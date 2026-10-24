@@ -251,6 +251,10 @@ inductive BlattG {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List 
       (ht : D.tabNr n = some t) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       BlattG (l := l) (.assignThru p t ht f i e hw hL)
+  | assignSlotRef (n : Nat) (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t)
+      (ho : D.offen t = true) (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true)
+      (hL : darf D t Λ) :
+      BlattG (l := l) (.assignSlotRef r t ht ho f e hw hL)
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)
       (hL : gdarf D g Λ) :
       BlattG (l := l) (.assignGlob g e hw hL)
@@ -287,7 +291,7 @@ theorem BlattG.istBlatt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
     impossible cases without dependent elimination on the indices). -/
 def Stmt.blattArt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
-  | .assignSlot .. | .assignThru .. | .assignGlob .. | .putBytes .. | .assignVar ..
+  | .assignSlot .. | .assignThru .. | .assignSlotRef .. | .assignGlob .. | .putBytes .. | .assignVar ..
   | .shift .. | .regWrite .. | .transition .. | .publish .. | .advances ..
   | .retires .. => true
   | _ => false
@@ -308,6 +312,10 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
   | assignThru n p t ht f i e hw hL =>
+      simp only [execStmt, Ausgang.ok.injEq] at hex
+      obtain ⟨rfl, -⟩ := hex
+      exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
+  | assignSlotRef n r t ht ho f e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)

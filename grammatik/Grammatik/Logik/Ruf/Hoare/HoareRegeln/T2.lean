@@ -198,6 +198,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       execGrund O passes R₁ arms r σ ρ = execGrund O passes R₂ arms r σ ρ)
     (fun t f i e hw hL σ ρ => rfl)
     (fun n p t ht f i e hw hL σ ρ => rfl)
+    (fun n r t ht ho f e hw hL σ ρ => rfl)
     (fun g e hw hL σ ρ => rfl)
     (fun t f hf n i hlo hhi e hw hL σ ρ => rfl)
     (fun x e σ ρ => rfl)

@@ -200,6 +200,9 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
   | .fl lo hi, v, hw => ⟨fun _ => Option.none, _, gleitWortPasst_voll lo hi v hw⟩
   | .fnptr m, v, _ => ⟨fun _ => some (v : {f : D.Fn // D.passt f m = true}).1, 0, zeigerPasst_voll m v⟩
   | .ptr _ _, _, _ => ⟨fun _ => Option.none, 0, rfl⟩
+  | .ref _, r, _ => ⟨fun _ => Option.none, ((Val.zelle r : Nat) : Int), by
+      simp only [einpassen, if_pos (Int.natCast_nonneg _), Int.toNat_natCast]
+      rfl⟩
 
 /-- Every decoded value is a value an answer can have. -/
 theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v : Wert D τ),
@@ -213,6 +216,7 @@ theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v 
   | _, .never, _, _, _ => trivial
   | _, .fnptr _, _, _, _ => trivial
   | _, .ptr _ _, _, _, _ => trivial
+  | _, .ref _, _, _, _ => trivial
 
 /-- **The answer class is empty EXACTLY when the type is** (G1 repair): no raw word decodes
     under any image iff the declared type has no value an answer can have. The model decides
@@ -496,6 +500,7 @@ def antwortTyB (fs : List D.Fn) : Ty → Bool
   | .fl lo hi => gleitBarB lo hi
   | .fnptr m => fs.any fun f => D.passt f m
   | .ptr _ _ => true
+  | .ref _ => true
 
 /-- An answer class is not empty, decided (a call without a result always answers). -/
 def antwortB (fs : List D.Fn) : Option Ty → Bool
@@ -539,6 +544,7 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
       exact ⟨fun ⟨f, _, hf⟩ => ⟨(⟨f, hf⟩ : {f : D.Fn // D.passt f m = true}), trivial⟩,
         fun ⟨v, _⟩ => ⟨(v : {f : D.Fn // D.passt f m = true}).1, hvoll _, v.2⟩⟩
   | .ptr _ _ => ⟨fun _ => ⟨(() : Unit), trivial⟩, fun _ => rfl⟩
+  | .ref _ => ⟨fun _ => ⟨(Val.vonZelle 0 : Wert D (.ref _)), trivial⟩, fun _ => rfl⟩
 
 /-- **The answer class, decided exactly** (W1): given the complete function list, the Bool
     says "answerable" exactly when the class is not empty (`antwortLeer_iff`). -/

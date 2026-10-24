@@ -45,6 +45,17 @@ theorem stmtS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ Λ)
         Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f)) <| Sz.mem_bind (mem_tyS hi) <| Sz.mem_bind (mem_tyS he) <|
         Sz.mem_wenn hw <| Sz.mem_wenn hL <| Sz.mem_pure _) (by omega)
     · glfertig
+  | assignSlotRef r t ht ho f e hw hL =>
+    simp only [groesseStmt] at hu hE hB hO
+    obtain ⟨r', hr, ⟨_, _⟩⟩ := hE _ r (by omega)
+    obtain ⟨e', he, ⟨_, _⟩⟩ := hE _ e (by omega)
+    refine ⟨.assignSlotRef r' t ht ho f e' hw hL, ?_, ?_⟩
+    · simp only [groesseStmt]
+      stm (sAssignSlotRef E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_refS hr) <|
+        Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) <| Sz.mem_wenn ht <| Sz.mem_wenn ho <|
+        Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f)) <| Sz.mem_bind (mem_tyS he) <|
+        Sz.mem_wenn hw <| Sz.mem_wenn hL <| Sz.mem_pure _) (by omega)
+    · glfertig
   | assignGlob g e hw hL =>
     simp only [groesseStmt] at hu hE hB hO
     obtain ⟨e', he, ⟨_, _⟩⟩ := hE _ e (by omega)

@@ -353,7 +353,7 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         · rw [h]; exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .assignSlot .., _, _ => Or.inl rfl
-  | .assignThru .., _, _ => Or.inl rfl
+  | .assignThru .., _, _ | .assignSlotRef .., _, _ => Or.inl rfl
   | .assignGlob .., _, _ => Or.inl rfl
   | .putBytes .., _, _ => Or.inl rfl
   | .assignVar .., _, _ => Or.inl rfl

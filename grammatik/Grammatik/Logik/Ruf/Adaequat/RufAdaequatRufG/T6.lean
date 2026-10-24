@@ -30,6 +30,8 @@ theorem stmtKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       BlattG.ende_none O passes R (.assignSlot t f' i e hw hL)
   | _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       BlattG.ende_none O passes R (.assignThru _ p t ht f' i e hw hL)
+  | _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
+      BlattG.ende_none O passes R (.assignSlotRef _ r t ht ho f' e hw hL)
   | _, _, _, _, .assignGlob g e hw hL, _ =>
       BlattG.ende_none O passes R (.assignGlob g e hw hL)
   | _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>

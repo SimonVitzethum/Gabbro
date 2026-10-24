@@ -46,7 +46,7 @@ theorem rufeS_mS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .retry _ _ body ueber => by simp only [rufeS, mS, rufeB_mB body, rufeB_mB ueber]
   | _, _, _, _, .forever _ _ body => by simp only [rufeS, mS, rufeB_mB body, Bool.true_and]
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignThru .. => rfl
+  | _, _, _, _, .assignThru .. | _, _, _, _, .assignSlotRef .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
   | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
@@ -148,7 +148,7 @@ theorem rufeS_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : 
   | _, _, _, _, .forever _ _ _, _, _, _, h => by
       simp only [befS, befund_und_ewig, Bool.true_or, Bool.true_eq_false] at h
   | _, _, _, _, .assignSlot .., _, _, _, _ => rfl
-  | _, _, _, _, .assignThru .., _, _, _, _ => rfl
+  | _, _, _, _, .assignThru .., _, _, _, _ | _, _, _, _, .assignSlotRef .., _, _, _, _ => rfl
   | _, _, _, _, .assignGlob .., _, _, _, _ => rfl
   | _, _, _, _, .putBytes .., _, _, _, _ => rfl
   | _, _, _, _, .assignVar .., _, _, _, _ => rfl

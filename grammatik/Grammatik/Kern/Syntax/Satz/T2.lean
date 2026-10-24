@@ -32,7 +32,18 @@ theorem gut_nimmt_gibt {W G} (σ σ1 : World D) (L : D.Lock)
 mutual
 theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .lit _, _, h | .tru, _, h | .fls, _, h | .var _, _, h | .ptrOf _ _ _ _, _, h
-  | .fnref _ _ _, _, h | .none _, _, h | .why _ _, _, h => by simp [Expr.orte] at h
+  | .fnref _ _ _, _, h | .none _, _, h | .why _ _, _, h | .refStart _, _, h => by simp [Expr.orte] at h
+  | .refNext r, o, h => r.orte_darf o h
+  | .refEq a b, o, h => by
+      simp only [Expr.orte, List.mem_append] at h
+      rcases h with h | h
+      · exact a.orte_darf o h
+      · exact b.orte_darf o h
+  | .slotRef r t _ _ _ hL, o, h => by
+      simp only [Expr.orte, List.mem_cons] at h
+      rcases h with rfl | h
+      · exact hL
+      · exact r.orte_darf o h
   | .glob g hL, o, h => by simp [Expr.orte] at h; subst h; exact hL
   | .oldG g hL, o, h => by simp [Expr.orte] at h; subst h; exact hL
   | .slot t _ i hL, o, h => by
@@ -144,7 +155,7 @@ theorem held_nachSig_iff (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (
 
 mutual
 theorem Stmt.held_mono : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ
-  | .assignSlot .., L, h | .assignThru .., L, h | .assignGlob .., L, h | .putBytes .., L, h
+  | .assignSlot .., L, h | .assignThru .., L, h | .assignSlotRef .., L, h | .assignGlob .., L, h | .putBytes .., L, h
   | .assignVar .., L, h | .shift .., L, h | .locks .., L, h | .traverse .., L, h
   | .retry .., L, h | .forever .., L, h | .axiomCall .., L, h | .regWrite .., L, h
   | .transition .., L, h | .publish .., L, h | .ret .., L, h | .retWhy .., L, h
@@ -186,7 +197,7 @@ theorem GrundArms.held_mono : (a : GrundArms D V l Γ Λ Λ' n) → ∀ L, Res.h
 end
 mutual
 theorem Stmt.held_iff : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
-  | .assignSlot .., _ | .assignThru .., _ | .assignGlob .., _ | .putBytes .., _
+  | .assignSlot .., _ | .assignThru .., _ | .assignSlotRef .., _ | .assignGlob .., _ | .putBytes .., _
   | .assignVar .., _ | .shift .., _ | .locks .., _ | .traverse .., _
   | .retry .., _ | .forever .., _ | .axiomCall .., _ | .regWrite .., _
   | .transition .., _ | .publish .., _ | .ret .., _ | .retWhy .., _

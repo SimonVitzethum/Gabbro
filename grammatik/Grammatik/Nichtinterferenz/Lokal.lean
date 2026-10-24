@@ -28,6 +28,7 @@ def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
   | .assignSlot _ _ i e _ _ => i.orte.all S && e.orte.all S
   | .assignThru p _ _ _ i e _ _ => p.orte.all S && i.orte.all S && e.orte.all S
+  | .assignSlotRef r _ _ _ _ e _ _ => r.orte.all S && e.orte.all S
   | .assignGlob _ e _ _ => e.orte.all S
   | .putBytes _ _ _ _ i _ _ e _ _ => i.orte.all S && e.orte.all S
   | .assignVar _ e => e.orte.all S
@@ -272,6 +273,12 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       have h1 := h.lese Λ (p.orte ++ i.orte ++ e.orte)
       simp only [execStmt, AusRel]
       rw [h1.eval i (alle_von hST hn.1.2) ρ, h1.eval e (alle_von hST hn.2) ρ]
+      exact ⟨h1.schreibSlot _ _ _ _ _, trivial⟩
+  | assignSlotRef r t ht ho f e hw hL =>
+      simp only [nS, Bool.and_eq_true] at hn
+      have h1 := h.lese Λ (r.orte ++ e.orte)
+      simp only [execStmt, AusRel]
+      rw [h1.eval r (alle_von hST hn.1) ρ, h1.eval e (alle_von hST hn.2) ρ]
       exact ⟨h1.schreibSlot _ _ _ _ _, trivial⟩
   | assignGlob g e hw hL =>
       simp only [nS] at hn

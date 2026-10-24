@@ -411,6 +411,10 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
         (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
+  | .assignSlotRef r t _ _ f e hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append r.orte_darf e.orte_darf) hh
+      exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
   | .assignGlob g e hw hL, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh

@@ -423,6 +423,7 @@ def stmtTraeger (tabs : List D.Tab) (globs : List D.Glob)
     Stmt D V l Γ Λ Λ' → List (D.Tab ⊕ D.Glob)
   | .assignSlot t _ _ _ _ _ => [.inl t]
   | .assignThru _ t _ _ _ _ _ _ => [.inl t]
+  | .assignSlotRef _ t _ _ _ _ _ _ => [.inl t]
   | .assignGlob g _ _ _ => [.inr g]
   | .putBytes t _ _ _ _ _ _ _ _ _ => [.inl t]
   | .assignVar _ _ => []

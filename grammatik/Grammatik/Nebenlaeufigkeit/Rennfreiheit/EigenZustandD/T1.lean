@@ -230,6 +230,67 @@ theorem assignDurch_neu (O : Orakel D) (passes : Nat)
     rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
 
+/-- `assignSlotRef t` records its write event in the recorded list. -/
+theorem assignSlotRef_neu (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat}
+    {r : Expr D Γ Λ (.ref n)} {t : D.Tab} {ht : D.tabNr n = some t} {ho : D.offen t = true}
+    {f : D.Feld t}
+    {e : Expr D Γ Λ (D.typ t f)}
+    {hw : V.schreibt t = true} {hL : darf D t Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
+    (hstep : (execStmt O passes keinRuf
+      (.assignSlotRef r t ht ho f e hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (hneu : σ'.spur = neu ++ σ.spur) :
+    Ereignis.zugriff t true Λ
+      (σ.lese Λ (r.orte ++ e.orte)).haelt ∈ neu := by
+  have h1 : σ'.spur =
+      Ereignis.zugriff t true Λ
+        (σ.lese Λ (r.orte ++ e.orte)).haelt ::
+        ((r.orte ++ e.orte).map fun o => match o with
+          | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+          | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := by
+    have hcomp : (execStmt O passes keinRuf
+        ((.assignSlotRef r t ht ho f e hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
+        some ((σ.lese Λ (r.orte ++ e.orte)).schreibSlot t Λ
+          ((eval (σ.lese Λ (r.orte ++ e.orte)) r
+            (σ.lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) f
+          (eval (σ.lese Λ (r.orte ++ e.orte)) e
+            (σ.lese Λ (r.orte ++ e.orte)) ρ)) := rfl
+    rw [hcomp] at hstep
+    have hspur : (σ.lese Λ (r.orte ++ e.orte)).spur =
+        ((r.orte ++ e.orte).map fun o => match o with
+          | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+          | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := rfl
+    have hσ' : σ' = (σ.lese Λ (r.orte ++ e.orte)).schreibSlot t Λ
+        ((eval (σ.lese Λ (r.orte ++ e.orte)) r
+          (σ.lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) f
+        (eval (σ.lese Λ (r.orte ++ e.orte)) e
+          (σ.lese Λ (r.orte ++ e.orte)) ρ) :=
+      Option.some_inj.mp hstep.symm
+    have hsc : (σ.lese Λ (r.orte ++ e.orte)).schreibSlot t Λ
+        ((eval (σ.lese Λ (r.orte ++ e.orte)) r
+          (σ.lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) f
+        (eval (σ.lese Λ (r.orte ++ e.orte)) e
+          (σ.lese Λ (r.orte ++ e.orte)) ρ) =
+        ((σ.lese Λ (r.orte ++ e.orte)).storeSlot t
+          ((eval (σ.lese Λ (r.orte ++ e.orte)) r
+            (σ.lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) f
+          (eval (σ.lese Λ (r.orte ++ e.orte)) e
+            (σ.lese Λ (r.orte ++ e.orte)) ρ)).merke
+        [.zugriff t true Λ
+          (σ.lese Λ (r.orte ++ e.orte)).haelt] := rfl
+    rw [hσ', hsc]
+    simp only [World.merke]
+    have hspur₂ : ((σ.lese Λ (r.orte ++ e.orte)).storeSlot t
+          ((eval (σ.lese Λ (r.orte ++ e.orte)) r
+            (σ.lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) f
+          (eval (σ.lese Λ (r.orte ++ e.orte)) e
+            (σ.lese Λ (r.orte ++ e.orte)) ρ)).spur =
+        (σ.lese Λ (r.orte ++ e.orte)).spur := rfl
+    rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+  exact neu_head h1 hneu
+
 /-- `uebergang t` records its write event in the recorded list. -/
 theorem uebergang_neu (O : Orakel D) (passes : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

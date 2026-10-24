@@ -71,6 +71,10 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .slot t f i _ => do .ok s!"(Expr.slot (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {bew})"
   | _, .thru p t _ f i _ => do .ok s!"(Expr.thru (D := z.deklaration) {← drE N p} {fin (N.tab t) "z.tabs.length"} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {bew})"
   | _, .ptrOf t n _ rw => .ok s!"(Expr.ptrOf (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {n} {bew} {rw})"
+  | _, .refStart n => .ok s!"(Expr.refStart (D := z.deklaration) {n})"
+  | _, .refNext r => do .ok s!"(Expr.refNext (D := z.deklaration) {← drE N r})"
+  | _, .refEq a b => do .ok s!"(Expr.refEq (D := z.deklaration) {← drE N a} {← drE N b})"
+  | _, .slotRef r t _ _ f _ => do .ok s!"(Expr.slotRef (D := z.deklaration) {← drE N r} {fin (N.tab t) "z.tabs.length"} {bew} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {bew})"
   | _, .fnref f n _ => .ok s!"(Expr.fnref (D := z.deklaration) {fin (N.fn f) "z.fns.length"} {n} {bew})"
   | _, .oldG g _ => .ok s!"(Expr.oldG (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {bew})"
   | _, .oldS t f i _ => do .ok s!"(Expr.oldS (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {bew})"
@@ -125,6 +129,7 @@ def drR (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option Ty} → ErgEx
 def drS (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Except String String
   | .assignSlot t f i e _ _ => do .ok s!"(Stmt.assignSlot (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {← drE N e} {bew} {bew})"
   | .assignThru p t _ f i e _ _ => do .ok s!"(Stmt.assignThru (D := z.deklaration) {← drE N p} {fin (N.tab t) "z.tabs.length"} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {← drE N e} {bew} {bew})"
+  | .assignSlotRef r t _ _ f e _ _ => do .ok s!"(Stmt.assignSlotRef (D := z.deklaration) {← drE N r} {fin (N.tab t) "z.tabs.length"} {bew} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N e} {bew} {bew})"
   | .assignGlob g e _ _ => do .ok s!"(Stmt.assignGlob (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N e} {bew} {bew})"
   | .putBytes t f _ n i _ _ e _ _ => do .ok s!"(Stmt.putBytes (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {bew} {n} {← drE N i} {bew} {bew} {← drE N e} {bew} {bew})"
   | .assignVar x e => do .ok s!"(Stmt.assignVar (D := z.deklaration) {var x} {← drE N e})"

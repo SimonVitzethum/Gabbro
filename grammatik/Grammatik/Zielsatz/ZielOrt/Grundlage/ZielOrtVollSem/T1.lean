@@ -259,7 +259,7 @@ theorem Stmt.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
       simp only [Stmt.vOk] at h ⊢
       exact hKK _ h
   | .assignSlot .., _ => rfl
-  | .assignThru .., _ => rfl
+  | .assignThru .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
   | .putBytes .., _ => rfl
   | .assignVar .., _ => rfl
@@ -414,7 +414,7 @@ theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .forever .., h => by simp [Stmt.kOk] at h
   | .callInd .., h => by simp [Stmt.kOk] at h
   | .assignSlot .., _ => rfl
-  | .assignThru .., _ => rfl
+  | .assignThru .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
   | .putBytes .., _ => rfl
   | .assignVar .., _ => rfl

@@ -206,7 +206,7 @@ mutual
 theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (eb dl : Bool),
     (befS eb true dl s).austritt = false → ∀ σ ρ, OhneAus eb (execStmt O passes R s σ ρ)
   | _, _, _, _, .assignSlot .., _, _, _, _, _ => trivial
-  | _, _, _, _, .assignThru .., _, _, _, _, _ => trivial
+  | _, _, _, _, .assignThru .., _, _, _, _, _ | _, _, _, _, .assignSlotRef .., _, _, _, _, _ => trivial
   | _, _, _, _, .assignGlob .., _, _, _, _, _ => trivial
   | _, _, _, _, .putBytes .., _, _, _, _, _ => trivial
   | _, _, _, _, .assignVar .., _, _, _, _, _ => trivial

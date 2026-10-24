@@ -350,6 +350,48 @@ theorem blatt_slots_t_gleich
           rw [hslot]
           exact lese_slots_gleich _ _ _ _ _ _
         exact hgoal
+  | assignSlotRef r u ht ho fld e hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      by_cases htu : u = t
+      · subst htu
+        have hev : Ereignis.zugriff u true Λ
+            ((M.weltVon f).lese Λ (r.orte ++ e.orte)).haelt ∈ neu := by
+          have hsp : (((M.weltVon f).lese Λ (r.orte ++ e.orte)).schreibSlot u Λ
+              ((eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) r
+                ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) fld
+              (eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) e
+                ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ)).spur =
+              [Ereignis.zugriff u true Λ ((M.weltVon f).lese Λ (r.orte ++ e.orte)).haelt] ++
+              ((r.orte ++ e.orte).map fun o => match o with
+                | .inl t' => Ereignis.zugriff t' false Λ (M.weltVon f).haelt
+                | .inr g => Ereignis.gzugriff g false Λ (M.weltVon f).haelt) ++ (M.weltVon f).spur := rfl
+          rw [hsp] at hneu
+          have hneueq := List.append_cancel_right hneu
+          rw [← hneueq]
+          exact List.mem_append_left _ (List.mem_singleton.mpr rfl)
+        have htr : (Ereignis.zugriff u true Λ
+            ((M.weltVon f).lese Λ (r.orte ++ e.orte)).haelt).traeger =
+            some (.inl u : D.Tab ⊕ D.Glob) := by
+          simp [Ereignis.traeger]
+        exact False.elim (hnoWrite _ hev htr Λ _ rfl)
+      · intro k fld'
+        have hslot : (((M.weltVon f).lese Λ (r.orte ++ e.orte)).schreibSlot u Λ
+            ((eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) r
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) fld
+            (eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) e
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ)).slots t k fld' =
+            ((M.weltVon f).lese Λ (r.orte ++ e.orte)).slots t k fld' :=
+          storeSlot_fremd_traeger _ (Ne.symm htu) _ _ _ _ _
+        have hgoal : (((M.weltVon f).lese Λ (r.orte ++ e.orte)).schreibSlot u Λ
+            ((eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) r
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) fld
+            (eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) e
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ)).slots t k fld' =
+            (M.weltVon f).slots t k fld' := by
+          rw [hslot]
+          exact lese_slots_gleich _ _ _ _ _ _
+        exact hgoal
   | assignGlob g e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep

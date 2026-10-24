@@ -58,6 +58,7 @@ namespace Gabbro.Grammatik
   | .fl lo hi => .fl lo hi
   | .fnptr n => .fnptr (n + 1)
   | .ptr t rw => .ptr t rw
+  | .ref t => .ref t
 
 /-- A signature with its types shifted. -/
 def sigR {Tab Glob Lock Marke : Type} (S : Signatur Tab Glob Lock Marke) :
@@ -120,6 +121,7 @@ theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
   | .fl _ _, v => v
   | .fnptr _, v => ⟨some v.1, v.2⟩
   | .ptr _ _, v => v
+  | .ref _, v => v
 
 /-- A value of the shifted `τ` as a value of `τ` (the root has number `0`,
     which no shifted pointer type names). -/
@@ -135,6 +137,7 @@ def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.pa
     | ⟨some f, h⟩ => ⟨f, h⟩
     | ⟨none, h⟩ => absurd h (by simp [passtM])
   | .ptr _ _, v => v
+  | .ref _, v => v
 
 theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.passt τ), valZ τ (valR τ v) = v
   | .int _ _, _ => rfl
@@ -146,6 +149,7 @@ theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.passt τ), valZ τ (valR τ v)
   | .fl _ _, _ => rfl
   | .fnptr _, ⟨_, _⟩ => rfl
   | .ptr _ _, _ => rfl
+  | .ref _, _ => rfl
 
 theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), valR τ (valZ τ v) = v
   | .int _ _, _ => rfl
@@ -158,6 +162,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   | .fnptr n, ⟨some f, h⟩ => rfl
   | .fnptr n, ⟨none, h⟩ => absurd h (by simp [passtM])
   | .ptr _ _, _ => rfl
+  | .ref _, _ => rfl
 
 /-- **`D` plus the runtime's idle root.** Every carrier, lock, mark,
     invariant, axiom and register is `D`'s; field, global, axiom and
@@ -167,6 +172,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   Tab := D.Tab
   decTab := D.decTab
   count := D.count
+  offen := D.offen
   Feld := D.Feld
   decFeld := D.decFeld
   typ := fun t f => tyR (D.typ t f)
@@ -469,6 +475,10 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .thru p t ht f i hL => Expr.thru (D := D.mitRuhe) (ruE p) t ht f (ruE i) (darfR hL)
   | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D.mitRuhe) t n ht rw
   | _, _, _, .fnref f n h => .fnref (D := D.mitRuhe) (some f) (n + 1) h
+  | _, _, _, .refStart n => .refStart n
+  | _, _, _, .refNext r => .refNext (ruE r)
+  | _, _, _, .refEq a b => .refEq (ruE a) (ruE b)
+  | _, _, _, .slotRef r t ht ho f hL => .slotRef (ruE r) t ht ho f (darfR hL)
   | _, _, _, .oldG g hL => Expr.oldG (D := D.mitRuhe) g (gdarfR hL)
   | _, _, _, .oldS t f i hL => Expr.oldS (D := D.mitRuhe) t f (ruE i) (darfR hL)
   | _, _, _, .widen h1 h2 e => .widen h1 h2 (ruE e)
@@ -537,6 +547,8 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, _, _, .assignSlot t f i e hw hL => .assignSlot t f (ruE i) (ruE e) hw (darfR hL)
   | _, _, _, _, .assignThru p t ht f i e hw hL =>
       .assignThru (ruE p) t ht f (ruE i) (ruE e) hw (darfR hL)
+  | _, _, _, _, .assignSlotRef r t ht ho f e hw hL =>
+      .assignSlotRef (ruE r) t ht ho f (ruE e) hw (darfR hL)
   | _, _, _, _, .assignGlob g e hw hL => .assignGlob g (ruE e) hw (gdarfR hL)
   | _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL =>
       .putBytes (V := vertragR V) t f (congrArg tyR hf) n (ruE i) hlo hhi

@@ -90,6 +90,10 @@ def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .forallSlots .. => 39
   | .existsSlots .. => 40
   | .reaches .. => 41
+  | .refStart .. => 42
+  | .refNext .. => 43
+  | .refEq .. => 44
+  | .slotRef .. => 45
 
 def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → Nat
   | .empty .. => 0
@@ -131,6 +135,7 @@ def kS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .retWhy .. => 24
   | .leave .. => 25
   | .next .. => 26
+  | .assignSlotRef .. => 27
 
 def kB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Nat
   | .nil .. => 0

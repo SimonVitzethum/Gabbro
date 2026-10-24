@@ -333,6 +333,10 @@ theorem stmt_treu :
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibSlot _ t Λ _ f _ hw)
+  | .assignSlotRef r t _ _ f e hw hL, σ, ρ, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
+        (treu_schreibSlot _ t Λ _ f _ hw)
   | .assignGlob g e hw hL, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans

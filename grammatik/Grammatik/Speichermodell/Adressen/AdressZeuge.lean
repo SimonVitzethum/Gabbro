@@ -3,7 +3,7 @@
   Subject:   WITNESS OF THE LEG `speicherAdressen` (2026-10-22): one table `T` of two elements with one field.
 
   * (A) `t[1].x = 5;` -- one step of machine G changes the cell `(T, 1, x)` (`az_aendert`); under the layout `aL`
-    (base 100, element 8 bytes, field 4 bytes at offset 0; `aL_ok`) its byte 108 lies in the table's region, as the
+    (base 100, element 8 bytes, field 4 bytes at offset 0; `aL_ok`) its byte (0, 108) lies in the table's region, as the
     leg says (`az_bereich`).
   * (B) a foreign call whose oracle writes `T[7]` (`oB`) -- one step changes a cell OUTSIDE the declared extent
     (`ab_aussen`): the named assumption `ImBereichO` of the leg is not idle (`oB_nicht`), and a good oracle meets it
@@ -120,10 +120,12 @@ theorem az_aendert : ∃ M1, RufErreichbarGX aP oG 0 (fun _ => False) aM0 M1 ∧
   rw [e] at h5
   exact absurd h5 (by decide)
 
-/-- The layout: table at 100, elements of 8 bytes, the field 4 bytes at offset 0. -/
-def aL : AdressLayout aD := ⟨fun _ => 100, fun _ => 8, fun _ _ => 0, fun _ _ => 4, fun g => g.elim, fun g => g.elim⟩
+/-- The layout: table in space 0 at 100, elements of 8 bytes, the field 4 bytes at offset 0. -/
+def aL : AdressLayout aD := ⟨fun _ => 0, fun _ => 100, fun _ => 8, fun _ _ => 0, fun _ _ => 4, fun g => g.elim, fun g => g.elim⟩
 
 theorem aL_ok : LayoutOk aL where
+  geschlossen := fun _ _ => rfl
+  offen := fun _ h => by simp at h
   feld := fun _ _ => by simp [aL]
   felder := fun _ _ _ h => absurd rfl h
   tabellen := fun _ _ _ h => absurd rfl h
@@ -132,13 +134,13 @@ theorem aL_ok : LayoutOk aL where
 
 /-- **The leg on (A)**: the changed cell is in its extent, and its byte 108 lies in the region of `T`. -/
 theorem az_bereich : ∃ M1, RufErreichbarGX aP oG 0 (fun _ => False) aM0 M1 ∧
-    M1.speicher.slots () 1 () ≠ aM0.speicher.slots () 1 () ∧ ImBereich aD () 1 ∧ aL.inZelle () 1 () 108 ∧
-    aL.inTabelle () 108 := by
+    M1.speicher.slots () 1 () ≠ aM0.speicher.slots () 1 () ∧ ImBereich aD () 1 ∧ aL.inZelle () 1 () (0, 108) ∧
+    aL.inTabelle () (0, 108) := by
   obtain ⟨M1, hr, hne⟩ := az_aendert
   have h := geaendert_im_bereich (rufErreichbarGX_aussen (fun _ h => h) oG_gut hr) aL_ok hne
-  have hz : aL.inZelle () 1 () 108 := by
+  have hz : aL.inZelle () 1 () (0, 108) := by
     simp [AdressLayout.inZelle, AdressLayout.adresse, aL]
-  exact ⟨M1, hr, hne, h.1, hz, h.2 108 hz⟩
+  exact ⟨M1, hr, hne, h.1, hz, h.2 (0, 108) hz⟩
 
 /-! ## (B) a foreign write outside the extent -/
 

@@ -299,7 +299,7 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
       simp only [execStmt] at he
       split at he <;> cases he
   | .assignSlot .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignThru .., _, _, _, _, he => by simp [execStmt] at he
+  | .assignThru .., _, _, _, _, he | .assignSlotRef .., _, _, _, _, he => by simp [execStmt] at he
   | .assignGlob .., _, _, _, _, he => by simp [execStmt] at he
   | .putBytes .., _, _, _, _, he => by simp [execStmt] at he
   | .assignVar .., _, _, _, _, he => by simp [execStmt] at he

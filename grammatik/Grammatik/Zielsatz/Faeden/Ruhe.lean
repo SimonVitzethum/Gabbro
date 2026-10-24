@@ -51,7 +51,7 @@ mutual
 theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ'), (ruS s).ants = s.ants
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignThru .. => rfl
+  | _, _, _, _, .assignThru .. | _, _, _, _, .assignSlotRef .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
   | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
@@ -156,6 +156,7 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .fl _ _, _ => Iff.rfl
   | .fnptr _, _ => Iff.rfl
   | .ptr _ _, _ => Iff.rfl
+  | .ref _, _ => Iff.rfl
 
 /-- **An answer class of `D.mitRuhe` is empty exactly when it is in `D`**: the shifted types
     have the shifted values (`valR`/`valZ`), and no shifted pointer type names the root. -/
@@ -184,6 +185,7 @@ theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
   | .fl _ _ => by simp
   | .fnptr _ => by simp
   | .ptr _ _ => by simp
+  | .ref _ => by simp
 
 theorem stelleAx_mitRuhe (e : Option Ty) :
     (e.map tyR = some .never ∨ ¬ AntwortLeer D.mitRuhe (e.map tyR)) ↔

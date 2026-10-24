@@ -159,7 +159,7 @@ theorem Stmt.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
             funext fun σ => funext fun ρ => Block.execH_passes ueber h.2 σ ρ]
   | .forever .., h, _, _ => by simp [Stmt.ohneEwig] at h
   | .assignSlot .., _, _, _ => rfl
-  | .assignThru .., _, _, _ => rfl
+  | .assignThru .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl
   | .putBytes .., _, _, _ => rfl
   | .assignVar .., _, _, _ => rfl

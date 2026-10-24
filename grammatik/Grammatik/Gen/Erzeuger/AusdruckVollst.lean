@@ -38,6 +38,8 @@ def _root_.Gabbro.Grammatik.Expr.teile {τ : Ty} : Expr D Γ Λ τ → List (SE 
   | .thru p _ _ _ i _ => [⟨_, p⟩, ⟨_, i⟩]
   | .widen _ _ e | .some e | .istSome e => [⟨_, e⟩]
   | .neg a | .not a => [⟨_, a⟩]
+  | .refNext r | .slotRef r _ _ _ _ _ => [⟨_, r⟩]
+  | .refEq a b => [⟨_, a⟩, ⟨_, b⟩]
   | .add a b | .sub a b | .mul a b | .div _ _ a b | .rem _ _ a b | .sdiv _ a b | .srem _ a b
   | .band _ _ a b | .bor _ _ _ _ _ a b | .bxor _ _ _ _ _ a b | .shl _ _ _ _ _ a b | .shr _ _ _ _ _ a b
   | .lt a b | .le a b | .eq a b | .fllt a b | .flle a b | .and a b | .or a b | .reaches _ _ _ a b _ => [⟨_, a⟩, ⟨_, b⟩]
@@ -346,6 +348,27 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
     have hc : (⟨.bool, .existsSlots t body hL⟩ : SE D Γ Λ) ∈ gExists Q (groesseExpr body + 1) :=
       List.mem_flatMap.2 ⟨t, Aufz.tab_mem t, List.mem_flatMap.2 ⟨body, mem_tyS hb, mem_dif hL⟩⟩
     ausd (gExists Q), Sz.mem_cast hc (by omega)
+  | refStart n =>
+    simp only [groesseExpr] at hu ⊢
+    ausd (gRefStart (D := D) (Γ := Γ) (Λ := Λ)),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := n) rfl (by omega)) (Sz.mem_pure _))) (by omega)
+  | refNext r =>
+    simp only [groesseExpr] at hu ⊢
+    have hr : (⟨_, r⟩ : SE D Γ Λ) ∈ E (groesseExpr r) := hE ⟨_, r⟩ (by simp [Expr.teile])
+    ausd (gRefNext E), Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_refS hr) (Sz.mem_pure _))) (by omega)
+  | refEq a b =>
+    simp only [groesseExpr] at hu ⊢
+    have ha : (⟨_, a⟩ : SE D Γ Λ) ∈ E (groesseExpr a) := hE ⟨_, a⟩ (by simp [Expr.teile])
+    have hb : (⟨_, b⟩ : SE D Γ Λ) ∈ E (groesseExpr b) := hE ⟨_, b⟩ (by simp [Expr.teile])
+    ausd (gRefEq E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_refS ha) (Sz.mem_bind (mem_tyS hb) (Sz.mem_pure _)))) (by omega)
+  | slotRef r t ht ho f hL =>
+    simp only [groesseExpr] at hu ⊢
+    have hr : (⟨_, r⟩ : SE D Γ Λ) ∈ E (groesseExpr r) := hE ⟨_, r⟩ (by simp [Expr.teile])
+    ausd (gSlotRef E),
+      Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_refS hr) (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t))
+        (Sz.mem_wenn ht (Sz.mem_wenn ho (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f))
+          (Sz.mem_wenn hL (Sz.mem_pure _)))))))) (by omega)
   | reaches t f hf a b hL =>
     simp only [groesseExpr] at hu ⊢
     have ha : (⟨_, a⟩ : SE D Γ Λ) ∈ E (groesseExpr a) := hE ⟨_, a⟩ (by simp [Expr.teile])

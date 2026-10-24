@@ -202,6 +202,7 @@ section Orakelfrei
 variable (O O' : Orakel D) (passes : Nat)
   (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D}
 
+set_option maxHeartbeats 800000 in
 mutual
 
 /-- A statement of the old fragment does not consult the oracle. -/
@@ -233,7 +234,7 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .axiomCall .., h, _, _ => by simp [Stmt.kOk] at h
   | .callInd .., h, _, _ => by simp [Stmt.kOk] at h
   | .assignSlot .., _, _, _ => rfl
-  | .assignThru .., _, _, _ => rfl
+  | .assignThru .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl
   | .putBytes .., _, _, _ => rfl
   | .assignVar .., _, _, _ => rfl

@@ -1587,3 +1587,40 @@ Update (same day): `BrainfuckG/ProgrammAkzeptiert.lean` wraps the G statement of
 counter and head, run, return). The core checker accepts it (`prog_accepted_zeuge`, `decide +kernel` on `Akzeptiert`; the `= false`
 probe fails), its structural class is `bedingt`, and `prog_exec_zeuge` shows that the same function returns normally within budget 2
 with the halting Brainfuck run and its output. Admission for EVERY Brainfuck program is not proved; it is per-program evidence.
+
+## 14. The open region in G itself (2026-10-24, in progress on branch `ziel/region`)
+
+Section 13 built the unbounded storage component beside G. This section brings it INTO the language model, so that an admitted G
+program can use storage without a declared element ceiling. The Lean model comes first (CLAUDE.md); checker, compiler and
+`SYNTAX.md`/`LANGUAGE.md` follow only after it.
+
+### 14.1 The forms (Lean model, `Kern/`)
+
+* **`Deklaration.offen : Tab → Bool`** (default `false`): `table T open`. An open table is a region; its cells are not bounded by
+  `count`.
+* **`Ty.ref t`**: a reference into open table number `t`. Its value is a cell number with no upper bound (`Val.zelle : Nat`).
+* **`Expr.refStart n`** (cell 0), **`Expr.refNext r`** (the next cell), **`Expr.refEq a b`**: the only ways to make and compare
+  references. There is no integer-to-reference form; a reference is the result of the region's own bump.
+* **`Expr.slotRef r t ht ho f hL`** and **`Stmt.assignSlotRef r t ht ho f e hw hL`**: read and write a field of the cell `r` of the
+  open table `t`, under exactly the guards of a slot access (`darf D t Λ`, `V.schreibt t`); the access records the read/write of `t`
+  like `slot`/`assignSlot`.
+* Allocation is G code, not a primitive: a counter global of type `ref t` bumped by `refNext`, a free list linked through `ref`
+  fields with a separate `bool` "has next" field, and every request behind `Block.allocationAttempt` -- the provider answer is an
+  ordinary Boolean from the program's own binding, the failure branch is mandatory, also on reuse. No availability axiom.
+
+### 14.2 What is decided and why
+
+* **No new memory primitive in the machine.** `World.slots` is already indexed by every `Int`; the open table only lifts the bound
+  that the index TYPE imposed. Race freedom, guards and the access trace are those of the table, so `gabbro_ziel`'s carrier-level
+  legs extend case by case.
+* **No forged references.** Like `ptr`, a `ref` is minted only by the region itself. Logical aliasing and use after release are the
+  ownership judgment's business (section 12), which works on the same G syntax.
+* **The raw word of a reference** is its cell number (`roh`); a provider answer decodes only non-negative words (`einpassen`).
+  Lowering to a finite machine must refuse (go to the failure branch) before the number exceeds its word: that is the provider's
+  answer, user logic, never an inserted trap or an assumption.
+
+### 14.3 Still open in this section
+
+The adaptations of every function and proof over G's syntax (in progress), the checker components of `Akzeptiert`, `gabbro_ziel`
+unchanged in text and axioms, a refinement theorem from the G region code to `ArenaStorage.Heap` with `Capacity.unbounded`, the
+Brainfuck bridge moved from the finite arena to the open region, witnesses, and only then Rust.

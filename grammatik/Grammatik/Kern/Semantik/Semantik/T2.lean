@@ -101,6 +101,7 @@ def roh : {τ : Ty} → Wert D τ → Int
   | .fl _ _, v => gleitRoh v.x
   | .fnptr _, _ => 0
   | .ptr _ _, _ => 0
+  | .ref _, v => (v.zelle : Int)
 
 /-- Die Gleitkommarechnung der Maschine: IEEE-754 binary64, exact result rounded once to
     nearest-even (`Gleitkomma.add/sub/mul/div`) -- kernel-computable since 2026-09-14. -/
@@ -161,6 +162,9 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
   | .assignThru p t _ f i e _ _, σ, ρ =>
       let σ := σ.lese Λ (p.orte ++ i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
+  | .assignSlotRef r t _ _ f e _ _, σ, ρ =>
+      let σ := σ.lese Λ (r.orte ++ e.orte)
+      .ok (σ.schreibSlot t Λ ((eval σ r σ ρ).zelle : Int) f (eval σ e σ ρ)) ρ
   | .assignGlob g e _ _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .ok (σ.schreibGlob g Λ (eval σ e σ ρ)) ρ

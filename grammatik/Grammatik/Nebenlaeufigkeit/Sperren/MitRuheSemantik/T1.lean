@@ -144,6 +144,17 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
         (eval_ru σ₀ σ i ρ)
   | _, _, _, .ptrOf .., _ => rfl
   | _, _, _, .fnref .., _ => rfl
+  | _, _, _, .refStart _, _ => rfl
+  | _, _, _, .refNext r, ρ =>
+      congrArg (fun z : Nat => (Val.vonZelle (z + 1) : Val (Option D.Fn) (passtM D) (.ref _)))
+        (eval_ru σ₀ σ r ρ)
+  | _, _, _, .refEq a b, ρ => by
+      show decide (_ = _) = decide (_ = _)
+      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
+      rfl
+  | _, _, _, .slotRef r t _ _ f _, ρ =>
+      congrArg (fun z : Nat => valR (D.typ t f) (σ.slots t (z : Int) f))
+        (eval_ru σ₀ σ r ρ)
   | _, _, _, .oldG _ _, _ => rfl
   | _, _, _, .oldS t f i _, ρ =>
       congrArg (fun z : Zahl 0 (D.count t - 1) => valR (D.typ t f) (σ₀.slots t z.n f))
@@ -441,6 +452,11 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
   | .why m, n => by
       show einpassen (D := D.mitRuhe) z' (.why m) n =
         Option.map (valR (.why m)) (einpassen (D := D) z (.why m) n)
+      simp only [einpassen]
+      split <;> rfl
+  | .ref m, n => by
+      show einpassen (D := D.mitRuhe) z' (.ref m) n =
+        Option.map (valR (.ref m)) (einpassen (D := D) z (.ref m) n)
       simp only [einpassen]
       split <;> rfl
   | .never, _ => rfl

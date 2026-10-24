@@ -10,7 +10,7 @@
 
   * `AussenGleich s s'` -- `s` and `s'` agree on every cell outside the declared extents;
   * `execStmt_blatt_aussen` -- a leaf writes inside the extents: every index it writes has an index type
-    (`assignSlot`, `assignThru`, `shift`), or lies in the checked byte range (`putBytes`), or comes from the oracle;
+    (`assignSlot`, `assignThru`, `shift`), or is a cell of an open region (`assignSlotRef`), or lies in the checked byte range (`putBytes`), or comes from the oracle;
   * `rufSchrittG_aussen`, `rufSchrittGX_aussen` -- every step of machine G and GX;
   * `rufErreichbarGX_aussen` -- every reached machine agrees with its start outside the extents.
 -/
@@ -22,8 +22,8 @@ variable {D : Deklaration}
 
 /-! ## 1. The extents -/
 
-/-- Index `k` lies in the declared extent of table `t`. -/
-def ImBereich (D : Deklaration) (t : D.Tab) (k : Int) : Prop := 0 ≤ k ∧ k < D.count t
+/-- Index `k` lies in the declared extent of table `t`: below its count, or anywhere above `0` in an open region. -/
+def ImBereich (D : Deklaration) (t : D.Tab) (k : Int) : Prop := 0 ≤ k ∧ (D.offen t = true ∨ k < D.count t)
 
 /-- Two memories agree on every cell outside the declared extents. -/
 def AussenGleich (s s' : Speicher D) : Prop :=
@@ -64,13 +64,13 @@ theorem schreibBytes_aussen (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 
       have h2 := schreibBytes_aussen t f hf Λ bs
         (σ.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255)))) (k + 1)
         (by omega) (by omega)
-      exact (schreibSlot_aussen σ t Λ k f _ ⟨h0, by omega⟩).trans h2
+      exact (schreibSlot_aussen σ t Λ k f _ ⟨h0, .inr (by omega)⟩).trans h2
 
 theorem lese_speicher (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob)) :
     (σ.lese Λ orte).speicher = σ.speicher := rfl
 
 theorem index_imBereich {t : D.Tab} (z : Wert D (.index (D.count t))) : ImBereich D t z.n :=
-  ⟨z.lo_le, by have := z.le_hi; omega⟩
+  ⟨z.lo_le, .inr (by have := z.le_hi; omega)⟩
 
 /-! ## 3. Leaves -/
 
@@ -89,6 +89,10 @@ theorem execStmt_blatt_aussen {O : Orakel D} (hI : ImBereichO O) (p : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, -⟩ := h
       exact schreibSlot_aussen (σ.lese Λ _) t Λ _ f _ (index_imBereich _)
+  | assignSlotRef r t _ ho f e _ _ =>
+      simp only [execStmt, Ausgang.ok.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      exact schreibSlot_aussen (σ.lese Λ _) t Λ _ f _ ⟨Int.natCast_nonneg _, .inl ho⟩
   | assignGlob g e _ _ =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, -⟩ := h

@@ -244,6 +244,7 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → List (D.Tab ⊕ D.Glob)
   | .assignSlot _ _ i e _ _ => i.orte ++ e.orte
   | .assignThru p _ _ _ i e _ _ => p.orte ++ i.orte ++ e.orte
+  | .assignSlotRef r _ _ _ _ e _ _ => r.orte ++ e.orte
   | .assignGlob _ e _ _ => e.orte
   | .putBytes _ _ _ _ i _ _ e _ _ => i.orte ++ e.orte
   | .assignVar _ e => e.orte

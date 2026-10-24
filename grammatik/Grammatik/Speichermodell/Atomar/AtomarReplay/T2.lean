@@ -579,6 +579,10 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
+  | assignSlotRef r t ht ho f e hw hL =>
+      simp only [execStmt, Ausgang.ok.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
   | assignGlob g e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
