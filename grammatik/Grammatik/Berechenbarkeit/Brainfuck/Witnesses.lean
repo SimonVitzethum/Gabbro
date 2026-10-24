@@ -88,4 +88,30 @@ theorem invalid_brackets_zeuge :
     checkBrackets ([.open 3, .increment, .close 2] : List (Instruction 3)) 0 [] = false ∧
     checkBrackets ([.close 0] : List (Instruction 1)) 0 [] = false := by decide
 
+/-- `+[>+]`: this one fixed finite program grows the tape without bound. -/
+def growing : Program 5 :=
+  ⟨#v[.increment, .open 5, .right, .increment, .close 2], by decide⟩
+
+def growingState (n : Nat) : State 5 := ⟨2, 1, List.replicate n 1, [], [], []⟩
+
+theorem growing_next (n : Nat) :
+    StateTransition.Reaches (step growing) (growingState n) (growingState (n + 1)) :=
+  .head rfl (.head rfl (.head rfl .refl))
+
+theorem growing_reached (n : Nat) :
+    StateTransition.Reaches (step growing) (initial []) (growingState n) := by
+  induction n with
+  | zero => exact .head rfl (.head rfl .refl)
+  | succ n ih => exact ih.trans (growing_next n)
+
+/-- The unbounded-tape premise is met by reachable source states, not an arbitrary
+    infinite initial tape or a machine family with an increasing fixed capacity. -/
+theorem unbounded_tape_zeuge (n : Nat) :
+    ∃ s, StateTransition.Reaches (step growing) (initial []) s ∧ s.left.length = n :=
+  ⟨growingState n, growing_reached n, List.length_replicate⟩
+
+theorem unbounded_tm2_zeuge (n : Nat) :
+    ∃ t, Turing.TM2.Reaches (compile growing) (encode (initial [])) t ∧ (t.stk .left).length = n :=
+  ⟨encode (growingState n), reachable_preservation growing (growing_reached n), List.length_replicate⟩
+
 end Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses

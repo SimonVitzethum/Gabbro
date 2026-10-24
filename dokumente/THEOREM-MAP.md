@@ -4549,3 +4549,22 @@ stack workers/protocol, their admission and initialization, the TM2-to-G simulat
 
 Validation of this milestone: full `lake build` succeeds (1,849 jobs), the expanded axiom audit checks 73 declarations
 with standard axioms only, and the goal-axiom, no-holes and layout checks pass. No production Rust or binary claim follows.
+
+### 91.2. Finite target entry, unbounded source tape and real G call/return storage (2026-10-24)
+
+`Brainfuck.ToTM2.finiteMachine` bundles the compiler into Mathlib's `FinTM2` with four stack names,
+finite labels and byte alphabet/local state. `finite_initial_reaches` and `finite_compiler_correct`
+connect the compiler to Mathlib's standard input entry, including the empty-code case. There is no
+claim that the source's unrelated final tape/head data are erased to Mathlib's stronger `haltList` convention.
+
+`growing_next`, `growing_reached`, `unbounded_tape_zeuge` and `unbounded_tm2_zeuge` exhibit one fixed
+finite source program, `+[>+]`, reaching arbitrarily large tape-side stacks in BF and TM2. The source
+proof does not increase the program's declared capacity as the execution grows.
+
+`Storage/CallReturn.lean` proves actual `RufSchrittG` call and return steps from `RufStartG`, retaining
+a data bit in the caller while the callee receives its negation, and restoring the caller's environment
+and continuation on return. Both functions have class `endet`, and `Akzeptiert` accepts the finite
+program. This is a checked storage primitive, **not** an unbounded stack worker or the missing TM2-to-G backend.
+
+Validation: `lake build Grammatik Grammatik.Berechenbarkeit.Audit` succeeds (2,173 jobs), auditing 88 declarations
+with standard axioms only; `gabbro_ziel` keeps exactly `propext`, `Classical.choice`, `Quot.sound`. Layout and diff checks pass.

@@ -167,6 +167,9 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   `AdmissionBoundary.lean` proves generic rejection of reachable unmeasured non-tail cycles. `TerminationCompatibility.lean` proves
   incompatibility with a complete computable halting test under an explicit reduction premise. Raw-text parsing, Gabbro storage/backend,
   admission, initialization and the universality bridge remain open. Simon confirmed: checked classes/proofs with conditional runs allowed.
+  The target is additionally bundled as finite Mathlib `FinTM2` with its regular input entry, and one fixed BF/TM2 program reaches
+  arbitrary tape depths. `Storage/CallReturn.lean` proves a real G call/return restores a retained bit (class `endet`, core-checker accepted).
+  This primitive does not solve the admission of an unbounded recursive stack service; no new storage form has been authorized or added.
 
 ## 3. Checker
 

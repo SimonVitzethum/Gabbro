@@ -5,6 +5,7 @@ import Grammatik.Berechenbarkeit.RecursionBoundary
 import Grammatik.Berechenbarkeit.AdmissionBoundary
 import Grammatik.Berechenbarkeit.TerminationCompatibility
 import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
+import Grammatik.Berechenbarkeit.Storage.CallReturn
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 #print axioms Gabbro.Grammatik.Terminierung.ExitTrace.run
@@ -81,3 +82,18 @@ import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.divergence_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.tm2_divergence_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.invalid_brackets_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.finite_initial_nonempty
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.finite_initial_reaches
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.finite_compiler_correct
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.growing_next
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.growing_reached
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.unbounded_tape_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses.unbounded_tm2_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn.callFits
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn.call_step
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn.return_step
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn.reached_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn.retained_bit_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn.terminating_classes_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn.accepted_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.Brainfuck.finiteMachine

@@ -491,6 +491,11 @@ instruction vectors; a raw-text frontend and the actual Gabbro stack/backend rem
 `TerminationCompatibility.lean` proves the no-complete-halting-test implication under an **explicit**
 effective reduction premise, not an already established Gabbro universality theorem.
 
+The next checked components bundle the target into Mathlib `FinTM2` with its standard input entry,
+show unbounded tape growth for one fixed BF/TM2 program, and prove real G call/return restoration of
+a retained data bit (`Storage/CallReturn.lean`, class `endet`, core-checker accepted). These still do
+not provide the command-serving unbounded G stack or its admission proof; see THEOREM-MAP 91.2.
+
 **Confirmed constraint (Simon, 2026-10-24):** termination classes and supplied termination proofs
 remain checked; conditional executions are allowed. No complete semantic halting decider is requested.
 

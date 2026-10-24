@@ -7,12 +7,17 @@
   compilation theorem, not yet the missing implementation of these stacks in Gabbro.
 -/
 import Grammatik.Berechenbarkeit.Brainfuck.Machine
+import Mathlib.Computability.TuringMachine.Computable
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Brainfuck
 
 inductive Stack where
   | left | right | input | output
   deriving DecidableEq
+
+instance : Fintype Stack where
+  elems := {Stack.left, Stack.right, Stack.input, Stack.output}
+  complete := by intro k; cases k <;> decide
 
 abbrev TMStatement (n : Nat) := Turing.TM2.Stmt (fun _ : Stack => Byte) (Fin (n + 1)) Byte
 abbrev TMState (n : Nat) := Turing.TM2.Cfg (fun _ : Stack => Byte) (Fin (n + 1)) Byte
@@ -53,6 +58,41 @@ def compile {n : Nat} (p : Program n) (pc : Fin (n + 1)) : TMStatement n :=
   if running : pc.val < n then
     compileInstruction (p.code.get ⟨pc.val, running⟩) (successor pc running)
   else .halt
+
+/-- The target is Mathlib's bundled finite machine: four stack names, `n+1` labels,
+    and a finite byte alphabet/local state. Storage is unbounded only in stack length. -/
+def finiteMachine {n : Nat} (p : Program n) : Turing.FinTM2 where
+  K := Stack
+  k₀ := .input
+  k₁ := .output
+  Γ := fun _ => Byte
+  Λ := Fin (n + 1)
+  main := 0
+  σ := Byte
+  initialState := 0
+  m := compile p
+
+/-- For a nonempty program, the encoding is Mathlib's standard finite-machine
+    entry: an actual input stack, empty tape/output stacks and a zero head. -/
+theorem finite_initial_nonempty {n : Nat} (p : Program (n + 1)) (input : List Byte) :
+    Turing.initList (finiteMachine p) input = encode (initial input) := by
+  simp only [Turing.initList, finiteMachine, encode, initial, label]
+  congr 1
+  funext k; cases k <;> rfl
+
+/-- Empty code needs one silent halt transition from `FinTM2.main`; every other
+    program starts directly in the encoded source state. No stacks are prepopulated
+    except the standard source input supplied by Mathlib's machine interface. -/
+theorem finite_initial_reaches {n : Nat} (p : Program n) (input : List Byte) :
+    Turing.TM2.Reaches (compile p) (Turing.initList (finiteMachine p) input) (encode (initial input)) := by
+  cases n with
+  | zero =>
+      apply Relation.ReflTransGen.single
+      change Turing.TM2.step (compile p) (Turing.initList (finiteMachine p) input) = some (encode (initial input))
+      change some ⟨none, 0, (Turing.initList (finiteMachine p) input).stk⟩ = some (encode (initial input))
+      congr 2
+      funext k; cases k <;> rfl
+  | succ n => rw [finite_initial_nonempty]; exact .refl
 
 /-- Each source command becomes genuine operations of Mathlib's TM2, with the same head,
     tape sides, remaining input and output history. There is no assumed instruction oracle. -/
@@ -191,5 +231,14 @@ theorem compiler_correct {n : Nat} (p : Program n) (input output : List Byte) :
   · rintro ⟨t, ht, hout⟩
     obtain ⟨s, hs, rfl⟩ := (Part.mem_map_iff _).mp ht
     exact ⟨s, hs, hout⟩
+
+/-- The same whole-program theorem from Mathlib's standard bundled-machine entry.
+    Output is observed without requiring unrelated tape/head data to be erased. -/
+theorem finite_compiler_correct {n : Nat} (p : Program n) (input output : List Byte) :
+    HaltsWith p input output ↔
+      ∃ t, t ∈ StateTransition.eval (Turing.TM2.step (compile p))
+        (Turing.initList (finiteMachine p) input) ∧ (t.stk .output).reverse = output := by
+  rw [StateTransition.reaches_eval (finite_initial_reaches p input)]
+  exact compiler_correct p input output
 
 end Gabbro.Grammatik.Berechenbarkeit.Brainfuck
