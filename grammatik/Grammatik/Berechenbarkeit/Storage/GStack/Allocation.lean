@@ -1,0 +1,107 @@
+import Grammatik.Berechenbarkeit.Storage.GStack.Reclaim
+
+namespace Gabbro.Grammatik.Berechenbarkeit.Storage.GStack
+
+variable {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+
+/-- A binder-producing prefix of actual G code, uniform in its continuation. -/
+abbrev Allocator (A : FreiForm D) (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) :=
+  ∀ {Λ'}, Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ' → Block D V l Γ Λ Λ'
+
+/-- An executed allocation effect, shared by fresh and recycled storage. This is
+proved from concrete G terms below; it is not an availability or callee axiom. -/
+def Allocated (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (A : FreiForm D) (allocator : Allocator A V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (value : Wert D (D.typ A.tab A.feld)) (slot : Int) : Prop :=
+  ∃ (σ' : World D) (k : Wert D (Ty.index (D.count A.tab))),
+    (∀ {Λ'} (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ'),
+      execBlock O passes R (allocator rest) σ ρ = (execBlock O passes R rest σ' (.cons k ρ)).schrumpf) ∧
+    k.n = slot ∧ A.Fremd σ σ' ∧ A.FreiOk σ' ∧
+    (∀ i, A.Lebt σ i → A.Lebt σ' i) ∧ A.Lebt σ' slot ∧ ¬ A.Lebt σ slot ∧
+    (∀ i, σ'.slots A.tab i A.feld = if i = slot then value else σ.slots A.tab i A.feld)
+
+section Execution
+
+variable (O : Orakel D) (passes : Nat)
+variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+
+theorem fresh_allocated (A : FreiForm D) (x : Var Γ (D.typ A.tab A.feld))
+    (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
+    (hwU : V.gschreibt A.zaehl = true) (hLU : gdarf D A.zaehl Λ)
+    (failure : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hf : A.FreiOk σ) (hroom : A.stand σ < D.count A.tab) :
+    Allocated O passes R A (Block.arenaAlloc A.toArenaForm (.var x) hwT hLT hwU hLU failure)
+      σ ρ (ρ.get x) (A.stand σ) := by
+  have hk : 0 ≤ A.stand σ ∧ A.stand σ ≤ D.count A.tab - 1 := ⟨A.stand_nonneg σ, by omega⟩
+  have hprefix : ∃ (σp : World D) (k : Wert D (Ty.index (D.count A.tab))),
+      (∀ {Λ'} (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ'),
+        execBlock O passes R (Block.arenaAlloc A.toArenaForm (.var x) hwT hLT hwU hLU failure rest) σ ρ =
+          (execBlock O passes R rest σp (.cons k ρ)).schrumpf) ∧
+      k.n = A.stand σ ∧ (∀ i, σp.slots A.tab i A.feld =
+        if i = A.stand σ then ρ.get x else σ.slots A.tab i A.feld) := by
+    refine ⟨?world, ⟨A.stand σ, hk.1, hk.2⟩, ?execution, rfl, ?payload⟩
+    case execution =>
+      intro Λ' rest
+      rw [arenaAlloc_unter_schranke O passes R A.toArenaForm (.var x) hwT hLT hwU hLU failure rest σ ρ hroom]
+      rfl
+    case payload =>
+      intro i
+      simp [eval, Block.arenaBump, Expr.weaken, Expr.ins, Var.ins, Env.get_cons_here, Env.get_cons_there, FreiForm.kopfSt,
+        World.schreibSlot, World.merke, World.storeSlot, World.lese] <;> rfl
+  obtain ⟨σp, k, hexec, hkn, hbytes⟩ := hprefix
+  obtain ⟨σm, km, hm, hkm, hframe, hf', hlive, hnew⟩ :=
+    frischAlloc_ausfuehren O passes R A (.var x) hwT hLT hwU hLU failure (.nil) σ ρ hroom hf
+  have hworld : σm = σp := by
+    have he := hexec (.nil)
+    rw [hm] at he
+    change (Ausgang.ok σm ρ : Ausgang V l Γ) = .ok σp ρ at he
+    cases he; rfl
+  subst σm
+  refine ⟨σp, k, hexec, hkn, hframe, hf', hlive, ?_, ?_, hbytes⟩
+  · simpa only [hkm] using hnew
+  · intro hn
+    have := hn.2.1
+    omega
+
+theorem reused_allocated (A : FreiForm D) (x : Var Γ (D.typ A.tab A.feld))
+    (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
+    (hwF : V.gschreibt A.kopf = true) (hLF : gdarf D A.kopf Λ)
+    (failure : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hf : A.FreiOk σ) (hroom : A.kopfSt σ < D.count A.tab) :
+    Allocated O passes R A (Block.freiNimm A (.var x) hwT hLT hwF hLF failure)
+      σ ρ (ρ.get x) (A.kopfSt σ) := by
+  have hk : 0 ≤ A.kopfSt σ ∧ A.kopfSt σ ≤ D.count A.tab - 1 := ⟨A.kopfSt_nonneg σ, by omega⟩
+  have hprefix : ∃ (σp : World D) (k : Wert D (Ty.index (D.count A.tab))),
+      (∀ {Λ'} (rest : Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ'),
+        execBlock O passes R (Block.freiNimm A (.var x) hwT hLT hwF hLF failure rest) σ ρ =
+          (execBlock O passes R rest σp (.cons k ρ)).schrumpf) ∧
+      k.n = A.kopfSt σ ∧ (∀ i, σp.slots A.tab i A.feld =
+        if i = A.kopfSt σ then ρ.get x else σ.slots A.tab i A.feld) := by
+    refine ⟨?world, ⟨A.kopfSt σ, hk.1, hk.2⟩, ?execution, rfl, ?payload⟩
+    case execution =>
+      intro Λ' rest
+      simp only [Block.freiNimm, execBlock, eval_umTyp, orte_umTyp, eval, Expr.orte, World.globs_lese]
+      rw [dite_eq_left (by exact hk)]
+      rfl
+    case payload =>
+      intro i
+      simp [eval, Expr.weaken, Expr.ins, Var.ins, Env.get_cons_here, Env.get_cons_there, FreiForm.kopfSt,
+        World.schreibSlot, World.merke, World.storeSlot, World.lese] <;> rfl
+  obtain ⟨σp, k, hexec, hkn, hbytes⟩ := hprefix
+  obtain ⟨σm, km, hm, hkm, hframe, hf', hlive, hnew, honfree⟩ :=
+    nimmAlloc_ausfuehren O passes R A (.var x) hwT hLT hwF hLF failure (.nil) σ ρ hroom hf
+  have hworld : σm = σp := by
+    have he := hexec (.nil)
+    rw [hm] at he
+    change (Ausgang.ok σm ρ : Ausgang V l Γ) = .ok σp ρ at he
+    cases he; rfl
+  subst σm
+  refine ⟨σp, k, hexec, hkn, hframe, hf', hlive, ?_, ?_, hbytes⟩
+  · simpa only [hkm] using hnew
+  · intro hn
+    exact hn.2.2 (by simpa only [hkm] using honfree)
+
+end Execution
+
+end Gabbro.Grammatik.Berechenbarkeit.Storage.GStack

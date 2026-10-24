@@ -37,6 +37,10 @@ name = "gen-zellen-sammeln"
 root = "Grammatik.Gen.Abdeckung.ZellenSammeln"
 
 [[lean_exe]]
+name = "rundprobe"
+root = "Grammatik.Gen.RundProbe"
+
+[[lean_exe]]
 name = "gen-fein"
 root = "Grammatik.Gen.Fein.Lauf"
 
