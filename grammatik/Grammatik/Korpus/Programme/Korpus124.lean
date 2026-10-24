@@ -579,7 +579,7 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 /-- **`beispiele/124` as ONE declaration**: code `kP`, lock invariant `kSI`,
     no axiom, declared starts `hauptA` and `hauptB` (no parameters), initial
     memory all zero. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kHauptA, .nil⟩, ⟨kHauptB, .nil⟩], kSp, []⟩
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kHauptA, .nil⟩, ⟨kHauptB, .nil⟩], kSp, [], []⟩
 
 theorem kE_nutzerPflicht : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,

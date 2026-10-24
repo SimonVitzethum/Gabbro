@@ -1,15 +1,13 @@
 import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
+import Grammatik.Zielsatz.Atomar.AtomarZiel
 
-/-! **The ownership leg on the goal's own runs.** Under the goal statement's
-premises -- the checker accepts the unit (a), the start obligations of the
-user (b), the hardware (c), the runtime (d) -- and the ownership acceptance
-of an arena (its executable check, plain allocator words, an empty arena in
-the declared start memory, start routines handed no allocation), ownership
-holds on every thread machine over GX that `GabbroZiel` speaks about. The
-thread facts the rely needs are derived from (a) and (d); nothing is added
-to the user's obligation and nothing is assumed of RAM or hardware. -/
+/-! **What the ownership leg of `GabbroZiel` needs, from the goal's premises.**
+The thread facts the rely needs (`ThreadFacts`) come from the checker's facts
+(a) and the admissible start; what the start owes every arena (`StartOwn`)
+comes from the checker's `BesitzStart` and the runtime (d). Nothing is added
+to the user's obligation and nothing is assumed of RAM or hardware. The leg
+itself is `ZielFX.besitz`, proved in `zielFX_aus`. -/
 
 namespace Gabbro.Grammatik.ArenaOwnership.Ruhe
 
@@ -20,8 +18,8 @@ variable {D : Deklaration}
 /-! ## 1. The thread facts from the checker and the runtime -/
 
 def threadFacts_of [DecidableEq D.Fn] {P : Programm D} {S : SperrInv D} {A : FreiForm D} {fs ws : List D.Fn}
-    {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
-    (hA : AkzeptiertSpecX P S fs ws) (hZ : StartZulaessig P S fs ws sp init) (hp : ArenaPlain A) :
+    {B : List (ArenaIface D)} {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
+    (hA : AkzeptiertSpecX P S fs ws B) (hZ : StartZulaessig P S fs ws sp init) (hp : ArenaPlain A) :
     ThreadFacts P A fs init := by
   have hLeer : ∀ t, D.haelt (init t).1 = [] := fun t => by
     rcases hZ.wurzel t with h | h
@@ -35,21 +33,7 @@ def threadFacts_of [DecidableEq D.Fn] {P : Programm D} {S : SperrInv D} {A : Fre
     · exact plain_zaehl hp
   exact schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn _ hB hAt)
 
-/-! ## 2. The ownership acceptance of the start -/
-
-/-- **The declared start memory holds an empty arena**: nothing used, the list empty. -/
-def ArenaLeer (A : FreiForm D) (sp0 : Speicher D) : Prop :=
-  A.stand (sp0.welt []) = 0 ∧ A.kopfSt (sp0.welt []) = D.count A.tab
-
-instance (A : FreiForm D) (sp0 : Speicher D) : Decidable (ArenaLeer A sp0) :=
-  inferInstanceAs (Decidable (_ ∧ _))
-
-/-- **No start routine is handed an allocation**: every parameter of a declared start is plain. -/
-def StartPlain {A : FreiForm D} (I : Interfaces A) (E : Einheit D) : Prop :=
-  ∀ a ∈ E.starts ++ E.gestartet, (modeList (I a.1).parameters).all Option.isNone = true
-
-instance {A : FreiForm D} (I : Interfaces A) (E : Einheit D) : Decidable (StartPlain I E) :=
-  inferInstanceAs (Decidable (∀ a ∈ _, _))
+/-! ## 2. The ownership start -/
 
 theorem umTyp_valR {τ : Ty} {a b : Int} (h : τ = .int a b) (h' : tyR τ = .int a b) (v : Wert D τ) :
     (Wert.umTyp (D := D.mitRuhe) h' (show Wert D.mitRuhe (tyR τ) from valR τ v)).n = (Wert.umTyp h v).n := by
@@ -94,7 +78,8 @@ theorem requires_plain {A : FreiForm D} {f : D.Fn} (I : Flow.Interface A f)
 /-- **The start owes the arena what `StartOwn` asks**, from the declared start memory and starts. -/
 theorem startOwn_of [DecidableEq D.Fn] {E : Einheit D} {A : FreiForm D} {I : Interfaces A}
     {sp : Speicher D.mitRuhe} {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
-    (hL : Laufzeit E sp init) (hleer : ArenaLeer A E.sp0) (hstart : StartPlain I E) :
+    (hL : Laufzeit E sp init) (hleer : ArenaLeer A E.sp0)
+    (hstart : ∀ r ∈ E.starts ++ E.gestartet, (modeList (I r.1).parameters).all Option.isNone = true) :
     StartOwn (liftA A) (liftI I) sp init := by
   obtain ⟨hs, hk⟩ := arenaLeer_lift hleer
   rw [← hL.lader] at hs hk
@@ -107,30 +92,16 @@ theorem startOwn_of [DecidableEq D.Fn] {E : Einheit D} {A : FreiForm D} {I : Int
     show (modeList (modesR (I a.1).parameters)).all Option.isNone = true
     rw [modeList_modesR]; exact hstart a ha
 
-/-! ## 3. The leg -/
+/-- **Every arena of the unit, lifted, owes its start**, from the checker's `BesitzStart` and (d). -/
+theorem startOwn_arenen [DecidableEq D.Fn] {E : Einheit D} {sp : Speicher D.mitRuhe}
+    {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
+    (hL : Laufzeit E sp init) (hB : BesitzStart E) :
+    ∀ a ∈ E.arenen.map (·.mitRuhe), StartOwn a.A a.I sp init := by
+  intro a' ha'
+  obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
+  exact startOwn_of hL (hB.leer a ha) (hB.start a ha)
 
-/-- **Ownership on the goal's runs.** Every machine of every thread-machine run over GX from the
-    runtime's start -- the runs `GabbroZiel` speaks about -- satisfies the ownership invariant of
-    the arena, lifted to the program with its idle root. -/
-theorem ownership_goal_gx (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
-    (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflichtA E)
-    (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
-    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
-    (a : ArenaIface D) (hacc : checkProgram E.P a.A a.I fs.1 = true) (hp : ArenaPlain a.A)
-    (hleer : ArenaLeer a.A E.sp0) (hstart : StartPlain a.I E)
-    (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe)
-    (hK : FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
-      (FadenStart E.P.mitRuhe sp init lebt0) K) :
-    OwnInv (liftA a.A) (liftI a.I) K.m := by
-  have hA0 := C.korrekt E fs ls cs hC
-  have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
-  have hZ := startZulaessig_aus E fs.1 hN.start hL
-  have hp' : ArenaPlain (liftA a.A) := hp
-  exact ownInv_reachGX (hardware_mitRuhe hH).1 (checked_mitRuhe (checkProgram_sound fs.2 hacc))
-    (fsRuhe_voll fs.2) (threadFacts_of hA hZ hp') (startOwn_of hL hleer hstart) hp'
-    (fun c hc => hc.1.1) (fadenErreichbarX_GX hK)
-
-#print axioms ownership_goal_gx
+#print axioms threadFacts_of
+#print axioms startOwn_arenen
 
 end Gabbro.Grammatik.ArenaOwnership.Ruhe

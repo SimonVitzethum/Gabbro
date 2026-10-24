@@ -17,6 +17,15 @@ variable {D : Deklaration}
 /-- **The arena's allocator words are plain**: no weak-memory answer reaches them. -/
 def ArenaPlain (A : FreiForm D) : Prop := D.atomar A.kopf = false ∧ D.atomar A.zaehl = false
 
+instance (A : FreiForm D) : Decidable (ArenaPlain A) := inferInstanceAs (Decidable (_ ∧ _))
+
+/-- **The declared start memory holds an empty arena**: nothing used, the list empty. -/
+def ArenaLeer (A : FreiForm D) (sp0 : Speicher D) : Prop :=
+  A.stand (sp0.welt []) = 0 ∧ A.kopfSt (sp0.welt []) = D.count A.tab
+
+instance (A : FreiForm D) (sp0 : Speicher D) : Decidable (ArenaLeer A sp0) :=
+  inferInstanceAs (Decidable (_ ∧ _))
+
 /-- What the rely and the start need of the program and its threads. -/
 structure ThreadFacts (P : Programm D) (A : FreiForm D) (fs : List D.Fn)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) where

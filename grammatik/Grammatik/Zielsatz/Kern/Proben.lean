@@ -189,7 +189,7 @@ theorem akP3_ohne_starts :
     Akzeptiert akP3 akS akFs [()] akCs [] = true ∧
     ∀ (sp : Speicher akD.mitRuhe)
       (init : Faden → Σ f : akD.mitRuhe.Fn, Env akD.mitRuhe (akD.mitRuhe.params f)),
-      Laufzeit ⟨akP3, akS, axWahr akD, [], akSp, []⟩ sp init → ∀ t, (init t).1 = none :=
+      Laufzeit ⟨akP3, akS, axWahr akD, [], akSp, [], []⟩ sp init → ∀ t, (init t).1 = none :=
   ⟨by decide, fun _ _ hL t => laufzeit_ohne_starts rfl rfl hL t⟩
 
 /-! ## 4. The two-thread program -/

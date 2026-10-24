@@ -1,4 +1,5 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Goal
+import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
+import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
 
 /-! **The ownership checks across the idle root.** The goal statement runs the
 program `P.mitRuhe`: the same syntax with the idle root added, types shifted

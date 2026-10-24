@@ -263,6 +263,10 @@ theorem checked_mitRuhe {P : Programm D} {A : FreiForm D} {I : Interfaces A} (hc
   | none => .ret _ _ rfl
   | some f => oe_um _ (oe_pre (parameterContext_modesR _) (oe_lift (hc f)))
 
+/-- **An arena with its interfaces, as one of the program with its idle root.** -/
+def _root_.Gabbro.Grammatik.ArenaOwnership.Body.ArenaIface.mitRuhe (a : ArenaIface D) : ArenaIface D.mitRuhe :=
+  ⟨liftA a.A, liftI a.I⟩
+
 #print axioms checked_mitRuhe
 
 end Gabbro.Grammatik.ArenaOwnership.Ruhe

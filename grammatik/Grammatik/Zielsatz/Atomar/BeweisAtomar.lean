@@ -17,6 +17,7 @@ import Grammatik.Zielsatz.Atomar.AtomarZiel
 import Grammatik.Speichermodell.Maschine.GXMaschine
 import Grammatik.Zielsatz.Faeden.Verbund
 import Grammatik.Logik.Fortschritt.Hungerfrei
+import Grammatik.Bausteine.Arena.Ownership.Ruhe.Start
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -197,8 +198,8 @@ variable [DecidableEq D.Fn]
     user's logic with the rely, (c) the hardware assumptions and an admissible start. -/
 theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
-    (hA : AkzeptiertSpecX P S fs ws) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
-    (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws))
+    (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (M : RufMaschineG D)
     (hX : RufErreichbarGX P O passes (GeteiltV P ws) (RufStartG P sp init) M) :
@@ -325,12 +326,13 @@ theorem budget_unecht {M : RufMaschineG D} {t : Faden} (hF : FortschrittG P O (p
 /-- **Every leg of `ZielFX` on every thread machine over GX.** -/
 theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
-    (hA : AkzeptiertSpecX P S fs ws) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
-    (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws))
+    (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
+    (hS : ∀ a ∈ B, ArenaOwnership.Machine.StartOwn a.A a.I sp init)
     (lebt0 : Faden → Bool) (K : FadenMaschine D)
     (hK : FadenErreichbarX P O passes (GeteiltV P ws) (FadenStart P sp init lebt0) K) :
-    ZielFX P S O passes (GeteiltV P ws) (RufStartG P sp init) K := by
+    ZielFX P S O passes (GeteiltV P ws) (RufStartG P sp init) B K := by
   have hLeer : ∀ t, D.haelt (init t).1 = [] := fun t => by
     rcases hZ.wurzel t with h | h
     · exact (hA.wurzeln _ h).1
@@ -360,7 +362,10 @@ theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.
     budgetUnecht := fun t hB => by
       have hK1 := fadenInvX_erreichbar (fadenErreichbarX_budget 1 hK)
       exact budget_unecht (zielX_aus P S Q hvoll hls ws hA hN O hH (passes + 1) sp init hZ _
-        hK1.lauf).fortschritt hB }
+        hK1.lauf).fortschritt hB
+    besitz := fun a ha => ArenaOwnership.Machine.ownInv_reachGX hH.1 (hA.besitz a ha) hvoll
+      (ArenaOwnership.Ruhe.threadFacts_of hA hZ (hA.worte a ha)) (hS a ha) (hA.worte a ha)
+      (fun c hc => hc.1.1) (fadenErreichbarX_GX hK) }
 
 end Aus
 
@@ -399,7 +404,7 @@ end Ruhe
 /-- **GABBRO_ZIEL WITH THE ATOMIC RELY, PROVED.** -/
 theorem gabbro_ziel : GabbroZiel := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
-  have hA0 := C.korrekt E fs ls cs hC
+  obtain ⟨hA0, hBS⟩ := C.korrekt E fs ls cs hC
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have heq := geteiltV_mitRuhe_eq E.P (ws := E.ws) fs.2 hA0.abg
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
@@ -412,7 +417,7 @@ theorem gabbro_ziel : GabbroZiel := by
       h.2⟩
   have h := zielFX_aus E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q) (fsRuhe_voll fs.2) ls.2
     (wsRuhe E.ws) hA hN' O.mitRuhe (hardware_mitRuhe hH) passes sp init
-    (startZulaessig_aus E fs.1 hN.start hL) lebt0 K (heq ▸ hK)
+    (startZulaessig_aus E fs.1 hN.start hL) (ArenaOwnership.Ruhe.startOwn_arenen hL hBS) lebt0 K (heq ▸ hK)
   exact heq ▸ h
 
 /-- **GABBRO_ZIEL_LEBEN, PROVED.** The reduction to `P.mitRuhe` as for `gabbro_ziel`; every machine of the run is
@@ -420,7 +425,7 @@ theorem gabbro_ziel : GabbroZiel := by
     `hungerfrei` applies. -/
 theorem gabbro_ziel_leben : GabbroZielLeben := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL R hR0 hFair n t L hSp
-  have hA0 := C.korrekt E fs ls cs hC
+  have hA0 := (C.korrekt E fs ls cs hC).1
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
       (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
@@ -510,7 +515,7 @@ theorem ziel_of_X (hT : ∀ c, ¬ Tg c) {M0 M : RufMaschineG D}
 
 /-- **With no shared atomic, `ZielFX` is `ZielF`.** -/
 theorem zielF_of_X (hT : ∀ c, ¬ Tg c) {M0 : RufMaschineG D} {K : FadenMaschine D}
-    (h : ZielFX P S O passes Tg M0 K) : ZielF P S O passes M0 K where
+    {B : List (ArenaOwnership.Body.ArenaIface D)} (h : ZielFX P S O passes Tg M0 B K) : ZielF P S O passes M0 K where
   g := ziel_of_X hT h.g
   schlafendUnberuehrt := h.schlafendUnberuehrt
   schlafendFrei := h.schlafendFrei
@@ -554,11 +559,19 @@ end Einbettung
     (`Pruefer.alsX`), on every unit it accepts (b) and (b) with the rely coincide
     (`nutzerPflichtA_of_akzeptiert`), every thread-machine run over G is one over GX
     (`fadenErreichbarX_of`), and such a unit has no admitted shared atomic (`geteiltV_leer`), so
-    `ZielFX` there is `ZielF` (`zielF_of_X`). -/
-theorem gabbro_ziel_sc_aus (h : GabbroZiel) : GabbroZielSC := by
-  intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
+    `ZielFX` there is `ZielF` (`zielF_of_X`). Since 2026-10-24 for every unit of before: one
+    without an arena (`hB`); `Pruefer.alsX` adds the ownership acceptance, which such a unit passes.
+    On a unit WITH an arena the statement of before is `gabbro_ziel_sc` (proved directly). -/
+theorem gabbro_ziel_sc_aus (h : GabbroZiel) (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn]
+    (E : Einheit D) (hB : E.arenen = []) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
+    (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflicht E)
+    (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
+    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
+    (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe)
+    (hK : FadenErreichbar E.P.mitRuhe O.mitRuhe passes (FadenStart E.P.mitRuhe sp init lebt0) K) :
+    ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K := by
   have hA0 := C.korrekt E fs ls cs hC
-  have hZ := h C.alsX D E fs ls cs hC (nutzerPflichtA_of_akzeptiert fs.2 hA0 hN) O hH passes sp
+  have hZ := h C.alsX D E fs ls cs (C.alsX_akzeptiert hB hC) (nutzerPflichtA_of_akzeptiert fs.2 hA0 hN) O hH passes sp
     init hL lebt0 K (fadenErreichbarX_of hK)
   refine zielF_of_X ?_ hZ
   exact fun c => geteiltV_leer fs.2 hA0 c
@@ -574,7 +587,8 @@ variable [DecidableEq D.Fn] {E₁ E₂ : Einheit D} {e : D.Fn → Bool}
     thread-local over the composed hulls -- shared atomics included -- so the linked footprints
     need no rely. The per-body components are each unit's own. -/
 theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hA₁ : AkzeptiertSpecX E₁.P E₁.S fs E₁.ws) (hA₂ : AkzeptiertSpecX E₂.P E₂.S fs E₂.ws)
+    {B₁ B₂ : List (ArenaOwnership.Body.ArenaIface D)} (hA₁ : AkzeptiertSpecX E₁.P E₁.S fs E₁.ws B₁)
+    (hA₂ : AkzeptiertSpecX E₂.P E₂.S fs E₂.ws B₂)
     (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs e E₁ E₂) :
     AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws := by
   have hH := huelle_of_reach (e := e) (E₁ := E₁) (E₂ := E₂) hvoll hS.keinRueckruf
@@ -671,21 +685,35 @@ end Verbund
 /-- **LINKING WITH THE ATOMIC RELY, PROVED.** -/
 theorem gabbro_ziel_verbund : GabbroZielVerbund := by
   intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
-  have hA := akzeptiertSpec_verbindeX fs.2 (C.korrekt E₁ fs ls cs h₁) (C.korrekt E₂ fs ls cs h₂)
+  have hA := akzeptiertSpec_verbindeX fs.2 (C.korrekt E₁ fs ls cs h₁).1 (C.korrekt E₂ fs ls cs h₂).1
     hV hS
-  have hB : akzeptiertX_pruefer.akzeptiert (verbinde e E₁ E₂) fs.1 ls.1 cs.1 = true :=
-    akzeptiertX_of_akzeptiert ((akzeptiert_iff fs.2 ls.2 cs.2).mpr hA)
-  exact gabbro_ziel akzeptiertX_pruefer D (verbinde e E₁ E₂) fs ls cs hB
-    (nutzerPflichtA_of_akzeptiert fs.2 hA
-      (nutzerPflicht_verbinde hV hQ (nutzerTeil_of_A hN₁) (nutzerTeil_of_A hN₂)))
-    O hH passes sp init hL lebt0 K hK
+  -- the linked unit without its arenas: the linked statement claims no ownership
+  let E : Einheit D := { verbinde e E₁ E₂ with arenen := [] }
+  have hB : akzeptiertX_pruefer.akzeptiert E fs.1 ls.1 cs.1 = true :=
+    (Bool.and_eq_true _ _).mpr
+      ⟨akzeptiertX_of_akzeptiert ((akzeptiert_iff fs.2 ls.2 cs.2).mpr hA), besitzB_leer rfl⟩
+  have hN : NutzerPflichtA (verbinde e E₁ E₂) := nutzerPflichtA_of_akzeptiert fs.2 hA
+    (nutzerPflicht_verbinde hV hQ (nutzerTeil_of_A hN₁) (nutzerTeil_of_A hN₂))
+  exact gabbro_ziel akzeptiertX_pruefer D E fs ls cs hB ⟨hN.logik, ⟨hN.start.sperren, hN.start.req⟩⟩
+    O hH passes sp init ⟨hL.lader, hL.start, hL.einmal⟩ lebt0 K hK
 
-/-- **THE LINKED STATEMENT OF BEFORE, DERIVED.** -/
-theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) : GabbroZielVerbundSC := by
-  intro C D _ E₁ E₂ e fs ls cs h₁ h₂ hV hS hN₁ hN₂ hQ O hH passes sp init hL lebt0 K hK
+/-- **THE LINKED STATEMENT OF BEFORE, DERIVED**, for two units of before (no arena, `hB₁`, `hB₂`). -/
+theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : Deklaration)
+    [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (hB₁ : E₁.arenen = []) (hB₂ : E₂.arenen = []) (e : D.Fn → Bool)
+    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (h₁ : C.akzeptiert E₁ fs.1 ls.1 cs.1 = true) (h₂ : C.akzeptiert E₂ fs.1 ls.1 cs.1 = true)
+    (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs.1 e E₁ E₂) (hN₁ : NutzerTeil e E₁)
+    (hN₂ : NutzerTeil (fun f => !e f) E₂) (hQ : E₂.Q = E₁.Q) (O : Orakel D) (hH : HardwareAnnahmen O E₁.Q)
+    (passes : Nat) (sp : Speicher D.mitRuhe)
+    (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f))
+    (hL : Laufzeit (verbinde e E₁ E₂) sp init) (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe)
+    (hK : FadenErreichbar (verbinde e E₁ E₂).P.mitRuhe O.mitRuhe passes
+      (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K) :
+    ZielF (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
+      (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K := by
   have hA₁ := C.korrekt E₁ fs ls cs h₁
   have hA₂ := C.korrekt E₂ fs ls cs h₂
-  have hZ := h C.alsX D E₁ E₂ e fs ls cs h₁ h₂ hV hS (nutzerTeilA_of fs.2 hA₁ hN₁)
+  have hZ := h C.alsX D E₁ E₂ e fs ls cs (C.alsX_akzeptiert hB₁ h₁) (C.alsX_akzeptiert hB₂ h₂) hV hS (nutzerTeilA_of fs.2 hA₁ hN₁)
     (nutzerTeilA_of fs.2 hA₂ hN₂) hQ O hH passes sp init hL lebt0 K (fadenErreichbarX_of hK)
   refine zielF_of_X ?_ hZ
   exact fun c => geteiltV_leer fs.2 (akzeptiertSpec_verbinde fs.2 hA₁ hA₂ hV hS) c

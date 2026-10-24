@@ -1,5 +1,5 @@
 import Grammatik.Bausteine.Arena.Ownership.Body.Check.Sound
-import Grammatik.Bausteine.Arena.Ownership.Body.Witness
+import Grammatik.Bausteine.Arena.Ownership.Body.Program
 
 /-! **The executable check of a whole program**: every body of the
 enumeration passes the check from its parameter context. A passing program
@@ -10,6 +10,11 @@ namespace Gabbro.Grammatik.ArenaOwnership.Body
 open Source
 
 variable {D : Deklaration}
+
+/-- An arena of the unit with the ownership interfaces of its functions. -/
+structure ArenaIface (D : Deklaration) where
+  A : FreiForm D
+  I : Interfaces A
 
 /-- **The check of a program** against an interface table, over an enumeration of its functions. -/
 def checkProgram (P : Programm D) (A : FreiForm D) (I : Interfaces A) (fs : List D.Fn) : Bool :=
@@ -32,13 +37,6 @@ theorem checkProgram_calls {P : Programm D} {A : FreiForm D} {I : Interfaces A} 
     ∀ n, Respects A I.contracts (rufAt P O passes n) :=
   checked_calls (checkProgram_sound hvoll h) hO passes
 
-/-- The witness program passes the executable check, decided by the kernel. -/
-theorem witness_passes : checkProgram Witness.P Witness.A Witness.I [true, false] = true := by decide
-
-theorem witness_checked : Checked Witness.P Witness.A Witness.I :=
-  checkProgram_sound (fun f => by cases f <;> simp) witness_passes
-
 #print axioms checkProgram_sound
-#print axioms witness_checked
 
 end Gabbro.Grammatik.ArenaOwnership.Body

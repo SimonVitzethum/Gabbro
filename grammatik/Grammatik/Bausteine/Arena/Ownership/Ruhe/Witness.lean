@@ -1,14 +1,17 @@
-import Grammatik.Bausteine.Arena.Ownership.Ruhe.Goal
+import Grammatik.Zielsatz.Atomar.BeweisAtomar
+import Grammatik.Bausteine.Arena.Ownership.Body.Witness
 import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
 
-/-! **A witness of the ownership leg on the goal's runs.** One function on the
+/-! **A witness of the ownership leg of `GabbroZiel`.** One function on the
 four-slot arena `FA` allocates from the counter, stores a payload, releases
-the allocation and returns. The concrete checker of the goal accepts the
-unit, the user's obligation holds, the oracle meets the hardware
-assumptions, the declared start memory holds an empty arena, and the
-executable ownership check accepts the program: every premise of
-`ownership_goal_gx` is discharged. The function's actual run executes both
-allocator forms. -/
+the allocation and returns; the unit declares the arena with its interfaces.
+The concrete checker of the goal accepts the unit -- its ownership acceptance
+included: the bodies pass the ownership check, the allocator words are plain,
+the declared start memory holds an empty arena, the start is handed no
+allocation -- the user's obligation holds and the oracle meets the hardware
+assumptions: every premise of `gabbro_ziel` is discharged, and its leg
+`besitz` holds on every thread-machine run over GX. The function's actual run
+executes both allocator forms. -/
 
 namespace Gabbro.Grammatik.ArenaOwnership.Ruhe.GoalWitness
 
@@ -58,6 +61,7 @@ def E : Einheit FD where
   Q := axWahr FD
   starts := [⟨(), .nil⟩]
   sp0 := sp0
+  arenen := [⟨FA, I⟩]
 
 def fs : List FD.Fn := [()]
 def cs : List (FD.Tab ⊕ FD.Glob) := [.inl (), .inr 0, .inr 1, .inr 2, .inr 3]
@@ -70,7 +74,7 @@ theorem cs_voll : ∀ c : FD.Tab ⊕ FD.Glob, c ∈ cs := by
   · cases t; simp [cs]
   · revert g; decide
 
-/-- (a) The goal's concrete checker accepts the unit. -/
+/-- (a) The goal's concrete checker accepts the unit, its arena included. -/
 theorem check : akzeptiertX_pruefer.akzeptiert E fs [] cs = true := by decide
 
 /-- The executable ownership check accepts the program. -/
@@ -110,21 +114,21 @@ theorem nutzer : NutzerPflichtA E := by
   · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ r _
     exact r.elim0
 
-/-- **The witness**: every premise of the ownership leg holds on this unit, so ownership holds on every
-    thread-machine run over GX of its runtime start. -/
-theorem ownership_goal_gx_zeuge (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine FD.mitRuhe)
+/-- **The witness**: every premise of `gabbro_ziel` holds on this unit, so its leg `besitz` -- ownership of
+    the arena -- holds on every thread-machine run over GX of its runtime start. -/
+theorem besitz_zeuge (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine FD.mitRuhe)
     (hK : FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := FD) E.P E.ws)
       (FadenStart E.P.mitRuhe (speicherR E.sp0) (initRuhe E.starts) lebt0) K) :
     OwnInv (liftA FA) (liftI I) K.m :=
-  ownership_goal_gx akzeptiertX_pruefer FD E ⟨fs, fs_voll⟩ ⟨[], ls_voll⟩ ⟨cs, cs_voll⟩ check nutzer O hardware
-    passes _ _ (laufzeit_voll E) ⟨FA, I⟩ owner_check ⟨rfl, rfl⟩ ⟨rfl, rfl⟩ (by decide) lebt0 K hK
+  (gabbro_ziel akzeptiertX_pruefer FD E ⟨fs, fs_voll⟩ ⟨[], ls_voll⟩ ⟨cs, cs_voll⟩ check nutzer O hardware
+    passes _ _ (laufzeit_voll E) lebt0 K hK).besitz _ (List.Mem.head _)
 
 /-- Non-degenerate: the function's actual run allocates slot `0` and puts it back on the list. -/
 theorem actual_run (O' : Orakel FD) (passes : Nat) :
     ∃ σ', rufAt P O' passes 1 () (sp0.welt []) .nil = .ok σ' () ∧ FA.stand σ' = 1 ∧ FA.kopfSt σ' = 0 :=
   ⟨_, rfl, rfl, rfl⟩
 
-#print axioms ownership_goal_gx_zeuge
+#print axioms besitz_zeuge
 #print axioms actual_run
 
 end Gabbro.Grammatik.ArenaOwnership.Ruhe.GoalWitness

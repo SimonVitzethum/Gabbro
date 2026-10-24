@@ -71,10 +71,10 @@ def vzBib : Programm zD := mitRumpf zPB fun
   | .wrap => zRumpfWrap
 
 /-- The app: `concurrent { haupt, haupt }`. -/
-def vzE1 : Einheit zD := ⟨vzApp, zS, axWahr zD, [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩], zSp, []⟩
+def vzE1 : Einheit zD := ⟨vzApp, zS, axWahr zD, [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩], zSp, [], []⟩
 
 /-- The library: no thread of its own. -/
-def vzE2 : Einheit zD := ⟨vzBib, zS, axWahr zD, [], zSp, []⟩
+def vzE2 : Einheit zD := ⟨vzBib, zS, axWahr zD, [], zSp, [], []⟩
 
 /-- Each unit is accepted ALONE by the concrete checker. -/
 theorem vz_app_akzeptiert :
@@ -197,7 +197,7 @@ def vmBib : Programm mD := mitRumpf mP fun
   | .ruhe => .ret .empty List.Perm.nil
 
 /-- The library as a unit: no thread of its own. -/
-def vmE2 : Einheit mD := ⟨vmBib, mSI, axWahr mD, [], mSp, []⟩
+def vmE2 : Einheit mD := ⟨vmBib, mSI, axWahr mD, [], mSp, [], []⟩
 
 /-- **Refused at the link, although each unit alone is accepted.** The app is the two-thread
     fixture `mE` (`hauptA` calls the imported `pruefeA`, `hauptB` writes `privB`); its
@@ -232,7 +232,7 @@ def vzBibSchwach : Programm zD := mitRumpf zP fun
   | .lies => zRumpfLies
   | .wrap => zRumpfWrap
 
-def vzE2Schwach : Einheit zD := ⟨vzBibSchwach, zS, axWahr zD, [], zSp, []⟩
+def vzE2Schwach : Einheit zD := ⟨vzBibSchwach, zS, axWahr zD, [], zSp, [], []⟩
 
 /-- **The contract is too weak: the link is refused.** The app relies on the imported
     `wrap`'s `ensures konto[0] == 100`; the library promises `ensures true`. The library alone

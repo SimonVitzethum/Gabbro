@@ -363,11 +363,11 @@ variable [DecidableEq D.Fn]
 /-- **Linking is conservative**: a unit linked with a partner that owns nothing and starts
     nothing IS the unit. The statement `GabbroZiel` is unchanged by this diff; this lemma says
     the new operation does not move a single unit either. -/
-theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestartet = []) :
-    verbinde (fun _ => true) E E' = E := by
+theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestartet = [])
+    (h3 : E'.arenen = []) : verbinde (fun _ => true) E E' = E := by
   cases E
   unfold verbinde verbindeP mitRumpf
-  rw [h1, h2, List.append_nil, List.append_nil]
+  rw [h1, h2, h3, List.append_nil, List.append_nil, List.append_nil]
   rfl
 
 /-- **The linked unit is accepted by the concrete checker** -- so it can be linked again: a

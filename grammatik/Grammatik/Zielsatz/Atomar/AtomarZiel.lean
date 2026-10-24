@@ -103,8 +103,9 @@ theorem fussSX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs
         exact h3.imp id (lokW_mitRuhe P hvoll hAbg)
 
 /-- **Transfer of the checker's facts with the rely to `P.mitRuhe`.** -/
-theorem akzeptiertSpecX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpecX P S fs ws) :
-    AkzeptiertSpecX P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) where
+theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hA : AkzeptiertSpecX P S fs ws B) :
+    AkzeptiertSpecX P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) (B.map (·.mitRuhe)) where
   frag := frag_mitRuhe P hA.frag
   abg := abg_mitRuhe P hvoll hA.abg
   fuss := fussSX_mitRuhe P hvoll hA.abg hA.fuss
@@ -126,18 +127,70 @@ theorem akzeptiertSpecX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptier
         obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hA.abg hf'
         rw [rumpf_mitRuhe_mE]
         exact hA.masken w hw f hf
+  besitz a' ha' := by
+    obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
+    exact ArenaOwnership.Ruhe.checked_mitRuhe (hA.besitz a ha)
+  worte a' ha' := by
+    obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
+    exact hA.worte a ha
 
 end Transfer
 
+/-! ## The ownership acceptance (2026-10-24) -/
+
+section Besitz
+
+open ArenaOwnership
+
+/-- **The ownership acceptance of a unit, decided**: for every arena, every body passes the
+    ownership check, the allocator words are plain, the arena is empty in the start memory, and no
+    declared start or run-time root is handed an allocation. -/
+def besitzB (E : Einheit D) (fs : List D.Fn) : Bool :=
+  E.arenen.all fun a => Body.checkProgram E.P a.A a.I fs && decide (Machine.ArenaPlain a.A) &&
+    decide (Machine.ArenaLeer a.A E.sp0) &&
+    (E.starts ++ E.gestartet).all fun r => (Body.modeList (a.I r.1).parameters).all Option.isNone
+
+/-- **The Bool decides the ownership judgment** and the ownership start. -/
+theorem besitzB_sound {E : Einheit D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (h : besitzB E fs = true) :
+    (∀ a ∈ E.arenen, Body.Checked E.P a.A a.I) ∧ (∀ a ∈ E.arenen, Machine.ArenaPlain a.A) ∧
+      BesitzStart E := by
+  have h' := List.all_eq_true.mp h
+  refine ⟨fun a ha => ?_, fun a ha => ?_, ⟨fun a ha => ?_, fun a ha r hr => ?_⟩⟩ <;>
+    have h1 := h' a ha <;> simp only [Bool.and_eq_true, decide_eq_true_eq] at h1
+  · exact Body.checkProgram_sound hvoll h1.1.1.1
+  · exact h1.1.1.2
+  · exact h1.1.2
+  · exact List.all_eq_true.mp h1.2 r hr
+
+theorem besitzB_leer {E : Einheit D} {fs : List D.Fn} (hB : E.arenen = []) : besitzB E fs = true := by
+  simp [besitzB, hB]
+
+end Besitz
+
 /-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. -/
 def akzeptiertX_pruefer : PrueferX where
-  akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws
-  korrekt := fun _ fs ls cs h => akzeptiertSpecX_of fs.2 ls.2 cs.2 h
+  akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws && besitzB E fs
+  korrekt := fun _ fs ls cs h => by
+    have h := (Bool.and_eq_true _ _).mp h
+    obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 h.2
+    exact ⟨(akzeptiertSpecX_of fs.2 ls.2 cs.2 h.1).mitBesitz hb hw, hs⟩
 
-/-- **Every checker of the goal is a checker for the rely** (`akzeptiertSpecX_of_spec`). -/
+/-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
+    (`akzeptiertSpecX_of_spec`, `besitzB_sound`). -/
 def Pruefer.alsX (C : Pruefer) : PrueferX where
-  akzeptiert := C.akzeptiert
-  korrekt := fun E fs ls cs h => akzeptiertSpecX_of_spec (C.korrekt E fs ls cs h)
+  akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && besitzB E fs
+  korrekt := fun E fs ls cs h => by
+    have h := (Bool.and_eq_true _ _).mp h
+    obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 h.2
+    exact ⟨(akzeptiertSpecX_of_spec (C.korrekt E fs ls cs h.1)).mitBesitz hb hw, hs⟩
+
+/-- On a unit without an arena -- every unit of before -- `Pruefer.alsX` decides as the checker. -/
+theorem Pruefer.alsX_akzeptiert (C : Pruefer) {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D}
+    {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} (hB : E.arenen = [])
+    (h : C.akzeptiert E fs ls cs = true) : C.alsX.akzeptiert E fs ls cs = true := by
+  show (C.akzeptiert E fs ls cs && besitzB E fs) = true
+  rw [h, besitzB_leer hB]; rfl
 
 /-- **THE GOAL WITH SHARED ATOMICS.** For every checker `C` for the rely, every declaration and
     unit `E` it accepts, the user's logic with the rely (bodies against every answer a shared
@@ -156,7 +209,7 @@ theorem gabbro_ziel_atomar (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (
       RufErreichbarW E.P.mitRuhe O.mitRuhe passes ord (RufStartW (RufStartG E.P.mitRuhe sp init)) W →
       ZielAtomar E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes ord (GeteiltV E.P.mitRuhe (wsRuhe E.ws))
         (RufStartG E.P.mitRuhe sp init) W := by
-  have hA := C.korrekt E fs ls cs hC
+  have hA := (C.korrekt E fs ls cs hC).1
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)
       (GeteiltA E.P.mitRuhe (wsRuhe E.ws)) := by
     have h := logikPflichtA_mitRuhe hN.logik
@@ -169,11 +222,12 @@ theorem gabbro_ziel_atomar (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (
     (wsRuhe E.ws) (akzeptiertSpecX_mitRuhe E.P fs.2 hA) hN' O.mitRuhe (hardware_mitRuhe hH) passes
     ord sp init (startZulaessig_aus E fs.1 hN.start hL)
 
-/-- **THE EMBEDDING: every unit `gabbro_ziel` covers is covered here**, with the premises of
+/-- **THE EMBEDDING: every unit `gabbro_ziel` covers is covered here** (a unit of before declares no
+    arena, `hB`), with the premises of
     `gabbro_ziel` -- a goal checker, the user obligation WITHOUT the rely (on such a unit the two
     obligations are equivalent, `logikPflichtA_iff_akzeptiert`). -/
 theorem gabbro_ziel_atomar_vor (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
-    (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
+    (hB : E.arenen = []) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
     (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflicht E)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat)
     (ord : D.mitRuhe.Glob → Ordnung) (sp : Speicher D.mitRuhe)
@@ -183,7 +237,7 @@ theorem gabbro_ziel_atomar_vor (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn
       RufErreichbarW E.P.mitRuhe O.mitRuhe passes ord (RufStartW (RufStartG E.P.mitRuhe sp init)) W →
       ZielAtomar E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes ord (GeteiltV E.P.mitRuhe (wsRuhe E.ws))
         (RufStartG E.P.mitRuhe sp init) W :=
-  gabbro_ziel_atomar C.alsX D E fs ls cs hC
+  gabbro_ziel_atomar C.alsX D E fs ls cs (C.alsX_akzeptiert hB hC)
     (nutzerPflichtA_of_akzeptiert fs.2 (C.korrekt E fs ls cs hC) hN) O hH passes ord sp init hL
 
 #print axioms Gabbro.Grammatik.Zielsatz.akzeptiertSpecX_mitRuhe

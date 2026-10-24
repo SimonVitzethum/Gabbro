@@ -133,7 +133,7 @@ fn abschnitt() -> String {
     out.push_str("    (hK : FadenErreichbarX gE.P.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)\n");
     out.push_str("      (FadenStart gE.P.mitRuhe sp init lebt0) K) :\n");
     out.push_str("    Zielsatz.ZielFX gE.P.mitRuhe gE.S.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV (D := gD) gE.P gE.ws)\n");
-    out.push_str("      (RufStartG gE.P.mitRuhe sp init) K :=\n");
+    out.push_str("      (RufStartG gE.P.mitRuhe sp init) [] K :=\n");
     out.push_str("  Zielsatz.gabbro_ziel Zielsatz.akzeptiertX_pruefer gD gE ⟨gFs, gFs_voll⟩ ⟨gLs, gLs_voll⟩ ⟨gCs, gCs_voll⟩\n");
     out.push_str("    gCheck hN O hH passes sp init hL lebt0 K hK\n");
     out

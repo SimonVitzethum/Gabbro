@@ -61,8 +61,9 @@ namespace Gabbro.Grammatik.ArenaOwnership
 #print axioms Machine.ownInv_reachGA
 #print axioms Machine.ownInv_reachGX
 #print axioms Ruhe.checked_mitRuhe
-#print axioms Ruhe.ownership_goal_gx
-#print axioms Ruhe.GoalWitness.ownership_goal_gx_zeuge
+#print axioms Ruhe.threadFacts_of
+#print axioms Ruhe.startOwn_arenen
+#print axioms Ruhe.GoalWitness.besitz_zeuge
 #print axioms Ruhe.GoalWitness.actual_run
 
 end Gabbro.Grammatik.ArenaOwnership
