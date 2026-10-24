@@ -257,4 +257,12 @@ end
 
 end Lift
 
+/-- **A checked program is checked with its idle root.** -/
+theorem checked_mitRuhe {P : Programm D} {A : FreiForm D} {I : Interfaces A} (hc : Checked P A I) :
+    Checked P.mitRuhe (liftA A) (liftI I)
+  | none => .ret _ _ rfl
+  | some f => oe_um _ (oe_pre (parameterContext_modesR _) (oe_lift (hc f)))
+
+#print axioms checked_mitRuhe
+
 end Gabbro.Grammatik.ArenaOwnership.Ruhe
