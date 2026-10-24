@@ -4653,6 +4653,22 @@ Files: `Bausteine/Arena/Ownership/Machine/*.lean` (19 files). Plan: `PLAN-DYNAMI
 Standard axioms only. Open: `Spec.lean` integration (review).
 
 
+
+### 92.5. The ownership leg inside `GabbroZiel` (2026-10-24)
+
+`Zielsatz/Kern/Spec.lean` (`Einheit.arenen`, `AkzeptiertSpecX.besitz`/`worte`, `BesitzStart`, `ZielFX.besitz`),
+`Zielsatz/Atomar/{AtomarZiel,BeweisAtomar}.lean`, `Bausteine/Arena/Ownership/Ruhe/{Start,Witness}.lean`. Scope:
+`PLAN-DYNAMIC.md` 12.11.
+
+* `akzeptiertSpecX_mitRuhe`: the ownership facts lift to `P.mitRuhe` (`checked_mitRuhe`).
+* `besitzB_sound`, `besitzB_leer`: the ownership acceptance, decided; trivially accepted without an arena.
+* `threadFacts_of`, `startOwn_arenen`: the rely's thread facts and every arena's start from (a), (b) and (d).
+* `zielFX_aus`, `gabbro_ziel`: the leg `besitz` on every GX thread-machine run.
+* `gabbro_ziel_sc_aus`, `gabbro_ziel_verbund_sc_aus`, `gabbro_ziel_atomar_vor`: the statements of before, for units
+  without an arena.
+* `GoalWitness.besitz_zeuge` (non-degenerate: one arena, allocation and release executed, `actual_run`). All axiom
+  lists standard.
+
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)
 
 Files: `Bausteine/Arena/Unbounded/{State,Safety,Lifetime,Runs,Execution,GForm,Realization,Witnesses,Audit}.lean`.

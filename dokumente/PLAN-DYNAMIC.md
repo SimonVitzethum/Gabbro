@@ -1487,8 +1487,19 @@ acceptance of an arena, `OwnInv` holds at every machine of every thread-machine 
 accepts it by `decide`, the user's obligation is proved, every premise discharged) and `actual_run` (the allocation and
 the release execute).
 
-**Open.** (a) Folding the leg into `Spec.lean` (`AkzeptiertSpecX` + `ZielFX`) waits for Simon's review; until then it
-stands beside the goal. (b) Exporter/Rust after (a).
+**Folded into the goal statement (2026-10-24, reviewed by Simon: arenas as a field of the unit).** `Einheit.arenen`
+(default `[]`); `AkzeptiertSpecX` takes the arena list and carries `besitz` (`Checked`) and `worte` (`ArenaPlain`);
+`BesitzStart E` (every arena empty in `E.sp0`, no start or run-time root handed an allocation) comes with it out of
+`PrueferX.korrekt`; `ZielFX` carries the leg `besitz : ∀ a ∈ B, OwnInv a.A a.I K.m`, and `GabbroZiel` instantiates
+`B := E.arenen.map (·.mitRuhe)`. Proof: `zielFX_aus` by `ownInv_reachGX` from `threadFacts_of` and `startOwn_arenen`
+(`Ruhe/Start.lean`); the concrete checker decides the acceptance by `besitzB` (`besitzB_sound`). Linked units carry both
+arenas lists, but `GabbroZielVerbund` claims `besitz` over `[]` (NOT CLAIMED). The derived statements of before
+(`gabbro_ziel_sc_aus`, `gabbro_ziel_verbund_sc_aus`, `gabbro_ziel_atomar_vor`) cover units without an arena;
+`gabbro_ziel_sc` proves `GabbroZielSC` for every unit directly. Witness `GoalWitness.besitz_zeuge`: the arena unit,
+accepted by `akzeptiertX_pruefer` with its ownership acceptance, gets `besitz` from `gabbro_ziel`.
+
+**Open.** Exporter/Rust: emit `arenen` (arena and ownership interfaces) from the source and check it in the Rust
+checker.
 
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
