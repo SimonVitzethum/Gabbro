@@ -1392,6 +1392,35 @@ allocator forms are definitions over `narrow`/`assignGlob`, so a Bool check must
 and the reviewed `Spec.lean` diff; (4) the front-end/exporter emitting interfaces and derivations. Containers (list/tree moves), whole
 arena reset and range/quantified arena expressions have no rule and stay refused.
 
+### 12.9 Executable admission and the ownership goal (2026-10-24)
+
+* **Executable check** (`Body/Check/`): `chkS`/`chkB`/`chkE`/`chkArms`/`chkGrund` compute, in one structural pass, the
+  context after every statement (refuse / never falls through / falls through in a context): access-checked
+  expressions, joins (`joinB`), loop heads with assigned names forgotten (`loopCtx`), decidable `Weaker`/`ExitsTo`,
+  interface-checked direct and pointer calls (the pointer interface against every fitting function of an enumeration,
+  `sigCompatB`), and the allocator forms recognised step by step on their statements (`relB`, `ctr1B`/`ctr2B`,
+  `lst1B`/`lst2B`). `chkE_sound` (with the mutual lemmas): every passing body has a derivation of the judgment.
+  `checkProgram_sound`: a passing program is `Checked`; `checkProgram_calls`: every actual call keeps its interface.
+  The witness program passes by `decide` in the kernel.
+* **Judgment changes for this**: the allocator rules now match the executed statements (narrow of the counter or
+  free-list head, the head/counter update, a non-link store; link store and head update for release), recognised at
+  any type index (`Body/Shapes.lean`), any payload; `Weaker` bounds the weaker context by its own counter (a loop body
+  may allocate and release per pass); dead-code rules for blocks and end blocks; `leave`/`next` at any loop flag.
+* **Kernel-evaluable sugar**: `Expr.ins` (and `Expr.weaken`) is now a structural renaming (`Expr.ren`), so weakened
+  payloads of the allocator forms compute; meaning unchanged.
+* **Goal leg** (`Body/Goal.lean`): `ownershipAccepted E arenas fs` (every body passes for every declared arena with its
+  interface table); `ownership_goal`: under the goal's own `HardwareAnnahmen` (only `GutO` used) every actual call of
+  `E.P` keeps its ownership interface at every depth and budget. Non-vacuous (`ownership_goal_witness`).
+
+**Not done, and why.** (a) Folding the leg into `Spec.lean` (`AkzeptiertSpecX` gains the ownership acceptance, the
+conclusion gains the leg, `Einheit` gains the arenas and interfaces) is a change of the reviewed statement; the
+statement is written beside it and waits for the review. (b) GA/GX step preservation: the machine runs threads
+interleaved; the per-activation effect (`local`) must become a rely/guarantee over the frames of all threads, and the
+replay invariant behind `VertragAmOrtG` (`ZielInv`) must carry the ownership of recorded answers. That is a new
+invariant over `GRest` continuations, not a lifting of an existing theorem. (c) Exporter/Rust: the source has no
+syntax for passing modes; the Lean model takes interfaces as checker input. Whether they are declared in the source
+or inferred is a language decision (Lean model first), and the Rust work follows the review of (a).
+
 ## 13. Explicit unbounded storage component (2026-10-24, implementation in progress)
 
 Simon authorized building an opt-in region without a declaration-time element ceiling, with fallible allocation and the existing

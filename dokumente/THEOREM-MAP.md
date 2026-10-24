@@ -4624,6 +4624,18 @@ Files: `Bausteine/Arena/Ownership/Body/{Holds,Handoff,Plan,Call,CallStep,CallInd
 Standard axioms only. Open: GA/GX step preservation, `Akzeptiert`/goal integration, exporter (`PLAN-DYNAMIC` 12.8).
 
 
+### 92.3. Executable ownership admission and the goal leg (2026-10-24)
+
+Files: `Bausteine/Arena/Ownership/Body/{Shapes,Goal}.lean`, `Body/Check/{Context,Ops,Checker,Lemmas,Sound,Program}.lean`.
+
+* `chkE_sound` (with `chkS_sound`, `chkB_sound`, the mode lemmas): the executable check is sound for every program.
+* `checkProgram_sound`, `checkProgram_calls`, `witness_checked` (by `decide`).
+* `allocCounter_post`, `allocList_post`, `release_post`: allocator forms recognised on their statements.
+* `ownership_goal`, `ownership_goal_witness`: the leg beside `GabbroZiel` under `HardwareAnnahmen`.
+
+Standard axioms only. Open: the `Spec.lean` integration (review), GA/GX steps, exporter (`PLAN-DYNAMIC` 12.9).
+
+
 ## 93. Explicit unbounded, fallible storage component (2026-10-24)
 
 Files: `Bausteine/Arena/Unbounded/{State,Safety,Lifetime,Runs,Execution,GForm,Realization,Witnesses,Audit}.lean`.
