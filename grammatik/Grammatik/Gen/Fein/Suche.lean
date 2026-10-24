@@ -214,25 +214,6 @@ def reqF (f : D.Fn) (n : Nat) : List (Expr D (D.params f) (Signatur.anfang D (D.
 def ensF (f : D.Fn) (n : Nat) : List (Expr D (ErgCtx (D.params f) (D.erg f)) (vertragVon D f).ende .bool) :=
   (genEF Kenner.fein n n _ _).flatMap fun b => b.filterMap fun p => ofTy [p] .bool |>.head?
 
-/-- **The candidates of a member**: the program whose every body is the first filtered body of its function, and the
-    programs that differ from it in one body or one contract. -/
-def kandidaten (z : Spez) (nb nc cap : Nat) : List (Programm z.deklaration) :=
-  letI : Zahlen := z.zahlen
-  let D := z.deklaration
-  let tabs : List (Σ f : D.Fn, List (Rumpf D f)) := z.fnListe.map fun f => ⟨f, rumpfF f nb cap⟩
-  let basis : ∀ f : D.Fn, Option (Rumpf D f) := fun f => ((ofTy tabs f).headD []).head?
-  if hall : z.fnListe.all (fun f => (basis f).isSome) = true then
-    let b0 : ∀ f : D.Fn, Rumpf D f := fun f => (basis f).get (by
-      have := List.all_eq_true.1 hall f (List.mem_finRange f); simpa using this)
-    let P0 : Programm D := Programm.mk (fun _ => .tru) (fun _ => .tru) (fun _ => .tru) b0 (fun _ => false)
-    let rs := tabs.flatMap fun ⟨f, bs⟩ => bs.map fun b =>
-      { P0 with rumpf := fun g => if h : f = g then h ▸ b else b0 g }
-    let vs := z.fnListe.flatMap fun f =>
-      (reqF f nc).map (fun e => { P0 with requires := fun g => if h : f = g then h ▸ e else .tru }) ++
-      (ensF f nc).map (fun e => { P0 with ensures := fun g => if h : f = g then h ▸ e else .tru })
-    rs ++ vs
-  else []
-
 /-! ## Packing: many bodies in one program -/
 
 section
