@@ -67,6 +67,8 @@ def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr
   | .fnref f n h => .fnref f n h
   | .oldG g hL => .oldG g hL
   | .oldS t f i hL => .oldS t f (i.ren r) hL
+  | .refEq a b => .refEq (a.ren r) (b.ren r)
+  | .slotRef q t ht ho f hL => .slotRef (q.ren r) t ht ho f hL
   | .getBytes t f hf n i hlo hhi hL => .getBytes t f hf n (i.ren r) hlo hhi hL
   | .widen h1 h2 e => .widen h1 h2 (e.ren r)
   | .add a b => .add (a.ren r) (b.ren r)

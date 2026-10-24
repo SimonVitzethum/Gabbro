@@ -117,6 +117,7 @@ theorem intVonTyp_eq {τ : Ty} {lo hi : Int}
   | fl _ => simp [intVonTyp] at h
   | fnptr _ => simp [intVonTyp] at h
   | ptr _ _ => simp [intVonTyp] at h
+  | ref _ => simp [intVonTyp] at h
 
 /-- The range of the `k`-th variable of `Γ`, if it is int-typed: a de Bruijn
     lookup that says `none` for out-of-range indices and non-int types. -/
@@ -152,6 +153,7 @@ theorem ctxTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int)
       | fl _ => simp [ctxTyp] at h
       | fnptr _ => simp [ctxTyp] at h
       | ptr _ _ => simp [ctxTyp] at h
+      | ref _ => simp [ctxTyp] at h
     | succ k =>
       simp [ctxTyp] at h
       obtain ⟨x, _⟩ := ih k h

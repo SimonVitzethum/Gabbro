@@ -44,7 +44,7 @@ theorem mS_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
       simp only [mS, mB_und A B body, mB_und A B ueber, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
   | .forever _ _ body => by simp only [mS, mB_und A B body]
   | .assignSlot .. => rfl
-  | .assignThru .. => rfl
+  | .assignThru .. | .assignSlotRef .. => rfl
   | .assignGlob .. => rfl
   | .putBytes .. => rfl
   | .assignVar .. => rfl
@@ -148,7 +148,7 @@ theorem mS_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ _ body ueber => by simp only [mS, mB_top body, mB_top ueber, Bool.and_self]
   | .forever _ _ body => by simp only [mS, mB_top body]
   | .assignSlot .. => rfl
-  | .assignThru .. => rfl
+  | .assignThru .. | .assignSlotRef .. => rfl
   | .assignGlob .. => rfl
   | .putBytes .. => rfl
   | .assignVar .. => rfl

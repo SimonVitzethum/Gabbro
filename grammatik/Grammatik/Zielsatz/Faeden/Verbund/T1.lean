@@ -48,6 +48,7 @@ theorem stmtOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' :
     (s : Stmt D V l Γ Λ Λ'), stmtOrteP (mitRumpf P r) s = stmtOrteP P s
   | _, _, _, _, .assignSlot _ _ _ _ _ _ => rfl
   | _, _, _, _, .assignThru _ _ _ _ _ _ _ _ => rfl
+  | _, _, _, _, .assignSlotRef _ _ _ _ _ _ _ _ => rfl
   | _, _, _, _, .assignGlob _ _ _ _ => rfl
   | _, _, _, _, .putBytes _ _ _ _ _ _ _ _ _ _ => rfl
   | _, _, _, _, .assignVar _ _ => rfl

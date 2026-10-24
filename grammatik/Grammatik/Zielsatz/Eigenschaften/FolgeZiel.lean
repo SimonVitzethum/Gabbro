@@ -49,7 +49,7 @@ theorem ruS_fNach (Φ : Folge D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .advances .. => fNach_nachΛ _ _ _ _
   | .retires .. => fNach_nachΛ _ _ _ _
   | .assignSlot .. => rfl
-  | .assignThru .. => rfl
+  | .assignThru .. | .assignSlotRef .. => rfl
   | .assignGlob .. => rfl
   | .putBytes .. => rfl
   | .assignVar .. => rfl
@@ -77,7 +77,7 @@ mutual
 theorem ruS_fS (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (e w : Bool) (s : Stmt D V l Γ Λ Λ'), fS Φ.mitRuhe e w (ruS s) = fS Φ e w s
   | _, _, _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, _, _, .assignThru .. => rfl
+  | _, _, _, _, _, _, .assignThru .. | _, _, _, _, _, _, .assignSlotRef .. => rfl
   | _, _, _, _, _, _, .assignGlob .. => rfl
   | _, _, _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, _, _, .assignVar .. => rfl

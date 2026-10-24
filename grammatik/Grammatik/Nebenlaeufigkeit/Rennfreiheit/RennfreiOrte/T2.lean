@@ -22,6 +22,10 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       refine ⟨_ :: leseEv σ Λ (p.orte ++ i.orte ++ e.orte), rfl, ?_⟩
       exact evOk_append (X := [_]) (evOk_schreibT hw) (evOk_lese σ Λ hC)
+  | .assignSlotRef r t _ ho f e hw hL, _, hC, σ, ρ, _, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      refine ⟨_ :: leseEv σ Λ (r.orte ++ e.orte), rfl, ?_⟩
+      exact evOk_append (X := [_]) (evOk_schreibT hw) (evOk_lese σ Λ hC)
   | .assignGlob g e hw hL, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       refine ⟨_ :: leseEv σ Λ e.orte, rfl, ?_⟩

@@ -38,6 +38,7 @@ def Spez.druckTy (z : Spez) : Ty → Except String String
   | .fl .. => .error "unsupported type: float"
   | .fnptr _ => .error "unsupported type: function pointer"
   | .ptr .. => .error "unsupported type: pointer"
+  | .ref _ => .error "unsupported type: reference (the open region has no source syntax yet)"
 
 /-- The names of the entities of a member. -/
 def Spez.namen (z : Spez) : Namen z.deklaration where

@@ -30,6 +30,8 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .thru (p := p) (i := i) .. => "Expr.thru" :: (eE p ++ eE i)
   | .ptrOf .. => ["Expr.ptrOf"]
   | .fnref .. => ["Expr.fnref"]
+  | .refEq a b => "Expr.refEq" :: (eE a ++ eE b)
+  | .slotRef (r := r) .. => "Expr.slotRef" :: eE r
   | .oldG .. => ["Expr.oldG"]
   | .oldS (i := i) .. => "Expr.oldS" :: eE i
   | .widen (e := e) .. => "Expr.widen" :: eE e
@@ -86,6 +88,7 @@ mutual
 def cS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → List String
   | .assignSlot (i := i) (e := e) .. => "Stmt.assignSlot" :: (eE i ++ eE e)
   | .assignThru (p := p) (i := i) (e := e) .. => "Stmt.assignThru" :: (eE p ++ eE i ++ eE e)
+  | .assignSlotRef (r := r) (e := e) .. => "Stmt.assignSlotRef" :: (eE r ++ eE e)
   | .assignGlob (e := e) .. => "Stmt.assignGlob" :: eE e
   | .putBytes (i := i) (e := e) .. => "Stmt.putBytes" :: (eE i ++ eE e)
   | .assignVar _ e => "Stmt.assignVar" :: eE e
@@ -175,6 +178,7 @@ def tyName : Ty → String
   | .fl .. => "Ty.fl"
   | .fnptr _ => "Ty.fnptr"
   | .ptr .. => "Ty.ptr"
+  | .ref _ => "Ty.ref"
 
 /-- The members a lowered program reaches: every function's body, and the types its parameters, results, table
     fields and statics have. -/

@@ -78,6 +78,34 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
         · have hmem : o ∈ p.orte ++ i.orte ++ e.orte := (mem_leseEr h1).2 o ho
           simp only [stmtTraeger, stmtOrte]
           exact List.mem_append.mpr (Or.inr hmem)
+  | assignSlotRef r t ht ho f e hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          [Ereignis.zugriff t true Λ
+            (σ.lese Λ (r.orte ++ e.orte)).haelt] ++
+          (r.orte ++ e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          rfl
+        · exact (mem_leseEr h1).1
+      · intro e' he' o ho
+        rcases List.mem_append.mp he' with h1 | h1
+        · obtain rfl := List.mem_singleton.mp h1
+          have ho' : o = .inl t := by simpa [Ereignis.traeger] using ho.symm
+          subst ho'
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
+        · have hmem : o ∈ r.orte ++ e.orte := (mem_leseEr h1).2 o ho
+          simp only [stmtTraeger, stmtOrte]
+          exact List.mem_append.mpr (Or.inr hmem)
   | assignGlob g e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur =

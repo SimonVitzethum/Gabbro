@@ -55,6 +55,16 @@ theorem mem_ptrS {E : Sz (SE D Γ Λ)} {i : Nat} {n : Nat} {rw : Bool} {a : Expr
     (⟨n, rw, a⟩ : Σ (n : Nat) (rw : Bool), Expr D Γ Λ (.ptr n rw)) ∈ ptrS E i :=
   List.mem_filterMap.2 ⟨_, h, rfl⟩
 
+/-- The reference-typed expressions of a stream. -/
+def refS (E : Sz (SE D Γ Λ)) : Sz (Σ n : Nat, Expr D Γ Λ (.ref n)) := fun i =>
+  (E i).filterMap fun p => match p with
+    | ⟨.ref n, a⟩ => some ⟨n, a⟩
+    | _ => none
+
+theorem mem_refS {E : Sz (SE D Γ Λ)} {i : Nat} {n : Nat} {a : Expr D Γ Λ (.ref n)}
+    (h : (⟨.ref n, a⟩ : SE D Γ Λ) ∈ E i) : (⟨n, a⟩ : Σ n : Nat, Expr D Γ Λ (.ref n)) ∈ refS E i :=
+  List.mem_filterMap.2 ⟨_, h, rfl⟩
+
 /-- The function-pointer-typed expressions of a stream. -/
 def fnptrS (E : Sz (SE D Γ Λ)) : Sz (Σ n : Nat, Expr D Γ Λ (.fnptr n)) := fun i =>
   (E i).filterMap fun p => match p with
@@ -151,6 +161,15 @@ def gPtrOf : Sz (SE D Γ Λ) :=
   Sz.knoten (Sz.bind nS fun n => Sz.bind (Sz.wahl Aufz.tab) fun t =>
     Sz.wenn (D.tabNr n = some t) fun ht => Sz.bind (Sz.wahl [true, false]) fun rw =>
       Sz.pure ⟨.ptr n rw, .ptrOf t n ht rw⟩)
+
+def gRefEq : Sz (SE D Γ Λ) :=
+  Sz.knoten (Sz.bind (refS E) fun ⟨n, a⟩ => Sz.bind (tyS E (.ref n)) fun b => Sz.pure ⟨.bool, .refEq a b⟩)
+
+def gSlotRef : Sz (SE D Γ Λ) :=
+  Sz.knoten (Sz.bind (refS E) fun ⟨n, r⟩ => Sz.bind (Sz.wahl Aufz.tab) fun t =>
+    Sz.wenn (D.tabNr n = some t) fun ht => Sz.wenn (D.offen t = true) fun ho =>
+      Sz.bind (Sz.wahl (Aufz.feld t)) fun f => Sz.wenn (darf D t Λ) fun hL =>
+        Sz.pure ⟨_, .slotRef r t ht ho f hL⟩)
 
 /-- `&f` at every pointer type `f` conforms to (`Aufz.sigs` holds every such type). -/
 def gFnref : Sz (SE D Γ Λ) := Sz.blatt (Aufz.fn.flatMap fun f => (Aufz.sigs (D := D)).filterMap fun n =>
@@ -283,6 +302,6 @@ def exprS (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE D Γ Λ)) :
   Sz.alle [gLit, gBool, gVar Γ, gGlob, gSlot E, gThru E, gPtrOf, gFnref, gOldG, gOldS E, gWiden E, gAdd E,
     gSub E, gNeg E, gMul E, gDiv E, gRem E, gSdiv E, gSrem E, gGetBytes E, gBand E, gBor E, gBxor E, gShl E,
     gShr E, gLt E, gLe E, gEq E, gFllt E, gFlle E, gAnd E, gOr E, gNot E, gNone, gSome E, gIstSome E, gCase E,
-    gWhy, gForall Q, gExists Q, gReaches E]
+    gWhy, gForall Q, gExists Q, gReaches E, gRefEq E, gSlotRef E]
 
 end Gabbro.Grammatik.Gen

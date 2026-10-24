@@ -32,6 +32,11 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
         kongr₂ (· ++ ·) (orte2 p i) (ruE_orte e), lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
       rfl
+  | _, _, Λ, _, .assignSlotRef r t ht ho f e hw hL, σ, ρ => by
+      simp only [ruS, execStmt]
+      rw [show (ruE r).orte ++ (ruE e).orte = r.orte ++ e.orte from
+        kongr₂ (· ++ ·) (ruE_orte r) (ruE_orte e), lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
+      rfl
   | _, _, Λ, _, .assignGlob g e hw hL, σ, ρ => by
       simp only [ruS, execStmt]
       rw [ruE_orte, lese_worldR, eval_ru, schreibGlob_worldR]

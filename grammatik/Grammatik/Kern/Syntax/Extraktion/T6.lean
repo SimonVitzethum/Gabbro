@@ -31,6 +31,8 @@ def stmtAtome (tabs : List D.Tab) (globs : List D.Glob)
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.assignThru _ _ _ _ _ _ _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.assignSlotRef _ _ _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.assignGlob _ _ _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.putBytes _ _ _ _ _ _ _ _ _ _) =>

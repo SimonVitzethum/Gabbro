@@ -258,6 +258,7 @@ mutual
 def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Prop
   | .assignSlot t _ i _ _ _ => SchreibOk ps t i
   | .assignThru _ t _ _ i _ _ _ => SchreibOk ps t i
+  | .assignSlotRef .. => False
   | .assignGlob .. => True
   | .putBytes .. => False
   | .assignVar x _ => VarFrei ps x

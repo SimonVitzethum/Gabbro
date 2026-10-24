@@ -425,6 +425,9 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       blattRetR P O passes f fn caller rst rho s0 A R ziel zielG
         (.assignThru _ p t ht f' i e hw hL)
+  | _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
+      blattRetR P O passes f fn caller rst rho s0 A R ziel zielG
+        (.assignSlotRef _ r t ht ho f' e hw hL)
   | _, _, _, _, .assignGlob g e hw hL, _ =>
       blattRetR P O passes f fn caller rst rho s0 A R ziel zielG (.assignGlob g e hw hL)
   | _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>

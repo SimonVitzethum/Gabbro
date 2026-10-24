@@ -31,6 +31,8 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .thru p _ _ _ i _ => 1 + groesseExpr p + groesseExpr i
   | _, _, _, .ptrOf _ n _ _ => 1 + Zahlen.kostN n
   | _, _, _, .fnref _ _ _ => 1
+  | _, _, _, .refEq a b => 1 + groesseExpr a + groesseExpr b
+  | _, _, _, .slotRef r _ _ _ _ _ => 1 + groesseExpr r
   | _, _, _, .oldG _ _ => 1
   | _, _, _, .oldS _ _ i _ => 1 + groesseExpr i
   | _, _, _, @Expr.widen _ lo' _ _ hi' _ _ _ _ e => 1 + Zahlen.kost lo' + Zahlen.kost hi' + groesseExpr e
@@ -86,6 +88,7 @@ mutual
 def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l Γ Λ Λ' → Nat
   | _, _, _, _, .assignSlot _ _ i e _ _ => 1 + groesseExpr i + groesseExpr e
   | _, _, _, _, .assignThru p _ _ _ i e _ _ => 1 + groesseExpr p + groesseExpr i + groesseExpr e
+  | _, _, _, _, .assignSlotRef r _ _ _ _ e _ _ => 1 + groesseExpr r + groesseExpr e
   | _, _, _, _, .assignGlob _ e _ _ => 1 + groesseExpr e
   | _, _, _, _, .putBytes _ _ _ n i _ _ e _ _ => 1 + Zahlen.kostN n + groesseExpr i + groesseExpr e
   | _, _, _, _, .assignVar x e => 1 + groesseVar x + groesseExpr e

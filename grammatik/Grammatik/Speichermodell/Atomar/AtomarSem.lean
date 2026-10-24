@@ -97,6 +97,9 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignThru p t _ f i e _ _, σ, ρ =>
       let σ := leseA A σ Λ (p.orte ++ i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
+  | .assignSlotRef r t _ _ f e _ _, σ, ρ =>
+      let σ := leseA A σ Λ (r.orte ++ e.orte)
+      .ok (σ.schreibSlot t Λ ((eval σ r σ ρ).zelle : Int) f (eval σ e σ ρ)) ρ
   | .assignGlob g e _ _, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       .ok (σ.schreibGlob g Λ (eval σ e σ ρ)) ρ
@@ -388,6 +391,9 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .assignThru p t _ f i e _ _, hT, σ, ρ => by
+      simp only [stmtOrteP] at hT
+      simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
+  | .assignSlotRef r t _ _ f e _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .assignGlob g e _ _, hT, σ, ρ => by

@@ -66,6 +66,8 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .thru p _ _ _ i _ => 1 + kostenExpr p + kostenExpr i
   | .ptrOf _ _ _ _ => 0
   | .fnref _ _ _ => 0
+  | .refEq a b => 1 + kostenExpr a + kostenExpr b
+  | .slotRef r _ _ _ _ _ => 1 + kostenExpr r
   | .oldG _ _ => 1
   | .oldS _ _ i _ => 1 + kostenExpr i
   | .widen _ _ e => 1 + kostenExpr e
@@ -146,6 +148,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i e _ _ => 1 + kostenExpr i + kostenExpr e
   | .assignThru p _ _ _ i e _ _ => 1 + kostenExpr p + kostenExpr i + kostenExpr e
+  | .assignSlotRef r _ _ _ _ e _ _ => 1 + kostenExpr r + kostenExpr e
   | .assignGlob _ e _ _ => 1 + kostenExpr e
   | .putBytes _ _ _ _ i _ _ e _ _ => 1 + kostenExpr i + kostenExpr e
   | .assignVar _ e => 1 + kostenExpr e
@@ -286,7 +289,7 @@ def rufeS (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .retry _ _ body ueber => rufeB Z ZS EW body && rufeB Z ZS EW ueber
   | .forever _ _ body => EW && rufeB Z ZS EW body
   | .assignSlot .. => true
-  | .assignThru .. => true
+  | .assignThru .. | .assignSlotRef .. => true
   | .assignGlob .. => true
   | .putBytes .. => true
   | .assignVar .. => true

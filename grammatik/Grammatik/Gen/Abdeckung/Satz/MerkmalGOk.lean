@@ -33,7 +33,7 @@ theorem sGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .retry _ _ body ueber => by simp only [Stmt.gOk, mS, bGOk K body, bGOk K ueber]
   | .forever _ _ body => by simp only [Stmt.gOk, mS, bGOk K body]
   | .assignSlot .. => rfl
-  | .assignThru .. => rfl
+  | .assignThru .. | .assignSlotRef .. => rfl
   | .assignGlob .. => rfl
   | .putBytes .. => rfl
   | .assignVar .. => rfl

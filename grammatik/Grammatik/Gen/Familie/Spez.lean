@@ -41,6 +41,8 @@ structure TabZ where
   eigner : Option Nat := none
   geteilt : Bool := false
   geist : Bool := false
+  /-- `table T open`: a region without an element ceiling (`Deklaration.offen`). -/
+  offen : Bool := false
   deriving DecidableEq, Repr
 
 /-- A static: its type, whether it is `atomic`, its guard (a lock or a mark with a stage), the payload it
@@ -210,6 +212,7 @@ def deklaration : Deklaration where
   Tab := Fin z.tabs.length
   decTab := inferInstance
   count := fun t => (z.tabs.get t).count
+  offen := fun t => (z.tabs.get t).offen
   Feld := fun t => Fin (z.tabs.get t).felder.length
   decFeld := fun _ => inferInstance
   typ := fun t f => ((z.tabs.get t).felder.get f).typ

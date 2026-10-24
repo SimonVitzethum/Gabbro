@@ -456,6 +456,7 @@ theorem flVonTyp_eq {τ : Ty} {lo hi : Int × Int}
     rfl
   | fnptr _ => simp [flVonTyp] at h
   | ptr _ _ => simp [flVonTyp] at h
+  | ref _ => simp [flVonTyp] at h
 
 /-- What `ctxFlTyp` promises: a `some` names a variable that EXISTS (mirror
     of `ctxTyp_var`). The `Var` witness is rebuilt here, never trusted from
@@ -481,6 +482,7 @@ theorem ctxFlTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int × Int)
         exact ⟨.here, trivial⟩
       | fnptr _ => simp [ctxFlTyp, flVonTyp] at h
       | ptr _ _ => simp [ctxFlTyp, flVonTyp] at h
+      | ref _ => simp [ctxFlTyp, flVonTyp] at h
     | succ k =>
       simp [ctxFlTyp] at h
       obtain ⟨x, _⟩ := ih k h

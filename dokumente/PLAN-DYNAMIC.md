@@ -1179,6 +1179,11 @@ invariant ONLY, not a `D.invs` member) change the text of the earlier proposal a
 allocation to a callee which may free it, return its ownership, or return a newly allocated object. Preserving the arena's structural
 invariant across a call is already proved, but does not establish this ownership protocol. This audit did not run a fresh Lean build.
 
+**Superseded 2026-10-24 (Simon): "OOM is user logic from now on."** No allocation needs a source OOM path any more; that
+the provider has memory to give is an obligation of the program's own logic (the provider item's contract), like every
+other contract. The OOM rules below (12.4 and the "every allocation has its OOM path" sentences of 13 and 14) are history;
+an arena's `else` at its declared ceiling is a capacity bound, not OOM, and is not touched by this ruling.
+
 **Binding clarification from Simon:** providing sufficient RAM is user logic. The language must preserve its guarantees when allocation
 fails; the unbounded heap must always have an explicit OOM path. A pressure sample does not replace that path. No OS guarantee or extra
 hardware assumption may be introduced to discharge ownership, resource availability, or the OOM branch.
@@ -1616,3 +1621,48 @@ Update (same day): `BrainfuckG/ProgrammAkzeptiert.lean` wraps the G statement of
 counter and head, run, return). The core checker accepts it (`prog_accepted_zeuge`, `decide +kernel` on `Akzeptiert`; the `= false`
 probe fails), its structural class is `bedingt`, and `prog_exec_zeuge` shows that the same function returns normally within budget 2
 with the halting Brainfuck run and its output. Admission for EVERY Brainfuck program is not proved; it is per-program evidence.
+
+## 14. The open region in G itself (2026-10-24, in progress on branch `ziel/region`)
+
+Section 13 built the unbounded storage component beside G. This section brings it INTO the language model, so that an admitted G
+program can use storage without a declared element ceiling. The Lean model comes first (CLAUDE.md); checker, compiler and
+`SYNTAX.md`/`LANGUAGE.md` follow only after it.
+
+### 14.1 The forms (Lean model, `Kern/`)
+
+* **`Deklaration.offen : Tab → Bool`** (default `false`): `table T open`. An open table is a region; its cells are not bounded by
+  `count`.
+* **`Ty.ref t`**: a reference into open table number `t`. Its value is a cell number with no upper bound (`Val.zelle : Nat`).
+* **Where a reference comes from (Simon, 2026-10-24): ONLY from the program's memory provider.** A reference is the answer of a
+  provider item (`syscall`/`extern`); the item's contract (user logic) says the cell is fresh, and that the provider has memory
+  to give is user logic as well (Simon, 2026-10-24: OOM is user logic; the item needs no failure branch). G has no form that
+  makes a reference, and none that turns an integer into one: "memory from outside comes as a REGION", for every cell.
+* **`Expr.refEq a b`**, **`Expr.slotRef r t ht ho f hL`** and **`Stmt.assignSlotRef r t ht ho f e hw hL`**: compare references,
+  read and write a field of cell `r` of the open table `t`, under exactly the guards of a slot access (`darf D t Λ`,
+  `V.schreibt t`); the access records the read/write of `t` like `slot`/`assignSlot`.
+* The new constructors stand at the END of `Expr` and `Stmt`, so the fine cells of the existing constructors keep their numbers.
+
+### 14.2 The address leg of the goal (Simon, 2026-10-24: address spaces)
+
+An address is a pair (space, byte). Closed tables and the globals lie in space `0` as before; every open region lies in a space of
+its own (`LayoutOk.offen`) and reaches up without an end, so its growth meets no other carrier. `ImBereich D t k` is
+`0 ≤ k ∧ (D.offen t ∨ k < D.count t)`. The text of `speicherAdressen` in `Spec.lean` is unchanged, but its meaning moved with
+`AdressLayout`/`ImBereich`: this is a goal-statement change and needs review before the merge.
+
+### 14.3 What is proved, and what stays conservative
+
+The whole Lean tree builds with the forms: machine G, the lock and atomic semantics, race freedom, call adequacy, costs, the
+Hoare rules, the idle-root translation, the address leg, the generator (clauses, completeness, representatives), the coverage
+cells (component hashes re-pinned after reading them again: the cells are carrier-level and see a reference access as an access
+of its table) and the fine-cell universe (type class `ref` = 9). `gabbro_ziel` keeps exactly `propext`, `Classical.choice`,
+`Quot.sound`. Conservative, by refusal: the object-frame discipline and the ownership requirements refuse reference accesses
+(no rule yet); the source printer has no syntax for references.
+
+### 14.4 Still open
+
+Done: `Bausteine/Arena/Unbounded/GRegion.lean` -- `let r = neu(); r->x = 7; return;` on an open table with `count 0`:
+the provider's cell `K` is written (`zelle_geschrieben`), for every `K` (`kein_statisches_limit`), the cell is in the
+region's extent (`zelle_im_bereich`), and the core checker accepts the program (`prog_akzeptiert`).
+
+Open: a refinement theorem from the G region to `ArenaStorage.Heap` with `Capacity.unbounded`, ownership rules for reference accesses, the generator's declarations with open
+tables (otherwise the new fine cells are unreachable for M and N), the Brainfuck bridge on the open region, then Rust.

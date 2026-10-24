@@ -116,7 +116,7 @@ theorem Stmt.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
   | .onTag .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
   | .onWhy .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
   | .assignSlot .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignThru .., _, _, _, _, he => by simp [execStmt] at he
+  | .assignThru .., _, _, _, _, he | .assignSlotRef .., _, _, _, _, he => by simp [execStmt] at he
   | .assignGlob .., _, _, _, _, he => by simp [execStmt] at he
   | .putBytes .., _, _, _, _, he => by simp [execStmt] at he
   | .assignVar .., _, _, _, _, he => by simp [execStmt] at he

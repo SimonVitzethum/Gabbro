@@ -153,6 +153,42 @@ theorem assignDurch_andere_fest (O : Orakel D) (passes : Nat)
   rw [storeSlot_andere _ _ _ _ _ _ hne]
   rfl
 
+/-- `assignSlotRef t₂` with `t₂ ≠ t` keeps every slot of `t`. -/
+theorem assignSlotRef_andere_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat}
+    {r : Expr D Γ Λ (.ref n)} {t₂ : D.Tab} {ht₂ : D.tabNr n = some t₂} {ho : D.offen t₂ = true}
+    {f₂ : D.Feld t₂}
+    {e : Expr D Γ Λ (D.typ t₂ f₂)}
+    {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignSlotRef (V := V) (l := l) r t₂ ht₂ ho f₂ e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  have hEq : (execStmt O passes keinRuf
+      (Stmt.assignSlotRef (V := V) (l := l) r t₂ ht₂ ho f₂ e hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt =
+      some ((σ.lese Λ (r.orte ++ e.orte)).schreibSlot t₂ Λ
+        ((eval (σ.lese Λ (r.orte ++ e.orte)) r
+          (σ.lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) f₂
+        (eval (σ.lese Λ (r.orte ++ e.orte)) e
+          (σ.lese Λ (r.orte ++ e.orte)) ρ)) := rfl
+  rw [hEq] at hstep
+  have hσ' : σ' = ((σ.lese Λ (r.orte ++ e.orte)).schreibSlot t₂ Λ
+      ((eval (σ.lese Λ (r.orte ++ e.orte)) r
+        (σ.lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) f₂
+      (eval (σ.lese Λ (r.orte ++ e.orte)) e
+        (σ.lese Λ (r.orte ++ e.orte)) ρ)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hσ']
+  have hne : t ≠ t₂ := fun h => ht h.symm
+  show ((σ.lese Λ (r.orte ++ e.orte)).storeSlot t₂ _ f₂ _).slots t k f =
+    σ.slots t k f
+  rw [storeSlot_andere _ _ _ _ _ _ hne]
+  rfl
+
 /-- `uebergang t₂` with `t₂ ≠ t` keeps every slot of `t` (failed guard
     yields no world; success writes `t₂`). -/
 theorem uebergang_andere_fest (O : Orakel D) (passes : Nat)
@@ -398,6 +434,12 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
         exact Or.inl ⟨_, assignDurch_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
       · exact Or.inr (Or.inl fun k f =>
           assignDurch_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
+  | assignSlotRef r t2 ht2 ho f2 e hw hL =>
+      by_cases ht : t2 = t
+      · subst ht
+        exact Or.inl ⟨_, assignSlotRef_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
+      · exact Or.inr (Or.inl fun k f =>
+          assignSlotRef_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
   | assignGlob g e hw hL =>
       exact Or.inr (Or.inl fun k f =>
         assignGlob_slots_fest O passes σ ρ σ' hstep t k f)

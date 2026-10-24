@@ -411,6 +411,8 @@ theorem speicherfest_speicher
       simp [Stmt.speicherfest] at hFest
   | assignThru p t ht f i e hw hL =>
       simp [Stmt.speicherfest] at hFest
+  | assignSlotRef r t ht ho f e hw hL =>
+      simp [Stmt.speicherfest] at hFest
   | assignGlob g e hw hL =>
       simp [Stmt.speicherfest] at hFest
   | putBytes t f hf n i hlo hhi e hw hL =>

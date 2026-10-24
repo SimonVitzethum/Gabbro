@@ -26,6 +26,8 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       BlattG.nicht_zurueck O passes keinRuf (.assignSlot t f' i e hw hL)
   | _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       BlattG.nicht_zurueck O passes keinRuf (.assignThru _ p t ht f' i e hw hL)
+  | _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
+      BlattG.nicht_zurueck O passes keinRuf (.assignSlotRef _ r t ht ho f' e hw hL)
   | _, _, _, _, .assignGlob g e hw hL, _ =>
       BlattG.nicht_zurueck O passes keinRuf (.assignGlob g e hw hL)
   | _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>

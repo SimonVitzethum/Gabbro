@@ -149,6 +149,11 @@ structure Deklaration where
   [decTab : DecidableEq Tab]
   /-- `table T count N`; ein `format` und ein Verbund sind Tabellen mit `count 1`. -/
   count : Tab → Int
+  /-- `table T open` -- an OPEN table: a region without a declared element ceiling. Its cells are addressed by
+      `ref` values (`Expr.slotRef`), not by the bounded index type; `count` does not bound them. Every cell of
+      such a region comes from the program's own provider (an answer of type `ref`); that it has memory to give is
+      user logic. Default: no table is open. -/
+  offen : Tab → Bool := fun _ => false
   Feld : Tab → Type
   [decFeld : ∀ t, DecidableEq (Feld t)]
   typ : ∀ t, Feld t → Ty
@@ -493,6 +498,11 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       `ancestors of` und `chain(…) in` sind `forallSlots` mit `reaches` als Filter. -/
   | reaches (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
       (a b : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr Γ Λ .bool
+  /-- Two references name the same cell. -/
+  | refEq (a b : Expr Γ Λ (.ref n)) : Expr Γ Λ .bool
+  /-- `r->f` into the OPEN table number `n` -- under the same guards as a slot of `t`. -/
+  | slotRef (r : Expr Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
+      (f : D.Feld t) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
   | empty : NutzlastExpr Γ Λ none
@@ -597,6 +607,10 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | retWhy (r : Fin V.gruende) (hΛ : Λ.Perm V.ende) : Stmt l Γ Λ Λ
   | leave (h : l = true) : Stmt l Γ Λ Λ
   | next (h : l = true) : Stmt l Γ Λ Λ
+  /-- `r->f = e;` into the OPEN table number `n` (`Expr.slotRef`). -/
+  | assignSlotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
+      (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
+      Stmt l Γ Λ Λ
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ

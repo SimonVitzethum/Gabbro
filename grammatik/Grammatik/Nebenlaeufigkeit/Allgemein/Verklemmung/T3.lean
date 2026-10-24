@@ -52,7 +52,7 @@ theorem mS_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [mS]
       exact mB_boden body fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
   | .assignSlot .., _ => rfl
-  | .assignThru .., _ => rfl
+  | .assignThru .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
   | .putBytes .., _ => rfl
   | .assignVar .., _ => rfl

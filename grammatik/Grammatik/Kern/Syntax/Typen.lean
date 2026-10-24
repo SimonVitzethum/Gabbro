@@ -56,6 +56,12 @@ inductive Ty where
       wie ein direkter. Zwei Zeiger auf `t` sind damit zwei Namen fuer EINE Welt unter EINEM
       Waechter -- der Alias kostet keine Sicherheit, nur Logik (§15.8). -/
   | ptr (t : Nat) (rw : Bool)
+  /-- `ref T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
+      `Deklaration.offen`). The value is a cell number without an upper bound. A reference is made ONLY by the program's
+      memory provider: the answer of a provider item (`syscall`/`extern`), whose contract (user logic) says the cell
+      is fresh. That the provider has memory to give is user logic too (Simon, 2026-10-24: OOM is user logic). G itself makes no reference, and never one
+      from an integer. Every access through it carries the guards of `t` like a slot access. -/
+  | ref (t : Nat)
   deriving DecidableEq, Repr
 
 /-- Ein Index in `0 ..< n`: der Typ, den `index into T` erzeugt. -/
@@ -127,6 +133,16 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .fl lo hi => Gleit lo hi
   | .fnptr n => { f : F // passt f n = true }
   | .ptr _ _ => Unit
+  | .ref _ => Nat
+
+/-- The cell number of a reference. -/
+def Val.zelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (v : Val F passt (.ref n)) : Nat := v
+
+/-- The reference to cell `k`. -/
+def Val.vonZelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (k : Nat) : Val F passt (.ref n) := k
+
+@[simp] theorem Val.zelle_vonZelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (k : Nat) :
+    (Val.vonZelle (F := F) (passt := passt) (n := n) k).zelle = k := rfl
 
 theorem Val.int_bereich {F : Type} {passt : F → Nat → Bool} {lo hi : Int} (v : Val F passt (.int lo hi)) :
     lo ≤ v.n ∧ v.n ≤ hi := ⟨v.lo_le, v.le_hi⟩

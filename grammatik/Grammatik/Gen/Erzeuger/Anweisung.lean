@@ -33,6 +33,13 @@ def sAssignThru : Sz (SS D V l Γ Λ) :=
         Sz.wenn (V.schreibt t = true) fun hw => Sz.wenn (darf D t Λ) fun hL =>
           Sz.pure ⟨Λ, .assignThru q t ht f i e hw hL⟩)
 
+def sAssignSlotRef : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (refS E) fun ⟨n, r⟩ => Sz.bind (Sz.wahl Aufz.tab) fun t =>
+    Sz.wenn (D.tabNr n = some t) fun ht => Sz.wenn (D.offen t = true) fun ho =>
+      Sz.bind (Sz.wahl (Aufz.feld t)) fun f => Sz.bind (tyS E (D.typ t f)) fun e =>
+        Sz.wenn (V.schreibt t = true) fun hw => Sz.wenn (darf D t Λ) fun hL =>
+          Sz.pure ⟨Λ, .assignSlotRef r t ht ho f e hw hL⟩)
+
 def sAssignGlob : Sz (SS D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.glob) fun g => Sz.bind (tyS E (D.gtyp g)) fun e =>
     Sz.wenn (V.gschreibt g = true) fun hw => Sz.wenn (gdarf D g Λ) fun hL => Sz.pure ⟨Λ, .assignGlob g e hw hL⟩)
@@ -160,6 +167,6 @@ def stmtS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D
   Sz.alle [sAssignSlot E, sAssignThru E, sAssignGlob E, sPutBytes E, sAssignVar E, sShift E, sIte E Bs,
     sOnOption O E Bs, sOnTag O E, sOnWhy O E, sCall E, sCallInd E, sLocks O, sBreaking Bs, sTraverse O E,
     sRetry O E Bs, sForever O E, sAxiomCall E, sRegWrite E, sTransition, sPublish E, sAdvances, sRetires, sRet E,
-    sRetWhy, sLeave, sNext]
+    sRetWhy, sLeave, sNext, sAssignSlotRef E]
 
 end Gabbro.Grammatik.Gen

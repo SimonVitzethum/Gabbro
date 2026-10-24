@@ -24,6 +24,7 @@ def koerperS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → List (D.Tab ⊕ D.Glob)
   | .assignSlot _ _ i e _ _ => i.orte ++ e.orte
   | .assignThru p _ _ _ i e _ _ => p.orte ++ i.orte ++ e.orte
+  | .assignSlotRef r _ _ _ _ e _ _ => r.orte ++ e.orte
   | .assignGlob _ e _ _ => e.orte
   | .putBytes _ _ _ _ i _ _ e _ _ => i.orte ++ e.orte
   | .assignVar _ e => e.orte
@@ -131,12 +132,13 @@ theorem gerufen_ruf (P : Programm D) (g' : D.Fn) (x : D.Tab ⊕ D.Glob) :
   · intro h
     exact ⟨g', by simp [rufNur], List.mem_append.2 h⟩
 
+set_option maxHeartbeats 1000000 in
 mutual
 
 theorem stmtOrteP_iff (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ (s : Stmt D V l Γ Λ Λ') (x : D.Tab ⊕ D.Glob), x ∈ stmtOrteP P s ↔ x ∈ koerperS s ∨ Gerufen P (fun g => mS (rufNur g) s) x
   | .assignSlot .., x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
-  | .assignThru .., x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
+  | .assignThru .., x | .assignSlotRef .., x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
   | .assignGlob .., x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
   | .putBytes .., x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
   | .assignVar .., x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])

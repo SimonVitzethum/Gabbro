@@ -183,6 +183,15 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
           hg1,
         eval_gleichAuf e (fun o ho => hS o (List.mem_append_right _ ho)) hg1]
       exact gleichAuf_schreibSlot hg1 _ _ _ _ _ _
+  | assignSlotRef r t ht ho f e hw hL =>
+      simp only [stmtOrteP] at hS
+      simp only [execStmt, Ausgang.ok.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hg1 := hg.lese Λ Λ (r.orte ++ e.orte) (r.orte ++ e.orte)
+      refine ⟨_, rfl, ?_, spur_laenge_erw ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))⟩
+      rw [eval_gleichAuf r (fun o ho => hS o (List.mem_append_left _ ho)) hg1,
+        eval_gleichAuf e (fun o ho => hS o (List.mem_append_right _ ho)) hg1]
+      exact gleichAuf_schreibSlot hg1 _ _ _ _ _ _
   | assignGlob g e hw hL =>
       simp only [stmtOrteP] at hS
       simp only [execStmt, Ausgang.ok.injEq] at h

@@ -109,6 +109,32 @@ theorem blatt_erhaelt_slots
           rw [hslot]
           exact lese_slots_gleich _ _ _ _ _ _
         exact hgoal
+  | assignSlotRef r u ht ho fld e hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      by_cases htu : u = t
+      · subst htu
+        have hmem : Res.held L ∈ Λ := by
+          have hdarf := hL _ hGuard
+          simpa [Res.von] using hdarf
+        exact False.elim (hfrei (hheld hmem))
+      · intro k fld'
+        have hslot : (((M.weltVon f).lese Λ (r.orte ++ e.orte)).schreibSlot u Λ
+            ((eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) r
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) fld
+            (eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) e
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ)).slots t k fld' =
+            ((M.weltVon f).lese Λ (r.orte ++ e.orte)).slots t k fld' :=
+          storeSlot_fremd_traeger _ (Ne.symm htu) _ _ _ _ _
+        have hgoal : (((M.weltVon f).lese Λ (r.orte ++ e.orte)).schreibSlot u Λ
+            ((eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) r
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ).zelle : Int) fld
+            (eval ((M.weltVon f).lese Λ (r.orte ++ e.orte)) e
+              ((M.weltVon f).lese Λ (r.orte ++ e.orte)) ρ)).slots t k fld' =
+            (M.weltVon f).slots t k fld' := by
+          rw [hslot]
+          exact lese_slots_gleich _ _ _ _ _ _
+        exact hgoal
   | assignGlob g e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep

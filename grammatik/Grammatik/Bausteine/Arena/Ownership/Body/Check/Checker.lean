@@ -135,6 +135,8 @@ def chkS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
   | _, _, _, _, .retWhy _ _, _, c => if finish c none then some none else none
   | _, _, _, _, .leave _, k, c => if exitsB k c then some none else none
   | _, _, _, _, .next _, k, c => if exitsB k c then some none else none
+  -- A write through a reference into an open region: no ownership rule yet (PLAN-DYNAMIC 14.3), so refused.
+  | _, _, _, _, .assignSlotRef .., _, _ => none
 
 def chkB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     Block D V l Γ Λ Λ' → (k c : Context) → Out

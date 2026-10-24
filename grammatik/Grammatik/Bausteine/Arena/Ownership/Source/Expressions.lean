@@ -29,7 +29,8 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .bor _ _ _ _ _ a b | .bxor _ _ _ _ _ a b | .shl _ _ _ _ _ a b | .shr _ _ _ _ _ a b =>
     requirements a ++ requirements b
   | .case _ _ payload => payloadRequirements payload
-  | .forallSlots .. | .existsSlots .. | .reaches .. => [.unsupported]
+  | .forallSlots .. | .existsSlots .. | .reaches .. | .slotRef .. => [.unsupported]
+  | .refEq a b => requirements a ++ requirements b
   | .lit _ | .tru | .fls | .glob .. | .ptrOf .. | .fnref .. | .oldG .. | .none _ | .why .. => []
 
 def payloadRequirements {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :

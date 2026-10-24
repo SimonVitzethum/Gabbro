@@ -31,6 +31,8 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .thru p t ht f i hL => kongr₂ (fun x y => x ++ Sum.inl t :: y) (ruE_orte p) (ruE_orte i)
   | _, _, _, .ptrOf .. => rfl
   | _, _, _, .fnref .. => rfl
+  | _, _, _, .refEq a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .slotRef r t ht ho f hL => congrArg (Sum.inl t :: ·) (ruE_orte r)
   | _, _, _, .oldG _ _ => rfl
   | _, _, _, .oldS t f i hL => congrArg (Sum.inl t :: ·) (ruE_orte i)
   | _, _, _, .widen _ _ e => ruE_orte e
@@ -146,6 +148,7 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .assignSlot _ _ i e _ _ => kongr₂ (· ++ ·) (ruE_orte i) (ruE_orte e)
   | _, _, _, _, .assignThru p _ _ _ i e _ _ =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruE_orte i)) (ruE_orte e)
+  | _, _, _, _, .assignSlotRef r _ _ _ _ e _ _ => kongr₂ (· ++ ·) (ruE_orte r) (ruE_orte e)
   | _, _, _, _, .assignGlob _ e _ _ => ruE_orte e
   | _, _, _, _, .putBytes _ _ _ _ i _ _ e _ _ => kongr₂ (· ++ ·) (ruE_orte i) (ruE_orte e)
   | _, _, _, _, .assignVar _ e => ruE_orte e
@@ -272,7 +275,7 @@ mutual
 theorem ruS_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ'), (ruS s).regs = s.regs
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignThru .. => rfl
+  | _, _, _, _, .assignThru .. | _, _, _, _, .assignSlotRef .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
   | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
@@ -369,7 +372,7 @@ mutual
 theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ'), Stmt.gOk (D := D.mitRuhe) K Rg (ruS s) = s.gOk (kZ K) Rg
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignThru .. => rfl
+  | _, _, _, _, .assignThru .. | _, _, _, _, .assignSlotRef .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
   | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl

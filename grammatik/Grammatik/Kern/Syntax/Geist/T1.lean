@@ -88,6 +88,7 @@ def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
   | .assignSlot _ _ i e _ _ => orteOk (D := D) (i.orte ++ e.orte)
   | .assignThru p _ _ _ i e _ _ => orteOk (D := D) (p.orte ++ i.orte ++ e.orte)
+  | .assignSlotRef r _ _ _ _ e _ _ => orteOk (D := D) (r.orte ++ e.orte)
   | .assignGlob _ e _ _ => orteOk (D := D) e.orte
   | .putBytes _ _ _ _ i _ _ e _ _ => orteOk (D := D) (i.orte ++ e.orte)
   | .assignVar _ e => orteOk (D := D) e.orte
@@ -236,6 +237,12 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro h ho
       have h0 : (orteOk (D := D) (p.orte ++ i.orte ++ e.orte)) = true := h
       have ho' : o ∈ p.orte ++ i.orte ++ e.orte := by
+        simpa [Extraktion.stmtOrte] using ho
+      exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
+  | .assignSlotRef r t ht ho f e hw hL =>
+      intro h ho
+      have h0 : (orteOk (D := D) (r.orte ++ e.orte)) = true := h
+      have ho' : o ∈ r.orte ++ e.orte := by
         simpa [Extraktion.stmtOrte] using ho
       exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
   | .assignGlob g e hw hL =>

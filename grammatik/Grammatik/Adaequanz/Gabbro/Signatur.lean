@@ -105,6 +105,8 @@ def tabelle : List Konstr := [
   ⟨"Expr", "forallSlots", ["Expr"], 1, 1⟩,
   ⟨"Expr", "existsSlots", ["Expr"], 1, 1⟩,
   ⟨"Expr", "reaches", ["Expr", "Expr"], 2, 2⟩,
+  ⟨"Expr", "refEq", ["Expr", "Expr"], 0, 0⟩,
+  ⟨"Expr", "slotRef", ["Expr"], 3, 2⟩,
   ⟨"NutzlastExpr", "empty", [], 0, 0⟩,
   ⟨"NutzlastExpr", "num", ["Expr"], 0, 0⟩,
   ⟨"Args", "nil", [], 0, 0⟩,
@@ -138,6 +140,7 @@ def tabelle : List Konstr := [
   ⟨"Stmt", "retWhy", [], 1, 1⟩,
   ⟨"Stmt", "leave", [], 1, 0⟩,
   ⟨"Stmt", "next", [], 1, 0⟩,
+  ⟨"Stmt", "assignSlotRef", ["Expr", "Expr"], 4, 2⟩,
   ⟨"Block", "nil", [], 0, 0⟩,
   ⟨"Block", "cons", ["Stmt", "Block"], 0, 0⟩,
   ⟨"Block", "bind", ["Expr", "Block"], 0, 0⟩,
@@ -187,19 +190,19 @@ run_meta pruefeTabelle
 /-- The rows of a family. -/
 def zeilen (f : String) : List Konstr := tabelle.filter (·.familie == f)
 
-/-- 111 constructors: `Expr` 42, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 27, `Block` 18, `Endblock` 14,
+/-- 114 constructors: `Expr` 44, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 28, `Block` 18, `Endblock` 14,
     `Arms` 2, `GrundArms` 2. -/
-theorem anzahl_konstruktoren : tabelle.length = 111 ∧
+theorem anzahl_konstruktoren : tabelle.length = 114 ∧
     ["Expr", "NutzlastExpr", "Args", "ErgExpr", "Stmt", "Block", "Endblock", "Arms", "GrundArms"].map
-      (fun f => (zeilen f).length) = [42, 2, 2, 2, 27, 18, 14, 2, 2] := by decide
+      (fun f => (zeilen f).length) = [44, 2, 2, 2, 28, 18, 14, 2, 2] := by decide
 
 /-- The arity histogram: how many constructors have 0, 1, 2, 3 children. -/
-theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [25, 29, 41, 16] := by
+theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [25, 30, 43, 16] := by
   decide
 
 /-- The premises (each one local refusal cell of Theorem 4) and the child positions (each one "child of the wrong
     sort or index" refusal cell). -/
-theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 139 ∧
-    (tabelle.map (·.kinder.length)).sum = 159 := by decide
+theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 146 ∧
+    (tabelle.map (·.kinder.length)).sum = 164 := by decide
 
 end Gabbro.Grammatik.Adaequanz.GabbroSig

@@ -569,6 +569,8 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       blattOkR P O passes f fn stapel rho s0 A R (.assignSlot t f' i e hw hL)
   | _, _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       blattOkR P O passes f fn stapel rho s0 A R (.assignThru _ p t ht f' i e hw hL)
+  | _, _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
+      blattOkR P O passes f fn stapel rho s0 A R (.assignSlotRef _ r t ht ho f' e hw hL)
   | _, _, _, _, _, .assignGlob g e hw hL, _ =>
       blattOkR P O passes f fn stapel rho s0 A R (.assignGlob g e hw hL)
   | _, _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>
@@ -1063,6 +1065,8 @@ theorem stmtAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       blattAbbR P O passes f fn stapel rho s0 A R (.assignSlot t f' i e hw hL)
   | _, _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       blattAbbR P O passes f fn stapel rho s0 A R (.assignThru _ p t ht f' i e hw hL)
+  | _, _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
+      blattAbbR P O passes f fn stapel rho s0 A R (.assignSlotRef _ r t ht ho f' e hw hL)
   | _, _, _, _, _, .assignGlob g e hw hL, _ =>
       blattAbbR P O passes f fn stapel rho s0 A R (.assignGlob g e hw hL)
   | _, _, _, _, _, .putBytes t f' hf n i hlo hhi e hw hL, _ =>

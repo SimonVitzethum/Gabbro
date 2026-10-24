@@ -53,6 +53,14 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
       Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) <| Sz.mem_wenn ht <|
       Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f)) <| Sz.mem_bind (mem_tyS hi) <| Sz.mem_bind (mem_tyS he) <|
       Sz.mem_wenn hw <| Sz.mem_wenn hL <| Sz.mem_pure _) (by omega)
+  | assignSlotRef r t ht ho f e hw hL =>
+    simp only [groesseStmt] at hu hE hB hO ⊢
+    have hr := hE _ r (by omega)
+    have he := hE _ e (by omega)
+    stm (sAssignSlotRef E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_refS hr) <|
+      Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) <| Sz.mem_wenn ht <| Sz.mem_wenn ho <|
+      Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f)) <| Sz.mem_bind (mem_tyS he) <|
+      Sz.mem_wenn hw <| Sz.mem_wenn hL <| Sz.mem_pure _) (by omega)
   | assignGlob g e hw hL =>
     simp only [groesseStmt] at hu hE hB hO ⊢
     have he := hE _ e (by omega)

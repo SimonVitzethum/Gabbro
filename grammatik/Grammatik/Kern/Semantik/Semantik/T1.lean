@@ -159,6 +159,8 @@ mutual
     `&&` liest den rechten Operanden nicht immer -- mehr Ereignisse, alle bewacht). -/
 def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .lit _ | .tru | .fls | .var _ | .ptrOf _ _ _ _ | .fnref _ _ _ | .none _ | .why _ _ => []
+  | .refEq a b => a.orte ++ b.orte
+  | .slotRef r t _ _ _ _ => .inl t :: r.orte
   | .glob g _ => [.inr g]
   | .slot t _ i _ => .inl t :: i.orte
   | .thru p t _ _ i _ => p.orte ++ .inl t :: i.orte
@@ -220,6 +222,8 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .thru _ t _ f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
   | .ptrOf _ _ _ _, _, _ => ()
   | .fnref f _ h, _, _ => ⟨f, h⟩
+  | .refEq a b, σ, ρ => decide ((eval σ₀ a σ ρ).zelle = (eval σ₀ b σ ρ).zelle)
+  | .slotRef r t _ _ f _, σ, ρ => σ.slots t ((eval σ₀ r σ ρ).zelle : Int) f
   | .oldG g _, _, _ => σ₀.globs g
   | .oldS t f i _, σ, ρ => σ₀.slots t (eval σ₀ i σ ρ).n f
   | .widen h1 h2 e, σ, ρ => Zahl.weiter h1 h2 (eval σ₀ e σ ρ)
@@ -432,6 +436,7 @@ def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D �
   | .fl lo hi, n => gleitWortPasst lo hi n
   | .fnptr m, n => zeigerPasst z m n
   | .ptr _ _, _ => some ()
+  | .ref _, n => if 0 ≤ n then some (Val.vonZelle n.toNat) else Option.none
 
 def einpassenErg (z : Int → Option D.Fn) : (τ : Option Ty) → Int → Option (ErgVal D τ)
   | Option.none, _ => some ()
