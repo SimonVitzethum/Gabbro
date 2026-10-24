@@ -1,4 +1,5 @@
 import Grammatik.Berechenbarkeit.BrainfuckG.Nimm
+import Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses
 import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
 
 /-! Axiom audit of the Brainfuck-on-G modules. -/
@@ -12,3 +13,7 @@ import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.lege_voll
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses.lege_ok_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses.lege_voll_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.befehl_schritt
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.befehl_voll
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses.befehl_schritt_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses.befehl_voll_zeuge
