@@ -101,13 +101,22 @@ def marke (weiter : Bool) : Spez where
   annahmen := 1
   sigs := [{ konsumiert := [(0, 0)], produziert := if weiter then [(0, 1)] else [] }]
 
+/-- **The region member** (PLAN-DYNAMIC 14): an open table with a byte field and a reference field, a static of
+    reference type, references as parameters and as a result. The provider item is a foreign body, outside the fine
+    cells; references reach the bodies as parameters and through the static. -/
+def region : Spez where
+  tabs := [{ count := 0, offen := true, felder := [{ typ := .int 0 255 }, { typ := .ref 0 }] }]
+  globs := [{ typ := .ref 0 }]
+  sigs := [{ params := [.ref 0, .ref 0], schreibt := [0], gschreibt := [0] }, { params := [.ref 0], erg := some (.ref 0) }]
+  fns := [0, 1]
+
 /-- **The fine members**: for every group the three declarations, then for every group the one with a pointer; then
-    the divisor group; then the combination members; then a one-class member per class and the two mark members
+    the divisor group; then the combination members; then a one-class member per class, the two mark members and the region member
     (each block appended, so the members before keep their numbers). -/
 def feinMitglieder : List Spez :=
   (((gruppen.flatMap fun g => [ausdruck g, register g, atomar g]) ++ gruppen.map zeiger) ++
     [ausdruck teilerGruppe, register teilerGruppe, zeiger teilerGruppe] ++ kombiListen.map kombi ++
-    vertreter.map einKlasse ++ [marke true, marke false]).map Spez.einzeln
+    vertreter.map einKlasse ++ [marke true, marke false] ++ [region]).map Spez.einzeln
 
 theorem kombiListen_laenge : kombiListen.length = 15 := by decide
 
