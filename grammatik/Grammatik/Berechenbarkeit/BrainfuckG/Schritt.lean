@@ -237,13 +237,13 @@ theorem execBlock_cons_of_end {Λ' Λ'' : List (Res D)} {Γ : Ctx} (s : Stmt D V
   simp only [execBlock, h]
   cases e <;> rfl
 
-/-- **One Brainfuck step is one run of its G block**: with room for one cell, the block of the instruction at the
-counter runs normally to the representation of the successor state. -/
+/-- **One Brainfuck step is one run of its G block**: the block of an instruction runs normally to the representation
+of the successor state; an instruction that pushes needs room for one cell. -/
 theorem befehl_schritt (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hinj : Function.Injective fun k => (G k).g)
     (hp : D.typ A.tab A.feld = ByteTy) (r : Rechte A G V Λ) (voll : Endblock D V l (BCtx n Γ0) Λ)
     (ρ0 : Env D Γ0) (op : Instruction n) (next : Fin (n + 1)) (s : State n) (σ : World D)
     (ρ : Env D (BCtx n Γ0)) (hd : Darstellt L G hp ρ0 s σ ρ)
-    (hroom : A.kopfSt σ < D.count A.tab ∨ A.stand σ < D.count A.tab) :
+    (hroom : op = .right ∨ op = .left ∨ op = .output → A.kopfSt σ < D.count A.tab ∨ A.stand σ < D.count A.tab) :
     ∃ σ' ρ', execBlock O passes R (befehl L G hp r voll op next) σ ρ = .ok σ' ρ' ∧
       Darstellt L G hp ρ0 (execute op next s) σ' ρ' := by
   have hrest : ∀ op', op' ≠ Instruction.right ∧ op' ≠ .left ∧ op' ≠ .input ∧ op' ≠ .output → op' = op →
@@ -256,7 +256,7 @@ theorem befehl_schritt (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hinj : Funct
   subst hρ
   cases op with
   | right =>
-      obtain ⟨σ1, h1, hm1, hf1⟩ := legeS_exec O passes R L G hinj hp r voll 0 σ _ _ hm hf hroom
+      obtain ⟨σ1, h1, hm1, hf1⟩ := legeS_exec O passes R L G hinj hp r voll 0 σ _ _ hm hf (hroom (.inl rfl))
       obtain ⟨σ2, h2, hm2, hf2⟩ := nimmS_exec O passes R L G hinj hp r voll 1 σ1 _ _ s.right rfl hm1 hf1
       refine ⟨σ2.lese Λ [], _, ?_, rfl, MultiRep.lese ?_ Λ [], A.freiOk_gleich (σ := σ2) rfl (fun _ => rfl) rfl hf2⟩
       · simp only [befehl]
@@ -267,7 +267,7 @@ theorem befehl_schritt (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hinj : Funct
         funext k
         rcases k with ⟨_ | _ | _ | _ | k, hk⟩ <;> first | rfl | omega
   | left =>
-      obtain ⟨σ1, h1, hm1, hf1⟩ := legeS_exec O passes R L G hinj hp r voll 1 σ _ _ hm hf hroom
+      obtain ⟨σ1, h1, hm1, hf1⟩ := legeS_exec O passes R L G hinj hp r voll 1 σ _ _ hm hf (hroom (.inr (.inl rfl)))
       obtain ⟨σ2, h2, hm2, hf2⟩ := nimmS_exec O passes R L G hinj hp r voll 0 σ1 _ _ s.left rfl hm1 hf1
       refine ⟨σ2.lese Λ [], _, ?_, rfl, MultiRep.lese ?_ Λ [], A.freiOk_gleich (σ := σ2) rfl (fun _ => rfl) rfl hf2⟩
       · simp only [befehl]
@@ -288,7 +288,7 @@ theorem befehl_schritt (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hinj : Funct
         funext k
         rcases k with ⟨_ | _ | _ | _ | k, hk⟩ <;> first | rfl | omega
   | output =>
-      obtain ⟨σ1, h1, hm1, hf1⟩ := legeS_exec O passes R L G hinj hp r voll 3 σ _ _ hm hf hroom
+      obtain ⟨σ1, h1, hm1, hf1⟩ := legeS_exec O passes R L G hinj hp r voll 3 σ _ _ hm hf (hroom (.inr (.inr rfl)))
       refine ⟨σ1.lese Λ [], _, ?_, rfl, MultiRep.lese ?_ Λ [], A.freiOk_gleich (σ := σ1) rfl (fun _ => rfl) rfl hf1⟩
       · simp only [befehl]
         rw [execBlock_cons_of_ok O passes R _ _ h1,
@@ -320,6 +320,22 @@ theorem befehl_voll (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hp : D.typ A.ta
   · exact execBlock_cons_of_end O passes R _ _ _ (hl 0)
   · exact execBlock_cons_of_end O passes R _ _ _ (hl 1)
   · exact execBlock_cons_of_end O passes R _ _ _ (hl 3)
+
+/-- **Every step has exactly one of two outcomes**: the represented successor state, or the failure block. -/
+theorem befehl_genau (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hinj : Function.Injective fun k => (G k).g)
+    (hp : D.typ A.tab A.feld = ByteTy) (r : Rechte A G V Λ) (voll : Endblock D V l (BCtx n Γ0) Λ)
+    (ρ0 : Env D Γ0) (op : Instruction n) (next : Fin (n + 1)) (s : State n) (σ : World D)
+    (ρ : Env D (BCtx n Γ0)) (hd : Darstellt L G hp ρ0 s σ ρ) :
+    (∃ σ' ρ', execBlock O passes R (befehl L G hp r voll op next) σ ρ = .ok σ' ρ' ∧
+      Darstellt L G hp ρ0 (execute op next s) σ' ρ') ∨
+    ∃ σf, execBlock O passes R (befehl L G hp r voll op next) σ ρ = (execEnd O passes R voll σf ρ).zuAusgang := by
+  by_cases hroom : A.kopfSt σ < D.count A.tab ∨ A.stand σ < D.count A.tab
+  · exact .inl (befehl_schritt O passes R L G hinj hp r voll ρ0 op next s σ ρ hd (fun _ => hroom))
+  · by_cases hop : op = .right ∨ op = .left ∨ op = .output
+    · have h1 := A.kopfSt_le σ
+      have h2 := A.stand_le σ
+      exact .inr (befehl_voll O passes R L G hp r voll op hop next σ ρ (by omega) (by omega))
+    · exact .inl (befehl_schritt O passes R L G hinj hp r voll ρ0 op next s σ ρ hd (fun h => absurd h hop))
 end Execution
 
 end Gabbro.Grammatik.Berechenbarkeit.BrainfuckG

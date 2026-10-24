@@ -1,4 +1,5 @@
 import Grammatik.Berechenbarkeit.BrainfuckG.Nimm
+import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
 import Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses
 import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
 
@@ -17,3 +18,12 @@ import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.befehl_voll
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses.befehl_schritt_zeuge
 #print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses.befehl_voll_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.befehl_genau
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.durchgang
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.durchgang_platz
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.programm_vollstaendig
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.programm_korrekt
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.programm_haelt
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses.programm_vollstaendig_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses.programm_ok_zeuge
+#print axioms Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses.programm_haelt_zeuge
