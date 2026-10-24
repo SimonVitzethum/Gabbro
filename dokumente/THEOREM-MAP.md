@@ -4653,3 +4653,21 @@ counts, Brainfuck compilation and joint execution witnesses. `PLAN-DYNAMIC.md` 1
 Full library plus heap audit: 2,213 jobs; 68 new and 64 earlier storage/main axiom lists, all standard. Executed witnesses cover transfer,
 nested loops, wrap, empty input entry, OOM, fuel exhaustion, divergent output prefixes and peek followed by release. No G admission or
 Rust/universality claim is inferred from these component results.
+
+### 93.2. Actual G stack prefixes and terminating program witness (2026-10-24)
+
+`Berechenbarkeit/Storage/GStack/{Values,Link,Pop,Reclaim,Allocation,Push,Termination,Witnesses,Audit}.lean`.
+Scope and the exact remaining boundary: `PLAN-DYNAMIC.md` 13.4.
+
+* `Represents.frame/reads`, `linkPush_values`, `linkPop_values`: live, distinct linked cells represent exact payload sequences before
+  and after the real G instructions; recorded reads and changes outside visited cells preserve the representation.
+* `fresh_allocated`, `reused_allocated`, `push_values`: concrete allocation and payload initialization compose with real link stores,
+  uniformly for every continuation. Both fresh and recycled push preserve free-list safety and the old sequence.
+* `free_values`, `popAndRelease_values`: the head payload is saved before actual release; the remaining sequence is preserved and the
+  old head becomes dead. The dead internal index is not by itself a source-level owning reference.
+* `*_termination`: existing behaviour extraction retains all continuations and failure branches, with no new recursive service.
+* `roundTrip_correct`, fresh/recycled witnesses, `program_exec_zeuge`, `program_accepted_zeuge`, `program_termination_zeuge`: complete
+  G cycles and a whole finite, core-accepted program returning normally, in class `endet`. Provider refusal and empty pop are executed
+  separately. This is not the new source ownership checker, an unbounded G arena or a whole-program TM2/G simulation.
+
+Full library plus G-stack audit: 2,230 jobs; 36 new axiom lists, all standard. No-holes, goal-axiom, layout and whitespace checks pass.
