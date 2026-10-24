@@ -362,8 +362,19 @@ of §8.2 (refusal, never "optimised but unchecked"); a LANGUAGE item goes into t
 2-5x less memory in Goose's measurements), typed references into growing storage (`bintrees`), inline DTOs (`respond`). These
 become benchmark pairs once the direct backend measures (§11 of AGENTS.md: fixed-work and throughput scores against GCC `-O3`).
 
-**Order:** G1, G2, G4 first (they need no new language form and serve every program), then G5/G6 with the open region, then G7,
-G3, G10; G8, G9 and G11 are language forms and go through the Lean model first.
+**Status measured 2026-10-24 in the Lean lowering (`grammatik/Grammatik/Code/Lower`):**
+* G2 is already the design: a function with a failure channel answers ONE word that packs value and reason
+  (`Lower/Fail.lean`: reason `r` is `r + 1`, a value is `L * (v - lo)`); no unwinder, no result chain.
+* G4 is already the design for sums and records: a tagged value is one word (`Lower/Sum.lean`, case + payload offset),
+  records are flat (`Model/Layout.lean`: `fieldOff`, `gepOff`, no interior pointers), ranges are carried at
+  their own width (`Ar.wid`).
+* G1 has no object yet: G has no first-class aggregate values, every result is a word. It becomes relevant with
+  `string max N` as a value (the next language item).
+* The open-region forms (`slotRef`, `assignSlotRef`) are refused by the lowering (`_ => none`), as the rule demands for
+  a form without a proved lowering row. G5/G6 are their lowering.
+
+**Order:** G5/G6 first (the lowering of the open region, which has none yet), then G7, G3, G10; G1 with the string values;
+G8, G9 and G11 are language forms and go through the Lean model first.
 
 ## 9. The path from the grammar to the checker and emitter (absorbed from `dokumente/PLAN-TRANSLATION-VALIDATION.md`)
 
