@@ -212,7 +212,7 @@ a table of `count = hi` plus a `used` global; `arenaAlloc_unter_schranke`), `Are
 
 ## 8. What is not covered
 
-* `free` across function boundaries and aliases outside the tracked ownership discipline (a copy the flow does
+* `free` across function boundaries (Lean audit and implementation plan: section 12) and aliases outside the tracked ownership discipline (a copy the flow does
   not track reads freed memory silently; the alias question is `A1-OWN-PAPER.md`'s).
 * A `reset` in a routine running concurrently with the index holder is refused as a pair (`N521`), but generations
   are tracked along one thread of control otherwise; memory safety does not depend on it (a stale index stays
@@ -1172,3 +1172,123 @@ replacement is a global footprint exemption built from those facts, not a weaken
 
 Open for Simon after the planning pass: §8a.3 T1 (the arena declaration lives in `Deklaration`, not in `Programm`) and T3 (a shared arena is a lock
 invariant ONLY, not a `D.invs` member) change the text of the earlier proposal and should be confirmed before M1 starts.
+
+## 12. Ownership of individual allocations across calls (Lean audit and plan, 2026-10-24)
+
+**Status: inspected definitions and proofs; extension PLANNED, not implemented or proved.** The question is whether a caller can hand one
+allocation to a callee which may free it, return its ownership, or return a newly allocated object. Preserving the arena's structural
+invariant across a call is already proved, but does not establish this ownership protocol. This audit did not run a fresh Lean build.
+
+**Binding clarification from Simon:** providing sufficient RAM is user logic. The language must preserve its guarantees when allocation
+fails; the unbounded heap must always have an explicit OOM path. A pressure sample does not replace that path. No OS guarantee or extra
+hardware assumption may be introduced to discharge ownership, resource availability, or the OOM branch.
+
+### 12.1 What the Lean model currently covers
+
+All paths below are relative to `grammatik/Grammatik/`.
+
+| Existing definition or theorem | What it establishes | What it does not establish |
+|---|---|---|
+| `Bausteine/Arena/Struktur/Erkenner/ArenaErkenner.lean`: `Abs.leer`, `StrukturPasst`, `Erk.frei` | Function-entry parameters have status `offen`; `frei` requires status `frei` (owned, live, unlinked), and changes it to `offen`. Two owned variables denote different slots. | No signature instantiates ownership of an argument in the callee. `offen` forgets knowledge; it is not by itself a prohibition on every payload read. |
+| `Bausteine/Arena/Struktur/Erkenner/ArenaErkEnde.lean`: `ErkE.ret`, `ErkE.retWhy`, `erkE_koerper` | Recognized bodies preserve `K.Ok`; the entry theorem uses `Abs.leer`. | The returned value carries no proved ownership postcondition. The recognition of a return does not transfer an allocation to its caller. |
+| `Bausteine/Arena/Struktur/Sperre/ArenaSperreRuf.lean`: `rufAt_erk`; `ArenaSperreAbschnitt.lean`: `RErhaelt`, `Rufe` | Calls to recognized bodies preserve `K.Ok` on value/reason returns, including calls in a lock section. | No ownership frame for caller-held allocations, argument-to-parameter ownership substitution, or returned allocation identity. |
+| `Bausteine/Arena/Struktur/ArenaFremd.lean`: `Rahmen.frei_lebt`; `ArenaLebt.lean`: `lebt_frei` | Executed release kills the released slot, preserves other live slots and the allocator frame under explicit liveness/invariant premises. | No rule establishes those premises from a consuming function parameter or invalidates aliases in the suspended caller. |
+| `Logik/Vertraege/Objekte.lean`: `Obj`; `ObjektRahmen/T1.lean`: `ObjPar`, `ObjRufOk`; `ObjektRahmen/T2.lean`: `rufAt_obj` | Object identity below a table is `(table, slot)`; arguments can name distinct objects; calls obey a write frame. | Separation at one call is not ownership over an object's lifetime. `ObjRufOk` transports a writable footprint, not a right to destroy an allocation. |
+| `Kern/Syntax/Syntax.lean`: `Res`, `Signatur`, `nachSig`, `RufPasst` | Locks and declared linear marks are threaded through calls. | `Res` contains only `held` and `marke`; the consumed/produced mark lists do not depend on argument or result values. A carrier owner mark alone cannot identify one dynamically chosen slot. |
+| `Bausteine/Arena/ArenaDyn.lean`: `Block.dynAlloc`, `dynAlloc_ueber_commit` | The dynamic allocation form contains `voll`; without committed space it executes that failure continuation. | This bounded-prefix theorem is not a complete semantics/proof of the sampled unbounded heap or physical allocation failure. |
+
+**Verdict:** general ownership transfer of individual allocations across calls is not covered by these judgments. A manually proved
+callee with a suitable liveness precondition can execute the existing release block; that is not an automatic theorem for all accepted
+programs. Existing `own` pointer loans must keep their meaning: borrowing a carrier does not grant permission to destroy an arbitrary slot.
+
+### 12.2 Alternatives and selected architecture
+
+1. **Keep release in the allocating body.** Smallest change, but prevents ordinary allocator/destructor APIs and returning owned objects.
+2. **Use the arena's existing owner mark as the release permission.** Reuses call plumbing, but is too coarse: it neither identifies the
+   allocation being destroyed nor prevents a stale index from reaching a reused slot.
+3. **Generalize the existing arena recognizer with object ownership and argument/result summaries. Selected.** Reuse `Obj`/`ObjPar`,
+   `Lebt`, the allocator forms, and the existing call machine. Extend `Erk`/`ErkE` and their proofs rather than building a second allocator,
+   a parallel checker, or a general lifetime language. Keep carrier guards and object lifetime rights as distinct obligations in one
+   judgment. Only introduce a core syntax/resource change if the binding/substitution proof needs it; changing `Res` alone cannot solve
+   its current lack of argument-dependent identities.
+
+This is a model design, not new source syntax. Choose source notation only after the Lean judgment and its executable check are sound.
+
+### 12.3 Semantic contract and safety obligations
+
+* **Allocation identity.** Reuse `Obj = (table, slot)` for storage, but distinguish successive allocations of that storage by a fresh ghost
+  incarnation. Bind aliases to that identity, not to the current occupant of the numeric slot. Allocation creates a right only on success;
+  release consumes it. Reallocation of the same slot and whole-arena reset cannot revive old rights. The incarnation is proof state;
+  erasure must be proved before claiming that no runtime tag is needed.
+* **One owner, scoped loans.** A consuming parameter moves the allocation right out of the caller. Its aliases keep their provenance but
+  have no access right. A borrowing parameter temporarily lends access, forbids release/reset/ownership escape, and restores the same
+  right at return. No move or release is allowed while a loan is active. Initially loans are confined to calls; stored/escaping loans stay
+  refused. Existing carrier `own` loans retain their semantics.
+* **Value-dependent summaries.** Describe pre/post rights using typed argument positions and result positions, interpreted in actual
+  environments using `ObjPar`-style references. A postcondition relates input identities, the actual output and allocation state; a fresh
+  result must be backed by an executed successful allocation. Do not merely mark every index parameter `frei` at entry. Summaries must be
+  checked against bodies, not trusted metadata or new named assumptions. Store them with signatures, and extend `SigPasst` so indirect
+  calls cannot erase or change the ownership contract.
+* **Call and return.** Prove argument substitution, disjoint partition into callee rights and the caller's retained frame, and return
+  substitution back to the suspended frame. A consumed object never becomes usable under an old caller alias, even if returned under a
+  new owning result. A destructor consumes its input; an identity function can return the same ownership; a factory returns a genuinely
+  allocated identity. A declaration alone must never mint a right. Nested and recursive calls obey the same rule.
+* **All executable accesses.** Require a valid owner/loan or a proved container access for every arena payload read, write and release,
+  including expressions in arguments, returns, guards and indices. Cover direct slot access and pointer views; a copy or computed index
+  cannot bypass the rule. In particular, the existing unconstrained payload-index shapes in `ErkE.nutzlast` and `Erk.nutzlast` must not be
+  mistaken for a lifetime proof. Proof-only predicates may describe dead storage without authorizing an executable dereference.
+* **Containers and reset.** Reuse the existing list/tree ownership transitions: inserting relinquishes the loose owner right to the
+  structure, removing grants it back. Preserve rights and contents outside the operation's footprint, including other fields of the
+  same table. Whole-arena reset must discharge/invalidate all rights, including those in suspended frames and structures; outstanding
+  loans or retained caller rights prevent a callee reset. Generation checking and per-slot incarnation checking must agree.
+* **Branches, loops and exits.** Track moves, releases and returned rights on every path, with a sound join and loop invariant. Give every
+  value return and every declared reason return an ownership postcondition. Start with uniform effects on consuming inputs across all
+  returning outcomes; reject path-dependent effects until the same judgment can express and prove the needed outcome relation. Losing
+  knowledge is not a license to abandon a linear obligation. Do not claim eventual release for diverging programs or after hardware stops.
+* **Concurrency.** First cover same-thread calls under the existing carrier/allocator guards. Prove the object-right partition across
+  active and suspended frames and threads, preserving GA/GX and the current lock invariants. This does not enable new cross-thread
+  ownership transfer or lock-free reclamation. Those require a separately proved handoff using the same identities and rights.
+
+### 12.4 RAM availability and mandatory OOM handling
+
+Model an allocation request with success or failure supplied through the program's memory-provider contract. Successful requests establish
+freshness, disjointness, extent and access rights; failed requests create no object or ownership right. Any internal payload/metadata
+reservation made before failure must be rolled back or remain accounted for. Preserve pre-existing objects and rights on the failure path.
+Any stronger promise of sufficient RAM must be discharged as user logic, never silently inserted as a hardware assumption.
+
+The unbounded form must contain a source OOM continuation for **every** allocation, including allocations below `lo`, free-list reuse
+and reuse whose pages were returned. The continuation runs if the operation fails; it need not run on reuse requiring no new storage.
+Sampling is a policy decision; a positive sample proves no later allocation success. Refused reserve/commit/metadata requests must reach
+the declared failure channel, not an injected trap. This obligation does not claim recovery after a platform violates its provider contract.
+
+**Static audit finding, not a measured run:** `crates/gabbro-check/src/arena.rs::reservierung` returns `lo` for sampled and bounded arenas
+alike, and `Laeufer::alloc` requires `else` only when the count reaches `lo`. Thus this check alone does not enforce Simon's unconditional
+OOM-path rule for a sampled arena with positive `lo`. Add the Lean admission rule first, then a positive-`lo` negative probe without
+`else`, its explicit-`else` positive twin, and allocation-failure witnesses. Do not claim the requirement is already enforced end to end.
+
+### 12.5 Implementation sequence and completion evidence
+
+1. **Lean judgments and witnesses.** Define incarnations, right interpretation, checked summaries, entry/exit environments and sound
+   substitution in the existing arena/object modules. Exhibit real accepted G bodies: allocate in caller/free in callee; allocate in
+   callee/return ownership/free in caller; forward ownership through a nested call; borrow then continue using the owner. Each witness
+   must jointly satisfy every premise and execute a store or allocator change. Prove the old no-transfer fragment embeds conservatively.
+2. **Preservation on real execution.** Generalize `erk_erhaelt`, `erkE_erhaelt`, `rufAt_erk` and the call-frame bridges to carry ownership
+   pre/postconditions and a frame. Connect the ghost incarnation transitions to executed `arenaRumpf`, `freiNimm`, `freiVar` and reset.
+   Prove no duplication, no use after move/free/reset, no stale revival on slot reuse, and preservation of unrelated rights/objects.
+   Do not assume a callee ownership-preservation premise instead of deriving it from checked bodies. Cover binding calls, reason returns,
+   indirect calls and recursion explicitly; any temporarily unsupported case remains a named refusal, not a claimed theorem.
+3. **Goal and checker boundary.** Add the executable Lean admission check and prove its soundness over syntax for every program. Integrate
+   it into the actual `PrueferX`/`Akzeptiert` and `NutzerPflichtA` path; review any `Spec.lean` change and reprove `gabbro_ziel`, linked/SC
+   variants and required GA/GX properties. Standalone arena lemmas are not completion evidence. Keep exactly the standard goal axioms.
+4. **Rust/exporter/backend.** Only then implement the same summary/alias flow in the existing passes and exporter. Replace the blanket
+   refusal of parameter `free` with the proved distinction between moved and borrowed inputs. Cover returned owning indices, all aliases,
+   joins, loops and compatible function pointers without a second ownership pass or a bypass. Model runtime consequences before changing
+   lowering; prove erasure and the source-to-model bridge. Final-byte validation remains separately open until its own proof lands.
+5. **Negative and resource witnesses.** Reject double free split across caller/callee, use through a saved alias after a consuming call,
+   freeing a borrow, duplicate consuming arguments, reset while a frame retains a right, a fabricated owning result, and an old handle
+   after the slot is reused. Include success and provider-refusal/OOM runs, also positive-`lo` sampled allocation without `else` as a
+   refusal. Prove semantic counterexamples when a necessary premise is removed; checker poison probes alone are insufficient.
+6. **Acceptance.** Run the four existing guardians, including `#print axioms gabbro_ziel`, the Lean layout check and Rust tests with
+   `--no-fail-fast`. Measure corpus diagnostic changes; ownership-transfer examples may newly pass, unsafe programs must not become
+   accepted. Record proof, checker/exporter and binary evidence separately. Until these gates pass, this section remains a plan and
+   section 8's open item stays open.

@@ -100,7 +100,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   return of empty anonymous payload pages; whole-arena reset. All direct and compatible indirect recursive cycles use a loop dispatcher
   with explicit growable continuation storage (allocation failure is an explicit trap); checked static range zeroing; guarded
   per-invocation thread stacks, group spawn before join, stack unmapping after join.
-- **Open:** `free` across function boundaries; aliases outside the tracked ownership discipline; complete `ArenaForm`/`DynForm` export and
+- **Open:** `free` across function boundaries (Lean audit and plan: `dokumente/PLAN-DYNAMIC.md` §12); aliases outside the tracked ownership discipline; complete `ArenaForm`/`DynForm` export and
   the G form of the newer memory statements. No checker refusal or source obligation was relaxed. CPU/final-byte refinement is §5.
 - **Evidence:** `dokumente/LLVM-BACKEND.md`; coverage is the Lean constructor/field register, checked by
   `python3 instrumente/pruefe-llvm-modelldeckung.py` (examples never define it).
