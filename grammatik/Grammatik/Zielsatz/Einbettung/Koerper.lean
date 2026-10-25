@@ -228,7 +228,7 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
           rw [if_neg hc]
         · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev]
           rw [if_neg (fun h' => hc (hn'.symm.trans h'))]
-          exact E.logikRel_kein (fun _ h' => by cases h')
+          exact ⟨E.logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
   | .ite c t e => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
@@ -308,7 +308,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       · refine ⟨M₂, .logik (E.logikZ e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, evalArgs_umτs, hargs, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, evalArgs_umτs, hargs, ha]
@@ -338,7 +339,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
         · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hp', valE, evalArgs_umτs, hargs,
             E.umsig_E hS hf, paramsUm, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
         · simp only [exS, exec_nachΛ, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hp', valE, evalArgs_umτs, hargs,
@@ -536,7 +538,8 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       · refine ⟨M₂, .logik (E.logikZ e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exB, execBlockHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exB, execBlockHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]
@@ -576,7 +579,8 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       · refine ⟨M₂, .logik (E.logikZ e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
         · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hp', valE, evalArgs_umτs, hargs, E.umsig_E hS hf, paramsUm, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
         · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hp', valE, evalArgs_umτs, hargs, E.umsig_E hS hf, paramsUm, ha]
@@ -621,7 +625,8 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       · refine ⟨M₂, .logik (E.logikZ e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exB, execBlockHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exB, execBlockHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]
@@ -883,7 +888,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
           refine ⟨M₁, .logik .bereich, hs, fun Φ hP => ?_, ?_⟩
           · simp only [execBlockHA, hΦ Φ hP, hg]
           · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev, valE_fl, hg]
-            exact E.logikRel_kein (fun _ h' => by cases h')
+            exact ⟨E.logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
       | some w =>
           obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_block rest M₁ σ₁ _ (Env.cons (τ := .fl lo hi) w ρ) (Env.cons (τ := .fl lo hi) w (E.envE ρ)) hI
             (E.envR_envE (Env.cons (τ := .fl lo hi) w ρ))
@@ -900,7 +905,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
           refine ⟨M, .logik .bereich, fun _ hp => hp, fun Φ hP => ?_, ?_⟩
           · simp only [execBlockHA, hg]
           · simp only [exB, execBlockHA, hg]
-            exact E.logikRel_kein (fun _ h' => by cases h')
+            exact ⟨E.logikRel_kein (fun _ h' => by cases h'), hM.keyOk E⟩
       | some w =>
           obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_block rest M σ _ (Env.cons (τ := .fl lo hi) w ρ) (Env.cons (τ := .fl lo hi) w (E.envE ρ)) hM
             (E.envR_envE (Env.cons (τ := .fl lo hi) w ρ))
@@ -919,7 +924,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
           refine ⟨M₁, .logik .bereich, hs, fun Φ hP => ?_, ?_⟩
           · simp only [execBlockHA, hΦ Φ hP, hg]
           · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev, valE_int, hg]
-            exact E.logikRel_kein (fun _ h' => by cases h')
+            exact ⟨E.logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
       | some w =>
           obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_block rest M₁ σ₁ _ (Env.cons (τ := .fl lo hi) w ρ) (Env.cons (τ := .fl lo hi) w (E.envE ρ)) hI
             (E.envR_envE (Env.cons (τ := .fl lo hi) w ρ))
@@ -1045,7 +1050,8 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · refine ⟨M₂, .logik (E.logikZ e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exEnd, execEndHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exEnd, execEndHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]
@@ -1085,7 +1091,8 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · refine ⟨M₂, .logik (E.logikZ e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
         · simp only [exEnd, execEndHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hp', valE, evalArgs_umτs, hargs, E.umsig_E hS hf, paramsUm, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), hvd, hRΦ Φ hP, antwortR]
         · simp only [exEnd, execEndHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hp', valE, evalArgs_umτs, hargs, E.umsig_E hS hf, paramsUm, ha]
@@ -1130,7 +1137,8 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · refine ⟨M₂, .logik (E.logikZ e'), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exEnd, execEndHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]
-          exact E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he')))
+          exact ⟨E.logikRel_logikZ (fun g' he' => hB.vorb f _ _ g' (ha.trans (congrArg RufAusgang.logik he'))),
+            hI2.keyOk E⟩
       · refine ⟨M₂, .hardware .ieee, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), hRΦ Φ hP, antwortR]
         · simp only [exEnd, execEndHA, Args.orte_umτs, Einbettung.orte_exA, evalArgs_umτs, hargs, ha]

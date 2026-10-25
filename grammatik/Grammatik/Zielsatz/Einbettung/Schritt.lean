@@ -102,6 +102,13 @@ structure Inv (M : List (World D × World D')) (σ : World D) (σ' : World D') :
   gleich : ∀ p ∈ M, p.1.spur.length = σ.spur.length → E.Fremd p.2 σ'
   funk : ∀ p ∈ M, ∀ q ∈ M, p.1 = q.1 → p.2 = q.2
 
+/-- The keys alone: every one carries its image memory, and they are functional. -/
+def KeyOk (M : List (World D × World D')) : Prop :=
+  (∀ p ∈ M, E.Treu p.1.speicher p.2) ∧ (∀ p ∈ M, ∀ q ∈ M, p.1 = q.1 → p.2 = q.2)
+
+theorem Inv.keyOk {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+    (h : E.Inv M σ σ') : E.KeyOk M := ⟨h.eintrag, h.funk⟩
+
 /-- **The current pair is a key.** -/
 theorem Inv.merke {M : List (World D × World D')} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') : E.Inv ((σ, σ') :: M) σ σ' := by

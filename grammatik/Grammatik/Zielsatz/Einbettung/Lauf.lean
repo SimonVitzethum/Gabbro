@@ -76,7 +76,7 @@ def AusRel (M : List (World D × World D')) {V : Vertrag D} {l : Bool} {Γ Γ' :
   | .why σ r, .why σ' r' => E.Inv M σ σ' ∧ r'.val = r.val
   | .leave _ σ ρ, .leave _ σ' ρ' => E.Inv M σ σ' ∧ E.EnvR ρ ρ'
   | .next _ σ ρ, .next _ σ' ρ' => E.Inv M σ σ' ∧ E.EnvR ρ ρ'
-  | .logik e, .logik e' => E.LogikRel e e'
+  | .logik e, .logik e' => E.LogikRel e e' ∧ E.KeyOk M
   | .hardware _, .hardware _ => True
   | _, _ => False
 
@@ -87,7 +87,7 @@ def EndRel (M : List (World D × World D')) {V : Vertrag D} {l : Bool} {Γ Γ' :
   | .why σ r, .why σ' r' => E.Inv M σ σ' ∧ r'.val = r.val
   | .leave _ σ ρ, .leave _ σ' ρ' => E.Inv M σ σ' ∧ E.EnvR ρ ρ'
   | .next _ σ ρ, .next _ σ' ρ' => E.Inv M σ σ' ∧ E.EnvR ρ ρ'
-  | .logik e, .logik e' => E.LogikRel e e'
+  | .logik e, .logik e' => E.LogikRel e e' ∧ E.KeyOk M
   | .hardware _, .hardware _ => True
   | _, _ => False
 
@@ -289,14 +289,26 @@ theorem freiH_rel {M : List (World D × World D')} {V : Vertrag D} {l : Bool} {�
     (hSi : ∀ L s', S'.inv (E.lock L) s' = S.inv L (E.speicherZ hZ s')) (L : D.Lock)
     {o : Ausgang V l Γ} {o' : Ausgang (E.vertragE V) l Γ'} (h : E.AusRel M o o') :
     E.AusRel M (freiH S L o) (freiH S' (E.lock L) o') := by
+  have hb : ∀ {σ : World D} {σ' : World D'}, E.Inv M σ σ' →
+      S'.inv (E.lock L) σ'.speicher = S.inv L σ.speicher := fun h =>
+    by rw [hSi, E.speicherZ_treu hZ h.treu]
   cases o <;> cases o' <;> simp only [AusRel] at h <;> (try exact h.elim)
-  all_goals first
-    | (simp only [freiH, AusRel] <;> exact h)
-    | (simp only [freiH, hSi, E.speicherZ_treu hZ h.1.treu]
-       split
-       · exact ⟨h.1.gibt E L (E.lock L), h.2⟩
-       · exact fun _ he => by cases he)
-    | (simp only [freiH]; exact ⟨h.1.gibt E L (E.lock L), h.2⟩)
+  · simp only [freiH, hb h.1]
+    split
+    · exact ⟨h.1.gibt E L (E.lock L), h.2⟩
+    · exact (show E.LogikRel _ _ ∧ E.KeyOk M from ⟨fun _ he => (by cases he), h.1.keyOk E⟩)
+  · simp only [freiH]; exact ⟨h.1.gibt E L (E.lock L), h.2⟩
+  · simp only [freiH]; exact ⟨h.1.gibt E L (E.lock L), h.2⟩
+  · simp only [freiH, hb h.1]
+    split
+    · exact ⟨h.1.gibt E L (E.lock L), h.2⟩
+    · exact (show E.LogikRel _ _ ∧ E.KeyOk M from ⟨fun _ he => (by cases he), h.1.keyOk E⟩)
+  · simp only [freiH, hb h.1]
+    split
+    · exact ⟨h.1.gibt E L (E.lock L), h.2⟩
+    · exact (show E.LogikRel _ _ ∧ E.KeyOk M from ⟨fun _ he => (by cases he), h.1.keyOk E⟩)
+  · simp only [freiH]; exact h
+  · simp only [freiH]; exact h
 
 end Einbettung
 

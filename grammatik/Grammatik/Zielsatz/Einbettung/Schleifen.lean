@@ -67,7 +67,7 @@ theorem traverse_sim {l : Bool} {τ τ' : Ty}
       · simp only [traverseLauf, hΦ1 Φ hP]
       · simp only [List.map_nil, traverseLauf, hb]
         cases b
-        · exact E.logikRel_schleife
+        · exact ⟨E.logikRel_schleife, hI1.keyOk E⟩
         · exact ⟨hI1, hρ⟩
   | cons k ks ih =>
       intro M σ σ' ρ ρ' h hρ
@@ -75,7 +75,7 @@ theorem traverse_sim {l : Bool} {τ τ' : Ty}
       cases b
       · refine ⟨M₁, .logik .schleife, hs1, fun Φ hP => by simp only [traverseLauf, hΦ1 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte], ?_⟩
         simp only [List.map_cons, traverseLauf, hb, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-        exact E.logikRel_schleife
+        exact ⟨E.logikRel_schleife, hI1.keyOk E⟩
       · obtain ⟨M₂, o₁, hs2, hΦ2, hR2⟩ := hs M₁ σ₁ (pruef' σ' ρ').1 (.cons k ρ) (.cons (f k) ρ') hI1
           ⟨hf k, hρ⟩
         generalize hsch : schritt' (pruef' σ' ρ').1 (.cons (f k) ρ') = o₁' at hR2
@@ -103,7 +103,7 @@ theorem traverse_sim {l : Bool} {τ τ' : Ty}
               hΦ2 Φ (passt_teil hP hs3), hΦ3 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
           · simp only [List.map_cons, traverseLauf, hb, hsch, hb3, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
             cases b₃
-            · exact E.logikRel_schleife
+            · exact ⟨E.logikRel_schleife, hI3.keyOk E⟩
             · exact ⟨hI3, E.envR_tail _ _ hR2.2⟩
         · obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := ih _ _ _ _ _ hR2.1 (E.envR_tail _ _ hR2.2)
           refine ⟨M₃, o, teil_trans h12 hs3, fun Φ hP => ?_, ?_⟩
@@ -204,7 +204,7 @@ theorem forever_sim {l : Bool} (a : D.Annahme) (a' : D'.Annahme)
       cases b
       · refine ⟨M₁, .logik .schleife, hs1, fun Φ hP => by simp only [foreverLauf, hΦ1 Φ hP, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte], ?_⟩
         simp only [foreverLauf, hb, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]
-        exact E.logikRel_schleife
+        exact ⟨E.logikRel_schleife, hI1.keyOk E⟩
       · obtain ⟨M₂, o₁, hs2, hΦ2, hR2⟩ := hs M₁ σ₁ (pruef' σ' ρ').1 ρ ρ' hI1 hρ
         generalize hsch : schritt' (pruef' σ' ρ').1 ρ' = o₁' at hR2
         have h12 := teil_trans hs1 hs2
