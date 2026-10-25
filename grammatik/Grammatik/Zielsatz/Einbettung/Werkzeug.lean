@@ -93,12 +93,12 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
   | .ref t, _, n => by by_cases h : 0 ≤ n <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
 
 /-- A register answer, on both sides. -/
-theorem regLies_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
+theorem regLies_wert (hZ : E.Rueck) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
     (r : D.Reg) (n : Int) (hr : D'.rtyp (E.reg r) = E.tyE (D.rtyp r)) :
     (einpassen z (D.rtyp r) n = Option.none → einpassen z' (D'.rtyp (E.reg r)) n = Option.none) ∧
     ∀ v, einpassen z (D.rtyp r) n = some v →
       einpassen z' (D'.rtyp (E.reg r)) n = some (hr.symm ▸ E.valE _ v) := by
-  have e := E.einpassen_E z z' (D.rtyp r) (hZ.rtyp r) n
+  have e := E.einpassen_E z z' (D.rtyp r) (hZ.rtypFrei r) n
   revert hr
   generalize D'.rtyp (E.reg r) = T'
   intro hr
@@ -113,11 +113,11 @@ theorem einpassenErg_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
   | some τ, hz, n => E.einpassen_E z z' τ (hz τ rfl) n
 
 /-- An axiom's result, on both sides. -/
-theorem axiom_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
+theorem axiom_wert (hZ : E.Rueck) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
     (a : D.Ax) (n : Int) (ha : D'.aerg (E.ax a) = (D.aerg a).map E.tyE) :
     einpassenErg z' (D'.aerg (E.ax a)) n =
       (einpassenErg z (D.aerg a) n).map (fun v => castV ha.symm (E.ergE (D.aerg a) v)) := by
-  have hz := hZ.aerg a
+  have hz := hZ.aergFrei a
   revert ha
   generalize D'.aerg (E.ax a) = e'
   intro ha
@@ -126,7 +126,7 @@ theorem axiom_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int → 
   rfl
 
 /-- A fallible axiom's result (value or reason), on both sides. -/
-theorem axiomSonst_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
+theorem axiomSonst_wert (hZ : E.Rueck) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
     (a : D.Ax) (n : Int) (ha : D'.aerg (E.ax a) = (D.aerg a).map E.tyE)
     (hg : D'.agruende (E.ax a) = D.agruende a) :
     sonstPasst z' (D'.aerg (E.ax a)) (D'.agruende (E.ax a)) n =
@@ -134,7 +134,7 @@ theorem axiomSonst_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int
       | Option.none => Option.none
       | Option.some (Sum.inl v) => Option.some (Sum.inl (castV ha.symm (E.ergE (D.aerg a) v)))
       | Option.some (Sum.inr r) => Option.some (Sum.inr (Fin.cast hg.symm r)) := by
-  have hz := hZ.aerg a
+  have hz := hZ.aergFrei a
   revert ha hg
   generalize D'.aerg (E.ax a) = e'
   generalize D'.agruende (E.ax a) = m'
@@ -151,17 +151,16 @@ theorem axiomSonst_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int
 
 /-! ## Results bound to a name -/
 
-theorem ergWert_ergZ (hZ : ZeigerfreiD D) {τ : Ty} {e e' : Option Ty} (heq : e.map E.tyE = e')
-    (he : e = some τ) (he' : e' = some (E.tyE τ)) (hz : ∀ τ, e = some τ → τ.zeigerfrei = true)
-    (v' : ErgVal D' e') :
-    ergWert he' v' = E.valE τ (ergWert he (E.ergZ e hz (castV heq.symm v'))) := by
+theorem ergWert_ergZ (hZ : E.Rueck) {τ : Ty} {e e' : Option Ty} (heq : e.map E.tyE = e')
+    (he : e = some τ) (he' : e' = some (E.tyE τ)) (v' : ErgVal D' e') :
+    E.VRel hZ τ (ergWert he (E.ergZ hZ e (castV heq.symm v'))) (ergWert he' v') := by
   subst heq; subst he
-  exact (E.valE_valZ τ _ v').symm
+  exact E.vrel_valZ hZ τ v'
 
-theorem ergWert_ergE {τ : Ty} {e e' : Option Ty} (heq : e' = e.map E.tyE)
+theorem ergWert_ergE (hZ : E.Rueck) {τ : Ty} {e e' : Option Ty} (heq : e' = e.map E.tyE)
     (he : e = some τ) (he' : e' = some (E.tyE τ)) (v : ErgVal D e) :
-    ergWert he' (castV heq.symm (E.ergE e v)) = E.valE τ (ergWert he v) := by
-  subst heq; subst he; rfl
+    E.VRel hZ τ (ergWert he v) (ergWert he' (castV heq.symm (E.ergE e v))) := by
+  subst heq; subst he; exact E.vrel_valE hZ τ v
 
 theorem castW_why {a b : Nat} (h : Ty.why a = Ty.why b) (r : Fin a) :
     castW (D := D') h r = Fin.cast (Ty.why.inj h) r := by
@@ -178,27 +177,28 @@ theorem alleIndizes_bild {c c' : Int} (hc : c' = c) :
 
 /-! ## Foreign answers -/
 
-theorem inv_antwort (hZ : ZeigerfreiD D) {pad : List (Ereignis D)} (hp : PadOk pad)
-    {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv M σ σ') (W : World D') :
-    E.Inv M (E.antwortWelt hZ pad σ W) W :=
+theorem inv_antwort (hZ : E.Rueck) {pad : List (Ereignis D)} (hp : PadOk pad)
+    {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ') (W : World D') :
+    E.Inv hZ M (E.antwortWelt hZ pad σ W) W :=
   h.wachs E (E.antwortWelt_laenge hZ hp σ W) (E.treu_antwortWelt hZ pad σ W)
 
 /-! ## Reads with an expression -/
 
 /-- **A read and an evaluation**: the read events, the key, the atomic answer; then every
     expression of `D` evaluates as its image in the worlds after. -/
-theorem lese_eval (hZ : ZeigerfreiD D) {M : Keys D D'} {σ : World D} {σ' : World D'}
-    (h : E.Inv M σ σ') (T : D.Tab ⊕ D.Glob → Prop) {T' : D'.Tab ⊕ D'.Glob → Prop}
+theorem lese_eval (hZ : E.Rueck) {M : Keys D D'} {σ : World D} {σ' : World D'}
+    (h : E.Inv hZ M σ σ') (T : D.Tab ⊕ D.Glob → Prop) {T' : D'.Tab ⊕ D'.Glob → Prop}
     {A' : AUmwelt D'} (hA' : HavocA T' A') (hT : ∀ c, T' (E.ortE c) → T c)
     (Λ : List (Res D)) (Λ' : List (Res D')) (X : List (D.Tab ⊕ D.Glob)) :
     ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
-      E.Inv M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) ∧
-      ∀ {Γ : Ctx} {Λ₀ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ₀ τ) (ρ : Env D Γ),
-        eval (leseA A' σ' Λ' (X.map E.ortE)) (exE E e) (leseA A' σ' Λ' (X.map E.ortE)) (E.envE ρ) =
-          E.valE τ (eval σ₁ e σ₁ ρ) := by
-  obtain ⟨M₁, σ₁, hs, hΦ, hI⟩ := E.lese_schritt hZ h T hA' hT Λ Λ' X
-  exact ⟨M₁, σ₁, hs, hΦ, hI, fun e ρ => E.eval_exE hI.treu hI.treu e ρ⟩
+      E.Inv hZ M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) ∧
+      ∀ {Γ : Ctx} {Λ₀ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ₀ τ) (ρ : Env D Γ)
+        (ρ' : Env D' (Γ.map E.tyE)), E.EnvR hZ ρ ρ' →
+        E.VRel hZ τ (eval σ₁ e σ₁ ρ)
+          (eval (leseA A' σ' Λ' (X.map E.ortE)) (exE E e) (leseA A' σ' Λ' (X.map E.ortE)) ρ') := by
+  obtain ⟨M₁, σ₁, hs, hΦ, hI⟩ := E.lese_schritt h T hA' hT Λ Λ' X
+  exact ⟨M₁, σ₁, hs, hΦ, hI, fun e ρ ρ' hρ => E.eval_exE hZ hI.treu hI.treu e ρ ρ' hρ⟩
 
 end Einbettung
 

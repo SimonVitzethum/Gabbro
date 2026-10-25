@@ -23,17 +23,6 @@ def _root_.Gabbro.Grammatik.Ty.zeigerfrei : Ty → Bool
   | .fnptr _ => false
   | _ => true
 
-/-- **No function pointer comes in from outside**: tables and globals of `D` carry none, and no
-    function parameter or result, axiom result or register answer is one (a foreign caller or
-    answer could name a function `D` does not know; callbacks are stage E4). -/
-structure ZeigerfreiD (D : Deklaration) : Prop where
-  typ : ∀ t f, (D.typ t f).zeigerfrei = true
-  gtyp : ∀ g, (D.gtyp g).zeigerfrei = true
-  erg : ∀ f τ, D.erg f = some τ → τ.zeigerfrei = true
-  aerg : ∀ a τ, D.aerg a = some τ → τ.zeigerfrei = true
-  rtyp : ∀ r, (D.rtyp r).zeigerfrei = true
-  params : ∀ f τ, τ ∈ D.params f → τ.zeigerfrei = true
-
 /-- A value transported along a type equation. -/
 def castW {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
 
@@ -63,46 +52,128 @@ namespace Einbettung
 
 variable (E : Einbettung D D')
 
-/-- A value of a pointer-free type, back in `D`. -/
-def valZ : (τ : Ty) → τ.zeigerfrei = true → Wert D' (E.tyE τ) → Wert D τ
-  | .int _ _, _, v => v
-  | .bool, _, v => v
-  | .opt _, _, v => v
-  | .sum _, _, v => v
-  | .why _, _, v => v
-  | .never, _, v => v
-  | .fl _ _, _, v => v
-  | .fnptr _, h, _ => absurd h (by simp [Ty.zeigerfrei])
-  | .ptr _ _, _, v => v
-  | .ref _, _, v => v
+/-- **How `D` names a function of `D'`**: an image function by its preimage, a function outside
+    the image that conforms to the image of signature `n` by the HEAD `rep n` -- a function of `D`
+    that conforms to `n` and whose contract is the pointer's contract (callbacks, stage E4). The
+    carriers a register or a visibility answer reads hold no function pointer, and no register,
+    axiom argument or axiom result is one (two different foreign functions are one head in `D`;
+    an answer that depends on which one `D` cannot repeat). -/
+structure Rueck : Type where
+  rep : Nat → Option D.Fn
+  rep_passt : ∀ n g, rep n = some g → D.passt g n = true
+  voll : ∀ n (f' : D'.Fn), D'.passt f' (E.num n) = true → E.fnZ f' = none → (rep n).isSome = true
+  regFrei : ∀ r t, Sum.inl t ∈ D.rtraeger r → ∀ f, (D.typ t f).zeigerfrei = true
+  regFreiG : ∀ r g, Sum.inr g ∈ D.rtraeger r → (D.gtyp g).zeigerfrei = true
+  atomFrei : ∀ g, D.atomar g = true → (D.gtyp g).zeigerfrei = true
+  aergFrei : ∀ a τ, D.aerg a = some τ → τ.zeigerfrei = true
+  aparamsFrei : ∀ a τ, τ ∈ D.aparams a → τ.zeigerfrei = true
+  rtypFrei : ∀ r, (D.rtyp r).zeigerfrei = true
 
-theorem valZ_valE : ∀ (τ : Ty) (h : τ.zeigerfrei = true) (v : Wert D τ), E.valZ τ h (E.valE τ v) = v
-  | .int _ _, _, _ => rfl
-  | .bool, _, _ => rfl
-  | .opt _, _, _ => rfl
-  | .sum _, _, _ => rfl
-  | .why _, _, _ => rfl
-  | .never, _, _ => rfl
-  | .fl _ _, _, _ => rfl
-  | .fnptr _, h, _ => absurd h (by simp [Ty.zeigerfrei])
-  | .ptr _ _, _, _ => rfl
-  | .ref _, _, _ => rfl
+variable {E} in
+/-- A function of `D'` conforming to the image of `n`, named in `D`. -/
+def Rueck.zeiger (K : E.Rueck) (n : Nat) (f' : D'.Fn) (h' : D'.passt f' (E.num n) = true) :
+    {g : D.Fn // D.passt g n = true} :=
+  match hz : E.fnZ f' with
+  | some g => ⟨g, by rw [← E.passt g n, E.fn_fnZ f' g hz]; exact h'⟩
+  | none =>
+      match hr : K.rep n with
+      | some g => ⟨g, K.rep_passt n g hr⟩
+      | none => absurd (K.voll n f' h' hz) (by rw [hr]; simp)
 
-theorem valE_valZ : ∀ (τ : Ty) (h : τ.zeigerfrei = true) (v : Wert D' (E.tyE τ)), E.valE τ (E.valZ τ h v) = v
-  | .int _ _, _, _ => rfl
-  | .bool, _, _ => rfl
-  | .opt _, _, _ => rfl
-  | .sum _, _, _ => rfl
-  | .why _, _, _ => rfl
-  | .never, _, _ => rfl
-  | .fl _ _, _, _ => rfl
-  | .fnptr _, h, _ => absurd h (by simp [Ty.zeigerfrei])
-  | .ptr _ _, _, _ => rfl
-  | .ref _, _, _ => rfl
+variable (K : E.Rueck)
 
-theorem valE_inj (τ : Ty) (h : τ.zeigerfrei = true) {v w : Wert D τ} (e : E.valE τ v = E.valE τ w) :
-    v = w := by
-  rw [← E.valZ_valE τ h v, ← E.valZ_valE τ h w, e]
+/-- **A value of `D'` back in `D`**: a function pointer to its name in `D`, everything else as is. -/
+def valZ : (τ : Ty) → Wert D' (E.tyE τ) → Wert D τ
+  | .int _ _, v => v
+  | .bool, v => v
+  | .opt _, v => v
+  | .sum _, v => v
+  | .why _, v => v
+  | .never, v => v
+  | .fl _ _, v => v
+  | .fnptr n, v => K.zeiger n v.1 v.2
+  | .ptr _ _, v => v
+  | .ref _, v => v
+
+/-- **A value of `D` beside a value of `D'`**: equal through the embedding, except that a head of
+    `D` stands beside every function outside the image of its signature. -/
+def VRel : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ) → Prop
+  | .fnptr n, v, v' => v'.1 = E.fn v.1 ∨ (E.fnZ v'.1 = none ∧ K.rep n = some v.1)
+  | τ, v, v' => v' = E.valE τ v
+
+theorem vrel_valE : ∀ (τ : Ty) (v : Wert D τ), E.VRel K τ v (E.valE τ v)
+  | .int _ _, _ => rfl
+  | .bool, _ => rfl
+  | .opt _, _ => rfl
+  | .sum _, _ => rfl
+  | .why _, _ => rfl
+  | .never, _ => rfl
+  | .fl _ _, _ => rfl
+  | .fnptr _, _ => Or.inl rfl
+  | .ptr _ _, _ => rfl
+  | .ref _, _ => rfl
+
+theorem vrel_valZ : ∀ (τ : Ty) (v' : Wert D' (E.tyE τ)), E.VRel K τ (E.valZ K τ v') v'
+  | .int _ _, _ => rfl
+  | .bool, _ => rfl
+  | .opt _, _ => rfl
+  | .sum _, _ => rfl
+  | .why _, _ => rfl
+  | .never, _ => rfl
+  | .fl _ _, _ => rfl
+  | .fnptr n, ⟨f', h'⟩ => by
+      show f' = E.fn (K.zeiger n f' h').1 ∨ (E.fnZ f' = none ∧ K.rep n = some (K.zeiger n f' h').1)
+      unfold Rueck.zeiger
+      split
+      · rename_i g hz; exact Or.inl (E.fn_fnZ f' g hz).symm
+      · rename_i hz
+        split
+        · rename_i g hr; exact Or.inr ⟨hz, hr⟩
+        · rename_i hr; exact absurd (K.voll n f' h' hz) (by rw [hr]; simp)
+  | .ptr _ _, _ => rfl
+  | .ref _, _ => rfl
+
+theorem valZ_vrel : ∀ (τ : Ty) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}, E.VRel K τ v v' →
+    E.valZ K τ v' = v
+  | .int _ _, _, _, h => by subst h; rfl
+  | .bool, _, _, h => by subst h; rfl
+  | .opt _, _, _, h => by subst h; rfl
+  | .sum _, _, _, h => by subst h; rfl
+  | .why _, _, _, h => by subst h; rfl
+  | .never, _, _, h => by subst h; rfl
+  | .fl _ _, _, _, h => by subst h; rfl
+  | .fnptr n, ⟨g, hg⟩, ⟨f', h'⟩, h => by
+      show K.zeiger n f' h' = ⟨g, hg⟩
+      unfold Rueck.zeiger
+      rcases h with h | ⟨hz, hr⟩
+      · simp only at h
+        subst h
+        split
+        · rename_i g0 hz
+          rw [E.fnZ_fn] at hz
+          cases hz; rfl
+        · rename_i hz; rw [E.fnZ_fn] at hz; cases hz
+      · split
+        · rename_i g0 hz'; simp only at hz; rw [hz] at hz'; cases hz'
+        · split
+          · rename_i g0 hr'; simp only at hr; rw [hr] at hr'; cases hr'; rfl
+          · rename_i hr'; simp only at hr; rw [hr] at hr'; cases hr'
+  | .ptr _ _, _, _, h => by subst h; rfl
+  | .ref _, _, _, h => by subst h; rfl
+
+/-- Pointer-free values are related exactly when they are equal through the embedding. -/
+theorem vrel_frei : ∀ (τ : Ty), τ.zeigerfrei = true → ∀ (v : Wert D τ) (v' : Wert D' (E.tyE τ)),
+    E.VRel K τ v v' ↔ v' = E.valE τ v
+  | .int _ _, _, _, _ => Iff.rfl
+  | .bool, _, _, _ => Iff.rfl
+  | .opt _, _, _, _ => Iff.rfl
+  | .sum _, _, _, _ => Iff.rfl
+  | .why _, _, _, _ => Iff.rfl
+  | .never, _, _, _ => Iff.rfl
+  | .fl _ _, _, _, _ => Iff.rfl
+  | .fnptr _, h, _, _ => absurd h (by simp [Ty.zeigerfrei])
+  | .ptr _ _, _, _, _ => Iff.rfl
+  | .ref _, _, _, _ => Iff.rfl
 
 /-! ## Memories -/
 
@@ -113,9 +184,9 @@ theorem typ_feldZ (t : D.Tab) (f' : D'.Feld (E.tab t)) :
   exact E.typ t (E.feldZ t f')
 
 /-- **A memory of `D'` restricted to `D`.** -/
-def speicherZ (hZ : ZeigerfreiD D) (s : Speicher D') : Speicher D where
-  slots := fun t k f => E.valZ (D.typ t f) (hZ.typ t f) (castW (E.typ t f) (s.slots (E.tab t) k (E.feld t f)))
-  globs := fun g => E.valZ (D.gtyp g) (hZ.gtyp g) (castW (E.gtyp g) (s.globs (E.glob g)))
+def speicherZ (s : Speicher D') : Speicher D where
+  slots := fun t k f => E.valZ K (D.typ t f) (castW (E.typ t f) (s.slots (E.tab t) k (E.feld t f)))
+  globs := fun g => E.valZ K (D.gtyp g) (castW (E.gtyp g) (s.globs (E.glob g)))
 
 /-- A slot of an image table, from a memory of `D`. -/
 def slotBild (s : Speicher D) (t : D.Tab) (k : Int) (f' : D'.Feld (E.tab t)) :
@@ -190,18 +261,18 @@ theorem globE_bild (ctx : Speicher D') (s : Speicher D) (g : D.Glob) :
     rfl
 
 /-- **Restricting an embedding gives the memory back.** -/
-theorem speicherZ_speicherE (hZ : ZeigerfreiD D) (ctx : Speicher D') (s : Speicher D) :
-    E.speicherZ hZ (E.speicherE ctx s) = s := by
+theorem speicherZ_speicherE (ctx : Speicher D') (s : Speicher D) :
+    E.speicherZ K (E.speicherE ctx s) = s := by
   cases s with
   | mk slots globs =>
     simp only [speicherZ, speicherE]
     congr 1
     · funext t k f
       rw [E.slotE_bild, E.slotBild_feld, castW_castW, castW_self]
-      exact E.valZ_valE _ _ _
+      exact E.valZ_vrel K _ (E.vrel_valE K _ _)
     · funext g
       rw [E.globE_bild, castW_castW, castW_self]
-      exact E.valZ_valE _ _ _
+      exact E.valZ_vrel K _ (E.vrel_valE K _ _)
 
 /-! ## Environments -/
 

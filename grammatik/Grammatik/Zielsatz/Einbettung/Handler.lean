@@ -121,41 +121,50 @@ theorem orte_exErg : ∀ {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (x : Erg
 
 section Werte
 
-variable {σ₀ σ : World D} {σ₀' σ' : World D'}
+variable (hZ : E.Rueck) {σ₀ σ : World D} {σ₀' σ' : World D'}
 
-theorem evalArgs_exA (h₀ : E.Treu σ₀.speicher σ₀') (h : E.Treu σ.speicher σ') :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs) (ρ : Env D Γ),
-      evalArgs σ₀' (exA E a) σ' (E.envE ρ) = E.envE (evalArgs σ₀ a σ ρ)
-  | _, _, _, .nil, _ => rfl
-  | _, _, _, .cons e rest, ρ => by
-      simp only [exA, evalArgs, E.eval_exE h₀ h e ρ, evalArgs_exA h₀ h rest ρ]; rfl
+theorem evalArgs_exA (h₀ : E.Treu hZ σ₀.speicher σ₀') (h : E.Treu hZ σ.speicher σ') :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs) (ρ : Env D Γ)
+      (ρ' : Env D' (Γ.map E.tyE)), E.EnvR hZ ρ ρ' →
+      E.EnvR hZ (evalArgs σ₀ a σ ρ) (evalArgs σ₀' (exA E a) σ' ρ')
+  | _, _, _, .nil, _, _, _ => trivial
+  | _, _, _, .cons e rest, ρ, ρ', hρ =>
+      ⟨⟨rfl, E.eval_exE hZ h₀ h e ρ ρ' hρ⟩, evalArgs_exA h₀ h rest ρ ρ' hρ⟩
 
-theorem evalErg_exErg (h₀ : E.Treu σ₀.speicher σ₀') (h : E.Treu σ.speicher σ') :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (x : ErgExpr D Γ Λ e) (ρ : Env D Γ),
-      evalErg σ₀' (exErg E x) σ' (E.envE ρ) = E.ergE e (evalErg σ₀ x σ ρ)
-  | _, _, _, .empty, _ => rfl
-  | _, _, _, .val e, ρ => E.eval_exE h₀ h e ρ
+/-- A result value beside one of `D'`. -/
+def ErgRel : (e : Option Ty) → ErgVal D e → ErgVal D' (e.map E.tyE) → Prop
+  | none, _, _ => True
+  | some τ, v, v' => E.VRel hZ τ v v'
+
+theorem evalErg_exErg (h₀ : E.Treu hZ σ₀.speicher σ₀') (h : E.Treu hZ σ.speicher σ') :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (x : ErgExpr D Γ Λ e) (ρ : Env D Γ)
+      (ρ' : Env D' (Γ.map E.tyE)), E.EnvR hZ ρ ρ' →
+      E.ErgRel hZ e (evalErg σ₀ x σ ρ) (evalErg σ₀' (exErg E x) σ' ρ')
+  | _, _, _, .empty, _, _, _ => trivial
+  | _, _, _, .val e, ρ, ρ', hρ => E.eval_exE hZ h₀ h e ρ ρ' hρ
 
 end Werte
 
 /-! ## Answers back in `D` -/
 
-variable (hZ : ZeigerfreiD D)
+variable (hZ : E.Rueck)
 
-/-- A result value of a pointer-free result type, back in `D`. -/
-def ergZ : (e : Option Ty) → (∀ τ, e = some τ → τ.zeigerfrei = true) →
-    ErgVal D' (e.map E.tyE) → ErgVal D e
-  | none, _, v => v
-  | some τ, h, v => E.valZ τ (h τ rfl) v
+/-- A result value of `D'` back in `D`. -/
+def ergZ : (e : Option Ty) → ErgVal D' (e.map E.tyE) → ErgVal D e
+  | none, v => v
+  | some τ, v => E.valZ hZ τ v
 
-theorem ergE_ergZ : ∀ (e : Option Ty) (h : ∀ τ, e = some τ → τ.zeigerfrei = true)
-    (v : ErgVal D' (e.map E.tyE)), E.ergE e (E.ergZ e h v) = v
-  | none, _, _ => rfl
-  | some τ, h, v => E.valE_valZ τ (h τ rfl) v
+theorem ergRel_ergZ : ∀ (e : Option Ty) (v : ErgVal D' (e.map E.tyE)), E.ErgRel hZ e (E.ergZ hZ e v) v
+  | none, _ => trivial
+  | some τ, v => E.vrel_valZ hZ τ v
+
+theorem ergRel_ergE : ∀ (e : Option Ty) (v : ErgVal D e), E.ErgRel hZ e v (E.ergE e v)
+  | none, _ => trivial
+  | some τ, v => E.vrel_valE hZ τ v
 
 /-- The memory of a `D'`-world restricted to `D` is its image memory. -/
-theorem treu_speicherZ (W : World D') : E.Treu (E.speicherZ hZ W.speicher) W :=
-  ⟨fun t k f => (E.valE_valZ _ _ _).symm, fun g => (E.valE_valZ _ _ _).symm⟩
+theorem treu_speicherZ (W : World D') : E.Treu hZ (E.speicherZ hZ W.speicher) W :=
+  ⟨fun t k f => E.vrel_valZ hZ _ _, fun g => E.vrel_valZ hZ _ _⟩
 
 /-- **The world a foreign answer leaves, in `D`**: its memory restricted, the caller's trace
     with the neutral piece on top. -/
@@ -163,7 +172,7 @@ def antwortWelt (pad : List (Ereignis D)) (σ : World D) (W : World D') : World 
   (E.speicherZ hZ W.speicher).welt (pad ++ σ.spur)
 
 theorem treu_antwortWelt (pad : List (Ereignis D)) (σ : World D) (W : World D') :
-    E.Treu (E.antwortWelt hZ pad σ W).speicher W := by
+    E.Treu hZ (E.antwortWelt hZ pad σ W).speicher W := by
   rw [antwortWelt, speicher_welt_speicher]; exact E.treu_speicherZ hZ W
 
 theorem antwortWelt_laenge {pad : List (Ereignis D)} (hp : PadOk pad) (σ : World D) (W : World D') :
@@ -176,27 +185,18 @@ theorem antwortWelt_offen {pad : List (Ereignis D)} (hp : PadOk pad) (σ : World
     Gabbro.Grammatik.offen (E.antwortWelt hZ pad σ W).spur = Gabbro.Grammatik.offen σ.spur :=
   hp.offen σ.spur
 
-/-- A `logik` outcome of `D'` as one of `D`: a blamed caller stays a blamed caller. -/
-def logikZ : Logik D' → Logik D
-  | .vorbedingung g' => match E.fnZ g' with
-    | some g => .vorbedingung g
-    | none => .schleife
+/-- A `logik` outcome of the callee, seen from `D`: a blamed caller stays a blamed caller (of the
+    function `D` called). -/
+def logikZ (g : D.Fn) : Logik D' → Logik D
+  | .vorbedingung _ => .vorbedingung g
   | _ => .schleife
 
-theorem logikZ_vorbedingung (g : D.Fn) : E.logikZ (.vorbedingung (E.fn g)) = .vorbedingung g := by
-  simp only [logikZ, E.fnZ_fn]
-
-/-- **A `logik` outcome of `D` beside one of `D'`**: where `D'` blames a caller, `D` blames the
-    caller it comes from. -/
+/-- **A `logik` outcome of `D` beside one of `D'`**: where `D'` blames a caller, `D` blames one. -/
 def LogikRel (e : Logik D) (e' : Logik D') : Prop :=
-  ∀ g', e' = .vorbedingung g' → ∃ g, g' = E.fn g ∧ e = .vorbedingung g
+  ∀ g', e' = .vorbedingung g' → ∃ g, e = .vorbedingung g
 
-/-- A `D'`-outcome that blames only images comes back related. -/
-theorem logikRel_logikZ {e' : Logik D'} (h : ∀ g', e' = .vorbedingung g' → ∃ g, g' = E.fn g) :
-    E.LogikRel (E.logikZ e') e' := by
-  intro g' he
-  obtain ⟨g, rfl⟩ := h g' he
-  exact ⟨g, rfl, by rw [he, E.logikZ_vorbedingung]⟩
+theorem logikRel_logikZ (g : D.Fn) (e' : Logik D') : LogikRel (logikZ g e') e' := by
+  intro g' he; subst he; exact ⟨g, rfl⟩
 
 /-- The arguments of a call of `g`, as the parameters of its image. -/
 def paramsUm (hS : E.SigTreu) (g : D.Fn) (ρ : Env D (D.params g)) : Env D' (D'.params (E.fn g)) :=
@@ -206,29 +206,68 @@ def paramsUm (hS : E.SigTreu) (g : D.Fn) (ρ : Env D (D.params g)) : Env D' (D'.
 def aparamsUm (a : D.Ax) (ρ : Env D (D.aparams a)) : Env D' (D'.aparams (E.ax a)) :=
   castE (E.aparams a).symm (E.envE ρ)
 
-/-- **A callee's answer back in `D`.** -/
-def antwortR (hS : E.SigTreu) (pad : List (Ereignis D)) (g : D.Fn) (σ : World D) :
-    RufAusgang (D := D') (E.fn g) → RufAusgang g
-  | .ok W v => .ok (E.antwortWelt hZ pad σ W) (E.ergZ (D.erg g) (hZ.erg g) (castV (ergE_fn hS g).symm v))
-  | .why W r => .why (E.antwortWelt hZ pad σ W) (Fin.cast (gruendeE hS g) r)
-  | .logik e => .logik (E.logikZ e)
+/-- **`f'` may stand where `D` calls `g`**: the image of `g`, or a function outside the image
+    that conforms to the image of a signature whose head is `g`. -/
+def Konform (g : D.Fn) (f' : D'.Fn) : Prop :=
+  f' = E.fn g ∨ ∃ n, E.fnZ f' = none ∧ hZ.rep n = some g ∧ D'.passt f' (E.num n) = true
+
+section Konform
+
+variable {E hZ}
+
+theorem konform_sig (hS : E.SigTreu) {g : D.Fn} {f' : D'.Fn} (h : E.Konform hZ g f') :
+    (D'.signatur f').params = (D.signatur g).params.map E.tyE ∧
+      (D'.signatur f').erg = (D.signatur g).erg.map E.tyE ∧
+      (D'.signatur f').gruende = (D.signatur g).gruende := by
+  rcases h with rfl | ⟨n, _, hr, hp⟩
+  · rw [hS.signatur]; exact ⟨rfl, rfl, rfl⟩
+  · have h1 := D'.passt_sig hp
+    have h2 := D.passt_sig (hZ.rep_passt n g hr)
+    rw [hS.sigNr] at h1
+    refine ⟨?_, ?_, ?_⟩
+    · rw [h1.params, h2.params]; rfl
+    · rw [h1.erg, h2.erg]; rfl
+    · rw [h1.gruende, h2.gruende]; rfl
+
+end Konform
+
+/-- **A callee's answer back in `D`**, from a callee `f'` of `D'` whose result and reasons are
+    those of `g`. -/
+def antwortR (pad : List (Ereignis D)) (g : D.Fn) (σ : World D) {f' : D'.Fn}
+    (he : D'.erg f' = (D.erg g).map E.tyE) (hr : D'.gruende f' = D.gruende g) :
+    RufAusgang f' → RufAusgang g
+  | .ok W v => .ok (E.antwortWelt hZ pad σ W) (E.ergZ hZ (D.erg g) (castV he v))
+  | .why W r => .why (E.antwortWelt hZ pad σ W) (Fin.cast hr r)
+  | .logik e => .logik (logikZ g e)
   | .hardware _ => .hardware .ieee
 
 /-! ## The induced handlers -/
 
-/-- A map from `D`-worlds to `D'`-worlds for the main keys and one for the atomic keys. -/
+/-- The maps from `D`-worlds the keys give: the `D'`-world at a main key, at an atomic key, and
+    the callee and arguments at a call key. -/
 structure _root_.Gabbro.Grammatik.Einbettung.Phi (D D' : Deklaration) where
   haupt : World D → World D'
   atom : World D → World D'
+  ruf : World D → Option (Σ f' : D'.Fn, Env D' (D'.params f'))
 
 section Induziert
 
 variable (hS : E.SigTreu) (pad : List (Ereignis D)) (Φ : Phi D D')
 
-/-- **The induced call handler.** -/
-def rufΦ (R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f) :
+/-- **The induced call handler**: at a call key whose callee may stand for `g` and whose arguments
+    stand beside `g`'s, the `D'`-callee's answer; elsewhere the image's. -/
+noncomputable def rufΦ (R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f) :
     ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g :=
-  fun g σ ρ => E.antwortR hZ hS pad g σ (R' (E.fn g) (Φ.haupt σ) (E.paramsUm hS g ρ))
+  fun g σ ρ =>
+    haveI := Classical.propDecidable
+    match Φ.ruf σ with
+    | some ⟨f', a'⟩ =>
+        if h : E.EnvR hZ ρ a' ∧ E.Konform hZ g f' then
+          E.antwortR hZ pad g σ (konform_sig hS h.2).2.1 (konform_sig hS h.2).2.2 (R' f' (Φ.haupt σ) a')
+        else E.antwortR hZ pad g σ (ergE_fn hS g).symm (gruendeE hS g)
+          (R' (E.fn g) (Φ.haupt σ) (E.paramsUm hS g ρ))
+    | none => E.antwortR hZ pad g σ (ergE_fn hS g).symm (gruendeE hS g)
+          (R' (E.fn g) (Φ.haupt σ) (E.paramsUm hS g ρ))
 
 /-- **The induced lock move**: the protected carriers from the `D'`-move. -/
 def umweltΦ (S : SperrInv D) (U' : Umwelt D') : Umwelt D :=

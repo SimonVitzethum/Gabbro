@@ -162,7 +162,7 @@ theorem antwortR_ok {pad : List (Ereignis D)} {g : D.Fn} {σ : World D}
 
 theorem antwortR_logik {pad : List (Ereignis D)} {g : D.Fn} {σ : World D}
     {a : RufAusgang (D := D') (E.fn g)} {e : Logik D} (h : E.antwortR hZ hS pad g σ a = .logik e) :
-    ∃ e', a = .logik e' ∧ e = E.logikZ e' := by
+    ∃ e', a = .logik e' ∧ e = logikZ e' := by
   cases a with
   | ok W v' => simp only [antwortR, reduceCtorEq] at h
   | why W r => simp only [antwortR, reduceCtorEq] at h
@@ -175,7 +175,7 @@ theorem castV_ergE_ergZ (g : D.Fn) (v' : ErgVal D' (D'.erg (E.fn g))) :
     castV (ergE_fn hS g) (E.ergE _ (E.ergZ (D.erg g) (hZ.erg g) (castV (ergE_fn hS g).symm v'))) = v' := by
   rw [E.ergE_ergZ, castV_castV]; rfl
 
-theorem logikZ_vorb {e' : Logik D'} {g : D.Fn} (h : E.logikZ e' = .vorbedingung g) :
+theorem logikZ_vorb {e' : Logik D'} {g : D.Fn} (h : logikZ e' = .vorbedingung g) :
     e' = .vorbedingung (E.fn g) := by
   cases e' with
   | vorbedingung g' =>
@@ -252,7 +252,7 @@ theorem rufΦ_ohneVorbedingung {R' : ∀ f : D'.Fn, World D' → Env D' (D'.para
     (hR' : OhneVorbedingung R') : OhneVorbedingung (E.rufΦ hZ hS pad Φ R') := by
   intro g σ ρ e h g' he
   obtain ⟨e', ha, rfl⟩ := E.antwortR_logik hZ hS h
-  exact hR' (E.fn g) _ _ e' ha (E.fn g') (E.logikZ_vorb he)
+  exact hR' (E.fn g) _ _ e' ha (E.fn g') (logikZ_vorb he)
 
 /-- The induced call handler answers no `logik` outcome when the `D'`-handler does not. -/
 theorem rufΦ_ohneLogik {R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f}
@@ -271,7 +271,7 @@ theorem rufΦ_torRuf (R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → 
   rw [E.req_E hS hF (hΦ σ)]
   split
   · rfl
-  · simp only [antwortR, E.logikZ_vorbedingung]
+  · simp only [antwortR, logikZ_vorbedingung]
 
 include hΦ in
 /-- The induced lock move is in the class. -/
