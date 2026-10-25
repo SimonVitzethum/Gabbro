@@ -278,9 +278,11 @@ theorem chkS_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (st : Stm
   | _, _, _, _, .next hl, k, c, hk, hc => by
     simp only [chkS]
     exact supports_ifDead (fun h x => OS.next hl (exitsB_sound hk hc h))
-  | _, _, _, _, .assignSlotRef .., k, c, _, _ => by
+  | _, _, _, _, .assignSlotRef r t ht ho f e hw hL, k, c, _, hc => by
     simp only [chkS]
-    trivial
+    exact supports_if (fun h => by
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+      exact OS.assignSlotRef r t ht ho f e hw hL h.1.1 h.1.2 h.2) hc
 
 theorem chkB_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (k c : Context),
     k.bounded → c.bounded → Supports (OB A I out k c b) (chkB A I fs out b k c)

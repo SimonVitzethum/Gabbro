@@ -274,7 +274,8 @@ certificates, and Rust producing untrusted candidates that a Lean validator chec
 reachable support, entry and binding bytes, linking and relocation, the final mapping). Source safety, G/GX
 concurrency, IEEE, contracts, call logs and budget guarantees remain; OS and freestanding profiles stay generic.
 
-Performance against equivalent C built with GCC `-O3`: minimum 80 %, target 95 %, ambitious above 110 %.
+Performance against equivalent C built with `gcc -O3` or `clang -O3` (the faster of the two): minimum 100 % on every workload
+class and ISA (Simon, 2026-10-25; was 80 %), ambitious above 110 %.
 Fixed-work score `100 * Ctime / Gabbrotime`, throughput score `100 * Gabbrothroughput / Cthroughput`, per
 workload and class, on full validated direct binaries with matched hardware, ISA, semantics and settings.
 Compile latency includes checking, optimisation, production, validation and Lean kernel checking. Targets are

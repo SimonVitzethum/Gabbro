@@ -185,6 +185,13 @@ inductive OS (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       OS A I out (l := l) (Γ := Γ) (Λ := Λ) k c (.leave h) c'
   | next {l Γ Λ k c c'} (h : l = true) (hx : ExitsTo k c) :
       OS A I out (l := l) (Γ := Γ) (Λ := Λ) k c (.next h) c'
+  /-- A write through a reference into an open region (`r->f = e;`): the region is not the arena the ledger tracks
+      (`t ≠ A.tab`), so the write moves no grant and no link; the reference and the value are admitted expressions. -/
+  | assignSlotRef {l Γ Λ k c n} (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t)
+      (ho : D.offen t = true) (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true)
+      (hL : darf D t Λ) (htA : t ≠ A.tab) (hr : checkExpression A c r = true)
+      (he : checkExpression A c e = true) :
+      OS A I out (l := l) k c (.assignSlotRef r t ht ho f e hw hL) c
 
 /-- **A block.** -/
 inductive OB (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :

@@ -1744,8 +1744,21 @@ The whole Lean tree builds with the forms: machine G, the lock and atomic semant
 Hoare rules, the idle-root translation, the address leg, the generator (clauses, completeness, representatives), the coverage
 cells (component hashes re-pinned after reading them again: the cells are carrier-level and see a reference access as an access
 of its table) and the fine-cell universe (type class `ref` = 9). `gabbro_ziel` keeps exactly `propext`, `Classical.choice`,
-`Quot.sound`. Conservative, by refusal: the object-frame discipline and the ownership requirements refuse reference accesses
-(no rule yet); the source printer has no syntax for references.
+`Quot.sound`. Conservative, by refusal: the object-frame discipline refuses reference accesses (no rule yet).
+
+**Ownership of references (Simon, 2026-10-25).** A reference access owes what an access of another carrier owes: a read
+through `r` (`Expr.slotRef`) requires that the region is not the arena the ownership ledger tracks (`range t`) and that `r`
+itself is admitted; a write through `r` is the judgment `OS.assignSlotRef` (`t ≠ A.tab`, reference and value admitted),
+decided by the executable checker and carried through its soundness proof, the machine invariant and the idle-root lift.
+Witness `Ownership/Body/RefWitness.lean`: an arena plus an open region, `let r = alloc R; r->x = 7; return;` is admitted
+(`checked`); `chkS_ref_arena`: a write through a reference into the tracked arena is refused in every declaration.
+
+**Refinement to the storage component (Simon, 2026-10-25).** `Unbounded/GRefine.lean`: with the abstraction
+`RegionRepr` (every live abstract payload is the G cell's field), a G read through a reference is `Heap.read`
+(`read_refines`), a G write through a reference is `Heap.write` (`write_refines`), an allocation at `Capacity.unbounded`
+of a valid heap is never refused, whatever its extent (`allocate_unbounded`), and the allocation keeps the abstraction
+(`allocate_refines`). `gregion_verfeinert`: the program of `GRegion` is the abstract allocation followed by the abstract
+write, on the actual G run where the provider answers the heap's candidate cell.
 
 ### 14.4 Still open
 
@@ -1754,6 +1767,6 @@ Done: `Bausteine/Arena/Unbounded/GRegion.lean` -- `let r = alloc T; r->x = 7; re
 the provider's cell `K` is written (`zelle_geschrieben`), for every `K` (`kein_statisches_limit`), the cell is in the
 region's extent (`zelle_im_bereich`), and the core checker accepts the program (`prog_akzeptiert`).
 
-Open: a refinement theorem from the G region to `ArenaStorage.Heap` with `Capacity.unbounded`, ownership rules for reference accesses, the generator's declarations with open
+Open: release of region cells (a provider-side `free`, then the ledger's grants for references), the generator's declarations with open
 tables (otherwise the new fine cells are unreachable for M and N), the Brainfuck bridge on the open region, then Rust (the parser and checker for `table T from p`, `index into T` at an open table and `alloc T`;
 `SYNTAX.md`/`LANGUAGE.md`).

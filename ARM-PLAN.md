@@ -74,7 +74,8 @@ the final bytes, optimisation). The Muse agents may now change the checker (`cra
 model, not only `arm/`; their tools: `./cargo-pruef-check` (checker crates only), `./arm-bau`,
 `./lean-bau`.
 
-**Performance target against equivalent C built with GCC `-O3`:** minimum **80 %**, target **110 %**.
+**Performance target against equivalent C built with `gcc -O3` or `clang -O3` (the faster):** minimum **100 %**, ambitious
+**110 %** (Simon, 2026-10-25; was 80 %).
 **Invariant analysis is mandatory** (not optional): loop invariants, range and bound facts from the
 checker (ranged integers, contracts, `requires`/`ensures`) are used to remove checks and enable
 optimisation, and every use is validated in the final-byte validator. Targets are open until

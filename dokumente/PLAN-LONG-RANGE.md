@@ -1,4 +1,4 @@
-# Long-range plans: generated-program corpus, `async`, self-hosted compiler
+# Long-range plans: generated-program corpus, `async`, self-hosted checker and compiler
 
 *Moved out of `TODO.md` (Phase C items 10, 11, 12) on 2026-10-20, text unchanged in substance. **None of the three is started:**
 Simon asked for no new agents for now (2026-10-18). `TODO.md` keeps the status and the order of work; this file keeps the designs.*
@@ -57,35 +57,7 @@ a wait stop like a flag stop, not an error.
 short); (b) `async fn` in the Lean model (estimate 4 000-8 000 lines, two to four agent runs, a guess); (c) parser, checker rules and
 the transformation as a lowering.
 
-## 3. Self-hosted Gabbro compiler (Simon's idea, 2026-10-18)
+## 3. Self-hosted checker and compiler
 
-**Decision of Simon (2026-10-18):** the compiler stays Rust + LLVM (more flexible and faster); no own backend and no Lean compiler
-(they would need a CPU model for their refinement; the CPU itself is the model, `PLAN-TRANSLATION-VALIDATION.md` §9c). A self-hosted
-compiler therefore keeps LLVM as its back end: only the language of the FRONT END changes, never the back end.
-
-**Bootstrap, as for Lean, TypeScript or Go.**
-- Stage 0 is EITHER the existing Rust compiler (it compiles everything already) OR the Lean pipeline compiled natively (parser,
-  elaboration, `Akzeptiert`, G to `Code`; its small runtime is C/C++ and counts as trust base only as the start, never inside a
-  shipped binary).
-- Stage 1 is the Gabbro-written compiler built by stage 0; stage 2 is stage 1 compiling itself; stage 1 == stage 2 is the fixpoint
-  test. Also diverse double compilation (stage 0 and a second path compile the same source, results compared) against the
-  trusting-trust problem.
-- The compiler source is written in a SMALL SUBSET that stage 0 handles (today the Lean pipeline elaborates 22 of 72 surface
-  constructs, 73.6 % of the slice); stage 1 handles the whole language and extends itself, as bootstrap compilers do. Track P need
-  not be finished first.
-
-**Trust.** The Gabbro-written compiler is an UNTRUSTED producer; the Lean side validates each result (checker verdict against
-`Akzeptiert`, generated IR against `Code` per function, the generated-program set and the adequacy theorem as the differential
-test). It is memory-safe and race-free by the language itself and the best test of Gabbro's power.
-
-**Missing today:** strings (only bounded strings exist), dynamic containers as libraries (lists, trees, hash chains are proved in the
-model, not yet libraries), file IO through declared gates (possible), no generics and no closures (every container copied per type),
-loops need static bounds (fixed limits on program size).
-
-**Order:** (1) Track P as far as the compiler source needs; (2) libraries in Gabbro (strings, arena containers, file IO); (3) lexer
-and parser in Gabbro with a differential test against the Lean lexer/parser over the generated programs; (4) the checker as Gabbro
-functions (the ten components, per function) validated against `Akzeptiert`; (5) lowering and IR emission validated per function,
-then the fixpoint.
-
-**Estimate (a guess):** compiler 40 000-100 000 lines of Gabbro, libraries 10 000-20 000, extra Lean 2 000-6 000 (drivers, fixpoint,
-per-function validator), plus Track P 5 000-15 000 for the subset used.
+Moved to [`PLAN-SELF-HOSTING.md`](PLAN-SELF-HOSTING.md) (Simon, 2026-10-25): checker and compiler written in Gabbro,
+every computation in Gabbro, Lean for specification and proof; both tools proved through M and N and logic proofs.
