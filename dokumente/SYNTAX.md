@@ -321,9 +321,9 @@ moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" path ";" ;
 (* CHANGED 2026-10-25 (name spaces of linked projects, Lean `Parser/Namen/Namensraum.lean`, no new form):
    a project writes paths from its OWN root. A path whose first segment is the local name of a
-   declared dependency (`use lager::bestand::Regal;`) goes into the copy of that dependency the
+   declared dependency (`use store::stock::Shelf;`) goes into the copy of that dependency the
    build assigned; versions are never written (a project declares a dependency once, so its local
-   name is unambiguous, and two versions in one program are two copies, `lager@1`/`lager@2`, of
+   name is unambiguous, and two versions in one program are two copies, `store@1`/`store@2`, of
    which each project sees the one it declared). A path resolves to its first candidate -- inside
    the using module and every enclosing one, innermost first, then the `use` lines of these
    modules ending in its last segment -- that names something VISIBLE: the project's own names

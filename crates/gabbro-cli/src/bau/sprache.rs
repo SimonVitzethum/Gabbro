@@ -3,14 +3,14 @@
 //! A small declarative language, read and evaluated in one pass, never compiled to anything:
 //!
 //! ```text
-//! project('hallo', version: '0.1.0')
-//! lager = library('lager', 'lager.gab')          # a source library
-//! haupt = program('haupt', files('haupt.gab'), install: true)
+//! project('hello', version: '0.1.0')
+//! store = library('store', 'store.gab')          # a source library
+//! app = program('app', files('app.gab'), install: true)
 //! if get_option('trace')
-//!   program('haupt-trace', 'haupt.gab', 'trace.gab')
+//!   program('app-trace', 'app.gab', 'trace.gab')
 //! endif
 //! foreach n : ['a', 'b']
-//!   test('runs-' + n, haupt, args: [n], stdout: n + '\n')
+//!   test('runs-' + n, app, args: [n], stdout: n + '\n')
 //! endforeach
 //! subdir('werkzeuge')
 //! ```

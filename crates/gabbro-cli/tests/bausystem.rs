@@ -291,130 +291,130 @@ fn optionen_unterverzeichnisse_tests_und_installation() {
 
 // ---------------------------------------------------------------- dependencies (BUILD-SYSTEM §7.3)
 
-/// Writes `lager` (a library project: `bestand` exported, `util` private) and `werk` (a program
-/// with a `module util` of its own) below `d`; `werk_build` is werk's project file, `zusatz` goes
-/// into werk's main module.
-fn zwei_projekte(d: &Path, werk_build: &str, zusatz: &str) {
-    let lager = d.join("lager");
-    let werk = d.join("werk");
-    std::fs::create_dir_all(&lager).unwrap();
-    std::fs::create_dir_all(werk.join("neu")).unwrap();
+/// Writes `store` (a library project: `stock` exported, `util` private) and `app` (a program
+/// with a `module util` of its own) below `d`; `app_build` is app's project file, `zusatz` goes
+/// into app's main module.
+fn two_projects(d: &Path, app_build: &str, zusatz: &str) {
+    let store = d.join("store");
+    let app = d.join("app");
+    std::fs::create_dir_all(&store).unwrap();
+    std::fs::create_dir_all(app.join("neu")).unwrap();
     std::fs::write(
-        lager.join("gabbro.build"),
-        "project('lager', version: '1.3.0')\n\
-         library('bestand', 'bestand.gab', export: true)\n\
-         library('intern', 'intern.gab')\n",
+        store.join("gabbro.build"),
+        "project('store', version: '1.3.0')\n\
+         library('stock', 'stock.gab', export: true)\n\
+         library('internal', 'internal.gab')\n",
     )
     .unwrap();
-    std::fs::write(lager.join("gabbro.options"), "option('spur', type: 'boolean', value: false)\n").unwrap();
+    std::fs::write(store.join("gabbro.options"), "option('trace', type: 'boolean', value: false)\n").unwrap();
     std::fs::write(
-        lager.join("bestand.gab"),
-        "module bestand {\nuse util::GRENZE;\npub const MENGE : u32 = 3;\n}\n",
+        store.join("stock.gab"),
+        "module stock {\nuse util::LIMIT;\npub const AMOUNT : u32 = 3;\n}\n",
     )
     .unwrap();
-    std::fs::write(lager.join("intern.gab"), "module util {\npub const GRENZE : u32 = 7;\n}\n").unwrap();
-    let (_, fehler, code) = lauf_in(&werk.join("neu"), &["new", "werk"]);
+    std::fs::write(store.join("internal.gab"), "module util {\npub const LIMIT : u32 = 7;\n}\n").unwrap();
+    let (_, fehler, code) = lauf_in(&app.join("neu"), &["new", "app"]);
     assert_eq!(code, 0, "{fehler}");
-    let haupt = std::fs::read_to_string(werk.join("neu/werk.gab")).unwrap();
-    std::fs::remove_dir_all(werk.join("neu")).unwrap();
-    let haupt = haupt.replacen("module werk {", &format!("module werk {{\n{zusatz}\n"), 1);
+    let haupt = std::fs::read_to_string(app.join("neu/app.gab")).unwrap();
+    std::fs::remove_dir_all(app.join("neu")).unwrap();
+    let haupt = haupt.replacen("module app {", &format!("module app {{\n{zusatz}\n"), 1);
     std::fs::write(
-        werk.join("werk.gab"),
-        format!("module util {{\npub const EIGEN : u32 = 1;\n}}\n{haupt}"),
+        app.join("app.gab"),
+        format!("module util {{\npub const OWN : u32 = 1;\n}}\n{haupt}"),
     )
     .unwrap();
-    std::fs::write(werk.join("gabbro.build"), werk_build).unwrap();
+    std::fs::write(app.join("gabbro.build"), app_build).unwrap();
 }
 
-const WERK: &str = "project('werk', version: '0.2.0')\n\
-                    lager = dependency('lager', path: '../lager', version: '>=1.2, <2')\n\
-                    werk = program('werk', 'werk.gab', dependencies: [lager])\n\
-                    test('laeuft', werk, stdout: 'Hi\\n')\n";
+const APP: &str = "project('app', version: '0.2.0')\n\
+                    store = dependency('store', path: '../store', version: '>=1.2, <2')\n\
+                    app = program('app', 'app.gab', dependencies: [store])\n\
+                    test('runs', app, stdout: 'Hi\\n')\n";
 
 /// **A program over a library of another project builds and runs**; both projects have a
 /// `module util`, and each keeps its own.
 #[test]
-fn eine_abhaengigkeit_baut_und_laeuft() {
+fn a_dependency_builds_and_runs() {
     let d = PathBuf::from(bauverzeichnis("abh"));
-    zwei_projekte(&d, WERK, "use lager::bestand::MENGE;");
-    let werk = d.join("werk");
+    two_projects(&d, APP, "use store::stock::AMOUNT;");
+    let app = d.join("app");
     let b = d.join("bau").display().to_string();
-    let (aus, fehler, code) = lauf_in(&werk, &["setup", &b]);
+    let (aus, fehler, code) = lauf_in(&app, &["setup", &b]);
     assert_eq!(code, 0, "{aus}\n{fehler}");
-    assert!(aus.contains("dependency lager 1.3.0"), "{aus}");
+    assert!(aus.contains("dependency store 1.3.0"), "{aus}");
     assert!(Path::new(&b).join("gabbro.lock").exists(), "setup writes the lock");
-    let (aus, fehler, code) = lauf_in(&werk, &["compile", "-C", &b]);
+    let (aus, fehler, code) = lauf_in(&app, &["compile", "-C", &b]);
     assert_eq!(code, 0, "{aus}\n{fehler}");
-    assert!(aus.contains("built    lager:bestand") && aus.contains("built    werk"), "{aus}");
-    let (aus, fehler, code) = lauf_in(&werk, &["test", "-C", &b]);
+    assert!(aus.contains("built    store:stock") && aus.contains("built    app"), "{aus}");
+    let (aus, fehler, code) = lauf_in(&app, &["test", "-C", &b]);
     assert_eq!(code, 0, "{aus}\n{fehler}");
-    let (aus, _, _) = lauf_in(&werk, &["introspect", "-C", &b]);
-    assert!(aus.contains("\"lager:intern\"") && aus.contains("\"lager:bestand\""), "{aus}");
-    assert!(aus.contains("\"name\": \"lager\", \"version\": \"1.3.0\", \"namespace\": \"lager\""), "{aus}");
+    let (aus, _, _) = lauf_in(&app, &["introspect", "-C", &b]);
+    assert!(aus.contains("\"store:internal\"") && aus.contains("\"store:stock\""), "{aus}");
+    assert!(aus.contains("\"name\": \"store\", \"version\": \"1.3.0\", \"namespace\": \"store\""), "{aus}");
     // **A dependency that changes under the build is named, never swapped in silently.**
     std::fs::write(
-        d.join("lager/bestand.gab"),
-        "module bestand {\nuse util::GRENZE;\npub const MENGE : u32 = 4;\n}\n",
+        d.join("store/stock.gab"),
+        "module stock {\nuse util::LIMIT;\npub const AMOUNT : u32 = 4;\n}\n",
     )
     .unwrap();
-    let (aus, fehler, code) = lauf_in(&werk, &["compile", "-C", &b]);
+    let (aus, fehler, code) = lauf_in(&app, &["compile", "-C", &b]);
     assert_eq!(code, 2, "{aus}\n{fehler}");
-    assert!(fehler.contains("the dependencies changed") && fehler.contains("project=lager"), "{fehler}");
-    let (aus, fehler, code) = lauf_in(&werk, &["configure", "-C", &b]);
+    assert!(fehler.contains("the dependencies changed") && fehler.contains("project=store"), "{fehler}");
+    let (aus, fehler, code) = lauf_in(&app, &["configure", "-C", &b]);
     assert_eq!(code, 0, "{aus}\n{fehler}");
-    let (aus, fehler, code) = lauf_in(&werk, &["compile", "-C", &b]);
+    let (aus, fehler, code) = lauf_in(&app, &["compile", "-C", &b]);
     assert_eq!(code, 0, "accepted by configure:\n{aus}\n{fehler}");
     weg(&d.display().to_string());
 }
 
 /// **Every refusal of the dependency rules, by name.**
 #[test]
-fn abhaengigkeiten_fallen_mit_namen() {
+fn dependency_refusals_by_name() {
     let faelle: [(&str, &str, &str); 7] = [
         // a private library of the dependency
-        (WERK, "use lager::util::GRENZE;", "which it does not export"),
+        (APP, "use store::util::LIMIT;", "which it does not export"),
         // used, not declared
         (
-            "project('werk')\nlager = dependency('lager', path: '../lager')\nprogram('werk', 'werk.gab')\n",
-            "use lager::bestand::MENGE;",
-            "does not declare it -- add `dependencies: [lager]`",
+            "project('app')\nstore = dependency('store', path: '../store')\nprogram('app', 'app.gab')\n",
+            "use store::stock::AMOUNT;",
+            "does not declare it -- add `dependencies: [store]`",
         ),
         // declared, not used
-        (WERK, "", "delete `lager` there"),
+        (APP, "", "delete `store` there"),
         // the version
         (
-            "project('werk')\nlager = dependency('lager', path: '../lager', version: '>=2')\n\
-             program('werk', 'werk.gab', dependencies: [lager])\n",
-            "use lager::bestand::MENGE;",
+            "project('app')\nstore = dependency('store', path: '../store', version: '>=2')\n\
+             program('app', 'app.gab', dependencies: [store])\n",
+            "use store::stock::AMOUNT;",
             "requires version `>=2`, and",
         ),
         // an option the dependency does not have
         (
-            "project('werk')\nlager = dependency('lager', path: '../lager', options: ['nichts=1'])\n\
-             program('werk', 'werk.gab', dependencies: [lager])\n",
-            "use lager::bestand::MENGE;",
-            "`nichts` is no option of project `lager`",
+            "project('app')\nstore = dependency('store', path: '../store', options: ['nichts=1'])\n\
+             program('app', 'app.gab', dependencies: [store])\n",
+            "use store::stock::AMOUNT;",
+            "`nichts` is no option of project `store`",
         ),
         // a missing project
         (
-            "project('werk')\nlager = dependency('lager', path: '../fehlt')\n\
-             program('werk', 'werk.gab', dependencies: [lager])\n",
-            "use lager::bestand::MENGE;",
+            "project('app')\nstore = dependency('store', path: '../fehlt')\n\
+             program('app', 'app.gab', dependencies: [store])\n",
+            "use store::stock::AMOUNT;",
             "holds no `gabbro.build`",
         ),
         // the dependency's own option, set well, still builds the plan
         (
-            "project('werk')\nlager = dependency('lager', path: '../lager', options: ['spur=true'])\n\
-             program('werk', 'werk.gab', dependencies: [lager])\n",
-            "use lager::bestand::MENGE;",
+            "project('app')\nstore = dependency('store', path: '../store', options: ['trace=true'])\n\
+             program('app', 'app.gab', dependencies: [store])\n",
+            "use store::stock::AMOUNT;",
             "",
         ),
     ];
     for (n, (build, zusatz, text)) in faelle.iter().enumerate() {
         let d = PathBuf::from(bauverzeichnis(&format!("abh-gift-{n}")));
-        zwei_projekte(&d, build, zusatz);
+        two_projects(&d, build, zusatz);
         let b = d.join("bau").display().to_string();
-        let (aus, fehler, code) = lauf_in(&d.join("werk"), &["setup", &b]);
+        let (aus, fehler, code) = lauf_in(&d.join("app"), &["setup", &b]);
         if text.is_empty() {
             assert_eq!(code, 0, "case {n}:\n{aus}\n{fehler}");
         } else {
@@ -429,49 +429,49 @@ fn abhaengigkeiten_fallen_mit_namen() {
 /// named by their short name in effects and in the product, so the second would be the first.
 /// Modules of one name are two modules; items of one name are refused by name.
 #[test]
-fn gleiche_kurznamen_fallen_mit_n039() {
+fn one_short_name_twice_falls_at_n039() {
     let d = PathBuf::from(bauverzeichnis("abh-kurzname"));
-    zwei_projekte(&d, WERK, "use lager::bestand::MENGE;");
-    let werk = d.join("werk/werk.gab");
-    let t = std::fs::read_to_string(&werk).unwrap().replace("pub const EIGEN : u32 = 1;", "pub const GRENZE : u32 = 1;");
-    std::fs::write(&werk, t).unwrap();
+    two_projects(&d, APP, "use store::stock::AMOUNT;");
+    let app = d.join("app/app.gab");
+    let t = std::fs::read_to_string(&app).unwrap().replace("pub const OWN : u32 = 1;", "pub const LIMIT : u32 = 1;");
+    std::fs::write(&app, t).unwrap();
     let b = d.join("bau").display().to_string();
-    let (aus, fehler, code) = lauf_in(&d.join("werk"), &["setup", &b]);
+    let (aus, fehler, code) = lauf_in(&d.join("app"), &["setup", &b]);
     assert_eq!(code, 0, "{aus}\n{fehler}");
-    let (aus, fehler, code) = lauf_in(&d.join("werk"), &["compile", "-C", &b]);
+    let (aus, fehler, code) = lauf_in(&d.join("app"), &["compile", "-C", &b]);
     assert_eq!(code, 1, "{aus}\n{fehler}");
-    assert!(aus.contains("REFUSED  werk") && aus.contains("N039"), "{aus}\n{fehler}");
+    assert!(aus.contains("REFUSED  app") && aus.contains("N039"), "{aus}\n{fehler}");
     weg(&d.display().to_string());
 }
 
 /// **A cycle of projects is refused; a path into a project not declared is refused.**
 #[test]
-fn zyklus_und_unsichtbares_fallen() {
+fn cycle_and_invisible_paths_refused() {
     let d = PathBuf::from(bauverzeichnis("abh-zyklus"));
-    zwei_projekte(&d, WERK, "use lager::bestand::MENGE;");
+    two_projects(&d, APP, "use store::stock::AMOUNT;");
     std::fs::write(
-        d.join("lager/gabbro.build"),
-        "project('lager', version: '1.3.0')\nwerk = dependency('werk', path: '../werk')\n\
-         library('bestand', 'bestand.gab', export: true, dependencies: [werk])\nlibrary('intern', 'intern.gab')\n",
+        d.join("store/gabbro.build"),
+        "project('store', version: '1.3.0')\napp = dependency('app', path: '../app')\n\
+         library('stock', 'stock.gab', export: true, dependencies: [app])\nlibrary('internal', 'internal.gab')\n",
     )
     .unwrap();
     let b = d.join("bau").display().to_string();
-    let (_, fehler, code) = lauf_in(&d.join("werk"), &["setup", &b]);
+    let (_, fehler, code) = lauf_in(&d.join("app"), &["setup", &b]);
     assert_eq!(code, 2, "{fehler}");
     assert!(fehler.contains("the projects form a cycle"), "{fehler}");
     weg(&d.display().to_string());
 
-    // `lager` names the program's module without declaring the program.
+    // `store` names the program's module without declaring the program.
     let d = PathBuf::from(bauverzeichnis("abh-sicht"));
-    zwei_projekte(&d, WERK, "use lager::bestand::MENGE;");
+    two_projects(&d, APP, "use store::stock::AMOUNT;");
     std::fs::write(
-        d.join("lager/bestand.gab"),
-        "module bestand {\nuse util::GRENZE;\npub const MENGE : u32 = werk::util::GRENZE;\n}\n",
+        d.join("store/stock.gab"),
+        "module stock {\nuse util::LIMIT;\npub const AMOUNT : u32 = app::util::LIMIT;\n}\n",
     )
     .unwrap();
     let b = d.join("bau").display().to_string();
-    let (aus, fehler, code) = lauf_in(&d.join("werk"), &["setup", &b]);
+    let (aus, fehler, code) = lauf_in(&d.join("app"), &["setup", &b]);
     assert_eq!(code, 2, "{aus}\n{fehler}");
-    assert!(fehler.contains("reaches project `werk`, which this file's project does not declare"), "{fehler}");
+    assert!(fehler.contains("reaches project `app`, which this file's project does not declare"), "{fehler}");
     weg(&d.display().to_string());
 }

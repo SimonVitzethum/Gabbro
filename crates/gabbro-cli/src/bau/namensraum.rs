@@ -3,7 +3,7 @@
 //! the tokens of each file before the unit reaches the checker.
 //!
 //! A name of the unit is (copy, path): every project's top-level modules are placed below its
-//! name space (`module bestand` of the copy `lager` becomes `module lager::bestand`), a path whose
+//! name space (`module stock` of the copy `store` becomes `module store::stock`), a path whose
 //! first segment is the LOCAL name of a declared dependency goes into that dependency's name space,
 //! and every other path stays as it was written (relative to the project root, or to the enclosing
 //! modules). So two projects with `module util` share no name, and the checker's resolution is the

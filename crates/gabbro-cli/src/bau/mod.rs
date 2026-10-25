@@ -610,7 +610,7 @@ fn kompiliere(g: &Geladen, auswahl: &[String], trocken: bool) -> Result<bool, St
     Ok(abgesagt == 0)
 }
 
-/// A library of the unit as a report names it: `lager:bestand` for a dependency's.
+/// A library of the unit as a report names it: `store:stock` for a dependency's.
 fn bib_name(g: &abh::Graph, (c, b): (usize, usize)) -> String {
     let k = &g.kopien[c].projekt;
     if c == 0 {
