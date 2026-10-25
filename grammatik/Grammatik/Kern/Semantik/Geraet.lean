@@ -130,6 +130,7 @@ def GSchritt.sperren : GSchritt (D := D) → List D.Lock
       | .gzugriff _ _ _ h => h
       | .nimmt _ h => h
       | .gibt _ => []
+      | .fremd _ => []
   | .dma _ => []
 
 /-- **The device takes no locks.** By construction: the `dma` branch has no

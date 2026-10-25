@@ -273,6 +273,7 @@ def evR : Ereignis D → Ereignis D.mitRuhe
   | .gzugriff g w Λ h => .gzugriff g w (Λ.map resR) h
   | .nimmt L h => .nimmt L h
   | .gibt L => .gibt L
+  | .fremd q => .fremd q
 
 /-- An event of `D.mitRuhe` as an event of `D`. -/
 def evZ : Ereignis D.mitRuhe → Ereignis D
@@ -280,6 +281,7 @@ def evZ : Ereignis D.mitRuhe → Ereignis D
   | .gzugriff g w Λ h => .gzugriff g w (Λ.map resZ) h
   | .nimmt L h => .nimmt L h
   | .gibt L => .gibt L
+  | .fremd q => .fremd q
 
 theorem evZ_evR (e : Ereignis D) : evZ (evR e) = e := by
   cases e <;> simp only [evR, evZ, map_rz_rm]

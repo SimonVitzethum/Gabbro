@@ -297,11 +297,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           · simp only [World.storeGlob, dif_neg hgx]
             rfl
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-      have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
-      have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+      have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
       rw [← e] at hfr
       cases c with
       | inl t =>
@@ -340,11 +340,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           rw [hfr.2 x ha, hs₁]
           rfl
   | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-      have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
-      have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+      have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
       rw [← e] at hfr
       cases c with
       | inl t =>
@@ -383,11 +383,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           rw [hfr.2 x ha, hs₁]
           rfl
   | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-      have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
-      have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+      have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
       rw [← e] at hfr
       cases c with
       | inl t =>
@@ -426,11 +426,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           rw [hfr.2 x ha, hs₁]
           rfl
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-      have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
-      have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+      have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
       rw [← e] at hfr
       cases c with
       | inl t =>
@@ -469,11 +469,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           rw [hfr.2 x ha, hs₁]
           rfl
   | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-      have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
-      have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+      have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
       rw [← e] at hfr
       cases c with
       | inl t =>
@@ -512,11 +512,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           rw [hfr.2 x ha, hs₁]
           rfl
   | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-      have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
-      have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+      have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
       rw [← e] at hfr
       cases c with
       | inl t =>

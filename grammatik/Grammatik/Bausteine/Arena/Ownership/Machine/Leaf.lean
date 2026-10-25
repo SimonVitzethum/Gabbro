@@ -230,7 +230,7 @@ theorem os_meta (hO : GutO O) : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
       have hσ : σ2 = (axiomAntwort O a _ _).1 := (congrArg Prod.fst heq).symm
       rw [axiomAntwort_fst] at hσ
       rw [hσ]
-      exact (MetaSame.reads A σ _ _).trans (MetaSame.axiom hO hfree _ _)
+      exact ((MetaSame.reads A σ _ _).trans (MetaSame.fragt A _ _)).trans (MetaSame.axiom hO hfree _ _)
     · cases h
   | _, _, _, _, _, _, _, _, .regWrite .. => by
     intro _ σ ρ σ' ρ' h

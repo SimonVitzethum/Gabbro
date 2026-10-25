@@ -53,6 +53,7 @@ theorem offen_map_evR : ∀ s : List (Ereignis D), offen (s.map (evR (D := D))) 
   | .gibt L :: s => congrArg (fun l => List.erase l L) (offen_map_evR s)
   | .zugriff .. :: s => offen_map_evR s
   | .gzugriff .. :: s => offen_map_evR s
+  | .fremd .. :: s => offen_map_evR s
 
 theorem haelt_worldR (σ : World D) : (worldR σ).haelt = σ.haelt := offen_map_evR σ.spur
 
@@ -508,12 +509,16 @@ theorem orakelRu_mitRuhe (O : Orakel D) : OrakelRu O O.mitRuhe :=
       rw [worldZ_worldR],
     zeiger_mitRuhe O⟩
 
+/-- A question to the outside translates as itself. -/
+theorem worldR_fragt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) :
+    (worldR σ).fragt q = worldR (σ.fragt q) := rfl
+
 theorem axiomAntwort_ruG {O : Orakel D} {O' : Orakel D.mitRuhe} (hO : OrakelRu O O') (a : D.Ax)
     (σ : World D) (ρ : Env D (D.aparams a)) :
     axiomAntwort O' a (worldR σ) (envR ρ) =
       (worldR (axiomAntwort O a σ ρ).1, (axiomAntwort O a σ ρ).2.map (ergR (D.aerg a))) := by
   unfold axiomAntwort
-  rw [hO.wirkt]
+  rw [worldR_fragt, hO.wirkt]
   exact congrArg _ (einpassenErg_ru O.zeiger O'.zeiger hO.zeiger (D.aerg a) _)
 
 theorem axiomAntwort_ru (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :

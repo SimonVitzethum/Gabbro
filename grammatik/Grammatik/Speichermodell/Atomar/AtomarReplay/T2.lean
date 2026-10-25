@@ -103,6 +103,37 @@ theorem fadenSA_lese {z : RufFadenG D} {W W' : World D}
   refine ⟨σ', HX', hfx', kurzX_mono hkx' hl, hsub, Nat.le_trans (lese_laenge σ Λr X) hl, hg', hok',
     fun R O' U A hPX hHA hQ => hsem R O' U A σ hQ hg (hrec A hPX hHA)⟩
 
+/-- **A question to the outside, then reads** (`fadenSA_lese` after `World.fragt`): the register and visibility
+    steps record `Ereignis.fremd` before they read. -/
+theorem fadenSA_fragtLese {z : RufFadenG D} {W W' : World D}
+    (hF : FadenSA P O passes Q S lok Tg m zyk z W)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
+    {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
+    {l' : Bool} {Γ' : Ctx} {Λ' : List (Res D)} (ρ' : Env D Γ')
+    (r' : GRest D (vertragVon D z.kopf.f) l' Γ' Λ') (spur' : List (Ereignis D))
+    (q : D.Ax ⊕ D.Reg ⊕ D.Glob) (Λr : List (Res D)) (X : List (D.Tab ⊕ D.Glob))
+    (hX : r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
+      ∀ c ∈ X, c ∈ stabilS P S lok z.kopf.f Λ ∨ Tg c)
+    (hstep : ∀ σ : World D, GleichAuf (stabilS P S lok z.kopf.f Λ ++ X) σ ((W.fragt q).lese Λr X) →
+      r.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) →
+      ∃ σ' : World D, σ.spur.length ≤ σ'.spur.length ∧
+        GleichAuf (stabilS P S lok z.kopf.f Λ') σ' W' ∧
+        r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f) ∧
+        ∀ (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (O' : Orakel D)
+          (U : Umwelt D) (A : AUmwelt D) (σ0 : World D), GleichRS O O' →
+          GleichAuf (stabilS P S lok z.kopf.f Λ) σ0 W → leseA A (σ0.fragt q) Λr X = σ →
+          (semHA S O' U A passes R r σ0 ρ).folgt (semHA S O' U A passes R r' σ' ρ')) :
+    FadenSA P O passes Q S lok Tg m zyk
+      ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩ W' := by
+  refine fadenSA_lokalQ hF hr ρ' r' spur' fun σ HX hfx hkx hg hok => ?_
+  obtain ⟨HX', hfx', hkx', hsub, hrec⟩ :=
+    lese_schritt (σ := σ.fragt q) Tg hfx (kurzX_mono hkx (Nat.le_succ _)) Λr X W.speicher
+  have hgX := mischT_gleichAuf (σ := σ.fragt q) (W := W.fragt q) hg (hX hok) Λr Λr
+  obtain ⟨σ', hl, hg', hok', hsem⟩ := hstep _ hgX hok
+  refine ⟨σ', HX', hfx', kurzX_mono hkx' hl, hsub,
+    Nat.le_trans (Nat.le_succ _) (Nat.le_trans (lese_laenge (σ.fragt q) Λr X) hl), hg', hok',
+    fun R O' U A hPX hHA hQ => hsem R O' U A σ hQ hg (hrec A hPX hHA)⟩
+
 /-- Memory moved outside the head's stable carriers keeps the replay. -/
 theorem fadenSA_speicher {z : RufFadenG D} {W W' : World D}
     (hF : FadenSA P O passes Q S lok Tg m zyk z W)
@@ -478,7 +509,7 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
       r'.okS P (fussOrteG P z.kopf.f) (sicher P lok z.kopf.f))
     (xm : World D × Int) (hxm : Rahmen (D.aschreibt a) (D.agschreibt a) (W.lese Λ args.orte) xm.1)
     (hxO : ¬ Nonempty (Ereignis D) →
-      xm.2 = (O.wirkt a (W.lese Λ args.orte) (evalArgs (W.lese Λ args.orte) args
+      xm.2 = (O.wirkt a ((W.lese Λ args.orte).fragt (.inl a)) (evalArgs (W.lese Λ args.orte) args
         (W.lese Λ args.orte) ρ)).2)
     (hlok : AxEnsLokal Q)
     (hxq : ∀ v : ErgVal D (D.aerg a), einpassenErg O.zeiger (D.aerg a) xm.2 = some v →
@@ -486,9 +517,9 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
       (U : Umwelt D) (A : AUmwelt D) (σ0 κ : World D), ZeigerGleich O O' →
       leseA A σ0 Λ args.orte = κ →
-      O'.wirkt a κ (evalArgs κ args κ ρ) = (axWeltF a κ xm.1, xm.2) →
+      O'.wirkt a (κ.fragt (.inl a)) (evalArgs κ args κ ρ) = (axWeltF a (κ.fragt (.inl a)) xm.1, xm.2) →
       (semHA S O' U A passes R r σ0 ρ).folgt
-        (semHA S O' U A passes R r' (axWeltF a κ xm.1) ρ')) :
+        (semHA S O' U A passes R r' (axWeltF a (κ.fragt (.inl a)) xm.1) ρ')) :
     FadenSA P O passes Q S lok Tg m zyk
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩
       (xm.1.speicher.welt spur') := by
@@ -499,38 +530,39 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
   have hg0 : GleichAuf (stabilS P S lok z.kopf.f Λ) σ W := by rw [hr] at hg; exact hg
   obtain ⟨HX', hfx', hkx', hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ args.orte W.speicher
   have hgκ := mischT_gleichAuf hg0 (hX hok') Λ Λ
-  have hlen : σ.spur.length ≤ (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).spur.length :=
-    lese_laenge _ _ _
+  have hlen : σ.spur.length ≤ ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).spur.length :=
+    Nat.le_trans (lese_laenge _ _ _) (Nat.le_succ _)
   have hlen2 : σ.spur.length ≤
-      (axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1).spur.length :=
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).spur.length :=
     Nat.le_trans hlen (axWeltF_laenge _ _ _)
-  have hlen3 : (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).spur.length ≤
-      (axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1).spur.length :=
+  have hlen3 : ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).spur.length ≤
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).spur.length :=
     axWeltF_laenge _ _ _
   have hlt : Nonempty (Ereignis D) →
-      (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).spur.length <
-      (axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1).spur.length :=
+      ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)).spur.length <
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1).spur.length :=
     fun hN => frischSpur_laenge hN _
   have hpa : ¬ Nonempty (Ereignis D) → PasstA O (HA ++ [⟨a,
-      mischT Tg args.orte (σ.lese Λ args.orte) W.speicher,
+      (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a),
       evalArgs (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) args
         (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) ρ,
-      (axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1, xm.2)⟩]) := by
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1, xm.2)⟩]) := by
     intro hN a' σk ρk x hm
     rcases List.mem_append.mp hm with hm | hm
     · exact hka.2 hN a' σk ρk x hm
     · rw [List.mem_singleton] at hm
       cases hm
-      rw [hxO hN, welt_eq hN (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher)
-        (W.lese Λ args.orte)]
+      rw [hxO hN, welt_eq hN ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a))
+        ((W.lese Λ args.orte).fragt (.inl a)),
+        welt_eq hN (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) (W.lese Λ args.orte)]
       exact Prod.ext (welt_eq hN _ _) rfl
-  refine ⟨⟨H, HA ++ [⟨a, mischT Tg args.orte (σ.lese Λ args.orte) W.speicher,
+  refine ⟨⟨H, HA ++ [⟨a, (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a),
       evalArgs (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) args
         (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) ρ,
-      (axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1, xm.2)⟩], HU, HX',
-    axWeltF a (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher) xm.1, hreq, hf, hv, hm,
+      (axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1, xm.2)⟩], HU, HX',
+    axWeltF a ((mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) xm.1, hreq, hf, hv, hm,
     kurzVBA_mono hk hlen2, ?_, ?_, ?_, ?_,
-    hfu, hiu, kurzUB_mono hku hlen2, ⟨hfx', kurzX_mono hkx' hlen3⟩, ?_, hok hok', ?_⟩, hS⟩
+    hfu, hiu, kurzUB_mono hku hlen2, ⟨hfx', kurzX_mono hkx' (Nat.le_trans (Nat.le_succ _) hlen3)⟩, ?_, hok hok', ?_⟩, hS⟩
   · by_cases hN : Nonempty (Ereignis D)
     · exact funkA_append hfa (hka.1 hN) _ hlen
     · exact funkA_of_passtA (hpa hN)
@@ -552,7 +584,7 @@ theorem fadenSA_ax {z : RufFadenG D} {W : World D}
     · rw [List.mem_singleton] at hm
       subst hm
       exact hlt hN
-  · have h1 := axWeltF_gleichAuf a
+  · have h1 := axWeltF_gleichAuf (κ := (mischT Tg args.orte (σ.lese Λ args.orte) W.speicher).fragt (.inl a)) a
       (GleichAuf.mono (fun _ h => List.mem_append_left _ h) hgκ) hxm
     exact gleichAuf_stabil_iff hΛ' ⟨fun t ht => h1.1 t ht, fun g hg' => h1.2 g hg'⟩
   · intro R O' U A hR hA hU hXA hHA hQ
@@ -610,7 +642,7 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       simp only [stmtOrteP, lese_nil]
-      exact Nat.le_refl _
+      exact Nat.le_succ _
   | publish g e payload hp hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -684,12 +716,12 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
           obtain ⟨e1, e2, u, hu⟩ := axiomCall_ok_inv O passes keinRuf a args h hw hg hd hgd W ρ σ' ρ'
             hstep
           subst e2
-          have hfr := (hO a (W.lese Λ args.orte)
+          have hfr := (hO a ((W.lese Λ args.orte).fragt (.inl a))
             (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).1
           rw [← e1] at hfr
           refine fadenSA_ax hF hr ρ' K σ'.spur hΛ' a args
             (fun h' => orte_stabilX (hFS _) args.orte_darf (hok h').1) (fun h' => (hok h').2)
-            (σ', (O.wirkt a (W.lese Λ args.orte)
+            (σ', (O.wirkt a ((W.lese Λ args.orte).fragt (.inl a))
               (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).2) hfr (fun _ => rfl)
             hlok
             (fun v hv => by

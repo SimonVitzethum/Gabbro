@@ -56,8 +56,11 @@ theorem hmark_hcar_aus_progAus_axiomCall
       exact pcAtom_mem_marks _ _ _ ha m
         (by simp only [PCAtom.marks]
             exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩)
-    · rw [hLe] at hm
-      exact absurd hm (hmf m st)
+    · rcases hLe with hLe | hLe
+      · rw [hLe] at hm
+        exact absurd hm (hmf m st)
+      · rw [hLe] at hm
+        exact absurd hm List.not_mem_nil
   · intro e he o ho
     have hmem : o ∈ stmtTraeger tabs globs
         (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++

@@ -54,7 +54,7 @@ theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
   have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
       L ∈ (σ.lese Λ args.orte).haelt :=
     fun g hwr L hL => (hhL L).mp (hgd g hwr _ hL)
-  obtain ⟨_, _, hcond⟩ := hO a (σ.lese Λ args.orte)
+  obtain ⟨_, _, hcond⟩ := hO a ((σ.lese Λ args.orte).fragt (.inl a))
     (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
   obtain ⟨tabs₀, globs₀, Λe, hct₀, _, _, _, _, _, hspurO⟩ := hcond hgt hgg
   have hlese : (σ.lese Λ args.orte).spur =
@@ -79,7 +79,7 @@ theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
             rw [hfire, hAns, Ausgang.welt]
           rw [hcomp] at hstep
           have hsg' : σ' = fst := Option.some_inj.mp hstep.symm
-          have hfst : fst = (O.wirkt a (σ.lese Λ args.orte)
+          have hfst : fst = (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
               (evalArgs (σ.lese Λ args.orte) args
                 (σ.lese Λ args.orte) ρ)).1 := by
             have hA := hAns
@@ -89,12 +89,12 @@ theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
             exact hF.symm
           have hsp : σ'.spur =
               axiomSpur tabs₀ globs₀ a Λe (σ.lese Λ args.orte).haelt ++
-              (σ.lese Λ args.orte).spur := by
+              (Ereignis.fremd (.inl a) :: (σ.lese Λ args.orte).spur) := by
             rw [hsg', hfst]
             exact hspurO
-          rw [hsp, hlese, ← List.append_assoc] at hneu
+          rw [hsp, hlese, ← List.cons_append, ← List.append_assoc] at hneu
           have hneueq : axiomSpur tabs₀ globs₀ a Λe (σ.lese Λ args.orte).haelt ++
-              (args.orte.map fun o => match o with
+              (Ereignis.fremd (.inl a) :: args.orte.map fun o => match o with
                 | .inl t => Ereignis.zugriff t false Λ σ.haelt
                 | .inr g => Ereignis.gzugriff g false Λ σ.haelt) = neu :=
             List.append_cancel_right hneu
@@ -102,7 +102,7 @@ theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
             (σ.lese Λ args.orte).haelt t (hct₀ t hwr) hwr
           have hmem2 : Ereignis.zugriff t true Λe (σ.lese Λ args.orte).haelt ∈
               axiomSpur tabs₀ globs₀ a Λe (σ.lese Λ args.orte).haelt ++
-              (args.orte.map fun o => match o with
+              (Ereignis.fremd (.inl a) :: args.orte.map fun o => match o with
                 | .inl t => Ereignis.zugriff t false Λ σ.haelt
                 | .inr g => Ereignis.gzugriff g false Λ σ.haelt) :=
             List.mem_append.mpr (Or.inl hmem)
@@ -247,7 +247,7 @@ theorem axFireExists : ∃ σ' : World EZD.AxGegen.D2,
       (evalArgs (Γ := []) (Λ := []) (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])
         (Args.nil (D := EZD.AxGegen.D2) (Γ := []) (Λ := []))
         (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []) Env.nil) =
-      (EZD.AxGegen.Wflip2 (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []),
+      (EZD.AxGegen.Wflip2 ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []).fragt (.inl ())),
         Option.some ()) := by
     rfl
   have hcomp : (execStmt (O := EZD.AxGegen.O2) 0 keinRuf EZD.AxGegen.axCall
@@ -272,14 +272,14 @@ theorem axiomMemStep (σ' : World EZD.AxGegen.D2)
       ((GenStart EZD.AxGegen.wspF).weltVon 1) Env.nil).welt = some σ')
     (hneu' : σ'.spur =
       [Ereignis.zugriff () true []
-        ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt] ++
+        ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt, Ereignis.fremd (.inl ())] ++
         (GenStart EZD.AxGegen.wspF).spuren 1) :
     PCSchritt (P := EZD.AxGegen.P2w) (O := EZD.AxGegen.O2) 0 axiomProg
       (GenStart EZD.AxGegen.wspF) (fun _ => 0) 1
       ⟨σ'.speicher, genUpdate (GenStart EZD.AxGegen.wspF).spuren 1 σ'.spur,
         (GenStart EZD.AxGegen.wspF).lauf ++ genEigen 1
           [Ereignis.zugriff () true []
-            ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt],
+            ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt, Ereignis.fremd (.inl ())],
         (GenStart EZD.AxGegen.wspF).start,
         (GenStart EZD.AxGegen.wspF).welten ++ [σ'],
         (GenStart EZD.AxGegen.wspF).tiefe + 1⟩
@@ -288,7 +288,7 @@ theorem axiomMemStep (σ' : World EZD.AxGegen.D2)
     (V := EZD.AxGegen.V2) (l := false) (Γ := []) (Λ := []) (Λ' := [])
     (s := EZD.AxGegen.axCall) (ρ := Env.nil) (σ' := σ')
     (neu := [Ereignis.zugriff () true []
-      ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt])
+      ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt, Ereignis.fremd (.inl ())])
     (Λa := []) (cs := [Sum.inl ()]) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
   · rfl
   · intro L
@@ -300,20 +300,24 @@ theorem axiomMemStep (σ' : World EZD.AxGegen.D2)
   · rfl
   · rfl
   · intro e he m st hm
-    simp only [List.mem_singleton] at he
-    subst he
-    simp [Ereignis.lambda] at hm
+    rcases List.mem_cons.mp he with rfl | he
+    · simp [Ereignis.lambda] at hm
+    · simp only [List.mem_singleton] at he
+      subst he
+      simp [Ereignis.lambda] at hm
   · intro e he o ho
-    simp only [List.mem_singleton] at he
-    subst he
-    have h2 : (Ereignis.zugriff () true []
-        ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt).traeger =
-        some (Sum.inl ()) := rfl
-    rw [h2] at ho
-    have ho' : o = Sum.inl () := (Option.some_inj.mp ho).symm
-    rw [ho']
-    simp only [PCAtom.carriers]
-    exact List.mem_singleton.mpr rfl
+    rcases List.mem_cons.mp he with rfl | he
+    · have h2 : (Ereignis.zugriff () true []
+          ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt).traeger =
+          some (Sum.inl ()) := rfl
+      rw [h2] at ho
+      have ho' : o = Sum.inl () := (Option.some_inj.mp ho).symm
+      rw [ho']
+      simp only [PCAtom.carriers]
+      exact List.mem_singleton.mpr rfl
+    · simp only [List.mem_singleton] at he
+      subst he
+      simp [Ereignis.traeger] at ho
 
 /-- The witnessed foreign step on the one-axiom declaration: thread `1`
     fires `leave` (memory-preserving, empty recorded list, carrier-free
@@ -380,13 +384,13 @@ theorem eigenzustand_axiom_zeuge :
   obtain ⟨σ', hfire'⟩ := axFireExists
   have hs0 := axiomLeaveStep (GenStart EZD.AxGegen.wspF) rfl
   have hσ' : σ' = EZD.AxGegen.Wflip2
-      (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []) := by
+      ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []).fragt (.inl ())) := by
     have hAns2 : axiomAntwort (O := EZD.AxGegen.O2) ()
         (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])
         (evalArgs (Γ := []) (Λ := []) (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])
           (Args.nil (D := EZD.AxGegen.D2) (Γ := []) (Λ := []))
           (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []) Env.nil) =
-        (EZD.AxGegen.Wflip2 (((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []),
+        (EZD.AxGegen.Wflip2 ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] []).fragt (.inl ())),
           Option.some ()) := rfl
     have hrfl2 : (execStmt (O := EZD.AxGegen.O2) 0 keinRuf EZD.AxGegen.axCall
         ((GenStart EZD.AxGegen.wspF).weltVon 1) Env.nil).welt =
@@ -404,7 +408,7 @@ theorem eigenzustand_axiom_zeuge :
     exact Option.some_inj.mp hfire'.symm
   have hneu' : σ'.spur =
       [Ereignis.zugriff () true []
-        ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt] ++
+        ((((GenStart EZD.AxGegen.wspF).weltVon 1).lese [] [])).haelt, Ereignis.fremd (.inl ())] ++
         (GenStart EZD.AxGegen.wspF).spuren 1 := by
     rw [hσ']
     rfl

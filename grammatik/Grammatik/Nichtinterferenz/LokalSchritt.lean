@@ -508,7 +508,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
   | regRead r hk' rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
-      rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp
+      rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := (sp₁.welt spur).fragt (.inr (.inl r))) (τ := (sp₂.welt spur).fragt (.inr (.inl r))) hsp
         (alle_von hST hb.1))]
       generalize einpassen _ (D.rtyp r) _ = x
       cases x with
@@ -517,23 +517,23 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
   | regReadElse r hk' zusage sonst rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
-      rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp
+      rw [hRL.1 r _ _ (gleichAuf_von_sg (σ := (sp₁.welt spur).fragt (.inr (.inl r))) (τ := (sp₂.welt spur).fragt (.inr (.inl r))) hsp
         (alle_von hST hb.1.1.1))]
       generalize einpassen _ (D.rtyp r) _ = x
       cases x with
       | none => exact KRel.none_l _
       | some v =>
           simp only
-          rw [(hW.lese Λ zusage.orte).eval zusage (alle_von hST hb.1.1.2) (.cons v ρ)]
+          rw [((hW.fragt (.inr (.inl r))).lese Λ zusage.orte).eval zusage (alle_von hST hb.1.1.2) (.cons v ρ)]
           exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp)
             (fun _ => KRel.lokal _ _ _ _ _ rfl hsp)
   | awaits g payload hp hL hat rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
-      rw [hRL.2 g _ _ (gleichAuf_von_sg (σ := sp₁.welt spur) (τ := sp₂.welt spur) hsp
+      rw [hRL.2 g _ _ (gleichAuf_von_sg (σ := (sp₁.welt spur).fragt (.inr (.inr g))) (τ := (sp₂.welt spur).fragt (.inr (.inr g))) hsp
         (by simp [hST _ hb.1]))]
-      have hg : ((sp₁.welt spur).lese Λ [.inr g]).globs g =
-          ((sp₂.welt spur).lese Λ [.inr g]).globs g := hsp (.inr g) (hST _ hb.1)
+      have hg : (((sp₁.welt spur).fragt (.inr (.inr g))).lese Λ [.inr g]).globs g =
+          (((sp₂.welt spur).fragt (.inr (.inr g))).lese Λ [.inr g]).globs g := hsp (.inr g) (hST _ hb.1)
       rw [hg]
       exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp) (fun _ => KRel.none_l _)
   | exchange g neuE hw hL rest =>

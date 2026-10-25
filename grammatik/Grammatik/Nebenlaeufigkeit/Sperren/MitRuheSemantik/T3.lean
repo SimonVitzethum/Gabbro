@@ -277,8 +277,8 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
   | _, _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruB, execBlock]
-      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      rw [worldR_fragt, regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
@@ -287,20 +287,20 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
           | false => rfl
           | true =>
               simp only [if_true]
-              rw [← ausR_schrumpf, ← execBlock_ru rest σ (Env.cons v ρ)]
+              rw [← ausR_schrumpf, ← execBlock_ru rest (σ.fragt (.inr (.inl r))) (Env.cons v ρ)]
               rfl
   | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlock]
-      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      rw [worldR_fragt, regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
           rw [ruE_orte, lese_worldR]
-          have ez := eval_ru (σ.lese Λ zusage.orte) (σ.lese Λ zusage.orte) zusage (Env.cons v ρ)
+          have ez := eval_ru ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage (Env.cons v ρ)
           change eval _ (ruE zusage) _ (Env.cons (valR _ v) (envR ρ)) = _ at ez
           rw [ez]
-          cases h : (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (Env.cons v ρ) : Bool) with
+          cases h : (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (Env.cons v ρ) : Bool) with
           | false =>
               simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
               rw [← endR_zuAusgang, execEnd_ru sonst _ ρ]
@@ -310,8 +310,8 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               rfl
   | _, _, Λ, _, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruB, execBlock]
-      rw [sichtbar_mitRuhe]
-      cases O.sichtbar g σ with
+      rw [worldR_fragt, sichtbar_mitRuhe]
+      cases O.sichtbar g (σ.fragt (.inr (.inr g))) with
       | false => rfl
       | true =>
           simp only [if_true]
@@ -465,8 +465,8 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
             rfl
   | _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruEnd, execEnd]
-      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      rw [worldR_fragt, regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
@@ -475,20 +475,20 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
           | false => rfl
           | true =>
               simp only [if_true]
-              rw [← endR_schrumpf, ← execEnd_ru rest σ (Env.cons v ρ)]
+              rw [← endR_schrumpf, ← execEnd_ru rest (σ.fragt (.inr (.inl r))) (Env.cons v ρ)]
               rfl
   | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruEnd, execEnd]
-      rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      rw [worldR_fragt, regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
           rw [ruE_orte, lese_worldR]
-          have ez := eval_ru (σ.lese Λ zusage.orte) (σ.lese Λ zusage.orte) zusage (Env.cons v ρ)
+          have ez := eval_ru ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage (Env.cons v ρ)
           change eval _ (ruE zusage) _ (Env.cons (valR _ v) (envR ρ)) = _ at ez
           rw [ez]
-          cases h : (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (Env.cons v ρ) : Bool) with
+          cases h : (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (Env.cons v ρ) : Bool) with
           | false =>
               simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
               exact execEnd_ru sonst _ ρ
@@ -498,8 +498,8 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
               rfl
   | _, _, Λ, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruEnd, execEnd]
-      rw [sichtbar_mitRuhe]
-      cases O.sichtbar g σ with
+      rw [worldR_fragt, sichtbar_mitRuhe]
+      cases O.sichtbar g (σ.fragt (.inr (.inr g))) with
       | false => rfl
       | true =>
           simp only [if_true]

@@ -451,7 +451,7 @@ theorem taP_koerper_warte : KoerperGutG taP 0 taWarte := by
   simp only [taRumpfWarte, taIteW, taAwaitsBlock, execEnd, execStmt, execBlock, eval, wahr?,
     if_true, Expr.orte] at hrun
   by_cases hv : O'.sichtbar ()
-      (σ.lese (Signatur.anfang taD (taD.signatur taWarte)) []) = true
+      ((σ.lese (Signatur.anfang taD (taD.signatur taWarte)) []).fragt (Sum.inr (Sum.inr ()))) = true
   · simp only [hv, if_true, Ausgang.schrumpf] at hrun
     cases hrun
   · simp only [hv, Bool.false_eq_true, if_false] at hrun

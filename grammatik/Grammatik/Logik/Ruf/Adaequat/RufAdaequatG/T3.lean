@@ -450,7 +450,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
           obtain ⟨M3, hs3, hZ3⟩ := schrumpfOk P O passes f fn stapel rho s0 log hZ2
           exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
-            by rw [ho2, (Erw.lese _ _ _).offen]⟩
+            by rw [ho2, (Erw.lese _ _ _).offen]; rfl⟩
         · exact absurd hex (zuAusgang_ne_ok _ _ _)
       · cases hex
   | _, _, _, _, _, .awaits g payload hp hL hat rest, hb => by
@@ -468,7 +468,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
         obtain ⟨M3, hs3, hZ3⟩ := schrumpfOk P O passes f fn stapel rho s0 log hZ2
         exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
-          by rw [ho2, (Erw.lese _ _ _).offen]⟩
+          by rw [ho2, (Erw.lese _ _ _).offen]; rfl⟩
       · cases hex
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA

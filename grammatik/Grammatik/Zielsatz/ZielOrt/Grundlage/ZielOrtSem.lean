@@ -240,7 +240,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
   | transition r hk' m hm hl maske bits =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨_, rfl, hg, Nat.le_refl _⟩
+      exact ⟨_, rfl, hg, Nat.le_succ _⟩
   | publish g e payload hp hw hL =>
       simp only [stmtOrteP] at hS
       simp only [execStmt, Ausgang.ok.injEq] at h

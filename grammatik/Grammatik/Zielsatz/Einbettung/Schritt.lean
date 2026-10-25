@@ -139,6 +139,11 @@ theorem Inv.wachs {M : Keys D D'} {σ τ : World D} {σ' τ' : World D'}
     h.aEintrag, fun p hp => Nat.le_of_lt (Nat.lt_of_le_of_lt (h.aKurz p hp) hl), h.aFunk,
     fun p hp => Nat.lt_trans (h.rKurz p hp) hl, h.rFunk⟩
 
+/-- **A question to the outside on both sides** (`Ereignis.fremd`): the trace grows, no memory moves. -/
+theorem Inv.fragt {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ')
+    (q : D.Ax ⊕ D.Reg ⊕ D.Glob) (q' : D'.Ax ⊕ D'.Reg ⊕ D'.Glob) : E.Inv hZ M (σ.fragt q) (σ'.fragt q') :=
+  h.wachs E (Nat.lt_succ_self _) h.treu
+
 /-- **The current pair as an atomic key**, every earlier key strictly shorter. -/
 theorem Inv.merkeA {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (hk : ∀ p ∈ M.atom, p.1.spur.length < σ.spur.length) :

@@ -328,7 +328,7 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       simp only [execBlock]
       split
       · split
-        · exact (block_obj rest hok σ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+        · exact (block_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
         · trivial
       · trivial
   | .regReadElse r _ zusage sonst rest, hok, σ, ρ, hlen, hinv => by
@@ -369,7 +369,7 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
   | .floatLit q lo hi rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
-      · exact (block_obj rest hok σ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · exact (block_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
   | .floatOf e lo hi rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
@@ -457,7 +457,7 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEnd]
       split
       · split
-        · exact (end_obj rest hok σ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+        · exact (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
         · trivial
       · trivial
   | .regReadElse r _ zusage sonst rest, hok, σ, ρ, hlen, hinv => by

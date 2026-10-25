@@ -161,7 +161,7 @@ theorem axiomAntwort_aussen {O : Orakel D} (hI : ImBereichO O) {a : D.Ax} {σ σ
   have e := congrArg Prod.fst hax
   simp only [axiomAntwort] at e
   rw [← e]
-  exact fun t k f hk => hI a σ ρ t k f hk
+  exact fun t k f hk => hI a (σ.fragt (.inl a)) ρ t k f hk
 
 theorem axiomAntwortSonst_aussen {O : Orakel D} (hI : ImBereichO O) {a : D.Ax} {σ σ₂ : World D}
     {ρ : Env D (D.aparams a)} {r : Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
@@ -169,7 +169,7 @@ theorem axiomAntwortSonst_aussen {O : Orakel D} (hI : ImBereichO O) {a : D.Ax} {
   have e := congrArg Prod.fst hax
   simp only [axiomAntwortSonst] at e
   rw [← e]
-  exact fun t k f hk => hI a σ ρ t k f hk
+  exact fun t k f hk => hI a (σ.fragt (.inl a)) ρ t k f hk
 
 theorem execStmt_leave_welt {O : Orakel D} {p : Nat} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
     {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {hl hl' : true = true} {σ σ' : World D} {ρ ρ' : Env D Γ}

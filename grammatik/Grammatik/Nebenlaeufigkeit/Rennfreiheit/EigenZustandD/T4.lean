@@ -224,6 +224,8 @@ theorem wStep1 (σ' : World Gabbro.Grammatik.BG.D1)
         exact nomatch L
     | gibt L =>
         exact nomatch L
+    | fremd q =>
+        simp [Ereignis.traeger] at ho
 
 /-- The write fires from the start world. -/
 theorem wFire1 : ∃ σ' : World Gabbro.Grammatik.BG.D1,

@@ -389,20 +389,21 @@ theorem fadenA_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenA
     (hxq : ∀ v : ErgVal D (D.aerg a), einpassenErg O.zeiger (D.aerg a) xm.2 = some v → Q a xm.1 v = true)
     (hsem : ∀ (O' : Orakel D) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
       (σ : World D), ZeigerGleich O O' →
-      O'.wirkt a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) =
-        (axWelt e0 a (σ.lese Λ args.orte) xm.1, xm.2) →
+      O'.wirkt a ((σ.lese Λ args.orte).fragt (.inl a)) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) =
+        (axWelt e0 a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1, xm.2) →
       (semV O' passes R r σ ρ).folgt
-        (semV O' passes R r' (axWelt e0 a (σ.lese Λ args.orte) xm.1) ρ')) :
+        (semV O' passes R r' (axWelt e0 a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1) ρ')) :
     FadenA P O passes Q
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩
       (xm.1.speicher.welt spur') := by
   obtain ⟨⟨H, HA, σ, hreq, hf, hv, hk, hfa, hra, hqa, hka, hg, hok0, heq⟩, hS⟩ := hF
   have hok' : r.okV P (fussOrte P z.kopf.f) := by rw [hr] at hok0; exact hok0
-  have hlen : σ.spur.length ≤ (σ.lese Λ args.orte).spur.length := lese_laenge _ _ _
-  refine ⟨⟨H, HA ++ [⟨a, σ.lese Λ args.orte,
+  have hlen : σ.spur.length ≤ ((σ.lese Λ args.orte).fragt (.inl a)).spur.length :=
+    Nat.le_trans (lese_laenge _ _ _) (Nat.le_succ _)
+  refine ⟨⟨H, HA ++ [⟨a, (σ.lese Λ args.orte).fragt (.inl a),
       evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ,
-      (axWelt e0 a (σ.lese Λ args.orte) xm.1, xm.2)⟩],
-    axWelt e0 a (σ.lese Λ args.orte) xm.1, hreq, hf, hv,
+      (axWelt e0 a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1, xm.2)⟩],
+    axWelt e0 a ((σ.lese Λ args.orte).fragt (.inl a)) xm.1, hreq, hf, hv,
     kurzV_mono hk (Nat.le_trans hlen (Nat.le_succ _)), funkA_append hfa hka _ hlen, ?_, ?_, ?_,
     ?_, hok hok', ?_⟩, hS⟩
   · intro a' σk ρk x hm
@@ -423,7 +424,8 @@ theorem fadenA_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenA
     · rw [List.mem_singleton] at hm
       subst hm
       exact Nat.lt_succ_self _
-  · have h1 := axWelt_gleichAuf e0 a (hg.lese Λ Λ args.orte args.orte) hxm
+  · have h1 := axWelt_gleichAuf (κ := (σ.lese Λ args.orte).fragt (.inl a)) e0 a
+      (hg.lese Λ Λ args.orte args.orte) hxm
     exact ⟨fun t ht => h1.1 t ht, fun g hg' => h1.2 g hg'⟩
   · intro R O' hR hA hz
     have h1 := heq R O' hR (passtA_append hA) hz
@@ -460,11 +462,11 @@ theorem fadenA_blatt (e0 : Ereignis D) (hO : GutO O) (hQ : AxVertragO Q O)
           obtain ⟨e1, e2, u, hu⟩ := axiomCall_ok_inv O passes keinRuf a args h hw hg hd hgd W ρ σ' ρ'
             hstep
           subst e2
-          have hfr := (hO a (W.lese Λ args.orte)
+          have hfr := (hO a ((W.lese Λ args.orte).fragt (.inl a))
             (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).1
           rw [← e1] at hfr
           refine fadenA_ax e0 hF hr ρ' K σ'.spur a args (fun h' => (hok h').2)
-            (σ', (O.wirkt a (W.lese Λ args.orte)
+            (σ', (O.wirkt a ((W.lese Λ args.orte).fragt (.inl a))
               (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ')).2) hfr hlok
             (fun v hv => by
               rw [e1]

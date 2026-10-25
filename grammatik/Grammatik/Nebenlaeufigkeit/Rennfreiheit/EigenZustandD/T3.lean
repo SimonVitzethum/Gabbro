@@ -357,7 +357,7 @@ theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
           rw [hcomp] at hstep
           have hsg' : σ' = fst := Option.some_inj.mp hstep.symm
           rw [hsg']
-          have hfst : fst = (O.wirkt a (σ.lese Λ args.orte)
+          have hfst : fst = (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
               (evalArgs (σ.lese Λ args.orte) args
                 (σ.lese Λ args.orte) ρ)).1 := by
             have hA := hAns
@@ -365,10 +365,10 @@ theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
             have hF := congrArg Prod.fst hA
             simp only at hF
             exact hF.symm
-          have hlese : (σ.lese Λ args.orte).slots t k f = σ.slots t k f := rfl
+          have hlese : ((σ.lese Λ args.orte).fragt (.inl a)).slots t k f = σ.slots t k f := rfl
           rw [hfst]
           have hframe := axiomCall_slots_frame O hO a t ht
-            (σ.lese Λ args.orte)
+            ((σ.lese Λ args.orte).fragt (.inl a))
             (evalArgs (σ.lese Λ args.orte) args
               (σ.lese Λ args.orte) ρ) k f
           rw [hframe, hlese]

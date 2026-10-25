@@ -308,16 +308,8 @@ theorem axiomCall_slots_frame (O : Orakel D) (hO : GutO O) (a : D.Ax)
     (t : D.Tab) (ht : D.aschreibt a t = false)
     (sg : World D) (rho : Env D (D.aparams a)) (k : Int) (f : D.Feld t) :
     (O.wirkt a sg rho).1.slots t k f = sg.slots t k f := by
-  -- `hR : Rahmen (D.aschreibt a) (D.agschreibt a) sg (axiomAntwort ..).1`;
-  -- project the `Rahmen` slot leg at `ht`.
-  have hR : Rahmen (D.aschreibt a) (D.agschreibt a) sg
-      (axiomAntwort O a sg rho).1 := (hO a sg rho).1
-  have hEq := hR.1 t ht k f
-  -- `(axiomAntwort ..).1 = (wirkt ..).1` by `rfl` on the pair projection.
-  have hProj : (axiomAntwort O a sg rho).1 =
-      (O.wirkt a sg rho).1 := rfl
-  rw [hProj] at hEq
-  exact hEq
+  -- project the `Rahmen` slot leg of `GutO` at `ht`.
+  exact (hO a sg rho).1.1 t ht k f
 
 /-! ## 4. Slot preservation per leaf shape: every non-recording leaf keeps `slots t`.
 
