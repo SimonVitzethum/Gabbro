@@ -1,4 +1,5 @@
 import Grammatik.Bausteine.Arena.Unbounded.GRegion
+import Grammatik.Bausteine.Arena.Unbounded.GRefine
 import Grammatik.Bausteine.Arena.Unbounded.Witnesses
 import Grammatik.Zielsatz.BeweisAtomar
 
@@ -72,3 +73,8 @@ import Grammatik.Zielsatz.BeweisAtomar
 #print axioms Gabbro.Grammatik.GRegion.kein_statisches_limit
 #print axioms Gabbro.Grammatik.GRegion.zelle_im_bereich
 #print axioms Gabbro.Grammatik.GRegion.prog_akzeptiert
+#print axioms Gabbro.Grammatik.ArenaStorage.read_refines
+#print axioms Gabbro.Grammatik.ArenaStorage.write_refines
+#print axioms Gabbro.Grammatik.ArenaStorage.allocate_unbounded
+#print axioms Gabbro.Grammatik.ArenaStorage.allocate_refines
+#print axioms Gabbro.Grammatik.ArenaStorage.gregion_verfeinert
