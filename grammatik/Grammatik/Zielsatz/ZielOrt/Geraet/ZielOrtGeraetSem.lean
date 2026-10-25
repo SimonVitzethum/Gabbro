@@ -43,12 +43,13 @@ variable {D : Deklaration}
 /-- **Register locality** (hardware). A register read answers from the
     state of its device: two worlds that agree on the device carriers the
     declaration attributes to `r` (`D.rtraeger r`) get the same answer. The
-    visibility answer of `awaits g` (A10) depends on the awaited global only.
-    Consecutive reads may differ only where those carriers changed. -/
+    visibility answer of `awaits g` (A10) depends on the awaited global only -- and both on the thread's trace,
+    which records every earlier question to the outside (`Ereignis.fremd`, 2026-10-25): two reads of a register
+    whose carriers did not change are two events and may answer differently, as a moving device does. -/
 def RegLokal (O : Orakel D) : Prop :=
-  (∀ (r : D.Reg) (σ σ' : World D), GleichAuf (D.rtraeger r) σ σ' →
+  (∀ (r : D.Reg) (σ σ' : World D), GleichAuf (D.rtraeger r) σ σ' → σ.spur = σ'.spur →
     O.regLies r σ = O.regLies r σ') ∧
-  (∀ (g : D.Glob) (σ σ' : World D), GleichAuf [Sum.inr g] σ σ' →
+  (∀ (g : D.Glob) (σ σ' : World D), GleichAuf [Sum.inr g] σ σ' → σ.spur = σ'.spur →
     O.sichtbar g σ = O.sichtbar g σ')
 
 /-- The sequential oracle `O'` gives the register and visibility answers of
@@ -655,7 +656,7 @@ variable (O : Orakel D) (passes : Nat)
 
 theorem semV_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hz : D.rzusage r v = true) :
     semV O passes R (.dann (.regRead r hk rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
@@ -666,7 +667,7 @@ theorem semV_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).les
 theorem semV_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true) :
     semV O passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ zusage.orte) (.cons v ρ) := by
@@ -677,7 +678,7 @@ theorem semV_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklass
 theorem semV_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
     (semV O passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
       (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
@@ -688,7 +689,7 @@ theorem semV_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rkla
 
 theorem semV_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
-    (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) (hvis : O.sichtbar g σ = true) :
+    (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) (hvis : O.sichtbar g (σ.fragt (.inr (.inr g))) = true) :
     semV O passes R (.dann (.awaits g payload hp hL hat rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ [.inr g])
         (.cons ((σ.lese Λ [.inr g]).globs g) ρ) := by

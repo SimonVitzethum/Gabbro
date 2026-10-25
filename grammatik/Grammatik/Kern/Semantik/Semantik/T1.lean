@@ -65,6 +65,13 @@ inductive Ereignis (D : Deklaration) where
       der Rang steigt strikt, also nimmt kein Faden eine Sperre zweimal). -/
   | nimmt (L : D.Lock) (haelt : List D.Lock)
   | gibt (L : D.Lock)
+  /-- **An answer from outside the program** (2026-10-25): a foreign body is called (`inl a`), a device register is
+      read (`inr (inl r)`), or the visibility of an `awaits` on `g` is asked (`inr (inr g)`). Recorded BEFORE the
+      machine answers, so the answer may depend on the whole history of the thread: two calls of the same foreign
+      body in the same memory are two events, and an oracle can answer them differently, as a real system does
+      (a `read` that returns the next bytes, a provider that gives a fresh cell, a register that moves). It
+      touches no cell and records no lock. -/
+  | fremd (q : D.Ax ⊕ D.Reg ⊕ D.Glob)
 
 /-- Die OFFENEN Sperren einer Spur: was genommen und nicht gegeben ist (neuestes zuerst). -/
 def offen : List (Ereignis D) → List D.Lock
@@ -73,6 +80,7 @@ def offen : List (Ereignis D) → List D.Lock
   | .gibt L :: s => (offen s).erase L
   | .zugriff .. :: s => offen s
   | .gzugriff .. :: s => offen s
+  | .fremd _ :: s => offen s
 
 /-- Die Welt: je Tabelle, Index und Feld ein Wert des erklaerten Typs; je Global einer; dazu
     die Spur dieses Fadens (neuestes zuerst). Die gehaltenen Sperren sind die offenen der Spur. -/
@@ -84,6 +92,9 @@ structure World (D : Deklaration) where
 def World.haelt (σ : World D) : List D.Lock := offen σ.spur
 
 def World.merke (σ : World D) (es : List (Ereignis D)) : World D := { σ with spur := es ++ σ.spur }
+
+/-- **Asking outside the program** records the question first (`Ereignis.fremd`): the world the machine answers in. -/
+def World.fragt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : World D := σ.merke [.fremd q]
 
 /-- Die Lesungen eines Ausdrucks, als Ereignisse mit dem Stand der Sperren. -/
 def World.lese (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob)) : World D :=

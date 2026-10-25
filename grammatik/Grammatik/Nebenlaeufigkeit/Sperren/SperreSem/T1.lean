@@ -260,6 +260,7 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let _ := O.regSchreib r (roh (eval σ e σ ρ))
       .ok σ ρ
   | .transition r _ m _ _ maske bits, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl m))
       let alt := O.regLies m σ
       let _ := O.regSchreib r (((alt.toNat &&& (Nat.xor maske.toNat (2 ^ 64 - 1))) ||| bits.toNat : Nat) : Int)
       .ok σ ρ
@@ -319,12 +320,14 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | (σ', Option.some (Sum.inr r)) => (execEndH err σ' (.cons r ρ)).schrumpf.zuAusgang
       | (_, Option.none) => .hardware (.annahme a)
   | .regRead r _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execBlockH rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
   | .regReadElse r _ zusage sonst rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
@@ -332,6 +335,7 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
           else (execEndH sonst σ ρ).zuAusgang
       | Option.none => .hardware (.register r)
   | .awaits g _ _ _ _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inr g))
       if O.sichtbar g σ then
         let σ := σ.lese Λ [.inr g]
         (execBlockH rest σ (.cons (σ.globs g) ρ)).schrumpf
@@ -414,12 +418,14 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       | (σ', Option.some (Sum.inr r)) => (execEndH err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
   | .regRead r _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execEndH rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
   | .regReadElse r _ zusage sonst rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
@@ -427,6 +433,7 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
           else (execEndH sonst σ ρ)
       | Option.none => .hardware (.register r)
   | .awaits g _ _ _ _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inr g))
       if O.sichtbar g σ then
         let σ := σ.lese Λ [.inr g]
         (execEndH rest σ (.cons (σ.globs g) ρ)).schrumpf

@@ -278,7 +278,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
   | _, _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
@@ -292,7 +292,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
   | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
@@ -311,7 +311,7 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
   | _, _, Λ, _, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [sichtbar_mitRuhe]
-      cases O.sichtbar g σ with
+      cases O.sichtbar g (σ.fragt (.inr (.inr g))) with
       | false => rfl
       | true =>
           simp only [if_true]
@@ -466,7 +466,7 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruEnd, execEnd]
       rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
@@ -480,7 +480,7 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruEnd, execEnd]
       rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => rfl
       | some v =>
           simp only [Option.map]
@@ -499,7 +499,7 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, Λ, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruEnd, execEnd]
       rw [sichtbar_mitRuhe]
-      cases O.sichtbar g σ with
+      cases O.sichtbar g (σ.fragt (.inr (.inr g))) with
       | false => rfl
       | true =>
           simp only [if_true]

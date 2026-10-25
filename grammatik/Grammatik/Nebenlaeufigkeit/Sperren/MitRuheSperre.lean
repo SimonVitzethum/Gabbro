@@ -683,7 +683,7 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
   | _, _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruB, execBlockH]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -696,7 +696,7 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
   | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlockH]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -714,7 +714,7 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
   | _, _, Λ, _, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruB, execBlockH]
       rw [hO.sichtbar]
-      cases O.sichtbar g σ with
+      cases O.sichtbar g (σ.fragt (.inr (.inr g))) with
       | false => exact Or.inl rfl
       | true =>
           simp only [if_true]
@@ -878,7 +878,7 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruEnd, execEndH]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -891,7 +891,7 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruEnd, execEndH]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -909,7 +909,7 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | _, _, Λ, .awaits g payload hp hL hat rest, σ, ρ => by
       simp only [ruEnd, execEndH]
       rw [hO.sichtbar]
-      cases O.sichtbar g σ with
+      cases O.sichtbar g (σ.fragt (.inr (.inr g))) with
       | false => exact Or.inl rfl
       | true =>
           simp only [if_true]

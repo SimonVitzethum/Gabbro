@@ -100,6 +100,11 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
   have hMo : InM M fn bo := fun b hb' => hM b (List.mem_cons_of_mem _ hb')
   obtain ⟨bk2, hbk2, hkp2⟩ := kok_of_shape S1 hMo
   simp only [execBlock]
+  -- the question to the outside is recorded in the trace only: the memory the code represents is the same
+  have hR : Rep lay (σ.fragt (.inr (.inr g))) m := hR
+  have hS : S m (lay.ggblk g) 0 (memTy (D.gtyp g)) .acq
+      (encM lay (D.gtyp g) ((σ.fragt (.inr (.inr g))).globs g)) := hS
+  generalize σ.fragt (.inr (.inr g)) = σ at hR hS ⊢
   by_cases hvis : O.sichtbar g σ = true
   · rw [if_pos hvis]
     have hnb := atomicG_nonbool hat

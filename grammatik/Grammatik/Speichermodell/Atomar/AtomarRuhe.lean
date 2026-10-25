@@ -377,7 +377,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
   | _, _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -390,7 +390,7 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
   | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -571,7 +571,7 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
   | _, _, _, .regRead r hk rest, σ, ρ => by
       simp only [ruEnd, execEndHA]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]
@@ -584,7 +584,7 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
   | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ => by
       simp only [ruEnd, execEndHA]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
-      cases einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           simp only [Option.map]

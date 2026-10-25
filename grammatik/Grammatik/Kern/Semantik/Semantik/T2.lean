@@ -123,7 +123,7 @@ def keinGrund {f : D.Fn} (hr : D.gruende f = 0) (r : Fin (D.gruende f)) : α :=
 /-- Das Ergebnis eines Axioms, gegen seinen Typ gehalten. -/
 def axiomAntwort (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     World D × Option (ErgVal D (D.aerg a)) :=
-  let (σ', roh) := O.wirkt a σ ρ
+  let (σ', roh) := O.wirkt a (σ.fragt (.inl a)) ρ
   (σ', einpassenErg O.zeiger (D.aerg a) roh)
 
 /-- **The raw word of a FALLIBLE foreign body** (C-free lane, 2026-09-30): the pair
@@ -145,7 +145,7 @@ def sonstPasst (z : Int → Option D.Fn) (e : Option Ty) (n : Nat) (roh : Int) :
     pair. -/
 def axiomAntwortSonst (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     World D × Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a)) :=
-  let (σ', roh) := O.wirkt a σ ρ
+  let (σ', roh) := O.wirkt a (σ.fragt (.inl a)) ρ
   (σ', sonstPasst O.zeiger (D.aerg a) (D.agruende a) roh)
 
 /-- The world a fallible axiom leaves is the world the oracle's effect leaves -- the same as
@@ -232,6 +232,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       let _ := O.regSchreib r (roh (eval σ e σ ρ))
       .ok σ ρ
   | .transition r _ m _ _ maske bits, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl m))
       let alt := O.regLies m σ
       let _ := O.regSchreib r (((alt.toNat &&& (Nat.xor maske.toNat (2 ^ 64 - 1))) ||| bits.toNat : Nat) : Int)
       .ok σ ρ
@@ -290,12 +291,14 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
       | (_, Option.none) => .hardware (.annahme a)
   | .regRead r _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execBlock rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
   | .regReadElse r _ zusage sonst rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
@@ -303,6 +306,7 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
           else (execEnd sonst σ ρ).zuAusgang
       | Option.none => .hardware (.register r)
   | .awaits g _ _ _ _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inr g))
       if O.sichtbar g σ then
         let σ := σ.lese Λ [.inr g]
         (execBlock rest σ (.cons (σ.globs g) ρ)).schrumpf
@@ -384,12 +388,14 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
       | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
   | .regRead r _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           if D.rzusage r v then (execEnd rest σ (.cons v ρ)).schrumpf
           else .hardware (.geraet r)
       | Option.none => .hardware (.register r)
   | .regReadElse r _ zusage sonst rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inl r))
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
           let σ := σ.lese Λ zusage.orte
@@ -397,6 +403,7 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
           else execEnd sonst σ ρ
       | Option.none => .hardware (.register r)
   | .awaits g _ _ _ _ rest, σ, ρ =>
+      let σ := σ.fragt (.inr (.inr g))
       if O.sichtbar g σ then
         let σ := σ.lese Λ [.inr g]
         (execEnd rest σ (.cons (σ.globs g) ρ)).schrumpf

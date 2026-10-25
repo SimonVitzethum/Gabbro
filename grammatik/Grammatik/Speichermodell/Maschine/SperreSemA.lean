@@ -907,7 +907,7 @@ theorem semHA_dannRetGrund {Λ Λ'' : List (Res D)} (r : Fin V.gruende)
 
 theorem semHA_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hz : D.rzusage r v = true) :
     semHA S O U A passes R (.dann (.regRead r hk rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
@@ -918,7 +918,7 @@ theorem semHA_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).le
 theorem semHA_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hw : wahr? (eval (leseA A σ Λ zusage.orte) zusage (leseA A σ Λ zusage.orte) (.cons v ρ)) = true) :
     semHA S O U A passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ zusage.orte) (.cons v ρ) := by
@@ -930,7 +930,7 @@ theorem semHA_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
     (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hw : wahr? (eval (leseA A σ Λ zusage.orte) zusage (leseA A σ Λ zusage.orte) (.cons v ρ)) = false) :
     (semHA S O U A passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
       (semHA S O U A passes R (.dann sonst.alsBlock.2 (.abbruch k)) (leseA A σ Λ zusage.orte) ρ) := by

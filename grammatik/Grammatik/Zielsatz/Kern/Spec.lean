@@ -558,16 +558,16 @@ def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
       ¬ AntwortLeer D (D.aerg a)
   | .hardware, .regRead r .. =>
-      (∀ v, einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v → D.rzusage r v = false) ∧
+      (∀ v, einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v → D.rzusage r v = false) ∧
       ¬ AntwortLeer D (some (D.rtyp r))
   | .hardware, .regReadElse r .. =>
-      einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r σ) = none ∧
+      einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = none ∧
       ¬ AntwortLeer D (some (D.rtyp r))
   | .nieZurueck, .bindAxiom a .. => D.aerg a = some .never
   | .hardware, .bindAxiomElse a args .. =>
       (axiomAntwortSonst O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
-  | .flagge, .awaits g .. => O.sichtbar g σ = false
+  | .flagge, .awaits g .. => O.sichtbar g (σ.fragt (.inr (.inr g))) = false
   | _, _ => False
 
 /-- A residue at a named stop of kind `k`: a spent `forever` budget (`budget`), a leaf's

@@ -207,7 +207,7 @@ theorem axiomCall_haelt_waechter
   · rename_i σ1 v ha
     simp only [Ausgang.welt, Option.some.injEq] at hexec
     subst hexec
-    have hfst : (O.wirkt a (σ.lese Λ args.orte)
+    have hfst : (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
         (evalArgs (σ.lese Λ args.orte) args
           (σ.lese Λ args.orte) ρ)).1 = σ1 := by
       have h1 := congrArg Prod.fst ha
@@ -215,8 +215,8 @@ theorem axiomCall_haelt_waechter
       exact h1
     clear ha v
     obtain ⟨k, f, hne⟩ := hdiff
-    have hlese_slots : (σ.lese Λ args.orte).slots = σ.slots := rfl
-    have hframe := (hO a (σ.lese Λ args.orte)
+    have hlese_slots : ((σ.lese Λ args.orte).fragt (.inl a)).slots = σ.slots := rfl
+    have hframe := (hO a ((σ.lese Λ args.orte).fragt (.inl a))
       (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1
     have haschreibt : D.aschreibt a t = true := by
       cases heq : D.aschreibt a t with
@@ -275,7 +275,7 @@ def σrF : World DF := σF.lese ΛF argsF.orte
 def ρrF : Env DF (DF.aparams ()) := evalArgs σrF argsF σrF ρF
 
 /-- The oracle world after the flip. -/
-def σF' : World DF := (OF.wirkt () σrF ρrF).1
+def σF' : World DF := (OF.wirkt () (σrF.fragt (.inl ())) ρrF).1
 
 /-- The call handler is never consulted by an axiom call. -/
 def RF : ∀ f : DF.Fn, World DF → Env DF (DF.params f) → RufAusgang f :=
