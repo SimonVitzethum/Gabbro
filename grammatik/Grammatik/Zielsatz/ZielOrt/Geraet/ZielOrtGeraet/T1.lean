@@ -556,20 +556,20 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
   -- the axiom bind
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+    have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
       have := congrArg Prod.fst hax
       simp only [axiomAntwort] at this
       exact this.symm
-    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
+    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwort] at this
       exact this
-    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
     refine ⟨fadenG_ax e0 hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
       (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
-      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+      (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
@@ -578,22 +578,22 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     rfl
   | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+    have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
       have := congrArg Prod.fst hax
       simp only [axiomAntwortSonst] at this
       exact this.symm
-    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inr r) := by
+    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inr r) := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwortSonst] at this
       exact this
-    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
     refine ⟨fadenG_ax e0 hF hhead (Env.cons (τ := .why (D.agruende a)) r ρ) (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur a args
       (fun hok => okG_alsBlock err (.schrumpf k) rest.held_iff
         (by have h1 := hok.1; simp only [Block.gOk, Bool.and_eq_true] at h1; exact h1.1)
         (by have h2 := hok.2.1; simp only [blockOrteP] at h2; exact (teil_append (teil_append h2).1).2) hok.2.2)
-      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+      (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
@@ -602,21 +602,21 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     rw [semV_alsBlock_schrumpf]
   | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+    have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
       have := congrArg Prod.fst hax
       simp only [axiomAntwortSonst] at this
       exact this.symm
-    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inl v) := by
+    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inl v) := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwortSonst] at this
       exact this
-    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
     refine ⟨fadenG_ax e0 hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Block.gOk, Bool.and_eq_true] at h1; exact h1.2,
         by have h2 := hok.2.1; simp only [blockOrteP] at h2; exact (teil_append h2).2, hok.2.2⟩)
-      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+      (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
@@ -625,20 +625,20 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     rfl
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+    have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
       have := congrArg Prod.fst hax
       simp only [axiomAntwort] at this
       exact this.symm
-    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
+    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwort] at this
       exact this
-    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
     refine ⟨fadenG_ax e0 hF hhead (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur a args
       (fun hok => ⟨hok.1, by simpa [endblockOrteP] using (teil_append hok.2).2⟩)
-      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+      (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
@@ -648,21 +648,21 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     rfl
   | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+    have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
       have := congrArg Prod.fst hax
       simp only [axiomAntwortSonst] at this
       exact this.symm
-    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inr r) := by
+    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inr r) := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwortSonst] at this
       exact this
-    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
     refine ⟨fadenG_ax e0 hF hhead (Env.cons (τ := .why (D.agruende a)) r ρ) (.ende err) σ₂.spur a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Endblock.gOk, Bool.and_eq_true] at h1; exact h1.1,
         by have h2 := hok.2; simp only [endblockOrteP] at h2; exact (teil_append (teil_append h2).1).2⟩)
-      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+      (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
@@ -672,21 +672,21 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     rfl
   | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
-    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+    have e2 : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
       have := congrArg Prod.fst hax
       simp only [axiomAntwortSonst] at this
       exact this.symm
-    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inl v) := by
+    have hv : sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).2 = some (Sum.inl v) := by
       have := congrArg Prod.snd hax
       simp only [axiomAntwortSonst] at this
       exact this
-    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    have hfr := (hO a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1
     rw [← e2] at hfr
     subst hs₁
     refine ⟨fadenG_ax e0 hF hhead (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Endblock.gOk, Bool.and_eq_true] at h1; exact h1.2,
         by have h2 := hok.2; simp only [endblockOrteP] at h2; exact (teil_append h2).2⟩)
-      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+      (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
@@ -1090,8 +1090,8 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     obtain ⟨hks, hss, hrest⟩ := hok
     simp only [Block.gOk, Bool.and_eq_true] at hks
     simp only [blockOrteP] at hss
-    refine ⟨σ, Nat.le_refl _, hg, ⟨hks.2, hss, hrest⟩, fun R O' hQ => ?_⟩
-    have hrl : O'.regLies r σ = O.regLies r (M.weltVon u) :=
+    refine ⟨σ.fragt (.inr (.inl r)), Nat.le_succ _, hg, ⟨hks.2, hss, hrest⟩, fun R O' hQ => ?_⟩
+    have hrl : O'.regLies r (σ.fragt (.inr (.inl r))) = O.regLies r ((M.weltVon u).fragt (.inr (.inl r))) :=
       regLies_gleich hRL hQ r (regP_ok hks.1) hg
     exact ZErg.folgt_of_eq
       (semV_regLies O' passes R r hk rest k σ ρ v (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) hz)
@@ -1100,16 +1100,17 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     refine ⟨fadenG_lokalQ hF hhead (.cons v ρ) (.dann rest (.schrumpf k)) σ₁.spur
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨hks, hss, hrest⟩ := hok
+    have hgq : GleichAuf _ (σ.fragt (.inr (.inl r))) ((M.weltVon u).fragt (.inr (.inl r))) := hg
     simp only [Block.gOk, Bool.and_eq_true] at hks
     simp only [blockOrteP, List.append_subset] at hss
     obtain ⟨⟨hzS, _⟩, hrS⟩ := hss
-    have hw' : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) =
+    have hw' : wahr? (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ)) =
         true := by
-      rw [eval_gleichAuf zusage (fun _ h => hzS h) (hg.lese Λ Λ zusage.orte zusage.orte), ← hs₁]
+      rw [eval_gleichAuf zusage (fun _ h => hzS h) (hgq.lese Λ Λ zusage.orte zusage.orte), ← hs₁]
       exact hw
-    refine ⟨σ.lese Λ zusage.orte, lese_laenge _ _ _, hg, ⟨hks.2.2, hrS, hrest⟩,
+    refine ⟨(σ.fragt (.inr (.inl r))).lese Λ zusage.orte, Nat.le_trans (Nat.le_succ _) (lese_laenge (σ.fragt _) _ _), hg, ⟨hks.2.2, hrS, hrest⟩,
       fun R O' hQ => ?_⟩
-    have hrl : O'.regLies r σ = O.regLies r (M.weltVon u) :=
+    have hrl : O'.regLies r (σ.fragt (.inr (.inl r))) = O.regLies r ((M.weltVon u).fragt (.inr (.inl r))) :=
       regLies_gleich hRL hQ r (regP_ok hks.1) hg
     exact ZErg.folgt_of_eq (semV_regLiesElseWahr O' passes R r hk zusage sonst rest k σ ρ v
       (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) hw')
@@ -1119,16 +1120,17 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     refine ⟨fadenG_lokalQ hF hhead ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨hks, hss, hrk⟩ := hok
+    have hgq : GleichAuf _ (σ.fragt (.inr (.inl r))) ((M.weltVon u).fragt (.inr (.inl r))) := hg
     simp only [Block.gOk, Bool.and_eq_true] at hks
     simp only [blockOrteP, List.append_subset] at hss
     obtain ⟨⟨hzS, hsS⟩, _⟩ := hss
-    have hw' : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) =
+    have hw' : wahr? (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ)) =
         false := by
-      rw [eval_gleichAuf zusage (fun _ h => hzS h) (hg.lese Λ Λ zusage.orte zusage.orte), ← hs₁]
+      rw [eval_gleichAuf zusage (fun _ h => hzS h) (hgq.lese Λ Λ zusage.orte zusage.orte), ← hs₁]
       exact hw
-    refine ⟨σ.lese Λ zusage.orte, lese_laenge _ _ _, hg,
+    refine ⟨(σ.fragt (.inr (.inl r))).lese Λ zusage.orte, Nat.le_trans (Nat.le_succ _) (lese_laenge (σ.fragt _) _ _), hg,
       okG_alsBlock sonst k rest.held_iff hks.2.1 hsS hrk, fun R O' hQ => ?_⟩
-    have hrl : O'.regLies r σ = O.regLies r (M.weltVon u) :=
+    have hrl : O'.regLies r (σ.fragt (.inr (.inl r))) = O.regLies r ((M.weltVon u).fragt (.inr (.inl r))) :=
       regLies_gleich hRL hQ r (regP_ok hks.1) hg
     exact semV_regLiesElseFalsch O' passes R r hk zusage sonst rest k σ ρ v
       (by rw [hrl, show O'.zeiger = O.zeiger from hQ.2.2]; exact hv) hw'
@@ -1139,12 +1141,12 @@ theorem akteurG (hO : GutO O) (hRL : RegLokal O) (hK : ∀ f, KoerperGutG P pass
     obtain ⟨hks, hss, hrest⟩ := hok
     simp only [Block.gOk] at hks
     simp only [blockOrteP, List.cons_subset] at hss
-    have hglob : (σ.lese Λ [.inr g]).globs g = σ₁.globs g := by
+    have hglob : ((σ.fragt (.inr (.inr g))).lese Λ [.inr g]).globs g = σ₁.globs g := by
       rw [hs₁]
       exact hg.2 g hss.1
-    refine ⟨σ.lese Λ [.inr g], lese_laenge _ _ _, hg, ⟨hks, hss.2, hrest⟩, fun R O' hQ => ?_⟩
-    have hsv : O'.sichtbar g σ = true := by
-      rw [sichtbar_gleich hRL hQ g hss.1 hg]
+    refine ⟨(σ.fragt (.inr (.inr g))).lese Λ [.inr g], Nat.le_trans (Nat.le_succ _) (lese_laenge (σ.fragt _) _ _), hg, ⟨hks, hss.2, hrest⟩, fun R O' hQ => ?_⟩
+    have hsv : O'.sichtbar g (σ.fragt (.inr (.inr g))) = true := by
+      rw [sichtbar_gleich (σ := σ.fragt (.inr (.inr g))) (W := (M.weltVon u).fragt (.inr (.inr g))) hRL hQ g hss.1 hg]
       exact hvis
     have h1 := semV_awaits O' passes R g payload hp hLg hat rest k σ ρ hsv
     rw [hglob] at h1

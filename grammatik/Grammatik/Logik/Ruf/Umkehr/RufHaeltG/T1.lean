@@ -260,12 +260,12 @@ theorem next_welt' {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel D)
 theorem axiom_offen' {O : Orakel D} (hO : GutO O) (a : D.Ax) (σ : World D)
     (ρ : Env D (D.aparams a)) (σ₂ : World D) (v : Option (ErgVal D (D.aerg a)))
     (hax : axiomAntwort O a σ ρ = (σ₂, v)) : offen σ₂.spur = offen σ.spur := by
-  have e : σ₂ = (O.wirkt a σ ρ).1 := by
+  have e : σ₂ = (O.wirkt a (σ.fragt (.inl a)) ρ).1 := by
     have := congrArg Prod.fst hax
     simp only [axiomAntwort] at this
     exact this.symm
   subst e
-  exact (hO a σ ρ).2.1
+  exact (hO a (σ.fragt (.inl a)) ρ).2.1
 
 /-- The same for a FALLIBLE axiom (C-free lane, 2026-09-30): its world is `axiomAntwort`'s. -/
 theorem axiomSonst_offen' {O : Orakel D} (hO : GutO O) (a : D.Ax) (σ : World D)

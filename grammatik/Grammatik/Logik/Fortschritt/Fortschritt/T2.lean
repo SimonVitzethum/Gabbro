@@ -167,7 +167,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
             = none
         rw [hax]
-      · have hσ : (O.wirkt a ((M.weltVon t).lese Λ args.orte)
+      · have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
               ρ)).1 = σ₂ := by
           have := congrArg Prod.fst hax
@@ -176,7 +176,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
           show HeldIn Λ (offen _)
           rw [(Erw.lese (M.weltVon t) Λ args.orte).offen]
           exact hΛ
-        have herw := (Erw.lese (M.weltVon t) Λ args.orte).trans
+        have herw := ((Erw.lese (M.weltVon t) Λ args.orte).trans (Erw.fragt _ (.inl a))).trans
           (axiom_erw hO a _ (evalArgs ((M.weltVon t).lese Λ args.orte) args
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
@@ -193,7 +193,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
             = none
         rw [hax]
       all_goals
-        have hσ : (O.wirkt a ((M.weltVon t).lese Λ args.orte)
+        have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
               ρ)).1 = σ₂ := by
           have := congrArg Prod.fst hax
@@ -202,7 +202,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
           show HeldIn Λ (offen _)
           rw [(Erw.lese (M.weltVon t) Λ args.orte).offen]
           exact hΛ
-        have herw := (Erw.lese (M.weltVon t) Λ args.orte).trans
+        have herw := ((Erw.lese (M.weltVon t) Λ args.orte).trans (Erw.fragt _ (.inl a))).trans
           (axiom_erw hO a _ (evalArgs ((M.weltVon t).lese Λ args.orte) args
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
@@ -284,7 +284,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
             = none
         rw [hax]
-      · have hσ : (O.wirkt a ((M.weltVon t).lese Λ args.orte)
+      · have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
               ρ)).1 = σ₂ := by
           have := congrArg Prod.fst hax
@@ -293,7 +293,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           show HeldIn Λ (offen _)
           rw [(Erw.lese (M.weltVon t) Λ args.orte).offen]
           exact hΛ
-        have herw := (Erw.lese (M.weltVon t) Λ args.orte).trans
+        have herw := ((Erw.lese (M.weltVon t) Λ args.orte).trans (Erw.fragt _ (.inl a))).trans
           (axiom_erw hO a _ (evalArgs ((M.weltVon t).lese Λ args.orte) args
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
@@ -310,7 +310,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             = none
         rw [hax]
       all_goals
-        have hσ : (O.wirkt a ((M.weltVon t).lese Λ args.orte)
+        have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
               ρ)).1 = σ₂ := by
           have := congrArg Prod.fst hax
@@ -319,7 +319,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           show HeldIn Λ (offen _)
           rw [(Erw.lese (M.weltVon t) Λ args.orte).offen]
           exact hΛ
-        have herw := (Erw.lese (M.weltVon t) Λ args.orte).trans
+        have herw := ((Erw.lese (M.weltVon t) Λ args.orte).trans (Erw.fragt _ (.inl a))).trans
           (axiom_erw hO a _ (evalArgs ((M.weltVon t).lese Λ args.orte) args
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
@@ -329,7 +329,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
       · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomElseGrund M t l Γ Λ _ _ a args he hr hw hg hd hgd err rest
           k ρ hx _ rfl σ₂ r hax neu hneu hΛ⟩
   | regRead r hk rest =>
-      by_cases hex : ∃ v, einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (M.weltVon t)) = some v ∧
+      by_cases hex : ∃ v, einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r ((M.weltVon t).fragt (.inr (.inl r)))) = some v ∧
           D.rzusage r v = true
       · obtain ⟨v, hv, hz⟩ := hex
         exact fort_schritt (w_regLies rfl r hk rest k ρ hx v hv hz hΛ)
@@ -342,20 +342,20 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
         · rfl
         · exact absurd ⟨v, hv, hz⟩ hex
   | regReadElse r hk zusage sonst rest =>
-      cases hv : einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (M.weltVon t)) with
+      cases hv : einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r ((M.weltVon t).fragt (.inr (.inl r)))) with
       | none =>
           by_cases hleer : AntwortLeer D (some (D.rtyp r))
           · simp only [Block.ants, List.all_cons, Bool.and_eq_true] at hAnt
             exact absurd hleer (stelleC_iff.mp hAnt.1)
           · exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hv, hleer⟩
       | some v =>
-          cases hw : wahr? (eval ((M.weltVon t).lese Λ zusage.orte) zusage
-              ((M.weltVon t).lese Λ zusage.orte) (.cons v ρ)) with
+          cases hw : wahr? (eval (((M.weltVon t).fragt (.inr (.inl r))).lese Λ zusage.orte) zusage
+              (((M.weltVon t).fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ)) with
           | true => exact fort_schritt (w_regLiesElseWahr rfl r hk zusage sonst rest k ρ hx v hv hw hΛ)
           | false =>
               exact fort_schritt (w_regLiesElseFalsch rfl r hk zusage sonst rest k ρ hx v hv hw hΛ)
   | awaits g payload hp hL hat rest =>
-      cases hvis : O.sichtbar g (M.weltVon t) with
+      cases hvis : O.sichtbar g ((M.weltVon t).fragt (.inr (.inr g))) with
       | false => exact fort_flagge ⟨l, Γ, Λ, ρ, _, hx, hvis⟩
       | true => exact fort_schritt (w_awaits rfl g payload hp hL hat rest k ρ hx hvis hΛ)
   | exchange g neuE hw hL rest => exact fort_schritt (w_exchange rfl g neuE hw hL rest k ρ hx hΛ)

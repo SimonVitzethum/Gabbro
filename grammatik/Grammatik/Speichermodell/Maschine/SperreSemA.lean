@@ -907,10 +907,10 @@ theorem semHA_dannRetGrund {Λ Λ'' : List (Res D)} (r : Fin V.gruende)
 
 theorem semHA_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hz : D.rzusage r v = true) :
     semHA S O U A passes R (.dann (.regRead r hk rest) k) σ ρ =
-      semHA S O U A passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
+      semHA S O U A passes R (.dann rest (.schrumpf k)) (σ.fragt (.inr (.inl r))) (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv, hz, if_true]
   rfl
@@ -918,10 +918,10 @@ theorem semHA_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).le
 theorem semHA_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
-    (hw : wahr? (eval (leseA A σ Λ zusage.orte) zusage (leseA A σ Λ zusage.orte) (.cons v ρ)) = true) :
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
+    (hw : wahr? (eval (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) zusage (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) (.cons v ρ)) = true) :
     semHA S O U A passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
-      semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ zusage.orte) (.cons v ρ) := by
+      semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) (.cons v ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv, hw, if_true]
   rfl
@@ -930,10 +930,10 @@ theorem semHA_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
     (hk : (D.rklasse r).lesbar = true)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = some v)
-    (hw : wahr? (eval (leseA A σ Λ zusage.orte) zusage (leseA A σ Λ zusage.orte) (.cons v ρ)) = false) :
+    (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
+    (hw : wahr? (eval (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) zusage (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) (.cons v ρ)) = false) :
     (semHA S O U A passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
-      (semHA S O U A passes R (.dann sonst.alsBlock.2 (.abbruch k)) (leseA A σ Λ zusage.orte) ρ) := by
+      (semHA S O U A passes R (.dann sonst.alsBlock.2 (.abbruch k)) (leseA A (σ.fragt (.inr (.inl r))) Λ zusage.orte) ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hv, hw, Bool.false_eq_true, if_false]
   rw [semHA_alsBlock]
@@ -942,10 +942,10 @@ theorem semHA_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
 theorem semHA_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
-    (hvis : O.sichtbar g (leseA A σ Λ [.inr g]) = true) :
+    (hvis : O.sichtbar g (leseA A (σ.fragt (.inr (.inr g))) Λ [.inr g]) = true) :
     semHA S O U A passes R (.dann (.awaits g payload hp hL hat rest) k) σ ρ =
-      semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ [.inr g])
-        (.cons ((leseA A σ Λ [.inr g]).globs g) ρ) := by
+      semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A (σ.fragt (.inr (.inr g))) Λ [.inr g])
+        (.cons ((leseA A (σ.fragt (.inr (.inr g))) Λ [.inr g]).globs g) ρ) := by
   rw [semHA_dann]
   simp only [execBlockHA, hvis, if_true]
   rfl

@@ -113,6 +113,7 @@ def neutral : Ereignis D → List (Ereignis D)
   | .gibt L => [.gibt L, .nimmt L []]
   | .zugriff t b Λ h => [.zugriff t b Λ h]
   | .gzugriff g b Λ h => [.gzugriff g b Λ h]
+  | .fremd q => [.fremd q]
 
 theorem offen_neutral (e0 : Ereignis D) (s : List (Ereignis D)) :
     offen (neutral e0 ++ s) = offen s := by
@@ -125,6 +126,7 @@ theorem offen_neutral (e0 : Ereignis D) (s : List (Ereignis D)) :
       exact List.erase_cons_head L (offen s)
   | zugriff => rfl
   | gzugriff => rfl
+  | fremd => rfl
 
 theorem neutral_laenge (e0 : Ereignis D) (s : List (Ereignis D)) :
     s.length < (neutral e0 ++ s).length := by

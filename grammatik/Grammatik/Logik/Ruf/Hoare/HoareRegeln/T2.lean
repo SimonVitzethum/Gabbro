@@ -270,7 +270,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun r hk rest hr ihr σ ρ => by
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         simp only [execBlock]
-        cases hein : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+        cases hein : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
         | none => simp only [hein]
         | some v =>
             simp only [hein]
@@ -282,7 +282,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         have he' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihe σ ρ
         simp only [execBlock]
-        cases hein : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+        cases hein : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
         | none => simp only [hein]
         | some v =>
             simp only [hein]
@@ -293,7 +293,7 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun g payload hp hL _ rest hr ihr σ ρ => by
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ
         simp only [execBlock]
-        by_cases hs : O.sichtbar g σ = true
+        by_cases hs : O.sichtbar g (σ.fragt (.inr (.inr g))) = true
         · simp only [hs, if_pos hs, hr']
         · simp only [if_neg hs]
 )

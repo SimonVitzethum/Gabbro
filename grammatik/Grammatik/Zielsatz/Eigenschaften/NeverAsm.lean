@@ -81,7 +81,7 @@ theorem execBlock_bindAxiom_never (O : Orakel D) (passes : Nat)
     execBlock O passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ =
       .hardware (.annahme a) := by
   have h2 : einpassenErg O.zeiger (D.aerg a)
-      (O.wirkt a (σ.lese Λ args.orte)
+      (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none :=
     axiomAntwort_never_keine O a (by rw [he, hne]) _ _
   simp only [execBlock, axiomAntwort, h2]

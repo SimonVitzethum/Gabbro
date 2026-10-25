@@ -55,15 +55,16 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
       split at h
       · rename_i σ1 v ha
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        have e1 : σ1 = (O.wirkt a (σ.lese Λ args.orte)
+        have e1 : σ1 = (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
             (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1 := by
           have := congrArg Prod.fst ha
           simp only [axiomAntwort] at this
           exact this.symm
-        obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := schreibV V) O hO a (σ.lese Λ args.orte)
+        obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := schreibV V) O hO a ((σ.lese Λ args.orte).fragt (.inl a))
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldIn hh)
           hw hg
-        refine ⟨X ++ leseEv σ Λ args.orte, ?_, evOk_append hok (evOk_lese σ Λ hC)⟩
+        refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv σ Λ args.orte), ?_,
+          evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese σ Λ hC))⟩
         rw [e1, hX, List.append_assoc]
         rfl
       · simp [Ausgang.welt] at h
@@ -72,7 +73,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
       exact ⟨leseEv σ Λ e.orte, rfl, evOk_lese σ Λ hC⟩
   | .transition .., _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact ⟨[], rfl, evOk_nil⟩
+      exact ⟨[.fremd _], rfl, evOk_fremd _⟩
   | .publish g e _ _ hw hL, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       refine ⟨_ :: leseEv σ Λ e.orte, rfl, ?_⟩
@@ -205,16 +206,17 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       subst hs₁
       have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
         (Args.orte_darf args) hΛ
-      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+      have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
       obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-        ((M.weltVon f).lese Λ args.orte)
+        (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
         (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1)⟩
+      refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
+        evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
       rw [e2, hX, List.append_assoc]
       rfl
   | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
@@ -224,16 +226,17 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       subst hs₁
       have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
         (Args.orte_darf args) hΛ
-      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+      have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwortSonst] at this
         exact this.symm
       obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-        ((M.weltVon f).lese Λ args.orte)
+        (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
         (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1.1)⟩
+      refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
+        evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1.1))⟩
       rw [e2, hX, List.append_assoc]
       rfl
   | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
@@ -243,16 +246,17 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       subst hs₁
       have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
         (Args.orte_darf args) hΛ
-      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+      have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwortSonst] at this
         exact this.symm
       obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-        ((M.weltVon f).lese Λ args.orte)
+        (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
         (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1.1)⟩
+      refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
+        evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1.1))⟩
       rw [e2, hX, List.append_assoc]
       rfl
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
@@ -262,16 +266,17 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       subst hs₁
       have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
         (Args.orte_darf args) hΛ
-      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+      have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
         exact this.symm
       obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-        ((M.weltVon f).lese Λ args.orte)
+        (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
         (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1)⟩
+      refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
+        evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1))⟩
       rw [e2, hX, List.append_assoc]
       rfl
   | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
@@ -281,16 +286,17 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       subst hs₁
       have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
         (Args.orte_darf args) hΛ
-      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+      have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwortSonst] at this
         exact this.symm
       obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-        ((M.weltVon f).lese Λ args.orte)
+        (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
         (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1)⟩
+      refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
+        evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
       rw [e2, hX, List.append_assoc]
       rfl
   | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
@@ -300,16 +306,17 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       subst hs₁
       have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
         (Args.orte_darf args) hΛ
-      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+      have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwortSonst] at this
         exact this.symm
       obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-        ((M.weltVon f).lese Λ args.orte)
+        (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
         (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1)⟩
+      refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
+        evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
       rw [e2, hX, List.append_assoc]
       rfl
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
@@ -400,6 +407,39 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       simp only [GRest.oR, endblockOrteP, stmtOrteP, List.all_append, Bool.and_eq_true] at hC
       subst hs1
       exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ hC.1⟩
+  | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
+      simp only [rufUpdateG_self]
+      exact ⟨[.fremd (.inr (.inl r))], rfl, evOk_fremd _⟩
+  | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      rw [hhead] at hC
+      dsimp only at hC ⊢
+      simp only [GRest.oR, endblockOrteP, blockOrteP, stmtOrteP, blockOrteP_alsBlock,
+        List.all_append, List.all_cons, List.all_nil, Bool.and_eq_true, Bool.and_true,
+        Bool.true_and] at hC
+      subst hs₁
+      exact ⟨leseEv ((M.weltVon f).fragt (.inr (.inl r))) Λ zusage.orte ++ [.fremd (.inr (.inl r))],
+        by rw [List.append_assoc]; rfl, evOk_append (evOk_lese _ _ (by simp_all)) (evOk_fremd _)⟩
+  | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      rw [hhead] at hC
+      dsimp only at hC ⊢
+      simp only [GRest.oR, endblockOrteP, blockOrteP, stmtOrteP, blockOrteP_alsBlock,
+        List.all_append, List.all_cons, List.all_nil, Bool.and_eq_true, Bool.and_true,
+        Bool.true_and] at hC
+      subst hs₁
+      exact ⟨leseEv ((M.weltVon f).fragt (.inr (.inl r))) Λ zusage.orte ++ [.fremd (.inr (.inl r))],
+        by rw [List.append_assoc]; rfl, evOk_append (evOk_lese _ _ (by simp_all)) (evOk_fremd _)⟩
+  | dannAwaits l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      rw [hhead] at hC
+      dsimp only at hC ⊢
+      simp only [GRest.oR, endblockOrteP, blockOrteP, stmtOrteP, blockOrteP_alsBlock,
+        List.all_append, List.all_cons, List.all_nil, Bool.and_eq_true, Bool.and_true,
+        Bool.true_and] at hC
+      subst hs₁
+      exact ⟨leseEv ((M.weltVon f).fragt (.inr (.inr g))) Λ [.inr g] ++ [.fremd (.inr (.inr g))],
+        by rw [List.append_assoc]; rfl, evOk_append (evOk_lese _ _ (by simp_all)) (evOk_fremd _)⟩
   | _ => leseO
 
 /-! ## 5. Every access of a step is bounded by its function -/

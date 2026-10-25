@@ -84,12 +84,13 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 /-! ## 1. The premise: one event covers at most one cell -/
 
 /-- How many cells one trace event covers: a slot or global access
-    touches exactly one cell; taking or giving a lock touches none. -/
+    touches exactly one cell; taking or giving a lock, or an answer from outside, touches none. -/
 def eventWidth : Ereignis D → Nat
   | .zugriff .. => 1
   | .gzugriff .. => 1
   | .nimmt .. => 0
   | .gibt .. => 0
+  | .fremd .. => 0
 
 /-- **Each event executes indivisibly on the machine.** An event covers
     at most one cell, so there is no interior boundary at which an
@@ -101,6 +102,7 @@ theorem ereignisAtomar_gilt (e : Ereignis D) : EreignisAtomar e := by
   cases e
   · exact Nat.le_refl _
   · exact Nat.le_refl _
+  · exact Nat.zero_le _
   · exact Nat.zero_le _
   · exact Nat.zero_le _
 

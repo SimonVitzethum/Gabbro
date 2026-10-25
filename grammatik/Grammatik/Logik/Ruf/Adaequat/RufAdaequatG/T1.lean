@@ -156,10 +156,11 @@ def leseEv (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
 theorem lese_spur (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
     (σ.lese Λ os).spur = leseEv σ Λ os ++ σ.spur := rfl
 
-/-- An access event (table or global), never a lock event. -/
+/-- An access event (table or global) or a question to the outside -- never a lock event. -/
 def Ereignis.istZugriff : Ereignis D → Bool
   | .zugriff .. => true
   | .gzugriff .. => true
+  | .fremd .. => true
   | _ => false
 
 /-- Every event of `neu` is an access event. -/
@@ -175,6 +176,7 @@ theorem offen_nurZugriff : ∀ (neu s : List (Ereignis D)), NurZugriff neu →
       cases e with
       | zugriff => simpa [offen] using ih
       | gzugriff => simpa [offen] using ih
+      | fremd => simpa [offen] using ih
       | nimmt => simp [Ereignis.istZugriff] at he
       | gibt => simp [Ereignis.istZugriff] at he
 
@@ -204,6 +206,9 @@ theorem Erw.offen {σ σ' : World D} (h : Erw σ σ') : offen σ'.spur = offen �
   obtain ⟨neu, e, z⟩ := h
   rw [e]
   exact offen_nurZugriff neu σ.spur z
+
+theorem Erw.fragt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : Erw σ (σ.fragt q) :=
+  ⟨[.fremd q], rfl, fun e he => by simp only [List.mem_singleton] at he; subst he; rfl⟩
 
 theorem Erw.lese (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
     Erw σ (σ.lese Λ os) := by
@@ -345,7 +350,7 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | transition r hk m hm hl maske bits =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
-      exact Erw.refl _
+      exact Erw.fragt _ _
   | publish g e payload hp hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex

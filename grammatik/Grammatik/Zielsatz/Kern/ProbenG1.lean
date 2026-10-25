@@ -205,9 +205,9 @@ theorem g1O_schief_vertrag (Q : AxEns g1D) (t : Int) : AxVertragO Q (g1O 3 t) :=
 
 /-- The value of the answer `summeRoh v`. -/
 theorem g1_holen_dekodiert (v : Wert g1D g1Erg) (t : Int) (σ : World g1D) :
-    axiomAntwort (g1O (summeRoh g1Fall v) t) g1Holen σ .nil = (σ, some v) := by
-  show (σ, summePasst g1Fall (summeRoh g1Fall v)) = (σ, some v)
-  exact congrArg (Prod.mk σ) (summePasst_voll g1Fall v)
+    axiomAntwort (g1O (summeRoh g1Fall v) t) g1Holen σ .nil = (σ.fragt (.inl g1Holen), some v) := by
+  show (σ.fragt (.inl g1Holen), summePasst g1Fall (summeRoh g1Fall v)) = (σ.fragt (.inl g1Holen), some v)
+  exact congrArg (Prod.mk (σ.fragt (.inl g1Holen))) (summePasst_voll g1Fall v)
 
 /-! ## 4. Both directions -/
 

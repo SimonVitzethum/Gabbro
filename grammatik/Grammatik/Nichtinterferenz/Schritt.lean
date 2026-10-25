@@ -314,22 +314,23 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
             (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur σ₂.speicher
       | (_, none) => none
   | _, _, _, _, ρ, .regRead r _ rest, k =>
-      match einpassen O.zeiger (D.rtyp r) (O.regLies r (sp.welt spur)) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r ((sp.welt spur).fragt (.inr (.inl r)))) with
       | some v =>
-          if D.rzusage r v = true then kLokal st f rho (.cons v ρ) (.dann rest (.schrumpf k)) spur sp
+          if D.rzusage r v = true then
+            kLokal st f rho (.cons v ρ) (.dann rest (.schrumpf k)) ((sp.welt spur).fragt (.inr (.inl r))).spur sp
           else none
       | none => none
   | _, _, Λ, _, ρ, .regReadElse r _ zusage sonst rest, k =>
-      match einpassen O.zeiger (D.rtyp r) (O.regLies r (sp.welt spur)) with
+      match einpassen O.zeiger (D.rtyp r) (O.regLies r ((sp.welt spur).fragt (.inr (.inl r)))) with
       | some v =>
-          let σ₁ := (sp.welt spur).lese Λ zusage.orte
+          let σ₁ := ((sp.welt spur).fragt (.inr (.inl r))).lese Λ zusage.orte
           if wahr? (eval σ₁ zusage σ₁ (.cons v ρ)) = true then
             kLokal st f rho (.cons v ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
           else kLokal st f rho ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur sp
       | none => none
   | _, _, Λ, _, ρ, .awaits g _ _ _ _ rest, k =>
-      if O.sichtbar g (sp.welt spur) = true then
-        let σ₁ := (sp.welt spur).lese Λ [.inr g]
+      if O.sichtbar g ((sp.welt spur).fragt (.inr (.inr g))) = true then
+        let σ₁ := ((sp.welt spur).fragt (.inr (.inr g))).lese Λ [.inr g]
         kLokal st f rho (.cons (σ₁.globs g) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
       else none
   | _, _, Λ, _, ρ, .exchange g neuE _ _ rest, k =>

@@ -147,6 +147,11 @@ theorem WRel.welt {sp₁ sp₂ : Speicher D} (h : SpeicherGleich T sp₁ sp₂) 
     WRel T (sp₁.welt spur) (sp₂.welt spur) :=
   ⟨rfl, h⟩
 
+/-- A question to the outside keeps the relation: both traces get the same event. -/
+theorem WRel.fragt {σ τ : World D} (h : WRel T σ τ) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) :
+    WRel T (σ.fragt q) (τ.fragt q) :=
+  ⟨congrArg (Ereignis.fremd q :: ·) h.1, h.2⟩
+
 theorem WRel.lese {σ τ : World D} (h : WRel T σ τ) (Λ : List (Res D))
     (os : List (D.Tab ⊕ D.Glob)) : WRel T (σ.lese Λ os) (τ.lese Λ os) := by
   refine ⟨?_, h.2⟩
@@ -217,7 +222,7 @@ theorem axiomAntwort_rel (O : Orakel D) {T : D.Tab ⊕ D.Glob → Bool} {AxT : D
     (x : Env D (D.aparams a)) :
     (axiomAntwort O a σ x).2 = (axiomAntwort O a τ x).2 ∧
       WRel T (axiomAntwort O a σ x).1 (axiomAntwort O a τ x).1 := by
-  obtain ⟨e1, e2⟩ := hO a ha σ τ x h
+  obtain ⟨e1, e2⟩ := hO a ha (σ.fragt (.inl a)) (τ.fragt (.inl a)) x (h.fragt _)
   simp only [axiomAntwort]
   exact ⟨by rw [e1], e2⟩
 
@@ -228,7 +233,7 @@ theorem axiomAntwortSonst_rel (O : Orakel D) {T : D.Tab ⊕ D.Glob → Bool} {Ax
     (x : Env D (D.aparams a)) :
     (axiomAntwortSonst O a σ x).2 = (axiomAntwortSonst O a τ x).2 ∧
       WRel T (axiomAntwortSonst O a σ x).1 (axiomAntwortSonst O a τ x).1 := by
-  obtain ⟨e1, e2⟩ := hO a ha σ τ x h
+  obtain ⟨e1, e2⟩ := hO a ha (σ.fragt (.inl a)) (τ.fragt (.inl a)) x (h.fragt _)
   simp only [axiomAntwortSonst]
   exact ⟨by rw [e1], e2⟩
 
@@ -333,7 +338,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       exact ⟨h.lese Λ e.orte, trivial⟩
   | transition r hk m hm hl maske bits =>
       simp only [execStmt, AusRel]
-      exact ⟨h, trivial⟩
+      exact ⟨h.fragt _, trivial⟩
   | publish g e payload hp hw hL =>
       simp only [nS] at hn
       have h1 := h.lese Λ e.orte

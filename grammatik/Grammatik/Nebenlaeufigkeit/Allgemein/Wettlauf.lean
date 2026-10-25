@@ -97,6 +97,7 @@ theorem offen_nodup : ∀ (s : List (Ereignis D)), Konsistent s → (∀ e ∈ s
   | [], _, _ => List.nodup_nil
   | .zugriff .. :: s, hk, hg => offen_nodup s (konsistent_tail hk) (fun e he => hg e (List.mem_cons_of_mem _ he))
   | .gzugriff .. :: s, hk, hg => offen_nodup s (konsistent_tail hk) (fun e he => hg e (List.mem_cons_of_mem _ he))
+  | .fremd _ :: s, hk, hg => offen_nodup s (konsistent_tail hk) (fun e he => hg e (List.mem_cons_of_mem _ he))
   | .gibt L :: s, hk, hg =>
       List.Nodup.erase L (offen_nodup s (konsistent_tail hk) (fun e he => hg e (List.mem_cons_of_mem _ he)))
   | .nimmt L h :: s, hk, hg => by
@@ -120,6 +121,14 @@ theorem offen_zeuge : ∀ (s : List (Ereignis D)), Konsistent s → (∀ e ∈ s
       | zero => simp
       | succ n' => simp only [List.getElem?_cons_succ]; exact hv n' (by omega)
   | .gzugriff .. :: s, hk, hg, L, h => by
+      obtain ⟨n, h', hn, hv⟩ := offen_zeuge s (konsistent_tail hk)
+        (fun e he => hg e (List.mem_cons_of_mem _ he)) L (by simpa [offen] using h)
+      refine ⟨n + 1, h', by simpa using hn, ?_⟩
+      intro n' hn'
+      cases n' with
+      | zero => simp
+      | succ n' => simp only [List.getElem?_cons_succ]; exact hv n' (by omega)
+  | .fremd _ :: s, hk, hg, L, h => by
       obtain ⟨n, h', hn, hv⟩ := offen_zeuge s (konsistent_tail hk)
         (fun e he => hg e (List.mem_cons_of_mem _ he)) L (by simpa [offen] using h)
       refine ⟨n + 1, h', by simpa using hn, ?_⟩
@@ -159,6 +168,7 @@ theorem offen_bleibt (L : D.Lock) : ∀ (s : List (Ereignis D)), L ∈ offen s �
   cases e with
   | zugriff _ _ _ _ => simpa [offen] using hs
   | gzugriff _ _ _ _ => simpa [offen] using hs
+  | fremd _ => simpa [offen] using hs
   | nimmt M _ => simp [offen, hs]
   | gibt M =>
       have : M ≠ L := fun h => he (by rw [h])
@@ -250,6 +260,14 @@ theorem Lauf.haelt_zeuge (l : Lauf D) (hg : Gesittet l) (f : Faden) (L : D.Lock)
             · subst hr; rw [he]; simp
             · exact hv r h1 (by omega)
         | gzugriff g w Λ hh =>
+            simp only [offen] at h
+            obtain ⟨k, hk, h', hn, hv⟩ := ih h
+            refine ⟨k, by omega, h', hn, ?_⟩
+            intro r h1 h2
+            by_cases hr : r = j
+            · subst hr; rw [he]; simp
+            · exact hv r h1 (by omega)
+        | fremd q =>
             simp only [offen] at h
             obtain ⟨k, hk, h', hn, hv⟩ := ih h
             refine ⟨k, by omega, h', hn, ?_⟩
@@ -374,6 +392,7 @@ theorem Lauf.haelt_bei_zugriff (l : Lauf D) (hg : Gesittet l) (f : Faden) (j : N
       unfold Lauf.haelt; rw [← hp]; exact hgut.2 L hL
   | nimmt _ _ => simp [Ereignis.traeger] at ht
   | gibt _ => simp [Ereignis.traeger] at ht
+  | fremd _ => simp [Ereignis.traeger] at ht
 
 /-- **Kein Wettlauf auf einem Traeger.** Zwei Zugriffe verschiedener Faeden auf dieselbe
     Tabelle sind durch happens-before geordnet. -/

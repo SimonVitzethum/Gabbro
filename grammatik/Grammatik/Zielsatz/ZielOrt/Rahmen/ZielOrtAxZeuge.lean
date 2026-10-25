@@ -211,7 +211,8 @@ theorem axLauf : ∃ M : RufMaschineG axD,
         rfl
       rw [hn]
       rfl)
-    (axiomSpur [()] [] () [Res.held ()] ((M3.weltVon 0).lese axL []).haelt) rfl
+    (axiomSpur [()] [] () [Res.held ()] ((M3.weltVon 0).lese axL []).haelt ++ [Ereignis.fremd (.inl axInc)])
+    (by rw [List.append_assoc]; rfl)
     (axHgL (axHoff e3 hoff3))
   have hoff4 : offen (M4.faeden 0).spur = [()] := by
     rw [hZ4.spur]

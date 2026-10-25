@@ -267,6 +267,8 @@ def Ereignis.gut : Ereignis D → Prop
   -- Nehmen einer Sperre: ueber allem Gehaltenen im Rang (H006), also nicht schon gehalten.
   | .nimmt L h => (∀ M ∈ h, D.rang M < D.rang L) ∧ L ∉ h
   | .gibt _ => True
+  -- An answer from outside: no cell, no lock.
+  | .fremd _ => True
 
 /-- Ein Ereignis PASST zu seiner Nachwelt (dem Rest der Spur hinter ihm): die Sperren, die es
     als gehalten aufzeichnet, sind genau die dort offenen. -/
@@ -275,6 +277,7 @@ def Ereignis.passt : Ereignis D → List (Ereignis D) → Prop
   | .gzugriff _ _ _ h, s => h = offen s
   | .nimmt _ h, s => h = offen s
   | .gibt _, _ => True
+  | .fremd _, _ => True
 
 /-- Eine Spur ist KONSISTENT, wenn jedes Ereignis zu seinem Rest passt. -/
 def Konsistent (s : List (Ereignis D)) : Prop :=
@@ -366,6 +369,8 @@ def Ereignis.zugriffMit (h : List D.Lock) : Ereignis D → Prop
   | .gzugriff _ _ _ h' => h' = h
   | .nimmt _ _ => False
   | .gibt _ => False
+  -- An answer from outside records no lock and changes none: it may sit among the accesses.
+  | .fremd _ => True
 
 theorem offen_append_zugriffe (h : List D.Lock) : ∀ (es s : List (Ereignis D)),
     (∀ e ∈ es, e.zugriffMit h) → offen (es ++ s) = offen s := by
@@ -413,6 +418,13 @@ theorem gut_merke {W G} (σ : World D) (es : List (Ereignis D)) (hz : ∀ e ∈ 
     · exact .inr (h e he)
     · exact .inl he,
    fun k => konsistent_merke σ.haelt es σ.spur hz rfl k⟩
+
+/-- **Asking outside the program is a good step**: the question is recorded, no cell changes, no lock moves. -/
+theorem gut_fragt {W G} (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : Gut W G σ (σ.fragt q) :=
+  gut_merke σ [.fremd q] (fun e he => by simp only [List.mem_singleton] at he; subst he; exact True.intro)
+    (fun e he => by simp only [List.mem_singleton] at he; subst he; exact True.intro)
+
+theorem fragt_haelt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : (σ.fragt q).haelt = σ.haelt := rfl
 
 theorem gut_lese {W G} (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob))
     (ho : ∀ o ∈ orte, OrtDarf Λ o) (hh : HeldIn Λ σ.haelt) : Gut W G σ (σ.lese Λ orte) := by

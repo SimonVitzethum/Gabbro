@@ -456,14 +456,14 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         · exact ((Endblock.kongruent hR err _ _).schrumpf).zuAusgang
   | .regRead r hr rest, σ, ρ => by
       simp only [execBlock]
-      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
-          exact AusgangUnter.ite ((Block.kongruent hR rest σ (.cons v ρ)).schrumpf)
+          exact AusgangUnter.ite ((Block.kongruent hR rest _ (.cons v ρ)).schrumpf)
             (Or.inl rfl)
   | .regReadElse r hr zusage sonst rest, σ, ρ => by
       simp only [execBlock]
-      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           exact AusgangUnter.ite
@@ -471,7 +471,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
             ((Endblock.kongruent hR sonst _ ρ).zuAusgang)
   | .awaits g hg hw hL hat rest, σ, ρ => by
       simp only [execBlock]
-      by_cases hs : O.sichtbar g σ = true
+      by_cases hs : O.sichtbar g (σ.fragt (.inr (.inr g))) = true
       · rw [if_pos hs, if_pos hs]
         exact (Block.kongruent hR rest _ _).schrumpf
       · rw [if_neg hs, if_neg hs]; exact Or.inl rfl
@@ -582,14 +582,14 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
         · exact (Endblock.kongruent hR err _ _).schrumpf
   | .regRead r hr rest, σ, ρ => by
       simp only [execEnd]
-      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
-          exact EndUnter.ite ((Endblock.kongruent hR rest σ (.cons v ρ)).schrumpf)
+          exact EndUnter.ite ((Endblock.kongruent hR rest _ (.cons v ρ)).schrumpf)
             (Or.inl rfl)
   | .regReadElse r hr zusage sonst rest, σ, ρ => by
       simp only [execEnd]
-      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
+      cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
       | none => exact Or.inl rfl
       | some v =>
           exact EndUnter.ite
@@ -597,7 +597,7 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
             (Endblock.kongruent hR sonst _ ρ)
   | .awaits g hg hw hL hat rest, σ, ρ => by
       simp only [execEnd]
-      by_cases hs : O.sichtbar g σ = true
+      by_cases hs : O.sichtbar g (σ.fragt (.inr (.inr g))) = true
       · rw [if_pos hs, if_pos hs]
         exact (Endblock.kongruent hR rest _ _).schrumpf
       · rw [if_neg hs, if_neg hs]; exact Or.inl rfl

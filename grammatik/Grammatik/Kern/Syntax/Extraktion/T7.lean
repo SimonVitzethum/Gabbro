@@ -19,7 +19,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s σ ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ σ.spur) :
-    (∀ e ∈ neu, e.lambda = Λ) ∧
+    (∀ e ∈ neu, e.lambda = Λ ∨ e.lambda = []) ∧
       (∀ e ∈ neu, ∀ o, e.traeger = some o →
         o ∈ stmtTraeger tabs globs s ++ stmtOrte s) := by
   cases s with
@@ -36,6 +36,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         rcases List.mem_append.mp he' with h1 | h1
         · obtain rfl := List.mem_singleton.mp h1
           rfl
@@ -64,6 +65,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         rcases List.mem_append.mp he' with h1 | h1
         · obtain rfl := List.mem_singleton.mp h1
           rfl
@@ -92,6 +94,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         rcases List.mem_append.mp he' with h1 | h1
         · obtain rfl := List.mem_singleton.mp h1
           rfl
@@ -119,6 +122,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         rcases List.mem_append.mp he' with h1 | h1
         · obtain rfl := List.mem_singleton.mp h1
           rfl
@@ -149,6 +153,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         rcases List.mem_append.mp he' with h1 | h1
         · have heq : e' =
               Ereignis.zugriff t true Λ (σ.lese Λ (i.orte ++ e.orte)).haelt :=
@@ -181,14 +186,16 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         exact (mem_leseEr he').1
       · intro e' he' o ho
         have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
         simp only [stmtTraeger, stmtOrte]
         exact List.mem_append.mpr (Or.inr hmem)
   | shift t f hτ i von nach hn he hw hL =>
-      exact uebergang_ereignis_aus_blatt O passes l tabs globs t f hτ i von nach
+      obtain ⟨h1, h2⟩ := uebergang_ereignis_aus_blatt O passes l tabs globs t f hτ i von nach
         hn he hw hL σ ρ σ' neu hstep hneu
+      exact ⟨fun e he => Or.inl (h1 e he), h2⟩
   | ite c t e => simp [Stmt.istBlatt] at hleaf
   | onOption o p a => simp [Stmt.istBlatt] at hleaf
   | onTag v arms => simp [Stmt.istBlatt] at hleaf
@@ -213,6 +220,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         exact (mem_leseEr he').1
       · intro e' he' o ho
         have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
@@ -220,15 +228,19 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
         exact List.mem_append.mpr (Or.inr hmem)
   | transition r hk m hm hl maske bits =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
-      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      have hspur : σ'.spur = [Ereignis.fremd (.inr (.inl m))] ++ σ.spur := by rw [← hstep]; rfl
       rw [hspur] at hneu
       have hneueq := List.append_cancel_right hneu
       subst hneueq
       constructor
       · intro e' he'
-        simp at he'
+        simp only [List.mem_singleton] at he'
+        subst he'
+        exact Or.inr rfl
       · intro e' he' o ho
-        simp at he'
+        simp only [List.mem_singleton] at he'
+        subst he'
+        simp [Ereignis.traeger] at ho
   | publish g e payload hp hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur =
@@ -242,6 +254,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         rcases List.mem_append.mp he' with h1 | h1
         · obtain rfl := List.mem_singleton.mp h1
           rfl
@@ -264,6 +277,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         simp at he'
       · intro e' he' o ho
         simp at he'
@@ -275,6 +289,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         simp at he'
       · intro e' he' o ho
         simp at he'
@@ -290,6 +305,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         exact (mem_leseEr he').1
       · intro e' he' o ho
         have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
@@ -303,6 +319,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         simp at he'
       · intro e' he' o ho
         simp at he'
@@ -314,6 +331,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         simp at he'
       · intro e' he' o ho
         simp at he'
@@ -325,6 +343,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       subst hneueq
       constructor
       · intro e' he'
+        refine Or.inl ?_
         simp at he'
       · intro e' he' o ho
         simp at he'
@@ -361,11 +380,13 @@ theorem hmark_hcar_aus_progAus_ohne_axiomCall
     List.mem_of_getElem? hpc
   constructor
   · intro e he m st hm
-    rw [hlam e he] at hm
-    rw [← hΛa] at hm
-    exact pcAtom_mem_marks _ _ _ ha m
-      (by simp only [PCAtom.marks]
-          exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩)
+    rcases hlam e he with hl | hl
+    · rw [hl, ← hΛa] at hm
+      exact pcAtom_mem_marks _ _ _ ha m
+        (by simp only [PCAtom.marks]
+            exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩)
+    · rw [hl] at hm
+      exact absurd hm List.not_mem_nil
   · intro e he o ho
     have hmem : o ∈ stmtTraeger tabs globs s ++ stmtOrte s := hcar e he o ho
     apply pcAtom_mem_carriers _ _ _ ha o
@@ -441,7 +462,7 @@ theorem execEreignis_aus_axiomCall
     (hneu : σ'.spur = neu ++ σ.spur) :
     ∃ Λe : List (Res D),
       (∀ m st, Res.marke m st ∉ Λe) ∧
-      (∀ e ∈ neu, e.lambda = Λ ∨ e.lambda = Λe) ∧
+      (∀ e ∈ neu, e.lambda = Λ ∨ e.lambda = Λe ∨ e.lambda = []) ∧
       (∀ e ∈ neu, ∀ o, e.traeger = some o →
         o ∈ stmtTraeger tabs globs
           (Stmt.axiomCall a args h hw hg hd hgd : Stmt D V l Γ Λ Λ) ++
@@ -457,7 +478,7 @@ theorem execEreignis_aus_axiomCall
   have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
       L ∈ (σ.lese Λ args.orte).haelt :=
     fun g hwr L hL => (hhL L).mp (hgd g hwr _ hL)
-  obtain ⟨_, _, hcond⟩ := hO a (σ.lese Λ args.orte)
+  obtain ⟨_, _, hcond⟩ := hO a ((σ.lese Λ args.orte).fragt (.inl a))
     (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
   obtain ⟨tabs₀, globs₀, Λe, _, _, _, _, hmf₀, _, hspurO⟩ := hcond hgt hgg
   simp only [execStmt] at hstep
@@ -465,18 +486,18 @@ theorem execEreignis_aus_axiomCall
   · rename_i σ1 v ha
     simp only [Ausgang.welt, Option.some.injEq] at hstep
     subst hstep
-    have hσ1 : σ1 = (O.wirkt a (σ.lese Λ args.orte)
+    have hσ1 : σ1 = (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1 := by
       have hfst := congrArg Prod.fst ha
       simp only [axiomAntwort] at hfst
       exact hfst.symm
-    have hlese : (σ.lese Λ args.orte).spur =
-        (args.orte.map fun o => match o with
+    have hlese : ((σ.lese Λ args.orte).fragt (.inl a)).spur =
+        (Ereignis.fremd (.inl a) :: args.orte.map fun o => match o with
           | .inl t => Ereignis.zugriff t false Λ σ.haelt
           | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := rfl
     rw [hσ1, hspurO, hlese, ← List.append_assoc] at hneu
-    have hneueq : axiomSpur tabs₀ globs₀ a Λe (σ.lese Λ args.orte).haelt ++
-        (args.orte.map fun o => match o with
+    have hneueq : axiomSpur tabs₀ globs₀ a Λe ((σ.lese Λ args.orte).fragt (.inl a)).haelt ++
+        (Ereignis.fremd (.inl a) :: args.orte.map fun o => match o with
           | .inl t => Ereignis.zugriff t false Λ σ.haelt
           | .inr g => Ereignis.gzugriff g false Λ σ.haelt) = neu :=
       List.append_cancel_right hneu
@@ -486,9 +507,11 @@ theorem execEreignis_aus_axiomCall
       rw [List.mem_append] at he
       rcases he with hor | hrd
       · rcases axiomSpur_mem hor with ⟨t, _, _, rfl⟩ | ⟨g, _, _, rfl⟩
-        · exact Or.inr rfl
-        · exact Or.inr rfl
-      · exact Or.inl (mem_leseEr hrd).1
+        · exact Or.inr (Or.inl rfl)
+        · exact Or.inr (Or.inl rfl)
+      · rcases List.mem_cons.mp hrd with rfl | hrd
+        · exact Or.inr (Or.inr rfl)
+        · exact Or.inl (mem_leseEr hrd).1
     · intro e he o ho
       rw [List.mem_append] at he
       rcases he with hor | hrd
@@ -507,7 +530,9 @@ theorem execEreignis_aus_axiomCall
           apply List.mem_append.mpr; apply Or.inr
           apply List.mem_map.mpr
           exact ⟨g, List.mem_filter.mpr ⟨hcg g hwr, hwr⟩, rfl⟩
-      · have hmem : o ∈ args.orte := (mem_leseEr hrd).2 o ho
+      · rcases List.mem_cons.mp hrd with rfl | hrd
+        · simp [Ereignis.traeger] at ho
+        have hmem : o ∈ args.orte := (mem_leseEr hrd).2 o ho
         simp only [stmtTraeger, stmtOrte]
         exact List.mem_append.mpr (Or.inr hmem)
   · simp [Ausgang.welt] at hstep

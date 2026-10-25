@@ -360,7 +360,7 @@ theorem geLeser_lauf (O' : Orakel geD) (hRL : RegLokal O') (passes : Nat)
   simp only [geRumpfLeser, geLesBlock, geNotiz, execEnd, execStmt, execBlock]
   generalize hσ1 : σ.lese geLg (Expr.tru : Expr geD [] geLg .bool).orte = σ1
   simp only [eval, wahr?, if_true]
-  cases hv : einpassen O'.zeiger (geD.rtyp ()) (O'.regLies () σ1) with
+  cases hv : einpassen O'.zeiger (geD.rtyp ()) (O'.regLies () (σ1.fragt (.inr (.inl ())))) with
   | none =>
       right
       exact ⟨_, rfl⟩
@@ -368,10 +368,10 @@ theorem geLeser_lauf (O' : Orakel geD) (hRL : RegLokal O') (passes : Nat)
       left
       have hz : geD.rzusage () v = true := rfl
       simp only [hz, if_true]
-      generalize hσ3 : (σ1.lese geLg _).schreibSlot GeTab.notiz geLg _ () _ = σ3
-      have hloc : O'.regLies () σ3 = O'.regLies () σ1 := by
+      generalize hσ3 : ((σ1.fragt (Sum.inr (Sum.inl (() : geD.Reg)))).lese geLg _).schreibSlot GeTab.notiz geLg _ () _ = σ3
+      have hloc : O'.regLies () (σ3.fragt (.inr (.inl ()))) = O'.regLies () (σ1.fragt (.inr (.inl ()))) := by
         rw [← hσ3]
-        exact hRL.1 () _ _ (geNotiz_geraet _ _ _ _)
+        exact hRL.1 () _ _ (geNotiz_geraet ((σ1.fragt (Sum.inr (Sum.inl (() : geD.Reg)))).lese geLg _) geLg _ _)
       rw [hloc, hv]
       simp only [hz, if_true, Ausgang.schrumpf, evalErg, eval]
       exact ⟨_, congrArg (EndAusgang.zurueck _) (decide_eq_true rfl)⟩
@@ -481,6 +481,9 @@ theorem geHgLt {s : List (Ereignis geD)} (h : offen s = [GeLock.lt]) :
 theorem geOffen_weltVon (M : RufMaschineG geD) (t : Faden) :
     offen (M.weltVon t).spur = offen (M.faeden t).spur := rfl
 
+theorem geOffen_fragt (M : RufMaschineG geD) (t : Faden) (q : geD.Ax ⊕ geD.Reg ⊕ geD.Glob) :
+    offen ((M.weltVon t).fragt q).spur = offen (M.faeden t).spur := rfl
+
 theorem geHoff_e {M : RufMaschineG geD} {f : Faden} {z : RufFadenG geD} {x : List geD.Lock}
     (e : M.faeden f = z) (ho : offen (M.faeden f).spur = x) : offen z.spur = x := by
   rw [← e]; exact ho
@@ -537,7 +540,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
   have e4 := hZ4.1
   try dsimp only at e4
   have hoff4 : offen (M4.faeden 0).spur = [GeLock.lg] := by
-    rw [hZ4.spur, geOffen_weltVon]; exact hoff3
+    rw [hZ4.spur, geOffen_fragt]; exact hoff3
   -- the reader writes `notiz`
   obtain ⟨M5, s5, hZ5⟩ := w_dannBlatt (P := geP) (O := geO) (passes := 0) e4 geNotiz _ _ _
     rfl rfl (geHgLg (geHoff_e e4 hoff4)).heldIn _ _
@@ -578,7 +581,7 @@ theorem geLauf : ∃ M : RufMaschineG geD,
   have e7 := hZ7.1
   try dsimp only at e7
   have hoff7 : offen (M7.faeden 0).spur = [GeLock.lg] := by
-    rw [hZ7.spur, geOffen_weltVon, h60]; exact hoff5
+    rw [hZ7.spur, geOffen_fragt, h60]; exact hoff5
   -- return `x == y`, which is `true`
   obtain ⟨M8, s8, hG8⟩ := w_dannRetP (P := geP) (O := geO) (passes := 0) e7 _ _ rfl
     (PopArt.wie rfl) _ (List.Perm.refl _) .nil _ _ rfl (geHgLg (geHoff_e e7 hoff7)).heldIn

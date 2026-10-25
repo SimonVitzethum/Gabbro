@@ -226,13 +226,13 @@ theorem blatt_erhaelt_slots
       · rename_i σ1 v ha
         simp only [Ausgang.welt, Option.some.injEq] at hstep
         subst hstep
-        have hfst : (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+        have hfst : (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon f).lese Λ args.orte) args
               ((M.weltVon f).lese Λ args.orte) ρ)).1 = σ1 := by
           have h1 := congrArg Prod.fst ha
           simp only [axiomAntwort] at h1
           exact h1
-        have hframe := (hO a ((M.weltVon f).lese Λ args.orte)
+        have hframe := (hO a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
           (evalArgs ((M.weltVon f).lese Λ args.orte) args
             ((M.weltVon f).lese Λ args.orte) ρ)).1
         intro k fld

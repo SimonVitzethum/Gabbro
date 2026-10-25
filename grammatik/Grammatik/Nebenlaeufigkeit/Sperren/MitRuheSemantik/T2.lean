@@ -24,7 +24,7 @@ theorem axiomAntwortSonst_ruG {O : Orakel D} {O' : Orakel D.mitRuhe} (hO : Orake
       (worldR (axiomAntwortSonst O a σ ρ).1,
         (axiomAntwortSonst O a σ ρ).2.map (Sum.map (ergR (D.aerg a)) id)) := by
   unfold axiomAntwortSonst
-  rw [hO.wirkt]
+  rw [worldR_fragt, hO.wirkt]
   exact congrArg _ (sonstPasst_ru O.zeiger O'.zeiger hO.zeiger (D.aerg a) (D.agruende a) _)
 
 theorem axiomAntwortSonst_ru (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :

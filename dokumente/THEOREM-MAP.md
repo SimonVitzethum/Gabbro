@@ -545,9 +545,11 @@ values, never `Post`-at-entry.
   `ZielOrtSem.lean` CUTS). `ziel_ort_voll` adds loops/exits/reasons/axioms/
   indirect calls but excludes `regLies`, `regLiesElse`, `awaits`
   (`ZielOrtVoll.lean` CUTS). `ziel_ort_geraet` admits those under `RegLokal`
-  + `fussOrtGB`; the unrepaired widening is provably false
-  (`ziel_ort_register_falsch`, `ZielOrtRegister.lean`; no analogous
-  refutation built for `awaits`, `ZielOrtGeraetAus.lean` CUTS). Indirect
+  + `fussOrtGB`. The former refutation of the unrepaired widening (a reader
+  reading a register twice in one world) relied on two reads at one world
+  answering alike; since every read is a trace event (`Ereignis.fremd`,
+  2026-10-25) they are two questions, so it no longer applies and was
+  removed. Whether `ziel_ort_voll` now extends to register forms is open. Indirect
   calls stay restricted to `KandOk`: every function of the pointer's
   signature must have its contract carriers in the caller's footprint, so the
   caller must read those carriers or name them in its own contract.
@@ -4862,7 +4864,23 @@ All axiom lists standard.
 
 All axiom lists standard.
 
-## 98. Linking complete in the model: own starts, joined assumptions, n units, grown rely (2026-10-25)
+## 98. Questions to the outside are trace events (2026-10-25)
+
+`Kern/Semantik/Semantik/T1.lean` (`Ereignis.fremd`, `World.fragt`), `T2.lean` (machine G), the copies of G
+(`SperreSem`, `AtomarSem`, `Nichtinterferenz/Schritt`), the thread machine (`RufMaschineG` T2: `dannRegLies*`,
+`dannAwaits`), `Spec.lean` (`KopfHalt`, header).
+
+* Every foreign call, register read and `awaits` visibility records `Ereignis.fremd q` before the oracle answers;
+  the answer is read in `σ.fragt q`. It touches no cell and no lock (`gut_fragt`, `treu_fragt`, `Erw.fragt`,
+  `zugriffsDelta_fragt`, `evOk_fremd`, `WRel.fragt`, `Inv.fragt` of the embedding).
+* The replay proofs (`fadenV_ax`, `fadenG_ax`, `fadenR_ax`, `fadenA_ax`, `fadenS_ax`, `fadenSA_ax`,
+  `fadenSA_fragtLese`) key a recorded answer by the asked world.
+* `gabbro_ziel` stays on `propext`, `Classical.choice`, `Quot.sound`.
+* Removed: `ZielOrtRegister.lean` and `ZielOrtGeraetAus.lean` -- their counterexample relied on two register reads
+  in one world answering alike, which no longer holds.
+* Open: `RegLokal` still forbids register and visibility answers that depend on the history.
+
+## 99. Linking complete in the model: own starts, joined assumptions, n units, grown rely (2026-10-25)
 
 `Zielsatz/Projekte/{Komposition,Annahmen,Verbund,Zeuge}.lean`, `Zielsatz/Einbettung/Projekt.lean`,
 `Speichermodell/Atomar/AtomarGleich.lean`. Scope: `BUILD-SYSTEM.md` §7.5-§7.9.

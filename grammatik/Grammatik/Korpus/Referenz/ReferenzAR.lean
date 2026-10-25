@@ -321,7 +321,7 @@ theorem arM1haelt :
 def arW1 : World arD := (arM1.weltVon 1).lese arL []
 
 /-- The answer world: the oracle stores the cap `100` at `konto[0]`. -/
-def arS1 : World arD := (arO.wirkt .ruf0 arW1 .nil).1
+def arS1 : World arD := (arO.wirkt .ruf0 (arW1.fragt (Sum.inl ARAx.ruf0)) .nil).1
 
 /-- Step B: thread 1 fires the `ruf0` axiom call. The oracle answers
     without a result (`aerg` is `none`, so `einpassenErg` always fits)
@@ -335,7 +335,7 @@ def arMB : RufMaschineF arD :=
        ⟨false, [], arL, .nil, (.ret .empty (by rfl))⟩⟩,
       arS1.spur,
       (arM1.faeden 1).log⟩,
-   arM1.lauf ++ rufEigenF 1 [],
+   arM1.lauf ++ rufEigenF 1 [Ereignis.fremd (Sum.inl ARAx.ruf0)],
    arM1.start⟩
 
 theorem arSchrittB : RufSchrittF arP arO 0 arM1 1 arMB := by
@@ -346,9 +346,9 @@ theorem arSchrittB : RufSchrittF arP arO 0 arM1 1 arMB := by
       (arM1.weltVon 1) .nil) =
       Ausgang.ok (D := arD) (V := vertragVon arD (arM1.faeden 1).kopf.f)
         arS1 .nil := rfl
-  have hneu : arS1.spur = [] ++ (arM1.faeden 1).spur := rfl
+  have hneu : arS1.spur = [Ereignis.fremd (Sum.inl ARAx.ruf0)] ++ (arM1.faeden 1).spur := rfl
   have hkn : ∀ (L : arD.Lock) (h : List arD.Lock),
-      Ereignis.nimmt L h ∉ ([] : List (Ereignis arD)) := by
+      Ereignis.nimmt L h ∉ ([Ereignis.fremd (Sum.inl ARAx.ruf0)] : List (Ereignis arD)) := by
     intro L h hm
     simp at hm
   exact RufSchrittF.blatt arM1 1 false [] arL arL

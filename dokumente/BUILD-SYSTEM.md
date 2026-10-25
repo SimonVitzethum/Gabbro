@@ -259,7 +259,7 @@ Required, not optional, but ONLY in a form that gives exactly what 7.2 gives:
    whole-program acceptance. Then a dependency is checked ONCE and its verdict reused by content fingerprint.
 2. The LLVM backend emits units with external linkage, every static defined once.
 3. Translation validation covers each object and the link step (`PLAN-TRANSLATION-VALIDATION.md`).
-Lean, done (2026-10-25, `Zielsatz/Projekte/Verbund.lean`, THEOREM-MAP §98): `gabbro_ziel_verbund_n` for any
+Lean, done (2026-10-25, `Zielsatz/Projekte/Verbund.lean`, THEOREM-MAP §99): `gabbro_ziel_verbund_n` for any
 number of units, each accepted ALONE, plus the link check `BindeSpec` (decided by `bindeB`, `bindeB_sound`) --
 callbacks, shared atomics, ownership across units, differing assumptions and initial memories, one lock order.
 It is a new statement beside `GabbroZielProjekte` (its own file, like that one), not a diff of `Spec.lean`; the
@@ -280,7 +280,7 @@ deterministic), and the program is compiled as one unit.
 
 ### 7.9 Status (2026-10-25)
 
-Every Lean step of 7.8 is done (THEOREM-MAP §94-§98): L1-L6, name spaces, the embedding with callbacks, L3's twin
+Every Lean step of 7.8 is done (THEOREM-MAP §94-§99): L1-L6, name spaces, the embedding with callbacks, L3's twin
 of `vereinige` (`Annahmen.lean`), L4 (`Passend`, `StartTeil`, `startTeil_E`), the n-unit link
 (`gabbro_ziel_verbund_n`) and the grown-rely re-check on the model side (`koerperGutSA_wachs`,
 `nutzerTeilO_wachs`). Open outside the model: the Rust checker and build files (steps 1-2), GabbroV's reuse of

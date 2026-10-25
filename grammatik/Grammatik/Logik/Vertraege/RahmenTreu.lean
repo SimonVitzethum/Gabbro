@@ -65,6 +65,10 @@ theorem Treu.weiter {W W' : D.Tab → Bool} {G G' : D.Glob → Bool} {a b : Worl
     (hW : ∀ t, W t = true → W' t = true) (hG : ∀ g, G g = true → G' g = true)
     (h : Treu W G a b) : Treu W' G' a b := ⟨h.1.weiter hW hG, h.2⟩
 
+/-- Asking outside the program changes no cell and no lock. -/
+theorem treu_fragt {W G} (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : Treu W G σ (σ.fragt q) :=
+  ⟨rahmen_gleich rfl rfl, rfl⟩
+
 /-- Everything `Satz.lean` proves is at least this. -/
 theorem Gut.treu {W G} {a b : World D} (h : Gut W G a b) : Treu W G a b := ⟨h.1, h.2.1⟩
 
@@ -311,7 +315,7 @@ variable (O : Orakel D)
 theorem axiomAntwort_treu (hO : TreuO O) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     Treu (D.aschreibt a) (D.agschreibt a) σ (axiomAntwort O a σ ρ).1 := by
   simp only [axiomAntwort]
-  exact ⟨(hO a σ ρ).1, (hO a σ ρ).2⟩
+  exact ⟨(hO a (σ.fragt (.inl a)) ρ).1, (hO a (σ.fragt (.inl a)) ρ).2⟩
 
 variable (passes : Nat)
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -532,6 +536,8 @@ theorem block_treu :
       · simp [Ausgang.welt] at h
   | .regRead r _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
+      refine (treu_fragt σ (.inr (.inl r))).trans ?_
+      generalize σ.fragt (.inr (.inl r)) = σ at h ⊢
       split at h
       · split at h
         · exact (block_treu rest σ _).schrumpf σ' h
@@ -539,6 +545,8 @@ theorem block_treu :
       · simp [Ausgang.welt] at h
   | .regReadElse r _ zusage sonst rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
+      refine (treu_fragt σ (.inr (.inl r))).trans ?_
+      generalize σ.fragt (.inr (.inl r)) = σ at h ⊢
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
         split at h
@@ -547,6 +555,8 @@ theorem block_treu :
       · simp [Ausgang.welt] at h
   | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
+      refine (treu_fragt σ (.inr (.inr g))).trans ?_
+      generalize σ.fragt (.inr (.inr g)) = σ at h ⊢
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
         exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
@@ -675,6 +685,8 @@ theorem end_treu :
       · simp [EndAusgang.welt] at h
   | .regRead r _ rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
+      refine (treu_fragt σ (.inr (.inl r))).trans ?_
+      generalize σ.fragt (.inr (.inl r)) = σ at h ⊢
       split at h
       · split at h
         · exact (end_treu rest σ _).schrumpf σ' h
@@ -682,6 +694,8 @@ theorem end_treu :
       · simp [EndAusgang.welt] at h
   | .regReadElse r _ zusage sonst rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
+      refine (treu_fragt σ (.inr (.inl r))).trans ?_
+      generalize σ.fragt (.inr (.inl r)) = σ at h ⊢
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
         split at h
@@ -690,6 +704,8 @@ theorem end_treu :
       · simp [EndAusgang.welt] at h
   | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
+      refine (treu_fragt σ (.inr (.inr g))).trans ?_
+      generalize σ.fragt (.inr (.inr g)) = σ at h ⊢
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
         exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h

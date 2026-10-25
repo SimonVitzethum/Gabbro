@@ -1629,7 +1629,7 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.regRead r hk rest) k⟩)
       (v : Wert D (D.rtyp r))
-      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
+      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r ((M.weltVon f).fragt (.inr (.inl r)))) = some v)
       (hz : D.rzusage r v = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
       RufSchrittG P O passes M f
@@ -1639,8 +1639,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, D.rtyp r :: Γ, Λ, .cons v ρ,
               .dann rest (.schrumpf k)⟩⟩,
-            (M.faeden f).spur, (M.faeden f).log⟩,
-         M.lauf, M.start⟩
+            Ereignis.fremd (.inr (.inl r)) :: (M.faeden f).spur, (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f [Ereignis.fremd (.inr (.inl r))], M.start⟩
   | dannRegLiesElseWahr (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
@@ -1652,8 +1652,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.regReadElse r hk zusage sonst rest) k⟩)
       (v : Wert D (D.rtyp r))
-      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
-      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ zusage.orte)
+      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r ((M.weltVon f).fragt (.inr (.inl r)))) = some v)
+      (σ₁ : World D) (hs₁ : σ₁ = ((M.weltVon f).fragt (.inr (.inl r))).lese Λ zusage.orte)
       (hw : wahr? (eval σ₁ zusage σ₁ (.cons v ρ)) = true)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
@@ -1677,8 +1677,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.regReadElse r hk zusage sonst rest) k⟩)
       (v : Wert D (D.rtyp r))
-      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (M.weltVon f)) = some v)
-      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ zusage.orte)
+      (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r ((M.weltVon f).fragt (.inr (.inl r)))) = some v)
+      (σ₁ : World D) (hs₁ : σ₁ = ((M.weltVon f).fragt (.inr (.inl r))).lese Λ zusage.orte)
       (hw : wahr? (eval σ₁ zusage σ₁ (.cons v ρ)) = false)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
@@ -1699,8 +1699,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (ρ : Env D Γ)
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.awaits g payload hp hL hat rest) k⟩)
-      (hvis : O.sichtbar g (M.weltVon f) = true)
-      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ [.inr g])
+      (hvis : O.sichtbar g ((M.weltVon f).fragt (.inr (.inr g))) = true)
+      (σ₁ : World D) (hs₁ : σ₁ = ((M.weltVon f).fragt (.inr (.inr g))).lese Λ [.inr g])
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
       RufSchrittG P O passes M f

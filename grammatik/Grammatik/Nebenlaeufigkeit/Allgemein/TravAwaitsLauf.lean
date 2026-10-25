@@ -456,7 +456,9 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
     rw [hsp5, hflag]
   · show (Sum.inr (), false) ∈ zugriffe M5 M6 1
     have hX : (M6.faeden 1).spur =
-        leseEv (M5.weltVon 1) taKL [Sum.inr ()] ++ (M5.faeden 1).spur := hZ6.spur
+        (leseEv ((M5.weltVon 1).fragt (Sum.inr (Sum.inr ()))) taKL [Sum.inr ()] ++
+          [Ereignis.fremd (Sum.inr (Sum.inr ()))]) ++ (M5.faeden 1).spur := by
+      rw [hZ6.spur, List.append_assoc]; rfl
     rw [zugriffe_ereignisse, ereignisse_eq hX]
     exact List.mem_cons_self
   · show ∃ (rho : Env taD (taD.params taWarte)) (s0 s1 : World taD),

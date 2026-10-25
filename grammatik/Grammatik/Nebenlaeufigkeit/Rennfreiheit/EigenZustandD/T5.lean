@@ -141,13 +141,13 @@ theorem axFeuert (σ : World D2) (ρ : Env D2 [])
   have hAns : axiomAntwort (O := O2) () (σ.lese [] [])
       (evalArgs (Γ := []) (Λ := []) (σ.lese [] [])
         (Args.nil (D := D2) (Γ := []) (Λ := [])) (σ.lese [] []) ρ) =
-      (Wflip2 (σ.lese [] []), Option.some ()) := by
+      (Wflip2 ((σ.lese [] []).fragt (.inl ())), Option.some ()) := by
     rfl
   rw [hAns] at hstep
   simp only [Option.some.injEq] at hstep
   subst hstep
   -- `Wflip2` flips the slot; `lese` keeps slots by `rfl`.
-  show (Wflip2 (σ.lese [] [])).slots () 0 () = _
+  show (Wflip2 ((σ.lese [] []).fragt (.inl ()))).slots () 0 () = _
   have hlese : (σ.lese [] []).slots () 0 () = σ.slots () 0 () := rfl
   show (!(σ.lese [] []).slots () 0 ()) = _
   rw [hlese]

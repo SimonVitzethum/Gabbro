@@ -432,10 +432,12 @@ theorem pcSchritt_blatt_progAus_ohne_axiomCall
   refine PCSchritt.leaf M pc f V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu
     hkein_nimmt Λa cs hpc hΛa ?_ ?_
   · intro e he m st hm
-    rw [hlam e he] at hm
-    rw [← hΛa] at hm
-    simp only [PCAtom.marks]
-    exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
+    rcases hlam e he with hl | hl
+    · rw [hl, ← hΛa] at hm
+      simp only [PCAtom.marks]
+      exact List.mem_filterMap.mpr ⟨Res.marke m st, hm, rfl⟩
+    · rw [hl] at hm
+      exact absurd hm List.not_mem_nil
   · intro e he o ho
     have hmem : o ∈ Extraktion.stmtTraeger tabs globs s ++ Extraktion.stmtOrte s :=
       hcar e he o ho

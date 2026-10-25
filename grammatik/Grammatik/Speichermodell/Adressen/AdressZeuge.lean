@@ -150,7 +150,7 @@ def bM0 : RufMaschineG aD := RufStartG aP aS (fun _ => ⟨false, .nil⟩)
 theorem ab_aussen : ∃ M1, RufErreichbarGX aP oB 0 (fun _ => False) bM0 M1 ∧ ¬ ImBereich aD () 7 ∧
     M1.speicher.slots () 7 () ≠ bM0.speicher.slots () 7 () := by
   refine ⟨_, gx_aus_g_lauf (.schritt _ _ 0 .start (RufSchrittG.blatt bM0 0 false [] [] [] _
-    (.ret .empty (List.Perm.refl _)) .nil rfl rfl (fun _ h => nomatch h) _ _ [] rfl rfl (by simp))),
+    (.ret .empty (List.Perm.refl _)) .nil rfl rfl (fun _ h => nomatch h) _ _ [.fremd (.inl ())] rfl rfl (by simp))),
     by simp [ImBereich], ?_⟩
   intro e
   have := congrArg Zahl.n e
