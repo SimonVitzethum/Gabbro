@@ -68,4 +68,30 @@ theorem nutzerPflichtA_aus [DecidableEq D.Fn] (E : Zielsatz.Einheit D)
     (hQ : AxEnsLokal E.Q) (hStart : StartPflicht E) : Zielsatz.NutzerPflichtA E :=
   ⟨logikPflichtA_aus h hS hQ, hStart⟩
 
+/-- **Conversely**: the three body obligations give `PflichtWP` -- the calculus loses nothing. -/
+theorem wp_aus_pflichten {P : Programm D} {passes : Nat} {Q : AxEns D} {S : SperrInv D} {T : D.Tab ⊕ D.Glob → Prop}
+    {f : D.Fn} (h : KoerperGutSA P passes Q S T f ∧ InvGutSA P passes Q S T f ∧ InvGutGrundA P passes Q S T f) :
+    PflichtWP P passes Q S T f := by
+  obtain ⟨⟨hk1, hk2⟩, hi, hg⟩ := h
+  refine ⟨fun O' h1 h2 h3 U hU A hA R hR hOV σ ρ hreq => ⟨⟨?_, ?_⟩, ?_⟩,
+    fun O' h1 h2 h3 U hU A hA R hR hOL σ ρ hreq => hk2 O' h1 h2 h3 U hU A hA R hR hOL σ ρ hreq⟩
+  · intro σ' v hrun
+    exact ⟨(hk1 O' h1 h2 h3 U hU A hA R hR hOV σ ρ hreq).1 σ' v hrun, hi O' h1 h2 h3 U hU A hA R hR hOV σ ρ hreq σ' v hrun⟩
+  · intro σ' r hrun
+    exact hg O' h1 h2 h3 U hU A hA R hR hOV σ ρ hreq σ' r hrun
+  · exact (hk1 O' h1 h2 h3 U hU A hA R hR hOV σ ρ hreq).2
+
+/-- **Completeness at the level of the goal theorem**: premise (b) holds EXACTLY when the body obligations hold as
+    weakest preconditions, the lock invariants and axiom ensures are local, and the start obligation holds. Every true
+    user logic of a certificate is provable in the calculus. -/
+theorem nutzerPflichtA_iff [DecidableEq D.Fn] (E : Zielsatz.Einheit D) :
+    Zielsatz.NutzerPflichtA E ↔
+      (∀ passes f, PflichtWP E.P passes E.Q E.S (GeteiltA E.P E.ws) f) ∧ SperrInvLokal E.S ∧ AxEnsLokal E.Q ∧
+        StartPflicht E := by
+  constructor
+  · intro h
+    exact ⟨fun passes f => wp_aus_pflichten (h.logik.1 passes f), h.logik.2.1, h.logik.2.2, h.start⟩
+  · intro ⟨h, hS, hQ, hStart⟩
+    exact nutzerPflichtA_aus E h hS hQ hStart
+
 end Gabbro.Grammatik.WP
