@@ -310,7 +310,8 @@ restricts to a `D`-object, the `D'`-run is the translated `D`-run, and the trace
 events.
 
 **Stages** (each a commit with witnesses, Lean only; LLVM later):
-* E0 the embedding: sorts, types, values, resources, signatures, contracts; the translation of syntax.
+* E0 the embedding: sorts, types (numbers mapped by `num`/`tnum`), values, resources, signatures, contracts;
+  the translation of syntax (`Zielsatz/Einbettung/{Einbettung,Ressourcen,Syntax}.lean`). DONE.
 * E1 worlds: restriction, merge with a fixed context, events and the trace (`offen` commutes with the filter).
 * E2 semantics: `eval`, `execEndHA` simulation, oracle/environment/handler restriction.
 * E3 the obligation transfer and `gabbro_ziel_projekte` over per-project declarations; a witness with two projects
@@ -319,3 +320,17 @@ events.
   then needs a contract per POINTER SIGNATURE (what every conforming callee promises); today contracts are per
   function. This is a language question (a contract on `fnptr` types) and is put to the owner before it is built;
   until then E3 requires that no foreign function conforms to a pointer type of `D` (decidable).
+
+**Finding while designing E1 (2026-10-25): obligations do not carry over WORD FOR WORD.** The user obligation (b)
+quantifies over call handlers, oracles and environments that are FUNCTIONS of the world, trace included. In a larger
+program the trace carries events the project cannot see (locks the caller holds, events a callee appended), so the
+same project-visible world can meet different answers. A proof over `D` may use "same visible world, same answer"
+(a body that calls `g()` twice with nothing in between and promises `x == y`); over `D'` that step is not valid.
+So the transfer cannot map each `D'`-object to a `D`-object pointwise.
+
+**The construction that still gives it, without changing the model or the statement:** the `D`-objects are built
+from the given `D'`-run (run-indexed), and the `D`-trace is marked with harmless access events so that every
+consultation of an outside object happens at a different `D`-world; then one function of the `D`-world reproduces
+every answer the `D'`-run receives. This needs a carrier in `D` to mark with (a table or a global; a project
+without any state is handled by a ghost carrier of its own). It is proof work, not a model change -- the strongest
+variant -- and it is the critical path of E2/E3.
