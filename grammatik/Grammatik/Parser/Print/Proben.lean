@@ -105,7 +105,7 @@ theorem rt_item_fn :
       (.block [] (some (.ret (some (.variable "a")))))) = true := by
   decide +kernel
 theorem rt_item_data :
-    rundlaufItem (.tableT "T" (some (.lit 4)) none none false
+    rundlaufItem (.tableT "T" none (some (.lit 4)) none none false
       [.tSlot [{ fname := "v", ftyp := .atom "u32", pos := none, bezug := none, wo := none,
                  reserviert := false, byOps := true }]]) = true := by
   decide +kernel

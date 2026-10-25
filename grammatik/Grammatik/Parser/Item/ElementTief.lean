@@ -595,7 +595,7 @@ inductive SItemTief
   | specT : FnSig → SExpr → SItemTief
   | asmT : FnSig → String → SItemTief
   | formatT : String → Option SExpr → Option String → List SFeld → SItemTief
-  | tableT : String → Option SExpr → Option String → Option String → Bool → List STabTeil → SItemTief
+  | tableT : String → Option String → Option SExpr → Option String → Option String → Bool → List STabTeil → SItemTief
   | arenaT : String → SExpr → SExpr → Option SExpr → STyp → Option (List String × SExpr) → SItemTief
   | whyT : String → List (String × SExpr × String) → Bool → SItemTief
   | stateT : String → List STrans → SItemTief
@@ -647,8 +647,8 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .asmT s a, .asmT t b => beqFnSig s t && strEq a b
   | .formatT a v e f, .formatT b w g h =>
     strEq a b && beqOptExpr v w && beqOptWort e g && beqSFeldList f h
-  | .tableT a c b o g p, .tableT d f e h i q =>
-    strEq a d && beqOptExpr c f && beqOptWort b e &&
+  | .tableT a v c b o g p, .tableT d w f e h i q =>
+    strEq a d && beqOptWort v w && beqOptExpr c f && beqOptWort b e &&
     beqOptWort o h && (g == i) && beqSTabTeilList p q
   | .arenaT a l h x t p, .arenaT b m i y u q =>
     strEq a b && beqSExpr l m && beqSExpr h i && beqOptExpr x y && beqSTyp t u &&
@@ -1891,7 +1891,8 @@ def parseFormatRest (f : Nat) (toks : List Token) :
         | _ => .error "endian expected"
       else .ok (((none, none)), toks)
     | _ => .ok (((none, none)), toks)
-/-- `table n [count e] [backed b] [owner o] [shared] { parts }`. -/
+/-- `table n [count e] [from p] [backed b] [owner o] [shared] { parts }`; `from p` names the provider of an OPEN
+    table (`Deklaration.anbieter`). -/
 def parseTabellenTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
@@ -1902,7 +1903,7 @@ def parseTabellenTief (f : Nat) (toks : List Token) :
       | .error e => .error e
       | .ok (n, r2) => match parseTabellenKopf f r2 with
         | .error e => .error e
-        | .ok (((cnt, backed, owner, g)), r3) =>
+        | .ok (((cnt, von, backed, owner, g)), r3) =>
           match fordereZeichen "{" r3 with
           | .error e => .error e
           | .ok r4 => match parseTabTeile f r4 with
@@ -1910,10 +1911,10 @@ def parseTabellenTief (f : Nat) (toks : List Token) :
             | .ok (ps, r5) => match fordereZeichen "}" r5 with
               | .error e => .error e
               | .ok r => .ok
-                (.tableT n cnt backed owner g ps, r)
+                (.tableT n von cnt backed owner g ps, r)
 def parseTabellenKopf (f : Nat) (toks : List Token) :
     Except String
-      ((Option SExpr × Option String × Option String × Bool) × List Token) :=
+      ((Option SExpr × Option String × Option String × Option String × Bool) × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
@@ -1922,22 +1923,27 @@ def parseTabellenKopf (f : Nat) (toks : List Token) :
         | .error e => .error e
         | .ok (e, r1) => match parseTabellenKopf f r1 with
           | .error e => .error e
-          | .ok (((_, b, o, g)), r) => .ok ((((some e, b, o, g))), r)
+          | .ok (((_, v, b, o, g)), r) => .ok ((((some e, v, b, o, g))), r)
+      else if strEq s "from" then match nimmName rest with
+        | .error e => .error e
+        | .ok (n, r1) => match parseTabellenKopf f r1 with
+          | .error e => .error e
+          | .ok (((c, _, b, o, g)), r) => .ok ((((c, some n, b, o, g))), r)
       else if strEq s "backed" then match nimmName rest with
         | .error e => .error e
         | .ok (n, r1) => match parseTabellenKopf f r1 with
           | .error e => .error e
-          | .ok (((c, _, o, g)), r) => .ok ((((c, some n, o, g))), r)
+          | .ok (((c, v, _, o, g)), r) => .ok ((((c, v, some n, o, g))), r)
       else if strEq s "owner" then match nimmName rest with
         | .error e => .error e
         | .ok (n, r1) => match parseTabellenKopf f r1 with
           | .error e => .error e
-          | .ok (((c, b, _, g)), r) => .ok ((((c, b, some n, g))), r)
+          | .ok (((c, v, b, _, g)), r) => .ok ((((c, v, b, some n, g))), r)
       else if strEq s "shared" then match parseTabellenKopf f rest with
         | .error e => .error e
-        | .ok (((c, b, o, _)), r) => .ok ((((c, b, o, true))), r)
-      else .ok ((((none, none, none, false))), toks)
-    | _ => .ok ((((none, none, none, false))), toks)
+        | .ok (((c, v, b, o, _)), r) => .ok ((((c, v, b, o, true))), r)
+      else .ok ((((none, none, none, none, false))), toks)
+    | _ => .ok ((((none, none, none, none, false))), toks)
 def parseTabTeile (f : Nat) (toks : List Token) :
     Except String (List STabTeil × List Token) :=
   match f with

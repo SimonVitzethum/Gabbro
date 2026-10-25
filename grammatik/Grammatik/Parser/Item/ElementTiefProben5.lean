@@ -64,7 +64,7 @@ def ttEnd : List Token :=
   .zeichen "}", .ende]
 theorem tEnd : beqTopTief (parseTopTief ttEnd)
     (.ok [.modT "beispiel112" [
-.tableT "Zustand" (.some (.lit 4)) .none .none false
+.tableT "Zustand" .none (.some (.lit 4)) .none .none false
       [.tSlot [{ fname := "bereit", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],

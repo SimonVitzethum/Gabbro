@@ -149,13 +149,17 @@ theorem parseLet_nameTok (x : String) (hx : x ≠ "mut") (R : List Token) (f : N
 
 theorem parseLet_nach (x : String) (hx : x ≠ "mut") (nach : List Token) (f : Nat)
     (h1 : ∀ ts, nach ≠ .zeichen "@" :: ts)
-    (h2 : ∀ s t ts, nach = .wort s :: t :: .zeichen "(" :: ts → strEq s "alloc" = false) :
+    (h2 : ∀ s t ts, nach = .wort s :: t :: .zeichen "(" :: ts → strEq s "alloc" = false)
+    (h3 : ∀ s t ts, nach = .wort s :: t :: .zeichen ";" :: ts → strEq s "alloc" = false) :
     parseLet (f + 1) (nameTok x :: .zeichen "=" :: nach) = parseLetExpr f false x none nach := by
   rw [parseLet_nameTok x hx]
   simp [parseLet, nimmName, fordereZeichen, bind, Except.bind, pure, Except.pure]
   split
   · rename_i tl
     exact absurd rfl (h1 tl)
+  · rename_i s t tl
+    have hs := h3 s t tl rfl
+    simp [hs]
   · rename_i s t tl
     have hs := h2 s t tl rfl
     simp [hs]
@@ -174,6 +178,14 @@ theorem parseLet_ausdruck (x : String) (hx : x ≠ "mut") (e : SExpr) (hg : gut 
     subst ht
     simp only [KopfGut] at hkg
     rcases hkg with h | h | h | h | h <;> exact absurd h (by decide)
+  · intro s t2 ts2 hc
+    rw [hk] at hc
+    injection hc with ht _
+    subst ht
+    simp only [KopfGut] at hkg
+    cases h : strEq s "alloc"
+    · rfl
+    · exact absurd ((strEq_eq _ _).mp h) hkg
   · intro s t2 ts2 hc
     rw [hk] at hc
     injection hc with ht _

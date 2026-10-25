@@ -8,7 +8,7 @@
     §1  Typen ohne Bereich            `u8` … `i64`, `f64` ohne `in`
     §2  Praedikatzucker               `=>`, `!=`, `>`, `>=`, `~`, `in`, `descendants of`,
                                       `ancestors of`, `chain(…) in`, `queue`, `fields of`
-    §3  Anweisungszucker              `+=` `-=` `&=` `|=`, `observes`, `on_exceeded f`,
+    §3  Anweisungszucker              `+=` `-=` `&=` `|=`, `observes`, `on_exceeded f`, `alloc T`,
                                       `accumulates … merge`, `maintains`, ein Verbundwert
     §4  Bytes als Sicht               ein `format`-Feld `@[hi:lo]`, `embeds … scale`,
                                       `offset_into`, `endian big`
@@ -210,7 +210,42 @@ variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 def onExceeded (f : D.Fn) (hp0 : D.params f = []) (hp : RufPasst D V (D.signatur f) Λ)
     (hr : D.gruende f = 0) : Block D V l Γ Λ (nach D f Λ) :=
   .cons (.call f (hp0 ▸ Args.nil) hp hr) .nil
+
+/-- The empty argument list at a parameter list known to be empty (by a match, so that `alloc` reduces where the
+    provider's parameters are concrete). -/
+def argsLeer : (ps : List Ty) → ps = [] → Args D Γ Λ ps
+  | [], _ => .nil
+
+/-- `let r = alloc T;` -- the call of `T`'s provider (`table T from p`): `let r = p();`. The provider
+    takes no arguments (`anbieter_passt`); its answer is a reference into `T` (`Block.alloc_tabelle`). -/
+def alloc (t : D.Tab) (a : D.Ax) (hp : D.anbieter t = some a) (he : D.aerg a = some (.ref n))
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (rest : Block D V l (.ref n :: Γ) Λ Λ') : Block D V l Γ Λ Λ' :=
+  .bindAxiom a (argsLeer _ (D.anbieter_passt t a hp).2.1) he hw hg hd hgd rest
+
+/-- **`alloc T` answers a reference into `T`**: the number its provider's answer type names is `T`'s. -/
+theorem alloc_tabelle {t : D.Tab} {a : D.Ax} (hp : D.anbieter t = some a) (he : D.aerg a = some (.ref n)) :
+    D.tabNr n = some t ∧ D.offen t = true := by
+  obtain ⟨ho, _, m, hm, ht⟩ := D.anbieter_passt t a hp
+  rw [he] at hm
+  cases hm
+  exact ⟨ht, ho⟩
 end Block
+
+namespace Endblock
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+/-- `let r = alloc T;` at the top level of a body: `Block.alloc` with an end-block rest. -/
+def alloc (t : D.Tab) (a : D.Ax) (hp : D.anbieter t = some a) (he : D.aerg a = some (.ref n))
+    (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+    (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (rest : Endblock D V l (.ref n :: Γ) Λ) : Endblock D V l Γ Λ :=
+  .bindAxiom a (Block.argsLeer _ (D.anbieter_passt t a hp).2.1) he hw hg hd hgd rest
+end Endblock
 
 /-! ## 4. Bytes als Sicht -/
 

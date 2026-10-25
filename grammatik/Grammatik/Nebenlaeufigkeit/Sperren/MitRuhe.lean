@@ -212,6 +212,10 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   aschreibt := D.aschreibt
   agschreibt := D.agschreibt
   agruende := D.agruende
+  anbieter := D.anbieter
+  anbieter_passt := fun t a h => by
+    obtain ⟨h1, h2, n, h3, h4⟩ := D.anbieter_passt t a h
+    exact ⟨h1, by simp [h2], n, by simp [h3, tyR], h4⟩
   Reg := D.Reg
   rtyp := fun r => tyR (D.rtyp r)
   rklasse := D.rklasse

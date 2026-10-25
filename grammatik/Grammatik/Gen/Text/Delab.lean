@@ -388,7 +388,7 @@ def delabTab (t : Fin z.tabs.length) : Except String SItemTief := do
     pure ({ fname := nFeld j, ftyp := ← typS (optTab z) fz.typ, pos := none, bezug := none, wo := none,
             reserviert := false, byOps := false } : SFeld)).mapM id
   if tz.count < 0 then throw "table with a negative count"
-  pure (.tableT (nTab t.val) (some (.lit tz.count.toNat)) none none (z.deklaration.geteilt t) [.tSlot fs])
+  pure (.tableT (nTab t.val) none (some (.lit tz.count.toNat)) none none (z.deklaration.geteilt t) [.tSlot fs])
 
 def anfang : Ty → SKonstWert
   | .int lo hi => .one (zahlE (if lo > 0 then lo else if hi < 0 then hi else 0))

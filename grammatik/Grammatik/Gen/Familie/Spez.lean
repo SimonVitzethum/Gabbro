@@ -43,6 +43,9 @@ structure TabZ where
   geist : Bool := false
   /-- `table T open`: a region without an element ceiling (`Deklaration.offen`). -/
   offen : Bool := false
+  /-- `from ax<k>`: the provider of the open table (`Deklaration.anbieter`); a provider that does not fit
+      (`Spez.anbieterPasst`) is no provider. -/
+  anbieter : Option Nat := none
   deriving DecidableEq, Repr
 
 /-- A static: its type, whether it is `atomic`, its guard (a lock or a mark with a stage), the payload it
@@ -180,6 +183,10 @@ def sigNr (n : Nat) : Signatur (Fin z.tabs.length) (Fin z.globs.length) (Fin z.l
   produziert := z.produziert n
   boden := (z.sigRoh n).boden
 
+/-- A provider fits its table: the table is open, the provider takes no arguments and answers `ref` of the table. -/
+def anbieterPasst (t : Fin z.tabs.length) (a : Fin z.axs.length) : Bool :=
+  (z.tabs.get t).offen && (z.axs.get a).params.isEmpty && (z.axs.get a).erg == some (.ref t.val)
+
 theorem eigner_ok (n : Nat) (t : Fin z.tabs.length) (m : Fin z.marken.length) (s : Nat) (h : m ∈ z.eigner t) :
     (m, s) ∉ (z.sigNr n).produziert := by
   intro hm
@@ -248,6 +255,11 @@ def deklaration : Deklaration where
   aschreibt := fun a t => (z.axs.get a).schreibt.contains t.val
   agschreibt := fun a g => (z.axs.get a).gschreibt.contains g.val
   agruende := fun a => (z.axs.get a).gruende
+  anbieter := fun t => ((z.tabs.get t).anbieter.bind (fin? z.axs.length)).filter (z.anbieterPasst t)
+  anbieter_passt := fun t a h => by
+    have hp := (Option.filter_eq_some_iff.1 h).2
+    simp only [anbieterPasst, Bool.and_eq_true, List.isEmpty_iff, beq_iff_eq] at hp
+    exact ⟨hp.1.1, hp.1.2, t.val, hp.2, by simp [fin?, t.isLt]⟩
   Reg := Fin z.regs.length
   rtyp := fun r => (z.regs.get r).typ
   rklasse := fun r => (z.regs.get r).klasse

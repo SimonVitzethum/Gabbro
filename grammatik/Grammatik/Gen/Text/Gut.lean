@@ -303,7 +303,7 @@ theorem teilGutB_sound (t : STabTeil) (h : teilGutB t = true) : TeilGut t := by
 def itemGutB : Nat → SItemTief → Bool
   | 0, _ => false
   | n + 1, .modT name its => nameForm name && its.all (itemGutB n)
-  | _ + 1, .tableT _ cnt _ _ _ parts => cnt.all gut && parts.all teilGutB
+  | _ + 1, .tableT _ _ cnt _ _ _ parts => cnt.all gut && parts.all teilGutB
   | _ + 1, .globT _ x t (.one v) al _ _ => x != "mut" && typGutB t && gut v && al.all gut
   | _ + 1, .atomT _ t pub ord _ => typGutB t && pub.all (·.all gut) && ord.all istOrdnung
   | _ + 1, .lockT _ ps rk h sh _ inv => ps.all gut && gut rk && h.all gut && sh.all gut && inv.all gut
@@ -327,9 +327,9 @@ theorem itemGutB_sound : ∀ (n : Nat) (it : SItemTief), itemGutB n it = true �
       simp only [itemGutB, Bool.and_eq_true, List.all_eq_true] at h
       have := ItemGut.modT [name] its ⟨by simp, by simpa using h.1⟩ (fun it hm => ih it (h.2 it hm))
       simpa using this
-    | .tableT x cnt b o sh parts, h =>
+    | .tableT x v cnt b o sh parts, h =>
       simp only [itemGutB, Bool.and_eq_true, List.all_eq_true] at h
-      refine .tableT x cnt b o sh parts ?_ (fun t ht => teilGutB_sound t (h.2 t ht))
+      refine .tableT x v cnt b o sh parts ?_ (fun t ht => teilGutB_sound t (h.2 t ht))
       intro e he; subst he; simpa using h.1
     | .globT m x t (.one v) al s sh, h =>
       simp only [itemGutB, Bool.and_eq_true, bne_iff_ne, ne_eq] at h

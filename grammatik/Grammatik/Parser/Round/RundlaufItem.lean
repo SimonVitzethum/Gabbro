@@ -1956,90 +1956,112 @@ def nameOptToks (w : String) : Option String → List Token
 def shToks (sh : Bool) : List Token := if sh then [.wort "shared"] else []
 
 theorem tabKopf_ende (f : Nat) (R : List Token) :
-    parseTabellenKopf (f + 1) (.zeichen "{" :: R) = .ok ((none, none, none, false), .zeichen "{" :: R) := by
+    parseTabellenKopf (f + 1) (.zeichen "{" :: R) = .ok ((none, none, none, none, false), .zeichen "{" :: R) := by
   simp [parseTabellenKopf]
 
-theorem tabKopf_shared (f : Nat) (R X : List Token) (c : Option SExpr) (b o : Option String) (g : Bool)
-    (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
-    parseTabellenKopf (f + 1) (.wort "shared" :: R) = .ok ((c, b, o, true), X) := by
+theorem tabKopf_shared (f : Nat) (R X : List Token) (c : Option SExpr) (v b o : Option String) (g : Bool)
+    (h : parseTabellenKopf f R = .ok ((c, v, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "shared" :: R) = .ok ((c, v, b, o, true), X) := by
   simp [parseTabellenKopf, h, strEq_self, (by decide : strEq "shared" "count" = false),
+    (by decide : strEq "shared" "from" = false),
     (by decide : strEq "shared" "backed" = false), (by decide : strEq "shared" "owner" = false)]
 
-theorem tabKopf_owner (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (b o : Option String)
-    (g : Bool) (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
-    parseTabellenKopf (f + 1) (.wort "owner" :: nameTok n :: R) = .ok ((c, b, some n, g), X) := by
-  simp [parseTabellenKopf, h, strEq_self, nimmName, (by decide : strEq "owner" "count" = false), (by decide : strEq "owner" "backed" = false)]
+theorem tabKopf_owner (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (v b o : Option String)
+    (g : Bool) (h : parseTabellenKopf f R = .ok ((c, v, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "owner" :: nameTok n :: R) = .ok ((c, v, b, some n, g), X) := by
+  simp [parseTabellenKopf, h, strEq_self, nimmName, (by decide : strEq "owner" "count" = false),
+    (by decide : strEq "owner" "from" = false), (by decide : strEq "owner" "backed" = false)]
 
-theorem tabKopf_backed (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (b o : Option String)
-    (g : Bool) (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
-    parseTabellenKopf (f + 1) (.wort "backed" :: nameTok n :: R) = .ok ((c, some n, o, g), X) := by
-  simp [parseTabellenKopf, h, strEq_self, nimmName, (by decide : strEq "backed" "count" = false)]
+theorem tabKopf_backed (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (v b o : Option String)
+    (g : Bool) (h : parseTabellenKopf f R = .ok ((c, v, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "backed" :: nameTok n :: R) = .ok ((c, v, some n, o, g), X) := by
+  simp [parseTabellenKopf, h, strEq_self, nimmName, (by decide : strEq "backed" "count" = false),
+    (by decide : strEq "backed" "from" = false)]
 
-theorem tabKopf_count (f : Nat) (e : SExpr) (R X : List Token) (c : Option SExpr) (b o : Option String)
+theorem tabKopf_from (f : Nat) (n : String) (R X : List Token) (c : Option SExpr) (v b o : Option String)
+    (g : Bool) (h : parseTabellenKopf f R = .ok ((c, v, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "from" :: nameTok n :: R) = .ok ((c, some n, b, o, g), X) := by
+  simp [parseTabellenKopf, h, strEq_self, nimmName, (by decide : strEq "from" "count" = false)]
+
+theorem tabKopf_count (f : Nat) (e : SExpr) (R X : List Token) (c : Option SExpr) (v b o : Option String)
     (g : Bool) (hO : parseOr f (druckToks e ++ R) = .ok (e, R))
-    (h : parseTabellenKopf f R = .ok ((c, b, o, g), X)) :
-    parseTabellenKopf (f + 1) (.wort "count" :: (druckToks e ++ R)) = .ok ((some e, b, o, g), X) := by
+    (h : parseTabellenKopf f R = .ok ((c, v, b, o, g), X)) :
+    parseTabellenKopf (f + 1) (.wort "count" :: (druckToks e ++ R)) = .ok ((some e, v, b, o, g), X) := by
   simp [parseTabellenKopf, h, hO, strEq_self]
 
-theorem tabKopf_rund (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
+theorem tabKopf_rund (cnt : Option SExpr) (von backed owner : Option String) (sh : Bool)
     (hc : ∀ e, cnt = some e → gut e = true) (R : List Token) (F : Nat)
-    (hF : 8 * (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh).length + 40 ≤ F) :
-    parseTabellenKopf F (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh ++
-      .zeichen "{" :: R) = .ok ((cnt, backed, owner, sh), .zeichen "{" :: R) := by
+    (hF : 8 * (cntToks cnt ++ nameOptToks "from" von ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++
+      shToks sh).length + 40 ≤ F) :
+    parseTabellenKopf F (cntToks cnt ++ nameOptToks "from" von ++ nameOptToks "backed" backed ++
+      nameOptToks "owner" owner ++ shToks sh ++ .zeichen "{" :: R) =
+      .ok ((cnt, von, backed, owner, sh), .zeichen "{" :: R) := by
   have L1 : ∀ G, 2 ≤ G → parseTabellenKopf G (shToks sh ++ .zeichen "{" :: R) =
-      .ok ((none, none, none, sh), .zeichen "{" :: R) := by
+      .ok ((none, none, none, none, sh), .zeichen "{" :: R) := by
     intro G hG
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 2 := ⟨G - 2, by omega⟩
     cases sh
     · simpa [shToks] using tabKopf_ende (G' + 1) R
-    · simpa [shToks] using tabKopf_shared (G' + 1) _ _ none none none false (tabKopf_ende G' R)
+    · simpa [shToks] using tabKopf_shared (G' + 1) _ _ none none none none false (tabKopf_ende G' R)
   have L2 : ∀ G, 3 ≤ G → parseTabellenKopf G (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R)) =
-      .ok ((none, none, owner, sh), .zeichen "{" :: R) := by
+      .ok ((none, none, none, owner, sh), .zeichen "{" :: R) := by
     intro G hG
     cases owner with
     | none => simpa [nameOptToks] using L1 G (by omega)
     | some o =>
       obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
-      simpa [nameOptToks] using tabKopf_owner G' o _ _ none none none sh (L1 G' (by omega))
+      simpa [nameOptToks] using tabKopf_owner G' o _ _ none none none none sh (L1 G' (by omega))
   have L3 : ∀ G, 4 ≤ G → parseTabellenKopf G (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++
-      (shToks sh ++ .zeichen "{" :: R))) = .ok ((none, backed, owner, sh), .zeichen "{" :: R) := by
+      (shToks sh ++ .zeichen "{" :: R))) = .ok ((none, none, backed, owner, sh), .zeichen "{" :: R) := by
     intro G hG
     cases backed with
     | none => simpa [nameOptToks] using L2 G (by omega)
     | some b =>
       obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
-      simpa [nameOptToks] using tabKopf_backed G' b _ _ none none owner sh (L2 G' (by omega))
+      simpa [nameOptToks] using tabKopf_backed G' b _ _ none none none owner sh (L2 G' (by omega))
+  have L4 : ∀ G, 5 ≤ G → parseTabellenKopf G (nameOptToks "from" von ++ (nameOptToks "backed" backed ++
+      (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R)))) =
+      .ok ((none, von, backed, owner, sh), .zeichen "{" :: R) := by
+    intro G hG
+    cases von with
+    | none => simpa [nameOptToks] using L3 G (by omega)
+    | some p =>
+      obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
+      simpa [nameOptToks] using tabKopf_from G' p _ _ none none backed owner sh (L3 G' (by omega))
   simp only [List.append_assoc] at hF ⊢
   cases cnt with
-  | none => simpa [cntToks] using L3 F (by simp [cntToks] at hF; omega)
+  | none => simpa [cntToks] using L4 F (by simp [cntToks] at hF; omega)
   | some e =>
     have he := hc e rfl
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by simp [cntToks] at hF; omega⟩
-    have hrX : ruhig (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R))) = true ∧
-        ruhigSuff (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R))) = true ∧
-        ruhigGleit (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++ (shToks sh ++ .zeichen "{" :: R))) = true := by
-      cases backed <;> cases owner <;> cases sh <;> exact ⟨rfl, rfl, rfl⟩
+    have hrX : ruhig (nameOptToks "from" von ++ (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++
+          (shToks sh ++ .zeichen "{" :: R)))) = true ∧
+        ruhigSuff (nameOptToks "from" von ++ (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++
+          (shToks sh ++ .zeichen "{" :: R)))) = true ∧
+        ruhigGleit (nameOptToks "from" von ++ (nameOptToks "backed" backed ++ (nameOptToks "owner" owner ++
+          (shToks sh ++ .zeichen "{" :: R)))) = true := by
+      cases von <;> cases backed <;> cases owner <;> cases sh <;> exact ⟨rfl, rfl, rfl⟩
     have hO := ausdruck e he _ F' hrX.1 hrX.2.1 hrX.2.2 (by simp [cntToks] at hF; omega)
-    have := tabKopf_count F' e _ _ none backed owner sh hO (L3 F' (by simp [cntToks] at hF; omega))
+    have := tabKopf_count F' e _ _ none von backed owner sh hO (L4 F' (by simp [cntToks] at hF; omega))
     simpa [cntToks] using this
 
-theorem item_table (n : String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
-    (parts : List STabTeil) (hc : ∀ e, cnt = some e → gut e = true) (hp : ∀ t ∈ parts, TeilGut t) :
-    ItemBein (.tableT n cnt backed owner sh parts) := by
+theorem item_table (n : String) (von : Option String) (cnt : Option SExpr) (backed owner : Option String)
+    (sh : Bool) (parts : List STabTeil) (hc : ∀ e, cnt = some e → gut e = true) (hp : ∀ t ∈ parts, TeilGut t) :
+    ItemBein (.tableT n von cnt backed owner sh parts) := by
   intro rest F hF
-  have hd : druckItem (.tableT n cnt backed owner sh parts) ++ rest = .wort "table" :: nameTok n ::
-      (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh ++
-        .zeichen "{" :: (druckTabTeile parts ++ .zeichen "}" :: rest)) := by
-    cases cnt <;> cases backed <;> cases owner <;> cases sh <;>
+  have hd : druckItem (.tableT n von cnt backed owner sh parts) ++ rest = .wort "table" :: nameTok n ::
+      (cntToks cnt ++ nameOptToks "from" von ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++
+        shToks sh ++ .zeichen "{" :: (druckTabTeile parts ++ .zeichen "}" :: rest)) := by
+    cases cnt <;> cases von <;> cases backed <;> cases owner <;> cases sh <;>
       simp [druckItem, cntToks, nameOptToks, shToks]
-  have hlen : (druckItem (.tableT n cnt backed owner sh parts)).length = 2 +
-      (cntToks cnt ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++ shToks sh).length + 1 +
-      (druckTabTeile parts).length + 1 := by
-    cases cnt <;> cases backed <;> cases owner <;> cases sh <;>
+  have hlen : (druckItem (.tableT n von cnt backed owner sh parts)).length = 2 +
+      (cntToks cnt ++ nameOptToks "from" von ++ nameOptToks "backed" backed ++ nameOptToks "owner" owner ++
+        shToks sh).length + 1 + (druckTabTeile parts).length + 1 := by
+    cases cnt <;> cases von <;> cases backed <;> cases owner <;> cases sh <;>
       simp [druckItem, cntToks, nameOptToks, shToks] <;> omega
   simp only [fbI, hlen] at hF
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 3 := ⟨F - 3, by omega⟩
-  have hK := tabKopf_rund cnt backed owner sh hc (druckTabTeile parts ++ .zeichen "}" :: rest) F' (by omega)
+  have hK := tabKopf_rund cnt von backed owner sh hc (druckTabTeile parts ++ .zeichen "}" :: rest) F' (by omega)
   have hT := tabTeile_rund parts rest F' hp (by omega)
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_table]
   simp only [List.append_assoc] at hK

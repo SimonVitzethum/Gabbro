@@ -1630,7 +1630,7 @@ program can use storage without a declared element ceiling. The Lean model comes
 
 ### 14.1 The forms (Lean model, `Kern/`)
 
-* **`Deklaration.offen : Tab → Bool`** (default `false`): `table T open`. An open table is a region; its cells are not bounded by
+* **`Deklaration.offen : Tab → Bool`** (default `false`): `table T from p`. An open table is a region; its cells are not bounded by
   `count`.
 * **`Ty.ref t`**: a reference into open table number `t`. Its value is a cell number with no upper bound (`Val.zelle : Nat`).
 * **Where a reference comes from (Simon, 2026-10-24): ONLY from the program's memory provider.** A reference is the answer of a
@@ -1641,6 +1641,15 @@ program can use storage without a declared element ceiling. The Lean model comes
   read and write a field of cell `r` of the open table `t`, under exactly the guards of a slot access (`darf D t Λ`,
   `V.schreibt t`); the access records the read/write of `t` like `slot`/`assignSlot`.
 * The new constructors stand at the END of `Expr` and `Stmt`, so the fine cells of the existing constructors keep their numbers.
+* **`alloc T` (Simon, 2026-10-24)**: `table T from p` names the provider of an open table (the table is open exactly when it
+  names one; no new word: `from`, `index into T` and `alloc` are in the vocabulary already)
+  (`Deklaration.anbieter : Tab → Option Ax`), and `let r = alloc T;` is the call of that provider. It is SUGAR
+  (`Block.alloc`/`Endblock.alloc`, `Zucker.lean`): by definition the `bindAxiom` of the provider, with no constructor
+  and no meaning of its own, so machine G, `Akzeptiert` and `gabbro_ziel` are untouched. A declaration whose provider does
+  not fit cannot be built (`Deklaration.anbieter_passt`: the table is open, the provider takes no arguments and answers
+  `ref T`); `Block.alloc_tabelle` states that the answer points into `T`. The provider's body (the system calls that fetch
+  memory) is Gabbro code, checked as user logic like any other. No macro layer and no compile-time execution: the
+  form is fixed, and nothing runs at compile time beyond the `const` fragment.
 
 ### 14.2 The address leg of the goal (Simon, 2026-10-24: address spaces)
 
@@ -1660,9 +1669,11 @@ of its table) and the fine-cell universe (type class `ref` = 9). `gabbro_ziel` k
 
 ### 14.4 Still open
 
-Done: `Bausteine/Arena/Unbounded/GRegion.lean` -- `let r = neu(); r->x = 7; return;` on an open table with `count 0`:
+Done: `Bausteine/Arena/Unbounded/GRegion.lean` -- `let r = alloc T; r->x = 7; return;` on an open table with `count 0`
+(`rumpf_ist_anbieterruf`: the provider's call; `alloc_in_T`: the answer points into `T`):
 the provider's cell `K` is written (`zelle_geschrieben`), for every `K` (`kein_statisches_limit`), the cell is in the
 region's extent (`zelle_im_bereich`), and the core checker accepts the program (`prog_akzeptiert`).
 
 Open: a refinement theorem from the G region to `ArenaStorage.Heap` with `Capacity.unbounded`, ownership rules for reference accesses, the generator's declarations with open
-tables (otherwise the new fine cells are unreachable for M and N), the Brainfuck bridge on the open region, then Rust.
+tables (otherwise the new fine cells are unreachable for M and N), the Brainfuck bridge on the open region, then Rust (the parser and checker for `table T from p`, `index into T` at an open table and `alloc T`;
+`SYNTAX.md`/`LANGUAGE.md`).
