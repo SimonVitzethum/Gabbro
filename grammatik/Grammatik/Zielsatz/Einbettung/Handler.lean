@@ -277,14 +277,16 @@ def umweltΦ (S : SperrInv D) (U' : Umwelt D') : Umwelt D :=
 noncomputable def aumweltΦ (T : D.Tab ⊕ D.Glob → Prop) (A' : AUmwelt D') : AUmwelt D :=
   fun X σ => mischT T X σ (E.speicherZ hZ (A' (X.map E.ortE) (Φ.atom σ)).speicher)
 
-/-- **The induced oracle.** -/
+/-- **The induced oracle.** Visibility of a global that carries function pointers is answered
+    constantly: no awaited global carries one (`Rueck.atomFrei`), and only so is the oracle
+    local to the carrier it asks about. -/
 def orakelΦ (O' : Orakel D') : Orakel D where
   wirkt := fun a σ ρ =>
     let x := O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)
     (E.antwortWelt hZ pad σ x.1, x.2)
   regLies := fun r σ => O'.regLies (E.reg r) (Φ.haupt σ)
   regSchreib := fun _ _ => ()
-  sichtbar := fun g σ => O'.sichtbar (E.glob g) (Φ.haupt σ)
+  sichtbar := fun g σ => if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.haupt σ) else true
   zeiger := fun _ => Option.none
 
 end Induziert

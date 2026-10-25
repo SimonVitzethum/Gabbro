@@ -153,8 +153,9 @@ theorem zelle_valE {n : Nat} (v : Wert D (.ref n)) : (E.valE (.ref n) v).zelle =
 theorem orakelΦ_regLies (Φ : Phi D D') (r : D.Reg) (σ : World D) :
     (E.orakelΦ hZ pad Φ O').regLies r σ = O'.regLies (E.reg r) (Φ.haupt σ) := rfl
 
-theorem orakelΦ_sichtbar (Φ : Phi D D') (g : D.Glob) (σ : World D) :
-    (E.orakelΦ hZ pad Φ O').sichtbar g σ = O'.sichtbar (E.glob g) (Φ.haupt σ) := rfl
+theorem orakelΦ_sichtbar (Φ : Phi D D') (g : D.Glob) (σ : World D) (h : (D.gtyp g).zeigerfrei = true) :
+    (E.orakelΦ hZ pad Φ O').sichtbar g σ = O'.sichtbar (E.glob g) (Φ.haupt σ) := by
+  simp only [orakelΦ, h, if_true]
 
 theorem orakelΦ_zeiger (Φ : Phi D D') :
     (E.orakelΦ hZ pad Φ O').zeiger = fun _ => Option.none := rfl
@@ -849,9 +850,10 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
       have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
         rw [List.map_cons, E.gtyp]
+      have hzf := hZ.atomFrei g hat
       cases hvis : O'.sichtbar (E.glob g) (leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)])
       · refine ⟨_, .hardware (.sichtbarkeit D.a10), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
-        · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hΦ2 Φ hP, hvis,
+        · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hzf, hΦ2 Φ hP, hvis,
             Bool.false_eq_true, ↓reduceIte]
         · simp only [exB, execBlockHA, hvis, Bool.false_eq_true, ↓reduceIte]
           trivial
@@ -859,7 +861,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
           _ σ₁ _ (.cons (σ₁.globs g) ρ) (.cons ((leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)]).globs
             (E.glob g)) ρ') hk2 (E.envR_cons hZ hρ _ _ (E.gtyp g) (hk2.treu.2 g))
         refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
-        · simp only [execBlockHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), orakelΦ_sichtbar,
+        · simp only [execBlockHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), orakelΦ_sichtbar, hzf,
             hΦ2 Φ (passt_teil hP hs3), hvis, ↓reduceIte]
           exact congrArg Ausgang.schrumpf (hΦ3 Φ hP)
         · simp only [exB, execBlockHA, hvis, ↓reduceIte]
@@ -1361,9 +1363,10 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
       have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
         rw [List.map_cons, E.gtyp]
+      have hzf := hZ.atomFrei g hat
       cases hvis : O'.sichtbar (E.glob g) (leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)])
       · refine ⟨_, .hardware (.sichtbarkeit D.a10), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
-        · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hΦ2 Φ hP, hvis,
+        · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hzf, hΦ2 Φ hP, hvis,
             Bool.false_eq_true, ↓reduceIte]
         · simp only [exEnd, execEndHA, hvis, Bool.false_eq_true, ↓reduceIte]
           trivial
@@ -1371,7 +1374,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
           _ σ₁ _ (.cons (σ₁.globs g) ρ) (.cons ((leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)]).globs
             (E.glob g)) ρ') hk2 (E.envR_cons hZ hρ _ _ (E.gtyp g) (hk2.treu.2 g))
         refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
-        · simp only [execEndHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), orakelΦ_sichtbar,
+        · simp only [execEndHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), orakelΦ_sichtbar, hzf,
             hΦ2 Φ (passt_teil hP hs3), hvis, ↓reduceIte]
           exact congrArg EndAusgang.schrumpf (hΦ3 Φ hP)
         · simp only [exEnd, execEndHA, hvis, ↓reduceIte]
