@@ -93,6 +93,7 @@ rules('grammatik/Grammatik/Parser', [
     (r'^Element\w*$', 'Item'),
     (r'^Rundlauf\w*$', 'Round'),
     (r'^Uebersetze\w*$', 'Elab'),
+    (r'^Namensraum\w*$', 'Namen'),
 ])
 
 # The elaboration's witness files (Track P): one folder of their own, so `Elab` stays under the limit.
