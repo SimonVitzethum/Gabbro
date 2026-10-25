@@ -41,6 +41,10 @@ def G_GROESSE : String :=
   "not reached within the bounds: the form needs a larger body or program (calls, axiom calls, register reads, " ++
   "exchanges, several functions), or a typed context the family lacks"
 
+def G_REGION : String :=
+  "the open region (PLAN-DYNAMIC 14): the bounded family declares no open table; the region is exercised by the fine " ++
+  "member `region` (Gen/Fein/Mitglieder) and the witnesses GRegion and UebersetzeProben40"
+
 /-- **The known gaps**: members of the register that no generated program contains within the bounds, each with the
     reason. The list is exact: a gap that is closed is removed, a new gap is a failure. -/
 def bekannteLuecken : List (String × String) :=
@@ -101,6 +105,13 @@ def bekannteLuecken : List (String × String) :=
    ("GrundArms.nil", G_GROESSE),
    ("GrundArms.cons", G_GROESSE),
    ("Programm.invariante", G_INV),
+   ("Ty.ref", G_REGION),
+   ("Deklaration.offen", G_REGION),
+   ("Deklaration.anbieter", G_REGION),
+   ("Deklaration.anbieter_passt", G_REGION),
+   ("Expr.refEq", G_REGION),
+   ("Expr.slotRef", G_REGION),
+   ("Stmt.assignSlotRef", G_REGION),
   ]
 
 /-- The members that are execution residues of the replay machine G: not terms of a program. -/
