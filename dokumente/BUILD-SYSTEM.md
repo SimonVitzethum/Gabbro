@@ -281,8 +281,9 @@ Proved in Lean (THEOREM-MAP §94), all axiom lists standard:
   every leg across project boundaries, `besitz` over the arenas of all projects.
 * Contract-free projects owe no hand-written proof (`nutzerTeilO_ohne`), via the generalized soundness of
   `logikFrei`.
-* Witnesses where a shared atomic, a call with contract + a lock held across it + a guarded table + an invariant,
-  and an allocation cross the boundary.
+* Witnesses for every unit and every boundary (`schnitt`, `projekte_zeuge`): whatever the unit carries across
+  the boundary -- a shared atomic, a call with contract and a lock held across it, a guarded table, an invariant,
+  an allocation -- crosses a project boundary.
 
 Found while proving, and next:
 * **Reuse across programs needs an embedding of declarations.** The projects are stated over ONE link declaration
@@ -294,7 +295,7 @@ Found while proving, and next:
   `stufen` over the composed program.
 * Name spaces (7.6): Lean done (copy + path names, project-relative paths, visibility); Rust follows.
 * Witnesses still to build: a thread spawned in one project running code of the other (the callback witness is
-  `einbettung_zeuge` with `zeuge_rueckruf`, 7.10).
+  `einbettung_zeuge` with `rueckruf_echt`, 7.10).
 * `GabbroZielVerbund` for n units with every leg (7.7), then the build accepts dependencies.
 
 ### 7.10 Design: the embedding theorem (reuse without re-proof, 2026-10-25)
@@ -327,14 +328,13 @@ events.
   (`Handler.lean`), the run relation (`Lauf.lean`), loops (`Schleifen.lean`), and every statement, block, end
   block and arm list of `D` beside its image (`Koerper.lean`: `sim_stmt` ... `sim_grund`). DONE.
 * E3 the obligation transfer: `logikPflicht_E` (`Uebertragung.lean`) with the lawfulness of the induced handlers
-  (`Pflicht.lean`) and the witness `einbettung_zeuge` (`Zeuge.lean`: a library with a table embedded into a
-  program with a table and a function of its own). DONE. Still open: `gabbro_ziel_projekte` over per-project
-  declarations (feeding `logikPflicht_E` into `NutzerTeilO`).
+  (`Pflicht.lean`) and the witness `einbettung_zeuge` (`Zeuge.lean`: every library embedded into the
+  program that adds a callback). DONE; `nutzerTeilO_E` feeds it into `NutzerTeilO` (`Projekt.lean`).
 * E4 callbacks (below; no change of `Spec.lean`). DONE: `Rueck`, `VRel` and the call keys (`Welt.lean`,
   `Schritt.lean`, `Handler.lean`), the relational simulation (`Koerper.lean`), `RueckVertrag` and
-  `konform_vertrag` (`Pflicht.lean`), the field `rueck` of `Uebernahme`; the witness `einbettung_zeuge` now has a
-  real callback (`zeuge_rueckruf`: the program's own function conforms to the library's signature from outside
-  the image).
+  `konform_vertrag` (`Pflicht.lean`), the field `rueck` of `Uebernahme`; the witness `einbettung_zeuge` holds for
+  every library, with a real callback (`rueckruf_echt`: one function outside the image conforms to the signature
+  of the library function `g₀`, which is its head).
 
 **E4: callbacks across the boundary without a change of the goal statement.** Before E4, `ZeigerfreiD` kept
 every function pointer out of a project's state and interface, because a foreign function has no name in `D`. The

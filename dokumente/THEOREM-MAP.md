@@ -4772,7 +4772,7 @@ Full library plus audit: 2,234 jobs; 58 G-stack axiom lists, all standard; no-ho
 
 ## 94. Linking projects: the whole program as the guarantee carrier (2026-10-25)
 
-`Zielsatz/Projekte/{Komposition,Ziel,Ohne,ZeugeAtomar,ZeugeSperre,ZeugeBesitz}.lean`, `ZielOrt/Grundlage/ZielOrtGanz/T2.lean`.
+`Zielsatz/Projekte/{Komposition,Ziel,Ohne,Zeuge}.lean`, `ZielOrt/Grundlage/ZielOrtGanz/T2.lean`.
 Scope: `BUILD-SYSTEM.md` §7 (plan) -- several projects, each with its own source, build file and proofs, linked into
 ONE program; every guarantee holds across project boundaries because the program is one unit for `GabbroZiel`.
 
@@ -4789,13 +4789,12 @@ ONE program; every guarantee holds across project boundaries because the program
 * `Endblock.logikFrei_ok` (generalized): every property of the callees' `logik` answers carries over to a
   `logikFrei` body; `koerperGutR_ohne`, `logikPflicht_ohne`, `nutzerTeilO_ohne`: a project without contracts,
   invariants and atomic globals whose bodies pass `logikFrei` owes no hand-written proof.
-* Witnesses (all premises discharged, the concrete checker by `decide`): `projekte_zeuge` + `grenze` (a SHARED
-  ATOMIC written in the library, read in the application), `projekte_sperre_zeuge` + `grenze` (a CALL with a
-  contract, a LOCK held across it, a guarded TABLE and a table INVARIANT across the boundary),
-  `projekte_besitz_zeuge`, `besitz_ueber_die_grenze` + `grenze` (an ALLOCATION made in the library and released
-  in the application; the actual run allocates slot 0 and frees it).
-* Open (BUILD-SYSTEM.md §7.9): reuse of a project's proof across programs whose link declarations differ (an
-  embedding of declarations), name spaces in the Lean front end, `GabbroZielVerbund` for n units with every leg.
+* Witnesses, for every unit and no particular program (`Zeuge.lean`): `schnitt` cuts any unit into two projects at
+  any boundary `eigen`; `schnitt_verbindbar`, `schnitt_deckend`, `schnitt_komponiere` (they compose back into the
+  unit), `schnitt_nutzer`; `projekte_zeuge`: every leg of `ZielFX` for the linked program of every accepted unit
+  and every boundary; `schnitt_grenze`: every call, lock, guarded table, invariant, shared atomic and arena of the
+  unit that crosses `eigen` crosses a project boundary.
+* Open (BUILD-SYSTEM.md §7.9): `GabbroZielVerbund` for n units with every leg.
 
 All axiom lists standard.
 
@@ -4818,13 +4817,17 @@ Koerper,Pflicht,Uebertragung,Zeuge}.lean`. Scope: `BUILD-SYSTEM.md` §7.10.
   obligation; `req_E`, `ens_E`: contracts hold exactly when their images do.
 * **`logikPflicht_E`**: `LogikPflichtA P S Q T` of the project gives `KoerperGutSA`, `InvGutSA`, `InvGutGrundA` of the
   linking program at every image function, for every budget, under `Uebernahme`, `Rueck`, `PadOk`.
-* Witness: `einbettung_zeuge` with `zeuge_fremd` (the embedding is not onto: the program's own table and function).
+* Witness, for every library and no particular program (`Zeuge.lean`): `erweitert D g₀` -- `D` with one function
+  outside it that has `g₀`'s signature and conformance; `einE`, `sigTreu_einE`, `rueckE`, `programmE`,
+  `uebernahmeE` prove every link condition for every library; `einbettung_zeuge` (`logikPflicht_E` on it),
+  `rueckruf_echt` (the callback is outside the image and has `g₀` as head), `nutzerTeil_zeuge` (`Projekt.lean`,
+  the library's part of (b) in that program).
 * **E4, callbacks**: `Rueck` (a head per pointer signature, pointer-free hardware answers), `VRel` (a value of `D`
   beside one of `D'`: at a function pointer the image or a foreign conforming function), call keys
   (`Inv.merkeRuf`, `ruf_schritt`); `RueckVertrag` and `konform_vertrag`: every callee that may stand where `D` calls
   `g` keeps `g`'s frames and contract; `rufΦ_fall`: the induced call handler answers as such a callee;
-  `logikPflicht_E` now needs `Rueck` and `Uebernahme.rueck` instead of `ZeigerfreiD`. Witness: `zeuge_rueckruf`
-  (the program's own function is a callback with the library's function as head) inside `einbettung_zeuge`.
+  `logikPflicht_E` now needs `Rueck` (with `AntwortFrei D`) and `Uebernahme.rueck` instead of `ZeigerfreiD`;
+  witness `rueckruf_echt`.
 
 ## 96. Stage 0 of self-hosting: the Lean runtime (2026-10-25)
 
