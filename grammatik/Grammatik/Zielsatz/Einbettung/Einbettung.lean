@@ -9,8 +9,9 @@ import Grammatik.Zielsatz.Kern.Spec
   it has a larger declaration `D'`. `Einbettung D D'` says how `D` sits in `D'`: an injection of
   every sort with its partial inverse, a bijection of the fields of every table, and the
   preservation of every attribute the semantics or the checker reads of an item of `D`. The
-  table and signature NUMBERS the project's types name keep their meaning, so a type of `D` is the
-  same type in `D'` and only the values of function-pointer type are mapped.
+  table and signature NUMBERS map injectively (`tnum`, `num`), so a type of `D` translates to a
+  type of `D'` (`tyN`: only `fnptr`, `ptr` and `ref` change their number) and the program keeps
+  free numbers for its own signatures and tables.
 
   A diamond of projects is two embeddings into one `D'`; no quotient is needed.
 
@@ -22,8 +23,26 @@ namespace Gabbro.Grammatik.Einbettung
 
 open Gabbro.Grammatik
 
+/-- **A type under the number maps**: signature numbers by `sn`, table numbers by `tn`. -/
+@[reducible] def tyN (sn tn : Nat → Nat) : Ty → Ty
+  | .int lo hi => .int lo hi
+  | .bool => .bool
+  | .opt n => .opt n
+  | .sum cs => .sum cs
+  | .why n => .why n
+  | .never => .never
+  | .fl lo hi => .fl lo hi
+  | .fnptr n => .fnptr (sn n)
+  | .ptr t rw => .ptr (tn t) rw
+  | .ref t => .ref (tn t)
+
 /-- **`D` inside `D'`.** -/
 structure Einbettung (D D' : Deklaration) where
+  -- the numbers: signature numbers (`fnptr`) and table numbers (`ptr`, `ref`)
+  num : Nat → Nat
+  num_inj : ∀ a b, num a = num b → a = b
+  tnum : Nat → Nat
+  tnum_inj : ∀ a b, tnum a = tnum b → a = b
   -- tables, and the fields of each
   tab : D.Tab → D'.Tab
   tabZ : D'.Tab → Option D.Tab
@@ -35,7 +54,7 @@ structure Einbettung (D D' : Deklaration) where
   feld_feldZ : ∀ t f, feld t (feldZ t f) = f
   count : ∀ t, D'.count (tab t) = D.count t
   offen : ∀ t, D'.offen (tab t) = D.offen t
-  typ : ∀ t f, D'.typ (tab t) (feld t f) = D.typ t f
+  typ : ∀ t f, D'.typ (tab t) (feld t f) = tyN num tnum (D.typ t f)
   erlaubt : ∀ t f, D'.erlaubt (tab t) (feld t f) = D.erlaubt t f
   geteilt : ∀ t, D'.geteilt (tab t) = D.geteilt t
   geist : ∀ t, D'.geist (tab t) = D.geist t
@@ -44,7 +63,7 @@ structure Einbettung (D D' : Deklaration) where
   globZ : D'.Glob → Option D.Glob
   globZ_glob : ∀ g, globZ (glob g) = some g
   glob_globZ : ∀ g' g, globZ g' = some g → glob g = g'
-  gtyp : ∀ g, D'.gtyp (glob g) = D.gtyp g
+  gtyp : ∀ g, D'.gtyp (glob g) = tyN num tnum (D.gtyp g)
   nutzlast : ∀ g, D'.nutzlast (glob g) = (D.nutzlast g).map glob
   atomar : ∀ g, D'.atomar (glob g) = D.atomar g
   ggeteilt : ∀ g, D'.ggeteilt (glob g) = D.ggeteilt g
@@ -69,8 +88,6 @@ structure Einbettung (D D' : Deklaration) where
   fnZ : D'.Fn → Option D.Fn
   fnZ_fn : ∀ f, fnZ (fn f) = some f
   fn_fnZ : ∀ f' f, fnZ f' = some f → fn f = f'
-  /-- The signature numbers the project's types name (`fnptr n`), with their signatures. -/
-  nummer : Nat → Bool
   -- invariants
   inv : D.Inv → D'.Inv
   invZ : D'.Inv → Option D.Inv
@@ -83,8 +100,8 @@ structure Einbettung (D D' : Deklaration) where
   axZ : D'.Ax → Option D.Ax
   axZ_ax : ∀ a, axZ (ax a) = some a
   ax_axZ : ∀ a' a, axZ a' = some a → ax a = a'
-  aparams : ∀ a, D'.aparams (ax a) = D.aparams a
-  aerg : ∀ a, D'.aerg (ax a) = D.aerg a
+  aparams : ∀ a, D'.aparams (ax a) = (D.aparams a).map (tyN num tnum)
+  aerg : ∀ a, D'.aerg (ax a) = (D.aerg a).map (tyN num tnum)
   agruende : ∀ a, D'.agruende (ax a) = D.agruende a
   aschreibt : ∀ a t', D'.aschreibt (ax a) t' = (match tabZ t' with | some t => D.aschreibt a t | none => false)
   agschreibt : ∀ a g', D'.agschreibt (ax a) g' =
@@ -95,17 +112,18 @@ structure Einbettung (D D' : Deklaration) where
   regZ : D'.Reg → Option D.Reg
   regZ_reg : ∀ r, regZ (reg r) = some r
   reg_regZ : ∀ r' r, regZ r' = some r → reg r = r'
-  rtyp : ∀ r, D'.rtyp (reg r) = D.rtyp r
+  rtyp : ∀ r, D'.rtyp (reg r) = tyN num tnum (D.rtyp r)
   rklasse : ∀ r, D'.rklasse (reg r) = D.rklasse r
   spiegel : ∀ r, D'.spiegel (reg r) = (D.spiegel r).map reg
   rtraeger : ∀ r, D'.rtraeger (reg r) = (D.rtraeger r).map (Sum.map tab glob)
   -- assumptions
   annahme : D.Annahme → D'.Annahme
   a10 : annahme D.a10 = D'.a10
-  -- table numbers keep their table
-  tabNr : ∀ n t, D.tabNr n = some t → D'.tabNr n = some (tab t)
-  -- conformance and signatures (the remaining fields need `sigE`, below)
-  passt : ∀ f n, D'.passt (fn f) n = D.passt f n
+  -- a table number names the image of its table
+  tabNr : ∀ n, D'.tabNr (tnum n) = (D.tabNr n).map tab
+  -- conformance (the signatures themselves need `sigE`, below: `SigTreu`)
+  sig : ∀ f, D'.sig (fn f) = num (D.sig f)
+  passt : ∀ f n, D'.passt (fn f) (num n) = D.passt f n
 
 variable {D D' : Deklaration}
 
@@ -115,8 +133,11 @@ variable (E : Einbettung D D')
 
 /-! ## Values, resources, signatures, contracts -/
 
-/-- A value of `D` as the same type's value in `D'`: only a function pointer moves. -/
-def valE : (τ : Ty) → Wert D τ → Wert D' τ
+/-- A type of `D` as a type of `D'`. -/
+@[reducible] def tyE (τ : Ty) : Ty := tyN E.num E.tnum τ
+
+/-- A value of `D` as a value of the translated type: only a function pointer moves. -/
+def valE : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ)
   | .int _ _, v => v
   | .bool, v => v
   | .opt _, v => v
@@ -129,7 +150,7 @@ def valE : (τ : Ty) → Wert D τ → Wert D' τ
   | .ref _, v => v
 
 /-- A result value. -/
-def ergE : (e : Option Ty) → ErgVal D e → ErgVal D' e
+def ergE : (e : Option Ty) → ErgVal D e → ErgVal D' (e.map E.tyE)
   | none, v => v
   | some τ, v => E.valE τ v
 
@@ -141,10 +162,10 @@ def resE : Res D → Res D'
 /-- A carrier. -/
 def ortE : D.Tab ⊕ D.Glob → D'.Tab ⊕ D'.Glob := Sum.map E.tab E.glob
 
-/-- A signature: writes are the image's, locks and marks mapped, types unchanged. -/
+/-- A signature: types translated, writes are the image's, locks and marks mapped. -/
 def sigE (S : Signatur D.Tab D.Glob D.Lock D.Marke) : Signatur D'.Tab D'.Glob D'.Lock D'.Marke where
-  params := S.params
-  erg := S.erg
+  params := S.params.map E.tyE
+  erg := S.erg.map E.tyE
   gruende := S.gruende
   haelt := S.haelt.map E.lock
   schreibt := fun t' => match E.tabZ t' with | some t => S.schreibt t | none => false
@@ -157,7 +178,7 @@ def sigE (S : Signatur D.Tab D.Glob D.Lock D.Marke) : Signatur D'.Tab D'.Glob D'
 def vertragE (V : Vertrag D) : Vertrag D' where
   schreibt := fun t' => match E.tabZ t' with | some t => V.schreibt t | none => false
   gschreibt := fun g' => match E.globZ g' with | some g => V.gschreibt g | none => false
-  erg := V.erg
+  erg := V.erg.map E.tyE
   gruende := V.gruende
   haelt := V.haelt.map E.lock
   produziert := V.produziert.map (Prod.map E.marke id)
@@ -185,18 +206,28 @@ theorem resE_inj {a b : Res D} (h : E.resE a = E.resE b) : a = b := by
 
 end Einbettung
 
-/-- **The signatures agree**: a function of `D` has its signature, mapped, in `D'`; so does every
-    pointer signature the project names. Stated beside the structure because it needs `sigE`. -/
+/-- **The signatures agree**: every signature number of `D` names, under `num`, the mapped
+    signature in `D'` (so a function's own signature and every pointer signature carry over), and a
+    register's promise is the same about the same value. Stated beside the structure because it
+    needs `sigE` and `valE`. -/
 structure Einbettung.SigTreu (E : Einbettung D D') : Prop where
-  signatur : ∀ f, D'.signatur (E.fn f) = E.sigE (D.signatur f)
-  sigNr : ∀ n, E.nummer n = true → D'.sigNr n = E.sigE (D.sigNr n)
+  sigNr : ∀ n, D'.sigNr (E.num n) = E.sigE (D.sigNr n)
   rzusage : ∀ r (v : Wert D (D.rtyp r)),
     D'.rzusage (E.reg r) ((E.rtyp r).symm ▸ E.valE (D.rtyp r) v) = D.rzusage r v
+
+theorem Einbettung.SigTreu.signatur {E : Einbettung D D'} (h : E.SigTreu) (f : D.Fn) :
+    D'.signatur (E.fn f) = E.sigE (D.signatur f) := by
+  unfold Deklaration.signatur
+  rw [E.sig, h.sigNr]
 
 /-! ## The identity: every declaration embeds into itself -/
 
 /-- The identity embedding. -/
 def Einbettung.id (D : Deklaration) : Einbettung D D where
+  num := fun n => n
+  num_inj := fun _ _ h => h
+  tnum := fun n => n
+  tnum_inj := fun _ _ h => h
   tab := fun t => t
   tabZ := some
   tabZ_tab := fun _ => rfl
@@ -207,7 +238,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   feld_feldZ := fun _ _ => rfl
   count := fun _ => rfl
   offen := fun _ => rfl
-  typ := fun _ _ => rfl
+  typ := fun t f => by cases D.typ t f <;> rfl
   erlaubt := fun _ _ => rfl
   geteilt := fun _ => rfl
   geist := fun _ => rfl
@@ -215,7 +246,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   globZ := some
   globZ_glob := fun _ => rfl
   glob_globZ := fun _ _ h => (Option.some.inj h).symm
-  gtyp := fun _ => rfl
+  gtyp := fun g => by cases D.gtyp g <;> rfl
   nutzlast := fun _ => by simp
   atomar := fun _ => rfl
   ggeteilt := fun _ => rfl
@@ -246,7 +277,6 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   fnZ := some
   fnZ_fn := fun _ => rfl
   fn_fnZ := fun _ _ h => (Option.some.inj h).symm
-  nummer := fun _ => true
   inv := fun i => i
   invZ := some
   invZ_inv := fun _ => rfl
@@ -257,8 +287,14 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   axZ := some
   axZ_ax := fun _ => rfl
   ax_axZ := fun _ _ h => (Option.some.inj h).symm
-  aparams := fun _ => rfl
-  aerg := fun _ => rfl
+  aparams := fun a => by
+    conv => lhs; rw [← List.map_id (D.aparams a)]
+    congr 1
+    funext τ
+    cases τ <;> rfl
+  aerg := fun a => by cases D.aerg a with
+    | none => rfl
+    | some τ => cases τ <;> rfl
   agruende := fun _ => rfl
   aschreibt := fun _ _ => rfl
   agschreibt := fun _ _ => rfl
@@ -267,7 +303,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   regZ := some
   regZ_reg := fun _ => rfl
   reg_regZ := fun _ _ h => (Option.some.inj h).symm
-  rtyp := fun _ => rfl
+  rtyp := fun r => by cases D.rtyp r <;> rfl
   rklasse := fun _ => rfl
   spiegel := fun _ => by simp
   rtraeger := fun r => by
@@ -277,7 +313,8 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
     rcases c with t | g <;> rfl
   annahme := fun a => a
   a10 := rfl
-  tabNr := fun _ _ h => h
+  tabNr := fun n => by simp
+  sig := fun _ => rfl
   passt := fun _ _ => rfl
 
 end Gabbro.Grammatik.Einbettung
