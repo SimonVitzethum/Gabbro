@@ -138,8 +138,10 @@ The tools read inputs of unbounded size; each need is modelled in Lean before it
 
 ## 7. Targets: a new ISA is a profile, not a port (Simon, 2026-10-25)
 
-**Requirement:** moving the tools and their output to AArch64, RISC-V or another 64-bit ISA is easy: a target is a
-checked profile plus a binding library, never a change of the front end, the checker or the compiler's core.
+**Requirement:** moving the tools and their output to another 64-bit ISA is easy: a target is a checked profile plus a
+binding library, never a change of the front end, the checker or the compiler's core. **Built:** x86-64 and AArch64
+(AArch64 hardware is available, Simon 2026-10-25). **Kept easy, not built:** RISC-V -- the design must make it items 1-4
+below and nothing else; no RISC-V profile, binding, proof or measurement belongs to this plan's deliverables.
 
 * **One target-independent core.** `gpruef` knows no ISA at all. `gkomp` lowers to target-independent LLVM IR; the ISA
   enters only through the **target profile** `Ziel`, a Gabbro data item: triple, data layout, calling convention and
@@ -150,7 +152,7 @@ checked profile plus a binding library, never a change of the front end, the che
   2. the binding library of the environment (syscall numbers, entry stubs) -- Gabbro code with user-logic contracts,
      never in the compiler (AGENTS.md §3: the OS is user logic);
   3. the memory-model mapping of the profile, proved in Lean against the target's model (AArch64: `ARM-PLAN.md`;
-     RISC-V: RVWMO, to be modelled the same way; x86-64 TSO is frozen);
+     x86-64 TSO is frozen; a later RISC-V owes RVWMO modelled the same way);
   4. a QEMU stage in `pruefe-llvm.py` and, for performance (§8), real hardware.
 * **Theorem `ziel_neutral`:** `run_gkomp (p, z)` = `abi z (kern p)`: the output is the target-independent core `kern p`
   followed by a function of the profile alone; the core never reads the profile. So the proofs of §3 and §4 are made
@@ -164,7 +166,8 @@ checked profile plus a binding library, never a change of the front end, the che
 ## 8. Performance: at least `gcc -O3` and `clang -O3` (Simon, 2026-10-25)
 
 **Requirement:** the code `gkomp` produces is at least as fast as equivalent C compiled with `gcc -O3` or `clang -O3`,
-on x86-64, AArch64 and RISC-V. This raises the minimum of AGENTS.md §11 (80 %) to 100 %.
+on x86-64 and AArch64 (both measured on real hardware). This raises the minimum of AGENTS.md §11 (80 %) to 100 %. A
+later RISC-V target owes the same minimum when it is built.
 
 * **Score:** per workload `100 · t_C / t_Gabbro` (fixed work) or `100 · throughput_Gabbro / throughput_C`, against the
   FASTER of `gcc -O3` and `clang -O3` (same machine, same ISA extensions, `-march`/`-mcpu` matched, same semantics,
@@ -183,7 +186,7 @@ on x86-64, AArch64 and RISC-V. This raises the minimum of AGENTS.md §11 (80 %) 
 * **Measurement:** a benchmark suite of workload classes (compute kernels, pointer-chasing over regions, parsing and
   string work, the tools themselves as a workload); each Gabbro program beside a C version written to the same
   algorithm; a performance stage in `pruefe-llvm.py` (no fifth guardian) that records the scores per ISA and fails below
-  100 %. x86-64 runs here; AArch64 and RISC-V need real hardware (QEMU timings are no measurement).
+  100 %. x86-64 runs here, AArch64 on the available AArch64 machine (QEMU timings are no measurement).
 * **The compiler itself** is a Gabbro program compiled by itself at `-O3`, so its own speed follows the same requirement;
   compile latency (checking, optimisation, validation) is measured beside it.
 
@@ -199,13 +202,47 @@ on x86-64, AArch64 and RISC-V. This raises the minimum of AGENTS.md §11 (80 %) 
 | S6 | `gpruef` (the fold) with §3.1-§3.3, the campaign on M ∪ N ∪ R, `gpruef_korrekt` | kernel + ledger |
 | S7 | `gkomp` and `gvalid` with §3.1-§3.4, bootstrap S0 → S1 → S2, fixpoint, double compilation, `gkomp_korrekt` | kernel + fixpoint + ledger |
 | S8 | deletions of §6 | the four guardians on the Gabbro tools |
-| S9 | targets (§7): the profile `Ziel` and `ziel_neutral`; AArch64 and RISC-V profiles, bindings, memory-model proofs | QEMU stage per ISA |
-| S10 | performance (§8): the proof-derived IR facts, the benchmark suite, the performance stage | 100 % of the faster of `gcc -O3`/`clang -O3` per workload class and ISA |
+| S9 | targets (§7): the profile `Ziel` and `ziel_neutral`; the x86-64 and AArch64 profiles, bindings, memory-model proofs; the RISC-V path checked as "profile only" by a design review, not built | QEMU and hardware stage on AArch64 |
+| S10 | performance (§8): the proof-derived IR facts, the benchmark suite, the performance stage | 100 % of the faster of `gcc -O3`/`clang -O3` per workload class, on x86-64 and AArch64 |
 
-**Estimates (ranges, a guess):** Gabbro 60 000-140 000 lines (front end shared; helpers 10 000-20 000; libraries
-10 000-25 000); Lean 25 000-60 000 (GabbroV simulations, the neutrality and determinism theorems, `gabbro-boot`).
+**New lines of code (ranges, a guess; measured bases 2026-10-25 in brackets).** Gabbro is denser in ceremony than Rust
+(contracts, effects, costs, no generics: one instance per element type), so a Gabbro tool is costed at 1.5-2.5x its
+Rust counterpart and 2-3x its Lean definition.
+
+| Part | Base today | New lines |
+|---|---|---|
+| **Gabbro, written by hand** | | |
+| libraries: bytes, strings, vector, hash map, tree, file IO, formatting | -- | 8 000-15 000 |
+| shared front end: lexer, parser | Rust syntax 11 200; Lean parser without proofs ≈ 8 100 | 15 000-30 000 |
+| shared front end: elaborator to G | Lean `Elab` 10 200 | 15 000-35 000 |
+| `gpruef`: the ten components of `AkzeptiertX` as a fold, refusal reports | Rust checker 110 900 (with diagnostics, passes, tools) | 20 000-45 000 |
+| `gkomp`: lowering, IR facts of §8, IR printer, profile handling | Rust LLVM 12 900; Lean `Code` 17 900 | 20 000-45 000 |
+| `ggen`, `gabdeck`, `glauf`, `gvalid` | Lean `Gen` 22 000 (with proofs) | 24 000-48 000 |
+| target profiles and bindings: x86-64, AArch64 | -- | 2 500-6 000 |
+| benchmark suite: Gabbro side | -- | 8 000-20 000 |
+| **Gabbro total** | | **112 000-244 000** |
+| generated container instances (not written by hand) | -- | 10 000-30 000 |
+| **Lean, specification and proof** | | |
+| language needs of §5 (region release, strings in G, file-gate contracts, measure-based loops) | region in G ≈ 5 000 | 8 000-20 000 |
+| `gabbro-boot`, IO oracle, its `GutO` | -- | 1 500-4 000 |
+| GabbroV: libraries' contracts | GabbroV today 115 000 | 8 000-20 000 |
+| GabbroV: front end against `lex`/`parseTopTief`/`elabU` | | 30 000-70 000 |
+| GabbroV: helpers, IR printer, refusal reports | | 15 000-35 000 |
+| §3.1-§3.3: termination, determinism (address neutrality), neutrality H1-H7, the fold as `Automat` | Nichtinterferenz 4 300, Terminierung 2 400, Adaequanz 1 600 | 15 000-40 000 |
+| §7: `ziel_neutral`, profile semantics, AArch64 memory-model mapping | `ARM-PLAN.md` parts | 7 000-20 000 |
+| §8: soundness of the IR facts (ranges, `nsw`/`nuw`, `noalias`, disjointness) in translation validation | | 8 000-20 000 |
+| closing the open cells (witness support, unreachability proofs) | 876 fine cells open | 3 000-10 000 |
+| **Lean total** | | **96 000-239 000** |
+| **Other:** C side of the benchmark suite | -- | 5 000-12 000 |
+| guardian stages (performance, AArch64 hardware), scripts | -- | 500-1 500 |
+| **All new lines** | | **≈ 210 000-490 000** |
+| **Deleted at parity (§6)** | Rust checker, compiler, syntax ≈ 122 000 plus their tests; Lean drivers 3 000-6 000 | |
+
+The ranges are wide because the two largest items -- the front end's GabbroV proof and the neutrality theorems -- have
+no precedent in the tree; the low ends assume the fold structure of §3.3 removes most of the per-component proofs.
+
 **Critical path:** S1 → S3 → S4 → S6. The least charted parts are §3.3 (neutrality as theorems), above all H1 for a
-real implementation, and the RISC-V memory-model proof of §7. The performance minimum (§8) is decided by the IR facts:
+real implementation, and the AArch64 memory-model mapping of §7. The performance minimum (§8) is decided by the IR facts:
 they must be designed into `gkomp` from S7 on, not added afterwards.
 
 ## 10. Decisions for Simon
@@ -214,5 +251,5 @@ they must be designed into `gkomp` from S7 on, not added afterwards.
    the correctness theorems as a named premise -- or the sets are cut until each test has a kernel certificate.
 2. The first `gpruef`/`gkomp` single-threaded (recommended).
 3. Deletion of the Rust tools and of the Lean drivers at parity (§6), as the no-legacy rule says.
-4. Real AArch64 and RISC-V hardware for the performance stage (§8); without it the requirement is measured on x86-64
-   only and stays OPEN for the other ISAs.
+4. ~~Hardware~~ decided (Simon, 2026-10-25): AArch64 hardware is available and AArch64 is built and measured; RISC-V
+   only stays easy to add (§7).
