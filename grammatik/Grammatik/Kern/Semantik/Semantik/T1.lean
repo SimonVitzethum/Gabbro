@@ -192,6 +192,10 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .arrSet a i v => a.orte ++ i.orte ++ v.orte
   | .strLen s => s.orte
   | .strCat s t => s.orte ++ t.orte
+  | .strGet s i => s.orte ++ i.orte
+  | .strEq s t => s.orte ++ t.orte
+  | .strLt s t => s.orte ++ t.orte
+  | .strWeit _ s => s.orte
 
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
   | .empty => []
@@ -287,6 +291,10 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .strLit bs h, _, _ => ⟨bs, h⟩
   | .strLen s, σ, ρ => strLenW (eval σ₀ s σ ρ)
   | .strCat s t, σ, ρ => strCatW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
+  | .strGet s i, σ, ρ => strGetW (eval σ₀ s σ ρ) (eval σ₀ i σ ρ).n
+  | .strEq s t, σ, ρ => strEqW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
+  | .strLt s t, σ, ρ => strLtW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
+  | .strWeit m s, σ, ρ => strWeitW m (eval σ₀ s σ ρ)
 
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast c
   | .empty, _, _ => ()

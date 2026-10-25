@@ -336,6 +336,27 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       show strCatW _ _ = strCatW _ _
       rw [he, he']
       rfl
+  | _, _, _, .strGet e e', ρ, ρ', hρ => by
+      have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
+      simp only [VRel, valE] at he he' ⊢
+      show strGetW _ _ = strGetW _ _
+      rw [he, he']
+  | _, _, _, .strEq e e', ρ, ρ', hρ => by
+      have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
+      simp only [VRel, valE] at he he' ⊢
+      show strEqW _ _ = strEqW _ _
+      rw [he, he']
+  | _, _, _, .strLt e e', ρ, ρ', hρ => by
+      have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
+      simp only [VRel, valE] at he he' ⊢
+      show strLtW _ _ = strLtW _ _
+      rw [he, he']
+  | _, _, _, .strWeit _ e, ρ, ρ', hρ => by
+      have he := eval_exE h₀ h e ρ ρ' hρ
+      simp only [VRel] at he ⊢
+      show strWeitW _ _ = strWeitW _ _
+      rw [he]
+      rfl
 
 /-- Payloads. -/
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :

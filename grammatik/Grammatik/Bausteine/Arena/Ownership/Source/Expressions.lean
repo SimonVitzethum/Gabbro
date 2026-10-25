@@ -40,6 +40,10 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .strCat a b => requirements a ++ requirements b
   | .arrSet a i v => requirements a ++ requirements i ++ requirements v
   | .strLen s => requirements s
+  | .strGet s i => requirements s ++ requirements i
+  | .strEq a b => requirements a ++ requirements b
+  | .strLt a b => requirements a ++ requirements b
+  | .strWeit _ s => requirements s
   | .lit _ | .tru | .fls | .glob .. | .ptrOf .. | .fnref .. | .oldG .. | .none _ | .why .. => []
 
 def payloadRequirements {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :

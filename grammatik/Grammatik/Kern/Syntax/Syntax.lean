@@ -525,6 +525,14 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   | strLen (s : Expr Γ Λ (.str n)) : Expr Γ Λ (.int 0 n)
   /-- `s + t`: the concatenation, its maximum the sum of the maxima. -/
   | strCat (s : Expr Γ Λ (.str n)) (t : Expr Γ Λ (.str m)) : Expr Γ Λ (.str (n + m))
+  /-- `s[i]`: the byte at position `i`, `0` outside the length (the bound is the contract's). -/
+  | strGet (s : Expr Γ Λ (.str n)) (i : Expr Γ Λ (.int lo hi)) : Expr Γ Λ (.int 0 255)
+  /-- `s == t`: the same bytes. -/
+  | strEq (s : Expr Γ Λ (.str n)) (t : Expr Γ Λ (.str m)) : Expr Γ Λ .bool
+  /-- `s < t`: lexicographic over the bytes. -/
+  | strLt (s : Expr Γ Λ (.str n)) (t : Expr Γ Λ (.str m)) : Expr Γ Λ .bool
+  /-- A string under the maximum `m` (`let t : string max m = s`): the front end writes it for `n ≤ m`. -/
+  | strWeit (m : Nat) (s : Expr Γ Λ (.str n)) : Expr Γ Λ (.str m)
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
   | empty : NutzlastExpr Γ Λ none

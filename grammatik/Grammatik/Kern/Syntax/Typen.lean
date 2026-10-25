@@ -180,6 +180,32 @@ def strCatW {n m : Nat} (a : { bs : List (Zahl 0 255) // bs.length ≤ n })
     (b : { bs : List (Zahl 0 255) // bs.length ≤ m }) : { bs : List (Zahl 0 255) // bs.length ≤ n + m } :=
   ⟨a.1 ++ b.1, by have := a.2; have := b.2; simp only [List.length_append]; omega⟩
 
+/-- The byte at position `i` of a string value, `0` outside its length. -/
+def strGetW {n : Nat} (w : { bs : List (Zahl 0 255) // bs.length ≤ n }) (i : Int) : Zahl 0 255 :=
+  if 0 ≤ i then (w.1[i.toNat]?).getD ⟨0, by omega, by omega⟩ else ⟨0, by omega, by omega⟩
+
+/-- Lexicographic order of two byte lists (a proper prefix is smaller). -/
+def bytesLt : List Int → List Int → Bool
+  | [], [] => false
+  | [], _ :: _ => true
+  | _ :: _, [] => false
+  | a :: as, b :: bs => a < b || (a == b && bytesLt as bs)
+
+/-- Two string values hold the same bytes. -/
+def strEqW {n m : Nat} (a : { bs : List (Zahl 0 255) // bs.length ≤ n })
+    (b : { bs : List (Zahl 0 255) // bs.length ≤ m }) : Bool :=
+  a.1.map (·.n) == b.1.map (·.n)
+
+/-- `a < b` on string values: lexicographic over the bytes. -/
+def strLtW {n m : Nat} (a : { bs : List (Zahl 0 255) // bs.length ≤ n })
+    (b : { bs : List (Zahl 0 255) // bs.length ≤ m }) : Bool :=
+  bytesLt (a.1.map (·.n)) (b.1.map (·.n))
+
+/-- A string value under the maximum `m`: the first `m` bytes (all of them when `n ≤ m`). -/
+def strWeitW {n : Nat} (m : Nat) (w : { bs : List (Zahl 0 255) // bs.length ≤ n }) :
+    { bs : List (Zahl 0 255) // bs.length ≤ m } :=
+  ⟨w.1.take m, by simp only [List.length_take]; omega⟩
+
 /-! ## 3. Die Rechnung -- jede Operation mit dem Bereich, den `M104` ihr gibt -/
 
 def imin (a b : Int) : Int := if a ≤ b then a else b

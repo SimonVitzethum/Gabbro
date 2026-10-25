@@ -73,6 +73,10 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .strCat a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .arrSet a i v => kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte i)) (ruE_orte v)
   | _, _, _, .strLen e => ruE_orte e
+  | _, _, _, .strGet a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .strEq a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .strLt a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .strWeit _ e => ruE_orte e
 
 theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c), (ruN n).orte = n.orte

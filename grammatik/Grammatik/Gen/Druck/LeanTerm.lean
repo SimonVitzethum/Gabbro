@@ -115,6 +115,10 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
       .ok s!"(Expr.strLit (D := z.deklaration) [{", ".intercalate (bs.map fun b => s!"⟨{b.n}, by decide, by decide⟩")}] (by decide))"
   | _, .strLen e => do .ok s!"(Expr.strLen (D := z.deklaration) {← drE N e})"
   | _, .strCat e e' => do .ok s!"(Expr.strCat (D := z.deklaration) {← drE N e} {← drE N e'})"
+  | _, .strGet e e' => do .ok s!"(Expr.strGet (D := z.deklaration) {← drE N e} {← drE N e'})"
+  | _, .strEq e e' => do .ok s!"(Expr.strEq (D := z.deklaration) {← drE N e} {← drE N e'})"
+  | _, .strLt e e' => do .ok s!"(Expr.strLt (D := z.deklaration) {← drE N e} {← drE N e'})"
+  | _, .strWeit m e => do .ok s!"(Expr.strWeit (D := z.deklaration) {m} {← drE N e})"
 
 /-- A payload expression. -/
 def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option (Int × Int)} → NutzlastExpr D Γ Λ o → Except String String

@@ -269,4 +269,8 @@ Expr.arrSet	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the
 Expr.strLit	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
 Expr.strLen	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
 Expr.strCat	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.strGet	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.strEq	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.strLt	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.strWeit	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
 Stmt.assignSlotRef	OPEN	-	Open region (PLAN-DYNAMIC 14): in the Lean model and its Lean front end only; the Rust parser, checker and LLVM lowering do not have it yet.

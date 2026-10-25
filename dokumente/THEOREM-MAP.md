@@ -4914,7 +4914,10 @@ All axiom lists standard.
   is `false`, so the checker refuses a foreign or register answer of aggregate type.
 * The embedding maps an array elementwise (`tyN_id`, `valE`, `VRel`, `eval_exE`); the witness casts elementwise
   (`Einbettung/Zeuge.lean`: `arr_cast`, `zurueck_cast`).
-* Fine cells: constructors 44-50, type heads 10/11 (`kopf_lt` below 12).
+* String reads and comparisons (`strGet`, `strEq`, `strLt`) and the widening `strWeit` to a larger maximum:
+  `strGetW` answers `0` outside the length (the bound is the contract's), `strLtW` is lexicographic over the bytes
+  (`bytesLt`), `strWeitW m` keeps the first `m` bytes (all of them for `n ≤ m`, the only form the front end writes).
+* Fine cells: constructors 44-54, type heads 10/11 (`kopf_lt` below 12).
 * Open: the generator does not produce aggregates yet (`TODO.md` §2).
 
 All axiom lists standard.

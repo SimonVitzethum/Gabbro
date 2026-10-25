@@ -11,6 +11,7 @@ import Grammatik.Gen.Erzeuger.Ausdruck
 namespace Gabbro.Grammatik.Gen
 
 set_option linter.unusedSectionVars false
+set_option maxHeartbeats 1000000
 
 open Gabbro.Grammatik
 
@@ -376,6 +377,10 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
   | strLit _ _ => simp [groesseExpr] at hu
   | strLen _ => simp only [groesseExpr] at hu; omega
   | strCat _ _ => simp only [groesseExpr] at hu; omega
+  | strGet _ _ => simp only [groesseExpr] at hu; omega
+  | strEq _ _ => simp only [groesseExpr] at hu; omega
+  | strLt _ _ => simp only [groesseExpr] at hu; omega
+  | strWeit _ _ => simp only [groesseExpr] at hu; omega
 
 /-! ## The table by size -/
 

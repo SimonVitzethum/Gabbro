@@ -208,6 +208,10 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .strLit bs h => .strLit bs h
   | _, _, _, .strLen e => .strLen (exE e)
   | _, _, _, .strCat e e' => .strCat (exE e) (exE e')
+  | _, _, _, .strGet e e' => .strGet (exE e) (exE e')
+  | _, _, _, .strEq e e' => .strEq (exE e) (exE e')
+  | _, _, _, .strLt e e' => .strLt (exE e) (exE e')
+  | _, _, _, .strWeit m e => .strWeit m (exE e)
 
 /-- A payload expression. -/
 def exN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →

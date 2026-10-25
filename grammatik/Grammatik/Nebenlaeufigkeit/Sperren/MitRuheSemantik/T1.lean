@@ -241,6 +241,22 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
       show strCatW _ _ = _
       rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
       rfl
+  | _, _, _, .strGet e e', ρ => by
+      show strGetW _ _ = _
+      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      rfl
+  | _, _, _, .strEq e e', ρ => by
+      show strEqW _ _ = _
+      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      rfl
+  | _, _, _, .strLt e e', ρ => by
+      show strLtW _ _ = _
+      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      rfl
+  | _, _, _, .strWeit _ e, ρ => by
+      show strWeitW _ _ = _
+      rw [eval_ru σ₀ σ e ρ]
+      rfl
 
 theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),
