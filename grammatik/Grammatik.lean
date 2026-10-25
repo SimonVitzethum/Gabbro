@@ -669,6 +669,7 @@ import Grammatik.Zielsatz.Projekte.Ziel
 import Grammatik.Zielsatz.Projekte.Ohne
 import Grammatik.Zielsatz.Projekte.Zeuge
 import Grammatik.Zielsatz.Projekte.Annahmen
+import Grammatik.Zielsatz.Projekte.Verbund
 import Grammatik.Zielsatz.Einbettung.Projekt
 import Grammatik.Logik.WP.Regeln3
 import Grammatik.Logik.WP.Zeuge
