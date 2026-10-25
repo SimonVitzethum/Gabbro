@@ -508,9 +508,8 @@ theorem gut_of_gutPrim : ∀ (e : SExpr),
 -- `old(BESITZER)`; `06-annahmen` ensures over `result`;
 -- `111-rufzulassung` passes `&hart_senden`): each as a
 -- `parse_druck_prim` instance and a kernel-computed `match`
--- check. No two-segment `G::F` occurs in the corpus --
--- three-segment paths lower to field chains via `grundKette`
--- -- so the `grund` witness is neutrally named.
+-- check. No two-segment `G::F` occurs in the corpus, so the
+-- `grund` witness is neutrally named.
 theorem zeuge_alt :
     parseOr (brennstoff (.old (.variable "BESITZER")))
     (druckToks (.old (.variable "BESITZER")) ++ [.ende]) =

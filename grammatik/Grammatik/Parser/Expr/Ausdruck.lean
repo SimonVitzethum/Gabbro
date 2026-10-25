@@ -205,11 +205,6 @@ def sammleSegmente : List Token → List String → List String × List Token
     | none => (acc, .zeichen "::" :: t :: rest)
   | toks, acc => (acc, toks)
 
-/-- A three-or-more segment non-call path as a field chain
-    (`parse.rs` builds the same `Ort` with `Feld` suffixes). -/
-def grundKette : List String → SExpr
-  | [] => .variable ""
-  | a :: rest => rest.foldl (fun e s => .field e s) (.variable a)
 
 -- The expression levels of SYNTAX.md section 4 (`expr` down to
 -- `primary`), each with fuel: every call passes strictly less fuel,
@@ -433,7 +428,9 @@ def parseKopf (f : Nat) (toks : List Token) :
           else if strEq a "Self" then .error "Self:: is not a form"
           else .ok (.why a b, rest')
         | ([a], rest') => parseSuffixe f (.variable a) rest'
-        | (segs, rest') => .ok (grundKette segs, rest')
+        -- A path of three or more segments names an item by its path (`Parser/Namen/Aufloesung.lean`):
+        -- one place head, its segments joined as the parser joins call paths.
+        | (segs, rest') => .ok (.variable ("::".intercalate segs), rest')
       | none => .error "expression expected"
     | [] => .error "expression expected"
 def parseSuffixe (f : Nat) (e : SExpr) (toks : List Token) :
