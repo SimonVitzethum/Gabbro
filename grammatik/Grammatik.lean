@@ -662,3 +662,9 @@ import Grammatik.Berechenbarkeit.Storage.GStack.Multi
 import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
 import Grammatik.Berechenbarkeit.Storage.GStack.TakeOrBump
 import Grammatik.Berechenbarkeit.BrainfuckG.Audit
+import Grammatik.Zielsatz.Projekte.Ziel
+import Grammatik.Zielsatz.Projekte.Ohne
+import Grammatik.Zielsatz.Projekte.ZeugeAtomar
+import Grammatik.Zielsatz.Projekte.ZeugeSperre
+import Grammatik.Zielsatz.Projekte.ZeugeBesitz
+import Grammatik.Zielsatz.Einbettung.Schritt
