@@ -286,3 +286,36 @@ Found while proving, and next:
 * Witnesses still to build: a callback through a function pointer into the dependent, a thread spawned in one
   project running code of the other.
 * `GabbroZielVerbund` for n units with every leg (7.7), then the build accepts dependencies.
+
+### 7.10 Design: the embedding theorem (reuse without re-proof, 2026-10-25)
+
+**What it says.** A project proved over its OWN declaration `D` (its items and the heads it imports) keeps its
+proof in every program whose declaration `D'` contains it: given an embedding `ι : Einbettung D D'`, every
+obligation `KoerperGutSA`/`InvGutSA`/`InvGutGrundA` of a function `f` of `D` (with the open-world rely) implies the
+same obligation of `ι f` for the translated body in `D'`. With it, `gabbro_ziel_projekte` takes each project's proof
+over its own declaration, not over the link declaration.
+
+**The embedding** (`Einbettung D D'`): injections of every sort (tables with a bijection of their fields, globals,
+locks, marks, functions, invariants, axioms, registers, assumptions) that preserve every attribute the semantics or
+the checker reads (types, counts, guards, ranks, signatures, conformance, frames, ensures, carriers), and table and
+signature NUMBERS used in the project's types, so that a type of `D` is the same type in `D'`. A diamond of projects
+is two embeddings into one `D'`; no quotient is needed.
+
+**Why the proof carries over** -- a simulation with a FIXED context: during one run of a project body in `D'`, the
+part of the world outside the image of `D` does not change and is not read: the body names only items of `D`; a
+callee of `D` writes only its declared frame (in `D`); an axiom of `D` writes only its frame (`RahmenO`); the
+environment moves at a lock of `D` only that lock's carriers (`HavocOk`); an atomic read answers only for the
+carriers it reads. So every `D'`-object the obligation quantifies over (world, oracle, environments, call handler)
+restricts to a `D`-object, the `D'`-run is the translated `D`-run, and the trace grows only by the translated
+events.
+
+**Stages** (each a commit with witnesses, Lean only; LLVM later):
+* E0 the embedding: sorts, types, values, resources, signatures, contracts; the translation of syntax.
+* E1 worlds: restriction, merge with a fixed context, events and the trace (`offen` commutes with the filter).
+* E2 semantics: `eval`, `execEndHA` simulation, oracle/environment/handler restriction.
+* E3 the obligation transfer and `gabbro_ziel_projekte` over per-project declarations; a witness with two projects
+  over DIFFERENT declarations.
+* E4 callbacks: a function pointer of `D` may in `D'` point to a function outside the image. The project's proof
+  then needs a contract per POINTER SIGNATURE (what every conforming callee promises); today contracts are per
+  function. This is a language question (a contract on `fnptr` types) and is put to the owner before it is built;
+  until then E3 requires that no foreign function conforms to a pointer type of `D` (decidable).
