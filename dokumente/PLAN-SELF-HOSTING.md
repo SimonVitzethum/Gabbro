@@ -245,11 +245,14 @@ no precedent in the tree; the low ends assume the fold structure of §3.3 remove
 real implementation, and the AArch64 memory-model mapping of §7. The performance minimum (§8) is decided by the IR facts:
 they must be designed into `gkomp` from S7 on, not added afterwards.
 
-## 10. Decisions for Simon
+## 10. Decisions (Simon, 2026-10-25)
 
-1. The premise *campaign* (§4): the agreement on M ∪ N, computed by the verified `glauf` on the native binary, enters
-   the correctness theorems as a named premise -- or the sets are cut until each test has a kernel certificate.
-2. The first `gpruef`/`gkomp` single-threaded (recommended).
-3. Deletion of the Rust tools and of the Lean drivers at parity (§6), as the no-legacy rule says.
-4. ~~Hardware~~ decided (Simon, 2026-10-25): AArch64 hardware is available and AArch64 is built and measured; RISC-V
-   only stays easy to add (§7).
+All decided:
+1. The premise *campaign* (§4) is accepted: the agreement on M ∪ N, computed by the verified `glauf` on the native
+   binary, enters the correctness theorems as a named premise; where a kernel certificate fits, it replaces the premise.
+2. The first `gpruef`/`gkomp` are single-threaded.
+3. The Rust tools and the Lean drivers are deleted at parity (§6).
+4. AArch64 hardware is available: x86-64 and AArch64 are built and measured; RISC-V only stays easy to add (§7).
+
+First step (Simon, 2026-10-25): complete GabbroV so that full logic proofs of Gabbro programs are possible -- it is what
+§3.4 and §4 rest on.
