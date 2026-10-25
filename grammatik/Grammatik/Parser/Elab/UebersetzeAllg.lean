@@ -336,6 +336,16 @@ def regZusage {F : Type} {sig : F → Nat → Bool} : (g : UReg) → Val F sig g
   | ⟨d, n, lo, hi, k, sp, tr, zu, pr, false⟩ => fun (v : Zahl lo hi) =>
     UReg.zusageBei ⟨d, n, lo, hi, k, sp, tr, zu, pr, false⟩ v.n
 
+/-- The provider of the table `t` (`table T from p`): the foreign body named `p`, when it fits -- no parameters, the
+    answer a reference into `t` (`Deklaration.anbieter_passt`); a provider that does not fit is none. -/
+def anbieterAt (u : UProg) (t : Fin u.tabs.length) : Option (Fin u.axs.length) :=
+  match (tabAt u t).von with
+  | none => none
+  | some p =>
+    match uaxIdx u.axs p with
+    | .ok a => if (uaxAt u a).params = [] ∧ (uaxAt u a).res = some (.ref t.val) then some a else none
+    | .error _ => none
+
 /-- The declaration built from the elaborated program itself: index
     carriers (`Fin`) for tables, statics, locks, fields, functions, foreign bodies and device registers
     (`Reg := Fin u.regs.length`: type, class, mirror, promise and carriers read off `UReg`). -/
@@ -343,6 +353,7 @@ def declOf (u : UProg) : Deklaration where
   Tab := Fin u.tabs.length
   decTab := inferInstance
   count := fun t => (tabAt u t).count
+  offen := fun t => (tabAt u t).von.isSome
   Feld := fun t => Fin (fieldCount u t)
   decFeld := fun _ => inferInstance
   typ := typAt u
@@ -381,6 +392,19 @@ def declOf (u : UProg) : Deklaration where
   aschreibt := fun _ _ => false
   agschreibt := fun _ _ => false
   agruende := fun a => (uaxAt u a).gruende
+  anbieter := anbieterAt u
+  anbieter_passt := fun t a h => by
+    unfold anbieterAt at h
+    split at h
+    · cases h
+    · rename_i p hp
+      split at h
+      · split at h
+        · rename_i hc
+          cases h
+          exact ⟨by simp [hp], hc.1, t.val, hc.2, by simp [t.isLt]⟩
+        · cases h
+      · cases h
   Reg := Fin u.regs.length
   rtyp := fun r => (regAt u r).ty
   rklasse := fun r => (regAt u r).klasse
@@ -947,6 +971,40 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 
+/-- A field read through a reference into an open table, at the field's recorded range. -/
+def refTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (num : Nat) (h : num < u.tabs.length) (ho : (declOf u).offen ⟨num, h⟩ = true)
+    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ref num))
+    (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
+    Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2) := by
+  rw [← fh.hint]
+  exact Expr.slotRef (D := declOf u) (Expr.var v) ⟨num, h⟩ (tabNr_some u num h) ho fh.idx hL
+
+/-- `r->f`: a field read through a reference local `r` (positions shift by `sh`). -/
+def lowRefRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (sh : Nat) (r fname : String) :
+    Except String (LowSide u Γ Λ) :=
+  match paramPos fn.params r with
+  | .error e => .error e
+  | .ok j =>
+    match fn.kinds[j]? with
+    | some (.ref num) =>
+      if h : num < u.tabs.length then
+        if ho : (declOf u).offen ⟨num, h⟩ = true then
+          match fieldHit u ⟨num, h⟩ fname with
+          | .error e => .error e
+          | .ok fh =>
+            match lowVar Γ (sh + j) (.ref num) with
+            | .error e => .error e
+            | .ok v =>
+              if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                  Res.von (declOf u) wdd ∈ Λ) then
+                .ok { range := fh.range, term := refTerm u Γ Λ num h ho fh v hL }
+              else .error "access without held guard"
+        else .error "reference into a table that is not open"
+      else .error "reference table unknown"
+    | _ => .error "place without G form"
+
 /-- A slot read at a table (positions shift by `sh`). -/
 def lowTabRead (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (sh : Nat) (b fname : String) (ix : UIdx) :
@@ -1091,6 +1149,8 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .glob p => lowGlobSide u Γ Λ p
   | .slot b f ix =>
     lowDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+  | .refSlot r f =>
+    lowRefRead u Γ Λ fn (if er.isSome then 1 else 0) r f
   | .tab b f ix =>
     lowTabRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .old b f ix =>

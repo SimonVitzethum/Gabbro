@@ -293,6 +293,53 @@ def lowAssignDurchL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 
+/-- A write through a reference into an open table at the field's recorded range (`Stmt.assignSlotRef`). -/
+def assignRefStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (num : Nat) (h : num < u.tabs.length) (ho : (declOf u).offen ⟨num, h⟩ = true)
+    (fh : FieldHit u ⟨num, h⟩) (r : Expr (declOf u) Γ Λ (.ref num))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
+    (hw : V.schreibt ⟨num, h⟩ = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ ⟨num, h⟩ fh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u ⟨num, h⟩ fh.idx)
+    rw [fh.hint]
+    exact e
+  exact Stmt.assignSlotRef (D := declOf u) r ⟨num, h⟩ (tabNr_some u num h) ho fh.idx e2 hw hL
+
+/-- `r->f = v;` through a reference local `r`. -/
+def lowAssignRefL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (r fname : String) (v : USide) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match paramPos fn.params r with
+  | .error e => .error e
+  | .ok j =>
+    match fn.kinds[j]? with
+    | some (.ref num) =>
+      if h : num < u.tabs.length then
+        if ho : (declOf u).offen ⟨num, h⟩ = true then
+          match fieldHit u ⟨num, h⟩ fname with
+          | .error e => .error e
+          | .ok fh =>
+            match lowVar Γ j (.ref num) with
+            | .error e => .error e
+            | .ok rv =>
+              match lowWertAt u Γ Λ fn fh.range.1 fh.range.2 v with
+              | .error e => .error e
+              | .ok e =>
+                if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ then
+                  if hw : writesAt u (fnAt u caller) ⟨num, h⟩ = true then
+                    have hwV : (verOf u caller).schreibt ⟨num, h⟩ = true := by
+                      show (vertragVon (declOf u) caller).schreibt ⟨num, h⟩ = true
+                      rw [vSchreibt_eq u caller ⟨num, h⟩]
+                      exact hw
+                    .ok (assignRefStmt u Γ Λ (verOf u caller) num h ho fh (Expr.var rv) e hwV hL)
+                  else .error "write without right"
+                else .error "access without held guard"
+        else .error "reference into a table that is not open"
+      else .error "reference table unknown"
+    | _ => .error "place without G form"
+
 /-- A slot write at a table. -/
 def lowAssignTabL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
@@ -1211,6 +1258,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .regWriteB d r v => lowRegWriteBL u caller Γ fn Λ d r v
   | .callInd p f args => lowCallIndL u caller Γ fn Λ p f args
   | .shiftTab b f ix _ von nach => lowShiftL u caller Γ fn Λ b f ix von nach
+  | .assignRef r f v => lowAssignRefL u caller Γ fn Λ r f v
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. =>

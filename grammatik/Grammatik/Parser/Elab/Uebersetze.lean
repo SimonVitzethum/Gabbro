@@ -77,6 +77,8 @@ inductive USide
   | shl : USide → USide → USide
   | shr : USide → USide → USide
   | neg : USide → USide
+  /-- `r->f` through a reference local `r` into an open table (`Expr.slotRef`). -/
+  | refSlot : String → String → USide
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -276,6 +278,8 @@ inductive UStmt
   | bindCallInd : String → String → String → List UArg → UStmt
   /-- `let x = A awaits { p, q };` (`Block.awaits`): binder, atomic; the payload is the declared one. -/
   | awaitBind : String → String → UStmt
+  /-- `r->f = v;` through a reference local `r` into an open table (`Stmt.assignSlotRef`). -/
+  | assignRef : String → String → USide → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -298,6 +302,8 @@ structure UTab where
   /-- `table T .. shared`: the carrier is reachable from more than one thread (`D.geteilt`); a shared table
       has a guard (the elaborator refuses one without). -/
   shared : Bool := false
+  /-- `table T from p`: the table is OPEN and `p` is its provider (`Deklaration.offen`/`anbieter`); its count is 0. -/
+  von : Option String := none
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -415,6 +421,8 @@ inductive UParamArt
   /-- A function pointer `fnptr n` (`Ty.fnptr n`): a parameter or `let` of a pointer type (`n` its signature
       number, behind the functions'), or `let p = &f;` (`n` the number of `f`, its own signature). -/
   | fnptr : Nat → UParamArt
+  /-- A reference into the open table number `n` (`Ty.ref n`): a local bound to a provider's answer. -/
+  | ref : Nat → UParamArt
   deriving DecidableEq, Repr
 
 /-- The kind of a local bound to a register read. -/
@@ -521,6 +529,7 @@ def UFn.mitTy (f : UFn) (x : String) : Ty → UFn
   | .int lo hi => f.mitBindung x (lo, hi)
   | .bool => f.mitBindungB x
   | .why n => { f with params := (x, Ty.why n) :: f.params, kinds := .why 0 :: f.kinds }
+  | .ref n => { f with params := (x, Ty.ref n) :: f.params, kinds := .ref n :: f.kinds }
   | _ => f
 
 /-- The scope after `let x` of a tagged value of the type at `num` with the specification `cs`. -/
@@ -960,6 +969,14 @@ def uTabelle (consts : List (String × Int))
               bools := (fs.filter (fun p => match p.2 with | .bool => true | _ => false)).map (·.1.1),
               opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none),
               shared := sh }
+  | .tableT n (.some p) .none .none .none sh (.tSlot fds :: invs) =>
+    if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
+    match uFelder alias tnames fds with
+    | .error e => .error e
+    | .ok fs =>
+      if fs.all (fun p => match p.2 with | .zahl => true | _ => false) then
+        .ok { name := n, count := 0, cols := fs.map (·.1), shared := sh, von := some p }
+      else .error "open table with a field other than a number without G form"
   | _ => .error "table without G form"
 
 /-- A `protects` carrier: a table name, a field of exactly one table (the guard loop of `read_lock`), or
@@ -1015,6 +1032,15 @@ def uArtBei : List UParamArt → Nat → Except String UParamArt
   | [], _ => .error "parameter outside"
   | a :: _, 0 => .ok a
   | _ :: rest, n + 1 => uArtBei rest n
+
+/-- The open table a local reference `r` points into (`some n` for a local of kind `ref n`). -/
+def uRefLokal (ctx : UCtx) (r : String) : Option Nat :=
+  match uParamNr ctx r with
+  | .error _ => none
+  | .ok j =>
+    match uArtBei ctx.kinds j with
+    | .ok (.ref n) => some n
+    | _ => none
 
 /-- Every guard of the table is held (the `holds_guards` of
     `lean_g.rs`: the generation-time half of the guard
@@ -1396,8 +1422,13 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
       match uArtBei ctx.kinds j with
       | .ok (.ptr _ _) => .error "pointer as value without G form"
       | .ok .bool => .error "truth value as a number"
+      | .ok (.ref _) => .error "reference as a number"
       | .ok _ => .ok (.param p)
       | .error e => .error e
+  | .arrow (.variable r) f =>
+    match uRefLokal ctx r with
+    | .some _ => .ok (.refSlot r f)
+    | .none => .error "value without G form"
   | e =>
     match uGrenzwort ctx e with
     | .some v => .ok (.lit v)
@@ -1454,6 +1485,8 @@ structure UFnKopf where
   /-- The device handles among the declared parameters: the position in the WRITTEN parameter list, the
       name and the device. They are erased from `names`/`kinds`/`types`; a call drops their arguments. -/
   griffe : List (Nat × String × String) := []
+  /-- The answer of a foreign body is a reference into the open table number `n` (`-> index into T`). -/
+  resRef : Option Nat := none
 
 /-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
     reason. -/
@@ -1465,7 +1498,8 @@ def uWertArt (k : UFnKopf) : Option (UParamArt × Ty) :=
 
 /-- The answer type of a foreign body. -/
 def UFnKopf.axErg (k : UFnKopf) : Option Ty :=
-  if k.resNever then some Ty.never
+  if let some n := k.resRef then some (Ty.ref n)
+  else if k.resNever then some Ty.never
   else if k.resBool then some Ty.bool
   else k.res.map fun r => Ty.int r.1 r.2
 
@@ -2128,6 +2162,13 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
   | some w =>
     match ziel with
     | .variable x => if ctx.muts.any (strEq · x) then uSetzeLokal ctx x w else uSetzePlatz ctx ziel w
+    | .arrow (.variable r) f =>
+      match uRefLokal ctx r with
+      | .some _ =>
+        match uWertBody ctx w with
+        | .error e => .error e
+        | .ok v => .ok (.assignRef r f v)
+      | .none => uSetzePlatz ctx ziel w
     | _ => uSetzePlatz ctx ziel w
 
 /-- A call through a local function pointer `p` (bound by `let p = &f;`): `some` of the head of the function it
@@ -2503,6 +2544,7 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
             | .none => .error "call without a value"
             | .some Ty.bool => .ok (.bindAx x c xs, uMitLokal ctx x UParamArt.bool Ty.bool muts)
             | .some (Ty.int lo hi) => .ok (.bindAx x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
+            | .some (Ty.ref n) => .ok (.bindAx x c xs, uMitLokal ctx x (UParamArt.ref n) (Ty.ref n) muts)
             | .some _ => .error "answer of a foreign fn without G form"
           else
           match callee.resBool, callee.res with
@@ -2885,6 +2927,11 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 | .error err => .error err
                 | .ok (xs, cE) => .ok ([UStmt.allocBeg x an sv] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
   | f + 1, ctx, .alloc .. :: _ => .error "alloc without else without G form"
+  | f + 1, ctx, .allocVon mu x t tn :: rest =>
+    -- `let r = alloc T;` is the call of `T`'s provider (`Block.alloc`, Zucker.lean): `let r = p();`
+    match ctx.tabs.find? (fun y => strEq y.name tn) with
+    | .some { von := .some p, .. } => uAnwReihe tabs koepfe f ctx (.bind mu x t (.call p []) :: rest)
+    | _ => .error ("alloc of a table without provider: " ++ tn)
   | f + 1, ctx, .retry h (.block ss e) :: rest =>
     match uRetryKopf ctx h with
     | .error err => .error err
@@ -3284,6 +3331,10 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
       | .none => if kn.isSome then .error "foreign fn with a reason channel and no answer without G form" else .ok base
       | .some (.atom "never") => .ok { base with resNever := true }
       | .some (.atom "bool") => if kn.isSome then .error "fallible foreign fn with a non-number answer without G form" else .ok { base with resBool := true }
+      | .some (.index false tn) =>
+        match tabs.findIdx? (fun (y : UTab) => strEq y.name tn && y.von.isSome) with
+        | .some num => if kn.isSome then .error "fallible provider without G form" else .ok { base with resRef := some num }
+        | .none => .error "foreign answer `index into` a table that is not open without G form"
       | .some t =>
         match uErgBereich alias t with
         | .error e => .error e
@@ -3939,6 +3990,7 @@ structure USeiteT where
 def lowerSeiteEin (tabs : List UTab) (names : List String)
     (types : List Ty) : USide → Except String USeiteT
   | .glob _ => .error "static without G form in the 104 lowering"
+  | .refSlot .. => .error "reference without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i", "b"] p with
@@ -4163,6 +4215,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
         (nach G104_referenz.gD G104_referenz.g_lies ULEin))
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
+  | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -4194,6 +4247,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
     (types : List Ty) : List UStmt → URet → Except String UKoerpEin
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
+  | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -4337,6 +4391,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     USide → Except String USeiteE
   | .glob _ => .error "static without G form in the 104 lowering"
+  | .refSlot .. => .error "reference without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with
@@ -5045,7 +5100,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=
