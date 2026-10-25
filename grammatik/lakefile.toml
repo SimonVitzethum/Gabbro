@@ -44,6 +44,11 @@ root = "Grammatik.Gen.RundProbe"
 name = "gen-fein"
 root = "Grammatik.Gen.Fein.Lauf"
 
+# Stage 0 of self-hosting: check and run a minimal Gabbro program on machine G (`Boot/Laufzeit.lean`).
+[[lean_exe]]
+name = "gabbro-boot"
+root = "Grammatik.Boot.Haupt"
+
 [[lean_exe]]
 name = "gen-text"
 root = "Grammatik.Gen.Text.Lauf"
