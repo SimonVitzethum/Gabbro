@@ -52,6 +52,12 @@ def konstListe : UKonst → Option (List UKonst)
   | .cons a r => (konstListe r).map (a :: ·)
   | _ => none
 
+/-- The payload of a constant case: none, or a number inside its range. -/
+def nutzKonst : (o : Option (Int × Int)) → UKonst → Option (Nutzlast o)
+  | none, .null => some ()
+  | some (lo, hi), .zahl n => if h : lo ≤ n ∧ n ≤ hi then some ⟨n, h.1, h.2⟩ else none
+  | _, _ => none
+
 /-- **The value of a constant initialiser at the type `τ`**: zero memory (`= 0`) wherever the type holds a zero,
     a number inside its range, a truth value, the bytes of a string under its maximum, an array literal of exactly
     the array's length; anything else has no value. -/
@@ -66,6 +72,8 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
     | none => none
   | .str _, .null => some ⟨[], Nat.zero_le _⟩
   | .opt _, .null => some none
+  | .sum cs, .fall k p =>
+    if h : k < cs.length then (nutzKonst (cs.get ⟨k, h⟩) p).map (⟨⟨k, h⟩, ·⟩) else none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
   | .arr τ n, k =>
     match konstListe k with

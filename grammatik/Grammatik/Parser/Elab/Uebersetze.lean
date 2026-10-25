@@ -362,6 +362,8 @@ inductive UKonst
   | text : List Int → UKonst
   | nil : UKonst
   | cons : UKonst → UKonst → UKonst
+  /-- A case of a tagged type: its position and its payload (`null` without one). -/
+  | fall : Nat → UKonst → UKonst
   deriving DecidableEq, Repr
 
 /-- One elaborated static (`static [mut] n : T = init;`): `init` is its `sp0` value (a numeral, `0`/`1` for a
@@ -376,6 +378,10 @@ structure UGlob where
       (`uOptGlobs`; its type is then `Ty.opt` of the count of `T`). -/
   optName : Option String := none
   optNum : Option Nat := none
+  /-- A static of a tagged type: the name of the type as written, and its position once the types are read
+      (`uSumGlobs`; its type is then `Ty.sum` of the specification). -/
+  sumName : Option String := none
+  sumNum : Option Nat := none
   var : Bool := false
   /-- An `atomic` item (`Deklaration.atomar`): read and stored without a lock, ordered by the machine. -/
   atomic : Bool := false
@@ -2974,7 +2980,8 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             | .ok (.why num) => some (e, 0, num)
             | .ok (.sum num) => some (e, 1, num)
             | _ => none
-          | .error _ => none
+          | .error _ =>
+            (ctx.globs.find? (fun g => strEq g.name e)).bind fun g => g.sumNum.map fun num => (e, 1, num)
         | _ => none : Option (String × Nat × Nat)) with
     | .some (e, 1, num) =>
       match ctx.sums[num]? with
@@ -3421,6 +3428,40 @@ def uNutzItem : List SExpr → Except String (List String)
   | _ :: _ => .error "payload of a table without G form"
 
 mutual
+/-- The initial value of a static of a tagged type: a payload-free case, or a case with a numeral payload. -/
+def uSumKonst (consts : List (String × Int)) (sm : USum) : SKonstWert → Except String UKonst
+  | .one (.variable c) =>
+    match sm.cases.findIdx? (fun x => strEq x.1 c) with
+    | some i => .ok (.fall i .null)
+    | none => .error ("case unknown: " ++ c)
+  | .one (.call c [e]) =>
+    match sm.cases.findIdx? (fun x => strEq x.1 c), (sm.cases.find? (fun x => strEq x.1 c)).bind (·.2) with
+    | some i, some (lo, hi) =>
+      match uKonstWert lo hi [] consts 64 e with
+      | some z => .ok (.fall i (.zahl z))
+      | none => .error "static initialiser without G form"
+    | _, _ => .error "static initialiser without G form"
+  | _ => .error "static initialiser without G form"
+
+/-- The statics of a tagged type with their type, read once the `tagged type`s are known. -/
+def uSumGlobs (consts : List (String × Int)) (sums : List USum) (ms : List SItemTief) :
+    List UGlob → Except String (List UGlob)
+  | [] => .ok []
+  | g :: rest =>
+    match uSumGlobs consts sums ms rest, g.sumName with
+    | .error e, _ => .error e
+    | .ok gs, none => .ok (g :: gs)
+    | .ok gs, some a =>
+      match sums.findIdx? (fun sm => strEq sm.name a), sums.find? (fun sm => strEq sm.name a) with
+      | some k, some sm =>
+        match ms.findSome? (fun m => match m with | .globT _ n _ v .. => if strEq n g.name then some v else none | _ => none) with
+        | some v =>
+          match uSumKonst consts sm v with
+          | .ok kv => .ok ({ g with ty := .wert (.sum sm.spec), initK := kv, sumNum := some k } :: gs)
+          | .error e => .error e
+        | none => .error ("static unknown: " ++ g.name)
+      | _, _ => .error ("type unknown: " ++ a)
+
 /-- The option statics with the number and count of their table. -/
 def uOptGlobs (tabs : List UTab) : List UGlob → Except String (List UGlob)
   | [] => .ok []
@@ -3477,6 +3518,20 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             | .ok τ => .ok (GTy.wert τ, (0 : Int))
           -- the count of `T` is read with the tables (`uOptGlobs`)
           | .index true _ => .ok (GTy.wert (.opt 0), (0 : Int))
+          -- a name that is no integer type may be a tagged type, read with the types (`uSumGlobs`)
+          | .atom a =>
+            match uErgBereich alias (.atom a) with
+            | .error _ => .ok (GTy.wert (.sum []), (0 : Int))
+            | .ok (lo, hi) =>
+              match (match v with
+                  | .one (.lit k) => .ok (Int.ofNat k)
+                  | .one (.un "-" (.lit k)) => .ok (-(Int.ofNat k))
+                  | .one (.variable c) => uSuch "const" consts c
+                  | _ => .error "static initialiser without G form" : Except String Int) with
+              | .error e => .error e
+              | .ok z =>
+                if lo ≤ z ∧ z ≤ hi then .ok (GTy.int lo hi, z)
+                else .error "static initialiser outside its range"
           | _ =>
             match uErgBereich alias t with
             | .error e => .error e
@@ -3492,15 +3547,17 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
                 else .error "static initialiser outside its range" : Except String (GTy × Int)) with
       | .error e => .error e
       | .ok (ty, z) =>
-        match (match ty with
-            | .wert _ => uKonst consts v
-            | _ => .ok .null : Except String UKonst) with
+        match (match ty, t with
+            | .wert (.sum _), _ => .ok .null
+            | .wert _, _ => uKonst consts v
+            | _, _ => .ok .null : Except String UKonst) with
         | .error e => .error e
         | .ok k =>
         match uGlobs consts alias rest with
         | .error e => .error e
         | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh,
-                           optName := match t with | .index true tn => some tn | _ => none } :: gs)
+                           optName := match t with | .index true tn => some tn | _ => none,
+                           sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
@@ -4298,6 +4355,9 @@ def elabU : List SItemTief → Except String UProg
     match uSums alias ms with
     | .error e => .error e
     | .ok sums =>
+    match uSumGlobs consts sums ms globs with
+    | .error e => .error e
+    | .ok globs =>
     match uRegs alias consts tabs globs ms with
     | .error e => .error e
     | .ok regs =>

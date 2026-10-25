@@ -621,7 +621,21 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
   | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs, rest =>
     if hs : sidx < u.sums.length then
       match paramPos fn.params m with
-      | .error err => .error err
+      | .error err =>
+        -- a static of a tagged type
+        match globIdx u.globs m with
+        | .error _ => .error err
+        | .ok g =>
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            match h : (declOf u).gtyp g with
+            | .sum cs =>
+              match lowArmsT (l := l) u caller Γ fn n Λ pe cs bs rest with
+              | .error err => .error err
+              | .ok (arms, .blkEnd :: rest') =>
+                .ok (Stmt.onTag (D := declOf u) (h ▸ Expr.glob (D := declOf u) g hd) arms, rest')
+              | .ok (_, _) => .error "lower: a match is not closed"
+            | _ => .error "lower: match of a non-tagged value"
+          else .error "access without held guard"
       | .ok j =>
         match fn.params[j]? with
         | some (_, .sum cs) =>
