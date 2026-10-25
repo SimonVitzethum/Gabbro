@@ -696,7 +696,9 @@ notion.
 | specifications as Lean relations per function; the call rule; one `rufAt` step as the body's weakest precondition; recursion, partial (`ruf_induktion`) and total with a measure (`ruf_mass`); completeness of the procedure logic | `WP/Ruf.lean` | done |
 | exact rules for `if`, `return`, the end-block sequence, `narrow`, `let x = f(..)` (exact and against a specification) | `WP/Regeln.lean` | done |
 | witnesses: a `traverse` over a table of ANY size (`fuellen_korrekt`); a recursive function, totally correct (`f_korrekt`) | `WP/Zeuge.lean`, `WP/ZeugeRuf.lean` | done |
-| an exact rule for EVERY remaining construct (writes to slots, statics, regions; locks; `match` over options, tags, reasons; indirect and fallible calls; foreign bodies; registers; `awaits`/`exchange`; `check`; floats), with one theorem that breaks the build when a constructor has none | `WP/Regeln*.lean` | open |
+| rules for the composite constructs: locks, `match` over options and reasons, the three loops at the statement level, `check`, the foreign body's binding, end-block binding and call | `WP/Regeln2.lean` | done |
+| leaves (writes to slots, statics, regions; register and transition statements; returns) need no rule: their `wp` is `Q` of the outcome, written out by `simp only [wpS, execStmt]` | -- | by exactness |
+| rules still to state: `match` over tags (`Arms`), indirect calls, fallible calls and fallible foreign bodies, register reads, `awaits`/`exchange`, floats | `WP/Regeln*.lean` | open |
 | frames: what a block leaves untouched, from `RahmenTreu`; the tactic `gv_wp` (the rules as a simp set) | | open |
 | relational logic (two runs): determinism, noninterference, renaming invariance -- what `PLAN-SELF-HOSTING.md` §3.2-§3.3 owes | | open |
 | concurrency: rely-guarantee over GX with the lock invariants and the atomic rely of `gabbro_ziel` | | open |
