@@ -4798,3 +4798,26 @@ ONE program; every guarantee holds across project boundaries because the program
   embedding of declarations), name spaces in the Lean front end, `GabbroZielVerbund` for n units with every leg.
 
 All axiom lists standard.
+
+## 95. The embedding theorem: a project's proof in every program that links it (2026-10-25)
+
+`Zielsatz/Einbettung/{Einbettung,Ressourcen,Syntax,Welt,Auswertung,Schritt,Handler,Lauf,Schleifen,Werkzeug,Simulation,
+Koerper,Pflicht,Uebertragung,Zeuge}.lean`. Scope: `BUILD-SYSTEM.md` §7.10.
+
+* `Einbettung D D'`: injections of every sort with partial inverses, attributes kept, signature and table numbers
+  mapped; `exS`/`exB`/`exEnd`: the syntax of `D` as syntax of `D'`.
+* `eval_exE`: evaluation commutes with the embedding on worlds that carry the same image memory (`Treu`).
+* `Inv` (the KEYS of a run): pairs of a `D`-world and the `D'`-world it stood for, functional because the
+  `D`-trace grows at every foreign answer (`PadOk`) and a key as long as the current trace agrees with the
+  current `D'`-world outside the image (`eq_of_treu`).
+* `sim_stmt`, `sim_block`, `sim_end`, `sim_arms`, `sim_grund`: every body of `D`, run against the handlers any
+  map repeating the keys induces (`rufΦ`, `umweltΦ`, `aumweltΦ`, `orakelΦ`), ends in ONE outcome beside the
+  image's outcome against the handlers of `D'` (`AusRel`/`EndRel`); `traverse_sim`, `retry_sim`, `forever_sim`.
+* `rufΦ_rahmen`, `rufΦ_ohneVorbedingung`, `rufΦ_ohneLogik`, `rufΦ_torRuf`, `umweltΦ_ok`, `aumweltΦ_ok`,
+  `orakelΦ_rahmen`, `orakelΦ_regLokal`, `orakelΦ_axVertrag`: the induced handlers are in the classes of the user
+  obligation; `req_E`, `ens_E`: contracts hold exactly when their images do.
+* **`logikPflicht_E`**: `LogikPflichtA P S Q T` of the project gives `KoerperGutSA`, `InvGutSA`, `InvGutGrundA` of the
+  linking program at every image function, for every budget, under `Uebernahme`, `ZeigerfreiD`, `PadOk`.
+* Witness: `einbettung_zeuge` with `zeuge_fremd` (the embedding is not onto: the program's own table and function).
+
+All axiom lists standard.

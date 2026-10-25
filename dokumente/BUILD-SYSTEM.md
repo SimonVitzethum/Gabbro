@@ -312,14 +312,29 @@ events.
 **Stages** (each a commit with witnesses, Lean only; LLVM later):
 * E0 the embedding: sorts, types (numbers mapped by `num`/`tnum`), values, resources, signatures, contracts;
   the translation of syntax (`Zielsatz/Einbettung/{Einbettung,Ressourcen,Syntax}.lean`). DONE.
-* E1 worlds: restriction, merge with a fixed context, events and the trace (`offen` commutes with the filter).
-* E2 semantics: `eval`, `execEndHA` simulation, oracle/environment/handler restriction.
-* E3 the obligation transfer and `gabbro_ziel_projekte` over per-project declarations; a witness with two projects
-  over DIFFERENT declarations.
-* E4 callbacks: a function pointer of `D` may in `D'` point to a function outside the image. The project's proof
-  then needs a contract per POINTER SIGNATURE (what every conforming callee promises); today contracts are per
-  function. This is a language question (a contract on `fnptr` types) and is put to the owner before it is built;
-  until then E3 requires that no foreign function conforms to a pointer type of `D` (decidable).
+* E1 values, memories, environments (`Welt.lean`); E2a evaluation commutes (`Auswertung.lean`). DONE.
+* E2b/E2c the simulation: one step beside its image under the KEYS (`Schritt.lean`), the induced handlers
+  (`Handler.lean`), the run relation (`Lauf.lean`), loops (`Schleifen.lean`), and every statement, block, end
+  block and arm list of `D` beside its image (`Koerper.lean`: `sim_stmt` ... `sim_grund`). DONE.
+* E3 the obligation transfer: `logikPflicht_E` (`Uebertragung.lean`) with the lawfulness of the induced handlers
+  (`Pflicht.lean`) and the witness `einbettung_zeuge` (`Zeuge.lean`: a library with a table embedded into a
+  program with a table and a function of its own). DONE. Still open: `gabbro_ziel_projekte` over per-project
+  declarations (feeding `logikPflicht_E` into `NutzerTeilO`).
+* E4 callbacks: see below; needs the owner's review of the `Spec.lean` change before it is merged.
+
+**What E3 needs** (`Uebernahme`, the link-time conditions, and the premises of `logikPflicht_E`):
+* the bodies, contracts and invariant predicates of the program are the images (`Fortsetzung`);
+* an image lock protects exactly the images of the lock's carriers under the same invariant;
+* the program's atomic rely is no larger on the image than the project's (`OffenA` on both sides satisfies it);
+* the program's axiom ensures agree with the project's on the image;
+* **an invariant over an image table is an image invariant** (finding: a program may not add an invariant over a
+  library table and expect the library's proof to keep it -- the library cannot know it; such an invariant must
+  be the library's, or the program re-proves the library functions that write the table);
+* `ZeigerfreiD`: no function pointer comes in from outside (parameters, results, carriers, axiom and register
+  answers) -- E4 lifts this;
+* `PadOk`: the project declares a table, a global or a lock (the neutral trace piece). Finding: for a declaration
+  with none of them the transfer is FALSE in general -- its worlds cannot tell two calls of a foreign function
+  apart, so a proof may use "same world, same answer"; a stateless project gets a ghost carrier of its own.
 
 **Finding while designing E1 (2026-10-25): obligations do not carry over WORD FOR WORD.** The user obligation (b)
 quantifies over call handlers, oracles and environments that are FUNCTIONS of the world, trace included. In a larger
