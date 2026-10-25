@@ -674,6 +674,40 @@ ceiling, the build state of `bruecke/` and `programmlogik/`, and every axiom set
 `Spec.lean` header cites for the bridge (`messung/GABBROV-BRUECKE-REPORT.md`,
 `GABBROV-SERVER-REPORT.md`, `GABBROV-V1.md`, the mandate `AUFTRAG-GABBROV.md`) are not in the tree.
 
+## 17. GabbroV over machine G: complete logic proofs (Simon, 2026-10-25)
+
+**Why a new route.** The channel of §13 proves duties against `Body.lean`, a model BESIDE machine G, through an
+emitter in the Rust checker (`lean.rs`) that refuses whole classes of forms (§13.9, §13.10). The self-hosting plan
+(`PLAN-SELF-HOSTING.md` §3.4, §4) needs logic proofs over THE semantics the goal theorem uses, for every form, without
+Rust. So GabbroV is completed directly over machine G (`grammatik/Grammatik/Logik/WP/`); the `Body` route stays until
+the Rust checker is deleted (`PLAN-SELF-HOSTING.md` §6).
+
+**The core idea.** Machine G is total: every run ends in an outcome (`Ausgang`); what would diverge ends in a budget,
+depth or progress outcome. So the weakest precondition of a postcondition over outcomes is EXACT
+(`wpB b Q σ ρ ↔ Q (execBlock … b σ ρ)`), and a triple holds exactly when its precondition implies it: the calculus is
+sound and complete at once, with Lean as the assertion language. Postconditions range over all outcomes, so partial
+correctness (`NurOk`), total correctness (`Normal`), returns (`Kehrt`), reasons, loop exits and named stops are one
+notion.
+
+| Part | Where | State |
+|---|---|---|
+| `wpS`/`wpB`/`wpE`, exactness, consequence, conjunction, sequence, binding | `WP/Kern.lean` | done |
+| the loops `traverse`, `retry`, `forever`: invariant rules, each with its completeness theorem | `WP/Kern.lean` | done |
+| specifications as Lean relations per function; the call rule; one `rufAt` step as the body's weakest precondition; recursion, partial (`ruf_induktion`) and total with a measure (`ruf_mass`); completeness of the procedure logic | `WP/Ruf.lean` | done |
+| exact rules for `if`, `return`, the end-block sequence, `narrow`, `let x = f(..)` (exact and against a specification) | `WP/Regeln.lean` | done |
+| witnesses: a `traverse` over a table of ANY size (`fuellen_korrekt`); a recursive function, totally correct (`f_korrekt`) | `WP/Zeuge.lean`, `WP/ZeugeRuf.lean` | done |
+| an exact rule for EVERY remaining construct (writes to slots, statics, regions; locks; `match` over options, tags, reasons; indirect and fallible calls; foreign bodies; registers; `awaits`/`exchange`; `check`; floats), with one theorem that breaks the build when a constructor has none | `WP/Regeln*.lean` | open |
+| frames: what a block leaves untouched, from `RahmenTreu`; the tactic `gv_wp` (the rules as a simp set) | | open |
+| relational logic (two runs): determinism, noninterference, renaming invariance -- what `PLAN-SELF-HOSTING.md` §3.2-§3.3 owes | | open |
+| concurrency: rely-guarantee over GX with the lock invariants and the atomic rely of `gabbro_ziel` | | open |
+| regions and linked structures: reasoning over `RegionRepr` and the ownership ledger (lists, trees, maps over the open region) | | open |
+| specifications stated over the SOURCE TEXT: through the Lean pipeline (`uebersetzeAllg`), "the function named `f` in this text meets `S`" | | open |
+
+**What may be said today:** every sequential, call-free or recursive program built from the constructs with rules can
+be proved correct, partially or totally, over machine G itself; the witnesses are non-degenerate (a loop over a
+table of any size, a recursion with a measure). **Not yet:** the remaining constructs' rules, relational and
+concurrent reasoning, and the source-text level.
+
 ## Appendix — old → new ids
 
 | Cited as | Now |
