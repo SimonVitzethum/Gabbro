@@ -37,6 +37,8 @@ variable {D : Deklaration}
 /-- **A project of a linked program**: the functions it owns, and its unit. -/
 structure Projekt (D : Deklaration) where
   eigen : D.Fn → Bool
+  /-- The locks whose invariants the project owes at its start (BUILD-SYSTEM 7.5, L4). -/
+  sperren : D.Lock → Bool
   E : Einheit D
 
 /-- The body of `f` in the composed program: the one of the first project that owns `f`. -/
@@ -67,6 +69,35 @@ def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
 /-- Every function is owned by some project of the list. -/
 def Deckend (ps : List (Projekt D)) : Prop := ∀ f, ∃ p ∈ ps, p.eigen f = true
 
+/-- Every lock is owned by some project of the list. -/
+def DeckendS (ps : List (Projekt D)) : Prop := ∀ L, ∃ p ∈ ps, p.sperren L = true
+
+/-- **A project fits the program** (L4): the same contracts, invariants, lock families and
+    dispatch facts as the link declaration; its OWN initial memory agrees with the program's on the
+    carriers of the locks it owns and on what the `requires` of its starts read. So every project
+    initializes its own carriers, and the program's initial memory is any memory that agrees with
+    each project there. -/
+structure Passend (B : Einheit D) (p : Projekt D) : Prop where
+  invariante : B.P.invariante = p.E.P.invariante
+  requires : B.P.requires = p.E.P.requires
+  ensures : B.P.ensures = p.E.P.ensures
+  sperrInv : B.S = p.E.S
+  unterbricht : B.P.unterbricht = p.E.P.unterbricht
+  speicherSperre : ∀ L, p.sperren L = true → GleichAuf (B.S.orte L) (p.E.sp0.welt []) (B.sp0.welt [])
+  speicherStart : ∀ a ∈ p.E.starts ++ p.E.gestartet,
+    GleichAuf (B.P.requires a.1).orte (p.E.sp0.welt []) (B.sp0.welt [])
+
+theorem passend_P {B : Einheit D} {p : Projekt D} (h : Passend B p) :
+    p.E.P = mitRumpf B.P p.E.P.rumpf := by
+  unfold mitRumpf
+  rw [h.invariante, h.requires, h.ensures, h.unterbricht]
+
+/-- **The start a project owes** (L4): the invariants of the locks it owns at its own initial
+    memory, and the `requires` of its own starts there. -/
+structure StartTeil (p : Projekt D) : Prop where
+  sperren : ∀ L, p.sperren L = true → p.E.S.inv L p.E.sp0 = true
+  req : ∀ a ∈ p.E.starts ++ p.E.gestartet, ReqAmEintritt p.E.P a.1 (p.E.sp0.welt []) a.2
+
 theorem koerperVon_besitzer {B : Programm D} {ps : List (Projekt D)} (h : Deckend ps) (f : D.Fn) :
     ∃ p ∈ ps, p.eigen f = true ∧ koerperVon B ps f = p.E.P.rumpf f := by
   unfold koerperVon
@@ -96,7 +127,7 @@ structure NutzerTeilO (p : Projekt D) : Prop where
         InvGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧
         InvGutGrundA p.E.P passes p.E.Q p.E.S OffenA f) ∧
     SperrInvLokal p.E.S ∧ AxEnsLokal p.E.Q
-  start : StartPflicht p.E
+  start : StartTeil p
 
 /-! ## 3. Monotonicity: stronger ensures, one body -/
 
@@ -181,15 +212,15 @@ variable [DecidableEq D.Fn] {B : Einheit D} {ps : List (Projekt D)}
     the project that owns it, against the open-world rely (which contains the program's shared
     atomics, however many threads the program starts into it) and its own axiom ensures (which
     the program's conjunction implies); the start is each project's. -/
-theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Verbindbar B p.E) (hne : ps ≠ [])
-    (hD : Deckend ps) (hN : ∀ p ∈ ps, NutzerTeilO p) :
+theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Passend B p) (hne : ps ≠ [])
+    (hD : Deckend ps) (hDS : DeckendS ps) (hN : ∀ p ∈ ps, NutzerTeilO p) :
     NutzerPflichtA (komponiere B ps) := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
   refine ⟨⟨fun passes f => ?_, ?_, ?_⟩, ⟨?_, ?_⟩⟩
   · obtain ⟨p, hp, he, hk⟩ := koerperVon_besitzer (B := B.P) hD f
     obtain ⟨k, i, g⟩ := (hN p hp).logik.1 passes f he
-    have hP : p.E.P = mitRumpf B.P p.E.P.rumpf := p2_eq (hV p hp)
-    have hS : p.E.S = B.S := (hV p hp).sperren.symm
+    have hP : p.E.P = mitRumpf B.P p.E.P.rumpf := passend_P (hV p hp)
+    have hS : p.E.S = B.S := (hV p hp).sperrInv.symm
     rw [hP, hS] at k i g
     have hQ : ∀ O, AxVertragO (qAlle ps) O → AxVertragO p.E.Q O := fun O => axVertragO_qAlle hp
     have hT : ∀ c, GeteiltA (komponiere B ps).P (komponiere B ps).ws c → OffenA c :=
@@ -200,13 +231,19 @@ theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Verbindbar B p.E) (hne : p
       (invGutGrundA_mitRumpf2 B.P _ _ passes _ _ _ f hk).mpr
         (invGutGrundA_mono hT (invGutGrundA_Q hQ g))⟩
   · show SperrInvLokal B.S
-    rw [(hV p0 hp0).sperren]
+    rw [(hV p0 hp0).sperrInv]
     exact (hN p0 hp0).logik.2.1
   · exact axEnsLokal_qAlle fun p hp => (hN p hp).logik.2.2
   · intro L
     show B.S.inv L B.sp0 = true
-    rw [(hV p0 hp0).sperren, (hV p0 hp0).speicher]
-    exact (hN p0 hp0).start.sperren L
+    obtain ⟨p, hp, hL⟩ := hDS L
+    have hlok : SperrInvLokal B.S := by rw [(hV p hp).sperrInv]; exact (hN p hp).logik.2.1
+    have hg := (hV p hp).speicherSperre L hL
+    rw [← hlok L p.E.sp0 B.sp0 (fun c hc => by
+      cases c with
+      | inl t => exact hg.1 t hc
+      | inr g => exact hg.2 g hc), (hV p hp).sperrInv]
+    exact (hN p hp).start.sperren L hL
   · intro a ha
     show ReqAmEintritt (komponiereP B.P ps) a.1 (B.sp0.welt []) a.2
     have hq : a ∈ (ps.flatMap (·.E.starts)) ++ ps.flatMap (·.E.gestartet) := ha
@@ -219,7 +256,8 @@ theorem nutzerPflichtA_komponiere (hV : ∀ p ∈ ps, Verbindbar B p.E) (hne : p
     have := (hN p hp).start.req a hap
     unfold ReqAmEintritt at this ⊢
     have e1 : (komponiereP B.P ps).requires = p.E.P.requires := (hV p hp).requires
-    rw [e1, (hV p hp).speicher]
+    rw [e1, ← eval_gleichAuf (p.E.P.requires a.1) (fun o h => by rw [(hV p hp).requires]; exact h)
+      ((hV p hp).speicherStart a hap)]
     exact this
 
 end Pflicht

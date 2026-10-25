@@ -4880,6 +4880,26 @@ All axiom lists standard.
   in one world answering alike, which no longer holds.
 * Open: `RegLokal` still forbids register and visibility answers that depend on the history.
 
+## 99. Linking complete in the model: own starts, joined assumptions, n units, grown rely (2026-10-25)
+
+`Zielsatz/Projekte/{Komposition,Annahmen,Verbund,Zeuge}.lean`, `Zielsatz/Einbettung/Projekt.lean`,
+`Speichermodell/Atomar/AtomarGleich.lean`. Scope: `BUILD-SYSTEM.md` §7.5-§7.9.
+
+* **L4**: `Projekt.sperren`, `Passend` (each project's own initial memory agrees with the program's on the carriers
+  of its locks and on what its starts' `requires` read), `StartTeil`, `DeckendS`; `nutzerPflichtA_komponiere` and
+  `gabbro_ziel_projekte` take them; `startTeil_E`: a library's start at its own memory carries into every program
+  whose memory restricts to it.
+* **L3**: `Annahmen.vereinige`, the twin of `manifest::vereinige`: `vereinige_teil`, `vereinige_eindeutig`,
+  `vereinige_voll` (without a contradiction every input is kept), `vereinige_streit` (a key is reported exactly
+  when two inputs differ on it).
+* **n units**: `BindeSpec` (the link check: closed graphs, footprints with shared atomics, pool, write separation,
+  masks, foreign ownership, ownership start), `akzeptiertSpecX_komponiere` (each unit alone + link check = the
+  whole program's acceptance), `bindeB`/`bindeB_sound`, **`gabbro_ziel_verbund_n`**; witness `verbund_zeuge`
+  (every accepted unit, cut at any boundary into two units checked alone).
+* **Grown rely**: `execHA_gleich` (environments alike on what a body reads run it alike), `koerperGutSA_wachs`,
+  `invGutSA_wachs`, `invGutGrundA_wachs`, `nutzerTeilO_wachs` (a closed-world library re-proves only bodies that
+  read an atomic outside its own rely).
+
 All axiom lists standard.
 
 ## 99. Arrays and strings as values in G (2026-10-25)

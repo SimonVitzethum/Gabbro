@@ -140,6 +140,8 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **O28-Rest (linking).** The `Spec.lean` diff had no independent review round; no semantic equivalence/refinement for contracts (normal-form
   trees); no certificate for linked programs. Name spaces are in Lean (THEOREM-MAP 97); the Rust checker still resolves against the whole
   unit -- it must resolve against the project's visible names and refuse an own top module named like a dependency.
+  The model side of linking is complete (THEOREM-MAP 94-99); open: the Rust link check (`bindeB`), build files, GabbroV
+  certificate reuse by fingerprint, LLVM linkage and TV of the link step.
 - **O41 (registers as Lean, not as `.tsv`; Simon, 2026-10-20).** `dokumente/llvm-modelldeckung.tsv` is a hand-written list of the model's
   members with an LLVM status per member; it proves nothing, its member column duplicates the total match of `Gen/Abdeckung/Mitglieder.lean`,
   and `instrumente/teile/llvm-modelldeckung.py` checks it against the Lean sources by regex. `messung/fallen-klassifikation.tsv` has no reader.

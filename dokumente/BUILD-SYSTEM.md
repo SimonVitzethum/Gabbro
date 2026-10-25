@@ -259,6 +259,11 @@ Required, not optional, but ONLY in a form that gives exactly what 7.2 gives:
    whole-program acceptance. Then a dependency is checked ONCE and its verdict reused by content fingerprint.
 2. The LLVM backend emits units with external linkage, every static defined once.
 3. Translation validation covers each object and the link step (`PLAN-TRANSLATION-VALIDATION.md`).
+Lean, done (2026-10-25, `Zielsatz/Projekte/Verbund.lean`, THEOREM-MAP §99): `gabbro_ziel_verbund_n` for any
+number of units, each accepted ALONE, plus the link check `BindeSpec` (decided by `bindeB`, `bindeB_sound`) --
+callbacks, shared atomics, ownership across units, differing assumptions and initial memories, one lock order.
+It is a new statement beside `GabbroZielProjekte` (its own file, like that one), not a diff of `Spec.lean`; the
+two-unit `GabbroZielVerbund` stays as it is. Open: points 2 and 3, and the Rust link check.
 Until all three hold, the check results of a dependency are cached by content fingerprint (the check is
 deterministic), and the program is compiled as one unit.
 
@@ -273,7 +278,13 @@ deterministic), and the program is compiled as one unit.
 | 5 | GabbroV: per-project certificates reused by fingerprint; automatic re-check of grown rely for closed-world libraries | 1-2 weeks |
 | 6 | separate compilation (7.7): Verbund extension, LLVM linkage, TV | after the TV backend |
 
-### 7.9 Status (2026-10-25, branch `ziel/projekte`)
+### 7.9 Status (2026-10-25)
+
+Every Lean step of 7.8 is done (THEOREM-MAP §94-§99): L1-L6, name spaces, the embedding with callbacks, L3's twin
+of `vereinige` (`Annahmen.lean`), L4 (`Passend`, `StartTeil`, `startTeil_E`), the n-unit link
+(`gabbro_ziel_verbund_n`) and the grown-rely re-check on the model side (`koerperGutSA_wachs`,
+`nutzerTeilO_wachs`). Open outside the model: the Rust checker and build files (steps 1-2), GabbroV's reuse of
+certificates by fingerprint (step 5, `programmlogik/`), LLVM linkage and translation validation (step 6).
 
 Proved in Lean (THEOREM-MAP §94), all axiom lists standard:
 * L1 composition (`komponiere`), L2 composition of (b) under the open-world rely (`nutzerPflichtA_komponiere`), L3

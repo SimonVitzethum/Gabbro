@@ -21,13 +21,21 @@ variable {D : Deklaration}
 
 /-- **A unit cut into two projects** at the boundary `eigen`. -/
 def schnitt (E : Einheit D) (eigen : D.Fn → Bool) : List (Projekt D) :=
-  [⟨eigen, E⟩, ⟨fun f => !eigen f, { E with starts := [], gestartet := [], arenen := [] }⟩]
+  [⟨eigen, fun _ => true, E⟩,
+    ⟨fun f => !eigen f, fun _ => false, { E with starts := [], gestartet := [], arenen := [] }⟩]
 
-theorem schnitt_verbindbar (E : Einheit D) (eigen : D.Fn → Bool) :
-    ∀ p ∈ schnitt E eigen, Verbindbar E p.E := by
+theorem gleichAuf_refl (S : List (D.Tab ⊕ D.Glob)) (σ : World D) : GleichAuf S σ σ :=
+  ⟨fun _ _ => rfl, fun _ _ => rfl⟩
+
+theorem schnitt_passend (E : Einheit D) (eigen : D.Fn → Bool) :
+    ∀ p ∈ schnitt E eigen, Passend E p := by
   intro p hp
   simp only [schnitt, List.mem_cons, List.not_mem_nil, or_false] at hp
-  rcases hp with rfl | rfl <;> exact ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+  rcases hp with rfl | rfl <;>
+    exact ⟨rfl, rfl, rfl, rfl, rfl, fun _ _ => gleichAuf_refl _ _, fun _ _ => gleichAuf_refl _ _⟩
+
+theorem schnitt_deckendS (E : Einheit D) (eigen : D.Fn → Bool) : DeckendS (schnitt E eigen) :=
+  fun _ => ⟨_, List.mem_cons_self, rfl⟩
 
 theorem schnitt_deckend (E : Einheit D) (eigen : D.Fn → Bool) : Deckend (schnitt E eigen) := by
   intro f
@@ -51,13 +59,14 @@ theorem schnitt_komponiere (E : Einheit D) (eigen : D.Fn → Bool) :
   simp [mitRumpf, schnitt]
 
 /-- Each part owes what the whole unit owes. -/
-theorem schnitt_nutzer {E : Einheit D} {eigen : D.Fn → Bool} (hN : NutzerTeilO ⟨fun _ => true, E⟩) :
+theorem schnitt_nutzer {E : Einheit D} {eigen : D.Fn → Bool}
+    (hN : NutzerTeilO ⟨fun _ => true, fun _ => true, E⟩) :
     ∀ p ∈ schnitt E eigen, NutzerTeilO p := by
   intro p hp
   simp only [schnitt, List.mem_cons, List.not_mem_nil, or_false] at hp
   rcases hp with rfl | rfl
-  · exact ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, hN.start⟩
-  · refine ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, ⟨hN.start.sperren, ?_⟩⟩
+  · exact ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, ⟨hN.start.sperren, hN.start.req⟩⟩
+  · refine ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, ⟨(fun _ h => by cases h), ?_⟩⟩
     intro a ha
     simp at ha
 
@@ -67,7 +76,7 @@ theorem schnitt_nutzer {E : Einheit D} {eigen : D.Fn → Bool} (hN : NutzerTeilO
     projects. -/
 theorem projekte_zeuge (C : PrueferX) [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
-    (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerTeilO ⟨fun _ => true, E⟩)
+    (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerTeilO ⟨fun _ => true, fun _ => true, E⟩)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
     (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe)
@@ -79,8 +88,8 @@ theorem projekte_zeuge (C : PrueferX) [DecidableEq D.Fn] (E : Einheit D) (eigen 
       (GeteiltV (D := D) (komponiere E (schnitt E eigen)).P (komponiere E (schnitt E eigen)).ws)
       (RufStartG (komponiere E (schnitt E eigen)).P.mitRuhe sp init)
       ((komponiere E (schnitt E eigen)).arenen.map (·.mitRuhe)) K :=
-  gabbro_ziel_projekte C D E (schnitt E eigen) fs ls cs (schnitt_verbindbar E eigen) (by simp [schnitt])
-    (schnitt_deckend E eigen) (by rw [schnitt_komponiere]; exact hC) (schnitt_nutzer hN) O
+  gabbro_ziel_projekte C D E (schnitt E eigen) fs ls cs (schnitt_passend E eigen) (by simp [schnitt])
+    (schnitt_deckend E eigen) (schnitt_deckendS E eigen) (by rw [schnitt_komponiere]; exact hC) (schnitt_nutzer hN) O
     (by rw [schnitt_komponiere]; exact hH) passes sp init (by rw [schnitt_komponiere]; exact hL)
     lebt0 K hK
 
