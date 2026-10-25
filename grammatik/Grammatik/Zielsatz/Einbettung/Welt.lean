@@ -4,9 +4,10 @@ import Grammatik.Zielsatz.Einbettung.Syntax
   File:      Grammatik/Zielsatz/Einbettung/Welt.lean
   Subject:   Values, memories and environments under an embedding (stage E1).
 
-  A project's carriers hold values the project can name: until callbacks into foreign functions
-  are covered (stage E4), its tables, globals and parameters carry no function-pointer type
-  (`ZeigerfreiD`), and a value of such a type goes back from `D'` to `D` (`valZ`). A memory of
+  A value of `D` stands beside a value of `D'` (`VRel`): equal through the embedding, except at a
+  function pointer, where a HEAD of its signature (`Rueck.rep`, stage E4) stands beside every
+  function of `D'` outside the image that conforms to the signature. Every value of `D'` goes
+  back to one of `D` beside it (`valZ`). A memory of
   `D'` restricts to `D` (`speicherZ`); a memory of `D` embeds into `D'` around a fixed CONTEXT
   for everything outside the image (`speicherE`). Restricting an embedding gives the memory back
   (`speicherZ_speicherE`), and outside the image the embedding is the context (`slotE_fremd`).

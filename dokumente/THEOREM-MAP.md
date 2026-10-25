@@ -4817,7 +4817,13 @@ Koerper,Pflicht,Uebertragung,Zeuge}.lean`. Scope: `BUILD-SYSTEM.md` §7.10.
   `orakelΦ_rahmen`, `orakelΦ_regLokal`, `orakelΦ_axVertrag`: the induced handlers are in the classes of the user
   obligation; `req_E`, `ens_E`: contracts hold exactly when their images do.
 * **`logikPflicht_E`**: `LogikPflichtA P S Q T` of the project gives `KoerperGutSA`, `InvGutSA`, `InvGutGrundA` of the
-  linking program at every image function, for every budget, under `Uebernahme`, `ZeigerfreiD`, `PadOk`.
+  linking program at every image function, for every budget, under `Uebernahme`, `Rueck`, `PadOk`.
 * Witness: `einbettung_zeuge` with `zeuge_fremd` (the embedding is not onto: the program's own table and function).
+* **E4, callbacks**: `Rueck` (a head per pointer signature, pointer-free hardware answers), `VRel` (a value of `D`
+  beside one of `D'`: at a function pointer the image or a foreign conforming function), call keys
+  (`Inv.merkeRuf`, `ruf_schritt`); `RueckVertrag` and `konform_vertrag`: every callee that may stand where `D` calls
+  `g` keeps `g`'s frames and contract; `rufΦ_fall`: the induced call handler answers as such a callee;
+  `logikPflicht_E` now needs `Rueck` and `Uebernahme.rueck` instead of `ZeigerfreiD`. Witness: `zeuge_rueckruf`
+  (the program's own function is a callback with the library's function as head) inside `einbettung_zeuge`.
 
 All axiom lists standard.

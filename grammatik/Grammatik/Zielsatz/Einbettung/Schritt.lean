@@ -17,6 +17,8 @@ import Grammatik.Speichermodell.Atomar.AtomarRec
   trace stood for the current `D'`-world, since no step changes the `D'`-world without growing
   the trace except an atomic answer and a lock move -- and those are taken together with the
   read events and the take event around them; the atomic keys are told apart by their length.
+  A CALL key records, at the world of a call, the callee `D'` really called and its arguments
+  (stage E4: a head of `D` may stand for several foreign callees).
 -/
 
 namespace Gabbro.Grammatik.Einbettung

@@ -283,8 +283,8 @@ Found while proving, and next:
   `stufen` over the composed program.
 * Name spaces (7.6): a dependency's modules wrapped under its project name need relative module paths inside the
   dependency -- a language change, Lean front end first.
-* Witnesses still to build: a callback through a function pointer into the dependent, a thread spawned in one
-  project running code of the other.
+* Witnesses still to build: a thread spawned in one project running code of the other (the callback witness is
+  `einbettung_zeuge` with `zeuge_rueckruf`, 7.10).
 * `GabbroZielVerbund` for n units with every leg (7.7), then the build accepts dependencies.
 
 ### 7.10 Design: the embedding theorem (reuse without re-proof, 2026-10-25)
@@ -320,9 +320,13 @@ events.
   (`Pflicht.lean`) and the witness `einbettung_zeuge` (`Zeuge.lean`: a library with a table embedded into a
   program with a table and a function of its own). DONE. Still open: `gabbro_ziel_projekte` over per-project
   declarations (feeding `logikPflicht_E` into `NutzerTeilO`).
-* E4 callbacks (design below; no change of `Spec.lean`).
+* E4 callbacks (below; no change of `Spec.lean`). DONE: `Rueck`, `VRel` and the call keys (`Welt.lean`,
+  `Schritt.lean`, `Handler.lean`), the relational simulation (`Koerper.lean`), `RueckVertrag` and
+  `konform_vertrag` (`Pflicht.lean`), the field `rueck` of `Uebernahme`; the witness `einbettung_zeuge` now has a
+  real callback (`zeuge_rueckruf`: the program's own function conforms to the library's signature from outside
+  the image).
 
-**E4 design: callbacks across the boundary without a change of the goal statement.** Today `ZeigerfreiD` keeps
+**E4: callbacks across the boundary without a change of the goal statement.** Before E4, `ZeigerfreiD` kept
 every function pointer out of a project's state and interface, because a foreign function has no name in `D`. The
 design: the project declares, per pointer signature `n` it hands out or calls through, a HEAD `ext n` (a function
 without a body, conforming to `n`) whose contract is the pointer's contract (source: a contract on the `fnptr` type;
@@ -337,6 +341,28 @@ callee. What the link adds is one obligation of the linking program, a premise o
 (its `requires` follows from `ext n`'s, its `ensures` implies `ext n`'s). A program that does not want to prove it
 re-proves the library instead; nothing is assumed.
 
+How it was built (2026-10-25):
+* The head is chosen by the embedding, not declared anew: `Rueck.rep n` names a function of `D` conforming to `n`,
+  and `Rueck.voll` demands one for every signature some function of `D'` outside the image conforms to.
+* `VRel` relates values: at `fnptr n` the image, or (`rep n` = the `D`-value) any foreign function conforming to
+  `num n`; elsewhere equality through the embedding. `Treu`, `EnvR`, `eval_exE`, every write and every outcome
+  relation are stated with it.
+* The keys are split by handler kind: main keys (world pairs), atomic keys (world pairs at an atomic read) and
+  CALL keys (the `D`-world at a call with the callee `D'` really called and its arguments). Finding: with foreign
+  pointers in shared or protected carriers, an atomic answer or a lock move can change the `D'`-world without the
+  `D`-world changing, so one list of pairs is no longer functional; the call key also records which foreign
+  callee stood for the head.
+* `RueckVertrag` (a field of `Uebernahme`): a foreign function conforming to `num n` writes only images of what
+  `rep n` may write, its `requires` holds EXACTLY where the head's does (an implication is not enough: the entry
+  gate `torRuf` must answer alike on both sides), and its `ensures` gives the head's on the restricted answer.
+* Pointer-free where `D` reads an answer of the hardware or the environment as a value (`Rueck.regFrei`,
+  `regFreiG`, `atomFrei`, `aergFrei`, `aparamsFrei`, `rtypFrei`): a register or atomic carrier, an axiom argument or
+  result, a register type. Finding: otherwise the induced oracle is not register-local (two `D'`-worlds beside one
+  `D`-world may hold different foreign functions there). The induced oracle answers visibility of a
+  pointer-carrying global constantly; no awaited global carries one, since awaited globals are atomic.
+* The `logik` outcome of a foreign callee is seen from `D` as blaming the caller of the head, so the transfer no
+  longer needs a premise that the `D'`-handler blames only images.
+
 **What E3 needs** (`Uebernahme`, the link-time conditions, and the premises of `logikPflicht_E`):
 * the bodies, contracts and invariant predicates of the program are the images (`Fortsetzung`);
 * an image lock protects exactly the images of the lock's carriers under the same invariant;
@@ -345,8 +371,8 @@ re-proves the library instead; nothing is assumed.
 * **an invariant over an image table is an image invariant** (finding: a program may not add an invariant over a
   library table and expect the library's proof to keep it -- the library cannot know it; such an invariant must
   be the library's, or the program re-proves the library functions that write the table);
-* `ZeigerfreiD`: no function pointer comes in from outside (parameters, results, carriers, axiom and register
-  answers) -- E4 lifts this;
+* `Rueck`: a head for every pointer signature a foreign function conforms to, and pointer-free register,
+  atomic and axiom answers; `RueckVertrag`: foreign callbacks keep their head's frames and contract (E4);
 * `PadOk`: the project declares a table, a global or a lock (the neutral trace piece). Finding: for a declaration
   with none of them the transfer is FALSE in general -- its worlds cannot tell two calls of a foreign function
   apart, so a proof may use "same world, same answer"; a stateless project gets a ghost carrier of its own.
