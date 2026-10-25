@@ -8,10 +8,10 @@ import Mathlib.Data.List.Nodup
   The language rule, modelled here before the Rust checker follows:
 
   * A unit consists of COPIES of projects. A name of the unit is a pair: the copy (`none` for the
-    program's own project, `some N` for a dependency copy such as `lager` or `lager@2`) and the
-    path inside it (`Name`). Two projects with `module util` therefore never share a name.
+    program's own project, `some N` for a dependency copy, one per project and version) and the
+    path inside it (`Name`). Two projects with a module of the same name therefore never share a name.
   * A project writes paths relative to its own root. A path whose first segment is the LOCAL name
-    of a declared dependency (`use lager::bestand::Regal;`) goes into the copy the build file
+    of a declared dependency (`use d::m::x;`) goes into the copy the build file
     assigned to that dependency (`qualifiziere`). Versions are never written in the source: a
     project declares each dependency once, so its local name is unambiguous, and the build maps it
     to the copy (`Platz.deps`). A project cannot name a copy it did not declare.
@@ -26,7 +26,7 @@ import Mathlib.Data.List.Nodup
     dependency it names declares it; where the copies sit does not enter.
   * **`aufloeseK_platz`** -- what a path means inside a project (the candidate chosen) is the same
     wherever the project and its dependencies sit in a unit: checked alone as a program or linked
-    as a copy `lager@2` under any other program, a library's names resolve alike. Only its own
+    as any copy under any other program, a library's names resolve alike. Only its own
     names, its dependencies' local names and their public names enter.
   * `aufloese_sichtbar` -- a resolved name is the project's own or a public name of a declared
     dependency: nothing reaches into an undeclared copy.

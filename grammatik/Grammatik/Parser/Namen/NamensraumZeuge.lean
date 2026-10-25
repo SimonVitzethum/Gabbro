@@ -1,82 +1,63 @@
 import Grammatik.Parser.Namen.Namensraum
-import Grammatik.Parser.Item.ElementTief
 
 /-!
   File:      Grammatik/Parser/Namen/NamensraumZeuge.lean
-  Subject:   Witnesses of the name-space rule: a library `lager` (modules `bestand` and `util`,
-             only `bestand` public) linked as the copy `lager@2` into a program with a module
-             `util` of its own; the library checked alone; and the `use` line as the parser reads it.
+  Subject:   Witnesses of the name-space rule, for every project: a project with one dependency,
+             placed as the program and as a copy, its dependency under two different copies.
+             An own name and a public name of the dependency are reached, and every path means
+             the same on both places. Nothing here names a particular program.
 -/
 
-namespace Gabbro.Grammatik.Parser.Namensraum.Zeuge
+namespace Gabbro.Grammatik.Parser.Namensraum
 
-open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Namensraum
+/-- The project as the program, its dependency `d` (public names `pub`) under the copy `k₁`. -/
+def platzA (d k₁ : String) (pub : List Pfad) : Platz := ⟨none, [(d, k₁, pub)]⟩
 
-/-- The library: `bestand::Regal`, `bestand::fuelle`, a private `util::f`, and `use util::f;`
-    inside `bestand`. -/
-def lager : Quelle where
-  namen := [["bestand", "Regal"], ["bestand", "fuelle"], ["util", "f"]]
-  verwendet := [(["bestand"], ["util", "f"])]
+/-- The project as the copy `n`, its dependency under the copy `k₂`. -/
+def platzB (n d k₂ : String) (pub : List Pfad) : Platz := ⟨some n, [(d, k₂, pub)]⟩
 
-/-- The library's public names. -/
-def lagerPub : List Pfad := [["bestand", "Regal"], ["bestand", "fuelle"]]
+theorem platzA_gut (d k₁ : String) (pub : List Pfad) : (platzA d k₁ pub).Gut := by
+  unfold Platz.Gut platzA; simp
 
-/-- The program: a module `util` of its own, and `use lager::bestand::Regal;` at its root. -/
-def app : Quelle where
-  namen := [["util", "f"], ["main"]]
-  verwendet := [([], ["lager", "bestand", "Regal"])]
+theorem platzB_gut {n d k₂ : String} (pub : List Pfad) (h : n ≠ k₂) : (platzB n d k₂ pub).Gut := by
+  unfold Platz.Gut platzB; simp [h]
 
-/-- The library checked alone, as a program of its own. -/
-def lagerAllein : Platz := ⟨none, []⟩
+/-- The first candidate of a path written at the root is the path itself. -/
+theorem kandidaten_wurzel (Q : Quelle) (p : Pfad) : ∃ r, kandidaten Q [] p = p :: r := by
+  exact ⟨(Q.verwendet.filter fun z => decide (z.1 = []) && decide (z.2.getLast? = p.getLast?)).map Prod.snd,
+    by simp [kandidaten, umgebend]⟩
 
-/-- The library linked: the copy `lager@2`. -/
-def lagerLinked : Platz := ⟨some "lager@2", []⟩
+theorem aufloese_erster {Q : Quelle} {L : Platz} {p : Pfad} (h : qualifiziere L p ∈ sichtbar Q L) :
+    aufloese Q L [] p = some (qualifiziere L p) := by
+  obtain ⟨r, hr⟩ := kandidaten_wurzel Q p
+  simp [aufloese, aufloeseK, hr, h]
 
-/-- The program: its local dependency name `lager` means the copy `lager@2`. -/
-def appPlatz : Platz := ⟨none, [("lager", "lager@2", lagerPub)]⟩
+/-- **An own name is reached**, in the project's own copy. -/
+theorem eigen_erreicht {Q : Quelle} {n d k : String} {pub : List Pfad} {x : String} {xs : Pfad}
+    (hx : x :: xs ∈ Q.namen) (hxd : x ≠ d) :
+    aufloese Q (platzB n d k pub) [] (x :: xs) = some (some n, x :: xs) := by
+  have hq : qualifiziere (platzB n d k pub) (x :: xs) = (some n, x :: xs) := by
+    simp [qualifiziere, platzB, ziel, Ne.symm hxd]
+  rw [aufloese_erster (by rw [hq]; simp [sichtbar, platzB, hx]), hq]
 
-theorem gut_allein : lagerAllein.Gut := by unfold Platz.Gut lagerAllein; simp
-theorem gut_linked : lagerLinked.Gut := by unfold Platz.Gut lagerLinked; simp
-theorem gut_app : appPlatz.Gut := by unfold Platz.Gut appPlatz; simp
+/-- **A public name of the dependency is reached**, in the dependency's copy. -/
+theorem abh_erreicht (Q : Quelle) {n d k : String} {pub : List Pfad} {y : Pfad} (hy : y ∈ pub) :
+    aufloese Q (platzB n d k pub) [] (d :: y) = some (some k, y) := by
+  have hq : qualifiziere (platzB n d k pub) (d :: y) = (some k, y) := by
+    simp [qualifiziere, platzB, ziel]
+  rw [aufloese_erster (by rw [hq]; simp [sichtbar, platzB, hy]), hq]
 
-/-- The program reaches the library's public name through its `use` line. -/
-theorem app_regal : aufloese app appPlatz [] ["Regal"] = some (some "lager@2", ["bestand", "Regal"]) := by
-  decide
-
-/-- The program's own `util::f` is its own, though the library has a `util::f` too. -/
-theorem app_util : aufloese app appPlatz [] ["util", "f"] = some (none, ["util", "f"]) := by
-  decide
-
-/-- The library's private `util::f` is not visible to the program. -/
-theorem app_privat : aufloese app appPlatz [] ["lager", "util", "f"] = none := by
-  decide
-
-/-- Inside the library, `f` in `bestand` resolves through its `use` line, alone and linked. -/
-theorem lager_allein : aufloese lager lagerAllein ["bestand"] ["f"] = some (none, ["util", "f"]) := by
-  decide
-
-theorem lager_linked :
-    aufloese lager lagerLinked ["bestand"] ["f"] = some (some "lager@2", ["util", "f"]) := by
-  decide
-
-/-- **The witness of `aufloeseK_platz`**: alone and linked, every path of the library means the same
-    candidate; the two places differ in the copy. -/
-theorem namensraum_zeuge (von p : Pfad) :
-    aufloeseK lager lagerAllein von p = aufloeseK lager lagerLinked von p ∧
-      lagerAllein.ns ≠ lagerLinked.ns :=
-  ⟨aufloeseK_platz lager gut_allein gut_linked rfl von p, by decide⟩
-
-/-- The two `util::f` of the unit are two names. -/
-theorem zwei_util : (none, ["util", "f"]) ≠ ((some "lager@2", ["util", "f"]) : Name) := by decide
-
-/-- The `use` line as the parser reads it: a path whose first segment is the dependency's local
-    name; no new form of the grammar. -/
-theorem use_gelesen : beqTopTief (parseTopTief
-    [.wort "use", .ident "lager", .zeichen "::", .ident "bestand", .zeichen "::", .ident "Regal",
-      .zeichen ";", .ende])
-    (.ok [.useT ["lager", "bestand", "Regal"]]) = true := by
-  decide
+/-- **The witness of `aufloeseK_platz`**: on the two places -- the project as the program with its
+    dependency under `k₁`, and as the copy `n` with its dependency under `k₂ ≠ k₁` -- every path
+    means the same candidate, while an own name and a public name of the dependency are reached in
+    different copies. -/
+theorem namensraum_zeuge (Q : Quelle) {n d k₁ k₂ : String} (pub : List Pfad) (hn : n ≠ k₂) :
+    (∀ von p, aufloeseK Q (platzA d k₁ pub) von p = aufloeseK Q (platzB n d k₂ pub) von p) ∧
+      (platzA d k₁ pub).ns ≠ (platzB n d k₂ pub).ns :=
+  ⟨aufloeseK_platz Q (platzA_gut d k₁ pub) (platzB_gut pub hn) rfl, by simp [platzA, platzB]⟩
 
 #print axioms namensraum_zeuge
+#print axioms eigen_erreicht
+#print axioms abh_erreicht
 
-end Gabbro.Grammatik.Parser.Namensraum.Zeuge
+end Gabbro.Grammatik.Parser.Namensraum

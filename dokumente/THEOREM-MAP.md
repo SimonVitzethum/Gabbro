@@ -4853,7 +4853,8 @@ All axiom lists standard.
   dependency names and public names -- a library checked alone and linked as any copy means the same.
 * `aufloese_sichtbar`: a resolved name is visible (no undeclared copy, no private name); `namen_getrennt`: names of
   different copies are disjoint.
-* Witnesses: `namensraum_zeuge` (library `lager` alone and as `lager@2`), `app_regal`, `app_util` (two
-  `util::f` in one unit), `app_privat`, `use_gelesen` (the `use` line through the parser).
+* Witnesses, for every project and no particular program: `namensraum_zeuge` (the project as the program and as a
+  copy, its dependency under two copies), `eigen_erreicht` (an own name is reached in the own copy),
+  `abh_erreicht` (a public name of the dependency is reached in its copy).
 
 All axiom lists standard.
