@@ -25,7 +25,7 @@ open Gabbro.Grammatik Speichermodell
 def GabbroZielProjekte : Prop :=
   ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (B : Einheit D) (ps : List (Projekt D))
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    (∀ p ∈ ps, Verbindbar B p.E) → ps ≠ [] → Deckend ps →     -- one link declaration, all owned
+    (∀ p ∈ ps, Passend B p) → ps ≠ [] → Deckend ps → DeckendS ps → -- one link declaration, all owned
     C.akzeptiert (komponiere B ps) fs.1 ls.1 cs.1 = true →     -- (a) the WHOLE program
     (∀ p ∈ ps, NutzerTeilO p) →                                -- (b) each project, once
     ∀ O : Orakel D, HardwareAnnahmen O (komponiere B ps).Q →   -- (c) all projects' ensures
@@ -43,8 +43,8 @@ def GabbroZielProjekte : Prop :=
 
 /-- **GABBRO_ZIEL FOR PROJECTS, PROVED.** -/
 theorem gabbro_ziel_projekte : GabbroZielProjekte := by
-  intro C D _ B ps fs ls cs hV hne hD hC hN O hH passes sp init hL lebt0 K hK
-  exact gabbro_ziel C D (komponiere B ps) fs ls cs hC (nutzerPflichtA_komponiere hV hne hD hN)
+  intro C D _ B ps fs ls cs hV hne hD hDS hC hN O hH passes sp init hL lebt0 K hK
+  exact gabbro_ziel C D (komponiere B ps) fs ls cs hC (nutzerPflichtA_komponiere hV hne hD hDS hN)
     O hH passes sp init hL lebt0 K hK
 
 #print axioms gabbro_ziel_projekte

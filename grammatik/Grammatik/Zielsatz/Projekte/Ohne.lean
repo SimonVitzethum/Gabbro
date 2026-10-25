@@ -62,7 +62,7 @@ theorem nutzerTeilO_ohne [DecidableEq D.Fn] {p : Projekt D} {fs : List D.Fn}
       rw [hat g] at hg
       cases hg) (logikPflicht_ohne hvoll hreq hens hinv hfrei)
   rw [← hP, ← hQ] at hL
-  refine ⟨⟨fun passes f _ => hL.1 passes f, hL.2⟩, ⟨fun L => ?_, hstart⟩⟩
+  refine ⟨⟨fun passes f _ => hL.1 passes f, hL.2⟩, ⟨fun L _ => ?_, hstart⟩⟩
   rw [hP]
   rfl
 
