@@ -88,7 +88,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   cases hd with
   | constT _ _ _ => simp [istGegenstand] at he
   | typeT _ _ _ _ _ => simp [istGegenstand] at he
-  | tableT _ _ _ _ _ _ => simp [istGegenstand] at he
+  | tableT _ _ _ _ _ _ _ => simp [istGegenstand] at he
   | lockT _ _ _ _ _ _ _ => simp [istGegenstand] at he
   | fnT _ _ => simp [istGegenstand] at he
   | entryT _ => simp [istGegenstand] at he
@@ -154,7 +154,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   cases hd with
   | constT _ _ _ => rfl
   | typeT _ _ _ _ _ => rfl
-  | tableT _ _ _ _ _ _ => rfl
+  | tableT _ _ _ _ _ _ _ => rfl
   | lockT _ _ _ _ _ _ _ => rfl
   | fnT _ _ => rfl
   | entryT _ => rfl
@@ -197,7 +197,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   cases hd with
   | constT _ _ _ => simp [istAngenommen] at ha
   | typeT _ _ _ _ _ => simp [istAngenommen] at ha
-  | tableT _ _ _ _ _ _ => simp [istAngenommen] at ha
+  | tableT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
   | lockT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
   | fnT _ _ => simp [istAngenommen] at ha
   | entryT _ => simp [istAngenommen] at ha
@@ -293,7 +293,7 @@ theorem elabU_verweigert_noch_zeuge :
     `concurrent` item (the thread roots). -/
 def w108items : List SItemTief :=
   [.modT "beispiel::disjoint_start_locks"
-    [.tableT "T" (.some (.lit 4)) .none .none false
+    [.tableT "T" .none (.some (.lit 4)) .none .none false
       [.tSlot [{ fname := "v", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],

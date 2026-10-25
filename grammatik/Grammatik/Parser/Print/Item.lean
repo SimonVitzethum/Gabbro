@@ -387,10 +387,13 @@ def druckItem : SItemTief → List Token
   | .protoT sig => (druckFnSig sig ++ [.zeichen ";"])
   | .specT sig p => (druckFnSig sig ++ [.zeichen "="] ++ druckPred p ++ [.zeichen ";"])
   | .asmT sig h => (druckFnSig sig ++ [.zeichen "="] ++ rohToks h ++ [.zeichen ";"])
-  | .tableT n cnt backed owner sh parts =>
+  | .tableT n von cnt backed owner sh parts =>
     ([.wort "table", nameTok n] ++
       (match cnt with
         | some e => [.wort "count"] ++ druckToks e
+        | none => []) ++
+      (match von with
+        | some p => [.wort "from", nameTok p]
         | none => []) ++
       (match backed with
         | some b => [.wort "backed", nameTok b]

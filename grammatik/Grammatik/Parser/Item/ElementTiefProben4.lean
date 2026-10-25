@@ -123,7 +123,7 @@ theorem t55_lex :
       .ok tt55 := by
   decide
 theorem t55 : beqTopTief (parseTopTief tt55)
-    (.ok [.tableT "Halde" (.some (.lit 1048576)) (.some "hinterlegt") .none false [.tSlot [{ fname := "b", ftyp := (.atom "bool"), pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]]]) = true := by
+    (.ok [.tableT "Halde" .none (.some (.lit 1048576)) (.some "hinterlegt") .none false [.tSlot [{ fname := "b", ftyp := (.atom "bool"), pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]]]) = true := by
   decide
 -- beispiele/28-reserve-und-hinterlegung.gab:19 (the header;
 -- memory kinds are values, not checked here). Rust: `Tabelle`

@@ -321,7 +321,7 @@ theorem t27_lex :
       .ok tt27 := by
   decide
 theorem t27 : beqTopTief (parseTopTief tt27)
-    (.ok [.tableT "Verzeichnis" (.some (.variable "N")) .none .none
+    (.ok [.tableT "Verzeichnis" .none (.some (.variable "N")) .none .none
       false
       [.tSlot [{ fname := "benutzt", ftyp := .atom "bool",
                    pos := .none, bezug := .none, wo := .none,
@@ -346,7 +346,7 @@ theorem t28_lex :
       .ok tt28 := by
   decide
 theorem t28 : beqTopTief (parseTopTief tt28)
-    (.ok [.tableT "T" (.some (.lit 4)) .none .none false
+    (.ok [.tableT "T" .none (.some (.lit 4)) .none .none false
       [.tConst "WURZEL" (.atom "u32") (.one (.lit 0)),
         .tSlot [{ fname := "b", ftyp := .atom "bool",
                    pos := .none, bezug := .none, wo := .none,
@@ -367,7 +367,7 @@ theorem t29_lex :
       .ok tt29 := by
   decide
 theorem t29 : beqTopTief (parseTopTief tt29)
-    (.ok [.tableT "K" (.some (.lit 4)) .none .none false
+    (.ok [.tableT "K" .none (.some (.lit 4)) .none .none false
       [.tTree [("parent", "elter"), ("child", "erstes_kind"),
         ("sibling", "naechstes")],
         .tSlot [{ fname := "b", ftyp := .atom "bool",

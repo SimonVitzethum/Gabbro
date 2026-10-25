@@ -94,6 +94,8 @@ inductive SAnw
   | start : List String → SAnw
   | other : String → SAnw
   | block : List SAnw → Option SEnde → SAnw
+  /-- `let [mut] x [: T] = alloc T;` -- the call of the provider of the open table `T` (`table T from p`). -/
+  | allocVon : Bool → String → Option STyp → String → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -162,6 +164,7 @@ def beqSAnw : SAnw → SAnw → Bool
   | .ret x, .ret y => beqOptExpr x y
   | .alloc m n y t w s, .alloc k o z u v r =>
     m == k && strEq n o && beqSTypOpt y z && strEq t u && beqSExpr w v && beqOptAnw s r
+  | .allocVon m n y t, .allocVon k o z u => m == k && strEq n o && beqSTypOpt y z && strEq t u
   | .reset a x, .reset b y => strEq a b && beqOptPaar x y
   | .grow a e b, .grow c f d => strEq a c && beqSExpr e f && beqSAnw b d
   | .free a, .free b => beqSExpr a b
@@ -271,6 +274,11 @@ def parseLet (f : Nat) (toks : List Token) :
     let nach ← fordereZeichen "=" r2
     match nach with
     | .zeichen "@" :: _ => parseLetLib f m name ty nach
+    | .wort s :: t :: .zeichen ";" :: rest =>
+      if strEq s "alloc" then match nameText t with
+        | some tisch => pure (.allocVon m name ty tisch, rest)
+        | none => parseLetExpr f m name ty nach
+      else parseLetExpr f m name ty nach
     | .wort s :: t :: .zeichen "(" :: _ =>
       if strEq s "alloc" then match nameText t with
         | some _ => parseLetAlloc f m name ty nach

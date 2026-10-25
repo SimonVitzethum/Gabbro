@@ -314,6 +314,11 @@ def parseLetNach (f : Nat) (m : Bool) (name : String) (ty : Option STyp) (nach :
     Except String (SAnw × List Token) :=
   match nach with
   | .zeichen "@" :: _ => parseLetLib f m name ty nach
+  | .wort s :: t :: .zeichen ";" :: rest =>
+    if strEq s "alloc" then match nameText t with
+      | some tisch => .ok (.allocVon m name ty tisch, rest)
+      | none => parseLetExpr f m name ty nach
+    else parseLetExpr f m name ty nach
   | .wort s :: t :: .zeichen "(" :: _ =>
     if strEq s "alloc" then match nameText t with
       | some _ => parseLetAlloc f m name ty nach
@@ -344,7 +349,7 @@ theorem parseLet_kopf (f : Nat) (m : Bool) (x : String) (hx : x ≠ "mut") (ty :
           (by intro r e; simp at e), rfl, rfl, rfl⟩ (hf t rfl)
     cases m <;> (try rw [hm]) <;> simp [parseLet, druckTypOpt, nimmName, fordereZeichen, strEq_self, bind, Except.bind, pure, Except.pure, parseLetNach, hT] <;> rfl
 
-/-- An expression right side: neither `@` nor `alloc t (`. -/
+/-- An expression right side: neither `@` nor `alloc t (` nor `alloc t ;`. -/
 theorem parseLetNach_expr (f : Nat) (m : Bool) (x : String) (ty : Option STyp) (e : SExpr)
     (hg : gut e = true) (R : List Token) :
     parseLetNach f m x ty (druckToks e ++ R) = parseLetExpr f m x ty (druckToks e ++ R) := by
@@ -353,6 +358,15 @@ theorem parseLetNach_expr (f : Nat) (m : Bool) (x : String) (ty : Option STyp) (
   unfold parseLetNach
   split
   · rename_i heq; simp at heq; obtain ⟨rfl, -⟩ := heq; simp [KopfGut] at hkg
+  · rename_i s t2 _ heq
+    simp at heq
+    obtain ⟨rfl, -⟩ := heq
+    simp only [KopfGut] at hkg
+    have : strEq s "alloc" = false := by
+      cases h : strEq s "alloc"
+      · rfl
+      · exact absurd ((strEq_eq _ _).mp h) hkg
+    simp [this]
   · rename_i s t2 _ heq
     simp at heq
     obtain ⟨rfl, -⟩ := heq
@@ -778,6 +792,21 @@ theorem anw_alloc (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STyp) 
       simp only [fbA]; split at hF <;> simp at hF <;> omega)
     simp only [parseLetNach, he, ite_true, nameText_nameTok, nameText_ident, nameText_wort, nameText_zeichen, nameText_num, nameText_ende]
     simp [parseLetAlloc, nimmName, fordereZeichen, strEq_self, hW, hB, bind, Except.bind, pure, Except.pure]
+
+theorem anw_allocVon (m : Bool) (n : String) (hx : n ≠ "mut") (ty : Option STyp) (t : String)
+    (hty : TypOptGut ty) : AnwBein (.allocVon m n ty t) := by
+  intro rest F _ hF
+  have he : strEq "alloc" "alloc" = true := by decide
+  simp only [fbA, druckAnw, List.length_cons, List.length_nil, List.length_append] at hF
+  obtain ⟨F', rfl⟩ : ∃ F', F = F' + 4 := ⟨F - 4, by omega⟩
+  have hd : druckAnw (.allocVon m n ty t) ++ rest = .wort "let" :: ((if m then [.wort "mut"] else []) ++
+      nameTok n :: (druckTypOpt ty ++ .zeichen "=" :: (.wort "alloc" :: nameTok t :: .zeichen ";" :: rest))) := by
+    simp [druckAnw]
+  rw [hd, parseStmt_let _ _ (by cases m <;> first | rfl | (simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact ortsFort_nameTok _ _))]
+  rw [show F' + 3 = (F' + 2) + 1 from rfl,
+    parseLet_kopf (F' + 2) m n hx ty _ hty (by
+      intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp at hF <;> omega)]
+  simp only [parseLetNach, he, ite_true, nameText_nameTok]
 
 theorem anw_bindElse (x : String) (hx : x ≠ "mut") (ty : Option STyp) (e : SExpr) (f : String) (b : SAnw)
     (hty : TypOptGut ty) (he : gut e = true) (hb : BlockBein b) :
@@ -1432,6 +1461,8 @@ inductive AnwGut : Rolle → SAnw → Prop
   | start (ps : List String) : ps ≠ [] → (∀ p ∈ ps, NameGut p) → AnwGut .anw (.start ps)
   | block (ss : List SAnw) (e : Option SEnde) :
       (∀ s ∈ ss, AnwGut .anw s) → EndeOk e → EndeGut ss e → AnwGut .block (.block ss e)
+  | allocVon (m : Bool) (n : String) (ty : Option STyp) (t : String) :
+      n ≠ "mut" → TypOptGut ty → AnwGut .anw (.allocVon m n ty t)
 
 /-- What the induction carries per position. -/
 def Bein : Rolle → SAnw → Prop
@@ -1539,6 +1570,8 @@ theorem bein_gut : ∀ (r : Rolle) (s : SAnw), AnwGut r s → Bein r s := by
   | alloc m n ty t w s hx hty hw _ ihs =>
     exact ⟨anw_alloc m n hx ty t w s hty hw (fun b hb => (ihs b hb).1),
       anwKopf_wort _ "let" (by decide) (by cases s <;> exact ⟨_, rfl⟩)⟩
+  | allocVon m n ty t hx hty =>
+    exact ⟨anw_allocVon m n hx ty t hty, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
   | reset a rg hrg => exact ⟨anw_reset a rg hrg, anwKopf_wort _ "reset" (by decide) ⟨_, rfl⟩⟩
   | grow a e b he _ ihb =>
     exact ⟨anw_grow a e b he ihb.1 ihb.2, anwKopf_wort _ "grow" (by decide) ⟨_, rfl⟩⟩

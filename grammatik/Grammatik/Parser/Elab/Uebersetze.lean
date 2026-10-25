@@ -948,7 +948,7 @@ def uFelder : List (String × (Int × Int)) → List String → List SFeld →
     are explicit errors (the refused arms of `read_table`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n (.some cnt) .none .none sh (.tSlot fds :: invs) =>
+  | .tableT n .none (.some cnt) .none .none sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uAnzahl consts cnt with
     | .error e => .error e
@@ -3156,7 +3156,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | [] => .ok ()
   | .constT _ _ _ :: rest => uRestFehler rest
   | .typeT _ _ _ _ _ :: rest => uRestFehler rest
-  | .tableT _ _ _ _ _ _ :: rest => uRestFehler rest
+  | .tableT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .lockT _ _ _ _ _ _ _ :: rest => uRestFehler rest
   | .globT .. :: rest => uRestFehler rest
   | .atomT .. :: rest => uRestFehler rest
@@ -3468,7 +3468,7 @@ def uInv (consts : List (String × Int)) (alias : List (String × (Int × Int)))
 def uInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (ms : List SItemTief) : Except String (List UInv) :=
   let ausTab := ms.flatMap fun it => match it with
-    | .tableT n _ _ _ _ parts => parts.filterMap fun p => match p with
+    | .tableT n _ _ _ _ _ parts => parts.filterMap fun p => match p with
       | .tInv g => some (uInv consts alias tabs locks globs [n] g)
       | _ => none
     | _ => []
@@ -3797,9 +3797,9 @@ def elabU : List SItemTief → Except String UProg
     match uGlobs consts alias ms with
     | .error e => .error e
     | .ok globs0 =>
-    let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ => some n | _ => none)
+    let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)
     match uSeq ((ms.filter (fun
-        | .tableT _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias tnames)) with
+        | .tableT _ _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias tnames)) with
     | .error e => .error e
     | .ok tabs0 =>
     match uArenen consts alias ms with
@@ -4738,7 +4738,7 @@ def items104 : List SItemTief :=
       (.some (.range (.atom "u32") (.lit 0) (.lit 10) false)),
     .typeT [] "Stand" [] []
       (.some (.range (.atom "u32") (.lit 0) (.lit 100) false)),
-    .tableT "Konto" (.some (.variable "NKONTO")) .none .none false
+    .tableT "Konto" .none (.some (.variable "NKONTO")) .none .none false
       [.tSlot [{ fname := "stand", ftyp := .atom "Stand",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],

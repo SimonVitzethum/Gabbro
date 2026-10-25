@@ -53,9 +53,9 @@ inductive ItemGut : SItemTief → Prop
       (∀ c ∈ cs, FallGut c) → ItemGut (.whyT n cs ex)
   | concT (ps : List (List String × List SExpr)) : (∀ p ∈ ps, PfadGut p.1 ∧ ∀ x ∈ p.2, gut x = true) →
       ItemGut (.concT ps)
-  | tableT (n : String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
+  | tableT (n : String) (von : Option String) (cnt : Option SExpr) (backed owner : Option String) (sh : Bool)
       (parts : List STabTeil) : (∀ e, cnt = some e → gut e = true) → (∀ t ∈ parts, TeilGut t) →
-      ItemGut (.tableT n cnt backed owner sh parts)
+      ItemGut (.tableT n von cnt backed owner sh parts)
   | entryT (e : SEingang) : EingangGut e → ItemGut (.entryT e)
   | devT (n : String) (ps : List (String × STyp)) (sp : String) (ms : List SGerTeil) :
       GeraetGut ps ms → ItemGut (.devT n ps sp ms)
@@ -113,8 +113,8 @@ theorem item_bein : ∀ (it : SItemTief), ItemGut it → ItemBein it ∧ ItemKop
   | whyT n cs ex hg => exact ⟨item_why n cs ex hg, itemKopf_wort _ "reason" (by decide) (by decide) ⟨_, rfl⟩⟩
   | concT ps hps =>
     exact ⟨item_conc ps hps, itemKopf_wort _ "concurrent" (by decide) (by decide) ⟨_, rfl⟩⟩
-  | tableT n cnt backed owner sh parts hc hp =>
-    exact ⟨item_table n cnt backed owner sh parts hc hp,
+  | tableT n von cnt backed owner sh parts hc hp =>
+    exact ⟨item_table n von cnt backed owner sh parts hc hp,
       itemKopf_wort _ "table" (by decide) (by decide) ⟨_, rfl⟩⟩
   | entryT e he =>
     refine ⟨item_entry e he, itemKopf_wort _ "entry" (by decide) (by decide) ?_⟩
@@ -177,7 +177,7 @@ def zeugeProgramm : List SItemTief := [
                         .effs [.writes (.variable "max")], .cost (.lit 5)] }
       (.block [.set (.variable "max") "+=" (.variable "x")] (some (.ret (some (.variable "x")))))],
   .concT [(["kern", "erhoehe"], [])],
-  .tableT "Knoten" (some (.lit 64)) none none true [
+  .tableT "Knoten" none (some (.lit 64)) none none true [
     .tSlot [{ fname := "x", ftyp := .atom "u32", pos := none, bezug := none,
               wo := some (.bin "<" (.variable "x") (.lit 10)), reserviert := false, byOps := true }],
     .tOps ["einfuegen", "loeschen"],
@@ -222,7 +222,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
   · exact .concT _ (by
       intro p hp; simp at hp; subst hp
       exact ⟨⟨by simp, by intro a ha; simp at ha; rcases ha with rfl | rfl <;> decide⟩, by simp⟩)
-  · refine .tableT _ _ _ _ _ _ (by intro e he; cases he; decide) ?_
+  · refine .tableT _ _ _ _ _ _ _ (by intro e he; cases he; decide) ?_
     intro t ht
     simp only [List.mem_cons, List.not_mem_nil, or_false] at ht
     rcases ht with rfl | rfl | rfl | rfl | rfl

@@ -1638,8 +1638,8 @@ def normSigU32 (s : FnSig) : FnSig :=
 /-- One item with bare `u32` normalised (no module recursion:
     `uMembers` unwraps the single module `elabU` supports). -/
 def normU32Item : SItemTief → SItemTief
-  | .tableT n c a b g parts =>
-    .tableT n c a b g (parts.map normTabTeilU32)
+  | .tableT n v c a b g parts =>
+    .tableT n v c a b g (parts.map normTabTeilU32)
   | .fnT s k => .fnT (normSigU32 s) k
   | it => it
 
@@ -1863,6 +1863,7 @@ def items108 : List SItemTief := [.modT
    "beispiel::disjoint_start_locks"
    [.tableT
       "T"
+      none
       (some (.lit 4))
       none
       none

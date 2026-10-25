@@ -35,7 +35,7 @@ theorem t01_lex :
       .ok tt01 := by
   decide
 theorem t01 : beqTopTief (parseTopTief tt01)
-    (.ok [.tableT "Zustand" (.some (.lit 4)) .none .none false
+    (.ok [.tableT "Zustand" .none (.some (.lit 4)) .none .none false
       [.tSlot [{ fname := "bereit", ftyp := .atom "u32",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]]]) = true := by

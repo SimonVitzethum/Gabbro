@@ -32,7 +32,8 @@ open Gabbro.Grammatik
 /-! ## 1. The round-6 probe: an axiom returning a pointer type no function has -/
 
 /-- `g1D` whose one axiom returns `fn(sig 5)`: no function has signature 5 (`sig = 0`). -/
-def w1D : Deklaration := { g1D with aerg := fun _ => some (.fnptr 5) }
+def w1D : Deklaration :=
+  { g1D with aerg := fun _ => some (.fnptr 5), anbieter := fun _ => none, anbieter_passt := fun _ _ h => nomatch h }
 
 instance w1D_fn_deq : DecidableEq w1D.Fn := inferInstanceAs (DecidableEq Unit)
 
@@ -124,7 +125,8 @@ theorem w1r_bool : Akzeptiert w1rP w1rS [()] [] [] [()] = false := by decide
 /-! ## 3. `reason` with no reasons -/
 
 /-- `g1D` whose axiom returns `.why 0`. -/
-def w1gD : Deklaration := { g1D with aerg := fun _ => some (.why 0) }
+def w1gD : Deklaration :=
+  { g1D with aerg := fun _ => some (.why 0), anbieter := fun _ => none, anbieter_passt := fun _ _ h => nomatch h }
 
 instance w1gD_fn_deq : DecidableEq w1gD.Fn := inferInstanceAs (DecidableEq Unit)
 
@@ -143,7 +145,8 @@ theorem w1g_bool : Akzeptiert w1gP w1gS [()] [] [] [()] = false := by decide
 /-! ## 4. The contrast: `never` -/
 
 /-- `g1D` whose axiom returns `never`. -/
-def w1vD : Deklaration := { g1D with aerg := fun _ => some .never }
+def w1vD : Deklaration :=
+  { g1D with aerg := fun _ => some .never, anbieter := fun _ => none, anbieter_passt := fun _ _ h => nomatch h }
 
 instance w1vD_fn_deq : DecidableEq w1vD.Fn := inferInstanceAs (DecidableEq Unit)
 

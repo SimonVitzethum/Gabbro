@@ -144,6 +144,9 @@ def druckAnw : SAnw → List Token
         | some b => [.wort "else"] ++ druckAnw b
         | none => []) ++
       [.zeichen ";"]
+  | .allocVon m n ty t =>
+    [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [nameTok n] ++ druckTypOpt ty ++
+      [.zeichen "=", .wort "alloc", nameTok t, .zeichen ";"]
   | .reset a rg =>
     [.wort "reset", nameTok a] ++
       (match rg with

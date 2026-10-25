@@ -40,7 +40,7 @@ theorem t30_lex :
       .ok tt30 := by
   decide
 theorem t30 : beqTopTief (parseTopTief tt30)
-    (.ok [.tableT "T" (.some (.lit 4)) .none .none false [.tSlot [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInv { name := "inv", kosten := .lit 1, online := true, proof := .none, pred := (.field (.index (.field (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
+    (.ok [.tableT "T" .none (.some (.lit 4)) .none .none false [.tSlot [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInv { name := "inv", kosten := .lit 1, online := true, proof := .none, pred := (.field (.index (.field (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
   decide
 -- The `invariant` member shape is beispiele/01-tabelle.gab (the
 -- header row); the `pred` is synthetic and quantifier-free --

@@ -113,7 +113,7 @@ def alsFunktion : SItemTief → Option (FnSig × SAnw)
   | .fnT s b => some (s, b)
   | _ => none
 
-/-- Statement tag (all 30 arms of `SAnw`; `Anweisung.lean`). -/
+/-- Statement tag (all 31 arms of `SAnw`; `Anweisung.lean`). -/
 def artAnw : SAnw → String
   | .bind .. => "let"
   | .bindElse .. => "let-else"
@@ -148,6 +148,7 @@ def artAnw : SAnw → String
   | .start .. => "start"
   | .other .. => "else"
   | .block .. => "block"
+  | .allocVon .. => "alloc-from"
 
 /-- Ender tag (all 3 arms of `SEnde`). -/
 def artEnde : SEnde → String
@@ -216,7 +217,7 @@ def sammleTabellen (consts : List (String × Int))
   | [] => []
   | it :: rest =>
     match it with
-    | .tableT n _ _ _ _ _ =>
+    | .tableT n _ _ _ _ _ _ =>
       (n, uTabelle consts alias tnames it) :: sammleTabellen consts alias tnames rest
     | _ => sammleTabellen consts alias tnames rest
 
@@ -321,7 +322,7 @@ def befundeFn (consts : List (String × Int))
 def befundeElab (ms : List SItemTief) : List Befund :=
   let consts := uConstsRech (uKonstFns ms) ms []
   let alias := uAliase ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
-  let tabs := sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ => some n | _ => none)) ms
+  let tabs := sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)) ms
   let tabOk := werte tabs
   let globR := uGlobs consts alias ms
   let globOk := match globR with | .ok gs => gs | .error _ => []
@@ -458,7 +459,7 @@ theorem zensus104_leer : befundeElab (uMembers items104) = [] := by
     type plus a function with a `match` body (real table, real body). -/
 def wMultiItems : List SItemTief :=
   [.modT "beispiel::zeuge"
-    [.tableT "T" (.some (.lit 1)) .none .none false
+    [.tableT "T" .none (.some (.lit 1)) .none .none false
       [.tSlot [{ fname := "v", ftyp := .atom "Unbekannt",
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]],
