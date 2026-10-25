@@ -160,11 +160,21 @@ def uOfEnd (art : Nat → UParamArt) {l : Bool} {Γ : Ctx} {Λ : List (Res z.dek
 
 end
 
+/-- Without wrapping fields a write keeps its value. -/
+theorem uWrap_leer {ctx : UCtx} (h : ∀ tb ∈ ctx.tabs, tb.wraps = []) (tb f : String) (v : USide) :
+    uWrap ctx tb f v = v := by
+  unfold uWrap
+  cases hf : ctx.tabs.find? (fun t => strEq t.name tb) with
+  | none => rfl
+  | some t => simp [h t (List.mem_of_find?_eq_some hf)]
+
 /-- **The statement context**, against the accessors of the declaration and the contract `V`. -/
 structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Nat → UParamArt) : Prop where
   var : ∀ d, d < Γ.length → ∃ j, uParamNr ctx (nVar (Γ.length - 1 - d)) = .ok j ∧ uArtBei ctx.kinds j = .ok (art d)
   namen : ∀ n ∈ ctx.names, RumpfName n
   lits : ctx.lits = []
+  arrKonst : ctx.arrKonst = []
+  wrapsLeer : ∀ tb ∈ ctx.tabs, tb.wraps = []
   glob : ∀ g : z.deklaration.Glob, ∃ gl, ctx.globs.find? (fun x => strEq x.name (nGlob (gN z g))) = some gl ∧
     (gl.ty = .bool ↔ z.deklaration.gtyp g = .bool) ∧ gl.var = !z.deklaration.atomar g ∧
     gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = ((z.deklaration.nutzlast g).map fun h => nGlob (gN z h)) ∧
@@ -208,10 +218,12 @@ theorem SInv.einv {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   var d hd _ := H.var d hd
   namen := H.namen
   lits := H.lits
+  arrKonst := H.arrKonst
   glob g := by
     obtain ⟨gl, h1, h2, _⟩ := H.glob g
     exact ⟨gl, h1, h2⟩
   tab := H.tab
+  wrapsLeer := H.wrapsLeer
   tabNr := H.tabNr
   waechter t hL := by
     have hall : ((ctx.locks.filterMap (fun l => if l.guard.any (strEq · (nTab (tN z t))) then some l.name else none)).all
@@ -256,7 +268,8 @@ theorem anw1_slot {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   simp only [slotS] at hz
   refine ⟨fun hb v hw => ?_, fun hb v hw => ?_⟩ <;>
   · simp only [uAnw1, uSetze, hs, ite_true, slotS, uRegOrt, uSetzePlatz, hz, H.einv.optFeld t f,
-      H.einv.boolFeld t f, Option.isSome_none, Bool.false_eq_true, ite_false, hb, hw, decide_true, decide_false]
+      H.einv.boolFeld t f, Option.isSome_none, Bool.false_eq_true, ite_false, hb, hw, decide_true, decide_false,
+      uWrap_leer H.wrapsLeer]
 
 /-- A static write `g = e;` at a static that is no atomic. -/
 theorem anw1_glob {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -369,8 +382,10 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     · exact Or.inl ⟨_, rfl⟩
     · exact H.namen n hn
   lits := H.lits
+  arrKonst := H.arrKonst
   glob := H.glob
   tab := H.tab
+  wrapsLeer := H.wrapsLeer
   tabNr := H.tabNr
   tabIdx := H.tabIdx
   tabNamen := H.tabNamen
@@ -398,8 +413,10 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   var := H.var
   namen := H.namen
   lits := H.lits
+  arrKonst := H.arrKonst
   glob := H.glob
   tab := H.tab
+  wrapsLeer := H.wrapsLeer
   tabNr := H.tabNr
   tabIdx := H.tabIdx
   tabNamen := H.tabNamen
@@ -475,7 +492,7 @@ theorem wert_bool_fehler {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)}
       obtain ⟨err, he⟩ := H.param_fremd (nGlob (gN z g)) (fun n hn => strEq_rumpf_nGlob hn _)
       obtain ⟨gl, hf, hb⟩ := H.glob g
       have : gl.ty = .bool := hb.2 hg
-      simp [uWertBody, uRechne, uWertBlatt, he, H.lits, uGlobLies, hf, this]
+      simp [uWertBody, uRechne, uWertBlatt, he, H.lits, H.arrKonst, uGlobLies, hf, this]
     · simp at hu
   | slot t f i hL =>
     simp only [delabE] at hd

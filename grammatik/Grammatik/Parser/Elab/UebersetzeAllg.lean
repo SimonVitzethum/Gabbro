@@ -1280,7 +1280,7 @@ def lowParamWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
   | .error _ => none
   | .ok j =>
     match fn.kinds[j]?, fn.params[j]? with
-    | some .wert, some (_, τ) =>
+    | some .wert, some (_, τ) | _, some (_, τ@Ty.never) =>
       some (match lowVar Γ (sh + j) τ with
         | .error e => .error e
         | .ok v => .ok ⟨τ, Expr.var v⟩)
@@ -1331,6 +1331,24 @@ def lowTabWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (s
           .ok ⟨_, Expr.slot (D := declOf u) t fi i hL⟩
         else .error "access without held guard"
       | .error e => .error e
+
+/-- A constant literal at its type (`USide.typed`): numbers inside the range, array literals element by element,
+    string literals under the maximum. -/
+def lowLit {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} : (τ : Ty) → USide → Except String (Expr (declOf u) Γ Λ τ)
+  | .int lo hi, .lit n =>
+    if h1 : lo ≤ n then
+      if h2 : n ≤ hi then .ok (Expr.widen h1 h2 (Expr.lit n)) else .error "constant outside its range"
+    else .error "constant outside its range"
+  | .arr _ 0, .arrNil => .ok Expr.arrNil
+  | .arr τ (k + 1), .arrCons a r =>
+    match lowLit τ a, lowLit (.arr τ k) r with
+    | .ok a', .ok r' => .ok (Expr.arrCons a' r')
+    | .error e, _ | _, .error e => .error e
+  | .str m, .text bs =>
+    match bytesZahl bs with
+    | some zs => if h : zs.length ≤ m then .ok (Expr.strLit zs h) else .error "string literal longer than the maximum"
+    | none => .error "string literal outside bytes"
+  | _, _ => .error "constant without G form"
 
 /-- The integer side of a value. -/
 def zahlVon {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
@@ -1425,6 +1443,7 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     match lowWertE u Γ Λ fn er a, zahlVon (lowWertE u Γ Λ fn er i), lowWertE u Γ Λ fn er v with
     | .ok wa, .ok wi, .ok wv => updW wa wi wv
     | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e
+  | .typed τ s => (lowLit τ s).map (⟨τ, ·⟩)
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
     slot reads, `old` and `result` travel (the integer values of `lowWertE`). -/

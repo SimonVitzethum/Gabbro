@@ -28,6 +28,7 @@ structure LInv (gNr : Nat → Nat) (tabs : List UTab) (locks : List ULock) (glob
   tabNr : ∀ t : z.deklaration.Tab, uTabNrAux tabs 0 (nTab (tN z t)) = .ok (tN z t, z.deklaration.count t)
   tabIdx : ∀ t : z.deklaration.Tab, tabs.findIdx? (fun x => strEq x.name (nTab (tN z t))) = some (tN z t)
   tabsOk : ∀ tb ∈ tabs, tb.arena = false ∧ ∃ i, tb.name = nTab i
+  wrapsLeer : ∀ tb ∈ tabs, tb.wraps = []
   lockFind : ∀ L : z.deklaration.Lock, ∃ lk, locks.find? (fun x => strEq x.name (nLock (lN z L))) = some lk
   lockGuard : ∀ lk ∈ locks, ∀ t : z.deklaration.Tab, lk.guard.any (strEq · (nTab (tN z t))) = true →
     ∃ L, lk.name = nLock (lN z L) ∧ Sum.inl L ∈ z.deklaration.braucht t
@@ -80,8 +81,10 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     obtain ⟨i, _, rfl⟩ := hn
     exact Or.inl ⟨_, rfl⟩
   lits := rfl
+  arrKonst := rfl
   glob := hL.glob
   tab := hL.tab
+  wrapsLeer := hL.wrapsLeer
   tabNr := hL.tabNr
   tabIdx := hL.tabIdx
   tabNamen tb hm := (hL.tabsOk tb hm).2
@@ -155,8 +158,10 @@ theorem EInv.mitErg {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
       exact this
   namen := H.namen
   lits := H.lits
+  arrKonst := H.arrKonst
   glob := H.glob
   tab := H.tab
+  wrapsLeer := H.wrapsLeer
   tabNr := H.tabNr
   waechter := H.waechter
 

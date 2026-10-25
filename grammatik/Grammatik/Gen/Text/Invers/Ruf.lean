@@ -168,8 +168,10 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
     · exact Or.inr ⟨_, rfl⟩
     · exact H.namen n hn
   lits := H.lits
+  arrKonst := H.arrKonst
   glob := H.glob
   tab := H.tab
+  wrapsLeer := H.wrapsLeer
   tabNr := H.tabNr
   tabIdx := H.tabIdx
   tabNamen := H.tabNamen

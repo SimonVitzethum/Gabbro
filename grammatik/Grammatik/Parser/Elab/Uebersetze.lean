@@ -88,6 +88,8 @@ inductive USide
   | arrNil : USide
   | arrCons : USide → USide → USide
   | upd : USide → USide → USide → USide
+  /-- A constant literal at its declared type (`const T : [u32; N] = [..]` at a use: its folded elements). -/
+  | typed : Ty → USide → USide
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -320,6 +322,8 @@ structure UTab where
   /-- The aggregate fields (`[T; N]`, `string max N`): the field name and its type. Like a bool field an aggregate
       field keeps its place in `cols` (placeholder range `0 .. 0`); its TYPE is the aggregate. -/
   werte : List (String × Ty) := []
+  /-- The wrapping fields (`f : u32 wrapping`): the field name and its modulus `2^w`. -/
+  wraps : List (String × Int) := []
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -507,6 +511,8 @@ structure UCtx where
   resTy : Option Ty := none
   /-- The unit's `spec fn`s (name, parameter names, predicate): inlined at every use in a contract (SUGAR, `M130`). -/
   specs : List (String × List String × SExpr) := []
+  /-- The unit's constant arrays (`const T : [u32; N] = [..]`): their folded literal at every use. -/
+  arrKonst : List (String × USide) := []
   /-- The unit's device registers. -/
   regs : List UReg := []
   /-- The unit's `state` items. -/
@@ -554,6 +560,11 @@ structure UFn where
   boden : Option Int := none
   deriving DecidableEq, Repr
 
+/-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
+def uArtVon : Ty → UParamArt
+  | .arr _ _ | .str _ => .wert
+  | _ => .int
+
 /-- The scope after a `let x` of a number with the computed range `w`: `x` is the first name (it
     shadows a parameter), `Block.bind` puts its type first in the context. -/
 def UFn.mitBindung (f : UFn) (x : String) (w : Int × Int) : UFn :=
@@ -569,7 +580,8 @@ def UFn.mitTy (f : UFn) (x : String) : Ty → UFn
   | .bool => f.mitBindungB x
   | .why n => { f with params := (x, Ty.why n) :: f.params, kinds := .why 0 :: f.kinds }
   | .ref n => { f with params := (x, Ty.ref n) :: f.params, kinds := .ref n :: f.kinds }
-  | _ => f
+  -- every other type is bound too, so that the positions of the names stay those of the context
+  | τ => { f with params := (x, τ) :: f.params, kinds := uArtVon τ :: f.kinds }
 
 /-- The scope after `let x` of a tagged value of the type at `num` with the specification `cs`. -/
 def UFn.mitSum (f : UFn) (x : String) (num : Nat) (cs : List (Option (Int × Int))) : UFn :=
@@ -974,6 +986,32 @@ def uFeldTyp (alias : List (String × (Int × Int))) : STyp → Except String (I
     | _, _ => .error "field type without G form"
   | t => .error ("field type without G form: " ++ sTypText t)
 
+mutual
+/-- A constant row folded at its element type: numbers by the constant evaluator, nested rows element by element. -/
+def uKonstZeile (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int)) :
+    Ty → SKonstWert → Option USide
+  | .int lo hi, .one e => (uKonstWert lo hi fns consts 64 e).map USide.lit
+  | .arr τ _, .rows ks => uKonstZeilen alias fns consts τ ks
+  | _, _ => none
+def uKonstZeilen (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int)) :
+    Ty → List SKonstWert → Option USide
+  | _, [] => some .arrNil
+  | τ, k :: ks =>
+    match uKonstZeile alias fns consts τ k, uKonstZeilen alias fns consts τ ks with
+    | some a, some r => some (.arrCons a r)
+    | _, _ => none
+end
+
+/-- The constant arrays of a unit (`const T : [u32; N] = [..]`): each as its folded literal at its type. -/
+def uKonstArrays (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
+    (ms : List SItemTief) : List (String × USide) :=
+  ms.filterMap fun
+    | .constT n t@(.array _ _) v =>
+      match uTyp alias [] t with
+      | .ok τ => (uKonstZeile alias fns consts τ v).map fun l => (n, .typed τ l)
+      | .error _ => none
+    | _ => none
+
 /-- A count: a literal or a named constant (the `numeral` of
     `lean_g.rs`). -/
 def uAnzahl (consts : List (String × Int)) : SExpr → Except String Int
@@ -989,6 +1027,8 @@ inductive UFeldArt
   | opt : Nat → UFeldArt
   /-- An aggregate value (`[T; N]`, `string max N`): its type. -/
   | wert : Ty → UFeldArt
+  /-- `u32 wrapping`: a number field whose writes are taken modulo `m` (SUGAR over `rem`, SYNTAX.md). -/
+  | wrap : Int → UFeldArt
 
 /-- One slot field: no bit position, no `offset_into`, no `where`, no `reserved` (all without G
     form, like the refused arms of `read_table`). `by ops` is a writer discipline the CHECKER holds
@@ -1007,6 +1047,11 @@ def uFeld (alias : List (String × (Int × Int))) (tnames : List String) :
     | .array _ _ | .str _ =>
       match uTyp alias [] ftyp with
       | .ok τ => .ok ((fname, (0, 0)), UFeldArt.wert τ)
+      | .error e => .error e
+    | .wrap t =>
+      match uFeldTyp alias t with
+      | .ok (0, hi) => .ok ((fname, (0, hi)), UFeldArt.wrap (hi + 1))
+      | .ok _ => .error "wrapping field of a range that does not start at 0 without G form"
       | .error e => .error e
     | _ =>
       match uFeldTyp alias ftyp with
@@ -1041,6 +1086,7 @@ def uTabelle (consts : List (String × Int))
               bools := (fs.filter (fun p => match p.2 with | .bool => true | _ => false)).map (·.1.1),
               opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none),
               werte := fs.filterMap (fun p => match p.2 with | .wert τ => some (p.1.1, τ) | _ => none),
+              wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
               shared := sh }
   | .tableT n (.some p) .none .none .none sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
@@ -1078,11 +1124,11 @@ def uSchutzAux (globs : List UGlob) : List UTab → List SExpr → Except String
     and the shared hold have no G form; the `held` budget is
     ignored like `costs` (both travel nowhere). -/
 def uSperre (globs : List UGlob) (tabs : List UTab) : SItemTief → Except String ULock
-  | .lockT n ps (.lit rk) _ .none .none .none =>
+  | .lockT n ps (.lit rk) _ .none .none _ =>
     match uSchutzAux globs tabs ps with
     | .error e => .error e
     | .ok ts => .ok { name := n, rank := Int.ofNat rk, guard := ts }
-  | .lockT n ps (.lit rk) _ .none (.some m) .none =>
+  | .lockT n ps (.lit rk) _ .none (.some m) _ =>
     if strEq m "irqs" then
       match uSchutzAux globs tabs ps with
       | .error e => .error e
@@ -1342,7 +1388,10 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .error _ =>
       match ctx.lits.find? (fun k => strEq k.1 p) with
       | .some k => .ok (.lit k.2)
-      | .none => uGlobLies ctx p
+      | .none =>
+        match ctx.arrKonst.find? (fun k => strEq k.1 p) with
+        | .some k => .ok k.2
+        | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.ptr _ _) => .error "pointer in a compare without G form"
@@ -1510,7 +1559,10 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .error _ =>
       match ctx.lits.find? (fun k => strEq k.1 p) with
       | .some k => .ok (.lit k.2)
-      | .none => uGlobLies ctx p
+      | .none =>
+        match ctx.arrKonst.find? (fun k => strEq k.1 p) with
+        | .some k => .ok k.2
+        | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.ptr _ _) => .error "pointer as value without G form"
@@ -1608,11 +1660,6 @@ def uParamBreite : STyp → Nat
     if strEq a "u8" then 8 else if strEq a "u16" then 16
     else if strEq a "u32" then 32 else if strEq a "u64" then 64 else 0
   | _ => 0
-
-/-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
-def uArtVon : Ty → UParamArt
-  | .arr _ _ | .str _ => .wert
-  | _ => .int
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
 def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := [])
@@ -1908,6 +1955,8 @@ def elabKopf (_consts : List (String × Int))
               | .none => .ok (kopf, puts)
               | .some (.atom "bool") =>
                 .ok ({ kopf with resBool := true }, puts)
+              | .some (.atom "never") =>
+                .ok ({ kopf with resTy := some Ty.never }, puts)
               | .some (.index true tn) =>
                 match uTabNr tabs tn with
                 | .error e => .error e
@@ -2221,6 +2270,13 @@ def uRuf (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (c : String) (a
 def UFn.mitWhy (f : UFn) (x : String) (num n : Nat) : UFn :=
   { f with params := (x, Ty.why n) :: f.params, kinds := .why num :: f.kinds }
 
+/-- The value written into a wrapping field: `(v + m) % m` (the `+ m` keeps a difference that went below zero by
+    at most `m` non-negative); any other field takes `v` as it is. -/
+def uWrap (ctx : UCtx) (tb f : String) (v : USide) : USide :=
+  match (ctx.tabs.find? (fun t => strEq t.name tb)).bind (fun t => t.wraps.find? (fun p => strEq p.1 f)) with
+  | some (_, m) => .rem (.add v (.lit m)) (.lit m)
+  | none => v
+
 /-- `place = v;` at a slot or a static (the place reader decides which). -/
 def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
   match uZugriff ctx ziel with
@@ -2246,7 +2302,7 @@ def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
         else
           match uWertBody ctx wert with
           | .error e => .error e
-          | .ok v => .ok (.assign b f ix v)
+          | .ok v => .ok (.assign b f ix (uWrap ctx tb f v))
       | _ => .error "write through a read pointer"
   | .ok (.tabelle b, tb, f, ix) =>
     if (uOptFeld ctx tb f).isSome then
@@ -2264,7 +2320,7 @@ def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
     else
       match uWertBody ctx wert with
       | .error e => .error e
-      | .ok v => .ok (.assignTab b f ix v)
+      | .ok v => .ok (.assignTab b f ix (uWrap ctx tb f v))
 
 /-- `x = v;` at a `let mut` local. -/
 def uSetzeLokal (ctx : UCtx) (x : String) (wert : SExpr) : Except String UStmt :=
@@ -2736,6 +2792,8 @@ def uEndeKanal (ctx : UCtx) (r c : String) : Except String URet :=
     result returns nowhere. -/
 def uEnde (ctx : UCtx) : Option SEnde → Except String URet
   | .none =>
+    -- a `-> never` function ends in a call that does not return: its `never` answer is the result
+    if ctx.resTy == some Ty.never then .ok (.wert (.param "#ax")) else
     match ctx.res with
     | .some _ => .error "fn with a result falls off"
     | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome || ctx.resTy.isSome then .error "fn with a result falls off" else .ok .empty
@@ -3295,13 +3353,13 @@ def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int)
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
     (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
     (regs : List UReg := []) (zustaende : List UZustand := [])
-    (specs : List (String × List String × SExpr) := []) : UCtx :=
+    (specs : List (String × List String × SExpr) := []) (arrKonst : List (String × USide) := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds,
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
     fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
     resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2),
-    zustaende, specs }
+    zustaende, specs, arrKonst }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
@@ -3310,12 +3368,13 @@ def elabUFunktion (consts : List (String × Int))
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
     (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
     (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := [])
-    (zeiger : List String := []) (zb : Nat := 0) (specs : List (String × List String × SExpr) := []) :
+    (zeiger : List String := []) (zb : Nat := 0) (specs : List (String × List String × SExpr) := [])
+    (arrKonst : List (String × USide) := []) :
     Except String UFn :=
   match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs with
+    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst with
                  zeiger := zeiger, zeigerBasis := zb }
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
@@ -3567,6 +3626,9 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
     else .error "foreign fn effect without G form"
   | .cost _ :: rest => uAxKlauseln kopf tabs globs rest
   | .arch _ :: rest => uAxKlauseln kopf tabs globs rest
+  -- `deadline <= n ops arch X falsifier p`: a named hardware outcome outside the goal (`Spec.lean`, NOT CLAIMED:
+  -- time bounds), the same as at an implemented function
+  | .limit _ :: rest => uAxKlauseln kopf tabs globs rest
   | _ :: _ => .error "foreign fn clause without G form"
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
@@ -3607,9 +3669,13 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
 def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
     (asm : Bool) : FnSig → Except String UFnKopf
   | { art, name, params, res, fehler, klauseln } =>
-    if !(asm || strEq art "extern") then .error "foreign fn without G form"
+    -- `extern`, `raw`, `prim` and `= asm`: a foreign body (SYNTAX.md); a body-less `divergent fn` is one whose
+    -- answer is `never`
+    if !(asm || strEq art "extern" || strEq art "raw" || strEq art "prim" || strEq art "divergent") then
+      .error "foreign fn without G form"
+    else if strEq art "divergent" && res.isSome then .error "divergent fn with a result without G form"
     else
-      match uAxKopf alias tabs whys name params res fehler with
+      match uAxKopf alias tabs whys name params (if strEq art "divergent" then some (.atom "never") else res) fehler with
       | .error e => .error e
       | .ok kopf => uAxKlauseln kopf tabs globs klauseln
 
@@ -3789,7 +3855,16 @@ def uInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))
   let ausGruppe := ms.flatMap fun it => match it with
     | .groupT _ ts gs => gs.map (uInv consts alias tabs locks globs ts)
     | _ => []
-  uSeq (ausTab ++ ausGruppe)
+  -- `lock L protects { A, B } invariant p`: an invariant over the tables the lock guards, like a group's
+  let ausSperre := ms.flatMap fun it => match it with
+    | .lockT n ps _ _ _ _ (.some e) =>
+      [uInv consts alias tabs locks globs
+        (ps.filterMap fun p => match p with
+          | .variable t => if tabs.any (fun x => strEq x.name t) then some t else none
+          | _ => none)
+        { name := n ++ "#invariant", kosten := .lit 0, online := false, proof := none, pred := e }]
+    | _ => []
+  uSeq (ausTab ++ ausGruppe ++ ausSperre)
 
 /-- `U003`: a function that writes a carrier of an invariant holds (by `requires Held(..)`) every lock that
     guards a carrier of it -- it owes the invariant at its `return` and reads all of them there. -/
@@ -4098,16 +4173,59 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
                      gruende := 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [],
                      body := [], ret := .empty, boden := boden })
 
+/-- The names a unit declares as memory: tables, arenas, statics, atomics. -/
+def uSpeicherNamen (ms : List SItemTief) : List String :=
+  ms.filterMap fun
+    | .tableT n .. => some n
+    | .arenaT n .. => some n
+    | .globT _ n .. => some n
+    | .atomT n .. => some n
+    | _ => none
+
+/-- The writes of a clause list that name no memory of the unit. -/
+def uFremdeSchreibe (mem : List String) (ks : List SKlausel) : List String :=
+  ks.flatMap fun
+    | .effs es => es.filterMap fun
+      | .writes (.variable n) => if mem.any (strEq · n) then none else some n
+      | _ => none
+    | _ => []
+
+/-- The clause list without the writes of the sinks. -/
+def uKlauselnOhne (senken : List String) (ks : List SKlausel) : List SKlausel :=
+  ks.map fun
+    | .effs es => .effs (es.filter fun
+      | .writes (.variable n) => !(senken.any (strEq · n))
+      | _ => true)
+    | k => k
+
+/-- **Sinks** (`writes ausgabe` at an `extern fn`): a name that is no memory of the unit, written by a foreign body,
+    is what lies behind it outside the program -- no carrier of G; the call itself is the trace event
+    (`Ereignis.fremd`). Such a name may stand in the `writes` of the foreign bodies and of the functions that call
+    them; it is dropped there. A name no foreign body declares stays and is refused as an unknown carrier. -/
+def uOhneSenken (ms : List SItemTief) : List SItemTief :=
+  let mem := uSpeicherNamen ms
+  let senken := ms.flatMap fun
+    | .protoT sig => uFremdeSchreibe mem sig.klauseln
+    | .asmT sig _ => uFremdeSchreibe mem sig.klauseln
+    | _ => []
+  if senken.isEmpty then ms else
+  ms.map fun
+    | .fnT sig b => .fnT { sig with klauseln := uKlauselnOhne senken sig.klauseln } b
+    | .protoT sig => .protoT { sig with klauseln := uKlauselnOhne senken sig.klauseln }
+    | .asmT sig c => .asmT { sig with klauseln := uKlauselnOhne senken sig.klauseln } c
+    | m => m
+
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
 def elabU : List SItemTief → Except String UProg
   | items =>
-    let ms := uMembers items
-    let consts := uConstsRech (uKonstFns ms) ms []
-    let alias := uAliase consts ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
-    match uRestFehler ms with
+    let ms0 := uMembers items
+    let consts := uConstsRech (uKonstFns ms0) ms0 []
+    let alias := uAliase consts ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
+    match uRestFehler ms0 with
     | .error e => .error e
     | .ok _ =>
+    let ms := uOhneSenken ms0
     match uGlobs consts alias ms with
     | .error e => .error e
     | .ok globs0 =>
@@ -4171,7 +4289,8 @@ def elabU : List SItemTief → Except String UProg
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
     match uSeq (fnItems.map (fun (s, b) =>
         elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
-          (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)))) with
+          (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
+          (uKonstArrays alias (uKonstFns ms) consts ms))) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln tabs fns ms with
@@ -4256,7 +4375,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
     (types : List Ty) : USide → Except String USeiteT
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
-  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. => .error "aggregate without G form in the 104 lowering"
+  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i", "b"] p with
@@ -4660,7 +4779,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
     USide → Except String USeiteE
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
-  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. => .error "aggregate without G form in the 104 lowering"
+  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with
@@ -5369,7 +5488,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=

@@ -111,6 +111,8 @@ structure EInvK (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : N
     ∃ j, uParamNr ctx (nVar (Γ.length - 1 - d)) = .ok j ∧ uArtBei ctx.kinds j = .ok (art d)
   namen : ∀ n ∈ ctx.names, RumpfName n
   lits : ctx.lits = []
+  arrKonst : ctx.arrKonst = []
+  wrapsLeer : ∀ tb ∈ ctx.tabs, tb.wraps = []
   glob : ∀ g : z.deklaration.Glob, ∃ gl, ctx.globs.find? (fun x => strEq x.name (nGlob (gN z g))) = some gl ∧
     (gl.ty = .bool ↔ z.deklaration.gtyp g = .bool)
   tab : ∀ t : z.deklaration.Tab, ∃ tb, ctx.tabs.find? (fun x => strEq x.name (nTab (tN z t))) = some tb ∧
@@ -335,7 +337,7 @@ theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     | _ => simp [tyInt] at hτ
   glob g hg := by
     obtain ⟨e, he⟩ := H.param_fremd (nGlob (gN z g)) (fun n hn => strEq_rumpf_nGlob hn _)
-    simp only [uSeiteBlatt, he, H.lits, List.find?_nil]
+    simp only [uSeiteBlatt, he, H.lits, H.arrKonst, List.find?_nil]
     exact H.globFind g hg
   slot t f i ix hi hL hb := by
     have hz := zugriff_slot H t f i ix hi hL
@@ -352,7 +354,7 @@ theorem blatt_wert {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
   res x _ hk := by simp at hk
   glob g hg := by
     obtain ⟨e, he⟩ := H.param_fremd (nGlob (gN z g)) (fun n hn => strEq_rumpf_nGlob hn _)
-    simp only [uWertBlatt, he, H.lits, List.find?_nil]
+    simp only [uWertBlatt, he, H.lits, H.arrKonst, List.find?_nil]
     exact H.globFind g hg
   slot t f i ix hi hL hb := by
     have hz := zugriff_slot H t f i ix hi hL
@@ -588,8 +590,10 @@ theorem EInvK.auf {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     · exact Or.inl ⟨_, rfl⟩
     · exact H.namen n hn
   lits := H.lits
+  arrKonst := H.arrKonst
   glob := H.glob
   tab := H.tab
+  wrapsLeer := H.wrapsLeer
   tabNr := H.tabNr
   waechter := H.waechter
 
@@ -921,7 +925,7 @@ theorem bool_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
     (H : EInv z ctx Γ Λ art) {τ : Ty} (e : Expr z.deklaration Γ Λ τ) (s : SExpr) (u : UEns)
     (hd : delabE z none e = .ok s) (hu : uOfB z art none e = some u) : uBool ctx s = .ok u := by
   have H' : EInv z { ctx with res := none, resBool := false } Γ Λ art :=
-    { var := H.var, namen := H.namen, lits := H.lits, glob := H.glob, tab := H.tab, tabNr := H.tabNr,
+    { var := H.var, namen := H.namen, lits := H.lits, arrKonst := H.arrKonst, wrapsLeer := H.wrapsLeer, glob := H.glob, tab := H.tab, tabNr := H.tabNr,
       waechter := H.waechter }
   have h := sichert_ok none (sizeOf e + 1) H' (ergOk_none _ _) e (by omega) s u hd hu
   simp only [uBool, h, ens_ohne_erg (sizeOf e + 1) e (by omega) u hu, Bool.false_eq_true, ite_false]
