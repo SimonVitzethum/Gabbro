@@ -200,16 +200,16 @@ theorem logikRel_logikZ {e' : Logik D'} (h : ∀ g', e' = .vorbedingung g' → �
 
 /-- The arguments of a call of `g`, as the parameters of its image. -/
 def paramsUm (hS : E.SigTreu) (g : D.Fn) (ρ : Env D (D.params g)) : Env D' (D'.params (E.fn g)) :=
-  paramsE hS g ▸ E.envE ρ
+  castE (paramsE hS g) (E.envE ρ)
 
 /-- The arguments of an axiom, as the parameters of its image. -/
 def aparamsUm (a : D.Ax) (ρ : Env D (D.aparams a)) : Env D' (D'.aparams (E.ax a)) :=
-  (E.aparams a).symm ▸ E.envE ρ
+  castE (E.aparams a).symm (E.envE ρ)
 
 /-- **A callee's answer back in `D`.** -/
 def antwortR (hS : E.SigTreu) (pad : List (Ereignis D)) (g : D.Fn) (σ : World D) :
     RufAusgang (D := D') (E.fn g) → RufAusgang g
-  | .ok W v => .ok (E.antwortWelt hZ pad σ W) (E.ergZ (D.erg g) (hZ.erg g) ((ergE_fn hS g).symm ▸ v))
+  | .ok W v => .ok (E.antwortWelt hZ pad σ W) (E.ergZ (D.erg g) (hZ.erg g) (castV (ergE_fn hS g).symm v))
   | .why W r => .why (E.antwortWelt hZ pad σ W) (Fin.cast (gruendeE hS g) r)
   | .logik e => .logik (E.logikZ e)
   | .hardware _ => .hardware .ieee

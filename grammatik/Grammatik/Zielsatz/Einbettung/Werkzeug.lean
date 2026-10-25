@@ -44,22 +44,22 @@ theorem execEnd_umΛ {Γ : Ctx} {Λ₁ Λ₂ : List (Res D₀)} (h : Λ₁ = Λ�
 theorem execBlock_umΓ {Γ Γ' : Ctx} {Λ Λ' : List (Res D₀)} (h : Γ = Γ') (b : Block D₀ V l Γ Λ Λ')
     (σ : World D₀) (ρ : Env D₀ Γ') :
     execBlockHA S O U A passes R (Block.umΓ h b) σ ρ =
-      (h ▸ execBlockHA S O U A passes R b σ (h.symm ▸ ρ) : Ausgang V l Γ') := by
+      castAus h (execBlockHA S O U A passes R b σ (castE h.symm ρ)) := by
   subst h; rfl
 
 theorem execEnd_umΓ {Γ Γ' : Ctx} {Λ : List (Res D₀)} (h : Γ = Γ') (b : Endblock D₀ V l Γ Λ)
     (σ : World D₀) (ρ : Env D₀ Γ') :
     execEndHA S O U A passes R (Endblock.umΓ h b) σ ρ =
-      (h ▸ execEndHA S O U A passes R b σ (h.symm ▸ ρ) : EndAusgang V l Γ') := by
+      castEnd h (execEndHA S O U A passes R b σ (castE h.symm ρ)) := by
   subst h; rfl
 
 theorem eval_umΓ {Γ Γ' : Ctx} {Λ : List (Res D₀)} {τ : Ty} (h : Γ = Γ') (e : Expr D₀ Γ Λ τ)
-    (σ₀ σ : World D₀) (ρ : Env D₀ Γ') : eval σ₀ (Expr.umΓ h e) σ ρ = eval σ₀ e σ (h.symm ▸ ρ) := by
+    (σ₀ σ : World D₀) (ρ : Env D₀ Γ') : eval σ₀ (Expr.umΓ h e) σ ρ = eval σ₀ e σ (castE h.symm ρ) := by
   subst h; rfl
 
 theorem evalArgs_umτs {Γ : Ctx} {Λ : List (Res D₀)} {τs τs' : List Ty} (h : τs = τs')
     (a : Args D₀ Γ Λ τs) (σ₀ σ : World D₀) (ρ : Env D₀ Γ) :
-    evalArgs σ₀ (Args.umτs h a) σ ρ = (h ▸ evalArgs σ₀ a σ ρ : Env D₀ τs') := by
+    evalArgs σ₀ (Args.umτs h a) σ ρ = castE h (evalArgs σ₀ a σ ρ) := by
   subst h; rfl
 
 end Transport
@@ -116,21 +116,24 @@ theorem einpassenErg_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
 theorem axiom_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
     (a : D.Ax) (n : Int) (ha : D'.aerg (E.ax a) = (D.aerg a).map E.tyE) :
     einpassenErg z' (D'.aerg (E.ax a)) n =
-      ha.symm ▸ (einpassenErg z (D.aerg a) n).map (E.ergE (D.aerg a)) := by
+      (einpassenErg z (D.aerg a) n).map (fun v => castV ha.symm (E.ergE (D.aerg a) v)) := by
   have hz := hZ.aerg a
   revert ha
   generalize D'.aerg (E.ax a) = e'
   intro ha
   subst ha
-  exact E.einpassenErg_E z z' _ hz n
+  rw [E.einpassenErg_E z z' _ hz n]
+  rfl
 
 /-- A fallible axiom's result (value or reason), on both sides. -/
 theorem axiomSonst_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)
     (a : D.Ax) (n : Int) (ha : D'.aerg (E.ax a) = (D.aerg a).map E.tyE)
     (hg : D'.agruende (E.ax a) = D.agruende a) :
     sonstPasst z' (D'.aerg (E.ax a)) (D'.agruende (E.ax a)) n =
-      ha.symm ▸ hg.symm ▸
-        (sonstPasst z (D.aerg a) (D.agruende a) n).map (Sum.map (E.ergE (D.aerg a)) _root_.id) := by
+      match sonstPasst z (D.aerg a) (D.agruende a) n with
+      | Option.none => Option.none
+      | Option.some (Sum.inl v) => Option.some (Sum.inl (castV ha.symm (E.ergE (D.aerg a) v)))
+      | Option.some (Sum.inr r) => Option.some (Sum.inr (Fin.cast hg.symm r)) := by
   have hz := hZ.aerg a
   revert ha hg
   generalize D'.aerg (E.ax a) = e'
@@ -139,25 +142,25 @@ theorem axiomSonst_wert (hZ : ZeigerfreiD D) (z : Int → Option D.Fn) (z' : Int
   subst ha; subst hg
   simp only [sonstPasst]
   by_cases t0 : n % ((D.agruende a : Int) + 1) = 0
-  · simp only [t0, if_true, E.einpassenErg_E z z' _ hz, Option.map_map]
-    rfl
+  · simp only [t0, if_true, E.einpassenErg_E z z' _ hz]
+    cases einpassenErg z (D.aerg a) (n / ((D.agruende a : Int) + 1)) <;> rfl
   · simp only [t0, if_false]
     by_cases t1 : 0 < n % ((D.agruende a : Int) + 1) ∧ n % ((D.agruende a : Int) + 1) ≤ D.agruende a
-    · simp only [t1, dif_pos, and_self, Option.map_some]; rfl
-    · simp only [t1, dif_neg, not_false_eq_true, Option.map_none]
+    · simp only [t1, dif_pos, and_self]; rfl
+    · simp only [t1, dif_neg, not_false_eq_true]
 
 /-! ## Results bound to a name -/
 
 theorem ergWert_ergZ (hZ : ZeigerfreiD D) {τ : Ty} {e e' : Option Ty} (heq : e.map E.tyE = e')
     (he : e = some τ) (he' : e' = some (E.tyE τ)) (hz : ∀ τ, e = some τ → τ.zeigerfrei = true)
     (v' : ErgVal D' e') :
-    ergWert he' v' = E.valE τ (ergWert he (E.ergZ e hz (heq.symm ▸ v' : ErgVal D' (e.map E.tyE)))) := by
+    ergWert he' v' = E.valE τ (ergWert he (E.ergZ e hz (castV heq.symm v'))) := by
   subst heq; subst he
   exact (E.valE_valZ τ _ v').symm
 
 theorem ergWert_ergE {τ : Ty} {e e' : Option Ty} (heq : e' = e.map E.tyE)
     (he : e = some τ) (he' : e' = some (E.tyE τ)) (v : ErgVal D e) :
-    ergWert he' (heq.symm ▸ E.ergE e v : ErgVal D' e') = E.valE τ (ergWert he v) := by
+    ergWert he' (castV heq.symm (E.ergE e v)) = E.valE τ (ergWert he v) := by
   subst heq; subst he; rfl
 
 theorem castW_why {a b : Nat} (h : Ty.why a = Ty.why b) (r : Fin a) :

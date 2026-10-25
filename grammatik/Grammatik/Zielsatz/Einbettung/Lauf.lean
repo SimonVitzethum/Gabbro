@@ -64,7 +64,7 @@ theorem envE_set : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ) (v :
 
 /-- Transporting the scope of the `D'`-side keeps the relation. -/
 theorem envR_um {Γ : Ctx} {Γ₁ Γ₂ : Ctx} (h : Γ₁ = Γ₂) (ρ : Env D Γ) (ρ' : Env D' Γ₁) :
-    E.EnvR ρ (h ▸ ρ' : Env D' Γ₂) ↔ E.EnvR ρ ρ' := by subst h; rfl
+    E.EnvR ρ (castE h ρ') ↔ E.EnvR ρ ρ' := by subst h; rfl
 
 /-! ## Outcomes -/
 
@@ -124,11 +124,11 @@ theorem endRel_zuAusgang {Γ Γ' : Ctx} {o : EndAusgang V l Γ}
 /-- Transporting the scope of the `D'`-side keeps the relation. -/
 theorem ausRel_um {Γ Γ₁ Γ₂ : Ctx} (h : Γ₁ = Γ₂) (o : Ausgang V l Γ)
     (o' : Ausgang (E.vertragE V) l Γ₁) :
-    E.AusRel M o (h ▸ o' : Ausgang (E.vertragE V) l Γ₂) ↔ E.AusRel M o o' := by subst h; rfl
+    E.AusRel M o (castAus h o') ↔ E.AusRel M o o' := by subst h; rfl
 
 theorem endRel_um {Γ Γ₁ Γ₂ : Ctx} (h : Γ₁ = Γ₂) (o : EndAusgang V l Γ)
     (o' : EndAusgang (E.vertragE V) l Γ₁) :
-    E.EndRel M o (h ▸ o' : EndAusgang (E.vertragE V) l Γ₂) ↔ E.EndRel M o o' := by subst h; rfl
+    E.EndRel M o (castEnd h o') ↔ E.EndRel M o o' := by subst h; rfl
 
 end Rel
 

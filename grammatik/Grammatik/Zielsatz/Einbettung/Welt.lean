@@ -41,6 +41,23 @@ theorem castW_castW {τ σ ρ : Ty} (h : τ = σ) (h' : σ = ρ) (v : Wert D τ)
 
 theorem castW_self {τ : Ty} (h : τ = τ) (v : Wert D τ) : castW h v = v := rfl
 
+/-- A result value transported along an equation of its type. -/
+def castV {e e' : Option Ty} (h : e = e') (v : ErgVal D e) : ErgVal D e' := h ▸ v
+
+theorem castW_symm {τ σ : Ty} (h : τ = σ) (x : Wert D σ) : castW h (castW h.symm x) = x := by
+  subst h; rfl
+
+/-- An environment transported along an equation of its scope. -/
+def castE {Γ Γ' : Ctx} (h : Γ = Γ') (ρ : Env D Γ) : Env D Γ' := h ▸ ρ
+
+/-- An outcome transported along an equation of its scope. -/
+def castAus {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx} (h : Γ = Γ') (o : Ausgang V l Γ) :
+    Ausgang V l Γ' := h ▸ o
+
+/-- An end outcome transported along an equation of its scope. -/
+def castEnd {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx} (h : Γ = Γ') (o : EndAusgang V l Γ) :
+    EndAusgang V l Γ' := h ▸ o
+
 namespace Einbettung
 
 variable (E : Einbettung D D')

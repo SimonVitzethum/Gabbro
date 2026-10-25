@@ -54,11 +54,11 @@ theorem traverse_sim {l : Bool} {τ τ' : Ty}
     (pruef : (World D → World D') → World D → Env D Γ → World D × Bool)
     (pruef' : World D' → Env D' Γ' → World D' × Bool)
     (hs : E.KoerperSim schritt schritt') (hi : E.PruefSim pruef pruef')
-    (f : Wert D τ → Wert D' τ') (hf : ∀ k, ∃ h : τ' = E.tyE τ, castW h (f k) = E.valE τ k) :
-    ∀ ks : List (Wert D τ),
+    (f : Wert D τ → Wert D' τ') (hf : ∀ k, ∃ h : τ' = E.tyE τ, castW h (f k) = E.valE τ k)
+    (ks : List (Wert D τ)) (ks' : List (Wert D' τ')) (hks : ks' = ks.map f) :
       E.KoerperSim (l := l) (fun Φ => traverseLauf (schritt Φ) (pruef Φ) ks)
-        (traverseLauf schritt' pruef' (ks.map f)) := by
-  intro ks
+        (traverseLauf schritt' pruef' ks') := by
+  subst hks
   induction ks with
   | nil =>
       intro M σ σ' ρ ρ' h hρ
