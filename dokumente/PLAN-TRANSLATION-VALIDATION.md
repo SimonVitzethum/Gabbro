@@ -322,8 +322,8 @@ and the memory-model refinement into W/GX; stack/ABI/entries/regions/runtime/bin
 all reachable bytes; IEEE/control-state correspondence; budget accounting and work/time transfer;
 closing validator soundness with finite/infinite coverage and negative probes; Rust implementation
 of the reviewed Lean interfaces (Lean first); full integrated validation and performance
-measurement. Performance goal against equivalent C built with GCC `-O3`: minimum 80 %, target
-110 % (Simon, 2026-10-07; `ARM-PLAN.md`); **unmeasured; no all-programs claim**; invariant
+measurement. Performance goal against equivalent C built with `gcc -O3` or `clang -O3` (the faster): minimum 100 %,
+ambitious above 110 % (Simon, 2026-10-25; was 80 % since 2026-10-07); **unmeasured; no all-programs claim**; invariant
 analysis is mandatory, not optional.
 
 ---
@@ -942,7 +942,7 @@ learned chip-tested semantics of the used patterns and the ordering axioms the p
   the lifting through footprints, the learning pipeline and probe adapter.
 - *Not covered:* physics and operation, firmware/SMM/hypervisor/boot chain, devices, timing/WCET/side channels/progress, uncertified
   foreign code.
-- The performance claim (>= 80 % of `-O3`) is CONDITIONAL on a small fallback rate and unproven.
+- The performance claim (>= 100 % of `gcc -O3`/`clang -O3`) is CONDITIONAL on a small fallback rate and unproven.
 
 **Research risks.** Bridge builder (reconstructing K' intermediate states from hints without pass granularity); UB justification
 (every exploited assumption needs a fact); validating `-O3` loop optimisations; transport of the facts; the fallback rate; term

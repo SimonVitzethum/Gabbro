@@ -373,7 +373,7 @@ Deliberately not there:
 **Pipeline.** `opt -O3` (middle end) then `llc -O3`; `llc` alone does not run the middle end
 (measured slower than `-O0`). `messung/llvm/summe.gab`: 10 ms at `-O0` against 2 ms at `-O3`
 (an earlier run: 20.3 against 3.3 ms), identical on both targets. That is Gabbro against
-Gabbro, not against GCC: the 80 % minimum and 110 % target of `ARM-PLAN.md` are unmeasured.
+Gabbro, not against GCC: the 100 % minimum (AGENTS.md §11, since 2026-10-25) and the 110 % ambition are unmeasured.
 
 ## 6. Evidence
 

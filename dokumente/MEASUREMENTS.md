@@ -268,7 +268,7 @@ separate unit): the tell was the same both times — *the own side won too clear
 `restrict` justification turned out to give **0** where it was proved: GCC already knows that a
 `static` whose address is never taken cannot be reached by any pointer, so the proved rule stays
 as machinery but is not booked as a speed statement. **Not measured:** the LLVM back end and
-the direct-binary goals (80 % minimum, 110 % target of GCC -O3 are goals, not figures).
+the direct-binary goals (100 % minimum against the faster of `gcc -O3`/`clang -O3`, 110 % ambition: goals, not figures).
 
 ### 3.8 Run times of the guardians (M12)
 

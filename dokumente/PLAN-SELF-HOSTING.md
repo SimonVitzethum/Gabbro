@@ -136,7 +136,58 @@ The tools read inputs of unbounded size; each need is modelled in Lean before it
 * At parity of `ggen`/`gabdeck`/`gvalid` with the Lean drivers: the Lean drivers (`gen-abdeckung`, `gen-zellen`,
   `gen-fein`, the executable pipeline and validator). The Lean DEFINITIONS stay: they are the specifications.
 
-## 7. Order of work, estimates, critical path
+## 7. Targets: a new ISA is a profile, not a port (Simon, 2026-10-25)
+
+**Requirement:** moving the tools and their output to AArch64, RISC-V or another 64-bit ISA is easy: a target is a
+checked profile plus a binding library, never a change of the front end, the checker or the compiler's core.
+
+* **One target-independent core.** `gpruef` knows no ISA at all. `gkomp` lowers to target-independent LLVM IR; the ISA
+  enters only through the **target profile** `Ziel`, a Gabbro data item: triple, data layout, calling convention and
+  aggregate ABI, the register and stack conventions of `entry`/`asm` stubs, the width classes of atomics, and the
+  mapping of `acquire`/`release`/`seq`/fences to the target's memory model.
+* **What is per target, and only that:**
+  1. the profile `Ziel` (data);
+  2. the binding library of the environment (syscall numbers, entry stubs) -- Gabbro code with user-logic contracts,
+     never in the compiler (AGENTS.md §3: the OS is user logic);
+  3. the memory-model mapping of the profile, proved in Lean against the target's model (AArch64: `ARM-PLAN.md`;
+     RISC-V: RVWMO, to be modelled the same way; x86-64 TSO is frozen);
+  4. a QEMU stage in `pruefe-llvm.py` and, for performance (§8), real hardware.
+* **Theorem `ziel_neutral`:** `run_gkomp (p, z)` = `abi z (kern p)`: the output is the target-independent core `kern p`
+  followed by a function of the profile alone; the core never reads the profile. So the proofs of §3 and §4 are made
+  ONCE and hold for every profile; a new target owes only items 1-4.
+* **Measure of "easy":** a new 64-bit target with an existing LLVM back end is items 1-4; the gate is the four guardians
+  plus the QEMU stage on the new target. Estimate (a guess): days for 1, 2 and 4; the memory-model proof (3) is the
+  long item, and it is shared by every program.
+* **Hardware model and translation validation** (H8, `PLAN-TRANSLATION-VALIDATION.md` §9c) stay per ISA; `Code` is
+  ISA-neutral by design (§9a there), so a new ISA adds its CPU model, not a new IR.
+
+## 8. Performance: at least `gcc -O3` and `clang -O3` (Simon, 2026-10-25)
+
+**Requirement:** the code `gkomp` produces is at least as fast as equivalent C compiled with `gcc -O3` or `clang -O3`,
+on x86-64, AArch64 and RISC-V. This raises the minimum of AGENTS.md §11 (80 %) to 100 %.
+
+* **Score:** per workload `100 · t_C / t_Gabbro` (fixed work) or `100 · throughput_Gabbro / throughput_C`, against the
+  FASTER of `gcc -O3` and `clang -O3` (same machine, same ISA extensions, `-march`/`-mcpu` matched, same semantics,
+  no `-ffast-math` on either side). **Minimum 100 % on every workload class; ambitious above 110 %.**
+* **Why it is reachable:** `gkomp` hands LLVM's `-O3` pipeline IR that carries what the proofs know and C cannot say:
+  * no bounds checks, no overflow checks where M1 proves the range (they are not emitted, not optimised away);
+  * `!range` from every integer type's bounds, `nsw`/`nuw` where the range proves no wrap, `inbounds` GEPs;
+  * `noalias` from ownership (`own`, the ledger) and from distinct carriers, `!tbaa`-style disjointness per table and
+    field, `nonnull`/`dereferenceable` for references into regions;
+  * loop trip counts from the loop bounds, `llvm.assume` from narrowed facts;
+  * the open region's allocator: a bump/free-list fast path inline, the provider called per chunk, not per cell (OOM is
+    user logic, so no refusal path on the fast path);
+  * whole-program optimisation across units (LTO) where linking allows (`GabbroZielVerbund`).
+  Every such fact is justified by a proof and checked by translation validation (`PLAN-TRANSLATION-VALIDATION.md` §8,
+  §8.6): a validated optimised image or a refusal, never "optimised but unchecked".
+* **Measurement:** a benchmark suite of workload classes (compute kernels, pointer-chasing over regions, parsing and
+  string work, the tools themselves as a workload); each Gabbro program beside a C version written to the same
+  algorithm; a performance stage in `pruefe-llvm.py` (no fifth guardian) that records the scores per ISA and fails below
+  100 %. x86-64 runs here; AArch64 and RISC-V need real hardware (QEMU timings are no measurement).
+* **The compiler itself** is a Gabbro program compiled by itself at `-O3`, so its own speed follows the same requirement;
+  compile latency (checking, optimisation, validation) is measured beside it.
+
+## 9. Order of work, estimates, critical path
 
 | | Step | Gate |
 |---|---|---|
@@ -148,15 +199,20 @@ The tools read inputs of unbounded size; each need is modelled in Lean before it
 | S6 | `gpruef` (the fold) with §3.1-§3.3, the campaign on M ∪ N ∪ R, `gpruef_korrekt` | kernel + ledger |
 | S7 | `gkomp` and `gvalid` with §3.1-§3.4, bootstrap S0 → S1 → S2, fixpoint, double compilation, `gkomp_korrekt` | kernel + fixpoint + ledger |
 | S8 | deletions of §6 | the four guardians on the Gabbro tools |
+| S9 | targets (§7): the profile `Ziel` and `ziel_neutral`; AArch64 and RISC-V profiles, bindings, memory-model proofs | QEMU stage per ISA |
+| S10 | performance (§8): the proof-derived IR facts, the benchmark suite, the performance stage | 100 % of the faster of `gcc -O3`/`clang -O3` per workload class and ISA |
 
 **Estimates (ranges, a guess):** Gabbro 60 000-140 000 lines (front end shared; helpers 10 000-20 000; libraries
 10 000-25 000); Lean 25 000-60 000 (GabbroV simulations, the neutrality and determinism theorems, `gabbro-boot`).
-**Critical path:** S1 → S3 → S4 → S6. The least charted part is §3.3 (neutrality as theorems), above all H1 for a
-real implementation.
+**Critical path:** S1 → S3 → S4 → S6. The least charted parts are §3.3 (neutrality as theorems), above all H1 for a
+real implementation, and the RISC-V memory-model proof of §7. The performance minimum (§8) is decided by the IR facts:
+they must be designed into `gkomp` from S7 on, not added afterwards.
 
-## 8. Decisions for Simon
+## 10. Decisions for Simon
 
 1. The premise *campaign* (§4): the agreement on M ∪ N, computed by the verified `glauf` on the native binary, enters
    the correctness theorems as a named premise -- or the sets are cut until each test has a kernel certificate.
 2. The first `gpruef`/`gkomp` single-threaded (recommended).
 3. Deletion of the Rust tools and of the Lean drivers at parity (§6), as the no-legacy rule says.
+4. Real AArch64 and RISC-V hardware for the performance stage (§8); without it the requirement is measured on x86-64
+   only and stays OPEN for the other ISAs.
