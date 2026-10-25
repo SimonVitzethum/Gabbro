@@ -239,6 +239,17 @@ names are opaque); the parser theorems and the exporter's export of qualified na
 contracts, effects, costs and lock-rank constraints of a dependency are readable as its interface (`gabbro abi
 --project`), for the reader and for 7.7.
 
+Lean, done (2026-10-25, `Parser/Namen/Namensraum.lean`, THEOREM-MAP §97): a name of the unit is a pair (copy,
+path); a project writes paths from its own root and reaches a dependency through the dependency's LOCAL name as
+first segment; resolution keeps today's candidates (enclosing modules, then `use` lines) and accepts only VISIBLE
+names (own, and public names of declared dependencies). `aufloeseK_platz`: a path means the same wherever the
+project and its dependencies sit (alone or as `lager@2` under any program); `aufloese_sichtbar`: nothing reaches an
+undeclared copy or a private name; `namen_getrennt`: copies share no name. Decision: versions are NOT written in
+the source (`lager@2::` was planned): a project declares each dependency once, so its local name is unambiguous;
+writing a version would let a project reach a copy it did not declare. The grammar is unchanged (`path` already
+reads `lager::bestand::Regal`). Rust next: the checker resolves against the visible names of the project, not the
+whole unit, and refuses a project whose own top module has the local name of one of its dependencies.
+
 ### 7.7 Separate compilation -- the same guarantees, faster
 
 Required, not optional, but ONLY in a form that gives exactly what 7.2 gives:
@@ -281,8 +292,7 @@ Found while proving, and next:
   one link declaration, and re-proved (cached by content) for another. L4 (each project's own initial memory) is
   part of this embedding. L5 (one lock order) needs no theorem of its own: the whole-program acceptance decides
   `stufen` over the composed program.
-* Name spaces (7.6): a dependency's modules wrapped under its project name need relative module paths inside the
-  dependency -- a language change, Lean front end first.
+* Name spaces (7.6): Lean done (copy + path names, project-relative paths, visibility); Rust follows.
 * Witnesses still to build: a thread spawned in one project running code of the other (the callback witness is
   `einbettung_zeuge` with `zeuge_rueckruf`, 7.10).
 * `GabbroZielVerbund` for n units with every leg (7.7), then the build accepts dependencies.

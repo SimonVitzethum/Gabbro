@@ -175,6 +175,8 @@ import Grammatik.Parser.Lex.LexerVertrauen
 import Grammatik.Parser.Lex.LexerDoku
 import Grammatik.Parser.Expr.Ausdruck
 import Grammatik.Parser.Stmt.Anweisung
+import Grammatik.Parser.Namen.Namensraum
+import Grammatik.Parser.Namen.NamensraumZeuge
 import Grammatik.Parser.Stmt.AnweisungProben
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2

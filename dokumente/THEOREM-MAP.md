@@ -4839,3 +4839,21 @@ Koerper,Pflicht,Uebertragung,Zeuge}.lean`. Scope: `BUILD-SYSTEM.md` §7.10.
 * Witnesses: `boot_gross` (`"abC"` → `"ABC"` by `decide +kernel`), `boot_ist_maschine_zeuge`.
 
 All axiom lists standard.
+
+## 97. Name spaces of linked projects (2026-10-25)
+
+`Parser/Namen/{Namensraum,NamensraumZeuge}.lean`. Scope: `BUILD-SYSTEM.md` 7.6, `SYNTAX.md` at `usedecl`.
+
+* `Name` = (copy, path); `qualifiziere`: a path written in a project, into the copy of the dependency its first
+  segment names or into the project's own copy; `kandidaten`: today's checker's candidates; `sichtbar`: own names
+  and the public names of declared dependencies; `aufloese`/`aufloeseK`: the first visible candidate.
+* `mem_sichtbar`: a candidate is visible exactly when the project or the public part of the named dependency
+  declares it (`bed`), on every well-formed place (`Platz.Gut`).
+* **`aufloeseK_platz`**: a path resolves to the same candidate on every two well-formed places with the same local
+  dependency names and public names -- a library checked alone and linked as any copy means the same.
+* `aufloese_sichtbar`: a resolved name is visible (no undeclared copy, no private name); `namen_getrennt`: names of
+  different copies are disjoint.
+* Witnesses: `namensraum_zeuge` (library `lager` alone and as `lager@2`), `app_regal`, `app_util` (two
+  `util::f` in one unit), `app_privat`, `use_gelesen` (the `use` line through the parser).
+
+All axiom lists standard.
