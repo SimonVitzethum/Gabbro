@@ -50,43 +50,35 @@ theorem nutzerTeilO_E [DecidableEq D'.Fn] (hZ : E.Rueck) (hS : E.SigTreu) {P : P
 
 end Einbettung
 
-namespace Zeuge
+/-! ## The witness, for every library -/
 
-/-- The library's logic against the open-world rely: it has no global, so nothing is shared. -/
-theorem hLO : LogikPflichtA libP (SperrInv.leer libD) (axWahr libD) OffenA :=
-  logikPflichtA_of_frei (fun _ _ _ h => by obtain ⟨⟨g, _⟩, _⟩ := h; exact nomatch g)
-    (logikPflicht_ohne (fs := [()]) (fun _ => List.mem_singleton.mpr rfl) (fun _ => rfl) (fun _ => rfl)
-      rfl (by decide))
+variable (D : Deklaration) (g₀ : D.Fn) [DecidableEq D.Fn] (hA : Einbettung.AntwortFrei D)
 
-/-- The program's memory at the start: every slot `0`. -/
-def sp0 : Speicher appD where
-  slots := fun _ _ _ => (⟨0, by decide, by decide⟩ : Zahl 0 10)
-  globs := fun g => nomatch g
+instance : DecidableEq (erweitert D g₀).Fn := inferInstanceAs (DecidableEq (D.Fn ⊕ Unit))
 
-/-- The program as a project owning the image of the library. -/
-def pBild : Projekt appD where
-  eigen := fun b => b
-  E := { P := appP, S := SperrInv.leer appD, Q := axWahr appD, starts := [], sp0 := sp0 }
+/-- **The extension as a project owning the image of the library**: the extended program, the
+    library's lock and axiom families on the restriction, started in `sp0`. -/
+def projektE (P : Programm D) (S : SperrInv D) (Q : AxEns D) (sp0 : Speicher (erweitert D g₀)) :
+    Projekt (erweitert D g₀) where
+  eigen := fun f => f.isLeft
+  E := { P := programmE D g₀ P, S := sperrE D g₀ hA S, Q := axE D g₀ hA Q, starts := [], sp0 := sp0 }
 
-theorem hUO : E.Uebernahme hZ hS libP (SperrInv.leer libD) (axWahr libD) OffenA
-    pBild.E.P pBild.E.S pBild.E.Q OffenA where
-  fort := hU.fort
-  orte := fun L => nomatch L
-  inv := fun L => nomatch L
-  atom := fun _ h => E.offenA_E h
-  ax := fun a => nomatch a
-  invBild := fun i => nomatch i
-  rueck := hU.rueck
-
-/-- **The witness**: the library's part of (b) in the linking program, from its proof over its
-    own declaration. -/
-theorem nutzerTeil_zeuge : NutzerTeilO pBild :=
-  E.nutzerTeilO_E hZ hS hLO pBild hUO (Einbettung.padOk_tab (D := libD) ())
-    (fun f' hf' => ⟨(), by cases f' <;> simp_all [pBild]; rfl⟩)
-    (fun _ _ _ _ => rfl) axEnsLokal_wahr ⟨(fun L => nomatch L), fun _ h => by cases h⟩
+/-- **The witness**: every library proved against the open-world rely, with lock invariants and axiom
+    ensures that read only their carriers, has its part of (b) in the program that adds a callback --
+    started in any memory whose restriction meets the library's lock invariants. -/
+theorem nutzerTeil_zeuge {P : Programm D} {S : SperrInv D} {Q : AxEns D}
+    (hL : LogikPflichtA P S Q OffenA) (hSL : SperrInvLokal S) (hQL : AxEnsLokal Q)
+    {pad : List (Ereignis D)} (hp : Einbettung.PadOk pad) (sp0 : Speicher (erweitert D g₀))
+    (hsp : ∀ L, S.inv L ((einE D g₀).speicherZ (rueckE D g₀ hA) sp0) = true) :
+    NutzerTeilO (projektE D g₀ hA P S Q sp0) :=
+  (einE D g₀).nutzerTeilO_E (rueckE D g₀ hA) (sigTreu_einE D g₀) hL (projektE D g₀ hA P S Q sp0)
+    (uebernahmeE D g₀ hA P S Q OffenA OffenA (fun _ h => (einE D g₀).offenA_E h)) hp
+    (fun f' hf' => by
+      cases f' with
+      | inl f => exact ⟨f, rfl⟩
+      | inr _ => cases hf')
+    (sperrE_lokal D g₀ hA hSL) (axE_lokal D g₀ hA hQL) ⟨hsp, fun _ h => by cases h⟩
 
 #print axioms nutzerTeil_zeuge
-
-end Zeuge
 
 end Gabbro.Grammatik.Einbettung

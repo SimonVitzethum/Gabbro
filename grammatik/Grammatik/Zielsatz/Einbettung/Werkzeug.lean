@@ -98,7 +98,7 @@ theorem regLies_wert (hZ : E.Rueck) (z : Int → Option D.Fn) (z' : Int → Opti
     (einpassen z (D.rtyp r) n = Option.none → einpassen z' (D'.rtyp (E.reg r)) n = Option.none) ∧
     ∀ v, einpassen z (D.rtyp r) n = some v →
       einpassen z' (D'.rtyp (E.reg r)) n = some (hr.symm ▸ E.valE _ v) := by
-  have e := E.einpassen_E z z' (D.rtyp r) (hZ.rtypFrei r) n
+  have e := E.einpassen_E z z' (D.rtyp r) (hZ.frei.rtypFrei r) n
   revert hr
   generalize D'.rtyp (E.reg r) = T'
   intro hr
@@ -117,7 +117,7 @@ theorem axiom_wert (hZ : E.Rueck) (z : Int → Option D.Fn) (z' : Int → Option
     (a : D.Ax) (n : Int) (ha : D'.aerg (E.ax a) = (D.aerg a).map E.tyE) :
     einpassenErg z' (D'.aerg (E.ax a)) n =
       (einpassenErg z (D.aerg a) n).map (fun v => castV ha.symm (E.ergE (D.aerg a) v)) := by
-  have hz := hZ.aergFrei a
+  have hz := hZ.frei.aergFrei a
   revert ha
   generalize D'.aerg (E.ax a) = e'
   intro ha
@@ -134,7 +134,7 @@ theorem axiomSonst_wert (hZ : E.Rueck) (z : Int → Option D.Fn) (z' : Int → O
       | Option.none => Option.none
       | Option.some (Sum.inl v) => Option.some (Sum.inl (castV ha.symm (E.ergE (D.aerg a) v)))
       | Option.some (Sum.inr r) => Option.some (Sum.inr (Fin.cast hg.symm r)) := by
-  have hz := hZ.aergFrei a
+  have hz := hZ.frei.aergFrei a
   revert ha hg
   generalize D'.aerg (E.ax a) = e'
   generalize D'.agruende (E.ax a) = m'

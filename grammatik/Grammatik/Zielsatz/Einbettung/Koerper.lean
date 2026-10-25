@@ -441,7 +441,7 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         (args.orte)
       have hev0 := E.frei_alle hZ (@hev) hρ
       obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
-      have hargs := E.envR_eq_frei hZ (hZ.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
+      have hargs := E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
       have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a
         (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE))
           (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
@@ -686,7 +686,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
         (args.orte)
       have hev0 := E.frei_alle hZ (@hev) hρ
       obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
-      have hargs := E.envR_eq_frei hZ (hZ.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
+      have hargs := E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
       have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
       cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
@@ -717,7 +717,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
         (args.orte)
       have hev0 := E.frei_alle hZ (@hev) hρ
       obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
-      have hargs := E.envR_eq_frei hZ (hZ.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
+      have hargs := E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
       have hw' := E.axiomSonst_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a) (E.agruende a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
       rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with _ | (v | r)
@@ -850,7 +850,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
       have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
         rw [List.map_cons, E.gtyp]
-      have hzf := hZ.atomFrei g hat
+      have hzf := hZ.frei.atomFrei g hat
       cases hvis : O'.sichtbar (E.glob g) (leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)])
       · refine ⟨_, .hardware (.sichtbarkeit D.a10), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hzf, hΦ2 Φ hP, hvis,
@@ -1199,7 +1199,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         (args.orte)
       have hev0 := E.frei_alle hZ (@hev) hρ
       obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
-      have hargs := E.envR_eq_frei hZ (hZ.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
+      have hargs := E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
       have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
       cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
@@ -1230,7 +1230,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         (args.orte)
       have hev0 := E.frei_alle hZ (@hev) hρ
       obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
-      have hargs := E.envR_eq_frei hZ (hZ.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
+      have hargs := E.envR_eq_frei hZ (hZ.frei.aparamsFrei a) _ _ (E.evalArgs_exA hZ hI.treu hI.treu args ρ ρ' hρ)
       have hw' := E.axiomSonst_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a) (E.agruende a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
       rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with _ | (v | r)
@@ -1363,7 +1363,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
       have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
         rw [List.map_cons, E.gtyp]
-      have hzf := hZ.atomFrei g hat
+      have hzf := hZ.frei.atomFrei g hat
       cases hvis : O'.sichtbar (E.glob g) (leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)])
       · refine ⟨_, .hardware (.sichtbarkeit D.a10), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hzf, hΦ2 Φ hP, hvis,

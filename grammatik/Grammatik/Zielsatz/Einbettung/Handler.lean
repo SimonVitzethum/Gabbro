@@ -278,7 +278,7 @@ noncomputable def aumweltΦ (T : D.Tab ⊕ D.Glob → Prop) (A' : AUmwelt D') : 
   fun X σ => mischT T X σ (E.speicherZ hZ (A' (X.map E.ortE) (Φ.atom σ)).speicher)
 
 /-- **The induced oracle.** Visibility of a global that carries function pointers is answered
-    constantly: no awaited global carries one (`Rueck.atomFrei`), and only so is the oracle
+    constantly: no awaited global carries one (`AntwortFrei.atomFrei`), and only so is the oracle
     local to the carrier it asks about. -/
 def orakelΦ (O' : Orakel D') : Orakel D where
   wirkt := fun a σ ρ =>

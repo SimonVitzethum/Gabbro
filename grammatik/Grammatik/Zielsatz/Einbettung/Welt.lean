@@ -51,24 +51,29 @@ def castEnd {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx} (h : Γ = Γ') (o : EndAus
 
 namespace Einbettung
 
-variable (E : Einbettung D D')
-
-/-- **How `D` names a function of `D'`**: an image function by its preimage, a function outside
-    the image that conforms to the image of signature `n` by the HEAD `rep n` -- a function of `D`
-    that conforms to `n` and whose contract is the pointer's contract (callbacks, stage E4). The
-    carriers a register or a visibility answer reads hold no function pointer, and no register,
-    axiom argument or axiom result is one (two different foreign functions are one head in `D`;
-    an answer that depends on which one `D` cannot repeat). -/
-structure Rueck : Type where
-  rep : Nat → Option D.Fn
-  rep_passt : ∀ n g, rep n = some g → D.passt g n = true
-  voll : ∀ n (f' : D'.Fn), D'.passt f' (E.num n) = true → E.fnZ f' = none → (rep n).isSome = true
+/-- **What `D` reads as a value from the hardware or the environment holds no function pointer**:
+    the carriers of a register, an atomic global, an axiom's arguments and result, a register's
+    type. Two foreign functions are one head in `D`; an answer that depended on which one `D`
+    could not repeat (stage E4). A condition on `D` alone. -/
+structure AntwortFrei (D : Deklaration) : Prop where
   regFrei : ∀ r t, Sum.inl t ∈ D.rtraeger r → ∀ f, (D.typ t f).zeigerfrei = true
   regFreiG : ∀ r g, Sum.inr g ∈ D.rtraeger r → (D.gtyp g).zeigerfrei = true
   atomFrei : ∀ g, D.atomar g = true → (D.gtyp g).zeigerfrei = true
   aergFrei : ∀ a τ, D.aerg a = some τ → τ.zeigerfrei = true
   aparamsFrei : ∀ a τ, τ ∈ D.aparams a → τ.zeigerfrei = true
   rtypFrei : ∀ r, (D.rtyp r).zeigerfrei = true
+
+variable (E : Einbettung D D')
+
+/-- **How `D` names a function of `D'`**: an image function by its preimage, a function outside
+    the image that conforms to the image of signature `n` by the HEAD `rep n` -- a function of `D`
+    that conforms to `n` and whose contract is the pointer's contract (callbacks, stage E4); and
+    what `D` reads from outside holds no function pointer (`AntwortFrei`). -/
+structure Rueck : Type where
+  rep : Nat → Option D.Fn
+  rep_passt : ∀ n g, rep n = some g → D.passt g n = true
+  voll : ∀ n (f' : D'.Fn), D'.passt f' (E.num n) = true → E.fnZ f' = none → (rep n).isSome = true
+  frei : AntwortFrei D
 
 variable {E} in
 /-- A function of `D'` conforming to the image of `n`, named in `D`. -/

@@ -383,7 +383,7 @@ theorem orakelΦ_rahmen {O' : Orakel D'} (hO' : RahmenO O') : RahmenO (E.orakel�
 
 include hΦ in
 /-- The induced oracle is register-local: the carriers of a register hold no function pointer
-    (`Rueck.regFrei`), and the visibility of a pointer-carrying global is constant. -/
+    (`AntwortFrei.regFrei`), and the visibility of a pointer-carrying global is constant. -/
 theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.orakelΦ hZ pad Φ O') := by
   refine ⟨fun r σ₁ σ₂ hg => ?_, fun g σ₁ σ₂ hg => ?_⟩
   · show O'.regLies (E.reg r) (Φ.haupt σ₁) = O'.regLies (E.reg r) (Φ.haupt σ₂)
@@ -394,14 +394,14 @@ theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.ora
       rcases c with t | g
       · simp only [Sum.map_inl, Sum.inl.injEq] at he
         subst he
-        exact E.bild_slots hZ (hΦ σ₁) (hΦ σ₂) (hZ.regFrei r t hc) (hg.1 t hc)
+        exact E.bild_slots hZ (hΦ σ₁) (hΦ σ₂) (hZ.frei.regFrei r t hc) (hg.1 t hc)
       · simp only [Sum.map_inr, reduceCtorEq] at he
     · obtain ⟨c, hc, he⟩ := List.mem_map.mp hg'
       rcases c with t | g
       · simp only [Sum.map_inl, reduceCtorEq] at he
       · simp only [Sum.map_inr, Sum.inr.injEq] at he
         subst he
-        exact E.bild_globs hZ (hΦ σ₁) (hΦ σ₂) (hZ.regFreiG r g hc) (hg.2 g hc)
+        exact E.bild_globs hZ (hΦ σ₁) (hΦ σ₂) (hZ.frei.regFreiG r g hc) (hg.2 g hc)
   · show (if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.haupt σ₁) else true) =
       (if (D.gtyp g).zeigerfrei = true then O'.sichtbar (E.glob g) (Φ.haupt σ₂) else true)
     by_cases hz : (D.gtyp g).zeigerfrei = true
