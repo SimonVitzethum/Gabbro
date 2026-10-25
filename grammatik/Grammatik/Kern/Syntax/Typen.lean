@@ -62,6 +62,11 @@ inductive Ty where
       is fresh. That the provider has memory to give is user logic too (Simon, 2026-10-24: OOM is user logic). G itself makes no reference, and never one
       from an integer. Every access through it carries the guards of `t` like a slot access. -/
   | ref (t : Nat)
+  /-- `[T; N]` as a VALUE (2026-10-25, Simon: aggregate values in G, lifting O15): `n` values of `τ`. Passed,
+      returned and bound by copy; an element is read and replaced by index. -/
+  | arr (τ : Ty) (n : Nat)
+  /-- `string max N` as a VALUE (lane 261, in G since 2026-10-25): at most `n` bytes. -/
+  | str (n : Nat)
   deriving DecidableEq, Repr
 
 /-- Ein Index in `0 ..< n`: der Typ, den `index into T` erzeugt. -/
@@ -134,6 +139,8 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .fnptr n => { f : F // passt f n = true }
   | .ptr _ _ => Unit
   | .ref _ => Nat
+  | .arr τ n => Fin n → Val F passt τ
+  | .str n => { bs : List (Zahl 0 255) // bs.length ≤ n }
 
 /-- The cell number of a reference. -/
 def Val.zelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (v : Val F passt (.ref n)) : Nat := v
@@ -151,6 +158,10 @@ theorem Val.int_bereich {F : Type} {passt : F → Nat → Bool} {lo hi : Int} (v
     Grammatik zulaesst (`M104` in der sicheren Richtung). -/
 def Zahl.weiter {lo hi lo' hi' : Int} (h1 : lo' ≤ lo) (h2 : hi ≤ hi') (v : Zahl lo hi) :
     Zahl lo' hi' := ⟨v.n, by have := v.lo_le; omega, by have := v.le_hi; omega⟩
+
+/-- An index of an array of length `n` as a position. -/
+def Zahl.fin {n : Nat} (k : Zahl 0 ((n : Int) - 1)) : Fin n :=
+  ⟨k.n.toNat, by have := k.lo_le; have := k.le_hi; omega⟩
 
 /-! ## 3. Die Rechnung -- jede Operation mit dem Bereich, den `M104` ihr gibt -/
 
