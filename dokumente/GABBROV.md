@@ -674,7 +674,14 @@ ceiling, the build state of `bruecke/` and `programmlogik/`, and every axiom set
 `Spec.lean` header cites for the bridge (`messung/GABBROV-BRUECKE-REPORT.md`,
 `GABBROV-SERVER-REPORT.md`, `GABBROV-V1.md`, the mandate `AUFTRAG-GABBROV.md`) are not in the tree.
 
-## 17. GabbroV over machine G: complete logic proofs (Simon, 2026-10-25)
+## 17. GabbroV over machine G: the certificate, and the calculus the user proves with (Simon, 2026-10-25)
+
+**The division of labour (Simon, 2026-10-25).** GabbroV proves no logic. It turns a Gabbro program into a Lean
+certificate that states ALL the logic the program's user owes and ALL the hardware assumptions the program rests on;
+the USER proves the logic. What GabbroV owes is that the certificate is complete and exact -- every duty named, none
+missing, none added (`LogikPflichten`, `logikPflichten_iff`, `WP/HA/Zertifikat.lean`) -- and that the user has a
+calculus in which every true duty is provable (below). The certificates proved in this section are EXAMPLES of user
+proofs, not something GabbroV does.
 
 **Why a new route.** The channel of §13 proves duties against `Body.lean`, a model BESIDE machine G, through an
 emitter in the Rust checker (`lean.rs`) that refuses whole classes of forms (§13.9, §13.10). The self-hosting plan
@@ -705,14 +712,14 @@ notion.
 | regions and linked structures: reasoning over `RegionRepr` and the ownership ledger (lists, trees, maps over the open region) | | open |
 | specifications stated over the SOURCE TEXT: through the Lean pipeline (`uebersetzeAllg`), "the function named `f` in this text meets `S`" | | open |
 
-**Logic proofs on the certificate (Simon, 2026-10-25).** A certificate (`gabbro obligations --g`) exports a program
+**The user's proofs on the certificate (Simon, 2026-10-25).** A certificate (`gabbro obligations --g`) exports a program
 as a G term and instantiates the goal theorem CONDITIONALLY on the user's logic `NutzerPflichtA gE`. That premise is
 stated over `execEndHA` (lock moves, release checks, the atomic environment), so the calculus exists over that
 semantics too (`WP/HA/Kern.lean`: exact, with the same rules, the call statement included). `WP/HA/Pflicht.lean`
 states the obligation of each function as three weakest preconditions (`PflichtWP`) and proves
 `nutzerPflichtA_iff`: premise (b) holds EXACTLY when those hold, the lock invariants and axiom ensures are local, and
 the start obligation holds -- so every true user logic of a certificate is provable in the calculus. Without a
-shared atomic the atomic environment is the identity (`leseA_ohneAtomar`). Four certificates are proved through to
+shared atomic the atomic environment is the identity (`leseA_ohneAtomar`). As examples of user proofs, four certificates are proved through to
 the goal theorem WITHOUT an open logic premise (`gP_gabbro_bewiesen`, on `propext`, `Classical.choice`, `Quot.sound`):
 
 | Certificate | What it exercises |
