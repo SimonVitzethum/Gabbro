@@ -36,7 +36,7 @@ option at `setup` or `configure`, tests declared next to the targets, `install` 
 
 | Not in the project file | Why | Where it stands |
 |---|---|---|
-| dependency lists between targets (`dependencies:`) | edges are COMPUTED from `module`/`use`; a second list over the same thing would drift (W7) | the sources |
+| dependency lists between targets of one project | edges are COMPUTED from `module`/`use`; a second list over the same thing would drift (W7). `dependencies:` names other PROJECTS a target may draw from (§7.3); which files enter is still computed | the sources |
 | compiler flags, defines | `arch`, `when TESTBUILD`, effects and costs are language | the sources |
 | custom commands, generators | a build that runs arbitrary programs checks nothing it runs | -- |
 | C sources | this build compiles no C | -- |
@@ -51,8 +51,9 @@ Operators: `+` (strings, integers, lists), `==`, `!=`, `in`, `not in`, `and`, `o
 | Function | Meaning |
 |---|---|
 | `project('name', version: '…')` | the first call of the root file, once |
-| `program('name', <sources>…, install: false)` | links to `<builddir>/name`; must carry `pub fn main` |
-| `library('name', <sources>…)` | a SOURCE library (§3); checked alone; must not carry `main` |
+| `program('name', <sources>…, install: false, dependencies: [])` | links to `<builddir>/name`; must carry `pub fn main`; `dependencies:` the projects it may draw from (also on `library` and `object`) |
+| `library('name', <sources>…, export: false)` | a SOURCE library (§3); checked alone; must not carry `main`; `export: true` lets dependents `use` it |
+| `dependency('name', path: '…', version: '…', options: ['k=v'])` | another Gabbro project (§7.3): from `path:` or `subprojects/<name>/`; returns a handle for `dependencies:` |
 | `object('name', <sources>…)` | stops at `<builddir>/name.o`; must not carry `main` |
 | `test('name', <program>, args: […], stdout: '…', exit: 0, timeout: 30)` | run by `gabbro test` |
 | `files('a.gab', …)` | paths relative to the current build file (a bare string is too) |
@@ -106,6 +107,10 @@ could not run (no test declared, or an `aarch64` binary on a machine without `qe
 |---|---|
 | a source that is not a `.gab` file | this build compiles no C |
 | `deps:` or any other unknown keyword, an unknown function | the edges are computed (§1); the language is closed |
+| a dependency: missing project, other name, version outside the requirement, unknown option, a built-in option set for it, a cycle of projects, one version from two sources or with two option sets | §7.3; each names the `dependency(...)` line |
+| a `use` into a dependency the target does not declare, a declared dependency no `use` reaches, a dependency's library it does not export | each with the fix |
+| in a unit of several projects: an item outside a module, a module named like a dependency, a path into a project not declared | the name spaces (§7.6) |
+| `compile` after a dependency changed | `gabbro.lock` (§7.3); `configure` accepts the change |
 | an empty target, two targets or tests of one name | an empty target builds nothing and says it built; artefacts would overwrite one another |
 | a module declared by two libraries, or twice in one unit | a `use` edge would have two targets |
 | a program using an object's or program's module | no separate compilation across units (§3) |
@@ -114,7 +119,8 @@ could not run (no test declared, or an `aarch64` binary on a machine without `qe
 
 ## 7. Plan: linking Gabbro projects with dependencies (2026-10-25, for review)
 
-*Status: PLAN, nothing implemented. Set by Simon: two or more Gabbro projects, the source of each present, each with
+*Status: implemented in the build (2026-10-25, `bau/abh.rs`, `bau/namensraum.rs`, tests in `tests/bausystem.rs`)
+except the open points of §7.11; the Lean side is §7.5-§7.10. Set by Simon: two or more Gabbro projects, the source of each present, each with
 its own `gabbro.build`, dependencies between them. **Everything crosses the boundary, every guarantee is kept, and
 the result is as usable as possible**: whatever works inside one project works across projects, and nothing that
 could be allowed is refused. Out of scope: a dependency available only as a binary; dynamic loading.*
@@ -411,3 +417,26 @@ consultation of an outside object happens at a different `D`-world; then one fun
 every answer the `D'`-run receives. This needs a carrier in `D` to mark with (a table or a global; a project
 without any state is handled by a ghost carrier of its own). It is proof work, not a model change -- the strongest
 variant -- and it is the critical path of E2/E3.
+
+### 7.11 What the build does with dependencies (2026-10-25)
+
+* `dependency(...)` resolves a COPY per source and option set (`bau/abh.rs`): evaluated in its own scope, its options
+  from `options:` and `-D<project>:<option>=<value>`, the program's `target` and `buildtype` handed down; the version
+  requirement (`'>=1.2, <2'`: comparisons joined by `,`) checked against `project(version:)`. Two versions are two
+  copies, each in its own name space (`lager_v1_3_0`); one version from two sources, or with two option sets, is
+  refused; so is a cycle of projects.
+* `gabbro.lock` lives in the build directory: per copy path, version, options and a content fingerprint of its build
+  files and sources. `setup` writes it, `compile` refuses a changed dependency by name, `configure` accepts it.
+* A target reaches a dependency through `use <dependency>::<module>::<item>` into a library the dependency marks
+  `export: true`; that library and what it uses (of its own project or of ITS dependencies) join the unit. Each
+  library of a dependency is also checked alone (`built lager:bestand`).
+* Several projects in one unit get name spaces on the tokens before the checker sees them (`bau/namensraum.rs`,
+  the rule of `Parser/Namen/Namensraum.lean`): every top-level module goes below its project's name space, a
+  dependency's local name becomes its copy's name space, every item stands in a module, and a path whose head is a
+  project the file's project does not declare -- or a module a dependency does not export -- is refused. The program
+  is ONE unit for the checker, as §7.2 says; `gabbro_ziel_projekte`/`gabbro_ziel_verbund_n` are its statements.
+* Open, a language change (Lean model first): carriers and exported items are named by their SHORT name -- in
+  `effects { writes T }` and in the product's symbols -- so two projects may not both export an item of one name
+  (`N039`, tested). Modules of one name are fine. Lifting it needs qualified carrier names in effects and qualified
+  symbols in the LLVM backend. Also open: running a dependency's own tests (`gabbro test -C build lager:`), `--fix`
+  applying the printed fixes, separate compilation (§7.7).
