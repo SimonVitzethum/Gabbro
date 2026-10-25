@@ -421,11 +421,16 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
 /-! ### Values of a `let`: a truth value is never read as a number -/
 
 theorem wert_fehler_blatt {ctx : UCtx} (s : SExpr) (hz : ∃ e, uZugriff ctx s = .error e) (hg : uGrenzwort ctx s = none)
-    (h1 : ∀ v, s ≠ .lit v) (h2 : ∀ p, s ≠ .variable p) : ∃ e, uWertBlatt ctx s = .error e := by
+    (h1 : ∀ v, s ≠ .lit v) (h2 : ∀ p, s ≠ .variable p) (h3 : ∀ r f, s ≠ .arrow (.variable r) f) :
+    ∃ e, uWertBlatt ctx s = .error e := by
   obtain ⟨e, he⟩ := hz
   cases s with
   | lit v => exact absurd rfl (h1 v)
   | «variable» p => exact absurd rfl (h2 p)
+  | arrow a f =>
+    cases a with
+    | «variable» r => exact absurd rfl (h3 r f)
+    | _ => simp only [uWertBlatt, hg, he]; exact ⟨_, rfl⟩
   | _ => simp only [uWertBlatt, hg, he]; exact ⟨_, rfl⟩
 
 theorem wert_bin_fehler (ctx : UCtx) (op : String) (a b : SExpr)

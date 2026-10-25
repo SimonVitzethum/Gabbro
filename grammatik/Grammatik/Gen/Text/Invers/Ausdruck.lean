@@ -62,6 +62,7 @@ def uOfS (art : Nat → UParamArt) (kopf : Option Nat) {Γ : Ctx} {Λ : List (Re
     match art (tiefe x) with
     | .ptr _ _ => none
     | .bool => none
+    | .ref _ => none
     | _ => some (.param (nVar (Γ.length - 1 - tiefe x)))
   | .glob g _ => if z.deklaration.gtyp g = .bool then none else some (.glob (nGlob (gN z g)))
   | .slot t f i _ =>
@@ -262,6 +263,7 @@ structure Blatt (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : N
     (bl : SExpr → Except String USide) : Prop where
   lit : ∀ v : Nat, bl (.lit v) = .ok (.lit (Int.ofNat v))
   var : ∀ d, d < Γ.length → kopf ≠ some (Γ.length - 1 - d) → (∀ n w, art d ≠ .ptr n w) → art d ≠ .bool →
+    (∀ n, art d ≠ .ref n) →
     bl (.variable (nVar (Γ.length - 1 - d))) = .ok (.param (nVar (Γ.length - 1 - d)))
   res : ∀ {τ : Ty} (x : Var Γ τ), tyInt τ = true → kopf = some (Γ.length - 1 - tiefe x) → bl .res = .ok .erg
   glob : ∀ g : z.deklaration.Glob, z.deklaration.gtyp g ≠ .bool →
@@ -317,7 +319,7 @@ theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     {kopf : Option Nat} (H : EInvK z ctx Γ Λ art kopf) (hr : ErgOk ctx Γ kopf) :
     Blatt (z := z) ctx Γ Λ art kopf (uSeiteBlatt ctx) where
   lit v := by simp [uSeiteBlatt]
-  var d hd hk hp hb := by
+  var d hd hk hp hb _ := by
     obtain ⟨j, hj, ha⟩ := H.var d hd hk
     simp only [uSeiteBlatt, hj, ha]
   res {τ} x hτ hk := by
@@ -343,7 +345,7 @@ theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
 theorem blatt_wert {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : EInv z ctx Γ Λ art) : Blatt (z := z) ctx Γ Λ art none (uWertBlatt ctx) where
   lit v := by simp [uWertBlatt]
-  var d hd hk hp hb := by
+  var d hd hk hp hb hr := by
     obtain ⟨j, hj, ha⟩ := H.var d hd hk
     simp only [uWertBlatt, hj, ha]
   res x _ hk := by simp at hk
@@ -406,10 +408,11 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       split at hu
       · simp at hu
       · simp at hu
-      · rename_i hp hb
+      · simp at hu
+      · rename_i hp hb hr
         simp only [Option.some.injEq] at hu
         subst hu
-        exact hB.var (tiefe x) (tiefe_lt x) hk (fun n w h => hp n w h) hb
+        exact hB.var (tiefe x) (tiefe_lt x) hk (fun n w h => hp n w h) hb (fun n h => hr n h)
   | glob g hL =>
     simp only [delabE, Except.ok.injEq] at hd
     subst hd
