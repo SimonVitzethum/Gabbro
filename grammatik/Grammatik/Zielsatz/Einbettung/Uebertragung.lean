@@ -18,9 +18,12 @@ import Grammatik.Zielsatz.Kern.Spec
   `D'` induces through the keys (`phiAus`), shows them lawful (`Pflicht.lean`), applies the
   project's obligation to them, and carries the conclusion back to `D'` (`ens_E`, `req_E`).
 
-  What it needs of `D`: no function pointer comes in from outside (`ZeigerfreiD`; callbacks are
-  stage E4), and a neutral trace piece (`PadOk`: `D` declares a table, a global or a lock) --
-  without one, `D`'s worlds cannot tell two calls of a foreign function apart.
+  What it needs of `D`: a head for every function-pointer signature a foreign function of `D'`
+  may conform to, and no function pointer where a register, an atomic, an axiom or a visibility
+  answer carries a value (`Rueck`, stage E4); every foreign callee conforming to a signature
+  keeps the head's frames and contract (`RueckVertrag`); and a neutral trace piece (`PadOk`: `D`
+  declares a table, a global or a lock) -- without one, `D`'s worlds cannot tell two calls of a
+  foreign function apart.
 -/
 
 namespace Gabbro.Grammatik.Einbettung
@@ -78,7 +81,7 @@ theorem castEnd_logik {D₀ : Deklaration} {V : Vertrag D₀} {l : Bool} {Γ Γ'
 
 namespace Einbettung
 
-variable (E : Einbettung D D') (hZ : ZeigerfreiD D) (hS : E.SigTreu)
+variable (E : Einbettung D D') (hZ : E.Rueck) (hS : E.SigTreu)
 
 /-- **What a linking program keeps of a project.** -/
 structure Uebernahme (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop)
@@ -90,10 +93,12 @@ structure Uebernahme (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab 
   ax : ∀ a (W' : World D') (v : ErgVal D (D.aerg a)),
     Q' (E.ax a) W' (castV (E.aerg a).symm (E.ergE _ v)) = Q a ((E.speicherZ hZ W'.speicher).welt []) v
   invBild : ∀ i' t', t' ∈ D'.traeger i' → (E.tabZ t').isSome = true → ∃ i, E.inv i = i'
+  rueck : ∀ pad, E.RueckVertrag hZ hS pad P P'
 
 theorem inv_anfang (σ' : World D') :
-    E.Inv Keys.leer ((E.speicherZ hZ σ'.speicher).welt []) σ' :=
+    E.Inv hZ Keys.leer ((E.speicherZ hZ σ'.speicher).welt []) σ' :=
   ⟨by rw [speicher_welt_speicher]; exact E.treu_speicherZ hZ σ',
+    fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
     fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
     fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
     fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
@@ -106,20 +111,17 @@ variable {P : Programm D} {S : SperrInv D} {Q : AxEns D} {T : D.Tab ⊕ D.Glob �
   (hU : E.Uebernahme hZ hS P S Q T P' S' Q' T') {pad : List (Ereignis D)} (hp : PadOk pad)
 
 include hU hp in
-/-- The handlers of `D'` meet `Bed` whenever the call handler blames only images. -/
-theorem bed_von {U' : Umwelt D'} {A' : AUmwelt D'}
-    {R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f}
-    (hA' : HavocA T' A') (hU' : HavocOk S' U')
-    (hv : ∀ g σ ρ g', R' (E.fn g) σ ρ = .logik (.vorbedingung g') → ∃ g₀, g' = E.fn g₀) :
-    E.Bed hZ pad S T S' T' U' A' R' :=
-  ⟨hp, hA', hU.atom, hU', hU.orte, hU.inv, hv⟩
+/-- The handlers of `D'` meet `Bed`. -/
+theorem bed_von {U' : Umwelt D'} {A' : AUmwelt D'} (hA' : HavocA T' A') (hU' : HavocOk S' U') :
+    E.Bed hZ pad S T S' T' U' A' :=
+  ⟨hp, hA', hU.atom, hU', hU.orte, hU.inv⟩
 
 include hU in
 /-- **The image body beside the body**: one key list, one outcome of `D` that every map
     repeating the keys produces, beside the image's outcome. -/
 theorem rumpf_sim (passes : Nat) {O' : Orakel D'} {U' : Umwelt D'} {A' : AUmwelt D'}
     {R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f}
-    (hB : E.Bed hZ pad S T S' T' U' A' R') (f : D.Fn) (σ' : World D')
+    (hB : E.Bed hZ pad S T S' T' U' A') (f : D.Fn) (σ' : World D')
     (ρ' : Env D' (D'.params (E.fn f))) :
     ∃ (M : Keys D D') (o : EndAusgang (vertragVon D f) false (D.params f)),
       (∀ Φ, Passt Φ M → execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U')
@@ -128,11 +130,9 @@ theorem rumpf_sim (passes : Nat) {O' : Orakel D'} {U' : Umwelt D'} {A' : AUmwelt
       execEndHA S' O' U' A' passes R' (P'.rumpf (E.fn f)) σ' ρ' =
         castEndV (vertragVonE hS f) (castEnd (paramsE hS f) (execEndHA S' O' U' A' passes R'
           (exEnd hS (P.rumpf f)) σ' (castE (paramsE hS f).symm ρ'))) ∧
-      E.EndRel M o (execEndHA S' O' U' A' passes R' (exEnd hS (P.rumpf f)) σ'
+      E.EndRel hZ M o (execEndHA S' O' U' A' passes R' (exEnd hS (P.rumpf f)) σ'
         (castE (paramsE hS f).symm ρ')) := by
-  have hρ : E.EnvR (E.parZ hZ hS f ρ') (castE (paramsE hS f).symm ρ') := by
-    have := E.envR_envE (E.parZ hZ hS f ρ')
-    rwa [parZ, E.envE_envZ] at this
+  have hρ : E.EnvR hZ (E.parZ hZ hS f ρ') (castE (paramsE hS f).symm ρ') := E.envR_envZ hZ _
   obtain ⟨M, o, _, hΦ, hR⟩ := E.sim_end hZ hS pad S T S' T' O' U' A' passes R' hB (P.rumpf f) Keys.leer
     _ σ' _ _ (E.inv_anfang hZ σ') hρ
   refine ⟨M, o, hΦ, ?_, hR⟩
@@ -154,7 +154,7 @@ variable {P : Programm D} {S : SperrInv D} {Q : AxEns D} {T : D.Tab ⊕ D.Glob �
 
 include hU in
 /-- An owed invariant of an image function is the image of one the function owes. -/
-theorem invAmRueck_E {σ : World D} {σ' : World D'} (h : E.Treu σ.speicher σ') (f : D.Fn)
+theorem invAmRueck_E {σ : World D} {σ' : World D'} (h : E.Treu hZ σ.speicher σ') (f : D.Fn)
     (hI : InvAmRueck P f σ) : InvAmRueck P' (E.fn f) σ' := by
   intro i' hi' hs
   have hs' := hs
@@ -184,9 +184,7 @@ theorem invAmRueck_E {σ : World D} {σ' : World D'} (h : E.Treu σ.speicher σ'
   rw [hU.fort.invariante i]
   unfold invarianteE
   rw [eval_umΛ]
-  have he := E.eval_exE h h (P.invariante i) Env.nil
-  rw [show E.envE (Env.nil : Env D []) = Env.nil from rfl] at he
-  rw [he]
+  rw [E.wahr_rel hZ h h (P.invariante i) Env.nil Env.nil trivial]
   exact hh
 
 variable (passes : Nat) (f : D.Fn)
@@ -196,8 +194,7 @@ include hU hp hSL hQL in
 theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' passes Q' S' T' (E.fn f) := by
   refine ⟨fun O' hRO hRL hAV U' hU' A' hA' R' hRR hOV σ' ρ' hreq => ⟨fun σ'' v' hrun => ?_, fun g' hrun => ?_⟩,
     fun O' hRO hRL hAV U' hU' A' hA' R' hRR hOL σ' ρ' hreq e' hrun => ?_⟩
-  · have hB := E.bed_von hZ hS hU hp hA' hU' (R' := R')
-      (fun g σ ρ g' h => absurd rfl (hOV (E.fn g) σ ρ _ h g'))
+  · have hB := E.bed_von hZ hS hU hp hA' hU'
     obtain ⟨M, o, hΦ, heq, hR⟩ := E.rumpf_sim hZ hS hU passes hB f σ' ρ'
     rw [heq] at hrun
     obtain ⟨v₀, hv₀, rfl⟩ := castEndV_zurueck _ hrun
@@ -206,71 +203,67 @@ theorem koerperGutSA_E (hP : KoerperGutSA P passes Q S T f) : KoerperGutSA P' pa
     | zurueck σe ve =>
         obtain ⟨hI, hv⟩ := hR
         have hk := hI.keyOk E
-        have hT := E.phiAus_treu hk σ'.speicher
+        have hT := E.phiAus_treu hZ hk σ'.speicher
         have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
           unfold ReqAmEintritt
-          rw [← E.req_E hS hU.fort (E.inv_anfang hZ σ').treu, E.paramsUm_parZ]
+          rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
         have hens := (hP.1 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
           (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
-          (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp hT hRR)
-          (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD).1 σe ve (hΦ _ (E.phiAus_passt hk σ'.speicher))
+          (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
+          (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD).1 σe ve (hΦ _ (E.phiAus_passt hZ hk σ'.speicher))
         unfold EnsAmRueck at hens ⊢
-        have key := E.ens_E hS hU.fort (E.inv_anfang hZ σ').treu hI.treu f (E.parZ hZ hS f ρ')
-          (ve : ErgVal D (D.erg f))
-        rw [E.paramsUm_parZ] at key
-        subst hv
+        have hv' : E.ErgRel hZ (D.erg f) ve
+            (castV (ergE_fn hS f).symm (castV (congrArg Vertrag.erg (vertragVonE hS f)) v₀)) := by
+          erw [castV_castV]; exact hv
+        have key := E.ens_E hZ hS hU.fort (E.inv_anfang hZ σ').treu hI.treu f (E.parZ hZ hS f ρ') ρ'
+          (E.envR_parZ hZ hS f ρ') (ve : ErgVal D (D.erg f))
+          (castV (congrArg Vertrag.erg (vertragVonE hS f)) v₀) hv'
         exact key.trans hens
     | _ => simp only [EndRel] at hR
-  · have hB := E.bed_von hZ hS hU hp hA' hU' (R' := torRuf P' R') (fun g σ ρ g' h => by
-      unfold torRuf at h
-      split at h
-      · exact absurd rfl (hOV (E.fn g) σ ρ _ h g')
-      · cases h; exact ⟨g, rfl⟩)
+  · have hB := E.bed_von hZ hS hU hp hA' hU' (U' := U')
     obtain ⟨M, o, hΦ, heq, hR⟩ := E.rumpf_sim hZ hS hU passes hB f σ' ρ'
     rw [heq] at hrun
     rw [castEnd_logik _ (castEndV_logik _ hrun)] at hR
     cases o with
     | logik e =>
         obtain ⟨hl, hk⟩ := hR
-        obtain ⟨g₀, rfl, rfl⟩ := hl g' rfl
-        have hT := E.phiAus_treu hk σ'.speicher
+        obtain ⟨g₀, rfl⟩ := hl g' rfl
+        have hT := E.phiAus_treu hZ hk σ'.speicher
         have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
           unfold ReqAmEintritt
-          rw [← E.req_E hS hU.fort (E.inv_anfang hZ σ').treu, E.paramsUm_parZ]
+          rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
-        have hrunD := hΦ _ (E.phiAus_passt hk σ'.speicher)
-        rw [E.rufΦ_torRuf hZ hS hU.fort hT R'] at hrunD
+        have hrunD := hΦ _ (E.phiAus_passt hZ hk σ'.speicher)
+        rw [E.rufΦ_torRuf hZ hS hU.fort (hU.rueck pad) hT R'] at hrunD
         exact (hP.1 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
           (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
-          (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp hT hRR)
+          (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
           (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD).2 g₀ hrunD
     | _ => simp only [EndRel] at hR
-  · have hB := E.bed_von hZ hS hU hp hA' hU' (R' := R')
-      (fun g σ ρ g' h => absurd h (hOL (E.fn g) σ ρ _))
+  · have hB := E.bed_von hZ hS hU hp hA' hU'
     obtain ⟨M, o, hΦ, heq, hR⟩ := E.rumpf_sim hZ hS hU passes hB f σ' ρ'
     rw [heq] at hrun
     rw [castEnd_logik _ (castEndV_logik _ hrun)] at hR
     cases o with
     | logik e =>
         obtain ⟨_, hk⟩ := hR
-        have hT := E.phiAus_treu hk σ'.speicher
+        have hT := E.phiAus_treu hZ hk σ'.speicher
         have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
           unfold ReqAmEintritt
-          rw [← E.req_E hS hU.fort (E.inv_anfang hZ σ').treu, E.paramsUm_parZ]
+          rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
           exact hreq
         exact hP.2 _ (E.orakelΦ_rahmen hZ hT hRO) (E.orakelΦ_regLokal hZ hT hRL)
           (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _ (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _
-          (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp hT hRR)
-          (E.rufΦ_ohneLogik hZ hS hOL) _ _ hreqD e (hΦ _ (E.phiAus_passt hk σ'.speicher))
+          (E.aumweltΦ_ok hZ T A') _ (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR)
+          (E.rufΦ_ohneLogik hZ hS hOL) _ _ hreqD e (hΦ _ (E.phiAus_passt hZ hk σ'.speicher))
     | _ => simp only [EndRel] at hR
 
 include hU hp hSL hQL in
 /-- **Owed invariants at a value return carry over.** -/
 theorem invGutSA_E (hP : InvGutSA P passes Q S T f) : InvGutSA P' passes Q' S' T' (E.fn f) := by
   intro O' hRO hRL hAV U' hU' A' hA' R' hRR hOV σ' ρ' hreq σ'' v' hrun
-  have hB := E.bed_von hZ hS hU hp hA' hU' (R' := R')
-    (fun g σ ρ g' h => absurd rfl (hOV (E.fn g) σ ρ _ h g'))
+  have hB := E.bed_von hZ hS hU hp hA' hU'
   obtain ⟨M, o, hΦ, heq, hR⟩ := E.rumpf_sim hZ hS hU passes hB f σ' ρ'
   rw [heq] at hrun
   obtain ⟨v₀, hv₀, rfl⟩ := castEndV_zurueck _ hrun
@@ -279,16 +272,16 @@ theorem invGutSA_E (hP : InvGutSA P passes Q S T f) : InvGutSA P' passes Q' S' T
   | zurueck σe ve =>
       obtain ⟨hI, _⟩ := hR
       have hk := hI.keyOk E
-      have hT := E.phiAus_treu hk σ'.speicher
+      have hT := E.phiAus_treu hZ hk σ'.speicher
       have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
         unfold ReqAmEintritt
-        rw [← E.req_E hS hU.fort (E.inv_anfang hZ σ').treu, E.paramsUm_parZ]
+        rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
         exact hreq
       exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hT hRO)
         (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _
         (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _ (E.aumweltΦ_ok hZ T A') _
-        (E.rufΦ_rahmen hZ hS hU.fort hp hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe ve
-        (hΦ _ (E.phiAus_passt hk σ'.speicher)))
+        (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe ve
+        (hΦ _ (E.phiAus_passt hZ hk σ'.speicher)))
   | _ => simp only [EndRel] at hR
 
 include hU hp hSL hQL in
@@ -296,8 +289,7 @@ include hU hp hSL hQL in
 theorem invGutGrundA_E (hP : InvGutGrundA P passes Q S T f) :
     InvGutGrundA P' passes Q' S' T' (E.fn f) := by
   intro O' hRO hRL hAV U' hU' A' hA' R' hRR hOV σ' ρ' hreq σ'' r' hrun
-  have hB := E.bed_von hZ hS hU hp hA' hU' (R' := R')
-    (fun g σ ρ g' h => absurd rfl (hOV (E.fn g) σ ρ _ h g'))
+  have hB := E.bed_von hZ hS hU hp hA' hU'
   obtain ⟨M, o, hΦ, heq, hR⟩ := E.rumpf_sim hZ hS hU passes hB f σ' ρ'
   rw [heq] at hrun
   obtain ⟨r₀, hr₀, _⟩ := castEndV_why _ hrun
@@ -306,16 +298,16 @@ theorem invGutGrundA_E (hP : InvGutGrundA P passes Q S T f) :
   | why σe re =>
       obtain ⟨hI, _⟩ := hR
       have hk := hI.keyOk E
-      have hT := E.phiAus_treu hk σ'.speicher
+      have hT := E.phiAus_treu hZ hk σ'.speicher
       have hreqD : ReqAmEintritt P f ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') := by
         unfold ReqAmEintritt
-        rw [← E.req_E hS hU.fort (E.inv_anfang hZ σ').treu, E.paramsUm_parZ]
+        rw [← E.req_E hZ hS hU.fort (E.inv_anfang hZ σ').treu f _ ρ' (E.envR_parZ hZ hS f ρ')]
         exact hreq
       exact E.invAmRueck_E hZ hS hU hI.treu f (hP _ (E.orakelΦ_rahmen hZ hT hRO)
         (E.orakelΦ_regLokal hZ hT hRL) (E.orakelΦ_axVertrag hZ hAV hU.ax hQL) _
         (E.umweltΦ_ok hZ hT S hSL hU.inv hU') _ (E.aumweltΦ_ok hZ T A') _
-        (E.rufΦ_rahmen hZ hS hU.fort hp hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe re
-        (hΦ _ (E.phiAus_passt hk σ'.speicher)))
+        (E.rufΦ_rahmen hZ hS hU.fort hp (hU.rueck pad) hT hRR) (E.rufΦ_ohneVorbedingung hZ hS hOV) _ _ hreqD σe re
+        (hΦ _ (E.phiAus_passt hZ hk σ'.speicher)))
   | _ => simp only [EndRel] at hR
 
 end Uebertragung
