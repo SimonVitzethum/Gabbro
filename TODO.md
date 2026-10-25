@@ -87,8 +87,10 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
     `dokumente/PLAN-LONG-RANGE.md` §1.
 11. **`async fn` and `.await`** as a verified state-machine transformation (sugar; machine G and `Spec.lean` stay untouched). Not started.
     `dokumente/PLAN-LONG-RANGE.md` §2.
-12. **Self-hosted compiler** (front end in Gabbro, LLVM stays the back end, Simon's decision 2026-10-18). Not started; needs strings,
-    containers and Track P first. `dokumente/PLAN-LONG-RANGE.md` §3.
+12. **Self-hosted checker and compiler in Gabbro** (Simon, 2026-10-25): stage 0 is machine G run in Lean; `gpruef` proved equal
+    to `AkzeptiertX` with GabbroV; `gkomp` proved neutral, terminating and deterministic, and correct through M ∪ N and the
+    adequacy theorem; LLVM stays the back end. Not started; first the language prerequisites (region release, strings in G,
+    file-gate contracts, measure-based loops). `dokumente/PLAN-LONG-RANGE.md` §3.
 
 *Items 10-12: Simon asked for no new agents for now.*
 
