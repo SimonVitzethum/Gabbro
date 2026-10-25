@@ -215,6 +215,32 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .reaches t f hf a b _, ρ =>
       kongr₃ (fun F (x y : Zahl 0 (D.count t - 1)) => kette F (D.count t).toNat x.n y.n)
         (funext fun k => slot_cast_worldR σ t f hf _ k) (eval_ru σ₀ σ a ρ) (eval_ru σ₀ σ b ρ)
+  | _, _, _, .arrNil, _ => funext fun j => j.elim0
+  | _, _, _, .arrCons a b, ρ => by
+      show arrConsW _ _ = valR (.arr _ _) (arrConsW (eval σ₀ a σ ρ) (eval σ₀ b σ ρ))
+      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
+      funext j
+      simp only [arrConsW, valR]
+      split <;> rfl
+  | _, _, _, .arrGet a i, ρ => by
+      show (eval (worldR σ₀) (ruE a) (worldR σ) (envR ρ)) _ = _
+      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ i ρ]
+      rfl
+  | _, _, _, .arrSet a i v, ρ => by
+      show arrSetW _ _ _ = valR (.arr _ _) (arrSetW (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin (eval σ₀ v σ ρ))
+      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ i ρ, eval_ru σ₀ σ v ρ]
+      funext j
+      simp only [arrSetW, valR]
+      split <;> rfl
+  | _, _, _, .strLit _ _, _ => rfl
+  | _, _, _, .strLen e, ρ => by
+      show strLenW _ = _
+      rw [eval_ru σ₀ σ e ρ]
+      rfl
+  | _, _, _, .strCat e e', ρ => by
+      show strCatW _ _ = _
+      rw [eval_ru σ₀ σ e ρ, eval_ru σ₀ σ e' ρ]
+      rfl
 
 theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),
@@ -488,6 +514,8 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
                 simp only [zeigerPasst, hz', hzn, dif_neg h2, dif_neg h2']
                 try rfl
   | .ptr _ _, _ => rfl
+  | .arr _ _, _ => rfl
+  | .str _, _ => rfl
 
 theorem einpassenErg_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn)
     (hz : ∀ k, (z' k).bind id = z k) : ∀ (e : Option Ty) (n : Int),

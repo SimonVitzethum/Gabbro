@@ -126,6 +126,8 @@ theorem encN_lt {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty)
   | fnptr _ => simp only [tyBits] at hb; simp at hb
   | ptr _ _ => simp only [tyBits] at hb; simp at hb
   | ref _ => simp only [tyBits] at hb; simp at hb
+  | arr _ _ => simp only [tyBits] at hb; simp at hb
+  | str _ => simp only [tyBits] at hb; simp at hb
 
 /-! ## 3. The round trip (with the `option` side condition).
 
@@ -187,6 +189,12 @@ theorem decN_encN {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty
       exact Grammatik.Speichermodell.Darstellung.dec_enc 0
         ((Gabbro.Grammatik.Val.zelle v : Nat) : Int) ((Gabbro.Grammatik.Val.zelle v : Nat) : Int)
         (by exact_mod_cast Nat.zero_le _) (Int.le_refl _)
+  | arr _ _ =>
+      simp only [tyLo, encN, Gabbro.Grammatik.encW]
+      rfl
+  | str _ =>
+      simp only [tyLo, encN, Gabbro.Grammatik.encW]
+      rfl
 
 /-! ## 4. The narrow cell.
 

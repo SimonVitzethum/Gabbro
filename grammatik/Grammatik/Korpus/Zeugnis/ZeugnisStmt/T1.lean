@@ -70,7 +70,7 @@ theorem ctxBoolTyp_var (Γ : Ctx) (k : Nat) (h : ctxBoolTyp Γ k = some ()) :
       | fl => simp [ctxBoolTyp] at h
       | fnptr => simp [ctxBoolTyp] at h
       | ptr => simp [ctxBoolTyp] at h
-      | ref => simp [ctxBoolTyp] at h
+      | ref | arr | str => simp [ctxBoolTyp] at h
     | succ k =>
       simp [ctxBoolTyp] at h
       obtain ⟨x, _⟩ := ih k h

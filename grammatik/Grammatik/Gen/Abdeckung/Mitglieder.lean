@@ -29,6 +29,8 @@ def tyM : Ty → List String
   | .fnptr _ => ["Ty.fnptr"]
   | .ptr .. => ["Ty.ptr"]
   | .ref _ => ["Ty.ref"]
+  | .arr τ _ => "Ty.arr" :: tyM τ
+  | .str _ => ["Ty.str"]
 
 /-- The constructor of a variable. -/
 def varM : ∀ {Γ : Ctx} {τ : Ty}, Var Γ τ → List String
@@ -126,6 +128,13 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
   | _, _, _, .forallSlots _ body _ => "Expr.forallSlots" :: "Ty.bool" :: exprM body
   | _, _, _, .existsSlots _ body _ => "Expr.existsSlots" :: "Ty.bool" :: exprM body
   | _, _, _, .reaches _ _ _ a b _ => "Expr.reaches" :: "Ty.bool" :: "Ty.opt" :: exprM a ++ exprM b
+  | _, _, _, .arrNil => ["Expr.arrNil", "Ty.arr"]
+  | _, _, _, .arrCons a b => "Expr.arrCons" :: "Ty.arr" :: exprM a ++ exprM b
+  | _, _, _, .arrGet a i => "Expr.arrGet" :: exprM a ++ exprM i
+  | _, _, _, .arrSet a i v => "Expr.arrSet" :: exprM a ++ exprM i ++ exprM v
+  | _, _, _, .strLit _ _ => ["Expr.strLit", "Ty.str"]
+  | _, _, _, .strLen s => "Expr.strLen" :: "Ty.int" :: exprM s
+  | _, _, _, .strCat s t => "Expr.strCat" :: "Ty.str" :: exprM s ++ exprM t
 
 def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → List String
   | _, _, _, .empty => ["NutzlastExpr.empty"]

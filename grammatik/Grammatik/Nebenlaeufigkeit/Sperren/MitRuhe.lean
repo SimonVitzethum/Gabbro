@@ -59,6 +59,8 @@ namespace Gabbro.Grammatik
   | .fnptr n => .fnptr (n + 1)
   | .ptr t rw => .ptr t rw
   | .ref t => .ref t
+  | .arr τ n => .arr (tyR τ) n
+  | .str n => .str n
 
 /-- A signature with its types shifted. -/
 def sigR {Tab Glob Lock Marke : Type} (S : Signatur Tab Glob Lock Marke) :
@@ -122,6 +124,8 @@ theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
   | .fnptr _, v => ⟨some v.1, v.2⟩
   | .ptr _ _, v => v
   | .ref _, v => v
+  | .arr τ _, v => fun j => valR τ (v j)
+  | .str _, v => v
 
 /-- A value of the shifted `τ` as a value of `τ` (the root has number `0`,
     which no shifted pointer type names). -/
@@ -138,6 +142,8 @@ def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.pa
     | ⟨none, h⟩ => absurd h (by simp [passtM])
   | .ptr _ _, v => v
   | .ref _, v => v
+  | .arr τ _, v => fun j => valZ τ (v j)
+  | .str _, v => v
 
 theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.passt τ), valZ τ (valR τ v) = v
   | .int _ _, _ => rfl
@@ -150,6 +156,8 @@ theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.passt τ), valZ τ (valR τ v)
   | .fnptr _, ⟨_, _⟩ => rfl
   | .ptr _ _, _ => rfl
   | .ref _, _ => rfl
+  | .arr τ _, v => funext fun j => valZ_valR τ (v j)
+  | .str _, _ => rfl
 
 theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), valR τ (valZ τ v) = v
   | .int _ _, _ => rfl
@@ -163,6 +171,8 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   | .fnptr n, ⟨none, h⟩ => absurd h (by simp [passtM])
   | .ptr _ _, _ => rfl
   | .ref _, _ => rfl
+  | .arr τ _, v => funext fun j => valR_valZ τ (v j)
+  | .str _, _ => rfl
 
 /-- **`D` plus the runtime's idle root.** Every carrier, lock, mark,
     invariant, axiom and register is `D`'s; field, global, axiom and
@@ -520,6 +530,13 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .reaches t f hf a b hL =>
       .reaches (D := D.mitRuhe) t f (congrArg tyR hf) (ruE a) (ruE b)
         (darfR hL)
+  | _, _, _, .arrNil => .arrNil
+  | _, _, _, .arrCons a b => .arrCons (ruE a) (ruE b)
+  | _, _, _, .arrGet a i => .arrGet (ruE a) (ruE i)
+  | _, _, _, .arrSet a i v => .arrSet (ruE a) (ruE i) (ruE v)
+  | _, _, _, .strLit bs h => .strLit bs h
+  | _, _, _, .strLen e => .strLen (ruE e)
+  | _, _, _, .strCat e e' => .strCat (ruE e) (ruE e')
 
 /-- A payload expression, translated. -/
 def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →

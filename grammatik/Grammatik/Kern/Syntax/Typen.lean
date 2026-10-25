@@ -163,6 +163,23 @@ def Zahl.weiter {lo hi lo' hi' : Int} (h1 : lo' ≤ lo) (h2 : hi ≤ hi') (v : Z
 def Zahl.fin {n : Nat} (k : Zahl 0 ((n : Int) - 1)) : Fin n :=
   ⟨k.n.toNat, by have := k.lo_le; have := k.le_hi; omega⟩
 
+/-- One element in front of an array value. -/
+def arrConsW {α : Type} {n : Nat} (x : α) (xs : Fin n → α) : Fin (n + 1) → α :=
+  fun j => if h : j.val = 0 then x else xs ⟨j.val - 1, by have := j.isLt; omega⟩
+
+/-- An array value with the element at `k` replaced. -/
+def arrSetW {α : Type} {n : Nat} (a : Fin n → α) (k : Fin n) (v : α) : Fin n → α :=
+  fun j => if j = k then v else a j
+
+/-- The length of a string value. -/
+def strLenW {n : Nat} (w : { bs : List (Zahl 0 255) // bs.length ≤ n }) : Zahl 0 n :=
+  ⟨w.1.length, by omega, by have := w.2; omega⟩
+
+/-- The concatenation of two string values. -/
+def strCatW {n m : Nat} (a : { bs : List (Zahl 0 255) // bs.length ≤ n })
+    (b : { bs : List (Zahl 0 255) // bs.length ≤ m }) : { bs : List (Zahl 0 255) // bs.length ≤ n + m } :=
+  ⟨a.1 ++ b.1, by have := a.2; have := b.2; simp only [List.length_append]; omega⟩
+
 /-! ## 3. Die Rechnung -- jede Operation mit dem Bereich, den `M104` ihr gibt -/
 
 def imin (a b : Int) : Int := if a ≤ b then a else b

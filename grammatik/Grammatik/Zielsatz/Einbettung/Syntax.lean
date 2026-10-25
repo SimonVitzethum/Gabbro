@@ -201,6 +201,13 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .reaches t f hf a b hL =>
       .reaches (D := D') (E.tab t) (E.feld t f) (by rw [E.typ t f, hf, E.count])
         (Expr.umTy (E.countE t) (exE a)) (Expr.umTy (E.countE t) (exE b)) (E.darfE hL)
+  | _, _, _, .arrNil => .arrNil
+  | _, _, _, .arrCons a b => .arrCons (exE a) (exE b)
+  | _, _, _, .arrGet a i => .arrGet (exE a) (exE i)
+  | _, _, _, .arrSet a i v => .arrSet (exE a) (exE i) (exE v)
+  | _, _, _, .strLit bs h => .strLit bs h
+  | _, _, _, .strLen e => .strLen (exE e)
+  | _, _, _, .strCat e e' => .strCat (exE e) (exE e')
 
 /-- A payload expression. -/
 def exN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →

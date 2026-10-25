@@ -281,21 +281,12 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .reaches t f hf a b _, σ, ρ =>
       kette (fun k => hf ▸ σ.slots t k f) (D.count t).toNat (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n
   | .arrNil, _, _ => fun i => i.elim0
-  | .arrCons a rest, σ, ρ =>
-      let x := eval σ₀ a σ ρ
-      let xs := eval σ₀ rest σ ρ
-      fun j => if h : j.val = 0 then x else xs ⟨j.val - 1, by have := j.isLt; omega⟩
+  | .arrCons a rest, σ, ρ => arrConsW (eval σ₀ a σ ρ) (eval σ₀ rest σ ρ)
   | .arrGet a i, σ, ρ => (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin
-  | .arrSet a i v, σ, ρ =>
-      fun j => if j = (eval σ₀ i σ ρ).fin then eval σ₀ v σ ρ else (eval σ₀ a σ ρ) j
+  | .arrSet a i v, σ, ρ => arrSetW (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin (eval σ₀ v σ ρ)
   | .strLit bs h, _, _ => ⟨bs, h⟩
-  | .strLen s, σ, ρ =>
-      let w := eval σ₀ s σ ρ
-      ⟨w.1.length, by omega, by have := w.2; omega⟩
-  | .strCat s t, σ, ρ =>
-      let a := eval σ₀ s σ ρ
-      let b := eval σ₀ t σ ρ
-      ⟨a.1 ++ b.1, by have := a.2; have := b.2; simp only [List.length_append]; omega⟩
+  | .strLen s, σ, ρ => strLenW (eval σ₀ s σ ρ)
+  | .strCat s t, σ, ρ => strCatW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
 
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast c
   | .empty, _, _ => ()

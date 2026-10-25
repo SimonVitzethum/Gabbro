@@ -22,6 +22,7 @@ variable {D D' : Deklaration}
 /-- A type that is not a function pointer: its values name no function. -/
 def _root_.Gabbro.Grammatik.Ty.zeigerfrei : Ty → Bool
   | .fnptr _ => false
+  | .arr τ _ => τ.zeigerfrei
   | _ => true
 
 /-- A value transported along a type equation. -/
@@ -100,11 +101,14 @@ def valZ : (τ : Ty) → Wert D' (E.tyE τ) → Wert D τ
   | .fnptr n, v => K.zeiger n v.1 v.2
   | .ptr _ _, v => v
   | .ref _, v => v
+  | .arr τ _, v => fun j => valZ τ (v j)
+  | .str _, v => v
 
 /-- **A value of `D` beside a value of `D'`**: equal through the embedding, except that a head of
     `D` stands beside every function outside the image of its signature. -/
 def VRel : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ) → Prop
   | .fnptr n, v, v' => v'.1 = E.fn v.1 ∨ (E.fnZ v'.1 = none ∧ K.rep n = some v.1)
+  | .arr τ _, v, v' => ∀ j, VRel τ (v j) (v' j)
   | τ, v, v' => v' = E.valE τ v
 
 theorem vrel_valE : ∀ (τ : Ty) (v : Wert D τ), E.VRel K τ v (E.valE τ v)
@@ -118,6 +122,8 @@ theorem vrel_valE : ∀ (τ : Ty) (v : Wert D τ), E.VRel K τ v (E.valE τ v)
   | .fnptr _, _ => Or.inl rfl
   | .ptr _ _, _ => rfl
   | .ref _, _ => rfl
+  | .arr τ _, v => fun j => vrel_valE τ (v j)
+  | .str _, _ => rfl
 
 theorem vrel_valZ : ∀ (τ : Ty) (v' : Wert D' (E.tyE τ)), E.VRel K τ (E.valZ K τ v') v'
   | .int _ _, _ => rfl
@@ -138,6 +144,8 @@ theorem vrel_valZ : ∀ (τ : Ty) (v' : Wert D' (E.tyE τ)), E.VRel K τ (E.valZ
         · rename_i hr; exact absurd (K.voll n f' h' hz) (by rw [hr]; simp)
   | .ptr _ _, _ => rfl
   | .ref _, _ => rfl
+  | .arr τ _, v' => fun j => vrel_valZ τ (v' j)
+  | .str _, _ => rfl
 
 theorem valZ_vrel : ∀ (τ : Ty) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}, E.VRel K τ v v' →
     E.valZ K τ v' = v
@@ -166,6 +174,8 @@ theorem valZ_vrel : ∀ (τ : Ty) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}, E.V
           · rename_i hr'; simp only at hr; rw [hr] at hr'; cases hr'
   | .ptr _ _, _, _, h => by subst h; rfl
   | .ref _, _, _, h => by subst h; rfl
+  | .arr τ _, _, _, h => funext fun j => valZ_vrel τ (h j)
+  | .str _, _, _, h => by subst h; rfl
 
 /-- Pointer-free values are related exactly when they are equal through the embedding. -/
 theorem vrel_frei : ∀ (τ : Ty), τ.zeigerfrei = true → ∀ (v : Wert D τ) (v' : Wert D' (E.tyE τ)),
@@ -180,6 +190,11 @@ theorem vrel_frei : ∀ (τ : Ty), τ.zeigerfrei = true → ∀ (v : Wert D τ) 
   | .fnptr _, h, _, _ => absurd h (by simp [Ty.zeigerfrei])
   | .ptr _ _, _, _, _ => Iff.rfl
   | .ref _, _, _, _ => Iff.rfl
+  | .arr τ _, h, v, v' => by
+      have hz : τ.zeigerfrei = true := h
+      exact ⟨fun hr => funext fun j => (vrel_frei τ hz (v j) (v' j)).mp (hr j),
+        fun he j => (vrel_frei τ hz (v j) (v' j)).mpr (by rw [he]; rfl)⟩
+  | .str _, _, _, _ => Iff.rfl
 
 /-! ## Memories -/
 

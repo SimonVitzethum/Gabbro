@@ -38,6 +38,8 @@ def zurueck : (τ : Ty) → Val (D.Fn ⊕ Unit) (passtE D g₀) τ → Wert D τ
   | .fnptr _, ⟨.inr _, h⟩ => ⟨g₀, h⟩
   | .ptr _ _, v => v
   | .ref _, v => v
+  | .arr τ _, v => fun j => zurueck τ (v j)
+  | .str _, v => v
 
 /-- **The extension**: `D` and one callback outside it. -/
 def erweitert : Deklaration where
@@ -100,8 +102,6 @@ def erweitert : Deklaration where
   ggeteilt_bewacht := D.ggeteilt_bewacht
   geist := D.geist
   ggeist := D.ggeist
-
-theorem tyN_id (τ : Ty) : tyN (fun n => n) (fun n => n) τ = τ := by cases τ <;> rfl
 
 /-- **`D` inside its extension.** -/
 def einE : Einbettung D (erweitert D g₀) where
@@ -226,9 +226,22 @@ theorem sigE_einE (S : Signatur D.Tab D.Glob D.Lock D.Marke) : (einE D g₀).sig
     · exact map_prod_id konsumiert
     · exact map_prod_id produziert
 
-theorem zurueck_cast (τ : Ty) (h : (einE D g₀).tyE τ = τ) (v : Wert D τ) :
-    zurueck D g₀ τ (h ▸ (einE D g₀).valE τ v) = v := by
-  cases τ <;> rfl
+/-- A cast between array types acts on every element. -/
+theorem arr_cast {F : Type} {P : F → Nat → Bool} {a b : Ty} {n : Nat}
+    (h : Ty.arr a n = Ty.arr b n) (g : Fin n → Val F P a) (j : Fin n) :
+    (h ▸ (g : Val F P (.arr a n)) : Val F P (.arr b n)) j = ((Ty.arr.inj h).1 ▸ g j : Val F P b) := by
+  obtain rfl : a = b := (Ty.arr.inj h).1
+  rfl
+
+theorem zurueck_cast : ∀ (τ : Ty) (h : (einE D g₀).tyE τ = τ) (v : Wert D τ),
+    zurueck D g₀ τ (h ▸ (einE D g₀).valE τ v) = v
+  | .arr τ n, h, v => by
+    funext j
+    exact (congrArg (zurueck D g₀ τ) (arr_cast (F := D.Fn ⊕ Unit) (P := passtE D g₀)
+      (a := (einE D g₀).tyE τ) (b := τ) h (fun j => (einE D g₀).valE τ (v j)) j)).trans
+      (zurueck_cast τ _ (v j))
+  | .int _ _, _, _ | .bool, _, _ | .opt _, _, _ | .sum _, _, _ | .why _, _, _ | .never, _, _
+  | .fl _ _, _, _ | .fnptr _, _, _ | .ptr _ _, _, _ | .ref _, _, _ | .str _, _, _ => rfl
 
 theorem sigTreu_einE : (einE D g₀).SigTreu where
   sigNr := fun n => (sigE_einE D g₀ (D.sigNr n)).symm

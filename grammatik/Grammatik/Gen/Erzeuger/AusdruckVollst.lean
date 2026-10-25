@@ -82,7 +82,7 @@ theorem mem_dif {P : Prop} [Decidable P] {α : Type} {g : P → α} (h : P) :
   rw [dif_pos h]; simp
 
 theorem groesseExpr_pos {τ : Ty} (e : Expr D Γ Λ τ) : 1 ≤ groesseExpr e := by
-  cases e <;> simp only [groesseExpr] <;> omega
+  cases e <;> simp only [groesseExpr, unendlich] <;> omega
 
 theorem mem_nutzS {E : Sz (SE D Γ Λ)} {o : Option (Int × Int)} (x : NutzlastExpr D Γ Λ o)
     (hE : ∀ y ∈ x.teile, y ∈ E (groesseExpr y.2)) : x ∈ nutzS E o (groesseNutz x) := by
@@ -369,6 +369,13 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
       Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t))
         (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f)) (Sz.mem_wenn hf (Sz.mem_bind (mem_tyS ha)
           (Sz.mem_bind (mem_tyS hb) (Sz.mem_wenn hL (Sz.mem_pure _)))))))) (by omega)
+  | arrNil => simp [groesseExpr] at hu
+  | arrCons _ _ => simp only [groesseExpr] at hu; omega
+  | arrGet _ _ => simp only [groesseExpr] at hu; omega
+  | arrSet _ _ _ => simp only [groesseExpr] at hu; omega
+  | strLit _ _ => simp [groesseExpr] at hu
+  | strLen _ => simp only [groesseExpr] at hu; omega
+  | strCat _ _ => simp only [groesseExpr] at hu; omega
 
 /-! ## The table by size -/
 

@@ -101,6 +101,13 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .forallSlots _ _ _ => 1
   | .existsSlots _ _ _ => 1
   | .reaches _ _ _ a b _ => 1 + kostenExpr a + kostenExpr b
+  | .arrNil => 0
+  | .arrCons a b => 1 + kostenExpr a + kostenExpr b
+  | .arrGet a b => 1 + kostenExpr a + kostenExpr b
+  | .arrSet a i v => 1 + kostenExpr a + kostenExpr i + kostenExpr v
+  | .strLit _ _ => 0
+  | .strLen s => 1 + kostenExpr s
+  | .strCat a b => 1 + kostenExpr a + kostenExpr b
 
 def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :
     NutzlastExpr D Γ Λ c → Nat

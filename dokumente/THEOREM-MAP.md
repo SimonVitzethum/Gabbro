@@ -4881,3 +4881,20 @@ All axiom lists standard.
 * Open: `RegLokal` still forbids register and visibility answers that depend on the history.
 
 All axiom lists standard.
+
+## 99. Arrays and strings as values in G (2026-10-25)
+
+`Kern/Syntax/Typen.lean` (`Ty.arr`, `Ty.str`, `Val`, `arrConsW`, `arrSetW`, `strLenW`, `strCatW`),
+`Kern/Syntax/Syntax.lean` (the `Expr` constructors `arrNil`, `arrCons`, `arrGet`, `arrSet`, `strLit`, `strLen`,
+`strCat`, appended at the end), `Kern/Semantik/Semantik/T1.lean` (`eval`, `orte`).
+
+* `Val (.arr τ n) = Fin n → Val τ`; `Val (.str n)` is a byte list of length at most `n`. Both are plain values:
+  no cell, no lock, no event (`eval_liest_nur_speicher`, `eval_liest_nur_orte`, `kostenExpr`, `ruE_orte`).
+* No raw word for an aggregate: `einpassen` answers `none`, `roh` answers `0`, `WertOk` is `False` and `antwortTyB`
+  is `false`, so the checker refuses a foreign or register answer of aggregate type.
+* The embedding maps an array elementwise (`tyN_id`, `valE`, `VRel`, `eval_exE`); the witness casts elementwise
+  (`Einbettung/Zeuge.lean`: `arr_cast`, `zurueck_cast`).
+* Fine cells: constructors 44-50, type heads 10/11 (`kopf_lt` below 12).
+* Open: the generator does not produce aggregates yet (`TODO.md` §2).
+
+All axiom lists standard.

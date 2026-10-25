@@ -318,6 +318,53 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       simp only [eval]
       rw [ha, hb]
       exact kette_gleich _ _ _ hw
+  | .arrNil => rfl
+  | .strLit _ _ => rfl
+  | .arrCons a b =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hb := eval_liest_nur_orte b os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .arrGet a b =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hb := eval_liest_nur_orte b os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .strCat a b =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hb := eval_liest_nur_orte b os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .arrSet a i v =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl ho)))))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hi := eval_liest_nur_orte i os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inr ho)))))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hv := eval_liest_nur_orte v os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha, hi, hv]
+  | .strLen a =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (ho))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha]
 
 /-- Die Nutzlast liest nur ihre Orte: die zweite Haelfte des Schlusssteins. -/
 theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}

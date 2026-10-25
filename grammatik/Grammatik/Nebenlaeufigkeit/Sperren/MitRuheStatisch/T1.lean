@@ -66,6 +66,13 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .forallSlots t body _ => congrArg (Sum.inl t :: ·) (ruE_orte body)
   | _, _, _, .existsSlots t body _ => congrArg (Sum.inl t :: ·) (ruE_orte body)
   | _, _, _, .reaches t _ _ a b _ => kongr₂ (fun x y => Sum.inl t :: x ++ y) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .arrNil => rfl
+  | _, _, _, .strLit _ _ => rfl
+  | _, _, _, .arrCons a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .arrGet a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .strCat a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .arrSet a i v => kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte i)) (ruE_orte v)
+  | _, _, _, .strLen e => ruE_orte e
 
 theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c), (ruN n).orte = n.orte
