@@ -19,7 +19,7 @@ structure LInv (gNr : Nat → Nat) (tabs : List UTab) (locks : List ULock) (glob
   glob : ∀ g : z.deklaration.Glob, ∃ gl, globs.find? (fun x => strEq x.name (nGlob (gN z g))) = some gl ∧
     (gl.ty = .bool ↔ z.deklaration.gtyp g = .bool) ∧ gl.var = !z.deklaration.atomar g ∧
     gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = ((z.deklaration.nutzlast g).map fun h => nGlob (gN z h)) ∧
-    ∀ τ, gl.ty ≠ .wert τ
+    (∀ τ, gl.ty ≠ .wert τ) ∧ gl.optNum = none
   tab : ∀ t : z.deklaration.Tab, ∃ tb, tabs.find? (fun x => strEq x.name (nTab (tN z t))) = some tb ∧
     tb.name = nTab (tN z t) ∧ tb.arena = false ∧ tb.count = z.deklaration.count t ∧ tb.opts = [] ∧
     (∀ f : z.deklaration.Feld t, tb.cols.any (fun (g, _) => strEq g (nFeld (show Fin _ from f).val)) = true) ∧

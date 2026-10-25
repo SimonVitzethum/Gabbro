@@ -178,7 +178,7 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   glob : ∀ g : z.deklaration.Glob, ∃ gl, ctx.globs.find? (fun x => strEq x.name (nGlob (gN z g))) = some gl ∧
     (gl.ty = .bool ↔ z.deklaration.gtyp g = .bool) ∧ gl.var = !z.deklaration.atomar g ∧
     gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = ((z.deklaration.nutzlast g).map fun h => nGlob (gN z h)) ∧
-    ∀ τ, gl.ty ≠ .wert τ
+    (∀ τ, gl.ty ≠ .wert τ) ∧ gl.optNum = none
   tab : ∀ t : z.deklaration.Tab, ∃ tb, ctx.tabs.find? (fun x => strEq x.name (nTab (tN z t))) = some tb ∧
     tb.name = nTab (tN z t) ∧ tb.arena = false ∧ tb.count = z.deklaration.count t ∧ tb.opts = [] ∧
     (∀ f : z.deklaration.Feld t, tb.cols.any (fun (g, _) => strEq g (nFeld (show Fin _ from f).val)) = true) ∧
@@ -279,20 +279,20 @@ theorem anw1_glob {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
       uAnw1 ctx tabs koepfe (.set (.variable (nGlob (gN z g))) "=" w) = .ok (.assignGlobB (nGlob (gN z g)) v)) ∧
     (z.deklaration.gtyp g ≠ .bool → ∀ v, uWertBody ctx w = .ok v →
       uAnw1 ctx tabs koepfe (.set (.variable (nGlob (gN z g))) "=" w) = .ok (.assignGlob (nGlob (gN z g)) v)) := by
-  obtain ⟨gl, hf, hb, hv, hat, _⟩ := H.glob g
+  obtain ⟨gl, hf, hb, hv, hat, _, _, hopt⟩ := H.glob g
   have hs : strEq "=" "=" = true := by decide
   refine ⟨fun hg v hw => ?_, fun hg v hw => ?_⟩
   · have : gl.ty = .bool := hb.2 hg
     simp only [uAnw1, uRegOrt, uSetze, hs, ite_true, H.muts, List.any_nil, Bool.false_eq_true, ite_false,
-      uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, this, hw]
+      uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, this, hw, hopt]
   · cases h : gl.ty with
     | bool => exact absurd (hb.1 h) hg
     | int _ _ =>
       simp only [uAnw1, uRegOrt, uSetze, hs, ite_true, H.muts, List.any_nil, Bool.false_eq_true, ite_false,
-        uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, h, hw]
+        uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, h, hw, hopt]
     | wert _ =>
       simp only [uAnw1, uRegOrt, uSetze, hs, ite_true, H.muts, List.any_nil, Bool.false_eq_true, ite_false,
-        uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, h, hw]
+        uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, h, hw, hopt]
 
 /-! ### The run reader, one head at a time -/
 

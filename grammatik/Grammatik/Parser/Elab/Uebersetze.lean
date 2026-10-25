@@ -100,6 +100,8 @@ inductive UOpt
   | var : String → UOpt
   | slot : String → String → UIdx → UOpt
   | tab : String → String → UIdx → UOpt
+  /-- An option static (`static mut frei : option index into T`). -/
+  | glob : String → UOpt
   deriving DecidableEq, Repr
 
 /-- One `ensures` predicate: a comparison, truth values, or a
@@ -295,6 +297,8 @@ inductive UStmt
   | assignRef : String → String → USide → UStmt
   /-- `let x [: T] = v;` of an aggregate value (`Block.bind`): `T` the declared type the value is fitted to. -/
   | bindW : String → Option Ty → USide → UStmt
+  /-- `X = o;` at an option static (`Stmt.assignGlob` at `Ty.opt`). -/
+  | assignGlobO : String → UOpt → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -368,6 +372,10 @@ structure UGlob where
   init : Int
   /-- The initial value of an aggregate static (`GTy.wert`). -/
   initK : UKonst := .null
+  /-- An option static (`option index into T`): the name of `T` as written, and its number once the tables are read
+      (`uOptGlobs`; its type is then `Ty.opt` of the count of `T`). -/
+  optName : Option String := none
+  optNum : Option Nat := none
   var : Bool := false
   /-- An `atomic` item (`Deklaration.atomar`): read and stored without a lock, ordered by the machine. -/
   atomic : Bool := false
@@ -709,18 +717,6 @@ def uConsts : List SItemTief → List (String × Int)
     (n, Int.ofNat v) :: uConsts rest
   | _ :: rest => uConsts rest
 
-/-- The type-alias scope: `type A = u32 in lo .. hi;` travels
-    as (`A`, (`lo`, `hi`)); any other `type` body has no G form
-    (`LG002`: a range where G needs a `Ty`). -/
-def uAliase (consts : List (String × Int)) : List SItemTief → List (String × (Int × Int))
-  | [] => []
-  | .typeT _ n _ _ (.some (.range _ lo hi o)) :: rest =>
-    let ks := consts.map (fun c => (c.1, (c.2, c.2)))
-    match uSchranke ks lo, uSchranke ks hi with
-    | some a, some b => (n, (a, if o then b - 1 else b)) :: uAliase consts rest
-    | _, _ => uAliase consts rest
-  | _ :: rest => uAliase consts rest
-
 /-- Lookup in an association list, with an explicit error. -/
 def uSuch (was : String) (xs : List (String × α)) (n : String) : Except String α :=
   match xs with
@@ -796,6 +792,23 @@ def uTypName (alias : List (String × (Int × Int))) (a : String) : Except Strin
     match eingebauteInt.find? (fun x => strEq x.1 a) with
     | .some (_, r) => .ok r
     | .none => .error e
+
+/-- The type-alias scope: `type A = u32 in lo .. hi;` travels
+    as (`A`, (`lo`, `hi`)); any other `type` body has no G form
+    (`LG002`: a range where G needs a `Ty`). -/
+def uAliase (consts : List (String × Int)) : List SItemTief → List (String × (Int × Int))
+  | [] => []
+  | .typeT _ n _ _ (.some (.range _ lo hi o)) :: rest =>
+    let ks := consts.map (fun c => (c.1, (c.2, c.2)))
+    match uSchranke ks lo, uSchranke ks hi with
+    | some a, some b => (n, (a, if o then b - 1 else b)) :: uAliase consts rest
+    | _, _ => uAliase consts rest
+  -- `[opaque] type A = u64;`: the range of the word (opacity is a rule of the checker; the value is the number)
+  | .typeT _ n _ _ (.some (.atom w)) :: rest =>
+    match uTypName [] w with
+    | .ok r => (n, r) :: uAliase consts rest
+    | .error _ => uAliase consts rest
+  | _ :: rest => uAliase consts rest
 
 /-! ## Compile-time constants
 
@@ -1439,7 +1452,13 @@ def uIstVgl : String → Bool
 def uOptEin (ctx : UCtx) : SExpr → Except String (UOpt × Nat)
   | .variable p =>
     match uParamNr ctx p with
-    | .error e => .error e
+    | .error e =>
+      match ctx.globs.find? (fun g => strEq g.name p) with
+      | .some gl =>
+        match gl.optNum with
+        | .some m => .ok (.glob p, m)
+        | .none => .error e
+      | .none => .error e
     | .ok j =>
       match uArtBei ctx.kinds j with
       | .ok (.opt m) => .ok (.var p, m)
@@ -2151,12 +2170,16 @@ def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String U
       if !gl.var then .error "write to an immutable static"
       else if gl.atomic then .error "plain write to an atomic: every store is a publish"
       else
-        match gl.ty with
-        | .bool =>
+        match gl.ty, gl.optNum with
+        | _, .some num =>
+          match uOpt ctx num wert with
+          | .error x => .error x
+          | .ok o => .ok (.assignGlobO g o)
+        | .bool, _ =>
           match uBool ctx wert with
           | .error x => .error x
           | .ok v => .ok (.assignGlobB g v)
-        | _ =>
+        | _, _ =>
           match uWertBody ctx wert with
           | .error x => .error x
           | .ok v => .ok (.assignGlob g v)
@@ -3398,10 +3421,23 @@ def uNutzItem : List SExpr → Except String (List String)
   | _ :: _ => .error "payload of a table without G form"
 
 mutual
+/-- The option statics with the number and count of their table. -/
+def uOptGlobs (tabs : List UTab) : List UGlob → Except String (List UGlob)
+  | [] => .ok []
+  | g :: rest =>
+    match uOptGlobs tabs rest, g.optName with
+    | .error e, _ => .error e
+    | .ok gs, none => .ok (g :: gs)
+    | .ok gs, some tn =>
+      match uTabNr tabs tn with
+      | .ok (num, c) => .ok ({ g with ty := .wert (.opt c), optNum := some num } :: gs)
+      | .error e => .error e
+
 /-- The initial value of an aggregate static: `0` is zero memory, a numeral or constant a number, a string literal
     its bytes, a row literal its elements. -/
 def uKonst (consts : List (String × Int)) : SKonstWert → Except String UKonst
   | .one (.lit 0) => .ok .null
+  | .one (.call "None" []) => .ok .null
   | .one (.lit k) => .ok (.zahl (Int.ofNat k))
   | .one (.un "-" (.lit k)) => .ok (.zahl (-(Int.ofNat k)))
   | .one .tru => .ok (.wahr true)
@@ -3439,6 +3475,8 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             match uTyp alias [] t with
             | .error e => .error e
             | .ok τ => .ok (GTy.wert τ, (0 : Int))
+          -- the count of `T` is read with the tables (`uOptGlobs`)
+          | .index true _ => .ok (GTy.wert (.opt 0), (0 : Int))
           | _ =>
             match uErgBereich alias t with
             | .error e => .error e
@@ -3461,7 +3499,8 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
         | .ok k =>
         match uGlobs consts alias rest with
         | .error e => .error e
-        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh } :: gs)
+        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh,
+                           optName := match t with | .index true tn => some tn | _ => none } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
@@ -4238,7 +4277,9 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok (arTabs, arGlobs) =>
     let tabs := tabs0 ++ arTabs
-    let globs := globs0 ++ arGlobs
+    match uOptGlobs tabs (globs0 ++ arGlobs) with
+    | .error e => .error e
+    | .ok globs =>
     match uSeq ((ms.filter (fun
         | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre globs tabs)) with
     | .error e => .error e
@@ -4601,7 +4642,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
-  | .bindW .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
+  | .bindW .. :: _, _ | .assignGlobO .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -4634,7 +4675,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
-  | .bindW .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
+  | .bindW .. :: _, _ | .assignGlobO .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"

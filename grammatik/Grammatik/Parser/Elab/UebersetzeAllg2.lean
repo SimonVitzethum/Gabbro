@@ -1123,6 +1123,33 @@ def lowAssignTabW {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
         else .error "access without held guard"
       | .error e, _ | _, .error e => .error e
 
+/-- A write of an option static (`Stmt.assignGlob` at `Ty.opt` of its table's count). -/
+def lowAssignGlobOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (n : String) (o : UOpt) :
+    Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
+  match globIdx u.globs n with
+  | .error e => .error e
+  | .ok g =>
+    match (globAt u g).optNum with
+    | none => .error "option for a static that is no option"
+    | some num =>
+      if hnum : num < u.tabs.length then
+        match lowOpt u Γ Λ fn 0 num hnum o with
+        | .error e => .error e
+        | .ok e =>
+          if h : (declOf u).gtyp g = .opt ((declOf u).count ⟨num, hnum⟩) then
+            if hw : writesGAt u (fnAt u caller) g = true then
+              have hwV : (verOf u caller).gschreibt g = true := by
+                show (vertragVon (declOf u) caller).gschreibt g = true
+                rw [vGSchreibt_eq u caller g]
+                exact hw
+              if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+                .ok (Stmt.assignGlob (D := declOf u) g (h ▸ e) hwV hd)
+              else .error "access without held guard"
+            else .error "write without right"
+          else .error "option of a foreign table"
+      else .error "option table unknown"
+
 /-- `x = v;` at a `let mut` number: `Stmt.assignVar`, the value fitted into the variable's range. -/
 def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (x : String) (v : USide) :
@@ -1335,6 +1362,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignTabOpt b f ix v => lowAssignTabOL u caller Γ fn Λ b f ix v
   | .assignGlob n v => lowAssignGlobL u caller Γ fn Λ n v
   | .assignGlobB n v => lowAssignGlobBL u caller Γ fn Λ n v
+  | .assignGlobO n o => lowAssignGlobOL u caller Γ fn Λ n o
   | .storeAtom n v => lowStoreAtomL u caller Γ fn Λ n v
   | .storeAtomB n v => lowStoreAtomBL u caller Γ fn Λ n v
   | .setVar x v => lowSetVarL u caller Γ fn Λ x v

@@ -1584,6 +1584,15 @@ def lowOpt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : 
               .ok (by rw [← hn]; exact slotTermO u Γ Λ t oh i hL)
             else .error "access without held guard"
         else .error "option of a foreign table"
+  | .glob p =>
+    match globIdx u.globs p with
+    | .error e => .error e
+    | .ok g =>
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+        if h : (declOf u).gtyp g = .opt ((declOf u).count ⟨num, hnum⟩) then
+          .ok (h ▸ Expr.glob (D := declOf u) g hd)
+        else .error "option of a foreign table"
+      else .error "access without held guard"
 
 /-- One `ensures` predicate. -/
 def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))

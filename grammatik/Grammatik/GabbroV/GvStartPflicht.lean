@@ -65,6 +65,7 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
     | some zs => if h : zs.length ≤ n then some ⟨zs, h⟩ else none
     | none => none
   | .str _, .null => some ⟨[], Nat.zero_le _⟩
+  | .opt _, .null => some none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
   | .arr τ n, k =>
     match konstListe k with

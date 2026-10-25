@@ -114,7 +114,7 @@ theorem anw1_publish {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {ar
     (z.deklaration.gtyp g ≠ .bool → ∀ u, uWertBody ctx w = .ok u →
       uAnw1 ctx tabs koepfe (.emit (.variable (nGlob (gN z g))) w (nutzText z (z.deklaration.nutzlast g))) =
         .ok (.storeAtom (nGlob (gN z g)) u)) := by
-  obtain ⟨gl, hf, hb, _, hat, hn, hwt⟩ := H.glob g
+  obtain ⟨gl, hf, hb, _, hat, hn, hwt, hopt⟩ := H.glob g
   have hgl : uNamenGleich (uNutzNamen (nutzText z (z.deklaration.nutzlast g))) gl.nutzlast = true := by
     rw [nutzNamen_ok, hn]; exact namenGleich_map _
   refine ⟨fun ht b hw => ?_, fun ht u hw => ?_⟩
@@ -140,7 +140,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
       uAnwReihe tabs koepfe (f + 1) ctx
         (.await x (.variable (nGlob (gN z g))) (nutzTextA z (z.deklaration.nutzlast g)) :: rest) =
         .ok (.awaitBind x (nGlob (gN z g)) :: xs, cE) := by
-  obtain ⟨gl, hf, hb, _, hat, hn, hwt⟩ := H.glob g
+  obtain ⟨gl, hf, hb, _, hat, hn, hwt, hopt⟩ := H.glob g
   have hgl : uNamenGleich (uNutzNamen (nutzTextA z (z.deklaration.nutzlast g))) gl.nutzlast = true := by
     rw [nutzNamenA_ok, hn]; exact namenGleich_map _
   cases h : gl.ty with
