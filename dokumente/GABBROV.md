@@ -674,6 +674,70 @@ ceiling, the build state of `bruecke/` and `programmlogik/`, and every axiom set
 `Spec.lean` header cites for the bridge (`messung/GABBROV-BRUECKE-REPORT.md`,
 `GABBROV-SERVER-REPORT.md`, `GABBROV-V1.md`, the mandate `AUFTRAG-GABBROV.md`) are not in the tree.
 
+## 17. GabbroV over machine G: the certificate, and the calculus the user proves with (Simon, 2026-10-25)
+
+**The division of labour (Simon, 2026-10-25).** GabbroV proves no logic. It turns a Gabbro program into a Lean
+certificate that states ALL the logic the program's user owes and ALL the hardware assumptions the program rests on;
+the USER proves the logic. What GabbroV owes is that the certificate is complete and exact -- every duty named, none
+missing, none added (`LogikPflichten`, `logikPflichten_iff`, `WP/HA/Zertifikat.lean`) -- and that the user has a
+calculus in which every true duty is provable (below). The certificates proved in this section are EXAMPLES of user
+proofs, not something GabbroV does.
+
+**Why a new route.** The channel of §13 proves duties against `Body.lean`, a model BESIDE machine G, through an
+emitter in the Rust checker (`lean.rs`) that refuses whole classes of forms (§13.9, §13.10). The self-hosting plan
+(`PLAN-SELF-HOSTING.md` §3.4, §4) needs logic proofs over THE semantics the goal theorem uses, for every form, without
+Rust. So GabbroV is completed directly over machine G (`grammatik/Grammatik/Logik/WP/`); the `Body` route stays until
+the Rust checker is deleted (`PLAN-SELF-HOSTING.md` §6).
+
+**The core idea.** Machine G is total: every run ends in an outcome (`Ausgang`); what would diverge ends in a budget,
+depth or progress outcome. So the weakest precondition of a postcondition over outcomes is EXACT
+(`wpB b Q σ ρ ↔ Q (execBlock … b σ ρ)`), and a triple holds exactly when its precondition implies it: the calculus is
+sound and complete at once, with Lean as the assertion language. Postconditions range over all outcomes, so partial
+correctness (`NurOk`), total correctness (`Normal`), returns (`Kehrt`), reasons, loop exits and named stops are one
+notion.
+
+| Part | Where | State |
+|---|---|---|
+| `wpS`/`wpB`/`wpE`, exactness, consequence, conjunction, sequence, binding | `WP/Kern.lean` | done |
+| the loops `traverse`, `retry`, `forever`: invariant rules, each with its completeness theorem | `WP/Kern.lean` | done |
+| specifications as Lean relations per function; the call rule; one `rufAt` step as the body's weakest precondition; recursion, partial (`ruf_induktion`) and total with a measure (`ruf_mass`); completeness of the procedure logic | `WP/Ruf.lean` | done |
+| exact rules for `if`, `return`, the end-block sequence, `narrow`, `let x = f(..)` (exact and against a specification) | `WP/Regeln.lean` | done |
+| witnesses: a `traverse` over a table of ANY size (`fuellen_korrekt`); a recursive function, totally correct (`f_korrekt`) | `WP/Zeuge.lean`, `WP/ZeugeRuf.lean` | done |
+| rules for the composite constructs: locks, `match` over options and reasons, the three loops at the statement level, `check`, the foreign body's binding, end-block binding and call | `WP/Regeln2.lean` | done |
+| leaves (writes to slots, statics, regions; register and transition statements; returns) need no rule: their `wp` is `Q` of the outcome, written out by `simp only [wpS, execStmt]` | -- | by exactness |
+| rules still to state: `match` over tags (`Arms`), indirect calls, fallible calls and fallible foreign bodies, register reads, `awaits`/`exchange`, floats | `WP/Regeln*.lean` | open |
+| frames: what a block leaves untouched, from `RahmenTreu`; the tactic `gv_wp` (the rules as a simp set) | | open |
+| relational logic (two runs): determinism, noninterference, renaming invariance -- what `PLAN-SELF-HOSTING.md` §3.2-§3.3 owes | | open |
+| concurrency: rely-guarantee over GX with the lock invariants and the atomic rely of `gabbro_ziel` | | open |
+| regions and linked structures: reasoning over `RegionRepr` and the ownership ledger (lists, trees, maps over the open region) | | open |
+| specifications stated over the SOURCE TEXT: through the Lean pipeline (`uebersetzeAllg`), "the function named `f` in this text meets `S`" | | open |
+
+**The user's proofs on the certificate (Simon, 2026-10-25).** A certificate (`gabbro obligations --g`) exports a program
+as a G term and instantiates the goal theorem CONDITIONALLY on the user's logic `NutzerPflichtA gE`. That premise is
+stated over `execEndHA` (lock moves, release checks, the atomic environment), so the calculus exists over that
+semantics too (`WP/HA/Kern.lean`: exact, with the same rules, the call statement included). `WP/HA/Pflicht.lean`
+states the obligation of each function as three weakest preconditions (`PflichtWP`) and proves
+`nutzerPflichtA_iff`: premise (b) holds EXACTLY when those hold, the lock invariants and axiom ensures are local, and
+the start obligation holds -- so every true user logic of a certificate is provable in the calculus. Without a
+shared atomic the atomic environment is the identity (`leseA_ohneAtomar`). As examples of user proofs, four certificates are proved through to
+the goal theorem WITHOUT an open logic premise (`gP_gabbro_bewiesen`, on `propext`, `Classical.choice`, `Quot.sound`):
+
+| Certificate | What it exercises |
+|---|---|
+| `beispiele/119-sperrinvariante-bloecke` (`WP/HA/ZeugeZertifikat.lean`) | a lock with an invariant (`A[0] ≤ 100`): every environment move, the release check, the start obligation |
+| `beispiele/190-erster-treffer` (`WP/HA/ZeugeZertifikat2.lean`) | a `traverse` with a branch and an exit, through `wpSA_traverse` |
+| `beispiele/104` (`WP/HA/ZeugeZertifikat3.lean`) | two functions, a call, contracts (`old(K[i]) ≤ K[i]`, `result == K[i]`), the callee's frame from `RespektiertRahmen` |
+| `beispiele/182-fallible-gate` (`WP/HA/ZeugeZertifikat4.lean`) | a fallible foreign body (`syscall` with a reason channel): every answer of the gate -- value, reason, none |
+
+Finding: the certificate of `beispiele/1168` declares the lock invariant `P[0] + Q[0] == 100` with the initial memory
+all zero; its start obligation is false and its `NutzerPflichtA` unprovable (a defect of the example or of the
+exported initial memory).
+
+**What may be said today:** every sequential, call-free or recursive program built from the constructs with rules can
+be proved correct, partially or totally, over machine G itself; the witnesses are non-degenerate (a loop over a
+table of any size, a recursion with a measure). **Not yet:** the remaining constructs' rules, relational and
+concurrent reasoning, and the source-text level.
+
 ## Appendix — old → new ids
 
 | Cited as | Now |

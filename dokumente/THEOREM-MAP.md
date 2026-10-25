@@ -4826,4 +4826,16 @@ Koerper,Pflicht,Uebertragung,Zeuge}.lean`. Scope: `BUILD-SYSTEM.md` §7.10.
   `logikPflicht_E` now needs `Rueck` and `Uebernahme.rueck` instead of `ZeigerfreiD`. Witness: `zeuge_rueckruf`
   (the program's own function is a callback with the library's function as head) inside `einbettung_zeuge`.
 
+## 96. Stage 0 of self-hosting: the Lean runtime (2026-10-25)
+
+`Boot/Laufzeit.lean`, `Boot/Zeuge.lean`, `Boot/Haupt.lean` (the executable `gabbro-boot`, not imported). Scope:
+`PLAN-SELF-HOSTING.md` §2.
+
+* `boot`: lex, parse, `pre108`, `elabU`, `akzeptiertU` (a refused program is not run), the subset gate `imKernB` (no
+  foreign body, register, atomic or open region), the I/O places by name (`orteVon`), the declared initial memory with
+  the input (`startWelt` over `sp0Of`), `rufAt` on `main`, the output `ausgabe`.
+* **`boot_ist_maschine`**: an output of `boot` is the output of the end world of a `rufAt` run of the program
+  `uebersetzeAllg` built from the source, from the start world, after `AkzeptiertX` accepted.
+* Witnesses: `boot_gross` (`"abC"` → `"ABC"` by `decide +kernel`), `boot_ist_maschine_zeuge`.
+
 All axiom lists standard.
