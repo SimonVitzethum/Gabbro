@@ -320,7 +320,22 @@ events.
   (`Pflicht.lean`) and the witness `einbettung_zeuge` (`Zeuge.lean`: a library with a table embedded into a
   program with a table and a function of its own). DONE. Still open: `gabbro_ziel_projekte` over per-project
   declarations (feeding `logikPflicht_E` into `NutzerTeilO`).
-* E4 callbacks: see below; needs the owner's review of the `Spec.lean` change before it is merged.
+* E4 callbacks (design below; no change of `Spec.lean`).
+
+**E4 design: callbacks across the boundary without a change of the goal statement.** Today `ZeigerfreiD` keeps
+every function pointer out of a project's state and interface, because a foreign function has no name in `D`. The
+design: the project declares, per pointer signature `n` it hands out or calls through, a HEAD `ext n` (a function
+without a body, conforming to `n`) whose contract is the pointer's contract (source: a contract on the `fnptr` type;
+sugar over the existing model, no new form of G or `Akzeptiert`). The project's proof treats a call through a
+pointer like any call: against the callee's contract, which for a foreign callee is `ext n`'s. The embedding then
+relates a pointer value of `D` to one of `D'` instead of mapping it: an image function to its image, `ext n` to
+every function of `D'` outside the image that conforms to `num n` (there is no equality test on function pointers,
+so nothing observes the difference). `Treu` and `eval_exE` become relations at `fnptr` types; the keys also record
+the callee of an indirect call; the induced handler answers for `ext n` what the `D'`-handler answered for the actual
+callee. What the link adds is one obligation of the linking program, a premise of the transfer (not of
+`GabbroZiel`): every foreign function it passes as a pointer of signature `num n` refines the contract of `ext n`
+(its `requires` follows from `ext n`'s, its `ensures` implies `ext n`'s). A program that does not want to prove it
+re-proves the library instead; nothing is assumed.
 
 **What E3 needs** (`Uebernahme`, the link-time conditions, and the premises of `logikPflicht_E`):
 * the bodies, contracts and invariant predicates of the program are the images (`Fortsetzung`);
