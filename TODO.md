@@ -118,7 +118,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   at each call site is a substitute, not supply-once.
 - **O6 (DEMAND 3 as an unbounded rank witness).** Works for the refutation; the proof direction (`unsat`) over the rank form plus four
   undrawn reachability rows stays with the demand.
-- **Generator support for aggregates (2026-10-25).** G has `Ty.arr`/`Ty.str` and their seven `Expr` forms (THEOREM-MAP 99);
+- **Generator support for aggregates (2026-10-25).** G has `Ty.arr`/`Ty.str` and their seven `Expr` forms (THEOREM-MAP 100);
   the generator gives them size `unendlich` and never draws them, so test sets M and N do not cover them yet.
 - **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
   `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
@@ -154,6 +154,10 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   unit -- it must resolve against the project's visible names and refuse an own top module named like a dependency.
   The model side of linking is complete (THEOREM-MAP 94-99); open: the Rust link check (`bindeB`), build files, GabbroV
   certificate reuse by fingerprint, LLVM linkage and TV of the link step.
+  Qualified names are in Lean (THEOREM-MAP 101: an item is its path, place heads may be paths, `pre108` resolves);
+  the Rust side does not follow yet: `parse.rs` still reads `x::y::C` as a field chain, the checker keys carriers
+  and functions by short name and `N039`/`N042` still refuse a second item of one short name, `llvm.rs` keys its
+  globals by short name.
 - **O41 (registers as Lean, not as `.tsv`; Simon, 2026-10-20).** `dokumente/llvm-modelldeckung.tsv` is a hand-written list of the model's
   members with an LLVM status per member; it proves nothing, its member column duplicates the total match of `Gen/Abdeckung/Mitglieder.lean`,
   and `instrumente/teile/llvm-modelldeckung.py` checks it against the Lean sources by regex. `messung/fallen-klassifikation.tsv` has no reader.

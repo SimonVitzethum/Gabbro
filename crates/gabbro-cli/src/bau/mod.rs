@@ -24,7 +24,9 @@
 //! are translated inside each unit that uses it, and alone once to be checked alone. A program
 //! or object whose modules another unit uses is refused by name -- make it a library.
 
+mod abh;
 mod einheit;
+mod namensraum;
 pub mod sprache;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -155,6 +157,10 @@ fn optionen(
         werte.insert(o.name.clone(), o.vorgabe.clone());
     }
     for (k, v) in gesetzt {
+        if k.contains(':') {
+            // `-D<project>:<option>=<value>`: an option of a dependency, checked where it resolves.
+            continue;
+        }
         let Some(o) = alle.iter().find(|o| &o.name == k) else {
             return Err(format!(
                 "`-D{k}={v}`: `{k}` is no option of this project (built-in: target, buildtype, \
@@ -182,16 +188,27 @@ struct Geladen {
     alle: Vec<Option_>,
     werte: BTreeMap<String, Wert>,
     projekt: Projekt,
+    graph: abh::Graph,
+}
+
+/// The program and every dependency, resolved.
+fn graph_von(baudatei: &Path, gesetzt: &BTreeMap<String, String>) -> Result<(Vec<Option_>, BTreeMap<String, Wert>, abh::Graph), String> {
+    let (alle, werte) = optionen(baudatei, gesetzt)?;
+    let projekt = sprache::werte_aus(baudatei, &werte)?;
+    let (_, fremd) = abh::trenne(gesetzt);
+    let graph = abh::loese(projekt, werte.clone(), baudatei.to_path_buf(), &fremd)?;
+    Ok((alle, werte, graph))
 }
 
 fn lade(verzeichnis: &Path) -> Result<Geladen, String> {
     let z = lies_zustand(verzeichnis)?;
-    let (alle, werte) = optionen(&z.baudatei, &z.gesetzt)?;
-    let projekt = sprache::werte_aus(&z.baudatei, &werte)?;
+    let (alle, werte, graph) = graph_von(&z.baudatei, &z.gesetzt)?;
+    abh::pruefe_lock(verzeichnis, &graph)?;
+    let projekt = graph.wurzel().clone();
     for m in &projekt.meldungen {
         println!("{m}");
     }
-    Ok(Geladen { verzeichnis: verzeichnis.to_path_buf(), alle, werte, projekt })
+    Ok(Geladen { verzeichnis: verzeichnis.to_path_buf(), alle, werte, projekt, graph })
 }
 
 fn text_option(werte: &BTreeMap<String, Wert>, name: &str) -> String {
@@ -203,78 +220,167 @@ fn text_option(werte: &BTreeMap<String, Wert>, name: &str) -> String {
 
 // ---------------------------------------------------------------- the plan
 
-/// One unit to build: the target, and every file the translation sees.
+/// One unit to build: the target (copy, index), and every file the translation sees.
 struct Einheit {
+    kopie: usize,
     ziel: usize,
+    /// The artefact name in the build directory (a dependency's library: `<copy>-<name>`).
+    name: String,
+    /// How the target is named in a report (a dependency's library: `<project>:<name>`).
+    anzeige: String,
     quellen: Vec<(String, String)>,
-    bibliotheken: Vec<usize>,
+    bibliotheken: Vec<(usize, usize)>,
 }
 
-/// Computes the units: reads every source once, maps modules to targets, follows `use` edges
-/// to libraries. **A refusal here names the targets it is about.**
-fn plane(p: &Projekt) -> Result<Vec<Einheit>, String> {
-    let mut texte: BTreeMap<String, String> = BTreeMap::new();
-    let mut karten: Vec<(BTreeSet<String>, BTreeSet<String>)> = Vec::new();
-    for z in &p.ziele {
-        let mut quellen = Vec::new();
-        for d in &z.dateien {
-            let t = match texte.get(d) {
-                Some(t) => t.clone(),
-                None => {
-                    let t = std::fs::read_to_string(p.wurzel.join(d)).map_err(|e| {
-                        format!("{}: `{d}` (target `{}`): {e}", z.ort, z.name)
-                    })?;
-                    texte.insert(d.clone(), t.clone());
-                    t
-                }
-            };
-            quellen.push((d.clone(), t));
+/// A source of a copy: its label in reports and its text.
+fn lies_quelle(
+    texte: &mut BTreeMap<PathBuf, String>,
+    k: &abh::Kopie,
+    z: &sprache::Ziel,
+    d: &str,
+) -> Result<(String, String), String> {
+    let pfad = k.projekt.wurzel.join(d);
+    let t = match texte.get(&pfad) {
+        Some(t) => t.clone(),
+        None => {
+            let t = std::fs::read_to_string(&pfad)
+                .map_err(|e| format!("{}: `{d}` (target `{}`): {e}", z.ort, z.name))?;
+            texte.insert(pfad.clone(), t.clone());
+            t
         }
-        karten.push(einheit::modulkarte(&quellen));
+    };
+    Ok((d.to_string(), t))
+}
+
+/// The label of a file of copy `c` in a unit: as written for the program, below the dependency's
+/// directory otherwise.
+fn etikett(g: &abh::Graph, c: usize, d: &str) -> String {
+    if c == 0 {
+        d.to_string()
+    } else {
+        g.kopien[c].projekt.wurzel.join(d).display().to_string()
     }
-    // Which target declares which module. A library's module must be unique among libraries;
-    // a program's or object's module only within the units it ends up in.
-    let mut modul_bib: BTreeMap<String, usize> = BTreeMap::new();
-    let mut modul_sonst: BTreeMap<String, usize> = BTreeMap::new();
-    for (i, z) in p.ziele.iter().enumerate() {
-        for m in &karten[i].0 {
-            if z.art == Art::Bibliothek {
-                if let Some(j) = modul_bib.insert(m.clone(), i) {
-                    return Err(format!(
-                        "module `{m}` is declared in library `{}` AND in library `{}` -- a `use` \
-                         edge onto it would have two targets",
-                        p.ziele[j].name, z.name
-                    ));
+}
+
+/// Computes the units over every project: reads every source once, maps modules to targets per
+/// project, follows `use` edges to libraries -- of the same project, or through a declared
+/// dependency to the libraries it exports. **A refusal here names the targets it is about.**
+fn plane(g: &abh::Graph) -> Result<Vec<Einheit>, String> {
+    let mut texte: BTreeMap<PathBuf, String> = BTreeMap::new();
+    // Per copy and target: (declared modules, used modules).
+    let mut karten: Vec<Vec<(BTreeSet<String>, BTreeSet<String>)>> = Vec::new();
+    for k in &g.kopien {
+        let mut kk = Vec::new();
+        for z in &k.projekt.ziele {
+            let mut quellen = Vec::new();
+            for d in &z.dateien {
+                quellen.push(lies_quelle(&mut texte, k, z, d)?);
+            }
+            kk.push(einheit::modulkarte(&quellen));
+        }
+        karten.push(kk);
+    }
+    // Which target declares which module, per project.
+    let mut modul_bib: Vec<BTreeMap<String, usize>> = Vec::new();
+    let mut modul_sonst: Vec<BTreeMap<String, usize>> = Vec::new();
+    for (c, k) in g.kopien.iter().enumerate() {
+        let (mut bib, mut sonst) = (BTreeMap::new(), BTreeMap::new());
+        for (i, z) in k.projekt.ziele.iter().enumerate() {
+            for m in &karten[c][i].0 {
+                if z.art == Art::Bibliothek {
+                    if let Some(j) = bib.insert(m.clone(), i) {
+                        return Err(format!(
+                            "module `{m}` is declared in library `{}` AND in library `{}`{} -- a `use` edge \
+                             onto it would have two targets",
+                            k.projekt.ziele[j].name,
+                            z.name,
+                            if c == 0 { String::new() } else { format!(" of project `{}`", k.projekt.name) }
+                        ));
+                    }
+                } else {
+                    sonst.entry(m.clone()).or_insert(i);
                 }
-            } else {
-                modul_sonst.entry(m.clone()).or_insert(i);
+            }
+        }
+        modul_bib.push(bib);
+        modul_sonst.push(sonst);
+    }
+    // The targets to plan: the program's, and every library of a dependency (checked alone).
+    let mut wurzeln: Vec<(usize, usize)> = (0..g.wurzel().ziele.len()).map(|i| (0, i)).collect();
+    for c in 1..g.kopien.len() {
+        for (i, z) in g.kopien[c].projekt.ziele.iter().enumerate() {
+            if z.art == Art::Bibliothek {
+                wurzeln.push((c, i));
             }
         }
     }
+    // Every target names only dependencies it uses.
+    let mut benutzt_abh: BTreeSet<(usize, usize, usize)> = BTreeSet::new();
     let mut einheiten = Vec::new();
-    for (i, z) in p.ziele.iter().enumerate() {
-        // The libraries this target rests on, transitively, deepest first.
-        let mut bibs: Vec<usize> = Vec::new();
-        let mut offen: Vec<usize> = vec![i];
-        let mut gesehen: BTreeSet<usize> = BTreeSet::from([i]);
-        while let Some(k) = offen.pop() {
-            for m in &karten[k].1 {
-                if karten[k].0.contains(m) {
+    for &(c0, i0) in &wurzeln {
+        let z0 = &g.kopien[c0].projekt.ziele[i0];
+        let mut bibs: Vec<(usize, usize)> = Vec::new();
+        let mut offen: Vec<(usize, usize)> = vec![(c0, i0)];
+        let mut gesehen: BTreeSet<(usize, usize)> = BTreeSet::from([(c0, i0)]);
+        while let Some((c, k)) = offen.pop() {
+            let p = &g.kopien[c].projekt;
+            let zk = &p.ziele[k];
+            for m in &karten[c][k].1 {
+                if karten[c][k].0.contains(m) {
                     continue;
                 }
-                if let Some(&b) = modul_bib.get(m) {
-                    if gesehen.insert(b) {
-                        bibs.push(b);
-                        offen.push(b);
-                    }
-                } else if let Some(&o) = modul_sonst.get(m) {
-                    if o != i && !karten[i].0.contains(m) {
+                let (kopf, rest) = match m.split_once("::") {
+                    Some((a, b)) => (a, b),
+                    None => (m.as_str(), ""),
+                };
+                if let Some(ai) = p.abhaengigkeiten.iter().position(|a| a.name == kopf) {
+                    if !zk.abhaengigkeiten.contains(&ai) {
                         return Err(format!(
-                            "{}: target `{}` uses module `{m}` of {} `{}` -- only a library's \
-                             modules reach another target; make `{}` a `library` (separate \
-                             compilation across units is not implemented in the LLVM backend)",
-                            z.ort,
-                            z.name,
+                            "{}: target `{}` uses `{m}` of project `{kopf}` and does not declare it -- add \
+                             `dependencies: [{kopf}]` (the handle of `dependency('{kopf}', …)`)",
+                            zk.ort, zk.name
+                        ));
+                    }
+                    benutzt_abh.insert((c, k, ai));
+                    let d = g.kopien[c].deps[ai];
+                    if rest.is_empty() {
+                        return Err(format!(
+                            "{}: `use {kopf}::…` names an item at the root of project `{kopf}` -- a dependency is \
+                             reached through its modules (`use {kopf}::<module>::<item>`)",
+                            zk.ort
+                        ));
+                    }
+                    let Some(&b) = modul_bib[d].get(rest) else {
+                        return Err(format!(
+                            "{}: target `{}` uses `{m}`, and project `{kopf}` has no library with module `{rest}`",
+                            zk.ort, zk.name
+                        ));
+                    };
+                    let bz = &g.kopien[d].projekt.ziele[b];
+                    if !bz.export {
+                        return Err(format!(
+                            "{}: target `{}` uses `{m}`, and module `{rest}` stands in library `{}` of project \
+                             `{kopf}`, which it does not export (`export: true`)",
+                            zk.ort, zk.name, bz.name
+                        ));
+                    }
+                    if gesehen.insert((d, b)) {
+                        bibs.push((d, b));
+                        offen.push((d, b));
+                    }
+                } else if let Some(&b) = modul_bib[c].get(m) {
+                    if gesehen.insert((c, b)) {
+                        bibs.push((c, b));
+                        offen.push((c, b));
+                    }
+                } else if let Some(&o) = modul_sonst[c].get(m) {
+                    if (c, o) != (c0, i0) && !karten[c0][i0].0.contains(m) {
+                        return Err(format!(
+                            "{}: target `{}` uses module `{m}` of {} `{}` -- only a library's modules reach \
+                             another target; make `{}` a `library` (separate compilation across units is not \
+                             implemented in the LLVM backend)",
+                            zk.ort,
+                            zk.name,
                             p.ziele[o].art.wort(),
                             p.ziele[o].name,
                             p.ziele[o].name
@@ -284,27 +390,105 @@ fn plane(p: &Projekt) -> Result<Vec<Einheit>, String> {
             }
         }
         bibs.reverse();
-        let mut quellen: Vec<(String, String)> = Vec::new();
-        let mut module: BTreeMap<String, usize> = BTreeMap::new();
-        for &k in bibs.iter().chain(std::iter::once(&i)) {
-            for m in &karten[k].0 {
-                if let Some(j) = module.insert(m.clone(), k) {
+        // The files of the unit, per project; module names must be unique within a project.
+        let mut dateien: Vec<(usize, String, String)> = Vec::new();
+        let mut module: BTreeMap<(usize, String), usize> = BTreeMap::new();
+        for &(c, k) in bibs.iter().chain(std::iter::once(&(c0, i0))) {
+            for m in &karten[c][k].0 {
+                if let Some(j) = module.insert((c, m.clone()), k) {
                     if j != k {
+                        let p = &g.kopien[c].projekt;
                         return Err(format!(
-                            "{}: module `{m}` is declared in `{}` AND in `{}`, and both end up in \
-                             the unit of `{}`",
-                            z.ort, p.ziele[j].name, p.ziele[k].name, z.name
+                            "{}: module `{m}` is declared in `{}` AND in `{}`, and both end up in the unit of `{}`",
+                            z0.ort, p.ziele[j].name, p.ziele[k].name, z0.name
                         ));
                     }
                 }
             }
-            for d in &p.ziele[k].dateien {
-                if !quellen.iter().any(|(q, _)| q == d) {
-                    quellen.push((d.clone(), texte[d].clone()));
+            let kopie = &g.kopien[c];
+            for d in &kopie.projekt.ziele[k].dateien {
+                if !dateien.iter().any(|(cc, q, _)| *cc == c && q == d) {
+                    let (_, t) = lies_quelle(&mut texte, kopie, &kopie.projekt.ziele[k], d)?;
+                    dateien.push((c, d.clone(), t));
                 }
             }
         }
-        einheiten.push(Einheit { ziel: i, quellen, bibliotheken: bibs });
+        // **Several projects in one unit: every project in its name space.**
+        let kopien_der_einheit: BTreeSet<usize> = dateien.iter().map(|(c, _, _)| *c).collect();
+        let quellen: Vec<(String, String)> = if kopien_der_einheit.len() > 1 {
+            let alle: BTreeMap<String, String> =
+                g.kopien.iter().map(|k| (k.ident.clone(), k.projekt.name.clone())).collect();
+            let mut aus = Vec::new();
+            for &c in &kopien_der_einheit {
+                let kopie = &g.kopien[c];
+                let eigene: BTreeSet<String> = module
+                    .keys()
+                    .filter(|(cc, _)| *cc == c)
+                    .map(|(_, m)| m.split("::").next().unwrap_or(m).to_string())
+                    .collect();
+                let deps: BTreeMap<String, String> = kopie
+                    .projekt
+                    .abhaengigkeiten
+                    .iter()
+                    .zip(&kopie.deps)
+                    .map(|(a, d)| (a.name.clone(), g.kopien[*d].ident.clone()))
+                    .collect();
+                let mut sicht: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+                for d in &kopie.deps {
+                    let mut ex = BTreeSet::new();
+                    for (b, z) in g.kopien[*d].projekt.ziele.iter().enumerate() {
+                        if z.export {
+                            for m in &karten[*d][b].0 {
+                                ex.insert(m.split("::").next().unwrap_or(m).to_string());
+                            }
+                        }
+                    }
+                    sicht.insert(g.kopien[*d].ident.clone(), ex);
+                }
+                for (cc, d, t) in &dateien {
+                    if *cc != c {
+                        continue;
+                    }
+                    let et = etikett(g, c, d);
+                    let neu = namensraum::umschreibe(&et, t, &kopie.ident, &eigene, &deps)?;
+                    namensraum::pruefe_sicht(&et, &neu, &kopie.ident, &alle, &sicht)?;
+                    aus.push((et, neu));
+                }
+            }
+            // The order of the unit: dependencies first, as planned.
+            let reihe: Vec<String> = dateien.iter().map(|(c, d, _)| etikett(g, *c, d)).collect();
+            aus.sort_by_key(|(e, _)| reihe.iter().position(|r| r == e));
+            aus
+        } else {
+            dateien.into_iter().map(|(c, d, t)| (etikett(g, c, &d), t)).collect()
+        };
+        let (name, anzeige) = if c0 == 0 {
+            (z0.name.clone(), z0.name.clone())
+        } else {
+            (
+                format!("{}-{}", g.kopien[c0].ident, z0.name),
+                format!("{}:{}", g.kopien[c0].projekt.name, z0.name),
+            )
+        };
+        einheiten.push(Einheit { kopie: c0, ziel: i0, name, anzeige, quellen, bibliotheken: bibs });
+    }
+    // A declared dependency no `use` reaches is refused, with the fix.
+    for (c, k) in g.kopien.iter().enumerate() {
+        for (i, z) in k.projekt.ziele.iter().enumerate() {
+            if c > 0 && z.art != Art::Bibliothek {
+                continue;
+            }
+            for ai in &z.abhaengigkeiten {
+                if !benutzt_abh.contains(&(c, i, *ai)) {
+                    let n = &k.projekt.abhaengigkeiten[*ai].name;
+                    return Err(format!(
+                        "{}: target `{}` declares `{n}` in `dependencies:`, and no `use` of it reaches `{n}` -- \
+                         delete `{n}` there",
+                        z.ort, z.name
+                    ));
+                }
+            }
+        }
     }
     Ok(einheiten)
 }
@@ -364,25 +548,38 @@ fn kompiliere(g: &Geladen, auswahl: &[String], trocken: bool) -> Result<bool, St
     } else {
         gabbro_check::gatter::Bau::Auslieferung
     };
-    let einheiten = plane(p)?;
-    // Libraries first: a refusal inside one names the library before its users fall with it.
+    let gr = &g.graph;
+    let einheiten = plane(gr)?;
+    // The program's targets asked for, and every library of a dependency they rest on.
+    let gewaehlt: Vec<&Einheit> = einheiten
+        .iter()
+        .filter(|e| e.kopie == 0 && (auswahl.is_empty() || auswahl.contains(&p.ziele[e.ziel].name)))
+        .collect();
+    let noetig: BTreeSet<(usize, usize)> =
+        gewaehlt.iter().flat_map(|e| e.bibliotheken.iter().copied()).filter(|(c, _)| *c > 0).collect();
     let mut reihe: Vec<&Einheit> = einheiten
         .iter()
-        .filter(|e| auswahl.is_empty() || auswahl.contains(&p.ziele[e.ziel].name))
+        .filter(|e| (e.kopie == 0 && gewaehlt.iter().any(|x| std::ptr::eq(*x, *e))) || noetig.contains(&(e.kopie, e.ziel)))
         .collect();
-    reihe.sort_by_key(|e| (p.ziele[e.ziel].art != Art::Bibliothek, e.ziel));
+    // Libraries first, a dependency's before the program's: a refusal inside one names the
+    // library -- and its project -- before its users fall with it.
+    let art = |e: &Einheit| gr.kopien[e.kopie].projekt.ziele[e.ziel].art;
+    reihe.sort_by_key(|e| (art(e) != Art::Bibliothek, e.kopie == 0, e.kopie, e.ziel));
 
     if trocken {
         println!("project  {} {}", p.name, p.version);
         println!("  build directory {}", g.verzeichnis.display());
         println!("  target   {}", ziel.triple);
+        for k in gr.kopien.iter().skip(1) {
+            println!("  dependency {} {} ({})", k.projekt.name, k.projekt.version, k.projekt.wurzel.display());
+        }
         for e in &reihe {
-            let z = &p.ziele[e.ziel];
-            let bibs: Vec<&str> = e.bibliotheken.iter().map(|b| p.ziele[*b].name.as_str()).collect();
+            let z = &gr.kopien[e.kopie].projekt.ziele[e.ziel];
+            let bibs: Vec<String> = e.bibliotheken.iter().map(|b| bib_name(gr, *b)).collect();
             println!(
                 "  {} {} ({} file(s){})",
                 z.art.wort(),
-                z.name,
+                e.anzeige,
                 e.quellen.len(),
                 if bibs.is_empty() { String::new() } else { format!(", computed: {}", bibs.join(", ")) }
             );
@@ -393,24 +590,34 @@ fn kompiliere(g: &Geladen, auswahl: &[String], trocken: bool) -> Result<bool, St
     std::fs::create_dir_all(&g.verzeichnis).map_err(|e| format!("{}: {e}", g.verzeichnis.display()))?;
     let (mut gebaut, mut aktuell, mut abgesagt) = (0usize, 0usize, 0usize);
     for e in reihe {
-        let z = &p.ziele[e.ziel];
-        match einheit::baue(&g.verzeichnis, &z.name, z.art, &e.quellen, bau, ziel) {
+        let z = &gr.kopien[e.kopie].projekt.ziele[e.ziel];
+        match einheit::baue(&g.verzeichnis, &e.name, z.art, &e.quellen, bau, ziel) {
             einheit::Ergebnis::Gebaut => {
                 gebaut += 1;
-                println!("built    {}", z.name);
+                println!("built    {}", e.anzeige);
             }
             einheit::Ergebnis::Aktuell => {
                 aktuell += 1;
-                println!("current  {}  -- content unchanged, artefact present", z.name);
+                println!("current  {}  -- content unchanged, artefact present", e.anzeige);
             }
             einheit::Ergebnis::Abgesagt(grund) => {
                 abgesagt += 1;
-                println!("REFUSED  {}: {grund}", z.name);
+                println!("REFUSED  {}: {grund}", e.anzeige);
             }
         }
     }
     deckungszeile(p, gebaut, aktuell, abgesagt);
     Ok(abgesagt == 0)
+}
+
+/// A library of the unit as a report names it: `store:stock` for a dependency's.
+fn bib_name(g: &abh::Graph, (c, b): (usize, usize)) -> String {
+    let k = &g.kopien[c].projekt;
+    if c == 0 {
+        k.ziele[b].name.clone()
+    } else {
+        format!("{}:{}", k.name, k.ziele[b].name)
+    }
 }
 
 fn verzeichnis_von(a: &Argumente) -> PathBuf {
@@ -448,13 +655,17 @@ pub fn setup(rest: &[String]) -> ExitCode {
         }
         let baudatei = finde_baudatei(&quelle)?;
         let gesetzt: BTreeMap<String, String> = a.setzen.into_iter().collect();
-        let (_, werte) = optionen(&baudatei, &gesetzt)?;
-        let projekt = sprache::werte_aus(&baudatei, &werte)?;
+        let (_, werte, graph) = graph_von(&baudatei, &gesetzt)?;
+        let projekt = graph.wurzel().clone();
         for m in &projekt.meldungen {
             println!("{m}");
         }
-        plane(&projekt)?;
+        plane(&graph)?;
         schreibe_zustand(&verzeichnis, &Zustand { baudatei: baudatei.clone(), gesetzt })?;
+        abh::schreibe_lock(&verzeichnis, &graph)?;
+        for k in graph.kopien.iter().skip(1) {
+            println!("  dependency {} {} ({})", k.projekt.name, k.projekt.version, k.projekt.wurzel.display());
+        }
         println!("project  {} {}", projekt.name, projekt.version);
         println!("  source   {}", baudatei.display());
         println!("  build    {}", verzeichnis.display());
@@ -484,10 +695,17 @@ pub fn configure(rest: &[String]) -> ExitCode {
                 z.gesetzt.insert(k, w);
             }
             // Validate before writing: a refused value never reaches the directory.
-            let (_, werte) = optionen(&z.baudatei, &z.gesetzt)?;
-            sprache::werte_aus(&z.baudatei, &werte)?;
+            graph_von(&z.baudatei, &z.gesetzt)?;
             schreibe_zustand(&v, &z)?;
             println!("configured {}", v.display());
+        }
+        // `configure` accepts the dependencies as they are now: the lock is written anew.
+        let (_, _, graph) = graph_von(&z.baudatei, &z.gesetzt)?;
+        if graph.kopien.len() > 1 || v.join(abh::LOCKDATEI).exists() {
+            abh::schreibe_lock(&v, &graph)?;
+            for k in graph.kopien.iter().skip(1) {
+                println!("dependency {} {} ({})", k.projekt.name, k.projekt.version, k.projekt.wurzel.display());
+            }
         }
         let (alle, werte) = optionen(&z.baudatei, &z.gesetzt)?;
         let zeilen: Vec<[String; 4]> = alle
@@ -562,17 +780,19 @@ pub fn befehl(rest: &[String]) -> ExitCode {
         for (k, w) in &a.setzen {
             z.gesetzt.insert(k.clone(), w.clone());
         }
-        let (_, werte) = optionen(&z.baudatei, &z.gesetzt)?;
-        sprache::werte_aus(&z.baudatei, &werte)?;
+        let (alle, werte, graph) = graph_von(&z.baudatei, &z.gesetzt)?;
         if !a.trocken {
+            let neu = !v.join(ZUSTAND).exists();
             schreibe_zustand(&v, &z)?;
+            if neu || !a.setzen.is_empty() {
+                abh::schreibe_lock(&v, &graph)?;
+            }
             let zeige = anzeige(&v);
             println!("build directory {zeige} (`gabbro configure -C {zeige}` shows its options)");
             kompiliere(&lade(&v)?, &[], false)
         } else {
-            let projekt = sprache::werte_aus(&z.baudatei, &werte)?;
-            let (alle, _) = optionen(&z.baudatei, &z.gesetzt)?;
-            kompiliere(&Geladen { verzeichnis: v, alle, werte, projekt }, &[], true)
+            let projekt = graph.wurzel().clone();
+            kompiliere(&Geladen { verzeichnis: v, alle, werte, projekt, graph }, &[], true)
         }
     })();
     melde("build", r)
@@ -775,7 +995,7 @@ pub fn introspect(rest: &[String]) -> ExitCode {
         let a = lies_argumente("introspect", rest)?;
         let g = lade(&verzeichnis_von(&a))?;
         let p = &g.projekt;
-        let einheiten = plane(p)?;
+        let einheiten: Vec<Einheit> = plane(&g.graph)?.into_iter().filter(|e| e.kopie == 0).collect();
         let mut j = String::from("{\n");
         j.push_str(&format!("  \"project\": {{\"name\": {}, \"version\": {}, \"root\": {}}},\n",
             js(&p.name), js(&p.version), js(&p.wurzel.display().to_string())));
@@ -792,8 +1012,19 @@ pub fn introspect(rest: &[String]) -> ExitCode {
                 js(&z.name), js(z.art.wort()), js(&z.ort), z.installieren, js(&datei.display().to_string()),
                 z.dateien.iter().map(|d| js(d)).collect::<Vec<_>>().join(", "),
                 e.quellen.iter().map(|(d, _)| js(d)).collect::<Vec<_>>().join(", "),
-                e.bibliotheken.iter().map(|b| js(&p.ziele[*b].name)).collect::<Vec<_>>().join(", "),
+                e.bibliotheken.iter().map(|b| js(&bib_name(&g.graph, *b))).collect::<Vec<_>>().join(", "),
                 if n + 1 < einheiten.len() { "," } else { "" }
+            ));
+        }
+        j.push_str("  ],\n  \"dependencies\": [\n");
+        let n_abh = g.graph.kopien.len().saturating_sub(1);
+        for (n, k) in g.graph.kopien.iter().skip(1).enumerate() {
+            j.push_str(&format!(
+                "    {{\"name\": {}, \"version\": {}, \"namespace\": {}, \"root\": {}, \"options\": [{}]}}{}\n",
+                js(&k.projekt.name), js(&k.projekt.version), js(&k.ident),
+                js(&k.projekt.wurzel.display().to_string()),
+                k.optionen.iter().map(|(a, b)| js(&format!("{a}={b}"))).collect::<Vec<_>>().join(", "),
+                if n + 1 < n_abh { "," } else { "" }
             ));
         }
         j.push_str("  ],\n  \"tests\": [\n");

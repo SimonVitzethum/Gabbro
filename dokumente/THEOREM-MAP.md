@@ -4902,7 +4902,7 @@ All axiom lists standard.
 
 All axiom lists standard.
 
-## 99. Arrays and strings as values in G (2026-10-25)
+## 100. Arrays and strings as values in G (2026-10-25)
 
 `Kern/Syntax/Typen.lean` (`Ty.arr`, `Ty.str`, `Val`, `arrConsW`, `arrSetW`, `strLenW`, `strCatW`),
 `Kern/Syntax/Syntax.lean` (the `Expr` constructors `arrNil`, `arrCons`, `arrGet`, `arrSet`, `strLit`, `strLen`,
@@ -4921,3 +4921,28 @@ All axiom lists standard.
 * Open: the generator does not produce aggregates yet (`TODO.md` §2).
 
 All axiom lists standard.
+
+## 101. Qualified names: items of one short name in two modules (2026-10-25)
+
+`Parser/Namen/Aufloesung.lean`, probes `Parser/Namen/AufloesungProben.lean`; `pre108` (the preprocessing of the
+Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
+
+* **The identity of an item is its path.** Two modules may declare a carrier, a function or a type of the same
+  short name; they stay two items. Every written name is resolved where it stands: a local first, else the first
+  visible candidate of the name-space rule (`Namensraum.aufloeseK`, §97); a name that resolves to nothing but is
+  some item's short name is refused (`gift`).
+* **A place head may be a path**: `writes a::C`, `b::C = 2`, `x::y::C`. A two-segment path whose head is no item
+  (no reason) names the item it resolves to; the parser reads three or more segments as one place head
+  (`Ausdruck.lean`, the former field-chain reading is gone).
+* **Keys** (`schluessel`): an item keeps its short name when no other item of the unit has it, else it is named by
+  its joined path. Every resolved reference carries its item's key, so the elaborator (which looks names up by
+  text) sees one text per item. `use` lines are dropped after resolution, module wrappers opened.
+* Theorems: `loese_einfach` (a unit of one name space is resolved exactly as before, `uMembers`), `ref_lokal`,
+  `ref_aufgeloest`, `ref_unsichtbar`, `schluessel_kurz`, `segmente_name`, `segmente_verbinde` (a joined path splits
+  back into its segments), **`schluessel_injektiv`** (distinct items carry distinct keys: the elaborator never
+  merges two items); each with a `_zeuge`. Probes (kernel-decided): `zwei_ok`/`zwei_traeger`/
+  `zwei_wirkung` (two `C`, one written through a `use`d function and one by path), `tief_ok`/`tief_traeger`,
+  `unsichtbar_refused`, `falsch_getrennt` (an effect on `a::C` and a body writing `b::C` stay apart).
+* Not yet followed (Simon, 2026-10-25: Lean model only): the Rust parser, checker and LLVM still name items by
+  short name and refuse a second one (`N039`, `N042`) -- `TODO.md` O28.
+

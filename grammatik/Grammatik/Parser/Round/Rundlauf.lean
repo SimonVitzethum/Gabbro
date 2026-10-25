@@ -422,8 +422,8 @@ def istKopfWort (s : String) : Bool :=
 -- expressions and nothing else is an `built`; a `Grund` with
 -- an integer, sugared-width or `Self` head reads as a field or
 -- fails; suffixes attach only to place bases, so `feld`/`index`/
--- `arrow` need a `gutPlatz` base (`grundKette` multi-segment
--- paths print as field chains and parse back through suffixes).
+-- `arrow` need a `gutPlatz` base (a path of three or more segments
+-- is one place head outside the printable core).
 /-- A bare variable. -/
 def istVar : SExpr → Bool
   | .variable _ => true

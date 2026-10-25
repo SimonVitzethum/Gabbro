@@ -6,6 +6,7 @@
 -/
 import Grammatik.Parser.Elab.UebersetzeSum
 import Grammatik.Bausteine.Arena.ArenaZucker
+import Grammatik.Parser.Namen.Aufloesung
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 
@@ -1682,10 +1683,11 @@ def normTopU32 : List SItemTief → List SItemTief
   | [] => []
   | it :: rest => normU32Item it :: normTopU32 rest
 
-/-- The preprocessing of the bridge instances: unwrap like `elabU`, then normalise bare `u32`,
-    before `elabU` (`concurrent` items are elaborated into the thread roots now). -/
+/-- The preprocessing of the bridge instances: resolve every name and open the modules
+    (`Aufloesung.loese`: a unit of one name space is unwrapped as `uMembers` does), then normalise
+    bare `u32`, before `elabU` (`concurrent` items are elaborated into the thread roots now). -/
 def pre108 (items : List SItemTief) : List SItemTief :=
-  normTopU32 (uMembers items)
+  normTopU32 (Aufloesung.loese items)
 
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
 

@@ -175,6 +175,8 @@ import Grammatik.Parser.Expr.Ausdruck
 import Grammatik.Parser.Stmt.Anweisung
 import Grammatik.Parser.Namen.Namensraum
 import Grammatik.Parser.Namen.NamensraumZeuge
+import Grammatik.Parser.Namen.Aufloesung
+import Grammatik.Parser.Namen.AufloesungProben
 import Grammatik.Parser.Stmt.AnweisungProben
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben
 import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2

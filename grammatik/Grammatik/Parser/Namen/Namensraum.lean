@@ -1,4 +1,3 @@
-import Mathlib.Data.List.Nodup
 
 /-!
   File:      Grammatik/Parser/Namen/Namensraum.lean
@@ -135,10 +134,23 @@ theorem ziel_none (ds : List (String × String × List Pfad)) (d : String) :
     ziel ds d = none ↔ pubVon (ds.map fun e => (e.1, e.2.2)) d = none := by
   rw [← ziel_pub]; cases ziel ds d <;> simp
 
+/-- An injective map on a duplicate-free image (core only: this file stands in the elaborator's import
+    chain, where Mathlib's `alias` keyword would break existing field names). -/
+theorem inj_von_nodup_map {α β : Type} {f : α → β} : ∀ {l : List α}, (l.map f).Nodup →
+    ∀ {x y : α}, x ∈ l → y ∈ l → f x = f y → x = y
+  | [], _, _, _, hx, _, _ => nomatch hx
+  | a :: l, h, x, y, hx, hy, hf => by
+    simp only [List.Nodup, List.map_cons, List.pairwise_cons] at h
+    rcases List.mem_cons.mp hx with rfl | hx' <;> rcases List.mem_cons.mp hy with rfl | hy'
+    · rfl
+    · exact absurd hf (h.1 _ (List.mem_map_of_mem hy'))
+    · exact absurd hf.symm (h.1 _ (List.mem_map_of_mem hx'))
+    · exact inj_von_nodup_map h.2 hx' hy' hf
+
 /-- A copy name among the dependencies stands for one dependency only. -/
 theorem kopie_eins {L : Platz} (hG : L.Gut) {e e' : String × String × List Pfad} (he : e ∈ L.deps)
     (he' : e' ∈ L.deps) (h : e.2.1 = e'.2.1) : e = e' :=
-  List.inj_on_of_nodup_map hG.2 he he' h
+  inj_von_nodup_map hG.2 he he' h
 
 /-- **A candidate is visible exactly when the project or the public part of the dependency it
     names declares it** -- the copies do not enter. -/
