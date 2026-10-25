@@ -74,6 +74,11 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
   | .opt _, .null => some none
   | .sum cs, .fall k p =>
     if h : k < cs.length then (nutzKonst (cs.get ⟨k, h⟩) p).map (⟨⟨k, h⟩, ·⟩) else none
+  -- zero memory of a tagged value: the first case, its payload zero
+  | .sum cs, .null =>
+    if h : 0 < cs.length then
+      (nutzKonst (cs.get ⟨0, h⟩) (match cs.get ⟨0, h⟩ with | none => .null | some _ => .zahl 0)).map (⟨⟨0, h⟩, ·⟩)
+    else none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
   | .arr τ n, k =>
     match konstListe k with

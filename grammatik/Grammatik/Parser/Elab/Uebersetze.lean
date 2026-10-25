@@ -135,6 +135,9 @@ inductive UEns
 inductive USVal
   | fall : Nat → Option USide → USVal
   | var : String → USVal
+  /-- A field of a tagged type, read through a pointer (`slot`) or at a table (`tab`). -/
+  | slot : String → String → UIdx → USVal
+  | tab : String → String → UIdx → USVal
   deriving DecidableEq, Repr
 
 /-- A value of a reason type `R`: a case `R::C` (its position) or a variable. -/
@@ -328,6 +331,10 @@ structure UTab where
   werte : List (String × Ty) := []
   /-- The wrapping fields (`f : u32 wrapping`): the field name and its modulus `2^w`. -/
   wraps : List (String × Int) := []
+  /-- The fields of a tagged type: the field name and the type's name as written, then (`uSumTabs`) its position;
+      such a field is an aggregate field (`werte`) of `Ty.sum`. -/
+  sumNamen : List (String × String) := []
+  sumFelder : List (String × Nat) := []
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -1048,6 +1055,8 @@ inductive UFeldArt
   | wert : Ty → UFeldArt
   /-- `u32 wrapping`: a number field whose writes are taken modulo `m` (SUGAR over `rem`, SYNTAX.md). -/
   | wrap : Int → UFeldArt
+  /-- A field of a tagged type, its name as written (read with the types, `uSumTabs`). -/
+  | summe : String → UFeldArt
 
 /-- One slot field: no bit position, no `offset_into`, no `where`, no `reserved` (all without G
     form, like the refused arms of `read_table`). `by ops` is a writer discipline the CHECKER holds
@@ -1067,6 +1076,10 @@ def uFeld (alias : List (String × (Int × Int))) (tnames : List String) :
       match uTyp alias [] ftyp with
       | .ok τ => .ok ((fname, (0, 0)), UFeldArt.wert τ)
       | .error e => .error e
+    | .atom a =>
+      match uFeldTyp alias (.atom a) with
+      | .ok r => .ok ((fname, r), UFeldArt.zahl)
+      | .error _ => .ok ((fname, (0, 0)), UFeldArt.summe a)
     | .wrap t =>
       match uFeldTyp alias t with
       | .ok (0, hi) => .ok ((fname, (0, hi)), UFeldArt.wrap (hi + 1))
@@ -1106,6 +1119,7 @@ def uTabelle (consts : List (String × Int))
               opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none),
               werte := fs.filterMap (fun p => match p.2 with | .wert τ => some (p.1.1, τ) | _ => none),
               wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
+              sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
               shared := sh }
   | .tableT n (.some p) .none .none .none sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
@@ -2956,6 +2970,18 @@ def uMitTrenner : List (List UStmt) → List UStmt
   | [a] => a
   | a :: rest => a ++ [UStmt.ifElse] ++ uMitTrenner rest
 
+/-- A field of a tagged type as a value, and the position of its type. -/
+def uSumPlatz (ctx : UCtx) (e : SExpr) : Except String (USVal × Nat) :=
+  match uZugriff ctx e with
+  | .error x => .error x
+  | .ok (b, tb, f, ix) =>
+    match (ctx.tabs.find? (fun t => strEq t.name tb)).bind (fun t => t.sumFelder.find? (fun p => strEq p.1 f)) with
+    | none => .error "match without G form"
+    | some (_, k) =>
+      match b with
+      | .thru p => .ok (.slot p f ix, k)
+      | .tabelle t => .ok (.tab t f ix, k)
+
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
@@ -2982,9 +3008,19 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             | _ => none
           | .error _ =>
             (ctx.globs.find? (fun g => strEq g.name e)).bind fun g => g.sumNum.map fun num => (e, 1, num)
-        | _ => none : Option (String × Nat × Nat)) with
+        | _ =>
+          -- a field of a tagged type: bound to the hidden local `#m` first (`uSumPlatz`)
+          match uSumPlatz ctx scrut with
+          | .ok (_, num) => some ("#m", 1, num)
+          | .error _ => none : Option (String × Nat × Nat)) with
     | .some (e, 1, num) =>
-      match ctx.sums[num]? with
+      -- a field of a tagged type is bound to `#m` first; the arms and the rest see it
+      let (ctxM, vor) : UCtx × List UStmt :=
+        match (if strEq e "#m" then (uSumPlatz ctx scrut).toOption else none), ctx.sums[num]? with
+        | some (sv, _), some sm =>
+          (uMitLokal ctx "#m" (UParamArt.sum num) (Ty.sum sm.spec) ctx.muts, [UStmt.bindSum "#m" num sv])
+        | _, _ => (ctx, [])
+      match ctxM.sums[num]? with
       | .none => .error "tagged type unknown"
       | .some sm =>
         if arms.length != sm.cases.length then .error "match arms without G form"
@@ -2993,9 +3029,9 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             match arms.find? (fun a => match a with | .arm n _ _ => strEq n cn | _ => false) with
             | .some (.arm _ bnd (.block ss en)) =>
               match (match pl, bnd with
-                  | .none, .none => some (ctx, "")
+                  | .none, .none => some (ctxM, "")
                   | .some (lo, hi), .some k =>
-                    some (uMitLokal ctx k UParamArt.int (Ty.int lo hi) (ctx.muts.filter (fun m => !strEq m k)), k)
+                    some (uMitLokal ctxM k UParamArt.int (Ty.int lo hi) (ctxM.muts.filter (fun m => !strEq m k)), k)
                   | _, _ => none : Option (UCtx × String)) with
               | .none => .error "match arm payload without G form"
               | .some (cx, k) =>
@@ -3008,10 +3044,10 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             | _ => .error "match arms without G form") with
         | .error err => .error err
         | .ok arme =>
-          match uAnwReihe tabs koepfe f ctx rest with
+          match uAnwReihe tabs koepfe f ctxM rest with
           | .error err => .error err
           | .ok (ys, cE) =>
-            .ok ([UStmt.matchTagBeg num e (arme.map (·.1))] ++ uMitTrenner (arme.map (·.2)) ++ [UStmt.blkEnd] ++ ys, cE)
+            .ok (vor ++ [UStmt.matchTagBeg num e (arme.map (·.1))] ++ uMitTrenner (arme.map (·.2)) ++ [UStmt.blkEnd] ++ ys, cE)
     | .some (e, _, num) =>
       match ctx.whys[num]? with
       | .none => .error "reason unknown"
@@ -3461,6 +3497,20 @@ def uSumGlobs (consts : List (String × Int)) (sums : List USum) (ms : List SIte
           | .error e => .error e
         | none => .error ("static unknown: " ++ g.name)
       | _, _ => .error ("type unknown: " ++ a)
+
+/-- The tables with their fields of a tagged type typed (`werte`) and numbered (`sumFelder`). -/
+def uSumTabs (sums : List USum) : List UTab → Except String (List UTab)
+  | [] => .ok []
+  | t :: rest =>
+    match uSumTabs sums rest,
+        uSeq (t.sumNamen.map fun (f, a) =>
+          match sums.findIdx? (fun sm => strEq sm.name a), sums.find? (fun sm => strEq sm.name a) with
+          | some k, some sm => .ok (f, k, sm.spec)
+          | _, _ => .error ("type unknown: " ++ a)) with
+    | .ok ts, .ok fs =>
+      .ok ({ t with werte := t.werte ++ fs.map (fun (f, _, sp) => (f, Ty.sum sp)),
+                    sumFelder := fs.map (fun (f, k, _) => (f, k)) } :: ts)
+    | .error e, _ | _, .error e => .error e
 
 /-- The option statics with the number and count of their table. -/
 def uOptGlobs (tabs : List UTab) : List UGlob → Except String (List UGlob)
@@ -4358,6 +4408,9 @@ def elabU : List SItemTief → Except String UProg
     match uSumGlobs consts sums ms globs with
     | .error e => .error e
     | .ok globs =>
+    match uSumTabs sums tabs with
+    | .error e => .error e
+    | .ok tabs =>
     match uRegs alias consts tabs globs ms with
     | .error e => .error e
     | .ok regs =>
@@ -5589,7 +5642,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=

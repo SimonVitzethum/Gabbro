@@ -45,5 +45,17 @@ def lowSVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh :
       | .error e => .error e
       | .ok nz => .ok (Expr.case (D := declOf u) _ ⟨i, hi⟩ nz)
     else .error "case outside the tagged type"
+  | .slot b f ix =>
+    match lowDurchWert u Γ Λ fn sh b f ix with
+    | some (.ok w) =>
+      if h : w.ty = .sum (u.sums.get ⟨sidx, hs⟩).spec then .ok (h ▸ w.term) else .error "tagged value of a foreign type"
+    | some (.error e) => .error e
+    | none => .error "tagged value without G form"
+  | .tab b f ix =>
+    match lowTabWert u Γ Λ fn sh b f ix with
+    | some (.ok w) =>
+      if h : w.ty = .sum (u.sums.get ⟨sidx, hs⟩).spec then .ok (h ▸ w.term) else .error "tagged value of a foreign type"
+    | some (.error e) => .error e
+    | none => .error "tagged value without G form"
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

@@ -322,7 +322,15 @@ def befundeFn (consts : List (String × Int))
 def befundeElab (ms : List SItemTief) : List Befund :=
   let consts := uConstsRech (uKonstFns ms) ms []
   let alias := uAliase consts ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
-  let tabs := sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)) ms
+  let sumOk := match uSums alias ms with | .ok w => w | .error _ => []
+  -- a field of an unknown type is read as a tagged type and refused there, as `elabU` does (`uSumTabs`)
+  let tabs := (sammleTabellen consts alias (ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)) ms).map
+    fun (n, r) => (n, match r with
+      | .ok t => (match uSumTabs sumOk [t] with
+        | .ok [t'] => .ok t'
+        | .ok _ => .ok t
+        | .error e => .error e)
+      | .error e => .error e)
   let tabOk := werte tabs
   let globR := uGlobs consts alias ms
   let globOk := match globR with | .ok gs => gs | .error _ => []
@@ -330,7 +338,6 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let lockOk := werte locks
   let fns := ms.filterMap alsFunktion
   let whyOk := match uWhys ms with | .ok w => w | .error _ => []
-  let sumOk := match uSums alias ms with | .ok w => w | .error _ => []
   let koepfe := sammleKoepfe consts alias tabOk lockOk globOk whyOk sumOk fns
   let kopfOk := (werte koepfe).map fun p => p.1
   let tabF := tabs.filterMap fun (n, r) => match r with
