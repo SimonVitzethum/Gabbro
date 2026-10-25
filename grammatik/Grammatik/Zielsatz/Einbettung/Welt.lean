@@ -24,14 +24,15 @@ def _root_.Gabbro.Grammatik.Ty.zeigerfrei : Ty → Bool
   | _ => true
 
 /-- **No function pointer comes in from outside**: tables and globals of `D` carry none, and no
-    function result, axiom result or register answer is one (a foreign answer could name a
-    function `D` does not know; callbacks are stage E4). -/
+    function parameter or result, axiom result or register answer is one (a foreign caller or
+    answer could name a function `D` does not know; callbacks are stage E4). -/
 structure ZeigerfreiD (D : Deklaration) : Prop where
   typ : ∀ t f, (D.typ t f).zeigerfrei = true
   gtyp : ∀ g, (D.gtyp g).zeigerfrei = true
   erg : ∀ f τ, D.erg f = some τ → τ.zeigerfrei = true
   aerg : ∀ a τ, D.aerg a = some τ → τ.zeigerfrei = true
   rtyp : ∀ r, (D.rtyp r).zeigerfrei = true
+  params : ∀ f τ, τ ∈ D.params f → τ.zeigerfrei = true
 
 /-- A value transported along a type equation. -/
 def castW {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
