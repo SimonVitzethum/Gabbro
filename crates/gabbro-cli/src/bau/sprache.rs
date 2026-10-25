@@ -477,6 +477,8 @@ pub enum Wert {
     Datei(String),
     /// A handle on a target, by index into `Projekt::ziele`.
     Ziel(usize),
+    /// A handle on a dependency, by index into `Projekt::abhaengigkeiten`.
+    Abh(usize),
     Nichts,
 }
 
@@ -489,6 +491,7 @@ impl Wert {
             Wert::Liste(_) => "a list",
             Wert::Datei(_) => "a file",
             Wert::Ziel(_) => "a target",
+            Wert::Abh(_) => "a dependency",
             Wert::Nichts => "nothing",
         }
     }
@@ -671,6 +674,7 @@ pub fn zeige_wert(w: &Wert) -> String {
         Wert::Liste(l) => format!("[{}]", l.iter().map(zeige_wert).collect::<Vec<_>>().join(", ")),
         Wert::Datei(d) => d.clone(),
         Wert::Ziel(i) => format!("<target {i}>"),
+        Wert::Abh(i) => format!("<dependency {i}>"),
         Wert::Nichts => "nothing".into(),
     }
 }
@@ -706,7 +710,27 @@ pub struct Ziel {
     /// Paths relative to the project root, in the order written.
     pub dateien: Vec<String>,
     pub installieren: bool,
+    /// `export: true` (a library): dependents may `use` its modules.
+    pub export: bool,
+    /// `dependencies: [...]`: the dependencies (indices into `Projekt::abhaengigkeiten`) this
+    /// target may draw from. Which files enter its unit is still COMPUTED from `use`.
+    pub abhaengigkeiten: Vec<usize>,
     /// `file:line` of the call that declared it.
+    pub ort: String,
+}
+
+/// **A `dependency(...)` call**: another Gabbro project, from a local path (or
+/// `subprojects/<name>/`), with a version requirement and options of its own.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Abhaengigkeit {
+    /// The project's name -- its `project('<name>')`, and the name its paths start with here.
+    pub name: String,
+    /// The project directory, relative to this project's root.
+    pub pfad: String,
+    /// The version requirement (`'>=1.2, <2'`), if any.
+    pub version: Option<String>,
+    /// `options: ['name=value', …]` for the dependency's own options.
+    pub optionen: Vec<(String, String)>,
     pub ort: String,
 }
 
@@ -728,6 +752,7 @@ pub struct Projekt {
     pub wurzel: PathBuf,
     pub ziele: Vec<Ziel>,
     pub tests: Vec<Test>,
+    pub abhaengigkeiten: Vec<Abhaengigkeit>,
     /// Every build file read, relative to the root: what a reconfigure has to look at.
     pub baudateien: Vec<String>,
     pub meldungen: Vec<String>,
@@ -748,6 +773,7 @@ pub fn werte_aus(
             wurzel: wurzel.clone(),
             ziele: Vec::new(),
             tests: Vec::new(),
+            abhaengigkeiten: Vec::new(),
             baudateien: Vec::new(),
             meldungen: Vec::new(),
         },
@@ -771,7 +797,10 @@ struct Auswerter {
     projekt_gesehen: bool,
 }
 
-const ZIELWOERTER: &[&str] = &["install"];
+const ZIELWOERTER: &[&str] = &["install", "dependencies"];
+const BIBLIOTHEKSWOERTER: &[&str] = &["export", "dependencies"];
+const OBJEKTWOERTER: &[&str] = &["dependencies"];
+const ABHWOERTER: &[&str] = &["path", "version", "options"];
 const TESTWOERTER: &[&str] = &["args", "stdout", "exit", "timeout"];
 
 impl Auswerter {
@@ -785,6 +814,7 @@ impl Auswerter {
                 wurzel: PathBuf::new(),
                 ziele: Vec::new(),
                 tests: Vec::new(),
+                abhaengigkeiten: Vec::new(),
                 baudateien: Vec::new(),
                 meldungen: Vec::new(),
             },
@@ -983,7 +1013,11 @@ impl Auswerter {
                 ))
             }
             "program" | "object" | "library" => {
-                erlaube(if name == "program" { ZIELWOERTER } else { &[] })?;
+                erlaube(match name {
+                    "program" => ZIELWOERTER,
+                    "library" => BIBLIOTHEKSWOERTER,
+                    _ => OBJEKTWOERTER,
+                })?;
                 let art = match name {
                     "program" => Art::Programm,
                     "object" => Art::Objekt,
@@ -1018,11 +1052,41 @@ impl Auswerter {
                     Some(Wert::Bool(b)) => *b,
                     Some(w) => return Err(format!("`install:` is a boolean, {} found", w.art())),
                 };
+                let export = match kw.get("export") {
+                    None => false,
+                    Some(Wert::Bool(b)) => *b,
+                    Some(w) => return Err(format!("`export:` is a boolean, {} found", w.art())),
+                };
+                let mut abhaengigkeiten = Vec::new();
+                match kw.get("dependencies") {
+                    None => {}
+                    Some(Wert::Liste(l)) => {
+                        for w in l {
+                            let Wert::Abh(i) = w else {
+                                return Err(format!(
+                                    "`dependencies:` lists handles of `dependency(...)`, {} found",
+                                    w.art()
+                                ));
+                            };
+                            if abhaengigkeiten.contains(i) {
+                                return Err(format!(
+                                    "`{}` stands twice in `dependencies:` of `{zname}`",
+                                    self.projekt.abhaengigkeiten[*i].name
+                                ));
+                            }
+                            abhaengigkeiten.push(*i);
+                        }
+                    }
+                    Some(Wert::Abh(i)) => abhaengigkeiten.push(*i),
+                    Some(w) => return Err(format!("`dependencies:` is a list of dependencies, {} found", w.art())),
+                }
                 self.projekt.ziele.push(Ziel {
                     name: zname.clone(),
                     art,
                     dateien,
                     installieren,
+                    export,
+                    abhaengigkeiten,
                     ort: format!("{datei}:{zeile}"),
                 });
                 Ok(Wert::Ziel(self.projekt.ziele.len() - 1))
@@ -1074,6 +1138,62 @@ impl Auswerter {
                 });
                 Ok(Wert::Nichts)
             }
+            "dependency" => {
+                erlaube(ABHWOERTER)?;
+                let [Wert::Text(dname)] = pos.as_slice() else {
+                    return Err("`dependency('<project>', path: '…', version: '…', options: […])`".into());
+                };
+                pruefe_projektname(dname)?;
+                let pfad = match kw.get("path") {
+                    None => format!("subprojects/{dname}"),
+                    Some(Wert::Text(t)) if !t.is_empty() && !t.starts_with('/') => self.relativ(t),
+                    Some(Wert::Text(t)) => {
+                        return Err(format!("`path: '{t}'` -- a project directory relative to this build file"))
+                    }
+                    Some(w) => return Err(format!("`path:` is a string, {} found", w.art())),
+                };
+                let version = match kw.get("version") {
+                    None => None,
+                    Some(Wert::Text(t)) => {
+                        Versionsbereich::lies(t)?;
+                        Some(t.clone())
+                    }
+                    Some(w) => return Err(format!("`version:` is a string, {} found", w.art())),
+                };
+                let mut optionen = Vec::new();
+                match kw.get("options") {
+                    None => {}
+                    Some(Wert::Liste(l)) => {
+                        for t in texte(l)? {
+                            let Some((k, v)) = t.split_once('=') else {
+                                return Err(format!("`options:` holds `name=value` strings, `{t}` found"));
+                            };
+                            optionen.push((k.trim().to_string(), v.trim().to_string()));
+                        }
+                    }
+                    Some(w) => return Err(format!("`options:` is a list of strings, {} found", w.art())),
+                }
+                let neu = Abhaengigkeit {
+                    name: dname.clone(),
+                    pfad,
+                    version,
+                    optionen,
+                    ort: format!("{datei}:{zeile}"),
+                };
+                if let Some(i) = self.projekt.abhaengigkeiten.iter().position(|a| a.name == *dname) {
+                    let alt = &self.projekt.abhaengigkeiten[i];
+                    if (&alt.pfad, &alt.version, &alt.optionen) != (&neu.pfad, &neu.version, &neu.optionen) {
+                        return Err(format!(
+                            "`{dname}` is declared a second time ({}) with other arguments -- a project \
+                             depends on one version of a project, so its name says which",
+                            alt.ort
+                        ));
+                    }
+                    return Ok(Wert::Abh(i));
+                }
+                self.projekt.abhaengigkeiten.push(neu);
+                Ok(Wert::Abh(self.projekt.abhaengigkeiten.len() - 1))
+            }
             "subdir" => {
                 erlaube(&[])?;
                 let [Wert::Text(d)] = pos.as_slice() else {
@@ -1114,7 +1234,7 @@ impl Auswerter {
             }
             andere => Err(format!(
                 "`{andere}` is no function of the build language -- project, files, program, \
-                 library, object, test, subdir, get_option, message, warning, error"
+                 library, object, dependency, test, subdir, get_option, message, warning, error"
             )),
         }
     }
@@ -1163,6 +1283,80 @@ fn plus_werte(l: Wert, r: Wert) -> Result<Wert, String> {
         }
         (a, b) => return Err(format!("`+` does not join {} and {}", a.art(), b.art())),
     })
+}
+
+/// A project name is a path head in Gabbro source and a name space: an identifier.
+pub fn pruefe_projektname(n: &str) -> Result<(), String> {
+    if n.is_empty() || !n.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return Err(format!("`{n}` -- a project name starts with an ASCII letter"));
+    }
+    if let Some(b) = n.chars().find(|c| !(c.is_ascii_alphanumeric() || *c == '_')) {
+        return Err(format!(
+            "`{n}` carries `{b}` -- a project name is an identifier (letters, digits, `_`): code reaches \
+             it as the head of a path"
+        ));
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------- versions
+
+/// A version: its numeric parts (`1.3.0` = [1, 3, 0]); a missing part is 0.
+pub fn lies_version(t: &str) -> Result<Vec<u64>, String> {
+    let t = t.trim();
+    if t.is_empty() {
+        return Err("an empty version".into());
+    }
+    t.split('.')
+        .map(|x| x.parse::<u64>().map_err(|_| format!("`{t}` is no version (numbers separated by `.`)")))
+        .collect()
+}
+
+fn vergleiche(a: &[u64], b: &[u64]) -> std::cmp::Ordering {
+    let n = a.len().max(b.len());
+    for i in 0..n {
+        let (x, y) = (a.get(i).copied().unwrap_or(0), b.get(i).copied().unwrap_or(0));
+        if x != y {
+            return x.cmp(&y);
+        }
+    }
+    std::cmp::Ordering::Equal
+}
+
+/// **A version requirement**: comparisons joined by `,`, all of which must hold
+/// (`'>=1.2, <2'`); a bare version is `==`.
+#[derive(Debug, Clone)]
+pub struct Versionsbereich(Vec<(String, Vec<u64>)>);
+
+impl Versionsbereich {
+    pub fn lies(t: &str) -> Result<Versionsbereich, String> {
+        let mut teile = Vec::new();
+        for teil in t.split(',') {
+            let teil = teil.trim();
+            let (op, rest) = ["<=", ">=", "==", "!=", "<", ">", "="]
+                .iter()
+                .find_map(|op| teil.strip_prefix(op).map(|r| (*op, r)))
+                .unwrap_or(("==", teil));
+            let op = if op == "=" { "==" } else { op };
+            teile.push((op.to_string(), lies_version(rest).map_err(|e| format!("`version: '{t}'`: {e}"))?));
+        }
+        Ok(Versionsbereich(teile))
+    }
+
+    pub fn erfuellt(&self, v: &[u64]) -> bool {
+        use std::cmp::Ordering::*;
+        self.0.iter().all(|(op, w)| {
+            let o = vergleiche(v, w);
+            match op.as_str() {
+                "<" => o == Less,
+                "<=" => o != Greater,
+                ">" => o == Greater,
+                ">=" => o != Less,
+                "!=" => o != Equal,
+                _ => o == Equal,
+            }
+        })
+    }
 }
 
 /// The name is a file name in the build directory. **Refuse, never interpret.**

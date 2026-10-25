@@ -2617,6 +2617,15 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
     let mut gesehen: HashMap<String, Span> = HashMap::new();
     for item in items {
         if let Some(name) = item.art.name() {
+            // **A module is named by its whole path** (`module lager::util` and `module werk::util`
+            // are two modules; their last segment alone would make them one).
+            let voll;
+            let name = if let ItemArt::Modul(m) = &item.art {
+                voll = Ident { text: m.pfad.text(), span: name.span };
+                &voll
+            } else {
+                name
+            };
             // `arch` und `when` waehlen aus: zwei Deklarationen desselben Namens fuer
             // **verschiedene** Architekturen sind eine Deklaration je Ziel, keine Doppelung.
             // `FRAGMENTS.md` F5 schreibt `prim fn invoke … arch x86_64;` und dieselbe Zeile
