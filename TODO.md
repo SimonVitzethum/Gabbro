@@ -118,6 +118,8 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   at each call site is a substitute, not supply-once.
 - **O6 (DEMAND 3 as an unbounded rank witness).** Works for the refutation; the proof direction (`unsat`) over the rank form plus four
   undrawn reachability rows stays with the demand.
+- **Generator support for aggregates (2026-10-25).** G has `Ty.arr`/`Ty.str` and their seven `Expr` forms (THEOREM-MAP 99);
+  the generator gives them size `unendlich` and never draws them, so test sets M and N do not cover them yet.
 - **O14 (arena chains: two statement shapes without a form).** Specification and exporter have the form; two statement shapes close no chain.
 - **O19-Rest (handlers and cores).** Since 2026-10-18 (Lean): G has a per-core interrupt-mask state over the layer `KernZ`
   (`KernMaske.lean`); the core schedule is DERIVED from the machine (`kernPlan_aus_lauf`, `kernHaltE_iff_M`); `Code` has `Instr.imsk` with the

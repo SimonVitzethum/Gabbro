@@ -66,6 +66,14 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .forallSlots _ body _ => 1 + groesseExpr body
   | _, _, _, .existsSlots _ body _ => 1 + groesseExpr body
   | _, _, _, .reaches _ _ _ a b _ => 1 + groesseExpr a + groesseExpr b
+  -- Aggregate values (2026-10-25) are not generated yet: outside every finite stage (TODO.md).
+  | _, _, _, .arrNil => unendlich
+  | _, _, _, .arrCons a b => unendlich + 1 + groesseExpr a + groesseExpr b
+  | _, _, _, .arrGet a i => unendlich + 1 + groesseExpr a + groesseExpr i
+  | _, _, _, .arrSet a i v => unendlich + 1 + groesseExpr a + groesseExpr i + groesseExpr v
+  | _, _, _, .strLit _ _ => unendlich
+  | _, _, _, .strLen s => unendlich + 1 + groesseExpr s
+  | _, _, _, .strCat s t => unendlich + 1 + groesseExpr s + groesseExpr t
 
 def groesseNutz : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → Nat
   | _, _, _, .empty => 1

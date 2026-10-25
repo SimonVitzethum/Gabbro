@@ -186,6 +186,12 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .case _ _ nutz => nutz.orte
   | .forallSlots t body _ | .existsSlots t body _ => .inl t :: body.orte
   | .reaches t _ _ a b _ => .inl t :: a.orte ++ b.orte
+  | .arrNil | .strLit _ _ => []
+  | .arrCons a rest => a.orte ++ rest.orte
+  | .arrGet a i => a.orte ++ i.orte
+  | .arrSet a i v => a.orte ++ i.orte ++ v.orte
+  | .strLen s => s.orte
+  | .strCat s t => s.orte ++ t.orte
 
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
   | .empty => []
@@ -274,6 +280,13 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
       (alleIndizes (D.count t)).any fun k => wahr? (eval σ₀ body σ (.cons k ρ))
   | .reaches t f hf a b _, σ, ρ =>
       kette (fun k => hf ▸ σ.slots t k f) (D.count t).toNat (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n
+  | .arrNil, _, _ => fun i => i.elim0
+  | .arrCons a rest, σ, ρ => arrConsW (eval σ₀ a σ ρ) (eval σ₀ rest σ ρ)
+  | .arrGet a i, σ, ρ => (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin
+  | .arrSet a i v, σ, ρ => arrSetW (eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin (eval σ₀ v σ ρ)
+  | .strLit bs h, _, _ => ⟨bs, h⟩
+  | .strLen s, σ, ρ => strLenW (eval σ₀ s σ ρ)
+  | .strCat s t, σ, ρ => strCatW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
 
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast c
   | .empty, _, _ => ()
@@ -448,6 +461,9 @@ def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D �
   | .fnptr m, n => zeigerPasst z m n
   | .ptr _ _, _ => some ()
   | .ref _, n => if 0 ≤ n then some (Val.vonZelle n.toNat) else Option.none
+  -- An aggregate is not one raw word: the checker admits no foreign or register answer of such a type.
+  | .arr _ _, _ => Option.none
+  | .str _, _ => Option.none
 
 def einpassenErg (z : Int → Option D.Fn) : (τ : Option Ty) → Int → Option (ErgVal D τ)
   | Option.none, _ => some ()

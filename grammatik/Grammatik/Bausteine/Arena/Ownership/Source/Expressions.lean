@@ -34,6 +34,12 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .slotRef r t _ _ _ _ => .range t :: requirements r
   | .forallSlots .. | .existsSlots .. | .reaches .. => [.unsupported]
   | .refEq a b => requirements a ++ requirements b
+  | .arrNil | .strLit .. => []
+  | .arrCons a b => requirements a ++ requirements b
+  | .arrGet a b => requirements a ++ requirements b
+  | .strCat a b => requirements a ++ requirements b
+  | .arrSet a i v => requirements a ++ requirements i ++ requirements v
+  | .strLen s => requirements s
   | .lit _ | .tru | .fls | .glob .. | .ptrOf .. | .fnref .. | .oldG .. | .none _ | .why .. => []
 
 def payloadRequirements {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :

@@ -107,6 +107,14 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .forallSlots t body _ => do .ok s!"(Expr.forallSlots (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {← drE N body} {bew})"
   | _, .existsSlots t body _ => do .ok s!"(Expr.existsSlots (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {← drE N body} {bew})"
   | _, .reaches t f _ a b _ => do .ok s!"(Expr.reaches (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {bew} {← drE N a} {← drE N b} {bew})"
+  | _, .arrNil => .ok "(Expr.arrNil (D := z.deklaration))"
+  | _, .arrCons a b => do .ok s!"(Expr.arrCons (D := z.deklaration) {← drE N a} {← drE N b})"
+  | _, .arrGet a i => do .ok s!"(Expr.arrGet (D := z.deklaration) {← drE N a} {← drE N i})"
+  | _, .arrSet a i v => do .ok s!"(Expr.arrSet (D := z.deklaration) {← drE N a} {← drE N i} {← drE N v})"
+  | _, .strLit bs _ =>
+      .ok s!"(Expr.strLit (D := z.deklaration) [{", ".intercalate (bs.map fun b => s!"⟨{b.n}, by decide, by decide⟩")}] (by decide))"
+  | _, .strLen e => do .ok s!"(Expr.strLen (D := z.deklaration) {← drE N e})"
+  | _, .strCat e e' => do .ok s!"(Expr.strCat (D := z.deklaration) {← drE N e} {← drE N e'})"
 
 /-- A payload expression. -/
 def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option (Int × Int)} → NutzlastExpr D Γ Λ o → Except String String

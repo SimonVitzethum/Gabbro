@@ -864,6 +864,20 @@ def uTabNrAux : List UTab → Nat → String → Except String (Nat × Int)
 def uTabNr (tabs : List UTab) (n : String) : Except String (Nat × Int) :=
   uTabNrAux tabs 0 n
 
+/-- A surface type as text, for a refusal that names what it refuses. -/
+def sTypText : STyp → String
+  | .atom a => a
+  | .path ps => ".".intercalate ps
+  | .ptr r w t => "ptr<" ++ r ++ ", " ++ w ++ "> " ++ sTypText t
+  | .index o t => (if o then "option " else "") ++ "index into " ++ t
+  | .range b _ _ _ => sTypText b ++ " in .."
+  | .array t _ => "[" ++ sTypText t ++ "; ..]"
+  | .wrap t => "wrap " ++ sTypText t
+  | .embed b n _ => sTypText b ++ " embed " ++ n
+  | .raw n => "raw " ++ n
+  | .str _ => "string"
+  | .entry n _ => "entry " ++ n
+
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
     `lean_g.rs`). Named address spaces other than `normal`,
@@ -893,7 +907,7 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
       | .ok (num, _) => .ok (.ptr num false)
       | .error e => .error e
     else .error "pointer right without G form"
-  | _ => .error "type without G form"
+  | t => .error ("type without G form: " ++ sTypText t)
 
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit
@@ -904,7 +918,7 @@ def uFeldTyp (alias : List (String × (Int × Int))) : STyp → Except String (I
     match uSchranke alias lo, uSchranke alias hi with
     | some a, some b => .ok (a, b)
     | _, _ => .error "field type without G form"
-  | _ => .error "field type without G form"
+  | t => .error ("field type without G form: " ++ sTypText t)
 
 /-- A count: a literal or a named constant (the `numeral` of
     `lean_g.rs`). -/
@@ -1015,6 +1029,7 @@ def uSperre (globs : List UGlob) (tabs : List UTab) : SItemTief → Except Strin
       | .error e => .error e
       | .ok ts => .ok { name := n, rank := Int.ofNat rk, guard := ts, masks := true }
     else .error "lock masks something but irqs: no G form"
+  | .lockT n .. => .error ("lock without G form: " ++ n)
   | _ => .error "lock without G form"
 
 /-- A parameter position by name (the `param_index` of
@@ -1572,7 +1587,7 @@ def uErgBereich (alias : List (String × (Int × Int))) : STyp →
     match uSchranke alias lo, uSchranke alias hi with
     | some a, some b => .ok (a, b)
     | _, _ => .error "result without G form"
-  | _ => .error "result without G form"
+  | t => .error ("result without G form: " ++ sTypText t)
 
 /-- `requires Held(L)`: exactly the signature-held locks (the
     requires loop of `check_fn`; every other requires-clause is

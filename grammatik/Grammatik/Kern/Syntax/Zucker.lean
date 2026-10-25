@@ -100,6 +100,13 @@ def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr
   | .forallSlots t body hL => .forallSlots t (body.ren (Var.hoch r)) hL
   | .existsSlots t body hL => .existsSlots t (body.ren (Var.hoch r)) hL
   | .reaches t f hf a b hL => .reaches t f hf (a.ren r) (b.ren r) hL
+  | .arrNil => .arrNil
+  | .arrCons a rest => .arrCons (a.ren r) (rest.ren r)
+  | .arrGet a i => .arrGet (a.ren r) (i.ren r)
+  | .arrSet a i v => .arrSet (a.ren r) (i.ren r) (v.ren r)
+  | .strLit bs h => .strLit bs h
+  | .strLen e => .strLen (e.ren r)
+  | .strCat e e' => .strCat (e.ren r) (e'.ren r)
 
 def NutzlastExpr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
     NutzlastExpr D Γ Λ c → NutzlastExpr D Γ' Λ c

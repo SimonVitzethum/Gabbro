@@ -294,6 +294,48 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       rw [castW_n, castW_n, ha, hb]
       exact kette_gleich (E.count t) _ _
         (fun k => E.opt_treu K _ _ (E.typ t f) (h.1 t k f) hf _) _ _
+  | _, _, _, .arrNil, _, _, _ => fun j => j.elim0
+  | _, _, _, .arrCons a b, ρ, ρ', hρ => by
+      have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
+      intro j
+      show E.VRel K _ (arrConsW _ _ j) (arrConsW _ _ j)
+      unfold arrConsW
+      split
+      · exact ha
+      · exact hb _
+  | _, _, _, .arrGet a i, ρ, ρ', hρ => by
+      have ha := eval_exE h₀ h a ρ ρ' hρ; have hi := eval_exE h₀ h i ρ ρ' hρ
+      simp only [VRel, valE] at hi
+      show E.VRel K _ ((eval σ₀ a σ ρ) (eval σ₀ i σ ρ).fin)
+        ((eval σ₀' (exE E a) σ' ρ') (eval σ₀' (exE E i) σ' ρ').fin)
+      rw [hi]
+      exact ha _
+  | _, _, _, .arrSet a i v, ρ, ρ', hρ => by
+      have ha := eval_exE h₀ h a ρ ρ' hρ; have hi := eval_exE h₀ h i ρ ρ' hρ
+      have hv := eval_exE h₀ h v ρ ρ' hρ
+      simp only [VRel, valE] at hi
+      intro j
+      show E.VRel K _ (arrSetW _ _ _ j) (arrSetW _ _ _ j)
+      unfold arrSetW
+      rw [hi]
+      by_cases hj : j = Zahl.fin (eval σ₀ i σ ρ)
+      · simp only [hj, if_true]
+        exact hv
+      · simp only [hj, if_false]
+        exact ha j
+  | _, _, _, .strLit _ _, _, _, _ => rfl
+  | _, _, _, .strLen e, ρ, ρ', hρ => by
+      have he := eval_exE h₀ h e ρ ρ' hρ
+      simp only [VRel] at he ⊢
+      show strLenW _ = strLenW _
+      rw [he]
+      rfl
+  | _, _, _, .strCat e e', ρ, ρ', hρ => by
+      have he := eval_exE h₀ h e ρ ρ' hρ; have he' := eval_exE h₀ h e' ρ ρ' hρ
+      simp only [VRel] at he he' ⊢
+      show strCatW _ _ = strCatW _ _
+      rw [he, he']
+      rfl
 
 /-- Payloads. -/
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :

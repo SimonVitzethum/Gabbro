@@ -220,7 +220,36 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       rw [ha, hb]
       exact speicher_kette_gleich _ _ _ hw
 
+  | .arrNil => rfl
+  | .strLit _ _ => rfl
+  | .arrCons a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .arrGet a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .strCat a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .arrSet a i v =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hi := eval_liest_nur_speicher i σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hv := eval_liest_nur_speicher v σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hi, hv]
+  | .strLen a =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha]
+
 /-- The payload reads only its places: the second half of the stone. -/
+
 theorem evalNutz_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (nutz : NutzlastExpr D Γ Λ c)
     (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)

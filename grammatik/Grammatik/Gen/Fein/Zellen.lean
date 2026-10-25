@@ -41,6 +41,8 @@ def _root_.Gabbro.Grammatik.Ty.kopf : Ty → Nat
   | .fnptr .. => 7
   | .ptr .. => 8
   | .ref .. => 9
+  | .arr .. => 10
+  | .str .. => 11
 
 variable {D : Deklaration}
 
@@ -94,6 +96,13 @@ def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .reaches .. => 41
   | .refEq .. => 42
   | .slotRef .. => 43
+  | .arrNil .. => 44
+  | .arrCons .. => 45
+  | .arrGet .. => 46
+  | .arrSet .. => 47
+  | .strLit .. => 48
+  | .strLen .. => 49
+  | .strCat .. => 50
 
 def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → Nat
   | .empty .. => 0
@@ -227,6 +236,13 @@ def fzE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List FZel
   | .reaches (a := a) (b := b) .. => [⟨0, 0, 41, false, [tk a, tk b]⟩, ⟨1, 0, 41, false, [0, 0, kE a]⟩, ⟨1, 0, 41, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
   | .refEq (a := a) (b := b) .. => [⟨0, 0, 42, false, [tk a, tk b]⟩, ⟨1, 0, 42, false, [0, 0, kE a]⟩, ⟨1, 0, 42, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
   | .slotRef (r := r) .. => [⟨0, 0, 43, false, [tk r]⟩, ⟨1, 0, 43, false, [0, 0, kE r]⟩] ++ fzE r
+  | .arrNil .. => [⟨0, 0, 44, false, []⟩]
+  | .arrCons a b => [⟨0, 0, 45, false, [tk a, tk b]⟩, ⟨1, 0, 45, false, [0, 0, kE a]⟩, ⟨1, 0, 45, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
+  | .arrGet a b => [⟨0, 0, 46, false, [tk a, tk b]⟩, ⟨1, 0, 46, false, [0, 0, kE a]⟩, ⟨1, 0, 46, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
+  | .arrSet a i v => [⟨0, 0, 47, false, [tk a, tk i, tk v]⟩, ⟨1, 0, 47, false, [0, 0, kE a]⟩, ⟨1, 0, 47, false, [1, 0, kE i]⟩, ⟨1, 0, 47, false, [2, 0, kE v]⟩] ++ fzE a ++ fzE i ++ fzE v
+  | .strLit .. => [⟨0, 0, 48, false, []⟩]
+  | .strLen e => [⟨0, 0, 49, false, [tk e]⟩, ⟨1, 0, 49, false, [0, 0, kE e]⟩] ++ fzE e
+  | .strCat a b => [⟨0, 0, 50, false, [tk a, tk b]⟩, ⟨1, 0, 50, false, [0, 0, kE a]⟩, ⟨1, 0, 50, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
 
 def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List FZelle
   | .empty .. => [⟨0, 1, 0, false, []⟩]

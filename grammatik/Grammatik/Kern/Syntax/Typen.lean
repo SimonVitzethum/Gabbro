@@ -62,6 +62,11 @@ inductive Ty where
       is fresh. That the provider has memory to give is user logic too (Simon, 2026-10-24: OOM is user logic). G itself makes no reference, and never one
       from an integer. Every access through it carries the guards of `t` like a slot access. -/
   | ref (t : Nat)
+  /-- `[T; N]` as a VALUE (2026-10-25, Simon: aggregate values in G, lifting O15): `n` values of `τ`. Passed,
+      returned and bound by copy; an element is read and replaced by index. -/
+  | arr (τ : Ty) (n : Nat)
+  /-- `string max N` as a VALUE (lane 261, in G since 2026-10-25): at most `n` bytes. -/
+  | str (n : Nat)
   deriving DecidableEq, Repr
 
 /-- Ein Index in `0 ..< n`: der Typ, den `index into T` erzeugt. -/
@@ -134,6 +139,8 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .fnptr n => { f : F // passt f n = true }
   | .ptr _ _ => Unit
   | .ref _ => Nat
+  | .arr τ n => Fin n → Val F passt τ
+  | .str n => { bs : List (Zahl 0 255) // bs.length ≤ n }
 
 /-- The cell number of a reference. -/
 def Val.zelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (v : Val F passt (.ref n)) : Nat := v
@@ -151,6 +158,27 @@ theorem Val.int_bereich {F : Type} {passt : F → Nat → Bool} {lo hi : Int} (v
     Grammatik zulaesst (`M104` in der sicheren Richtung). -/
 def Zahl.weiter {lo hi lo' hi' : Int} (h1 : lo' ≤ lo) (h2 : hi ≤ hi') (v : Zahl lo hi) :
     Zahl lo' hi' := ⟨v.n, by have := v.lo_le; omega, by have := v.le_hi; omega⟩
+
+/-- An index of an array of length `n` as a position. -/
+def Zahl.fin {n : Nat} (k : Zahl 0 ((n : Int) - 1)) : Fin n :=
+  ⟨k.n.toNat, by have := k.lo_le; have := k.le_hi; omega⟩
+
+/-- One element in front of an array value. -/
+def arrConsW {α : Type} {n : Nat} (x : α) (xs : Fin n → α) : Fin (n + 1) → α :=
+  fun j => if h : j.val = 0 then x else xs ⟨j.val - 1, by have := j.isLt; omega⟩
+
+/-- An array value with the element at `k` replaced. -/
+def arrSetW {α : Type} {n : Nat} (a : Fin n → α) (k : Fin n) (v : α) : Fin n → α :=
+  fun j => if j = k then v else a j
+
+/-- The length of a string value. -/
+def strLenW {n : Nat} (w : { bs : List (Zahl 0 255) // bs.length ≤ n }) : Zahl 0 n :=
+  ⟨w.1.length, by omega, by have := w.2; omega⟩
+
+/-- The concatenation of two string values. -/
+def strCatW {n m : Nat} (a : { bs : List (Zahl 0 255) // bs.length ≤ n })
+    (b : { bs : List (Zahl 0 255) // bs.length ≤ m }) : { bs : List (Zahl 0 255) // bs.length ≤ n + m } :=
+  ⟨a.1 ++ b.1, by have := a.2; have := b.2; simp only [List.length_append]; omega⟩
 
 /-! ## 3. Die Rechnung -- jede Operation mit dem Bereich, den `M104` ihr gibt -/
 

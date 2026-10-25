@@ -511,6 +511,20 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   /-- `r->f` into the OPEN table number `n` -- under the same guards as a slot of `t`. -/
   | slotRef (r : Expr Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
       (f : D.Feld t) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
+  /-- The empty array literal (2026-10-25: aggregate values). -/
+  | arrNil : Expr Γ Λ (.arr τ 0)
+  /-- `[a, rest…]`: one element in front of an array literal. -/
+  | arrCons (a : Expr Γ Λ τ) (rest : Expr Γ Λ (.arr τ n)) : Expr Γ Λ (.arr τ (n + 1))
+  /-- `a[i]`: the element at an index of the array's length. -/
+  | arrGet (a : Expr Γ Λ (.arr τ n)) (i : Expr Γ Λ (.index n)) : Expr Γ Λ τ
+  /-- The array with the element at `i` replaced by `v` (a value; `a[i] = v` on a local binds it). -/
+  | arrSet (a : Expr Γ Λ (.arr τ n)) (i : Expr Γ Λ (.index n)) (v : Expr Γ Λ τ) : Expr Γ Λ (.arr τ n)
+  /-- A string literal: its UTF-8 bytes, at most the declared maximum. -/
+  | strLit (bs : List (Zahl 0 255)) (h : bs.length ≤ n) : Expr Γ Λ (.str n)
+  /-- `lenof(s)`: the length of a string. -/
+  | strLen (s : Expr Γ Λ (.str n)) : Expr Γ Λ (.int 0 n)
+  /-- `s + t`: the concatenation, its maximum the sum of the maxima. -/
+  | strCat (s : Expr Γ Λ (.str n)) (t : Expr Γ Λ (.str m)) : Expr Γ Λ (.str (n + m))
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
   | empty : NutzlastExpr Γ Λ none

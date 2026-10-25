@@ -166,6 +166,9 @@ theorem zeigerPasst_voll (m : Nat) (v : {f : D.Fn // D.passt f m = true}) :
     value the kernel IEEE model computes is well-formed, `GleitkommaBits.lean`). -/
 def WertOk : (τ : Ty) → Wert D τ → Prop
   | .fl _ _, v => Gleitkomma.wf Gleitkomma.f64 (v : Gleit _ _).x
+  -- an aggregate is not one raw word: no answer has such a value
+  | .arr _ _, _ => False
+  | .str _, _ => False
   | _, _ => True
 
 /-- **Every value is an answer** (G1 repair): for every type and every value of it
@@ -203,8 +206,11 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
   | .ref _, r, _ => ⟨fun _ => Option.none, ((Val.zelle r : Nat) : Int), by
       simp only [einpassen, if_pos (Int.natCast_nonneg _), Int.toNat_natCast]
       rfl⟩
+  | .arr _ _, _, h => h.elim
+  | .str _, _, h => h.elim
 
 /-- Every decoded value is a value an answer can have. -/
+
 theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v : Wert D τ),
     einpassen z τ n = some v → WertOk τ v
   | _, .fl _ _, _, _, h => gleitWortPasst_wf h
@@ -501,6 +507,8 @@ def antwortTyB (fs : List D.Fn) : Ty → Bool
   | .fnptr m => fs.any fun f => D.passt f m
   | .ptr _ _ => true
   | .ref _ => true
+  | .arr _ _ => false
+  | .str _ => false
 
 /-- An answer class is not empty, decided (a call without a result always answers). -/
 def antwortB (fs : List D.Fn) : Option Ty → Bool
@@ -545,6 +553,8 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
         fun ⟨v, _⟩ => ⟨(v : {f : D.Fn // D.passt f m = true}).1, hvoll _, v.2⟩⟩
   | .ptr _ _ => ⟨fun _ => ⟨(() : Unit), trivial⟩, fun _ => rfl⟩
   | .ref _ => ⟨fun _ => ⟨(Val.vonZelle 0 : Wert D (.ref _)), trivial⟩, fun _ => rfl⟩
+  | .arr _ _ => ⟨fun h => absurd h (by simp [antwortTyB]), fun ⟨_, h⟩ => h.elim⟩
+  | .str _ => ⟨fun h => absurd h (by simp [antwortTyB]), fun ⟨_, h⟩ => h.elim⟩
 
 /-- **The answer class, decided exactly** (W1): given the complete function list, the Bool
     says "answerable" exactly when the class is not empty (`antwortLeer_iff`). -/

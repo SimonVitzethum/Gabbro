@@ -35,6 +35,13 @@ open Gabbro.Grammatik
   | .fnptr n => .fnptr (sn n)
   | .ptr t rw => .ptr (tn t) rw
   | .ref t => .ref (tn t)
+  | .arr τ n => .arr (tyN sn tn τ) n
+  | .str n => .str n
+
+/-- Under the identity maps a type is itself. -/
+theorem tyN_id : ∀ τ : Ty, tyN (fun n => n) (fun n => n) τ = τ
+  | .int _ _ | .bool | .opt _ | .sum _ | .why _ | .never | .fl _ _ | .fnptr _ | .ptr _ _ | .ref _ | .str _ => rfl
+  | .arr τ n => by simp only [tyN, tyN_id τ]
 
 /-- **`D` inside `D'`.** -/
 structure Einbettung (D D' : Deklaration) where
@@ -148,6 +155,8 @@ def valE : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ)
   | .fnptr _, v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩
   | .ptr _ _, v => v
   | .ref _, v => v
+  | .arr τ _, v => fun j => valE τ (v j)
+  | .str _, v => v
 
 /-- A result value. -/
 def ergE : (e : Option Ty) → ErgVal D e → ErgVal D' (e.map E.tyE)
@@ -238,7 +247,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   feld_feldZ := fun _ _ => rfl
   count := fun _ => rfl
   offen := fun _ => rfl
-  typ := fun t f => by cases D.typ t f <;> rfl
+  typ := fun t f => (tyN_id _).symm
   erlaubt := fun _ _ => rfl
   geteilt := fun _ => rfl
   geist := fun _ => rfl
@@ -246,7 +255,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   globZ := some
   globZ_glob := fun _ => rfl
   glob_globZ := fun _ _ h => (Option.some.inj h).symm
-  gtyp := fun g => by cases D.gtyp g <;> rfl
+  gtyp := fun g => (tyN_id _).symm
   nutzlast := fun _ => by simp
   atomar := fun _ => rfl
   ggeteilt := fun _ => rfl
@@ -291,10 +300,10 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
     conv => lhs; rw [← List.map_id (D.aparams a)]
     congr 1
     funext τ
-    cases τ <;> rfl
+    exact (tyN_id τ).symm
   aerg := fun a => by cases D.aerg a with
     | none => rfl
-    | some τ => cases τ <;> rfl
+    | some τ => exact congrArg some (tyN_id τ).symm
   agruende := fun _ => rfl
   aschreibt := fun _ _ => rfl
   agschreibt := fun _ _ => rfl
@@ -303,7 +312,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   regZ := some
   regZ_reg := fun _ => rfl
   reg_regZ := fun _ _ h => (Option.some.inj h).symm
-  rtyp := fun r => by cases D.rtyp r <;> rfl
+  rtyp := fun r => (tyN_id _).symm
   rklasse := fun _ => rfl
   spiegel := fun _ => by simp
   rtraeger := fun r => by

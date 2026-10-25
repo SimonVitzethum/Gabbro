@@ -65,6 +65,13 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .forallSlots (body := body) .. => "Expr.forallSlots" :: eE body
   | .existsSlots (body := body) .. => "Expr.existsSlots" :: eE body
   | .reaches (a := a) (b := b) .. => "Expr.reaches" :: (eE a ++ eE b)
+  | .arrNil => ["Expr.arrNil"]
+  | .arrCons a b => "Expr.arrCons" :: (eE a ++ eE b)
+  | .arrGet a i => "Expr.arrGet" :: (eE a ++ eE i)
+  | .arrSet a i v => "Expr.arrSet" :: (eE a ++ eE i ++ eE v)
+  | .strLit .. => ["Expr.strLit"]
+  | .strLen e => "Expr.strLen" :: eE e
+  | .strCat e e' => "Expr.strCat" :: (eE e ++ eE e')
 
 def eN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List String
   | .empty => ["NutzlastExpr.empty"]
@@ -179,6 +186,8 @@ def tyName : Ty → String
   | .fnptr _ => "Ty.fnptr"
   | .ptr .. => "Ty.ptr"
   | .ref _ => "Ty.ref"
+  | .arr .. => "Ty.arr"
+  | .str _ => "Ty.str"
 
 /-- The members a lowered program reaches: every function's body, and the types its parameters, results, table
     fields and statics have. -/

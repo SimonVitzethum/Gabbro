@@ -39,6 +39,8 @@ def Spez.druckTy (z : Spez) : Ty → Except String String
   | .fnptr _ => .error "unsupported type: function pointer"
   | .ptr .. => .error "unsupported type: pointer"
   | .ref n => if n < z.tabs.length then .ok s!"index into T{n}" else .error "unsupported type: reference to no table"
+  | .arr τ n => do .ok s!"[{← z.druckTy τ}; {n}]"
+  | .str n => .ok s!"string max {n}"
 
 /-- The names of the entities of a member. -/
 def Spez.namen (z : Spez) : Namen z.deklaration where

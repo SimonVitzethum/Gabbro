@@ -157,6 +157,8 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .fnptr _, _ => Iff.rfl
   | .ptr _ _, _ => Iff.rfl
   | .ref _, _ => Iff.rfl
+  | .arr _ _, _ => Iff.rfl
+  | .str _, _ => Iff.rfl
 
 /-- **An answer class of `D.mitRuhe` is empty exactly when it is in `D`**: the shifted types
     have the shifted values (`valR`/`valZ`), and no shifted pointer type names the root. -/
@@ -186,6 +188,8 @@ theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
   | .fnptr _ => by simp
   | .ptr _ _ => by simp
   | .ref _ => by simp
+  | .arr _ _ => by simp
+  | .str _ => by simp
 
 theorem stelleAx_mitRuhe (e : Option Ty) :
     (e.map tyR = some .never ∨ ¬ AntwortLeer D.mitRuhe (e.map tyR)) ↔
