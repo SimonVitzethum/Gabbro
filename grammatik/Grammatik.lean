@@ -672,3 +672,4 @@ import Grammatik.Logik.WP.HA.ZeugeZertifikat
 import Grammatik.Logik.WP.HA.ZeugeZertifikat2
 import Grammatik.Logik.WP.HA.ZeugeZertifikat3
 import Grammatik.Logik.WP.HA.ZeugeZertifikat4
+import Grammatik.Logik.WP.HA.Zertifikat
