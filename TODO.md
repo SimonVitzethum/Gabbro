@@ -120,6 +120,18 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   undrawn reachability rows stays with the demand.
 - **Generator support for aggregates (2026-10-25).** G has `Ty.arr`/`Ty.str` and their seven `Expr` forms (THEOREM-MAP 99);
   the generator gives them size `unendlich` and never draws them, so test sets M and N do not cover them yet.
+- **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
+  `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
+  fields. Open, model work first where marked (M):
+  * (M) records as values (`Treiber`, `Completion`, `Platz`; O15 was priced and refused for C, revisit for stage 0);
+    tables of atomics (`atomic A : [T; N]`); a translator and library calls (a table as a value, translation-time
+    evaluation); `format` (wire layouts over byte buffers); `rcu`, `accumulates`, `walk`, `entrust`, `boot`,
+    `profile`, `gate`, `check`, `axiom` items; `ptr<_, _> u8` byte regions; the `shr` result range (`h1 >> l2`,
+    the checker's, instead of `0 .. h1`).
+  * (front end) floats (`f64`, `Ty.fl` exists); `exchange update` loops; `count x in slots` as a value; `narrow`
+    of a place and at the top level of a body; `let mut` of an aggregate and element writes into a local;
+    `use`/module paths (qualified names: the `gabbro-qn` session); `deadline` on foreign bodies; tree tables,
+    `owner`, `backed`; registers' fields; `loop`, `await`, `drops`/`takes`/`posts`.
 - **O14 (arena chains: two statement shapes without a form).** Specification and exporter have the form; two statement shapes close no chain.
 - **O19-Rest (handlers and cores).** Since 2026-10-18 (Lean): G has a per-core interrupt-mask state over the layer `KernZ`
   (`KernMaske.lean`); the core schedule is DERIVED from the machine (`kernPlan_aus_lauf`, `kernHaltE_iff_M`); `Code` has `Instr.imsk` with the

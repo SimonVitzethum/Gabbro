@@ -301,7 +301,8 @@ def brauchtF (ctx : UCtx) : SKlausel → Option (Except String UEns)
   | .needs e => some (uBool ctx e)
   | _ => none
 
-theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss : List SAnw) (ende : Option SEnde) :
+theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss : List SAnw) (ende : Option SEnde)
+    (hsp : ctx.specs = []) :
     elabFn ctx koepfe kl (.block ss ende) =
       match uSeq (kl.filterMap (gibtF ctx)) with
       | .error e => .error e
@@ -314,7 +315,10 @@ theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss 
           | .ok (body, ctxE) =>
             match uEnde ctxE ende with
             | .error e => .error e
-            | .ok r => .ok (gives, needs, body, r) := rfl
+            | .ok r => .ok (gives, needs, body, r) := by
+  unfold elabFn
+  simp only [hsp, List.isEmpty_nil, ↓reduceIte]
+  rfl
 
 theorem brauchtF_needs (ctx : UCtx) (e : SExpr) (h : kopfOk e = true) : brauchtF ctx (.needs e) = some (uBool ctx e) := by
   cases e with
@@ -458,9 +462,9 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
     (nFn (fN z f)) annahmen sums zustaende hs zeiger zb hzb
   unfold elabUFunktion
   simp only [hkopf]
-  rw [elabFn_eq, gibt_klauseln _ P f req ens hreqF, braucht_klauseln _ P f req ens hensF]
   set ctx := { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) (nFn (fN z f)) annahmen whys
     sums regs zustaende with zeiger := zeiger, zeigerBasis := zb } with hctx
+  rw [elabFn_eq ctx _ _ _ _ rfl, gibt_klauseln _ P f req ens hreqF, braucht_klauseln _ P f req ens hensF]
   -- ensures
   have hG : uSeq (ens.filterMap (gibtF ctx)) = .ok gives := by
     rcases hE with ⟨rfl, rfl⟩ | ⟨e, u, rfl, rfl, he, hu⟩

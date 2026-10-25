@@ -77,6 +77,8 @@ def istGegenstand : SItemTief → Bool
   | .devT .. => false
   | .groupT .. => false
   | .stateT .. => false
+  | .specT .. => false
+  | .asmT .. => false
   | _ => true
 
 /-- **One off-fragment item fails the item check.** By cases over all
@@ -96,8 +98,8 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | useT _ => rfl
   | globT _ _ _ _ _ _ _ => simp [istGegenstand] at he
   | protoT _ => simp [istGegenstand] at he
-  | specT _ _ => rfl
-  | asmT _ _ => rfl
+  | specT _ _ => simp [istGegenstand] at he
+  | asmT _ _ => simp [istGegenstand] at he
   | formatT _ _ _ _ => rfl
   | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
   | whyT _ _ _ => simp [istGegenstand] at he
@@ -143,6 +145,8 @@ def istAngenommen : SItemTief → Bool
   | .devT .. => true
   | .groupT .. => true
   | .stateT .. => true
+  | .specT .. => true
+  | .asmT .. => true
   | _ => false
 
 /-- **An accepted head steps past the item check.** The mirror of
@@ -162,8 +166,8 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | useT _ => simp [istAngenommen] at he
   | globT _ _ _ _ _ _ _ => rfl
   | protoT _ => rfl
-  | specT _ _ => simp [istAngenommen] at he
-  | asmT _ _ => simp [istAngenommen] at he
+  | specT _ _ => rfl
+  | asmT _ _ => rfl
   | formatT _ _ _ _ => simp [istAngenommen] at he
   | arenaT _ _ _ _ _ _ => rfl
   | whyT _ _ _ => rfl
@@ -205,8 +209,8 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | useT _ => simp [istGegenstand] at he
   | globT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
   | protoT _ => simp [istAngenommen] at ha
-  | specT _ _ => simp [istGegenstand] at he
-  | asmT _ _ => simp [istGegenstand] at he
+  | specT _ _ => simp [istAngenommen] at ha
+  | asmT _ _ => simp [istAngenommen] at ha
   | formatT _ _ _ _ => simp [istGegenstand] at he
   | arenaT _ _ _ _ _ _ => simp [istAngenommen] at ha
   | whyT _ _ _ => simp [istAngenommen] at ha

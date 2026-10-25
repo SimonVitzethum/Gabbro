@@ -505,6 +505,8 @@ structure UCtx where
   resWhy : Option (Nat × Nat) := none
   /-- The result is an aggregate value (`Ty.arr`, `Ty.str`): its type. -/
   resTy : Option Ty := none
+  /-- The unit's `spec fn`s (name, parameter names, predicate): inlined at every use in a contract (SUGAR, `M130`). -/
+  specs : List (String × List String × SExpr) := []
   /-- The unit's device registers. -/
   regs : List UReg := []
   /-- The unit's `state` items. -/
@@ -599,8 +601,8 @@ def UFn.ergTy (f : UFn) : Option Ty :=
       | some (_, n) => some (Ty.why n)
       | none => f.res.map fun r => .int r.1 r.2
 
-/-- One foreign body (`extern fn`, `D.Ax`): its parameters and its answer (`none`, a number, a truth value or
-    `never`); it writes nothing. -/
+/-- One foreign body (`extern fn`, `= asm { .. }`, `D.Ax`): its parameters, its answer (`none`, a number, a truth
+    value or `never`) and what it writes (`effects { writes .. }`: `D.aschreibt`/`D.agschreibt`). -/
 structure UAx where
   name : String
   params : List Ty
@@ -608,6 +610,10 @@ structure UAx where
   res : Option Ty
   /-- The number of reasons of its channel (`D.agruende`), 0 without one. -/
   gruende : Nat := 0
+  /-- The tables it writes. -/
+  puts : List String := []
+  /-- The statics it writes. -/
+  gputs : List String := []
   deriving DecidableEq, Repr
 
 /-- The elaborated program: tables, locks, functions. -/
@@ -1576,6 +1582,8 @@ structure UFnKopf where
   resRef : Option Nat := none
   /-- The result is an aggregate value: its type. -/
   resTy : Option Ty := none
+  /-- The tables a foreign body writes (`ext`). -/
+  puts : List String := []
 
 /-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
     reason. -/
@@ -1812,10 +1820,7 @@ where
     machine and discharged by a probe, so the clause is dropped like `costs` (lane 255 of the exporter). -/
 def uOhneKlauselForm : List SKlausel → Except String Unit
   | [] => .ok ()
-  | .refs _ :: _ => .error "clause without G form"
-  | .keeps _ :: _ => .error "clause without G form"
   | .drops _ :: _ => .error "clause without G form"
-  | .induc _ :: _ => .error "clause without G form"
   | .moves _ _ :: _ => .error "clause without G form"
   | .quits _ :: _ => .error "clause without G form"
   | _ :: rest => uOhneKlauselForm rest
@@ -1860,7 +1865,9 @@ def elabKopf (_consts : List (String × Int))
   match sig with
   | { art, name, params := params0, res, fehler, klauseln } =>
     let params := uOhneGriffe devs params0
-    if !strEq art "impl" then .error "fn is not impl"
+    -- a `fn` without a kind word and with a body is an implemented function, like `impl fn` (the checker's
+    -- `None | Some(Impl)`)
+    if !(strEq art "impl" || strEq art "") then .error "fn is not impl"
     else
       match uOhneKlauselForm klauseln with
       | .error e => .error e
@@ -3189,9 +3196,79 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
 
+/-- The substitution of the parameters of a `spec fn` by the arguments of a use. A quantifier binder hides the
+    parameter of its name in its body (the last operand). Structural in a fuel (an expression is far shallower). -/
+def sErsetze (σ : List (String × SExpr)) : Nat → SExpr → SExpr
+  | 0, e => e
+  | n + 1, e =>
+    match e with
+    | .variable x => match σ.find? (fun p => strEq p.1 x) with
+      | some p => p.2
+      | none => e
+    | .field a f => .field (sErsetze σ n a) f
+    | .index a i => .index (sErsetze σ n a) (sErsetze σ n i)
+    | .arrow a f => .arrow (sErsetze σ n a) f
+    | .un o a => .un o (sErsetze σ n a)
+    | .bin o a b => .bin o (sErsetze σ n a) (sErsetze σ n b)
+    | .call f as => .call f (as.map (sErsetze σ n))
+    | .built f as => .built f (as.map (sErsetze σ n))
+    | .old a => .old (sErsetze σ n a)
+    | .ext k ns xs =>
+      if k == XKind.all || k == XKind.any || k == XKind.count then
+        let σ' := σ.filter (fun p => !(ns.head?.any (strEq p.1 ·)))
+        .ext k ns ((xs.dropLast.map (sErsetze σ n)) ++ (xs.getLast?.map (sErsetze σ' n)).toList)
+      else .ext k ns (xs.map (sErsetze σ n))
+    | e => e
+
+/-- Every use `g(a…)` of a `spec fn` `g` replaced by its predicate over the arguments (SUGAR, `M130`), also inside
+    the predicates it brings. Structural in a fuel. -/
+def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr → SExpr
+  | 0, e => e
+  | n + 1, e =>
+    match e with
+    | .call f as =>
+      let as' := as.map (uSpecEin specs n)
+      match specs.find? (fun p => strEq p.1 f) with
+      | some (_, ps, body) =>
+        if ps.length == as'.length then uSpecEin specs n (sErsetze (ps.zip as') 1000 body) else .call f as'
+      | none => .call f as'
+    | .field a f => .field (uSpecEin specs n a) f
+    | .index a i => .index (uSpecEin specs n a) (uSpecEin specs n i)
+    | .arrow a f => .arrow (uSpecEin specs n a) f
+    | .un o a => .un o (uSpecEin specs n a)
+    | .bin o a b => .bin o (uSpecEin specs n a) (uSpecEin specs n b)
+    | .built f as => .built f (as.map (uSpecEin specs n))
+    | .old a => .old (uSpecEin specs n a)
+    | .ext k ns xs => .ext k ns (xs.map (uSpecEin specs n))
+    | e => e
+
+/-- The contract clauses with every `spec fn` inlined: `refines g` is `ensures g(params)` (`M131`/`M132`),
+    `maintains` documents (the owed invariants are derived from `effects`), `by induction over` names a scheme
+    and carries no term. Without `spec fn`s the clauses stay as they are. -/
+def uSpecKlauseln (ctx : UCtx) (params : List String) (ks : List SKlausel) : Except String (List SKlausel) :=
+  let ein := uSpecEin ctx.specs 1000
+  ks.foldr (fun k acc => match acc with
+    | .error e => .error e
+    | .ok r =>
+      match k with
+      | .needs e => .ok (.needs (ein e) :: r)
+      | .gives e => .ok (.gives (ein e) :: r)
+      | .refs [g] =>
+        match ctx.specs.find? (fun p => strEq p.1 g) with
+        | some (_, ps, _) =>
+          if ps.length == params.length then .ok (.gives (ein (.call g (params.map .variable))) :: r)
+          else .error "refines a spec fn of another arity"
+        | none => .error ("refines unknown spec fn " ++ g)
+      | .refs _ => .error "refines without one spec fn"
+      | .keeps _ | .induc _ => .ok r
+      | k => .ok (k :: r)) (.ok [])
+
 /-- Pass two: contracts and body of one function. -/
-def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
+def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
     (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
+  match (if ctx.specs.isEmpty then .ok klauseln0 else uSpecKlauseln ctx ctx.names klauseln0) with
+  | .error e => .error e
+  | .ok klauseln =>
   match uSeq ((klauseln.filterMap (fun
     | .gives e => some (uSichert ctx e)
     | _ => none))) with
@@ -3217,13 +3294,14 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
     (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
-    (regs : List UReg := []) (zustaende : List UZustand := []) : UCtx :=
+    (regs : List UReg := []) (zustaende : List UZustand := [])
+    (specs : List (String × List String × SExpr) := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds,
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
     fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
     resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2),
-    zustaende }
+    zustaende, specs }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
@@ -3232,12 +3310,12 @@ def elabUFunktion (consts : List (String × Int))
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (sig : FnSig)
     (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
     (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := [])
-    (zeiger : List String := []) (zb : Nat := 0) :
+    (zeiger : List String := []) (zb : Nat := 0) (specs : List (String × List String × SExpr) := []) :
     Except String UFn :=
   match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende with
+    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs with
                  zeiger := zeiger, zeigerBasis := zb }
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
@@ -3397,6 +3475,8 @@ def uRestFehler : List SItemTief → Except String Unit
   | .devT .. :: rest => uRestFehler rest
   | .groupT .. :: rest => uRestFehler rest
   | .stateT .. :: rest => uRestFehler rest
+  | .specT .. :: rest => uRestFehler rest
+  | .asmT .. :: rest => uRestFehler rest
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
@@ -3474,13 +3554,19 @@ def uWurzeln (tabs : List UTab) (fns : List UFn) (ms : List SItemTief) : Except 
 
 /-- The clauses an `extern fn` may carry: `effects { pure | diverges | reads .. }` and `costs`; a `requires`,
     an `ensures` or a write has no form (`D.Ax` carries no contract here). -/
-def uAxKlauseln : List SKlausel → Except String Unit
-  | [] => .ok ()
+def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
+    List SKlausel → Except String UFnKopf
+  | [] => .ok kopf
   | .effs es :: rest =>
-    if es.all (fun e => match e with | .pure => true | .loops => true | .reads _ => true | _ => false) then
-      uAxKlauseln rest
+    if es.all (fun e => match e with | .pure => true | .loops => true | .reads _ => true | .writes _ => true | _ => false) then
+      match uEffekteAux kopf tabs [] globs es with
+      | .error e => .error e
+      | .ok eff =>
+        uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts),
+                                 gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs rest
     else .error "foreign fn effect without G form"
-  | .cost _ :: rest => uAxKlauseln rest
+  | .cost _ :: rest => uAxKlauseln kopf tabs globs rest
+  | .arch _ :: rest => uAxKlauseln kopf tabs globs rest
   | _ :: _ => .error "foreign fn clause without G form"
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
@@ -3518,14 +3604,14 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
         | .ok r => .ok { base with res := .some r }
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
-def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) :
-    FnSig → Except String UFnKopf
+def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
+    (asm : Bool) : FnSig → Except String UFnKopf
   | { art, name, params, res, fehler, klauseln } =>
-    if !strEq art "extern" then .error "foreign fn without G form"
+    if !(asm || strEq art "extern") then .error "foreign fn without G form"
     else
-      match uAxKlauseln klauseln with
+      match uAxKopf alias tabs whys name params res fehler with
       | .error e => .error e
-      | .ok _ => uAxKopf alias tabs whys name params res fehler
+      | .ok kopf => uAxKlauseln kopf tabs globs klauseln
 
 /-- The head of a `syscall` gate (a foreign body too): the ABI half (`abi`, `number`, the registers) is the stub's,
     a precondition, a postcondition or a write has no form. -/
@@ -4073,7 +4159,8 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
-    match uSeq ((ms.filterMap (fun | .protoT sig => some sig | _ => none)).map (elabAxKopf alias tabs whys)) with
+    match uSeq ((ms.filterMap (fun | .protoT sig => some (sig, false) | .asmT sig _ => some (sig, true) | _ => none)).map
+        (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
     | .error e => .error e
     | .ok axKoepfe0 =>
     match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (elabGateKopf alias tabs whys)) with
@@ -4083,7 +4170,8 @@ def elabU : List SItemTief → Except String UProg
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
     match uSeq (fnItems.map (fun (s, b) =>
-        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb)) with
+        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+          (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)))) with
     | .error e => .error e
     | .ok fns =>
     match uWurzeln tabs fns ms with
@@ -4101,7 +4189,7 @@ def elabU : List SItemTief → Except String UProg
         { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
           gestartet := gestartet,
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
-                                          gruende := (k.kanal.map (·.2)).getD 0 }),
+                                          gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
           annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
           zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger }
       .ok (uMitBoden u)

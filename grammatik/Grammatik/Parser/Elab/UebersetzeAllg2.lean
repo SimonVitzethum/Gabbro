@@ -863,27 +863,48 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
        else .error "call writes without right"
       else .error "call writes without right"
 
-/-- The head of a call of a foreign body: the axiom and its arguments. -/
-structure AxKopf (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+/-- The head of a call of a foreign body: the axiom, its arguments, and the four write premises of
+    `axiomCall`/`bindAxiom`: what it writes the caller may write, under the guards it holds. -/
+structure AxKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (Λ : List (Res (declOf u))) where
   ax : Fin u.axs.length
   args : Args (declOf u) Γ Λ ((declOf u).aparams ax)
+  hw : ∀ t, (declOf u).aschreibt ax t = true → (verOf u caller).schreibt t = true
+  hg : ∀ g, (declOf u).agschreibt ax g = true → (verOf u caller).gschreibt g = true
+  hd : ∀ t, (declOf u).aschreibt ax t = true → darf (declOf u) t Λ
+  hgd : ∀ g, (declOf u).agschreibt ax g = true → gdarf (declOf u) g Λ
 
 def lowAxKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (cname : String) (args : List UArg) :
-    Except String (AxKopf u Γ Λ) :=
+    Except String (AxKopf u caller Γ Λ) :=
   match uaxIdx u.axs cname with
   | .error e => .error e
   | .ok a =>
     match lowCallArgsAuxL u caller Γ fn Λ (uaxAt u a).kinds ((declOf u).aparams a) args with
     | .error e => .error e
-    | .ok xs => .ok ⟨a, xs⟩
-
-/-- A foreign body writes nothing: the four write premises of `axiomCall`/`bindAxiom` hold vacuously. -/
-theorem ax_schreibt_nie (u : UProg) (a : Fin u.axs.length) (t : Fin u.tabs.length) :
-    (declOf u).aschreibt a t = false := rfl
-
-theorem ax_gschreibt_nie (u : UProg) (a : Fin u.axs.length) (g : Fin u.globs.length) :
-    (declOf u).agschreibt a g = false := rfl
+    | .ok xs =>
+      if hw : (List.finRange u.tabs.length).all (fun t => !(declOf u).aschreibt a t || (verOf u caller).schreibt t) then
+        if hg : (List.finRange u.globs.length).all (fun g => !(declOf u).agschreibt a g || (verOf u caller).gschreibt g) then
+          if hd : (List.finRange u.tabs.length).all (fun t => !(declOf u).aschreibt a t ||
+              decide (∀ w ∈ (declOf u).braucht t, Res.von (declOf u) w ∈ Λ)) then
+            if hgd : (List.finRange u.globs.length).all (fun g => !(declOf u).agschreibt a g ||
+                decide (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ)) then
+              .ok ⟨a, xs,
+                fun t h => by
+                  have := List.all_eq_true.mp hw t (List.mem_finRange t)
+                  simp only [h, Bool.not_true, Bool.false_or] at this; exact this,
+                fun g h => by
+                  have := List.all_eq_true.mp hg g (List.mem_finRange g)
+                  simp only [h, Bool.not_true, Bool.false_or] at this; exact this,
+                fun t h => by
+                  have := List.all_eq_true.mp hd t (List.mem_finRange t)
+                  simp only [h, Bool.not_true, Bool.false_or, decide_eq_true_eq] at this; exact this,
+                fun g h => by
+                  have := List.all_eq_true.mp hgd g (List.mem_finRange g)
+                  simp only [h, Bool.not_true, Bool.false_or, decide_eq_true_eq] at this; exact this⟩
+            else .error "foreign call without held guard"
+          else .error "foreign call without held guard"
+        else .error "foreign call writes without right"
+      else .error "foreign call writes without right"
 
 /-- The answer of a foreign body, for the statement (none) or the binding (a type). -/
 def withAxErg {α : Type} (u : UProg) (a : Fin u.axs.length)
@@ -895,13 +916,13 @@ def withAxErg {α : Type} (u : UProg) (a : Fin u.axs.length)
 
 /-- `f(..);` at a foreign body with no answer: `Stmt.axiomCall`. -/
 def axiomStmt {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
-    (Λ : List (Res (declOf u))) (k : AxKopf u Γ Λ) (h : (declOf u).aerg k.ax = none) :
+    (Λ : List (Res (declOf u))) (k : AxKopf u caller Γ Λ) (h : (declOf u).aerg k.ax = none) :
     Stmt (declOf u) (verOf u caller) l Γ Λ Λ :=
   Stmt.axiomCall (D := declOf u) k.ax k.args h
-    (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-    (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
-    (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-    (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
+    k.hw
+    k.hg
+    k.hd
+    k.hgd
 
 /-- A direct call as a statement. -/
 def lowCallL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)

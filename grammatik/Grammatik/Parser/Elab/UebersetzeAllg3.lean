@@ -359,10 +359,10 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
           | .error e => .error e
           | .ok (b, r) =>
             .ok (Block.bindAxiom (D := declOf u) k.ax k.args hE
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
+              k.hw
+              k.hg
+              k.hd
+              k.hgd b, r))
   | Γ, fn, n + 1, Λ, pe, .bindAx x c args :: rest =>
     match lowAxKopf u caller Γ fn Λ c args with
     | .error e => .error e
@@ -373,10 +373,10 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
           | .error e => .error e
           | .ok (b, r) =>
             .ok (Block.bindAxiom (D := declOf u) k.ax k.args hE
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) b, r))
+              k.hw
+              k.hg
+              k.hd
+              k.hgd b, r))
   | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowSeqL (l := l) u caller Γ fn n Λ pe rest
   | _, _, _ + 1, _, _, .bindAxElse .. :: _ =>
     .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
@@ -1006,10 +1006,10 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           | .error e => .error e
           | .ok e =>
             .ok (Endblock.bindAxiom (D := declOf u) k.ax k.args hE
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) e))
+              k.hw
+              k.hg
+              k.hd
+              k.hgd e))
   | Γ, fn, n + 1, .bindAx x c args :: rest, r =>
     match lowAxKopf u caller Γ fn (resOf u caller) c args with
     | .error e => .error e
@@ -1020,10 +1020,10 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           | .error e => .error e
           | .ok e =>
             .ok (Endblock.bindAxiom (D := declOf u) k.ax k.args hE
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
-              (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-              (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) e))
+              k.hw
+              k.hg
+              k.hd
+              k.hgd e))
   | Γ, fn, n + 1, .bindCall x cname args :: rest, r =>
     match lowRufKopf u caller Γ fn (resOf u caller) cname args with
     | .error e => .error e
@@ -1155,10 +1155,10 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
             | .error err => .error err
             | .ok ee =>
               .ok (Endblock.bindAxiomElse (D := declOf u) k.ax k.args hE hr
-                (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-                (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide))
-                (fun t ht => by rw [ax_schreibt_nie u k.ax t] at ht; exact absurd ht (by decide))
-                (fun g hg => by rw [ax_gschreibt_nie u k.ax g] at hg; exact absurd hg (by decide)) errb ee)
+                k.hw
+                k.hg
+                k.hd
+                k.hgd errb ee)
           | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: let else of a foreign call without a reason channel"
   | Γ, fn, n + 1, (.matchTagBeg sidx m bs) :: rest, r =>

@@ -398,8 +398,8 @@ def declOf (u : UProg) : Deklaration where
   Ax := Fin u.axs.length
   aparams := fun a => (uaxAt u a).params
   aerg := fun a => (uaxAt u a).res
-  aschreibt := fun _ _ => false
-  agschreibt := fun _ _ => false
+  aschreibt := fun a t => (uaxAt u a).puts.any (· == (tabAt u t).name)
+  agschreibt := fun a g => (uaxAt u a).gputs.any (· == (globAt u g).name)
   agruende := fun a => (uaxAt u a).gruende
   anbieter := anbieterAt u
   anbieter_passt := fun t a h => by

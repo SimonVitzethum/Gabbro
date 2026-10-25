@@ -508,7 +508,7 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     exact eff_alle hE _ _ _ hV.tab hV.glob hV.sperren
   have himpl : strEq "impl" "impl" = true := by decide
   unfold elabKopf
-  simp only [hog, himpl, Bool.not_true, Bool.false_eq_true, ite_false, hok, hseq, hgeh]
+  simp only [hog, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true, ite_false, hok, hseq, hgeh]
   have hkn' : ∀ x, (match (if S.gruende = 0 then none else some (nGrund S.gruende)) with
       | none => Except.ok none
       | some r =>
