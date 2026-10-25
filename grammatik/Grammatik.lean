@@ -667,3 +667,4 @@ import Grammatik.Logik.WP.Regeln3
 import Grammatik.Logik.WP.Zeuge
 import Grammatik.Logik.WP.ZeugeRuf
 import Grammatik.Logik.WP.ZeugeRel
+import Grammatik.Logik.WP.Rahmen
