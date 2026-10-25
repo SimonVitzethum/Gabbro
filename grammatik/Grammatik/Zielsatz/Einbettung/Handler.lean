@@ -216,31 +216,36 @@ def antwortR (hS : E.SigTreu) (pad : List (Ereignis D)) (g : D.Fn) (σ : World D
 
 /-! ## The induced handlers -/
 
+/-- A map from `D`-worlds to `D'`-worlds for the main keys and one for the atomic keys. -/
+structure _root_.Gabbro.Grammatik.Einbettung.Phi (D D' : Deklaration) where
+  haupt : World D → World D'
+  atom : World D → World D'
+
 section Induziert
 
-variable (hS : E.SigTreu) (pad : List (Ereignis D)) (Φ : World D → World D')
+variable (hS : E.SigTreu) (pad : List (Ereignis D)) (Φ : Phi D D')
 
 /-- **The induced call handler.** -/
 def rufΦ (R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f) :
     ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g :=
-  fun g σ ρ => E.antwortR hZ hS pad g σ (R' (E.fn g) (Φ σ) (E.paramsUm hS g ρ))
+  fun g σ ρ => E.antwortR hZ hS pad g σ (R' (E.fn g) (Φ.haupt σ) (E.paramsUm hS g ρ))
 
 /-- **The induced lock move**: the protected carriers from the `D'`-move. -/
 def umweltΦ (S : SperrInv D) (U' : Umwelt D') : Umwelt D :=
-  fun L σ => mischU S L σ (E.speicherZ hZ (U' (E.lock L) (Φ σ)).speicher)
+  fun L σ => mischU S L σ (E.speicherZ hZ (U' (E.lock L) (Φ.haupt σ)).speicher)
 
 /-- **The induced atomic environment**: the read shared atomics from the `D'`-environment. -/
 noncomputable def aumweltΦ (T : D.Tab ⊕ D.Glob → Prop) (A' : AUmwelt D') : AUmwelt D :=
-  fun X σ => mischT T X σ (E.speicherZ hZ (A' (X.map E.ortE) (Φ σ)).speicher)
+  fun X σ => mischT T X σ (E.speicherZ hZ (A' (X.map E.ortE) (Φ.atom σ)).speicher)
 
 /-- **The induced oracle.** -/
 def orakelΦ (O' : Orakel D') : Orakel D where
   wirkt := fun a σ ρ =>
-    let x := O'.wirkt (E.ax a) (Φ σ) (E.aparamsUm a ρ)
+    let x := O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)
     (E.antwortWelt hZ pad σ x.1, x.2)
-  regLies := fun r σ => O'.regLies (E.reg r) (Φ σ)
+  regLies := fun r σ => O'.regLies (E.reg r) (Φ.haupt σ)
   regSchreib := fun _ _ => ()
-  sichtbar := fun g σ => O'.sichtbar (E.glob g) (Φ σ)
+  sichtbar := fun g σ => O'.sichtbar (E.glob g) (Φ.haupt σ)
   zeiger := fun _ => Option.none
 
 end Induziert

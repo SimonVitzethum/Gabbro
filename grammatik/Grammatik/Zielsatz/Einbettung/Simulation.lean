@@ -55,11 +55,11 @@ structure Bed : Prop where
 
 /-- An end block of `D` beside an end block of `D'`, for every map that repeats the keys. -/
 def EndSim {V : Vertrag D} {l : Bool} {Δ Δ' : Ctx}
-    (lauf : (World D → World D') → World D → Env D Δ → EndAusgang V l Δ)
+    (lauf : Phi D D' → World D → Env D Δ → EndAusgang V l Δ)
     (lauf' : World D' → Env D' Δ' → EndAusgang (E.vertragE V) l Δ') : Prop :=
-  ∀ (M : List (World D × World D')) (σ : World D) (σ' : World D') (ρ : Env D Δ) (ρ' : Env D' Δ'),
+  ∀ (M : Keys D D') (σ : World D) (σ' : World D') (ρ : Env D Δ) (ρ' : Env D' Δ'),
     E.Inv M σ σ' → E.EnvR ρ ρ' →
-    ∃ (M₁ : List (World D × World D')) (o : EndAusgang V l Δ), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ (M₁ : Keys D D') (o : EndAusgang V l Δ), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → lauf Φ σ ρ = o) ∧ E.EndRel M₁ o (lauf' σ' ρ')
 
 /-! ## Transports on the side of `D'` -/
@@ -69,7 +69,7 @@ section Um
 variable {V : Vertrag D} {l : Bool} {Δ Δ₁ Δ₂ : Ctx}
 
 theorem koerperSim_um (h : Δ₁ = Δ₂)
-    (lauf : (World D → World D') → World D → Env D Δ → Ausgang V l Δ)
+    (lauf : Phi D D' → World D → Env D Δ → Ausgang V l Δ)
     (lauf' : World D' → Env D' Δ₁ → Ausgang (E.vertragE V) l Δ₁) (hs : E.KoerperSim lauf lauf') :
     E.KoerperSim lauf (fun σ' ρ' => castAus h (lauf' σ' (castE h.symm ρ'))) := by
   intro M σ σ' ρ ρ' hI hρ
@@ -77,7 +77,7 @@ theorem koerperSim_um (h : Δ₁ = Δ₂)
   exact ⟨M₁, o, hs1, hΦ, (E.ausRel_um h o _).mpr hR⟩
 
 theorem endSim_um (h : Δ₁ = Δ₂)
-    (lauf : (World D → World D') → World D → Env D Δ → EndAusgang V l Δ)
+    (lauf : Phi D D' → World D → Env D Δ → EndAusgang V l Δ)
     (lauf' : World D' → Env D' Δ₁ → EndAusgang (E.vertragE V) l Δ₁) (hs : E.EndSim lauf lauf') :
     E.EndSim lauf (fun σ' ρ' => castEnd h (lauf' σ' (castE h.symm ρ'))) := by
   intro M σ σ' ρ ρ' hI hρ
@@ -88,11 +88,11 @@ end Um
 
 /-! ## A read with the read list of the image as `D'` writes it -/
 
-theorem lese_eval' {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+theorem lese_eval' {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') {T' : D'.Tab ⊕ D'.Glob → Prop} {A' : AUmwelt D'} (hA' : HavocA T' A')
     (hT : ∀ c, T' (E.ortE c) → T c) (Λ : List (Res D)) (Λ' : List (Res D'))
     (X : List (D.Tab ⊕ D.Glob)) (X' : List (D'.Tab ⊕ D'.Glob)) (hX : X.map E.ortE = X') :
-    ∃ (M₁ : List (World D × World D')) (σ₁ : World D), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
       E.Inv M₁ σ₁ (leseA A' σ' Λ' X') ∧
       ∀ {Γ : Ctx} {Λ₀ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ₀ τ) (ρ : Env D Γ),

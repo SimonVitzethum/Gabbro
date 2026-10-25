@@ -26,32 +26,29 @@ variable {V : Vertrag D} {Γ Γ' : Ctx}
 
 /-- A body of `D` beside a body of `D'`, for every map that repeats the keys. -/
 def KoerperSim {l : Bool} {Δ Δ' : Ctx}
-    (schritt : (World D → World D') → World D → Env D Δ → Ausgang V l Δ)
+    (schritt : Phi D D' → World D → Env D Δ → Ausgang V l Δ)
     (schritt' : World D' → Env D' Δ' → Ausgang (E.vertragE V) l Δ') : Prop :=
-  ∀ (M : List (World D × World D')) (σ : World D) (σ' : World D') (ρ : Env D Δ) (ρ' : Env D' Δ'),
+  ∀ (M : Keys D D') (σ : World D) (σ' : World D') (ρ : Env D Δ) (ρ' : Env D' Δ'),
     E.Inv M σ σ' → E.EnvR ρ ρ' →
-    ∃ (M₁ : List (World D × World D')) (o : Ausgang V l Δ), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ (M₁ : Keys D D') (o : Ausgang V l Δ), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → schritt Φ σ ρ = o) ∧ E.AusRel M₁ o (schritt' σ' ρ')
 
 /-- A boundary check of `D` beside one of `D'`. -/
-def PruefSim (pruef : (World D → World D') → World D → Env D Γ → World D × Bool)
+def PruefSim (pruef : Phi D D' → World D → Env D Γ → World D × Bool)
     (pruef' : World D' → Env D' Γ' → World D' × Bool) : Prop :=
-  ∀ (M : List (World D × World D')) (σ : World D) (σ' : World D') (ρ : Env D Γ) (ρ' : Env D' Γ'),
+  ∀ (M : Keys D D') (σ : World D) (σ' : World D') (ρ : Env D Γ) (ρ' : Env D' Γ'),
     E.Inv M σ σ' → E.EnvR ρ ρ' →
-    ∃ (M₁ : List (World D × World D')) (σ₁ : World D) (b : Bool), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ (M₁ : Keys D D') (σ₁ : World D) (b : Bool), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → pruef Φ σ ρ = (σ₁, b)) ∧ E.Inv M₁ σ₁ (pruef' σ' ρ').1 ∧
       (pruef' σ' ρ').2 = b
-
-theorem teil_trans {M M₁ M₂ : List (World D × World D')} (h1 : ∀ p ∈ M, p ∈ M₁)
-    (h2 : ∀ p ∈ M₁, p ∈ M₂) : ∀ p ∈ M, p ∈ M₂ := fun p hp => h2 p (h1 p hp)
 
 theorem logikRel_schleife : E.LogikRel (D := D) .schleife .schleife := fun _ h => by cases h
 
 /-- **`traverse` beside its image.** -/
 theorem traverse_sim {l : Bool} {τ τ' : Ty}
-    (schritt : (World D → World D') → World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
+    (schritt : Phi D D' → World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
     (schritt' : World D' → Env D' (τ' :: Γ') → Ausgang (E.vertragE V) true (τ' :: Γ'))
-    (pruef : (World D → World D') → World D → Env D Γ → World D × Bool)
+    (pruef : Phi D D' → World D → Env D Γ → World D × Bool)
     (pruef' : World D' → Env D' Γ' → World D' × Bool)
     (hs : E.KoerperSim schritt schritt') (hi : E.PruefSim pruef pruef')
     (f : Wert D τ → Wert D' τ') (hf : ∀ k, ∃ h : τ' = E.tyE τ, castW h (f k) = E.valE τ k)
@@ -120,11 +117,11 @@ theorem traverse_sim {l : Bool} {τ τ' : Ty}
 
 /-- **`retry` beside its image.** -/
 theorem retry_sim {l : Bool}
-    (schritt : (World D → World D') → World D → Env D Γ → Ausgang V true Γ)
+    (schritt : Phi D D' → World D → Env D Γ → Ausgang V true Γ)
     (schritt' : World D' → Env D' Γ' → Ausgang (E.vertragE V) true Γ')
-    (bis : (World D → World D') → World D → Env D Γ → World D × Bool)
+    (bis : Phi D D' → World D → Env D Γ → World D × Bool)
     (bis' : World D' → Env D' Γ' → World D' × Bool)
-    (ueber : (World D → World D') → World D → Env D Γ → Ausgang V l Γ)
+    (ueber : Phi D D' → World D → Env D Γ → Ausgang V l Γ)
     (ueber' : World D' → Env D' Γ' → Ausgang (E.vertragE V) l Γ')
     (hs : E.KoerperSim schritt schritt') (hi : E.PruefSim bis bis') (hu : E.KoerperSim ueber ueber') :
     ∀ n : Nat, E.KoerperSim (fun Φ => retryLauf (schritt Φ) (bis Φ) (ueber Φ) n)
@@ -186,9 +183,9 @@ theorem retry_sim {l : Bool}
 
 /-- **`forever` beside its image.** -/
 theorem forever_sim {l : Bool} (a : D.Annahme) (a' : D'.Annahme)
-    (schritt : (World D → World D') → World D → Env D Γ → Ausgang V true Γ)
+    (schritt : Phi D D' → World D → Env D Γ → Ausgang V true Γ)
     (schritt' : World D' → Env D' Γ' → Ausgang (E.vertragE V) true Γ')
-    (pruef : (World D → World D') → World D → Env D Γ → World D × Bool)
+    (pruef : Phi D D' → World D → Env D Γ → World D × Bool)
     (pruef' : World D' → Env D' Γ' → World D' × Bool)
     (hs : E.KoerperSim schritt schritt') (hi : E.PruefSim pruef pruef') :
     ∀ n : Nat, E.KoerperSim (l := l) (fun Φ => foreverLauf a (schritt Φ) (pruef Φ) n)
@@ -197,7 +194,7 @@ theorem forever_sim {l : Bool} (a : D.Annahme) (a' : D'.Annahme)
   induction n with
   | zero =>
       intro M σ σ' ρ ρ' h hρ
-      exact ⟨M, .hardware (.fortschritt a), fun _ hp => hp, fun _ _ => rfl, trivial⟩
+      exact ⟨M, .hardware (.fortschritt a), teil_refl M, fun _ _ => rfl, trivial⟩
   | succ n ih =>
       intro M σ σ' ρ ρ' h hρ
       obtain ⟨M₁, σ₁, b, hs1, hΦ1, hI1, hb⟩ := hi M σ σ' ρ ρ' h hρ

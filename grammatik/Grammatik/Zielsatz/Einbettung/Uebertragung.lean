@@ -92,10 +92,12 @@ structure Uebernahme (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab 
   invBild : ∀ i' t', t' ∈ D'.traeger i' → (E.tabZ t').isSome = true → ∃ i, E.inv i = i'
 
 theorem inv_anfang (σ' : World D') :
-    E.Inv [] ((E.speicherZ hZ σ'.speicher).welt []) σ' :=
+    E.Inv Keys.leer ((E.speicherZ hZ σ'.speicher).welt []) σ' :=
   ⟨by rw [speicher_welt_speicher]; exact E.treu_speicherZ hZ σ',
     fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
-    fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil⟩
+    fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
+    fun _ h => absurd h List.not_mem_nil, fun _ h => absurd h List.not_mem_nil,
+    fun _ h => absurd h List.not_mem_nil⟩
 
 section Lauf
 
@@ -119,7 +121,7 @@ theorem rumpf_sim (passes : Nat) {O' : Orakel D'} {U' : Umwelt D'} {A' : AUmwelt
     {R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f}
     (hB : E.Bed hZ pad S T S' T' U' A' R') (f : D.Fn) (σ' : World D')
     (ρ' : Env D' (D'.params (E.fn f))) :
-    ∃ (M : List (World D × World D')) (o : EndAusgang (vertragVon D f) false (D.params f)),
+    ∃ (M : Keys D D') (o : EndAusgang (vertragVon D f) false (D.params f)),
       (∀ Φ, Passt Φ M → execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U')
           (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (P.rumpf f)
           ((E.speicherZ hZ σ'.speicher).welt []) (E.parZ hZ hS f ρ') = o) ∧
@@ -131,7 +133,7 @@ theorem rumpf_sim (passes : Nat) {O' : Orakel D'} {U' : Umwelt D'} {A' : AUmwelt
   have hρ : E.EnvR (E.parZ hZ hS f ρ') (castE (paramsE hS f).symm ρ') := by
     have := E.envR_envE (E.parZ hZ hS f ρ')
     rwa [parZ, E.envE_envZ] at this
-  obtain ⟨M, o, _, hΦ, hR⟩ := E.sim_end hZ hS pad S T S' T' O' U' A' passes R' hB (P.rumpf f) []
+  obtain ⟨M, o, _, hΦ, hR⟩ := E.sim_end hZ hS pad S T S' T' O' U' A' passes R' hB (P.rumpf f) Keys.leer
     _ σ' _ _ (E.inv_anfang hZ σ') hρ
   refine ⟨M, o, hΦ, ?_, hR⟩
   rw [hU.fort.rumpf f]

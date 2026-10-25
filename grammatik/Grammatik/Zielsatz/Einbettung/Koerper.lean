@@ -32,9 +32,9 @@ variable (hZ : ZeigerfreiD D) (hS : E.SigTreu) (pad : List (Ereignis D)) (S : Sp
   (R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → RufAusgang f)
 
 /-- A call through the keys: the induced handler answers as the `D'`-handler at the key. -/
-theorem ruf_schluessel {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+theorem ruf_schluessel {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') (g : D.Fn) (ρa : Env D (D.params g)) :
-    ∃ M₁ : List (World D × World D'), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ M₁ : Keys D D', Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → E.rufΦ hZ hS pad Φ R' g σ ρa =
         E.antwortR hZ hS pad g σ (R' (E.fn g) σ' (castE (paramsE hS g) (E.envE ρa)))) ∧
       E.Inv M₁ σ σ' := by
@@ -42,9 +42,9 @@ theorem ruf_schluessel {M : List (World D × World D')} {σ : World D} {σ' : Wo
   exact ⟨_, hs, fun Φ hP => by simp only [rufΦ, paramsUm, hΦ Φ hP], hk⟩
 
 /-- An axiom through the keys. -/
-theorem ax_schluessel {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+theorem ax_schluessel {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') (a : D.Ax) (ρa : Env D (D.aparams a)) :
-    ∃ M₁ : List (World D × World D'), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ M₁ : Keys D D', Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → (E.orakelΦ hZ pad Φ O').wirkt a σ ρa =
         (E.antwortWelt hZ pad σ (O'.wirkt (E.ax a) σ' (E.aparamsUm a ρa)).1,
           (O'.wirkt (E.ax a) σ' (E.aparamsUm a ρa)).2)) ∧ E.Inv M₁ σ σ' := by
@@ -102,19 +102,19 @@ theorem zelle_valE {n : Nat} (v : Wert D (.ref n)) : (E.valE (.ref n) v).zelle =
 
 @[simp] theorem valE_ref {n : Nat} (v : Wert D (.ref n)) : E.valE (.ref n) v = v := rfl
 
-theorem orakelΦ_regLies (Φ : World D → World D') (r : D.Reg) (σ : World D) :
-    (E.orakelΦ hZ pad Φ O').regLies r σ = O'.regLies (E.reg r) (Φ σ) := rfl
+theorem orakelΦ_regLies (Φ : Phi D D') (r : D.Reg) (σ : World D) :
+    (E.orakelΦ hZ pad Φ O').regLies r σ = O'.regLies (E.reg r) (Φ.haupt σ) := rfl
 
-theorem orakelΦ_sichtbar (Φ : World D → World D') (g : D.Glob) (σ : World D) :
-    (E.orakelΦ hZ pad Φ O').sichtbar g σ = O'.sichtbar (E.glob g) (Φ σ) := rfl
+theorem orakelΦ_sichtbar (Φ : Phi D D') (g : D.Glob) (σ : World D) :
+    (E.orakelΦ hZ pad Φ O').sichtbar g σ = O'.sichtbar (E.glob g) (Φ.haupt σ) := rfl
 
-theorem orakelΦ_zeiger (Φ : World D → World D') :
+theorem orakelΦ_zeiger (Φ : Phi D D') :
     (E.orakelΦ hZ pad Φ O').zeiger = fun _ => Option.none := rfl
 
 /-- A block whose image is transported along its scope. -/
 theorem koerperSim_block_um {V : Vertrag D} {l : Bool} {Δ : Ctx} {Δ₁ Δ₂ : Ctx}
     {Λ₁ Λ₂ : List (Res D')} (h : Δ₁ = Δ₂)
-    (lauf : (World D → World D') → World D → Env D Δ → Ausgang V l Δ)
+    (lauf : Phi D D' → World D → Env D Δ → Ausgang V l Δ)
     (b : Block D' (E.vertragE V) l Δ₁ Λ₁ Λ₂)
     (hs : E.KoerperSim lauf (execBlockHA S' O' U' A' passes R' b)) :
     E.KoerperSim lauf (execBlockHA S' O' U' A' passes R' (Block.umΓ h b)) := by
@@ -127,7 +127,7 @@ theorem koerperSim_block_um {V : Vertrag D} {l : Bool} {Δ : Ctx} {Δ₁ Δ₂ :
 /-- An end block whose image is transported along its scope. -/
 theorem endSim_end_um {V : Vertrag D} {l : Bool} {Δ : Ctx} {Δ₁ Δ₂ : Ctx}
     {Λ₁ : List (Res D')} (h : Δ₁ = Δ₂)
-    (lauf : (World D → World D') → World D → Env D Δ → EndAusgang V l Δ)
+    (lauf : Phi D D' → World D → Env D Δ → EndAusgang V l Δ)
     (b : Endblock D' (E.vertragE V) l Δ₁ Λ₁)
     (hs : E.EndSim lauf (execEndHA S' O' U' A' passes R' b)) :
     E.EndSim lauf (execEndHA S' O' U' A' passes R' (Endblock.umΓ h b)) := by
@@ -351,7 +351,7 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       obtain rfl := E.envR_eq ρ ρ' hρ
       obtain ⟨M₁, σ₁, hs, hΦ, hI⟩ := E.umwelt_schritt hZ hM S hB.havocU hB.orte L
       obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_block body M₁ (σ₁.nimmt L) _ ρ (E.envE ρ)
-        (hI.nimmt E L (E.lock L)) (E.envR_envE ρ)
+        hI (E.envR_envE ρ)
       refine ⟨M₂, freiH S L o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2)]
         exact congrArg (freiH S L) (hΦ2 Φ hP)
@@ -426,7 +426,7 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .transition r hk m hm hl maske bits => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .ok σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
+      exact ⟨M, .ok σ ρ, teil_refl M, fun Φ hP => by simp only [execStmtHA],
         by simp only [exS, execStmtHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
   | .publish g e payload hp hw hL => by
       intro M σ σ' ρ ρ' hM hρ
@@ -440,12 +440,12 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .advances m a h hs => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .ok σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
+      exact ⟨M, .ok σ ρ, teil_refl M, fun Φ hP => by simp only [execStmtHA],
         by simp only [exS, exec_nachΛ, execStmtHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
   | .retires m s h a => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .ok σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
+      exact ⟨M, .ok σ ρ, teil_refl M, fun Φ hP => by simp only [execStmtHA],
         by simp only [exS, exec_nachΛ, execStmtHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
   | .ret e hΛ => by
       intro M σ σ' ρ ρ' hM hρ
@@ -459,17 +459,17 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retWhy r hΛ => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .why σ r, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
+      exact ⟨M, .why σ r, teil_refl M, fun Φ hP => by simp only [execStmtHA],
         by simp only [exS, execStmtHA]; exact ⟨hM, rfl⟩⟩
   | .leave h => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .leave h σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
+      exact ⟨M, .leave h σ ρ, teil_refl M, fun Φ hP => by simp only [execStmtHA],
         by simp only [exS, execStmtHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
   | .next h => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .next h σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
+      exact ⟨M, .next h σ ρ, teil_refl M, fun Φ hP => by simp only [execStmtHA],
         by simp only [exS, execStmtHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
 
 /-- **A block beside its image.** -/
@@ -480,7 +480,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       (execBlockHA S' O' U' A' passes R' (exB hS b))
   | .nil => by
       intro M σ σ' ρ ρ' h hρ
-      exact ⟨M, .ok σ ρ, fun _ hp => hp, fun _ _ => rfl, h, hρ⟩
+      exact ⟨M, .ok σ ρ, teil_refl M, fun _ _ => rfl, h, hρ⟩
   | .cons s rest => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
@@ -902,7 +902,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       obtain rfl := E.envR_eq ρ ρ' hρ
       cases hg : gleitPasst lo hi (bruch q) with
       | none =>
-          refine ⟨M, .logik .bereich, fun _ hp => hp, fun Φ hP => ?_, ?_⟩
+          refine ⟨M, .logik .bereich, teil_refl M, fun Φ hP => ?_, ?_⟩
           · simp only [execBlockHA, hg]
           · simp only [exB, execBlockHA, hg]
             exact ⟨E.logikRel_kein (fun _ h' => by cases h'), hM.keyOk E⟩
@@ -973,17 +973,17 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .retWhy r hΛ => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .why σ r, fun _ hp => hp, fun Φ hP => by simp only [execEndHA],
+      exact ⟨M, .why σ r, teil_refl M, fun Φ hP => by simp only [execEndHA],
         by simp only [exEnd, execEndHA]; exact ⟨hM, rfl⟩⟩
   | .leave h => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .leave h σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execEndHA],
+      exact ⟨M, .leave h σ ρ, teil_refl M, fun Φ hP => by simp only [execEndHA],
         by simp only [exEnd, execEndHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
   | .next h => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .next h σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execEndHA],
+      exact ⟨M, .next h σ ρ, teil_refl M, fun Φ hP => by simp only [execEndHA],
         by simp only [exEnd, execEndHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
   | .cons s rest => by
       intro M σ σ' ρ ρ' hM hρ

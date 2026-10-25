@@ -69,7 +69,7 @@ theorem envR_um {Γ : Ctx} {Γ₁ Γ₂ : Ctx} (h : Γ₁ = Γ₂) (ρ : Env D �
 /-! ## Outcomes -/
 
 /-- **An outcome of `D` beside one of `D'`**, under the keys `M`. -/
-def AusRel (M : List (World D × World D')) {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx} :
+def AusRel (M : Keys D D') {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx} :
     Ausgang V l Γ → Ausgang (E.vertragE V) l Γ' → Prop
   | .ok σ ρ, .ok σ' ρ' => E.Inv M σ σ' ∧ E.EnvR ρ ρ'
   | .zurueck σ v, .zurueck σ' v' => E.Inv M σ σ' ∧ v' = E.ergE V.erg v
@@ -81,7 +81,7 @@ def AusRel (M : List (World D × World D')) {V : Vertrag D} {l : Bool} {Γ Γ' :
   | _, _ => False
 
 /-- **An end outcome of `D` beside one of `D'`.** -/
-def EndRel (M : List (World D × World D')) {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx} :
+def EndRel (M : Keys D D') {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx} :
     EndAusgang V l Γ → EndAusgang (E.vertragE V) l Γ' → Prop
   | .zurueck σ v, .zurueck σ' v' => E.Inv M σ σ' ∧ v' = E.ergE V.erg v
   | .why σ r, .why σ' r' => E.Inv M σ σ' ∧ r'.val = r.val
@@ -93,7 +93,7 @@ def EndRel (M : List (World D × World D')) {V : Vertrag D} {l : Bool} {Γ Γ' :
 
 section Rel
 
-variable {M : List (World D × World D')} {V : Vertrag D} {l : Bool}
+variable {M : Keys D D'} {V : Vertrag D} {l : Bool}
 
 theorem ausRel_schrumpf {τ τ' : Ty} {Γ Γ' : Ctx} {o : Ausgang V l (τ :: Γ)}
     {o' : Ausgang (E.vertragE V) l (τ' :: Γ')} (h : E.AusRel M o o') :
@@ -197,74 +197,89 @@ theorem treu_misch {σ m : World D} {σ' W' : World D'} (hσ : E.Treu σ.speiche
       show castW _ (W'.globs (E.glob g)) = E.valE _ (m.globs g)
       rw [e1, e2]; exact hσ.2 g
 
-/-- A move that keeps the trace and every carrier outside the images of `X` is nothing foreign. -/
-theorem fremd_von {σ' W' : World D'} (X : List (D.Tab ⊕ D.Glob))
-    (h : ∀ c, c ∉ X.map E.ortE → TraegerGleich W'.speicher σ'.speicher c) (hs : W'.spur = σ'.spur) :
-    E.Fremd σ' W' :=
-  ⟨fun t' ht => (h (.inl t') (E.fremd_nicht_tab ht X)).symm,
-    fun g' hg => (h (.inr g') (E.fremd_nicht_glob hg X)).symm, hs.symm⟩
-
 /-! ## Keys -/
 
 /-- `Φ` repeats the keys. -/
-def Passt (Φ : World D → World D') (M : List (World D × World D')) : Prop :=
-  ∀ p ∈ M, Φ p.1 = p.2
+def Passt (Φ : Phi D D') (M : Keys D D') : Prop :=
+  (∀ p ∈ M.haupt, Φ.haupt p.1 = p.2) ∧ (∀ p ∈ M.atom, Φ.atom p.1 = p.2)
 
-theorem passt_teil {Φ : World D → World D'} {M M' : List (World D × World D')}
-    (h : Passt Φ M') (hs : ∀ p ∈ M, p ∈ M') : Passt Φ M := fun p hp => h p (hs p hp)
+theorem passt_teil {Φ : Phi D D'} {M M' : Keys D D'} (h : Passt Φ M') (hs : Teil M M') : Passt Φ M :=
+  ⟨fun p hp => h.1 p (hs.1 p hp), fun p hp => h.2 p (hs.2 p hp)⟩
 
-/-- **The current pair as a key.** -/
-theorem schluessel {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+/-- **The current pair as a main key.** -/
+theorem schluessel {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') :
-    E.Inv ((σ, σ') :: M) σ σ' ∧ (∀ p ∈ M, p ∈ (σ, σ') :: M) ∧
-      ∀ Φ, Passt Φ ((σ, σ') :: M) → Φ σ = σ' :=
-  ⟨h.merke E, fun _ hp => List.mem_cons_of_mem _ hp, fun _ hP => hP _ List.mem_cons_self⟩
+    E.Inv ⟨(σ, σ') :: M.haupt, M.atom⟩ σ σ' ∧ Teil M ⟨(σ, σ') :: M.haupt, M.atom⟩ ∧
+      ∀ Φ, Passt Φ ⟨(σ, σ') :: M.haupt, M.atom⟩ → Φ.haupt σ = σ' :=
+  ⟨h.merke E, ⟨fun _ hp => List.mem_cons_of_mem _ hp, fun _ hp => hp⟩,
+    fun _ hP => hP.1 _ List.mem_cons_self⟩
 
-/-- **An atomic read.** The read events on both sides, the pair after them as a key, and the
-    `D'`-environment's answer: the induced environment answers the same at the key. -/
-theorem lese_schritt {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+theorem mischT_nil (T : D.Tab ⊕ D.Glob → Prop) (σ : World D) (s : Speicher D) :
+    mischT T [] σ s = σ :=
+  world_ext (fun c => mischT_aussen σ s (fun h => absurd h.1 List.not_mem_nil)) rfl
+
+theorem havocA_nil {T' : D'.Tab ⊕ D'.Glob → Prop} {A' : AUmwelt D'} (hA' : HavocA T' A')
+    (σ' : World D') : A' [] σ' = σ' :=
+  world_ext (fun c => (hA' [] σ').2 c (fun h => absurd h.1 List.not_mem_nil)) (hA' [] σ').1
+
+/-- **An atomic read.** The read events on both sides, the pair after them as an atomic key, and
+    the `D'`-environment's answer: the induced environment answers the same at the key. A read of
+    nothing asks nothing. -/
+theorem lese_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') (T : D.Tab ⊕ D.Glob → Prop) {T' : D'.Tab ⊕ D'.Glob → Prop}
     {A' : AUmwelt D'} (hA' : HavocA T' A') (hT : ∀ c, T' (E.ortE c) → T c)
     (Λ : List (Res D)) (Λ' : List (Res D')) (X : List (D.Tab ⊕ D.Glob)) :
-    ∃ (M₁ : List (World D × World D')) (σ₁ : World D), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
       E.Inv M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) := by
-  have hl := h.lese E Λ Λ' X
-  obtain ⟨hk, hsub, hΦ⟩ := E.schluessel hl
-  let σl := σ.lese Λ X
-  let σl' := σ'.lese Λ' (X.map E.ortE)
-  let W' := A' (X.map E.ortE) σl'
-  refine ⟨(σl, σl') :: M, mischT T X σl (E.speicherZ hZ W'.speicher), hsub, ?_, ?_⟩
-  · intro Φ hP
-    show mischT T X σl (E.speicherZ hZ (A' (X.map E.ortE) (Φ σl)).speicher) = _
-    rw [hΦ Φ hP]
-  · have ht : E.Treu (mischT T X σl (E.speicherZ hZ W'.speicher)).speicher W' :=
-      E.treu_misch hZ hk.treu (fun c => c ∈ X ∧ T c) (fun c hc => mischT_innen σl _ hc)
-        (fun c hc => ⟨mischT_aussen σl _ hc, (hA' _ σl').2 _ fun ⟨h1, h2⟩ =>
-          hc ⟨E.mem_map_ortE.mp h1, hT c h2⟩⟩)
-    refine hk.bleib E (by rw [mischT_spur]) ht ?_
-    exact E.fremd_von X (fun c hc => (hA' _ σl').2 c fun ⟨h1, _⟩ => hc h1) (hA' _ σl').1
+  cases X with
+  | nil =>
+      refine ⟨M, σ, teil_refl M, fun Φ _ => ?_, ?_⟩
+      · show mischT T [] (σ.lese Λ []) _ = σ
+        rw [mischT_nil, lese_nil]
+      · show E.Inv M σ (A' [] (σ'.lese Λ' []))
+        rw [havocA_nil hA', lese_nil]; exact h
+  | cons x X =>
+      have hl := h.lese E Λ Λ' (x :: X)
+      have hgr : σ.spur.length < (σ.lese Λ (x :: X)).spur.length := by
+        rw [lese_laenge]; simp
+      have hk := hl.merkeA E (fun p hp => Nat.lt_of_le_of_lt (h.aKurz p hp) hgr)
+      let σl := σ.lese Λ (x :: X)
+      let σl' := σ'.lese Λ' ((x :: X).map E.ortE)
+      let W' := A' ((x :: X).map E.ortE) σl'
+      refine ⟨⟨M.haupt, (σl, σl') :: M.atom⟩, mischT T (x :: X) σl (E.speicherZ hZ W'.speicher),
+        ⟨fun _ hp => hp, fun _ hp => List.mem_cons_of_mem _ hp⟩, ?_, ?_⟩
+      · intro Φ hP
+        show mischT T (x :: X) σl (E.speicherZ hZ (A' ((x :: X).map E.ortE) (Φ.atom σl)).speicher) = _
+        rw [hP.2 _ List.mem_cons_self]
+      · have ht : E.Treu (mischT T (x :: X) σl (E.speicherZ hZ W'.speicher)).speicher W' :=
+          E.treu_misch hZ hk.treu (fun c => c ∈ x :: X ∧ T c) (fun c hc => mischT_innen σl _ hc)
+            (fun c hc => ⟨mischT_aussen σl _ hc, (hA' _ σl').2 _ fun ⟨h1, h2⟩ =>
+              hc ⟨E.mem_map_ortE.mp h1, hT c h2⟩⟩)
+        refine ⟨ht, hk.eintrag, hk.kurz, fun p hp he => absurd he (Nat.ne_of_lt ?_), hk.funk,
+          hk.aEintrag, hk.aKurz, hk.aFunk⟩
+        exact Nat.lt_of_le_of_lt (h.kurz p hp) hgr
 
-/-- **A lock move.** The pair at the acquire as a key, and the `D'`-move's answer: the induced
-    move answers the same there, the protected carriers of the image lock being the images. -/
-theorem umwelt_schritt {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+/-- **A lock move and the take.** The pair at the acquire as a main key, the `D'`-move's answer
+    (the induced move answers the same there, the protected carriers of the image lock being the
+    images), then the take event on both sides. -/
+theorem umwelt_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') (S : SperrInv D) {S' : SperrInv D'} {U' : Umwelt D'} (hU' : HavocOk S' U')
     (hSo : ∀ L, S'.orte (E.lock L) = (S.orte L).map E.ortE) (L : D.Lock) :
-    ∃ (M₁ : List (World D × World D')) (σ₁ : World D), (∀ p ∈ M, p ∈ M₁) ∧
-      (∀ Φ, Passt Φ M₁ → E.umweltΦ hZ Φ S U' L σ = σ₁) ∧ E.Inv M₁ σ₁ (U' (E.lock L) σ') := by
+    ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
+      (∀ Φ, Passt Φ M₁ → E.umweltΦ hZ Φ S U' L σ = σ₁) ∧
+      E.Inv M₁ (σ₁.nimmt L) ((U' (E.lock L) σ').nimmt (E.lock L)) := by
   obtain ⟨hk, hsub, hΦ⟩ := E.schluessel h
   let W' := U' (E.lock L) σ'
-  refine ⟨(σ, σ') :: M, mischU S L σ (E.speicherZ hZ W'.speicher), hsub, ?_, ?_⟩
+  refine ⟨_, mischU S L σ (E.speicherZ hZ W'.speicher), hsub, ?_, ?_⟩
   · intro Φ hP
-    show mischU S L σ (E.speicherZ hZ (U' (E.lock L) (Φ σ)).speicher) = _
+    show mischU S L σ (E.speicherZ hZ (U' (E.lock L) (Φ.haupt σ)).speicher) = _
     rw [hΦ Φ hP]
   · have ht : E.Treu (mischU S L σ (E.speicherZ hZ W'.speicher)).speicher W' :=
       E.treu_misch hZ hk.treu (fun c => c ∈ S.orte L) (fun c hc => mischU_innen S L σ _ c hc)
         (fun c hc => ⟨mischU_aussen S L σ _ c hc, (hU' (E.lock L) σ').2.1 _ (by
           rw [hSo]; exact fun hm => hc (E.mem_map_ortE.mp hm))⟩)
-    refine hk.bleib E (by rw [mischU_spur]) ht ?_
-    exact E.fremd_von (S.orte L) (fun c hc => (hU' (E.lock L) σ').2.1 c (by rw [hSo]; exact hc))
-      (hU' (E.lock L) σ').1
+    exact hk.wachs E (by simp [World.nimmt, mischU_spur]) ht
 
 /-- The memory of a `D'`-world beside a `D`-memory, restricted, is that memory. -/
 theorem speicherZ_treu {s : Speicher D} {σ' : World D'} (h : E.Treu s σ') :
@@ -284,7 +299,7 @@ theorem speicherZ_treu {s : Speicher D} {σ' : World D'} (h : E.Treu s σ') :
 
 /-- **A release on both sides**: the image lock's invariant is the lock's, over the image
     memory. -/
-theorem freiH_rel {M : List (World D × World D')} {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx}
+theorem freiH_rel {M : Keys D D'} {V : Vertrag D} {l : Bool} {Γ Γ' : Ctx}
     (S : SperrInv D) {S' : SperrInv D'}
     (hSi : ∀ L s', S'.inv (E.lock L) s' = S.inv L (E.speicherZ hZ s')) (L : D.Lock)
     {o : Ausgang V l Γ} {o' : Ausgang (E.vertragE V) l Γ'} (h : E.AusRel M o o') :

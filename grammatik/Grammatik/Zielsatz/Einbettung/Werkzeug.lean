@@ -179,7 +179,7 @@ theorem alleIndizes_bild {c c' : Int} (hc : c' = c) :
 /-! ## Foreign answers -/
 
 theorem inv_antwort (hZ : ZeigerfreiD D) {pad : List (Ereignis D)} (hp : PadOk pad)
-    {M : List (World D × World D')} {σ : World D} {σ' : World D'} (h : E.Inv M σ σ') (W : World D') :
+    {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv M σ σ') (W : World D') :
     E.Inv M (E.antwortWelt hZ pad σ W) W :=
   h.wachs E (E.antwortWelt_laenge hZ hp σ W) (E.treu_antwortWelt hZ pad σ W)
 
@@ -187,11 +187,11 @@ theorem inv_antwort (hZ : ZeigerfreiD D) {pad : List (Ereignis D)} (hp : PadOk p
 
 /-- **A read and an evaluation**: the read events, the key, the atomic answer; then every
     expression of `D` evaluates as its image in the worlds after. -/
-theorem lese_eval (hZ : ZeigerfreiD D) {M : List (World D × World D')} {σ : World D} {σ' : World D'}
+theorem lese_eval (hZ : ZeigerfreiD D) {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv M σ σ') (T : D.Tab ⊕ D.Glob → Prop) {T' : D'.Tab ⊕ D'.Glob → Prop}
     {A' : AUmwelt D'} (hA' : HavocA T' A') (hT : ∀ c, T' (E.ortE c) → T c)
     (Λ : List (Res D)) (Λ' : List (Res D')) (X : List (D.Tab ⊕ D.Glob)) :
-    ∃ (M₁ : List (World D × World D')) (σ₁ : World D), (∀ p ∈ M, p ∈ M₁) ∧
+    ∃ (M₁ : Keys D D') (σ₁ : World D), Teil M M₁ ∧
       (∀ Φ, Passt Φ M₁ → leseA (E.aumweltΦ hZ Φ T A') σ Λ X = σ₁) ∧
       E.Inv M₁ σ₁ (leseA A' σ' Λ' (X.map E.ortE)) ∧
       ∀ {Γ : Ctx} {Λ₀ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ₀ τ) (ρ : Env D Γ),

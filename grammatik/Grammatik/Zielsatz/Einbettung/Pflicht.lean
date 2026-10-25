@@ -69,30 +69,41 @@ theorem paramsUm_parZ (g : D.Fn) (ρ' : Env D' (D'.params (E.fn g))) :
 
 /-! ## The map from the keys -/
 
-/-- **A map repeating the keys**: a key's `D'`-world, else the `D`-memory around `ctx`. -/
-noncomputable def phiAus (M : List (World D × World D')) (ctx : Speicher D') : World D → World D' :=
+/-- A map repeating a list of keys: a key's `D'`-world, else the `D`-memory around `ctx`. -/
+noncomputable def phiListe (L : List (World D × World D')) (ctx : Speicher D') : World D → World D' :=
   fun σ =>
-    haveI := Classical.propDecidable (∃ p ∈ M, p.1 = σ)
-    if h : ∃ p ∈ M, p.1 = σ then (Classical.choose h).2 else (E.speicherE ctx σ.speicher).welt []
+    haveI := Classical.propDecidable (∃ p ∈ L, p.1 = σ)
+    if h : ∃ p ∈ L, p.1 = σ then (Classical.choose h).2 else (E.speicherE ctx σ.speicher).welt []
 
-theorem phiAus_passt {M : List (World D × World D')} (hk : E.KeyOk M) (ctx : Speicher D') :
-    Passt (E.phiAus M ctx) M := by
+theorem phiListe_passt {L : List (World D × World D')} (hf : ∀ p ∈ L, ∀ q ∈ L, p.1 = q.1 → p.2 = q.2)
+    (ctx : Speicher D') : ∀ p ∈ L, E.phiListe L ctx p.1 = p.2 := by
   intro p hp
-  have hex : ∃ q ∈ M, q.1 = p.1 := ⟨p, hp, rfl⟩
-  simp only [phiAus, dif_pos hex]
+  have hex : ∃ q ∈ L, q.1 = p.1 := ⟨p, hp, rfl⟩
+  simp only [phiListe, dif_pos hex]
   obtain ⟨hq, he⟩ := Classical.choose_spec hex
-  exact hk.2 _ hq p hp he
+  exact hf _ hq p hp he
 
-theorem phiAus_treu {M : List (World D × World D')} (hk : E.KeyOk M) (ctx : Speicher D') (σ : World D) :
-    E.Treu σ.speicher (E.phiAus M ctx σ) := by
-  unfold phiAus
+theorem phiListe_treu {L : List (World D × World D')} (ht : ∀ p ∈ L, E.Treu p.1.speicher p.2)
+    (ctx : Speicher D') (σ : World D) : E.Treu σ.speicher (E.phiListe L ctx σ) := by
+  unfold phiListe
   split
   · rename_i hex
     obtain ⟨hq, he⟩ := Classical.choose_spec hex
-    have := hk.1 _ hq
+    have := ht _ hq
     rw [he] at this
     exact this
   · exact E.treu_speicherE ctx σ.speicher []
+
+/-- **The maps repeating the keys.** -/
+noncomputable def phiAus (M : Keys D D') (ctx : Speicher D') : Phi D D' :=
+  ⟨E.phiListe M.haupt ctx, E.phiListe M.atom ctx⟩
+
+theorem phiAus_passt {M : Keys D D'} (hk : E.KeyOk M) (ctx : Speicher D') : Passt (E.phiAus M ctx) M :=
+  ⟨E.phiListe_passt hk.2.1 ctx, E.phiListe_passt hk.2.2.2 ctx⟩
+
+theorem phiAus_treu {M : Keys D D'} (hk : E.KeyOk M) (ctx : Speicher D') (σ : World D) :
+    E.Treu σ.speicher ((E.phiAus M ctx).haupt σ) :=
+  E.phiListe_treu hk.1 ctx σ
 
 /-! ## Contracts -/
 
@@ -206,8 +217,8 @@ theorem bild_globs {s₁ s₂ : Speicher D} {a b : World D'} (ha : E.Treu s₁ a
 section Klassen
 
 variable {P : Programm D} {P' : Programm D'} (hF : E.Fortsetzung hS P P')
-  {pad : List (Ereignis D)} (hp : PadOk pad) {Φ : World D → World D'}
-  (hΦ : ∀ σ, E.Treu σ.speicher (Φ σ))
+  {pad : List (Ereignis D)} (hp : PadOk pad) {Φ : Phi D D'}
+  (hΦ : ∀ σ, E.Treu σ.speicher (Φ.haupt σ))
 
 include hF hp hΦ in
 /-- **The induced call handler respects the contracts and frames of `P`.** -/
@@ -215,19 +226,19 @@ theorem rufΦ_rahmen {R' : ∀ f : D'.Fn, World D' → Env D' (D'.params f) → 
     (hR' : RespektiertRahmen P' R') : RespektiertRahmen P (E.rufΦ hZ hS pad Φ R') := by
   refine ⟨fun g σ ρ hreq σa v hok => ?_, fun g σ ρ σa v hok => ?_⟩
   · obtain ⟨W, v', ha, rfl, rfl⟩ := E.antwortR_ok hZ hS hok
-    have hreq' : ReqAmEintritt P' (E.fn g) (Φ σ) (E.paramsUm hS g ρ) := by
+    have hreq' : ReqAmEintritt P' (E.fn g) (Φ.haupt σ) (E.paramsUm hS g ρ) := by
       unfold ReqAmEintritt; rw [E.req_E hS hF (hΦ σ)]; exact hreq
-    have := hR'.1 (E.fn g) (Φ σ) (E.paramsUm hS g ρ) hreq' W v' ha
+    have := hR'.1 (E.fn g) (Φ.haupt σ) (E.paramsUm hS g ρ) hreq' W v' ha
     unfold EnsAmRueck at this ⊢
     rw [← E.castV_ergE_ergZ hZ hS g v', E.ens_E hS hF (hΦ σ) (E.treu_antwortWelt hZ pad σ W)] at this
     exact this
   · obtain ⟨W, v', ha, rfl, rfl⟩ := E.antwortR_ok hZ hS hok
-    obtain ⟨hr1, hr2⟩ := hR'.2 (E.fn g) (Φ σ) (E.paramsUm hS g ρ) W v' ha
+    obtain ⟨hr1, hr2⟩ := hR'.2 (E.fn g) (Φ.haupt σ) (E.paramsUm hS g ρ) W v' ha
     refine ⟨⟨fun t ht k f => ?_, fun g' hg => ?_⟩, E.antwortWelt_offen hZ hp σ W⟩
     · have hw : D'.schreibt (E.fn g) (E.tab t) = false := by
         unfold Deklaration.schreibt; rw [hS.signatur]; simp only [sigE, E.tabZ_tab]; exact ht
       have e := hr1.1 (E.tab t) hw
-      have e' : W.slots (E.tab t) = (Φ σ).slots (E.tab t) := funext fun k => funext fun f => e k f
+      have e' : W.slots (E.tab t) = (Φ.haupt σ).slots (E.tab t) := funext fun k => funext fun f => e k f
       show (E.speicherZ hZ W.speicher).slots t k f = σ.slots t k f
       rw [E.speicherZ_slots hZ e', E.speicherZ_treu hZ (hΦ σ)]; rfl
     · have hw : D'.gschreibt (E.fn g) (E.glob g') = false := by
@@ -270,9 +281,9 @@ theorem umweltΦ_ok (S : SperrInv D) {S' : SperrInv D'} (hSL : ∀ L (s s' : Spe
   intro L σ
   refine ⟨rfl, fun c hc => mischU_aussen S L σ _ c hc, ?_⟩
   show S.inv L (mischU S L σ _).speicher = true
-  rw [hSL L _ (E.speicherZ hZ (U' (E.lock L) (Φ σ)).speicher) (fun c hc => mischU_innen S L σ _ c hc),
+  rw [hSL L _ (E.speicherZ hZ (U' (E.lock L) (Φ.haupt σ)).speicher) (fun c hc => mischU_innen S L σ _ c hc),
     ← hSi]
-  exact (hU' (E.lock L) (Φ σ)).2.2
+  exact (hU' (E.lock L) (Φ.haupt σ)).2.2
 
 /-- The induced atomic environment is in the class. -/
 theorem aumweltΦ_ok (T : D.Tab ⊕ D.Glob → Prop) (A' : AUmwelt D') : HavocA T (E.aumweltΦ hZ Φ T A') :=
@@ -282,10 +293,10 @@ include hΦ in
 /-- The induced oracle respects the axiom frames. -/
 theorem orakelΦ_rahmen {O' : Orakel D'} (hO' : RahmenO O') : RahmenO (E.orakelΦ hZ pad Φ O') := by
   intro a σ ρ
-  obtain ⟨hr1, hr2⟩ := hO' (E.ax a) (Φ σ) (E.aparamsUm a ρ)
+  obtain ⟨hr1, hr2⟩ := hO' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)
   refine ⟨fun t ht k f => ?_, fun g hg => ?_⟩
   · have hw : D'.aschreibt (E.ax a) (E.tab t) = false := by rw [E.aschreibt, E.tabZ_tab]; exact ht
-    have e' : (O'.wirkt (E.ax a) (Φ σ) (E.aparamsUm a ρ)).1.slots (E.tab t) = (Φ σ).slots (E.tab t) :=
+    have e' : (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).1.slots (E.tab t) = (Φ.haupt σ).slots (E.tab t) :=
       funext fun k => funext fun f => hr1 (E.tab t) hw k f
     show (E.speicherZ hZ _).slots t k f = σ.slots t k f
     rw [E.speicherZ_slots hZ e', E.speicherZ_treu hZ (hΦ σ)]; rfl
@@ -298,7 +309,7 @@ include hΦ in
 /-- The induced oracle is register-local. -/
 theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.orakelΦ hZ pad Φ O') := by
   refine ⟨fun r σ₁ σ₂ hg => ?_, fun g σ₁ σ₂ hg => ?_⟩
-  · show O'.regLies (E.reg r) (Φ σ₁) = O'.regLies (E.reg r) (Φ σ₂)
+  · show O'.regLies (E.reg r) (Φ.haupt σ₁) = O'.regLies (E.reg r) (Φ.haupt σ₂)
     apply hRL.1
     rw [E.rtraeger]
     refine ⟨fun t' ht' => ?_, fun g' hg' => ?_⟩
@@ -314,7 +325,7 @@ theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.ora
       · simp only [Sum.map_inr, Sum.inr.injEq] at he
         subst he
         exact E.bild_globs (hΦ σ₁) (hΦ σ₂) (hg.2 g hc)
-  · show O'.sichtbar (E.glob g) (Φ σ₁) = O'.sichtbar (E.glob g) (Φ σ₂)
+  · show O'.sichtbar (E.glob g) (Φ.haupt σ₁) = O'.sichtbar (E.glob g) (Φ.haupt σ₂)
     apply hRL.2
     refine ⟨fun t' ht' => by simp at ht', fun g' hg' => ?_⟩
     rw [List.mem_singleton] at hg'
@@ -328,11 +339,11 @@ theorem orakelΦ_axVertrag {O' : Orakel D'} {Q : AxEns D} {Q' : AxEns D'} (hQ' :
     (hQL : AxEnsLokal Q) : AxVertragO Q (E.orakelΦ hZ pad Φ O') := by
   intro a σ ρ v hv
   have hw := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a
-    (O'.wirkt (E.ax a) (Φ σ) (E.aparamsUm a ρ)).2 (E.aerg a)
-  have hv' : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (Φ σ) (E.aparamsUm a ρ)).2 =
+    (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 (E.aerg a)
+  have hv' : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ)).2 =
       some v := hv
   rw [hv', Option.map_some] at hw
-  have hq := hQ' (E.ax a) (Φ σ) (E.aparamsUm a ρ) _ hw
+  have hq := hQ' (E.ax a) (Φ.haupt σ) (E.aparamsUm a ρ) _ hw
   rw [hQ] at hq
   show Q a (E.antwortWelt hZ pad σ _) v = true
   rw [← hq]
