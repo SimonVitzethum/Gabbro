@@ -390,13 +390,13 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       obtain rfl := E.envR_eq ρ ρ' hρ
       obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
         (args.orte)
-      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
+      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
       have hargs := E.evalArgs_exA hI.treu hI.treu args ρ
       have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a
-        (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE))
+        (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a)))
           (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
       cases hx : einpassenErg (fun _ => Option.none) (D.aerg a)
-          (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE))
+          (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a)))
             (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
       | none =>
           refine ⟨M₂, .hardware (.annahme a), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
@@ -407,8 +407,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
             rw [hx]
             trivial
       | some v =>
-          refine ⟨M₂, .ok (E.antwortWelt hZ pad σ₁ (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE)
-            (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) ρ, teil_trans hs hs2,
+          refine ⟨M₂, .ok (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE)
+            (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) ρ, teil_trans hs hs2,
             fun Φ hP => ?_, ?_⟩
           · simp only [execStmtHA, axiomAntwort, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger, hx]
           · simp only [exS, execStmtHA, axiomAntwort, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, evalArgs_umτs, hargs, aparamsUm_falt, hw', hx,
@@ -426,8 +426,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .transition r hk m hm hl maske bits => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      exact ⟨M, .ok σ ρ, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
-        by simp only [exS, execStmtHA]; exact ⟨hM, E.envR_envE ρ⟩⟩
+      exact ⟨M, .ok (σ.fragt (.inr (.inl m))) ρ, fun _ hp => hp, fun Φ hP => by simp only [execStmtHA],
+        by simp only [exS, execStmtHA]; exact ⟨hM.fragt E _ _, E.envR_envE ρ⟩⟩
   | .publish g e payload hp hw hL => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
@@ -636,11 +636,11 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       obtain rfl := E.envR_eq ρ ρ' hρ
       obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
         (args.orte)
-      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
+      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
       have hargs := E.evalArgs_exA hI.treu hI.treu args ρ
-      have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
+      have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
-      cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
+      cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
       | none =>
           refine ⟨M₂, .hardware (.annahme a), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
           · simp only [execBlockHA, axiomAntwort, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger]
@@ -650,7 +650,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
             rw [hx]
             trivial
       | some v =>
-          obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_block rest M₂ (E.antwortWelt hZ pad σ₁ (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
+          obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_block rest M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
             (.cons (ergWert he v) ρ) (.cons (ergWert he' (castV (E.aerg a).symm (E.ergE _ v))) (E.envE ρ))
             (E.inv_antwort hZ hB.pad hI2 _) (E.envR_cons (E.envR_envE ρ) _ _ rfl (E.ergWert_ergE (E.aerg a) he he' v))
           refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
@@ -667,11 +667,11 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       obtain rfl := E.envR_eq ρ ρ' hρ
       obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
         (args.orte)
-      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
+      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
       have hargs := E.evalArgs_exA hI.treu hI.treu args ρ
-      have hw' := E.axiomSonst_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a) (E.agruende a)
+      have hw' := E.axiomSonst_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a) (E.agruende a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
-      rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with _ | (v | r)
+      rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with _ | (v | r)
       · refine ⟨M₂, .hardware (.annahme a), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, axiomAntwortSonst, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger]
           rw [hx]
@@ -679,7 +679,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
             evalArgs_umτs, hargs, aparamsUm_falt, hw']
           rw [hx]
           trivial
-      · obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_block rest M₂ (E.antwortWelt hZ pad σ₁ (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
+      · obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_block rest M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
           (.cons (ergWert he v) ρ) (.cons (ergWert he' (castV (E.aerg a).symm (E.ergE _ v))) (E.envE ρ))
           (E.inv_antwort hZ hB.pad hI2 _) (E.envR_cons (E.envR_envE ρ) _ _ rfl (E.ergWert_ergE (E.aerg a) he he' v))
         refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
@@ -693,7 +693,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
           exact E.ausRel_schrumpf hR3
       · have hc : (Ty.why (D.agruende a) :: Γ).map E.tyE = Ty.why (D'.agruende (E.ax a)) :: Γ.map E.tyE := by
           rw [E.agruende]; rfl
-        obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end err M₂ (E.antwortWelt hZ pad σ₁ (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
+        obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end err M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
           (.cons r ρ) (castE hc.symm (.cons (Fin.cast (E.agruende a).symm r) (E.envE ρ)))
           (E.inv_antwort hZ hB.pad hI2 _)
           ((E.envR_um hc.symm _ _).mpr (E.envR_cons (E.envR_envE ρ) _ _ (by rw [E.agruende])
@@ -711,11 +711,11 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
   | .regRead r hk rest => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel hM
-      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) σ') (E.rtyp r)
+      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
       have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
         rw [List.map_cons, E.rtyp]
-      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) σ') with
+      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) with
       | none =>
           refine ⟨_, .hardware (.register r), hs1, fun Φ hP => ?_, ?_⟩
           · simp only [execBlockHA, orakelΦ_regLies, orakelΦ_zeiger, hΦ1 Φ hP]
@@ -735,7 +735,7 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
               simp only [hz, hzv, Bool.false_eq_true, ↓reduceIte]
               trivial
           · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := E.koerperSim_block_um S' O' U' A' passes R' hc _ _ (sim_block rest)
-              _ σ σ' (.cons v ρ) (.cons ((E.rtyp r).symm ▸ E.valE _ v) (E.envE ρ)) hk1
+              _ (σ.fragt (.inr (.inl r))) (σ'.fragt (.inr (.inl (E.reg r)))) (.cons v ρ) (.cons ((E.rtyp r).symm ▸ E.valE _ v) (E.envE ρ)) hk1
               (E.envR_cons (E.envR_envE ρ) _ _ (E.rtyp r) (castW_symm (E.rtyp r) _))
             refine ⟨M₂, o.schrumpf, teil_trans hs1 hs2, fun Φ hP => ?_, ?_⟩
             · simp only [execBlockHA, orakelΦ_regLies, orakelΦ_zeiger, hΦ1 Φ (passt_teil hP hs2)]
@@ -749,11 +749,11 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
   | .regReadElse r hk zusage sonst rest => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel hM
-      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) σ') (E.rtyp r)
+      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
       have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
         rw [List.map_cons, E.rtyp]
-      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) σ') with
+      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) with
       | none =>
           refine ⟨_, .hardware (.register r), hs1, fun Φ hP => ?_, ?_⟩
           · simp only [execBlockHA, orakelΦ_regLies, orakelΦ_zeiger, hΦ1 Φ hP]
@@ -797,19 +797,19 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
   | .awaits g payload hp hL hat rest => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T hM hB.havocA hB.atom Λ (Λ.map E.resE)
+      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T (hM.fragt E (.inr (.inr g)) (.inr (.inr (E.glob g)))) hB.havocA hB.atom Λ (Λ.map E.resE)
         [Sum.inr g] [Sum.inr (E.glob g)] rfl
       obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
       have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
         rw [List.map_cons, E.gtyp]
-      cases hvis : O'.sichtbar (E.glob g) (leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)])
+      cases hvis : O'.sichtbar (E.glob g) (leseA A' (σ'.fragt (.inr (.inr (E.glob g)))) (Λ.map E.resE) [Sum.inr (E.glob g)])
       · refine ⟨_, .hardware (.sichtbarkeit D.a10), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hΦ2 Φ hP, hvis,
             Bool.false_eq_true, ↓reduceIte]
         · simp only [exB, execBlockHA, hvis, Bool.false_eq_true, ↓reduceIte]
           trivial
       · obtain ⟨M₃, o, hs3, hΦ3, hR⟩ := E.koerperSim_block_um S' O' U' A' passes R' hc _ _ (sim_block rest)
-          _ σ₁ _ (.cons (σ₁.globs g) ρ) (.cons ((leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)]).globs
+          _ σ₁ _ (.cons (σ₁.globs g) ρ) (.cons ((leseA A' (σ'.fragt (.inr (.inr (E.glob g)))) (Λ.map E.resE) [Sum.inr (E.glob g)]).globs
             (E.glob g)) (E.envE ρ)) hk2 (E.envR_cons (E.envR_envE ρ) _ _ (E.gtyp g) (hk2.treu.2 g))
         refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
         · simp only [execBlockHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), orakelΦ_sichtbar,
@@ -1148,11 +1148,11 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       obtain rfl := E.envR_eq ρ ρ' hρ
       obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
         (args.orte)
-      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
+      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
       have hargs := E.evalArgs_exA hI.treu hI.treu args ρ
-      have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
+      have hw' := E.axiom_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
-      cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
+      cases hx : einpassenErg (fun _ => Option.none) (D.aerg a) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with
       | none =>
           refine ⟨M₂, .hardware (.annahme a), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
           · simp only [execEndHA, axiomAntwort, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger]
@@ -1162,7 +1162,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
             rw [hx]
             trivial
       | some v =>
-          obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end rest M₂ (E.antwortWelt hZ pad σ₁ (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
+          obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end rest M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
             (.cons (ergWert he v) ρ) (.cons (ergWert he' (castV (E.aerg a).symm (E.ergE _ v))) (E.envE ρ))
             (E.inv_antwort hZ hB.pad hI2 _) (E.envR_cons (E.envR_envE ρ) _ _ rfl (E.ergWert_ergE (E.aerg a) he he' v))
           refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
@@ -1179,11 +1179,11 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       obtain rfl := E.envR_eq ρ ρ' hρ
       obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
         (args.orte)
-      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' hI a (evalArgs σ₁ args σ₁ ρ)
+      obtain ⟨M₂, hs2, hOΦ, hI2⟩ := E.ax_schluessel hZ pad O' (hI.fragt E (.inl a) (.inl (E.ax a))) a (evalArgs σ₁ args σ₁ ρ)
       have hargs := E.evalArgs_exA hI.treu hI.treu args ρ
-      have hw' := E.axiomSonst_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a) (E.agruende a)
+      have hw' := E.axiomSonst_wert hZ (fun _ => Option.none) O'.zeiger a (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 (E.aerg a) (E.agruende a)
       have he' : D'.aerg (E.ax a) = some (E.tyE τ) := by rw [E.aerg, he]; rfl
-      rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with _ | (v | r)
+      rcases hx : sonstPasst (fun _ => Option.none) (D.aerg a) (D.agruende a) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).2 with _ | (v | r)
       · refine ⟨M₂, .hardware (.annahme a), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, axiomAntwortSonst, hΦ Φ (passt_teil hP hs2), hOΦ Φ hP, orakelΦ_zeiger]
           rw [hx]
@@ -1191,7 +1191,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
             evalArgs_umτs, hargs, aparamsUm_falt, hw']
           rw [hx]
           trivial
-      · obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end rest M₂ (E.antwortWelt hZ pad σ₁ (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
+      · obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end rest M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
           (.cons (ergWert he v) ρ) (.cons (ergWert he' (castV (E.aerg a).symm (E.ergE _ v))) (E.envE ρ))
           (E.inv_antwort hZ hB.pad hI2 _) (E.envR_cons (E.envR_envE ρ) _ _ rfl (E.ergWert_ergE (E.aerg a) he he' v))
         refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
@@ -1205,7 +1205,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
           exact E.endRel_schrumpf hR3
       · have hc : (Ty.why (D.agruende a) :: Γ).map E.tyE = Ty.why (D'.agruende (E.ax a)) :: Γ.map E.tyE := by
           rw [E.agruende]; rfl
-        obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end err M₂ (E.antwortWelt hZ pad σ₁ (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) (leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
+        obtain ⟨M₃, o, hs3, hΦ3, hR3⟩ := sim_end err M₂ (E.antwortWelt hZ pad (σ₁.fragt (.inl a)) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1) (O'.wirkt (E.ax a) ((leseA A' σ' (Λ.map E.resE) (args.orte.map E.ortE)).fragt (.inl (E.ax a))) (E.aparamsUm a (evalArgs σ₁ args σ₁ ρ))).1
           (.cons r ρ) (castE hc.symm (.cons (Fin.cast (E.agruende a).symm r) (E.envE ρ)))
           (E.inv_antwort hZ hB.pad hI2 _)
           ((E.envR_um hc.symm _ _).mpr (E.envR_cons (E.envR_envE ρ) _ _ (by rw [E.agruende])
@@ -1223,11 +1223,11 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regRead r hk rest => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel hM
-      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) σ') (E.rtyp r)
+      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
       have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
         rw [List.map_cons, E.rtyp]
-      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) σ') with
+      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) with
       | none =>
           refine ⟨_, .hardware (.register r), hs1, fun Φ hP => ?_, ?_⟩
           · simp only [execEndHA, orakelΦ_regLies, orakelΦ_zeiger, hΦ1 Φ hP]
@@ -1247,7 +1247,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
               simp only [hz, hzv, Bool.false_eq_true, ↓reduceIte]
               trivial
           · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := E.endSim_end_um S' O' U' A' passes R' hc _ _ (sim_end rest)
-              _ σ σ' (.cons v ρ) (.cons ((E.rtyp r).symm ▸ E.valE _ v) (E.envE ρ)) hk1
+              _ (σ.fragt (.inr (.inl r))) (σ'.fragt (.inr (.inl (E.reg r)))) (.cons v ρ) (.cons ((E.rtyp r).symm ▸ E.valE _ v) (E.envE ρ)) hk1
               (E.envR_cons (E.envR_envE ρ) _ _ (E.rtyp r) (castW_symm (E.rtyp r) _))
             refine ⟨M₂, o.schrumpf, teil_trans hs1 hs2, fun Φ hP => ?_, ?_⟩
             · simp only [execEndHA, orakelΦ_regLies, orakelΦ_zeiger, hΦ1 Φ (passt_teil hP hs2)]
@@ -1261,11 +1261,11 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse r hk zusage sonst rest => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel hM
-      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) σ') (E.rtyp r)
+      obtain ⟨hk1, hs1, hΦ1⟩ := E.schluessel (hM.fragt E (.inr (.inl r)) (.inr (.inl (E.reg r))))
+      have hw' := E.regLies_wert hZ (fun _ => Option.none) O'.zeiger r (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) (E.rtyp r)
       have hc : (D.rtyp r :: Γ).map E.tyE = D'.rtyp (E.reg r) :: Γ.map E.tyE := by
         rw [List.map_cons, E.rtyp]
-      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) σ') with
+      cases hx : einpassen (fun _ => Option.none) (D.rtyp r) (O'.regLies (E.reg r) (σ'.fragt (.inr (.inl (E.reg r))))) with
       | none =>
           refine ⟨_, .hardware (.register r), hs1, fun Φ hP => ?_, ?_⟩
           · simp only [execEndHA, orakelΦ_regLies, orakelΦ_zeiger, hΦ1 Φ hP]
@@ -1309,19 +1309,19 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits g payload hp hL hat rest => by
       intro M σ σ' ρ ρ' hM hρ
       obtain rfl := E.envR_eq ρ ρ' hρ
-      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T hM hB.havocA hB.atom Λ (Λ.map E.resE)
+      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T (hM.fragt E (.inr (.inr g)) (.inr (.inr (E.glob g)))) hB.havocA hB.atom Λ (Λ.map E.resE)
         [Sum.inr g] [Sum.inr (E.glob g)] rfl
       obtain ⟨hk2, hs2, hΦ2⟩ := E.schluessel hI
       have hc : (D.gtyp g :: Γ).map E.tyE = D'.gtyp (E.glob g) :: Γ.map E.tyE := by
         rw [List.map_cons, E.gtyp]
-      cases hvis : O'.sichtbar (E.glob g) (leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)])
+      cases hvis : O'.sichtbar (E.glob g) (leseA A' (σ'.fragt (.inr (.inr (E.glob g)))) (Λ.map E.resE) [Sum.inr (E.glob g)])
       · refine ⟨_, .hardware (.sichtbarkeit D.a10), teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP hs2), orakelΦ_sichtbar, hΦ2 Φ hP, hvis,
             Bool.false_eq_true, ↓reduceIte]
         · simp only [exEnd, execEndHA, hvis, Bool.false_eq_true, ↓reduceIte]
           trivial
       · obtain ⟨M₃, o, hs3, hΦ3, hR⟩ := E.endSim_end_um S' O' U' A' passes R' hc _ _ (sim_end rest)
-          _ σ₁ _ (.cons (σ₁.globs g) ρ) (.cons ((leseA A' σ' (Λ.map E.resE) [Sum.inr (E.glob g)]).globs
+          _ σ₁ _ (.cons (σ₁.globs g) ρ) (.cons ((leseA A' (σ'.fragt (.inr (.inr (E.glob g)))) (Λ.map E.resE) [Sum.inr (E.glob g)]).globs
             (E.glob g)) (E.envE ρ)) hk2 (E.envR_cons (E.envR_envE ρ) _ _ (E.gtyp g) (hk2.treu.2 g))
         refine ⟨M₃, o.schrumpf, teil_trans (teil_trans hs hs2) hs3, fun Φ hP => ?_, ?_⟩
         · simp only [execEndHA, hΦ Φ (passt_teil hP (teil_trans hs2 hs3)), orakelΦ_sichtbar,

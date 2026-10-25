@@ -141,6 +141,11 @@ theorem Inv.wachs {M : List (World D × World D')} {σ τ : World D} {σ' τ' : 
   ⟨ht, h.eintrag, fun p hp => Nat.le_of_lt (Nat.lt_of_le_of_lt (h.kurz p hp) hl),
     fun p hp he => absurd he (Nat.ne_of_lt (Nat.lt_of_le_of_lt (h.kurz p hp) hl)), h.funk⟩
 
+/-- **A question to the outside on both sides** (`Ereignis.fremd`): the trace grows, no memory moves. -/
+theorem Inv.fragt {M : List (World D × World D')} {σ : World D} {σ' : World D'} (h : E.Inv M σ σ')
+    (q : D.Ax ⊕ D.Reg ⊕ D.Glob) (q' : D'.Ax ⊕ D'.Reg ⊕ D'.Glob) : E.Inv M (σ.fragt q) (σ'.fragt q') :=
+  h.wachs E (Nat.lt_succ_self _) h.treu
+
 /-- **The same trace length, nothing foreign changed.** -/
 theorem Inv.bleib {M : List (World D × World D')} {σ τ : World D} {σ' τ' : World D'}
     (h : E.Inv M σ σ') (hl : τ.spur.length = σ.spur.length) (ht : E.Treu τ.speicher τ')

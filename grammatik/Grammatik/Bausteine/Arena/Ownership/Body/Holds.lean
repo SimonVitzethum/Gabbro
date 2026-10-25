@@ -39,6 +39,10 @@ theorem MetaSame.reads (A : FreiForm D) (σ : World D) (Λ : List (Res D))
     (os : List (D.Tab ⊕ D.Glob)) : MetaSame A σ (σ.lese Λ os) :=
   MetaSame.of_cells A rfl rfl (fun _ => rfl)
 
+theorem MetaSame.fragt (A : FreiForm D) (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) :
+    MetaSame A σ (σ.fragt q) :=
+  MetaSame.of_cells A rfl rfl (fun _ => rfl)
+
 theorem MetaSame.takes (A : FreiForm D) (σ : World D) (L : D.Lock) : MetaSame A σ (σ.nimmt L) :=
   MetaSame.of_cells A rfl rfl (fun _ => rfl)
 
@@ -133,6 +137,11 @@ theorem Holds.reads {c : Context} {σ : World D} {Γ : Ctx} {ρ : Env D Γ}
     (h : Holds A fr s0 c σ ρ) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
     Holds A fr s0 c (σ.lese Λ os) ρ :=
   h.meta (MetaSame.reads A σ Λ os)
+
+/-- A question to the outside keeps every holding: it changes no cell. -/
+theorem Holds.fragt {c : Context} {σ : World D} {Γ : Ctx} {ρ : Env D Γ}
+    (h : Holds A fr s0 c σ ρ) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : Holds A fr s0 c (σ.fragt q) ρ :=
+  h.meta (MetaSame.fragt A σ q)
 
 /-- A binder without provenance: computed values, register reads, foreign
 answers and loaded words never carry a grant. -/

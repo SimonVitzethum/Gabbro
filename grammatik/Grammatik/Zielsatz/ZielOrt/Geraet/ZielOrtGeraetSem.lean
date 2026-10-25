@@ -8,11 +8,12 @@
              user obligation against local oracles (`KoerperGutG`), and the
              frame semantics of the three device forms.
 
-  `ZielOrtRegister.lean` shows that register reads cannot join the fragment
-  of `ziel_ort_voll` as it stands: a register answer is `O.regLies r σ`, a
-  function of the WHOLE world, and on G another thread changes the world
-  between two reads outside the reader's footprint. The repair has two
-  halves.
+  Register reads are not in the fragment of `ziel_ort_voll`: a register
+  answer is `O.regLies r σ`, a function of the WHOLE world, and on G another
+  thread changes the world between two reads outside the reader's footprint.
+  (Until 2026-10-25 a two-thread counterexample refuted the plain widening; it
+  relied on two reads in one world answering alike, which no longer holds since
+  every read is a trace event, `Ereignis.fremd`.) The repair has two halves.
 
   * HARDWARE (`RegLokal`): the declaration attributes to every register the
     carriers that hold its device's state (`D.rtraeger r`, a declaration
@@ -43,13 +44,14 @@ variable {D : Deklaration}
 /-- **Register locality** (hardware). A register read answers from the
     state of its device: two worlds that agree on the device carriers the
     declaration attributes to `r` (`D.rtraeger r`) get the same answer. The
-    visibility answer of `awaits g` (A10) depends on the awaited global only -- and both on the thread's trace,
-    which records every earlier question to the outside (`Ereignis.fremd`, 2026-10-25): two reads of a register
-    whose carriers did not change are two events and may answer differently, as a moving device does. -/
+    visibility answer of `awaits g` (A10) depends on the awaited global only.
+    Consecutive reads may differ only where those carriers changed. (The trace records every read as
+    `Ereignis.fremd` since 2026-10-25; lifting this assumption to answers that depend on that history needs the
+    local replay to record register answers as it records foreign answers -- open.) -/
 def RegLokal (O : Orakel D) : Prop :=
-  (∀ (r : D.Reg) (σ σ' : World D), GleichAuf (D.rtraeger r) σ σ' → σ.spur = σ'.spur →
+  (∀ (r : D.Reg) (σ σ' : World D), GleichAuf (D.rtraeger r) σ σ' →
     O.regLies r σ = O.regLies r σ') ∧
-  (∀ (g : D.Glob) (σ σ' : World D), GleichAuf [Sum.inr g] σ σ' → σ.spur = σ'.spur →
+  (∀ (g : D.Glob) (σ σ' : World D), GleichAuf [Sum.inr g] σ σ' →
     O.sichtbar g σ = O.sichtbar g σ')
 
 /-- The sequential oracle `O'` gives the register and visibility answers of
@@ -659,7 +661,7 @@ theorem semV_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).les
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hz : D.rzusage r v = true) :
     semV O passes R (.dann (.regRead r hk rest) k) σ ρ =
-      semV O passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
+      semV O passes R (.dann rest (.schrumpf k)) (σ.fragt (.inr (.inl r))) (.cons v ρ) := by
   rw [semV_dann]
   simp only [execBlock, hv, hz, if_true]
   rfl
@@ -668,9 +670,9 @@ theorem semV_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklass
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
-    (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true) :
+    (hw : wahr? (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ)) = true) :
     semV O passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
-      semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ zusage.orte) (.cons v ρ) := by
+      semV O passes R (.dann rest (.schrumpf k)) ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ) := by
   rw [semV_dann]
   simp only [execBlock, hv, hw, if_true]
   rfl
@@ -679,9 +681,9 @@ theorem semV_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rkla
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
-    (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
+    (hw : wahr? (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ)) = false) :
     (semV O passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
-      (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
+      (semV O passes R (.dann sonst.alsBlock.2 (.abbruch k)) ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) ρ) := by
   rw [semV_dann]
   simp only [execBlock, hv, hw, Bool.false_eq_true, if_false]
   rw [semV_alsBlock]
@@ -691,8 +693,8 @@ theorem semV_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) (hvis : O.sichtbar g (σ.fragt (.inr (.inr g))) = true) :
     semV O passes R (.dann (.awaits g payload hp hL hat rest) k) σ ρ =
-      semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ [.inr g])
-        (.cons ((σ.lese Λ [.inr g]).globs g) ρ) := by
+      semV O passes R (.dann rest (.schrumpf k)) ((σ.fragt (.inr (.inr g))).lese Λ [.inr g])
+        (.cons (((σ.fragt (.inr (.inr g))).lese Λ [.inr g]).globs g) ρ) := by
   rw [semV_dann]
   simp only [execBlock, hvis, if_true]
   rfl

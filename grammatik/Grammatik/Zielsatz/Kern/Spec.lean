@@ -151,8 +151,18 @@
     (3) every lock take is an acquire and every give a release (the runtime's ticket lock: fetch-add on `next`,
         acquire spin on `now`, release advance);
     (4) carriers are the locations (a table or an atomic array is one location of W);
-    (5) what G reads without recording it -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
+    (5) what G reads from the outside -- foreign answers (`Orakel.wirkt`), register reads, the visibility of
         `awaits` -- is read over G's memory: the last executed write, not an older message.
+
+  QUESTIONS TO THE OUTSIDE ARE TRACE EVENTS (2026-10-25, a change of meaning reviewed with the owner). Every
+  foreign call, register read and `awaits` visibility first records `Ereignis.fremd` in the thread's trace
+  (`World.fragt`), and the oracle answers in that world. So two calls of the same foreign body in the same memory
+  are two different questions, and an oracle may answer them differently, as a real system does (a `read` that
+  returns the next bytes, a provider that hands out a fresh cell). Before, every oracle had to answer both alike,
+  so the statement covered no run in which a repeated call answered differently. The event touches no cell and no
+  lock. `RegLokal` (premise (c)) still lets a register or visibility answer depend on the device carriers only, not
+  on that history: lifting it needs the local replay of `ziel_ort_*` to record register answers as it records
+  foreign answers -- named, open.
 
   WHAT A GREEN BUILD COVERS. Certificates are generated on demand (crates/gabbro-check/tests/zertifikate.rs): for
   every accepted `.gab` under `beispiele/` the exporter (`gabbro obligations --g`) either writes a certificate --

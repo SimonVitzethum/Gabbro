@@ -67,10 +67,10 @@ theorem axOBoese_hardware : HardwareAnnahmen axOBoese axQ :=
 
 /-- The axiom's answer at any world: the world is `axO`'s, the value is none. -/
 theorem axOBoese_antwort (σ : World axD) :
-    axiomAntwort axOBoese axInc σ .nil = ((axO.wirkt axInc σ .nil).1, none) := by
-  show ((axOBoese.wirkt axInc σ .nil).1,
-    einpassenErg axOBoese.zeiger (axD.aerg axInc) (axOBoese.wirkt axInc σ .nil).2) = _
-  rw [axOBoese_passt_nicht axInc σ .nil]
+    axiomAntwort axOBoese axInc σ .nil = ((axO.wirkt axInc (σ.fragt (.inl axInc)) .nil).1, none) := by
+  show ((axOBoese.wirkt axInc (σ.fragt (.inl axInc)) .nil).1,
+    einpassenErg axOBoese.zeiger (axD.aerg axInc) (axOBoese.wirkt axInc (σ.fragt (.inl axInc)) .nil).2) = _
+  rw [axOBoese_passt_nicht axInc (σ.fragt (.inl axInc)) .nil]
   rfl
 
 /-- `zaehle`'s body, against this oracle and ANY handler, stops at the

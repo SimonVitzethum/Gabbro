@@ -19,7 +19,7 @@ theorem meta_axiom {A : FreiForm D} {O : Orakel D} (hO : GutO O) {a : D.Ax} (hfr
   have h := congrArg Prod.fst hax
   simp only [axiomAntwort_fst] at h
   rw [← h]
-  exact MetaSame.axiom hO hfree σ ρ
+  exact (MetaSame.fragt A σ _).trans (MetaSame.axiom hO hfree _ ρ)
 
 theorem meta_axiomSonst {A : FreiForm D} {O : Orakel D} (hO : GutO O) {a : D.Ax} (hfree : AxiomFree A a)
     {σ σ' : World D} {ρ : Env D (D.aparams a)} {x : Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
@@ -27,7 +27,7 @@ theorem meta_axiomSonst {A : FreiForm D} {O : Orakel D} (hO : GutO O) {a : D.Ax}
   have h := congrArg Prod.fst hax
   simp only [axiomAntwortSonst_fst, axiomAntwort_fst] at h
   rw [← h]
-  exact MetaSame.axiom hO hfree σ ρ
+  exact (MetaSame.fragt A σ _).trans (MetaSame.axiom hO hfree _ ρ)
 
 section Step
 

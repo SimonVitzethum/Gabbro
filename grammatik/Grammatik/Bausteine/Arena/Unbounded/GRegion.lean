@@ -110,7 +110,7 @@ theorem zelle_geschrieben (K : Nat) (passes : Nat)
     (R : ∀ f : rD.Fn, World rD → Env rD (rD.params f) → RufAusgang f) :
     ∃ σ', execEnd (oK K) passes R rumpf w0 .nil = .zurueck σ' () ∧ (σ'.slots () (K : Int) ()).n = 7 := by
   have h : execEnd (oK K) passes R rumpf w0 .nil =
-      (execEnd (oK K) passes R weiter (w0.lese [] []) (.cons (Val.vonZelle K) .nil)).schrumpf := by
+      (execEnd (oK K) passes R weiter ((w0.lese [] []).fragt (.inl ())) (.cons (Val.vonZelle K) .nil)).schrumpf := by
     simp only [rumpf_ist_anbieterruf, execEnd, axiomAntwort, oK, Args.orte, antwort_K]
     rfl
   rw [h]

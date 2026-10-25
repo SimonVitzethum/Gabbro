@@ -223,10 +223,17 @@ theorem blatt_slots_t_gleich
       ∀ (Λe : List (Res D)) (h : List D.Lock),
         e = Ereignis.zugriff t true Λe h → False := by
     intro e he htr Λe h heq
-    have hlam : (Ereignis.zugriff t true Λe h).lambda = Λ := by
-      rw [← heq]; exact hchar.1 e he
     have hg : (Ereignis.zugriff t true Λe h).gut := by
       rw [← heq]; exact hneu_gut e he
+    have hlam : (Ereignis.zugriff t true Λe h).lambda = Λ := by
+      rcases hchar.1 e he with hl | hl
+      · rw [← heq]; exact hl
+      · -- a write with an empty `Λ` names no guard, but the guarded carrier needs one
+        rw [heq] at hl
+        simp only [Ereignis.lambda] at hl
+        subst hl
+        have hd : darf D t [] := zugriff_darf_aus_gut hg
+        exact absurd (hd _ hGuard) List.not_mem_nil
     simp only [Ereignis.lambda] at hlam
     -- After `subst`, the statement-Λ binder is rewritten to `Λe`
     -- everywhere, including `hmem`, `hΛ`, `hchar`, `hfrei`.

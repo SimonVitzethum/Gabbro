@@ -742,8 +742,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             hZ.1 r hk zusage sonst rest k ρ rfl w (by rw [hW]; exact hw)
             (by rw [hW]; exact hw0)
           rw [hW] at hZ1
-          exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
-            (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ)
+          exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 ((Erw.fragt _ _).trans (Erw.lese _ _ _)).offen
+            (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese (σ := σ.fragt _) _ hΛ)
               (hA.lauf (RufLaufG.einzeln hs1)))
         · rename_i hw0
           rw [ende_zuAusgang] at hex
@@ -751,9 +751,9 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             hZ.1 r hk zusage sonst rest k ρ rfl w (by rw [hW]; exact hw)
             (by rw [hW]; simpa using hw0)
           rw [hW] at hZ1
-          exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
+          exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 ((Erw.fragt _ _).trans (Erw.lese _ _ _)).offen
             (alsRetR sonst hs _ _ _ _ hpe
-              (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese _ hΛ)
+              (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese (σ := σ.fragt _) _ hΛ)
               (hA.lauf (RufLaufG.einzeln hs1)))
       · simp [Ausgang.ende?] at hex
   | _, _, _, _, .awaits g payload hp hL hat rest, hb => by
@@ -767,8 +767,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M1, hs1, hZ1⟩ := w_awaits (P := P) (O := O) (passes := passes) hZ.1
           g payload hp hL hat rest k ρ rfl (by rw [hW]; exact hvis)
         rw [hW] at hZ1
-        exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
-          (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ)
+        exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 ((Erw.fragt _ _).trans (Erw.lese _ _ _)).offen
+          (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese (σ := σ.fragt _) _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
       · simp [Ausgang.ende?] at hex
   | _, _, Λ₀, _, .exchange g neuE hw hL rest, hb => by

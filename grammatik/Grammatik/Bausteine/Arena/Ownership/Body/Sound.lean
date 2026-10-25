@@ -39,7 +39,7 @@ theorem armCtx_length (Γ : Ctx) : ∀ ca : Option (Int × Int), Γ.length ≤ (
   | some (_, _) => Nat.le_succ _
 
 theorem axiomAntwort_fst (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
-    (axiomAntwort O a σ ρ).1 = (O.wirkt a σ ρ).1 := rfl
+    (axiomAntwort O a σ ρ).1 = (O.wirkt a (σ.fragt (.inl a)) ρ).1 := rfl
 
 end Arms
 
@@ -149,14 +149,14 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       have hσ : σ' = (axiomAntwort O a _ _).1 := (congrArg Prod.fst heq).symm
       rw [axiomAntwort_fst] at hσ
       rw [hσ]
-      exact (h.reads _ _).meta (MetaSame.axiom hO hfree _ _)
+      exact ((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)
     · trivial
   | _, _, _, _, _, _, _, _, .regWrite r hk' e _, σ, ρ, _, h => by
     simp only [execStmt]
     exact h.reads _ _
   | _, _, _, _, _, _, _, _, .transition r hk' m hm hl maske bits, σ, ρ, _, h => by
     simp only [execStmt]
-    exact h
+    exact h.fragt _
   | _, _, _, _, _, _, _, _, .publish g e payload hp hw hL hg _, σ, ρ, _, h => by
     simp only [execStmt]
     exact (h.reads _ _).meta (MetaSame.writeGlob A _ g _ _ hg)
@@ -250,7 +250,7 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       rw [axiomAntwort_fst] at hσ
       subst hσ
       exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega)
-        (((h.reads _ _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
+        ((((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
     · trivial
   | _, _, _, _, _, _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest hfree _ herr hrest,
       σ, ρ, hk, h => by
@@ -261,20 +261,20 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       rw [axiomAntwortSonst_fst, axiomAntwort_fst] at hσ
       subst hσ
       exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega)
-        (((h.reads _ _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
+        ((((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
     · rename_i σ' r heq
       have hσ : σ' = (axiomAntwortSonst O a _ _).1 := (congrArg Prod.fst heq).symm
       rw [axiomAntwortSonst_fst, axiomAntwort_fst] at hσ
       subst hσ
       exact EPost.toB _ (EPost.schrumpf hk _ (oe_sound hR hO herr _ _ (by simp; omega)
-        (((h.reads _ _).meta (MetaSame.axiom hO hfree _ _)).bindNone _)))
+        ((((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)).bindNone _)))
     · trivial
   | _, _, _, _, _, _, _, _, .regRead r hk' rest hrest, σ, ρ, hk, h => by
     simp only [execBlock]
     split
     · rename_i v _
       split
-      · exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega) (h.bindNone v))
+      · exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega) ((h.fragt _).bindNone v))
       · trivial
     · trivial
   | _, _, _, _, _, _, _, _, .regReadElse r hk' zusage sonst rest _ hs hrest, σ, ρ, hk, h => by
@@ -282,13 +282,13 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     split
     · rename_i v _
       split
-      · exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega) ((h.reads _ _).bindNone v))
-      · exact EPost.toB _ (oe_sound hR hO hs _ _ hk (h.reads _ _))
+      · exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega) (((h.fragt _).reads _ _).bindNone v))
+      · exact EPost.toB _ (oe_sound hR hO hs _ _ hk ((h.fragt _).reads _ _))
     · trivial
   | _, _, _, _, _, _, _, _, .awaits g payload hp hL ha rest hrest, σ, ρ, hk, h => by
     simp only [execBlock]
     split
-    · exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega) ((h.reads _ _).bindNone _))
+    · exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp; omega) (((h.fragt _).reads _ _).bindNone _))
     · trivial
   | _, _, _, _, _, _, _, _, .exchange g neu hw hL rest hg _ hrest, σ, ρ, hk, h => by
     simp only [execBlock]
@@ -411,7 +411,7 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       rw [axiomAntwort_fst] at hσ
       subst hσ
       exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega)
-        (((h.reads _ _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
+        ((((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
     · trivial
   | _, _, _, _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest hfree _ herr hrest, σ, ρ, hk, h => by
     simp only [execEnd]
@@ -421,20 +421,20 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       rw [axiomAntwortSonst_fst, axiomAntwort_fst] at hσ
       subst hσ
       exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega)
-        (((h.reads _ _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
+        ((((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
     · rename_i σ' r heq
       have hσ : σ' = (axiomAntwortSonst O a _ _).1 := (congrArg Prod.fst heq).symm
       rw [axiomAntwortSonst_fst, axiomAntwort_fst] at hσ
       subst hσ
       exact EPost.schrumpf hk _ (oe_sound hR hO herr _ _ (by simp; omega)
-        (((h.reads _ _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
+        ((((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)).bindNone _))
     · trivial
   | _, _, _, _, _, _, .regRead r hk' rest hrest, σ, ρ, hk, h => by
     simp only [execEnd]
     split
     · rename_i v _
       split
-      · exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega) (h.bindNone v))
+      · exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega) ((h.fragt _).bindNone v))
       · trivial
     · trivial
   | _, _, _, _, _, _, .regReadElse r hk' zusage sonst rest _ hs hrest, σ, ρ, hk, h => by
@@ -442,13 +442,13 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     split
     · rename_i v _
       split
-      · exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega) ((h.reads _ _).bindNone v))
-      · exact oe_sound hR hO hs _ _ hk (h.reads _ _)
+      · exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega) (((h.fragt _).reads _ _).bindNone v))
+      · exact oe_sound hR hO hs _ _ hk ((h.fragt _).reads _ _)
     · trivial
   | _, _, _, _, _, _, .awaits g payload hp hL ha rest hrest, σ, ρ, hk, h => by
     simp only [execEnd]
     split
-    · exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega) ((h.reads _ _).bindNone _))
+    · exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp; omega) (((h.fragt _).reads _ _).bindNone _))
     · trivial
   | _, _, _, _, _, _, .bindCallInd p args he hp hr rest J owner hJ _ _ hplan hrest, σ, ρ, hk, h => by
     simp only [execEnd]

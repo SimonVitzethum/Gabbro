@@ -902,7 +902,7 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             (heldB_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
           obtain ⟨M3, hs3, hZ3⟩ := schrumpfOkR P O passes f fn stapel rho s0 hZ2
           exact ⟨M3, _, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
-            by rw [ho2, (Erw.lese _ _ _).offen]⟩
+            by rw [ho2, (Erw.lese _ _ _).offen]; rfl⟩
         · exact absurd hex (zuAusgang_ne_ok _ _ _)
       · cases hex
   | _, _, _, _, _, .awaits g payload hp hL hat rest, hb => by
@@ -920,7 +920,7 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (heldB_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
         obtain ⟨M3, hs3, hZ3⟩ := schrumpfOkR P O passes f fn stapel rho s0 hZ2
         exact ⟨M3, _, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
-          by rw [ho2, (Erw.lese _ _ _).offen]⟩
+          by rw [ho2, (Erw.lese _ _ _).offen]; rfl⟩
       · cases hex
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb => by
       intro log σ σ' ρ ρ' hex M k hZ hΛ hA
@@ -1371,7 +1371,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (heldB_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
         obtain ⟨M3, hs3, hZ3⟩ := peelSchrumpfR P O passes f fn stapel rho s0 hl hZ2
         exact ⟨M3, e2, _, .nil, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
-          by rw [ho2, (Erw.lese _ _ _).offen]⟩
+          by rw [ho2, (Erw.lese _ _ _).offen]; rfl⟩
       · simp [Ausgang.abb?] at hex
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb => by
       intro hl log σ σ' ρ ρ' w hex M k hZ hΛ hA

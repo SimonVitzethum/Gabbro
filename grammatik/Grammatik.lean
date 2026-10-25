@@ -117,11 +117,9 @@ import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtRegister
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetAus
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
 import Grammatik.Logik.Fortschritt.PlanLauf
 import Grammatik.Logik.Fortschritt.Warten

@@ -464,14 +464,14 @@ theorem blatt_fall {O : Orakel D} (hO : GutO O) (passes : Nat) {V : Vertrag D} {
           · rename_i σ1 v hax
             simp only [Ausgang.ok.injEq] at hx
             obtain ⟨rfl, -⟩ := hx
-            have h1 : (O.wirkt a (W.lese Λ args.orte)
+            have h1 : (O.wirkt a ((W.lese Λ args.orte).fragt (.inl a))
                 (evalArgs (W.lese Λ args.orte) args (W.lese Λ args.orte) ρ)).1 = σ1 := by
               have := congrArg Prod.fst hax
               simpa [axiomAntwort] using this
             rw [← h1]
-            refine (Erw.lese W Λ args.orte).trans (axiom_erw hO a _ _ hd hgd ?_)
+            refine ((Erw.lese W Λ args.orte).trans (Erw.fragt _ _)).trans (axiom_erw hO a _ _ hd hgd ?_)
             show HeldIn Λ (offen _)
-            rw [(Erw.lese W Λ args.orte).offen]
+            rw [((Erw.lese W Λ args.orte).trans (Erw.fragt _ _)).offen]
             exact hh
           · cases hx
       | _ =>

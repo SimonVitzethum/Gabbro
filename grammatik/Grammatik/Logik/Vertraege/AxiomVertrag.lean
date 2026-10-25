@@ -335,7 +335,7 @@ theorem koerperGutV_nur_rahmen (E : AxEnsZ) (h : KoerperGutV (axPE E) 0 axZaehle
     simp only [einpassen, dif_pos (show 0 ≤ v.n ∧ v.n ≤ 3 from ⟨v.lo_le, v.le_hi⟩)]
     rfl
   have hax : axiomAntwort (axOrakel v w) axInc ((σ.lese axL []).lese axL []) .nil =
-      (((σ.lese axL []).lese axL []).storeSlot () 0 () w, some v) := by
+      ((((σ.lese axL []).lese axL []).fragt (.inl axInc)).storeSlot () 0 () w, some v) := by
     show (_, einpassenErg (D := axD) (axOrakel v w).zeiger (axD.aerg axInc) v.n) = _
     rw [hein]
     rfl
@@ -373,14 +373,14 @@ theorem inc_koerperGutA : KoerperGutA axP 0 axQ axZaehle := by
   have hρ : ρ = .nil := by cases ρ; rfl
   subst hρ
   have hax : axiomAntwort O' axInc ((σ.lese axL []).lese axL []) .nil =
-      ((O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).1,
-        einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2) :=
+      ((O'.wirkt axInc (((σ.lese axL []).lese axL []).fragt (.inl axInc)) .nil).1,
+        einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc (((σ.lese axL []).lese axL []).fragt (.inl axInc)) .nil).2) :=
     rfl
   refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
   · have e := hrun.symm.trans (axZaehle_lauf axEnsInc O' 0 R σ _ _ hax)
     revert e
     cases hw : einpassenErg O'.zeiger (axD.aerg axInc)
-        (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2 with
+        (O'.wirkt axInc (((σ.lese axL []).lese axL []).fragt (.inl axInc)) .nil).2 with
     | none => intro e; cases e
     | some u =>
         intro e
@@ -388,7 +388,7 @@ theorem inc_koerperGutA : KoerperGutA axP 0 axQ axZaehle := by
         exact hQ axInc _ .nil _ hw
   · have e := hrun.symm.trans (axZaehle_lauf axEnsInc O' 0 (torRuf axP R) σ _ _ hax)
     revert e
-    cases einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc ((σ.lese axL []).lese axL []) .nil).2 with
+    cases einpassenErg O'.zeiger (axD.aerg axInc) (O'.wirkt axInc (((σ.lese axL []).lese axL []).fragt (.inl axInc)) .nil).2 with
     | none => intro e; cases e
     | some u => intro e; cases e
 

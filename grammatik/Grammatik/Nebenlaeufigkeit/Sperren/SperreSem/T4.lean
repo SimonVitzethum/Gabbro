@@ -578,7 +578,7 @@ theorem semH_regLies {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklasse r).les
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
     (hz : D.rzusage r v = true) :
     semH S O U passes R (.dann (.regRead r hk rest) k) σ ρ =
-      semH S O U passes R (.dann rest (.schrumpf k)) σ (.cons v ρ) := by
+      semH S O U passes R (.dann rest (.schrumpf k)) (σ.fragt (.inr (.inl r))) (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv, hz, if_true]
   rfl
@@ -587,9 +587,9 @@ theorem semH_regLiesElseWahr {Λ Λ' : List (Res D)} (r : D.Reg) (hk : (D.rklass
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
-    (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true) :
+    (hw : wahr? (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ)) = true) :
     semH S O U passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ =
-      semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ zusage.orte) (.cons v ρ) := by
+      semH S O U passes R (.dann rest (.schrumpf k)) ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv, hw, if_true]
   rfl
@@ -599,9 +599,9 @@ theorem semH_regLiesElseFalsch {Λ Λ' : List (Res D)} (r : D.Reg)
     (zusage : Expr D (D.rtyp r :: Γ) Λ .bool) (sonst : Endblock D V l Γ Λ)
     (rest : Block D V l (D.rtyp r :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ)
     (v : Wert D (D.rtyp r)) (hv : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = some v)
-    (hw : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = false) :
+    (hw : wahr? (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (.cons v ρ)) = false) :
     (semH S O U passes R (.dann (.regReadElse r hk zusage sonst rest) k) σ ρ).folgt
-      (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) (σ.lese Λ zusage.orte) ρ) := by
+      (semH S O U passes R (.dann sonst.alsBlock.2 (.abbruch k)) ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hv, hw, Bool.false_eq_true, if_false]
   rw [semH_alsBlock]
@@ -611,8 +611,8 @@ theorem semH_awaits {Λ Λ' : List (Res D)} (g : D.Glob) (payload : List D.Glob)
     (hp : payload = D.nutzlast g) (hL : gdarf D g Λ) (hat : D.atomar g = true) (rest : Block D V l (D.gtyp g :: Γ) Λ Λ')
     (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) (hvis : O.sichtbar g (σ.fragt (.inr (.inr g))) = true) :
     semH S O U passes R (.dann (.awaits g payload hp hL hat rest) k) σ ρ =
-      semH S O U passes R (.dann rest (.schrumpf k)) (σ.lese Λ [.inr g])
-        (.cons ((σ.lese Λ [.inr g]).globs g) ρ) := by
+      semH S O U passes R (.dann rest (.schrumpf k)) ((σ.fragt (.inr (.inr g))).lese Λ [.inr g])
+        (.cons (((σ.fragt (.inr (.inr g))).lese Λ [.inr g]).globs g) ρ) := by
   rw [semH_dann]
   simp only [execBlockH, hvis, if_true]
   rfl

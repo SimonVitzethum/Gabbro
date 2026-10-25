@@ -159,9 +159,7 @@ theorem ziel_ort_voll_lokal (P : Programm D) (O : Orakel D) (passes : Nat) (fs :
   (`andereG`: the device carriers are protected like every footprint
   carrier), `KoerperGutG`, `StartGut`, `StartExklusiv`, `e0`. On
   register-local oracles `ziel_ort_voll` is a special case
-  (`ziel_ort_voll_lokal`). The counterexample of `ZielOrtRegister.lean` is
-  excluded by `RegLokal` (`ziel_ort_register_ausgeschlossen`,
-  `ZielOrtGeraetAus.lean`); the witness with all premises jointly is
+  (`ziel_ort_voll_lokal`). The witness with all premises jointly is
   `ziel_ort_geraet_zeuge` (`ZielOrtGeraetZeuge.lean`).
 
   What is NOT covered:
