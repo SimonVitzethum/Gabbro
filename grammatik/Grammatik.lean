@@ -667,4 +667,4 @@ import Grammatik.Zielsatz.Projekte.Ohne
 import Grammatik.Zielsatz.Projekte.ZeugeAtomar
 import Grammatik.Zielsatz.Projekte.ZeugeSperre
 import Grammatik.Zielsatz.Projekte.ZeugeBesitz
-import Grammatik.Zielsatz.Einbettung.Schleifen
+import Grammatik.Zielsatz.Einbettung.Werkzeug
