@@ -712,7 +712,7 @@ semantics too (`WP/HA/Kern.lean`: exact, with the same rules, the call statement
 states the obligation of each function as three weakest preconditions (`PflichtWP`) and proves
 `nutzerPflichtA_iff`: premise (b) holds EXACTLY when those hold, the lock invariants and axiom ensures are local, and
 the start obligation holds -- so every true user logic of a certificate is provable in the calculus. Without a
-shared atomic the atomic environment is the identity (`leseA_ohneAtomar`). Three certificates are proved through to
+shared atomic the atomic environment is the identity (`leseA_ohneAtomar`). Four certificates are proved through to
 the goal theorem WITHOUT an open logic premise (`gP_gabbro_bewiesen`, on `propext`, `Classical.choice`, `Quot.sound`):
 
 | Certificate | What it exercises |
@@ -720,6 +720,7 @@ the goal theorem WITHOUT an open logic premise (`gP_gabbro_bewiesen`, on `propex
 | `beispiele/119-sperrinvariante-bloecke` (`WP/HA/ZeugeZertifikat.lean`) | a lock with an invariant (`A[0] ≤ 100`): every environment move, the release check, the start obligation |
 | `beispiele/190-erster-treffer` (`WP/HA/ZeugeZertifikat2.lean`) | a `traverse` with a branch and an exit, through `wpSA_traverse` |
 | `beispiele/104` (`WP/HA/ZeugeZertifikat3.lean`) | two functions, a call, contracts (`old(K[i]) ≤ K[i]`, `result == K[i]`), the callee's frame from `RespektiertRahmen` |
+| `beispiele/182-fallible-gate` (`WP/HA/ZeugeZertifikat4.lean`) | a fallible foreign body (`syscall` with a reason channel): every answer of the gate -- value, reason, none |
 
 Finding: the certificate of `beispiele/1168` declares the lock invariant `P[0] + Q[0] == 100` with the initial memory
 all zero; its start obligation is false and its `NutzerPflichtA` unprovable (a defect of the example or of the
