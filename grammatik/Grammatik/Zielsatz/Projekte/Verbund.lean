@@ -1,4 +1,5 @@
 import Grammatik.Zielsatz.Projekte.Zeuge
+import Grammatik.Speichermodell.Atomar.AtomarGleich
 
 /-!
   File:      Grammatik/Zielsatz/Projekte/Verbund.lean
@@ -218,6 +219,26 @@ theorem gabbro_ziel_verbund_n : GabbroZielVerbundN := by
   exact gabbro_ziel specPruefer D (komponiere B ps) fs ls cs hK'
     (nutzerPflichtA_komponiere hV hne hD hDS hN) O hH passes sp init hLz lebt0 K hK
 
+/-! ## A library proved against a smaller rely -/
+
+/-- **A project proved against its own (closed-world) rely `T₁`** owes a new proof only for the bodies
+    that read an unguarded atomic outside `T₁`; every other body keeps its proof in every program.
+    The checker decides `LiestNicht` per body; this is what makes the re-check automatic. -/
+theorem nutzerTeilO_wachs {p : Projekt D} {T₁ : D.Tab ⊕ D.Glob → Prop}
+    (hL : ∀ (passes : Nat) (f : D.Fn), p.eigen f = true →
+      KoerperGutSA p.E.P passes p.E.Q p.E.S T₁ f ∧ InvGutSA p.E.P passes p.E.Q p.E.S T₁ f ∧
+        InvGutGrundA p.E.P passes p.E.Q p.E.S T₁ f)
+    (hNeu : ∀ (passes : Nat) (f : D.Fn), p.eigen f = true →
+      (∀ c ∈ endblockOrteP p.E.P (p.E.P.rumpf f), ¬ (OffenA c ∧ ¬ T₁ c)) ∨
+        (KoerperGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧ InvGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧
+          InvGutGrundA p.E.P passes p.E.Q p.E.S OffenA f))
+    (hSL : SperrInvLokal p.E.S) (hQL : AxEnsLokal p.E.Q) (hstart : StartTeil p) : NutzerTeilO p :=
+  ⟨⟨fun passes f hf => by
+      rcases hNeu passes f hf with hl | hneu
+      · obtain ⟨k, i, g⟩ := hL passes f hf
+        exact ⟨koerperGutSA_wachs k hl, invGutSA_wachs i hl, invGutGrundA_wachs g hl⟩
+      · exact hneu, hSL, hQL⟩, hstart⟩
+
 /-! ## The witness, for every accepted unit and every boundary -/
 
 theorem lokW_ohne_wurzeln [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (c : D.Tab ⊕ D.Glob) : lokW P fs [] c = true :=
@@ -281,5 +302,6 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
 
 #print axioms gabbro_ziel_verbund_n
 #print axioms verbund_zeuge
+#print axioms nutzerTeilO_wachs
 
 end Gabbro.Grammatik.Zielsatz
