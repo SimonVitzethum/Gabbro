@@ -46,6 +46,18 @@ freedom, contracts), proved terminating, deterministic and correct with GabbroV.
   in Lean) and once natively; the outputs must agree. The two paths share no compiled code.
 * After stage 2, Lean computes nothing more: every later run is a Gabbro binary.
 
+**State of stage 0 (2026-10-25, `grammatik/Grammatik/Boot/`).** `gabbro-boot` exists as a Lean executable
+(`lake build gabbro-boot`): `Boot.boot` runs the stages of `uebersetzeAllg`, refuses what `AkzeptiertX` refuses
+(`akzeptiertU`), refuses the forms whose meaning is a machine answer (foreign bodies, registers, atomics) and the open
+region (its provider is not yet fresh in the model: two `alloc T` in one world answer the same cell for every oracle),
+builds the declared initial memory (`sp0Of`) and runs `main` with `rufAt`. There are no gates yet: input and output are
+ordinary Gabbro, a table `io` with the fields `ein`/`aus` and the statics `ein_len`/`aus_len`. `boot_ist_maschine`:
+every output is the end world of `rufAt` on the pipeline's program; witness `Boot/Zeuge.lean` (call, branch, narrowing,
+loop; the kernel runs it). Measured: 0.55 s fixed cost, 4 KiB in 1.6 s, 16 KiB in 31 s -- quadratic, because a world
+slot is a chain of closures. Before stage 0 can run `gkomp` on its own source it needs (a) a world with array-backed
+slots, proved equal to the closure world, (b) the gates of the boot oracle over Lean `IO`, (c) the provider freshness
+repair of the open region in the model.
+
 ## 3. What is proved, for each tool
 
 For a tool `T`, `run_T x` is the output of its G program on input `x` (machine G, any oracle that meets the gates'
