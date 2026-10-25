@@ -54,6 +54,19 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
     | some _ => .error "number returned for a non-number result"
     | none => .error "return with value without result"
   | .why _ => .error "reason as a value without G form"
+  | .wert s =>
+    match hE : (fnAt u caller).ergTy with
+    | some τ =>
+      match lowWertAtE u Γ (resOf u caller) fn none τ s with
+      | .error e => .error e
+      | .ok v =>
+        have eW : ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg := by
+          rw [show (verOf u caller).erg =
+            (vertragVon (declOf u) caller).erg from rfl,
+            vErg_eq u caller, hE]
+          exact ErgExpr.val v
+        .ok eW
+    | none => .error "return with value without result"
   | .grund g =>
     match hE : (fnAt u caller).ergTy with
     | some (.why n) =>
@@ -297,6 +310,13 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n Λ pe rest with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.bind s.term b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindW x d v :: rest =>
+    match lowBindW u Γ Λ fn d v with
+    | .error e => .error e
+    | .ok w =>
+      match lowSeqL u caller (w.ty :: Γ) (fn.mitWert x w.ty) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.bind w.term b, r)
   | Γ, fn, n + 1, Λ, pe, .bindB x v :: rest =>
     match lowEns u Γ Λ fn none v with
     | .error e => .error e
@@ -740,6 +760,13 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowEndL (l := l) u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n Λ pe rest with
       | .error e => .error e
       | .ok (b, r) => .ok (Endblock.bind s.term b, r)
+  | Γ, fn, n + 1, Λ, pe, .bindW x d v :: rest =>
+    match lowBindW u Γ Λ fn d v with
+    | .error e => .error e
+    | .ok w =>
+      match lowEndL (l := l) u caller (w.ty :: Γ) (fn.mitWert x w.ty) n Λ pe rest with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.bind w.term b, r)
   | Γ, fn, n + 1, Λ, pe, .bindB x v :: rest =>
     match lowEns u Γ Λ fn none v with
     | .error e => .error e
@@ -958,6 +985,13 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller (.int s.range.1 s.range.2 :: Γ) (fn.mitBindung x s.range) n rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind s.term e)
+  | Γ, fn, n + 1, .bindW x d v :: rest, r =>
+    match lowBindW u Γ (resOf u caller) fn d v with
+    | .error e => .error e
+    | .ok w =>
+      match lowBodyF u caller (w.ty :: Γ) (fn.mitWert x w.ty) n rest r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.bind w.term e)
   | Γ, fn, n + 1, .axCall c args :: rest, r =>
     match lowAxKopf u caller Γ fn (resOf u caller) c args with
     | .error e => .error e

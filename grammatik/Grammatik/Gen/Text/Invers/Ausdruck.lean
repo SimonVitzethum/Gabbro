@@ -280,6 +280,7 @@ theorem EInvK.globFind {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {
   cases h : gl.ty with
   | bool => exact absurd (hb.1 h) hg
   | int _ _ => rfl
+  | wert _ => rfl
 
 /-- The variable of depth `d` has the type `Γ[d]`, the one of number `n` the type `Γ.reverse[n]`. -/
 theorem var_typ : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), Γ.reverse[Γ.length - 1 - tiefe x]? = some τ := by

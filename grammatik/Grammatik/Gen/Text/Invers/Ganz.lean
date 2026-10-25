@@ -18,7 +18,8 @@ structure LInv (gNr : Nat → Nat) (tabs : List UTab) (locks : List ULock) (glob
     (regs : List UReg) : Prop where
   glob : ∀ g : z.deklaration.Glob, ∃ gl, globs.find? (fun x => strEq x.name (nGlob (gN z g))) = some gl ∧
     (gl.ty = .bool ↔ z.deklaration.gtyp g = .bool) ∧ gl.var = !z.deklaration.atomar g ∧
-    gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = (z.deklaration.nutzlast g).map fun h => nGlob (gN z h)
+    gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = ((z.deklaration.nutzlast g).map fun h => nGlob (gN z h)) ∧
+    ∀ τ, gl.ty ≠ .wert τ
   tab : ∀ t : z.deklaration.Tab, ∃ tb, tabs.find? (fun x => strEq x.name (nTab (tN z t))) = some tb ∧
     tb.name = nTab (tN z t) ∧ tb.arena = false ∧ tb.count = z.deklaration.count t ∧ tb.opts = [] ∧
     (∀ f : z.deklaration.Feld t, tb.cols.any (fun (g, _) => strEq g (nFeld (show Fin _ from f).val)) = true) ∧
@@ -99,6 +100,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
   resOpt := rfl
   resSum := rfl
   resWhy := rfl
+  resTy := rfl
   ergNone h := by
     simp only [vertragVon, Vertrag.vonSig, Deklaration.signatur] at h
     simp [uCtxVon, kopfVon, ergBereich, Deklaration.signatur, h]

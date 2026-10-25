@@ -167,7 +167,8 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   lits : ctx.lits = []
   glob : ∀ g : z.deklaration.Glob, ∃ gl, ctx.globs.find? (fun x => strEq x.name (nGlob (gN z g))) = some gl ∧
     (gl.ty = .bool ↔ z.deklaration.gtyp g = .bool) ∧ gl.var = !z.deklaration.atomar g ∧
-    gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = (z.deklaration.nutzlast g).map fun h => nGlob (gN z h)
+    gl.atomic = z.deklaration.atomar g ∧ gl.nutzlast = ((z.deklaration.nutzlast g).map fun h => nGlob (gN z h)) ∧
+    ∀ τ, gl.ty ≠ .wert τ
   tab : ∀ t : z.deklaration.Tab, ∃ tb, ctx.tabs.find? (fun x => strEq x.name (nTab (tN z t))) = some tb ∧
     tb.name = nTab (tN z t) ∧ tb.arena = false ∧ tb.count = z.deklaration.count t ∧ tb.opts = [] ∧
     (∀ f : z.deklaration.Feld t, tb.cols.any (fun (g, _) => strEq g (nFeld (show Fin _ from f).val)) = true) ∧
@@ -185,6 +186,7 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
   resOpt : ctx.resOpt = none
   resSum : ctx.resSum = none
   resWhy : ctx.resWhy = none
+  resTy : ctx.resTy = none
   ergNone : V.erg = none → ctx.res = none ∧ ctx.resBool = false
   ergBool : V.erg = some .bool → ctx.res = none ∧ ctx.resBool = true
   ergInt : ∀ lo hi, V.erg = some (.int lo hi) → ctx.res.isSome ∧ ctx.resBool = false
@@ -273,6 +275,9 @@ theorem anw1_glob {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   · cases h : gl.ty with
     | bool => exact absurd (hb.1 h) hg
     | int _ _ =>
+      simp only [uAnw1, uRegOrt, uSetze, hs, ite_true, H.muts, List.any_nil, Bool.false_eq_true, ite_false,
+        uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, h, hw]
+    | wert _ =>
       simp only [uAnw1, uRegOrt, uSetze, hs, ite_true, H.muts, List.any_nil, Bool.false_eq_true, ite_false,
         uSetzePlatz, uZugriff, uGlobSchreib, hf, hv, hat, ha, Bool.not_true, Bool.not_false, h, hw]
 
@@ -377,6 +382,7 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   resOpt := H.resOpt
   resSum := H.resSum
   resWhy := H.resWhy
+  resTy := H.resTy
   ergNone := H.ergNone
   ergBool := H.ergBool
   ergInt := H.ergInt
@@ -409,6 +415,7 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   resOpt := H.resOpt
   resSum := H.resSum
   resWhy := H.resWhy
+  resTy := H.resTy
   ergNone := H.ergNone
   ergBool := H.ergBool
   ergInt := H.ergInt
@@ -690,7 +697,7 @@ theorem ende_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
     simp only [delabR, Except.ok.injEq] at hd; subst hd
     simp only [uOfR, Option.some.injEq] at hu; subst hu
     obtain ⟨h1, h2⟩ := H.ergNone ho.symm
-    simp [uEnde, h1, h2, H.resOpt, H.resSum, H.resWhy]
+    simp [uEnde, h1, h2, H.resOpt, H.resSum, H.resWhy, H.resTy]
   | val e =>
     simp only [delabR] at hd
     cases hs : delabE z none e with
@@ -711,7 +718,7 @@ theorem ende_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
           have hw : ∀ a c, s ≠ .why a c := fun a c h => by subst h; simp [kopfOk] at hk
           cases s with
           | why a c => exact absurd rfl (hw a c)
-          | _ => simp [uEnde, h1, h2, H.resOpt, H.resSum, H.resWhy, bool_ok H.einv e _ b hs hb]
+          | _ => simp [uEnde, h1, h2, H.resOpt, H.resSum, H.resWhy, H.resTy, bool_ok H.einv e _ b hs hb]
       | int lo hi =>
         simp only [uOfR] at hu
         cases hb : uOfS z art none e with
@@ -724,7 +731,7 @@ theorem ende_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
           obtain ⟨rg, hrg⟩ := Option.isSome_iff_exists.1 h1
           cases s with
           | why a c => exact absurd rfl (hw a c)
-          | _ => simp [uEnde, hrg, h2, H.resOpt, H.resSum, H.resWhy, wert_ok H.einv e _ b hs hb]
+          | _ => simp [uEnde, hrg, h2, H.resOpt, H.resSum, H.resWhy, H.resTy, wert_ok H.einv e _ b hs hb]
       | _ => simp [uOfR] at hu
 
 /-- **`return R::C;`** -/
@@ -732,6 +739,6 @@ theorem ende_why {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : 
     (H : SInv z V ctx Γ Λ art) (r : Fin V.gruende) :
     uEnde ctx (some (.ret (some (.why (nGrund V.gruende) (nFall r.val))))) = .ok (.why r.val) := by
   obtain ⟨k, w, hk, hj, hw, hc⟩ := H.kanal (by have := r.isLt; omega)
-  simp [uEnde, uEndeKanal, H.resWhy, hk, hj, hw, hc r.val r.isLt]
+  simp [uEnde, uEndeKanal, H.resWhy, H.resTy, hk, hj, hw, hc r.val r.isLt]
 
 end Gabbro.Grammatik.Gen.Text

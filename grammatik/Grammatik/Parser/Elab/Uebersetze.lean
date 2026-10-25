@@ -79,6 +79,15 @@ inductive USide
   | neg : USide → USide
   /-- `r->f` through a reference local `r` into an open table (`Expr.slotRef`). -/
   | refSlot : String → String → USide
+  /-- Aggregate values (`Ty.arr`, `Ty.str`, 2026-10-25): `a[i]` (an element or a byte), `lenof(a)`, a string
+      literal (its bytes), the array literal `[]` and `[a, rest…]`, and the array `a` with the element at `i`
+      replaced by `v` (`a[i] = v`). Their types are the lowering's (`lowWertE`). -/
+  | idx : USide → USide → USide
+  | len : USide → USide
+  | text : List Int → USide
+  | arrNil : USide
+  | arrCons : USide → USide → USide
+  | upd : USide → USide → USide → USide
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -164,6 +173,8 @@ inductive URet
   | sum : USVal → URet
   /-- A reason value as the result of a function of reason type (not its channel). -/
   | grund : UGrund → URet
+  /-- An aggregate value as the result (`UFn.resTy`). -/
+  | wert : USide → URet
   deriving DecidableEq, Repr
 
 /-- One body statement: a slot write through a pointer (`assign`)
@@ -280,6 +291,8 @@ inductive UStmt
   | awaitBind : String → String → UStmt
   /-- `r->f = v;` through a reference local `r` into an open table (`Stmt.assignSlotRef`). -/
   | assignRef : String → String → USide → UStmt
+  /-- `let x [: T] = v;` of an aggregate value (`Block.bind`): `T` the declared type the value is fitted to. -/
+  | bindW : String → Option Ty → USide → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -304,6 +317,9 @@ structure UTab where
   shared : Bool := false
   /-- `table T from p`: the table is OPEN and `p` is its provider (`Deklaration.offen`/`anbieter`); its count is 0. -/
   von : Option String := none
+  /-- The aggregate fields (`[T; N]`, `string max N`): the field name and its type. Like a bool field an aggregate
+      field keeps its place in `cols` (placeholder range `0 .. 0`); its TYPE is the aggregate. -/
+  werte : List (String × Ty) := []
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -317,15 +333,28 @@ structure ULock where
   masks : Bool := false
   deriving DecidableEq, Repr
 
-/-- The type of a static: ONE value, an integer range or `bool` (what a `Glob` carries here). -/
+/-- The type of a static: ONE value, an integer range, `bool`, or an aggregate (`Ty.arr`, `Ty.str`). -/
 inductive GTy
   | int : Int → Int → GTy
   | bool : GTy
+  | wert : Ty → GTy
   deriving DecidableEq, Repr
 
 def GTy.toTy : GTy → Ty
   | .int lo hi => .int lo hi
   | .bool => .bool
+  | .wert τ => τ
+
+/-- A constant initial value of an aggregate static: zero memory (`= 0`), a number, a truth value, the bytes of a
+    string, or an array literal (`nil`/`cons`, element by element). -/
+inductive UKonst
+  | null : UKonst
+  | zahl : Int → UKonst
+  | wahr : Bool → UKonst
+  | text : List Int → UKonst
+  | nil : UKonst
+  | cons : UKonst → UKonst → UKonst
+  deriving DecidableEq, Repr
 
 /-- One elaborated static (`static [mut] n : T = init;`): `init` is its `sp0` value (a numeral, `0`/`1` for a
     `bool`). `var` is `mut`: only a `mut` static is written. -/
@@ -333,6 +362,8 @@ structure UGlob where
   name : String
   ty : GTy
   init : Int
+  /-- The initial value of an aggregate static (`GTy.wert`). -/
+  initK : UKonst := .null
   var : Bool := false
   /-- An `atomic` item (`Deklaration.atomar`): read and stored without a lock, ordered by the machine. -/
   atomic : Bool := false
@@ -423,6 +454,8 @@ inductive UParamArt
   | fnptr : Nat → UParamArt
   /-- A reference into the open table number `n` (`Ty.ref n`): a local bound to a provider's answer. -/
   | ref : Nat → UParamArt
+  /-- An aggregate value (`Ty.arr`, `Ty.str`): its type stands beside the kind. -/
+  | wert : UParamArt
   deriving DecidableEq, Repr
 
 /-- The kind of a local bound to a register read. -/
@@ -470,6 +503,8 @@ structure UCtx where
   resSum : Option (Nat × List (Option (Int × Int))) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
+  /-- The result is an aggregate value (`Ty.arr`, `Ty.str`): its type. -/
+  resTy : Option Ty := none
   /-- The unit's device registers. -/
   regs : List UReg := []
   /-- The unit's `state` items. -/
@@ -500,6 +535,8 @@ structure UFn where
   resSum : Option (Nat × List (Option (Int × Int))) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
+  /-- The result is an aggregate value: its type (then `res` is `none`). -/
+  resTy : Option Ty := none
   /-- The number of reasons of the channel `-> T or R` (`Signatur.gruende`), 0 without a channel. -/
   gruende : Nat := 0
   held : List String
@@ -550,6 +587,7 @@ def UFn.mitFnptr (f : UFn) (p : String) (n : Nat) : UFn :=
 
 /-- The result type of an elaborated function: `bool`, an integer range, or none. -/
 def UFn.ergTy (f : UFn) : Option Ty :=
+  if let some τ := f.resTy then some τ else
   if f.resBool then some Ty.bool else
   match f.resOpt with
   | some (_, n) => some (Ty.opt n)
@@ -656,13 +694,14 @@ def uConsts : List SItemTief → List (String × Int)
 /-- The type-alias scope: `type A = u32 in lo .. hi;` travels
     as (`A`, (`lo`, `hi`)); any other `type` body has no G form
     (`LG002`: a range where G needs a `Ty`). -/
-def uAliase : List SItemTief → List (String × (Int × Int))
+def uAliase (consts : List (String × Int)) : List SItemTief → List (String × (Int × Int))
   | [] => []
-  | .typeT _ n _ _ (.some (.range _ lo hi false)) :: rest =>
-    match uSchranke [] lo, uSchranke [] hi with
-    | some a, some b => (n, (a, b)) :: uAliase rest
-    | _, _ => uAliase rest
-  | _ :: rest => uAliase rest
+  | .typeT _ n _ _ (.some (.range _ lo hi o)) :: rest =>
+    let ks := consts.map (fun c => (c.1, (c.2, c.2)))
+    match uSchranke ks lo, uSchranke ks hi with
+    | some a, some b => (n, (a, if o then b - 1 else b)) :: uAliase consts rest
+    | _, _ => uAliase consts rest
+  | _ :: rest => uAliase consts rest
 
 /-- Lookup in an association list, with an explicit error. -/
 def uSuch (was : String) (xs : List (String × α)) (n : String) : Except String α :=
@@ -761,9 +800,9 @@ structure UKonstFn where
 /-- The range of a declared parameter/result type of a `const fn`: a builtin word or a literal range. -/
 def uKonstBereich : STyp → Option (Int × Int)
   | .atom a => (uTypName [] a).toOption
-  | .range _ lo hi false =>
+  | .range _ lo hi o =>
     match uSchranke [] lo, uSchranke [] hi with
-    | some a, some b => some (a, b)
+    | some a, some b => some (a, if o then b - 1 else b)
     | _, _ => none
   | _ => none
 
@@ -888,9 +927,9 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     match uTypName alias a with
     | .ok (lo, hi) => .ok (.int lo hi)
     | .error e => .error e
-  | .range _ lo hi false =>
+  | .range _ lo hi o =>
     match uSchranke alias lo, uSchranke alias hi with
-    | some a, some b => .ok (.int a b)
+    | some a, some b => .ok (.int a (if o then b - 1 else b))
     | _, _ => .error "type without G form"
   | .index false t =>
     match uTabNr tabs t with
@@ -907,6 +946,15 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
       | .ok (num, _) => .ok (.ptr num false)
       | .error e => .error e
     else .error "pointer right without G form"
+  | .array t n =>
+    match uTyp alias tabs t, uSchranke alias n with
+    | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"
+    | .error e, _ => .error e
+    | _, none => .error "array length without G form"
+  | .str n =>
+    match uSchranke alias n with
+    | some k => if 0 ≤ k then .ok (.str k.toNat) else .error "string of a negative maximum"
+    | none => .error "string maximum without G form"
   | t => .error ("type without G form: " ++ sTypText t)
 
 /-- A slot field type as an integer range (the field loop of
@@ -914,9 +962,9 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     errors). -/
 def uFeldTyp (alias : List (String × (Int × Int))) : STyp → Except String (Int × Int)
   | .atom a => uTypName alias a
-  | .range _ lo hi false =>
+  | .range _ lo hi o =>
     match uSchranke alias lo, uSchranke alias hi with
-    | some a, some b => .ok (a, b)
+    | some a, some b => .ok (a, if o then b - 1 else b)
     | _, _ => .error "field type without G form"
   | t => .error ("field type without G form: " ++ sTypText t)
 
@@ -933,6 +981,8 @@ inductive UFeldArt
   | bool : UFeldArt
   /-- `option index into T`: the number of `T`. -/
   | opt : Nat → UFeldArt
+  /-- An aggregate value (`[T; N]`, `string max N`): its type. -/
+  | wert : Ty → UFeldArt
 
 /-- One slot field: no bit position, no `offset_into`, no `where`, no `reserved` (all without G
     form, like the refused arms of `read_table`). `by ops` is a writer discipline the CHECKER holds
@@ -948,6 +998,10 @@ def uFeld (alias : List (String × (Int × Int))) (tnames : List String) :
       match tnames.findIdx? (fun x => strEq x tn) with
       | .some num => .ok ((fname, (0, 1)), UFeldArt.opt num)
       | .none => .error ("table unknown: " ++ tn)
+    | .array _ _ | .str _ =>
+      match uTyp alias [] ftyp with
+      | .ok τ => .ok ((fname, (0, 0)), UFeldArt.wert τ)
+      | .error e => .error e
     | _ =>
       match uFeldTyp alias ftyp with
       | .ok r => .ok ((fname, r), UFeldArt.zahl)
@@ -957,13 +1011,11 @@ def uFeld (alias : List (String × (Int × Int))) (tnames : List String) :
 def uFelder : List (String × (Int × Int)) → List String → List SFeld →
     Except String (List ((String × (Int × Int)) × UFeldArt))
   | _, _, [] => .error "table without fields"
+  | alias, tnames, [f] => (uFeld alias tnames f).map ([·])
   | alias, tnames, f :: rest =>
-    match uFeld alias tnames f with
-    | .error e => .error e
-    | .ok p =>
-      match uFelder alias tnames rest with
-      | .error _ => .ok [p]
-      | .ok ps => .ok (p :: ps)
+    match uFeld alias tnames f, uFelder alias tnames rest with
+    | .ok p, .ok ps => .ok (p :: ps)
+    | .error e, _ | _, .error e => .error e
 
 /-- One table: `count` and one integer range per slot field.
 /// Invariants, `ops`, tree edges, the occupancy mark, an
@@ -982,6 +1034,7 @@ def uTabelle (consts : List (String × Int))
         .ok { name := n, count := c, cols := fs.map (·.1),
               bools := (fs.filter (fun p => match p.2 with | .bool => true | _ => false)).map (·.1.1),
               opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none),
+              werte := fs.filterMap (fun p => match p.2 with | .wert τ => some (p.1.1, τ) | _ => none),
               shared := sh }
   | .tableT n (.some p) .none .none .none sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
@@ -1192,6 +1245,12 @@ def uGrenzwort (ctx : UCtx) : SExpr → Option Int
 def uPraemisse (e : String) : Bool :=
   strEq e "index outside count" || strEq e "access without held guard"
 
+/-- `a[i]` reads a CARRIER (a table's or an arena's slot, `T.slots[i]`, `p.slots[i]`, `A[i]`), not an aggregate value. -/
+def uTraegerIndex (ctx : UCtx) : SExpr → Bool
+  | .field _ f => strEq f "slots"
+  | .variable n => ctx.tabs.any (fun t => strEq t.name n)
+  | _ => false
+
 /-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
     integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. -/
 def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Except String USide
@@ -1242,6 +1301,19 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       | .error e => .error e
       | .ok x => .ok (.conv lo hi x)
     | .error _ => blatt (.call f [a])
+  | .built "lenof" [a] =>
+    match uRechne ctx blatt a with
+    | .error e => .error e
+    | .ok x => .ok (.len x)
+  | .ext .text [t] [] => .ok (.text (t.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
+  | .index a i =>
+    if uTraegerIndex ctx a then blatt (.index a i) else
+    match uRechne ctx blatt a with
+    | .error e => .error e
+    | .ok x =>
+      match uRechne ctx blatt i with
+      | .error e => .error e
+      | .ok y => .ok (.idx x y)
   | e => blatt e
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
@@ -1502,10 +1574,13 @@ structure UFnKopf where
   griffe : List (Nat × String × String) := []
   /-- The answer of a foreign body is a reference into the open table number `n` (`-> index into T`). -/
   resRef : Option Nat := none
+  /-- The result is an aggregate value: its type. -/
+  resTy : Option Ty := none
 
 /-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
     reason. -/
 def uWertArt (k : UFnKopf) : Option (UParamArt × Ty) :=
+  if let some τ := k.resTy then some (UParamArt.wert, τ) else
   if k.resBool then some (UParamArt.bool, Ty.bool)
   else match k.res with
     | some r => some (UParamArt.int, Ty.int r.1 r.2)
@@ -1525,6 +1600,11 @@ def uParamBreite : STyp → Nat
     if strEq a "u8" then 8 else if strEq a "u16" then 16
     else if strEq a "u32" then 32 else if strEq a "u64" then 64 else 0
   | _ => 0
+
+/-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
+def uArtVon : Ty → UParamArt
+  | .arr _ _ | .str _ => .wert
+  | _ => .int
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
 def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := [])
@@ -1576,16 +1656,16 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
   | (n, t) =>
     match uTyp alias tabs t with
     | .error e => .error e
-    | .ok ty => .ok (n, ty, .int)
+    | .ok ty => .ok (n, ty, uArtVon ty)
 
 /-- A result range (the `int_range` of `lean_g.rs` on the
     result type). -/
 def uErgBereich (alias : List (String × (Int × Int))) : STyp →
     Except String (Int × Int)
   | .atom a => uTypName alias a
-  | .range _ lo hi false =>
+  | .range _ lo hi o =>
     match uSchranke alias lo, uSchranke alias hi with
-    | some a, some b => .ok (a, b)
+    | some a, some b => .ok (a, if o then b - 1 else b)
     | _, _ => .error "result without G form"
   | t => .error ("result without G form: " ++ sTypText t)
 
@@ -1842,6 +1922,12 @@ def elabKopf (_consts : List (String × Int))
                   | .error e => .error e
                   | .ok r => .ok ({ kopf with res := .some r }, puts)
               | .some t =>
+                match t with
+                | .array _ _ | .str _ =>
+                  match uTyp alias tabs t with
+                  | .error e => .error e
+                  | .ok τ => .ok ({ kopf with resTy := .some τ }, puts)
+                | _ =>
                 match uErgBereich alias t with
                 | .error e => .error e
                 | .ok r =>
@@ -1985,6 +2071,20 @@ def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
       | .ok xs => .ok (x :: xs)
   | _, _ => .error "argument count without G form"
 
+/-- `a[i] = v` on an aggregate held by the static at the root of `a`: the static and its new value, the element at
+    `i` replaced (`USide.upd`) at every level (`M[i][j] = v` replaces row `i` of `M` by the row with element `j`
+    replaced). -/
+def uElemSchreib (ctx : UCtx) : SExpr → SExpr → USide → Except String (String × USide)
+  | .variable g, i, v =>
+    match uWertBody ctx i with
+    | .error x => .error x
+    | .ok y => .ok (g, .upd (.glob g) y v)
+  | .index a j, i, v =>
+    match uWertBody ctx (.index a j), uWertBody ctx i with
+    | .ok cur, .ok y => uElemSchreib ctx a j (.upd cur y v)
+    | .error x, _ | _, .error x => .error x
+  | _, _, _ => .error "element write without G form"
+
 /-- `X = v;` where `X` is a static (the place reader found no slot): only a `mut` static is written. -/
 def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String UStmt :=
   match ziel with
@@ -2004,6 +2104,19 @@ def uGlobSchreib (ctx : UCtx) (ziel wert : SExpr) (e : String) : Except String U
           match uWertBody ctx wert with
           | .error x => .error x
           | .ok v => .ok (.assignGlob g v)
+  | .index a i =>
+    match uWertBody ctx wert with
+    | .error x => .error x
+    | .ok v =>
+      match uElemSchreib ctx a i v with
+      | .error x => .error x
+      | .ok (g, w) =>
+        match ctx.globs.find? (fun x => strEq x.name g) with
+        | .some gl =>
+          if !gl.var then .error "write to an immutable static"
+          else if gl.atomic then .error "plain write to an atomic: every store is a publish"
+          else .ok (.assignGlob g w)
+        | .none => .error e
   | _ => .error e
 
 /-- The words of a raw payload, as character lists (split at blanks and commas). -/
@@ -2454,6 +2567,15 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
           match ctx.tabs[num]? with
           | .none => .error err
           | .some tb => .ok (.bindOpt x num o, uMitLokal ctx x (UParamArt.opt num) (Ty.opt tb.count) muts)
+  | .some ty@(.array _ _) | .some ty@(.str _) =>
+    if mu then .error "let mut of an aggregate without G form"
+    else
+      match uTyp ctx.alias ctx.tabs ty with
+      | .error err => .error err
+      | .ok τ =>
+        match uWertBody ctx e with
+        | .error err => .error err
+        | .ok sd => .ok (.bindW x (some τ) sd, uMitLokal ctx x UParamArt.wert τ muts)
   | .some ty =>
     match uWertBody ctx e with
     | .error err => .error err
@@ -2609,11 +2731,11 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
   | .none =>
     match ctx.res with
     | .some _ => .error "fn with a result falls off"
-    | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome then .error "fn with a result falls off" else .ok .empty
+    | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome || ctx.resTy.isSome then .error "fn with a result falls off" else .ok .empty
   | .some (.ret .none) =>
     match ctx.res with
     | .some _ => .error "return without value with result"
-    | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome then .error "return without value with result" else .ok .empty
+    | .none => if ctx.resBool || ctx.resOpt.isSome || ctx.resSum.isSome || ctx.resTy.isSome then .error "return without value with result" else .ok .empty
   | .some (.ret (.some (.why r c))) =>
     match ctx.resWhy, ctx.whys.findIdx? (fun w => strEq w.name r) with
     | .some (k, _), .some j =>
@@ -2628,6 +2750,11 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
       else uEndeKanal ctx r c
     | _, _ => uEndeKanal ctx r c
   | .some (.ret (.some v)) =>
+    if ctx.resTy.isSome then
+      match uWertBody ctx v with
+      | .error e => .error e
+      | .ok w => .ok (.wert w)
+    else
     match ctx.resWhy with
     | .some (k, _) =>
       match v with
@@ -2850,6 +2977,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
         let ctx' := match gl.ty with
           | .bool => uMitLokal ctx x UParamArt.bool Ty.bool muts
           | .int lo hi => uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts
+          | .wert τ => uMitLokal ctx x UParamArt.wert τ muts
         match uAnwReihe tabs koepfe f ctx' rest with
         | .error err => .error err
         | .ok (xs, cE) => .ok (UStmt.awaitBind x a :: xs, cE)
@@ -3094,7 +3222,8 @@ def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int)
     types := kopf.types, tabs := tabs, locks := locks,
     held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
     fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
-    resSum := kopf.resSum, resWhy := kopf.resWhy, regs, griffe := kopf.griffe.map (·.2), zustaende }
+    resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2),
+    zustaende }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
@@ -3117,7 +3246,7 @@ def elabUFunktion (consts : List (String × Int))
             params := kopf.names.zip kopf.types,
             kinds := kopf.kinds,
             res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
-            resWhy := kopf.resWhy,
+            resWhy := kopf.resWhy, resTy := kopf.resTy,
             gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
             puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r }
 
@@ -3130,6 +3259,30 @@ def uNutzItem : List SExpr → Except String (List String)
     | .error e => .error e
     | .ok gs => .ok (g :: gs)
   | _ :: _ => .error "payload of a table without G form"
+
+mutual
+/-- The initial value of an aggregate static: `0` is zero memory, a numeral or constant a number, a string literal
+    its bytes, a row literal its elements. -/
+def uKonst (consts : List (String × Int)) : SKonstWert → Except String UKonst
+  | .one (.lit 0) => .ok .null
+  | .one (.lit k) => .ok (.zahl (Int.ofNat k))
+  | .one (.un "-" (.lit k)) => .ok (.zahl (-(Int.ofNat k)))
+  | .one .tru => .ok (.wahr true)
+  | .one .fls => .ok (.wahr false)
+  | .one (.variable c) =>
+    match uSuch "const" consts c with
+    | .error e => .error e
+    | .ok z => .ok (.zahl z)
+  | .one (.ext .text [t] []) => .ok (.text (t.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
+  | .one _ => .error "static initialiser without G form"
+  | .rows ks => uKonstReihe consts ks
+def uKonstReihe (consts : List (String × Int)) : List SKonstWert → Except String UKonst
+  | [] => .ok .nil
+  | k :: ks =>
+    match uKonst consts k, uKonstReihe consts ks with
+    | .ok a, .ok r => .ok (.cons a r)
+    | .error e, _ | _, .error e => .error e
+end
 
 /-- The statics of the unit: ONE value each, an integer range or `bool`, with a numeral (or `true`/`false`)
     as the initial value; a placement, an alignment or a `shared` word has no `Glob` form. -/
@@ -3145,6 +3298,10 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             | .one .tru => .ok (GTy.bool, (1 : Int))
             | .one .fls => .ok (GTy.bool, (0 : Int))
             | _ => .error "static initialiser without G form"
+          | .array _ _ | .str _ =>
+            match uTyp alias [] t with
+            | .error e => .error e
+            | .ok τ => .ok (GTy.wert τ, (0 : Int))
           | _ =>
             match uErgBereich alias t with
             | .error e => .error e
@@ -3160,9 +3317,14 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
                 else .error "static initialiser outside its range" : Except String (GTy × Int)) with
       | .error e => .error e
       | .ok (ty, z) =>
+        match (match ty with
+            | .wert _ => uKonst consts v
+            | _ => .ok .null : Except String UKonst) with
+        | .error e => .error e
+        | .ok k =>
         match uGlobs consts alias rest with
         | .error e => .error e
-        | .ok gs => .ok ({ name := n, ty, init := z, var := m, shared := sh } :: gs)
+        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
@@ -3856,7 +4018,7 @@ def elabU : List SItemTief → Except String UProg
   | items =>
     let ms := uMembers items
     let consts := uConstsRech (uKonstFns ms) ms []
-    let alias := uAliase ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
+    let alias := uAliase consts ms ++ consts.map (fun c => (c.1, (c.2, c.2)))
     match uRestFehler ms with
     | .error e => .error e
     | .ok _ =>
@@ -4006,6 +4168,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
     (types : List Ty) : USide → Except String USeiteT
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
+  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. => .error "aggregate without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i", "b"] p with
@@ -4231,6 +4394,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
+  | .bindW .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -4263,6 +4427,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
+  | .bindW .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | [], .empty => .ok (.ret .empty (List.Perm.refl _))
   | [], .bool _ | [], .opt _ | [], .why _ | [], .sum _ | [], .grund _ => .error "truth value returned without result"
   | [], .val _ => .error "return with value without result"
@@ -4407,6 +4572,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
     USide → Except String USeiteE
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
+  | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. => .error "aggregate without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with
@@ -5115,7 +5281,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=

@@ -524,11 +524,11 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
       have hgr : z.deklaration.gruende fk ≠ 0 := by omega
       obtain ⟨ty, hv⟩ : ∃ ty, uWertArt k = some (a, ty) := by
         cases τ with
-        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [uWertArt, hKP.ergBool he]⟩
+        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [uWertArt, hKP.ergBool he, hKP.resTy]⟩
         | int lo hi =>
           simp only [artErg, Option.some.injEq] at hτ; subst hτ
           obtain ⟨h1, h2⟩ := hKP.ergInt lo hi he
-          exact ⟨.int lo hi, by simp [uWertArt, h1, h2]⟩
+          exact ⟨.int lo hi, by simp [uWertArt, h1, h2, hKP.resTy]⟩
         | _ => simp [artErg] at hτ
       have HE : SInv z V (ctxMit ctx (nVar Γ.length) (.why (gNr (z.deklaration.gruende fk)))
           (.why (z.deklaration.gruende fk)) 0 [] ctx.loops) (.why (z.deklaration.gruende fk) :: Γ)
@@ -754,11 +754,11 @@ theorem rumpf_satz (hM : ∀ m : z.deklaration.Marke, False) (hK : KInv (z := z)
       have hgr : z.deklaration.gruende fk ≠ 0 := by omega
       obtain ⟨ty, hv⟩ : ∃ ty, uWertArt k = some (a, ty) := by
         cases τ with
-        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [uWertArt, hKP.ergBool he]⟩
+        | bool => simp only [artErg, Option.some.injEq] at hτ; subst hτ; exact ⟨.bool, by simp [uWertArt, hKP.ergBool he, hKP.resTy]⟩
         | int lo hi =>
           simp only [artErg, Option.some.injEq] at hτ; subst hτ
           obtain ⟨h1, h2⟩ := hKP.ergInt lo hi he
-          exact ⟨.int lo hi, by simp [uWertArt, h1, h2]⟩
+          exact ⟨.int lo hi, by simp [uWertArt, h1, h2, hKP.resTy]⟩
         | _ => simp [artErg] at hτ
       have HE : SInv z V (ctxMit ctx (nVar Γ.length) (.why (gNr (z.deklaration.gruende fk)))
           (.why (z.deklaration.gruende fk)) 0 [] ctx.loops) (.why (z.deklaration.gruende fk) :: Γ)

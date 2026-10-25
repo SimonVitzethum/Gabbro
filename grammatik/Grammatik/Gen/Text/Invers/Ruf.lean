@@ -24,6 +24,7 @@ structure KopfPasst (gNr : Nat → Nat) (f : z.deklaration.Fn) (k : UFnKopf) : P
   kanal : z.deklaration.gruende f ≠ 0 → k.kanal = some (gNr (z.deklaration.gruende f), z.deklaration.gruende f)
   ergBool : z.deklaration.erg f = some .bool → k.resBool = true
   ergInt : ∀ lo hi, z.deklaration.erg f = some (.int lo hi) → k.resBool = false ∧ k.res = some (lo, hi)
+  resTy : k.resTy = none
 
 /-- **The heads**: every function is found under its printed name. -/
 def KInv (gNr : Nat → Nat) (koepfe : List UFnKopf) : Prop :=
@@ -180,6 +181,7 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
   resOpt := H.resOpt
   resSum := H.resSum
   resWhy := H.resWhy
+  resTy := H.resTy
   ergNone := H.ergNone
   ergBool := H.ergBool
   ergInt := H.ergInt

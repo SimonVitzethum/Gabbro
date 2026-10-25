@@ -945,6 +945,19 @@ def lowAssignGlobL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
           else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number static"
+    | .wert _ =>
+      match lowWertAtE u Γ Λ fn none ((declOf u).gtyp g) v with
+      | .error e => .error e
+      | .ok e2 =>
+        if hw : writesGAt u (fnAt u caller) g = true then
+          have hwV : (verOf u caller).gschreibt g = true := by
+            show (vertragVon (declOf u) caller).gschreibt g = true
+            rw [vGSchreibt_eq u caller g]
+            exact hw
+          if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+            .ok (Stmt.assignGlob (D := declOf u) g e2 hwV hd)
+          else .error "access without held guard"
+        else .error "write without right"
 
 /-- The same for a `bool` static. -/
 def lowAssignGlobBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -975,6 +988,7 @@ def lowAssignGlobBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
           else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool static"
+    | .wert _ => .error "truth value for an aggregate static"
 
 /-- The store of a payload-free atomic (`Stmt.publish` with the empty payload): only where the function
     declares `writes A`. -/
@@ -1006,6 +1020,7 @@ def lowStoreAtomL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
           else .error "access without held guard"
         else .error "write without right"
     | .bool => .error "truth value for a number atomic"
+    | .wert _ => .error "aggregate atomic without G form"
 
 /-- The same for a `bool` atomic. -/
 def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -1036,6 +1051,56 @@ def lowStoreAtomBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
           else .error "access without held guard"
         else .error "write without right"
     | .int _ _ => .error "number for a bool atomic"
+    | .wert _ => .error "aggregate atomic without G form"
+
+/-- A write of an aggregate field through a pointer (`p.slots[i].f = v`, `Stmt.assignThru` at the field's type);
+    `none` for any other field. -/
+def lowAssignDurchW {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (v : USide) :
+    Option (Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ)) :=
+  match paramPos fn.params b with
+  | .error _ => none
+  | .ok j =>
+    match fn.kinds[j]? with
+    | some (.ptr num true) =>
+      if h : num < u.tabs.length then
+        (fieldHitW u ⟨num, h⟩ fname).map fun fi =>
+          match lowVar Γ j (.ptr num true), lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix,
+              lowWertAtE u Γ Λ fn none ((declOf u).typ ⟨num, h⟩ fi) v with
+          | .ok pv, .ok i, .ok e =>
+            if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ then
+              if hw : writesAt u (fnAt u caller) ⟨num, h⟩ = true then
+                have hwV : (verOf u caller).schreibt ⟨num, h⟩ = true := by
+                  show (vertragVon (declOf u) caller).schreibt ⟨num, h⟩ = true
+                  rw [vSchreibt_eq u caller ⟨num, h⟩]
+                  exact hw
+                .ok (Stmt.assignThru (D := declOf u) (Expr.var pv) ⟨num, h⟩ (tabNr_some u num h) fi i e hwV hL)
+              else .error "write without right"
+            else .error "access without held guard"
+          | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e
+      else none
+    | _ => none
+
+/-- A write of an aggregate field at a table (`T.slots[i].f = v`); `none` for any other field. -/
+def lowAssignTabW {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
+    (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (v : USide) :
+    Option (Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ)) :=
+  match tabIdx u.tabs b with
+  | .error _ => none
+  | .ok t =>
+    (fieldHitW u t fname).map fun fi =>
+      match lowIdx u Γ Λ fn 0 t ix, lowWertAtE u Γ Λ fn none ((declOf u).typ t fi) v with
+      | .ok i, .ok e =>
+        if hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ then
+          if hw : writesAt u (fnAt u caller) t = true then
+            have hwV : (verOf u caller).schreibt t = true := by
+              show (vertragVon (declOf u) caller).schreibt t = true
+              rw [vSchreibt_eq u caller t]
+              exact hw
+            .ok (Stmt.assignSlot (D := declOf u) t fi i e hwV hL)
+          else .error "write without right"
+        else .error "access without held guard"
+      | .error e, _ | _, .error e => .error e
 
 /-- `x = v;` at a `let mut` number: `Stmt.assignVar`, the value fitted into the variable's range. -/
 def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -1241,8 +1306,8 @@ def lowShiftL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn 
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) : UStmt →
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ)
-  | .assign b f ix v => lowAssignDurchL u caller Γ fn Λ b f ix v
-  | .assignTab b f ix v => lowAssignTabL u caller Γ fn Λ b f ix v
+  | .assign b f ix v => (lowAssignDurchW u caller Γ fn Λ b f ix v).getD (lowAssignDurchL u caller Γ fn Λ b f ix v)
+  | .assignTab b f ix v => (lowAssignTabW u caller Γ fn Λ b f ix v).getD (lowAssignTabL u caller Γ fn Λ b f ix v)
   | .assignB b f ix v => lowAssignDurchBL u caller Γ fn Λ b f ix v
   | .assignTabB b f ix v => lowAssignTabBL u caller Γ fn Λ b f ix v
   | .assignOpt b f ix v => lowAssignDurchOL u caller Γ fn Λ b f ix v
@@ -1261,7 +1326,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignRef r f v => lowAssignRefL u caller Γ fn Λ r f v
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindW .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"
@@ -1278,5 +1343,19 @@ def lowBindWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
     | some (lo, hi) =>
       if lo ≤ s.range.1 ∧ s.range.2 ≤ hi then .ok s
       else .error "let: value outside the annotated range"
+
+/-- A `let` of an aggregate value: at its declared type, or at the type the value has. -/
+def lowBindW (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (d : Option Ty) (v : USide) : Except String (LowWert u Γ Λ) :=
+  match d with
+  | some τ =>
+    match lowWertAtE u Γ Λ fn none τ v with
+    | .error e => .error e
+    | .ok e => .ok ⟨τ, e⟩
+  | none => lowWertE u Γ Λ fn none v
+
+/-- The scope after a `let` of a value of type `τ`. -/
+def _root_.Gabbro.Grammatik.Parser.Uebersetze.UFn.mitWert (f : UFn) (x : String) (τ : Ty) : UFn :=
+  { f with params := (x, τ) :: f.params, kinds := (match τ with | .bool => .bool | t => uArtVon t) :: f.kinds }
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

@@ -32,7 +32,7 @@ import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
 
 namespace Gabbro.Grammatik.GabbroV
 
-open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
   Gabbro.Grammatik.Zielsatz
 
@@ -46,6 +46,35 @@ def Sp0Ok (u : UProg) : Prop :=
     boolFeldAt u t f = true ∨
       ∃ w, fieldRangeO u t f = some w ∧ w.1 ≤ 0 ∧ 0 ≤ w.2
 
+/-- The elements of an array initialiser. -/
+def konstListe : UKonst → Option (List UKonst)
+  | .nil => some []
+  | .cons a r => (konstListe r).map (a :: ·)
+  | _ => none
+
+/-- **The value of a constant initialiser at the type `τ`**: zero memory (`= 0`) wherever the type holds a zero,
+    a number inside its range, a truth value, the bytes of a string under its maximum, an array literal of exactly
+    the array's length; anything else has no value. -/
+def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Option (Val F P τ)
+  | .int lo hi, .zahl n => if h : lo ≤ n ∧ n ≤ hi then some ⟨n, h.1, h.2⟩ else none
+  | .int lo hi, .null => if h : lo ≤ 0 ∧ 0 ≤ hi then some ⟨0, h.1, h.2⟩ else none
+  | .bool, .wahr b => some b
+  | .bool, .null => some false
+  | .str n, .text bs =>
+    match bytesZahl bs with
+    | some zs => if h : zs.length ≤ n then some ⟨zs, h⟩ else none
+    | none => none
+  | .str _, .null => some ⟨[], Nat.zero_le _⟩
+  | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
+  | .arr τ n, k =>
+    match konstListe k with
+    | some ks =>
+      match ks.mapM (konstWert τ) with
+      | some vs => if h : vs.length = n then some (fun i => vs.get ⟨i.val, by rw [h]; exact i.isLt⟩) else none
+      | none => none
+    | none => none
+  | _, _ => none
+
 /-- **The per-field `Sp0Ok` test** (`sp0FeldOkB`): the field entry is present and
     is a `bool` field or its recorded range holds `0` (the `none` arm is
     unreachable through a live index, kept for totality). Values (`sp0FeldWert`)
@@ -57,11 +86,18 @@ def sp0FeldOkB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : 
   | some q => (tabAt u t).bools.contains q.1 || decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2)
   | none => false
 
+/-- **An aggregate field has a zero value** (`sp0WertOkB`): zero memory is a value of its type (every number range
+    in it holds `0`); any other field passes. -/
+def sp0WertOkB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Bool :=
+  match wertFeldAt u t f with
+  | some τ => (konstWert (F := (declOf u).Fn) (P := (declOf u).passt) τ .null).isSome
+  | none => true
+
 /-- **The tables of the decider** (`sp0TabOkB`): the per-field test over every table and every field index
     (`List.finRange`, like `lowerAllg`'s own coverage). -/
 def sp0TabOkB (u : UProg) : Bool :=
   (List.finRange u.tabs.length).all fun t =>
-    (List.finRange (fieldCount u t)).all fun f => sp0FeldOkB u t f
+    (List.finRange (fieldCount u t)).all fun f => sp0FeldOkB u t f && sp0WertOkB u t f
 
 /-- **A static holds its initialiser** (`sp0GlobOkB`): an integer static starts inside its range, a `bool`
     static at `0` or `1`. -/
@@ -69,6 +105,7 @@ def sp0GlobOkB (u : UProg) (g : Fin u.globs.length) : Bool :=
   match (globAt u g).ty with
   | .int lo hi => decide (lo ≤ (globAt u g).init ∧ (globAt u g).init ≤ hi)
   | .bool => (globAt u g).init == 0 || (globAt u g).init == 1
+  | .wert τ => (konstWert (F := (declOf u).Fn) (P := (declOf u).passt) τ (globAt u g).initK).isSome
 
 /-- **The `Sp0Ok` decider** (`sp0OkB`): every slot starts at zero and every static at its initialiser. -/
 def sp0OkB (u : UProg) : Bool :=
@@ -107,6 +144,17 @@ def sp0GlobWert (u : UProg) (g : Fin u.globs.length) (h : sp0GlobOkB u g = true)
         rfl
       rw [hg]
       exact decide ((globAt u g).init = 1)
+  | .wert τ => by
+      have hg : (declOf u).gtyp g = τ := by
+        show (globAt u g).ty.toTy = _
+        rw [hq]
+        rfl
+      rw [hg]
+      have hc : (konstWert (F := (declOf u).Fn) (P := (declOf u).passt) τ (globAt u g).initK).isSome = true := by
+        unfold sp0GlobOkB at h
+        rw [hq] at h
+        exact h
+      exact Option.get _ hc
 
 /-- **The zero value at one field** (`sp0FeldWert`): `false` at a `bool` field,
     `⟨0, _, _⟩` at an integer field whose range holds `0` -- the Lean side of
@@ -114,7 +162,7 @@ def sp0GlobWert (u : UProg) (g : Fin u.globs.length) (h : sp0GlobOkB u g = true)
     lines 456-466: a slot starts at zero because no surface form names a slot
     initialiser). -/
 def sp0FeldWert (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
-    (h : sp0FeldOkB u t f = true) :
+    (h : sp0FeldOkB u t f = true) (hw0 : sp0WertOkB u t f = true) :
     Wert (declOf u) ((declOf u).typ t f) :=
   match hq : (tabAt u t).cols[f.val]? with
   | some q =>
@@ -135,6 +183,17 @@ def sp0FeldWert (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
           rw [ht]
           exact (none : Option (Zahl 0 (n - 1)))
       | none =>
+        match hW : wertFeldAt u t f with
+        | some τ => by
+            have hbf : boolFeldAt u t f = false := by unfold boolFeldAt; rw [hq]; exact hb
+            have ht : (declOf u).typ t f = τ := typAt_wert u t f τ hbf hO hW
+            rw [ht]
+            have hc : (konstWert (F := (declOf u).Fn) (P := (declOf u).passt) τ .null).isSome = true := by
+              unfold sp0WertOkB at hw0
+              rw [hW] at hw0
+              exact hw0
+            exact Option.get _ hc
+        | none =>
         match hd : decide (q.2.1 ≤ 0 ∧ 0 ≤ q.2.2) with
         | true => by
             have hbd := of_decide_eq_true hd
@@ -142,7 +201,7 @@ def sp0FeldWert (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t))
               show typAt u t f = .int q.2.1 q.2.2
               have hfr : fieldRangeO u t f = some q.2 := by unfold fieldRangeO; rw [hq]; rfl
               have hbf : boolFeldAt u t f = false := by unfold boolFeldAt; rw [hq]; exact hb
-              exact typAt_of u t f q.2 hfr hbf hO
+              exact typAt_of u t f q.2 hfr hbf hO hW
             rw [ht]
             exact ⟨0, hbd.1, hbd.2⟩
         | false => by
@@ -192,7 +251,7 @@ theorem sp0OkB_klingt (u : UProg) (h : sp0OkB u = true) : Sp0Ok u := by
   unfold sp0TabOkB at h
   have ht := (List.all_eq_true.mp h) t (List.mem_finRange t)
   have hf := (List.all_eq_true.mp ht) f (List.mem_finRange f)
-  exact sp0FeldOkB_klingt u t f hf
+  exact sp0FeldOkB_klingt u t f ((Bool.and_eq_true _ _).mp hf).1
 
 /-- **Per-field evidence from the decider** (`sp0FeldOkB_of`): `sp0OkB u = true`
     gives every field test. Assembly only; every premise is used. -/
@@ -201,13 +260,21 @@ theorem sp0FeldOkB_of (u : UProg) (h : sp0OkB u = true) (t : Fin u.tabs.length)
   have h := sp0OkB_tab u h
   unfold sp0TabOkB at h
   have ht := (List.all_eq_true.mp h) t (List.mem_finRange t)
-  exact (List.all_eq_true.mp ht) f (List.mem_finRange f)
+  exact ((Bool.and_eq_true _ _).mp ((List.all_eq_true.mp ht) f (List.mem_finRange f))).1
+
+/-- **The aggregate test from the decider** (`sp0WertOkB_of`). -/
+theorem sp0WertOkB_of (u : UProg) (h : sp0OkB u = true) (t : Fin u.tabs.length)
+    (f : Fin (fieldCount u t)) : sp0WertOkB u t f = true := by
+  have h := sp0OkB_tab u h
+  unfold sp0TabOkB at h
+  have ht := (List.all_eq_true.mp h) t (List.mem_finRange t)
+  exact ((Bool.and_eq_true _ _).mp ((List.all_eq_true.mp ht) f (List.mem_finRange f))).2
 
 /-- **The computed initial memory** (`sp0Of`): slots at zero through `sp0FeldWert`, statics at their
     initialisers through `sp0GlobWert`. This is the Lean side of the exporter's `gSp0`: the loader
     establishes exactly this memory (`Laufzeit.lader`). -/
 def sp0Of (u : UProg) (h : sp0OkB u = true) : Speicher (declOf u) where
-  slots := fun t _ f => sp0FeldWert u t f (sp0FeldOkB_of u h t f)
+  slots := fun t _ f => sp0FeldWert u t f (sp0FeldOkB_of u h t f) (sp0WertOkB_of u h t f)
   globs := fun g => sp0GlobWert u g (sp0OkB_glob u h g)
 
 /-- **No zero memory where a range misses zero** (`sp0_luecke`): a non-`bool`

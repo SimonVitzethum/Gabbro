@@ -89,14 +89,23 @@ def optNumAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Op
 def optFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Int :=
   (optNumAt u t f).bind fun num => (u.tabs[num]?).map (·.count)
 
-/-- The field type: `bool` for a bool field, `opt` for an option field, else the recorded range, or `.int 0 0`
-    off the table (unreachable through `fieldRangeO`, kept for totality). -/
+/-- The type of an aggregate field (`none` for any other field). -/
+def wertFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Ty :=
+  match (tabAt u t).cols[f.val]? with
+  | some q => ((tabAt u t).werte.find? (fun p => p.1 == q.1)).map (·.2)
+  | none => none
+
+/-- The field type: `bool` for a bool field, `opt` for an option field, the aggregate of an aggregate field, else
+    the recorded range, or `.int 0 0` off the table (unreachable through `fieldRangeO`, kept for totality). -/
 def typAt (u : UProg) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) : Ty :=
   if boolFeldAt u t f then .bool else
   match optFeldAt u t f with
   | some n => .opt n
   | none =>
+    match wertFeldAt u t f with
+    | some τ => τ
+    | none =>
     match fieldRangeO u t f with
     | some w => .int w.1 w.2
     | none => .int 0 0
@@ -494,10 +503,19 @@ theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
 theorem typAt_of (u : UProg) (t : Fin u.tabs.length)
     (fld : Fin (fieldCount u t)) (w : Int × Int)
     (h : fieldRangeO u t fld = some w) (hb : boolFeldAt u t fld = false)
-    (ho : optFeldAt u t fld = none) :
+    (ho : optFeldAt u t fld = none) (hw : wertFeldAt u t fld = none) :
     typAt u t fld = .int w.1 w.2 := by
   unfold typAt
-  rw [hb, ho, h]
+  rw [hb, ho, hw, h]
+  rfl
+
+/-- The type of an aggregate field is its aggregate. -/
+theorem typAt_wert (u : UProg) (t : Fin u.tabs.length)
+    (fld : Fin (fieldCount u t)) (τ : Ty) (hb : boolFeldAt u t fld = false)
+    (ho : optFeldAt u t fld = none) (hw : wertFeldAt u t fld = some τ) :
+    typAt u t fld = τ := by
+  unfold typAt
+  rw [hb, ho, hw]
   rfl
 
 /-- The type of an option field is `opt` of the count of its table. -/
@@ -611,10 +629,21 @@ def fieldHit (u : UProg) (t : Fin u.tabs.length) (fname : String) :
       fieldPos_lt _ _ _ h
     if hb : boolFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = false then
       if ho : optFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = none then
-        .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
-          typAt_of u t _ w (fieldAtPos_get _ _ _ h) hb ho⟩
+        if hw : wertFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩ = none then
+          .ok ⟨⟨fieldPos (tabAt u t).cols fname, hlt⟩, w, fieldAtPos_get _ _ _ h,
+            typAt_of u t _ w (fieldAtPos_get _ _ _ h) hb ho hw⟩
+        else .error "aggregate field as a number"
       else .error "option field as a number"
     else .error "bool field as a number"
+
+/-- An aggregate field hit: the index and its type (`typAt` is the aggregate). -/
+def fieldHitW (u : UProg) (t : Fin u.tabs.length) (fname : String) : Option (Fin (fieldCount u t)) :=
+  match h : fieldAtPos (tabAt u t).cols fname with
+  | none => none
+  | some w =>
+    have hlt : fieldPos (tabAt u t).cols fname < fieldCount u t := fieldPos_lt _ _ _ h
+    if (wertFeldAt u t ⟨fieldPos (tabAt u t).cols fname, hlt⟩).isSome then some ⟨fieldPos (tabAt u t).cols fname, hlt⟩
+    else none
 
 /-- An option field hit: the index, the count `n` of its table and the fact that its type is `opt n`. -/
 structure OptHit (u : UProg) (t : Fin u.tabs.length) where
@@ -1060,6 +1089,7 @@ def lowGlobSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
               rw [← hg]
               exact Expr.glob (D := declOf u) g hd }
     | .bool => .error "bool static as a number"
+    | .wert _ => .error "aggregate static as a number"
     else .error "access without held guard"
 
 /-- A `bool` static read as a truth value. -/
@@ -1079,6 +1109,7 @@ def lowGlobBool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
         rw [← hg]
         exact Expr.glob (D := declOf u) g hd)
     | .int _ _ => .error "number static as a truth value"
+    | .wert _ => .error "aggregate static as a truth value"
     else .error "access without held guard"
 
 /-- A `bool` slot read through a pointer parameter (positions shift by `sh`): the place's truth value. -/
@@ -1138,73 +1169,281 @@ def ergAlsParam (fn : UFn) : Option Ty → Except String UFn
   | some .bool => .ok { fn with params := ("#erg", .bool) :: fn.params, kinds := .bool :: fn.kinds }
   | some _ => .error "quantifier beside a result of this type without G form"
 
-/-- A comparison side in `ensures`: literals, numeric parameters,
-    slot reads, `old` and `result` travel. -/
-def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (er : Option Ty) :
-    USide → Except String (LowSide u Γ Λ)
-  | .lit n => .ok { range := (n, n), term := Expr.lit n }
+/-! ### Aggregate values (`Ty.arr`, `Ty.str`, 2026-10-25)
+
+A value of any type with its term: arrays and strings are lowered by their type, which travels with the term
+(`lowWertE`); a number keeps the range the integer lowering gives it. -/
+
+/-- A term with its type. -/
+structure LowWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+  ty : Ty
+  term : Expr (declOf u) Γ Λ ty
+
+/-- A number as a value. -/
+def LowSide.wert {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x : LowSide u Γ Λ) : LowWert u Γ Λ :=
+  ⟨.int x.range.1 x.range.2, x.term⟩
+
+/-- A value that is a number. -/
+def LowWert.zahl {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} : LowWert u Γ Λ → Except String (LowSide u Γ Λ)
+  | ⟨.int a b, t⟩ => .ok { range := (a, b), term := t }
+  | _ => .error "aggregate as a number"
+
+/-- The bytes of a string literal as values of `0 .. 255`. -/
+def bytesZahl : List Int → Option (List (Zahl 0 255))
+  | [] => some []
+  | b :: bs =>
+    if h : 0 ≤ b ∧ b ≤ 255 then (bytesZahl bs).map (⟨b, h.1, h.2⟩ :: ·) else none
+
+theorem bytesZahl_laenge : ∀ (bs : List Int) (zs : List (Zahl 0 255)), bytesZahl bs = some zs → zs.length = bs.length
+  | [], zs, h => by simp only [bytesZahl, Option.some.injEq] at h; subst h; rfl
+  | b :: bs, zs, h => by
+    unfold bytesZahl at h
+    split at h
+    · cases hz : bytesZahl bs with
+      | none => rw [hz] at h; cases h
+      | some ys =>
+        rw [hz] at h
+        simp only [Option.map_some, Option.some.injEq] at h
+        subst h
+        simp only [List.length_cons, bytesZahl_laenge bs ys hz]
+    · cases h
+
+/-- A string literal at the type of its own length. -/
+def lowText {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (bs : List Int) : Except String (LowWert u Γ Λ) :=
+  match bytesZahl bs with
+  | some zs => .ok ⟨.str zs.length, Expr.strLit zs (Nat.le_refl _)⟩
+  | none => .error "string literal outside bytes"
+
+/-- `a[i]`: an element of an array (the index fitted into `0 ..< n`) or a byte of a string. -/
+def idxW {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
+    LowWert u Γ Λ → LowSide u Γ Λ → Except String (LowWert u Γ Λ)
+  | ⟨.arr τ n, t⟩, i =>
+    if h1 : 0 ≤ i.range.1 then
+      if h2 : i.range.2 ≤ (n : Int) - 1 then .ok ⟨τ, Expr.arrGet t (Expr.widen h1 h2 i.term)⟩
+      else .error "index outside the array"
+    else .error "index outside the array"
+  | ⟨.str _, t⟩, i => .ok ⟨.int 0 255, Expr.strGet t i.term⟩
+  | _, _ => .error "index of a value without elements"
+
+/-- `lenof(a)`: the length of a string, the (constant) length of an array. -/
+def lenW {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} : LowWert u Γ Λ → Except String (LowWert u Γ Λ)
+  | ⟨.str n, t⟩ => .ok ⟨.int 0 n, Expr.strLen t⟩
+  | ⟨.arr _ n, _⟩ => .ok ⟨.int n n, Expr.lit n⟩
+  | _ => .error "lenof of a value without length"
+
+/-- A value fitted to the type `τ`: the same type, a number widened into a larger range, a string under a larger
+    maximum; everything else is refused. -/
+def fitW {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (τ : Ty) (w : LowWert u Γ Λ) :
+    Except String (Expr (declOf u) Γ Λ τ) :=
+  if h : w.ty = τ then .ok (h ▸ w.term) else
+  match w, τ with
+  | ⟨.int a b, t⟩, .int lo hi =>
+    if h1 : lo ≤ a then
+      if h2 : b ≤ hi then .ok (Expr.widen h1 h2 t) else .error "value outside range"
+    else .error "value outside range"
+  | ⟨.str n, t⟩, .str m => if n ≤ m then .ok (Expr.strWeit m t) else .error "string longer than the maximum"
+  | _, _ => .error "value of another type"
+
+/-- `a[i] = v` on an array value: the array with the element replaced. -/
+def updW {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
+    LowWert u Γ Λ → LowSide u Γ Λ → LowWert u Γ Λ → Except String (LowWert u Γ Λ)
+  | ⟨.arr τ n, t⟩, i, v =>
+    if h1 : 0 ≤ i.range.1 then
+      if h2 : i.range.2 ≤ (n : Int) - 1 then
+        match fitW τ v with
+        | .ok v' => .ok ⟨.arr τ n, Expr.arrSet t (Expr.widen h1 h2 i.term) v'⟩
+        | .error e => .error e
+      else .error "index outside the array"
+    else .error "index outside the array"
+  | _, _, _ => .error "element write into a value without elements"
+
+/-- `s + t` on two strings, the maximum the sum of the maxima. -/
+def catW {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
+    LowWert u Γ Λ → LowWert u Γ Λ → Except String (LowWert u Γ Λ)
+  | ⟨.str n, s⟩, ⟨.str m, t⟩ => .ok ⟨.str (n + m), Expr.strCat s t⟩
+  | ⟨.int .., _⟩, _ | _, ⟨.int .., _⟩ => .error "number added to an aggregate"
+  | _, _ => .error "addition of aggregates without G form"
+
+/-- `[a, rest…]`: the element in front of an array of its type. -/
+def consW {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
+    LowWert u Γ Λ → LowWert u Γ Λ → Except String (LowWert u Γ Λ)
+  | a, ⟨.arr τ n, r⟩ =>
+    match fitW τ a with
+    | .ok a' => .ok ⟨.arr τ (n + 1), Expr.arrCons a' r⟩
+    | .error e => .error e
+  | _, _ => .error "array literal without G form"
+
+/-- An aggregate parameter or local (a number or any other kind goes to the integer lowering). -/
+def lowParamWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : Nat) (p : String) :
+    Option (Except String (LowWert u Γ Λ)) :=
+  match paramPos fn.params p with
+  | .error _ => none
+  | .ok j =>
+    match fn.kinds[j]?, fn.params[j]? with
+    | some .wert, some (_, τ) =>
+      some (match lowVar Γ (sh + j) τ with
+        | .error e => .error e
+        | .ok v => .ok ⟨τ, Expr.var v⟩)
+    | _, _ => none
+
+/-- An aggregate static (a number static goes to the integer lowering). -/
+def lowGlobWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
+    Option (Except String (LowWert u Γ Λ)) :=
+  match globIdx u.globs p with
+  | .error _ => none
+  | .ok g =>
+    match (globAt u g).ty with
+    | .int .. | .bool => none
+    | _ =>
+      some (if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+        .ok ⟨(declOf u).gtyp g, Expr.glob (D := declOf u) g hd⟩
+      else .error "access without held guard")
+
+/-- An aggregate field read through a pointer parameter (`p.slots[i].f`); `none` for any other field. -/
+def lowDurchWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : Nat) (b fname : String)
+    (ix : UIdx) : Option (Except String (LowWert u Γ Λ)) :=
+  match paramPos fn.params b with
+  | .error _ => none
+  | .ok j =>
+    match fn.kinds[j]? with
+    | some (.ptr num w) =>
+      if h : num < u.tabs.length then
+        (fieldHitW u ⟨num, h⟩ fname).map fun fi =>
+          match lowVar Γ (sh + j) (.ptr num w), lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
+          | .ok v, .ok i =>
+            if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) then
+              .ok ⟨_, Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (tabNr_some u num h) fi i hL⟩
+            else .error "access without held guard"
+          | .error e, _ | _, .error e => .error e
+      else none
+    | _ => none
+
+/-- An aggregate field read at a table (`T.slots[i].f`); `none` for any other field. -/
+def lowTabWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : Nat) (b fname : String)
+    (ix : UIdx) : Option (Except String (LowWert u Γ Λ)) :=
+  match tabIdx u.tabs b with
+  | .error _ => none
+  | .ok t =>
+    (fieldHitW u t fname).map fun fi =>
+      match lowIdx u Γ Λ fn sh t ix with
+      | .ok i =>
+        if hL : (∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) then
+          .ok ⟨_, Expr.slot (D := declOf u) t fi i hL⟩
+        else .error "access without held guard"
+      | .error e => .error e
+
+/-- The integer side of a value. -/
+def zahlVon {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
+    Except String (LowWert u Γ Λ) → Except String (LowSide u Γ Λ)
+  | .ok w => w.zahl
+  | .error e => .error e
+
+/-- A value of any type (`LowWert`), in an `ensures` (`er` the result type) or a body (`er = none`): literals,
+    parameters, statics, slot reads, `old` and `result`, the integer arithmetic, and the aggregate forms (arrays and
+    strings by their type). One structural recursion, so that the lowering stays reducible. -/
+def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option Ty) : USide → Except String (LowWert u Γ Λ)
+  | .lit n => .ok (LowSide.wert { range := (n, n), term := Expr.lit n })
   | .param p =>
-    lowParamSide u Γ Λ fn (if er.isSome then 1 else 0) p
-  | .glob p => lowGlobSide u Γ Λ p
+    match lowParamWert u Γ Λ fn (if er.isSome then 1 else 0) p with
+    | some r => r
+    | none => (lowParamSide u Γ Λ fn (if er.isSome then 1 else 0) p).map LowSide.wert
+  | .glob p =>
+    match lowGlobWert u Γ Λ p with
+    | some r => r
+    | none => (lowGlobSide u Γ Λ p).map LowSide.wert
   | .slot b f ix =>
-    lowDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+    match lowDurchWert u Γ Λ fn (if er.isSome then 1 else 0) b f ix with
+    | some r => r
+    | none => (lowDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix).map LowSide.wert
   | .refSlot r f =>
-    lowRefRead u Γ Λ fn (if er.isSome then 1 else 0) r f
+    (lowRefRead u Γ Λ fn (if er.isSome then 1 else 0) r f).map LowSide.wert
   | .tab b f ix =>
-    lowTabRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+    match lowTabWert u Γ Λ fn (if er.isSome then 1 else 0) b f ix with
+    | some r => r
+    | none => (lowTabRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix).map LowSide.wert
   | .old b f ix =>
-    lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+    (lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix).map LowSide.wert
   | .add a b =>
-    match lowSideEns u Γ Λ fn er a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideEns u Γ Λ fn er b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.plus x y)
+    match lowWertE u Γ Λ fn er a, lowWertE u Γ Λ fn er b with
+    | .ok ⟨.int a1 a2, x⟩, .ok ⟨.int b1 b2, y⟩ =>
+      .ok (LowSide.plus { range := (a1, a2), term := x } { range := (b1, b2), term := y }).wert
+    | .ok wa, .ok wb => catW wa wb
+    | .error e, _ | _, .error e => .error e
   | .sub a b =>
-    match lowSideEns u Γ Λ fn er a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideEns u Γ Λ fn er b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.minus x y)
+    match zahlVon (lowWertE u Γ Λ fn er a), zahlVon (lowWertE u Γ Λ fn er b) with
+    | .ok x, .ok y => .ok (LowSide.minus x y).wert
+    | .error e, _ | _, .error e => .error e
   | .mul a b =>
-    match lowSideEns u Γ Λ fn er a with
-    | .error e => .error e
-    | .ok x =>
-      match lowSideEns u Γ Λ fn er b with
-      | .error e => .error e
-      | .ok y => .ok (LowSide.times x y)
+    match zahlVon (lowWertE u Γ Λ fn er a), zahlVon (lowWertE u Γ Λ fn er b) with
+    | .ok x, .ok y => .ok (LowSide.times x y).wert
+    | .error e, _ | _, .error e => .error e
   | .conv lo hi a =>
-    match lowSideEns u Γ Λ fn er a with
+    match zahlVon (lowWertE u Γ Λ fn er a) with
     | .error e => .error e
-    | .ok x => LowSide.conv lo hi x
-  | .band a b => lowZwei LowSide.and (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
-  | .bor a b => lowZwei LowSide.or (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
-  | .bxor a b => lowZwei LowSide.xoder (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
-  | .div a b => lowZwei LowSide.durch (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
-  | .rem a b => lowZwei LowSide.rest (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
-  | .shl a b => lowZwei LowSide.links (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
-  | .shr a b => lowZwei LowSide.rechts (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+    | .ok x => (LowSide.conv lo hi x).map LowSide.wert
+  | .band a b => (lowZwei LowSide.and (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
+  | .bor a b => (lowZwei LowSide.or (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
+  | .bxor a b => (lowZwei LowSide.xoder (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
+  | .div a b => (lowZwei LowSide.durch (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
+  | .rem a b => (lowZwei LowSide.rest (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
+  | .shl a b => (lowZwei LowSide.links (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
+  | .shr a b => (lowZwei LowSide.rechts (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
   | .neg a =>
-    match lowSideEns u Γ Λ fn er a with
+    match zahlVon (lowWertE u Γ Λ fn er a) with
     | .error e => .error e
-    | .ok x => .ok (LowSide.minusEins x)
+    | .ok x => .ok (LowSide.minusEins x).wert
   | .erg =>
     match er with
     | some (.int a b) =>
       match lowVar Γ 0 (.int a b) with
       | .error e => .error e
-      | .ok v => .ok { range := (a, b), term := Expr.var v }
+      | .ok v => .ok ⟨.int a b, Expr.var v⟩
     | none =>
       match paramPos fn.params "#erg", fn.params.find? (·.1 == "#erg") with
       | .ok j, some (_, .int a b) =>
         match lowVar Γ j (.int a b) with
         | .error e => .error e
-        | .ok v => .ok { range := (a, b), term := Expr.var v }
+        | .ok v => .ok ⟨.int a b, Expr.var v⟩
       | _, _ => .error "result without result"
     | _ => .error "result without result"
+  | .text bs => lowText bs
+  | .arrNil => .error "an empty array literal needs its type"
+  | .arrCons a r =>
+    match lowWertE u Γ Λ fn er a, lowWertE u Γ Λ fn er r with
+    | .ok wa, .ok wr => consW wa wr
+    | .error e, _ | _, .error e => .error e
+  | .idx a i =>
+    match lowWertE u Γ Λ fn er a, zahlVon (lowWertE u Γ Λ fn er i) with
+    | .ok wa, .ok wi => idxW wa wi
+    | .error e, _ | _, .error e => .error e
+  | .len a =>
+    match lowWertE u Γ Λ fn er a with
+    | .ok wa => lenW wa
+    | .error e => .error e
+  | .upd a i v =>
+    match lowWertE u Γ Λ fn er a, zahlVon (lowWertE u Γ Λ fn er i), lowWertE u Γ Λ fn er v with
+    | .ok wa, .ok wi, .ok wv => updW wa wi wv
+    | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e
+
+/-- A comparison side in `ensures`: literals, numeric parameters,
+    slot reads, `old` and `result` travel (the integer values of `lowWertE`). -/
+def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option Ty) (s : USide) : Except String (LowSide u Γ Λ) :=
+  zahlVon (lowWertE u Γ Λ fn er s)
+
+/-- A value at the type `τ` (checking mode): an array literal element by element, everything else by `fitW`. -/
+def lowWertAtE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty) :
+    (τ : Ty) → USide → Except String (Expr (declOf u) Γ Λ τ)
+  | .arr _ 0, .arrNil => .ok Expr.arrNil
+  | .arr τ (k + 1), .arrCons a r =>
+    match lowWertAtE u Γ Λ fn er τ a, lowWertAtE u Γ Λ fn er (.arr τ k) r with
+    | .ok a', .ok r' => .ok (Expr.arrCons a' r')
+    | .error e, _ | _, .error e => .error e
+  | τ, s =>
+    match lowWertE u Γ Λ fn er s with
+    | .ok w => fitW τ w
+    | .error e => .error e
 
 /-- A value side in a body: the sides of an `ensures` without `old` and `result` (a body reads neither). -/
 def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -1217,6 +1456,17 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option Ty) :
     String → USide → USide → Except String (Expr (declOf u) Γ Λ .bool)
   | op, a, b =>
+    match lowWertE u Γ Λ fn er a, lowWertE u Γ Λ fn er b with
+    | .ok ⟨.str _, x⟩, .ok ⟨.str _, y⟩ =>
+      match op with
+      | "==" => .ok (Expr.strEq x y)
+      | "!=" => .ok (Expr.not (Expr.strEq x y))
+      | "<" => .ok (Expr.strLt x y)
+      | "<=" => .ok (Expr.or (Expr.strLt x y) (Expr.strEq x y))
+      | ">" => .ok (Expr.strLt y x)
+      | ">=" => .ok (Expr.or (Expr.strLt y x) (Expr.strEq x y))
+      | _ => .error "operator without G form"
+    | _, _ =>
     match lowSideEns u Γ Λ fn er a with
     | .error e => .error e
     | .ok s1 =>
