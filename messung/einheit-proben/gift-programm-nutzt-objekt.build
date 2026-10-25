@@ -1,0 +1,6 @@
+# POISON: a program uses the modules of an OBJECT -- only a library's modules reach another
+# target (separate compilation across units is not implemented in the LLVM backend).
+project('gift-nutzt-objekt')
+
+object('rechenwerk', 'prog-vorrat.gab', 'prog-werk.gab')
+program('haupt', 'prog-haupt.gab')

@@ -48,7 +48,7 @@ fn was_new_schreibt_prueft_baut_und_laeuft() {
     let (aus, fehler, code) = lauf(&d, &["new", "hallo"]);
     assert_eq!(code, 0, "`gabbro new hallo` runs:\n{aus}\n{fehler}");
     assert!(d.join("hallo.gab").exists(), "it wrote the source:\n{aus}");
-    assert!(d.join("hallo.bau").exists(), "it wrote the manifest:\n{aus}");
+    assert!(d.join("gabbro.build").exists(), "it wrote the project file:\n{aus}");
 
     // **The checker over what it wrote.** `0 errors` and not "exit 0": a run that found
     // nothing because it read nothing would also exit 0.
@@ -69,14 +69,19 @@ fn was_new_schreibt_prueft_baut_und_laeuft() {
         "and it computes the entry's cost:\n{aus}"
     );
 
-    // **The build.** `cc` is called here; a machine without it fails this probe loudly, which
-    // is the right outcome -- the claim under test is that the skeleton RUNS.
-    let (aus, fehler, code) = lauf(&d, &["build", "hallo.bau"]);
+    // **The build.** The LLVM tools are called here; a machine without them fails this probe
+    // loudly, which is the right outcome -- the claim under test is that the skeleton RUNS.
+    let (aus, fehler, code) = lauf(&d, &["build"]);
     assert_eq!(code, 0, "the build comes through:\n{aus}\n{fehler}");
     assert!(aus.contains("0 refused"), "and refuses nothing:\n{aus}");
 
+    // **The declared test runs and passes** -- the project file's own claim about the output.
+    let (aus, fehler, code) = lauf(&d, &["test", "-C", "build"]);
+    assert_eq!(code, 0, "the skeleton's test passes:\n{aus}\n{fehler}");
+    assert!(aus.contains("ok       prints-hi") && aus.contains("1 ok, 0 failed"), "{aus}");
+
     // **And the binary prints.** This is the assertion the whole file exists for.
-    let binaer = d.join("target/hallo/hallo");
+    let binaer = d.join("build/hallo");
     assert!(binaer.exists(), "the linker wrote a binary: {}", binaer.display());
     let lauf = Command::new(&binaer).output().expect("the skeleton runs");
     assert_eq!(lauf.status.code(), Some(0), "it exits 0");
@@ -93,9 +98,9 @@ fn was_new_schreibt_prueft_baut_und_laeuft() {
 #[test]
 fn new_ueberschreibt_nichts() {
     let d = frisches_verzeichnis("bestand");
-    // Only the MANIFEST is in the way. A generator that checked the source first would
+    // Only the PROJECT FILE is in the way. A generator that checked the source first would
     // already have written it by the time it noticed.
-    std::fs::write(d.join("hallo.bau"), "-- a manifest of my own\n").expect("write");
+    std::fs::write(d.join("gabbro.build"), "# a project of my own\n").expect("write");
 
     let (aus, fehler, code) = lauf(&d, &["new", "hallo"]);
     assert_eq!(code, 2, "it refuses:\n{aus}\n{fehler}");
@@ -108,8 +113,8 @@ fn new_ueberschreibt_nichts() {
         "and the source it would have written first is NOT there"
     );
     assert_eq!(
-        std::fs::read_to_string(d.join("hallo.bau")).expect("read"),
-        "-- a manifest of my own\n",
+        std::fs::read_to_string(d.join("gabbro.build")).expect("read"),
+        "# a project of my own\n",
         "and the file that was in the way is untouched"
     );
 

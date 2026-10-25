@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# `gabbro setup <dir> beispiele/64-writes-a-whole-buffer.build`, then `gabbro compile -C <dir>`.
+project('64-writes-a-whole-buffer')
+
+program('puffer', '64-writes-a-whole-buffer.gab')

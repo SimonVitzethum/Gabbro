@@ -25,11 +25,14 @@ theorem Ausgang.mapWelt_logik {l : Bool} {Γ : Ctx} {o : Ausgang V l Γ}
     {f : World D → World D} {e : Logik D} (h : o.mapWelt f = .logik e) : o = .logik e := by
   cases o <;> simp_all [Ausgang.mapWelt]
 
-theorem retryLauf_ohneLogik {l : Bool} {Γ : Ctx} (schritt : World D → Env D Γ → Ausgang V true Γ)
+/-- A `retry` loop ends in a `logik` outcome only with one its step or its fallback gives; the
+    property `Ok` of such an outcome carries over (with `Ok := fun _ => False`: none at all). -/
+theorem retryLauf_ohneLogik {Ok : Logik D → Prop} {l : Bool} {Γ : Ctx}
+    (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueber : World D → Env D Γ → Ausgang V l Γ)
-    (hs : ∀ σ ρ e, schritt σ ρ ≠ .logik e) (hu : ∀ σ ρ e, ueber σ ρ ≠ .logik e) :
+    (hs : ∀ σ ρ e, schritt σ ρ = .logik e → Ok e) (hu : ∀ σ ρ e, ueber σ ρ = .logik e → Ok e) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (e : Logik D),
-      retryLauf schritt bis ueber n σ ρ ≠ .logik e
+      retryLauf schritt bis ueber n σ ρ = .logik e → Ok e
   | 0, σ, ρ, e => by
       intro h
       simp only [retryLauf] at h
@@ -53,13 +56,19 @@ theorem retryLauf_ohneLogik {l : Bool} {Γ : Ctx} (schritt : World D → Env D �
         · cases h
 
 variable (O : Orakel D) (passes : Nat)
-  (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+  (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {Ok : Logik D → Prop}
+
+/-! The soundness of `logikFrei`: a `logik` outcome of such a body is one a callee answered, so
+    every property `Ok` of the callees' `logik` answers carries over to the body's (with
+    `Ok := fun _ => False`: no `logik` outcome at all; with "no precondition failure": a caller
+    of callees without `requires` never blames itself). -/
 
 mutual
 
-theorem Stmt.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e → Ok e)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     (s : Stmt D V l Γ Λ Λ') → s.logikFrei = true →
-      ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execStmt O passes R s σ ρ ≠ .logik e
+      ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execStmt O passes R s σ ρ = .logik e → Ok e
   | .ite c t e, h, σ, ρ, e', he => by
       simp only [Stmt.logikFrei, Bool.and_eq_true] at h
       simp only [execStmt] at he
@@ -130,9 +139,10 @@ theorem Stmt.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
   | .leave .., _, _, _, _, he => by simp [execStmt] at he
   | .next .., _, _, _, _, he => by simp [execStmt] at he
 
-theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e → Ok e)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     (b : Block D V l Γ Λ Λ') → b.logikFrei = true →
-      ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execBlock O passes R b σ ρ ≠ .logik e
+      ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execBlock O passes R b σ ρ = .logik e → Ok e
   | .nil, _, σ, ρ, e, he => by simp [execBlock] at he
   | .cons s rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
@@ -248,9 +258,10 @@ theorem Block.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
       · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_logik he)
 
-theorem Endblock.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e → Ok e)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (b : Endblock D V l Γ Λ) → b.logikFrei = true →
-      ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execEnd O passes R b σ ρ ≠ .logik e
+      ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execEnd O passes R b σ ρ = .logik e → Ok e
   | .ret .., _, _, _, _, he => by simp [execEnd] at he
   | .retWhy .., _, _, _, _, he => by simp [execEnd] at he
   | .leave .., _, _, _, _, he => by simp [execEnd] at he
@@ -350,7 +361,9 @@ end LogikFrei
     declared axiom ensures, without any reasoning about the program. -/
 theorem logikFrei_keineLogik {P : Programm D} (passes : Nat) (Q : AxEns D) {f : D.Fn}
     (h : (P.rumpf f).logikFrei = true) : KeineLogik P passes Q f :=
-  fun O' _ _ _ R _ hR σ ρ _ e => Endblock.logikFrei_ok O' passes R hR (P.rumpf f) h σ ρ e
+  fun O' _ _ _ R _ hR σ ρ _ e =>
+    Endblock.logikFrei_ok O' passes R (Ok := fun _ => False) (fun g σ ρ e h => hR g σ ρ e h) (P.rumpf f) h
+      σ ρ e
 
 /-- The program-level check over a member list. -/
 def programmLogikFrei (P : Programm D) (fs : List D.Fn) : Bool :=

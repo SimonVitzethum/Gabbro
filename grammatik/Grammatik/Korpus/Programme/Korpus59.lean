@@ -481,7 +481,7 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 /-- **`beispiele/59` as ONE declaration**: code `kP`, lock family `kSI`,
     no axiom, declared starts `takt_verteiler` and `ruf_verteiler` (the two
     entry dispatch roots, no parameters), initial memory all zero. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], kSp, []⟩
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kTaktVert, .nil⟩, ⟨kRufVert, .nil⟩], kSp, [], []⟩
 
 theorem korpus59_nutzer : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,

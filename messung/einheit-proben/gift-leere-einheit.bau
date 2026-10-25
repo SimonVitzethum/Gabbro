@@ -1,9 +1,0 @@
--- GIFT: eine Einheit ohne Datei.
---
--- Ein Bau ueber nichts meldet Erfolg, und „nichts gefunden" sieht dann aus wie „nichts
--- angesehen" -- genau die Verwechslung, gegen die die Deckungszeile steht. Also faellt sie
--- schon am Manifest.
-
-out      target/bau-gift
-
-unit leer object

@@ -78,6 +78,7 @@ fn jeder_befehl_den_das_tutorial_nennt_gibt_es() {
     for befehl in [
         "gabbro new",
         "gabbro build",
+        "gabbro test",
         "gabbro check",
         "gabbro costs",
         "gabbro effects",

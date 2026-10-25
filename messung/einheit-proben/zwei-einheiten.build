@@ -1,0 +1,14 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# **Two targets, and the second NEEDS the first.**
+#
+#     rechenwerk (library)  prog-vorrat.gab + prog-werk.gab
+#          ^
+#          | use werk::ablegen, use werk::holen, use vorrat::Regal   (computed, never written)
+#     haupt (program)       prog-haupt.gab   -> unit: vorrat + werk + haupt -> build/haupt
+#
+# Until 2026-10-24 this case was refused (a unit resting on another unit); a source library
+# builds it: the library's files go into the program's unit.
+project('zwei')
+
+library('rechenwerk', 'prog-vorrat.gab', 'prog-werk.gab')
+program('haupt', 'prog-haupt.gab')

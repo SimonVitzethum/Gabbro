@@ -158,9 +158,9 @@ const FAHNEN: &[Fahne] = &[
     Fahne {
         erstname: "--dry-run",
         zweitname: "--trocken",
-        // Without a manifest both spellings fail identically BEFORE the flag is read --
+        // Without a project both spellings fail identically BEFORE the flag is read --
         // exactly the vacuous equality this file exists to refuse.
-        lebendig: &["build", "--dry-run", "programmlogik/beispiel/gabbro.bau"],
+        lebendig: &["build", "--dry-run", "programmlogik/beispiel"],
     },
     Fahne {
         erstname: "--help",
@@ -321,6 +321,12 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["check", "pruefe"],
     &["link", "verbinde"],
     &["build", "bau"],
+    &["setup"],
+    &["configure"],
+    &["compile"],
+    &["test"],
+    &["install"],
+    &["introspect"],
     &["llvm"],
     &["llvm-cert"],
     &["fragments", "fragmente"],
@@ -450,14 +456,22 @@ fn fahnen_in(text: &str) -> BTreeSet<String> {
 fn fahnen_der_quelle() -> BTreeSet<String> {
     let mut aus = BTreeSet::new();
     let mut gesehen = 0usize;
-    for eintrag in std::fs::read_dir(QUELLEN).expect("crates/gabbro-cli/src is readable") {
-        let pfad = eintrag.expect("directory entry").path();
-        if pfad.extension().and_then(|e| e.to_str()) != Some("rs") {
-            continue;
+    // Subdirectories too (`src/bau/`): a module folder is source as much as a file is.
+    let mut offen = vec![std::path::PathBuf::from(QUELLEN)];
+    while let Some(verzeichnis) = offen.pop() {
+        for eintrag in std::fs::read_dir(&verzeichnis).expect("crates/gabbro-cli/src is readable") {
+            let pfad = eintrag.expect("directory entry").path();
+            if pfad.is_dir() {
+                offen.push(pfad);
+                continue;
+            }
+            if pfad.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+            gesehen += 1;
+            let text = std::fs::read_to_string(&pfad).expect("source is readable");
+            aus.extend(fahnen_in(&text));
         }
-        gesehen += 1;
-        let text = std::fs::read_to_string(&pfad).expect("source is readable");
-        aus.extend(fahnen_in(&text));
     }
     assert!(
         gesehen >= 3,
@@ -742,7 +756,7 @@ fn jeder_fahnen_erstname_tut_dasselbe_wie_sein_zweitname() {
 /// and `gabbro effects` are one command.**
 ///
 /// They are not simply added to `PAARE` next door because that list drives every pair with
-/// ONE call shape, and `build` needs a manifest: `gabbro build <file.gab>` exits 2 for both
+/// ONE call shape, and `build` needs a project: `gabbro build <file.gab>` exits 2 for both
 /// spellings, which is the vacuous agreement `PAARE`'s own `assert_ne!(a.2, 2)` exists to
 /// refuse. *A pair that only agrees on how it fails has not been measured.*
 #[test]
@@ -750,8 +764,8 @@ fn die_zwei_paare_die_erstnamen_rs_nicht_faehrt_tun_dasselbe() {
     const OFFEN: &[(&[&str], &[&str])] = &[
         (&["effects", DATEI], &["wirkungen", DATEI]),
         (
-            &["build", "--dry-run", "programmlogik/beispiel/gabbro.bau"],
-            &["bau", "--dry-run", "programmlogik/beispiel/gabbro.bau"],
+            &["build", "--dry-run", "programmlogik/beispiel"],
+            &["bau", "--dry-run", "programmlogik/beispiel"],
         ),
     ];
     for (englisch, deutsch) in OFFEN {

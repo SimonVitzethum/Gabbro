@@ -457,7 +457,7 @@ def kSp : Speicher kD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g =>
 /-- **`beispiele/109` as ONE declaration**: code `kP`, lock family `kSI`,
     no axiom, declared starts `distribute_a` and `distribute_b` (the two
     entry dispatch roots, no parameters), initial memory all zero. -/
-def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kDistA, .nil⟩, ⟨kDistB, .nil⟩], kSp, []⟩
+def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kDistA, .nil⟩, ⟨kDistB, .nil⟩], kSp, [], []⟩
 
 theorem korpus109_nutzer : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,

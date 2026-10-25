@@ -1052,9 +1052,8 @@ pub const NAMEN: &[Satz] = &[
     Satz {
         name: "namen.verbund",
         kennungen: &["N501", "N502", "N503", "N504", "N505", "N516", "N568"],
-        aussage: "Separately compiled units that `gabbro link` (or `gabbro build` over two or \
-                  more units) accepts are checked over ONE link declaration: every `extern fn` \
-                  head one unit relies on names a `pub fn` of another unit with the same \
+        aussage: "Separately compiled units that `gabbro link` accepts are checked over ONE \
+                  link declaration: every `extern fn` head one unit relies on names a `pub fn` of another unit with the same \
                   parameters, result and error channel, and every exported declaration two \
                   units carry is the same text (`N501`); the same `requires` and `ensures` \
                   conjuncts, compared as TREES (`N502`); the same `effects` and a hull that \
@@ -1097,7 +1096,7 @@ pub const NAMEN: &[Satz] = &[
                       falls with `N291`+`N301`), `1248-modul-doppelt` (`N516`); the positive \
                       twins `rennen-bewacht-*` (the read behind the head under its lock) and \
                       `faeden-beide-*` (threads in both units, nothing shared) link clean \
-                      (`crates/gabbro-cli/tests/verbund.rs`, which also runs `gabbro build \
+                      (`crates/gabbro-cli/tests/verbund.rs`, which also runs `gabbro link \
                       a.gab b.gab`); snippet tests in `verbund.rs` (callback `N503`, body in \
                       both units, unexported import, differing table `N501`, differing \
                       foreign function `N505`, contracts as trees, the composed text, \

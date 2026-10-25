@@ -2,9 +2,12 @@ import Grammatik.Bausteine.Arena.Ownership.FactoryWitness
 import Grammatik.Bausteine.Arena.Ownership.Source.Witness
 import Grammatik.Bausteine.Arena.Ownership.Source.ForwardWitness
 import Grammatik.Bausteine.Arena.Ownership.Body.Goal
+import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+import Grammatik.Bausteine.Arena.Ownership.Ruhe.Witness
 
 /-! Kernel-checked public audit of the ownership extension. The general body
-judgment and its soundness are in `Body/`; whole-program integration is
+judgment and its soundness are in `Body/`, ownership on every reachable
+machine G, GA and GX in `Machine/`; whole-program integration is
 recorded separately in PLAN-DYNAMIC §12. -/
 
 namespace Gabbro.Grammatik.ArenaOwnership
@@ -53,5 +56,14 @@ namespace Gabbro.Grammatik.ArenaOwnership
 #print axioms Body.witness_checked
 #print axioms Body.ownership_goal
 #print axioms Body.ownership_goal_witness
+#print axioms Machine.ownInv_step
+#print axioms Machine.ownInv_reach
+#print axioms Machine.ownInv_reachGA
+#print axioms Machine.ownInv_reachGX
+#print axioms Ruhe.checked_mitRuhe
+#print axioms Ruhe.threadFacts_of
+#print axioms Ruhe.startOwn_arenen
+#print axioms Ruhe.GoalWitness.besitz_zeuge
+#print axioms Ruhe.GoalWitness.actual_run
 
 end Gabbro.Grammatik.ArenaOwnership

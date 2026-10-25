@@ -42,7 +42,7 @@ open Gabbro.Grammatik
 /-! ## 1. The pool unit -/
 
 /-- **Probe B's program with `haupt` declared twice**: `concurrent { haupt, haupt }`. -/
-def zPool : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩], zSp, []⟩
+def zPool : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩, ⟨zHaupt, .nil⟩], zSp, [], []⟩
 
 /-- `haupt` is declared twice. -/
 theorem zPool_mehrfach : Mehrfach zPool.ws zHaupt := List.Sublist.refl _

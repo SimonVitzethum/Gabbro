@@ -10,8 +10,9 @@
   THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`,
   `Classical.choice`, `Quot.sound`):
   * `GabbroZiel` -- safety, on every reached machine: the legs of `ZielFX` (below). Proof `gabbro_ziel`.
-  * `GabbroZielSC` -- the same over machine G without the atomic rely; a corollary (`gabbro_ziel_sc_aus`), kept as a
-    name because corpus theorems and embeddings are stated over it.
+  * `GabbroZielSC` -- the same over machine G without the atomic rely and without the ownership leg; proved directly
+    (`gabbro_ziel_sc`), and on every unit without an arena a corollary (`gabbro_ziel_sc_aus`), kept as a name
+    because corpus theorems and embeddings are stated over it.
   * `GabbroZielVerbund` -- a program LINKED from two separately compiled units, each accepted alone, under the link
     check `SchnittstelleSpec` and the SAME hardware assumptions; conclusion `ZielF` on the linked unit
     (`gabbro_ziel_verbund`).
@@ -33,7 +34,9 @@
   roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
   (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`
       (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
-      lock-free starts, pool safety, write separation, answer sites, masking discipline). The concrete checker is
+      lock-free starts, pool safety, write separation, answer sites, masking discipline, and since 2026-10-24 the
+      ownership judgment of every arena in `E.arenen` with plain allocator words; beside it `BesitzStart E`: every
+      arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
       `akzeptiertX_pruefer` (Zielsatz/Atomar/AtomarZiel.lean), deciding `AkzeptiertX`. `fs`/`ls`/`cs` are complete
       enumerations (finite declarations only).
   (b) `NutzerPflichtA E` -- the user's logic: every body, SEQUENTIALLY, at every `forever` budget, against every
@@ -81,6 +84,11 @@
   * on the thread machine: `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei` (dormant and joining threads hold
     nothing), `keineVerklemmung`/`keinZyklus` with join waits, `fortschritt` with the join wait, `spawnSicht` (a
     spawn leaves the G state alone, the new thread holds nothing, every free lock and closed invariant holds).
+  * `besitz` (2026-10-24) -- for every arena of the unit, lifted to `E.P.mitRuhe` (`ArenaIface.mitRuhe`): one
+    ledger of its slots agrees with the shared memory, the free list is well formed, the ledger keeps its
+    discipline against every thread's stack depth, and every thread's running activation and every suspended
+    caller realise what their ownership interfaces say (`OwnInv`, Bausteine/Arena/Ownership/Machine/Inv.lean).
+    (a), (c).
   * `budgetUnecht` -- a thread at a spent `forever` budget takes a step at budget `passes + 1` from the machine
     with every counter one higher: the budget stop is no stop of the program (BudgetMonoton.lean: every run at
     budget `p` is a run at every larger budget).
@@ -207,7 +215,10 @@
   * a routine declared ONCE running on several threads (outside (d));
   * for linked units: differing hardware assumptions, a callback through an import, an importer relying on a
     contract other than the exporter's, dynamic loading, linking of foreign code below the ABI, the link step
-    itself;
+    itself, ownership of an arena (`GabbroZielVerbund` concludes `besitz` over `[]`);
+  * ownership beyond the arenas the unit declares (`E.arenen`): an arena whose allocator words are atomic, an
+    arena not empty in the start memory, a start handed an allocation (each refused by the checker's
+    `BesitzStart`/`worte`), and what a foreign body does to an arena beyond `GutO`;
   * for threads spawned at run time: arguments per spawn, a root `requires` holding only at the spawn world,
     `old`-reads at the spawn world, the end of a join wait, the child's stack, a failing spawn, the lowering of the
     spawn;
@@ -233,6 +244,8 @@ import Grammatik.Logik.Fortschritt.PlanLauf
 import Grammatik.Logik.Fortschritt.Warten
 import Grammatik.Speichermodell.Adressen.Layout
 import Grammatik.Logik.Terminierung.LaufGX
+import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
+import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 
 namespace Gabbro.Grammatik.Zielsatz
 
@@ -260,6 +273,10 @@ def Aufzaehlung (α : Type) : Type := {l : List α // ∀ a, a ∈ l}
       in a loop, in two starters, in a pool routine), so the checker judges it as a POOL
       routine: it enters `ws` TWICE (`Einheit.ws`). Default `[]`: a unit that creates no thread
       at run time is the unit of before.
+    * `arenen` (NEW 2026-10-24, review branch `review/besitz-spec`) -- the unit's arenas, each with
+      the ownership interface of every function (`ArenaIface`: which parameter is handed which
+      allocation, which result returns one). Default `[]`: a unit without an arena is the unit of
+      before.
     The exporter's output is exactly one such value; a different `starts` (say `[]`) is a
     DIFFERENT program, whose run the statement then describes (`laufzeit_nur_erklaert`). -/
 structure Einheit (D : Deklaration) where
@@ -269,6 +286,7 @@ structure Einheit (D : Deklaration) where
   starts : List (Σ w : D.Fn, Env D (D.params w))
   sp0 : Speicher D
   gestartet : List (Σ w : D.Fn, Env D (D.params w)) := []
+  arenen : List (ArenaOwnership.Body.ArenaIface D) := []
 
 /-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
     (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
@@ -867,8 +885,12 @@ def GeteiltV (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
   GeteiltA P ws c ∧ VertragsFrei P c
 
 /-- **(a) with the atomic rely**: `AkzeptiertSpec` with the footprint property `FussSX` over the
-    admitted shared atomics `GeteiltV`. Every other field is `AkzeptiertSpec`'s. -/
-structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
+    admitted shared atomics `GeteiltV`, and (since 2026-10-24) the ownership judgment of every
+    arena in `B`: every body passes the ownership check against the arena's interfaces
+    (`Checked`), and the arena's allocator words are plain (`ArenaPlain`: no weak-memory answer
+    reaches them). Every other field is `AkzeptiertSpec`'s. -/
+structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
+    (B : List (ArenaOwnership.Body.ArenaIface D)) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
   fuss : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f
@@ -880,6 +902,18 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) 
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
   -- the handler discipline `H102` (Opus agent H), as in `AkzeptiertSpec`
   masken : MaskenDisziplin P fs
+  -- the ownership judgment (2026-10-24): every body, against every arena's interfaces
+  besitz : ∀ a ∈ B, ArenaOwnership.Body.Checked P a.A a.I
+  worte : ∀ a ∈ B, ArenaOwnership.Machine.ArenaPlain a.A
+
+/-- **The ownership start of a unit** (2026-10-24): every arena is empty in the declared start
+    memory (nothing used, the free list full), and no declared start or run-time root is handed an
+    allocation (every parameter mode of its interface is plain). Decided by the checker beside
+    `AkzeptiertSpecX`, which does not see the unit's start. -/
+structure BesitzStart (E : Einheit D) : Prop where
+  leer : ∀ a ∈ E.arenen, ArenaOwnership.Machine.ArenaLeer a.A E.sp0
+  start : ∀ a ∈ E.arenen, ∀ r ∈ E.starts ++ E.gestartet,
+    (ArenaOwnership.Body.modeList (a.I r.1).parameters).all Option.isNone = true
 
 /-- **Race freedom on GA runs** (`RennfreiBis` with `LaufGA`): on every run of GA -- so on the
     G-part of every run of W -- two accesses by different threads to a non-atomic carrier, one
@@ -901,7 +935,7 @@ structure PrueferX where
     Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpecX E.P E.S fs.1 E.ws
+    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen ∧ BesitzStart E
 
 /-- **The logic of the bodies with the atomic rely over `T`.** -/
 def LogikPflichtA (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop) :
@@ -1020,7 +1054,8 @@ def FortschrittFX (P : Programm D) (O : Orakel D) (passes : Nat) (Tg : D.Tab ⊕
 
 /-- **THE GOAL on a thread machine over GX.** -/
 structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
-    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 : RufMaschineG D) (K : FadenMaschine D) : Prop where
+    (Tg : D.Tab ⊕ D.Glob → Prop) (M0 : RufMaschineG D) (B : List (ArenaOwnership.Body.ArenaIface D))
+    (K : FadenMaschine D) : Prop where
   g : ZielX P S O passes Tg M0 K.m
   schlafendUnberuehrt : ∀ t, K.lebt t = false → K.m.faeden t = M0.faeden t
   schlafendFrei : ∀ t, K.lebt t = false → ∀ L, L ∉ offen (K.m.faeden t).spur
@@ -1038,6 +1073,9 @@ structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
   -- `forever` counter one higher, the stopped thread takes its next step
   budgetUnecht : ∀ t, HaltBenannt O passes K.m .budget t →
     ∃ M', RufSchrittG P O (passes + 1) (K.m.plus 1) t M'
+  -- ownership (2026-10-24): for every arena of `B` one disciplined ledger of its slots agrees with the
+  -- memory, the free list is well formed, and every thread's frames own exactly what their interfaces say
+  besitz : ∀ a ∈ B, ArenaOwnership.Machine.OwnInv a.A a.I K.m
 -- END atomic-rely definitions --
 
 /-- **GABBRO_ZIEL** (since Opus lane O25c, 2026-09-26: WITH THE ATOMIC RELY). Over the THREAD
@@ -1048,10 +1086,13 @@ structure ZielFX (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : Nat)
     than by the last write. (a) is a checker for the rely (`PrueferX`: sound against
     `AkzeptiertSpecX`, whose footprint rule admits exactly those carriers), (b) is the user's
     logic with the rely (`NutzerPflichtA`: every body against EVERY value such a read may
-    return). Every run of before is such a run (`fadenErreichbarX_of`), every checker of before
-    is such a checker (`Pruefer.alsX`), and on every unit it accepts (b) is (b) of before and no
-    admitted shared atomic exists: the statement of before, `GabbroZielSC`, is a corollary
-    (`gabbro_ziel_sc_aus`, Zielsatz/BeweisAtomar.lean). -/
+    return). Since 2026-10-24 (a) also decides the ownership judgment of every arena the unit
+    declares (`E.arenen`, `BesitzStart`), and the conclusion carries the leg `besitz` for each,
+    lifted to `E.P.mitRuhe`. Every run of before is such a run (`fadenErreichbarX_of`), every
+    checker of before with the ownership acceptance is such a checker (`Pruefer.alsX`), and on
+    every unit without an arena it accepts (b) is (b) of before and no admitted shared atomic
+    exists: the statement of before, `GabbroZielSC`, is a corollary there (`gabbro_ziel_sc_aus`,
+    Zielsatz/BeweisAtomar.lean). -/
 def GabbroZiel : Prop :=
   ∀ (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
@@ -1065,11 +1106,12 @@ def GabbroZiel : Prop :=
         FadenErreichbarX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
           (FadenStart E.P.mitRuhe sp init lebt0) K →
           ZielFX E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (GeteiltV (D := D) E.P E.ws)
-            (RufStartG E.P.mitRuhe sp init) K
+            (RufStartG E.P.mitRuhe sp init) (E.arenen.map (·.mitRuhe)) K
 
 /-- **THE STATEMENT OF BEFORE** (verbatim `GabbroZiel` until Opus lane O25c, 2026-09-26): the
-    checker of before, (b) without the rely, `ZielF` over the thread machine over G. It is a
-    COROLLARY of `GabbroZiel` (`gabbro_ziel_sc_aus`), kept as a name because the corpus theorems
+    checker of before, (b) without the rely, `ZielF` over the thread machine over G. It is proved
+    directly (`gabbro_ziel_sc`) and, on every unit without an arena, a COROLLARY of `GabbroZiel`
+    (`gabbro_ziel_sc_aus`), kept as a name because the corpus theorems
     and the earlier embeddings are stated over it. Since 2026-09-26 over the THREAD MACHINE:
     every thread-machine run from the runtime's start, with any set `lebt0` of initially live
     threads -- the others are slots that `start` or `child` spawn at run time. Every G run is
@@ -1205,6 +1247,8 @@ def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   starts := E₁.starts ++ E₂.starts
   sp0 := E₁.sp0
   gestartet := E₁.gestartet ++ E₂.gestartet
+  -- both units' arenas; ownership across a link is not claimed (NOT CLAIMED)
+  arenen := E₁.arenen ++ E₂.arenen
 
 /-- The OWNER's program of `f` (unit 1 iff `e f`). -/
 def teilP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (f : D.Fn) : Programm D :=
@@ -1358,7 +1402,7 @@ def GabbroZielVerbund : Prop :=
           (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K →
           ZielFX (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes
             (GeteiltV (D := D) (verbinde e E₁ E₂).P (verbinde e E₁ E₂).ws)
-            (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K
+            (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) [] K
 
 /-- **THE LINKED STATEMENT OF BEFORE** (verbatim `GabbroZielVerbund` until Opus lane O25c): a
     corollary of `GabbroZielVerbund` (`gabbro_ziel_verbund_sc_aus`). -/

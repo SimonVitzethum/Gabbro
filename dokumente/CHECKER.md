@@ -1183,7 +1183,7 @@ closed or named:
 * **The unit view** (`EINHEITENSICHT`): `gabbro lean` *concatenated text* into one parse tree (measured 2026-08-31), so
   names resolve across files because both `module` blocks stand in one tree; `gabbro pruefe`
   looped and built one tree per file, so the other file is never in the same `Umgebung` — the
-  resolver itself is complete and `use`-aware. `--unit` and `gabbro build` give the checker the
+  resolver itself is complete and `use`-aware. `--unit` and `gabbro compile` give the checker the
   unit view.
 * **What a `check` names, and who reads it** (`TORREICHWEITE`): `measures` names a carrier and the
   measured path must not write it; the 18 gate-probe files that produced C that did not compile

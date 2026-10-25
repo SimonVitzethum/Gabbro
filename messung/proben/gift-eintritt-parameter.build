@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: the entry rule (`parameter`).
+project('eintritt-parameter')
+
+program('parameter', 'probe-eintritt-parameter.gab')

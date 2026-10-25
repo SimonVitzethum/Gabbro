@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: a program without `pub fn main`.
+project('gift-ohne-main')
+
+program('ohnemain', 'prog-vorrat.gab', 'prog-werk.gab')

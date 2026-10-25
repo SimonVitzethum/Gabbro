@@ -35,13 +35,16 @@ nothing else. `gabbro build` additionally needs the LLVM tools `opt`, `llc` and 
 git clone https://github.com/SimonVitzethum/Gabbro
 cd Gabbro
 cargo install --path crates/gabbro-cli
+mkdir hello && cd hello
 gabbro new hello
 gabbro check hello.gab
-gabbro build hello.bau
-./target/hello/hello
+gabbro build
+./build/hello
+gabbro test -C build
 ```
 
-The program prints `Hi`. `gabbro new` creates `hello.gab` (source) and `hello.bau` (build manifest); read them next to the
+The program prints `Hi`. `gabbro new` creates `hello.gab` (source) and `gabbro.build` (the project file, after Meson:
+targets, tests, options -- [`BUILD-SYSTEM.md`](dokumente/BUILD-SYSTEM.md)); read them next to the
 [tutorial](dokumente/TUTORIAL.md). `gabbro passes` shows checker coverage, `gabbro obligations hello.gab` the user obligations left.
 
 ## 2. Proof check in two commands

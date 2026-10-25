@@ -351,7 +351,7 @@ theorem start_offen_leer {D : Deklaration} (P : Programm D) (sp : Speicher D)
 
 /-- **Probe B's pool routine `haupt` as a RUN-TIME root**: no declared start, `haupt` in
     `gestartet` (a `start { haupt, … }` of the idle root). `ws = [haupt, haupt]`. -/
-def zStart : Einheit zD := ⟨zPB, zS, axWahr zD, [], zSp, [⟨zHaupt, .nil⟩]⟩
+def zStart : Einheit zD := ⟨zPB, zS, axWahr zD, [], zSp, [⟨zHaupt, .nil⟩], []⟩
 
 theorem zStart_ws : zStart.ws = [zHaupt, zHaupt] := rfl
 
@@ -468,7 +468,7 @@ theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
 
 /-- **Probe B with a `child`**: `haupt` is a declared start AND the root of a run-time child
     (`gestartet`). `ws = [haupt, haupt, haupt]`. -/
-def zKind : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, [⟨zHaupt, .nil⟩]⟩
+def zKind : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, [⟨zHaupt, .nil⟩], []⟩
 
 theorem zKind_ws : zKind.ws = [zHaupt, zHaupt, zHaupt] := rfl
 
@@ -580,7 +580,7 @@ theorem spawn_kind_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     of the two-thread fixture writes `privB` unguarded. As a run-time root (`gestartet`) it stands
     twice in `ws`, and the checker Bool refuses -- at the pool component alone. The same routine
     as an ordinary declared start beside `hauptA` is accepted: the refusal is the spawn's. -/
-def mStartB : Einheit mD := ⟨mP, mSI, axWahr mD, [⟨mHauptA, .nil⟩], mSp, [⟨mHauptB, .nil⟩]⟩
+def mStartB : Einheit mD := ⟨mP, mSI, axWahr mD, [⟨mHauptA, .nil⟩], mSp, [⟨mHauptB, .nil⟩], []⟩
 
 theorem start_nicht_poolsicher_abgelehnt :
     akzeptiert_pruefer.akzeptiert mStartB mFs [()] mCs = false ∧
@@ -605,7 +605,7 @@ theorem start_nicht_poolsicher_spec : ¬ AkzeptiertSpec mP mSI mFs mStartB.ws :=
     by signature (it is called only inside `haupt`'s `locks`). As a run-time root it is refused
     by the checker Bool at the root component (`wurzelnB`: a thread root holds nothing). -/
 def zKindUnterSperre : Einheit zD :=
-  ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, [⟨zWrap, .nil⟩]⟩
+  ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, [⟨zWrap, .nil⟩], []⟩
 
 theorem kind_unter_sperre_abgelehnt :
     zD.haelt zWrap = [()] ∧

@@ -27,9 +27,10 @@ stage 4). Targets: `x86_64` and `aarch64`, both LP64 little endian, as data
 | `instrumente/teile/baue-llvm.sh [f.gab…]` (run by `instrumente/pruefe-llvm.py`) | end to end for both targets: check, IR, `opt`+`llc`, `ld.lld`, no-libc check, run (aarch64 under `qemu-aarch64`), compare |
 | `crates/gabbro-check/tests/llvm.rs` | IR tests without the LLVM toolchain; `tests/noalias.rs` the `noalias` rule; `tests/beispiele.rs` runs the emitter over the `Y` gift probes |
 
-`gabbro build` (the manifest build, [`BUILD-SYSTEM.md`](BUILD-SYSTEM.md)) drives this backend for
-`program` and `object` units (checker, IR, `opt -O3`, `llc -O3`, `ld.lld`); kernel-module,
-bare-metal and hosted-libc products, and a unit that uses another unit, are refused by name.
+The build system ([`BUILD-SYSTEM.md`](BUILD-SYSTEM.md): `gabbro setup`/`compile`/`test`, or the one-step
+`gabbro build`) drives this backend for `program` and `object` targets (checker, IR, `opt -O3`, `llc -O3`,
+`ld.lld`); a `library` is a source library joined into the units that use it, and a target using another
+program's or object's modules is refused by name.
 
 The tool set is closed: `gabbro`, `opt`, `llc`, `ld.lld`, `readelf`, and `qemu-aarch64` for
 execution only. `clang`, `cc` and `gcc` never run.

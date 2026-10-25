@@ -1,0 +1,5 @@
+# Converted from the `.bau` manifest of the same name (2026-10-25, the build system after Meson).
+# POISON: a target without a source -- an empty target builds nothing and says it built.
+project('gift-leer')
+
+object('leer')
