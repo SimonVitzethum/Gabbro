@@ -705,6 +705,26 @@ notion.
 | regions and linked structures: reasoning over `RegionRepr` and the ownership ledger (lists, trees, maps over the open region) | | open |
 | specifications stated over the SOURCE TEXT: through the Lean pipeline (`uebersetzeAllg`), "the function named `f` in this text meets `S`" | | open |
 
+**Logic proofs on the certificate (Simon, 2026-10-25).** A certificate (`gabbro obligations --g`) exports a program
+as a G term and instantiates the goal theorem CONDITIONALLY on the user's logic `NutzerPflichtA gE`. That premise is
+stated over `execEndHA` (lock moves, release checks, the atomic environment), so the calculus exists over that
+semantics too (`WP/HA/Kern.lean`: exact, with the same rules, the call statement included). `WP/HA/Pflicht.lean`
+states the obligation of each function as three weakest preconditions (`PflichtWP`) and proves
+`nutzerPflichtA_iff`: premise (b) holds EXACTLY when those hold, the lock invariants and axiom ensures are local, and
+the start obligation holds -- so every true user logic of a certificate is provable in the calculus. Without a
+shared atomic the atomic environment is the identity (`leseA_ohneAtomar`). Three certificates are proved through to
+the goal theorem WITHOUT an open logic premise (`gP_gabbro_bewiesen`, on `propext`, `Classical.choice`, `Quot.sound`):
+
+| Certificate | What it exercises |
+|---|---|
+| `beispiele/119-sperrinvariante-bloecke` (`WP/HA/ZeugeZertifikat.lean`) | a lock with an invariant (`A[0] ≤ 100`): every environment move, the release check, the start obligation |
+| `beispiele/190-erster-treffer` (`WP/HA/ZeugeZertifikat2.lean`) | a `traverse` with a branch and an exit, through `wpSA_traverse` |
+| `beispiele/104` (`WP/HA/ZeugeZertifikat3.lean`) | two functions, a call, contracts (`old(K[i]) ≤ K[i]`, `result == K[i]`), the callee's frame from `RespektiertRahmen` |
+
+Finding: the certificate of `beispiele/1168` declares the lock invariant `P[0] + Q[0] == 100` with the initial memory
+all zero; its start obligation is false and its `NutzerPflichtA` unprovable (a defect of the example or of the
+exported initial memory).
+
 **What may be said today:** every sequential, call-free or recursive program built from the constructs with rules can
 be proved correct, partially or totally, over machine G itself; the witnesses are non-degenerate (a loop over a
 table of any size, a recursion with a measure). **Not yet:** the remaining constructs' rules, relational and

@@ -174,6 +174,17 @@ theorem wpBA_bindCall_spez {Sp : Spez D} (hR : Erfuellt Sp R) {Λ Λ' : List (Re
     wpBA S O U A passes R (.bindCall f args he hp hr rest) Q σ ρ :=
   (wpBA_bindCall S O U A passes R f args he hp hr rest Q σ ρ).2 (h _ (hR f _ _))
 
+/-- **The call statement `f(args);`**, exactly. -/
+theorem wpSA_call {Λ : List (Res D)} (f : D.Fn) (args : Args D Γ Λ (D.params f))
+    (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0) (Q : Ausgang V l Γ → Prop) (σ : World D)
+    (ρ : Env D Γ) :
+    wpSA S O U A passes R (.call f args hp hr) Q σ ρ ↔
+      Q (rufZuAusgang hr ρ
+        (R f (leseA A σ Λ args.orte) (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ))) := by
+  unfold wpSA
+  simp only [execStmtHA]
+  cases R f (leseA A σ Λ args.orte) (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) <;> rfl
+
 /-! ## The loops, through the generic invariant rules -/
 
 theorem wpSA_traverse {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool)

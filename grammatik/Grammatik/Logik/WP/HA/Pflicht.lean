@@ -19,6 +19,16 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 
 variable {D : Deklaration}
 
+/-- **Without a shared atomic the atomic environment is the identity at every read**: a unit whose statics are not
+    atomic has no carrier in `GeteiltA`, so every environment in the class reads the plain world. -/
+theorem leseA_ohneAtomar [DecidableEq D.Fn] {P : Programm D} {ws : List D.Fn} (hat : ∀ g : D.Glob, D.atomar g = false)
+    {A : AUmwelt D} (hA : HavocA (GeteiltA P ws) A) (σ : World D) (Λ : List (Res D))
+    (X : List (D.Tab ⊕ D.Glob)) : leseA A σ Λ X = σ.lese Λ X :=
+  leseA_frei hA (fun c _ hT => by
+    obtain ⟨g, rfl, hg⟩ := hT.1
+    rw [hat g] at hg
+    cases hg) σ Λ
+
 /-- What a body owes at its exits: a return meets `ensures` and the owed invariants, a reason exit the owed
     invariants. -/
 def RueckPost (P : Programm D) (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) :

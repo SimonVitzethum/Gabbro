@@ -670,3 +670,4 @@ import Grammatik.Logik.WP.ZeugeRel
 import Grammatik.Logik.WP.Rahmen
 import Grammatik.Logik.WP.HA.ZeugeZertifikat
 import Grammatik.Logik.WP.HA.ZeugeZertifikat2
+import Grammatik.Logik.WP.HA.ZeugeZertifikat3
