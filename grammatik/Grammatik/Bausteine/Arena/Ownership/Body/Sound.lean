@@ -68,6 +68,9 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     simp only [execStmt]
     exact (h.reads _ _).meta
       (MetaSame.writeBytes A t f hf _ (fun he => absurd he.symm ht) _ _ _)
+  | _, _, _, _, _, _, _, _, .assignSlotRef r t _ _ f e _ _ htA _ _, σ, ρ, _, h => by
+    simp only [execStmt]
+    exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ (fun he => absurd he.symm htA))
   | _, _, _, _, _, _, _, _, .assignVar x e _, σ, ρ, _, h => by
     simp only [execStmt]
     exact (h.reads _ _).assign x e _ _

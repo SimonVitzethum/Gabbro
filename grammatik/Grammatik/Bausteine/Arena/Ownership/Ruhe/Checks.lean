@@ -100,6 +100,9 @@ theorem requirements_ruE {τ : Ty} (e : Expr D Γ Λ τ) :
   | getBytes t f hf n i hlo hhi hL ih =>
     simp only [requirements, ruE, List.all_cons, ih]
     rfl
+  | slotRef r t ht ho f hL ih =>
+    simp only [requirements, ruE, List.all_cons, ih]
+    rfl
   | case cs i nutz ih => simpa only [requirements, ruE] using ih
   | empty => rfl
   | num e ih => simpa only [payloadRequirements, ruN] using ih

@@ -170,6 +170,7 @@ theorem os_top : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c2 : Con
   | _, _, _, _, _, _, _, _, .assignThru .. => trivial
   | _, _, _, _, _, _, _, _, .assignGlob .. => trivial
   | _, _, _, _, _, _, _, _, .putBytes .. => trivial
+  | _, _, _, _, _, _, _, _, .assignSlotRef .. => trivial
   | _, _, _, _, _, _, _, _, .assignVar .. => trivial
   | _, _, _, _, _, _, _, _, .shift .. => trivial
   | _, _, _, _, _, _, _, _, .ite _ _ _ hc ht he => ⟨hc, ht, he⟩

@@ -2,7 +2,9 @@ import Grammatik.Bausteine.Arena.Ownership.Source.Context
 
 /-! Executable expression admission over the existing G syntax. The source
 walk collects obligations once; abstract checking and concrete read safety
-interpret the same obligations. Unknown/computed index provenance is refused.
+interpret the same obligations. Unknown/computed index provenance is refused. A read through a reference into an open region
+(`Expr.slotRef`) owes what a read of another carrier owes: the region is not the tracked arena
+(`range`), and the reference itself is admitted.
 -/
 
 namespace Gabbro.Grammatik.ArenaOwnership.Source
@@ -29,7 +31,8 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .bor _ _ _ _ _ a b | .bxor _ _ _ _ _ a b | .shl _ _ _ _ _ a b | .shr _ _ _ _ _ a b =>
     requirements a ++ requirements b
   | .case _ _ payload => payloadRequirements payload
-  | .forallSlots .. | .existsSlots .. | .reaches .. | .slotRef .. => [.unsupported]
+  | .slotRef r t _ _ _ _ => .range t :: requirements r
+  | .forallSlots .. | .existsSlots .. | .reaches .. => [.unsupported]
   | .refEq a b => requirements a ++ requirements b
   | .lit _ | .tru | .fls | .glob .. | .ptrOf .. | .fnref .. | .oldG .. | .none _ | .why .. => []
 

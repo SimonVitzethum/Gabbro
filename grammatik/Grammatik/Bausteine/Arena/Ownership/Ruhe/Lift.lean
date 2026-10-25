@@ -97,6 +97,8 @@ theorem os_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
     .assignGlob _ _ _ _ hg (by rw [checkExpression_ruE]; exact he)
   | _, _, _, _, _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL ht hi he =>
     .putBytes _ _ _ _ _ _ _ _ _ _ ht (by rw [checkExpression_ruE]; exact hi) (by rw [checkExpression_ruE]; exact he)
+  | _, _, _, _, _, _, _, _, .assignSlotRef r t ht ho f e hw hL htA hr he =>
+    .assignSlotRef _ _ _ _ _ _ _ _ htA (by rw [checkExpression_ruE]; exact hr) (by rw [checkExpression_ruE]; exact he)
   | l, _, _, _, k, c, _, _, .assignVar x e he => by
     have h := OS.assignVar (A := liftA A) (I := liftI I) (V := vertragR V) (out := outR A out) (l := l) (k := k) (c := c)
       (varR x) (ruE e) ((checkExpression_ruE A c e).trans he)
