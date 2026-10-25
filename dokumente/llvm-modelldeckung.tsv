@@ -255,9 +255,18 @@ GRest.wartet	PARTIAL	crates/gabbro-check/src/llvm/stackless.rs::emit	Continuatio
 GRest.wartetSonst	PARTIAL	crates/gabbro-check/src/llvm/stackless.rs::emit	Continuation state, locals, pending calls/returns stored in explicit frames for cyclic components; LLVM/G simulation is an obligation, not a proved compiler theorem.
 GRest.abbruch	PARTIAL	crates/gabbro-check/src/llvm/stackless.rs::emit	Continuation state, locals, pending calls/returns stored in explicit frames for cyclic components; LLVM/G simulation is an obligation, not a proved compiler theorem.
 Ty.ref	OPEN	-	Open region (PLAN-DYNAMIC 14): in the Lean model and its Lean front end only; the Rust parser, checker and LLVM lowering do not have it yet.
+Ty.arr	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Ty.str	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
 Deklaration.offen	OPEN	-	Open region (PLAN-DYNAMIC 14): in the Lean model and its Lean front end only; the Rust parser, checker and LLVM lowering do not have it yet.
 Deklaration.anbieter	OPEN	-	Open region (PLAN-DYNAMIC 14): in the Lean model and its Lean front end only; the Rust parser, checker and LLVM lowering do not have it yet.
 Deklaration.anbieter_passt	ERASED	-	Static proof that a provider fits its open table; no runtime state.
 Expr.refEq	OPEN	-	Open region (PLAN-DYNAMIC 14): in the Lean model and its Lean front end only; the Rust parser, checker and LLVM lowering do not have it yet.
 Expr.slotRef	OPEN	-	Open region (PLAN-DYNAMIC 14): in the Lean model and its Lean front end only; the Rust parser, checker and LLVM lowering do not have it yet.
+Expr.arrNil	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.arrCons	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.arrGet	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.arrSet	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.strLit	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.strLen	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
+Expr.strCat	OPEN	-	Aggregate value (THEOREM-MAP 99): in the Lean model only; the LLVM lowering of the G value form is not built yet (source arrays and strings lower as carriers).
 Stmt.assignSlotRef	OPEN	-	Open region (PLAN-DYNAMIC 14): in the Lean model and its Lean front end only; the Rust parser, checker and LLVM lowering do not have it yet.
