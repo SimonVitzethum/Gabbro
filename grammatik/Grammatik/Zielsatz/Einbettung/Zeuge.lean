@@ -128,7 +128,7 @@ def appSig : Signatur Bool Empty Empty Empty where
   gbraucht := fun e => nomatch e
   eigner := fun _ => []
   Fn := Bool
-  sig := fun b => if b then 0 else 1
+  sig := fun _ => 0
   sigNr := fun n => if n % 2 = 0 then libSigA else appSig
   eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
   Inv := Empty
@@ -268,13 +268,30 @@ def appP : Programm appD where
     | true => Einbettung.rumpfE hS libP ()
     | false => appBody
 
-theorem hZ : ZeigerfreiD libD where
-  typ := fun _ _ => rfl
-  gtyp := fun g => nomatch g
-  erg := fun _ _ h => by cases h
-  aerg := fun a => nomatch a
-  rtyp := fun r => nomatch r
-  params := fun _ _ h => by cases h
+/-- The heads: the library's function stands for every function of the program outside the image
+    that conforms to the library's signature -- the program's own function `false` does. -/
+def hZ : E.Rueck where
+  rep := fun n => if n = 0 then some () else none
+  rep_passt := fun n g h => by
+    by_cases hn : n = 0
+    · subst hn; rfl
+    · simp only [hn, if_false, reduceCtorEq] at h
+  voll := fun n f' h hz => by
+    have h' : decide ((0 : Nat) = 2 * n) = true := by cases f' <;> exact h
+    simp only [decide_eq_true_eq] at h'
+    have hn : n = 0 := by omega
+    subst hn; rfl
+  regFrei := fun r => nomatch r
+  regFreiG := fun r => nomatch r
+  atomFrei := fun g => nomatch g
+  aergFrei := fun a => nomatch a
+  aparamsFrei := fun a => nomatch a
+  rtypFrei := fun r => nomatch r
+
+/-- The program's own function is a callback: outside the image, conforming to the library's
+    signature, with the library's function as its head. -/
+theorem zeuge_rueckruf : E.fnZ false = none ∧ appD.passt false (E.num 0) = true ∧ hZ.rep 0 = some () :=
+  ⟨rfl, rfl, rfl⟩
 
 theorem hU : E.Uebernahme hZ hS libP (SperrInv.leer libD) (axWahr libD) (fun _ => False)
     appP (SperrInv.leer appD) (axWahr appD) (fun _ => False) where
@@ -284,6 +301,15 @@ theorem hU : E.Uebernahme hZ hS libP (SperrInv.leer libD) (axWahr libD) (fun _ =
   atom := fun _ h => h
   ax := fun a => nomatch a
   invBild := fun i => nomatch i
+  rueck := fun _ n g f' hz hr hp => by
+    refine ⟨fun t ht => absurd ht (by cases g; cases t; decide), (fun x => nomatch x),
+      fun σ σ' ρ a' _ _ => ⟨?_, fun W v' _ => ?_⟩⟩
+    · cases f' with
+      | true => cases hz
+      | false => rfl
+    · cases f' with
+      | true => cases hz
+      | false => rfl
 
 theorem hL : LogikPflichtA libP (SperrInv.leer libD) (axWahr libD) (fun _ => False) :=
   logikPflichtA_of_frei (fun _ _ _ h => h)

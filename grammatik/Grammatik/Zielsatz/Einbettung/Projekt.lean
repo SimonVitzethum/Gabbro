@@ -38,7 +38,7 @@ theorem offenA_E {c : D.Tab ⊕ D.Glob} (h : OffenA (E.ortE c)) : OffenA c := by
 /-- **A project's `NutzerTeilO` in a linking program, from its logic over its own declaration.**
     The project owns only image functions; its lock and axiom families in the program are local
     and its start holds there (both about the program's unit, decided or proved once). -/
-theorem nutzerTeilO_E [DecidableEq D'.Fn] (hZ : ZeigerfreiD D) (hS : E.SigTreu) {P : Programm D}
+theorem nutzerTeilO_E [DecidableEq D'.Fn] (hZ : E.Rueck) (hS : E.SigTreu) {P : Programm D}
     {S : SperrInv D} {Q : AxEns D} (hL : LogikPflichtA P S Q OffenA) (p : Projekt D')
     (hU : E.Uebernahme hZ hS P S Q OffenA p.E.P p.E.S p.E.Q OffenA) {pad : List (Ereignis D)}
     (hp : PadOk pad) (heigen : ∀ f', p.eigen f' = true → ∃ f, E.fn f = f')
@@ -76,6 +76,7 @@ theorem hUO : E.Uebernahme hZ hS libP (SperrInv.leer libD) (axWahr libD) OffenA
   atom := fun _ h => E.offenA_E h
   ax := fun a => nomatch a
   invBild := fun i => nomatch i
+  rueck := hU.rueck
 
 /-- **The witness**: the library's part of (b) in the linking program, from its proof over its
     own declaration. -/
