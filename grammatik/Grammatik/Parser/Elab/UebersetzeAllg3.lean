@@ -28,6 +28,7 @@ theorem endPerm_ok (u : UProg) (caller : Fin u.fns.length) :
 /-- The value of a return, at the function's held resources `resOf`. -/
 def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet →
     Except String (ErgExpr (declOf u) Γ (resOf u caller) (verOf u caller).erg)
+  | .keins => .error "fn with a result falls off"
   | .empty =>
     match hE : (fnAt u caller).ergTy with
     | none =>
@@ -266,6 +267,13 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .ifEnde c :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.ifBeg c) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
     | .error e => .error e
@@ -495,6 +503,20 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
                 exact b
               .ok (Block.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
             else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, n + 1, Λ, pe, .tausch x a v neu :: rest =>
+    match globIdx u.globs a with
+    | .error e => .error e
+    | .ok g =>
+      if hw : (verOf u caller).gschreibt g = true then
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+        match lowWertAtE u ((declOf u).gtyp g :: Γ) Λ (fn.mitTy v ((declOf u).gtyp g)) none ((declOf u).gtyp g) neu with
+        | .error e => .error e
+        | .ok ne =>
+          match lowSeqL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
+          | .error e => .error e
+          | .ok (b, r') => .ok (Block.exchange (D := declOf u) g ne hw hd b, r')
+      else .error "access without held guard"
+      else .error "exchange of a static the function does not write"
   | Γ, fn, n + 1, Λ, pe, .awaitBind x a :: rest =>
     match globIdx u.globs a with
     | .error e => .error e
@@ -814,8 +836,23 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
     .error "lower: a foreign call in an else branch has no G form here"
   | _, _, _ + 1, _, _, .bindAx .. :: _ =>
     .error "lower: a foreign call in an else branch has no G form here"
-  | _, _, _ + 1, _, _, .narrowBeg .. :: _ =>
-    .error "lower: a narrow in an else branch has no G form (Endblock lacks narrow)"
+  | Γ, fn, n + 1, Λ, pe, .narrowBeg x lo hi :: rest =>
+    match paramPos fn.params x with
+    | .error e => .error e
+    | .ok j =>
+      match fn.params[j]? with
+      | some (_, .int l1 h1) =>
+        match lowVar Γ j (.int l1 h1) with
+        | .error e => .error e
+        | .ok v =>
+          match lowEndL (l := l) u caller Γ fn n Λ pe rest with
+          | .error e => .error e
+          | .ok (sonst, .blkEnd :: rest') =>
+            match lowEndL (l := l) u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ pe rest' with
+            | .error e => .error e
+            | .ok (b, r) => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
+          | .ok (_, _) => .error "lower: a narrow is not closed"
+      | _ => .error "lower: narrow of a non-number"
   | Γ, fn, n + 1, Λ, pe, .bindFnref x f m :: rest =>
     match fnIdx u.fns f with
     | .error e => .error e
@@ -842,6 +879,20 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
                 exact b
               .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
             else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, n + 1, Λ, pe, .tausch x a v neu :: rest =>
+    match globIdx u.globs a with
+    | .error e => .error e
+    | .ok g =>
+      if hw : (verOf u caller).gschreibt g = true then
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
+        match lowWertAtE u ((declOf u).gtyp g :: Γ) Λ (fn.mitTy v ((declOf u).gtyp g)) none ((declOf u).gtyp g) neu with
+        | .error e => .error e
+        | .ok ne =>
+          match lowEndL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
+          | .error e => .error e
+          | .ok (b, r') => .ok (Endblock.exchange (D := declOf u) g ne hw hd b, r')
+      else .error "access without held guard"
+      else .error "exchange of a static the function does not write"
   | Γ, fn, n + 1, Λ, pe, .awaitBind x a :: rest =>
     match globIdx u.globs a with
     | .error e => .error e
@@ -934,6 +985,29 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .ifEnde c :: rest =>
+    -- both arms end: `Endblock.ite`; with anything but a closer behind it, the plain `if`
+    match lowEns u Γ Λ fn none c, lowEndL (l := l) u caller Γ fn n Λ pe rest with
+    | .ok cv, .ok (t, .ifElse :: rest1) =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest1 with
+      | .ok (e, .blkEnd :: .blkEnd :: rest2) => .ok (Endblock.ite cv t e, .blkEnd :: rest2)
+      | .ok (e, .blkEnd :: .ifElse :: rest2) => .ok (Endblock.ite cv t e, .ifElse :: rest2)
+      | .ok (e, [.blkEnd]) => .ok (Endblock.ite cv t e, [])
+      | _ =>
+        match lowStructL (l := l) u caller Γ fn n Λ pe (.ifBeg c) rest with
+        | .error e => .error e
+        | .ok (st, rest') =>
+          match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+          | .error e => .error e
+          | .ok (b, r) => .ok (Endblock.cons st b, r)
+    | .error e, _ => .error e
+    | _, _ =>
+      match lowStructL (l := l) u caller Γ fn n Λ pe (.ifBeg c) rest with
+      | .error e => .error e
+      | .ok (st, rest') =>
+        match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+        | .error e => .error e
+        | .ok (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
     | .error e => .error e
@@ -1054,8 +1128,23 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
               exact e
             .ok (Endblock.bindCall (D := declOf u) k.callee k.args hE k.hp hr e')
           else .error "call of a function with a reason channel needs `let .. else`"
-  | _, _, _ + 1, .narrowBeg .. :: _, _ =>
-    .error "lower: a narrow at the top level of a body has no G form (Endblock lacks narrow)"
+  | Γ, fn, n + 1, .narrowBeg x lo hi :: rest, r =>
+    match paramPos fn.params x with
+    | .error e => .error e
+    | .ok j =>
+      match fn.params[j]? with
+      | some (_, .int l1 h1) =>
+        match lowVar Γ j (.int l1 h1) with
+        | .error e => .error e
+        | .ok v =>
+          match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) rest with
+          | .error e => .error e
+          | .ok (sonst, .blkEnd :: rest') =>
+            match lowBodyF u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n rest' r with
+            | .error e => .error e
+            | .ok b => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b)
+          | .ok (_, _) => .error "lower: a narrow is not closed"
+      | _ => .error "lower: narrow of a non-number"
   | Γ, fn, n + 1, .bindFnref x f m :: rest, r =>
     match fnIdx u.fns f with
     | .error e => .error e
@@ -1083,6 +1172,20 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
                 exact e
               .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr e')
             else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, n + 1, .tausch x a v neu :: rest, r =>
+    match globIdx u.globs a with
+    | .error e => .error e
+    | .ok g =>
+      if hw : (verOf u caller).gschreibt g = true then
+      if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ resOf u caller) then
+        match lowWertAtE u ((declOf u).gtyp g :: Γ) (resOf u caller) (fn.mitTy v ((declOf u).gtyp g)) none ((declOf u).gtyp g) neu with
+        | .error e => .error e
+        | .ok ne =>
+          match lowBodyF u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n rest r with
+          | .error e => .error e
+          | .ok b => .ok (Endblock.exchange (D := declOf u) g ne hw hd b)
+      else .error "access without held guard"
+      else .error "exchange of a static the function does not write"
   | Γ, fn, n + 1, .awaitBind x a :: rest, r =>
     match globIdx u.globs a with
     | .error e => .error e
@@ -1223,6 +1326,24 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
   | Γ, fn, n + 1, (.ifBeg c) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.ifBeg c) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, (.ifEnde c) :: rest, .keins =>
+    -- the last statement of a body without a trailing return, both arms ending: `Endblock.ite`
+    match lowEns u Γ (resOf u caller) fn none c,
+        lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) rest with
+    | .ok cv, .ok (t, .ifElse :: rest1) =>
+      match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) rest1 with
+      | .ok (e, [.blkEnd]) => .ok (Endblock.ite cv t e)
+      | .ok (_, _) => .error "lower: a terminal if is followed by statements"
+      | .error err => .error err
+    | .error err, _ => .error err
+    | _, _ => .error "fn with a result falls off"
+  | Γ, fn, n + 1, (.ifEnde c) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.ifBeg c) rest with
     | .error e => .error e
     | .ok (st, rest') =>

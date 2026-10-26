@@ -120,6 +120,11 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   undrawn reachability rows stays with the demand.
 - **Generator support for aggregates (2026-10-25).** G has `Ty.arr`/`Ty.str` and their seven `Expr` forms (THEOREM-MAP 100);
   the generator gives them size `unendlich` and never draws them, so test sets M and N do not cover them yet.
+- **Front end, exchange and awaits (2026-10-26).** `exchange` has only the `update` form with one value in the
+  Lean front end; open: the compare form (`… when old(A) == x returns r`: what `returns` binds needs a model
+  decision), payloads and `awaits` at an exchange, exchanges at table elements (`REGEL[r]`), update bodies with
+  `if`. `let x : T = A awaits { … }` still drops the written type `T` in the surface tree (`SAnw.await`); `swap`
+  carries it since 2026-10-26.
 - **End-block forms (2026-10-26).** `Endblock.narrow`/`exchange`/`ite` (THEOREM-MAP 102): the generator does not draw
   them (size `unendlich`); arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them; the Rust exporter
   does not construct them.

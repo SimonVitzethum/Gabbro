@@ -349,7 +349,7 @@ def gebunden : SAnw → List String
   | .alloc _ x _ _ _ _ => [x]
   | .allocVon _ x _ _ => [x]
   | .await x _ _ => [x]
-  | .swap x _ _ => [x]
+  | .swap x _ _ _ => [x]
   | _ => []
 
 /-- An ender, resolved. -/
@@ -381,7 +381,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .watch d s => .watch (k.ref d) (anw k s)
   | .emit a b p => .emit (aus k a) (aus k b) p
   | .await x e p => .await x (aus k e) p
-  | .swap x e w => .swap x (aus k e) w
+  | .swap x t e w => .swap x t (aus k e) w
   | .ret e => .ret (ausO k e)
   | .alloc m x t a e none => .alloc m x (typO k t) (k.ref a) (aus k e) none
   | .alloc m x t a e (some s) => .alloc m x (typO k t) (k.ref a) (aus k e) (some (anw k s))

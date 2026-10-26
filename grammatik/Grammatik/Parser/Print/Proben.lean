@@ -77,7 +77,7 @@ theorem rt_match :
   decide +kernel
 theorem rt_misc :
     rbs [.emit (.variable "A") (.lit 1) "nothing", .await "v" (.variable "A") "p , q ",
-         .swap "w" (.variable "A") "update ( v ) { v } ", .step "a" "b", .free (.index (.variable "A") (.lit 0)),
+         .swap "w" none (.variable "A") "update ( v ) { v } ", .step "a" "b", .free (.index (.variable "A") (.lit 0)),
          .reset "A" none, .reset "A" (some (.lit 0, .lit 2)), .start ["main", "m::f"], .child (.block [] none)] = true := by
   decide +kernel
 /-- The whole statement forms of the reader that carry a raw header or an alloc, grow and shift: one block. -/

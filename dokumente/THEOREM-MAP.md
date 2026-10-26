@@ -4967,5 +4967,10 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
   acceptance; the generator does not draw them (size `unendlich`, `bekannteLuecken`: `G_ENDFORM`); the Rust exporter
   does not construct them (LLVM register OPEN).
 * Fine cells: `Endblock` constructors 14-16; `kTab` regenerated; the pinned component hashes moved structurally only.
+* Front end (`Parser/Elab`): `narrow` at the top level of a body and in an `else` branch; `let x = A exchange
+  update(v) [bounded … ops] [on_exceeded …] { [return] e } [publishes nothing]` (`UStmt.tausch`; the binder type, if
+  written, must be the static's, the new value is checked against the static's range); an `if`/`else` as the last
+  statement with both arms ending (`UStmt.ifEnde`, `URet.keins`). Probes `UebersetzeProben18`. Refused: the compare
+  form `… when … returns …`, a payload or `awaits` at an exchange, an update body other than one value.
 
 All axiom lists standard.

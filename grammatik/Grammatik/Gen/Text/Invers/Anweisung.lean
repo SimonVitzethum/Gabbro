@@ -337,8 +337,8 @@ theorem reihe_cond (f : Nat) (ctx : UCtx) (c : SExpr) (ss : List SAnw) (els : Op
     uAnwReihe tabs koepfe (f + 1) ctx (.cond c (.block ss none) [] els :: rest) =
       .ok ([.ifBeg cv] ++ body ++ [.ifElse] ++ elseS ++ [.blkEnd] ++ xs, cE) := by
   rcases hE with ⟨rfl, rfl⟩ | ⟨ss2, c2, rfl, he⟩
-  · rw [uAnwReihe] <;> first | (simp [hc, h1, h2, uEndeStmt]) | (intros; simp_all)
-  · rw [uAnwReihe] <;> first | (simp [hc, h1, h2, he, uEndeStmt]) | (intros; simp_all)
+  · rw [uAnwReihe] <;> first | (simp [hc, h1, h2, uEndeStmt, uEndetS]) | (intros; simp_all)
+  · rw [uAnwReihe] <;> first | (simp [hc, h1, h2, he, uEndeStmt, uEndetS]) | (intros; simp_all)
 
 theorem reihe_each (f : Nat) (ctx ctxS : UCtx) (bnd : String) (s : SExpr) (inv : Option SExpr) (ss rest : List SAnw)
     (tab : String) (iv : UEns) (body xs : List UStmt) (cB cE : UCtx)

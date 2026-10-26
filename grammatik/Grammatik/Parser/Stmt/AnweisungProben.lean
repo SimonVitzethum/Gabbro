@@ -128,7 +128,7 @@ theorem s08_lex :
       .ok st08 := by
   decide
 theorem s08 : beqTopStmt (parseTopStmt st08)
-    (.ok (.swap "alt" (.variable "ZAEHLER")
+    (.ok (.swap "alt" none (.variable "ZAEHLER")
       "update ( v ) bounded 4 ops on_exceeded streit { } publishes nothing ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:104 (block emptied). Rust:
@@ -146,7 +146,7 @@ theorem s09_lex :
       .ok st09 := by
   decide
 theorem s09 : beqTopStmt (parseTopStmt st09)
-    (.ok (.swap "genommen" (.variable "BESITZER")
+    (.ok (.swap "genommen" none (.variable "BESITZER")
       "f when old ( BESITZER ) == 0 returns erfolg publishes nothing ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:131. Rust: `Exchange` with

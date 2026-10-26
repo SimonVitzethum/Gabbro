@@ -132,8 +132,9 @@ def druckAnw : SAnw → List Token
   | .await n q e =>
     [.wort "let", nameTok n, .zeichen "="] ++ druckToks q ++ [.wort "awaits", .zeichen "{"] ++ rohToks e ++
       [.zeichen "}", .zeichen ";"]
-  | .swap n o k =>
-    [.wort "let", nameTok n, .zeichen "="] ++ druckToks o ++ [.wort "exchange"] ++ rohToks k ++ [.zeichen ";"]
+  | .swap n ty o k =>
+    [.wort "let", nameTok n] ++ druckTypOpt ty ++ [.zeichen "="] ++ druckToks o ++ [.wort "exchange"] ++ rohToks k ++
+      [.zeichen ";"]
   | .step a b => [.wort "advances", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
   | .ret none => [.wort "return", .zeichen ";"]
   | .ret (some e) => [.wort "return"] ++ druckToks e ++ [.zeichen ";"]

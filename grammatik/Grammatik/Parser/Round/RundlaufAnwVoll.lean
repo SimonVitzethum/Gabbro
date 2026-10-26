@@ -858,20 +858,22 @@ theorem anw_await (n : String) (hx : n ≠ "mut") (q : SExpr) (p : String) (hq :
       fun e => (hts t ht).2 (Or.inr e)⟩)
   simp [parseLetExpr, hQ, hN, fordereZeichen, strEq_self, bind, Except.bind, pure, Except.pure]
 
-theorem anw_swap (n : String) (hx : n ≠ "mut") (o : SExpr) (k : String) (ho : gut o = true) (hk : RohSemi k) :
-    AnwBein (.swap n o k) := by
+theorem anw_swap (n : String) (hx : n ≠ "mut") (ty : Option STyp) (o : SExpr) (k : String)
+    (hty : TypOptGut ty) (ho : gut o = true) (hk : RohSemi k) :
+    AnwBein (.swap n ty o k) := by
   intro rest F _ hF
   obtain ⟨ts, rfl, hts⟩ := hk
   have hroh := rohToks_render ts (fun t ht => (hts t ht).1)
   simp only [fbA, druckAnw, hroh, List.length_cons, List.length_nil, List.length_append] at hF
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 4 := ⟨F - 4, by omega⟩
-  have hd : druckAnw (.swap n o (renderText ts)) ++ rest = .wort "let" :: ((if false then [.wort "mut"] else []) ++
-      nameTok n :: (druckTypOpt none ++ .zeichen "=" :: (druckToks o ++ .wort "exchange" ::
+  have hd : druckAnw (.swap n ty o (renderText ts)) ++ rest = .wort "let" :: ((if false then [.wort "mut"] else []) ++
+      nameTok n :: (druckTypOpt ty ++ .zeichen "=" :: (druckToks o ++ .wort "exchange" ::
         (ts ++ .zeichen ";" :: rest)))) := by
-    simp [druckAnw, hroh, druckTypOpt]
+    simp [druckAnw, hroh]
   rw [hd, parseStmt_let _ _ (by first | rfl | exact ortsFort_nameTok _ _)]
   rw [show F' + 3 = (F' + 2) + 1 from rfl,
-    parseLet_kopf (F' + 2) false n hx none _ trivial (by intro t ht; cases ht),
+    parseLet_kopf (F' + 2) false n hx ty _ hty (by
+      intro t ht; have := fbT_of ty t ht; simp only [fbT]; omega),
     parseLetNach_expr _ _ _ _ o ho]
   have hO := ausdruck o ho (.wort "exchange" :: (ts ++ .zeichen ";" :: rest)) (F' + 1) rfl rfl rfl
     (by omega)
@@ -1446,7 +1448,8 @@ inductive AnwGut : Rolle → SAnw → Prop
   | emit (z w : SExpr) (p : String) :
       gutPlatz z = true → gut w = true → PubGut p → AnwGut .anw (.emit z w p)
   | await (n : String) (q : SExpr) (p : String) : n ≠ "mut" → gut q = true → RohZu p → AnwGut .anw (.await n q p)
-  | swap (n : String) (o : SExpr) (k : String) : n ≠ "mut" → gut o = true → RohSemi k → AnwGut .anw (.swap n o k)
+  | swap (n : String) (ty : Option STyp) (o : SExpr) (k : String) : n ≠ "mut" → TypOptGut ty → gut o = true →
+      RohSemi k → AnwGut .anw (.swap n ty o k)
   | step (a b : String) : AnwGut .anw (.step a b)
   | retLeer : AnwGut .anw (.ret none)
   | ret (e : SExpr) : gut e = true → AnwGut .anw (.ret (some e))
@@ -1562,8 +1565,8 @@ theorem bein_gut : ∀ (r : Rolle) (s : SAnw), AnwGut r s → Bein r s := by
     exact ⟨anw_emit z w p hz hw hp, anwKopf_platz _ z hz ⟨_, by simp [druckAnw] <;> rfl⟩⟩
   | await n q p hx hq hp =>
     exact ⟨anw_await n hx q p hq hp, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
-  | swap n o k hx ho hk =>
-    exact ⟨anw_swap n hx o k ho hk, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | swap n ty o k hx hty ho hk =>
+    exact ⟨anw_swap n hx ty o k hty ho hk, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
   | step a b => exact ⟨anw_step a b, anwKopf_wort _ "advances" (by decide) ⟨_, rfl⟩⟩
   | retLeer => exact ⟨anw_ret_leer, anwKopf_wort _ "return" (by decide) ⟨_, rfl⟩⟩
   | ret e he => exact ⟨anw_ret e he, anwKopf_wort _ "return" (by decide) ⟨_, rfl⟩⟩

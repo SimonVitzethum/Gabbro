@@ -319,7 +319,10 @@ theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss 
           | .error e => .error e
           | .ok (body, ctxE) =>
             match uEnde ctxE ende with
-            | .error e => .error e
+            | .error e =>
+              if ende.isNone && (match ss.getLast? with | some s => uEndetS 64 s | none => false) then
+                .ok (gives, needs, body, .keins)
+              else .error e
             | .ok r => .ok (gives, needs, body, r) := by
   unfold elabFn
   simp only [hsp, List.isEmpty_nil, ↓reduceIte]
