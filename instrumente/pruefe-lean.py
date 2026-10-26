@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guardian 1 of 4 -- the Lean model (`grammatik/`).
+"""Guardian 1 of 4 -- the Lean model (`grammatik/`) and the stage-0 runtime (`stage0/`).
 
     ./instrumente/pruefe-lean.py [--ohne-bau]
 
@@ -14,6 +14,8 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      certificate per exported corpus program to `target/zertifikate/`; each is elaborated with
      `lake env lean` against the built model, so the Lean Bool `Akzeptiert` deciding the exported
      unit and `gabbro_ziel` instantiated on it are checked for every certified program.
+  7. Stage 0 (`stage0/`, PLAN-SELF-HOSTING.md §2): `lake build` of the package (library and the executable
+     `stage0`); stage 3 covers its Lean files too.
   6. Coverage of the register by the program generator (`Gen/Abdeckung/`): `lake build gen-abdeckung`, then the
      native driver generates every program of the family up to the reference bounds and fails (exit 1) on a
      register member that no valid and no single-fault program contains and that is not a declared known gap
@@ -25,6 +27,7 @@ import os, pathlib, re, subprocess, sys
 
 W = pathlib.Path(__file__).resolve().parent.parent
 G = W / "grammatik"
+S0 = W / "stage0"
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
@@ -75,7 +78,7 @@ def stufe_sorry():
     erlaubt = {l.split()[1] for l in (W / "instrumente/teile/kein-sorry-allowlist.txt").read_text().splitlines()
                if l.strip() and not l.startswith("#")}
     n, befunde = 0, []
-    for f in sorted(G.rglob("*.lean")):
+    for f in sorted(list(G.rglob("*.lean")) + list(S0.rglob("*.lean"))):
         if ".lake" in f.parts: continue
         code = ohne_kommentare(f.read_text(encoding="utf-8"))
         n += 1
@@ -129,10 +132,21 @@ def stufe_abdeckung():
     return rc == 0
 
 
+def stufe_stage0():
+    if not S0.is_dir():
+        print("  7 stage0:  ROT (stage0/ fehlt)")
+        return False
+    rc, out = lauf(["lake", "build"], S0, 3600)
+    jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", out)
+    ok = rc == 0 and bool(jobs)
+    print(f"  7 stage0:  {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else out.strip().splitlines()[-1:]})")
+    return ok
+
+
 def main():
     if not G.is_dir(): print("ABBRUCH: grammatik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 1: Lean-Modell ==")
-    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_zertifikate, stufe_abdeckung]
+    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_zertifikate, stufe_abdeckung, stufe_stage0]
     erg = [s() for s in stufen]
     print("== LEAN:", "GRUEN" if all(erg) else "ROT", "==")
     return 0 if all(erg) else 1

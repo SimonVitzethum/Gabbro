@@ -31,7 +31,7 @@ predecessor.
 
 | Guardian | Subject | What it checks |
 |---|---|---|
-| `instrumente/pruefe-lean.py` | the Lean model (`grammatik/`) | `lake build`, `gabbro_ziel` only on `propext`/`Classical.choice`/`Quot.sound`, no `sorry`/`admit`/`native_decide`/`axiom`, at most 20 entries per folder |
+| `instrumente/pruefe-lean.py` | the Lean model (`grammatik/`) and stage 0 (`stage0/`) | `lake build` of both, `gabbro_ziel` only on `propext`/`Classical.choice`/`Quot.sound`, no `sorry`/`admit`/`native_decide`/`axiom`, at most 20 entries per folder |
 | `instrumente/pruefe-llvm.py` | the LLVM compiler | `cargo test --test llvm`, nine programs as a binary on x86_64 and aarch64 (qemu) with the same result, the heap stays free until used (no read/write mapping above 1 GiB) |
 | `instrumente/pruefe-pruefer.py` | the checker (Rust) | `cargo test --workspace --no-fail-fast`, sentence register, identifiers assigned only once |
 | `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build`, proofs without `sorry`, `gabbro prove` GREEN, no GREEN without Lean |

@@ -171,7 +171,7 @@ runs and QEMU stages. There is no build server and no `ssh` step.
 
   | Guardian | Subject | What it checks |
   |---|---|---|
-  | `instrumente/pruefe-lean.py` | the Lean model | `lake build`, `gabbro_ziel` on the standard axioms only, no `sorry`/`admit`/`native_decide`/`axiom`, layout |
+  | `instrumente/pruefe-lean.py` | the Lean model and stage 0 (`stage0/`) | `lake build` of both, `gabbro_ziel` on the standard axioms only, no `sorry`/`admit`/`native_decide`/`axiom`, layout |
   | `instrumente/pruefe-llvm.py` | the LLVM compiler | `cargo test --test llvm`, the reference programs as binaries on x86_64 and aarch64 with the same result |
   | `instrumente/pruefe-pruefer.py` | the Rust checker | `cargo test --workspace --no-fail-fast`, sentence register, identifiers assigned once |
   | `instrumente/pruefe-gabbrov.py` | GabbroV | `lake build`, proofs without `sorry`, `gabbro prove` GREEN, no GREEN without Lean |

@@ -33,21 +33,31 @@ compiler emits LLVM IR.*
 Every one of them is an ordinary Gabbro program: accepted by `AkzeptiertX` (so `gabbro_ziel` gives memory safety, race
 freedom, contracts), proved terminating, deterministic and correct with GabbroV.
 
-## 2. Bootstrap: an initial Lean runtime, used once
+## 2. Bootstrap: three stages (Simon, 2026-10-26)
 
-* **Stage 0** (`gabbro-boot`, a Lean executable): the Lean pipeline turns the Gabbro source of `gkomp` into a G program
-  (the Lean `AkzeptiertX` accepts it), and machine G -- executable in Lean -- runs it on its own source. The program's
-  declared gates (open, read, write, exit, the open region's provider) are answered by an oracle over Lean `IO`; its
-  `GutO` and the gates' contracts are proved where possible, the rest is the named assumption *boot oracle*. Output:
-  LLVM IR₀; `opt`/`llc`/`ld.lld` (H8) give stage 1.
-* **Stage 1** compiles the same source → IR₁; **IR₁ = IR₀ byte for byte** (determinism, §3.2, makes any difference a
-  bug of the back end or of the boot oracle). **Stage 2** = link(IR₁) compiles again: IR₂ = IR₁, the fixpoint.
-* **Diverse double compilation:** a sample of M ∪ N (and the tools themselves) is compiled once by stage 0 (machine G
-  in Lean) and once natively; the outputs must agree. The two paths share no compiled code.
-* After stage 2, Lean computes nothing more: every later run is a Gabbro binary.
+| Stage | Written in | Runs on | Does |
+|---|---|---|---|
+| 0 | Lean, the package `stage0/` | native (Lean executable) | interprets the Gabbro subset **S0**; every run is a run of machine G / the thread machine over GX (proved); raw Linux syscalls for IO; Gabbro threads on OS threads |
+| 1 | the subset S0 | stage 0 | interprets **all** of Gabbro, multithreaded, IO over raw Linux syscalls |
+| 2 | full Gabbro | stage 1 | `gpruef` and `gkomp` (the checker and the compiler of §1) |
 
-**State of stage 0 (2026-10-25, `grammatik/Grammatik/Boot/`).** `gabbro-boot` exists as a Lean executable
-(`lake build gabbro-boot`): `Boot.boot` runs the stages of `uebersetzeAllg`, refuses what `AkzeptiertX` refuses
+* **Stage 0 needs only S0.** S0 is the smallest subset stage 1 can be written in: functions and calls, numbers and
+  truth values, tables and the open region (`table T from p`, `alloc T`) for data of input size, bounded loops
+  (`traverse`, `retry`), bytes and strings, `syscall` gates, threads declared by `start` with locks and atomic statics
+  (a fixed pool of workers). The Lean front end and `AkzeptiertX` accept S0; the full syntax is stage 1's job.
+* **Syscalls are raw.** A Gabbro `syscall` item is executed as that Linux system call (one generic trampoline, booked
+  as a wall). Named assumption: the system call does what its Gabbro contract says (the boot oracle of the
+  hardware assumptions, `HardwareAnnahmen`).
+* **Threads are OS threads.** Each Gabbro thread of stage 1 runs on its own OS thread; every step of the thread machine
+  is taken under one futex lock on the shared world. Proved: the sequence of steps taken is a run of the thread
+  machine. Named assumptions: the futex lock gives mutual exclusion; the system calls keep their contracts. The OS
+  threads are created by the Lean runtime (a raw `clone` inside a Lean process breaks its thread-local state); the
+  locking is raw `futex`. The interpreted programs of stage 1 get their parallelism from stage 1's worker threads.
+* **Stage 2 is the goal of §1.** `gkomp` run by stage 1 emits LLVM IR; the compiled `gkomp` compiles itself again
+  (fixpoint as before), and the diverse double compilation compares stage 1's interpretation with the native binary.
+
+**State of stage 0 (2026-10-26, `stage0/Stage0/`, moved from `grammatik/Grammatik/Boot/`).** `stage0` exists as a
+Lean executable (`cd stage0 && lake build`): `Boot.boot` runs the stages of `uebersetzeAllg`, refuses what `AkzeptiertX` refuses
 (`akzeptiertU`), refuses the forms whose meaning is a machine answer (foreign bodies, registers, atomics) and the open
 region (its provider is not yet fresh in the model: two `alloc T` in one world answer the same cell for every oracle),
 builds the declared initial memory (`sp0Of`) and runs `main` with `rufAt`. There are no gates yet: input and output are
@@ -207,7 +217,7 @@ later RISC-V target owes the same minimum when it is built.
 | | Step | Gate |
 |---|---|---|
 | S1 | the language needs of §5 in the Lean model | full Lean build, `gabbro_ziel` on the standard axioms |
-| S2 | `gabbro-boot` (machine G in Lean with the IO oracle; `GutO` of the oracle proved) | a probe program's run equals its Lean semantics |
+| S2 | stage 0 (`stage0/`: machine G in Lean with the IO oracle; `GutO` of the oracle proved) | a probe program's run equals its Lean semantics |
 | S3 | libraries in Gabbro (bytes, strings, vector, hash map over the open region), GabbroV contracts | GabbroV GREEN |
 | S4 | the shared front end in Gabbro, proved against `lex`/`parseTopTief`/`elabU` | kernel |
 | S5 | `ggen` and `gabdeck` in Gabbro, proved against the Lean generator and cells; the open cells closed | kernel; coverage complete |
@@ -236,7 +246,7 @@ Rust counterpart and 2-3x its Lean definition.
 | generated container instances (not written by hand) | -- | 10 000-30 000 |
 | **Lean, specification and proof** | | |
 | language needs of §5 (region release, strings in G, file-gate contracts, measure-based loops) | region in G ≈ 5 000 | 8 000-20 000 |
-| `gabbro-boot`, IO oracle, its `GutO` | -- | 1 500-4 000 |
+| stage 0 (`stage0/`), IO oracle, its `GutO` | -- | 1 500-4 000 |
 | GabbroV: libraries' contracts | GabbroV today 115 000 | 8 000-20 000 |
 | GabbroV: front end against `lex`/`parseTopTief`/`elabU` | | 30 000-70 000 |
 | GabbroV: helpers, IR printer, refusal reports | | 15 000-35 000 |
@@ -257,7 +267,10 @@ no precedent in the tree; the low ends assume the fold structure of §3.3 remove
 real implementation, and the AArch64 memory-model mapping of §7. The performance minimum (§8) is decided by the IR facts:
 they must be designed into `gkomp` from S7 on, not added afterwards.
 
-## 10. Decisions (Simon, 2026-10-25)
+## 10. Decisions (Simon, 2026-10-25; 2026-10-26)
+
+0. (2026-10-26) The bootstrap is three stages (§2): stage 0 in Lean for the subset S0, stage 1 in S0 interpreting all of
+   Gabbro multithreaded with raw syscalls, stage 2 the checker and compiler in Gabbro. Stage 0 lives in `stage0/`.
 
 All decided:
 1. The premise *campaign* (§4) is accepted: the agreement on M ∪ N, computed by the verified `glauf` on the native

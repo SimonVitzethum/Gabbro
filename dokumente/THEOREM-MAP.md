@@ -4833,7 +4833,8 @@ Koerper,Pflicht,Uebertragung,Zeuge}.lean`. Scope: `BUILD-SYSTEM.md` §7.10.
 
 ## 96. Stage 0 of self-hosting: the Lean runtime (2026-10-25)
 
-`Boot/Laufzeit.lean`, `Boot/Zeuge.lean`, `Boot/Haupt.lean` (the executable `gabbro-boot`, not imported). Scope:
+`stage0/Stage0/Laufzeit.lean`, `Zeuge.lean`, `Haupt.lean` (the package `stage0/`, executable `stage0`; moved from
+`grammatik/Grammatik/Boot/` on 2026-10-26). Scope:
 `PLAN-SELF-HOSTING.md` §2.
 
 * `boot`: lex, parse, `pre108`, `elabU`, `akzeptiertU` (a refused program is not run), the subset gate `imKernB` (no

@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/Boot/Laufzeit.lean
+  File:      stage0/Stage0/Laufzeit.lean
   Subject:   STAGE 0 of self-hosting (`dokumente/PLAN-SELF-HOSTING.md` §2): the small Lean runtime that runs the
              minimal Gabbro the Gabbro-written checker, compiler and GabbroV are first started with.
 
@@ -31,7 +31,7 @@ import Grammatik.Parser.Cover.Differenz
 import Grammatik.GabbroV.GvStartPflicht
 import Grammatik.Parser.Elab.UebersetzePipeline
 
-namespace Gabbro.Grammatik.Boot
+namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.GabbroV
@@ -239,4 +239,4 @@ theorem boot_ist_maschine {B : Budget} {src : String} {ein aus : List UInt8} (h 
     · cases h
   · cases h
 
-end Gabbro.Grammatik.Boot
+end Gabbro.Stage0

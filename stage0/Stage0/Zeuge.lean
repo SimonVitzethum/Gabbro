@@ -1,13 +1,13 @@
 /-
-  File:      Grammatik/Boot/Zeuge.lean
+  File:      stage0/Stage0/Zeuge.lean
   Subject:   The witness of stage 0 (`Boot/Laufzeit.lean`): a minimal Gabbro program with a call, a branch, a
              narrowing and a loop, accepted by `AkzeptiertX`, run by the kernel on an input.
 -/
-import Grammatik.Boot.Laufzeit
+import Stage0.Laufzeit
 
-namespace Gabbro.Grammatik.Boot.Zeuge
+namespace Gabbro.Stage0.Zeuge
 
-open Gabbro.Grammatik Gabbro.Grammatik.Boot Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik Gabbro.Stage0 Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-- Upper-case ASCII: `gross` maps `a .. z` to `A .. Z` and leaves every other byte; `main` applies it to every
     input byte and sets the output length to the input length. -/
@@ -48,4 +48,4 @@ theorem boot_ist_maschine_zeuge :
     cases this
     rfl
 
-end Gabbro.Grammatik.Boot.Zeuge
+end Gabbro.Stage0.Zeuge
