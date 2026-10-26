@@ -5,8 +5,9 @@
     stage0 [--schritte N] [--passes N] PROGRAM.gab < INPUT > OUTPUT
 
   checks PROGRAM with the goal theorem's checker Bool and runs its `main` on the thread machine with real system calls
-  (`bootIO`, `Tor/LaufIO.lean`: the run, then its replay under the observed answers): the input
-  bytes go to `io.ein`/`ein_len`, the output is `io.aus` up to `aus_len`. A refusal or a stop goes to stderr with
+  (`bootIO`, `Tor/LaufIO.lean`: the run, then its replay under the observed answers). A program
+  that binds system-call gates does its own input and output; one that binds none gets the input bytes in
+  `io.ein`/`ein_len`, and its output is `io.aus` up to `aus_len`. A refusal or a stop goes to stderr with
   exit code 1.
 -/
 import Stage0.Tor.LaufIO
@@ -29,8 +30,7 @@ def haupt (args : List String) : IO UInt32 := do
   | .error e => IO.eprintln e; pure 2
   | .ok (B, pfad) =>
     let src ← IO.FS.readFile pfad
-    let ein ← (← IO.getStdin).readBinToEnd
-    match ← bootIO B src ein.toList with
+    match ← bootIO B src (do pure (← (← IO.getStdin).readBinToEnd).toList) with
     | .error e => IO.eprintln ("stage0: " ++ e); pure 1
     | .ok aus =>
       let out ← IO.getStdout

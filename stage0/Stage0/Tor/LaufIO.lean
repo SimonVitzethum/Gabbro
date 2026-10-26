@@ -124,8 +124,10 @@ theorem nachspiel_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B
 def imKernIO (u : UProg) (tore : List Tor) : Bool :=
   u.axs.all (fun a => tore.any (·.name == a.name)) && u.regs.isEmpty && u.tabs.all (fun t => t.von.isNone)
 
-/-- **STAGE 0 with system calls**: check, run with real system calls (phase 1), replay (phase 2). -/
-def bootIO (B : Budget) (src : String) (ein : List UInt8) : IO (Except String (List UInt8)) := do
+/-- **STAGE 0 with system calls**: check, run with real system calls (phase 1), replay (phase 2). A program that
+    binds no gate gets the input bytes `ein` in `io.ein`; one that binds gates reads for itself, and `ein` is not
+    run. -/
+def bootIO (B : Budget) (src : String) (ein : IO (List UInt8)) : IO (Except String (List UInt8)) := do
   match lex src with
   | .error _ => pure (.error "lex")
   | .ok toks =>
@@ -147,7 +149,8 @@ def bootIO (B : Budget) (src : String) (ein : List UInt8) : IO (Except String (L
               match lowerAllg u with
               | .error e => pure (.error e)
               | .ok (P, _) =>
-                match startWelt u o h ein with
+                let bytes ← if tore.isEmpty then ein else pure []
+                match startWelt u o h bytes with
                 | .error e => pure (.error e)
                 | .ok σ =>
                   match zeigerArgs ((declOf u).params o.main) with

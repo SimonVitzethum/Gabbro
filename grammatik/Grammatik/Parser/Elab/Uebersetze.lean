@@ -4181,12 +4181,12 @@ def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys 
 
 /-- The head of a `syscall` gate (a foreign body too): the ABI half (`abi`, `number`, the registers) is the stub's,
     a precondition, a postcondition or a write has no form. -/
-def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (sc : SSyscall) :
-    Except String UFnKopf :=
+def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
+    (sc : SSyscall) : Except String UFnKopf :=
   if !(sc.gate.pre.isEmpty && sc.gate.post.isEmpty) then .error "foreign fn clause without G form"
-  else if !(sc.gate.uses.all (fun e => match e with | .pure => true | .loops => true | .reads _ => true | _ => false))
-  then .error "foreign fn effect without G form"
-  else uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail
+  else match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail with
+    | .error e => .error e
+    | .ok kopf => uAxKlauseln kopf tabs globs [.effs sc.gate.uses]
 
 /-- The roots of the `start { .. };` statements of a body, in order (`fuel` bounds the nesting). -/
 def uStartNamen : Nat → SAnw → List String
@@ -4808,7 +4808,7 @@ def elabU : List SItemTief → Except String UProg
     match uSeq ((ms.filterMap uFremdSig).map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
     | .error e => .error e
     | .ok axKoepfe0 =>
-    match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (elabGateKopf alias tabs whys)) with
+    match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (elabGateKopf alias tabs whys globs)) with
     | .error e => .error e
     | .ok gateKoepfe =>
     let axKoepfe := axKoepfe0 ++ gateKoepfe
