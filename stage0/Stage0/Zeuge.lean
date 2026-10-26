@@ -3,7 +3,7 @@
   Subject:   The witness of stage 0 (`Boot/Laufzeit.lean`): a minimal Gabbro program with a call, a branch, a
              narrowing and a loop, accepted by `AkzeptiertX`, run by the kernel on an input.
 -/
-import Stage0.Laufzeit
+import Stage0.Lauf.Boot
 
 namespace Gabbro.Stage0.Zeuge
 
@@ -22,21 +22,20 @@ def gross : String :=
 
 set_option maxRecDepth 100000 in
 /-- **Stage 0 runs it**: `"abC"` becomes `"ABC"`, computed by the kernel through the pipeline, the checker and
-    machine G. -/
+    the thread machine. -/
 theorem boot_gross : (boot {} gross [97, 98, 67]).toOption = some [65, 66, 67] := by
   decide +kernel
 
-/-- **The witness of `boot_ist_maschine`**: its premise holds at a non-degenerate run, so its conclusion -- a `rufAt`
-    run of the pipeline's program from the declared initial memory -- is inhabited. -/
-theorem boot_ist_maschine_zeuge :
+/-- **The witness of `boot_ist_lauf`**: its premise holds at a non-degenerate run, so its conclusion -- a machine
+    reachable by `RufSchrittG` from the start machine of the pipeline's program, thread 0 ended -- is inhabited. -/
+theorem boot_ist_lauf_zeuge :
     ∃ (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn) (o : Orte u) (hs : GabbroV.sp0OkB u = true)
-      (σ σ' : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params o.main))
-      (v : ErgVal (declOf u) ((declOf u).erg o.main)),
+      (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params o.main)) (M : RufMaschineG (declOf u)),
       uebersetzeAllg gross = .ok ⟨u, P, fs⟩ ∧ Parser.Cover.Differenz.akzeptiertU u = .ok true ∧ imKernB u = true ∧
       startWelt u o hs [97, 98, 67] = .ok σ ∧
-      rufAt P (orakelLeer (declOf u)) ({} : Budget).passes ({} : Budget).tiefe o.main σ ρ = .ok σ' v ∧
-      ausgabe u o σ' = .ok [65, 66, 67] := by
-  apply boot_ist_maschine
+      RufErreichbarG P (orakelLeer (declOf u)) ({} : Budget).passes (startG P o σ ρ) M ∧ fertig M 0 = true ∧
+      ausgabe u o (M.weltVon 0) = .ok [65, 66, 67] := by
+  apply boot_ist_lauf
   cases h : boot {} gross [97, 98, 67] with
   | error e =>
     have := boot_gross

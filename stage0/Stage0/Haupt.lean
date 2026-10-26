@@ -2,26 +2,26 @@
   File:      stage0/Stage0/Haupt.lean
   Subject:   The executable `stage0` (`stage0/lakefile.toml`).
 
-    stage0 [--tiefe N] [--passes N] PROGRAM.gab < INPUT > OUTPUT
+    stage0 [--schritte N] [--passes N] PROGRAM.gab < INPUT > OUTPUT
 
-  checks PROGRAM with the goal theorem's checker Bool and runs its `main` on machine G (`Boot.boot`): the input
+  checks PROGRAM with the goal theorem's checker Bool and runs its `main` on the thread machine (`boot`, `Lauf/Boot.lean`): the input
   bytes go to `io.ein`/`ein_len`, the output is `io.aus` up to `aus_len`. A refusal or a stop goes to stderr with
   exit code 1.
 -/
-import Stage0.Laufzeit
+import Stage0.Lauf.Boot
 
 namespace Gabbro.Stage0
 
 /-- Read the options in front of the program path. -/
 def optionen : Budget → List String → Except String (Budget × String)
-  | B, "--tiefe" :: n :: rest => match n.toNat? with
-    | some k => optionen { B with tiefe := k } rest
-    | none => .error "--tiefe takes a number"
+  | B, "--schritte" :: n :: rest => match n.toNat? with
+    | some k => optionen { B with schritte := k } rest
+    | none => .error "--schritte takes a number"
   | B, "--passes" :: n :: rest => match n.toNat? with
     | some k => optionen { B with passes := k } rest
     | none => .error "--passes takes a number"
   | B, [p] => .ok (B, p)
-  | _, _ => .error "usage: stage0 [--tiefe N] [--passes N] PROGRAM.gab < INPUT > OUTPUT"
+  | _, _ => .error "usage: stage0 [--schritte N] [--passes N] PROGRAM.gab < INPUT > OUTPUT"
 
 def haupt (args : List String) : IO UInt32 := do
   match optionen {} args with
