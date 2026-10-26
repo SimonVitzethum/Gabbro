@@ -335,6 +335,8 @@ structure UTab where
       such a field is an aggregate field (`werte`) of `Ty.sum`. -/
   sumNamen : List (String × String) := []
   sumFelder : List (String × Nat) := []
+  /-- `tree { parent p, child c, sibling s }`: the role and the field of each edge. -/
+  kanten : List (String × String) := []
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -1100,27 +1102,37 @@ def uFelder : List (String × (Int × Int)) → List String → List SFeld →
     | .ok p, .ok ps => .ok (p :: ps)
     | .error e, _ | _, .error e => .error e
 
+/-- A table of `count` slots with its fields, its invariants and its tree edges. -/
+def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tnames : List String)
+    (n : String) (cnt : SExpr) (sh : Bool) (fds : List SFeld) (invs : List STabTeil) (kanten : List (String × String)) :
+    Except String UTab :=
+  if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
+  match uAnzahl consts cnt with
+  | .error e => .error e
+  | .ok c =>
+    match uFelder alias tnames fds with
+    | .error e => .error e
+    | .ok fs =>
+      .ok { name := n, count := c, cols := fs.map (·.1),
+            bools := (fs.filter (fun p => match p.2 with | .bool => true | _ => false)).map (·.1.1),
+            opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none),
+            werte := fs.filterMap (fun p => match p.2 with | .wert τ => some (p.1.1, τ) | _ => none),
+            wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
+            sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
+            kanten := kanten, shared := sh }
+
 /-- One table: `count` and one integer range per slot field.
 /// Invariants, `ops`, tree edges, the occupancy mark, an
     `owner` mark, a `backed`/`shared` flag and a missing slot
     are explicit errors (the refused arms of `read_table`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n .none (.some cnt) .none .none sh (.tSlot fds :: invs) =>
-    if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
-    match uAnzahl consts cnt with
-    | .error e => .error e
-    | .ok c =>
-      match uFelder alias tnames fds with
-      | .error e => .error e
-      | .ok fs =>
-        .ok { name := n, count := c, cols := fs.map (·.1),
-              bools := (fs.filter (fun p => match p.2 with | .bool => true | _ => false)).map (·.1.1),
-              opts := fs.filterMap (fun p => match p.2 with | .opt num => some (p.1.1, num) | _ => none),
-              werte := fs.filterMap (fun p => match p.2 with | .wert τ => some (p.1.1, τ) | _ => none),
-              wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
-              sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
-              shared := sh }
+  | .tableT n .none (.some cnt) .none .none sh parts =>
+    -- `tree { parent p, child c }` names the fields `reaches … via` and the tree domains read; it adds no carrier
+    match parts.filter (fun p => match p with | .tTree _ => false | _ => true) with
+    | .tSlot fds :: invs => uTabelleSlots consts alias tnames n cnt sh fds invs
+        (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => []))
+    | _ => .error "table without G form"
   | .tableT n (.some p) .none .none .none sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uFelder alias tnames fds with
@@ -5642,7 +5654,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _, kanten := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=
