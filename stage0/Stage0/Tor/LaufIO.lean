@@ -25,8 +25,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.Cover.Differenz
 
 /-- **What the threads of phase 1 share**, under the world lock. -/
-structure Geteilt (u : UProg) (n : Nat) where
-  s : FStand (kodVon u) n
+structure Geteilt (u : UProg) (K : Kodierung (declOf u)) (n : Nat) where
+  s : FStand K n
   log : List (Antwort (declOf u)) := []
   /-- The keys asked, with the thread that asked. -/
   wer : List ((Nat × List Int) × Faden) := []
@@ -37,18 +37,18 @@ structure Geteilt (u : UProg) (n : Nat) where
   ende : Option (Except String Unit) := none
 
 /-- The key a question of thread `f` is answered under. -/
-def schluessel {u : UProg} {n : Nat} (s : FStand (kodVon u) n) (f : Faden)
+def schluessel {u : UProg} {K : Kodierung (declOf u)} {n : Nat} (s : FStand K n) (f : Faden)
     (q : Σ a : (declOf u).Ax, World (declOf u) × Env (declOf u) ((declOf u).aparams a)) : Nat × List Int :=
   (fremdZahl q.2.1.spur + s.c f, kfVon u q.1 q.2.2)
 
 section Phase1
 
 variable (u : UProg) (P : Programm (declOf u)) (B : Budget) (tore : List Tor) (ww : World (declOf u))
-  (M0 : RufMaschineG (declOf u)) {n : Nat} (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = [])
-  (ref : IO.Ref (Option (Geteilt u n)))
+  (M0 : RufMaschineG (declOf u)) {K : Kodierung (declOf u)} {n : Nat}
+  (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = []) (ref : IO.Ref (Option (Geteilt u K n)))
 
 /-- Under the lock: the step of thread `f`, filed; `false` when it cannot step. -/
-def schritt (g : Geteilt u n) (f : Faden) : IO Bool := do
+def schritt (g : Geteilt u K n) (f : Faden) : IO Bool := do
   let { s, log, wer, plan, schritte, ende } := g
   match s.schritt P (kfVon u) log B.passes ww M0 h0 f with
   | .inr ⟨t, _⟩ =>
@@ -62,7 +62,7 @@ def schritt (g : Geteilt u n) (f : Faden) : IO Bool := do
     pure false
 
 /-- Under the lock: stop the run with an error. -/
-def stopp (g : Geteilt u n) (e : String) : IO Unit :=
+def stopp (g : Geteilt u K n) (e : String) : IO Unit :=
   ref.set (some { g with ende := some (.error e) })
 
 /-- **One thread of phase 1**, until the run ends. -/
@@ -120,7 +120,7 @@ end Phase1
 
 /-- The replay meets a question: it must be answered in the log. -/
 def frageImLog {u : UProg} {n : Nat} (log : List (Antwort (declOf u))) (ww : World (declOf u))
-    (M0 : RufMaschineG (declOf u)) (s : FStand (kodVon u) n) (f : Faden) : Bool :=
+    (M0 : RufMaschineG (declOf u)) {K : Kodierung (declOf u)} (s : FStand K n) (f : Faden) : Bool :=
   match frage? (s.F ww M0) f with
   | some q => log.any (·.schluessel == schluessel s f q)
   | none => true
@@ -145,8 +145,8 @@ def nachspiel (u : UProg) (P : Programm (declOf u)) (o : Orte u) (B : Budget) (�
     (rs : List (Anfang u)) (hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true)
     (A : AWelt (declOf u)) (hA : A.sicht (kodVon u) = σ.speicher)
     (log : List (Antwort (declOf u))) (plan : List Faden) : Except String (List UInt8) := do
-  let s ← nachspielen u P B.passes log σ (startG P σ m rs) (startG_ruhe P σ m rs hl) plan
-    (SStand.start P (kfVon u) log B.passes σ (startG P σ m rs) (kodVon u) (rs.length + 1) A hA)
+  let s ← nachspielen u (memoP u P) B.passes log σ (startG P σ m rs) (startG_ruhe P σ m rs hl) plan
+    (SStand.start (memoP u P) (kfVon u) log B.passes σ (startG P σ m rs) (kodVon u) (rs.length + 1) A hA)
   let F := s.s.F σ (startG P σ m rs)
   if fertig F 0 then ausgabe u o (F.weltVon 0) else throw "main did not end"
 
@@ -166,6 +166,7 @@ theorem nachspiel_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B
   · cases h
   · rename_i s _
     obtain ⟨M, hr, hF⟩ := s.steht
+    rw [memoP_eq] at hr
     split at h
     · rename_i hf
       refine ⟨M, hr, ?_, ?_⟩
@@ -185,8 +186,8 @@ def imKernIO (u : UProg) (tore : List Tor) : Bool :=
     log and the schedule once the run ended. -/
 def mehrfach (u : UProg) (P : Programm (declOf u)) (B : Budget) (tore : List Tor) (ww : World (declOf u))
     (M0 : RufMaschineG (declOf u)) {n : Nat} (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = [])
-    (A : AWelt (declOf u)) : IO (Except String (List (Antwort (declOf u)) × List Faden)) := do
-  let ref ← IO.mkRef (some ({ s := FStand.start (kodVon u) ww M0 n A } : Geteilt u n))
+    (K : Kodierung (declOf u)) (A : AWelt (declOf u)) : IO (Except String (List (Antwort (declOf u)) × List Faden)) := do
+  let ref ← IO.mkRef (some ({ s := FStand.start K ww M0 n A } : Geteilt u K n))
   for f in List.range n do
     if f != 0 then
       let _ ← IO.asTask (prio := .dedicated) (faden u P B tore ww M0 h0 ref f)
@@ -227,8 +228,8 @@ def bootIO (B : Budget) (src : String) (ein : IO (List UInt8)) : IO (Except Stri
                 | .ok w =>
                   let σ := (schreibAuf w (sp0Of u h)).welt []
                   if hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true then
-                    match ← mehrfach u P B tore σ (startG P σ m rs) (n := rs.length + 1)
-                        (startG_ruhe P σ m rs hl) (startAWelt u h w) with
+                    match ← mehrfach u (memoP u P) B tore σ (startG P σ m rs) (n := rs.length + 1)
+                        (startG_ruhe P σ m rs hl) (kodVon u) (startAWelt u h w) with
                     | .error e => pure (.error e)
                     | .ok (log, plan) =>
                       pure (nachspiel u P o B σ m rs hl (startAWelt u h w) (startAWelt_sicht u h w) log plan)

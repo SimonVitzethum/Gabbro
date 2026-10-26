@@ -75,6 +75,8 @@ LEAN_EXPORT lean_obj_res gabbro_stage0_syscall(uint64_t nr, uint64_t a0, uint64_
 static uint32_t welt_schloss = 0;
 /* counts the steps taken; a thread that cannot step sleeps until it moves */
 static uint32_t welt_generation = 0;
+/* the threads sleeping on the generation: a step wakes only when there are some */
+static uint32_t welt_wartende = 0;
 
 LEAN_EXPORT lean_obj_res gabbro_stage0_nimm(lean_obj_arg world) {
     (void)world;
@@ -103,14 +105,19 @@ LEAN_EXPORT lean_obj_res gabbro_stage0_generation(lean_obj_arg world) {
 
 LEAN_EXPORT lean_obj_res gabbro_stage0_warte(uint32_t g, lean_obj_arg world) {
     (void)world;
-    if (__atomic_load_n(&welt_generation, __ATOMIC_ACQUIRE) == g)
+    /* announce first, then sleep only while the generation is still g (the kernel checks it atomically) */
+    __atomic_add_fetch(&welt_wartende, 1, __ATOMIC_SEQ_CST);
+    if (__atomic_load_n(&welt_generation, __ATOMIC_SEQ_CST) == g)
         roh(SYS_FUTEX, (uint64_t)(uintptr_t)&welt_generation, FUTEX_WAIT_PRIVATE, g, 0, 0, 0);
+    __atomic_sub_fetch(&welt_wartende, 1, __ATOMIC_SEQ_CST);
     return lean_io_result_mk_ok(lean_box(0));
 }
 
 LEAN_EXPORT lean_obj_res gabbro_stage0_wecke(lean_obj_arg world) {
     (void)world;
-    __atomic_add_fetch(&welt_generation, 1, __ATOMIC_RELEASE);
-    roh(SYS_FUTEX, (uint64_t)(uintptr_t)&welt_generation, FUTEX_WAKE_PRIVATE, 0x7fffffff, 0, 0, 0);
+    __atomic_add_fetch(&welt_generation, 1, __ATOMIC_SEQ_CST);
+    /* a sleeper announced before this load sees the new generation or is woken here */
+    if (__atomic_load_n(&welt_wartende, __ATOMIC_SEQ_CST) != 0)
+        roh(SYS_FUTEX, (uint64_t)(uintptr_t)&welt_generation, FUTEX_WAKE_PRIVATE, 0x7fffffff, 0, 0, 0);
     return lean_io_result_mk_ok(lean_box(0));
 }

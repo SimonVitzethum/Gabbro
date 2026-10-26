@@ -33,3 +33,4 @@ import Stage0.Schnell.Sim
 import Stage0.Schnell.Orakel
 import Stage0.Schnell.Stand
 import Stage0.Schnell.Lauf
+import Stage0.Lauf.Memo

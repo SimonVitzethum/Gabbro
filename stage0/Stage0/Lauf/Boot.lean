@@ -8,6 +8,7 @@
 import Stage0.Laufzeit
 import Stage0.Schnell.Lauf
 import Stage0.Tor.Worte
+import Stage0.Lauf.Memo
 
 namespace Gabbro.Stage0
 
@@ -81,7 +82,8 @@ def lauf (u : UProg) (P : Programm (declOf u)) (o : Orte u) (B : Budget) (σ : W
     (rs : List (Anfang u)) (A : AWelt (declOf u)) (hA : A.sicht (kodVon u) = σ.speicher) :
     Except String (List UInt8) :=
   if hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true then
-    let s0 := SStand.start P (kfVon u) [] B.passes σ (startG P σ m rs) (kodVon u) (rs.length + 1) A hA
+    let P' := memoP u P
+    let s0 := SStand.start P' (kfVon u) [] B.passes σ (startG P σ m rs) (kodVon u) (rs.length + 1) A hA
     let (s, _) := s0.laufe (startG_ruhe P σ m rs hl) B.schritte (alleN (rs.length + 1)) []
     let F := s.s.F σ (startG P σ m rs)
     if fertig F 0 then ausgabe u o (F.weltVon 0) else .error "main did not end within the step budget"
@@ -129,8 +131,8 @@ theorem lauf_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B : Bu
   · simp only at h
     split at h
     · rename_i hf
-      obtain ⟨M, hr, hF⟩ := SStand.steht (SStand.laufe _ B.schritte _ _ [] |>.1)
-      rw [orakelZ_leer] at hr
+      obtain ⟨M, hr, hF⟩ := SStand.steht (P := memoP u P) (SStand.laufe _ B.schritte _ _ [] |>.1)
+      rw [orakelZ_leer, memoP_eq] at hr
       refine ⟨M, hr, ?_, ?_⟩
       · rw [hF, fertig_normal] at hf
         exact hf
