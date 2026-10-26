@@ -121,8 +121,9 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **Generator support for aggregates (2026-10-25).** G has `Ty.arr`/`Ty.str` and their seven `Expr` forms (THEOREM-MAP 100);
   the generator gives them size `unendlich` and never draws them, so test sets M and N do not cover them yet.
 - **Front end, exchange (2026-10-26).** Open: exchanges at table elements (`REGEL[r]`: atomic tables have no G form,
-  model work), `update` bodies with statements other than guarded `return`s, guard narrowing only against literals
-  (`v < K`, also negated and under `and`/`or`); a body ending in a `match` or a nested `if` gets an unreachable
+  model work), `update` bodies with statements other than guarded `return`s; guard narrowing against literals, named
+  constants and number locals/parameters by their range (also negated and under `and`/`or`), not against other
+  expressions; a body ending in a `match` or a nested `if` gets an unreachable
   trailing return of a default value of its result type (refused for result types without one).
 - **End-block forms (2026-10-26).** `Endblock.narrow`/`exchange`/`ite` (THEOREM-MAP 102): the generator does not draw
   them (size `unendlich`); arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them; the Rust exporter

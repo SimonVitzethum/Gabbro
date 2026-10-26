@@ -125,6 +125,16 @@ def ite_range_refused : String :=
   "module m { impl fn f(c : bool) -> u32 in 0 .. 1 { if c { return 1; } else { return 2; } } }"
 theorem ite_range_refused_stufe : stufe ite_range_refused = "lower: value outside range" := by decide +kernel
 
+/-- The guard may compare with a side of known range: `v < k` for `k : 0 .. 51` gives `v ≤ 50`. -/
+def tausch_param_ok : String :=
+  "module m { atomic Z : u32 in 0 .. 100 relaxed; impl fn f(k : u32 in 0 .. 51) -> u32 in 0 .. 100 effects { reads Z, writes Z } { let alt = Z exchange update(v) { if v < k { return v + 50; } return v; } publishes nothing; return alt; } }"
+theorem tausch_param_ok_stufe : stufe tausch_param_ok = "OK" := by decide +kernel
+
+/-- With `k : 0 .. 52` the arm may reach `101`. -/
+def tausch_param_refused : String :=
+  "module m { atomic Z : u32 in 0 .. 100 relaxed; impl fn f(k : u32 in 0 .. 52) -> u32 in 0 .. 100 effects { reads Z, writes Z } { let alt = Z exchange update(v) { if v < k { return v + 50; } return v; } publishes nothing; return alt; } }"
+theorem tausch_param_refused_stufe : stufe tausch_param_refused = "lower: value outside range" := by decide +kernel
+
 /-! ## A body ending on every path without a trailing return -/
 
 /-- A nested terminal `if`. -/

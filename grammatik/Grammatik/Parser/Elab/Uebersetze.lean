@@ -2608,28 +2608,44 @@ def uAltErsetze (a : String) : Nat → SExpr → SExpr
   | f + 1, .call n args => .call n (args.map (uAltErsetze a f))
   | _ + 1, e => e
 
-/-- What a guard says about the local `v`: a lower and an upper bound, from comparisons with literals under `and`
-    (and their negations, `pos = false`, under `or`); anything else says nothing. -/
-def uGrenzen (v : String) : Bool → UEns → Option Int × Option Int
-  | pos, .cmp op (.param x) (.lit k) =>
-    if !strEq x v then (none, none) else uGrenzeCmp pos op k
-  | pos, .cmp op (.lit k) (.param x) =>
-    if !strEq x v then (none, none) else uGrenzeCmp pos (uDreh op) k
-  | true, .and a b => uGrenzenUnd (uGrenzen v true a) (uGrenzen v true b)
-  | false, .or a b => uGrenzenUnd (uGrenzen v false a) (uGrenzen v false b)
-  | pos, .not a => uGrenzen v (!pos) a
+/-- The range a side of a guard is known to lie in: a literal, or a number local or parameter at its type. -/
+def uSeiteBereich (ctx : UCtx) : USide → Option (Int × Int)
+  | .lit k => some (k, k)
+  | .param p =>
+    match uParamNr ctx p with
+    | .ok j => match ctx.types[j]? with | some (.int lo hi) => some (lo, hi) | _ => none
+    | .error _ => none
+  | _ => none
+
+/-- What a guard says about the local `v`: a lower and an upper bound, from comparisons with a side of known range
+    `x .. y` (a literal, or a number local: `v < X` gives `v ≤ y - 1`) under `and` (and their negations,
+    `pos = false`, under `or`); anything else says nothing. -/
+def uGrenzen (ctx : UCtx) (v : String) : Bool → UEns → Option Int × Option Int
+  | pos, .cmp op (.param x) s =>
+    if !strEq x v then
+      (match s with
+       | .param y => if strEq y v then (match uSeiteBereich ctx (.param x) with
+           | some r => uGrenzeCmp pos (uDreh op) r | none => (none, none)) else (none, none)
+       | _ => (none, none))
+    else match uSeiteBereich ctx s with | some r => uGrenzeCmp pos op r | none => (none, none)
+  | pos, .cmp op s (.param x) =>
+    if !strEq x v then (none, none)
+    else match uSeiteBereich ctx s with | some r => uGrenzeCmp pos (uDreh op) r | none => (none, none)
+  | true, .and a b => uGrenzenUnd (uGrenzen ctx v true a) (uGrenzen ctx v true b)
+  | false, .or a b => uGrenzenUnd (uGrenzen ctx v false a) (uGrenzen ctx v false b)
+  | pos, .not a => uGrenzen ctx v (!pos) a
   | _, _ => (none, none)
 where
-  /-- `x op k` (or its negation) as bounds of `x`. -/
-  uGrenzeCmp (pos : Bool) (op : String) (k : Int) : Option Int × Option Int :=
+  /-- `v op X` (or its negation) as bounds of `v`, for `X` in `r.1 .. r.2`. -/
+  uGrenzeCmp (pos : Bool) (op : String) (r : Int × Int) : Option Int × Option Int :=
     if pos then
-      if strEq op "<" then (none, some (k - 1)) else if strEq op "<=" then (none, some k)
-      else if strEq op ">" then (some (k + 1), none) else if strEq op ">=" then (some k, none)
-      else if strEq op "==" then (some k, some k) else (none, none)
+      if strEq op "<" then (none, some (r.2 - 1)) else if strEq op "<=" then (none, some r.2)
+      else if strEq op ">" then (some (r.1 + 1), none) else if strEq op ">=" then (some r.1, none)
+      else if strEq op "==" then (some r.1, some r.2) else (none, none)
     else
-      if strEq op "<" then (some k, none) else if strEq op "<=" then (some (k + 1), none)
-      else if strEq op ">" then (none, some k) else if strEq op ">=" then (none, some (k - 1))
-      else if strEq op "!=" then (some k, some k) else (none, none)
+      if strEq op "<" then (some r.1, none) else if strEq op "<=" then (some (r.1 + 1), none)
+      else if strEq op ">" then (none, some r.2) else if strEq op ">=" then (none, some (r.2 - 1))
+      else if strEq op "!=" then (some r.1, some r.2) else (none, none)
   /-- `k op x` read as `x op' k`. -/
   uDreh (op : String) : String :=
     if strEq op "<" then ">" else if strEq op "<=" then ">=" else if strEq op ">" then "<"
@@ -2658,8 +2674,8 @@ def uSideEng (v : String) (lo hi : Int) : USide → USide
 
 /-- The value of an `update` arm with `v` narrowed by the arm's guard (`pos` the arm's own condition, `negs` the
     conditions of the arms before it, all false there), inside the static's range `slo .. shi`. -/
-def uArmEng (v : String) (slo shi : Int) (pos : Option UEns) (negs : List UEns) (s : USide) : USide :=
-  let gs := (match pos with | some c => [uGrenzen v true c] | none => []) ++ negs.map (uGrenzen v false)
+def uArmEng (ctx : UCtx) (v : String) (slo shi : Int) (pos : Option UEns) (negs : List UEns) (s : USide) : USide :=
+  let gs := (match pos with | some c => [uGrenzen ctx v true c] | none => []) ++ negs.map (uGrenzen ctx v false)
   let lo := gs.foldl (fun acc g => match g.1 with | some x => max acc x | none => acc) slo
   let hi := gs.foldl (fun acc g => match g.2 with | some x => min acc x | none => acc) shi
   if lo == slo && hi == shi then s else if lo ≤ hi then uSideEng v lo hi s else s
@@ -3409,8 +3425,8 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             | .ok zs0, .ok neu0 =>
               -- each arm reads `v` narrowed by its guard and the negated guards before it
               let zs := (List.range zs0.length).zip zs0 |>.map (fun (i, (c, e)) =>
-                (c, uArmEng v lo hi (some c) ((zs0.take i).map (·.1)) e))
-              let neu := uArmEng v lo hi none (zs0.map (·.1)) neu0
+                (c, uArmEng ctxV v lo hi (some c) ((zs0.take i).map (·.1)) e))
+              let neu := uArmEng ctxV v lo hi none (zs0.map (·.1)) neu0
               -- `awaits` at an exchange: the acquiring read of `Block.awaits` (its value unused) in front
               let vor := if aw.isSome then [UStmt.awaitBind "#awaits" a] else []
               match vergleich with
