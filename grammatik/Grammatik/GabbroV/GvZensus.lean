@@ -192,6 +192,7 @@ def artItem : SItemTief → String
   | .transT .. => "transT"
   | .profT .. => "profT"
   | .gateT .. => "gateT"
+  | .pubT .. => "pubT"
 
 /-- Parse each chunk; collect per-chunk outcomes (no short-circuit). -/
 def parseStuecke (toks : List Token) :

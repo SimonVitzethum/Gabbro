@@ -622,6 +622,9 @@ inductive SItemTief
   | transT : String → FnSig → SAnw → SItemTief
   | profT : Bool → List SProfEintrag → SItemTief
   | gateT : SItemTief → SItemTief
+  /-- `pub item`: the item crosses the boundary of its project (its name is visible to a dependent
+      project, its signature may name only what crosses too -- `Parser/Namen/Oeffentlich.lean`). -/
+  | pubT : SItemTief → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
@@ -692,6 +695,7 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .profT a e, .profT b f =>
     (a == b) && beqSProfEintragList e f
   | .gateT a, .gateT b => beqSItemTief a b
+  | .pubT a, .pubT b => beqSItemTief a b
   | _, _ => false
 def beqSItemTiefList : List SItemTief → List SItemTief → Bool
   | [], [] => true
@@ -3140,7 +3144,9 @@ def parseItemTief (f : Nat) (toks : List Token) :
             else .error "when without TESTBUILD"
           | none => .error "when without TESTBUILD"
         | _ => .error "when without TESTBUILD"
-      else if strEq s "pub" then parseItemTief f rest
+      else if strEq s "pub" then match parseItemTief f rest with
+        | .ok (it, r) => .ok (.pubT it, r)
+        | .error e => .error e
       else parseItemKopfTief f toks
     | _ => parseItemKopfTief f toks
 def parseItemKopfTief (f : Nat) (toks : List Token) :

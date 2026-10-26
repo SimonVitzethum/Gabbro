@@ -49,7 +49,7 @@ theorem t57_lex :
     lex "pub module a::b { use c::d; }" = .ok tt57 := by
   decide
 theorem t57 : beqTopTief (parseTopTief tt57)
-    (.ok [.modT "a::b" [.useT ["c", "d"]]]) = true := by
+    (.ok [.pubT (.modT "a::b" [.useT ["c", "d"]])]) = true := by
   decide
 -- Synthetic (no `pub module` in the corpus, measured
 -- 2026-09-13): the `pub` prefix and nested members. Rust:

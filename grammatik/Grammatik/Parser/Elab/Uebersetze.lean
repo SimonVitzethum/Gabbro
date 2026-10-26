@@ -710,11 +710,13 @@ structure UProg where
 
 /-- The members: a single module wrapper is unwrapped, a bare
     list passes through (104 wraps everything in
-    `module beispiel::referenz`). -/
+    `module beispiel::referenz`); a `pub` mark is dropped (visibility is
+    checked before, `Parser/Namen/Oeffentlich.lean`). -/
 def uFlach : Nat → List SItemTief → List SItemTief
   | 0, ms => ms
   | _ + 1, [] => []
   | f + 1, .modT _ b :: rest => uFlach f b ++ uFlach f rest
+  | f + 1, .pubT it :: rest => uFlach f [it] ++ uFlach f rest
   | f + 1, it :: rest => it :: uFlach f rest
 
 /-- The members of a unit: every module wrapper is opened, so the items of nested modules stand in one

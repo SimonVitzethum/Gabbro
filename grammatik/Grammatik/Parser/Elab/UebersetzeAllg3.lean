@@ -6,7 +6,7 @@
 -/
 import Grammatik.Parser.Elab.UebersetzeSum
 import Grammatik.Bausteine.Arena.ArenaZucker
-import Grammatik.Parser.Namen.Aufloesung
+import Grammatik.Parser.Namen.Oeffentlich
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 
@@ -1839,11 +1839,14 @@ def normTopU32 : List SItemTief → List SItemTief
   | [] => []
   | it :: rest => normU32Item it :: normTopU32 rest
 
-/-- The preprocessing of the bridge instances: resolve every name and open the modules
+/-- The preprocessing of the bridge instances: check `pub` (`Oeffentlich.huelleZu`), resolve every name
+    and open the modules
     (`Aufloesung.loese`: a unit of one name space is unwrapped as `uMembers` does), then normalise
     bare `u32`, before `elabU` (`concurrent` items are elaborated into the thread roots now). -/
 def pre108 (items : List SItemTief) : List SItemTief :=
-  normTopU32 (Aufloesung.loese items)
+  if Oeffentlich.huelleZu items then normTopU32 (Aufloesung.loese items)
+  -- An open export hull (or a `pub` where none may stand) refuses the unit: a lone `use` has no G form.
+  else [.useT ["pub"]]
 
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
 
