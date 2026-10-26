@@ -30,18 +30,10 @@ def leseBytes (u : UProg) (σ : World (declOf u)) (t : (declOf u).Tab) (f : (dec
     | some z => z.toNat.toUInt8
     | none => 0⟩
 
-/-- The slots after the call wrote the buffer back into the byte field. -/
-def mitBytes (u : UProg) (t : (declOf u).Tab) (f : (declOf u).Feld t) (b : ByteArray)
-    (sl : ∀ t : (declOf u).Tab, Int → ∀ f : (declOf u).Feld t, Wert (declOf u) ((declOf u).typ t f)) :
-    ∀ t : (declOf u).Tab, Int → ∀ f : (declOf u).Feld t, Wert (declOf u) ((declOf u).typ t f) :=
-  fun t' k f' =>
-    if h : t' = t then
-      if (h ▸ f') = f ∧ 0 ≤ k ∧ k < b.size then
-        match ausZahl ((declOf u).typ t' f') (b.get! k.toNat).toNat with
-        | some v => v
-        | none => sl t' k f'
-      else sl t' k f'
-    else sl t' k f'
+/-- The writes of a buffer copied back into a byte field: every byte that is a value of the field. -/
+def bytesZellen (u : UProg) (t : (declOf u).Tab) (f : (declOf u).Feld t) (b : ByteArray) : List (Schreib (declOf u)) :=
+  (List.range b.size).filterMap fun k =>
+    (ausZahl ((declOf u).typ t f) (b.get! k).toNat).map fun v => .slot t (k : Int) f v
 
 /-- The kernel's word as the raw answer of the model, for a gate with `n` reasons. -/
 def rohVon (tor : Tor) (n : Nat) (rax : Int) : Int :=
@@ -85,9 +77,9 @@ def ausfuehren (u : UProg) (tore : List Tor) (c : Nat) (q : Σ a : (declOf u).Ax
   let which : UInt8 := match regs.findIdx? (·.2) with | some i => i.toUInt8 | none => 255
   let w : Nat → UInt64 := fun i => (regs.getD i (0, false)).1
   let (rax, buf') ← roherSyscall tor.nummer.toUInt64 (w 0) (w 1) (w 2) (w 3) (w 4) (w 5) buf which
-  let slots := match feld with
-    | some ⟨t, f, true⟩ => mitBytes u t f buf'
-    | _ => id
-  pure ⟨(fremdZahl σq.spur + c, kfVon u a ρa), rohVon tor ((declOf u).agruende a) (vorzeichen rax), slots, ws.map ArgWort.zahlVon⟩
+  let zellen := match feld with
+    | some ⟨t, f, true⟩ => bytesZellen u t f buf'
+    | _ => []
+  pure ⟨(fremdZahl σq.spur + c, kfVon u a ρa), rohVon tor ((declOf u).agruende a) (vorzeichen rax), zellen, ws.map ArgWort.zahlVon⟩
 
 end Gabbro.Stage0

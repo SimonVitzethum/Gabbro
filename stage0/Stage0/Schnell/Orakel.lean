@@ -31,10 +31,20 @@ theorem orakelZ_paar (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (c :
     simp only [orakelZ, orakelLog, hk]
     split
     · obtain ⟨neu, hF, hM⟩ := h.neu
-      exact ⟨⟨by simp only [h.slots], h.globs, neu, hF, hM⟩, rfl⟩
+      refine ⟨⟨?_, ?_, neu, hF, hM⟩, rfl⟩
+      · simp only [Speicher.welt, World.speicher, h.slots, h.globs]
+      · simp only [Speicher.welt, World.speicher, h.slots, h.globs]
     · exact ⟨h, rfl⟩
   regLies := fun _ _ _ => rfl
   sichtbar := fun _ _ _ => rfl
   zeiger := rfl
+
+/-- The writes of the fast oracle's answers. -/
+def orakelZZellen (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (c : Nat) (log : List (Antwort D)) :
+    ∀ a : D.Ax, World D → Env D (D.aparams a) → List (Schreib D) :=
+  logZellen (fun a σ ρ => (fremdZahl σ.spur + c, kf a ρ)) log
+
+theorem orakelZ_schreibt (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (c : Nat) (log : List (Antwort D)) :
+    OrakelSchreibt (orakelZ kf c log) (orakelZZellen kf c log) := orakelLog_schreibt _ _
 
 end Gabbro.Stage0

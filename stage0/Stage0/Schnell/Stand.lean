@@ -62,8 +62,9 @@ def FStand.schritt (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) →
     (s : FStand n D) (f : Faden) :
     Option {t : FStand n D // ∃ F', RufSchrittG P (orakelZ kf (s.c f) log) passes (s.F ww M0) f F' ∧
       t = s.nach ww f F'} :=
-  match zug P (orakelZ kf (s.c f) log) passes (orakelZ_treu kf _ log) (s.F ww M0) f (List.range n) (s.ruhe h0) with
-  | some z => some ⟨s.nach ww f z.1, z.1, z.2, rfl⟩
+  match zug P (orakelZ kf (s.c f) log) passes (orakelZ_treu kf _ log) (orakelZZellen kf _ log)
+      (orakelZ_schreibt kf _ log) (s.F ww M0) f (List.range n) (s.ruhe h0) with
+  | some z => some ⟨s.nach ww f z.M', z.M', z.schritt, rfl⟩
   | none => none
 
 variable (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (log : List (Antwort D))

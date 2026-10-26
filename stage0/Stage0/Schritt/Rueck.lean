@@ -26,18 +26,18 @@ def zugRueckEnde (M : RufMaschineG D) (f : Faden) {lr : Bool} {Γ : Ctx} {Λ : L
     | caller :: rst =>
       if hnw : caller.wartend = false then
         some ⟨_, .rueck M f caller rst hpop Γ Λ e hperm ρ hk _ rfl _ rfl _ rfl (heldIn_of hΛ) s1 rfl _ rfl _
-          (lese_neu M f Λ e.orte) hnw⟩
+          (lese_neu M f Λ e.orte) hnw, [], rfl⟩
       else
         match hc : caller.rest with
         | ⟨l, Γc, Λc, ρc, .wartet (τ := τ) restb k⟩ =>
           if he : D.erg (M.faeden f).kopf.f = some τ then
             some ⟨_, .rueckBind M f caller rst hpop l Γc Λc _ τ restb k ρc (Or.inl hc) Γ Λ e hperm ρ hk _ rfl _ rfl
-              _ rfl (heldIn_of hΛ) s1 rfl _ rfl he _ (lese_neu M f Λ e.orte)⟩
+              _ rfl (heldIn_of hΛ) s1 rfl _ rfl he _ (lese_neu M f Λ e.orte), [], rfl⟩
           else none
         | ⟨l, Γc, Λc, ρc, .wartetSonst (τ := τ) n err restb k⟩ =>
           if he : D.erg (M.faeden f).kopf.f = some τ then
             some ⟨_, .rueckBind M f caller rst hpop l Γc Λc _ τ restb k ρc (Or.inr ⟨n, err, hc⟩) Γ Λ e hperm ρ hk _
-              rfl _ rfl _ rfl (heldIn_of hΛ) s1 rfl _ rfl he _ (lese_neu M f Λ e.orte)⟩
+              rfl _ rfl _ rfl (heldIn_of hΛ) s1 rfl _ rfl he _ (lese_neu M f Λ e.orte), [], rfl⟩
           else none
         | _ => none
   else none
@@ -56,18 +56,18 @@ def zugRueckConsEnde (M : RufMaschineG D) (f : Faden) {lr : Bool} {Γ : Ctx} {Λ
     | caller :: rst =>
       if hnw : caller.wartend = false then
         some ⟨_, .rueckCons M f caller rst hpop Γ Λ e hperm rest ρ hk _ rfl _ rfl _ rfl (heldIn_of hΛ) s1 rfl _ rfl _
-          (lese_neu M f Λ e.orte) hnw⟩
+          (lese_neu M f Λ e.orte) hnw, [], rfl⟩
       else
         match hc : caller.rest with
         | ⟨l, Γc, Λc, ρc, .wartet (τ := τ) restb k⟩ =>
           if he : D.erg (M.faeden f).kopf.f = some τ then
             some ⟨_, .rueckConsBind M f lr Γ Λ e hperm rest ρ hk caller rst hpop l Γc Λc _ τ restb k ρc (Or.inl hc)
-              (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte)⟩
+              (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte), [], rfl⟩
           else none
         | ⟨l, Γc, Λc, ρc, .wartetSonst (τ := τ) n err restb k⟩ =>
           if he : D.erg (M.faeden f).kopf.f = some τ then
             some ⟨_, .rueckConsBind M f lr Γ Λ e hperm rest ρ hk caller rst hpop l Γc Λc _ τ restb k ρc
-              (Or.inr ⟨n, err, hc⟩) (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte)⟩
+              (Or.inr ⟨n, err, hc⟩) (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte), [], rfl⟩
           else none
         | _ => none
   else none
@@ -87,18 +87,18 @@ def zugRetDann (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ Λ'' :
     | caller :: rst =>
       if hnw : caller.wartend = false then
         some ⟨_, .dannRet M f l Γ Λ Λ'' e hperm rest k ρ hk caller rst hpop (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _
-          rfl _ (lese_neu M f Λ e.orte) hnw⟩
+          rfl _ (lese_neu M f Λ e.orte) hnw, [], rfl⟩
       else
         match hc : caller.rest with
         | ⟨lc, Γc, Λc, ρc, .wartet (τ := τ) restb kc⟩ =>
           if he : D.erg (M.faeden f).kopf.f = some τ then
             some ⟨_, .dannRetBind M f l Γ Λ Λ'' e hperm rest k ρ hk caller rst hpop lc Γc Λc _ τ restb kc ρc
-              (Or.inl hc) (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte)⟩
+              (Or.inl hc) (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte), [], rfl⟩
           else none
         | ⟨lc, Γc, Λc, ρc, .wartetSonst (τ := τ) n err restb kc⟩ =>
           if he : D.erg (M.faeden f).kopf.f = some τ then
             some ⟨_, .dannRetBind M f l Γ Λ Λ'' e hperm rest k ρ hk caller rst hpop lc Γc Λc _ τ restb kc ρc
-              (Or.inr ⟨n, err, hc⟩) (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte)⟩
+              (Or.inr ⟨n, err, hc⟩) (heldIn_of hΛ) s1 rfl _ rfl _ rfl _ rfl _ rfl he _ (lese_neu M f Λ e.orte), [], rfl⟩
           else none
         | _ => none
   else none
@@ -136,7 +136,7 @@ def zugGrundEnde (M : RufMaschineG D) (f : Faden) {lk : Bool} {Γk : Ctx} {Λk :
       match zugGrundAus M f caller with
       | some ⟨l, Γ, Λ, Λ', τ, n, err, restb, k, ρc, hc, hn⟩ =>
         some ⟨_, .rueckGrund M f r hperm ρ hk caller rst hpop l Γ Λ Λ' τ n err restb k ρc hc (heldIn_of hΛ) _ rfl _ rfl
-          _ rfl _ rfl hn⟩
+          _ rfl _ rfl hn, [], rfl⟩
       | none => none
   else none
 
@@ -154,7 +154,7 @@ def zugGrundConsEnde (M : RufMaschineG D) (f : Faden) {lk : Bool} {Γk : Ctx} {�
       match zugGrundAus M f caller with
       | some ⟨l, Γ, Λ, Λ', τ, n, err, restb, k, ρc, hc, hn⟩ =>
         some ⟨_, .rueckConsGrund M f r hperm restk ρ hk caller rst hpop l Γ Λ Λ' τ n err restb k ρc hc (heldIn_of hΛ)
-          _ rfl _ rfl _ rfl _ rfl hn⟩
+          _ rfl _ rfl _ rfl _ rfl hn, [], rfl⟩
       | none => none
   else none
 
@@ -173,7 +173,7 @@ def zugGrundDann (M : RufMaschineG D) (f : Faden) {lk : Bool} {Γk : Ctx} {Λk �
       match zugGrundAus M f caller with
       | some ⟨l, Γ, Λ, Λ', τ, n, err, restb, k, ρc, hc, hn⟩ =>
         some ⟨_, .dannRetGrund M f r hperm restk kk ρ hk caller rst hpop l Γ Λ Λ' τ n err restb k ρc hc
-          (heldIn_of hΛ) _ rfl _ rfl _ rfl _ rfl hn⟩
+          (heldIn_of hΛ) _ rfl _ rfl _ rfl _ rfl hn, [], rfl⟩
       | none => none
   else none
 

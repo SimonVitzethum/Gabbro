@@ -24,7 +24,7 @@ def zugRufDann (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ Λ'' :
     Option (Zug P O passes M f) :=
   if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
     some ⟨_, .rufDann M f l Γ Λ Λ Λ'' g args hp hr rest k ρ hk (heldIn_of hΛ) _ rfl _ rfl _
-      (lese_neu M f Λ args.orte)⟩
+      (lese_neu M f Λ args.orte), [], rfl⟩
   else none
 
 /-- `g(args);` at the head of an end block. -/
@@ -35,7 +35,7 @@ def zugRufEnde (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ : List
     (hk : (M.faeden f).kopf.rest = ⟨l, Γ, Λ, ρ, .ende (.cons (.call g args hp hr) rest)⟩) :
     Option (Zug P O passes M f) :=
   if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
-    some ⟨_, .ruf M f l Γ Λ g args hp hr rest ρ hk (heldIn_of hΛ) _ rfl _ rfl _ (lese_neu M f Λ args.orte)⟩
+    some ⟨_, .ruf M f l Γ Λ g args hp hr rest ρ hk (heldIn_of hΛ) _ rfl _ rfl _ (lese_neu M f Λ args.orte), [], rfl⟩
   else none
 
 /-- `p(args);` through a pointer, at the head of a `dann` block. -/
@@ -51,7 +51,7 @@ def zugRufIndDann (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ Λ'
     match hv : eval s0 p s0 ρ with
     | ⟨g, hg⟩ =>
       some ⟨_, .dannCallInd M f l Γ Λ Λ Λ'' n p args hp hr rest k ρ hk (heldIn_of hΛ) s0 rfl g hg hv _ rfl _
-        (lese_neu M f Λ (p.orte ++ args.orte))⟩
+        (lese_neu M f Λ (p.orte ++ args.orte)), [], rfl⟩
   else none
 
 /-- `p(args);` through a pointer, at the head of an end block. -/
@@ -66,7 +66,7 @@ def zugRufIndEnde (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ : L
     match hv : eval s0 p s0 ρ with
     | ⟨g, hg⟩ =>
       some ⟨_, .rufCallInd M f l Γ Λ n p args hp hr rest ρ hk (heldIn_of hΛ) s0 rfl g hg hv _ rfl _
-        (lese_neu M f Λ (p.orte ++ args.orte))⟩
+        (lese_neu M f Λ (p.orte ++ args.orte)), [], rfl⟩
   else none
 
 /-- `let x = g(args);` -- the caller waits for the value. -/
@@ -79,7 +79,7 @@ def zugBindRuf (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ Λ' : 
     Option (Zug P O passes M f) :=
   if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
     some ⟨_, .dannBindCall M f l Γ Λ Λ' Λ' τ g args he hp hr rest k ρ hk (heldIn_of hΛ) _ rfl _ rfl _
-      (lese_neu M f Λ args.orte)⟩
+      (lese_neu M f Λ args.orte), [], rfl⟩
   else none
 
 /-- `let x = p(args);` through a pointer. -/
@@ -96,7 +96,7 @@ def zugBindRufInd (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ Λ'
     match hv : eval s0 p s0 ρ with
     | ⟨g, hg⟩ =>
       some ⟨_, .dannBindCallInd M f l Γ Λ Λ' Λ' τ n p args he hp hr rest k ρ hk (heldIn_of hΛ) s0 rfl g hg hv _
-        rfl _ (lese_neu M f Λ (p.orte ++ args.orte))⟩
+        rfl _ (lese_neu M f Λ (p.orte ++ args.orte)), [], rfl⟩
   else none
 
 /-- `let x = g(args) else (e) { … }` -- the caller waits for a value or a reason. -/
@@ -110,7 +110,7 @@ def zugBindRufSonst (M : RufMaschineG D) (f : Faden) {l : Bool} {Γ : Ctx} {Λ �
     Option (Zug P O passes M f) :=
   if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
     some ⟨_, .dannBindCallElse M f l Γ Λ Λ' Λ' τ g args he hp hr err rest k ρ hk (heldIn_of hΛ) _ rfl _ rfl _
-      (lese_neu M f Λ args.orte)⟩
+      (lese_neu M f Λ args.orte), [], rfl⟩
   else none
 
 end Gabbro.Stage0

@@ -5,8 +5,9 @@
 
   A `Zug P O passes M f` is a successor of `M` by thread `f` TOGETHER with the rule of `RufSchrittG` that takes it:
   every step stage 0 executes is a step of the machine by construction, no separate soundness theorem is needed.
+  It also names the writes the step makes (`Schritt/Schreib.lean`), so the fast machine updates its arrays in place.
 -/
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
+import Stage0.Schritt.Schreib
 
 namespace Gabbro.Stage0
 
@@ -14,9 +15,12 @@ open Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-- **A step of thread `f` of `M`, with its rule.** -/
-abbrev Zug (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (f : Faden) :=
-  { M' : RufMaschineG D // RufSchrittG P O passes M f M' }
+/-- **A step of thread `f` of `M`, with its rule and the writes it makes to the memory.** -/
+structure Zug (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (f : Faden) where
+  M' : RufMaschineG D
+  schritt : RufSchrittG P O passes M f M'
+  w : List (Schreib D)
+  hw : M'.speicher = schreibAuf w M.speicher
 
 /-- `HeldIn` as a Boolean: every lock the static holdings name is held. -/
 def heldInB (Λ : List (Res D)) (h : List D.Lock) : Bool :=
