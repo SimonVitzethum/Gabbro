@@ -165,4 +165,28 @@ theorem blatt_paar (hS : Schwanz c sF sM) (hO : OrakelPaar c OF OM) (passes : Na
   | .retry .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
   | .forever .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
 
+/-- `blatt_paar` from the fast step's equation: the machine's outcome exists and is paired. -/
+theorem blatt_paar' (hS : Schwanz c sF sM) (hO : OrakelPaar c OF OM) {passes : Nat}
+    {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} (hb : s.istBlatt = true) (h : Paar sF sM σF σM) {ρ : Env D Γ}
+    {Y : Ausgang V l Γ} (hY : execStmt OF passes R s σF ρ = Y) :
+    ∃ X, execStmt OM passes R s σM ρ = X ∧ AusPaar sF sM Y X :=
+  ⟨_, rfl, hY ▸ blatt_paar hS hO passes R s hb h ρ⟩
+
+/-- `axiomAntwort_paar` from the fast answer's equation. -/
+theorem axiom_paar' (hO : OrakelPaar c OF OM) (hS : Schwanz c sF sM) (h : Paar sF sM σF σM) {a : D.Ax}
+    {ρF : Env D (D.aparams a)} {Y : World D × Option (ErgVal D (D.aerg a))} (hY : axiomAntwort OF a σF ρF = Y)
+    {ρM : Env D (D.aparams a)} (hρ : ρF = ρM) :
+    ∃ Z, axiomAntwort OM a σM ρM = Z ∧ Paar sF sM Y.1 Z.1 ∧ Y.2 = Z.2 := by
+  subst hρ hY
+  exact ⟨_, rfl, axiomAntwort_paar hO hS h a ρF⟩
+
+/-- `axiomAntwortSonst_paar` from the fast answer's equation. -/
+theorem axiomSonst_paar' (hO : OrakelPaar c OF OM) (hS : Schwanz c sF sM) (h : Paar sF sM σF σM) {a : D.Ax}
+    {ρF : Env D (D.aparams a)} {Y : World D × Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
+    (hY : axiomAntwortSonst OF a σF ρF = Y) {ρM : Env D (D.aparams a)} (hρ : ρF = ρM) :
+    ∃ Z, axiomAntwortSonst OM a σM ρM = Z ∧ Paar sF sM Y.1 Z.1 ∧ Y.2 = Z.2 := by
+  subst hρ hY
+  exact ⟨_, rfl, axiomAntwortSonst_paar hO hS h a ρF⟩
+
 end Gabbro.Stage0

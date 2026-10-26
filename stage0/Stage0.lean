@@ -19,3 +19,14 @@ import Stage0.Tor.Ausfuehren
 import Stage0.Tor.LaufIO
 import Stage0.Schnell.Kompakt
 import Stage0.Schnell.BlattPaar
+import Stage0.Schnell.Normal
+import Stage0.Schnell.Werkzeug
+import Stage0.Schnell.Sim.SA
+import Stage0.Schnell.Sim.SB
+import Stage0.Schnell.Sim.SC
+import Stage0.Schnell.Sim.SD
+import Stage0.Schnell.Sim.SE
+import Stage0.Schnell.Sim.SF
+import Stage0.Schnell.Sim.SG
+import Stage0.Schnell.Sim.SH
+import Stage0.Schnell.Sim
