@@ -27,6 +27,18 @@ theorem neuVon_eq {s t x : List (Ereignis D)} (h : s = x ++ t) : s = neuVon s t 
   subst h
   simp [neuVon]
 
+theorem neuVon_von {s t x : List (Ereignis D)} (h : s = x ++ t) : neuVon s t = x := by
+  subst h
+  simp [neuVon]
+
+/-- A leaf's growth as the step needs it: the new events, computed, with their two facts. -/
+theorem erw_neu {σ σ' : World D} (h : Erw σ σ') :
+    σ'.spur = neuVon σ'.spur σ.spur ++ σ.spur ∧
+      ∀ (L : D.Lock) (hs : List D.Lock), Ereignis.nimmt L hs ∉ neuVon σ'.spur σ.spur := by
+  obtain ⟨neu, hn, hz⟩ := h
+  rw [neuVon_von hn]
+  exact ⟨hn, kein_nimmt hz⟩
+
 /-- The answer of a foreign body extends the trace by its question only. -/
 theorem axiomAntwort_spur {O : Orakel D} (hO : OrakelSpurTreu O) (a : D.Ax) (σ : World D)
     (ρ : Env D (D.aparams a)) : (axiomAntwort O a σ ρ).1.spur = .fremd (.inl a) :: σ.spur := by

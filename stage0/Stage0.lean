@@ -6,3 +6,6 @@ import Stage0.Schritt.Abbruch
 import Stage0.Schritt.Rest
 import Stage0.Schritt.Blatt
 import Stage0.Schritt.Ruf
+import Stage0.Schritt.Rueck
+import Stage0.Schritt.Geraet
+import Stage0.Schritt.Zug
