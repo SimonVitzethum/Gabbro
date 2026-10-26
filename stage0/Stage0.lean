@@ -17,3 +17,5 @@ import Stage0.Tor.Orakel
 import Stage0.Tor.Frage
 import Stage0.Tor.Ausfuehren
 import Stage0.Tor.LaufIO
+import Stage0.Schnell.Kompakt
+import Stage0.Schnell.BlattPaar
