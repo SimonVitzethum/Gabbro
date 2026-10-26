@@ -337,6 +337,8 @@ structure UTab where
   sumFelder : List (String × Nat) := []
   /-- `tree { parent p, child c, sibling s }`: the role and the field of each edge. -/
   kanten : List (String × String) := []
+  /-- The `index into T` fields: the field and the name of `T` (their range is set by `uIdxTabs`). -/
+  idxNamen : List (String × String) := []
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -1059,6 +1061,8 @@ inductive UFeldArt
   | wrap : Int → UFeldArt
   /-- A field of a tagged type, its name as written (read with the types, `uSumTabs`). -/
   | summe : String → UFeldArt
+  /-- `index into T`: a number in `0 ..< count T`, the name of `T` as written (its count is read with the tables). -/
+  | idx : String → UFeldArt
 
 /-- One slot field: no bit position, no `offset_into`, no `where`, no `reserved` (all without G
     form, like the refused arms of `read_table`). `by ops` is a writer discipline the CHECKER holds
@@ -1082,6 +1086,8 @@ def uFeld (alias : List (String × (Int × Int))) (tnames : List String) :
       match uFeldTyp alias (.atom a) with
       | .ok r => .ok ((fname, r), UFeldArt.zahl)
       | .error _ => .ok ((fname, (0, 0)), UFeldArt.summe a)
+    | .index false tn =>
+      if tnames.any (strEq · tn) then .ok ((fname, (0, 0)), UFeldArt.idx tn) else .error ("table unknown: " ++ tn)
     | .wrap t =>
       match uFeldTyp alias t with
       | .ok (0, hi) => .ok ((fname, (0, hi)), UFeldArt.wrap (hi + 1))
@@ -1110,6 +1116,10 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
   match uAnzahl consts cnt with
   | .error e => .error e
   | .ok c =>
+    -- `Self` in a field type is the table itself
+    let fds := fds.map fun fd => match fd.ftyp with
+      | .index o t => if strEq t "Self" then { fd with ftyp := .index o n } else fd
+      | _ => fd
     match uFelder alias tnames fds with
     | .error e => .error e
     | .ok fs =>
@@ -1119,6 +1129,7 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
             werte := fs.filterMap (fun p => match p.2 with | .wert τ => some (p.1.1, τ) | _ => none),
             wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
             sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
+            idxNamen := fs.filterMap (fun p => match p.2 with | .idx tn => some (p.1.1, tn) | _ => none),
             kanten := kanten, shared := sh }
 
 /-- One table: `count` and one integer range per slot field.
@@ -3524,6 +3535,19 @@ def uSumTabs (sums : List USum) : List UTab → Except String (List UTab)
                     sumFelder := fs.map (fun (f, k, _) => (f, k)) } :: ts)
     | .error e, _ | _, .error e => .error e
 
+/-- The range of a column: an `index into T` field reads `0 .. count T - 1`. -/
+def uIdxSpalte (tabs : List UTab) (t : UTab) (c : String × (Int × Int)) : String × (Int × Int) :=
+  match t.idxNamen.find? (fun p => strEq p.1 c.1) with
+  | some (_, tn) =>
+    match tabs.find? (fun x => strEq x.name tn) with
+    | some x => (c.1, (0, x.count - 1))
+    | none => c
+  | none => c
+
+/-- The `index into T` fields with their range `0 .. count T - 1`. -/
+def uIdxTabs (tabs : List UTab) : List UTab :=
+  tabs.map fun t => { t with cols := t.cols.map (uIdxSpalte tabs t) }
+
 /-- The option statics with the number and count of their table. -/
 def uOptGlobs (tabs : List UTab) : List UGlob → Except String (List UGlob)
   | [] => .ok []
@@ -4395,7 +4419,7 @@ def elabU : List SItemTief → Except String UProg
     match uArenen consts alias ms with
     | .error e => .error e
     | .ok (arTabs, arGlobs) =>
-    let tabs := tabs0 ++ arTabs
+    let tabs := uIdxTabs (tabs0 ++ arTabs)
     match uOptGlobs tabs (globs0 ++ arGlobs) with
     | .error e => .error e
     | .ok globs =>
@@ -5654,7 +5678,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _, kanten := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _, kanten := _, idxNamen := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=
