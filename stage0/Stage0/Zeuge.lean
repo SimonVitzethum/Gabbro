@@ -30,10 +30,10 @@ theorem boot_gross : (boot {} gross [97, 98, 67]).toOption = some [65, 66, 67] :
     reachable by `RufSchrittG` from the start machine of the pipeline's program, thread 0 ended -- is inhabited. -/
 theorem boot_ist_lauf_zeuge :
     ∃ (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn) (o : Orte u) (hs : GabbroV.sp0OkB u = true)
-      (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params o.main)) (M : RufMaschineG (declOf u)),
+      (σ : World (declOf u)) (m : Anfang u) (rs : List (Anfang u)) (M : RufMaschineG (declOf u)),
       uebersetzeAllg gross = .ok ⟨u, P, fs⟩ ∧ Parser.Cover.Differenz.akzeptiertU u = .ok true ∧ imKernB u = true ∧
-      startWelt u o hs [97, 98, 67] = .ok σ ∧
-      RufErreichbarG P (orakelLeer (declOf u)) ({} : Budget).passes (startG P o σ ρ) M ∧ fertig M 0 = true ∧
+      startWelt u o hs [97, 98, 67] = .ok σ ∧ anfaengeVon u o = .ok (m, rs) ∧
+      RufErreichbarG P (orakelLeer (declOf u)) ({} : Budget).passes (startG P σ m rs) M ∧ fertig M 0 = true ∧
       ausgabe u o (M.weltVon 0) = .ok [65, 66, 67] := by
   apply boot_ist_lauf
   cases h : boot {} gross [97, 98, 67] with

@@ -36,7 +36,8 @@ def haupt (args : List String) : IO UInt32 := do
       let out ← IO.getStdout
       out.write ⟨aus.toArray⟩
       out.flush
-      pure 0
+      -- threads still blocked in the kernel do not hold up the end of the run
+      IO.Process.exit 0
 
 end Gabbro.Stage0
 

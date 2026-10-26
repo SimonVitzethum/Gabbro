@@ -1,7 +1,7 @@
 /-
   File:      stage0/Stage0/Lauf/Boot.lean
   Subject:   Stage 0 on the thread machine: the pipeline and the checker as in `Laufzeit.lean`, then the start machine
-             `RufStartG` with `main` on thread 0, run by the driver. `boot_ist_lauf`: every output is read from a
+             `RufStartG` with `main` on thread 0 and the program's roots on threads 1, 2, .., run by the driver. `boot_ist_lauf`: every output is read from a
              machine REACHABLE from the start machine by steps of `RufSchrittG`, in which thread 0 has ended.
 -/
 import Stage0.Laufzeit
@@ -16,26 +16,50 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 /-- The machine's answers for a unit of the subset keep the trace. -/
 theorem orakelLeer_treu (D : Deklaration) : OrakelSpurTreu (orakelLeer D) := fun _ _ _ => rfl
 
-/-- The start machine: `main` with its arguments on every thread; only thread 0 runs. -/
-def startG {u : UProg} (P : Programm (declOf u)) (o : Orte u) (σ : World (declOf u))
-    (ρ : Env (declOf u) ((declOf u).params o.main)) : RufMaschineG (declOf u) :=
-  RufStartG P σ.speicher (fun _ => ⟨o.main, ρ⟩)
+/-- A thread's start: its root and its arguments. -/
+abbrev Anfang (u : UProg) := Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f)
 
-/-- **Run `main` on the thread machine** and read the output of the world thread 0 ended in. -/
-def lauf (u : UProg) (P : Programm (declOf u)) (o : Orte u) (B : Budget) (σ : World (declOf u)) :
-    Except String (List UInt8) :=
-  match zeigerArgs ((declOf u).params o.main) with
-  | none => .error "main takes a parameter that is not a table pointer"
-  | some ρ =>
-    if hl : (offen (startSpur (D := declOf u) (show (declOf u).Fn from o.main))).isEmpty = true then
-      let M0 := startG P o σ ρ
-      let s0 : Stand P (orakelLeer (declOf u)) B.passes M0 [0] :=
-        Stand.start M0 [0] (fun g _ => by
-          show offen (startSpur (D := declOf u) (show (declOf u).Fn from o.main)) = []
-          simpa using hl)
-      let (s, _) := s0.laufe (orakelLeer_treu _) B.schritte [⟨0, by simp⟩] []
-      if fertig s.M 0 then ausgabe u o (s.M.weltVon 0) else .error "main did not end within the step budget"
-    else .error "main holds locks by signature"
+/-- The start of one root: its parameters are table pointers or none. -/
+def anfangVon (u : UProg) (f : Fin u.fns.length) : Except String (Anfang u) :=
+  match zeigerArgs ((declOf u).params f) with
+  | some ρ => .ok ⟨f, ρ⟩
+  | none => .error ("the root " ++ (u.fns[f.val]?.map (·.name)).getD "" ++ " takes a parameter that is not a table pointer")
+
+/-- **The threads of a run**: `main` on thread 0; on threads 1, 2, .. the declared roots (`entry` dispatch roots,
+    `concurrent` members) and the roots of `start { .. }`, each once. -/
+def anfaengeVon (u : UProg) (o : Orte u) : Except String (Anfang u × List (Anfang u)) := do
+  let m ← anfangVon u o.main
+  let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)
+  let rs ← (rs.filter (· != o.main)).mapM (anfangVon u)
+  pure (m, rs)
+
+/-- The start machine: thread `t` runs the `t`-th start, every thread behind the last one `main` (it never steps). -/
+def startG {u : UProg} (P : Programm (declOf u)) (σ : World (declOf u)) (m : Anfang u) (rs : List (Anfang u)) :
+    RufMaschineG (declOf u) :=
+  RufStartG P σ.speicher (fun t => (m :: rs).getD t m)
+
+/-- The running threads: `main` and one for each root. -/
+def aktivVon {u : UProg} (rs : List (Anfang u)) : List Faden := List.range (rs.length + 1)
+
+theorem startG_ruhe {u : UProg} (P : Programm (declOf u)) (σ : World (declOf u)) (m : Anfang u)
+    (rs : List (Anfang u)) (hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true) :
+    ∀ g, g ∉ aktivVon rs → offen ((startG P σ m rs).faeden g).spur = [] := by
+  intro g hg
+  have hd : (m :: rs).getD g m = m := by
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by simp [aktivVon] at hg; simp; omega)]
+    rfl
+  simp only [startG, RufStartG, hd]
+  simpa using hl
+
+/-- **Run the threads on the thread machine** and read the output of the world thread 0 ended in. -/
+def lauf (u : UProg) (P : Programm (declOf u)) (o : Orte u) (B : Budget) (σ : World (declOf u)) (m : Anfang u)
+    (rs : List (Anfang u)) : Except String (List UInt8) :=
+  if hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true then
+    let s0 : Stand P (orakelLeer (declOf u)) B.passes (startG P σ m rs) (aktivVon rs) :=
+      Stand.start _ _ (startG_ruhe P σ m rs hl)
+    let (s, _) := s0.laufe (orakelLeer_treu _) B.schritte ((aktivVon rs).attach) []
+    if fertig s.M 0 then ausgabe u o (s.M.weltVon 0) else .error "main did not end within the step budget"
+  else .error "main holds locks by signature"
 
 /-- **STAGE 0 on the thread machine**: check, then run a program of the subset on its input bytes. -/
 def boot (B : Budget) (src : String) (ein : List UInt8) : Except String (List UInt8) :=
@@ -60,28 +84,24 @@ def boot (B : Budget) (src : String) (ein : List UInt8) : Except String (List UI
               match lowerAllg u with
               | .error e => .error e
               | .ok (P, _) =>
-                match startWelt u o h ein with
-                | .error e => .error e
-                | .ok σ => lauf u P o B σ
+                match startWelt u o h ein, anfaengeVon u o with
+                | .error e, _ | _, .error e => .error e
+                | .ok σ, .ok (m, rs) => lauf u P o B σ m rs
             else .error "no declared initial memory (sp0)"
 
 /-- **The run is the thread machine**: every output of `lauf` is read from a machine that `RufSchrittG` reaches from
     the start machine, in which thread 0 has ended. -/
 theorem lauf_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B : Budget} {σ : World (declOf u)}
-    {aus : List UInt8} (h : lauf u P o B σ = .ok aus) :
-    ∃ (ρ : Env (declOf u) ((declOf u).params o.main)) (M : RufMaschineG (declOf u)),
-      RufErreichbarG P (orakelLeer (declOf u)) B.passes (startG P o σ ρ) M ∧ fertig M 0 = true ∧
+    {m : Anfang u} {rs : List (Anfang u)} {aus : List UInt8} (h : lauf u P o B σ m rs = .ok aus) :
+    ∃ M : RufMaschineG (declOf u),
+      RufErreichbarG P (orakelLeer (declOf u)) B.passes (startG P σ m rs) M ∧ fertig M 0 = true ∧
         ausgabe u o (M.weltVon 0) = .ok aus := by
   unfold lauf at h
   split at h
-  · cases h
-  rename_i ρ _
-  split at h
-  · rename_i hl
-    simp only at h
+  · simp only at h
     split at h
     · rename_i hf
-      exact ⟨ρ, _, Stand.erreicht _, hf, h⟩
+      exact ⟨_, Stand.erreicht _, hf, h⟩
     · cases h
   · cases h
 
@@ -89,10 +109,10 @@ theorem lauf_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B : Bu
     built from the source, from the declared initial memory with the input, after the checker accepted. -/
 theorem boot_ist_lauf {B : Budget} {src : String} {ein aus : List UInt8} (h : boot B src ein = .ok aus) :
     ∃ (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn) (o : Orte u) (hs : sp0OkB u = true)
-      (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params o.main)) (M : RufMaschineG (declOf u)),
+      (σ : World (declOf u)) (m : Anfang u) (rs : List (Anfang u)) (M : RufMaschineG (declOf u)),
       uebersetzeAllg src = .ok ⟨u, P, fs⟩ ∧ akzeptiertU u = .ok true ∧ imKernB u = true ∧
-      startWelt u o hs ein = .ok σ ∧
-      RufErreichbarG P (orakelLeer (declOf u)) B.passes (startG P o σ ρ) M ∧ fertig M 0 = true ∧
+      startWelt u o hs ein = .ok σ ∧ anfaengeVon u o = .ok (m, rs) ∧
+      RufErreichbarG P (orakelLeer (declOf u)) B.passes (startG P σ m rs) M ∧ fertig M 0 = true ∧
       ausgabe u o (M.weltVon 0) = .ok aus := by
   unfold boot at h
   split at h
@@ -121,9 +141,10 @@ theorem boot_ist_lauf {B : Budget} {src : String} {ein aus : List UInt8} (h : bo
     rename_i P fs hw
     split at h
     · cases h
-    rename_i σ hσ
-    obtain ⟨ρ, M, hM, hf, ho⟩ := lauf_ist_lauf h
-    refine ⟨u, P, fs, o, hs, σ, ρ, M, ?_, ha, Bool.not_eq_false _ ▸ hk, hσ, hM, hf, ho⟩
+    · cases h
+    rename_i σ m rs hσ hmr
+    obtain ⟨M, hM, hf, ho⟩ := lauf_ist_lauf h
+    refine ⟨u, P, fs, o, hs, σ, m, rs, M, ?_, ha, Bool.not_eq_false _ ▸ hk, hσ, hmr, hM, hf, ho⟩
     unfold uebersetzeAllg
     rw [hl]
     dsimp only

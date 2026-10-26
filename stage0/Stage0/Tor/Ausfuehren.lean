@@ -32,6 +32,16 @@ def argWorte (u : UProg) : (Γ : List Ty) → Env (declOf u) Γ → Except Strin
     | none => .error "a pointer to no table"
   | _ :: _, .cons _ _ => .error "an argument of a type a system call does not take"
 
+/-- An argument word as a number of the key: a table by `-1 - t`. -/
+def ArgWort.zahlVon {u : UProg} : ArgWort u → Int
+  | .zahl z => z
+  | .puffer t _ => -1 - (t.val : Int)
+
+/-- **The key of a question**: the length of the asking thread's trace, the gate, the argument words. -/
+def schluesselVon (u : UProg) (a : (declOf u).Ax) (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).aparams a)) :
+    Nat × List Int :=
+  (σ.spur.length, (a.val : Int) :: ((argWorte u _ ρ).toOption.getD []).map ArgWort.zahlVon)
+
 /-- The byte field of a table: its first field typed `0 .. 255`. -/
 def bytFeld (u : UProg) (t : (declOf u).Tab) : Option ((declOf u).Feld t) :=
   (List.finRange (fieldCount u t)).find? (fun f => decide ((declOf u).typ t f = .int 0 255))
@@ -101,9 +111,6 @@ def ausfuehren (u : UProg) (tore : List Tor) (q : Σ a : (declOf u).Ax, World (d
   let slots := match feld with
     | some ⟨t, f, true⟩ => mitBytes u t f buf'
     | _ => id
-  let worte : List Int := ws.map fun w => match w with
-    | ArgWort.zahl z => z
-    | ArgWort.puffer t _ => -1 - (t.val : Int)
-  pure ⟨σq.spur.length, rohVon tor ((declOf u).agruende a) (vorzeichen rax), slots, worte⟩
+  pure ⟨schluesselVon u a σq ρa, rohVon tor ((declOf u).agruende a) (vorzeichen rax), slots, ws.map ArgWort.zahlVon⟩
 
 end Gabbro.Stage0
