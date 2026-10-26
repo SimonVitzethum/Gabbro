@@ -126,6 +126,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | transT _ _ _ => rfl
   | profT _ _ => rfl
   | gateT _ => rfl
+  | pubT _ => rfl
 
 /-- **Is this item accepted by the item check?** Exactly the kinds `uRestFehler` recurses on (accepted
     heads step past; off-fragment heads refuse at once). -/
@@ -198,6 +199,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | transT _ _ _ => simp [istAngenommen] at he
   | profT _ _ => simp [istAngenommen] at he
   | gateT _ => simp [istAngenommen] at he
+  | pubT _ => simp [istAngenommen] at he
 
 /-- **A head that is neither accepted nor excused fails at once.** With
     no fragment excuse (`istGegenstand` false) and no accepted shape
@@ -244,6 +246,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | transT _ _ _ => simp [istGegenstand] at he
   | profT _ _ => simp [istGegenstand] at he
   | gateT _ => simp [istGegenstand] at he
+  | pubT _ => simp [istGegenstand] at he
 
 /-- **An off-fragment item anywhere fails the item check.** Induction:
     empty lists hold no witness; a bad head fails at once, otherwise the

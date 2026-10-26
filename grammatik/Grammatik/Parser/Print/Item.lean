@@ -419,6 +419,7 @@ def druckItem : SItemTief → List Token
         | none => []) ++ [.zeichen ";"])
   | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckStarts ps ++ [.zeichen "}", .zeichen ";"])
   | .gateT it => [.wort "when", .ident "TESTBUILD"] ++ druckItem it
+  | .pubT it => .wort "pub" :: druckItem it
   | .assumT n a s k =>
     ([.wort "assume", nameTok n] ++
       (match a with

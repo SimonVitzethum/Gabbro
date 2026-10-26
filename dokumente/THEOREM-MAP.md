@@ -4974,3 +4974,24 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
   form `… when … returns …`, a payload or `awaits` at an exchange, an update body other than one value.
 
 All axiom lists standard.
+
+## 102. `pub` and the closed export hull (2026-10-26)
+
+`Parser/Namen/Oeffentlich.lean`, probes `Parser/Namen/OeffentlichProben.lean`; the surface item `SItemTief.pubT`
+(appended at the end), parsed and printed (`pub` was dropped by the reader before); `pre108` refuses a unit whose
+hull is open; `uMembers` (the direct `elabU` path) drops the mark as before.
+
+* **Which kinds carry `pub`** (`darfPub`): functions (body, prototype, `spec`, `asm`), `static`, `const`, `type`,
+  `atomic`, `table`, `arena`, `lock`, `format`, `device`, `reason`, `use`, `module`; a `pub` before anything else
+  (and `pub pub`) is refused.
+* **The export hull is closed** (`N038`): every item a `pub` item's head names (`kopfNamen`: parameter, result and
+  field types, the `or` reason, effect places, contract, costs, protected places; parameters and binders are
+  locals) is `pub` or the item itself. Names are resolved by the unit's rule (THEOREM-MAP 101), so the rule is
+  about items: a public `a::C` does not close a head that names a private `b::C`.
+* Theorems: `huelle_ohne_pub` (a unit without `pub` is unchanged), **`huelle_geschlossen`**, `pub_sichtbar` (what
+  an exported head names is a public name, the names `Namensraum.sichtbar` gives a dependent); witnesses and probes
+  `zu_ok`, `offen_refused`, `namensgleich_huelle`, `falscheArt_huelle`, `huelle_ohne_pub_zeuge`,
+  `pub_sichtbar_zeuge`.
+* Round trip: `pubT` is outside `ItemGut`, like `gateT` (no print-parse claim for marked items yet).
+* Not yet followed (Lean model only): the Rust `N038` compares short names and its `pub` grammar is per kind.
+

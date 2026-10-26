@@ -166,6 +166,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   the Rust side does not follow yet: `parse.rs` still reads `x::y::C` as a field chain, the checker keys carriers
   and functions by short name and `N039`/`N042` still refuse a second item of one short name, `llvm.rs` keys its
   globals by short name.
+  `pub` and the closed export hull are in Lean too (THEOREM-MAP 102); the Rust `N038` still compares short names.
 - **O41 (registers as Lean, not as `.tsv`; Simon, 2026-10-20).** `dokumente/llvm-modelldeckung.tsv` is a hand-written list of the model's
   members with an LLVM status per member; it proves nothing, its member column duplicates the total match of `Gen/Abdeckung/Mitglieder.lean`,
   and `instrumente/teile/llvm-modelldeckung.py` checks it against the Lean sources by regex. `messung/fallen-klassifikation.tsv` has no reader.

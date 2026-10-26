@@ -25,7 +25,8 @@ import Grammatik.Parser.Namen.Namensraum
     (identifiers never contain `:`), a joined key has at least one, and a short key is used only for a
     short name no other item has.
   * `use` items have done their work once the names are resolved and are dropped; module wrappers are
-    opened (as `Uebersetze.uMembers` does).
+    opened and `pub` marks dropped (as `Uebersetze.uMembers` does; what `pub` demands is checked before,
+    `Oeffentlich.lean`).
 
   A unit without `use` items and with at most one module wrapper (every unit of the corpus models before
   this change) is resolved by `uMembers` alone (`loese_einfach`): there every name is its own key.
@@ -152,6 +153,7 @@ def itemName : SItemTief → Option String
   | .varT n => some n
   | .transT n _ _ => some n
   | .gateT it => itemName it
+  | .pubT it => itemName it
   | _ => none
 
 mutual
@@ -160,6 +162,7 @@ mutual
 def sammleI (von : Pfad) : SItemTief → List Pfad × List (Pfad × Pfad)
   | .modT p b => sammleL (von ++ segmente p) b
   | .useT p => ([], [(von, p)])
+  | .pubT it => sammleI von it
   | it => match itemName it with
     | some n => ([von ++ [n]], [])
     | none => ([], [])
@@ -496,6 +499,7 @@ def item (k : Kontext) : SItemTief → SItemTief
     .devT (k.eigen n) (ps.map fun (x, t) => (x, typ k t)) sp (ms.map (gerTeil (k.mit (ps.map Prod.fst))))
   | .groupT n ns is => .groupT (k.eigen n) (ns.map k.ref) (is.map (inv k))
   | .stateT n ts => .stateT (k.eigen n) (ts.map (trans k))
+  | .pubT it => item k it
   | it => it
 
 mutual
@@ -503,6 +507,7 @@ mutual
 def loeseI (q : Quelle) (von : Pfad) : SItemTief → List SItemTief
   | .modT p b => loeseL q (von ++ segmente p) b
   | .useT _ => []
+  | .pubT it => loeseI q von it
   | it => [item ⟨q, von, []⟩ it]
 def loeseL (q : Quelle) (von : Pfad) : List SItemTief → List SItemTief
   | [] => []
@@ -514,6 +519,8 @@ def flach : List SItemTief → Bool
   | [] => true
   | .modT _ _ :: _ => false
   | .useT _ :: _ => false
+  | .pubT (.modT _ _) :: _ => false
+  | .pubT (.useT _) :: _ => false
   | _ :: rest => flach rest
 
 /-- **A unit of one name space**: no `use` line, and at most one module wrapper around flat items. -/
