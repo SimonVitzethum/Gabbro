@@ -5021,3 +5021,22 @@ hull is open; `uMembers` (the direct `elabU` path) drops the mark as before.
 * Round trip: `pubT` is outside `ItemGut`, like `gateT` (no print-parse claim for marked items yet).
 * Not yet followed (Lean model only): the Rust `N038` compares short names and its `pub` grammar is per kind.
 
+
+## 105. Stage 0: the thread machine stepped, real system calls, OS threads (2026-10-26)
+
+`stage0/Stage0/` (its own Lake package beside `grammatik/`, PLAN-SELF-HOSTING §2).
+
+* **One step with its rule.** `Zug P O passes M f := {M' // RufSchrittG P O passes M f M'}`; `zug` (`Schritt/Zug.lean`)
+  computes the step of thread `f` for every rule of the thread machine (calls, returns, leaves and loop rules,
+  locks with the side condition `freiB` over the running threads, foreign bodies, registers, `awaits`, exchange,
+  floats), for every oracle that keeps the trace (`OrakelSpurTreu`). `zug_schritt`: what it returns is a step.
+* **A run.** `Stand` carries `RufErreichbarG` from the start machine; `startG` puts `main` on thread 0 and the program's
+  roots on threads 1, 2, .. (`anfaengeVon`), `startG_ruhe`: the threads that never run hold no lock.
+  `lauf_ist_lauf`, `boot_ist_lauf`: every output of the pure driver is read from a reachable machine in which thread
+  0 has ended; witness `boot_ist_lauf_zeuge` (the kernel runs `boot_gross`).
+* **System calls.** `orakelLog k log` answers a question by the logged answer under its key (trace length, gate,
+  argument words, `schluesselVon`), `orakelLog_treu`. `nachspiel_ist_lauf` (`Tor/LaufIO.lean`): every output of the
+  replay of a schedule is read from a machine reachable by `RufSchrittG` under `orakelLog (schluesselVon u) log`, the
+  oracle of the answers the kernel gave in the run. The run itself (phase 1, OS threads, futex world lock, system
+  calls outside the lock) is IO and unproved; the replay checks it.
+* Named assumptions: the system calls keep their Gabbro contracts; the futex lock excludes.

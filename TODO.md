@@ -128,6 +128,11 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **End-block forms (2026-10-26).** `Endblock.narrow`/`exchange`/`ite` (THEOREM-MAP 102): the generator does not draw
   them (size `unendlich`); arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them; the Rust exporter
   does not construct them.
+- **Stage 0 runtime (2026-10-26, THEOREM-MAP 105).** Runs on the thread machine with raw system calls on OS threads.
+  Open: an array-backed world proved equal to the closure world (a slot is a chain of closures; every access
+  lengthens the trace); the provider freshness of the open region in the model; S0 as a checked list of forms; the
+  Rust exporter `lean_g.rs` writes `aschreibt := false` for every gate and refuses a gate's `writes` (the model and
+  the Lean front end accept it); then stage 1 (an interpreter of all of Gabbro, written in S0).
 - **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
   `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
   fields. Open, model work first where marked (M):

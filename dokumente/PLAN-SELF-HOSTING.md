@@ -56,17 +56,24 @@ freedom, contracts), proved terminating, deterministic and correct with GabbroV.
 * **Stage 2 is the goal of §1.** `gkomp` run by stage 1 emits LLVM IR; the compiled `gkomp` compiles itself again
   (fixpoint as before), and the diverse double compilation compares stage 1's interpretation with the native binary.
 
-**State of stage 0 (2026-10-26, `stage0/Stage0/`, moved from `grammatik/Grammatik/Boot/`).** `stage0` exists as a
-Lean executable (`cd stage0 && lake build`): `Boot.boot` runs the stages of `uebersetzeAllg`, refuses what `AkzeptiertX` refuses
-(`akzeptiertU`), refuses the forms whose meaning is a machine answer (foreign bodies, registers, atomics) and the open
-region (its provider is not yet fresh in the model: two `alloc T` in one world answer the same cell for every oracle),
-builds the declared initial memory (`sp0Of`) and runs `main` with `rufAt`. There are no gates yet: input and output are
-ordinary Gabbro, a table `io` with the fields `ein`/`aus` and the statics `ein_len`/`aus_len`. `boot_ist_maschine`:
-every output is the end world of `rufAt` on the pipeline's program; witness `Boot/Zeuge.lean` (call, branch, narrowing,
-loop; the kernel runs it). Measured: 0.55 s fixed cost, 4 KiB in 1.6 s, 16 KiB in 31 s -- quadratic, because a world
-slot is a chain of closures. Before stage 0 can run `gkomp` on its own source it needs (a) a world with array-backed
-slots, proved equal to the closure world, (b) the gates of the boot oracle over Lean `IO`, (c) the provider freshness
-repair of the open region in the model.
+**State of stage 0 (2026-10-26, `stage0/Stage0/`).** `stage0` is a Lean executable (`cd stage0 && lake build`;
+`stage0 [--schritte N] [--passes N] PROGRAM.gab`). It runs the stages of `uebersetzeAllg`, refuses what `AkzeptiertX`
+refuses (`akzeptiertU`), refuses device registers and the open region (its provider is not yet fresh in the model),
+and accepts a foreign body only as a `syscall` gate bound on this machine (`Tor/Bindung.lean`). The run is on the thread
+machine `RufMaschineG`: `Schritt/` computes one step of a thread together with its rule (`Zug`, all 84 rules of
+`RufSchrittG`), `Lauf/` starts `main` on thread 0 and the program's roots (`entry`, `concurrent`, `start { .. }`) on
+threads 1, 2, .. (`anfaengeVon`, `startG`). `Tor/LaufIO.lean` runs it in two phases: every machine thread on an OS
+thread of its own, each step under one futex world lock, every question answered by the raw system call outside the
+lock (`c/syscall.c`, the booked wall); then the schedule is replayed under the log of the observed answers.
+`nachspiel_ist_lauf`: every output is read from a machine reachable by `RufSchrittG` from the start machine under the
+oracle that answers with the observed results, in which thread 0 has ended. A program without gates gets its input
+in `io.ein`/`ein_len` and leaves its output in `io.aus`/`aus_len` (`boot`, kernel-evaluable; witness `Zeuge.lean`).
+The probes `stage0/proben/` (write, read, the convention, a root writing while `main` blocks in `read`) run in stage 7
+of the Lean guardian. Open before stage 0 can run stage 1: (a) a world with array-backed slots, proved equal to the
+closure world (measured 4096 slots of `traverse` in 13 s: a slot is a chain of closures, and every access lengthens
+the thread's trace); (b) the provider freshness repair of the open region in the model; (c) S0 written down as a
+checked list of forms; (d) the Rust exporter `lean_g.rs` still writes `aschreibt := false` for every gate and refuses
+a gate's `writes`, which the Lean front end and the model accept.
 
 ## 3. What is proved, for each tool
 

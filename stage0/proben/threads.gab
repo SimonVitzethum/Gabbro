@@ -1,0 +1,62 @@
+// stage-0 probe (instrumente/pruefe-lean.py stage 7): main blocks in read(2) while a concurrent root writes B on its own OS thread
+module stage0_probe {
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    Interrupted = 4 "interrupted"
+    exhaustive
+}
+assume linux_io_contract "Read and write keep their contracts." falsifier sonde_io;
+static mut ein_len : u32 in 0 .. 8 = 0;
+static mut aus_len : u32 in 0 .. 8 = 0;
+table io count 8 { slot { ein : u32 in 0 .. 255, aus : u32 in 0 .. 255, } }
+table puffer count 16 { slot { b : u32 in 0 .. 255, } }
+table pufferb count 4 { slot { b : u32 in 0 .. 255, } }
+syscall sys_read;
+syscall sys_write;
+syscall read(fd : u64, buf : ptr<normal, rw> puffer, len : u64) -> u64 in 0 .. 16 or IoError
+    via sys_read
+    effects { writes buf.slots }
+    costs <= 8 ops;
+syscall write(fd : u64, buf : ptr<normal, rw> puffer, len : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+syscall writeb(fd : u64, buf : ptr<normal, rw> pufferb, len : u64) -> u64 or IoError
+    via sys_write
+    effects { pure }
+    costs <= 8 ops;
+impl fn neben()
+    effects { writes pufferb.slots }
+{
+    pufferb.slots[0].b = 66;
+    pufferb.slots[1].b = 10;
+    let n = writeb(1, &pufferb, 2) else (e) {
+        return;
+    }
+}
+concurrent { neben };
+impl fn main(t : ptr<normal, rw> io, p : ptr<normal, rw> puffer)
+    effects { writes p.slots }
+{
+    let n = read(0, p, 16) else (e) {
+        return;
+    }
+    let m = write(1, p, n) else (e) {
+        return;
+    }
+}
+target linux_x86_64 abi linux arch x86_64 {
+    sys_read = number 0
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted }
+        assume linux_io_contract falsifier sonde_io;
+    sys_write = number 1
+        regs in { rdi = fd, rsi = buf, rdx = len }
+        regs out { rax }
+        clobbers { rcx, r11 }
+        errors { EBADF => BadFd, EINTR => Interrupted }
+        assume linux_io_contract falsifier sonde_io;
+}
+}

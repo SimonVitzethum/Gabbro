@@ -15,7 +15,9 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      `lake env lean` against the built model, so the Lean Bool `Akzeptiert` deciding the exported
      unit and `gabbro_ziel` instantiated on it are checked for every certified program.
   7. Stage 0 (`stage0/`, PLAN-SELF-HOSTING.md §2): `lake build` of the package (library and the executable
-     `stage0`); stage 3 covers its Lean files too.
+     `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
+     executable on `NAME.ein` (written after `NAME.warte` seconds when that file exists, so a thread blocked in
+     `read(2)` must leave the others running) and must print exactly `NAME.aus` with exit code 0.
   6. Coverage of the register by the program generator (`Gen/Abdeckung/`): `lake build gen-abdeckung`, then the
      native driver generates every program of the family up to the reference bounds and fails (exit 1) on a
      register member that no valid and no single-fault program contains and that is not a declared known gap
@@ -140,7 +142,31 @@ def stufe_stage0():
     jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", out)
     ok = rc == 0 and bool(jobs)
     print(f"  7 stage0:  {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else out.strip().splitlines()[-1:]})")
-    return ok
+    if not ok:
+        return False
+    exe = S0 / ".lake/build/bin/stage0"
+    proben = sorted((S0 / "proben").glob("*.gab"))
+    falsch = []
+    for gab in proben:
+        ein = gab.with_suffix(".ein").read_bytes()
+        warte = gab.with_suffix(".warte")
+        p = subprocess.Popen([str(exe), str(gab)], cwd=S0, env=ENV, stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            if warte.exists():
+                try:
+                    p.wait(timeout=float(warte.read_text()))
+                except subprocess.TimeoutExpired:
+                    pass
+            aus, err = p.communicate(ein, timeout=600)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            aus, err = p.communicate()
+        if p.returncode != 0 or aus != gab.with_suffix(".aus").read_bytes():
+            falsch.append(f"{gab.name} (rc {p.returncode}: {(aus + err)[:200]!r})")
+    print(f"  7 proben:  {'ok' if proben and not falsch else 'ROT'} ({len(proben) - len(falsch)} of {len(proben)})")
+    for f in falsch: print("     ", f)
+    return bool(proben) and not falsch
 
 
 def main():
