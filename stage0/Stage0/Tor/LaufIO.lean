@@ -3,13 +3,13 @@
   Subject:   **Stage 0 with real system calls on real OS threads.** Two phases:
 
   1. `faden` (IO): every running thread of the machine (`main` and the program's roots, `anfaengeVon`) runs on an OS
-     thread of its own. A step is taken under the world lock (`weltNimm`, a futex word): the thread's step by `zug`
-     under the oracle of the answers logged so far, filed in the schedule. A question (`frage?`) is answered by the
+     thread of its own. A step of the fast machine (`Schnell/`) is taken under the world lock (`weltNimm`, a futex
+     word), under the oracle of the answers logged so far, and filed in the schedule. A question (`frage?`) is answered by the
      real system call OUTSIDE the lock, so a thread blocked in the kernel holds up no other; the answer is filed
-     under its key (`schluesselVon`) and the thread steps with it. A thread that cannot step sleeps until another
+     under its key (`schluessel`) and the thread steps with it. A thread that cannot step sleeps until another
      one has stepped (`weltWarte`).
-  2. `nachspielen` (pure) replays the schedule from the start machine under the oracle of the WHOLE log, each step by
-     `zug`, every question it meets answered in the log. Its result carries `RufErreichbarG`: `nachspiel_ist_lauf`
+  2. `nachspielen` (pure) replays the schedule on the fast machine under the oracle of the WHOLE log, every question
+     it meets answered in the log. Its result carries `RufErreichbarG`: `nachspiel_ist_lauf`
      -- the run is a run of the thread machine under the oracle that answers with the observed system-call results.
 
   Two threads asking under one key could not be told apart by the oracle: phase 1 refuses that run instead of
@@ -24,14 +24,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.GabbroV
   Gabbro.Grammatik.Parser.Cover.Differenz
 
-/-- A machine whose threads outside `aktiv` hold nothing (the half of `Stand` that does not depend on the oracle). -/
-structure RStand (D : Deklaration) (aktiv : List Faden) where
-  M : RufMaschineG D
-  ruhe : ∀ g, g ∉ aktiv → offen (M.faeden g).spur = []
-
 /-- **What the threads of phase 1 share**, under the world lock. -/
-structure Geteilt (u : UProg) (aktiv : List Faden) where
-  s : RStand (declOf u) aktiv
+structure Geteilt (u : UProg) (n : Nat) where
+  s : FStand n (declOf u)
   log : List (Antwort (declOf u)) := []
   /-- The keys asked, with the thread that asked. -/
   wer : List ((Nat × List Int) × Faden) := []
@@ -41,32 +36,34 @@ structure Geteilt (u : UProg) (aktiv : List Faden) where
   /-- `some (.ok ())` once thread 0 has ended, `some (.error e)` once the run stopped. -/
   ende : Option (Except String Unit) := none
 
+/-- The key a question of thread `f` is answered under. -/
+def schluessel {u : UProg} {n : Nat} (s : FStand n (declOf u)) (f : Faden)
+    (q : Σ a : (declOf u).Ax, World (declOf u) × Env (declOf u) ((declOf u).aparams a)) : Nat × List Int :=
+  (fremdZahl q.2.1.spur + s.c f, kfVon u q.1 q.2.2)
+
 section Phase1
 
-variable (u : UProg) (P : Programm (declOf u)) (B : Budget) (tore : List Tor) {aktiv : List Faden}
-  (ref : IO.Ref (Geteilt u aktiv))
+variable (u : UProg) (P : Programm (declOf u)) (B : Budget) (tore : List Tor) (ww : World (declOf u))
+  (M0 : RufMaschineG (declOf u)) {n : Nat} (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = [])
+  (ref : IO.Ref (Geteilt u n))
 
 /-- Under the lock: the step of thread `f`, filed; `false` when it cannot step. -/
-def schritt (g : Geteilt u aktiv) (f : Faden) (hf : f ∈ aktiv) : IO Bool := do
-  match zug P (orakelLog (schluesselVon u) g.log) B.passes (orakelLog_treu _ _) g.s.M f aktiv g.s.ruhe with
-  | some z =>
-    let n := g.schritte + 1
-    let ende := if fertig z.1 0 then some (.ok ())
-      else if n ≥ B.schritte then some (.error "the step budget ran out") else none
-    ref.set { g with
-      s := ⟨z.1, fun h hh => by
-        rw [rufSchrittG_fremd z.2 h (fun e => hh (e ▸ hf))]
-        exact g.s.ruhe h hh⟩
-      plan := f :: g.plan, schritte := n, ende }
+def schritt (g : Geteilt u n) (f : Faden) : IO Bool := do
+  match g.s.schritt P (kfVon u) g.log B.passes ww M0 h0 f with
+  | some ⟨t, _⟩ =>
+    let k := g.schritte + 1
+    let ende := if fertig (t.F ww M0) 0 then some (.ok ())
+      else if k ≥ B.schritte then some (.error "the step budget ran out") else none
+    ref.set { g with s := t, plan := f :: g.plan, schritte := k, ende }
     pure true
   | none => pure false
 
 /-- Under the lock: stop the run with an error. -/
-def stopp (g : Geteilt u aktiv) (e : String) : IO Unit :=
+def stopp (g : Geteilt u n) (e : String) : IO Unit :=
   ref.set { g with ende := some (.error e) }
 
 /-- **One thread of phase 1**, until the run ends. -/
-partial def faden (f : Faden) (hf : f ∈ aktiv) : IO Unit := do
+partial def faden (f : Faden) : IO Unit := do
   weltNimm
   let g ← ref.get
   if g.ende.isSome then
@@ -80,21 +77,21 @@ partial def faden (f : Faden) (hf : f ∈ aktiv) : IO Unit := do
       let gen ← weltGeneration
       weltGib
       weltWarte gen
-    faden f hf
-  match frage? g.s.M f with
-  | none => weiter (← schritt u P B ref g f hf)
+    faden f
+  match frage? (g.s.F ww M0) f with
+  | none => weiter (← schritt u P B ww M0 h0 ref g f)
   | some q =>
-    let k := schluesselVon u q.1 q.2.1 q.2.2
+    let k := schluessel g.s f q
     match g.wer.find? (·.1 == k) with
     | some (_, h) =>
-      if h == f then weiter (← schritt u P B ref g f hf)
+      if h == f then weiter (← schritt u P B ww M0 h0 ref g f)
       else
         stopp u ref g s!"threads {h} and {f} ask under the same key; the oracle cannot tell them apart"
         weiter true
     | none =>
       ref.set { g with wer := (k, f) :: g.wer }
       weltGib
-      let a ← (ausfuehren u tore q).toBaseIO
+      let a ← (ausfuehren u tore (g.s.c f) q).toBaseIO
       weltNimm
       let g ← ref.get
       match a with
@@ -103,9 +100,9 @@ partial def faden (f : Faden) (hf : f ∈ aktiv) : IO Unit := do
         weiter true
       | .ok a =>
         let g := { g with log := g.log ++ [a] }
-        match frage? g.s.M f with
+        match frage? (g.s.F ww M0) f with
         | some q' =>
-          if schluesselVon u q'.1 q'.2.1 q'.2.2 == k then weiter (← schritt u P B ref g f hf)
+          if schluessel g.s f q' == k then weiter (← schritt u P B ww M0 h0 ref g f)
           else
             stopp u ref g "the arguments of a system call moved while it ran"
             weiter true
@@ -116,25 +113,22 @@ partial def faden (f : Faden) (hf : f ∈ aktiv) : IO Unit := do
 end Phase1
 
 /-- The replay meets a question: it must be answered in the log. -/
-def frageImLog (u : UProg) (log : List (Antwort (declOf u))) (M : RufMaschineG (declOf u)) (f : Faden) : Bool :=
-  match frage? M f with
-  | some q => log.any (·.schluessel == schluesselVon u q.1 q.2.1 q.2.2)
+def frageImLog {u : UProg} {n : Nat} (log : List (Antwort (declOf u))) (ww : World (declOf u))
+    (M0 : RufMaschineG (declOf u)) (s : FStand n (declOf u)) (f : Faden) : Bool :=
+  match frage? (s.F ww M0) f with
+  | some q => log.any (·.schluessel == schluessel s f q)
   | none => true
 
 /-- **Phase 2**: replay the schedule under the oracle of the whole log. -/
 def nachspielen (u : UProg) (P : Programm (declOf u)) (passes : Nat) (log : List (Antwort (declOf u)))
-    {M0 : RufMaschineG (declOf u)} {aktiv : List Faden} :
-    List Faden → Stand P (orakelLog (schluesselVon u) log) passes M0 aktiv →
-      Except String (Stand P (orakelLog (schluesselVon u) log) passes M0 aktiv)
+    (ww : World (declOf u)) (M0 : RufMaschineG (declOf u)) {n : Nat} (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = []) :
+    List Faden → SStand P (kfVon u) log passes ww M0 n → Except String (SStand P (kfVon u) log passes ww M0 n)
   | [], s => .ok s
   | f :: plan, s =>
-    if hf : f ∈ aktiv then
-      if frageImLog u log s.M f then
-        match zug P (orakelLog (schluesselVon u) log) passes (orakelLog_treu _ _) s.M f aktiv s.ruhe with
-        | some z =>
-          nachspielen u P passes log plan ⟨z.1, .schritt _ _ f s.erreicht z.2, fun g hg => by
-            rw [rufSchrittG_fremd z.2 g (fun e => hg (e ▸ hf))]
-            exact s.ruhe g hg⟩
+    if hf : f < n then
+      if frageImLog log ww M0 s.s f then
+        match s.schritt h0 f hf with
+        | some s' => nachspielen u P passes log ww M0 h0 plan s'
         | none => .error "the replay does not step where the run did"
       else .error "the replay asks a question the run did not answer"
     else .error "the schedule names a thread that does not run"
@@ -143,8 +137,10 @@ def nachspielen (u : UProg) (P : Programm (declOf u)) (passes : Nat) (log : List
 def nachspiel (u : UProg) (P : Programm (declOf u)) (o : Orte u) (B : Budget) (σ : World (declOf u)) (m : Anfang u)
     (rs : List (Anfang u)) (hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true)
     (log : List (Antwort (declOf u))) (plan : List Faden) : Except String (List UInt8) := do
-  let s ← nachspielen u P B.passes log plan (Stand.start _ _ (startG_ruhe P σ m rs hl))
-  if fertig s.M 0 then ausgabe u o (s.M.weltVon 0) else throw "main did not end"
+  let s ← nachspielen u P B.passes log σ (startG P σ m rs) (startG_ruhe P σ m rs hl) plan
+    (SStand.start P (kfVon u) log B.passes σ (startG P σ m rs) (rs.length + 1))
+  let F := s.s.F σ (startG P σ m rs)
+  if fertig F 0 then ausgabe u o (F.weltVon 0) else throw "main did not end"
 
 /-- **The run with system calls is the thread machine**: every output of the replay is read from a machine reachable
     from the start machine by `RufSchrittG` under the oracle answering with the observed system-call results, in
@@ -153,15 +149,22 @@ theorem nachspiel_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B
     {m : Anfang u} {rs : List (Anfang u)} {hl} {log : List (Antwort (declOf u))} {plan : List Faden}
     {aus : List UInt8} (h : nachspiel u P o B σ m rs hl log plan = .ok aus) :
     ∃ M : RufMaschineG (declOf u),
-      RufErreichbarG P (orakelLog (schluesselVon u) log) B.passes (startG P σ m rs) M ∧ fertig M 0 = true ∧
+      RufErreichbarG P (orakelZ (kfVon u) 0 log) B.passes (startG P σ m rs) M ∧ fertig M 0 = true ∧
         ausgabe u o (M.weltVon 0) = .ok aus := by
   unfold nachspiel at h
   simp only [bind, Except.bind] at h
   split at h
   · cases h
   · rename_i s _
+    obtain ⟨M, hr, hF⟩ := s.steht
     split at h
-    · exact ⟨s.M, s.erreicht, by assumption, h⟩
+    · rename_i hf
+      refine ⟨M, hr, ?_, ?_⟩
+      · rw [hF, fertig_normal] at hf
+        exact hf
+      · rw [hF] at h
+        rw [← h]
+        exact ausgabe_welt o _ _ _
     · cases h
 
 /-- The subset of stage 0 with system calls: every foreign body is a gate bound on this machine; no device register,
@@ -171,14 +174,14 @@ def imKernIO (u : UProg) (tore : List Tor) : Bool :=
 
 /-- **Phase 1 on OS threads**: thread 0 on the calling thread, every other running thread on a dedicated one. The
     log and the schedule once the run ended. -/
-def mehrfach (u : UProg) (P : Programm (declOf u)) (B : Budget) (tore : List Tor) {aktiv : List Faden}
-    (s0 : RStand (declOf u) aktiv) (h0 : 0 ∈ aktiv) :
+def mehrfach (u : UProg) (P : Programm (declOf u)) (B : Budget) (tore : List Tor) (ww : World (declOf u))
+    (M0 : RufMaschineG (declOf u)) {n : Nat} (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = []) :
     IO (Except String (List (Antwort (declOf u)) × List Faden)) := do
-  let ref ← IO.mkRef ({ s := s0 } : Geteilt u aktiv)
-  for ⟨f, hf⟩ in aktiv.attach do
+  let ref ← IO.mkRef ({ s := FStand.start ww M0 n } : Geteilt u n)
+  for f in List.range n do
     if f != 0 then
-      let _ ← IO.asTask (prio := .dedicated) (faden u P B tore ref f hf)
-  faden u P B tore ref 0 h0
+      let _ ← IO.asTask (prio := .dedicated) (faden u P B tore ww M0 h0 ref f)
+  faden u P B tore ww M0 h0 ref 0
   let g ← ref.get
   match g.ende with
   | some (.error e) => pure (.error e)
@@ -214,8 +217,8 @@ def bootIO (B : Budget) (src : String) (ein : IO (List UInt8)) : IO (Except Stri
                 | .error e => pure (.error e)
                 | .ok σ =>
                   if hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true then
-                    let s0 : RStand (declOf u) (aktivVon rs) := ⟨startG P σ m rs, startG_ruhe P σ m rs hl⟩
-                    match ← mehrfach u P B tore s0 (by simp [aktivVon]) with
+                    match ← mehrfach u P B tore σ (startG P σ m rs) (n := rs.length + 1)
+                        (startG_ruhe P σ m rs hl) with
                     | .error e => pure (.error e)
                     | .ok (log, plan) => pure (nachspiel u P o B σ m rs hl log plan)
                   else pure (.error "main holds locks by signature")

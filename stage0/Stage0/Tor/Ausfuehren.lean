@@ -11,36 +11,12 @@ import Stage0.Tor.Roh
 import Stage0.Tor.Bindung
 import Stage0.Tor.Orakel
 import Stage0.Tor.Frage
+import Stage0.Tor.Worte
+import Stage0.Schnell.Kompakt
 
 namespace Gabbro.Stage0
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg
-
-/-- An argument as the machine sees it: a number, or a table handed by pointer. -/
-inductive ArgWort (u : UProg)
-  | zahl (z : Int)
-  | puffer (t : (declOf u).Tab) (rw : Bool)
-
-/-- The argument words of an argument list. -/
-def argWorte (u : UProg) : (Γ : List Ty) → Env (declOf u) Γ → Except String (List (ArgWort u))
-  | [], .nil => .ok []
-  | .int _ _ :: Γ, .cons v ρ => return .zahl v.n :: (← argWorte u Γ ρ)
-  | .bool :: Γ, .cons v ρ => return .zahl (cond (show Bool from v) 1 0) :: (← argWorte u Γ ρ)
-  | .ptr n rw :: Γ, .cons _ ρ =>
-    match (declOf u).tabNr n with
-    | some t => return .puffer t rw :: (← argWorte u Γ ρ)
-    | none => .error "a pointer to no table"
-  | _ :: _, .cons _ _ => .error "an argument of a type a system call does not take"
-
-/-- An argument word as a number of the key: a table by `-1 - t`. -/
-def ArgWort.zahlVon {u : UProg} : ArgWort u → Int
-  | .zahl z => z
-  | .puffer t _ => -1 - (t.val : Int)
-
-/-- **The key of a question**: the length of the asking thread's trace, the gate, the argument words. -/
-def schluesselVon (u : UProg) (a : (declOf u).Ax) (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).aparams a)) :
-    Nat × List Int :=
-  (σ.spur.length, (a.val : Int) :: ((argWorte u _ ρ).toOption.getD []).map ArgWort.zahlVon)
 
 /-- The byte field of a table: its first field typed `0 .. 255`. -/
 def bytFeld (u : UProg) (t : (declOf u).Tab) : Option ((declOf u).Feld t) :=
@@ -79,8 +55,9 @@ def rohVon (tor : Tor) (n : Nat) (rax : Int) : Int :=
 /-- The signed value of a kernel word. -/
 def vorzeichen (w : UInt64) : Int := if w < 0x8000000000000000 then w.toNat else (w.toNat : Int) - 18446744073709551616
 
-/-- **Answer the question `q` by the real system call** of its gate. -/
-def ausfuehren (u : UProg) (tore : List Tor) (q : Σ a : (declOf u).Ax, World (declOf u) × Env (declOf u) ((declOf u).aparams a)) :
+/-- **Answer the question `q` by the real system call** of its gate; the asking thread's compact trace dropped `c`
+    questions. -/
+def ausfuehren (u : UProg) (tore : List Tor) (c : Nat) (q : Σ a : (declOf u).Ax, World (declOf u) × Env (declOf u) ((declOf u).aparams a)) :
     IO (Antwort (declOf u)) := do
   let ⟨a, σq, ρa⟩ := q
   let name := (uaxAt u a).name
@@ -111,6 +88,6 @@ def ausfuehren (u : UProg) (tore : List Tor) (q : Σ a : (declOf u).Ax, World (d
   let slots := match feld with
     | some ⟨t, f, true⟩ => mitBytes u t f buf'
     | _ => id
-  pure ⟨schluesselVon u a σq ρa, rohVon tor ((declOf u).agruende a) (vorzeichen rax), slots, ws.map ArgWort.zahlVon⟩
+  pure ⟨(fremdZahl σq.spur + c, kfVon u a ρa), rohVon tor ((declOf u).agruende a) (vorzeichen rax), slots, ws.map ArgWort.zahlVon⟩
 
 end Gabbro.Stage0

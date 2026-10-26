@@ -1,11 +1,13 @@
 /-
   File:      stage0/Stage0/Lauf/Boot.lean
   Subject:   Stage 0 on the thread machine: the pipeline and the checker as in `Laufzeit.lean`, then the start machine
-             `RufStartG` with `main` on thread 0 and the program's roots on threads 1, 2, .., run by the driver. `boot_ist_lauf`: every output is read from a
-             machine REACHABLE from the start machine by steps of `RufSchrittG`, in which thread 0 has ended.
+             `RufStartG` with `main` on thread 0 and the program's roots on threads 1, 2, .., run by the fast machine
+             (`Schnell/`). `boot_ist_lauf`: every output is read from a machine REACHABLE from the start machine by
+             steps of `RufSchrittG`, in which thread 0 has ended.
 -/
 import Stage0.Laufzeit
-import Stage0.Lauf.Treiber
+import Stage0.Schnell.Lauf
+import Stage0.Tor.Worte
 
 namespace Gabbro.Stage0
 
@@ -13,8 +15,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.GabbroV
   Gabbro.Grammatik.Parser.Cover.Differenz
 
-/-- The machine's answers for a unit of the subset keep the trace. -/
-theorem orakelLeer_treu (D : Deklaration) : OrakelSpurTreu (orakelLeer D) := fun _ _ _ => rfl
+/-- The oracle of an empty log is the machine that is never asked. -/
+theorem orakelZ_leer {D : Deklaration} (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (c : Nat) :
+    orakelZ kf c [] = orakelLeer D := rfl
 
 /-- A thread's start: its root and its arguments. -/
 abbrev Anfang (u : UProg) := Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f)
@@ -38,27 +41,35 @@ def startG {u : UProg} (P : Programm (declOf u)) (σ : World (declOf u)) (m : An
     RufMaschineG (declOf u) :=
   RufStartG P σ.speicher (fun t => (m :: rs).getD t m)
 
-/-- The running threads: `main` and one for each root. -/
-def aktivVon {u : UProg} (rs : List (Anfang u)) : List Faden := List.range (rs.length + 1)
-
 theorem startG_ruhe {u : UProg} (P : Programm (declOf u)) (σ : World (declOf u)) (m : Anfang u)
     (rs : List (Anfang u)) (hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true) :
-    ∀ g, g ∉ aktivVon rs → offen ((startG P σ m rs).faeden g).spur = [] := by
+    ∀ g, rs.length + 1 ≤ g → offen ((startG P σ m rs).faeden g).spur = [] := by
   intro g hg
   have hd : (m :: rs).getD g m = m := by
-    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by simp [aktivVon] at hg; simp; omega)]
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by simp; omega)]
     rfl
   simp only [startG, RufStartG, hd]
   simpa using hl
 
-/-- **Run the threads on the thread machine** and read the output of the world thread 0 ended in. -/
+/-- The output depends on the memory only. -/
+theorem ausgabe_welt {u : UProg} (o : Orte u) (S : Speicher (declOf u)) (s s' : List (Ereignis (declOf u))) :
+    ausgabe u o (S.welt s) = ausgabe u o (S.welt s') := by
+  have hl : ∀ k, leseAus u o (S.welt s) k = leseAus u o (S.welt s') k := by
+    intro k
+    induction k with
+    | zero => rfl
+    | succ k ih => simp only [leseAus, ih]; rfl
+  simp only [ausgabe, hl]
+  rfl
+
+/-- **Run the threads on the fast machine** and read the output of the world thread 0 ended in. -/
 def lauf (u : UProg) (P : Programm (declOf u)) (o : Orte u) (B : Budget) (σ : World (declOf u)) (m : Anfang u)
     (rs : List (Anfang u)) : Except String (List UInt8) :=
   if hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true then
-    let s0 : Stand P (orakelLeer (declOf u)) B.passes (startG P σ m rs) (aktivVon rs) :=
-      Stand.start _ _ (startG_ruhe P σ m rs hl)
-    let (s, _) := s0.laufe (orakelLeer_treu _) B.schritte ((aktivVon rs).attach) []
-    if fertig s.M 0 then ausgabe u o (s.M.weltVon 0) else .error "main did not end within the step budget"
+    let s0 := SStand.start P (kfVon u) [] B.passes σ (startG P σ m rs) (rs.length + 1)
+    let (s, _) := s0.laufe (startG_ruhe P σ m rs hl) B.schritte (alleN (rs.length + 1)) []
+    let F := s.s.F σ (startG P σ m rs)
+    if fertig F 0 then ausgabe u o (F.weltVon 0) else .error "main did not end within the step budget"
   else .error "main holds locks by signature"
 
 /-- **STAGE 0 on the thread machine**: check, then run a program of the subset on its input bytes. -/
@@ -101,7 +112,14 @@ theorem lauf_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B : Bu
   · simp only at h
     split at h
     · rename_i hf
-      exact ⟨_, Stand.erreicht _, hf, h⟩
+      obtain ⟨M, hr, hF⟩ := SStand.steht (SStand.laufe _ B.schritte _ _ [] |>.1)
+      rw [orakelZ_leer] at hr
+      refine ⟨M, hr, ?_, ?_⟩
+      · rw [hF, fertig_normal] at hf
+        exact hf
+      · rw [hF] at h
+        rw [← h]
+        exact ausgabe_welt o _ _ _
     · cases h
   · cases h
 

@@ -9,7 +9,7 @@ import Stage0.Schritt.Ruf
 import Stage0.Schritt.Rueck
 import Stage0.Schritt.Geraet
 import Stage0.Schritt.Zug
-import Stage0.Lauf.Treiber
+import Stage0.Lauf.Fertig
 import Stage0.Lauf.Boot
 import Stage0.Tor.Roh
 import Stage0.Tor.Bindung
@@ -30,3 +30,6 @@ import Stage0.Schnell.Sim.SF
 import Stage0.Schnell.Sim.SG
 import Stage0.Schnell.Sim.SH
 import Stage0.Schnell.Sim
+import Stage0.Schnell.Orakel
+import Stage0.Schnell.Stand
+import Stage0.Schnell.Lauf

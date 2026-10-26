@@ -7,7 +7,8 @@
              machine's tail `sM`; `Paar sF sM σF σM`: two worlds of one step, one memory, the same new events in
              front of the two tails. Every world operation of the semantics keeps `Paar`.
 -/
-import Grammatik
+import Grammatik.Logik.Ruf.RufLogik
+import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 
 namespace Gabbro.Stage0
 
