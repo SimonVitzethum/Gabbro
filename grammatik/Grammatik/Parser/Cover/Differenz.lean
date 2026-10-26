@@ -33,9 +33,25 @@ open Gabbro.Grammatik.Zielsatz
 def wurzelIdx (u : UProg) (name : String) : Option (Fin u.fns.length) :=
   (List.finRange u.fns.length).find? fun f => (fnAt u f).name == name
 
+/-- A function with no parameters: the scope of a lock invariant. -/
+def leerFn : UFn :=
+  { name := "", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [], ret := .empty }
+
+/-- Every lock held: a lock invariant reads its carriers under its own guards. -/
+def alleGehalten (u : UProg) : List (Res (declOf u)) :=
+  (List.finRange u.locks.length).map (Res.held (D := declOf u))
+
+/-- The lock invariant of `L` as a term, if it has one (and it lowers). -/
+def sperrInvTerm (u : UProg) (L : Fin u.locks.length) : Option (Expr (declOf u) [] (alleGehalten u) .bool) :=
+  (lockAt u L).inv.bind fun p => (lowEns u [] (alleGehalten u) leerFn none p).toOption
+
+/-- Every declared lock invariant lowers (a refusal otherwise: the family would read it as false). -/
+def sperrInvsOk (u : UProg) : Bool :=
+  (List.finRange u.locks.length).all fun L => (lockAt u L).inv.isNone || (sperrInvTerm u L).isSome
+
 /-- **The lock family of an elaborated unit**: the carriers each lock protects (the tables and the statics whose guard
-    list names it), and no invariant predicate (`fun _ _ => true`) -- the family the exporter writes as
-    `gS` for a lock without an `invariant` clause. (`SperrInv.leer` protects NOTHING, so the footprint
+    list names it), and its `invariant` evaluated over the memory (`true` without one) -- the family the exporter
+    writes as `gS`. (`SperrInv.leer` protects NOTHING, so the footprint
     component would refuse every read under a lock.) -/
 def sperrFamilie (u : UProg) : SperrInv (declOf u) :=
   { orte := fun L =>
@@ -47,7 +63,9 @@ def sperrFamilie (u : UProg) : SperrInv (declOf u) :=
         ((declOf u).gbraucht g).any fun x => match x with
           | .inl l => l == L
           | .inr _ => false).map Sum.inr
-    inv := fun _ _ => true }
+    inv := fun L s => match sperrInvTerm u L with
+      | some e => wahr? (eval (s.welt []) e (s.welt []) Env.nil)
+      | none => (lockAt u L).inv.isNone }
 
 /-- **The checker of the goal theorem on an elaborated unit**: the lowered program, the lock family
     `sperrFamilie`, every lock and every carrier (tables then statics) enumerated, the thread roots of the
@@ -56,6 +74,7 @@ def akzeptiertU (u : UProg) : Except String Bool :=
   match lowerAllg u with
   | .error e => .error e
   | .ok (P, fs) =>
+    if !sperrInvsOk u then .error "lock invariant without G form" else
     haveI : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
     let ws : List (declOf u).Fn := (u.roots ++ u.gestartet ++ u.gestartet).filterMap fun n => wurzelIdx u n
     let ls : List (declOf u).Lock := List.finRange u.locks.length

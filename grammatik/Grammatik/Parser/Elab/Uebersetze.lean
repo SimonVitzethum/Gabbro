@@ -350,6 +350,9 @@ structure ULock where
   guard : List String
   /-- `masks irqs`: taking the lock masks interrupts (`D.maskiert`, lane 255). -/
   masks : Bool := false
+  /-- `invariant p`: the lock invariant over the carriers it protects (`SperrInv.inv`, re-established at every
+      release -- a duty of the user, not owed at a `return`). -/
+  inv : Option UEns := none
   deriving DecidableEq, Repr
 
 /-- The type of a static: ONE value, an integer range, `bool`, or an aggregate (`Ty.arr`, `Ty.str`). -/
@@ -1180,16 +1183,18 @@ def uSchutzAux (globs : List UGlob) : List UTab → List SExpr → Except String
     and the shared hold have no G form; the `held` budget is
     ignored like `costs` (both travel nowhere). -/
 def uSperre (globs : List UGlob) (tabs : List UTab) : SItemTief → Except String ULock
-  | .lockT n ps (.lit rk) _ .none .none _ =>
-    match uSchutzAux globs tabs ps with
+  | .lockT n ps (.lit rk) _ .none m _ =>
+    match (match m with
+        | .none => .ok false
+        | .some w => if strEq w "irqs" then .ok true else .error "lock masks something but irqs: no G form"
+        : Except String Bool) with
     | .error e => .error e
-    | .ok ts => .ok { name := n, rank := Int.ofNat rk, guard := ts }
-  | .lockT n ps (.lit rk) _ .none (.some m) _ =>
-    if strEq m "irqs" then
+    | .ok masks =>
       match uSchutzAux globs tabs ps with
       | .error e => .error e
-      | .ok ts => .ok { name := n, rank := Int.ofNat rk, guard := ts, masks := true }
-    else .error "lock masks something but irqs: no G form"
+      | .ok ts =>
+        -- the `invariant` is read once the predicates can be (`uSperrInvs`)
+        .ok { name := n, rank := Int.ofNat rk, guard := ts, masks }
   | .lockT n .. => .error ("lock without G form: " ++ n)
   | _ => .error "lock without G form"
 
@@ -4026,6 +4031,20 @@ def uInv (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     | .error e => .error e
     | .ok p => .ok { name := g.name, traeger, pred := p }
 
+/-- The `invariant p` of each lock, read with the lock held: the predicate names the protected carriers and
+    constants only (`N275`). -/
+def uSperrInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))) (globs : List UGlob)
+    (tabs : List UTab) (ms : List SItemTief) (locks : List ULock) : Except String (List ULock) :=
+  uSeq (locks.map fun l =>
+    match ms.findSome? (fun m => match m with | .lockT n _ _ _ _ _ p => if strEq n l.name then some p else none | _ => none) with
+    | some (some e) =>
+      let ctx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [l.name], res := none,
+                          fname := l.name, alias, lits := consts, globs }
+      match uBool ctx e with
+      | .error x => .error x
+      | .ok p => .ok { l with inv := some p }
+    | _ => .ok l)
+
 /-- The invariants of the unit: those of each table, in table order, then those of each `group`. -/
 def uInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (ms : List SItemTief) : Except String (List UInv) :=
@@ -4037,16 +4056,7 @@ def uInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))
   let ausGruppe := ms.flatMap fun it => match it with
     | .groupT _ ts gs => gs.map (uInv consts alias tabs locks globs ts)
     | _ => []
-  -- `lock L protects { A, B } invariant p`: an invariant over the tables the lock guards, like a group's
-  let ausSperre := ms.flatMap fun it => match it with
-    | .lockT n ps _ _ _ _ (.some e) =>
-      [uInv consts alias tabs locks globs
-        (ps.filterMap fun p => match p with
-          | .variable t => if tabs.any (fun x => strEq x.name t) then some t else none
-          | _ => none)
-        { name := n ++ "#invariant", kosten := .lit 0, online := false, proof := none, pred := e }]
-    | _ => []
-  uSeq (ausTab ++ ausGruppe ++ ausSperre)
+  uSeq (ausTab ++ ausGruppe)
 
 /-- `U003`: a function that writes a carrier of an invariant holds (by `requires Held(..)`) every lock that
     guards a carrier of it -- it owes the invariant at its `return` and reads all of them there. -/
@@ -4425,6 +4435,9 @@ def elabU : List SItemTief → Except String UProg
     | .ok globs =>
     match uSeq ((ms.filter (fun
         | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre globs tabs)) with
+    | .error e => .error e
+    | .ok locks0 =>
+    match uSperrInvs consts alias globs tabs ms locks0 with
     | .error e => .error e
     | .ok locks =>
     let bewacht : String → Bool := fun c => locks.any (fun l => l.guard.any (strEq · c))
