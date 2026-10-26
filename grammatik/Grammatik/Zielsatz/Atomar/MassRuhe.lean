@@ -266,6 +266,9 @@ theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock
   | _, _, _, .bindCallInd _ _ _ _ _ rest, eb, ie => by
       simp only [ruEnd, befE, befund_und_ewig]
       exact kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
+  | _, _, _, .narrow _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruEnd rest eb ie)
+  | _, _, _, .exchange _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .ite _ t e, eb, ie => kongr₂ (· || ·) (ewig_ruEnd e eb ie) (ewig_ruEnd t eb ie)
 
 theorem ewig_ruArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     (arms : Arms D V l Γ Λ Λ' cs) (eb ie : Bool), (befArms eb ie (ruArms arms)).ewig = (befArms eb ie arms).ewig

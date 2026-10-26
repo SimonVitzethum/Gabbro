@@ -154,6 +154,12 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | bindCallInd p args he hp hr rest =>
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
+  | narrow e lo' hi' sonst rest =>
+      exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
+  | exchange g neu hw hL rest =>
+      exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
+  | ite c t' e =>
+      exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | bindAxiom a args he hw hg hd hgd rest =>
       rcases hax : axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with

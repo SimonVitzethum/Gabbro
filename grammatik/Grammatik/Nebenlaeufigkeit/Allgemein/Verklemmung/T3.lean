@@ -187,6 +187,17 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd (n := n) _ _ _ _ _ rest, h => by
       simp only [mE, Bool.and_eq_true]
       exact ⟨hi n, mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
+  | .narrow _ _ _ sonst rest, h => by
+      simp only [mE, Bool.and_eq_true]
+      exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
+        mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
+  | .exchange _ _ _ _ rest, h => by
+      simp only [mE]
+      exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
+  | .ite _ t e, h => by
+      simp only [mE, Bool.and_eq_true]
+      exact ⟨mE_boden t fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
+        mE_boden e fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
 
 end
 

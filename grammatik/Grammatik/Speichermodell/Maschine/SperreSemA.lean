@@ -277,6 +277,21 @@ theorem Endblock.execBlockHA_alsBlock :
         exact keinGrundSig hf hr r
       · rfl
       · rfl
+  | _, _, .narrow e lo' hi' sonst rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · rw [Endblock.execBlockHA_alsBlock rest]
+        cases execEndHA S O U A passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .exchange g neu hw hL rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      rw [Endblock.execBlockHA_alsBlock rest]
+      cases execEndHA S O U A passes R rest _ _ <;> rfl
+  | _, _, .ite c t e, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · exact Endblock.execBlockHA_alsBlock t _ _
+      · rfl
 
 /-- Past `abbruch`, an end outcome continues as without it. -/
 theorem weiterHA_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :

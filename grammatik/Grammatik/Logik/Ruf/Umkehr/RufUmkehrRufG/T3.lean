@@ -173,6 +173,12 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .awaits .. => rfl
 
   | _, _, .bindCallInd .. => rfl
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock t, Bool.and_comm]
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndR.alsBlock {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} :

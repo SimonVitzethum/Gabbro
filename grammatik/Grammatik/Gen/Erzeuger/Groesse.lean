@@ -171,6 +171,10 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .regReadElse _ _ z sonst rest => 1 + groesseExpr z + groesseEnd sonst + groesseEnd rest
   | _, _, _, .awaits _ _ _ _ _ rest => 1 + groesseEnd rest
   | _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseEnd rest
+  -- the end-block forms of stage 0 are not drawn yet (TODO.md): their size lies beyond every bound
+  | _, _, _, .narrow e _ _ sonst rest => unendlich + 1 + groesseExpr e + groesseEnd sonst + groesseEnd rest
+  | _, _, _, .exchange _ neu _ _ rest => unendlich + 1 + groesseExpr neu + groesseEnd rest
+  | _, _, _, .ite c t e => unendlich + 1 + groesseExpr c + groesseEnd t + groesseEnd e
 
 def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
     Arms D V l Γ Λ Λ' cs → Nat

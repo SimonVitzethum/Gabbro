@@ -185,6 +185,9 @@ def kEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D 
   | .regReadElse .. => 11
   | .awaits .. => 12
   | .bindCallInd .. => 13
+  | .narrow .. => 14
+  | .exchange .. => 15
+  | .ite .. => 16
 
 def kArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil .. => 0
@@ -329,6 +332,9 @@ def fzEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D
   | .regReadElse (zusage := zusage) (sonst := sonst) (rest := rest) .. => [⟨0, 6, 11, l, [tk zusage]⟩, ⟨1, 6, 11, l, [0, 0, kE zusage]⟩, ⟨1, 6, 11, l, [1, 6, kEnd sonst]⟩, ⟨1, 6, 11, l, [2, 6, kEnd rest]⟩] ++ fzE zusage ++ fzEnd sonst ++ fzEnd rest
   | .awaits (rest := rest) .. => [⟨0, 6, 12, l, []⟩, ⟨1, 6, 12, l, [0, 6, kEnd rest]⟩] ++ fzEnd rest
   | .bindCallInd (p := p) (args := args) (rest := rest) .. => [⟨0, 6, 13, l, [tk p]⟩, ⟨1, 6, 13, l, [0, 0, kE p]⟩, ⟨1, 6, 13, l, [1, 2, kA args]⟩, ⟨1, 6, 13, l, [2, 6, kEnd rest]⟩] ++ fzE p ++ fzA args ++ fzEnd rest
+  | .narrow (e := e) (sonst := sonst) (rest := rest) .. => [⟨0, 6, 14, l, [tk e]⟩, ⟨1, 6, 14, l, [0, 0, kE e]⟩, ⟨1, 6, 14, l, [1, 6, kEnd sonst]⟩, ⟨1, 6, 14, l, [2, 6, kEnd rest]⟩] ++ fzE e ++ fzEnd sonst ++ fzEnd rest
+  | .exchange (neu := neu) (rest := rest) .. => [⟨0, 6, 15, l, [tk neu]⟩, ⟨1, 6, 15, l, [0, 0, kE neu]⟩, ⟨1, 6, 15, l, [1, 6, kEnd rest]⟩] ++ fzE neu ++ fzEnd rest
+  | .ite (c := c) (t := t) (e := e) .. => [⟨0, 6, 16, l, [tk c]⟩, ⟨1, 6, 16, l, [0, 0, kE c]⟩, ⟨1, 6, 16, l, [1, 6, kEnd t]⟩, ⟨1, 6, 16, l, [2, 6, kEnd e]⟩] ++ fzE c ++ fzEnd t ++ fzEnd e
 
 def fzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List FZelle
   | .nil .. => [⟨0, 7, 0, l, []⟩]

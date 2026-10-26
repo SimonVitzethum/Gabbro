@@ -49,6 +49,10 @@ def G_AGGREGAT : String :=
   "aggregate values (THEOREM-MAP 99): the generator gives arrays and strings the size `unendlich` and never draws " ++
   "them (TODO.md §2, generator support for aggregates)"
 
+def G_ENDFORM : String :=
+  "end-block forms (THEOREM-MAP 102): the generator gives them the size `unendlich` and never draws them; each " ++
+  "unfolds to its block form (`Endblock.alsBlock`), whose cells are drawn"
+
 /-- **The known gaps**: members of the register that no generated program contains within the bounds, each with the
     reason. The list is exact: a gap that is closed is removed, a new gap is a failure. -/
 def bekannteLuecken : List (String × String) :=
@@ -104,6 +108,9 @@ def bekannteLuecken : List (String × String) :=
    ("Endblock.next", G_ZUSTAND),
    ("Endblock.bindAxiomElse", G_GROESSE),
    ("Endblock.bindCallInd", G_GROESSE),
+   ("Endblock.narrow", G_ENDFORM),
+   ("Endblock.exchange", G_ENDFORM),
+   ("Endblock.ite", G_ENDFORM),
    ("Arms.nil", G_GROESSE),
    ("Arms.cons", G_GROESSE),
    ("GrundArms.nil", G_GROESSE),

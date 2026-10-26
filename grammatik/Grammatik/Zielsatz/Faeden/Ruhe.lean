@@ -124,6 +124,9 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       congrArg (Sum.inr r :: ·) (kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest))
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_ants rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => (ants_umΛ _ _).trans (ruEnd_ants rest)
+  | _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest)
+  | _, _, _, .exchange _ _ _ _ rest => ruEnd_ants rest
+  | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_ants e) (ruEnd_ants t)
 
 theorem ruArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),

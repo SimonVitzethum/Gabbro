@@ -234,6 +234,9 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .regReadElse _ _ _ _ rest => endStmts rest
   | _, _, _, .awaits _ _ _ _ _ rest => endStmts rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => endStmts rest
+  | _, _, _, .narrow _ _ _ _ rest => endStmts rest
+  | _, _, _, .exchange _ _ _ _ rest => endStmts rest
+  | _, _, _, .ite .. => []
   | _, _, _, .ret .. => []
   | _, _, _, .retWhy .. => []
   | _, _, _, .leave .. => []
@@ -324,6 +327,10 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
     "Endblock.regReadElse" :: "Deklaration.rzusage" :: klasseM (D.rklasse r) ++ exprM z ++ endM sonst ++ endM rest
   | _, _, _, .awaits _ _ _ _ _ rest => "Endblock.awaits" :: endM rest
   | _, _, _, .bindCallInd p args _ _ _ rest => "Endblock.bindCallInd" :: passtM ++ exprM p ++ argsM args ++ endM rest
+  | _, _, _, .narrow e _ _ sonst rest =>
+    "Endblock.narrow" :: exprM e ++ endM sonst ++ endM rest ++ paare "Endblock.narrow" (endStmts sonst)
+  | _, _, _, .exchange _ neu _ _ rest => "Endblock.exchange" :: exprM neu ++ endM rest
+  | _, _, _, .ite c t e => "Endblock.ite" :: exprM c ++ endM t ++ endM e
 
 def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
     Arms D V l Γ Λ Λ' cs → List String

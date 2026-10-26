@@ -466,6 +466,26 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp [EndAusgang.welt] at h
       · simp [EndAusgang.welt] at h
+  | .narrow e lo' hi' sonst rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
+      split at h
+      · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
+      · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))) σ' h
+  | .exchange g neu hw hL rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_glob hL) neu.orte_darf) hh.heldIn
+      have g1 := hl.trans (gut_schreibGlob (W := V.schreibt) (G := V.gschreibt)
+        (σ.lese Λ (.inr g :: neu.orte)) g Λ (eval (σ.lese Λ (.inr g :: neu.orte)) neu
+          (σ.lese Λ (.inr g :: neu.orte)) (.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ))
+          hw hL (hl.heldB hh).heldIn)
+      exact (GutEnd.vor g1 (end_gutB bo hbV rest _ _ (by boden_tac) (g1.heldB hh))).schrumpf σ' h
+  | .ite c t e, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ c.orte_darf hh.heldIn
+      split at h
+      · exact (GutEnd.vor hl (end_gutB bo hbV t _ ρ (by boden_tac) (hl.heldB hh))) σ' h
+      · exact (GutEnd.vor hl (end_gutB bo hbV e _ ρ (by boden_tac) (hl.heldB hh))) σ' h
 
 theorem arms_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

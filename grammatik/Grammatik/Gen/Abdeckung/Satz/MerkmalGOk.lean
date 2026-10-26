@@ -96,6 +96,9 @@ theorem eGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
   | .regReadElse _ _ _ sonst rest => by simp only [Endblock.gOk, mE, eGOk K sonst, eGOk K rest, Bool.true_and]
   | .awaits _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .bindCallInd _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]; rfl
+  | .narrow _ _ _ sonst rest => by simp only [Endblock.gOk, mE, eGOk K sonst, eGOk K rest]
+  | .exchange _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
+  | .ite _ t e => by simp only [Endblock.gOk, mE, eGOk K t, eGOk K e, Bool.and_comm]
 
 end
 

@@ -90,6 +90,9 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse r _ _ sonst rest => .inr r :: (sonst.ants ++ rest.ants)
   | .awaits _ _ _ _ _ rest => rest.ants
   | .bindCallInd _ _ _ _ _ rest => rest.ants
+  | .narrow _ _ _ sonst rest => sonst.ants ++ rest.ants
+  | .exchange _ _ _ _ rest => rest.ants
+  | .ite _ t e => e.ants ++ t.ants
 
 def Arms.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
@@ -147,6 +150,12 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock t]
 
 /-! ## 2. What a residue still reaches -/
 

@@ -636,6 +636,37 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
             | hardware e => (try erw [hx]); exact Or.inl rfl
           · erw [h1, h2]
             exact Or.inr ⟨e', e, rfl, rfl, ht⟩
+  | _, _, Λ, .narrow e lo' hi' sonst rest, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_int]
+      by_cases hc : lo' ≤ (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ∧
+          (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ≤ hi'
+      · erw [dif_pos hc, dif_pos hc]
+        exact EndRel.schrumpf (execEndHA_ru rest _
+          (Env.cons (⟨(eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))
+      · erw [dif_neg hc, dif_neg hc]
+        exact execEndHA_ru sonst _ ρ
+  | _, _, Λ, .exchange g neu hw hL rest, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      rw [show (Sum.inr g :: (ruE neu).orte : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) =
+        Sum.inr g :: neu.orte from congrArg (Sum.inr g :: ·) (ruE_orte neu), leseA_worldR hA]
+      have ez := eval_ru (leseA A σ Λ (Sum.inr g :: neu.orte)) (leseA A σ Λ (Sum.inr g :: neu.orte)) neu
+        (Env.cons ((leseA A σ Λ (Sum.inr g :: neu.orte)).globs g) ρ)
+      change eval _ (ruE neu) _ (Env.cons (valR _ _) (envR ρ)) = _ at ez
+      rw [show ((worldR (leseA A σ Λ (Sum.inr g :: neu.orte))).globs g) =
+        valR _ ((leseA A σ Λ (Sum.inr g :: neu.orte)).globs g) from rfl, ez, schreibGlob_worldR]
+      exact EndRel.schrumpf (execEndHA_ru rest
+        ((leseA A σ Λ (Sum.inr g :: neu.orte)).schreibGlob g Λ (eval (leseA A σ Λ (Sum.inr g :: neu.orte)) neu
+          (leseA A σ Λ (Sum.inr g :: neu.orte)) (Env.cons ((leseA A σ Λ (Sum.inr g :: neu.orte)).globs g) ρ)))
+        (Env.cons ((leseA A σ Λ (Sum.inr g :: neu.orte)).globs g) ρ))
+  | _, _, Λ, .ite c t e, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      rw [ruE_orte, leseA_worldR hA, eval_ru]
+      cases h : (eval (leseA A σ Λ c.orte) c (leseA A σ Λ c.orte) ρ : Bool)
+      · simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
+        exact execEndHA_ru e _ ρ
+      · simp only [wahr?, valR_bool, h, if_true]
+        exact execEndHA_ru t _ ρ
 
 theorem execArmsHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))

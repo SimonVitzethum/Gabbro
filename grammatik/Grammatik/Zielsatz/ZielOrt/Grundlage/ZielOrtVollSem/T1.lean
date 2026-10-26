@@ -104,6 +104,9 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .regReadElse .. => false
   | .awaits .. => false
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.vOk K
+  | .narrow _ _ _ sonst rest => sonst.vOk K && rest.vOk K
+  | .exchange _ _ _ _ rest => rest.vOk K
+  | .ite _ t e => e.vOk K && t.vOk K
 
 def Arms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
@@ -142,6 +145,12 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K t]
 
 /-- The candidates of an indirect call through a pointer of signature `n`
     -- every function that conforms to it -- have their contract carriers in
@@ -355,6 +364,15 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .bindCallInd _ _ _ _ _ rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨hKK _ h.1, Endblock.vOk_mono rest h.2⟩
+  | .narrow _ _ _ sonst rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono sonst h.1, Endblock.vOk_mono rest h.2⟩
+  | .exchange _ _ _ _ rest, h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
+  | .ite _ t e, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono e h.1, Endblock.vOk_mono t h.2⟩
 
 theorem Arms.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -493,6 +511,15 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   | .regReadElse .., h => by simp [Endblock.kOk] at h
   | .awaits .., h => by simp [Endblock.kOk] at h
   | .bindCallInd .., h => by simp [Endblock.kOk] at h
+  | .narrow _ _ _ sonst rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_of_kOk sonst h.1, Endblock.vOk_of_kOk rest h.2⟩
+  | .exchange _ _ _ _ rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk] at h ⊢
+      exact Endblock.vOk_of_kOk rest h
+  | .ite _ t e, h => by
+      simp only [Endblock.kOk, Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_of_kOk e h.2, Endblock.vOk_of_kOk t h.1⟩
 
 theorem Arms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

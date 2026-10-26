@@ -175,6 +175,9 @@ def cE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .regReadElse (zusage := z) (sonst := sonst) (rest := rest) .. => "Endblock.regReadElse" :: (eE z ++ cE sonst ++ cE rest)
   | .awaits (rest := rest) .. => "Endblock.awaits" :: cE rest
   | .bindCallInd (p := p) (args := args) (rest := rest) .. => "Endblock.bindCallInd" :: (eE p ++ eA args ++ cE rest)
+  | .narrow e _ _ sonst rest => "Endblock.narrow" :: (eE e ++ cE sonst ++ cE rest)
+  | .exchange (neu := neu) (rest := rest) .. => "Endblock.exchange" :: (eE neu ++ cE rest)
+  | .ite c t e => "Endblock.ite" :: (eE c ++ cE t ++ cE e)
 
 end
 

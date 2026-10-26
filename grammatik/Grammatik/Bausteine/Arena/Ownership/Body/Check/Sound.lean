@@ -596,6 +596,9 @@ theorem chkE_sound : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (eb : Endbloc
     simp only [chkE, Bool.and_eq_true] at h
     exact OE.bindCallInd p args he hp hr rest _ _ (sigCompatB_sound hvoll h.1.1.2) h.1.1.1.1 h.1.1.1.2 h.1.2
       (chkE_sound rest k _ hk (resultContextB_bounded (afterCall_bounded hc) _) h.2)
+  | _, _, _, .narrow .., _, _, _, _, h => by simp [chkE] at h
+  | _, _, _, .exchange .., _, _, _, _, h => by simp [chkE] at h
+  | _, _, _, .ite .., _, _, _, _, h => by simp [chkE] at h
 
 theorem chkArms_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     (arms : Arms D V l Γ Λ Λ' cs) (k c : Context),

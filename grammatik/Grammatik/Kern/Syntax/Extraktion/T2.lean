@@ -319,6 +319,10 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       zusage.orte ++ endblockOrte sonst ++ endblockOrte rest
   | .awaits g _ _ _ _ rest => .inr g :: endblockOrte rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrte rest
+  | .narrow e _ _ sonst rest =>
+      e.orte ++ endblockOrte sonst ++ endblockOrte rest
+  | .exchange g neu _ _ rest => .inr g :: neu.orte ++ endblockOrte rest
+  | .ite c t e => c.orte ++ endblockOrte e ++ endblockOrte t
 
 /-- Die gelesenen Orte der Fallunterscheidung. -/
 def armsOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

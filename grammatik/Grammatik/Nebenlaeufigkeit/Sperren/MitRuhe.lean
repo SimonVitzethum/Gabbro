@@ -686,6 +686,9 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
       .bindCallInd (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
         (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
         (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd rest))
+  | _, _, _, .narrow e lo' hi' sonst rest => .narrow (ruE e) lo' hi' (ruEnd sonst) (ruEnd rest)
+  | _, _, _, .exchange g neu hw hL rest => .exchange g (ruE neu) hw (gdarfR hL) (ruEnd rest)
+  | _, _, _, .ite c t e => .ite (ruE c) (ruEnd t) (ruEnd e)
 
 /-- Arms, translated (the arm scope `ArmCtx` is split on the case). -/
 def ruArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →

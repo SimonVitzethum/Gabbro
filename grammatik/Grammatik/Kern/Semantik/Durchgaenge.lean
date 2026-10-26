@@ -99,6 +99,9 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .regReadElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .awaits _ _ _ _ _ rest => rest.ohneEwig
   | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
+  | .narrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
+  | .exchange _ _ _ _ rest => rest.ohneEwig
+  | .ite _ t e => t.ohneEwig && e.ohneEwig
 
 def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Bool
@@ -270,6 +273,15 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd p args he hp hr rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]
+  | .narrow e lo' hi' sonst rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
+      simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes sonst h.1]
+  | .exchange g neu hw hL rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
+  | .ite c t e, h, σ, ρ => by
+      simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
+      simp only [execEndH, Endblock.execH_passes t h.1, Endblock.execH_passes e h.2]
 
 theorem Arms.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

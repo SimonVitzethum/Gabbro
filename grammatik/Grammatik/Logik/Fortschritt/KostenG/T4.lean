@@ -474,6 +474,10 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .regReadElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
   | .awaits _ _ _ _ _ rest => fremdEnd fa pa rest
   | .bindCallInd _ _ _ _ _ rest => fremdEnd fa pa rest
+  | .narrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
+  | .exchange _ _ _ _ rest => fremdEnd fa pa rest
+  -- as `Block.check` (`Endblock.alsBlock`)
+  | .ite _ t e => fremdEnd fa pa e + fremdEnd fa pa t
 end
 /-- The §1 cost plus the declared foreign cost, per statement form. -/
 def kostenStmtF (fa : D.Ax → Nat) (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool}

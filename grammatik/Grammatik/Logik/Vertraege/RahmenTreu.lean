@@ -726,6 +726,26 @@ theorem end_treu :
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp [EndAusgang.welt] at h
       · simp [EndAusgang.welt] at h
+  | .narrow e lo' hi' sonst rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
+      split at h
+      · exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
+      · exact (TreuEnd.vor hl (end_treu sonst _ ρ)) σ' h
+  | .exchange g neu hw hL rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (.inr g :: neu.orte)
+      have g1 := hl.trans (treu_schreibGlob (W := V.schreibt) (G := V.gschreibt)
+        (σ.lese Λ (.inr g :: neu.orte)) g Λ (eval (σ.lese Λ (.inr g :: neu.orte)) neu
+          (σ.lese Λ (.inr g :: neu.orte)) (.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ))
+          hw)
+      exact (TreuEnd.vor g1 (end_treu rest _ _)).schrumpf σ' h
+  | .ite c t e, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
+      split at h
+      · exact (TreuEnd.vor hl (end_treu t _ ρ)) σ' h
+      · exact (TreuEnd.vor hl (end_treu e _ ρ)) σ' h
 
 theorem arms_treu :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

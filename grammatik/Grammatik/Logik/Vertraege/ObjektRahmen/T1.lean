@@ -320,6 +320,9 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .regReadElse _ _ _ sonst rest => oE sonst ∧ oE rest
   | .awaits _ _ _ _ _ rest => oE rest
   | .bindCallInd .. => False
+  | .narrow _ _ _ sonst rest => oE sonst ∧ oE rest
+  | .exchange _ _ _ _ rest => oE rest
+  | .ite _ t e => oE t ∧ oE e
 
 def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Prop

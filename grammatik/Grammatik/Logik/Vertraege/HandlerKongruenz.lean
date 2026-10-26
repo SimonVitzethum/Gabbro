@@ -183,6 +183,14 @@ theorem EndUnter.ite {c : Prop} [Decidable c] {a₁ a₂ b₁ b₂ : EndAusgang 
   · rw [if_pos h, if_pos h]; exact ha
   · rw [if_neg h, if_neg h]; exact hb
 
+theorem EndUnter.dite {c : Prop} [Decidable c] {a₁ a₂ : c → EndAusgang V l Γ}
+    {b₁ b₂ : ¬c → EndAusgang V l Γ} (ha : ∀ h, EndUnter Er (a₁ h) (a₂ h))
+    (hb : ∀ h, EndUnter Er (b₁ h) (b₂ h)) :
+    EndUnter Er (dite c a₁ b₁) (dite c a₂ b₂) := by
+  by_cases h : c
+  · rw [dif_pos h, dif_pos h]; exact ha h
+  · rw [dif_neg h, dif_neg h]; exact hb h
+
 theorem AusgangUnter.dite {c : Prop} [Decidable c] {a₁ a₂ : c → Ausgang V l Γ}
     {b₁ b₂ : ¬c → Ausgang V l Γ} (ha : ∀ h, AusgangUnter Er (a₁ h) (a₂ h))
     (hb : ∀ h, AusgangUnter Er (b₁ h) (b₂ h)) :
@@ -620,6 +628,16 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
           | logik e => exact Or.inl rfl
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
+  | .narrow e lo' hi' sonst rest, σ, ρ => by
+      simp only [execEnd]
+      exact EndUnter.dite (fun _ => (Endblock.kongruent hR rest _ _).schrumpf)
+        (fun _ => Endblock.kongruent hR sonst _ ρ)
+  | .exchange g neu hw hL rest, σ, ρ => by
+      simp only [execEnd]
+      exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .ite c t e, σ, ρ => by
+      simp only [execEnd]
+      exact EndUnter.ite (Endblock.kongruent hR t _ ρ) (Endblock.kongruent hR e _ ρ)
 
 theorem Arms.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

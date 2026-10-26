@@ -266,6 +266,23 @@ theorem Endblock.execHA_gleich {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         simp only [List.mem_append] at h; rcases h with h | h <;> simp [endblockOrteP, h])
       have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       simp only [execEndHA, hG _ h1, Endblock.execHA_gleich rest h2] <;> (try rfl)
+  | .narrow e lo' hi' sonst rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, hG _ h1, Endblock.execHA_gleich rest h2,
+        Endblock.execHA_gleich sonst h3] <;> (try rfl)
+  | .exchange g neu _ _ rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ Sum.inr g :: neu.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_cons] at h; rcases h with h | h <;> simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, hG _ h1, Endblock.execHA_gleich rest h2] <;> (try rfl)
+  | .ite c t e, hT, σ, ρ => by
+      have h1 : ∀ x ∈ c.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P t, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h3 : ∀ x ∈ endblockOrteP P e, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, hG _ h1, Endblock.execHA_gleich t h2,
+        Endblock.execHA_gleich e h3] <;> (try rfl)
 
 theorem Arms.execHA_gleich {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

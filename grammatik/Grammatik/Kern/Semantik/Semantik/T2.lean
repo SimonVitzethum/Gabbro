@@ -419,6 +419,18 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .narrow e lo' hi' sonst rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEnd rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else execEnd sonst σ ρ
+  | .exchange g neu _ _ rest, σ, ρ =>
+      let σ := σ.lese Λ (.inr g :: neu.orte)
+      let alt := σ.globs g
+      (execEnd rest (σ.schreibGlob g Λ (eval σ neu σ (.cons alt ρ))) (.cons alt ρ)).schrumpf
+  | .ite c t e, σ, ρ =>
+      let σ := σ.lese Λ c.orte
+      if wahr? (eval σ c σ ρ) then execEnd t σ ρ else execEnd e σ ρ
 
 def execArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ

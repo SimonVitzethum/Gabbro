@@ -424,6 +424,21 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       split
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.none_l _
+  | narrow e lo' hi' sonst rest =>
+      simp only [kEnde]
+      split
+      · exact KRel.lokal _ _ _ _ _ rfl hsp
+      · exact KRel.none_l _
+  | exchange g neu hw hL rest =>
+      simp only [kEnde]
+      split
+      · exact KRel.lokal _ _ _ _ _ rfl hsp
+      · exact KRel.none_l _
+  | ite c t e =>
+      simp only [kEnde]
+      split
+      · exact KRel.lokal _ _ _ _ _ rfl hsp
+      · exact KRel.none_l _
   | ret e _ =>
       simp only [nE] at he
       simp only [kEnde]

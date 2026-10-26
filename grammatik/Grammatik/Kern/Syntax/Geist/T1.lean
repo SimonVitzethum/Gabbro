@@ -168,6 +168,9 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .awaits g _ _ _ _ rest => orteOk (D := D) [.inr g] && g001End rest
   | _, _, _, .bindCallInd p args _ _ _ rest =>
       orteOk (D := D) (p.orte ++ args.orte) && g001End rest
+  | _, _, _, .narrow e _ _ sonst rest => orteOk (D := D) e.orte && g001End sonst && g001End rest
+  | _, _, _, .exchange g neu _ _ rest => orteOk (D := D) ([.inr g] ++ neu.orte) && g001End rest
+  | _, _, _, .ite c t e => orteOk (D := D) c.orte && g001End t && g001End e
 
 /-- The G001 check over case arms. -/
 def g001Arms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -830,6 +833,49 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           simpa [List.mem_append] using ho'
         exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho2)
       · exact g001End_korrekt rest h1.2 o ho'
+  | .narrow e lo' hi' sonst rest =>
+      intro h ho
+      have h0 : (orteOk (D := D) e.orte && g001End sonst && g001End rest) = true := h
+      have ho' : o ∈ e.orte ∨ o ∈ Extraktion.endblockOrte sonst ∨ o ∈ Extraktion.endblockOrte rest := by
+        simpa [Extraktion.endblockOrte] using ho
+      have h1 : ((orteOk (D := D) e.orte && g001End sonst) = true) ∧ ((g001End rest) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      have h2 : ((orteOk (D := D) e.orte) = true) ∧ ((g001End sonst) = true) :=
+        Bool.and_eq_true_iff.mp h1.1
+      rcases ho' with ho' | ho' | ho'
+      · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
+      · exact g001End_korrekt sonst h2.2 o ho'
+      · exact g001End_korrekt rest h1.2 o ho'
+  | .exchange g neu hw hL rest =>
+      intro h ho
+      have h0 : (orteOk (D := D) ([Sum.inr g] ++ neu.orte) && g001End rest) = true := h
+      have ho2 : o = Sum.inr g ∨ o ∈ neu.orte ∨ o ∈ Extraktion.endblockOrte rest := by
+        simpa [Extraktion.endblockOrte] using ho
+      have ho' : (o = Sum.inr g ∨ o ∈ neu.orte) ∨ o ∈ Extraktion.endblockOrte rest := by
+        rcases ho2 with ho2 | ho2 | ho2
+        · exact Or.inl (Or.inl ho2)
+        · exact Or.inl (Or.inr ho2)
+        · exact Or.inr ho2
+      have h1 : ((orteOk (D := D) ([Sum.inr g] ++ neu.orte)) = true) ∧ ((g001End rest) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      rcases ho' with ho' | ho'
+      · have ho2 : o ∈ ([Sum.inr g] ++ neu.orte) := by
+          simpa [List.mem_append] using ho'
+        exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho2)
+      · exact g001End_korrekt rest h1.2 o ho'
+  | .ite c t e =>
+      intro h ho
+      have h0 : (orteOk (D := D) c.orte && g001End t && g001End e) = true := h
+      have ho' : o ∈ c.orte ∨ o ∈ Extraktion.endblockOrte e ∨ o ∈ Extraktion.endblockOrte t := by
+        simpa [Extraktion.endblockOrte] using ho
+      have h1 : ((orteOk (D := D) c.orte && g001End t) = true) ∧ ((g001End e) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      have h2 : ((orteOk (D := D) c.orte) = true) ∧ ((g001End t) = true) :=
+        Bool.and_eq_true_iff.mp h1.1
+      rcases ho' with ho' | ho' | ho'
+      · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
+      · exact g001End_korrekt e h1.2 o ho'
+      · exact g001End_korrekt t h2.2 o ho'
 
 termination_by structural b
 

@@ -487,6 +487,9 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .regReadElse .. => false
   | .awaits .. => false
   | .bindCallInd _ _ _ _ _ rest => rest.ohneOrakel
+  | .narrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+  | .exchange _ _ _ _ rest => rest.ohneOrakel
+  | .ite _ t e => t.ohneOrakel && e.ohneOrakel
 
 def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool

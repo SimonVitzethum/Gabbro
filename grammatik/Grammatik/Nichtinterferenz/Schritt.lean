@@ -274,6 +274,18 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       if l = false then
         kLokal st f rho ρ (.dann (Endblock.bindCallInd p args he hp hr rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
       else none
+  | l, _, Λ, ρ, .narrow e lo' hi' sonst rest =>
+      if l = false then
+        kLokal st f rho ρ (.dann (Endblock.narrow e lo' hi' sonst rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
+      else none
+  | l, _, Λ, ρ, .exchange g neu hw hL rest =>
+      if l = false then
+        kLokal st f rho ρ (.dann (Endblock.exchange g neu hw hL rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
+      else none
+  | l, _, Λ, ρ, .ite c t e =>
+      if l = false then
+        kLokal st f rho ρ (.dann (Endblock.ite c t e).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
+      else none
   | _, _, Λ, ρ, .ret e _ =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)

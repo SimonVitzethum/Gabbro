@@ -262,6 +262,12 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .bindCallInd p args _ _ _ rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args))
         ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
+  | _, _, _, .narrow e _ _ sonst rest =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruEnd_orteP P rest)
+  | _, _, _, .exchange g neu _ _ rest =>
+      kongr₂ (fun x y => (Sum.inr g :: x) ++ y) (ruE_orte neu) (ruEnd_orteP P rest)
+  | _, _, _, .ite c t e =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruEnd_orteP P e)) (ruEnd_orteP P t)
 
 theorem ruArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -357,6 +363,9 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       congrArg (r :: ·) (kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruEnd_regs rest))
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_regs rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => (regs_umΛ _ _).trans (ruEnd_regs rest)
+  | _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruEnd_regs rest)
+  | _, _, _, .exchange _ _ _ _ rest => ruEnd_regs rest
+  | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_regs e) (ruEnd_regs t)
 
 theorem ruArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -461,6 +470,10 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .bindCallInd (n := n) _ _ _ _ _ rest =>
       congrArg (K (n + 1) && ·) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
+  | _, _, _, .narrow _ _ _ sonst rest =>
+      kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruEnd_gOk K Rg rest)
+  | _, _, _, .exchange _ _ _ _ rest => ruEnd_gOk K Rg rest
+  | _, _, _, .ite _ t e => kongr₂ (· && ·) (ruEnd_gOk K Rg e) (ruEnd_gOk K Rg t)
 
 theorem ruArms_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}

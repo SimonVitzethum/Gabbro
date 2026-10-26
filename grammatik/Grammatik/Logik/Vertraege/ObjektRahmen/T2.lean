@@ -475,6 +475,21 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
           (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
   | .bindCallInd .., hok, _, _, _, _ => hok.elim
+  | .narrow e lo' hi' sonst rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · exact ObjE.vor (slotRahmen_gleich rfl)
+          (end_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv)
+  | .exchange g neu hw hL rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      exact ObjE.vor (slotRahmen_gleich rfl)
+        (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+  | .ite c t e, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj t hok.1 _ ρ hlen hinv)
+      · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj e hok.2 _ ρ hlen hinv)
 
 theorem arms_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

@@ -123,6 +123,9 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .regReadElse _ _ _ sonst rest => mE A sonst && mE A rest
   | .awaits _ _ _ _ _ rest => mE A rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mE A rest
+  | .narrow _ _ _ sonst rest => mE A sonst && mE A rest
+  | .exchange _ _ _ _ rest => mE A rest
+  | .ite _ t e => mE A t && mE A e
 end
 
 /-- **The residue predicate**: every block, end block and loop body still to
@@ -182,6 +185,12 @@ theorem mB_alsBlock (A : Merkmal D) :
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A t, Bool.and_comm]
 
 theorem mB_armWahlG (A : Merkmal D) {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),

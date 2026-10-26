@@ -245,6 +245,9 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
     have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
     blk (eAwaits O), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.glob_mem g)) <|
       Sz.mem_wenn hL <| Sz.mem_wenn hat <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+  | narrow _ _ _ _ _ => simp only [groesseEnd] at hu; omega
+  | exchange _ _ _ _ _ => simp only [groesseEnd] at hu; omega
+  | ite _ _ _ => simp only [groesseEnd] at hu; omega
   | bindCallInd p args he hp hr rest =>
     simp only [groesseEnd] at hu hE hS hO ⊢
     have hpp := hE _ p (by omega)

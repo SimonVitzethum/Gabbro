@@ -316,6 +316,9 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .regReadElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .awaits _ _ _ _ _ rest => rest.logikFrei
   | .bindCallInd _ _ _ _ _ rest => rest.logikFrei
+  | .narrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
+  | .exchange _ _ _ _ rest => rest.logikFrei
+  | .ite _ t e => t.logikFrei && e.logikFrei
 
 end
 

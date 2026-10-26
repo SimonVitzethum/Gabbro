@@ -216,6 +216,10 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
       zusage.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
   | .awaits g _ _ _ _ rest => .inr g :: endblockOrteP P rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrteP P rest
+  | .narrow e _ _ sonst rest =>
+      e.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
+  | .exchange g neu _ _ rest => .inr g :: neu.orte ++ endblockOrteP P rest
+  | .ite c t e => c.orte ++ endblockOrteP P e ++ endblockOrteP P t
 
 def armsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -258,6 +262,12 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P t]
 
 /-- The carriers of the table and group invariants `f` owes at its return
     (`schuldet`: `f` writes one of their carriers; `rufAt` checks exactly

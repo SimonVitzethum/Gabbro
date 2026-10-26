@@ -124,6 +124,11 @@ theorem mE_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Lis
   | .awaits _ _ _ _ _ rest => by simp only [mE, mE_und A B rest]
   | .bindCallInd _ _ _ _ _ rest => by
       simp only [mE, mE_und A B rest, Merkmal.und_ruf, Merkmal.und_ind, Merkmal.und_sperre, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  | .narrow _ _ _ sonst rest => by
+      simp only [mE, mE_und A B sonst, mE_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  | .exchange _ _ _ _ rest => by simp only [mE, mE_und A B rest]
+  | .ite _ t e => by
+      simp only [mE, mE_und A B t, mE_und A B e, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 end
 
@@ -211,6 +216,9 @@ theorem mE_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ _ sonst rest => by simp only [mE, mE_top sonst, mE_top rest, Bool.and_self]
   | .awaits _ _ _ _ _ rest => by simp only [mE, mE_top rest]
   | .bindCallInd _ _ _ _ _ rest => by simp only [mE, mE_top rest]; rfl
+  | .narrow _ _ _ sonst rest => by simp only [mE, mE_top sonst, mE_top rest, Bool.and_self]
+  | .exchange _ _ _ _ rest => by simp only [mE, mE_top rest]
+  | .ite _ t e => by simp only [mE, mE_top t, mE_top e, Bool.and_self]
 
 end
 

@@ -353,6 +353,18 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .narrow e lo' hi' sonst rest, σ, ρ =>
+      let σ := leseA A σ Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEndHA rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else (execEndHA sonst σ ρ)
+  | .exchange g neu _ _ rest, σ, ρ =>
+      let σ := leseA A σ Λ (.inr g :: neu.orte)
+      let alt := σ.globs g
+      (execEndHA rest (σ.schreibGlob g Λ (eval σ neu σ (.cons alt ρ))) (.cons alt ρ)).schrumpf
+  | .ite c t e, σ, ρ =>
+      let σ := leseA A σ Λ c.orte
+      if wahr? (eval σ c σ ρ) then execEndHA t σ ρ else execEndHA e σ ρ
 
 def execArmsHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
@@ -632,6 +644,23 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         simp only [List.mem_append] at h; rcases h with h | h <;> simp [endblockOrteP, h])
       have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
+  | .narrow e lo' hi' sonst rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
+        Endblock.execHA_frei sonst h3] <;> (try rfl)
+  | .exchange g neu _ _ rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ Sum.inr g :: neu.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_cons] at h; rcases h with h | h <;> simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
+  | .ite c t e, hT, σ, ρ => by
+      have h1 : ∀ x ∈ c.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P t, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h3 : ∀ x ∈ endblockOrteP P e, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei t h2,
+        Endblock.execHA_frei e h3] <;> (try rfl)
 
 theorem Arms.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

@@ -526,6 +526,36 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
           | why σ' r => exact keinGrundSig hg hr r
           | logik e => (try erw [hx]); rfl
           | hardware e => (try erw [hx]); rfl
+  | _, _, Λ, .narrow e lo' hi' sonst rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      simp only [ruE_orte, lese_worldR, eval_ru, valR_int]
+      by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+          (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
+      · erw [dif_pos hc, dif_pos hc]
+        exact (congrArg EndAusgang.schrumpf (execEnd_ru rest _
+          (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))).trans
+          (endR_schrumpf _)
+      · erw [dif_neg hc, dif_neg hc]
+        exact execEnd_ru sonst _ ρ
+  | _, _, Λ, .exchange g neu hw hL rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      rw [show (Sum.inr g :: (ruE neu).orte : List (D.mitRuhe.Tab ⊕ D.mitRuhe.Glob)) =
+        Sum.inr g :: neu.orte from congrArg (Sum.inr g :: ·) (ruE_orte neu), lese_worldR]
+      have ez := eval_ru (σ.lese Λ (Sum.inr g :: neu.orte)) (σ.lese Λ (Sum.inr g :: neu.orte)) neu
+        (Env.cons ((σ.lese Λ (Sum.inr g :: neu.orte)).globs g) ρ)
+      change eval _ (ruE neu) _ (Env.cons (valR _ _) (envR ρ)) = _ at ez
+      rw [show ((worldR (σ.lese Λ (Sum.inr g :: neu.orte))).globs g) =
+        valR _ ((σ.lese Λ (Sum.inr g :: neu.orte)).globs g) from rfl, ez, schreibGlob_worldR,
+        ← endR_schrumpf, ← execEnd_ru rest _ (Env.cons _ ρ)]
+      rfl
+  | _, _, Λ, .ite c t e, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      rw [ruE_orte, lese_worldR, eval_ru]
+      cases h : (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ : Bool)
+      · simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
+        exact execEnd_ru e _ ρ
+      · simp only [wahr?, valR_bool, h, if_true]
+        exact execEnd_ru t _ ρ
 
 theorem execArms_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))

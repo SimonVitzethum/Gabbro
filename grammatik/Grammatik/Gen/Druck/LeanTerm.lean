@@ -203,6 +203,9 @@ def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .regReadElse r _ zusage sonst rest => do .ok s!"(Endblock.regReadElse (D := z.deklaration) {fin (N.reg r) "z.regs.length"} {bew} {← drE N zusage} {← drEnd N sonst} {← drEnd N rest})"
   | .awaits g _ _ _ _ rest => do .ok s!"(Endblock.awaits (D := z.deklaration) {fin (N.glob g) "z.globs.length"} _ rfl {bew} {bew} {← drEnd N rest})"
   | .bindCallInd p args _ _ _ rest => do .ok s!"(Endblock.bindCallInd (D := z.deklaration) {← drE N p} {← drA N args} {bew} {bew} {bew} {← drEnd N rest})"
+  | .narrow e lo' hi' sonst rest => do .ok s!"(Endblock.narrow (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drEnd N sonst} {← drEnd N rest})"
+  | .exchange g neu _ _ rest => do .ok s!"(Endblock.exchange (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N neu} {bew} {bew} {← drEnd N rest})"
+  | .ite c t e => do .ok s!"(Endblock.ite (D := z.deklaration) {← drE N c} {← drEnd N t} {← drEnd N e})"
 
 /-- The arms of a `match` on a tagged value. -/
 def drArms (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → Except String String

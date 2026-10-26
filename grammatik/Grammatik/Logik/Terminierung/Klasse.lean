@@ -209,6 +209,9 @@ def befE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ebene imEwig : Bool) : Endbl
   | .regReadElse _ _ _ sonst rest => befE ebene imEwig sonst ++ befE ebene imEwig rest
   | .awaits _ _ _ _ _ rest => befE ebene imEwig rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => Befund.rufInd n imEwig ++ befE ebene imEwig rest
+  | .narrow _ _ _ sonst rest => befE ebene imEwig sonst ++ befE ebene imEwig rest
+  | .exchange _ _ _ _ rest => befE ebene imEwig rest
+  | .ite _ t e => befE ebene imEwig e ++ befE ebene imEwig t
 
 end
 

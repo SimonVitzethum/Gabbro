@@ -120,6 +120,9 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   undrawn reachability rows stays with the demand.
 - **Generator support for aggregates (2026-10-25).** G has `Ty.arr`/`Ty.str` and their seven `Expr` forms (THEOREM-MAP 100);
   the generator gives them size `unendlich` and never draws them, so test sets M and N do not cover them yet.
+- **End-block forms (2026-10-26).** `Endblock.narrow`/`exchange`/`ite` (THEOREM-MAP 102): the generator does not draw
+  them (size `unendlich`); arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them; the Rust exporter
+  does not construct them.
 - **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
   `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
   fields. Open, model work first where marked (M):

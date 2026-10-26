@@ -238,6 +238,10 @@ def chkE : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l 
       planFits c (modeList (sigIface A I fs n).1) (originList c args) &&
       chkE rest k (resultContextB (c.afterCall (modeList (sigIface A I fs n).1) (originList c args))
         (sigIface A I fs n).2)
+  -- the end-block forms of stage 0 have no ownership judgment yet (`OE`, TODO.md): refused, never passed
+  | _, _, _, .narrow .., _, _ => false
+  | _, _, _, .exchange .., _, _ => false
+  | _, _, _, .ite .., _, _ => false
 
 def chkArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → (k c : Context) → Out

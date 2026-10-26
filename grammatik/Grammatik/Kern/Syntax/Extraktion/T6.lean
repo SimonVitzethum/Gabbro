@@ -113,6 +113,10 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
       endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest
   | .awaits _ _ _ _ _ rest => endblockAtome tabs globs rest
   | .bindCallInd _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .narrow _ _ _ sonst rest =>
+      endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest
+  | .exchange _ _ _ _ rest => endblockAtome tabs globs rest
+  | .ite _ t e => endblockAtome tabs globs e ++ endblockAtome tabs globs t
 
 /-- The atoms of a case split: every arm may run. -/
 def armsAtome (tabs : List D.Tab) (globs : List D.Glob)

@@ -88,6 +88,9 @@ def koerperE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ zusage sonst rest => zusage.orte ++ koerperE sonst ++ koerperE rest
   | .awaits g _ _ _ _ rest => .inr g :: koerperE rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ koerperE rest
+  | .narrow e _ _ sonst rest => e.orte ++ koerperE sonst ++ koerperE rest
+  | .exchange g neu _ _ rest => .inr g :: neu.orte ++ koerperE rest
+  | .ite c t e => c.orte ++ koerperE e ++ koerperE t
 
 def koerperArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → List (D.Tab ⊕ D.Glob)
@@ -202,6 +205,9 @@ theorem endblockOrteP_iff (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .regReadElse _ _ _ sonst rest, x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true, endblockOrteP_iff P sonst x, endblockOrteP_iff P rest x] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
   | .awaits _ _ _ _ _ rest, x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true, endblockOrteP_iff P rest x] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
   | .bindCallInd _ _ _ _ _ rest, x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true, endblockOrteP_iff P rest x] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
+  | .narrow _ _ _ sonst rest, x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true, endblockOrteP_iff P sonst x, endblockOrteP_iff P rest x] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
+  | .exchange _ _ _ _ rest, x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true, endblockOrteP_iff P rest x] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
+  | .ite _ t e, x => by (simp only [stmtOrteP, blockOrteP, endblockOrteP, armsOrteP, grundArmsOrteP, koerperS, koerperB, koerperE, koerperArms, koerperGArms, mS, mB, mE, mArms, mGArms, List.mem_append, List.mem_cons, List.not_mem_nil, gerufen_und, gerufen_ruf, rufNur_ind, rufNur_sperre, Bool.true_and, Bool.and_true, endblockOrteP_iff P e x, endblockOrteP_iff P t x] <;> simp only [gerufen_wahr, false_or, or_false, or_assoc, or_left_comm, or_comm])
 
 theorem armsOrteP_iff (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     ∀ (s : Arms D V l Γ Λ Λ' cs) (x : D.Tab ⊕ D.Glob), x ∈ armsOrteP P s ↔ x ∈ koerperArms s ∨ Gerufen P (fun g => mArms (rufNur g) s) x

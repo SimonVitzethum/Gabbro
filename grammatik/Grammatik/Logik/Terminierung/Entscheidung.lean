@@ -109,6 +109,9 @@ theorem rufeE_mE : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
   | _, _, _, .regReadElse _ _ _ sonst rest => by simp only [rufeE, mE, rufeE_mE sonst, rufeE_mE rest]
   | _, _, _, .awaits _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .bindCallInd _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
+  | _, _, _, .narrow _ _ _ sonst rest => by simp only [rufeE, mE, rufeE_mE sonst, rufeE_mE rest]
+  | _, _, _, .exchange _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
+  | _, _, _, .ite _ t e => by simp only [rufeE, mE, rufeE_mE t, rufeE_mE e, Bool.and_comm]
 
 end
 
@@ -271,6 +274,15 @@ theorem rufeE_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endb
   | _, _, _, .bindCallInd _ _ _ _ _ rest, eb, ie, h => by
       simp only [befE, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeE, rufeE_ohneEwig rest eb ie h.2]
+  | _, _, _, .narrow _ _ _ sonst rest, eb, ie, h => by
+      simp only [befE, befund_und_ewig, Bool.or_eq_false_iff] at h
+      simp only [rufeE, rufeE_ohneEwig sonst eb ie h.1, rufeE_ohneEwig rest eb ie h.2]
+  | _, _, _, .exchange _ _ _ _ rest, eb, ie, h => by
+      simp only [befE] at h
+      simp only [rufeE, rufeE_ohneEwig rest eb ie h]
+  | _, _, _, .ite _ t e, eb, ie, h => by
+      simp only [befE, befund_und_ewig, Bool.or_eq_false_iff] at h
+      simp only [rufeE, rufeE_ohneEwig e eb ie h.1, rufeE_ohneEwig t eb ie h.2]
 
 end
 

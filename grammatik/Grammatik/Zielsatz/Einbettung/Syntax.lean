@@ -385,6 +385,11 @@ def exEnd (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ :
         (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
         (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
         (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS rest))
+  | _, _, _, .narrow e lo' hi' sonst rest => .narrow (exE E e) lo' hi' (exEnd hS sonst) (exEnd hS rest)
+  | _, _, _, .exchange g neu hw hL rest =>
+      .exchange (E.glob g) (Expr.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (Expr.umTy (E.gtyp g).symm (exE E neu)))
+        (E.gschreibtE hw) (E.gdarfE hL) (Endblock.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (exEnd hS rest))
+  | _, _, _, .ite c t e => .ite (exE E c) (exEnd hS t) (exEnd hS e)
 
 /-- Arms (the arm scope `ArmCtx` is split on the case). -/
 def exArms (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →

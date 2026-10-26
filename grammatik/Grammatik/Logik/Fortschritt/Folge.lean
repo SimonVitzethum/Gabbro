@@ -162,6 +162,10 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
   | .regReadElse _ _ _ sonst rest => fE e false sonst && fE e w rest
   | .awaits _ _ _ _ _ rest => fE e w rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => (!Φ.ind n || w) && fE e false rest
+  | .narrow _ _ _ sonst rest => fE e false sonst && fE e w rest
+  | .exchange _ _ _ _ rest => fE e w rest
+  -- as its block form `check c el t`: the false branch is checked unarmed
+  | .ite _ t el => fE e false el && fE e w t
 
 end
 

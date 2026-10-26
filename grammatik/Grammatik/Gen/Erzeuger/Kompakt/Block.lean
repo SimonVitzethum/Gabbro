@@ -384,5 +384,8 @@ theorem endS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
         mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
         Sz.mem_bindR hargs hr' <| Sz.mem_pure _) (by omega)
     · glfertig
+  | narrow _ _ _ _ _ => simp only [groesseEnd] at hu; omega
+  | exchange _ _ _ _ _ => simp only [groesseEnd] at hu; omega
+  | ite _ _ _ => simp only [groesseEnd] at hu; omega
 
 end Gabbro.Grammatik.Gen

@@ -132,6 +132,12 @@ theorem fE_mono {l : Bool} :
   | _, _, e, .bindCallInd _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
       exact ⟨h.1.imp id hw, h.2⟩
+  | _, _, e, .narrow _ _ _ _ rest, w, w', hw, h => by
+      simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e rest _ _ hw h.2⟩
+  | _, _, e, .exchange _ _ _ _ rest, w, w', hw, h => by
+      simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
+  | _, _, e, .ite _ t _, w, w', hw, h => by
+      simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e t _ _ hw h.2⟩
 
 /-- The residue predicate is monotone in the armed bit. -/
 theorem fR_mono (e : Bool) :
@@ -188,6 +194,12 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindCallInd p args he hp hr rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .narrow _ _ _ sonst rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .exchange _ _ _ _ rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .ite _ t _, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e t]
 
 theorem fB_armWahlG (e : Bool) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),

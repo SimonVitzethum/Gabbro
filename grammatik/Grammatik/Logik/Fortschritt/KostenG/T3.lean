@@ -191,6 +191,10 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelE rest
   | .awaits _ _ _ _ _ rest => spiegelE rest
   | .bindCallInd .. => false
+  -- the end-block forms of stage 0 are outside the checker's mirror until `kosten.rs` prices them (TODO.md)
+  | .narrow .. => false
+  | .exchange .. => false
+  | .ite .. => false
 end
 mutual
 /-- **The checker's number**, `kosten.rs::anweisung`/`block`/`ruf` read
@@ -292,6 +296,9 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .regReadElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKE c rest
   | .awaits _ _ _ _ _ rest => 1 + kostenKE c rest
   | .bindCallInd _ _ _ _ _ rest => kostenKE c rest
+  | .narrow .. => 0
+  | .exchange .. => 0
+  | .ite .. => 0
 end
 mutual
 /-- **The remainder**: G's dispatch steps plus what the checker does not
@@ -375,6 +382,9 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
   | .awaits _ _ _ _ _ rest => 4 + zusatzSonst rest
   | .bindCallInd .. => 0
+  | .narrow .. => 0
+  | .exchange .. => 0
+  | .ite .. => 0
 
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
 def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
@@ -393,5 +403,8 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
   | .awaits _ _ _ _ _ rest => 1 + zusatzSonst rest
   | .bindCallInd .. => 0
+  | .narrow .. => 0
+  | .exchange .. => 0
+  | .ite .. => 0
 end
 

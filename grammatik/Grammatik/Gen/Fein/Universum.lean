@@ -152,7 +152,10 @@ def kTab : List (List Zeile) := [
     ⟨none, false, false, [(6, none, none)]⟩ /- regRead -/,
     ⟨none, false, false, [(0, some 1, none), (6, none, none), (6, none, none)]⟩ /- regReadElse -/,
     ⟨none, false, false, [(6, none, none)]⟩ /- awaits -/,
-    ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none)]⟩ /- bindCallInd -/],
+    ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none)]⟩ /- bindCallInd -/,
+    ⟨none, false, false, [(0, some 0, none), (6, none, none), (6, none, none)]⟩ /- narrow -/,
+    ⟨none, false, false, [(0, none, none), (6, none, none)]⟩ /- exchange -/,
+    ⟨none, false, false, [(0, some 1, none), (6, none, none), (6, none, none)]⟩ /- ite -/],
   -- Arms
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(5, none, none), (7, none, none)]⟩ /- cons -/],

@@ -57,6 +57,10 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, _, .regReadElse r hk z sonst rest => ⟨rest.alsBlock.1, .regReadElse r hk z sonst rest.alsBlock.2⟩
   | _, _, .awaits g pl hp hL hat rest => ⟨rest.alsBlock.1, .awaits g pl hp hL hat rest.alsBlock.2⟩
   | _, _, .bindCallInd p args he hp hr rest => ⟨rest.alsBlock.1, .bindCallInd p args he hp hr rest.alsBlock.2⟩
+  | _, _, .narrow e lo' hi' sonst rest => ⟨rest.alsBlock.1, .narrow e lo' hi' sonst rest.alsBlock.2⟩
+  | _, _, .exchange g neu hw hL rest => ⟨rest.alsBlock.1, .exchange g neu hw hL rest.alsBlock.2⟩
+  -- an `if` of two end blocks is a check: true runs `t`, false the end block `e` (`Block.check`)
+  | _, _, .ite c t e => ⟨t.alsBlock.1, .check c e t.alsBlock.2⟩
 
 /-- The residue of a running frame: what is left to do. `ende` is a plain
     end block; `dann b k` runs the block `b` first, then `k`; `schrumpf`
@@ -201,6 +205,21 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
         exact keinGrundSig hf hr r
       · rfl
       · rfl
+  | _, _, .narrow e lo' hi' sonst rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .exchange g neu hw hL rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      rw [Endblock.execBlock_alsBlock O passes R rest]
+      cases execEnd O passes R rest _ _ <;> rfl
+  | _, _, .ite c t e, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · exact Endblock.execBlock_alsBlock O passes R t _ _
+      · rfl
 
 /-- A residue that waits for a callee's answer (`wartet`/`wartetSonst`):
     only a BINDING pop may resume it. -/
@@ -300,6 +319,9 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse .. => true
   | .awaits .. => true
   | .bindCallInd .. => true
+  | .narrow .. => true
+  | .exchange .. => true
+  | .ite .. => true
 
 /-- Arm selection for `onTag`: the VALUE's index chooses the arm and the
     VALUE's payload feeds it (like `execArms`, but returning the chosen arm

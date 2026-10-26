@@ -175,6 +175,15 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallInd _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
         Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
+        Endblock.ohneOrakel_alsBlock t, Bool.and_comm]
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndG.alsBlock {V : Vertrag D} {A : D.Lock → Prop} :

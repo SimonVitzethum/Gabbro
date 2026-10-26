@@ -85,6 +85,9 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse .. => false
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .narrow _ _ _ sonst rest => sonst.kOk && rest.kOk
+  | .exchange _ _ _ _ rest => rest.kOk
+  | .ite _ t e => t.kOk && e.kOk
 
   | .regRead .. => false
 

@@ -214,6 +214,9 @@ Endblock.regRead	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporte
 Endblock.regReadElse	REFUSED	crates/gabbro-check/src/llvm.rs::senke_stmt	The exporter does not construct the model Reg carrier.
 Endblock.awaits	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Unfolded to the Block form (`Endblock.alsBlock`); lowered as `Block.awaits`.
 Endblock.bindCallInd	LOWERED	crates/gabbro-check/src/llvm.rs::senke_stmt	Unfolded to the Block form (`Endblock.alsBlock`); lowered as `Block.bindCallInd`.
+Endblock.narrow	OPEN	-	End-block form (THEOREM-MAP 102): in the Lean model and its Lean front end only; the Rust exporter does not construct it (its block form is `Block.narrow`).
+Endblock.exchange	OPEN	-	End-block form (THEOREM-MAP 102): in the Lean model and its Lean front end only; the Rust exporter does not construct it (its block form is `Block.exchange`).
+Endblock.ite	OPEN	-	End-block form (THEOREM-MAP 102): in the Lean model and its Lean front end only; the Rust exporter does not construct it (its block form is `Block.check`).
 Arms.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 Arms.cons	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.
 GrundArms.nil	LOWERED	crates/gabbro-check/src/llvm.rs::emittiere_llvm_mit_beleg	Binding/value/branch structure on supported runtime carriers.

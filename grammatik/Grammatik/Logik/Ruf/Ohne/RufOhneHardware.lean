@@ -125,6 +125,9 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse .. => false
   | .awaits .. => false
   | .bindCallInd _ _ _ _ _ rest => rest.hardwareFrei
+  | .narrow _ _ _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
+  | .exchange _ _ _ _ rest => rest.hardwareFrei
+  | .ite _ t e => t.hardwareFrei && e.hardwareFrei
 
 def Arms.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -472,6 +475,22 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
+  | .narrow x lo' hi' sonst rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_hardware he)
+      · exact Endblock.hardwareFrei_ok hR sonst h.1 _ _ _ he
+  | .exchange g neu hw hL rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei] at h
+      simp only [execEnd] at he
+      exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+  | .ite c t e', h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR t h.1 _ _ _ he
+      · exact Endblock.hardwareFrei_ok hR e' h.2 _ _ _ he
 
 theorem Arms.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

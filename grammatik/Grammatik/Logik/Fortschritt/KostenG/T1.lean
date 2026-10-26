@@ -250,6 +250,10 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
       5 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .awaits _ _ _ _ _ rest => 5 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 5 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
+  -- unfolded into block position like the other compound end forms: the unfold step and the block's price
+  | .narrow e _ _ sonst rest => 5 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
+  | .exchange _ neu _ _ rest => 5 + kostenExpr neu + kostenSonst c pa rest
+  | .ite b t e => 4 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
 
 /-- The steps of an `else` branch: the end block run in BLOCK position
     (`Endblock.alsBlock`, since 2026-09-13), where a `leave`/`next` in it
@@ -275,6 +279,10 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
       2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .awaits _ _ _ _ _ rest => 2 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
+  | .narrow e _ _ sonst rest => 2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
+  | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst c pa rest
+  -- run as `Block.check b e t` (`Endblock.alsBlock`)
+  | .ite b t e => 1 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
 end
 /-! ## 2. Which callees a body names -/
 
@@ -363,6 +371,9 @@ def rufeE (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .regReadElse _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
   | .awaits _ _ _ _ _ rest => rufeE Z ZS EW rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => ZS n && rufeE Z ZS EW rest
+  | .narrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
+  | .exchange _ _ _ _ rest => rufeE Z ZS EW rest
+  | .ite _ t e => rufeE Z ZS EW e && rufeE Z ZS EW t
 end
 /-- The callees of a residue: those of every block, end block and loop body
     still to run. -/
@@ -472,6 +483,12 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock t]
 
 /-- An end block run as a block names the callees the end block names. -/
 theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
@@ -501,6 +518,12 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW t]
 
 end Positiv
 /-! ## 4. Arm selection keeps cost and callees -/

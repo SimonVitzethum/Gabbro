@@ -184,6 +184,9 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .regReadElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .awaits _ _ _ _ _ rest => rest.ueberBoden c
   | .bindCallInd _ _ _ _ _ rest => rest.ueberBoden c
+  | .narrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .exchange _ _ _ _ rest => rest.ueberBoden c
+  | .ite _ t e => t.ueberBoden c && e.ueberBoden c
 
 def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     (c : Int) : Arms D V l Γ Λ Λ' cs → Bool

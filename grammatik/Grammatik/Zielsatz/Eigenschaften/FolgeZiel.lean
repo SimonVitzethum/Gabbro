@@ -173,6 +173,11 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
   | _, _, _, e, w, .bindCallInd (n := n) _ _ _ _ _ rest =>
       congrArg (fun x => (!Φ.ind n || w) && x)
         ((fE_umΛ Φ.mitRuhe _ e false (ruEnd rest)).trans (ruEnd_fE Φ e false rest))
+  | _, _, _, e, w, .narrow _ _ _ sonst rest =>
+      kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruEnd_fE Φ e w rest)
+  | _, _, _, e, w, .exchange _ _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, e, w, .ite _ t f =>
+      kongr₂ (· && ·) (ruEnd_fE Φ e false f) (ruEnd_fE Φ e w t)
 
 theorem ruArms_fArms (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (e : Bool)

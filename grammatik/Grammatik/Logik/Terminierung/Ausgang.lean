@@ -460,6 +460,21 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
       · rename_i hf _ _ _ r _; exact keinGrundSig hf hr r
       · trivial
       · trivial
+  | _, _, _, .narrow _ _ _ sonst rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
+      · exact ohneAus_execEnd sonst eb h.1 _ _
+  | _, _, _, .exchange _ _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)
+  | _, _, _, .ite _ t e, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · exact ohneAus_execEnd t eb h.2 _ _
+      · exact ohneAus_execEnd e eb h.1 _ _
 
 theorem ohneAus_execArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     (arms : Arms D V l Γ Λ Λ' cs) (eb : Bool), (befArms eb true arms).austritt = false →

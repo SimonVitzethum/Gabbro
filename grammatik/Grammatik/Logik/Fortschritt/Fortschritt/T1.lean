@@ -119,6 +119,12 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .exchange _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .ite _ t _ => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal t]
 
 /-- The residue takes an abrupt exit (`leave`/`next`): a loop shim behind
     `dann`/`schrumpf`/`frei`/`abbruch` layers. -/

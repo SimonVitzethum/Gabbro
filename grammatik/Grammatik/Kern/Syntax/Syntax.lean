@@ -768,6 +768,16 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | bindCallInd (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
       (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : (D.sigNr n).gruende = 0)
       (rest : Endblock l (τ :: Γ) (nachSig D (D.sigNr n) Λ)) : Endblock l Γ Λ
+  /-- `narrow x to lo .. hi else { … }` at the top level of a body (or in an `else` that must not fall off):
+      `Block.narrow` with an end-block rest (stage 0, 2026-10-26). -/
+  | narrow (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int) (sonst : Endblock l Γ Λ)
+      (rest : Endblock l (.int lo' hi' :: Γ) Λ) : Endblock l Γ Λ
+  /-- `let x = A exchange update(v) { … } …` at the top level of a body: `Block.exchange` with an end-block
+      rest (stage 0, 2026-10-26). -/
+  | exchange (g : D.Glob) (neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)) (hw : V.gschreibt g = true)
+      (hL : gdarf D g Λ) (rest : Endblock l (D.gtyp g :: Γ) Λ) : Endblock l Γ Λ
+  /-- `if c { … } else { … }` as the last statement of a body, both branches ending (stage 0, 2026-10-26). -/
+  | ite (c : Expr D Γ Λ .bool) (t e : Endblock l Γ Λ) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
   | nil : Arms l Γ Λ Λ []

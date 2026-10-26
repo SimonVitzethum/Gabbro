@@ -168,6 +168,9 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       endblockKanten sonst ++ endblockKanten rest
   | .awaits _ _ _ _ _ rest => endblockKanten rest
   | .bindCallInd _ _ _ _ _ rest => endblockKanten rest
+  | .narrow _ _ _ sonst rest => endblockKanten sonst ++ endblockKanten rest
+  | .exchange _ _ _ _ rest => endblockKanten rest
+  | .ite _ t e => endblockKanten e ++ endblockKanten t
 
 /-- Die direkten Rufe der Fallunterscheidung. -/
 def armsKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

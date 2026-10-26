@@ -4946,3 +4946,26 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
 * Not yet followed (Simon, 2026-10-25: Lean model only): the Rust parser, checker and LLVM still name items by
   short name and refuse a second one (`N039`, `N042`) -- `TODO.md` O28.
 
+
+## 102. End-block forms: narrow, exchange and a two-armed `if` at the end of a body (2026-10-26)
+
+`Kern/Syntax/Syntax.lean` (three constructors at the END of `Endblock`), `Kern/Semantik/Semantik/T2.lean`
+(`execEnd`), `Logik/Ruf/Maschine/RufMaschineG/T1.lean` (`Endblock.alsBlock`).
+
+* **What they are.** `Endblock.narrow e lo hi sonst rest` (an integer narrowed to `[lo, hi]`, `sonst` ends the body
+  when it is outside), `Endblock.exchange g neu hw hL rest` (a carrier swapped for a new value, the old one bound) and
+  `Endblock.ite c t e` (a terminal `if`/`else` whose two arms both end the body). A body whose last statement is one
+  of these no longer needs a dummy return behind it.
+* **Each is its block form.** `alsBlock` maps them to `Block.narrow`, `Block.exchange` and `Block.check c e t`
+  (the false arm is the `check`'s end block, the true arm the continuation), so every analysis of the thread
+  machine, the lock and atomic semantics, the embedding (`sim_end`), the cost bound and the call-order check
+  (`fE`: the false arm is checked unarmed, as in `check`) is the block form's. All three are unfoldable
+  (`EndEntfaltbar`), so the call machine takes them through `RufSchrittG.endeForm`.
+* List-valued analyses of `ite` are ordered false arm first (`alsBlock` order); Bool-valued ones are commuted in
+  their `alsBlock` lemmas.
+* Not claimed: arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them (false), a refusal, not an
+  acceptance; the generator does not draw them (size `unendlich`, `bekannteLuecken`: `G_ENDFORM`); the Rust exporter
+  does not construct them (LLVM register OPEN).
+* Fine cells: `Endblock` constructors 14-16; `kTab` regenerated; the pinned component hashes moved structurally only.
+
+All axiom lists standard.
