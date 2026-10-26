@@ -77,7 +77,7 @@ inductive SAnw
   | leave : String → SAnw
   | next : String → SAnw
   | emit : SExpr → SExpr → String → SAnw
-  | await : String → SExpr → String → SAnw
+  | await : String → Option STyp → SExpr → String → SAnw
   | swap : String → Option STyp → SExpr → String → SAnw
   | step : String → String → SAnw
   | ret : Option SExpr → SAnw
@@ -156,8 +156,8 @@ def beqSAnw : SAnw → SAnw → Bool
   | .next l, .next m => strEq l m
   | .emit z w p, .emit y v q =>
     beqSExpr z y && beqSExpr w v && strEq p q
-  | .await n q e, .await m p f =>
-    strEq n m && beqSExpr q p && strEq e f
+  | .await n t q e, .await m u p f =>
+    strEq n m && beqSTypOpt t u && beqSExpr q p && strEq e f
   | .swap n t o k, .swap m u p l =>
     strEq n m && beqSTypOpt t u && beqSExpr o p && strEq k l
   | .step a b, .step c d => strEq a c && strEq b d
@@ -328,7 +328,7 @@ def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
       let (pl, rest'') ← nimmBisZeichen "}" rest' 0
       let rest3 ← fordereZeichen "}" rest''
       let rest4 ← fordereZeichen ";" rest3
-      pure (.await name e pl, rest4)
+      pure (.await name ty e pl, rest4)
     | .wort "awaits" :: _ => .error "awaits without {"
     | .wort "exchange" :: rest' => do
       let (k, rest'') ← nimmBisZeichen ";" rest' 0

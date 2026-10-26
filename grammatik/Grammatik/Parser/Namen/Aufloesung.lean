@@ -348,7 +348,7 @@ def gebunden : SAnw → List String
   | .bindLib _ x _ _ _ => [x]
   | .alloc _ x _ _ _ _ => [x]
   | .allocVon _ x _ _ => [x]
-  | .await x _ _ => [x]
+  | .await x _ _ _ => [x]
   | .swap x _ _ _ => [x]
   | _ => []
 
@@ -380,7 +380,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .locks sh p s => .locks sh (aus k p) (anw k s)
   | .watch d s => .watch (k.ref d) (anw k s)
   | .emit a b p => .emit (aus k a) (aus k b) p
-  | .await x e p => .await x (aus k e) p
+  | .await x t e p => .await x t (aus k e) p
   | .swap x t e w => .swap x t (aus k e) w
   | .ret e => .ret (ausO k e)
   | .alloc m x t a e none => .alloc m x (typO k t) (k.ref a) (aus k e) none

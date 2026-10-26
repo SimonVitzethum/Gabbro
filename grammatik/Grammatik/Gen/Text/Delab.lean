@@ -212,7 +212,7 @@ def delabB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
       let (es, ende) ← delabEnd sonst
       .ok (.bindElse (nVar Γ.length) none (regOrt z r) (nVar Γ.length) (.block es ende) :: (← delabB rest))
   | .awaits g payload _ _ _ rest => do
-      .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
+      .ok (.await (nVar Γ.length) none (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
         (← delabB rest))
   | b => .error ("block without a spelling: " ++ String.intercalate " " (Gabbro.Grammatik.Parser.Cover.Mitglieder.cB b))
 
@@ -243,7 +243,7 @@ def delabEnd {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
       .ok (.bind false (nVar Γ.length) none (regOrt z r) :: rs, en)
   | .awaits g payload _ _ _ rest => do
       let (rs, en) ← delabEnd rest
-      .ok (.await (nVar Γ.length) (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
+      .ok (.await (nVar Γ.length) none (.variable (nGlob (show Fin z.globs.length from g).val)) (nutzTextA z payload) ::
         rs, en)
   | .bindCallInd p args _ _ _ rest => do
       let as ← delabA z args

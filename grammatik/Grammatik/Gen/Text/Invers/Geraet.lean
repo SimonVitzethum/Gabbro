@@ -138,7 +138,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     (rest : List SAnw) :
     ∃ ty, ∀ xs cE, uAnwReihe tabs koepfe f (ctxMit ctx x a ty 0 [] ctx.loops) rest = .ok (xs, cE) →
       uAnwReihe tabs koepfe (f + 1) ctx
-        (.await x (.variable (nGlob (gN z g))) (nutzTextA z (z.deklaration.nutzlast g)) :: rest) =
+        (.await x none (.variable (nGlob (gN z g))) (nutzTextA z (z.deklaration.nutzlast g)) :: rest) =
         .ok (.awaitBind x (nGlob (gN z g)) :: xs, cE) := by
   obtain ⟨gl, hf, hb, _, hat, hn, hwt, hopt⟩ := H.glob g
   have hgl : uNamenGleich (uNutzNamen (nutzTextA z (z.deklaration.nutzlast g))) gl.nutzlast = true := by
@@ -149,7 +149,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     rw [ht] at hart; simp only [artErg, Option.some.injEq] at hart; subst hart
     refine ⟨.bool, fun xs cE hr => ?_⟩
     rw [uAnwReihe]
-    simp only [hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
+    simp only [uBinderTyp, hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
     simp only [uMitLokal, ctxMit] at hr ⊢
     simp only [hr]
   | wert τ => exact absurd h (hwt τ)
@@ -163,7 +163,7 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
       | _ => rw [hg] at hart; simp [artErg] at hart
     subst this
     rw [uAnwReihe]
-    simp only [hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
+    simp only [uBinderTyp, hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]
     simp only [uMitLokal, ctxMit] at hr ⊢
     simp only [hr]
 

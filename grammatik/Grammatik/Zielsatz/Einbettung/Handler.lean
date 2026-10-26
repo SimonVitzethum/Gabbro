@@ -110,6 +110,8 @@ theorem orte_exE : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .strEq a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
   | _, _, _, .strLt a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]
   | _, _, _, .strWeit _ e => by simp only [exE, Expr.orte, orte_exE e]
+  | _, _, _, .wenn c a b => by simp only [exE, Expr.orte, orte_exE c, orte_exE a, orte_exE b, List.map_append]
+  | _, _, _, .eng e _ _ s => by simp only [exE, Expr.orte, orte_exE e, orte_exE s, List.map_append]
 
 theorem orteN_exN : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} (n : NutzlastExpr D Γ Λ c),
     (exN E n).orte = n.orte.map E.ortE

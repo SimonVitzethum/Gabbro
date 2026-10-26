@@ -77,10 +77,31 @@ def tausch_typ_refused : String :=
   "module m { static Z : u32 in 0 .. 100 = 0; impl fn f() -> u32 in 0 .. 100 effects { reads Z, writes Z } { let alt : u32 = Z exchange update(v) { return v / 2; } publishes nothing; return alt; } }"
 theorem tausch_typ_refused_stufe : stufe tausch_typ_refused = "elab: exchange binder typed other than its static" := by decide +kernel
 
-/-- The compare form (`… when … returns …`) has no G form yet. -/
-def tausch_cas_refused : String :=
-  "module m { static Z : u32 in 0 .. 100 = 0; impl fn f() -> bool effects { reads Z, writes Z } { let ok = Z exchange 1 when old(Z) == 0 returns erfolg publishes nothing; return ok; } }"
-theorem tausch_cas_refused_stufe : stufe tausch_cas_refused = "elab: exchange compare form without G form" := by decide +kernel
+/-- The compare form: the new value where `old(Z)` meets the predicate (`Expr.wenn`), the binder the success. -/
+def tausch_cas_ok : String :=
+  "module m { atomic Z : u32 in 0 .. 100 relaxed; impl fn f() -> bool effects { reads Z, writes Z } { let ok = Z exchange 7 when old(Z) == 0 returns erfolg publishes nothing; return ok; } }"
+theorem tausch_cas_ok_stufe : stufe tausch_cas_ok = "OK" := by decide +kernel
+
+/-- The new value of the compare form is checked against the static's range. -/
+def tausch_cas_range_refused : String :=
+  "module m { atomic Z : u32 in 0 .. 100 relaxed; impl fn f() -> bool effects { reads Z, writes Z } { let ok = Z exchange 700 when old(Z) == 0 returns erfolg publishes nothing; return ok; } }"
+theorem tausch_cas_range_refused_stufe : stufe tausch_cas_range_refused = "lower: value outside range" := by decide +kernel
+
+/-- An `update` body with `if`: each arm reads the binder narrowed by its guard (`Expr.eng`), so `v + 1` under
+    `v < 100` fits `0 .. 100`. -/
+def tausch_wenn_ok : String :=
+  "module m { atomic Z : u32 in 0 .. 100 relaxed; impl fn f() -> u32 in 0 .. 100 effects { reads Z, writes Z } { let alt = Z exchange update(v) bounded 8 ops on_exceeded k { if v < 100 { return v + 1; } else { return v; } } publishes nothing; return alt; } }"
+theorem tausch_wenn_ok_stufe : stufe tausch_wenn_ok = "OK" := by decide +kernel
+
+/-- An `else if` chain: the later arms read the binder under the negated guards before them. -/
+def tausch_kette_ok : String :=
+  "module m { atomic Z : u32 in 0 .. 100 relaxed; impl fn f() -> u32 in 0 .. 100 effects { reads Z, writes Z } { let alt = Z exchange update(v) { if v >= 100 { return v; } else if v > 50 { return v + 1; } else { return v + 2; } } publishes nothing; return alt; } }"
+theorem tausch_kette_ok_stufe : stufe tausch_kette_ok = "OK" := by decide +kernel
+
+/-- A guard too weak for the arm is refused: `v < 101` leaves `v + 1` at `101`. -/
+def tausch_wenn_refused : String :=
+  "module m { atomic Z : u32 in 0 .. 100 relaxed; impl fn f() -> u32 in 0 .. 100 effects { reads Z, writes Z } { let alt = Z exchange update(v) { if v < 101 { return v + 1; } return v; } publishes nothing; return alt; } }"
+theorem tausch_wenn_refused_stufe : stufe tausch_wenn_refused = "lower: value outside range" := by decide +kernel
 
 /-! ## A terminal `if`/`else` -/
 
@@ -103,5 +124,22 @@ theorem ite_faellt_refused_stufe : stufe ite_faellt_refused = "elab: fn with a r
 def ite_range_refused : String :=
   "module m { impl fn f(c : bool) -> u32 in 0 .. 1 { if c { return 1; } else { return 2; } } }"
 theorem ite_range_refused_stufe : stufe ite_range_refused = "lower: value outside range" := by decide +kernel
+
+/-! ## A body ending on every path without a trailing return -/
+
+/-- A nested terminal `if`. -/
+def ende_verschachtelt_ok : String :=
+  "module m { impl fn f(c : bool, d : bool) -> u32 in 0 .. 5 { if c { if d { return 1; } else { return 4; } } else { return 2; } } }"
+theorem ende_verschachtelt_ok_stufe : stufe ende_verschachtelt_ok = "OK" := by decide +kernel
+
+/-- A terminal `match` over an option static. -/
+def ende_match_ok : String :=
+  "module m { table T count 4 { slot { x : u32 in 0 .. 9, } } static mut O : option index into T = None; impl fn f() -> option index into T effects { reads O } { match O { None => { return None; } Some(i) => { return Some(i); } } } }"
+theorem ende_match_ok_stufe : stufe ende_match_ok = "OK" := by decide +kernel
+
+/-- An arm that falls through still falls off the function. -/
+def ende_match_refused : String :=
+  "module m { table T count 4 { slot { x : u32 in 0 .. 9, } } static mut O : option index into T = None; impl fn f() -> option index into T effects { reads O } { match O { None => { return None; } Some(i) => { } } } }"
+theorem ende_match_refused_stufe : stufe ende_match_refused = "elab: fn with a result falls off" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben18

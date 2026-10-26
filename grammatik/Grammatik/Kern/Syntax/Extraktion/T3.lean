@@ -398,6 +398,28 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval]
       rw [ha]
+  | .wenn c a b =>
+      have hc := eval_liest_nur_orte c os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl ho)))))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inr ho)))))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hb := eval_liest_nur_orte b os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [hc, ha, hb]
+  | .eng e _ _ s =>
+      have he := eval_liest_nur_orte e os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hs := eval_liest_nur_orte s os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [hs]
+      exact eng_kongr he _
 
 /-- Die Nutzlast liest nur ihre Orte: die zweite Haelfte des Schlusssteins. -/
 theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}

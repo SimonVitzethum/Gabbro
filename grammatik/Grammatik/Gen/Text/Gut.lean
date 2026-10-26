@@ -138,7 +138,7 @@ def anwGutB : Nat → Bool → SAnw → Bool
   | n + 1, false, .cond c t [] s => gut c && anwGutB n true t && s.all (anwGutB n true)
   | n + 1, false, .locks false o b => gutPlatz o && kopfName o != "shared" && anwGutB n true b
   | _ + 1, false, .emit z w p => gutPlatz z && gut w && pubGutB p
-  | _ + 1, false, .await x q p => x != "mut" && gut q && rohZuB p
+  | _ + 1, false, .await x none q p => x != "mut" && gut q && rohZuB p
   | n + 1, false, .each _ none _ s _ r i body =>
     gut s && r == "" && i.all (predGutB 50) && anwGutB n true body
   | _ + 1, false, .ret none => true
@@ -191,9 +191,9 @@ theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = tru
       | .emit z w p, h =>
         simp only [anwGutB, Bool.and_eq_true] at h
         exact .emit z w p h.1.1 h.1.2 (pubGutB_sound p h.2)
-      | .await x q p, h =>
+      | .await x none q p, h =>
         simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
-        exact .await x q p h.1.1 h.1.2 (rohZuB_sound p h.2)
+        exact .await x none q p h.1.1 trivial h.1.2 (rohZuB_sound p h.2)
       | .each b none k s m r i body, h =>
         simp only [anwGutB, Bool.and_eq_true, beq_iff_eq] at h
         obtain ⟨⟨⟨hs, rfl⟩, hi⟩, hb⟩ := h

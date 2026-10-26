@@ -119,6 +119,8 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .strEq e e' => do .ok s!"(Expr.strEq (D := z.deklaration) {← drE N e} {← drE N e'})"
   | _, .strLt e e' => do .ok s!"(Expr.strLt (D := z.deklaration) {← drE N e} {← drE N e'})"
   | _, .strWeit m e => do .ok s!"(Expr.strWeit (D := z.deklaration) {m} {← drE N e})"
+  | _, .wenn c a b => do .ok s!"(Expr.wenn (D := z.deklaration) {← drE N c} {← drE N a} {← drE N b})"
+  | _, .eng e lo hi s => do .ok s!"(Expr.eng (D := z.deklaration) {← drE N e} {zahl lo} {zahl hi} {← drE N s})"
 
 /-- A payload expression. -/
 def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option (Int × Int)} → NutzlastExpr D Γ Λ o → Except String String

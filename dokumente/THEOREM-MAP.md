@@ -4974,3 +4974,28 @@ Lean pipeline, `Parser/Elab/UebersetzeAllg3.lean`) runs it before `elabU`.
   form `… when … returns …`, a payload or `awaits` at an exchange, an update body other than one value.
 
 All axiom lists standard.
+
+## 103. Conditional and narrowed values; the rest of `exchange` in the front end (2026-10-26)
+
+`Kern/Syntax/Syntax.lean` (two constructors at the END of `Expr`), `Kern/Semantik/Semantik/T1.lean` (`eval`).
+
+* **`Expr.wenn c a b : Expr τ`** is `if c then a else b` as a value. **`Expr.eng e lo hi sonst : Expr (.int lo hi)`**
+  is `e` narrowed to `lo .. hi`, else `sonst` (the expression twin of `Block.narrow`). Every pass, the embedding
+  (`eval_exE`), the lock and rely translations (`eval_ru`), the read lemmas (`eval_liest_nur_orte`/`_speicher`,
+  via `eng_kongr`), costs (`kostenExpr`: both arms), the fine cells (Expr 55, 56) and the printers carry them; the
+  checker components moved structurally only (hashes updated). LLVM register OPEN; the generator does not draw
+  them (`G_WENN`).
+* Front end (`Parser/Elab`), all checked by kernel probes in `UebersetzeProben18`:
+  * the compare form `let x = A exchange e when p returns r …`: the new value `Expr.wenn p e old`, the binder `x`
+    the success `p` (a truth value, as the Rust checker types it), `old(A)` in `p` the old value;
+  * `update` bodies with `if`/`else if`/`else` and guarded `return`s: nested `Expr.wenn`, each arm reading the
+    binder narrowed by its guard and the negated guards before it (`Expr.eng`, whose fallback is unreachable
+    there), so `if v < 100 { return v + 1; }` fits `0 .. 100` and `if v < 101` does not;
+  * `publishes { … }`/`awaits { … }` at an exchange: exactly the declared payload, as at `publish` (`publishes
+    nothing` only for an atomic without one); `awaits` is the acquiring read of `Block.awaits` in front;
+  * the written binder type of `let x : T = A awaits { … }` is kept (`SAnw.await`) and must be `A`'s;
+  * a body that ends on every path (`uEndetTief`: a nested terminal `if`, a `match`, whose arms the model makes
+    complete) gets `URet.keins`, lowered to `Endblock.ite` where it can and else to an unreachable trailing return
+    of a default value of the result type.
+
+All axiom lists standard.

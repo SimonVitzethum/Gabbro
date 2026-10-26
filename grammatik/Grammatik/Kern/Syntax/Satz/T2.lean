@@ -129,6 +129,17 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       · exact v.orte_darf o h
   | .strLen s, o, h => s.orte_darf o h
   | .strWeit _ s, o, h => s.orte_darf o h
+  | .wenn c a b, o, h => by
+      simp only [Expr.orte, List.mem_append] at h
+      rcases h with (h | h) | h
+      · exact c.orte_darf o h
+      · exact a.orte_darf o h
+      · exact b.orte_darf o h
+  | .eng e _ _ s, o, h => by
+      simp only [Expr.orte, List.mem_append] at h
+      rcases h with h | h
+      · exact e.orte_darf o h
+      · exact s.orte_darf o h
 
 theorem NutzlastExpr.orte_darf : (e : NutzlastExpr D Γ Λ c) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .empty, _, h => by simp [NutzlastExpr.orte] at h

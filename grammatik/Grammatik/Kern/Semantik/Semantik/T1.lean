@@ -196,6 +196,8 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .strEq s t => s.orte ++ t.orte
   | .strLt s t => s.orte ++ t.orte
   | .strWeit _ s => s.orte
+  | .wenn c a b => c.orte ++ a.orte ++ b.orte
+  | .eng e _ _ s => e.orte ++ s.orte
 
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
   | .empty => []
@@ -295,6 +297,10 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .strEq s t, σ, ρ => strEqW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
   | .strLt s t, σ, ρ => strLtW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
   | .strWeit m s, σ, ρ => strWeitW m (eval σ₀ s σ ρ)
+  | .wenn c a b, σ, ρ => if wahr? (eval σ₀ c σ ρ) then eval σ₀ a σ ρ else eval σ₀ b σ ρ
+  | .eng e lo' hi' s, σ, ρ =>
+      let v := eval σ₀ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then ⟨v.n, h.1, h.2⟩ else eval σ₀ s σ ρ
 
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast c
   | .empty, _, _ => ()
@@ -586,5 +592,12 @@ def traverseLauf (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ 
       | .logik e => .logik e
       | .hardware e => .hardware e
 
+
+
+/-- The narrowing of `Expr.eng` is a function of the narrowed value. -/
+theorem eng_kongr {lo hi lo' hi' : Int} {x y : Zahl lo hi} (h : x = y) (f : Zahl lo' hi') :
+    (if h : lo' ≤ x.n ∧ x.n ≤ hi' then (⟨x.n, h.1, h.2⟩ : Zahl lo' hi') else f) =
+      (if h : lo' ≤ y.n ∧ y.n ≤ hi' then (⟨y.n, h.1, h.2⟩ : Zahl lo' hi') else f) := by
+  subst h; rfl
 
 end Gabbro.Grammatik

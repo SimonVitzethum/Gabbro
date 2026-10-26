@@ -1444,6 +1444,13 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .ok wa, .ok wi, .ok wv => updW wa wi wv
     | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e
   | .typed τ s => (lowLit τ s).map (⟨τ, ·⟩)
+  | .eng s lo' hi' =>
+    match lowWertE u Γ Λ fn er s with
+    | .ok ⟨.int _ _, t⟩ =>
+      if h : lo' ≤ hi' then .ok ⟨.int lo' hi', Expr.eng t lo' hi' (Expr.widen (Int.le_refl lo') h (Expr.lit lo'))⟩
+      else .error "narrowing to an empty range"
+    | .ok _ => .error "narrowing of a non-number"
+    | .error e => .error e
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
     slot reads, `old` and `result` travel (the integer values of `lowWertE`). -/

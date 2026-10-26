@@ -273,7 +273,7 @@ def zeugeGeraet : List SItemTief := [
       .set (.field (.variable "d") "C") "=" (.variable "x"),
       .bind false "p" none (.fnref "g"),
       .call "p" [.call "p" [.lit 1]],
-      .await "r" (.variable "flag") (renderText [.ident "zaehler"]),
+      .await "r" none (.variable "flag") (renderText [.ident "zaehler"]),
       .emit (.variable "flag") .tru (renderText [.ident "zaehler"])]
       (some (.ret (some (.variable "t"))))),
   .groupT "Gruppe" ["D", "Tab"] [
@@ -321,7 +321,7 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
       · exact .set _ _ _ (by decide) (by decide) (by decide)
       · exact .bind _ _ _ _ (by decide) trivial (by decide)
       · exact .call _ _ (show nameForm _ = true by decide) (by decide) (by decide)
-      · exact .await _ _ _ (by decide) (by decide) ⟨[.ident "zaehler"], rfl,
+      · exact .await _ _ _ _ (by decide) trivial (by decide) ⟨[.ident "zaehler"], rfl,
           by intro t ht; simp at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp⟩⟩
       · exact .emit _ _ _ (by decide) (by decide)
           (Or.inr ⟨⟨[.ident "zaehler"], rfl,

@@ -541,6 +541,8 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .strEq e e' => .strEq (ruE e) (ruE e')
   | _, _, _, .strLt e e' => .strLt (ruE e) (ruE e')
   | _, _, _, .strWeit m e => .strWeit m (ruE e)
+  | _, _, _, .wenn c a b => .wenn (ruE c) (ruE a) (ruE b)
+  | _, _, _, .eng e lo hi s => .eng (ruE e) lo hi (ruE s)
 
 /-- A payload expression, translated. -/
 def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →

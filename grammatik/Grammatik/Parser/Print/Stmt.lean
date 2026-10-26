@@ -129,9 +129,9 @@ def druckAnw : SAnw → List Token
     druckToks z ++ [.zeichen "="] ++ druckToks w ++ [.wort "publishes"] ++
       (if strEq p "nothing" then [.wort "nothing"] else [.zeichen "{"] ++ rohToks p ++ [.zeichen "}"]) ++
       [.zeichen ";"]
-  | .await n q e =>
-    [.wort "let", nameTok n, .zeichen "="] ++ druckToks q ++ [.wort "awaits", .zeichen "{"] ++ rohToks e ++
-      [.zeichen "}", .zeichen ";"]
+  | .await n ty q e =>
+    [.wort "let", nameTok n] ++ druckTypOpt ty ++ [.zeichen "="] ++ druckToks q ++ [.wort "awaits", .zeichen "{"] ++
+      rohToks e ++ [.zeichen "}", .zeichen ";"]
   | .swap n ty o k =>
     [.wort "let", nameTok n] ++ druckTypOpt ty ++ [.zeichen "="] ++ druckToks o ++ [.wort "exchange"] ++ rohToks k ++
       [.zeichen ";"]

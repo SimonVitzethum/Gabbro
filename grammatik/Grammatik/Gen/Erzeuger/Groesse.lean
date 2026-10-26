@@ -78,6 +78,8 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .strEq s t => unendlich + 1 + groesseExpr s + groesseExpr t
   | _, _, _, .strLt s t => unendlich + 1 + groesseExpr s + groesseExpr t
   | _, _, _, .strWeit _ s => unendlich + 1 + groesseExpr s
+  | _, _, _, .wenn c a b => unendlich + 1 + groesseExpr c + groesseExpr a + groesseExpr b
+  | _, _, _, .eng e _ _ s => unendlich + 1 + groesseExpr e + groesseExpr s
 
 def groesseNutz : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → Nat
   | _, _, _, .empty => 1

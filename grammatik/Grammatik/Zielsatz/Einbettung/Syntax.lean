@@ -212,6 +212,8 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .strEq e e' => .strEq (exE e) (exE e')
   | _, _, _, .strLt e e' => .strLt (exE e) (exE e')
   | _, _, _, .strWeit m e => .strWeit m (exE e)
+  | _, _, _, .wenn c a b => .wenn (exE c) (exE a) (exE b)
+  | _, _, _, .eng e lo hi s => .eng (exE e) lo hi (exE s)
 
 /-- A payload expression. -/
 def exN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →

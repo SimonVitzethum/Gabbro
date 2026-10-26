@@ -142,9 +142,20 @@ def lowErg (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) : URet 
     | some _ => .error "truth value returned for a non-bool result"
     | none => .error "return with value without result"
 
+/-- The return a body ends with when every path already ended (`URet.keins`, set by the elaborator only then,
+    `uEndetTief`): unreachable, so any value of the result type; refused where none is at hand. -/
+def keinsWert : Option Ty → Option URet
+  | some (.int lo _) => some (.val (.lit lo))
+  | some (.opt _) => some (.opt .nichts)
+  | some .bool => some (.bool .fls)
+  | _ => none
+
 /-- The trailing return. -/
-def lowEnd (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) (r : URet) :
+def lowEnd (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) (r0 : URet) :
     Except String (Endblock (declOf u) (verOf u caller) false Γ (resOf u caller)) :=
+  let r := match r0 with
+    | .keins => (keinsWert (fnAt u caller).ergTy).getD .keins
+    | r => r
   match r with
   | .why i =>
     if h : i < (verOf u caller).gruende then .ok (Endblock.retWhy (D := declOf u) ⟨i, h⟩ (endPerm_ok u caller))
@@ -240,6 +251,16 @@ def mkAllocBlock {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (
   else .error "arena counter foreign"
 
 /-! ## Runs of statements -/
+
+/-- The new value of an exchange: the guarded values of an `update` body as nested `Expr.wenn`, at the static's
+    type `τ`. -/
+def lowTauschNeu (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (τ : Ty) :
+    List (UEns × USide) → USide → Except String (Expr (declOf u) Γ Λ τ)
+  | [], s => lowWertAtE u Γ Λ fn none τ s
+  | (c, e) :: rest, s =>
+    match lowEns u Γ Λ fn none c, lowWertAtE u Γ Λ fn none τ e, lowTauschNeu u Γ Λ fn τ rest s with
+    | .ok c', .ok e', .ok r' => .ok (Expr.wenn c' e' r')
+    | .error x, _, _ | _, .error x, _ | _, _, .error x => .error x
 
 mutual
 /-- A flat run of statements at `Λ`, up to (not including) the `zu`/`sonst` marker that ends it, or the
@@ -503,13 +524,13 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
                 exact b
               .ok (Block.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
             else .error "call of a function with a reason channel needs `let .. else`"
-  | Γ, fn, n + 1, Λ, pe, .tausch x a v neu :: rest =>
+  | Γ, fn, n + 1, Λ, pe, .tausch x a v zweige neu :: rest =>
     match globIdx u.globs a with
     | .error e => .error e
     | .ok g =>
       if hw : (verOf u caller).gschreibt g = true then
       if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
-        match lowWertAtE u ((declOf u).gtyp g :: Γ) Λ (fn.mitTy v ((declOf u).gtyp g)) none ((declOf u).gtyp g) neu with
+        match lowTauschNeu u ((declOf u).gtyp g :: Γ) Λ (fn.mitTy v ((declOf u).gtyp g)) ((declOf u).gtyp g) zweige neu with
         | .error e => .error e
         | .ok ne =>
           match lowSeqL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
@@ -879,13 +900,13 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
                 exact b
               .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
             else .error "call of a function with a reason channel needs `let .. else`"
-  | Γ, fn, n + 1, Λ, pe, .tausch x a v neu :: rest =>
+  | Γ, fn, n + 1, Λ, pe, .tausch x a v zweige neu :: rest =>
     match globIdx u.globs a with
     | .error e => .error e
     | .ok g =>
       if hw : (verOf u caller).gschreibt g = true then
       if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
-        match lowWertAtE u ((declOf u).gtyp g :: Γ) Λ (fn.mitTy v ((declOf u).gtyp g)) none ((declOf u).gtyp g) neu with
+        match lowTauschNeu u ((declOf u).gtyp g :: Γ) Λ (fn.mitTy v ((declOf u).gtyp g)) ((declOf u).gtyp g) zweige neu with
         | .error e => .error e
         | .ok ne =>
           match lowEndL (l := l) u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n Λ pe rest with
@@ -1172,13 +1193,13 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
                 exact e
               .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr e')
             else .error "call of a function with a reason channel needs `let .. else`"
-  | Γ, fn, n + 1, .tausch x a v neu :: rest, r =>
+  | Γ, fn, n + 1, .tausch x a v zweige neu :: rest, r =>
     match globIdx u.globs a with
     | .error e => .error e
     | .ok g =>
       if hw : (verOf u caller).gschreibt g = true then
       if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ resOf u caller) then
-        match lowWertAtE u ((declOf u).gtyp g :: Γ) (resOf u caller) (fn.mitTy v ((declOf u).gtyp g)) none ((declOf u).gtyp g) neu with
+        match lowTauschNeu u ((declOf u).gtyp g :: Γ) (resOf u caller) (fn.mitTy v ((declOf u).gtyp g)) ((declOf u).gtyp g) zweige neu with
         | .error e => .error e
         | .ok ne =>
           match lowBodyF u caller ((declOf u).gtyp g :: Γ) (fn.mitTy x ((declOf u).gtyp g)) n rest r with

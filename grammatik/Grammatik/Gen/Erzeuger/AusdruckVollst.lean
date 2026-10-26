@@ -381,6 +381,8 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
   | strEq _ _ => simp only [groesseExpr] at hu; omega
   | strLt _ _ => simp only [groesseExpr] at hu; omega
   | strWeit _ _ => simp only [groesseExpr] at hu; omega
+  | wenn _ _ _ => simp only [groesseExpr] at hu; omega
+  | eng _ _ _ _ => simp only [groesseExpr] at hu; omega
 
 /-! ## The table by size -/
 

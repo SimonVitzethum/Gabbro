@@ -533,6 +533,12 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   | strLt (s : Expr Γ Λ (.str n)) (t : Expr Γ Λ (.str m)) : Expr Γ Λ .bool
   /-- A string under the maximum `m` (`let t : string max m = s`): the front end writes it for `n ≤ m`. -/
   | strWeit (m : Nat) (s : Expr Γ Λ (.str n)) : Expr Γ Λ (.str m)
+  /-- `if c then a else b` as a value: the compare form of `exchange` and an `update` body with `if`
+      (stage 0, 2026-10-26). -/
+  | wenn (c : Expr Γ Λ .bool) (a b : Expr Γ Λ τ) : Expr Γ Λ τ
+  /-- `e` narrowed to `lo' .. hi'`, else `sonst`: the binder of an `update` body under the guard of its branch,
+      where `sonst` is unreachable (stage 0, 2026-10-26). -/
+  | eng (e : Expr Γ Λ (.int lo hi)) (lo' hi' : Int) (sonst : Expr Γ Λ (.int lo' hi')) : Expr Γ Λ (.int lo' hi')
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
   | empty : NutzlastExpr Γ Λ none

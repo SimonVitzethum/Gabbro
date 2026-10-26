@@ -257,6 +257,15 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
       show strWeitW _ _ = _
       rw [eval_ru σ₀ σ e ρ]
       rfl
+  | _, _, _, .wenn c a b, ρ => by
+      show (if wahr? (eval _ (ruE c) _ _) then eval _ (ruE a) _ _ else eval _ (ruE b) _ _) = _
+      rw [eval_ru σ₀ σ c ρ, eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
+      show (if wahr? (eval σ₀ c σ ρ) then _ else _) = valR _ (if wahr? (eval σ₀ c σ ρ) then _ else _)
+      split <;> rfl
+  | _, _, _, .eng e lo' hi' s, ρ => by
+      show (if h : lo' ≤ (eval _ (ruE e) _ _).n ∧ (eval _ (ruE e) _ _).n ≤ hi' then _ else eval _ (ruE s) _ _) = _
+      rw [eval_ru σ₀ σ s ρ]
+      exact eng_kongr (eval_ru σ₀ σ e ρ) _
 
 theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),

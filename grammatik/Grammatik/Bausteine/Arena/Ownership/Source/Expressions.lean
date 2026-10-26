@@ -44,6 +44,8 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .strEq a b => requirements a ++ requirements b
   | .strLt a b => requirements a ++ requirements b
   | .strWeit _ s => requirements s
+  | .wenn c a b => requirements c ++ requirements a ++ requirements b
+  | .eng e _ _ s => requirements e ++ requirements s
   | .lit _ | .tru | .fls | .glob .. | .ptrOf .. | .fnref .. | .oldG .. | .none _ | .why .. => []
 
 def payloadRequirements {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :

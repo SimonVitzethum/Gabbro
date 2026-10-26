@@ -158,7 +158,7 @@ def printInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .reaches _ _ _ _ _ _ => none
   | .arrNil | .arrCons .. | .arrSet .. | .strLit .. | .strCat .. => none
   | .arrGet .. | .strLen .. => none
-  | .strGet .. | .strEq .. | .strLt .. | .strWeit .. => none
+  | .strGet .. | .strEq .. | .strLt .. | .strWeit .. | .wenn .. | .eng .. => none
 
 /-- The computational elaborator: from a printed certificate back to a
     CHECKED term. Every side condition `certRange` recomputes is rechecked
@@ -477,6 +477,8 @@ theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty
   | .strEq _ _ => by simp [printInt]
   | .strLt _ _ => by simp [printInt]
   | .strWeit _ _ => by simp [printInt]
+  | .wenn _ _ _ => by simp [printInt]
+  | .eng _ _ _ _ => by simp [printInt]
 
 /-- Term identity at int type: the task's proposed shape
     (`print_elab (e : CheckedExpr) : elab (print e) = some e`).

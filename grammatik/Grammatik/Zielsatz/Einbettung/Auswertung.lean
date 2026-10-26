@@ -357,6 +357,23 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       show strWeitW _ _ = strWeitW _ _
       rw [he]
       rfl
+  | _, _, _, .wenn c a b, ρ, ρ', hρ => by
+      have hc := eval_exE h₀ h c ρ ρ' hρ; have ha := eval_exE h₀ h a ρ ρ' hρ
+      have hb := eval_exE h₀ h b ρ ρ' hρ
+      simp only [VRel] at hc
+      show E.VRel K _ (if wahr? _ then _ else _) (if wahr? _ then _ else _)
+      rw [hc]
+      by_cases hw : wahr? (eval σ₀ c σ ρ) = true
+      · rw [if_pos hw, if_pos (by simpa [valE, wahr?] using hw)]
+        exact ha
+      · rw [if_neg hw, if_neg (by simpa [valE, wahr?] using hw)]
+        exact hb
+  | _, _, _, .eng e lo' hi' s, ρ, ρ', hρ => by
+      have he := eval_exE h₀ h e ρ ρ' hρ; have hs := eval_exE h₀ h s ρ ρ' hρ
+      simp only [VRel, valE] at he hs ⊢
+      show (if h : _ then _ else _) = (if h : _ then _ else _)
+      first | rw [← hs] | rw [hs]
+      first | exact eng_kongr he _ | exact eng_kongr he.symm _
 
 /-- Payloads. -/
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :

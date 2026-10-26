@@ -139,6 +139,8 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
   | _, _, _, .strEq s t => "Expr.strEq" :: "Ty.bool" :: exprM s ++ exprM t
   | _, _, _, .strLt s t => "Expr.strLt" :: "Ty.bool" :: exprM s ++ exprM t
   | _, _, _, .strWeit _ s => "Expr.strWeit" :: "Ty.str" :: exprM s
+  | _, _, _, .wenn c a b => "Expr.wenn" :: exprM c ++ exprM a ++ exprM b
+  | _, _, _, .eng e _ _ s => "Expr.eng" :: exprM e ++ exprM s
 
 def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → List String
   | _, _, _, .empty => ["NutzlastExpr.empty"]

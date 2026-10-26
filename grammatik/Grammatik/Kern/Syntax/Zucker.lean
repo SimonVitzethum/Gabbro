@@ -111,6 +111,8 @@ def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr
   | .strEq e e' => .strEq (e.ren r) (e'.ren r)
   | .strLt e e' => .strLt (e.ren r) (e'.ren r)
   | .strWeit m e => .strWeit m (e.ren r)
+  | .wenn c a b => .wenn (c.ren r) (a.ren r) (b.ren r)
+  | .eng e lo hi s => .eng (e.ren r) lo hi (s.ren r)
 
 def NutzlastExpr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
     NutzlastExpr D Γ Λ c → NutzlastExpr D Γ' Λ c

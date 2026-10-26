@@ -107,6 +107,8 @@ def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .strEq .. => 52
   | .strLt .. => 53
   | .strWeit .. => 54
+  | .wenn .. => 55
+  | .eng .. => 56
 
 def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → Nat
   | .empty .. => 0
@@ -254,6 +256,8 @@ def fzE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List FZel
   | .strEq a b => [⟨0, 0, 52, false, [tk a, tk b]⟩, ⟨1, 0, 52, false, [0, 0, kE a]⟩, ⟨1, 0, 52, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
   | .strLt a b => [⟨0, 0, 53, false, [tk a, tk b]⟩, ⟨1, 0, 53, false, [0, 0, kE a]⟩, ⟨1, 0, 53, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
   | .strWeit _ e => [⟨0, 0, 54, false, [tk e]⟩, ⟨1, 0, 54, false, [0, 0, kE e]⟩] ++ fzE e
+  | .wenn c a b => [⟨0, 0, 55, false, [tk c, tk a, tk b]⟩, ⟨1, 0, 55, false, [0, 0, kE c]⟩, ⟨1, 0, 55, false, [1, 0, kE a]⟩, ⟨1, 0, 55, false, [2, 0, kE b]⟩] ++ fzE c ++ fzE a ++ fzE b
+  | .eng e _ _ s => [⟨0, 0, 56, false, [tk e, tk s]⟩, ⟨1, 0, 56, false, [0, 0, kE e]⟩, ⟨1, 0, 56, false, [1, 0, kE s]⟩] ++ fzE e ++ fzE s
 
 def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List FZelle
   | .empty .. => [⟨0, 1, 0, false, []⟩]

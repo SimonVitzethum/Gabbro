@@ -111,7 +111,7 @@ theorem s07_lex :
       .ok st07 := by
   decide
 theorem s07 : beqTopStmt (parseTopStmt st07)
-    (.ok (.await "fertig" (.variable "FARBE_FERTIG")
+    (.ok (.await "fertig" none (.variable "FARBE_FERTIG")
       "farbbericht ")) = true := by
   decide
 -- beispiele/05-nebenlaeufigkeit.gab:60. Rust: `AwaitLoad` -- same

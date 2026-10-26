@@ -90,6 +90,9 @@ inductive USide
   | upd : USide → USide → USide → USide
   /-- A constant literal at its declared type (`const T : [u32; N] = [..]` at a use: its folded elements). -/
   | typed : Ty → USide → USide
+  /-- A number narrowed to `lo .. hi` where the guard of the branch it stands in says so (`Expr.eng`; the
+      fallback is unreachable there): the binder of an `update` body. -/
+  | eng : USide → Int → Int → USide
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -304,9 +307,10 @@ inductive UStmt
   | bindW : String → Option Ty → USide → UStmt
   /-- `X = o;` at an option static (`Stmt.assignGlob` at `Ty.opt`). -/
   | assignGlobO : String → UOpt → UStmt
-  /-- `let x = A exchange update(v) { e } …;` (`Block.exchange`): binder, static, update binder, new value `e`
-      (read with `v` the old value). -/
-  | tausch : String → String → String → USide → UStmt
+  /-- `let x = A exchange update(v) { … } …;` (`Block.exchange`): binder, static, update binder, the guarded values
+      and the last value of the body (`if c₁ { return e₁ } … return e`, the new value `Expr.wenn c₁ e₁ (… e)`, read
+      with `v` the old value). -/
+  | tausch : String → String → String → List (UEns × USide) → USide → UStmt
   /-- `if c { … } else { … }` as the last statement of a block whose two arms both end (`Endblock.ite`); the arms
       and markers as at `ifBeg`. -/
   | ifEnde : UEns → UStmt
@@ -2531,34 +2535,185 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     if ctx.held.isEmpty then .ok .startS else .error "start under a held lock: the start step has an empty held list"
   | s => .error ("stmt without G form: " ++ anwArt s)
 
-/-- The tail of `let x = A exchange update(v) [bounded n ops] [on_exceeded k] { [return] e[;] } [publishes nothing]`:
-    the update binder and the new value. The bound and the exit belong to the lowering (G takes the exchange as one
-    atomic step, A10); a payload, an `awaits` and the compare form (`… when … returns …`) have no G form. -/
-def uTauschSchwanz (k : String) : Except String (String × SExpr) :=
+/-- A written binder type at a read of the static `A` (`awaits`, `exchange`): it must be `A`'s own type. -/
+def uBinderTyp (ctx : UCtx) (wo : String) : Option STyp → GTy → Except String Unit
+  | .none, _ => .ok ()
+  | .some (.atom "bool"), .bool => .ok ()
+  | .some t, .int lo hi =>
+    match uErgBereich ctx.alias t with
+    | .ok (l, h) => if l == lo && h == hi then .ok () else .error (wo ++ " binder typed other than its static")
+    | .error err => .error err
+  | .some _, _ => .error (wo ++ " binder typed other than its static")
+
+/-- The names in braces at the head of `ts` (`{ p, q }`), and what follows. -/
+def uKlammerNamen : List Token → Option (List String × List Token)
+  | .zeichen "{" :: ts =>
+    let innen := ts.takeWhile (fun t => t != .zeichen "}")
+    match ts.dropWhile (fun t => t != .zeichen "}") with
+    | .zeichen "}" :: rest =>
+      if innen.all (fun t => match t with | .ident _ => true | .zeichen "," => true | _ => false) then
+        some (innen.filterMap (fun t => match t with | .ident n => some n | _ => none), rest)
+      else none
+    | _ => none
+  | _ => none
+
+/-- The clauses behind an exchange: `[publishes nothing | publishes { … }] [awaits { … }]`. The payload names
+    (empty for `nothing` or no clause) and the `awaits` names, if any. -/
+def uTauschKlauseln : List Token → Except String (List String × Option (List String))
+  | ts =>
+    let (pub, ts1) : List String × List Token := match ts with
+      | .wort "publishes" :: .wort "nothing" :: r => ([], r)
+      | .wort "publishes" :: r => (match uKlammerNamen r with | some (ns, r') => (ns, r') | none => ([], .wort "publishes" :: r))
+      | r => ([], r)
+    match ts1 with
+    | [] => .ok (pub, none)
+    | .wort "awaits" :: r =>
+      match uKlammerNamen r with
+      | some (ns, []) => .ok (pub, some ns)
+      | _ => .error "exchange clause without G form"
+    | _ => .error "exchange clause without G form"
+
+/-- The value an arm of an `update` body returns: `{ return e; }`. -/
+def uArmWert : SAnw → Option SExpr
+  | .block [] (some (.ret (some e))) => some e
+  | _ => none
+
+/-- An `update` body as guarded values and a last value: `if c₁ { return e₁; } else if … else { return e; }`, or
+    `if c₁ { return e₁; } … return e;`. Fuel for the chain. -/
+def uZweige : Nat → SAnw → Option (List (SExpr × SExpr) × SExpr)
+  | 0, _ => none
+  | _ + 1, .block [] (some (.ret (some e))) => some ([], e)
+  | f + 1, .block (.cond c t ei els :: rest) ende =>
+    match uArmWert t with
+    | none => none
+    | some e1 =>
+      let weiter : Option SAnw := match ei, els with
+        | .elsif c2 b2 :: ei', _ => some (.block (.cond c2 b2 ei' els :: rest) ende)
+        | [], some b => if rest.isEmpty && ende.isNone then some b else none
+        | [], none => some (.block rest ende)
+        | _, _ => none
+      match weiter.bind (uZweige f) with
+      | some (zs, s) => some ((c, e1) :: zs, s)
+      | none => none
+  | _ + 1, _ => none
+
+/-- `old(A)` in the predicate of a compare-exchange is the old value of `A`, the local `#alt`. Fuel for the depth. -/
+def uAltErsetze (a : String) : Nat → SExpr → SExpr
+  | 0, e => e
+  | _ + 1, .old (.variable b) => if strEq a b then .variable "#alt" else .old (.variable b)
+  | f + 1, .un o e => .un o (uAltErsetze a f e)
+  | f + 1, .bin o x y => .bin o (uAltErsetze a f x) (uAltErsetze a f y)
+  | f + 1, .call n args => .call n (args.map (uAltErsetze a f))
+  | _ + 1, e => e
+
+/-- What a guard says about the local `v`: a lower and an upper bound, from comparisons with literals under `and`
+    (and their negations, `pos = false`, under `or`); anything else says nothing. -/
+def uGrenzen (v : String) : Bool → UEns → Option Int × Option Int
+  | pos, .cmp op (.param x) (.lit k) =>
+    if !strEq x v then (none, none) else uGrenzeCmp pos op k
+  | pos, .cmp op (.lit k) (.param x) =>
+    if !strEq x v then (none, none) else uGrenzeCmp pos (uDreh op) k
+  | true, .and a b => uGrenzenUnd (uGrenzen v true a) (uGrenzen v true b)
+  | false, .or a b => uGrenzenUnd (uGrenzen v false a) (uGrenzen v false b)
+  | pos, .not a => uGrenzen v (!pos) a
+  | _, _ => (none, none)
+where
+  /-- `x op k` (or its negation) as bounds of `x`. -/
+  uGrenzeCmp (pos : Bool) (op : String) (k : Int) : Option Int × Option Int :=
+    if pos then
+      if strEq op "<" then (none, some (k - 1)) else if strEq op "<=" then (none, some k)
+      else if strEq op ">" then (some (k + 1), none) else if strEq op ">=" then (some k, none)
+      else if strEq op "==" then (some k, some k) else (none, none)
+    else
+      if strEq op "<" then (some k, none) else if strEq op "<=" then (some (k + 1), none)
+      else if strEq op ">" then (none, some k) else if strEq op ">=" then (none, some (k - 1))
+      else if strEq op "!=" then (some k, some k) else (none, none)
+  /-- `k op x` read as `x op' k`. -/
+  uDreh (op : String) : String :=
+    if strEq op "<" then ">" else if strEq op "<=" then ">=" else if strEq op ">" then "<"
+    else if strEq op ">=" then "<=" else op
+  /-- Both bounds hold: the tighter of each. -/
+  uGrenzenUnd (a b : Option Int × Option Int) : Option Int × Option Int :=
+    (match a.1, b.1 with | some x, some y => some (max x y) | some x, none => some x | none, y => y,
+     match a.2, b.2 with | some x, some y => some (min x y) | some x, none => some x | none, y => y)
+
+/-- Every read of the local `v` in `s` narrowed to `lo .. hi` (`USide.eng`). -/
+def uSideEng (v : String) (lo hi : Int) : USide → USide
+  | .param p => if strEq p v then .eng (.param p) lo hi else .param p
+  | .add a b => .add (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .sub a b => .sub (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .mul a b => .mul (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .conv l h a => .conv l h (uSideEng v lo hi a)
+  | .band a b => .band (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .bor a b => .bor (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .bxor a b => .bxor (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .div a b => .div (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .rem a b => .rem (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .shl a b => .shl (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .shr a b => .shr (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .neg a => .neg (uSideEng v lo hi a)
+  | s => s
+
+/-- The value of an `update` arm with `v` narrowed by the arm's guard (`pos` the arm's own condition, `negs` the
+    conditions of the arms before it, all false there), inside the static's range `slo .. shi`. -/
+def uArmEng (v : String) (slo shi : Int) (pos : Option UEns) (negs : List UEns) (s : USide) : USide :=
+  let gs := (match pos with | some c => [uGrenzen v true c] | none => []) ++ negs.map (uGrenzen v false)
+  let lo := gs.foldl (fun acc g => match g.1 with | some x => max acc x | none => acc) slo
+  let hi := gs.foldl (fun acc g => match g.2 with | some x => min acc x | none => acc) shi
+  if lo == slo && hi == shi then s else if lo ≤ hi then uSideEng v lo hi s else s
+
+/-- An exchange as read from its tail: the update binder, the guarded values, the last value, the payload, the
+    `awaits` names, and whether it is the compare form (whose binder is the success, a truth value). -/
+structure UTausch where
+  v : String
+  zweige : List (SExpr × SExpr)
+  sonst : SExpr
+  pub : List String
+  aw : Option (List String)
+  vergleich : Option SExpr
+
+/-- The tail of an exchange (`exchstmt` of SYNTAX.md): `update(v) [bounded n ops] [on_exceeded k] { … } [clauses]`,
+    or `e when p returns r [clauses]` (compare-exchange: the new value `e` if `p` holds of the old value, else the
+    old value; the binder is `p`, Rust `kosten.rs`). The bound and the exit belong to the lowering (G takes the
+    exchange as one atomic step, A10). -/
+def uTauschSchwanz (a k : String) : Except String UTausch :=
   match lex k with
   | .error _ => .error "exchange without G form"
   | .ok toks0 =>
     let toks := toks0.filter (fun t => match t with | .ende => false | _ => true)
+    let fuel := 8 * toks.length + 30
     match toks with
     | .wort "update" :: .zeichen "(" :: .ident v :: .zeichen ")" :: rest =>
       match rest.dropWhile (fun t => t != .zeichen "{") with
       | .zeichen "{" :: innen =>
-        let innen' := match innen with
-          | .wort "return" :: r => r
-          | r => r
-        match parseOr (8 * innen'.length + 30) innen' with
-        | .error _ => .error "exchange update body without G form"
-        | .ok (e, nach) =>
-          let nach' := match nach with
-            | .zeichen ";" :: r => r
-            | r => r
-          match nach' with
-          | [.zeichen "}"] => .ok (v, e)
-          | [.zeichen "}", .wort "publishes", .wort "nothing"] => .ok (v, e)
-          | .zeichen "}" :: _ => .error "exchange with a payload or awaits without G form"
-          | _ => .error "exchange update body other than one value without G form"
+        match parseBlock fuel (.zeichen "{" :: innen) with
+        | .ok (b, kl) =>
+          match uZweige 64 b, uTauschKlauseln kl with
+          | some (zs, s), .ok (pub, aw) => .ok ⟨v, zs, s, pub, aw, none⟩
+          | none, _ => .error "exchange update body other than guarded values without G form"
+          | _, .error err => .error err
+        | .error _ =>
+          -- an expression body `{ e }`
+          match parseOr fuel innen with
+          | .error _ => .error "exchange update body without G form"
+          | .ok (e, .zeichen "}" :: kl) =>
+            match uTauschKlauseln kl with
+            | .error err => .error err
+            | .ok (pub, aw) => .ok ⟨v, [], e, pub, aw, none⟩
+          | .ok (_, _) => .error "exchange update body other than one value without G form"
       | _ => .error "exchange update without a body"
-    | _ => .error "exchange compare form without G form"
+    | _ =>
+      match parseOr fuel toks with
+      | .ok (neu, .wort "when" :: r1) =>
+        match parseOr fuel r1 with
+        | .ok (p, .wort "returns" :: .ident _ :: kl) =>
+          match uTauschKlauseln kl with
+          | .error err => .error err
+          | .ok (pub, aw) =>
+            let p' := uAltErsetze a 64 p
+            .ok ⟨"#alt", [(p', neu)], .variable "#alt", pub, aw, some p'⟩
+        | _ => .error "exchange compare form without G form"
+      | _ => .error "exchange without G form"
 
 /-- The context after `let x [: T]`: the annotated range (when there is one) and the context in which the
     rest of the block reads `x` as a numeric parameter that shadows any earlier name. -/
@@ -3059,6 +3214,26 @@ def uSumPlatz (ctx : UCtx) (e : SExpr) : Except String (USVal × Nat) :=
       | .tabelle t => .ok (.tab t f ix, k)
 
 
+/-- The statement ends the function on every path, looking through the last statement of each arm: an `if` with an
+    `else`, or a `match` (every arm of a `match` the model accepts is there: `Arms`/`GrundArms` are indexed by the
+    cases, an option match has both). Only then does a body without a trailing return get `URet.keins`. -/
+def uEndetTief : Nat → SAnw → Bool
+  | 0, _ => false
+  | f + 1, .cond _ t ei els =>
+    let arm : SAnw → Bool := fun b => match b with
+      | .block ss e => e.isSome || (match ss.getLast? with | some s => uEndetTief f s | none => false)
+      | _ => false
+    arm t &&
+      (match ei with
+       | .elsif c2 b2 :: ei' => uEndetTief f (.cond c2 b2 ei' els)
+       | [] => (match els with | some b => arm b | none => false)
+       | _ => false)
+  | f + 1, .cases _ arms =>
+    !arms.isEmpty && arms.all (fun a => match a with
+      | .arm _ _ (.block ss e) => e.isSome || (match ss.getLast? with | some s => uEndetTief f s | none => false)
+      | _ => false)
+  | _ + 1, _ => false
+
 /-- The statement ends its block on every path: an `if` with an `else` whose arms end in a `return`, `leave` or
     `next` (an `else if` chain is the `if` in the `else`). Fuel for the chain. -/
 def uEndetS : Nat → SAnw → Bool
@@ -3189,13 +3364,15 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 | .ok (ys, cE) =>
                   .ok ([UStmt.matchBeg num o k] ++ sbody ++ sEnd ++ [UStmt.ifElse] ++ nbody ++ nEnd ++ [UStmt.blkEnd] ++ ys, cE)
       | _, _ => .error "match arms without G form"
-  | f + 1, ctx, .await x (.variable a) pl :: rest =>
+  | f + 1, ctx, .await x ty (.variable a) pl :: rest =>
     match ctx.globs.find? (fun g => strEq g.name a) with
     | .none => .error "awaits without an atomic without G form"
     | .some gl =>
       if !gl.atomic then .error "awaits without an atomic without G form"
       else if !uNamenGleich (uNutzNamen pl) gl.nutzlast then .error "awaits a payload other than the declared one"
-      else
+      else match uBinderTyp ctx "awaits" ty gl.ty with
+      | .error err => .error err
+      | .ok () =>
         let muts := ctx.muts.filter (fun m => !strEq m x)
         let ctx' := match gl.ty with
           | .bool => uMitLokal ctx x UParamArt.bool Ty.bool muts
@@ -3210,25 +3387,45 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     | .some gl =>
       match gl.ty with
       | .int lo hi =>
-        match uTauschSchwanz k with
+        match uTauschSchwanz a k with
         | .error err => .error err
-        | .ok (v, e) =>
-          match ((match ty with
-              | .none => .ok ()
-              | .some t =>
-                match uErgBereich ctx.alias t with
-                | .ok (l, h) => if l == lo && h == hi then .ok () else .error "exchange binder typed other than its static"
-                | .error err => .error err) : Except String Unit) with
+        | .ok ⟨v, zweige, sonst, pub, aw, vergleich⟩ =>
+          match uBinderTyp ctx "exchange" ty gl.ty with
           | .error err => .error err
           | .ok () =>
+            if !uNamenGleich (pub.map String.toList) gl.nutzlast then
+              .error "exchange publishes a payload other than the declared one"
+            else if (aw.map (fun ns => !gl.atomic || !uNamenGleich (ns.map String.toList) gl.nutzlast)).getD false then
+              .error "exchange awaits a payload other than the declared one"
+            else
             let ctxV := uMitLokal ctx v UParamArt.int (Ty.int lo hi) (ctx.muts.filter (fun m => !strEq m v))
-            match uWertBody ctxV e with
-            | .error err => .error err
-            | .ok neu =>
-              let ctx' := uMitLokal ctx x UParamArt.int (Ty.int lo hi) (ctx.muts.filter (fun m => !strEq m x))
-              match uAnwReihe tabs koepfe f ctx' rest with
-              | .error err => .error err
-              | .ok (xs, cE) => .ok (UStmt.tausch x a v neu :: xs, cE)
+            match uSeq (zweige.map (fun (c, e) =>
+                match uBool ctxV c, uWertBody ctxV e with
+                | .ok c', .ok e' => .ok (c', e')
+                | .error err, _ | _, .error err => .error err)), uWertBody ctxV sonst with
+            | .error err, _ | _, .error err => .error err
+            | .ok zs0, .ok neu0 =>
+              -- each arm reads `v` narrowed by its guard and the negated guards before it
+              let zs := (List.range zs0.length).zip zs0 |>.map (fun (i, (c, e)) =>
+                (c, uArmEng v lo hi (some c) ((zs0.take i).map (·.1)) e))
+              let neu := uArmEng v lo hi none (zs0.map (·.1)) neu0
+              -- `awaits` at an exchange: the acquiring read of `Block.awaits` (its value unused) in front
+              let vor := if aw.isSome then [UStmt.awaitBind "#awaits" a] else []
+              match vergleich with
+              | none =>
+                let ctx' := uMitLokal ctx x UParamArt.int (Ty.int lo hi) (ctx.muts.filter (fun m => !strEq m x))
+                match uAnwReihe tabs koepfe f ctx' rest with
+                | .error err => .error err
+                | .ok (xs, cE) => .ok (vor ++ UStmt.tausch x a v zs neu :: xs, cE)
+              | some p =>
+                -- compare-exchange: the old value is `#alt`, the binder `x` is the success `p`
+                match uBool ctxV p with
+                | .error err => .error err
+                | .ok pv =>
+                  let ctx' := uMitLokal ctxV x UParamArt.bool Ty.bool (ctx.muts.filter (fun m => !strEq m x))
+                  match uAnwReihe tabs koepfe f ctx' rest with
+                  | .error err => .error err
+                  | .ok (xs, cE) => .ok (vor ++ UStmt.tausch v a v zs neu :: UStmt.bindB x pv :: xs, cE)
       | _ => .error "exchange of a static that is not a number without G form"
   | f + 1, ctx, .ret v :: rest =>
     match uEnde ctx (some (.ret v)) with
@@ -3531,7 +3728,7 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
       | .ok (body, ctxE) =>
         match uEnde ctxE ende with
         | .error e =>
-          if ende.isNone && (match ss.getLast? with | some s => uEndetS 64 s | none => false) then
+          if ende.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
             .ok (gives, needs, body, .keins)
           else .error e
         | .ok r => .ok (gives, needs, body, r)
@@ -4688,6 +4885,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
   | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
+  | .eng .. => .error "narrowing without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i", "b"] p with
@@ -5096,6 +5294,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
   | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
+  | .eng .. => .error "narrowing without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with

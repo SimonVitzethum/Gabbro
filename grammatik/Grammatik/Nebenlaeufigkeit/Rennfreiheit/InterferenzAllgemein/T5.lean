@@ -266,6 +266,18 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [eval]
       rw [ha]
+  | .wenn c a b =>
+      have hc := eval_liest_nur_speicher c σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [hc, ha, hb]
+  | .eng e _ _ s =>
+      have he := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hs := eval_liest_nur_speicher s σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [hs]
+      exact eng_kongr he _
 
 /-- The payload reads only its places: the second half of the stone. -/
 

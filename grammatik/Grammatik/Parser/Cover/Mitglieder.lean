@@ -76,6 +76,8 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .strEq e e' => "Expr.strEq" :: (eE e ++ eE e')
   | .strLt e e' => "Expr.strLt" :: (eE e ++ eE e')
   | .strWeit _ e => "Expr.strWeit" :: eE e
+  | .wenn c a b => "Expr.wenn" :: (eE c ++ eE a ++ eE b)
+  | .eng e _ _ s => "Expr.eng" :: (eE e ++ eE s)
 
 def eN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List String
   | .empty => ["NutzlastExpr.empty"]

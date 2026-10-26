@@ -112,6 +112,8 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .strEq a b => 1 + kostenExpr a + kostenExpr b
   | .strLt a b => 1 + kostenExpr a + kostenExpr b
   | .strWeit _ s => 1 + kostenExpr s
+  | .wenn c a b => 1 + kostenExpr c + kostenExpr a + kostenExpr b
+  | .eng e _ _ s => 1 + kostenExpr e + kostenExpr s
 
 def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :
     NutzlastExpr D Γ Λ c → Nat
