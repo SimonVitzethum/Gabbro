@@ -53,20 +53,35 @@ theorem startG_ruhe {u : UProg} (P : Programm (declOf u)) (σ : World (declOf u)
 
 /-- The output depends on the memory only. -/
 theorem ausgabe_welt {u : UProg} (o : Orte u) (S : Speicher (declOf u)) (s s' : List (Ereignis (declOf u))) :
-    ausgabe u o (S.welt s) = ausgabe u o (S.welt s') := by
-  have hl : ∀ k, leseAus u o (S.welt s) k = leseAus u o (S.welt s') k := by
-    intro k
-    induction k with
-    | zero => rfl
-    | succ k ih => simp only [leseAus, ih]; rfl
-  simp only [ausgabe, hl]
+    ausgabe u o (S.welt s) = ausgabe u o (S.welt s') := rfl
+
+/-- The numbers of the tables, fields and statics of a unit: their positions. -/
+def kodVon (u : UProg) : Kodierung (declOf u) where
+  tn := fun t => (t : Fin u.tabs.length).val
+  tn_inj := fun _ _ h => Fin.ext h
+  fn := fun _ f => (f : Fin _).val
+  fn_inj := fun _ _ _ h => Fin.ext h
+  gn := fun g => (g : Fin u.globs.length).val
+  gn_inj := fun _ _ h => Fin.ext h
+  felder := (List.finRange u.tabs.length).flatMap fun t =>
+    (List.finRange (fieldCount u t)).map fun f => (⟨t, f⟩ : Σ t : (declOf u).Tab, (declOf u).Feld t)
+  globs := List.finRange u.globs.length
+
+/-- The array memory of the start: the declared initial memory prepared, then the writes of the start in place. -/
+def startAWelt (u : UProg) (h : sp0OkB u = true) (w : List (Schreib (declOf u))) : AWelt (declOf u) :=
+  (AWelt.von (kodVon u) (sp0Of u h)).schreibe (kodVon u) w
+
+theorem startAWelt_sicht (u : UProg) (h : sp0OkB u = true) (w : List (Schreib (declOf u))) :
+    (startAWelt u h w).sicht (kodVon u) = ((schreibAuf w (sp0Of u h)).welt []).speicher := by
+  rw [startAWelt, sicht_schreibe, sicht_von]
   rfl
 
 /-- **Run the threads on the fast machine** and read the output of the world thread 0 ended in. -/
 def lauf (u : UProg) (P : Programm (declOf u)) (o : Orte u) (B : Budget) (σ : World (declOf u)) (m : Anfang u)
-    (rs : List (Anfang u)) : Except String (List UInt8) :=
+    (rs : List (Anfang u)) (A : AWelt (declOf u)) (hA : A.sicht (kodVon u) = σ.speicher) :
+    Except String (List UInt8) :=
   if hl : (offen (startSpur (D := declOf u) m.1)).isEmpty = true then
-    let s0 := SStand.start P (kfVon u) [] B.passes σ (startG P σ m rs) (rs.length + 1)
+    let s0 := SStand.start P (kfVon u) [] B.passes σ (startG P σ m rs) (kodVon u) (rs.length + 1) A hA
     let (s, _) := s0.laufe (startG_ruhe P σ m rs hl) B.schritte (alleN (rs.length + 1)) []
     let F := s.s.F σ (startG P σ m rs)
     if fertig F 0 then ausgabe u o (F.weltVon 0) else .error "main did not end within the step budget"
@@ -95,15 +110,17 @@ def boot (B : Budget) (src : String) (ein : List UInt8) : Except String (List UI
               match lowerAllg u with
               | .error e => .error e
               | .ok (P, _) =>
-                match startWelt u o h ein, anfaengeVon u o with
+                match startSchreib u o ein, anfaengeVon u o with
                 | .error e, _ | _, .error e => .error e
-                | .ok σ, .ok (m, rs) => lauf u P o B σ m rs
+                | .ok w, .ok (m, rs) =>
+                  lauf u P o B ((schreibAuf w (sp0Of u h)).welt []) m rs (startAWelt u h w) (startAWelt_sicht u h w)
             else .error "no declared initial memory (sp0)"
 
 /-- **The run is the thread machine**: every output of `lauf` is read from a machine that `RufSchrittG` reaches from
     the start machine, in which thread 0 has ended. -/
 theorem lauf_ist_lauf {u : UProg} {P : Programm (declOf u)} {o : Orte u} {B : Budget} {σ : World (declOf u)}
-    {m : Anfang u} {rs : List (Anfang u)} {aus : List UInt8} (h : lauf u P o B σ m rs = .ok aus) :
+    {m : Anfang u} {rs : List (Anfang u)} {A : AWelt (declOf u)} {hA : A.sicht (kodVon u) = σ.speicher}
+    {aus : List UInt8} (h : lauf u P o B σ m rs A hA = .ok aus) :
     ∃ M : RufMaschineG (declOf u),
       RufErreichbarG P (orakelLeer (declOf u)) B.passes (startG P σ m rs) M ∧ fertig M 0 = true ∧
         ausgabe u o (M.weltVon 0) = .ok aus := by
@@ -160,9 +177,9 @@ theorem boot_ist_lauf {B : Budget} {src : String} {ein aus : List UInt8} (h : bo
     split at h
     · cases h
     · cases h
-    rename_i σ m rs hσ hmr
+    rename_i w m rs hσ hmr
     obtain ⟨M, hM, hf, ho⟩ := lauf_ist_lauf h
-    refine ⟨u, P, fs, o, hs, σ, m, rs, M, ?_, ha, Bool.not_eq_false _ ▸ hk, hσ, hmr, hM, hf, ho⟩
+    refine ⟨u, P, fs, o, hs, _, m, rs, M, ?_, ha, Bool.not_eq_false _ ▸ hk, by rw [startWelt, hσ]; rfl, hmr, hM, hf, ho⟩
     unfold uebersetzeAllg
     rw [hl]
     dsimp only

@@ -29,6 +29,7 @@
   machine the thread machine reaches from the start machine of the pipeline's program. It is exact and slow (a
   world slot is a chain of closures).
 -/
+import Stage0.Schritt.Schreib
 import Grammatik.Parser.Cover.Differenz
 import Grammatik.GabbroV.GvStartPflicht
 import Grammatik.Parser.Elab.UebersetzePipeline
@@ -99,32 +100,36 @@ def orakelLeer (D : Deklaration) : Orakel D where
   regSchreib := fun _ _ => ()
   sichtbar := fun _ _ => true
 
-/-- Write the input bytes from slot `k` on into the field `ein`. -/
-def schreibEin (u : UProg) (o : Orte u) : World (declOf u) → Int → List UInt8 → Except String (World (declOf u))
-  | σ, _, [] => .ok σ
-  | σ, k, b :: bs =>
+/-- The writes of the input bytes from slot `k` on into the field `ein`. -/
+def eingabeSchreib (u : UProg) (o : Orte u) : Int → List UInt8 → Except String (List (Schreib (declOf u)))
+  | _, [] => .ok []
+  | k, b :: bs =>
     match ausZahl ((declOf u).typ o.io o.ein) b.toNat with
-    | some v => schreibEin u o (σ.storeSlot o.io k o.ein v) (k + 1) bs
+    | some v => (Schreib.slot o.io k o.ein v :: ·) <$> eingabeSchreib u o (k + 1) bs
     | none => .error "input byte outside the type of io.ein"
 
-/-- **The start world**: the declared initial memory, the input in `io.ein`, its length in `ein_len`. -/
-def startWelt (u : UProg) (o : Orte u) (h : sp0OkB u = true) (ein : List UInt8) :
-    Except String (World (declOf u)) := do
+/-- **The writes of the start**: the input in `io.ein`, its length in `ein_len`. -/
+def startSchreib (u : UProg) (o : Orte u) (ein : List UInt8) : Except String (List (Schreib (declOf u))) := do
   if (ein.length : Int) > (declOf u).count o.io then throw "input longer than the table io"
-  let σ ← schreibEin u o ((sp0Of u h).welt []) 0 ein
-  match ausZahl ((declOf u).gtyp o.einLen) ein.length with
-  | some v => pure (σ.storeGlob o.einLen v)
+  let w ← eingabeSchreib u o 0 ein
+  match (ausZahl ((declOf u).gtyp o.einLen) ein.length : Option (Wert (declOf u) ((declOf u).gtyp o.einLen))) with
+  | some v => pure (w ++ [Schreib.glob o.einLen v])
   | none => throw "input length outside the type of ein_len"
 
+/-- **The start world**: the declared initial memory with the writes of the start. -/
+def startWelt (u : UProg) (o : Orte u) (h : sp0OkB u = true) (ein : List UInt8) :
+    Except String (World (declOf u)) :=
+  (startSchreib u o ein).map fun w => (schreibAuf w (sp0Of u h)).welt []
+
+/-- The output byte `io.aus` at slot `k`. -/
+def leseAus1 (u : UProg) (o : Orte u) (σ : World (declOf u)) (k : Nat) : Except String UInt8 :=
+  match alsZahl _ (σ.slots o.io k o.aus) with
+  | some z => if 0 ≤ z ∧ z < 256 then pure z.toNat.toUInt8 else throw "output value outside a byte"
+  | none => throw "io.aus is not a number field"
+
 /-- The output bytes `io.aus` at the slots `0 .. n`. -/
-def leseAus (u : UProg) (o : Orte u) (σ : World (declOf u)) : Nat → Except String (List UInt8)
-  | 0 => .ok []
-  | n + 1 => do
-    let vorn ← leseAus u o σ n
-    match alsZahl _ (σ.slots o.io n o.aus) with
-    | some z =>
-      if 0 ≤ z ∧ z < 256 then pure (vorn ++ [z.toNat.toUInt8]) else throw "output value outside a byte"
-    | none => throw "io.aus is not a number field"
+def leseAus (u : UProg) (o : Orte u) (σ : World (declOf u)) (n : Nat) : Except String (List UInt8) :=
+  (List.range n).mapM (leseAus1 u o σ)
 
 /-- **The output of an end world**: `aus_len` bytes of `io.aus`. -/
 def ausgabe (u : UProg) (o : Orte u) (σ : World (declOf u)) : Except String (List UInt8) :=

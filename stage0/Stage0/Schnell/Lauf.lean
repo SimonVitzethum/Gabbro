@@ -12,18 +12,18 @@ namespace Gabbro.Stage0
 open Gabbro.Grammatik
 
 variable {D : Deklaration} {P : Programm D} {kf : (a : D.Ax) → Env D (D.aparams a) → List Int}
-  {log : List (Antwort D)} {passes : Nat} {ww : World D} {M0 : RufMaschineG D} {n : Nat}
+  {log : List (Antwort D)} {passes : Nat} {ww : World D} {M0 : RufMaschineG D} {K : Kodierung D} {n : Nat}
 
 /-- **The start**: the normal form of the start machine. -/
-def FStand.start (ww : World D) (M0 : RufMaschineG D) (n : Nat) : FStand n D :=
-  ⟨M0.speicher, (Array.range n).map (fun g => fadenNormal ww (M0.faeden g)),
+def FStand.start (K : Kodierung D) (ww : World D) (M0 : RufMaschineG D) (n : Nat) (A : AWelt D) : FStand K n :=
+  ⟨A, (Array.range n).map (fun g => fadenNormal ww (M0.faeden g)),
     (Array.range n).map (fun g => fremdZahl (M0.faeden g).spur), by simp, by simp⟩
 
 theorem SInv.start (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (log : List (Antwort D))
-    (passes : Nat) (ww : World D) (M0 : RufMaschineG D) (n : Nat) :
-    SInv P kf log passes ww M0 (FStand.start ww M0 n) := by
+    (passes : Nat) (ww : World D) (M0 : RufMaschineG D) (K : Kodierung D) (n : Nat) (A : AWelt D)
+    (hA : A.sicht K = M0.speicher) : SInv P kf log passes ww M0 (FStand.start K ww M0 n A) := by
   refine ⟨M0, .start, ?_, ?_, fun _ _ => rfl⟩
-  · simp only [FStand.F, FStand.start, sMaschine, normal, RufMaschineG.mk.injEq, true_and, and_true]
+  · simp only [FStand.F, FStand.start, sMaschine, normal, RufMaschineG.mk.injEq, hA, true_and, and_true]
     funext g
     by_cases hg : g < n
     · simp [tabelle, hg]
@@ -33,23 +33,24 @@ theorem SInv.start (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) →
 
 /-- The start of a run. -/
 def SStand.start (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (log : List (Antwort D))
-    (passes : Nat) (ww : World D) (M0 : RufMaschineG D) (n : Nat) : SStand P kf log passes ww M0 n :=
-  ⟨FStand.start ww M0 n, SInv.start P kf log passes ww M0 n⟩
+    (passes : Nat) (ww : World D) (M0 : RufMaschineG D) (K : Kodierung D) (n : Nat) (A : AWelt D)
+    (hA : A.sicht K = M0.speicher) : SStand P kf log passes ww M0 K n :=
+  ⟨FStand.start K ww M0 n A, SInv.start P kf log passes ww M0 K n A hA⟩
 
 /-- **The fast machine stands for a reachable machine.** -/
-theorem SStand.steht (s : SStand P kf log passes ww M0 n) :
+theorem SStand.steht (s : SStand P kf log passes ww M0 K n) :
     ∃ M : RufMaschineG D, RufErreichbarG P (orakelZ kf 0 log) passes M0 M ∧ s.s.F ww M0 = normal ww M := by
   obtain ⟨M, hr, hF, _⟩ := s.inv
   exact ⟨M, hr, hF⟩
 
 /-- One step of the first thread in `fs` that steps. -/
-def SStand.weiter (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = []) (s : SStand P kf log passes ww M0 n) :
-    List {f // f < n} → Option (Faden × SStand P kf log passes ww M0 n)
+def SStand.weiter (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = []) (s : SStand P kf log passes ww M0 K n) :
+    List {f // f < n} → Option (Faden × SStand P kf log passes ww M0 K n)
   | [] => none
   | ⟨f, hf⟩ :: fs =>
     match s.schritt h0 f hf with
-    | some s' => some (f, s')
-    | none => s.weiter h0 fs
+    | .inr s' => some (f, s')
+    | .inl s => s.weiter h0 fs
 
 /-- The threads in round-robin order after `f`: those behind it first. -/
 def rundeNach (reihe : List {f // f < n}) (f : Faden) : List {f // f < n} :=
@@ -58,8 +59,8 @@ def rundeNach (reihe : List {f // f < n}) (f : Faden) : List {f // f < n} :=
 
 /-- **Run** at most `k` steps, round robin; also the schedule taken. -/
 def SStand.laufe (h0 : ∀ g, n ≤ g → offen (M0.faeden g).spur = []) :
-    Nat → List {f // f < n} → SStand P kf log passes ww M0 n → List Faden →
-      SStand P kf log passes ww M0 n × List Faden
+    Nat → List {f // f < n} → SStand P kf log passes ww M0 K n → List Faden →
+      SStand P kf log passes ww M0 K n × List Faden
   | 0, _, s, plan => (s, plan.reverse)
   | k + 1, reihe, s, plan =>
     match s.weiter h0 reihe with
