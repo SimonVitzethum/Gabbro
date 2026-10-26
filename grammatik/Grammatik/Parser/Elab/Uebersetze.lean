@@ -3723,6 +3723,9 @@ def uRestFehler : List SItemTief → Except String Unit
   | .stateT .. :: rest => uRestFehler rest
   | .specT .. :: rest => uRestFehler rest
   | .asmT .. :: rest => uRestFehler rest
+  -- `axiom f(..) effects { .. } falsifier p;`: a foreign body under a named hardware assumption; a `requires` has no
+  -- G form yet (the model's foreign bodies carry no caller duty)
+  | .axiomT _ _ _ .none _ _ :: rest => uRestFehler rest
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
@@ -4399,13 +4402,25 @@ def uOhneSenken (ms : List SItemTief) : List SItemTief :=
   let senken := ms.flatMap fun
     | .protoT sig => uFremdeSchreibe mem sig.klauseln
     | .asmT sig _ => uFremdeSchreibe mem sig.klauseln
+    | .axiomT _ _ _ _ effs _ => uFremdeSchreibe mem [.effs effs]
     | _ => []
   if senken.isEmpty then ms else
   ms.map fun
     | .fnT sig b => .fnT { sig with klauseln := uKlauselnOhne senken sig.klauseln } b
     | .protoT sig => .protoT { sig with klauseln := uKlauselnOhne senken sig.klauseln }
     | .asmT sig c => .asmT { sig with klauseln := uKlauselnOhne senken sig.klauseln } c
+    | .axiomT n ps r q effs k =>
+      .axiomT n ps r q (match uKlauselnOhne senken [.effs effs] with | [.effs es] => es | _ => effs) k
     | m => m
+
+/-- The signature of a foreign body item and whether it is `= asm { .. }`: `extern`/`raw`/`prim`/`divergent` declarations,
+    `asm` bodies, and `axiom` items without a `requires` (read as an `extern fn` with their effects). -/
+def uFremdSig : SItemTief → Option (FnSig × Bool)
+  | .protoT sig => some (sig, false)
+  | .asmT sig _ => some (sig, true)
+  | .axiomT n ps res .none effs _ =>
+    some ({ art := "extern", name := n, params := ps, res, fehler := .none, klauseln := [.effs effs] }, false)
+  | _ => none
 
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
@@ -4480,8 +4495,7 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
-    match uSeq ((ms.filterMap (fun | .protoT sig => some (sig, false) | .asmT sig _ => some (sig, true) | _ => none)).map
-        (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
+    match uSeq ((ms.filterMap uFremdSig).map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
     | .error e => .error e
     | .ok axKoepfe0 =>
     match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (elabGateKopf alias tabs whys)) with
