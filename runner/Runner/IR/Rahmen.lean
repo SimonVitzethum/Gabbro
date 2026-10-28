@@ -42,12 +42,15 @@ theorem Agree.mono {fp : W} {lo lo' K : Nat} {m m' : Mem} (h : Agree fp lo' K m 
   ⟨h.rd, h.wr, fun x hx => h.b x fun ⟨h1, h2⟩ => hx ⟨by omega, h2⟩⟩
 
 structure FrameOK (m : Mem) (fp : W) (K : Nat) : Prop where
-  room : fp.toNat + 8 * K ≤ 2 ^ 64
+  lt : fp.toNat + 8 * K < 2 ^ 64
   rd : ∀ i, i < K → all m.rd (slot fp (BitVec.ofNat 64 i)) 8 = true
   wr : ∀ i, i < K → all m.wr (slot fp (BitVec.ofNat 64 i)) 8 = true
 
+theorem FrameOK.room {m : Mem} {fp : W} {K : Nat} (h : FrameOK m fp K) : fp.toNat + 8 * K ≤ 2 ^ 64 :=
+  Nat.le_of_lt h.lt
+
 theorem FrameOK.agree {m m' : Mem} {fp : W} {K lo : Nat} (h : FrameOK m fp K) (ha : Agree fp lo K m m') :
-    FrameOK m' fp K := ⟨h.room, fun i hi => by rw [ha.rd]; exact h.rd i hi, fun i hi => by rw [ha.wr]; exact h.wr i hi⟩
+    FrameOK m' fp K := ⟨h.lt, fun i hi => by rw [ha.rd]; exact h.rd i hi, fun i hi => by rw [ha.wr]; exact h.wr i hi⟩
 
 theorem slot_toNat {fp : W} {K i : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (hi : i < K) :
     (slot fp (BitVec.ofNat 64 i)).toNat = fp.toNat + 8 * i := by

@@ -117,6 +117,26 @@ theorem run_jmp {t : T} {m : Mem} {l b c : BitVec 32} (hi : InsAt m t.pc 18 l b 
   simp only [op]
   exact f1_run hi Run.next
 
+/-- `call a k`: the target from slot `a`; the return `pc` and the caller's `fp` into the new frame's first two
+    words; on at the target with the new frame. -/
+theorem run_call {t : T} {m m1 m2 : Mem} {a k c : BitVec 32} {tg : W} (hi : InsAt m t.pc 20 a k c)
+    (ha : m.rd64 (slot t.fp (sx a)) = some tg) (h1 : m.wr64 (slot t.fp (sx k)) (t.pc + 16) = some m1)
+    (h2 : m1.wr64 (slot t.fp (sx k) + 8) t.fp = some m2) :
+    Run (op 20 t) m ⟨tg, slot t.fp (sx k)⟩ m2 := by
+  simp only [op]
+  refine f1_run hi ?_
+  simp only [ld]
+  refine run_rd64 ha ?_
+  refine f2_run hi ?_
+  refine .ask (a := some (0, 0)) (m' := m1) ?_ (by simpa [opt] using run_wr64 h2)
+  simp only [memAns, h1]
+
+/-- `ret`: on at the return `pc` and the caller's `fp`, the frame's first two words. -/
+theorem run_ret {t : T} {m : Mem} {p f : W} (h0 : m.rd64 t.fp = some p) (h1 : m.rd64 (t.fp + 8) = some f) :
+    Run (op 21 t) m ⟨p, f⟩ m := by
+  simp only [op]
+  exact run_rd64 h0 (run_rd64 h1 Run.next)
+
 /-! ## Stopping: the run reaches a request to the kernel -/
 
 /-- The tree, answered by the memory, reaches the system call `q` (which the memory does not answer). -/

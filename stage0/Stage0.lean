@@ -42,3 +42,8 @@ import Stage0.Senke.Umgebung
 import Stage0.Senke.Anweisung
 import Stage0.Senke.AnweisungSatz
 import Stage0.Senke.Stopp
+import Stage0.Senke.AnweisungHilfe
+import Stage0.Senke.Funktion
+import Stage0.Senke.Spez
+import Stage0.Senke.Aufruf
+import Stage0.Senke.FunktionSatz

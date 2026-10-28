@@ -1,10 +1,11 @@
 /-
   File:      stage0/Stage0/Senke/AnweisungSatz.lean
-  Subject:   `ir_sim` for statements and blocks: where machine G ends a block normally (`ok`), the lowered code
-             runs to its end and leaves the new environment in the frame.
+  Subject:   `ir_sim` for statements and blocks, calls included: where machine G ends a block normally (`ok`), the
+             lowered code runs to its end and leaves the new environment in the frame, changing no slot below
+             `lo`; where G ends in a logic outcome, the code stops with its `exit_group` code. G answers nothing
+             else for a lowered block (`Sim`).
 -/
-import Stage0.Senke.Umgebung
-import Stage0.Senke.Anweisung
+import Stage0.Senke.Aufruf
 
 namespace Gabbro.Stage0.Senke
 
@@ -12,65 +13,78 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 
 variable {D : Deklaration} {V : Vertrag D}
 
-/-- `mov j s`: slot `j` gets the word of slot `s`. -/
-theorem mov_to {m : Runner.Mem} {pc fp : Runner.W} {K j s : Nat} {w : Runner.W}
-    (hc : CodeAt m pc [ci 2 j s 0]) (hF : FrameOK m fp K) (hj : j < K) (hs : s < K) (hK : K < 2 ^ 31)
-    (hv : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
-    Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [ci 2 j s 0].length), fp⟩
-      (write m (slot fp (BitVec.ofNat 64 j)) 8 w.toNat) := by
-  have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  refine star_ins hc (by simp [ci]) ?_
-  simp only [ci, op]
-  refine f2_run (t := ⟨pc, fp⟩) hi ?_
-  rw [sx_nat (by omega)]
-  refine run_rd64 hv ?_
-  simp only [ret1]
-  refine f1_run (t := ⟨pc, fp⟩) hi ?_
-  rw [sx_nat (by omega)]
-  exact run_wr64 (wr64_some (hF.wr j hj))
+/-- What the code from `t` to `e` does for G's outcome `o`. -/
+def Sim {l : Bool} {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (t : T) (m : Runner.Mem) (e : Runner.W) :
+    Ausgang V l Γ → Prop
+  | .ok _ ρ' => ∃ m', Star t m ⟨e, fp⟩ m' ∧ Agree fp lo K m m' ∧ EnvAt m' fp ρ'
+  | .logik c => Stops t m (logikCode c)
+  | _ => False
 
-theorem star_cast {t t' u u' : T} {m m' : Runner.Mem} (h : Star t m t' m') (h1 : t = u) (h2 : t' = u') :
-    Star u m u' m' := by subst h1; subst h2; exact h
+theorem Sim.prefix {l : Bool} {Γ : Ctx} {o : Ausgang V l Γ} {fp : Runner.W} {lo K : Nat} {t0 t : T}
+    {m0 m : Runner.Mem} {e : Runner.W} (h : Star t0 m0 t m) (ha : Agree fp lo K m0 m) (hs : Sim fp lo K t m e o) :
+    Sim fp lo K t0 m0 e o := by
+  cases o with
+  | ok σ ρ => obtain ⟨m', s, a, en⟩ := hs; exact ⟨m', h.trans s, ha.trans a, en⟩
+  | logik c => exact Stops.prefix h hs
+  | zurueck | why | leave | next | hardware => exact hs
 
-theorem addr_norm (pc : Runner.W) (a b : Nat) :
-    pc + BitVec.ofNat 64 a + BitVec.ofNat 64 b = pc + BitVec.ofNat 64 (a + b) := by
-  rw [BitVec.add_assoc, ← BitVec.ofNat_add]
+theorem Sim.cont {l : Bool} {Γ : Ctx} {o : Ausgang V l Γ} {fp : Runner.W} {lo K : Nat} {t : T} {m : Runner.Mem}
+    {e1 e2 : Runner.W} (hs : Sim fp lo K t m e1 o)
+    (hj : ∀ m', Agree fp lo K m m' → Star ⟨e1, fp⟩ m' ⟨e2, fp⟩ m') : Sim fp lo K t m e2 o := by
+  cases o with
+  | ok σ ρ => obtain ⟨m', s, a, en⟩ := hs; exact ⟨m', s.trans (hj m' a), a, en⟩
+  | logik c => exact hs
+  | zurueck | why | leave | next | hardware => exact hs
 
-theorem pc_add1 (pc : Runner.W) (a b : List II) :
-    pc + BitVec.ofNat 64 (16 * (a ++ b).length) = pc + BitVec.ofNat 64 (16 * a.length) +
-      BitVec.ofNat 64 (16 * b.length) := by
-  rw [pc_add, List.length_append]
+theorem Sim.cast {l : Bool} {Γ : Ctx} {o : Ausgang V l Γ} {fp : Runner.W} {lo K : Nat} {t t' : T}
+    {m : Runner.Mem} {e e' : Runner.W} (hs : Sim fp lo K t m e o) (h1 : t = t') (h2 : e = e') :
+    Sim fp lo K t' m e' o := by subst h1; subst h2; exact hs
+
+theorem Sim.schrumpf {l : Bool} {Γ : Ctx} {τ : Ty} {o : Ausgang V l (τ :: Γ)} {fp : Runner.W} {lo K : Nat}
+    {t : T} {m : Runner.Mem} {e : Runner.W} (hs : Sim fp lo K t m e o) : Sim fp lo K t m e o.schrumpf := by
+  cases o with
+  | ok σ ρ => obtain ⟨m', s, a, en⟩ := hs; exact ⟨m', s, a, envAt_tail en⟩
+  | logik c => exact hs
+  | zurueck | why | leave | next | hardware => exact hs
+
+theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e} {w : Runner.W}
+    (h : EncErg e v w) : Enc τ (ergWert he v) w := by
+  subst he; exact h
 
 mutual
 theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {fp : Runner.W} {K : Nat} :
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {fp : Runner.W} {K lo : Nat} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D V l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowS s = some (c, top) → top ≤ K → 16 * c.length < 2 ^ 31 →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (σ σ' : World D) (ρ ρ' : Env D Γ),
-    execStmt O passes R s σ ρ = .ok σ' ρ' → Pre m pc fp K (frei Γ) c ρ →
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp 0 K m m' ∧ EnvAt m' fp ρ'
-  | _, Γ, Λ, _, .assignVar x e, c, top, h, hK, _, m, pc, σ, σ', ρ, ρ', hx, hp => by
-    simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    simp only [execStmt, Ausgang.ok.injEq] at hx
-    obtain ⟨rfl, rfl⟩ := hx
-    have htop := lowE_top e _ _ _ he
-    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he hK m pc ρ hp.left
-    have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
-    have hxs := vslot_lt x
-    have hsm := hp.small
-    have s2 := mov_to hp1.code hp1.frame (j := vslot x) (by omega) (by omega) hsm hw
-    refine ⟨_, s1.trans (by rw [pc_add1]; exact s2), (a1.mono (Nat.zero_le _)).trans
-      (agree_write hp1.frame.room (Nat.zero_le _) (by omega) _), ?_⟩
-    have hF1 := hp1.frame
-    refine envAt_set hp1.env (rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))) hen ?_
-    intro τ' y hy
-    have := vslot_lt y
-    exact rd64_write_far (slot_far hF1.room (by omega) (by omega) (vslot_ne hy).symm)
-  | _, Γ, Λ, _, .ite cnd t e, c, top, h, hK, hs, m, pc, σ, σ', ρ, ρ', hx, hp => by
+    lowS A lo s = some (c, top) → top + cap ≤ K → 16 * c.length < 2 ^ 31 →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), Pre m pc fp K (frei Γ) c ρ →
+    FB ≤ lo → lo ≤ frei Γ → Umf A C dv m fp K →
+    Sim fp lo K ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (execStmt O passes R s σ ρ)
+  | _, Γ, Λ, _, .assignVar x e, c, top, h, hK, _, m, pc, σ, ρ, hp, _, hlo2, _ => by
+    simp only [lowS] at h
+    split at h
+    · next hlx =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ce, te⟩, he, hc⟩ := h
+      simp only [Prod.mk.injEq] at hc
+      obtain ⟨rfl, rfl⟩ := hc
+      simp only [execStmt, Sim]
+      have htop := lowE_top e _ _ _ he
+      obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega)
+        m pc ρ hp.left
+      have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
+      have hxs := vslot_lt x
+      have hsm := hp.small
+      have s2 := mov_to hp1.code hp1.frame (j := vslot x) (by omega) (by omega) hsm hw
+      refine ⟨_, s1.trans (by rw [pc_add1]; exact s2), (a1.mono hlo2).trans
+        (agree_write hp1.frame.room hlx (by omega) _), ?_⟩
+      have hF1 := hp1.frame
+      refine envAt_set hp1.env (rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))) hen ?_
+      intro τ' y hy
+      have := vslot_lt y
+      exact rd64_write_far (slot_far hF1.room (by omega) (by omega) (vslot_ne hy).symm)
+    · simp at h
+  | _, Γ, Λ, _, .ite cnd t e, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cc, tc⟩, hcc, ⟨ct, tt⟩, hct, ⟨ce, te⟩, hce, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
@@ -78,20 +92,20 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     simp only [List.length_append, List.length_singleton] at hs
     have hsm := hp.small
     have htop := lowE_top cnd (frei Γ) cc tc hcc
-    let σ1 := σ.lese Λ cnd.orte
     have hq : Pre m pc fp K (frei Γ) (cc ++ ([ci 19 (frei Γ) (16 * (ct.length + 2)) 0] ++ (ct ++
         ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ := by simpa [List.append_assoc] using hp
-    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ1 σ1 cnd (frei Γ) cc tc hcc (by omega) m pc ρ
-      hq.left
+    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) cnd
+      (frei Γ) cc tc hcc (by omega) m pc ρ hq.left
     have h1 := hq.next a1 (Nat.le_refl _) (by omega)
+    have hu1 := hu.agree (a1.mono hlo2) hp.frame hlo
     have hF1 := h1.frame
     have hbrz := h1.code 0 (by simp)
     simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
     have h2 := h1.next (a := [ci 19 (frei Γ) (16 * (ct.length + 2)) 0]) (Agree.refl _ _ _ _) (Nat.le_refl _)
       (by omega)
     have hd0 : sx (II.f (frei Γ : Int)) = BitVec.ofNat 64 (frei Γ) := sx_nat (by omega)
-    simp only [execStmt] at hx
-    split at hx
+    simp only [execStmt]
+    split
     · next hb =>
       -- the condition holds: brz falls through, the `then` block, jmp to the end
       have hw1 : w = 1 := by
@@ -99,9 +113,10 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
         rw [hen, if_pos hb]
       have sb := star_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
         (by simp only [ci]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact hw) (by rw [hw1]; decide))
-      obtain ⟨m2, s2, a2, e2⟩ := lowB_ok t ct tt hct (by omega) (by omega) m1 _ σ1 σ' ρ ρ' hx h2.left
+      have ih := lowB_ok (O := O) (passes := passes) hS hA t ct tt hct (by omega) (by omega) m1 _ (σ.lese Λ cnd.orte) ρ h2.left hlo hlo2 hu1
       have hf3 := codeFar_right (n := ct.length) (k := ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length)
         (by simpa using h2.far)
+      refine Sim.prefix (s1.trans sb) (a1.mono hlo2) (Sim.cont ih fun m2 a2 => ?_)
       have hc3 := (codeAt_right h2.code).agree a2 hf3
       have hjmp := hc3 0 (by simp)
       simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hjmp
@@ -109,7 +124,7 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       have hl : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
         have := sx_nat (d := 16 * (ce.length + 1)) (by omega); simpa using this
       rw [hl] at sj
-      refine ⟨m2, ((s1.trans sb).trans s2).trans (star_cast sj rfl ?_), ((a1.mono (Nat.zero_le _)).trans a2), e2⟩
+      refine star_cast sj rfl ?_
       simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, List.length_cons,
         List.length_nil, addr_norm]
       congr 2
@@ -126,16 +141,31 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       rw [hl] at sb
       have h4 := ((h2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)).next
         (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega))
-      obtain ⟨m2, s2, a2, e2⟩ := lowB_ok e ce te hce (by omega) (by omega) m1 _ σ1 σ' ρ ρ' hx h4
-      refine ⟨m2, (s1.trans sb).trans (star_cast s2 ?_ ?_), ((a1.mono (Nat.zero_le _)).trans a2), e2⟩
+      have ih := lowB_ok (O := O) (passes := passes) hS hA e ce te hce (by omega) (by omega) m1 _ (σ.lese Λ cnd.orte) ρ h4 hlo hlo2 hu1
+      refine Sim.prefix (s1.trans sb) (a1.mono hlo2) (Sim.cast ih ?_ ?_)
       · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, List.length_cons,
           List.length_nil, addr_norm]
         congr 2
         omega
-      · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, List.length_cons,
-          List.length_nil, addr_norm]
+      · simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
         congr 2
         omega
+  | _, Γ, Λ, _, .call f args _ _, c, top, h, hK, _, m, pc, σ, ρ, hp, _, hlo2, hu => by
+    simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    have hct : frei Γ + FB + (D.params f).length + 1 ≤ callTop f (frei Γ) ta := by simp only [callTop]; omega
+    have hc := callC_ok hS (hA f) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp hu
+    simp only [execStmt]
+    generalize R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
+    cases o with
+    | ok σ' v =>
+      obtain ⟨m1, s1, a1, _⟩ := hc
+      exact ⟨m1, s1, a1.mono hlo2, envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)⟩
+    | logik e => exact hc
+    | why _ _ => exact hc.elim
+    | hardware _ => exact hc.elim
   | _, _, _, _, .assignSlot .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .assignThru .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .assignGlob .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
@@ -144,7 +174,6 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
   | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onTag .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .call .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .locks .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .breaking .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
@@ -164,61 +193,88 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
   | _, _, _, _, .assignSlotRef .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
 
 theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {fp : Runner.W} {K : Nat} :
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {fp : Runner.W} {K lo : Nat} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D V l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowB b = some (c, top) → top ≤ K → 16 * c.length < 2 ^ 31 →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (σ σ' : World D) (ρ ρ' : Env D Γ),
-    execBlock O passes R b σ ρ = .ok σ' ρ' → Pre m pc fp K (frei Γ) c ρ →
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp 0 K m m' ∧ EnvAt m' fp ρ'
-  | _, Γ, _, _, .nil, c, top, h, _, _, m, pc, σ, σ', ρ, ρ', hx, hp => by
+    lowB A lo b = some (c, top) → top + cap ≤ K → 16 * c.length < 2 ^ 31 →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), Pre m pc fp K (frei Γ) c ρ →
+    FB ≤ lo → lo ≤ frei Γ → Umf A C dv m fp K →
+    Sim fp lo K ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (execBlock O passes R b σ ρ)
+  | _, Γ, _, _, .nil, c, top, h, _, _, m, pc, σ, ρ, hp, _, _, _ => by
     simp only [lowB, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    simp only [execBlock, Ausgang.ok.injEq] at hx
-    obtain ⟨rfl, rfl⟩ := hx
+    simp only [execBlock, Sim]
     exact ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, hp.env⟩
-  | _, Γ, _, _, .cons s rest, c, top, h, hK, hs, m, pc, σ, σ', ρ, ρ', hx, hp => by
+  | _, Γ, _, _, .cons s rest, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu => by
     simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cs, ts⟩, hs1, ⟨cr, tr⟩, hr, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append] at hs
-    simp only [execBlock] at hx
-    cases hst : execStmt O passes R s σ ρ with
+    have ih := lowS_ok (O := O) (passes := passes) hS hA s cs ts hs1 (by omega) (by omega) m pc σ ρ hp.left hlo hlo2 hu
+    simp only [execBlock]
+    generalize execStmt O passes R s σ ρ = o at ih ⊢
+    cases o with
     | ok σ1 ρ1 =>
-      rw [hst] at hx
-      obtain ⟨m1, s1, a1, e1⟩ := lowS_ok s cs ts hs1 (by omega) (by omega) m pc σ σ1 ρ ρ1 hst hp.left
+      obtain ⟨m1, s1, a1, e1⟩ := ih
       have hf := codeFar_right (n := cs.length) (k := cr.length) (by simpa using hp.far)
       have hp1 : Pre m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K (frei Γ) cr ρ1 :=
         ⟨hp.ctx, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf, e1⟩
-      obtain ⟨m2, s2, a2, e2⟩ := lowB_ok rest cr tr hr (by omega) (by omega) m1 _ σ1 σ' ρ1 ρ' hx hp1
-      exact ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans a2, e2⟩
-    | zurueck | why | leave | next | logik | hardware => rw [hst] at hx; cases hx
-  | _, Γ, Λ, _, .bind e rest, c, top, h, hK, hs, m, pc, σ, σ', ρ, ρ', hx, hp => by
+      have ih2 := lowB_ok (O := O) (passes := passes) hS hA rest cr tr hr (by omega) (by omega) m1 _ σ1 ρ1 hp1 hlo hlo2
+        (hu.agree a1 hp.frame hlo)
+      rw [pc_add1]
+      exact Sim.prefix s1 a1 ih2
+    | zurueck | why | leave | next | logik | hardware => exact ih
+  | _, Γ, Λ, _, .bind e rest, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu => by
     simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append] at hs
-    simp only [execBlock] at hx
-    cases hb : execBlock O passes R rest (σ.lese Λ e.orte)
-        (.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) with
-    | ok σ2 ρ2 =>
-      rw [hb] at hx
-      simp only [Ausgang.schrumpf, Ausgang.ok.injEq] at hx
-      obtain ⟨rfl, rfl⟩ := hx
-      have htop := lowE_top e _ _ _ he
-      obtain ⟨m1, s1, a1, w, hw, hen⟩ :=
-        lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega) m pc ρ hp.left
-      have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
-      have hp1 : Pre m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ + 1) cr
-          (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) :=
-        ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf,
-         envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen⟩
-      obtain ⟨m2, s2, a2, e2⟩ := lowB_ok rest cr tr hr (by omega) (by omega) m1 _ _ σ2 _ ρ2 hb hp1
-      exact ⟨m2, s1.trans (by rw [pc_add1]; exact s2), (a1.mono (Nat.zero_le _)).trans a2, envAt_tail e2⟩
-    | zurueck | why | leave | next | logik | hardware =>
-      rw [hb] at hx; simp [Ausgang.schrumpf] at hx
-  | _, _, _, _, .bindCall .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+    simp only [execBlock]
+    have htop := lowE_top e _ _ _ he
+    obtain ⟨m1, s1, a1, w, hw, hen⟩ :=
+      lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega) m pc ρ hp.left
+    have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
+    have hp1 : Pre m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ + 1) cr
+        (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) :=
+      ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf,
+       envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen⟩
+    have ih := lowB_ok (O := O) (passes := passes) hS hA rest cr tr hr (by omega) (by omega) m1 _ (σ.lese Λ e.orte) _ hp1 hlo
+      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) (hu.agree (a1.mono hlo2) hp.frame hlo)
+    rw [pc_add1]
+    exact Sim.prefix s1 (a1.mono hlo2) (Sim.schrumpf ih)
+  | _, Γ, Λ, _, .bindCall f args he _ _ rest, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu => by
+    simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, hca, ⟨cr, tr⟩, hr, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    simp only [List.length_append] at hs
+    have hFB3 : FB = 3 := rfl
+    have hct : frei Γ + FB + (D.params f).length + 1 ≤ callTop f (frei Γ) ta := by simp only [callTop]; omega
+    have hc := callC_ok hS (hA f) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu
+    simp only [execBlock]
+    generalize R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
+    cases o with
+    | ok σ' v =>
+      obtain ⟨m1, s1, a1, w, hw, hew⟩ := hc
+      have hp1 := hp.left.next a1 (Nat.le_refl _) (by omega)
+      have s2 := mov_to hp1.code hp1.frame (j := frei Γ) (s := frei Γ + 2) (by omega) (by omega) hp.small hw
+      rw [← pc_add1] at s2
+      let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ))) 8 w.toNat
+      have a2 : Agree fp (frei Γ) K m1 m2 := agree_write hp1.frame.room (Nat.le_refl _) (by omega) _
+      have hq := hp.next (a1.trans a2) (d' := frei Γ + 1) (by omega) (by omega)
+      have hp2 : Pre m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+        ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
+         envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert he hew)⟩
+      have ih := lowB_ok (O := O) (passes := passes) hS hA rest cr tr hr (by omega) (by omega) m2 _ σ' _ hp2 hlo
+        (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
+        (hu.agree ((a1.trans a2).mono hlo2) hp.frame hlo)
+      rw [pc_add1 pc (callC A f (frei Γ) ca ++ [ci 2 (frei Γ) (frei Γ + 2) 0]) cr]
+      exact Sim.prefix (s1.trans s2) ((a1.trans a2).mono hlo2) (Sim.schrumpf ih)
+    | logik e => exact hc
+    | why _ _ => exact hc.elim
+    | hardware _ => exact hc.elim
   | _, _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .bindCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .bindAxiom .., _, _, h, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
