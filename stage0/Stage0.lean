@@ -50,3 +50,5 @@ import Stage0.Senke.Rueckkehr
 import Stage0.Senke.FunktionSatz
 import Stage0.Senke.Rekursion
 import Stage0.Senke.Bild
+import Stage0.Senke.BildLese
+import Stage0.Senke.BildSatz
