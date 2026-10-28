@@ -23,7 +23,7 @@ def PCode (m : Runner.Mem) (A : D.Fn → Nat) (C : D.Fn → List II) (fp : Runne
 /-- The word of a result. -/
 def EncErg : (e : Option Ty) → ErgVal D e → Runner.W → Prop
   | some τ, v, w => Enc τ v w
-  | none, _, _ => False
+  | none, _, _ => True
 
 def FunSpec (A : D.Fn → Nat) (C : D.Fn → List II) (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (dv : Runner.W) (c : Nat) : Prop :=

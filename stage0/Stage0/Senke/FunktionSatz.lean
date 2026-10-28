@@ -77,7 +77,7 @@ theorem Kopf.agree {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {K lo : Nat} {
 theorem envAt_ergEnv {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} :
     {e : Option Ty} → {v : ErgVal D e} → {w : Runner.W} → EnvAt m fp ρ →
     m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w → EncErg e v w → EnvAt m fp (ergEnv e v ρ)
-  | none, _, _, _, _, h => h.elim
+  | none, _, _, h, _, _ => h
   | some _, _, _, h, hw, he => envAt_cons h hw he
 
 theorem frei_ergCtx (Γ : Ctx) : (e : Option Ty) → frei (ErgCtx Γ e) ≤ frei Γ + 1
@@ -86,14 +86,18 @@ theorem frei_ergCtx (Γ : Ctx) : (e : Option Ty) → frei (ErgCtx Γ e) ≤ frei
 
 theorem lowErg_top {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) →
     (c : List II) → (top : Nat) → lowErg x d = some (c, top) → d < top
-  | _, .empty, _, _, _, h => by simp [lowErg] at h
+  | _, .empty, d, c, top, h => by simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, .val e, d, c, top, h => lowE_top e d c top h
 
 theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} (σ₀ σ : World D) {Γ : Ctx} :
     {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) → (c : List II) → (top : Nat) →
     lowErg x d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre m pc fp K d c ρ → Ok m pc fp K d c (EncErg e (evalErg σ₀ x σ ρ))
-  | _, .empty, _, _, _, h, _, _, _, _, _ => by simp [lowErg] at h
+  | _, .empty, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, ?_⟩
+    exact ⟨_, by simp only [Runner.Mem.rd64, hp.frame.rd d (by omega), ↓reduceIte]; rfl, trivial⟩
   | _, .val e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ e d c top h hK m pc ρ hp
 
 theorem codeFar_tail {pc fp : Runner.W} {K : Nat} {a b : List II} (h : CodeFar pc (a ++ b).length fp K) :

@@ -169,7 +169,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
           · next hens' =>
             simp only [hens', if_false]
             have hfil : D.invs.filter (schuldet f) = [] := by
-              simp only [Bool.and_eq_true, List.isEmpty_iff] at hcond; exact hcond.1
+              simp only [List.isEmpty_iff] at hcond; exact hcond
             have hsch : ∀ i ∈ D.invs, schuldet f i = false := by
               intro i hi
               have := List.filter_eq_nil_iff.mp hfil i hi

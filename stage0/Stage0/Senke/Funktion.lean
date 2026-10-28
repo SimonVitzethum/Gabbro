@@ -8,7 +8,8 @@
   * the body (`lowEnd`), which writes no slot below `FB + np`, so the parameters stay as the call gave them;
   * every `ret e`: `e`, into slot `lo = FB + np`, then `ensures` over the result and the parameters into the
     slot above, false: `exit_group(102)`; else the result into slot 2 and `ret`.
-  Refused: a function with invariants to keep (`schuldet`), without a result, or a form outside the fragment.
+  Refused: a function with invariants to keep (`schuldet`), or a form outside the fragment. A function without a
+  result returns whatever word slot `FB + np` holds; nobody reads it.
 -/
 import Stage0.Senke.Anweisung
 import Stage0.Senke.Stopp
@@ -20,7 +21,7 @@ open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration} {V : Vertrag D}
 
 def lowErg {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
-  | _, .empty, _ => none
+  | _, .empty, d => some ([], d + 1)
   | _, .val e, d => lowE e d
 
 /-- `ret`: the result from slot `r` into slot `q` (`FB + np`, the slot of `ensures`' result variable), the
@@ -60,7 +61,7 @@ def guardC (a c s : Nat) : List II := [ci 19 a 32 0, ci 18 64 0 0] ++ stopC c s
 /-- The code of `f`, and the first slot it does not write. -/
 def lowFun (P : Programm D) (A : D.Fn → Nat) (f : D.Fn) : Option (List II × Nat) :=
   let np := (D.params f).length
-  if (D.invs.filter (schuldet f)).isEmpty && (D.erg f).isSome then do
+  if (D.invs.filter (schuldet f)).isEmpty then do
     let req ← lowE (P.requires f) (FB + np)
     let ens ← lowE (P.ensures f) (FB + np + 1)
     let body ← lowEnd A (FB + np) ens (P.rumpf f)
