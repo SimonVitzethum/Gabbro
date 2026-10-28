@@ -56,21 +56,21 @@ theorem step_ok {L : Lay} (hI : CInv L) {t : IR.T} {x : X} (hD : Disp L t x) : M
   simp only [IR.step, rd8]
   refine .ask (h1.trans he) fun a => ?_
   cases a with
-  | none => exact .fault
+  | none => exact .kfault
   | some p =>
     simp only [opt_some]
-    refine .next ?_
+    refine .knext ?_
     have h2 : step L.C (x1 ((p.1.setWidth 8).setWidth 64)) =
         exec (.jmpm (ms .r14 .rax)) (enc (.jmpm (ms .r14 .rax))).length (x1 ((p.1.setWidth 8).setWidth 64)) :=
       step_code (x := x1 _) (by simpa [x1, X.set] using hc2)
     let op := ((p.1.setWidth 8).setWidth 64 : W).toNat
     refine .tbl (k := fun r => opt r fun q => .next { x1 ((p.1.setWidth 8).setWidth 64) with rip := q.1 }) op
-      ?_ fun w => ?_
+      (by simp only [op, BitVec.toNat_setWidth]; omega) ?_ fun w => ?_
     · rw [h2]
       simp only [exec, rd64, ea, ms, X.get, x1, X.set, hD.tb, taddr, op, BitVec.ofNat_toNat,
         BitVec.setWidth_eq]
     · simp only [opt_some]
-      refine .next ?_
+      refine .knext ?_
       have hpre : HPre L op { x1 ((p.1.setWidth 8).setWidth 64) with rip := L.H op } :=
         ⟨rfl, by simp [x1, X.set, hD.tb], hI⟩
       have := handler_ok op hpre

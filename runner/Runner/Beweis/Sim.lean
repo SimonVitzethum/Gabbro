@@ -34,22 +34,28 @@ structure Disp (L : Lay) (t : IR.T) (x : X) : Prop where
   fp : x.r13 = t.fp
   tb : x.r14 = L.T
 
-mutual
-inductive Match (L : Lay) : Res IR.T → X → Prop
-  | priv {r : Res IR.T} {x y : X} : step L.C x = .next y → Match L r y → Match L r x
-  | tbl {r : Res IR.T} {x : X} {k : Ans → Res X} (op : Nat) :
-      step L.C x = .ask (.rd 8 (taddr L (BitVec.ofNat 64 op))) k →
-      (∀ w, MatchK L r (k (some (L.H op, w)))) → Match L r x
-  | ask {o : Op} {kI : Ans → Res IR.T} {kX : Ans → Res X} {x : X} :
-      step L.C x = .ask o kX → (∀ a, MatchK L (kI a) (kX a)) → Match L (.ask o kI) x
-  | fault {x : X} : step L.C x = .fault → Match L .fault x
-  | disp {t : IR.T} {x : X} : Disp L t x → Match L (.next t) x
+/-- Where the x86 side stands: at a thread state, or just after an answer (the rest of one instruction). -/
+inductive Pos
+  | th (x : X)
+  | af (r : Res X)
 
-/-- After an answer: both fault, or the x86 thread continues in a state that goes on matching. -/
-inductive MatchK (L : Lay) : Res IR.T → Res X → Prop
-  | fault : MatchK L .fault .fault
-  | next {r : Res IR.T} {y : X} : Match L r y → MatchK L r (.next y)
-end
+inductive MatchP (L : Lay) : Res IR.T → Pos → Prop
+  | priv {r : Res IR.T} {x y : X} : step L.C x = .next y → MatchP L r (.th y) → MatchP L r (.th x)
+  | tbl {r : Res IR.T} {x : X} {k : Ans → Res X} (op : Nat) : op < 256 →
+      step L.C x = .ask (.rd 8 (taddr L (BitVec.ofNat 64 op))) k →
+      (∀ w, MatchP L r (.af (k (some (L.H op, w))))) → MatchP L r (.th x)
+  | ask {o : Op} {kI : Ans → Res IR.T} {kX : Ans → Res X} {x : X} :
+      step L.C x = .ask o kX → (∀ a, MatchP L (kI a) (.af (kX a))) → MatchP L (.ask o kI) (.th x)
+  | fault {x : X} : step L.C x = .fault → MatchP L .fault (.th x)
+  | disp {t : IR.T} {x : X} : Disp L t x → MatchP L (.next t) (.th x)
+  /-- after an answer: both fault -/
+  | kfault : MatchP L .fault (.af .fault)
+  /-- after an answer: the x86 thread continues in a state that goes on matching -/
+  | knext {r : Res IR.T} {y : X} : MatchP L r (.th y) → MatchP L r (.af (.next y))
+
+abbrev Match (L : Lay) (r : Res IR.T) (x : X) : Prop := MatchP L r (.th x)
+abbrev MatchK (L : Lay) (r : Res IR.T) (rx : Res X) : Prop := MatchP L r (.af rx)
+
 
 /-! ## Straight code: the trees side by side -/
 
@@ -109,12 +115,12 @@ theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) :
         · have : Corr y0 (kI a) ((k a).bind (runL is)) := hk a
           rw [hka, bind_fault] at this
           cases hkI : kI a <;> rw [hkI] at this <;> simp [Corr] at this
-          rw [hka]; exact .fault
+          rw [hka]; exact .kfault
         · have : Corr y0 (kI a) ((k a).bind (runL is)) := hk a
           rw [hka, bind_next] at this
           have hy := hrip a
           rw [hka] at hy
-          rw [hka]; exact .next (straight_go htb is y (kI a) hfs (hc' y hy) this)
+          rw [hka]; exact .knext (straight_go htb is y (kI a) hfs (hc' y hy) this)
       | _ => simp [Corr] at hco
 
 /-! ## Code ending in a jump: the trees side by side, the ends matched by `Match` itself -/
@@ -173,11 +179,11 @@ theorem go {L : Lay} : ∀ (is : List Ins) (x : X) (r : Res IR.T), (∀ i ∈ is
         · have : CorrM L (kI a) ((k a).bind (runL is)) := hk a
           rw [hka, bind_fault] at this
           cases hkI : kI a <;> rw [hkI] at this <;> simp [CorrM] at this
-          rw [hka]; exact .fault
+          rw [hka]; exact .kfault
         · have : CorrM L (kI a) ((k a).bind (runL is)) := hk a
           rw [hka, bind_next] at this
           rw [hka]
-          refine .next (hrest y (kI a) (fun hne => ?_) this)
+          refine .knext (hrest y (kI a) (fun hne => ?_) this)
           have := hrip hne
           rw [he] at this
           have := this a

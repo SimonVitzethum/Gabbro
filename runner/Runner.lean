@@ -18,3 +18,5 @@ import Runner.Beweis.Gerade
 import Runner.Beweis.Handler.Gerade
 import Runner.Beweis.Handler.Sprung
 import Runner.Beweis.Schritt
+import Runner.Mach.Maschine
+import Runner.Beweis.Mehr
