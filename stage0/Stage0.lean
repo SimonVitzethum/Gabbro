@@ -47,3 +47,4 @@ import Stage0.Senke.Funktion
 import Stage0.Senke.Spez
 import Stage0.Senke.Aufruf
 import Stage0.Senke.FunktionSatz
+import Stage0.Senke.Rekursion
