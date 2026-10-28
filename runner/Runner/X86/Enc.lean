@@ -64,3 +64,15 @@ def enc : Ins → List B
   | .ud2 => [byte 0x0F, byte 0x0B]
 
 end Runner.X86
+
+namespace Runner.X86
+
+/-- The operands `enc` can encode: a scale below 4 and no `rsp` index; `test` has no immediate form. -/
+def Addr.ok (m : Addr) : Bool := m.sc < 4 && m.idx != some .rsp
+
+def Ins.ok : Ins → Bool
+  | .ld _ m | .st m _ | .ldsx _ m | .ldzx _ m | .lea _ m | .jmpm m | .cmpxchg m _ => m.ok
+  | .alui o _ _ => o != .test
+  | _ => true
+
+end Runner.X86

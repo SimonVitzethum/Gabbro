@@ -19,9 +19,9 @@ def Alu.ofOpc : Nat → Option Alu
   | 0x01 => some .add | 0x09 => some .or | 0x21 => some .and | 0x29 => some .sub
   | 0x31 => some .xor | 0x39 => some .cmp | 0x85 => some .test | _ => none
 
-def Alu.ofExt : Nat → Option Alu
-  | 0 => some .add | 1 => some .or | 4 => some .and | 5 => some .sub | 6 => some .xor | 7 => some .cmp
-  | _ => none
+def Alu.ofExt (n : Nat) : Option Alu :=
+  if n = 0 then some .add else if n = 1 then some .or else if n = 4 then some .and
+  else if n = 5 then some .sub else if n = 6 then some .xor else if n = 7 then some .cmp else none
 
 def Cond.ofCc : Nat → Option Cond
   | 4 => some .z | 5 => some .nz | 8 => some .s | 12 => some .l | _ => none

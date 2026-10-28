@@ -5,6 +5,7 @@ import Runner.X86.Ins
 import Runner.X86.Enc
 import Runner.X86.Dec
 import Runner.X86.Step
+import Runner.X86.DecEnc
 import Runner.Prog.Asm
 import Runner.Prog.Code
 import Runner.Prog.Elf
