@@ -20,3 +20,4 @@ import Runner.Beweis.Handler.Gerade
 import Runner.Beweis.Handler.Sprung
 import Runner.Beweis.Handler.Sys
 import Runner.Beweis.Schritt
+import Runner.Beweis.Spur
