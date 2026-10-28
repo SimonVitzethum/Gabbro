@@ -5,8 +5,9 @@
 
 BIN is the `runner` executable of the Lean package `runner/`; DIR a scratch directory. Three checks:
 
-1. The runner binary written by Lean runs every probe image with the output and exit code the IR semantics
-   computes (`hello`, `probe`).
+1. The runner binary written by Lean runs every probe image with the output and exit code fixed in
+   `runner/proben/NAME.aus` and `NAME.code` (no Lean program runs the IR); `objdump` decodes the runner's code to the
+   instructions of the listing `runner.s`.
 2. Differential tests of the x86-64 model: CASES random cases of the 22 instruction forms run on this processor;
    registers, data area and every flag the model defines must equal the model's `exec`.
 3. Fault programs: every instruction the model says faults ends the program with the named signal, and the model
@@ -19,6 +20,38 @@ import subprocess
 import sys
 
 KINDS = 19  # Runner.Test.KINDS
+
+
+def listing_matches(binary, listing):
+    """objdump's mnemonics at every address of the listing equal the listing's (operands are not compared:
+    the two syntaxes differ in detail; the bytes themselves are checked by the proofs)."""
+    want = {}
+    for line in open(listing):
+        line = line.strip()
+        if line.startswith("0x") and ":" in line:
+            a, ins = line.split(":", 1)
+            want[int(a, 16)] = ins.split()[0] if ins.split()[0] != "lock" else "lock"
+    try:
+        out = subprocess.run(["objdump", "-D", "-b", "binary", "-m", "i386:x86-64", "-M", "intel",
+                                  "--adjust-vma=0x400000", "--start-address=0x400100", binary],
+                             capture_output=True, text=True).stdout
+    except FileNotFoundError:
+        print("runner-cpu: objdump missing")
+        return False
+    got = {}
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 3 and parts[0].strip().endswith(":"):
+            try:
+                words = [w for w in parts[2].split() if not w.startswith("rex")]
+                got[int(parts[0].strip()[:-1], 16)] = words[0]
+            except ValueError:
+                pass
+    bad = [hex(a) for a, m in want.items() if got.get(a) != m]
+    if bad:
+        print(f"runner-cpu: listing and objdump differ at {len(bad)} of {len(want)} addresses, e.g. {bad[:5]}",
+              [(a, want[int(a, 16)], got.get(int(a, 16))) for a in bad[:5]])
+    return not bad and len(want) > 0
 
 
 def main():
@@ -37,14 +70,23 @@ def main():
         print("runner-cpu: writing the runner failed:", r.stderr)
         return 2
     os.chmod(os.path.join(d, "runner"), 0o755)
+    proben = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "runner", "proben")
     for p in ["hello", "probe", "threads"]:
-        want = open(os.path.join(d, p + ".out"), "rb").read()
-        code = int(open(os.path.join(d, p + ".code")).read())
+        want = open(os.path.join(proben, p + ".aus"), "rb").read()
+        code = int(open(os.path.join(proben, p + ".code")).read())
         q = subprocess.run([os.path.join(d, "runner"), os.path.join(d, p + ".img")], capture_output=True)
         measured += 1
         if q.stdout != want or q.returncode != code:
             bad += 1
             print(f"runner-cpu: probe {p}: exit {q.returncode} (IR {code}), output equal: {q.stdout == want}")
+    measured += 1
+    committed = os.path.join(proben, "..", "runner.s")
+    if open(committed).read() != open(os.path.join(d, "runner.s")).read():
+        bad += 1
+        print("runner-cpu: runner/runner.s is not the listing of the current runner (write it with lake exe runner)")
+    measured += 1
+    if not listing_matches(os.path.join(d, "runner"), os.path.join(d, "runner.s")):
+        bad += 1
     # 2. differential tests
     r = subprocess.run([exe, "difftest", d, cases], capture_output=True, text=True)
     if r.returncode != 0:
