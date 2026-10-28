@@ -25,57 +25,63 @@ def mb (b : Reg) (d : BitVec 32 := 0) : Addr := { base := b, disp := d }
 def ms (b i : Reg) (d : BitVec 32 := 0) : Addr := { base := b, idx := some i, sc := 3, disp := d }
 
 /-- `r := sx(field k)` of the instruction at `pc`. -/
-def fld (r : Reg) (k : Nat) : Item := .i (.ldsx r (mb .r12 (BitVec.ofNat 32 (4 * k))))
+def fld (r : Reg) (k : Nat) : Ins := .ldsx r (mb .r12 (BitVec.ofNat 32 (4 * k)))
 /-- `r := slot[i]`. -/
-def sld (r i : Reg) : Item := .i (.ld r (ms .r13 i))
+def sld (r i : Reg) : Ins := .ld r (ms .r13 i)
 /-- `slot[i] := r`. -/
-def sst (i r : Reg) : Item := .i (.st (ms .r13 i) r)
+def sst (i r : Reg) : Ins := .st (ms .r13 i) r
 
-def dispatch : List Item := [.i (.ldzx .rax (mb .r12)), .i (.jmpm (ms .r14 .rax))]
-def nextI : List Item := .i (.alui .add .r12 16) :: dispatch
+def dispatch : List Ins := [.ldzx .rax (mb .r12), .jmpm (ms .r14 .rax)]
+def nextI : List Ins := .alui .add .r12 16 :: dispatch
+
+def lenOf (is : List Ins) : Nat := (is.map fun i => (enc i).length).sum
 
 /-- `rax := op(slot f2, slot f3)` then `slot f1 := rax`. -/
-def binH (body : List Item) : List Item :=
+def binH (body : List Ins) : List Ins :=
   [fld .rax 2, sld .rax .rax, fld .rdx 3, sld .rdx .rdx] ++ body ++ [fld .rcx 1, sst .rcx .rax] ++ nextI
 
-def divH (res : Reg) : List Item :=
-  [fld .rax 2, sld .rax .rax, fld .rsi 3, sld .rsi .rsi, .i .cqo, .i (.idiv .rsi), fld .rcx 1, sst .rcx res] ++ nextI
+def divH (res : Reg) : List Ins :=
+  [fld .rax 2, sld .rax .rax, fld .rsi 3, sld .rsi .rsi, .cqo, .idiv .rsi, fld .rcx 1, sst .rcx res] ++ nextI
 
-def shiftH (sh : Ins) : List Item :=
-  [fld .rax 2, sld .rax .rax, fld .rcx 3, sld .rcx .rcx, .i sh, fld .rdx 1, sst .rdx .rax] ++ nextI
+def shiftH (sh : Ins) : List Ins :=
+  [fld .rax 2, sld .rax .rax, fld .rcx 3, sld .rcx .rcx, sh, fld .rdx 1, sst .rdx .rax] ++ nextI
 
-/-- The handler of each opcode 1..23. -/
-def handler : Nat → List Item
+/-- `brz`: the taken branch, which the `jnz` skips. -/
+def brzTaken : List Ins := [fld .rax 2, .alu .add .r12 .rax] ++ dispatch
+
+/-- The code of each opcode; position independent (the one jump inside, `brz`'s `jnz`, is relative). Opcodes
+    without a handler run `ud2`. -/
+def handler : Nat → List Ins
   | 1 => [fld .rax 2, fld .rcx 1, sst .rcx .rax] ++ nextI
   | 2 => [fld .rax 2, sld .rax .rax, fld .rcx 1, sst .rcx .rax] ++ nextI
-  | 3 => binH [.i (.alu .add .rax .rdx)]
-  | 4 => binH [.i (.alu .sub .rax .rdx)]
-  | 5 => binH [.i (.imul .rax .rdx)]
+  | 3 => binH [.alu .add .rax .rdx]
+  | 4 => binH [.alu .sub .rax .rdx]
+  | 5 => binH [.imul .rax .rdx]
   | 6 => divH .rax
   | 7 => divH .rdx
-  | 8 => binH [.i (.alu .and .rax .rdx)]
-  | 9 => binH [.i (.alu .or .rax .rdx)]
-  | 10 => binH [.i (.alu .xor .rax .rdx)]
+  | 8 => binH [.alu .and .rax .rdx]
+  | 9 => binH [.alu .or .rax .rdx]
+  | 10 => binH [.alu .xor .rax .rdx]
   | 11 => shiftH (.shl .rax)
   | 12 => shiftH (.shr .rax)
-  | 13 => binH [.i (.alu .cmp .rax .rdx), .i (.set .l .rax), .i (.zx8 .rax .rax)]
-  | 14 => binH [.i (.alu .cmp .rax .rdx), .i (.set .z .rax), .i (.zx8 .rax .rax)]
-  | 15 => [fld .rax 2, sld .rax .rax, .i (.ld .rax (mb .rax)), fld .rcx 1, sst .rcx .rax] ++ nextI
-  | 16 => [fld .rax 1, sld .rax .rax, fld .rdx 2, sld .rdx .rdx, .i (.st (mb .rax) .rdx)] ++ nextI
-  | 17 => [fld .rax 2, .i (.lea .rax (ms .r13 .rax)), fld .rcx 1, sst .rcx .rax] ++ nextI
-  | 18 => [fld .rax 1, .i (.alu .add .r12 .rax)] ++ dispatch
-  | 19 => [fld .rax 1, sld .rax .rax, .i (.alu .test .rax .rax), .jccL .nz 219, fld .rax 2,
-           .i (.alu .add .r12 .rax)] ++ dispatch ++ [.lab 219] ++ nextI
-  | 20 => [fld .rax 1, sld .rax .rax, fld .rdx 2, .i (.lea .rdx (ms .r13 .rdx)), .i (.lea .rcx (mb .r12 16)),
-           .i (.st (mb .rdx) .rcx), .i (.st (mb .rdx 8) .r13), .i (.mov .r13 .rdx), .i (.mov .r12 .rax)] ++ dispatch
-  | 21 => [.i (.ld .rax (mb .r13)), .i (.ld .r13 (mb .r13 8)), .i (.mov .r12 .rax)] ++ dispatch
-  | 22 => [fld .rax 2, .i (.ld .rdx (ms .r13 .rax)), fld .rcx 3, .i (.ld .rax (ms .r13 .rcx)),
-           .i (.ld .rsi (ms .r13 .rcx 8)), .i (.cmpxchg (mb .rdx) .rsi), fld .rcx 1, sst .rcx .rax] ++ nextI
-  | 23 => [fld .rbx 1, .i (.lea .rbx (ms .r13 .rbx)), fld .rcx 2, .i (.lea .rcx (ms .r13 .rcx)),
-           .i (.ld .rax (mb .rcx)), .i (.ld .rdi (mb .rcx 8)), .i (.ld .rsi (mb .rcx 16)), .i (.ld .rdx (mb .rcx 24)),
-           .i (.ld .r10 (mb .rcx 32)), .i (.ld .r8 (mb .rcx 40)), .i (.ld .r9 (mb .rcx 48)), .i .syscall,
-           .i (.st (mb .rbx) .rax)] ++ nextI
-  | _ => []
+  | 13 => binH [.alu .cmp .rax .rdx, .set .l .rax, .zx8 .rax .rax]
+  | 14 => binH [.alu .cmp .rax .rdx, .set .z .rax, .zx8 .rax .rax]
+  | 15 => [fld .rax 2, sld .rax .rax, .ld .rax (mb .rax), fld .rcx 1, sst .rcx .rax] ++ nextI
+  | 16 => [fld .rax 1, sld .rax .rax, fld .rdx 2, sld .rdx .rdx, .st (mb .rax) .rdx] ++ nextI
+  | 17 => [fld .rax 2, .lea .rax (ms .r13 .rax), fld .rcx 1, sst .rcx .rax] ++ nextI
+  | 18 => [fld .rax 1, .alu .add .r12 .rax] ++ dispatch
+  | 19 => [fld .rax 1, sld .rax .rax, .alu .test .rax .rax, .jcc .nz (BitVec.ofNat 32 (lenOf brzTaken))] ++
+           brzTaken ++ nextI
+  | 20 => [fld .rax 1, sld .rax .rax, fld .rdx 2, .lea .rdx (ms .r13 .rdx), .lea .rcx (mb .r12 16),
+           .st (mb .rdx) .rcx, .st (mb .rdx 8) .r13, .mov .r13 .rdx, .mov .r12 .rax] ++ dispatch
+  | 21 => [.ld .rax (mb .r13), .ld .r13 (mb .r13 8), .mov .r12 .rax] ++ dispatch
+  | 22 => [fld .rax 2, .ld .rdx (ms .r13 .rax), fld .rcx 3, .ld .rax (ms .r13 .rcx),
+           .ld .rsi (ms .r13 .rcx 8), .cmpxchg (mb .rdx) .rsi, fld .rcx 1, sst .rcx .rax] ++ nextI
+  | 23 => [fld .rbx 1, .lea .rbx (ms .r13 .rbx), fld .rcx 2, .lea .rcx (ms .r13 .rcx),
+           .ld .rax (mb .rcx), .ld .rdi (mb .rcx 8), .ld .rsi (mb .rcx 16), .ld .rdx (mb .rcx 24),
+           .ld .r10 (mb .rcx 32), .ld .r8 (mb .rcx 40), .ld .r9 (mb .rcx 48), .syscall,
+           .st (mb .rbx) .rax] ++ nextI
+  | _ => [.ud2]
 
 /-- Label numbers: 0 the loader, `k` the handler of opcode `k`, 100 `ud2`, 101 the table. -/
 def LOADER : Nat := 0
@@ -90,11 +96,11 @@ def loader : List Item :=
     .i (.movi .rdi (BitVec.ofNat 32 IMG)), .i (.movi .rdx 3), .i (.movi .r10 0x100002), .i (.mov .r8 .rbx),
     .i (.movi .r9 0), .i (.movi .rax 9), .i .syscall,
     .i (.movi .rcx (BitVec.ofNat 32 IMG)), .i (.alu .cmp .rax .rcx), .jccL .nz BAD,
-    .adr .r14 TABLE, .i (.ld .r13 (mb .rcx)), .i (.lea .r12 (mb .rcx 16)) ] ++ dispatch
+    .adr .r14 TABLE, .i (.ld .r13 (mb .rcx)), .i (.lea .r12 (mb .rcx 16)) ] ++ dispatch.map .i
 
 def items : List Item :=
   [.lab LOADER] ++ loader ++
-  ((List.range 23).map (· + 1)).flatMap (fun k => .lab k :: handler k) ++
+  ((List.range 23).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
   [.lab BAD, .i .ud2]
 
 def codeLen : Nat := (items.map Item.len).sum

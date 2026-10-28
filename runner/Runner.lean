@@ -11,3 +11,12 @@ import Runner.Prog.Code
 import Runner.Prog.Elf
 import Runner.Prog.IRAsm
 import Runner.Prog.Proben
+import Runner.Beweis.BV
+import Runner.Beweis.Lauf
+import Runner.Beweis.Holen
+import Runner.Beweis.Sim
+import Runner.Beweis.Gerade
+import Runner.Beweis.Handler.Gerade
+import Runner.Beweis.Handler.Sprung
+import Runner.Beweis.Handler.Sys
+import Runner.Beweis.Schritt
