@@ -64,15 +64,15 @@ theorem star_ins {m m' : Runner.Mem} {pc fp : Runner.W} {i : II} (hc : CodeAt m 
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [i].length), fp⟩ m' :=
   Star.one (run_step (t := ⟨pc, fp⟩) (by simpa using hc 0 (by simp)) ho hr)
 
-theorem vslot_lt {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : vslot x < Γ.length := by
+theorem vslot_lt {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : vslot x < frei Γ := by
   have : Var.idx x < Γ.length := by
     induction x with
     | here => simp [Var.idx]
     | there x ih => simp [Var.idx]; omega
-  unfold vslot; omega
+  unfold vslot frei; omega
 
 theorem envAt_agree {D : Deklaration} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat}
-    (h : EnvAt m fp ρ) (ha : Agree fp d K m m') (hF : FrameOK m fp K) (hd : Γ.length ≤ d) (hK : d ≤ K) :
+    (h : EnvAt m fp ρ) (ha : Agree fp d K m m') (hF : FrameOK m fp K) (hd : frei Γ ≤ d) (hK : d ≤ K) :
     EnvAt m' fp ρ := by
   intro τ x
   obtain ⟨w, hw, he⟩ := h τ x

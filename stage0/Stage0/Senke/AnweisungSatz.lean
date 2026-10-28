@@ -48,7 +48,7 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D V l Γ Λ Λ') → (c : List II) → (top : Nat) →
     lowS s = some (c, top) → top ≤ K → 16 * c.length < 2 ^ 31 →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ σ' : World D) (ρ ρ' : Env D Γ),
-    execStmt O passes R s σ ρ = .ok σ' ρ' → Pre m pc fp K Γ.length c ρ →
+    execStmt O passes R s σ ρ = .ok σ' ρ' → Pre m pc fp K (frei Γ) c ρ →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp 0 K m m' ∧ EnvAt m' fp ρ'
   | _, Γ, Λ, _, .assignVar x e, c, top, h, hK, _, m, pc, σ, σ', ρ, ρ', hx, hp => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -77,19 +77,19 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append, List.length_singleton] at hs
     have hsm := hp.small
-    have htop := lowE_top cnd Γ.length cc tc hcc
+    have htop := lowE_top cnd (frei Γ) cc tc hcc
     let σ1 := σ.lese Λ cnd.orte
-    have hq : Pre m pc fp K Γ.length (cc ++ ([ci 19 Γ.length (16 * (ct.length + 2)) 0] ++ (ct ++
+    have hq : Pre m pc fp K (frei Γ) (cc ++ ([ci 19 (frei Γ) (16 * (ct.length + 2)) 0] ++ (ct ++
         ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ := by simpa [List.append_assoc] using hp
-    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ1 σ1 cnd Γ.length cc tc hcc (by omega) m pc ρ
+    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ1 σ1 cnd (frei Γ) cc tc hcc (by omega) m pc ρ
       hq.left
     have h1 := hq.next a1 (Nat.le_refl _) (by omega)
     have hF1 := h1.frame
     have hbrz := h1.code 0 (by simp)
     simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
-    have h2 := h1.next (a := [ci 19 Γ.length (16 * (ct.length + 2)) 0]) (Agree.refl _ _ _ _) (Nat.le_refl _)
+    have h2 := h1.next (a := [ci 19 (frei Γ) (16 * (ct.length + 2)) 0]) (Agree.refl _ _ _ _) (Nat.le_refl _)
       (by omega)
-    have hd0 : sx (II.f (Γ.length : Int)) = BitVec.ofNat 64 Γ.length := sx_nat (by omega)
+    have hd0 : sx (II.f (frei Γ : Int)) = BitVec.ofNat 64 (frei Γ) := sx_nat (by omega)
     simp only [execStmt] at hx
     split at hx
     · next hb =>
@@ -168,7 +168,7 @@ theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D V l Γ Λ Λ') → (c : List II) → (top : Nat) →
     lowB b = some (c, top) → top ≤ K → 16 * c.length < 2 ^ 31 →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ σ' : World D) (ρ ρ' : Env D Γ),
-    execBlock O passes R b σ ρ = .ok σ' ρ' → Pre m pc fp K Γ.length c ρ →
+    execBlock O passes R b σ ρ = .ok σ' ρ' → Pre m pc fp K (frei Γ) c ρ →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp 0 K m m' ∧ EnvAt m' fp ρ'
   | _, Γ, _, _, .nil, c, top, h, _, _, m, pc, σ, σ', ρ, ρ', hx, hp => by
     simp only [lowB, Option.some.injEq, Prod.mk.injEq] at h
@@ -188,7 +188,7 @@ theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       rw [hst] at hx
       obtain ⟨m1, s1, a1, e1⟩ := lowS_ok s cs ts hs1 (by omega) (by omega) m pc σ σ1 ρ ρ1 hst hp.left
       have hf := codeFar_right (n := cs.length) (k := cr.length) (by simpa using hp.far)
-      have hp1 : Pre m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K Γ.length cr ρ1 :=
+      have hp1 : Pre m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K (frei Γ) cr ρ1 :=
         ⟨hp.ctx, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf, e1⟩
       obtain ⟨m2, s2, a2, e2⟩ := lowB_ok rest cr tr hr (by omega) (by omega) m1 _ σ1 σ' ρ1 ρ' hx hp1
       exact ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans a2, e2⟩
@@ -210,9 +210,9 @@ theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       obtain ⟨m1, s1, a1, w, hw, hen⟩ :=
         lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega) m pc ρ hp.left
       have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
-      have hp1 : Pre m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (Γ.length + 1) cr
+      have hp1 : Pre m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ + 1) cr
           (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) :=
-        ⟨by simp, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf,
+        ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf,
          envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen⟩
       obtain ⟨m2, s2, a2, e2⟩ := lowB_ok rest cr tr hr (by omega) (by omega) m1 _ _ σ2 _ ρ2 hb hp1
       exact ⟨m2, s1.trans (by rw [pc_add1]; exact s2), (a1.mono (Nat.zero_le _)).trans a2, envAt_tail e2⟩

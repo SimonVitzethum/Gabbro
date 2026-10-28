@@ -2,8 +2,8 @@
   File:      stage0/Stage0/Senke/Ausdruck.lean
   Subject:   The lowering of stage 0 (`PLAN-SELF-HOSTING.md` §2.1.4), part 1: expressions of machine G into `S0IR`.
 
-  A variable of the context `Γ` lives in a frame slot, counted from the bottom of `Γ` (`vslot`), so a `bind`
-  adds the slot `Γ.length` and keeps the others. An integer is its 64-bit two's complement, a Boolean 0 or 1
+  A variable of the context `Γ` lives in a frame slot, counted from the bottom of `Γ` after the frame's first
+  slots (`vslot`, `FB`), so a `bind` adds the slot `frei Γ` and keeps the others. An integer is its 64-bit two's complement, a Boolean 0 or 1
   (`Enc`). `lowE e d` computes `e` into slot `d`, using the slots above `d` as scratch; it answers the code and the
   first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
   compares, or a literal outside 32 bits is refused (`none`); wide integers and the other forms follow.
@@ -22,8 +22,15 @@ def Var.idx : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
   | _, _, .here => 0
   | _, _, .there x => Var.idx x + 1
 
-/-- The frame slot of a variable: counted from the bottom of the context. -/
-def vslot {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : Nat := Γ.length - 1 - Var.idx x
+/-- The first slots of every frame: 0 the return `pc` and 1 the caller's `fp` (both written by `call`), 2 the
+    remaining call depth (G's `fuel`; a call with depth 0 stops with `abstieg`). The variables follow. -/
+def FB : Nat := 3
+
+/-- The first free slot of a frame whose variables are `Γ`. -/
+def frei (Γ : Ctx) : Nat := FB + Γ.length
+
+/-- The frame slot of a variable: counted from the bottom of the context, after the frame's first slots. -/
+def vslot {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : Nat := FB + (Γ.length - 1 - Var.idx x)
 
 /-- A range of integers that 64 bits hold. -/
 def inW (lo hi : Int) : Bool := decide (-2 ^ 63 ≤ lo) && decide (hi < 2 ^ 63)

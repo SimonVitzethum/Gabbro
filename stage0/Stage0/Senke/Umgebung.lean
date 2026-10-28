@@ -59,15 +59,15 @@ theorem envAt_set {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ}
   · obtain ⟨w', hw', he'⟩ := h τ' y
     exact ⟨w', by rw [hothers τ' y hy]; exact hw', by rw [get_set_ne ρ x y v hy]; exact he'⟩
 
-theorem vslot_here {Γ : Ctx} {τ : Ty} : vslot (Var.here : Var (τ :: Γ) τ) = Γ.length := by
-  simp [vslot, Var.idx]
+theorem vslot_here {Γ : Ctx} {τ : Ty} : vslot (Var.here : Var (τ :: Γ) τ) = frei Γ := by
+  simp [vslot, frei, Var.idx]
 
 theorem vslot_there {Γ : Ctx} {τ σ : Ty} (y : Var Γ τ) : vslot (Var.there y : Var (σ :: Γ) τ) = vslot y := by
   have := idx_lt y
   simp [vslot, Var.idx]; omega
 
 theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {v : Wert D τ}
-    {w : Runner.W} (h : EnvAt m fp ρ) (hw : m.rd64 (slot fp (BitVec.ofNat 64 Γ.length)) = some w)
+    {w : Runner.W} (h : EnvAt m fp ρ) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
     (he : Enc τ v w) : EnvAt m fp (Env.cons v ρ : Env D (τ :: Γ)) := by
   intro τ' y
   cases y with

@@ -16,7 +16,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 variable {D : Deklaration}
 
 structure Pre (m : Runner.Mem) (pc fp : Runner.W) (K d : Nat) (cd : List II) {Γ : Ctx} (ρ : Env D Γ) : Prop where
-  ctx : Γ.length ≤ d
+  ctx : frei Γ ≤ d
   small : K < 2 ^ 31
   frame : FrameOK m fp K
   code : CodeAt m pc cd
