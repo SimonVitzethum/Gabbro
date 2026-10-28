@@ -325,13 +325,14 @@ For the runner:
   `runner_mt` (every observation of the runner's threads -- system calls of all threads with their answers, in
   order, and the end -- is one of the IR's threads, never an undescribed step; for every program, also with data
   races, under every memory model that reads the table right), `runner_tso` and `runner_sc` on the real file,
-  `runner_zeuge`.
+  `runner_zeuge`; `loader_ok` (from the ELF entry the loader makes exactly the requests `argv[1]`, `open`,
+  `lseek`, `mmap`, the first frame, and every failure ends in its own `ud2`), so `runner_entry_tso` and
+  `runner_entry_sc` hold from the process's first instruction (`entry_is_loader`).
 * Named assumptions: the CPU implements the model for these forms (differential tests) and x86-TSO for `mov` and
   `lock cmpxchg` (litmus tests); the ELF loader maps the file (`FileInv`); the kernel keeps the runner's code and
   table and the registers but `rax`, `rcx`, `r11` across `syscall`; `clone` behaves as Linux documents for the
   fixed thread flags; the program makes no other process- or thread-creating call and installs no signal handler.
-* Open: the loader's proof (ELF entry to the first dispatch), `ir_sim` (S0IR against machine G) and the
-  lowering, the speed set.
+* Open: `ir_sim` (S0IR against machine G) and the lowering of stage 0, the speed set.
 
 **Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; beside it the x86-64 subset written anew with its
 differential tests on the CPU and the instruction layer; then the runner with `runner_ok`, first on one thread as a

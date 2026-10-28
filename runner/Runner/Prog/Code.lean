@@ -100,28 +100,46 @@ def LOADER : Nat := 0
 def BAD : Nat := 100
 def TABLE : Nat := 101
 
-def loader : List Item :=
-  [ .i (.ld .rdi (mb .rsp 16)), .i (.movi .rax 2), .i (.movi .rsi 0), .i (.movi .rdx 0), .i .syscall,
-    .i (.alu .test .rax .rax), .jccL .s BAD, .i (.mov .rbx .rax),
-    .i (.mov .rdi .rbx), .i (.movi .rsi 0), .i (.movi .rdx 2), .i (.movi .rax 8), .i .syscall,
-    .i (.alu .test .rax .rax), .jccL .s BAD, .jccL .z BAD, .i (.mov .rsi .rax),
-    .i (.movi .rdi (BitVec.ofNat 32 IMG)), .i (.movi .rdx 3), .i (.movi .r10 0x100002), .i (.mov .r8 .rbx),
-    .i (.movi .r9 0), .i (.movi .rax 9), .i .syscall,
-    .i (.movi .rcx (BitVec.ofNat 32 IMG)), .i (.alu .cmp .rax .rcx), .jccL .nz BAD,
-    .adr .r14 TABLE, .i (.ld .r13 (mb .rcx)), .i (.lea .r12 (mb .rcx 16)) ] ++ dispatch.map .i
+/-! The loader, in five blocks; a failure jumps to its own `ud2` at the end (relative jumps only). Its one
+    absolute operand, the table's address `tb`, is filled in after the layout is known. -/
 
-def items : List Item :=
-  [.lab LOADER] ++ loader ++
+/-- `rdi := argv[1]`; `open(rdi, O_RDONLY, 0)`; test. -/
+def ld1 : List Ins := [.ld .rdi (mb .rsp 16), .movi .rax 2, .movi .rsi 0, .movi .rdx 0, .syscall, .alu .test .rax .rax]
+/-- keep the fd in `rbx`; `lseek(fd, 0, SEEK_END)`; test. -/
+def ld2 : List Ins :=
+  [.mov .rbx .rax, .mov .rdi .rbx, .movi .rsi 0, .movi .rdx 2, .movi .rax 8, .syscall, .alu .test .rax .rax]
+/-- `mmap(IMG, len, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED_NOREPLACE, fd, 0)`; compare with `IMG`. -/
+def ld4 : List Ins :=
+  [.mov .rsi .rax, .movi .rdi (BitVec.ofNat 32 IMG), .movi .rdx 3, .movi .r10 0x100002, .mov .r8 .rbx, .movi .r9 0,
+   .movi .rax 9, .syscall, .movi .rcx (BitVec.ofNat 32 IMG), .alu .cmp .rax .rcx]
+/-- `r14` := the table, `fp` := the image's first word, `pc` := `IMG + 16`, dispatch. -/
+def ld5 (tb : Nat) : List Ins :=
+  [.movi .r14 (BitVec.ofNat 32 tb), .ld .r13 (mb .rcx), .lea .r12 (mb .rcx 16)] ++ dispatch
+
+def ldj4 : Ins := .jcc .nz (BitVec.ofNat 32 (lenOf (ld5 0)))
+def ldj3 : Ins := .jcc .z (BitVec.ofNat 32 (lenOf (ld4 ++ [ldj4] ++ ld5 0)))
+def ldj2 : Ins := .jcc .s (BitVec.ofNat 32 (lenOf ([ldj3] ++ ld4 ++ [ldj4] ++ ld5 0)))
+def ldj1 : Ins := .jcc .s (BitVec.ofNat 32 (lenOf (ld2 ++ [ldj2, ldj3] ++ ld4 ++ [ldj4] ++ ld5 0)))
+
+def loaderI (tb : Nat) : List Ins :=
+  ld1 ++ [ldj1] ++ ld2 ++ [ldj2, ldj3] ++ ld4 ++ [ldj4] ++ ld5 tb ++ [.ud2]
+
+/-- The program with the table at `tb`; the layout does not depend on `tb`. -/
+def itemsWith (tb : Nat) : List Item :=
+  [.lab LOADER] ++ (loaderI tb).map .i ++
   ((List.range 24).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
   [.lab BAD, .i .ud2]
 
-def codeLen : Nat := (items.map Item.len).sum
+def codeLen : Nat := ((itemsWith 0).map Item.len).sum
 
 /-- The table's file offset: after the code, aligned to 8. -/
 def tblOff : Nat := (CODE + codeLen + 7) / 8 * 8
 
+def items : List Item := itemsWith (BASE + tblOff)
+
+
 /-- Label → file offset. -/
-def tab : List (Nat × Nat) := (TABLE, tblOff) :: labels items CODE
+def tab : List (Nat × Nat) := (TABLE, tblOff) :: labels (itemsWith 0) CODE
 
 /-- The runner's instructions with their file offsets. -/
 def prog : List (Nat × Ins) := place tab BASE items CODE
