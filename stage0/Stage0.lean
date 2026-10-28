@@ -34,3 +34,7 @@ import Stage0.Schnell.Orakel
 import Stage0.Schnell.Stand
 import Stage0.Schnell.Lauf
 import Stage0.Lauf.Memo
+import Stage0.Senke.Ausdruck
+import Stage0.Senke.Hilfe
+import Stage0.Senke.AusdruckSim
+import Stage0.Senke.AusdruckSatz

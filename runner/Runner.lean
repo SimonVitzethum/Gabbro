@@ -25,3 +25,6 @@ import Runner.Mach.TSO
 import Runner.Beweis.Bild
 import Runner.Beweis.Satz
 import Runner.Beweis.Lader
+import Runner.IR.Seq
+import Runner.IR.Rahmen
+import Runner.Basis.MemLemma
