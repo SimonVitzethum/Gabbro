@@ -92,4 +92,29 @@ theorem run_bin {t : T} {m m1 : Mem} {o : Nat} {d a b : BitVec 32} (hi : InsAt m
   simp only [hg, opt_some, ret1]
   exact f1_run hi (run_wr64 hw)
 
+/-- `brz a L` with slot `a` zero: the jump is taken. -/
+theorem run_brz_zero {t : T} {m : Mem} {a l c : BitVec 32} (hi : InsAt m t.pc 19 a l c)
+    (ha : m.rd64 (slot t.fp (sx a)) = some 0) : Run (op 19 t) m { t with pc := t.pc + sx l } m := by
+  simp only [op]
+  refine f1_run hi ?_
+  simp only [ld]
+  refine run_rd64 ha ?_
+  simp only [↓reduceIte]
+  exact f2_run hi Run.next
+
+/-- `brz a L` with slot `a` not zero: on to the next instruction. -/
+theorem run_brz_ne {t : T} {m : Mem} {a l c : BitVec 32} {v : W} (hi : InsAt m t.pc 19 a l c)
+    (ha : m.rd64 (slot t.fp (sx a)) = some v) (hv : v ≠ 0) : Run (op 19 t) m (nxt t) m := by
+  simp only [op]
+  refine f1_run hi ?_
+  simp only [ld]
+  refine run_rd64 ha ?_
+  simp only [hv, ↓reduceIte]
+  exact Run.next
+
+theorem run_jmp {t : T} {m : Mem} {l b c : BitVec 32} (hi : InsAt m t.pc 18 l b c) :
+    Run (op 18 t) m { t with pc := t.pc + sx l } m := by
+  simp only [op]
+  exact f1_run hi Run.next
+
 end Runner.IR

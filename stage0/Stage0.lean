@@ -38,3 +38,6 @@ import Stage0.Senke.Ausdruck
 import Stage0.Senke.Hilfe
 import Stage0.Senke.AusdruckSim
 import Stage0.Senke.AusdruckSatz
+import Stage0.Senke.Umgebung
+import Stage0.Senke.Anweisung
+import Stage0.Senke.AnweisungSatz
