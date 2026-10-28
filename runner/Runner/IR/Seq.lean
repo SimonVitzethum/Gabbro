@@ -117,4 +117,44 @@ theorem run_jmp {t : T} {m : Mem} {l b c : BitVec 32} (hi : InsAt m t.pc 18 l b 
   simp only [op]
   exact f1_run hi Run.next
 
+/-! ## Stopping: the run reaches a request to the kernel -/
+
+/-- The tree, answered by the memory, reaches the system call `q` (which the memory does not answer). -/
+inductive RunTo : Res T → Mem → Req → Prop
+  | sys {q : Req} {k : Ans → Res T} {m : Mem} : RunTo (.ask (.sys q) k) m q
+  | ask {o : Op} {k : Ans → Res T} {m m' : Mem} {a : Ans} {q : Req} :
+      memAns m o = some (a, m') → RunTo (k a) m' q → RunTo (.ask o k) m q
+
+theorem runTo_rd8 {a : W} {v : B} {m : Mem} {f : W → Res T} {q : Req} (h : m.rd8 a = some v)
+    (hr : RunTo (f (v.setWidth 64)) m q) : RunTo (rd8 a f) m q :=
+  .ask (a := some (v.setWidth 64, 0)) (m' := m) (by simp [memAns, h]) (by simpa [opt] using hr)
+
+theorem runTo_rd32 {a : W} {v : BitVec 32} {m : Mem} {f : BitVec 32 → Res T} {q : Req}
+    (h : m.rd32 a = some v) (hr : RunTo (f v) m q) : RunTo (rd32 a f) m q :=
+  .ask (a := some (v.setWidth 64, 0)) (m' := m) (by simp [memAns, h]) (by simpa [opt] using hr)
+
+theorem runTo_rd64 {a : W} {v : W} {m : Mem} {f : W → Res T} {q : Req}
+    (h : m.rd64 a = some v) (hr : RunTo (f v) m q) : RunTo (rd64 a f) m q :=
+  .ask (a := some (v, 0)) (m' := m) (by simp [memAns, h]) (by simpa [opt] using hr)
+
+/-- The thread at `t` asks the kernel `q` in its next instruction. -/
+def StopAt (t : T) (m : Mem) (q : Req) : Prop := RunTo (step t) m q
+
+/-- `sys d a` with the number and the six arguments in slots `a .. a+6`. -/
+theorem runTo_sys {t : T} {m : Mem} {d a c : BitVec 32} (hi : InsAt m t.pc 23 d a c)
+    {nr a1 a2 a3 a4 a5 a6 : W}
+    (h0 : m.rd64 (slot t.fp (sx a)) = some nr) (h1 : m.rd64 (slot t.fp (sx a) + 8) = some a1)
+    (h2 : m.rd64 (slot t.fp (sx a) + 16) = some a2) (h3 : m.rd64 (slot t.fp (sx a) + 24) = some a3)
+    (h4 : m.rd64 (slot t.fp (sx a) + 32) = some a4) (h5 : m.rd64 (slot t.fp (sx a) + 40) = some a5)
+    (h6 : m.rd64 (slot t.fp (sx a) + 48) = some a6) : StopAt t m ⟨nr, a1, a2, a3, a4, a5, a6⟩ := by
+  unfold StopAt step
+  refine runTo_rd8 hi.op ?_
+  have : ((BitVec.ofNat 8 23).setWidth 64).toNat = 23 := by decide
+  rw [this]
+  simp only [op]
+  refine runTo_rd32 hi.f1 (runTo_rd32 hi.f2 ?_)
+  simp only [ld]
+  refine runTo_rd64 h0 (runTo_rd64 h1 (runTo_rd64 h2 (runTo_rd64 h3 (runTo_rd64 h4 (runTo_rd64 h5
+    (runTo_rd64 h6 RunTo.sys))))))
+
 end Runner.IR

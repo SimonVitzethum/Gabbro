@@ -41,3 +41,4 @@ import Stage0.Senke.AusdruckSatz
 import Stage0.Senke.Umgebung
 import Stage0.Senke.Anweisung
 import Stage0.Senke.AnweisungSatz
+import Stage0.Senke.Stopp
