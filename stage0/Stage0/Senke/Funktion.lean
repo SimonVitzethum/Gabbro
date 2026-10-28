@@ -20,24 +20,13 @@ open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration} {V : Vertrag D}
 
-def lowErg {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
-  | _, .empty, d => some ([], d + 1)
-  | _, .val e, d => lowE e d
-
-/-- `ret`: the result from slot `r` into slot `q` (`FB + np`, the slot of `ensures`' result variable), the
-    `ensures` code `ens`, the check, slot 2, back. -/
-def retC (q r : Nat) (ens : List II) : List II :=
-  [ci 2 q r 0] ++ ens ++ [ci 19 ((q + 1 : Nat) : Int) 48 0, ci 2 2 q 0, ci 21 0 0 0] ++ stopC 102 (q + 1)
-
-def retTop (q : Nat) : Nat := q + 1 + 8
-
 def lowEnd (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (List II × Nat)
   | _, Γ, _, .ret e _ => do
     let ce ← lowErg e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
   | _, _, _, .cons s rest => do
-    let cs ← lowS A lo s
+    let cs ← lowS A lo ens s
     let cr ← lowEnd A lo ens rest
     pure (cs.1 ++ cr.1, max cs.2 cr.2)
   | _, Γ, _, .bind e rest => do

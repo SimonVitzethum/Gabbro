@@ -161,7 +161,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
         generalize execEnd O passes (rufAt P O passes k) (P.rumpf f) σR ρ = o at hret ⊢
         cases o with
         | zurueck σ' v =>
-          simp only [Ret] at hret
+          simp only [Ret, RetZ] at hret
           split at hret
           · next hens' =>
             simp only [hens', if_true]

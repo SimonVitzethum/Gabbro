@@ -6,11 +6,12 @@
   computes its value there, which is then the new variable's slot. `assignVar x e` moves the value into `x`'s slot;
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
-  body keeps its parameters for `ensures`); `A f` is the code address of `f`. Accepted so far: `assignVar`, `ite`,
-  `call`, and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
+  body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
+import Stage0.Senke.Stopp
 
 namespace Gabbro.Stage0.Senke
 
@@ -40,8 +41,19 @@ def callC (A : D.Fn → Nat) (f : D.Fn) (F : Nat) (ca : List II) : List II := ca
 
 def callTop (f : D.Fn) (F t : Nat) : Nat := max t (F + FB + (D.params f).length + 1)
 
+def lowErg {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
+  | _, .empty, d => some ([], d + 1)
+  | _, .val e, d => lowE e d
+
+/-- `ret`: the result from slot `r` into slot `q` (`FB + np`, the slot of `ensures`' result variable), the
+    `ensures` code `ens`, the check, slot 2, back. -/
+def retC (q r : Nat) (ens : List II) : List II :=
+  [ci 2 q r 0] ++ ens ++ [ci 19 ((q + 1 : Nat) : Int) 48 0, ci 2 2 q 0, ci 21 0 0 0] ++ stopC 102 (q + 1)
+
+def retTop (q : Nat) : Nat := q + 1 + 8
+
 mutual
-def lowS (A : D.Fn → Nat) (lo : Nat) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' →
+def lowS (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' →
     Option (List II × Nat)
   | _, Γ, _, _, .assignVar x e =>
     if lo ≤ vslot x then do
@@ -50,29 +62,32 @@ def lowS (A : D.Fn → Nat) (lo : Nat) : {l : Bool} → {Γ : Ctx} → {Λ Λ' :
     else none
   | _, Γ, _, _, .ite c t e => do
     let cc ← lowE c (frei Γ)
-    let ct ← lowB A lo t
-    let ce ← lowB A lo e
+    let ct ← lowB A lo ens t
+    let ce ← lowB A lo ens e
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 2)) 0] ++ ct.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
       max cc.2 (max ct.2 ce.2))
   | _, Γ, _, _, .call f args _ _ => do
     let ca ← lowA args (frei Γ + FB)
     pure (callC A f (frei Γ) ca.1, callTop f (frei Γ) ca.2)
+  | _, Γ, _, _, .ret e _ => do
+    let ce ← lowErg e (frei Γ)
+    pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
   | _, _, _, _, _ => none
 
-def lowB (A : D.Fn → Nat) (lo : Nat) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' →
+def lowB (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' →
     Option (List II × Nat)
   | _, Γ, _, _, .nil => some ([], frei Γ)
   | _, _, _, _, .cons s rest => do
-    let cs ← lowS A lo s
-    let cr ← lowB A lo rest
+    let cs ← lowS A lo ens s
+    let cr ← lowB A lo ens rest
     pure (cs.1 ++ cr.1, max cs.2 cr.2)
   | _, Γ, _, _, .bind e rest => do
     let ce ← lowE e (frei Γ)
-    let cr ← lowB A lo rest
+    let cr ← lowB A lo ens rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA args (frei Γ + FB)
-    let cr ← lowB A lo rest
+    let cr ← lowB A lo ens rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
   | _, _, _, _, _ => none
 end
