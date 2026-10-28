@@ -97,13 +97,16 @@ machine, proved against machine G, and the runner is proved against that machine
    numbered frame slots and ends in one terminator (`jmp`, `br`, `switch`, `call`, `ret`, `stop`). Every `Expr`,
    `Stmt` and `Endblock` former of G lowers to straight-line slot code plus terminators; nested environments `Env D Γ`
    become fixed slot offsets computed once per function. No closures, no dependent types at run time.
-2. **Words only.** A value whose G type has a range inside 64 bits (`Ty.int lo hi`, `bool`, `opt`, `why`, `sum`
-   tags, `fnptr`, `ptr`, `ref`) is one machine word. An operation whose operand ranges prove the exact result fits in
-   64 bits is a word operation (a range lemma per operator, decided at lowering time); any other is lowered to a
-   fixed multi-word sequence (128-bit or wider by limbs) whose correctness is a lemma, never to a call into a bignum
-   library. Aggregates (`arr`, `str`) occupy consecutive slots; floats are the kernel IEEE model's bit patterns in a
-   word, operations on them the x86-64 SSE2 instructions the hardware assumption `gleitkomma_ieee` names.
-3. **Memory.** Tables are arrays per field (structure of arrays, as `AWelt`), statics one cell each, the open region in
+2. **64-bit words, everywhere** (Simon, 2026-10-28). Every value, every slot and every memory cell is one 64-bit word;
+   no narrower storage, no narrower arithmetic. A value whose G type has a range inside 64 bits (`Ty.int lo hi`,
+   `bool`, `opt`, `why`, `sum` tags, `fnptr`, `ptr`, `ref`) is one word. An operation whose operand ranges prove the
+   exact result fits in 64 bits is a word operation (a range lemma per operator, decided at lowering time, `BitVec 64`);
+   any other is lowered to a fixed sequence of words (128 bits or wider by limbs) whose correctness is a lemma, never to
+   a call into a bignum library. Aggregates (`arr`, `str`) occupy consecutive words (a string one byte per word); floats
+   are the kernel IEEE model's bit patterns in a word, operations on them the x86-64 SSE2 instructions the hardware
+   assumption `gleitkomma_ieee` names. Opcodes are encoded as bytes in the image (rule 8); that is the code, not the
+   values.
+3. **Memory.** Tables are arrays of words per field (structure of arrays, as `AWelt`), statics one word each, the open region in
    chunks handed out by its provider. A load/store names (table, field, index slot) or (static). Index checks that G
    performs stay as instructions with the same outcome; checks that the type discharges are not emitted (the range
    lemma is the proof).
@@ -115,9 +118,12 @@ machine, proved against machine G, and the runner is proved against that machine
 5. **Effects are instructions.** Lock acquire/release (with the rank order and the held set of the frame), atomic
    statics (load, store, read-modify-write, each carrying its GX order), `syscall` gates (the oracle question), `start`
    of a root. Only these touch another thread.
-6. **Threads without a world lock.** Race freedom (`RennfreiBis`) says two threads never touch the same non-atomic
-   carrier without a lock between them, so thread-local instructions need no global lock; only rule 5 synchronises.
-   Owed theorem `ir_parallel`: a parallel `S0IR` run is equal to some interleaving of the thread machine.
+6. **Multithreading is required, without a world lock** (Simon, 2026-10-28). `S0IR` runs every Gabbro thread on its
+   own OS thread, truly in parallel; the compiler `gkomp` is written to use it (about a 20-fold speed-up expected on
+   the x86-64 machine). Race freedom (`RennfreiBis`) says two threads never touch the same non-atomic carrier without a
+   lock between them, so thread-local instructions need no global lock; only rule 5 synchronises. Owed theorem
+   `ir_parallel`: a parallel `S0IR` run is equal to some interleaving of the thread machine. A single-threaded runner
+   is a development step only, never the target.
 7. **Answers by log, no replay.** The runner records the oracle answers and the order of effect instructions; the
    replay theorem is applied to the log (`ir_log`), not to a second run of the program.
 8. **A binary format.** `S0IR` is serialised to a byte image the runner loads (functions, blocks, a constant pool, the
@@ -150,26 +156,36 @@ the runner's atomics and locks to GX proved (`runner_tso`). Together with §2.1:
 of a run of the thread machine, so the goal theorem applies to it. The precedent for the method is seL4's binary
 verification (machine code against a formal ISA model, refinement of a proved specification).
 
-**The model.** The x86-64 model archived on branch `archive` (commit `7c693cb7`: 357 Lean files, ≈ 265 000 lines,
-Lean v4.33) is the starting point. Only the instruction subset the runner uses is revived, re-read against the
-manuals instruction by instruction ("silicon over proof shape"; what a vendor leaves undefined, e.g. some flags,
-stays FREE), moved to the current toolchain and given its own folder. Named assumption: the CPU implements this
-model for these instructions. The memory model is x86-TSO, which is much smaller than the Armv9 model.
+**The model: written anew, tested against the CPU** (2026-10-28). The archived x86-64 model (branch `archive`,
+`7c693cb7`) was written by hand in lanes and never tested against hardware; it is not the base (at most a quarry for
+the decoder). seL4 did the same as planned here: its binary verification (Sewell, Myreen, Klein, PLDI 2013) ran
+against Anthony Fox's ARMv7 model (HOL4, later L3), which is not proved but VALIDATED -- instructions executed at
+random on real processors and compared with the model; that the CPU follows the model stays a named assumption.
+For the runner:
+1. **Only the instructions the runner uses** (expected 30-60), their semantics in Lean written after the most
+   validated x86-64 definitions -- ACL2 `x86isa` (Goel, co-simulated against real CPUs) and Fox's L3 x64 model
+   (CakeML's x64 back end) -- with the Intel and AMD manuals as the cross-check; what a vendor leaves undefined (some
+   flags) stays FREE.
+2. **Differential tests on the CPU:** random register and memory states plus the edge cases (overflow, sign, shift
+   counts, alignment), each instruction executed on Simon's x86-64 machine and compared with the Lean evaluation of the
+   model. A stage of `pruefe-lean.py` (no fifth guardian); the machine is named in `AGENTS.md` §4.
+3. **x86-TSO** (Sewell, Owens et al.) for several cores, with its litmus tests run on the same machine.
+4. **Named assumption:** the CPU implements this model for these instructions -- the trust base seL4 has.
 
 * **Why x86-64:** the AArch64 machine at hand is 5-10 times slower, and `arm/` is far from complete (Simon, 2026-10-28).
   The compiler's own targets (`gkomp`: x86-64 and AArch64, `ARM-PLAN.md`) are not affected.
 * **Why not C:** a verified C runner needs a verified C compiler; CompCert is Coq and not freely licensed, and gcc/clang
   bring LLVM back. Handwritten C is also against `AGENTS.md` §3.
 * **Speed:** a threaded-code interpreter in machine code runs about 10^8 - 3 * 10^8 `S0IR` instructions a second per
-  core, times the cores under rule 6: `gkomp` without optimisations well within the hour, `gkomp -O3` within the hour
-  at the low end of §2's estimate, not at the high end.
+  core; with the multithreading of rule 6 and a parallel `gkomp` about 20 times that, 2 * 10^9 - 6 * 10^9 a second:
+  `gkomp` without optimisations in minutes, `gkomp -O3` (about 10^11 - 1.5 * 10^12 steps) in about 20 s to 12 min.
 * **Size and risk:** the runner 3 000 - 8 000 instructions; the proofs 25 000 - 60 000 lines of Lean: an instruction
   layer over the revived subset that makes symbolic execution of a handler cheap, the handlers, the loader, the
   system-call and thread layer, `runner_tso`. The least charted part is `ir_parallel` with `runner_tso`.
 
-**Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; the revived x86-64 subset and its instruction layer
-beside it; then the sequential runner with `runner_ok` (one thread); then `ir_log`; then threads, `ir_parallel` and
-`runner_tso`. The Lean-run stage 0 stays the reference until the runner runs the probes and `gkomp`, then its run
+**Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; beside it the x86-64 subset written anew with its
+differential tests on the CPU and the instruction layer; then the runner with `runner_ok`, first on one thread as a
+step; then `ir_log`; then threads, `ir_parallel`, x86-TSO and `runner_tso` -- the target. The Lean-run stage 0 stays the reference until the runner runs the probes and `gkomp`, then its run
 path is deleted.
 
 ## 3. What is proved, for each tool
@@ -351,7 +367,7 @@ Rust counterpart and 2-3x its Lean definition.
 | **Lean, specification and proof** | | |
 | language needs of §5 (region release, strings in G, file-gate contracts, measure-based loops) | region in G ≈ 5 000 | 8 000-20 000 |
 | stage 0 (`stage0/`) as the translator into `S0IR` over the whole language, with `ir_sim`, `ir_parallel`, `ir_log`, `ir_decode` (§2.1) | stage 0 ≈ 6 900 | 10 000-26 000 |
-| the verified x86-64 runner of `S0IR` (§2.2): machine code, the revived x86-64 subset, `runner_ok`, `runner_tso` | archived x86-64 model ≈ 265 000 | 25 000-60 000 |
+| the verified x86-64 runner of `S0IR` (§2.2): machine code, the x86-64 subset written anew with its CPU tests, x86-TSO, `runner_ok`, `runner_tso` | -- | 25 000-60 000 |
 | GabbroV: libraries' contracts | GabbroV today 115 000 | 8 000-20 000 |
 | GabbroV: front end against `lex`/`parseTopTief`/`elabU` | | 30 000-70 000 |
 | GabbroV: helpers, IR printer, refusal reports | | 15 000-35 000 |

@@ -130,9 +130,9 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   does not construct them.
 - **Stage 0 runtime (2026-10-26, THEOREM-MAP 105).** Runs on the thread machine with raw system calls on OS threads;
   the fast machine and the array memory are built. Decided 2026-10-28 (`PLAN-SELF-HOSTING.md` §2): Lean stage 0 only
-  translates Gabbro into the IR `S0IR` (§2.1); a formally verified x86-64 machine-code runner runs it (§2.2), revived
-  from the archived x86-64 model (branch `archive`). Target: `gkomp` compiles its own ≈ 500 000 lines on the runner in
-  under one hour. Open: `S0IR` with `ir_sim`; the x86-64 subset; the runner with `runner_ok`, then threads with
+  translates Gabbro into the IR `S0IR` (§2.1); a formally verified x86-64 machine-code runner runs it (§2.2), its
+  instruction model written anew and tested against the CPU; 64-bit words everywhere; multithreading required. Target: `gkomp` compiles its own ≈ 500 000 lines on the runner in
+  under one hour. Open: `S0IR` with `ir_sim`; the x86-64 subset with its CPU tests; the runner with `runner_ok`, then threads with
   `ir_parallel`/`runner_tso`; the provider freshness of the open region in the model; the front end and the subset gate
   over the whole language; the Rust exporter `lean_g.rs` writes `aschreibt := false` for every gate and refuses a
   gate's `writes` (the model and the Lean front end accept it). The Lean run path is deleted once the runner runs `gkomp`.

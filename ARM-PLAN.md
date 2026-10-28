@@ -3,7 +3,7 @@
 **Decision.** All work on the x86-64 hardware model stops. Its files moved to the branch `archive`
 (`7c693cb7`: `grammatik/Grammatik/X86/`, `DIRECT-COMPILER*.md`). The selected next target is **AArch64
 (Armv9-A)**. The reason is effort: the x86 hardware model was too laborious to complete. One exception
-(Simon, 2026-10-28): the verified stage-0 runner runs on x86-64 and revives the instruction subset it uses
+(Simon, 2026-10-28): the verified stage-0 runner runs on x86-64, its instruction subset written anew and tested against the CPU
 (`dokumente/PLAN-SELF-HOSTING.md` §2.2); the compiler's targets are unchanged.
 
 **Basis.** The Arm architecture specification as Sail models:

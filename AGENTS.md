@@ -100,7 +100,7 @@ not the Rust checker, and no bridge to any binary is built. The
   `archiv/c-emitter-2026-10-17`.
 - **Target direction: AArch64** (Armv9-A) on the Sail Arm model, with the multicore memory model added in Lean
   (`ARM-PLAN.md`). The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
-  stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), which revives the x86-64 instruction subset it uses.
+  stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
 - **Target portability**: source semantics, IR, optimisation and validation stay generic; ABI, image and entry
   requirements are described in checked profiles; environment services are Gabbro bindings with user-logic proof
   obligations. No implicit Linux/POSIX/libc/ELF dependency; freestanding has no mandatory host runtime.
@@ -149,7 +149,8 @@ not the Rust checker, and no bridge to any binary is built. The
 ## 4. Where things run
 
 Everything runs locally, in this checkout or in worktrees beside it: Lean builds, `cargo` runs, acceptance
-runs and QEMU stages. There is no build server and no `ssh` step.
+runs and QEMU stages. There is no build server. One exception (Simon, 2026-10-28): the differential tests of the
+x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HOSTING.md` §2.2).
 
 - **GitHub:** push is `git@github.com:SimonVitzethum/Gabbro.git` with key `~/.ssh/id_ed25519_github`; fetch
   goes over https.
