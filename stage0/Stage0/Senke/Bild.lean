@@ -58,17 +58,17 @@ structure Bild (D : Deklaration) where
   /-- `main` runs at this depth -/
   depth : Nat
 
-def lowFunE (P : Programm D) (name : D.Fn → String) (A : D.Fn → Nat) (g : D.Fn) : Except String (List II × Nat) :=
-  match lowFun P A g with
+def lowFunE (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) (g : D.Fn) : Except String (List II × Nat) :=
+  match lowFun P A Y g with
   | some ct => .ok ct
   | none => .error ("ir: the function " ++ name g ++ " uses a form outside the IR fragment")
 
 /-- Every function of `fs`, lowered with the addresses `A`. -/
-def lowAll (P : Programm D) (name : D.Fn → String) (A : D.Fn → Nat) : List D.Fn → Except String (List (List II × Nat))
+def lowAll (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) : List D.Fn → Except String (List (List II × Nat))
   | [] => .ok []
   | g :: gs => do
-    let c ← lowFunE P name A g
-    let r ← lowAll P name A gs
+    let c ← lowFunE P Y name A g
+    let r ← lowAll P Y name A gs
     pure (c :: r)
 
 /-- The largest stack need of the functions (at least 1). -/
@@ -87,14 +87,14 @@ instance (D : Deklaration) (main : D.Fn) (lens : List Nat) (cs : List (List II �
   unfold BildGut; infer_instance
 
 /-- The image of a program, or why not. -/
-def bild (P : Programm D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn) (K : Nat) :
+def bild (P : Programm D) (Y : Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn) (K : Nat) :
     Except String (Bild D) :=
-  match lowAll P name (fun _ => 0) fs with
+  match lowAll P Y name (fun _ => 0) fs with
   | .error e => .error e
   | .ok cs0 =>
     let lens := cs0.map (·.1.length)
     let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * startLen) lens).getD (pos g) 0
-    match lowAll P name A fs with
+    match lowAll P Y name A fs with
     | .error e => .error e
     | .ok cs =>
       let body := cs.flatMap (·.1)

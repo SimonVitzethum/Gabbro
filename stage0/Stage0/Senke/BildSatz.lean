@@ -86,7 +86,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
     (hbody : body = cs.flatMap (·.1)) (hL : L = maxTop cs) (hn : n = depthOf K L)
     (hfp : fp0 = codeBase + 16 * (startLen + body.length))
     (hA : ∀ g, A g = (addrs (codeBase + 16 * startLen) (cs.map (·.1.length))).getD (pos g) 0)
-    (hcl : cs.length = fs.length) (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A fs[i] = some cs[i])
+    (hcl : cs.length = fs.length) (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Y fs[i] = some cs[i])
     (hfs : ∀ g, fs[pos g]? = some g) (hpar : (D.params main).isEmpty = true) (hfit : fp0 + 8 * K < 2 ^ 31)
     (hroomK : FB + 2 * L ≤ K) (hexK : exitSlot + 8 ≤ K)
     (hops : (startC A main n ++ body).all (fun i => decide (i.o < 256)) = true)
@@ -111,7 +111,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   rw [List.all_append, Bool.and_eq_true] at hops
   -- the functions, each at its address
   let C : D.Fn → List II := fun g => ((cs[pos g]?).map (·.1)).getD []
-  have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun P A g = some cs[pos g] ∧ C g = cs[pos g].1 := by
+  have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun P A Y g = some cs[pos g] ∧ C g = cs[pos g].1 := by
     intro g
     obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp (hfs g)
     have hc : pos g < cs.length := by omega
@@ -139,7 +139,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   have hlen : ∀ g, 16 * (C g).length < 2 ^ 31 := fun g => by have := (hseg g).2.1; omega
   have hP : PCode m A C (BitVec.ofNat 64 fp0) K := fun g =>
     ⟨codeAt_bytes (C g) (A g) (hseg g).2.2 (hseg g).1, codeFar_nat (hseg g).2.1 (by omega)⟩
-  have hC' : ∀ g, ∃ top, lowFun P A g = some (C g, top) ∧ top ≤ L := fun g => by
+  have hC' : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L := fun g => by
     obtain ⟨hc, hl, hC⟩ := hpos g
     exact ⟨cs[pos g].2, by rw [hl, hC], hL ▸ maxTop_ge hc⟩
   -- the stack
@@ -208,7 +208,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
 /-- **The program theorem.** -/
 theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
     {name : D.Fn → String} {main : D.Fn} {K : Nat} {b : Bild D}
-    (hb : bild P fs pos name main K = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hb : bild P Y fs pos name main K = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main)) :
     match rufAt P O passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧

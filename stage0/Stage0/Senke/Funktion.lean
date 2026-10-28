@@ -20,27 +20,27 @@ open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration} {V : Vertrag D}
 
-def lowEnd (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) :
+def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (List II × Nat)
   | _, Γ, _, .ret e _ => do
-    let ce ← lowErg e (frei Γ)
+    let ce ← lowErg L e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
   | _, _, _, .cons s rest => do
-    let cs ← lowS A lo ens s
-    let cr ← lowEnd A lo ens rest
+    let cs ← lowS A L lo ens s
+    let cr ← lowEnd A L lo ens rest
     pure (cs.1 ++ cr.1, max cs.2 cr.2)
   | _, Γ, _, .bind e rest => do
-    let ce ← lowE e (frei Γ)
-    let cr ← lowEnd A lo ens rest
+    let ce ← lowE L e (frei Γ)
+    let cr ← lowEnd A L lo ens rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
   | _, Γ, _, .bindCall f args _ _ _ rest => do
-    let ca ← lowA args (frei Γ + FB)
-    let cr ← lowEnd A lo ens rest
+    let ca ← lowA L args (frei Γ + FB)
+    let cr ← lowEnd A L lo ens rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
   | _, Γ, _, .ite c t e => do
-    let cc ← lowE c (frei Γ)
-    let ct ← lowEnd A lo ens t
-    let ce ← lowEnd A lo ens e
+    let cc ← lowE L c (frei Γ)
+    let ct ← lowEnd A L lo ens t
+    let ce ← lowEnd A L lo ens e
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
   | _, _, _, _ => none
 
@@ -48,12 +48,12 @@ def lowEnd (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) :
 def guardC (a c s : Nat) : List II := [ci 19 a 32 0, ci 18 64 0 0] ++ stopC c s
 
 /-- The code of `f`, and the first slot it does not write. -/
-def lowFun (P : Programm D) (A : D.Fn → Nat) (f : D.Fn) : Option (List II × Nat) :=
+def lowFun (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D.Fn) : Option (List II × Nat) :=
   let np := (D.params f).length
   if (D.invs.filter (schuldet f)).isEmpty then do
-    let req ← lowE (P.requires f) (FB + np)
-    let ens ← lowE (P.ensures f) (FB + np + 1)
-    let body ← lowEnd A (FB + np) ens (P.rumpf f)
+    let req ← lowE L (P.requires f) (FB + np)
+    let ens ← lowE L (P.ensures f) (FB + np + 1)
+    let body ← lowEnd A L (FB + np) ens (P.rumpf f)
     pure (guardC 2 105 (FB + np) ++ req.1 ++ guardC (FB + np) 101 (FB + np) ++ body.1,
       max (FB + np + 8) (max req.2 body.2))
   else none

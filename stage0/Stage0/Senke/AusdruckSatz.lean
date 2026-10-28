@@ -49,7 +49,7 @@ theorem bool_word (b : Bool) : Runner.IR.bool b = (if b = true then 1 else 0) :=
 /-! ## The slot the lowering stops at -/
 
 theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
-    (top : Nat) → lowE e d = some (c, top) → d < top
+    (top : Nat) → lowE L e d = some (c, top) → d < top
   | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
   | _, _, .add a b, d, c, top, h | _, _, .sub a b, d, c, top, h | _, _, .mul a b, d, c, top, h
   | _, _, .and a b, d, c, top, h | _, _, .or a b, d, c, top, h => by
@@ -143,8 +143,8 @@ theorem Ok.mono {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {P
 /-- Destructure the code of a binary operation. -/
 theorem bin_some {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {o d : Nat}
     {c : List II} {top : Nat}
-    (h : (do let ca ← lowE a d; let cb ← lowE b (d + 1); pure (bin2 o d ca cb)) = some (c, top)) :
-    ∃ ca ta cb tb, lowE a d = some (ca, ta) ∧ lowE b (d + 1) = some (cb, tb) ∧
+    (h : (do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 o d ca cb)) = some (c, top)) :
+    ∃ ca ta cb tb, lowE L a d = some (ca, ta) ∧ lowE L b (d + 1) = some (cb, tb) ∧
       c = ca ++ cb ++ [ci o d d (d + 1)] ∧ top = max ta tb := by
   simp only [bind, Option.bind_eq_some_iff] at h
   obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
@@ -153,7 +153,7 @@ theorem bin_some {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ
 
 theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
-    lowE e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
+    lowE L e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre m pc fp K d c ρ W → Ok m pc fp K d c (Enc τ (eval σ₀ e σ ρ))
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by

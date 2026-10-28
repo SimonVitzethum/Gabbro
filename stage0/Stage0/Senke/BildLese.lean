@@ -134,24 +134,24 @@ theorem rd64_leN {m : Runner.Mem} {p v : Nat} {bs : List Runner.B} (h : BytesAt 
 variable {D : Deklaration}
 
 theorem lowAll_ok {P : Programm D} {name : D.Fn → String} {A : D.Fn → Nat} :
-    (fs : List D.Fn) → (cs : List (List II × Nat)) → lowAll P name A fs = .ok cs →
-    cs.length = fs.length ∧ ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A fs[i] = some cs[i]
+    (fs : List D.Fn) → (cs : List (List II × Nat)) → lowAll P Y name A fs = .ok cs →
+    cs.length = fs.length ∧ ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Y fs[i] = some cs[i]
   | [], cs, h => by
     simp only [lowAll, Except.ok.injEq] at h
     subst h
     exact ⟨rfl, fun i hi => absurd hi (by simp)⟩
   | g :: gs, cs, h => by
     simp only [lowAll, bind, Except.bind] at h
-    cases hf : lowFunE P name A g with
+    cases hf : lowFunE P Y name A g with
     | error e => simp [hf] at h
     | ok c =>
-      cases hr : lowAll P name A gs with
+      cases hr : lowAll P Y name A gs with
       | error e => simp [hf, hr] at h
       | ok r =>
         simp only [hf, hr, pure, Except.pure, Except.ok.injEq] at h
         subst h
         obtain ⟨hl, hall⟩ := lowAll_ok gs r hr
-        have hg : lowFun P A g = some c := by
+        have hg : lowFun P A Y g = some c := by
           simp only [lowFunE] at hf
           split at hf
           · next ct hct => simp only [Except.ok.injEq] at hf; rw [hct, hf]

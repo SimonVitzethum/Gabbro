@@ -22,7 +22,8 @@ def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) 
   if (← akzeptiertU u) = false then throw "refused by the checker (AkzeptiertX)"
   let main ← fnIdx u.fns "main"
   let (P, _) ← lowerAllg u
-  let b ← Senke.bild P (List.finRange u.fns.length) Fin.val
+  let Y0 : Senke.Lay (declOf u) := ⟨fun _ _ => 0, fun _ => 0, 0, 0⟩
+  let b ← Senke.bild P Y0 (List.finRange u.fns.length) Fin.val
     (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main K
   pure b.bytes
 

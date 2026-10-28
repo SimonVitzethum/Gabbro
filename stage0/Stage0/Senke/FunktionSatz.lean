@@ -49,9 +49,9 @@ theorem lowEnd_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE (P.ensures f) (lo + 1) = some (cens, tens)) :
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens)) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → (b : Endblock D (vertragVon D f) l Γ Λ) → (c : List II) →
-    (top : Nat) → lowEnd A lo (cens, tens) b = some (c, top) → top + cap ≤ K → 16 * c.length < 2 ^ 31 →
+    (top : Nat) → lowEnd A L lo (cens, tens) b = some (c, top) → top + cap ≤ K → 16 * c.length < 2 ^ 31 →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS m pc fp K (frei Γ) c ρ →
     lo ≤ frei Γ → Umf A C dv m fp K → Kopf f m fp K rp cfp ρ0 →
     Ret P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (execEnd O passes R b σ ρ)

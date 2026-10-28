@@ -61,13 +61,13 @@ theorem frei_ergCtx (Γ : Ctx) : (e : Option Ty) → frei (ErgCtx Γ e) ≤ frei
   | some _ => by simp [ErgCtx, frei]; omega
 
 theorem lowErg_top {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) →
-    (c : List II) → (top : Nat) → lowErg x d = some (c, top) → d < top
+    (c : List II) → (top : Nat) → lowErg L x d = some (c, top) → d < top
   | _, .empty, d, c, top, h => by simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, .val e, d, c, top, h => lowE_top e d c top h
 
 theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) {Γ : Ctx} :
     {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) → (c : List II) → (top : Nat) →
-    lowErg x d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
+    lowErg L x d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre m pc fp K d c ρ W → Ok m pc fp K d c (EncErg e (evalErg σ₀ x σ ρ))
   | _, .empty, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h
@@ -87,9 +87,9 @@ theorem slot_one (fp : Runner.W) : slot fp (BitVec.ofNat 64 1) = fp + 8 := by si
 /-- `ret e`: the result, `ensures`, back or the stop (`retC`). -/
 theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
-    (he : lowErg e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ K)
+    (he : lowErg L e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ K)
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
     (hp : PreS m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
     (hk : Kopf f m fp K rp cfp ρ0) :
