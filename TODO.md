@@ -227,8 +227,9 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   (`ERWARTET_A`: costs, `locks`/`reads` effects, `N511`/`N275` user logic, `const fn`) need Lean components; the model gaps (`return` under
   `locks`, `Endblock` formers, `Block.arenaAlloc` at the top level) are listed there with the exact change. Open rulings: `M104`, `N001`,
   `M133`, `M147`. Track P: 79 % of the generated space is outside the elaboration fragment.
-- **Guardian remnants** (four guardians since 2026-10-17). `bruecke/` is not measured (its `lake build` fails on the missing `mathlib`
-  entry); the tree-wide `gabbro prove` run and the E1 comparison (duties manifest) hang in no guardian; the mutation run over the checker
+- **Guardian remnants** (four guardians since 2026-10-17). `bruecke/` is not measured and does not build: toolchain and manifest are
+  on v4.35.0 since `e0c737c9` (unbuilt), but its `Duty` library names the five `programmlogik/Duty/*.lean` files deleted in `60b73119`;
+  either the bridge computes its duties from `Pflichten src` alone or it retires with the `Body` route (`GABBROV.md` §14, §17); the tree-wide `gabbro prove` run and the E1 comparison (duties manifest) hang in no guardian; the mutation run over the checker
   is dropped without replacement; 8 600 German comment lines in the checker are unguarded. Details: `dokumente/TOOLBOX.md`.
 - **O11 (guardless invariant).** A `table`/`group` invariant that no function `maintains` is booked by NOTHING (`N275`-`N277` check only
   anchored ones).
