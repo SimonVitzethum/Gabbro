@@ -21,3 +21,5 @@ import Runner.Beweis.Handler.Sprung
 import Runner.Beweis.Handler.Sys
 import Runner.Beweis.Schritt
 import Runner.Beweis.Spur
+import Runner.Beweis.Bild
+import Runner.Beweis.Zeuge
