@@ -3,6 +3,7 @@
   Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
 -/
 import Stage0.Senke.AusdruckSim
+import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
 

@@ -131,6 +131,20 @@ theorem run_call {t : T} {m m1 m2 : Mem} {a k c : BitVec 32} {tg : W} (hi : InsA
   refine .ask (a := some (0, 0)) (m' := m1) ?_ (by simpa [opt] using run_wr64 h2)
   simp only [memAns, h1]
 
+/-- `ld d a`: the word at the address in slot `a` into slot `d`. -/
+theorem run_ld {t : T} {m m1 : Mem} {d a c : BitVec 32} (hi : InsAt m t.pc 15 d a c) {va v : W}
+    (ha : m.rd64 (slot t.fp (sx a)) = some va) (hv : m.rd64 va = some v)
+    (hw : m.wr64 (slot t.fp (sx d)) v = some m1) : Run (op 15 t) m (nxt t) m1 := by
+  simp only [op]
+  exact f2_run hi (run_rd64 ha (run_rd64 hv (f1_run hi (run_wr64 hw))))
+
+/-- `st a b`: the word of slot `b` to the address in slot `a`. -/
+theorem run_st {t : T} {m m1 : Mem} {a b c : BitVec 32} (hi : InsAt m t.pc 16 a b c) {va vb : W}
+    (ha : m.rd64 (slot t.fp (sx a)) = some va) (hb : m.rd64 (slot t.fp (sx b)) = some vb)
+    (hw : m.wr64 va vb = some m1) : Run (op 16 t) m (nxt t) m1 := by
+  simp only [op]
+  exact f1_run hi (run_rd64 ha (f2_run hi (run_rd64 hb (run_wr64 hw))))
+
 /-- `ret`: on at the return `pc` and the caller's `fp`, the frame's first two words. -/
 theorem run_ret {t : T} {m : Mem} {p f : W} (h0 : m.rd64 t.fp = some p) (h1 : m.rd64 (t.fp + 8) = some f) :
     Run (op 21 t) m ⟨p, f⟩ m := by
