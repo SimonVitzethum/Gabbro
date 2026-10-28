@@ -58,7 +58,7 @@ def main():
     if len(sys.argv) < 3:
         print(__doc__)
         return 2
-    exe, d = sys.argv[1], sys.argv[2]
+    exe, d = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
     cases = sys.argv[3] if len(sys.argv) > 3 else "20000"
     os.makedirs(d, exist_ok=True)
     bad = 0
@@ -71,10 +71,10 @@ def main():
         return 2
     os.chmod(os.path.join(d, "runner"), 0o755)
     proben = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "runner", "proben")
-    for p in ["hello", "probe", "threads"]:
+    for p in ["hello", "probe", "threads", "io"]:
         want = open(os.path.join(proben, p + ".aus"), "rb").read()
         code = int(open(os.path.join(proben, p + ".code")).read())
-        q = subprocess.run([os.path.join(d, "runner"), os.path.join(d, p + ".img")], capture_output=True)
+        q = subprocess.run([os.path.join(d, "runner"), os.path.join(d, p + ".img")], capture_output=True, cwd=d)
         measured += 1
         if q.stdout != want or q.returncode != code:
             bad += 1

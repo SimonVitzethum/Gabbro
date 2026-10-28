@@ -34,7 +34,7 @@ def main (args : List String) : IO UInt32 := do
   let dir := args.headD "."
   IO.FS.writeBinFile (dir ++ "/runner") (toBytes image)
   IO.FS.writeFile (dir ++ "/runner.s") listing
-  for (name, img) in [("hello", hello), ("probe", probe), ("threads", threads)] do
+  for (name, img) in [("hello", hello), ("probe", probe), ("threads", threads), ("io", io)] do
     IO.FS.writeBinFile (dir ++ s!"/{name}.img") (toBytes img)
   IO.println s!"runner: {image.length} bytes, code {codeLen}, table at {tblOff}, {prog.length} instructions"
   return 0

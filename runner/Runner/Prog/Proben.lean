@@ -105,3 +105,51 @@ def threads : List B :=
     MF
 
 end Runner.Prog
+
+namespace Runner.Prog
+open Runner.X86
+
+def PATH : Nat := 70
+def MSG : Nat := 71
+def PING : Nat := 72
+def BUF : Nat := 73
+def IOF : Nat := 74
+
+/-- `sys` with number `nr` and the arguments in slots 51..56, the result into slot `r` (args set before). -/
+def sysc (nr : Int) (r : Int) : List IItem := [c 50 nr, .op 23 r 50 0]
+
+/-- Arbitrary system calls with buffers in the image: `openat`/`write`/`close` a file, `openat`/`read`/`close` it
+    again, `unlink` it, print what was read; then `socketpair`, `write` into one end, `read` from the other, print
+    it. Expected: "file io ok\nping\n", exit 0. -/
+def io : List B :=
+  let str (s : String) : List B := s.toUTF8.toList.map fun u => byte u.toNat
+  let path := str "runner-io-probe.txt" ++ [byte 0]
+  let msg := str "file io ok\n"
+  let ping := str "ping\n"
+  let its : List IItem :=
+    [ -- fd = openat(AT_FDCWD, path, O_CREAT|O_WRONLY|O_TRUNC, 0644)
+      c 51 (-100), .adr 52 PATH, c 53 0x241, c 54 0o644, c 55 0, c 56 0 ] ++ sysc 257 60 ++
+    [ .op 2 51 60 0, .adr 52 MSG, c 53 msg.length, c 54 0 ] ++ sysc 1 61 ++          -- write(fd, msg, n)
+    [ .op 2 51 60 0 ] ++ sysc 3 61 ++                                                  -- close(fd)
+    [ c 51 (-100), .adr 52 PATH, c 53 0, c 54 0 ] ++ sysc 257 60 ++                    -- openat(.., O_RDONLY)
+    [ .op 2 51 60 0, .adr 52 BUF, c 53 64 ] ++ sysc 0 62 ++                            -- n = read(fd, buf, 64)
+    [ .op 2 51 60 0 ] ++ sysc 3 61 ++
+    [ c 51 (-100), .adr 52 PATH, c 53 0 ] ++ sysc 263 61 ++                             -- unlinkat(.., path, 0)
+    [ c 51 1, .adr 52 BUF, .op 2 53 62 0 ] ++ sysc 1 61 ++                              -- write(1, buf, n)
+    -- socketpair(AF_UNIX, SOCK_STREAM, 0, &sv): sv is slot 63 (two 32-bit fds in one word)
+    [ c 51 1, c 52 1, c 53 0, .op 17 54 63 0 ] ++ sysc 53 61 ++
+    [ c 64 0xFFFFFFFF, .op 8 65 63 64, c 66 32, .op 12 67 63 66 ] ++                   -- fd0, fd1
+    [ .op 2 51 65 0, .adr 52 PING, c 53 ping.length ] ++ sysc 1 61 ++                   -- write(fd0, "ping\n")
+    [ .op 2 51 67 0, .adr 52 BUF, c 53 64 ] ++ sysc 0 62 ++                             -- n = read(fd1, buf, 64)
+    [ c 51 1, .adr 52 BUF, .op 2 53 62 0 ] ++ sysc 1 61 ++
+    [ c 51 0 ] ++ sysc 231 61 ++
+    [ .lab PATH, .zeros path.length, .lab MSG, .zeros msg.length, .lab PING, .zeros ping.length,
+      .lab BUF, .zeros 64, .lab IOF, .zeros 4096 ]
+  let img := irImage its IOF
+  let t := ilabels its 16
+  let put (img : List B) (l : Nat) (bs : List B) : List B :=
+    let o := find t l
+    img.take o ++ bs ++ img.drop (o + bs.length)
+  put (put (put img PATH path) MSG msg) PING ping
+
+end Runner.Prog
