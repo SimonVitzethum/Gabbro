@@ -131,8 +131,8 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **Stage 0 runtime (2026-10-26, THEOREM-MAP 105).** Runs on the thread machine with raw system calls on OS threads;
   the fast machine and the array memory are built. Stage 0 runs the compiler itself (no stage 1, no LLVM on the
   bootstrap path; `PLAN-SELF-HOSTING.md` §2). Open: speed (target: `gkomp` compiles its own ≈ 500 000 lines on stage 0
-  in under one hour; base about 10^5 steps a second, short by a factor of roughly 3-100: a small proved IR, no world lock
-  per step, an answer log instead of the full replay); the provider freshness of the open region in the model; the
+  in under one hour; base about 10^5 steps a second, short by a factor of roughly 3-100: the IR `S0IR` and, if decided,
+  the verified AArch64 runner, `PLAN-SELF-HOSTING.md` §2.1-§2.2); the provider freshness of the open region in the model; the
   front end and the subset gate over the whole language; the Rust exporter `lean_g.rs` writes `aschreibt := false` for
   every gate and refuses a gate's `writes` (the model and the Lean front end accept it).
 - **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
