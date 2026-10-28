@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guardian 1 of 4 -- the Lean model (`grammatik/`) and the stage-0 runtime (`stage0/`).
+"""Guardian 1 of 4 -- the Lean model (`grammatik/`), the stage-0 runtime (`stage0/`) and the runner (`runner/`).
 
     ./instrumente/pruefe-lean.py [--ohne-bau]
 
@@ -18,6 +18,12 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
      executable on `NAME.ein` (written after `NAME.warte` seconds when that file exists, so a thread blocked in
      `read(2)` must leave the others running) and must print exactly `NAME.aus` with exit code 0.
+  8. The verified x86-64 runner (`runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
+     `Nachpruefung.lean` -- `runner_ok`, `image_ok`, the witnesses and `decode_enc` depend on exactly the three
+     standard axioms; then `teile/runner-cpu.py` on this processor: the runner binary runs the probe images with
+     the IR semantics' output and exit code, the differential tests of the x86-64 model (every instruction form,
+     every flag the model defines) show no difference, and every instruction the model says faults ends its
+     program with the named signal. Stage 3 covers the package's Lean files too.
   6. Coverage of the register by the program generator (`Gen/Abdeckung/`): `lake build gen-abdeckung`, then the
      native driver generates every program of the family up to the reference bounds and fails (exit 1) on a
      register member that no valid and no single-fault program contains and that is not a declared known gap
@@ -30,6 +36,7 @@ import os, pathlib, re, subprocess, sys
 W = pathlib.Path(__file__).resolve().parent.parent
 G = W / "grammatik"
 S0 = W / "stage0"
+RN = W / "runner"
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 STANDARD = {"propext", "Classical.choice", "Quot.sound"}
@@ -80,7 +87,7 @@ def stufe_sorry():
     erlaubt = {l.split()[1] for l in (W / "instrumente/teile/kein-sorry-allowlist.txt").read_text().splitlines()
                if l.strip() and not l.startswith("#")}
     n, befunde = 0, []
-    for f in sorted(list(G.rglob("*.lean")) + list(S0.rglob("*.lean"))):
+    for f in sorted(list(G.rglob("*.lean")) + list(S0.rglob("*.lean")) + list(RN.rglob("*.lean"))):
         if ".lake" in f.parts: continue
         code = ohne_kommentare(f.read_text(encoding="utf-8"))
         n += 1
@@ -169,10 +176,39 @@ def stufe_stage0():
     return bool(proben) and not falsch
 
 
+RUNNER_FAELLE = "20000"
+
+
+def stufe_runner():
+    if not RN.is_dir():
+        print("  8 runner:  ROT (runner/ fehlt)")
+        return False
+    rc, out = lauf(["lake", "build"], RN, 3600)
+    jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", out)
+    if rc != 0 or not jobs:
+        print(f"  8 runner:  ROT (build: {out.strip().splitlines()[-1:]})")
+        return False
+    rc, out = lauf(["lake", "env", "lean", "Nachpruefung.lean"], RN, 1800)
+    zeilen = re.findall(r"'([^']+)' depends on axioms: \[([^\]]*)\]", out)
+    schlecht = [n for n, a in zeilen if not {x.strip() for x in a.split(",") if x.strip()} <= STANDARD]
+    satz = any(n.endswith(".runner_ok") for n, _ in zeilen)
+    ok_ax = rc == 0 and satz and len(zeilen) >= 7 and not schlecht
+    print(f"  8 runner:  {'ok' if ok_ax else 'ROT'} ({jobs[-1]} Jobs, {len(zeilen)} Saetze, runner_ok "
+          f"{'gefunden' if satz else 'FEHLT'}, {len(schlecht)} mit fremden Axiomen)")
+    kratz = RN / ".lake" / "cpu"
+    rc, out = lauf([sys.executable, str(W / "instrumente/teile/runner-cpu.py"), str(RN / ".lake/build/bin/runner"),
+                    str(kratz), RUNNER_FAELLE], RN, 3600)
+    letzte = [z for z in out.splitlines() if z.startswith("runner-cpu:")]
+    print(f"  8 cpu:     {'ok' if rc == 0 else 'ROT'} ({letzte[-1] if letzte else out.strip()[-200:]})")
+    if rc != 0:
+        for z in letzte[:10]: print("     ", z[:300])
+    return ok_ax and rc == 0
+
+
 def main():
     if not G.is_dir(): print("ABBRUCH: grammatik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 1: Lean-Modell ==")
-    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_zertifikate, stufe_abdeckung, stufe_stage0]
+    stufen = ([] if "--ohne-bau" in sys.argv else [stufe_bau]) + [stufe_axiome, stufe_sorry, stufe_layout, stufe_zertifikate, stufe_abdeckung, stufe_stage0, stufe_runner]
     erg = [s() for s in stufen]
     print("== LEAN:", "GRUEN" if all(erg) else "ROT", "==")
     return 0 if all(erg) else 1

@@ -305,6 +305,28 @@ For the runner:
   handler cheap, the handlers, the loader, `spawn`, `runner_tso` over x86-TSO for `MOV` and `LOCK CMPXCHG`. The least charted part is
   `ir_parallel` with `runner_tso`.
 
+**State (2026-10-28, package `runner/`).** Built and proved for one thread, on the standard axioms:
+* `IR/Step.lean`: `S0IR` with 23 opcodes (`spawn` follows with the threads). Deviations from §2.1.3, decided for the
+  smallest runner: the opcode is byte 0; `jmp`/`brz` take a byte offset relative to the instruction; `call a k` jumps
+  to the code ADDRESS held in slot `a` (a function number is turned into an address by IR code); `cas d a e` takes the
+  new word from slot `e+1`; the image header is one word (the first frame), the code starts at byte 16. The memory
+  is the same byte memory with read and write permission per byte as on the x86 side, so a refused access is a
+  fault on both sides and every image -- also a wrong one -- has a defined run; the runner checks nothing.
+* `X86/`: the 22 instruction forms with one encoding each, the decoder, the step (undefined flags unknown; reading
+  one is undescribed), and `decode_enc` (the instruction layer). `Test/Diff.lean` with
+  `instrumente/teile/runner-cpu.py`: random cases of every form against this processor, every defined flag
+  compared; ten fault programs (each instruction kind the model says faults dies with the named signal).
+* `Prog/`: the runner (loader `open`/`lseek`/`mmap`, threaded dispatch through a 256-entry table, 23 handlers;
+  253 instructions, a 4136-byte ELF) and probe images.
+* `Beweis/`: `step_ok` (every handler, all 256 opcode bytes), `runner_ok` (every observation of the model is one
+  of the IR, and the model never reaches an undescribed step), `image_ok` (the file establishes the invariant),
+  `runner_zeuge` with `zeuge_ir`/`zeuge_x86` (both machines ask `write` first on `hello`).
+* Named assumptions of `runner_ok`: the CPU implements the model for these forms (tested, stage 8); the ELF
+  loader maps the file (`FileInv`); every kernel answer keeps the runner's code and table (`KeepsRunner` -- an IR
+  program that unmaps or remaps the runner's pages breaks it); `syscall` keeps every register but `rax`, `rcx`,
+  `r11`.
+* Open: the loader's proof (ELF entry to `R`), `ir_sim`/the lowering, `spawn`, threads, x86-TSO, the speed set.
+
 **Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; beside it the x86-64 subset written anew with its
 differential tests on the CPU and the instruction layer; then the runner with `runner_ok`, first on one thread as a
 step; then threads, `ir_parallel`, x86-TSO and `runner_tso` -- the target. The Lean-run stage 0 stays the reference until the runner runs the probes and `gkomp`, then its run
