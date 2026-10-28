@@ -151,10 +151,10 @@ theorem bin_some {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ
   simp only [bin2, pure, Option.some.injEq, Prod.mk.injEq] at he
   exact ⟨ca, ta, cb, tb, ha, hb, he.1.symm, he.2.symm⟩
 
-theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} (σ₀ σ : World D) :
+theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
-    Pre m pc fp K d c ρ → Ok m pc fp K d c (Enc τ (eval σ₀ e σ ρ))
+    Pre m pc fp K d c ρ W → Ok m pc fp K d c (Enc τ (eval σ₀ e σ ρ))
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE] at h

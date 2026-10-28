@@ -65,10 +65,10 @@ theorem lowErg_top {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → (x : Erg
   | _, .empty, d, c, top, h => by simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, .val e, d, c, top, h => lowE_top e d c top h
 
-theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} (σ₀ σ : World D) {Γ : Ctx} :
+theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) {Γ : Ctx} :
     {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) → (c : List II) → (top : Nat) →
     lowErg x d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
-    Pre m pc fp K d c ρ → Ok m pc fp K d c (EncErg e (evalErg σ₀ x σ ρ))
+    Pre m pc fp K d c ρ W → Ok m pc fp K d c (EncErg e (evalErg σ₀ x σ ρ))
   | _, .empty, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -91,7 +91,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp 
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
     (he : lowErg e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ K)
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
-    (hp : Pre m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
+    (hp : PreS m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
     (hk : Kopf f m fp K rp cfp ρ0) :
     RetZ P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
     have hFB3 : FB = 3 := rfl
@@ -103,7 +103,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp 
     obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowErg_ok (fp := fp) (K := K) (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te
       he (by omega) m pc ρ hp.left
     have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
-    have hq : Pre m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ)
+    have hq : PreS m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ)
         ([ci 2 lo (frei Γ) 0] ++ (cens ++ ([ci 19 ((lo + 1 : Nat) : Int) 48 0] ++
           ([ci 2 2 lo 0] ++ ([ci 21 0 0 0] ++ stopC 102 (lo + 1)))))) ρ := by
       simpa [retC, List.append_assoc] using hp1
@@ -116,12 +116,12 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp 
     have hc2 := (codeAt_right hq.code).agree a2 hf2
     have hk2 := hk.agree ((a1.mono hlo).trans a2) hp.frame (by omega)
     -- `ensures` over the result and the parameters, into slot `lo + 1`
-    have hpe : Pre m2 _ fp K (lo + 1) cens (ergEnv (D.erg f) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ0) :=
+    have hpe : PreS m2 _ fp K (lo + 1) cens (ergEnv (D.erg f) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ0) :=
       ⟨Nat.le_trans (frei_ergCtx _ _) (by simp only [frei]; omega), hsm, hF2, codeAt_left hc2,
        codeFar_left (by rw [← List.length_append]; exact hf2),
        envAt_ergEnv hk2.env (by
          show m2.rd64 (slot fp (BitVec.ofNat 64 (FB + (D.params f).length))) = some w
-         rw [← hlo0]; exact rd_same hF1 (by omega) w) hen⟩
+         rw [← hlo0]; exact rd_same hF1 (by omega) w) hen, trivial, wstab_true _ _⟩
     obtain ⟨m3, s3, a3, b, hb, hbe⟩ := lowE_ok (fp := fp) (K := K) σ0
       ((σ.lese Λ e.orte).lese (vertragVon D f).ende (P.ensures f).orte) (P.ensures f) (lo + 1) cens tens hens
       (by omega) m2 _ _ hpe

@@ -120,8 +120,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
       have hc1 := codeAt_right hcode
       simp only [rufAt]
       generalize σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte = σR
-      have hpq : Pre m _ fp K s cq ρ :=
-        ⟨Nat.le_refl _, hK, hF, codeAt_left hc1, codeFar_left (by rw [← List.length_append]; exact hf1), hE⟩
+      have hpq : PreS m _ fp K s cq ρ :=
+        ⟨Nat.le_refl _, hK, hF, codeAt_left hc1, codeFar_left (by rw [← List.length_append]; exact hf1), hE, trivial, wstab_true _ _⟩
       obtain ⟨m1, s1, a1, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := K) σR σR (P.requires f) s cq tq hq (by omega) m _
         ρ hpq
       have hF1 := hF.agree a1
@@ -152,8 +152,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
           ⟨pcode_agree hP a1, by
             rw [agree_rd_low a1 hroom (by omega) (by omega), h2, ofNat_succ], by omega⟩
         have hk : Kopf f m1 fp K rp cfp ρ := Kopf.agree ⟨h0, h1, hE, by omega⟩ a1 hF (Nat.le_refl _)
-        have hpb : Pre m1 _ fp K (frei (D.params f)) cb ρ :=
-          ⟨Nat.le_refl _, hK, hF1, hc3, hf3, envAt_agree hE a1 hF (Nat.le_refl _) (by omega)⟩
+        have hpb : PreS m1 _ fp K (frei (D.params f)) cb ρ :=
+          ⟨Nat.le_refl _, hK, hF1, hc3, hf3, envAt_agree hE a1 hF (Nat.le_refl _) (by omega), trivial, wstab_true _ _⟩
         have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (P.rumpf f) cb tb hb
           (by omega) (by omega) m1 _ σR ρ hpb (Nat.le_refl _) hu hk
         have spre := sg.trans (s1.trans sg2)

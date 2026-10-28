@@ -182,14 +182,14 @@ theorem Umf.agree {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m
     exact h.depth, h.big⟩
 
 theorem Pre.up {m : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    (h : Pre m pc fp K d c ρ) (hd : d ≤ d') : Pre m pc fp K d' c ρ :=
-  ⟨Nat.le_trans h.ctx hd, h.small, h.frame, h.code, h.far, h.env⟩
+    {W : Runner.Mem → Prop} (h : Pre m pc fp K d c ρ W) (hd : d ≤ d') : Pre m pc fp K d' c ρ W :=
+  ⟨Nat.le_trans h.ctx hd, h.small, h.frame, h.code, h.far, h.env, h.welt, h.wstab⟩
 
 /-- The arguments land in the parameter slots of the frame at slot `F`, and nothing below `F + FB` changes. -/
-theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} (σ₀ σ : World D) :
+theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (c : List II) → (top : Nat) →
     lowA args (F + FB) = some (c, top) → top ≤ K → F + FB + τs.length ≤ K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre m pc fp K (F + FB) c ρ →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre m pc fp K (F + FB) c ρ W →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp (F + FB) K m m' ∧
       EnvAt m' (slot fp (BitVec.ofNat 64 F)) (evalArgs σ₀ args σ ρ)
   | _, _, .nil, c, top, h, _, _, m, pc, ρ, _ => by
@@ -225,7 +225,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     (hA : A f < 2 ^ 31) (args : Args D Γ Λ (D.params f)) (σ₀ σ : World D) {ca : List II} {ta : Nat}
     {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {ρ : Env D Γ}
     (hca : lowA args (frei Γ + FB) = some (ca, ta)) (htop : callTop f (frei Γ) ta + cap ≤ K)
-    (hp : Pre m pc fp K (frei Γ) (callC A f (frei Γ) ca) ρ) (hu : Umf A C dv m fp K) :
+    (hp : PreS m pc fp K (frei Γ) (callC A f (frei Γ) ca) ρ) (hu : Umf A C dv m fp K) :
     match R f σ (evalArgs σ₀ args σ ρ) with
     | .ok _ v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (callC A f (frei Γ) ca).length), fp⟩ m' ∧
         Agree fp (frei Γ) K m m' ∧
@@ -234,7 +234,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     | _ => False := by
   simp only [callTop] at htop
   have hFB : FB ≤ frei Γ := by simp only [frei]; omega
-  have hp' : Pre m pc fp K (frei Γ + FB) (ca ++ callTail A f (frei Γ)) ρ := hp.up (by omega)
+  have hp' : PreS m pc fp K (frei Γ + FB) (ca ++ callTail A f (frei Γ)) ρ := hp.up (by omega)
   obtain ⟨m1, s1, a1, e1⟩ := lowA_ok (F := frei Γ) σ₀ σ args ca ta hca (by omega) (by omega) m pc ρ hp'.left
   have hp1 := hp'.next a1 (Nat.le_refl _) (by omega)
   have hl4 : (callTail A f (frei Γ)).length = 4 := rfl
