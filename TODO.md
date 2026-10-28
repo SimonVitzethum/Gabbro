@@ -128,11 +128,14 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **End-block forms (2026-10-26).** `Endblock.narrow`/`exchange`/`ite` (THEOREM-MAP 102): the generator does not draw
   them (size `unendlich`); arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them; the Rust exporter
   does not construct them.
-- **Stage 0 runtime (2026-10-26, THEOREM-MAP 105).** Runs on the thread machine with raw system calls on OS threads.
-  Open: an array-backed world proved equal to the closure world (a slot is a chain of closures; every access
-  lengthens the trace); the provider freshness of the open region in the model; S0 as a checked list of forms; the
-  Rust exporter `lean_g.rs` writes `aschreibt := false` for every gate and refuses a gate's `writes` (the model and
-  the Lean front end accept it); then stage 1 (an interpreter of all of Gabbro, written in S0).
+- **Stage 0 runtime (2026-10-26, THEOREM-MAP 105).** Runs on the thread machine with raw system calls on OS threads;
+  the fast machine and the array memory are built. Decided 2026-10-28 (`PLAN-SELF-HOSTING.md` §2): Lean stage 0 only
+  translates Gabbro into the IR `S0IR` (§2.1); a formally verified x86-64 machine-code runner runs it (§2.2), its
+  instruction model written anew and tested against the CPU; 64-bit words everywhere; multithreading required. Target: `gkomp` compiles its own ≈ 500 000 lines on the runner in
+  under one hour. Open: `S0IR` with `ir_sim`; the x86-64 subset with its CPU tests; the runner with `runner_ok`, then threads with
+  `ir_parallel`/`runner_tso`; the provider freshness of the open region in the model; the front end and the subset gate
+  over the whole language; the Rust exporter `lean_g.rs` writes `aschreibt := false` for every gate and refuses a
+  gate's `writes` (the model and the Lean front end accept it). The Lean run path is deleted once the runner runs `gkomp`.
 - **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
   `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
   fields. Open, model work first where marked (M):
@@ -227,8 +230,9 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   (`ERWARTET_A`: costs, `locks`/`reads` effects, `N511`/`N275` user logic, `const fn`) need Lean components; the model gaps (`return` under
   `locks`, `Endblock` formers, `Block.arenaAlloc` at the top level) are listed there with the exact change. Open rulings: `M104`, `N001`,
   `M133`, `M147`. Track P: 79 % of the generated space is outside the elaboration fragment.
-- **Guardian remnants** (four guardians since 2026-10-17). `bruecke/` is not measured (its `lake build` fails on the missing `mathlib`
-  entry); the tree-wide `gabbro prove` run and the E1 comparison (duties manifest) hang in no guardian; the mutation run over the checker
+- **Guardian remnants** (four guardians since 2026-10-17). `bruecke/` is not measured and does not build: toolchain and manifest are
+  on v4.35.0 since `e0c737c9` (unbuilt), but its `Duty` library names the five `programmlogik/Duty/*.lean` files deleted in `60b73119`;
+  either the bridge computes its duties from `Pflichten src` alone or it retires with the `Body` route (`GABBROV.md` §14, §17); the tree-wide `gabbro prove` run and the E1 comparison (duties manifest) hang in no guardian; the mutation run over the checker
   is dropped without replacement; 8 600 German comment lines in the checker are unguarded. Details: `dokumente/TOOLBOX.md`.
 - **O11 (guardless invariant).** A `table`/`group` invariant that no function `maintains` is booked by NOTHING (`N275`-`N277` check only
   anchored ones).

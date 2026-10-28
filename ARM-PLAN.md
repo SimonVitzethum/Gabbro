@@ -1,9 +1,10 @@
 # ARM-PLAN.md — the AArch64 direction (decided by Simon, 2026-10-07)
 
-**Decision.** All work on the x86-64 hardware model stops. The files stay in the tree
-(`grammatik/Grammatik/X86/`, `DIRECT-COMPILER*.md`); nothing is deleted and nothing new is
-added there. The selected next target is **AArch64 (Armv9-A)**. The reason is effort: the x86
-hardware model was too laborious to complete.
+**Decision.** All work on the x86-64 hardware model stops. Its files moved to the branch `archive`
+(`7c693cb7`: `grammatik/Grammatik/X86/`, `DIRECT-COMPILER*.md`). The selected next target is **AArch64
+(Armv9-A)**. The reason is effort: the x86 hardware model was too laborious to complete. One exception
+(Simon, 2026-10-28): the verified stage-0 runner runs on x86-64, its instruction subset written anew and tested against the CPU
+(`dokumente/PLAN-SELF-HOSTING.md` §2.2); the compiler's targets are unchanged.
 
 **Basis.** The Arm architecture specification as Sail models:
 `rems-project/sail-arm` (`arm-v9.4-a`, 37 `.sail` files, about 466,000 lines, derived from

@@ -45,7 +45,8 @@ to be checked anew becomes a test in `cargo test`, a Lean theorem or a stage in 
 ## Everything runs locally, with an eye on memory
 
 Everything that computes runs in this checkout: every Lean build, every `cargo` run, every acceptance run.
-There is no second machine any more (since 2026-09-27); recipes for servers or SSH in old notes are history.
+There is no build server (since 2026-09-27); recipes for servers or SSH in old notes are history. Only the CPU tests of
+the x86-64 runner model run on Simon's x86-64 machine (`PLAN-SELF-HOSTING.md` §2.2).
 `git push` goes through `~/.ssh/id_ed25519_github`.
 
 * **One heavy run at a time, `free -g` beside it.** Heavy are `cargo build`, `cargo test`, `lake build`

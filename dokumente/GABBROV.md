@@ -565,7 +565,10 @@ calls through places in `SExpr`; no printer or round trip for statements and ite
 fragment above.
 
 **The bridge** (`bruecke/Bruecke/`, a Lake project over `grammatik` and the original `programmlogik`
-sources, Mathlib-free, toolchain v4.33.1; ≈5 000 lines, 16 files plus the instances `Instanz104/108/130/69/73`):
+sources, toolchain v4.35.0 with Mathlib through `grammatik` (manifest laid out as `stage0/`'s); ≈5 700 lines, 22 files with
+the instances `Instanz104/108/130/69/73`). **DOES NOT BUILD (2026-10-28):** its `Duty` library names
+`programmlogik/Duty/Duty104Referenz.lean` and four more, deleted in `60b73119` (generated files left the repository); no
+guardian measures `bruecke/`:
 
 * `Pflichten.lean` — computes, from the parser's `UProg`, the duty statements and the `Body` datum
   (`zuBody`, `meetsU`), so a wrong Rust print is a failed per-unit check (`Instanz*.lean`), never
@@ -705,9 +708,12 @@ notion.
 | witnesses: a `traverse` over a table of ANY size (`fuellen_korrekt`); a recursive function, totally correct (`f_korrekt`) | `WP/Zeuge.lean`, `WP/ZeugeRuf.lean` | done |
 | rules for the composite constructs: locks, `match` over options and reasons, the three loops at the statement level, `check`, the foreign body's binding, end-block binding and call | `WP/Regeln2.lean` | done |
 | leaves (writes to slots, statics, regions; register and transition statements; returns) need no rule: their `wp` is `Q` of the outcome, written out by `simp only [wpS, execStmt]` | -- | by exactness |
-| rules still to state: `match` over tags (`Arms`), indirect calls, fallible calls and fallible foreign bodies, register reads, `awaits`/`exchange`, floats | `WP/Regeln*.lean` | open |
-| frames: what a block leaves untouched, from `RahmenTreu`; the tactic `gv_wp` (the rules as a simp set) | | open |
-| relational logic (two runs): determinism, noninterference, renaming invariance -- what `PLAN-SELF-HOSTING.md` §3.2-§3.3 owes | | open |
+| fallible calls (`let x = f(..) else`, exact and against a specification), `match` over tags (`wpArms_*`, `wpS_onTag`) | `WP/Regeln3.lean` | done |
+| rules still to state: indirect calls (the header of `Regeln3.lean` names them, no rule stands), register reads, `awaits`/`exchange`, floats | `WP/Regeln*.lean` | open |
+| frames: what a block leaves untouched, from `RahmenTreu` (`wpB_rahmen`, `wpE_rahmen`, `rahmen_slot`) | `WP/Rahmen.lean` | done |
+| the tactic `gv_wp` (the rules as a simp set) | | open |
+| relational logic (two runs): exact `wp2B`, lockstep sequence, low-guard `if`, relational `traverse`, the diagonal; witness `fuellen_unabhaengig` (two oracles, one result) | `WP/Relational.lean`, `WP/ZeugeRel.lean` | done |
+| relational logic: renaming invariance, noninterference as a stated theorem, the other loops and calls in lockstep -- what `PLAN-SELF-HOSTING.md` §3.2-§3.3 owes | | open |
 | concurrency: rely-guarantee over GX with the lock invariants and the atomic rely of `gabbro_ziel` | | open |
 | regions and linked structures: reasoning over `RegionRepr` and the ownership ledger (lists, trees, maps over the open region) | | open |
 | specifications stated over the SOURCE TEXT: through the Lean pipeline (`uebersetzeAllg`), "the function named `f` in this text meets `S`" | | open |
