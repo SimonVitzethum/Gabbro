@@ -84,72 +84,206 @@ the open region in the model; (d) the front end and the subset gate over the who
 `lean_g.rs` still writes `aschreibt := false` for every gate and refuses a gate's `writes`, which the Lean front end
 and the model accept.
 
-### 2.1 The stage-0 IR `S0IR` (plan, 2026-10-28)
+### 2.1 The stage-0 IR `S0IR` — design (2026-10-28)
 
-**Purpose.** Stage 0 lowers the accepted G program ONCE into `S0IR`; the runner executes it. Every `S0IR` run is
-proved to be a run of the thread machine (`RufSchrittG`) through the fast machine (`Schnell/`): the theorem is a
-forward simulation `ir_sim` from the `S0IR` state to `FStand`, so `nachspiel_ist_lauf` and everything the goal theorem
-says about runs carry over unchanged. `S0IR` is not a new semantics: its meaning is defined in Lean as a small-step
-machine, proved against machine G, and the runner is proved against that machine (§2.2).
+**Purpose.** Stage 0 lowers an accepted G program ONCE into an `S0IR` image; the runner of §2.2 executes it. `S0IR` is
+not a new semantics: it has a small-step semantics in Lean, proved against machine G, and every run of the runner is
+proved to be a run of the thread machine (`RufSchrittG`) over GX, so the goal theorem applies to it unchanged. Built
+from the syntax of `Kern/Syntax/Syntax.lean` (64 `Expr`, 46 `Stmt`/`Block`, 21 `Endblock` formers) and the outcomes
+of `Kern/Semantik/Semantik/T1.lean`.
 
-**Design rules.**
-1. **Flat and register-based.** A function is an array of basic blocks; a block is an array of instructions over
-   numbered frame slots and ends in one terminator (`jmp`, `br`, `switch`, `call`, `ret`, `stop`). Every `Expr`,
-   `Stmt` and `Endblock` former of G lowers to straight-line slot code plus terminators; nested environments `Env D Γ`
-   become fixed slot offsets computed once per function. No closures, no dependent types at run time.
-2. **64-bit words, everywhere** (Simon, 2026-10-28). Every value, every slot and every memory cell is one 64-bit word;
-   no narrower storage, no narrower arithmetic. A value whose G type has a range inside 64 bits (`Ty.int lo hi`,
-   `bool`, `opt`, `why`, `sum` tags, `fnptr`, `ptr`, `ref`) is one word. An operation whose operand ranges prove the
-   exact result fits in 64 bits is a word operation (a range lemma per operator, decided at lowering time, `BitVec 64`);
-   any other is lowered to a fixed sequence of words (128 bits or wider by limbs) whose correctness is a lemma, never to
-   a call into a bignum library. Aggregates (`arr`, `str`) occupy consecutive words (a string one byte per word); floats
-   are the kernel IEEE model's bit patterns in a word, operations on them the x86-64 SSE2 instructions the hardware
-   assumption `gleitkomma_ieee` names. Opcodes are encoded as bytes in the image (rule 8); that is the code, not the
-   values.
-3. **Memory.** Tables are arrays of words per field (structure of arrays, as `AWelt`), statics one word each, the open region in
-   chunks handed out by its provider. A load/store names (table, field, index slot) or (static). Index checks that G
-   performs stay as instructions with the same outcome; checks that the type discharges are not emitted (the range
-   lemma is the proof).
-4. **Ghost is erased, outcomes are kept.** The thread trace `spur`, the call log, the frame entry worlds `s0` and the
-   run log are ghost: `S0IR` does not compute them, the simulation relation reconstructs them (as the compact trace of
-   `Schnell/` does). Whatever decides an outcome of G stays: every `narrow`/`check` branch, every refusal or stop the
-   machine takes, every runtime check G makes. The budget, depth and progress stops of G are kept EXACTLY: one counter
-   per thread, decremented where G counts (loop back edges, calls).
-5. **Effects are instructions.** Lock acquire/release (with the rank order and the held set of the frame), atomic
-   statics (load, store, read-modify-write, each carrying its GX order), `syscall` gates (the oracle question), `start`
-   of a root. Only these touch another thread.
-6. **Multithreading is required, without a world lock** (Simon, 2026-10-28). `S0IR` runs every Gabbro thread on its
-   own OS thread, truly in parallel; the compiler `gkomp` is written to use it (about a 20-fold speed-up expected on
-   the x86-64 machine). Race freedom (`RennfreiBis`) says two threads never touch the same non-atomic carrier without a
-   lock between them, so thread-local instructions need no global lock; only rule 5 synchronises. Owed theorem
-   `ir_parallel`: a parallel `S0IR` run is equal to some interleaving of the thread machine. A single-threaded runner
-   is a development step only, never the target.
-7. **Answers by log, no replay.** The runner records the oracle answers and the order of effect instructions; the
-   replay theorem is applied to the log (`ir_log`), not to a second run of the program.
-8. **A binary format.** `S0IR` is serialised to a byte image the runner loads (functions, blocks, a constant pool, the
-   table layout); `ir_decode` proves that decoding the image gives back the `S0IR` program stage 0 produced.
+#### 2.1.1 Two modes
 
-**Theorems owed.** `ir_lower_ok` (lowering is total on accepted programs, or refuses by name), `ir_sim` (one `S0IR`
-step is zero or more fast-machine steps, related states agree on memory and answers), `ir_budget` (stops agree),
-`ir_parallel` (rule 6), `ir_log` (rule 7), `ir_decode` (rule 8). Witnesses: the probes of `stage0/proben/` plus a
-program with every `Stmt` former; a planted mis-lowering (wrong slot, dropped check) must fail the build.
+Machine G checks at run time: `requires` at every call (`Logik.vorbedingung`), `ensures` and the owed invariants at
+every return (`nachbedingung`, `invariante`), loop invariants at every pass boundary (`schleife`), `state` pre-states
+(`vorzustand`), float ranges (`bereich`). An invariant over a table is a loop over the whole table at every return.
+* **Certified mode (the mode `gkomp` runs in).** The image comes with the program's certificate: its user logic
+  (`NutzerPflichtA`) proved with GabbroV. Exactly the checks whose failure the certificate excludes are not emitted;
+  theorem `ir_erase`: under the certificate the erased program has the same runs. Which stop kinds a certificate
+  excludes is read from `NutzerPflichtA`, never assumed.
+* **Checked mode.** Every check G makes is emitted. For diagnosis and for programs without a certificate; slow where
+  invariants range over tables.
+Budget stops are never erased (§2.1.7): `abstieg` (call depth), `fortschritt` (`forever` passes) and `retry`
+exhaustion are outcomes of G for some budget and stay exact.
 
-**The lowering's output is checked, not trusted.** Stage 0 is compiled Lean, so its run sits on the Lean compiler, the
-Lean runtime and the toolchain's C compiler. Its output (the `S0IR` image) is therefore validated: either
-`ir_lower_ok` evaluated by the kernel on the pinned program (`decide +kernel`), or an `S0IR` checker written in Gabbro
-and run on the runner (proved like every Gabbro tool). Which one is cheaper for 500 000 lines is measured first.
+#### 2.1.2 Values: everything is a 64-bit word
 
-**Size.** `S0IR` syntax, semantics, lowering and image format 3 000 - 6 000 lines of Lean; `ir_sim` with `ir_budget`
-4 000 - 10 000; `ir_parallel` 3 000 - 8 000; `ir_log` 500 - 2 000.
+| G type | Words | Encoding |
+|---|---|---|
+| `int lo hi` with `-2^63 ≤ lo`, `hi < 2^63` | 1 | two's complement |
+| `int lo hi` beyond 64 bits (e.g. a `mul` range, `getBytes` with `n > 8`) | `k` limbs | two's complement over `64k` bits, `k` the least that holds the range; lowering counts them per program |
+| `bool` | 1 | 0 / 1 |
+| `opt n` | 1 | `-1` absent, else the index |
+| `sum cs` | 2 | tag word, payload word (0 when the case has none) |
+| `why n` | 1 | the reason's number |
+| `never` | 0 | -- |
+| `fl lo hi` | 1 | the IEEE binary64 bit pattern of the kernel model |
+| `fnptr n` | 1 | the function's number in the image |
+| `ptr t rw` | 0 | erased: `thru`/`assignThru` name the table statically (`D.tabNr n = some t`), the pointer is a capability with no run-time content |
+| `ref t` | 1 | the cell number in the open table |
+| `arr τ n` | `n · words τ` | consecutive |
+| `str n` | `1 + n` | length word, then one byte per word |
+
+Every memory cell is one word too: a table field of `count` slots is an array of `count` words (structure of arrays,
+as `AWelt`), a static is one word; an atomic static has a cache line of its own. Bytes from and to the operating
+system are widened and narrowed at the gate (§2.1.8).
+
+#### 2.1.3 The state
+
+* **Image** (read-only): functions (entry, frame size, parameter count), code, constant pool, layout (tables with
+  count, fields, open flag; statics with atomic flag; locks with rank), gates (§2.1.8), roots (the threads started at
+  program start: `main`, `entry`, `concurrent`, `start { .. }` — G spawns no thread at run time), initial memory,
+  mode, default budgets.
+* **Shared memory:** the field arrays, statics, open tables (§2.1.8), one lock word per Gabbro lock.
+* **Per thread:** `pc`, frame pointer, a frame stack, the depth budget left, the held-lock stack, the thread's
+  stop state. A frame: return `pc`, caller frame, continuation targets (§2.1.7), then the slots: parameters first, then
+  every binder of `Γ` at a fixed offset (the lowering computes the offsets of nested `Env D Γ` once per function),
+  then temporaries.
+* **Ghost, not in `S0IR`:** the trace `spur`, the call log, entry worlds `s0`, the run log, marks (`advances`,
+  `retires`), `breaking`. The simulation relation reconstructs them, as the compact trace of `Schnell/` does.
+
+#### 2.1.4 Instructions
+
+Three-address over frame slots `s` (a word offset) and immediates `k`. No instruction checks a bound or a type at run
+time: the image is the lowering of an accepted program, and the typing invariant `ir_typed` (every slot holds a value
+of its static type in every reachable state) proves every index in range. Complex G operations become loops of these
+instructions, so the handler set stays small.
+
+| Group | Instructions | Meaning (64-bit unless said) |
+|---|---|---|
+| move | `const s k`, `mov s a`, `copy s a n` | `copy`: `n` words (aggregates by value) |
+| integer | `add sub mul neg`, `divu remu` (G `div`/`rem`, operands ≥ 0), `divs rems` (G `sdiv`/`srem` = `Int.tdiv`/`tmod`, as x86 `IDIV`), `and or xor`, `shl shr` | exact by the range lemma of §2.1.2 |
+| wide | `adc sbb` (with carry slot), `mulx` (64×64→128), `cmpu` | the limb sequences of wide ranges |
+| compare | `eq ne lt le` (signed), `ltu`, `select s c a b` | result 0/1 |
+| float | `fadd fsub fmul fdiv`, `fofint`, `flt fle`, `frange s a lo hi` | binary64, round to nearest even (the kernel IEEE model); `frange`: finite and inside |
+| memory | `ld s T.f i`, `st T.f i a`, `ldg s g`, `stg g a`, `ldx s base i w`, `stx base i w a` | field `T.f` at index slot `i`; static `g`; `ldx`/`stx`: element `i` of width `w` of a frame aggregate |
+| open table | `ldr s T.f r`, `str T.f r a` | cell `r` of an open table (§2.1.8) |
+| control | `jmp L`, `br c L1 L2`, `switch a L0 … Ln` | in-function labels |
+| call | `call f args ret Lwhy`, `calli p args ret Lwhy`, `ret a`, `retnone`, `retwhy k` | §2.1.7 |
+| budget | `pass s Lout` | decrement the `forever` counter in `s`, jump to `Lout` at zero |
+| stop | `stop c` | end the thread in G outcome `c` (`logik …`/`hardware …`, the code names the constructor and its argument) |
+| locks | `lock L`, `unlock L` | §2.1.8 |
+| atomics | `aload s g o`, `astore g a o`, `acas s g e n o` | GX order `o` (§2.1.8) |
+| gates | `gate a args ret Lwhy` | one `syscall` item (§2.1.8) |
+
+About 55 instructions. Encoding: one opcode byte, then the operands as 32-bit little-endian fields, a fixed length
+per opcode (no variable-length decoding to prove); a 64-bit immediate lives in the constant pool.
+
+#### 2.1.5 Lowering, former by former
+
+* **Expressions** (pure; lowered into temporaries, in G's evaluation order): `lit tru fls` → `const`; `var` → the
+  binder's slot (no code); `glob` → `ldg` or `aload` for an atomic; `slot`, `thru` → `ld` (the pointer erased);
+  `ptrOf` → nothing; `fnref` → `const`; `widen` → nothing (or a sign-extension into limbs); `add … shr` → their
+  instructions or limb sequences; `getBytes n` → `n` loads and shifts/ors (`bytesZuZahl`, byte `k` at `256^k`), limbs
+  beyond 8 bytes; `lt le eq` → compare; `fllt flle` → `flt fle`; `and or not` → compare/select (G's `and`/`or`
+  evaluate both sides, there is nothing to short-circuit in a pure language); `none some istSome case why` → `const`,
+  `mov`, `ne -1`, two words; `forallSlots existsSlots` → a loop over `0 … count-1`; `reaches` → the loop of `kette`
+  with its fuel `count`; `refEq` → `eq`; `slotRef` → `ldr`; `arrNil arrCons arrGet arrSet` → frame words, `ldx`,
+  `copy` + `stx`; `strLit` → constant pool + `copy`; `strLen` → the length word; `strCat strEq strLt` → loops;
+  `strGet` → `ltu` against the length, `ldx` or 0; `strWeit` → `copy`; `wenn` → `select` (both pure); `eng` → range
+  test and `select`; `oldG oldS` → only in `ensures` (checked mode): the value saved at entry; an `old` whose index
+  depends on the result saves the whole field at entry.
+* **Statements:** `assignSlot assignThru` → `st`; `assignGlob` → `stg` or `astore`; `putBytes` → `n` stores of
+  shifted bytes; `assignVar` → `mov`/`copy`; `shift` → (checked) `ld`, `ne von`, `stop vorzustand`, then `st nach`;
+  `ite` → `br`; `onOption onTag onWhy` → `br`/`switch`, the payload into the arm's binder slot; `call callInd` →
+  `call`/`calli` with no result; `locks L body` → `lock L`, body, `unlock L` on EVERY exit edge of the body (normal
+  end, `leave`, `next`, `ret`, `retwhy`, a stop), as the `frei` peels of the thread machine; `breaking` → the body;
+  `traverse t inv body` → index slot from 0 to `count-1`, (checked) `inv` at every pass boundary → `stop schleife`,
+  `leave`/`next` as jumps; `retry n bis body ueberlauf` → a counter slot, `bis` test, after `n` passes the `ueberlauf`
+  block; `forever a inv body` → a counter slot set to `passes`, `pass` at every boundary jumping to
+  `stop (hardware fortschritt a)`; `axiomCall` → `gate`; `publish` → the payload stores, then `astore` release;
+  `advances retires` → nothing; `ret retWhy` → `ret`/`retnone`/`retwhy`; `leave next` → jumps; `assignSlotRef` →
+  `str`.
+* **Blocks and end blocks:** `bind` → evaluate into the binder's slot; `bindCall bindCallInd` → `call` with the
+  result slot; `bindCallElse` → `call` whose `Lwhy` is the lowered `err` end block with the reason in its slot;
+  `bindAxiom bindAxiomElse` → `gate`; `awaits` → `aload` acquire (§2.1.8); `exchange` → a CAS loop (`aload`, the `neu`
+  expression, `acas`, retry on failure; a failed `acas` is zero G steps, the successful one is G's exchange step);
+  `narrow` → two compares and `br` to the `sonst` end block; `check` → `br`; `float floatLit floatOf` → the float
+  instruction then `frange` and `stop bereich`; `floatNarrow` → `frange` and `br` to `sonst`; `Endblock.ite` → `br`.
+* **Refused by name** (the runner's profile is a Linux user process): `regRead regReadElse regWrite transition` (device
+  registers), interrupt handlers (`via idt`), a `fnptr` answered by a gate (`Orakel.zeiger`), and any form the model
+  does not yet carry. A refusal names the former; nothing is accepted by default.
+
+#### 2.1.6 Calls, returns, outcomes
+
+* `call f args ret Lwhy`: the caller has written the arguments into the slots that become the callee's parameters
+  (frames overlap at the parameter window, no copy); the callee frame is pushed, the depth budget decremented
+  (`rufAt (n+1)` → `rufAt n`); at zero the thread stops in `logik (abstieg f)` exactly where `rufAt 0` does. In checked
+  mode the callee's entry code tests `requires` (→ `stop vorbedingung f`) and saves the `old` values.
+* `ret a` / `retnone`: (checked) `ensures`, then every invariant `schuldet f` owes, in `D.invs` order (→ `stop
+  nachbedingung f` / `stop invariante i`); then the frame pops and execution continues after the `call` with the
+  result in `ret`. `retwhy k`: continues at the caller's `Lwhy` with `k` in its reason slot.
+* A `stop` ends the thread in that outcome. The runner then ends the run: what was observed up to that point is a
+  prefix of a run of the thread machine, which is a run.
+
+#### 2.1.7 Budgets
+
+The budgets of G are run parameters, given to the runner (defaults in the image): the call depth `fuel`, the
+`forever` passes, and nothing else (`retry` carries its own bound). The runner chooses the frame stack so that
+`fuel` nested calls of the largest frame fit; stack exhaustion is therefore impossible and the only depth outcome is
+G's own `abstieg`.
+
+#### 2.1.8 Threads, locks, atomics, gates, open tables
+
+* **Threads.** One OS thread per root, created at start (raw `clone`); truly parallel, no world lock (rule:
+  `RennfreiBis` — a non-atomic carrier is never touched by two threads without a lock between them). `ir_parallel`:
+  every parallel run equals an interleaving of the thread machine.
+* **Locks.** One word per Gabbro lock: `lock` takes it (`LOCK CMPXCHG` 0→1, `futex` wait on contention), `unlock`
+  releases it (store 0, `futex` wake if a waiter is marked). The rank order (`H006`) makes a wait cycle impossible, as
+  `KeinWarteZyklus` states. In checked mode the lock invariant checks G makes at a lock move are emitted there.
+* **Atomics.** `aload`/`astore`/`acas` carry the GX order of their G form; on x86-TSO a plain `MOV` load is acquire, a
+  plain `MOV` store is release, a sequentially consistent store is `XCHG`, `acas` is `LOCK CMPXCHG` (`runner_tso` maps
+  them to GX). `awaits`: an acquire load; what G's oracle `sichtbar` answers is what that load observes (the rule is
+  fixed in `ir_parallel`/`runner_tso`, not here).
+* **Gates.** A gate entry names the Linux system call, its arguments (words, or a buffer = table field + offset slot +
+  length slot), the result type and range, the reason channel, and the declared `writes`. The runner copies a buffer
+  out of its words into bytes, makes the `syscall`, copies the bytes the call wrote back into the declared field only,
+  and holds the result against its type: outside it the thread stops in `hardware (annahme a)`, as G's `einpassen`
+  does. Named assumption, as today: the system call does what its Gabbro contract says.
+* **Open tables.** Each open table is one contiguous virtual range the runner reserves at start (`mmap`,
+  `MAP_NORESERVE`, far above every other mapping); a `ref` is an index into it, so `ldr`/`str` are a plain indexed
+  access. The program's provider (a `syscall` item whose contract says fresh) is answered by the runner's bump pointer
+  in that range: fresh by construction; the end of the range is the provider's "no memory" answer through its reason
+  channel (OOM stays user logic).
+
+#### 2.1.9 Semantics and theorems
+
+* `S0IR` syntax, image format and small-step semantics in Lean: a thread machine of `S0IR` with the shared memory of
+  §2.1.3, the same oracle questions as G.
+* `ir_lower_ok`: lowering is total on accepted programs (or refuses by name, §2.1.5); `ir_typed`: the typing
+  invariant; `ir_decode`: decoding the image gives the lowered program; `ir_sim`: one `S0IR` step is zero or more
+  fast-machine steps (`Schnell/`), related states agree on memory, held locks and oracle answers; `ir_budget`: budget
+  stops agree; `ir_erase`: certified mode has the runs of checked mode under the certificate; `ir_parallel`.
+* **Checking the lowering's output.** Stage 0 runs as compiled Lean (Lean compiler, runtime, the toolchain's C
+  compiler). The image is therefore not trusted: it carries a hash, and either the kernel evaluates
+  `lower P = image` on the pinned program, or an `S0IR` checker written in Gabbro does it on the runner. Measured
+  before chosen.
+* Witnesses: the probes of `stage0/proben/`, a program with every former of §2.1.5, a multithreaded probe with locks
+  and atomics; planted mis-lowerings (wrong slot, a dropped `unlock` on a `leave` edge, a dropped check in checked
+  mode) must fail.
+
+#### 2.1.10 Speed
+
+One G step becomes 1-5 `S0IR` instructions; a handler is 3-8 x86 instructions plus one indirect jump. Expected
+10^8 - 3 * 10^8 instructions a second per core, about 20 times that with the threads of a parallel `gkomp`. What
+costs most and is avoided by design: contracts at run time (certified mode), aggregate copies (frames overlap at
+parameters; the lowering moves instead of copying when the source dies), dispatch (fixed-width encoding; later
+superinstructions such as compare-and-branch, each with its own lemma).
+
+#### 2.1.11 Size
+
+Syntax, semantics and image format 3 000 - 6 000 lines of Lean; lowering with `ir_lower_ok`/`ir_typed` 3 000 - 7 000;
+`ir_sim` with `ir_budget` and `ir_erase` 5 000 - 12 000; `ir_parallel` 3 000 - 8 000.
 
 ### 2.2 The verified x86-64 runner (Simon, 2026-10-28)
 
 **What it is.** A program of x86-64 machine code (no C, no compiler, no Lean runtime) that loads an `S0IR` image and
-runs it: a threaded-code interpreter (one handler per instruction, dispatch by an indirect jump table), the memory
-of rule 3, the per-thread counters of rule 4, raw `syscall` for the gates, raw `clone` + `futex` for threads and locks,
-`LOCK`-prefixed read-modify-write and `MFENCE` for atomics. Its bytes are written down in Lean and proved there.
+runs it: a threaded-code interpreter (one handler per instruction, dispatch by an indirect jump table), the state of
+§2.1.3, raw `syscall` for the gates, raw `clone` + `futex` for threads and locks, `LOCK`-prefixed read-modify-write
+and `XCHG` for atomics (§2.1.8). Its bytes are written down in Lean and proved there.
 
-**What is proved.** `runner_ok`: for every image and every run of the runner on the x86-64 model, the sequence of
+**What is proved.** `runner_ok`: for every image that is the lowering of an accepted program (checked by its hash, §2.1.9) and every
+run of the runner on the x86-64 model, the sequence of
 machine states refines a run of the `S0IR` machine of §2.1 (per handler: its instructions from dispatch to dispatch
 refine its `S0IR` rule; the loader refines `ir_decode`). Concurrency: the x86-TSO memory model, with the mapping of
 the runner's atomics and locks to GX proved (`runner_tso`). Together with §2.1: every output of the runner is an output
@@ -177,15 +311,15 @@ For the runner:
 * **Why not C:** a verified C runner needs a verified C compiler; CompCert is Coq and not freely licensed, and gcc/clang
   bring LLVM back. Handwritten C is also against `AGENTS.md` §3.
 * **Speed:** a threaded-code interpreter in machine code runs about 10^8 - 3 * 10^8 `S0IR` instructions a second per
-  core; with the multithreading of rule 6 and a parallel `gkomp` about 20 times that, 2 * 10^9 - 6 * 10^9 a second:
+  core; with the threads of §2.1.8 and a parallel `gkomp` about 20 times that, 2 * 10^9 - 6 * 10^9 a second:
   `gkomp` without optimisations in minutes, `gkomp -O3` (about 10^11 - 1.5 * 10^12 steps) in about 20 s to 12 min.
 * **Size and risk:** the runner 3 000 - 8 000 instructions; the proofs 25 000 - 60 000 lines of Lean: an instruction
-  layer over the revived subset that makes symbolic execution of a handler cheap, the handlers, the loader, the
+  layer over the subset that makes symbolic execution of a handler cheap, the handlers, the loader, the
   system-call and thread layer, `runner_tso`. The least charted part is `ir_parallel` with `runner_tso`.
 
 **Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; beside it the x86-64 subset written anew with its
 differential tests on the CPU and the instruction layer; then the runner with `runner_ok`, first on one thread as a
-step; then `ir_log`; then threads, `ir_parallel`, x86-TSO and `runner_tso` -- the target. The Lean-run stage 0 stays the reference until the runner runs the probes and `gkomp`, then its run
+step; then threads, `ir_parallel`, x86-TSO and `runner_tso` -- the target. The Lean-run stage 0 stays the reference until the runner runs the probes and `gkomp`, then its run
 path is deleted.
 
 ## 3. What is proved, for each tool
@@ -366,7 +500,7 @@ Rust counterpart and 2-3x its Lean definition.
 | generated container instances (not written by hand) | -- | 10 000-30 000 |
 | **Lean, specification and proof** | | |
 | language needs of §5 (region release, strings in G, file-gate contracts, measure-based loops) | region in G ≈ 5 000 | 8 000-20 000 |
-| stage 0 (`stage0/`) as the translator into `S0IR` over the whole language, with `ir_sim`, `ir_parallel`, `ir_log`, `ir_decode` (§2.1) | stage 0 ≈ 6 900 | 10 000-26 000 |
+| stage 0 (`stage0/`) as the translator into `S0IR` over the whole language: semantics, image, lowering, `ir_typed`, `ir_sim`, `ir_budget`, `ir_erase`, `ir_parallel`, `ir_decode` (§2.1.11) | stage 0 ≈ 6 900 | 14 000-33 000 |
 | the verified x86-64 runner of `S0IR` (§2.2): machine code, the x86-64 subset written anew with its CPU tests, x86-TSO, `runner_ok`, `runner_tso` | -- | 25 000-60 000 |
 | GabbroV: libraries' contracts | GabbroV today 115 000 | 8 000-20 000 |
 | GabbroV: front end against `lex`/`parseTopTief`/`elabU` | | 30 000-70 000 |
