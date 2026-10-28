@@ -1,6 +1,6 @@
 import Runner.Prog.Asm
 
-/-! # The runner: loader, dispatch, the 23 handlers (`PLAN-SELF-HOSTING.md` §2.1.5)
+/-! # The runner: loader, dispatch, the 24 handlers (`PLAN-SELF-HOSTING.md` §2.1.5)
 
 Registers while the IR runs: `r12` = the IR `pc`, `r13` = the IR `fp`, `r14` = the dispatch table. Nothing else
 lives across instructions, and the runner never uses the stack.
@@ -11,7 +11,11 @@ lives across instructions, and the runner never uses the stack.
   read-write, `MAP_FIXED_NOREPLACE`), then `fp` := the first word of the image, `pc` := `IMG + 16`. Any failure:
   `ud2`.
 * Each handler reads its operand fields and slots in the order of the IR semantics (`Runner/IR/Step.lean`) and
-  writes last. -/
+  writes last.
+* **Threads:** `spawn` calls `clone` with fixed flags (`Runner/Basis/Res.lean`) and no new stack: the runner never
+  touches its stack, and no signal handler is installed. The child returns from `syscall` with `rax = 0` and every
+  other register of the parent; it takes `pc` and `fp` from `rbx` and `rbp`. A thread ends with `exit`, the
+  process with `exit_group`, both through `sys`. -/
 
 namespace Runner.Prog
 open Runner.X86
@@ -49,8 +53,11 @@ def shiftH (sh : Ins) : List Ins :=
 /-- `brz`: the taken branch, which the `jnz` skips. -/
 def brzTaken : List Ins := [fld .rax 2, .alu .add .r12 .rax] ++ dispatch
 
-/-- The code of each opcode; position independent (the one jump inside, `brz`'s `jnz`, is relative). Opcodes
-    without a handler run `ud2`. -/
+/-- `spawn`: the parent's path after `clone`, which the child's `jz` skips. -/
+def spawnParent : List Ins := [fld .rcx 1, sst .rcx .rax] ++ nextI
+
+/-- The code of each opcode; position independent (the jumps inside, `brz`'s `jnz` and `spawn`'s `jz`, are
+    relative). Opcodes without a handler run `ud2`. -/
 def handler : Nat → List Ins
   | 1 => [fld .rax 2, fld .rcx 1, sst .rcx .rax] ++ nextI
   | 2 => [fld .rax 2, sld .rax .rax, fld .rcx 1, sst .rcx .rax] ++ nextI
@@ -81,6 +88,11 @@ def handler : Nat → List Ins
            .ld .rax (mb .rcx), .ld .rdi (mb .rcx 8), .ld .rsi (mb .rcx 16), .ld .rdx (mb .rcx 24),
            .ld .r10 (mb .rcx 32), .ld .r8 (mb .rcx 40), .ld .r9 (mb .rcx 48), .syscall,
            .st (mb .rbx) .rax] ++ nextI
+  | 24 => [fld .rcx 2, .lea .rcx (ms .r13 .rcx), .ld .rbx (mb .rcx), .ld .rbp (mb .rcx 8),
+           .movi .rax (BitVec.ofNat 32 NR_CLONE), .movi .rdi (BitVec.ofNat 32 CLONE_FLAGS), .movi .rsi 0,
+           .movi .rdx 0, .movi .r10 0, .movi .r8 0, .movi .r9 0, .syscall,
+           .alu .test .rax .rax, .jcc .z (BitVec.ofNat 32 (lenOf spawnParent))] ++ spawnParent ++
+           [.mov .r12 .rbx, .mov .r13 .rbp] ++ dispatch
   | _ => [.ud2]
 
 /-- Label numbers: 0 the loader, `k` the handler of opcode `k`, 100 `ud2`, 101 the table. -/
@@ -100,7 +112,7 @@ def loader : List Item :=
 
 def items : List Item :=
   [.lab LOADER] ++ loader ++
-  ((List.range 23).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
+  ((List.range 24).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
   [.lab BAD, .i .ud2]
 
 def codeLen : Nat := (items.map Item.len).sum
@@ -115,6 +127,6 @@ def tab : List (Nat × Nat) := (TABLE, tblOff) :: labels items CODE
 def prog : List (Nat × Ins) := place tab BASE items CODE
 
 /-- The table entry of opcode `k`: the address of its handler. -/
-def target (k : Nat) : Nat := BASE + find tab (if 1 ≤ k ∧ k ≤ 23 then k else BAD)
+def target (k : Nat) : Nat := BASE + find tab (if 1 ≤ k ∧ k ≤ 24 then k else BAD)
 
 end Runner.Prog

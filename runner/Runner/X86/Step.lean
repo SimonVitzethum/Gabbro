@@ -3,16 +3,18 @@ import Runner.X86.Dec
 /-! # The x86-64 machine for the subset: state and one step
 
 Written after the Intel SDM (vol. 2) and checked against the processor by `Runner/Test/`. One user-mode thread:
-sixteen registers, `rip`, the four status flags the runner reads, and the shared memory (`Runner/Basis/Mem.lean`).
+sixteen registers, `rip` and the four status flags the runner reads. Every data access is a request to the memory
+(`Runner/Basis/Res.lean`), answered by the machine (`Runner/Mach/`); instructions are fetched from the runner's
+code `C`, which never changes while it runs (its pages are not writable and the kernel keeps them: the named
+assumption of the machine).
 A flag is `none` where the manual leaves it undefined or where the model does not track it; a condition that reads
 `none` is `unk` (the model says nothing), so whatever the model does describe holds on every processor.
 
-* A memory access the permissions refuse is a page fault: `fault` (the process dies, it has no handler).
+* A memory access the memory refuses is a page fault: `fault` (the process dies, it has no handler).
 * `idiv` with a zero divisor or a quotient outside 64 bits is `#DE`: `fault`. `ud2` is `#UD`: `fault`.
 * `syscall` hands the request to the kernel; after the answer `rax` holds the result, `rcx` the return address,
-  `r11` what the kernel left there, the memory is the kernel's, and every other register is kept (the Linux
-  system-call convention, a named assumption). The flags are not tracked across the call.
-* Fetching needs the instruction's bytes readable (the execute permission is the loader's assumption). -/
+  `r11` what the kernel left there, and every other register is kept (the Linux system-call convention, a named
+  assumption). The flags are not tracked across the call. -/
 
 namespace Runner.X86
 
@@ -38,7 +40,6 @@ structure X where
   zf : Option Bool
   sf : Option Bool
   of : Option Bool
-  mem : Mem
 
 namespace X
 
@@ -101,12 +102,12 @@ def exec (i : Ins) (n : Nat) (x : X) : Res X :=
   let nx := x.rip + BitVec.ofNat 64 n
   let y := { x with rip := nx }
   match i with
-  | .ld d m => opt (x.mem.rd64 (ea x m)) fun v => .next (y.set d v)
-  | .st m s => opt (x.mem.wr64 (ea x m) (x.get s)) fun mm => .next { y with mem := mm }
+  | .ld d m => rd64 (ea x m) fun v => .next (y.set d v)
+  | .st m s => wr64 (ea x m) (x.get s) y
   | .mov d s => .next (y.set d (x.get s))
   | .movi d v => .next (y.set d (sx32 v))
-  | .ldsx d m => opt (x.mem.rd32 (ea x m)) fun v => .next (y.set d (sx32 v))
-  | .ldzx d m => opt (x.mem.rd8 (ea x m)) fun v => .next (y.set d (v.setWidth 64))
+  | .ldsx d m => rd32 (ea x m) fun v => .next (y.set d (sx32 v))
+  | .ldzx d m => rd8 (ea x m) fun v => .next (y.set d v)
   | .zx8 d s => .next (y.set d (((x.get s).setWidth 8).setWidth 64))
   | .lea d m => .next (y.set d (ea x m))
   | .alu o d s => .next (aluStep y o d (x.get s))
@@ -131,22 +132,20 @@ def exec (i : Ins) (n : Nat) (x : X) : Res X :=
     match Cond.eval x c with
     | none => .unk
     | some t => .next { x with rip := if t then nx + sx32 rel else nx }
-  | .jmpm m => opt (x.mem.rd64 (ea x m)) fun t => .next { x with rip := t }
-  | .cmpxchg m s =>
-    opt (x.mem.cas (ea x m) x.rax (x.get s)) fun (old, mm) =>
-      .next ({ (y.cmpf x.rax old) with mem := mm }.set .rax old)
+  | .jmpm m => rd64 (ea x m) fun t => .next { x with rip := t }
+  | .cmpxchg m s => cas (ea x m) x.rax (x.get s) fun old => .next ((y.cmpf x.rax old).set .rax old)
   | .syscall =>
-    .sys ⟨x.rax, x.rdi, x.rsi, x.rdx, x.r10, x.r8, x.r9⟩ fun r =>
-      some { y.nof with rax := r.ret, rcx := nx, r11 := r.r11, mem := r.mem }
+    .ask (.sys ⟨x.rax, x.rdi, x.rsi, x.rdx, x.r10, x.r8, x.r9⟩) fun r => opt r fun p =>
+      .next { y.nof with rax := p.1, rcx := nx, r11 := p.2 }
   | .ud2 => .fault
 
-/-- The 15 bytes at `a` (the longest x86 instruction). -/
-def fetch (m : Mem) (a : W) : List B :=
-  (List.range 15).map fun i => m.b (a + BitVec.ofNat 64 i)
+/-- The 15 bytes at `a` of the code `C` (the longest x86 instruction). -/
+def fetch (C : W → B) (a : W) : List B :=
+  (List.range 15).map fun i => C (a + BitVec.ofNat 64 i)
 
-def step (x : X) : Res X :=
-  match decode (fetch x.mem x.rip) with
+def step (C : W → B) (x : X) : Res X :=
+  match decode (fetch C x.rip) with
   | none => .unk
-  | some (i, n) => if Mem.all x.mem.rd x.rip n then exec i n x else .unk
+  | some (i, n) => exec i n x
 
 end Runner.X86

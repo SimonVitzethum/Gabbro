@@ -37,7 +37,7 @@ def main():
         print("runner-cpu: writing the runner failed:", r.stderr)
         return 2
     os.chmod(os.path.join(d, "runner"), 0o755)
-    for p in ["hello", "probe"]:
+    for p in ["hello", "probe", "threads"]:
         want = open(os.path.join(d, p + ".out"), "rb").read()
         code = int(open(os.path.join(d, p + ".code")).read())
         q = subprocess.run([os.path.join(d, "runner"), os.path.join(d, p + ".img")], capture_output=True)

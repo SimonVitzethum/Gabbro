@@ -133,21 +133,41 @@ def initX (i : Nat) (c : Case) : X :=
     r10 := c.regs .r10, r11 := c.regs .r11, r12 := c.regs .r12, r13 := c.regs .r13, r14 := c.regs .r14,
     r15 := c.regs .r15, rip := 0x1000,
     cf := some (bitOf c.flags 0), zf := some (bitOf c.flags 6), sf := some (bitOf c.flags 7),
-    of := some (bitOf c.flags 11), mem := dataMem i c.data }
+    of := some (bitOf c.flags 11) }
+
+/-- The answer of the one memory `m` to a data request. -/
+def memAns (m : Mem) : Op → Option (Ans × Mem)
+  | .rd 1 a => some ((m.rd8 a).map (fun v => (v.setWidth 64, 0)), m)
+  | .rd 4 a => some ((m.rd32 a).map (fun v => (v.setWidth 64, 0)), m)
+  | .rd _ a => some ((m.rd64 a).map (fun v => (v, 0)), m)
+  | .wr a v => some (match m.wr64 a v with | some m' => (some (0, 0), m') | none => (none, m))
+  | .cas a e n => some (match m.cas a e n with | some (o, m') => (some (o, 0), m') | none => (none, m))
+  | .sys _ => none
+
+/-- One instruction against the memory `m`: the new state and memory, or `none` for a fault or `unk`. -/
+def execM (i : Ins) (x : X) (m : Mem) : Option (X × Mem) :=
+  match exec i (enc i).length x with
+  | .next y => some (y, m)
+  | .ask o k =>
+    match memAns m o with
+    | some (a, m') => match k a with
+      | .next y => some (y, m')
+      | _ => none
+    | none => none
+  | _ => none
 
 /-- Runs the case's instructions in order; a jump that skips the next instruction skips it. -/
-def runCase : List Ins → X → Option X
-  | [], x => some x
-  | i :: is, x =>
+def runCase : List Ins → X → Mem → Option (X × Mem)
+  | [], x, m => some (x, m)
+  | i :: is, x, m =>
     let n := (enc i).length
-    match exec i n x with
-    | .next y =>
-      if y.rip = x.rip + BitVec.ofNat 64 n then runCase is y
+    match execM i x m with
+    | some (y, m') =>
+      if y.rip = x.rip + BitVec.ofNat 64 n then runCase is y m'
       else
-        -- a jump: over the following instructions by `rel` bytes
         let skipped := (is.map fun j => (enc j).length).sum
-        if y.rip = x.rip + BitVec.ofNat 64 (n + skipped) then some { y with rip := x.rip } else none
-    | _ => none
+        if y.rip = x.rip + BitVec.ofNat 64 (n + skipped) then some ({ y with rip := x.rip }, m') else none
+    | none => none
 
 def flagsOut (x : X) : Nat × Nat :=
   let fs := [(0, x.cf), (6, x.zf), (7, x.sf), (11, x.of)]
@@ -239,20 +259,20 @@ partial def gen (n : Nat) : List B × List B × List (Nat × Nat) := Id.run do
       | [.cmpxchg m _] =>
         if eqc = 0 then
           let x := initX i c0
-          match x.mem.rd64 (ea x m) with
+          match (dataMem i c0.data).rd64 (ea x m) with
           | some v => { c0 with regs := fun r => if r == .rax then v else regsF r }
           | none => c0
         else c0
       | _ => c0
     g := g6
-    match runCase c.ins (initX i c) with
+    match runCase c.ins (initX i c) (dataMem i c.data) with
     | none => pure ()   -- the model faults (idiv): no case
-    | some y =>
+    | some (y, ym) =>
       let blockIn : List B := (regs.map fun r => if r == .rsp then 0 else c.regs r).flatMap leW ++
         leN 8 c.flags ++ c.data.toList
       let live := regs.filter fun r => r != .rsp && r != base
       let (fv, fm) := flagsOut y
-      let dataOut := (List.range 256).map fun j => y.mem.b (BitVec.ofNat 64 (caseDat i + j))
+      let dataOut := (List.range 256).map fun j => ym.b (BitVec.ofNat 64 (caseDat i + j))
       let outRegs := regs.flatMap fun r => if live.contains r then leW (y.get r) else leN 8 0
       let blk := pad (blockIn.take 136 ++ dataOut) OUT ++ outRegs ++ leN 8 fv
       code := caseCode i base c :: code
@@ -280,6 +300,15 @@ structure FaultCase where
 def faultProg (setup : List Ins) (i : Ins) : List B :=
   elf2 (setup.flatMap enc ++ enc i ++ tail 0) (List.replicate 4096 (byte 0))
 
+/-- The step faults against the memory `m`. -/
+def faults1 (r : Res X) (m : Mem) : Bool :=
+  match r with
+  | .fault => true
+  | .ask o k => match memAns m o with
+    | some (a, _) => match k a with | .fault => true | _ => false
+    | none => false
+  | _ => false
+
 def faultModel (regs : List (Reg × W)) (i : Ins) : Bool :=
   let m : Mem :=
     { b := fun _ => 0
@@ -288,18 +317,16 @@ def faultModel (regs : List (Reg × W)) (i : Ins) : Bool :=
   let x : X :=
     { rax := 0, rcx := 0, rdx := 0, rbx := 0, rsp := 0, rbp := 0, rsi := 0, rdi := 0, r8 := 0,
       r9 := 0, r10 := 0, r11 := 0, r12 := 0, r13 := 0, r14 := 0, r15 := 0, rip := 0x401000,
-      cf := none, zf := none, sf := none, of := none, mem := m }
+      cf := none, zf := none, sf := none, of := none }
   let x := regs.foldl (fun x (r, v) => x.set r v) x
-  match exec i (enc i).length x with
-  | .fault => true
-  | _ => false
+  faults1 (exec i (enc i).length x) m
 
 def idivOverflowModel : Bool :=
   let m : Mem := { b := fun _ => 0, rd := fun _ => false, wr := fun _ => false }
   let x : X :=
     { rax := BitVec.ofNat 64 (2 ^ 63), rcx := 63, rdx := BitVec.allOnes 64, rbx := 0, rsp := 0, rbp := 0,
       rsi := BitVec.allOnes 64, rdi := 0, r8 := 0, r9 := 0, r10 := 0, r11 := 0, r12 := 0, r13 := 0,
-      r14 := 0, r15 := 0, rip := 0, cf := none, zf := none, sf := none, of := none, mem := m }
+      r14 := 0, r15 := 0, rip := 0, cf := none, zf := none, sf := none, of := none }
   match exec (.idiv .rsi) 3 x with
   | .fault => true
   | _ => false
