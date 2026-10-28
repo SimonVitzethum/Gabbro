@@ -33,35 +33,39 @@ compiler emits LLVM IR.*
 Every one of them is an ordinary Gabbro program: accepted by `AkzeptiertX` (so `gabbro_ziel` gives memory safety, race
 freedom, contracts), proved terminating, deterministic and correct with GabbroV.
 
-## 2. Bootstrap: stage 0 runs the compiler (Simon, 2026-10-26; one stage since 2026-10-28)
+## 2. Bootstrap: stage 0 translates, a verified x86-64 runner runs (Simon, 2026-10-26; changed 2026-10-28)
 
-| Stage | Written in | Runs on | Does |
+| Part | Written in | Runs on | Does |
 |---|---|---|---|
-| 0 | Lean, the package `stage0/` | native (Lean executable) | runs **all** of Gabbro: every run is a run of machine G / the thread machine over GX (proved); raw Linux syscalls for IO; Gabbro threads on OS threads |
-| 1 | full Gabbro | stage 0 | `gpruef` and `gkomp` (the checker and the compiler of §1) |
+| stage 0 | Lean, the package `stage0/` | native (Lean executable), once per program | translates an accepted Gabbro program into the IR `S0IR` (§2.1); runs nothing |
+| the runner | x86-64 machine code, its bytes proved in Lean (§2.2) | x86-64, Linux | runs `S0IR`: every run is a run of the thread machine over GX (proved); raw Linux syscalls for IO; Gabbro threads on OS threads |
+| stage 1 | full Gabbro | the runner | `gpruef` and `gkomp` (the checker and the compiler of §1) |
 
-* **There is no interpreter written in Gabbro** (Simon, 2026-10-28). Stage 0 runs the large compiler directly, either
-  by interpreting it on machine G or by compiling it, inside stage 0, into a small fast IR whose runs are proved to be
-  runs of the thread machine (a simulation theorem like `Schnell/Sim`). No LLVM and no unvalidated code is on the
-  bootstrap path: it would void every guarantee, and stage 0 would have no reason to exist.
+* **Decisions (Simon, 2026-10-28).** There is no interpreter written in Gabbro. Lean stage 0 only translates Gabbro into
+  `S0IR`; it does not run programs. `S0IR` runs on a small x86-64 runner whose machine code is formally verified (the
+  precedent is seL4's binary verification). No LLVM, no C and no unvalidated code is on the bootstrap path: it would
+  void every guarantee, and stage 0 would have no reason to exist. The runner is x86-64, not AArch64: the available
+  AArch64 machine is 5-10 times slower, and the AArch64 model `arm/` is far from complete.
 * **Stage 0 therefore needs the whole language:** the Lean front end over the full syntax (shared with GabbroV's
   source level), and the forms its subset gate refuses today (atomic statics, the open region, device registers) once
   the model carries them.
-* **Speed target:** stage 0 runs `gkomp` compiling its own source (≈ 500 000 lines) in under one hour, with the
-  optimisations that `gkomp` itself performs. Measured base (2026-10-28, `54a9b3d7`): about 93 us per input byte on the
-  upper-casing probe, roughly 10^5 machine steps a second, every step under one world lock, plus a full replay.
-* **Syscalls are raw.** A Gabbro `syscall` item is executed as that Linux system call (one generic trampoline, booked
-  as a wall). Named assumption: the system call does what its Gabbro contract says (the boot oracle of the
-  hardware assumptions, `HardwareAnnahmen`).
-* **Threads are OS threads.** Each Gabbro thread runs on its own OS thread; every step of the thread machine
-  is taken under one futex lock on the shared world. Proved: the sequence of steps taken is a run of the thread
-  machine. Named assumptions: the futex lock gives mutual exclusion; the system calls keep their contracts. The OS
-  threads are created by the Lean runtime (a raw `clone` inside a Lean process breaks its thread-local state); the
-  locking is raw `futex`.
-* **Stage 1 is the goal of §1.** `gkomp` run by stage 0 compiles its own source; the compiled `gkomp` compiles itself
-  again (fixpoint), and the diverse double compilation compares stage 0's run with the native binary.
+* **Speed target:** the runner runs `gkomp` compiling its own source (≈ 500 000 lines) in under one hour, with the
+  optimisations that `gkomp` itself performs. Measured base of the Lean-run stage 0 (2026-10-28, `54a9b3d7`): about
+  93 us per input byte on the upper-casing probe, roughly 10^5 machine steps a second, every step under one world
+  lock, plus a full replay. Needed: about 3 * 10^5 - 10^7 steps a second for `gkomp` without optimisations, about
+  3 * 10^7 - 4 * 10^8 with `-O3`-class optimisations done by `gkomp` itself (estimates, 2026-10-28).
+* **Syscalls are raw.** A Gabbro `syscall` item is executed as that Linux system call (`syscall` instruction in the
+  runner). Named assumption: the system call does what its Gabbro contract says (the boot oracle of the hardware
+  assumptions, `HardwareAnnahmen`).
+* **Threads are OS threads.** Each Gabbro thread runs on its own OS thread of the runner (raw `clone`, raw `futex`;
+  no Lean runtime inside the runner). Named assumptions: the system calls keep their contracts; the CPU implements
+  the x86-64 model for the instructions the runner uses.
+* **Stage 1 is the goal of §1.** `gkomp` run by the runner compiles its own source; the compiled `gkomp` compiles itself
+  again (fixpoint), and the diverse double compilation compares the runner's run with the native binary.
 
-**State of stage 0 (2026-10-26, `stage0/Stage0/`).** `stage0` is a Lean executable (`cd stage0 && lake build`;
+**State of stage 0 (2026-10-26, `stage0/Stage0/`).** Today `stage0` still RUNS programs; that path is the reference
+until the runner runs `gkomp`, then it is deleted (no legacy) except what the proofs of §2.1 reuse (`Schnell/`, the
+replay theorem). `stage0` is a Lean executable (`cd stage0 && lake build`;
 `stage0 [--schritte N] [--passes N] PROGRAM.gab`). It runs the stages of `uebersetzeAllg`, refuses what `AkzeptiertX`
 refuses (`akzeptiertU`), refuses device registers and the open region (its provider is not yet fresh in the model),
 and accepts a foreign body only as a `syscall` gate bound on this machine (`Tor/Bindung.lean`). The run is on the thread
@@ -73,104 +77,100 @@ lock (`c/syscall.c`, the booked wall); then the schedule is replayed under the l
 `nachspiel_ist_lauf`: every output is read from a machine reachable by `RufSchrittG` from the start machine under the
 oracle that answers with the observed results, in which thread 0 has ended. A program without gates gets its input
 in `io.ein`/`ein_len` and leaves its output in `io.aus`/`aus_len` (`boot`, kernel-evaluable; witness `Zeuge.lean`).
-The probes `stage0/proben/` (write, read, the convention, a root writing while `main` blocks in `read`) run in stage 7
-of the Lean guardian. Built since: the fast machine (`Schnell/`, a normal form proved to simulate the thread machine),
-an array memory written in place, the program tabulated once (`Lauf/Memo`). Open before stage 0 can run `gkomp`:
-(a) speed, by a factor of roughly 3-100 (the one-hour target above): the IR `S0IR` (§2.1) and the verified runner
-(§2.2); (b) the provider freshness repair of the open region in the model; (c) the
-front end and the subset gate over the whole language; (d) the Rust exporter `lean_g.rs` still writes `aschreibt := false` for every gate and refuses
-a gate's `writes`, which the Lean front end and the model accept.
+The probes `stage0/proben/` run in stage 7 of the Lean guardian. Built since: the fast machine (`Schnell/`, a normal
+form proved to simulate the thread machine), an array memory written in place, the program tabulated once
+(`Lauf/Memo`). Open: (a) `S0IR` and the lowering (§2.1); (b) the runner (§2.2); (c) the provider freshness repair of
+the open region in the model; (d) the front end and the subset gate over the whole language; (e) the Rust exporter
+`lean_g.rs` still writes `aschreibt := false` for every gate and refuses a gate's `writes`, which the Lean front end
+and the model accept.
 
 ### 2.1 The stage-0 IR `S0IR` (plan, 2026-10-28)
 
-**Purpose.** Stage 0 compiles the accepted G program ONCE into `S0IR` and runs `S0IR` instead of stepping the typed
-syntax. Every `S0IR` run is proved to be a run of the thread machine (`RufSchrittG`) through the fast machine
-(`Schnell/`): the theorem is a forward simulation `ir_sim` from the `S0IR` state to `FStand`, so `nachspiel_ist_lauf`
-and everything the goal theorem says about runs carry over unchanged. Nothing in `S0IR` is a new semantics: it is a
-lowering of G, proved, and the only meaning remains machine G.
+**Purpose.** Stage 0 lowers the accepted G program ONCE into `S0IR`; the runner executes it. Every `S0IR` run is
+proved to be a run of the thread machine (`RufSchrittG`) through the fast machine (`Schnell/`): the theorem is a
+forward simulation `ir_sim` from the `S0IR` state to `FStand`, so `nachspiel_ist_lauf` and everything the goal theorem
+says about runs carry over unchanged. `S0IR` is not a new semantics: its meaning is defined in Lean as a small-step
+machine, proved against machine G, and the runner is proved against that machine (§2.2).
 
 **Design rules.**
 1. **Flat and register-based.** A function is an array of basic blocks; a block is an array of instructions over
    numbered frame slots and ends in one terminator (`jmp`, `br`, `switch`, `call`, `ret`, `stop`). Every `Expr`,
    `Stmt` and `Endblock` former of G lowers to straight-line slot code plus terminators; nested environments `Env D Γ`
    become fixed slot offsets computed once per function. No closures, no dependent types at run time.
-2. **Words, not `Int`.** A value whose G type has a range inside 64 bits (`Ty.int lo hi`, `bool`, `opt`, `why`,
-   `sum` tags, `fnptr`, `ptr`, `ref`) is one machine word. An operation whose operand ranges prove the exact result
-   fits in 64 bits is a word operation (the proof is a range lemma per operator, decided at lowering time); any other
-   is a `big` operation on Lean `Int` (expected rare: measured per program, a ledger counts them). Aggregates
-   (`arr`, `str`) occupy consecutive slots; floats are the kernel IEEE model's bit patterns in a word.
-3. **Memory as stage 0 already holds it.** Tables are arrays per field (`AWelt`, structure of arrays), statics one cell
-   each, the open region in chunks handed out by its provider. An `S0IR` load/store names (table, field, index slot)
-   or (static); index checks that G performs stay as instructions with the same outcome, checks that the type
-   discharges are not emitted (the range lemma is the proof).
+2. **Words only.** A value whose G type has a range inside 64 bits (`Ty.int lo hi`, `bool`, `opt`, `why`, `sum`
+   tags, `fnptr`, `ptr`, `ref`) is one machine word. An operation whose operand ranges prove the exact result fits in
+   64 bits is a word operation (a range lemma per operator, decided at lowering time); any other is lowered to a
+   fixed multi-word sequence (128-bit or wider by limbs) whose correctness is a lemma, never to a call into a bignum
+   library. Aggregates (`arr`, `str`) occupy consecutive slots; floats are the kernel IEEE model's bit patterns in a
+   word, operations on them the x86-64 SSE2 instructions the hardware assumption `gleitkomma_ieee` names.
+3. **Memory.** Tables are arrays per field (structure of arrays, as `AWelt`), statics one cell each, the open region in
+   chunks handed out by its provider. A load/store names (table, field, index slot) or (static). Index checks that G
+   performs stay as instructions with the same outcome; checks that the type discharges are not emitted (the range
+   lemma is the proof).
 4. **Ghost is erased, outcomes are kept.** The thread trace `spur`, the call log, the frame entry worlds `s0` and the
    run log are ghost: `S0IR` does not compute them, the simulation relation reconstructs them (as the compact trace of
-   `Schnell/` already does). Whatever decides an outcome of G stays: every `narrow`/`check` branch, every refusal or
-   stop the machine takes, every runtime check G itself makes. The budget, depth and progress stops of G are kept
-   EXACTLY: one counter per thread, decremented at the points where G counts (loop back edges, calls), so a run that
-   G ends in a budget outcome ends there in `S0IR` too.
+   `Schnell/` does). Whatever decides an outcome of G stays: every `narrow`/`check` branch, every refusal or stop the
+   machine takes, every runtime check G makes. The budget, depth and progress stops of G are kept EXACTLY: one counter
+   per thread, decremented where G counts (loop back edges, calls).
 5. **Effects are instructions.** Lock acquire/release (with the rank order and the held set of the frame), atomic
-   statics (load, store, read-modify-write, each one instruction carrying its GX order), `syscall` gates (the
-   question to the oracle: the run phase asks the system call, the log answers it), `start` of a root. These are the
-   only instructions that touch another thread; everything else is thread-local.
-6. **Threads without a world lock.** Each machine thread is one `S0IR` thread. Race freedom (`RennfreiBis`) says two
-   threads never touch the same non-atomic carrier without a lock between them, so thread-local instructions need no
-   global lock: only the effect instructions of rule 5 synchronise. Owed theorem `ir_parallel`: a parallel `S0IR` run
-   is equal to some interleaving of the thread machine (from race freedom and the lock discipline; atomics through the
-   weak memory of GX).
-7. **Answers by log, no replay.** The run phase records the oracle answers and the schedule of effect instructions
-   only; the proof object is the log, and the existing replay theorem is applied to the log rather than re-running
-   the whole program (`nachspiel_ist_lauf` over the log; the replay stays available as a cross-check, not on the path
-   of every run).
+   statics (load, store, read-modify-write, each carrying its GX order), `syscall` gates (the oracle question), `start`
+   of a root. Only these touch another thread.
+6. **Threads without a world lock.** Race freedom (`RennfreiBis`) says two threads never touch the same non-atomic
+   carrier without a lock between them, so thread-local instructions need no global lock; only rule 5 synchronises.
+   Owed theorem `ir_parallel`: a parallel `S0IR` run is equal to some interleaving of the thread machine.
+7. **Answers by log, no replay.** The runner records the oracle answers and the order of effect instructions; the
+   replay theorem is applied to the log (`ir_log`), not to a second run of the program.
+8. **A binary format.** `S0IR` is serialised to a byte image the runner loads (functions, blocks, a constant pool, the
+   table layout); `ir_decode` proves that decoding the image gives back the `S0IR` program stage 0 produced.
 
 **Theorems owed.** `ir_lower_ok` (lowering is total on accepted programs, or refuses by name), `ir_sim` (one `S0IR`
-step is zero or more fast-machine steps, the related states agree on memory and answers), `ir_budget` (stops agree),
-`ir_parallel` (rule 6), `ir_log` (rule 7). Witnesses: the probes of `stage0/proben/` plus a program with every
-`Stmt` former; a planted mis-lowering (wrong slot, dropped check) must fail the build.
+step is zero or more fast-machine steps, related states agree on memory and answers), `ir_budget` (stops agree),
+`ir_parallel` (rule 6), `ir_log` (rule 7), `ir_decode` (rule 8). Witnesses: the probes of `stage0/proben/` plus a
+program with every `Stmt` former; a planted mis-lowering (wrong slot, dropped check) must fail the build.
 
-**Speed target and measurement.** Single thread, run in compiled Lean: 10^7 - 5 * 10^7 `S0IR` instructions a second
-(today about 10^5 G steps). A stage in `pruefe-lean.py` (no fifth guardian) runs the upper-casing probe at 1 MiB and
-a call-heavy probe and records steps a second; the one-hour target of §2 is measured on `gkomp` once it exists.
+**The lowering's output is checked, not trusted.** Stage 0 is compiled Lean, so its run sits on the Lean compiler, the
+Lean runtime and the toolchain's C compiler. Its output (the `S0IR` image) is therefore validated: either
+`ir_lower_ok` evaluated by the kernel on the pinned program (`decide +kernel`), or an `S0IR` checker written in Gabbro
+and run on the runner (proved like every Gabbro tool). Which one is cheaper for 500 000 lines is measured first.
 
-**Limit of the Lean-run `S0IR`.** Lean arrays are values with reference counts, so several OS threads cannot write ONE
-array in place; shared memory across OS threads in Lean needs a foreign (C) cell. Rule 6 therefore pays off only in
-the runner of §2.2; the Lean-run `S0IR` interleaves the threads on one OS thread (gates still run on their own OS
-thread), which serves `gkomp` without optimisations (§2, about 10^9 - 3 * 10^10 steps) but not `gkomp -O3` under stage
-0 (about 10^11 - 1.5 * 10^12 steps, needs 10^8 and more a second).
+**Size.** `S0IR` syntax, semantics, lowering and image format 3 000 - 6 000 lines of Lean; `ir_sim` with `ir_budget`
+4 000 - 10 000; `ir_parallel` 3 000 - 8 000; `ir_log` 500 - 2 000.
 
-**Size.** `S0IR` syntax and lowering 2 000 - 4 000 lines of Lean; `ir_sim` with `ir_budget` 4 000 - 10 000;
-`ir_parallel` 3 000 - 8 000; `ir_log` 500 - 2 000.
+### 2.2 The verified x86-64 runner (Simon, 2026-10-28)
 
-### 2.2 The verified runner (proposal, 2026-10-28; Simon's decision open)
+**What it is.** A program of x86-64 machine code (no C, no compiler, no Lean runtime) that loads an `S0IR` image and
+runs it: a threaded-code interpreter (one handler per instruction, dispatch by an indirect jump table), the memory
+of rule 3, the per-thread counters of rule 4, raw `syscall` for the gates, raw `clone` + `futex` for threads and locks,
+`LOCK`-prefixed read-modify-write and `MFENCE` for atomics. Its bytes are written down in Lean and proved there.
 
-**The trust gap of a Lean-run stage 0.** A Lean executable is Lean compiled to C and the C compiled by the toolchain's
-C compiler (clang, i.e. LLVM), linked with the Lean runtime (C/C++). So the compiled Lean code, its runtime and LLVM
-sit under every stage-0 run today: exactly what §2 keeps off the bootstrap path.
+**What is proved.** `runner_ok`: for every image and every run of the runner on the x86-64 model, the sequence of
+machine states refines a run of the `S0IR` machine of §2.1 (per handler: its instructions from dispatch to dispatch
+refine its `S0IR` rule; the loader refines `ir_decode`). Concurrency: the x86-TSO memory model, with the mapping of
+the runner's atomics and locks to GX proved (`runner_tso`). Together with §2.1: every output of the runner is an output
+of a run of the thread machine, so the goal theorem applies to it. The precedent for the method is seL4's binary
+verification (machine code against a formal ISA model, refinement of a proved specification).
 
-**Proposal.** A small runner for `S0IR` written directly as **AArch64 machine code** (no C, no compiler), its bytes
-proved in Lean against the AArch64 model of `arm/` (the hand-ported Sail instructions, `Arm/Isa`, and the multicore
-model, `Arm/Mem`): every instruction handler of the runner refines its `S0IR` rule; the runner's atomics and locks
-(`LDAXR`/`STLXR` or LSE, `DMB`) are proved against the GX correspondence of `ARM-PLAN.md`. System calls are raw `svc`,
-the threads raw `clone` + `futex` (no Lean runtime inside the runner, so no reason against raw `clone` remains). Named
-assumptions only: the hardware model, the system calls' contracts.
+**The model.** The x86-64 model archived on branch `archive` (commit `7c693cb7`: 357 Lean files, ≈ 265 000 lines,
+Lean v4.33) is the starting point. Only the instruction subset the runner uses is revived, re-read against the
+manuals instruction by instruction ("silicon over proof shape"; what a vendor leaves undefined, e.g. some flags,
+stays FREE), moved to the current toolchain and given its own folder. Named assumption: the CPU implements this
+model for these instructions. The memory model is x86-TSO, which is much smaller than the Armv9 model.
 
+* **Why x86-64:** the AArch64 machine at hand is 5-10 times slower, and `arm/` is far from complete (Simon, 2026-10-28).
+  The compiler's own targets (`gkomp`: x86-64 and AArch64, `ARM-PLAN.md`) are not affected.
 * **Why not C:** a verified C runner needs a verified C compiler; CompCert is Coq and not freely licensed, and gcc/clang
-  bring LLVM back. Handwritten C is also against the rule of `AGENTS.md` §3.
-* **Why AArch64 only:** the x86-64 model is frozen (`ARM-PLAN.md`); the machine here is AArch64 (8 cores). x86-64
-  keeps the Lean-run `S0IR`.
-* **What stays in compiled Lean:** the front end and the lowering to `S0IR` run once per program, not per step. Their
-  output can be checked instead of trusted: `ir_lower_ok` evaluated by the kernel (`decide +kernel` on the pinned
-  program) or a small `S0IR` checker written in `S0IR` and run on the verified runner. Which of the two is cheaper for
-  500 000 lines is measured before it is chosen.
+  bring LLVM back. Handwritten C is also against `AGENTS.md` §3.
 * **Speed:** a threaded-code interpreter in machine code runs about 10^8 - 3 * 10^8 `S0IR` instructions a second per
-  core, times the cores under rule 6: enough for `gkomp -O3` under stage 0 within an hour at the low end of §2's
-  estimate, not at the high end.
-* **Size and risk:** the runner 3 000 - 8 000 instructions; the proofs 20 000 - 50 000 lines of Lean, most of it an
-  instruction-level layer over `Arm/Isa` that makes symbolic execution of a handler cheap. The least charted part is
-  rule 6 on the weak memory of AArch64.
+  core, times the cores under rule 6: `gkomp` without optimisations well within the hour, `gkomp -O3` within the hour
+  at the low end of §2's estimate, not at the high end.
+* **Size and risk:** the runner 3 000 - 8 000 instructions; the proofs 25 000 - 60 000 lines of Lean: an instruction
+  layer over the revived subset that makes symbolic execution of a handler cheap, the handlers, the loader, the
+  system-call and thread layer, `runner_tso`. The least charted part is `ir_parallel` with `runner_tso`.
 
-**Order.** `S0IR` and `ir_sim` first (they serve both runners), then `ir_log`, then the verified runner, then
-`ir_parallel` on it.
+**Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; the revived x86-64 subset and its instruction layer
+beside it; then the sequential runner with `runner_ok` (one thread); then `ir_log`; then threads, `ir_parallel` and
+`runner_tso`. The Lean-run stage 0 stays the reference until the runner runs the probes and `gkomp`, then its run
+path is deleted.
 
 ## 3. What is proved, for each tool
 
@@ -350,8 +350,8 @@ Rust counterpart and 2-3x its Lean definition.
 | generated container instances (not written by hand) | -- | 10 000-30 000 |
 | **Lean, specification and proof** | | |
 | language needs of §5 (region release, strings in G, file-gate contracts, measure-based loops) | region in G ≈ 5 000 | 8 000-20 000 |
-| stage 0 (`stage0/`) over the whole language, the small IR with its simulation proof, parallel steps (2026-10-28) | stage 0 ≈ 6 900 | 10 000-25 000 |
-| the verified AArch64 runner of `S0IR` (§2.2, if decided): machine code and its proofs over `arm/` | `arm/` ≈ 5 900 | 20 000-50 000 |
+| stage 0 (`stage0/`) as the translator into `S0IR` over the whole language, with `ir_sim`, `ir_parallel`, `ir_log`, `ir_decode` (§2.1) | stage 0 ≈ 6 900 | 10 000-26 000 |
+| the verified x86-64 runner of `S0IR` (§2.2): machine code, the revived x86-64 subset, `runner_ok`, `runner_tso` | archived x86-64 model ≈ 265 000 | 25 000-60 000 |
 | GabbroV: libraries' contracts | GabbroV today 115 000 | 8 000-20 000 |
 | GabbroV: front end against `lex`/`parseTopTief`/`elabU` | | 30 000-70 000 |
 | GabbroV: helpers, IR printer, refusal reports | | 15 000-35 000 |
@@ -374,9 +374,9 @@ they must be designed into `gkomp` from S7 on, not added afterwards.
 
 ## 10. Decisions (Simon, 2026-10-25; 2026-10-26)
 
-0. (2026-10-26, changed 2026-10-28) The bootstrap (§2): stage 0 in Lean (`stage0/`) runs the checker and compiler
-   written in Gabbro directly -- interpreted, or compiled inside stage 0 into a small proved IR. No interpreter in a
-   Gabbro subset, no LLVM on the bootstrap path.
+0. (2026-10-26, changed 2026-10-28) The bootstrap (§2): stage 0 in Lean (`stage0/`) only translates Gabbro into the IR
+   `S0IR`; a formally verified x86-64 machine-code runner runs it (not AArch64: the machine is 5-10 times slower and
+   `arm/` is far from complete). No interpreter in a Gabbro subset, no LLVM and no C on the bootstrap path.
 
 All decided:
 1. The premise *campaign* (§4) is accepted: the agreement on M ∪ N, computed by the verified `glauf` on the native

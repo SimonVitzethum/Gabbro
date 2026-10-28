@@ -129,12 +129,13 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   them (size `unendlich`); arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them; the Rust exporter
   does not construct them.
 - **Stage 0 runtime (2026-10-26, THEOREM-MAP 105).** Runs on the thread machine with raw system calls on OS threads;
-  the fast machine and the array memory are built. Stage 0 runs the compiler itself (no stage 1, no LLVM on the
-  bootstrap path; `PLAN-SELF-HOSTING.md` §2). Open: speed (target: `gkomp` compiles its own ≈ 500 000 lines on stage 0
-  in under one hour; base about 10^5 steps a second, short by a factor of roughly 3-100: the IR `S0IR` and, if decided,
-  the verified AArch64 runner, `PLAN-SELF-HOSTING.md` §2.1-§2.2); the provider freshness of the open region in the model; the
-  front end and the subset gate over the whole language; the Rust exporter `lean_g.rs` writes `aschreibt := false` for
-  every gate and refuses a gate's `writes` (the model and the Lean front end accept it).
+  the fast machine and the array memory are built. Decided 2026-10-28 (`PLAN-SELF-HOSTING.md` §2): Lean stage 0 only
+  translates Gabbro into the IR `S0IR` (§2.1); a formally verified x86-64 machine-code runner runs it (§2.2), revived
+  from the archived x86-64 model (branch `archive`). Target: `gkomp` compiles its own ≈ 500 000 lines on the runner in
+  under one hour. Open: `S0IR` with `ir_sim`; the x86-64 subset; the runner with `runner_ok`, then threads with
+  `ir_parallel`/`runner_tso`; the provider freshness of the open region in the model; the front end and the subset gate
+  over the whole language; the Rust exporter `lean_g.rs` writes `aschreibt := false` for every gate and refuses a
+  gate's `writes` (the model and the Lean front end accept it). The Lean run path is deleted once the runner runs `gkomp`.
 - **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
   `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
   fields. Open, model work first where marked (M):

@@ -99,7 +99,8 @@ not the Rust checker, and no bridge to any binary is built. The
   `ld.lld`). A form LLVM cannot lower is refused by name (`Y1xx`). The removed C emitter is in the tag
   `archiv/c-emitter-2026-10-17`.
 - **Target direction: AArch64** (Armv9-A) on the Sail Arm model, with the multicore memory model added in Lean
-  (`ARM-PLAN.md`). The x86-64 hardware model is frozen (its files stay; add nothing there).
+  (`ARM-PLAN.md`). The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
+  stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), which revives the x86-64 instruction subset it uses.
 - **Target portability**: source semantics, IR, optimisation and validation stay generic; ABI, image and entry
   requirements are described in checked profiles; environment services are Gabbro bindings with user-logic proof
   obligations. No implicit Linux/POSIX/libc/ELF dependency; freestanding has no mandatory host runtime.
