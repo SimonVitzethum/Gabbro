@@ -3,14 +3,17 @@
   Subject:   The executable `stage0` (`stage0/lakefile.toml`).
 
     stage0 [--schritte N] [--passes N] PROGRAM.gab < INPUT > OUTPUT
+    stage0 --ir PROGRAM.gab IMAGE
+
 
   checks PROGRAM with the goal theorem's checker Bool and runs its `main` on the thread machine with real system calls
   (`bootIO`, `Tor/LaufIO.lean`: the run, then its replay under the observed answers). A program
   that binds system-call gates does its own input and output; one that binds none gets the input bytes in
   `io.ein`/`ein_len`, and its output is `io.aus` up to `aus_len`. A refusal or a stop goes to stderr with
-  exit code 1.
+  exit code 1. With `--ir` it writes the program's `S0IR` image for the runner instead (`IRBild.lean`).
 -/
 import Stage0.Tor.LaufIO
+import Stage0.IRBild
 
 namespace Gabbro.Stage0
 
@@ -26,6 +29,12 @@ def optionen : Budget → List String → Except String (Budget × String)
   | _, _ => .error "usage: stage0 [--schritte N] [--passes N] PROGRAM.gab < INPUT > OUTPUT"
 
 def haupt (args : List String) : IO UInt32 := do
+  if let ["--ir", pfad, aus] := args then
+    match irBild (← IO.FS.readFile pfad) with
+    | .error e => IO.eprintln ("stage0: " ++ e); return 1
+    | .ok bs =>
+      IO.FS.writeBinFile aus ⟨(bs.map fun b => b.toNat.toUInt8).toArray⟩
+      return 0
   match optionen {} args with
   | .error e => IO.eprintln e; pure 2
   | .ok (B, pfad) =>
