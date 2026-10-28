@@ -44,7 +44,7 @@ structure LInv (gNr : Nat → Nat) (tabs : List UTab) (locks : List ULock) (glob
 def artListe (ks : List UParamArt) (d : Nat) : UParamArt := ks.getD d .int
 
 theorem artBei_ok : ∀ (ks : List UParamArt) (d : Nat), d < ks.length → uArtBei ks d = .ok (artListe ks d)
-  | [], d, h => by simp at h
+  | [], d, h => by simp only [List.length_nil, Nat.not_lt_zero] at h
   | k :: ks, 0, _ => rfl
   | k :: ks, d + 1, h => by
     simp only [List.length_cons] at h
@@ -106,16 +106,17 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
   resTy := rfl
   ergNone h := by
     simp only [vertragVon, Vertrag.vonSig, Deklaration.signatur] at h
-    simp [uCtxVon, kopfVon, ergBereich, Deklaration.signatur, h]
+    simp only [uCtxVon, kopfVon, Deklaration.signatur, ergBereich, h, reduceCtorEq, decide_false, and_self]
   ergBool h := by
     simp only [vertragVon, Vertrag.vonSig, Deklaration.signatur] at h
-    simp [uCtxVon, kopfVon, ergBereich, Deklaration.signatur, h]
+    simp only [uCtxVon, kopfVon, Deklaration.signatur, ergBereich, h, decide_true, and_self]
   ergInt lo hi h := by
     simp only [vertragVon, Vertrag.vonSig, Deklaration.signatur] at h
-    simp [uCtxVon, kopfVon, ergBereich, Deklaration.signatur, h]
+    simp only [uCtxVon, kopfVon, Deklaration.signatur, ergBereich, h, Option.some.injEq, reduceCtorEq,
+  decide_false, Option.isSome_some, and_self]
   kanal0 h := by
     simp only [vertragVon, Vertrag.vonSig, Deklaration.signatur] at h
-    simp [uCtxVon, kopfVon, kanalVon, Deklaration.signatur, h]
+    simp only [uCtxVon, kopfVon, Deklaration.signatur, kanalVon, h, ↓reduceIte]
   griff r := by
     obtain ⟨hm, hd⟩ := hgriff r
     subst hm
@@ -127,12 +128,13 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     have hdv : (devs.any fun x => strEq x "Dev") = true := List.any_eq_true.2 ⟨"Dev", hd, by decide⟩
     simp only [uCtxVon, kopfVon, mitGriffPs, ite_true]
     rw [griffe_append devs ps _ 0 hps_none]
-    simp [uGriffe, uGriffTyp, hdv, strEq_eq, hd]
+    simp only [strEq_eq, uGriffe, uGriffTyp, List.any_eq_true, decide_eq_true_eq, exists_eq_right, hd, ↓reduceIte,
+  zero_add, List.map_cons, List.map_nil, decide_true, List.find?_cons_of_pos]
   reg := hL.reg
   kanal h := by
     simp only [vertragVon, Vertrag.vonSig] at h ⊢
     obtain ⟨w, h1, h2, _, h4⟩ := hL.why f h
-    exact ⟨_, w, by simp [uCtxVon, kopfVon, kanalVon, Deklaration.gruende, h], h1, h2, h4⟩
+    exact ⟨_, w, by simp only [uCtxVon, kopfVon, kanalVon, h, ↓reduceIte, Deklaration.gruende], h1, h2, h4⟩
   zb := hzb
 
 /-- The `requires`/`ensures` context: the body context with the held resources of `Λ'` (its locks held). -/
@@ -149,10 +151,10 @@ theorem EInv.mitErg {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     EInvK z ctx (τ :: Γ) Λ (artAuf a art) (some Γ.length) where
   var d hd hk := by
     cases d with
-    | zero => simp at hk
+    | zero => simp only [List.length_cons, Nat.add_one_sub_one, Nat.sub_zero, ne_eq, not_true_eq_false] at hk
     | succ d =>
       simp only [List.length_cons] at hd
-      have := H.var d (by omega) (by simp)
+      have := H.var d (by omega) (by simp only [ne_eq, reduceCtorEq, not_false_eq_true])
       have e : Γ.length + 1 - 1 - (d + 1) = Γ.length - 1 - d := by omega
       simp only [List.length_cons, e]
       exact this
@@ -171,8 +173,9 @@ theorem ergOk_mitErg {V : Vertrag z.deklaration} {ctx : UCtx} {Γ : Ctx} {Λ : L
   intro n hn
   simp only [Option.some.injEq] at hn
   subst hn
-  have h' : (τ :: Γ).reverse[Γ.length]? = some τ := by simp
-  refine ⟨by simp, fun lo hi h => ?_, fun h => ?_⟩
+  have h' : (τ :: Γ).reverse[Γ.length]? = some τ := by simp only [List.reverse_cons, List.length_append, List.length_reverse, List.length_cons, List.length_nil,
+  zero_add, Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
+  refine ⟨by simp only [List.length_cons, Nat.lt_add_one], fun lo hi h => ?_, fun h => ?_⟩
   · rw [h'] at h
     simp only [Option.some.injEq] at h
     subst h
@@ -230,19 +233,19 @@ theorem delabFn_teile (P : Programm z.deklaration) (mitGriff : Bool) (f : z.dekl
       koerper = .block ss ende := by
   unfold delabFn at hd
   cases hps : parListe (optTab z) (z.deklaration.signatur f).params.length 0 (z.deklaration.signatur f).params with
-  | error _ => simp [hps, bind, Except.bind] at hd
+  | error _ => simp only [bind, Except.bind, hps, reduceCtorEq] at hd
   | ok ps =>
   cases hres : delabRes z f with
-  | error _ => simp [hps, hres, bind, Except.bind] at hd
+  | error _ => simp only [bind, Except.bind, hps, hres, reduceCtorEq] at hd
   | ok res =>
   cases hreq : delabReq z P f with
-  | error _ => simp [hps, hres, hreq, bind, Except.bind] at hd
+  | error _ => simp only [bind, Except.bind, hps, hres, hreq, reduceCtorEq] at hd
   | ok req =>
   cases hens : delabEns z P f with
-  | error _ => simp [hps, hres, hreq, hens, bind, Except.bind] at hd
+  | error _ => simp only [bind, Except.bind, hps, hres, hreq, hens, reduceCtorEq] at hd
   | ok ens =>
   cases hb : delabEnd z (vertragVon z.deklaration f) (P.rumpf f) with
-  | error _ => simp [hps, hres, hreq, hens, hb, bind, Except.bind] at hd
+  | error _ => simp only [bind, Except.bind, hps, hres, hreq, hens, hb, reduceCtorEq] at hd
   | ok q =>
   obtain ⟨ss, ende⟩ := q
   simp only [hps, hres, hreq, hens, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq,
@@ -261,11 +264,11 @@ theorem req_ok (P : Programm z.deklaration) (f : z.deklaration.Fn) (art : Nat �
     exact Or.inl ⟨hd.symm, hu.symm⟩
   · simp only [h, Bool.false_eq_true, ite_false] at hd hu
     cases he : delabE z none (P.requires f) with
-    | error _ => simp [he, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, he, reduceCtorEq] at hd
     | ok e =>
     simp only [he, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     cases hb : uOfB z art none (P.requires f) with
-    | none => simp [hb] at hu
+    | none => simp only [hb, Option.map_none, reduceCtorEq] at hu
     | some u =>
     simp only [hb, Option.map_some, Option.some.injEq] at hu
     exact Or.inr ⟨e, u, hd.symm, hu.symm, rfl, rfl⟩
@@ -286,12 +289,12 @@ theorem ens_ok (P : Programm z.deklaration) (f : z.deklaration.Fn) (art : Nat �
   · simp only [h, Bool.false_eq_true, ite_false] at hd hu
     cases he : delabE z ((z.deklaration.signatur f).erg.map fun _ => (z.deklaration.signatur f).params.length)
         (P.ensures f) with
-    | error _ => simp [he, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, he, reduceCtorEq] at hd
     | ok e =>
     simp only [he, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     cases hb : uOfB z (artErgAuf (z.deklaration.signatur f).erg art) ((z.deklaration.signatur f).erg.map fun _ =>
         (z.deklaration.signatur f).params.length) (P.ensures f) with
-    | none => simp [hb] at hu
+    | none => simp only [hb, Option.map_none, reduceCtorEq] at hu
     | some u =>
     simp only [hb, Option.map_some, Option.some.injEq] at hu
     exact Or.inr ⟨e, u, hd.symm, hu.symm, rfl, rfl⟩
@@ -330,7 +333,7 @@ theorem elabFn_eq (ctx : UCtx) (koepfe : List UFnKopf) (kl : List SKlausel) (ss 
 
 theorem brauchtF_needs (ctx : UCtx) (e : SExpr) (h : kopfOk e = true) : brauchtF ctx (.needs e) = some (uBool ctx e) := by
   cases e with
-  | call c args => simp [kopfOk] at h
+  | call c args => simp only [kopfOk, Bool.false_eq_true] at h
   | _ => rfl
 
 theorem gibt_klauseln (ctx : UCtx) (P : Programm z.deklaration) (f : z.deklaration.Fn) (req ens : List SKlausel)
@@ -341,7 +344,7 @@ theorem gibt_klauseln (ctx : UCtx) (P : Programm z.deklaration) (f : z.deklarati
     rw [List.filterMap_eq_nil_iff]
     intro k hk; obtain ⟨e, rfl⟩ := hreq k hk; rfl
   simp only [List.filterMap_append, hr, List.nil_append]
-  split <;> split <;> simp [gibtF, List.filterMap_cons] <;> rfl
+  split <;> split <;> simp only [gibtF, List.filterMap_nil, List.append_nil, List.nil_append, List.filterMap_cons] <;> rfl
 
 theorem braucht_klauseln (ctx : UCtx) (P : Programm z.deklaration) (f : z.deklaration.Fn) (req ens : List SKlausel)
     (hens : ∀ k ∈ ens, ∃ e, k = .gives e) :
@@ -351,7 +354,7 @@ theorem braucht_klauseln (ctx : UCtx) (P : Programm z.deklaration) (f : z.deklar
     rw [List.filterMap_eq_nil_iff]
     intro k hk; obtain ⟨e, rfl⟩ := hens k hk; rfl
   simp only [List.filterMap_append, hr, List.append_nil]
-  split <;> split <;> simp [brauchtF]
+  split <;> split <;> simp only [brauchtF, List.filterMap_nil, List.nil_append, List.append_nil, List.append_right_eq_self, List.filterMap_eq_nil_iff, List.mem_cons, List.not_mem_nil, or_false, forall_eq, List.filterMap_cons_none]
 
 /-- The `ensures` context of a function. -/
 theorem ens_einv (f : z.deklaration.Fn) {ctx : UCtx} {art : Nat → UParamArt}
@@ -395,20 +398,20 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
   unfold uOfFn at hu
   simp only at hu
   split at hu
-  · simp at hu
+  · simp only [reduceCtorEq] at hu
   rename_i hergOk
   cases hks : (z.deklaration.signatur f).params.mapM artErg with
-  | none => simp [hks] at hu
+  | none => simp only [hks, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
   | some ks =>
   simp only [hks, Option.bind_eq_bind, Option.bind_some] at hu
   cases hnd : uOfReq z P f (artListe ks) with
-  | none => simp [hnd] at hu
+  | none => simp only [hnd, Option.bind_none, reduceCtorEq] at hu
   | some needs =>
   cases hgv : uOfEns z P f (artListe ks) with
-  | none => simp [hnd, hgv] at hu
+  | none => simp only [hnd, hgv, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
   | some gives =>
   cases hbr : uOfEnd z (vertragVon z.deklaration f) gNr (artListe ks) (P.rumpf f) with
-  | none => simp [hnd, hgv, hbr] at hu
+  | none => simp only [hnd, hgv, hbr, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
   | some q =>
   obtain ⟨body, r⟩ := q
   simp only [hnd, hgv, hbr, Option.bind_some, Option.some.injEq] at hu
@@ -417,22 +420,22 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
   have hR := req_ok P f _ req needs hreq hnd
   have hE := ens_ok P f _ ens gives hens hgv
   have hreqF : ∀ k ∈ req, ∃ e, k = .needs e := by
-    rcases hR with ⟨rfl, _⟩ | ⟨e, _, rfl, _⟩ <;> simp
+    rcases hR with ⟨rfl, _⟩ | ⟨e, _, rfl, _⟩ <;> simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true, List.mem_cons, or_false, forall_eq, SKlausel.needs.injEq, exists_eq']
   have hensF : ∀ k ∈ ens, ∃ e, k = .gives e := by
-    rcases hE with ⟨rfl, _⟩ | ⟨e, _, rfl, _⟩ <;> simp
+    rcases hE with ⟨rfl, _⟩ | ⟨e, _, rfl, _⟩ <;> simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true, List.mem_cons, or_false, forall_eq, SKlausel.gives.injEq, exists_eq']
   have hkl : ∀ k ∈ req ++ ens, KlauselOk k ∧ (∀ args, k ≠ .needs (.call "Held" args)) ∧ (∀ es, k ≠ .effs es) := by
     intro k hk
     simp only [List.mem_append] at hk
     rcases hk with hk | hk
     · rcases hR with ⟨rfl, _⟩ | ⟨e, u, rfl, _, he, hu⟩
-      · simp at hk
+      · simp only [List.not_mem_nil] at hk
       · simp only [List.mem_singleton] at hk; subst hk
         have hko := kopfOk_delab (artListe ks) none (sizeOf (P.requires f) + 1) (P.requires f) (by omega)
-          e he (Or.inr (by simp [hu]))
+          e he (Or.inr (by simp only [hu, Option.isSome_some]))
         refine And.intro trivial (And.intro (fun args h => ?_) (fun es h => by cases h))
-        cases h; simp [kopfOk] at hko
+        cases h; simp only [kopfOk, Bool.false_eq_true] at hko
     · rcases hE with ⟨rfl, _⟩ | ⟨e, u, rfl, _, _, _⟩
-      · simp at hk
+      · simp only [List.not_mem_nil] at hk
       · simp only [List.mem_singleton] at hk; subst hk
         exact And.intro trivial (And.intro (fun args h => by cases h) (fun es h => by cases h))
   -- the head
@@ -479,15 +482,16 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
     · rfl
     · obtain ⟨HE, HO⟩ := ens_einv f hM H
       have := sichert_ok _ _ HE HO (P.ensures f) (Nat.lt_succ_self _) e u he hu
-      simp [gibtF, uSeq, this]
+      simp only [gibtF, this, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil, uSeq]
   -- requires
   have hN : uSeq (req.filterMap (brauchtF ctx)) = .ok needs := by
     rcases hR with ⟨rfl, rfl⟩ | ⟨e, u, rfl, rfl, he, hu⟩
     · rfl
     · have hko := kopfOk_delab (artListe ks) none (sizeOf (P.requires f) + 1) (P.requires f) (by omega)
-        e he (Or.inr (by simp [hu]))
+        e he (Or.inr (by simp only [hu, Option.isSome_some]))
       have := bool_ok H.einv (P.requires f) e u he hu
-      simp [brauchtF_needs ctx e hko, uSeq, this]
+      simp only [brauchtF_needs ctx e hko, this, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil,
+  uSeq]
   -- the body
   obtain ⟨cE, hB, hEnde, _⟩ := (rumpf_satz gNr ctx.tabs koepfe hM hK hI (sizeOf (P.rumpf f) + 1)).2.2 (P.rumpf f) ctx
     (artListe ks) 1000000 ss ende body r (by omega) hsize H hb hbr
@@ -495,6 +499,6 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
   congr 1
   simp only [kopfVon, kanalVon]
   congr 1
-  by_cases hg : (z.deklaration.signatur f).gruende = 0 <;> simp [hg]
+  by_cases hg : (z.deklaration.signatur f).gruende = 0 <;> simp only [hg, ↓reduceIte, Option.map_none, Option.getD_none, Option.map_some, Option.getD_some]
 
 end Gabbro.Grammatik.Gen.Text

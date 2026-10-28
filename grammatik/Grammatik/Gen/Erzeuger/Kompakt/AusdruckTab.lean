@@ -110,9 +110,11 @@ theorem groesse_genEK (n : Nat) (Γ : Ctx) (j : Nat) :
   unfold tab at hx
   rcases j with _ | k
   · rcases n with _ | n
-    · simp [buckets] at hx
+    · simp only [buckets, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.lt_add_one, getElem?_pos, List.getElem_cons_zero, Option.getD_some, List.not_mem_nil] at hx
     · rw [getD_buckets_le _ _ _ (Nat.zero_le _) (n + 1) (Nat.zero_le _)] at hx
-      simp [buckets] at hx
+      simp only [buckets, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.lt_add_one, getElem?_pos, List.getElem_cons_zero, Option.getD_some, List.not_mem_nil] at hx
   · by_cases hk : k + 1 ≤ n
     · rw [getD_buckets_step _ _ _ hk] at hx
       rcases eimer_teil _ _ _ _ x hx with h | ⟨_, h⟩
@@ -184,7 +186,7 @@ theorem genEK_rep : ∀ (n : Nat) (Γ : Ctx) (τ : Ty) (e : Expr D Γ Λ τ),
   obtain ⟨-, -, h3, h4⟩ := eimer_spec eSchl (fun x => groesseExpr x.2 != k + 1)
     (exprS (Q (k + 1)) (tab (buckets [] (schrittEK n Γ Λ) k)) (k + 1))
     ([], ((buckets [] (schrittEK n Γ Λ) k).flatMap id).map eSchl)
-  have hkey := h4 _ hc (by simp [hk])
+  have hkey := h4 _ hc (by simp only [hk, bne_self_eq_false])
   have rep : ∀ y ∈ tab (genEK n Γ Λ) (groesseExpr y.2), eSchl y = eSchl ⟨τ, e'⟩ →
       groesseExpr y.2 ≤ k + 1 → ∃ e'' : Expr D Γ Λ τ, (⟨τ, e''⟩ : SE D Γ Λ) ∈ tab (genEK n Γ Λ)
         (groesseExpr e'') ∧ GlE e'' e := by

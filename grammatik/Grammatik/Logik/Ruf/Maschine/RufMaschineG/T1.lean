@@ -272,12 +272,12 @@ def rufUpdateG (m : Faden → RufFadenG D) (f : Faden) (z : RufFadenG D) :
 
 theorem rufUpdateG_self (m : Faden → RufFadenG D) (f : Faden) (z : RufFadenG D) :
     rufUpdateG m f z f = z := by
-  simp [rufUpdateG]
+  simp only [rufUpdateG, ↓reduceIte]
 
 theorem rufUpdateG_noteq (m : Faden → RufFadenG D) (f g : Faden) (h : g ≠ f)
     (z : RufFadenG D) :
     rufUpdateG m f z g = m g := by
-  simp [rufUpdateG, h]
+  simp only [rufUpdateG, h, ↓reduceIte]
 
 /-! ## 2. Which compounds unfold -/
 

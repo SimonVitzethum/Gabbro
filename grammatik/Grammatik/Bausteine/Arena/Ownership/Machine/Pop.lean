@@ -28,7 +28,7 @@ variable {s : State} {cf fr : Frame}
 theorem cells (j : Int) : (s.pop cf fr).cells j = (s.cells j).map (popCell s.next cf fr) := rfl
 
 theorem none_iff (j : Int) : (s.pop cf fr).cells j = none ↔ s.cells j = none := by
-  rw [cells]; cases s.cells j <;> simp
+  rw [cells]; cases s.cells j <;> simp only [Option.map_none, Option.map_some, reduceCtorEq]
 
 theorem valid (hv : s.valid) : (s.pop cf fr).valid := by
   intro i c hc
@@ -42,7 +42,7 @@ theorem valid (hv : s.valid) : (s.pop cf fr).valid := by
     obtain ⟨h1, h2, h3, h4⟩ := hv i old hs
     unfold popCell
     split
-    · exact ⟨by show old.allocation ≤ s.next; omega, by show s.next < s.next + 1; omega, List.nodup_nil, by simp⟩
+    · exact ⟨by show old.allocation ≤ s.next; omega, by show s.next < s.next + 1; omega, List.nodup_nil, by simp only [List.not_mem_nil, not_false_eq_true]⟩
     · refine ⟨h1, by show old.grant < s.next + 1; omega, h3.filter _, fun hm => h4 (List.mem_filter.mp hm).1⟩
 
 theorem progress : s.progress (s.pop cf fr) := by
@@ -57,7 +57,7 @@ theorem progress : s.progress (s.pop cf fr) := by
     subst hc
     unfold popCell at hlt ⊢
     split at hlt
-    · simp at hlt
+    · simp only [Nat.lt_irrefl] at hlt
     · rename_i hne
       simp only [hne, if_false]
       exact ⟨old, rfl, rfl, rfl⟩
@@ -105,8 +105,8 @@ theorem disciplined (hd : s.Disciplined depth) (hdepth : depth t = a + 1) :
     obtain ⟨⟨hdeep, hsort⟩, hown, hloans⟩ := hd i old hs
     unfold popCell
     split
-    · refine ⟨⟨by simp, by simp⟩, ?_, by simp⟩
-      simp [lower]
+    · refine ⟨⟨by simp only [List.not_mem_nil, false_implies, implies_true], by simp only [List.Pairwise.nil]⟩, ?_, by simp only [List.not_mem_nil, false_implies, implies_true]⟩
+      simp only [lower, ↓reduceIte, Std.le_refl]
     · rename_i hne
       refine ⟨⟨fun g hg => hdeep g ((List.mem_filter.mp hg).1), hsort.filter _⟩, below _ hown hne, ?_⟩
       intro g hg
@@ -129,18 +129,18 @@ theorem view_other (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {fr2 : 
     · rename_i hcf
       have h1 : ¬ fr2.Sees ⟨c.allocation, s.next, ⟨t, a⟩, []⟩ := by
         rintro ⟨ht, hlt⟩
-        simp at ht hlt
+        simp only at ht hlt
         rcases hne with h | h
         · exact h ht.symm
         · omega
       have h2 : ¬ fr2.Sees c := by
         rintro ⟨ht, hlt⟩
         rw [hcf] at ht hlt
-        simp at ht hlt
+        simp only at ht hlt
         rcases hne with h | h
         · exact h ht.symm
         · omega
-      simp [h1, h2]
+      simp only [h1, ↓reduceIte, h2]
     · rename_i hcf
       by_cases hsee : fr2.Sees c
       · have hsee' : fr2.Sees { c with loans := c.loans.filter (fun g => decide (g ≠ ⟨t, a + 1⟩)) } := hsee
@@ -158,8 +158,8 @@ theorem view_other (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {fr2 : 
             rcases hne with h | h
             · exact absurd hthr.symm h
             · show fr2.activation < a + 1; omega
-          simp [this]
-        · simp [hgcf]
+          simp only [this, decide_true, Bool.not_true, ne_eq, not_true_eq_false, decide_false, Bool.and_self]
+        · simp only [ne_eq, hgcf, not_false_eq_true, decide_true, Bool.and_true]
       · have hsee' : ¬ fr2.Sees { c with loans := c.loans.filter (fun g => decide (g ≠ ⟨t, a + 1⟩)) } := hsee
         rw [if_neg hsee, if_neg hsee']
 
@@ -176,7 +176,7 @@ theorem pop_at (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {i : Int} {
     (hc : s.cells i = some c) (hsee : (⟨t, a⟩ : Frame).Sees c) :
     popCell s.next ⟨t, a + 1⟩ ⟨t, a⟩ c = c.at ⟨t, a⟩ := by
   have hne : c.owner ≠ ⟨t, a + 1⟩ := by
-    intro he; have := hsee.2; rw [he] at this; exact absurd this (by simp)
+    intro he; have := hsee.2; rw [he] at this; exact absurd this (by simp only [Nat.not_le, Nat.lt_add_one])
   unfold popCell
   rw [if_neg hne]
   simp only [Cell.at, Cell.mk.injEq, true_and]
@@ -188,12 +188,12 @@ theorem pop_at (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {i : Int} {
   rw [ht, hdepth] at hle
   by_cases hgcf : g = ⟨t, a + 1⟩
   · subst hgcf
-    have : (⟨t, a⟩ : Frame).Deeper ⟨t, a + 1⟩ := ⟨rfl, by simp⟩
-    simp [this]
+    have : (⟨t, a⟩ : Frame).Deeper ⟨t, a + 1⟩ := ⟨rfl, by simp only [Nat.lt_add_one]⟩
+    simp only [ne_eq, not_true_eq_false, decide_false, this, decide_true, Bool.not_true]
   · have hga : g.activation ≠ a + 1 := fun he => hgcf (frame_eq ht he)
     have : ¬ (⟨t, a⟩ : Frame).Deeper g := by
-      rintro ⟨_, h⟩; simp at h; omega
-    simp [hgcf, this]
+      rintro ⟨_, h⟩; simp only at h; omega
+    simp only [ne_eq, hgcf, not_false_eq_true, decide_true, this, decide_false, Bool.not_false]
 
 theorem cell_seen (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {i : Int} {c' : Cell}
     (hv : (s.viewAt ⟨t, a⟩).cells i = some c') : (s.pop ⟨t, a + 1⟩ ⟨t, a⟩).cells i = some c' := by
@@ -280,8 +280,8 @@ theorem disjoint_handBack (hd : s.Disciplined depth) (hdepth : depth t = a + 1) 
   simp only [handBack] at he
   rw [he, View.viewAt_cells, hs] at ha
   by_cases hsee : (⟨t, a⟩ : Frame).Sees cell
-  · have := hsee.2; rw [hm.2.1] at this; exact absurd this (by simp)
-  · simp [hsee] at ha
+  · have := hsee.2; rw [hm.2.1] at this; exact absurd this (by simp only [Nat.not_le, Nat.lt_add_one])
+  · simp only [Option.bind_some, hsee, ↓reduceIte] at ha
 
 theorem complete_handBack (hd : s.Disciplined depth) (hdepth : depth t = a + 1) {c : Context} {g : Ghost}
     (hb : c.bounded) (hc : Complete c g (s.viewAt ⟨t, a⟩) ⟨t, a⟩) {h : Handle} (ho : s.owns ⟨t, a + 1⟩ h)
@@ -318,7 +318,8 @@ theorem frame_ownerDrop {D : Deklaration} (hd : s.Disciplined depth) (hdepth : d
     complete_handBack hd hdepth hf.1 hf.2.2.2 ho hsingle⟩
   have href' := References.setFresh hf.1 hf.2.1 (handBack s h)
   have hrefs : c.bindFresh.drop.references = c.references := by
-    simp [Context.bindFresh, Context.drop]
+    simp only [Context.drop, Context.bindFresh, ne_eq, List.cons_ne_self, not_false_eq_true,
+  List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
   exact ⟨by rw [hrefs]; exact href'.1, fun x i hi => href'.2 x i (by
     simp only [Context.reference, hrefs] at hi ⊢; exact hi)⟩
 

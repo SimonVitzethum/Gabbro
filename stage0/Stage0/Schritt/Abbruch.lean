@@ -30,18 +30,18 @@ def zugLeave (M : RufMaschineG D) (f : Faden) {Γ : Ctx} {Λ Λ'' : List (Res D)
       let σ₁ := (M.weltVon f).lese Λ0 inv.orte
       if hw : wahr? (eval σ₁ inv σ₁ ρ0) = true then
         some ⟨_, .dannLeaveTrav M f l Γ0 Λ0 t inv body is k' rest i ρ0 h hk (M.weltVon f) (.cons i ρ0) []
-          rfl rfl (fun _ _ hm => by simp at hm) σ₁ rfl hw _ (lese_neu M f Λ0 inv.orte) (heldIn_of hΛ), [], rfl⟩
+          rfl rfl (fun _ _ hm => by simp only [List.not_mem_nil] at hm) σ₁ rfl hw _ (lese_neu M f Λ0 inv.orte) (heldIn_of hΛ), [], rfl⟩
       else none
     else none
   | .wiederRest (l := l) (Λ := Λ0) n bis body ueber k', ρ, hk =>
     if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
       some ⟨_, .dannLeaveWieder M f l Γ Λ0 n bis body ueber k' rest ρ h hk (M.weltVon f) ρ [] rfl rfl
-        (fun _ _ hm => by simp at hm) (heldIn_of hΛ), [], rfl⟩
+        (fun _ _ hm => by simp only [List.not_mem_nil] at hm) (heldIn_of hΛ), [], rfl⟩
     else none
   | .ewigRest (l := l) (Λ := Λ0) a n inv body k', ρ, hk =>
     if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
       some ⟨_, .dannLeaveEwig M f l Γ Λ0 a n inv body k' rest ρ h hk (M.weltVon f) ρ [] rfl rfl
-        (fun _ _ hm => by simp at hm) (heldIn_of hΛ), [], rfl⟩
+        (fun _ _ hm => by simp only [List.not_mem_nil] at hm) (heldIn_of hΛ), [], rfl⟩
     else none
   | _, _, _ => none
 
@@ -61,17 +61,17 @@ def zugNext (M : RufMaschineG D) (f : Faden) {Γ : Ctx} {Λ Λ'' : List (Res D)}
   | .travRest (l := l) (Γ := Γ0) (Λ := Λ0) t inv body is k', .cons i ρ0, hk =>
     if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
       some ⟨_, .dannNextTrav M f l Γ0 Λ0 t inv body is k' rest i ρ0 h hk (M.weltVon f) (.cons i ρ0) [] rfl rfl
-        (fun _ _ hm => by simp at hm) (heldIn_of hΛ), [], rfl⟩
+        (fun _ _ hm => by simp only [List.not_mem_nil] at hm) (heldIn_of hΛ), [], rfl⟩
     else none
   | .wiederRest (l := l) (Λ := Λ0) n bis body ueber k', ρ, hk =>
     if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
       some ⟨_, .dannNextWieder M f l Γ Λ0 n bis body ueber k' rest ρ h hk (M.weltVon f) ρ [] rfl rfl
-        (fun _ _ hm => by simp at hm) (heldIn_of hΛ), [], rfl⟩
+        (fun _ _ hm => by simp only [List.not_mem_nil] at hm) (heldIn_of hΛ), [], rfl⟩
     else none
   | .ewigRest (l := l) (Λ := Λ0) a n inv body k', ρ, hk =>
     if hΛ : heldInB Λ (offen (M.faeden f).spur) = true then
       some ⟨_, .dannNextEwig M f l Γ Λ0 a n inv body k' rest ρ h hk (M.weltVon f) ρ [] rfl rfl
-        (fun _ _ hm => by simp at hm) (heldIn_of hΛ), [], rfl⟩
+        (fun _ _ hm => by simp only [List.not_mem_nil] at hm) (heldIn_of hΛ), [], rfl⟩
     else none
   | _, _, _ => none
 

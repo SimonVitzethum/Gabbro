@@ -141,33 +141,33 @@ theorem AusgangUnter.schrumpf {τ : Ty} {o₁ o₂ : Ausgang V l (τ :: Γ)}
     (h : AusgangUnter Er o₁ o₂) : AusgangUnter Er o₁.schrumpf o₂.schrumpf := by
   rcases h with h | ⟨m, h1, hE⟩
   · exact Or.inl (congrArg Ausgang.schrumpf h)
-  · exact Or.inr ⟨m, by rw [h1]; simp, hE⟩
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.schrumpf_zuAusgang], hE⟩
 
 theorem AusgangUnter.schrumpfArm {c : Option (Int × Int)} {o₁ o₂ : Ausgang V l (ArmCtx Γ c)}
     (h : AusgangUnter Er o₁ o₂) :
     AusgangUnter Er (Ausgang.schrumpfArm c o₁) (Ausgang.schrumpfArm c o₂) := by
   rcases h with h | ⟨m, h1, hE⟩
   · exact Or.inl (congrArg _ h)
-  · exact Or.inr ⟨m, by rw [h1]; simp, hE⟩
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.schrumpfArm_zuAusgang], hE⟩
 
 theorem AusgangUnter.mapWelt {f : World D → World D} {o₁ o₂ : Ausgang V l Γ}
     (h : AusgangUnter Er o₁ o₂) :
     AusgangUnter Er (o₁.mapWelt f) (o₂.mapWelt f) := by
   rcases h with h | ⟨m, h1, hE⟩
   · exact Or.inl (congrArg _ h)
-  · exact Or.inr ⟨m, by rw [h1]; simp, hE⟩
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.mapWelt_zuAusgang], hE⟩
 
 theorem EndUnter.schrumpf {τ : Ty} {o₁ o₂ : EndAusgang V l (τ :: Γ)}
     (h : EndUnter Er o₁ o₂) : EndUnter Er o₁.schrumpf o₂.schrumpf := by
   rcases h with h | ⟨m, h1, hE⟩
   · exact Or.inl (congrArg EndAusgang.schrumpf h)
-  · exact Or.inr ⟨m, by rw [h1]; simp, hE⟩
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.schrumpf_zuEnd], hE⟩
 
 theorem EndUnter.zuAusgang {o₁ o₂ : EndAusgang V l Γ} (h : EndUnter Er o₁ o₂) :
     AusgangUnter Er o₁.zuAusgang o₂.zuAusgang := by
   rcases h with h | ⟨m, h1, hE⟩
   · exact Or.inl (congrArg EndAusgang.zuAusgang h)
-  · exact Or.inr ⟨m, by rw [h1]; simp, hE⟩
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.zuAusgang_zuEnd], hE⟩
 
 theorem AusgangUnter.ite {c : Prop} [Decidable c] {a₁ a₂ b₁ b₂ : Ausgang V l Γ}
     (ha : AusgangUnter Er a₁ a₂) (hb : AusgangUnter Er b₁ b₂) :

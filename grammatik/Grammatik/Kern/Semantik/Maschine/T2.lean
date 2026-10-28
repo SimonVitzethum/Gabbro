@@ -11,7 +11,7 @@ theorem genFilterMap_eigen_fremd (f g : Faden) (hg : g ≠ f) (neu : List (Ereig
   unfold genEigen
   induction neu.reverse with
   | nil => rfl
-  | cons _ _ ih => simp [ih, Ne.symm hg]
+  | cons _ _ ih => simp only [List.map_cons, Ne.symm hg, ↓reduceIte, List.filterMap_cons_none, ih]
 
 theorem genFilterMap_eigen_take_fremd (f g : Faden) (hg : g ≠ f) (neu : List (Ereignis D))
     (i : Nat) :
@@ -22,7 +22,7 @@ theorem genFilterMap_eigen_take_fremd (f g : Faden) (hg : g ≠ f) (neu : List (
   generalize neu.reverse.take i = xs
   induction xs with
   | nil => rfl
-  | cons _ _ ih => simp [ih, Ne.symm hg]
+  | cons _ _ ih => simp only [List.map_cons, Ne.symm hg, ↓reduceIte, List.filterMap_cons_none, ih]
 
 /-- After appending: the acting thread's projection grows by `neu`. -/
 theorem gen_spur_append_eigen (l : Lauf D) (f : Faden) (neu : List (Ereignis D)) :
@@ -73,10 +73,10 @@ theorem gen_eigen_getElem (f : Faden) (neu : List (Ereignis D)) (i : Nat) (g : F
   unfold genEigen at h
   rw [List.getElem?_map] at h
   cases hx : neu.reverse[i]? with
-  | none => rw [hx] at h; simp at h
+  | none => rw [hx] at h; simp only [Option.map_none, reduceCtorEq] at h
   | some e' =>
       rw [hx] at h
-      simp at h
+      simp only [Option.map_some, Option.some.injEq, Schritt.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨rfl, List.mem_reverse.mp (List.mem_of_getElem? hx)⟩
 
@@ -122,12 +122,12 @@ theorem maschinenWelten_speicher_gleich (M : MaschinenLauf D) :
 theorem storeSlot_hit (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t)
     (v : Wert D (D.typ t f)) :
     (σ.storeSlot t k f v).slots t k f = v := by
-  simp [World.storeSlot]
+  simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte]
 
 /-- A store hits: the global carries the stored value afterwards. -/
 theorem storeGlob_hit (σ : World D) (g : D.Glob) (v : Wert D (D.gtyp g)) :
     (σ.storeGlob g v).globs g = v := by
-  simp [World.storeGlob]
+  simp only [World.storeGlob, ↓reduceDIte]
 
 /-- A write carries its value into the world, with its event. -/
 theorem schreibt_wirkt_slot (O : Orakel D) (passes : Nat)
@@ -209,8 +209,8 @@ theorem gen_write_glob_moves (P : Programm D) (O : Orakel D) (passes : Nat)
   · intro L h hm
     simp only [List.mem_append, List.mem_singleton, List.mem_map] at hm
     rcases hm with hm | ⟨o, _, hm⟩
-    · simp at hm
-    · cases o <;> simp at hm
+    · simp only [reduceCtorEq] at hm
+    · cases o <;> simp only [reduceCtorEq] at hm
   · show ((((M.weltVon f).lese Λ e.orte).storeGlob g _).globs g) ≠ _
     rw [storeGlob_hit]
     exact hv
@@ -333,12 +333,12 @@ theorem genStart_inv (sp : Speicher D) : GenInv (GenStart sp) := by
     show Konsistent ([] : List (Ereignis D))
     exact konsistent_nil
   · intro f e he
-    simp [GenStart] at he
+    simp only [GenStart, List.not_mem_nil] at he
   · intro W hW e he
     simp only [GenStart, List.mem_singleton] at hW
     subst hW
     change e ∈ ([] : List (Ereignis D)) at he
-    simp at he
+    simp only [List.not_mem_nil] at he
   · intro f
     show Lauf.spur ([] : Lauf D) f 0 = []
     exact Lauf.spur_zero _ _
@@ -346,7 +346,7 @@ theorem genStart_inv (sp : Speicher D) : GenInv (GenStart sp) := by
     show ([sp.welt []]).getLast? = some (sp.welt [])
     exact List.getLast?_singleton
   · intro j g L h hj
-    simp [GenStart] at hj
+    simp only [GenStart, List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hj
   · show (([sp.welt []] : List (World D))).length = (0 : Nat) + 1
     rfl
 
@@ -413,7 +413,8 @@ theorem genInv_blatt (_P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO 
   · show ForeignExclusion (M.lauf ++ genEigen f neu)
     exact genAuss_blatt M.lauf f neu hM.auss hkein_nimmt
   · show (M.welten ++ [σ']).length = (M.tiefe + 1) + 1
-    simp [List.length_append, hM.tiefe_len]
+    simp only [List.length_append, hM.tiefe_len, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.add_left_cancel_iff]
 
 /-- A `nimmt` step preserves the invariant. -/
 theorem genInv_nimmt (_P : Programm D) (_O : Orakel D) (_passes : Nat)
@@ -473,7 +474,8 @@ theorem genInv_nimmt (_P : Programm D) (_O : Orakel D) (_passes : Nat)
   · show ForeignExclusion (M.lauf ++ genEigen f [Ereignis.nimmt L (offen (M.spuren f))])
     exact genAuss_nimmt M.lauf M.spuren f L hM.auss hfrei hM.proj
   · show (M.welten ++ [M.speicher.welt (Ereignis.nimmt L (offen (M.spuren f)) :: M.spuren f)]).length = (M.tiefe + 1) + 1
-    simp [List.length_append, hM.tiefe_len]
+    simp only [List.length_append, hM.tiefe_len, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.add_left_cancel_iff]
 
 
 end Gabbro.Grammatik

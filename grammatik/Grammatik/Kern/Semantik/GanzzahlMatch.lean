@@ -71,7 +71,8 @@ def aufzaehlung : Nat → Int → List Int
 theorem mem_aufzaehlung (n : Nat) (s x : Int) :
     x ∈ aufzaehlung n s ↔ s ≤ x ∧ x < s + n := by
   induction n generalizing s with
-  | zero => simp [aufzaehlung]
+  | zero => simp only [aufzaehlung, List.not_mem_nil, Int.cast_ofNat_Int, Int.add_zero, false_iff, not_and, Int.not_lt,
+  imp_self]
   | succ n ih =>
     simp only [aufzaehlung, List.mem_cons]
     constructor
@@ -98,7 +99,7 @@ def armKeys : IArm → List Int
 /-- Exact arm: its label is its value. -/
 theorem mem_armKeys_exact (v x : Int) :
     x ∈ armKeys (.exact v) ↔ x = v := by
-  simp [armKeys]
+  simp only [armKeys, List.mem_cons, List.not_mem_nil, or_false]
 
 /-- Inclusive range arm: its labels are exactly `lo .. hi`. -/
 theorem mem_armKeys_incl (lo hi x : Int) :
@@ -158,7 +159,7 @@ def wahl (arms : List IArm) (x : Int) : Option Nat :=
 theorem lookup_mem_isSome {l : List (Int × Nat)} {x : Int} {i : Nat}
     (h : (x, i) ∈ l) : (l.lookup x).isSome = true := by
   induction l with
-  | nil => simp at h
+  | nil => simp only [List.not_mem_nil] at h
   | cons hd tl ih =>
     obtain ⟨a, b⟩ := hd
     simp only [List.mem_cons] at h
@@ -180,7 +181,7 @@ theorem mem_fallListeAux_of (arms : List IArm) (i : Nat) (a : IArm) (x : Int)
     (ha : a ∈ arms) (hx : x ∈ armKeys a) :
     ∃ j, (x, j) ∈ fallListeAux arms i := by
   induction arms generalizing i with
-  | nil => simp at ha
+  | nil => simp only [List.not_mem_nil] at ha
   | cons hd tl ih =>
     simp only [fallListeAux, List.mem_append]
     simp only [List.mem_cons] at ha
@@ -199,7 +200,7 @@ theorem trifft_wahl_some {arms : List IArm} {x : Int}
     lookup_mem_isSome hj
   cases he : ((fallListe arms).lookup x) with
   | some i => exact ⟨i, he⟩
-  | none => rw [he] at hs; simp at hs
+  | none => rw [he] at hs; simp only [Option.isSome_none, Bool.false_eq_true] at hs
 
 /-- A miss refuses every arm: no arm matches the value. -/
 theorem wahl_none_weigert {arms : List IArm} {x : Int}

@@ -119,7 +119,7 @@ theorem rw_leser_geht {w : D.Fn} {M : RufMaschineG D} {f : Faden} {L : D.Lock}
   refine ⟨{ Mh with faeden := rufUpdateG M.faeden f (Mh.faeden f) }, hl, hr, ⟨hself, ?_⟩, Mh, hs, rfl⟩
   show L ∈ offen (rufUpdateG M.faeden f (Mh.faeden f) f).spur
   rw [rufUpdateG_self, e]
-  simp [offen]
+  simp only [offen, List.mem_cons, true_or]
 
 end Gabbro.Grammatik.Zielsatz
 

@@ -190,7 +190,7 @@ def bibD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => bibSigW
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -454,7 +454,7 @@ theorem bibSchrittBF : RufSchrittF bibP bibO 0 bibM1F 0 bibM2F := by
       Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
         [Res.held (D := bibD) ()] (bibM1F.weltVon 0).haelt] := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   exact RufSchrittF.blatt bibM1F 0 false [.int 0 10]
     [Res.held (D := bibD) ()] [Res.held (D := bibD) ()]
     bibWriteStAt _ bibRho7 rfl hhead bibM1Fhaelt _ _ _ hstep hneu hkn
@@ -496,7 +496,7 @@ theorem bib_schreibt : bibM2F.speicher.slots () 0 () ≠
   intro hcon
   have hn : (bibV100.n) = ((⟨0, by decide, by decide⟩ :
       Wert bibD (bibD.typ () ())).n) := congrArg Zahl.n hcon
-  simp [bibV100] at hn
+  simp only [bibV100, Int.reduceEq] at hn
 
 /-! ## 6. Witness: the bridge holds jointly on a non-degenerate program -/
 

@@ -125,7 +125,7 @@ theorem schleife (σ : World (fD N)) :
     exact h j h0 hN (fun k hk => by cases hk)
   case bruch =>
     intro k ks σ ρ _ hc
-    exact absurd hc (by simp [wahr?, eval])
+    exact absurd hc (by simp only [wahr?, eval, Bool.true_eq_false, not_false_eq_true])
   case schritt =>
     intro k ks σ ρ h _
     cases ρ

@@ -230,7 +230,7 @@ theorem tdiv_vierecken (lo1 hi1 lo2 hi2 x y : Int)
 theorem imin_neg (a b : Int) : imin (-a) (-b) = -(imax a b) := by
   rcases le_or_gt a b with h | h
   · rcases eq_or_lt_of_le h with rfl | hlt
-    · simp [imin, imax]
+    · simp only [imin, Std.le_refl, ↓reduceIte, imax]
     · have hF : ¬ -a ≤ -b := by omega
       have hT : a ≤ b := le_of_lt hlt
       simp only [imin, imax, if_neg hF, if_pos hT]
@@ -242,7 +242,7 @@ theorem imin_neg (a b : Int) : imin (-a) (-b) = -(imax a b) := by
 theorem imax_neg (a b : Int) : imax (-a) (-b) = -(imin a b) := by
   rcases le_or_gt a b with h | h
   · rcases eq_or_lt_of_le h with rfl | hlt
-    · simp [imin, imax]
+    · simp only [imax, Std.le_refl, ↓reduceIte, imin]
     · have hF : ¬ -a ≤ -b := by omega
       have hT : a ≤ b := le_of_lt hlt
       simp only [imin, imax, if_neg hF, if_pos hT]
@@ -287,7 +287,7 @@ theorem trem_pos (y x : Int) (lo2 hi2 : Int) (hypos : 0 < y)
   · have hxN : (0 : Int) < -x := by omega
     have h1 : (0 : Int) ≤ (-x).tmod y := Int.tmod_nonneg y (le_of_lt hxN)
     have h2 : (-x).tmod y < y := Int.tmod_lt_of_pos (-x) hypos
-    have hN : x.tmod y = -((-x).tmod y) := by rw [Int.neg_tmod]; simp
+    have hN : x.tmod y = -((-x).tmod y) := by rw [Int.neg_tmod]; simp only [neg_neg]
     rw [hN]
     exact ⟨by omega, by omega⟩
 
@@ -311,7 +311,7 @@ theorem maskeNat_ge (n : Nat) : n ≤ maskeNat n := by
 /-- Every mask plus one is a power of two. -/
 theorem maskeNat_pow2 (n : Nat) : ∃ k, maskeNat n + 1 = 2 ^ k := by
   induction n with
-  | zero => exact ⟨0, by simp [maskeNat]⟩
+  | zero => exact ⟨0, by simp only [maskeNat, zero_add, pow_zero]⟩
   | succ n ih =>
     obtain ⟨k, hk⟩ := ih
     simp only [maskeNat]
@@ -564,7 +564,7 @@ def KettenWohlgeformt (D : Deklaration) (σ : World) : Prop :=
 
 theorem zahl_some_int {sh : Shape} {v : Value} (hz : (zahl sh).isSome = true)
     (hv : v.hasShape sh = true) : ∃ n, v = .int n := by
-  cases sh <;> simp [zahl] at hz
+  cases sh <;> simp only [zahl, Option.isSome_some, Option.isSome_none, Bool.false_eq_true] at hz
   · exact Value.hasShape_int_true v hv
   · obtain ⟨n, hn, _⟩ := Value.hasShape_intIn_true v _ _ hv; exact ⟨n, hn⟩
 
@@ -573,11 +573,11 @@ theorem zahl_some_of_zahl {sh : Shape} {r : Option (Int × Int)} (h : zahl sh = 
 
 theorem bereich_of_zahl {sh : Shape} {lo hi : Int} (h : zahl sh = some (some (lo, hi))) :
     sh = .intIn lo hi := by
-  cases sh <;> simp [zahl] at h
+  cases sh <;> simp only [zahl, Option.some.injEq, reduceCtorEq, Prod.mk.injEq] at h
   obtain ⟨h1, h2⟩ := h; subst h1; subst h2; rfl
 
 theorem int_of_zahl_none {sh : Shape} (h : zahl sh = some none) : sh = .int := by
-  cases sh <;> simp [zahl] at h; rfl
+  cases sh <;> simp only [zahl, reduceCtorEq, Option.some.injEq] at h; rfl
 
 /-- `allBelow` ueber einer Funktion, die immer einen `bool` liefert, liefert einen `bool`. -/
 theorem allBelow_bool (f : Nat → Option Value) :
@@ -590,7 +590,7 @@ theorem allBelow_bool (f : Nat → Option Value) :
       intro hf
       obtain ⟨a, ha⟩ := ih (fun k hk => hf k (Nat.lt_succ_of_lt hk))
       obtain ⟨b, hb⟩ := hf n (Nat.lt_succ_self n)
-      exact ⟨a && b, by simp [allBelowImpl, ha, hb]⟩
+      exact ⟨a && b, by simp only [allBelowImpl, ha, hb]⟩
 
 theorem anyBelow_bool (f : Nat → Option Value) :
     ∀ n, (∀ k, k < n → ∃ b, f k = some (.bool b)) → ∃ b, anyBelow f n = some (.bool b) := by
@@ -602,7 +602,7 @@ theorem anyBelow_bool (f : Nat → Option Value) :
       intro hf
       obtain ⟨a, ha⟩ := ih (fun k hk => hf k (Nat.lt_succ_of_lt hk))
       obtain ⟨b, hb⟩ := hf n (Nat.lt_succ_self n)
-      exact ⟨a || b, by simp [anyBelowImpl, ha, hb]⟩
+      exact ⟨a || b, by simp only [anyBelowImpl, ha, hb]⟩
 
 /-- `chase` ueber wohlgeformten Ketten liefert einen `bool` -- mit jedem Treibstoff. -/
 theorem chase_bool (σ : World) (c via : String) (bis : Int)
@@ -638,10 +638,10 @@ theorem quant_rumpf (D : Deklaration) (Γ : Typing) {b : Expr}
       (bindLocal s.local' v (.int k)) := by
     intro m sh hm
     by_cases hmv : m = v
-    · subst hmv; simp at hm; subst hm
-      simp [Value.hasShape]
+    · subst hmv; simp only [↓reduceIte, Option.some.injEq] at hm; subst hm
+      simp only [Value.hasShape, bindLocal_here, Nat.cast_nonneg, true_and, decide_eq_true_eq]
       omega
-    · simp [hmv] at hm; simpa [bindLocal, hmv] using hl m sh hm
+    · simp only [hmv, ↓reduceIte] at hm; simpa [bindLocal, hmv] using hl m sh hm
   obtain ⟨t, ht, hts⟩ := ih _ ⟨s.world, bindLocal s.local' v (.int k)⟩ _ hw hl' hk hb
   obtain ⟨tb, rfl⟩ := Value.hasShape_bool_true t hts
   exact ⟨tb, ht⟩
@@ -657,11 +657,11 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
       ∃ v, eval s e = some v ∧ v.hasShape sh = true
   | .lit v, Δ, s, sh => by
       intro _ _ _ h
-      cases v <;> simp [schluss] at h <;> subst h
-      · exact ⟨_, rfl, by simp [Value.hasShape]⟩
-      · exact ⟨_, rfl, by simp [Value.hasShape]⟩
-      · exact ⟨_, rfl, by simp [Value.hasShape]⟩
-      · exact ⟨_, rfl, by simp [Value.hasShape]⟩
+      cases v <;> simp only [schluss, Option.some.injEq, reduceCtorEq] at h <;> subst h
+      · exact ⟨_, rfl, by simp only [Value.hasShape, Std.le_refl, and_self, decide_true]⟩
+      · exact ⟨_, rfl, by simp only [Value.hasShape]⟩
+      · exact ⟨_, rfl, by simp only [Value.hasShape]⟩
+      · exact ⟨_, rfl, by simp only [Value.hasShape]⟩
   | .name n, Δ, s, sh => by
       intro _ hl _ h
       exact ⟨_, rfl, hl n sh h⟩
@@ -681,10 +681,10 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
           obtain ⟨k, hk', hlo, hhi⟩ := Value.hasShape_intIn_true v lo hi hvs
           subst hk'
           refine ⟨_, ?_, hw (.slot c k f) sh ?_⟩
-          · simp [eval, hv]
+          · simp only [eval, hv]
           · rw [hD.1 c k f (by omega) (by omega)]; exact h
-        · exact absurd h (by simp)
-      · exact absurd h (by simp)
+        · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .fieldOf c f, Δ, s, sh => by
       intro hw _ _ h
       refine ⟨_, rfl, hw _ sh ?_⟩
@@ -700,8 +700,8 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
             obtain ⟨v, hv, hvs⟩ := ih Δ s _ hw hl hk ha
             obtain ⟨b, rfl⟩ := Value.hasShape_bool_true v hvs
             cases h
-            simp [eval, hv, unop, Value.hasShape]
-          · exact absurd h (by simp)
+            simp only [eval, hv, unop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+          · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
       | neg =>
           simp only [schluss] at h
           split at h
@@ -709,13 +709,14 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
             obtain ⟨v, hv, hvs⟩ := ih Δ s _ hw hl hk ha
             obtain ⟨n, rfl⟩ := Value.hasShape_int_true v hvs
             cases h
-            simp [eval, hv, unop, Value.hasShape]
+            simp only [eval, hv, unop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
           · rename_i lo hi ha
             obtain ⟨v, hv, hvs⟩ := ih Δ s _ hw hl hk ha
             obtain ⟨n, rfl, h1, h2⟩ := Value.hasShape_intIn_true v lo hi hvs
             cases h
-            simp [eval, hv, unop, Value.hasShape]; omega
-          · exact absurd h (by simp)
+            simp only [eval, hv, unop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left',
+  neg_le_neg_iff, Bool.and_eq_true, decide_eq_true_eq]; omega
+          · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .bin op a b, Δ, s, sh => by
       have iha := schluss_sicher D Γ hD a
       have ihb := schluss_sicher D Γ hD b
@@ -739,8 +740,10 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
             obtain ⟨x, rfl, hx1, hx2⟩ := Value.hasShape_intIn_true va lo1 hi1 hvas
             obtain ⟨y, rfl, hy1, hy2⟩ := Value.hasShape_intIn_true vb lo2 hi2 hvbs
             cases op with
-            | add => cases harith; simp [eval, hva, hvb, binop, Value.hasShape]; omega
-            | sub => cases harith; simp [eval, hva, hvb, binop, Value.hasShape]; omega
+            | add => cases harith; simp only [eval, hva, hvb, binop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left',
+  Bool.and_eq_true, decide_eq_true_eq]; omega
+            | sub => cases harith; simp only [eval, hva, hvb, binop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left',
+  tsub_le_iff_right, Bool.and_eq_true, decide_eq_true_eq]; omega
             | mul =>
                 cases harith
                 simp only [eval, hva, hvb, binop, Value.hasShape, Option.some.injEq,
@@ -1006,21 +1009,22 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
             obtain ⟨x, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz1) hvas
             obtain ⟨y, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz2) hvbs
             cases op <;> cases harith
-            all_goals simp [eval, hva, hvb, binop, Value.hasShape]
+            all_goals simp only [eval, hva, hvb, binop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
           · cases harith
         · -- Vergleich
           rename_i harith
           unfold vergleich at h
           cases op with
-          | eq => cases h; simp [eval, hva, hvb, binop, Value.hasShape]
-          | ne => cases h; simp [eval, hva, hvb, binop, Value.hasShape]
+          | eq => cases h; simp only [eval, hva, hvb, binop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+          | ne => cases h; simp only [eval, hva, hvb, binop, ne_eq, decide_not, Option.some.injEq, Value.hasShape, Bool.decide_and,
+  exists_eq_left']
           | lt =>
               dsimp only at h
               split at h
               · rename_i hz1 hz2; cases h
                 obtain ⟨x, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz1) hvas
                 obtain ⟨y, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz2) hvbs
-                simp [eval, hva, hvb, binop, Value.hasShape]
+                simp only [eval, hva, hvb, binop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
               · cases h
           | le =>
               dsimp only at h
@@ -1028,7 +1032,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
               · rename_i hz1 hz2; cases h
                 obtain ⟨x, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz1) hvas
                 obtain ⟨y, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz2) hvbs
-                simp [eval, hva, hvb, binop, Value.hasShape]
+                simp only [eval, hva, hvb, binop, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
               · cases h
           | gt =>
               dsimp only at h
@@ -1036,7 +1040,8 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
               · rename_i hz1 hz2; cases h
                 obtain ⟨x, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz1) hvas
                 obtain ⟨y, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz2) hvbs
-                simp [eval, hva, hvb, binop, Value.hasShape]
+                simp only [eval, hva, hvb, binop, gt_iff_lt, Option.some.injEq, Value.hasShape, Bool.decide_and,
+  exists_eq_left']
               · cases h
           | ge =>
               dsimp only at h
@@ -1044,7 +1049,8 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
               · rename_i hz1 hz2; cases h
                 obtain ⟨x, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz1) hvas
                 obtain ⟨y, rfl⟩ := zahl_some_int (zahl_some_of_zahl hz2) hvbs
-                simp [eval, hva, hvb, binop, Value.hasShape]
+                simp only [eval, hva, hvb, binop, ge_iff_le, Option.some.injEq, Value.hasShape, Bool.decide_and,
+  exists_eq_left']
               · cases h
           | and =>
               dsimp only at h
@@ -1052,7 +1058,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
               · cases h
                 obtain ⟨x, rfl⟩ := Value.hasShape_bool_true va hvas
                 obtain ⟨y, rfl⟩ := Value.hasShape_bool_true vb hvbs
-                simp [eval, hva, hvb, andBool, Value.hasShape]
+                simp only [eval, andBool, hva, hvb, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
               · cases h
           | or =>
               dsimp only at h
@@ -1060,7 +1066,7 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
               · cases h
                 obtain ⟨x, rfl⟩ := Value.hasShape_bool_true va hvas
                 obtain ⟨y, rfl⟩ := Value.hasShape_bool_true vb hvbs
-                simp [eval, hva, hvb, orBool, Value.hasShape]
+                simp only [eval, orBool, hva, hvb, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
               · cases h
           | add => cases h
           | sub => cases h
@@ -1084,9 +1090,9 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
           cases h
           obtain ⟨v, hv, hvs⟩ := ih Δ s _ hw hl hk ha
           obtain ⟨n, rfl⟩ := zahl_some_int hz hvs
-          simp [eval, hv, Value.hasShape]
-        · exact absurd h (by simp)
-      · exact absurd h (by simp)
+          simp only [eval, hv, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+        · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .forallSlots v n b, Δ, s, sh => by
       have ih := schluss_sicher D Γ hD b
       intro hw hl hk h
@@ -1095,8 +1101,8 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
       · rename_i hb
         cases h
         obtain ⟨t, ht⟩ := allBelow_bool _ n.toNat (quant_rumpf D Γ ih Δ s n hw hl hk hb)
-        simp [eval, ht, Value.hasShape]
-      · exact absurd h (by simp)
+        simp only [eval, ht, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .existsSlots v n b, Δ, s, sh => by
       have ih := schluss_sicher D Γ hD b
       intro hw hl hk h
@@ -1105,8 +1111,8 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
       · rename_i hb
         cases h
         obtain ⟨t, ht⟩ := anyBelow_bool _ n.toNat (quant_rumpf D Γ ih Δ s n hw hl hk hb)
-        simp [eval, ht, Value.hasShape]
-      · exact absurd h (by simp)
+        simp only [eval, ht, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .reaches c a z via cnt, Δ, s, sh => by
       have iha := schluss_sicher D Γ hD a
       have ihz := schluss_sicher D Γ hD z
@@ -1122,9 +1128,9 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
           obtain ⟨k, rfl⟩ := zahl_some_int hzz.1 hvas
           obtain ⟨t, rfl⟩ := zahl_some_int hzz.2 hvzs
           obtain ⟨b, hb⟩ := chase_bool s.world c via t (fun k => hk c via k hvia) cnt.toNat k
-          simp [eval, hva, hvz, hb, Value.hasShape]
-        · exact absurd h (by simp)
-      · exact absurd h (by simp)
+          simp only [eval, hva, hvz, hb, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+        · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .chainFrom c hd x via cnt, Δ, s, sh => by
       have ihh := schluss_sicher D Γ hD hd
       have ihx := schluss_sicher D Γ hD x
@@ -1139,15 +1145,15 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
           obtain ⟨vx, hvx, hvxs⟩ := ihx Δ s _ hw hl hk hx
           obtain ⟨t, rfl⟩ := zahl_some_int hzz hvxs
           rcases Value.hasShape_opt_true vh hvhs with rfl | ⟨m, rfl⟩
-          · simp [eval, hvh, hvx, Value.hasShape]
+          · simp only [eval, hvh, hvx, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
           · obtain ⟨b, hb⟩ := chase_bool s.world c via t (fun k => hk c via k hvia) cnt.toNat m
-            simp [eval, hvh, hvx, hb, Value.hasShape]
-        · exact absurd h (by simp)
-      · exact absurd h (by simp)
+            simp only [eval, hvh, hvx, hb, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+        · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .hasShape n sh', Δ, s, sh => by
       intro _ _ _ h
       simp only [schluss] at h; cases h
-      exact ⟨_, rfl, by simp [Value.hasShape]⟩
+      exact ⟨_, rfl, by simp only [Value.hasShape]⟩
   | .wrapTo b sg a, Δ, s, sh => by
       have ih := schluss_sicher D Γ hD a
       intro hw hl hk h
@@ -1159,12 +1165,12 @@ theorem schluss_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D Γ) :
           cases h
           obtain ⟨v, hv, hvs⟩ := ih Δ s _ hw hl hk ha
           obtain ⟨n, rfl⟩ := zahl_some_int hz hvs
-          simp [eval, hv, Value.hasShape]
-        · exact absurd h (by simp)
-      · exact absurd h (by simp)
+          simp only [eval, hv, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+        · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | .tagOf t p, Δ, s, sh => by
       intro _ _ _ h
-      cases p <;> simp [schluss] at h
+      cases p <;> simp only [schluss, reduceCtorEq] at h
 
 /-- The checker with a carried option target bound is still safe: what it accepts
     evaluates, and to a value of the computed shape. For every form but `someOf`
@@ -1190,8 +1196,8 @@ theorem schlussMitZiel_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D
           cases h
           obtain ⟨v, hv, hvs⟩ := schluss_sicher D Γ hD a Δ s _ hw hl hk ha
           obtain ⟨n, rfl⟩ := zahl_some_int hz hvs
-          simp [eval, hv, Value.hasShape]
-        · exact absurd h (by simp)
+          simp only [eval, hv, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+        · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
       | some bh =>
         obtain ⟨lo, hi⟩ := bh
         cases sa with
@@ -1211,12 +1217,12 @@ theorem schlussMitZiel_sicher (D : Deklaration) (Γ : Typing) (hD : Deklariert D
             cases h
             obtain ⟨v, hv, hvs⟩ := schluss_sicher D Γ hD a Δ s _ hw hl hk ha
             obtain ⟨n, rfl, _, _⟩ := Value.hasShape_intIn_true v lo' hi' hvs
-            simp [eval, hv, Value.hasShape]
-          · exact absurd h (by simp)
+            simp only [eval, hv, Option.some.injEq, Value.hasShape, Bool.decide_and, exists_eq_left']
+          · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
         | sum cs =>
           simp only [somePasst] at h
           cases h
-    · exact absurd h (by simp)
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   | lit v =>
     simp only [schlussMitZiel] at h
     exact schluss_sicher D Γ hD (.lit v) Δ s sh hw hl hk h

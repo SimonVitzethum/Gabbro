@@ -310,7 +310,7 @@ theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
     (L : Fin u.locks.length) (hL : Sum.inl L ∈ needsAt u t) : L ∈ (sigAt u n).haelt := by
   unfold traegerD at h ht
   cases hok : invOkB u i with
-  | false => rw [hok] at ht; simp at ht
+  | false => rw [hok] at ht; simp only [Bool.false_eq_true, ↓reduceIte, List.not_mem_nil] at ht
   | true =>
     rw [hok] at h ht
     simp only [if_true] at h ht
@@ -329,14 +329,14 @@ theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
         exact of_decide_eq_true hw
     · have hs : sigAt u n = dummySig u := by unfold sigAt; rw [dif_neg hn]
       rw [hs] at h
-      simp [dummySig] at h
+      simp only [dummySig, List.any_eq_true, Bool.false_eq_true, and_false, exists_false] at h
 
 /-- A non-empty emptiness test means a non-empty list. -/
 theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :
     l ≠ [] := by
   cases l with
-  | nil => simp at h
-  | cons _ _ => simp
+  | nil => simp only [List.isEmpty_nil, Bool.not_true, Bool.false_eq_true] at h
+  | cons _ _ => simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- The device's promise at a read value: a truth value is read at `1`/`0`, a number at itself. -/
 def regZusage {F : Type} {sig : F → Nat → Bool} : (g : UReg) → Val F sig g.ty → Bool
@@ -411,7 +411,7 @@ def declOf (u : UProg) : Deklaration where
       · split at h
         · rename_i hc
           cases h
-          exact ⟨by simp [hp], hc.1, t.val, hc.2, by simp [t.isLt]⟩
+          exact ⟨by simp only [hp, Option.isSome_some], hc.1, t.val, hc.2, by simp only [t.isLt, ↓reduceDIte, Fin.eta]⟩
         · cases h
       · cases h
   Reg := Fin u.regs.length
@@ -470,17 +470,17 @@ theorem sigAt_produziert (u : UProg) (i : Fin u.fns.length) :
 /-- Parameters through the declaration. -/
 theorem params_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).params i = (fnAt u i).params.map (·.2) := by
-  simp [Deklaration.params, Deklaration.signatur, declOf, sigAt_params]
+  simp only [Deklaration.params, declOf, Deklaration.signatur, sigAt_params]
 
 /-- Result through the declaration. -/
 theorem erg_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).erg i = (fnAt u i).ergTy := by
-  simp [Deklaration.erg, Deklaration.signatur, declOf, sigAt_erg]
+  simp only [Deklaration.erg, declOf, Deklaration.signatur, sigAt_erg]
 
 /-- Held locks through the declaration. -/
 theorem haelt_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).haelt i = heldAt u (fnAt u i) := by
-  simp [Deklaration.haelt, Deklaration.signatur, declOf, sigAt_haelt]
+  simp only [declOf, Deklaration.haelt, Deklaration.signatur, sigAt_haelt]
 
 /-- The contract end: held locks only (no marks travel). -/
 theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
@@ -559,18 +559,18 @@ theorem fieldPos_lt (fs : List (String × (Int × Int))) (n : String)
     (w : Int × Int) (h : fieldAtPos fs n = some w) :
     fieldPos fs n < fs.length := by
   induction fs with
-  | nil => simp [fieldAtPos] at h
+  | nil => simp only [fieldAtPos, reduceCtorEq] at h
   | cons hd tl ih =>
     cases he : (hd.1 == n) with
     | true =>
-      have h1 : fieldPos (hd :: tl) n = 0 := by simp [fieldPos, he]
+      have h1 : fieldPos (hd :: tl) n = 0 := by simp only [fieldPos, he, ↓reduceIte]
       rw [h1]
       exact Nat.zero_lt_succ _
     | false =>
       have h1 : fieldPos (hd :: tl) n = fieldPos tl n + 1 := by
-        simp [fieldPos, he]
+        simp only [fieldPos, he, Bool.false_eq_true, ↓reduceIte, Nat.add_left_cancel_iff]
       have h2 : fieldAtPos (hd :: tl) n = fieldAtPos tl n := by
-        simp [fieldAtPos, he]
+        simp only [fieldAtPos, he, Bool.false_eq_true, ↓reduceIte]
       rw [h2] at h
       have hi := ih h
       rw [h1]
@@ -582,13 +582,13 @@ theorem fieldAtPos_get (fs : List (String × (Int × Int))) (n : String)
     (w : Int × Int) (h : fieldAtPos fs n = some w) :
     (fs[fieldPos fs n]?).map (·.2) = some w := by
   induction fs with
-  | nil => simp [fieldAtPos] at h
+  | nil => simp only [fieldAtPos, reduceCtorEq] at h
   | cons hd tl ih =>
     cases he : (hd.1 == n) with
     | true =>
-      have h1 : fieldPos (hd :: tl) n = 0 := by simp [fieldPos, he]
+      have h1 : fieldPos (hd :: tl) n = 0 := by simp only [fieldPos, he, ↓reduceIte]
       have h2 : fieldAtPos (hd :: tl) n = some hd.2 := by
-        simp [fieldAtPos, he]
+        simp only [fieldAtPos, he, ↓reduceIte]
       rw [h2] at h
       rw [h1]
       have g0 : (((hd :: tl)[0]?).map (·.2)) = some hd.2 := rfl
@@ -596,9 +596,9 @@ theorem fieldAtPos_get (fs : List (String × (Int × Int))) (n : String)
       exact h
     | false =>
       have h1 : fieldPos (hd :: tl) n = fieldPos tl n + 1 := by
-        simp [fieldPos, he]
+        simp only [fieldPos, he, Bool.false_eq_true, ↓reduceIte, Nat.add_left_cancel_iff]
       have h2 : fieldAtPos (hd :: tl) n = fieldAtPos tl n := by
-        simp [fieldAtPos, he]
+        simp only [fieldAtPos, he, Bool.false_eq_true, ↓reduceIte]
       rw [h2] at h
       have ih' := ih h
       rw [h1]

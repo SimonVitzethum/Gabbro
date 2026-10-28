@@ -34,7 +34,7 @@ theorem r4_einzahlen_R : KoerperGutR r4P 0 r4Ein := by
   · have hr : r4P.rumpf r4Ein = r4RumpfEin := rfl
     rw [hr] at hrun
     rcases execEnd_cons_zurueck _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, h1, hrun1⟩
-    · simp [r4Schreib, execStmt] at h1
+    · simp only [r4Schreib, execStmt, List.append_assoc, reduceCtorEq] at h1
     rcases execEnd_cons_zurueck _ _ _ _ _ hrun1 with h2 | ⟨σ2, ρ2, h2, hrun2⟩
     · simp only [r4RufLies, execStmt] at h2
       split at h2
@@ -67,7 +67,7 @@ theorem r4_einzahlen_R : KoerperGutR r4P 0 r4Ein := by
   · have hr : r4P.rumpf r4Ein = r4RumpfEin := rfl
     rw [hr] at hrun
     rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
-    · simp [r4Schreib, execStmt] at h1
+    · simp only [r4Schreib, execStmt, List.append_assoc, reduceCtorEq] at h1
     · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h1 with h2 | ⟨σ2, ρ2, _, h2⟩
       · exact r4_call_tor _ _ R hOV _ _ _ _ _ _ _ h2
       · simp only [r4RetEin, execEnd] at h2

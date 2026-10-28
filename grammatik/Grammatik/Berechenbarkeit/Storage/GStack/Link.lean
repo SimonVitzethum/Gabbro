@@ -24,7 +24,8 @@ theorem linkPush_prefix (L : LinkFeld A) (G : LinkKopf A)
   case execution => intro Λ' rest; rfl
   case payload =>
     intro i
-    simp [eval, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ (Ne.symm L.h1)]
+    simp only [eval, World.slots_schreibGlob, World.slots_lese,
+  World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ (Ne.symm L.h1)]
 
 /-- Link an actually allocated cell in front of an existing G stack. The
 conclusion specifies its value sequence, not only shape and liveness. -/

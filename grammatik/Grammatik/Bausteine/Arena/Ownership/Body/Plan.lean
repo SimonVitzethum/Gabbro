@@ -33,17 +33,21 @@ def originList (c : Context) {Γ : Ctx} {Λ : List (Res D)} :
 
 theorem modeList_length : ∀ {params : Ctx} (modes : Modes params), (modeList modes).length = params.length
   | _, .nil => rfl
-  | _, .cons _ rest => by simp [modeList, modeList_length rest]
+  | _, .cons _ rest => by simp only [modeList, List.length_append, modeList_length rest, List.length_cons, List.length_nil,
+  Nat.zero_add, Nat.add_left_cancel_iff]
 
 theorem originList_length (c : Context) {Γ : Ctx} {Λ : List (Res D)} :
     ∀ {params : Ctx} (args : Args D Γ Λ params), (originList c args).length = params.length
   | _, .nil => rfl
-  | _, .cons _ rest => by simp [originList, originList_length c rest]
+  | _, .cons _ rest => by simp only [originList, List.length_append, originList_length c rest, List.length_cons, List.length_nil,
+  Nat.zero_add, Nat.add_left_cancel_iff]
 
 theorem modeList_at : ∀ {params : Ctx} (modes : Modes params) {τ : Ty} (x : Var params τ),
     (modeList modes)[x.unten]? = some (modeAt modes x)
   | _ :: rest, .cons mode modes, _, .here => by
-    simp [modeList, modeAt, Var.unten, List.getElem?_append_right, modeList_length modes]
+    simp only [modeList, Var.unten, List.length_append, modeList_length modes, List.length_cons, List.length_nil,
+  Nat.zero_add, Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self,
+  List.getElem_cons_zero, modeAt]
   | _ :: rest, .cons mode modes, _, .there x => by
     have hx : x.unten < (modeList modes).length := by rw [modeList_length]; exact Var.unten_lt x
     simp only [modeList, modeAt, Var.unten, List.getElem?_append_left hx]
@@ -53,7 +57,9 @@ theorem originList_at (c : Context) {Γ : Ctx} {Λ : List (Res D)} :
     ∀ {params : Ctx} (args : Args D Γ Λ params) {τ : Ty} (x : Var params τ),
       (originList c args)[x.unten]? = some (origin c (argument args x))
   | _ :: rest, .cons e args, _, .here => by
-    simp [originList, argument, Var.unten, List.getElem?_append_right, originList_length c args]
+    simp only [originList, Var.unten, List.length_append, originList_length c args, List.length_cons,
+  List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self,
+  List.getElem_cons_zero, argument]
   | _ :: rest, .cons e args, _, .there x => by
     have hx : x.unten < (originList c args).length := by rw [originList_length]; exact Var.unten_lt x
     simp only [originList, argument, Var.unten, List.getElem?_append_left hx]
@@ -64,7 +70,8 @@ theorem originList_at (c : Context) {Γ : Ctx} {Λ : List (Res D)} :
 theorem parameterContext_references : ∀ {params : Ctx} (modes : Modes params) (u : Nat),
     (Flow.parameterContext modes).references[u]? =
       ((modeList modes)[u]?).map (fun m => m.map fun _ => u)
-  | _, .nil, u => by simp [Flow.parameterContext, Context.empty, modeList]
+  | _, .nil, u => by simp only [Flow.parameterContext, Context.empty, List.length_nil, List.replicate_zero, Nat.not_lt_zero,
+  not_false_eq_true, getElem?_neg, modeList, Option.map_none]
   | _ :: rest, .cons mode modes, u => by
     have hl := (parameterContext_length modes)
     have hm := modeList_length modes
@@ -74,30 +81,36 @@ theorem parameterContext_references : ∀ {params : Ctx} (modes : Modes params) 
       exact parameterContext_references modes u
     · rw [List.getElem?_append_right (by omega), List.getElem?_append_right (by omega)]
       by_cases he : u = rest.length
-      · subst he; simp [hl.1, hl.2, hm]
+      · subst he; simp only [hl.2, hl.1, Nat.sub_self, List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one,
+  getElem?_pos, List.getElem_cons_zero, hm, Option.map_some]
       · have h1 : u - (Flow.parameterContext modes).references.length ≠ 0 := by omega
         have h2 : u - (modeList modes).length ≠ 0 := by omega
-        simp [List.getElem?_singleton, h1, h2]
+        simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, h1, not_false_eq_true,
+  getElem?_neg, h2, Option.map_none]
 where
   parameterContext_length {params : Ctx} (modes : Modes params) :=
     Flow.parameterContext_length modes
 
 theorem parameterContext_rights : ∀ {params : Ctx} (modes : Modes params) (u : Nat),
     (Flow.parameterContext modes).rights u = ((modeList modes)[u]?).getD none
-  | _, .nil, u => by simp [Flow.parameterContext, Context.empty, modeList]
+  | _, .nil, u => by simp only [Flow.parameterContext, Context.empty, List.length_nil, List.replicate_zero, modeList,
+  Nat.not_lt_zero, not_false_eq_true, getElem?_neg, Option.getD_none]
   | _ :: rest, .cons mode modes, u => by
     have hl := Flow.parameterContext_length modes
     have hm := modeList_length modes
     simp only [Flow.parameterContext, modeList]
     by_cases he : u = rest.length
     · subst he
-      simp [hl.2, List.getElem?_append_right, hm]
+      simp only [hl.2, ↓reduceIte, List.length_append, hm, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero,
+  Option.getD_some]
     · rw [if_neg (by rw [hl.2]; exact he), parameterContext_rights modes u]
       by_cases hu : u < rest.length
       · rw [List.getElem?_append_left (by omega)]
       · rw [List.getElem?_append_right (by omega), List.getElem?_eq_none (by omega)]
         have h2 : u - (modeList modes).length ≠ 0 := by omega
-        simp [List.getElem?_singleton, h2]
+        simp only [Option.getD_none, List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, h2,
+  not_false_eq_true, getElem?_neg]
 
 theorem parameterContext_reference {params : Ctx} (modes : Modes params) {τ : Ty} (x : Var params τ) :
     (Flow.parameterContext modes).reference x = (modeAt modes x).map fun _ => x.unten := by
@@ -141,7 +154,7 @@ variable {c : Context} {ms : List (Option PassingMode)} {os : List (Option Nat)}
 
 theorem passesAt_iff {u : Nat} {m : PassingMode} {i : Nat} :
     passesAt ms os u m i = true ↔ ms[u]? = some (some m) ∧ os[u]? = some (some i) := by
-  simp [passesAt]
+  simp only [passesAt, Bool.and_eq_true, beq_iff_eq]
 
 theorem consumes_iff {j : Nat} :
     consumes ms os j = true ↔ ∃ u : Nat, ms[u]? = some (some PassingMode.owned) ∧ os[u]? = some (some j) := by
@@ -172,10 +185,10 @@ theorem planFits_mode (hp : planFits c ms os = true) {u : Nat} {m : PassingMode}
   unfold positionFits at hf
   rw [hm] at hf
   cases ho : os[u]? with
-  | none => cases m <;> simp [ho] at hf
+  | none => cases m <;> simp only [ho, Bool.false_eq_true] at hf
   | some o =>
     cases o with
-    | none => cases m <;> simp [ho] at hf
+    | none => cases m <;> simp only [ho, Bool.false_eq_true] at hf
     | some i =>
       rw [ho] at hf
       cases m with
@@ -200,7 +213,7 @@ theorem planFits_owned_unique (hp : planFits c ms os = true) {u v : Nat} {q : Pa
     have hvlen : v < ms.length := (List.getElem?_eq_some_iff.mp hv).1
     rcases hall v hvlen with he | hn
     · exact he.symm
-    · simp [passesAt, hv, hov] at hn
+    · simp only [passesAt, hv, BEq.rfl, hov, Bool.and_self, Bool.true_eq_false] at hn
   | borrowed =>
     have : lends ms os i = true := lends_iff.mpr ⟨v, hv, hov⟩
     rw [hl] at this
@@ -213,7 +226,7 @@ theorem afterCall_bounded (hb : c.bounded) : (c.afterCall ms os).bounded := by
   refine ⟨?_, hb.2⟩
   intro i hi
   rw [afterCall_rights]
-  by_cases hc : consumes ms os i <;> simp [hc, hb.1 i hi]
+  by_cases hc : consumes ms os i <;> simp only [hc, ↓reduceIte, Bool.false_eq_true, hb.1 i hi]
 
 theorem afterCall_rights_sub {j : Nat} {m : PassingMode} (h : (c.afterCall ms os).rights j = some m) :
     c.rights j = some m ∧ consumes ms os j = false := by

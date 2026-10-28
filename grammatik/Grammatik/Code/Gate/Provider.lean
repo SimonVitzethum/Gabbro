@@ -75,7 +75,7 @@ theorem hole_frisch {m m' : Mem} {vs : List Val} {ans : Option Val} (hw : m.Wf)
   simp only [Mem.alloc]
   cases hb : m.blks m.next with
   | none => rfl
-  | some blk => have := hw m.next (by simp [hb]); omega
+  | some blk => have := hw m.next (by simp only [hb, Option.isSome_some]); omega
 
 /-- Every other block is as it was (a block that exists has an id below `next`, so it is not the
     new one). -/
@@ -109,12 +109,12 @@ theorem fuell_lokal {m m' : Mem} {vs : List Val} {ans : Option Val}
       · intro k hk
         simp only [Blk.fuellen]
         have : ¬ (o ≤ k ∧ k < o + n ∧ blk.cells k = none) := by omega
-        simp [this]
+        simp only [this, ↓reduceIte]
       · intro k h1 h2
         simp only [Blk.fuellen]
         cases hck : blk.cells k with
-        | none => simp [h1, h2]
-        | some c' => simp
+        | none => simp only [h1, h2, and_self, ↓reduceIte, Option.isSome_some]
+        | some c' => simp only [reduceCtorEq, and_false, ↓reduceIte, Option.isSome_some]
     · exact Or.inl rfl
 
 /-! ## 3. release -/
@@ -125,13 +125,13 @@ theorem gib_weg {m m' : Mem} {vs : List Val} {ans : Option Val} (hw : m.Wf)
     ∃ b, m.blks b ≠ none ∧ m'.blks b = none ∧ (∀ b', b' ≠ b → m'.blks b' = m.blks b') ∧
       m'.next = m.next ∧ m'.Wf := by
   obtain ⟨b, blk, -, hb, rfl, -⟩ := h
-  refine ⟨b, by simp [hb], by simp [Mem.entfernen], ?_, rfl, ?_⟩
+  refine ⟨b, by simp only [hb, ne_eq, reduceCtorEq, not_false_eq_true], by simp only [Mem.entfernen, ↓reduceIte], ?_, rfl, ?_⟩
   · intro b' hne
-    simp [Mem.entfernen, hne]
+    simp only [Mem.entfernen, hne, ↓reduceIte]
   · intro b' hb'
     simp only [Mem.entfernen] at hb' ⊢
     by_cases e : b' = b
-    · simp [e] at hb'
+    · simp only [e, ↓reduceIte, Option.isSome_none, Bool.false_eq_true] at hb'
     · simp only [e, if_false] at hb'
       exact hw b' hb'
 
@@ -141,6 +141,6 @@ theorem gib_haengt {m m' : Mem} {vs : List Val} {ans : Option Val}
     ∃ b, ∀ o t, m'.load b o t = none := by
   obtain ⟨b, blk, -, hb, rfl, -⟩ := h
   refine ⟨b, fun o t => ?_⟩
-  simp [Mem.load, Mem.entfernen]
+  simp only [Mem.load, Mem.entfernen, ↓reduceIte]
 
 end Gabbro.Code

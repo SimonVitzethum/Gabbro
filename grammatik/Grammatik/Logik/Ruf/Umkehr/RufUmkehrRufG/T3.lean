@@ -376,7 +376,7 @@ theorem istBlatt_R (O : Orakel D) (passes : Nat)
     {Γ : Ctx} {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} (h : s.istBlatt = true)
     (σ : World D) (ρ : Env D Γ) :
     execStmt O passes R s σ ρ = execStmt O passes keinRuf s σ ρ := by
-  cases s <;> first | rfl | simp [Stmt.istBlatt] at h
+  cases s <;> first | rfl | simp only [Stmt.istBlatt, Bool.false_eq_true] at h
 
 /-- How the machine resumes a caller when the callee `g` returns `v`: the
     caller itself (it did not wait), or its waiting continuation with `v`

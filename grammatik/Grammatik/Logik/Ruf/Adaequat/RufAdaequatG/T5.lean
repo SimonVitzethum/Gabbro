@@ -217,8 +217,8 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
         (grundRet arms ha _ _ _ _ _ hex M1 _ hZ1 (heldGenau_lese _ hΛ)
           (hA.lauf (RufLaufG.einzeln hs1)))
-  | _, _, _, _, .call .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .call .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .locks L hr body, hs => by
       intro σ σ' ρ v hex
       obtain ⟨_, hb⟩ := hs.locks_inv
@@ -235,10 +235,10 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rw [hW] at hZ1
       exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
         (blockRet body hb _ _ _ _ hex M1 _ hZ1 hΛ (hA.lauf (RufLaufG.einzeln hs1)))
-  | _, _, _, _, .traverse .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .retry .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .forever .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .traverse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret e hperm, _ => by
       intro σ σ' ρ v hex M _ rest k hZ hΛ _
       have hW := hZ.welt
@@ -248,16 +248,16 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         caller rst rfl e hperm rest k ρ rfl hΛ.heldIn hnw
       rw [hW] at hG
       exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
-  | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .leave .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .next .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .leave .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .next .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
 theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D (vertragVon D fn) l Γ Λ Λ'), BlockG A true b →
     SimRetB P O passes f fn caller rst rho s0 log A b
   | _, _, _, _, .nil, _ => by
       intro σ σ' ρ v hex
-      simp [execBlock] at hex
+      simp only [execBlock, reduceCtorEq] at hex
   | _, _, _, _, .cons s rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       obtain ⟨hs, hr⟩ := hb.cons_inv

@@ -71,7 +71,7 @@ theorem modusVonProfil_kopf {D : Deklaration} (P : Profil D)
     (k : ProfilSchluessel) (v : Nat) (n c : String) :
     modusVonProfil (AnnahmeEintrag.modus (D := D) n c k v :: P) k = v := by
   unfold modusVonProfil modusVonProfilAux
-  simp
+  simp only [↓reduceIte]
 
 /-- Keyed value lookup: the value `a` carries for key `k`, if any. -/
 def eintragWert {D : Deklaration} (a : AnnahmeEintrag D)
@@ -85,7 +85,7 @@ theorem eintragWert_trifft {D : Deklaration} (a : AnnahmeEintrag D)
     (k : ProfilSchluessel) (v : Nat) (h : istModus a k v) :
     eintragWert a k = some v := by
   obtain ⟨n, c, rfl⟩ := h
-  simp [eintragWert]
+  simp only [eintragWert, ↓reduceIte]
 
 /-- A keyed entry determines its key and value: inversion for `modus`. -/
 theorem istModus_inj {D : Deklaration} {n c : String}
@@ -131,7 +131,7 @@ theorem modusVonProfil_trifft {D : Deklaration} (P : Profil D)
     (hmem : AnnahmeEintrag.modus (D := D) n c k v ∈ P) :
     modusVonProfil (D := D) P k = v := by
   induction P with
-  | nil => simp at hmem
+  | nil => simp only [List.not_mem_nil] at hmem
   | cons hd tl ih =>
       simp only [List.mem_cons] at hmem
       cases hmem with
@@ -165,7 +165,7 @@ theorem modusVonProfil_trifft {D : Deklaration} (P : Profil D)
                   (AnnahmeEintrag.modus (D := D) n' c' kHead vHead :: tl) kHead
                     = vHead
                 unfold modusVonProfilAux
-                simp
+                simp only [↓reduceIte]
               · show modusVonProfilAux D
                   (AnnahmeEintrag.modus (D := D) n' c' kHead vHead :: tl) k = v
                 unfold modusVonProfilAux
@@ -219,7 +219,7 @@ theorem pruefeSchluesselAux_kons {D : Deklaration} (a : AnnahmeEintrag D)
   intro b hb
   have hall := (List.all_eq_true.mp hpair) b hb
   cases hc : schluesselKonflikt a b with
-  | true => simp [hc] at hall
+  | true => simp only [hc, Bool.not_true, Bool.false_eq_true] at hall
   | false => rfl
 
 /-- No conflict on a pair means key agreement: both directions of the
@@ -254,9 +254,9 @@ theorem pruefeSchluessel_einigung {D : Deklaration} (P : Profil D)
     | nil =>
         constructor
         · intro a ha
-          simp at ha
+          simp only [List.not_mem_nil] at ha
         · intro x hx
-          simp at hx
+          simp only [List.not_mem_nil] at hx
     | cons hd tl ih =>
         have hpair := (pruefeSchluesselAux_kons hd tl P hQ).1
         have hrest := (pruefeSchluesselAux_kons hd tl P hQ).2
@@ -451,7 +451,7 @@ def zeugeD : Deklaration where
       gschreibt := fun e => nomatch e
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -467,7 +467,7 @@ def zeugeD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
 
@@ -503,7 +503,7 @@ theorem zeugeProfil_gut : Profil.gut zeugeProfil := by
                 cases heq
                 cases heqA
             | inr heqB =>
-                simp at heqB
+                simp only [List.not_mem_nil] at heqB
     | inr heq =>
         cases heq with
         | inl heqA =>
@@ -518,9 +518,9 @@ theorem zeugeProfil_gut : Profil.gut zeugeProfil := by
                     cases heqC
                     rfl
                 | inr heqD =>
-                    simp at heqD
+                    simp only [List.not_mem_nil] at heqD
         | inr heqB =>
-            simp at heqB
+            simp only [List.not_mem_nil] at heqB
   · intro a ha b hb hname
     simp only [zeugeProfil, List.mem_cons] at ha hb
     simp only [eintragName] at hname
@@ -530,30 +530,30 @@ theorem zeugeProfil_gut : Profil.gut zeugeProfil := by
         cases hb with
         | inl heq2 =>
             rw [heq, heq2]
-            simp [namensGleichheit, namensGleichheitAux]
+            simp only [namensGleichheit, namensGleichheitAux, and_self]
         | inr heq2 =>
             cases heq2 with
             | inl heqA =>
                 rw [heq, heqA] at hname
-                simp at hname
+                simp only [String.reduceEq] at hname
             | inr heqB =>
-                simp at heqB
+                simp only [List.not_mem_nil] at heqB
     | inr heq =>
         cases heq with
         | inl heqA =>
             cases hb with
             | inl heq2 =>
                 rw [heqA, heq2] at hname
-                simp at hname
+                simp only [String.reduceEq] at hname
             | inr heqB =>
                 cases heqB with
                 | inl heqC =>
                     rw [heqA, heqC]
-                    simp [namensGleichheit, namensGleichheitAux]
+                    simp only [namensGleichheit, namensGleichheitAux, and_self]
                 | inr heqD =>
-                    simp at heqD
+                    simp only [List.not_mem_nil] at heqD
         | inr heqB =>
-            simp at heqB
+            simp only [List.not_mem_nil] at heqB
 
 /-- The witness profile holds only keyed entries. -/
 theorem zeugeProfil_keyed : ∀ a ∈ zeugeProfil, ∃ k v, istModus a k v := by
@@ -569,7 +569,7 @@ theorem zeugeProfil_keyed : ∀ a ∈ zeugeProfil, ∃ k v, istModus a k v := by
           rw [heqA]
           exact ⟨.fpKontraktion, zeugeKontraktionAus, "fp-kontraktion", "ziel", rfl⟩
       | inr heqB =>
-          simp at heqB
+          simp only [List.not_mem_nil] at heqB
 
 /-- The witness library binds: its one requirement is in the profile. -/
 theorem zeugeBibliothek_bindet : Profil.bindet zeugeProfil zeugeBibliothek := by
@@ -578,9 +578,10 @@ theorem zeugeBibliothek_bindet : Profil.bindet zeugeProfil zeugeBibliothek := by
   subst hr
   refine ⟨AnnahmeEintrag.modus "fp-kontraktion" "ziel" .fpKontraktion
     zeugeKontraktionAus, ?_, ?_, ?_⟩
-  · simp [zeugeProfil]
-  · simp [eintragName, anforderungName]
-  · simp [namensGleichheit, namensGleichheitAux, anforderungEintrag]
+  · simp only [zeugeProfil, List.mem_cons, AnnahmeEintrag.modus.injEq, String.reduceEq, reduceCtorEq, false_and,
+  and_false, and_self, List.not_mem_nil, or_false, or_true]
+  · simp only [eintragName, anforderungName]
+  · simp only [namensGleichheit, namensGleichheitAux, anforderungEintrag, and_self]
 
 /-- ZEUGE for `profil_modell`: the witness profile is good and keyed, so the
     model exists -- instantiated jointly with `zeugeProfil_gut` and

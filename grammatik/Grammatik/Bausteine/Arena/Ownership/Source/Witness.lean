@@ -16,7 +16,7 @@ theorem bounded : context.bounded := by
   constructor
   · intro i hi
     have hne : i ≠ 0 := by change 1 ≤ i at hi; omega
-    simp [context, hne]
+    simp only [context, hne, ↓reduceIte]
   · intro ref hm i hi
     have he : ref = some 0 := by simpa [context] using hm
     have hz : i = 0 := (Option.some.inj (he.symm.trans hi)).symm
@@ -47,14 +47,14 @@ theorem rights : Rights context ghosts state caller := by
       have hm : mode = .owned := by simpa [context] using hi.symm
       subst mode
       exact ⟨handle, rfl, ArenaOwnership.Witness.owns⟩
-    · simp [context, hz] at hi
+    · simp only [context, hz, ↓reduceIte, reduceCtorEq] at hi
   · intro i j p q hi hj hne _ h k hg hk
     have hiz : i = 0 := by
       by_contra hn
-      simp [context, hn] at hi
+      simp only [context, hn, ↓reduceIte, reduceCtorEq] at hi
     have hjz : j = 0 := by
       by_contra hn
-      simp [context, hn] at hj
+      simp only [context, hn, ↓reduceIte, reduceCtorEq] at hj
     exact False.elim (hne (hiz.trans hjz.symm))
 
 theorem realizes : Realizes context ghosts A caller state world rho :=

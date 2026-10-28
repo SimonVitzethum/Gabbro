@@ -48,7 +48,8 @@ theorem zugriff_aus_spur {M M' : RufMaschineG ivD} {f : Faden} {Λ : List (Res i
     ((Sum.inl () : ivD.Tab ⊕ ivD.Glob), true) ∈ zugriffe M M' f := by
   show _ ∈ (ereignisse M M' f).filterMap zugriffVon
   rw [ereignisse_eq h]
-  simp [zugriffVon]
+  simp only [zugriffVon, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil, List.mem_cons,
+  List.not_mem_nil, or_false]
 
 /-- One thread's two steps: `haupt` calls `setze`, `setze` writes `konto[0] := 5`, with the write
     event recorded. -/

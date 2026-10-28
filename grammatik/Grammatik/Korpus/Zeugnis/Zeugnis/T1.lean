@@ -106,20 +106,20 @@ theorem intVonTyp_eq {τ : Ty} {lo hi : Int}
     (h : intVonTyp τ = some (lo, hi)) : τ = .int lo hi := by
   cases τ with
   | int lo' hi' =>
-    simp [intVonTyp] at h
+    simp only [intVonTyp, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     rfl
-  | bool => simp [intVonTyp] at h
-  | opt _ => simp [intVonTyp] at h
-  | sum _ => simp [intVonTyp] at h
-  | why _ => simp [intVonTyp] at h
-  | never => simp [intVonTyp] at h
-  | fl _ => simp [intVonTyp] at h
-  | fnptr _ => simp [intVonTyp] at h
-  | ptr _ _ => simp [intVonTyp] at h
-  | ref _ => simp [intVonTyp] at h
-  | arr _ _ => simp [intVonTyp] at h
-  | str _ => simp [intVonTyp] at h
+  | bool => simp only [intVonTyp, reduceCtorEq] at h
+  | opt _ => simp only [intVonTyp, reduceCtorEq] at h
+  | sum _ => simp only [intVonTyp, reduceCtorEq] at h
+  | why _ => simp only [intVonTyp, reduceCtorEq] at h
+  | never => simp only [intVonTyp, reduceCtorEq] at h
+  | fl _ => simp only [intVonTyp, reduceCtorEq] at h
+  | fnptr _ => simp only [intVonTyp, reduceCtorEq] at h
+  | ptr _ _ => simp only [intVonTyp, reduceCtorEq] at h
+  | ref _ => simp only [intVonTyp, reduceCtorEq] at h
+  | arr _ _ => simp only [intVonTyp, reduceCtorEq] at h
+  | str _ => simp only [intVonTyp, reduceCtorEq] at h
 
 /-- The range of the `k`-th variable of `Γ`, if it is int-typed: a de Bruijn
     lookup that says `none` for out-of-range indices and non-int types. -/
@@ -138,28 +138,28 @@ theorem ctxTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int)
     (h : ctxTyp Γ k = some (lo, hi)) : ∃ _ : Var Γ (.int lo hi), True := by
   induction Γ generalizing k with
   | nil =>
-    cases k <;> simp [ctxTyp] at h
+    cases k <;> simp only [ctxTyp, reduceCtorEq] at h
   | cons τ Γ ih =>
     cases k with
     | zero =>
       cases τ with
       | int lo' hi' =>
-        simp [ctxTyp] at h
+        simp only [ctxTyp, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         exact ⟨.here, trivial⟩
-      | bool => simp [ctxTyp] at h
-      | opt _ => simp [ctxTyp] at h
-      | sum _ => simp [ctxTyp] at h
-      | why _ => simp [ctxTyp] at h
-      | never => simp [ctxTyp] at h
-      | fl _ => simp [ctxTyp] at h
-      | fnptr _ => simp [ctxTyp] at h
-      | ptr _ _ => simp [ctxTyp] at h
-      | ref _ => simp [ctxTyp] at h
-      | arr _ _ => simp [ctxTyp] at h
-      | str _ => simp [ctxTyp] at h
+      | bool => simp only [ctxTyp, reduceCtorEq] at h
+      | opt _ => simp only [ctxTyp, reduceCtorEq] at h
+      | sum _ => simp only [ctxTyp, reduceCtorEq] at h
+      | why _ => simp only [ctxTyp, reduceCtorEq] at h
+      | never => simp only [ctxTyp, reduceCtorEq] at h
+      | fl _ => simp only [ctxTyp, reduceCtorEq] at h
+      | fnptr _ => simp only [ctxTyp, reduceCtorEq] at h
+      | ptr _ _ => simp only [ctxTyp, reduceCtorEq] at h
+      | ref _ => simp only [ctxTyp, reduceCtorEq] at h
+      | arr _ _ => simp only [ctxTyp, reduceCtorEq] at h
+      | str _ => simp only [ctxTyp, reduceCtorEq] at h
     | succ k =>
-      simp [ctxTyp] at h
+      simp only [ctxTyp] at h
       obtain ⟨x, _⟩ := ih k h
       exact ⟨.there x, trivial⟩
 

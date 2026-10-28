@@ -46,7 +46,7 @@ def Mem.Wf (m : Mem) : Prop := ∀ b, (m.blks b).isSome = true → b < m.next
 def Mem.empty : Mem := ⟨fun _ => none, 0⟩
 
 theorem Mem.empty_wf : Mem.empty.Wf := by
-  intro b h; simp [Mem.empty] at h
+  intro b h; simp only [empty, Option.isSome_none, Bool.false_eq_true] at h
 
 /-! ## 1. Cells -/
 
@@ -77,7 +77,8 @@ theorem getCells_put_same (f : Nat → Option Cell) (o : Nat) (cs : List Cell) :
   induction cs generalizing o with
   | nil => rfl
   | cons c cs ih =>
-      have h0 : putCells f o (c :: cs) o = some c := by simp [putCells]
+      have h0 : putCells f o (c :: cs) o = some c := by simp only [putCells, Std.le_refl, List.length_cons, Nat.lt_add_right_iff_pos, Nat.zero_lt_succ, and_self,
+  ↓reduceIte, Nat.sub_self, getElem?_pos, List.getElem_cons_zero]
       have h1 : getCells (putCells f o (c :: cs)) (o + 1) cs.length = some cs := by
         rw [getCells_congr (g := putCells f (o + 1) cs) (o + 1) cs.length]
         · exact ih (o + 1)
@@ -85,7 +86,7 @@ theorem getCells_put_same (f : Nat → Option Cell) (o : Nat) (cs : List Cell) :
           simp only [putCells, List.length_cons]
           have e : k - o = (k - (o + 1)) + 1 := by omega
           rw [if_pos (by omega), if_pos (by omega), e]
-          simp
+          simp only [List.getElem?_cons_succ]
       simp only [List.length_cons, getCells, h0, h1]
       rfl
 
@@ -112,11 +113,11 @@ def bytesNat : List Cell → Option Nat
 theorem natBytes_length (k v : Nat) : (natBytes k v).length = k := by
   induction k generalizing v with
   | zero => rfl
-  | succ k ih => simp [natBytes, ih]
+  | succ k ih => simp only [natBytes, List.length_cons, ih, Nat.add_left_cancel_iff]
 
 theorem bytesNat_natBytes (k v : Nat) : bytesNat (natBytes k v) = some (v % 256 ^ k) := by
   induction k generalizing v with
-  | zero => simp [natBytes, bytesNat, Nat.mod_one]
+  | zero => simp only [natBytes, bytesNat, Nat.pow_zero, Nat.mod_one]
   | succ k ih =>
       simp only [natBytes, bytesNat, ih, Option.map_some, Nat.pow_succ]
       congr 1
@@ -145,7 +146,7 @@ def Ty.decLE : Ty → List Cell → Option Val
   | _, _ => none
 
 theorem Val.encLE_length (v : Val) : v.encLE.length = v.ty.store := by
-  cases v <;> simp [Val.encLE, Val.ty, Ty.store, natBytes_length]
+  cases v <;> simp only [encLE, natBytes_length, Ty.store, ty, List.length_map, List.length_range]
 
 theorem decLE_encLE_int (w : Nat) (v : BitVec w) : Ty.decLE (.int w) (Val.encLE (.int w v)) = some (.int w v) := by
   simp only [Ty.decLE, Val.encLE, natBytes_length, bytesNat_natBytes, if_true, Option.map_some]
@@ -161,7 +162,7 @@ theorem decLE_encLE_int (w : Nat) (v : BitVec w) : Ty.decLE (.int w) (Val.encLE 
 
 theorem decLE_encLE_ptr (b : Nat) (o : Int) : Ty.decLE .ptr (Val.encLE (.ptr b o)) = some (.ptr b o) := by
   obtain ⟨n, hn⟩ : ∃ n, Conf.wb = n + 1 := ⟨Conf.wb - 1, by have := Conf.wb_pos; omega⟩
-  simp [Ty.decLE, Val.encLE, hn, List.range_succ_eq_map]
+  simp only [Ty.decLE, Val.encLE, hn, List.range_succ_eq_map, List.map_cons, List.map_map, ↓reduceIte]
 
 /-- A well-formed float triple stays below `2^(1 + ebits + fracBits)`. -/
 theorem zuBits_lt (F : Format) (hF : F.dicht) (g : GBits F) (hw : wf F g) :
@@ -201,10 +202,10 @@ theorem decLE_encLE_dbl (g : F64) (hw : wf f64 g) :
 def order (cs : List Cell) : List Cell := if Conf.big then cs.reverse else cs
 
 theorem order_order (cs : List Cell) : order (order cs) = cs := by
-  by_cases h : Conf.big = true <;> simp [order, h]
+  by_cases h : Conf.big = true <;> simp only [order, h, ↓reduceIte, List.reverse_reverse, Bool.false_eq_true]
 
 theorem order_length (cs : List Cell) : (order cs).length = cs.length := by
-  by_cases h : Conf.big = true <;> simp [order, h]
+  by_cases h : Conf.big = true <;> simp only [order, h, ↓reduceIte, List.length_reverse, Bool.false_eq_true]
 
 /-- The cells a value is stored as, in memory order. -/
 def Val.enc (v : Val) : List Cell := order v.encLE

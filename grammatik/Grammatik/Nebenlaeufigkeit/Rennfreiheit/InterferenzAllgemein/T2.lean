@@ -172,7 +172,7 @@ theorem kindEintrittAusGabel_mem (Nb : Nebeneinander)
     (h : KindEintrittAusGabel Nb J spawns kind = some σ) : σ ∈ J.welten := by
   unfold KindEintrittAusGabel at h
   cases heq : spawns.find? (fun s => decide (s.2.1 = kind)) with
-  | none => simp [heq] at h
+  | none => simp only [heq, reduceCtorEq] at h
   | some s => simp only [heq] at h; exact List.mem_of_getElem? h
 
 /-- **The spawned entry keeps the invariant.** The named entry world is a

@@ -84,7 +84,7 @@ theorem stmtKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact (Fin.cast hr ‹_›).elim0
       · rfl
       · rfl
-  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .locks L hr body, hs => by
       intro σ ρ
       obtain ⟨_, hb, _⟩ := hs.locks_inv
@@ -107,7 +107,7 @@ theorem stmtKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro σ ρ
       simp only [execStmt]
       exact foreverLauf_ende_none _ _ _ (fun σ ρ => blockKeinR body hs.forever_inv σ ρ) _ _ _
-  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret .., hs => absurd hs.ret_inv (by decide)
   | _, _, _, _, .retWhy .., hs => absurd hs.retGrund_inv (by decide)
   | _, _, _, _, .leave .., _ => by intro σ ρ; rfl
@@ -280,11 +280,11 @@ theorem endeConsOkR (hRuf : RufOk P O passes f A R C) {mr l : Bool} {Γ : Ctx}
       · exact (Fin.cast hr ‹_›).elim0
       · cases hex
       · cases hex
-    | _ => simp [Stmt.rufZiel] at hg
-  | ret _ _ => simp [execStmt] at hex
-  | retWhy _ _ => simp [execStmt] at hex
-  | leave _ => simp [execStmt] at hex
-  | next _ => simp [execStmt] at hex
+    | _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
+  | ret _ _ => simp only [execStmt, reduceCtorEq] at hex
+  | retWhy _ _ => simp only [execStmt, reduceCtorEq] at hex
+  | leave _ => simp only [execStmt, reduceCtorEq] at hex
+  | next _ => simp only [execStmt, reduceCtorEq] at hex
   | ite => exact hEntf rfl
   | onOption => exact hEntf rfl
   | onTag => exact hEntf rfl

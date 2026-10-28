@@ -26,7 +26,7 @@ theorem ausTabelle_eq (u : UProg) {β : Fin u.fns.length → Type} (g : ∀ f, �
   funext f
   simp only [ausTabelle, tabelleFn]
   rw [Array.getElem?_ofFn]
-  simp [f.isLt]
+  simp only [f.isLt, ↓reduceDIte, Fin.eta]
 
 /-- **The program with its bodies and contracts computed once** (the tables are built when `memoP` is evaluated,
     outside the functions that read them). -/

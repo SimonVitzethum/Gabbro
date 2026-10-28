@@ -33,28 +33,28 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
   | .why _ _ => rfl
   | .glob g _ =>
       simp only [eval]
-      exact hSG g (hsub _ (by simp [Expr.orte]))
+      exact hSG g (hsub _ (by simp only [Expr.orte, List.mem_cons, List.not_mem_nil, or_false]))
   | .oldG g _ =>
       simp only [eval]
-      exact h0G g (hsub _ (by simp [Expr.orte]))
+      exact h0G g (hsub _ (by simp only [Expr.orte, List.mem_cons, List.not_mem_nil, or_false]))
   | .slot t f i _ =>
       have hi := eval_liest_nur_orte i os
         (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
-      exact hS t (hsub _ (by simp [Expr.orte])) _ _
+      exact hS t (hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])) _ _
   | .oldS t f i _ =>
       have hi := eval_liest_nur_orte i os
         (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
-      exact h0T t (hsub _ (by simp [Expr.orte])) _ _
+      exact h0T t (hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])) _ _
   | .thru _ t _ f i _ =>
       have hi := eval_liest_nur_orte i os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inr (List.mem_cons_of_mem _ ho))))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
-      exact hS t (hsub _ (by simp [Expr.orte])) _ _
+      exact hS t (hsub _ (by simp only [Expr.orte, List.mem_append, List.mem_cons, true_or, or_true])) _ _
   | .refEq a b =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho))) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
@@ -67,7 +67,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
         (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hr]
-      exact hS t (hsub _ (by simp [Expr.orte])) _ _
+      exact hS t (hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])) _ _
   | .widen _ _ e =>
       have h := eval_liest_nur_orte e os
         (fun o ho => hsub o ho) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
@@ -270,7 +270,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       simp only [eval]
       rw [ha, hb]
   | .getBytes t f hf n i _ _ _ =>
-      have hmemT : .inl t ∈ os := hsub _ (by simp [Expr.orte])
+      have hmemT : .inl t ∈ os := hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])
       have hi := eval_liest_nur_orte i os
         (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
@@ -314,7 +314,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
           (fun k => hf ▸ σ'.slots t k f) k := by
         intro k
         show (hf ▸ σ.slots t k f) = (hf ▸ σ'.slots t k f)
-        rw [hS t (hsub _ (by simp [Expr.orte])) k f]
+        rw [hS t (hsub _ (by simp only [Expr.orte, List.cons_append, List.mem_cons, List.mem_append, true_or])) k f]
       simp only [eval]
       rw [ha, hb]
       exact kette_gleich _ _ _ hw
@@ -501,9 +501,9 @@ theorem vertragW_mem {Γ : Ctx} {Λ : List (Res D)}
         subst heq
         exact ho
     | inr _ =>
-        simp at hpo
+        simp only [Bool.false_eq_true] at hpo
   · intro h
-    exact ⟨.inl t, h, by simp⟩
+    exact ⟨.inl t, h, by simp only [decide_true]⟩
 
 /-- The global half names exactly the `.inr` members of `e.orte`. -/
 theorem vertragG_mem {Γ : Ctx} {Λ : List (Res D)}
@@ -514,14 +514,14 @@ theorem vertragG_mem {Γ : Ctx} {Λ : List (Res D)}
   · rintro ⟨o, ho, hpo⟩
     cases o with
     | inl _ =>
-        simp at hpo
+        simp only [Bool.false_eq_true] at hpo
     | inr g' =>
         simp only at hpo
         have heq : g' = g := of_decide_eq_true hpo
         subst heq
         exact ho
   · intro h
-    exact ⟨.inr g, h, by simp⟩
+    exact ⟨.inr g, h, by simp only [decide_true]⟩
 
 /-- A contract expression as a world predicate: holds for every environment. -/
 def QExpr {Γ : Ctx} {Λ : List (Res D)} (e : Expr D Γ Λ .bool) :

@@ -181,25 +181,25 @@ theorem antwortLeer_mitRuhe (e : Option Ty) :
         exact h (valZ τ v) ((wertOk_valR τ _).mp hv)
 
 theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
-  | .int _ _ => by simp
-  | .bool => by simp
-  | .opt _ => by simp
-  | .sum _ => by simp
-  | .why _ => by simp
-  | .never => by simp
-  | .fl _ _ => by simp
-  | .fnptr _ => by simp
-  | .ptr _ _ => by simp
-  | .ref _ => by simp
-  | .arr _ _ => by simp
-  | .str _ => by simp
+  | .int _ _ => by simp only [reduceCtorEq]
+  | .bool => by simp only [reduceCtorEq]
+  | .opt _ => by simp only [reduceCtorEq]
+  | .sum _ => by simp only [reduceCtorEq]
+  | .why _ => by simp only [reduceCtorEq]
+  | .never => by simp only
+  | .fl _ _ => by simp only [reduceCtorEq]
+  | .fnptr _ => by simp only [reduceCtorEq]
+  | .ptr _ _ => by simp only [reduceCtorEq]
+  | .ref _ => by simp only [reduceCtorEq]
+  | .arr _ _ => by simp only [reduceCtorEq]
+  | .str _ => by simp only [reduceCtorEq]
 
 theorem stelleAx_mitRuhe (e : Option Ty) :
     (e.map tyR = some .never ∨ ¬ AntwortLeer D.mitRuhe (e.map tyR)) ↔
       (e = some .never ∨ ¬ AntwortLeer D e) := by
   rw [antwortLeer_mitRuhe]
   cases e with
-  | none => simp
+  | none => simp only [Option.map_none, reduceCtorEq, false_or]
   | some τ => simp only [Option.map_some, Option.some.injEq, tyR_never]
 
 /-- An answer site of `D.mitRuhe` is admissible exactly when it is in `D`. -/
@@ -258,7 +258,7 @@ theorem mehrfach_map_inj {α β : Type} {f : α → β} (hf : ∀ a b, f a = f b
   constructor
   · intro h
     obtain ⟨l', hl', he⟩ := List.sublist_map_iff.mp h
-    rcases l' with _ | ⟨a, _ | ⟨b, _ | ⟨c, l⟩⟩⟩ <;> simp at he
+    rcases l' with _ | ⟨a, _ | ⟨b, _ | ⟨c, l⟩⟩⟩ <;> simp only [List.map_nil, reduceCtorEq, List.map_cons, List.cons.injEq, List.cons_ne_self, and_false, and_true, List.nil_eq] at he
     obtain ⟨h1, h2⟩ := he
     rw [hf a w h1.symm, hf b w h2.symm] at hl'
     exact hl'
@@ -268,7 +268,7 @@ theorem mehrfach_map_inj {α β : Type} {f : α → β} (hf : ∀ a b, f a = f b
 /-- Two different positions holding one value make it "declared twice". -/
 theorem mehrfach_of_getElem? {α : Type} : ∀ {l : List α} {i j : Nat} {x : α}, i < j →
     l[i]? = some x → l[j]? = some x → Mehrfach l x
-  | [], _, _, _, _, hi, _ => by simp at hi
+  | [], _, _, _, _, hi, _ => by simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   | _ :: _, _, 0, _, hij, _, _ => by omega
   | a :: l, 0, j + 1, x, _, hi, hj => by
       simp only [List.getElem?_cons_zero, Option.some.injEq] at hi

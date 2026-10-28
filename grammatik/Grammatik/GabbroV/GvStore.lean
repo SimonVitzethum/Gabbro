@@ -38,8 +38,8 @@ theorem storeSlot_anders (σ : World D) (t : D.Tab) (k : Int)
       cases h with
       | inl hkk' => exact absurd hkk hkk'
       | inr hff => exact hff
-    simp [World.storeSlot, hkk, hff]
-  · simp [World.storeSlot, hkk]
+    simp only [World.storeSlot, hkk, ↓reduceDIte, ↓reduceIte, hff]
+  · simp only [World.storeSlot, ↓reduceDIte, hkk, ↓reduceIte]
 
 /-- The edge map a `reaches` runs over (`eval .reaches`,
     `Semantik.lean:262`): the `option index` field read as chain edges. -/
@@ -103,7 +103,7 @@ def zahlInv : Zahl 0 255 → Bool
 /-- The step map computes what it says. -/
 theorem zahlNach_wert (k : Nat) (z : Zahl 0 255) :
     (zahlNach k z).n = (z.n + 1) % 16 := by
-  simp [zahlNach]
+  simp only [zahlNach]
 
 /-- Uniform tick contract over any `Zahl 0 255` state: from every state
     below 16 (`k < 64` is the tick index bound, used by `vor`) each call
@@ -115,10 +115,10 @@ theorem zahl_tick_vertrag :
   intro k z hk hs
   have hslt : z.n < 16 := by simpa [zahlInv] using hs
   constructor
-  · simp [zahlVor, hk, hslt]
+  · simp only [zahlVor, hk, hslt, and_self, decide_true]
   · have hmod : (z.n + 1) % 16 < 16 := by omega
     have e : (zahlNach k z).n = (z.n + 1) % 16 := zahlNach_wert k z
-    simp [zahlInv, e, hmod]
+    simp only [zahlInv, e, hmod, decide_true]
 
 /-! ## Fixture: three slots, one edge field, one counter field -/
 
@@ -167,7 +167,7 @@ def kettenD : Deklaration where
       gschreibt := fun g => nomatch g
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []
@@ -183,7 +183,7 @@ def kettenD : Deklaration where
   rzusage := fun r => nomatch r
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
 

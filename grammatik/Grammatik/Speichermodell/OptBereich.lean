@@ -42,7 +42,7 @@ theorem optDec_optEnc (lo hi : Int) (o : Option Int)
     (h : o = none ∨ ∃ v, o = some v ∧ lo ≤ v ∧ v ≤ hi) :
     optDec lo hi (optEnc lo hi o) = o := by
   rcases h with rfl | ⟨v, rfl, h1, h2⟩
-  · simp [optEnc, optDec]
+  · simp only [optDec, optEnc, ↓reduceIte]
   · have hlt : enc lo v < (hi - lo + 1).toNat := by
       unfold enc
       omega
@@ -50,7 +50,7 @@ theorem optDec_optEnc (lo hi : Int) (o : Option Int)
       intro hcon
       omega
     simp only [optEnc, optDec]
-    simp [hne]
+    simp only [hne, ↓reduceIte, Option.some.injEq]
     exact dec_enc lo hi v h1 h2
 /-! ## 3. Width fit and injectivity. -/
 

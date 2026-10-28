@@ -89,40 +89,40 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
     (he : istGegenstand hd = true) :
     uRestFehler (hd :: tl) = .error "item without G form" := by
   cases hd with
-  | constT _ _ _ => simp [istGegenstand] at he
-  | typeT _ _ _ _ _ => simp [istGegenstand] at he
-  | tableT _ _ _ _ _ _ _ => simp [istGegenstand] at he
-  | lockT _ _ _ _ _ _ _ => simp [istGegenstand] at he
-  | fnT _ _ => simp [istGegenstand] at he
-  | entryT _ => simp [istGegenstand] at he
+  | constT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | typeT _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | tableT _ _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | lockT _ _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | fnT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | entryT _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | modT _ _ => rfl
   | useT _ => rfl
-  | globT _ _ _ _ _ _ _ => simp [istGegenstand] at he
-  | protoT _ => simp [istGegenstand] at he
-  | specT _ _ => simp [istGegenstand] at he
-  | asmT _ _ => simp [istGegenstand] at he
+  | globT _ _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | protoT _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | specT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | asmT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | formatT _ _ _ _ => rfl
-  | arenaT _ _ _ _ _ _ => simp [istGegenstand] at he
-  | whyT _ _ _ => simp [istGegenstand] at he
-  | stateT _ _ => simp [istGegenstand] at he
-  | devT _ _ _ _ => simp [istGegenstand] at he
-  | assumT _ _ _ _ => simp [istGegenstand] at he
+  | arenaT _ _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | whyT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | stateT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | devT _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | assumT _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | axiomT _ _ _ q _ _ =>
     cases q with
-    | none => simp [istGegenstand] at he
+    | none => simp only [istGegenstand, Bool.false_eq_true] at he
     | some _ => rfl
   | checkT _ => rfl
-  | atomT _ _ _ _ _ => simp [istGegenstand] at he
+  | atomT _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | rcuT _ _ _ => rfl
-  | groupT _ _ _ => simp [istGegenstand] at he
-  | concT _ => simp [istGegenstand] at he
+  | groupT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | concT _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | accT _ _ _ _ => rfl
   | walkT _ => rfl
   | trustT _ _ _ _ _ _ => rfl
   | bootT _ _ _ _ => rfl
-  | callT _ => simp [istGegenstand] at he
-  | varT _ => simp [istGegenstand] at he
-  | goalT _ _ => simp [istGegenstand] at he
+  | callT _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | varT _ => simp only [istGegenstand, Bool.false_eq_true] at he
+  | goalT _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | transT _ _ _ => rfl
   | profT _ _ => rfl
   | gateT _ => rfl
@@ -168,13 +168,13 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | lockT _ _ _ _ _ _ _ => rfl
   | fnT _ _ => rfl
   | entryT _ => rfl
-  | modT _ _ => simp [istAngenommen] at he
-  | useT _ => simp [istAngenommen] at he
+  | modT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | useT _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | globT _ _ _ _ _ _ _ => rfl
   | protoT _ => rfl
   | specT _ _ => rfl
   | asmT _ _ => rfl
-  | formatT _ _ _ _ => simp [istAngenommen] at he
+  | formatT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | arenaT _ _ _ _ _ _ => rfl
   | whyT _ _ _ => rfl
   | stateT _ _ => rfl
@@ -183,23 +183,23 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | axiomT _ _ _ q _ _ =>
     cases q with
     | none => rfl
-    | some _ => simp [istAngenommen] at he
-  | checkT _ => simp [istAngenommen] at he
+    | some _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | checkT _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | atomT _ _ _ _ _ => rfl
-  | rcuT _ _ _ => simp [istAngenommen] at he
+  | rcuT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | groupT _ _ _ => rfl
   | concT _ => rfl
-  | accT _ _ _ _ => simp [istAngenommen] at he
-  | walkT _ => simp [istAngenommen] at he
-  | trustT _ _ _ _ _ _ => simp [istAngenommen] at he
-  | bootT _ _ _ _ => simp [istAngenommen] at he
+  | accT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | walkT _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | trustT _ _ _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | bootT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | callT _ => rfl
   | varT _ => rfl
   | goalT _ _ => rfl
-  | transT _ _ _ => simp [istAngenommen] at he
-  | profT _ _ => simp [istAngenommen] at he
-  | gateT _ => simp [istAngenommen] at he
-  | pubT _ => simp [istAngenommen] at he
+  | transT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | profT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | gateT _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | pubT _ => simp only [istAngenommen, Bool.false_eq_true] at he
 
 /-- **A head that is neither accepted nor excused fails at once.** With
     no fragment excuse (`istGegenstand` false) and no accepted shape
@@ -209,44 +209,44 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
     (he : istGegenstand hd = false) (ha : istAngenommen hd = false) :
     uRestFehler (hd :: tl) = .error "item without G form" := by
   cases hd with
-  | constT _ _ _ => simp [istAngenommen] at ha
-  | typeT _ _ _ _ _ => simp [istAngenommen] at ha
-  | tableT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | lockT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | fnT _ _ => simp [istAngenommen] at ha
-  | entryT _ => simp [istAngenommen] at ha
-  | modT _ _ => simp [istGegenstand] at he
-  | useT _ => simp [istGegenstand] at he
-  | globT _ _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | protoT _ => simp [istAngenommen] at ha
-  | specT _ _ => simp [istAngenommen] at ha
-  | asmT _ _ => simp [istAngenommen] at ha
-  | formatT _ _ _ _ => simp [istGegenstand] at he
-  | arenaT _ _ _ _ _ _ => simp [istAngenommen] at ha
-  | whyT _ _ _ => simp [istAngenommen] at ha
-  | stateT _ _ => simp [istAngenommen] at ha
-  | devT _ _ _ _ => simp [istAngenommen] at ha
-  | assumT _ _ _ _ => simp [istAngenommen] at ha
+  | constT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | typeT _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | tableT _ _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | lockT _ _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | fnT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | entryT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | modT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | useT _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | globT _ _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | protoT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | specT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | asmT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | formatT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | arenaT _ _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | whyT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | stateT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | devT _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | assumT _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
   | axiomT _ _ _ q _ _ =>
     cases q with
-    | none => simp [istAngenommen] at ha
-    | some _ => simp [istGegenstand] at he
-  | checkT _ => simp [istGegenstand] at he
-  | atomT _ _ _ _ _ => simp [istAngenommen] at ha
-  | rcuT _ _ _ => simp [istGegenstand] at he
-  | groupT _ _ _ => simp [istAngenommen] at ha
-  | concT _ => simp [istAngenommen] at ha
-  | accT _ _ _ _ => simp [istGegenstand] at he
-  | walkT _ => simp [istGegenstand] at he
-  | trustT _ _ _ _ _ _ => simp [istGegenstand] at he
-  | bootT _ _ _ _ => simp [istGegenstand] at he
-  | callT _ => simp [istAngenommen] at ha
-  | varT _ => simp [istAngenommen] at ha
-  | goalT _ _ => simp [istAngenommen] at ha
-  | transT _ _ _ => simp [istGegenstand] at he
-  | profT _ _ => simp [istGegenstand] at he
-  | gateT _ => simp [istGegenstand] at he
-  | pubT _ => simp [istGegenstand] at he
+    | none => simp only [istAngenommen, Bool.true_eq_false] at ha
+    | some _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | checkT _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | atomT _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | rcuT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | groupT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | concT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | accT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | walkT _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | trustT _ _ _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | bootT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | callT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | varT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | goalT _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
+  | transT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | profT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | gateT _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | pubT _ => simp only [istGegenstand, Bool.true_eq_false] at he
 
 /-- **An off-fragment item anywhere fails the item check.** Induction:
     empty lists hold no witness; a bad head fails at once, otherwise the
@@ -259,7 +259,7 @@ theorem uRestFehler_faellt (l : List SItemTief)
     cases h with
     | intro w hw =>
       cases hw with
-      | intro hmem hbad => simp at hmem
+      | intro hmem hbad => simp only [List.not_mem_nil] at hmem
   | cons hd tl ih =>
     cases h with
     | intro w hw =>
@@ -276,7 +276,7 @@ theorem uRestFehler_faellt (l : List SItemTief)
               | inl heq =>
                 cases heq
                 rw [he] at hbad
-                simp at hbad
+                simp only [Bool.false_eq_true] at hbad
               | inr hm => exact hm
             rw [uRestFehler_kopf_gut hd tl ha]
             exact ih ⟨w, hmem', hbad⟩
@@ -287,7 +287,7 @@ theorem uRestFehler_faellt (l : List SItemTief)
 theorem elabU_bei_RestFehler (ms : List SItemTief) (e : String)
     (hR : uRestFehler (uMembers ms) = .error e) :
     elabU ms = .error e := by
-  simp [elabU, hR]
+  simp only [elabU, hR]
 
 /-- **Units that carry an off-fragment item are refused.** The premise is read where `elabU` checks. -/
 theorem elabU_verweigert_noch (items : List SItemTief)

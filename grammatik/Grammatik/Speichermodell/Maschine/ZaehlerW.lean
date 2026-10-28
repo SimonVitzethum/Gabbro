@@ -72,7 +72,7 @@ theorem w_kette {M0 : RufMaschineG D} {g : D.Glob} {f : Wert D (D.gtyp g) → In
       have e : m = ⟨0, M0.speicher, Sicht.null⟩ := List.mem_singleton.mp hm
       subst e
       show f (M0.speicher.globs g) = f (M0.speicher.globs g) + ((0 : Nat) : Int)
-      simp
+      simp only [Int.cast_ofNat_Int, Int.add_zero]
   | schritt W W' u hr' hs ih =>
       obtain ⟨σ, M'', wahl, neu, h⟩ := hs
       obtain ⟨hmap, hval⟩ := ih
@@ -125,7 +125,8 @@ theorem w_zaehler {M0 : RufMaschineG D} {g : D.Glob} {f : Wert D (D.gtyp g) → 
       rw [hh] at hmap hval
       have hts : m.ts = k.length := by
         have := congrArg List.head? hmap
-        simp [List.range_succ] at this
+        simp only [List.map_cons, List.head?_cons, List.length_cons, List.range_succ, List.reverse_append,
+  List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append, Option.some.injEq] at this
         exact this
       refine ⟨m, k, rfl, hts, by rw [hval m List.mem_cons_self, hts], fun m' hm' => ?_⟩
       have := mem_ts_lt hmap (List.mem_cons_of_mem _ hm')
@@ -134,11 +135,12 @@ theorem w_zaehler {M0 : RufMaschineG D} {g : D.Glob} {f : Wert D (D.gtyp g) → 
         intro e
         have hm2 : m'.ts ∈ k.map (·.ts) := List.mem_map_of_mem hm'
         have hk : k.map (·.ts) = (List.range k.length).reverse := by
-          simp [List.range_succ] at hmap
+          simp only [List.map_cons, List.length_cons, List.range_succ, List.reverse_append, List.reverse_cons,
+  List.reverse_nil, List.nil_append, List.cons_append, List.cons.injEq] at hmap
           exact hmap.2
         rw [hk, List.mem_reverse, List.mem_range, e] at hm2
         omega
-      simp at this
+      simp only [List.length_cons] at this
       omega
 
 /-- **Two increments, the counter ends at two above its start**: once the history of `g` holds
@@ -151,7 +153,7 @@ theorem w_zaehler_zwei {M0 : RufMaschineG D} {g : D.Glob} {f : Wert D (D.gtyp g)
   obtain ⟨m, k, hh, _, hv, _⟩ := w_zaehler hZ hr
   refine ⟨m, k, hh, ?_⟩
   rw [hh] at h3
-  simp at h3
+  simp only [List.length_cons, Nat.reduceEqDiff] at h3
   rw [hv, h3]
   rfl
 

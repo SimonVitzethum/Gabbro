@@ -27,7 +27,7 @@ def fremdZahl : List (Ereignis D) → Nat
 
 theorem fremdZahl_append (a b : List (Ereignis D)) : fremdZahl (a ++ b) = fremdZahl a + fremdZahl b := by
   induction a with
-  | nil => simp [fremdZahl]
+  | nil => simp only [List.nil_append, fremdZahl, Nat.zero_add]
   | cons e a ih => cases e <;> simp only [List.cons_append, fremdZahl, ih] <;> omega
 
 /-- The open locks after new events depend on the tail only through its open locks. -/
@@ -90,7 +90,7 @@ theorem Paar.fremd (hS : Schwanz c sF sM) (h : Paar sF sM σF σM) :
 
 theorem Paar.merke (h : Paar sF sM σF σM) (es : List (Ereignis D)) : Paar sF sM (σF.merke es) (σM.merke es) := by
   obtain ⟨neu, hF, hM⟩ := h.neu
-  exact ⟨h.slots, h.globs, es ++ neu, by simp [World.merke, hF], by simp [World.merke, hM]⟩
+  exact ⟨h.slots, h.globs, es ++ neu, by simp only [World.merke, hF, List.append_assoc], by simp only [World.merke, hM, List.append_assoc]⟩
 
 theorem Paar.lese (hS : Schwanz c sF sM) (h : Paar sF sM σF σM) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
     Paar sF sM (σF.lese Λ os) (σM.lese Λ os) := by
@@ -105,12 +105,12 @@ theorem Paar.nimmt (hS : Schwanz c sF sM) (h : Paar sF sM σF σM) (L : D.Lock) 
     Paar sF sM (σF.nimmt L) (σM.nimmt L) := by
   obtain ⟨neu, hF, hM⟩ := h.neu
   refine ⟨h.slots, h.globs, .nimmt L σM.haelt :: neu, ?_, ?_⟩
-  · simp [World.nimmt, hF, h.haelt hS]
-  · simp [World.nimmt, hM]
+  · simp only [World.nimmt, h.haelt hS, hF, List.cons_append]
+  · simp only [World.nimmt, hM, List.cons_append]
 
 theorem Paar.gibt (h : Paar sF sM σF σM) (L : D.Lock) : Paar sF sM (σF.gibt L) (σM.gibt L) := by
   obtain ⟨neu, hF, hM⟩ := h.neu
-  exact ⟨h.slots, h.globs, .gibt L :: neu, by simp [World.gibt, hF], by simp [World.gibt, hM]⟩
+  exact ⟨h.slots, h.globs, .gibt L :: neu, by simp only [World.gibt, hF, List.cons_append], by simp only [World.gibt, hM, List.cons_append]⟩
 
 theorem Paar.storeSlot (h : Paar sF sM σF σM) (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
     Paar sF sM (σF.storeSlot t k f v) (σM.storeSlot t k f v) := by

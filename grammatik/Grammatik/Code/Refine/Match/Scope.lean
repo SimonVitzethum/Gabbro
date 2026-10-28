@@ -53,7 +53,7 @@ theorem reach_block_brc {M : Modl} {S : Sees} {fn : Nat} {lb t e : Lbl} {b bk : 
     Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks)
       (.run m' ⟨fn, (if x1 = 1 then t else e), 0, rs', dst⟩ ks) := by
   have h1 := reach_seq M S b.body m ⟨fn, lb, 0, rs, dst⟩ ks m' rs'
-    ⟨b, hb, fun i h => by simp⟩ hs
+    ⟨b, hb, fun i h => by simp only [Nat.zero_add, getElem?_eq_some_getElem_iff]⟩ hs
   have h2 := reach_brc (S := S) (m := m') (ks := ks)
     (f := ⟨fn, lb, 0 + b.body.length, rs', dst⟩) (blk := b) (blk' := bk)
     ⟨hb, (show b.body.length ≤ 0 + b.body.length by omega), hbt⟩ ha hc hi hk hkp

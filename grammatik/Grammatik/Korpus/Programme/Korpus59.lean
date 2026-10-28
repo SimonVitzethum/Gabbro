@@ -127,7 +127,7 @@ def kD : Deklaration where
   Fn := KFn
   sig := kSigOf
   sigNr := kSigNr
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []
@@ -199,7 +199,7 @@ theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
   hb := fun c hc => by
     have : (vertragVon kD caller).boden = (kD.signatur caller).boden := rfl
     rw [this, hbc] at hc; cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
+  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩
   hh := hh
   hx := fun L hL hn => absurd (hx L hL) hn
 
@@ -307,7 +307,7 @@ def kCs : List (kD.Tab ⊕ kD.Glob) := [.inl KTab.takte, .inl KTab.auftraege]
 
 theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
   rcases c with t | g
-  · cases t <;> simp [kCs]
+  · cases t <;> simp only [kCs, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]
   · exact nomatch g
 
 /-- **The checker accepts the program** with its declared starts

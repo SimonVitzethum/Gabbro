@@ -60,7 +60,7 @@ theorem rufLauf_letzter {S : Type} (c : RufKette S) (i j : Nat) (s : S) :
     rufLauf c (i + 1) j s = c.nach (j + i) (rufLauf c i j s) := by
   induction i generalizing j s with
   | zero =>
-      simp [rufLauf]
+      simp only [rufLauf, Nat.add_zero]
   | succ i ih =>
       have hstep : rufLauf c (i + 1 + 1) j s
           = rufLauf c (i + 1) (j + 1) (c.nach j s) := rfl
@@ -93,7 +93,7 @@ theorem runde_vertrag : ∀ k s, k < 64 → rundeInv s = true →
   · simpa [rundeVor, rundeInv] using hs
   · simp only [rundeInv, rundeNach]
     have hmod : (s + 1) % 16 < 16 := by omega
-    simp [hmod]
+    simp only [hmod, decide_true]
 
 /-- Witness (`tick_runde` shape, non-degenerate): 64 uniform round ticks
     from round 0 keep the round below 16 -- one lemma application, not

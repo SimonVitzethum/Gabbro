@@ -22,7 +22,7 @@ theorem unmeasured_non_tail_rejected {D : Deklaration} [DecidableEq D.Fn]
     klasse P fs mass w = .abgelehnt := by
   have localRejected : lokal P fs mass f = .abgelehnt := by
     unfold lokal
-    cases passOk P fs mass f <;> simp [cycle, unmeasured, nonTail]
+    cases passOk P fs mass f <;> simp only [Bool.not_false, ↓reduceIte, Bool.not_true, Bool.false_eq_true, cycle, unmeasured, Bool.and_self, nonTail]
   have lower := (klasse_foldl P fs mass w fs .endet).2 f member reachable
   change (lokal P fs mass f).rang ≤ (klasse P fs mass w).rang at lower
   rw [localRejected] at lower
@@ -48,7 +48,7 @@ open Gabbro.Grammatik.Zielsatz.BudgetZeuge Gabbro.Grammatik.Terminierung.KlasseZ
 /-- The generic rejection theorem applies to the existing finite growing-stack program. -/
 theorem rejection_zeuge : klasse RecursionBoundary.program [()] ohne () = .abgelehnt :=
   unmeasured_non_tail_rejected RecursionBoundary.program [()] ohne () ()
-    (by simp) (by decide) (by decide) rfl (by decide)
+    (by simp only [List.mem_cons, List.not_mem_nil, or_false]) (by decide) (by decide) rfl (by decide)
 
 /-- A real conditional tail cycle remains allowed; the rejection theorem does not ban
     conditional execution or strengthen the existing classifier. -/

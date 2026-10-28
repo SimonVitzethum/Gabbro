@@ -111,7 +111,7 @@ def mD : Deklaration where
   Fn := MFn
   sig := mSigOf
   sigNr := mSigNr
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Unit
   traeger := fun _ => [.privA]
   invs := [()]
@@ -190,7 +190,7 @@ theorem mHp (caller callee : mD.Fn) {Λ : List (Res mD)}
   hb := fun c hc => by
     have : (vertragVon mD caller).boden = (mD.signatur caller).boden := rfl
     rw [this, hbc] at hc; cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
+  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩
   hh := hh
   hx := fun L hL hn => absurd (hx L hL) hn
 
@@ -345,7 +345,7 @@ theorem mStumm : ∀ t, 2 ≤ t → StummK mP (mK t) := by
   have h0 : t ≠ 0 := fun h => by rw [h] at ht; exact absurd ht (by decide)
   have h1 : t ≠ 1 := fun h => by rw [h] at ht; exact absurd ht (by decide)
   simp only [mK, if_neg h0, if_neg h1] at hf
-  cases f <;> simp [mKR] at hf
+  cases f <;> simp only [mKR, Bool.false_eq_true] at hf
   exact ⟨by decide, fun c => by cases c with
     | inl t => cases t <;> rfl
     | inr g => exact nomatch g⟩
@@ -387,7 +387,7 @@ theorem mInv_of_ens {κ σ2 : World mD} {ρk : Env mD (mD.params mSetze)}
 theorem mA_req {W : World mD} (h : (W.slots MTab.privA 0 ()).n = 7) :
     ReqAmEintritt mP mPruefeA W .nil := by
   show decide ((W.slots MTab.privA 0 ()).n = 7) = true
-  simp [h]
+  simp only [h, decide_true]
 
 theorem mA_lauf {O : Orakel mD} {U : Umwelt mD} (hU : HavocOk mSI U)
     {R : ∀ f : mD.Fn, World mD → Env mD (mD.params f) → RufAusgang f} (hR : RespektiertRahmen mP R)
@@ -438,7 +438,7 @@ theorem mP_koerper_A : KoerperGutS mP 0 (axWahr mD) mSI mHauptA := by
   · rw [hr] at hrun
     have h := (mA_lauf hU hR σ ρ hrun).1
     show decide ((σ'.slots MTab.privA 0 ()).n = 7) = true
-    simp [h]
+    simp only [h, decide_true]
   · rw [hr] at hrun
     obtain ⟨σ2, e2, h20, _⟩ := mA_schreib (S := mSI) (O := O') (U := U) (passes := 0)
       (R := torRuf mP R) σ ρ
@@ -513,7 +513,7 @@ theorem mP_inv_A : InvGutS mP 0 (axWahr mD) mSI mHauptA := by
   have h := mA_lauf hU hR σ ρ hrun
   cases i
   show decide ((σ'.slots MTab.privA 0 ()).n = (σ'.slots MTab.privA 1 ()).n) = true
-  simp [h.1, h.2]
+  simp only [h.1, h.2, decide_true]
 
 theorem mB_schreib {S : SperrInv mD} {O : Orakel mD} {U : Umwelt mD} {passes : Nat}
     {R : ∀ f : mD.Fn, World mD → Env mD (mD.params f) → RufAusgang f} (σ : World mD)
@@ -578,8 +578,9 @@ theorem mP_koerper_setze : KoerperGutS mP 0 (axWahr mD) mSI mSetze := by
     | cons x rest =>
       cases rest
       show wahr? (eval σ (mP.ensures mSetze) _ (ergEnv (mD.erg mSetze) () (Env.cons x Env.nil))) = true
-      simp [mP, mSetze, mGleich, eval, World.lese, World.merke, World.schreibSlot,
-        World.storeSlot, mI0, mI1, Zahl.weiter, wahr?, ergEnv]
+      simp only [wahr?, mSetze, mP, mGleich, mI0, Int.reduceSub, mI1, World.lese, World.merke, World.schreibSlot,
+  World.storeSlot, List.map_append, List.append_assoc, eval, Zahl.weiter, List.cons_append, List.nil_append, ergEnv,
+  Int.reduceEq, ↓reduceIte, dite_eq_ite, ite_self, Bool.and_eq_true, decide_eq_true_eq]
       exact ⟨rfl, rfl⟩
   · rw [hr] at hrun
     simp only [mRumpfSetze, execEndH, execStmtH] at hrun

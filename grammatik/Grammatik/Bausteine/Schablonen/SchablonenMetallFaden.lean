@@ -138,13 +138,13 @@ theorem haenge_kette {q : Q} {l : List Nat} (h : Kette q l) (f : Nat) (hf : f �
   | some s =>
       simp only
       refine ⟨folge_anhaengen hfo f hf hnd s (hq ▸ hs).symm, ?_, hnd'⟩
-      simp
+      simp only [List.getLast?_append, List.getLast?_singleton, Option.some_or]
   | none =>
       simp only
       have hl : l = [] := by
         cases l with
         | nil => rfl
-        | cons a r => rw [hq] at hs; simp [List.getLast?_cons] at hs
+        | cons a r => rw [hq] at hs; simp only [List.getLast?_cons, reduceCtorEq] at hs
       subst hl
       refine ⟨Folge.glied f [] ?_, rfl, hnd'⟩
       have e : setzeN q.nach f none f = none := if_pos rfl
@@ -179,7 +179,7 @@ theorem nimm_kette {q : Q} {x : Nat} {l : List Nat} (h : Kette q (x :: l)) :
 theorem nimm_leer {q : Q} (h : Kette q []) : (nimm q).1 = none := by
   obtain ⟨hfo, _, _⟩ := h
   cases hq : q.kopf with
-  | none => simp [nimm, hq]
+  | none => simp only [nimm, hq]
   | some y => rw [hq] at hfo; cases hfo
 
 /-- **FIFO**: a thread queued behind `l` comes out after every thread of `l`, in order. -/
@@ -199,11 +199,11 @@ theorem schlange_zeuge :
     let q3 := haenge (haenge (haenge leer 5) 7) 9
     Kette q3 [5, 7, 9] ∧ (nimm q3).1 = some 5 ∧ Kette (haenge (nimm q3).2 2) [7, 9, 2] := by
   intro q3
-  have h1 : Kette (haenge leer 5) [5] := haenge_kette leer_kette 5 (by simp)
-  have h2 : Kette (haenge (haenge leer 5) 7) [5, 7] := haenge_kette h1 7 (by simp)
-  have h3 : Kette q3 [5, 7, 9] := haenge_kette h2 9 (by simp)
+  have h1 : Kette (haenge leer 5) [5] := haenge_kette leer_kette 5 (by simp only [List.not_mem_nil, not_false_eq_true])
+  have h2 : Kette (haenge (haenge leer 5) 7) [5, 7] := haenge_kette h1 7 (by simp only [List.mem_cons, Nat.reduceEqDiff, List.not_mem_nil, or_self, not_false_eq_true])
+  have h3 : Kette q3 [5, 7, 9] := haenge_kette h2 9 (by simp only [List.mem_cons, Nat.reduceEqDiff, List.not_mem_nil, or_self, not_false_eq_true])
   have hn := nimm_kette h3
-  exact ⟨h3, hn.1, haenge_kette hn.2 2 (by simp)⟩
+  exact ⟨h3, hn.1, haenge_kette hn.2 2 (by simp only [List.mem_cons, Nat.reduceEqDiff, List.not_mem_nil, or_self, not_false_eq_true])⟩
 
 /-! ### The scheduler loop is round robin on its core -/
 
@@ -289,8 +289,12 @@ theorem rahmen_korrekt (top eintritt : Nat) (h72 : 72 ≤ top) (hal : top % 16 =
       (schalteAuf (top - 72) (rahmen eintritt)).rsp = top - 8 ∧
       ((schalteAuf (top - 72) (rahmen eintritt)).rsp + 8) % 16 = 0 := by
   refine ⟨?_, ?_, rfl, rfl, ?_, ?_⟩
-  · simp [schalteAuf, rahmen]
-  · simp [schalteAuf, rahmen]
+  · simp only [schalteAuf, rahmen, Nat.reduceMul, Nat.reduceAdd, List.getD_eq_getElem?_getD, List.length_cons,
+  List.length_nil, Nat.zero_add, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.getD_some,
+  Nat.reduceMod, Nat.reduceDiv, Nat.reduceLT, List.getElem_cons_succ]
+  · simp only [schalteAuf, rahmen, Nat.reduceMul, Nat.reduceAdd, List.getD_eq_getElem?_getD, List.length_cons,
+  List.length_nil, Nat.zero_add, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.getD_some,
+  Nat.reduceMod, Nat.reduceDiv, Nat.reduceLT, List.getElem_cons_succ]
   · show top - 72 + 8 * 8 = top - 8; omega
   · show (top - 72 + 8 * 8 + 8) % 16 = 0; omega
 
@@ -364,7 +368,7 @@ theorem warte_korrekt (i k w0 m : Nat) (hm : 1 ≤ m) (h0 : wort w0 ((spur i k).
       · by_cases hk1 : m = k + 1
         · subst hk1
           rw [wort_take_nach (i + 1) k 1] at h0
-          simp [wort] at h0
+          simp only [List.take_succ_cons, List.take_zero, wort, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at h0
         · omega
 
 /-- **The store before the queueing is load-bearing**: without it the word is the zeroed
@@ -374,7 +378,8 @@ theorem warte_ohne_vorbelegung_waere_falsch (k : Nat) (_hk : 0 < k) :
     let ohne := List.replicate k Ereignis.schritt ++ [Ereignis.ende, Ereignis.null]
     wort 0 (ohne.take 0) = 0 ∧ 0 < ohne.length := by
   intro ohne
-  exact ⟨rfl, by simp [ohne]⟩
+  exact ⟨rfl, by simp only [List.length_append, List.length_replicate, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.zero_lt_succ, ohne]⟩
 
 /-- **Witness**: a thread of slot 3 with five steps -- the word reads 4 midway and right
     before the burial, and 0 at the end; the frame on a top of `0x200000`; a placement on 4

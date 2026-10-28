@@ -52,14 +52,14 @@ def lockRel (lay : Layout D) (L : D.Lock) (rt ru : Reg) (lb k : Lbl) : Block :=
 
 theorem atomicOk_lw : atomicOk lw = true := by
   unfold atomicOk lw Ty.store Conf.wb
-  rcases Conf.wide with h | h <;> simp [h]
+  rcases Conf.wide with h | h <;> simp only [h, Nat.reduceAdd, Nat.reduceDiv, decide_true]
 
 theorem tk_add_one (n : Nat) : BitVec.ofNat Conf.wbits n + 1#Conf.wbits = BitVec.ofNat Conf.wbits (n + 1) := by
   rw [BitVec.ofNat_add]
 
 theorem icmp_tk (a b : Nat) : Val.icmp .eq Conf.wbits (tk a) (tk b) =
     some (Val.bool (decide (BitVec.ofNat Conf.wbits a = BitVec.ofNat Conf.wbits b))) := by
-  simp [Val.icmp, tk, IPred.ap]
+  simp only [Val.icmp, tk, ↓reduceDIte, IPred.ap]
 
 theorem tk_ty (n : Nat) : (tk n).ty = lw := rfl
 
@@ -68,13 +68,14 @@ theorem stepI_take {m m' : Mem} {rs : Regs} {d : Reg} {b : Nat} {n : Nat} {o : O
     (hl : m.load b 0 lw = some (tk n)) (hs : m.store b 0 lw (tk (n + 1)) = some m') :
     stepI (.armw d .add lw (.glob b) (.int Conf.wbits 1) o) m rs = some (m', rs.set d (tk n)) := by
   have hap : RmwOp.ap .add (tk n) (Val.ofInt Conf.wbits 1) = some (tk (n + 1)) := by
-    simp [RmwOp.ap, tk, Val.ofInt, tk_add_one]
+    simp only [RmwOp.ap, tk, Val.ofInt, BitVec.ofInt_ofNat, ↓reduceDIte, tk_add_one]
   simp only [stepI, Opd.ev, atomicOk_lw, if_true, hl, hap, hs, Option.map_some]
 
 /-- The release's sum. -/
 theorem stepI_succ {m : Mem} {rs : Regs} {d : Reg} {r : Reg} {a : Nat} (hr : rs r = some (tk a)) :
     stepI (.bin d .add Conf.wbits (.reg r) (.int Conf.wbits 1)) m rs = some (m, rs.set d (tk (a + 1))) := by
-  simp [stepI, Opd.ev, hr, Val.bin, tk, Val.ofInt, BinOp.ap, tk_add_one]
+  simp only [stepI, Opd.ev, hr, tk, Val.ofInt, BitVec.ofInt_ofNat, Val.bin, ↓reduceDIte, BinOp.ap, tk_add_one,
+  Option.map_some]
 
 theorem stepI_astor_tk {m m' : Mem} {rs : Regs} {r : Reg} {b : Nat} {a : Nat} {o : Order}
     (hr : rs r = some (tk a)) (hs : m.store b 0 lw (tk a) = some m') :
@@ -105,15 +106,15 @@ theorem spin_enter {lay : Layout D} {L : D.Lock} {rt rs' : Reg} {M : Modl} {S : 
     atomicOk_lw (inside_of_load hld) hS rfl
   have h2 : Step M S (.run m ⟨fn, lsp, 1, rs.set rs' (tk x), dst⟩ ks)
       (.run m ⟨fn, kb, 0, rs.set rs' (tk x), dst⟩ ks) := by
-    refine step_term (blk := lockSpin lay L rt rs' lsp kb) ⟨hb, by simp [lockSpin], rfl⟩ ?_
+    refine step_term (blk := lockSpin lay L rt rs' lsp kb) ⟨hb, by simp only [lockSpin, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl], rfl⟩ ?_
     have e1 : (Opd.reg rt).ev (rs.set rs' (tk x)) = some (tk a) := by
-      simp [Opd.ev, Regs.set, hne, hrt]
+      simp only [Opd.ev, Regs.set, hne, ↓reduceIte, hrt]
     have e2 : (Opd.reg rs').ev (rs.set rs' (tk x)) = some (tk x) := by
-      simp [Opd.ev, Regs.set]
+      simp only [Opd.ev, Regs.set, ↓reduceIte]
     have hbool : Val.bool (decide (BitVec.ofNat Conf.wbits a = BitVec.ofNat Conf.wbits x)) = .int 1 1 := by
-      simp [Val.bool, heq]
+      simp only [Val.bool, heq, decide_true, ↓reduceIte, BitVec.ofNat_eq_ofNat]
     simp only [lockSpin, stepTerm, e1, e2, icmp_tk, hbool, if_true]
-    simp [Frame.enter, hk, hkp]
+    simp only [Frame.enter, hk, hkp, List.mapM_nil, Option.pure_def, List.foldl_nil, Option.map_some]
   exact Reach.trans (Reach.one h1) (Reach.one h2)
 
 /-- **A spin that finds another ticket served** spins again. -/
@@ -129,16 +130,17 @@ theorem spin_wait {lay : Layout D} {L : D.Lock} {rt rs' : Reg} {M : Modl} {S : S
     atomicOk_lw (inside_of_load hld) hS rfl
   have h2 : Step M S (.run m ⟨fn, lsp, 1, rs.set rs' (tk x), dst⟩ ks)
       (.run m ⟨fn, lsp, 0, rs.set rs' (tk x), dst⟩ ks) := by
-    refine step_term (blk := lockSpin lay L rt rs' lsp kb) ⟨hb, by simp [lockSpin], rfl⟩ ?_
+    refine step_term (blk := lockSpin lay L rt rs' lsp kb) ⟨hb, by simp only [lockSpin, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl], rfl⟩ ?_
     have e1 : (Opd.reg rt).ev (rs.set rs' (tk x)) = some (tk a) := by
-      simp [Opd.ev, Regs.set, hne, hrt]
+      simp only [Opd.ev, Regs.set, hne, ↓reduceIte, hrt]
     have e2 : (Opd.reg rs').ev (rs.set rs' (tk x)) = some (tk x) := by
-      simp [Opd.ev, Regs.set]
+      simp only [Opd.ev, Regs.set, ↓reduceIte]
     have hdec : decide (BitVec.ofNat Conf.wbits a = BitVec.ofNat Conf.wbits x) = false := decide_eq_false hne'
     have hbool : Val.bool (decide (BitVec.ofNat Conf.wbits a = BitVec.ofNat Conf.wbits x)) = .int 1 0 := by
-      simp [Val.bool, hne']
+      simp only [Val.bool, hne', decide_false, Bool.false_eq_true, ↓reduceIte, BitVec.ofNat_eq_ofNat]
     simp only [lockSpin, stepTerm, e1, e2, icmp_tk, hbool]
-    simp [Frame.enter, hb, lockSpin]
+    simp only [Frame.enter, BitVec.ofNat_eq_ofNat, BitVec.zero_eq_one_iff, Nat.succ_ne_self, ↓reduceIte, hb,
+  lockSpin, List.mapM_nil, Option.pure_def, List.foldl_nil, Option.map_some]
   exact Reach.trans (Reach.one h1) (Reach.one h2)
 
 /-- **Release**: from `lockRel` to the continuation, the serving cell now `a + 1`. -/

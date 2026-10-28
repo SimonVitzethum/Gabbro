@@ -185,7 +185,7 @@ theorem traverse_vollstaendig (schritt : World D → Env D (τ :: Γ) → Ausgan
       TraverseSchritt inv Q I ks (schritt (inv σ ρ).1 (.cons k ρ))) := by
   refine ⟨fun σ ρ h => h, fun k ks σ ρ h hc => ?_, fun k ks σ ρ h hc => ?_⟩
   · simpa [traverseLauf, hc] using h
-  · have hc' : ¬ (inv σ ρ).2 = false := by simp [hc]
+  · have hc' : ¬ (inv σ ρ).2 = false := by simp only [hc, Bool.true_eq_false, not_false_eq_true]
     simp only [traverseLauf, hc', if_false] at h
     revert h
     cases schritt (inv σ ρ).1 (.cons k ρ) <;> exact id
@@ -286,7 +286,7 @@ theorem forever_vollstaendig (a : D.Annahme) (schritt : World D → Env D Γ →
     (∀ n σ ρ, I (n + 1) σ ρ → (inv σ ρ).2 = true → PassSchritt Q I n (schritt (inv σ ρ).1 ρ)) := by
   refine ⟨fun σ ρ h => h, fun n σ ρ h hc => ?_, fun n σ ρ h hc => ?_⟩
   · simpa [foreverLauf, hc] using h
-  · have hc' : ¬ (inv σ ρ).2 = false := by simp [hc]
+  · have hc' : ¬ (inv σ ρ).2 = false := by simp only [hc, Bool.true_eq_false, not_false_eq_true]
     simp only [foreverLauf, hc', if_false] at h
     revert h
     cases schritt (inv σ ρ).1 ρ <;> exact id

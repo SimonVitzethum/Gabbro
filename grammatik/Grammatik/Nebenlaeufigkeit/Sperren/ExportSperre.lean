@@ -89,7 +89,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .gib => 0 | .nimm => 1
   sigNr := fun | 0 => gSig_gib | 1 => gSig_nimm | _ => gSig_nimm
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []

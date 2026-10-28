@@ -50,11 +50,11 @@ inductive Counted (available : Bool) (frame : Frame) :
 theorem Counted.sound {code : Turing.TM2.Stmt Γ Λ σ} {available frame state S n result}
     (ht : Counted available frame code state S n result) : evaluate available frame code state S = result := by
   induction ht with
-  | pushFail he => simp [evaluate, he]
+  | pushFail he => simp only [evaluate, he]
   | push he _ ih => simpa [evaluate, he] using ih
-  | peekFail he => simp [evaluate, he]
+  | peekFail he => simp only [evaluate, he]
   | peek he _ ih => simpa [evaluate, he] using ih
-  | popFail he => simp [evaluate, he]
+  | popFail he => simp only [evaluate, he]
   | pop he _ ih => simpa [evaluate, he] using ih
   | load _ ih => exact ih
   | yes he _ ih => simpa [evaluate, he] using ih
@@ -174,7 +174,7 @@ theorem Driven.bound {program : Λ → Turing.TM2.Stmt Γ Λ σ} {available fram
     (hb : ∀ label, operationBound (program label) ≤ bound) : n ≤ fuel * bound := by
   induction ht with
   | halted => omega
-  | exhausted => simp
+  | exhausted => simp only [zero_mul, Std.le_refl]
   | @next fuel C C' label consumed rest result _ hc _ ih =>
     have hh := Nat.le_trans hc.bound.2 (hb label)
     rw [Nat.add_mul]

@@ -118,15 +118,15 @@ theorem req4 (f : D4.Fn) : P4.requires f = .tru := by rcases fn_zwei f with e | 
 /-! ## 3. The enumerations of the declaration's members -/
 
 def fsA : Aufzaehlung D4.Fn := ⟨[ein4, lies4], fun f => by
-  rcases fn_zwei f with e | e <;> subst e <;> simp⟩
+  rcases fn_zwei f with e | e <;> subst e <;> simp only [List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]⟩
 
 def lsA : Aufzaehlung D4.Lock := ⟨[m4], fun L => by
   have e : L = m4 := Fin.ext (by have h : L.val < 1 := L.isLt; show L.val = 0; omega)
-  subst e; simp⟩
+  subst e; simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
 
 def csA : Aufzaehlung (D4.Tab ⊕ D4.Glob) := ⟨[.inl t4], fun c => by
   rcases c with t | g
-  · rw [tab_eins t]; simp
+  · rw [tab_eins t]; simp only [List.mem_cons, List.not_mem_nil, or_false]
   · exact nomatch g⟩
 
 /-! ## 4. The unit: the parsed code, and what the source declares about its run -/
@@ -197,7 +197,7 @@ theorem ein4_R : KoerperGutR P4 0 ein4 := by
   refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
   · rw [rumpf_ein4] at hrun
     rcases execEnd_cons_zurueck _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, h1, hrun1⟩
-    · simp [execStmt] at h1
+    · simp only [execStmt, List.append_assoc, reduceCtorEq] at h1
     rcases execEnd_cons_zurueck _ _ _ _ _ hrun1 with h2 | ⟨σ2, ρ2, h2, hrun2⟩
     · simp only [execStmt] at h2
       split at h2
@@ -231,7 +231,7 @@ theorem ein4_R : KoerperGutR P4 0 ein4 := by
     · cases h2
   · rw [rumpf_ein4] at hrun
     rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
-    · simp [execStmt] at h1
+    · simp only [execStmt, List.append_assoc, reduceCtorEq] at h1
     · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h1 with h2 | ⟨σ2, ρ2, _, h2⟩
       · exact d4_call_tor _ _ R hOV _ _ _ _ _ _ _ h2
       · simp only [execEnd] at h2

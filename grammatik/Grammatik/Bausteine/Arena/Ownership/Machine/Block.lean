@@ -16,7 +16,8 @@ def _root_.Gabbro.Grammatik.ArenaOwnership.Source.Context.pad (c : Context) : Co
   { c with references := c.references ++ [none] }
 
 theorem Context.pad_drop (c : Context) : c.pad.drop = c := by
-  simp [Context.pad, Context.drop]
+  simp only [Context.drop, Context.pad, ne_eq, List.cons_ne_self, not_false_eq_true,
+  List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
 
 /-- The end context of a binder block: the binder's context `c1` dropped, possibly weakened. -/
 def DropW (cout c1 : Context) : Prop := cout = c1.drop ∨ Weaker cout c1.drop
@@ -40,8 +41,9 @@ theorem Weaker.pad {c2 c1 : Context} (hw : Weaker c2 c1.drop) (hlen : c1.referen
       · exact h
       · rw [List.getElem?_append_right h] at hp
         rcases Nat.eq_zero_or_pos (p - c2.references.length) with he | he
-        · rw [he] at hp; simp at hp
-        · rw [List.getElem?_eq_none (by simp; omega)] at hp; cases hp
+        · rw [he] at hp; simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, reduceCtorEq] at hp
+        · rw [List.getElem?_eq_none (by simp only [List.length_cons, List.length_nil, Nat.zero_add]; omega)] at hp; cases hp
     rw [List.getElem?_append_left hpl] at hp
     obtain ⟨h1, h2⟩ := hrefs p o hp
     refine ⟨?_, h2⟩
@@ -73,7 +75,8 @@ theorem OR.binder {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} {k c0 
   rcases hd with rfl | hw
   · exact OR.of_cont hb (Cont.schrumpf hk hc)
   · by_cases hlen : c1.references.length = (τ :: Γ).length
-    · have hw' := Weaker.pad hw (by rw [hlen]; simp)
+    · have hw' := Weaker.pad hw (by rw [hlen]; simp only [List.length_cons, ne_eq, Nat.add_eq_zero_iff, List.length_eq_zero_iff, Nat.succ_ne_self, and_false,
+  not_false_eq_true])
       refine OR.of_cont (.weaken _ hb hw') (Cont.schrumpf hk ?_)
       rw [Context.pad_drop]; exact hc
     · exact .dannDead b _ hb hlen (.schrumpf r hk hc.exits)

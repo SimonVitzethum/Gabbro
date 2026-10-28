@@ -146,7 +146,7 @@ def maschinenLeer (voll : Faden → List (Ereignis D)) (code : D.Marke → Nat)
         | .inr x => D.ggeteilt x = false) → f = g) :
     MaschinenLauf D :=
   { run := [], voll := voll, code := code, start := σ₀, hvoll := hvoll,
-    hvers := fun f j => ⟨(voll f).length, by rw [List.drop_length]; simp [Lauf.spur]⟩,
+    hvers := fun f j => ⟨(voll f).length, by rw [List.drop_length]; simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]⟩,
     hausschluss := hausschluss, hEin := hEin, hungeteilt := hungeteilt }
 
 /-! ## 3. Event-to-world -- which worlds and events a real run produces -/
@@ -172,7 +172,7 @@ theorem weltenFalte_laenge (σ : World D) (run : Lauf D) :
     (weltenFalte σ run).length = run.length + 1 := by
   induction run generalizing σ with
   | nil => rfl
-  | cons s rest ih => simp [weltenFalte, ih]
+  | cons s rest ih => simp only [weltenFalte, List.length_cons, ih, Nat.add_left_cancel_iff]
 
 /-- One world per step, plus the start world. -/
 theorem maschinenWelten_laenge (M : MaschinenLauf D) :
@@ -184,11 +184,11 @@ theorem weltenEnde_spur (run : Lauf D) (σ : World D) :
     (weltenEnde σ run).spur = (run.map Schritt.ereignis).reverse ++ σ.spur := by
   unfold weltenEnde
   induction run generalizing σ with
-  | nil => simp [World.merke]
+  | nil => simp only [World.merke, List.cons_append, List.nil_append, List.foldl_nil, List.map_nil, List.reverse_nil]
   | cons s rest ih =>
       simp only [List.foldl_cons, List.map_cons, List.reverse_cons]
       rw [ih]
-      simp [World.merke, List.append_assoc]
+      simp only [World.merke, List.cons_append, List.nil_append, List.append_assoc]
 
 /-- The list ends at the folded end world. -/
 theorem weltenFalte_ende (σ : World D) (run : Lauf D) :
@@ -202,7 +202,8 @@ theorem weltenFalte_ende (σ : World D) (run : Lauf D) :
       | nil =>
           have hlen := weltenFalte_laenge (σ.merke [s.ereignis]) rest
           rw [h] at hlen
-          simp at hlen
+          simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, List.length_eq_zero_iff, Nat.succ_ne_self,
+  and_false] at hlen
       | cons w ws =>
           rw [h] at htail
           rwa [List.getLast?_cons_cons] at ⊢
@@ -385,7 +386,7 @@ def keinRuf : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f :=
 
 theorem keinRuf_gut : GutR (D := D) keinRuf := by
   intro f σ ρ _ σ' h
-  simp [keinRuf, RufAusgang.welt] at h
+  simp only [RufAusgang.welt, keinRuf, reduceCtorEq] at h
 
 /-- Leaf or compound. A thread step executes one leaf; compound statements
     (`ite`, calls, `locks`, loops, ...) open into further steps instead. -/
@@ -432,7 +433,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_tab hL) i.orte_darf) hh
         exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .axiomCall a args _ hw hg hd hgd, _, σ, ρ, hh, σ', h => by
       simp only [execStmt] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh
@@ -442,7 +443,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
         have := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldIn hh)
         rw [ha] at this
         exact hl.trans (Gut.weiter hw hg this)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regWrite r _ e, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
@@ -465,17 +466,17 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .next _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .ite .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onOption .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onTag .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onWhy .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .call .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .callInd .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .locks .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .breaking .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .traverse .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .retry .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .forever .., hleaf, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .ite .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .onOption .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .onTag .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .onWhy .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .call .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .callInd .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .locks .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .breaking .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .traverse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .retry .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .forever .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
 
 
 /-- The generated machine: shared memory, one trace per thread, the run so far,
@@ -508,12 +509,12 @@ def genUpdate (m : Faden → List (Ereignis D)) (f : Faden) (s : List (Ereignis 
 
 theorem genUpdate_self (m : Faden → List (Ereignis D)) (f : Faden) (s : List (Ereignis D)) :
     genUpdate m f s f = s := by
-  simp [genUpdate]
+  simp only [genUpdate, ↓reduceIte]
 
 theorem genUpdate_noteq (m : Faden → List (Ereignis D)) (f g : Faden) (h : g ≠ f)
     (s : List (Ereignis D)) :
     genUpdate m f s g = m g := by
-  simp [genUpdate, h]
+  simp only [genUpdate, h, ↓reduceIte]
 
 /-- **One step of the generated machine.** `blatt`: thread `f` runs one leaf
     statement through `execStmt` (shared memory moves on writes); `nimmt`:
@@ -577,7 +578,7 @@ theorem genFilterMap_eigen (f : Faden) (neu : List (Ereignis D)) :
   unfold genEigen
   induction neu.reverse with
   | nil => rfl
-  | cons _ _ ih => simp [ih]
+  | cons _ _ ih => simp only [List.map_cons, ↓reduceIte, Option.some.injEq, List.filterMap_cons_some, ih]
 
 
 end Gabbro.Grammatik

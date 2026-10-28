@@ -73,32 +73,32 @@ theorem m_texte : ∀ m ∈ Zeugen.Mw, ∃ t ∈ mText, ∃ e', ausText t = .ok 
   intro m hm
   simp only [Zeugen.Mw, List.mem_cons, List.not_mem_nil, or_false] at hm
   rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · exact ⟨_, by simp [mText], Zeugen.M99_824.text⟩
-  · exact ⟨_, by simp [mText], Zeugen.M47_549.text⟩
-  · exact ⟨_, by simp [mText], Zeugen.M169_350.text⟩
-  · exact ⟨_, by simp [mText], Zeugen.M16_13.text⟩
-  · exact ⟨_, by simp [mText], Zeugen.M49_50.text⟩
-  · exact ⟨_, by simp [mText], Zeugen.M103_803.text⟩
-  · exact ⟨_, by simp [mText], Zeugen.M103_131.text⟩
-  · exact ⟨_, by simp [mText], Zeugen.M99_825.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.M99_824.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M47_549.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M169_350.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M16_13.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M49_50.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M103_803.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.M103_131.text⟩
+  · exact ⟨_, by simp only [mText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.M99_825.text⟩
 
 theorem n_texte : ∀ n ∈ Zeugen.Nw, ∃ t ∈ nText, ∃ e', ausText t = .ok e' ∧ e'.zellen = n.zellen ∧ e'.gueltig = n.gueltig := by
   intro n hn
   simp only [Zeugen.Nw, List.mem_cons, List.not_mem_nil, or_false] at hn
   rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · exact ⟨_, by simp [nText], Zeugen.N16_5.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N18_0.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N18_4.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N19_0.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N19_2.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N19_5.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N19_7.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N20_1.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N23_4.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N24_0.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N3_0.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N47_20.text⟩
-  · exact ⟨_, by simp [nText], Zeugen.N47_45.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or], Zeugen.N16_5.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N18_0.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N18_4.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N19_0.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N19_2.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N19_5.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N19_7.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N20_1.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N23_4.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N24_0.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N3_0.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], Zeugen.N47_20.text⟩
+  · exact ⟨_, by simp only [nText, List.mem_cons, List.not_mem_nil, or_false, or_true], Zeugen.N47_45.text⟩
 
 /-- Acceptance by a cell table depends on the cells only. -/
 theorem akzeptiert_zellen (φ : Zelle → Bool) (e e' : Einsatz) (h : e.zellen = e'.zellen) :
@@ -114,7 +114,7 @@ theorem pruefer_text_korrekt (R : String → Bool) (hR : NeutralText R)
   obtain ⟨φ, hφ⟩ := hR
   classical
   let C : Einsatz → Bool := fun e => decide (akzeptiert Einsatz.Hat φ e)
-  have hC : Neutral C := ⟨φ, fun e => by simp [C]⟩
+  have hC : Neutral C := ⟨φ, fun e => by simp only [decide_eq_true_eq, C]⟩
   have hCw : ∀ w t e', t ∈ mText ∨ t ∈ nText → ausText t = .ok e' → e'.zellen = w.zellen →
       C w = R t := by
     intro w t e' _ ht hz

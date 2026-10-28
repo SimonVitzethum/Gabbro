@@ -244,7 +244,7 @@ theorem sp0FeldOkB_klingt (u : UProg) (t : Fin u.tabs.length)
   unfold sp0FeldOkB at h
   cases hqe : (tabAt u t).cols[f.val]? with
   | none =>
-    simp [hqe] at h
+    simp only [hqe, Bool.false_eq_true] at h
   | some q =>
     rw [hqe] at h
     change ((tabAt u t).bools.contains q.1 ||

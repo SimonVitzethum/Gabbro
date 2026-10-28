@@ -46,7 +46,8 @@ theorem erfuellbar {k : Nat} {gs : GateSpec} {m : Mem} {vs : List Val}
       cases (Option.some.inj hk)
       obtain ⟨b, blk, rfl, hb⟩ := hp
       exact ⟨_, _, b, blk, rfl, hb, rfl, rfl⟩
-  | k + 3, hk => simp [tabelle] at hk
+  | k + 3, hk => simp only [tabelle, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.not_lt,
+  Nat.le_add_left, getElem?_neg, reduceCtorEq] at hk
 
 /-- **The reference CPU meets the obligations.** -/
 theorem ref_need : GateNeed (Mem × Regs) refRel tabelle (refTrap tabelle) := by
@@ -78,7 +79,8 @@ theorem schlecht_verletzt : ¬ GateNeed (Mem × Regs) refRel tabelle schlechtTra
     (Mem.empty, fun _ => none) (Mem.empty, fun _ => none) rfl hpre hw rfl ⟨rfl, rfl⟩
   obtain ⟨n, -, rfl, -⟩ := hp
   have := congrArg (fun p : Mem × Regs => p.1.next) hr
-  simp [Mem.alloc, Mem.setBlk, Mem.empty] at this
+  simp only [Mem.empty, Mem.alloc, Mem.setBlk, Bool.false_eq_true, and_false, ↓reduceIte, Nat.zero_add,
+  Nat.zero_ne_one] at this
 
 /-- **Witness for `gate_verfeinert`**, all premises jointly: a module whose only function calls the `get`
     gate (function number 1, past its single own function) with the word 64. -/
@@ -102,7 +104,7 @@ theorem tor_zeuge :
     (blk := ⟨0, [], [.call (some 0) 1 [.int Conf.wbits 64]], .ret none⟩) (d := some 0) (fi := 1)
     (args := [.int Conf.wbits 64]) (vs := [Val.ofInt Conf.wbits 64]) (gs := holeSpec)
     (x := (Mem.empty, fun _ => none)) (y := y)
-    rfl rfl (by simp [modul]) rfl rfl hpre hw rfl hy
+    rfl rfl (by simp only [modul, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl]) rfl rfl hpre hw rfl hy
   exact ⟨m', g, y, hs, hr⟩
 
 end Gabbro.Code

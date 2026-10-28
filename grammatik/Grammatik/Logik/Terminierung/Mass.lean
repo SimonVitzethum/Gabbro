@@ -56,8 +56,8 @@ def lexLt : List Nat → List Nat → Bool
 
 theorem lexLt_laenge : ∀ {a b : List Nat}, lexLt a b = true → a ≠ [] ∧ b ≠ []
   | _ :: _, _ :: _, _ => ⟨List.cons_ne_nil _ _, List.cons_ne_nil _ _⟩
-  | [], _, h => by simp [lexLt] at h
-  | _ :: _, [], h => by simp [lexLt] at h
+  | [], _, h => by simp only [lexLt, Bool.false_eq_true] at h
+  | _ :: _, [], h => by simp only [lexLt, Bool.false_eq_true] at h
 
 /-- The order restricted to tuples of length `n`. -/
 def lexLtN (n : Nat) (a b : List Nat) : Prop := a.length = n ∧ b.length = n ∧ lexLt a b = true
@@ -73,7 +73,7 @@ theorem lexLt_wf : ∀ n, WellFounded (lexLtN n)
       suffices H : ∀ (a : Nat) (as : List Nat), as.length = n → Acc (lexLtN (n + 1)) (a :: as) by
         refine ⟨_, fun y ⟨hy, hx, _⟩ => ?_⟩
         cases y with
-        | nil => simp at hy
+        | nil => simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at hy
         | cons b bs => exact H b bs (by simpa using hy)
       intro a
       induction a using Nat.strongRecOn with
@@ -83,7 +83,7 @@ theorem lexLt_wf : ∀ n, WellFounded (lexLtN n)
       | intro as _ ihas =>
       refine ⟨_, fun y ⟨hy, _, hlt⟩ => ?_⟩
       cases y with
-      | nil => simp at hy
+      | nil => simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at hy
       | cons b bs =>
           simp only [lexLt, Bool.or_eq_true, decide_eq_true_eq, Bool.and_eq_true, beq_iff_eq] at hlt
           have hbs : bs.length = n := by simpa using hy

@@ -368,7 +368,7 @@ theorem speicher_kette_gleich {n : Int} {weiter weiter' : Int → Option (Zahl 0
           | none => false
           | some m => kette weiter' fuel m.n ziel)
       by_cases hk : k = ziel
-      · simp [hk]
+      · simp only [hk, ↓reduceIte]
       · simp only [if_neg hk]
         rw [h k]
         cases hm : weiter' k with
@@ -383,7 +383,7 @@ theorem speicher_list_all_congr {α : Type} {l : List α} {p q : α → Bool}
   | cons x xs ih =>
       have hx : p x = q x := h x List.mem_cons_self
       have ih' := ih (fun y hy => h y (List.mem_cons_of_mem _ hy))
-      simp [List.all_cons, hx, ih']
+      simp only [List.all_cons, hx, ih']
 
 /-- Pointwise equal predicates count equal (`any`). -/
 theorem speicher_list_any_congr {α : Type} {l : List α} {p q : α → Bool}
@@ -393,7 +393,7 @@ theorem speicher_list_any_congr {α : Type} {l : List α} {p q : α → Bool}
   | cons x xs ih =>
       have hx : p x = q x := h x List.mem_cons_self
       have ih' := ih (fun y hy => h y (List.mem_cons_of_mem _ hy))
-      simp [List.any_cons, hx, ih']
+      simp only [List.any_cons, hx, ih']
 
 
 end Gabbro.Grammatik

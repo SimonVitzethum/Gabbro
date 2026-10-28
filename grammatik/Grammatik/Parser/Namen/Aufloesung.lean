@@ -73,27 +73,28 @@ theorem zerlegeZ_cons {c : Char} (l acc : List Char) (hc : c ≠ ':') :
 /-- Characters without `:` are one segment. -/
 theorem zerlegeZ_ohne (l acc : List Char) (h : ':' ∉ l) : zerlegeZ l acc = [acc.reverse ++ l] := by
   induction l generalizing acc with
-  | nil => simp [zerlegeZ]
+  | nil => simp only [zerlegeZ, List.append_nil]
   | cons c rest ih =>
     have hc : c ≠ ':' := fun e => h (e ▸ List.mem_cons_self)
     have hr : ':' ∉ rest := fun m => h (List.mem_cons_of_mem _ m)
     rw [zerlegeZ_cons _ _ hc, ih _ hr]
-    simp
+    simp only [List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
 
 /-- **A plain name is one segment**: an identifier (no `:`) resolves as the one-segment path. -/
 theorem segmente_name {s : String} (h : ':' ∉ s.toList) : segmente s = [s] := by
-  simp [segmente, zerlegeZ_ohne _ _ h, String.ofList_toList]
+  simp only [segmente, zerlegeZ_ohne _ _ h, List.reverse_nil, List.nil_append, List.map_cons,
+  String.ofList_toList, List.map_nil]
 
 /-- A segment without `:` followed by `::` closes the segment. -/
 theorem zerlegeZ_trenner (l rest acc : List Char) (h : ':' ∉ l) :
     zerlegeZ (l ++ ':' :: ':' :: rest) acc = (acc.reverse ++ l) :: zerlegeZ rest [] := by
   induction l generalizing acc with
-  | nil => simp [zerlegeZ]
+  | nil => simp only [↓Char.isValue, List.nil_append, zerlegeZ, List.append_nil]
   | cons c l ih =>
     have hc : c ≠ ':' := fun e => h (e ▸ List.mem_cons_self)
     have hr : ':' ∉ l := fun m => h (List.mem_cons_of_mem _ m)
     rw [List.cons_append, zerlegeZ_cons _ _ hc, ih _ hr]
-    simp
+    simp only [List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
 
 /-- Segments without `:`, joined by `::`, split back into themselves. -/
 theorem zerlegeZ_verbinde : ∀ (p : List (List Char)), p ≠ [] → (∀ s ∈ p, ':' ∉ s) →
@@ -101,14 +102,14 @@ theorem zerlegeZ_verbinde : ∀ (p : List (List Char)), p ≠ [] → (∀ s ∈ 
   | [], h, _ => absurd rfl h
   | [x], _, hs => by
     rw [List.intercalate_singleton, zerlegeZ_ohne _ _ (hs x List.mem_cons_self)]
-    simp
+    simp only [List.reverse_nil, List.nil_append]
   | x :: y :: zs, _, hs => by
     rw [List.intercalate_cons_cons, List.append_assoc]
     rw [show [':', ':'] ++ [':', ':'].intercalate (y :: zs) = ':' :: ':' :: [':', ':'].intercalate (y :: zs)
       from rfl]
     rw [zerlegeZ_trenner _ _ _ (hs x List.mem_cons_self),
       zerlegeZ_verbinde (y :: zs) (List.cons_ne_nil _ _) (fun s m => hs s (List.mem_cons_of_mem _ m))]
-    simp
+    simp only [List.reverse_nil, List.nil_append]
 
 /-- **A joined path splits back into its segments** when no segment contains `:` (identifiers never
     do): `segmente` is the inverse of the joined key. -/
@@ -118,7 +119,7 @@ theorem segmente_verbinde {p : Pfad} (hp : p ≠ []) (h : ∀ s ∈ p, ':' ∉ s
   simp only [segmente, String.toList_intercalate, hz]
   rw [zerlegeZ_verbinde (p.map String.toList) (by simpa using hp)
     (by simpa using h)]
-  simp [String.ofList_toList]
+  simp only [List.map_map, String.ofList_comp_toList, List.map_id_fun, id_eq]
 
 
 /-- The last segment of a path: the short name. -/
@@ -199,7 +200,7 @@ theorem schluessel_injektiv {namen : List Pfad}
     (hd : d ∈ namen) (h : schluessel namen c = schluessel namen d) : c = d := by
   obtain ⟨hc0, hcs⟩ := hok c hc
   obtain ⟨hd0, hds⟩ := hok d hd
-  have hself : ∀ x : String, strEq x x = true := fun x => by simp [strEq]
+  have hself : ∀ x : String, strEq x x = true := fun x => by simp only [strEq, BEq.rfl]
   -- One short name, one filter.
   have hfil : letzter c = letzter d →
       (namen.filter fun q => strEq (letzter q) (letzter c)) =
@@ -214,11 +215,11 @@ theorem schluessel_injektiv {namen : List Pfad}
     have e := hfil h
     have hl : (namen.filter fun q => strEq (letzter q) (letzter c)).length = 1 := beq_iff_eq.mp h1
     obtain ⟨x, hx⟩ := List.length_eq_one_iff.mp hl
-    have mc : c ∈ namen.filter fun q => strEq (letzter q) (letzter c) := by simp [hc, hself]
+    have mc : c ∈ namen.filter fun q => strEq (letzter q) (letzter c) := by simp only [List.mem_filter, hc, hself, and_self]
     have md : d ∈ namen.filter fun q => strEq (letzter q) (letzter c) := by
-      rw [e]; simp [hd, hself]
+      rw [e]; simp only [List.mem_filter, hd, hself, and_self]
     rw [hx] at mc md
-    simp at mc md
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at mc md
     rw [mc, md]
   · -- c short, d joined: d splits into the one segment `letzter c`, so it has c's filter
     rename_i h1 h2
@@ -536,29 +537,29 @@ def loese (items : List SItemTief) : List SItemTief :=
 /-- **A unit of one name space is resolved as before.** -/
 theorem loese_einfach {items : List SItemTief} (h : einfach items = true) :
     loese items = Uebersetze.uMembers items := by
-  simp [loese, h]
+  simp only [loese, h, ↓reduceIte]
 
 /-- **A local stays what it is.** -/
 theorem ref_lokal {k : Kontext} {s : String} (h : k.lok.any (strEq · s) = true) : k.ref s = s := by
-  simp [Kontext.ref, h]
+  simp only [Kontext.ref, h, ↓reduceIte]
 
 /-- **A name that resolves names its item's key.** -/
 theorem ref_aufgeloest {k : Kontext} {s : String} {c : Pfad} (hl : k.lok.any (strEq · s) = false)
     (h : aufloeseK k.q ⟨none, []⟩ k.von (segmente s) = some c) :
     k.ref s = schluessel k.q.namen c := by
-  simp [Kontext.ref, hl, h]
+  simp only [Kontext.ref, hl, Bool.false_eq_true, ↓reduceIte, h]
 
 /-- **A name of an item that is not visible from here is poisoned**: no item carries the text. -/
 theorem ref_unsichtbar {k : Kontext} {s : String} (hl : k.lok.any (strEq · s) = false)
     (h : aufloeseK k.q ⟨none, []⟩ k.von (segmente s) = none)
     (hn : k.q.namen.any (fun q => strEq (letzter q) (letzter (segmente s))) = true) :
     k.ref s = gift s := by
-  simp [Kontext.ref, hl, h, hn]
+  simp only [Kontext.ref, hl, Bool.false_eq_true, ↓reduceIte, h, hn]
 
 /-- **An item whose short name no other item has keeps its short name.** -/
 theorem schluessel_kurz {namen : List Pfad} {c : Pfad}
     (h : (namen.filter fun q => strEq (letzter q) (letzter c)).length = 1) :
     schluessel namen c = letzter c := by
-  simp [schluessel, h]
+  simp only [schluessel, h, BEq.rfl, ↓reduceIte]
 
 end Gabbro.Grammatik.Parser.Aufloesung

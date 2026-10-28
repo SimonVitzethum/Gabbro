@@ -37,7 +37,7 @@ theorem foldl_flatMap {δ β : Type} (xs : List δ) (g : δ → List α) (s : β
     (xs.flatMap g).foldl s b = xs.foldl (fun b x => (g x).foldl s b) b := by
   induction xs generalizing b with
   | nil => rfl
-  | cons x xs ih => simp [List.flatMap_cons, List.foldl_append, ih]
+  | cons x xs ih => simp only [List.flatMap_cons, List.foldl_append, ih, List.foldl_cons]
 
 theorem faltet_bind {S : Strom α} {A : Sz α} {F : α → Strom γ} {B : α → Sz γ} (hS : faltet S A)
     (hF : ∀ a, faltet (F a) (B a)) : faltet (bind S F) (Sz.bind A B) := by

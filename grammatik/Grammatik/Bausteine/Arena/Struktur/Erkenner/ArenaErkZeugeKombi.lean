@@ -63,7 +63,7 @@ namespace ErkKombi
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -79,9 +79,9 @@ namespace ErkKombi
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 def FA2 : FreiForm FD2 where
   tab := ()
@@ -149,16 +149,16 @@ def wd2 (st kopf lh tr : Int) (nx ln lf rf : Int → Int) : World FD2 where
   slots := fun _ k f =>
     if h0 : f = 0 then (by subst h0; exact (⟨0, by decide, by decide⟩ : Zahl 0 255))
     else if h1 : f = 1 then (by
-      have : FD2.typ () f = .int 0 4 := by simp [h0]
+      have : FD2.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact InvDynZeuge.zc (nx k))
     else if h2 : f = 2 then (by
-      have : FD2.typ () f = .int 0 4 := by simp [h0]
+      have : FD2.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact InvDynZeuge.zc (ln k))
     else if h3 : f = 3 then (by
-      have : FD2.typ () f = .int 0 4 := by simp [h0]
+      have : FD2.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact InvDynZeuge.zc (lf k))
     else (by
-      have : FD2.typ () f = .int 0 4 := by simp [h0]
+      have : FD2.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact InvDynZeuge.zc (rf k))
   globs := fun g =>
     if g = 0 then InvDynZeuge.zc st else if g = 1 then InvDynZeuge.zc st else if g = 2 then InvDynZeuge.zc kopf
@@ -188,7 +188,7 @@ theorem kette_wk : FA2.Kette wk 1 [1] :=
 
 theorem freiOk_wk : FA2.FreiOk wk := by
   refine ⟨[1], by rw [kopf_wk]; exact kette_wk, by decide, ?_⟩
-  intro i hi; simp at hi; subst hi; rw [stand_wk]; omega
+  intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; rw [stand_wk]; omega
 
 theorem aufListe_wk (i : Int) : FA2.AufListe wk i ↔ i = 1 := by
   constructor
@@ -197,7 +197,7 @@ theorem aufListe_wk (i : Int) : FA2.AufListe wk i ↔ i = 1 := by
     have := FreiForm.Kette.eindeutig hL kette_wk
     subst this; simpa using hm
   · rintro rfl
-    exact ⟨[1], by rw [kopf_wk]; exact kette_wk, by simp⟩
+    exact ⟨[1], by rw [kopf_wk]; exact kette_wk, by simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
 
 theorem lebt_wk (i : Int) : FA2.Lebt wk i ↔ (0 ≤ i ∧ i < 4 ∧ i ≠ 1) := by
   unfold FreiForm.Lebt
@@ -249,7 +249,7 @@ theorem ok_wk : K2.Ok wk := by
   rw [wz_wk] at hS
   have h2 := BaumF.eindeutig hS baumF_wk
   subst h2
-  simp at hm hm2
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hm hm2
   omega
 
 /-- A world that meets the arena invariant has a well formed list and tree. -/
@@ -322,8 +322,8 @@ theorem erk_kombiHang : ∃ a' : Abs, Erk K2 Abs.leer kombiHang a' :=
   ⟨_, Erk.nimm sieben2 rfl fdarf2 rfl (fgdarf2 _) vollK0 _ rein_vollK0
     (Erk.wurzelKopf ⟨Lf2, Rf2, Wz2, by decide⟩ rfl (fgdarf2 _) vollK1 _ rein_vollK1
       (Erk.haengen ⟨Lf2, Rf2, Wz2, by decide⟩ rfl Lf2 Rf2 (Or.inl ⟨rfl, rfl⟩) (.here : Var G2k _)
-        (.there .here : Var G2k _) rfl fdarf2 vollK2 _ (by simp [Abs.ext, Var.pos])
-        (by simp [Abs.ext, Var.pos]) rein_vollK2
+        (.there .here : Var G2k _) rfl fdarf2 vollK2 _ (by simp only [Abs.ext, Var.pos])
+        (by simp only [Abs.ext, Var.pos, Nat.zero_add]) rein_vollK2
         (Erk.kopf ⟨LL2, LG2⟩ rfl (fgdarf2 _) vollK2 .nil rein_vollK2 (Erk.nil _))))⟩
 
 def kombiHangOk : Bool :=
@@ -349,12 +349,12 @@ theorem kombiHang_zeuge : ∃ σ' : World FD2, execBlock (V := FV2) oF2 0 rF2 ko
     cases ρ
     simp only [decide_eq_true_eq] at hd
     exact ⟨σ', rfl, hpost.1, hd⟩
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-! ### Accepted: a slot moves from the tree to the list -/
 
@@ -367,9 +367,9 @@ def kombiVersetzen : Block FD2 FV2 false [] [] [] :=
 theorem erk_kombiVersetzen : ∃ a' : Abs, Erk K2 Abs.leer kombiVersetzen a' :=
   ⟨_, Erk.wurzelKopf ⟨Lf2, Rf2, Wz2, by decide⟩ rfl (fgdarf2 _) vollK0 _ rein_vollK0
     (Erk.abschneiden ⟨Lf2, Rf2, Wz2, by decide⟩ rfl Rf2 (Or.inr rfl) (.here : Var G1k _) rfl fdarf2 vollK1
-      vollK2 _ (by simp [Abs.ext, Var.pos]) rein_vollK1 rein_vollK2
+      vollK2 _ (by simp only [Abs.ext, Var.pos]) rein_vollK1 rein_vollK2
       (Erk.push ⟨LL2, LG2⟩ rfl (.here : Var G2k _) rfl fdarf2 rfl (fgdarf2 _) .nil
-        (by simp [Abs.forget, Abs.ext, Var.pos]) (Erk.nil _)))⟩
+        (by simp only [Abs.ext, Var.pos]) (Erk.nil _)))⟩
 
 def kombiVersetzenOk : Bool :=
   match execBlock (V := FV2) oF2 0 rF2 kombiVersetzen wk .nil with
@@ -394,12 +394,12 @@ theorem kombiVersetzen_zeuge : ∃ σ' : World FD2, execBlock (V := FV2) oF2 0 r
     cases ρ
     simp only [decide_eq_true_eq] at hd
     exact ⟨σ', rfl, hpost.1, hd⟩
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-! ### Planted defect: a slot in both structures -/
 
@@ -447,12 +447,12 @@ theorem doppelGlied_abgelehnt (a' : Abs) : ¬ Erk K2 Abs.leer doppelGlied a' := 
       rw [hd.2]
       exact this
     exact hpost.1.2.2.2 0 ⟨hinL, hinB⟩
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 end ErkKombi
 

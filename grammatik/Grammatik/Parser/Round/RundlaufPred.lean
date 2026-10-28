@@ -86,49 +86,49 @@ theorem druck_kopf_pred (e : SExpr) (hg : gut e = true) :
     have he : a ≠ "exists" := by intro e; subst e; revert h; decide
     unfold nameTok; split
     · exact ⟨fun e => hf (by injection e), fun e => he (by injection e)⟩
-    · exact ⟨by simp, by simp⟩
+    · exact ⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
   have platz : ∀ p, gutPlatz p = true → ∃ t ts, druckToks p = t :: ts ∧ KopfPred t ∧
       (t = .zeichen "!" → ∃ x, p = .un "!" x) := by
     intro p hp
     obtain ⟨a, ts, h, ak⟩ := platz_kopf p hp
-    exact ⟨_, ts, h, ki a ak, by simp⟩
+    exact ⟨_, ts, h, ki a ak, by simp only [nameTok_ne_zeichen, false_implies]⟩
   cases e with
-  | lit n => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
-  | float s => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
-  | tru => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-  | fls => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-  | «variable» s => exact ⟨_, _, rfl, ki s (by simpa [gut] using hg), by simp⟩
+  | lit n => exact ⟨_, _, rfl, ⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩, by simp only [reduceCtorEq, exists_false, imp_self]⟩
+  | float s => exact ⟨_, _, rfl, ⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩, by simp only [reduceCtorEq, exists_false, imp_self]⟩
+  | tru => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp only [reduceCtorEq, exists_false, imp_self]⟩
+  | fls => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp only [reduceCtorEq, exists_false, imp_self]⟩
+  | «variable» s => exact ⟨_, _, rfl, ki s (by simpa [gut] using hg), by simp only [nameTok_ne_zeichen, reduceCtorEq, exists_false, imp_self]⟩
   | field x f => exact platz _ hg
   | index x i => exact platz _ hg
   | arrow x f => exact platz _ hg
   | un o x =>
     by_cases hs0 : strEq o "-()" = true
-    · refine ⟨.zeichen "-", .zeichen "(" :: (druckToks x ++ [.zeichen ")"]), by simp [druckToks, hs0],
-        ⟨by simp, by simp⟩, ?_⟩
+    · refine ⟨.zeichen "-", .zeichen "(" :: (druckToks x ++ [.zeichen ")"]), by simp only [druckToks, hs0, ↓reduceIte, List.cons_append, List.nil_append],
+        ⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩, ?_⟩
       intro h; injection h with h; exact absurd h (by decide)
-    refine ⟨.zeichen o, _, by simp [druckToks, hs0]; rfl, ⟨by simp, by simp⟩, ?_⟩
+    refine ⟨.zeichen o, _, by simp [druckToks, hs0]; rfl, ⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩, ?_⟩
     intro h; injection h with h; subst h; exact ⟨x, rfl⟩
-  | bin o l r => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
+  | bin o l r => exact ⟨_, _, rfl, ⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩, by simp only [Token.zeichen.injEq, String.reduceEq, reduceCtorEq, exists_false, imp_self]⟩
   | call f xs =>
-    exact ⟨_, _, rfl, ki f (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1), by simp⟩
-  | fnref p => exact ⟨_, _, rfl, ⟨by simp, by simp⟩, by simp⟩
+    exact ⟨_, _, rfl, ki f (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1), by simp only [nameTok_ne_zeichen, reduceCtorEq, exists_false, imp_self]⟩
+  | fnref p => exact ⟨_, _, rfl, ⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩, by simp only [Token.zeichen.injEq, String.reduceEq, reduceCtorEq, exists_false, imp_self]⟩
   | built w xs =>
     rcases gut_built_faelle w xs hg with ⟨x, hw, rfl, -, -⟩ | ⟨a, b, rfl, rfl, -, -⟩
     · rcases hw with rfl | rfl
-      · exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-      · exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-    · exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-  | old x => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
-  | res => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp⟩
+      · exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp only [reduceCtorEq, exists_false, imp_self]⟩
+      · exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp only [reduceCtorEq, exists_false, imp_self]⟩
+    · exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp only [reduceCtorEq, exists_false, imp_self]⟩
+  | old x => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp only [reduceCtorEq, exists_false, imp_self]⟩
+  | res => exact ⟨_, _, rfl, kw _ (by decide) (by decide), by simp only [reduceCtorEq, exists_false, imp_self]⟩
   | why g f =>
-    exact ⟨_, _, rfl, ki g (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1.1.1), by simp⟩
+    exact ⟨_, _, rfl, ki g (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1.1.1), by simp only [nameTok_ne_zeichen, reduceCtorEq, exists_false, imp_self]⟩
   | ext k ns xs =>
     obtain ⟨rfl, rfl, c, ys, rfl, hc, hv, -⟩ := gut_ruf_faelle k ns xs hg
     obtain ⟨t, ts, h, hk, h3⟩ := platz c hc
     refine ⟨t, ts ++ ([.zeichen "("] ++ druckToksListe ys ++ [.zeichen ")"]), by rw [druck_ruf, h]; rfl, hk,
       fun ht => ?_⟩
     obtain ⟨x, rfl⟩ := h3 ht
-    simp [gutPlatz] at hc
+    simp only [gutPlatz, Bool.false_eq_true] at hc
 
 /-- After `parseCmp`, the atom's tail checks. -/
 theorem predAtom_aus (H : Nat) (toks rest : List Token) (e : SExpr)
@@ -158,8 +158,8 @@ theorem predNot_plain (G : Nat) (t : Token) (R rest : List Token) (a : SExpr) (h
     have hz : ∀ r, Token.zeichen z :: R ≠ .zeichen "!" :: r := by
       intro r e; injection e with e1; exact ht e1
     simp only [parsePredNot, hz, hA]
-    simp
-  | _ => simp only [parsePredNot, hA]; simp
+    simp only [Bool.false_eq_true, ↓reduceIte]
+  | _ => simp only [parsePredNot, hA]; simp only [Bool.false_eq_true, ↓reduceIte]
 
 /-- **Predicates read back**: a printable expression through `parsePred`. -/
 theorem pred_druck (e : SExpr) (hg : gut e = true) (rest : List Token) (hf : PredFolge rest)
@@ -175,7 +175,8 @@ theorem pred_druck (e : SExpr) (hg : gut e = true) (rest : List Token) (hf : Pre
         simp only [gut, strEq_bang_klammer, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg; exact hg.2
       cases hat : istAtom x with
       | true =>
-        have hdx : druckToks (.un "!" x) = .zeichen "!" :: druckToks x := by simp [druckToks, hat]
+        have hdx : druckToks (.un "!" x) = .zeichen "!" :: druckToks x := by simp only [druckToks, strEq_bang_klammer, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
         obtain ⟨t2, ts2, hd2, hk2, -⟩ := druck_kopf_pred x hx
         have hC := (legs_tok x hx).2.2.2.2.2.1 rest F' hr1 hr2 hr3 (by
           simp only [fb, hdx, List.length_cons] at hF ⊢; omega)
@@ -185,7 +186,8 @@ theorem pred_druck (e : SExpr) (hg : gut e = true) (rest : List Token) (hf : Pre
         exact predNot_bang _ _ _ _ hA hpf
       | false =>
         have hdx : druckToks (.un "!" x) = .zeichen "!" :: .zeichen "(" :: (druckToks x ++ [.zeichen ")"]) := by
-          simp [druckToks, hat]
+          simp only [druckToks, strEq_bang_klammer, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
         have hC := cmp_klammer x hx rest hr1 F' (by
           simp only [fb, hdx, List.length_cons, List.length_append, List.length_singleton] at hF ⊢; omega)
         have hA := predAtom_aus F' (.zeichen "(" :: (druckToks x ++ .zeichen ")" :: rest)) rest x
@@ -213,7 +215,7 @@ theorem predListe_rund : ∀ (ps : List SExpr) (rest : List Token) (F : Nat), ps
   | nil => intro _ _ h; exact absurd rfl h
   | cons p ps ih =>
     intro rest F _ hg hf hk hF
-    have hp := hg p (by simp)
+    have hp := hg p (by simp only [List.mem_cons, true_or])
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
     cases ps with
     | nil =>
@@ -221,20 +223,21 @@ theorem predListe_rund : ∀ (ps : List SExpr) (rest : List Token) (F : Nat), ps
       have hP := pred_druck p hp rest hf F' (by simp only [fb]; omega)
       simp only [parsePredListe, hP]
     | cons q qs =>
-      have hq := hg q (by simp)
+      have hq := hg q (by simp only [List.mem_cons, true_or, or_true])
       have hd : druckPredListe (p :: q :: qs) ++ rest =
           druckToks p ++ .zeichen "," :: (druckPredListe (q :: qs) ++ rest) := by
-        simp [druckPredListe]
+        simp only [druckPredListe, List.append_assoc, List.cons_append, List.nil_append]
       have hlen : (druckPredListe (p :: q :: qs)).length =
           (druckToks p).length + 1 + (druckPredListe (q :: qs)).length := by
-        simp [druckPredListe]; omega
+        simp only [druckPredListe, List.append_assoc, List.cons_append, List.nil_append, List.length_append,
+  List.length_cons]; omega
       have hlq : (druckToks q).length ≤ (druckPredListe (q :: qs)).length := by
-        cases qs <;> simp [druckPredListe]
+        cases qs <;> simp only [druckPredListe, Std.le_refl, List.append_assoc, List.cons_append, List.nil_append, List.length_append, List.length_cons, Nat.le_add_right]
       rw [hlen] at hF
       rw [hd]
-      have hR := ih rest F' (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) hf hk (by omega)
+      have hR := ih rest F' (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) hf hk (by omega)
       have hfk : PredFolge (.zeichen "," :: (druckPredListe (q :: qs) ++ rest)) :=
-        ⟨rfl, rfl, rfl, (by intro r e; simp at e), (by intro r e; simp at e), (by intro r e; simp at e)⟩
+        ⟨rfl, rfl, rfl, (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e)⟩
       have hP := pred_druck p hp _ hfk F' (by simp only [fb]; omega)
       have hQ : ∃ v, parsePred F' (druckPredListe (q :: qs) ++ rest) = .ok v := by
         cases qs with
@@ -244,10 +247,10 @@ theorem predListe_rund : ∀ (ps : List SExpr) (rest : List Token) (F : Nat), ps
         | cons x xs =>
           have hd2 : druckPredListe (q :: x :: xs) ++ rest =
               druckToks q ++ .zeichen "," :: (druckPredListe (x :: xs) ++ rest) := by
-            simp [druckPredListe]
+            simp only [druckPredListe, List.append_assoc, List.cons_append, List.nil_append]
           rw [hd2]
-          exact ⟨_, pred_druck q hq _ ⟨rfl, rfl, rfl, (by intro r e; simp at e), (by intro r e; simp at e),
-            (by intro r e; simp at e)⟩ F' (by simp only [fb]; omega)⟩
+          exact ⟨_, pred_druck q hq _ ⟨rfl, rfl, rfl, (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e),
+            (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e)⟩ F' (by simp only [fb]; omega)⟩
       obtain ⟨v, hv⟩ := hQ
       simp only [parsePredListe, hP, hv, hR]
 
@@ -278,7 +281,7 @@ theorem scan_name_vor (b : Bool) (s : String) (c : Char) (rest : List Char) (m :
     have hnf : nimmFolge (ds ++ c :: rest) = (ds, c :: rest) := by
       clear hs hl
       induction ds with
-      | nil => simp [nimmFolge, hc]
+      | nil => simp only [List.nil_append, nimmFolge, hc, Bool.false_eq_true, ↓reduceIte]
       | cons e es ih =>
         simp only [List.all_cons, Bool.and_eq_true] at h
         simp only [List.cons_append, nimmFolge, h.2.1, ite_true, ih ⟨h.1, h.2.2⟩]
@@ -318,7 +321,9 @@ theorem scan_name_ende (b : Bool) (s : String) (m : Nat) (h : nameForm s = true)
 
 theorem scan_dd (b : Bool) (l : List Char) (m : Nat) (hl : ∀ r, l ≠ '%' :: r) (hl2 : ∀ r, l ≠ '<' :: r) :
     scan b (':' :: ':' :: l) (m + 1) = Except.map (Token.zeichen "::" :: ·) (scan b l m) := by
-  simp [scan, nimmZeichen, istLeer, istZiffer, istAnfang]
+  simp only [↓Char.isValue, Char.reduceEq, List.cons.injEq, false_and, imp_self, implies_true, scan, istLeer,
+  Bool.false_eq_true, ↓reduceIte, istZiffer, Char.reduceToNat, Nat.reduceLeDiff, decide_true, decide_false,
+  Bool.and_false, istAnfang, Bool.and_true, Bool.or_self, nimmZeichen]
 
 /-- A path text, segments name-shaped, lexes to its path tokens. -/
 theorem scan_pfad : ∀ (segs : List String) (n : Nat), segs ≠ [] →
@@ -329,37 +334,41 @@ theorem scan_pfad : ∀ (segs : List String) (n : Nat), segs ≠ [] →
   | nil => intro _ h; exact absurd rfl h
   | cons a segs ih =>
     intro n _ hg hn
-    have ha := hg a (by simp)
-    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by simp at hn; omega⟩
+    have ha := hg a (by simp only [List.mem_cons, true_or])
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by simp only [List.length_cons] at hn; omega⟩
     cases segs with
     | nil =>
       simp only [List.map_cons, List.map_nil, List.intercalate_singleton]
       rw [scan_name_ende false a m ha]
-      simp [pfadToks, nameTok]
+      simp only [nameTok, pfadToks, List.cons_append, List.nil_append]
     | cons b bs =>
-      have hb := hg b (by simp)
-      obtain ⟨k, rfl⟩ : ∃ k, m = k + 1 := ⟨m - 1, by simp at hn; omega⟩
-      have hi := ih k (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by simp at hn ⊢; omega)
+      have hb := hg b (by simp only [List.mem_cons, true_or, or_true])
+      obtain ⟨k, rfl⟩ : ∃ k, m = k + 1 := ⟨m - 1, by simp only [List.length_cons] at hn; omega⟩
+      have hi := ih k (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by simp only [List.length_cons] at hn ⊢; omega)
       have hcons : [':', ':'].intercalate ((a :: b :: bs).map String.toList) =
           a.toList ++ ':' :: ':' :: [':', ':'].intercalate ((b :: bs).map String.toList) := by
-        simp [List.intercalate_cons_cons]
+        simp only [↓Char.isValue, List.map_cons, List.intercalate_cons_cons, List.append_assoc, List.cons_append,
+  List.nil_append]
       have hbk : ∃ c cs, [':', ':'].intercalate ((b :: bs).map String.toList) = c :: cs ∧ istAnfang c = true := by
         unfold nameForm at hb
         cases hbl : b.toList with
-        | nil => rw [hbl] at hb; simp at hb
+        | nil => rw [hbl] at hb; simp only [Bool.false_eq_true] at hb
         | cons c cs =>
           rw [hbl] at hb; simp only [Bool.and_eq_true] at hb
           cases bs with
-          | nil => exact ⟨c, cs, by simp [hbl], hb.1⟩
+          | nil => exact ⟨c, cs, by simp only [↓Char.isValue, List.map_cons, hbl, List.map_nil, List.intercalate_singleton], hb.1⟩
           | cons x xs =>
             exact ⟨c, cs ++ ':' :: ':' :: [':', ':'].intercalate ((x :: xs).map String.toList),
-              by simp [List.intercalate_cons_cons, hbl], hb.1⟩
+              by simp only [↓Char.isValue, List.map_cons, hbl, List.intercalate_cons_cons, List.cons_append, List.append_assoc,
+  List.nil_append], hb.1⟩
       obtain ⟨c, cs, hc, hca⟩ := hbk
       rw [hcons, scan_name_vor false a ':' _ _ ha (by decide) (Or.inr trivial), scan_dd]
       · rw [hi]
-        simp [pfadToks, nameTok, Except.map]
-      · rw [hc]; intro r e; injection e with e; subst e; simp [istAnfang] at hca
-      · rw [hc]; intro r e; injection e with e; subst e; simp [istAnfang] at hca
+        simp only [Except.map, nameTok, pfadToks, List.cons_append, List.nil_append]
+      · rw [hc]; intro r e; injection e with e; subst e; simp only [istAnfang, ↓Char.isValue, Char.reduceEq, imp_self, Char.reduceToNat, Nat.reduceLeDiff,
+  decide_false, decide_true, Bool.and_true, Bool.or_self, Bool.false_eq_true] at hca
+      · rw [hc]; intro r e; injection e with e; subst e; simp only [istAnfang, ↓Char.isValue, Char.reduceEq, imp_self, Char.reduceToNat, Nat.reduceLeDiff,
+  decide_false, decide_true, Bool.and_true, Bool.or_self, Bool.false_eq_true] at hca
 
 theorem pfad_len : ∀ (segs : List String), segs ≠ [] → (∀ a ∈ segs, nameForm a = true) →
     2 * segs.length ≤ ([':', ':'].intercalate (segs.map String.toList)).length + 1 := by
@@ -369,17 +378,17 @@ theorem pfad_len : ∀ (segs : List String), segs ≠ [] → (∀ a ∈ segs, na
   | cons a as ih =>
     intro _ hg
     have ha : 1 ≤ a.toList.length := by
-      have := hg a (by simp)
+      have := hg a (by simp only [List.mem_cons, true_or])
       unfold nameForm at this
       cases h : a.toList with
-      | nil => rw [h] at this; simp at this
-      | cons _ _ => simp
+      | nil => rw [h] at this; simp only [Bool.false_eq_true] at this
+      | cons _ _ => simp only [List.length_cons, Nat.le_add_left]
     cases as with
     | nil =>
       rw [List.map_cons, List.map_nil, List.intercalate_singleton]
       simp only [List.length_singleton]; omega
     | cons b bs =>
-      have := ih (by simp) (fun x hx => hg x (List.mem_cons_of_mem _ hx))
+      have := ih (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) (fun x hx => hg x (List.mem_cons_of_mem _ hx))
       rw [List.map_cons, List.map_cons, List.intercalate_cons_cons]
       rw [List.map_cons] at this
       simp only [List.length_append, List.length_cons] at this ⊢
@@ -404,12 +413,12 @@ theorem pfad_tokGut : ∀ (segs : List String), (∀ a ∈ segs, nameForm a = tr
     ∀ t ∈ pfadToks segs, TokGut t := by
   intro segs
   induction segs with
-  | nil => intro _ t h; simp [pfadToks] at h
+  | nil => intro _ t h; simp only [pfadToks, List.not_mem_nil] at h
   | cons a as ih =>
     intro hg t ht
-    have ha := hg a (by simp)
+    have ha := hg a (by simp only [List.mem_cons, true_or])
     cases as with
-    | nil => simp [pfadToks] at ht; subst ht; exact tokGut_nameTok ha
+    | nil => simp only [pfadToks, List.mem_cons, List.not_mem_nil, or_false] at ht; subst ht; exact tokGut_nameTok ha
     | cons b bs =>
       simp only [pfadToks, List.cons_append, List.nil_append, List.mem_cons] at ht
       rcases ht with rfl | rfl | ht

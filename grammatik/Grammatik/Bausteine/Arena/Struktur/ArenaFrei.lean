@@ -112,7 +112,7 @@ theorem Kette.eindeutig {A : FreiForm D} {σ : World D} {k : Int} {L L' : List I
 theorem Kette.mem_bereich {A : FreiForm D} {σ : World D} {k : Int} {L : List Int}
     (h : Kette A σ k L) : ∀ i ∈ L, 0 ≤ i ∧ i < D.count A.tab := by
   induction h with
-  | nil => intro i hi; simp at hi
+  | nil => intro i hi; simp only [List.not_mem_nil] at hi
   | cons k h0 hk L h ih =>
     intro i hi
     simp only [List.mem_cons] at hi
@@ -126,10 +126,10 @@ theorem Kette.uebertragen {A : FreiForm D} {σ σ' : World D} {k : Int} {L : Lis
   induction h with
   | nil => exact Kette.nil
   | cons k h0 hk L h ih =>
-    have hk' : A.naechst σ' k = A.naechst σ k := g k (by simp)
+    have hk' : A.naechst σ' k = A.naechst σ k := g k (by simp only [List.mem_cons, true_or])
     refine Kette.cons k h0 hk L ?_
     rw [hk']
-    exact ih (fun j hj => g j (by simp [hj]))
+    exact ih (fun j hj => g j (by simp only [List.mem_cons, hj, or_true]))
 
 end FreiForm
 
@@ -220,21 +220,21 @@ theorem frei_erhaelt (A : FreiForm D) (σ : World D) (Λ : List (Res D)) (i : In
   have hcount : i < D.count A.tab := by have := A.stand_le σ; omega
   refine ⟨i :: L, ?_, ?_, ?_⟩
   · have hkopf : A.kopfSt (A.freiWelt σ Λ i h0 (by omega)) = i := by
-      simp [freiWelt, kopfWert_n]
+      simp only [freiWelt, kopfSt_schreibGlob_kopf, kopfWert_n]
     rw [hkopf]
     refine Kette.cons i h0 hcount L ?_
     have hnx : A.naechst (A.freiWelt σ Λ i h0 (by omega)) i = A.kopfSt σ := by
-      simp [freiWelt, naechst_schreibSlot, nxtWert_n]
+      simp only [freiWelt, naechst_schreibGlob, naechst_schreibSlot, ↓reduceIte, nxtWert_n]
     rw [hnx]
     refine Kette.uebertragen hk ?_
     intro j hj
     have hji : j ≠ i := fun h => hiL (h ▸ hj)
-    simp [freiWelt, naechst_schreibSlot, hji]
+    simp only [freiWelt, naechst_schreibGlob, naechst_schreibSlot, hji, ↓reduceIte]
   · exact List.nodup_cons.mpr ⟨hiL, hnd⟩
   · intro j hj
     simp only [List.mem_cons] at hj
     have hs : A.stand (A.freiWelt σ Λ i h0 (by omega)) = A.stand σ := by
-      simp [freiWelt]
+      simp only [freiWelt, stand_schreibGlob_kopf, ArenaForm.stand_schreibSlot]
     rw [hs]
     rcases hj with rfl | hj
     · exact ⟨h0, h1⟩
@@ -250,12 +250,12 @@ theorem abheben_erhaelt (A : FreiForm D) (σ : World D) (Λ : List (Res D))
   | cons k h0 hk' L1 h1 =>
     refine ⟨L1, ?_, ?_, ?_⟩
     · have : A.kopfSt (A.abhebWelt σ Λ) = A.naechst σ kk := by
-        simp [abhebWelt, kopfWert_n, hg]
+        simp only [abhebWelt, hg, kopfSt_schreibGlob_kopf, kopfWert_n]
       rw [this]
-      exact Kette.uebertragen h1 (fun j _ => by simp [abhebWelt])
+      exact Kette.uebertragen h1 (fun j _ => by simp only [abhebWelt, naechst_schreibGlob])
     · exact (List.nodup_cons.mp hnd).2
     · intro j hj
-      have hs : A.stand (A.abhebWelt σ Λ) = A.stand σ := by simp [abhebWelt]
+      have hs : A.stand (A.abhebWelt σ Λ) = A.stand σ := by simp only [abhebWelt, stand_schreibGlob_kopf]
       rw [hs]
       exact hlt j (List.mem_cons_of_mem _ hj)
 
@@ -345,7 +345,7 @@ theorem bump_sicher (A : FreiForm D) (σ σ' : World D) (hok : A.FreiOk σ)
 theorem doppelt_bricht (A : FreiForm D) (σ : World D) (Λ : List (Res D)) (i : Int)
     (h0 : 0 ≤ i) (h1 : i < A.stand σ) (hkopf : A.kopfSt σ = i) :
     A.naechst (A.freiWelt σ Λ i h0 (by have := A.stand_le σ; omega)) i = i := by
-  simp [freiWelt, naechst_schreibSlot, nxtWert_n, hkopf]
+  simp only [freiWelt, hkopf, naechst_schreibGlob, naechst_schreibSlot, ↓reduceIte, nxtWert_n]
 
 end FreiForm
 

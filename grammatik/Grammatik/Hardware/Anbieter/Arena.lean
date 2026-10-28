@@ -47,7 +47,7 @@ open ArenaDyn (DynArena dynGrow)
 theorem paar_aus {l : List Strecke} (hp : l.Pairwise Strecke.getrennt) {r r' : Strecke}
     (hr : r ∈ l) (hr' : r' ∈ l) (hne : r ≠ r') : Strecke.getrennt r r' := by
   induction l with
-  | nil => simp at hr
+  | nil => simp only [List.not_mem_nil] at hr
   | cons x xs ih =>
       rw [List.pairwise_cons] at hp
       obtain ⟨hx, hxs⟩ := hp
@@ -85,7 +85,7 @@ theorem dynGrow_felder {A B : DynArena} {n : Nat} (h : dynGrow A n = some B) :
   · rename_i hle
     cases h
     exact ⟨rfl, rfl, hle⟩
-  · exact absurd h (by simp)
+  · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **The start.** The reserve answers the arena's span; the invariant holds with an empty
     prefix: the fresh range holds nothing resident. -/
@@ -102,7 +102,7 @@ theorem arena_start {g elem b : Nat} {s s' : Zust} (A : DynArena) (hc : A.c = 0)
   · intro a h1 h2 h3
     have := hp a h1 h2
     rw [this] at h3
-    exact absurd h3 (by simp)
+    exact absurd h3 (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-- **A grow is one commit of the template's range.** `dynGrow A n = some B` (the ceiling is kept)
     is realised by a `fuell` of `[b + commitStart, b + commitEnde)`: legal under the contract,
@@ -115,8 +115,8 @@ theorem arena_grow_geht {g elem b : Nat} {A B : DynArena} {s : Zust} (hg0 : 0 < 
   obtain ⟨e1, e2, e3, e4, e5, e6, -⟩ := ArenaLaufzeit.arena_commit_bereich elem A.M A.c n g hg0 hn
   have hal : (b + commitStart elem A.c g) % g = 0 ∧ (b + commitEnde elem A.c n g) % g = 0 := by
     constructor
-    · rw [Nat.add_mod, hb, e5]; simp
-    · rw [Nat.add_mod, hb, e6]; simp
+    · rw [Nat.add_mod, hb, e5]; simp only [Nat.add_zero, Nat.zero_mod]
+    · rw [Nat.add_mod, hb, e6]; simp only [Nat.add_zero, Nat.zero_mod]
   have hlive : arenaStrecke elem g b A.M ∈ s.lebend := hA.lebt
   have hstep := PStep.fuell (g := g) (s := s) (r := arenaStrecke elem g b A.M)
     (lo := b + commitStart elem A.c g) (hi := b + commitEnde elem A.c n g) hlive
@@ -130,12 +130,12 @@ theorem arena_grow_geht {g elem b : Nat} {A B : DynArena} {s : Zust} (hg0 : 0 < 
     show (s.ram a || (decide (b + commitStart elem A.c g ≤ a) &&
       decide (a < b + commitEnde elem A.c n g))) = true
     by_cases hlt : a < b + A.c * elem
-    · simp [hA.voll a h1 hlt]
+    · simp only [hA.voll a h1 hlt, Bool.true_or]
     · have h3 : b + commitStart elem A.c g ≤ a := by omega
       have h4 : a < b + commitEnde elem A.c n g := by
         have : (A.c + n) * elem ≤ commitEnde elem A.c n g := e2
         omega
-      simp [h3, h4]
+      simp only [h3, decide_true, h4, Bool.and_self, Bool.or_true]
   · intro a h1 h2 h3
     rw [hM] at h2
     rw [hBc]
@@ -177,7 +177,7 @@ theorem gib_nichts_resident {g : Nat} {s s' : Zust} {r : Strecke} (h : PStep g s
     (a : Nat) (ha : r.drin a) : s'.ram a = false := by
   cases h
   unfold Strecke.drin at ha
-  simp [ha.1, ha.2]
+  simp only [ha.1, decide_true, ha.2, Bool.and_self, Bool.not_true, Bool.and_false]
 
 /-- **The planted defect: a grow past the ceiling.** One slot beyond `M = 8` of 512-byte slots on
     4096-byte pages asks for a commit past the reservation; the contract refuses it (the caller's
@@ -224,7 +224,7 @@ theorem stapel_waechst {g b n gd lo hi : Nat} {s s' : Zust} (hS : StapelGut b n 
       intro a h1 h2
       show (s.ram a || (decide (lo ≤ a) && decide (a < hi))) = false
       have h3 : ¬ lo ≤ a := by omega
-      simp [hS.wache a h1 h2, h3]
+      simp only [hS.wache a h1 h2, h3, decide_false, Bool.false_and, Bool.or_self]
 
 /-- **An overflow into the guard is a stop, not a write**: the guard is not a legal access. -/
 theorem stapel_wache_kein_zugriff {b n gd : Nat} {s : Zust} (hS : StapelGut b n gd s)
@@ -233,7 +233,7 @@ theorem stapel_wache_kein_zugriff {b n gd : Nat} {s : Zust} (hS : StapelGut b n 
   have := hS.wache a h1 h2
   unfold Zugriff at hz
   rw [this] at hz
-  exact absurd hz (by simp)
+  exact absurd hz (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-- The guard (inside the stack's reservation) belongs to no other live reservation. -/
 theorem stapel_wache_exklusiv {b n gd : Nat} {s : Zust} (hg : Gut s) (hS : StapelGut b n gd s)
@@ -246,7 +246,7 @@ theorem stapel_wache_exklusiv {b n gd : Nat} {s : Zust} (hg : Gut s) (hS : Stape
 theorem fuell_in_wache_bricht :
     ((⟨[⟨64, 64 + 128⟩], fun _ => false⟩ : Zust).ram 64 = false) ∧
     (∃ s', PStep 16 ⟨[⟨64, 64 + 128⟩], fun _ => false⟩ (.fuell 64 80) s' ∧ s'.ram 64 = true) := by
-  refine ⟨rfl, _, PStep.fuell (r := ⟨64, 64 + 128⟩) (by simp) (by decide) (by decide), rfl⟩
+  refine ⟨rfl, _, PStep.fuell (r := ⟨64, 64 + 128⟩) (by simp only [Nat.reduceAdd, List.mem_cons, List.not_mem_nil, or_false]) (by decide) (by decide), rfl⟩
 
 /-! ## 4. Witness: an arena of six 8-byte slots on 16-byte pages -/
 
@@ -267,7 +267,7 @@ theorem arena_zeuge :
       ArenaGut 8 16 32 A3 s3 ∧ A3.c = 3 ∧ s3.ram (32 + 2 * 8) = true ∧ s3.ram 70 = false := by
   have hs1 : PStep 16 Zust.leer (.hole (spanne 8 6 16) 32)
       { lebend := [⟨32, 32 + spanne 8 6 16⟩], ram := Zust.leer.ram } :=
-    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp [Zust.leer])
+    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp only [Zust.leer, List.not_mem_nil, false_implies, implies_true])
   have hA0 : ArenaGut 8 16 32 arenaA0
       { lebend := [⟨32, 32 + spanne 8 6 16⟩], ram := Zust.leer.ram } :=
     arena_start arenaA0 rfl gut_leer hs1
@@ -281,7 +281,7 @@ theorem arena_zeuge :
     have : A2.c + 1 ≤ A2.M := by
       have := (dynGrow_felder hA2).1
       rw [hc2, this]; decide
-    simp [this]
+    simp only [this, ↓reduceDIte, Option.isSome_some]
   obtain ⟨A3, hA3⟩ := Option.isSome_iff_exists.mp hsome3
   obtain ⟨s3, hst3, hG3⟩ := arena_grow_geht (by decide) (by decide) hG2 1 hA3
   have hc3 : A3.c = 3 := by

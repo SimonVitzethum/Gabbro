@@ -221,7 +221,7 @@ theorem fadenInvX_schritt {M0 : RufMaschineG D} {K K' : FadenMaschine D}
       refine ⟨hI.lauf, fun t ht => ?_, h.joinFrei, h.joinLebt, h.kindLebt, h.rangSteigt,
         h.rangUhr⟩
       by_cases hc : t ∈ cs
-      · simp [hc] at ht
+      · simp only [hc, ↓reduceIte, Bool.true_eq_false] at ht
       · simp only [hc, if_false] at ht
         exact hI.schlaeft t ht
   | kind p c hp hw hc =>
@@ -231,7 +231,7 @@ theorem fadenInvX_schritt {M0 : RufMaschineG D} {K K' : FadenMaschine D}
       refine ⟨hI.lauf, fun t ht => ?_, h.joinFrei, h.joinLebt, h.kindLebt, h.rangSteigt,
         h.rangUhr⟩
       by_cases htc : t = c
-      · simp [htc] at ht
+      · simp only [htc, ↓reduceIte, Bool.true_eq_false] at ht
       · simp only [htc, if_false] at ht
         exact hI.schlaeft t ht
   | join p hp hw hf =>
@@ -350,11 +350,11 @@ theorem frame_schritte_beschraenktX (f : Faden) (g : D.Fn) (n : Nat)
   (kinv_laufX (kostenTief P passes) (rufTief P) (fun i _ => i - 1)
     (fun i h hS => by
       cases i with
-      | zero => simp [rufTief] at hS
+      | zero => simp only [rufTief, Bool.false_eq_true] at hS
       | succ m => exact Nat.le_refl _)
     (fun i h hS => by
       cases i with
-      | zero => simp [rufTief] at hS
+      | zero => simp only [rufTief, Bool.false_eq_true] at hS
       | succ m => exact hS)
     (kinv_eintritt (kostenTief P passes) (rufTief P) P passes hE n hadm) run hA).1
 

@@ -30,7 +30,7 @@ theorem textCheck_sound (z : Spez) (P : Programm z.deklaration) (ws : List z.dek
     (g : Bool) (h : textCheck z P ws zs g = true) :
     ∃ e', ausText (textVon z P ws) = .ok e' ∧ e'.zellen = zs ∧ e'.gueltig = g := by
   cases hd : delab z P ws with
-  | error m => simp [textCheck, hd] at h
+  | error m => simp only [textCheck, hd, Bool.false_eq_true] at h
   | ok its =>
     simp only [textCheck, hd, Bool.and_eq_true] at h
     obtain ⟨hg, h⟩ := h

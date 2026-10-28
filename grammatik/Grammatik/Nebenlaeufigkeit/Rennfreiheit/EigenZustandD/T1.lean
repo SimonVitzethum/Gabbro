@@ -46,7 +46,7 @@ theorem schreibBytes_spur_suffix (σ : World D) (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) (k : Int) (bs : List Byte) :
     ∃ pre, (σ.schreibBytes t f hf Λ k bs).spur = pre ++ σ.spur := by
   induction bs generalizing σ k with
-  | nil => exact ⟨[], by simp [World.schreibBytes]⟩
+  | nil => exact ⟨[], by simp only [World.schreibBytes, List.nil_append]⟩
   | cons b bs ih =>
       have hcons : σ.schreibBytes t f hf Λ k (b :: bs) =
           (σ.schreibSlot t Λ k f
@@ -355,7 +355,7 @@ theorem uebergang_neu (O : Orakel D) (passes : Nat)
       rw [hspur₂, hspur, List.singleton_append, List.cons_append]
     exact neu_head h1 hneu
   · rw [if_neg hvon, Ausgang.welt] at hstep
-    exact absurd hstep (by simp)
+    exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 
 end Gabbro.Grammatik.EZD

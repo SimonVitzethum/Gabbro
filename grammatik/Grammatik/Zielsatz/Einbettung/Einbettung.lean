@@ -256,7 +256,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   globZ_glob := fun _ => rfl
   glob_globZ := fun _ _ h => (Option.some.inj h).symm
   gtyp := fun g => (tyN_id _).symm
-  nutzlast := fun _ => by simp
+  nutzlast := fun _ => by simp only [List.map_id_fun', id_eq]
   atomar := fun _ => rfl
   ggeteilt := fun _ => rfl
   ggeist := fun _ => rfl
@@ -281,7 +281,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
     congr 1
     funext w
     rcases w with L | ⟨m, s⟩ <;> rfl
-  eigner := fun _ => by simp
+  eigner := fun _ => by simp only [List.map_id_fun', id_eq]
   fn := fun f => f
   fnZ := some
   fnZ_fn := fun _ => rfl
@@ -290,7 +290,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   invZ := some
   invZ_inv := fun _ => rfl
   inv_invZ := fun _ _ h => (Option.some.inj h).symm
-  traeger := fun _ => by simp
+  traeger := fun _ => by simp only [List.map_id_fun', id_eq]
   invs := fun _ => Iff.rfl
   ax := fun a => a
   axZ := some
@@ -307,14 +307,14 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   agruende := fun _ => rfl
   aschreibt := fun _ _ => rfl
   agschreibt := fun _ _ => rfl
-  anbieter := fun _ => by simp
+  anbieter := fun _ => by simp only [Option.map_id_fun', id_eq]
   reg := fun r => r
   regZ := some
   regZ_reg := fun _ => rfl
   reg_regZ := fun _ _ h => (Option.some.inj h).symm
   rtyp := fun r => (tyN_id _).symm
   rklasse := fun _ => rfl
-  spiegel := fun _ => by simp
+  spiegel := fun _ => by simp only [Option.map_id_fun', id_eq]
   rtraeger := fun r => by
     conv => lhs; rw [← List.map_id (D.rtraeger r)]
     congr 1
@@ -322,7 +322,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
     rcases c with t | g <;> rfl
   annahme := fun a => a
   a10 := rfl
-  tabNr := fun n => by simp
+  tabNr := fun n => by simp only [Option.map_id_fun', id_eq]
   sig := fun _ => rfl
   passt := fun _ _ => rfl
 

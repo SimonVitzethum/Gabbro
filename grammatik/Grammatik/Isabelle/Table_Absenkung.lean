@@ -56,7 +56,7 @@ theorem absenkung_deckt_genau {m N : Nat} :
   · intro h
     have hall : ∀ i, (i < m) ↔ (i < N) := fun i => by
       have e := congrFun h i
-      simp [feldindizes, indextyp] at e
+      simp only [feldindizes, indextyp, eq_iff_iff] at e
       exact e
     rcases Nat.lt_trichotomy m N with hlt | heq | hgt
     · exact absurd ((hall m).mpr hlt) (Nat.lt_irrefl _)

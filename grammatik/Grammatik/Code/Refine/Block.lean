@@ -36,7 +36,7 @@ theorem reach_block_jmp {M : Modl} {S : Sees} {fn : Nat} {lb k : Lbl} {b bk : Bl
     (hkp : bk.phis = []) (hs : seqI b.body m rs = some (m', rs')) :
     Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' ⟨fn, k, 0, rs', dst⟩ ks) := by
   have h1 := reach_seq M S b.body m ⟨fn, lb, 0, rs, dst⟩ ks m' rs'
-    ⟨b, hb, fun i h => by simp⟩ hs
+    ⟨b, hb, fun i h => by simp only [Nat.zero_add, getElem?_eq_some_getElem_iff]⟩ hs
   have h2 := reach_jmp (S := S) (m := m') (ks := ks)
     (f := ⟨fn, lb, 0 + b.body.length, rs', dst⟩) (l := k) (blk := b) (blk' := bk)
     ⟨hb, (show b.body.length ≤ 0 + b.body.length by omega), hbt⟩ hk hkp
@@ -50,7 +50,7 @@ theorem reach_block_br {M : Modl} {S : Sees} {fn : Nat} {lb t e : Lbl} {b bk : B
     Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks)
       (.run m' ⟨fn, (if x = 1 then t else e), 0, rs', dst⟩ ks) := by
   have h1 := reach_seq M S b.body m ⟨fn, lb, 0, rs, dst⟩ ks m' rs'
-    ⟨b, hb, fun i h => by simp⟩ hs
+    ⟨b, hb, fun i h => by simp only [Nat.zero_add, getElem?_eq_some_getElem_iff]⟩ hs
   have h2 := reach_br (S := S) (m := m') (ks := ks)
     (f := ⟨fn, lb, 0 + b.body.length, rs', dst⟩) (blk := b) (blk' := bk) (x := x)
     ⟨hb, (show b.body.length ≤ 0 + b.body.length by omega), hbt⟩ hc hk hkp
@@ -62,7 +62,7 @@ theorem reach_block_end {M : Modl} {S : Sees} {fn : Nat} {lb : Lbl} {b : Block}
     (hb : M.blk fn lb = some b) (hs : seqI b.body m rs = some (m', rs')) :
     Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' ⟨fn, lb, b.body.length, rs', dst⟩ ks) := by
   have h1 := reach_seq M S b.body m ⟨fn, lb, 0, rs, dst⟩ ks m' rs'
-    ⟨b, hb, fun i h => by simp⟩ hs
+    ⟨b, hb, fun i h => by simp only [Nat.zero_add, getElem?_eq_some_getElem_iff]⟩ hs
   simpa using h1
 
 /-! ## Stores -/
@@ -72,17 +72,17 @@ theorem store_of_load {m : Mem} {b : Nat} {o : Int} {t : Ty} {v0 x : Val}
   unfold Mem.load at hl
   unfold Mem.store
   cases hb : m.blks b with
-  | none => simp [hb] at hl
+  | none => simp only [hb, reduceCtorEq] at hl
   | some blk =>
       simp only [hb] at hl ⊢
       by_cases hi : Mem.inside blk.size o t
-      · simp [hi, hx]
-      · simp [hi] at hl
+      · simp only [hi, hx, and_self, ↓reduceIte, Option.some.injEq, exists_eq']
+      · simp only [hi, ↓reduceIte, reduceCtorEq] at hl
 
 theorem stepI_store {m m' : Mem} {rs : Regs} {t : Ty} {v p : Opd} {x : Val} {b : Nat} {o : Int}
     (hv : v.ev rs = some x) (hp : p.ev rs = some (.ptr b o)) (hs : m.store b o t x = some m') :
     stepI (.store t v p) m rs = some (m', rs) := by
-  simp [stepI, hv, hp, hs]
+  simp only [stepI, hv, hp, hs, Option.map_some]
 
 theorem bool_zext : Val.ofInt 1 (0 : Int) = Val.ofInt 1 0 := rfl
 
@@ -96,19 +96,19 @@ theorem cvtM_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = tr
       split at h
       · obtain rfl := Option.some.inj h
         exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | bool =>
       simp only [cvtM] at h
       obtain rfl := Option.some.inj h
       apply frag_one
       have e1 : encR lay .bool v = Val.ofInt 1 (if wbool v then 1 else 0) := by
-        simp [encR, bool_ofInt]
+        simp only [encR, bool_ofInt]
         rfl
       rw [e1] at hv
       have e2 : encM lay .bool v = Val.ofInt 8 (if wbool v then 1 else 0) := rfl
       rw [e2]
       cases hb : wbool v <;>
-        simp [stepI, hv, hb, Val.ty, Val.ofInt, Val.cast, Ar.zext_ofInt]
+        simp only [stepI, hv, Val.ofInt, hb, Bool.false_eq_true, ↓reduceIte, BitVec.ofInt_ofNat, Val.ty, Val.cast, Nat.reduceLeDiff, Nat.pow_one, Nat.zero_lt_succ, BitVec.setWidth_ofNat_of_le_of_lt, Option.map_some, Nat.lt_add_one]
   | ptr n rw =>
       simp only [cvtM] at h
       obtain rfl := Option.some.inj h
@@ -118,20 +118,20 @@ theorem cvtM_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = tr
       split at h
       · obtain rfl := Option.some.inj h
         exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | why n =>
       simp only [cvtM] at h
       split at h
       · obtain rfl := Option.some.inj h
         exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | sum cs =>
       simp only [cvtM] at h
       split at h
       · obtain rfl := Option.some.inj h
         exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩
-      · simp at h
-  | _ => simp [supp] at hs
+      · simp only [reduceCtorEq] at h
+  | _ => simp only [supp, Bool.false_eq_true] at hs
 
 /-- **What the store code does**: the new memory is the old one with the value stored. -/
 theorem storeTo_run (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = true) (oe : Opd)
@@ -143,7 +143,7 @@ theorem storeTo_run (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = 
       r1 ≤ r2 ∧ (∀ x, x < r1 → rs' x = rs x) := by
   unfold storeTo at h
   rcases hc : cvtM τ oe r1 with _ | ⟨cm, om, r3⟩
-  · simp [hc] at h
+  · simp only [hc, reduceCtorEq] at h
   simp only [hc] at h
   obtain ⟨rfl, rfl⟩ : cs = cm ++ [storeI τ om p] ∧ r2 = r3 := by
     simpa [Prod.ext_iff] using (Option.some.inj h).symm
@@ -177,8 +177,8 @@ theorem bind_run (lay : Layout D) {τ : GTy} (v : Wert D τ) (hs : supp τ = tru
     simp only [seqI, storeI]
     rw [hs1]
     simp only []
-    rw [stepI_store hom1 (by simp [Opd.ev, regs_set_same]) hm1]
-  · rw [store_next hm1]; simp [Mem.alloc]
+    rw [stepI_store hom1 (by simp only [Opd.ev, regs_set_same]) hm1]
+  · rw [store_next hm1]; simp only [Mem.alloc, Bool.false_eq_true, and_false, ↓reduceIte, Nat.add_left_cancel_iff]
   · intro x hx; exact regs_set_ne rs a x _ hx
   · exact load_store_of hm1 (dec_enc_encM lay v hs)
   · intro hw
@@ -206,11 +206,11 @@ theorem bindCode_run (lay : Layout D) {τ : GTy} {σ : World D} {Γ : Ctx} {cenv
       (∀ b, rs3 a = some (.ptr b 0) → m.next ≤ b) := by
   unfold bindCode at h
   rcases hcm : cvtM τ oe r1 with _ | ⟨cm, om, r3⟩
-  · simp [hcm] at h
+  · simp only [hcm, reduceCtorEq] at h
   simp only [hcm] at h
   have hs : supp τ = true := by
     cases hbb : supp τ
-    · simp [hbb] at h
+    · simp only [hbb, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
     · rfl
   simp only [hs, if_true] at h
   have h' := Option.some.inj h

@@ -222,7 +222,7 @@ theorem liestVertragTab_fall (P : Programm D) (f : D.Fn) (t : D.Tab)
         subst heq
         exact ho
     | inr _ =>
-        simp at hfo
+        simp only [reduceCtorEq] at hfo
   have h2 : (.inl t : D.Tab ⊕ D.Glob) ∈
       liestDirekt P f ++ (P.requires f).orte ++ (P.ensures f).orte := hmem
   rcases List.mem_append.mp h2 with hV | hens
@@ -243,7 +243,7 @@ theorem liestVertragGlob_fall (P : Programm D) (f : D.Fn) (g : D.Glob)
     obtain ⟨o, ho, hfo⟩ := List.mem_filterMap.mp h
     cases o with
     | inl _ =>
-        simp at hfo
+        simp only [reduceCtorEq] at hfo
     | inr g' =>
         have heq : g' = g := by simpa using hfo
         subst heq
@@ -274,7 +274,7 @@ theorem liestVertragMitInvTab_fall (P : Programm D) (f : D.Fn)
         subst heq
         exact ho
     | inr _ =>
-        simp at hfo
+        simp only [reduceCtorEq] at hfo
   have h2 : (.inl t : D.Tab ⊕ D.Glob) ∈ liestVertragMitInv P f invs := hmem
   rcases List.mem_append.mp h2 with hV | hI
   · left
@@ -298,7 +298,7 @@ theorem liestVertragMitInvGlob_fall (P : Programm D) (f : D.Fn)
     obtain ⟨o, ho, hfo⟩ := List.mem_filterMap.mp h
     cases o with
     | inl _ =>
-        simp at hfo
+        simp only [reduceCtorEq] at hfo
     | inr g' =>
         have heq : g' = g := by simpa using hfo
         subst heq

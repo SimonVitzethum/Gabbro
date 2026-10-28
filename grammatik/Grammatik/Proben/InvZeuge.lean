@@ -93,8 +93,8 @@ def ivD : Deklaration where
   sigNr := fun | 0 => ivSigL | _ => ivSigFrei
   eigner_nie_erzeugt := fun n _ _ _ h => by
     cases n with
-    | zero => simp at h
-    | succ n => simp at h
+    | zero => simp only [List.not_mem_nil] at h
+    | succ n => simp only [List.not_mem_nil] at h
   Inv := Unit
   traeger := fun _ => [()]
   invs := [()]
@@ -114,7 +114,7 @@ def ivD : Deklaration where
   invarianten_gehalten := fun n _ h _ _ L _ => by
     cases n with
     | zero => cases L; exact List.mem_singleton.mpr rfl
-    | succ n => simp [ivSigFrei] at h
+    | succ n => simp only [ivSigFrei, List.any_cons, List.any_nil, Bool.or_self, Bool.false_eq_true] at h
   ggeteilt_bewacht := fun e => nomatch e
 
 def ivHaupt : ivD.Fn := IvFn.haupt
@@ -174,7 +174,7 @@ def ivRumpfSchlecht : Endblock ivD (vertragVon ivD ivSetze) false [] ivL :=
 theorem ivHp : RufPasst ivD (vertragVon ivD ivHaupt) (ivD.signatur ivSetze) ivL where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := fun L _ => by cases L; exact List.mem_singleton.mpr rfl
   hx := fun L _ hn => absurd (by cases L; exact List.mem_singleton.mpr rfl) hn
 
@@ -340,8 +340,9 @@ theorem iv_inv_gut : InvGutS ivPgut 0 (axWahr ivD) (SperrInv.leer ivD) ivSetze :
   cases hrun
   intro i _ _
   cases i
-  simp [InvHaelt, ivPgut, ivP, ivInv, ivIdx, ivWert, eval, World.storeSlot, World.merke,
-    World.lese, World.schreibSlot, Zahl.weiter]
+  simp only [InvHaelt, World.lese, World.merke, World.schreibSlot, World.storeSlot, ivIdx, ivWert,
+  List.map_append, List.append_assoc, eval, Zahl.weiter, dite_eq_ite, List.cons_append, List.nil_append, ivPgut, ivP,
+  ivInv, Int.reduceEq, ↓reduceIte, ite_self]
   rfl
 
 theorem iv_inv_haupt (setze : Endblock ivD (vertragVon ivD ivSetze) false [] ivL) :
@@ -357,8 +358,9 @@ theorem iv_inv_haupt (setze : Endblock ivD (vertragVon ivD ivSetze) false [] ivL
     cases hrun
     intro i _ _
     cases i
-    simp [InvHaelt, ivP, ivInv, ivIdx, ivWert, eval, World.storeSlot, World.merke,
-      World.lese, World.schreibSlot, Zahl.weiter]
+    simp only [InvHaelt, World.lese, World.merke, World.schreibSlot, World.storeSlot, ivIdx, ivWert,
+  List.map_append, List.append_assoc, eval, Zahl.weiter, dite_eq_ite, List.cons_append, List.nil_append, ivP, ivInv,
+  Int.reduceEq, ↓reduceIte, ite_self]
     rfl
   · cases hrun
   · cases hrun
@@ -413,8 +415,9 @@ theorem ivPschlecht_nicht_invGutS :
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil ivPschlecht).1) (ivSp.welt []) .nil rfl _ _ rfl ()
     (List.mem_singleton.mpr rfl) rfl
   revert h3
-  simp [InvHaelt, ivPschlecht, ivP, ivInv, ivIdx, ivWert, eval, World.storeSlot, World.merke,
-    World.lese, World.schreibSlot, Zahl.weiter, ivSp, Speicher.welt]
+  simp only [InvHaelt, World.lese, World.merke, World.schreibSlot, World.storeSlot, Speicher.welt, ivSp, ivIdx,
+  ivWert, List.map_append, List.append_nil, eval, Zahl.weiter, List.cons_append, List.nil_append, ivPschlecht, ivP,
+  ivInv, ↓reduceIte, Int.reduceEq, imp_false, Bool.not_eq_true]
   decide
 
 theorem ivM0_faden0 (setze : Endblock ivD (vertragVon ivD ivSetze) false [] ivL) :
@@ -454,9 +457,9 @@ theorem ivPschlecht_verletzt : ∃ M : RufMaschineG ivD,
     (List.mem_singleton.mpr rfl) rfl
   revert h3
   rw [hZ2.welt, hZ1.welt]
-  simp [InvHaelt, ivPschlecht, ivP, ivInv, ivIdx, ivWert, eval, World.storeSlot, World.merke,
-    World.lese, World.schreibSlot, Zahl.weiter, ivSp, Speicher.welt, RufMaschineG.weltVon,
-    RufStartG]
+  simp only [InvHaelt, World.lese, World.merke, World.schreibSlot, World.storeSlot, RufMaschineG.weltVon,
+  Speicher.welt, RufStartG, ivSp, ivP, ivInv, ivIdx, ivWert, List.map_append, List.append_assoc, eval, Zahl.weiter,
+  List.cons_append, List.nil_append, ivPschlecht, ↓reduceIte, Int.reduceEq, imp_false, Bool.not_eq_true]
   decide
 
 /-! ## 7. The correct program on a reached run -/
@@ -504,12 +507,14 @@ theorem ivGut_zeuge : ∃ M : RufMaschineG ivD,
     rw [hG4.1]; exact ⟨_, _, _, List.mem_cons_self, rfl⟩
   refine ⟨M4, hr4, v, a, b, hm, (ivPgut_zertifiziert M4 hr4).2 0 _ hm _ _ _ _ _ rfl, ?_, ?_⟩
   · rw [hb, hZ3.welt, hZ2.welt, hZ1.welt]
-    simp [World.storeSlot, World.merke, World.lese, World.schreibSlot, Zahl.weiter, ivSp,
-      Speicher.welt, RufMaschineG.weltVon, RufStartG, ivS0, ivS1, ivSchreib, ivIdx, ivWert, eval]
+    simp only [World.lese, World.merke, World.schreibSlot, World.storeSlot, RufMaschineG.weltVon, Speicher.welt,
+  RufStartG, ivSp, ivIdx, ivWert, List.map_append, List.append_assoc, eval, Zahl.weiter, List.cons_append,
+  List.nil_append, dite_eq_ite, List.map_nil, Int.reduceEq, ↓reduceIte, ite_self]
     rfl
   · rw [hb, hZ3.welt, hZ2.welt, hZ1.welt]
-    simp [World.storeSlot, World.merke, World.lese, World.schreibSlot, Zahl.weiter, ivSp,
-      Speicher.welt, RufMaschineG.weltVon, RufStartG, ivS0, ivS1, ivSchreib, ivIdx, ivWert, eval]
+    simp only [World.lese, World.merke, World.schreibSlot, World.storeSlot, RufMaschineG.weltVon, Speicher.welt,
+  RufStartG, ivSp, ivIdx, ivWert, List.map_append, List.append_assoc, eval, Zahl.weiter, List.cons_append,
+  List.nil_append, dite_eq_ite, List.map_nil, ↓reduceIte, Int.reduceEq]
     rfl
 
 /-! ## CUTS:

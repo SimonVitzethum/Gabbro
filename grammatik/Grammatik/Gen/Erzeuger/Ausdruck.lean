@@ -118,7 +118,7 @@ theorem mem_tyS {E : Sz (SE D Γ Λ)} {i : Nat} {τ : Ty} {e : Expr D Γ Λ τ}
 def varS (Γ : Ctx) : Sz (Σ τ, Var Γ τ) := fun c => (genVar Γ).filter fun p => decide (groesseVar p.2 = c)
 
 theorem mem_varS {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : (⟨τ, x⟩ : Σ τ, Var Γ τ) ∈ varS Γ (groesseVar x) :=
-  List.mem_filter.2 ⟨genVar_vollst Γ τ x, by simp⟩
+  List.mem_filter.2 ⟨genVar_vollst Γ τ x, by simp only [decide_true]⟩
 
 /-- The payload expression of a sum case. -/
 def nutzS (E : Sz (SE D Γ Λ)) : (o : Option (Int × Int)) → Sz (NutzlastExpr D Γ Λ o)

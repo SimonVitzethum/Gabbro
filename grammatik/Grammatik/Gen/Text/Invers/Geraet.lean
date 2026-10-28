@@ -15,26 +15,30 @@ variable {z : Spez} {V : Vertrag z.deklaration}
 
 theorem namenGleich_map : ∀ (ws : List String), uNamenGleich (ws.map String.toList) ws = true
   | [] => rfl
-  | w :: ws => by simp [uNamenGleich, namenGleich_map ws]
+  | w :: ws => by simp only [List.map_cons, uNamenGleich, BEq.rfl, namenGleich_map ws, Bool.and_self]
 
 theorem flatten_kopf (a : String) (l : List String) :
     ∃ tail, (((a :: l).map fun n => [nameTok n]).intersperse [Token.zeichen ","]).flatten = nameTok a :: tail := by
   cases l with
-  | nil => exact ⟨[], by simp⟩
-  | cons b l => exact ⟨_, by simp [List.intersperse_cons_cons]; rfl⟩
+  | nil => exact ⟨[], by simp only [List.map_cons, List.map_nil, List.intersperse_singleton, List.flatten_cons, List.flatten_nil,
+  List.append_nil]⟩
+  | cons b l => exact ⟨_, by simp only [List.map_cons, List.intersperse_cons_cons, List.flatten_cons, List.cons_append, List.nil_append,
+  List.cons.injEq, true_and]; rfl⟩
 
 theorem nicht_nothing (k : Nat) (tail : List Token) :
     strEq (String.ofList (render (nameTok (nGlob k) :: tail))) "nothing" = false := by
   unfold strEq
   rw [String.toList_ofList]
   simp only [render, spell_nameTok, nGlob_toList]
-  simp
+  simp only [↓Char.isValue, Nat.toString_eq_repr, Nat.toList_repr, List.cons_append, String.reduceToList,
+  List.cons_beq_cons, Char.reduceBEq, Bool.false_and]
 
 /-- The payload of `publishes`: the declared statics, by name. -/
 theorem nutzNamen_ok (gs : List z.deklaration.Glob) :
     uNutzNamen (nutzText z gs) = (gs.map fun g => nGlob (gN z g)).map String.toList := by
   cases gs with
-  | nil => simp [nutzText, uNutzNamen]; decide
+  | nil => simp only [uNutzNamen, nutzText, List.isEmpty_nil, ↓reduceIte, String.reduceToList, ↓Char.isValue,
+  List.map_nil, ite_eq_left_iff, Bool.not_eq_true]; decide
   | cons g gs =>
     have hw := woerter_namen ((g :: gs).map fun g => nGlob (gN z g)) (by
       intro w hw
@@ -42,7 +46,8 @@ theorem nutzNamen_ok (gs : List z.deklaration.Glob) :
       obtain ⟨h, _, rfl⟩ := hw
       exact nGlob_wort _)
     have hm : (g :: gs).map (fun g => [nameTok (nGlob (gN z g))]) =
-        ((g :: gs).map fun g => nGlob (gN z g)).map (fun n => [nameTok n]) := by simp [List.map_map]
+        ((g :: gs).map fun g => nGlob (gN z g)).map (fun n => [nameTok n]) := by simp only [List.map_cons, List.map_map, List.cons.injEq, List.map_inj_left, Function.comp_apply, implies_true,
+  and_self]
     obtain ⟨tail, ht⟩ := flatten_kopf (nGlob (gN z g)) (gs.map fun g => nGlob (gN z g))
     have ht' : (((g :: gs).map fun g => [nameTok (nGlob (gN z g))]).intersperse [Token.zeichen ","]).flatten =
         nameTok (nGlob (gN z g)) :: tail := by rw [hm]; simpa using ht
@@ -58,7 +63,8 @@ theorem nutzNamenA_ok (gs : List z.deklaration.Glob) :
     uNutzNamen (nutzTextA z gs) = (gs.map fun g => nGlob (gN z g)).map String.toList := by
   unfold nutzTextA
   cases gs with
-  | nil => simp [uNutzNamen, uWoerter, strEq_eq]
+  | nil => simp only [uNutzNamen, List.isEmpty_nil, ↓reduceIte, strEq_eq, String.empty_eq_iff, String.reduceEq,
+  decide_false, Bool.false_eq_true, String.toList_empty, uWoerter, List.map_nil]
   | cons g gs => simpa using nutzNamen_ok (g :: gs)
 
 /-- The register place `d.r{k}`. -/
@@ -71,8 +77,10 @@ theorem regOrt_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     rw [List.any_eq_false]
     intro n hm
     rcases H.namen n hm with ⟨k, rfl⟩ | ⟨k, rfl⟩
-    · simp [strEq_kopf (nVar_toList k) (show "d".toList = 'd' :: [] from rfl) (by decide)]
-    · simp [strEq_kopf (nZeiger_toList k) (show "d".toList = 'd' :: [] from rfl) (by decide)]
+    · simp only [strEq_kopf (nVar_toList k) (show "d".toList = 'd' :: [] from rfl) (by decide), Bool.false_eq_true,
+  not_false_eq_true]
+    · simp only [strEq_kopf (nZeiger_toList k) (show "d".toList = 'd' :: [] from rfl) (by decide),
+  Bool.false_eq_true, not_false_eq_true]
   refine ⟨g, ?_, hd, hn, hp, ha, hb⟩
   simp only [regOrt, uRegOrt, hnames, Bool.false_eq_true, ite_false, H.griff r]
   simp only [hf]
@@ -159,8 +167,8 @@ theorem reihe_await {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
     have : a = .int := by
       cases hg : z.deklaration.gtyp g with
       | bool => exact absurd hg ht
-      | int _ _ => rw [hg] at hart; simp [artErg] at hart; exact hart.symm
-      | _ => rw [hg] at hart; simp [artErg] at hart
+      | int _ _ => rw [hg] at hart; simp only [artErg, Option.some.injEq] at hart; exact hart.symm
+      | _ => rw [hg] at hart; simp only [artErg, reduceCtorEq] at hart
     subst this
     rw [uAnwReihe]
     simp only [uBinderTyp, hf, hat, ha, Bool.not_true, Bool.false_eq_true, ite_false, hgl, h, H.muts, List.filter_nil]

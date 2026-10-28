@@ -278,7 +278,7 @@ theorem rangregel_ist_nicht_notwendig :
           fun A => if A = .eins then 3 else 7, ?_, ?_⟩
   · intro h
     have := h () .eins .zwei rfl rfl
-    simp at this
+    simp only [reduceCtorEq, ↓reduceIte, Int.reduceLT] at this
   · intro p s hk hc
     have h1 := kette_endet_wartend hk
     have h2 : Zwei.eins = s.2 := by injection h1

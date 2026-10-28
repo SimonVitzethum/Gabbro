@@ -73,7 +73,7 @@ theorem gehe_schritt {prog : Nat → List (Befehl LOrt)} {Z Z' : LZustand LOrt} 
     (h : Z.gehe prog t k = some Z') : LSchritt prog Z Z' := by
   unfold LZustand.gehe at h
   cases hb : (prog t)[Z.pc t]? with
-  | none => rw [hb] at h; simp at h
+  | none => rw [hb] at h; simp only [reduceCtorEq] at h
   | some b =>
       rw [hb] at h
       dsimp only at h
@@ -86,12 +86,12 @@ theorem gehe_schritt {prog : Nat → List (Befehl LOrt)} {Z Z' : LZustand LOrt} 
             cases h
             exact .schreib Z t loc w o k hb
               ⟨hc.1, fun m hm => bne_iff_ne.mp (List.all_eq_true.mp hc.2 m hm)⟩
-          · simp at h
+          · simp only [reduceCtorEq] at h
       | lies loc r o =>
           unfold Befehl.geh at h
           dsimp only at h
           cases hm : (Z.hist loc)[k]? with
-          | none => rw [hm] at h; simp at h
+          | none => rw [hm] at h; simp only [reduceCtorEq] at h
           | some m =>
               rw [hm] at h
               dsimp only at h
@@ -99,7 +99,7 @@ theorem gehe_schritt {prog : Nat → List (Befehl LOrt)} {Z Z' : LZustand LOrt} 
               · rename_i hc
                 cases h
                 exact .lies Z t loc r o m hb ⟨List.mem_of_getElem? hm, hc⟩
-              · simp at h
+              · simp only [reduceCtorEq] at h
 
 /-- A list of choices, run from `Z`. -/
 def lauf (prog : Nat → List (Befehl LOrt)) : LZustand LOrt → List (Nat × Nat) →
@@ -110,11 +110,11 @@ def lauf (prog : Nat → List (Befehl LOrt)) : LZustand LOrt → List (Nat × Na
 theorem lauf_erreichbar {prog : Nat → List (Befehl LOrt)} :
     ∀ (acts : List (Nat × Nat)) {Z Z' : LZustand LOrt}, LErreichbar (LSchritt prog) Z →
       lauf prog Z acts = some Z' → LErreichbar (LSchritt prog) Z'
-  | [], Z, Z', hz, h => by simp [lauf] at h; subst h; exact hz
+  | [], Z, Z', hz, h => by simp only [lauf, Option.some.injEq] at h; subst h; exact hz
   | a :: r, Z, Z', hz, h => by
       simp only [lauf] at h
       cases hg : Z.gehe prog a.1 a.2 with
-      | none => simp [hg] at h
+      | none => simp only [hg, Option.bind_none, reduceCtorEq] at h
       | some Z1 =>
           simp only [hg, Option.bind_some] at h
           exact lauf_erreichbar r (.schritt hz (gehe_schritt hg)) h
@@ -125,7 +125,7 @@ theorem erlaubt_of {prog : Nat → List (Befehl LOrt)} {acts : List (Nat × Nat)
     (h : (lauf prog (LZustand.start LOrt) acts).map p = some true) :
     ∃ Z, LErreichbar (LSchritt prog) Z ∧ p Z = true := by
   cases hl : lauf prog (LZustand.start LOrt) acts with
-  | none => simp [hl] at h
+  | none => simp only [hl, Option.map_none, reduceCtorEq] at h
   | some Z =>
       simp only [hl, Option.map_some] at h
       exact ⟨Z, lauf_erreichbar acts .start hl, Option.some.inj h⟩

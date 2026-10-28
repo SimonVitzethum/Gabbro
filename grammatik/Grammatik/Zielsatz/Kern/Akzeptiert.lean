@@ -129,10 +129,11 @@ theorem mehrfach_filter {α : Type} [DecidableEq α] {ws : List α} {w : α} :
   constructor
   · intro h
     have h1 := (h.filter (fun v => decide (v = w))).length_le
-    have h2 : ([w, w].filter (fun v => decide (v = w))).length = 2 := by simp
+    have h2 : ([w, w].filter (fun v => decide (v = w))).length = 2 := by simp only [decide_true, List.filter_cons_of_pos, List.filter_nil, List.length_cons, List.length_nil,
+  Nat.zero_add, Nat.reduceAdd]
     omega
   · induction ws with
-    | nil => intro h; simp at h
+    | nil => intro h; simp only [List.filter_nil, List.length_nil, Nat.not_lt_zero] at h
     | cons a l ih =>
         intro h
         by_cases he : a = w
@@ -160,7 +161,8 @@ theorem mehrfachB_iff {ws : List D.Fn} {w : D.Fn} : mehrfachB ws w = true ↔ Me
 theorem nicht_mehrfach_of_nodup {α : Type} {ws : List α} (hnd : ws.Nodup) (w : α) :
     ¬ Mehrfach ws w := fun h => by
   have := List.Nodup.sublist h hnd
-  simp at this
+  simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, not_true_eq_false, not_false_eq_true,
+  List.nodup_nil, and_self, and_true] at this
 
 /-! ## 1. Thread-locality over the declared starts -/
 
@@ -187,7 +189,7 @@ theorem getrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
         cases h1.2
     · have h2 := (List.all_eq_true.mp h1) f (hvoll f)
       rw [hf, istIn_iff.mpr hc] at h2
-      simp at h2
+      simp only [Bool.not_true, Bool.or_self, Bool.false_eq_true] at h2
     · have h2 := (List.all_eq_true.mp h1) g (hvoll g)
       rw [hg] at h2
       simpa using h2
@@ -195,7 +197,7 @@ theorem getrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
     refine List.all_eq_true.mpr fun w1 hw1 => List.all_eq_true.mpr fun w2 hw2 => ?_
     by_cases hne : w1 = w2 ∧ mehrfachB ws w1 = false
     · obtain ⟨rfl, hm⟩ := hne
-      simp [hm]
+      simp only [decide_true, hm, Bool.not_false, Bool.and_self, Bool.true_or]
     have hne' : w1 ≠ w2 ∨ Mehrfach ws w1 := by
       by_cases he : w1 = w2
       · refine Or.inr (mehrfachB_iff.mp ?_)
@@ -204,7 +206,7 @@ theorem getrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
         · rfl
       · exact Or.inl he
     by_cases hfr : (fs.all fun f => !(reachB P fs w1 f) || !(istIn (fussOrteG P f) c)) = true
-    · simp [hfr]
+    · simp only [hfr, Bool.or_true, Bool.true_or]
     · have hex : ∃ f, reachB P fs w1 f = true ∧ c ∈ fussOrteG P f := by
         refine Classical.byContradiction fun hn => hfr (List.all_eq_true.mpr fun f _ => ?_)
         cases hr : reachB P fs w1 f
@@ -217,8 +219,8 @@ theorem getrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn
         List.all_eq_true.mpr fun g _ => by
           cases hg : reachB P fs w2 g
           · rfl
-          · simp [h w1 hw1 w2 hw2 hne' f g hf hc hg]
-      simp [hw]
+          · simp only [Bool.not_true, h w1 hw1 w2 hw2 hne' f g hf hc hg, Bool.not_false, Bool.or_true]
+      simp only [hw, Bool.or_true]
 
 /-- The decided thread-locality IS Spec's `lokW` (given the member list). -/
 theorem getrenntW_eq_lokW {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
@@ -254,7 +256,7 @@ theorem schreibGetrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g
     · exact absurd h1 hne
     · have h2 := (List.all_eq_true.mp h1) g (hvoll g)
       rw [hg, hgw] at h2
-      simp at h2
+      simp only [Bool.not_true, Bool.or_self, Bool.false_eq_true] at h2
     · have h2 := (List.all_eq_true.mp h1) k (hvoll k)
       rw [hk] at h2
       simp only [Bool.not_true, Bool.false_or, Bool.and_eq_true, Bool.not_eq_true'] at h2
@@ -262,9 +264,9 @@ theorem schreibGetrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g
   · intro h
     refine List.all_eq_true.mpr fun w1 hw1 => List.all_eq_true.mpr fun w2 hw2 => ?_
     by_cases hne : w1 = w2
-    · simp [hne]
+    · simp only [hne, decide_true, Bool.true_or]
     by_cases hfr : (fs.all fun g => !(reachB P fs w1 g) || !(TraegerSchreibt g c)) = true
-    · simp [hfr]
+    · simp only [hfr, Bool.or_true, Bool.true_or]
     · have hex : ∃ g, reachB P fs w1 g = true ∧ TraegerSchreibt g c = true := by
         refine Classical.byContradiction fun hn => hfr (List.all_eq_true.mpr fun g _ => ?_)
         cases hr : reachB P fs w1 g
@@ -283,8 +285,8 @@ theorem schreibGetrenntW_iff {P : Programm D} {fs ws : List D.Fn} (hvoll : ∀ g
               cases hi : istIn (fussOrteG P k) c
               · rfl
               · exact absurd (istIn_iff.mp hi) h2
-            simp [h1, h3]
-      simp [hw]
+            simp only [Bool.not_true, h1, Bool.not_false, h3, Bool.and_self, Bool.or_true]
+      simp only [hw, Bool.or_true]
 
 /-! ## 2. The exemptions of the race component -/
 
@@ -311,7 +313,7 @@ theorem ausgenommenB_false {c : D.Tab ⊕ D.Glob} :
       rw [hw] at this
       exact absurd this List.not_mem_nil
     · rintro ⟨g, rfl, hg⟩
-      simp [atomarB, hg] at ha
+      simp only [atomarB, hg, Bool.true_eq_false] at ha
   · rintro ⟨hB, hA⟩
     refine ⟨?_, ?_⟩
     · cases hw : waechterVon c with
@@ -321,7 +323,7 @@ theorem ausgenommenB_false {c : D.Tab ⊕ D.Glob} :
       | inl t => rfl
       | inr g =>
           cases hg : D.atomar g
-          · simp [atomarB, hg]
+          · simp only [atomarB, hg]
           · exact absurd ⟨g, rfl, hg⟩ hA
 
 /-- **The race component**: every carrier that needs it is write-separated
@@ -453,7 +455,7 @@ theorem abgAlleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) :
     refine List.all_eq_true.mpr fun w _ => List.all_eq_true.mpr fun f _ => ?_
     cases hf : reachB P fs w f
     · rfl
-    · simp [h w f hf]
+    · simp only [Bool.not_true, h w f hf, Bool.or_true]
 
 theorem fussWB_iff' (hvoll : ∀ g : D.Fn, g ∈ fs) :
     fussWB P S fs ws = true ↔ ∀ f, FussS P S (getrenntW P fs ws) f := by
@@ -547,7 +549,7 @@ theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab �
         rw [hl, he] at h5
         simp only [Bool.not_true, Bool.false_or] at h5
         cases c with
-        | inl _ => simp [atomarB] at h5
+        | inl _ => simp only [atomarB, Bool.false_eq_true] at h5
         | inr g => exact Or.inr ⟨g, rfl, h5⟩
     | cons L _ => exact Or.inl ⟨L, waechterVon_mem.mp (hl.symm ▸ List.mem_cons_self)⟩
   · rintro ⟨h1, h2, h3⟩
@@ -568,7 +570,7 @@ theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab �
               rw [he]
               rfl
             · have hag : atomarB (.inr g) = true := hg
-              simp [hag]
+              simp only [Bool.not_true, hag, Bool.or_true]
 
 /-- **The start component decides its field** (`AkzeptiertSpec.einzeln`, fix lane F10). -/
 theorem einzelnPoolB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
@@ -680,7 +682,8 @@ theorem ruheB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob
     cases hf : reachB P fs w f
     · rfl
     · obtain ⟨h4, h5⟩ := h3 f hf
-      simp [h4, h5]
+      simp only [Bool.not_true, h4, List.isEmpty_nil, h5, Bool.not_false, Bool.true_and, Bool.false_or,
+  List.all_eq_true, implies_true]
 
 /-- The call graph of thread `t`, computed from its start function. -/
 def kVon (P : Programm D) (fs : List D.Fn) (init : Faden → Σ f : D.Fn, Env D (D.params f))

@@ -47,7 +47,7 @@ open ArenaKette InvDynZeuge
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -63,9 +63,9 @@ open ArenaKette InvDynZeuge
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 /-- The arena: payload `0`, free link `1`; words `0` (counter), `1` (committed), `2` (free head). -/
 def MA : FreiForm MD where
@@ -114,7 +114,7 @@ def zwei {α : Type} (a b : α) : Fin 2 → α := fun k => if k = 0 then a else 
 
 theorem heads_inj : Function.Injective fun k => (heads k).g := by
   intro a b h
-  rcases a with ⟨_ | _ | a, ha⟩ <;> rcases b with ⟨_ | _ | b, hb⟩ <;> first | rfl | omega | (simp [heads, MG0, MG1] at h)
+  rcases a with ⟨_ | _ | a, ha⟩ <;> rcases b with ⟨_ | _ | b, hb⟩ <;> first | rfl | omega | (simp only [heads, Fin.zero_eta, Fin.isValue, ↓reduceIte, MG0, Nat.zero_add, Fin.mk_one, Fin.one_eq_zero_iff, Nat.succ_ne_self, MG1, Fin.reduceEq] at h)
 
 def MV : Vertrag MD where
   schreibt := fun _ => true
@@ -140,7 +140,7 @@ def w1 : World MD where
   slots := fun _ k f =>
     if h0 : f = 0 then (by subst h0; exact (⟨0, by decide, by decide⟩ : Zahl 0 255))
     else (by
-      have : MD.typ () f = .int 0 4 := by simp [h0]
+      have : MD.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact zc 4)
   globs := fun g => if g = 0 then zc 2 else if g = 1 then zc 2 else if g = 2 then zc 4 else if g = 3 then zc 0
     else zc 1
@@ -154,7 +154,7 @@ theorem aufListe_w1 (i : Int) : ¬ MA.AufListe w1 i := by
   rintro ⟨L, hL, hm⟩
   rw [kopf_w1] at hL
   cases hL with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | cons _ _ hk _ _ => exact absurd hk (by decide)
 
 theorem lebt_w1 (i : Int) : MA.Lebt w1 i ↔ 0 ≤ i ∧ i < 2 := by
@@ -163,20 +163,23 @@ theorem lebt_w1 (i : Int) : MA.Lebt w1 i ↔ 0 ≤ i ∧ i < 2 := by
   exact ⟨fun h => ⟨h.1, h.2.1⟩, fun h => ⟨h.1, h.2, aufListe_w1 i⟩⟩
 
 theorem frei_w1 : MA.FreiOk w1 :=
-  ⟨[], by rw [kopf_w1]; exact FreiForm.Kette.nil, .nil, by simp⟩
+  ⟨[], by rw [kopf_w1]; exact FreiForm.Kette.nil, .nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]⟩
 
 /-- Both stacks hold one cell with payload 0. -/
 theorem multi_w1 : MultiRep ML heads w1 (fun _ => [zero]) := by
   refine ⟨zwei [0] [1], fun k => ?_, ?_⟩
   · rcases k with ⟨_ | _ | k, hk⟩
-    · refine ⟨KetteF.cons 0 (by decide) (by decide) [] (by rw [link_w1]; exact KetteF.nil), by simp [zwei], ?_, rfl⟩
-      intro i hi; simp [zwei] at hi; subst hi; exact (lebt_w1 0).mpr (by decide)
-    · refine ⟨KetteF.cons 1 (by decide) (by decide) [] (by rw [link_w1]; exact KetteF.nil), by simp [zwei], ?_, rfl⟩
-      intro i hi; simp [zwei] at hi; subst hi; exact (lebt_w1 1).mpr (by decide)
+    · refine ⟨KetteF.cons 0 (by decide) (by decide) [] (by rw [link_w1]; exact KetteF.nil), by simp only [zwei, Fin.zero_eta, Fin.isValue, ↓reduceIte, List.nodup_cons, List.not_mem_nil, not_false_eq_true,
+  List.nodup_nil, and_self], ?_, rfl⟩
+      intro i hi; simp only [zwei, Fin.zero_eta, Fin.isValue, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; exact (lebt_w1 0).mpr (by decide)
+    · refine ⟨KetteF.cons 1 (by decide) (by decide) [] (by rw [link_w1]; exact KetteF.nil), by simp only [zwei, Nat.zero_add, Fin.mk_one, Fin.isValue, Fin.one_eq_zero_iff, Nat.succ_ne_self, ↓reduceIte,
+  List.nodup_cons, List.not_mem_nil, not_false_eq_true, List.nodup_nil, and_self], ?_, rfl⟩
+      intro i hi; simp only [zwei, Nat.zero_add, Fin.mk_one, Fin.isValue, Fin.one_eq_zero_iff, Nat.succ_ne_self, ↓reduceIte,
+  List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; exact (lebt_w1 1).mpr (by decide)
     · omega
   · intro a b hab i hi hi'
     rcases a with ⟨_ | _ | a, ha⟩ <;> rcases b with ⟨_ | _ | b, hb⟩ <;>
-      first | omega | (simp [zwei] at hi hi'; omega)
+      first | omega | (simp only [zwei, Fin.zero_eta, Fin.isValue, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false, Nat.zero_add, Fin.mk_one, Fin.one_eq_zero_iff, Nat.succ_ne_self] at hi hi'; omega)
 
 def failure {Γ : Ctx} : Endblock MD MV false Γ [] := .ret .empty (List.Perm.refl [])
 

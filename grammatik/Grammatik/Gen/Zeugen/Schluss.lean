@@ -592,93 +592,93 @@ theorem erreicht_mw : ∀ w ∈ erreicht, ∃ m ∈ Mw, m.Hat w := by
   intro w hw
   simp only [erreicht, List.mem_cons, List.not_mem_nil, or_false] at hw
   rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M103_803.e, by simp [Mw], M103_803.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-  · exact ⟨M49_50.e, by simp [Mw], M49_50.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M103_803.e, by simp [Mw], M103_803.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M103_131.e, by simp [Mw], M103_131.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-  · exact ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M49_50.e, by simp [Mw], M49_50.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M49_50.e, by simp [Mw], M49_50.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
-  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-  · exact ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M103_803.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_803.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+  · exact ⟨M49_50.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M49_50.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M103_803.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_803.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M103_131.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_131.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+  · exact ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M49_50.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M49_50.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M49_50.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M49_50.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+  · first | exact ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+  · exact ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
 
 /-- **The table of the witness lists**: M and N are complete. -/
 theorem zeugen_tafel : Tafel Mw Nw where
@@ -698,129 +698,129 @@ theorem zeugen_tafel : Tafel Mw Nw where
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
     rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
     · exact Or.inr (nie_gut (u_2_0_sig false false))
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inr (nie_gut (u_2_0_sig true false))
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M103_803.e, by simp [Mw], M103_803.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M49_50.e, by simp [Mw], M49_50.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M103_803.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_803.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M49_50.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M49_50.e_hat _ (by decide)⟩
     · exact Or.inr (nie_gut (u_2_0_sig false true))
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inr (nie_gut (u_2_0_sig true true))
     · exact Or.inr (nie_gut (u_2_0_11 false false))
     · exact Or.inr (nie_gut (u_2_0_11 true false))
     · exact Or.inr (nie_gut (u_2_0_11 false true))
     · exact Or.inr (nie_gut (u_2_0_11 true true))
     · exact absurd hs (by decide)
-    · exact Or.inl ⟨M103_803.e, by simp [Mw], M103_803.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M103_131.e, by simp [Mw], M103_131.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M169_350.e, by simp [Mw], M169_350.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M103_803.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_803.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M103_131.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M103_131.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M169_350.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M169_350.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, or_true], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
     · exact Or.inr (nie_gut u_4_01)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inr (nie_gueltig fun e hv => ug_6_0 false true false rfl e hv)
     · exact absurd hs (by decide)
     · exact Or.inr (nie_gueltig fun e hv => ug_6_0 false false true rfl e hv)
     · exact absurd hs (by decide)
     · exact Or.inr (nie_gueltig fun e hv => ug_6_0 false true true rfl e hv)
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
-    · exact Or.inl ⟨M49_50.e, by simp [Mw], M49_50.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M49_50.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M49_50.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inr (nie_gut u_7_1_110)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M49_50.e, by simp [Mw], M49_50.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M49_50.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M49_50.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
     · exact Or.inr (nie_gut (u_8_ax false false))
     · exact Or.inr (nie_gut (u_8_ax true false))
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact Or.inr (nie_gut (u_8_ax false true))
     · exact Or.inr (nie_gut (u_8_ax true true))
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
     · exact absurd hs (by decide)
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M47_549.e, by simp [Mw], M47_549.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
-    · first | exact Or.inl ⟨M99_824.e, by simp [Mw], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
-    · exact Or.inl ⟨M16_13.e, by simp [Mw], M16_13.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M47_549.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M47_549.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
+    · first | exact Or.inl ⟨M99_824.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or], M99_824.e_hat _ (by decide)⟩ | exact Or.inl ⟨M99_825.e, by simp [Mw], M99_825.e_hat _ (by decide)⟩
+    · exact Or.inl ⟨M16_13.e, by simp only [Mw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], M16_13.e_hat _ (by decide)⟩
   n_schlecht n hn := by
     simp only [Nw, List.mem_cons, List.not_mem_nil, or_false] at hn
     rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
@@ -848,7 +848,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact fun e h => absurd h (u_0_ohne false true e)
     · exact absurd hs (by decide)
     · exact fun e h => absurd h (u_0_ohne true true e)
-    · exact fun e h => ⟨N47_20.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N47_20.e e N47_20.bnoetig N47_20.e_gedeckt
+    · exact fun e h => ⟨N47_20.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N47_20.e e N47_20.bnoetig N47_20.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N47_20.bnoetig, w = ⟨0, 0, true, [true, true, true]⟩) w hw
           exact h)⟩
@@ -860,7 +860,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · exact fun e h => ⟨N24_0.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N24_0.e e N24_0.bnoetig N24_0.e_gedeckt
+    · exact fun e h => ⟨N24_0.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N24_0.e e N24_0.bnoetig N24_0.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N24_0.bnoetig, w = ⟨2, 0, true, [false, false, false, false]⟩) w hw
           exact h)⟩
@@ -879,7 +879,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · exact fun e h => ⟨N23_4.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N23_4.e e N23_4.bnoetig N23_4.e_gedeckt
+    · exact fun e h => ⟨N23_4.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N23_4.e e N23_4.bnoetig N23_4.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N23_4.bnoetig, w = ⟨2, 1, true, [false, false]⟩) w hw
           exact h)⟩
@@ -914,28 +914,28 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact fun e h => by
         obtain ⟨m, hm⟩ := m_5_0 true false e h
         cases m
-        · exact ⟨N18_0.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N18_0.e e N18_0.bnoetig N18_0.e_gedeckt
+        · exact ⟨N18_0.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N18_0.e e N18_0.bnoetig N18_0.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N18_0.bnoetig, w = ⟨5, 0, true, [true, false]⟩ ∨ w = ⟨6, 0, true, [false, true, false]⟩) w hw with rfl | rfl <;> assumption)⟩
-        · exact ⟨N18_4.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N18_4.e e N18_4.bnoetig N18_4.e_gedeckt
+        · exact ⟨N18_4.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N18_4.e e N18_4.bnoetig N18_4.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N18_4.bnoetig, w = ⟨5, 0, true, [true, false]⟩ ∨ w = ⟨6, 0, true, [true, true, false]⟩) w hw with rfl | rfl <;> assumption)⟩
     · exact fun e h => by
         obtain ⟨m, hm⟩ := m_5_0 false true e h
         cases m
-        · exact ⟨N19_0.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N19_0.e e N19_0.bnoetig N19_0.e_gedeckt
+        · exact ⟨N19_0.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N19_0.e e N19_0.bnoetig N19_0.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N19_0.bnoetig, w = ⟨5, 0, true, [false, true]⟩ ∨ w = ⟨6, 0, true, [false, false, true]⟩) w hw with rfl | rfl <;> assumption)⟩
-        · exact ⟨N19_5.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N19_5.e e N19_5.bnoetig N19_5.e_gedeckt
+        · exact ⟨N19_5.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N19_5.e e N19_5.bnoetig N19_5.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N19_5.bnoetig, w = ⟨5, 0, true, [false, true]⟩ ∨ w = ⟨6, 0, true, [true, false, true]⟩) w hw with rfl | rfl <;> assumption)⟩
     · exact fun e h => by
         obtain ⟨m, hm⟩ := m_5_0 true true e h
         cases m
-        · exact ⟨N19_2.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N19_2.e e N19_2.bnoetig N19_2.e_gedeckt
+        · exact ⟨N19_2.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N19_2.e e N19_2.bnoetig N19_2.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N19_2.bnoetig, w = ⟨5, 0, true, [true, true]⟩ ∨ w = ⟨6, 0, true, [false, true, true]⟩) w hw with rfl | rfl <;> assumption)⟩
-        · exact ⟨N19_7.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N19_7.e e N19_7.bnoetig N19_7.e_gedeckt
+        · exact ⟨N19_7.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N19_7.e e N19_7.bnoetig N19_7.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N19_7.bnoetig, w = ⟨5, 0, true, [true, true]⟩ ∨ w = ⟨6, 0, true, [true, true, true]⟩) w hw with rfl | rfl <;> assumption)⟩
     · exact absurd hs (by decide)
@@ -943,19 +943,19 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact fun e h => by
         have hm := (m_6_0 true true false rfl e h).1
-        exact ⟨N18_4.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N18_4.e e N18_4.bnoetig N18_4.e_gedeckt
+        exact ⟨N18_4.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N18_4.e e N18_4.bnoetig N18_4.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N18_4.bnoetig, w = ⟨6, 0, true, [true, true, false]⟩ ∨ w = ⟨5, 0, true, [true, false]⟩) w hw with rfl | rfl <;> assumption)⟩
     · exact absurd hs (by decide)
     · exact fun e h => by
         have hm := (m_6_0 true false true rfl e h).1
-        exact ⟨N19_5.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N19_5.e e N19_5.bnoetig N19_5.e_gedeckt
+        exact ⟨N19_5.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N19_5.e e N19_5.bnoetig N19_5.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N19_5.bnoetig, w = ⟨6, 0, true, [true, false, true]⟩ ∨ w = ⟨5, 0, true, [false, true]⟩) w hw with rfl | rfl <;> assumption)⟩
     · exact absurd hs (by decide)
     · exact fun e h => by
         have hm := (m_6_0 true true true rfl e h).1
-        exact ⟨N19_7.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N19_7.e e N19_7.bnoetig N19_7.e_gedeckt
+        exact ⟨N19_7.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N19_7.e e N19_7.bnoetig N19_7.e_gedeckt
           (fun w hw => by
           rcases (by decide : ∀ w ∈ N19_7.bnoetig, w = ⟨6, 0, true, [true, true, true]⟩ ∨ w = ⟨5, 0, true, [true, true]⟩) w hw with rfl | rfl <;> assumption)⟩
     · exact absurd hs (by decide)
@@ -965,7 +965,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · exact fun e h => ⟨N3_0.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N3_0.e e N3_0.bnoetig N3_0.e_gedeckt
+    · exact fun e h => ⟨N3_0.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N3_0.e e N3_0.bnoetig N3_0.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N3_0.bnoetig, w = ⟨6, 1, true, [true, true, true, false]⟩) w hw
           exact h)⟩
@@ -977,7 +977,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · exact fun e h => ⟨N20_1.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N20_1.e e N20_1.bnoetig N20_1.e_gedeckt
+    · exact fun e h => ⟨N20_1.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true], n_deckt Mw erreicht erreicht_mw N20_1.e e N20_1.bnoetig N20_1.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N20_1.bnoetig, w = ⟨7, 0, true, [false, false]⟩) w hw
           exact h)⟩
@@ -993,7 +993,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · exact fun e h => ⟨N47_45.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N47_45.e e N47_45.bnoetig N47_45.e_gedeckt
+    · exact fun e h => ⟨N47_45.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, or_true], n_deckt Mw erreicht erreicht_mw N47_45.e e N47_45.bnoetig N47_45.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N47_45.bnoetig, w = ⟨8, 0, true, [true, false, false]⟩) w hw
           exact h)⟩
@@ -1010,7 +1010,7 @@ theorem zeugen_tafel : Tafel Mw Nw where
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
     · exact absurd hs (by decide)
-    · exact fun e h => ⟨N16_5.e, by simp [Nw], n_deckt Mw erreicht erreicht_mw N16_5.e e N16_5.bnoetig N16_5.e_gedeckt
+    · exact fun e h => ⟨N16_5.e, by simp only [Nw, List.mem_cons, List.not_mem_nil, or_false, true_or], n_deckt Mw erreicht erreicht_mw N16_5.e e N16_5.bnoetig N16_5.e_gedeckt
           (fun w hw => by
           obtain rfl := (by decide : ∀ w ∈ N16_5.bnoetig, w = ⟨9, 0, true, [true, true, true, false]⟩) w hw
           exact h)⟩

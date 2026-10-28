@@ -77,7 +77,7 @@ theorem mem_ofTy {α : Type} {F : α → Type} [DecidableEq α] {xs : List (Σ a
     (h : (⟨a, x⟩ : Σ a, F a) ∈ xs) : x ∈ ofTy xs a := by
   unfold ofTy
   rw [List.mem_filterMap]
-  exact ⟨⟨a, x⟩, h, by simp⟩
+  exact ⟨⟨a, x⟩, h, by simp only [↓reduceDIte]⟩
 
 section Entscheidung
 
@@ -102,7 +102,7 @@ def genVar : (Γ : Ctx) → List (Σ τ, Var Γ τ)
 theorem genVar_vollst : ∀ (Γ : Ctx) (τ : Ty) (x : Var Γ τ), (⟨τ, x⟩ : Σ τ, Var Γ τ) ∈ genVar Γ := by
   intro Γ τ x
   induction x with
-  | here => simp [genVar]
+  | here => simp only [genVar, List.mem_cons, List.mem_map, Sigma.mk.injEq, true_or]
   | there x ih => simp only [genVar, List.mem_cons, List.mem_map]; exact Or.inr ⟨⟨_, x⟩, ih, rfl⟩
 
 /-- The size of a variable: its depth in the context, plus the node. -/

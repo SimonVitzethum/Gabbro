@@ -192,7 +192,7 @@ theorem step_indep (M : Modl) (O O' : Oracle) (c : Cfg)
           cases hi : blk.body[f.pc]? with
           | none => rfl
           | some ins =>
-              have hn : ins.oracular = false := h ins (by simp [Cfg.nextI, hb, hi])
+              have hn : ins.oracular = false := h ins (by simp only [Cfg.nextI, hb, Option.bind_some, hi])
               cases ins <;> simp_all [Instr.oracular]
 
 end Gabbro.Code

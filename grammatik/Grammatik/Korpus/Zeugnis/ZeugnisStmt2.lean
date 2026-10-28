@@ -173,12 +173,12 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
         exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.empty),
           trivial⟩
       | some _ =>
-        simp [certCut3PayloadOk] at hp
+        simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
     | some q =>
       obtain ⟨lo, hi2⟩ := q
       cases p with
       | none =>
-        simp [certCut3PayloadOk] at hp
+        simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
       | some e =>
         simp only [certCut3PayloadOk] at hp
         have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp

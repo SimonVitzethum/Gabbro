@@ -33,11 +33,11 @@ def upd (f : Nat → α) (s0 : Nat) (b : α) : Nat → α :=
   fun s => if s = s0 then b else f s
 
 theorem upd_self (f : Nat → α) (s0 : Nat) (b : α) : upd f s0 b s0 = b := by
-  simp [upd]
+  simp only [upd, ↓reduceIte]
 
 theorem upd_other {f : Nat → α} {s0 s : Nat} {b : α} (h : s ≠ s0) :
     upd f s0 b s = f s := by
-  simp [upd, h]
+  simp only [upd, h, ↓reduceIte]
 
 /-! ## Part I -- the generated loop IS the count -/
 
@@ -67,15 +67,15 @@ theorem zaehle_ist_kardinalitaet (P : Nat → Bool) (n : Nat) :
   | succ k ih =>
     have e1 : List.range (k + 1) = List.range k ++ [k] := List.range_succ
     rw [e1, List.filter_append, List.length_append, ← ih]
-    cases hPk : P k <;> simp [zaehle, hPk]
+    cases hPk : P k <;> simp only [zaehle, hPk, Bool.false_eq_true, ↓reduceIte, Nat.add_zero, not_false_eq_true, List.filter_cons_of_neg, List.filter_nil, List.length_nil, List.filter_cons_of_pos, List.length_cons, Nat.zero_add, Nat.add_left_cancel_iff]
 
 /-- Z-2: the count is bounded by the bound. The line carrying a range
     promise on the counter field. -/
 theorem zaehle_beschraenkt (P : Nat → Bool) (n : Nat) : zaehle P n ≤ n := by
   induction n with
-  | zero => simp [zaehle]
+  | zero => simp only [zaehle, Std.le_refl]
   | succ k ih =>
-    cases hPk : P k <;> simp [zaehle, hPk] <;> omega
+    cases hPk : P k <;> simp only [zaehle, hPk, Bool.false_eq_true, ↓reduceIte, Nat.add_zero, Nat.add_le_add_iff_right] <;> omega
 
 /-! ## Part II -- the preservation question -/
 
@@ -106,15 +106,15 @@ theorem zaehlung_faellt_um_eins {f : Nat → Nat} {s0 a b n : Nat}
         rw [upd_other hne2]
       have e1 : decide (f k = a) = true := by
         have hfk : f k = a := by rw [← heq]; exact hfa
-        simp [hfk]
+        simp only [hfk, decide_true]
       have e2 : decide (upd f s0 b k = a) = false := by
         have huk : upd f s0 b k = b := by rw [← heq]; exact upd_self _ _ _
         rw [huk]
         exact decide_eq_false hne
       have s1 : zaehle (fun s => decide (f s = a)) (k + 1)
-          = zaehle (fun s => decide (f s = a)) k + 1 := by simp [zaehle, e1]
+          = zaehle (fun s => decide (f s = a)) k + 1 := by simp only [zaehle, e1, ↓reduceIte, Nat.add_left_cancel_iff]
       have s2 : zaehle (fun s => decide (upd f s0 b s = a)) (k + 1)
-          = zaehle (fun s => decide (upd f s0 b s = a)) k := by simp [zaehle, e2]
+          = zaehle (fun s => decide (upd f s0 b s = a)) k := by simp only [zaehle, e2, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
       omega
     · have hle : s0 ≤ k := Nat.le_of_lt_succ hlt
       have hlt' : s0 < k := Nat.lt_of_le_of_ne hle heq
@@ -151,15 +151,15 @@ theorem zaehlung_steigt_um_eins {f : Nat → Nat} {s0 a b n : Nat}
         rw [upd_other hne2]
       have e1 : decide (upd f s0 b k = b) = true := by
         have huk : upd f s0 b k = b := by rw [← heq]; exact upd_self _ _ _
-        simp [huk]
+        simp only [huk, decide_true]
       have e2 : decide (f k = b) = false := by
         have hfk : f k = a := by rw [← heq]; exact hfa
         rw [hfk]
         exact decide_eq_false (fun hcon => hne hcon.symm)
       have s1 : zaehle (fun s => decide (upd f s0 b s = b)) (k + 1)
-          = zaehle (fun s => decide (upd f s0 b s = b)) k + 1 := by simp [zaehle, e1]
+          = zaehle (fun s => decide (upd f s0 b s = b)) k + 1 := by simp only [zaehle, e1, ↓reduceIte, Nat.add_left_cancel_iff]
       have s2 : zaehle (fun s => decide (f s = b)) (k + 1)
-          = zaehle (fun s => decide (f s = b)) k := by simp [zaehle, e2]
+          = zaehle (fun s => decide (f s = b)) k := by simp only [zaehle, e2, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
       omega
     · have hle : s0 ≤ k := Nat.le_of_lt_succ hlt
       have hlt' : s0 < k := Nat.lt_of_le_of_ne hle heq
@@ -243,7 +243,7 @@ def schritte : Nat → Nat
 theorem schritte_der_inneren (n : Nat) : schritte n = n := by
   induction n with
   | zero => rfl
-  | succ k ih => simp [schritte, ih]
+  | succ k ih => simp only [schritte, ih, Nat.add_left_cancel_iff]
 
 /-- Z-7: the outer loop over `m` objects, the inner over `n` slots. -/
 def doppelt : Nat → Nat → Nat
@@ -252,8 +252,8 @@ def doppelt : Nat → Nat → Nat
 
 theorem doppelte_schleife_kostet_produkt (m n : Nat) : doppelt m n = m * n := by
   induction m with
-  | zero => simp [doppelt]
-  | succ k ih => simp [doppelt, ih, schritte_der_inneren, Nat.succ_mul]
+  | zero => simp only [doppelt, Nat.zero_mul]
+  | succ k ih => simp only [doppelt, ih, schritte_der_inneren, Nat.succ_mul, Nat.add_left_cancel_iff]
 
 /-- Z-8: so `cost O(n)` on such an invariant is wrong, as a
     counterexample and not as a claim. -/

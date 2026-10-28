@@ -161,7 +161,7 @@ theorem ziel_ort_sperre_invGrund (P : Programm D) (O : Orakel D) (passes : Nat) 
   | start =>
       intro t ev hev g rho r s0 s1 h
       subst h
-      simp [RufStartG] at hev
+      simp only [RufStartG, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hev
   | schritt M M' u hr' hs ih =>
       have hZ := (zielInvS_erreichbar P O passes Q S fs sp init hO hRL hQ hlok hS hvoll hFrag
         hFuss hK hStart hSstart hex M hr').1
@@ -214,7 +214,7 @@ theorem invAmGrundG_erreichbarL (P : Programm D) (O : Orakel D) (passes : Nat) (
   | start =>
       intro t ev hev g rho r s0 s1 h
       subst h
-      simp [RufStartG] at hev
+      simp only [RufStartG, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hev
   | schritt M M' u hr' hs ih =>
       have hZ' := (hZ M hr').1
       intro t ev hev

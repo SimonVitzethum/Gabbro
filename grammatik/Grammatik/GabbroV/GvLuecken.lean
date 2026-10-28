@@ -103,9 +103,9 @@ theorem gvLuecke_statik_ohne_form
   simp only [uGlobs]
   have h' : (al.isSome || s.isSome) = true := by
     cases h with
-    | inl h1 => simp [h1]
-    | inr h2 => simp [h2]
-  simp [h']
+    | inl h1 => simp only [h1, Bool.true_or]
+    | inr h2 => simp only [h2, Bool.or_true]
+  simp only [h', ↓reduceIte]
 
 /-
   CUTS (review gaps, agent 01 follow-up -- ALL CLOSED as theorems):

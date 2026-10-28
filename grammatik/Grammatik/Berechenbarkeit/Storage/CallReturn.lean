@@ -32,7 +32,7 @@ def environment (b : Bool) : Env declaration [.bool] := .cons b .nil
 theorem callFits : RufPasst declaration (vertragVon declaration false) (declaration.signatur true) [] where
   hw := fun t => t.elim
   hg := fun g => g.elim
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := fun L => L.elim
 
 def returnedBody (f : Bool) :
@@ -79,7 +79,7 @@ theorem call_step (budget : Nat) (b : Bool) :
     RufSchrittG program oracle budget (initial b) 0 (called b) := by
   have h := RufSchrittG.ruf (P := program) (O := oracle) (passes := budget)
     (initial b) 0 false [.bool] [] true (.cons (.not (.var .here)) .nil) callFits rfl
-    (returnedBody false) (environment b) rfl (by simp [HeldIn]) (memory.welt []) rfl
+    (returnedBody false) (environment b) rfl (by simp only [HeldIn, List.not_mem_nil, false_implies, implies_true]) (memory.welt []) rfl
     (environment (!b)) rfl [] rfl
   simp only [rufEigenG, List.reverse_nil, List.map_nil, List.append_nil] at h
   exact h
@@ -90,7 +90,7 @@ theorem return_step (budget : Nat) (b : Bool) :
   have h := RufSchrittG.rueck (P := program) (O := oracle) (passes := budget)
     (called b) 0 (saved b) [] rfl [.bool] [] .empty (List.Perm.refl [])
     (environment (!b)) rfl true rfl (environment (!b)) rfl (memory.welt []) rfl
-    (by simp [HeldIn]) (memory.welt []) rfl () rfl [] rfl rfl
+    (by simp only [HeldIn, List.not_mem_nil, false_implies, implies_true]) (memory.welt []) rfl () rfl [] rfl rfl
   simp only [rufEigenG, List.reverse_nil, List.map_nil, List.append_nil] at h
   exact h
 
@@ -102,7 +102,7 @@ theorem retained_bit_zeuge (b : Bool) :
     (called b).faeden 0 |>.kopf.rest.2.2.2.1 = environment (!b) ∧
     ((resumed b).faeden 0).kopf.rest.2.2.2.1 = environment b ∧
     ((resumed b).faeden 0).stapel = [] := by
-  simp [called, resumed, saved, rufUpdateG]
+  simp only [called, saved, rufUpdateG, ↓dreduceIte, resumed, ↓reduceIte, and_self]
 
 theorem terminating_classes_zeuge :
     klasse program [false, true] (fun _ => false) false = .endet ∧

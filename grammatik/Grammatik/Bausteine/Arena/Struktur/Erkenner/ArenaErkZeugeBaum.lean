@@ -102,8 +102,8 @@ theorem erk_baumHang : ∃ a' : Abs, Erk KB Abs.leer baumHang a' :=
   ⟨_, Erk.nimm sieben rfl fdarf rfl (fgdarf _) voll0 _ rein_voll0
     (Erk.wurzelKopf ⟨LL, RR, LG, by decide⟩ rfl (fgdarf _) voll1 _ rein_voll1
       (Erk.haengen ⟨LL, RR, LG, by decide⟩ rfl RR LL (Or.inr ⟨rfl, rfl⟩) (.here : Var G2' _)
-        (.there .here : Var G2' _) rfl fdarf vollG2 .nil (by simp [Abs.ext, Var.pos])
-        (by simp [Abs.ext, Var.pos]) rein_vollG2 (Erk.nil _)))⟩
+        (.there .here : Var G2' _) rfl fdarf vollG2 .nil (by simp only [Abs.ext, Var.pos])
+        (by simp only [Abs.ext, Var.pos, Nat.zero_add]) rein_vollG2 (Erk.nil _)))⟩
 
 set_option maxHeartbeats 1000000 in
 /-- **Run on the real world:** the tree `2 (left 0)` gets the right child `1` (the slot that came off the free list),
@@ -128,9 +128,9 @@ def baumSchnitt : Block FD FV false [] [] [] :=
 theorem erk_baumSchnitt : ∃ a' : Abs, Erk KB Abs.leer baumSchnitt a' :=
   ⟨_, Erk.wurzelKopf ⟨LL, RR, LG, by decide⟩ rfl (fgdarf _) voll0 _ rein_voll0
     (Erk.abschneiden ⟨LL, RR, LG, by decide⟩ rfl LL (Or.inl rfl) (.here : Var G1 _) rfl fdarf voll1 vollG2 _
-      (by simp [Abs.ext, Var.pos]) rein_voll1 rein_vollG2
+      (by simp only [Abs.ext, Var.pos]) rein_voll1 rein_vollG2
       (Erk.frei (.here : Var G2' _) rfl fdarf rfl (fgdarf _) .nil
-        (by simp [Abs.ext, Var.pos]) (Erk.nil _)))⟩
+        (by simp only [Abs.ext, Var.pos]) (Erk.nil _)))⟩
 
 /-- **Run on the real world:** the leaf `0` leaves the tree and goes onto the free list; the tree is the root alone. -/
 theorem baumSchnitt_zeuge : ∃ σ' : World FD, execBlock (V := FV) oF 0 rF baumSchnitt w0 .nil = .ok σ' .nil ∧

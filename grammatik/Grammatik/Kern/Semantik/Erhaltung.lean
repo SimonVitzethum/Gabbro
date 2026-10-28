@@ -817,7 +817,7 @@ instance entschiedenDec (e : EntscheidZiel) : Decidable (entschieden e) := by
   | benannt _ _ => exact isTrue trivial
   | luecke _ s =>
     cases s with
-    | offen => exact isFalse (by simp [entschieden])
+    | offen => exact isFalse (by simp only [entschieden, not_false_eq_true])
     | aufListe _ => exact isTrue trivial
     | ausErzeuger _ => exact isTrue trivial
 

@@ -59,7 +59,7 @@ theorem hwit_alt_faltung
         · exact hgf.symm
         · have hprog_empty : prog g = [] := hsingle_prog g hgf
           rw [hprog_empty] at hpc
-          simp at hpc
+          simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
       subst hact
       refine ⟨sched ++ [f], ?_⟩
       show ∀ (k : Nat) (g : Faden), (sched ++ [f])[k]? = some g →
@@ -84,7 +84,7 @@ theorem hwit_alt_faltung
         · exact hgf.symm
         · have hprog_empty : prog g = [] := hsingle_prog g hgf
           rw [hprog_empty] at hpc
-          simp at hpc
+          simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
       subst hact
       refine ⟨sched ++ [f], ?_⟩
       show ∀ (k : Nat) (g : Faden), (sched ++ [f])[k]? = some g →
@@ -103,7 +103,7 @@ theorem hwit_alt_faltung
           · exact h
           · have hle : Mmid.lauf.length ≤ j := by omega
             rw [List.getElem?_eq_none hle] at hw
-            simp at hw
+            simp only [reduceCtorEq] at hw
         refine ⟨j, w, Λe, he, ?_⟩
         rw [List.getElem?_append_left hjlt]
         exact hw
@@ -114,7 +114,7 @@ theorem hwit_alt_faltung
         · exact hgf.symm
         · have hprog_empty : prog g = [] := hsingle_prog g hgf
           rw [hprog_empty] at hpc
-          simp at hpc
+          simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
       subst hact
       refine ⟨sched ++ [f], ?_⟩
       show ∀ (k : Nat) (g : Faden), (sched ++ [f])[k]? = some g →
@@ -133,7 +133,7 @@ theorem hwit_alt_faltung
           · exact h
           · have hle : Mmid.lauf.length ≤ j := by omega
             rw [List.getElem?_eq_none hle] at hw
-            simp at hw
+            simp only [reduceCtorEq] at hw
         refine ⟨j, w, Λe, he, ?_⟩
         rw [List.getElem?_append_left hjlt]
         exact hw
@@ -268,7 +268,7 @@ theorem hwit_aus_lauf
         · exact hgf.symm
         · have hprog_empty : prog g = [] := hsingle_prog g hgf
           rw [hprog_empty] at hpc
-          simp at hpc
+          simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
       subst hact
       refine Or.inr ?_
       intro _
@@ -287,7 +287,7 @@ theorem hwit_aus_lauf
         · exact hgf.symm
         · have hprog_empty : prog g = [] := hsingle_prog g hgf
           rw [hprog_empty] at hpc
-          simp at hpc
+          simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
       subst hact
       exact absurd hpc (hlockfree (pcmid f) L).1
     · have hact : f = g := by
@@ -295,7 +295,7 @@ theorem hwit_aus_lauf
         · exact hgf.symm
         · have hprog_empty : prog g = [] := hsingle_prog g hgf
           rw [hprog_empty] at hpc
-          simp at hpc
+          simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
       subst hact
       exact absurd hpc (hlockfree (pcmid f) L).2
 

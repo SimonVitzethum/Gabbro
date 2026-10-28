@@ -382,7 +382,7 @@ theorem evOk_nil : EvOk (D := D) C W [] := fun _ h => absurd h List.not_mem_nil
 theorem evOk_fremd (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : EvOk (D := D) C W [.fremd q] := fun e he c w h => by
   simp only [List.mem_singleton] at he
   subst he
-  simp [zugriffVon] at h
+  simp only [zugriffVon, reduceCtorEq] at h
 
 theorem evOk_append {X Y : List (Ereignis D)} (hX : EvOk C W X) (hY : EvOk C W Y) :
     EvOk C W (X ++ Y) := by

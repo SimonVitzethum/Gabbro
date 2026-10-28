@@ -219,7 +219,7 @@ def Einfaedig (l : Lauf) : Prop :=
 theorem belebe_bei (σ : Stand) (m : Marke) (f : Faden) (s : Nat) :
     belebe σ m f s m = some (f, s) := by
   unfold belebe
-  simp
+  simp only [↓reduceIte]
 
 /-- Beleben ruehrt keine andere Marke an. -/
 theorem belebe_anders (σ : Stand) (m m' : Marke) (f : Faden) (s : Nat)
@@ -230,7 +230,7 @@ theorem belebe_anders (σ : Stand) (m m' : Marke) (f : Faden) (s : Nat)
 /-- Loeschen macht die Marke frei. -/
 theorem loesche_bei (σ : Stand) (m : Marke) : loesche σ m m = none := by
   unfold loesche
-  simp
+  simp only [↓reduceIte]
 
 /-- Loeschen ruehrt keine andere Marke an. -/
 theorem loesche_anders (σ : Stand) (m m' : Marke) (h : m' ≠ m) :
@@ -247,7 +247,7 @@ theorem schritt_stufentreu (κ : MarkDekl) {σ σ' : Stand}
       by_cases heq : m' = m
       · subst heq
         rw [belebe_bei] at hmem
-        simp at hmem
+        simp only [Option.some.injEq, Prod.mk.injEq] at hmem
         obtain ⟨rfl, rfl⟩ := hmem
         exact hstufe
       · rw [belebe_anders _ _ _ _ _ heq] at hmem
@@ -257,7 +257,7 @@ theorem schritt_stufentreu (κ : MarkDekl) {σ σ' : Stand}
       by_cases heq : m' = m
       · subst heq
         rw [belebe_bei] at hmem
-        simp at hmem
+        simp only [Option.some.injEq, Prod.mk.injEq] at hmem
         obtain ⟨rfl, rfl⟩ := hmem
         exact hstufe
       · rw [belebe_anders _ _ _ _ _ heq] at hmem
@@ -267,7 +267,7 @@ theorem schritt_stufentreu (κ : MarkDekl) {σ σ' : Stand}
       by_cases heq : m' = m
       · subst heq
         rw [loesche_bei] at hmem
-        simp at hmem
+        simp only [reduceCtorEq] at hmem
       · rw [loesche_anders _ _ _ heq] at hmem
         exact hσ m' f' s' hmem
 
@@ -311,7 +311,7 @@ theorem schritt_einfaedig (κ : MarkDekl) {σ σ' : Stand}
       by_cases heq : m = m₀
       · subst heq
         rw [loesche_bei] at h1
-        simp at h1
+        simp only [reduceCtorEq] at h1
       · rw [loesche_anders _ _ _ heq] at h1 h2
         exact hσ m f g ⟨s₁, h1⟩ ⟨s₂, h2⟩
 
@@ -321,7 +321,7 @@ theorem verlauf_stufentreu (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
   induction v with
   | anfang =>
       intro m f s h
-      simp [Anfang] at h
+      simp only [Anfang, reduceCtorEq] at h
   | widen _ h ih =>
       exact schritt_stufentreu κ ih h
 
@@ -332,7 +332,7 @@ theorem verlauf_einfaedig (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
   | anfang =>
       intro m f g hf hg
       obtain ⟨s₁, h1⟩ := hf
-      simp [Anfang] at h1
+      simp only [Anfang, reduceCtorEq] at h1
   | widen _ h ih =>
       exact schritt_einfaedig κ ih h
 
@@ -354,13 +354,13 @@ theorem verlauf_einfaedig (κ : MarkDekl) {σ : Stand} (v : Verlauf κ σ) :
 /-- Der Anfang ist stufentreu: keine Hand, keine verletzte Stufe. -/
 theorem anfang_stufentreu (κ : MarkDekl) : StufenTreu κ Anfang := by
   intro m f s h
-  simp [Anfang] at h
+  simp only [Anfang, reduceCtorEq] at h
 
 /-- Der Anfang ist einfaedrig: keine Hand, keine zweite. -/
 theorem anfang_einfaedig : StandEinfaedig Anfang := by
   intro m f g hf hg
   obtain ⟨s₁, h1⟩ := hf
-  simp [Anfang] at h1
+  simp only [Anfang, reduceCtorEq] at h1
 
 /-- Jeder erreichbare Stand traegt BEIDE Formen in einem Satz. -/
 theorem verlauf_treu_und_einfaedig (κ : MarkDekl) {σ : Stand}
@@ -387,7 +387,7 @@ theorem stand_besitz_eindeutig {σ : Stand} (hσ : StandEinfaedig σ)
 /-- Der leere Lauf ist einfaedrig: kein Ereignis, keine Marke. -/
 theorem einfaedig_leer : Einfaedig [] := by
   intro i j f g m s s' ei ej hi hj _ _
-  simp at hi
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
 
 /-- Der einzelne Schritt ist einfaedrig: beide Treffer meinen denselben. -/
 theorem einfaedig_einzel (q : Schritt) : Einfaedig [q] := by
@@ -396,7 +396,8 @@ theorem einfaedig_einzel (q : Schritt) : Einfaedig [q] := by
     intro k x hx
     cases k with
     | zero => exact (by simpa using hx : q = x).symm
-    | succ k => simp at hx
+    | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hx
   have e1 := hlen i _ hi
   have e2 := hlen j _ hj
   have hf : f = q.faden := congrArg Schritt.faden e1
@@ -419,17 +420,20 @@ theorem nimm_zugriff (l : Lauf) (n i : Nat) (q : Schritt)
     (h : (l.take n)[i]? = some q) : l[i]? = some q := by
   induction l generalizing n i with
   | nil =>
-      simp at h
+      simp only [List.take_nil, List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg,
+  reduceCtorEq] at h
   | cons hd tl ih =>
       cases n with
-      | zero => simp at h
+      | zero => simp only [List.take_zero, List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg,
+  reduceCtorEq] at h
       | succ n =>
           cases i with
           | zero =>
-              simp at h ⊢
+              simp only [List.take_succ_cons, List.length_cons, List.length_take, Nat.zero_lt_succ, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq] at h ⊢
               exact h
           | succ i =>
-              simp at h ⊢
+              simp only [List.take_succ_cons, List.getElem?_cons_succ] at h ⊢
               exact ih n i h
 
 /-- Jede beobachtete Vorsilbe eines einfaedrigen Laufs ist einfaedrig: der
@@ -549,7 +553,7 @@ def Unbenannt (m : Marke) (l : Lauf) : Prop :=
 /-- The empty run is carried everywhere: no event, no owner owed. -/
 theorem getragen_leer (σ : Stand) : Getragen σ [] := by
   intro i f ei hi m s hm
-  simp at hi
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
 
 /-- Appending an event that names only owned marks keeps the run carried. -/
 theorem getragen_cons (σ : Stand) (q : Schritt) (l : Lauf)
@@ -571,7 +575,7 @@ theorem getragen_cons (σ : Stand) (q : Schritt) (l : Lauf)
 /-- The empty run names nothing. -/
 theorem unbenannt_leer (m : Marke) : Unbenannt m [] := by
   intro i f ei hi s
-  simp at hi
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
 
 /-- Appending an event that avoids `m` keeps `m` unnamed. -/
 theorem unbenannt_cons (m : Marke) (q : Schritt) (l : Lauf)

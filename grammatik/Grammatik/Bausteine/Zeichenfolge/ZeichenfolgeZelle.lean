@@ -51,8 +51,8 @@ theorem laden_speichern {max n m : Nat} (z : Zellen max n) (i : Fin n) (s : BStr
     (h : s.daten.length ≤ max) :
     ∃ z' : Zellen max n, speichern z i s = some z' ∧ (laden z' i).daten = s.daten := by
   refine ⟨fun j => if j = i then ⟨s.daten, h⟩ else z j, ?_, ?_⟩
-  · simp [speichern, bkopie, h]
-  · simp [laden]
+  · simp only [speichern, bkopie, h, ↓reduceDIte]
+  · simp only [laden, ↓reduceIte]
 
 /-- Copy-out at one cell leaves every other cell alone (the frame of the store). -/
 theorem laden_speichern_ne {max n m : Nat} (z : Zellen max n) (i j : Fin n) (s : BString m)
@@ -60,12 +60,12 @@ theorem laden_speichern_ne {max n m : Nat} (z : Zellen max n) (i j : Fin n) (s :
     laden z' j = laden z j := by
   unfold speichern at h
   cases hk : bkopie max s with
-  | none => simp [hk] at h
+  | none => simp only [hk, reduceCtorEq] at h
   | some r =>
       simp only [hk] at h
       have hz : z' = fun j => if j = i then r else z j := (Option.some.inj h).symm
       subst hz
-      simp [laden, hij]
+      simp only [laden, hij, ↓reduceIte]
 
 /-- A store of a string that does NOT fit is refused: nothing is written (the checker's `N455`
     has already ruled the case out). -/
@@ -73,7 +73,7 @@ theorem speichern_zu_lang {max n m : Nat} (z : Zellen max n) (i : Fin n) (s : BS
     (h : max < s.daten.length) : speichern z i s = none := by
   unfold speichern bkopie
   have : ¬ s.daten.length ≤ max := by omega
-  simp [this]
+  simp only [this, ↓reduceDIte]
 
 /-! ### Native size of a cell -/
 
@@ -91,7 +91,7 @@ theorem zelleBytes_le_wort (max : Nat) (h : max < 2 ^ 32) : zelleBytes max ≤ z
   unfold zelleBytes zelleBytesWort
   have hb := Grammatik.Speichermodell.Darstellung.schmal_le_wort 0 (max : Int) 4 (by omega)
     (by omega) (by
-      have : ((2 : Int) ^ (8 * 4)) = ((2 ^ 32 : Nat) : Int) := by simp
+      have : ((2 : Int) ^ (8 * 4)) = ((2 ^ 32 : Nat) : Int) := by simp only [Nat.reduceMul, Int.reducePow, Nat.reducePow, Int.cast_ofNat_Int]
       omega)
   unfold Grammatik.Speichermodell.Darstellung.schmalBytes
     Grammatik.Speichermodell.Darstellung.wortBytes at hb

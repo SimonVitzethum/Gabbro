@@ -69,7 +69,7 @@ theorem kBinde_rel (f : D.Fn) (rst : List (KRahmen D)) (c : KRahmen D) {σ τ : 
       · intro a b ha hb
         simp only [Option.some.injEq] at ha hb
         subst ha hb
-        exact ⟨by simp [h.1], h.2⟩
+        exact ⟨by simp only [h.1], h.2⟩
       · exact KRel.none_l _
   | wartetSonst n err restb k =>
       simp only [kBinde]
@@ -77,7 +77,7 @@ theorem kBinde_rel (f : D.Fn) (rst : List (KRahmen D)) (c : KRahmen D) {σ τ : 
       · intro a b ha hb
         simp only [Option.some.injEq] at ha hb
         subst ha hb
-        exact ⟨by simp [h.1], h.2⟩
+        exact ⟨by simp only [h.1], h.2⟩
       · exact KRel.none_l _
   | _ => exact KRel.none_l _
 
@@ -91,7 +91,7 @@ theorem kPop_rel (st : List (KRahmen D)) (f : D.Fn) {σ τ : World D} (h : WRel 
       intro a b ha hb
       simp only [Option.some.injEq] at ha hb
       subst ha hb
-      exact ⟨by simp [h.1], h.2⟩
+      exact ⟨by simp only [h.1], h.2⟩
 
 theorem kPopGrund_rel (st : List (KRahmen D)) (f : D.Fn) (spur : List (Ereignis D))
     {m₁ m₂ : Speicher D} (hm : SpeicherGleich T m₁ m₂) (r : Fin (vertragVon D f).gruende) :
@@ -546,7 +546,7 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
       rw [hRL.2 g _ _ (gleichAuf_von_sg (σ := (sp₁.welt spur).fragt (.inr (.inr g))) (τ := (sp₂.welt spur).fragt (.inr (.inr g))) hsp
-        (by simp [hST _ hb.1]))]
+        (by simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq, hST _ hb.1]))]
       have hg : (((sp₁.welt spur).fragt (.inr (.inr g))).lese Λ [.inr g]).globs g =
           (((sp₂.welt spur).fragt (.inr (.inr g))).lese Λ [.inr g]).globs g := hsp (.inr g) (hST _ hb.1)
       rw [hg]

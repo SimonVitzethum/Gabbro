@@ -36,8 +36,8 @@ variable {A : FreiForm D} (K : Dekl A) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 /-- The knowledge-free state is met by every world and environment. -/
 theorem StrukturPasst.leer (σ : World D) (ρ : Env D Γ) : StrukturPasst K Abs.leer σ ρ :=
-  ⟨fun _ hx => absurd hx (by simp [Abs.leer]), fun _ hx => absurd hx (by simp [Abs.leer]),
-    fun _ hx => absurd hx (by simp [Abs.leer]), fun _ _ hx _ _ => absurd hx (by simp [Abs.leer])⟩
+  ⟨fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]), fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]),
+    fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]), fun _ _ hx _ _ => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true])⟩
 
 /-- The arena invariant does not see the lock events of the trace. -/
 theorem Dekl.Ok.gibt {σ : World D} (h : K.Ok σ) (L : D.Lock) : K.Ok (σ.gibt L) :=

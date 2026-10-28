@@ -477,7 +477,7 @@ theorem fadenA_blatt (e0 : Ereignis D) (hO : GutO O) (hQ : AxVertragO Q O)
           simp only [execStmt, axiomAntwort, hw]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
-      | _ => simp [Stmt.istAxiom] at hax
+      | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax
 
 end Schritte2
 

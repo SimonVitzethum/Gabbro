@@ -102,7 +102,7 @@ theorem oblig_einzahlen_R : KoerperGutR G104_referenz_oblig.gP 0 g_einzahlen := 
   · have hr : G104_referenz_oblig.gP.rumpf g_einzahlen = gBody_einzahlen := rfl
     rw [hr] at hrun
     rcases execEnd_cons_zurueck _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, h1, hrun1⟩
-    · simp [execStmt] at h1
+    · simp only [execStmt, List.append_assoc, Int.reduceSub, reduceCtorEq] at h1
     rcases execEnd_cons_zurueck _ _ _ _ _ hrun1 with h2 | ⟨σ2, ρ2, h2, hrun2⟩
     · simp only [execStmt] at h2
       split at h2
@@ -136,7 +136,7 @@ theorem oblig_einzahlen_R : KoerperGutR G104_referenz_oblig.gP 0 g_einzahlen := 
   · have hr : G104_referenz_oblig.gP.rumpf g_einzahlen = gBody_einzahlen := rfl
     rw [hr] at hrun
     rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ hrun with h1 | ⟨σ1, ρ1, _, h1⟩
-    · simp [execStmt] at h1
+    · simp only [execStmt, List.append_assoc, Int.reduceSub, reduceCtorEq] at h1
     · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h1 with h2 | ⟨σ2, ρ2, _, h2⟩
       · exact oblig_call_tor _ _ R hOV _ _ _ _ _ _ _ h2
       · simp only [execEnd] at h2

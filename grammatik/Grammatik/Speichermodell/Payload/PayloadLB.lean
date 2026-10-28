@@ -21,50 +21,63 @@ theorem lb_fall {t n : Nat} {b : Befehl LOrt} (h : (lb t)[n]? = some b) :
     (t = 0 ∧ n = 0 ∧ b = lies .y 0 .entspannt) ∨ (t = 0 ∧ n = 1 ∧ b = schreib .x 1 .entspannt) ∨
     (t = 1 ∧ n = 0 ∧ b = lies .x 0 .entspannt) ∨ (t = 1 ∧ n = 1 ∧ b = schreib .y 1 .entspannt) := by
   match t, n, h with
-  | 0, 0, h => simp [lb, faeden] at h; exact Or.inl ⟨rfl, rfl, h.symm⟩
-  | 0, 1, h => simp [lb, faeden] at h; exact Or.inr (Or.inl ⟨rfl, rfl, h.symm⟩)
-  | 1, 0, h => simp [lb, faeden] at h; exact Or.inr (Or.inr (Or.inl ⟨rfl, rfl, h.symm⟩))
-  | 1, 1, h => simp [lb, faeden] at h; exact Or.inr (Or.inr (Or.inr ⟨rfl, rfl, h.symm⟩))
-  | 0, n + 2, h => simp [lb, faeden] at h
-  | 1, n + 2, h => simp [lb, faeden] at h
-  | t + 2, n, h => simp [lb, faeden] at h
+  | 0, 0, h => simp only [lb, faeden, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.getD_some, Option.some.injEq] at h; exact Or.inl ⟨rfl, rfl, h.symm⟩
+  | 0, 1, h => simp only [lb, faeden, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.getD_some, Nat.lt_add_one,
+  List.getElem_cons_succ, Option.some.injEq] at h; exact Or.inr (Or.inl ⟨rfl, rfl, h.symm⟩)
+  | 1, 0, h => simp only [lb, faeden, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.lt_add_one, getElem?_pos, List.getElem_cons_succ, List.getElem_cons_zero, Option.getD_some,
+  Nat.zero_lt_succ, Option.some.injEq] at h; exact Or.inr (Or.inr (Or.inl ⟨rfl, rfl, h.symm⟩))
+  | 1, 1, h => simp only [lb, faeden, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.lt_add_one, getElem?_pos, List.getElem_cons_succ, List.getElem_cons_zero, Option.getD_some,
+  Option.some.injEq] at h; exact Or.inr (Or.inr (Or.inr ⟨rfl, rfl, h.symm⟩))
+  | 0, n + 2, h => simp only [lb, faeden, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.getD_some, Nat.not_lt, Nat.le_add_left,
+  getElem?_neg, reduceCtorEq] at h
+  | 1, n + 2, h => simp only [lb, faeden, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.lt_add_one, getElem?_pos, List.getElem_cons_succ, List.getElem_cons_zero, Option.getD_some,
+  Nat.not_lt, Nat.le_add_left, getElem?_neg, reduceCtorEq] at h
+  | t + 2, n, h => simp only [lb, faeden, List.getD_eq_getElem?_getD, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.reduceAdd, Nat.not_lt, Nat.le_add_left, getElem?_neg, Option.getD_none, Nat.not_lt_zero, not_false_eq_true,
+  reduceCtorEq] at h
 
 theorem ns_pc_self (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (w : Int) (o : Ordnung) (ts : Nat) :
-    (Z.nachSchreib t loc w o ts).pc t = Z.pc t + 1 := by simp [LZustand.nachSchreib, aufN]
+    (Z.nachSchreib t loc w o ts).pc t = Z.pc t + 1 := by simp only [LZustand.nachSchreib, aufN, ↓reduceIte, Nat.add_left_cancel_iff]
 
 theorem ns_pc_other (Z : LZustand LOrt) {t u : Nat} (loc : LOrt) (w : Int) (o : Ordnung) (ts : Nat)
     (h : u ≠ t) : (Z.nachSchreib t loc w o ts).pc u = Z.pc u := by
-  simp [LZustand.nachSchreib, aufN, h]
+  simp only [LZustand.nachSchreib, aufN, h, ↓reduceIte]
 
 theorem ns_hist_self (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (w : Int) (o : Ordnung) (ts : Nat) :
     (Z.nachSchreib t loc w o ts).hist loc = nachricht o (Z.sicht t) loc ts w :: Z.hist loc := by
-  simp [LZustand.nachSchreib, aufO]
+  simp only [LZustand.nachSchreib, aufO, ↓reduceIte]
 
 theorem ns_hist_other (Z : LZustand LOrt) (t : Nat) {loc loc2 : LOrt} (w : Int) (o : Ordnung)
     (ts : Nat) (h : loc2 ≠ loc) : (Z.nachSchreib t loc w o ts).hist loc2 = Z.hist loc2 := by
-  simp [LZustand.nachSchreib, aufO, h]
+  simp only [LZustand.nachSchreib, aufO, h, ↓reduceIte]
 
 theorem ns_reg (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (w : Int) (o : Ordnung) (ts : Nat) :
     (Z.nachSchreib t loc w o ts).reg = Z.reg := rfl
 
 theorem nl_pc_self (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (r : Nat) (o : Ordnung)
     (m : Nachricht LOrt Int) : (Z.nachLies t loc r o m).pc t = Z.pc t + 1 := by
-  simp [LZustand.nachLies, aufN]
+  simp only [LZustand.nachLies, aufN, ↓reduceIte, Nat.add_left_cancel_iff]
 
 theorem nl_pc_other (Z : LZustand LOrt) {t u : Nat} (loc : LOrt) (r : Nat) (o : Ordnung)
     (m : Nachricht LOrt Int) (h : u ≠ t) : (Z.nachLies t loc r o m).pc u = Z.pc u := by
-  simp [LZustand.nachLies, aufN, h]
+  simp only [LZustand.nachLies, aufN, h, ↓reduceIte]
 
 theorem nl_hist (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (r : Nat) (o : Ordnung)
     (m : Nachricht LOrt Int) : (Z.nachLies t loc r o m).hist = Z.hist := rfl
 
 theorem nl_reg_self (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (o : Ordnung)
     (m : Nachricht LOrt Int) : (Z.nachLies t loc 0 o m).reg t 0 = m.wert := by
-  simp [LZustand.nachLies, aufN]
+  simp only [LZustand.nachLies, aufN, ↓reduceIte]
 
 theorem nl_reg_other (Z : LZustand LOrt) {t u : Nat} (loc : LOrt) (r : Nat) (o : Ordnung)
     (m : Nachricht LOrt Int) (h : u ≠ t) : (Z.nachLies t loc r o m).reg u = Z.reg u := by
-  simp [LZustand.nachLies, aufN, h]
+  simp only [LZustand.nachLies, aufN, h, ↓reduceIte]
 
 /-- The invariant of `lb`: a message of value 1 exists only after its writer's write (`a1`,
     `a2`); a thread that read 1 saw a write whose thread had already finished its read
@@ -77,11 +90,11 @@ structure LBInv (Z : LZustand LOrt) : Prop where
   g : ¬ (1 ≤ Z.pc 0 ∧ Z.reg 0 0 = 1 ∧ 1 ≤ Z.pc 1 ∧ Z.reg 1 0 = 1)
 
 theorem lbInv_start : LBInv (LZustand.start LOrt) where
-  a1 m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  a2 m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  b0 h := by simp [LZustand.start] at h
-  b1 h := by simp [LZustand.start] at h
-  g h := by simp [LZustand.start] at h
+  a1 m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
+  a2 m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
+  b0 h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
+  b1 h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
+  g h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self, Int.reduceEq, and_self] at h
 
 theorem lbInv_schritt {Z Z' : LZustand LOrt} (hI : LBInv Z) (hs : LSchritt lb Z Z') :
     LBInv Z' := by

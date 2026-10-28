@@ -23,16 +23,16 @@ theorem opRest_fits {op : BinOp} {j : Int × Int} {τ σa σb : GTy} {oa ob : Op
   split at h
   · rename_i la ha lb hb
     rcases hc1 : cvtG (.int la ha) (.int j.1 j.2) oa r with _ | ⟨c1, oa', r1⟩
-    · simp [hc1] at h
+    · simp only [hc1, reduceCtorEq] at h
     simp only [hc1] at h
     rcases hc2 : cvtG (.int lb hb) (.int j.1 j.2) ob r1 with _ | ⟨c2, ob', r2⟩
-    · simp [hc2] at h
+    · simp only [hc2, reduceCtorEq] at h
     simp only [hc2] at h
     split at h
     · rename_i hf
       exact (Bool.and_eq_true _ _).mp hf
-    · simp at h
-  · simp at h
+    · simp only [reduceCtorEq] at h
+  · simp only [reduceCtorEq] at h
 
 theorem opRest_frag (op : BinOp) (zf : Int → Int → Int) (jl jh : Int)
     {la ha lb hb lo hi : Int} (za zb : Int) (hfa : Ar.Fits la ha 128) (hfb : Ar.Fits lb hb 128)
@@ -55,13 +55,13 @@ theorem opRest_frag (op : BinOp) (zf : Int → Int → Int) (jl jh : Int)
   simp only at h
   have hr1 : r ≤ r1 := by obtain ⟨_, _, h, _⟩ := F1; exact h
   rcases hc2 : cvtG (.int lb hb) (.int jl jh) ob r1 with _ | ⟨c2, ob', r2⟩
-  · simp [hc2] at h
+  · simp only [hc2, reduceCtorEq] at h
   simp only [hc2] at h
   rcases hq : (fitsT (.int jl jh) && fitsT (.int lo hi)) with _ | _
-  · simp [hq] at h
+  · simp only [hq, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   simp only [hq, if_true] at h
   rcases hc3 : cvtG (.int jl jh) (.int lo hi) (.reg r2) (r2 + 1) with _ | ⟨c3, o3, r3⟩
-  · simp [hc3] at h
+  · simp only [hc3, reduceCtorEq] at h
   simp only [hc3] at h
   obtain rfl := Option.some.inj h
   have F12 : Frag m rs r (c1 ++ c2 ++ [Instr.bin r2 op (twid (.int jl jh)) oa' ob'], .reg r2, r2 + 1)

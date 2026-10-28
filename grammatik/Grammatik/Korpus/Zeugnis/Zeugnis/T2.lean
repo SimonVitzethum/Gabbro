@@ -20,11 +20,11 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | add a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb, Option.some.injEq, Prod.mk.injEq] at h
@@ -35,11 +35,11 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | sub a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb, Option.some.injEq, Prod.mk.injEq] at h
@@ -50,7 +50,7 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | neg a iha =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       simp only [ha, Option.some.injEq, Prod.mk.injEq] at h
@@ -60,11 +60,11 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | mul a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb, Option.some.injEq, Prod.mk.injEq] at h
@@ -75,11 +75,11 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | div a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, _⟩ := q
         simp only [ha, hb] at h
@@ -90,15 +90,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨ea, _⟩ := iha _ _ ha
           obtain ⟨eb, _⟩ := ihb _ _ hb
           exact ⟨Expr.div hc.1 hc.2 ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | rem a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, _⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
@@ -109,15 +109,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨ea, _⟩ := iha _ _ ha
           obtain ⟨eb, _⟩ := ihb _ _ hb
           exact ⟨Expr.rem hc.1 hc.2 ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | sdiv a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
@@ -128,15 +128,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨ea, _⟩ := iha _ _ ha
           obtain ⟨eb, _⟩ := ihb _ _ hb
           exact ⟨Expr.sdiv hc ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [Int.reduceNeg, hc, ↓reduceIte, reduceCtorEq] at h
   | srem a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨_, _⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
@@ -147,15 +147,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨ea, _⟩ := iha _ _ ha
           obtain ⟨eb, _⟩ := ihb _ _ hb
           exact ⟨Expr.srem hc ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [Int.reduceNeg, hc, ↓reduceIte, reduceCtorEq] at h
   | band a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, _⟩ := q
         simp only [ha, hb] at h
@@ -166,15 +166,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨ea, _⟩ := iha _ _ ha
           obtain ⟨eb, _⟩ := ihb _ _ hb
           exact ⟨Expr.band hc.1 hc.2 ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | bor w a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
@@ -186,15 +186,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨eb, _⟩ := ihb _ _ hb
           obtain ⟨h0, h0', hw1, hw2⟩ := hc
           exact ⟨Expr.bor w h0 h0' hw1 hw2 ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | bxor w a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
@@ -206,15 +206,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨eb, _⟩ := ihb _ _ hb
           obtain ⟨h0, h0', hw1, hw2⟩ := hc
           exact ⟨Expr.bxor w h0 h0' hw1 hw2 ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | shl w a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
@@ -226,15 +226,15 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨eb, _⟩ := ihb _ _ hb
           obtain ⟨hc1, hc2, hcw1, hcw2⟩ := hc
           exact ⟨Expr.shl w hcw1 hcw2 hc1 hc2 ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | shr w a b iha ihb =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       cases hb : certRange D Γ Λ b with
-      | none => simp [ha, hb] at h
+      | none => simp only [ha, hb, reduceCtorEq] at h
       | some q =>
         obtain ⟨l2, h2⟩ := q
         simp only [ha, hb] at h
@@ -246,11 +246,11 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨eb, _⟩ := ihb _ _ hb
           obtain ⟨hc1, hc2, hcw1, hcw2⟩ := hc
           exact ⟨Expr.shr w hcw1 hcw2 hc1 hc2 ea eb, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | wide lo' hi' a iha =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ a with
-    | none => simp [ha] at h
+    | none => simp only [ha, reduceCtorEq] at h
     | some p =>
       obtain ⟨l1, h1⟩ := p
       simp only [ha] at h
@@ -260,11 +260,11 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨ea, _⟩ := iha _ _ ha
         exact ⟨Expr.widen hc.1 hc.2 ea, trivial⟩
-      · simp [hc] at h
+      · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | var k =>
     simp only [GueltigAbleitung, certRange] at h
     cases hk : ctxTyp Γ k with
-    | none => simp [hk] at h
+    | none => simp only [hk, reduceCtorEq] at h
     | some p =>
       obtain ⟨lo', hi'⟩ := p
       simp only [hk, Option.some.injEq, Prod.mk.injEq] at h
@@ -274,7 +274,7 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | glob g =>
     simp only [GueltigAbleitung, certRange] at h
     cases ht : intVonTyp (D.gtyp g) with
-    | none => simp [ht] at h
+    | none => simp only [ht, reduceCtorEq] at h
     | some p =>
       obtain ⟨lo', hi'⟩ := p
       simp only [ht] at h
@@ -284,18 +284,18 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         obtain ⟨rfl, rfl⟩ := h
         have heq := intVonTyp_eq ht
         exact ⟨heq ▸ Expr.glob g hc, trivial⟩
-      · simp [hc] at h
+      · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | slot t f i ih =>
     simp only [GueltigAbleitung, certRange] at h
     cases ha : certRange D Γ Λ i with
     | none =>
       cases ht : intVonTyp (D.typ t f) with
-      | none => simp [ha, ht] at h
-      | some _ => simp [ha, ht] at h
+      | none => simp only [ha, ht, reduceCtorEq] at h
+      | some _ => simp only [ha, ht, reduceCtorEq] at h
     | some p =>
       obtain ⟨l, h'⟩ := p
       cases ht : intVonTyp (D.typ t f) with
-      | none => simp [ha, ht] at h
+      | none => simp only [ha, ht, reduceCtorEq] at h
       | some q =>
         obtain ⟨lo', hi'⟩ := q
         simp only [ha, ht] at h
@@ -309,7 +309,7 @@ theorem zeugnis_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           subst hc1
           subst hc2
           exact ⟨heq ▸ Expr.slot t f ei hc3, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
 
 /-! ## The test world: one concrete declaration for the decide probes
 
@@ -370,9 +370,9 @@ def TestD : Deklaration where
   rzusage := fun e => e.elim
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => i.elim
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 /-- Procedure contract: no result, holds nothing, produces nothing. -/
 def TestV : Vertrag TestD :=
@@ -386,8 +386,8 @@ def TestVw : Vertrag TestD :=
     rights to check (both write maps are `false`), nothing consumed, and the
     held-lock check is vacuous in both directions over the empty lists. -/
 theorem TestHp : RufPasst TestD TestV (TestD.signatur false) [] where
-  hw := fun t h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
-  hg := fun g h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
+  hw := fun t h => by simp only [TestD, TestSig0, TestSig1, Deklaration.signatur, Bool.false_eq_true] at h
+  hg := fun g h => by simp only [TestD, TestSig0, TestSig1, Deklaration.signatur, Bool.false_eq_true] at h
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
   hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
@@ -396,8 +396,8 @@ theorem TestHp : RufPasst TestD TestV (TestD.signatur false) [] where
     so the same vacuous proofs go through -- and the table still rejects the
     call, on `params = []`. -/
 theorem TestHp1 : RufPasst TestD TestV (TestD.signatur true) [] where
-  hw := fun t h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
-  hg := fun g h => by simp [Deklaration.signatur, TestD, TestSig0, TestSig1] at h
+  hw := fun t h => by simp only [TestD, TestSig0, TestSig1, Deklaration.signatur, Bool.false_eq_true] at h
+  hg := fun g h => by simp only [TestD, TestSig0, TestSig1, Deklaration.signatur, Bool.false_eq_true] at h
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
   hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil

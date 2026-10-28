@@ -53,205 +53,205 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | endeForm l Γ Λ e ρ hl hent hhead =>
     rw [hhead] at hRet
     cases e <;> simp_all [GRest.istRetEnde, Endblock.istRet, EndEntfaltbar]
   | dannLeer l Γ Λ k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannIteWahr l Γ Λ Λ' Λ'' c t e rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannIteFalsch l Γ Λ Λ' Λ'' c t e rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannOnOptionSome l Γ Λ Λ' Λ'' n o p a rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannOnOptionNone l Γ Λ Λ' Λ'' n o p a rest k ρ hhead σ₁ hs₁ hv neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | endeBind l Γ Λ τ e rest ρ hhead σ₁ hs₁ neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | dannBind l Γ Λ Λ' Λ'' τ e rest k ρ hhead σ₁ hs₁ neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannNarrowOk l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannNarrowElse l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannPruefWahr l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannPruefFalsch l Γ Λ Λ' Λ'' c sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannBreaking l Γ Λ Λ' Λ'' i body rest k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannLocks l Γ Λ Λ'' L hr body rest k ρ hhead hself hrang hfrei =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | freiGib l Γ Λ L k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | schrumpfVergiss l Γ Λ τ k v ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannTrav l Γ Λ Λ'' t inv body rest k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | travNext l Γ Λ t inv body i is k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | travFort l Γ Λ t inv body is k i ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | travDone l Γ Λ t inv body k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannRetry l Γ Λ Λ' Λ'' n bis body ueber rest k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | wiederWeiter l Γ Λ n bis body ueber k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | wiederSchritt l Γ Λ n bis body ueber k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | wiederFort l Γ Λ n bis body ueber k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannForever l Γ Λ Λ' Λ'' a inv body rest k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | ewigWeiter l Γ Λ a n inv body k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | ewigFort l Γ Λ a n inv body k ρ hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannLeaveTrav l Γ Λ t inv body is k rest i ρ hleave hhead σ' ρ' neu hstep hneu hkein σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannNextTrav l Γ Λ t inv body is k rest i ρ hnext hhead σ' ρ' neu hstep hneu hkein hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannLeaveWieder l Γ Λ n bis body ueber k rest ρ hleave hhead σ' ρ' neu hstep hneu hkein hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannNextWieder l Γ Λ n bis body ueber k rest ρ hnext hhead σ' ρ' neu hstep hneu hkein hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannLeaveEwig l Γ Λ a n inv body k rest ρ hleave hhead σ' ρ' neu hstep hneu hkein hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannNextEwig l Γ Λ a n inv body k rest ρ hnext hhead σ' ρ' neu hstep hneu hkein hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelDannLeave l Γ Λ rest b k ρ hleave hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelDannNext l Γ Λ rest b k ρ hnext hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelSchrumpfLeave l Γ Λ τ rest k ρ hleave hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelSchrumpfNext l Γ Λ τ rest k ρ hnext hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelFreiLeave l Γ Λ L rest k ρ hleave hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelFreiNext l Γ Λ L rest k ρ hnext hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannExchange l Γ Λ Λ' g neuE hw hLg rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannGleit l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannGleitLit l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannGleitVon l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannGleitNarrowOk l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
     rw [hpop] at hStk
     cases hStk
@@ -281,16 +281,16 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     cases hStk
   | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | dannAwaits l Γ Λ Λ' g payload hp hLg hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
     rw [hhead] at hRet
-    simp [GRest.istRetEnde, Endblock.istRet] at hRet
+    simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
 
 end Stumm
 

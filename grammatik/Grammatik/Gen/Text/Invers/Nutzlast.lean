@@ -18,13 +18,15 @@ theorem woerter_wort : ∀ (w : List Char) (acc rest : List Char) (c : Char), Wo
   | [], acc, rest, c, _, hc, hne => by
     have : (c == ' ' || c == ',') = true := by rcases hc with rfl | rfl <;> rfl
     have ha : acc.isEmpty = false := by simpa using hne
-    simp [uWoerter, this, ha]
+    simp only [List.nil_append, uWoerter, ↓Char.isValue, this, ↓reduceIte, ha, Bool.false_eq_true,
+  List.append_nil]
   | d :: w, acc, rest, c, hw, hc, _ => by
     have hd := hw d List.mem_cons_self
-    have : (d == ' ' || d == ',') = false := by simp [hd.1, hd.2]
+    have : (d == ' ' || d == ',') = false := by simp only [↓Char.isValue, Bool.or_eq_false_iff, beq_eq_false_iff_ne, ne_eq, hd.1, not_false_eq_true, hd.2,
+  and_self]
     simp only [List.cons_append, uWoerter, this, Bool.false_eq_true, ite_false]
-    rw [woerter_wort w (d :: acc) rest c (fun x hx => hw x (List.mem_cons_of_mem _ hx)) hc (by simp)]
-    simp
+    rw [woerter_wort w (d :: acc) rest c (fun x hx => hw x (List.mem_cons_of_mem _ hx)) hc (by simp only [List.cons_append, ne_eq, reduceCtorEq, not_false_eq_true])]
+    simp only [List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
 
 theorem spell_nameTok (n : String) : spell (nameTok n) = n.toList := by
   unfold nameTok; split <;> rfl
@@ -32,13 +34,14 @@ theorem spell_nameTok (n : String) : spell (nameTok n) = n.toList := by
 /-- **The payload text**: the words of a comma-separated list of names are the names. -/
 theorem woerter_namen : ∀ (ws : List String), (∀ w ∈ ws, WortOk w.toList ∧ w.toList ≠ []) →
     uWoerter (render ((ws.map fun n => [nameTok n]).intersperse [.zeichen ","] |>.flatten)) [] = ws.map String.toList
-  | [], _ => by simp [render, uWoerter]
+  | [], _ => by simp only [List.map_nil, List.intersperse_nil, List.flatten_nil, render, uWoerter, List.isEmpty_nil,
+  ↓reduceIte]
   | [a], h => by
     have ha := h a List.mem_cons_self
     simp only [List.map_cons, List.map_nil, List.intersperse_singleton, List.flatten_cons, List.flatten_nil,
       List.append_nil, render, spell_nameTok]
     rw [woerter_wort a.toList [] [] ' ' ha.1 (Or.inl rfl) (by simpa using ha.2)]
-    simp [uWoerter]
+    simp only [List.reverse_nil, List.nil_append, uWoerter, List.isEmpty_nil, ↓reduceIte]
   | a :: b :: rest, h => by
     have ha := h a List.mem_cons_self
     simp only [List.map_cons, List.intersperse_cons_cons, List.flatten_cons, List.singleton_append, render,
@@ -48,11 +51,12 @@ theorem woerter_namen : ∀ (ws : List String), (∀ w ∈ ws, WortOk w.toList �
     simp only [hk, List.cons_append, List.nil_append, uWoerter, List.reverse_nil, List.nil_append]
     have ih := woerter_namen (b :: rest) (fun w hw => h w (List.mem_cons_of_mem _ hw))
     simp only [List.map_cons] at ih
-    simp [ih]
+    simp only [↓Char.isValue, Char.reduceBEq, BEq.rfl, Bool.or_true, ↓reduceIte, List.isEmpty_nil, Bool.or_false,
+  ih]
 
 theorem nGlob_wort (k : Nat) : WortOk (nGlob k).toList ∧ (nGlob k).toList ≠ [] := by
   rw [nGlob_toList]
-  refine ⟨?_, by simp⟩
+  refine ⟨?_, by simp only [↓Char.isValue, Nat.toString_eq_repr, Nat.toList_repr, ne_eq, reduceCtorEq, not_false_eq_true]⟩
   intro c hc
   simp only [List.mem_cons] at hc
   rcases hc with rfl | hc
@@ -62,6 +66,7 @@ theorem nGlob_wort (k : Nat) : WortOk (nGlob k).toList ∧ (nGlob k).toList ≠ 
       rw [Nat.toString_eq_ofList_toDigits, String.toList_ofList]
     rw [this] at hc
     have := (List.all_eq_true.1 hd) c hc
-    constructor <;> intro e <;> subst e <;> simp [istZiffer] at this
+    constructor <;> intro e <;> subst e <;> simp only [istZiffer, ↓Char.isValue, Char.reduceToNat, Nat.reduceLeDiff, decide_false, decide_true,
+  Bool.and_true, Bool.false_eq_true] at this
 
 end Gabbro.Grammatik.Gen.Text

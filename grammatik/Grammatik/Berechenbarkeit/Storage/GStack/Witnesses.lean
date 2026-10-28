@@ -35,7 +35,7 @@ def roundTrip (allocator : Allocator FA FV false [Payload, Payload] []) :
 theorem empty_contents : Represents LL LG initialWorld [] := represents_empty rfl
 
 theorem initial_free : FA.FreiOk initialWorld :=
-  ⟨[], FreiForm.Kette.nil, .nil, by simp⟩
+  ⟨[], FreiForm.Kette.nil, .nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]⟩
 
 /-- Provider refusal executes the supplied continuation without allocating or
 touching a stored payload, even though the finite arena has room. -/

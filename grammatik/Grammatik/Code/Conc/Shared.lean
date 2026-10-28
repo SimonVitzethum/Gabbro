@@ -48,7 +48,7 @@ theorem rep_storeGlob_shared {lay : Layout D} {σ : World D} {m : Mem} (g : D.Gl
     (xg : Wert D (D.gtyp g)) (hR : Rep lay σ m) : Rep lay (σ.storeGlob g xg) m := by
   refine rep_agree (σ := σ) (σ' := σ.storeGlob g xg) (fun t k f => rfl) (fun g' hg' => ?_) hR
   have hne : g' ≠ g := fun e => by rw [e, hg] at hg'; exact Bool.noConfusion hg'
-  simp [World.storeGlob, hne]
+  simp only [World.storeGlob, hne, ↓reduceDIte]
 
 /-- **`await` of a shared atomic refines G's `await` on every presented world.** The memory represents the actual
     world `σ`; the thread reads the world `σ[g := xg]` for any `xg`, which the GX interface answers. -/

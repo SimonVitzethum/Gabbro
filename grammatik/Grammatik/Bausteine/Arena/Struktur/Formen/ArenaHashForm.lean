@@ -130,9 +130,10 @@ theorem hashPush_ausfuehren (b : Var Γ (Ty.index (D.count H.bt))) (x : Var Γ (
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
   refine ⟨_, rfl, ?_, ?_⟩
   · refine ⟨fun C hC => funext fun j => ?_, fun G' _ => rfl⟩
-    have hne : C.f ≠ L.f := fun e => hC (by simp [e])
-    simp [LinkFeld.wert, World.slots_schreibSlot_andere_tabelle _ _ _ _ _ _ _ _ _ H.hbt.symm,
-      World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
+    have hne : C.f ≠ L.f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+    simp only [LinkFeld.wert, orte_umTyp, eval_umTyp,
+  World.slots_schreibSlot_andere_tabelle _ _ _ _ _ _ _ _ _ H.hbt.symm, World.slots_lese,
+  World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
   simp only [eval, Block.idxAlsBucket, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
     LinkKopf.st_schreibSlot, LinkKopf.st_lese, FreiForm.kopfSt_schreibSlot, FreiForm.kopfSt_lese,
     ArenaForm.stand_lese, ArenaForm.stand_schreibSlot, FreiForm.naechst_lese, BucketKopf.wert_lese]

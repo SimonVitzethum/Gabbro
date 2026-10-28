@@ -20,7 +20,7 @@ theorem schrumpf_ok {τ : Ty} {o : Ausgang V l (τ :: Γ)} {σ' : World D} {ρ' 
           simp only [Ausgang.schrumpf, Env.tail, Ausgang.ok.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
           exact ⟨v, rfl⟩
-  | _ => simp [Ausgang.schrumpf] at h
+  | _ => simp only [Ausgang.schrumpf, reduceCtorEq] at h
 
 theorem schrumpf_zurueck {τ : Ty} {o : Ausgang V l (τ :: Γ)} {σ' : World D}
     {v : ErgVal D V.erg} (h : o.schrumpf = .zurueck σ' v) : o = .zurueck σ' v := by
@@ -37,7 +37,7 @@ theorem mapWelt_ok {o : Ausgang V l Γ} {g : World D → World D} {σ' : World D
       simp only [Ausgang.mapWelt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨σ, rfl, rfl⟩
-  | _ => simp [Ausgang.mapWelt] at h
+  | _ => simp only [Ausgang.mapWelt, reduceCtorEq] at h
 
 theorem mapWelt_zurueck {o : Ausgang V l Γ} {g : World D → World D} {σ' : World D}
     {v : ErgVal D V.erg} (h : o.mapWelt g = .zurueck σ' v) :
@@ -47,11 +47,11 @@ theorem mapWelt_zurueck {o : Ausgang V l Γ} {g : World D → World D} {σ' : Wo
       simp only [Ausgang.mapWelt, Ausgang.zurueck.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨σ, rfl, rfl⟩
-  | _ => simp [Ausgang.mapWelt] at h
+  | _ => simp only [Ausgang.mapWelt, reduceCtorEq] at h
 
 theorem zuAusgang_ne_ok (o : EndAusgang V l Γ) (σ' : World D) (ρ' : Env D Γ) :
     o.zuAusgang ≠ .ok σ' ρ' := by
-  cases o <;> simp [EndAusgang.zuAusgang]
+  cases o <;> simp only [EndAusgang.zuAusgang, ne_eq, reduceCtorEq, not_false_eq_true]
 
 theorem zuAusgang_zurueck {o : EndAusgang V l Γ} {σ' : World D} {v : ErgVal D V.erg}
     (h : o.zuAusgang = .zurueck σ' v) : o = .zurueck σ' v := by
@@ -101,7 +101,7 @@ theorem execEnd_cons_zurueck (O : Orakel D) (passes : Nat)
     simp only [EndAusgang.zurueck.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact Or.inl hs
-  all_goals simp at h
+  all_goals simp only [reduceCtorEq] at h
 
 /-- `execArms` runs the arm `armWahlG` selects. -/
 theorem execArms_wahl (O : Orakel D) (passes : Nat)
@@ -333,8 +333,8 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨M2, hr2, hZ2, ho2⟩ := grundOk arms ha _ _ _ _ _ hex M1 _ hZ1
         (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
       exact ⟨M2, RufLaufG.schritt hs1 hr2, hZ2, by rw [ho2, (Erw.lese _ _ _).offen]⟩
-  | _, _, _, _, _, .call .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .call .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs => by
       intro σ σ' ρ ρ' hex M _ rest k hZ hΛ hA
       obtain ⟨hAL, hb⟩ := hs.locks_inv
@@ -363,16 +363,16 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨M2, hr2, hZ2, ho2⟩ := blockOk body hb _ _ _ _ hex M1 _ hZ1
         hΛ (hA.lauf (RufLaufG.einzeln hs1))
       exact ⟨M2, RufLaufG.schritt hs1 hr2, hZ2, ho2⟩
-  | _, _, _, _, _, .traverse .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .retry .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .forever .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .traverse .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retry .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .forever .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret .., _ => by
       intro σ σ' ρ ρ' hex
-      simp [execStmt] at hex
-  | _, _, _, _, _, .retWhy .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .leave .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .next .., hs => by exact absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+      simp only [execStmt, reduceCtorEq] at hex
+  | _, _, _, _, _, .retWhy .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .leave .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .next .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
 theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D (vertragVon D fn) l Γ Λ Λ'), BlockG A mr b →

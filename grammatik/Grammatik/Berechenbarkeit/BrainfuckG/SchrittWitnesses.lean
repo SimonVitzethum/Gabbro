@@ -48,7 +48,7 @@ open Brainfuck ArenaKette InvDynZeuge Storage.GStack
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -64,9 +64,9 @@ open Brainfuck ArenaKette InvDynZeuge Storage.GStack
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 /-- The arena: payload `0`, free link `1`; words `0` (counter), `1` (committed), `2` (free head). -/
 def BA : FreiForm BD where
@@ -97,14 +97,15 @@ def BL : LinkFeld BA where
 def BG (k : Fin 4) : LinkKopf BA where
   g := ⟨k.val + 3, by omega⟩
   hg := rfl
-  h1 := fun h => by have := congrArg Fin.val h; simp [BA] at this
-  h2 := fun h => by have := congrArg Fin.val h; simp [BA] at this
-  h3 := fun h => by have := congrArg Fin.val h; simp [BA] at this
+  h1 := fun h => by have := congrArg Fin.val h; simp only [BA, Fin.coe_ofNat_eq_mod, Nat.zero_mod, Nat.add_eq_zero_iff, Fin.val_eq_zero_iff, Fin.isValue,
+  reduceCtorEq, and_false] at this
+  h2 := fun h => by have := congrArg Fin.val h; simp only [BA, Fin.coe_ofNat_eq_mod, Nat.reduceMod, Nat.reduceEqDiff] at this
+  h3 := fun h => by have := congrArg Fin.val h; simp only [BA, Fin.coe_ofNat_eq_mod, Nat.one_mod, Nat.reduceEqDiff] at this
 
 theorem BG_inj : Function.Injective fun k => (BG k).g := by
   intro a b h
   have := congrArg Fin.val h
-  simp [BG] at this
+  simp only [BG, Nat.add_right_cancel_iff] at this
   exact Fin.ext this
 
 def BV : Vertrag BD where
@@ -134,7 +135,7 @@ def welt (c : Zahl 0 4) : World BD where
   slots := fun _ k f =>
     if h0 : f = 0 then (by subst h0; exact (⟨0, by decide, by decide⟩ : Zahl 0 255))
     else (by
-      have : BD.typ () f = .int 0 4 := by simp [h0]
+      have : BD.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact zc 4)
   globs := fun g => if g = 0 then c else if g = 1 then c else zc 4
   spur := []
@@ -143,10 +144,10 @@ def w0 : World BD := welt (zc 0)
 def wv : World BD := welt (zc 4)
 
 theorem frei_w0 : BA.FreiOk w0 :=
-  ⟨[], FreiForm.Kette.nil, .nil, by simp⟩
+  ⟨[], FreiForm.Kette.nil, .nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]⟩
 
 theorem multi_w0 : MultiRep BL BG w0 (fun _ => []) := by
-  refine ⟨fun _ => [], fun k => ⟨?_, .nil, by simp, rfl⟩, by simp⟩
+  refine ⟨fun _ => [], fun k => ⟨?_, .nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true], rfl⟩, by simp only [ne_eq, List.not_mem_nil, not_false_eq_true, implies_true]⟩
   have : (BG k).st w0 = 4 := by
     rcases k with ⟨_ | _ | _ | _ | k, hk⟩ <;> rfl
   rw [this]

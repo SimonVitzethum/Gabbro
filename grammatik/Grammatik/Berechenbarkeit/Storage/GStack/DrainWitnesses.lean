@@ -23,7 +23,8 @@ theorem drain_values_zeuge (O : Orakel FD) (n : Nat)
     ∃ σ', execStmt O (n + 3) R loop w0 initialEnv = .ok σ' initialEnv ∧
       Represents LL LG σ' [] ∧ FA.FreiOk σ' :=
   drain_bound O (n + 3) R LL LG rfl (fgdarf _) rfl fdarf rfl (fgdarf _) emptyFailure ()
-    w0 initialEnv [zero, zero] reused_contents freiOk_w0 (by simp)
+    w0 initialEnv [zero, zero] reused_contents freiOk_w0 (by simp only [Fin.isValue, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd,
+  Nat.lt_add_left_iff_pos, Nat.zero_lt_succ])
 
 theorem insufficient_budget_zeuge (O : Orakel FD)
     (R : ∀ f : FD.Fn, World FD → Env FD (FD.params f) → RufAusgang f) :

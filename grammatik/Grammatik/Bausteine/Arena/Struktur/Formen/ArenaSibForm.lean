@@ -66,7 +66,7 @@ theorem parStore_ausfuehren (Par : LinkFeld A) (i : Var Γ (Ty.index (D.count A.
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
   refine ⟨_, rfl, fun C hC => funext fun j => ?_, fun H => rfl, ?_, fun j hj => ?_, rfl,
     fun j => A.naechst_schreibSlot_ne _ _ _ _ _ Par.h2 j, rfl⟩
-  · simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hC]
+  · simp only [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hC, World.slots_lese]
   · exact (Par.wert_schreibSlot_selbst _ _ _ _).trans (hv _ rfl)
   · exact Par.wert_schreibSlot_anderer _ _ _ _ _ hj
 

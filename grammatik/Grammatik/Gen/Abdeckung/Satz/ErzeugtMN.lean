@@ -50,7 +50,7 @@ def Spez.einsatz (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaratio
     simpa using this
   keinAx a := by
     have := (show Fin z.axs.length from a).isLt
-    simp [hax] at this
+    simp only [hax, List.length_nil, Nat.not_lt_zero] at this
 
 theorem Spez.einsatz_gueltig (z : Spez) (P : Programm z.deklaration) (ws : List z.deklaration.Fn)
     (hax : z.axs = []) (hb : z.bodenOk P = true) : (z.einsatz P ws hax hb).gueltig = z.gutB P z.sperreMax (z.wurzelnVon P ws) := rfl

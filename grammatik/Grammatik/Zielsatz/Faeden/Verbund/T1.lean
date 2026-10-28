@@ -166,7 +166,7 @@ variable [DecidableEq D.Fn]
 theorem erreichB_mono_n (P : Programm D) (fs : List D.Fn) (w : D.Fn) (n : Nat) (g : D.Fn)
     (h : erreichB P fs w n g = true) : erreichB P fs w (n + 1) g = true := by
   show erreichSchritt P fs (erreichB P fs w n) g = true
-  simp [erreichSchritt, h]
+  simp only [erreichSchritt, h, Bool.true_or]
 
 theorem countP_lt_of {α : Type} (p q : α → Bool) : ∀ (l : List α), (∀ x, p x = true → q x = true) →
     (∃ x ∈ l, q x = true ∧ p x = false) → l.countP p < l.countP q
@@ -179,8 +179,8 @@ theorem countP_lt_of {α : Type} (p q : α → Bool) : ∀ (l : List α), (∀ x
         omega
       · have hlt := countP_lt_of p q l hpq ⟨x, hx', hq, hp⟩
         cases ha : p a
-        · cases hb : q a <;> simp <;> omega
-        · simp [hpq a ha]
+        · cases hb : q a <;> simp only [Bool.false_eq_true, ↓reduceIte, Nat.add_zero, gt_iff_lt] <;> omega
+        · simp only [↓reduceIte, hpq a ha, Nat.add_lt_add_iff_right, gt_iff_lt]
           omega
 
 theorem erreichB_stabil (P : Programm D) {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -201,7 +201,7 @@ theorem erreichB_stabil (P : Programm D) {fs : List D.Fn} (hvoll : ∀ g : D.Fn,
     induction n with
     | zero =>
         intro _
-        have h0 : erreichB P fs w 0 w = true := by simp [erreichB]
+        have h0 : erreichB P fs w 0 w = true := by simp only [erreichB, decide_true]
         have : 0 < fs.countP (erreichB P fs w 0) := List.countP_pos_iff.mpr ⟨w, hvoll w, h0⟩
         omega
     | succ n ih =>

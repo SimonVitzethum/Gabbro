@@ -130,7 +130,7 @@ theorem nach_eq (u : UProg) (i : Fin u.fns.length)
   have hP := sigProduziert_nil u i
   unfold nach nachSig
   rw [hK, hP]
-  simp
+  simp only [List.foldl_nil, List.map_nil, List.append_nil]
 
 /-- The body context is the declared parameter list. -/
 theorem ctxParams_eq (u : UProg) (c : Fin u.fns.length) :
@@ -720,7 +720,7 @@ theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
       (Res.vonMarke (declOf u))) Λ := by
   rw [sigKonsumiert_nil u callee]
   show Untermulti ([] : List (Res (declOf u))) Λ
-  exact ⟨[], List.Perm.refl _, by simp⟩
+  exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
 
 /-- The caller's floor is at most the callee's (the Bool the lowering decides). -/
 def floorLeB (u : UProg) (caller callee : Fin u.fns.length) : Bool :=
@@ -740,7 +740,7 @@ theorem rufHb_ok (u : UProg) (caller callee : Fin u.fns.length)
   unfold floorLeB at h
   rw [hc] at h
   cases hb : (fnAt u callee).boden with
-  | none => rw [hb] at h; simp at h
+  | none => rw [hb] at h; simp only [Bool.false_eq_true] at h
   | some c' =>
     rw [hb] at h
     exact ⟨c', rfl, of_decide_eq_true h⟩
@@ -766,7 +766,7 @@ theorem heldLocksD_mem (u : UProg) (Λ : List (Res (declOf u)))
     L ∈ heldLocksD u Λ := by
   induction Λ with
   | nil =>
-    simp at h
+    simp only [List.not_mem_nil] at h
   | cons w rest ih =>
     cases w with
     | held M =>
@@ -784,7 +784,7 @@ theorem heldLocksD_mem (u : UProg) (Λ : List (Res (declOf u)))
       simp only [List.mem_cons] at h
       cases h with
       | inl he =>
-        simp at he
+        simp only [reduceCtorEq] at he
       | inr hm =>
         exact ih hm
 
@@ -844,7 +844,7 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
                 · rw [sigBoden_eq u callee]
                   unfold floorUeberB at h
                   cases hf : (fnAt u callee).boden with
-                  | none => rw [hf] at h; simp at h
+                  | none => rw [hf] at h; simp only [Bool.false_eq_true] at h
                   | some c =>
                     rw [hf] at h
                     exact ⟨c, rfl, of_decide_eq_true h⟩
@@ -1263,9 +1263,9 @@ theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.t
       cases hk : S.konsumiert with
       | nil => rfl
       | cons m _ => exact m.1.elim
-    rw [this]; exact ⟨[], List.Perm.refl _, by simp⟩
+    rw [this]; exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
   · rcases hx L (List.mem_finRange L) with (h1 | h1) | h1
-    · simp at h1; exact absurd hL h1
+    · simp only [decide_eq_false_iff_not] at h1; exact absurd hL h1
     · exact absurd h1 hn
     · revert h1
       cases hS : S.boden with

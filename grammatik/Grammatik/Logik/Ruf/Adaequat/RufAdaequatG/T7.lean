@@ -301,8 +301,8 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rw [execGrund_wahlW O passes keinRuf arms, execGrund_wahlW O passes keinRuf arms,
         h1.eval r]
       exact grundSG arms ha ho _ _ _ _ h1
-  | _, _, _, _, _, .call .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .callInd .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .call .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .callInd .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hb⟩ := hs.locks_inv
@@ -315,18 +315,18 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [Stmt.ohneOrakel] at ho
       simp only [execStmt]
       exact blockSG body hb ho _ _ _ h
-  | _, _, _, _, _, .traverse .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .retry .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .forever .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .axiomCall .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .traverse .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retry .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .forever .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCall .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, Λ₀, _, .ret e hperm, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
       exact ⟨h1, h1.evalErg e ρ⟩
-  | _, _, _, _, _, .retWhy .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .leave .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .next .., hs, _ => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .retWhy .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .leave .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .next .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
 theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ'), BlockG A mr b → b.ohneOrakel = true → SGB O passes b
@@ -359,9 +359,9 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallElse .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb, _ => by cases hb
-  | _, _, _, _, _, .regRead .., _, ho => by simp [Block.ohneOrakel] at ho
-  | _, _, _, _, _, .regReadElse .., _, ho => by simp [Block.ohneOrakel] at ho
-  | _, _, _, _, _, .awaits .., _, ho => by simp [Block.ohneOrakel] at ho
+  | _, _, _, _, _, .regRead .., _, ho => by simp only [Block.ohneOrakel, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .regReadElse .., _, ho => by simp only [Block.ohneOrakel, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .awaits .., _, ho => by simp only [Block.ohneOrakel, Bool.false_eq_true] at ho
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.exchange_inv

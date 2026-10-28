@@ -523,12 +523,12 @@ theorem rufAt_obj (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
     ∀ fuel, ObjTreuR objs (rufAt P O passes fuel) := by
   intro fuel
   induction fuel with
-  | zero => intro f σ ρ σ' h; simp [rufAt, RufAusgang.welt] at h
+  | zero => intro f σ ρ σ' h; simp only [RufAusgang.welt, rufAt, reduceCtorEq] at h
   | succ n ih =>
       intro f σ ρ σ' h
       simp only [rufAt] at h
       split at h
-      · simp [RufAusgang.welt] at h
+      · simp only [RufAusgang.welt, reduceCtorEq] at h
       · have hb := end_obj (O := O) (passes := passes) (R := rufAt P O passes n) (objs := objs)
           (W := WVon (objs f) ρ) (ps := objs f) ih hO (P.rumpf f) (hP f).1
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ (hP f).2.1
@@ -537,9 +537,9 @@ theorem rufAt_obj (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
         · rename_i σ2 v hs
           rw [hs] at hb
           split at h
-          · simp [RufAusgang.welt] at h
+          · simp only [RufAusgang.welt, reduceCtorEq] at h
           · split at h
-            · simp [RufAusgang.welt] at h
+            · simp only [RufAusgang.welt, reduceCtorEq] at h
             · simp only [RufAusgang.welt, Option.some.injEq] at h
               subst h
               intro t k fld hn
@@ -552,8 +552,8 @@ theorem rufAt_obj (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
           exact hb
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · rename_i hl _ _ _; exact absurd hl (by decide)
-        · simp [RufAusgang.welt] at h
-        · simp [RufAusgang.welt] at h
+        · simp only [RufAusgang.welt, reduceCtorEq] at h
+        · simp only [RufAusgang.welt, reduceCtorEq] at h
 
 
 end Gabbro.Grammatik

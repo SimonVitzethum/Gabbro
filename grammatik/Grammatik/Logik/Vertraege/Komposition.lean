@@ -297,7 +297,7 @@ def ZyklusOhneMassWirdAbgewiesen : ¬ ZyklusGetragen ZyklusOhneMass ["a", "b"] :
   obtain ⟨r, hr, hm⟩ := h "b" (by decide)
   simp only [ZyklusOhneMass, OhneMassTabelle] at hr
   cases hr
-  simp at hm
+  simp only [Option.isSome_none, Bool.false_eq_true] at hm
 
 #print axioms Gabbro.Grammatik.ohne_mass_ist_none
 #print axioms Gabbro.Grammatik.ZyklusOhneMassWirdAbgewiesen

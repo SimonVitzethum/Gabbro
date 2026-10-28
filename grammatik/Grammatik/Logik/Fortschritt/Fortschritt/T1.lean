@@ -210,7 +210,7 @@ theorem Stmt.istAbschluss_ok {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
     (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (s : Stmt D V l Γ Λ Λ') (σ σ' : World D) (ρ ρ' : Env D Γ)
     (h : execStmt O passes R s σ ρ = .ok σ' ρ') : s.istAbschluss = false := by
-  cases s <;> first | rfl | (simp [execStmt] at h)
+  cases s <;> first | rfl | (simp only [execStmt, reduceCtorEq] at h)
 
 section Inv
 
@@ -353,7 +353,8 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     rcases List.mem_cons.mp hc with rfl | hc
     · refine ⟨?_, rfl⟩
       revert hk
-      simp [GRest.fOk, Block.terminal, Stmt.istAbschluss]
+      simp only [GRest.fOk, Block.terminal, Stmt.istAbschluss, Bool.false_or, Bool.and_eq_true, Bool.or_eq_true,
+  Bool.not_eq_eq_eq_not, Bool.not_true, imp_self]
     · exact hst c hc
   | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg =>
     obtain ⟨hk, _, hst, hkt⟩ := h
@@ -364,7 +365,8 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     rcases List.mem_cons.mp hc with rfl | hc
     · refine ⟨?_, rfl⟩
       revert hk
-      simp [GRest.fOk, Block.terminal, Stmt.istAbschluss]
+      simp only [GRest.fOk, Block.terminal, Stmt.istAbschluss, Bool.false_or, Bool.and_eq_true, Bool.or_eq_true,
+  Bool.not_eq_eq_eq_not, Bool.not_true, imp_self]
     · exact hst c hc
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg =>
     obtain ⟨hk, _, hst, hkt⟩ := h
@@ -482,26 +484,26 @@ theorem blatt_fall {O : Orakel D} (hO : GutO O) (passes : Nat) {V : Vertrag D} {
           · cases hx
       | _ =>
           first
-          | (simp [Stmt.istAbschluss] at ha; done)
-          | (simp [Stmt.istBlatt] at hb; done)
+          | (simp only [Stmt.istAbschluss, Bool.true_eq_false] at ha; done)
+          | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb; done)
           | exact BlattG.erw O passes keinRuf (by constructor) W σ' ρ ρ' hx
   | hardware h => exact Or.inr (Or.inl ⟨h, rfl⟩)
   | logik e => exact Or.inr (Or.inr ⟨e, rfl⟩)
   | zurueck σ' v =>
       exfalso
-      cases s <;> simp [Stmt.istBlatt, Stmt.istAbschluss] at hb ha <;>
+      cases s <;> simp only [Stmt.istBlatt, Stmt.istAbschluss, Bool.false_eq_true, Bool.true_eq_false] at hb ha <;>
         simp only [execStmt] at hx <;> (try split at hx) <;> cases hx
   | why σ' r =>
       exfalso
-      cases s <;> simp [Stmt.istBlatt, Stmt.istAbschluss] at hb ha <;>
+      cases s <;> simp only [Stmt.istBlatt, Stmt.istAbschluss, Bool.false_eq_true, Bool.true_eq_false] at hb ha <;>
         simp only [execStmt] at hx <;> (try split at hx) <;> cases hx
   | leave hl σ' ρ' =>
       exfalso
-      cases s <;> simp [Stmt.istBlatt, Stmt.istAbschluss] at hb ha <;>
+      cases s <;> simp only [Stmt.istBlatt, Stmt.istAbschluss, Bool.false_eq_true, Bool.true_eq_false] at hb ha <;>
         simp only [execStmt] at hx <;> (try split at hx) <;> cases hx
   | next hl σ' ρ' =>
       exfalso
-      cases s <;> simp [Stmt.istBlatt, Stmt.istAbschluss] at hb ha <;>
+      cases s <;> simp only [Stmt.istBlatt, Stmt.istAbschluss, Bool.false_eq_true, Bool.true_eq_false] at hb ha <;>
         simp only [execStmt] at hx <;> (try split at hx) <;> cases hx
 
 /-! ## 5. The case analysis -/

@@ -75,7 +75,7 @@ theorem ziel_ort_sperre_invL (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
     | start =>
         intro t ev hev g rho v s0 s1 h
         subst h
-        simp [RufStartG] at hev
+        simp only [RufStartG, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hev
     | schritt M M' u hr' hs ih =>
         have hZ' := (hZ M hr').1
         intro t ev hev
@@ -149,8 +149,8 @@ def reachB (P : Programm D) (fs : List D.Fn) (wurzel : D.Fn) : D.Fn → Bool :=
 theorem reachB_wurzel (P : Programm D) (fs : List D.Fn) (w : D.Fn) : reachB P fs w w = true := by
   unfold reachB
   induction fs.length with
-  | zero => simp [erreichB]
-  | succ n ih => simp [erreichB, erreichSchritt, ih]
+  | zero => simp only [erreichB, decide_true]
+  | succ n ih => simp only [erreichB, erreichSchritt, ih, Bool.true_or]
 
 end Erreich
 
@@ -318,7 +318,7 @@ theorem getrenntB_ok {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g 
   · have h2 := (List.all_eq_true.mp h1) f (hvoll f)
     have h3 : istIn (fussOrteG P f) c = true := istIn_iff.mpr hc
     rw [hf, h3] at h2
-    simp at h2
+    simp only [Bool.not_true, Bool.or_self, Bool.false_eq_true] at h2
   · have h2 := (List.all_eq_true.mp h1) g (hvoll g)
     rw [hg] at h2
     simpa using h2
@@ -341,8 +341,8 @@ theorem fussMehrB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   · have h2 := (List.all_eq_true.mp h1.1) c hc
     simp only [Bool.or_eq_true] at h2
     rcases h2 with (h2 | h2) | h2
-    · exact Or.inl (by simp [h2])
-    · exact Or.inl (by simp [lokK_of (getrenntB_ok hvoll hN h2)])
+    · exact Or.inl (by simp only [h2, Bool.true_or])
+    · exact Or.inl (by simp only [lokK_of (getrenntB_ok hvoll hN h2), Bool.or_true])
     · obtain ⟨L, hL, hc'⟩ := List.any_eq_true.mp h2
       exact Or.inr ⟨L, waechterVon_mem.mp hL, istIn_iff.mp hc'⟩
   · have h2 := (List.all_eq_true.mp h1.2) c hc

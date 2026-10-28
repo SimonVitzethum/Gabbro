@@ -64,15 +64,15 @@ theorem Stmt.blatt_darf (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {
       · exact i.orte_darf o ho
   | axiomCall a args h hw hg hd hgd => exact args.orte_darf o ho
   | regWrite r hk e => exact e.orte_darf o ho
-  | transition => simp [stmtOrteP] at ho
+  | transition => simp only [stmtOrteP, List.not_mem_nil] at ho
   | publish g e payload hp hw hL => exact e.orte_darf o ho
-  | advances => simp [stmtOrteP] at ho
-  | retires => simp [stmtOrteP] at ho
+  | advances => simp only [stmtOrteP, List.not_mem_nil] at ho
+  | retires => simp only [stmtOrteP, List.not_mem_nil] at ho
   | ret e hp => exact e.orte_darf o ho
-  | retWhy => simp [stmtOrteP] at ho
-  | leave => simp [stmtOrteP] at ho
-  | next => simp [stmtOrteP] at ho
-  | _ => simp [Stmt.istBlatt] at hb
+  | retWhy => simp only [stmtOrteP, List.not_mem_nil] at ho
+  | leave => simp only [stmtOrteP, List.not_mem_nil] at ho
+  | next => simp only [stmtOrteP, List.not_mem_nil] at ho
+  | _ => simp only [istBlatt, Bool.false_eq_true] at hb
 
 /-! ## 0b. Fresh keys, with or without an event
 
@@ -135,9 +135,9 @@ theorem rahmenWeltF_rahmen (g : D.Fn) (κ s1 : World D) :
     Rahmen (D.schreibt g) (D.gschreibt g) κ (rahmenWeltF g κ s1) := by
   refine ⟨fun t ht k f => ?_, fun x hx => ?_⟩
   · show (if D.schreibt g t = true then s1.slots t else κ.slots t) k f = κ.slots t k f
-    rw [if_neg (by simp [ht])]
+    rw [if_neg (by simp only [ht, Bool.false_eq_true, not_false_eq_true])]
   · show (if D.gschreibt g x = true then s1.globs x else κ.globs x) = κ.globs x
-    rw [if_neg (by simp [hx])]
+    rw [if_neg (by simp only [hx, Bool.false_eq_true, not_false_eq_true])]
 
 theorem rahmenWeltF_offen (g : D.Fn) (κ s1 : World D) :
     offen (rahmenWeltF g κ s1).spur = offen κ.spur :=
@@ -174,9 +174,9 @@ theorem axWeltF_rahmen (a : D.Ax) (κ σ₂ : World D) :
     Rahmen (D.aschreibt a) (D.agschreibt a) κ (axWeltF a κ σ₂) := by
   refine ⟨fun t ht k f => ?_, fun g hg => ?_⟩
   · show (if D.aschreibt a t = true then σ₂.slots t else κ.slots t) k f = κ.slots t k f
-    rw [if_neg (by simp [ht])]
+    rw [if_neg (by simp only [ht, Bool.false_eq_true, not_false_eq_true])]
   · show (if D.agschreibt a g = true then σ₂.globs g else κ.globs g) = κ.globs g
-    rw [if_neg (by simp [hg])]
+    rw [if_neg (by simp only [hg, Bool.false_eq_true, not_false_eq_true])]
 
 theorem axWeltF_laenge (a : D.Ax) (κ σ₂ : World D) :
     κ.spur.length ≤ (axWeltF a κ σ₂).spur.length := by

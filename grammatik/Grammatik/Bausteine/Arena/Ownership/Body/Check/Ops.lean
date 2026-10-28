@@ -93,7 +93,7 @@ theorem loopCtx_bounded {c : Context} (hc : c.bounded) (ps : List Nat) : (loopCt
     · subst hp; exact hc.2 _ (List.mem_of_getElem? hq) i rfl
 
 theorem loopCtx_weaker {c : Context} (hc : c.bounded) (ps : List Nat) : Weaker (loopCtx c ps) c := by
-  refine ⟨fun _ => rfl, hc.1, by simp [loopCtx], ?_⟩
+  refine ⟨fun _ => rfl, hc.1, by simp only [loopCtx, List.length_mapIdx], ?_⟩
   intro p o hp
   simp only [loopCtx, List.getElem?_mapIdx] at hp
   cases hq : c.references[p]? with
@@ -170,14 +170,14 @@ def modesOf : (P : Ctx) → List (Option PassingMode) → Modes P
 
 theorem modeList_modesOf : ∀ (P : Ctx) (l : List (Option PassingMode)), l.length = P.length →
     modeList (modesOf P l) = l
-  | [], l, h => by simp at h; subst h; rfl
+  | [], l, h => by simp only [List.length_nil, List.length_eq_zero_iff] at h; subst h; rfl
   | τ :: P, l, h => by
-    have hl : (l.take P.length).length = P.length := by simp at h ⊢; omega
+    have hl : (l.take P.length).length = P.length := by simp only [List.length_cons, List.length_take] at h ⊢; omega
     simp only [modesOf, modeList, modeList_modesOf P _ hl]
-    have hP : P.length < l.length := by simp at h; omega
+    have hP : P.length < l.length := by simp only [List.length_cons] at h; omega
     rw [List.getElem?_eq_getElem hP, Option.getD_some]
     have ht : l.take (P.length + 1) = l.take P.length ++ [l[P.length]] := by
       rw [List.take_succ, List.getElem?_eq_getElem hP]; rfl
-    rw [← ht, List.take_of_length_le (by simp at h; omega)]
+    rw [← ht, List.take_of_length_le (by simp only [List.length_cons] at h; omega)]
 
 end Gabbro.Grammatik.ArenaOwnership.Body

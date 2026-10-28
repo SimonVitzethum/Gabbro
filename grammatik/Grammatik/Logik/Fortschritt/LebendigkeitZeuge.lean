@@ -153,27 +153,27 @@ theorem lAbschnitt {M : RufMaschineG mD} (t : Faden) (fn : mD.Fn) (rho : Env mD 
     ?_, _, _, hZ8, ?_⟩
   · refine befund_von hZ1.1 hoff1 rfl kein_fertig fun _ σ k hR => ?_
     cases k <;> (try rw [show mP.rumpf mSetze = mRumpfSetze from rfl] at hR) <;>
-      simp [Zielsatz.RestHalt, Zielsatz.KopfHalt, Stmt.istBlatt, mRumpfSetze] at hR
+      simp only [Zielsatz.RestHalt, Zielsatz.KopfHalt, Stmt.istBlatt, Bool.false_eq_true, false_and] at hR
   · refine befund_von hZ2.1 hoff2 rfl kein_fertig fun _ σ k hR => ?_
     cases k
     · obtain ⟨_, hw, he⟩ := hR
       have he' := (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _).symm.trans he
       cases he'
     all_goals (try rw [show mP.rumpf mSetze = mRumpfSetze from rfl] at hR)
-    all_goals simp [Zielsatz.RestHalt, mRumpfSetze] at hR
+    all_goals simp only [Zielsatz.RestHalt, mRumpfSetze] at hR
   · refine befund_von hZ3.1 hoff3 rfl kein_fertig fun _ σ k hR => ?_
     cases k
     · obtain ⟨_, hw, he⟩ := hR
       have he' := (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _).symm.trans he
       cases he'
     all_goals (try rw [show mP.rumpf mSetze = mRumpfSetze from rfl] at hR)
-    all_goals simp [Zielsatz.RestHalt, mRumpfSetze] at hR
+    all_goals simp only [Zielsatz.RestHalt] at hR
   · refine befund_von hZ4.1 hoff4 rfl kein_fertig fun _ σ k hR => ?_
-    cases k <;> simp [Zielsatz.RestHalt] at hR
+    cases k <;> simp only [Zielsatz.RestHalt] at hR
   · refine befund_von hG5.1 hoff5 rfl kein_fertig fun _ σ k hR => ?_
-    cases k <;> simp [Zielsatz.RestHalt, Zielsatz.KopfHalt] at hR
+    cases k <;> simp only [Zielsatz.RestHalt, Zielsatz.KopfHalt] at hR
   · refine befund_von hZ6.1 hoff6 rfl kein_fertig fun _ σ k hR => ?_
-    cases k <;> simp [Zielsatz.RestHalt] at hR
+    cases k <;> simp only [Zielsatz.RestHalt] at hR
   · exact befund_von hZ7.1 hoff7 rfl kein_fertig kein_halt_leer
   · show offen (M7.faeden t).spur = []
     exact hoff7

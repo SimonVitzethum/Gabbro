@@ -198,10 +198,11 @@ theorem linkPush_ausfuehren
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
   refine ⟨_, rfl, ?_, ?_⟩
   · refine ⟨fun C hC => funext fun j => ?_, fun G' hG' => ?_⟩
-    · have hne : C.f ≠ L.f := fun e => hC (by simp [e])
-      simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
-    · have hne : G'.g ≠ G.g := fun e => hG' (by simp [e])
-      simp [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne]
+    · have hne : C.f ≠ L.f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+      simp only [LinkFeld.wert, World.slots_schreibGlob, World.slots_lese,
+  World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
+    · have hne : G'.g ≠ G.g := fun e => hG' (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+      simp only [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne, World.globs_lese, World.globs_schreibSlot]
   simp only [eval, Block.linkKopfAlsFeld, Block.linkIdxAlsKopf, eval_umTyp, Expr.orte, orte_umTyp,
     List.nil_append, LinkKopf.st_schreibGlob_selbst, LinkKopf.st_schreibSlot, LinkKopf.st_lese,
     LinkFeld.wert_schreibGlob, LinkFeld.wert_lese,
@@ -234,8 +235,8 @@ theorem linkPop_ausfuehren
   case e => rfl
   case rh =>
     refine ⟨fun C _ => rfl, fun G' hG' => ?_⟩
-    have hne : G'.g ≠ G.g := fun e => hG' (by simp [e])
-    simp [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne]
+    have hne : G'.g ≠ G.g := fun e => hG' (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+    simp only [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne, World.globs_lese]
   case n => rfl
   case r =>
     simp only [eval, Block.linkWeiter, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append, List.cons_append,
@@ -269,8 +270,8 @@ theorem linkUnlink_ausfuehren
   case e => rfl
   case rh =>
     refine ⟨fun C hC => funext fun j => ?_, fun G' _ => rfl⟩
-    have hne : C.f ≠ L.f := fun e => hC (by simp [e])
-    simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
+    have hne : C.f ≠ L.f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+    simp only [LinkFeld.wert, World.slots_lese, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
   case n => rfl
   case r =>
     simp only [eval, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append, List.cons_append,

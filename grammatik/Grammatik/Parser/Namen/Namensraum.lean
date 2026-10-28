@@ -132,7 +132,7 @@ theorem ziel_pub : ∀ (ds : List (String × String × List Pfad)) (d : String),
 
 theorem ziel_none (ds : List (String × String × List Pfad)) (d : String) :
     ziel ds d = none ↔ pubVon (ds.map fun e => (e.1, e.2.2)) d = none := by
-  rw [← ziel_pub]; cases ziel ds d <;> simp
+  rw [← ziel_pub]; cases ziel ds d <;> simp only [Option.map_none, reduceCtorEq, Option.map_some]
 
 /-- An injective map on a duplicate-free image (core only: this file stands in the elaborator's import
     chain, where Mathlib's `alias` keyword would break existing field names). -/
@@ -163,7 +163,7 @@ theorem mem_sichtbar {Q : Quelle} {L : Platz} (hG : L.Gut) (c : Pfad) :
     · rintro (⟨y, hy, -, rfl⟩ | ⟨e, he, y, -, hn, -⟩)
       · exact hy
       · exact absurd hn.symm (hG.1 e he)
-    · intro hx; exact Or.inl ⟨x, hx, by simp⟩
+    · intro hx; exact Or.inl ⟨x, hx, by simp only [and_self]⟩
   cases c with
   | nil => simp only [qualifiziere, bed, decide_eq_true_eq]; exact eigen []
   | cons d rest =>

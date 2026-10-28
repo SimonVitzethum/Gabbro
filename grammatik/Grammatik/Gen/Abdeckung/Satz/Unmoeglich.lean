@@ -165,11 +165,11 @@ theorem u_2_0_11 (a b : Bool) (e : Einsatz) : ¬ e.Hat ⟨2, 0, true, [a, b, tru
     have h3' : ((waechterVon c).any fun L => istIn (e.S.orte L) c) = true := h3.symm
     unfold geteiltVB at h4'
     have hl : (waechterVon c).isEmpty = true := by
-      revert h4'; cases atomarB c <;> cases (waechterVon c).isEmpty <;> simp
+      revert h4'; cases atomarB c <;> cases (waechterVon c).isEmpty <;> simp only [Bool.and_self, Bool.false_and, Bool.false_eq_true, imp_self, Bool.and_true, implies_true, Bool.and_false, Bool.true_and]
     rw [List.isEmpty_iff] at hl
     rw [hl] at h3'
     cases h3'
-  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp at h'')
+  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp only [OfNat.ofNat_ne_zero, Bool.false_eq_true, List.any_eq_true, Bool.and_eq_true, List.ne_cons_self, and_false, and_self, Bool.true_eq, List.cons_ne_self, reduceCtorEq] at h'')
 
 /-- `2.0 1 b 0 d`: a carrier one of whose guards the signature holds is guarded, and in a program of the source the
     lock family protects exactly the guarded carriers. -/
@@ -186,6 +186,6 @@ theorem u_2_0_sig (b d : Bool) (e : Einsatz) : ¬ e.Hat ⟨2, 0, true, [true, b,
       List.any_eq_true.2 ⟨L, hL, istIn_iff.2 ((e.hS L c).2 hL)⟩
     rw [← h3] at this
     cases this
-  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp at h'')
+  all_goals (obtain ⟨_, _, _, _, h''⟩ := h'; simp only [OfNat.ofNat_ne_zero, Bool.false_eq_true, Bool.and_eq_true, decide_eq_true_eq, Bool.not_eq_eq_eq_not, Bool.not_true, List.any_eq_false, not_and, Bool.not_eq_true, List.ne_cons_self, and_false, and_self, Bool.false_eq, List.cons_ne_self, reduceCtorEq] at h'')
 
 end Gabbro.Grammatik.Gen

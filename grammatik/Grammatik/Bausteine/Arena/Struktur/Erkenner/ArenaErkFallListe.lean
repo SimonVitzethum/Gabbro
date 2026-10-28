@@ -31,9 +31,9 @@ theorem Dekl.GlB.liste {d : ListDekl A} (hd : K.liste = some d) {fs : List (D.Fe
   Dekl.GlB.rahmen hr (fun b hb => by
     obtain ⟨h1, h2, h3⟩ := K.getrennt d b hd hb
     refine ⟨fun e => h1 ?_, fun e => h2 ?_, fun e => h3 ?_⟩
-    · have := hf e; simp at this; exact this.symm
-    · have := hf e; simp at this; exact this.symm
-    · have := hg e; simp at this; exact this.symm)
+    · have := hf e; simp only [List.mem_cons, List.not_mem_nil, or_false] at this; exact this.symm
+    · have := hf e; simp only [List.mem_cons, List.not_mem_nil, or_false] at this; exact this.symm
+    · have := hg e; simp only [List.mem_cons, List.not_mem_nil, or_false] at this; exact this.symm)
 
 theorem fall_push {a a' : Abs} (d : ListDekl A) (hd : K.liste = some d)
     (x : Var Γ (Ty.index (D.count A.tab))) (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -48,7 +48,7 @@ theorem fall_push {a a' : Abs} (d : ListDekl A) (hd : K.liste = some d)
   obtain ⟨σ', he, hrm, hl', hok', hlebt', hg, hli, hvor, hnach⟩ :=
     liste_push_zug O passes R d.L d.G x hwT hLT hwG hLG rest σ ρ hl hS.1 hlebt hnot
   rw [he]
-  have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp) (by simp)
+  have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp only [List.Subset.refl]) (by simp only [List.Subset.refl])
   have hOk : K.Ok σ' := by
     refine ⟨hok', (Dekl.LOk_some hd σ').mpr hl',
       hGB.bok (fun j hj => (hlebt' j).mpr (Dekl.InB.lebt hS.2.2.1 hj)) hS.2.2.1, ?_⟩
@@ -90,7 +90,7 @@ theorem fall_pop {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
       liste_pop_zug O passes R d.L d.G hwG hLG hLT voll rest σ ρ hl hS.1 hne
     rw [he]
     apply StrukturPost.schrumpf
-    have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp) (by simp)
+    have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp only [List.Subset.refl, List.subset_cons_of_subset]) (by simp only [List.Subset.refl])
     have hhead : K.InL σ k.n := (Dekl.InL_some hd σ _).mpr (by rw [hkn]; exact kopf_auf hl hne)
     have hnotB : ¬ K.InB σ k.n := fun hb => hS.2.2.2 _ ⟨hhead, hb⟩
     have hOk : K.Ok σ' := by
@@ -129,7 +129,7 @@ theorem fall_unlink {a a'' : Abs} (d : ListDekl A) (hd : K.liste = some d)
       liste_unlink_zug O passes R d.L d.G p hwT hLT voll rest σ ρ hl hS.1 hpa hi
     rw [he]
     apply StrukturPost.schrumpf
-    have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp) (by simp)
+    have hGB : Dekl.GlB K σ σ' := Dekl.GlB.liste K hd hrm (by simp only [List.Subset.refl]) (by simp only [List.Subset.refl, List.subset_cons_of_subset])
     have hmem : K.InL σ k.n := (Dekl.InL_some hd σ _).mpr (by rw [hkn]; exact auf_nach hpa hi)
     have hnotB : ¬ K.InB σ k.n := fun hb => hS.2.2.2 _ ⟨hmem, hb⟩
     have hOk : K.Ok σ' := by

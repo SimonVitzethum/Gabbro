@@ -276,37 +276,37 @@ theorem zeile_lt {f k : Nat} {r : Zeile} (h : zeile f k = some r) : f < 9 ∧ k 
     · exfalso
       have : kTab.getD f [] = [] := by
         unfold List.getD
-        rw [List.getElem?_eq_none (by simp [kTab]; omega)]
+        rw [List.getElem?_eq_none (by simp only [kTab, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd]; omega)]
         rfl
       rw [this] at h
-      simp at h
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at h
   · exact (List.getElem?_eq_some_iff.1 h).1
 
 theorem kopf_mem {q : Option Nat} {h : Nat} (hq : kopfOk q h = true) : h ∈ kopfListe q := by
   cases q with
-  | none => simp [kopfOk, kopfListe] at *; exact hq
-  | some q => simp [kopfOk, kopfListe] at *; exact hq.symm
+  | none => simp only [kopfOk, decide_eq_true_eq, kopfListe, List.mem_range] at *; exact hq
+  | some q => simp only [kopfOk, beq_iff_eq, kopfListe, List.mem_cons, List.not_mem_nil, or_false] at *; exact hq.symm
 
 theorem koepfe_mem : ∀ {qs : List (Option Nat)} {hs : List Nat}, koepfeOk qs hs = true → hs ∈ koepfeListe qs
-  | [], [], _ => by simp [koepfeListe]
+  | [], [], _ => by simp only [koepfeListe, List.mem_cons, List.not_mem_nil, or_false]
   | q :: qs, h :: hs, hk => by
     simp only [koepfeOk, Bool.and_eq_true] at hk
     simp only [koepfeListe, List.mem_flatMap, List.mem_map]
     exact ⟨h, kopf_mem hk.1, hs, koepfe_mem hk.2, rfl⟩
-  | [], _ :: _, hk => by simp [koepfeOk] at hk
-  | _ :: _, [], hk => by simp [koepfeOk] at hk
+  | [], _ :: _, hk => by simp only [koepfeOk, Bool.false_eq_true] at hk
+  | _ :: _, [], hk => by simp only [koepfeOk, Bool.false_eq_true] at hk
 
 theorem ergPasst_lt {k h : Nat} (he : ergPasst k h = true) : k < kAnzahl 0 := by
   unfold ergPasst at he
   split at he
   · next r hr => exact (zeile_lt hr).2
-  · simp at he
+  · simp only [Bool.false_eq_true] at he
 
 theorem lPasst_lt {f k : Nat} {l : Bool} (he : lPasst f k l = true) : k < kAnzahl f := by
   unfold lPasst at he
   split at he
   · next r hr => exact (zeile_lt hr).2
-  · simp at he
+  · simp only [Bool.false_eq_true] at he
 
 theorem kindOk_lt {cf k : Nat} {q : Option Nat} {lk : Bool} (h : kindOk cf q lk k = true) : k < kAnzahl cf := by
   unfold kindOk at h
@@ -331,22 +331,22 @@ theorem daten_mem {r : Zeile} {l : Bool} {art : Nat} {d : List Nat} (h : datenOk
       simp only [datenListe, List.mem_flatMap, List.mem_range, List.mem_map]
       refine ⟨p, hp.1, k, ?_, ?_⟩
       · have : (r.kinder.getD p (0, none, none)).1 = c.1 := by
-          simp [List.getD, hc]
+          simp only [List.getD, hc, Option.getD_some]
         rw [this]; exact kindOk_lt hk
-      · simp [List.getD, hc]
-    · simp at h
-  | art + 2, d, h => simp [datenOk] at h
-  | 1, [], h => simp [datenOk] at h
-  | 1, [_], h => simp [datenOk] at h
-  | 1, [_, _], h => simp [datenOk] at h
-  | 1, _ :: _ :: _ :: _ :: _, h => simp [datenOk] at h
+      · simp only [List.getD, hc, Option.getD_some]
+    · simp only [Bool.false_eq_true] at h
+  | art + 2, d, h => simp only [datenOk, Bool.false_eq_true] at h
+  | 1, [], h => simp only [datenOk, Bool.false_eq_true] at h
+  | 1, [_], h => simp only [datenOk, Bool.false_eq_true] at h
+  | 1, [_, _], h => simp only [datenOk, Bool.false_eq_true] at h
+  | 1, _ :: _ :: _ :: _ :: _, h => simp only [datenOk, Bool.false_eq_true] at h
 
 /-- **The universe is complete**: every allowed cell is in the list. -/
 theorem uF_vollst {c : FZelle} (h : moeglich c = true) : c ∈ uF := by
   obtain ⟨art, f, k, l, d⟩ := c
   unfold moeglich at h
   split at h
-  · simp at h
+  · simp only [Bool.false_eq_true] at h
   · next r hr =>
     simp only [Bool.and_eq_true] at h
     obtain ⟨⟨⟨⟨_, _⟩, _⟩, hd⟩, ht⟩ := h
@@ -355,14 +355,14 @@ theorem uF_vollst {c : FZelle} (h : moeglich c = true) : c ∈ uF := by
       match art, hd with
       | 0, _ => exact Or.inl rfl
       | 1, _ => exact Or.inr rfl
-      | a + 2, hd => simp [datenOk] at hd
+      | a + 2, hd => simp only [datenOk, Bool.false_eq_true] at hd
     unfold uF
     refine List.mem_filter.2 ⟨?_, ?_⟩
     · simp only [List.mem_flatMap, List.mem_range]
       refine ⟨f, hf, k, hk, ?_⟩
       rw [hr]
       simp only [List.mem_flatMap, List.mem_cons, List.mem_map, List.not_mem_nil, or_false]
-      refine ⟨art, hart, l, by cases l <;> simp, d, daten_mem hd, rfl⟩
+      refine ⟨art, hart, l, by cases l <;> simp only [Bool.false_eq_true, or_false, Bool.true_eq_false, or_true], d, daten_mem hd, rfl⟩
     · unfold moeglich
       simp only [hr, Bool.and_eq_true]
       exact ⟨⟨⟨⟨by assumption, by assumption⟩, by assumption⟩, hd⟩, ht⟩

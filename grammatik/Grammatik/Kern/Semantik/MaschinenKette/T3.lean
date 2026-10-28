@@ -71,7 +71,7 @@ theorem kette_aus_lauf_gesamt
           · exact hgf.symm
           · have hempty : prog g = [] := hsingle_prog g hgf
             rw [hempty] at hpc
-            simp at hpc
+            simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
         subst hact
         have hmid_single : ∀ s ∈ Mmid.lauf, s.faden = f := by
           intro s hs'
@@ -104,7 +104,7 @@ theorem kette_aus_lauf_gesamt
           · exact hgf.symm
           · have hempty : prog g = [] := hsingle_prog g hgf
             rw [hempty] at hpc
-            simp at hpc
+            simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
         subst hact
         have hmid_single : ∀ s ∈ Mmid.lauf, s.faden = f := by
           intro s hs'
@@ -129,7 +129,7 @@ theorem kette_aus_lauf_gesamt
           · exact hgf.symm
           · have hempty : prog g = [] := hsingle_prog g hgf
             rw [hempty] at hpc
-            simp at hpc
+            simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
         subst hact
         have hmid_single : ∀ s ∈ Mmid.lauf, s.faden = f := by
           intro s hs'
@@ -244,57 +244,57 @@ theorem kette_bezeugt_start (Nb : Nebeneinander) (sp : Speicher D)
   have hGes : Gesittet ([] : Lauf D) := by
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
     · intro f j
-      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
       rw [hsp]
       exact konsistent_nil
     · intro f j e he
-      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
       rw [hsp] at he
-      simp at he
+      simp only [List.not_mem_nil] at he
     · intro j f L h hi g hne
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     · intro i j f g m s s' ei ej hi hj hm hm'
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     · intro i j f g o ei ej hi hj ht1 ht2 hu
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   have hBeschr : BeschraenkteVerschraenkung (D := D) Nb ([] : Lauf D) := by
     intro i j f g ei ej hi hj hne
-    simp at hi
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   have hKette0 : (GenStart sp).welten.length = ([] : List Faden).length + 1 := by
-    simp [GenStart]
+    simp only [GenStart, List.length_cons, List.length_nil, Nat.zero_add]
   have hSchritt0 : ∀ (k : Nat) (f' : Faden) (vor nach : World D),
       ([] : List Faden)[k]? = some f' → (GenStart sp).welten[k]? = some vor →
       (GenStart sp).welten[k + 1]? = some nach →
       f' ∈ ([f] : List Faden) ∧
         Rahmen (D.schreibt (code f')) (D.gschreibt (code f')) vor nach := by
     intro k f' vor nach hk _ _
-    simp at hk
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
   have hPaar0 : ∀ (f' : Faden), f' ∈ ([f] : List Faden) → ∀ (g : Faden),
       g ∈ ([f] : List Faden) → f' ≠ g → Nb f' g := by
     intro f' hf' g hg' hne
-    simp at hf' hg'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hf' hg'
     subst hf'
     subst hg'
     exact absurd rfl hne
   have hEintritt0 : ∀ (f' : Faden), f' ∈ ([f] : List Faden) →
       EintrittPasst (code f') ((fun _ => (GenStart sp).start) f') := by
     intro f' hf'
-    simp at hf'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hf'
     subst hf'
     exact hEintritt
   have hSchuld0 : ∀ (f' : Faden), f' ∈ ([f] : List Faden) →
       SchuldnerHaelt (code f') := by
     intro f' hf'
-    simp at hf'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hf'
     subst hf'
     exact hSchuld
   have hInvSicht0 : ∀ (f' : Faden), f' ∈ ([f] : List Faden) →
       InvSichtHaelt (code f') ((fun _ => (GenStart sp).start) f') := by
     intro f' hf'
-    simp at hf'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hf'
     subst hf'
     exact hInvSicht
-  have hmem0 : f ∈ ([f] : List Faden) := by simp
+  have hmem0 : f ∈ ([f] : List Faden) := by simp only [List.mem_cons, List.not_mem_nil, or_false]
   -- DELTA: the identity conjunct (`rfl` at the literal), the unconditional link
   -- (vacuous over `[]`), and the derived guard -- no non-writer premise.
   refine ⟨{ faeden := [f], code := code, eintritt := fun _ => (GenStart sp).start,
@@ -305,7 +305,7 @@ theorem kette_bezeugt_start (Nb : Nebeneinander) (sp : Speicher D)
           rfl, rfl, hmem0, rfl, rfl, ?_, ?_⟩
   · intro k g hk _
     have hk' : ([] : List Faden)[k]? = some g := hk
-    simp at hk'
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk'
   · intro g hg hw
     have hmem' : g ∈ ([f] : List Faden) := hg
     have hgf : g = f := by simpa using hmem'

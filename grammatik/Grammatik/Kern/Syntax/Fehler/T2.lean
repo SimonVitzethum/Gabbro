@@ -16,11 +16,11 @@ theorem stecken_klassifikation (a : AusF V l Γ) (h : IstStecken a) :
   | fehler k => exact .inr (.inr ⟨k, rfl⟩)
   | widen o =>
       cases o with
-      | ok σ ρ => simp [IstStecken, endZustandF] at h
-      | zurueck σ v => simp [IstStecken, endZustandF] at h
-      | why σ r => simp [IstStecken, endZustandF] at h
-      | leave h' σ ρ => simp [IstStecken, endZustandF] at h
-      | next h' σ ρ => simp [IstStecken, endZustandF] at h
+      | ok σ ρ => simp only [IstStecken, endZustandF, reduceCtorEq] at h
+      | zurueck σ v => simp only [IstStecken, endZustandF, reduceCtorEq] at h
+      | why σ r => simp only [IstStecken, endZustandF, reduceCtorEq] at h
+      | leave h' σ ρ => simp only [IstStecken, endZustandF, reduceCtorEq] at h
+      | next h' σ ρ => simp only [IstStecken, endZustandF, reduceCtorEq] at h
       | logik e => exact .inl ⟨e, rfl⟩
       | hardware e => exact .inr (.inl ⟨e, rfl⟩)
 
@@ -194,7 +194,7 @@ theorem traverseAusF_kopf_fehler
     (hinv : (inv σ ρ).2 = true)
     (h : schrittF (inv σ ρ).1 (.cons k ρ) = (AusF.fehler e : AusF V true (τ :: Γ))) :
     traverseAusF schrittF inv (k :: ks) σ ρ = (AusF.fehler e : AusF V l Γ) := by
-  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  have hneg : (inv σ ρ).2 ≠ false := by simp only [hinv, ne_eq, Bool.true_eq_false, not_false_eq_true]
   simp only [traverseAusF, if_neg hneg, h]
 
 /-- An `ok` element hands world and scope to the rest of the run. -/
@@ -208,7 +208,7 @@ theorem traverseAusF_kopf_ok
       (AusF.widen (.ok σ' ρ') : AusF V true (τ :: Γ))) :
     (traverseAusF schrittF inv (k :: ks) σ ρ : AusF V l Γ) =
       traverseAusF schrittF inv ks σ' ρ'.tail := by
-  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  have hneg : (inv σ ρ).2 ≠ false := by simp only [hinv, ne_eq, Bool.true_eq_false, not_false_eq_true]
   simp only [traverseAusF, if_neg hneg, h]
 
 /-- A `next` element ends its pass and hands world and scope to the rest. -/
@@ -222,7 +222,7 @@ theorem traverseAusF_kopf_next
       (AusF.widen (.next rfl σ' ρ') : AusF V true (τ :: Γ))) :
     (traverseAusF schrittF inv (k :: ks) σ ρ : AusF V l Γ) =
       traverseAusF schrittF inv ks σ' ρ'.tail := by
-  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  have hneg : (inv σ ρ).2 ≠ false := by simp only [hinv, ne_eq, Bool.true_eq_false, not_false_eq_true]
   simp only [traverseAusF, if_neg hneg, h]
 
 /-- A faulted rest faults the run -- past a fault-free head. -/
@@ -298,7 +298,7 @@ theorem foreverAusF_kopf_fehler (a : D.Annahme)
     (hinv : (inv σ ρ).2 = true)
     (h : schrittF (inv σ ρ).1 ρ = (AusF.fehler e : AusF V true Γ)) :
     foreverAusF a schrittF inv (n + 1) σ ρ = (AusF.fehler e : AusF V l Γ) := by
-  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  have hneg : (inv σ ρ).2 ≠ false := by simp only [hinv, ne_eq, Bool.true_eq_false, not_false_eq_true]
   simp only [foreverAusF, if_neg hneg, h]
 
 /-- A fault-free `ok` pass hands world and scope to the remaining fuel. -/
@@ -310,7 +310,7 @@ theorem foreverAusF_kopf_ok (a : D.Annahme)
     (h : schrittF (inv σ ρ).1 ρ = (AusF.widen (.ok σ' ρ') : AusF V true Γ)) :
     (foreverAusF a schrittF inv (n + 1) σ ρ : AusF V l Γ) =
       foreverAusF a schrittF inv n σ' ρ' := by
-  have hneg : (inv σ ρ).2 ≠ false := by simp [hinv]
+  have hneg : (inv σ ρ).2 ≠ false := by simp only [hinv, ne_eq, Bool.true_eq_false, not_false_eq_true]
   simp only [foreverAusF, if_neg hneg, h]
 
 #print axioms Gabbro.Grammatik.evalF

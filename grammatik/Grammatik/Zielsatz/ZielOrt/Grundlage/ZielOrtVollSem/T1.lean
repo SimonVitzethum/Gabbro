@@ -309,9 +309,9 @@ theorem Block.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono err h.1, Block.vOk_mono rest h.2⟩
-  | .regRead .., h => by simp [Block.vOk] at h
-  | .regReadElse .., h => by simp [Block.vOk] at h
-  | .awaits .., h => by simp [Block.vOk] at h
+  | .regRead .., h => by simp only [Block.vOk, Bool.false_eq_true] at h
+  | .regReadElse .., h => by simp only [Block.vOk, Bool.false_eq_true] at h
+  | .awaits .., h => by simp only [Block.vOk, Bool.false_eq_true] at h
   | .exchange _ _ _ _ rest, h => by
       simp only [Block.vOk] at h ⊢
       exact Block.vOk_mono rest h
@@ -358,9 +358,9 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono err h.1, Endblock.vOk_mono rest h.2⟩
-  | .regRead .., h => by simp [Endblock.vOk] at h
-  | .regReadElse .., h => by simp [Endblock.vOk] at h
-  | .awaits .., h => by simp [Endblock.vOk] at h
+  | .regRead .., h => by simp only [Endblock.vOk, Bool.false_eq_true] at h
+  | .regReadElse .., h => by simp only [Endblock.vOk, Bool.false_eq_true] at h
+  | .awaits .., h => by simp only [Endblock.vOk, Bool.false_eq_true] at h
   | .bindCallInd _ _ _ _ _ rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨hKK _ h.1, Endblock.vOk_mono rest h.2⟩
@@ -427,10 +427,10 @@ theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .breaking _ body, h => by
       simp only [Stmt.kOk, Stmt.vOk] at h ⊢
       exact Block.vOk_of_kOk body h
-  | .traverse .., h => by simp [Stmt.kOk] at h
-  | .retry .., h => by simp [Stmt.kOk] at h
-  | .forever .., h => by simp [Stmt.kOk] at h
-  | .callInd .., h => by simp [Stmt.kOk] at h
+  | .traverse .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
+  | .retry .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
+  | .forever .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
+  | .callInd .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .assignSlot .., _ => rfl
   | .assignThru .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
@@ -461,13 +461,13 @@ theorem Block.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .bindCall _ _ _ _ _ rest, h => by
       simp only [Block.kOk, Block.vOk] at h ⊢
       exact Block.vOk_of_kOk rest h
-  | .bindCallInd .., h => by simp [Block.kOk] at h
-  | .bindCallElse .., h => by simp [Block.kOk] at h
-  | .bindAxiom .., h => by simp [Block.kOk] at h
-  | .bindAxiomElse .., h => by simp [Block.kOk] at h
-  | .regRead .., h => by simp [Block.kOk] at h
-  | .regReadElse .., h => by simp [Block.kOk] at h
-  | .awaits .., h => by simp [Block.kOk] at h
+  | .bindCallInd .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .bindCallElse .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .bindAxiom .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .regRead .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .regReadElse .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .awaits .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .exchange _ _ _ _ rest, h => by
       simp only [Block.kOk, Block.vOk] at h ⊢
       exact Block.vOk_of_kOk rest h
@@ -505,12 +505,12 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   | .bindCall _ _ _ _ _ rest, h => by
       simp only [Endblock.kOk, Endblock.vOk] at h ⊢
       exact Endblock.vOk_of_kOk rest h
-  | .bindAxiom .., h => by simp [Endblock.kOk] at h
-  | .bindAxiomElse .., h => by simp [Endblock.kOk] at h
-  | .regRead .., h => by simp [Endblock.kOk] at h
-  | .regReadElse .., h => by simp [Endblock.kOk] at h
-  | .awaits .., h => by simp [Endblock.kOk] at h
-  | .bindCallInd .., h => by simp [Endblock.kOk] at h
+  | .bindAxiom .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .regRead .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .regReadElse .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .awaits .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindCallInd .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .narrow _ _ _ sonst rest, h => by
       simp only [Endblock.kOk, Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_of_kOk sonst h.1, Endblock.vOk_of_kOk rest h.2⟩

@@ -371,7 +371,7 @@ theorem mischT_globs (T : D.Tab ⊕ D.Glob → Prop) (X : List (D.Tab ⊕ D.Glob
     (w : World D) (s : Speicher D) (g : D.Glob)
     (h : Sum.inr g ∈ X ∧ T (.inr g)) :
     (mischT T X w s).globs g = s.globs g := by
-  simp [mischT, h]
+  simp only [mischT, h, and_self, ↓reduceIte]
 
 /-- Projection outside, applied: an unpinned slot reads the live world. -/
 theorem mischT_slot_beiseite (T : D.Tab ⊕ D.Glob → Prop)

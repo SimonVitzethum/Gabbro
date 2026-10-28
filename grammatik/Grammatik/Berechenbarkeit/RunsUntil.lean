@@ -71,7 +71,7 @@ theorem ExitTrace.run {n σ ρ σ' ρ'} (h : ExitTrace step inv n σ ρ σ' ρ')
 theorem exitTrace_of_run (a : D.Annahme) : ∀ {p : Nat} {σ ρ σ' ρ'},
     foreverLauf (l := false) a step inv p σ ρ = .ok σ' ρ' →
       ∃ n, n < p ∧ ExitTrace step inv n σ ρ σ' ρ'
-  | 0, _, _, _, _, h => by simp [foreverLauf] at h
+  | 0, _, _, _, _, h => by simp only [foreverLauf, reduceCtorEq] at h
   | p + 1, σ, ρ, σ', ρ', h => by
       rw [foreverLauf] at h
       cases hi : (inv σ ρ).2 with
@@ -183,7 +183,7 @@ theorem runsUntil_iff (O : Orakel D) (passes : Nat)
     cannot prove that it is eventually taken. -/
 theorem untilBody_has_exit (condition : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ) :
     (befB true true (untilBody condition body)).austritt = true := by
-  simp [untilBody, befB, befS, befund_und_austritt]
+  simp only [untilBody, befB, befS, befund_und_austritt, Bool.or_false, Bool.true_or]
 
 /-- Successful exit of a guarded loop establishes its actual guard, provided the body has no
     separate `leave`. Logic/hardware failures remain failures, never successful exits. -/

@@ -142,7 +142,7 @@ theorem fortschrittFX_aus {K : FadenMaschine D}
         · refine Or.inr ⟨_, FadenSchrittX.join K t hl hw fun u hu =>
             Classical.byContradiction fun hfu => hj ⟨u, hu, hfu⟩, rfl, ?_⟩
           show (if t = t then [] else K.wartet t) = []
-          simp
+          simp only [↓reduceIte]
 
 end Faden
 

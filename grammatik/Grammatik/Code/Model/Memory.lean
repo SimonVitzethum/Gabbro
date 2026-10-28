@@ -62,11 +62,11 @@ def Mem.store (m : Mem) (b : Nat) (o : Int) (t : Ty) (v : Val) : Option Mem :=
       else none
 
 theorem setBlk_same (m : Mem) (b : Nat) (blk : Blk) : (m.setBlk b blk).blks b = some blk := by
-  simp [Mem.setBlk]
+  simp only [Mem.setBlk, ↓reduceIte]
 
 theorem setBlk_other (m : Mem) (b : Nat) (blk : Blk) (b' : Nat) (h : b' ≠ b) :
     (m.setBlk b blk).blks b' = m.blks b' := by
-  simp [Mem.setBlk, h]
+  simp only [Mem.setBlk, h, ↓reduceIte]
 
 /-- What a successful store says: the block exists, the access is inside it, the value has the
     type, and the new memory is the old one with that block's cells overwritten. -/
@@ -76,14 +76,14 @@ theorem store_some {m m' : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
       m' = m.setBlk b { blk with cells := putCells blk.cells o.toNat v.enc } := by
   unfold Mem.store at h
   split at h
-  · simp at h
+  · simp only [reduceCtorEq] at h
   · rename_i blk hblk
     split at h
     · rename_i hc
       refine ⟨blk, hblk, hc.1, hc.2, ?_⟩
-      simp at h
+      simp only [Option.some.injEq] at h
       exact h.symm
-    · simp at h
+    · simp only [reduceCtorEq] at h
 
 theorem alloc_wf {m : Mem} (h : m.Wf) (n : Nat) (z : Bool) : (m.alloc n z).1.Wf := by
   intro b hb
@@ -102,7 +102,7 @@ theorem alloc_fresh {m : Mem} (h : m.Wf) (n : Nat) (z : Bool) (b : Nat)
 
 theorem alloc_blks_old (m : Mem) (n : Nat) (z : Bool) (b : Nat) (hb : b ≠ m.next) :
     (m.alloc n z).1.blks b = m.blks b := by
-  simp [Mem.alloc, Mem.setBlk, hb]
+  simp only [Mem.alloc, Mem.setBlk, hb, ↓reduceIte]
 
 theorem alloc_load (m : Mem) (n : Nat) (z : Bool) (b : Nat) (hb : b ≠ m.next) (o : Int) (t : Ty) :
     (m.alloc n z).1.load b o t = m.load b o t := by
@@ -110,7 +110,7 @@ theorem alloc_load (m : Mem) (n : Nat) (z : Bool) (b : Nat) (hb : b ≠ m.next) 
 
 theorem alloc_size (m : Mem) (n : Nat) (z : Bool) :
     ((m.alloc n z).1.blks (m.alloc n z).2).map Blk.size = some n := by
-  simp [Mem.alloc, Mem.setBlk]
+  simp only [Mem.alloc, Mem.setBlk, ↓reduceIte, Option.map_some]
 
 theorem store_next {m m' : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
     (h : m.store b o t v = some m') : m'.next = m.next := by
@@ -129,7 +129,7 @@ theorem store_wf {m m' : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
   obtain ⟨blk, hblk, _, _, e⟩ := store_some h
   by_cases eb : b' = b
   · subst eb
-    exact hw b' (by simp [hblk])
+    exact hw b' (by simp only [hblk, Option.isSome_some])
   · rw [store_blks_other h b' eb] at hb'
     exact hw b' hb'
 

@@ -55,9 +55,9 @@ theorem run_complete {n : Nat} (p : Program n) (frame : Frame) (fuel : Nat) (inp
   have hsource := initial_budget p input fuel
   rw [he] at hsource
   obtain ⟨C, hrun, hrep⟩ := drive_complete (compile p) frame (transitionBudget n fuel) hr hsource
-  refine ⟨C, by simp [run, hstart, hrun], hrep, ?_⟩
+  refine ⟨C, by simp only [run, hstart, hrun], hrep, ?_⟩
   have hout := Store.observe_correct hrep.2.2 Stack.output
-  simp [observedOutput, encode, storageOf, State.output, hout]
+  simp only [observedOutput, hout, encode, storageOf, Option.map_some, State.output]
 
 /-- Conversely, normal target completion contains a genuine finite source
 halting certificate. Exhaustion and OOM cannot be used as such a certificate. -/
@@ -72,13 +72,13 @@ theorem run_sound {n : Nat} (p : Program n) (frame : Frame) (fuel : Nat) (input 
   obtain ⟨c, hs, hrep⟩ := drive_sound (compile p) frame (transitionBudget n fuel) hr hrun
   rw [initial_budget p input fuel] at hs
   cases ht : Brainfuck.runFor (Brainfuck.step p) fuel (initial input) with
-  | exhausted target => simp [ht, Brainfuck.RunResult.map] at hs
+  | exhausted target => simp only [RunResult.map, ht, reduceCtorEq] at hs
   | halted target =>
     simp only [ht, Brainfuck.RunResult.map, Brainfuck.RunResult.halted.injEq] at hs
     subst c
     refine ⟨target, rfl, hrep, ?_⟩
     have hout := Store.observe_correct hrep.2.2 Stack.output
-    simp [observedOutput, encode, storageOf, State.output, hout]
+    simp only [observedOutput, hout, encode, storageOf, Option.map_some, State.output]
 
 theorem normal_halting_iff {n : Nat} (p : Program n) (frame : Frame) (fuel : Nat) (input output : List Brainfuck.Byte) :
     (∃ C, run p true frame fuel input = .halted C ∧ observedOutput C frame = some output) ↔
@@ -114,8 +114,8 @@ theorem run_sound_any {n : Nat} (p : Program n) (available : Bool) (frame : Fram
       C.Represents frame (encode target) ∧ observedOutput C frame = some target.output := by
   have hload := loadInput_safe (finiteMachine p) available frame input
   cases hl : loadInput (finiteMachine p) available frame input with
-  | outOfMemory S => simp [run, hl] at he
-  | invalid S => simp [hl, Outcome.Compatible] at hload
+  | outOfMemory S => simp only [run, hl, reduceCtorEq] at he
+  | invalid S => simp only [Outcome.Compatible, hl] at hload
   | success start =>
     have hr : start.Represents frame (Turing.initList (finiteMachine p) input) := by
       simpa [hl, Outcome.Compatible] using hload
@@ -124,13 +124,13 @@ theorem run_sound_any {n : Nat} (p : Program n) (available : Bool) (frame : Fram
     obtain ⟨c, hs, hrep⟩ := drive_sound_any (compile p) available frame (transitionBudget n fuel) hr hrun
     rw [initial_budget p input fuel] at hs
     cases ht : Brainfuck.runFor (Brainfuck.step p) fuel (initial input) with
-    | exhausted target => simp [ht, Brainfuck.RunResult.map] at hs
+    | exhausted target => simp only [RunResult.map, ht, reduceCtorEq] at hs
     | halted target =>
       simp only [ht, Brainfuck.RunResult.map, Brainfuck.RunResult.halted.injEq] at hs
       subst c
       refine ⟨target, rfl, hrep, ?_⟩
       have hout := Store.observe_correct hrep.2.2 Stack.output
-      simp [observedOutput, encode, storageOf, State.output, hout]
+      simp only [observedOutput, hout, encode, storageOf, Option.map_some, State.output]
 
 theorem divergence_preserved {n : Nat} (p : Program n) (input : List Brainfuck.Byte)
     (hd : ¬ (StateTransition.eval (Brainfuck.step p) (initial input)).Dom)

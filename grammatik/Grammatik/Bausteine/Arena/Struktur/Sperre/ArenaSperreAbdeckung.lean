@@ -53,7 +53,7 @@ end
 theorem schleife_nicht_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (an : D.Annahme) (inv : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (rest : Block D V l Γ Λ Λ) :
     (Block.cons (Stmt.forever an inv body) rest).schleifenfrei = false := by
-  simp [Block.schleifenfrei, Stmt.schleifenfrei]
+  simp only [Block.schleifenfrei, Stmt.schleifenfrei, Bool.false_and]
 
 end Schleifenfrei
 
@@ -182,13 +182,13 @@ theorem erk_blockR {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a a' : Abs} {b
       (BlockR.check _ _ _ (endR_of_rein hv2) (blockR_glob _ _ _ _ (ih rfl hs.2.2)))
   | forever an inv body rest hin hb hs' h ihb ih =>
     intro hl hs
-    simp [Block.schleifenfrei, Stmt.schleifenfrei] at hs
+    simp only [Block.schleifenfrei, Stmt.schleifenfrei, Bool.false_and, Bool.false_eq_true] at hs
   | traverse t inv body rest hin hb hs' h ihb ih =>
     intro hl hs
-    simp [Block.schleifenfrei, Stmt.schleifenfrei] at hs
+    simp only [Block.schleifenfrei, Stmt.schleifenfrei, Bool.false_and, Bool.false_eq_true] at hs
   | retry n bis body ueber rest hin hb hs' hu h3 h4 h ihb ihu ih =>
     intro hl hs
-    simp [Block.schleifenfrei, Stmt.schleifenfrei] at hs
+    simp only [Block.schleifenfrei, Stmt.schleifenfrei, Bool.false_and, Bool.false_eq_true] at hs
 
 /-- **A loop-free recognized function body is covered** -- the premise `EndR` of `erkE_maschine`, from the certificate. -/
 theorem erkE_endR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {a : Abs} {e : Endblock D V l Γ Λ}
@@ -208,13 +208,13 @@ theorem erkE_endR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {a : Abs} {e : Endbl
     exact EndR.cons _ _ (StmtR.ite _ _ _ (erk_blockR ht rfl hs.1.1) (erk_blockR he rfl hs.1.2)) (ihr rfl hs.2)
   | forever an inv body rest hin hb hs' h ih =>
     intro hl hs
-    simp [Endblock.schleifenfrei, Stmt.schleifenfrei] at hs
+    simp only [Endblock.schleifenfrei, Stmt.schleifenfrei, Bool.false_and, Bool.false_eq_true] at hs
   | traverse t inv body rest hin hb hs' h ih =>
     intro hl hs
-    simp [Endblock.schleifenfrei, Stmt.schleifenfrei] at hs
+    simp only [Endblock.schleifenfrei, Stmt.schleifenfrei, Bool.false_and, Bool.false_eq_true] at hs
   | retry n bis body ueber rest hin hb hs' hu h3 h4 h ih =>
     intro hl hs
-    simp [Endblock.schleifenfrei, Stmt.schleifenfrei] at hs
+    simp only [Endblock.schleifenfrei, Stmt.schleifenfrei, Bool.false_and, Bool.false_eq_true] at hs
 
 /-- **The machine bridge with ONE certificate.** A loop-free recognized writer needs no separate coverage proof: `erkE_endR`
     derives `EndR` from the derivation, and `erkE_maschine` does the rest. -/

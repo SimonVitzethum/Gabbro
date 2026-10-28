@@ -71,8 +71,10 @@ theorem freiVar_ausfuehren (x : Var Γ (Ty.index (D.count A.tab)))
   · simp only [eval, Block.freiKopfNeuX, Block.freiKopfAlt, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
       ArenaForm.stand_lese, FreiForm.stand_schreibGlob_kopf, ArenaForm.stand_schreibSlot]
   · refine ⟨fun g _ hk _ => ?_, fun k f hf hn => ?_⟩
-    · simp [eval, hk]
-    · simp [eval, World.slots_schreibSlot_ne, hn]
+    · simp only [eval, ne_eq, hk, not_false_eq_true, World.globs_schreibGlob_ne, World.globs_lese,
+  World.globs_schreibSlot]
+    · simp only [eval, World.slots_schreibGlob, World.slots_lese, ne_eq, hn, not_false_eq_true,
+  World.slots_schreibSlot_ne]
 
 /-- **`free` of a live slot, for every continuation:** the free list stays well formed, every other live slot stays
     live, the released slot is dead, and only the allocator's places moved. -/
@@ -109,8 +111,10 @@ theorem arenaRumpf_ausfuehren (v : Expr D Γ Λ (D.typ A.tab A.feld))
       ArenaForm.stand_lese, ArenaForm.stand_schreibGlob]
     exact umTyp_trans_n _ _ _
   · refine ⟨fun g hz _ _ => ?_, fun k' f hf hn => ?_⟩
-    · simp [eval, Block.arenaBump, hz]
-    · simp [eval, Block.arenaBump, World.slots_schreibSlot_ne, hf]
+    · simp only [eval, Block.arenaBump, Int.reduceAdd, orte_umTyp, eval_umTyp, ne_eq, hz, not_false_eq_true,
+  World.globs_schreibGlob_ne, World.globs_lese, World.globs_schreibSlot]
+    · simp only [eval, Block.arenaBump, Int.reduceAdd, orte_umTyp, eval_umTyp, World.slots_schreibGlob,
+  World.slots_lese, ne_eq, hf, not_false_eq_true, World.slots_schreibSlot_ne]
 
 /-- **`let i = alloc A (v) else voll; rest` from the counter, executed in the middle of a body:** under `stand < count`
     the binder holds the counter, the run continues in the world the allocation leaves; `FreiOk` and every liveness
@@ -176,8 +180,10 @@ theorem nimmAlloc_fakten (v : Expr D Γ Λ (D.typ A.tab A.feld))
       ArenaForm.stand_schreibSlot]
   case r4 =>
     refine ⟨fun g _ hk _ => ?_, fun k' f hf hn => ?_⟩
-    · simp [eval, hk]
-    · simp [eval, World.slots_schreibSlot_ne, hf]
+    · simp only [eval, World.globs_schreibSlot, World.globs_lese, ne_eq, hk, not_false_eq_true,
+  World.globs_schreibGlob_ne]
+    · simp only [eval, ne_eq, hf, not_false_eq_true, World.slots_schreibSlot_ne, World.slots_lese,
+  World.slots_schreibGlob]
 
 /-- **`let i = alloc A (v) else voll; rest` from the free list, executed in the middle of a body:** `FreiOk` and every
     liveness are kept, the slot handed out is live and WAS on the free list. -/

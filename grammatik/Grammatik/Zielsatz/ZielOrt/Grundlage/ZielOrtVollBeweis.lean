@@ -269,9 +269,9 @@ theorem axWelt_rahmen (e0 : Ereignis D) (a : D.Ax) (κ σ₂ : World D) :
     Rahmen (D.aschreibt a) (D.agschreibt a) κ (axWelt e0 a κ σ₂) := by
   refine ⟨fun t ht k f => ?_, fun g hg => ?_⟩
   · show (if D.aschreibt a t = true then σ₂.slots t else κ.slots t) k f = κ.slots t k f
-    rw [if_neg (by simp [ht])]
+    rw [if_neg (by simp only [ht, Bool.false_eq_true, not_false_eq_true])]
   · show (if D.agschreibt a g = true then σ₂.globs g else κ.globs g) = κ.globs g
-    rw [if_neg (by simp [hg])]
+    rw [if_neg (by simp only [hg, Bool.false_eq_true, not_false_eq_true])]
 
 /-- The recorded answer world agrees with the machine's answer world on
     every carrier on which the key world agreed with the machine's call
@@ -703,8 +703,8 @@ theorem blatt_orakel (O O' : Orakel D) (passes : Nat)
     {Γ : Ctx} {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} (hb : s.istBlatt = true)
     (ha : s.istAxiom = false) (σ : World D) (ρ : Env D Γ) :
     execStmt O passes R s σ ρ = execStmt O' passes R' s σ ρ := by
-  cases s <;> first | rfl | (simp [Stmt.istBlatt] at hb; done) |
-    (simp [Stmt.istAxiom] at ha; done)
+  cases s <;> first | rfl | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb; done) |
+    (simp only [Stmt.istAxiom, Bool.true_eq_false] at ha; done)
 
 /-- **Leaf locality, for any oracle and handler.** A leaf other than an
     axiom call, run at a world agreeing with the machine world on a
@@ -720,8 +720,8 @@ theorem blatt_lokalV (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag
         execStmt O' passes R s σ ρ = .ok σ' ρ') ∧ GleichAuf S σ' W' ∧
       σ.spur.length ≤ σ'.spur.length := by
   have hk : s.kOk = true := by
-    cases s <;> first | rfl | (simp [Stmt.istBlatt] at hb; done) |
-      (simp [Stmt.istAxiom] at ha; done) | (simp [execStmt] at h; done)
+    cases s <;> first | rfl | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb; done) |
+      (simp only [Stmt.istAxiom, Bool.true_eq_false] at ha; done) | (simp only [execStmt, reduceCtorEq] at h; done)
   obtain ⟨σ', h1, h2, h3⟩ := blatt_lokal P O passes s hk hb (fun o ho => hS ho) hg h
   exact ⟨σ', fun O' R => by rw [blatt_orakel O' O passes R keinRuf hb ha]; exact h1, h2, h3⟩
 
@@ -847,7 +847,7 @@ theorem fadenV_blatt (e0 : Ereignis D) (hO : GutO O) {z : RufFadenG D} {W : Worl
           simp only [execStmt, axiomAntwort, hw]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
-      | _ => simp [Stmt.istAxiom] at hax
+      | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax
 
 end Schritte2
 

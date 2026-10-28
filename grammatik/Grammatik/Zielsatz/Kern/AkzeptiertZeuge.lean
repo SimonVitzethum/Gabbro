@@ -102,7 +102,7 @@ def mCs : List (mD.Tab ⊕ mD.Glob) := [.inl MTab.konto, .inl MTab.privA, .inl M
 
 theorem mCs_voll : ∀ c : mD.Tab ⊕ mD.Glob, c ∈ mCs := fun c => by
   rcases c with t | g
-  · cases t <;> simp [mCs]
+  · cases t <;> simp only [mCs, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]
   · exact nomatch g
 
 /-- **`Akzeptiert` holds on the two-thread fixture**, its declared starts
@@ -281,7 +281,7 @@ def akD : Deklaration where
   Fn := AkFn
   sig := akSigOf
   sigNr := akSigNr
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -297,7 +297,7 @@ def akD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun _ h => by simp at h
+  geteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 

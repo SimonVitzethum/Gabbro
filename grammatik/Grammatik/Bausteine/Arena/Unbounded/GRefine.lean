@@ -92,7 +92,8 @@ theorem allocate_unbounded {α : Type} (H : Heap region α) (hv : H.Valid .unbou
   have hempty := (H.candidate_facts hv).1
   cases h : H.allocate .unbounded true frame value with
   | none =>
-    simp [Heap.allocate, Capacity.permits, ArenaOwnership.State.allocate, hempty] at h
+    simp only [Heap.allocate, Capacity.permits, Bool.and_self, ↓reduceIte, ArenaOwnership.State.allocate, hempty,
+  Option.bind_eq_bind, Option.bind_some, reduceCtorEq] at h
   | some x =>
     obtain ⟨H', ref⟩ := x
     obtain ⟨hv', _, hs, _⟩ := Heap.allocate_valid hv h
@@ -140,7 +141,7 @@ theorem gregion_verfeinert (passes : Nat) (R : ∀ f : rD.Fn, World rD → Env r
   obtain ⟨_, hown, _, _⟩ := Heap.allocate_valid (Heap.empty_valid _) ha
   have hacc : H1.rights.access frame ref.handle := ArenaOwnership.State.owner_access hown
   have hw : H1.write frame ref ⟨7, by decide, by decide⟩ = some (H1.put ref.handle.slot (some ⟨7, by decide, by decide⟩)) := by
-    simp [Heap.write, hacc]
+    simp only [Heap.write, hacc, ↓reduceIte]
   obtain ⟨σ', hrun, h7⟩ := zelle_geschrieben 0 passes R
   refine ⟨H1, _, ref, σ', ha, hs.trans hcand, hw, hrun, ?_⟩
   intro i v hv
@@ -163,6 +164,6 @@ theorem gregion_verfeinert (passes : Nat) (R : ∀ f : rD.Fn, World rD → Env r
     unfold Heap.install at hv
     simp only at hv
     rw [if_neg (by rw [← hs]; exact hi)] at hv
-    simp [Heap.empty] at hv
+    simp only [Heap.empty, reduceCtorEq] at hv
 
 end Gabbro.Grammatik.ArenaStorage

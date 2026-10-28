@@ -100,8 +100,8 @@ theorem agrees : state.agrees A world := by
   refine ⟨valid, fun i => ?_⟩
   rw [live]
   by_cases hi : i = 0
-  · simp [state, hi]
-  · simp [state, hi]
+  · simp only [hi, state, ↓reduceIte, Option.some.injEq, exists_eq']
+  · simp only [hi, state, ↓reduceIte, reduceCtorEq, exists_false]
 
 theorem owns : state.owns caller handle := by decide
 

@@ -45,11 +45,11 @@ theorem beqWorte_klingt : ∀ (a b : List String), beqWorte a b = true → a = b
   induction a with
   | nil =>
     intro b h
-    cases b <;> simp [beqWorte] at h ⊢
+    cases b <;> simp only [beqWorte, Bool.false_eq_true] at h ⊢
   | cons x xs ih =>
     intro b h
     cases b with
-    | nil => simp [beqWorte] at h
+    | nil => simp only [beqWorte, Bool.false_eq_true] at h
     | cons y ys =>
       simp only [beqWorte, Bool.and_eq_true, strEq_eq] at h
       obtain ⟨h1, h2⟩ := h
@@ -309,7 +309,7 @@ where
 theorem druckQuant_ne_nil (w : String) (ns : List String) (ts : List (List Token)) :
     druckExtToks.druckQuant w ns ts ≠ [] := by
   unfold druckExtToks.druckQuant
-  split <;> simp
+  split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
 
 theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Token)) :
     druckExtToks k ns ts ≠ [] := by
@@ -317,11 +317,11 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
   · exact druckQuant_ne_nil _ _ _
   · exact druckQuant_ne_nil _ _ _
   · exact druckQuant_ne_nil _ _ _
-  · split <;> simp
-  · split <;> simp
-  · split <;> simp
-  · split <;> simp
-  · split <;> simp
+  · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
+  · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
+  · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
+  · split <;> simp only [ne_eq, List.cons_ne_self, not_false_eq_true]
+  · split <;> simp only [List.append_assoc, List.cons_append, List.nil_append, ne_eq, List.append_eq_nil_iff, reduceCtorEq, and_false, not_false_eq_true, List.cons_ne_self]
 
 mutual
 def druckToks : SExpr → List Token
@@ -508,7 +508,7 @@ def ruhigGleit : List Token → Bool
 theorem strNe_of (s w : String) (h : strEq s w = false) : s ≠ w := by
   intro e
   subst e
-  simp [strEq] at h
+  simp only [strEq, BEq.rfl, Bool.true_eq_false] at h
 
 -- A negated `true` is `false` (for unfolding `ruhig`).
 theorem nichtWahr_falsch : ∀ (b : Bool), (!b) = true → b = false := by
@@ -530,17 +530,17 @@ theorem kopf_ne {s : String} (h : istKopfWort s = false) :
 
 /-- The name token is no mark, no literal and no end: the readers that look for those pass it by. -/
 @[simp] theorem nameTok_ne_zeichen (s z : String) : nameTok s ≠ .zeichen z := by
-  unfold nameTok; split <;> simp
+  unfold nameTok; split <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 @[simp] theorem nameTok_ne_ende (s : String) : nameTok s ≠ .ende := by
-  unfold nameTok; split <;> simp
+  unfold nameTok; split <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 @[simp] theorem nameTok_ne_num (s : String) (n : Nat) : nameTok s ≠ .num n := by
-  unfold nameTok; split <;> simp
+  unfold nameTok; split <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 @[simp] theorem nameTok_ne_float (s z : String) : nameTok s ≠ .float z := by
-  unfold nameTok; split <;> simp
+  unfold nameTok; split <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 @[simp] theorem nameTok_ne_text (s z : String) : nameTok s ≠ .text z := by
-  unfold nameTok; split <;> simp
+  unfold nameTok; split <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 @[simp] theorem nameTok_ne_doku (s z : String) : nameTok s ≠ .doku z := by
-  unfold nameTok; split <;> simp
+  unfold nameTok; split <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- A printed name at a primary: read through `parseKopf`. -/
 theorem parsePrimary_nameTok (f : Nat) (s : String) (r : List Token) (h : istKopfWort s = false) :
@@ -550,12 +550,12 @@ theorem parsePrimary_nameTok (f : Nat) (s : String) (r : List Token) (h : istKop
   unfold nameTok
   split
   · simp [parsePrimary, nameText, hk, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
-  · simp [parsePrimary, nameText, hk]
+  · simp only [parsePrimary, nameText, hk, Bool.false_eq_true, ↓reduceIte]
 
 /-- A printed name at a unary: no prefix mark, so the primary reader. -/
 theorem parseUnary_nameTok (f : Nat) (s : String) (r : List Token) :
     parseUnary (f + 1) (nameTok s :: r) = parsePrimary f (nameTok s :: r) := by
-  unfold nameTok; split <;> simp [parseUnary]
+  unfold nameTok; split <;> simp only [parseUnary]
 
 -- Every operator table misses a benign follow. Each proof cases
 -- on the token list: `[]` and non-`zeichen` heads miss by
@@ -583,7 +583,7 @@ theorem stopOder : ∀ (t : List Token),
       simp only [istSchleifenOp, Bool.or_eq_false_iff, and_assoc] at hf
       obtain ⟨hOr, -, -, -, -, -⟩ := hf
       have ne := strNe_of s "||" hOr
-      simp [opOder, ne]
+      simp only [opOder, List.cons.injEq, Token.zeichen.injEq, ne, false_and, imp_self, implies_true]
     | ende => rfl
 theorem stopUnd : ∀ (t : List Token),
     ruhig t = true → opUnd t = none := by
@@ -604,7 +604,7 @@ theorem stopUnd : ∀ (t : List Token),
       simp only [istSchleifenOp, Bool.or_eq_false_iff, and_assoc] at hf
       obtain ⟨-, hAnd, -, -, -, -⟩ := hf
       have ne := strNe_of s "&&" hAnd
-      simp [opUnd, ne]
+      simp only [opUnd, List.cons.injEq, Token.zeichen.injEq, ne, false_and, imp_self, implies_true]
     | ende => rfl
 theorem stopVgl : ∀ (t : List Token),
     ruhig t = true → opVgl t = none := by
@@ -833,7 +833,8 @@ theorem stopSuffix : ∀ (F : Nat) (e : SExpr) (t : List Token),
       have ne2 := strNe_of s "->" c2
       have ne3 := strNe_of s "[" c3
       have ne5 := strNe_of s "(" c5
-      simp [parseSuffixe, ne1, ne2, ne3, ne5]
+      simp only [parseSuffixe, List.cons.injEq, Token.zeichen.injEq, ne1, false_and, imp_self, implies_true, ne2,
+  ne3, ne5]
     | ende => rfl
 
 -- Trees handled at the primary level (prefix `un` trees and
@@ -943,7 +944,7 @@ theorem groesse_mem_le : ∀ (xs : List SExpr) (x : SExpr),
   induction xs with
   | nil =>
     intro x hm
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   | cons y ys ih =>
     intro x hm
     simp only [List.mem_cons] at hm
@@ -962,7 +963,7 @@ theorem gutListe_mem : ∀ (xs : List SExpr) (x : SExpr),
   induction xs with
   | nil =>
     intro x hm _
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   | cons y ys ih =>
     intro x hm hxs
     simp only [List.mem_cons] at hm
@@ -978,10 +979,10 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
     gutPlatz x = true → gut x = true := by
   intro x h
   cases x with
-  | lit m => simp [gutPlatz] at h
-  | float s => simp [gutPlatz] at h
-  | tru => simp [gutPlatz] at h
-  | fls => simp [gutPlatz] at h
+  | lit m => simp only [gutPlatz, Bool.false_eq_true] at h
+  | float s => simp only [gutPlatz, Bool.false_eq_true] at h
+  | tru => simp only [gutPlatz, Bool.false_eq_true] at h
+  | fls => simp only [gutPlatz, Bool.false_eq_true] at h
   | «variable» s =>
     simp only [gutPlatz] at h
     simp only [gut] at ⊢
@@ -998,15 +999,15 @@ theorem gut_of_gutPlatz : ∀ (x : SExpr),
     simp only [gutPlatz] at h
     simp only [gut] at ⊢
     exact h
-  | un o x => simp [gutPlatz] at h
-  | bin o l r => simp [gutPlatz] at h
-  | call f xs => simp [gutPlatz] at h
-  | fnref f => simp [gutPlatz] at h
-  | built f xs => simp [gutPlatz] at h
-  | old x => simp [gutPlatz] at h
-  | res => simp [gutPlatz] at h
-  | why g f => simp [gutPlatz] at h
-  | ext xk xn xs => simp [gutPlatz] at h
+  | un o x => simp only [gutPlatz, Bool.false_eq_true] at h
+  | bin o l r => simp only [gutPlatz, Bool.false_eq_true] at h
+  | call f xs => simp only [gutPlatz, Bool.false_eq_true] at h
+  | fnref f => simp only [gutPlatz, Bool.false_eq_true] at h
+  | built f xs => simp only [gutPlatz, Bool.false_eq_true] at h
+  | old x => simp only [gutPlatz, Bool.false_eq_true] at h
+  | res => simp only [gutPlatz, Bool.false_eq_true] at h
+  | why g f => simp only [gutPlatz, Bool.false_eq_true] at h
+  | ext xk xn xs => simp only [gutPlatz, Bool.false_eq_true] at h
 
 /-- The printable `ext` trees are the calls through a place: a suffixed place, then the arguments. -/
 theorem gut_ruf_faelle (k : XKind) (ns : List String) (xs : List SExpr) (h : gut (.ext k ns xs) = true) :
@@ -1015,14 +1016,14 @@ theorem gut_ruf_faelle (k : XKind) (ns : List String) (xs : List SExpr) (h : gut
   cases k with
   | call =>
     cases ns with
-    | cons _ _ => simp [gut] at h
+    | cons _ _ => simp only [gut, Bool.false_eq_true] at h
     | nil =>
       cases xs with
-      | nil => simp [gut, gutOrtRuf] at h
+      | nil => simp only [gut, gutOrtRuf, Bool.false_eq_true] at h
       | cons c ys =>
         simp only [gut, gutOrtRuf, Bool.and_eq_true, Bool.not_eq_true'] at h
         exact ⟨rfl, rfl, c, ys, rfl, h.1.1, h.1.2, h.2⟩
-  | _ => simp [gut] at h
+  | _ => simp only [gut, Bool.false_eq_true] at h
 
 /-- Printed operands, comma separated, are the printed list. -/
 theorem kommaToks_viele : ∀ (ys : List SExpr), kommaToks (druckToksViele ys) = druckToksListe ys
@@ -1075,7 +1076,7 @@ theorem keinDP_list : ∀ (n : Nat)
   induction xs with
   | nil =>
     intro hs hg t hm
-    simp [druckToksListe] at hm
+    simp only [druckToksListe, List.not_mem_nil] at hm
   | cons x zs ihzs =>
     intro hs hg t hm
     cases zs with
@@ -1098,7 +1099,7 @@ theorem keinDP_list : ∀ (n : Nat)
         · rw [List.mem_singleton] at hm2
           subst hm2
           intro h
-          simp at h
+          simp only [Token.zeichen.injEq, String.reduceEq] at h
       · have hzs : groesseListe (y :: ys) ≤ n := by
           simp only [groesseListe] at hs ⊢
           omega
@@ -1162,31 +1163,31 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       rw [List.mem_singleton] at hm
       subst hm
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | float s =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | tru =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | fls =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | «variable» s =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
       intro h
-      simp at h
+      simp only [nameTok_ne_zeichen] at h
     | field x f =>
       simp only [gut] at hg
       simp only [druckToks] at hm
@@ -1199,9 +1200,9 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       · rw [List.mem_cons, List.mem_singleton] at hmR
         obtain rfl | rfl := hmR
         · intro h
-          simp at h
+          simp only [Token.zeichen.injEq, String.reduceEq] at h
         · intro h
-          simp at h
+          simp only [nameTok_ne_zeichen] at h
     | index x i =>
       simp only [gut, Bool.and_eq_true] at hg
       obtain ⟨hpx, hi⟩ := hg
@@ -1219,7 +1220,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
           · rw [List.mem_singleton] at hmR
             subst hmR
             intro h
-            simp at h
+            simp only [Token.zeichen.injEq, String.reduceEq] at h
         · have hii : groesse i ≤ n := by
             simp only [groesse] at hs
             omega
@@ -1227,7 +1228,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       · rw [List.mem_singleton] at hmR
         subst hmR
         intro h
-        simp at h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
     | arrow x f =>
       simp only [gut] at hg
       simp only [druckToks] at hm
@@ -1240,9 +1241,9 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       · rw [List.mem_cons, List.mem_singleton] at hmR
         obtain rfl | rfl := hmR
         · intro h
-          simp at h
+          simp only [Token.zeichen.injEq, String.reduceEq] at h
         · intro h
-          simp at h
+          simp only [nameTok_ne_zeichen] at h
     | un o x =>
       by_cases hs0 : strEq o "-()" = true
       · have ho := strKlingt o "-()" hs0
@@ -1254,8 +1255,8 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         | lit k =>
           simp only [druckToks, hs0, ite_true, List.mem_append, List.mem_cons, List.mem_nil_iff,
             or_false] at hm
-          rcases hm with ((rfl | rfl) | rfl) | rfl <;> intro h <;> simp at h
-        | _ => simp [istLit] at hl
+          rcases hm with ((rfl | rfl) | rfl) | rfl <;> intro h <;> simp only [Token.zeichen.injEq, String.reduceEq, reduceCtorEq] at h
+        | _ => simp only [istLit, Bool.false_eq_true] at hl
       simp only [gut, hs0, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg
       obtain ⟨hop, hx⟩ := hg
       have hne : o ≠ ":" := by
@@ -1282,7 +1283,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
             · rw [List.mem_singleton] at hmL
               subst hmL
               intro h
-              simp at h
+              simp only [Token.zeichen.injEq, String.reduceEq] at h
             · have hxx : groesse x ≤ n := by
                 simp only [groesse] at hs
                 omega
@@ -1290,7 +1291,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
           · rw [List.mem_singleton] at hmR
             subst hmR
             intro h
-            simp at h
+            simp only [Token.zeichen.injEq, String.reduceEq] at h
     | bin o l r =>
       simp only [gut, Bool.and_eq_true, and_assoc] at hg
       obtain ⟨hop, hl, hr⟩ := hg
@@ -1310,7 +1311,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
             · rw [List.mem_singleton] at hmL
               subst hmL
               intro h
-              simp at h
+              simp only [Token.zeichen.injEq, String.reduceEq] at h
             · have hll : groesse l ≤ n := by
                 simp only [groesse] at hs
                 omega
@@ -1327,7 +1328,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       · rw [List.mem_singleton] at hmR
         subst hmR
         intro h
-        simp at h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
     | call f xs =>
       simp only [gut, Bool.and_eq_true] at hg
       obtain ⟨hf, hxs⟩ := hg
@@ -1342,22 +1343,22 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         · rw [List.mem_cons, List.mem_singleton] at hmL
           obtain rfl | rfl := hmL
           · intro h
-            simp at h
+            simp only [nameTok_ne_zeichen] at h
           · intro h
-            simp at h
+            simp only [Token.zeichen.injEq, String.reduceEq] at h
         · exact keinDP_list n ih xs hgl hxs t hmR
       · rw [List.mem_singleton] at hmR
         subst hmR
         intro h
-        simp at h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
     | fnref p =>
       simp only [druckToks] at hm
       rw [List.mem_cons, List.mem_singleton] at hm
       obtain rfl | rfl := hm
       · intro h
-        simp at h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
       · intro h
-        simp at h
+        simp only [nameTok_ne_zeichen] at h
     | built f xs =>
       cases he1 : decEq f "sizeof" with
       | isTrue e1 =>
@@ -1382,15 +1383,15 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
               · rw [List.mem_cons, List.mem_singleton] at hmL
                 obtain rfl | rfl := hmL
                 · intro h
-                  simp at h
+                  simp only [reduceCtorEq] at h
                 · intro h
-                  simp at h
+                  simp only [Token.zeichen.injEq, String.reduceEq] at h
               · rw [args_einzeln] at hmR
                 exact ih x hxx hxg t hmR
             · rw [List.mem_singleton] at hmR
               subst hmR
               intro h
-              simp at h
+              simp only [Token.zeichen.injEq, String.reduceEq] at h
           | cons y ys =>
             rw [gut_sizeof_multi] at hg
             exact absurd hg Bool.false_ne_true
@@ -1418,15 +1419,15 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
                 · rw [List.mem_cons, List.mem_singleton] at hmL
                   obtain rfl | rfl := hmL
                   · intro h
-                    simp at h
+                    simp only [reduceCtorEq] at h
                   · intro h
-                    simp at h
+                    simp only [Token.zeichen.injEq, String.reduceEq] at h
                 · rw [args_einzeln] at hmR
                   exact ih x hxx hxg t hmR
               · rw [List.mem_singleton] at hmR
                 subst hmR
                 intro h
-                simp at h
+                simp only [Token.zeichen.injEq, String.reduceEq] at h
             | cons y ys =>
               rw [gut_lenof_multi] at hg
               exact absurd hg Bool.false_ne_true
@@ -1463,9 +1464,9 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
                     · rw [List.mem_cons, List.mem_singleton] at hmL
                       obtain rfl | rfl := hmL
                       · intro h
-                        simp at h
+                        simp only [reduceCtorEq] at h
                       · intro h
-                        simp at h
+                        simp only [Token.zeichen.injEq, String.reduceEq] at h
                     · rw [args_cons] at hmR
                       rw [List.mem_append] at hmR
                       obtain hmL | hmR := hmR
@@ -1475,17 +1476,17 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
                         · rw [List.mem_singleton] at hmR
                           subst hmR
                           intro h
-                          simp at h
+                          simp only [Token.zeichen.injEq, String.reduceEq] at h
                       · rw [args_einzeln] at hmR
                         exact ih b hbg hb t hmR
                   · rw [List.mem_singleton] at hmR
                     subst hmR
                     intro h
-                    simp at h
+                    simp only [Token.zeichen.injEq, String.reduceEq] at h
                 | cons c xs =>
                   rw [gut_aligned_multi] at hg
                   exact absurd hg Bool.false_ne_true
-          | isFalse ne3 => simp [gut, ne1, ne2, ne3] at hg
+          | isFalse ne3 => simp only [ne1, imp_false, false_implies, implies_true, ne2, ne3, gut, Bool.false_eq_true] at hg
     | old x =>
       simp only [gut] at hg
       have hxg := gut_of_gutPlatz x hg
@@ -1500,30 +1501,30 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
         · rw [List.mem_cons, List.mem_singleton] at hmL
           obtain rfl | rfl := hmL
           · intro h
-            simp at h
+            simp only [reduceCtorEq] at h
           · intro h
-            simp at h
+            simp only [Token.zeichen.injEq, String.reduceEq] at h
         · exact ih x hxx hxg t hmR
       · rw [List.mem_singleton] at hmR
         subst hmR
         intro h
-        simp at h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
     | res =>
       simp only [druckToks] at hm
       rw [List.mem_singleton] at hm
       subst hm
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | why g f =>
       simp only [druckToks] at hm
       rw [List.mem_cons, List.mem_cons, List.mem_singleton] at hm
       obtain rfl | rfl | rfl := hm
       · intro h
-        simp at h
+        simp only [nameTok_ne_zeichen] at h
       · intro h
-        simp at h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
       · intro h
-        simp at h
+        simp only [nameTok_ne_zeichen] at h
     | ext xk xn xs =>
       obtain ⟨rfl, rfl, c, ys, rfl, hc, -, hys⟩ := gut_ruf_faelle xk xn xs hg
       have hpc := groesse_pos c
@@ -1535,7 +1536,7 @@ theorem keinDP_tree : ∀ (n : Nat) (e : SExpr),
       · exact ih c hcs (gut_of_gutPlatz c hc) t hm
       · apply ih (.call "x" ys) hcall hgc t
         simp only [druckToks, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hm ⊢
-        rcases hm with (h | h) | h <;> simp [h]
+        rcases hm with (h | h) | h <;> simp only [h, or_true, true_or, Token.zeichen.injEq, String.reduceEq, or_false]
 
 -- A printed `gut` tree never starts with `)` (heads are literals,
 -- names or openers; suffix chains delver into the base, operators
@@ -1560,38 +1561,38 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | float s =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | tru =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | fls =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | «variable» s =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [nameTok_ne_zeichen] at h
     | field x f =>
       simp only [gut] at hg
       have hne : druckToks x ≠ [] := by
         intro he
         have hlen := toksLang (groesse x) x (Nat.le_refl _)
         rw [he] at hlen
-        simp at hlen
+        simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
       obtain ⟨b, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
       simp only [druckToks] at hT
       have hx : groesse x ≤ n := by
@@ -1610,7 +1611,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
         intro he
         have hlen := toksLang (groesse x) x (Nat.le_refl _)
         rw [he] at hlen
-        simp at hlen
+        simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
       obtain ⟨b, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
       simp only [druckToks] at hT
       have hx : groesse x ≤ n := by
@@ -1628,7 +1629,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
         intro he
         have hlen := toksLang (groesse x) x (Nat.le_refl _)
         rw [he] at hlen
-        simp at hlen
+        simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
       obtain ⟨b, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
       simp only [druckToks] at hT
       have hx : groesse x ≤ n := by
@@ -1646,7 +1647,7 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
         injection hT with ha _
         subst ha
         intro h
-        simp at h
+        simp only [Token.zeichen.injEq, String.reduceEq] at h
       simp only [gut, hs0, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg
       obtain ⟨hop, -⟩ := hg
       have hne : o ≠ ")" := by
@@ -1664,43 +1665,43 @@ theorem toksKopf : ∀ (n : Nat) (e : SExpr), groesse e ≤ n →
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [Token.zeichen.injEq, String.reduceEq] at h
     | call f xs =>
       simp only [druckToks, List.cons_append] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [nameTok_ne_zeichen] at h
     | fnref p =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [Token.zeichen.injEq, String.reduceEq] at h
     | built f xs =>
       simp only [druckToks, List.cons_append] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | old x =>
       simp only [druckToks, List.cons_append] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | res =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [reduceCtorEq] at h
     | why g f =>
       simp only [druckToks] at hT
       injection hT with ha _
       subst ha
       intro h
-      simp at h
+      simp only [nameTok_ne_zeichen] at h
     | ext xk xn xs =>
       obtain ⟨rfl, rfl, c, ys, rfl, hc, -, -⟩ := gut_ruf_faelle xk xn xs hg
       have hcs : groesse c ≤ n := by simp only [groesse, groesseListe] at hs; omega
@@ -1796,7 +1797,7 @@ theorem sammleSeg_stop : ∀ (segs : List String) (t : List Token),
       simp only [Bool.or_eq_false_iff, and_assoc] at hf
       obtain ⟨-, -, -, hDc, -⟩ := hf
       have ne := strNe_of s "::" hDc
-      simp [sammleSegmente, ne]
+      simp only [List.cons.injEq, Token.zeichen.injEq, ne, false_and, imp_self, implies_true, sammleSegmente]
     | ende => rfl
 
 -- A benign follow never starts with `(` (for the `parseKopf` call
@@ -1805,15 +1806,15 @@ theorem ruhigSuff_nopar : ∀ (t : List Token), ruhigSuff t = true →
     ∀ (R : List Token), t ≠ .zeichen "(" :: R := by
   intro t h R hcon
   cases t with
-  | nil => simp at hcon
+  | nil => simp only [List.nil_eq, reduceCtorEq] at hcon
   | cons hd tl =>
     cases hd with
-    | ident s => simp at hcon
-    | wort s => simp at hcon
-    | num n => simp at hcon
-    | float s => simp at hcon
-    | text s => simp at hcon
-    | doku s => simp at hcon
+    | ident s => simp only [List.cons.injEq, reduceCtorEq, false_and] at hcon
+    | wort s => simp only [List.cons.injEq, reduceCtorEq, false_and] at hcon
+    | num n => simp only [List.cons.injEq, reduceCtorEq, false_and] at hcon
+    | float s => simp only [List.cons.injEq, reduceCtorEq, false_and] at hcon
+    | text s => simp only [List.cons.injEq, reduceCtorEq, false_and] at hcon
+    | doku s => simp only [List.cons.injEq, reduceCtorEq, false_and] at hcon
     | zeichen s =>
       simp only [ruhigSuff] at h
       have hf := nichtWahr_falsch _ h
@@ -1823,7 +1824,7 @@ theorem ruhigSuff_nopar : ∀ (t : List Token), ruhigSuff t = true →
       injection hcon with hs _
       injection hs with hs2
       exact ne hs2
-    | ende => simp at hcon
+    | ende => simp only [List.cons.injEq, reduceCtorEq, false_and] at hcon
 
 -- One argument through `parseArg`: the label strip misses (the
 -- second token is never `:`), then the expression parses. The
@@ -1845,7 +1846,7 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
       intro he
       have hlen := toksLang (groesse x) x (Nat.le_refl _)
       rw [he] at hlen
-      simp at hlen
+      simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
     obtain ⟨a, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
     rw [hxb] at hcon
     simp only [List.cons_append] at hcon
@@ -1858,15 +1859,15 @@ theorem arg_einzeln : ∀ (n : Nat) (Rn : R n)
       cases hsep with
       | inl h =>
         subst h
-        simp at hsep2
+        simp only [Token.zeichen.injEq, String.reduceEq] at hsep2
       | inr h =>
         subst h
-        simp at hsep2
+        simp only [Token.zeichen.injEq, String.reduceEq] at hsep2
     | cons b R3 =>
       rw [hR] at ht
       simp only [List.cons_append] at ht
       injection ht with hb _
-      have hbmem : b ∈ druckToks x := by simp [hxb, hR]
+      have hbmem : b ∈ druckToks x := by simp only [hxb, hR, List.mem_cons, true_or, or_true]
       have hne2 := keinDP_tree n x hx hxg b hbmem
       exact hne2 hb
   simp only [parseArg] at ⊢
@@ -1927,7 +1928,7 @@ theorem args_rund : ∀ (n : Nat) (Rn : R n)
           intro he
           have hlen := toksLang (groesse x) x (Nat.le_refl _)
           rw [he] at hlen
-          simp at hlen
+          simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
         obtain ⟨a, R3, hxb⟩ := List.exists_cons_of_ne_nil hne
         have ha := hkop a R3 hxb
         rw [hxb] at hcon
@@ -1960,7 +1961,7 @@ theorem args_rund : ∀ (n : Nat) (Rn : R n)
           intro he
           have hlen := toksLang (groesse x) x (Nat.le_refl _)
           rw [he] at hlen
-          simp at hlen
+          simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
         obtain ⟨a, R3, hxb⟩ := List.exists_cons_of_ne_nil hne
         have ha := hkop a R3 hxb
         rw [hxb] at hcon
@@ -2062,45 +2063,45 @@ theorem groesse_applySuff : ∀ (base : SExpr) (suff : List SuffFrag),
       groesse base + suffGroesse suff := by
   intro base suff
   induction suff generalizing base with
-  | nil => simp [applySuff, suffGroesse]
+  | nil => simp only [applySuff, suffGroesse, Nat.add_zero]
   | cons f s ih =>
     cases f with
-    | dot g => simp [applySuff, suffGroesse, groesse, ih]; omega
-    | arrow g => simp [applySuff, suffGroesse, groesse, ih]; omega
-    | idx i => simp [applySuff, suffGroesse, groesse, ih]; omega
+    | dot g => simp only [applySuff, ih, groesse, suffGroesse]; omega
+    | arrow g => simp only [applySuff, ih, groesse, suffGroesse]; omega
+    | idx i => simp only [applySuff, ih, groesse, suffGroesse]; omega
 theorem applySuff_append : ∀ (base : SExpr) (s1 s2 : List SuffFrag),
     applySuff base (s1 ++ s2) =
       applySuff (applySuff base s1) s2 := by
   intro base s1
   induction s1 generalizing base with
-  | nil => simp [applySuff]
+  | nil => simp only [List.nil_append, applySuff, implies_true]
   | cons f s ih =>
     cases f with
-    | dot g => simp [applySuff, ih]
-    | arrow g => simp [applySuff, ih]
-    | idx i => simp [applySuff, ih]
+    | dot g => simp only [List.cons_append, applySuff, ih, implies_true]
+    | arrow g => simp only [List.cons_append, applySuff, ih, implies_true]
+    | idx i => simp only [List.cons_append, applySuff, ih, implies_true]
 theorem suffGroesse_append : ∀ (s1 s2 : List SuffFrag),
     suffGroesse (s1 ++ s2) = suffGroesse s1 + suffGroesse s2 := by
   intro s1
   induction s1 with
-  | nil => simp [suffGroesse]
+  | nil => simp only [List.nil_append, suffGroesse, Nat.zero_add, implies_true]
   | cons f s ih =>
     cases f with
-    | dot g => simp [suffGroesse, ih]; omega
-    | arrow g => simp [suffGroesse, ih]; omega
-    | idx i => simp [suffGroesse, ih]; omega
+    | dot g => simp only [List.cons_append, suffGroesse, ih]; omega
+    | arrow g => simp only [List.cons_append, suffGroesse, ih]; omega
+    | idx i => simp only [List.cons_append, suffGroesse, ih]; omega
 
 -- `suffGut` splits over appends.
 theorem suffGut_append : ∀ (s1 s2 : List SuffFrag),
     suffGut (s1 ++ s2) = (suffGut s1 && suffGut s2) := by
   intro s1
   induction s1 with
-  | nil => simp [suffGut]
+  | nil => simp only [List.nil_append, suffGut, Bool.true_and, implies_true]
   | cons f s ih =>
     cases f with
-    | dot g => simp [suffGut, ih]
-    | arrow g => simp [suffGut, ih]
-    | idx i => simp [suffGut, ih, Bool.and_assoc]
+    | dot g => simp only [List.cons_append, suffGut, ih, implies_true]
+    | arrow g => simp only [List.cons_append, suffGut, ih, implies_true]
+    | idx i => simp only [List.cons_append, suffGut, ih, Bool.and_assoc, implies_true]
 
 -- `sammleSegmente` never consumes a suffix chain (fragments start
 -- with `.`, `->`, `[`, never `::`; the tail is benign).
@@ -2136,15 +2137,16 @@ theorem suffToks_nopar : ∀ (suff : List SuffFrag) (rest R : List Token),
     | dot f =>
       intro rest R hr hcon
       simp only [suffToks, List.cons_append] at hcon
-      simp at hcon
+      simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at hcon
     | arrow f =>
       intro rest R hr hcon
       simp only [suffToks, List.cons_append] at hcon
-      simp at hcon
+      simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at hcon
     | idx i =>
       intro rest R hr hcon
       simp only [suffToks, List.cons_append] at hcon
-      simp at hcon
+      simp only [List.append_assoc, List.cons_append, List.nil_append, List.cons.injEq, Token.zeichen.injEq,
+  String.reduceEq, false_and] at hcon
 
 -- Every `gutPlatz` tree is a head variable plus fragments, with a
 -- lawful head and lawful index payloads. By size induction.
@@ -2164,10 +2166,10 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
   | succ n ih =>
     intro p hs hg
     cases p with
-    | lit m => simp [gutPlatz] at hg
-    | float s => simp [gutPlatz] at hg
-    | tru => simp [gutPlatz] at hg
-    | fls => simp [gutPlatz] at hg
+    | lit m => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | float s => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | tru => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | fls => simp only [gutPlatz, Bool.false_eq_true] at hg
     | «variable» a =>
       simp only [gutPlatz] at hg
       exact ⟨a, [], rfl, hg, rfl, by simp only [suffGroesse]; omega⟩
@@ -2181,7 +2183,7 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
       · rw [applySuff_append]
         rfl
       · have hsg : suffGut (suff ++ [.dot f]) = suffGut suff := by
-          simp [suffGut_append, suffGut]
+          simp only [suffGut_append, suffGut, Bool.and_true]
         rw [hsg]
         exact hgs
       · simp only [suffGroesse_append, suffGroesse] at ⊢
@@ -2198,9 +2200,9 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
         rfl
       · have hgi : gut i = true := hi
         have hsg : suffGut (suff ++ [.idx i]) = (suffGut suff && gut i) := by
-          simp [suffGut_append, suffGut, Bool.and_assoc]
+          simp only [suffGut_append, suffGut, Bool.and_true]
         rw [hsg]
-        simp [hgs, hgi]
+        simp only [hgs, hgi, Bool.and_self]
       · simp only [suffGroesse_append, suffGroesse] at ⊢
         simp only [groesse, groesse_applySuff] at hs
         omega
@@ -2214,20 +2216,20 @@ theorem zerlege : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
       · rw [applySuff_append]
         rfl
       · have hsg : suffGut (suff ++ [.arrow f]) = suffGut suff := by
-          simp [suffGut_append, suffGut]
+          simp only [suffGut_append, suffGut, Bool.and_true]
         rw [hsg]
         exact hgs
       · simp only [suffGroesse_append, suffGroesse] at ⊢
         omega
-    | un o x => simp [gutPlatz] at hg
-    | bin o l r => simp [gutPlatz] at hg
-    | call f xs => simp [gutPlatz] at hg
-    | fnref f => simp [gutPlatz] at hg
-    | built f xs => simp [gutPlatz] at hg
-    | old x => simp [gutPlatz] at hg
-    | res => simp [gutPlatz] at hg
-    | why g f => simp [gutPlatz] at hg
-    | ext xk xn xs => simp [gutPlatz] at hg
+    | un o x => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | bin o l r => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | call f xs => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | fnref f => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | built f xs => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | old x => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | res => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | why g f => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | ext xk xn xs => simp only [gutPlatz, Bool.false_eq_true] at hg
 
 -- Suffix chains through `parseSuffixe`, by list induction. Index
 -- payloads parse via `R n` (smaller); fuel carries one spare per
@@ -2326,7 +2328,7 @@ theorem druckToks_applySuff : ∀ (base : SExpr) (suff : List SuffFrag),
       druckToks base ++ suffToks suff := by
   intro base suff
   induction suff generalizing base with
-  | nil => simp [applySuff, suffToks]
+  | nil => simp only [applySuff, suffToks, List.append_nil]
   | cons frag suff ih =>
     cases frag with
     | dot f =>
@@ -2432,7 +2434,7 @@ theorem prim_gleit : ∀ (s : String) (rest : List Token) (F : Nat),
       simp only [ruhigGleit] at hg
       have hf := nichtWahr_falsch _ hg
       have ne := strNe_of w "rounded" hf
-      simp [ne]
+      simp only [List.cons.injEq, Token.wort.injEq, ne, false_and, imp_self, implies_true]
     | ident v => rfl
     | num n => rfl
     | float g => rfl
@@ -2537,7 +2539,7 @@ theorem eingebaut_ein_ok : ∀ (w : String) (x : SExpr) (rest : List Token),
   | fls => rfl
   | «variable» s =>
     simp only [istTypWortVar] at htwf
-    simp [htwf]
+    simp only [htwf, Bool.false_eq_true, ↓reduceIte]
   | field x f => rfl
   | index x i => rfl
   | arrow x f => rfl

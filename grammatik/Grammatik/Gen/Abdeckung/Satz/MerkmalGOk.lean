@@ -125,7 +125,7 @@ theorem kand_zerlegt (fs : List D.Fn) (Ok : D.Fn → Bool) {V : Vertrag D} {l : 
       show (fs.all fun g => !(D.passt g n) || Ok g) = _
       apply congrArg (List.all fs); funext g
       split
-      · rename_i h; simp [h, Merkmal.top]
+      · rename_i h; simp only [h, Bool.or_true, Merkmal.top]
       · rename_i h
         simp only [h, ohneInd, Bool.or_false]
     · intro L; rw [alle_sperre]; simp only [List.all_map, Function.comp_def]
@@ -135,7 +135,7 @@ theorem kand_zerlegt (fs : List D.Fn) (Ok : D.Fn → Bool) {V : Vertrag D} {l : 
   simp only [Function.comp_def]
   split
   · rename_i h; rw [h, mE_top]; rfl
-  · rename_i h; simp [h]
+  · rename_i h; simp only [h, Bool.false_or]
 
 theorem indB_eq (P : Programm D) (f g : D.Fn) : indB P f g = !(mE (ohneInd g) (P.rumpf f)) := rfl
 

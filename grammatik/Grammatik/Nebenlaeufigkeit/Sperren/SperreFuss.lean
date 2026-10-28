@@ -44,11 +44,11 @@ def heldL : List (Res D) → List D.Lock
 
 theorem heldL_mem {Λ : List (Res D)} {L : D.Lock} : L ∈ heldL Λ ↔ Res.held L ∈ Λ := by
   induction Λ with
-  | nil => simp [heldL]
+  | nil => simp only [heldL, List.not_mem_nil]
   | cons r Λ ih =>
       cases r with
-      | held K => simp [heldL, ih]
-      | marke m s => simp [heldL, ih]
+      | held K => simp only [heldL, List.mem_cons, ih, Res.held.injEq]
+      | marke m s => simp only [heldL, ih, List.mem_cons, reduceCtorEq, false_or]
 
 /-- The carrier is guarded by a lock `f` holds by signature. -/
 def sigB (f : D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
@@ -143,7 +143,7 @@ def FussS (P : Programm D) (S : SperrInv D) (lok : D.Tab ⊕ D.Glob → Bool) (f
 
 /-- With every carrier local the property holds for every function. -/
 theorem fussS_alle (P : Programm D) (S : SperrInv D) (f : D.Fn) : FussS P S (fun _ => true) f :=
-  ⟨fun _ _ => Or.inl (by simp), fun _ _ => by simp⟩
+  ⟨fun _ _ => Or.inl (by simp only [Bool.or_true]), fun _ _ => by simp only [Bool.or_true]⟩
 
 theorem fussSperreB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (h : fussSperreB P S fs = true) (f : D.Fn) :

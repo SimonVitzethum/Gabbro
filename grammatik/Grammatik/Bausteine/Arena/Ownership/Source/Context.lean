@@ -78,16 +78,16 @@ theorem origin_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
 @[simp] theorem Context.kill_reference (c : Context) (i : Nat) {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
     (c.kill i).reference x = c.reference x := rfl
 
-@[simp] theorem Context.kill_at (c : Context) (i : Nat) : (c.kill i).rights i = none := by simp [Context.kill]
+@[simp] theorem Context.kill_at (c : Context) (i : Nat) : (c.kill i).rights i = none := by simp only [kill, ↓reduceIte]
 
 @[simp] theorem Context.kill_other (c : Context) (i j : Nat) (h : j ≠ i) :
-    (c.kill i).rights j = c.rights j := by simp [Context.kill, h]
+    (c.kill i).rights j = c.rights j := by simp only [kill, h, ↓reduceIte]
 
 theorem Context.kill_bounded {c : Context} (hc : c.bounded) (i : Nat) : (c.kill i).bounded := by
   refine ⟨?_, hc.2⟩
   intro j hj
   by_cases he : j = i
-  · simp [Context.kill, he]
+  · simp only [kill, he, ↓reduceIte]
   · simpa [Context.kill, he] using hc.1 j hj
 
 theorem Context.kill_references {c : Context} {g : Ghost} {Γ : Ctx} {ρ : Env D Γ}
@@ -98,11 +98,11 @@ theorem Context.kill_rights {c : Context} {g : Ghost} {s : State} {frame : Frame
   constructor
   · intro j mode hj
     by_cases he : j = i
-    · simp [Context.kill, he] at hj
+    · simp only [kill, he, ↓reduceIte, reduceCtorEq] at hj
     · exact hc.1 j mode (by simpa [Context.kill, he] using hj)
   · intro j k p q hj hk hne hown h h' hg hg'
-    have hjne : j ≠ i := by intro he; simp [Context.kill, he] at hj
-    have hkne : k ≠ i := by intro he; simp [Context.kill, he] at hk
+    have hjne : j ≠ i := by intro he; simp only [kill, he, ↓reduceIte, reduceCtorEq] at hj
+    have hkne : k ≠ i := by intro he; simp only [kill, he, ↓reduceIte, reduceCtorEq] at hk
     exact hc.2 j k p q (by simpa [Context.kill, hjne] using hj)
       (by simpa [Context.kill, hkne] using hk) hne hown h h' hg hg'
 

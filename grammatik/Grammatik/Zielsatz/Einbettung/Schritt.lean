@@ -40,13 +40,13 @@ structure PadOk (pad : List (Ereignis D)) : Prop where
 
 /-- A declaration with a carrier or a lock has a neutral piece. -/
 theorem padOk_tab (t : D.Tab) : PadOk [Ereignis.zugriff t false [] ([] : List D.Lock)] :=
-  ⟨by simp, fun _ => rfl⟩
+  ⟨by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one], fun _ => rfl⟩
 
 theorem padOk_glob (g : D.Glob) : PadOk [Ereignis.gzugriff g false [] ([] : List D.Lock)] :=
-  ⟨by simp, fun _ => rfl⟩
+  ⟨by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one], fun _ => rfl⟩
 
 theorem padOk_lock (L : D.Lock) : PadOk [Ereignis.gibt L, Ereignis.nimmt L []] :=
-  ⟨by simp, fun s => by simp [Gabbro.Grammatik.offen]⟩
+  ⟨by simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ], fun s => by simp only [List.cons_append, List.nil_append, Grammatik.offen, List.erase_cons_head]⟩
 
 theorem castW_inj {τ σ : Ty} (h : τ = σ) {v w : Wert D τ} (e : castW h v = castW h w) : v = w := by
   subst h; exact e
@@ -197,7 +197,7 @@ theorem Inv.merkeRuf {M : Keys D D'} {σ τ : World D} {σ' τ' : World D'}
 /-- The events of a read: one per carrier. -/
 theorem lese_laenge (σ : World D) (Λ : List (Res D)) (X : List (D.Tab ⊕ D.Glob)) :
     (σ.lese Λ X).spur.length = X.length + σ.spur.length := by
-  simp [World.lese, World.merke]
+  simp only [World.lese, World.merke, List.length_append, List.length_map, Nat.add_left_cancel_iff]
 
 theorem lese_speicher (σ : World D) (Λ : List (Res D)) (X : List (D.Tab ⊕ D.Glob)) :
     (σ.lese Λ X).speicher = σ.speicher := rfl
@@ -210,7 +210,7 @@ theorem Inv.lese {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M
   | nil => simp only [List.map_nil]; rw [lese_nil, lese_nil]; exact h
   | cons x X =>
       refine h.wachs E ?_ h.treu
-      rw [lese_laenge]; simp
+      rw [lese_laenge]; simp only [List.length_cons, Nat.lt_add_left_iff_pos, Nat.zero_lt_succ]
 
 theorem treu_storeSlot {s : Speicher D} {σ' : World D'} (h : E.Treu hZ s σ') (t : D.Tab) (k : Int)
     (f : D.Feld t) (v : Wert D (D.typ t f)) (v' : Wert D' (D'.typ (E.tab t) (E.feld t f)))
@@ -263,7 +263,8 @@ theorem Inv.schreibSlot {M : Keys D D'} {σ : World D} {σ' : World D'}
     (v : Wert D (D.typ t f)) (v' : Wert D' (D'.typ (E.tab t) (E.feld t f)))
     (hv : E.VRel hZ _ v (castW (E.typ t f) v')) :
     E.Inv hZ M (σ.schreibSlot t Λ k f v) (σ'.schreibSlot (E.tab t) Λ' k (E.feld t f) v') := by
-  refine h.wachs E (by simp [World.schreibSlot, World.merke, World.storeSlot]) ?_
+  refine h.wachs E (by simp only [World.schreibSlot, World.merke, World.storeSlot, List.cons_append, List.nil_append,
+  List.length_cons, Nat.lt_add_one]) ?_
   show E.Treu hZ (σ.storeSlot t k f v).speicher ((σ'.storeSlot (E.tab t) k (E.feld t f) v').merke _)
   rw [speicher_storeSlot]
   exact E.treu_storeSlot h.treu t k f v v' hv
@@ -273,7 +274,8 @@ theorem Inv.schreibGlob {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (g : D.Glob) (Λ : List (Res D)) (Λ' : List (Res D')) (v : Wert D (D.gtyp g))
     (v' : Wert D' (D'.gtyp (E.glob g))) (hv : E.VRel hZ _ v (castW (E.gtyp g) v')) :
     E.Inv hZ M (σ.schreibGlob g Λ v) (σ'.schreibGlob (E.glob g) Λ' v') := by
-  refine h.wachs E (by simp [World.schreibGlob, World.merke, World.storeGlob]) ?_
+  refine h.wachs E (by simp only [World.schreibGlob, World.merke, World.storeGlob, List.cons_append, List.nil_append,
+  List.length_cons, Nat.lt_add_one]) ?_
   show E.Treu hZ (σ.storeGlob g v).speicher ((σ'.storeGlob (E.glob g) v').merke _)
   rw [speicher_storeGlob]
   exact E.treu_storeGlob h.treu g v v' hv
@@ -300,11 +302,11 @@ theorem Inv.schreibBytes {M : Keys D D'} {σ : World D} {σ' : World D'}
 /-- The trace of a lock take and release grows by one on both sides. -/
 theorem Inv.nimmt {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (L : D.Lock) (L' : D'.Lock) : E.Inv hZ M (σ.nimmt L) (σ'.nimmt L') :=
-  h.wachs E (by simp [World.nimmt]) h.treu
+  h.wachs E (by simp only [World.nimmt, List.length_cons, Nat.lt_add_one]) h.treu
 
 theorem Inv.gibt {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (L : D.Lock) (L' : D'.Lock) : E.Inv hZ M (σ.gibt L) (σ'.gibt L') :=
-  h.wachs E (by simp [World.gibt]) h.treu
+  h.wachs E (by simp only [World.gibt, List.length_cons, Nat.lt_add_one]) h.treu
 
 end Einbettung
 

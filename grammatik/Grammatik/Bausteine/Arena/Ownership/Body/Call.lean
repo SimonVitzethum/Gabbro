@@ -48,7 +48,7 @@ theorem mem_handles {m : PassingMode} {h : Handle}
           intro hu
           by_cases he : m' = m
           · subst he; simp only [ite_true] at hu; exact ⟨u, i, hmu, hou, hu⟩
-          · simp [he] at hu
+          · simp only [he, ↓reduceIte, reduceCtorEq] at hu
 
 theorem mem_moved {h : Handle} (hm : h ∈ movedHandles g ms os) :
     ∃ (u i : Nat), ms[u]? = some (some PassingMode.owned) ∧ os[u]? = some (some i) ∧ g i = some h := by
@@ -64,7 +64,7 @@ theorem mem_moved {h : Handle} (hm : h ∈ movedHandles g ms os) :
       | none => cases m <;> intro h <;> cases h
       | some o => cases o with
         | none => cases m <;> intro h <;> cases h
-        | some i => cases m <;> simp
+        | some i => cases m <;> simp only [↓reduceIte, imp_self, reduceCtorEq]
 
 theorem mem_lent {h : Handle} (hm : h ∈ lentHandles g ms os) :
     ∃ (u i : Nat), ms[u]? = some (some PassingMode.borrowed) ∧ os[u]? = some (some i) ∧ g i = some h := by
@@ -80,17 +80,17 @@ theorem mem_lent {h : Handle} (hm : h ∈ lentHandles g ms os) :
       | none => cases m <;> intro h <;> cases h
       | some o => cases o with
         | none => cases m <;> intro h <;> cases h
-        | some i => cases m <;> simp
+        | some i => cases m <;> simp only [reduceCtorEq, ↓reduceIte, imp_self]
 
 theorem moved_of {u i : Nat} {h : Handle} (hmu : ms[u]? = some (some .owned)) (hou : os[u]? = some (some i))
     (hg : g i = some h) : h ∈ movedHandles g ms os := by
   refine List.mem_filterMap.mpr ⟨u, List.mem_range.mpr (List.getElem?_eq_some_iff.mp hmu).1, ?_⟩
-  simp [hmu, hou, hg]
+  simp only [hmu, hou, hg]
 
 theorem lent_of {u i : Nat} {h : Handle} (hmu : ms[u]? = some (some .borrowed)) (hou : os[u]? = some (some i))
     (hg : g i = some h) : h ∈ lentHandles g ms os := by
   refine List.mem_filterMap.mpr ⟨u, List.mem_range.mpr (List.getElem?_eq_some_iff.mp hmu).1, ?_⟩
-  simp [hmu, hou, hg]
+  simp only [hmu, hou, hg]
 
 /-! ## 2. Handing over -/
 
@@ -182,40 +182,40 @@ theorem handoff_requires_at {Λ : List (Res D)} {params : Ctx} (modes : Modes pa
       obtain ⟨h, hg, hv⟩ := origin_sound c g ρ href (argument args x) i horigin σa σb
       rw [eval_argument] at hv
       cases m with
-      | owned => exact ⟨⟨h.slot, h.allocation, s.next⟩, by simp [calleeGhost, hmu, hoi, hg], hv⟩
-      | borrowed => exact ⟨h, by simp [calleeGhost, hmu, hoi, hg], hv⟩
+      | owned => exact ⟨⟨h.slot, h.allocation, s.next⟩, by simp only [calleeGhost, hmu, hoi, hg, Option.map_some], hv⟩
+      | borrowed => exact ⟨h, by simp only [calleeGhost, hmu, hoi, hg], hv⟩
   · intro u m hu
     rw [parameterContext_rights, hms] at hu
     have hmu : ms[u]? = some (some m) := by
       cases hmu : ms[u]? with
-      | none => simp [hmu] at hu
+      | none => simp only [hmu, Option.getD_none, reduceCtorEq] at hu
       | some mo => simp only [hmu, Option.getD_some] at hu; rw [hu]
     obtain ⟨i, hoi, hsome, hown⟩ := planFits_mode hp hmu
     obtain ⟨m', h, hm', hg, hperm⟩ := rights_handle hr hsome
     cases m with
     | owned =>
-      refine ⟨⟨h.slot, h.allocation, s.next⟩, by simp [calleeGhost, hmu, hoi, hg], ?_⟩
+      refine ⟨⟨h.slot, h.allocation, s.next⟩, by simp only [calleeGhost, hmu, hoi, hg, Option.map_some], ?_⟩
       exact handoff_moved_owns hok (moved_of hmu hoi hg)
     | borrowed =>
-      exact ⟨h, by simp [calleeGhost, hmu, hoi, hg], handoff_lent_access hok (lent_of hmu hoi hg)⟩
+      exact ⟨h, by simp only [calleeGhost, hmu, hoi, hg], handoff_lent_access hok (lent_of hmu hoi hg)⟩
   · intro u v p q hu hv hne hown h k hgu hgv
     rw [parameterContext_rights, hms] at hu hv
     have hmu : ms[u]? = some (some p) := by
       cases hmu : ms[u]? with
-      | none => simp [hmu] at hu
+      | none => simp only [hmu, Option.getD_none, reduceCtorEq] at hu
       | some mo => simp only [hmu, Option.getD_some] at hu; rw [hu]
     have hmv : ms[v]? = some (some q) := by
       cases hmv : ms[v]? with
-      | none => simp [hmv] at hv
+      | none => simp only [hmv, Option.getD_none, reduceCtorEq] at hv
       | some mo => simp only [hmv, Option.getD_some] at hv; rw [hv]
     obtain ⟨i, hoi, hsi, hoi'⟩ := planFits_mode hp hmu
     obtain ⟨j, hoj, hsj, hoj'⟩ := planFits_mode hp hmv
     obtain ⟨mi, hi, hmi, hgi, _⟩ := rights_handle hr hsi
     obtain ⟨mj, hj, hmj, hgj, _⟩ := rights_handle hr hsj
     have hslot_u : h.slot = hi.slot := by
-      cases p <;> simp [calleeGhost, hmu, hoi, hgi] at hgu <;> rw [← hgu]
+      cases p <;> simp only [calleeGhost, hmu, hoi, hgi, Option.map_some, Option.some.injEq] at hgu <;> rw [← hgu]
     have hslot_v : k.slot = hj.slot := by
-      cases q <;> simp [calleeGhost, hmv, hoj, hgj] at hgv <;> rw [← hgv]
+      cases q <;> simp only [calleeGhost, hmv, hoj, hgj, Option.map_some, Option.some.injEq] at hgv <;> rw [← hgv]
     have hij : i ≠ j := by
       intro he; subst he
       rcases hown with hpo | hqo
@@ -229,8 +229,8 @@ theorem handoff_requires_at {Λ : List (Res D)} {params : Ctx} (modes : Modes pa
     obtain ⟨hloans, h, hm, hslot, hc⟩ := handoff_callee_owned hok hcell howner
     obtain ⟨u, i, hmu, hou, hg⟩ := mem_moved hm
     refine ⟨hloans, u, ⟨h.slot, h.allocation, s.next⟩, ?_, ?_, hslot, ?_⟩
-    · rw [parameterContext_rights, hms]; simp [hmu]
-    · simp [calleeGhost, hmu, hou, hg]
+    · rw [parameterContext_rights, hms]; simp only [hmu, Option.getD_some]
+    · simp only [calleeGhost, hmu, hou, hg, Option.map_some]
     · subst hc; exact ⟨rfl, rfl⟩
 
 theorem handoff_requires {Λ : List (Res D)} {params : Ctx} (modes : Modes params)

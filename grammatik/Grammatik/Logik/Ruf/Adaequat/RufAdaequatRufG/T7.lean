@@ -74,7 +74,7 @@ theorem stmtR_call_ende_none {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
     (ρ : Env D Γ) : (execStmt O passes R s σ ρ).ende? = none := by
   cases s with
   | call => exact call_ende_none O passes R σ ρ
-  | _ => simp [Stmt.rufZiel] at hg
+  | _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
 
 /-- Lift a pop after one step. -/
 theorem gepoppt_vorR {M M1 : RufMaschineG D} {log : List (RufEreignisF D)}
@@ -142,8 +142,8 @@ theorem endeConsRetR {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       caller rst rfl hpe r hperm rest ρ rfl hΛ.heldIn
     rw [hW] at hG
     exact ⟨M1, [], RufLaufG.einzeln hs1, hG, rfl⟩
-  | leave _ => simp [execStmt, Ausgang.ende?] at hex
-  | next _ => simp [execStmt, Ausgang.ende?] at hex
+  | leave _ => simp only [Ausgang.ende?, execStmt, reduceCtorEq] at hex
+  | next _ => simp only [Ausgang.ende?, execStmt, reduceCtorEq] at hex
   | ite => exact hEntf rfl
   | onOption => exact hEntf rfl
   | onTag => exact hEntf rfl
@@ -177,12 +177,12 @@ theorem travRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (inv : Ex
           GepopptE M' f ziel zielG rst rho s0 (ext ++ log) e ∧ offen e.welt.spur = offen σ.spur
   | [], log, σ, ρ, e, _, hex, M, hZ, _, _ => by
       simp only [traverseLauf] at hex
-      split at hex <;> simp [Ausgang.ende?] at hex
+      split at hex <;> simp only [Ausgang.ende?, reduceCtorEq] at hex
   | i :: is, log, σ, ρ, e, hpe, hex, M, hZ, hΛ, hA => by
       have hW := hZ.welt
       simp only [traverseLauf] at hex
       split at hex
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
       · rename_i hw
         have hw' : wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = true := by
           simpa using hw
@@ -228,14 +228,14 @@ theorem travRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (inv : Ex
             rw [hW2] at hZ3
             exact weiter M3 e2 σ2 ρt (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
               hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
-        · split at hex <;> simp [Ausgang.ende?] at hex
+        · split at hex <;> simp only [Ausgang.ende?, reduceCtorEq] at hex
         · rename_i σ2 v2 hb2
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
             (hbodyRet log _ _ e hpe (by rw [hb2]; exact hex) M1 _ hZ1 hΛ1 hA1)
         · rename_i σ2 r2 hb2
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
             (hbodyRet log _ _ e hpe (by rw [hb2]; exact hex) M1 _ hZ1 hΛ1 hA1)
-        all_goals simp [Ausgang.ende?] at hex
+        all_goals simp only [Ausgang.ende?, reduceCtorEq] at hex
 
 /-- **The loop of a `retry`, frame end.** As `travRetR`, for `retryLauf`;
     the overflow block may end the frame too. -/
@@ -261,7 +261,7 @@ theorem retryRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ 
       have hW := hZ.welt
       simp only [retryLauf] at hex
       split at hex
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
       · rename_i hw
         have hw' : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false := by
           simpa using hw
@@ -280,7 +280,7 @@ theorem retryRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ 
       have hW := hZ.welt
       simp only [retryLauf] at hex
       split at hex
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
       · rename_i hw
         have hw' : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false := by
           simpa using hw
@@ -323,14 +323,14 @@ theorem retryRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bis : Expr D Γ Λ 
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
-        · simp [Ausgang.ende?] at hex
+        · simp only [Ausgang.ende?, reduceCtorEq] at hex
         · rename_i σ2 v2 hb2
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
             (hbodyRet log _ _ e hpe (by rw [hb2]; exact hex) M1 _ hZ1 hΛ1 hA1)
         · rename_i σ2 r2 hb2
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
             (hbodyRet log _ _ e hpe (by rw [hb2]; exact hex) M1 _ hZ1 hΛ1 hA1)
-        all_goals simp [Ausgang.ende?] at hex
+        all_goals simp only [Ausgang.ende?, reduceCtorEq] at hex
 
 /-- **The loop of a `forever`, frame end.** As `travRetR`, for
     `foreverLauf`: passes end normally or by `next` until one ends the
@@ -352,12 +352,12 @@ theorem foreverRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (a : D.Annahme)
         ∃ (M' : RufMaschineG D) (ext : List (RufEreignisF D)), RufLaufG P O passes f M M' ∧
           GepopptE M' f ziel zielG rst rho s0 (ext ++ log) e ∧ offen e.welt.spur = offen σ.spur
   | 0, log, σ, ρ, e, _, hex, M, hZ, _, _ => by
-      simp [foreverLauf, Ausgang.ende?] at hex
+      simp only [Ausgang.ende?, foreverLauf, reduceCtorEq] at hex
   | n + 1, log, σ, ρ, e, hpe, hex, M, hZ, hΛ, hA => by
       have hW := hZ.welt
       simp only [foreverLauf] at hex
       split at hex
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
       · rename_i hw
         have hw' : wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = true := by
           simpa using hw
@@ -399,14 +399,14 @@ theorem foreverRetR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (a : D.Annahme)
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
-        · simp [Ausgang.ende?] at hex
+        · simp only [Ausgang.ende?, reduceCtorEq] at hex
         · rename_i σ2 v2 hb2
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
             (hbodyRet log _ _ e hpe (by rw [hb2]; exact hex) M1 _ hZ1 hΛ1 hA1)
         · rename_i σ2 r2 hb2
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
             (hbodyRet log _ _ e hpe (by rw [hb2]; exact hex) M1 _ hZ1 hΛ1 hA1)
-        all_goals simp [Ausgang.ende?] at hex
+        all_goals simp only [Ausgang.ende?, reduceCtorEq] at hex
 
 variable (hRuf : RufOk P O passes f A R C)
 include hRuf
@@ -531,7 +531,7 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro log σ ρ E _ hex
       rw [call_ende_none O passes R σ ρ] at hex
       cases hex
-  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .locks L hr body, hs => by
       intro log σ ρ E _ hex
       obtain ⟨_, hb, _⟩ := hs.locks_inv
@@ -590,7 +590,7 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           (blockAbbR P O passes f fn (caller :: rst) rho s0 A R C hRuf body hb)
           (blockRetR body hb) (.dann rest k) passes log σ ρ E hpe hex M1 hZ1 hΛ
           (hA.lauf (RufLaufG.einzeln hs1)))
-  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret e hperm, _ => by
       intro log σ ρ E hpe hex M _ rest k hZ hΛ _
       have hW := hZ.welt
@@ -611,17 +611,17 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact ⟨M1, [], RufLaufG.einzeln hs1, hG, rfl⟩
   | _, _, _, _, .leave .., _ => by
       intro log σ ρ E _ hex
-      simp [execStmt, Ausgang.ende?] at hex
+      simp only [Ausgang.ende?, execStmt, reduceCtorEq] at hex
   | _, _, _, _, .next .., _ => by
       intro log σ ρ E _ hex
-      simp [execStmt, Ausgang.ende?] at hex
+      simp only [Ausgang.ende?, execStmt, reduceCtorEq] at hex
 
 theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D (vertragVon D fn) l Γ Λ Λ'), BlockR A C true b →
     SimRetBR P O passes f fn caller rst rho s0 A R ziel zielG b
   | _, _, _, _, .nil, _ => by
       intro log σ ρ E _ hex
-      simp [execBlock, Ausgang.ende?] at hex
+      simp only [Ausgang.ende?, execBlock, reduceCtorEq] at hex
   | _, _, _, _, .cons s rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       obtain ⟨hs, hr⟩ := hb.cons_inv
@@ -668,8 +668,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact gepoppt_laufR P O passes f fn rst rho s0 ziel zielG hl12 ho12
           (blockRetR rest hrest _ _ _ _ hpe hex M2 _ hZ2 hΛ2 (hA.lauf hl12))
       · exact (Fin.cast hr ‹_›).elim0
-      · simp [Ausgang.ende?] at hex
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, _, _, .bindCallInd .., hb => by cases hb
   | _, _, _, _, .bindCallElse g args he hp hr err rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
@@ -707,8 +707,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact gepoppt_laufR P O passes f fn rst rho s0 ziel zielG hl12 ho12
           (alsRetR err herr _ _ _ _ hpe
             (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M2 _ hZ2 hΛ2 (hA.lauf hl12))
-      · simp [Ausgang.ende?] at hex
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, .regRead r hk rest, hb => by
@@ -726,8 +726,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           rw [hW] at hZ1
           exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 rfl
             (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 hΛ (hA.lauf (RufLaufG.einzeln hs1)))
-        · simp [Ausgang.ende?] at hex
-      · simp [Ausgang.ende?] at hex
+        · simp only [Ausgang.ende?, reduceCtorEq] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, _, _, .regReadElse r hk zusage sonst rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       obtain ⟨_, hr, hs, _⟩ := hb.regLiesElse_inv
@@ -755,7 +755,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
             (alsRetR sonst hs _ _ _ _ hpe
               (by rw [Endblock.execBlock_alsBlock, ende_zuAusgang]; exact hex) M1 _ hZ1 (heldB_lese (σ := σ.fragt _) _ hΛ)
               (hA.lauf (RufLaufG.einzeln hs1)))
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, _, _, .awaits g payload hp hL hat rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       have hr := hb.awaits_inv
@@ -770,7 +770,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 ((Erw.fragt _ _).trans (Erw.lese _ _ _)).offen
           (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese (σ := σ.fragt _) _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, Λ₀, _, .exchange g neuE hw hL rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       have hr := hb.exchange_inv
@@ -845,7 +845,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
           (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, _, _, .floatLit q lo hi rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       have hr := hb.gleitLit_inv
@@ -859,7 +859,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         rw [hW] at hZ1
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 rfl
           (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 hΛ (hA.lauf (RufLaufG.einzeln hs1)))
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, _, _, .floatOf e lo hi rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       have hr := hb.gleitVon_inv
@@ -874,7 +874,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
           (blockRetR rest hr _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
-      · simp [Ausgang.ende?] at hex
+      · simp only [Ausgang.ende?, reduceCtorEq] at hex
   | _, _, _, _, .floatNarrow e lo hi sonst rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       obtain ⟨_, hr, hs, _⟩ := hb.gleitNarrow_inv

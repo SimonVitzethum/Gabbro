@@ -46,9 +46,9 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     · rw [entfZ_wahr hent]; omega
   | endeForm l Γ Λ e ρ hl hent hhead =>
     kopfA
-    · cases e <;> try (simp [EndEntfaltbar] at hent; done)
+    · cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
       all_goals simp_all [rufeB_alsBlock, rufeR]
-    · cases e <;> try (simp [EndEntfaltbar] at hent; done)
+    · cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
       all_goals (simp only [potRest, kostenBlock_alsBlock, kostenEnd, kostenSonst]; omega)
   | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
     kopfA
@@ -501,11 +501,11 @@ theorem frame_schritte_beschraenkt (P : Programm D) (O : Orakel D) (passes : Nat
   rahmen_schritte (kostenTief P passes) (rufTief P) (fun i _ => i - 1) P O passes
     (fun i h hS => by
       cases i with
-      | zero => simp [rufTief] at hS
+      | zero => simp only [rufTief, Bool.false_eq_true] at hS
       | succ m => exact Nat.le_refl _)
     (fun i h hS => by
       cases i with
-      | zero => simp [rufTief] at hS
+      | zero => simp only [rufTief, Bool.false_eq_true] at hS
       | succ m => exact hS)
     hE n hadm run hA
 

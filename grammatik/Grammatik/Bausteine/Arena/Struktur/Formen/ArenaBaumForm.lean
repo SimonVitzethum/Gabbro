@@ -79,9 +79,10 @@ theorem blattEin_ausfuehren (Cp Co : LinkFeld A) (hd : Cp.f ≠ Co.f)
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
   refine ⟨_, rfl, ?_, ?_⟩
   · refine ⟨fun C hC => funext fun j => ?_, fun G' _ => rfl⟩
-    have h1 : C.f ≠ Cp.f := fun e => hC (by simp [e])
-    have h2 : C.f ≠ Co.f := fun e => hC (by simp [e])
-    simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h2]
+    have h1 : C.f ≠ Cp.f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false, true_or])
+    have h2 : C.f ≠ Co.f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false, or_true])
+    simp only [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1, World.slots_lese,
+  World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h2]
   simp only [eval, Block.linkNil, Block.linkIdxAlsFeld, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
     LinkKopf.st_schreibSlot, LinkKopf.st_lese, LinkFeld.wert_lese,
     FreiForm.kopfSt_schreibSlot, FreiForm.kopfSt_lese, ArenaForm.stand_lese, ArenaForm.stand_schreibSlot,
@@ -121,8 +122,8 @@ theorem blattAus_ausfuehren (C : LinkFeld A) (p : Var Γ (Ty.index (D.count A.ta
   case e => rfl
   case rh =>
     refine ⟨fun C' hC' => funext fun j => ?_, fun G' _ => rfl⟩
-    have h1 : C'.f ≠ C.f := fun e => hC' (by simp [e])
-    simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1]
+    have h1 : C'.f ≠ C.f := fun e => hC' (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+    simp only [LinkFeld.wert, World.slots_lese, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1]
   case n => rfl
   case r =>
     simp only [eval, Block.linkNil, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,

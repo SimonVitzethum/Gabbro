@@ -122,7 +122,7 @@ theorem schrittBis_succ (ruft : Fn → List Fn) (e : Fn) (n : Nat) :
 theorem mem_schrittBis_refl (ruft : Fn → List Fn) (n e : Fn) :
     e ∈ schrittBis ruft n e := by
   induction n with
-  | zero => simp [schrittBis_zero]
+  | zero => simp only [Nat.zero_eq, schrittBis_zero, List.mem_cons, List.not_mem_nil, or_false]
   | succ n ih =>
       rw [schrittBis_succ]
       exact List.mem_append.mpr (Or.inl ih)
@@ -187,7 +187,7 @@ theorem traegerBis_genau (B : Bau) (fuel f : Nat) (c : Carrier) :
     cases hentry : B.eintritt[f]? with
     | none =>
         rw [traegerBis_none B fuel f hentry] at hmem
-        simp at hmem
+        simp only [List.not_mem_nil] at hmem
     | some e =>
         rw [traegerBis_some B fuel f e hentry] at hmem
         obtain ⟨g, hg, hgc⟩ := List.mem_flatMap.mp hmem
@@ -229,7 +229,7 @@ theorem filter_hoechstens_eins {α : Type} {p : α → Bool} {l : List α} {a b 
     (h : (l.filter p).length ≤ 1) (ha : a ∈ l.filter p)
     (hb : b ∈ l.filter p) : a = b := by
   match hm : l.filter p with
-  | [] => simp [hm] at ha
+  | [] => simp only [hm, List.not_mem_nil] at ha
   | [x] =>
       have ha' : a = x := by simpa [hm] using ha
       have hb' : b = x := by simpa [hm] using hb
@@ -245,7 +245,7 @@ theorem ungeteiltOk_genau (cs : List Carrier) (B : Bau) (fuel : Nat)
     (h : ungeteiltOk cs B fuel = true) (c : Carrier) (hmem : c ∈ cs)
     (hu : B.geteilt c = false) : (erreicher B fuel c).length ≤ 1 := by
   induction cs with
-  | nil => simp at hmem
+  | nil => simp only [List.not_mem_nil] at hmem
   | cons d ds ih =>
       have hmem' : c = d ∨ c ∈ ds := by simpa using hmem
       have hcons : ungeteiltOk (d :: ds) B fuel =
@@ -256,7 +256,7 @@ theorem ungeteiltOk_genau (cs : List Carrier) (B : Bau) (fuel : Nat)
       rcases hmem' with rfl | hmemds
       · rw [Bool.or_eq_true] at hd
         rcases hd with hd | hd
-        · simp [hu] at hd
+        · simp only [hu, Bool.false_eq_true] at hd
         · exact of_decide_eq_true hd
       · exact ih hrest hmemds
 
@@ -266,7 +266,7 @@ theorem eintritt_schranke (l : List Fn) (f : Nat) (e : Fn)
   Classical.byContradiction fun hcon =>
     have hcon' : l.length ≤ f := by omega
     have hn : l[f]? = none := List.getElem?_eq_none hcon'
-    by rw [hn] at h; simp at h
+    by rw [hn] at h; simp only [reduceCtorEq] at h
 
 /-! ## 4. The theorem: an unshared carrier has one thread -/
 
@@ -596,7 +596,7 @@ theorem getrennteWelt_keinQuerschritt (p : WeltSeiteBau)
   rw [hb] at hbin
   have hsame : p a.traeger = p b.traeger := hf _ _ hfold
   rw [hain, hbin] at hsame
-  simp at hsame
+  simp only [reduceCtorEq] at hsame
 
 /-- Speech probe: a single-sided partition factors through any fold, so
     the discharge applies. -/

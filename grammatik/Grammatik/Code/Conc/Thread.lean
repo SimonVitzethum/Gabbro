@@ -44,13 +44,13 @@ def TM.upd (T : TM) (u : Nat) : Cfg → TM
   | .fin m x => ⟨m, fun v => if v = u then .done x else T.th v⟩
 
 theorem cfg_upd (T : TM) (u : Nat) (c : Cfg) : (T.upd u c).cfg u = c := by
-  cases c <;> simp [TM.upd, TM.cfg]
+  cases c <;> simp only [TM.cfg, TM.upd, ↓reduceIte]
 
 theorem upd_other (T : TM) {u v : Nat} (c : Cfg) (h : v ≠ u) : (T.upd u c).th v = T.th v := by
-  cases c <;> simp [TM.upd, h]
+  cases c <;> simp only [TM.upd, h, ↓reduceIte]
 
 theorem upd_upd (T : TM) (u : Nat) (c c' : Cfg) : (T.upd u c).upd u c' = T.upd u c' := by
-  cases c <;> cases c' <;> simp [TM.upd] <;> funext v <;> split <;> rfl
+  cases c <;> cases c' <;> simp only [TM.upd, TM.mk.injEq, true_and] <;> funext v <;> split <;> rfl
 
 theorem upd_cfg (T : TM) (u : Nat) : T.upd u (T.cfg u) = T := by
   obtain ⟨m, th⟩ := T

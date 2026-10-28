@@ -56,7 +56,7 @@ theorem deckt_laesst_keins_aus (fs : List Feld) (zs : List (Feld × Nat))
     intro hdk hdrin
     simp only [deckt, List.map_nil] at hdk
     rw [←hdk] at hdrin
-    simp at hdrin
+    simp only [List.not_mem_nil] at hdrin
   | cons p rest ih =>
     intro hdk hdrin
     simp only [deckt, List.map_cons] at hdk
@@ -78,7 +78,7 @@ theorem ablesung_ist_eindeutig (fs : List Feld) (zs : List (Feld × Nat))
   induction zs generalizing fs f with
   | nil =>
     intro _ _ hdrin
-    simp at hdrin
+    simp only [List.not_mem_nil] at hdrin
   | cons p rest ih =>
     obtain ⟨a, b⟩ := p
     intro hwf hdk hdrin
@@ -130,7 +130,8 @@ theorem verbund_zeuge :
     liest [("x", 1), ("y", 2)] "y" = some 2 ∧
     (∃ v, liest [("x", 1), ("y", 2)] "y" = some v) := by
   have hwf : wohlgeformt ["x", "y"] := by
-    simp [wohlgeformt, List.nodup_cons, List.nodup_nil]
+    simp only [wohlgeformt, List.nodup_cons, List.mem_cons, String.reduceEq, List.not_mem_nil, or_self,
+  not_false_eq_true, List.nodup_nil, and_self]
   have hdk : deckt ["x", "y"] [("x", 1), ("y", 2)] := rfl
   refine ⟨?_, ?_, ⟨2, ?_⟩⟩
   · exact ablesung_ist_eindeutig _ _ hwf hdk _ _ (by decide)

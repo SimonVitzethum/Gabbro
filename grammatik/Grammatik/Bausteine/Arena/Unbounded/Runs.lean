@@ -65,7 +65,7 @@ theorem Heap.finite_payload_support {H : Heap region α} {capacity : Capacity}
     have hh := hv.coherent i
     rw [hp] at hh
     cases hc : H.rights.cells i with
-    | none => simp [hc] at hh
+    | none => simp only [Option.isSome_some, hc, Option.isSome_none, Bool.true_eq_false] at hh
     | some c =>
       have hb := hv.support i c hc
       omega
@@ -111,6 +111,6 @@ theorem allocateList_refused (capacity : Capacity) (frame : Frame) (H : Heap reg
     (value : α) (rest : List α) :
     allocateList capacity (fun _ => false) frame 0 H [] (value :: rest) =
       .outOfMemory H [] := by
-  simp [allocateList, Heap.allocateThen, Heap.allocate_refused]
+  simp only [allocateList, Heap.allocateThen, Heap.allocate_refused, List.reverse_nil]
 
 end Gabbro.Grammatik.ArenaStorage

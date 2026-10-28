@@ -45,7 +45,7 @@ def suche (arms : List Arm) (lo n x : Nat) : Option Nat :=
 /-- The table has exactly `n` entries. -/
 theorem tafel_laenge (arms : List Arm) (lo n : Nat) :
     (tafel arms lo n).length = n := by
-  simp [tafel]
+  simp only [tafel, List.length_map, List.length_range]
 
 /-- Outside every arm's reach the chain answers `none`: an out-of-window
     scrutinee equals no in-window arm value. -/
@@ -61,7 +61,7 @@ theorem kette_none_aussen (arms : List Arm) (lo n x : Nat)
         fun a_1 ha => h a_1 (List.mem_cons_of_mem _ ha)
       have hne : x ≠ a.1 := by omega
       simp only [kette]
-      simp [hne]
+      simp only [beq_iff_eq, hne, ↓reduceIte]
       exact ih hmem'
 
 /-- In the window the lookup runs the chain (no premises on `arms`). -/
@@ -120,7 +120,7 @@ theorem armMin_le (arms : List Arm) (a : Arm) (hm : a ∈ arms) :
     armMin arms ≤ a.1 := by
   revert a hm
   induction arms with
-  | nil => intro a hm; simp at hm
+  | nil => intro a hm; simp only [List.not_mem_nil] at hm
   | cons c arms ih =>
       intro a hm
       simp only [List.mem_cons] at hm
@@ -135,7 +135,7 @@ theorem armMax_ge (arms : List Arm) (a : Arm) (hm : a ∈ arms) :
     a.1 ≤ armMax arms := by
   revert a hm
   induction arms with
-  | nil => intro a hm; simp at hm
+  | nil => intro a hm; simp only [List.not_mem_nil] at hm
   | cons c arms ih =>
       intro a hm
       simp only [List.mem_cons] at hm

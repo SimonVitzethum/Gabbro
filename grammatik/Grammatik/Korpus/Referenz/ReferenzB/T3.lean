@@ -13,7 +13,7 @@ theorem refB_schreibt : MB.speicher.slots () 0 () ≠
   intro hcon
   have hn : (refV100.n) = ((⟨0, by decide, by decide⟩ :
       Wert refD (refD.typ () ())).n) := congrArg Zahl.n hcon
-  simp [refV100] at hn
+  simp only [refV100, Int.reduceEq] at hn
 
 /-- Witness for `refB_schreibt`: the premises of the reached run are
     instantiated JOINTLY -- the concrete machine `MB` reached from the
@@ -82,24 +82,24 @@ theorem refB_pc_leaf :
       Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
         [Res.held (D := refD) ()] (refPC1pre.weltVon 1).haelt] := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   have hmark : ∀ e ∈ [Ereignis.zugriff () true [Res.held (D := refD) ()]
       (refPC1pre.weltVon 1).haelt], ∀ (m : refD.Marke) (st : Nat),
       Res.marke m st ∈ e.lambda →
         m ∈ PCAtom.marks (PCAtom.leaf [Res.held (D := refD) ()]
           [Sum.inl (())]) := by
     intro e hm m st hlam
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.lambda] at hlam
+    simp only [Ereignis.lambda, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hlam
   have hcar : ∀ e ∈ [Ereignis.zugriff () true [Res.held (D := refD) ()]
       (refPC1pre.weltVon 1).haelt], ∀ o, e.traeger = some o →
         o ∈ PCAtom.carriers (PCAtom.leaf [Res.held (D := refD) ()]
           [Sum.inl (())]) := by
     intro e hm o ho
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.traeger] at ho
+    simp only [Ereignis.traeger, Option.some.injEq] at ho
     subst ho
     have hc : PCAtom.carriers (D := refD)
         (PCAtom.leaf [Res.held (D := refD) ()] [Sum.inl (())]) =

@@ -84,7 +84,7 @@ theorem mask_on_step {mb : Nat → Nat} {mk : MaskeKern D} {T : TM} (hinj : ∀ 
   obtain ⟨m', hm'⟩ := store_of_load hx (tk_ty 1)
   have hreach := maskOn_run (S := S) hb hk hkp (rs := rs) (ks := ks) (dst := dst) hx hm'
   refine ⟨T.upd u (.run m' ⟨fn, k, 0, rs.set rm x, dst⟩ ks), x, treach_solo hreach T (cfg_of_atB hth),
-    by simp [AtB, TM.upd], fun v hv => upd_other T _ hv, hx, hm', ?_, ?_⟩
+    by simp only [AtB, TM.upd, ↓reduceIte], fun v hv => upd_other T _ hv, hx, hm', ?_, ?_⟩
   · exact load_store_of hm' (dec_enc_tk 1)
   · intro c' hne
     by_cases hcc : c' = c
@@ -140,9 +140,9 @@ theorem mask_off_step {mb : Nat → Nat} {mk' : MaskeKern D} {T : TM} (hinj : �
         have hw : w = Conf.wbits := by simpa [Val.ty, lw] using hxw
         subst hw
         exact dec_enc_int _ _
-    | _ => simp [Val.ty, lw] at hxw
+    | _ => simp only [Val.ty, lw, reduceCtorEq] at hxw
   refine ⟨T.upd u (.run m' ⟨fn, k, 0, rs.set rx y, dst⟩ ks), y, treach_solo hreach T (cfg_of_atB hth),
-    by simp [AtB, TM.upd], fun v hv => upd_other T _ hv, hy, hm', load_store_of hm' hdec, ?_⟩
+    by simp only [AtB, TM.upd, ↓reduceIte], fun v hv => upd_other T _ hv, hy, hm', load_store_of hm' hdec, ?_⟩
   intro c' hne
   by_cases hcc : c' = c
   · subst hcc

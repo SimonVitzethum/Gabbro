@@ -20,47 +20,47 @@ theorem kette_aus_maschinenlauf (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.
   have hGes : Gesittet ([] : Lauf D) := by
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
     · intro f j
-      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
       rw [hsp]
       exact konsistent_nil
     · intro f j e he
-      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+      have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
       rw [hsp] at he
-      simp at he
+      simp only [List.not_mem_nil] at he
     · intro j f L h hi g hne
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     · intro i j f g m s s' ei ej hi hj hm hm'
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     · intro i j f g o ei ej hi hj ht1 ht2 hu
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   have hBeschr : BeschraenkteVerschraenkung (D := D) Nb ([] : Lauf D) := by
     intro i j f g ei ej hi hj hne
-    simp at hi
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   have hKette0 : (GenStart sp).welten.length = ([] : List Faden).length + 1 := by
-    simp [GenStart]
+    simp only [GenStart, List.length_cons, List.length_nil, Nat.zero_add]
   have hSchritt0 : ∀ (k : Nat) (f : Faden) (vor nach : World D),
       ([] : List Faden)[k]? = some f → (GenStart sp).welten[k]? = some vor →
       (GenStart sp).welten[k + 1]? = some nach →
       f ∈ ([] : List Faden) ∧
         Rahmen (D.schreibt ((fun _ => fn0) f)) (D.gschreibt ((fun _ => fn0) f)) vor nach := by
     intro k f vor nach hk _ _
-    simp at hk
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
   have hPaar0 : ∀ (f : Faden), f ∈ ([] : List Faden) → ∀ (g : Faden),
       g ∈ ([] : List Faden) → f ≠ g → Nb f g := by
     intro f hf
-    simp at hf
+    simp only [List.not_mem_nil] at hf
   have hEintritt0 : ∀ (f : Faden), f ∈ ([] : List Faden) →
       EintrittPasst ((fun _ => fn0) f) ((fun _ => (GenStart sp).start) f) := by
     intro f hf
-    simp at hf
+    simp only [List.not_mem_nil] at hf
   have hSchuld0 : ∀ (f : Faden), f ∈ ([] : List Faden) →
       SchuldnerHaelt ((fun _ => fn0) f) := by
     intro f hf
-    simp at hf
+    simp only [List.not_mem_nil] at hf
   have hInvSicht0 : ∀ (f : Faden), f ∈ ([] : List Faden) →
       InvSichtHaelt ((fun _ => fn0) f) ((fun _ => (GenStart sp).start) f) := by
     intro f hf
-    simp at hf
+    simp only [List.not_mem_nil] at hf
   refine ⟨{ faeden := [], code := fun _ => fn0, eintritt := fun _ => (GenStart sp).start,
             welten := (GenStart sp).welten, schrittFaden := [], l := ([] : Lauf D),
             hKette := hKette0, hSchritt := hSchritt0, hPaar := hPaar0,
@@ -69,7 +69,7 @@ theorem kette_aus_maschinenlauf (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.
           rfl, rfl, ?_⟩
   intro t₀ k g hk _
   have hk' : ([] : List Faden)[k]? = some g := hk
-  simp at hk'
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk'
 
 /-- **The chain from the machine, one induction step.** A chain tracking `M`
     extends along one memory-preserving step of a member thread: worlds and
@@ -139,8 +139,8 @@ theorem kette_aus_maschinenlauf_schritt
     have h2 := hfaden j g2 e2 hj
     exact absurd (h1.trans h2.symm) hne
   have hKette' : M'.welten.length = (J.schrittFaden ++ [f]).length + 1 := by
-    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp
-    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp
+    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
+    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
     omega
   have hSchritt' : ∀ (k : Nat) (g0 : Faden) (vor nach0 : World D),
       (J.schrittFaden ++ [f])[k]? = some g0 → M'.welten[k]? = some vor →
@@ -197,7 +197,7 @@ theorem kette_aus_maschinenlauf_schritt
             List.length_singleton]
           omega
         rw [eNone] at hk
-        simp at hk
+        simp only [reduceCtorEq] at hk
   refine ⟨{ faeden := J.faeden, code := J.code, eintritt := J.eintritt,
             welten := M'.welten, schrittFaden := J.schrittFaden ++ [f], l := M'.lauf,
             hKette := hKette', hSchritt := hSchritt', hPaar := J.hPaar,
@@ -217,7 +217,7 @@ theorem kette_aus_maschinenlauf_schritt
       · exact h
       · have hle : M.lauf.length ≤ j := by omega
         rw [List.getElem?_eq_none hle] at hw
-        simp at hw
+        simp only [reduceCtorEq] at hw
     have hw' : M'.lauf[j]? = some (Schritt.mk g0 (.zugriff t₀ w Λ h)) := by
       rw [hM'l, List.getElem?_append_left hjlt]
       exact hw
@@ -233,14 +233,14 @@ theorem kette_aus_maschinenlauf_schritt
       rw [hg0] at hwr
       have hwrF : TraegerSchreibt (J.code f) (.inl t₀) = true := hwr
       rw [hnw] at hwrF
-      simp at hwrF
+      simp only [Bool.false_eq_true] at hwrF
     · have hle : J.schrittFaden.length ≤ k0 := by omega
       have eNone : (J.schrittFaden ++ [f])[k0]? = none := by
         rw [List.getElem?_append_right hle, List.getElem?_eq_none_iff,
           List.length_singleton]
         omega
       rw [eNone] at hk0'
-      simp at hk0'
+      simp only [reduceCtorEq] at hk0'
 
 /-- **The chain from the machine, lock-take instance.** A fireable `nimmt`
     step of a member thread extends a tracking chain: the successor and its

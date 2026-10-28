@@ -77,7 +77,7 @@ def gzD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => gzSig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []
@@ -95,7 +95,7 @@ def gzD : Deklaration where
   a10 := ()
   geteilt_bewacht := fun t => t.elim
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun _ h => by simp at h
+  ggeteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h
 
 abbrev gzV : Vertrag gzD := vertragVon gzD ()
 

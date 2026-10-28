@@ -232,31 +232,31 @@ theorem baum0 : BaumF 4 l0 r0 2 [2, 0] := by
   simpa using this
 
 theorem baumOk0 : BaumOkF 4 l0 r0 2 (fun j => 0 ≤ j ∧ j < 4) :=
-  ⟨[2, 0], baum0, by decide, by intro i hi; simp at hi; rcases hi with rfl | rfl <;> decide⟩
+  ⟨[2, 0], baum0, by decide, by intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; rcases hi with rfl | rfl <;> decide⟩
 
 theorem sib0 : SibF 4 l0 r0 par0 2 := by
   intro j ⟨S, hS, hm⟩
   have := BaumF.eindeutig hS baum0
   subst this
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
-  rcases hm with rfl | rfl <;> simp [l0, r0, par0]
+  rcases hm with rfl | rfl <;> simp only [l0, ↓reduceIte, Int.reduceLT, par0, imp_self, r0, Int.lt_irrefl, Int.reduceEq, implies_true, and_self]
 
-theorem hp0 : InBaum 4 l0 r0 2 0 := ⟨[2, 0], baum0, by simp⟩
+theorem hp0 : InBaum 4 l0 r0 2 0 := ⟨[2, 0], baum0, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_false, or_true]⟩
 
 theorem hnot3 : ¬ InBaum 4 l0 r0 2 3 := by
   rintro ⟨S, hS, hm⟩
   have := BaumF.eindeutig hS baum0
-  subst this; simp at hm
+  subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
 
 /-- **The witness:** hanging the live slot `3` as the next sibling of `0`, with the parent of `0`, keeps the demand; the new
     sibling link is real (`r1 0 = 3 < 4`), so the second clause of `SibF` is exercised at `0`. -/
 theorem sib_einfuegen_zeuge : SibF 4 l0 r1 par1 2 ∧ r1 0 < 4 ∧ par1 (r1 0) = par1 0 := by
   have h := sib_einfuegen_rechts (l' := l0) (r' := r1) (par' := par1) sib0 baumOk0 hp0 rfl (by decide) (by decide) hnot3
     rfl rfl (by unfold l0; decide)
-    (fun j hj hji => by unfold r1 r0; simp [hj])
+    (fun j hj hji => by unfold r1 r0; simp only [hj, ↓reduceIte])
     (fun j hji => rfl)
     (by unfold par1 par0; decide)
-    (fun j hji => by unfold par1; simp [hji])
+    (fun j hji => by unfold par1; simp only [hji, ↓reduceIte])
   refine ⟨h, by unfold r1; decide, ?_⟩
   unfold r1 par1 par0
   decide
@@ -288,7 +288,7 @@ theorem baum1 : BaumF 4 l0 r1 2 [2, 0, 3] := by
 
 /-- **The model rejects the foreign parent:** `3` is the next sibling of `0` but `parBad 3 = 4 ≠ 2 = parBad 0`. -/
 theorem sib_defekt_bricht : ¬ SibF 4 l0 r1 parBad 2 :=
-  sib_ohne_vater_bricht (p := 0) (i := 3) ⟨[2, 0, 3], baum1, by simp⟩ (by unfold r1; decide) (by decide)
+  sib_ohne_vater_bricht (p := 0) (i := 3) ⟨[2, 0, 3], baum1, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false, or_true]⟩ (by unfold r1; decide) (by decide)
     (by unfold parBad; decide)
 
 end Zeuge

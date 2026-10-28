@@ -76,7 +76,7 @@ def zaehltFuerTrennung : Ty → Bool
   | _ => false
 
 theorem zaehlt_ptr {τ : Ty} (h : zaehltFuerTrennung τ = true) : ∃ n, τ = .ptr n true := by
-  cases τ <;> simp [zaehltFuerTrennung] at h
+  cases τ <;> simp only [zaehltFuerTrennung, Bool.false_eq_true] at h
   next n rw => subst h; exact ⟨n, rfl⟩
 
 /-! ## 2. `ParamGetrennt` -- the predicate on a call frame -/

@@ -88,7 +88,7 @@ theorem platzhalterB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {eigen : D.Fn → Bool
     refine List.all_eq_true.mpr fun f _ => ?_
     cases hf : eigen f
     · rw [Bool.false_or]
-      exact List.all_eq_true.mpr fun g _ => by simp [h f g hf]
+      exact List.all_eq_true.mpr fun g _ => by simp only [h f g hf, Bool.not_false]
     · rfl
 
 theorem huelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {w h : D.Fn} :
@@ -122,12 +122,12 @@ theorem keinRueckrufB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) :
     refine List.all_eq_true.mpr fun w _ => List.all_eq_true.mpr fun f _ =>
       List.all_eq_true.mpr fun g _ => ?_
     by_cases hne : e f = e w
-    · simp [hne]
+    · simp only [hne, decide_true, Bool.not_true, Bool.false_and, Bool.not_false, Bool.true_or]
     · cases hwf : reachB (teilP e E₁ E₂ w) fs w f
-      · simp
+      · simp only [Bool.and_false, Bool.false_and, Bool.not_false, Bool.true_or]
       · cases hfg : reachB (teilP e E₁ E₂ f) fs f g
-        · simp
-        · simp [h w f g hne hwf hfg]
+        · simp only [Bool.and_true, Bool.and_false, Bool.not_false, Bool.true_or]
+        · simp only [Bool.and_true, Bool.not_not, h w f g hne hwf hfg, decide_true, Bool.or_true]
 
 theorem lokBedarfB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {c : D.Tab ⊕ D.Glob} :
     lokBedarfB fs e E₁ E₂ c = true ↔ LokBedarf e E₁ E₂ c := by
@@ -173,7 +173,7 @@ theorem getrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn} {c : D.
         cases h1.2
     · have h2 := (List.all_eq_true.mp h1) f (hvoll f)
       rw [(huelleB_iff hvoll).mpr hf, istIn_iff.mpr hc] at h2
-      simp at h2
+      simp only [Bool.not_true, Bool.or_self, Bool.false_eq_true] at h2
     · have h2 := (List.all_eq_true.mp h1) g (hvoll g)
       rw [(huelleB_iff hvoll).mpr hg] at h2
       simpa using h2
@@ -181,7 +181,7 @@ theorem getrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn} {c : D.
     refine List.all_eq_true.mpr fun w1 hw1 => List.all_eq_true.mpr fun w2 hw2 => ?_
     by_cases hne : w1 = w2 ∧ mehrfachB ws w1 = false
     · obtain ⟨rfl, hm⟩ := hne
-      simp [hm]
+      simp only [decide_true, hm, Bool.not_false, Bool.and_self, Bool.true_or]
     have hne' : w1 ≠ w2 ∨ Mehrfach ws w1 := by
       by_cases he : w1 = w2
       · refine Or.inr (mehrfachB_iff.mp ?_)
@@ -191,7 +191,7 @@ theorem getrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn} {c : D.
       · exact Or.inl he
     by_cases hfr : (fs.all fun f => !(huelleB fs e E₁ E₂ w1 f) ||
         !(istIn (fussOrteG (teilP e E₁ E₂ f) f) c)) = true
-    · simp [hfr]
+    · simp only [hfr, Bool.or_true, Bool.true_or]
     · have hex : ∃ f, HuelleV fs e E₁ E₂ w1 f ∧ c ∈ fussOrteG (teilP e E₁ E₂ f) f := by
         refine Classical.byContradiction fun hn => hfr (List.all_eq_true.mpr fun f _ => ?_)
         cases hr : huelleB fs e E₁ E₂ w1 f
@@ -204,8 +204,9 @@ theorem getrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn} {c : D.
         List.all_eq_true.mpr fun g _ => by
           cases hg : huelleB fs e E₁ E₂ w2 g
           · rfl
-          · simp [h w1 hw1 w2 hw2 hne' f g hf hc ((huelleB_iff hvoll).mp hg)]
-      simp [hw]
+          · simp only [Bool.not_true, h w1 hw1 w2 hw2 hne' f g hf hc ((huelleB_iff hvoll).mp hg), Bool.not_false,
+  Bool.or_true]
+      simp only [hw, Bool.or_true]
 
 theorem schreibGetrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn}
     {c : D.Tab ⊕ D.Glob} :
@@ -218,7 +219,7 @@ theorem schreibGetrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn}
     · exact absurd h1 hne
     · have h2 := (List.all_eq_true.mp h1) g (hvoll g)
       rw [(huelleB_iff hvoll).mpr hg, hgc] at h2
-      simp at h2
+      simp only [Bool.not_true, Bool.or_self, Bool.false_eq_true] at h2
     · have h2 := (List.all_eq_true.mp h1) k (hvoll k)
       rw [(huelleB_iff hvoll).mpr hk] at h2
       simp only [Bool.not_true, Bool.false_or, Bool.and_eq_true, Bool.not_eq_true'] at h2
@@ -228,9 +229,9 @@ theorem schreibGetrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn}
   · intro h
     refine List.all_eq_true.mpr fun w1 hw1 => List.all_eq_true.mpr fun w2 hw2 => ?_
     by_cases hne : w1 = w2
-    · simp [hne]
+    · simp only [hne, decide_true, Bool.true_or]
     by_cases hfr : (fs.all fun g => !(huelleB fs e E₁ E₂ w1 g) || !(TraegerSchreibt g c)) = true
-    · simp [hfr]
+    · simp only [hfr, Bool.or_true, Bool.true_or]
     · have hex : ∃ g, HuelleV fs e E₁ E₂ w1 g ∧ TraegerSchreibt g c = true := by
         refine Classical.byContradiction fun hn => hfr (List.all_eq_true.mpr fun g _ => ?_)
         cases hr : huelleB fs e E₁ E₂ w1 g
@@ -246,9 +247,9 @@ theorem schreibGetrenntVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) {ws : List D.Fn}
           · rfl
           · obtain ⟨h1, h2⟩ := h w1 hw1 w2 hw2 hne g hg hgc k ((huelleB_iff hvoll).mp hk)
             cases hi : istIn (fussOrteG (teilP e E₁ E₂ k) k) c
-            · simp [h1]
+            · simp only [Bool.not_true, h1, Bool.not_false, Bool.and_self, Bool.or_true]
             · exact absurd (istIn_iff.mp hi) h2
-      simp [hw]
+      simp only [hw, Bool.or_true]
 
 theorem poolSicherVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     {w : D.Fn} : poolSicherVB fs cs e E₁ E₂ w = true ↔ PoolSicherV fs e E₁ E₂ w := by
@@ -401,14 +402,14 @@ theorem nutzerTeil_verbinde {E₁ E₂ : Einheit D} {e a₁ a₂ : D.Fn → Bool
       obtain ⟨k, i, g⟩ := hN₂.logik.1 passes f ha2
       rw [p2_eq hV, hQ, hS] at k i g
       have hr : (fun f => if e f then E₁.P.rumpf f else E₂.P.rumpf f) f = E₂.P.rumpf f := by
-        simp [hef]
+        simp only [hef, Bool.false_eq_true, ↓reduceIte]
       exact ⟨(koerper_mitRumpf2 E₁.P _ _ passes _ _ f hr).mpr k,
         (invGutS_mitRumpf2 E₁.P _ _ passes _ _ f hr).mpr i,
         (invGutGrund_mitRumpf2 E₁.P _ _ passes _ _ f hr).mpr g⟩
     · have hef := h₁ f ha
       obtain ⟨k, i, g⟩ := hN₁.logik.1 passes f ha
       have hr : (fun f => if e f then E₁.P.rumpf f else E₂.P.rumpf f) f = E₁.P.rumpf f := by
-        simp [hef]
+        simp only [hef, ↓reduceIte]
       exact ⟨(koerper_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr k,
         (invGutS_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr i,
         (invGutGrund_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr g⟩

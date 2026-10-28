@@ -172,12 +172,12 @@ def passt : Shape → Shape → Bool
 
 theorem passt_hasShape {a b : Shape} {v : Value} (hp : passt a b = true) (hv : v.hasShape a = true) :
     v.hasShape b = true := by
-  cases a <;> cases b <;> simp [passt] at hp
+  cases a <;> cases b <;> simp only [passt, Bool.false_eq_true, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq] at hp
   · exact hv
-  · obtain ⟨n, rfl⟩ := Value.hasShape_bool_true v hv; simp [Value.hasShape]
+  · obtain ⟨n, rfl⟩ := Value.hasShape_bool_true v hv; simp only [Value.hasShape]
   · exact hv
-  · obtain ⟨n, rfl, h1, h2⟩ := Value.hasShape_intIn_true v _ _ hv; simp [Value.hasShape]
-  · obtain ⟨n, rfl, h1, h2⟩ := Value.hasShape_intIn_true v _ _ hv; simp [Value.hasShape]; omega
+  · obtain ⟨n, rfl, h1, h2⟩ := Value.hasShape_intIn_true v _ _ hv; simp only [Value.hasShape]
+  · obtain ⟨n, rfl, h1, h2⟩ := Value.hasShape_intIn_true v _ _ hv; simp only [Value.hasShape, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq]; omega
   · subst hp; exact hv
 
 /-- Ein Wert in ein ZIEL, das eine Gestalt tragen kann oder nicht: traegt es keine, ist
@@ -270,7 +270,7 @@ theorem bindAll_fremd (names : List String) : ∀ (vs : List Value) (β : Bindin
           have hmn : m ≠ n := fun h => hm (h ▸ List.mem_cons_self)
           have hmns : m ∉ ns := fun h => hm (List.mem_cons_of_mem _ h)
           rw [ih vs _ m hmns]
-          simp [bindLocal, hmn]
+          simp only [bindLocal, hmn, ↓reduceIte]
 
 /-- Die Antwort eines Gerufenen in die Antwort des Rufers (`return f(a);`). -/
 def antwortGestaltPasst : Option Shape → Option Shape → Bool
@@ -286,11 +286,11 @@ def grundEnthalten : List String → String → Bool
 theorem grundEnthalten_mem {rs : List String} {r : String}
     (h : grundEnthalten rs r = true) : r ∈ rs := by
   induction rs with
-  | nil => simp [grundEnthalten] at h
+  | nil => simp only [grundEnthalten, Bool.false_eq_true] at h
   | cons c rest ih =>
       simp only [grundEnthalten, Bool.or_eq_true, beq_iff_eq] at h
       rcases h with rfl | h
-      · simp
+      · simp only [List.mem_cons, true_or]
       · exact List.mem_cons_of_mem _ (ih h)
 
 /-- Der Fehlerkanal des Gerufenen gegen den des Rufers (F6). -/
@@ -301,7 +301,7 @@ def gruendePassen : List String → List String → Bool
 theorem gruendePassen_mem {cs rs : List String} {r : String}
     (h : gruendePassen cs rs = true) (hm : r ∈ cs) : r ∈ rs := by
   induction cs with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | cons c rest ih =>
       simp only [gruendePassen, Bool.and_eq_true] at h
       obtain ⟨h1, h2⟩ := h
@@ -681,12 +681,12 @@ theorem argumente_sicher {P : Programm} {Γ : Typing} (hD : Deklariert P.D Γ) {
   | nil =>
       intro as β _ h
       cases as with
-      | nil => exact ⟨[], rfl, fun n g hn => by simp [paramUmgebung, such] at hn⟩
-      | cons _ _ => simp [argumentePassen] at h
+      | nil => exact ⟨[], rfl, fun n g hn => by simp only [paramUmgebung, such, reduceCtorEq] at hn⟩
+      | cons _ _ => simp only [argumentePassen, Bool.false_eq_true] at h
   | cons p ps ih =>
       intro as β hfrei h
       cases as with
-      | nil => simp [argumentePassen] at h
+      | nil => simp only [argumentePassen, Bool.false_eq_true] at h
       | cons e es =>
           obtain ⟨n, ziel⟩ := p
           simp only [argumentePassen] at h
@@ -701,7 +701,7 @@ theorem argumente_sicher {P : Programm} {Γ : Typing} (hD : Deklariert P.D Γ) {
               rw [h] at hnin; cases hnin
             obtain ⟨v, hv, hvs⟩ := schluss_sicher' hD hw hl hsh
             obtain ⟨vs, hvs', hrec⟩ := ih es (bindLocal β n v) hfrei' hrest
-            refine ⟨v :: vs, by simp [evalAll, hv, hvs'], ?_⟩
+            refine ⟨v :: vs, by simp only [evalAll, hv, hvs'], ?_⟩
             intro m g hm
             cases ziel with
             | none =>
@@ -831,20 +831,20 @@ theorem pruefe_erweitert (P : Programm) (erg : Option Shape) :
         · exact pruefeArme_erweitert P erg Δ arms Δ' h
         · cases h
       · cases h
-  | .onReason (.lit _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.global _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.place _ _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.un _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.bin _ _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.someOf _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.fieldOf _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.forallSlots _ _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.existsSlots _ _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.reaches _ _ _ _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.chainFrom _ _ _ _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.hasShape _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.wrapTo _ _ _) _, Δ, Δ', h => by simp [pruefe] at h
-  | .onReason (.tagOf _ _) _, Δ, Δ', h => by simp [pruefe] at h
+  | .onReason (.lit _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.global _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.place _ _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.un _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.bin _ _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.someOf _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.fieldOf _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.forallSlots _ _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.existsSlots _ _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.reaches _ _ _ _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.chainFrom _ _ _ _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.hasShape _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.wrapTo _ _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.tagOf _ _) _, Δ, Δ', h => by simp only [pruefe, reduceCtorEq] at h
   | .onTag g arms, Δ, Δ', h => by
       simp only [pruefe] at h; split at h
       · split at h
@@ -986,7 +986,7 @@ theorem fall_gefunden : ∀ (cs : List (String × Option (Option (Int × Int))))
     ∃ pl, suchFall cs x = some pl ∧ Shape.payloadOk pl p = true := by
   intro cs
   induction cs with
-  | nil => intro x p _ h; simp at h
+  | nil => intro x p _ h; simp only [Shape.caseOk_nil, Bool.false_eq_true] at h
   | cons c rest ih =>
       intro x p hu h
       obtain ⟨t, pl⟩ := c
@@ -995,7 +995,7 @@ theorem fall_gefunden : ∀ (cs : List (String × Option (Option (Int × Int))))
       simp only [Shape.caseOk_cons, Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq] at h
       simp only [suchFall]
       rcases h with ⟨rfl, hpl⟩ | h
-      · exact ⟨pl, by simp, hpl⟩
+      · exact ⟨pl, by simp only [↓reduceIte], hpl⟩
       · have hne : t ≠ x := by
           intro heq; subst heq
           -- `x` haette dann einen Fall in `rest`, gegen `hnot`
@@ -1012,7 +1012,7 @@ theorem grund_hat_arm : ∀ (arms : List (String × List Stmt)) (cs : List Strin
     alleGruendeHabenArm arms cs = true → r ∈ cs → arms.any (fun a => a.1 == r) = true := by
   intro arms cs
   induction cs with
-  | nil => intro r _ h; simp at h
+  | nil => intro r _ h; simp only [List.not_mem_nil] at h
   | cons c rest ih =>
       intro r h hr
       simp only [alleGruendeHabenArm, Bool.and_eq_true] at h
@@ -1026,7 +1026,7 @@ theorem fall_hat_arm : ∀ (arms : List (String × Option String × List Stmt))
     arms.any (fun a => a.1 == x) = true := by
   intro arms cs
   induction cs with
-  | nil => intro x pl _ h; simp [suchFall] at h
+  | nil => intro x pl _ h; simp only [suchFall, reduceCtorEq] at h
   | cons c rest ih =>
       intro x pl h hs
       obtain ⟨t, pl'⟩ := c
@@ -1050,14 +1050,14 @@ theorem antwort_ohne_kanal {P : Programm} {Γ : Typing} {ρ : Env} (hU : Umgebun
       rw [he] at hr
       rcases hr with hr | ⟨r, hr, _⟩
       · rw [hr]; trivial
-      · rw [hg] at hr; simp at hr
+      · rw [hg] at hr; simp only [List.not_mem_nil] at hr
   | some sh =>
       rw [he] at hr
       obtain ⟨v, hv, hvs⟩ := hr
       rw [hv]
       rcases hvs with hvs | ⟨r, hr, _⟩
       · exact Or.inl hvs
-      · rw [hg] at hr; simp at hr
+      · rw [hg] at hr; simp only [List.not_mem_nil] at hr
 
 /-- Die Antwort eines Gerufenen MIT Fehlerkanal, wie (U1) sie zusagt -- in die Antwort
     des Rufers (F6): die Gestalt muss treffen (`antwortGestaltPasst`), und ein Grund muss
@@ -1078,11 +1078,11 @@ theorem antwort_mit_kanal {P : Programm} {Γ : Typing} {ρ : Env} (hU : Umgebung
           rcases hres with hres | ⟨r, hr, hres⟩
           · rw [hres]; trivial
           · rw [hres]; exact ⟨r, gruendePassen_mem hsub hr, rfl⟩
-      | some _ => simp [antwortGestaltPasst, he] at hpass
+      | some _ => simp only [antwortGestaltPasst, he, Bool.false_eq_true] at hpass
   | some sh =>
       rw [he] at hres
       cases erg with
-      | none => simp [antwortGestaltPasst, he] at hpass
+      | none => simp only [antwortGestaltPasst, he, Bool.false_eq_true] at hpass
       | some _ =>
           simp only [antwortGestaltPasst, he] at hpass
           obtain ⟨v, hv, hvs⟩ := hres
@@ -1096,30 +1096,30 @@ theorem ausgang_nicht_running (ρ : Env) (sig : String → Option Signatur)
     (hdiv : DivergenzOK sig) (a : Stmt) (s s' : State) (h : istAusgang sig a = true) :
     step ρ a s ≠ .running s' := by
   intro hx
-  cases a <;> simp [istAusgang] at h
+  cases a <;> simp only [istAusgang, Bool.false_eq_true] at h
   case retCall f ps as pre =>
     simp only [step] at hx
     split at hx
-    · split at hx <;> simp at hx
-    · simp at hx
+    · split at hx <;> simp only [reduceCtorEq] at hx
+    · simp only [reduceCtorEq] at hx
   case ret v =>
     cases v
-    · simp [step] at hx
-    · simp only [step] at hx; split at hx <;> simp at hx
+    · simp only [step, reduceCtorEq] at hx
+    · simp only [step] at hx; split at hx <;> simp only [reduceCtorEq] at hx
   case call f ps as pre =>
     cases hs : sig f with
-    | none => simp [hs, istAusgang] at h
+    | none => simp only [hs, Bool.false_eq_true] at h
     | some S =>
         simp only [hs, istAusgang] at h
         have hnb := hdiv f S hs
         rw [h] at hnb
-        simp at hnb
-  case exit => simp [step] at hx
-  case leave => simp [step] at hx
+        simp only [Bool.true_eq_false] at hnb
+  case exit => simp only [step, reduceCtorEq] at hx
+  case leave => simp only [step, reduceCtorEq] at hx
 
 theorem endet_nicht_running (ρ : Env) (sig : String → Option Signatur) (hdiv : DivergenzOK sig) :
     ∀ (b : List Stmt) (s s' : State), endetMitAusgang sig b = true → exec ρ b s ≠ .running s'
-  | [], s, s', h, _ => by simp [endetMitAusgang] at h
+  | [], s, s', h, _ => by simp only [endetMitAusgang, Bool.false_eq_true] at h
   | [a], s, s', h, hx => by
       simp only [endetMitAusgang] at h
       simp only [exec] at hx
@@ -1152,14 +1152,14 @@ theorem antwort_uebertragen {erg z : Option Shape} {R : List String} {v : Option
           cases v with
           | none => trivial
           | some _ => exact hv
-      | some _ => simp [antwortGestaltPasst] at h
+      | some _ => simp only [antwortGestaltPasst, Bool.false_eq_true] at h
   | some _ =>
       cases z with
-      | none => simp [antwortGestaltPasst] at h
+      | none => simp only [antwortGestaltPasst, Bool.false_eq_true] at h
       | some sh =>
           simp only [antwortGestaltPasst] at h
           cases v with
-          | none => simp [AntwortPasst] at hv
+          | none => simp only [AntwortPasst] at hv
           | some w =>
               simp only [AntwortPasst] at hv ⊢
               rcases hv with hv | ⟨r, hr, rfl⟩
@@ -1345,7 +1345,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
             · right; exact LogikS.abwesend hv hlog
           · simp only [step, hv]
             have hl' : WFU ΔP (bindLocal s.local' bn (.int k)) :=
-              WFU_binde hb hl (by simp [Ge.haelt, Value.hasShape])
+              WFU_binde hb hl (by simp only [Ge.haelt, Value.hasShape])
             rcases pruefeBlock_sicher P Γ ρ hD hU hS erg onP ΔP ΔP'
                 ⟨s.world, bindLocal s.local' bn (.int k)⟩ hP hw hl' with hr | hlog
             · left
@@ -1363,7 +1363,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
           obtain ⟨vs, hvs, b, hb⟩ := ruf_eintritt hD hw hl hr
           obtain ⟨hsig, _⟩ := rufPasst_eq hr
           cases b
-          · right; exact LogikS.ruf hvs (by rw [hb]; simp)
+          · right; exact LogikS.ruf hvs (by rw [hb]; simp only [ne_eq, Option.some.injEq, Value.bool.injEq, Bool.false_eq_true, not_false_eq_true])
           · left
             simp only [step, hvs, eintritt] at hb ⊢
             simp only [hb, Ergebnis]
@@ -1381,7 +1381,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
             obtain ⟨vs, hvs, b, hb⟩ := ruf_eintritt hD hw hl hr
             obtain ⟨hsig, _⟩ := rufPasst_eq hr
             cases b
-            · right; exact LogikS.rufGebunden hvs (by rw [hb]; simp)
+            · right; exact LogikS.rufGebunden hvs (by rw [hb]; simp only [ne_eq, Option.some.injEq, Value.bool.injEq, Bool.false_eq_true, not_false_eq_true])
             · left
               obtain ⟨hw', ha⟩ := antwort_ohne_kanal hU hsig hg (t := eintritt s ps vs) hw
               rw [he] at ha
@@ -1394,7 +1394,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
                   rcases ha with ha | ⟨r, hr, _⟩
                   · simp only [Ergebnis]
                     exact ⟨hw', WFU_binde h hl ha⟩
-                  · simp at hr
+                  · simp only [List.not_mem_nil] at hr
           · cases h
         · cases h
       · cases h
@@ -1416,7 +1416,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
                 obtain ⟨vs, hvs, b, hb⟩ := ruf_eintritt hD hw hl hr
                 obtain ⟨hsig, _⟩ := rufPasst_eq hr
                 cases b
-                · right; exact LogikS.rufSonst hvs (by rw [hb]; simp)
+                · right; exact LogikS.rufSonst hvs (by rw [hb]; simp only [ne_eq, Option.some.injEq, Value.bool.injEq, Bool.false_eq_true, not_false_eq_true])
                 · obtain ⟨hw', hres, hdivP⟩ := hU f S hsig (eintritt s ps vs) hw
                   simp only [step, hvs, eintritt] at hb ⊢
                   simp only [hb]
@@ -1432,7 +1432,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
                       · rename_i he
                         left
                         simp only [Ergebnis]
-                        exact ⟨hw', WFU_binde h hl (by simp [Ge.haelt, Value.hasShape])⟩
+                        exact ⟨hw', WFU_binde h hl (by simp only [Ge.haelt, Value.hasShape])⟩
                   | some v =>
                       cases v with
                       | reason x =>
@@ -1449,7 +1449,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
                                 obtain ⟨w, hw2, hws⟩ := hres
                                 cases hw2
                                 rcases hws with hws | ⟨r, hr', hr''⟩
-                                · cases sh <;> simp [Value.hasShape] at hws
+                                · cases sh <;> simp only [Value.hasShape, Bool.false_eq_true] at hws
                                 · cases hr''; exact hr'
                           have hlE : WFU ΔE (bindLocal s.local' err (.reason x)) :=
                             WFU_binde hE hl ⟨x, hx, rfl⟩
@@ -1460,11 +1460,11 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
                             exact Ergebnis_ausgang (binde_erweitert hE)
                               (fun s' => endet_nicht_running ρ P.sig hdivP onErr _ s' hEnd) hr3
                           · right; exact LogikS.fehlerzweig hvs hr2 hlog
-                      | int k => exact bindCallElse_wert h hres hr2 (by simp) hw' hl
-                      | bool t => exact bindCallElse_wert h hres hr2 (by simp) hw' hl
-                      | absent => exact bindCallElse_wert h hres hr2 (by simp) hw' hl
-                      | present k => exact bindCallElse_wert h hres hr2 (by simp) hw' hl
-                      | tagged t q => exact bindCallElse_wert h hres hr2 (by simp) hw' hl
+                      | int k => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
+                      | bool t => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
+                      | absent => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
+                      | present k => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
+                      | tagged t q => exact bindCallElse_wert h hres hr2 (by simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true]) hw' hl
               · cases h
             · cases h
       · cases h
@@ -1479,23 +1479,23 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
           rcases pruefeArme_sicher P Γ ρ hD hU hS erg Δ arms Δ' r s h
               (grund_hat_arm arms cs r hall hr) hw hl with hres | hlog
           · left; exact hres
-          · right; exact LogikS.grundArm (by simp [eval, hgr]) hlog
+          · right; exact LogikS.grundArm (by simp only [eval, hgr]) hlog
         · cases h
       · cases h
-  | .onReason (.lit _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.global _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.place _ _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.un _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.bin _ _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.someOf _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.fieldOf _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.forallSlots _ _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.existsSlots _ _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.reaches _ _ _ _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.chainFrom _ _ _ _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.hasShape _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.wrapTo _ _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
-  | .onReason (.tagOf _ _) _, Δ, Δ', s, h, hw, hl => by simp [pruefe] at h
+  | .onReason (.lit _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.global _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.place _ _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.un _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.bin _ _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.someOf _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.fieldOf _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.forallSlots _ _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.existsSlots _ _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.reaches _ _ _ _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.chainFrom _ _ _ _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.hasShape _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.wrapTo _ _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
+  | .onReason (.tagOf _ _) _, Δ, Δ', s, h, hw, hl => by simp only [pruefe, reduceCtorEq] at h
   | .onTag g arms, Δ, Δ', s, h, hw, hl => by
       simp only [pruefe] at h
       split at h
@@ -1523,7 +1523,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
           obtain ⟨vs, hvs, b, hb⟩ := ruf_eintritt hD hw hl hr
           obtain ⟨hsig, _⟩ := rufPasst_eq hr
           cases b
-          · right; exact LogikS.rufZurueck hvs (by rw [hb]; simp)
+          · right; exact LogikS.rufZurueck hvs (by rw [hb]; simp only [ne_eq, Option.some.injEq, Value.bool.injEq, Bool.false_eq_true, not_false_eq_true])
           · left
             obtain ⟨hw', ha⟩ := antwort_mit_kanal hU hsig (t := eintritt s ps vs) hw hc.2 hc.1
             simp only [step, hvs, eintritt] at hb ⊢
@@ -1542,7 +1542,7 @@ theorem pruefe_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert P
             obtain ⟨v, hv, hvs⟩ := schluss_sicher' hD hw hl hinv
             obtain ⟨b, rfl⟩ := Value.hasShape_bool_true v hvs
             cases b
-            · right; exact LogikS.invariante (by rw [hv]; simp)
+            · right; exact LogikS.invariante (by rw [hv]; simp only [ne_eq, Option.some.injEq, Value.bool.injEq, Bool.false_eq_true, not_false_eq_true])
             · left
               simp only [step, hv, Ergebnis]
               exact hS id _ hreg s hw hl
@@ -1664,7 +1664,7 @@ theorem pruefeArme_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
       pruefeArme P erg Δ arms = some Δ' → arms.any (fun a => a.1 == x) = true →
       Welt P.D Γ s.world → WFU Δ s.local' →
       Ergebnis P Γ erg Δ Δ' (pickArm ρ arms x s) ∨ LogikA ρ arms x s
-  | [], Δ', x, s, h, hx, hw, hl => by simp at hx
+  | [], Δ', x, s, h, hx, hw, hl => by simp only [List.any_nil, Bool.false_eq_true] at hx
   | (n, b) :: rest, Δ', x, s, h, hx, hw, hl => by
       simp only [pruefeArme] at h
       split at h
@@ -1698,7 +1698,7 @@ theorem pruefeTags_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
       arms.any (fun a => a.1 == x) = true → Shape.caseOk cs x p = true →
       Welt P.D Γ s.world → WFU Δ s.local' →
       Ergebnis P Γ erg Δ Δ' (pickTag ρ arms x p s) ∨ LogikT ρ arms x p s
-  | [], Δ', x, p, s, h, hu, hx, hok, hw, hl => by simp at hx
+  | [], Δ', x, p, s, h, hu, hx, hok, hw, hl => by simp only [List.any_nil, Bool.false_eq_true] at hx
   | (t, bd, b) :: rest, Δ', x, p, s, h, hu, hx, hok, hw, hl => by
       simp only [pruefeTags] at h
       split at h
@@ -1720,23 +1720,23 @@ theorem pruefeTags_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
                   rw [pruefeTags_gibt_Δ P erg Δ cs rest Δ' h]
                   obtain ⟨k, rfl⟩ : ∃ k, p = some k := by
                     cases pl with
-                    | none => simp [nutzlastGestalt] at hsh
+                    | none => simp only [nutzlastGestalt, reduceCtorEq] at hsh
                     | some q => cases p with
                       | none => cases q with
-                        | none => simp at hpok
-                        | some r => obtain ⟨lo, hi⟩ := r; simp at hpok
+                        | none => simp only [Shape.payloadOk_some_none_none, Bool.false_eq_true] at hpok
+                        | some r => obtain ⟨lo, hi⟩ := r; simp only [Shape.payloadOk_range_none, Bool.false_eq_true] at hpok
                       | some k => exact ⟨k, rfl⟩
                   simp only
                   have hk : (Value.int k).hasShape sh = true := by
                     cases pl with
-                    | none => simp [nutzlastGestalt] at hsh
+                    | none => simp only [nutzlastGestalt, reduceCtorEq] at hsh
                     | some q => cases q with
-                      | none => simp only [nutzlastGestalt, Option.some.injEq] at hsh; subst hsh; simp [Value.hasShape]
+                      | none => simp only [nutzlastGestalt, Option.some.injEq] at hsh; subst hsh; simp only [Value.hasShape]
                       | some r =>
                           obtain ⟨lo, hi⟩ := r
                           simp only [nutzlastGestalt, Option.some.injEq] at hsh; subst hsh
                           simp only [Shape.payloadOk_range_some, decide_eq_true_eq] at hpok
-                          simp [Value.hasShape]; omega
+                          simp only [Value.hasShape, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq]; omega
                   have hl' : WFU Δv (bindLocal s.local' v (.int k)) := WFU_binde hv hl hk
                   rcases pruefeBlock_sicher P Γ ρ hD hU hS erg b Δv Δb
                       ⟨s.world, bindLocal s.local' v (.int k)⟩ hb hw hl' with hr | hlog
@@ -1757,8 +1757,8 @@ theorem pruefeTags_sicher (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
                   cases pl with
                   | none => simpa using hpok
                   | some q => cases q with
-                    | none => simp [nutzlastGestalt] at hsh
-                    | some r => obtain ⟨lo, hi⟩ := r; simp [nutzlastGestalt] at hsh
+                    | none => simp only [nutzlastGestalt, reduceCtorEq] at hsh
+                    | some r => obtain ⟨lo, hi⟩ := r; simp only [nutzlastGestalt, reduceCtorEq] at hsh
                 subst hp
                 simp only
                 rcases pruefeBlock_sicher P Γ ρ hD hU hS erg b Δ Δb s hb hw hl with hr | hlog

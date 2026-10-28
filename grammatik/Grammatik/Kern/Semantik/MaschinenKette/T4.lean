@@ -86,8 +86,8 @@ theorem kette_bezeugt_schritt_sperre
     have h2 := hfaden j g2 e2 hj
     exact absurd (h1.trans h2.symm) hne
   have hKette' : M'.welten.length = (J.schrittFaden ++ [f]).length + 1 := by
-    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp
-    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp
+    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
+    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
     omega
   have hSchritt' : ∀ (k : Nat) (g0 : Faden) (vor nach0 : World D),
       (J.schrittFaden ++ [f])[k]? = some g0 → M'.welten[k]? = some vor →
@@ -146,7 +146,7 @@ theorem kette_bezeugt_schritt_sperre
             List.length_singleton]
           omega
         rw [eNone] at hk
-        simp at hk
+        simp only [reduceCtorEq] at hk
   -- DELTA: the extended chain keeps member, members, and code by construction;
   -- the link below is unconditional for `t₀` (old steps via `hLinkOld`, the new
   -- step via the prefix witness) and the guard rides along from `hGuardOld`.
@@ -170,7 +170,7 @@ theorem kette_bezeugt_schritt_sperre
         · exact h
         · have hle : M.lauf.length ≤ j := by omega
           rw [List.getElem?_eq_none hle] at hw
-          simp at hw
+          simp only [reduceCtorEq] at hw
       have hw' : M'.lauf[j]? = some (Schritt.mk g0 (.zugriff t₀ w Λe he)) := by
         rw [hM'l, List.getElem?_append_left hjlt]
         exact hw
@@ -192,7 +192,7 @@ theorem kette_bezeugt_schritt_sperre
           · exact h
           · have hle : M.lauf.length ≤ j := by omega
             rw [List.getElem?_eq_none hle] at hj
-            simp at hj
+            simp only [reduceCtorEq] at hj
         have hj' : M'.lauf[j]? = some (Schritt.mk f (.zugriff t₀ w Λe he)) := by
           rw [hM'l, List.getElem?_append_left hjlt]
           exact hj
@@ -203,7 +203,7 @@ theorem kette_bezeugt_schritt_sperre
             List.length_singleton]
           omega
         rw [eNone] at hk0'
-        simp at hk0'
+        simp only [reduceCtorEq] at hk0'
   · intro g hg hw
     exact hGuardOld g hg hw
 
@@ -334,7 +334,7 @@ theorem kette_aus_lauf_bezeugt
           · exact hgf.symm
           · have hempty : prog g = [] := hsingle_prog g hgf
             rw [hempty] at hpc
-            simp at hpc
+            simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
         subst hact
         have hmid_single : ∀ s ∈ Mmid.lauf, s.faden = f := by
           intro s hs'
@@ -382,7 +382,7 @@ theorem kette_aus_lauf_bezeugt
           · exact hgf.symm
           · have hempty : prog g = [] := hsingle_prog g hgf
             rw [hempty] at hpc
-            simp at hpc
+            simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
         subst hact
         have hmid_single : ∀ s ∈ Mmid.lauf, s.faden = f := by
           intro s hs'
@@ -417,7 +417,7 @@ theorem kette_aus_lauf_bezeugt
           · exact hgf.symm
           · have hempty : prog g = [] := hsingle_prog g hgf
             rw [hempty] at hpc
-            simp at hpc
+            simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hpc
         subst hact
         have hmid_single : ∀ s ∈ Mmid.lauf, s.faden = f := by
           intro s hs'

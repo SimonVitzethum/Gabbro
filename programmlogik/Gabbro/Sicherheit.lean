@@ -139,7 +139,7 @@ theorem logik_grundfaelle (ρ : Env) (st : Stmt) (s : State) (h : LogikS ρ st s
     (∃ c t e, st = .ite c t e) ∨ (∃ g bn onP onA, st = .onOption g bn onP onA) ∨
     (∃ g arms, st = .onReason g arms) ∨ (∃ g arms, st = .onTag g arms) ∨
     (∃ l b, st = .locked l b) ∨ (∃ i b, st = .breaking i b) := by
-  cases h <;> simp
+  cases h <;> simp only [Stmt.call.injEq, exists_and_left, ↓existsAndEq, and_true, exists_eq', reduceCtorEq, exists_false, exists_const, or_self, or_false, Stmt.bindCall.injEq, or_true, Stmt.bindCallElse.injEq, Stmt.retCall.injEq, Stmt.loop.injEq, Stmt.ite.injEq, Stmt.onOption.injEq, Stmt.onReason.injEq, Stmt.onTag.injEq, Stmt.locked.injEq, Stmt.breaking.injEq]
 
 /-! ## 2. Sprechproben -- der Pruefer sagt ab, wo das Modell steckenbliebe -/
 

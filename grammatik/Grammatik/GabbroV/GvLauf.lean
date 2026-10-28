@@ -32,7 +32,7 @@ theorem zahl_ext {lo hi : Int} (a b : Zahl lo hi) (h : a.n = b.n) :
   | mk an alo ahi =>
     cases b with
     | mk bn blo bhi =>
-      simp at h
+      simp only at h
       subst h
       rfl
 

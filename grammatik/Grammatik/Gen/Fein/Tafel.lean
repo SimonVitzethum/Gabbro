@@ -14,7 +14,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen
 theorem zip_all_mem {α β : Type} {P : α × β → Bool} :
     ∀ {xs : List α} {ys : List β}, ys.length = xs.length → (xs.zip ys).all P = true → ∀ x ∈ xs, ∃ y, P (x, y) = true
   | [], _, _, _, x, hx => absurd hx (List.not_mem_nil)
-  | _ :: _, [], hl, _, _, _ => by simp at hl
+  | _ :: _, [], hl, _, _, _ => by simp only [List.length_nil, List.length_cons, Nat.right_eq_add, Nat.add_eq_zero_iff, List.length_eq_zero_iff,
+  one_ne_zero, and_false] at hl
   | a :: as, b :: bs, hl, h, x, hx => by
     simp only [List.zip_cons_cons, List.all_cons, Bool.and_eq_true] at h
     rcases List.mem_cons.1 hx with rfl | hx
@@ -27,13 +28,14 @@ theorem mem_getD_map {paare : List (Einsatz × List FZelle)}
     (h : ((paare.map (·.2)).getD j []).contains c = true) : ∃ m ∈ paare.map (·.1), m.HatF c := by
   rw [List.getD_eq_getElem?_getD] at h
   cases hj : (paare.map (·.2))[j]? with
-  | none => simp [hj] at h
+  | none => simp only [hj, Option.getD_none, List.contains_eq_mem, List.not_mem_nil, decide_false,
+  Bool.false_eq_true] at h
   | some zs =>
     rw [hj] at h
     obtain ⟨hjl, hjz⟩ := List.getElem?_eq_some_iff.1 hj
     have hjl' : j < paare.length := by simpa using hjl
     refine ⟨(paare[j]'hjl').1, List.mem_map.2 ⟨_, List.getElem_mem hjl', rfl⟩, ?_⟩
-    have hz : zs = (paare[j]'hjl').2 := by rw [← hjz]; simp
+    have hz : zs = (paare[j]'hjl').2 := by rw [← hjz]; simp only [List.getElem_map]
     exact (hp _ (List.getElem_mem hjl')).2 c (hz ▸ List.contains_iff_mem.1 h)
 
 /-- **The fine table from data.** -/

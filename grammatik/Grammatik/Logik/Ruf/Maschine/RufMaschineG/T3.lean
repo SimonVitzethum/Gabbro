@@ -15,7 +15,7 @@ def nimmtAlle : List D.Lock → List (Ereignis D) → List (Ereignis D)
 
 theorem offen_nimmtAlle : ∀ (Ls : List D.Lock) (s : List (Ereignis D)) (L : D.Lock),
     L ∈ offen (nimmtAlle Ls s) ↔ L ∈ Ls ∨ L ∈ offen s
-  | [], s, L => by simp [nimmtAlle]
+  | [], s, L => by simp only [nimmtAlle, List.not_mem_nil, false_or]
   | K :: Ls, s, L => by
       rw [nimmtAlle, offen_nimmtAlle Ls _ L]
       simp only [offen, List.mem_cons]
@@ -34,7 +34,7 @@ def startSpur (g : D.Fn) : List (Ereignis D) := nimmtAlle (D.haelt g) []
 
 theorem offen_startSpur (g : D.Fn) (L : D.Lock) : L ∈ offen (startSpur g) ↔ L ∈ D.haelt g := by
   rw [startSpur, offen_nimmtAlle]
-  simp [offen]
+  simp only [offen, List.not_mem_nil, or_false]
 
 /-- The start machine: every thread in its entry frame with the entry
     environment and an `ende` residue over the function body, HOLDING the
@@ -127,7 +127,7 @@ theorem rufLogPasstG_mem_eintritt
     RufEreignisF.eintritt k.1 k.2.1 k.2.2 ∈ log := by
   induction h with
   | leer =>
-      simp at hmem
+      simp only [List.not_mem_nil] at hmem
   | eintritt s l f rho s0 htail ih =>
       rw [List.mem_cons] at hmem
       rcases hmem with hmem | hmem
@@ -161,12 +161,12 @@ theorem rufLogPasstG_gedeckt
   induction h with
   | leer =>
       intro f rho v s0 s1 hm
-      simp at hm
+      simp only [List.not_mem_nil] at hm
   | eintritt ks log f rho s0 htail ih =>
       intro g rho' v s0' s1 hm
       rw [List.mem_cons] at hm
       rcases hm with hm | hm
-      · simp at hm
+      · simp only [reduceCtorEq] at hm
       · have hmem := ih g rho' v s0' s1 hm
         rw [List.mem_cons]
         exact Or.inr hmem
@@ -187,7 +187,7 @@ theorem rufLogPasstG_gedeckt
       intro g rho' w s0' s1' hm
       rw [List.mem_cons] at hm
       rcases hm with hm | hm
-      · simp at hm
+      · simp only [reduceCtorEq] at hm
       · have hmem := ih g rho' w s0' s1' hm
         rw [List.mem_cons]
         exact Or.inr hmem
@@ -204,7 +204,7 @@ theorem rufFadenSchluesselG_behalte (z : RufFadenG D)
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l, Γ, Λ, ρ', rb⟩⟩,
        spur, z.log⟩ =
       RufFadenSchluesselG z := by
-  simp [RufFadenSchluesselG, RufSchluesselG]
+  simp only [RufFadenSchluesselG, List.map_cons, RufSchluesselG]
 
 /-- Invariant helper: a step that keeps the key triple and the log keeps
     a well-formed thread. Used by every non-call step below. -/
@@ -300,7 +300,7 @@ theorem rufPopG_passt (z : RufFadenG D)
     have e : RufFadenSchluesselG z =
         RufSchluesselG z.kopf ::
           ((z.stapel.map RufSchluesselG)) := by
-      simp [RufFadenSchluesselG]
+      simp only [RufFadenSchluesselG, List.map_cons]
     rw [e, hpop]
   have htail : RufFadenSchluesselG
       (⟨rest, neu, spur,
@@ -335,7 +335,7 @@ theorem rufPopGrundG_passt (z : RufFadenG D)
     have e : RufFadenSchluesselG z =
         RufSchluesselG z.kopf ::
           ((z.stapel.map RufSchluesselG)) := by
-      simp [RufFadenSchluesselG]
+      simp only [RufFadenSchluesselG, List.map_cons]
     rw [e, hpop]
   have htail : RufFadenSchluesselG
       (⟨rest, neu, spur,

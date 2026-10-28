@@ -253,26 +253,27 @@ theorem aob_of_rmw (x : Exec) (r w : Nat) (h : (r, w) ∈ x.rmw) :
 /-- LDXR/LDAXR installs this core's reservation. -/
 theorem ldx_sets (s : ExclState) (c : CoreId) (a : Addr) (n : Nat) (sh : Bool) :
     monGet (ldxStep s c a n sh).perCore c = some (a, n) := by
-  simp [ldxStep, monSet, monGet]
+  simp only [monGet, ldxStep, monSet, BEq.rfl, List.find?_cons_of_pos]
 
 /-- STXR/STLXR with no reservation fails: the only legal status is `1`. -/
 theorem stx_fails_unset (s : ExclState) (c : CoreId) (a : Addr) (n : Nat)
     (sh : Bool) (h : monGet s.perCore c = none) :
     stxOutcomes s c a n sh = [1] := by
-  simp [stxOutcomes, stxPass, h]
+  simp only [stxOutcomes, stxPass, h, Bool.false_eq_true, ↓reduceIte]
 
 /-- `find?` with a never-true predicate finds nothing. -/
 theorem find?_never (l : List (CoreId × Addr × Nat)) :
     (l.find? fun _ => false) = none := by
   induction l with
   | nil => rfl
-  | cons _ _ ih => simp [List.find?, ih]
+  | cons _ _ ih => simp only [List.find?, ih]
 
 /-- STXR/STLXR clears this core's local monitor, pass or fail. Sail:
     `ClearExclusiveLocal` runs unconditionally (v8_base.sail:29091). -/
 theorem stx_clears (s : ExclState) (c : CoreId) :
     monGet (stxStep s c).perCore c = none := by
-  simp [stxStep, monSet, monGet, find?_never]
+  simp only [monGet, stxStep, monSet, List.find?_filter, bne_iff_ne, ne_eq, beq_iff_eq, not_and_self,
+  decide_false, find?_never]
 
 /-- The lock word both cores contend on. -/
 def lockAddr : Addr := 0

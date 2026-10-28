@@ -13,39 +13,39 @@ theorem StmtR.ite_inv {Λ Λ' : List (Res D)} {c : Expr D Γ Λ .bool}
     {t e : Block D V l Γ Λ Λ'} (h : StmtR A C mr (.ite c t e)) :
     BlockR A C mr t ∧ BlockR A C mr e := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | ite _ _ _ ht he => exact ⟨ht, he⟩
 
 theorem StmtR.onOption_inv {Λ Λ' : List (Res D)} {n : Int} {o : Expr D Γ Λ (.opt n)}
     {p : Block D V l (.index n :: Γ) Λ Λ'} {a : Block D V l Γ Λ Λ'}
     (h : StmtR A C mr (.onOption o p a)) : BlockR A C mr p ∧ BlockR A C mr a := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | onOption _ _ _ hp ha => exact ⟨hp, ha⟩
 
 theorem StmtR.onTag_inv {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     {v : Expr D Γ Λ (.sum cs)} {arms : Arms D V l Γ Λ Λ' cs}
     (h : StmtR A C mr (.onTag v arms)) : ArmsR A C mr arms := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | onTag _ _ ha => exact ha
 
 theorem StmtR.onGrund_inv {Λ Λ' : List (Res D)} {n : Nat}
     {r : Expr D Γ Λ (.why n)} {arms : GrundArms D V l Γ Λ Λ' n}
     (h : StmtR A C mr (.onWhy r arms)) : GrundArmsR A C mr arms := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | onWhy _ _ ha => exact ha
 
 theorem StmtR.breaking_inv {Λ Λ' : List (Res D)} {i : D.Inv}
     {body : Block D V l Γ Λ Λ'} (h : StmtR A C mr (.breaking i body)) : BlockR A C mr body := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | breaking _ _ hb => exact hb
 
 theorem StmtR.locks_inv {Λ : List (Res D)} {L : D.Lock}
@@ -54,15 +54,15 @@ theorem StmtR.locks_inv {Λ : List (Res D)} {L : D.Lock}
     (h : StmtR A C mr (.locks L hr body)) :
     A L ∧ BlockR A C false body ∧ ∀ c, V.boden = some c → c ≤ D.rang L := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | locks _ _ _ hbo hA hb => exact ⟨hA, hb, hbo⟩
 
 theorem StmtR.ret_inv {Λ : List (Res D)} {e : ErgExpr D Γ Λ V.erg} {hΛ : Λ.Perm V.ende}
     (h : StmtR A C mr (.ret (l := l) e hΛ)) : mr = true := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | ret _ _ => rfl
 
 theorem BlockR.cons_inv {Λ Λ' Λ'' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
@@ -180,12 +180,12 @@ theorem EndR.bind_inv {Λ : List (Res D)} {τ : Ty} {e : Expr D Γ Λ τ}
 theorem StmtR.call_inv' {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'} (h : StmtR A C mr s)
     (g : D.Fn) (hg : s.rufZiel = some g) : C g := by
   cases h with
-  | blatt _ hb => cases hb <;> simp [Stmt.rufZiel] at hg
+  | blatt _ hb => cases hb <;> simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | call s g' hg' hC =>
     rw [hg'] at hg
     cases hg
     exact hC
-  | _ => simp [Stmt.rufZiel] at hg
+  | _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
 
 theorem StmtR.call_inv {Λ : List (Res D)} {g : D.Fn} {args : Args D Γ Λ (D.params g)}
     {hp : RufPasst D V (D.signatur g) Λ} {hr : D.gruende g = 0}
@@ -208,31 +208,31 @@ theorem StmtR.traverse_inv {Λ : List (Res D)} {t : D.Tab} {inv : Expr D Γ Λ .
     {body : Block D V true (.index (D.count t) :: Γ) Λ Λ}
     (h : StmtR A C mr (.traverse (l := l) t inv body)) : BlockR A C mr body := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | traverse _ _ _ hb => exact hb
 
 theorem StmtR.retry_inv {Λ : List (Res D)} {n : Nat} {bis : Expr D Γ Λ .bool}
     {body : Block D V true Γ Λ Λ} {ueber : Block D V l Γ Λ Λ}
     (h : StmtR A C mr (.retry n bis body ueber)) : BlockR A C mr body ∧ BlockR A C mr ueber := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | retry _ _ _ _ hb hu => exact ⟨hb, hu⟩
 
 theorem StmtR.forever_inv {Λ : List (Res D)} {a : D.Annahme} {inv : Expr D Γ Λ .bool}
     {body : Block D V true Γ Λ Λ}
     (h : StmtR A C mr (.forever (l := l) a inv body)) : BlockR A C mr body := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | forever _ _ _ hb => exact hb
 
 theorem StmtR.retGrund_inv {Λ : List (Res D)} {r : Fin V.gruende} {hΛ : Λ.Perm V.ende}
     (h : StmtR A C mr (.retWhy (l := l) (Γ := Γ) r hΛ)) : mr = true := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
-  | call _ _ hg _ => simp [Stmt.rufZiel] at hg
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | retWhy _ _ => rfl
 
 theorem BlockR.bindCallElse_inv {Λ Λ' : List (Res D)} {τ : Ty} {g : D.Fn}

@@ -85,13 +85,13 @@ theorem req8 (f : D8.Fn) : P8.requires f = .tru := by rcases fn_zwei f with e | 
 /-! ## 3. Enumerations, unit, checker -/
 
 def fsA : Aufzaehlung D8.Fn := ⟨[a8, c8], fun f => by
-  rcases fn_zwei f with e | e <;> subst e <;> simp⟩
+  rcases fn_zwei f with e | e <;> subst e <;> simp only [List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]⟩
 
 def lsA : Aufzaehlung D8.Lock := ⟨[], fun L => (kein_lock L).elim⟩
 
 def csA : Aufzaehlung (D8.Tab ⊕ D8.Glob) := ⟨[.inl t8], fun c => by
   rcases c with t | g
-  · rw [tab_eins t]; simp
+  · rw [tab_eins t]; simp only [List.mem_cons, List.not_mem_nil, or_false]
   · exact nomatch g⟩
 
 /-- The zero memory. -/

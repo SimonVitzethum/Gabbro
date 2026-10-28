@@ -30,13 +30,13 @@ theorem align_pos : ∀ t : Ty, 0 < t.align := by
   intro t
   induction t with
   | int w => exact intAlign_pos w
-  | flt => simp [align]
-  | dbl => simp [align]
+  | flt => simp only [align, Nat.zero_lt_succ]
+  | dbl => simp only [align, Nat.zero_lt_succ]
   | ptr => exact Conf.wb_pos
-  | void => simp [align]
+  | void => simp only [align, Nat.lt_add_one]
   | arr n t ih => exact ih
   | fld t r iht ihr => unfold align; omega
-  | unit => simp [align]
+  | unit => simp only [align, Nat.lt_add_one]
 
 theorem roundUp_ge (o a : Nat) (h : 0 < a) : o ≤ roundUp o a := by
   unfold roundUp
@@ -88,7 +88,7 @@ theorem fieldOff_end : ∀ (c : Ty) (i o o' : Nat) (t' : Ty), fieldOff c i o = s
           have h3 := roundUp_ge o t.align (align_pos t)
           unfold endOff
           exact ⟨by omega, h2⟩
-  | _ => intro i o o' t' h; simp [fieldOff] at h
+  | _ => intro i o o' t' h; simp only [fieldOff, reduceCtorEq] at h
 
 theorem fieldOff_disj : ∀ (c : Ty) (i j o o1 o2 : Nat) (t1 t2 : Ty), i < j →
     fieldOff c i o = some (o1, t1) → fieldOff c j o = some (o2, t2) → o1 + t1.size ≤ o2 := by
@@ -112,7 +112,7 @@ theorem fieldOff_disj : ∀ (c : Ty) (i j o o1 o2 : Nat) (t1 t2 : Ty), i < j →
           | succ j =>
               simp only [fieldOff] at h1 h2
               exact ihr i j _ o1 o2 t1 t2 (by omega) h1 h2
-  | _ => intro i j o o1 o2 t1 t2 _ h1; simp [fieldOff] at h1
+  | _ => intro i j o o1 o2 t1 t2 _ h1; simp only [fieldOff, reduceCtorEq] at h1
 
 theorem endOff_le_size (t : Ty) (r : Ty) : endOff (fld t r) 0 ≤ size (fld t r) := by
   have h := roundUp_zero t.align (align_pos t)
@@ -137,8 +137,9 @@ theorem gepOff_slot (n : Nat) (R : Ty) (k : Int) (i off : Nat) (t' : Ty)
     gepOff (.arr n R) [0, k, (i : Int)] = some (k * (size R : Int) + off, t') := by
   cases R with
   | fld t r =>
-      simp [gepOff, gepIn, h]
-  | _ => simp [fieldOff] at h
+      simp only [gepOff, Int.zero_mul, Int.zero_add, gepIn, Int.natCast_nonneg, ↓reduceIte, Int.toNat_natCast, h,
+  Option.map_some, Int.add_zero]
+  | _ => simp only [fieldOff, reduceCtorEq] at h
 
 end Ty
 

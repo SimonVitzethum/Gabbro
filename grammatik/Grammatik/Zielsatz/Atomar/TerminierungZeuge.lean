@@ -36,7 +36,8 @@ theorem mStart_endet (t : Faden) (w : mD.Fn) (hw : (initRuhe mE.starts t).1 = so
   | 1, hw =>
       have : w = mHauptB := (Option.some.inj hw).symm
       subst this; exact mKlasse_B
-  | _ + 2, hw => exact absurd hw (by simp [initRuhe, mE])
+  | _ + 2, hw => exact absurd hw (by simp only [initRuhe, mE, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.not_lt,
+  Nat.le_add_left, getElem?_neg, reduceCtorEq, not_false_eq_true])
 
 /-- The run: thread 0's first step (a write to `privA`), then nothing. -/
 theorem terminierung_zeuge : ∃ (R : FadenLaufX mE.P.mitRuhe mO.mitRuhe 0 (GeteiltV (D := mD) mE.P mE.ws)),
@@ -62,7 +63,7 @@ theorem terminierung_zeuge : ∃ (R : FadenLaufX mE.P.mitRuhe mO.mitRuhe 0 (Gete
           cases h
       stotter := fun n h => by
         by_cases hn : n = 0
-        · subst hn; simp at h
+        · subst hn; simp only [↓reduceIte, reduceCtorEq] at h
         · simp only [hn, if_false, Nat.add_one_ne_zero] }
   let R : FadenLaufX mE.P.mitRuhe mO.mitRuhe 0 (GeteiltV (D := mD) mE.P mE.ws) :=
     { K := fun n => ⟨R0.M n, fun _ => true, fun _ => [], fun _ => 0, 0⟩

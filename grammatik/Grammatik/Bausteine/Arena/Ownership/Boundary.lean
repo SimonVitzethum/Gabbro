@@ -52,7 +52,7 @@ theorem consume_call_frame (A : FreiForm D) (C : ∀ f, Contract D f)
     subst released
     refine ⟨so, hso, hfree, rfl, ?_, ?_, ?_⟩
     · intro other
-      simp [State.access, ← hmprops.2.2.2.1, hconsumed.1]
+      simp only [State.access, ← hmprops.2.2.2.1, hconsumed.1, not_false_eq_true]
     · intro j hj
       exact (hconsumed.2.1 j (hmprops.2.2.2.1 ▸ hj)).trans (State.move_other hm j hj)
     · have hn := hconsumed.2.2

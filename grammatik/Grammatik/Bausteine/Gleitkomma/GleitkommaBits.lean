@@ -53,7 +53,7 @@ theorem zerlege (S b fr e f : Nat) (hb : b < 2 ^ e) (hf : fr < 2 ^ f) :
 theorem zuBits_zerlegt (F : Format) (g : GBits F) :
     zuBits F g = (if g.sign then 1 else 0) * 2 ^ (F.ebits + F.fracBits)
       + g.bexp * 2 ^ F.fracBits + g.frac := by
-  unfold zuBits; cases g.sign <;> simp
+  unfold zuBits; cases g.sign <;> simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_add, Nat.zero_mul, Nat.add_left_cancel_iff, Nat.one_mul]
 
 /-- Reading back the bits of a well-formed triple gives the triple. -/
 theorem ausBits_zuBits (F : Format) (hF : F.dicht) (g : GBits F) (hw : wf F g) :
@@ -78,7 +78,7 @@ theorem zuBits_lt (F : Format) (hF : F.dicht) (g : GBits F) (hw : wf F g) :
     rw [Nat.add_mul, Nat.one_mul, ← Nat.pow_add] at hm
     omega
   have h2 : (if g.sign then 1 else 0) * 2 ^ (F.ebits + F.fracBits) ≤ 2 ^ (F.ebits + F.fracBits) := by
-    cases g.sign <;> simp
+    cases g.sign <;> simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_mul, Nat.zero_le, Nat.one_mul, Std.le_refl]
   rw [Nat.pow_succ]
   omega
 

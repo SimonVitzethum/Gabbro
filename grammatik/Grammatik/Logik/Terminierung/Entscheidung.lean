@@ -318,11 +318,11 @@ theorem tor_ruft {f g : D.Fn} (hr : ruftB P f g = true) : tor (zykS P fs) (rangB
   have hfg : reachB P fs f g = true := Zielsatz.reachB_ruft P hvoll (reachB_wurzel P fs f) hr
   unfold tor
   cases hgf : reachB P fs g f
-  · simp [rangB_lt hvoll hfg hgf]
+  · simp only [rangB_lt hvoll hfg hgf, decide_true, Bool.true_or]
   · have e : rangB P fs g = rangB P fs f := Nat.le_antisymm (rangB_le hvoll hfg) (rangB_le hvoll hgf)
     simp only [e, Nat.lt_irrefl, decide_false, Bool.false_or, beq_self_eq_true, Bool.true_and]
     simp only [zykS, zyklusMit, hfg, hgf, Bool.and_self, Bool.true_and]
-    exact List.any_eq_true.2 ⟨g, hvoll g, by simp [hr, hgf]⟩
+    exact List.any_eq_true.2 ⟨g, hvoll g, by simp only [hr, hgf, Bool.and_self]⟩
 
 /-- A gate that every callee of `f` passes admits `f`'s body. -/
 theorem rufeE_aus_ruft (Z : D.Fn → Bool) {f : D.Fn} (hZ : ∀ g, ruftB P f g = true → Z g = true) :
@@ -339,8 +339,8 @@ theorem rufeE_aus_ruft (Z : D.Fn → Bool) {f : D.Fn} (hZ : ∀ g, ruftB P f g =
       cases hm : mE (Gen.ohneRuf g) (P.rumpf f)
       · rw [hm] at e; cases e
       · rfl
-    simp [hm]
-  · simp [hZ g h]
+    simp only [hm, Bool.or_true]
+  · simp only [hZ g h, Bool.true_or]
 
 /-- **THE GATE HOLDS FOR EVERY PROGRAM.** -/
 theorem tor_gut (f : D.Fn) :
@@ -442,7 +442,8 @@ theorem ewigFrei_klasse (hvoll : ∀ g : D.Fn, g ∈ fs) {w : D.Fn} (h : klasse 
   intro g _
   cases hr : reachB P fs w g
   · rfl
-  · simp [lokal_endet_ewig P fs mass (klasse_endet_lokal P fs mass h (hvoll g) hr)]
+  · simp only [Bool.not_true, lokal_endet_ewig P fs mass (klasse_endet_lokal P fs mass h (hvoll g) hr),
+  Bool.not_false, Bool.or_true]
 
 /-- **A `forever`-free hull admits the body under the gate without `forever`.** -/
 theorem ewigFrei_rumpf (hvoll : ∀ g : D.Fn, g ∈ fs) {f : D.Fn} (hf : ewigFrei P fs f = true) :

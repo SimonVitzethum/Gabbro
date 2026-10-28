@@ -60,24 +60,26 @@ def Lauf.haelt (l : Lauf D) (f : Faden) (L : D.Lock) (j : Nat) : Prop :=
   L ∈ offen (l.spur f j)
 
 theorem Lauf.spur_zero (l : Lauf D) (f : Faden) : l.spur f 0 = [] := by
-  simp [Lauf.spur]
+  simp only [spur, List.take_zero, List.filterMap_nil, List.reverse_nil]
 
 theorem Lauf.spur_succ_eigen (l : Lauf D) (f : Faden) (j : Nat) (e : Ereignis D)
     (h : l[j]? = some (Schritt.mk f e)) : l.spur f (j + 1) = e :: l.spur f j := by
   unfold Lauf.spur
   rw [List.take_add_one, h]
-  simp [List.filterMap_append]
+  simp only [Option.toList_some, List.filterMap_append, ↓reduceIte, Option.some.injEq, List.filterMap_cons_some,
+  List.filterMap_nil, List.reverse_append, List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append]
 
 theorem Lauf.spur_succ_fremd (l : Lauf D) (f : Faden) (j : Nat)
     (h : ∀ e, l[j]? ≠ some (Schritt.mk f e)) : l.spur f (j + 1) = l.spur f j := by
   unfold Lauf.spur
   rw [List.take_add_one]
   cases hj : l[j]? with
-  | none => simp
+  | none => simp only [Option.toList_none, List.append_nil]
   | some s =>
       have : s.faden ≠ f := by
         intro hf; exact h s.ereignis (by rw [hj]; cases s; simp_all)
-      simp [List.filterMap_append, this]
+      simp only [Option.toList_some, List.filterMap_append, this, ↓reduceIte, List.filterMap_cons_none,
+  List.filterMap_nil, List.append_nil]
 
 /-! ## 2. Was `offen` ueber eine konsistente, gute Spur sagt -/
 
@@ -89,7 +91,7 @@ theorem konsistent_tail {e : Ereignis D} {s : List (Ereignis D)} (h : Konsistent
 
 theorem konsistent_head {e : Ereignis D} {s : List (Ereignis D)} (h : Konsistent (e :: s)) :
     e.passt s := by
-  have := h 0 e (by simp)
+  have := h 0 e (by simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero])
   simpa using this
 
 /-- Auf einer konsistenten, guten Spur ist keine Sperre zweimal offen. -/
@@ -111,14 +113,15 @@ theorem offen_nodup : ∀ (s : List (Ereignis D)), Konsistent s → (∀ e ∈ s
 theorem offen_zeuge : ∀ (s : List (Ereignis D)), Konsistent s → (∀ e ∈ s, e.gut) → ∀ L, L ∈ offen s →
     ∃ (n : Nat) (h : List D.Lock), s[n]? = some (Ereignis.nimmt L h) ∧
       ∀ n' < n, s[n']? ≠ some (Ereignis.gibt L)
-  | [], _, _, L, h => by simp [offen] at h
+  | [], _, _, L, h => by simp only [offen, List.not_mem_nil] at h
   | .zugriff .. :: s, hk, hg, L, h => by
       obtain ⟨n, h', hn, hv⟩ := offen_zeuge s (konsistent_tail hk)
         (fun e he => hg e (List.mem_cons_of_mem _ he)) L (by simpa [offen] using h)
       refine ⟨n + 1, h', by simpa using hn, ?_⟩
       intro n' hn'
       cases n' with
-      | zero => simp
+      | zero => simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, ne_eq, Option.some.injEq,
+  reduceCtorEq, not_false_eq_true]
       | succ n' => simp only [List.getElem?_cons_succ]; exact hv n' (by omega)
   | .gzugriff .. :: s, hk, hg, L, h => by
       obtain ⟨n, h', hn, hv⟩ := offen_zeuge s (konsistent_tail hk)
@@ -126,7 +129,8 @@ theorem offen_zeuge : ∀ (s : List (Ereignis D)), Konsistent s → (∀ e ∈ s
       refine ⟨n + 1, h', by simpa using hn, ?_⟩
       intro n' hn'
       cases n' with
-      | zero => simp
+      | zero => simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, ne_eq, Option.some.injEq,
+  reduceCtorEq, not_false_eq_true]
       | succ n' => simp only [List.getElem?_cons_succ]; exact hv n' (by omega)
   | .fremd _ :: s, hk, hg, L, h => by
       obtain ⟨n, h', hn, hv⟩ := offen_zeuge s (konsistent_tail hk)
@@ -134,18 +138,20 @@ theorem offen_zeuge : ∀ (s : List (Ereignis D)), Konsistent s → (∀ e ∈ s
       refine ⟨n + 1, h', by simpa using hn, ?_⟩
       intro n' hn'
       cases n' with
-      | zero => simp
+      | zero => simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, ne_eq, Option.some.injEq,
+  reduceCtorEq, not_false_eq_true]
       | succ n' => simp only [List.getElem?_cons_succ]; exact hv n' (by omega)
   | .nimmt M hm :: s, hk, hg, L, h => by
       simp only [offen, List.mem_cons] at h
       rcases h with rfl | h
-      · exact ⟨0, hm, by simp, fun n' hn' => by omega⟩
+      · exact ⟨0, hm, by simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero], fun n' hn' => by omega⟩
       · obtain ⟨n, h', hn, hv⟩ := offen_zeuge s (konsistent_tail hk)
           (fun e he => hg e (List.mem_cons_of_mem _ he)) L h
         refine ⟨n + 1, h', by simpa using hn, ?_⟩
         intro n' hn'
         cases n' with
-        | zero => simp
+        | zero => simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, ne_eq, Option.some.injEq,
+  reduceCtorEq, not_false_eq_true]
         | succ n' => simp only [List.getElem?_cons_succ]; exact hv n' (by omega)
   | .gibt M :: s, hk, hg, L, h => by
       simp only [offen] at h
@@ -158,7 +164,8 @@ theorem offen_zeuge : ∀ (s : List (Ereignis D)), Konsistent s → (∀ e ∈ s
       refine ⟨n + 1, h', by simpa using hn, ?_⟩
       intro n' hn'
       cases n' with
-      | zero => simp [hne]
+      | zero => simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, ne_eq, Option.some.injEq,
+  Ereignis.gibt.injEq, hne, not_false_eq_true]
       | succ n' => simp only [List.getElem?_cons_succ]; exact hv n' (by omega)
 
 /-- Was neuer ist als ein `nimmt L` und kein `gibt L` ist, laesst `L` offen. -/
@@ -169,7 +176,7 @@ theorem offen_bleibt (L : D.Lock) : ∀ (s : List (Ereignis D)), L ∈ offen s �
   | zugriff _ _ _ _ => simpa [offen] using hs
   | gzugriff _ _ _ _ => simpa [offen] using hs
   | fremd _ => simpa [offen] using hs
-  | nimmt M _ => simp [offen, hs]
+  | nimmt M _ => simp only [offen, List.mem_cons, hs, or_true]
   | gibt M =>
       have : M ≠ L := fun h => he (by rw [h])
       simp only [offen]
@@ -220,7 +227,7 @@ theorem Lauf.haelt_zeuge (l : Lauf D) (hg : Gesittet l) (f : Faden) (L : D.Lock)
       ∀ r, k < r → r < j → l[r]? ≠ some (Schritt.mk f (.gibt L)) := by
   intro j
   induction j with
-  | zero => intro h; simp [Lauf.haelt, Lauf.spur_zero, offen] at h
+  | zero => intro h; simp only [haelt, spur_zero, offen, List.not_mem_nil] at h
   | succ j ih =>
       intro h
       by_cases hj : ∃ e, l[j]? = some (Schritt.mk f e)
@@ -239,7 +246,7 @@ theorem Lauf.haelt_zeuge (l : Lauf D) (hg : Gesittet l) (f : Faden) (L : D.Lock)
               refine ⟨k, by omega, h', hn, ?_⟩
               intro r h1 h2
               by_cases hr : r = j
-              · subst hr; rw [he]; simp
+              · subst hr; rw [he]; simp only [ne_eq, Option.some.injEq, Schritt.mk.injEq, reduceCtorEq, and_false, not_false_eq_true]
               · exact hv r h1 (by omega)
         | gibt M =>
             simp only [offen] at h
@@ -249,7 +256,7 @@ theorem Lauf.haelt_zeuge (l : Lauf D) (hg : Gesittet l) (f : Faden) (L : D.Lock)
             refine ⟨k, by omega, h', hn, ?_⟩
             intro r h1 h2
             by_cases hr : r = j
-            · subst hr; rw [he]; simp [hne]
+            · subst hr; rw [he]; simp only [ne_eq, Option.some.injEq, Schritt.mk.injEq, Ereignis.gibt.injEq, hne, and_false, not_false_eq_true]
             · exact hv r h1 (by omega)
         | zugriff t w Λ hh =>
             simp only [offen] at h
@@ -257,7 +264,7 @@ theorem Lauf.haelt_zeuge (l : Lauf D) (hg : Gesittet l) (f : Faden) (L : D.Lock)
             refine ⟨k, by omega, h', hn, ?_⟩
             intro r h1 h2
             by_cases hr : r = j
-            · subst hr; rw [he]; simp
+            · subst hr; rw [he]; simp only [ne_eq, Option.some.injEq, Schritt.mk.injEq, reduceCtorEq, and_false, not_false_eq_true]
             · exact hv r h1 (by omega)
         | gzugriff g w Λ hh =>
             simp only [offen] at h
@@ -265,7 +272,7 @@ theorem Lauf.haelt_zeuge (l : Lauf D) (hg : Gesittet l) (f : Faden) (L : D.Lock)
             refine ⟨k, by omega, h', hn, ?_⟩
             intro r h1 h2
             by_cases hr : r = j
-            · subst hr; rw [he]; simp
+            · subst hr; rw [he]; simp only [ne_eq, Option.some.injEq, Schritt.mk.injEq, reduceCtorEq, and_false, not_false_eq_true]
             · exact hv r h1 (by omega)
         | fremd q =>
             simp only [offen] at h
@@ -273,7 +280,7 @@ theorem Lauf.haelt_zeuge (l : Lauf D) (hg : Gesittet l) (f : Faden) (L : D.Lock)
             refine ⟨k, by omega, h', hn, ?_⟩
             intro r h1 h2
             by_cases hr : r = j
-            · subst hr; rw [he]; simp
+            · subst hr; rw [he]; simp only [ne_eq, Option.some.injEq, Schritt.mk.injEq, reduceCtorEq, and_false, not_false_eq_true]
             · exact hv r h1 (by omega)
       · have hs := l.spur_succ_fremd f j (fun e he => hj ⟨e, he⟩)
         unfold Lauf.haelt at h
@@ -298,7 +305,7 @@ theorem Lauf.haelt_von (l : Lauf D) (f : Faden) (L : D.Lock) (k : Nat) (h : List
       · subst hjk
         unfold Lauf.haelt
         rw [l.spur_succ_eigen f j _ hk]
-        simp [offen]
+        simp only [offen, List.mem_cons, true_or]
       · have ih' := ih (by omega) (fun r h1 h2 => hv r h1 (by omega))
         unfold Lauf.haelt at ih' ⊢
         by_cases hj : ∃ e, l[j]? = some (Schritt.mk f e)
@@ -337,7 +344,7 @@ theorem geordnet_durch_sperre (l : Lauf D) (hg : Gesittet l) (f g : Faden) (L : 
         have : k = i := by omega
         subst this
         have := hi.symm.trans hnk
-        simp at this
+        simp only [Option.some.injEq, Schritt.mk.injEq] at this
         exact hfg this.1
     -- dann haelt f `L` an `k` (genommen an k' < k, seit da nicht gegeben) -- gegen (W3)
     have hkk' : k' < k := by
@@ -350,7 +357,7 @@ theorem geordnet_durch_sperre (l : Lauf D) (hg : Gesittet l) (f g : Faden) (L : 
           have : k = k' := by omega
           subst this
           have := hnk.symm.trans hnk'
-          simp at this
+          simp only [Option.some.injEq, Schritt.mk.injEq, Ereignis.nimmt.injEq, true_and] at this
           exact hfg this.1.symm
       have := hg.ausschluss k' f L hk' hnk' g (Ne.symm hfg)
       exact this (l.haelt_von g L k hk hnk k' hlt' (fun r h1 h2 => hvk r h1 (by omega)))
@@ -368,7 +375,7 @@ theorem geordnet_durch_sperre (l : Lauf D) (hg : Gesittet l) (f g : Faden) (L : 
     · by_cases hri' : r = i
       · subst hri'
         have := hi.symm.trans hc
-        simp at this
+        simp only [Option.some.injEq, Schritt.mk.injEq, true_and] at this
         exact hei L this
       · exact hno ⟨r, by omega, h2, hc⟩
   obtain ⟨r, hir, hrk, hgibt⟩ := hr
@@ -390,9 +397,9 @@ theorem Lauf.haelt_bei_zugriff (l : Lauf D) (hg : Gesittet l) (f : Faden) (j : N
       simp only [Ereignis.passt] at hp
       simp only [Ereignis.gut] at hgut
       unfold Lauf.haelt; rw [← hp]; exact hgut.2 L hL
-  | nimmt _ _ => simp [Ereignis.traeger] at ht
-  | gibt _ => simp [Ereignis.traeger] at ht
-  | fremd _ => simp [Ereignis.traeger] at ht
+  | nimmt _ _ => simp only [Ereignis.traeger, Option.isSome_none, Bool.false_eq_true] at ht
+  | gibt _ => simp only [Ereignis.traeger, Option.isSome_none, Bool.false_eq_true] at ht
+  | fremd _ => simp only [Ereignis.traeger, Option.isSome_none, Bool.false_eq_true] at ht
 
 /-- **Kein Wettlauf auf einem Traeger.** Zwei Zugriffe verschiedener Faeden auf dieselbe
     Tabelle sind durch happens-before geordnet. -/
@@ -420,8 +427,8 @@ theorem kein_wettlauf (l : Lauf D) (hg : Gesittet l) (i j : Nat) (hij : i < j) (
       have hLi : Res.held L ∈ Λ := gi.1 _ hwt
       have hLj : Res.held L ∈ Λ' := gj.1 _ hwt
       exact geordnet_durch_sperre l hg f g L i j hij hfg _ _ (by intro L' h; cases h) hi hj
-        (l.haelt_bei_zugriff hg f i L _ hi hLi (by simp [Ereignis.traeger]))
-        (l.haelt_bei_zugriff hg g j L _ hj hLj (by simp [Ereignis.traeger]))
+        (l.haelt_bei_zugriff hg f i L _ hi hLi (by simp only [Ereignis.traeger, Option.isSome_some]))
+        (l.haelt_bei_zugriff hg g j L _ hj hLj (by simp only [Ereignis.traeger, Option.isSome_some]))
   | inr ms =>
       obtain ⟨m, s⟩ := ms
       have hmi : Res.marke m s ∈ Λ := gi.1 _ hwt
@@ -452,8 +459,8 @@ theorem kein_wettlauf_global (l : Lauf D) (hg : Gesittet l) (i j : Nat) (hij : i
     cases wt with
     | inl L =>
         exact geordnet_durch_sperre l hg f g L i j hij hfg _ _ (by intro L' h; cases h) hi hj
-          (l.haelt_bei_zugriff hg f i L _ hi (gi.1 _ hwt) (by simp [Ereignis.traeger]))
-          (l.haelt_bei_zugriff hg g j L _ hj (gj.1 _ hwt) (by simp [Ereignis.traeger]))
+          (l.haelt_bei_zugriff hg f i L _ hi (gi.1 _ hwt) (by simp only [Ereignis.traeger, Option.isSome_some]))
+          (l.haelt_bei_zugriff hg g j L _ hj (gj.1 _ hwt) (by simp only [Ereignis.traeger, Option.isSome_some]))
     | inr ms =>
         obtain ⟨m, s⟩ := ms
         exact absurd (hg.marke_eindeutig i j f g m s s _ _ hi hj (gi.1 _ hwt) (gj.1 _ hwt)) hfg
@@ -613,7 +620,7 @@ theorem laufProj_get (code : D.Marke → Nat) (l : Lauf D)
     (h : l[i]? = some (Schritt.mk f ei)) :
     (laufProj code l)[i]? =
       some (Marken.Schritt.mk f (ereignisProj code ei)) := by
-  simp [laufProj, schrittProj, List.getElem?_map, h]
+  simp only [laufProj, List.getElem?_map, h, Option.map_some, schrittProj]
 
 /-- **W4 from the construction.** `Einfaedig` over the projected run IS
     `marke_eindeutig` over the real run. -/

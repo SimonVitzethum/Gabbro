@@ -256,7 +256,7 @@ theorem sammleIdx_laenge {α β : Type}
     (sammleIdx f n l).length = l.length := by
   induction l generalizing n with
   | nil => rfl
-  | cons _ _ ih => simp [sammleIdx, ih]
+  | cons _ _ ih => simp only [sammleIdx, List.length_cons, ih, Nat.add_left_cancel_iff]
 
 #print axioms Gabbro.Grammatik.GabbroV.GvZensus.sammleIdx_laenge
 

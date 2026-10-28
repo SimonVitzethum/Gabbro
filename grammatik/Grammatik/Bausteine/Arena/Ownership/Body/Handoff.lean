@@ -15,7 +15,7 @@ open Source
 def slotIn (hs : List Handle) (j : Int) : Bool := hs.any (fun h => decide (h.slot = j))
 
 theorem slotIn_iff {hs : List Handle} {j : Int} : slotIn hs j = true ↔ ∃ h ∈ hs, h.slot = j := by
-  simp [slotIn]
+  simp only [slotIn, List.any_eq_true, decide_eq_true_eq]
 
 theorem slotIn_of_mem {hs : List Handle} {h : Handle} (hm : h ∈ hs) : slotIn hs h.slot = true :=
   slotIn_iff.mpr ⟨h, hm, rfl⟩
@@ -59,19 +59,19 @@ theorem handoff_cells (j : Int) :
     (s.handoff cf moved lent).cells j = (s.cells j).map (handoffCell s.next cf moved lent j) := rfl
 
 theorem handoff_none (j : Int) : (s.handoff cf moved lent).cells j = none ↔ s.cells j = none := by
-  rw [handoff_cells]; simp
+  rw [handoff_cells]; simp only [Option.map_eq_none_iff]
 
 theorem handoff_other {j : Int} (hm : slotIn moved j = false) (hl : slotIn lent j = false) :
     (s.handoff cf moved lent).cells j = s.cells j := by
   rw [handoff_cells]
-  cases s.cells j <;> simp [handoffCell, hm, hl]
+  cases s.cells j <;> simp only [Option.map_none, Option.map_some, handoffCell, hm, hl, cond_eq_ite, Bool.false_eq_true, ↓reduceIte]
 
 theorem moved_cell (hok : HandoffOk s fr cf moved lent) {h : Handle} (hm : h ∈ moved) :
     s.cells h.slot = some ⟨h.allocation, h.grant, fr, []⟩ := by
   have ho := hok.owned h hm
   unfold State.owns at ho
   cases hc : s.cells h.slot with
-  | none => simp [hc] at ho
+  | none => simp only [hc] at ho
   | some cell =>
     rw [hc] at ho
     obtain ⟨⟨ha, hg⟩, hf, hl⟩ := ho
@@ -81,18 +81,18 @@ theorem moved_cell (hok : HandoffOk s fr cf moved lent) {h : Handle} (hm : h ∈
 theorem handoff_moved (hok : HandoffOk s fr cf moved lent) {h : Handle} (hm : h ∈ moved) :
     (s.handoff cf moved lent).cells h.slot = some ⟨h.allocation, s.next, cf, []⟩ := by
   rw [handoff_cells, moved_cell hok hm]
-  simp [handoffCell, slotIn_of_mem hm]
+  simp only [Option.map_some, handoffCell, slotIn_of_mem hm, cond_eq_ite, ↓reduceIte]
 
 theorem handoff_moved_owns (hok : HandoffOk s fr cf moved lent) {h : Handle} (hm : h ∈ moved) :
     (s.handoff cf moved lent).owns cf ⟨h.slot, h.allocation, s.next⟩ := by
-  simp [State.owns, handoff_moved hok hm, Cell.matches]
+  simp only [State.owns, handoff_moved hok hm, Cell.matches, and_self]
 
 theorem lent_cell (hok : HandoffOk s fr cf moved lent) {k : Handle} (hk : k ∈ lent) :
     ∃ cell, s.cells k.slot = some cell ∧ cell.matches k ∧ cell.holder = fr := by
   have ha := hok.lentAccess k hk
   unfold State.access at ha
   cases hc : s.cells k.slot with
-  | none => simp [hc] at ha
+  | none => simp only [hc] at ha
   | some cell => rw [hc] at ha; exact ⟨cell, rfl, ha⟩
 
 theorem not_moved_of_lent (hok : HandoffOk s fr cf moved lent) {k : Handle} (hk : k ∈ lent) :
@@ -109,13 +109,14 @@ theorem handoff_lent (hok : HandoffOk s fr cf moved lent) {k : Handle} (hk : k �
   obtain ⟨cell, hc, hm, hh⟩ := lent_cell hok hk
   refine ⟨cell, hc, hm, hh, ?_⟩
   rw [handoff_cells, hc]
-  simp [handoffCell, not_moved_of_lent hok hk, slotIn_of_mem hk]
+  simp only [Option.map_some, handoffCell, not_moved_of_lent hok hk, slotIn_of_mem hk, cond_eq_ite, ↓reduceIte,
+  Bool.false_eq_true]
 
 theorem handoff_lent_access (hok : HandoffOk s fr cf moved lent) {k : Handle} (hk : k ∈ lent) :
     (s.handoff cf moved lent).access cf k := by
   obtain ⟨cell, _, hm, _, h1⟩ := handoff_lent hok hk
   simp only [State.access, h1, Cell.holder, List.headD_cons]
-  exact ⟨hm, by simp⟩
+  exact ⟨hm, by simp only⟩
 
 theorem handoff_valid (hok : HandoffOk s fr cf moved lent) : (s.handoff cf moved lent).valid := by
   intro j c hc
@@ -132,13 +133,13 @@ theorem handoff_valid (hok : HandoffOk s fr cf moved lent) : (s.handoff cf moved
       simp only [List.mem_cons, not_or]
       exact ⟨hfr.1, hh.2.2.2⟩
   · simp only [handoffCell, hm, Bool.cond_true]
-    exact ⟨by omega, Nat.lt_succ_self _, List.nodup_nil, by simp⟩
+    exact ⟨by omega, Nat.lt_succ_self _, List.nodup_nil, by simp only [List.not_mem_nil, not_false_eq_true]⟩
 
 theorem handoff_agrees {A : FreiForm D} {σ : World D} (hok : HandoffOk s fr cf moved lent)
     (ha : s.agrees A σ) : (s.handoff cf moved lent).agrees A σ := by
   refine ⟨handoff_valid hok, fun i => (ha.2 i).trans ?_⟩
   rw [handoff_cells]
-  cases s.cells i <;> simp
+  cases s.cells i <;> simp only [reduceCtorEq, exists_false, Option.map_none, Option.some.injEq, exists_eq', Option.map_some]
 
 theorem handoff_progress : s.progress (s.handoff cf moved lent) := by
   refine ⟨Nat.le_succ _, ?_⟩
@@ -167,7 +168,7 @@ theorem handoff_callee_owned (hok : HandoffOk s fr cf moved lent) {j : Int} {c :
     rw [moved_cell hok hh] at hs
     cases hs
     simp only [handoffCell, hm, Bool.cond_true]
-    refine ⟨?_, h, hh, rfl, ?_⟩ <;> simp
+    refine ⟨?_, h, hh, rfl, ?_⟩ <;> simp only
 
 end Handoff
 
@@ -188,7 +189,7 @@ structure ReturnOk (s1 s2 : State) (cf : Frame) (result : Option Handle) : Prop 
 
 theorem resultAt_iff {result : Option Handle} {j : Int} :
     resultAt result j = true ↔ ∃ h, result = some h ∧ h.slot = j := by
-  cases result <;> simp [resultAt]
+  cases result <;> simp only [resultAt, Option.any_none, Bool.false_eq_true, reduceCtorEq, false_and, exists_false, Option.any_some, decide_eq_true_eq, Option.some.injEq, exists_eq_left']
 
 theorem restore_cells (j : Int) :
     (s2.restore fr lent result).cells j = (s2.cells j).map (restoreCell s2.next fr lent result j) := rfl
@@ -202,7 +203,7 @@ theorem restore_unmoved (hok : HandoffOk s fr cf moved lent)
   have h1 : (s.handoff cf moved lent).cells j = some (handoffCell s.next cf moved lent j cell) := by
     rw [handoff_cells, hs]; rfl
   have howner : (handoffCell s.next cf moved lent j cell).owner ≠ cf := by
-    cases hl : slotIn lent j <;> simp [handoffCell, hm, hl, hfr.1]
+    cases hl : slotIn lent j <;> simp only [handoffCell, hm, hl, cond_eq_ite, Bool.false_eq_true, ↓reduceIte, ne_eq, hfr.1, not_false_eq_true]
   have h2 := hr.isLocal.1 j _ h1 howner
   have hres : resultAt result j = false := by
     cases hra : resultAt result j with
@@ -213,7 +214,7 @@ theorem restore_unmoved (hok : HandoffOk s fr cf moved lent)
       simp only [State.owns, he, h2] at ho
       exact absurd ho.2.1 howner
   rw [restore_cells, h2]
-  cases hl : slotIn lent j <;> simp [restoreCell, handoffCell, hm, hl, hres]
+  cases hl : slotIn lent j <;> simp only [handoffCell, hm, hl, cond_eq_ite, Bool.false_eq_true, ↓reduceIte, Option.map_some, restoreCell, hres, List.tail_cons]
 
 /-- A handed allocation the callee did not return is gone. -/
 theorem restore_moved (hok : HandoffOk s fr cf moved lent)
@@ -227,7 +228,7 @@ theorem restore_moved (hok : HandoffOk s fr cf moved lent)
     by_cases ho : c.owner = cf
     · obtain ⟨h, hh, he, _⟩ := hr.owned j c h2 ho
       subst he
-      simp [resultAt, hh] at hres
+      simp only [resultAt, hh, Option.any_some, decide_true, Bool.true_eq_false] at hres
     · obtain ⟨h, hh, he⟩ := slotIn_iff.mp hm
       subst he
       have hback := hr.isLocal.2 h.slot c h2 ho
@@ -246,7 +247,7 @@ theorem restore_new (hr : ReturnOk (s.handoff cf moved lent) s2 cf result) {j : 
     by_cases ho : c.owner = cf
     · obtain ⟨h, hh, he, _⟩ := hr.owned j c h2 ho
       subst he
-      simp [resultAt, hh] at hres
+      simp only [resultAt, hh, Option.any_some, decide_true, Bool.true_eq_false] at hres
     · have hback := hr.isLocal.2 j c h2 ho
       rw [(handoff_none j).mpr hs] at hback
       cases hback
@@ -258,13 +259,14 @@ theorem restore_result {h : Handle} (hr : ReturnOk s1 s2 cf (some h)) :
   have ho := hr.result h rfl
   unfold State.owns at ho
   cases h2 : s2.cells h.slot with
-  | none => simp [h2] at ho
+  | none => simp only [h2] at ho
   | some c =>
     rw [h2] at ho
     have hc : (s2.restore fr lent (some h)).cells h.slot = some ⟨h.allocation, s2.next, fr, []⟩ := by
       rw [restore_cells, h2]
-      simp [restoreCell, resultAt, ho.1.1]
-    exact ⟨by simp [State.owns, hc, Cell.matches], hc⟩
+      simp only [Option.map_some, restoreCell, resultAt, Option.any_some, decide_true, ho.1.1, cond_eq_ite,
+  ↓reduceIte]
+    exact ⟨by simp only [State.owns, hc, Cell.matches, and_self], hc⟩
 
 theorem restore_valid (hr : ReturnOk s1 s2 cf result) : (s2.restore fr lent result).valid := by
   intro j c hc
@@ -279,13 +281,13 @@ theorem restore_valid (hr : ReturnOk s1 s2 cf result) : (s2.restore fr lent resu
       exact ⟨hh.1, Nat.lt_succ_of_lt hh.2.1, hh.2.2.1.sublist (List.tail_sublist _),
         fun hm => hh.2.2.2 (List.mem_of_mem_tail hm)⟩
   · simp only [restoreCell, hra, Bool.cond_true]
-    exact ⟨by omega, Nat.lt_succ_self _, List.nodup_nil, by simp⟩
+    exact ⟨by omega, Nat.lt_succ_self _, List.nodup_nil, by simp only [List.not_mem_nil, not_false_eq_true]⟩
 
 theorem restore_agrees {A : FreiForm D} {σ : World D} (hr : ReturnOk s1 s2 cf result)
     (ha : s2.agrees A σ) : (s2.restore fr lent result).agrees A σ := by
   refine ⟨restore_valid hr, fun i => (ha.2 i).trans ?_⟩
   rw [restore_cells]
-  cases s2.cells i <;> simp
+  cases s2.cells i <;> simp only [reduceCtorEq, exists_false, Option.map_none, Option.some.injEq, exists_eq', Option.map_some]
 
 /-- The caller's view of the whole call: every allocation of another
 activation is untouched, nothing new belongs to another activation, and no
@@ -333,7 +335,7 @@ theorem restore_progress (hok : HandoffOk s fr cf moved lent)
     subst hh he
     rw [(restore_result hr).2] at hc
     cases hc
-    simp at hlt
+    simp only at hlt
     omega
   | false =>
     cases hs : s.cells j with

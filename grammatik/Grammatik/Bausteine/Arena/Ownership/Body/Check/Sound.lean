@@ -596,9 +596,9 @@ theorem chkE_sound : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (eb : Endbloc
     simp only [chkE, Bool.and_eq_true] at h
     exact OE.bindCallInd p args he hp hr rest _ _ (sigCompatB_sound hvoll h.1.1.2) h.1.1.1.1 h.1.1.1.2 h.1.2
       (chkE_sound rest k _ hk (resultContextB_bounded (afterCall_bounded hc) _) h.2)
-  | _, _, _, .narrow .., _, _, _, _, h => by simp [chkE] at h
-  | _, _, _, .exchange .., _, _, _, _, h => by simp [chkE] at h
-  | _, _, _, .ite .., _, _, _, _, h => by simp [chkE] at h
+  | _, _, _, .narrow .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
+  | _, _, _, .exchange .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
+  | _, _, _, .ite .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
 
 theorem chkArms_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     (arms : Arms D V l Γ Λ Λ' cs) (k c : Context),
@@ -610,7 +610,7 @@ theorem chkArms_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : 
     simp only [chkArms]
     exact supports_join
       (supports_map (fun c1 => armDrop c1 ca) (fun x => armBind x ca)
-        (fun x => by cases ca <;> simp [armDrop, armBind, Context.bind_drop])
+        (fun x => by cases ca <;> simp only [armDrop, armBind, Context.bind_drop])
         (fun x hx => armBind_bounded hx ca) (fun x hx => armDrop_bounded hx ca)
         (chkB_sound b k (armBind c ca) hk (armBind_bounded hc ca)))
       (chkArms_sound rest k c hk hc)

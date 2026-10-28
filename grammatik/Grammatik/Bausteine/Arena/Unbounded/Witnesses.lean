@@ -100,7 +100,7 @@ open InvDynZeuge
 def gWorld : World FD := wd 0 4 4 nx0 rn0 rn0
 
 theorem gFree : FA.FreiOk gWorld := by
-  refine ⟨[], ?_, .nil, by simp⟩
+  refine ⟨[], ?_, .nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]⟩
   change FA.Kette gWorld 4 []
   exact .nil
 

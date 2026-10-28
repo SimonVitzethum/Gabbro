@@ -21,12 +21,12 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
       simp only [traverseLauf] at h
       split at h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hi σ ρ hh
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | cons k ks ih =>
       intro σ ρ hh σ' h
       simp only [traverseLauf] at h
       split at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 (.cons k ρ) (hinv.heldB hh)
         split at h
@@ -38,14 +38,14 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
           exact g1.trans (ih σ1 ρ1.tail (g1.heldB hh) σ' h)
         · rename_i σ1 ρ1 hs1
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          split at h <;> simp [Ausgang.welt] at h
+          split at h <;> simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h
           subst h; exact g1.trans (hi σ1 ρ1.tail (g1.heldB hh))
-        · rename_i σ1 v hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp [Ausgang.welt] at h
-        · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
 
 theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
@@ -66,7 +66,7 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
       intro σ ρ hh σ' h
       simp only [retryLauf] at h
       split at h
-      · simp [Ausgang.welt] at h; subst h; exact hb σ ρ hh
+      · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ hh
       · have hinv := hb σ ρ hh
         have hstep := hs (bis σ ρ).1 ρ (hinv.heldB hh)
         split at h
@@ -76,14 +76,14 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
         · rename_i σ1 ρ1 hs1
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
           exact g1.trans (ih σ1 ρ1 (g1.heldB hh) σ' h)
-        · rename_i σ1 ρ1 hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 v hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp [Ausgang.welt] at h
-        · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
 
 theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausgang V true Γ)
     (inv : World D → Env D Γ → World D × Bool)
@@ -93,12 +93,12 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
       GutAusgang W G σ (foreverLauf (l := l) a schritt inv n σ ρ) := by
   intro n
   induction n with
-  | zero => intro σ ρ _ σ' h; simp [foreverLauf, Ausgang.welt] at h
+  | zero => intro σ ρ _ σ' h; simp only [Ausgang.welt, foreverLauf, reduceCtorEq] at h
   | succ n ih =>
       intro σ ρ hh σ' h
       simp only [foreverLauf] at h
       split at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 ρ (hinv.heldB hh)
         split at h
@@ -108,14 +108,14 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
         · rename_i σ1 ρ1 hs1
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
           exact g1.trans (ih σ1 ρ1 (g1.heldB hh) σ' h)
-        · rename_i σ1 ρ1 hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 v hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp [Ausgang.welt] at h
-        · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
 
 end Schleifen
 /-! ### The lock floor of a body (held-set relaxation, 2026-09-13)

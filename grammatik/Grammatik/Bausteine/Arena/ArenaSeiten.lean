@@ -26,18 +26,19 @@ theorem discard_live (S : SeitenZustand) (lo hi i : Nat)
     (empty : EmptyChunk S.slots lo hi) (live : Live S.slots i) :
     (discard S lo hi).payload i = S.payload i := by
   have h : ¬ (lo ≤ i ∧ i < hi) := fun h => live.2 (empty i h.1 h.2 live.1)
-  simp [discard, h]
+  simp only [discard, h, ↓reduceIte]
 
 theorem discard_preserves_reuse (S : SeitenZustand) (lo hi : Nat) :
     freiAlloc (discard S lo hi).slots = freiAlloc S.slots := rfl
 
 theorem discard_live_zeuge :
-    let S : SeitenZustand := ⟨⟨3, [0, 1], by intro i h; simp at h; omega⟩, fun i => i + 7⟩
+    let S : SeitenZustand := ⟨⟨3, [0, 1], by intro i h; simp only [List.mem_cons, List.not_mem_nil, or_false] at h; omega⟩, fun i => i + 7⟩
     EmptyChunk S.slots 0 2 ∧ Live S.slots 2 ∧
     (discard S 0 2).payload 2 = 9 ∧ (freiAlloc (discard S 0 2).slots).1 = 0 := by
-  refine ⟨?_, by simp [Live], by decide, by decide⟩
+  refine ⟨?_, by simp only [Live, Nat.lt_add_one, List.mem_cons, reduceCtorEq, Nat.succ_ne_self, List.not_mem_nil, or_self,
+  not_false_eq_true, and_self], by decide, by decide⟩
   intro i _ hi _
   have h : i = 0 ∨ i = 1 := by omega
-  rcases h with rfl | rfl <;> simp
+  rcases h with rfl | rfl <;> simp only [List.mem_cons, Nat.zero_ne_one, List.not_mem_nil, or_self, or_false, Nat.succ_ne_self, or_true]
 
 end Gabbro.Grammatik.ArenaDyn

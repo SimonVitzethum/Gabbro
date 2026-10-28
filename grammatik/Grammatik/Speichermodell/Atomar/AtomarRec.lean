@@ -203,7 +203,7 @@ theorem lese_schritt (T : D.Tab ⊕ D.Glob → Prop) {HX : List (XEintrag D)} (h
   | cons x xs =>
       have hlt : σ.spur.length < (σ.lese Λ (x :: xs)).spur.length := by
         show σ.spur.length < (leseEv σ Λ (x :: xs) ++ σ.spur).length
-        simp [leseEv]
+        simp only [leseEv, List.map_cons, List.cons_append, List.length_cons, List.length_append, List.length_map]
         omega
       refine ⟨HX ++ [(σ.lese Λ (x :: xs), s)], ?_, ?_, fun e h => List.mem_append_left _ h,
         fun A hP _ => hP _ _ (List.mem_append_right _ List.mem_cons_self) _⟩
@@ -289,7 +289,7 @@ theorem execStmtHA_blatt (P : Programm D) (S : SperrInv D) (O : Orakel D) (U : U
     (σ : World D) (ρ : Env D Γ) :
     execStmtHA S O U A passes R s σ ρ = execStmt O passes R s (vorA A σ Λ (stmtOrteP P s)) ρ := by
   cases s <;> first
-    | (simp [Stmt.istBlatt] at hb; done)
+    | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb; done)
     | (simp only [execStmtHA, execStmt, stmtOrteP, ← vorA_lese hA]; done)
     | (simp only [execStmtHA, execStmt, stmtOrteP, vorA_nil hA]; done)
     | (simp only [execStmtHA, execStmt, stmtOrteP, vorA_lese hA]; done)

@@ -93,7 +93,7 @@ theorem fussSX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs
             rw [@decide_eq_true _ (Classical.propDecidable _) hg] at hl
             cases hl
           · left
-            simp
+            simp only [Bool.or_true]
       · have hc' : c ∈ (P.rumpf f).regs.flatMap D.rtraeger := by
           have e := rumpf_mitRuhe_regs P f
           exact e ▸ hc
@@ -164,7 +164,7 @@ theorem besitzB_sound {E : Einheit D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g 
   · exact List.all_eq_true.mp h1.2 r hr
 
 theorem besitzB_leer {E : Einheit D} {fs : List D.Fn} (hB : E.arenen = []) : besitzB E fs = true := by
-  simp [besitzB, hB]
+  simp only [besitzB, hB, List.all_append, List.all_nil]
 
 end Besitz
 

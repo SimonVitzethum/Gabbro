@@ -96,7 +96,7 @@ def vD : Deklaration where
   Fn := VFn
   sig := fun | .haupt => 0 | .mid => 1 | .ferr => 2
   sigNr := fun | 0 => vSigHaupt | 1 => vSigMid | _ => vSigErr
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -137,7 +137,7 @@ theorem vHp (caller callee : vD.Fn) (hw : ∀ t, (vD.signatur callee).schreibt t
   hw := hw
   hg := fun g => nomatch g
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
+  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := RufPasst.hh_von (by
     intro L
     rw [hh]
@@ -279,7 +279,7 @@ theorem vO_gut : GutO vO := by
     · intro g
       exact nomatch g
     · intro m st hm
-      simp at hm
+      simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
     · intro L hL
       have eL : L = () := rfl
       rw [eL]
@@ -341,7 +341,7 @@ theorem execBlock_eins_logikV {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ :
   simp only [execBlock] at h
   revert h
   cases execStmt O passes R s σ ρ with
-  | ok σ' ρ' => intro h; simp [execBlock] at h
+  | ok σ' ρ' => intro h; simp only [reduceCtorEq] at h
   | _ => intro h; exact h
 
 /-- An axiom call never ends in a logic failure (only in `ok` or in the
@@ -358,7 +358,7 @@ theorem execStmt_axiomCall_logik {D : Deklaration} {V : Vertrag D} {l : Bool} {�
     execStmt O passes R (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) σ ρ ≠
       .logik e := by
   simp only [execStmt]
-  split <;> simp
+  split <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 
 theorem vP_koerper_mid : KoerperGutV vP 0 vMid := by
   intro O' _ R _ hOV σ ρ _
@@ -370,8 +370,8 @@ theorem vP_koerper_mid : KoerperGutV vP 0 vMid := by
   · simp only [vIte, vLetElse, vErrBlock, execStmt, execBlock, vTor] at h1
     split at h1
     · split at h1
-      · simp [Ausgang.schrumpf] at h1
-      · simp [execEnd, EndAusgang.schrumpf, EndAusgang.zuAusgang] at h1
+      · simp only [Ausgang.schrumpf, reduceCtorEq] at h1
+      · simp only [EndAusgang.zuAusgang, EndAusgang.schrumpf, execEnd, reduceCtorEq] at h1
       · rename_i e hR
         cases h1
         exact hOV _ _ _ _ hR g rfl
@@ -397,7 +397,8 @@ theorem vP_koerper_haupt : KoerperGutV vP 0 vHaupt := by
       exact hOV _ _ _ _ hR g rfl
     · cases h1
   · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h1 with h2 | ⟨σ2, ρ2, _, h2⟩
-    · simp [vRetry, vLeave, execStmt, retryLauf, execBlock, eval, wahr?] at h2
+    · simp only [vRetry, vLeave, execStmt, retryLauf, wahr?, eval, Bool.false_eq_true, ↓reduceIte, execBlock,
+  reduceCtorEq] at h2
     · rcases execEnd_cons_logikV _ _ _ _ _ _ _ _ h2 with h3 | ⟨σ3, ρ3, _, h3⟩
       · simp only [vLocks] at h3
         simp only [execStmt] at h3

@@ -61,7 +61,7 @@ def probeD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => probeSig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -77,9 +77,9 @@ def probeD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun _ h => by simp at h
+  geteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun _ h => by simp at h
+  ggeteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h
 
 /-- Complete enumerations of the probe. -/
 instance probeA : Aufz probeD where

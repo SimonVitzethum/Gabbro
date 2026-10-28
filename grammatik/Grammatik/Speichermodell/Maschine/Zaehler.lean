@@ -131,8 +131,8 @@ theorem zInv_schritt {Z Z' : ZZustand} (hI : ZInv Z) (hs : ZSchritt Z Z') : ZInv
         unfold ZZustand.fertige at hz
         have ht' : t = 0 ∨ t = 1 := by omega
         rcases ht' with rfl | rfl
-        · rw [hf] at hz; simp at hz ⊢; omega
-        · rw [hf] at hz; simp at hz ⊢; omega
+        · rw [hf] at hz; simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_add, Nat.succ_ne_self] at hz ⊢; omega
+        · rw [hf] at hz; simp only [Bool.false_eq_true, ↓reduceIte, Nat.add_zero, Nat.zero_ne_one, Nat.add_right_cancel_iff] at hz ⊢; omega
       · show (if u = t then true else Z.fertig u) = false
         rw [if_neg (by omega)]
         exact hI.sonst u hu

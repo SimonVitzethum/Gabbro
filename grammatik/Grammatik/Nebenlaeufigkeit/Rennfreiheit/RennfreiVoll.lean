@@ -76,7 +76,7 @@ theorem zugriffsDelta_lese (σ : World D) (Λ : List (Res D)) (os : List (D.Tab 
 theorem zugriffsDelta_fragt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) :
     ZugriffsDelta σ.spur (σ.fragt q).spur :=
   zugriffsDelta_brav (gut_fragt (W := fun _ => true) (G := fun _ => true) σ q).2 [.fremd q] rfl
-    (fun L h hm => by simp at hm)
+    (fun L h hm => by simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm)
 
 /-- A question to the outside, then the reads of the form. -/
 theorem zugriffsDelta_fragt_lese (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) (Λ : List (Res D))
@@ -88,7 +88,7 @@ theorem zugriffsDelta_fragt_lese (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) 
     (fun L h hm => by
       rcases List.mem_append.mp hm with hm | hm
       · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
-      · simp at hm)
+      · simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm)
 
 theorem sperrDelta_nimmt (s : List (Ereignis D)) (L : D.Lock) :
     SperrDelta s (Ereignis.nimmt L (offen s) :: s) :=
@@ -587,9 +587,9 @@ theorem zugriffVon_some {e : Ereignis D} {c : D.Tab ⊕ D.Glob} {w : Bool}
       simp only [zugriffVon, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact Or.inr ⟨g, Λ, hh, rfl, rfl⟩
-  | nimmt => simp [zugriffVon] at h
-  | gibt => simp [zugriffVon] at h
-  | fremd => simp [zugriffVon] at h
+  | nimmt => simp only [zugriffVon, reduceCtorEq] at h
+  | gibt => simp only [zugriffVon, reduceCtorEq] at h
+  | fremd => simp only [zugriffVon, reduceCtorEq] at h
 
 /-- Without a `nimmt` in `Y`, a lock open after `Y` was open before. -/
 theorem offen_ohne_nimmt (L : D.Lock) : ∀ (Y s : List (Ereignis D)),
@@ -620,7 +620,7 @@ theorem gibt_aus_offen (L : D.Lock) : ∀ (X s : List (Ereignis D)), L ∈ offen
         | zugriff => exact absurd (by simpa [offen] using hX) hn
         | gzugriff => exact absurd (by simpa [offen] using hX) hn
         | fremd => exact absurd (by simpa [offen] using hX) hn
-        | nimmt M hm => exact absurd (by simp [offen, hX]) hn
+        | nimmt M hm => exact absurd (by simp only [List.cons_append, offen, List.mem_cons, hX, or_true]) hn
         | gibt M =>
             by_cases hM : M = L
             · subst hM; exact List.mem_cons_self

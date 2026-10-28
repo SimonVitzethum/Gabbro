@@ -73,7 +73,7 @@ noncomputable def erreicht {Q' : Type} (I : Automat σ Q' O) (ks : List σ.K) (a
 theorem mem_erreicht {Q' : Type} {I : Automat σ Q' O} {ks : List σ.K} {a : List (Baum σ)} {d : Nat} {x : Q'} :
     x ∈ erreicht I ks a d ↔ ∃ u ∈ schicht ks a d, I.lauf u = x := by
   classical
-  simp [erreicht]
+  simp only [erreicht, List.mem_toFinset, List.mem_map]
 
 theorem erreicht_mono {Q' : Type} (I : Automat σ Q' O) (ks : List σ.K) (a : List (Baum σ)) (d : Nat) :
     erreicht I ks a d ⊆ erreicht I ks a (d + 1) := fun _ hx => by

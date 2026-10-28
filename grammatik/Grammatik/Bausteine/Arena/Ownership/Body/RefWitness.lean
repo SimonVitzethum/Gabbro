@@ -52,7 +52,7 @@ open Source
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -73,9 +73,9 @@ open Source
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 /-- The tracked arena: payload `0`, free link `1`; words `0` (counter), `1` (committed), `2` (free head). -/
 def A : FreiForm D where
@@ -122,11 +122,11 @@ def I : Interfaces A := fun _ => ⟨.nil, rfl, .plain⟩
 theorem admitted : checkProgram P A I [()] = true := by decide +kernel
 
 /-- **The body derives in the ownership judgment.** -/
-theorem checked : Checked P A I := checkProgram_sound (fun f => by cases f; simp) admitted
+theorem checked : Checked P A I := checkProgram_sound (fun f => by cases f; simp only [List.mem_cons, List.not_mem_nil, or_false]) admitted
 
 /-- The checked program's interfaces hold at every actual call, under a good oracle. -/
 theorem calls {O : Orakel D} (hO : GutO O) (passes : Nat) : ∀ n, Respects A I.contracts (rufAt P O passes n) :=
-  checkProgram_calls (fun f => by cases f; simp) admitted hO passes
+  checkProgram_calls (fun f => by cases f; simp only [List.mem_cons, List.not_mem_nil, or_false]) admitted hO passes
 
 /-- **A reference never bypasses the ledger**: a write through a reference into the tracked arena is refused by
     the checker, in every declaration, for every program. -/
@@ -135,7 +135,7 @@ theorem chkS_ref_arena {D : Deklaration} (A : FreiForm D) (I : Interfaces A) (fs
     (ht : D.tabNr n = some A.tab) (ho : D.offen A.tab = true) (f : D.Feld A.tab) (e : Expr D Γ Λ (D.typ A.tab f))
     (hw : V.schreibt A.tab = true) (hL : darf D A.tab Λ) (k c : Context) :
     chkS A I fs out (l := l) (.assignSlotRef r A.tab ht ho f e hw hL) k c = none := by
-  simp [chkS]
+  simp only [chkS, ne_eq, not_true_eq_false, decide_false, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
 
 #print axioms checked
 #print axioms chkS_ref_arena

@@ -17,8 +17,8 @@ variable {D : Deklaration}
 
 theorem Var.pos_inj {Γ : Ctx} {τ : Ty} : ∀ (x y : Var Γ τ), x.pos = y.pos → x = y
   | .here, .here, _ => rfl
-  | .here, .there _, h => by simp [Var.pos] at h
-  | .there _, .here, h => by simp [Var.pos] at h
+  | .here, .there _, h => by simp only [pos, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at h
+  | .there _, .here, h => by simp only [pos, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at h
   | .there x, .there y, h => by
       have := Var.pos_inj x y (by simpa [Var.pos] using h)
       rw [this]
@@ -29,10 +29,10 @@ theorem Abs.ext_null (a : Abs) (s : Status) : a.ext s 0 = s := rfl
 
 theorem Abs.ext_succ (a : Abs) (s : Status) (n : Nat) : a.ext s (n + 1) = a n := rfl
 
-theorem Abs.set_selbst (a : Abs) (m : Nat) (s : Status) : a.set m s m = s := by simp [Abs.set]
+theorem Abs.set_selbst (a : Abs) (m : Nat) (s : Status) : a.set m s m = s := by simp only [set, ↓reduceIte]
 
 theorem Abs.set_anders (a : Abs) (m n : Nat) (s : Status) (h : n ≠ m) : a.set m s n = a n := by
-  simp [Abs.set, h]
+  simp only [set, h, ↓reduceIte]
 
 /-- What a status in `a.set m s` says: either the position is `m` and `s` is that status, or it is another position and
     `a` said so. -/
@@ -85,19 +85,19 @@ theorem StrukturPasst.ext_offen {a : Abs} {τ : Ty} {Γ : Ctx} {σ : World D} {k
     (h : StrukturPasst K a σ ρ) : StrukturPasst K (a.ext .offen) σ (.cons k ρ) := by
   refine ⟨fun x hx => ?_, fun x hx => ?_, fun x hx => ?_, fun x y hx hy hne => ?_⟩
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact h.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact h.2.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact h.2.2.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there x' =>
       cases y with
-      | here => exact absurd hy (by simp [Var.pos, Abs.ext])
+      | here => exact absurd hy (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
       | there y' => exact h.2.2.2 x' y' hx hy (by simpa [Var.pos] using hne)
 
 /-- A new OWNED binder: it names a live slot in neither structure that differs from every owned slot. -/
@@ -110,10 +110,10 @@ theorem StrukturPasst.ext_frei {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D �
     | here => exact ⟨h1, h2, h2'⟩
     | there y => exact hP.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact hP.2.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact hP.2.2.1 y hx
   · cases x with
     | here =>
@@ -130,19 +130,19 @@ theorem StrukturPasst.ext_liste {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D 
     (hP : StrukturPasst K a σ ρ) (h1 : K.InL σ k.n) : StrukturPasst K (a.ext .liste) σ (.cons k ρ) := by
   refine ⟨fun x hx => ?_, fun x hx => ?_, fun x hx => ?_, fun x y hx hy hne => ?_⟩
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact hP.1 y hx
   · cases x with
     | here => exact h1
     | there y => exact hP.2.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact hP.2.2.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there x' =>
       cases y with
-      | here => exact absurd hy (by simp [Var.pos, Abs.ext])
+      | here => exact absurd hy (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
       | there y' => exact hP.2.2.2 x' y' hx hy (by simpa [Var.pos] using hne)
 
 /-- A new TREE MEMBER binder. -/
@@ -150,19 +150,19 @@ theorem StrukturPasst.ext_baum {a : Abs} {Γ : Ctx} {σ : World D} {ρ : Env D �
     (hP : StrukturPasst K a σ ρ) (h1 : K.InB σ k.n) : StrukturPasst K (a.ext .baum) σ (.cons k ρ) := by
   refine ⟨fun x hx => ?_, fun x hx => ?_, fun x hx => ?_, fun x y hx hy hne => ?_⟩
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact hP.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there y => exact hP.2.1 y hx
   · cases x with
     | here => exact h1
     | there y => exact hP.2.2.1 y hx
   · cases x with
-    | here => exact absurd hx (by simp [Var.pos, Abs.ext])
+    | here => exact absurd hx (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
     | there x' =>
       cases y with
-      | here => exact absurd hy (by simp [Var.pos, Abs.ext])
+      | here => exact absurd hy (by simp only [Abs.ext, Var.pos, reduceCtorEq, not_false_eq_true])
       | there y' => exact hP.2.2.2 x' y' hx hy (by simpa [Var.pos] using hne)
 
 /-- **The status of some variables changes, the world moves.** The caller supplies the facts of the new state in the new
@@ -344,7 +344,8 @@ theorem baum_doppelkind_bricht (A : FreiForm D) (Lf Rf : LinkFeld A) (Wz : LinkK
         rw [hT1.leer, hT2.leer]
         rfl
     rw [key S1 hS1, key S2 hS2] at hnd
-    simp at hnd
+    simp only [List.cons_append, List.nil_append, List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false,
+  or_self, not_true_eq_false, not_false_eq_true, List.nodup_nil, and_self, and_true, and_false] at hnd
 
 /-- A tree with a released slot as its root is not well formed: **use after release** in the tree. -/
 theorem baum_freigegeben_bricht (A : FreiForm D) (Lf Rf : LinkFeld A) (Wz : LinkKopf A) (σ : World D)

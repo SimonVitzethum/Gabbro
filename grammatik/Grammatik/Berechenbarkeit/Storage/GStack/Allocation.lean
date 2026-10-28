@@ -47,8 +47,9 @@ theorem fresh_allocated (A : FreiForm D) (x : Var Γ (D.typ A.tab A.feld))
       rfl
     case payload =>
       intro i
-      simp [eval, Block.arenaBump, Expr.weaken, Expr.ins, Var.ins,
-        World.schreibSlot, World.merke, World.storeSlot, World.lese]; rfl
+      simp only [World.lese, World.merke, World.schreibSlot, World.storeSlot, eval, List.map_cons, List.map_nil,
+  List.cons_append, List.nil_append, Expr.weaken, Expr.ins, Var.ins, List.map_append, List.append_assoc,
+  Block.arenaBump, Int.reduceAdd, orte_umTyp, eval_umTyp, World.slots_schreibGlob, ↓reduceDIte]; rfl
   obtain ⟨σp, k, hexec, hkn, hbytes⟩ := hprefix
   obtain ⟨σm, hm, hhead, hlinks, hcount, hframe⟩ :=
     arenaRumpf_ausfuehren O passes R A (.var x) hwT hLT hwU hLU (.nil)
@@ -88,8 +89,9 @@ theorem reused_allocated (A : FreiForm D) (x : Var Γ (D.typ A.tab A.feld))
       rfl
     case payload =>
       intro i
-      simp [eval, Expr.weaken, Expr.ins, Var.ins,
-        World.schreibSlot, World.merke, World.storeSlot, World.lese]; rfl
+      simp only [World.schreibSlot, World.merke, World.storeSlot, eval, World.lese, List.map_cons, List.map_nil,
+  List.cons_append, List.nil_append, World.slots_schreibGlob, Expr.weaken, Expr.ins, Var.ins, List.map_append,
+  List.append_assoc, ↓reduceDIte]; rfl
   obtain ⟨σp, k, hexec, hkn, hbytes⟩ := hprefix
   obtain ⟨σm, km, hm, hkm, hhead, hlinks, hcount, hframe⟩ :=
     nimmAlloc_fakten O passes R A (.var x) hwT hLT hwF hLF failure (.nil) σ ρ hroom

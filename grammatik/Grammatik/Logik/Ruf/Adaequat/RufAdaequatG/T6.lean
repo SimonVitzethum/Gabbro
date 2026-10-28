@@ -90,18 +90,18 @@ theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
       .onOption _ _ _ (blockG_ohneRuf p hs.onOption_inv.1) (blockG_ohneRuf a hs.onOption_inv.2)
   | _, _, _, _, _, .onTag _ arms, hs => .onTag _ _ (armsG_ohneRuf arms hs.onTag_inv)
   | _, _, _, _, _, .onWhy _ arms, hs => .onWhy _ _ (grundG_ohneRuf arms hs.onGrund_inv)
-  | _, _, _, _, _, .call .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .callInd .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .call .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks _ _ body, hs => .locks _ _ _ (blockG_ohneRuf body hs.locks_inv.2)
   | _, _, _, _, _, .breaking _ body, hs => .breaking _ _ (blockG_ohneRuf body hs.breaking_inv)
-  | _, _, _, _, _, .traverse .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .retry .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .forever .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .traverse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret e hΛ, _ => .ret e hΛ
-  | _, _, _, _, _, .retWhy .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .leave .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, _, .next .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .leave .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .next .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
 theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
     ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ'),
@@ -250,7 +250,7 @@ def adD : Deklaration where
   Fn := Bool
   sig := fun | true => 0 | false => 1
   sigNr := fun | 0 => adSigA | _ => adSigB
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -362,12 +362,12 @@ theorem adRumpf_G : EndG (fun L : adD.Lock => L = ()) adRumpf :=
 /-- No thread of `adM` holds any lock. -/
 theorem adM_frei : ∀ L : adD.Lock, L = () → RufFreiG adM 0 L := by
   intro L _ g _ hm
-  simp [adM, adFaden, offen] at hm
+  simp only [adM, adFaden, offen, List.not_mem_nil] at hm
 
 /-- The frame's holdings are exactly the (empty) held locks. -/
 theorem adM_held : HeldGenau ([] : List (Res adD)) (offen ([] : List (Ereignis adD))) := by
   intro L
-  simp [offen]
+  simp only [List.not_mem_nil, offen]
 
 /-- The sequential run of the body: a normal return with the written slot. -/
 theorem adRumpf_exec : ∃ (σ' : World adD) (v : ErgVal adD (vertragVon adD adFn).erg),

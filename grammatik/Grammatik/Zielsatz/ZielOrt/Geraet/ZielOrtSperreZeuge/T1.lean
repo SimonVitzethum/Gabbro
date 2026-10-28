@@ -478,7 +478,7 @@ def sD : Deklaration where
   Fn := SFn
   sig := fun | .setze => 0 | .haupt => 1
   sigNr := fun | 0 => sSigSetze | _ => sSigHaupt
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []

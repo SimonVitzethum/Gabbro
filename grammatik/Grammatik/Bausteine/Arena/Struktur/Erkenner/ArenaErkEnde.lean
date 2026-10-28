@@ -129,8 +129,8 @@ theorem erkE_erhaelt {a : Abs} {e : Endblock D V l Γ Λ} (h : ErkE K a e) : Fol
 theorem erkE_koerper {e : Endblock D V l Γ Λ} (h : ErkE K Abs.leer e) (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ)
     (b : Abs) : StrukturPost K b (execEnd O passes R e σ ρ).zuAusgang :=
   erkE_erhaelt O passes R K h σ ρ hS
-    ⟨fun _ hx => absurd hx (by simp [Abs.leer]), fun _ hx => absurd hx (by simp [Abs.leer]),
-      fun _ hx => absurd hx (by simp [Abs.leer]), fun _ _ hx _ _ => absurd hx (by simp [Abs.leer])⟩ b
+    ⟨fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]), fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]),
+      fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]), fun _ _ hx _ _ => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true])⟩ b
 
 end Beweis
 

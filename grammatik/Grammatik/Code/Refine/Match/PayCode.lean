@@ -29,7 +29,7 @@ theorem payCode_fits {top : Int} {W L : Nat} {lo hi : Int} {ov : Opd} {r : Nat} 
   unfold payCode at h
   split at h
   · rename_i hf; exact hf
-  · simp at h
+  · simp only [reduceCtorEq] at h
 
 theorem payCode_frag (top : Int) (W L : Nat) (lo hi : Int) (ov : Opd) (r : Nat) (m : Mem) (rs : Regs)
     (i : Nat) (n : Int)
@@ -45,7 +45,7 @@ theorem payCode_frag (top : Int) (W L : Nat) (lo hi : Int) (ov : Opd) (r : Nat) 
   simp only at h
   rcases hv : cvtG (.int (min 0 lo) (max top hi)) (.int lo hi) (.reg (r1 + 1)) (r1 + 2) with
     _ | ⟨c3, o3, r3⟩
-  · simp [hv] at h
+  · simp only [hv, reduceCtorEq] at h
   simp only [hv] at h
   obtain rfl := Option.some.inj h
   have hLpos : (0 : Int) < L := by
@@ -75,7 +75,7 @@ theorem payCode_frag (top : Int) (W L : Nat) (lo hi : Int) (ov : Opd) (r : Nat) 
       = c1 ++ ([Instr.bin r1 .udiv (Ar.wid (min 0 lo) (max top hi)) o1
         (.int (Ar.wid (min 0 lo) (max top hi)) (L : Int))] ++
         ([Instr.bin (r1 + 1) .add (Ar.wid (min 0 lo) (max top hi)) (.reg r1)
-          (.int (Ar.wid (min 0 lo) (max top hi)) lo)] ++ c3)) := by simp
+          (.int (Ar.wid (min 0 lo) (max top hi)) lo)] ++ c3)) := by simp only [List.append_assoc, List.cons_append, List.nil_append]
   show Frag m rs r (c1 ++ [Instr.bin r1 .udiv (Ar.wid (min 0 lo) (max top hi)) o1
         (.int (Ar.wid (min 0 lo) (max top hi)) (L : Int)),
       Instr.bin (r1 + 1) .add (Ar.wid (min 0 lo) (max top hi)) (.reg r1)

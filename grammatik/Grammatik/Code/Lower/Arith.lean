@@ -44,7 +44,7 @@ theorem wid_fits {lo hi : Int} (h : Fits lo hi 128) : Fits lo hi (wid lo hi) := 
 theorem wid_pos (lo hi : Int) : 8 ≤ wid lo hi := by
   unfold wid
   by_cases h8 : Fits lo hi 8 <;> by_cases h16 : Fits lo hi 16 <;> by_cases h32 : Fits lo hi 32 <;>
-    by_cases h64 : Fits lo hi 64 <;> simp [h8, h16, h32, h64]
+    by_cases h64 : Fits lo hi 64 <;> simp only [h8, ↓reduceIte, Std.le_refl, h16, Nat.reduceLeDiff, h32, h64]
 
 /-- The integer a bit pattern denotes: unsigned for a non-negative range, signed otherwise. -/
 def dec (lo : Int) (w : Nat) (v : BitVec w) : Int :=
@@ -96,7 +96,7 @@ theorem two_pow_le {a b : Nat} (h : a ≤ b) : (2 : Int) ^ a ≤ 2 ^ b := by
   exact_mod_cast Nat.pow_le_pow_right (by decide) h
 
 theorem pow_cast (w : Nat) : ((2 ^ w : Nat) : Int) = (2 : Int) ^ w := by
-  simp [Int.natCast_pow]
+  simp only [Int.natCast_pow, Int.cast_ofNat_Int]
 
 theorem zext_ofInt {w1 w2 : Nat} {n : Int} (hw : w1 ≤ w2) (h0 : 0 ≤ n) (h1 : n < 2 ^ w1) :
     (BitVec.ofInt w1 n).setWidth w2 = BitVec.ofInt w2 n := by
@@ -183,7 +183,7 @@ theorem urem_ofInt {w : Nat} {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ w) (hb0 
   simp only [BitVec.ofInt_natCast, BitVec.toNat_ofNat]
   rw [Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb]
   rcases Nat.eq_zero_or_pos b' with h | h
-  · subst h; simp [Nat.mod_eq_of_lt ha]
+  · subst h; simp only [Nat.mod_zero, Nat.mod_eq_of_lt ha]
   · rw [Nat.mod_eq_of_lt (Nat.lt_trans (Nat.mod_lt _ h) hb)]
 
 end Gabbro.Code.Ar

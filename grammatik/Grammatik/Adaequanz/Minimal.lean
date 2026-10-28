@@ -52,7 +52,7 @@ def zeuge (acc : Q → Baum σ) (z : Zelle σ Q) : Baum σ := .knoten z.1 fun i 
 theorem zelle_zeuge {S : Automat σ Q O} {acc : Q → Baum σ} (hacc : ∀ q, S.lauf (acc q) = q) (z : Zelle σ Q) :
     S.zelle (zeuge acc z) = z := by
   obtain ⟨k, q⟩ := z
-  simp [Automat.zelle, zeuge, hacc]
+  simp only [Automat.zelle, zeuge, hacc]
 
 /-! ## The root mutant -/
 
@@ -143,7 +143,7 @@ theorem wurzel_schranke [Fintype σ.K] {M : List (Baum σ)} {m : Nat} (hm : Fint
   choose f hf hfz using wurzel_noetig hacc hkipp hm hM
   have hinj : Function.Injective f := fun z z' h => by rw [← hfz z, ← hfz z', h]
   have hcard : Fintype.card (Zelle σ Q) = ∑ k : σ.K, Fintype.card Q ^ σ.ar k := by
-    simp [Zelle, Fintype.card_sigma]
+    simp only [Zelle, Fintype.card_sigma, Fintype.card_pi, Finset.prod_const, Finset.card_univ, Fintype.card_fin]
   rw [← hcard]
   calc Fintype.card (Zelle σ Q) = (Finset.univ.image f).card := by
         rw [Finset.card_image_of_injective _ hinj, Finset.card_univ]

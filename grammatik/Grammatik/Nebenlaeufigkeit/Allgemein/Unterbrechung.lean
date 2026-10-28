@@ -148,8 +148,8 @@ theorem handler_nach_freigabe (l : Lauf D) (hg : Gesittet l) (H : Handler)
   have _ := K j g _ hj
   exact ⟨hHg, geordnet_durch_sperre l hg f g L i j hij hfg _ _ (by intro L' hc; cases hc)
     hi hj
-    (l.haelt_bei_zugriff hg f i L _ hi hLi (by simp [Ereignis.traeger]))
-    (l.haelt_bei_zugriff hg g j L _ hj hLj (by simp [Ereignis.traeger]))⟩
+    (l.haelt_bei_zugriff hg f i L _ hi hLi (by simp only [Ereignis.traeger, Option.isSome_some]))
+    (l.haelt_bei_zugriff hg g j L _ hj hLj (by simp only [Ereignis.traeger, Option.isSome_some]))⟩
 
 /-- **... or excluded upfront by priority masking.** Thread `f` takes a masking lock
     `L` at `k'` and does not release it before `k`; then no foreign handler step

@@ -96,7 +96,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .auffuellen => 0
   sigNr := fun | 0 => gSig_auffuellen | _ => gSig_auffuellen
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -204,7 +204,7 @@ theorem gLs_voll : ∀ L : gD.Lock, L ∈ gLs := by
 theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
   intro c
   cases c with
-  | inl t => cases t <;> simp [gCs]
+  | inl t => cases t <;> simp only [gCs, List.mem_cons, List.not_mem_nil, or_false]
   | inr g => cases g <;> simp [gCs]
 
 -- The checker premise, discharged here: the concrete checker of the
@@ -308,12 +308,12 @@ theorem pflicht (passes : Nat) (f : gD.Fn) : PflichtWP gP passes gE.Q gS (Geteil
 theorem sperrInvLokal : SperrInvLokal gS := by
   intro L s s' h
   cases L
-  have hA : s.slots GTab.A = s'.slots GTab.A := h (.inl GTab.A) (by simp [gS])
+  have hA : s.slots GTab.A = s'.slots GTab.A := h (.inl GTab.A) (by simp only [gS, List.mem_cons, List.not_mem_nil, or_false])
   simp only [gS, hA]
 
 /-- The declared initial memory meets the lock invariant; there is no declared start. -/
 theorem startPflicht : StartPflicht gE :=
-  ⟨fun L => by cases L; decide, fun a ha => by simp [gE] at ha⟩
+  ⟨fun L => by cases L; decide, fun a ha => by simp only [gE, List.append_nil, List.not_mem_nil] at ha⟩
 
 /-- **Premise (b) of the goal theorem, proved**: the user's whole logic for this program. -/
 theorem nutzerPflicht_bewiesen : NutzerPflichtA gE :=

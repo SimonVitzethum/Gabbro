@@ -59,7 +59,7 @@ def Zahlen.exakt (M : Nat) : Zahlen where
     · simp only [hM, if_true]
       by_cases h0 : n.natAbs = 0
       · have : n = 0 := by omega
-        simp [this]
+        simp only [this, Int.natAbs_zero, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false]
       · simp only [h0, if_false, List.mem_cons, List.not_mem_nil, or_false]
         omega
     · simp only [hM, if_false] at h
@@ -71,7 +71,7 @@ def Zahlen.exakt (M : Nat) : Zahlen where
     · simp only [hM, if_true]
       by_cases h0 : n.natAbs = 0
       · have : n = 0 := by omega
-        simp [this]
+        simp only [this, Int.natAbs_zero, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false]
       · simp only [h0, if_false, List.mem_cons, List.not_mem_nil, or_false]
         omega
     · simp only [hM, if_false] at h
@@ -80,7 +80,7 @@ def Zahlen.exakt (M : Nat) : Zahlen where
   listeN c := [c]
   memN n h := by
     by_cases hM : n ≤ M
-    · simp [hM]
+    · simp only [hM, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false]
     · simp only [hM, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
   bindOk := fun _ => true
@@ -110,7 +110,7 @@ def Zahlen.exakt (M : Nat) : Zahlen where
     have hx : x ∈ (if x.natAbs = 0 then [(0 : Int)] else [(x.natAbs : Int), -(x.natAbs : Int)]) := by
       by_cases h0 : x.natAbs = 0
       · have : x = 0 := by omega
-        simp [this]
+        simp only [this, Int.natAbs_zero, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false]
       · simp only [h0, if_false, List.mem_cons, List.not_mem_nil, or_false]
         omega
     refine ⟨x, hx, ?_⟩
@@ -119,7 +119,7 @@ def Zahlen.exakt (M : Nat) : Zahlen where
     refine List.mem_map.2 ⟨y, ?_, rfl⟩
     by_cases h0 : y.natAbs = 0
     · have : y = 0 := by omega
-      simp [this]
+      simp only [this, Int.natAbs_zero, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false]
     · simp only [h0, if_false, List.mem_cons, List.not_mem_nil, or_false, Int.ofNat_eq_natCast]
       omega
 
@@ -133,28 +133,28 @@ def Zahlen.kanon (N W : List Int) (NN : List Nat) (NP : List (Int × Int)) (SF :
   liste c := if c = 0 then N else []
   mem n h := by
     by_cases hn : n ∈ N
-    · simp [hn]
+    · simp only [hn, ↓reduceIte]
     · simp only [hn, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
   kostW n := if n ∈ W then 0 else unendlich
   listeW c := if c = 0 then W else []
   memW n h := by
     by_cases hn : n ∈ W
-    · simp [hn]
+    · simp only [hn, ↓reduceIte]
     · simp only [hn, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
   kostN n := if n ∈ NN then 0 else unendlich
   listeN c := if c = 0 then NN else []
   memN n h := by
     by_cases hn : n ∈ NN
-    · simp [hn]
+    · simp only [hn, ↓reduceIte]
     · simp only [hn, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
   kostP p := if p ∈ NP then 0 else unendlich
   listeP c := if c = 0 then NP else []
   memP p h := by
     by_cases hn : p ∈ NP
-    · simp [hn]
+    · simp only [hn, ↓reduceIte]
     · simp only [hn, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
 
@@ -192,11 +192,11 @@ def vereint (A B : Sz α) : Sz α := fun k => A k ++ B k
 /-- A decided guard: the rule's premise is a proof argument of the term. -/
 def wenn (p : Prop) [Decidable p] (X : p → Sz α) : Sz α := fun k => if h : p then X h k else []
 
-theorem mem_pure (a : α) : a ∈ pure a 0 := by simp [pure]
+theorem mem_pure (a : α) : a ∈ pure a 0 := by simp only [pure, ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false]
 
-theorem mem_wahl {xs : List α} {x : α} (h : x ∈ xs) : x ∈ wahl xs 0 := by simp [wahl, h]
+theorem mem_wahl {xs : List α} {x : α} (h : x ∈ xs) : x ∈ wahl xs 0 := by simp only [wahl, ↓reduceIte, h]
 
-theorem mem_blatt {xs : List α} {x : α} (h : x ∈ xs) : x ∈ blatt xs 1 := by simp [blatt, h]
+theorem mem_blatt {xs : List α} {x : α} (h : x ∈ xs) : x ∈ blatt xs 1 := by simp only [blatt, ↓reduceIte, h]
 
 theorem mem_knoten {A : Sz α} {k : Nat} {x : α} (h : x ∈ A k) : x ∈ knoten A (k + 1) := h
 
@@ -268,7 +268,7 @@ theorem mem_schluessel_aux {α κ : Type} [DecidableEq κ] (key : α → κ) (xs
       rcases h with h | ⟨a, ha, hac⟩
       · exact Or.inl (List.mem_append.2 (Or.inl h))
       · rcases List.mem_cons.1 ha with rfl | ha
-        · exact Or.inl (List.mem_append.2 (Or.inr (by simp [hac])))
+        · exact Or.inl (List.mem_append.2 (Or.inr (by simp only [hac, List.mem_cons, List.not_mem_nil, or_false])))
         · exact Or.inr ⟨a, ha, hac⟩
 
 theorem mem_schluessel {α κ : Type} [DecidableEq κ] (key : α → κ) {xs : List α} {a : α} (h : a ∈ xs) :
@@ -364,7 +364,7 @@ theorem bindOk_of [Zahlen] {τ : Ty} (h : Zahlen.kostT τ < unendlich) : Zahlen.
 
 theorem kostT_null [Zahlen] {τ : Ty} (h : Zahlen.bindOk τ = true) : Zahlen.kostT τ = 0 := by
   unfold Zahlen.kostT
-  simp [h]
+  simp only [h, ↓reduceIte]
 
 /-- The sum types that exist, as a free choice. -/
 def sfS [Zahlen] : Sz (List (Option (Int × Int))) := Sz.wahl Zahlen.sfaelle
@@ -375,7 +375,7 @@ def Zahlen.kostS [Zahlen] (cs : List (Option (Int × Int))) : Nat :=
 
 theorem kostS_null [Zahlen] {cs : List (Option (Int × Int))} (h : cs ∈ Zahlen.sfaelle) : Zahlen.kostS cs = 0 := by
   unfold Zahlen.kostS
-  simp [h]
+  simp only [h, ↓reduceIte]
 
 theorem mem_sfS [Zahlen] {cs : List (Option (Int × Int))} (h : Zahlen.kostS cs < unendlich) :
     cs ∈ Zahlen.sfaelle := by

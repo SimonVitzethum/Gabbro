@@ -87,7 +87,7 @@ def igD : Deklaration where
   Fn := IgFn
   sig := fun | .haupt => 0 | .setze => 1 | .nichts => 2
   sigNr := igSigNr
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Unit
   traeger := fun _ => [()]
   invs := [()]
@@ -109,7 +109,7 @@ def igD : Deklaration where
     match n, h with
     | 0, _ => exact List.mem_singleton.mpr rfl
     | 1, _ => exact List.mem_singleton.mpr rfl
-    | n + 2, h => simp [igSigNr, igSig] at h
+    | n + 2, h => simp only [igSigNr, igSig, List.any_cons, List.any_nil, Bool.or_self, Bool.false_eq_true] at h
   ggeteilt_bewacht := fun e => nomatch e
 
 def igHaupt : igD.Fn := IgFn.haupt
@@ -168,7 +168,7 @@ def igRumpfSchlecht : Endblock igD (vertragVon igD igSetze) false [] igL :=
 theorem igHp : RufPasst igD (vertragVon igD igHaupt) (igD.signatur igSetze) igL where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := fun L _ => by cases L; exact List.mem_singleton.mpr rfl
   hx := fun L _ hn => absurd (by cases L; exact List.mem_singleton.mpr rfl) hn
 
@@ -381,15 +381,13 @@ theorem ig_inv_haupt (setze : Endblock igD (vertragVon igD igSetze) false [] igL
     cases hrun
     intro i _ _
     cases i
-    simp [InvHaelt, igP, igInv, igIdx, igWert, eval, World.storeSlot, World.merke,
-      World.lese, World.schreibSlot, Zahl.weiter]
+    simp only [InvHaelt, World.lese, World.merke, World.schreibSlot, World.storeSlot, igIdx, igWert, List.map_append, List.append_assoc, eval, Zahl.weiter, dite_eq_ite, List.cons_append, List.nil_append, igP, igInv, Int.reduceEq, ↓reduceIte, ite_self]
     rfl
   · simp only [igErr, igH, igSchreib, execEndH, execStmtH, EndAusgang.schrumpf] at hrun
     cases hrun
     intro i _ _
     cases i
-    simp [InvHaelt, igP, igInv, igIdx, igWert, eval, World.storeSlot, World.merke,
-      World.lese, World.schreibSlot, Zahl.weiter]
+    simp only [InvHaelt, World.lese, World.merke, World.schreibSlot, World.storeSlot, igIdx, igWert, List.map_append, List.append_assoc, eval, Zahl.weiter, dite_eq_ite, List.cons_append, List.nil_append, igP, igInv, Int.reduceEq, ↓reduceIte, ite_self]
     rfl
   · cases hrun
   · cases hrun
@@ -432,8 +430,7 @@ theorem ig_invGrund_gut : Zielsatz.InvGutGrund igPgut 0 (axWahr igD) (SperrInv.l
   cases hrun
   intro i _ _
   cases i
-  simp [InvHaelt, igPgut, igP, igInv, igIdx, igWert, eval, World.storeSlot, World.merke,
-    World.lese, World.schreibSlot, Zahl.weiter]
+  simp only [InvHaelt, World.schreibSlot, World.merke, World.storeSlot, World.lese, igIdx, igWert, List.map_append, List.append_assoc, eval, Zahl.weiter, dite_eq_ite, List.cons_append, List.nil_append, igPgut, igP, igInv, Int.reduceEq, ↓reduceIte, ite_self]
   rfl
 
 theorem igPgut_invGrund :
@@ -483,8 +480,7 @@ theorem igPschlecht_nicht_invGutGrund :
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil igPschlecht).1) (igSp.welt []) .nil rfl _ _ rfl ()
     (List.mem_singleton.mpr rfl) rfl
   revert h3
-  simp [InvHaelt, igPschlecht, igP, igInv, igIdx, igWert, eval, World.storeSlot, World.merke,
-    World.lese, World.schreibSlot, Zahl.weiter, igSp, Speicher.welt]
+  simp only [InvHaelt, World.schreibSlot, World.merke, World.storeSlot, World.lese, Speicher.welt, igSp, igIdx, igWert, List.map_append, List.append_nil, eval, Zahl.weiter, List.cons_append, List.nil_append, igPschlecht, igP, igInv, ↓reduceIte, Int.reduceEq, imp_false, Bool.not_eq_true]
   decide
 
 /-! ## 6. The runs -/
@@ -552,8 +548,7 @@ theorem igPschlecht_verletzt : ∃ M : RufMaschineG igD,
     (List.mem_singleton.mpr rfl) rfl
   revert h3
   rw [hZ4.welt, hw3]
-  simp [InvHaelt, igPschlecht, igP, igInv, igIdx, igWert, eval, World.storeSlot, World.merke,
-    World.lese, World.schreibSlot, Zahl.weiter, hsl3, igSp]
+  simp only [InvHaelt, World.schreibSlot, World.merke, World.storeSlot, World.lese, hsl3, igSp, igIdx, igWert, List.map_append, List.append_assoc, eval, Zahl.weiter, List.cons_append, List.nil_append, igPschlecht, igP, igInv, ↓reduceIte, Int.reduceEq, imp_false, Bool.not_eq_true]
   rfl
 
 /-- **`igGut_zeuge`**: on a machine of `igPgut` reached in six steps
@@ -593,12 +588,10 @@ theorem igGut_zeuge : ∃ M : RufMaschineG igD,
     rw [hG6.1]; exact ⟨_, _, _, List.mem_cons_self, rfl⟩
   refine ⟨M6, hr6, r, a, b, hm, (igPgut_zertifiziert M6 hr6).2 0 _ hm _ _ _ _ _ rfl, ?_, ?_⟩
   · rw [hb, hZ5.welt, hZ4.welt, hw3]
-    simp [World.storeSlot, World.merke, World.lese, World.schreibSlot, Zahl.weiter, hsl3,
-      igSp, igSchreib, igIdx, igWert, eval]
+    simp only [World.schreibSlot, World.merke, World.storeSlot, World.lese, hsl3, igSp, igIdx, igWert, List.map_append, List.append_assoc, eval, Zahl.weiter, List.cons_append, List.nil_append, dite_eq_ite, Int.reduceEq, ↓reduceIte, ite_self]
     rfl
   · rw [hb, hZ5.welt, hZ4.welt, hw3]
-    simp [World.storeSlot, World.merke, World.lese, World.schreibSlot, Zahl.weiter, hsl3,
-      igSp, igSchreib, igIdx, igWert, eval]
+    simp only [World.schreibSlot, World.merke, World.storeSlot, World.lese, hsl3, igSp, igIdx, igWert, List.map_append, List.append_assoc, eval, Zahl.weiter, List.cons_append, List.nil_append, dite_eq_ite, ↓reduceIte, Int.reduceEq]
     rfl
 
 #print axioms Gabbro.Grammatik.igPgut_frag

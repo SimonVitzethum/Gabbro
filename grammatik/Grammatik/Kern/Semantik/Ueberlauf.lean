@@ -9,7 +9,7 @@ namespace Gabbro.Grammatik
 theorem zweiPow_pos (w : Nat) : (0 : Int) < 2 ^ (w + 1) := by
   have h0 : (0 : Nat) < 2 ^ (w + 1) := Nat.pow_pos (by decide)
   have hpos' : (0 : Int) < ((2 ^ (w + 1) : Nat) : Int) := Int.ofNat_lt.mpr h0
-  have e : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have e : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   omega
 
 /-- Wrapping addition on the exact unsigned range `0 .. 2^(w+1) - 1`
@@ -133,7 +133,7 @@ theorem addW_c_gleich (w : Nat)
     (a b : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
     (Zahl.addW w a b).n =
       (((a.n.toNat + b.n.toNat) % 2 ^ (w + 1) : Nat) : Int) := by
-  have hmod : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hmod : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   have hart : ((a.n.toNat : Nat) : Int) = a.n := Int.toNat_of_nonneg a.lo_le
   have ha_nn : (0 : Int) ≤ a.n := a.lo_le
   have hbrt : ((b.n.toNat : Nat) : Int) = b.n := Int.toNat_of_nonneg b.lo_le
@@ -182,7 +182,7 @@ theorem subW_c_gleich (w : Nat)
     (a b : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
     (Zahl.subW w a b).n =
       (((a.n.toNat + 2 ^ (w + 1) - b.n.toNat) % 2 ^ (w + 1) : Nat) : Int) := by
-  have hM : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hM : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   have haM : a.n.toNat ≤ 2 ^ (w + 1) := by
     have hhi := a.le_hi
     have hbound : a.n ≤ ((2 ^ (w + 1) : Nat) : Int) := by
@@ -261,7 +261,7 @@ theorem mulW_c_gleich (w : Nat)
     (a b : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
     (Zahl.mulW w a b).n =
       (((a.n.toNat * b.n.toNat) % 2 ^ (w + 1) : Nat) : Int) := by
-  have hM : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hM : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   have hart : ((a.n.toNat : Nat) : Int) = a.n := Int.toNat_of_nonneg a.lo_le
   have hbrt : ((b.n.toNat : Nat) : Int) = b.n := Int.toNat_of_nonneg b.lo_le
   have hcast : ((a.n.toNat * b.n.toNat : Nat) : Int) = a.n * b.n := by
@@ -343,7 +343,7 @@ theorem wrapping_nur_exakt :
       Int.ofNat_le.mpr hN
     have e1 : ((2 ^ 4 : Nat) : Int) = 16 := by decide
     have e2 : ((2 ^ (k + 1 + 1 + 1 + 1) : Nat) : Int) =
-        (2 : Int) ^ (k + 1 + 1 + 1 + 1) := by simp
+        (2 : Int) ^ (k + 1 + 1 + 1 + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
     omega
   intro hEx
   obtain ⟨f, hfit, k, hmodf⟩ := hEx

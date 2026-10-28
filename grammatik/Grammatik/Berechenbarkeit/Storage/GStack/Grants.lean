@@ -70,7 +70,7 @@ theorem pop_owned (L : LinkFeld A) (G : LinkKopf A)
       (∀ i, i ≠ h.slot → s'.cells i = s.cells i) := by
   obtain ⟨σ', k, he, hk, hr', hf', hdead, hlive⟩ :=
     popAndRelease_values O passes R L G hwH hLH hwT hLT hwF hLF empty rest σ ρ value values hr hf
-  have hrelease : s.release frame h = some (s.put h.slot none) := by simp [State.release, ho]
+  have hrelease : s.release frame h = some (s.put h.slot none) := by simp only [State.release, ho, ↓reduceIte]
   have hslot : k.n = h.slot := hk.trans hh.symm
   refine ⟨σ', k, s.put h.slot none, he, hslot, hrelease, ?_, hr', hf', ?_, ?_⟩
   · apply State.release_agrees ha frame h hrelease

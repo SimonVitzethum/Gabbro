@@ -101,9 +101,9 @@ theorem storeSlot_sonst (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v :
     by_cases hk : k' = k
     · subst hk
       have hf : f' ≠ f := fun hf => h ⟨rfl, rfl, hf⟩
-      simp [World.storeSlot, hf]
-    · simp [World.storeSlot, hk]
-  · simp [World.storeSlot, ht]
+      simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte, hf]
+    · simp only [World.storeSlot, ↓reduceDIte, hk, ↓reduceIte]
+  · simp only [World.storeSlot, ht, ↓reduceDIte]
 
 theorem zelleAus_setze {τ : Ty} (a : Array (Wert D τ)) (k k' : Int) (v : Wert D τ) (hk0 : 0 ≤ k)
     (hka : k.toNat < a.size) :
@@ -111,13 +111,13 @@ theorem zelleAus_setze {τ : Ty} (a : Array (Wert D τ)) (k k' : Int) (v : Wert 
   unfold zelleAus
   by_cases hkk : k' = k
   · subst hkk
-    simp [hk0, hka]
+    simp only [hk0, Array.size_setIfInBounds, hka, and_self, ↓reduceDIte, Array.getElem_setIfInBounds_self, ↓reduceIte]
   · rw [if_neg hkk]
     by_cases h' : 0 ≤ k' ∧ k'.toNat < a.size
     · have hne : k.toNat ≠ k'.toNat := by omega
-      simp [h', Array.getElem_setIfInBounds_ne _ hne]
+      simp only [h', Array.size_setIfInBounds, and_self, ↓reduceDIte, Array.getElem_setIfInBounds_ne _ hne]
     · simp only [Array.size_setIfInBounds]
-      simp [h']
+      simp only [h', ↓reduceDIte]
 
 theorem sicht_schreib1 (A : AWelt D) (s : Schreib D) : (A.schreib1 K s).sicht K = s.auf (A.sicht K) := by
   cases s with
@@ -146,7 +146,7 @@ theorem sicht_schreib1 (A : AWelt D) (s : Schreib D) : (A.schreib1 K s).sicht K 
           simp only [if_pos rfl, Option.getD_some]
           exact (storeSlot_hit _ _ _ _ _).symm
         · simp only [hkk, if_false]
-          simp [World.storeSlot, hkk, Speicher.welt, AWelt.slot, he]
+          simp only [World.storeSlot, Speicher.welt, ↓reduceDIte, hkk, ↓reduceIte, he]
       · rw [storeSlot_sonst _ _ _ _ _ _ _ _ (fun ⟨ht, _, hf⟩ => by subst ht; subst hf; exact hi rfl)]
         simp only [AWelt.slot, Array.getElem?_modify, if_neg hi, Speicher.welt]
     · rename_i hh
@@ -187,11 +187,11 @@ theorem sicht_schreib1 (A : AWelt D) (s : Schreib D) : (A.schreib1 K s).sicht K 
       by_cases hg : g' = g
       · subst hg
         rw [storeGlob_hit]
-        simp [AWelt.glob, Array.getElem?_modify]
+        simp only [AWelt.glob, Array.getElem?_modify, ↓reduceIte]
         unfold AWelt.haeltG at hh
         split at hh
         · rename_i τ x he
-          simp [he]
+          simp only [he, Option.map_some, ↓reduceDIte]
         · cases hh
       · have hne : K.gn g ≠ K.gn g' := fun h => hg (K.gn_inj _ _ h).symm
         rw [storeGlob_andere _ _ _ _ hg]
@@ -310,7 +310,7 @@ theorem sicht_leer (S : Speicher D) (nF nG : Nat) :
         have := congrArg (fun e : Σ τ : Ty, Array (Wert D τ) => e.2.size) hm
         simpa using this
       split
-      · simp [zelleAus, hs]
+      · simp only [zelleAus, hs, Nat.not_lt_zero, and_false, ↓reduceDIte, Option.getD_none]
       · rfl
     · rfl
   · funext g

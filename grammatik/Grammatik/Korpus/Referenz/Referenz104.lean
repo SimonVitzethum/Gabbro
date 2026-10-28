@@ -147,7 +147,7 @@ def r4D : Deklaration where
   sig := fun | .einzahlen => 0 | .lies => 1 | .treiber => 2 | .ruhe => 3
   sigNr := fun n => match n with
     | 0 => r4SigEin | 1 => r4SigLies | 2 => r4SigTreiber | _ => r4SigRuhe
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -194,7 +194,7 @@ def r4Schreib : Stmt r4D (vertragVon r4D r4Ein) false r4GEin r4M r4M :=
 theorem r4HpLies : RufPasst r4D (vertragVon r4D r4Ein) (r4D.signatur r4Lies) r4M where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by
     cases L
     exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
@@ -236,7 +236,7 @@ def r4EnsLies : Expr r4D (ErgCtx (r4D.params r4Lies) (r4D.erg r4Lies)) (vertragV
 theorem r4HpEinT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Ein) r4M where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by
     cases L
     exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
@@ -247,7 +247,7 @@ theorem r4HpEinT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Ein) 
 theorem r4HpLiesT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Lies) r4M where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by
     cases L
     exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)

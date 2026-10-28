@@ -20,7 +20,7 @@ theorem pcStart_markInv (prog : PCProg D) (sp : Speicher D) :
   intro k f e hk m st hm
   have hnil : (GenStart sp).lauf = [] := rfl
   rw [hnil] at hk
-  simp at hk
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 /-- The start machine touches no carriers: its run is empty. -/
 theorem pcStart_carrierInv (prog : PCProg D) (sp : Speicher D) :
@@ -28,7 +28,7 @@ theorem pcStart_carrierInv (prog : PCProg D) (sp : Speicher D) :
   intro k f e hk o ho
   have hnil : (GenStart sp).lauf = [] := rfl
   rw [hnil] at hk
-  simp at hk
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 /-- A PC step preserves the mark invariant: old positions keep it, new positions
     carry the pointed-to atom's footprint into its thread's program text. -/
@@ -60,7 +60,7 @@ theorem pcSchritt_markInv (P : Programm D) (O : Orakel D) (passes : Nat)
       cases hmem
       have hlam : (Ereignis.nimmt L (offen (M.spuren f'))).lambda = [] := rfl
       rw [hlam] at hm
-      simp at hm
+      simp only [List.not_mem_nil] at hm
   · intro k f' e hk m st hm
     have hkred : (M.lauf ++ genEigen f [Ereignis.gibt L])[k]? =
         some (Schritt.mk f' e) := hk
@@ -73,7 +73,7 @@ theorem pcSchritt_markInv (P : Programm D) (O : Orakel D) (passes : Nat)
       cases hmem
       have hlam : (Ereignis.gibt L).lambda = [] := rfl
       rw [hlam] at hm
-      simp at hm
+      simp only [List.not_mem_nil] at hm
 
 /-- A PC step preserves the carrier invariant: old positions keep it, new
     positions carry the pointed-to atom's carrier set into its thread's text. -/
@@ -169,13 +169,13 @@ theorem pc_discharge_einfaedig (code : D.Marke → Nat) (prog : PCProg D)
   cases hxi : M.lauf[i]? with
   | none =>
       rw [hxi] at hi
-      simp at hi
+      simp only [Option.map_none, reduceCtorEq] at hi
   | some si =>
       rw [hxi] at hi
       cases hxj : M.lauf[j]? with
       | none =>
           rw [hxj] at hj
-          simp at hj
+          simp only [Option.map_none, reduceCtorEq] at hj
       | some sj =>
           rw [hxj] at hj
           cases si with

@@ -55,43 +55,43 @@ theorem strEq_let_let : strEq "let" "let" = true := by decide
 
 theorem parseStmt_ret_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "return" :: r) = parseRueck f r := by
-  simp [parseStmt, h, strEq_ret_let, strEq_ret_if, strEq_ret_match, strEq_ret_traverse, strEq_ret_retry,
-    strEq_ret_forever, strEq_ret_breaking, strEq_ret_narrow, strEq_ret_locks, strEq_ret_observes,
-    strEq_ret_leave, strEq_ret_next, strEq_ret_ret]
+  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_ret_let, strEq_ret_if, strEq_ret_match,
+  strEq_ret_traverse, strEq_ret_retry, strEq_ret_forever, strEq_ret_breaking, strEq_ret_narrow, strEq_ret_locks,
+  strEq_ret_observes, strEq_ret_leave, strEq_ret_next, strEq_self]
 
 theorem parseStmt_leave_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "leave" :: r) = parseVerlasse f r := by
-  simp [parseStmt, h, strEq_leave_let, strEq_leave_if, strEq_leave_match, strEq_leave_traverse,
-    strEq_leave_retry, strEq_leave_forever, strEq_leave_breaking, strEq_leave_narrow, strEq_leave_locks,
-    strEq_leave_observes, strEq_leave_leave]
+  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_leave_let, strEq_leave_if, strEq_leave_match,
+  strEq_leave_traverse, strEq_leave_retry, strEq_leave_forever, strEq_leave_breaking, strEq_leave_narrow,
+  strEq_leave_locks, strEq_leave_observes, strEq_self]
 
 theorem parseStmt_next_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "next" :: r) = parseWeiter f r := by
-  simp [parseStmt, h, strEq_next_let, strEq_next_if, strEq_next_match, strEq_next_traverse,
-    strEq_next_retry, strEq_next_forever, strEq_next_breaking, strEq_next_narrow, strEq_next_locks,
-    strEq_next_observes, strEq_next_leave, strEq_next_next]
+  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_next_let, strEq_next_if, strEq_next_match,
+  strEq_next_traverse, strEq_next_retry, strEq_next_forever, strEq_next_breaking, strEq_next_narrow, strEq_next_locks,
+  strEq_next_observes, strEq_next_leave, strEq_self]
 
 theorem parseStmt_let_eq (f : Nat) (r : List Token) (h : istOrtsFort r = false) :
     parseStmt (f + 1) (.wort "let" :: r) = parseLet f r := by
-  simp [parseStmt, h, strEq_let_let]
+  simp only [parseStmt, h, Bool.false_eq_true, ↓reduceIte, strEq_self]
 
 /-- `return` with no value: a `;` behind it. -/
 theorem parseRueck_leer (f : Nat) (r : List Token) :
     parseRueck (f + 1) (.zeichen ";" :: r) = .ok (.ret none, r) := by
-  simp [parseRueck]
+  simp only [parseRueck]
 
 /-- `return e ;` for a head that is no `;`, given the expression read. -/
 theorem parseRueck_aus (f : Nat) (toks : List Token) (x : SExpr) (r : List Token)
     (h : ∀ ts, toks ≠ .zeichen ";" :: ts) (hO : parseOr f toks = .ok (x, .zeichen ";" :: r)) :
     parseRueck (f + 1) toks = .ok (.ret (some x), r) := by
   rcases toks with _ | ⟨t, ts⟩
-  · simp [parseRueck, hO, fordereZeichen]
+  · simp only [parseRueck, hO, fordereZeichen, strEq_self, ↓reduceIte]
   · cases t with
     | zeichen s =>
       by_cases hs : s = ";"
       · subst hs; exact absurd rfl (h ts)
-      · simp [parseRueck, hs, hO, fordereZeichen]
-    | _ => simp [parseRueck, hO, fordereZeichen]
+      · simp only [parseRueck, hO, fordereZeichen, strEq_self, ↓reduceIte]
+    | _ => simp only [parseRueck, hO, fordereZeichen, strEq_self, ↓reduceIte]
 
 theorem kopf_nicht_semi (t : Token) (h : KopfGut t) (ts : List Token) :
     ∀ us, t :: ts ≠ .zeichen ";" :: us := by
@@ -106,8 +106,9 @@ theorem kopf_nicht_ortsfort (t : Token) (h : KopfGut t) (ts : List Token) :
   cases t with
   | zeichen s =>
     simp only [KopfGut] at h
-    rcases h with h | h | h | h | h <;> subst h <;> simp [istOrtsFort]
-  | _ => simp [istOrtsFort]
+    rcases h with h | h | h | h | h <;> subst h <;> simp only [istOrtsFort, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self,
+  implies_true]
+  | _ => simp only [istOrtsFort]
 
 /-! ## One statement -/
 
@@ -141,7 +142,7 @@ theorem parseLet_nameTok (x : String) (hx : x ≠ "mut") (R : List Token) (f : N
     split
     rename_i heq
     split at heq
-    · rename_i h2; simp at h2; exact absurd h2.1 hx
+    · rename_i h2; simp only [List.cons.injEq, Token.wort.injEq] at h2; exact absurd h2.1 hx
     · simp only [Prod.mk.injEq] at heq
       obtain ⟨rfl, rfl⟩ := heq
       rfl
@@ -153,16 +154,17 @@ theorem parseLet_nach (x : String) (hx : x ≠ "mut") (nach : List Token) (f : N
     (h3 : ∀ s t ts, nach = .wort s :: t :: .zeichen ";" :: ts → strEq s "alloc" = false) :
     parseLet (f + 1) (nameTok x :: .zeichen "=" :: nach) = parseLetExpr f false x none nach := by
   rw [parseLet_nameTok x hx]
-  simp [parseLet, nimmName, fordereZeichen, bind, Except.bind, pure, Except.pure]
+  simp only [parseLet, bind, Except.bind, nimmName, nameText_ident, List.cons.injEq, Token.zeichen.injEq,
+  String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte]
   split
   · rename_i tl
     exact absurd rfl (h1 tl)
   · rename_i s t tl
     have hs := h3 s t tl rfl
-    simp [hs]
+    simp only [hs, Bool.false_eq_true, ↓reduceIte]
   · rename_i s t tl
     have hs := h2 s t tl rfl
-    simp [hs]
+    simp only [hs, Bool.false_eq_true, ↓reduceIte]
   · rfl
 
 /-- `let x = e ;` reads as an expression `let`, whatever the head of `e` (`@` and `alloc` stay off it). -/
@@ -198,7 +200,8 @@ theorem parseLet_ausdruck (x : String) (hx : x ≠ "mut") (e : SExpr) (hg : gut 
 theorem parseLetExpr_aus (x : String) (e : SExpr) (hg : gutPrim e = true) (r : List Token) (f : Nat)
     (hf : brennstoff e ≤ f) :
     parseLetExpr (f + 1) false x none (druckToks e ++ .zeichen ";" :: r) = .ok (.bind false x none e, r) := by
-  simp [parseLetExpr, or_vor_semi e hg r f hf, fordereZeichen, bind, Except.bind, pure, Except.pure]
+  simp only [parseLetExpr, bind, Except.bind, or_vor_semi e hg r f hf, fordereZeichen, strEq_self, ↓reduceIte,
+  pure, Except.pure]
 
 /-- **One simple statement reads back as itself.** -/
 theorem parseStmt_einfach (s : SAnw) (hs : Einfach s) (r : List Token) (F : Nat) (hF : fuelAnw s + 1 ≤ F) :
@@ -207,8 +210,9 @@ theorem parseStmt_einfach (s : SAnw) (hs : Einfach s) (r : List Token) (F : Nat)
   cases hs with
   | retLeer =>
     simp only [druckAnw, List.cons_append, List.nil_append]
-    rw [parseStmt_ret_eq _ _ (by simp [istOrtsFort])]
-    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
+    rw [parseStmt_ret_eq _ _ (by simp only [istOrtsFort, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self,
+  implies_true])]
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp only [fuelAnw, Nat.reduceAdd, Nat.reduceLeDiff] at hF; omega⟩
     exact parseRueck_leer F'' r
   | ret e hg =>
     obtain ⟨t, ts, hk, hkg⟩ := druck_kopf e (gut_of_gutPrim e hg)
@@ -216,27 +220,27 @@ theorem parseStmt_einfach (s : SAnw) (hs : Einfach s) (r : List Token) (F : Nat)
     have hso : istOrtsFort (druckToks e ++ .zeichen ";" :: r) = false := by
       rw [hk]; exact kopf_nicht_ortsfort t hkg _
     rw [parseStmt_ret_eq _ _ hso]
-    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp only [fuelAnw, Nat.add_le_add_iff_right] at hF; omega⟩
     have hne : ∀ ts', druckToks e ++ .zeichen ";" :: r ≠ .zeichen ";" :: ts' := by
       rw [hk]; exact kopf_nicht_semi t hkg _
-    exact parseRueck_aus _ _ e r hne (or_vor_semi e hg r F'' (by simp [fuelAnw] at hF; omega))
+    exact parseRueck_aus _ _ e r hne (or_vor_semi e hg r F'' (by simp only [fuelAnw, Nat.add_le_add_iff_right, Nat.reduceLeDiff] at hF; omega))
   | leave l =>
     simp only [druckAnw, List.cons_append, List.nil_append]
-    rw [parseStmt_leave_eq _ _ (by simp [istOrtsFort])]
-    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
-    simp [parseVerlasse, nimmName, fordereZeichen, bind, Except.bind, pure, Except.pure]
+    rw [parseStmt_leave_eq _ _ (by simp only [istOrtsFort, List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self, implies_true])]
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp only [fuelAnw, Nat.reduceAdd, Nat.reduceLeDiff] at hF; omega⟩
+    simp only [parseVerlasse, nimmName, nameText_nameTok, fordereZeichen, strEq_self, ↓reduceIte]
   | next l =>
     simp only [druckAnw, List.cons_append, List.nil_append]
-    rw [parseStmt_next_eq _ _ (by simp [istOrtsFort])]
-    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
-    simp [parseWeiter, nimmName, fordereZeichen, bind, Except.bind, pure, Except.pure]
+    rw [parseStmt_next_eq _ _ (by simp only [istOrtsFort, List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self, implies_true])]
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp only [fuelAnw, Nat.reduceAdd, Nat.reduceLeDiff] at hF; omega⟩
+    simp only [parseWeiter, nimmName, nameText_nameTok, fordereZeichen, strEq_self, ↓reduceIte]
   | bind x e hx hg =>
     simp only [druckAnw, druckTypOpt, Bool.false_eq_true, if_false, List.cons_append, List.nil_append,
       List.append_assoc, List.singleton_append]
-    rw [parseStmt_let_eq _ _ (by simp [istOrtsFort])]
-    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp [fuelAnw] at hF; omega⟩
+    rw [parseStmt_let_eq _ _ (by simp only [istOrtsFort, List.cons.injEq, nameTok_ne_zeichen, false_and, imp_self, implies_true])]
+    obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by simp only [fuelAnw, Nat.add_le_add_iff_right] at hF; omega⟩
     rw [parseLet_ausdruck x hx e (gut_of_gutPrim e hg) r F'']
-    obtain ⟨F3, rfl⟩ : ∃ F3, F'' = F3 + 1 := ⟨F'' - 1, by simp [fuelAnw] at hF; omega⟩
-    exact parseLetExpr_aus x e hg r F3 (by simp [fuelAnw] at hF; omega)
+    obtain ⟨F3, rfl⟩ : ∃ F3, F'' = F3 + 1 := ⟨F'' - 1, by simp only [fuelAnw, Nat.add_le_add_iff_right, Nat.reduceLeDiff] at hF; omega⟩
+    exact parseLetExpr_aus x e hg r F3 (by simp only [fuelAnw, Nat.add_le_add_iff_right] at hF; omega)
 
 end Gabbro.Grammatik.Parser

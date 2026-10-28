@@ -22,7 +22,7 @@ theorem Represents.empty_head {L : LinkFeld A} {G : LinkKopf A} {σ : World D}
   generalize hroot : G.st σ = root at hc ⊢
   cases hc with
   | nil => rfl
-  | cons i hlo hhi tail ht => simp at hv
+  | cons i hlo hhi tail ht => simp only [List.map_cons, reduceCtorEq] at hv
 
 namespace Block
 

@@ -124,7 +124,7 @@ theorem masken_zeuge : ∃ M1 M2 M3 : RufMaschineG kD.mitRuhe,
     (fun L => by
       show Res.held L ∈ ([] : List (Res kD.mitRuhe)) ↔ L ∈ offen (kM0.faeden 1).spur
       rw [kM0_offen]
-      simp) hfrei1
+      simp only [List.not_mem_nil]) hfrei1
   -- the handler preempts: thread 0 steps and stands at `locks TAKT`
   obtain ⟨M3, s3, hZ3⟩ := w_endeEntf (P := kP.mitRuhe) (O := kO.mitRuhe) (passes := 0)
     (M := M2) (f := 0)
@@ -291,7 +291,7 @@ theorem kernHaltE_verletzt : ∃ M3 : RufMaschineG kD.mitRuhe,
     (fun L => by
       show Res.held L ∈ ([] : List (Res kD.mitRuhe)) ↔ L ∈ offen (kMv0.faeden 1).spur
       rw [kMv0_offen]
-      simp) hfrei1
+      simp only [List.not_mem_nil]) hfrei1
   obtain ⟨M3, s3, hZ3⟩ := w_endeEntf (P := kPv.mitRuhe) (O := kO.mitRuhe) (passes := 0)
     (M := M2) (f := 0)
     ((rufSchrittG_fremd s2 0 (by decide)).trans (rufSchrittG_fremd s1 0 (by decide)))

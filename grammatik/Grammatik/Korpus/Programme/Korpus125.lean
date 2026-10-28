@@ -200,7 +200,7 @@ def kCs : List (kD.Tab ⊕ kD.Glob) := [.inr QGlob.z]
 theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
   rcases c with t | g
   · exact nomatch t
-  · cases g; simp [kCs]
+  · cases g; simp only [kCs, List.mem_cons, List.not_mem_nil, or_false]
 
 /-- **The checker accepts the program** with its declared starts
     `lese_schreibe`, `setze_null` (the `concurrent` members). -/
@@ -220,7 +220,7 @@ theorem offen125_ret_unter_locks :
   rw [kEndeLese]
   intro h
   have := List.Perm.length_eq h
-  simp at this
+  simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.succ_ne_self] at this
 
 /-- **No guarded read outside the lock**: `z` is shared and guarded, so
     `gdarf z []` is uninhabited -- the value must be read inside the lock
@@ -229,7 +229,7 @@ theorem offen125_lese_aussen : ¬ gdarf kD QGlob.z [] := by
   intro h
   have h2 : Res.held (D := kD) QLock.w ∈ ([] : List (Res kD)) :=
     h _ (List.mem_singleton.mpr rfl)
-  simp at h2
+  simp only [List.not_mem_nil] at h2
 
 /-- What stays open for 125: the Rust EXPORTER's form, not G's. The source's
     `return z` inside `locks WACHE` is refused by `lean_g.rs` (LG004); the
@@ -255,12 +255,12 @@ theorem kP_koerper_setzeNull : KoerperGutS kP 0 (axWahr kD) kSI kSetzeNull := by
     simp only [kRumpfSetzeNull, execEndH] at hrun
     erw [execStmtH_locks_eins] at hrun
     simp only [freiH, kSI, execStmtH] at hrun
-    simp at hrun
+    simp only [↓reduceIte, reduceCtorEq] at hrun
   · rw [hr] at hrun
     simp only [kRumpfSetzeNull, execEndH] at hrun
     erw [execStmtH_locks_eins] at hrun
     simp only [freiH, kSI, execStmtH] at hrun
-    simp at hrun
+    simp only [↓reduceIte, reduceCtorEq] at hrun
 
 /-- `locks L { body }` for an arbitrary body block: take `L`, run the body,
     release (the general form of `execStmtH_locks_eins`). -/
@@ -281,12 +281,12 @@ theorem kP_koerper_lese : KoerperGutS kP 0 (axWahr kD) kSI kLese := by
     simp only [kRumpfLese, execEndH] at hrun
     erw [execStmtH_locks_blk] at hrun
     simp only [freiH, kSI, execStmtH, execBlockH] at hrun
-    simp [Ausgang.schrumpf, EndAusgang.schrumpf] at hrun
+    simp only [EndAusgang.schrumpf, Ausgang.schrumpf, ↓reduceIte, reduceCtorEq] at hrun
   · rw [hr] at hrun
     simp only [kRumpfLese, execEndH] at hrun
     erw [execStmtH_locks_blk] at hrun
     simp only [freiH, kSI, execStmtH, execBlockH] at hrun
-    simp [Ausgang.schrumpf, EndAusgang.schrumpf] at hrun
+    simp only [EndAusgang.schrumpf, Ausgang.schrumpf, ↓reduceIte, reduceCtorEq] at hrun
 
 theorem kP_koerper : ∀ f : kD.Fn, KoerperGutS kP 0 (axWahr kD) kSI f := by
   intro f

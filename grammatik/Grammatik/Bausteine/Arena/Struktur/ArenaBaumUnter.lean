@@ -21,10 +21,10 @@ theorem unterbaum_aux {c : Int} {l l' r : Int → Int} {p i : Int} (hpi : l p = 
     {k : Int} {S : List Int} (h : BaumF c l r k S) (hnd : S.Nodup) (hm : p ∈ S) :
     ∃ T S', BaumF c l r i T ∧ BaumF c l' r k S' ∧ S.Perm (T ++ S') := by
   induction h with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | node k h0 hk S1 S2 h1 h2 ih1 ih2 =>
     obtain ⟨hk12, hnd12⟩ := List.nodup_cons.mp hnd
-    have hk2 : k ∉ S2 := fun e => hk12 (by simp [e])
+    have hk2 : k ∉ S2 := fun e => hk12 (by simp only [List.mem_append, e, or_true])
     have hnd1 : S1.Nodup := (List.nodup_append.mp hnd12).1
     have hnd2 : S2.Nodup := (List.nodup_append.mp hnd12).2.1
     have hdisj : ∀ x ∈ S1, x ∉ S2 := fun x hx hx2 => (List.nodup_append.mp hnd12).2.2 x hx x hx2 rfl

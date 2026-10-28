@@ -50,7 +50,7 @@ def DF : Deklaration where
       gschreibt := fun g => nomatch g
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []
@@ -68,7 +68,7 @@ def DF : Deklaration where
   a10 := ()
   geteilt_bewacht := fun t _ => by
     show [Sum.inl ()] ≠ []
-    simp
+    simp only [ne_eq, List.cons_ne_self, not_false_eq_true]
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
 
@@ -153,7 +153,7 @@ theorem hOF : GutO OF := by
         · intro g
           exact nomatch g
         · intro m st hm
-          simp at hm
+          simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
         · intro L hL
           have eL : L = () := by
             have heq : Res.held (D := DF) L = Res.held (D := DF) () :=
@@ -251,7 +251,7 @@ theorem axiomCall_haelt_waechter
     simp only [axiomAntwort] at h2
     rw [h] at h2
     simp only [einpassenErg] at h2
-    simp at h2
+    simp only [reduceCtorEq] at h2
 
 /-- **No guard, no derivation.** The table of `DF` is guarded, so `darf`
     at the empty trace is uninhabitable: a foreign call writing it is not
@@ -260,7 +260,7 @@ theorem axiomCall_haelt_waechter
 theorem axiomCall_ohne_sperre_nicht_ableitbar : darf DF () [] → False := by
   intro hder
   have hmem' := hder _ (List.Mem.head _)
-  simp [Res.von] at hmem'
+  simp only [Res.von, List.not_mem_nil] at hmem'
 
 /-- Empty call arguments for the parameter-free axiom. -/
 def argsF : Args DF [] ΛF (DF.aparams ()) := .nil

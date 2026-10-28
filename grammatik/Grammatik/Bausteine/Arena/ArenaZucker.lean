@@ -306,7 +306,7 @@ theorem arenaAlloc_gdw_modell (A : ArenaForm D) (σ : World D)
   · intro h
     have hlt : a.used < k.hi := by omega
     rw [Arena.alloc_erfolg a hlt]
-    simp
+    simp only [ne_eq, reduceCtorEq, not_false_eq_true]
   · intro h
     have hne : ¬ (a.used = k.hi) := fun he => h ((Arena.alloc_scheitert_gdw a).mpr he)
     have hle : a.used ≤ k.hi := a.hused
@@ -368,7 +368,7 @@ def ZD : Deklaration where
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -384,9 +384,9 @@ def ZD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 /-- `arena Log capacity 2 .. 4 of u8` -- the hard bound is the table's `count`. -/
 def Log : ArenaForm ZD where

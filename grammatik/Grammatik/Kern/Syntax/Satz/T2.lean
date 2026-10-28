@@ -32,7 +32,7 @@ theorem gut_nimmt_gibt {W G} (σ σ1 : World D) (L : D.Lock)
 mutual
 theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .lit _, _, h | .tru, _, h | .fls, _, h | .var _, _, h | .ptrOf _ _ _ _, _, h
-  | .fnref _ _ _, _, h | .none _, _, h | .why _ _, _, h => by simp [Expr.orte] at h
+  | .fnref _ _ _, _, h | .none _, _, h | .why _ _, _, h => by simp only [Expr.orte, List.not_mem_nil] at h
   | .refEq a b, o, h => by
       simp only [Expr.orte, List.mem_append] at h
       rcases h with h | h
@@ -43,8 +43,8 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       rcases h with rfl | h
       · exact hL
       · exact r.orte_darf o h
-  | .glob g hL, o, h => by simp [Expr.orte] at h; subst h; exact hL
-  | .oldG g hL, o, h => by simp [Expr.orte] at h; subst h; exact hL
+  | .glob g hL, o, h => by simp only [Expr.orte, List.mem_cons, List.not_mem_nil, or_false] at h; subst h; exact hL
+  | .oldG g hL, o, h => by simp only [Expr.orte, List.mem_cons, List.not_mem_nil, or_false] at h; subst h; exact hL
   | .slot t _ i hL, o, h => by
       simp only [Expr.orte, List.mem_cons] at h
       rcases h with rfl | h
@@ -89,8 +89,8 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       · exact hL
       · exact a.orte_darf o h
       · exact b.orte_darf o h
-  | .arrNil, _, h => by simp [Expr.orte] at h
-  | .strLit _ _, _, h => by simp [Expr.orte] at h
+  | .arrNil, _, h => by simp only [Expr.orte, List.not_mem_nil] at h
+  | .strLit _ _, _, h => by simp only [Expr.orte, List.not_mem_nil] at h
   | .arrCons a b, o, h => by
       simp only [Expr.orte, List.mem_append] at h
       rcases h with h | h
@@ -142,11 +142,11 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       · exact s.orte_darf o h
 
 theorem NutzlastExpr.orte_darf : (e : NutzlastExpr D Γ Λ c) → ∀ o ∈ e.orte, OrtDarf Λ o
-  | .empty, _, h => by simp [NutzlastExpr.orte] at h
+  | .empty, _, h => by simp only [NutzlastExpr.orte, List.not_mem_nil] at h
   | .num e, o, h => e.orte_darf o h
 end
 theorem Args.orte_darf : (a : Args D Γ Λ τs) → ∀ o ∈ a.orte, OrtDarf Λ o
-  | .nil, _, h => by simp [Args.orte] at h
+  | .nil, _, h => by simp only [orte, List.not_mem_nil] at h
   | .cons e rest, o, h => by
       simp only [Args.orte, List.mem_append] at h
       rcases h with h | h
@@ -154,7 +154,7 @@ theorem Args.orte_darf : (a : Args D Γ Λ τs) → ∀ o ∈ a.orte, OrtDarf Λ
       · exact rest.orte_darf o h
 
 theorem ErgExpr.orte_darf : (e : ErgExpr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ o
-  | .empty, _, h => by simp [ErgExpr.orte] at h
+  | .empty, _, h => by simp only [orte, List.not_mem_nil] at h
   | .val e, o, h => e.orte_darf o h
 
 /-- Zwei Ausdruecke, zusammen. -/
@@ -181,7 +181,7 @@ theorem held_nachSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res 
       | nil => intro Λ h; exact h
       | cons k ks ih => intro Λ h; exact List.mem_of_mem_erase (ih _ h)
     exact key _ _ h
-  · cases m; simp [Res.vonMarke] at hm
+  · cases m; simp only [Res.vonMarke, reduceCtorEq] at hm
 
 theorem held_nachSig_iff (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D)) (L : D.Lock) :
     Res.held L ∈ nachSig D S Λ ↔ Res.held L ∈ Λ := by
@@ -200,7 +200,7 @@ theorem held_nachSig_iff (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (
           intro Λ h
           apply ih
           apply List.mem_erase_of_ne _ |>.mpr h
-          cases k; simp [Res.vonMarke]
+          cases k; simp only [Res.vonMarke, ne_eq, reduceCtorEq, not_false_eq_true]
     exact key _ _ h
 
 mutual
@@ -265,11 +265,11 @@ theorem Stmt.held_iff : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ'
       · rintro (h | h)
         · exact List.mem_of_mem_erase h
         · cases h
-      · intro h; left; exact (List.mem_erase_of_ne (by simp)).mpr h
+      · intro h; left; exact (List.mem_erase_of_ne (by simp only [ne_eq, reduceCtorEq, not_false_eq_true])).mpr h
   | .retires .., L => by
       constructor
       · exact List.mem_of_mem_erase
-      · intro h; exact (List.mem_erase_of_ne (by simp)).mpr h
+      · intro h; exact (List.mem_erase_of_ne (by simp only [ne_eq, reduceCtorEq, not_false_eq_true])).mpr h
 
 theorem Block.held_iff : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
   | .nil, _ => Iff.rfl
@@ -325,7 +325,7 @@ def GutEnd (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : EndAus
 
 theorem GutAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
     (h : GutAusgang W G σ o) : GutAusgang W G σ o.schrumpf := by
-  intro σ' hs; cases o <;> simp [Ausgang.schrumpf, Ausgang.welt] at hs ⊢ <;>
+  intro σ' hs; cases o <;> simp only [Ausgang.welt, Ausgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 theorem GutAusgang.schrumpfArm {W G} {σ : World D} (c : Option (Int × Int))
@@ -337,12 +337,12 @@ theorem GutAusgang.schrumpfArm {W G} {σ : World D} (c : Option (Int × Int))
 
 theorem GutEnd.schrumpf {W G} {σ : World D} {o : EndAusgang V l (τ :: Γ)}
     (h : GutEnd W G σ o) : GutEnd W G σ o.schrumpf := by
-  intro σ' hs; cases o <;> simp [EndAusgang.schrumpf, EndAusgang.welt] at hs ⊢ <;>
+  intro σ' hs; cases o <;> simp only [EndAusgang.welt, EndAusgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 theorem GutEnd.zuAusgang {W G} {σ : World D} {o : EndAusgang V l Γ} (h : GutEnd W G σ o) :
     GutAusgang W G σ o.zuAusgang := by
-  intro σ' hs; cases o <;> simp [EndAusgang.zuAusgang, Ausgang.welt] at hs ⊢ <;>
+  intro σ' hs; cases o <;> simp only [Ausgang.welt, EndAusgang.zuAusgang, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 /-- Ein Schritt, der schon gut ist, zieht durch einen Unterblock hindurch. -/
@@ -359,7 +359,7 @@ theorem GutAusgang.gibt {W G} {σ : World D} (L : D.Lock)
     (hn : (∀ M ∈ σ.haelt, D.rang M < D.rang L) ∧ L ∉ σ.haelt) {o : Ausgang V l Γ}
     (h : GutAusgang W G (σ.nimmt L) o) : GutAusgang W G σ (o.mapWelt (·.gibt L)) := by
   intro σ' hs
-  cases o <;> simp [Ausgang.mapWelt, Ausgang.welt] at hs ⊢ <;>
+  cases o <;> simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact gut_nimmt_gibt _ _ L hn (h _ rfl))
 
 /-- Von einem `Λ` zu einem, das hoechstens weniger Zeugnisse nennt, ueber einen guten Schritt. -/
@@ -375,7 +375,7 @@ theorem held_anfang (S : Signatur D.Tab D.Glob D.Lock D.Marke) (L : D.Lock) :
   constructor
   · rintro (⟨M, hM, hML⟩ | ⟨m, _, hm⟩)
     · cases hML; exact hM
-    · cases m; simp [Res.vonMarke] at hm
+    · cases m; simp only [Res.vonMarke, reduceCtorEq] at hm
   · intro h; exact .inl ⟨L, h, rfl⟩
 
 theorem held_ende (V : Vertrag D) (L : D.Lock) : Res.held L ∈ V.ende ↔ L ∈ V.haelt := by
@@ -384,7 +384,7 @@ theorem held_ende (V : Vertrag D) (L : D.Lock) : Res.held L ∈ V.ende ↔ L ∈
   constructor
   · rintro (⟨M, hM, hML⟩ | ⟨m, _, hm⟩)
     · cases hML; exact hM
-    · cases m; simp [Res.vonMarke] at hm
+    · cases m; simp only [Res.vonMarke, reduceCtorEq] at hm
   · intro h; exact .inl ⟨L, h, rfl⟩
 
 /-- Der Rufer haelt genau, was der Gerufene am Eintritt nennt. -/
@@ -514,7 +514,7 @@ theorem axiomSpur_zugriffMit (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax
     ∀ e ∈ axiomSpur tabs globs a Λ h, e.zugriffMit h := by
   intro e hmem
   rcases axiomSpur_mem hmem with ⟨t, _, _, rfl⟩ | ⟨g, _, _, rfl⟩ <;>
-    simp [Ereignis.zugriffMit]
+    simp only [Ereignis.zugriffMit]
 
 /-- Every `axiomSpur` event is good, when the guards hold it. -/
 theorem axiomSpur_gut (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax)

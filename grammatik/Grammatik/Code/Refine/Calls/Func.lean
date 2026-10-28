@@ -53,10 +53,10 @@ theorem prologue_ok (lay : Layout D) :
   | _, .cons (τ := τ) (Γ := Γ') v ρ', i, r, code, cenv0, r', h, σ, m, rs, hR, hW, hA, hlen => by
       simp only [prologue] at h
       rcases hp : prologue Γ' (i + 1) r with _ | ⟨c2, as, r1⟩
-      · simp [hp] at h
+      · simp only [hp, reduceCtorEq] at h
       simp only [hp] at h
       rcases hb : bindCode τ (.reg i) r1 with _ | ⟨c, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -65,7 +65,7 @@ theorem prologue_ok (lay : Layout D) :
       have hlen' : (i + 1) + Γ'.length ≤ r := by simpa [Nat.add_assoc, Nat.add_comm 1] using hlen
       obtain ⟨m1, rs1, hs1, hR1, hW1, hE1, hr1, hag1, hbd1, hFr1, hcell1⟩ :=
         prologue_ok lay ρ' (i + 1) r hp hR hW hA1 hlen'
-      have hir : i < r := by simp at hlen; omega
+      have hir : i < r := by simp only [List.length_cons] at hlen; omega
       have hrs1 : rs1 i = some (encR lay τ v) := by rw [hag1 i hir]; exact hA0
       obtain ⟨m2, rs2, hs2, hR2, hE2, hW2, hra, hr2e, hag2, hFb, hcell2⟩ :=
         bindCode_run lay v (.reg i) r1 m1 rs1
@@ -101,14 +101,14 @@ theorem blk_of_nodup {M : Modl} {fn : Nat} {func : Func} (hfn : M.funs[fn]? = so
   have key : ∀ L : List Block, (L.map Block.lbl).Nodup → b ∈ L → L.find? (fun x => x.lbl == b.lbl) = some b := by
     intro L
     induction L with
-    | nil => intro _ h; simp at h
+    | nil => intro _ h; simp only [List.not_mem_nil] at h
     | cons h t ih =>
         intro hn hm
         rw [List.map_cons, List.nodup_cons] at hn
         rcases List.mem_cons.mp hm with rfl | ht
-        · simp [List.find?]
+        · simp only [List.find?, BEq.rfl]
         · have hne : h.lbl ≠ b.lbl := fun e => hn.1 (by rw [e]; exact List.mem_map_of_mem ht)
-          have hb2 : (h.lbl == b.lbl) = false := by simp [hne]
+          have hb2 : (h.lbl == b.lbl) = false := by simp only [beq_eq_false_iff_ne, ne_eq, hne, not_false_eq_true]
           simp only [List.find?, hb2]
           exact ih hn.2 ht
   simp only [Modl.blk, hfn, Option.bind_some]
@@ -120,10 +120,10 @@ theorem lowerFn_nodup (lay : Layout D) (P : Programm D) (f : D.Fn) (name : Strin
     (hf : lowerFn lay P f name = some func) : (func.blks.map Block.lbl).Nodup := by
   unfold lowerFn at hf
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
-  · simp [hp] at hf
+  · simp only [hp, reduceCtorEq] at hf
   simp only [hp] at hf
   rcases hl : lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
-  · simp [hl] at hf
+  · simp only [hl, reduceCtorEq] at hf
   simp only [hl, Option.some.injEq] at hf
   subst hf
   obtain ⟨m, n, a⟩ := lowerEnd_lbl lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ s' blks (by show (1 : Nat) < 2; omega) hl
@@ -138,8 +138,8 @@ theorem reach_ret_fin {M : Modl} {S : Sees} {f : Frame} {vo : Option Val} (h : R
     (m : Mem) : Reach M S (.run m f []) (.fin m vo) := by
   obtain ⟨blk, hb, hl, h2⟩ := h
   rcases h2 with ⟨ht, rfl⟩ | ⟨o, v, ht, rfl, hv⟩
-  · exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp [stepTerm, finish]))
-  · exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp [stepTerm, hv, finish]))
+  · exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp only [stepTerm, finish]))
+  · exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp only [stepTerm, hv, finish]))
 
 /-- **The closing function theorem.** The module holds the lowered function `f` as function number
     `fn`. If its body returns `v` in machine G (from a world that the memory represents, with the
@@ -158,10 +158,10 @@ theorem lowerFn_run (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f : D
   have hnd := lowerFn_nodup lay P f name func hf
   unfold lowerFn at hf
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
-  · simp [hp] at hf
+  · simp only [hp, reduceCtorEq] at hf
   simp only [hp] at hf
   rcases hl : lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
-  · simp [hl] at hf
+  · simp only [hl, reduceCtorEq] at hf
   simp only [hl, Option.some.injEq] at hf
   subst hf
   have hM : ∀ b ∈ (⟨0, [], pc, .jmp 1⟩ :: blks : List Block), M.blk fn b.lbl = some b :=
@@ -204,10 +204,10 @@ theorem lowerFn_run_why (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (f
   have hnd := lowerFn_nodup lay P f name func hf
   unfold lowerFn at hf
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
-  · simp [hp] at hf
+  · simp only [hp, reduceCtorEq] at hf
   simp only [hp] at hf
   rcases hl : lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
-  · simp [hl] at hf
+  · simp only [hl, reduceCtorEq] at hf
   simp only [hl, Option.some.injEq] at hf
   subst hf
   have hM : ∀ b ∈ (⟨0, [], pc, .jmp 1⟩ :: blks : List Block), M.blk fn b.lbl = some b :=

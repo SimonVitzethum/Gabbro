@@ -120,15 +120,15 @@ theorem rufSchritt_nicht_logik (P : Programm D) (O : Orakel D) (passes : Nat)
     ∀ e : Logik D, rufSchritt P O passes R f σ ρ ≠ .logik e := by
   intro e hcon
   simp only [rufSchritt] at hcon
-  rw [if_neg (by rw [req_lese, show wahr? (eval σ (P.requires f) σ ρ) = true from hq]; simp)]
+  rw [if_neg (by rw [req_lese, show wahr? (eval σ (P.requires f) σ ρ) = true from hq]; simp only [Bool.true_eq_false, not_false_eq_true])]
     at hcon
   cases hy : execEnd (V := vertragVon D f) O passes R (P.rumpf f)
       (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ with
-  | why σ₂ r => simp [hy] at hcon
+  | why σ₂ r => simp only [hy, reduceCtorEq] at hcon
   | leave hl σ₂ ρ₂ => exact absurd hl (by decide)
   | next hl σ₂ ρ₂ => exact absurd hl (by decide)
   | logik e' => exact hbody e' hy
-  | hardware e' => simp [hy] at hcon
+  | hardware e' => simp only [hy, reduceCtorEq] at hcon
   | zurueck σ₂ w =>
       simp only [hy] at hcon
       have h1 : wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte)
@@ -142,7 +142,7 @@ theorem rufSchritt_nicht_logik (P : Programm D) (O : Orakel D) (passes : Nat)
           σ₂ (σ₂.lese (vertragVon D f).ende (P.ensures f).orte)
           rfl rfl rfl rfl (ergEnv (D.erg f) w ρ)] at hE
         exact hE
-      rw [if_neg (by rw [h1]; simp)] at hcon
+      rw [if_neg (by rw [h1]; simp only [Bool.true_eq_false, not_false_eq_true])] at hcon
       have h2 : (D.invs.find? (fun i => schuldet f i && !wahr? (eval
           ((D.invs.filter (schuldet f)).foldl
             (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte)
@@ -178,12 +178,12 @@ theorem rufAt_vertraege (P : Programm D) (O : Orakel D) (passes : Nat) :
     ∀ n : Nat, RespektiertVertraege P (rufAt P O passes n) := by
   intro n
   cases n with
-  | zero => intro f σ ρ _ σ' v h; simp [rufAt] at h
+  | zero => intro f σ ρ _ σ' v h; simp only [rufAt, reduceCtorEq] at h
   | succ m =>
       intro f σ ρ hreq
       rw [rufAt_succ_eq]
       simp only [rufSchritt]
-      rw [if_neg (by rw [req_lese, show wahr? (eval σ (P.requires f) σ ρ) = true from hreq]; simp)]
+      rw [if_neg (by rw [req_lese, show wahr? (eval σ (P.requires f) σ ρ) = true from hreq]; simp only [Bool.true_eq_false, not_false_eq_true])]
       cases hy : execEnd (V := vertragVon D f) O passes (rufAt P O passes m) (P.rumpf f)
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ with
       | why σ₂ r => dsimp only; intro σ' v h; cases h

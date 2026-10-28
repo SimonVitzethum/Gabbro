@@ -169,8 +169,8 @@ theorem linear_dann_affin {s : Anw V} (h : linear s) : affin s := by
 theorem affin_sieht_das_leck_nicht :
     ∃ s : Anw Nat, affin s ∧ ¬ linear s ∧ laeuft s (fun _ => 0) := by
   refine ⟨.leer, ?_, ?_, laeuft.leer⟩
-  · intro y; simp [zaehlt]
-  · intro h; have := h 0; simp [zaehlt] at this
+  · intro y; simp only [zaehlt, Nat.zero_le]
+  · intro h; have := h 0; simp only [zaehlt, Nat.zero_ne_one] at this
 
 
 #print axioms Passlogik.Linear.affin_sieht_das_leck_nicht
@@ -186,14 +186,14 @@ def unabgeglichen : Anw Nat := .wenn (.verbraucht 0) .leer
 theorem unabgeglichen_faellt : ¬ abgeglichen unabgeglichen := by
   rintro ⟨_, _, hgl⟩
   have := hgl 0
-  simp [zaehlt] at this
+  simp only [zaehlt, ↓reduceIte, Nat.succ_ne_self] at this
 
 /-- **Und ohne den Abgleich stimmt die Rechnung nicht mehr.** Der Pass rechnet `1`, ein
     Pfad verbraucht `0` -- ein Leck, das durchgeht. -/
 theorem ohne_abgleich_leck :
     ∃ f, laeuft unabgeglichen f ∧ f 0 ≠ zaehlt unabgeglichen 0 := by
   refine ⟨fun _ => 0, laeuft.rechts laeuft.leer, ?_⟩
-  simp [zaehlt, unabgeglichen]
+  simp only [unabgeglichen, zaehlt, ↓reduceIte, ne_eq, Nat.zero_ne_one, not_false_eq_true]
 
 
 #print axioms Passlogik.Linear.ohne_abgleich_leck
@@ -205,7 +205,7 @@ def schleife_verbraucht : Anw Nat := .schleife (.verbraucht 0)
 theorem schleife_verbraucht_faellt : ¬ abgeglichen schleife_verbraucht := by
   rintro ⟨_, hnull⟩
   have := hnull 0
-  simp [zaehlt] at this
+  simp only [zaehlt, ↓reduceIte, Nat.succ_ne_self] at this
 
 /-- **Und der Grund ist der zweite Durchgang.** Zwei Durchgaenge verbrauchen zweimal --
     Gebrauch nach dem Ende. -/
@@ -214,7 +214,7 @@ theorem zwei_durchgaenge_verbrauchen_zweimal :
   refine ⟨fun y => (if y = 0 then 1 else 0) + ((if y = 0 then 1 else 0) + 0), ?_, ?_⟩
   · exact laeuft.mehr (laeuft.verbraucht 0)
       (laeuft.mehr (laeuft.verbraucht 0) laeuft.null)
-  · simp
+  · simp only [↓reduceIte, Nat.add_zero, Nat.reduceAdd]
 
 
 #print axioms Passlogik.Linear.zwei_durchgaenge_verbrauchen_zweimal
@@ -254,7 +254,7 @@ theorem basisname_verwischt :
       zaehlt (vergroebert s) 0 = 1
       ∧ zaehlt s ⟨0, 0⟩ = 1
       ∧ zaehlt s ⟨0, 1⟩ = 0 := by
-  refine ⟨.verbraucht ⟨0, 0⟩, ?_, ?_, ?_⟩ <;> simp [vergroebert, zaehlt]
+  refine ⟨.verbraucht ⟨0, 0⟩, ?_, ?_, ?_⟩ <;> simp only [vergroebert, zaehlt, ↓reduceIte, Ort.mk.injEq, Nat.succ_ne_self, and_false]
 
 
 #print axioms Passlogik.Linear.basisname_verwischt

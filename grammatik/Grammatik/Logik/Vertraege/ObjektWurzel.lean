@@ -190,7 +190,7 @@ theorem wurzel_getrennt_obj {wp : Nat → Bool} {pObj fObj : Nat → Obj D}
       refine wurzelObj_inj hS hF hrr ?_
       intro i j hi _
       subst hi
-      simp [hR i hr]
+      simp only [hR i hr, Bool.true_or]
     · exact absurd ⟨hr, ha' r⟩ (hG r)
   · obtain ⟨r', hr'⟩ := h'.wurzeln_nichtleer
     exact absurd ⟨ha r', hr'⟩ (hG r')
@@ -259,7 +259,7 @@ theorem freiAlloc_neu (F : FreiZustand) (i : Nat) (hi : F.lebt i) : (freiAlloc F
 theorem freiAlloc_bleibt (F : FreiZustand) (i : Nat) (hi : F.lebt i) : (freiAlloc F).2.lebt i := by
   obtain ⟨belegt, frei, hfrei⟩ := F
   cases frei with
-  | nil => exact ⟨by simp only [freiAlloc]; have := hi.1; simp only at this; omega, by simp [freiAlloc]⟩
+  | nil => exact ⟨by simp only [freiAlloc]; have := hi.1; simp only at this; omega, by simp only [freiAlloc, List.not_mem_nil, not_false_eq_true]⟩
   | cons j rest =>
       refine ⟨hi.1, ?_⟩
       simp only [freiAlloc]
@@ -269,7 +269,7 @@ theorem freiAlloc_bleibt (F : FreiZustand) (i : Nat) (hi : F.lebt i) : (freiAllo
 theorem freiAlloc_lebt (F : FreiZustand) (hnd : F.frei.Nodup) : (freiAlloc F).2.lebt (freiAlloc F).1 := by
   obtain ⟨belegt, frei, hfrei⟩ := F
   cases frei with
-  | nil => exact ⟨by simp [freiAlloc], by simp [freiAlloc]⟩
+  | nil => exact ⟨by simp only [freiAlloc, Nat.lt_add_one], by simp only [freiAlloc, List.not_mem_nil, not_false_eq_true]⟩
   | cons j rest =>
       refine ⟨hfrei j List.mem_cons_self, ?_⟩
       simp only [freiAlloc]
@@ -278,7 +278,7 @@ theorem freiAlloc_lebt (F : FreiZustand) (hnd : F.frei.Nodup) : (freiAlloc F).2.
 theorem freiAlloc_nodup (F : FreiZustand) (hnd : F.frei.Nodup) : (freiAlloc F).2.frei.Nodup := by
   obtain ⟨belegt, frei, hfrei⟩ := F
   cases frei with
-  | nil => simp [freiAlloc]
+  | nil => simp only [freiAlloc, List.nodup_nil]
   | cons j rest => simp only [freiAlloc]; exact (List.nodup_cons.mp hnd).2
 
 /-- `free` keeps the free list duplicate-free (it refuses a slot already on it). -/
@@ -365,7 +365,7 @@ theorem rust_lesart_luecke (o : Obj D) :
     omega
   · intro r h; exact h.1
   · show o = ⟨o.tab, o.nr + (0 : Nat)⟩
-    exact Obj.ext' rfl (by simp)
+    exact Obj.ext' rfl (by simp only [Int.cast_ofNat_Int, Int.add_zero])
   · intro h; exact h (.param 0) ⟨trivial, rfl⟩
 
 #print axioms Gabbro.Grammatik.wurzel_getrennt_obj

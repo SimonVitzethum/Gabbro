@@ -194,13 +194,13 @@ theorem WRel.schreibSlot {σ τ : World D} (h : WRel T σ τ) (t : D.Tab) (Λ : 
     (f : D.Feld t) (v : Wert D (D.typ t f)) :
     WRel T (σ.schreibSlot t Λ k f v) (τ.schreibSlot t Λ k f v) := by
   refine ⟨?_, sg_von_gleichAuf fun c hc =>
-    gleichAuf_schreibSlot (gleichAuf_von_sg h.2 (by simp [hc])) t Λ Λ k f v⟩
+    gleichAuf_schreibSlot (gleichAuf_von_sg h.2 (by simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq, hc])) t Λ Λ k f v⟩
   simp only [World.schreibSlot, World.merke, World.storeSlot, World.haelt, h.1]
 
 theorem WRel.schreibGlob {σ τ : World D} (h : WRel T σ τ) (g : D.Glob) (Λ : List (Res D))
     (v : Wert D (D.gtyp g)) : WRel T (σ.schreibGlob g Λ v) (τ.schreibGlob g Λ v) := by
   refine ⟨?_, sg_von_gleichAuf fun c hc =>
-    gleichAuf_schreibGlob (gleichAuf_von_sg h.2 (by simp [hc])) g Λ Λ v⟩
+    gleichAuf_schreibGlob (gleichAuf_von_sg h.2 (by simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq, hc])) g Λ Λ v⟩
   simp only [World.schreibGlob, World.merke, World.storeGlob, World.haelt, h.1]
 
 theorem WRel.schreibBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
@@ -369,7 +369,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
   | next h' =>
       simp only [execStmt, AusRel]
       exact ⟨h, trivial⟩
-  | _ => simp [Stmt.istBlatt] at hb
+  | _ => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
 
 end Blatt
 

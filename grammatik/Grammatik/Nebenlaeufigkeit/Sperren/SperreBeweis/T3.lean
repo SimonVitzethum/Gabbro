@@ -145,7 +145,7 @@ theorem fadenS_blatt (hO : GutO O) (hQ : AxVertragO Q O)
           simp only [execStmtH, axiomAntwort, hw]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
-      | _ => simp [Stmt.istAxiom] at hax
+      | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax
 
 /-- **The acquire keeps the replay.** At `locks L { body }` with `L` free in
     the machine, the invariant of `L` holds at the machine memory
@@ -341,7 +341,7 @@ theorem fadenS_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   obtain ⟨_, _, hk⟩ := hok
   refine ⟨σ.gibt L, Nat.le_succ _,
     GleichAuf.mono (fun _ hc => stabilS_mono hΛ1 hc) ⟨fun t ht => hg.1 t ht, fun g hg' => hg.2 g hg'⟩,
-    ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp [blockOrteP, stmtOrteP] at hc, hk⟩,
+    ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp only [blockOrteP, Bool.false_eq_true, ↓reduceIte, stmtOrteP, List.append_nil, List.not_mem_nil] at hc, hk⟩,
     fun R O' U => ZErgG.folgt_of_eq (semH_peelFrei S O' U passes R L rest k σ ρ h x hiσ)⟩
 
 end Frei

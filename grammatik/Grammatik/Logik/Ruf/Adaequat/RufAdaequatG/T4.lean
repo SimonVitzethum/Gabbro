@@ -77,8 +77,8 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt] at hex
       rw [execGrund_wahlW O passes keinRuf arms] at hex
       exact grundKein arms ha _ _ _ _ _ hex
-  | _, _, _, _, .call .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .call .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .locks L hr body, hs => by
       intro σ σ' ρ v hex
       obtain ⟨_, hb⟩ := hs.locks_inv
@@ -90,20 +90,20 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have hb := hs.breaking_inv
       simp only [execStmt] at hex
       exact blockKein body hb _ _ _ _ hex
-  | _, _, _, _, .traverse .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .retry .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .forever .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .traverse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret .., hs => absurd hs.ret_inv (by decide)
-  | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .leave .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
-  | _, _, _, _, .next .., hs => absurd hs.art (by simp [Stmt.gArt, Stmt.blattArt])
+  | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .leave .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .next .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
 theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ'), BlockG A false b → KeinRueckB O passes b
   | _, _, _, _, .nil, _ => by
       intro σ σ' ρ v hex
-      simp [execBlock] at hex
+      simp only [execBlock, reduceCtorEq] at hex
   | _, _, _, _, .cons s rest, hb => by
       intro σ σ' ρ v hex
       obtain ⟨hs, hr⟩ := hb.cons_inv
@@ -229,7 +229,7 @@ theorem endeConsOk {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     obtain ⟨M1, hs1, hZ1⟩ := w_blatt (P := P) (O := O) (passes := passes) hZ.1 s rest ρ
       h.istBlatt rfl hΛ.heldIn σ' ρ' (by rw [hW]; exact hex) (by rw [hW]; exact herw)
     exact ⟨M1, RufLaufG.einzeln hs1, hZ1, herw.offen⟩
-  | ret _ _ => simp [execStmt] at hex
+  | ret _ _ => simp only [execStmt, reduceCtorEq] at hex
   | ite => exact hEntf rfl
   | onOption => exact hEntf rfl
   | onTag => exact hEntf rfl

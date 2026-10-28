@@ -47,7 +47,7 @@ theorem KetteF.eindeutig {c : Int} {nx : Int → Int} {k : Int} {L L' : List Int
 theorem KetteF.mem_bereich {c : Int} {nx : Int → Int} {k : Int} {L : List Int}
     (h : KetteF c nx k L) : ∀ i ∈ L, 0 ≤ i ∧ i < c := by
   induction h with
-  | nil => intro i hi; simp at hi
+  | nil => intro i hi; simp only [List.not_mem_nil] at hi
   | cons k h0 hk L h ih =>
     intro i hi
     simp only [List.mem_cons] at hi
@@ -62,8 +62,8 @@ theorem KetteF.uebertragen {c : Int} {nx nx' : Int → Int} {k : Int} {L : List 
   | nil => exact KetteF.nil
   | cons k h0 hk L h ih =>
     refine KetteF.cons k h0 hk L ?_
-    rw [g k (by simp)]
-    exact ih (fun j hj => g j (by simp [hj]))
+    rw [g k (by simp only [List.mem_cons, true_or])]
+    exact ih (fun j hj => g j (by simp only [List.mem_cons, hj, or_true]))
 
 /-- `i` is a member of the chain from `kopf`. -/
 def Auf (c : Int) (nx : Int → Int) (kopf i : Int) : Prop :=
@@ -76,7 +76,7 @@ def ListOkF (c : Int) (nx : Int → Int) (kopf : Int) (Live : Int → Prop) : Pr
 
 /-- The empty list is well formed. -/
 theorem listOkF_leer (c : Int) (nx : Int → Int) (Live : Int → Prop) : ListOkF c nx c Live :=
-  ⟨[], KetteF.nil, List.nodup_nil, by simp⟩
+  ⟨[], KetteF.nil, List.nodup_nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]⟩
 
 /-- A well formed chain survives a change of the link function away from its slots and a
     widening of the live set. -/
@@ -109,7 +109,7 @@ theorem auf_nach {c : Int} {nx : Int → Int} {kopf p : Int} (hp : Auf c nx kopf
   obtain ⟨L, hk, hm⟩ := hp
   refine ⟨L, hk, ?_⟩
   induction hk with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | cons k h0 hk L h ih =>
     by_cases hkp : k = p
     · subst hkp
@@ -176,7 +176,7 @@ theorem unlink_aux {c : Int} {nx nx' : Int → Int} {p i : Int} (hi : i < c)
     {k : Int} {L : List Int} (h : KetteF c nx k L) (hnd : L.Nodup) (hm : p ∈ L) :
     ∃ L', KetteF c nx' k L' ∧ L.Perm (i :: L') := by
   induction h with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | cons k h0 hk L h ih =>
     by_cases hkp : k = p
     · subst hkp

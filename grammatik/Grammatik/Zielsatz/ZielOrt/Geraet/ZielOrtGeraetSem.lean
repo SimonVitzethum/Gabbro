@@ -825,9 +825,9 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [Block.vOk] at h
       exact Block.gOk_of_vOk rest h
-  | .regRead .., h => by simp [Block.vOk] at h
-  | .regReadElse .., h => by simp [Block.vOk] at h
-  | .awaits .., h => by simp [Block.vOk] at h
+  | .regRead .., h => by simp only [Block.vOk, Bool.false_eq_true] at h
+  | .regReadElse .., h => by simp only [Block.vOk, Bool.false_eq_true] at h
+  | .awaits .., h => by simp only [Block.vOk, Bool.false_eq_true] at h
   | .exchange _ _ _ _ rest, h => by
       simp only [Block.vOk] at h
       exact Block.gOk_of_vOk rest h
@@ -892,9 +892,9 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
       simp only [Endblock.gOk, Endblock.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
-  | .regRead .., h => by simp [Endblock.vOk] at h
-  | .regReadElse .., h => by simp [Endblock.vOk] at h
-  | .awaits .., h => by simp [Endblock.vOk] at h
+  | .regRead .., h => by simp only [Endblock.vOk, Bool.false_eq_true] at h
+  | .regReadElse .., h => by simp only [Endblock.vOk, Bool.false_eq_true] at h
+  | .awaits .., h => by simp only [Endblock.vOk, Bool.false_eq_true] at h
   | .bindCallInd _ _ _ _ _ rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
@@ -948,7 +948,7 @@ theorem fussOrteG_of_vOk (P : Programm D) (fs : List D.Fn) (f : D.Fn)
     (h : (P.rumpf f).vOk (kandB P fs (fussOrte P f)) = true) : fussOrteG P f = fussOrte P f := by
   unfold fussOrteG
   rw [(Endblock.gOk_of_vOk (Rg := fun _ => true) _ h).2]
-  simp
+  simp only [List.flatMap_nil, List.append_nil]
 
 /-- **The fragment of `ziel_ort_voll` is inside the widened fragment.** -/
 theorem programmImFragmentG_of_V (P : Programm D) (fs : List D.Fn)

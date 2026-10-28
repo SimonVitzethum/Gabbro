@@ -221,7 +221,7 @@ def treset (s : Nat × Bool) : Option (Nat × Bool) :=
     consumed by the branch. -/
 theorem reset_from_clean (s : Nat × Bool) (h : s.2 = false) :
     treset s = some (0, false) := by
-  simp [treset, h]
+  simp only [treset, h, Bool.false_eq_true, ↓reduceIte]
 
 /-- The M2 side: a held linear value is rejected, not leaked. -/
 theorem reset_rejects_held (v : Nat) : treset (v, true) = none :=
@@ -340,7 +340,7 @@ theorem table_ops_keep_zeuge :
   have h : ∀ op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)),
       ∀ s : Nat, 0 ≤ s → 0 ≤ op s := by
     intro op hop s hs
-    simp at hop
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hop
     rcases hop with rfl | rfl <;> simp_all <;> omega
   have hr : ∀ op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)),
       op ∈ ([(· + 1), (· * 2)] : List (Nat → Nat)) := by
@@ -388,7 +388,7 @@ theorem op_search_first (pre : List Nat) (x : Nat) (post : List Nat)
   induction pre with
   | nil =>
     show (opSearch ([x] ++ post) p).2 = some x
-    simp [opSearch, hpx]
+    simp only [List.cons_append, List.nil_append, opSearch, hpx, ↓reduceIte]
   | cons y ys ih =>
     have hy : p y = false := hpre _ (List.mem_cons.mpr (Or.inl rfl))
     have hrest : ∀ z ∈ ys, p z = false :=

@@ -353,12 +353,12 @@ def belegung_nichtnegativ (σ : Nat → Int) : Prop := ∀ s, 0 ≤ σ s
 theorem gliederwert_null (gs : List (Int × Nat)) : gliederwert null_belegung gs = 0 := by
   induction gs with
   | nil => rfl
-  | cons p rest ih => simp [gliederwert, null_belegung, ih]
+  | cons p rest ih => simp only [gliederwert, null_belegung, Int.mul_zero, ih, Int.add_zero]
 
 theorem gliederwert_nichtnegativ {σ : Nat → Int} {gs : List (Int × Nat)}
     (hk : ∀ p ∈ gs, 0 ≤ p.1) (hs : belegung_nichtnegativ σ) : 0 ≤ gliederwert σ gs := by
   induction gs with
-  | nil => simp [gliederwert]
+  | nil => simp only [gliederwert, Std.le_refl]
   | cons p rest ih =>
       have h1 : 0 ≤ p.1 := hk p (List.mem_cons_self ..)
       have h2 : 0 ≤ σ p.2 := hs p.2
@@ -389,7 +389,8 @@ theorem ohne_K005_faellt_L2 :
   have hs : belegung_nichtnegativ (fun _ => (1 : Int)) := by
     intro _; show (0 : Int) ≤ 1; decide
   refine ⟨⟨0, [(-1, 0)]⟩, (fun _ => (1 : Int)), hs, ?_⟩
-  simp [wert, gliederwert, null_belegung]
+  simp only [wert, gliederwert, Int.reduceNeg, Int.mul_one, Int.add_zero, Int.zero_add, null_belegung,
+  Int.mul_zero, Int.neg_neg_iff_pos, Int.reduceLT]
 
 
 #print axioms Passlogik.Kosten.ohne_K005_faellt_L2
@@ -423,11 +424,13 @@ def leeres_programm : KProgramm Unit := ⟨fun _ => .leer, fun _ => 0⟩
 
 /-- Die alte Regel rechnet **2**. -/
 theorem alt_rechnet_zwei : kostenKalt leeres_programm.dekl kette_gemessen = 2 := by
-  simp [kette_gemessen, bedingung, kostenKalt, kostenS, kostenA, leeres_programm]
+  simp only [leeres_programm, kette_gemessen, bedingung, kostenKalt, kostenA, Nat.add_zero, Nat.reduceAdd,
+  kostenS, Nat.zero_le, Nat.max_eq_left, Std.le_refl, Nat.max_eq_right]
 
 /-- Die korrigierte Regel rechnet **6**. -/
 theorem neu_rechnet_sechs : kostenK leeres_programm.dekl 0 kette_gemessen = 6 := by
-  simp [kette_gemessen, bedingung, kostenK, kostenS, kostenA, leeres_programm]
+  simp only [leeres_programm, kette_gemessen, bedingung, kostenK, kostenA, Nat.add_zero, Nat.reduceAdd,
+  Nat.zero_add, kostenS, Std.le_refl, Nat.max_eq_right, Nat.reduceLeDiff]
 
 /-- **Und es GIBT einen Durchlauf, der 6 kostet** -- der, der bis zum `sonst` laeuft. -/
 theorem durchlauf_kostet_sechs : laeuftK leeres_programm kette_gemessen 6 := by
@@ -525,7 +528,7 @@ theorem wartezeit_ist_summe (Ls : List Sperre) (kosten : Sperre → Nat)
     (h : ∀ L ∈ Ls, kosten L ≤ L.held) :
     (Ls.map kosten).sum ≤ summe_held Ls := by
   induction Ls with
-  | nil => simp [summe_held]
+  | nil => simp only [List.map_nil, List.sum_nil, summe_held, Std.le_refl]
   | cons L rest ih =>
       have h1 : kosten L ≤ L.held := h L (List.mem_cons_self ..)
       have h2 := ih (fun M hm => h M (List.mem_cons_of_mem _ hm))

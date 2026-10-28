@@ -152,7 +152,7 @@ theorem runOps_within (bound left : Nat) (ops : List Op)
   | nil =>
     intro left _
     rw [runOps_nil, totalCost_nil]
-    simp
+    simp only [Nat.sub_zero]
   | cons op rest ih =>
     intro left h
     rw [totalCost_cons] at h

@@ -30,7 +30,7 @@ theorem State.release_consumed {s s' : State} {f : Frame} {h : Handle}
 
 theorem State.consumed_no_access {s s' : State} {h : Handle}
     (hc : s.consumed s' h) (f : Frame) : ¬ s'.access f h := by
-  simp [State.access, hc.1]
+  simp only [access, hc.1, not_false_eq_true]
 
 theorem State.returned_refl {s : State} {f : Frame} {h : Handle}
     (ho : s.owns f h) : s.returned s f h h :=

@@ -185,7 +185,7 @@ theorem ohne_o006_zwei_stufen :
   refine ⟨.still, .tut ⟨⟨0⟩, ⟨1⟩⟩, ⟨0⟩, ⟨0⟩, ⟨1⟩,
           fliesst.links (fliesst.still _), fliesst.rechts (fliesst.tut _), ?_⟩
   intro h
-  simp at h
+  simp only [Stufe.mk.injEq, Nat.zero_ne_one] at h
 
 
 #print axioms Passlogik.Phasen.ohne_o006_zwei_stufen
@@ -277,7 +277,7 @@ theorem ordnung_ist_nicht_umsonst :
         have e1 := tut_nur_von_der_ausgangsstufe h1
         have e2 := tut_nur_von_der_ausgangsstufe h2
         have h3 := e1.2.symm.trans e2.1
-        simp at h3
+        simp only [Stufe.mk.injEq, reduceCtorEq] at h3
 
 
 #print axioms Passlogik.Phasen.ordnung_ist_nicht_umsonst

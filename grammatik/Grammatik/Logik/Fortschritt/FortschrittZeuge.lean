@@ -57,29 +57,29 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
   | ewig a n inv body k' =>
       cases n with
       | zero => rfl
-      | succ n => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
+      | succ n => cases k <;> exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true, reduceCtorEq, imp_self, implies_true])
   | ende e =>
       cases e with
       | cons s rest =>
           cases k
           · exact h.1
-          all_goals exact absurd h (by simp [Zielsatz.RestHalt])
+          all_goals exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true])
       | bindAxiom => rfl
       | bindAxiomElse => rfl
-      | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
+      | _ => cases k <;> exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true])
   | dann b k' =>
       cases b with
       | cons s rest =>
           cases k
           · exact h.1
-          all_goals exact absurd h (by simp [Zielsatz.RestHalt, Zielsatz.KopfHalt])
+          all_goals exact absurd h (by simp only [Zielsatz.RestHalt, Zielsatz.KopfHalt, not_false_eq_true])
       | bindAxiom => rfl
       | bindAxiomElse => rfl
       | regRead => rfl
       | regReadElse => rfl
       | awaits => rfl
-      | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt, Zielsatz.KopfHalt])
-  | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
+      | _ => cases k <;> exact absurd h (by simp only [Zielsatz.RestHalt, Zielsatz.KopfHalt, not_false_eq_true])
+  | _ => cases k <;> exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true])
 
 /-- A thread whose head residue cannot hold a named stop stands at none. -/
 theorem nicht_haltBenannt {O : Orakel D} {passes : Nat} {M : RufMaschineG D} {t : Faden}

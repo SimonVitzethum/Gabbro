@@ -50,8 +50,8 @@ theorem abschneiden_ausfuehren (Lf Rf C : LinkFeld A) (p : Var Γ (Ty.index (D.c
     case e => rfl
     case rh =>
       refine ⟨fun C' hC' => funext fun j => ?_, fun G' _ => rfl⟩
-      have h1 : C'.f ≠ C.f := fun e => hC' (by simp [e])
-      simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1]
+      have h1 : C'.f ≠ C.f := fun e => hC' (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+      simp only [LinkFeld.wert, World.slots_lese, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1]
     case n => rfl
     case r =>
       simp only [eval, Block.linkNil, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
@@ -81,11 +81,12 @@ theorem wurzelSetze_ausfuehren (Lf Rf : LinkFeld A) (Wz : LinkKopf A) (hd : Lf.f
       A.kopfSt σ' = A.kopfSt σ ∧ (∀ j, A.naechst σ' j = A.naechst σ j) ∧ A.stand σ' = A.stand σ := by
   refine ⟨_, rfl, ?_, ?_⟩
   · refine ⟨fun C hC => funext fun j => ?_, fun G' hG' => ?_⟩
-    · have h1 : C.f ≠ Lf.f := fun e => hC (by simp [e])
-      have h2 : C.f ≠ Rf.f := fun e => hC (by simp [e])
-      simp [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h2]
-    · have hne : G'.g ≠ Wz.g := fun e => hG' (by simp [e])
-      simp [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne]
+    · have h1 : C.f ≠ Lf.f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false, true_or])
+      have h2 : C.f ≠ Rf.f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false, or_true])
+      simp only [LinkFeld.wert, World.slots_schreibGlob, World.slots_lese,
+  World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h2, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ h1]
+    · have hne : G'.g ≠ Wz.g := fun e => hG' (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+      simp only [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne, World.globs_lese, World.globs_schreibSlot]
   simp only [eval, Block.wurzelSetze, Block.linkNil, Block.linkIdxAlsKopf, eval_umTyp, Expr.orte, orte_umTyp,
     List.nil_append, LinkKopf.st_schreibSlot, LinkKopf.st_lese, LinkKopf.st_schreibGlob_selbst,
     LinkFeld.wert_schreibGlob, LinkFeld.wert_lese,
@@ -127,8 +128,8 @@ theorem wurzelAus_ausfuehren (Lf Rf : LinkFeld A) (Wz : LinkKopf A)
     case e => rfl
     case rh =>
       refine ⟨fun C _ => rfl, fun G' hG' => ?_⟩
-      have hne : G'.g ≠ Wz.g := fun e => hG' (by simp [e])
-      simp [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne]
+      have hne : G'.g ≠ Wz.g := fun e => hG' (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
+      simp only [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne, World.globs_lese]
     case n => rfl
     case r =>
       simp only [eval, Block.linkNilKopf, eval_umTyp, Expr.orte, orte_umTyp, List.nil_append,
@@ -136,7 +137,7 @@ theorem wurzelAus_ausfuehren (Lf Rf : LinkFeld A) (Wz : LinkKopf A)
         A.kopfSt_schreibGlob_ne _ _ _ _ (Ne.symm Wz.h2), A.stand_schreibGlob_ne _ _ _ _ (Ne.symm Wz.h1),
         FreiForm.naechst_schreibGlob, FreiForm.naechst_lese, FreiForm.kopfSt_lese, ArenaForm.stand_lese]
       refine ⟨umTyp_rund_n Wz.hg _, ?_⟩
-      simp
+      simp only [implies_true, and_self]
   · exact hl
   · exact hr
 

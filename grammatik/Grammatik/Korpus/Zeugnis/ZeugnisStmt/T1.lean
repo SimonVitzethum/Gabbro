@@ -54,25 +54,25 @@ theorem ctxBoolTyp_var (Γ : Ctx) (k : Nat) (h : ctxBoolTyp Γ k = some ()) :
     ∃ _ : Var Γ .bool, True := by
   induction Γ generalizing k with
   | nil =>
-    cases k <;> simp [ctxBoolTyp] at h
+    cases k <;> simp only [ctxBoolTyp, reduceCtorEq] at h
   | cons τ Γ ih =>
     cases k with
     | zero =>
       cases τ with
       | bool =>
-        simp [ctxBoolTyp] at h
+        simp only [ctxBoolTyp] at h
         exact ⟨.here, trivial⟩
-      | int => simp [ctxBoolTyp] at h
-      | opt => simp [ctxBoolTyp] at h
-      | sum => simp [ctxBoolTyp] at h
-      | why => simp [ctxBoolTyp] at h
-      | never => simp [ctxBoolTyp] at h
-      | fl => simp [ctxBoolTyp] at h
-      | fnptr => simp [ctxBoolTyp] at h
-      | ptr => simp [ctxBoolTyp] at h
-      | ref | arr | str => simp [ctxBoolTyp] at h
+      | int => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | opt => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | sum => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | why => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | never => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | fl => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | fnptr => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | ptr => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | ref | arr | str => simp only [ctxBoolTyp, reduceCtorEq] at h
     | succ k =>
-      simp [ctxBoolTyp] at h
+      simp only [ctxBoolTyp] at h
       obtain ⟨x, _⟩ := ih k h
       exact ⟨.there x, trivial⟩
 

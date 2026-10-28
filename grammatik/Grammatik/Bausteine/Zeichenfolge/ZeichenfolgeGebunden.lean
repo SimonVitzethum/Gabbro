@@ -63,7 +63,7 @@ def bconcat (tmax : Nat) {m1 m2 : Nat} (a : BString m1) (b : BString m2) :
 theorem bconcat_laenge (tmax : Nat) {m1 m2 : Nat} (a : BString m1) (b : BString m2)
     (h : (a.daten ++ b.daten).length ≤ tmax) :
     blaenge (⟨_, h⟩ : BString tmax) = a.daten.length + b.daten.length := by
-  simp [blaenge, List.length_append]
+  simp only [blaenge, List.length_append, Nat.add_left_cancel_iff]
 
 /-- Bounded indexing (M103-class): in-range or refused. `none` is the
     out-of-range refusal. -/
@@ -73,7 +73,7 @@ def bindex {max : Nat} (s : BString max) (i : Nat) : Option Char :=
 /-- An in-range index returns the list element. -/
 theorem bindex_innen {max : Nat} (s : BString max) (i : Nat)
     (h : i < s.daten.length) : bindex s i = some (s.daten[i]) := by
-  simp [bindex, List.getElem?_eq_getElem h]
+  simp only [bindex, List.getElem?_eq_getElem h]
 
 /-- An out-of-range index is refused. -/
 theorem bindex_aussen {max : Nat} (s : BString max) (i : Nat)
@@ -101,7 +101,7 @@ theorem vergl_refl (l : List Char) : vergl l l = .eq := by
   | nil => rfl
   | cons a as ih =>
     simp only [vergl]
-    have hcmp : compare a.toNat a.toNat = .eq := by simp
+    have hcmp : compare a.toNat a.toNat = .eq := by simp only [Std.compare_self]
     rw [hcmp]
     exact ih
 
@@ -139,7 +139,7 @@ def bkopie (tmax : Nat) {m : Nat} (s : BString m) : Option (BString tmax) :=
 theorem bkopie_max {tmax m : Nat} (s : BString m) (h : m ≤ tmax) :
     ∃ r : BString tmax, bkopie tmax s = some r ∧ r.daten = s.daten := by
   have hl : s.daten.length ≤ tmax := Nat.le_trans s.len_ok h
-  exact ⟨⟨s.daten, hl⟩, by simp [bkopie, hl], rfl⟩
+  exact ⟨⟨s.daten, hl⟩, by simp only [bkopie, hl, ↓reduceDIte], rfl⟩
 
 /-- A copy into a shorter slot can fail: a full `string max 8` does not fit
     `string max 2`. -/
@@ -159,7 +159,7 @@ theorem bconcat_max_summe {tmax m1 m2 : Nat} (a : BString m1) (b : BString m2)
   refine ⟨⟨_, hl⟩, ?_, ?_⟩
   · unfold bconcat
     rw [dif_pos hl]
-  · simp [blaenge, List.length_append]
+  · simp only [blaenge, List.length_append, Nat.add_left_cancel_iff]
 
 /-- The max proves no index: a `string max 8` may be empty, and index 7
     (below the max) is then refused. This is why the checker demands a

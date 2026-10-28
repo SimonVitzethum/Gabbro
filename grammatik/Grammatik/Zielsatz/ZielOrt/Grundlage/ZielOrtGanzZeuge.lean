@@ -227,7 +227,7 @@ theorem paP_halt : ∃ M : RufMaschineG zD, RufErreichbarG paP zO 0 (RufStartG p
   have h0 := h 0
   unfold PrueftG at h0
   rw [hZ2.1] at h0
-  exact absurd (h0.1 _ _ _ _ _ _ _ _ _ rfl) (by simp [eval, wahr?])
+  exact absurd (h0.1 _ _ _ _ _ _ _ _ _ rfl) (by simp only [wahr?, eval, Bool.false_eq_true, not_false_eq_true])
 
 /-! ## 4. A program with a loop: the check is reached, and it passes -/
 

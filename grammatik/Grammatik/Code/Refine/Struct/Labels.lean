@@ -31,7 +31,7 @@ theorem lowerErg_lbl (lay : Layout D) (cenv : List Reg) {Γ : Ctx} {Λ : List (R
   | val e =>
       simp only [lowerErg] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
@@ -46,13 +46,13 @@ theorem lowerErgF_lbl (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {�
       · simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         exact lw_single rfl (Nat.le_refl _)
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | @val τ e =>
       cases τ with
       | int lo hi =>
           simp only [lowerErgF] at h
           rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-          · simp [he] at h
+          · simp only [he, reduceCtorEq] at h
           simp only [he] at h
           split at h
           · rcases hnc : numCode lo hi (retW n (some (.int lo hi))) (n + 1) 0 oe r1 with ⟨cn, on, r2⟩
@@ -60,8 +60,8 @@ theorem lowerErgF_lbl (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {�
             simp only [Option.some.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
             exact lw_single rfl (Nat.le_refl _)
-          · simp at h
-      | _ => simp [lowerErgF] at h
+          · simp only [reduceCtorEq] at h
+      | _ => simp only [lowerErgF, reduceCtorEq] at h
 
 theorem lowerRet_lbl (lay : Layout D) (cenv : List Reg) (n : Nat) {Γ : Ctx} {Λ : List (Res D)}
     {eo : Option GTy} (e : ErgExpr D Γ Λ eo) (lb : Lbl) (st st' : St) (blks : List Block)
@@ -80,7 +80,7 @@ theorem lowerWhy_lbl (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl) (st st' : 
   · simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact lw_single rfl (Nat.le_refl _)
-  · simp at h
+  · simp only [reduceCtorEq] at h
 
 variable {V : Vertrag D}
 
@@ -99,7 +99,7 @@ theorem bindCallElse_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) {l
       = some (blks, st')) : LblWf lb st st' blks := by
   unfold lowerB at h
   rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
-  · simp [hla] at h
+  · simp only [hla, reduceCtorEq] at h
   simp only [hla] at h
   unfold lowerElse at h
   cases τ with
@@ -108,13 +108,13 @@ theorem bindCallElse_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) {l
       split at h
       · rcases hp' : payCode (failTop (D.gruende f) (some (.int lo hi))) (retW (D.gruende f) (some (.int lo hi)))
             (D.gruende f + 1) lo hi (.reg r1) (r1 + 2) with _ | ⟨cp, op, r2⟩
-        · simp [hp'] at h
+        · simp only [hp', reduceCtorEq] at h
         simp only [hp'] at h
         rcases hb : bindCode (.int lo hi) op r2 with _ | ⟨cb, a, r3⟩
-        · simp [hb] at h
+        · simp only [hb, reduceCtorEq] at h
         simp only [hb] at h
         rcases hb1 : lowerB lay (a :: cenv) lv rest (st.l + 2) k ⟨r3, st.l + 4⟩ with _ | ⟨bo, s1⟩
-        · simp [hb1] at h
+        · simp only [hb1, reduceCtorEq] at h
         have W1 := IHrest a _ _ _ (by show (st.l + 2 : Nat) < st.l + 4; omega) hb1
         simp only [hb1] at h
         rcases hc : cvt (retW (D.gruende f) (some (.int lo hi))) (Ar.wid 0 ((D.gruende f : Int) - 1)) false
@@ -122,11 +122,11 @@ theorem bindCallElse_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) {l
         rw [hc] at h
         simp only at h
         rcases hb2 : bindCode (.why (D.gruende f)) ov r4 with _ | ⟨cb2, a2, r5⟩
-        · simp [hb2] at h
+        · simp only [hb2, reduceCtorEq] at h
         simp only [hb2] at h
         have m1' : st.l + 4 ≤ s1.l := W1.1
         rcases hb3 : lowerEnd lay (a2 :: cenv) lv err (st.l + 3) ⟨r5, s1.l⟩ with _ | ⟨be, s2⟩
-        · simp [hb3] at h
+        · simp only [hb3, reduceCtorEq] at h
         have W2 := IHerr a2 _ _ _ (by show (st.l + 3 : Nat) < s1.l; omega) hb3
         simp only [hb3, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
@@ -139,8 +139,8 @@ theorem bindCallElse_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) {l
           (bB := ⟨st.l + 1, [], .bin s1.r .sub (retW (D.gruende f) (some (.int lo hi))) (.reg (r1 + 1))
             (.int (retW (D.gruende f) (some (.int lo hi))) 1) :: (cv ++ cb2), .jmp (st.l + 3)⟩)
           rfl rfl rfl hlt m1' W2.1 ⟨W1.2.1, W1.2.2⟩ ⟨W2.2.1, W2.2.2⟩
-      · simp at h
-  | _ => simp at h
+      · simp only [reduceCtorEq] at h
+  | _ => simp only [reduceCtorEq] at h
 
 mutual
 
@@ -150,38 +150,38 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerS lay cenv lv s lb k st = some (blks, st') → LblWf lb st st' blks
   | _, _, _, _, .assignSlot t f i e _ _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      repeat (split at h <;> try (simp at h; done))
+      repeat (split at h <;> try (simp only [reduceCtorEq] at h; done))
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, .assignThru p t _ f i e _ _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      repeat (split at h <;> try (simp at h; done))
+      repeat (split at h <;> try (simp only [reduceCtorEq] at h; done))
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, .assignGlob g e _ _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      repeat (split at h <;> try (simp at h; done))
+      repeat (split at h <;> try (simp only [reduceCtorEq] at h; done))
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, Gabbro.Grammatik.Stmt.assignVar (τ := τ) x e, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
-      repeat (split at h <;> try (simp at h; done))
+      repeat (split at h <;> try (simp only [reduceCtorEq] at h; done))
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, .ite c tb eb, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       rcases hc : lowerE lay cenv c st.r with _ | ⟨cc, oc, r1⟩
-      · simp [hc] at h
+      · simp only [hc, reduceCtorEq] at h
       simp only [hc] at h
       rcases hb1 : lowerB lay cenv lv tb st.l k ⟨r1, st.l + 2⟩ with _ | ⟨bt, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hb2 : lowerB lay cenv lv eb (st.l + 1) k s1 with _ | ⟨be, s2⟩
-      · simp [hb2] at h
+      · simp only [hb2, reduceCtorEq] at h
       simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv lv tb st.l k ⟨r1, st.l + 2⟩ s1 bt
@@ -194,26 +194,26 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS] at h
       exact lowerRet_lbl lay cenv V.gruende e lb st st' blks h
   | _, _, _, _, .putBytes .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .onOption (n := n) o p a, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       rcases ho : lowerE lay cenv o st.r with _ | ⟨co, oo, r1⟩
-      · simp [ho] at h
+      · simp only [ho, reduceCtorEq] at h
       simp only [ho] at h
       split at h
       · rcases hv : cvtG (.int (-1) (n - 1)) (.int 0 (n - 1)) oo r1 with _ | ⟨cv, ov, r2⟩
-        · simp [hv] at h
+        · simp only [Int.reduceNeg, hv, reduceCtorEq] at h
         simp only [hv] at h
         rcases hb : bindCode (.int 0 (n - 1)) ov r2 with _ | ⟨cb, c, r3⟩
-        · simp [hb] at h
+        · simp only [hb, reduceCtorEq] at h
         simp only [hb] at h
         rcases hb1 : lowerB lay cenv lv a st.l k ⟨r3, st.l + 3⟩ with _ | ⟨ba, s1⟩
-        · simp [hb1] at h
+        · simp only [hb1, reduceCtorEq] at h
         simp only [hb1] at h
         rcases hb2 : lowerB lay (c :: cenv) lv p (st.l + 2) k s1 with _ | ⟨bp, s2⟩
-        · simp [hb2] at h
+        · simp only [hb2, reduceCtorEq] at h
         simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv lv a st.l k ⟨r3, st.l + 3⟩ s1 ba
@@ -224,16 +224,16 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         exact lw_narrow (b0 := ⟨lb, [], co, .brc .slt (Ar.wid (-1) (n - 1)) oo
             (.int (Ar.wid (-1) (n - 1)) 0) st.l (st.l + 1)⟩)
           (b1 := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 2)⟩) rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, _, .onTag (cs := cs) v arms, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       rcases hv : lowerE lay cenv v st.r with _ | ⟨cv, ov, r1⟩
-      · simp [hv] at h
+      · simp only [hv, reduceCtorEq] at h
       simp only [hv] at h
       split at h
       · rcases hga : lowerAr lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms (st.l + 1) k
             ⟨r1 + 1, st.l + 1 + cs.length⟩ with _ | ⟨ba, s1⟩
-        · simp [hga] at h
+        · simp only [hga, reduceCtorEq] at h
         simp only [hga, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨m1, n1, a1⟩ := lowerAr_lbl lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms
@@ -269,15 +269,15 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           · exact Or.inl rfl
           · exact Or.inr ⟨Nat.le_refl _, by show st.l < s1.l; omega⟩
           · have := a1' x hx; right; omega
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, _, .onWhy (n := n) r arms, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       rcases hr : lowerE lay cenv r st.r with _ | ⟨cr, orr, r1⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr] at h
       split at h
       · rcases hga : lowerGA lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ with _ | ⟨ba, s1⟩
-        · simp [hga] at h
+        · simp only [hga, reduceCtorEq] at h
         simp only [hga, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨m1, n1, a1⟩ := lowerGA_lbl lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ s1 ba
@@ -309,34 +309,34 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           · exact Or.inl rfl
           · exact Or.inr ⟨Nat.le_refl _, by show st.l < s1.l; omega⟩
           · have := a1' x hx; right; omega
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, _, .call f args _ _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
-      · simp [hla] at h
+      · simp only [hla, reduceCtorEq] at h
       simp only [hla, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
   | _, _, _, _, .callInd .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       by_cases hc : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
       · simp only [hc, and_self, if_true] at h
         rcases hv : cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg st.r) (st.r + 1) with
           _ | ⟨cv, ov, r1⟩
-        · simp [hv] at h
+        · simp only [hv, reduceCtorEq] at h
         simp only [hv] at h
         rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
-        · simp [hb] at h
+        · simp only [hb, reduceCtorEq] at h
         simp only [hb] at h
         rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
           _ | ⟨bb, s1⟩
-        · simp [hb2] at h
+        · simp only [hb2, reduceCtorEq] at h
         simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ s1 bb
@@ -344,19 +344,19 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         have m2' : st.l + 4 ≤ s1.l := m2
         exact lw_loop (b0 := ⟨lb, [], _, .jmp st.l⟩) (bH := ⟨st.l, [], [], _⟩) (bB := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 3)⟩)
           (bI := ⟨st.l + 2, [], _, .jmp st.l⟩) rfl rfl rfl rfl hlt m2' ⟨n2, a2⟩
-      · simp [hc] at h
+      · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, _, .retry n bis body ueb, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       by_cases hc : retryOk n = true
       · simp only [hc, if_true] at h
         rcases hcb : lowerE lay cenv bis (st.r + 1) with _ | ⟨cb, ob, r1⟩
-        · simp [hcb] at h
+        · simp only [hcb, reduceCtorEq] at h
         simp only [hcb] at h
         rcases hb1 : lowerB lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ with _ | ⟨bb, s1⟩
-        · simp [hb1] at h
+        · simp only [hb1, reduceCtorEq] at h
         simp only [hb1] at h
         rcases hb2 : lowerB lay cenv lv ueb (st.l + 2) k s1 with _ | ⟨bo, s2⟩
-        · simp [hb2] at h
+        · simp only [hb2, reduceCtorEq] at h
         simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ s1 bb
@@ -366,22 +366,22 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           (by show (st.l + 2 : Nat) < s1.l; omega) hb2
         exact lw_retry (b0 := ⟨lb, [], _, .jmp st.l⟩) (bH := ⟨st.l, [], cb, _⟩) (bT := ⟨st.l + 1, [], [], _⟩)
           (bI := ⟨st.l + 3, [], _, .jmp st.l⟩) rfl rfl rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
-      · simp [hc] at h
+      · simp only [hc, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, _, .forever _ _ body, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       exact lowerB_lbl lay cenv (k, lb) body lb lb st st' blks hlt h
   | _, _, _, _, .axiomCall .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .regWrite .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .transition .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .publish .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .advances .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .retires .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .retWhy r _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       exact lowerWhy_lbl V.gruende V.erg r.val lb st st' blks h
@@ -405,10 +405,10 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .cons s rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
       rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
-      · simp [hs] at h
+      · simp only [hs, reduceCtorEq] at h
       simp only [hs] at h
       rcases hr : lowerB lay cenv lv rest st.l k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m1, n1, a1⟩ := lowerS_lbl lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ s1 b1
@@ -419,13 +419,13 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, Gabbro.Grammatik.Block.bind (τ := τ) e rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ s2 b2
@@ -434,13 +434,13 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .check c sonst rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
       rcases hc : lowerE lay cenv c st.r with _ | ⟨cc, oc, r1⟩
-      · simp [hc] at h
+      · simp only [hc, reduceCtorEq] at h
       simp only [hc] at h
       rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r1, st.l + 2⟩ with _ | ⟨be, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hb2 : lowerB lay cenv lv rest (st.l + 1) k s1 with _ | ⟨br, s2⟩
-      · simp [hb2] at h
+      · simp only [hb2, reduceCtorEq] at h
       simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m1, n1, a1⟩ := lowerEnd_lbl lay cenv lv sonst st.l ⟨r1, st.l + 2⟩ s1 be
@@ -452,13 +452,13 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, Gabbro.Grammatik.Block.bindCall (τ := τ) f args _ _ _ rest, lb, k, st, st', blks, hlt, h => by
       simp only [lowerB] at h
       rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
-      · simp [hla] at h
+      · simp only [hla, reduceCtorEq] at h
       simp only [hla] at h
       rcases hb : bindCode τ (.reg r1) (r1 + 1) with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ s2 b2
@@ -466,44 +466,44 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       exact lw_bind (b := ⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops] ++ cb, .jmp st.l⟩) rfl hlt (by exact m2)
         ⟨n2, a2⟩
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, hlt, h =>
       bindCallElse_lbl lay cenv lv f args he hp hr err rest lb k st st' blks hlt
         (fun a st1 s1 bo hlt' hk => lowerB_lbl lay (a :: cenv) lv rest (st.l + 2) k st1 s1 bo hlt' hk)
         (fun a st1 s2 be hlt' hk => lowerEnd_lbl lay (a :: cenv) lv err (st.l + 3) st1 s2 be hlt' hk) h
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .regRead .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .regReadElse .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .awaits .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .exchange .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) e lo' hi' sonst rest, lb, k, st, st', blks,
       hlt, h => by
       simp only [lowerB] at h
       rcases hc : lowerE lay cenv (Expr.and (Expr.le (Expr.lit lo') e) (Expr.le e (Expr.lit hi'))) st.r with
         _ | ⟨cc, oc, r1⟩
-      · simp [hc] at h
+      · simp only [hc, reduceCtorEq] at h
       simp only [hc] at h
       rcases he : lowerE lay cenv e r1 with _ | ⟨ce, oe, r2⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hv : cvtG (.int lo hi) (.int lo' hi') oe r2 with _ | ⟨cv, ov, r3⟩
-      · simp [hv] at h
+      · simp only [hv, reduceCtorEq] at h
       simp only [hv] at h
       rcases hb : bindCode (.int lo' hi') ov r3 with _ | ⟨cb, a, r4⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ with _ | ⟨be, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hb2 : lowerB lay (a :: cenv) lv rest (st.l + 2) k s1 with _ | ⟨br, s2⟩
-      · simp [hb2] at h
+      · simp only [hb2, reduceCtorEq] at h
       simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m1, n1, a1⟩ := lowerEnd_lbl lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ s1 be
@@ -514,13 +514,13 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       exact lw_narrow (b0 := ⟨lb, [], cc, .br oc (st.l + 1) st.l⟩) (b1 := ⟨st.l + 1, [], ce ++ cv ++ cb, .jmp (st.l + 2)⟩)
         rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
   | _, _, _, _, .float .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatLit .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatOf .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatNarrow .., lb, k, st, st', blks, hlt, h => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
 
 theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Gabbro.Grammatik.Endblock D V l Γ Λ)
@@ -532,10 +532,10 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .cons s rest, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
       rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
-      · simp [hs] at h
+      · simp only [hs, reduceCtorEq] at h
       simp only [hs] at h
       rcases hr : lowerEnd lay cenv lv rest st.l s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m1, n1, a1⟩ := lowerS_lbl lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ s1 b1
@@ -546,13 +546,13 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, Gabbro.Grammatik.Endblock.bind (τ := τ) e rest, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerEnd lay (a :: cenv) lv rest st.l ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m2, n2, a2⟩ := lowerEnd_lbl lay (a :: cenv) lv rest st.l ⟨r2, st.l + 1⟩ s2 b2
@@ -570,23 +570,23 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
   | _, _, _, .bindCall .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .regRead .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .regReadElse .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .awaits .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .bindCallInd .., lb, st, st', blks, hlt, h => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
 /-- The arms of a `match` on a tagged value: arm `i` has entry label `lb + i` (below `st.l`), the counter
     hands out labels from `st.l`; all labels are distinct. -/
@@ -600,14 +600,14 @@ theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
   | _, _, _, _, _, .nil, lb, k, st, st', blks, hn, h => by
       simp only [lowerAr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨Nat.le_refl _, by simp, by simp⟩
+      exact ⟨Nat.le_refl _, by simp only [List.map_nil, List.nodup_nil], by simp only [List.not_mem_nil, List.length_nil, Nat.add_zero, false_implies, implies_true]⟩
   | _, _, _, _, _, .cons (c := none) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
       simp only [lowerAr] at h
       rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hn' : lb + (cs'.length + 1) ≤ st.l := hn
@@ -618,16 +618,16 @@ theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
   | _, _, _, _, _, .cons (c := some (lo, hi)) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
-      · simp [hp] at h
+      · simp only [hp, reduceCtorEq] at h
       simp only [hp] at h
       rcases hb : bindCode (.int lo hi) op r1 with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hb1 : lowerB lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ with _ | ⟨bb, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hn' : lb + (cs'.length + 1) ≤ st.l := hn
@@ -652,14 +652,14 @@ theorem lowerGA_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, _, .nil, lb, k, st, st', blks, hn, h => by
       simp only [lowerGA, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨Nat.le_refl _, by simp, by simp⟩
+      exact ⟨Nat.le_refl _, by simp only [List.map_nil, List.nodup_nil], by simp only [List.not_mem_nil, Nat.add_zero, false_implies, implies_true]⟩
   | _, _, _, _, _, .cons (n := n') b rest, lb, k, st, st', blks, hn, h => by
       simp only [lowerGA] at h
       rcases hb : lowerB lay cenv lv b lb k st with _ | ⟨b1, s1⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerGA lay cenv lv rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hn' : lb + (n' + 1) ≤ st.l := hn

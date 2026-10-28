@@ -15,7 +15,7 @@ theorem consume_facts {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     origin c e = some i ∧ c.rights i = some .owned ∧ c' = c.kill i := by
   unfold consume at hc
   cases ho : origin c e with
-  | none => simp [ho] at hc
+  | none => simp only [ho, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hc
   | some j =>
     rw [ho] at hc
     change (if c.rights j = some .owned then some (c.kill j, j) else none) = some (c', i) at hc
@@ -38,7 +38,7 @@ theorem rights_after_consumption {c : Context} {g : Ghost} {s s' : State} {frame
     (hframe : ∀ j, j ≠ h.slot → s'.cells j = s.cells j) : Rights (c.kill i) g s' frame := by
   constructor
   · intro j mode hj
-    have hne : j ≠ i := by intro he; simp [Context.kill, he] at hj
+    have hne : j ≠ i := by intro he; simp only [Context.kill, he, ↓reduceIte, reduceCtorEq] at hj
     have hright : c.rights j = some mode := by simpa [Context.kill, hne] using hj
     obtain ⟨k, hgk, hk⟩ := hp.1 j mode hright
     have hslots : k.slot ≠ h.slot := hp.2 j i mode .owned hright hi hne (Or.inr rfl) k h hgk hg

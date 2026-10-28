@@ -107,7 +107,7 @@ theorem stub_erfuellt (abi : SysAbiArm) (hn : abi.nummer < 18446744073709551616)
     intro r
     simp only [setzeReg, ladeAufruf]
     by_cases hr : r = abi.nummerReg
-    · simp [hr, Nat.mod_eq_of_lt hn]
+    · simp only [hr, ↓reduceIte, Nat.mod_eq_of_lt hn]
     · simp only [hr, if_false]
       cases hf : abi.ein.find? (fun p => decide (p.1 = r)) with
       | none => rfl
@@ -125,7 +125,7 @@ theorem stub_erfuellt (abi : SysAbiArm) (hn : abi.nummer < 18446744073709551616)
     subst hs
     exact hl r
   · rw [haus]
-    simp [nachSvc]
+    simp only [nachSvc, ↓reduceIte]
   · intro r h1 h2
     rw [haus] at h1
     simp only [nachSvc, h1, if_false, setzeReg, h2]
@@ -138,7 +138,7 @@ theorem stub_zeuge :
   refine ⟨stub_erfuellt _ (by decide) rfl, stub_erfuellt _ (by decide) rfl, ?_⟩
   intro h
   have h1 := (h beispielVorher (fun i => 1000 + i) 0 (by decide)).2.1 beispielVorher.reg
-    (by simp [lauf, schritt, List.foldl])
+    (by simp only [lauf, List.foldl, schritt, List.nil_append, List.mem_cons, List.not_mem_nil, or_false])
   have h2 := h1 (xr 8)
   revert h2
   decide
@@ -163,7 +163,9 @@ def eintrittBlock (haupt : Nat) : List Bef :=
 theorem eintritt_erfuellt (haupt : Nat) : PflichtEintritt (eintrittBlock haupt) := by
   intro z0 hsp hlt
   simp only [lauf, eintrittBlock, List.foldl, schritt, setzeReg, ausrichtenArm]
-  simp
+  simp only [↓reduceIte, reduceCtorEq, Nat.reduceDvd, Nat.mod_mod_of_dvd, Nat.zero_mod, List.nil_append,
+  List.length_cons, List.length_nil, Nat.zero_add, List.mem_cons, List.not_mem_nil, or_false, forall_eq, ArmReg.x.injEq,
+  Fin.reduceFinMk, Fin.reduceEq, and_self, and_true, true_and]
   refine ⟨?_, ?_, ?_⟩ <;> omega
 
 /-- An entry state with an 8-mod-16 stack pointer (the kernel hands 16-aligned; the duty must hold
@@ -180,7 +182,8 @@ theorem eintritt_zeuge :
   intro h
   have := (h eintrittVorher (by decide) (by decide)).2.1
   have h2 := this (0x401000, eintrittVorher.reg .sp, eintrittVorher.reg ergebnisReg)
-    (by simp [lauf, schritt, List.foldl, setzeReg]; intro h; exact absurd h (by decide))
+    (by simp only [lauf, List.foldl, schritt, setzeReg, Nat.zero_mod, reduceCtorEq, ↓reduceIte, List.nil_append,
+  List.mem_cons, Prod.mk.injEq, right_eq_ite_iff, true_and, List.not_mem_nil, or_false]; intro h; exact absurd h (by decide))
   revert h2
   decide
 
@@ -208,7 +211,10 @@ theorem kind_erfuellt (stapelReg : ArmReg) (region : Nat) :
     PflichtKind stapelReg (kindBlock stapelReg region) := by
   intro z0 v hv hlt hsp hst h9 h29
   simp only [lauf, kindBlock, List.foldl, schritt, setzeReg, ausrichtenArm, ergebnisReg]
-  simp [hsp, hst]
+  simp only [reduceCtorEq, ↓reduceIte, hsp, Nat.reduceDvd, Nat.mod_mod_of_dvd, ArmReg.x.injEq, Fin.zero_eta,
+  Fin.isValue, Fin.reduceFinMk, Fin.reduceEq, hst, List.nil_append, List.length_cons, List.length_nil, Nat.zero_add,
+  List.mem_cons, List.not_mem_nil, or_false, forall_eq, Nat.mod_succ_eq_iff_lt, Nat.succ_eq_add_one, Nat.reduceAdd,
+  Nat.zero_mod, and_self, and_true, true_and]
   refine ⟨hlt, ?_, ?_, ?_⟩ <;> omega
 
 /-! ## 5. Duty 4: the two-call child path through callee-saved registers -/
@@ -231,7 +237,9 @@ def trampolinBlock (ra rb : ArmReg) : List Bef :=
 theorem trampolin_erfuellt (ra rb : ArmReg) : PflichtTrampolin ra rb (trampolinBlock ra rb) := by
   intro z0 hsp hlt h9a h9b hsa hsb
   simp only [lauf, trampolinBlock, List.foldl, schritt, setzeReg, ausrichtenArm]
-  simp [h9a, h9b, hsa, hsb]
+  simp only [hsa, ↓reduceIte, h9a, Nat.reduceDvd, Nat.mod_mod_of_dvd, List.nil_append, hsb, h9b,
+  List.cons_append, List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq,
+  and_self, and_true, true_and]
   refine ⟨?_, ?_, ?_⟩ <;> omega
 
 /-- Witness for the kind and trampoline duties: concrete handed stack tops, plus a REFUSED block
@@ -244,10 +252,12 @@ theorem kind_zeuge :
   let z0 : ArmZustand :=
     { beispielVorher with reg := fun r =>
         if r = .sp then 0x7f0000010008 else if r = xr 1 then 0x7f0000010008 else beispielVorher.reg r }
-  have := (h z0 0x7f0000010008 (by decide) (by decide) (by simp [z0]) (by simp [z0])
+  have := (h z0 0x7f0000010008 (by decide) (by decide) (by simp only [↓reduceIte, z0]) (by simp only [reduceCtorEq, ↓reduceIte, z0])
     (by decide) (by decide)).2.1
   have h2 := this (0x401000, 0x7f0000010008, 0x7f0000010008)
-    (by simp [z0, lauf, schritt, List.foldl, setzeReg, ergebnisReg])
+    (by simp only [lauf, List.foldl, schritt, setzeReg, Nat.zero_mod, ergebnisReg, reduceCtorEq, ↓reduceIte,
+  Nat.reduceMod, ArmReg.x.injEq, Fin.zero_eta, Fin.isValue, Fin.reduceFinMk, Fin.reduceEq, List.nil_append,
+  List.mem_cons, List.not_mem_nil, or_false, z0])
   revert h2
   decide
 

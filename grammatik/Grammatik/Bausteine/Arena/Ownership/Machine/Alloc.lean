@@ -172,7 +172,7 @@ theorem list_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {lo h
   injection hstep with hσ hρ
   subst σ' ρ'
   have hlink := exprSlotRead_eval e2 he2 (σ.lese Λ e2.orte) (σ.lese Λ e2.orte) (.cons x ρ) x.n
-    (by simp [Env.unten, intVon])
+    (by simp only [Env.unten, ↓reduceIte, intVon])
   rw [intVon_umTyp A.hkopf, intVon_umTyp A.hnxt, Option.some.injEq] at hlink
   generalize hσ2 : (σ.lese Λ e2.orte).schreibGlob A.kopf Λ
     (eval (σ.lese Λ e2.orte) e2 (σ.lese Λ e2.orte) (.cons x ρ)) = σ2
@@ -220,7 +220,7 @@ theorem counter_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {l
   injection hstep with hσ hρ
   subst σ' ρ'
   have hsucc := exprSucc_eval e2 he2 (σ.lese Λ e2.orte) (σ.lese Λ e2.orte) (.cons x ρ) x.n
-    (by simp [Env.unten, intVon])
+    (by simp only [Env.unten, ↓reduceIte, intVon])
   rw [intVon_umTyp A.hz, Option.some.injEq] at hsucc
   generalize hσ2 : (σ.lese Λ e2.orte).schreibGlob A.zaehl Λ
     (eval (σ.lese Λ e2.orte) e2 (σ.lese Λ e2.orte) (.cons x ρ)) = σ2
@@ -298,7 +298,7 @@ theorem release_step {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 : List (Res D)} {k
   have hl3 : A.naechst σ3 h.slot = A.kopfSt σ := by rw [hn3, hlink]
   have hfree := A.lebt_frei h.slot hlive ho hk3 hl3 (fun j _ => hn3 j) hs3
   have howns' : s.owns fr h := howns
-  have hrel : s.release fr h = some (s.put h.slot none) := by simp [State.release, howns']
+  have hrel : s.release fr h = some (s.put h.slot none) := by simp only [State.release, howns', ↓reduceIte]
   refine ⟨s.put h.slot none, State.release_local hrel, State.release_progress hrel, ?_, hfree.1,
     fun j _ => hn3 j, ?_⟩
   · exact State.release_agrees ha fr h hrel

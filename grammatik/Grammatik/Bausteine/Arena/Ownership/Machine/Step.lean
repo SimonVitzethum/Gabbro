@@ -21,10 +21,10 @@ theorem head_run {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ} {r : 
     ∃ k c g, k.references.length ≤ Γ.length ∧ FrameOk c g s fr ρ ∧ OR A I (I f).output k c r := by
   cases h with
   | run _ _ hk hf hr => exact ⟨_, _, _, hk, hf, hr⟩
-  | list => simp [pendWord] at hp
-  | counter => simp [pendWord] at hp
-  | store => simp [pendWord] at hp
-  | release => simp [pendWord] at hp
+  | list => simp only [pendWord, true_or, ↓reduceIte, reduceCtorEq] at hp
+  | counter => simp only [pendWord, or_true, ↓reduceIte, reduceCtorEq] at hp
+  | store => simp only [pendWord, ↓reduceIte, reduceCtorEq] at hp
+  | release => simp only [pendWord, true_or, ↓reduceIte, reduceCtorEq] at hp
 
 theorem meta_lese (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) {σ₁ : World D}
     (h : σ₁ = σ.lese Λ os) {A : FreiForm D} : MetaSame A σ σ₁ := by
@@ -47,7 +47,7 @@ theorem head_leaf {O : Orakel D} {passes : Nat} (hO : GutO O) {l : Bool} {Γ : C
     release_step ρ0 e2 hw hL b r p o hh he2 hp ho' hg hlink hk hf hr ha ho hstep
 
 theorem dropContextB_refs (c : Context) (owner : Bool) : (dropContextB c owner).references = c.references := by
-  cases owner <;> simp [dropContextB, Context.bindFresh, Context.drop]
+  cases owner <;> simp only [dropContextB, Bool.false_eq_true, ↓reduceIte, Context.drop, Context.bindFresh, ne_eq, List.cons_ne_self, not_false_eq_true, List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
 
 /-- The caller of the running activation, suspended on it. -/
 theorem caller_susp {t : Faden} {g : D.Fn} {caller : RufRahmenG D} {rst : List (RufRahmenG D)}

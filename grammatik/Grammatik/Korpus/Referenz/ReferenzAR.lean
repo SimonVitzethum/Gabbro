@@ -76,7 +76,7 @@ def arD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun | 0 => arSigMain | _ => arSigMain
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -350,7 +350,7 @@ theorem arSchrittB : RufSchrittF arP arO 0 arM1 1 arMB := by
   have hkn : ∀ (L : arD.Lock) (h : List arD.Lock),
       Ereignis.nimmt L h ∉ ([Ereignis.fremd (Sum.inl ARAx.ruf0)] : List (Ereignis arD)) := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   exact RufSchrittF.blatt arM1 1 false [] arL arL
     arAxStmtAt _ .nil rfl hhead arM1haelt _ _ _ hstep hneu hkn
 
@@ -384,7 +384,7 @@ theorem arB_schreibt : arMB.speicher.slots () 0 () ≠
   intro hcon
   have hn : (arV100.n) = ((⟨0, by decide, by decide⟩ :
       Wert arD (arD.typ () ())).n) := congrArg Zahl.n hcon
-  simp [arV100] at hn
+  simp only [arV100, Int.reduceEq] at hn
 
 /-- Joint witness: the reached machine with its memory move, instantiated
     together. The run is NON-DEGENERATE: `main` writes `konto` by contract

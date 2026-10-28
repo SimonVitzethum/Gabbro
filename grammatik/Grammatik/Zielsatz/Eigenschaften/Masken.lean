@@ -85,7 +85,7 @@ theorem anSperre_nicht_fertig {M : RufMaschineG D} {t : Faden} {L : D.Lock}
   intro hF
   have h2 := hF.2
   rw [hhead] at h2
-  simp [GRest.anRueck, Block.istRueck, Stmt.istRueck] at h2
+  simp only [GRest.anRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true] at h2
 
 /-- A thread whose residue is the whole body (an `.ende` layer) stands at no lock head. -/
 theorem anSperre_ende_falsch {M : RufMaschineG D} {t : Faden} {L : D.Lock}
@@ -103,7 +103,7 @@ theorem anSperre_ende_falsch {M : RufMaschineG D} {t : Faden} {L : D.Lock}
   simp only [Sigma.mk.injEq] at hE2
   obtain ⟨rfl, hE2⟩ := hE2
   have hE3 := eq_of_heq hE2
-  simp at hE3
+  simp only [Prod.mk.injEq, reduceCtorEq, and_false] at hE3
 
 /-- **No thread of a start machine stands at a lock head**: its residue is the whole body
     (`.ende`), not a `.dann` layer. -/

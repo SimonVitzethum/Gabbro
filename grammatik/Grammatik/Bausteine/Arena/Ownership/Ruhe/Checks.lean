@@ -33,7 +33,7 @@ def liftA (A : FreiForm D) : FreiForm D.mitRuhe where
   hf := A.hf
 
 theorem varR_unten : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), (varR x).unten = x.unten
-  | _ :: Γ, _, .here => by simp [varR, Var.unten]
+  | _ :: Γ, _, .here => by simp only [varR, Var.unten, List.length_map]
   | _ :: _, _, .there x => by simp only [varR, Var.unten]; exact varR_unten x
 
 theorem reference_varR (c : Context) {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : c.reference (varR x) = c.reference x := by
@@ -87,13 +87,13 @@ theorem requirements_ruE {τ : Ty} (e : Expr D Γ Λ τ) :
   induction e using Expr.rec
     (motive_2 := fun _ _ _ n => (payloadRequirements (ruN n)).all (Requirement.check (liftA A) c) =
       (payloadRequirements n).all (Requirement.check A c)) with
-  | var x => simp [requirements, ruE, Requirement.check, reference_varR]
+  | var x => simp only [ruE, requirements, List.all_cons, Requirement.check, reference_varR, List.all_nil, Bool.and_true]
   | slot t f i hL ih =>
     simp only [requirements, ruE, List.all_cons, ih]
-    simp [Requirement.check, accessCheck, origin_ruE, liftA]
+    simp only [Requirement.check, liftA, accessCheck, origin_ruE, Bool.ite_true_right]
   | thru p t ht f i hL ihp ihi =>
     simp only [requirements, ruE, List.all_cons, List.all_append, ihp, ihi]
-    simp [Requirement.check, accessCheck, origin_ruE, liftA]
+    simp only [Requirement.check, liftA, accessCheck, origin_ruE, Bool.ite_true_right]
   | oldS t f i hL ih =>
     simp only [requirements, ruE, List.all_cons, ih]
     rfl
@@ -127,7 +127,7 @@ theorem consume_ruE {τ : Ty} (e : Expr D Γ Λ τ) : consume c (ruE e) = consum
 
 theorem storeCheck_ruE (t : D.Tab) {lo hi : Int} (i : Expr D Γ Λ (.int lo hi)) :
     storeCheck (liftA A) c t (ruE i) = storeCheck A c t i := by
-  simp [storeCheck, accessCheck, origin_ruE, liftA]
+  simp only [storeCheck, liftA, accessCheck, origin_ruE, Bool.ite_true_right]
 
 theorem notLink_lift {t : D.Tab} {f : D.Feld t} : NotLink (liftA A) t f ↔ NotLink A t f := Iff.rfl
 

@@ -60,7 +60,7 @@ def zc (v : Int) : Zahl 0 4 := ⟨max 0 (min 4 v), by omega, by omega⟩
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -76,9 +76,9 @@ def zc (v : Int) : Zahl 0 4 := ⟨max 0 (min 4 v), by omega, by omega⟩
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 /-- The arena with slot release: payload `0`, free link `1`; words `0` (counter), `1` (committed), `2` (free head). -/
 def FA : FreiForm FD where
@@ -124,13 +124,13 @@ def wd (st kopf lk : Int) (nx ln rn : Int → Int) : World FD where
   slots := fun _ k f =>
     if h0 : f = 0 then (by subst h0; exact (⟨0, by decide, by decide⟩ : Zahl 0 255))
     else if h1 : f = 1 then (by
-      have : FD.typ () f = .int 0 4 := by simp [h0]
+      have : FD.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact zc (nx k))
     else if h2 : f = 2 then (by
-      have : FD.typ () f = .int 0 4 := by simp [h0]
+      have : FD.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact zc (ln k))
     else (by
-      have : FD.typ () f = .int 0 4 := by simp [h0]
+      have : FD.typ () f = .int 0 4 := by simp only [Fin.isValue, h0, ↓reduceIte]
       rw [this]; exact zc (rn k))
   globs := fun g =>
     if g = 0 then zc st else if g = 1 then zc st else if g = 2 then zc kopf else zc lk
@@ -160,7 +160,7 @@ theorem kette_w0 : FA.Kette w0 1 [1] :=
 
 theorem freiOk_w0 : FA.FreiOk w0 := by
   refine ⟨[1], by rw [kopf_w0]; exact kette_w0, by decide, ?_⟩
-  intro i hi; simp at hi; subst hi; rw [stand_w0]; omega
+  intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; rw [stand_w0]; omega
 
 theorem aufListe_w0 (i : Int) : FA.AufListe w0 i ↔ i = 1 := by
   constructor
@@ -169,7 +169,7 @@ theorem aufListe_w0 (i : Int) : FA.AufListe w0 i ↔ i = 1 := by
     have := FreiForm.Kette.eindeutig hL kette_w0
     subst this; simpa using hm
   · rintro rfl
-    exact ⟨[1], by rw [kopf_w0]; exact kette_w0, by simp⟩
+    exact ⟨[1], by rw [kopf_w0]; exact kette_w0, by simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
 
 theorem lebt_w0 (i : Int) : FA.Lebt w0 i ↔ (0 ≤ i ∧ i < 4 ∧ i ≠ 1) := by
   unfold FreiForm.Lebt
@@ -223,7 +223,7 @@ theorem pop_kette : KetteF 4 (LL.wert w1) 0 [0] := by
 def wBad : World FD := wd 4 2 2 nx0 ln0 rn0
 
 theorem aufListe_bad : FA.AufListe wBad 2 :=
-  ⟨[2], FreiForm.Kette.cons 2 (by decide) (by decide) [] FreiForm.Kette.nil, by simp⟩
+  ⟨[2], FreiForm.Kette.cons 2 (by decide) (by decide) [] FreiForm.Kette.nil, by simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
 
 /-- **The model rejects it:** a list slot that is also on the free list is not live, so `ListOk` fails. The checker's
     refusal of a use after release (`N586`) is what keeps real programs out of this state. -/
@@ -274,14 +274,14 @@ theorem einfuegen_zeuge :
     rintro ⟨S, hS, hm⟩
     rw [lg_w0] at hS
     have := BaumF.eindeutig hS baumB_w0
-    subst this; simp at hm
+    subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
   have hp : InBaum 4 (LL.wert w0) (RR.wert w0) (LG.st w0) 2 := by
-    rw [lg_w0]; exact ⟨[2, 0], baumB_w0, by simp⟩
+    rw [lg_w0]; exact ⟨[2, 0], baumB_w0, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩
   have h := baum_einfuegen_rechts FA LL RR LG baumOk_w0 (σ' := w2) 2 3 hp (by rw [rr_w0])
     ((lebt_w0 3).mpr (by decide)) hnot rfl (fun j => rfl) rfl rfl
-    (by simp [rr_w2, rn2]) (by simp [rr_w2, rn2])
+    (by simp only [rr_w2, rn2, ↓reduceIte]) (by simp only [rr_w2, rn2, Int.reduceEq, ↓reduceIte])
     (by show max 0 (min 4 (ln0 3)) = 4; decide)
-    (fun j hj hji => by rw [rr_w2, rr_w0]; unfold rn2; simp [hj])
+    (fun j hj hji => by rw [rr_w2, rr_w0]; unfold rn2; simp only [hj, ↓reduceIte])
     (fun j hji => rfl)
   exact h
 

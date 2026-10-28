@@ -174,7 +174,7 @@ theorem roundtrip_zeuge :
   · exact roundtrip _ _ _ rfl
   · intro n hpass _
     exact eintrittspruefung_deckt_jeden_zugriff [⟨4, 2⟩] n ⟨4, 2⟩ 5
-      hpass (by simp) ⟨by decide, by decide⟩
+      hpass (by simp only [List.mem_cons, List.not_mem_nil, or_false]) ⟨by decide, by decide⟩
 
 /-! ## Bridge
 

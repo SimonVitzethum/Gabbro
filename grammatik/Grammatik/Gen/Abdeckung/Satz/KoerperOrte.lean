@@ -123,7 +123,7 @@ theorem gerufen_und (P : Programm D) (a b : D.Fn → Bool) (x : D.Tab ⊕ D.Glob
   simp only [Gerufen, Bool.and_eq_false_iff, or_and_right, exists_or]
 
 theorem gerufen_wahr (P : Programm D) (x : D.Tab ⊕ D.Glob) : Gerufen P (fun _ => true) x ↔ False := by
-  simp [Gerufen]
+  simp only [Gerufen, Bool.true_eq_false, false_and, exists_false]
 
 theorem gerufen_ruf (P : Programm D) (g' : D.Fn) (x : D.Tab ⊕ D.Glob) :
     Gerufen P (fun g => (rufNur g).ruf g') x ↔ x ∈ (P.requires g').orte ∨ x ∈ (P.ensures g').orte := by
@@ -133,7 +133,7 @@ theorem gerufen_ruf (P : Programm D) (g' : D.Fn) (x : D.Tab ⊕ D.Glob) :
     subst this
     exact List.mem_append.1 hx
   · intro h
-    exact ⟨g', by simp [rufNur], List.mem_append.2 h⟩
+    exact ⟨g', by simp only [rufNur, decide_true, Bool.not_true], List.mem_append.2 h⟩
 
 set_option maxHeartbeats 1000000 in
 mutual

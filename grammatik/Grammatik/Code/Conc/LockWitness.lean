@@ -48,15 +48,15 @@ def lcMod : Modl :=
 def gh0 : cD.Lock → Tkt := fun _ => ⟨0, 0, fun _ => none, false⟩
 
 theorem gh0_ok : (gh0 ()).Ok :=
-  ⟨Nat.le_refl _, by decide, fun _ h1 h2 => absurd h2 (by simp [gh0] at h1 ⊢), fun i _ _ h1 h2 _ _ _ _ =>
-    absurd h2 (by simp [gh0] at h1 ⊢), fun h => absurd h (by simp [gh0])⟩
+  ⟨Nat.le_refl _, by decide, fun _ h1 h2 => absurd h2 (by simp only [gh0, Nat.zero_le, Nat.not_lt_zero, not_false_eq_true] at h1 ⊢), fun i _ _ h1 h2 _ _ _ _ =>
+    absurd h2 (by simp only [gh0, Nat.zero_le, Nat.not_lt_zero, not_false_eq_true] at h1 ⊢), fun h => absurd h (by simp only [gh0, Bool.false_eq_true, not_false_eq_true])⟩
 
 theorem lcRel0 : LockRel cLay lcM0 mem0 gh0 := by
   intro L
   cases L
   refine ⟨gh0_ok, ⟨by decide +kernel, by decide +kernel⟩, fun v => ?_⟩
   rw [lcM0_offen]
-  simp [Tkt.holdsB, gh0]
+  simp only [Tkt.holdsB, gh0, reduceCtorEq, decide_false, Bool.and_self, Bool.false_eq_true, ↓reduceIte]
   rfl
 
 /-- Both threads stand at the take block. -/
@@ -82,15 +82,15 @@ def lcM3 : RufMaschineG cD :=
 
 theorem lcM1_offen (v : Faden) : offen (lcM1.faeden v).spur = if v = 0 then lcL :: offen (lcM0.faeden v).spur
     else offen (lcM0.faeden v).spur := by
-  by_cases h : v = 0 <;> simp [lcM1, h, offen] <;> rfl
+  by_cases h : v = 0 <;> simp only [lcM1, h, ↓reduceIte, offen] <;> rfl
 
 theorem lcM2_offen (v : Faden) : offen (lcM2.faeden v).spur =
     if v = 0 then (offen (lcM1.faeden v).spur).erase lcL else offen (lcM1.faeden v).spur := by
-  by_cases h : v = 0 <;> simp [lcM2, h, offen]
+  by_cases h : v = 0 <;> simp only [lcM2, h, ↓reduceIte, offen]
 
 theorem lcM3_offen (v : Faden) : offen (lcM3.faeden v).spur =
     if v = 1 then lcL :: offen (lcM2.faeden v).spur else offen (lcM2.faeden v).spur := by
-  by_cases h : v = 1 <;> simp [lcM3, h, offen] <;> rfl
+  by_cases h : v = 1 <;> simp only [lcM3, h, ↓reduceIte, offen] <;> rfl
 
 theorem lc_blk1 : lcMod.blk 0 1 = some (lockTake cLay () 1 1 2) := rfl
 theorem lc_blk2 : lcMod.blk 0 2 = some (lockSpin cLay () 1 2 2 3) := rfl
@@ -131,15 +131,16 @@ theorem lock_witness :
     (fun i h1 h2 => by
       have : i = 0 := by simp only [g1, Tkt.take, gh0] at h1 h2; omega
       subst this
-      simp [g1, Tkt.take, gh0])
+      simp only [Tkt.take, gh0, Nat.zero_add, ↓reduceIte, ne_eq, Option.some.injEq, Nat.zero_ne_one,
+  not_false_eq_true])
     (by simp only [g1, Tkt.take, gh0]; decide)
   rw [upd_unit] at R2
   have a1' : AtB T2 0 0 2 (Regs.set (fun _ => none) 1 (tk 0)) [] none := (o2 0 (by decide)).trans a1
   -- thread 0 spins, finds ticket 0 served: G takes the lock
   obtain ⟨hfree0, T3, r3, a3, o3, m3, R3⟩ := spin_enter_step (S := Sees.shared cLay) R2 () lc_blk2 lc_blk3 rfl
     (lc_sees (R2 ()).2.1.2) 0 a1' (a := 0) (regs_set_same _ _ _)
-    ⟨by simp [g1, g2, Tkt.take, gh0], by simp [g1, g2, Tkt.take, gh0],
-      by simp [g1, g2, Tkt.take, gh0]⟩ (by simp [g1, g2, Tkt.take, gh0]) (by decide)
+    ⟨by simp only [Tkt.take, gh0, Nat.zero_add, Nat.reduceAdd, Std.le_refl], by simp only [Tkt.take, gh0, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ],
+      by simp only [Tkt.take, gh0, Nat.zero_add, Nat.reduceAdd, Nat.zero_ne_one, ↓reduceIte]⟩ (by simp only [Tkt.take, gh0, Nat.zero_add, Nat.reduceAdd]) (by decide)
     (by rw [lcM0_offen]; exact List.not_mem_nil)
   have R3' : LockRel cLay lcM1 T3.m (fun _ => g3) := by
     have := R3 lcM1 lcM1_offen
@@ -155,7 +156,7 @@ theorem lock_witness :
   have R4 : LockRel cLay lcM1 T4.m (fun _ => g3) := by rw [m4]; exact R3'
   obtain ⟨T5, r5, a5, o5, m5, R5⟩ := release_step (S := Sees.shared cLay) cLayOk R4 () lc_blk3 lc_blk4 rfl 0 a3'
     (by rw [regs_set_ne _ _ _ _ (by decide)]; exact regs_set_same _ _ _) rfl
-    (by simp [g3, g2, g1, Tkt.enter, Tkt.take, gh0])
+    (by simp only [g3, Tkt.enter, g2, Tkt.take, g1, gh0, Nat.zero_add, Nat.reduceAdd, Nat.zero_ne_one, ↓reduceIte])
   have R5' : LockRel cLay lcM2 T5.m (fun _ => g5) := by
     have := R5 lcM2 lcM2_offen
     rw [upd_unit] at this
@@ -165,7 +166,7 @@ theorem lock_witness :
     (o5 1 (by decide)).trans a4
   obtain ⟨hfree1, T6, r6, a6, o6, m6, R6⟩ := spin_enter_step (S := Sees.shared cLay) R5' () lc_blk2 lc_blk3 rfl
     (lc_sees (R5' ()).2.1.2) 1 a4' (a := 1) (by rw [regs_set_ne _ _ _ _ (by decide)]; exact regs_set_same _ _ _)
-    ⟨by decide, by decide, by simp [g5, g3, g2, g1, Tkt.enter, Tkt.leave, Tkt.take, gh0]⟩ (by decide) (by decide)
+    ⟨by decide, by decide, by simp only [g5, Tkt.leave, g3, Tkt.enter, g2, Tkt.take, g1, gh0, Nat.zero_add, Nat.reduceAdd, ↓reduceIte]⟩ (by decide) (by decide)
     (by rw [lcM2_offen, if_neg (show (1 : Faden) ≠ 0 by decide), lcM1_offen, if_neg (show (1 : Faden) ≠ 0 by decide),
       lcM0_offen]; exact List.not_mem_nil)
   have R6' : LockRel cLay lcM3 T6.m (fun _ => g6) := by
@@ -177,7 +178,7 @@ theorem lock_witness :
     exact List.mem_cons_self
   · rw [lcM3_offen, if_neg (show (0 : Faden) ≠ 1 by decide), lcM2_offen, if_pos (rfl : (0 : Faden) = 0), lcM1_offen,
       if_pos (rfl : (0 : Faden) = 0), lcM0_offen]
-    simp
+    simp only [List.erase_cons_head, List.not_mem_nil, not_false_eq_true]
 
 end C64
 

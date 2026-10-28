@@ -130,7 +130,7 @@ theorem spec_aus_fuehrung_schritt
       omega
     rw [hJ'sf] at hkg
     rw [eNone] at hkg
-    simp at hkg
+    simp only [reduceCtorEq] at hkg
   rcases hGen with ⟨V, l, Γ, Λ, Λ', s, ρ, hleaf, hΛ, σ', neu, hstep, hneu, hkein⟩ |
     ⟨L, _hself, _hrang, _hfrei⟩ | ⟨L, _hhaelt⟩
   · -- the fired leaf appends its outcome world

@@ -49,7 +49,7 @@ theorem forever_ok {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : Ora
       intro σ ρ m rs hR hE hW hc
       simp only [foreverLauf]
       by_cases hi : wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = false
-      · simp [hi, OutOk]
+      · simp only [OutOk, hi, ↓reduceIte]
       · rw [if_neg hi]
         have IH1 := IHb (σ.lese Λ inv.orte) ρ m rs hR hE hW hc
         rcases hx : execBlock O passes R body (σ.lese Λ inv.orte) ρ with ⟨σ1, ρ1⟩ | ⟨σ1, v1⟩ | ⟨σ1, r1⟩ |

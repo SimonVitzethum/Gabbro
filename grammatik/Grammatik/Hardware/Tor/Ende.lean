@@ -53,7 +53,7 @@ def startSpur (lauf : List S) : Option Int → List (Ev S)
 /-- A returning `main` ends in exactly one end event, with `main`'s own result as the code. -/
 theorem start_code (lauf : List S) (c : Int) :
     (startSpur lauf (some c)).getLast? = some (Ev.ende c) := by
-  simp [startSpur]
+  simp only [startSpur, List.getLast?_append, List.getLast?_singleton, List.getLast?_map, Option.some_or]
 
 /-- A present element lies inside the list. -/
 theorem lt_of_get {α : Type} {tr : List α} {i : Nat} {x : α} (h : tr[i]? = some x) :
@@ -62,7 +62,7 @@ theorem lt_of_get {α : Type} {tr : List α} {i : Nat} {x : α} (h : tr[i]? = so
   | inl hl => exact hl
   | inr hn =>
       rw [List.getElem?_eq_none hn] at h
-      simp at h
+      simp only [reduceCtorEq] at h
 
 /-- Nothing follows the end event. -/
 theorem start_ende_gut (lauf : List S) (c : Option Int) : EndeGut (startSpur lauf c) := by
@@ -70,16 +70,18 @@ theorem start_ende_gut (lauf : List S) (c : Option Int) : EndeGut (startSpur lau
   cases c with
   | none =>
       simp only [startSpur] at hi
-      simp [List.getElem?_map] at hi
+      simp only [List.getElem?_map, Option.map_eq_some_iff, reduceCtorEq, and_false, exists_false] at hi
   | some c =>
       simp only [startSpur] at hi ⊢
-      have hlen : (lauf.map Ev.schritt ++ [Ev.ende c]).length = lauf.length + 1 := by simp
+      have hlen : (lauf.map Ev.schritt ++ [Ev.ende c]).length = lauf.length + 1 := by simp only [List.length_append, List.length_map, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.add_left_cancel_iff]
       have hi' := lt_of_get hi
       have hge : lauf.length ≤ i := by
         cases Nat.lt_or_ge i lauf.length with
         | inl hl =>
             rw [List.getElem?_append_left (by simpa using hl)] at hi
-            simp [List.getElem?_map, List.getElem?_eq_getElem hl] at hi
+            simp only [List.getElem?_map, List.getElem?_eq_getElem hl, Option.map_some, Option.some.injEq,
+  reduceCtorEq] at hi
         | inr hg => exact hg
       exact List.getElem?_eq_none (by omega)
 
@@ -99,7 +101,7 @@ theorem ohne_exit_kein_ende (lauf : List S) (c : Int) :
   intro h
   simp only [startOhneExit] at h
   have := List.mem_of_getLast? h
-  simp at this
+  simp only [List.mem_map, reduceCtorEq, and_false, exists_false] at this
 
 /-- Defect: a stub that keeps stepping after the gate returned. -/
 def startMitNachlauf (lauf : List S) (c : Int) (s : S) : List (Ev S) :=
@@ -109,9 +111,13 @@ theorem nachlauf_nicht_ende_gut (lauf : List S) (c : Int) (s : S) :
     ¬ EndeGut (startMitNachlauf lauf c s) := by
   intro h
   have h1 : (startMitNachlauf lauf c s)[lauf.length]? = some (Ev.ende c) := by
-    simp [startMitNachlauf]
+    simp only [startMitNachlauf, List.length_append, List.length_map, List.length_cons, List.length_nil,
+  Nat.zero_add, Nat.reduceAdd, Nat.lt_add_right_iff_pos, Nat.zero_lt_succ, getElem?_pos, Std.le_refl,
+  List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
   have h2 := h lauf.length (lauf.length + 1) c h1 (by omega)
-  simp [startMitNachlauf] at h2
+  simp only [startMitNachlauf, List.length_append, List.length_map, List.length_cons, List.length_nil,
+  Nat.zero_add, Nat.reduceAdd, Nat.lt_add_one, getElem?_pos, Nat.le_add_right, List.getElem_append_right,
+  Nat.add_sub_cancel_left, List.getElem_cons_succ, List.getElem_cons_zero, reduceCtorEq] at h2
 
 /-- Witness: a three-step `main` returning 7. -/
 theorem start_zeuge :
@@ -154,9 +160,10 @@ theorem kein_kind_nach_gib {tr : List (TEr S)} (h : JoinGut tr) :
 theorem join_defekt : ¬ JoinGut ([.kind 0, .wartet, .gib, .loescht, .endet] : List (TEr Nat)) := by
   intro h
   obtain ⟨j, hj, he⟩ := h.wartetNach 1 rfl
-  simp at hj
+  simp only [Nat.lt_one_iff] at hj
   subst hj
-  simp at he
+  simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, reduceCtorEq] at he
 
 /-- Witness: the proper order of a child that takes two steps. -/
 theorem join_zeuge : JoinGut ([.kind 0, .kind 1, .endet, .loescht, .wartet, .gib] : List (TEr Nat)) := by
@@ -166,19 +173,19 @@ theorem join_zeuge : JoinGut ([.kind 0, .kind 1, .endet, .loescht, .wartet, .gib
     simp only [List.length_cons, List.length_nil] at hl
     rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
       rfl | rfl | rfl | rfl | rfl | rfl <;>
-      first | (simp at hi; done) | exact ⟨4, by decide, rfl⟩
+      first | (simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ] at hi; done) | exact ⟨4, by decide, rfl⟩
   · intro i hi
     have hl := lt_of_get hi
     simp only [List.length_cons, List.length_nil] at hl
     rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
       rfl | rfl | rfl | rfl | rfl | rfl <;>
-      first | (simp at hi; done) | exact ⟨3, by decide, rfl⟩
+      first | (simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ, Nat.lt_add_one] at hi; done) | exact ⟨3, by decide, rfl⟩
   · intro i hi
     have hl := lt_of_get hi
     simp only [List.length_cons, List.length_nil] at hl
     rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
       rfl | rfl | rfl | rfl | rfl | rfl <;>
-      first | (simp at hi; done) | exact ⟨2, by decide, rfl⟩
+      first | (simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ, Nat.lt_add_one] at hi; done) | exact ⟨2, by decide, rfl⟩
   · intro j hj i hji s hi
     have hl := lt_of_get hj
     have hl2 := lt_of_get hi
@@ -187,6 +194,6 @@ theorem join_zeuge : JoinGut ([.kind 0, .kind 1, .endet, .loescht, .wartet, .gib
       rfl | rfl | rfl | rfl | rfl | rfl <;>
     rcases (by omega : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5) with
       rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp at hj hi hji
+    simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq, Nat.reduceLT, List.getElem_cons_succ, TEr.kind.injEq, Nat.not_lt_zero, Nat.lt_one_iff, Nat.lt_add_one] at hj hi hji
 
 end Gabbro.Grammatik.Tor

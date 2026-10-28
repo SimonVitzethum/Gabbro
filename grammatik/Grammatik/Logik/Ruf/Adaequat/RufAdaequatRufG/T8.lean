@@ -204,7 +204,7 @@ def t4D : Deklaration where
   Fn := Fin 4
   sig := fun _ => 0
   sigNr := fun _ => t4Sig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []

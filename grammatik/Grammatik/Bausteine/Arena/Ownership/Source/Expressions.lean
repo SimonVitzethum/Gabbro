@@ -93,10 +93,10 @@ theorem accessCheck_sound {Γ : Ctx} {Λ : List (Res D)} {lo hi : Int}
     (hr : References c g ρ) (hp : Rights c g s frame) (e : Expr D Γ Λ (.int lo hi))
     (hb : accessCheck c e = true) : AllowedIndex c g s frame σ0 σ ρ e := by
   cases ho : origin c e with
-  | none => simp [accessCheck, ho] at hb
+  | none => simp only [accessCheck, ho, Bool.false_eq_true] at hb
   | some i =>
     cases hm : c.rights i with
-    | none => simp [accessCheck, ho, hm] at hb
+    | none => simp only [accessCheck, ho, hm, Option.isSome_none, Bool.false_eq_true] at hb
     | some mode =>
       obtain ⟨h, hg, hpermit⟩ := hp.1 i mode hm
       obtain ⟨h', hg', hv⟩ := origin_sound c g ρ hr e i ho σ0 σ
@@ -113,7 +113,7 @@ theorem Requirement.check_sound (A : FreiForm D) (c : Context) (g : Ghost) (s : 
   | varUse x =>
     intro i hi
     cases hm : c.rights i with
-    | none => simp [Requirement.check, hi, hm] at hb
+    | none => simp only [check, hi, hm, Option.isSome_none, Bool.false_eq_true] at hb
     | some mode =>
       obtain ⟨h, hg, hright⟩ := hp.1 i mode hm
       exact ⟨h, hg, PassingMode.access_of_permits hright⟩
@@ -121,7 +121,7 @@ theorem Requirement.check_sound (A : FreiForm D) (c : Context) (g : Ghost) (s : 
     by_cases ht : t = A.tab
     · simp only [Requirement.check, ht, ite_true] at hb
       simpa only [Requirement.satisfied, ite_eq_left ht] using accessCheck_sound c g s frame σ0 σ ρ hr hp i hb
-    · simp [Requirement.satisfied, ht]
+    · simp only [satisfied, ht, ↓reduceIte]
   | range t =>
     change t ≠ A.tab
     exact of_decide_eq_true hb
@@ -140,7 +140,7 @@ theorem checkExpression_sound (A : FreiForm D) (c : Context) (g : Ghost) (s : St
 theorem accessCheck_after_consume {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (c : Context) (e : Expr D Γ Λ τ) (i : Nat) (hi : origin c e = some i) :
     accessCheck (c.kill i) e = false := by
-  simp [accessCheck, (Context.kill_aliases e i hi).1]
+  simp only [accessCheck, (Context.kill_aliases e i hi).1, Context.kill_at, Option.isSome_none]
 
 #print axioms checkExpression_sound
 

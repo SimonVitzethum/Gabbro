@@ -47,7 +47,7 @@ theorem call_slots_fest (O : Orakel D) (passes : Nat)
   simp only [execStmt] at hstep
   rw [hR] at hstep
   simp only [Ausgang.welt] at hstep
-  exact absurd hstep (by simp)
+  exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- `callInd` through `keinRuf` yields no world: the slot goal is vacuous. -/
 theorem callInd_slots_fest (O : Orakel D) (passes : Nat)
@@ -75,7 +75,7 @@ theorem callInd_slots_fest (O : Orakel D) (passes : Nat)
           RufAusgang.logik (.abstieg fn) := rfl
       rw [hR] at hstep
       simp only [Ausgang.welt] at hstep
-      exact absurd hstep (by simp)
+      exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-! ## 7. Other-table and degenerate arms: slots of `t` survive writes to `t₂ ≠ t`.
 
@@ -232,7 +232,7 @@ theorem uebergang_andere_fest (O : Orakel D) (passes : Nat)
     rw [storeSlot_andere _ _ _ _ _ _ hne]
     rfl
   · rw [if_neg hvon, Ausgang.welt] at hstep
-    exact absurd hstep (by simp)
+    exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- `schreibBytes t₂` with `t₂ ≠ t` keeps every slot of `t` (every fold
     step targets `t₂`). -/
@@ -291,7 +291,7 @@ theorem schreibBytes_null_fest (O : Orakel D) (passes : Nat)
     have hlen := zahlZuBytes_length 0
       (eval (σ.lese Λ (i.orte ++ e.orte)) e
         (σ.lese Λ (i.orte ++ e.orte)) ρ).n
-    simp at hlen
+    simp only [Int.reducePow, Int.reduceSub, List.length_eq_zero_iff] at hlen
     exact hlen
   have hEq : (execStmt O passes keinRuf
       (Stmt.putBytes (V := V) (l := l) t f₂ hf₂ 0 i hlo hhi e hw hL :
@@ -386,7 +386,7 @@ theorem axiomCall_nichtschreibt_fest (O : Orakel D) (hO : GutO O) (passes : Nat)
                   (Ausgang.hardware (D := D) (.annahme a) : Ausgang V l Γ)).welt := rfl
             rw [hrfl, hAns, Ausgang.welt]
           rw [hcomp, Ausgang.welt] at hstep
-          simp at hstep
+          simp only [reduceCtorEq] at hstep
 
 /-! ## 9. The leaf dispatch: every firing leaf either records `t`, keeps it,
     or is a declared oracle write to `t`.
@@ -465,27 +465,27 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
         exact Or.inl ⟨_, uebergang_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
       · exact Or.inr (Or.inl fun k f =>
           uebergang_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
-  | ite c tb eb => simp [Stmt.istBlatt] at hleaf
-  | onOption o p a => simp [Stmt.istBlatt] at hleaf
-  | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
+  | ite c tb eb => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onOption o p a => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onTag v arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | call fn args hp hr =>
       exact Or.inr (Or.inl fun k f =>
         call_slots_fest O passes (Stmt.call fn args hp hr) rfl σ ρ σ' hstep t k f)
   | callInd p args hp hr =>
       exact Or.inr (Or.inl fun k f =>
         callInd_slots_fest O passes (Stmt.callInd p args hp hr) rfl σ ρ σ' hstep t k f)
-  | locks L hr body => simp [Stmt.istBlatt] at hleaf
-  | breaking ii body => simp [Stmt.istBlatt] at hleaf
-  | traverse tt inv body => simp [Stmt.istBlatt] at hleaf
-  | retry n bis body ueb => simp [Stmt.istBlatt] at hleaf
-  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+  | locks L hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | traverse tt inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | retry n bis body ueb => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args h hw hg hd hgd =>
       by_cases ht : D.aschreibt a t = true
       · exact Or.inr (Or.inr ⟨a, args, h, hw, hg, hd, hgd, hstep, ht⟩)
       · have htF : D.aschreibt a t = false := by
           cases hT : D.aschreibt a t with
-          | true => exact absurd hT (by simp [ht])
+          | true => exact absurd hT (by simp only [ht, Bool.false_eq_true, not_false_eq_true])
           | false => rfl
         exact Or.inr (Or.inl fun k f =>
           axiomCall_nichtschreibt_fest (Λ' := Λ) O hO passes (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) rfl t htF σ ρ σ' hstep k f)

@@ -51,7 +51,7 @@ def nimmPush (voll : Endblock FD FV false [] []) : Block FD FV false [] [] [] :=
 theorem erk_nimmPush (voll : Endblock FD FV false [] []) (hv : Rein voll) :
     Erk KL Abs.leer (nimmPush voll) (((Abs.leer.ext .frei).set 0 .liste).tail) :=
   Erk.nimm sieben rfl fdarf rfl (fgdarf _) voll _ hv
-    (Erk.push ⟨LL, LG⟩ rfl (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil (by simp [Abs.ext, Var.pos])
+    (Erk.push ⟨LL, LG⟩ rfl (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil (by simp only [Abs.ext, Var.pos])
       (Erk.nil _))
 
 /-- **Run on the real world:** the slot that came off the free list is the new head of the list, and the invariant
@@ -99,8 +99,8 @@ theorem erk_kopfUnlinkFrei :
     Erk KL Abs.leer kopfUnlinkFrei
       ((((((Abs.leer.ext .liste).forget .liste).ext .frei).set 0 .offen).tail).tail) :=
   Erk.kopf ⟨LL, LG⟩ rfl (fgdarf _) voll0 _ rein_voll0
-    (Erk.unlink ⟨LL, LG⟩ rfl (.here : Var G1 _) rfl fdarf voll1 _ (by simp [Abs.ext, Var.pos]) rein_voll1
-      (Erk.frei (.here : Var G2 _) rfl fdarf rfl (fgdarf _) .nil (by simp [Abs.forget, Abs.ext, Var.pos])
+    (Erk.unlink ⟨LL, LG⟩ rfl (.here : Var G1 _) rfl fdarf voll1 _ (by simp only [Abs.ext, Var.pos]) rein_voll1
+      (Erk.frei (.here : Var G2 _) rfl fdarf rfl (fgdarf _) .nil (by simp only [Abs.ext, Var.pos])
         (Erk.nil _)))
 
 /-- **Run on the real world:** the list `2 -> 0` becomes `2`, the slot `0` is released onto the free list, and the
@@ -138,7 +138,7 @@ theorem kopfUnlinkFrei_zeuge (O : Orakel FD) (passes : Nat)
     have e2 : LL.wert σc = LL.wert σb := LL.wert_fremd' hf3
     have e1' : LL.wert σb 2 = LL.wert w0 (LL.wert w0 2) := by rw [← hk1']; exact e1
     rw [e2, e1', ll_w0, ll_w0]
-    simp [ln0]
+    simp only [ln0, ↓reduceIte, Int.reduceEq]
   · have : FA.kopfSt σc = k2.n := hkc
     rw [this, hk2']
 

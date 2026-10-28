@@ -89,15 +89,15 @@ theorem Sicht.verein_rechts (a b : Sicht Ort) (x : Ort) : b x ≤ (a.verein b) x
   Nat.le_max_right _ _
 
 theorem Sicht.eins_selbst [DecidableEq Ort] (x : Ort) (n : Nat) : Sicht.eins x n x = n := by
-  simp [Sicht.eins]
+  simp only [eins, ↓reduceIte]
 
 theorem Sicht.setze_selbst [DecidableEq Ort] (v : Sicht Ort) (x : Ort) (n : Nat) :
     v.setze x n x = n := by
-  simp [Sicht.setze]
+  simp only [setze, ↓reduceIte]
 
 theorem Sicht.setze_anders [DecidableEq Ort] (v : Sicht Ort) {x y : Ort} (n : Nat) (h : y ≠ x) :
     v.setze x n y = v y := by
-  simp [Sicht.setze, h]
+  simp only [setze, h, ↓reduceIte]
 
 /-- **A message** of one location: its timestamp (the position in modification order), the
     value, and the view it carries (the writer's view for a release write, only its own
@@ -117,8 +117,8 @@ def beitrag [DecidableEq Ort] (o : Ordnung) (x : Ort) (m : Nachricht Ort Wert) :
 theorem beitrag_selbst [DecidableEq Ort] (o : Ordnung) (x : Ort) (m : Nachricht Ort Wert) :
     m.ts ≤ beitrag o x m x := by
   cases o
-  · simp [beitrag, Sicht.eins]
-  · exact Nat.le_trans (by simp [Sicht.eins]) (Sicht.verein_rechts _ _ x)
+  · simp only [beitrag, Sicht.eins, ↓reduceIte, Std.le_refl]
+  · exact Nat.le_trans (by simp only [Sicht.eins, ↓reduceIte, Std.le_refl]) (Sicht.verein_rechts _ _ x)
 
 /-- The message a write of `w` at `x` with timestamp `ts` in order `o` by a writer whose view
     is `v` creates. -/
@@ -218,18 +218,18 @@ inductive LErreichbar (S : LZustand Ort → LZustand Ort → Prop) : LZustand Or
   | schritt {Z Z' : LZustand Ort} : LErreichbar S Z → S Z Z' → LErreichbar S Z'
 
 theorem aufN_gleich {α : Type} (f : Nat → α) (t : Nat) (a : α) : aufN f t a t = a := by
-  simp [aufN]
+  simp only [aufN, ↓reduceIte]
 
 theorem aufN_anders {α : Type} (f : Nat → α) {t u : Nat} (a : α) (h : u ≠ t) :
     aufN f t a u = f u := by
-  simp [aufN, h]
+  simp only [aufN, h, ↓reduceIte]
 
 theorem aufO_gleich {α : Type} (f : Ort → α) (x : Ort) (a : α) : aufO f x a x = a := by
-  simp [aufO]
+  simp only [aufO, ↓reduceIte]
 
 theorem aufO_anders {α : Type} (f : Ort → α) {x y : Ort} (a : α) (h : y ≠ x) :
     aufO f x a y = f y := by
-  simp [aufO, h]
+  simp only [aufO, h, ↓reduceIte]
 
 end Maschine
 
@@ -254,15 +254,18 @@ theorem zwei_fall {p0 p1 : List (Befehl LOrt)} {t n : Nat} {b : Befehl LOrt}
   match t, h with
   | 0, h => exact Or.inl ⟨rfl, h⟩
   | 1, h => exact Or.inr ⟨rfl, h⟩
-  | _ + 2, h => simp [zwei] at h
+  | _ + 2, h => simp only [zwei, List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at h
 
 /-- Lookup in a two-instruction list. -/
 theorem zwei_befehle {a b c : Befehl LOrt} {n : Nat} (h : [a, b][n]? = some c) :
     (n = 0 ∧ c = a) ∨ (n = 1 ∧ c = b) := by
   match n, h with
-  | 0, h => simp at h; exact Or.inl ⟨rfl, h.symm⟩
-  | 1, h => simp at h; exact Or.inr ⟨rfl, h.symm⟩
-  | _ + 2, h => simp at h
+  | 0, h => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq] at h; exact Or.inl ⟨rfl, h.symm⟩
+  | 1, h => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_succ, List.getElem_cons_zero, Option.some.injEq] at h; exact Or.inr ⟨rfl, h.symm⟩
+  | _ + 2, h => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.not_lt, Nat.le_add_left,
+  getElem?_neg, reduceCtorEq] at h
 
 theorem befehl_schreib_inj {x x' : LOrt} {w w' : Int} {o o' : Ordnung}
     (h : Befehl.schreib x w o = Befehl.schreib x' w' o') : x = x' ∧ w = w' ∧ o = o' := by
@@ -289,12 +292,12 @@ structure MPInv (Z : LZustand LOrt) : Prop where
   r1 : 2 ≤ Z.pc 1 → Z.reg 1 0 = 1 → Z.reg 1 1 = 1
 
 theorem mpInv_start : MPInv (LZustand.start LOrt) where
-  xEins m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  yEins m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  t0 h := by simp [LZustand.start] at h
+  xEins m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Nat.le_zero_eq, Nat.succ_ne_self] at h
+  yEins m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
+  t0 h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
   r0 _ := rfl
-  t1 h := by simp [LZustand.start] at h
-  r1 h := by simp [LZustand.start] at h
+  t1 h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
+  r1 h := by simp only [LZustand.start, Nat.le_zero_eq, reduceCtorEq] at h
 
 theorem mpInv_schritt {Z Z' : LZustand LOrt} (hI : MPInv Z) (hs : LSchritt mpRA Z Z') :
     MPInv Z' := by
@@ -361,7 +364,7 @@ theorem mpInv_schritt {Z Z' : LZustand LOrt} (hI : MPInv Z) (hs : LSchritt mpRA 
             simp only [LZustand.nachLies, aufN_anders _ _ (show (0 : Nat) ≠ 1 by decide)] at h ⊢
             exact hI.t0 h
           · intro h
-            simp [LZustand.nachLies, aufN] at h
+            simp only [LZustand.nachLies, aufN, ↓reduceIte, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at h
           · intro _ h'
             simp only [LZustand.nachLies, aufN_gleich] at h' ⊢
             have hmy := hl.1
@@ -369,7 +372,7 @@ theorem mpInv_schritt {Z Z' : LZustand LOrt} (hI : MPInv Z) (hs : LSchritt mpRA 
             exact Nat.le_trans h1 (Nat.le_trans (Sicht.verein_links _ _ LOrt.x)
               (Sicht.verein_rechts _ _ LOrt.x))
           · intro h
-            simp [LZustand.nachLies, aufN, hpc] at h
+            simp only [LZustand.nachLies, hpc, Nat.zero_add, aufN, ↓reduceIte, Nat.reduceLeDiff] at h
         · -- thread 1 reads `x` (relaxed) into r1
           obtain ⟨rfl, rfl, rfl⟩ := befehl_lies_inj hc
           refine ⟨hI.xEins, hI.yEins, ?_, ?_, ?_, ?_⟩
@@ -377,7 +380,7 @@ theorem mpInv_schritt {Z Z' : LZustand LOrt} (hI : MPInv Z) (hs : LSchritt mpRA 
             simp only [LZustand.nachLies, aufN_anders _ _ (show (0 : Nat) ≠ 1 by decide)] at h ⊢
             exact hI.t0 h
           · intro h
-            simp [LZustand.nachLies, aufN] at h
+            simp only [LZustand.nachLies, aufN, ↓reduceIte, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at h
           · intro _ h'
             simp only [LZustand.nachLies, aufN_gleich, aufN_anders _ _ (show (0 : Nat) ≠ 1 by decide)]
               at h' ⊢
@@ -418,20 +421,25 @@ theorem mp_rlx_erlaubt : ∃ Z : LZustand LOrt, LErreichbar (LSchritt mpRlx) Z �
   let m0 : Nachricht LOrt Int := ⟨0, 0, Sicht.null⟩
   let Z4 := Z3.nachLies 1 .x 1 .entspannt m0
   have s1 : LSchritt mpRlx Z0 Z1 := LSchritt.schreib Z0 0 .x 1 .entspannt 1 (by rfl)
-    ⟨by decide, by simp [Z0, LZustand.start]⟩
+    ⟨by decide, by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false, ne_eq, forall_eq, Nat.zero_ne_one,
+  not_false_eq_true, Z0]⟩
   have s2 : LSchritt mpRlx Z1 Z2 := LSchritt.schreib Z1 0 .y 1 .entspannt 1 (by rfl)
-    ⟨by simp [Z1, Z0, LZustand.nachSchreib, LZustand.start, aufN, Sicht.setze, Sicht.null],
-     by simp [Z1, Z0, LZustand.nachSchreib, LZustand.start, aufO]⟩
+    ⟨by simp only [LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufN, ↓reduceIte, Sicht.setze, reduceCtorEq,
+  Sicht.null, Nat.lt_add_one, Z1, Z0],
+     by simp only [LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufO, reduceCtorEq, ↓reduceIte, List.mem_cons,
+  List.not_mem_nil, or_false, ne_eq, forall_eq, Nat.zero_ne_one, not_false_eq_true, Z1, Z0]⟩
   have s3 : LSchritt mpRlx Z2 Z3 := LSchritt.lies Z2 1 .y 0 .entspannt my (by rfl)
-    ⟨by simp [Z2, my, LZustand.nachSchreib, aufO],
-     by simp [Z2, Z1, Z0, my, LZustand.nachSchreib, LZustand.start, aufN, Sicht.null, nachricht]⟩
+    ⟨by simp only [LZustand.nachSchreib, aufO, ↓reduceIte, List.mem_cons, true_or, Z2, my],
+     by simp only [LZustand.nachSchreib, LZustand.start, Nat.zero_add, nachricht, aufN, ↓reduceIte, Nat.reduceAdd,
+  Nat.succ_ne_self, Sicht.null, Nat.zero_le, Z2, Z1, Z0, my]⟩
   have s4 : LSchritt mpRlx Z3 Z4 := LSchritt.lies Z3 1 .x 1 .entspannt m0 (by rfl)
-    ⟨by simp [Z3, Z2, Z1, Z0, m0, LZustand.nachLies, LZustand.nachSchreib, LZustand.start, aufO],
-     by simp [Z3, Z2, Z1, Z0, m0, my, LZustand.nachLies, LZustand.nachSchreib, LZustand.start,
-       aufN, Sicht.null, Sicht.verein, beitrag, Sicht.eins]⟩
+    ⟨by simp only [LZustand.nachLies, LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufO, reduceCtorEq,
+  ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false, or_true, Z3, Z2, Z1, Z0, m0],
+     by simp only [LZustand.nachLies, LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufN, ↓reduceIte,
+  Nat.reduceAdd, Nat.succ_ne_self, beitrag, Sicht.verein, Sicht.null, Sicht.eins, reduceCtorEq, Std.le_refl,
+  Nat.max_eq_right, Z3, Z2, Z1, Z0, my, m0]⟩
   refine ⟨Z4, .schritt (.schritt (.schritt (.schritt .start s1) s2) s3) s4, ?_, ?_, ?_⟩ <;>
-    simp [Z4, Z3, Z2, Z1, Z0, my, m0, LZustand.nachLies, LZustand.nachSchreib, LZustand.start,
-      aufN, nachricht]
+    simp only [LZustand.nachLies, LZustand.nachSchreib, LZustand.start, Nat.zero_add, nachricht, aufN, ↓reduceIte, Nat.reduceAdd, Nat.succ_ne_self, Z4, Z3, Z2, Z1, Z0, my, m0, Nat.zero_ne_one]
 
 /-! ## 6. Store buffering: both reads 0 is REACHABLE, even with release/acquire, and NOT on SC -/
 
@@ -452,20 +460,26 @@ theorem sb_erlaubt : ∃ Z : LZustand LOrt, LErreichbar (LSchritt sbRA) Z ∧
   let Z3 := Z2.nachLies 0 .y 0 .freigabe m0
   let Z4 := Z3.nachLies 1 .x 0 .freigabe m0
   have s1 : LSchritt sbRA Z0 Z1 := LSchritt.schreib Z0 0 .x 1 .freigabe 1 (by rfl)
-    ⟨by decide, by simp [Z0, LZustand.start]⟩
+    ⟨by decide, by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false, ne_eq, forall_eq, Nat.zero_ne_one,
+  not_false_eq_true, Z0]⟩
   have s2 : LSchritt sbRA Z1 Z2 := LSchritt.schreib Z1 1 .y 1 .freigabe 1 (by rfl)
-    ⟨by simp [Z1, Z0, LZustand.nachSchreib, LZustand.start, aufN, Sicht.null],
-     by simp [Z1, Z0, LZustand.nachSchreib, LZustand.start, aufO]⟩
+    ⟨by simp only [LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufN, Nat.succ_ne_self, ↓reduceIte, Sicht.null,
+  Nat.lt_add_one, Z1, Z0],
+     by simp only [LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufO, reduceCtorEq, ↓reduceIte, List.mem_cons,
+  List.not_mem_nil, or_false, ne_eq, forall_eq, Nat.zero_ne_one, not_false_eq_true, Z1, Z0]⟩
   have s3 : LSchritt sbRA Z2 Z3 := LSchritt.lies Z2 0 .y 0 .freigabe m0 (by rfl)
-    ⟨by simp [Z2, Z1, Z0, m0, LZustand.nachSchreib, LZustand.start, aufO],
-     by simp [Z2, Z1, Z0, m0, LZustand.nachSchreib, LZustand.start, aufN, Sicht.null,
-       Sicht.setze]⟩
+    ⟨by simp only [LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufO, reduceCtorEq, ↓reduceIte, List.mem_cons,
+  List.not_mem_nil, or_false, or_true, Z2, Z1, Z0, m0],
+     by simp only [LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufN, Nat.succ_ne_self, ↓reduceIte,
+  Nat.zero_ne_one, Sicht.setze, reduceCtorEq, Sicht.null, Std.le_refl, Z2, Z1, Z0, m0]⟩
   have s4 : LSchritt sbRA Z3 Z4 := LSchritt.lies Z3 1 .x 0 .freigabe m0 (by rfl)
-    ⟨by simp [Z3, Z2, Z1, Z0, m0, LZustand.nachLies, LZustand.nachSchreib, LZustand.start, aufO],
-     by simp [Z3, Z2, Z1, Z0, m0, LZustand.nachLies, LZustand.nachSchreib, LZustand.start,
-       aufN, Sicht.null, Sicht.setze]⟩
+    ⟨by simp only [LZustand.nachLies, LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufO, reduceCtorEq,
+  ↓reduceIte, List.mem_cons, List.not_mem_nil, or_false, or_true, Z3, Z2, Z1, Z0, m0],
+     by simp only [LZustand.nachLies, LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufN, Nat.succ_ne_self,
+  ↓reduceIte, Nat.zero_ne_one, Nat.reduceAdd, Sicht.setze, reduceCtorEq, Sicht.null, Std.le_refl, Z3, Z2, Z1, Z0, m0]⟩
   refine ⟨Z4, .schritt (.schritt (.schritt (.schritt .start s1) s2) s3) s4, ?_, ?_, ?_, ?_⟩ <;>
-    simp [Z4, Z3, Z2, Z1, Z0, m0, LZustand.nachLies, LZustand.nachSchreib, LZustand.start, aufN]
+    simp only [LZustand.nachLies, LZustand.nachSchreib, LZustand.start, Nat.zero_add, aufN, Nat.succ_ne_self,
+  ↓reduceIte, Nat.zero_ne_one, Nat.reduceAdd, Z4, Z3, Z2, Z1, Z0, m0]
 
 /-- The invariant of `sbRA` on the SC machine. -/
 structure SBInv (Z : LZustand LOrt) : Prop where
@@ -474,9 +488,9 @@ structure SBInv (Z : LZustand LOrt) : Prop where
   r0 : 2 ≤ Z.pc 0 → Z.reg 0 0 = 0 → 2 ≤ Z.pc 1 → Z.reg 1 0 = 1
 
 theorem sbInv_start : SBInv (LZustand.start LOrt) where
-  xOben _ _ _ h := by simp [LZustand.start] at h
-  yOben _ _ _ h := by simp [LZustand.start] at h
-  r0 h := by simp [LZustand.start] at h
+  xOben _ _ _ h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
+  yOben _ _ _ h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
+  r0 h := by simp only [LZustand.start, Nat.le_zero_eq, reduceCtorEq] at h
 
 /-- The newest message after an appending write is the written one. -/
 theorem oben_neu {hist : List (Nachricht LOrt Int)} {n m : Nachricht LOrt Int}
@@ -505,7 +519,7 @@ theorem sbInv_schritt {Z Z' : LZustand LOrt} (hI : SBInv Z) (hs : LSchrittSC sbR
               aufN_anders _ _ (show (1 : Nat) ≠ 0 by decide)] at hm hmax h
             exact hI.yOben m hm hmax h
           · intro h
-            simp [LZustand.nachSchreib, aufN, hpc] at h
+            simp only [LZustand.nachSchreib, hpc, Nat.zero_add, aufN, ↓reduceIte, Nat.reduceLeDiff] at h
         · cases hc
       · rcases zwei_befehle hb with ⟨hpc, hc⟩ | ⟨_, hc⟩
         · obtain ⟨rfl, rfl, rfl⟩ := befehl_schreib_inj hc
@@ -519,7 +533,7 @@ theorem sbInv_schritt {Z Z' : LZustand LOrt} (hI : SBInv Z) (hs : LSchrittSC sbR
             rw [oben_neu (n := nachricht .freigabe (Z.sicht 1) .y ts 1) hoben hm hmax]
             rfl
           · intro _ _ h
-            simp [LZustand.nachSchreib, aufN, hpc] at h
+            simp only [LZustand.nachSchreib, hpc, Nat.zero_add, aufN, ↓reduceIte, Nat.reduceLeDiff] at h
         · cases hc
   | lies t xo r o m hb hl hoben =>
       rcases zwei_fall hb with ⟨rfl, hb⟩ | ⟨rfl, hb⟩
@@ -530,7 +544,7 @@ theorem sbInv_schritt {Z Z' : LZustand LOrt} (hI : SBInv Z) (hs : LSchrittSC sbR
           refine ⟨?_, ?_, ?_⟩
           · intro m' hm hmax h
             simp only [LZustand.nachLies] at hm hmax h
-            exact hI.xOben m' hm hmax (by simp [aufN] at h; omega)
+            exact hI.xOben m' hm hmax (by simp only [aufN, ↓reduceIte, Nat.le_add_left] at h; omega)
           · intro m' hm hmax h
             simp only [LZustand.nachLies, aufN_anders _ _ (show (1 : Nat) ≠ 0 by decide)] at hm hmax h
             exact hI.yOben m' hm hmax h
@@ -550,7 +564,7 @@ theorem sbInv_schritt {Z Z' : LZustand LOrt} (hI : SBInv Z) (hs : LSchrittSC sbR
             exact hI.xOben m' hm hmax h
           · intro m' hm hmax h
             simp only [LZustand.nachLies] at hm hmax h
-            exact hI.yOben m' hm hmax (by simp [aufN] at h; omega)
+            exact hI.yOben m' hm hmax (by simp only [aufN, ↓reduceIte, Nat.le_add_left] at h; omega)
           · intro h2 _ _
             simp only [LZustand.nachLies, aufN_gleich, aufN_anders _ _ (show (0 : Nat) ≠ 1 by decide)]
               at h2 ⊢
@@ -594,13 +608,13 @@ structure CoInv (Z : LZustand LOrt) : Prop where
   r1 : 2 ≤ Z.pc 1 → Z.reg 1 0 = 2 → Z.reg 1 1 ≠ 1
 
 theorem coInv_start : CoInv (LZustand.start LOrt) where
-  ordnung m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  t0 m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  zwei0 m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  eins0 m hm h := by simp [LZustand.start] at hm; subst hm; simp at h
-  gesehen h := by simp [LZustand.start] at h
-  t1 h := by simp [LZustand.start] at h
-  r1 h := by simp [LZustand.start] at h
+  ordnung m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
+  t0 m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
+  zwei0 m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
+  eins0 m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
+  gesehen h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
+  t1 h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
+  r1 h := by simp only [LZustand.start, Nat.le_zero_eq, reduceCtorEq] at h
 
 theorem coInv_schritt {Z Z' : LZustand LOrt} (hI : CoInv Z) (hs : LSchritt coRR Z Z') :
     CoInv Z' := by
@@ -619,17 +633,17 @@ theorem coInv_schritt {Z Z' : LZustand LOrt} (hI : CoInv Z) (hs : LSchritt coRR 
               aufN_anders _ _ (show (1 : Nat) ≠ 0 by decide)]
           · intro m hm h1 m' hm' h2
             rcases List.mem_cons.mp hm' with rfl | hm'
-            · simp [nachricht] at h2
+            · simp only [nachricht, Int.reduceEq] at h2
             · exact absurd h2 (kein2 m' hm')
           · intro m hm h1
             rcases List.mem_cons.mp hm with rfl | hm
-            · simp [nachricht, Sicht.setze_selbst]
+            · simp only [nachricht, Sicht.setze_selbst, Std.le_refl]
             · exact absurd h1 (kein1 m hm)
           · intro m hm h2
             rcases List.mem_cons.mp hm with rfl | hm
-            · simp [nachricht] at h2
+            · simp only [nachricht, Int.reduceEq] at h2
             · exact absurd h2 (kein2 m hm)
-          · intro _ _ _; simp [aufN]
+          · intro _ _ _; simp only [Nat.le_add_left]
           · intro h h'
             obtain ⟨m, hm, h2⟩ := hI.gesehen h h'
             exact absurd h2 (kein2 m hm)
@@ -644,7 +658,7 @@ theorem coInv_schritt {Z Z' : LZustand LOrt} (hI : CoInv Z) (hs : LSchritt coRR 
               aufN_anders _ _ (show (1 : Nat) ≠ 0 by decide)]
           · intro m hm h1 m' hm' h2
             rcases List.mem_cons.mp hm with rfl | hm
-            · simp [nachricht] at h1
+            · simp only [nachricht, Int.reduceEq] at h1
             · rcases List.mem_cons.mp hm' with rfl | hm'
               · have := hI.t0 m hm h1
                 have := hf.1
@@ -653,19 +667,19 @@ theorem coInv_schritt {Z Z' : LZustand LOrt} (hI : CoInv Z) (hs : LSchritt coRR 
               · exact hI.ordnung m hm h1 m' hm' h2
           · intro m hm h1
             rcases List.mem_cons.mp hm with rfl | hm
-            · simp [nachricht] at h1
+            · simp only [nachricht, Int.reduceEq] at h1
             · have := hI.t0 m hm h1
               have := hf.1
               rw [Sicht.setze_selbst]
               omega
-          · intro _ _ _; simp [aufN, hpc]
-          · intro _ _ _; simp [aufN, hpc]
+          · intro _ _ _; simp only [hpc, Nat.reduceAdd, Std.le_refl]
+          · intro _ _ _; simp only [hpc, Nat.reduceAdd, Nat.reduceLeDiff]
           · intro h h'
             obtain ⟨m, hm, h2⟩ := hI.gesehen h h'
             exact ⟨m, List.mem_cons_of_mem _ hm, h2⟩
           · intro h h' m hm h1
             rcases List.mem_cons.mp hm with rfl | hm
-            · simp [nachricht] at h1
+            · simp only [nachricht, Int.reduceEq] at h1
             · exact hI.t1 h h' m hm h1
           · exact hI.r1
       · rcases zwei_befehle hb with ⟨_, hc⟩ | ⟨_, hc⟩ <;> cases hc
@@ -685,20 +699,20 @@ theorem coInv_schritt {Z Z' : LZustand LOrt} (hI : CoInv Z) (hs : LSchritt coRR 
             have h2 := hI.ordnung m1 hm1 h1 m hl.1 h'
             exact Nat.lt_of_lt_of_le h2 (Nat.le_trans (beitrag_selbst _ _ _)
               (Sicht.verein_rechts _ _ LOrt.x))
-          · intro h; simp [aufN, hpc] at h
+          · intro h; simp only [hpc, Nat.zero_add, Nat.reduceLeDiff] at h
         · -- `r1 := x`
           obtain ⟨rfl, rfl, rfl⟩ := befehl_lies_inj hc
           simp only [LZustand.nachLies, aufN_gleich, aufN_anders _ _ (show (0 : Nat) ≠ 1 by decide)]
           have hpc1 : 1 ≤ Z.pc 1 := by omega
           refine ⟨hI.ordnung, hI.t0, hI.zwei0, hI.eins0, ?_, ?_, ?_⟩
           · intro _ h'
-            simp [aufN] at h'
+            simp only [aufN, ↓reduceIte, Nat.zero_ne_one] at h'
             exact hI.gesehen hpc1 h'
           · intro _ h' m1 hm1 h1
-            simp [aufN] at h'
+            simp only [aufN, ↓reduceIte, Nat.zero_ne_one] at h'
             exact Nat.lt_of_lt_of_le (hI.t1 hpc1 h' m1 hm1 h1) (Sicht.verein_links _ _ LOrt.x)
           · intro _ h' h1
-            simp [aufN] at h' h1
+            simp only [aufN, ↓reduceIte, Nat.zero_ne_one] at h' h1
             have := hI.t1 hpc1 h' m hl.1 h1
             have := hl.2
             omega

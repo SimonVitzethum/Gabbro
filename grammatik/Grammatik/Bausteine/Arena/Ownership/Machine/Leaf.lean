@@ -17,7 +17,7 @@ variable {D : Deklaration}
 
 /-- Leaf statements never call: the empty handler respects every contract. -/
 theorem respects_keinRuf (A : FreiForm D) (C : ∀ f, Contract D f) : Respects A C (keinRuf (D := D)) :=
-  fun _ _ _ _ _ _ _ _ => ⟨fun _ _ h => by simp [keinRuf] at h, fun _ _ h => by simp [keinRuf] at h⟩
+  fun _ _ _ _ _ _ _ _ => ⟨fun _ _ h => by simp only [keinRuf, reduceCtorEq] at h, fun _ _ h => by simp only [keinRuf, reduceCtorEq] at h⟩
 
 /-- A context that no environment over `Γ` realises. -/
 def badContext (Γ : Ctx) : Context := ⟨List.replicate (Γ.length + 1) none, fun _ => none, 0⟩
@@ -29,7 +29,7 @@ theorem badContext_bounded (Γ : Ctx) : (badContext Γ).bounded :=
     cases hi⟩
 
 theorem badContext_length (Γ : Ctx) : (badContext Γ).references.length ≠ Γ.length := by
-  simp [badContext]
+  simp only [badContext, List.length_replicate, ne_eq, Nat.add_eq_left, Nat.succ_ne_self, not_false_eq_true]
 
 section Cont
 
@@ -262,21 +262,21 @@ theorem os_meta (hO : GutO O) : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
     injection h with h1 _
     subst σ'
     exact MetaSame.refl A σ
-  | _, _, _, _, _, _, _, _, .ret .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
-  | _, _, _, _, _, _, _, _, .retWhy .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
-  | _, _, _, _, _, _, _, _, .leave .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
-  | _, _, _, _, _, _, _, _, .next .. => by intro _ σ ρ σ' ρ' h; simp [execStmt] at h
-  | _, _, _, _, _, _, _, _, .ite .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .onOption .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .onTag .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .onWhy .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .call .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .callInd .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .locks .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .breaking .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .traverse .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .retry .. => by intro hl; simp [Stmt.istBlatt] at hl
-  | _, _, _, _, _, _, _, _, .forever .. => by intro hl; simp [Stmt.istBlatt] at hl
+  | _, _, _, _, _, _, _, _, .ret .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
+  | _, _, _, _, _, _, _, _, .retWhy .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
+  | _, _, _, _, _, _, _, _, .leave .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
+  | _, _, _, _, _, _, _, _, .next .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
+  | _, _, _, _, _, _, _, _, .ite .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .onOption .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .onTag .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .onWhy .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .call .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .callInd .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .locks .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .breaking .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .traverse .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .retry .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .forever .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
 
 end Meta
 
@@ -362,7 +362,7 @@ theorem run_leaf (hO : GutO O) {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 Λ' : Li
     have hn2 : ∀ j, A.naechst σ2 j = if j = hh.slot then A.kopfSt σ else A.naechst σ j := by
       intro j; rw [← hσ2, FreiForm.naechst_schreibSlot, hi1, hlink, ← hσ1]; rfl
     have hlive : A.Lebt σ hh.slot := State.owned_live ha hown
-    obtain ⟨ho2, hl2⟩ := link_live A hlive ho hk2 hs2 (fun j hj => by rw [hn2]; simp [hj])
+    obtain ⟨ho2, hl2⟩ := link_live A hlive ho hk2 hs2 (fun j hj => by rw [hn2]; simp only [hj, ↓reduceIte])
     refine ⟨s, State.local_refl s fr, State.progress_refl s, ⟨ha.1, fun j => (hl2 j).trans (ha.2 j)⟩, ho2, ?_, ?_⟩
     · intro j hj
       rw [hn2]
@@ -370,8 +370,8 @@ theorem run_leaf (hO : GutO O) {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ1 Λ' : Li
       · subst hjs
         obtain ⟨cell, hcell⟩ := State.own_cell hown
         exact absurd (State.owned_cell hown hcell).2.1 (hj _ hcell)
-      · simp [hjs]
-    exact .release ρ e2 hwK hLK rest' r p o hh he2 hpx howned hgh (by rw [hn2, hk2]; simp) hk hf
+      · simp only [hjs, ↓reduceIte]
+    exact .release ρ e2 hwK hLK rest' r p o hh he2 hpx howned hgh (by rw [hn2, hk2]; simp only [↓reduceIte]) hk hf
       (OR.of_cont hrest hc)
 
 /-- **A leaf statement in end-block position.** -/

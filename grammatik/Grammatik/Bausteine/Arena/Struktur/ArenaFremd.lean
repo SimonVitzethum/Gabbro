@@ -40,9 +40,11 @@ theorem freiRumpf_fremd (A : FreiForm D)
         = .ok σ' (.cons k ρ) ∧ A.Fremd σ σ' := by
   refine ⟨_, rfl, ?_, ?_⟩
   · intro g _ hk _
-    simp [eval, hk]
+    simp only [eval, ne_eq, hk, not_false_eq_true, World.globs_schreibGlob_ne, World.globs_lese,
+  World.globs_schreibSlot]
   · intro k' f hf hn
-    simp [eval, World.slots_schreibSlot_ne, hn]
+    simp only [eval, World.slots_schreibGlob, World.slots_lese, ne_eq, hn, not_false_eq_true,
+  World.slots_schreibSlot_ne]
 
 theorem freiNimm_fremd (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -58,9 +60,11 @@ theorem freiNimm_fremd (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
   rw [dif_pos (by exact hk)]
   refine ⟨_, rfl, ?_, ?_⟩
   · intro g _ hk _
-    simp [eval, hk]
+    simp only [eval, World.globs_schreibSlot, World.globs_lese, ne_eq, hk, not_false_eq_true,
+  World.globs_schreibGlob_ne]
   · intro k' f hf hn
-    simp [eval, World.slots_schreibSlot_ne, hf]
+    simp only [eval, ne_eq, hf, not_false_eq_true, World.slots_schreibSlot_ne, World.slots_lese,
+  World.slots_schreibGlob]
 
 theorem frischRumpf_fremd (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -72,9 +76,11 @@ theorem frischRumpf_fremd (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld
         = .ok σ' (.cons k ρ) ∧ A.Fremd σ σ' := by
   refine ⟨_, rfl, ?_, ?_⟩
   · intro g hz _ _
-    simp [eval, Block.arenaBump, hz]
+    simp only [eval, Block.arenaBump, Int.reduceAdd, orte_umTyp, eval_umTyp, ne_eq, hz, not_false_eq_true,
+  World.globs_schreibGlob_ne, World.globs_lese, World.globs_schreibSlot]
   · intro k' f hf hn
-    simp [eval, Block.arenaBump, World.slots_schreibSlot_ne, hf]
+    simp only [eval, Block.arenaBump, Int.reduceAdd, orte_umTyp, eval_umTyp, World.slots_schreibGlob,
+  World.slots_lese, ne_eq, hf, not_false_eq_true, World.slots_schreibSlot_ne]
 
 /-! The three allocator moves, with everything a link structure needs from them at once: the executed form, the
     frame (`Fremd`), the free list, and the liveness of the slots. -/

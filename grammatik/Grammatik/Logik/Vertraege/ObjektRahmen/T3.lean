@@ -46,7 +46,7 @@ theorem ergVarUnten_eval {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (x : Erg
     (h : x.varUnten? = some b) (σ0 σ : World D) (ρ : Env D Γ) :
     ergInt e (evalErg σ0 x σ ρ) = ρ.unten b := by
   cases x with
-  | empty => simp [ErgExpr.varUnten?] at h
+  | empty => simp only [ErgExpr.varUnten?, reduceCtorEq] at h
   | val ex => exact varUnten_eval ex h σ0 σ ρ
 
 /-- **A re-view keeps the object** (the borrow rule `R014` assumes, now a theorem of the

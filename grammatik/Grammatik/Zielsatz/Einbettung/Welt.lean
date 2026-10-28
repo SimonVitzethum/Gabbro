@@ -85,7 +85,7 @@ def Rueck.zeiger (K : E.Rueck) (n : Nat) (f' : D'.Fn) (h' : D'.passt f' (E.num n
   | none =>
       match hr : K.rep n with
       | some g => ⟨g, K.rep_passt n g hr⟩
-      | none => absurd (K.voll n f' h' hz) (by rw [hr]; simp)
+      | none => absurd (K.voll n f' h' hz) (by rw [hr]; simp only [Option.isSome_none, Bool.false_eq_true, not_false_eq_true])
 
 variable (K : E.Rueck)
 
@@ -141,7 +141,7 @@ theorem vrel_valZ : ∀ (τ : Ty) (v' : Wert D' (E.tyE τ)), E.VRel K τ (E.valZ
       · rename_i hz
         split
         · rename_i g hr; exact Or.inr ⟨hz, hr⟩
-        · rename_i hr; exact absurd (K.voll n f' h' hz) (by rw [hr]; simp)
+        · rename_i hr; exact absurd (K.voll n f' h' hz) (by rw [hr]; simp only [Option.isSome_none, Bool.false_eq_true, not_false_eq_true])
   | .ptr _ _, _ => rfl
   | .ref _, _ => rfl
   | .arr τ _, v' => fun j => vrel_valZ τ (v' j)
@@ -187,7 +187,7 @@ theorem vrel_frei : ∀ (τ : Ty), τ.zeigerfrei = true → ∀ (v : Wert D τ) 
   | .why _, _, _, _ => Iff.rfl
   | .never, _, _, _ => Iff.rfl
   | .fl _ _, _, _, _ => Iff.rfl
-  | .fnptr _, h, _, _ => absurd h (by simp [Ty.zeigerfrei])
+  | .fnptr _, h, _, _ => absurd h (by simp only [Ty.zeigerfrei, Bool.false_eq_true, not_false_eq_true])
   | .ptr _ _, _, _, _ => Iff.rfl
   | .ref _, _, _, _ => Iff.rfl
   | .arr τ _, h, v, v' => by

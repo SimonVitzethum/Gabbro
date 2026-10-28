@@ -33,7 +33,7 @@ theorem refsWeaker_sound : ∀ {k c : List (Option Nat)}, refsWeaker k c = true 
     simp only [refsWeaker, Bool.and_eq_true, Bool.or_eq_true, Option.isNone_iff_eq_none, beq_iff_eq] at h
     obtain ⟨hxy, hr⟩ := h
     obtain ⟨hl, hs⟩ := refsWeaker_sound hr
-    refine ⟨by simp [hl], ?_⟩
+    refine ⟨by simp only [List.length_cons, hl, Nat.add_left_cancel_iff], ?_⟩
     intro p o hp
     cases p with
     | zero =>
@@ -42,8 +42,8 @@ theorem refsWeaker_sound : ∀ {k c : List (Option Nat)}, refsWeaker k c = true 
       · subst hn; cases hp
       · rw [← he]; exact hp
     | succ p => simpa using hs p o (by simpa using hp)
-  | [], _ :: _, h => by simp [refsWeaker] at h
-  | _ :: _, [], h => by simp [refsWeaker] at h
+  | [], _ :: _, h => by simp only [refsWeaker, Bool.false_eq_true] at h
+  | _ :: _, [], h => by simp only [refsWeaker, Bool.false_eq_true] at h
 
 theorem rights_eq_of_agree {a b : Context} (ha : a.bounded) (hb : b.bounded)
     (h : rightsAgree a b (max a.next b.next) = true) (i : Nat) : a.rights i = b.rights i := by
@@ -78,15 +78,16 @@ theorem refsMeet_weaker : ∀ {a b : List (Option Nat)}, a.length = b.length →
   | x :: xs, y :: ys, h => by
     have ih := refsMeet_weaker (a := xs) (b := ys) (by simpa using h)
     by_cases he : x = y
-    · subst he; simp [refsMeet, refsWeaker, ih.1, ih.2]
-    · simp [refsMeet, refsWeaker, he, ih.1, ih.2]
+    · subst he; simp only [refsMeet, BEq.rfl, ↓reduceIte, refsWeaker, Bool.or_true, ih.1, Bool.and_self, ih.2, and_self]
+    · simp only [refsMeet, beq_iff_eq, he, ↓reduceIte, refsWeaker, Option.isNone_none, Bool.true_or, ih.1,
+  Bool.and_self, ih.2, and_self]
 
 theorem joinB_bounded {a b j : Context} (ha : a.bounded) (hb : b.bounded) (hj : joinB a b = some j) :
     j.bounded := by
   unfold joinB at hj
   split at hj
   · cases hj
-    refine ⟨fun i hi => ha.1 i (by simp at hi; omega), ?_⟩
+    refine ⟨fun i hi => ha.1 i (by simp only at hi; omega), ?_⟩
     intro ref hm i he
     subst he
     obtain ⟨p, hp⟩ := List.mem_iff_getElem?.mp hm
@@ -94,7 +95,7 @@ theorem joinB_bounded {a b j : Context} (ha : a.bounded) (hb : b.bounded) (hj : 
       rename_i hc; simp only [Bool.and_eq_true, beq_iff_eq] at hc; exact hc.2
     have hw := (refsWeaker_sound (refsMeet_weaker hl).1).2 p i hp
     have := ha.2 _ (List.mem_of_getElem? hw) i rfl
-    simp; omega
+    simp only [gt_iff_lt]; omega
   · cases hj
 
 theorem joinB_weaker {a b j : Context} (ha : a.bounded) (hb : b.bounded) (hj : joinB a b = some j) :

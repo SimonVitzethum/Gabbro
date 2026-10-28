@@ -436,10 +436,10 @@ theorem invErhalt_aus_Kontext (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D)
 theorem kette_welt_belegt {α : Type} (w : List α) (k : Nat) (hk : k < w.length) :
     ∃ σ, w[k]? = some σ := by
   induction w generalizing k with
-  | nil => simp at hk
+  | nil => simp only [List.length_nil, Nat.not_lt_zero] at hk
   | cons a as ih =>
     cases k with
-    | zero => exact ⟨a, by simp⟩
+    | zero => exact ⟨a, by simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero]⟩
     | succ k =>
       have hk' : k < as.length := by
         simp only [List.length_cons] at hk
@@ -451,10 +451,10 @@ theorem kette_welt_belegt {α : Type} (w : List α) (k : Nat) (hk : k < w.length
 theorem lt_of_belegt {α : Type} (w : List α) (k : Nat) (σ : α)
     (h : w[k]? = some σ) : k < w.length := by
   induction w generalizing k with
-  | nil => simp at h
+  | nil => simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at h
   | cons a as ih =>
     cases k with
-    | zero => simp
+    | zero => simp only [List.length_cons, Nat.zero_lt_succ]
     | succ k =>
       have h' : as[k]? = some σ := by simpa using h
       have hk := ih k h'

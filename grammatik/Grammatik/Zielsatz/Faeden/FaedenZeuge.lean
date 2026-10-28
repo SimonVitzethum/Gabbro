@@ -79,10 +79,11 @@ theorem schreib_schritt (M : RufMaschineG rufDF) (t : Faden) (stapel : List (Ruf
     refine ⟨(outW M.speicher).spur, ?_, ?_⟩
     · rw [hw]; exact (List.append_nil _).symm
     · intro e he
-      simp [outW, World.schreibSlot, World.lese, World.merke] at he
+      simp only [outW, World.schreibSlot, World.merke, World.lese, List.map_nil, List.nil_append, List.cons_append,
+  List.mem_cons] at he
       rcases he with rfl | he
       · rfl
-      · simp [World.storeSlot, Speicher.welt] at he
+      · simp only [World.storeSlot, Speicher.welt, dite_eq_ite, List.not_mem_nil] at he
   obtain ⟨M', hs, hZ⟩ := w_blatt (P := rufPF) (O := rufOF) (passes := 0) hz
     (leafSF : Stmt rufDF (vertragVon rufDF rufIncF) false _ _ _) restF rufRhoF leafSF_blatt rfl
     (heldLeerF _).heldIn (outW M.speicher) rufRhoF hstep herw
@@ -151,7 +152,8 @@ theorem schreiber_nicht_fertig {M : RufMaschineG rufDF} {t : Faden}
 
 /-- The write leaves an event in the writer's own trace. -/
 theorem outW_spur_ne (sp : Speicher rufDF) : (outW sp).spur ≠ [] := by
-  simp [outW, World.schreibSlot, World.lese, World.merke]
+  simp only [outW, World.schreibSlot, World.merke, World.lese, List.map_nil, List.nil_append, List.cons_append,
+  ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- Slot 0 holds 2 after the write, from any memory. -/
 theorem outW_slot (sp : Speicher rufDF) :
@@ -232,7 +234,8 @@ theorem sj_lauf : ∃ K2 K3 K4 K5 K6 : FadenMaschine rufDF,
   let K4 : FadenMaschine rufDF :=
     ⟨K3.m, K3.lebt, fun t => if t = 0 then [] else K3.wartet t, K3.rang, K3.uhr⟩
   have t4 : FadenSchritt rufPF rufOF 0 K3 K4 :=
-    FadenSchritt.join K3 0 rfl (by simp [K3, K2, sjK1]) hF
+    FadenSchritt.join K3 0 rfl (by simp only [sjK1, List.mem_cons, List.not_mem_nil, or_false, Bool.ite_true_left, Bool.decide_or, ↓reduceIte,
+  ne_eq, reduceCtorEq, not_false_eq_true, K3, K2]) hF
   -- the starter calls
   have hz0 : M3.faeden 0 = rufenderFaden [] (spF.welt [])
       [RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := by
@@ -248,9 +251,10 @@ theorem sj_lauf : ∃ K2 K3 K4 K5 K6 : FadenMaschine rufDF,
     .schritt _ _ (.schritt _ _ (.schritt _ _ (.schritt _ _ (.schritt _ _ (.schritt _ _ .start
       sj_schritt1) t2) t3) t4) t5) t6
   refine ⟨K2, K3, K4, K5, K6, hr, rfl, rfl, rfl, rfl, rfl, rfl,
-    geschrieben_fertig h2f, schreiber_nicht_fertig hz2, ⟨2, by simp [K2, sjK1],
+    geschrieben_fertig h2f, schreiber_nicht_fertig hz2, ⟨2, by simp only [sjK1, List.mem_cons, List.not_mem_nil, or_false, Bool.ite_true_left, Bool.decide_or, ↓reduceIte,
+  Nat.succ_ne_self, or_true, K2],
       schreiber_nicht_fertig hz2⟩, rfl,
-    geschrieben_fertig hf31, geschrieben_fertig h3f, ?_, ?_, t4, by simp [K4], rfl, ?_, ?_, ?_,
+    geschrieben_fertig hf31, geschrieben_fertig h3f, ?_, ?_, t4, by simp only [↓reduceIte, K4], rfl, ?_, ?_, ?_,
     rfl, ?_⟩
   · show (M3.faeden 1).spur ≠ []
     rw [hf31]; exact outW_spur_ne _
@@ -382,7 +386,7 @@ theorem zStart_laufzeit : Laufzeit zStart (speicherR zSp) zsInit where
   start t := by
     unfold zsInit
     split
-    · exact Or.inr ⟨⟨zHaupt, .nil⟩, by simp [zStart], rfl⟩
+    · exact Or.inr ⟨⟨zHaupt, .nil⟩, by simp only [zStart, List.nil_append, List.mem_cons, List.not_mem_nil, or_false], rfl⟩
     · exact Or.inl rfl
   einmal t u _ he := by
     revert he
@@ -447,7 +451,7 @@ theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     (fun L => by
       show Res.held L ∈ ([] : List (Res zD.mitRuhe)) ↔ L ∈ offen (zsK1.m.faeden 1).spur
       rw [hoff]
-      simp) hfrei
+      simp only [List.not_mem_nil]) hfrei
   let K4 : FadenMaschine zD.mitRuhe := ⟨M4, K3.lebt, K3.wartet, K3.rang, K3.uhr⟩
   have t4 : FadenSchritt zPB.mitRuhe zO.mitRuhe 0 K3 K4 := FadenSchritt.lauf K3 1 M4 rfl rfl s4
   have hr : FadenErreichbar zPB.mitRuhe zO.mitRuhe 0 zsK0 K4 :=
@@ -456,7 +460,8 @@ theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     rw [hZ4.1]
     show () ∈ () :: offen (M3.weltVon 1).spur
     exact List.mem_cons_self
-  refine ⟨K2, K3, K4, hr, rfl, rfl, rfl, rfl, s2, s3, s4, hL1, rfl, ⟨2, by simp [K4, K3, K2, zsK1],
+  refine ⟨K2, K3, K4, hr, rfl, rfl, rfl, rfl, s2, s3, s4, hL1, rfl, ⟨2, by simp only [zsK1, List.mem_cons, List.not_mem_nil, or_false, Bool.ite_true_left, Bool.decide_or, ↓reduceIte,
+  Nat.succ_ne_self, or_true, K3, K2, K4],
     fun hF => ?_⟩, ?_⟩
   · -- root 2 stands at its `locks`, not at a return
     have h := hF.2
@@ -496,7 +501,7 @@ theorem zKind_laufzeit : Laufzeit zKind (speicherR zSp) zkInit where
   start t := by
     unfold zkInit
     split
-    · exact Or.inr ⟨⟨zHaupt, .nil⟩, by simp [zKind], rfl⟩
+    · exact Or.inr ⟨⟨zHaupt, .nil⟩, by simp only [zKind, List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false, or_self], rfl⟩
     · exact Or.inl rfl
   einmal t u _ he := by
     revert he
@@ -560,7 +565,7 @@ theorem spawn_kind_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     (fun L => by
       show Res.held L ∈ ([] : List (Res zD.mitRuhe)) ↔ L ∈ offen (zkK1.m.faeden 0).spur
       rw [hoff]
-      simp) hfrei
+      simp only [List.not_mem_nil]) hfrei
   let K4 : FadenMaschine zD.mitRuhe := ⟨M4, K3.lebt, K3.wartet, K3.rang, K3.uhr⟩
   have t4 : FadenSchritt zPB.mitRuhe zO.mitRuhe 0 K3 K4 := FadenSchritt.lauf K3 0 M4 rfl rfl s4
   have hr : FadenErreichbar zPB.mitRuhe zO.mitRuhe 0 zkK0 K4 :=
@@ -631,7 +636,7 @@ theorem start_unter_sperre_kein_schritt {D : Deklaration} {P : Programm D} {O : 
   | start q cs _ _ hfrei _ =>
       by_cases hpq : p = q
       · subst hpq; exact hfrei
-      · exact absurd (by show (if p = q then cs else K.wartet p) = []; simp [hpq, h0]) h1
+      · exact absurd (by show (if p = q then cs else K.wartet p) = []; simp only [hpq, ↓reduceIte, h0]) h1
   | kind => exact absurd h0 h1
   | join q _ _ _ =>
       exact absurd (by show (if p = q then [] else K.wartet p) = []; split <;> simp_all) h1

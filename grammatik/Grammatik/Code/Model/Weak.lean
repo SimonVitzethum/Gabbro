@@ -36,11 +36,11 @@ def Order.toOrdnung : Order → Ordnung
   | .seqc => .freigabe
 
 theorem toOrdnung_entspannt (o : Order) : o.toOrdnung = .entspannt ↔ o = .rlx := by
-  cases o <;> simp [Order.toOrdnung]
+  cases o <;> simp only [Order.toOrdnung, reduceCtorEq]
 
 theorem toOrdnung_freigabe (o : Order) :
     o.toOrdnung = .freigabe ↔ (o = .acq ∨ o = .rel ∨ o = .acrel ∨ o = .seqc) := by
-  cases o <;> simp [Order.toOrdnung]
+  cases o <;> simp only [Order.toOrdnung, reduceCtorEq, or_self, or_false, or_true]
 
 /-- A location of the weak memory: block and byte offset. -/
 abbrev Loc := Nat × Int

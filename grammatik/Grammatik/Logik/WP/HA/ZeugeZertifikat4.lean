@@ -102,7 +102,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .schreibe => 0
   sigNr := fun | 0 => gSig_schreibe | _ => gSig_schreibe
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -272,7 +272,7 @@ theorem lauf (O : Orakel gD) (U : Umwelt gD) (A : AUmwelt gD) (passes : Nat)
     (∀ σ' r, execEndHA (V := vertragVon gD g_schreibe) gS O U A passes R gBody_schreibe σ ρ ≠ .why σ' r) := by
   simp only [gBody_schreibe, execEndHA]
   generalize axiomAntwortSonst O GAx.write _ _ = antwort
-  rcases antwort with ⟨σ', _ | _ | _⟩ <;> simp [EndAusgang.schrumpf]
+  rcases antwort with ⟨σ', _ | _ | _⟩ <;> simp only [ne_eq, reduceCtorEq, not_false_eq_true, implies_true, and_self, EndAusgang.schrumpf]
 
 /-- **The body obligation, as weakest preconditions**, at every budget. -/
 theorem pflicht (passes : Nat) (f : gD.Fn) : PflichtWP gP passes gE.Q gS (GeteiltA gP gE.ws) f := by

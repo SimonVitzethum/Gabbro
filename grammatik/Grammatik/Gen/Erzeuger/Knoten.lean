@@ -253,7 +253,7 @@ theorem findeOder_vollst (V : Vertrag D)
     unfold finde at hf
     obtain ⟨l₁, c, l₂, hc, hfc, _⟩ := List.findSome?_eq_some_iff.1 hf
     have hmem : c ∈ keys.map (CEintrag.neu V gen) := by
-      rw [hc]; simp
+      rw [hc]; simp only [List.mem_append, List.mem_cons, true_or, or_true]
     obtain ⟨k, _, rfl⟩ := List.mem_map.1 hmem
     by_cases h : (CEintrag.neu V gen k).l = l ∧ (CEintrag.neu V gen k).Γ = Γ ∧ (CEintrag.neu V gen k).Λ = Λ
     · rw [dif_pos h] at hfc

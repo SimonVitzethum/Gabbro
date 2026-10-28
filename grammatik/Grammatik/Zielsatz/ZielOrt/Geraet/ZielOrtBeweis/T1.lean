@@ -183,7 +183,7 @@ theorem zErg_gleich_zurueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgan
       obtain ⟨hs, hv⟩ := h
       subst hv
       exact ⟨σ', rfl, hs⟩
-  | _ => simp [zErg, ZErg.gleich] at h
+  | _ => simp only [ZErg.gleich, zErg] at h
 
 theorem gleichAuf_SG {S : List (D.Tab ⊕ D.Glob)} {σ σ' : World D} (h : SG σ σ') :
     GleichAuf S σ σ' :=

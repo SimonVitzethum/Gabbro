@@ -43,12 +43,16 @@ theorem reused_agrees : reusedRights.agrees FA w0 := by
   refine ⟨reused_valid, fun i => ?_⟩
   rw [lebt_w0]
   by_cases hi : i = 0
-  · simp [reusedRights, hi]
+  · simp only [hi, Std.le_refl, Int.reduceLT, ne_eq, Int.reduceEq, not_false_eq_true, and_self, reusedRights,
+  ↓reduceIte, Option.some.injEq, exists_eq']
   · by_cases hj : i = 2
-    · simp [reusedRights, hj]
+    · simp only [hj, Int.zero_le_ofNat, Int.reduceLT, ne_eq, Int.reduceEq, not_false_eq_true, and_self,
+  reusedRights, ↓reduceIte, Option.some.injEq, exists_eq']
     · by_cases hk : i = 3
-      · simp [reusedRights, hk]
-      · simp [reusedRights, hi, hj, hk]
+      · simp only [hk, Int.zero_le_ofNat, Int.reduceLT, ne_eq, Int.reduceEq, not_false_eq_true, and_self,
+  reusedRights, ↓reduceIte, Option.some.injEq, exists_eq']
+      · simp only [ne_eq, reusedRights, hi, ↓reduceIte, hj, hk, reduceCtorEq, exists_false, iff_false, not_and,
+  Decidable.not_not]
         omega
 
 theorem reused_other_owns : reusedRights.owns other ⟨3, 2, 2⟩ := by decide

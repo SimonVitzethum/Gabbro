@@ -132,8 +132,9 @@ theorem tabelle_widerlegt_gilt : tabelle_widerlegt := by
     (rufAusV_ohneVorbedingung (vertraegeOkR_nil ivPschlecht).1) (ivSp.welt []) .nil rfl _ _
     (hrun.trans rfl) () (List.mem_singleton.mpr rfl) rfl
   revert h3
-  simp [InvHaelt, ivPschlecht, ivP, ivInv, ivIdx, ivWert, eval, World.storeSlot, World.merke,
-    World.lese, World.schreibSlot, Zahl.weiter, ivSp, Speicher.welt]
+  simp only [InvHaelt, World.lese, World.merke, World.schreibSlot, World.storeSlot, Speicher.welt, ivSp, ivIdx,
+  ivWert, List.map_append, List.append_nil, eval, Zahl.weiter, List.cons_append, List.nil_append, ivPschlecht, ivP,
+  ivInv, ↓reduceIte, Int.reduceEq, imp_false, Bool.not_eq_true]
   decide
 
 /-! ## 2. Refutations of (a) -/

@@ -287,17 +287,17 @@ theorem nichtschreiber_erhaelt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D
     have hc := hFrameT t ht
     cases c with
     | inl t₀ =>
-      simp at hc
+      simp only [Sum.inl.injEq] at hc
       subst hc
       simp only [TraegerSchreibt] at hN
       exact hN
-    | inr x₀ => simp at hc
+    | inr x₀ => simp only [reduceCtorEq] at hc
   · intro x hx
     have hc := hFrameG x hx
     cases c with
-    | inl t₀ => simp at hc
+    | inl t₀ => simp only [reduceCtorEq] at hc
     | inr x₀ =>
-      simp at hc
+      simp only [Sum.inr.injEq] at hc
       subst hc
       simp only [TraegerSchreibt] at hN
       exact hN
@@ -349,11 +349,11 @@ theorem hinv_kette_aus_disziplin (Nb : Nebeneinander) (J : GemeinsamerLauf (D :=
 theorem kette_belegt_of_mem {α : Type} (w : List α) (σ : α) (h : σ ∈ w) :
     ∃ k : Nat, w[k]? = some σ := by
   induction w with
-  | nil => simp at h
+  | nil => simp only [List.not_mem_nil] at h
   | cons a as ih =>
     simp only [List.mem_cons] at h
     rcases h with rfl | h
-    · exact ⟨0, by simp⟩
+    · exact ⟨0, by simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero]⟩
     · obtain ⟨k, hk⟩ := ih h
       exact ⟨k + 1, by simp only [List.getElem?_cons_succ]; exact hk⟩
 
@@ -362,15 +362,15 @@ theorem kette_belegt_of_mem {α : Type} (w : List α) (σ : α) (h : σ ∈ w) :
 theorem any_of_mem_true (ts : List D.Tab) (P : D.Tab → Bool) (t₀ : D.Tab)
     (hm : t₀ ∈ ts) (hP : P t₀ = true) : ts.any P = true := by
   induction ts with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | cons a as ih =>
     simp only [List.mem_cons] at hm
     simp only [List.any_cons]
     rcases hm with rfl | hm
-    · simp [hP]
+    · simp only [hP, Bool.true_or]
     · cases hPa : P a with
-      | true => simp
-      | false => simp [ih hm]
+      | true => simp only [Bool.true_or]
+      | false => simp only [ih hm, Bool.or_true]
 
 /-- **The watch, discharged for tables.** A writer of table `t₀` holds every guard in
     `t₀`'s watch list: coverage gives an owed invariant over `t₀` (its carrier list hits

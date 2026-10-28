@@ -28,7 +28,7 @@ theorem frei_of {M : RufMaschineG D} {f : Faden} {aktiv : List Faden} {L : D.Loc
     rcases this with e | e
     · exact hg e
     · exact e hL
-  · rw [hruhe g ha] at hL; simp at hL
+  · rw [hruhe g ha] at hL; simp only [List.not_mem_nil] at hL
 
 /-- The unfold of a compound statement at the head of a `dann` block. -/
 def zugDannCons (M : RufMaschineG D) (f : Faden) (aktiv : List Faden)

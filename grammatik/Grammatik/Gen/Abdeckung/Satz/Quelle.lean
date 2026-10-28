@@ -41,9 +41,9 @@ theorem einsatz_4 (e : Einsatz) {a b : Bool} (h : e.Hat ⟨4, 0, true, [a, b]⟩
   have hs := e.hS L c
   cases h1 : istIn (e.S.orte L) c
   · have : c ∉ e.S.orte L := fun hc => by rw [← istIn_iff, h1] at hc; cases hc
-    simp [hs.not.1 this]
+    simp only [hs.not.1 this, decide_false]
   · have : c ∈ e.S.orte L := istIn_iff.1 h1
-    simp [hs.1 this]
+    simp only [hs.1 this, decide_true]
 
 /-- **No foreign body**: an answer cell whose second atom holds names a foreign body, and a program of the source has
     none. -/
@@ -55,6 +55,6 @@ theorem einsatz_8_ax (e : Einsatz) {a c : Bool} (h : e.Hat ⟨8, 0, true, [a, tr
   obtain ⟨_, _, x, _, -, -, -, -, hb, -⟩ := h0
   cases x with
   | inl ax => exact e.keinAx ax
-  | inr _ => simp at hb
+  | inr _ => simp only [Bool.false_eq_true] at hb
 
 end Gabbro.Grammatik.Gen

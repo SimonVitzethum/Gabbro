@@ -51,7 +51,7 @@ theorem zwei_fehler (o : Ausgang V l Γ) :
     (∃ σ ρ, o = .ok σ ρ) ∨ (∃ σ v, o = .zurueck σ v) ∨ (∃ σ r, o = .why σ r) ∨
     (∃ h σ ρ, o = .leave h σ ρ) ∨ (∃ h σ ρ, o = .next h σ ρ) ∨
     (∃ e : Logik D, o = .logik e) ∨ (∃ e : Hardware D, o = .hardware e) := by
-  cases o <;> simp <;> assumption
+  cases o <;> simp only [Ausgang.ok.injEq, exists_and_left, exists_eq', and_true, reduceCtorEq, exists_false, or_self, or_false, Ausgang.zurueck.injEq, or_true, Ausgang.why.injEq, Ausgang.leave.injEq, exists_prop, false_or, Ausgang.next.injEq, Ausgang.logik.injEq, Ausgang.hardware.injEq] <;> assumption
 
 /-- Und die Bedeutung ist TOTAL: zu jedem Satz der Grammatik, jeder Welt, jeder Belegung
     gibt es den Ausgang -- `exec` ist eine Funktion. (Der Beweis ist, dass sie eine ist.) -/
@@ -208,8 +208,8 @@ theorem Rahmen.trans {W : D.Tab → Bool} {G : D.Glob → Bool} {a b c : World D
 theorem Rahmen.weiter {W W' : D.Tab → Bool} {G G' : D.Glob → Bool} {a b : World D}
     (hW : ∀ t, W t = true → W' t = true) (hG : ∀ g, G g = true → G' g = true)
     (h : Rahmen W G a b) : Rahmen W' G' a b :=
-  ⟨fun t ht k f => h.1 t (by cases hw : W t; rfl; exact absurd (hW t hw) (by simp [ht])) k f,
-   fun g hg => h.2 g (by cases hg' : G g; rfl; exact absurd (hG g hg') (by simp [hg]))⟩
+  ⟨fun t ht k f => h.1 t (by cases hw : W t; rfl; exact absurd (hW t hw) (by simp only [ht, Bool.false_eq_true, not_false_eq_true])) k f,
+   fun g hg => h.2 g (by cases hg' : G g; rfl; exact absurd (hG g hg') (by simp only [hg, Bool.false_eq_true, not_false_eq_true]))⟩
 
 /-- Die Sperren, die ein statisches `Λ` nennt, sind dynamisch gehalten. -/
 def HeldIn (Λ : List (Res D)) (h : List D.Lock) : Prop := ∀ L, Res.held L ∈ Λ → L ∈ h
@@ -284,13 +284,13 @@ def Konsistent (s : List (Ereignis D)) : Prop :=
   ∀ (n : Nat) (e : Ereignis D), s[n]? = some e → e.passt (s.drop (n + 1))
 
 theorem konsistent_nil : Konsistent ([] : List (Ereignis D)) := by
-  unfold Konsistent; intro n e h; simp at h
+  unfold Konsistent; intro n e h; simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at h
 
 theorem konsistent_cons {e : Ereignis D} {s : List (Ereignis D)} (he : e.passt s) (hs : Konsistent s) :
     Konsistent (e :: s) := by
   unfold Konsistent; intro n e' h
   cases n with
-  | zero => simp at h; subst h; exact he
+  | zero => simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq] at h; subst h; exact he
   | succ n => simp only [List.getElem?_cons_succ] at h; exact hs n e' h
 
 /-- Von `σ` nach `σ'`: die offenen Sperren sind dieselben (jedes `locks` ist geschlossen), jedes
@@ -317,7 +317,7 @@ theorem Brav.konsistent_von_leer {a b : World D} (h : Brav a b) (hempty : a.spur
 theorem Brav.gut_von_leer {a b : World D} (h : Brav a b) (hempty : a.spur = [])
     {e : Ereignis D} (he : e ∈ b.spur) : e.gut := by
   rcases h.2.1 e he with hmem | hg
-  · rw [hempty] at hmem; simp at hmem
+  · rw [hempty] at hmem; simp only [List.not_mem_nil] at hmem
   · exact hg
 
 /-- Konsistenz ueberlebt das Vergessen der aeltesten Ereignisse: der Kopf einer
@@ -381,7 +381,7 @@ theorem offen_append_zugriffe (h : List D.Lock) : ∀ (es s : List (Ereignis D))
       intro s hz
       have he := hz e List.mem_cons_self
       have ih' := ih s (fun e' he' => hz e' (List.mem_cons_of_mem _ he'))
-      cases e <;> simp [Ereignis.zugriffMit] at he <;> simp [offen, ih']
+      cases e <;> simp only [Ereignis.zugriffMit] at he <;> simp only [List.cons_append, offen, ih']
 
 /-- Reading preserves the held locks: `lese` only prefixes `zugriff`
     events, which `offen` ignores. -/
@@ -392,7 +392,7 @@ theorem lese_haelt (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.
       | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur) = offen σ.spur
   exact offen_append_zugriffe σ.haelt _ _ (fun e he => by
     obtain ⟨o, _, rfl⟩ := List.mem_map.mp he
-    cases o <;> simp [Ereignis.zugriffMit])
+    cases o <;> simp only [Ereignis.zugriffMit])
 
 theorem konsistent_merke (h : List D.Lock) : ∀ (es s : List (Ereignis D)),
     (∀ e ∈ es, e.zugriffMit h) → h = offen s → Konsistent s → Konsistent (es ++ s) := by
@@ -405,8 +405,8 @@ theorem konsistent_merke (h : List D.Lock) : ∀ (es s : List (Ereignis D)),
       have hrest : ∀ e' ∈ es, e'.zugriffMit h := fun e' he' => hz e' (List.mem_cons_of_mem _ he')
       simp only [List.cons_append]
       apply konsistent_cons _ (ih s hrest hh hs)
-      cases e <;> simp [Ereignis.zugriffMit] at he <;>
-        simp [Ereignis.passt, offen_append_zugriffe h es s hrest, he, hh]
+      cases e <;> simp only [Ereignis.zugriffMit] at he <;>
+        simp only [Ereignis.passt, he, hh, offen_append_zugriffe h es s hrest]
 
 theorem gut_merke {W G} (σ : World D) (es : List (Ereignis D)) (hz : ∀ e ∈ es, e.zugriffMit σ.haelt)
     (h : ∀ e ∈ es, e.gut) : Gut W G σ (σ.merke es) :=
@@ -432,7 +432,7 @@ theorem gut_lese {W G} (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab �
   · intro e he
     simp only [List.mem_map] at he
     obtain ⟨o, _, rfl⟩ := he
-    cases o <;> simp [Ereignis.zugriffMit]
+    cases o <;> simp only [Ereignis.zugriffMit]
   · intro e he
     simp only [List.mem_map] at he
     obtain ⟨o, ho', rfl⟩ := he
@@ -443,11 +443,11 @@ theorem gut_lese {W G} (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab �
 theorem storeSlot_andere (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f))
     (t' : D.Tab) (ht : t' ≠ t) (k' : Int) (f' : D.Feld t') :
     (σ.storeSlot t k f v).slots t' k' f' = σ.slots t' k' f' := by
-  simp [World.storeSlot, ht]
+  simp only [World.storeSlot, ht, ↓reduceDIte]
 
 theorem storeGlob_andere (σ : World D) (g : D.Glob) (v : Wert D (D.gtyp g)) (g' : D.Glob) (hg : g' ≠ g) :
     (σ.storeGlob g v).globs g' = σ.globs g' := by
-  simp [World.storeGlob, hg]
+  simp only [World.storeGlob, hg, ↓reduceDIte]
 
 theorem rahmen_storeSlot (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (t : D.Tab)
     (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) (hw : W t = true) :
@@ -466,14 +466,14 @@ theorem gut_schreibSlot {W G} (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k 
     (v : Wert D (D.typ t f)) (hw : W t = true) (hL : darf D t Λ) (hh : HeldIn Λ σ.haelt) :
     Gut W G σ (σ.schreibSlot t Λ k f v) :=
   Gut.trans ⟨rahmen_storeSlot W G σ t k f v hw, rfl, fun e he => .inl he, id⟩
-    (gut_merke _ _ (by intro e he; simp at he; subst he; simp [Ereignis.zugriffMit]; rfl)
-      (by intro e he; simp at he; subst he; exact ⟨hL, hh⟩))
+    (gut_merke _ _ (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; simp only [Ereignis.zugriffMit]; rfl)
+      (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; exact ⟨hL, hh⟩))
 
 theorem gut_schreibGlob {W G} (σ : World D) (g : D.Glob) (Λ : List (Res D)) (v : Wert D (D.gtyp g))
     (hg : G g = true) (hL : gdarf D g Λ) (hh : HeldIn Λ σ.haelt) : Gut W G σ (σ.schreibGlob g Λ v) :=
   Gut.trans ⟨rahmen_storeGlob W G σ g v hg, rfl, fun e he => .inl he, id⟩
-    (gut_merke _ _ (by intro e he; simp at he; subst he; simp [Ereignis.zugriffMit]; rfl)
-      (by intro e he; simp at he; subst he; exact ⟨hL, hh⟩))
+    (gut_merke _ _ (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; simp only [Ereignis.zugriffMit]; rfl)
+      (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; exact ⟨hL, hh⟩))
 
 theorem gut_schreibBytes {W G} (σ : World D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
     (Λ : List (Res D)) (hw : W t = true) (hL : darf D t Λ) :

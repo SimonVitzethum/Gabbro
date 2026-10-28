@@ -103,7 +103,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .aendern => 0 | .getrennt => 1
   sigNr := fun | 0 => sigAendern | 1 => sigGetrennt | _ => sigAendern
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -119,7 +119,7 @@ abbrev gD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by cases t <;> simp at h
+  geteilt_bewacht := fun t h => by cases t <;> simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 

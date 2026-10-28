@@ -53,12 +53,12 @@ theorem varOfAll_varIdx {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
     varOfAll Γ (varIdx x) = some ⟨τ, x⟩ := by
   induction x with
   | here => rfl
-  | there x ih => simp [varIdx, varOfAll, ih]
+  | there x ih => simp only [varIdx, varOfAll, ih]
 
 /-- Roundtrip at int type, behind the projection. -/
 theorem varOf_varIdx {Γ : Ctx} {lo hi : Int} (x : Var Γ (.int lo hi)) :
     varOf Γ (varIdx x) = some ⟨lo, hi, x⟩ := by
-  simp [varOf, varOfAll_varIdx x]
+  simp only [varOf, varOfAll_varIdx x]
 
 /-- The rebuilt variable reads back through the range table: `varOfAll`
     at int type IS the `ctxTyp` lookup. Every premise is used (`Γ` by
@@ -69,7 +69,7 @@ theorem varOfAll_ctxTyp {Γ : Ctx} {k : Nat} {lo hi : Int} {x : Var Γ (.int lo 
   induction Γ with
   | nil =>
     intro k x h
-    cases k <;> simp [varOfAll] at h
+    cases k <;> simp only [varOfAll, reduceCtorEq] at h
   | cons τ Γ ih =>
     intro k x h
     cases k with
@@ -81,7 +81,7 @@ theorem varOfAll_ctxTyp {Γ : Ctx} {k : Nat} {lo hi : Int} {x : Var Γ (.int lo 
     | succ k =>
       simp only [varOfAll] at h
       cases hsub : varOfAll Γ k with
-      | none => simp [hsub] at h
+      | none => simp only [hsub, reduceCtorEq] at h
       | some w =>
         obtain ⟨τw, xw⟩ := w
         simp only [hsub, Option.some.injEq, Sigma.mk.injEq] at h
@@ -273,212 +273,212 @@ theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty
     | some c => elabInt c = some ⟨τ, e⟩
     | none => True
   | .lit n => rfl
-  | .var x => by simp [printInt, elabInt, varOfAll_varIdx x]
-  | .glob g hL => by simp [printInt, elabInt, hL]
+  | .var x => by simp only [printInt, elabInt, varOfAll_varIdx x]
+  | .glob g hL => by simp only [printInt, elabInt, hL, ↓reduceDIte]
   | .slot t f i hL => by
     have ihi := print_elab_all i
     cases hi : printInt i with
-    | none => simp [printInt, hi]
+    | none => simp only [printInt, hi, Option.map_none]
     | some ci =>
       have ihi' : elabInt ci = some ⟨_, i⟩ := by rw [hi] at ihi; exact ihi
-      simp [printInt, hi, elabInt, ihi', hL]
+      simp only [printInt, hi, Option.map_some, elabInt, ihi', hL, and_self, ↓reduceDIte, eq_mp_eq_cast, cast_eq]
   | .widen h1 h2 e => by
     have ihe := print_elab_all e
     cases he : printInt e with
-    | none => simp [printInt, he]
+    | none => simp only [printInt, he, Option.map_none]
     | some ce =>
       have ihe' : elabInt ce = some ⟨_, e⟩ := by rw [he] at ihe; exact ihe
-      simp [printInt, he, elabInt, ihe', h1, h2]
+      simp only [printInt, he, Option.map_some, elabInt, ihe', h1, h2, and_self, ↓reduceDIte]
   | .add a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb']
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb']
   | .sub a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb']
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb']
   | .neg a => by
     have iha := print_elab_all a
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.map_none]
     | some ca =>
       have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
-      simp [printInt, ha, elabInt, iha']
+      simp only [printInt, ha, Option.map_some, elabInt, iha']
   | .mul a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb']
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb']
   | .div h0 h1' a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h1']
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb', h0, h1', and_self, ↓reduceDIte]
   | .rem h0 h1' a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h1']
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb', h0, h1', and_self, ↓reduceDIte]
   | .sdiv hb a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb2 : printInt b with
-      | none => simp [printInt, ha, hb2]
+      | none => simp only [printInt, ha, hb2, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb2] at ihb; exact ihb
-        simp [printInt, ha, hb2, elabInt, iha', ihb', hb]
+        simp only [printInt, ha, hb2, Option.bind_some, elabInt, iha', ihb', Int.reduceNeg, hb, ↓reduceDIte]
   | .srem hb a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb2 : printInt b with
-      | none => simp [printInt, ha, hb2]
+      | none => simp only [printInt, ha, hb2, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb2] at ihb; exact ihb
-        simp [printInt, ha, hb2, elabInt, iha', ihb', hb]
+        simp only [printInt, ha, hb2, Option.bind_some, elabInt, iha', ihb', Int.reduceNeg, hb, ↓reduceDIte]
   | .band h0 h0' a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h0']
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb', h0, h0', and_self, ↓reduceDIte]
   | .bor w h0 h0' hw1 hw2 a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h0', hw1, hw2]
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb', h0, h0', hw1, hw2, and_self, ↓reduceDIte]
   | .bxor w h0 h0' hw1 hw2 a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb', h0, h0', hw1, hw2]
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb', h0, h0', hw1, hw2, and_self, ↓reduceDIte]
   | .shl w hw1 hw2 h0 h0' a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb', hw1, hw2, h0, h0']
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb', h0, h0', hw1, hw2, and_self, ↓reduceDIte]
   | .shr w hw1 hw2 h0 h0' a b => by
     have iha := print_elab_all a
     have ihb := print_elab_all b
     cases ha : printInt a with
-    | none => simp [printInt, ha]
+    | none => simp only [printInt, ha, Option.bind_none]
     | some ca =>
       cases hb : printInt b with
-      | none => simp [printInt, ha, hb]
+      | none => simp only [printInt, ha, hb, Option.bind_none, Option.bind_fun_none]
       | some cb =>
         have iha' : elabInt ca = some ⟨_, a⟩ := by rw [ha] at iha; exact iha
         have ihb' : elabInt cb = some ⟨_, b⟩ := by rw [hb] at ihb; exact ihb
-        simp [printInt, ha, hb, elabInt, iha', ihb', hw1, hw2, h0, h0']
-  | .tru => by simp [printInt]
-  | .fls => by simp [printInt]
-  | .thru _ _ _ _ _ _ => by simp [printInt]
-  | .ptrOf _ _ _ _ => by simp [printInt]
-  | .refEq _ _ => by simp [printInt]
-  | .slotRef _ _ _ _ _ _ => by simp [printInt]
-  | .fnref _ _ _ => by simp [printInt]
-  | .oldG _ _ => by simp [printInt]
-  | .oldS _ _ _ _ => by simp [printInt]
-  | .getBytes _ _ _ _ _ _ _ _ => by simp [printInt]
-  | .lt _ _ => by simp [printInt]
-  | .le _ _ => by simp [printInt]
-  | .eq _ _ => by simp [printInt]
-  | .fllt _ _ => by simp [printInt]
-  | .flle _ _ => by simp [printInt]
-  | .and _ _ => by simp [printInt]
-  | .or _ _ => by simp [printInt]
-  | .not _ => by simp [printInt]
-  | .none _ => by simp [printInt]
-  | .some _ => by simp [printInt]
-  | .istSome _ => by simp [printInt]
-  | .case _ _ _ => by simp [printInt]
-  | .why _ _ => by simp [printInt]
-  | .forallSlots _ _ _ => by simp [printInt]
-  | .existsSlots _ _ _ => by simp [printInt]
-  | .reaches _ _ _ _ _ _ => by simp [printInt]
-  | .arrNil => by simp [printInt]
-  | .arrCons _ _ => by simp [printInt]
-  | .arrGet _ _ => by simp [printInt]
-  | .arrSet _ _ _ => by simp [printInt]
-  | .strLit _ _ => by simp [printInt]
-  | .strLen _ => by simp [printInt]
-  | .strCat _ _ => by simp [printInt]
-  | .strGet _ _ => by simp [printInt]
-  | .strEq _ _ => by simp [printInt]
-  | .strLt _ _ => by simp [printInt]
-  | .strWeit _ _ => by simp [printInt]
-  | .wenn _ _ _ => by simp [printInt]
-  | .eng _ _ _ _ => by simp [printInt]
+        simp only [printInt, ha, hb, Option.bind_some, elabInt, iha', ihb', h0, h0', hw1, hw2, and_self, ↓reduceDIte]
+  | .tru => by simp only [printInt]
+  | .fls => by simp only [printInt]
+  | .thru _ _ _ _ _ _ => by simp only [printInt]
+  | .ptrOf _ _ _ _ => by simp only [printInt]
+  | .refEq _ _ => by simp only [printInt]
+  | .slotRef _ _ _ _ _ _ => by simp only [printInt]
+  | .fnref _ _ _ => by simp only [printInt]
+  | .oldG _ _ => by simp only [printInt]
+  | .oldS _ _ _ _ => by simp only [printInt]
+  | .getBytes _ _ _ _ _ _ _ _ => by simp only [printInt]
+  | .lt _ _ => by simp only [printInt]
+  | .le _ _ => by simp only [printInt]
+  | .eq _ _ => by simp only [printInt]
+  | .fllt _ _ => by simp only [printInt]
+  | .flle _ _ => by simp only [printInt]
+  | .and _ _ => by simp only [printInt]
+  | .or _ _ => by simp only [printInt]
+  | .not _ => by simp only [printInt]
+  | .none _ => by simp only [printInt]
+  | .some _ => by simp only [printInt]
+  | .istSome _ => by simp only [printInt]
+  | .case _ _ _ => by simp only [printInt]
+  | .why _ _ => by simp only [printInt]
+  | .forallSlots _ _ _ => by simp only [printInt]
+  | .existsSlots _ _ _ => by simp only [printInt]
+  | .reaches _ _ _ _ _ _ => by simp only [printInt]
+  | .arrNil => by simp only [printInt]
+  | .arrCons _ _ => by simp only [printInt]
+  | .arrGet _ _ => by simp only [printInt]
+  | .arrSet _ _ _ => by simp only [printInt]
+  | .strLit _ _ => by simp only [printInt]
+  | .strLen _ => by simp only [printInt]
+  | .strCat _ _ => by simp only [printInt]
+  | .strGet _ _ => by simp only [printInt]
+  | .strEq _ _ => by simp only [printInt]
+  | .strLt _ _ => by simp only [printInt]
+  | .strWeit _ _ => by simp only [printInt]
+  | .wenn _ _ _ => by simp only [printInt]
+  | .eng _ _ _ _ => by simp only [printInt]
 
 /-- Term identity at int type: the task's proposed shape
     (`print_elab (e : CheckedExpr) : elab (print e) = some e`).
@@ -512,7 +512,7 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | var k =>
     simp only [elabInt] at h
     cases hvar : varOfAll Γ k with
-    | none => simp [hvar] at h
+    | none => simp only [hvar, reduceCtorEq] at h
     | some w =>
       obtain ⟨τw, xw⟩ := w
       simp only [hvar, Option.some.injEq, Sigma.mk.injEq] at h
@@ -527,18 +527,18 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
       rw [h'] at h
       have hg : D.gtyp g = .int lo hi := congrArg Sigma.fst (Option.some.inj h)
       show certRange D Γ Λ (.glob g) = some (lo, hi)
-      simp [certRange, hg, hc, intVonTyp]
+      simp only [certRange, intVonTyp, hg, hc, ↓reduceIte]
     · have h' : elabInt (D := D) (Γ := Γ) (Λ := Λ) (.glob g) = none := by
         simp only [elabInt, dif_neg hc]
       rw [h'] at h
-      simp at h
+      simp only [reduceCtorEq] at h
   | add a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -551,18 +551,18 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
             have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
             have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
             show certRange D Γ Λ (.add a b) = some (l1 + l2, h1 + h2)
-            simp [certRange, ra, rb]
+            simp only [certRange, ra, rb]
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | sub a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -575,14 +575,14 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
             have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
             have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
             show certRange D Γ Λ (.sub a b) = some (l1 - h2, h1 - l2)
-            simp [certRange, ra, rb]
+            simp only [certRange, ra, rb]
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | neg a iha =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases τa with
@@ -591,16 +591,16 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         obtain ⟨⟨rfl, rfl⟩, -⟩ := h
         have ra : certRange D Γ Λ a = some (l, hh) := iha ha1
         show certRange D Γ Λ (.neg a) = some (-hh, -l)
-        simp [certRange, ra]
+        simp only [certRange, ra]
       | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-        simp [elabInt, ha1] at h
+        simp only [elabInt, ha1, reduceCtorEq] at h
   | mul a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -615,18 +615,18 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
             show certRange D Γ Λ (.mul a b) =
               some (imin (imin (l1 * l2) (l1 * h2)) (imin (h1 * l2) (h1 * h2)),
                 imax (imax (l1 * l2) (l1 * h2)) (imax (h1 * l2) (h1 * h2)))
-            simp [certRange, ra, rb]
+            simp only [certRange, ra, rb]
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | div a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -641,20 +641,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.div a b) = some (0, h1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | rem a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -669,20 +669,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.rem a b) = some (0, h2 - 1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | sdiv a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -698,20 +698,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.sdiv a b) =
                 some (-(betragMax l1 h1), betragMax l1 h1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, Int.reduceNeg, hc, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | srem a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -727,20 +727,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.srem a b) =
                 some (-(betragMax l2 h2 - 1), betragMax l2 h2 - 1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, Int.reduceNeg, hc, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | band a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -755,20 +755,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.band a b) = some (0, h1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | bor w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -783,20 +783,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.bor w a b) = some (0, 2 ^ w - 1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | bxor w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -811,20 +811,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.bxor w a b) = some (0, 2 ^ w - 1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | shl w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -839,20 +839,20 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.shl w a b) = some (0, h1 * 2 ^ h2.toNat)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | shr w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases hb1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) b with
-      | none => simp [elabInt, ha1, hb1] at h
+      | none => simp only [elabInt, ha1, hb1, reduceCtorEq] at h
       | some vb =>
         obtain ⟨τb, eb⟩ := vb
         cases τa with
@@ -867,16 +867,16 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               have ra : certRange D Γ Λ a = some (l1, h1) := iha ha1
               have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
               show certRange D Γ Λ (.shr w a b) = some (0, h1)
-              simp [certRange, ra, rb, hc]
+              simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
-              simp at h
+              simp only [reduceCtorEq] at h
           | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-            simp [elabInt, ha1, hb1] at h
+            simp only [elabInt, ha1, hb1, reduceCtorEq] at h
         | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-          simp [elabInt, ha1, hb1] at h
+          simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | wide lo' hi' a iha =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
-    | none => simp [elabInt, ha1] at h
+    | none => simp only [elabInt, ha1, reduceCtorEq] at h
     | some va =>
       obtain ⟨τa, ea⟩ := va
       cases τa with
@@ -888,14 +888,14 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨⟨rfl, rfl⟩, -⟩ := h
           have ra : certRange D Γ Λ a = some (l, hh) := iha ha1
           show certRange D Γ Λ (.wide lo' hi' a) = some (lo', hi')
-          simp [certRange, ra, hc]
+          simp only [certRange, ra, hc, and_self, ↓reduceIte]
         · simp only [dif_neg hc] at h
-          simp at h
+          simp only [reduceCtorEq] at h
       | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-        simp [elabInt, ha1] at h
+        simp only [elabInt, ha1, reduceCtorEq] at h
   | slot t f i ihi =>
     cases hi1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) i with
-    | none => simp [elabInt, hi1] at h
+    | none => simp only [elabInt, hi1, reduceCtorEq] at h
     | some w =>
       obtain ⟨τw, eiw⟩ := w
       cases τw with
@@ -907,11 +907,11 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           obtain ⟨rfl, rfl, hL⟩ := hc
           have ri : certRange D Γ Λ i = some (0, D.count t - 1) := ihi hi1
           show certRange D Γ Λ (.slot t f i) = some (lo, hi)
-          simp [certRange, ri, hg, hL, intVonTyp]
+          simp only [certRange, ri, intVonTyp, hg, hL, and_self, ↓reduceIte]
         · simp only [dif_neg hc] at h
-          simp at h
+          simp only [reduceCtorEq] at h
       | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
-        simp [elabInt, hi1] at h
+        simp only [elabInt, hi1, reduceCtorEq] at h
 
 /-- Witness for `print_elab_all` (rule 13): joint instantiation on the
     reference fixture -- a checked int expression (`refHundert`, the

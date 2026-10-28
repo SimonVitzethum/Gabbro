@@ -24,7 +24,8 @@ theorem eimer_spec (bucket : List α) (a : List α × List κ) :
     (∃ neu, r.1 = a.1 ++ neu) ∧ (∀ x ∈ a.2, x ∈ r.2) ∧ (∀ x ∈ r.2, x ∈ a.2 ∨ ∃ b ∈ r.1, key b = x) ∧
       (∀ b ∈ bucket, aus b = false → key b ∈ r.2) := by
   induction bucket generalizing a with
-  | nil => exact ⟨⟨[], by simp [entdoppeltEimer]⟩, fun x hx => hx, fun x hx => Or.inl hx, fun b hb => by cases hb⟩
+  | nil => exact ⟨⟨[], by simp only [entdoppeltEimer, List.contains_eq_mem, Bool.or_eq_true, decide_eq_true_eq, List.foldl_nil,
+  List.append_nil]⟩, fun x hx => hx, fun x hx => Or.inl hx, fun b hb => by cases hb⟩
   | cons b rest ih =>
     simp only [entdoppeltEimer, List.foldl_cons] at ih ⊢
     split
@@ -42,11 +43,12 @@ theorem eimer_spec (bucket : List α) (a : List α × List κ) :
         rcases h3 x hx with hx | ⟨b', hb', hk⟩
         · rcases List.mem_append.1 hx with hx | hx
           · exact Or.inl hx
-          · right; exact ⟨b, by rw [hn]; simp, (List.mem_singleton.1 hx).symm⟩
+          · right; exact ⟨b, by rw [hn]; simp only [List.append_assoc, List.cons_append, List.nil_append, List.mem_append, List.mem_cons, true_or,
+  or_true], (List.mem_singleton.1 hx).symm⟩
         · exact Or.inr ⟨b', hb', hk⟩
       · intro b' hb' ha
         rcases List.mem_cons.1 hb' with rfl | hb'
-        · exact h2 _ (by simp)
+        · exact h2 _ (by simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_true])
         · exact h4 b' hb' ha
 
 /-- A kept item was kept before or is an item of the bucket that is not dropped. -/
@@ -80,7 +82,7 @@ theorem aussen_spec (B : List (List α)) (acc : List (List α)) (seen : List κ)
       ∀ j < B.length, ∀ e ∈ B.getD j [], aus e = false →
         ∃ k ≤ acc.length + j, ∃ b ∈ r.1.getD k [], key b = key e := by
   induction B generalizing acc seen with
-  | nil => exact ⟨⟨[], by simp, rfl⟩, fun j hj => by simp at hj⟩
+  | nil => exact ⟨⟨[], by simp only [List.foldl_nil, List.append_nil], rfl⟩, fun j hj => by simp only [List.length_nil, Nat.not_lt_zero] at hj⟩
   | cons bucket B ih =>
     dsimp only [List.foldl_cons]
     obtain ⟨⟨neu, hn⟩, _, h3, h4⟩ := eimer_spec key aus bucket ([], seen)
@@ -90,23 +92,25 @@ theorem aussen_spec (B : List (List α)) (acc : List (List α)) (seen : List κ)
       intro x hx
       rcases h3 x hx with hx | ⟨b, hb, hk⟩
       · obtain ⟨k, hk, b, hb, hkb⟩ := hI x hx
-        refine ⟨k, by simp; omega, b, ?_, hkb⟩
+        refine ⟨k, by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega, b, ?_, hkb⟩
         rw [List.getD_eq_getElem?_getD, List.getElem?_append_left hk, ← List.getD_eq_getElem?_getD]
         exact hb
-      · refine ⟨acc.length, by simp, b, ?_, hk⟩
-        simp [List.getD_eq_getElem?_getD, hb]
+      · refine ⟨acc.length, by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one], b, ?_, hk⟩
+        simp only [List.getD_eq_getElem?_getD, List.length_append, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero,
+  Option.getD_some, hb]
     obtain ⟨⟨rest, hrest, hlen⟩, hj⟩ := ih (acc ++ [r0.1]) r0.2 hI'
-    refine ⟨⟨[r0.1] ++ rest, by rw [hrest, List.append_assoc], by simp [hlen]⟩, ?_⟩
+    refine ⟨⟨[r0.1] ++ rest, by rw [hrest, List.append_assoc], by simp only [List.cons_append, List.nil_append, List.length_cons, hlen, Nat.add_left_cancel_iff]⟩, ?_⟩
     intro j hjl e he ha
     match j, hjl, he with
     | 0, _, he =>
       obtain ⟨k, hk, b, hb, hkb⟩ := hI' (key e) (h4 e (by simpa using he) ha)
-      refine ⟨k, by simp at hk; omega, b, ?_, hkb⟩
+      refine ⟨k, by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add] at hk; omega, b, ?_, hkb⟩
       rw [hrest, List.getD_eq_getElem?_getD, List.getElem?_append_left hk, ← List.getD_eq_getElem?_getD]
       exact hb
     | j + 1, hjl, he =>
-      obtain ⟨k, hk, b, hb, hkb⟩ := hj j (by simp at hjl; omega) e (by simpa using he) ha
-      exact ⟨k, by simp at hk; omega, b, hb, hkb⟩
+      obtain ⟨k, hk, b, hb, hkb⟩ := hj j (by simp only [List.length_cons, Nat.add_lt_add_iff_right] at hjl; omega) e (by simpa using he) ha
+      exact ⟨k, by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add] at hk; omega, b, hb, hkb⟩
 
 /-- **Completeness of the de-duplication**: an item of bucket `j` that is not dropped has a representative with the
     same key in a bucket at most `j`. -/

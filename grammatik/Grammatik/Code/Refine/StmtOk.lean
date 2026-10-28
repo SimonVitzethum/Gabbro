@@ -44,14 +44,14 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp only [lowerS] at h
       have hs : supp (D.gtyp g) = true := by
         cases hbb : supp (D.gtyp g)
-        · simp [hbb] at h
+        · simp only [hbb, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
         · rfl
       simp only [hs, if_true] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hst : storeTo (D.gtyp g) oe r1 (.glob (lay.ggblk g)) with _ | ⟨cs, r2⟩
-      · simp [hst] at h
+      · simp only [hst, reduceCtorEq] at h
       simp only [hst] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -107,21 +107,21 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp only [lowerS] at h
       have hs : supp (D.typ t f) = true := by
         cases hbb : supp (D.typ t f)
-        · simp [hbb] at h
+        · simp only [hbb, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
         · rfl
       simp only [hs, if_true] at h
       rcases hi : lowerE lay cenv i st.r with _ | ⟨ci, oi, r1⟩
-      · simp [hi] at h
+      · simp only [hi, reduceCtorEq] at h
       simp only [hi] at h
       rcases he : lowerE lay cenv e r1 with _ | ⟨ce, oe, r2⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hsa : slotAddr lay t f (.glob (lay.gblk t)) (.int 0 (D.count t - 1)) oi r2 with
         _ | ⟨ca, oa, r3⟩
-      · simp [hsa] at h
+      · simp only [hsa, reduceCtorEq] at h
       simp only [hsa] at h
       rcases hst : storeTo (D.typ t f) oe r3 oa with _ | ⟨cs, r4⟩
-      · simp [hst] at h
+      · simp only [hst, reduceCtorEq] at h
       simp only [hst] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -183,23 +183,23 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp only [lowerS] at h
       have hs : supp (D.typ t f) = true := by
         cases hbb : supp (D.typ t f)
-        · simp [hbb] at h
+        · simp only [hbb, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
         · rfl
       simp only [hs, if_true] at h
       rcases hp : lowerE lay cenv p st.r with _ | ⟨cp, op, r1⟩
-      · simp [hp] at h
+      · simp only [hp, reduceCtorEq] at h
       simp only [hp] at h
       rcases hi : lowerE lay cenv i r1 with _ | ⟨ci, oi, r2⟩
-      · simp [hi] at h
+      · simp only [hi, reduceCtorEq] at h
       simp only [hi] at h
       rcases he : lowerE lay cenv e r2 with _ | ⟨ce, oe, r3⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hsa : slotAddr lay t f op (.int 0 (D.count t - 1)) oi r3 with _ | ⟨ca, oa, r4⟩
-      · simp [hsa] at h
+      · simp only [hsa, reduceCtorEq] at h
       simp only [hsa] at h
       rcases hst : storeTo (D.typ t f) oe r4 oa with _ | ⟨cs, r5⟩
-      · simp [hst] at h
+      · simp only [hst, reduceCtorEq] at h
       simp only [hst] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -233,7 +233,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
         have h1 : op.ev rsA = op.ev rsP := ev_agree hagA hltP
         have h2 : op.ev rsB = op.ev rsA := ev_agree hagB (fun x hx => Nat.lt_of_lt_of_le (hltP x hx) hrA)
         rw [h2, h1, hevP]
-        simp [encR, ht]
+        simp only [encR, ht]
       have hltA2 : OpdLt oi r3 := fun x hx => Nat.lt_of_lt_of_le (hltA x hx) hrB
       have hltP2 : OpdLt op r3 := fun x hx =>
         Nat.lt_of_lt_of_le (Nat.lt_of_lt_of_le (hltP x hx) hrA) hrB
@@ -276,18 +276,18 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
       rcases hcx : cenv[varIdx x]? with _ | a
-      · simp [hcx] at h
+      · simp only [hcx, reduceCtorEq] at h
       simp only [hcx] at h
       have hs : supp τ = true := by
         cases hbb : supp τ
-        · simp [hbb] at h
+        · simp only [hbb, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
         · rfl
       simp only [hs, if_true] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hst : storeTo τ oe r1 (.reg a) with _ | ⟨cs, r2⟩
-      · simp [hst] at h
+      · simp only [hst, reduceCtorEq] at h
       simp only [hst] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -331,13 +331,13 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       hR, hE, hW, hc => by
       simp only [lowerS] at h
       rcases hc1 : lowerE lay cenv c st.r with _ | ⟨cc, oc, r1⟩
-      · simp [hc1] at h
+      · simp only [hc1, reduceCtorEq] at h
       simp only [hc1] at h
       rcases hb1 : lowerB lay cenv lv tb st.l k ⟨r1, st.l + 2⟩ with _ | ⟨bt, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hb2 : lowerB lay cenv lv eb (st.l + 1) k s1 with _ | ⟨be, s2⟩
-      · simp [hb2] at h
+      · simp only [hb2, reduceCtorEq] at h
       simp only [hb2] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -397,9 +397,9 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
           (lowerB_ok lay hL cenv lv O passes R eb (st.l + 1) k s1 s2 be hb2
           M S fn hMe hk hlv hFn hCall σl ρ m rs1 ks dst hRl hE1 hW (fun x hx => Nat.lt_of_lt_of_le (hc1' x hx) S1.2.2))
   | _, _, _, _, .putBytes .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .onOption o p a, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       onOption_ok lay hL cenv lv O passes R o p a
         (fun c lb' k' st1 st1' blks' h' M' S' fn' hM' hk' hlv' hFn' hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc' =>
@@ -419,7 +419,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
       rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
-      · simp [hla] at h
+      · simp only [hla, reduceCtorEq] at h
       simp only [hla, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hb := hM _ (List.mem_singleton_self _)
@@ -436,7 +436,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
           hmap hRl hW
         have hjmp := reach_jmp (S := S) (m := m') (ks := ks)
           (f := ⟨fn, lb, ca.length + 1, rs1, dst⟩) (l := k) (blk := ⟨lb, [], ca ++ [.call none (lay.fno f) ops], .jmp k⟩)
-          ⟨hb, by simp, rfl⟩ hbk hkp
+          ⟨hb, by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl], rfl⟩ hbk hkp
         have hE1 := envRep_regs cenv ρ (fun x hx => hag1 x (hc x hx)) hE
         have hEm : EnvRep lay rs1 m' cenv ρ := envRep_load cenv ρ
           (fun r hr' b hb' hf o t w hl => hK.2 b hf (envRep_blocks_lt hW.1 cenv ρ hE1 r hr' b hb') o t w hl) hE1
@@ -446,11 +446,11 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       · simp only [OutOk]
       · simp only [OutOk]
   | _, _, _, _, .callInd .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .traverse (Λ := Λ) t inv body, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks,
       dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
@@ -458,14 +458,14 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       · simp only [hcn, and_self, if_true] at h
         rcases hv : cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg st.r) (st.r + 1) with
           _ | ⟨cv, ov, r1⟩
-        · simp [hv] at h
+        · simp only [hv, reduceCtorEq] at h
         simp only [hv] at h
         rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
-        · simp [hb] at h
+        · simp only [hb, reduceCtorEq] at h
         simp only [hb] at h
         rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
           _ | ⟨bb, s1⟩
-        · simp [hb2] at h
+        · simp only [hb2, reduceCtorEq] at h
         simp only [hb2] at h
         have h' := Option.some.inj h
         simp only [Prod.mk.injEq] at h'
@@ -493,7 +493,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
         have hinit : seqI [Instr.bin st.r .add (Ar.wid 0 (D.count t)) (.int (Ar.wid 0 (D.count t)) 0)
             (.int (Ar.wid 0 (D.count t)) 0)] m rs
             = some (m, rs.set st.r (Val.ofInt (Ar.wid 0 (D.count t)) ((0 : Nat) : Int))) := by
-          simp [seqI, stepI, Opd.ev, val_bin_add]
+          simp only [seqI, stepI, Opd.ev, val_bin_add, Int.add_zero, Option.map_some, Int.cast_ofNat_Int]
         obtain ⟨bkh, hbkh, hkph⟩ := hKH
         have hI0 := reach_block_jmp (S := S) (ks := ks) (dst := dst) hM0 rfl hbkh hkph hinit
         have hmap : (alleIndizes (D.count t)).map (·.n) =
@@ -509,20 +509,20 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
               (st.l + 2) ⟨r2, st.l + 4⟩ s1 bb hb2 M S fn hMbb hKI ⟨hk, hKI⟩ hFn hCall σ ρ' m rs ks dst hR hE hW hc)
             (alleIndizes (D.count t)) 0 hmap (Nat.zero_le _) σ ρ m
             (rs.set st.r (Val.ofInt (Ar.wid 0 (D.count t)) ((0 : Nat) : Int))) hR hE0 hW hc (regs_set_same _ _ _))
-      · simp [hcn] at h
+      · simp only [hcn, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, _, .retry (Λ := Λ) n bis body ueb, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m,
       rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
       by_cases hcn : retryOk n = true
       · simp only [hcn, if_true] at h
         rcases hcb : lowerE lay cenv bis (st.r + 1) with _ | ⟨cb, ob, r1⟩
-        · simp [hcb] at h
+        · simp only [hcb, reduceCtorEq] at h
         simp only [hcb] at h
         rcases hb1 : lowerB lay cenv (k, st.l + 3) body (st.l + 4) (st.l + 3) ⟨r1, st.l + 5⟩ with _ | ⟨bb, s1⟩
-        · simp [hb1] at h
+        · simp only [hb1, reduceCtorEq] at h
         simp only [hb1] at h
         rcases hb2 : lowerB lay cenv lv ueb (st.l + 2) k s1 with _ | ⟨bo, s2⟩
-        · simp [hb2] at h
+        · simp only [hb2, reduceCtorEq] at h
         simp only [hb2] at h
         have h' := Option.some.inj h
         simp only [Prod.mk.injEq] at h'
@@ -552,7 +552,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
         have hinit : seqI [Instr.bin st.r .add (Ar.wid 0 (n : Int)) (.int (Ar.wid 0 (n : Int)) 0)
             (.int (Ar.wid 0 (n : Int)) 0)] m rs
             = some (m, rs.set st.r (Val.ofInt (Ar.wid 0 (n : Int)) ((0 : Nat) : Int))) := by
-          simp [seqI, stepI, Opd.ev, val_bin_add]
+          simp only [seqI, stepI, Opd.ev, val_bin_add, Int.add_zero, Option.map_some, Int.cast_ofNat_Int]
         obtain ⟨bkh, hbkh, hkph⟩ := hKH
         have hI0 := reach_block_jmp (S := S) (ks := ks) (dst := dst) hM0 rfl hbkh hkph hinit
         have hE0 := envRep_regs (rs' := rs.set st.r (Val.ofInt (Ar.wid 0 (n : Int)) ((0 : Nat) : Int))) cenv ρ
@@ -568,7 +568,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
               M S fn hMbo hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc)
             n 0 (by omega) σ ρ m (rs.set st.r (Val.ofInt (Ar.wid 0 (n : Int)) ((0 : Nat) : Int))) hR hE0 hW hc
             (regs_set_same _ _ _))
-      · simp [hcn] at h
+      · simp only [hcn, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, _, .forever (Λ := Λ) a inv body, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks,
       dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
@@ -577,17 +577,17 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       exact forever_ok a inv body (fun σ ρ m rs hR hE hW hc => lowerB_ok lay hL cenv (k, lb) O passes R body lb lb
         st st' blks h M S fn hM hKl ⟨hk, hKl⟩ hFn hCall σ ρ m rs ks dst hR hE hW hc) passes σ ρ m rs hR hE hW hc
   | _, _, _, _, .axiomCall .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .regWrite .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .transition .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .publish .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .advances .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .retires .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerS] at h
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .retWhy r _, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerS] at h
       simp only [execStmt, OutOk]
@@ -616,10 +616,10 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       hW, hc => by
       simp only [lowerB] at h
       rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
-      · simp [hs] at h
+      · simp only [hs, reduceCtorEq] at h
       simp only [hs] at h
       rcases hr : lowerB lay cenv lv rest st.l k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -659,13 +659,13 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -703,13 +703,13 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       ks, dst, hR, hE, hW, hc => by
       simp only [lowerB] at h
       rcases hc1 : lowerE lay cenv c st.r with _ | ⟨cc, oc, r1⟩
-      · simp [hc1] at h
+      · simp only [hc1, reduceCtorEq] at h
       simp only [hc1] at h
       rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r1, st.l + 2⟩ with _ | ⟨be, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hb2 : lowerB lay cenv lv rest (st.l + 1) k s1 with _ | ⟨br, s2⟩
-      · simp [hb2] at h
+      · simp only [hb2, reduceCtorEq] at h
       simp only [hb2] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -772,13 +772,13 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB] at h
       rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
-      · simp [hla] at h
+      · simp only [hla, reduceCtorEq] at h
       simp only [hla] at h
       rcases hb : bindCode τ (.reg r1) (r1 + 1) with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr' : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
-      · simp [hr'] at h
+      · simp only [hr', reduceCtorEq] at h
       simp only [hr'] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -802,7 +802,7 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
           rw [if_pos hr]
           exact ergImg_ergWert lay he v
         obtain ⟨m', hreach, hRn, hWn, hK⟩ := call_run_some hFn hCall hRf hb0 (pre := ca) (post := cb) (r := r1) (ks := ks) (dst := dst)
-          (by simp) hw hs1' hmap hRl hW
+          (by simp only [List.append_assoc, List.cons_append, List.nil_append]) hw hs1' hmap hRl hW
         -- the cells of the locals survive the call
         have hE1 := envRep_regs cenv ρ (fun x hx => hag1 x (hc x hx)) hE
         have hEm : EnvRep lay rs1 m' cenv ρ := envRep_load cenv ρ
@@ -812,20 +812,21 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
         have hEs := envRep_regs (rs' := rs1.set r1 (encR lay τ (ergWert he v))) cenv ρ hag2 hEm
         obtain ⟨m1, rs4, hs4, hRn', hEnew, hWn', hra, hr2e, hag4, hFb, hcell⟩ :=
           bindCode_run lay (ergWert he v) (.reg r1) (r1 + 1) m' (rs1.set r1 (encR lay τ (ergWert he v))) hRn hEs hWn
-            (by simp [Opd.ev, regs_set_same]) (opdlt_reg r1 (r1 + 1) (Nat.lt_succ_self _))
+            (by simp only [Opd.ev, regs_set_same]) (opdlt_reg r1 (r1 + 1) (Nat.lt_succ_self _))
             (fun x hx => Nat.lt_succ_of_lt (hc1 x hx)) hb
         subst hr2e
         -- the rest of the block: `cb`, then the jump
         have hstr : Stretch M fn lb (ca.length + 1) cb := ⟨_, hb0, fun i hi => by
           show (ca ++ [Instr.call (some r1) (lay.fno f) ops] ++ cb)[ca.length + 1 + i]? = some cb[i]
           rw [List.append_assoc, List.getElem?_append_right (by omega)]
-          simp [show ca.length + 1 + i - ca.length = i + 1 by omega, List.getElem?_eq_getElem hi]⟩
+          simp only [List.cons_append, List.nil_append, show ca.length + 1 + i - ca.length = i + 1 by omega,
+  List.getElem?_cons_succ, List.getElem?_eq_getElem hi]⟩
         have hseqb := reach_seq M S cb m'
           ⟨fn, lb, ca.length + 1, rs1.set r1 (encR lay τ (ergWert he v)), dst⟩ ks m1 rs4 hstr hs4
         have hjmp := reach_jmp (S := S) (m := m1) (ks := ks)
           (f := ⟨fn, lb, ca.length + 1 + cb.length, rs4, dst⟩) (l := st.l)
           (blk := ⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops] ++ cb, .jmp st.l⟩)
-          ⟨hb0, by simp; omega, rfl⟩ hbk2 hkp2
+          ⟨hb0, by simp only [List.append_assoc, List.cons_append, List.nil_append, List.length_append, List.length_cons]; omega, rfl⟩ hbk2 hkp2
         have hbound : ∀ x ∈ a :: cenv, x < a + 1 := fun x hx => by
           rcases List.mem_cons.mp hx with rfl | hx'
           · exact Nat.lt_succ_self _
@@ -849,7 +850,7 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       · simp only [OutOk]
       · simp only [OutOk]
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv,
       hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       bindCallElse_ok lay hL cenv lv O passes R f args he hp hr err rest
@@ -861,39 +862,39 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
             hCall' σ' ρ' m' rs' ks' dst' hR' hE' hW' hc')
         lb k st st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .regRead .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .regReadElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .awaits .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .exchange .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) (Λ := Λ) e lo' hi' sonst rest, lb, k, st,
       st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB] at h
       rcases hcd : lowerE lay cenv (Gabbro.Grammatik.Expr.and (Gabbro.Grammatik.Expr.le
           (Gabbro.Grammatik.Expr.lit lo') e) (Gabbro.Grammatik.Expr.le e (Gabbro.Grammatik.Expr.lit hi')))
           st.r with _ | ⟨cc, oc, r1⟩
-      · simp [hcd] at h
+      · simp only [hcd, reduceCtorEq] at h
       simp only [hcd] at h
       rcases he : lowerE lay cenv e r1 with _ | ⟨ce, oe, r2⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hv : cvtG (.int lo hi) (.int lo' hi') oe r2 with _ | ⟨cv, ov, r3⟩
-      · simp [hv] at h
+      · simp only [hv, reduceCtorEq] at h
       simp only [hv] at h
       rcases hb : bindCode (.int lo' hi') ov r3 with _ | ⟨cb, a, r4⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hb1 : lowerEnd lay cenv lv sonst st.l ⟨r4, st.l + 3⟩ with _ | ⟨be, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hb2 : lowerB lay (a :: cenv) lv rest (st.l + 2) k s1 with _ | ⟨br, s2⟩
-      · simp [hb2] at h
+      · simp only [hb2, reduceCtorEq] at h
       simp only [hb2] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -1002,13 +1003,13 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
           (lowerEnd_ok lay hL cenv lv O passes R sonst st.l ⟨r4, st.l + 3⟩ s1 be hb1 M S fn hMe hlv hFn hCall (σ.lese Λ e.orte) ρ m rs1
             ks dst hRl hE1 hW (fun x hx => Nat.lt_of_lt_of_le (hc1 x hx) hle14))))
   | _, _, _, _, .float .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatLit .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatOf .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatNarrow .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerB] at h
+      simp only [lowerB, reduceCtorEq] at h
 
 theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
@@ -1044,10 +1045,10 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       hc => by
       simp only [lowerEnd] at h
       rcases hs : lowerS lay cenv lv s lb st.l ⟨st.r, st.l + 1⟩ with _ | ⟨b1, s1⟩
-      · simp [hs] at h
+      · simp only [hs, reduceCtorEq] at h
       simp only [hs] at h
       rcases hr : lowerEnd lay cenv lv rest st.l s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -1087,13 +1088,13 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hb : bindCode τ oe r1 with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerEnd lay (a :: cenv) lv rest st.l ⟨r2, st.l + 1⟩ with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -1134,23 +1135,23 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
         m rs ks dst
       exact ⟨m, f', hr, hf1, hf2, hret, hR, hW, hFr⟩
   | _, _, _, .bindCall .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .regRead .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .regReadElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .awaits .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .bindCallInd .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp [lowerEnd] at h
+      simp only [lowerEnd, reduceCtorEq] at h
 
 /-- Every arm body of a `match` on a tagged value refines (the structural companion of `lowerB_ok`). -/
 theorem lowerAr_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)

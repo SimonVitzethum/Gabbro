@@ -273,7 +273,7 @@ theorem geteiltTab_trifft (tabs : List D.Tab) (tabCode : D.Tab → Nat)
     (t : D.Tab) (ht : t ∈ tabs) :
     geteiltTab tabs tabCode (tabCode t) = some (D.geteilt t) := by
   induction tabs with
-  | nil => simp at ht
+  | nil => simp only [List.not_mem_nil] at ht
   | cons x xs ih =>
       simp only [geteiltTab]
       by_cases hxc : tabCode x = tabCode t
@@ -295,7 +295,7 @@ theorem geteiltGlob_trifft (globs : List D.Glob) (globCode : D.Glob → Nat)
     (g : D.Glob) (hg : g ∈ globs) :
     geteiltGlob globs globCode (globCode g) = some (D.ggeteilt g) := by
   induction globs with
-  | nil => simp at hg
+  | nil => simp only [List.not_mem_nil] at hg
   | cons x xs ih =>
       simp only [geteiltGlob]
       by_cases hxc : globCode x = globCode g

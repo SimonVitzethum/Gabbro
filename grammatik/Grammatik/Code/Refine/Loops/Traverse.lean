@@ -149,7 +149,7 @@ theorem traverse_loop {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : 
   | cons k0 L ih =>
       intro j hmap hj σ ρ m rs hR hE hW hc hcj
       have hne : List.range' j ((D.count t).toNat - j) ≠ [] := by
-        intro h0; rw [h0] at hmap; simp at hmap
+        intro h0; rw [h0] at hmap; simp only [List.map_cons, List.map_nil, reduceCtorEq] at hmap
       have hjlt : j < (D.count t).toNat := by
         apply Nat.lt_of_not_le
         intro hge
@@ -198,7 +198,7 @@ theorem traverse_loop {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : 
       have IH1 := IHb (σ.lese Λ inv.orte) (Env.cons k0 ρ) m1 rs4 hRn hEnew hWn hbound
       simp only [traverseLauf]
       by_cases hinv : wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = false
-      · simp [hinv, OutOk]
+      · simp only [OutOk, hinv, ↓reduceIte]
       · rw [if_neg hinv]
         rcases hx : execBlock O passes R body (σ.lese Λ inv.orte) (Env.cons k0 ρ) with ⟨σ1, ρ1⟩ |
           ⟨σ1, v1⟩ | ⟨σ1, rx⟩ | ⟨h1, σ1, ρ1⟩ | ⟨h1, σ1, ρ1⟩ | e1 | e1
@@ -211,7 +211,7 @@ theorem traverse_loop {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : 
           have hinc : seqI [Instr.bin c .add (Ar.wid 0 (D.count t)) (.reg c)
               (.int (Ar.wid 0 (D.count t)) 1)] m' rs'
               = some (m', rs'.set c (Val.ofInt (Ar.wid 0 (D.count t)) ((j + 1 : Nat) : Int))) := by
-            simp [seqI, stepI, Opd.ev, hcR, val_bin_add]
+            simp only [seqI, stepI, Opd.ev, hcR, val_bin_add, Option.map_some, Int.natCast_add, Int.cast_ofNat_Int]
           obtain ⟨bkh, hbkh, hkph⟩ := hKH
           have hI := reach_block_jmp (S := S) (ks := ks) (dst := dst) hMI rfl hbkh hkph hinc
           have hPt := post_tail ρ1 hP
@@ -248,7 +248,7 @@ theorem traverse_loop {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {O : 
           have hinc : seqI [Instr.bin c .add (Ar.wid 0 (D.count t)) (.reg c)
               (.int (Ar.wid 0 (D.count t)) 1)] m' rs'
               = some (m', rs'.set c (Val.ofInt (Ar.wid 0 (D.count t)) ((j + 1 : Nat) : Int))) := by
-            simp [seqI, stepI, Opd.ev, hcR, val_bin_add]
+            simp only [seqI, stepI, Opd.ev, hcR, val_bin_add, Option.map_some, Int.natCast_add, Int.cast_ofNat_Int]
           obtain ⟨bkh, hbkh, hkph⟩ := hKH
           have hI := reach_block_jmp (S := S) (ks := ks) (dst := dst) hMI rfl hbkh hkph hinc
           have hPt := post_tail ρ1 hP

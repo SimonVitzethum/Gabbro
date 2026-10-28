@@ -22,7 +22,8 @@ def LblWf (lb : Nat) (st st' : St) (blks : List Block) : Prop :=
 
 theorem lw_single {lb : Nat} {st st' : St} {b : Block} (hb : b.nl = lb) (hl : st.l ≤ st'.l) :
     LblWf lb st st' [b] := by
-  refine ⟨hl, by simp, ?_⟩
+  refine ⟨hl, by simp only [List.map_cons, List.map_nil, List.nodup_cons, List.not_mem_nil, not_false_eq_true, List.nodup_nil,
+  and_self], ?_⟩
   intro x hx
   rw [List.mem_singleton] at hx
   subst hx

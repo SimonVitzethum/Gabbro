@@ -217,7 +217,7 @@ theorem folge50_gegen : ∃ M : RufMaschineG eD,
     exact ⟨_, List.mem_cons_self, rfl⟩
   · rw [hG5.1]
     intro h
-    exact Bool.false_ne_true (h.2.2.2.1 (by simp) rfl)
+    exact Bool.false_ne_true (h.2.2.2.1 (by simp only [ne_eq, List.cons_ne_self, not_false_eq_true]) rfl)
 
 #print axioms Gabbro.Grammatik.folge50_zeuge
 #print axioms Gabbro.Grammatik.folge52_zeuge

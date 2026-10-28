@@ -88,12 +88,12 @@ theorem treu_schreibSlot {W G} (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k
     (f : D.Feld t) (v : Wert D (D.typ t f)) (hw : W t = true) :
     Treu W G σ (σ.schreibSlot t Λ k f v) :=
   Treu.trans ⟨rahmen_storeSlot W G σ t k f v hw, rfl⟩
-    (treu_merke _ _ (by intro e he; simp at he; subst he; simp [Ereignis.zugriffMit]; rfl))
+    (treu_merke _ _ (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; simp only [Ereignis.zugriffMit]; rfl))
 
 theorem treu_schreibGlob {W G} (σ : World D) (g : D.Glob) (Λ : List (Res D))
     (v : Wert D (D.gtyp g)) (hg : G g = true) : Treu W G σ (σ.schreibGlob g Λ v) :=
   Treu.trans ⟨rahmen_storeGlob W G σ g v hg, rfl⟩
-    (treu_merke _ _ (by intro e he; simp at he; subst he; simp [Ereignis.zugriffMit]; rfl))
+    (treu_merke _ _ (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; simp only [Ereignis.zugriffMit]; rfl))
 
 theorem treu_schreibBytes {W G} (σ : World D) (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) (hw : W t = true) :
@@ -141,7 +141,7 @@ def TreuEnd (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : EndAu
 
 theorem TreuAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
     (h : TreuAusgang W G σ o) : TreuAusgang W G σ o.schrumpf := by
-  intro σ' hs; cases o <;> simp [Ausgang.schrumpf, Ausgang.welt] at hs ⊢ <;>
+  intro σ' hs; cases o <;> simp only [Ausgang.welt, Ausgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 theorem TreuAusgang.schrumpfArm {W G} {σ : World D} (c : Option (Int × Int))
@@ -153,12 +153,12 @@ theorem TreuAusgang.schrumpfArm {W G} {σ : World D} (c : Option (Int × Int))
 
 theorem TreuEnd.schrumpf {W G} {σ : World D} {o : EndAusgang V l (τ :: Γ)}
     (h : TreuEnd W G σ o) : TreuEnd W G σ o.schrumpf := by
-  intro σ' hs; cases o <;> simp [EndAusgang.schrumpf, EndAusgang.welt] at hs ⊢ <;>
+  intro σ' hs; cases o <;> simp only [EndAusgang.welt, EndAusgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 theorem TreuEnd.zuAusgang {W G} {σ : World D} {o : EndAusgang V l Γ} (h : TreuEnd W G σ o) :
     TreuAusgang W G σ o.zuAusgang := by
-  intro σ' hs; cases o <;> simp [EndAusgang.zuAusgang, Ausgang.welt] at hs ⊢ <;>
+  intro σ' hs; cases o <;> simp only [Ausgang.welt, EndAusgang.zuAusgang, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
 theorem TreuAusgang.vor {W G} {σ σ1 : World D} {o : Ausgang V l Γ}
@@ -172,7 +172,7 @@ theorem TreuEnd.vor {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
 theorem TreuAusgang.gibt {W G} {σ : World D} (L : D.Lock) {o : Ausgang V l Γ}
     (h : TreuAusgang W G (σ.nimmt L) o) : TreuAusgang W G σ (o.mapWelt (·.gibt L)) := by
   intro σ' hs
-  cases o <;> simp [Ausgang.mapWelt, Ausgang.welt] at hs ⊢ <;>
+  cases o <;> simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl))
 
 /-! ## 4. The three loop combinators -/
@@ -193,12 +193,12 @@ theorem traverseLauf_treu (schritt : World D → Env D (τ :: Γ) → Ausgang V 
       simp only [traverseLauf] at h
       split at h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hi σ ρ
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | cons k ks ih =>
       intro σ ρ σ' h
       simp only [traverseLauf] at h
       split at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ
         have hstep := hs (inv σ ρ).1 (.cons k ρ)
         split at h
@@ -210,14 +210,14 @@ theorem traverseLauf_treu (schritt : World D → Env D (τ :: Γ) → Ausgang V 
           exact g1.trans (ih σ1 ρ1.tail σ' h)
         · rename_i σ1 ρ1 hs1
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          split at h <;> simp [Ausgang.welt] at h
+          split at h <;> simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h
           subst h; exact g1.trans (hi σ1 ρ1.tail)
-        · rename_i σ1 v hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp [Ausgang.welt] at h
-        · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
 
 theorem retryLauf_treu (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
@@ -238,7 +238,7 @@ theorem retryLauf_treu (schritt : World D → Env D Γ → Ausgang V true Γ)
       intro σ ρ σ' h
       simp only [retryLauf] at h
       split at h
-      · simp [Ausgang.welt] at h; subst h; exact hb σ ρ
+      · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ
       · have hinv := hb σ ρ
         have hstep := hs (bis σ ρ).1 ρ
         split at h
@@ -248,14 +248,14 @@ theorem retryLauf_treu (schritt : World D → Env D Γ → Ausgang V true Γ)
         · rename_i σ1 ρ1 hs1
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
           exact g1.trans (ih σ1 ρ1 σ' h)
-        · rename_i σ1 ρ1 hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 v hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp [Ausgang.welt] at h
-        · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
 
 theorem foreverLauf_treu (a : D.Annahme) (schritt : World D → Env D Γ → Ausgang V true Γ)
     (inv : World D → Env D Γ → World D × Bool)
@@ -265,12 +265,12 @@ theorem foreverLauf_treu (a : D.Annahme) (schritt : World D → Env D Γ → Aus
       TreuAusgang W G σ (foreverLauf (l := l) a schritt inv n σ ρ) := by
   intro n
   induction n with
-  | zero => intro σ ρ σ' h; simp [foreverLauf, Ausgang.welt] at h
+  | zero => intro σ ρ σ' h; simp only [Ausgang.welt, foreverLauf, reduceCtorEq] at h
   | succ n ih =>
       intro σ ρ σ' h
       simp only [foreverLauf] at h
       split at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ
         have hstep := hs (inv σ ρ).1 ρ
         split at h
@@ -280,14 +280,14 @@ theorem foreverLauf_treu (a : D.Annahme) (schritt : World D → Env D Γ → Aus
         · rename_i σ1 ρ1 hs1
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
           exact g1.trans (ih σ1 ρ1 σ' h)
-        · rename_i σ1 ρ1 hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 v hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · rename_i σ1 r hs1; simp [Ausgang.welt] at h; subst h
+        · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
-        · simp [Ausgang.welt] at h
-        · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
 
 end Schleifen
 
@@ -358,7 +358,7 @@ theorem stmt_treu :
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
           (treu_schreibSlot _ t Λ _ f _ hw)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .ite c t e, σ, ρ, σ', h => by
       simp only [execStmt] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
@@ -386,8 +386,8 @@ theorem stmt_treu :
         exact hl.trans (Treu.weiter hp.hw hp.hg
           (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
       · rename_i σ1 r _; exact keinGrund hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .callInd p args hp hr, σ, ρ, σ', h => by
       simp only [execStmt] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte)
@@ -401,8 +401,8 @@ theorem stmt_treu :
         exact hl.trans (Treu.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
       · rename_i σ1 r _; exact keinGrundSig hf hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .locks L hr body, σ, ρ, σ', h =>
       (TreuAusgang.gibt L (block_treu body (σ.nimmt L) ρ)) σ' h
   | .breaking _ body, σ, ρ, σ', h => block_treu body σ ρ σ' h
@@ -426,7 +426,7 @@ theorem stmt_treu :
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
         rw [ha] at this
         exact hl.trans (Treu.weiter hw hg this)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regWrite r _ e, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
@@ -475,8 +475,8 @@ theorem block_treu :
           (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrund hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindCallInd p args he hp hr rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte)
@@ -491,8 +491,8 @@ theorem block_treu :
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans (g2.schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindCallElse f args he hp _ err rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -505,8 +505,8 @@ theorem block_treu :
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg
           (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -517,7 +517,7 @@ theorem block_treu :
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -533,7 +533,7 @@ theorem block_treu :
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regRead r _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       refine (treu_fragt σ (.inr (.inl r))).trans ?_
@@ -541,8 +541,8 @@ theorem block_treu :
       split at h
       · split at h
         · exact (block_treu rest σ _).schrumpf σ' h
-        · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regReadElse r _ zusage sonst rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       refine (treu_fragt σ (.inr (.inl r))).trans ?_
@@ -552,7 +552,7 @@ theorem block_treu :
         split at h
         · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
         · exact (TreuEnd.vor hl (end_treu sonst _ ρ)).zuAusgang σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       refine (treu_fragt σ (.inr (.inr g))).trans ?_
@@ -560,7 +560,7 @@ theorem block_treu :
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
         exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .exchange g neu hw hL rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (.inr g :: neu.orte)
@@ -586,18 +586,18 @@ theorem block_treu :
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (a.orte ++ b.orte)
       split at h
       · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .floatLit q lo hi rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       split at h
       · exact (block_treu rest σ _).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .floatOf e lo hi rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       split at h
       · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .floatNarrow e lo hi sonst rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
@@ -627,7 +627,7 @@ theorem end_treu :
       all_goals first
         | (rename_i hs1; simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
            exact hs _ (by rw [hs1]; rfl))
-        | (simp [EndAusgang.welt] at h)
+        | (simp only [EndAusgang.welt, reduceCtorEq] at h)
   | .bind e rest, σ, ρ, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
@@ -640,8 +640,8 @@ theorem end_treu :
           (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrund hr r
-      · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindCallElse f args he hp _ err rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -654,8 +654,8 @@ theorem end_treu :
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg
           (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((end_treu err σ1 _).schrumpf σ' h)
-      · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -666,7 +666,7 @@ theorem end_treu :
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
@@ -682,7 +682,7 @@ theorem end_treu :
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((end_treu err σ1 _).schrumpf σ' h)
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .regRead r _ rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       refine (treu_fragt σ (.inr (.inl r))).trans ?_
@@ -690,8 +690,8 @@ theorem end_treu :
       split at h
       · split at h
         · exact (end_treu rest σ _).schrumpf σ' h
-        · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+        · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .regReadElse r _ zusage sonst rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       refine (treu_fragt σ (.inr (.inl r))).trans ?_
@@ -701,7 +701,7 @@ theorem end_treu :
         split at h
         · exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
         · exact (TreuEnd.vor hl (end_treu sonst _ ρ)) σ' h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .awaits g _ _ hL _ rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       refine (treu_fragt σ (.inr (.inr g))).trans ?_
@@ -709,7 +709,7 @@ theorem end_treu :
       split at h
       · have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
         exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindCallInd p args he hp hr rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte)
@@ -724,8 +724,8 @@ theorem end_treu :
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
         exact g1.trans (g2.schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
-      · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .narrow e lo' hi' sonst rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
@@ -773,14 +773,14 @@ theorem rufAt_treu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
     ∀ fuel, TreuR (rufAt P O passes fuel) := by
   intro fuel
   induction fuel with
-  | zero => intro f σ ρ σ' h; simp [rufAt, RufAusgang.welt] at h
+  | zero => intro f σ ρ σ' h; simp only [RufAusgang.welt, rufAt, reduceCtorEq] at h
   | succ n ih =>
       intro f σ ρ σ' h
       simp only [rufAt] at h
       have g0 : Treu (D.schreibt f) (D.gschreibt f) σ
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) := treu_lese _ _ _
       split at h
-      · simp [RufAusgang.welt] at h
+      · simp only [RufAusgang.welt, reduceCtorEq] at h
       · have hb := end_treu O passes (rufAt P O passes n) ih hO (P.rumpf f)
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ
         split at h
@@ -790,14 +790,14 @@ theorem rufAt_treu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
               (σ2.lese (vertragVon D f).ende (P.ensures f).orte) :=
             treu_lese σ2 (vertragVon D f).ende (P.ensures f).orte
           split at h
-          · simp [RufAusgang.welt] at h
+          · simp only [RufAusgang.welt, reduceCtorEq] at h
           · have g4 : Treu (D.schreibt f) (D.gschreibt f) _
                 ((D.invs.filter (schuldet f)).foldl
                   (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte)
                   (σ2.lese (vertragVon D f).ende (P.ensures f).orte)) :=
               treu_foldl_lese P (D.invs.filter (schuldet f)) _
             split at h
-            · simp [RufAusgang.welt] at h
+            · simp only [RufAusgang.welt, reduceCtorEq] at h
             · simp only [RufAusgang.welt, Option.some.injEq] at h; subst h
               exact ((g0.trans g2).trans g3).trans g4
         · rename_i σ2 r hs
@@ -805,8 +805,8 @@ theorem rufAt_treu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
           exact g0.trans (hb _ (by rw [hs]; rfl))
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · rename_i hl _ _ _; exact absurd hl (by decide)
-        · simp [RufAusgang.welt] at h
-        · simp [RufAusgang.welt] at h
+        · simp only [RufAusgang.welt, reduceCtorEq] at h
+        · simp only [RufAusgang.welt, reduceCtorEq] at h
 
 #print axioms Gabbro.Grammatik.rufAt_treu
 

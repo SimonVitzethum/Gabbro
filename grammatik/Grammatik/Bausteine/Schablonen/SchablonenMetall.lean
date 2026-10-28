@@ -130,7 +130,7 @@ theorem rueck_rahmen (d s : Nat) :
     rw [ih _ a (by omega)]
     simp only [schreib]
     have hne : a ≠ d + n := by omega
-    simp [hne]
+    simp only [hne, ↓reduceIte]
 
 theorem rueck_korrekt (d s : Nat) (hs : s ≤ d) :
     ∀ n (m : Sp) j, j < n → rueck m d s n (d + j) = m (s + j) := by
@@ -143,11 +143,11 @@ theorem rueck_korrekt (d s : Nat) (hs : s ≤ d) :
     by_cases hjn : j = n
     · subst hjn
       rw [rueck_rahmen d s j _ (d + j) (by omega)]
-      simp [schreib]
+      simp only [schreib, Nat.add_left_cancel_iff, ↓reduceIte]
     · rw [ih _ j (by omega)]
       simp only [schreib]
       have hne : s + j ≠ d + n := by omega
-      simp [hne]
+      simp only [hne, ↓reduceIte]
 
 /-- **`memcpy`**: under C's premise (no overlap) the destination holds the source. -/
 theorem memcpy_korrekt (m : Sp) (d s n : Nat) (h : s + n ≤ d ∨ d + n ≤ s) :
@@ -183,7 +183,7 @@ theorem memset_korrekt (m : Sp) (d c n : Nat) :
       intro j hj
       simp only [setze, schreib]
       by_cases hjn : j = n
-      · subst hjn; simp
+      · subst hjn; simp only [Nat.add_left_cancel_iff, ↓reduceIte]
       · have hne : d + j ≠ d + n := by omega
         simp only [hne, if_false]
         exact ih j (by omega)
@@ -200,7 +200,7 @@ theorem vgl_null (m : Sp) (a b : Nat) :
     ∀ r i, vgl m a b i r = 0 ↔ ∀ j, j < r → m (a + i + j) = m (b + i + j) := by
   intro r
   induction r with
-  | zero => intro i; simp [vgl]
+  | zero => intro i; simp only [vgl, Nat.not_lt_zero, false_implies, implies_true]
   | succ r ih =>
     intro i
     simp only [vgl]
@@ -222,7 +222,7 @@ theorem vgl_null (m : Sp) (a b : Nat) :
         rwa [e1, e2]
     · simp only [ne_eq, h, not_false_eq_true, if_true]
       constructor
-      · intro hc; split at hc <;> simp at hc
+      · intro hc; split at hc <;> simp only [Int.reduceNeg, Int.neg_eq_zero, Int.reduceEq] at hc
       · intro hr; exact absurd (by simpa using hr 0 (by omega)) h
 
 /-- **`memcmp` answers 0 exactly when the two ranges are equal.** -/
@@ -230,7 +230,7 @@ theorem memcmp_null (m : Sp) (a b n : Nat) :
     memcmp m a b n = 0 ↔ ∀ j, j < n → m (a + j) = m (b + j) := by
   unfold memcmp
   rw [vgl_null]
-  simp
+  simp only [Nat.add_zero]
 
 theorem vgl_kleiner (m : Sp) (a b : Nat) :
     ∀ r i, vgl m a b i r = -1 →
@@ -238,7 +238,7 @@ theorem vgl_kleiner (m : Sp) (a b : Nat) :
         m (a + i + k) < m (b + i + k) := by
   intro r
   induction r with
-  | zero => intro i h; simp [vgl] at h
+  | zero => intro i h; simp only [vgl, Int.reduceNeg, reduceCtorEq] at h
   | succ r ih =>
     intro i h
     simp only [vgl] at h
@@ -259,7 +259,7 @@ theorem vgl_kleiner (m : Sp) (a b : Nat) :
     · simp only [ne_eq, he, not_false_eq_true, if_true] at h
       by_cases hl : m (a + i) < m (b + i)
       · exact ⟨0, by omega, fun j hj => by omega, by simpa using hl⟩
-      · simp [hl] at h
+      · simp only [hl, ↓reduceIte, Int.reduceNeg, reduceCtorEq] at h
 
 /-- **`memcmp` answers -1 exactly at a first difference whose left byte is smaller.** -/
 theorem memcmp_kleiner (m : Sp) (a b n : Nat) (h : memcmp m a b n = -1) :
@@ -299,12 +299,12 @@ def reserviere (liste : List Nat) (ok : Nat → Bool) (d : Nat) : Option Nat :=
   | some i => if ok i then some i else none
 
 theorem stelle_korrekt : ∀ (liste : List Nat) d i, stelle liste d = some i → liste[i]? = some d
-  | [], _, _, h => by simp [stelle] at h
+  | [], _, _, h => by simp only [stelle, reduceCtorEq] at h
   | x :: rest, d, i, h => by
     simp only [stelle] at h
     by_cases hx : x = d
     · simp only [hx, if_true, Option.some.injEq] at h
-      subst h; simp [hx]
+      subst h; simp only [hx, List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero]
     · simp only [hx, if_false, Option.map_eq_some_iff] at h
       obtain ⟨j, hj, rfl⟩ := h
       simpa using stelle_korrekt rest d j hj
@@ -315,19 +315,19 @@ theorem stelle_fremd : ∀ (liste : List Nat) d, d ∉ liste → stelle liste d 
     simp only [List.mem_cons, not_or] at h
     simp only [stelle]
     have hx : ¬ x = d := fun e => h.1 e.symm
-    simp [hx, stelle_fremd rest d h.2]
+    simp only [hx, ↓reduceIte, stelle_fremd rest d h.2, Option.map_none]
 
 /-- A reservation that returns binds the pool of the descriptor's OWN position. -/
 theorem arena_metall_eigene_stelle (liste : List Nat) (ok : Nat → Bool) (d i : Nat)
     (h : reserviere liste ok d = some i) : liste[i]? = some d ∧ ok i = true := by
   unfold reserviere at h
   split at h
-  · simp at h
+  · simp only [reduceCtorEq] at h
   · rename_i j hj
     by_cases hok : ok j
     · simp only [hok, if_true, Option.some.injEq] at h
       subst h; exact ⟨stelle_korrekt liste d j hj, hok⟩
-    · simp [hok] at h
+    · simp only [hok, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
 
 /-- **Two descriptors never share a pool.** -/
 theorem arena_metall_getrennt (liste : List Nat) (ok : Nat → Bool) (d1 d2 i1 i2 : Nat)

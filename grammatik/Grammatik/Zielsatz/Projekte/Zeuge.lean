@@ -40,7 +40,7 @@ theorem schnitt_deckendS (E : Einheit D) (eigen : D.Fn → Bool) : DeckendS (sch
 theorem schnitt_deckend (E : Einheit D) (eigen : D.Fn → Bool) : Deckend (schnitt E eigen) := by
   intro f
   cases h : eigen f
-  · exact ⟨_, List.mem_cons_of_mem _ List.mem_cons_self, by simp [h]⟩
+  · exact ⟨_, List.mem_cons_of_mem _ List.mem_cons_self, by simp only [h, Bool.not_false]⟩
   · exact ⟨_, List.mem_cons_self, h⟩
 
 /-- **The two projects compose back into the unit.** -/
@@ -49,14 +49,14 @@ theorem schnitt_komponiere (E : Einheit D) (eigen : D.Fn → Bool) :
   have hP : koerperVon E.P (schnitt E eigen) = E.P.rumpf := by
     funext f
     unfold koerperVon
-    cases h : eigen f <;> simp [schnitt, h]
+    cases h : eigen f <;> simp only [schnitt, h, Bool.false_eq_true, not_false_eq_true, List.find?_cons_of_neg, Bool.not_false, List.find?_cons_of_pos]
   have hQ : qAlle (schnitt E eigen) = E.Q := by
     funext a σ v
-    simp [qAlle, schnitt]
+    simp only [qAlle, schnitt, List.all_cons, List.all_nil, Bool.and_true, Bool.and_self]
   unfold komponiere komponiereP
   rw [hP, hQ]
   cases E
-  simp [mitRumpf, schnitt]
+  simp only [mitRumpf, schnitt, List.flatMap_cons, List.flatMap_nil, List.append_nil]
 
 /-- Each part owes what the whole unit owes. -/
 theorem schnitt_nutzer {E : Einheit D} {eigen : D.Fn → Bool}
@@ -68,7 +68,7 @@ theorem schnitt_nutzer {E : Einheit D} {eigen : D.Fn → Bool}
   · exact ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, ⟨hN.start.sperren, hN.start.req⟩⟩
   · refine ⟨⟨fun passes f _ => hN.logik.1 passes f rfl, hN.logik.2⟩, ⟨(fun _ h => by cases h), ?_⟩⟩
     intro a ha
-    simp at ha
+    simp only [List.append_nil, List.not_mem_nil] at ha
 
 /-- **The witness**: for every checker for the rely, every unit it accepts, every boundary through
     it, the unit's own logic against the open-world rely, its hardware assumptions and its runtime,
@@ -88,7 +88,7 @@ theorem projekte_zeuge (C : PrueferX) [DecidableEq D.Fn] (E : Einheit D) (eigen 
       (GeteiltV (D := D) (komponiere E (schnitt E eigen)).P (komponiere E (schnitt E eigen)).ws)
       (RufStartG (komponiere E (schnitt E eigen)).P.mitRuhe sp init)
       ((komponiere E (schnitt E eigen)).arenen.map (·.mitRuhe)) K :=
-  gabbro_ziel_projekte C D E (schnitt E eigen) fs ls cs (schnitt_passend E eigen) (by simp [schnitt])
+  gabbro_ziel_projekte C D E (schnitt E eigen) fs ls cs (schnitt_passend E eigen) (by simp only [schnitt, ne_eq, reduceCtorEq, not_false_eq_true])
     (schnitt_deckend E eigen) (schnitt_deckendS E eigen) (by rw [schnitt_komponiere]; exact hC) (schnitt_nutzer hN) O
     (by rw [schnitt_komponiere]; exact hH) passes sp init (by rw [schnitt_komponiere]; exact hL)
     lebt0 K hK
@@ -100,10 +100,10 @@ theorem schnitt_grenze (E : Einheit D) (eigen : D.Fn → Bool) {f g : D.Fn} (hf 
     (komponiere E (schnitt E eigen)).P = E.P ∧
       ∃ p ∈ schnitt E eigen, ∃ q ∈ schnitt E eigen, p ≠ q ∧ p.eigen f = true ∧ q.eigen g = true := by
   refine ⟨by rw [schnitt_komponiere], _, List.mem_cons_self, _,
-    List.mem_cons_of_mem _ List.mem_cons_self, ?_, hf, by simp [hg]⟩
+    List.mem_cons_of_mem _ List.mem_cons_self, ?_, hf, by simp only [hg, Bool.not_false]⟩
   intro h
   have := congrArg (fun p : Projekt D => p.eigen g) h
-  simp [hg] at this
+  simp only [hg, Bool.not_false, Bool.false_eq_true] at this
 
 #print axioms projekte_zeuge
 #print axioms schnitt_grenze

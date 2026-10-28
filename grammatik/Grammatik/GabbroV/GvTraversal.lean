@@ -58,7 +58,7 @@ theorem alleIndizes_get (n : Int) (j : Nat) (hj : j < (alleIndizes n).length) :
       ((List.range n.toNat).map (fun k : Nat => (k : Int)))[j] := by
     simp only [h]
   rw [e2]
-  simp
+  simp only [List.getElem_map, List.getElem_range]
 
 
 /-! ## 1. The visited set: what "covered" means
@@ -211,35 +211,35 @@ theorem trav_lauf_hat_spur (schritt : World D → Env D (τ :: Γ) → Ausgang V
   induction ks generalizing σ ρ with
   | nil =>
     cases heq : (inv σ ρ).2 with
-    | true => exact ⟨[], _, LaufSpur.leerOk heq, by simp [traverseLauf, heq]⟩
-    | false => exact ⟨[], _, LaufSpur.invFehlt heq, by simp [traverseLauf, heq]⟩
+    | true => exact ⟨[], _, LaufSpur.leerOk heq, by simp only [traverseLauf, heq, ↓reduceIte]⟩
+    | false => exact ⟨[], _, LaufSpur.invFehlt heq, by simp only [traverseLauf, heq, Bool.false_eq_true, ↓reduceIte]⟩
   | cons k ks ih =>
     cases heq : (inv σ ρ).2 with
-    | false => exact ⟨[], _, LaufSpur.invFehlt heq, by simp [traverseLauf, heq]⟩
+    | false => exact ⟨[], _, LaufSpur.invFehlt heq, by simp only [traverseLauf, heq, ↓reduceIte]⟩
     | true =>
       cases hs : schritt (inv σ ρ).1 (.cons k ρ) with
       | ok σ' ρ' =>
         obtain ⟨besucht, aus, hspur, hrun⟩ := ih σ' ρ'.tail
         exact ⟨k :: besucht, aus, LaufSpur.weiterOk heq hs hspur,
-          by simp [traverseLauf, heq, hs, hrun]⟩
+          by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs, hrun]⟩
       | next hl σ' ρ' =>
         obtain ⟨besucht, aus, hspur, hrun⟩ := ih σ' ρ'.tail
         exact ⟨k :: besucht, aus, LaufSpur.weiterNext heq hs hspur,
-          by simp [traverseLauf, heq, hs, hrun]⟩
+          by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs, hrun]⟩
       | leave hl σ' ρ' =>
         cases hinv : (inv σ' ρ'.tail).2 with
         | true => exact ⟨[k], _, LaufSpur.verlassOk heq hs hinv,
-            by simp [traverseLauf, heq, hs, hinv]⟩
+            by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs, hinv]⟩
         | false => exact ⟨[k], _, LaufSpur.verlassFehlt heq hs hinv,
-            by simp [traverseLauf, heq, hs, hinv]⟩
+            by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs, hinv, Bool.false_eq_true]⟩
       | zurueck σ' v =>
-        exact ⟨[k], _, LaufSpur.abZurueck heq hs, by simp [traverseLauf, heq, hs]⟩
+        exact ⟨[k], _, LaufSpur.abZurueck heq hs, by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs]⟩
       | why σ' r =>
-        exact ⟨[k], _, LaufSpur.abGrund heq hs, by simp [traverseLauf, heq, hs]⟩
+        exact ⟨[k], _, LaufSpur.abGrund heq hs, by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs]⟩
       | logik e =>
-        exact ⟨[k], _, LaufSpur.abLogik heq hs, by simp [traverseLauf, heq, hs]⟩
+        exact ⟨[k], _, LaufSpur.abLogik heq hs, by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs]⟩
       | hardware e =>
-        exact ⟨[k], _, LaufSpur.abHardware heq hs, by simp [traverseLauf, heq, hs]⟩
+        exact ⟨[k], _, LaufSpur.abHardware heq hs, by simp only [traverseLauf, heq, Bool.true_eq_false, ↓reduceIte, hs]⟩
 
 /-- A trace visits only scheduled indices. -/
 theorem trav_spur_besucht_im_plan (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
@@ -335,7 +335,7 @@ theorem trav_ohne_verlasse_weiter (schritt : World D → Env D (τ :: Γ) → Au
   induction ks generalizing σ ρ with
   | nil =>
     refine ⟨[], _, WeiterSpur.leer (hinv σ ρ), rfl, ?_⟩
-    simp [traverseLauf, hinv σ ρ]
+    simp only [traverseLauf, hinv σ ρ, ↓reduceIte]
   | cons k ks ih =>
     have hkm : k ∈ k :: ks := List.mem_cons_self ..
     have hc' : ∀ k σ ρ, k ∈ ks →
@@ -345,10 +345,10 @@ theorem trav_ohne_verlasse_weiter (schritt : World D → Env D (τ :: Γ) → Au
     rcases hc k ((inv σ ρ).1) ρ hkm with ⟨σ', ρ', hs⟩ | ⟨hl, σ', ρ', hs⟩
     · obtain ⟨besucht, aus, hspur, heq1, heq2⟩ := ih σ' ρ'.tail hc'
       exact ⟨k :: besucht, aus, WeiterSpur.weiterOk (hinv σ ρ) hs hspur, by rw [heq1],
-        by simp [traverseLauf, hinv σ ρ, hs, heq2]⟩
+        by simp only [traverseLauf, hinv σ ρ, Bool.true_eq_false, ↓reduceIte, hs, heq2]⟩
     · obtain ⟨besucht, aus, hspur, heq1, heq2⟩ := ih σ' ρ'.tail hc'
       exact ⟨k :: besucht, aus, WeiterSpur.weiterNext (hinv σ ρ) hs hspur, by rw [heq1],
-        by simp [traverseLauf, hinv σ ρ, hs, heq2]⟩
+        by simp only [traverseLauf, hinv σ ρ, Bool.true_eq_false, ↓reduceIte, hs, heq2]⟩
 
 /-- A leave-free trace is a trace. -/
 theorem weiter_zu_lauf (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
@@ -424,7 +424,7 @@ def gvD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := by intro t h; cases t; simp at h
+  geteilt_bewacht := by intro t h; cases t; simp only [Bool.false_eq_true] at h
   invarianten_gehalten := by intro n i h; cases i
   ggeteilt_bewacht := by intro g h; cases g
 

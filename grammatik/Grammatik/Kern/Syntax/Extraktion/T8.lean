@@ -187,7 +187,7 @@ theorem hwit_aus_feuerung_ohne_axiomCall
       rw [hteq]
       exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
   | assignGlob g e hw hL =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hmem
   | putBytes t f hf n i hlo hhi e hw hL =>
       simp only [stmtTraeger] at hmem
       have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem
@@ -213,7 +213,7 @@ theorem hwit_aus_feuerung_ohne_axiomCall
       exact List.mem_append.mpr
         (Or.inl (List.mem_replicate.mpr ⟨by rw [hlen]; omega, rfl⟩))
   | assignVar x e =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | shift t f hτ i von nach hn he hw hL =>
       simp only [stmtTraeger] at hmem
       have hteq : t₀ = t := by simpa using List.mem_singleton.mp hmem
@@ -233,37 +233,37 @@ theorem hwit_aus_feuerung_ohne_axiomCall
         rw [hteq]
         exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
       · simp only [Ausgang.welt] at hstep
-        simp at hstep
-  | ite c t e => simp [Stmt.istBlatt] at hleaf
-  | onOption o p a => simp [Stmt.istBlatt] at hleaf
-  | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
-  | call f args hp hr => simp [Stmt.istBlatt] at hleaf
-  | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
-  | locks L hr body => simp [Stmt.istBlatt] at hleaf
-  | breaking i body => simp [Stmt.istBlatt] at hleaf
-  | traverse t inv body => simp [Stmt.istBlatt] at hleaf
-  | retry n bis body ueberlauf => simp [Stmt.istBlatt] at hleaf
-  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+        simp only [reduceCtorEq] at hstep
+  | ite c t e => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onOption o p a => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onTag v arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | call f args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | locks L hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | breaking i body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | traverse t inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | retry n bis body ueberlauf => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args h hw hg hd hgd => exact False.elim hax
   | regWrite r hk e =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | transition r hk m hm hl maske bits =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | publish g e payload hp hw hL =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hmem
   | advances m a h hs =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | retires m s h a =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | ret e hΛ =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | retWhy r hΛ =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | leave h =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
   | next h =>
-      simp [stmtTraeger] at hmem
+      simp only [stmtTraeger, List.not_mem_nil] at hmem
 
 /-- The prefix base: with no thread steps owed, no witness is owed -- the
     witness duty holds vacuously over any run. `hempty` types the
@@ -276,7 +276,7 @@ theorem hwit_leer (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
         run[j]? = some (Schritt.mk g (.zugriff t₀ w Λe he)) := by
   intro k g hk _
   rw [hempty] at hk
-  simp at hk
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 #print axioms Gabbro.Grammatik.Extraktion.hwit_aus_feuerung_ohne_axiomCall
 #print axioms Gabbro.Grammatik.Extraktion.hwit_leer
@@ -382,7 +382,7 @@ theorem hwit_alt_schritt
       · exact h
       · have hle : lauf.length ≤ j := by omega
         rw [List.getElem?_eq_none hle] at hw
-        simp at hw
+        simp only [reduceCtorEq] at hw
     refine ⟨j, w, Λe, he, ?_⟩
     rw [List.getElem?_append_left hjlt]
     exact hw
@@ -401,7 +401,7 @@ theorem hwit_alt_schritt
           List.length_singleton]
         omega
       rw [eNone] at hk
-      simp at hk
+      simp only [reduceCtorEq] at hk
 
 #print axioms Gabbro.Grammatik.Extraktion.hwit_alt_schritt
 

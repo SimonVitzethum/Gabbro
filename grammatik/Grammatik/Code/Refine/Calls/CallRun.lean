@@ -24,13 +24,13 @@ theorem step_call {M : Modl} {S : Sees} {f : Frame} {blk : Block} {d : Option Re
     (hb : M.blk f.fn f.lbl = some blk) (hi : blk.body[f.pc]? = some (.call d fi args))
     (hargs : args.mapM (Opd.ev f.regs) = some vs) (hg : Frame.callee M fi vs d = some g) :
     Step M S (.run m f ks) (.run m g (f :: ks)) := by
-  have hnext : Cfg.nextI M (.run m f ks) = some (.call d fi args) := by simp [Cfg.nextI, hb, hi]
+  have hnext : Cfg.nextI M (.run m f ks) = some (.call d fi args) := by simp only [Cfg.nextI, hb, Option.bind_some, hi]
   refine ⟨⟨fun _ _ _ _ _ => none⟩, legal_of_not_oracular S M _ _ ?_, ?_⟩
   · intro j hj
     rw [hnext] at hj
     cases hj
     rfl
-  · simp [step, hb, hi, hargs, hg]
+  · simp only [step, hb, hi, hargs, hg]
 
 /-- A `ret` with a caller goes back to the caller, one instruction on, with the result in the
     destination register if there is one. -/
@@ -41,14 +41,14 @@ theorem reach_ret_back {M : Modl} {S : Sees} {f' k : Frame} {ks : List Frame} {m
       Reach M S (.run m f' (k :: ks)) (.run m (k.adv.setr r w) ks)) := by
   obtain ⟨blk, hb, hl, h2⟩ := h
   rcases h2 with ⟨ht, rfl⟩ | ⟨o, v, ht, rfl, hv⟩
-  · refine ⟨fun hd => Reach.one (step_term ⟨hb, hl, ht⟩ (by simp [stepTerm, finish, hd])), ?_⟩
+  · refine ⟨fun hd => Reach.one (step_term ⟨hb, hl, ht⟩ (by simp only [stepTerm, finish, hd])), ?_⟩
     intro r w _ hw
     cases hw
-  · refine ⟨fun hd => Reach.one (step_term ⟨hb, hl, ht⟩ (by simp [stepTerm, hv, finish, hd])), ?_⟩
+  · refine ⟨fun hd => Reach.one (step_term ⟨hb, hl, ht⟩ (by simp only [stepTerm, hv, finish, hd])), ?_⟩
     intro r w hd hw
     have hvw : v = w := Option.some.inj hw
     subst hvw
-    exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp [stepTerm, hv, finish, hd]))
+    exact Reach.one (step_term ⟨hb, hl, ht⟩ (by simp only [stepTerm, hv, finish, hd]))
 
 /-- **The core of a lowered call**: the caller has run `pre`, the call instruction fires, the callee
     runs to its `ret`. -/
@@ -65,9 +65,10 @@ theorem call_core {lay : Layout D} {M : Modl} {S : Sees}
       f'.dst = d ∧ RetAt M f' (retImg lay (D.gruende f) (D.erg f) v) ∧ Rep lay σ' m' ∧ WfL lay m' ∧
         Keep lay m m' := by
   have hstr : Stretch M fn lb 0 pre := ⟨blk, hb, fun i hi => by
-    simp [hbody, List.getElem?_append_left hi]⟩
+    simp only [hbody, Nat.zero_add, List.getElem?_append_left hi, getElem?_eq_some_getElem_iff]⟩
   have h1 := reach_seq M S pre m ⟨fn, lb, 0, rs, dst⟩ ks m rs1 hstr hpre
-  have hi : blk.body[pre.length]? = some (.call d (lay.fno f) ops) := by simp [hbody]
+  have hi : blk.body[pre.length]? = some (.call d (lay.fno f) ops) := by simp only [hbody, List.length_append, List.length_cons, Nat.lt_add_right_iff_pos, Nat.zero_lt_succ,
+  getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
   obtain ⟨g, hg, hgfn, hgl, hgpc, hgd, hgA⟩ := callee_frame hFn f ρa d
   have h2 := step_call (M := M) (S := S) (f := ⟨fn, lb, pre.length, rs1, dst⟩) (blk := blk) (m := m)
     (ks := ks) hb hi hops hg
@@ -93,9 +94,10 @@ theorem call_core_why {lay : Layout D} {M : Modl} {S : Sees}
       f'.dst = d ∧ RetAt M f' (whyImg (D.gruende f) (D.erg f) r.val) ∧ Rep lay σ' m' ∧ WfL lay m' ∧
         Keep lay m m' := by
   have hstr : Stretch M fn lb 0 pre := ⟨blk, hb, fun i hi => by
-    simp [hbody, List.getElem?_append_left hi]⟩
+    simp only [hbody, Nat.zero_add, List.getElem?_append_left hi, getElem?_eq_some_getElem_iff]⟩
   have h1 := reach_seq M S pre m ⟨fn, lb, 0, rs, dst⟩ ks m rs1 hstr hpre
-  have hi : blk.body[pre.length]? = some (.call d (lay.fno f) ops) := by simp [hbody]
+  have hi : blk.body[pre.length]? = some (.call d (lay.fno f) ops) := by simp only [hbody, List.length_append, List.length_cons, Nat.lt_add_right_iff_pos, Nat.zero_lt_succ,
+  getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self, List.getElem_cons_zero]
   obtain ⟨g, hg, hgfn, hgl, hgpc, hgd, hgA⟩ := callee_frame hFn f ρa d
   have h2 := step_call (M := M) (S := S) (f := ⟨fn, lb, pre.length, rs1, dst⟩) (blk := blk) (m := m)
     (ks := ks) hb hi hops hg
@@ -173,10 +175,10 @@ theorem lowerArgs_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) :
   | _, _, _, .cons e rest, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerArgs] at h
       rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hr : lowerArgs lay cenv rest r1 with _ | ⟨cr, os, r2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq] at h
       subst h
       obtain ⟨Fe, _⟩ := lowerE_ok lay hL e cenv r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc

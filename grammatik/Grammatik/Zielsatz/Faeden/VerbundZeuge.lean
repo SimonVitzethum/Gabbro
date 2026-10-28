@@ -98,7 +98,7 @@ theorem vz_huelle_schreibt :
 
 theorem vz_nutzer1 : NutzerTeil vzE vzE1 := by
   refine ⟨⟨fun passes f hf => ?_, zS_lokal, axEnsLokal_wahr⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
-  · cases f <;> simp [vzE] at hf
+  · cases f <;> simp only [vzE, Bool.false_eq_true] at hf
     obtain ⟨k, i, g⟩ := zPool_nutzerPflicht.logik.1 passes zHaupt
     exact ⟨(koerper_mitRumpf2 zPB _ zPB.rumpf passes _ _ zHaupt rfl).mpr k,
       (invGutS_mitRumpf2 zPB _ zPB.rumpf passes _ _ zHaupt rfl).mpr i,
@@ -119,8 +119,8 @@ theorem vz_nutzer2 : NutzerTeil (fun f => !vzE f) vzE2 := by
     · exact ⟨(koerper_mitRumpf2 zPB _ zPB.rumpf passes _ _ zWrap rfl).mpr k,
         (invGutS_mitRumpf2 zPB _ zPB.rumpf passes _ _ zWrap rfl).mpr i,
         (invGutGrund_mitRumpf2 zPB _ zPB.rumpf passes _ _ zWrap rfl).mpr g⟩
-    · simp [vzE] at *
-  · simp [vzE2] at ha
+    · simp only [vzE, Bool.not_true, Bool.false_eq_true] at *
+  · simp only [vzE2, List.append_nil, List.not_mem_nil] at ha
 
 /-- **THE LINKED GOAL**: every leg of `ZielF` on every reachable thread machine of the linked
     program, from `gabbro_ziel_verbund` -- the two units' verdicts, the link check, the two

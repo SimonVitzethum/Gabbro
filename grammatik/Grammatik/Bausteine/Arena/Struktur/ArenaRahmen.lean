@@ -40,14 +40,14 @@ theorem lese (σ : World D) (Λ : List (Res D)) (o : List (D.Tab ⊕ D.Glob)) : 
 theorem schreibSlot (σ : World D) (Λ : List (Res D)) (i : Int) (f : D.Feld A.tab) (v : Wert D (D.typ A.tab f)) :
     LinkRahmen A [f] [] σ (σ.schreibSlot A.tab Λ i f v) := by
   refine ⟨fun C hC => funext fun j => ?_, fun _ _ => rfl⟩
-  have hne : C.f ≠ f := fun e => hC (by simp [e])
+  have hne : C.f ≠ f := fun e => hC (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
   simp only [LinkFeld.wert, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ hne]
 
 /-- A store into one global. -/
 theorem schreibGlob (σ : World D) (Λ : List (Res D)) (g : D.Glob) (v : Wert D (D.gtyp g)) :
     LinkRahmen A [] [g] σ (σ.schreibGlob g Λ v) := by
   refine ⟨fun _ _ => rfl, fun G hG => ?_⟩
-  have hne : G.g ≠ g := fun e => hG (by simp [e])
+  have hne : G.g ≠ g := fun e => hG (by simp only [e, List.mem_cons, List.not_mem_nil, or_false])
   simp only [LinkKopf.st, World.globs_schreibGlob_ne _ _ _ _ _ hne]
 
 /-- Two runs one after the other. -/

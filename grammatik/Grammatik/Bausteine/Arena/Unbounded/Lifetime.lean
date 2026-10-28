@@ -15,7 +15,7 @@ theorem Heap.Valid.withRights (hv : H.Valid capacity) (rights : ArenaOwnership.S
   · intro i c hc
     have hh : (H.rights.cells i).isSome = true := by rw [← hs i, hc]; rfl
     cases ho : H.rights.cells i with
-    | none => simp [ho] at hh
+    | none => simp only [ho, Option.isSome_none, Bool.false_eq_true] at hh
     | some old => exact hv.support i old ho
   · intro i hi
     obtain ⟨hb, he⟩ := hv.free_empty i hi
@@ -35,13 +35,13 @@ theorem Heap.write_valid {frame : Frame} {r : Ref region} {value : α}
       unfold ArenaOwnership.State.access at ha
       split at ha
       · contradiction
-      · rename_i c hc; simp [hc]
+      · rename_i c hc; simp only [hc, Option.isSome_some]
     refine ⟨⟨hv.rights, hv.support, ?_, hv.free_nodup, hv.free_empty, hv.capacity⟩, ?_⟩
     · intro i
       by_cases hi : i = r.handle.slot
       · subst i; simpa [Heap.put] using hc.symm
       · simpa [Heap.put, hi] using hv.coherent i
-    · simp [Heap.read, Heap.put, ha]
+    · simp only [read, put, ha, ↓reduceIte]
   · cases he
 
 theorem Heap.release_valid {frame : Frame} {r : Ref region}
@@ -49,7 +49,7 @@ theorem Heap.release_valid {frame : Frame} {r : Ref region}
     H'.Valid capacity ∧ (∀ g, H'.read g r = none) := by
   unfold Heap.release at he
   cases hr : H.rights.release frame r.handle with
-  | none => simp [hr] at he
+  | none => simp only [hr, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at he
   | some rights =>
     simp only [hr] at he
     cases he
@@ -57,7 +57,7 @@ theorem Heap.release_valid {frame : Frame} {r : Ref region}
     have hcell : ∃ c, H.rights.cells r.handle.slot = some c := by
       unfold ArenaOwnership.State.owns at ho
       cases hc : H.rights.cells r.handle.slot with
-      | none => simp [hc] at ho
+      | none => simp only [hc] at ho
       | some c => exact ⟨c, rfl⟩
     obtain ⟨c, hc⟩ := hcell
     obtain ⟨h0, hbound⟩ := hv.support _ _ hc
@@ -75,32 +75,32 @@ theorem Heap.release_valid {frame : Frame} {r : Ref region}
       · intro i c hi
         rw [hrights] at hi
         by_cases hs : i = r.handle.slot
-        · simp [ArenaOwnership.State.put, hs] at hi
+        · simp only [ArenaOwnership.State.put, hs, ↓reduceIte, reduceCtorEq] at hi
         · exact hv.support i c (by simpa [ArenaOwnership.State.put, hs] using hi)
       · intro i
         simp only [Heap.put]
         rw [hrights]
         by_cases hs : i = r.handle.slot
-        · simp [ArenaOwnership.State.put, hs]
+        · simp only [hs, ↓reduceIte, Option.isSome_none, ArenaOwnership.State.put]
         · simpa [ArenaOwnership.State.put, hs] using hv.coherent i
       · intro i hi
         rcases List.mem_cons.mp hi with hi | hi
         · subst i
           exact ⟨by change r.handle.slot.toNat < H.extent; omega,
-            by simp [hrights, ArenaOwnership.State.put, hnat]⟩
+            by simp only [hrights, ArenaOwnership.State.put, hnat, ↓reduceIte]⟩
         · obtain ⟨hb, hz⟩ := hv.free_empty i hi
           exact ⟨hb, by simpa [hrights, ArenaOwnership.State.put,
             show (i : Int) ≠ r.handle.slot by intro eq; rw [eq, hc] at hz; contradiction] using hz⟩
     · intro g
       have hn := (ArenaOwnership.State.release_valid hv.rights frame r.handle hr).2 g
-      simp [Heap.read, hn]
+      simp only [read, hn, ↓reduceIte]
 
 theorem Heap.move_valid {f g : Frame} {r r' : Ref region}
     (hv : H.Valid capacity) (he : H.move f g r = some (H', r')) :
     H'.Valid capacity ∧ H'.rights.owns g r'.handle ∧ (∀ k, H'.read k r = none) := by
   unfold Heap.move at he
   cases hr : H.rights.move f g r.handle with
-  | none => simp [hr] at he
+  | none => simp only [hr, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at he
   | some pair =>
     rcases pair with ⟨rights, handle⟩
     simp only [hr] at he
@@ -116,15 +116,15 @@ theorem Heap.move_valid {f g : Frame} {r r' : Ref region}
           unfold ArenaOwnership.State.owns at ho
           split at ho
           · contradiction
-          · rename_i c hc; simp [hc]
+          · rename_i c hc; simp only [hc, Option.isSome_some]
         have hh := congrArg Prod.fst (Option.some.inj hr)
         dsimp only at hh
         rw [← hh]
         by_cases hi : i = r.handle.slot
-        · subst i; simp [ArenaOwnership.State.put, hcell]
-        · simp [ArenaOwnership.State.put, hi]
+        · subst i; simp only [ArenaOwnership.State.put, ↓reduceIte, Option.isSome_some, hcell]
+        · simp only [ArenaOwnership.State.put, hi, ↓reduceIte]
       · cases hr
-    · intro k; simp [Heap.read, hp.2.2.1 k]
+    · intro k; simp only [read, hp.2.2.1 k, ↓reduceIte]
 
 theorem Heap.lend_valid {f g : Frame} {r : Ref region}
     (hv : H.Valid capacity) (he : H.lend f g r = some H') :
@@ -132,7 +132,7 @@ theorem Heap.lend_valid {f g : Frame} {r : Ref region}
       H'.read f r = none := by
   unfold Heap.lend at he
   cases hr : H.rights.lend f g r.handle with
-  | none => simp [hr] at he
+  | none => simp only [hr, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at he
   | some rights =>
     simp only [hr] at he
     cases he
@@ -147,16 +147,16 @@ theorem Heap.lend_valid {f g : Frame} {r : Ref region}
         · have hh := Option.some.inj hr
           rw [← hh]
           by_cases hi : i = r.handle.slot
-          · subst i; simp [ArenaOwnership.State.put, hc]
-          · simp [ArenaOwnership.State.put, hi]
+          · subst i; simp only [ArenaOwnership.State.put, ↓reduceIte, Option.isSome_some, hc]
+          · simp only [ArenaOwnership.State.put, hi, ↓reduceIte]
         · cases hr
-    · simp [Heap.read, hp.2.2.2]
+    · simp only [read, hp.2.2.2, ↓reduceIte]
 
 theorem Heap.endLoan_valid {f : Frame} {r : Ref region}
     (hv : H.Valid capacity) (he : H.endLoan f r = some H') : H'.Valid capacity := by
   unfold Heap.endLoan at he
   cases hr : H.rights.endLoan f r.handle with
-  | none => simp [hr] at he
+  | none => simp only [hr, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at he
   | some rights =>
     simp only [hr] at he
     cases he
@@ -172,8 +172,8 @@ theorem Heap.endLoan_valid {f : Frame} {r : Ref region}
         · have hh := Option.some.inj hr
           rw [← hh]
           by_cases hi : i = r.handle.slot
-          · subst i; simp [ArenaOwnership.State.put, hc]
-          · simp [ArenaOwnership.State.put, hi]
+          · subst i; simp only [ArenaOwnership.State.put, ↓reduceIte, Option.isSome_some, hc]
+          · simp only [ArenaOwnership.State.put, hi, ↓reduceIte]
         · cases hr
 
 /-- The finite reset checker is equivalent to the existing all-frames ownership rule. -/
@@ -201,9 +201,9 @@ theorem Heap.reset_valid {frame : Frame} (hv : H.Valid capacity)
     · intro i c hc; cases hc
     · intro i; rfl
     · intro i hi; cases hi
-    · cases capacity <;> simp [Capacity.permits]
+    · cases capacity <;> simp only [Capacity.permits, Nat.zero_le, decide_true]
     · intro f r
-      simp [Heap.read, ArenaOwnership.State.reset, ArenaOwnership.State.access]
+      simp only [read, ArenaOwnership.State.access, ArenaOwnership.State.reset, ↓reduceIte]
   · cases he
 
 theorem Heap.reset_blocked_by_other {f g : Frame} {r : Ref region}
@@ -214,7 +214,7 @@ theorem Heap.reset_blocked_by_other {f g : Frame} {r : Ref region}
     cases he : H.canReset f with
     | false => rfl
     | true => exact False.elim (hn ((H.canReset_iff hv f).mp he))
-  simp [Heap.reset, hc]
+  simp only [reset, hc, Bool.false_eq_true, ↓reduceIte]
 
 /-- Numeric slot reuse cannot revive an earlier allocation or consuming-call alias. -/
 theorem Heap.reuse_no_revival {available : Bool} {frame : Frame} {value : α} {r old : Ref region}
@@ -224,6 +224,6 @@ theorem Heap.reuse_no_revival {available : Bool} {frame : Frame} {value : α} {r
   have hr := (Heap.allocate_parts he).2.2.1
   intro f
   have hn := ArenaOwnership.State.reuse_no_revival hr hs hg f
-  simp [Heap.read, hn]
+  simp only [read, hn, ↓reduceIte]
 
 end Gabbro.Grammatik.ArenaStorage

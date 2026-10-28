@@ -26,7 +26,7 @@ theorem hautT_mem (tbls : List (Σ f : D.Fn, List (List (Rumpf D f)))) (h : Haut
     mem_piS (L := rumpfS tbls) h.rumpf c Aufz.fn (fun f _ => hm f)
   have hus : (fun f _ => h.unterbricht f) ∈ piS (fun _ => Sz.wahl [false, true]) Aufz.fn 0 := by
     have := mem_piS (L := fun _ : D.Fn => Sz.wahl [false, true]) h.unterbricht (fun _ => 0) Aufz.fn
-      (fun f _ => Sz.mem_wahl (by cases hb : h.unterbricht f <;> simp))
+      (fun f _ => Sz.mem_wahl (by cases hb : h.unterbricht f <;> simp only [List.mem_cons, Bool.false_eq_true, List.not_mem_nil, or_self, or_false, Bool.true_eq_false, or_true]))
     have hz : ((Aufz.fn (D := D)).map fun _ => 0).sum = 0 := summe_null _
     rw [hz] at this
     exact this
@@ -40,7 +40,7 @@ theorem hautT_mem (tbls : List (Σ f : D.Fn, List (List (Rumpf D f)))) (h : Haut
 omit [Aufz D] [Zahlen] in
 theorem summe_le {l : List D.Fn} {a b : D.Fn → Nat} (h : ∀ f, a f ≤ b f) : (l.map a).sum ≤ (l.map b).sum := by
   induction l with
-  | nil => simp
+  | nil => simp only [List.map_nil, List.sum_nil, Std.le_refl]
   | cons x xs ih => simp only [List.map_cons, List.sum_cons]; have := h x; omega
 
 end
@@ -54,7 +54,7 @@ theorem tabellenD_vollst (z : Spez) (nb : Nat) (hnb : nb < unendlich) (f : z.dek
   obtain ⟨e', he', g⟩ := rumpfTK_rep (fun _ _ => true) f nb hnb (fun _ => rfl) e hn
   have hgs : GleicherSchluessel e' e := schluessel_of_glN g
   have hl : groesseEnd e' < (rumpfTK (fun _ _ => true) f nb).length := by
-    have := g.groesse; simp [rumpfTK]; omega
+    have := g.groesse; simp only [rumpfTK, List.filter_true, List.length_map, List.length_range, gt_iff_lt]; omega
   obtain ⟨k, hk, b, hb, hkb⟩ := entdoppelt_vollst Rumpf.schluessel (fun _ => false) _ _ hl e' he' rfl
   refine ⟨k, by have := g.groesse; omega, b, ?_, hkb.trans hgs⟩
   unfold rumpfS Spez.tabellenD

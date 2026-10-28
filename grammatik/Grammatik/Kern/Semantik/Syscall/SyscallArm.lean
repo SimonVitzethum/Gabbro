@@ -218,12 +218,12 @@ theorem svc_errno_zeuge :
 /-- The frame law, for every state and answer: `svc` changes `x0` and nothing else. -/
 theorem nachSvc_rahmen (vorher : ArmZustand) (antwort : Int) (r : ArmReg)
     (h : r ≠ ergebnisReg) : (nachSvc vorher antwort).reg r = vorher.reg r := by
-  simp [nachSvc, h]
+  simp only [nachSvc, h, ↓reduceIte]
 
 /-- ... and `x0` carries the answer mod 2^64. -/
 theorem nachSvc_ergebnis (vorher : ArmZustand) (antwort : Int) :
     (nachSvc vorher antwort).reg ergebnisReg = (antwort % 18446744073709551616).toNat := by
-  simp [nachSvc]
+  simp only [nachSvc, ↓reduceIte]
 
 /-! ## 4. The stack-alignment premises, AArch64 -/
 

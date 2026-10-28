@@ -102,7 +102,7 @@ abbrev oD : Deklaration where
   Fn := OFn
   sig := fun | .aendern => 0 | .sicht => 1
   sigNr := fun | 0 => sigAendern | 1 => sigSicht | _ => sigAendern
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -118,7 +118,7 @@ abbrev oD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by cases t; simp at h
+  geteilt_bewacht := fun t h => by cases t; simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
@@ -175,7 +175,8 @@ theorem zeuge_prog : ProgObjOk objs oP := by
   intro f
   cases f with
   | aendern =>
-      refine ⟨⟨⟨.there .here, rfl, ⟨2, 3, OTab.T, true⟩, by simp [objs], rfl, rfl, rfl⟩, trivial⟩,
+      refine ⟨⟨⟨.there .here, rfl, ⟨2, 3, OTab.T, true⟩, by simp only [objs, List.mem_cons, ObjPar.mk.injEq, reduceCtorEq, Nat.reduceEqDiff, Bool.true_eq_false,
+  and_false, and_self, List.not_mem_nil, or_self, or_false], rfl, rfl, rfl⟩, trivial⟩,
         ?_, ?_⟩
       · intro op hop hrw
         simp only [objs, List.mem_cons, List.not_mem_nil, or_false] at hop
@@ -248,9 +249,9 @@ theorem zeuge_objGetrennt : ObjGetrennt (objs fA) ρGetrennt := by
   | ⟨0, _⟩, ⟨0, _⟩ => exact absurd rfl hij
   | ⟨1, _⟩, ⟨1, _⟩ => exact absurd rfl hij
   | ⟨0, _⟩, ⟨1, _⟩ =>
-      rw [h0, h1]; intro e; have := congrArg (fun o => o.map Obj.nr) e; simp at this
+      rw [h0, h1]; intro e; have := congrArg (fun o => o.map Obj.nr) e; simp only [Option.map_some, Option.some.injEq, Int.reduceEq] at this
   | ⟨1, _⟩, ⟨0, _⟩ =>
-      rw [h0, h1]; intro e; have := congrArg (fun o => o.map Obj.nr) e; simp at this
+      rw [h0, h1]; intro e; have := congrArg (fun o => o.map Obj.nr) e; simp only [Option.map_some, Option.some.injEq, Int.reduceEq] at this
 
 /-- **`obj_ruf_rahmen` on the fixture**: every run of `aendern` at `k = 0, w = 1`, at every
     depth and from every world, leaves every field of `T.slots[1]` -- the object of the
@@ -357,7 +358,7 @@ theorem zeuge_S2 : ParamVerschieden wp pObj := by
 theorem zeuge_frischNeu : FrischNeu pObj fObj :=
   show FrischNeu (fun i => (⟨OTab.T, pNr i⟩ : Obj oD)) (fun n => ⟨OTab.T, ArenaDyn.allocStrom F0 n⟩) from
   frischNeu_aus_arena (D := oD) OTab.T F0 List.nodup_nil pNr
-    (fun i => ⟨show pNr i < 2 from by unfold pNr; split <;> decide, by simp [F0]⟩)
+    (fun i => ⟨show pNr i < 2 from by unfold pNr; split <;> decide, by simp only [F0, List.not_mem_nil, not_false_eq_true]⟩)
 
 /-- **THE BRIDGE, END TO END**: the call `aendern(k, f)` with `k = 0` (the caller's writable
     parameter) and `f = 2` (the first fresh answer of the allocator) is `R014`-clean, the
@@ -381,7 +382,7 @@ theorem zeuge_r014_ruf_rahmen (passes fuel : Nat) (σ σ' : World oD)
   · intro k hk i hi
     match k with
     | ⟨0, _⟩ =>
-        simp [herkunftFrisch, Herkunft.wurzeln] at hi
+        simp only [herkunftFrisch, ↓reduceIte, Herkunft.wurzeln, Wurzel.param.injEq] at hi
         subst hi; rfl
     | ⟨1, _⟩ => cases hk
 

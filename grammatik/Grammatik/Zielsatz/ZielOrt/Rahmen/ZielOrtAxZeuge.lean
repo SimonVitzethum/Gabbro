@@ -80,7 +80,7 @@ theorem axO_gut : GutO axO := by
     · intro g
       exact nomatch g
     · intro m st hm
-      simp at hm
+      simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
     · intro L hL
       have eL : L = () := rfl
       rw [eL]

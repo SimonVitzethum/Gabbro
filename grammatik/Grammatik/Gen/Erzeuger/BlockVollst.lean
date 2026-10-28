@@ -26,7 +26,7 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
   cases b with
   | nil =>
     simp only [groesseBlock]
-    blk bNil, Sz.mem_blatt (by simp)
+    blk bNil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
   | cons s rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO ⊢
     have hs := hS _ s (by omega)
@@ -176,13 +176,13 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
       Sz.mem_wenn hΛ <| Sz.mem_pure _) (by omega)
   | retWhy r hΛ =>
     simp only [groesseEnd]
-    blk eRetWhy, Sz.mem_blatt (List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp⟩)
+    blk eRetWhy, Sz.mem_blatt (List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp only [List.mem_cons, List.not_mem_nil, or_false]⟩)
   | leave hl =>
     simp only [groesseEnd]
-    blk eLeave, Sz.mem_blatt (by rw [dif_pos hl]; simp)
+    blk eLeave, Sz.mem_blatt (by rw [dif_pos hl]; simp only [List.mem_cons, List.not_mem_nil, or_false])
   | next hl =>
     simp only [groesseEnd]
-    blk eNext, Sz.mem_blatt (by rw [dif_pos hl]; simp)
+    blk eNext, Sz.mem_blatt (by rw [dif_pos hl]; simp only [List.mem_cons, List.not_mem_nil, or_false])
   | cons s rest =>
     simp only [groesseEnd] at hu hE hS hO ⊢
     have hs := hS _ s (by omega)

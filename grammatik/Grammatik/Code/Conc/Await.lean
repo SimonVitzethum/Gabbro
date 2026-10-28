@@ -36,7 +36,7 @@ theorem step_aload {M : Modl} {S : Sees} {f : Frame} {blk : Block} {d : Reg} {t 
     (hp : p.ev f.regs = some (.ptr b o)) (hat : atomicOk t = true)
     (hin : Mem.inside (((m.blks b).map Blk.size).getD 0) o t) (hS : S m b o t ord x) (hty : x.ty = t) :
     Step M S (.run m f ks) (.run m { f with regs := f.regs.set d x, pc := f.pc + 1 } ks) := by
-  have hnext : Cfg.nextI M (.run m f ks) = some (.aload d t p ord) := by simp [Cfg.nextI, hb, hi]
+  have hnext : Cfg.nextI M (.run m f ks) = some (.aload d t p ord) := by simp only [Cfg.nextI, hb, Option.bind_some, hi]
   refine ⟨⟨fun _ _ _ _ _ => some x⟩, ?_, ?_⟩
   · simp only [Oracle.legal, hnext]
     intro b' o' v hp' hv
@@ -55,12 +55,12 @@ theorem inside_of_load {m : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val} (h : m.l
     Mem.inside (((m.blks b).map Blk.size).getD 0) o t := by
   unfold Mem.load at h
   cases hb : m.blks b with
-  | none => simp [hb] at h
+  | none => simp only [hb, reduceCtorEq] at h
   | some blk =>
       simp only [hb] at h
       by_cases hi : Mem.inside blk.size o t
       · simpa [hb] using hi
-      · simp [hi] at h
+      · simp only [hi, ↓reduceIte, reduceCtorEq] at h
 
 /-- **`await` refines G's `await`** on the world the thread reads, for the value the interface answers. -/
 theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
@@ -82,15 +82,15 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     apply Classical.byContradiction
     intro hn
     rw [if_neg hn] at h
-    simp at h
+    simp only [reduceCtorEq] at h
   rw [if_pos hat] at h
   have hs := atomicG_supp hat
   rcases hb : bindCode (D.gtyp g) (.reg st.r) (st.r + 1) with _ | ⟨cb, a, r2⟩
-  · simp [hb] at h
+  · simp only [hb, reduceCtorEq] at h
   have m3 := bindCode_mono hb
   simp only [hb] at h
   rcases hb1 : lowerB lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ with _ | ⟨bo, s1⟩
-  · simp [hb1] at h
+  · simp only [hb1, reduceCtorEq] at h
   have S1 := lowerB_shape lay (a :: cenv) lv rest st.l k ⟨r2, st.l + 1⟩ s1 bo hb1
   simp only [hb1] at h
   have h' := Option.some.inj h
@@ -128,12 +128,12 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     subst hr4e
     have hstr : Stretch M fn lb 1 cb := ⟨_, hb0, fun i hi => by
       show (Instr.aload st.r (memTy (D.gtyp g)) (.glob (lay.ggblk g)) .acq :: cb)[1 + i]? = some cb[i]
-      simp [List.getElem?_eq_getElem hi, show 1 + i = i + 1 by omega]⟩
+      simp only [show 1 + i = i + 1 by omega, List.getElem?_cons_succ, List.getElem?_eq_getElem hi]⟩
     have hseqb := reach_seq M S cb m ⟨fn, lb, 1, rs.set st.r (encM lay (D.gtyp g) (σ.globs g)), dst⟩ ks m1 rs4 hstr hs4
     have hjmp := reach_jmp (S := S) (m := m1) (ks := ks)
       (f := ⟨fn, lb, 1 + cb.length, rs4, dst⟩) (l := st.l)
       (blk := ⟨lb, [], .aload st.r (memTy (D.gtyp g)) (.glob (lay.ggblk g)) .acq :: cb, .jmp st.l⟩)
-      ⟨hb0, by simp; omega, rfl⟩ hbk2 hkp2
+      ⟨hb0, by simp only [List.length_cons]; omega, rfl⟩ hbk2 hkp2
     have hbound : ∀ x ∈ a :: cenv, x < a + 1 := fun x hx => by
       rcases List.mem_cons.mp hx with rfl | hx'
       · exact Nat.lt_succ_self _
@@ -152,7 +152,7 @@ theorem await_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     have hca : ∀ x ∈ cenv, x < st.r := hc
     exact outok_bind hreach hFtot hcell' hca (Nat.le_trans (Nat.le_succ _) (Nat.le_trans m3.1 (Nat.le_succ a))) _ IHr
   · rw [if_neg hvis]
-    simp [OutOk]
+    simp only [OutOk]
 
 /-- A successful lowering of `await` is a lowering of an atomic global. -/
 theorem lowerAwait_atomic {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {g : D.Glob} {l : Bool}
@@ -163,7 +163,7 @@ theorem lowerAwait_atomic {lay : Layout D} {cenv : List Reg} {lv : Lbl × Lbl} {
   apply Classical.byContradiction
   intro hn
   rw [if_neg hn] at h
-  simp at h
+  simp only [reduceCtorEq] at h
 
 /-- **The sequentially consistent reading is exact**: with `Sees.sc` the interface answers what the memory holds,
     which `Rep` says is the image of the world's value, so the lowered `await` refines G's `await`. -/
@@ -191,10 +191,10 @@ def PresentedAt (g : D.Glob) (σ σ' : World D) : Prop :=
   σ'.slots = σ.slots ∧ ∀ h, h ≠ g → σ'.globs h = σ.globs h
 
 theorem presentedAt_storeGlob (σ : World D) (g : D.Glob) (xg : Wert D (D.gtyp g)) :
-    PresentedAt g σ (σ.storeGlob g xg) := ⟨rfl, fun h hh => by simp [World.storeGlob, hh]⟩
+    PresentedAt g σ (σ.storeGlob g xg) := ⟨rfl, fun h hh => by simp only [World.storeGlob, hh, ↓reduceDIte]⟩
 
 theorem storeGlob_globs_self (σ : World D) (g : D.Glob) (xg : Wert D (D.gtyp g)) :
-    (σ.storeGlob g xg).globs g = xg := by simp [World.storeGlob]
+    (σ.storeGlob g xg).globs g = xg := by simp only [World.storeGlob, ↓reduceDIte]
 
 /-- **The reading in machine GX's terms**: for every value `xg` the interface answers at the cell, when the memory
     represents the presented world (the world with the shared atomic `g` holding `xg`), the lowered `await`

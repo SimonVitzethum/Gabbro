@@ -92,7 +92,7 @@ theorem blk_mem {M : Modl} {f : Nat} {l : Lbl} {blk : Block} (h : M.blk f l = so
     ∃ fn ∈ M.funs, blk ∈ fn.blks := by
   unfold Modl.blk at h
   cases hf : M.funs[f]? with
-  | none => simp [hf] at h
+  | none => simp only [hf, Option.bind_none, reduceCtorEq] at h
   | some fn =>
       simp only [hf, Option.bind_some] at h
       exact ⟨fn, List.mem_of_getElem? hf, List.mem_of_find?_eq_some h⟩
@@ -142,7 +142,7 @@ theorem step_stuck_am_tor {M : Modl} {O : Oracle} {m : Mem} {f : Frame} {ks : Li
   | some vs =>
       simp only
       have : M.funs[fi]? = none := List.getElem?_eq_none hge
-      simp [Frame.callee, this]
+      simp only [Frame.callee, this]
 
 /-! ## 3. What a CPU model must provide for user-declared traps -/
 

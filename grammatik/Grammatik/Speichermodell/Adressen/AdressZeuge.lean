@@ -97,10 +97,11 @@ theorem oG_gut : ImBereichO oG := fun _ _ _ _ _ _ _ => rfl
 
 theorem oB_nicht : ¬ ImBereichO oB := by
   intro h
-  have := h () (aS.welt []) .nil () 7 () (by simp [ImBereich])
-  simp [oB, World.storeSlot] at this
+  have := h () (aS.welt []) .nil () 7 () (by simp only [ImBereich, Int.zero_le_ofNat, Bool.false_eq_true, Int.reduceLT, or_self, and_false,
+  not_false_eq_true])
+  simp only [oB, World.storeSlot, ↓reduceDIte, ↓reduceIte] at this
   have := congrArg Zahl.n this
-  simp [aS, Speicher.welt] at this
+  simp only [Speicher.welt, aS, Int.reduceEq] at this
 
 /-! ## (A) a write inside the extent -/
 
@@ -109,7 +110,7 @@ def aM0 : RufMaschineG aD := RufStartG aP aS (fun _ => ⟨true, .nil⟩)
 theorem az_schritt : ∃ M1, RufSchrittG aP oG 0 aM0 0 M1 ∧ (M1.speicher.slots () 1 ()).n = 5 := by
   refine ⟨_, RufSchrittG.blatt aM0 0 false [] [] [] _ (.ret .empty (List.Perm.refl _)) .nil rfl rfl
     (fun _ h => nomatch h) _ _ [Ereignis.zugriff () true [] (offen (aM0.faeden 0).spur)] rfl rfl
-    (by simp), ?_⟩
+    (by simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, not_false_eq_true, implies_true]), ?_⟩
   rfl
 
 /-- The cell `(T, 1, x)` changed, from `0` to `5`. -/
@@ -125,8 +126,8 @@ def aL : AdressLayout aD := ⟨fun _ => 0, fun _ => 100, fun _ => 8, fun _ _ => 
 
 theorem aL_ok : LayoutOk aL where
   geschlossen := fun _ _ => rfl
-  offen := fun _ h => by simp at h
-  feld := fun _ _ => by simp [aL]
+  offen := fun _ h => by simp only [Bool.false_eq_true] at h
+  feld := fun _ _ => by simp only [aL, Nat.zero_add, Nat.reduceLeDiff]
   felder := fun _ _ _ h => absurd rfl h
   tabellen := fun _ _ _ h => absurd rfl h
   tabGlob := fun _ g => g.elim
@@ -139,7 +140,8 @@ theorem az_bereich : ∃ M1, RufErreichbarGX aP oG 0 (fun _ => False) aM0 M1 ∧
   obtain ⟨M1, hr, hne⟩ := az_aendert
   have h := geaendert_im_bereich (rufErreichbarGX_aussen (fun _ h => h) oG_gut hr) aL_ok hne
   have hz : aL.inZelle () 1 () (0, 108) := by
-    simp [AdressLayout.inZelle, AdressLayout.adresse, aL]
+    simp only [AdressLayout.inZelle, aL, AdressLayout.adresse, Int.toNat_one, Nat.one_mul, Nat.reduceAdd,
+  Nat.add_zero, Std.le_refl, Nat.reduceLT, and_self]
   exact ⟨M1, hr, hne, h.1, hz, h.2 (0, 108) hz⟩
 
 /-! ## (B) a foreign write outside the extent -/
@@ -150,8 +152,9 @@ def bM0 : RufMaschineG aD := RufStartG aP aS (fun _ => ⟨false, .nil⟩)
 theorem ab_aussen : ∃ M1, RufErreichbarGX aP oB 0 (fun _ => False) bM0 M1 ∧ ¬ ImBereich aD () 7 ∧
     M1.speicher.slots () 7 () ≠ bM0.speicher.slots () 7 () := by
   refine ⟨_, gx_aus_g_lauf (.schritt _ _ 0 .start (RufSchrittG.blatt bM0 0 false [] [] [] _
-    (.ret .empty (List.Perm.refl _)) .nil rfl rfl (fun _ h => nomatch h) _ _ [.fremd (.inl ())] rfl rfl (by simp))),
-    by simp [ImBereich], ?_⟩
+    (.ret .empty (List.Perm.refl _)) .nil rfl rfl (fun _ h => nomatch h) _ _ [.fremd (.inl ())] rfl rfl (by simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, not_false_eq_true, implies_true]))),
+    by simp only [ImBereich, Int.zero_le_ofNat, Bool.false_eq_true, Int.reduceLT, or_self, and_false,
+  not_false_eq_true], ?_⟩
   intro e
   have := congrArg Zahl.n e
   revert this

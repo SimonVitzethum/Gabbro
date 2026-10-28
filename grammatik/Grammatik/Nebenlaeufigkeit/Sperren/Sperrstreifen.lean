@@ -177,7 +177,7 @@ def grobD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => spSig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -228,7 +228,7 @@ def strD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => stSig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []

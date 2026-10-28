@@ -37,7 +37,7 @@ theorem zugriffe_anders {P : Programm D} {O : Orakel D} {passes : Nat}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
     (g : Faden) (hg : g ≠ f) : zugriffe M M' g = [] := by
   have e : M'.faeden g = M.faeden g := rufSchrittG_fremd hs g hg
-  simp [zugriffe, e]
+  simp only [zugriffe, e, Nat.sub_self, List.take_zero, List.filterMap_nil]
 
 /-- An adjacent double write on a lock-guarded carrier: two steps back to
     back by different threads, each changing the same carrier `c`, where `c`

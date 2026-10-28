@@ -54,10 +54,10 @@ theorem lowerGA_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, _, .cons b rest, lb, k, s, s', blks, h, ⟨0, hi⟩ => by
       simp only [lowerGA] at h
       rcases hb : lowerB lay cenv lv b lb k s with _ | ⟨b1, s1⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerGA lay cenv lv rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       have G := lowerGA_shape lay cenv lv rest (lb + 1) k s1 s2 b2 hr
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -66,11 +66,11 @@ theorem lowerGA_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, _, .cons b rest, lb, k, s, s', blks, h, ⟨i + 1, hi⟩ => by
       simp only [lowerGA] at h
       rcases hb : lowerB lay cenv lv b lb k s with _ | ⟨b1, s1⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       have S1 := lowerB_shape lay cenv lv b lb k s s1 b1 hb
       simp only [hb] at h
       rcases hr : lowerGA lay cenv lv rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨bi, si, si', hbi, hsub, hle1, hle2⟩ :=
@@ -95,7 +95,7 @@ theorem reach_block_sw {M : Modl} {S : Sees} {fn : Nat} {lb d : Lbl} {cs : List 
     (hk : M.blk fn l = some bk) (hkp : bk.phis = []) :
     Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' ⟨fn, l, 0, rs', dst⟩ ks) := by
   have h1 := reach_seq M S b.body m ⟨fn, lb, 0, rs, dst⟩ ks m' rs'
-    ⟨b, hb, fun i h => by simp⟩ hs
+    ⟨b, hb, fun i h => by simp only [Nat.zero_add, getElem?_eq_some_getElem_iff]⟩ hs
   have h2 : Reach M S (.run m' ⟨fn, lb, 0 + b.body.length, rs', dst⟩ ks) (.run m' ⟨fn, l, 0, rs', dst⟩ ks) :=
     Reach.one (step_term (f := ⟨fn, lb, 0 + b.body.length, rs', dst⟩) (blk := b)
       ⟨hb, (show b.body.length ≤ 0 + b.body.length by omega), hbt⟩ (by
@@ -139,7 +139,8 @@ theorem find_tbl (w n r base : Nat) (hn : n ≤ 2 ^ w) (hr : r < n) :
           rw [toNat_ofInt_nat (by omega), toNat_ofInt_nat (by omega)] at this
           omega
         rw [hnone]
-        simp
+        simp only [BitVec.ofInt_natCast, List.map_cons, List.map_nil, decide_true, List.find?_cons_of_pos,
+  Option.or_some, Option.getD_none]
 
 /-! ## The statement -/
 
@@ -160,16 +161,16 @@ theorem onWhy_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
       (execStmt O passes R (Gabbro.Grammatik.Stmt.onWhy r arms) σ ρ) := by
   simp only [lowerS] at h
   rcases hr : lowerE lay cenv r st.r with _ | ⟨cr, orr, r1⟩
-  · simp [hr] at h
+  · simp only [hr, reduceCtorEq] at h
   simp only [hr] at h
   have hfit : Ar.Fits 0 ((n : Int) - 1) 128 := by
     apply Classical.byContradiction
     intro hn
     rw [if_neg hn] at h
-    simp at h
+    simp only [reduceCtorEq] at h
   rw [if_pos hfit] at h
   rcases hga : lowerGA lay cenv lv arms (st.l + 1) k ⟨r1, st.l + 1 + n⟩ with _ | ⟨ba, s1⟩
-  · simp [hga] at h
+  · simp only [hga, reduceCtorEq] at h
   simp only [hga] at h
   have h' := Option.some.inj h
   simp only [Prod.mk.injEq] at h'
@@ -215,7 +216,7 @@ theorem onWhy_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     (by
       intro hc
       rw [find_tbl _ n i.val (st.l + 1) hin i.isLt] at hc
-      exact absurd hc (by simp))
+      exact absurd hc (by simp only [reduceCtorEq, not_false_eq_true]))
     hbkb hkpb
   exact outok_mono hle2 _ (outok_lift hbr (fr_regs hag1) (Nat.le_trans hr1 hle1) hc _
     (IH i (st.l + 1 + i.val) k si si' bi hbi M S fn hMi hk hlv hFn hCall σl ρ m rs1 ks dst hRl' hE1 hW

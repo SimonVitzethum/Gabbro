@@ -203,7 +203,7 @@ theorem H9H_moves : H9H.speicher.slots () 0 () ≠
   have hn : ((⟨2, by decide, by decide⟩ :
       Wert rufDF (rufDF.typ () ())).n) = ((⟨0, by decide, by decide⟩ :
       Wert rufDF (rufDF.typ () ())).n) := congrArg Zahl.n hcon
-  simp at hn
+  simp only [Int.reduceEq] at hn
 
 /-- **Witness for `rufG_treu` over a loop with `leave` and a bind-call.**
     The premises of `rufG_treu` are instantiated JOINTLY: the program `hP`

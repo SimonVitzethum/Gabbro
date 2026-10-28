@@ -25,11 +25,11 @@ def neuVon (s t : List (Ereignis D)) : List (Ereignis D) := s.take (s.length - t
 
 theorem neuVon_eq {s t x : List (Ereignis D)} (h : s = x ++ t) : s = neuVon s t ++ t := by
   subst h
-  simp [neuVon]
+  simp only [neuVon, List.length_append, Nat.add_sub_cancel, List.take_left']
 
 theorem neuVon_von {s t x : List (Ereignis D)} (h : s = x ++ t) : neuVon s t = x := by
   subst h
-  simp [neuVon]
+  simp only [neuVon, List.length_append, Nat.add_sub_cancel, List.take_left']
 
 /-- A leaf's growth as the step needs it: the new events, computed, with their two facts. -/
 theorem erw_neu {σ σ' : World D} (h : Erw σ σ') :
@@ -85,6 +85,6 @@ theorem blatt_erw {O : Orakel D} (hO : OrakelSpurTreu O) (passes : Nat) {V : Ver
         refine (Erw.lese σ Λ args.orte).trans ⟨[.fremd (.inl a)], hs, ?_⟩
         intro e he; simp only [List.mem_singleton] at he; subst he; rfl
       · cases hex
-  | _ => (try simp [Stmt.istBlatt] at hleaf) <;> simp [execStmt] at hex
+  | _ => (try simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf) <;> simp only [execStmt, reduceCtorEq] at hex
 
 end Gabbro.Stage0

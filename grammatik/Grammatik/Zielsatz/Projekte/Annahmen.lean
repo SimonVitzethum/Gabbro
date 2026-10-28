@@ -44,7 +44,7 @@ structure Inv (gesehen : List (K × C)) (acc : List (K × C) × List K) : Prop w
 
 theorem find_key {l : List (K × C)} {k : K} :
     l.find? (fun a => a.1 = k) = none ↔ ∀ a ∈ l, a.1 ≠ k := by
-  simp [List.find?_eq_none]
+  simp only [List.find?_eq_none, decide_eq_true_eq, Prod.forall, ne_eq]
 
 theorem eindeutig_eq {l : List (K × C)} (h : (l.map Prod.fst).Nodup) {a b : K × C}
     (ha : a ∈ l) (hb : b ∈ l) (hk : a.1 = b.1) : a = b :=
@@ -61,18 +61,18 @@ theorem inv_schritt {g : List (K × C)} {acc : List (K × C) × List K} (h : Inv
       · intro a ha
         rcases List.mem_append.mp ha with ha | ha
         · exact List.mem_append_left _ (h.teil a ha)
-        · simp at ha; subst ha; simp
+        · simp only [List.mem_cons, List.not_mem_nil, or_false] at ha; subst ha; simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_true]
       · simp only [List.map_append, List.map_cons, List.map_nil]
         refine List.nodup_append.mpr ⟨h.eindeutig, List.nodup_singleton _, ?_⟩
         intro x hx y hy hxy
-        simp at hy; subst hy; subst hxy
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at hy; subst hy; subst hxy
         obtain ⟨a, ha, hae⟩ := List.mem_map.mp hx
         exact hn a ha hae
       · intro x hx
         rcases List.mem_append.mp hx with hx | hx
         · obtain ⟨a, ha, hk⟩ := h.schluessel x hx
           exact ⟨a, List.mem_append_left _ ha, hk⟩
-        · simp at hx; subst hx; exact ⟨x, by simp, rfl⟩
+        · simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; exact ⟨x, by simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_true], rfl⟩
       · intro x hx a ha hk hc
         rcases List.mem_append.mp ha with ha1 | ha1
         · rcases List.mem_append.mp hx with hx1 | hx1
@@ -95,7 +95,7 @@ theorem inv_schritt {g : List (K × C)} {acc : List (K × C) × List K} (h : Inv
       have alt : ∀ x ∈ g ++ [e], x ∈ g ∨ x = e := fun x hx => by
         rcases List.mem_append.mp hx with hx | hx
         · exact Or.inl hx
-        · simp at hx; exact Or.inr hx
+        · simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; exact Or.inr hx
       by_cases hc : a.2 = e.2
       · simp only [hc, ite_true]
         refine ⟨fun x hx => List.mem_append_left _ (h.teil x hx), h.eindeutig, ?_, ?_, ?_⟩
@@ -125,7 +125,7 @@ theorem inv_schritt {g : List (K × C)} {acc : List (K × C) × List K} (h : Inv
           rcases List.mem_append.mp hk with hk | hk
           · obtain ⟨x, hx, b, hb, h1, h2, h3⟩ := h.gemeldet k hk
             exact ⟨x, List.mem_append_left _ hx, b, hb, h1, h2, h3⟩
-          · simp at hk; subst hk
+          · simp only [List.mem_cons, List.not_mem_nil, or_false] at hk; subst hk
             exact ⟨e, List.mem_append_right _ (List.mem_singleton.mpr rfl), a, ha, hak, rfl, hc⟩
 
 theorem inv_foldl : ∀ (l g : List (K × C)) (acc : List (K × C) × List K), Inv g acc →

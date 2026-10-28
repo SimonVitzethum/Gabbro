@@ -53,8 +53,8 @@ theorem allocation_payload_frame (A : FreiForm D)
   intro i
   simp only [eval, Block.arenaBump, eval_umTyp, orte_umTyp, Expr.orte,
     World.slots_schreibGlob, World.slots_lese]
-  simp [Expr.weaken, Expr.ins, Expr.ren, Var.ins, eval, Env.get,
-    World.schreibSlot, World.merke, World.storeSlot, World.lese]
+  simp only [World.schreibSlot, World.merke, World.storeSlot, Env.get, World.lese, Expr.weaken, Expr.ins,
+  Expr.ren, List.nil_append, Var.ins, eval, List.cons_append, ↓reduceDIte]
 
 /-- The existing G allocation actually runs and produces the SAME grant as the
 unbounded allocator, whenever this finite realisation has room. This is a

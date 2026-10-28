@@ -115,12 +115,12 @@ theorem abgK_ruft (hvoll : ∀ g : D.Fn, g ∈ fs) {Z : D.Fn → Bool} (hA : Abg
       · show (!decide (h = g)) = true
         have hh' : Z h = true := hh
         have : h ≠ g := fun e => by subst e; rw [hh'] at hg; cases hg
-        simp [this]
+        simp only [this, decide_false, Bool.not_false]
       · show (!D.passt g n) = true
         have h1 := (List.all_eq_true.mp hn) g (hvoll g)
         cases e : D.passt g n
         · rfl
-        · simp [e, hg] at h1
+        · simp only [e, Bool.not_true, hg, Bool.or_self, Bool.false_eq_true] at h1
     have := mE_mono hle _ hm
     unfold ruftB at hr
     rw [this] at hr

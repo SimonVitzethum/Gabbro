@@ -77,7 +77,7 @@ theorem uebersetzeAllg_von_zeichen {l : List Char} {toks : List Token}
 theorem except_ok_get {ε α : Type} {x : Except ε α} (h : x.toOption.isSome = true) :
     x = .ok (x.toOption.get h) := by
   cases x with
-  | error e => simp [Except.toOption] at h
+  | error e => simp only [Except.toOption, Option.isSome_none, Bool.false_eq_true] at h
   | ok a => rfl
 
 /-- The declared starts of an elaborated unit, as functions of its declaration: the thread roots (the
@@ -123,7 +123,7 @@ theorem filterMap_laenge {α β : Type} (f : α → Option β) (ns : List α) (h
     have hn := h n (List.mem_cons_self ..)
     cases hx : f n with
     | none => rw [hx] at hn; cases hn
-    | some b => simp [List.filterMap_cons, hx, ih hr]
+    | some b => simp only [hx, Option.some.injEq, List.filterMap_cons_some, List.length_cons, ih hr, Nat.add_left_cancel_iff]
 
 /-- A name the unit knows is kept: `fnsVon` drops exactly the unknown names. -/
 theorem fnsVon_laenge (u : UProg) (ns : List String) (h : ∀ n ∈ ns, (fnIdx u.fns n).toOption.isSome = true) :

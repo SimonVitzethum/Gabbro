@@ -96,7 +96,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .erster_frei_belegen => 0
   sigNr := fun | 0 => gSig_erster_frei_belegen | _ => gSig_erster_frei_belegen
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -200,7 +200,7 @@ theorem gLs_voll : ∀ L : gD.Lock, L ∈ gLs := by
 theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
   intro c
   cases c with
-  | inl t => cases t <;> simp [gCs]
+  | inl t => cases t <;> simp only [gCs, List.mem_cons, List.not_mem_nil, or_false]
   | inr g => cases g <;> simp [gCs]
 
 -- The checker premise, discharged here: the concrete checker of the
@@ -273,9 +273,9 @@ theorem schleife (O : Orakel gD) (U : Umwelt gD) (A : AUmwelt gD) (passes : Nat)
       (fun o => ∃ σ' ρ', o = .ok σ' ρ') σ ρ := by
   apply wpSA_traverse (I := fun _ _ _ => True) (hStart := trivial)
   · intro σ ρ _
-    simp [wahr?, eval]
+    simp only [wahr?, eval, ↓reduceIte, Ausgang.ok.injEq, exists_and_left, exists_eq', and_true]
   · intro k ks σ ρ _ h
-    simp [wahr?, eval] at h
+    simp only [wahr?, eval, Bool.true_eq_false] at h
   · intro k ks σ ρ _ _
     rw [wpBA_cons, wpSA_ite]
     split
@@ -326,7 +326,7 @@ theorem sperrInvLokal : SperrInvLokal gS := by
   rfl
 
 theorem startPflicht : StartPflicht gE :=
-  ⟨fun L => by cases L; rfl, fun a ha => by simp [gE] at ha⟩
+  ⟨fun L => by cases L; rfl, fun a ha => by simp only [gE, List.append_nil, List.not_mem_nil] at ha⟩
 
 /-- **Premise (b) of the goal theorem, proved.** -/
 theorem nutzerPflicht_bewiesen : NutzerPflichtA gE :=

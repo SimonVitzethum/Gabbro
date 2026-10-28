@@ -284,7 +284,7 @@ def Zahl.mul {l1 h1 l2 h2 : Int} (a : Zahl l1 h1) (b : Zahl l2 h2) :
     nicht steht («SG-3» in SYNTAX.md nennt die Grenze). -/
 
 theorem Int.tdiv_eq_ediv_nonneg {a b : Int} (ha : 0 ≤ a) : a.tdiv b = a / b := by
-  rw [Int.tdiv_eq_ediv]; simp [ha]
+  rw [Int.tdiv_eq_ediv]; simp only [ha, true_or, ↓reduceIte, Int.add_zero]
 
 def Zahl.div {l1 h1 l2 h2 : Int} (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (a : Zahl l1 h1) (b : Zahl l2 h2) :
     Zahl 0 h1 :=
@@ -347,7 +347,7 @@ def Zahl.srem {l1 h1 l2 h2 : Int} (hb : 1 ≤ l2 ∨ h2 ≤ -1) (a : Zahl l1 h1)
       unfold betragMax; omega⟩
 
 theorem Int.pow_nonneg_two (k : Nat) : (0 : Int) ≤ 2 ^ k := by
-  have e : ((2 ^ k : Nat) : Int) = (2:Int) ^ k := by simp
+  have e : ((2 ^ k : Nat) : Int) = (2:Int) ^ k := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   have : (0:Int) ≤ ((2 ^ k : Nat) : Int) := Int.natCast_nonneg _
   omega
 
@@ -368,7 +368,7 @@ def Zahl.bor {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
     Zahl 0 (2 ^ w - 1) :=
   ⟨((a.n.toNat ||| b.n.toNat : Nat) : Int), by omega, by
       have ha := a.lo_le; have hh := a.le_hi; have hb := b.lo_le; have hh' := b.le_hi
-      have e : ((2 ^ w : Nat) : Int) = (2:Int) ^ w := by simp
+      have e : ((2 ^ w : Nat) : Int) = (2:Int) ^ w := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
       have := Nat.or_lt_two_pow (x := a.n.toNat) (y := b.n.toNat) (n := w) (by omega) (by omega)
       omega⟩
 
@@ -377,7 +377,7 @@ def Zahl.bxor {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
     Zahl 0 (2 ^ w - 1) :=
   ⟨((a.n.toNat ^^^ b.n.toNat : Nat) : Int), by omega, by
       have ha := a.lo_le; have hh := a.le_hi; have hb := b.lo_le; have hh' := b.le_hi
-      have e : ((2 ^ w : Nat) : Int) = (2:Int) ^ w := by simp
+      have e : ((2 ^ w : Nat) : Int) = (2:Int) ^ w := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
       have := Nat.xor_lt_two_pow (x := a.n.toNat) (y := b.n.toNat) (n := w) (by omega) (by omega)
       omega⟩
 
@@ -399,8 +399,8 @@ def Zahl.shl {l1 h1 l2 h2 : Int} (w : Nat) (_hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : 
       have hw2' : h2 < (w : Int) := hw2
       have hpow : (2 : Int) ^ b.n.toNat ≤ 2 ^ h2.toNat := by
         have := Nat.pow_le_pow_right (show 0 < 2 by decide) (show b.n.toNat ≤ h2.toNat by omega)
-        have e1 : ((2 ^ b.n.toNat : Nat) : Int) = (2:Int) ^ b.n.toNat := by simp
-        have e2 : ((2 ^ h2.toNat : Nat) : Int) = (2:Int) ^ h2.toNat := by simp
+        have e1 : ((2 ^ b.n.toNat : Nat) : Int) = (2:Int) ^ b.n.toNat := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
+        have e2 : ((2 ^ h2.toNat : Nat) : Int) = (2:Int) ^ h2.toNat := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
         omega
       have s1 : a.n * 2 ^ b.n.toNat ≤ h1 * 2 ^ b.n.toNat :=
         Int.mul_le_mul_of_nonneg_right hh (Int.pow_nonneg_two _)
@@ -441,7 +441,7 @@ def bytesZuZahl : List Byte → Int
 theorem bytesZuZahl_bereich (bs : List Byte) :
     0 ≤ bytesZuZahl bs ∧ bytesZuZahl bs ≤ 256 ^ bs.length - 1 := by
   induction bs with
-  | nil => simp [bytesZuZahl]
+  | nil => simp only [bytesZuZahl, Std.le_refl, List.length_nil, Int.pow_zero, Int.sub_self, and_self]
   | cons b bs ih =>
       simp only [bytesZuZahl, List.length_cons]
       have h1 := b.lo_le; have h2 := b.le_hi
@@ -458,7 +458,7 @@ def zahlZuBytes : Nat → Int → List Byte
 theorem zahlZuBytes_length (k : Nat) (z : Int) : (zahlZuBytes k z).length = k := by
   induction k generalizing z with
   | zero => rfl
-  | succ k ih => simp [zahlZuBytes, ih]
+  | succ k ih => simp only [zahlZuBytes, List.length_cons, ih, Nat.add_left_cancel_iff]
 
 /-! ## 5. Owner marks on the producer path -- the value-level application
 
@@ -534,7 +534,7 @@ theorem eigner_lauf_aus_anfang (Ss : List OwnerSig) (Λ : List (OwnerMarke × Na
   | cons S Ss ih =>
       have h3 := ih (ownerNachRuf S Λ)
         (fun T hT => hE T (List.mem_cons_of_mem _ hT)) hmem
-      exact eigner_nachRuf_aus_anfang S _ m s (hE S (by simp)) h3
+      exact eigner_nachRuf_aus_anfang S _ m s (hE S (by simp only [List.mem_cons, true_or])) h3
 
 /-- **From empty holdings, no call sequence ever holds an owner mark.**
     With no initial holder there is no first mark to produce -- the sentence
@@ -544,7 +544,7 @@ theorem eigner_aus_leer_nie (Ss : List OwnerSig)
     (m, s) ∉ ownerNachLaeufen Ss [] := by
   intro hmem
   have h0 := eigner_lauf_aus_anfang Ss [] m s hE hmem
-  simp at h0
+  simp only [List.not_mem_nil] at h0
 
 #print axioms Gabbro.Grammatik.eigner_nachRuf_aus_anfang
 #print axioms Gabbro.Grammatik.eigner_lauf_aus_anfang

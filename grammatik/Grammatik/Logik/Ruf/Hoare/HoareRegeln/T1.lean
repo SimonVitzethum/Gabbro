@@ -270,12 +270,12 @@ theorem hoare_seq (O : Orakel D) (passes : Nat)
         rw [hstep] at hrun
         exact hrun
       exact hrest σ1 ρ1 hmid σ' ρ' hcont
-  | zurueck σ1 v => rw [hstep] at hrun; exact absurd hrun (by simp)
-  | why σ1 r => rw [hstep] at hrun; exact absurd hrun (by simp)
-  | leave h σ1 ρ1 => rw [hstep] at hrun; exact absurd hrun (by simp)
-  | next h σ1 ρ1 => rw [hstep] at hrun; exact absurd hrun (by simp)
-  | logik e => rw [hstep] at hrun; exact absurd hrun (by simp)
-  | hardware e => rw [hstep] at hrun; exact absurd hrun (by simp)
+  | zurueck σ1 v => rw [hstep] at hrun; exact absurd hrun (by simp only [reduceCtorEq, not_false_eq_true])
+  | why σ1 r => rw [hstep] at hrun; exact absurd hrun (by simp only [reduceCtorEq, not_false_eq_true])
+  | leave h σ1 ρ1 => rw [hstep] at hrun; exact absurd hrun (by simp only [reduceCtorEq, not_false_eq_true])
+  | next h σ1 ρ1 => rw [hstep] at hrun; exact absurd hrun (by simp only [reduceCtorEq, not_false_eq_true])
+  | logik e => rw [hstep] at hrun; exact absurd hrun (by simp only [reduceCtorEq, not_false_eq_true])
+  | hardware e => rw [hstep] at hrun; exact absurd hrun (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- If-then-else: both branches satisfy the same triple. The branch
     condition reads its carriers first (`σ.lese`), so the branch
@@ -405,7 +405,7 @@ theorem grundArmsOhneRuf_RunabhaengigAux
       rw [hstep, hstep2]
       cases hr with
       | nil =>
-          simp at hk'
+          simp only [Nat.not_lt_zero] at hk'
       | cons _ _ hbTail hrTail =>
           exact ih _ _ hrTail hk' _ hbTail)
     k n' rest hr hk b hb

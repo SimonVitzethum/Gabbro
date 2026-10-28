@@ -435,7 +435,7 @@ theorem grob_deckt_mehr :
     exact ⟨.writes ⟨0⟩, rfl, by rw [← ha, hw]; rfl⟩
   · intro h
     have := h (.writes ⟨1⟩) rfl
-    simp [Wkg.writes.injEq, Ort.mk.injEq] at this
+    simp only [Wkg.writes.injEq, Ort.mk.injEq, Nat.succ_ne_self] at this
 
 
 #print axioms Passlogik.Wirkung.grob_deckt_mehr

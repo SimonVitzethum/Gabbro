@@ -66,12 +66,12 @@ def E : Einheit FD where
 def fs : List FD.Fn := [()]
 def cs : List (FD.Tab ⊕ FD.Glob) := [.inl (), .inr 0, .inr 1, .inr 2, .inr 3]
 
-theorem fs_voll : ∀ g : FD.Fn, g ∈ fs := fun g => by cases g; simp [fs]
+theorem fs_voll : ∀ g : FD.Fn, g ∈ fs := fun g => by cases g; simp only [fs, List.mem_cons, List.not_mem_nil, or_false]
 theorem ls_voll : ∀ L : FD.Lock, L ∈ ([] : List FD.Lock) := fun L => nomatch L
 theorem cs_voll : ∀ c : FD.Tab ⊕ FD.Glob, c ∈ cs := by
   intro c
   rcases c with t | g
-  · cases t; simp [cs]
+  · cases t; simp only [cs, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false]
   · revert g; decide
 
 /-- (a) The goal's concrete checker accepts the unit, its arena included. -/
@@ -97,9 +97,9 @@ theorem body_no_logik (S' : SperrInv FD) (O' : Orakel FD) (U : Umwelt FD) (A' : 
   simp only [body, allocFree, release, Block.arenaAlloc, Block.arenaRumpf, Block.freiVar, execEndHA, execStmtHA,
     execBlockHA]
   repeat' (first
-    | (simp [Ausgang.schrumpf, EndAusgang.zuAusgang]; done)
+    | (simp only [ne_eq, reduceCtorEq, not_false_eq_true]; done)
     | split
-    | (rename_i heq; (repeat' split at heq) <;> simp [Ausgang.schrumpf, EndAusgang.zuAusgang] at heq))
+    | (rename_i heq; (repeat' split at heq) <;> simp only [Ausgang.schrumpf, Expr.umTyp_rfl, Int.reduceSub, Fin.isValue, reduceCtorEq, EndAusgang.zuAusgang] at heq))
 
 /-- (b) The user's obligation with the atomic rely. -/
 theorem nutzer : NutzerPflichtA E := by

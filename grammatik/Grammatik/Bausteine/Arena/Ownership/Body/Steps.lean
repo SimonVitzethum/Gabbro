@@ -39,7 +39,7 @@ theorem Holds.assign {c : Context} {σ : World D} {Γ : Ctx} {Λ : List (Res D)}
     Holds A fr s0 (c.assign x (origin c e)) σ (ρ.set x (eval σa e σb ρ)) := by
   obtain ⟨g, s, ⟨ha, hf, hb, href, hr⟩, hc, hl, hp⟩ := h
   have hx : x.unten < c.references.length := by rw [href.1]; exact Var.unten_lt x
-  refine ⟨g, s, ⟨ha, hf, ⟨hb.1, ?_⟩, ⟨by simp [Context.assign, href.1], ?_⟩, hr⟩, hc, hl, hp⟩
+  refine ⟨g, s, ⟨ha, hf, ⟨hb.1, ?_⟩, ⟨by simp only [Context.assign, List.length_set, href.1], ?_⟩, hr⟩, hc, hl, hp⟩
   · intro ref hm i he
     rcases List.mem_or_eq_of_mem_set hm with hm | hm
     · exact hb.2 ref hm i he
@@ -104,12 +104,12 @@ theorem BPost.schrumpf {k c' : Context} {l : Bool} {Γ : Ctx} {τ : Ty}
     cases ρ
     obtain ⟨c, hx, hc⟩ := h
     have := hc.length
-    exact ⟨c.drop, hx.drop (by simp at this; omega), Holds.drop hc⟩
+    exact ⟨c.drop, hx.drop (by simp only [List.length_cons] at this; omega), Holds.drop hc⟩
   | next hl σ ρ =>
     cases ρ
     obtain ⟨c, hx, hc⟩ := h
     have := hc.length
-    exact ⟨c.drop, hx.drop (by simp at this; omega), Holds.drop hc⟩
+    exact ⟨c.drop, hx.drop (by simp only [List.length_cons] at this; omega), Holds.drop hc⟩
   | _ => exact h
 
 theorem EPost.schrumpf {k : Context} {l : Bool} {Γ : Ctx} {τ : Ty}
@@ -120,12 +120,12 @@ theorem EPost.schrumpf {k : Context} {l : Bool} {Γ : Ctx} {τ : Ty}
     cases ρ
     obtain ⟨c, hx, hc⟩ := h
     have := hc.length
-    exact ⟨c.drop, hx.drop (by simp at this; omega), Holds.drop hc⟩
+    exact ⟨c.drop, hx.drop (by simp only [List.length_cons] at this; omega), Holds.drop hc⟩
   | next hl σ ρ =>
     cases ρ
     obtain ⟨c, hx, hc⟩ := h
     have := hc.length
-    exact ⟨c.drop, hx.drop (by simp at this; omega), Holds.drop hc⟩
+    exact ⟨c.drop, hx.drop (by simp only [List.length_cons] at this; omega), Holds.drop hc⟩
   | _ => exact h
 
 theorem EPost.toB {k c' : Context} {l : Bool} {Γ : Ctx} (o : EndAusgang V l Γ)
@@ -254,14 +254,14 @@ theorem traverse_post {k kk c1 : Context} {l : Bool} {Γ : Ctx} {τ : Ty}
         obtain ⟨c, hx, hc⟩ := hs
         have hl := hc.length
         have hd : ∃ c, ExitsTo kk c ∧ Holds A fr s0 c σ' _ :=
-          ⟨c.drop, hx.drop (by simp at hl; omega), Holds.drop hc⟩
+          ⟨c.drop, hx.drop (by simp only [List.length_cons] at hl; omega), Holds.drop hc⟩
         exact traverse_post schritt inv hinv hb hback hlen ks σ' _ (BPost.loopHead hd hlen)
       | leave _ σ' ρ' =>
         cases ρ'
         obtain ⟨c, hx, hc⟩ := hs
         have hl := hc.length
         have hd : Holds A fr s0 kk σ' _ :=
-          BPost.loopHead ⟨c.drop, hx.drop (by simp at hl; omega), Holds.drop hc⟩ hlen
+          BPost.loopHead ⟨c.drop, hx.drop (by simp only [List.length_cons] at hl; omega), Holds.drop hc⟩ hlen
         simp only [Env.tail]
         split
         · exact hd.meta (hinv _ _)

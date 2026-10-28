@@ -96,7 +96,7 @@ theorem kante_teil (hB₁ : Platzhalter e E₁.P) (hB₂ : Platzhalter (fun f =>
     cases hf : e f
     · rw [hf] at heh hr
       have : e h = true := by cases h' : e h; exact absurd h' heh; rfl
-      have := hB₂ h g (by simp [this])
+      have := hB₂ h g (by simp only [this, Bool.not_true])
       simp only [Bool.false_eq_true, ↓reduceIte] at hr
       rw [this] at hr
       cases hr
@@ -239,16 +239,16 @@ theorem nutzerPflicht_verbinde (hV : Verbindbar E₁ E₂) (hQ : E₂.Q = E₁.Q
       InvGutS (verbindeP e E₁ E₂) passes E₁.Q E₁.S f ∧
       InvGutGrund (verbindeP e E₁ E₂) passes E₁.Q E₁.S f
     cases hf : e f
-    · obtain ⟨k, i, g⟩ := hN₂.logik.1 passes f (by simp [hf])
+    · obtain ⟨k, i, g⟩ := hN₂.logik.1 passes f (by simp only [hf, Bool.not_false])
       rw [p2_eq hV, hQ, hS] at k i g
       have hr : (fun f => if e f then E₁.P.rumpf f else E₂.P.rumpf f) f = E₂.P.rumpf f := by
-        simp [hf]
+        simp only [hf, Bool.false_eq_true, ↓reduceIte]
       exact ⟨(koerper_mitRumpf2 E₁.P _ _ passes _ _ f hr).mpr k,
         (invGutS_mitRumpf2 E₁.P _ _ passes _ _ f hr).mpr i,
         (invGutGrund_mitRumpf2 E₁.P _ _ passes _ _ f hr).mpr g⟩
     · obtain ⟨k, i, g⟩ := hN₁.logik.1 passes f hf
       have hr : (fun f => if e f then E₁.P.rumpf f else E₂.P.rumpf f) f = E₁.P.rumpf f := by
-        simp [hf]
+        simp only [hf, ↓reduceIte]
       exact ⟨(koerper_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr k,
         (invGutS_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr i,
         (invGutGrund_mitRumpf2 E₁.P _ E₁.P.rumpf passes _ _ f hr).mpr g⟩

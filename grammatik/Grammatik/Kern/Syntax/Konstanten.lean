@@ -35,19 +35,19 @@ theorem konstZert_nil (f : Nat → Nat → Bool) : konstZert [] f = true :=
 theorem mem_zipIdx_aux {t : List Nat} {n j v : Nat}
     (hm : t[j]? = some v) : (v, n + j) ∈ t.zipIdx n := by
   induction t generalizing n j with
-  | nil => simp at hm
+  | nil => simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hm
   | cons a rest ih =>
     cases j with
     | zero =>
-      simp at hm
+      simp only [List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero, Option.some.injEq] at hm
       subst hm
-      simp [List.zipIdx]
+      simp only [List.zipIdx, Nat.add_zero, List.mem_cons, true_or]
     | succ j =>
-      simp at hm
+      simp only [List.getElem?_cons_succ] at hm
       have hmem := ih (n := n + 1) (j := j) hm
       have heq : n + (j + 1) = (n + 1) + j := by omega
       rw [heq]
-      simp [List.zipIdx]
+      simp only [List.zipIdx, List.mem_cons, Prod.mk.injEq]
       exact Or.inr hmem
 
 /-- `t[j]? = some v` puts `(v, j)` into `t.zipIdx`. -/

@@ -27,7 +27,7 @@ theorem numCode_frag {lo hi : Int} (W L i : Nat) (n : Int) (hf : Ar.Fits lo hi 1
   have e : c1 ++ [Instr.bin r2 .sub W o1 (.int W lo), Instr.bin (r2 + 1) .mul W (.reg r2) (.int W (L : Int)),
         Instr.bin (r2 + 2) .add W (.reg (r2 + 1)) (.int W (i : Int))]
       = c1 ++ ([Instr.bin r2 .sub W o1 (.int W lo)] ++ ([Instr.bin (r2 + 1) .mul W (.reg r2) (.int W (L : Int))] ++
-        [Instr.bin (r2 + 2) .add W (.reg (r2 + 1)) (.int W (i : Int))])) := by simp
+        [Instr.bin (r2 + 2) .add W (.reg (r2 + 1)) (.int W (i : Int))])) := by simp only [List.cons_append, List.nil_append]
   show Frag m rs r (c1 ++ [Instr.bin r2 .sub W o1 (.int W lo), Instr.bin (r2 + 1) .mul W (.reg r2) (.int W (L : Int)),
         Instr.bin (r2 + 2) .add W (.reg (r2 + 1)) (.int W (i : Int))], .reg (r2 + 2), r2 + 3) _
   rw [e]

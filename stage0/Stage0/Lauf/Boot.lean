@@ -47,7 +47,7 @@ theorem startG_ruhe {u : UProg} (P : Programm (declOf u)) (σ : World (declOf u)
     ∀ g, rs.length + 1 ≤ g → offen ((startG P σ m rs).faeden g).spur = [] := by
   intro g hg
   have hd : (m :: rs).getD g m = m := by
-    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by simp; omega)]
+    rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by simp only [List.length_cons]; omega)]
     rfl
   simp only [startG, RufStartG, hd]
   simpa using hl

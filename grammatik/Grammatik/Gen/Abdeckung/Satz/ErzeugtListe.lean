@@ -67,7 +67,7 @@ theorem mem_erzeugtL {z : Spez} {tbls : List (Σ f : z.deklaration.Fn, List (Lis
     {nc k : Nat} {e : Erzeugt z} :
     e ∈ z.erzeugtL tbls nc k ↔ ∃ h ∈ hautT tbls k, ∃ P ∈ z.vertragsL nc h, ∃ ws ∈ z.parameter,
       z.erzeugeAus P ws = some e := by
-  simp [Spez.erzeugtL, List.mem_flatMap, List.mem_filterMap]
+  simp only [Spez.erzeugtL, List.mem_flatMap, List.mem_filterMap]
 
 /-- A valid program is emitted as a `Gutes`. -/
 theorem erzeugeAus_gut {z : Spez} {P : Programm z.deklaration} {ws : List z.deklaration.Fn}

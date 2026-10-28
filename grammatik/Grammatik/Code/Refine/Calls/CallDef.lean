@@ -76,16 +76,16 @@ def irParamsFrom (n : Nat) (ps : List GTy) : List Param :=
 theorem irParams_eq (ps : List GTy) : irParams ps = irParamsFrom 0 ps := rfl
 
 theorem irParamsFrom_len (n : Nat) (ps : List GTy) : (irParamsFrom n ps).length = ps.length := by
-  simp [irParamsFrom]
+  simp only [irParamsFrom, List.length_map, List.length_zipIdx]
 
 theorem irParamsFrom_ty (n : Nat) (ps : List GTy) : (irParamsFrom n ps).map Param.t = ps.map regTy := by
   induction ps generalizing n with
   | nil => rfl
-  | cons τ ps ih => simp [irParamsFrom, List.zipIdx_cons] at ih ⊢; exact ih (n + 1)
+  | cons τ ps ih => simp only [irParamsFrom, List.map_map, List.zipIdx_cons, List.map_cons, List.cons.injEq, true_and] at ih ⊢; exact ih (n + 1)
 
 theorem argImgs_len (lay : Layout D) : ∀ {Γ : Ctx} (ρ : Env D Γ), (argImgs lay ρ).length = Γ.length
   | _, .nil => rfl
-  | _, .cons v ρ => by simp [argImgs, argImgs_len lay ρ]
+  | _, .cons v ρ => by simp only [argImgs, List.length_cons, argImgs_len lay ρ, Nat.add_left_cancel_iff]
 
 theorem argImgs_ty (lay : Layout D) :
     ∀ {Γ : Ctx} (ρ : Env D Γ), (∀ τ ∈ Γ, supp τ = true) → (argImgs lay ρ).map Val.ty = Γ.map regTy
@@ -96,7 +96,7 @@ theorem argImgs_ty (lay : Layout D) :
       have hs := h τ (List.mem_cons_self ..)
       cases τ <;> simp_all [supp, encR, regTy, Val.ty, Val.ofInt, Val.bool]
       rename_i n rw
-      cases D.tabNr n <;> simp [Val.ty]
+      cases D.tabNr n <;> simp only
 
 theorem foldl_set_ne (ps : List (Param × Val)) (rs : Regs) (x : Reg) (h : ∀ p ∈ ps, p.1.r ≠ x) :
     ps.foldl (fun rs pv => rs.set pv.1.r pv.2) rs x = rs x := by
@@ -132,12 +132,12 @@ theorem callee_frame {lay : Layout D} {M : Modl} (hFn : FnOk lay M) (f : D.Fn) (
     ∃ g, Frame.callee M (lay.fno f) (argImgs lay ρ) d = some g ∧ g.fn = lay.fno f ∧ g.lbl = 0 ∧
       g.pc = 0 ∧ g.dst = d ∧ ArgRegs lay g.regs 0 ρ := by
   obtain ⟨hsupp, func, blk, hfun, hpar, hhead, hlbl, hphi⟩ := hFn f
-  have hent : M.entry (lay.fno f) = some blk := by simp [Modl.entry, hfun, hhead]
+  have hent : M.entry (lay.fno f) = some blk := by simp only [Modl.entry, hfun, Option.bind_some, hhead]
   have hlen : (argImgs lay ρ).length = func.params.length := by
     rw [argImgs_len, hpar, irParams_eq, irParamsFrom_len]
   have hty : func.params.map Param.t = (argImgs lay ρ).map Val.ty := by
     rw [hpar, irParams_eq, irParamsFrom_ty, argImgs_ty lay ρ hsupp]
-  have hph : blk.phis.isEmpty = true := by simp [hphi]
+  have hph : blk.phis.isEmpty = true := by simp only [hphi, List.isEmpty_nil]
   have hc : Frame.callee M (lay.fno f) (argImgs lay ρ) d = some
       { fn := lay.fno f, lbl := blk.lbl, pc := 0, dst := d,
         regs := (func.params.zip (argImgs lay ρ)).foldl (fun rs pv => rs.set pv.1.r pv.2) (fun _ => none) } := by

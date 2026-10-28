@@ -22,43 +22,43 @@ def samen_J0 (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
     welten := (GenStart sp).welten
     schrittFaden := []
     l := (GenStart sp).lauf
-    hKette := by simp [GenStart]
+    hKette := by simp only [GenStart, List.length_cons, List.length_nil, Nat.zero_add]
     hSchritt := by
       intro k f vor nach hk _ _
-      simp at hk
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
     hPaar := by
       intro f hf
-      simp at hf
+      simp only [List.not_mem_nil] at hf
     hGesittet := by
       show Gesittet ([] : Lauf D)
       refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · intro f j
-        have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+        have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
         rw [hsp]
         exact konsistent_nil
       · intro f j e he
-        have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp [Lauf.spur]
+        have hsp : Lauf.spur ([] : Lauf D) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
         rw [hsp] at he
-        simp at he
+        simp only [List.not_mem_nil] at he
       · intro j f L h hi g hne
-        simp at hi
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
       · intro i j f g m s s' ei ej hi hj hm hm'
-        simp at hi
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
       · intro i j f g o ei ej hi hj ht1 ht2 hu
-        simp at hi
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     hBeschraenkt := by
       show BeschraenkteVerschraenkung (D := D) Nb ([] : Lauf D)
       intro i j f g ei ej hi hj hne
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     hEintritt := by
       intro f hf
-      simp at hf
+      simp only [List.not_mem_nil] at hf
     hSchuld := by
       intro f hf
-      simp at hf
+      simp only [List.not_mem_nil] at hf
     hInvSicht := by
       intro f hf
-      simp at hf
+      simp only [List.not_mem_nil] at hf
   }
 
 /-- The seed owes no thread steps: `hempty` by construction. -/
@@ -97,7 +97,7 @@ theorem samen_J0_hwit_base (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn)
   intro k g hk _
   have hempty : (samen_J0 Nb sp fn0).schrittFaden = [] := rfl
   rw [hempty] at hk
-  simp at hk
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 #print axioms Gabbro.Grammatik.samen_J0
 #print axioms Gabbro.Grammatik.samen_J0_hwit_base

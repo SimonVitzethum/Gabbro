@@ -130,7 +130,7 @@ theorem offen_neutral (e0 : Ereignis D) (s : List (Ereignis D)) :
 
 theorem neutral_laenge (e0 : Ereignis D) (s : List (Ereignis D)) :
     s.length < (neutral e0 ++ s).length := by
-  cases e0 <;> simp [neutral] <;> omega
+  cases e0 <;> simp only [neutral, List.cons_append, List.nil_append, List.length_cons, Nat.lt_add_one] <;> omega
 
 /-- **The recorded answer world of a call to `g`**: the callee's declared
     write carriers from the machine's return world `s1`, every other carrier
@@ -144,9 +144,9 @@ theorem rahmenWelt_rahmen (e0 : Ereignis D) (g : D.Fn) (κ s1 : World D) :
     Rahmen (D.schreibt g) (D.gschreibt g) κ (rahmenWelt e0 g κ s1) := by
   refine ⟨fun t ht k f => ?_, fun x hx => ?_⟩
   · show (if D.schreibt g t = true then s1.slots t else κ.slots t) k f = κ.slots t k f
-    rw [if_neg (by simp [ht])]
+    rw [if_neg (by simp only [ht, Bool.false_eq_true, not_false_eq_true])]
   · show (if D.gschreibt g x = true then s1.globs x else κ.globs x) = κ.globs x
-    rw [if_neg (by simp [hx])]
+    rw [if_neg (by simp only [hx, Bool.false_eq_true, not_false_eq_true])]
 
 theorem rahmenWelt_offen (e0 : Ereignis D) (g : D.Fn) (κ s1 : World D) :
     offen (rahmenWelt e0 g κ s1).spur = offen κ.spur :=

@@ -76,10 +76,10 @@ theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
   | _, _, _, _, _, .cons (c := none) b rest, lb, k, s, s', blks, h, ⟨0, hi⟩ => by
       simp only [lowerAr] at h
       rcases hb : lowerB lay cenv lv b lb k s with _ | ⟨b1, s1⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       have G := lowerAr_shape lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2 hr
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -87,16 +87,16 @@ theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
   | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, lb, k, s, s', blks, h, ⟨0, hi'⟩ => by
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov s.r with _ | ⟨cp, op, r1⟩
-      · simp [hp] at h
+      · simp only [hp, reduceCtorEq] at h
       simp only [hp] at h
       rcases hb : bindCode (.int lo hi) op r1 with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hb1 : lowerB lay (a :: cenv) lv b s.l k ⟨r2, s.l + 1⟩ with _ | ⟨bb, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       simp only [hb1] at h
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       have G := lowerAr_shape lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2 hr
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -105,11 +105,11 @@ theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
   | _, _, _, _, _, .cons (c := none) b rest, lb, k, s, s', blks, h, ⟨i + 1, hi⟩ => by
       simp only [lowerAr] at h
       rcases hb : lowerB lay cenv lv b lb k s with _ | ⟨b1, s1⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       have S1 := lowerB_shape lay cenv lv b lb k s s1 b1 hb
       simp only [hb] at h
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨bi, si, si', hbi, hsub, hle1, hle2⟩ :=
@@ -123,19 +123,19 @@ theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
   | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, lb, k, s, s', blks, h, ⟨i + 1, hi'⟩ => by
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov s.r with _ | ⟨cp, op, r1⟩
-      · simp [hp] at h
+      · simp only [hp, reduceCtorEq] at h
       have m1 := payCode_mono hp
       simp only [hp] at h
       rcases hb : bindCode (.int lo hi) op r1 with _ | ⟨cb, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       have m2 := bindCode_mono hb
       simp only [hb] at h
       rcases hb1 : lowerB lay (a :: cenv) lv b s.l k ⟨r2, s.l + 1⟩ with _ | ⟨bb, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       have S1 := lowerB_shape lay (a :: cenv) lv b s.l k ⟨r2, s.l + 1⟩ s1 bb hb1
       simp only [hb1] at h
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
-      · simp [hr] at h
+      · simp only [hr, reduceCtorEq] at h
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨bi, si, si', hbi, hsub, hle1, hle2⟩ :=

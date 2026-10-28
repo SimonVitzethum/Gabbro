@@ -40,7 +40,7 @@ theorem kinv_idx {gNr : Nat → Nat} {koepfe : List UFnKopf} {f : z.deklaration.
     ∃ i, koepfe.findIdx? (fun k => strEq k.name (nFn (fN z f))) = some i ∧ koepfe[i]? = some k := by
   rw [List.find?_eq_bind_findIdx?_getElem?] at h
   cases hi : koepfe.findIdx? (fun k => strEq k.name (nFn (fN z f))) with
-  | none => simp [hi] at h
+  | none => simp only [hi, Option.bind_none, reduceCtorEq] at h
   | some i => simp only [hi, Option.bind_some] at h; exact ⟨i, rfl, h⟩
 
 /-- The arguments. -/
@@ -61,10 +61,10 @@ theorem args_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
     intro as xs ks hd hu hk
     simp only [delabA] at hd
     cases he : delabE z none e with
-    | error _ => simp [he, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, he, reduceCtorEq] at hd
     | ok se =>
     cases hr : delabA z rest with
-    | error _ => simp [he, hr, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, he, hr, reduceCtorEq] at hd
     | ok sr =>
     simp only [he, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
@@ -72,38 +72,38 @@ theorem args_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
     | bool =>
       simp only [uOfArgs] at hu
       cases hb : uOfB z art none e with
-      | none => simp [hb] at hu
+      | none => simp only [hb, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
       | some b =>
       cases hx : uOfArgs z art rest with
-      | none => simp [hb, hx] at hu
+      | none => simp only [hb, hx, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
       | some xr =>
       simp only [hb, hx, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
       subst hu
       simp only [List.mapM_cons, artErg, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hk
       cases hks : τs.mapM artErg with
-      | none => simp [hks] at hk
+      | none => simp only [hks, Option.bind_none, reduceCtorEq] at hk
       | some kr =>
       simp only [hks, Option.bind_some, Option.some.injEq] at hk
       subst hk
-      simp [uArgs, uArg, bool_ok H e se b he hb, ih sr xr kr hr hx hks]
+      simp only [uArgs, uArg, bool_ok H e se b he hb, ih sr xr kr hr hx hks]
     | int lo hi =>
       simp only [uOfArgs] at hu
       cases hb : uOfS z art none e with
-      | none => simp [hb] at hu
+      | none => simp only [hb, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
       | some b =>
       cases hx : uOfArgs z art rest with
-      | none => simp [hb, hx] at hu
+      | none => simp only [hb, hx, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
       | some xr =>
       simp only [hb, hx, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
       subst hu
       simp only [List.mapM_cons, artErg, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at hk
       cases hks : τs.mapM artErg with
-      | none => simp [hks] at hk
+      | none => simp only [hks, Option.bind_none, reduceCtorEq] at hk
       | some kr =>
       simp only [hks, Option.bind_some, Option.some.injEq] at hk
       subst hk
-      simp [uArgs, uArg, wert_ok H e se b he hb, ih sr xr kr hr hx hks]
-    | _ => simp [uOfArgs] at hu
+      simp only [uArgs, uArg, wert_ok H e se b he hb, ih sr xr kr hr hx hks]
+    | _ => simp only [uOfArgs, reduceCtorEq] at hu
 
 theorem delabA_length {Γ : Ctx} {Λ : List (Res z.deklaration)} :
     ∀ {τs : List Ty} (args : Args z.deklaration Γ Λ τs) (as : List SExpr), delabA z args = .ok as →
@@ -117,7 +117,7 @@ theorem delabA_length {Γ : Ctx} {Λ : List (Res z.deklaration)} :
     cases he : delabE z none e <;> cases hr : delabA z rest <;>
       simp only [he, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq, reduceCtorEq] at hd
     subst hd
-    simp [ih _ hr]
+    simp only [List.length_cons, ih _ hr, Nat.add_left_cancel_iff]
 
 /-- Device handles stand behind every printed argument: the arguments pass unchanged. -/
 theorem ohneGriffArgs_ok (ctx : UCtx) (gs : List (Nat × String × String)) :
@@ -221,7 +221,7 @@ theorem bindWert_fnref {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} 
     rw [List.any_eq_false]
     intro tb hm
     obtain ⟨j, hj⟩ := H.tabNamen tb hm
-    rw [hj, strEq_nTab_nFn]; simp
+    rw [hj, strEq_nTab_nFn]; simp only [Bool.false_eq_true, not_false_eq_true]
   simp only [uBindWert, uRegOrt, he, Except.toOption, Option.isSome_none, ht, Bool.or_false, Bool.false_eq_true,
     ite_false, hi, hk, hK.ext, Bool.false_or, H.muts, List.filter_nil, Option.isSome_none]
   rfl
@@ -240,9 +240,9 @@ theorem anw1_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {�
       .ok (.callInd (nZeiger p) (nFn (fN z f)) xs) := by
   have H' := H.pushZ p (.fnptr i) (.fnptr i) 0 ls
   have hp : uParamNr (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) (nZeiger p) = .ok 0 := by
-    simp [uParamNr, ctxMit, uParamNrAux]
+    simp only [uParamNr, ctxMit, uParamNrAux, strEq_nZeiger, BEq.rfl, ↓reduceIte]
   have hz : uFnZeiger (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) koepfe (nZeiger p) = some (.ok k) := by
-    unfold uFnZeiger; rw [hp]; simp [ctxMit, uArtBei, hk, hb]
+    unfold uFnZeiger; rw [hp]; simp only [ctxMit, uArtBei, hb, ↓reduceIte, hk]
   have hR := ruf_ok H' tabs f k hf hK hh args as xs hd hu
   simp only [uAnw1, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false, hK.name]
 
@@ -273,7 +273,7 @@ theorem bindWert_call {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {
     simp only [uBindWert, uRegOrt, uFnZeiger, he', hf, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true,
       ite_false, hK.ext, h1, h2, H.muts, List.filter_nil]
     rfl
-  | _ => simp [artErg] at ha
+  | _ => simp only [artErg, reduceCtorEq] at ha
 
 /-- `let x = p(..);` through the pointer `p` just bound to `f`. -/
 theorem bindWert_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {Γ : Ctx}
@@ -292,9 +292,9 @@ theorem bindWert_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx
         ctxMit (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) x a ty 0 [] ls) := by
   have H' := H.pushZ p (.fnptr i) (.fnptr i) 0 ls
   have hp : uParamNr (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) (nZeiger p) = .ok 0 := by
-    simp [uParamNr, ctxMit, uParamNrAux]
+    simp only [uParamNr, ctxMit, uParamNrAux, strEq_nZeiger, BEq.rfl, ↓reduceIte]
   have hz : uFnZeiger (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) koepfe (nZeiger p) = some (.ok k) := by
-    unfold uFnZeiger; rw [hp]; simp [ctxMit, uArtBei, hk, hb]
+    unfold uFnZeiger; rw [hp]; simp only [ctxMit, uArtBei, hb, ↓reduceIte, hk]
   have hR := ruf_ok H' tabs f k hf hK hh args as xs hd hu
   cases τ with
   | bool =>
@@ -310,7 +310,7 @@ theorem bindWert_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx
     simp only [uBindWert, uRegOrt, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false, h1, h2,
       hK.name, Bool.or_self]
     rfl
-  | _ => simp [artErg] at ha
+  | _ => simp only [artErg, reduceCtorEq] at ha
 
 /-- `let y = f(..) else (e) { .. }` at the head of a run. -/
 theorem reihe_bindElse (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx) (y c e : String)
@@ -338,7 +338,7 @@ theorem nach_ohne_marken (hM : ∀ m : z.deklaration.Marke, False) (S : Signatur
     cases h : S.produziert with
     | nil => rfl
     | cons x _ => exact (hM x.1).elim
-  simp [nachSig, h1, h2]
+  simp only [nachSig, h1, List.foldl_nil, h2, List.map_nil, List.append_nil]
 
 /-- A call statement at the head of a run. -/
 theorem reihe_call (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx) (c : String) (as : List SExpr)

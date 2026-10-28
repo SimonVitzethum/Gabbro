@@ -64,7 +64,7 @@ theorem pcSchritt_fremd_fest (P : Programm D) (O : Orakel D) (hO : GutO O)
           have hget := hpc
           exact List.mem_of_getElem? hget
         have hcon := hNurG _ hatom hcarEv
-        exact absurd hcon (by simp)
+        exact absurd hcon (by simp only [not_false_eq_true])
       · -- Declared oracle write: excluded by `hNoAx`.
         obtain ⟨a, args, hh, hw, hg, hd, hgd, hfire, hwr⟩ := hAx
         exact absurd ⟨a, args, hh, hw, hg, hd, hgd, hfire, hwr⟩
@@ -161,7 +161,7 @@ theorem wNurG : ∀ h, h ≠ 0 →
   rw [if_neg hh] at ha
   simp only [List.mem_singleton] at ha
   subst ha
-  simp [PCAtom.carriers]
+  simp only [PCAtom.carriers, List.not_mem_nil, not_false_eq_true]
 
 /-- `hNoAx` holds vacuously: `D1.Ax` is empty. -/
 theorem wNoAx (M : GenMaschine Gabbro.Grammatik.BG.D1) (pc : PCStand) (h : Faden)
@@ -206,7 +206,8 @@ theorem wStep1 (σ' : World Gabbro.Grammatik.BG.D1)
     exact nomatch L
   · have h0 : (wprog 0)[(fun _ : Faden => 0) 0]? =
         some (PCAtom.leaf (D := Gabbro.Grammatik.BG.D1) [] [.inl ()]) := by
-      simp [wprog]
+      simp only [wprog, ↓reduceIte, List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero]
     exact h0
   · rfl
   · intro e he m st hm
@@ -217,7 +218,7 @@ theorem wStep1 (σ' : World Gabbro.Grammatik.BG.D1)
         simp only [Ereignis.traeger, Option.some.injEq] at ho
         subst ho
         cases t2
-        simp [PCAtom.carriers]
+        simp only [PCAtom.carriers, List.mem_cons, List.not_mem_nil, or_false]
     | gzugriff g b Lam h =>
         exact nomatch g
     | nimmt L h =>
@@ -225,7 +226,7 @@ theorem wStep1 (σ' : World Gabbro.Grammatik.BG.D1)
     | gibt L =>
         exact nomatch L
     | fremd q =>
-        simp [Ereignis.traeger] at ho
+        simp only [Ereignis.traeger, reduceCtorEq] at ho
 
 /-- The write fires from the start world. -/
 theorem wFire1 : ∃ σ' : World Gabbro.Grammatik.BG.D1,
@@ -277,17 +278,18 @@ theorem wStep2 (M1 : GenMaschine Gabbro.Grammatik.BG.D1) (pc1 : PCStand)
     have hwSpur : (M1.weltVon 1).spur = M1.spuren 1 := rfl
     rw [hσspur, hwSpur, htr1, List.append_nil]
   · intro L h hm
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   · -- `pc1 1 = 0` and `wprog 1 = [leaf [] []]` since `1 ≠ 0`.
     have h1 : (wprog 1)[pc1 1]? = some (PCAtom.leaf (D := Gabbro.Grammatik.BG.D1) [] []) := by
       rw [hpc1]
-      simp [wprog]
+      simp only [wprog, Nat.succ_ne_self, ↓reduceIte, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.lt_add_one, getElem?_pos, List.getElem_cons_zero]
     exact h1
   · rfl
   · intro e he m st hm
-    simp at he
+    simp only [List.not_mem_nil] at he
   · intro e he o ho
-    simp at he
+    simp only [List.not_mem_nil] at he
 
 /-! ## 13. The joint witness and the oracle-write counterexample.
 
@@ -331,7 +333,7 @@ theorem ezdProg_nurG (h : Faden) (a : PCAtom refD) (ha : a ∈ ezdProg h) :
   have e : ezdProg h = [PCAtom.leaf (D := refD) [] []] := rfl
   rw [e, List.mem_singleton] at ha
   subst ha
-  simp [PCAtom.carriers]
+  simp only [PCAtom.carriers, List.not_mem_nil, not_false_eq_true]
 
 /-- The witnessed foreign step: thread `0` fires `leave` (memory-preserving,
     empty recorded list, carrier-free atom) from any machine whose thread-0
@@ -364,13 +366,13 @@ theorem ezdLeave_step (M : GenMaschine refD) (hempty : M.spuren 0 = []) :
     rw [hspur, hempty]
     rfl
   · intro L h hm
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   · rfl
   · rfl
   · intro e he m st hm
-    simp at he
+    simp only [List.not_mem_nil] at he
   · intro e he o ho
-    simp at he
+    simp only [List.not_mem_nil] at he
 
 /-- Joint witness for the repaired target (rule 13), on the reference
     fixture (review continuation): all premises instantiated together --

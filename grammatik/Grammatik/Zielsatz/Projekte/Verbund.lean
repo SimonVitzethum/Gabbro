@@ -101,9 +101,9 @@ theorem mem_ws_komponiere {w : D.Fn} (h : w ∈ (komponiere B ps).ws) : ∃ p �
   simp only [Einheit.ws, komponiere, List.mem_map, List.mem_append, List.mem_flatMap] at h
   obtain ⟨a, ha, rfl⟩ := h
   rcases ha with (⟨p, hp, ha⟩ | ⟨p, hp, ha⟩) | ⟨p, hp, ha⟩
-  · exact ⟨p, hp, List.mem_map.mpr ⟨a, by simp [ha], rfl⟩⟩
-  · exact ⟨p, hp, List.mem_map.mpr ⟨a, by simp [ha], rfl⟩⟩
-  · exact ⟨p, hp, List.mem_map.mpr ⟨a, by simp [ha], rfl⟩⟩
+  · exact ⟨p, hp, List.mem_map.mpr ⟨a, by simp only [List.append_assoc, List.mem_append, ha, or_self, true_or], rfl⟩⟩
+  · exact ⟨p, hp, List.mem_map.mpr ⟨a, by simp only [List.append_assoc, List.mem_append, ha, or_self, or_true], rfl⟩⟩
+  · exact ⟨p, hp, List.mem_map.mpr ⟨a, by simp only [List.append_assoc, List.mem_append, ha, or_self, or_true], rfl⟩⟩
 
 theorem mem_arenen_komponiere {a : ArenaOwnership.Body.ArenaIface D} (h : a ∈ (komponiere B ps).arenen) :
     ∃ p ∈ ps, a ∈ p.E.arenen := by
@@ -259,7 +259,7 @@ theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.
     refine ⟨fun c _ => Or.inl (by rw [lokW_ohne_wurzeln, Bool.or_true]), fun c _ => by
       rw [lokW_ohne_wurzeln, Bool.or_true]⟩
   · rw [hws] at h
-    exact absurd h (by simp [Mehrfach])
+    exact absurd h (by simp only [Mehrfach, List.sublist_nil, reduceCtorEq, not_false_eq_true])
 
 /-- **The witness of `gabbro_ziel_verbund_n`**: every unit the checker of the specification accepts,
     cut at any boundary into two units checked ALONE -- the first the unit, the second its other
@@ -297,7 +297,7 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     · exact fun a ha f _ => (checked_iff _ _ _).mp (hA.besitz a ha) f
     · exact hBS
   exact gabbro_ziel_verbund_n specPruefer D E (schnitt E eigen) fs ls cs hC (schnitt_passend E eigen)
-    (by simp [schnitt]) (schnitt_deckend E eigen) (schnitt_deckendS E eigen) hL' (schnitt_nutzer hN) O
+    (by simp only [schnitt, ne_eq, reduceCtorEq, not_false_eq_true]) (schnitt_deckend E eigen) (schnitt_deckendS E eigen) hL' (schnitt_nutzer hN) O
     (by rw [hkomp]; exact hH) passes sp init (by rw [hkomp]; exact hL) lebt0 K hK
 
 #print axioms gabbro_ziel_verbund_n

@@ -183,7 +183,7 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
     simp only [groesseStmt]
     stm sAdvances, Sz.mem_blatt (List.mem_flatMap.2 ⟨.marke mk a, hmem, by
       dsimp only
-      rw [dif_pos hmem, dif_pos hs]; simp⟩)
+      rw [dif_pos hmem, dif_pos hs]; simp only [List.mem_cons, List.not_mem_nil, or_false]⟩)
   | retires mk s hmem a =>
     simp only [groesseStmt]
     stm sRetires, Sz.mem_blatt (List.mem_flatMap.2 ⟨.marke mk s, hmem, by
@@ -196,12 +196,12 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
       Sz.mem_wenn hΛ <| Sz.mem_pure _) (by omega)
   | retWhy r hΛ =>
     simp only [groesseStmt]
-    stm sRetWhy, Sz.mem_blatt (List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp⟩)
+    stm sRetWhy, Sz.mem_blatt (List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp only [List.mem_cons, List.not_mem_nil, or_false]⟩)
   | leave hl =>
     simp only [groesseStmt]
-    stm sLeave, Sz.mem_blatt (by rw [dif_pos hl]; simp)
+    stm sLeave, Sz.mem_blatt (by rw [dif_pos hl]; simp only [List.mem_cons, List.not_mem_nil, or_false])
   | next hl =>
     simp only [groesseStmt]
-    stm sNext, Sz.mem_blatt (by rw [dif_pos hl]; simp)
+    stm sNext, Sz.mem_blatt (by rw [dif_pos hl]; simp only [List.mem_cons, List.not_mem_nil, or_false])
 
 end Gabbro.Grammatik.Gen

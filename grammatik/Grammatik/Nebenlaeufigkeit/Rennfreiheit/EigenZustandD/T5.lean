@@ -48,7 +48,7 @@ def D2 : Deklaration where
       gschreibt := fun e => nomatch e
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -64,7 +64,7 @@ def D2 : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
 
@@ -105,15 +105,15 @@ theorem O2gut : GutO (D := D2) O2 := by
             (Wflip2 σ).slots t k f = σ.slots t k f) ∧
           (∀ (g : D2.Glob), D2.agschreibt () g = false →
             (Wflip2 σ).globs g = σ.globs g)
-        exact ⟨fun t ht => absurd ht (by simp [D2]), fun g _ => nomatch g⟩
+        exact ⟨fun t ht => absurd ht (by simp only [D2, Bool.true_eq_false, not_false_eq_true]), fun g _ => nomatch g⟩
       · intro hgt hgg
         refine ⟨[()], [], [], ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
         · intro t _; cases t; exact List.Mem.head _
         · intro g; exact nomatch g
-        · intro t _ w hw; simp [D2] at hw; cases hw
+        · intro t _ w hw; simp only [D2] at hw; cases hw
         · intro g; exact nomatch g
-        · intro m st hm; simp at hm
-        · intro L hL; simp at hL
+        · intro m st hm; simp only [List.not_mem_nil] at hm
+        · intro L hL; simp only [List.not_mem_nil] at hL
         · rfl
 
 /-- The axiom call statement (answer type `none`, so it is a `Stmt`).
@@ -123,7 +123,7 @@ theorem O2gut : GutO (D := D2) O2 := by
 def axCall : Stmt D2 V2 false [] [] [] :=
   .axiomCall (a := ()) (Args.nil (D := D2) (Γ := []) (Λ := [])) rfl
     (fun t _ => rfl) (fun g => nomatch g)
-    (fun t _ w hw => by simp [D2] at hw; cases hw) (fun g => nomatch g)
+    (fun t _ w hw => by simp only [D2] at hw; cases hw) (fun g => nomatch g)
 
 /-- Firing the axiom call flips the slot. -/
 theorem axFeuert (σ : World D2) (ρ : Env D2 [])
@@ -172,7 +172,7 @@ theorem hNurF : ∀ h : Faden, h ≠ (0 : Faden) → ∀ a ∈ progF h,
   simp only [progF] at ha
   simp only [List.mem_singleton] at ha
   subst ha
-  simp [PCAtom.carriers]
+  simp only [PCAtom.carriers, List.not_mem_nil, not_false_eq_true]
 
 
 /- REMOVED (lane 80): `axNeu_kein_schrieb` and `axiomCall_ohne_ereignis_falsch`

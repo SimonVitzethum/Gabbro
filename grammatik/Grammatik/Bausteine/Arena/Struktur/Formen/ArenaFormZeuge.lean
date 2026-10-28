@@ -34,7 +34,7 @@ theorem nicht_auf_3 : ¬ Auf 4 (LL.wert w0) (LG.st w0) 3 := by
   rintro ⟨L, hL, hm⟩
   rw [lg_w0] at hL
   have := KetteF.eindeutig hL listeKette_w0
-  subst this; simp at hm
+  subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
 
 theorem lebt_3 : FA.Lebt w0 3 := (lebt_w0 3).mpr (by decide)
 
@@ -72,13 +72,13 @@ theorem pop_zeuge' (O : Orakel FD) (passes : Nat)
 /-! ### The tree: leaf in at the right, leaf out at the left -/
 
 theorem hp_2 : InBaum 4 (LL.wert w0) (RR.wert w0) (LG.st w0) 2 := by
-  rw [lg_w0]; exact ⟨[2, 0], baumB_w0, by simp⟩
+  rw [lg_w0]; exact ⟨[2, 0], baumB_w0, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩
 
 theorem nicht_in_3 : ¬ InBaum 4 (LL.wert w0) (RR.wert w0) (LG.st w0) 3 := by
   rintro ⟨S, hS, hm⟩
   rw [lg_w0] at hS
   have := BaumF.eindeutig hS baumB_w0
-  subst this; simp at hm
+  subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
 
 /-- Two index variables: the root `2` (newest) and the slot `3`. -/
 def rho23 : Env FD [Ty.index (FD.count FA.tab), Ty.index (FD.count FA.tab)] :=
@@ -132,7 +132,7 @@ theorem unlink_zeuge (O : Orakel FD) (passes : Nat)
       ListOk FA LL LG σ' ∧ ¬ Auf 4 (LL.wert σ') (LG.st σ') 0 ∧ FA.Lebt σ' 0 ∧ LL.wert σ' 2 = 4 := by
   obtain ⟨σ1, k, he1, -, hkn, h1, -, -, h2, h3, hnp, -⟩ := liste_unlink_zug O passes R LL LG (V := FV) (l := false)
     (Λ := []) (Λ' := []) .here rfl fdarf voll .nil w0 rho2 listOk_w0 freiOk_w0
-    (by show Auf 4 (LL.wert w0) (LG.st w0) 2; rw [lg_w0]; exact ⟨[2, 0], listeKette_w0, by simp⟩)
+    (by show Auf 4 (LL.wert w0) (LG.st w0) 2; rw [lg_w0]; exact ⟨[2, 0], listeKette_w0, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩)
     (by show LL.wert w0 2 < 4; rw [ll_w0]; decide)
   have hk0 : k.n = 0 := by rw [hkn]; show LL.wert w0 2 = 0; rw [ll_w0]; rfl
   rw [hk0] at h2 h3

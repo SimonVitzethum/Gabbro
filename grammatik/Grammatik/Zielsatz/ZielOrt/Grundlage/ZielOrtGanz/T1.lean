@@ -239,18 +239,18 @@ theorem blatt_logik (P : Programm D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | axiomCall a args h' hw hg' hd hgd =>
       simp only [execStmt, axiomAntwort] at h
       split at h <;> cases h
-  | ite => simp [Stmt.istBlatt] at hb
-  | onOption => simp [Stmt.istBlatt] at hb
-  | onTag => simp [Stmt.istBlatt] at hb
-  | onWhy => simp [Stmt.istBlatt] at hb
-  | call => simp [Stmt.istBlatt] at hb
-  | callInd => simp [Stmt.istBlatt] at hb
-  | locks => simp [Stmt.istBlatt] at hb
-  | breaking => simp [Stmt.istBlatt] at hb
-  | traverse => simp [Stmt.istBlatt] at hb
-  | retry => simp [Stmt.istBlatt] at hb
-  | forever => simp [Stmt.istBlatt] at hb
-  | _ => simp [execStmt] at h
+  | ite => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | onOption => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | onTag => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | onWhy => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | call => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | callInd => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | locks => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | breaking => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | traverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | retry => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | forever => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | _ => simp only [execStmt, reduceCtorEq, List.append_assoc] at h
 
 end Pruefung
 /-! ## 5. A sufficient syntactic check: bodies without `logik` sources

@@ -57,8 +57,8 @@ theorem mem_piS {ι : Type} [DecidableEq ι] {X : ι → Type} {L : ∀ i, Sz (X
         if h' : i = a then h' ▸ g a else (fun i (_ : i ∈ as) => g i) i ((List.mem_cons.1 h).resolve_left h')) := by
       funext i hi
       by_cases h' : i = a
-      · subst h'; simp
-      · simp [h']
+      · subst h'; simp only [↓reduceDIte]
+      · simp only [h', ↓reduceDIte]
     rw [heq]
     exact hm
 
@@ -122,7 +122,7 @@ theorem hautT_vollst (tbls : List (Σ f : D.Fn, List (List (Rumpf D f)))) (h : H
     exact mem_piS (L := rumpfS tbls) h.rumpf (fun f => groesseEnd (h.rumpf f)) Aufz.fn (fun f _ => hm f)
   have hus : (fun f _ => h.unterbricht f) ∈ piS (fun _ => Sz.wahl [false, true]) Aufz.fn 0 := by
     have := mem_piS (L := fun _ : D.Fn => Sz.wahl [false, true]) h.unterbricht (fun _ => 0) Aufz.fn
-      (fun f _ => Sz.mem_wahl (by cases hb : h.unterbricht f <;> simp))
+      (fun f _ => Sz.mem_wahl (by cases hb : h.unterbricht f <;> simp only [List.mem_cons, Bool.false_eq_true, List.not_mem_nil, or_self, or_false, Bool.true_eq_false, or_true]))
     have hz : ((Aufz.fn (D := D)).map fun _ => 0).sum = 0 := summe_null _
     rw [hz] at this
     exact this
@@ -144,9 +144,9 @@ theorem ofTy_rumpfTab (T : ∀ f : D.Fn, List (List (Rumpf D f))) (f : D.Fn) :
     obtain ⟨f', _, rfl⟩ := List.mem_map.1 hp
     by_cases h : f' = f
     · subst h
-      simp at hpx
+      simp only [↓reduceDIte, Option.some.injEq] at hpx
       exact hpx.symm
-    · simp [h] at hpx
+    · simp only [h, ↓reduceDIte, reduceCtorEq] at hpx
   have hne : (⟨f, T f⟩ : Σ f : D.Fn, List (List (Rumpf D f))) ∈
       (Aufz.fn.map fun f' => (⟨f', T f'⟩ : Σ f : D.Fn, List (List (Rumpf D f)))) := List.mem_map.2 ⟨f, Aufz.fn_mem f, rfl⟩
   have hmem := mem_ofTy hne
@@ -207,10 +207,10 @@ def progS (nb nc : Nat) : Sz (Programm D) :=
 
 theorem le_summe {α : Type} {l : List α} {a : α} (f : α → Nat) (h : a ∈ l) : f a ≤ (l.map f).sum := by
   induction l with
-  | nil => simp at h
+  | nil => simp only [List.not_mem_nil] at h
   | cons b bs ih =>
     rcases List.mem_cons.1 h with rfl | h
-    · simp
+    · simp only [List.map_cons, List.sum_cons, Nat.le_add_right]
     · have := ih h; simp only [List.map_cons, List.sum_cons]; omega
 
 theorem summe_add {α : Type} (l : List α) (f g : α → Nat) :

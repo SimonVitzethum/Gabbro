@@ -13,34 +13,34 @@ theorem StmtG.ite_inv {Λ Λ' : List (Res D)} {c : Expr D Γ Λ .bool}
     {t e : Block D V l Γ Λ Λ'} (h : StmtG A mr (.ite c t e)) :
     BlockG A mr t ∧ BlockG A mr e := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | ite _ _ _ ht he => exact ⟨ht, he⟩
 
 theorem StmtG.onOption_inv {Λ Λ' : List (Res D)} {n : Int} {o : Expr D Γ Λ (.opt n)}
     {p : Block D V l (.index n :: Γ) Λ Λ'} {a : Block D V l Γ Λ Λ'}
     (h : StmtG A mr (.onOption o p a)) : BlockG A mr p ∧ BlockG A mr a := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | onOption _ _ _ hp ha => exact ⟨hp, ha⟩
 
 theorem StmtG.onTag_inv {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
     {v : Expr D Γ Λ (.sum cs)} {arms : Arms D V l Γ Λ Λ' cs}
     (h : StmtG A mr (.onTag v arms)) : ArmsG A mr arms := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | onTag _ _ ha => exact ha
 
 theorem StmtG.onGrund_inv {Λ Λ' : List (Res D)} {n : Nat}
     {r : Expr D Γ Λ (.why n)} {arms : GrundArms D V l Γ Λ Λ' n}
     (h : StmtG A mr (.onWhy r arms)) : GrundArmsG A mr arms := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | onWhy _ _ ha => exact ha
 
 theorem StmtG.breaking_inv {Λ Λ' : List (Res D)} {i : D.Inv}
     {body : Block D V l Γ Λ Λ'} (h : StmtG A mr (.breaking i body)) : BlockG A mr body := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | breaking _ _ hb => exact hb
 
 theorem StmtG.locks_inv {Λ : List (Res D)} {L : D.Lock}
@@ -48,13 +48,13 @@ theorem StmtG.locks_inv {Λ : List (Res D)} {L : D.Lock}
     {body : Block D V l Γ (.held L :: Λ) (.held L :: Λ)}
     (h : StmtG A mr (.locks L hr body)) : A L ∧ BlockG A false body := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | locks _ _ _ hA hb => exact ⟨hA, hb⟩
 
 theorem StmtG.ret_inv {Λ : List (Res D)} {e : ErgExpr D Γ Λ V.erg} {hΛ : Λ.Perm V.ende}
     (h : StmtG A mr (.ret (l := l) e hΛ)) : mr = true := by
   cases h with
-  | blatt _ hb => exact absurd hb.art (by simp [Stmt.blattArt])
+  | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | ret _ _ => rfl
 
 theorem BlockG.cons_inv {Λ Λ' Λ'' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}

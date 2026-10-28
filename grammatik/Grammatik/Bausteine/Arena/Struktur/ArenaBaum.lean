@@ -31,15 +31,15 @@ theorem BaumF.uebertragen {c : Int} {l r l' r' : Int → Int} {k : Int} {S : Lis
   induction h with
   | nil => exact BaumF.nil
   | node k h0 hk S1 S2 h1 h2 ih1 ih2 =>
-    have hk' := g k (by simp)
+    have hk' := g k (by simp only [List.mem_cons, List.mem_append, true_or])
     refine BaumF.node k h0 hk S1 S2 ?_ ?_
-    · rw [hk'.1]; exact ih1 (fun j hj => g j (by simp [hj]))
-    · rw [hk'.2]; exact ih2 (fun j hj => g j (by simp [hj]))
+    · rw [hk'.1]; exact ih1 (fun j hj => g j (by simp only [List.mem_cons, List.mem_append, hj, true_or, or_true]))
+    · rw [hk'.2]; exact ih2 (fun j hj => g j (by simp only [List.mem_cons, List.mem_append, hj, or_true]))
 
 theorem BaumF.mem_bereich {c : Int} {l r : Int → Int} {k : Int} {S : List Int}
     (h : BaumF c l r k S) : ∀ i ∈ S, 0 ≤ i ∧ i < c := by
   induction h with
-  | nil => intro i hi; simp at hi
+  | nil => intro i hi; simp only [List.not_mem_nil] at hi
   | node k h0 hk S1 S2 h1 h2 ih1 ih2 =>
     intro i hi
     simp only [List.mem_cons, List.mem_append] at hi
@@ -66,7 +66,7 @@ def InBaum (c : Int) (l r : Int → Int) (wurzel i : Int) : Prop :=
   ∃ S, BaumF c l r wurzel S ∧ i ∈ S
 
 theorem baumOkF_leer (c : Int) (l r : Int → Int) (Live : Int → Prop) : BaumOkF c l r c Live :=
-  ⟨[], BaumF.nil, List.nodup_nil, by simp⟩
+  ⟨[], BaumF.nil, List.nodup_nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]⟩
 
 /-- A well formed tree survives a change of the links away from its slots and a widening of the live set. -/
 theorem BaumOkF.rahmen {c : Int} {l r l' r' : Int → Int} {w : Int} {Live Live' : Int → Prop}
@@ -82,14 +82,14 @@ theorem einfuegen_aux {c : Int} {l r l' r' : Int → Int} {p i : Int} (h0i : 0 �
     {k : Int} {S : List Int} (h : BaumF c l r k S) (hnd : S.Nodup) (hiS : i ∉ S) (hm : p ∈ S) :
     ∃ S', BaumF c l' r' k S' ∧ S'.Perm (i :: S) := by
   induction h with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | node k h0 hk S1 S2 h1 h2 ih1 ih2 =>
     have hkS : k ≠ i := fun e => hiS (e ▸ List.mem_cons_self)
-    have hi1 : i ∉ S1 := fun e => hiS (by simp [e])
-    have hi2 : i ∉ S2 := fun e => hiS (by simp [e])
+    have hi1 : i ∉ S1 := fun e => hiS (by simp only [List.mem_cons, List.mem_append, e, true_or, or_true])
+    have hi2 : i ∉ S2 := fun e => hiS (by simp only [List.mem_cons, List.mem_append, e, or_true])
     obtain ⟨hk12, hnd12⟩ := List.nodup_cons.mp hnd
-    have hk1 : k ∉ S1 := fun e => hk12 (by simp [e])
-    have hk2 : k ∉ S2 := fun e => hk12 (by simp [e])
+    have hk1 : k ∉ S1 := fun e => hk12 (by simp only [List.mem_append, e, true_or])
+    have hk2 : k ∉ S2 := fun e => hk12 (by simp only [List.mem_append, e, or_true])
     have hnd1 : S1.Nodup := (List.nodup_append.mp hnd12).1
     have hnd2 : S2.Nodup := (List.nodup_append.mp hnd12).2.1
     have hdisj : ∀ x ∈ S1, x ∉ S2 := fun x hx hx2 => (List.nodup_append.mp hnd12).2.2 x hx x hx2 rfl
@@ -158,11 +158,11 @@ theorem blatt_aus_aux {c : Int} {l l' r : Int → Int} {p i : Int} (h0i : 0 ≤ 
     {k : Int} {S : List Int} (h : BaumF c l r k S) (hnd : S.Nodup) (hm : p ∈ S) :
     ∃ S', BaumF c l' r k S' ∧ S.Perm (i :: S') := by
   induction h with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | node k h0 hk S1 S2 h1 h2 ih1 ih2 =>
     obtain ⟨hk12, hnd12⟩ := List.nodup_cons.mp hnd
-    have hk1 : k ∉ S1 := fun e => hk12 (by simp [e])
-    have hk2 : k ∉ S2 := fun e => hk12 (by simp [e])
+    have hk1 : k ∉ S1 := fun e => hk12 (by simp only [List.mem_append, e, true_or])
+    have hk2 : k ∉ S2 := fun e => hk12 (by simp only [List.mem_append, e, or_true])
     have hnd1 : S1.Nodup := (List.nodup_append.mp hnd12).1
     have hnd2 : S2.Nodup := (List.nodup_append.mp hnd12).2.1
     have hdisj : ∀ x ∈ S1, x ∉ S2 := fun x hx hx2 => (List.nodup_append.mp hnd12).2.2 x hx x hx2 rfl
@@ -304,17 +304,17 @@ theorem blatt_aus_rechts_ok {c : Int} {l r r' : Int → Int} {w p i : Int} {Live
 theorem BaumF.kind_mem {c : Int} {l r : Int → Int} {k : Int} {S : List Int} (h : BaumF c l r k S)
     {p : Int} (hm : p ∈ S) : (l p < c → l p ∈ S) ∧ (r p < c → r p ∈ S) := by
   induction h with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | node k h0 hk S1 S2 h1 h2 ih1 ih2 =>
     by_cases hkp : p = k
     · subst hkp
       refine ⟨fun hl => ?_, fun hr => ?_⟩
       · cases h1 with
         | nil => exact absurd hl (Int.lt_irrefl _)
-        | node _ _ _ T1 T2 g1 g2 => simp
+        | node _ _ _ T1 T2 g1 g2 => simp only [List.cons_append, List.append_assoc, List.mem_cons, List.mem_append, true_or, or_true]
       · cases h2 with
         | nil => exact absurd hr (Int.lt_irrefl _)
-        | node _ _ _ T1 T2 g1 g2 => simp
+        | node _ _ _ T1 T2 g1 g2 => simp only [List.mem_cons, List.mem_append, true_or, or_true]
     · have hm' : p ∈ S1 ∨ p ∈ S2 := by
         simp only [List.mem_cons, List.mem_append] at hm
         rcases hm with e | e | e
@@ -322,8 +322,8 @@ theorem BaumF.kind_mem {c : Int} {l r : Int → Int} {k : Int} {S : List Int} (h
         · exact Or.inl e
         · exact Or.inr e
       rcases hm' with e | e
-      · exact ⟨fun hl => by have := (ih1 e).1 hl; simp [this], fun hr => by have := (ih1 e).2 hr; simp [this]⟩
-      · exact ⟨fun hl => by have := (ih2 e).1 hl; simp [this], fun hr => by have := (ih2 e).2 hr; simp [this]⟩
+      · exact ⟨fun hl => by have := (ih1 e).1 hl; simp only [List.mem_cons, List.mem_append, this, true_or, or_true], fun hr => by have := (ih1 e).2 hr; simp only [List.mem_cons, List.mem_append, this, true_or, or_true]⟩
+      · exact ⟨fun hl => by have := (ih2 e).1 hl; simp only [List.mem_cons, List.mem_append, this, or_true], fun hr => by have := (ih2 e).2 hr; simp only [List.mem_cons, List.mem_append, this, or_true]⟩
 
 theorem InBaum.links {c : Int} {l r : Int → Int} {w p : Int} (h : InBaum c l r w p) (hl : l p < c) :
     InBaum c l r w (l p) := by
@@ -348,13 +348,13 @@ theorem liste_zeuge :
       (by show KetteF 4 nx 0 [0]; exact KetteF.cons 0 (by omega) (by omega) []
             (by show KetteF 4 nx 4 []; exact KetteF.nil))
   have h1 : ListOkF 4 nx 2 (fun j => j < 3) :=
-    ⟨[2, 0], hk, by decide, by intro i hi; simp at hi; omega⟩
+    ⟨[2, 0], hk, by decide, by intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; omega⟩
   have hnot : ¬ Auf 4 nx 2 1 := by
     rintro ⟨L, hL, hm⟩
     have := KetteF.eindeutig hL hk
-    subst this; simp at hm
+    subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
   have h2 := push_ok (nx' := nx') (kopf' := 1) h1 (by omega) (by omega) (by omega)
-    (fun _ h => h) hnot rfl (by simp [nx']) (by intro j hj; simp [nx', hj])
+    (fun _ h => h) hnot rfl (by simp only [↓reduceIte, nx']) (by intro j hj; simp only [hj, ↓reduceIte, nx'])
   refine ⟨nx, nx', h1, hnot, h2, ?_⟩
   obtain ⟨L, hL, _, _⟩ := h2
   have hk' : KetteF 4 nx' 1 [1, 2, 0] :=
@@ -362,8 +362,8 @@ theorem liste_zeuge :
       (by show KetteF 4 nx' 2 [2, 0]
           exact hk.uebertragen (fun j hj => by
             simp only [List.mem_cons, List.not_mem_nil, or_false] at hj
-            rcases hj with rfl | rfl <;> simp [nx']))
-  exact ⟨[1, 2, 0], hk', by simp⟩
+            rcases hj with rfl | rfl <;> simp only [Int.reduceEq, ↓reduceIte, nx']))
+  exact ⟨[1, 2, 0], hk', by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_false, or_true]⟩
 
 /-- A concrete tree (`0` with children `1`, `2`) in a table of 5 slots; the live leaf `3` is hung below `1`, then cut
     off again. -/
@@ -381,15 +381,15 @@ theorem baum_zeuge :
         (by show BaumF 5 l r 5 []; exact BaumF.nil))
     simpa using this
   have h1 : BaumOkF 5 l r 0 (fun j => j < 4) :=
-    ⟨[0, 1, 2], hb, by decide, by intro i hi; simp at hi; omega⟩
+    ⟨[0, 1, 2], hb, by decide, by intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; omega⟩
   have hnot : ¬ InBaum 5 l r 0 3 := by
     rintro ⟨S, hS, hm⟩
     have := BaumF.eindeutig hS hb
-    subst this; simp at hm
-  have hp : InBaum 5 l r 0 1 := ⟨[0, 1, 2], hb, by simp⟩
+    subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
+  have hp : InBaum 5 l r 0 1 := ⟨[0, 1, 2], hb, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false, or_true]⟩
   have h2 := einfuegen_ok (l' := l') (r' := r) (p := 1) (i := 3) (Live' := fun j => j < 4)
-    h1 hp (by simp [l]) (by omega) (by omega) (by omega) (fun _ h => h) hnot (by simp [l'])
-    (by simp [l', l]) rfl (by intro j hj _; simp [l', hj]) (fun _ _ => rfl)
+    h1 hp (by simp only [Int.reduceEq, ↓reduceIte, l]) (by omega) (by omega) (by omega) (fun _ h => h) hnot (by simp only [↓reduceIte, l'])
+    (by simp only [Int.reduceEq, ↓reduceIte, l', l]) rfl (by intro j hj _; simp only [hj, ↓reduceIte, l']) (fun _ _ => rfl)
   exact ⟨l, r, l', h1, hnot, h2.1, h2.2⟩
 
 end Gabbro.Grammatik.ArenaKette

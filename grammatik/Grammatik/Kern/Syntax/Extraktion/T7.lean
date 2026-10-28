@@ -196,17 +196,17 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       obtain ⟨h1, h2⟩ := uebergang_ereignis_aus_blatt O passes l tabs globs t f hτ i von nach
         hn he hw hL σ ρ σ' neu hstep hneu
       exact ⟨fun e he => Or.inl (h1 e he), h2⟩
-  | ite c t e => simp [Stmt.istBlatt] at hleaf
-  | onOption o p a => simp [Stmt.istBlatt] at hleaf
-  | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
-  | call f args hp hr => simp [Stmt.istBlatt] at hleaf
-  | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
-  | locks L hr body => simp [Stmt.istBlatt] at hleaf
-  | breaking i body => simp [Stmt.istBlatt] at hleaf
-  | traverse t inv body => simp [Stmt.istBlatt] at hleaf
-  | retry n bis body ueberlauf => simp [Stmt.istBlatt] at hleaf
-  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+  | ite c t e => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onOption o p a => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onTag v arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | call f args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | locks L hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | breaking i body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | traverse t inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | retry n bis body ueberlauf => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args h hw hg hd hgd => exact False.elim hax
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
@@ -240,7 +240,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       · intro e' he' o ho
         simp only [List.mem_singleton] at he'
         subst he'
-        simp [Ereignis.traeger] at ho
+        simp only [Ereignis.traeger, reduceCtorEq] at ho
   | publish g e payload hp hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur =
@@ -278,9 +278,9 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       constructor
       · intro e' he'
         refine Or.inl ?_
-        simp at he'
+        simp only [List.not_mem_nil] at he'
       · intro e' he' o ho
-        simp at he'
+        simp only [List.not_mem_nil] at he'
   | retires m s h a =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
@@ -290,9 +290,9 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       constructor
       · intro e' he'
         refine Or.inl ?_
-        simp at he'
+        simp only [List.not_mem_nil] at he'
       · intro e' he' o ho
-        simp at he'
+        simp only [List.not_mem_nil] at he'
   | ret e hΛ =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur =
@@ -320,9 +320,9 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       constructor
       · intro e' he'
         refine Or.inl ?_
-        simp at he'
+        simp only [List.not_mem_nil] at he'
       · intro e' he' o ho
-        simp at he'
+        simp only [List.not_mem_nil] at he'
   | leave h =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
@@ -332,9 +332,9 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       constructor
       · intro e' he'
         refine Or.inl ?_
-        simp at he'
+        simp only [List.not_mem_nil] at he'
       · intro e' he' o ho
-        simp at he'
+        simp only [List.not_mem_nil] at he'
   | next h =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
@@ -344,9 +344,9 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
       constructor
       · intro e' he'
         refine Or.inl ?_
-        simp at he'
+        simp only [List.not_mem_nil] at he'
       · intro e' he' o ho
-        simp at he'
+        simp only [List.not_mem_nil] at he'
 
 /-- The `PCSchritt` footprint checks discharged against `progAus` atoms: a
     fired non-oracle leaf step whose counter points at its extracted atom
@@ -531,11 +531,11 @@ theorem execEreignis_aus_axiomCall
           apply List.mem_map.mpr
           exact ⟨g, List.mem_filter.mpr ⟨hcg g hwr, hwr⟩, rfl⟩
       · rcases List.mem_cons.mp hrd with rfl | hrd
-        · simp [Ereignis.traeger] at ho
+        · simp only [Ereignis.traeger, reduceCtorEq] at ho
         have hmem : o ∈ args.orte := (mem_leseEr hrd).2 o ho
         simp only [stmtTraeger, stmtOrte]
         exact List.mem_append.mpr (Or.inr hmem)
-  · simp [Ausgang.welt] at hstep
+  · simp only [Ausgang.welt, reduceCtorEq] at hstep
 
 
 end Gabbro.Grammatik.Extraktion

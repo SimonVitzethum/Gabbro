@@ -69,7 +69,7 @@ theorem foreverLauf_ok (a : D.Annahme) (schritt : World D → Env D Γ → Ausga
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (σ' : World D) (ρ' : Env D Γ),
       foreverLauf (l := l) a schritt inv n σ ρ = .ok σ' ρ' →
       ∃ σ1 ρ1, ∃ h : true = true, schritt σ1 ρ1 = .leave h σ' ρ'
-  | 0, _, _, _, _, h => by simp [foreverLauf] at h
+  | 0, _, _, _, _, h => by simp only [foreverLauf, reduceCtorEq] at h
   | n + 1, σ, ρ, σ', ρ', h => by
       unfold foreverLauf at h
       split at h
@@ -87,7 +87,7 @@ theorem foreverLauf_zurueck (a : D.Annahme) (schritt : World D → Env D Γ → 
     (inv : World D → Env D Γ → World D × Bool) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (σ' : World D) (v : ErgVal D V.erg),
       foreverLauf (l := l) a schritt inv n σ ρ = .zurueck σ' v → ∃ σ1 ρ1, schritt σ1 ρ1 = .zurueck σ' v
-  | 0, _, _, _, _, h => by simp [foreverLauf] at h
+  | 0, _, _, _, _, h => by simp only [foreverLauf, reduceCtorEq] at h
   | n + 1, σ, ρ, σ', v, h => by
       unfold foreverLauf at h
       split at h
@@ -106,7 +106,7 @@ theorem foreverLauf_why (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
     (inv : World D → Env D Γ → World D × Bool) :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (σ' : World D) (r : Fin V.gruende),
       foreverLauf (l := l) a schritt inv n σ ρ = .why σ' r → ∃ σ1 ρ1, schritt σ1 ρ1 = .why σ' r
-  | 0, _, _, _, _, h => by simp [foreverLauf] at h
+  | 0, _, _, _, _, h => by simp only [foreverLauf, reduceCtorEq] at h
   | n + 1, σ, ρ, σ', r, h => by
       unfold foreverLauf at h
       split at h
@@ -138,9 +138,9 @@ theorem foreverLauf_nur_umwelt (a : D.Annahme) (schritt : World D → Env D Γ �
         split
         · exact foreverLauf_nur_umwelt a schritt inv hs n _ _
         · exact foreverLauf_nur_umwelt a schritt inv hs n _ _
-        · rename_i he; rw [he] at h; exact absurd h (by simp [OhneAus])
-        · rename_i he; rw [he] at h; exact absurd h (by simp [OhneAus])
-        · rename_i he; rw [he] at h; exact absurd h (by simp [OhneAus])
+        · rename_i he; rw [he] at h; exact absurd h (by simp only [OhneAus, Bool.true_eq_false, not_false_eq_true])
+        · rename_i he; rw [he] at h; exact absurd h (by simp only [OhneAus, not_false_eq_true])
+        · rename_i he; rw [he] at h; exact absurd h (by simp only [OhneAus, not_false_eq_true])
         · exact Or.inl ⟨_, rfl⟩
         · exact Or.inr ⟨_, rfl⟩
 
@@ -162,8 +162,8 @@ theorem ohneAus_traverse {τ : Ty} {eb : Bool} (schritt : World D → Env D (τ 
         · exact ohneAus_traverse schritt inv hs ks _ _
         · exact ohneAus_traverse schritt inv hs ks _ _
         · split <;> trivial
-        · rename_i he; rw [he] at h; exact absurd h (by simp [OhneAus])
-        · rename_i he; rw [he] at h; exact absurd h (by simp [OhneAus])
+        · rename_i he; rw [he] at h; exact absurd h (by simp only [OhneAus, not_false_eq_true])
+        · rename_i he; rw [he] at h; exact absurd h (by simp only [OhneAus, not_false_eq_true])
         · trivial
         · trivial
 
@@ -181,8 +181,8 @@ theorem ohneAus_retry {eb : Bool} (schritt : World D → Env D Γ → Ausgang V 
         · exact ohneAus_retry schritt bis ueber hs hu n _ _
         · exact ohneAus_retry schritt bis ueber hs hu n _ _
         · trivial
-        · rename_i he; rw [he] at h; exact absurd h (by simp [OhneAus])
-        · rename_i he; rw [he] at h; exact absurd h (by simp [OhneAus])
+        · rename_i he; rw [he] at h; exact absurd h (by simp only [OhneAus, not_false_eq_true])
+        · rename_i he; rw [he] at h; exact absurd h (by simp only [OhneAus, not_false_eq_true])
         · trivial
         · trivial
 
@@ -266,8 +266,8 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
   | _, _, _, _, .publish .., _, _, _, _, _ => trivial
   | _, _, _, _, .advances .., _, _, _, _, _ => trivial
   | _, _, _, _, .retires .., _, _, _, _, _ => trivial
-  | _, _, _, _, .ret .., _, _, h, _, _ => by simp [befS] at h
-  | _, _, _, _, .retWhy .., _, _, h, _, _ => by simp [befS] at h
+  | _, _, _, _, .ret .., _, _, h, _, _ => by simp only [befS, Bool.true_eq_false] at h
+  | _, _, _, _, .retWhy .., _, _, h, _, _ => by simp only [befS, Bool.true_eq_false] at h
   | _, _, _, _, .leave _, _, _, h, _, _ => by simp only [befS] at h; exact h
   | _, _, _, _, .next _, _, _, _, _, _ => trivial
 
@@ -386,8 +386,8 @@ theorem ohneAus_execBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b
 
 theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (eb : Bool),
     (befE eb true e).austritt = false → ∀ σ ρ, EndOhneAus eb (execEnd O passes R e σ ρ)
-  | _, _, _, .ret .., _, h, _, _ => by simp [befE] at h
-  | _, _, _, .retWhy .., _, h, _, _ => by simp [befE] at h
+  | _, _, _, .ret .., _, h, _, _ => by simp only [befE, Bool.true_eq_false] at h
+  | _, _, _, .retWhy .., _, h, _, _ => by simp only [befE, Bool.true_eq_false] at h
   | _, _, _, .leave _, _, h, _, _ => by simp only [befE] at h; exact h
   | _, _, _, .next _, _, _, _, _ => trivial
   | _, _, _, .cons s rest, eb, h, σ, ρ => by

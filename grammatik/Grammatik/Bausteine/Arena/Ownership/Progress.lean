@@ -28,7 +28,7 @@ theorem State.progress_no_revival {s s' : State} (hp : s.progress s') {h : Handl
   intro frame ha
   unfold State.access at ha
   cases hc : s'.cells h.slot with
-  | none => simp [hc] at ha
+  | none => simp only [hc] at ha
   | some cell =>
     rw [hc] at ha
     obtain ⟨hm, _⟩ := ha
@@ -60,7 +60,7 @@ theorem State.release_progress {s s' : State} {frame : Frame} {h : Handle}
     refine ⟨Nat.le_refl _, ?_⟩
     intro slot cell hc _
     by_cases he : slot = h.slot
-    · subst slot; simp [State.put] at hc
+    · subst slot; simp only [put, ↓reduceIte, reduceCtorEq] at hc
     · exact ⟨cell, by simpa [State.put, he] using hc, rfl, rfl⟩
   · cases ha
 

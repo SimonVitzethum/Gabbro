@@ -115,7 +115,7 @@ theorem traverse2_regel {τ : Ty} (s₁ s₂ : World D → Env D (τ :: Γ) → 
     obtain ⟨h₁, h₂⟩ := hInv k ks σ₁ ρ₁ σ₂ ρ₂ h
     have hs := hSchritt k ks σ₁ ρ₁ σ₂ ρ₂ h
     unfold traverseLauf
-    rw [if_neg (by simp [h₁]), if_neg (by simp [h₂])]
+    rw [if_neg (by simp only [h₁, Bool.true_eq_false, not_false_eq_true]), if_neg (by simp only [h₂, Bool.true_eq_false, not_false_eq_true])]
     revert hs
     cases s₁ (inv₁ σ₁ ρ₁).1 (.cons k ρ₁) <;> cases s₂ (inv₂ σ₂ ρ₂).1 (.cons k ρ₂) <;>
       first
@@ -128,7 +128,7 @@ theorem wp2_selbst {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (Q : Ausg
     (ρ : Env D Γ) :
     wp2B O₁ O₁ p₁ p₁ R₁ R₁ b b (fun o₁ o₂ => o₁ = o₂ ∧ Q o₁) σ ρ σ ρ ↔ wpB O₁ p₁ R₁ b Q σ ρ := by
   unfold wp2B wpB
-  simp
+  simp only [true_and]
 
 end Relational
 

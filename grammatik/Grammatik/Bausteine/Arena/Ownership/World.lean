@@ -139,7 +139,7 @@ theorem State.lend_agrees {s s' : State} {A : FreiForm D} {σ : World D}
       by_cases hi : i = h.slot
       · subst i
         have hlive := (ha.2 h.slot).mpr ⟨c, hc⟩
-        simp [State.put, hlive]
+        simp only [hlive, put, ↓reduceIte, Option.some.injEq, exists_eq']
       · simpa [State.put, hi] using ha.2 i
     · cases he
 
@@ -159,7 +159,7 @@ theorem State.endLoan_agrees {s s' : State} {A : FreiForm D} {σ : World D}
         by_cases hi : i = h.slot
         · subst i
           have hlive := (ha.2 h.slot).mpr ⟨c, hc⟩
-          simp [State.put, hlive]
+          simp only [hlive, put, ↓reduceIte, Option.some.injEq, exists_eq']
         · simpa [State.put, hi] using ha.2 i
       · cases he
 
@@ -174,7 +174,7 @@ theorem State.release_agrees {s s' : State} {A : FreiForm D} {σ σ' : World D}
     intro i
     rw [hl]
     by_cases hi : i = h.slot
-    · subst i; simp [State.put]
+    · subst i; simp only [ne_eq, not_true_eq_false, and_false, put, ↓reduceIte, reduceCtorEq, exists_false]
     · simpa [State.put, hi] using ha.2 i
   · cases he
 
@@ -190,7 +190,7 @@ theorem State.allocate_agrees {s s' : State} {A : FreiForm D} {σ σ' : World D}
     intro j
     rw [hl]
     by_cases hj : j = i
-    · subst j; simp [State.put]
+    · subst j; simp only [true_or, put, ↓reduceIte, Option.some.injEq, exists_eq']
     · simpa [State.put, hj] using ha.2 j
 
 theorem State.allocate_exists {s : State} {A : FreiForm D} {σ : World D}
@@ -200,7 +200,7 @@ theorem State.allocate_exists {s : State} {A : FreiForm D} {σ : World D}
     cases he : s.cells i with
     | none => rfl
     | some c => exact False.elim (hn ((ha.2 i).mpr ⟨c, he⟩))
-  simp [State.allocate, hc]
+  simp only [allocate, hc, Option.some.injEq, Prod.mk.injEq, exists_and_left, exists_eq', and_true]
 
 section Execution
 
@@ -226,7 +226,7 @@ theorem release_execution (A : FreiForm D) (s : State) (f : Frame) (h : Handle)
     freiVar_ausfuehren O passes R A x hwT hLT hwK hLK rest σ ρ
   have hfree := (A.lebt_frei _ hlive hf hk hn hother hc).1
   have hrelease : s.release f h = some (s.put h.slot none) := by
-    simp [State.release, ho]
+    simp only [State.release, ho, ↓reduceIte]
   refine ⟨s.put h.slot none, σ', hrelease, he, ?_, hfree, hframe,
     (State.release_valid ha.1 f h hrelease).2⟩
   apply State.release_agrees ha f h hrelease

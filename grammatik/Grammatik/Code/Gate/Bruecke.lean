@@ -116,7 +116,7 @@ theorem entspricht_gib {g : Nat} {s s' : Zust} {m : Mem} {rho : Nat → Nat} {b 
       · intro b' blk' h
         simp only [Mem.entfernen] at h
         by_cases e : b' = b
-        · simp [e] at h
+        · simp only [e, ↓reduceIte, reduceCtorEq] at h
         · simp only [e, if_false] at h
           refine (List.mem_erase_of_ne ?_).2 (hE.lebt b' blk' h)
           intro h2
@@ -125,15 +125,15 @@ theorem entspricht_gib {g : Nat} {s s' : Zust} {m : Mem} {rho : Nat → Nat} {b 
       · intro b' blk' h
         simp only [Mem.entfernen] at h
         by_cases e : b' = b
-        · simp [e] at h
+        · simp only [e, ↓reduceIte, reduceCtorEq] at h
         · simp only [e, if_false] at h
           exact hE.gross b' blk' h
       · intro b1 b2 blk1 blk2 h1 h2 hr
         simp only [Mem.entfernen] at h1 h2
         by_cases e1 : b1 = b <;> by_cases e2 : b2 = b
-        · simp [e1] at h1
-        · simp [e1] at h1
-        · simp [e2] at h2
+        · simp only [e1, ↓reduceIte, reduceCtorEq] at h1
+        · simp only [e1, ↓reduceIte, reduceCtorEq] at h1
+        · simp only [e2, ↓reduceIte, reduceCtorEq] at h2
         · simp only [e1, e2, if_false] at h1 h2
           exact hE.eind b1 b2 blk1 blk2 h1 h2 hr
 
@@ -199,23 +199,26 @@ theorem bruecke_zeuge :
       rho 0 = 32 ∧ rho 1 = 96 ∧ m2.blks 0 ≠ none ∧ m2.blks 1 ≠ none ∧
       Strecke.getrennt ⟨32, 32 + 64⟩ ⟨96, 96 + 64⟩ := by
   have hE0 : Entspricht Zust.leer Mem.empty (fun _ => 0) :=
-    ⟨fun b blk h => by simp [Mem.empty] at h, fun b blk h => by simp [Mem.empty] at h,
-     fun b b' blk blk' h => by simp [Mem.empty] at h⟩
+    ⟨fun b blk h => by simp only [Mem.empty, reduceCtorEq] at h, fun b blk h => by simp only [Mem.empty, reduceCtorEq] at h,
+     fun b b' blk blk' h => by simp only [Mem.empty, reduceCtorEq] at h⟩
   have hs1 : PStep 16 Zust.leer (.hole 64 32)
       { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp [Zust.leer])
+    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp only [Zust.leer, List.not_mem_nil, Nat.reduceAdd, false_implies, implies_true])
   have hE1 := entspricht_hole hE0 hs1
   have hg1 := gut_nach gut_leer hs1
   have hs2 : PStep 16 { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } (.hole 64 96)
       { lebend := ⟨96, 96 + 64⟩ :: [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (by decide) (by decide) (by decide) (by simp [Strecke.getrennt])
+    PStep.hole (by decide) (by decide) (by decide) (by simp only [Nat.reduceAdd, List.mem_cons, List.not_mem_nil, or_false, Strecke.getrennt, forall_eq,
+  Nat.reduceLeDiff, Std.le_refl, or_true])
   have hE2 := entspricht_hole hE1 hs2
   have hg2 := gut_nach hg1 hs2
   refine ⟨_, _, _, hg2, hE2, rfl, ?_, ?_, ?_, ?_⟩
-  · simp [Mem.alloc, Mem.setBlk, Mem.empty]
-  · simp [Mem.alloc, Mem.setBlk, Mem.empty]
-  · simp [Mem.alloc, Mem.setBlk, Mem.empty]
-  · simp [Strecke.getrennt]
+  · simp only [Mem.alloc, Mem.setBlk, Mem.empty, Bool.false_eq_true, and_false, ↓reduceIte, Nat.zero_add]
+  · simp only [Mem.alloc, Mem.setBlk, Mem.empty, Bool.false_eq_true, and_false, ↓reduceIte, Nat.zero_add,
+  Nat.reduceAdd, Nat.zero_ne_one, ne_eq, reduceCtorEq, not_false_eq_true]
+  · simp only [Mem.alloc, Mem.setBlk, Mem.empty, Bool.false_eq_true, and_false, ↓reduceIte, Nat.zero_add,
+  Nat.reduceAdd, ne_eq, reduceCtorEq, not_false_eq_true]
+  · simp only [Strecke.getrennt, Nat.reduceAdd, Std.le_refl, Nat.reduceLeDiff, or_false]
 
 /-- **Planted defect: aliasing.** An assignment that puts two distinct live blocks at one address is no
     correspondence: injectivity is a field, not a hope. -/

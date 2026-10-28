@@ -106,7 +106,7 @@ theorem zaehle_ein_mehr {k i : Nat} {p q : Nat → Bool}
       by_cases hin : i = n
       · subst hin
         have : zaehle i q = zaehle i p := zaehle_gleich (fun j hj => hrest j (by omega))
-        simp [zaehle, hp, hq, this]
+        simp only [zaehle, hq, ↓reduceIte, this, hp, Bool.false_eq_true, Nat.zero_add]
         omega
       · have hne : q n = p n := hrest n (fun hc => hin hc.symm)
         have hr := ih (by omega)
@@ -137,8 +137,8 @@ theorem unvisited_endet {n : Nat} (lauf : Nat → UZustand n)
   intro a b ⟨i, hin, ha, hb, hrest⟩
   unfold unbesucht
   have : zaehle n (fun j => ! a.besucht j) = zaehle n (fun j => ! b.besucht j) + 1 := by
-    refine zaehle_ein_mehr hin (by simp [hb]) (by simp [ha]) ?_
-    intro j hj; simp [hrest j hj]
+    refine zaehle_ein_mehr hin (by simp only [hb, Bool.not_true]) (by simp only [ha, Bool.not_false]) ?_
+    intro j hj; simp only [hrest j hj]
   omega
 
 
@@ -178,7 +178,7 @@ theorem s005_ist_nicht_hinreichend :
   refine ⟨fun _ => ⟨7, true⟩, fun _ => rfl, ?_⟩
   intro h
   have := h 0
-  simp [dschritt_gut] at this
+  simp only [dschritt_gut, Nat.lt_irrefl] at this
 
 
 #print axioms Passlogik.Terminierung.s005_ist_nicht_hinreichend
@@ -218,7 +218,7 @@ theorem s008_ist_nicht_hinreichend :
   refine ⟨fun _ => ⟨3, true⟩, fun _ => rfl, ?_⟩
   intro h
   have := h 0
-  simp [cschritt] at this
+  simp only [cschritt, Nat.lt_irrefl] at this
 
 
 #print axioms Passlogik.Terminierung.s008_ist_nicht_hinreichend
@@ -263,7 +263,7 @@ theorem retry_endet {k : Nat} (hk : 0 < k) (lauf : Nat → RZustand)
 theorem retry_ohne_kosten_endet_nicht :
     ∃ lauf : Nat → RZustand, ∀ i, rschritt 0 (lauf i) (lauf (i+1)) := by
   refine ⟨fun _ => ⟨5⟩, ?_⟩
-  intro i; simp [rschritt]
+  intro i; simp only [rschritt, Nat.add_zero]
 
 
 #print axioms Passlogik.Terminierung.retry_ohne_kosten_endet_nicht
@@ -290,7 +290,7 @@ def per_pass_haelt (N : Nat) (z : FZustand) : Prop := z.pass_kosten ≤ N
 theorem forever_laeuft_ewig (N : Nat) :
     ∃ lauf : Nat → FZustand, ∀ i, per_pass_haelt N (lauf i) := by
   refine ⟨fun _ => ⟨0⟩, ?_⟩
-  intro i; simp [per_pass_haelt]
+  intro i; simp only [per_pass_haelt, Nat.zero_le]
 
 
 #print axioms Passlogik.Terminierung.forever_laeuft_ewig

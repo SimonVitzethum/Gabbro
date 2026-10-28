@@ -260,7 +260,7 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Stmt.ohneLocks] at h
       simp only [execStmtH, execStmt]
       exact GrundArms.execH_ohne arms h _ _ _
-  | .locks .., h, _, _ => by simp [Stmt.ohneLocks] at h
+  | .locks .., h, _, _ => by simp only [Stmt.ohneLocks, Bool.false_eq_true] at h
   | .breaking i body, h, σ, ρ => by
       simp only [Stmt.ohneLocks] at h
       simp only [execStmtH, execStmt, Block.execH_ohne body h]
@@ -448,7 +448,7 @@ theorem execStmtH_blatt (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes :
     {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hb : s.istBlatt = true)
     (σ : World D) (ρ : Env D Γ) :
     execStmtH S O U passes R s σ ρ = execStmt O passes R s σ ρ := by
-  cases s <;> first | rfl | (simp [Stmt.istBlatt] at hb)
+  cases s <;> first | rfl | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb)
 
 /-! ## 2a. Frame results WITH the reason channel
 
@@ -480,7 +480,7 @@ def gleich : ZErgG V → ZErgG V → Prop
   | _, _ => False
 
 theorem gleich_refl (r : ZErgG V) : r.gleich r := by
-  cases r <;> simp [gleich, SG]
+  cases r <;> simp only [gleich, SG, and_self]
 
 theorem gleich_symm {r r' : ZErgG V} (h : r.gleich r') : r'.gleich r := by
   cases r <;> cases r' <;> simp_all [gleich, SG]
@@ -557,7 +557,7 @@ theorem zErgG_gleich_zurueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusga
       obtain ⟨hs, hv⟩ := h
       subst hv
       exact ⟨σ', rfl, hs⟩
-  | _ => simp [zErgG, ZErgG.gleich] at h
+  | _ => simp only [ZErgG.gleich, zErgG] at h
 
 
 end Gabbro.Grammatik

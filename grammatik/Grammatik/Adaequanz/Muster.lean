@@ -89,8 +89,8 @@ theorem schlecht_noetig {φS : Z → Bool} {M : List P} (hM : MusterHinreichend 
           · rfl⟩
       obtain ⟨z', hz', hne', hf⟩ := hother
       constructor
-      · intro h; have := h z' hz'; simp [umschalten, hne', hf] at this
-      · intro h; have := h z' hz'; simp [hf] at this
+      · intro h; have := h z' hz'; simp only [umschalten, hne', ↓reduceIte, hf, Bool.false_eq_true] at this
+      · intro h; have := h z' hz'; simp only [hf, Bool.false_eq_true] at this
     · constructor
       · intro h z' hz'
         have := h z' hz'
@@ -101,7 +101,7 @@ theorem schlecht_noetig {φS : Z → Bool} {M : List P} (hM : MusterHinreichend 
         simpa [umschalten, hne'] using h z' hz'
   have hall := (hM _ hpass p0).mp (fun z' hz' => by
     by_cases he : z' = z
-    · simp [umschalten, he]
+    · simp only [umschalten, he, ↓reduceIte]
     · simpa [umschalten, he] using h0.2.2 z' hz' he)
   have := hall z h0.1
   rw [h0.2.1] at this
@@ -126,7 +126,7 @@ theorem gut_noetig {φS : Z → Bool} {M : List P} (hM : MusterHinreichend T φS
     by_cases hzp : T p z
     · have hn := hne p hp hzp
       constructor
-      · intro h; have := h z hzp; simp [umschalten] at this
+      · intro h; have := h z hzp; simp only [umschalten, ↓reduceIte, Bool.false_eq_true] at this
       · intro h; exact absurd h hn
     · constructor
       · intro h z' hz'
@@ -136,7 +136,7 @@ theorem gut_noetig {φS : Z → Bool} {M : List P} (hM : MusterHinreichend T φS
         have hne' : z' ≠ z := fun he => hzp (he ▸ hz')
         simpa [umschalten, hne'] using h z' hz'
   have := (hM _ hpass p0).mpr hp0 z hz0
-  simp [umschalten] at this
+  simp only [umschalten, ↓reduceIte, Bool.false_eq_true] at this
 
 /-- **Theorem 4d (the count)**: a sufficient set has at least one test per isolable bad cell, and one more
     (an accepted test) when some accepted program has a cell. -/

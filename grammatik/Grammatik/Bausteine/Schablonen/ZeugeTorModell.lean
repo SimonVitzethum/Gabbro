@@ -127,7 +127,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .merke => 0 | .ende_wenn => 1
   sigNr := fun | 0 => gSig_merke | 1 => gSig_ende_wenn | _ => gSig_ende_wenn
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -244,7 +244,7 @@ theorem gLs_voll : ∀ L : gD.Lock, L ∈ gLs := by
 theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
   intro c
   cases c with
-  | inl t => cases t <;> simp [gCs]
+  | inl t => cases t <;> simp only [gCs, List.mem_cons, List.not_mem_nil, or_false]
   | inr g => cases g <;> simp [gCs]
 
 -- The checker premise, discharged here: the concrete checker of the

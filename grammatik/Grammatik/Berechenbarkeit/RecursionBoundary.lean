@@ -40,7 +40,7 @@ theorem push_step (p : Nat) (M : RufMaschineG bD)
     (head : (M.faeden 0).kopf.rest = ⟨false, [], [], .nil, .ende rZwei⟩) :
     RufSchrittG program bO p M 0 (push M) := by
   have h := RufSchrittG.ruf (P := program) (O := bO) (passes := p) M 0 false [] [] () .nil hpB rfl
-    rEnd .nil head (by simp [HeldIn]) (M.weltVon 0) rfl .nil rfl [] rfl
+    rEnd .nil head (by simp only [HeldIn, List.not_mem_nil, false_implies, implies_true]) (M.weltVon 0) rfl .nil rfl [] rfl
   simp only [rufEigenG, List.reverse_nil, List.map_nil, List.append_nil] at h
   exact h
 
@@ -53,7 +53,7 @@ theorem head_zeuge (n : Nat) :
     ((state n).faeden 0).kopf.rest = ⟨false, [], [], .nil, .ende rZwei⟩ := by
   cases n with
   | zero => rfl
-  | succ n => simp [state, push, rufUpdateG]
+  | succ n => simp only [state, push, rufUpdateG, ↓dreduceIte]
 
 theorem step_zeuge (p n : Nat) : RufSchrittG program bO p (state n) 0 (state (n + 1)) :=
   push_step p (state n) (head_zeuge n)
@@ -88,7 +88,7 @@ theorem claimed_measure_zeuge : klasse program [()] mit () = .endet := by decide
 private theorem lexLt_self (xs : List Nat) : lexLt xs xs = false := by
   induction xs with
   | nil => rfl
-  | cons x xs ih => simp [lexLt, ih]
+  | cons x xs ih => simp only [lexLt, Nat.lt_irrefl, decide_false, BEq.rfl, ih, Bool.and_false, Bool.or_self]
 
 /-- **No honest recursive descent measure exists for this program.** Its recursive call
     has the same arguments and world as its entry, so every candidate measure stays equal.
@@ -112,8 +112,8 @@ theorem no_measure_duty (p : Nat) (m : Mass bD) (Q : AxEns bD) (S : SperrInv bD)
     (bS.welt []) .nil (by rfl) () cycle
   apply bad
   rw [show program.rumpf () = rZwei from rfl]
-  simp [rZwei, execEndHA, execStmtHA, massTor, cycle, leseA, idA,
-    Args.orte, evalArgs, World.lese, World.merke, lexLt_self]
+  simp only [rZwei, execEndHA, execStmtHA, massTor, cycle, leseA, idA, World.lese, World.merke, Args.orte,
+  List.map_nil, List.nil_append, evalArgs, lexLt_self, Bool.not_false, Bool.and_self, ↓reduceIte]
 
 /-- **Termination boundary.** No well-founded measure can decrease along all steps of this
     program. Hence a proof of its recursive descent duty cannot be replaced by a class flag. -/

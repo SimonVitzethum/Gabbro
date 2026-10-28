@@ -39,25 +39,25 @@ theorem onOption_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       (execStmt O passes R (Gabbro.Grammatik.Stmt.onOption o p a) σ ρ) := by
   simp only [lowerS] at h
   rcases ho : lowerE lay cenv o st.r with _ | ⟨co, oo, r1⟩
-  · simp [ho] at h
+  · simp only [ho, reduceCtorEq] at h
   simp only [ho] at h
   have hfit : Ar.Fits (-1) (n - 1) 128 ∧ Ar.Fits 0 (n - 1) 128 := by
     apply Classical.byContradiction
     intro hn
     rw [if_neg hn] at h
-    simp at h
+    simp only [reduceCtorEq] at h
   rw [if_pos hfit] at h
   rcases hv : cvtG (.int (-1) (n - 1)) (.int 0 (n - 1)) oo r1 with _ | ⟨cv, ov, r2⟩
-  · simp [hv] at h
+  · simp only [Int.reduceNeg, hv, reduceCtorEq] at h
   simp only [hv] at h
   rcases hb : bindCode (.int 0 (n - 1)) ov r2 with _ | ⟨cb, cc, r3⟩
-  · simp [hb] at h
+  · simp only [hb, reduceCtorEq] at h
   simp only [hb] at h
   rcases hb1 : lowerB lay cenv lv a st.l k ⟨r3, st.l + 3⟩ with _ | ⟨ba, s1⟩
-  · simp [hb1] at h
+  · simp only [hb1, reduceCtorEq] at h
   simp only [hb1] at h
   rcases hb2 : lowerB lay (cc :: cenv) lv p (st.l + 2) k s1 with _ | ⟨bp, s2⟩
-  · simp [hb2] at h
+  · simp only [hb2, reduceCtorEq] at h
   simp only [hb2] at h
   have h' := Option.some.inj h
   simp only [Prod.mk.injEq] at h'

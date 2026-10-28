@@ -30,10 +30,10 @@ theorem bindCode_supp {τ : GTy} {oe : Opd} {r : Nat} {c : List Instr × Nat × 
     (h : bindCode τ oe r = some c) : supp τ = true := by
   unfold bindCode at h
   rcases hcm : cvtM τ oe r with _ | ⟨cm, om, r3⟩
-  · simp [hcm] at h
+  · simp only [hcm, reduceCtorEq] at h
   simp only [hcm] at h
   cases hbb : supp τ
-  · simp [hbb] at h
+  · simp only [hbb, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   · rfl
 
 theorem prologue_supp : ∀ (ps : List GTy) (i r : Nat) {code : List Instr} {cenv0 : List Reg} {r' : Nat},
@@ -42,10 +42,10 @@ theorem prologue_supp : ∀ (ps : List GTy) (i r : Nat) {code : List Instr} {cen
   | τ :: τs, i, r, code, cenv0, r', h => by
       simp only [prologue] at h
       rcases hp : prologue τs (i + 1) r with _ | ⟨c2, as, r1⟩
-      · simp [hp] at h
+      · simp only [hp, reduceCtorEq] at h
       simp only [hp] at h
       rcases hb : bindCode τ (.reg i) r1 with _ | ⟨c, a, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       intro σ hσ
       rcases List.mem_cons.mp hσ with rfl | h'
       · exact bindCode_supp hb
@@ -59,10 +59,10 @@ theorem fnOk_of_lowerFn (lay : Layout D) (P : Programm D) (M : Modl) (name : D.F
   obtain ⟨func, hlf, hM⟩ := hfun f
   unfold lowerFn at hlf
   rcases hp : prologue (D.params f) 0 (D.params f).length with _ | ⟨pc, cenv, r⟩
-  · simp [hp] at hlf
+  · simp only [hp, reduceCtorEq] at hlf
   simp only [hp] at hlf
   rcases hl : lowerEnd lay cenv (0, 0) (P.rumpf f) 1 ⟨r, 2⟩ with _ | ⟨blks, s'⟩
-  · simp [hl] at hlf
+  · simp only [hl, reduceCtorEq] at hlf
   simp only [hl, Option.some.injEq] at hlf
   subst hlf
   exact ⟨prologue_supp _ _ _ hp, _, ⟨0, [], pc, .jmp 1⟩, hM, rfl, rfl, rfl, rfl⟩
@@ -146,8 +146,8 @@ theorem lowerFn_callref (lay : Layout D) (hL : LayoutOk lay) (P : Programm D) (O
   induction n with
   | zero =>
       refine ⟨fun f σ ρ σ' v h => ?_, fun f σ ρ σ' r h => ?_⟩
-      · simp [rufAt] at h
-      · simp [rufAt] at h
+      · simp only [rufAt, reduceCtorEq] at h
+      · simp only [rufAt, reduceCtorEq] at h
   | succ n ih =>
       refine ⟨fun f σ ρ σ' v hok m rs ks dst hR hW hA => ?_, fun f σ ρ σ' r hwhy m rs ks dst hR hW hA => ?_⟩
       · obtain ⟨σ'', hex, hrep⟩ := rufAt_ok_inv P O passes n f σ ρ σ' v hok

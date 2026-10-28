@@ -19,10 +19,10 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Adaequanz
 /-! ## The universe holds every cell of every program -/
 
 theorem mem_belegungen : ∀ v : List Bool, v ∈ belegungen v.length
-  | [] => by simp [belegungen]
+  | [] => by simp only [List.length_nil, belegungen, List.mem_cons, List.not_mem_nil, or_false]
   | b :: v => by
     simp only [belegungen, List.length_cons, List.mem_flatMap]
-    exact ⟨v, mem_belegungen v, by cases b <;> simp⟩
+    exact ⟨v, mem_belegungen v, by cases b <;> simp only [List.mem_cons, List.cons.injEq, Bool.false_eq_true, and_true, List.not_mem_nil, or_self, or_false, Bool.true_eq_false, or_true]⟩
 
 theorem mem_zellAlle (z : Zelle) (h : (z.komp, z.art, z.urteil, z.atome.length) ∈ zellTafel) : z ∈ zellAlle := by
   simp only [zellAlle, List.mem_flatMap, List.mem_map]
@@ -41,25 +41,39 @@ theorem zellen_im_universum {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {
   obtain ⟨c, h⟩ := mem_alleZellen.1 h
   rcases c with ⟨n, hn⟩
   match n, hn with
-  | 0, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp [zellTafel]
-  | 1, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, _, _, rfl⟩ := h; simp [zellTafel]
+  | 0, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
+  Prod.mk.injEq, zero_ne_one, and_true, OfNat.zero_ne_ofNat, Nat.reduceEqDiff, and_false, and_self, Nat.succ_ne_self,
+  Bool.true_eq_false, List.not_mem_nil, or_self, or_false]
+  | 1, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, _, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
+  Prod.mk.injEq, one_ne_zero, and_true, OfNat.one_ne_ofNat, Nat.reduceEqDiff, and_false, and_self, zero_ne_one,
+  Nat.succ_ne_self, OfNat.zero_ne_ofNat, Bool.true_eq_false, List.not_mem_nil, or_self, or_false, or_true]
   | 2, _ =>
     simp only [zellen, getrenntZellen, geteiltZelle, List.mem_append, List.mem_flatMap, List.mem_map,
       List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at h
     rcases h with ⟨_, _, _, _, (rfl | ⟨_, _, _, _, rfl⟩) | rfl⟩ | ⟨_, _, _, _, rfl | ⟨_, _, _, _, rfl⟩⟩ <;>
-      simp [zellTafel]
-  | 3, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp [zellTafel]
-  | 4, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp [zellTafel]
-  | 5, _ => simp only [zellen, List.mem_map] at h; obtain ⟨_, _, rfl⟩ := h; simp [zellTafel]
+      simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons, Prod.mk.injEq, OfNat.ofNat_ne_zero, Nat.succ_ne_self, and_false, and_self, OfNat.ofNat_ne_one, zero_ne_one, Nat.reduceEqDiff, OfNat.zero_ne_ofNat, Bool.true_eq_false, and_true, List.not_mem_nil, or_self, or_false, or_true, Bool.false_eq_true, one_ne_zero, OfNat.one_ne_ofNat]
+  | 3, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
+  Prod.mk.injEq, OfNat.ofNat_ne_zero, Nat.reduceEqDiff, and_false, and_self, OfNat.ofNat_ne_one, Nat.succ_ne_self,
+  zero_ne_one, and_true, OfNat.zero_ne_ofNat, Bool.true_eq_false, List.not_mem_nil, or_self, or_false, or_true]
+  | 4, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
+  Prod.mk.injEq, OfNat.ofNat_ne_zero, Nat.reduceEqDiff, and_false, and_self, OfNat.ofNat_ne_one, zero_ne_one, and_true,
+  OfNat.zero_ne_ofNat, Bool.true_eq_false, Nat.succ_ne_self, List.not_mem_nil, or_self, or_false, or_true]
+  | 5, _ => simp only [zellen, List.mem_map] at h; obtain ⟨_, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
+  Prod.mk.injEq, OfNat.ofNat_ne_zero, Nat.reduceEqDiff, and_false, and_self, OfNat.ofNat_ne_one, zero_ne_one, and_true,
+  OfNat.zero_ne_ofNat, Bool.true_eq_false, Nat.succ_ne_self, List.not_mem_nil, or_self, or_false, or_true]
   | 6, _ =>
     simp only [zellen, List.mem_append, List.mem_flatMap, List.mem_map] at h
-    rcases h with ⟨_, _, rfl⟩ | ⟨_, _, _, _, _, _, rfl⟩ <;> simp [zellTafel]
+    rcases h with ⟨_, _, rfl⟩ | ⟨_, _, _, _, _, _, rfl⟩ <;> simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons, Prod.mk.injEq, OfNat.ofNat_ne_zero, and_true, OfNat.ofNat_ne_one, Nat.reduceEqDiff, and_false, and_self, zero_ne_one, Nat.succ_ne_self, OfNat.zero_ne_ofNat, Bool.true_eq_false, List.not_mem_nil, or_self, or_false, or_true, one_ne_zero, OfNat.one_ne_ofNat]
   | 7, _ =>
     simp only [zellen, schreibGetrenntZellen, List.mem_flatMap, List.mem_append, List.mem_cons,
       List.mem_singleton, List.not_mem_nil, or_false, List.mem_map] at h
-    rcases h with ⟨_, _, rfl | ⟨_, _, _, _, rfl⟩⟩ <;> simp [zellTafel]
-  | 8, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp [zellTafel]
-  | 9, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, _, _, rfl⟩ := h; simp [zellTafel]
+    rcases h with ⟨_, _, rfl | ⟨_, _, _, _, rfl⟩⟩ <;> simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons, Prod.mk.injEq, OfNat.ofNat_ne_zero, Nat.reduceEqDiff, and_false, and_self, OfNat.ofNat_ne_one, zero_ne_one, and_true, OfNat.zero_ne_ofNat, Bool.true_eq_false, Nat.succ_ne_self, List.not_mem_nil, or_self, or_false, or_true, one_ne_zero, Bool.false_eq_true, OfNat.one_ne_ofNat]
+  | 8, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
+  Prod.mk.injEq, OfNat.ofNat_ne_zero, and_true, OfNat.ofNat_ne_one, Nat.reduceEqDiff, and_false, and_self, zero_ne_one,
+  Nat.succ_ne_self, OfNat.zero_ne_ofNat, Bool.true_eq_false, List.not_mem_nil, or_self, or_false, or_true]
+  | 9, _ => simp only [zellen, List.mem_flatMap, List.mem_map] at h; obtain ⟨_, _, _, _, _, _, rfl⟩ := h; simp only [zellTafel, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, List.mem_cons,
+  Prod.mk.injEq, OfNat.ofNat_ne_zero, Nat.succ_ne_self, and_false, and_self, OfNat.ofNat_ne_one, Nat.reduceEqDiff,
+  and_true, zero_ne_one, OfNat.zero_ne_ofNat, Bool.true_eq_false, List.not_mem_nil, or_false, or_true]
   | n + 10, hn => exact absurd hn (by omega)
 
 end

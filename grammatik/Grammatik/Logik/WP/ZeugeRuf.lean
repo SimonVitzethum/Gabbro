@@ -151,7 +151,7 @@ theorem f_korrekt : ∀ n f σ ρ, μ f σ ρ < n → S f σ ρ (rufAt P O passe
   apply ruf_mass P O passes S μ
   intro n ih f σ ρ hμ
   apply rufAt_succ_wp
-  · intro h; simp [P, wahr?, eval] at h
+  · intro h; simp only [wahr?, P, eval, Bool.true_eq_false] at h
   · intro _
     cases ρ with
     | cons x rest =>

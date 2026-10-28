@@ -170,10 +170,10 @@ theorem fB_von_false (e : Bool) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 theorem fB_alsBlock (e : Bool) {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (b : Endblock D V l Γ Λ) (w : Bool),
       fB Φ e w b.alsBlock.2 = fE Φ e w b
-  | _, _, .ret _ _, w => by simp [Endblock.alsBlock, fB, fS, fE, fNach]
-  | _, _, .retWhy _ _, w => by simp [Endblock.alsBlock, fB, fS, fE, fNach]
-  | _, _, .leave _, w => by simp [Endblock.alsBlock, fB, fS, fE]
-  | _, _, .next _, w => by simp [Endblock.alsBlock, fB, fS, fE]
+  | _, _, .ret _ _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_true, fE]
+  | _, _, .retWhy _ _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_true, fE]
+  | _, _, .leave _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_self, fE]
+  | _, _, .next _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_self, fE]
   | _, _, .cons s rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bind _ rest, w => by
@@ -236,13 +236,13 @@ theorem fR_anRueck (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       | retWhy _ _ => simpa [GRest.fR, fE] using h
       | cons s _ =>
           cases s <;> simp_all [GRest.anRueck, Endblock.istRueck, Stmt.istRueck, GRest.fR, fE, fS]
-      | _ => simp [GRest.anRueck, Endblock.istRueck] at ha
+      | _ => simp only [GRest.anRueck, Endblock.istRueck, Bool.false_eq_true] at ha
   | dann b _ =>
       cases b with
       | cons s _ =>
           cases s <;> simp_all [GRest.anRueck, Block.istRueck, Stmt.istRueck, GRest.fR, fB, fS]
-      | _ => simp [GRest.anRueck, Block.istRueck] at ha
-  | _ => simp [GRest.anRueck] at ha
+      | _ => simp only [GRest.anRueck, Block.istRueck, Bool.false_eq_true] at ha
+  | _ => simp only [GRest.anRueck, Bool.false_eq_true] at ha
 
 end Hilfen
 
@@ -593,8 +593,8 @@ theorem folgeLog_nicht_schwach (Φ : Folge D) (ev a : RufEreignisF D)
     (ha : Armiert Φ [a] = true) (hn : Armiert Φ (rest ++ [a]) = false) (hr : rest ≠ []) :
     (∃ x ∈ ev :: rest ++ [a], Pflichtig Φ x = true) ∧ (∃ x ∈ ev :: rest ++ [a], Armiert Φ [x] = true) ∧
       ¬ FolgeLog Φ (ev :: (rest ++ [a])) := by
-  refine ⟨⟨ev, List.mem_cons_self, hp⟩, ⟨a, by simp, ha⟩, fun h => ?_⟩
-  have := h.1 (by cases rest with | nil => exact absurd rfl hr | cons _ _ => simp) hp
+  refine ⟨⟨ev, List.mem_cons_self, hp⟩, ⟨a, by simp only [List.cons_append, List.mem_cons, List.mem_append, List.not_mem_nil, or_false, or_true], ha⟩, fun h => ?_⟩
+  have := h.1 (by cases rest with | nil => exact absurd rfl hr | cons _ _ => simp only [List.cons_append, ne_eq, reduceCtorEq, not_false_eq_true]) hp
   rw [hn] at this
   exact Bool.false_ne_true this
 

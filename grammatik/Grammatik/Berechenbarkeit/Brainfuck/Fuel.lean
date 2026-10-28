@@ -40,7 +40,7 @@ theorem runFor_sound {n : Nat} (p : Program n) (fuel : Nat) (s t : State n)
       | none => simp only [runFor, hs, RunResult.halted.injEq] at h
                 subst t
                 exact ⟨0, Nat.le_refl _, .zero s, hs⟩
-      | some u => simp [runFor, hs] at h
+      | some u => simp only [runFor, hs, reduceCtorEq] at h
   | succ fuel ih =>
       cases hs : step p s with
       | none => simp only [runFor, hs, RunResult.halted.injEq] at h
@@ -56,7 +56,7 @@ theorem runFor_complete {n : Nat} {p : Program n} {k : Nat} {s t : State n}
     (trace : Steps p k s t) (halt : step p t = none) :
     ∀ fuel, k ≤ fuel → runFor (step p) fuel s = .halted t := by
   induction trace with
-  | zero s => intro fuel _; cases fuel <;> simp [runFor, halt]
+  | zero s => intro fuel _; cases fuel <;> simp only [runFor, halt]
   | more hs _ ih =>
       intro fuel bound
       cases fuel with
@@ -93,10 +93,10 @@ theorem runFor_translation {n : Nat} (p : Program n) (fuel : Nat) (s : State n) 
     runFor (Turing.TM2.step (compile p)) fuel (encode s) =
       (runFor (step p) fuel s).map encode := by
   induction fuel generalizing s with
-  | zero => cases hs : step p s <;> simp [runFor, step_correct, hs, RunResult.map]
+  | zero => cases hs : step p s <;> simp only [runFor, step_correct, hs, Option.map_none, RunResult.map, Option.map_some]
   | succ fuel ih =>
       cases hs : step p s with
-      | none => simp [runFor, step_correct, hs, RunResult.map]
+      | none => simp only [runFor, step_correct, hs, Option.map_none, RunResult.map]
       | some t => simpa only [runFor, step_correct, hs, Option.map_some] using ih t
 
 end Gabbro.Grammatik.Berechenbarkeit.Brainfuck

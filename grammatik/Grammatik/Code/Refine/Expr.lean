@@ -61,7 +61,7 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
         intro lo hi e
         cases e
         exact hf
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, .tru, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       obtain rfl := Option.some.inj h
@@ -90,25 +90,25 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
         rw [hc'] at h
         obtain rfl := Option.some.inj h
         exact ⟨F, fitsT_supp hs0⟩
-      · simp [lowerE, hs] at h
+      · simp only [lowerE, hs, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, .ptrOf t n ht rw, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       obtain rfl := Option.some.inj h
-      exact ⟨frag_const m rs r _ _ (by simp [Opd.ev, encR, ht]) (fun x hx => nomatch hx),
+      exact ⟨frag_const m rs r _ _ (by simp only [Opd.ev, encR, ht]) (fun x hx => nomatch hx),
         fitsT_nonint (fun lo hi e => nomatch e)⟩
   | _, _, _, .slot t f i hL', cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases hi : lowerE lay cenv i r with _ | ⟨ci, oi, r1⟩
-      · simp [hi] at h
+      · simp only [hi, reduceCtorEq] at h
       simp only [hi] at h
       rcases hsa : slotAddr lay t f (.glob (lay.gblk t)) (.int 0 (D.count t - 1)) oi r1 with
         _ | ⟨ca, oa, r2⟩
-      · simp [hsa] at h
+      · simp only [hsa, reduceCtorEq] at h
       simp only [hsa] at h
       by_cases hs : supp (D.typ t f) = true
       · simp only [hs, if_true] at h
         rcases hld : loadG (D.typ t f) oa r2 with _ | ⟨cl, ol, r3⟩
-        · simp [hld] at h
+        · simp only [hld, reduceCtorEq] at h
         simp only [hld] at h
         obtain rfl := Option.some.inj h
         obtain ⟨Fi, _⟩ := lowerE_ok lay hL i cenv r (ci, oi, r1) hi σ₀ σ ρ m rs hR hE hc
@@ -127,22 +127,22 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
             exact F))
         rw [List.append_assoc]
         exact T
-      · simp [hs] at h
+      · simp only [hs, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, .thru p t ht f i hL', cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases hp : lowerE lay cenv p r with _ | ⟨cp, op, r1⟩
-      · simp [hp] at h
+      · simp only [hp, reduceCtorEq] at h
       simp only [hp] at h
       rcases hi : lowerE lay cenv i r1 with _ | ⟨ci, oi, r2⟩
-      · simp [hi] at h
+      · simp only [hi, reduceCtorEq] at h
       simp only [hi] at h
       rcases hsa : slotAddr lay t f op (.int 0 (D.count t - 1)) oi r2 with _ | ⟨ca, oa, r3⟩
-      · simp [hsa] at h
+      · simp only [hsa, reduceCtorEq] at h
       simp only [hsa] at h
       by_cases hs : supp (D.typ t f) = true
       · simp only [hs, if_true] at h
         rcases hld : loadG (D.typ t f) oa r3 with _ | ⟨cl, ol, r4⟩
-        · simp [hld] at h
+        · simp only [hld, reduceCtorEq] at h
         simp only [hld] at h
         obtain rfl := Option.some.inj h
         obtain ⟨Ip, _⟩ := lowerE_ok lay hL p cenv r (cp, op, r1) hp σ₀ σ ρ m rs hR hE hc
@@ -157,7 +157,7 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
               (fun x hx => Nat.lt_of_lt_of_le (hc x hx) hrp)).1)
           (fun rsB hagB hoa hob hla hlb => frag_two (ct := (cl, ol, r4))
             (slotAddr_frag lay hL t f hs z.n hk0 hk1 op oi r2 m rsB
-              (by rw [hoa]; simp [encR, ht]) hla hob hlb ⟨_, hR.1 t z.n f hs hk0 hk1⟩ (ca, oa, r3) hsa)
+              (by rw [hoa]; simp only [encR, ht]) hla hob hlb ⟨_, hR.1 t z.n f hs hk0 hk1⟩ (ca, oa, r3) hsa)
             (fun rsC hagC hoa' hlta => by
               obtain ⟨c', hc', F⟩ := loadG_frag lay (D.typ t f) (σ.slots t z.n f) hs oa (lay.gblk t)
                 (lay.off t z.n f) m rsC r3 hoa' (hR.1 t z.n f hs hk0 hk1)
@@ -166,14 +166,14 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
               exact F))
         rw [List.append_assoc (cp ++ ci) ca cl]
         exact T
-      · simp [hs] at h
+      · simp only [hs, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
   | _, _, _, .widen (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') h1 h2 e, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hcv : cvtG (ety e) (ety (Expr.widen h1 h2 e)) oe r1 with _ | ⟨c2, o2, r2⟩
-      · simp [hcv] at h
+      · simp only [hcv, reduceCtorEq] at h
       simp only [hcv] at h
       split at h
       · rename_i hfit
@@ -187,17 +187,17 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
         rw [hcv] at hc''
         obtain rfl := Option.some.inj hc''
         exact F
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, .add (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : binRest .add (ety (Expr.add a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -214,13 +214,13 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .sub (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : binRest .sub (ety (Expr.sub a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -237,13 +237,13 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .mul (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : binRest .mul (ety (Expr.mul a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -260,11 +260,11 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .neg (lo := lo) (hi := hi) a, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hbr : binRest .sub (ety (Expr.neg a)) (.int 0 0) (ety a) (.int (twid (.int 0 0)) 0) oa r1
         with _ | ⟨ct, ot, r2⟩
-      · simp [hbr] at h
+      · simp only [hbr, reduceCtorEq] at h
       simp only [hbr] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -278,13 +278,13 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .lt (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : cmpRest .ult .slt (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -302,13 +302,13 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .le (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : cmpRest .ule .sle (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -326,13 +326,13 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .eq (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : cmpRest .eq .eq (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -350,10 +350,10 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .and a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, _⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -372,10 +372,10 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .or a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, _⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -394,7 +394,7 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .not a, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, _⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -406,22 +406,22 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
         simp only [stepI, hoa', e1, hv]
         rfl)
   | _, _, _, .fnref .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .oldG .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .oldS .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .div (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) h0 h1' a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE,
       hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : divRest .udiv (ety (Expr.div h0 h1' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -448,13 +448,13 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
       hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       simp only [hb] at h
       rcases hbr : divRest .urem (ety (Expr.rem h0 h1' a b)) (ety a) (ety b) oa ob r2 with _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -480,14 +480,14 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .sdiv (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb'] at h
+      · simp only [hb', reduceCtorEq] at h
       simp only [hb'] at h
       rcases hbr : opRest .sdiv (jsdiv l1 h1 l2 h2) (ety (Expr.sdiv hb a b)) (ety a) (ety b) oa ob r2 with
         _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -507,14 +507,14 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .srem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) hb a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb'] at h
+      · simp only [hb', reduceCtorEq] at h
       simp only [hb'] at h
       rcases hbr : opRest .srem (jsrem l1 h1 l2 h2) (ety (Expr.srem hb a b)) (ety a) (ety b) oa ob r2 with
         _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -532,18 +532,18 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
         (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
         oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
   | _, _, _, .getBytes .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .band (h1 := h1) (h2 := h2) h0 h0' a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb'] at h
+      · simp only [hb', reduceCtorEq] at h
       simp only [hb'] at h
       rcases hbr : opRest .and (jbit h1 h2 h1) (ety (Expr.band h0 h0' a b)) (ety a) (ety b) oa ob r2 with
         _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -564,14 +564,14 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .bor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb'] at h
+      · simp only [hb', reduceCtorEq] at h
       simp only [hb'] at h
       rcases hbr : opRest .or (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with
         _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -592,14 +592,14 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .bxor (h1 := h1) (h2 := h2) w h0 h0' hw1 hw2 a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb'] at h
+      · simp only [hb', reduceCtorEq] at h
       simp only [hb'] at h
       rcases hbr : opRest .xor (jbit h1 h2 (2 ^ w - 1)) (ety (Expr.bxor w h0 h0' hw1 hw2 a b)) (ety a) (ety b) oa ob r2 with
         _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -620,14 +620,14 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .shl (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb'] at h
+      · simp only [hb', reduceCtorEq] at h
       simp only [hb'] at h
       rcases hbr : opRest .shl (jshl h1 h2) (ety (Expr.shl w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with
         _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -648,14 +648,14 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .shr (h1 := h1) (h2 := h2) w hw1 hw2 h0 h0' a b, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases ha : lowerE lay cenv a r with _ | ⟨ca, oa, r1⟩
-      · simp [ha] at h
+      · simp only [ha, reduceCtorEq] at h
       simp only [ha] at h
       rcases hb' : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
-      · simp [hb'] at h
+      · simp only [hb', reduceCtorEq] at h
       simp only [hb'] at h
       rcases hbr : opRest .lshr (jshr h1 h2) (ety (Expr.shr w hw1 hw2 h0 h0' a b)) (ety a) (ety b) oa ob r2 with
         _ | ⟨ct, ot, r3⟩
-      · simp [hbr] at h
+      · simp only [List.append_assoc, hbr, Option.map_none, reduceCtorEq] at h
       simp only [hbr, Option.map_some] at h
       obtain rfl := Option.some.inj h
       obtain ⟨Ia, Ifa⟩ := lowerE_ok lay hL a cenv r (ca, oa, r1) ha σ₀ σ ρ m rs hR hE hc
@@ -674,24 +674,24 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
         (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi hop hz1 hz2
         oa ob r2 m rsB hoa hob hla hlb (ct, ot, r3) hbr
   | _, _, _, .fllt .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .flle .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .none n, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       split at h
       · obtain rfl := Option.some.inj h
         exact ⟨frag_intc m rs r _ _, fitsT_nonint (fun lo hi e => nomatch e)⟩
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, .some (n := n) e, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       split at h
       · rename_i hfit
         rcases hcv : cvtG (.int 0 (n - 1)) (.int (-1) (n - 1)) oe r1 with _ | ⟨c2, o2, r2⟩
-        · simp [hcv] at h
+        · simp only [Int.reduceNeg, hcv, Option.map_none, reduceCtorEq] at h
         simp only [hcv, Option.map_some] at h
         obtain rfl := Option.some.inj h
         obtain ⟨Ie, _⟩ := lowerE_ok lay hL e cenv r (ce, oe, r1) he σ₀ σ ρ m rs hR hE hc
@@ -702,11 +702,11 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
         rw [hcv] at hc'
         obtain rfl := Option.some.inj hc'
         exact F
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, .istSome (n := n) e, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       split at h
       · rename_i hfit
@@ -722,25 +722,25 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
             have := istSome_frag hfit k.n (Or.inr ⟨k.lo_le, k.le_hi⟩) oe r1 m rsA hoe hlte
             rw [decide_eq_true k.lo_le] at this
             exact this
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, .case cs i nutz, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       split at h
       · exact ⟨lowerNutz_ok lay hL _ _ _ nutz cenv r c h σ₀ σ ρ m rs hR hE hc,
           fitsT_nonint (fun lo hi e => nomatch e)⟩
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, .why n i, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       split at h
       · obtain rfl := Option.some.inj h
         exact ⟨frag_intc m rs r _ _, fitsT_nonint (fun lo hi e => nomatch e)⟩
-      · simp at h
+      · simp only [reduceCtorEq] at h
   | _, _, _, .forallSlots .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .existsSlots .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
   | _, _, _, .reaches .., cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      simp [lowerE] at h
+      simp only [lowerE, reduceCtorEq] at h
 
 /-- The payload of a `case` expression: the code computes the word of the value. -/
 theorem lowerNutz_ok (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat) :
@@ -753,13 +753,13 @@ theorem lowerNutz_ok (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat) :
   | _, _, _, .empty, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerNutz, Option.some.injEq] at h
       subst h
-      have e : ∀ u : Gabbro.Grammatik.Nutzlast none, (i : Int) + L * payOff none u = i := fun u => by simp [payOff]
+      have e : ∀ u : Gabbro.Grammatik.Nutzlast none, (i : Int) + L * payOff none u = i := fun u => by simp only [payOff, Int.mul_zero, Int.add_zero]
       rw [e]
       exact frag_intc m rs r W (i : Int)
   | _, _, _, .num (lo := lo) (hi := hi) e, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerNutz] at h
       rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       rcases hn : numCode lo hi W L i oe r1 with ⟨cn, on, r2⟩
       rw [hn] at h

@@ -105,7 +105,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .einzahlen => 0 | .lies => 1
   sigNr := fun | 0 => gSig_einzahlen | 1 => gSig_lies | _ => gSig_lies
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -139,7 +139,7 @@ theorem gDarf_lies_Konto : darf gD GTab.Konto gL_lies := by unfold darf; decide
 theorem gHp_einzahlen_lies : RufPasst gD (vertragVon gD g_einzahlen) (gD.signatur g_lies) gL_einzahlen where
   hw := fun t => by cases t <;> decide
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := fun L => by cases L <;> decide
   hx := fun L hL hn => by cases L <;> (first | exact absurd (by decide) hn | exact absurd hL (by decide))
   hb := fun c h => by have hV : (vertragVon gD g_einzahlen).boden = some 1 := rfl; rw [hV] at h; cases h; exact ⟨1, rfl, by decide⟩
@@ -233,7 +233,7 @@ theorem gLs_voll : ∀ L : gD.Lock, L ∈ gLs := by
 theorem gCs_voll : ∀ c : gD.Tab ⊕ gD.Glob, c ∈ gCs := by
   intro c
   cases c with
-  | inl t => cases t <;> simp [gCs]
+  | inl t => cases t <;> simp only [gCs, List.mem_cons, List.not_mem_nil, or_false]
   | inr g => cases g <;> simp [gCs]
 
 -- The checker premise, discharged here: the concrete checker of the

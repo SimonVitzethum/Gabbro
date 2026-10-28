@@ -38,7 +38,7 @@ theorem opdlt_reg (r n : Nat) (h : r < n) : OpdLt (.reg r) n := by
 theorem seqI_append (c1 c2 : List Instr) (m : Mem) (rs : Regs) :
     seqI (c1 ++ c2) m rs = (seqI c1 m rs).bind fun p => seqI c2 p.1 p.2 := by
   induction c1 generalizing m rs with
-  | nil => simp [seqI]
+  | nil => simp only [List.nil_append, seqI, Option.bind_some]
   | cons i is ih =>
       simp only [List.cons_append, seqI]
       cases stepI i m rs with
@@ -46,10 +46,10 @@ theorem seqI_append (c1 c2 : List Instr) (m : Mem) (rs : Regs) :
       | some p => exact ih p.1 p.2
 
 theorem regs_set_ne (rs : Regs) (d x : Reg) (v : Val) (h : x ≠ d) : rs.set d v x = rs x := by
-  simp [Regs.set, h]
+  simp only [Regs.set, h, ↓reduceIte]
 
 theorem regs_set_same (rs : Regs) (d : Reg) (v : Val) : rs.set d v d = some v := by
-  simp [Regs.set]
+  simp only [Regs.set, ↓reduceIte]
 
 /-- Run a fragment, then a second one from the resulting registers. -/
 theorem frag_trans {m : Mem} {rs rs1 : Regs} {r : Nat} {c1 c2 : LR} {v2 : Val}
@@ -64,10 +64,10 @@ theorem frag_trans {m : Mem} {rs rs1 : Regs} {r : Nat} {c1 c2 : LR} {v2 : Val}
 theorem frag_one (m : Mem) (rs : Regs) (r : Nat) (i : Instr) (v : Val)
     (h : stepI i m rs = some (m, rs.set r v)) : Frag m rs r ([i], .reg r, r + 1) v := by
   refine ⟨rs.set r v, ?_, by show r ≤ r + 1; omega, ?_, ?_, ?_⟩
-  · simp [seqI, h]
+  · simp only [seqI, h]
   · intro x hx; exact regs_set_ne rs r x v (Nat.ne_of_lt hx)
   · exact opdlt_reg r (r + 1) (by omega)
-  · simp [Opd.ev, regs_set_same]
+  · simp only [Opd.ev, regs_set_same]
 
 /-- A constant needs no code. -/
 theorem frag_const (m : Mem) (rs : Regs) (r : Nat) (o : Opd) (v : Val) (h : o.ev rs = some v)
@@ -142,16 +142,16 @@ theorem cvt_frag (src dst : Nat) (sg : Bool) (o : Opd) (r : Nat) (m : Mem) (rs :
       apply frag_one
       cases sg
       · have ⟨h0, h1'⟩ : 0 ≤ z ∧ z < 2 ^ src := by simpa [FitS] using hfit
-        simp [stepI, hv, Val.ofInt, Val.ty, Val.cast, Nat.le_of_lt h2,
-          Ar.zext_ofInt (Nat.le_of_lt h2) h0 h1']
+        simp only [stepI, hv, Val.ofInt, Val.ty, ↓reduceIte, Val.cast, Bool.false_eq_true, Nat.le_of_lt h2,
+  Ar.zext_ofInt (Nat.le_of_lt h2) h0 h1', Option.map_some]
       · have ⟨h0, h1', h2'⟩ : 0 < src ∧ -(2 ^ (src - 1)) ≤ z ∧ z < 2 ^ (src - 1) := by
           simpa [FitS] using hfit
-        simp [stepI, hv, Val.ofInt, Val.ty, Val.cast, Nat.le_of_lt h2,
-          Ar.sext_ofInt (Nat.le_of_lt h2) h0 h1' h2']
+        simp only [stepI, hv, Val.ofInt, Val.ty, ↓reduceIte, Val.cast, Nat.le_of_lt h2,
+  Ar.sext_ofInt (Nat.le_of_lt h2) h0 h1' h2', Option.map_some]
     · rw [if_neg h2]
       apply frag_one
-      simp [stepI, hv, Val.ofInt, Val.ty, Val.cast, show dst ≤ src by omega,
-        Ar.trunc_ofInt z (show dst ≤ src by omega)]
+      simp only [stepI, hv, Val.ofInt, Val.ty, ↓reduceIte, Val.cast, show dst ≤ src by omega,
+  Ar.trunc_ofInt z (show dst ≤ src by omega), Option.map_some]
 
 /-- `cvtG` between two integer types, for a value of the source range. -/
 theorem cvtG_frag {la ha lb hb : Int} {o : Opd} {r : Nat} {m : Mem} {rs : Regs} {z : Int}
@@ -168,12 +168,12 @@ theorem cvtG_frag {la ha lb hb : Int} {o : Opd} {r : Nat} {m : Mem} {rs : Regs} 
 theorem stepI_load {m : Mem} {rs : Regs} {d : Reg} {t : Ty} {p : Opd} {b : Nat} {o : Int} {v : Val}
     (hp : p.ev rs = some (.ptr b o)) (hl : m.load b o t = some v) :
     stepI (.load d t p) m rs = some (m, rs.set d v) := by
-  simp [stepI, hp, hl]
+  simp only [stepI, hp, hl]
 
 theorem stepI_trunc {m : Mem} {rs : Regs} {d : Reg} {s t : Nat} {a : Opd} {z : Int}
     (ha : a.ev rs = some (Val.ofInt s z)) (h : t ≤ s) :
     stepI (.cast d .trunc (.int s) (.int t) a) m rs = some (m, rs.set d (Val.ofInt t z)) := by
-  simp [stepI, ha, Val.ofInt, Val.ty, Val.cast, h, Ar.trunc_ofInt]
+  simp only [stepI, ha, Val.ofInt, Val.ty, ↓reduceIte, Val.cast, h, Ar.trunc_ofInt, Option.map_some]
 
 theorem bool_ofInt (b : Bool) : Val.ofInt 1 (if b then 1 else 0) = Val.bool b := by
   cases b <;> rfl
@@ -187,7 +187,7 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
   cases τ with
   | int lo hi =>
       have hf : Ar.Fits lo hi 128 := by simpa [supp] using hs
-      refine ⟨([.load r (.int (Ar.wid lo hi)) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      refine ⟨([.load r (.int (Ar.wid lo hi)) p], .reg r, r + 1), by simp only [loadG, hf, ↓reduceIte], ?_⟩
       rw [show encR lay (Grammatik.Ty.int lo hi) v = Val.ofInt (Ar.wid lo hi) v.n from rfl]
       apply frag_one
       have hl' : m.load b o (.int (Ar.wid lo hi)) = some (Val.ofInt (Ar.wid lo hi) v.n) := by
@@ -195,7 +195,7 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
       exact stepI_load hp hl'
   | bool =>
       refine ⟨([.load r (.int 8) p, .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)],
-        .reg (r + 1), r + 2), by simp [loadG], ?_⟩
+        .reg (r + 1), r + 2), by simp only [loadG], ?_⟩
       have hl' : m.load b o (.int 8) = some (Val.ofInt 8 (if (wbool v) then 1 else 0)) := by
         simpa [memTy, regTy, encM, encR] using hl
       have h1 := stepI_load (d := r) hp hl'
@@ -203,7 +203,7 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
           (rs.set r (Val.ofInt 8 (if (wbool v) then 1 else 0)))
           = some (m, (rs.set r (Val.ofInt 8 (if (wbool v) then 1 else 0))).set (r + 1)
               (Val.ofInt 1 (if (wbool v) then 1 else 0))) :=
-        stepI_trunc (by simp [Opd.ev, regs_set_same]) (by omega)
+        stepI_trunc (by simp only [Opd.ev, regs_set_same]) (by omega)
       refine ⟨(rs.set r (Val.ofInt 8 (if (wbool v) then 1 else 0))).set (r + 1)
           (Val.ofInt 1 (if (wbool v) then 1 else 0)), ?_, by show r ≤ r + 2; omega, ?_, ?_, ?_⟩
       · simp only [seqI, h1, h2]
@@ -212,36 +212,36 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
         have e2 : x ≠ r := by omega
         rw [regs_set_ne _ _ _ _ e1, regs_set_ne _ _ _ _ e2]
       · exact opdlt_reg (r + 1) (r + 2) (by omega)
-      · simp [Opd.ev, regs_set_same, encR, bool_ofInt]
+      · simp only [Opd.ev, bool_ofInt, regs_set_same, encR, Option.some.injEq]
         rfl
   | ptr n rw =>
-      refine ⟨([.load r .ptr p], .reg r, r + 1), by simp [loadG], ?_⟩
+      refine ⟨([.load r .ptr p], .reg r, r + 1), by simp only [loadG], ?_⟩
       apply frag_one
       have hl' : m.load b o .ptr = some (encR lay (.ptr n rw) v) := by
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
   | opt n =>
       have hf : Ar.Fits (-1) (n - 1) 128 := by simpa [supp] using hs
-      refine ⟨([.load r (.int (Ar.wid (-1) (n - 1))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      refine ⟨([.load r (.int (Ar.wid (-1) (n - 1))) p], .reg r, r + 1), by simp only [loadG, Int.reduceNeg, hf, ↓reduceIte], ?_⟩
       apply frag_one
       have hl' : m.load b o (.int (Ar.wid (-1) (n - 1))) = some (encR lay (.opt n) v) := by
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
   | why n =>
       have hf : Ar.Fits 0 ((n : Int) - 1) 128 := by simpa [supp] using hs
-      refine ⟨([.load r (.int (Ar.wid 0 ((n : Int) - 1))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      refine ⟨([.load r (.int (Ar.wid 0 ((n : Int) - 1))) p], .reg r, r + 1), by simp only [loadG, hf, ↓reduceIte], ?_⟩
       apply frag_one
       have hl' : m.load b o (.int (Ar.wid 0 ((n : Int) - 1))) = some (encR lay (.why n) v) := by
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
   | sum cs =>
       have hf : Ar.Fits 0 (sumTop cs) 128 := by simpa [supp] using hs
-      refine ⟨([.load r (.int (Ar.wid 0 (sumTop cs))) p], .reg r, r + 1), by simp [loadG, hf], ?_⟩
+      refine ⟨([.load r (.int (Ar.wid 0 (sumTop cs))) p], .reg r, r + 1), by simp only [loadG, hf, ↓reduceIte], ?_⟩
       apply frag_one
       have hl' : m.load b o (.int (Ar.wid 0 (sumTop cs))) = some (encR lay (.sum cs) v) := by
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
-  | _ => simp [supp] at hs
+  | _ => simp only [supp, Bool.false_eq_true] at hs
 
 /-! ## Addresses -/
 
@@ -250,14 +250,14 @@ theorem inBlock_of_load {m : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
   unfold Mem.load at h
   unfold inBlock
   cases hb : m.blks b with
-  | none => simp [hb] at h
+  | none => simp only [hb, reduceCtorEq] at h
   | some blk =>
       simp only [hb] at h ⊢
       by_cases hi : Mem.inside blk.size o t
       · obtain ⟨h0, _, h2, _⟩ := hi
         simp only [decide_eq_true_eq]
         omega
-      · simp [hi] at h
+      · simp only [hi, ↓reduceIte, reduceCtorEq] at h
 
 theorem wid_word : Ar.wid 0 (2 ^ Conf.wbits - 1) = Conf.wbits := by
   rcases Conf.wide with h | h <;> rw [h] <;> decide
@@ -313,7 +313,7 @@ theorem slotAddr_frag (lay : Layout D) (hL : LayoutOk lay) (t : D.Tab) (f : D.Fe
         (small_lt (by exact_mod_cast hfs))]
     have hidx : ([Opd.int Conf.wbits 0, oo, Opd.int Conf.wbits (lay.fidx t f)].mapM
         (fun i => (i.ev rs1).bind Val.idx)) = some [0, k, (lay.fidx t f : Int)] := by
-      simp [List.mapM_cons, List.mapM_nil, i0, i1, i2]
+      simp only [List.mapM_cons, i0, i1, i2, List.mapM_nil, Option.pure_def, Option.bind_eq_bind, Option.bind_some]
     have hstep : stepI (.gep rr (lay.tty t) base [.int Conf.wbits 0, oo, .int Conf.wbits (lay.fidx t f)] true) m rs1
         = some (m, rs1.set rr (.ptr (lay.gblk t) (lay.off t k f))) := by
       have hb1 : base.ev rs1 = some (.ptr (lay.gblk t) 0) := by
@@ -321,27 +321,27 @@ theorem slotAddr_frag (lay : Layout D) (hL : LayoutOk lay) (t : D.Tab) (f : D.Fe
       obtain ⟨v, hv⟩ := hld
       have hin := inBlock_of_load hv
       simp only [stepI, hb1, hidx, hg]
-      simp [Int.zero_add, hin]
+      simp only [Bool.not_true, Int.zero_add, hin, Bool.or_true, ↓reduceIte]
     have h2 := frag_one m rs1 rr (.gep rr (lay.tty t) base [.int Conf.wbits 0, oo, .int Conf.wbits (lay.fidx t f)] true)
       (.ptr (lay.gblk t) (lay.off t k f)) hstep
     have := frag_trans (c1 := (cc, oo, rr)) (c2 := ([.gep rr (lay.tty t) base
       [.int Conf.wbits 0, oo, .int Conf.wbits (lay.fidx t f)] true], .reg rr, rr + 1)) hs1 hr1 hag1 h2
     exact this
-  · simp at h
+  · simp only [reduceCtorEq] at h
 
 /-! ## Binary operations and comparisons -/
 
 theorem val_bin_add (W : Nat) (a b : Int) :
     Val.bin .add W (Val.ofInt W a) (Val.ofInt W b) = some (Val.ofInt W (a + b)) := by
-  simp [Val.bin, BinOp.ap, Val.ofInt, Ar.add_ofInt]
+  simp only [Val.bin, Val.ofInt, ↓reduceDIte, BinOp.ap, Ar.add_ofInt, Option.map_some]
 
 theorem val_bin_sub (W : Nat) (a b : Int) :
     Val.bin .sub W (Val.ofInt W a) (Val.ofInt W b) = some (Val.ofInt W (a - b)) := by
-  simp [Val.bin, BinOp.ap, Val.ofInt, Ar.sub_ofInt]
+  simp only [Val.bin, Val.ofInt, ↓reduceDIte, BinOp.ap, Ar.sub_ofInt, Option.map_some]
 
 theorem val_bin_mul (W : Nat) (a b : Int) :
     Val.bin .mul W (Val.ofInt W a) (Val.ofInt W b) = some (Val.ofInt W (a * b)) := by
-  simp [Val.bin, BinOp.ap, Val.ofInt, Ar.mul_ofInt]
+  simp only [Val.bin, Val.ofInt, ↓reduceDIte, BinOp.ap, Ar.mul_ofInt, Option.map_some]
 
 /-- **A binary integer operation**: both operands moved to the width of the result, then the
     instruction; the result is the exact result, encoded. -/
@@ -381,7 +381,7 @@ theorem binRest_frag (op : BinOp) (zf : Int → Int → Int)
       simp only [stepI, hev1', hev2]
       have := hop (twid (.int lo hi)) za zb
       simp only [twid] at this ⊢
-      simp [this]
+      simp only [this, Option.map_some]
     have h3' := frag_one m rs2 r2 _ _ hstep
     have t2 := frag_trans (c1 := (c2, ob', r2)) (c2 := ([.bin r2 op (twid (.int lo hi)) oa' ob'],
       .reg r2, r2 + 1)) (rs := rs1) (r := r1) hs2 hr2 hag2 h3'
@@ -389,7 +389,7 @@ theorem binRest_frag (op : BinOp) (zf : Int → Int → Int)
       .reg r2, r2 + 1)) hs1 hr1 hag1 (by simpa using t2)
     rw [List.append_assoc]
     exact t1
-  · simp at h
+  · simp only [reduceCtorEq] at h
 
 theorem val_icmp_lt (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg W a) (hb : FitS sg W b) :
     Val.icmp (if sg then .slt else .ult) W (Val.ofInt W a) (Val.ofInt W b)
@@ -397,10 +397,11 @@ theorem val_icmp_lt (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg
   cases sg
   · obtain ⟨a0, a1⟩ : 0 ≤ a ∧ a < 2 ^ W := by simpa [FitS] using ha
     obtain ⟨b0, b1⟩ : 0 ≤ b ∧ b < 2 ^ W := by simpa [FitS] using hb
-    simp [Val.icmp, IPred.ap, Val.ofInt, Ar.ult_ofInt a0 a1 b0 b1]
+    simp only [Val.icmp, Val.ofInt, ↓reduceDIte, IPred.ap, Bool.false_eq_true, ↓reduceIte,
+  Ar.ult_ofInt a0 a1 b0 b1]
   · obtain ⟨_, a0, a1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ a ∧ a < 2 ^ (W - 1) := by simpa [FitS] using ha
     obtain ⟨_, b0, b1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ b ∧ b < 2 ^ (W - 1) := by simpa [FitS] using hb
-    simp [Val.icmp, IPred.ap, Val.ofInt, Ar.slt_ofInt hW a0 a1 b0 b1]
+    simp only [Val.icmp, Val.ofInt, ↓reduceDIte, IPred.ap, ↓reduceIte, Ar.slt_ofInt hW a0 a1 b0 b1]
 
 theorem val_icmp_le (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg W a) (hb : FitS sg W b) :
     Val.icmp (if sg then .sle else .ule) W (Val.ofInt W a) (Val.ofInt W b)
@@ -408,10 +409,11 @@ theorem val_icmp_le (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg
   cases sg
   · obtain ⟨a0, a1⟩ : 0 ≤ a ∧ a < 2 ^ W := by simpa [FitS] using ha
     obtain ⟨b0, b1⟩ : 0 ≤ b ∧ b < 2 ^ W := by simpa [FitS] using hb
-    simp [Val.icmp, IPred.ap, Val.ofInt, Ar.ule_ofInt a0 a1 b0 b1]
+    simp only [Val.icmp, Val.ofInt, ↓reduceDIte, IPred.ap, Bool.false_eq_true, ↓reduceIte,
+  Ar.ule_ofInt a0 a1 b0 b1]
   · obtain ⟨_, a0, a1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ a ∧ a < 2 ^ (W - 1) := by simpa [FitS] using ha
     obtain ⟨_, b0, b1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ b ∧ b < 2 ^ (W - 1) := by simpa [FitS] using hb
-    simp [Val.icmp, IPred.ap, Val.ofInt, Ar.sle_ofInt hW a0 a1 b0 b1]
+    simp only [Val.icmp, Val.ofInt, ↓reduceDIte, IPred.ap, ↓reduceIte, Ar.sle_ofInt hW a0 a1 b0 b1]
 
 theorem val_icmp_eq (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg W a) (hb : FitS sg W b) :
     Val.icmp (if sg then .eq else .eq) W (Val.ofInt W a) (Val.ofInt W b)
@@ -420,7 +422,7 @@ theorem val_icmp_eq (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg
     cases sg
     · obtain ⟨a0, a1⟩ : 0 ≤ a ∧ a < 2 ^ W := by simpa [FitS] using ha
       obtain ⟨b0, b1⟩ : 0 ≤ b ∧ b < 2 ^ W := by simpa [FitS] using hb
-      exact Ar.ofInt_inj (lo := 0) (hi := 2 ^ W - 1) (by unfold Ar.Fits; simp; omega) hW
+      exact Ar.ofInt_inj (lo := 0) (hi := 2 ^ W - 1) (by unfold Ar.Fits; simp only [Std.le_refl, ↓reduceIte]; omega) hW
         a0 (by omega) b0 (by omega)
     · obtain ⟨_, a0, a1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ a ∧ a < 2 ^ (W - 1) := by simpa [FitS] using ha
       obtain ⟨_, b0, b1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ b ∧ b < 2 ^ (W - 1) := by simpa [FitS] using hb
@@ -430,7 +432,7 @@ theorem val_icmp_eq (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg
               have : (0 : Int) < 2 ^ (W - 1) := by exact_mod_cast Nat.two_pow_pos (W - 1)
               omega
             rw [if_neg this]; omega) hW a0 (by omega) b0 (by omega)
-  simp [Val.icmp, IPred.ap, Val.ofInt, key]
+  simp only [Val.icmp, Val.ofInt, ↓reduceDIte, IPred.ap, ite_self, key]
 
 /-- **A comparison**: both operands moved to the width of the joined range, compared. -/
 theorem cmpRest_frag (pu ps : IPred) (P : Int → Int → Prop) [DecidableRel P]
@@ -482,7 +484,7 @@ theorem cmpRest_frag (pu ps : IPred) (P : Int → Int → Prop) [DecidableRel P]
       have := hic (tsgn (.int (min la lb) (max ha hb))) (Ar.wid (min la lb) (max ha hb)) za zb
         (by omega) (by simpa [tsgn] using fa) (by simpa [tsgn] using fb)
       simp only [twid] at this ⊢
-      simp [this]
+      simp only [this, Option.map_some]
     have h3' := frag_one m rs2 r2 _ _ hstep
     have t2 := frag_trans (c1 := (c2, ob', r2)) (rs := rs1) (r := r1)
       (c2 := ([.icmp r2 (if tsgn (.int (min la lb) (max ha hb)) then ps else pu)
@@ -492,7 +494,7 @@ theorem cmpRest_frag (pu ps : IPred) (P : Int → Int → Prop) [DecidableRel P]
         (twid (.int (min la lb) (max ha hb))) oa' ob'], .reg r2, r2 + 1)) (by simpa using t2)
     rw [List.append_assoc]
     exact t1
-  · simp at h
+  · simp only [reduceCtorEq] at h
 
 theorem val_bin_and (x y : Bool) :
     Val.bin .and 1 (Val.bool x) (Val.bool y) = some (Val.bool (x && y)) := by
@@ -514,9 +516,9 @@ theorem binRest_fits {op : BinOp} {τ σa σb : GTy} {oa ob : Opd} {r : Nat} {c 
   · split at h
     · split at h
       · rename_i hf; exact hf
-      · simp at h
-    · simp at h
-  · simp at h
+      · simp only [reduceCtorEq] at h
+    · simp only [reduceCtorEq] at h
+  · simp only [reduceCtorEq] at h
 
 /-! ## Division and remainder -/
 
@@ -526,7 +528,7 @@ theorem val_bin_udiv (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb
     intro h
     have := congrArg BitVec.toNat h
     rw [Ar.toNat_ofInt_lt (by omega) hb1] at this
-    simp at this
+    simp only [BitVec.ofNat_eq_ofNat, BitVec.toNat_ofNat, Nat.zero_mod, Int.toNat_eq_zero] at this
     omega
   simp only [Val.bin, BinOp.ap, Val.ofInt, hne, if_false, Option.map_some]
   simp only [dite_true]
@@ -538,7 +540,7 @@ theorem val_bin_urem (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb
     intro h
     have := congrArg BitVec.toNat h
     rw [Ar.toNat_ofInt_lt (by omega) hb1] at this
-    simp at this
+    simp only [BitVec.ofNat_eq_ofNat, BitVec.toNat_ofNat, Nat.zero_mod, Int.toNat_eq_zero] at this
     omega
   simp only [Val.bin, BinOp.ap, Val.ofInt, hne, if_false, Option.map_some]
   simp only [dite_true]
@@ -551,16 +553,16 @@ theorem divRest_fits {op : BinOp} {τ σa σb : GTy} {oa ob : Opd} {r : Nat} {c 
   · rename_i la ha lb hb
     simp only at h
     rcases hc1 : cvtG (.int la ha) (joinT (.int la ha) (.int lb hb)) oa r with _ | ⟨c1, oa', r1⟩
-    · simp [hc1] at h
+    · simp only [hc1, reduceCtorEq] at h
     simp only [hc1] at h
     rcases hc2 : cvtG (.int lb hb) (joinT (.int la ha) (.int lb hb)) ob r1 with _ | ⟨c2, ob', r2⟩
-    · simp [hc2] at h
+    · simp only [hc2, reduceCtorEq] at h
     simp only [hc2] at h
     split at h
     · rename_i hf
       exact ((Bool.and_eq_true _ _).mp hf).2
-    · simp at h
-  · simp at h
+    · simp only [reduceCtorEq] at h
+  · simp only [reduceCtorEq] at h
 
 /-- **A division or remainder of non-negative numbers**: both operands at the width of the joined
     range, the instruction (whose precondition, a nonzero divisor, is `1 <= lb`), the result moved to
@@ -627,7 +629,7 @@ theorem divRest_frag (op : BinOp) (zf : Int → Int → Int)
             show zb < 2 ^ Ar.wid (min la lb) (max ha hb)
             omega)
       simp only [twid] at this ⊢
-      simp [this]
+      simp only [this, Option.map_some]
     have tb := frag_one m rs2 r2 _ _ hstep
     rcases hc3 : cvt (twid (.int (min la lb) (max ha hb))) (twid (.int lo hi)) (tsgn (.int (min la lb) (max ha hb)))
       (.reg r2) (r2 + 1) with ⟨c3, o3, r3⟩
@@ -636,10 +638,10 @@ theorem divRest_frag (op : BinOp) (zf : Int → Int → Int)
     have f3 := cvt_frag (twid (.int (min la lb) (max ha hb))) (twid (.int lo hi))
       (tsgn (.int (min la lb) (max ha hb))) (.reg r2) (r2 + 1) m (rs2.set r2 (Val.ofInt
         (Ar.wid (min la lb) (max ha hb)) (zf za zb))) (zf za zb)
-      (by simp [Opd.ev, regs_set_same, twid]) (by
+      (by simp only [Opd.ev, regs_set_same, twid]) (by
         have hsg : tsgn (.int (min la lb) (max ha hb)) = false := by
           simp only [tsgn]
-          simp [show ¬ (min la lb < 0) by omega]
+          simp only [show ¬(min la lb < 0) by omega, decide_false]
         rw [hsg]
         show FitS false (twid (.int (min la lb) (max ha hb))) (zf za zb)
         simp only [FitS, twid, Bool.false_eq_true, if_false]
@@ -649,13 +651,13 @@ theorem divRest_frag (op : BinOp) (zf : Int → Int → Int)
     -- compose: c1, c2, the instruction, c3
     have t3 := frag_trans (c1 := ([.bin r2 op (twid (.int (min la lb) (max ha hb))) oa' ob'], .reg r2, r2 + 1))
       (c2 := (c3, o3, r3)) (m := m) (rs := rs2) (rs1 := rs2.set r2 (Val.ofInt (Ar.wid (min la lb) (max ha hb)) (zf za zb)))
-      (r := r2) (by simp [seqI, hstep]) (by simp) (fun x hx => regs_set_ne rs2 r2 x _ (Nat.ne_of_lt hx))
+      (r := r2) (by simp only [seqI, hstep]) (by simp only [Nat.le_add_right]) (fun x hx => regs_set_ne rs2 r2 x _ (Nat.ne_of_lt hx))
       (by simpa using f3)
     have t2 := frag_trans (c1 := (c2, ob', r2)) (c2 := ([.bin r2 op (twid (.int (min la lb) (max ha hb))) oa' ob'] ++ c3, o3, r3))
       (rs := rs1) (r := r1) hs2 hr2 hag2 (by simpa using t3)
     have t1 := frag_trans (c1 := (c1, oa', r1)) (c2 := (c2 ++ ([.bin r2 op (twid (.int (min la lb) (max ha hb))) oa' ob'] ++ c3), o3, r3))
       hs1 hr1 hag1 (by simpa using t2)
     simpa [List.append_assoc, twid] using t1
-  · simp at h
+  · simp only [reduceCtorEq] at h
 
 end Gabbro.Code.Lower

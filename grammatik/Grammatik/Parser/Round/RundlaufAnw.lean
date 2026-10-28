@@ -58,99 +58,101 @@ theorem platz_kopf_aux : ∀ (n : Nat) (x : SExpr), groesse x ≤ n → gutPlatz
     intro x hs hg
     cases x with
     | «variable» s =>
-      exact ⟨s, [], by simp [druckToks], by simpa [gutPlatz] using hg⟩
+      exact ⟨s, [], by simp only [druckToks], by simpa [gutPlatz] using hg⟩
     | field y f =>
       have hy : gutPlatz y = true := by simpa [gutPlatz] using hg
       have hs' : groesse y ≤ n := by simp only [groesse] at hs; omega
       obtain ⟨s, ts, h, hk⟩ := ih y hs' hy
-      exact ⟨s, ts ++ [.zeichen ".", nameTok f], by simp [druckToks, h], hk⟩
+      exact ⟨s, ts ++ [.zeichen ".", nameTok f], by simp only [druckToks, h, List.cons_append], hk⟩
     | index y i =>
       have hy : gutPlatz y = true := by
         simp only [gutPlatz, Bool.and_eq_true] at hg
         exact hg.1
       have hs' : groesse y ≤ n := by simp only [groesse] at hs; omega
       obtain ⟨s, ts, h, hk⟩ := ih y hs' hy
-      exact ⟨s, ts ++ ([.zeichen "["] ++ druckToks i ++ [.zeichen "]"]), by simp [druckToks, h], hk⟩
+      exact ⟨s, ts ++ ([.zeichen "["] ++ druckToks i ++ [.zeichen "]"]), by simp only [druckToks, h, List.cons_append, List.append_assoc, List.nil_append], hk⟩
     | arrow y f =>
       have hy : gutPlatz y = true := by simpa [gutPlatz] using hg
       have hs' : groesse y ≤ n := by simp only [groesse] at hs; omega
       obtain ⟨s, ts, h, hk⟩ := ih y hs' hy
-      exact ⟨s, ts ++ [.zeichen "->", nameTok f], by simp [druckToks, h], hk⟩
-    | lit _ => simp [gutPlatz] at hg
-    | float _ => simp [gutPlatz] at hg
-    | tru => simp [gutPlatz] at hg
-    | fls => simp [gutPlatz] at hg
-    | un _ _ => simp [gutPlatz] at hg
-    | bin _ _ _ => simp [gutPlatz] at hg
-    | call _ _ => simp [gutPlatz] at hg
-    | fnref _ => simp [gutPlatz] at hg
-    | built _ _ => simp [gutPlatz] at hg
-    | old _ => simp [gutPlatz] at hg
-    | res => simp [gutPlatz] at hg
-    | why _ _ => simp [gutPlatz] at hg
-    | ext _ _ _ => simp [gutPlatz] at hg
+      exact ⟨s, ts ++ [.zeichen "->", nameTok f], by simp only [druckToks, h, List.cons_append], hk⟩
+    | lit _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | float _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | tru => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | fls => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | un _ _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | bin _ _ _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | call _ _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | fnref _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | built _ _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | old _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | res => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | why _ _ => simp only [gutPlatz, Bool.false_eq_true] at hg
+    | ext _ _ _ => simp only [gutPlatz, Bool.false_eq_true] at hg
 
 /-- Every printable expression starts with a good head token. -/
 theorem druck_kopf : ∀ (e : SExpr), gut e = true →
     ∃ t ts, druckToks e = t :: ts ∧ KopfGut t := by
   intro e hg
   cases e with
-  | lit n => exact ⟨.num n, [], by simp [druckToks], trivial⟩
-  | float s => exact ⟨.float s, [], by simp [druckToks], trivial⟩
-  | tru => exact ⟨.wort "true", [], by simp [druckToks], by simp [KopfGut]⟩
-  | fls => exact ⟨.wort "false", [], by simp [druckToks], by simp [KopfGut]⟩
+  | lit n => exact ⟨.num n, [], by simp only [druckToks], trivial⟩
+  | float s => exact ⟨.float s, [], by simp only [druckToks], trivial⟩
+  | tru => exact ⟨.wort "true", [], by simp only [druckToks], by simp only [KopfGut, ne_eq, String.reduceEq, not_false_eq_true]⟩
+  | fls => exact ⟨.wort "false", [], by simp only [druckToks], by simp only [KopfGut, ne_eq, String.reduceEq, not_false_eq_true]⟩
   | «variable» s =>
-    exact ⟨nameTok s, [], by simp [druckToks], kopfGut_nameTok (by simpa [gut] using hg)⟩
+    exact ⟨nameTok s, [], by simp only [druckToks], kopfGut_nameTok (by simpa [gut] using hg)⟩
   | field y f =>
     have hy : gutPlatz y = true := by simpa [gut] using hg
     obtain ⟨s, ts, h, hk⟩ := platz_kopf_aux (groesse y) y (Nat.le_refl _) hy
-    exact ⟨nameTok s, ts ++ [.zeichen ".", nameTok f], by simp [druckToks, h], kopfGut_nameTok hk⟩
+    exact ⟨nameTok s, ts ++ [.zeichen ".", nameTok f], by simp only [druckToks, h, List.cons_append], kopfGut_nameTok hk⟩
   | index y i =>
     have hy : gutPlatz y = true := by
       simp only [gut, Bool.and_eq_true] at hg
       exact hg.1
     obtain ⟨s, ts, h, hk⟩ := platz_kopf_aux (groesse y) y (Nat.le_refl _) hy
-    exact ⟨nameTok s, ts ++ ([.zeichen "["] ++ druckToks i ++ [.zeichen "]"]), by simp [druckToks, h],
+    exact ⟨nameTok s, ts ++ ([.zeichen "["] ++ druckToks i ++ [.zeichen "]"]), by simp only [druckToks, h, List.cons_append, List.append_assoc, List.nil_append],
       kopfGut_nameTok hk⟩
   | arrow y f =>
     have hy : gutPlatz y = true := by simpa [gut] using hg
     obtain ⟨s, ts, h, hk⟩ := platz_kopf_aux (groesse y) y (Nat.le_refl _) hy
-    exact ⟨nameTok s, ts ++ [.zeichen "->", nameTok f], by simp [druckToks, h], kopfGut_nameTok hk⟩
+    exact ⟨nameTok s, ts ++ [.zeichen "->", nameTok f], by simp only [druckToks, h, List.cons_append], kopfGut_nameTok hk⟩
   | un o x =>
     by_cases hs0 : strEq o "-()" = true
-    · exact ⟨.zeichen "-", .zeichen "(" :: (druckToks x ++ [.zeichen ")"]), by simp [druckToks, hs0],
-        by simp [KopfGut]⟩
+    · exact ⟨.zeichen "-", .zeichen "(" :: (druckToks x ++ [.zeichen ")"]), by simp only [druckToks, hs0, ↓reduceIte, List.cons_append, List.nil_append],
+        by simp only [KopfGut, String.reduceEq, or_self, or_false, or_true]⟩
     have ho : gutOpUn o = true := by
       simp only [gut, hs0, Bool.false_and, Bool.or_false, Bool.and_eq_true] at hg
       exact hg.1
     refine ⟨.zeichen o, _, by simp [druckToks, hs0]; rfl, ?_⟩
     simp only [gutOpUn, Bool.or_eq_true, strEq_eq] at ho
     simp only [KopfGut]
-    rcases ho with (h | h) | h <;> simp [h]
-  | bin o l r => exact ⟨.zeichen "(", _, rfl, by simp [KopfGut]⟩
+    rcases ho with (h | h) | h <;> simp only [h, String.reduceEq, or_self, or_false, or_true]
+  | bin o l r => exact ⟨.zeichen "(", _, rfl, by simp only [KopfGut, String.reduceEq, or_self, or_false]⟩
   | call f xs =>
     exact ⟨nameTok f, _, rfl, kopfGut_nameTok (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1)⟩
-  | fnref p => exact ⟨.zeichen "&", _, rfl, by simp [KopfGut]⟩
+  | fnref p => exact ⟨.zeichen "&", _, rfl, by simp only [KopfGut, String.reduceEq, or_true]⟩
   | built f xs =>
     cases xs with
-    | nil => simp [gut] at hg
+    | nil => simp only [gut, Bool.false_eq_true] at hg
     | cons a rest =>
       cases rest with
       | nil =>
         by_cases h1 : f = "sizeof"
-        · subst h1; exact ⟨.wort "sizeof", _, rfl, by simp [KopfGut]⟩
+        · subst h1; exact ⟨.wort "sizeof", _, rfl, by simp only [KopfGut, ne_eq, String.reduceEq, not_false_eq_true]⟩
         · by_cases h2 : f = "lenof"
-          · subst h2; exact ⟨.wort "lenof", _, rfl, by simp [KopfGut]⟩
-          · simp [gut, h1, h2] at hg
+          · subst h2; exact ⟨.wort "lenof", _, rfl, by simp only [KopfGut, ne_eq, String.reduceEq, not_false_eq_true]⟩
+          · simp only [h1, List.cons.injEq, and_true, imp_false, false_implies, implies_true, h2, gut,
+  Bool.false_eq_true] at hg
       | cons b rest2 =>
         cases rest2 with
         | nil =>
           by_cases h1 : f = "aligned"
-          · subst h1; exact ⟨.wort "aligned", _, rfl, by simp [KopfGut]⟩
-          · simp [gut, h1] at hg
-        | cons _ _ => simp [gut] at hg
-  | old x => exact ⟨.wort "old", _, rfl, by simp [KopfGut]⟩
-  | res => exact ⟨.wort "result", [], by simp [druckToks], by simp [KopfGut]⟩
+          · subst h1; exact ⟨.wort "aligned", _, rfl, by simp only [KopfGut, ne_eq, String.reduceEq, not_false_eq_true]⟩
+          · simp only [h1, List.cons.injEq, and_true, imp_false, not_and, false_implies, implies_true, gut,
+  Bool.false_eq_true] at hg
+        | cons _ _ => simp only [gut, Bool.false_eq_true] at hg
+  | old x => exact ⟨.wort "old", _, rfl, by simp only [KopfGut, ne_eq, String.reduceEq, not_false_eq_true]⟩
+  | res => exact ⟨.wort "result", [], by simp only [druckToks], by simp only [KopfGut, ne_eq, String.reduceEq, not_false_eq_true]⟩
   | why g f =>
     exact ⟨nameTok g, _, rfl, kopfGut_nameTok (by simp only [gut, Bool.and_eq_true] at hg; simpa using hg.1.1.1)⟩
   | ext k ns xs =>

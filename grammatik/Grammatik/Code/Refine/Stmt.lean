@@ -90,9 +90,9 @@ theorem inm_sub {M : Modl} {fn : Nat} {b1 b2 : List Block} (h : InM M fn b1) (hs
 theorem kok_of_shape {M : Modl} {fn : Nat} {lb : Lbl} {st st' : St} {blks : List Block}
     (hS : Shape lb st st' blks) (hM : InM M fn blks) : KOk M fn lb := by
   obtain ⟨⟨b, bs, hb, hl⟩, hp, _⟩ := hS
-  have h1 := hM b (by rw [hb]; simp)
+  have h1 := hM b (by rw [hb]; simp only [List.mem_cons, true_or])
   rw [hl] at h1
-  exact ⟨b, h1, hp b (by rw [hb]; simp)⟩
+  exact ⟨b, h1, hp b (by rw [hb]; simp only [List.mem_cons, true_or])⟩
 
 /-- Dropping the innermost local from a `Post`. -/
 theorem post_tail {lay : Layout D} {cenv : List Reg} {a : Reg} {τ : GTy} {Γ : Ctx} {σ : World D}

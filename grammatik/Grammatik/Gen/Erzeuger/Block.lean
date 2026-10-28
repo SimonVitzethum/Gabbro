@@ -18,7 +18,7 @@ variable {D : Deklaration} [Aufz D] [Zahlen] {V : Vertrag D}
 /-- The four float operations. -/
 def gleitOps : List GleitOp := [.add, .sub, .mul, .div]
 
-theorem mem_gleitOps (op : GleitOp) : op ∈ gleitOps := by cases op <;> simp [gleitOps]
+theorem mem_gleitOps (op : GleitOp) : op ∈ gleitOps := by cases op <;> simp only [gleitOps, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false, or_true]
 
 section Klauseln
 

@@ -30,7 +30,7 @@ theorem wurzel_ein_ok {c : Int} {l' r' : Int → Int} {Live' : Int → Prop} {i 
     have := BaumF.node (l := l') (r := r') i h0i hi [] [] (by rw [hli]; exact BaumF.nil)
       (by rw [hri]; exact BaumF.nil)
     simpa using this
-  refine ⟨⟨[i], hb, List.nodup_cons.mpr ⟨by simp, List.nodup_nil⟩, ?_⟩, fun j => ⟨?_, ?_⟩⟩
+  refine ⟨⟨[i], hb, List.nodup_cons.mpr ⟨by simp only [List.not_mem_nil, not_false_eq_true], List.nodup_nil⟩, ?_⟩, fun j => ⟨?_, ?_⟩⟩
   · intro j hj
     have : j = i := by simpa using hj
     subst this
@@ -40,7 +40,7 @@ theorem wurzel_ein_ok {c : Int} {l' r' : Int → Int} {Live' : Int → Prop} {i 
     subst this
     simpa using hm
   · rintro rfl
-    exact ⟨[j], hb, by simp⟩
+    exact ⟨[j], hb, by simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
 
 /-- **The last node:** with the root set to the nil marker the tree is empty; it has no member. -/
 theorem wurzel_aus_ok {c : Int} {l r : Int → Int} {Live : Int → Prop} :
@@ -49,7 +49,7 @@ theorem wurzel_aus_ok {c : Int} {l r : Int → Int} {Live : Int → Prop} :
   rintro j ⟨S, hS, hm⟩
   have := hS.leer
   subst this
-  simp at hm
+  simp only [List.not_mem_nil] at hm
 
 end Gabbro.Grammatik.ArenaKette
 

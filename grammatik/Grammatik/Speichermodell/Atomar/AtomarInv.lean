@@ -398,7 +398,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
     | start =>
         intro t ev hev g rho v s0 s1 h
         subst h
-        simp [RufStartG] at hev
+        simp only [RufStartG, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hev
     | schritt M M' u hr' hs ih =>
         have hA' := ziel_ort_atomar P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
           hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr'
@@ -422,7 +422,7 @@ theorem ziel_ort_atomar_voll (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
     | start =>
         intro t ev hev g rho r s0 s1 h
         subst h
-        simp [RufStartG] at hev
+        simp only [RufStartG, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hev
     | schritt M M' u hr' hs ih =>
         have hA' := ziel_ort_atomar P O passes Q S K Tg lok sp init hO hRL hQ hlok hS hvoll hAbg hWurzel
           hTA hTV hTS hTO hFragS hFS hlokK hK hStart hsp hex M hr'

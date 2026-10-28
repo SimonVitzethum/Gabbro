@@ -92,7 +92,7 @@ theorem permits_running (hd : s.Disciplined depth) {fr : Frame} (hr : Running de
     | owned =>
       simp only [PassingMode.permits, State.owns, viewAt_cells, hc, Option.bind_some]
       by_cases hs : fr.Sees c
-      · simp [hs, hat]
+      · simp only [hs, ↓reduceIte, hat]
       · simp only [hs, ite_false]
         constructor
         · intro h; exact h.elim
@@ -101,7 +101,7 @@ theorem permits_running (hd : s.Disciplined depth) {fr : Frame} (hr : Running de
     | borrowed =>
       simp only [PassingMode.permits, State.access, viewAt_cells, hc, Option.bind_some]
       by_cases hs : fr.Sees c
-      · simp [hs, hat]
+      · simp only [hs, ↓reduceIte, hat]
       · simp only [hs, ite_false]
         constructor
         · intro h; exact h.elim
@@ -119,7 +119,7 @@ theorem permits_running (hd : s.Disciplined depth) {fr : Frame} (hr : Running de
   cases hc : s.cells h.slot with
   | some c => exact key c hc
   | none =>
-    cases m <;> simp [PassingMode.permits, State.owns, State.access, viewAt_cells, hc]
+    cases m <;> simp only [PassingMode.permits, State.owns, viewAt_cells, hc, Option.bind_none, State.access]
 
 theorem rights_running (hd : s.Disciplined depth) {fr : Frame} (hr : Running depth fr) {c : Context}
     {g : Ghost} : Rights c g (s.viewAt fr) fr ↔ Rights c g s fr := by
@@ -140,7 +140,7 @@ theorem complete_running (hd : s.Disciplined depth) {fr : Frame} (hr : Running d
   constructor
   · intro h slot cell hc ho
     have hs : fr.Sees cell := ⟨by rw [ho], by rw [ho]; exact Nat.le_refl _⟩
-    have := h slot (cell.at fr) (by rw [viewAt_cells, hc]; simp [hs]) (by simpa [Cell.at] using ho)
+    have := h slot (cell.at fr) (by rw [viewAt_cells, hc]; simp only [Option.bind_some, hs, ↓reduceIte]) (by simpa [Cell.at] using ho)
     rwa [at_running hd hr hc] at this
   · intro h slot cell hc ho
     rw [viewAt_cells] at hc
@@ -180,15 +180,15 @@ theorem local_view (hd : s.Disciplined depth) {fr : Frame} (hr : Running depth f
     | none => rfl
     | some c' =>
       by_cases ho : c'.owner = fr
-      · simp [hhid c' ho]
+      · simp only [Option.bind_none, Option.bind_some, hhid c' ho, ↓reduceIte]
       · rw [← local_cells hl i c' ho, h1] at h2; cases h2
   | some c =>
     by_cases ho : c.owner = fr
     · cases h2 : s'.cells i with
-      | none => simp [hhid c ho]
+      | none => simp only [Option.bind_some, hhid c ho, ↓reduceIte, Option.bind_none]
       | some c' =>
         by_cases ho' : c'.owner = fr
-        · simp [hhid c ho, hhid c' ho']
+        · simp only [Option.bind_some, hhid c ho, ↓reduceIte, hhid c' ho']
         · rw [← local_cells hl i c' ho', h1] at h2
           cases h2; exact absurd ho ho'
     · rw [(local_cells hl i c ho).mp h1]
@@ -200,7 +200,7 @@ theorem local_disciplined (hd : s.Disciplined depth) {fr : Frame} (hr : Running 
   intro i c hc
   by_cases ho : c.owner = fr
   · have hn := hown i c hc ho
-    refine ⟨⟨by simp [hn], by simp [hn]⟩, by rw [ho, hr]; exact Nat.le_refl _, by simp [hn]⟩
+    refine ⟨⟨by simp only [hn, List.not_mem_nil, false_implies, implies_true], by simp only [hn, List.Pairwise.nil]⟩, by rw [ho, hr]; exact Nat.le_refl _, by simp only [hn, List.not_mem_nil, false_implies, implies_true]⟩
   · exact hd i c ((local_cells hl i c ho).mpr hc)
 
 end View

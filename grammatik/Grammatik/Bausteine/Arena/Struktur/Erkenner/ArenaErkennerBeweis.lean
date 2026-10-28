@@ -79,8 +79,8 @@ theorem erk_koerper {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a' : Abs} {b 
     (h : Erk K Abs.leer b a') (σ : World D) (ρ : Env D Γ) (hS : K.Ok σ) :
     StrukturPost K a' (execBlock O passes R b σ ρ) :=
   erk_erhaelt O passes R K h σ ρ hS
-    ⟨fun _ hx => absurd hx (by simp [Abs.leer]), fun _ hx => absurd hx (by simp [Abs.leer]),
-      fun _ hx => absurd hx (by simp [Abs.leer]), fun _ _ hx _ _ => absurd hx (by simp [Abs.leer])⟩
+    ⟨fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]), fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]),
+      fun _ hx => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true]), fun _ _ hx _ _ => absurd hx (by simp only [Abs.leer, reduceCtorEq, not_false_eq_true])⟩
 
 /-- **The same, for an outcome that is only named:** the run of the body is given as an equation, so that nothing has to be
     evaluated to state the promise (a long run is expensive to unfold by the elaborator). -/

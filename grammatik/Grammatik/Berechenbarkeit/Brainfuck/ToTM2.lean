@@ -105,13 +105,13 @@ theorem instruction_correct {n : Nat} (op : Instruction n) (next : Fin (n + 1)) 
       simp only [Function.update_of_ne (by decide : Stack.right ≠ Stack.left), storageOf]
       simp only [encode, execute, List.headD_eq_head?_getD]
       congr 1
-      funext k; cases k <;> simp [storageOf, Function.update]
+      funext k; cases k <;> simp only [Function.update, reduceCtorEq, ↓reduceDIte, storageOf]
   | left =>
       simp only [compileInstruction, Turing.TM2.stepAux, id_eq, jump_exec]
       simp only [Function.update_of_ne (by decide : Stack.left ≠ Stack.right), storageOf]
       simp only [encode, execute, List.headD_eq_head?_getD]
       congr 1
-      funext k; cases k <;> simp [storageOf, Function.update]
+      funext k; cases k <;> simp only [Function.update, ↓reduceDIte, storageOf, reduceCtorEq]
   | increment =>
       simp only [compileInstruction, Turing.TM2.stepAux, jump_exec, encode, execute]
       congr 1
@@ -122,11 +122,11 @@ theorem instruction_correct {n : Nat} (op : Instruction n) (next : Fin (n + 1)) 
       simp only [compileInstruction, Turing.TM2.stepAux, jump_exec, storageOf, encode, execute,
         List.headD_eq_head?_getD]
       congr 1
-      funext k; cases k <;> simp [storageOf, Function.update]
+      funext k; cases k <;> simp only [Function.update, reduceCtorEq, ↓reduceDIte, storageOf]
   | output =>
       simp only [compileInstruction, Turing.TM2.stepAux, id_eq, jump_exec, encode, execute]
       congr 1
-      funext k; cases k <;> simp [storageOf, Function.update]
+      funext k; cases k <;> simp only [Function.update, reduceCtorEq, ↓reduceDIte, storageOf]
   | «open» exit =>
       by_cases h : s.head = 0 <;>
         simp only [compileInstruction, Turing.TM2.stepAux, h, decide_true, decide_false,
@@ -142,7 +142,7 @@ theorem step_correct {n : Nat} (p : Program n) (s : State n) :
   by_cases running : s.pc.val < n
   · simp only [encode, label, running, ↓reduceIte, Turing.TM2.step, compile, step]
     exact congrArg some (instruction_correct _ _ s)
-  · simp [encode, label, running, Turing.TM2.step, step]
+  · simp only [Turing.TM2.step, encode, label, running, ↓reduceIte, step, ↓reduceDIte, Option.map_none]
 
 /-- A refinement in Mathlib's existing transition framework. -/
 theorem respects {n : Nat} (p : Program n) :
@@ -185,7 +185,7 @@ theorem reachable_reflection {n : Nat} (p : Program n) (s : State n) {u : TMStat
       have he : Turing.TM2.step (compile p) (encode t) = some v := huv
       rw [step_correct] at he
       cases hs : step p t with
-      | none => simp [hs] at he
+      | none => simp only [hs, Option.map_none, reduceCtorEq] at he
       | some w =>
           simp only [hs, Option.map_some, Option.some.injEq] at he
           exact ⟨w, ht.tail hs, he.symm⟩

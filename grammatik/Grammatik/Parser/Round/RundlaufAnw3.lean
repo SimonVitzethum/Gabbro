@@ -32,7 +32,7 @@ theorem druckAnwListe_append : ∀ (a b : List SAnw),
   intro a b
   induction a with
   | nil => rfl
-  | cons s ss ih => simp [druckAnwListe, ih, List.append_assoc]
+  | cons s ss ih => simp only [List.cons_append, druckAnwListe, ih, List.append_assoc]
 
 theorem druckEnde_eq : ∀ (e : Option SEnde), druckEnde e = druckAnwListe (endeAnw e) := by
   intro e
@@ -40,9 +40,9 @@ theorem druckEnde_eq : ∀ (e : Option SEnde), druckEnde e = druckAnwListe (ende
   | none => rfl
   | some e' =>
     cases e' with
-    | ret x => cases x <;> simp [druckEnde, endeAnw, druckAnwListe, druckAnw]
-    | leave l => simp [druckEnde, endeAnw, druckAnwListe, druckAnw]
-    | next l => simp [druckEnde, endeAnw, druckAnwListe, druckAnw]
+    | ret x => cases x <;> simp only [druckEnde, endeAnw, druckAnwListe, druckAnw, List.append_nil, List.cons_append, List.nil_append]
+    | leave l => simp only [druckEnde, endeAnw, druckAnwListe, druckAnw, List.append_nil]
+    | next l => simp only [druckEnde, endeAnw, druckAnwListe, druckAnw, List.append_nil]
 
 /-- The ender is one of the simple statements. -/
 def EinfachEnde : Option SEnde → Prop
@@ -55,15 +55,15 @@ def EinfachEnde : Option SEnde → Prop
 theorem einfach_ende : ∀ (e : Option SEnde), EinfachEnde e → ∀ s ∈ endeAnw e, Einfach s := by
   intro e he s hs
   cases e with
-  | none => simp [endeAnw] at hs
+  | none => simp only [endeAnw, List.not_mem_nil] at hs
   | some e' =>
     cases e' with
     | ret x =>
       cases x with
-      | none => simp [endeAnw] at hs; subst hs; exact Einfach.retLeer
-      | some y => simp [endeAnw] at hs; subst hs; exact Einfach.ret y he
-    | leave l => simp [endeAnw] at hs; subst hs; exact Einfach.leave l
-    | next l => simp [endeAnw] at hs; subst hs; exact Einfach.next l
+      | none => simp only [endeAnw, List.mem_cons, List.not_mem_nil, or_false] at hs; subst hs; exact Einfach.retLeer
+      | some y => simp only [endeAnw, List.mem_cons, List.not_mem_nil, or_false] at hs; subst hs; exact Einfach.ret y he
+    | leave l => simp only [endeAnw, List.mem_cons, List.not_mem_nil, or_false] at hs; subst hs; exact Einfach.leave l
+    | next l => simp only [endeAnw, List.mem_cons, List.not_mem_nil, or_false] at hs; subst hs; exact Einfach.next l
 
 /-- A statement that `schliesseBlock` takes for an ender. -/
 def istEnder : SAnw → Bool
@@ -80,13 +80,14 @@ def EndeGut (ss : List SAnw) (e : Option SEnde) : Prop :=
 theorem druckAnw_kopf (s : SAnw) (hs : Einfach s) :
     ∃ (w : String) (ts : List Token), ∀ r, druckAnw s ++ r = .wort w :: (ts ++ r) := by
   cases hs with
-  | retLeer => exact ⟨"return", [.zeichen ";"], fun r => by simp [druckAnw]⟩
-  | ret e hg => exact ⟨"return", druckToks e ++ [.zeichen ";"], fun r => by simp [druckAnw, List.append_assoc]⟩
-  | leave l => exact ⟨"leave", [nameTok l, .zeichen ";"], fun r => by simp [druckAnw]⟩
-  | next l => exact ⟨"next", [nameTok l, .zeichen ";"], fun r => by simp [druckAnw]⟩
+  | retLeer => exact ⟨"return", [.zeichen ";"], fun r => by simp only [druckAnw, List.cons_append, List.nil_append]⟩
+  | ret e hg => exact ⟨"return", druckToks e ++ [.zeichen ";"], fun r => by simp only [druckAnw, List.cons_append, List.nil_append, List.append_assoc]⟩
+  | leave l => exact ⟨"leave", [nameTok l, .zeichen ";"], fun r => by simp only [druckAnw, List.cons_append, List.nil_append]⟩
+  | next l => exact ⟨"next", [nameTok l, .zeichen ";"], fun r => by simp only [druckAnw, List.cons_append, List.nil_append]⟩
   | bind x e _ hg =>
     exact ⟨"let", [nameTok x, .zeichen "="] ++ druckToks e ++ [.zeichen ";"],
-      fun r => by simp [druckAnw, druckTypOpt, List.append_assoc]⟩
+      fun r => by simp only [druckAnw, Bool.false_eq_true, ↓reduceIte, List.append_nil, List.cons_append, List.nil_append,
+  druckTypOpt, List.append_assoc]⟩
 
 /-- **A statement list reads back** (up to the closing `}`). -/
 theorem parseStmts_einfach : ∀ (ss : List SAnw), (∀ s ∈ ss, Einfach s) → ∀ (r : List Token) (F : Nat),
@@ -97,7 +98,7 @@ theorem parseStmts_einfach : ∀ (ss : List SAnw), (∀ s ∈ ss, Einfach s) →
   | nil =>
     intro _ r F hF
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-    simp [druckAnwListe, parseStmts]
+    simp only [parseStmts, druckAnwListe, List.nil_append]
   | cons s ss ih =>
     intro hs r F hF
     have hs0 : Einfach s := hs s (List.mem_cons_self ..)
@@ -112,11 +113,11 @@ theorem parseStmts_einfach : ∀ (ss : List SAnw), (∀ s ∈ ss, Einfach s) →
     have hd : druckAnwListe (s :: ss) ++ .zeichen "}" :: r =
         .wort w :: (ts ++ (druckAnwListe ss ++ .zeichen "}" :: r)) := by
       rw [← hw (druckAnwListe ss ++ .zeichen "}" :: r)]
-      simp [druckAnwListe, List.append_assoc]
+      simp only [druckAnwListe, List.append_assoc]
     rw [hd]
     simp only [parseStmts]
     rw [← hw, hStmt]
-    simp [hRest]
+    simp only [hRest]
 
 /-- **A block reads back.** -/
 theorem rundlauf_block_einfach (ss : List SAnw) (e : Option SEnde)
@@ -132,7 +133,7 @@ theorem rundlauf_block_einfach (ss : List SAnw) (e : Option SEnde)
   have hP := parseStmts_einfach (ss ++ endeAnw e) hall r F' (by omega)
   have hd : druckAnw (.block ss e) ++ r =
       .zeichen "{" :: (druckAnwListe (ss ++ endeAnw e) ++ .zeichen "}" :: r) := by
-    simp [druckAnw, druckAnwListe_append, druckEnde_eq]
+    simp only [druckAnw, List.cons_append, List.nil_append, druckEnde_eq, List.append_assoc, druckAnwListe_append]
   rw [hd]
   simp only [parseBlock, fordereZeichen, strEq_self, if_true, hP]
   -- the closing brace, then the shape of the block
@@ -152,10 +153,16 @@ theorem rundlauf_block_einfach (ss : List SAnw) (e : Option SEnde)
           cases x <;> simp_all [istEnder]
     | some e' =>
       cases e' with
-      | ret x => simp [endeAnw, schliesseBlock, List.getLast?_append]
-      | leave l => simp [endeAnw, schliesseBlock, List.getLast?_append]
-      | next l => simp [endeAnw, schliesseBlock, List.getLast?_append]
-  simp [hS]
+      | ret x => simp only [schliesseBlock, endeAnw, List.append_eq_nil_iff, List.cons_ne_self, and_false, imp_self,
+  List.getLast?_append, List.getLast?_singleton, Option.some_or, ne_eq, not_false_eq_true,
+  List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
+      | leave l => simp only [schliesseBlock, endeAnw, List.append_eq_nil_iff, List.cons_ne_self, and_false, imp_self,
+  List.getLast?_append, List.getLast?_singleton, Option.some_or, ne_eq, not_false_eq_true,
+  List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
+      | next l => simp only [schliesseBlock, endeAnw, List.append_eq_nil_iff, List.cons_ne_self, and_false, imp_self,
+  List.getLast?_append, List.getLast?_singleton, Option.some_or, ne_eq, not_false_eq_true,
+  List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
+  simp only [hS]
 
 /-- **Witness**: a non-degenerate block (a `let`, a `leave`, a valued `return`) meets every hypothesis, so the
     theorem is not vacuous. -/
@@ -170,7 +177,7 @@ theorem rundlauf_block_einfach_zeuge (r : List Token) :
       rcases hs with rfl | rfl
       · exact Einfach.bind "x" (.lit 1) (by decide) (by decide)
       · exact Einfach.leave "i")
-    (by simp only [EinfachEnde]; decide) (by intro h; simp at h) r 200 (by decide)
+    (by simp only [EinfachEnde]; decide) (by intro h; simp only [reduceCtorEq] at h) r 200 (by decide)
 
 /-- **Planted defect**: a block without an ender that ENDS in a `return` reads back with that `return` as its
     ender -- the hypothesis `EndeGut` of the theorem is necessary. -/

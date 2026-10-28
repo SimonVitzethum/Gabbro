@@ -162,7 +162,7 @@ theorem fristErgebnis_eq_some_iff {D : Deklaration} (o : FristOut D) (h : Hardwa
   | ok =>
     constructor
     · intro hh
-      simp [fristErgebnis] at hh
+      simp only [fristErgebnis, reduceCtorEq] at hh
     · rintro ⟨_, hg, _⟩
       cases hg
   | abgelaufen f =>
@@ -178,8 +178,8 @@ theorem fristErgebnis_eq_some_iff {D : Deklaration} (o : FristOut D) (h : Hardwa
 theorem fristErgebnis_eq_none_iff {D : Deklaration} (o : FristOut D) :
     fristErgebnis o = none ↔ o = .ok := by
   cases o with
-  | ok => simp [fristErgebnis]
-  | abgelaufen _ => simp [fristErgebnis]
+  | ok => simp only [fristErgebnis]
+  | abgelaufen _ => simp only [fristErgebnis, reduceCtorEq]
 
 /-- The decision, unfolded: a deadline moment expires the run iff it lies
     strictly between check and use. -/
@@ -197,7 +197,7 @@ theorem fristlauf_some_abgelaufen {D : Deklaration} (p : PruefPaar) (f : Frist D
   · rw [if_pos (decide_eq_true h)]
     exact iff_of_true rfl h
   · rw [if_neg (fun he => h (of_decide_eq_true he))]
-    exact iff_of_false (by simp) h
+    exact iff_of_false (by simp only [reduceCtorEq, not_false_eq_true]) h
 
 /-- The run is `ok` exactly when the deadline does not lie strictly between
     check and use -- endpoint coincidence included. -/
@@ -207,7 +207,7 @@ theorem fristlauf_some_ok {D : Deklaration} (p : PruefPaar) (f : Frist D) (m : M
   unfold laeuftAb
   by_cases h : p.pruef < m ∧ m < p.lauf
   · rw [if_pos (decide_eq_true h)]
-    exact iff_of_false (by simp) (fun hn => hn h)
+    exact iff_of_false (by simp only [reduceCtorEq, not_false_eq_true]) (fun hn => hn h)
   · rw [if_neg (fun he => h (of_decide_eq_true he))]
     exact iff_of_true rfl h
 

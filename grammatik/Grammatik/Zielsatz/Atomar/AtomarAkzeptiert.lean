@@ -252,8 +252,8 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
   have h2 := (List.all_eq_true.mp h1.1) c hc
   simp only [Bool.or_eq_true] at h2
   rcases h2 with ((h2 | h2) | h2) | h2
-  · exact Or.inl (by simp [h2])
-  · exact Or.inl (by simp [h2])
+  · exact Or.inl (by simp only [h2, Bool.true_or])
+  · exact Or.inl (by simp only [h2, Bool.or_true])
   · obtain ⟨L, hL, hc'⟩ := List.any_eq_true.mp h2
     exact Or.inr (Or.inl ⟨L, waechterVon_mem.mp hL, istIn_iff.mp hc'⟩)
   · cases hg : getrenntW P fs ws c
@@ -267,7 +267,7 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
       · have := (getrenntW_iff hvoll).mpr ((getrenntR_iff hvoll hAbg c).mp hR)
         rw [hg] at this
         cases this
-    · exact Or.inl (by simp)
+    · exact Or.inl (by simp only [Bool.or_true])
 
 /-- **The Bool decides (a)**: `AkzeptiertX` gives `AkzeptiertSpecX`. -/
 theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)

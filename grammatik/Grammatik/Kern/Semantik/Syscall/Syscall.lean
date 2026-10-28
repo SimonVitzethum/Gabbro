@@ -73,7 +73,8 @@ def sysAbiGutB (a : SysAbi) : Bool :=
     `of_decide_eq_false` on the clobber fact. -/
 theorem sysAbiGutB_sound (a : SysAbi) (h : sysAbiGutB a = true) : a.gut := by
   unfold sysAbiGutB at h
-  simp at h
+  simp only [Bool.and_eq_true, decide_eq_true_eq, Bool.not_eq_eq_eq_not, Bool.not_true,
+  decide_eq_false_iff_not] at h
   obtain ⟨⟨h1, h2⟩, h3⟩ := h
   refine ⟨?_, ?_, ?_⟩
   · simpa using h1
@@ -134,7 +135,7 @@ theorem fehlerSuche_erster {Grund : Type} [DecidableEq Grund]
     rw [List.find?_eq_none]
     intro x hx hcon
     exact absurd (of_decide_eq_true hcon) (hvor x hx)
-  have hpos : (fun p => decide (p.1 = e)) (e, r) = true := by simp
+  have hpos : (fun p => decide (p.1 = e)) (e, r) = true := by simp only [decide_true]
   have h2 : List.find? (fun p => decide (p.1 = e)) ((e, r) :: nach) = some (e, r) :=
     List.find?_cons_of_pos hpos
   unfold fehlerSuche
@@ -369,10 +370,10 @@ theorem dekodiere_total {Grund : Type} [DecidableEq Grund]
     by_cases hok : lo ≤ roh ∧ roh ≤ hi
     · left
       refine ⟨⟨roh, hok⟩, ?_, rfl, by omega, hok.1, hok.2⟩
-      simp [dif_pos hok]
+      simp only [dif_pos hok]
     · right; right
       refine ⟨roh, ?_, rfl, ?_, ?_⟩
-      · simp [dif_neg hok]
+      · simp only [dif_neg hok]
       · intro hcon
         exact absurd hcon.2 hok
       · intro hcon

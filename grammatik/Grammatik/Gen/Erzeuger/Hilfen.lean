@@ -48,7 +48,7 @@ def tySchranken : Ty → Option (Int × Int)
   | _ => none
 
 theorem tySchranken_eq {τ : Ty} {p : Int × Int} (h : tySchranken τ = some p) : τ = .int p.1 p.2 := by
-  cases τ <;> simp [tySchranken] at h
+  cases τ <;> simp only [tySchranken, Option.some.injEq, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := h
   rfl
 
@@ -61,7 +61,7 @@ theorem mem_mitTypInt {R : Type} {τ : Ty} {f : ∀ {lo hi : Int}, τ = .int lo 
   unfold mitTypInt
   rw [List.mem_flatMap]
   have hs : tySchranken τ = some (lo, hi) := by subst h; rfl
-  exact ⟨⟨(lo, hi), by simp [hs]⟩, List.mem_attach _ _, hx⟩
+  exact ⟨⟨(lo, hi), by simp only [hs, Option.toList_some, List.mem_cons, List.not_mem_nil, or_false]⟩, List.mem_attach _ _, hx⟩
 
 /-- `o = some τ`, read off an optional type (a callee's result). -/
 def mitSome {R : Type} (o : Option Ty) (f : ∀ {τ : Ty}, o = some τ → Sz R) : Sz R := fun k =>
@@ -71,7 +71,7 @@ theorem mem_mitSome {R : Type} {o : Option Ty} {f : ∀ {τ : Ty}, o = some τ �
     (h : o = some τ) (hx : x ∈ f h k) : x ∈ mitSome o f k := by
   unfold mitSome
   rw [List.mem_flatMap]
-  exact ⟨⟨τ, by simp [h]⟩, List.mem_attach _ _, hx⟩
+  exact ⟨⟨τ, by simp only [h, Option.toList_some, List.mem_cons, List.not_mem_nil, or_false]⟩, List.mem_attach _ _, hx⟩
 
 /-! ## The pointer-with-write-right view -/
 
@@ -99,7 +99,7 @@ theorem mem_argsS {E : Sz (SE D Γ Λ)} {K : Nat} (hE : Unter E K) :
     ∀ (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ K → a ∈ argsS E τs (groesseArgs a) := by
   intro τs a
   induction a with
-  | nil => intro _; exact Sz.mem_blatt (by simp)
+  | nil => intro _; exact Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
   | cons e rest ih =>
     intro h
     simp only [groesseArgs] at h ⊢
@@ -115,7 +115,7 @@ def ergS (E : Sz (SE D Γ Λ)) : (o : Option Ty) → Sz (ErgExpr D Γ Λ o)
 theorem mem_ergS {E : Sz (SE D Γ Λ)} {K : Nat} (hE : Unter E K) {o : Option Ty} (a : ErgExpr D Γ Λ o)
     (h : groesseErg a ≤ K) : a ∈ ergS E o (groesseErg a) := by
   cases a with
-  | empty => exact Sz.mem_blatt (by simp)
+  | empty => exact Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
   | val e =>
     simp only [groesseErg] at h ⊢
     have he := hE _ e (by omega)
@@ -138,7 +138,7 @@ theorem mem_armsS {O : Orakel V} {K : Nat} (hO : OUnter O K) {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option (Int × Int))} {Λ' : List (Res D)}
       (a : Arms D V l Γ Λ Λ' cs), groesseArms a ≤ K →
       (⟨Λ', a⟩ : Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs) ∈ armsS O l Γ Λ cs (groesseArms a)
-  | _, _, _, _, .nil, _ => Sz.mem_blatt (by simp)
+  | _, _, _, _, .nil, _ => Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
   | Γ, Λ, _, _, .cons b rest, h => by
     simp only [groesseArms] at h ⊢
     have hb := hO.bl _ _ _ _ _ b (by omega) (Nat.le_refl _)
@@ -162,7 +162,7 @@ theorem mem_grundArmsS {O : Orakel V} {K : Nat} (hO : OUnter O K) {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {Λ' : List (Res D)}
       (a : GrundArms D V l Γ Λ Λ' n), groesseGrundArms a ≤ K →
       (⟨Λ', a⟩ : Σ Λ' : List (Res D), GrundArms D V l Γ Λ Λ' n) ∈ grundArmsS O l Γ Λ n (groesseGrundArms a)
-  | _, _, _, _, .nil, _ => Sz.mem_blatt (by simp)
+  | _, _, _, _, .nil, _ => Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
   | Γ, Λ, _, _, .cons b rest, h => by
     simp only [groesseGrundArms] at h ⊢
     have hb' := hO.bl (groesseBlock b + groesseGrundArms rest) _ _ _ _ b (by omega) (by omega)

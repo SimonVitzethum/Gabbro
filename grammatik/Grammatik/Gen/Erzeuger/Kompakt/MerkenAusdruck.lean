@@ -44,7 +44,7 @@ theorem bucketE_eq {c : List (EintragE D)} (hc : CacheEOk c) (Γ : Ctx) (Λ : Li
   split
   · rename_i e he
     obtain ⟨l₁, x, l₂, _, hx, _⟩ := List.findSome?_eq_some_iff.1 he
-    have hxc : x ∈ c := by rw [‹c = l₁ ++ x :: l₂›]; simp
+    have hxc : x ∈ c := by rw [‹c = l₁ ++ x :: l₂›]; simp only [List.mem_append, List.mem_cons, true_or, or_true]
     by_cases h : x.Γ = Γ ∧ x.Λ = Λ
     · rw [dif_pos h] at hx
       by_cases hi : i ≤ x.n

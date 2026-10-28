@@ -482,7 +482,7 @@ theorem retryAbbR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (hl : l = true)
       have hW := hZ.welt
       simp only [retryLauf] at hex
       split at hex
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
       · rename_i hw
         have hw' : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false := by
           simpa using hw
@@ -504,7 +504,7 @@ theorem retryAbbR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (hl : l = true)
       have hW := hZ.welt
       simp only [retryLauf] at hex
       split at hex
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
       · rename_i hw
         have hw' : wahr? (eval (σ.lese Λ bis.orte) bis (σ.lese Λ bis.orte) ρ) = false := by
           simpa using hw
@@ -549,8 +549,8 @@ theorem retryAbbR {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (hl : l = true)
           rw [hW2] at hZ3
           exact weiter M3 e2 σ2 ρ2 (RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)))
             hZ3 (by rw [ho2, (Erw.lese _ _ _).offen]) hex
-        · simp [Ausgang.abb?] at hex
-        all_goals simp [Ausgang.abb?] at hex
+        · simp only [Ausgang.abb?, reduceCtorEq] at hex
+        all_goals simp only [Ausgang.abb?, reduceCtorEq] at hex
 
 
 variable (hRuf : RufOk P O passes f A R C)
@@ -692,7 +692,7 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact (Fin.cast hr ‹_›).elim0
       · cases hex
       · cases hex
-  | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+  | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs => by
       intro log σ σ' ρ ρ' hex M _ rest k hZ hΛ hA
       obtain ⟨hAL, hb, hbo⟩ := hs.locks_inv
@@ -757,19 +757,19 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         (blockOkR body hb) (blockAbbR body hb) (.dann rest k) passes log σ σ' ρ ρ'
         hex M1 hZ1 hΛ (hA.lauf (RufLaufG.einzeln hs1))
       exact ⟨M2, _, RufLaufG.schritt hs1 hr2, hZ2, ho2⟩
-  | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+  | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret .., _ => by
       intro log σ σ' ρ ρ' hex
-      simp [execStmt] at hex
+      simp only [execStmt, reduceCtorEq] at hex
   | _, _, _, _, _, .retWhy .., _ => by
       intro log σ σ' ρ ρ' hex
-      simp [execStmt] at hex
+      simp only [execStmt, reduceCtorEq] at hex
   | _, _, _, _, _, .leave .., _ => by
       intro log σ σ' ρ ρ' hex
-      simp [execStmt] at hex
+      simp only [execStmt, reduceCtorEq] at hex
   | _, _, _, _, _, .next .., _ => by
       intro log σ σ' ρ ρ' hex
-      simp [execStmt] at hex
+      simp only [execStmt, reduceCtorEq] at hex
 
 theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D (vertragVon D fn) l Γ Λ Λ'), BlockR A C mr b →
@@ -1187,11 +1187,11 @@ theorem stmtAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro hl log σ σ' ρ ρ' w hex
       simp only [execStmt] at hex
       split at hex
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
       · exact (Fin.cast hr ‹_›).elim0
-      · simp [Ausgang.abb?] at hex
-      · simp [Ausgang.abb?] at hex
-  | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
+  | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs => by
       intro hl log σ σ' ρ ρ' w hex M _ rest k hZ hΛ hA
       obtain ⟨hAL, hb, hbo⟩ := hs.locks_inv
@@ -1245,13 +1245,13 @@ theorem stmtAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           σ ρ).ohneAbbruch := by simp only [execStmt]; exact foreverLauf_ohneAbbruch _ _ _ _ _ _
       rw [abb_none_of h0] at hex
       cases hex
-  | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp [Stmt.rArt, Stmt.blattArt])
+  | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret .., _ => by
       intro hl log σ σ' ρ ρ' w hex
-      simp [execStmt, Ausgang.abb?] at hex
+      simp only [Ausgang.abb?, execStmt, reduceCtorEq] at hex
   | _, _, _, _, _, .retWhy .., _ => by
       intro hl log σ σ' ρ ρ' w hex
-      simp [execStmt, Ausgang.abb?] at hex
+      simp only [Ausgang.abb?, execStmt, reduceCtorEq] at hex
   | _, _, _, _, _, .leave h, _ => by
       intro hl log σ σ' ρ ρ' w hex M _ rest k hZ hΛ hA
       simp only [execStmt, Ausgang.abb?, Option.some.injEq, Prod.mk.injEq] at hex
@@ -1268,7 +1268,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     SimAbbBR P O passes f fn stapel rho s0 A R b
   | _, _, _, _, _, .nil, _ => by
       intro hl log σ σ' ρ ρ' w hex
-      simp [execBlock, Ausgang.abb?] at hex
+      simp only [Ausgang.abb?, execBlock, reduceCtorEq] at hex
   | _, _, _, _, _, .cons s rest, hb => by
       intro hl log σ σ' ρ ρ' w hex M k hZ hΛ hA
       obtain ⟨hs, hr⟩ := hb.cons_inv
@@ -1321,8 +1321,8 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           by rw [List.append_assoc]; exact hZ4,
           by rw [ho3, ho2, (Erw.lese _ _ _).offen]⟩
       · exact (Fin.cast hr ‹_›).elim0
-      · simp [Ausgang.abb?] at hex
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
   | _, _, _, _, _, .bindCallInd .., hb => by cases hb
   | _, _, _, _, _, .bindCallElse .., hb => by
       intro hl
@@ -1349,8 +1349,8 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
           obtain ⟨M3, hs3, hZ3⟩ := peelSchrumpfR P O passes f fn stapel rho s0 hl hZ2
           exact ⟨M3, e2, _, .nil, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
             ho2⟩
-        · simp [Ausgang.abb?] at hex
-      · simp [Ausgang.abb?] at hex
+        · simp only [Ausgang.abb?, reduceCtorEq] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
   | _, _, _, _, _, .regReadElse .., hb => by
       intro hl
       have h0 := hb.regLiesElse_inv.2.2.2
@@ -1372,7 +1372,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M3, hs3, hZ3⟩ := peelSchrumpfR P O passes f fn stapel rho s0 hl hZ2
         exact ⟨M3, e2, _, .nil, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]; rfl⟩
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb => by
       intro hl log σ σ' ρ ρ' w hex M k hZ hΛ hA
       have hr := hb.exchange_inv
@@ -1417,7 +1417,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M3, hs3, hZ3⟩ := peelSchrumpfR P O passes f fn stapel rho s0 hl hZ2
         exact ⟨M3, e2, _, .nil, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
   | _, _, _, _, _, .floatLit q lo hi rest, hb => by
       intro hl log σ σ' ρ ρ' w hex M k hZ hΛ hA
       have hr := hb.gleitLit_inv
@@ -1434,7 +1434,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M3, hs3, hZ3⟩ := peelSchrumpfR P O passes f fn stapel rho s0 hl hZ2
         exact ⟨M3, e2, _, .nil, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           ho2⟩
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
   | _, _, _, _, _, .floatOf e lo hi rest, hb => by
       intro hl log σ σ' ρ ρ' w hex M k hZ hΛ hA
       have hr := hb.gleitVon_inv
@@ -1451,7 +1451,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M3, hs3, hZ3⟩ := peelSchrumpfR P O passes f fn stapel rho s0 hl hZ2
         exact ⟨M3, e2, _, .nil, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
-      · simp [Ausgang.abb?] at hex
+      · simp only [Ausgang.abb?, reduceCtorEq] at hex
   | _, _, _, _, _, .floatNarrow .., hb => by
       intro hl
       have h0 := hb.gleitNarrow_inv.2.2.2

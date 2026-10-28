@@ -206,7 +206,7 @@ theorem schleife_haelt (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert 
   rw [heq]
   clear heq
   induction ks generalizing t with
-  | nil => simp [iterate] at hit; subst hit; exact ⟨hw, hl⟩
+  | nil => simp only [iterate, Option.some.injEq] at hit; subst hit; exact ⟨hw, hl⟩
   | cons k ks ih =>
       obtain ⟨u', hu', hwf, hlf⟩ :=
         schleife_pass P Γ ρ hD hU hS l.ΔS l.body l.v l.erg hcheck hfrisch t k hw hl
@@ -214,15 +214,15 @@ theorem schleife_haelt (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklariert 
       simp only [iterate] at hit
       split at hit
       · rename_i u hu
-        rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+        rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
         exact ih u hwf hlf hit
       · rename_i u hu
-        rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+        rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
         exact ih u hwf hlf hit
       · rename_i u hu
-        rw [hu] at hu'; simp [finalState] at hu'; subst hu'
-        simp at hit; subst hit; exact ⟨hwf, hlf⟩
-      · exact absurd hit (by simp)
+        rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
+        simp only [Option.some.injEq] at hit; subst hit; exact ⟨hwf, hlf⟩
+      · exact absurd hit (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **The induction over the passes of a ranged domain**, in the shape of
     `Body.looprule_of_body_in`: the pass may assume its index in range, and the range
@@ -241,26 +241,26 @@ theorem schleife_haelt_in (P : Programm) (Γ : Typing) (ρ : Env) (hD : Deklarie
   rw [heq]
   clear heq
   induction ks generalizing t with
-  | nil => simp [iterate] at hit; subst hit; exact ⟨hw, hl⟩
+  | nil => simp only [iterate, Option.some.injEq] at hit; subst hit; exact ⟨hw, hl⟩
   | cons k ks ih =>
-      have hk : l.lo ≤ k ∧ k < l.hi := hks k (by simp)
+      have hk : l.lo ≤ k ∧ k < l.hi := hks k (by simp only [List.mem_cons, true_or])
       have hks' : ∀ k' ∈ ks, l.lo ≤ k' ∧ k' < l.hi :=
-        fun k' hk' => hks k' (by simp [hk'])
+        fun k' hk' => hks k' (by simp only [List.mem_cons, hk', or_true])
       obtain ⟨u', hu', hwf, hlf⟩ :=
         schleife_pass P Γ ρ hD hU hS l.ΔS l.body l.v l.erg hcheck hfrisch t k hw hl
           (hnologik t k hk.1 hk.2 hw hl)
       simp only [iterate] at hit
       split at hit
       · rename_i u hu
-        rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+        rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
         exact ih u hwf hlf hks' hit
       · rename_i u hu
-        rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+        rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
         exact ih u hwf hlf hks' hit
       · rename_i u hu
-        rw [hu] at hu'; simp [finalState] at hu'; subst hu'
-        simp at hit; subst hit; exact ⟨hwf, hlf⟩
-      · exact absurd hit (by simp)
+        rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
+        simp only [Option.some.injEq] at hit; subst hit; exact ⟨hwf, hlf⟩
+      · exact absurd hit (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **Every registered loop keeps world and scope: `SchleifenOK` from `RunsLoop`.**
     Loops are never foreign -- every registered loop has its body in the list (`halle`:

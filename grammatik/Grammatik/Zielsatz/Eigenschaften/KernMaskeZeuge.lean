@@ -185,7 +185,7 @@ theorem w_prefix (m : Bool) : ∃ M1 M2 M3 M4 : RufMaschineG (wD m),
     (fun L => by
       show Res.held L ∈ ([] : List (Res (wD m))) ↔ L ∈ offen ((wM0 m).faeden 1).spur
       rw [wM0_offen]
-      simp) hfrei
+      simp only [List.not_mem_nil]) hfrei
   obtain ⟨M3, s3, hZ3⟩ := w_dannLeer (P := wP m) (O := wO m) (passes := 0) (M := M2) (f := 1)
     hZ2.1 (.frei () (.dann .nil (.ende (wRet m WFn.t)))) .nil rfl
   obtain ⟨M4, s4, hZ4⟩ := w_freiGib (P := wP m) (O := wO m) (passes := 0) (M := M3) (f := 1)
@@ -205,7 +205,7 @@ theorem w_prefix (m : Bool) : ∃ M1 M2 M3 M4 : RufMaschineG (wD m),
     exact List.mem_cons_self
   · rw [hn4, hn3, hn2]
     have e1' : offen (M1.weltVon 1).spur = [] := e1
-    simp [offen, e1']
+    simp only [offen, e1']
     first | rfl | decide
   · intro f hf
     rw [rufSchrittG_fremd s2 f hf, rufSchrittG_fremd s1 f hf]

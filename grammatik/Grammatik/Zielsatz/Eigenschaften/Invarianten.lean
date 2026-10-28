@@ -189,17 +189,17 @@ theorem fertig_retKopf {M : RufMaschineG D} {t : Faden} (hF : FertigG M t)
           cases s with
           | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩
           | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ hKt
-          | _ => simp [GRest.anRueck, Endblock.istRueck, Stmt.istRueck] at han
-      | _ => simp [GRest.anRueck, Endblock.istRueck] at han
+          | _ => simp only [GRest.anRueck, Endblock.istRueck, Stmt.istRueck, Bool.false_eq_true] at han
+      | _ => simp only [GRest.anRueck, Endblock.istRueck, Bool.false_eq_true] at han
   | dann b k =>
       cases b with
       | cons s rest =>
           cases s with
           | ret e hp => exact ⟨_, _, _, _, _, e, rfl, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩
           | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩ hKt
-          | _ => simp [GRest.anRueck, Block.istRueck, Stmt.istRueck] at han
-      | _ => simp [GRest.anRueck, Block.istRueck] at han
-  | _ => simp [GRest.anRueck] at han
+          | _ => simp only [GRest.anRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true] at han
+      | _ => simp only [GRest.anRueck, Block.istRueck, Bool.false_eq_true] at han
+  | _ => simp only [GRest.anRueck, Bool.false_eq_true] at han
 
 /-- **A TABLE INVARIANT HOLDS WHEREVER NO UNFINISHED THREAD IS INSIDE A WRITER.** -/
 theorem invRuhe_erreichbar (hO : GutO O) (sp : Speicher D)

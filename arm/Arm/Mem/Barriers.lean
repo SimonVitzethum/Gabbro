@@ -262,9 +262,9 @@ theorem dmbHolds_false_of_plain (x : Exec) (a c : Nat)
       ((b.isDmbFull && memOf x a && memOf x c) ||
        (b.isDmbLd && rdOf x a && memOf x c) ||
        (b.isDmbSt && wrOf x a && wrOf x c))) = false := by
-    simp [hf, hl, hs]
+    simp only [hf, Bool.false_and, hl, Bool.or_self, hs, Bool.and_false]
   rw [hcond] at hcon
-  simp at hcon
+  simp only [Bool.false_eq_true] at hcon
 
 /-- Same for DSB. -/
 theorem dsbHolds_false_of_plain (x : Exec) (a c : Nat)
@@ -282,9 +282,9 @@ theorem dsbHolds_false_of_plain (x : Exec) (a c : Nat)
       ((b.isDsbFull && memOf x a && memOf x c) ||
        (b.isDsbLd && rdOf x a && memOf x c) ||
        (b.isDsbSt && wrOf x a && wrOf x c))) = false := by
-    simp [hf, hl, hs]
+    simp only [hf, Bool.false_and, hl, Bool.or_self, hs, Bool.and_false]
   rw [hcond] at hcon
-  simp at hcon
+  simp only [Bool.false_eq_true] at hcon
 
 /-- Same for the acquire leg. -/
 theorem acqHolds_false_of_plain (x : Exec) (a c : Nat)
@@ -304,7 +304,7 @@ theorem acqHolds_false_of_plain (x : Exec) (a c : Nat)
     simp only [Bool.or_eq_false_iff] at hbig
     obtain ⟨ha, hq⟩ := hbig
     rw [ha, hq] at hcon
-    simp at hcon
+    simp only [Bool.false_and, Bool.or_self, Bool.and_false, Bool.false_eq_true] at hcon
 
 /-- Same for the release leg. -/
 theorem relHolds_false_of_plain (x : Exec) (a c : Nat)
@@ -320,7 +320,7 @@ theorem relHolds_false_of_plain (x : Exec) (a c : Nat)
     have hpred := (List.all_eq_true.mp h) e he
     have hrel : e.isRelease = false := of_decide_eq_true hpred
     rw [hrel] at hcon
-    simp at hcon
+    simp only [Bool.and_false, Bool.false_eq_true] at hcon
 
 /-- Same for the release-acquire leg. -/
 theorem relAcqHolds_false_of_plain (x : Exec) (a c : Nat)
@@ -339,8 +339,8 @@ theorem relAcqHolds_false_of_plain (x : Exec) (a c : Nat)
       simp only [Bool.or_eq_false_iff] at hbig
       obtain ⟨⟨hr, _⟩, _⟩ := hbig
       rw [hr] at hcon
-      simp at hcon
-    simp [h1]
+      simp only [Bool.and_false, Bool.false_eq_true] at hcon
+    simp only [h1, Bool.and_false, Bool.false_and]
 
 /-- Same for the ISB leg. -/
 theorem isbHolds_false_of_plain (x : Exec) (a c : Nat)
@@ -353,9 +353,9 @@ theorem isbHolds_false_of_plain (x : Exec) (a c : Nat)
   have hisb : b.isIsb = false := of_decide_eq_true hpred
   have hcond : (ctrlMem x a b.id && poMem x b.id c && b.isIsb && rdOf x a &&
       memOf x c) = false := by
-    simp [hisb]
+    simp only [hisb, Bool.and_false, Bool.false_and]
   rw [hcond] at hcon
-  simp at hcon
+  simp only [Bool.false_eq_true] at hcon
 
 /-- One concrete plain event, shared by the splitter witness. -/
 def plainEv : Ev := ⟨0, 0, .write ⟨0, 4, .plain, false⟩, 1⟩

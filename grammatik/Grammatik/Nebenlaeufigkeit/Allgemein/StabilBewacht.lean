@@ -239,7 +239,7 @@ theorem zbSchritt_rahmen :
     cases t
     have htrue : refD.schreibt (zbCode 1) () = true := rfl
     rw [htrue] at ht
-    simp at ht
+    simp only [Bool.true_eq_false] at ht
   · intro g
     exact nomatch g
 
@@ -256,12 +256,14 @@ def zbJ : GemeinsamerLauf (D := refD) zbNb where
     intro k f' vor nach hk hv hn
     cases k with
     | zero =>
-      simp at hk hv hn
+      simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, Nat.reduceAdd, Nat.zero_lt_succ, List.getElem_cons_succ] at hk hv hn
       subst hk
       subst hv
       subst hn
-      exact ⟨by simp, zbSchritt_rahmen⟩
-    | succ k => simp at hk
+      exact ⟨by simp only [List.mem_cons, Nat.succ_ne_self, List.not_mem_nil, or_false, or_true], zbSchritt_rahmen⟩
+    | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
   hPaar := by
     intro f' hf' g hg' hne
     simp only [List.mem_cons, List.not_mem_nil,
@@ -274,22 +276,22 @@ def zbJ : GemeinsamerLauf (D := refD) zbNb where
   hGesittet := by
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
     · intro f j
-      have hsp : Lauf.spur ([] : Lauf refD) f j = [] := by simp [Lauf.spur]
+      have hsp : Lauf.spur ([] : Lauf refD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
       rw [hsp]
       exact konsistent_nil
     · intro f j e he
-      have hsp : Lauf.spur ([] : Lauf refD) f j = [] := by simp [Lauf.spur]
+      have hsp : Lauf.spur ([] : Lauf refD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
       rw [hsp] at he
-      simp at he
+      simp only [List.not_mem_nil] at he
     · intro j f L h hi g hne
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     · intro i j f g m s s' ei ej hi hj hm hm'
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     · intro i j f g o ei ej hi hj ht1 ht2 hu
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   hBeschraenkt := by
     intro i j f g ei ej hi hj hne
-    simp at hi
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   hEintritt := by
     intro f hf
     simp only [List.mem_cons, List.not_mem_nil,
@@ -333,7 +335,8 @@ theorem zbQ_W1 (f : Faden) : zbQ f zbW1 := by
 theorem zbKopf : ∀ f ∈ zbJ.faeden, ∀ σ₀, zbJ.welten[0]? = some σ₀ → zbQ f σ₀ := by
   intro f hf σ₀ h
   rw [zbJ_welten] at h
-  simp at h
+  simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq] at h
   subst h
   rw [zbJ_faeden] at hf
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
@@ -355,12 +358,15 @@ theorem zbEigen : ∀ f ∈ zbJ.faeden, ∀ (k : Nat) (vor nach : World refD),
   | zero =>
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
     rcases hf with rfl | rfl
-    · simp at hk
-    · simp at hk hv hn
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, Nat.succ_ne_self] at hk
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Nat.reduceAdd, Nat.zero_lt_succ, Option.some.injEq, List.getElem_cons_succ] at hk hv hn
       subst hv
       subst hn
       exact zbQ_W1 1
-  | succ k => simp at hk
+  | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 /-- Foreign-step preservation on the witness chain: the only foreign step
     (thread 1, seen from thread 0) is the slot-5 write. (`hQvor` is carried
@@ -377,14 +383,17 @@ theorem zbStabil : ∀ f ∈ zbJ.faeden, ∀ (k : Nat) (g : Faden) (vor nach : W
   | zero =>
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hgm hf
     rcases hgm with rfl | rfl
-    · simp at hk
-    · simp at hk hv hn
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, Nat.succ_ne_self] at hk
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Nat.reduceAdd, Nat.zero_lt_succ, Option.some.injEq, List.getElem_cons_succ] at hk hv hn
       subst hv
       subst hn
       rcases hf with rfl | rfl
       · exact zbQ_W1 0
       · exact absurd rfl hne
-  | succ k => simp at hk
+  | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 /-- Every witness thread holds exactly the guard, by computation. -/
 theorem zbHaelt (f : Faden) (hf : f ∈ zbJ.faeden) :
@@ -440,12 +449,12 @@ theorem zbWacheT : ∀ (f g : Faden), f ∈ zbJ.faeden → g ∈ zbJ.faeden → 
   rcases hg with rfl | rfl
   · cases t
     rw [zbSchreibtLies] at hwrite
-    simp at hwrite
+    simp only [Bool.false_eq_true] at hwrite
   · obtain ⟨rfl, _⟩ := hSf
     refine ⟨(), List.Mem.head _, ?_, ?_⟩
     · rw [zbHaelt f hf]
       exact List.mem_singleton.mpr rfl
-    · have hg1 : (1 : Faden) ∈ zbJ.faeden := by simp [zbJ_faeden]
+    · have hg1 : (1 : Faden) ∈ zbJ.faeden := by simp only [zbJ_faeden, List.mem_cons, Nat.succ_ne_self, List.not_mem_nil, or_false, or_true]
       rw [zbHaelt 1 hg1]
       exact List.mem_singleton.mpr rfl
 
@@ -473,7 +482,8 @@ theorem zbRelyT : ∀ (f : Faden), f ∈ zbJ.faeden → ∀ (k : Nat) (g : Faden
   rw [zbJ_welten] at hv hn
   cases k with
   | zero =>
-    simp at hk hv hn
+    simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, Nat.reduceAdd, Nat.zero_lt_succ, List.getElem_cons_succ] at hk hv hn
     subst hv
     subst hn
     obtain ⟨rfl, hk' | hk'⟩ := hSf
@@ -483,7 +493,8 @@ theorem zbRelyT : ∀ (f : Faden), f ∈ zbJ.faeden → ∀ (k : Nat) (g : Faden
     · subst hk'
       show (if (1 : Int) = 5 then zbV7 else zbV0) = zbV0
       rw [if_neg (by decide)]
-  | succ k => simp at hk
+  | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 /-- No globals exist, so the global rely holds vacuously. (Premises
     carried for shape.) -/
@@ -509,7 +520,7 @@ theorem zbMemMoved : zbW1.slots () 5 () ≠ zbW0.slots () 5 () := by
   intro hcon
   rw [zbW1_slot5, zbW0_slot5] at hcon
   have hn := congrArg Zahl.n hcon
-  simp [zbV7, zbV0] at hn
+  simp only [zbV7, zbV0, Int.reduceEq] at hn
 
 /-- A function of the witness writes the shared table. -/
 theorem zbSchreibt : TraegerSchreibt (zbCode 1) (.inl ()) = true :=

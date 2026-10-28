@@ -83,7 +83,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_tab hL) i.orte_darf) hh.heldIn
         exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .ite c t e, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ c.orte_darf hh.heldIn
@@ -111,8 +111,8 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact hl.trans (Gut.weiter hp.hw hp.hg
           (hR f (σ.lese Λ args.orte) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
       · rename_i σ1 r _; exact keinGrund hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .callInd p args hp hr, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
@@ -127,8 +127,8 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact hl.trans (Gut.weiter hp.hw hp.hg
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
       · rename_i σ1 r _; exact keinGrundSig hf hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .locks L hr body, σ, ρ, hbo, hh, σ', h =>
       (GutAusgang.gibt L (nicht_gehaltenB L hr hh (fun c hc => by
           have hsc := hbo c hc; simp only [Stmt.ueberBoden, Bool.and_eq_true, decide_eq_true_eq] at hsc; exact hsc.1))
@@ -153,7 +153,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         have := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldB hh).heldIn
         rw [ha] at this
         exact hl.trans (Gut.weiter hw hg this)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regWrite r _ e, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
@@ -203,8 +203,8 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac)
           (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrund hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindCallInd p args he hp hr rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
@@ -220,8 +220,8 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((g2 (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindCallElse f args he hp _ err rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
@@ -236,8 +236,8 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           (hR f (σ.lese Λ args.orte) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac)
           (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf.zuAusgang σ' h)
-      · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
@@ -247,7 +247,7 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
@@ -262,7 +262,7 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf.zuAusgang σ' h)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regRead r _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       refine (gut_fragt σ (.inr (.inl r))).trans ?_
@@ -271,8 +271,8 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · split at h
         · exact (block_gutB bo hbV rest σ _ (by boden_tac) hh).schrumpf σ' h
-        · simp [Ausgang.welt] at h
-      · simp [Ausgang.welt] at h
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regReadElse r _ zusage sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       refine (gut_fragt σ (.inr (.inl r))).trans ?_
@@ -283,7 +283,7 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         split at h
         · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
         · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))).zuAusgang σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .awaits g _ _ hL _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       refine (gut_fragt σ (.inr (.inr g))).trans ?_
@@ -291,9 +291,9 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       generalize σ.fragt (.inr (.inr g)) = σ at h hh ⊢
       split at h
       · have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
-          (orte_cons (orte_glob hL) (by intro o ho; simp at ho)) hh.heldIn
+          (orte_cons (orte_glob hL) (by intro o ho; simp only [List.not_mem_nil] at ho)) hh.heldIn
         exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .exchange g neu hw hL rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_glob hL) neu.orte_darf) hh.heldIn
@@ -320,18 +320,18 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         (orte_append a.orte_darf b.orte_darf) hh.heldIn
       split at h
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .floatLit q lo hi rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       split at h
       · exact (block_gutB bo hbV rest σ _ (by boden_tac) hh).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .floatOf e lo hi rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
       split at h
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .floatNarrow e lo hi sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
@@ -361,7 +361,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       all_goals first
         | (rename_i hs1; simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
            exact hs _ (by rw [hs1]; rfl))
-        | (simp [EndAusgang.welt] at h)
+        | (simp only [EndAusgang.welt, reduceCtorEq] at h)
   | .bind e rest, σ, ρ, hbo, hh, σ', h => by
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
       exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
@@ -375,8 +375,8 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac)
           (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrund hr r
-      · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindCallElse f args he hp _ err rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
@@ -391,8 +391,8 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           (hR f (σ.lese Λ args.orte) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac)
           (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
-      · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
@@ -402,7 +402,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
@@ -417,7 +417,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .regRead r _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       refine (gut_fragt σ (.inr (.inl r))).trans ?_
@@ -426,8 +426,8 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · split at h
         · exact (end_gutB bo hbV rest σ _ (by boden_tac) hh).schrumpf σ' h
-        · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+        · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .regReadElse r _ zusage sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       refine (gut_fragt σ (.inr (.inl r))).trans ?_
@@ -438,7 +438,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         split at h
         · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
         · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))) σ' h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .awaits g _ _ hL _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       refine (gut_fragt σ (.inr (.inr g))).trans ?_
@@ -446,9 +446,9 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       generalize σ.fragt (.inr (.inr g)) = σ at h hh ⊢
       split at h
       · have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ [.inr g]
-          (orte_cons (orte_glob hL) (by intro o ho; simp at ho)) hh.heldIn
+          (orte_cons (orte_glob hL) (by intro o ho; simp only [List.not_mem_nil] at ho)) hh.heldIn
         exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindCallInd p args he hp hr rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
@@ -464,8 +464,8 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           (hR f (σ.lese Λ (p.orte ++ args.orte)) _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
         exact g1.trans ((g2 (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
-      · simp [EndAusgang.welt] at h
-      · simp [EndAusgang.welt] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .narrow e lo' hi' sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
@@ -523,15 +523,15 @@ theorem held_invSicht_aux (L : D.Lock) : ∀ (ts : List D.Tab),
     ∃ t ∈ ts, Sum.inl L ∈ D.braucht t := by
   intro ts
   induction ts with
-  | nil => intro h; simp at h
+  | nil => intro h; simp only [List.foldr_nil, List.not_mem_nil] at h
   | cons t ts ih =>
       intro h
       simp only [List.foldr_cons, List.mem_append, List.mem_map] at h
       rcases h with ⟨w, hw, hwL⟩ | h
       · refine ⟨t, List.mem_cons_self, ?_⟩
         cases w with
-        | inl M => simp [Res.von] at hwL; subst hwL; exact hw
-        | inr m => obtain ⟨_, _⟩ := m; simp [Res.von] at hwL
+        | inl M => simp only [Res.von, Res.held.injEq] at hwL; subst hwL; exact hw
+        | inr m => obtain ⟨_, _⟩ := m; simp only [Res.von, reduceCtorEq] at hwL
       · obtain ⟨t', ht', hL⟩ := ih h
         exact ⟨t', List.mem_cons_of_mem _ ht', hL⟩
 
@@ -572,14 +572,14 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
     ∀ fuel, GutR (rufAt P O passes fuel) := by
   intro fuel
   induction fuel with
-  | zero => intro f σ ρ _ σ' h; simp [rufAt, RufAusgang.welt] at h
+  | zero => intro f σ ρ _ σ' h; simp only [RufAusgang.welt, rufAt, reduceCtorEq] at h
   | succ n ih =>
       intro f σ ρ hh σ' h
       simp only [rufAt] at h
       have g0 : Gut (D.schreibt f) (D.gschreibt f) σ _ :=
         gut_lese σ _ _ (P.requires f).orte_darf hh.heldIn
       split at h
-      · simp [RufAusgang.welt] at h
+      · simp only [RufAusgang.welt, reduceCtorEq] at h
       · have hb := end_gutB O passes (rufAt P O passes n) ih hO (D.signatur f).boden
           (bodenUnter_refl _) (P.rumpf f)
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ (hP f) (g0.heldB hh)
@@ -592,12 +592,12 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
             gut_lese σ2 (vertragVon D f).ende _ (P.ensures f).orte_darf
               (by intro L hL; exact hh2.heldIn L ((held_anfang _ L).mpr ((held_ende _ L).mp hL)))
           split at h
-          · simp [RufAusgang.welt] at h
+          · simp only [RufAusgang.welt, reduceCtorEq] at h
           · have g4 := gut_foldl_lese (W := D.schreibt f) (G := D.gschreibt f) P f
               (D.invs.filter (schuldet f)) _
               (fun i hi => (List.mem_filter.mp hi).2) (g3.heldB hh2).heldIn
             split at h
-            · simp [RufAusgang.welt] at h
+            · simp only [RufAusgang.welt, reduceCtorEq] at h
             · simp only [RufAusgang.welt, Option.some.injEq] at h; subst h
               exact ((g0.trans g2).trans g3).trans g4
         · rename_i σ2 r hs
@@ -605,8 +605,8 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
           exact g0.trans (hb _ (by rw [hs]; rfl))
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · rename_i hl _ _ _; exact absurd hl (by decide)
-        · simp [RufAusgang.welt] at h
-        · simp [RufAusgang.welt] at h
+        · simp only [RufAusgang.welt, reduceCtorEq] at h
+        · simp only [RufAusgang.welt, reduceCtorEq] at h
 
 /-- **Der Satz ueber Rahmen und Spur**: ein Rumpf unter Vertrag `V`, gestartet in einer Welt,
     die haelt, was sein `Λ` nennt, schreibt nur, was `V` nennt, gibt jede Sperre zurueck und

@@ -73,7 +73,7 @@ theorem fn_kopf (sig : FnSig) (hs : SigGut sig) (X : List Token) :
   rw [druckFnSig_eq]
   rcases hart with h | h | h
   · refine ⟨"fn", ts ++ X, ?_, by decide, by decide⟩
-    simp [h, strEq_self, hts]
+    simp only [h, strEq_self, ↓reduceIte, hts, List.nil_append, List.cons_append]
   · refine ⟨"const", sigToks sig ++ X, ?_, by decide, by decide⟩
     simp [h, (by decide : strEq "const" "" = false)]
   · have hne : strEq sig.art "" = false := by
@@ -81,7 +81,7 @@ theorem fn_kopf (sig : FnSig) (hs : SigGut sig) (X : List Token) :
       · rfl
       · have := (strEq_eq _ _).mp e; rw [this] at h; exact absurd h (by decide)
     refine ⟨sig.art, sigToks sig ++ X, ?_, ?_, ?_⟩
-    · simp [hne]
+    · simp only [hne, Bool.false_eq_true, ↓reduceIte, List.cons_append, List.nil_append]
     · intro e; rw [e] at h; exact absurd h (by decide)
     · intro e; rw [e] at h; exact absurd h (by decide)
 
@@ -118,7 +118,8 @@ theorem item_bein : ∀ (it : SItemTief), ItemGut it → ItemBein it ∧ ItemKop
       itemKopf_wort _ "table" (by decide) (by decide) ⟨_, rfl⟩⟩
   | entryT e he =>
     refine ⟨item_entry e he, itemKopf_wort _ "entry" (by decide) (by decide) ?_⟩
-    simp [druckItem, druckEingang_eq]
+    simp only [druckItem, druckEingang_eq, List.cons_append, List.nil_append, List.append_assoc, List.cons.injEq,
+  true_and, exists_eq']
   | devT n ps sp ms h =>
     refine ⟨item_dev n ps sp ms h, itemKopf_wort _ "device" (by decide) (by decide) ?_⟩
     rw [druckDev_eq]; exact ⟨_, rfl⟩
@@ -192,47 +193,47 @@ def zeugeProgramm : List SItemTief := [
 
 theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
   have atom : ∀ a, typKopf a = false → TypGut (.atom a) := fun a h => by
-    have := TypGut.kette (.atom a) [] (.atom a h) (by simp [TsGut]); simpa [applyTS] using this
+    have := TypGut.kette (.atom a) [] (.atom a h) (by simp only [TsGut, List.not_mem_nil, false_implies, implies_true]); simpa [applyTS] using this
   intro it hit
   simp only [zeugeProgramm, List.mem_cons, List.not_mem_nil, or_false] at hit
   rcases hit with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · exact .useT _ (by simp)
+  · exact .useT _ (by simp only [ne_eq, reduceCtorEq, not_false_eq_true])
   · refine .constT _ _ _ (by decide) (atom _ (by decide)) (.rows _ ?_)
-    intro x hx; simp at hx; rcases hx with rfl | rfl <;> exact .one _ (by decide)
-  · exact .globT _ _ _ _ _ _ _ (by decide) (atom _ (by decide)) (.one _ (by decide)) (by simp)
-  · refine .lockT _ _ _ _ _ _ _ (by simp; decide) (by decide) ?_ (by simp) (by simp)
+    intro x hx; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> exact .one _ (by decide)
+  · exact .globT _ _ _ _ _ _ _ (by decide) (atom _ (by decide)) (.one _ (by decide)) (by simp only [reduceCtorEq, false_implies, implies_true])
+  · refine .lockT _ _ _ _ _ _ _ (by simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq]; decide) (by decide) ?_ (by simp only [reduceCtorEq, false_implies, implies_true]) (by simp only [reduceCtorEq, false_implies, implies_true])
     intro e he; cases he; decide
-  · exact .atomT _ _ _ _ _ (atom _ (by decide)) ⟨by intro ps h p hp; cases h; simp at hp; subst hp; decide,
+  · exact .atomT _ _ _ _ _ (atom _ (by decide)) ⟨by intro ps h p hp; cases h; simp only [List.mem_cons, List.not_mem_nil, or_false] at hp; subst hp; decide,
       by intro o h; cases h; decide⟩
-  · exact .whyT _ _ _ (by intro c hc; simp at hc; subst hc; exact ⟨show gut (.lit 1) = true by decide, by decide⟩)
-  · refine .modT ["kern"] _ ⟨by simp, by intro a ha; simp at ha; subst ha; decide⟩ ?_
-    intro it hit; simp at hit; subst hit
+  · exact .whyT _ _ _ (by intro c hc; simp only [List.mem_cons, List.not_mem_nil, or_false] at hc; subst hc; exact ⟨show gut (.lit 1) = true by decide, by decide⟩)
+  · refine .modT ["kern"] _ ⟨by simp only [ne_eq, List.cons_ne_self, not_false_eq_true], by intro a ha; simp only [List.mem_cons, List.not_mem_nil, or_false] at ha; subst ha; decide⟩ ?_
+    intro it hit; simp only [List.mem_cons, List.not_mem_nil, or_false] at hit; subst hit
     refine .fnT _ _ ⟨Or.inl rfl, ?_, atom _ (by decide), ?_⟩ ?_
-    · intro p hp; simp at hp; subst hp; exact atom _ (by decide)
-    · intro k hk; simp at hk
+    · intro p hp; simp only [List.mem_cons, List.not_mem_nil, or_false] at hp; subst hp; exact atom _ (by decide)
+    · intro k hk; simp only [List.mem_cons, List.not_mem_nil, or_false] at hk
       rcases hk with rfl | rfl | rfl
       · exact .quant .all "i" "slots" [] [.variable "Knoten"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
           (.und _ _ (.expr _ (by decide))
             (.quant .any "t" "threads" [] [] _ (Or.inr rfl) .threads (.expr _ (by decide))))
-      · intro e he; simp at he; subst he; show gut _ = true; decide
+      · intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; show gut _ = true; decide
       · show gut _ = true; decide
     · refine .block _ _ ?_ (by show gut _ = true; decide) (by intro h; cases h)
-      intro s hs; simp at hs; subst hs
+      intro s hs; simp only [List.mem_cons, List.not_mem_nil, or_false] at hs; subst hs
       exact .set _ _ _ (by decide) (by decide) (by decide)
   · exact .concT _ (by
-      intro p hp; simp at hp; subst hp
-      exact ⟨⟨by simp, by intro a ha; simp at ha; rcases ha with rfl | rfl <;> decide⟩, by simp⟩)
+      intro p hp; simp only [List.mem_cons, List.not_mem_nil, or_false] at hp; subst hp
+      exact ⟨⟨by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by intro a ha; simp only [List.mem_cons, List.not_mem_nil, or_false] at ha; rcases ha with rfl | rfl <;> decide⟩, by simp only [List.not_mem_nil, false_implies, implies_true]⟩)
   · refine .tableT _ _ _ _ _ _ _ (by intro e he; cases he; decide) ?_
     intro t ht
     simp only [List.mem_cons, List.not_mem_nil, or_false] at ht
     rcases ht with rfl | rfl | rfl | rfl | rfl
-    · intro fd hfd; simp at hfd; subst hfd
-      exact ⟨atom _ (by decide), by simp, by intro e he; cases he; decide⟩
-    · show _ ≠ []; simp
-    · exact ⟨by simp, by intro k hk; simp at hk; subst hk; exact Or.inl rfl⟩
+    · intro fd hfd; simp only [List.mem_cons, List.not_mem_nil, or_false] at hfd; subst hfd
+      exact ⟨atom _ (by decide), by simp only [reduceCtorEq, false_implies, implies_true], by intro e he; cases he; decide⟩
+    · show _ ≠ []; simp only [ne_eq, reduceCtorEq, not_false_eq_true]
+    · exact ⟨by simp only [ne_eq, List.cons_ne_self, not_false_eq_true], by intro k hk; simp only [List.mem_cons, List.not_mem_nil, or_false] at hk; subst hk; exact Or.inl rfl⟩
     · trivial
-    · exact ⟨by decide, .expr _ (by decide), by simp⟩
-  · refine .entryT _ ⟨?_, ?_, Or.inr (Or.inl rfl), by simp⟩
+    · exact ⟨by decide, .expr _ (by decide), by simp only [reduceCtorEq, false_implies, implies_true]⟩
+  · refine .entryT _ ⟨?_, ?_, Or.inr (Or.inl rfl), by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩
     · intro v hv; cases hv; decide
     · intro x hx; cases hx; decide
 
@@ -282,36 +283,36 @@ def zeugeGeraet : List SItemTief := [
 
 theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
   have atom : ∀ a, typKopf a = false → TypGut (.atom a) := fun a h => by
-    have := TypGut.kette (.atom a) [] (.atom a h) (by simp [TsGut]); simpa [applyTS] using this
+    have := TypGut.kette (.atom a) [] (.atom a h) (by simp only [TsGut, List.not_mem_nil, false_implies, implies_true]); simpa [applyTS] using this
   have rng : TypGut (.range (.atom "u32") (.lit 0) (.lit 9) false) :=
     TypGut.kette (.atom "u32") [.rng (.lit 0) (.lit 9) false] (.atom _ (by decide))
-      (by intro lo hi x h; simp at h; obtain ⟨rfl, rfl, -⟩ := h; exact ⟨by decide, by decide⟩)
+      (by intro lo hi x h; simp only [List.mem_cons, TSuff.rng.injEq, List.not_mem_nil, or_false] at h; obtain ⟨rfl, rfl, -⟩ := h; exact ⟨by decide, by decide⟩)
   intro it hit
   simp only [zeugeGeraet, List.mem_cons, List.not_mem_nil, or_false] at hit
   rcases hit with rfl | rfl | rfl | rfl
-  · exact .whyT _ _ _ (by intro c hc; simp at hc; subst hc; exact ⟨show gut (.lit 1) = true by decide, by decide⟩)
+  · exact .whyT _ _ _ (by intro c hc; simp only [List.mem_cons, List.not_mem_nil, or_false] at hc; subst hc; exact ⟨show gut (.lit 1) = true by decide, by decide⟩)
   · refine .devT _ _ _ _ ⟨?_, ?_⟩
-    · intro p hp; simp at hp; subst hp; exact atom _ (by decide)
+    · intro p hp; simp only [List.mem_cons, List.not_mem_nil, or_false] at hp; subst hp; exact atom _ (by decide)
     · intro m hm
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
       rcases hm with rfl | rfl | rfl
       · exact ⟨by decide, by decide⟩
-      · exact ⟨rng, by intro _; decide, fun _ => rfl, Or.inl rfl, by simp, by simp, by simp, by simp⟩
-      · refine ⟨rng, by intro _; decide, fun h => absurd h (by decide), ?_, ?_, ?_, by simp, ?_⟩
+      · exact ⟨rng, by intro _; decide, fun _ => rfl, Or.inl rfl, by simp only [List.not_mem_nil, false_implies, implies_true], by simp only [reduceCtorEq, false_implies, implies_true], by simp only [imp_self], by simp only [List.not_mem_nil, false_implies, implies_true]⟩
+      · refine ⟨rng, by intro _; decide, fun h => absurd h (by decide), ?_, ?_, ?_, by simp only [reduceCtorEq, imp_self], ?_⟩
         · exact Or.inr ⟨"boot", _, rfl, by decide, .cons _ _ _ (by decide) (by decide) .nil⟩
-        · intro fd hfd; simp at hfd
+        · intro fd hfd; simp only [List.mem_cons, List.not_mem_nil, or_false] at hfd
           rcases hfd with rfl | rfl
           · exact Or.inl ⟨0, rfl⟩
           · exact Or.inr (by decide)
         · intro p hp; cases hp; exact .expr _ (by decide)
-        · intro c hc; simp at hc
+        · intro c hc; simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
           rcases hc with rfl | rfl
           · exact Or.inl rfl
           · exact Or.inr rfl
   · have leer : AnwGut .block (.block [] (some (.ret (some (.why "G" "Z"))))) :=
-      .block [] _ (by simp) (show gut (.why "G" "Z") = true by decide) (by intro h; cases h)
-    refine .fnT _ _ ⟨Or.inl rfl, ?_, rng, by simp⟩ ?_
-    · intro p hp; simp at hp; rcases hp with rfl | rfl <;> exact atom _ (by decide)
+      .block [] _ (by simp only [List.not_mem_nil, false_implies, implies_true]) (show gut (.why "G" "Z") = true by decide) (by intro h; cases h)
+    refine .fnT _ _ ⟨Or.inl rfl, ?_, rng, by simp only [List.not_mem_nil, false_implies, implies_true]⟩ ?_
+    · intro p hp; simp only [List.mem_cons, List.not_mem_nil, or_false] at hp; rcases hp with rfl | rfl <;> exact atom _ (by decide)
     · refine .block _ _ ?_ (show gut (.variable "t") = true by decide) (by intro h; cases h)
       intro s hs
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hs
@@ -322,14 +323,14 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
       · exact .bind _ _ _ _ (by decide) trivial (by decide)
       · exact .call _ _ (show nameForm _ = true by decide) (by decide) (by decide)
       · exact .await _ _ _ _ (by decide) trivial (by decide) ⟨[.ident "zaehler"], rfl,
-          by intro t ht; simp at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp⟩⟩
+          by intro t ht; simp only [List.mem_cons, List.not_mem_nil, or_false] at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp only [reduceCtorEq, or_self, not_false_eq_true]⟩⟩
       · exact .emit _ _ _ (by decide) (by decide)
           (Or.inr ⟨⟨[.ident "zaehler"], rfl,
-            by intro t ht; simp at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp⟩⟩, by decide⟩)
-  · refine .groupT _ _ _ (by simp) ?_
-    intro i hi; simp at hi; subst hi
+            by intro t ht; simp only [List.mem_cons, List.not_mem_nil, or_false] at ht; subst ht; exact ⟨⟨by decide, by decide⟩, by simp only [reduceCtorEq, or_self, not_false_eq_true]⟩⟩, by decide⟩)
+  · refine .groupT _ _ _ (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) ?_
+    intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi
     exact ⟨by decide, .quant .all "s" "slots" [] [.variable "Tab"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
-      (.expr _ (by decide)), by simp⟩
+      (.expr _ (by decide)), by simp only [reduceCtorEq, false_implies, implies_true]⟩
 
 /-- The device witness reads back through the whole program reader. -/
 theorem zeugeGeraet_rund : parseTopTief (druckItems zeugeGeraet ++ [.ende]) = .ok zeugeGeraet :=

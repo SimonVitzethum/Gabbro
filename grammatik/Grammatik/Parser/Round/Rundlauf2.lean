@@ -80,12 +80,12 @@ theorem suffGutKern_append : ∀ (s1 s2 : List SuffFrag),
     suffGutKern (s1 ++ s2) = (suffGutKern s1 && suffGutKern s2) := by
   intro s1
   induction s1 with
-  | nil => simp [suffGutKern]
+  | nil => simp only [List.nil_append, suffGutKern, Bool.true_and, implies_true]
   | cons f s ih =>
     cases f with
-    | dot g => simp [suffGutKern, ih]
-    | arrow g => simp [suffGutKern, ih]
-    | idx i => simp [suffGutKern, ih, Bool.and_assoc]
+    | dot g => simp only [List.cons_append, suffGutKern, ih, implies_true]
+    | arrow g => simp only [List.cons_append, suffGutKern, ih, implies_true]
+    | idx i => simp only [List.cons_append, suffGutKern, ih, Bool.and_assoc, implies_true]
 
 -- Unfolding equations for the two recursive arms, as plain rewrite
 -- rules (kernel-checked; the `gutKern` match has literal arms that
@@ -146,7 +146,7 @@ theorem un_ne_klammer (o : String) (hop : (strEq o "!" || strEq o "-" || strEq o
 /-- The operand condition of the `-` arm for an atom: a numeral prints no `(`. -/
 theorem atom_bed (x : SExpr) (rest : List Token) :
     (∀ T, druckToks x ++ rest ≠ .zeichen "(" :: T) ∨ istLit x = false := by
-  cases x <;> simp [istLit, druckToks]
+  cases x <;> simp only [druckToks, List.cons_append, List.nil_append, ne_eq, List.cons.injEq, reduceCtorEq, false_and, not_false_eq_true, implies_true, istLit, Bool.true_eq_false, or_false, or_self, nameTok_ne_zeichen, List.append_assoc, or_true, true_and, forall_eq', Token.zeichen.injEq, String.reduceEq]
 
 theorem nonatom_bed (x : SExpr) (hat : istAtom x = false) : istLit x = false := by
   cases x <;> simp_all [istAtom, istLit]
@@ -223,21 +223,21 @@ theorem gut_of_gutKern : ∀ (e : SExpr),
     · simp only [gut, Bool.and_eq_true, and_assoc] at ⊢
       refine ⟨?_, gut_of_gutKern l hl, gut_of_gutKern r hr⟩
       decide
-  | call f xs => simp [gutKern] at h
-  | fnref f => simp [gutKern] at h
-  | built f xs => simp [gutKern] at h
-  | old x => simp [gutKern] at h
-  | res => simp [gutKern] at h
-  | why g f => simp [gutKern] at h
-  | ext xk xn xs => simp [gutKern] at h
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at h
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at h
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at h
+  | old x => simp only [gutKern, Bool.false_eq_true] at h
+  | res => simp only [gutKern, Bool.false_eq_true] at h
+  | why g f => simp only [gutKern, Bool.false_eq_true] at h
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at h
 theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
     gutKernPlatz p = true → gutPlatz p = true := by
   intro p h
   cases p with
-  | lit m => simp [gutKernPlatz] at h
-  | float s => simp [gutKernPlatz] at h
-  | tru => simp [gutKernPlatz] at h
-  | fls => simp [gutKernPlatz] at h
+  | lit m => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | float s => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | tru => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | fls => simp only [gutKernPlatz, Bool.false_eq_true] at h
   | «variable» s =>
     simp only [gutKernPlatz] at h
     simp only [gutPlatz] at ⊢
@@ -255,15 +255,15 @@ theorem gutPlatz_of_gutKernPlatz : ∀ (p : SExpr),
     simp only [gutKernPlatz] at h
     simp only [gutPlatz] at ⊢
     exact gutPlatz_of_gutKernPlatz x h
-  | un o x => simp [gutKernPlatz] at h
-  | bin o l r => simp [gutKernPlatz] at h
-  | call f xs => simp [gutKernPlatz] at h
-  | fnref f => simp [gutKernPlatz] at h
-  | built f xs => simp [gutKernPlatz] at h
-  | old x => simp [gutKernPlatz] at h
-  | res => simp [gutKernPlatz] at h
-  | why g f => simp [gutKernPlatz] at h
-  | ext xk xn xs => simp [gutKernPlatz] at h
+  | un o x => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | bin o l r => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | call f xs => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | fnref f => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | built f xs => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | old x => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | res => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | why g f => simp only [gutKernPlatz, Bool.false_eq_true] at h
+  | ext xk xn xs => simp only [gutKernPlatz, Bool.false_eq_true] at h
 end
 
 -- The round-trip invariant at size bound `n`, restricted to
@@ -738,15 +738,15 @@ theorem primFrei_of_atom : ∀ (x : SExpr), istAtom x = true →
   | field x f => rfl
   | index x i => rfl
   | arrow x f => rfl
-  | un o y => simp [istAtom] at hat
-  | bin o l r => simp [istAtom] at hat
-  | call f xs => simp [gutKern] at hgx
-  | fnref f => simp [istAtom] at hat
-  | built f xs => simp [gutKern] at hgx
-  | old x => simp [gutKern] at hgx
-  | res => simp [gutKern] at hgx
-  | why g f => simp [gutKern] at hgx
-  | ext xk xn xs => simp [gutKern] at hgx
+  | un o y => simp only [istAtom, Bool.false_eq_true] at hat
+  | bin o l r => simp only [istAtom, Bool.false_eq_true] at hat
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hgx
+  | fnref f => simp only [istAtom, Bool.false_eq_true] at hat
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hgx
+  | old x => simp only [gutKern, Bool.false_eq_true] at hgx
+  | res => simp only [gutKern, Bool.false_eq_true] at hgx
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hgx
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hgx
 
 -- Atom towers, one per remaining leaf shape: the `parsePrimary`
 -- leg (concrete head) plus the `parseUnary` fall-through (head is
@@ -930,7 +930,7 @@ theorem bang_arm_gen : ∀ (G' : Nat) (M R : List Token) (o : String) (v : SExpr
     simp only [parseUnary, h] at ⊢
   · simp only [List.cons_append, List.nil_append] at h ⊢
     cases M with
-    | nil => cases G' <;> simp [parsePrimary] at h
+    | nil => cases G' <;> simp only [parsePrimary, reduceCtorEq] at h
     | cons t T =>
       by_cases ht : t = .zeichen "("
       · subst ht
@@ -974,7 +974,8 @@ theorem un_paren_fall : ∀ (G' : Nat) (M R : List Token) (v : SExpr),
   have n3 : ("(" : String) ≠ "~" := by decide
   have n4 : ("(" : String) ≠ "&" := by decide
   simp only [List.cons_append, List.nil_append] at h ⊢
-  simp [parseUnary, h, n1, n2, n3, n4] at ⊢
+  simp only [parseUnary, List.cons.injEq, Token.zeichen.injEq, n1, false_and, imp_self, implies_true, n2, n3,
+  n4, h] at ⊢
 
 -- The `un` tower for ATOM children, generalised over the
 -- prefix spelling: the `parsePrimary` leg (same follow)
@@ -1012,7 +1013,8 @@ theorem kern_un_atom_turm : ∀ (o : String) (x : SExpr) (rest : List Token),
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     have hd : druckToks (.un o x) =
         [.zeichen o] ++ druckToks x := by
-      simp [druckToks, hat, un_ne_klammer _ hop]
+      simp only [druckToks, un_ne_klammer _ hop, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
     have hP' := hPx G' (by omega)
     simp only [hd, List.append_assoc] at ⊢
     exact bang_arm_gen _ _ _ _ _ hop hP' (atom_bed x rest)
@@ -1054,7 +1056,8 @@ theorem kern_un_paren_turm : ∀ (o : String) (x : SExpr) (rest : List Token),
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
     have hd : druckToks (.un o x) = [.zeichen o] ++
         (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-      simp [druckToks, hat, un_ne_klammer _ hop]
+      simp only [druckToks, un_ne_klammer _ hop, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
     have hF2 : 1 ≤ G' := by omega
     obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
     have hO' := hOx G'' (by omega)
@@ -1106,7 +1109,7 @@ theorem kern_bin_turm : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "+" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "+" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "+"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hP : ∀ (G : Nat),
       12 * (groesse (.bin "+" l r) + 1) + groesse (.bin "+" l r) + 1 ≤ G →
       parsePrimary G (druckToks (.bin "+" l r) ++ rest) =
@@ -1179,7 +1182,7 @@ theorem kern_bin_star_turm : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "*" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "*" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "*"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hP : ∀ (G : Nat),
       12 * (groesse (.bin "*" l r) + 1) + groesse (.bin "*" l r) + 1 ≤ G →
       parsePrimary G (druckToks (.bin "*" l r) ++ rest) =
@@ -1245,7 +1248,7 @@ theorem kern_bin_or_turm : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "||" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "||" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "||"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hP : ∀ (G : Nat),
       12 * (groesse (.bin "||" l r) + 1) + groesse (.bin "||" l r) + 1 ≤ G →
       parsePrimary G (druckToks (.bin "||" l r) ++ rest) =
@@ -1310,7 +1313,7 @@ theorem kern_bin_and_turm : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "&&" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "&&" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "&&"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hP : ∀ (G : Nat),
       12 * (groesse (.bin "&&" l r) + 1) + groesse (.bin "&&" l r) + 1 ≤ G →
       parsePrimary G (druckToks (.bin "&&" l r) ++ rest) =
@@ -2032,10 +2035,10 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
   | succ n ih =>
     intro p hs hg
     cases p with
-    | lit m => simp [gutKernPlatz] at hg
-    | float s => simp [gutKernPlatz] at hg
-    | tru => simp [gutKernPlatz] at hg
-    | fls => simp [gutKernPlatz] at hg
+    | lit m => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | float s => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | tru => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | fls => simp only [gutKernPlatz, Bool.false_eq_true] at hg
     | «variable» a =>
       simp only [gutKernPlatz] at hg
       exact ⟨a, [], rfl, hg, rfl, by simp only [suffGroesse]; omega⟩
@@ -2049,7 +2052,7 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
       · rw [applySuff_append]
         rfl
       · have hsg : suffGutKern (suff ++ [.dot f]) = suffGutKern suff := by
-          simp [suffGutKern_append, suffGutKern]
+          simp only [suffGutKern_append, suffGutKern, Bool.and_true]
         rw [hsg]
         exact hgs
       · simp only [suffGroesse_append, suffGroesse] at ⊢
@@ -2067,9 +2070,9 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
       · have hgi : gutKern i = true := hi
         have hsg : suffGutKern (suff ++ [.idx i]) =
             (suffGutKern suff && gutKern i) := by
-          simp [suffGutKern_append, suffGutKern, Bool.and_assoc]
+          simp only [suffGutKern_append, suffGutKern, Bool.and_true]
         rw [hsg]
-        simp [hgs, hgi]
+        simp only [hgs, hgi, Bool.and_self]
       · simp only [suffGroesse_append, suffGroesse] at ⊢
         simp only [groesse, groesse_applySuff] at hs
         omega
@@ -2083,20 +2086,20 @@ theorem zerlege_kern : ∀ (n : Nat) (p : SExpr), groesse p ≤ n →
       · rw [applySuff_append]
         rfl
       · have hsg : suffGutKern (suff ++ [.arrow f]) = suffGutKern suff := by
-          simp [suffGutKern_append, suffGutKern]
+          simp only [suffGutKern_append, suffGutKern, Bool.and_true]
         rw [hsg]
         exact hgs
       · simp only [suffGroesse_append, suffGroesse] at ⊢
         omega
-    | un o x => simp [gutKernPlatz] at hg
-    | bin o l r => simp [gutKernPlatz] at hg
-    | call f xs => simp [gutKernPlatz] at hg
-    | fnref f => simp [gutKernPlatz] at hg
-    | built f xs => simp [gutKernPlatz] at hg
-    | old x => simp [gutKernPlatz] at hg
-    | res => simp [gutKernPlatz] at hg
-    | why g f => simp [gutKernPlatz] at hg
-    | ext xk xn xs => simp [gutKernPlatz] at hg
+    | un o x => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | bin o l r => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | call f xs => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | fnref f => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | built f xs => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | old x => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | res => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | why g f => simp only [gutKernPlatz, Bool.false_eq_true] at hg
+    | ext xk xn xs => simp only [gutKernPlatz, Bool.false_eq_true] at hg
 
 -- Suffix chains through `parseSuffixe` over kernel trees:
 -- lane 161's `suff_rund` with index payloads parsed through
@@ -2337,13 +2340,13 @@ theorem kernOr_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKe
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.2 F (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2393,13 +2396,13 @@ theorem kernAnd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.2.2.1 F (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2449,13 +2452,13 @@ theorem kernCmp_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.2.1 F (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2505,13 +2508,13 @@ theorem kernBit_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.2.1 F (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 -- The `bin "*"` primary leg from a star-inner leg: word
 -- for word the `+` leg with the spelling swapped.
@@ -2528,7 +2531,7 @@ theorem kern_bin_prim_star : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "*" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "*" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "*"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hG1 : 1 ≤ G := by omega
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   have hB' := hB G' (by omega)
@@ -2552,7 +2555,7 @@ theorem kern_bin_prim_or : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "||" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "||" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "||"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hG1 : 1 ≤ G := by omega
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   have hB' := hB G' (by omega)
@@ -2576,7 +2579,7 @@ theorem kern_bin_prim_and : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "&&" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "&&" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "&&"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hG1 : 1 ≤ G := by omega
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   have hB' := hB G' (by omega)
@@ -2602,7 +2605,7 @@ theorem kern_bin_prim : ∀ (l r : SExpr) (rest : List Token),
   have hsize : groesse (.bin "+" l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin "+" l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen "+"] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hG1 : 1 ≤ G := by omega
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   have hB' := hB G' (by omega)
@@ -2659,13 +2662,13 @@ theorem kernAdd_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.2.1 F (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BKernOr n → BKernAnd n →
     (∀ (e : SExpr) (rest : List Token) (F : Nat), groesse e ≤ n + 1 →
@@ -2715,13 +2718,13 @@ theorem kernMul_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → BK
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact (turm_platz n rkn (.arrow x f) rest hs hpp hr hrs hrg).2.2.1 F (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 -- The `parseUnary` step: no `ruhig` premise (loops never see
 -- the tail here), so atoms prove their fall-through legs
@@ -2808,7 +2811,8 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
         exact rPr x rest G hxn hgx hpf hrs hrg hG
       have hd : druckToks (.un o x) =
           [.zeichen o] ++ druckToks x := by
-        simp [druckToks, hat, un_ne_klammer _ hop]
+        simp only [druckToks, un_ne_klammer _ hop, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
       have hP' := hPx F' (by omega)
       simp only [hd, List.append_assoc] at ⊢
       exact bang_arm_gen _ _ _ _ _ hop hP' (atom_bed x rest)
@@ -2821,7 +2825,8 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
           (hr_paren rest) (hrs_paren rest) (hrg_paren rest) hG
       have hd : druckToks (.un o x) = [.zeichen o] ++
           (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-        simp [druckToks, hat, un_ne_klammer _ hop]
+        simp only [druckToks, un_ne_klammer _ hop, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
       have hF2 : 1 ≤ F' := by omega
       obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
       have hO' := hOx F'' (by omega)
@@ -2838,7 +2843,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
       have hsum : groesse l + groesse r ≤ n := by omega
       have hd : druckToks (.bin "+" l r) = [.zeichen "("] ++ druckToks l ++
           [.zeichen "+"] ++ druckToks r ++ [.zeichen ")"] := by
-        simp [druckToks]
+        simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
       have hB : ∀ (G : Nat),
           12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ G →
           parseOr G (druckToks l ++ [.zeichen "+"] ++ druckToks r ++
@@ -2855,7 +2860,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
       have hsum : groesse l + groesse r ≤ n := by omega
       have hd : druckToks (.bin "*" l r) = [.zeichen "("] ++ druckToks l ++
           [.zeichen "*"] ++ druckToks r ++ [.zeichen ")"] := by
-        simp [druckToks]
+        simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
       have hB : ∀ (G : Nat),
           12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ G →
           parseOr G (druckToks l ++ [.zeichen "*"] ++ druckToks r ++
@@ -2872,7 +2877,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
       have hsum : groesse l + groesse r ≤ n := by omega
       have hd : druckToks (.bin "||" l r) = [.zeichen "("] ++ druckToks l ++
           [.zeichen "||"] ++ druckToks r ++ [.zeichen ")"] := by
-        simp [druckToks]
+        simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
       have hB : ∀ (G : Nat),
           12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ G →
           parseOr G (druckToks l ++ [.zeichen "||"] ++ druckToks r ++
@@ -2889,7 +2894,7 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
       have hsum : groesse l + groesse r ≤ n := by omega
       have hd : druckToks (.bin "&&" l r) = [.zeichen "("] ++ druckToks l ++
           [.zeichen "&&"] ++ druckToks r ++ [.zeichen ")"] := by
-        simp [druckToks]
+        simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
       have hB : ∀ (G : Nat),
           12 * (groesse l + groesse r + 1) + (groesse l + groesse r) + 10 ≤ G →
           parseOr G (druckToks l ++ [.zeichen "&&"] ++ druckToks r ++
@@ -2919,13 +2924,13 @@ theorem kernUnary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n → 
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact (turm_platz_PU n rkn' (.arrow x f) rest hs hpp hrs hrg).2 F (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 -- The `parsePrimary` step: no `ruhig` premise (suffixes never
 -- see loop operators), prefix trees vacuous by `primFrei`.
@@ -2946,7 +2951,7 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
       simp only [gutKern] at hg
       exact hg
     exact kern_prim_var a rest F hka hrs (by omega)
-  | un o x => simp [primFrei] at hpf
+  | un o x => simp only [primFrei, Bool.false_eq_true] at hpf
   | bin o l r =>
     rw [gutKern_bin] at hg
     simp only [Bool.and_eq_true, and_assoc] at hg
@@ -3009,13 +3014,13 @@ theorem kernPrimary_step : ∀ (n : Nat), RKern n → BKern n → BKernStar n �
     have hpp : gutKernPlatz (.arrow x f) = true := by
       rw [gutKernPlatz_pfeil]; exact hg
     exact kern_prim_platz n rkn (.arrow x f) rest F hs hpp hrs (by omega)
-  | call f xs => simp [gutKern] at hg
-  | fnref f => simp [gutKern] at hg
-  | built f xs => simp [gutKern] at hg
-  | old x => simp [gutKern] at hg
-  | res => simp [gutKern] at hg
-  | why g f => simp [gutKern] at hg
-  | ext xk xn xs => simp [gutKern] at hg
+  | call f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | fnref f => simp only [gutKern, Bool.false_eq_true] at hg
+  | built f xs => simp only [gutKern, Bool.false_eq_true] at hg
+  | old x => simp only [gutKern, Bool.false_eq_true] at hg
+  | res => simp only [gutKern, Bool.false_eq_true] at hg
+  | why g f => simp only [gutKern, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [gutKern, Bool.false_eq_true] at hg
 
 -- The joint invariant by size induction: base cases are
 -- vacuous (every tree has size at least one, every pair at
@@ -3091,7 +3096,7 @@ theorem parse_druck_kern : ∀ (e : SExpr), gutKern e = true →
   have hrs : ruhigSuff [.ende] = true := rfl
   have hrg : ruhigGleit [.ende] = true := rfl
   have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
+    simp only [brennstoff, Std.le_refl]
   exact rOr e [.ende] (brennstoff e) (Nat.le_refl _) hg hr hrs hrg hF
 
 -- Witnesses on small expressions, each in two forms: the

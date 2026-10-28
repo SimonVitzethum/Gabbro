@@ -21,7 +21,7 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
   | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
-  | endeForm _ _ _ _ _ _ hent hhead => (rw [hR] at hhead; cases hhead; exact absurd hent (by simp [EndEntfaltbar]))
+  | endeForm _ _ _ _ _ _ hent hhead => (rw [hR] at hhead; cases hhead; exact absurd hent (by simp only [EndEntfaltbar, Bool.false_eq_true, not_false_eq_true]))
   | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
   | dannLeer _ _ _ _ _ hhead => kopfweg
   | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg

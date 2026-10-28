@@ -114,7 +114,7 @@ theorem fort_abb {M : RufMaschineG D} {t : Faden} (hP : PrueftG O passes M t) (w
   | abbruch k' =>
       obtain ⟨M', hs, _⟩ := w_peelAbbruch (P := P) (O := O) (passes := passes) rfl w rest k' ρ hx
       exact ⟨M', hs⟩
-  | _ => simp [GRest.absorb] at habs
+  | _ => simp only [GRest.absorb, Bool.false_eq_true] at habs
 
 /-- **An `ende` head**: a leaf, an unfold, a call, a pop, or a finished
     thread; `leave`/`next` cannot stand there (`fOk`: no `ende` node in a
@@ -514,10 +514,10 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
           exact fort_schritt (w_ewigWeiter rfl a n inv body k ρ hx
             (hP.2.1 l Γ Λ ρ a n inv body k hx) hΛ)
   | ewigRest a n inv body k => exact fort_schritt (w_ewigFort rfl a n inv body k ρ hx)
-  | wartet rest k => simp [GRest.wartend] at hnw'
-  | wartetSonst n err rest k => simp [GRest.wartend] at hnw'
-  | abbruch k => simp [GRest.blockiert] at hb
-  | leer => simp [GRest.blockiert] at hb
+  | wartet rest k => simp only [GRest.wartend, Bool.true_eq_false] at hnw'
+  | wartetSonst n err rest k => simp only [GRest.wartend, Bool.true_eq_false] at hnw'
+  | abbruch k => simp only [GRest.blockiert, Bool.true_eq_false] at hb
+  | leer => simp only [GRest.blockiert, Bool.true_eq_false] at hb
 
 end Fort
 /-! ## 6. The float range checks pass (verdict F1) -/

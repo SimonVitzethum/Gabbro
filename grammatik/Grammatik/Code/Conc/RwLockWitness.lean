@@ -64,11 +64,11 @@ def mDel (M : RufMaschineG cD) (u : Faden) : RufMaschineG cD :=
 
 theorem mAdd_offen (M : RufMaschineG cD) (u v : Faden) : offen ((mAdd M u).faeden v).spur =
     if v = u then lcL :: offen (M.faeden v).spur else offen (M.faeden v).spur := by
-  by_cases h : v = u <;> simp [mAdd, h, offen]
+  by_cases h : v = u <;> simp only [mAdd, h, ↓reduceIte, offen]
 
 theorem mDel_offen (M : RufMaschineG cD) (u v : Faden) : offen ((mDel M u).faeden v).spur =
     if v = u then (offen (M.faeden v).spur).erase lcL else offen (M.faeden v).spur := by
-  by_cases h : v = u <;> simp [mDel, h, offen]
+  by_cases h : v = u <;> simp only [mDel, h, ↓reduceIte, offen]
 
 /-- With one lock the ghost state is a constant. -/
 theorem updR_unit (gh : cD.Lock → Rw) (g : Rw) : updR gh () g = fun _ => g :=
@@ -92,11 +92,12 @@ theorem ge_eq : ge = Rw.free := rfl
 theorem rwRel0 : RwRel rwLese cLay lcM0 mem0 (fun _ => ga) := by
   intro L
   cases L
-  refine ⟨⟨List.nodup_nil, fun h => absurd h (by simp [ga, Rw.free]), by decide⟩,
+  refine ⟨⟨List.nodup_nil, fun h => absurd h (by simp only [ga, Rw.free, Option.isSome_none, Bool.false_eq_true, not_false_eq_true]), by decide⟩,
     by show mem0.load (cLay.lblk ()) 0 lw = some (tk ga.cellv); decide +kernel, fun v => ?_,
-    ⟨fun _ h => absurd h List.not_mem_nil, fun w h => absurd h (by simp [ga, Rw.free])⟩⟩
+    ⟨fun _ h => absurd h List.not_mem_nil, fun w h => absurd h (by simp only [ga, Rw.free, reduceCtorEq, not_false_eq_true])⟩⟩
   rw [lcM0_offen]
-  simp [Rw.holdsB, ga, Rw.free] <;> rfl
+  simp only [Rw.holdsB, ga, Rw.free, List.not_mem_nil, decide_false, reduceCtorEq, Bool.or_self,
+  Bool.false_eq_true, ↓reduceIte] <;> rfl
 
 /-- All three threads stand at their first block. -/
 def rwT0 : TM := ⟨mem0, fun t => if t = 2 then .run ⟨0, 10, 0, fun _ => none, none⟩ [] else
@@ -166,7 +167,7 @@ theorem rw_witness :
   have e0 := (o7 0 (by decide)).trans ((o6 0 (by decide)).trans ((o5 0 (by decide)).trans
     ((o4 0 (by decide)).trans a3)))
   obtain ⟨n8, hn8, T8, r8, a8, o8, st8, R8⟩ := rd_rel_step cLayOk (S := Sees.shared cLay) R7 () rw_blk5 rw_blk6
-    rfl 0 e0 (by simp [gc, gb, ga, Rw.addR, Rw.free])
+    rfl 0 e0 (by simp only [gc, Rw.addR, gb, ga, Rw.free, List.mem_cons, Nat.zero_ne_one, List.not_mem_nil, or_false, or_true])
   have R8' : RwRel rwLese cLay (mDel (mAdd (mAdd lcM0 0) 1) 0) T8.m (fun _ => gd) := by
     have := R8 (mDel (mAdd (mAdd lcM0 0) 1) 0) (mDel_offen _ 0)
     rw [updR_unit] at this
@@ -174,7 +175,8 @@ theorem rw_witness :
   -- thread 1 releases (word 0)
   have e1 := (o8 1 (by decide)).trans ((o7 1 (by decide)).trans a6)
   obtain ⟨n9, hn9, T9, r9, a9, o9, st9, R9⟩ := rd_rel_step cLayOk (S := Sees.shared cLay) R8' () rw_blk5 rw_blk6
-    rfl 1 e1 (by simp [gd, gc, gb, ga, Rw.addR, Rw.delR, Rw.free])
+    rfl 1 e1 (by simp only [gd, Rw.delR, gc, Rw.addR, gb, ga, Rw.free, Nat.reduceBEq, Bool.false_eq_true, not_false_eq_true,
+  List.erase_cons_tail, List.erase_cons_head, List.mem_cons, List.not_mem_nil, or_false])
   have R9' : RwRel rwLese cLay (mDel (mDel (mAdd (mAdd lcM0 0) 1) 0) 1) T9.m (fun _ => ge) := by
     have := R9 (mDel (mDel (mAdd (mAdd lcM0 0) 1) 0) 1) (mDel_offen _ 1)
     rw [updR_unit] at this
@@ -196,8 +198,8 @@ theorem rw_witness :
     exact List.mem_cons_self
   · rw [mAdd_offen, if_pos rfl]
     exact List.mem_cons_self
-  · simp [mAdd_offen, mDel_offen, lcM0_offen, lcL] <;> exact fun h => nomatch h
-  · simp [mAdd_offen, mDel_offen, lcM0_offen, lcL] <;> exact fun h => nomatch h
+  · simp only [mAdd_offen, reduceCtorEq, ↓reduceIte, mDel_offen, Nat.zero_ne_one, lcL, lcM0_offen] <;> exact fun h => nomatch h
+  · simp only [mAdd_offen, Nat.reduceEqDiff, ↓reduceIte, mDel_offen, Nat.succ_ne_self, lcL, lcM0_offen] <;> exact fun h => nomatch h
 
 end C64R
 

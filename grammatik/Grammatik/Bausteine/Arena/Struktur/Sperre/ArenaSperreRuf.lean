@@ -35,7 +35,7 @@ theorem rufAt_erk (W : D.Fn → Prop) (hW : ∀ f, W f → ErkE K Abs.leer (P.ru
     ∀ n : Nat, RErhaelt K W (rufAt P O passes n) := by
   intro n f hf σ ρ hS
   cases n with
-  | zero => exact ⟨fun σ' v h => by simp [rufAt] at h, fun σ' r h => by simp [rufAt] at h⟩
+  | zero => exact ⟨fun σ' v h => by simp only [rufAt, reduceCtorEq] at h, fun σ' r h => by simp only [rufAt, reduceCtorEq] at h⟩
   | succ n =>
     have hS1 := Dekl.Ok.lese K (Signatur.anfang D (D.signatur f)) (P.requires f).orte hS
     have hpost := erkE_koerper O passes (rufAt P O passes n) K (hW f hf) _ ρ hS1 Abs.leer

@@ -169,7 +169,7 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
     refine haeltInvG_kopf h (fun K hK hnf => (List.mem_erase_of_ne (fun e => hnf (by
-        rw [freis_von hhead]; simp [GRest.freis, e]))).mpr hK) (by fr_tac) hk.2 ?_
+        rw [freis_von hhead]; simp only [GRest.freis, e, List.mem_cons, true_or]))).mpr hK) (by fr_tac) hk.2 ?_
     intro K hK
     have hKL : K ≠ L := fun e => hk.1 (e ▸ hK)
     exact (List.mem_erase_of_ne hKL).mpr (hh K (List.mem_cons_of_mem _ hK))
@@ -370,7 +370,7 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
     refine haeltInvG_kopf h (fun K hK hnf => (List.mem_erase_of_ne (fun e => hnf (by
-        rw [freis_von hhead]; simp [GRest.freis, e]))).mpr hK) (by fr_tac) ⟨GRest.kette_top k hk.2.2, hk.2.2⟩ ?_
+        rw [freis_von hhead]; simp only [GRest.freis, e, List.mem_cons, true_or]))).mpr hK) (by fr_tac) ⟨GRest.kette_top k hk.2.2, hk.2.2⟩ ?_
     intro K hK
     have hKL : K ≠ L := fun e => hk.2.1 (e ▸ hK)
     exact (List.mem_erase_of_ne hKL).mpr
@@ -380,7 +380,7 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     have hk := kette_von hhead hk0
     have hh := heldIn_von hhead hh0
     refine haeltInvG_kopf h (fun K hK hnf => (List.mem_erase_of_ne (fun e => hnf (by
-        rw [freis_von hhead]; simp [GRest.freis, e]))).mpr hK) (by fr_tac) ⟨GRest.kette_top k hk.2.2, hk.2.2⟩ ?_
+        rw [freis_von hhead]; simp only [GRest.freis, e, List.mem_cons, true_or]))).mpr hK) (by fr_tac) ⟨GRest.kette_top k hk.2.2, hk.2.2⟩ ?_
     intro K hK
     have hKL : K ≠ L := fun e => hk.2.1 (e ▸ hK)
     exact (List.mem_erase_of_ne hKL).mpr

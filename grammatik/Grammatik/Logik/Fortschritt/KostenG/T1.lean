@@ -141,7 +141,7 @@ def entfZ {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 theorem entfZ_wahr {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {s : Stmt D V l Γ Λ Λ'} (h : GEntfaltbar s = true) : entfZ s = 2 := by
-  simp [entfZ, h]
+  simp only [entfZ, h, ↓reduceIte]
 
 /- **The cost of statements, blocks and end blocks** -- the number of G
     steps a thread may take to run them, parametrised by

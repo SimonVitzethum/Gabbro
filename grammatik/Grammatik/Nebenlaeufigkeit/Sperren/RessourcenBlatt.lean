@@ -66,7 +66,7 @@ theorem storeSlot_fremd_traeger (σ : World D)
     (k : Int) (f : D.Feld u) (v : Wert D (D.typ u f))
     (k' : Int) (f' : D.Feld t) :
     (σ.storeSlot u k f v).slots t k' f' = σ.slots t k' f' := by
-  simp [World.storeSlot, h]
+  simp only [World.storeSlot, h, ↓reduceDIte]
 
 /-- A store to the same carrier but a different slot leaves this slot
     untouched. Used: `hk` selects the branch, `hf` is the field equation
@@ -76,7 +76,7 @@ theorem storeSlot_fremd_slot (σ : World D) (t : D.Tab)
     (k' : Int) (f' : D.Feld t) (hk : k' ≠ k) (hf : f' = f) :
     (σ.storeSlot t k f v).slots t k' f' = σ.slots t k' f' := by
   subst hf
-  simp [World.storeSlot, hk]
+  simp only [World.storeSlot, ↓reduceDIte, hk, ↓reduceIte]
 
 /-- A store to the same slot but a different field leaves this field
     untouched. Used: `hk` forces the same-index branch, `hf` selects the
@@ -86,7 +86,7 @@ theorem storeSlot_fremd_feld (σ : World D) (t : D.Tab)
     (k' : Int) (f' : D.Feld t) (hk : k' = k) (hf : f' ≠ f) :
     (σ.storeSlot t k f v).slots t k' f' = σ.slots t k' f' := by
   subst hk
-  simp [World.storeSlot, hf]
+  simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte, hf]
 
 /-- A global store leaves every table slot untouched: the table/write
     distinction is the frame. Used: all premises feed the `rfl` unfolding. -/
@@ -295,7 +295,7 @@ theorem blatt_slots_t_gleich
           exact List.mem_append_left _ (List.mem_singleton.mpr rfl)
         have htr : (Ereignis.zugriff u true Λ ((M.weltVon f).lese Λ (i.orte ++ e.orte)).haelt).traeger =
             some (.inl u : D.Tab ⊕ D.Glob) := by
-          simp [Ereignis.traeger]
+          simp only [Ereignis.traeger]
         exact False.elim (hnoWrite _ hev htr Λ _ rfl)
       · intro k fld'
         have hslot : (((M.weltVon f).lese Λ (i.orte ++ e.orte)).schreibSlot u Λ
@@ -338,7 +338,7 @@ theorem blatt_slots_t_gleich
         have htr : (Ereignis.zugriff u true Λ
             ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)).haelt).traeger =
             some (.inl u : D.Tab ⊕ D.Glob) := by
-          simp [Ereignis.traeger]
+          simp only [Ereignis.traeger]
         exact False.elim (hnoWrite _ hev htr Λ _ rfl)
       · intro k fld'
         have hslot : (((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot u Λ
@@ -380,7 +380,7 @@ theorem blatt_slots_t_gleich
         have htr : (Ereignis.zugriff u true Λ
             ((M.weltVon f).lese Λ (r.orte ++ e.orte)).haelt).traeger =
             some (.inl u : D.Tab ⊕ D.Glob) := by
-          simp [Ereignis.traeger]
+          simp only [Ereignis.traeger]
         exact False.elim (hnoWrite _ hev htr Λ _ rfl)
       · intro k fld'
         have hslot : (((M.weltVon f).lese Λ (r.orte ++ e.orte)).schreibSlot u Λ
@@ -518,7 +518,7 @@ theorem blatt_slots_t_gleich
           have htr : (Ereignis.zugriff u true Λ
               ((M.weltVon f).lese Λ (.inl u :: i.orte)).haelt).traeger =
               some (.inl u : D.Tab ⊕ D.Glob) := by
-            simp [Ereignis.traeger]
+            simp only [Ereignis.traeger]
           exact False.elim (hnoWrite _ hev htr Λ _ rfl)
         · intro k fld'
           have hslot : (((M.weltVon f).lese Λ (.inl u :: i.orte)).schreibSlot u Λ
@@ -535,18 +535,18 @@ theorem blatt_slots_t_gleich
             rw [hslot]
             exact lese_slots_gleich _ _ _ _ _ _
           exact hgoal
-      · simp [Ausgang.welt] at hstep
-  | ite c tb eb => simp [Stmt.istBlatt] at hleaf
-  | onOption o pb ab => simp [Stmt.istBlatt] at hleaf
-  | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
-  | call fn args hp hr => simp [Stmt.istBlatt] at hleaf
-  | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
-  | locks L' hr body => simp [Stmt.istBlatt] at hleaf
-  | breaking ii body => simp [Stmt.istBlatt] at hleaf
-  | traverse u inv body => simp [Stmt.istBlatt] at hleaf
-  | retry n bis body ueber => simp [Stmt.istBlatt] at hleaf
-  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+      · simp only [Ausgang.welt, reduceCtorEq] at hstep
+  | ite c tb eb => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onOption o pb ab => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onTag v arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | call fn args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | locks L' hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | traverse u inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | retry n bis body ueber => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args hh hw hg _ _ => exact False.elim (hax)
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep

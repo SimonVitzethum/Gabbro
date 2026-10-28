@@ -125,7 +125,7 @@ theorem kein_statisches_limit (passes : Nat)
       ¬ (K : Int) < rD.count () := by
   intro K
   obtain ⟨σ', h, h7⟩ := zelle_geschrieben K passes R
-  exact ⟨oK K, σ', h, h7, by simp⟩
+  exact ⟨oK K, σ', h, h7, by simp only [Int.not_lt, Int.natCast_nonneg]⟩
 
 /-- **The written cell lies in the extent of the open region**, whatever its number. -/
 theorem zelle_im_bereich (K : Nat) : ImBereich rD () (K : Int) := ⟨by omega, .inl rfl⟩

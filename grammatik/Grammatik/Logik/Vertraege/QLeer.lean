@@ -73,7 +73,7 @@ def qD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => qSig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []

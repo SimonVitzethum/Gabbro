@@ -12,10 +12,10 @@ open Source Body
 
 variable {D : Deklaration}
 
-theorem lower_self (depth : Nat → Nat) (t a : Nat) : Pop.lower depth t a t = a := by simp [Pop.lower]
+theorem lower_self (depth : Nat → Nat) (t a : Nat) : Pop.lower depth t a t = a := by simp only [Pop.lower, ↓reduceIte]
 
 theorem lower_other (depth : Nat → Nat) {t u : Nat} (a : Nat) (h : u ≠ t) : Pop.lower depth t a u = depth u := by
-  simp [Pop.lower, h]
+  simp only [Pop.lower, h, ↓reduceIte]
 
 /-- **The call, on the whole machine.** -/
 theorem ownInv_push {P : Programm D} {A : FreiForm D} {I : Interfaces A} (hc : Checked P A I)
@@ -46,7 +46,7 @@ theorem ownInv_push {P : Programm D} {A : FreiForm D} {I : Interfaces A} (hc : C
     funext t
     simp only [depthOf, hM']
     by_cases htu : t = u
-    · subst htu; simp [rufUpdateG_self, lower_self]
+    · subst htu; simp only [rufUpdateG_self, List.length_cons, lower_self, Nat.add_left_cancel_iff]
     · rw [rufUpdateG_noteq _ _ _ htu, lower_other _ _ htu]; rfl
   have hd' := Push.disciplined hd rfl hok
   refine ⟨_, by rw [hmem]; exact handoff_agrees hok hag, by rw [hmem]; exact hfo, hdepth ▸ hd', fun t => ?_⟩

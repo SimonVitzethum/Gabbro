@@ -58,7 +58,7 @@ theorem ownInv_congr {M M' : RufMaschineG D} (h : OwnInv A I M) (hfa : M'.faeden
     (hn : ∀ j, M'.speicher.slots A.tab j A.nxt = M.speicher.slots A.tab j A.nxt) : OwnInv A I M' := by
   obtain ⟨s, hag, hfo, hd, hth⟩ := h
   have hm : MetaSame A (M.speicher.welt []) (M'.speicher.welt []) := MetaSame.of_cells A hk hz hn
-  have hdep : depthOf M' = depthOf M := by funext t; simp [depthOf, hfa]
+  have hdep : depthOf M' = depthOf M := by funext t; simp only [depthOf, hfa]
   refine ⟨s, State.agrees_meta hag hm, freiOk_meta hfo hm, hdep ▸ hd, fun t => ?_⟩
   rw [hfa]
   exact ⟨(hth t).1.meta hm, (hth t).2⟩

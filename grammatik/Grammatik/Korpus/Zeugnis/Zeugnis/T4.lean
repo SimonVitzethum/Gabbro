@@ -16,7 +16,7 @@ theorem certFl_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   | globFl g =>
     simp only [certFlTyp] at h
     cases ht : flVonTyp (D.gtyp g) with
-    | none => simp [ht] at h
+    | none => simp only [ht, reduceCtorEq] at h
     | some q =>
       obtain ⟨lo', hi'⟩ := q
       simp only [ht] at h
@@ -26,18 +26,18 @@ theorem certFl_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         obtain ⟨rfl, rfl⟩ := h
         have heq := flVonTyp_eq ht
         exact ⟨heq ▸ Expr.glob g hc, trivial⟩
-      · simp [hc] at h
+      · simp only [hc, ↓reduceIte, reduceCtorEq] at h
   | slotFl t f i =>
     simp only [certFlTyp] at h
     cases ha : certRange D Γ Λ i with
     | none =>
       cases ht : flVonTyp (D.typ t f) with
-      | none => simp [ha, ht] at h
-      | some _ => simp [ha, ht] at h
+      | none => simp only [ha, ht, reduceCtorEq] at h
+      | some _ => simp only [ha, ht, reduceCtorEq] at h
     | some p =>
       obtain ⟨l, h'⟩ := p
       cases ht : flVonTyp (D.typ t f) with
-      | none => simp [ha, ht] at h
+      | none => simp only [ha, ht, reduceCtorEq] at h
       | some q =>
         obtain ⟨lo', hi'⟩ := q
         simp only [ha, ht] at h
@@ -51,7 +51,7 @@ theorem certFl_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           subst hc1
           subst hc2
           exact ⟨heq ▸ Expr.slot t f ei hc3, trivial⟩
-        · simp [hc] at h
+        · simp only [hc, ↓reduceIte, reduceCtorEq] at h
 
 /-- The booked remainder of CUT-3, named as data: the quantifier body. The
     certificate carries the guard only (`darf` -- the bound variable is the
@@ -118,14 +118,14 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
       subst hrfl
       obtain ⟨ee, _⟩ := zeugnis_sound e 0 (m - 1) ho
       exact ⟨.bool, Expr.istSome (Expr.some ee), trivial⟩
-    | fllt _ _ => simp [certCut3IsOpt] at hi
-    | flle _ _ => simp [certCut3IsOpt] at hi
-    | istSome _ _ => simp [certCut3IsOpt] at hi
-    | case _ _ _ => simp [certCut3IsOpt] at hi
-    | why _ _ => simp [certCut3IsOpt] at hi
-    | forallSlots _ => simp [certCut3IsOpt] at hi
-    | existsSlots _ => simp [certCut3IsOpt] at hi
-    | reaches _ _ _ _ => simp [certCut3IsOpt] at hi
+    | fllt _ _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
+    | flle _ _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
+    | istSome _ _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
+    | case _ _ _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
+    | why _ _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
+    | forallSlots _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
+    | existsSlots _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
+    | reaches _ _ _ _ => simp only [certCut3IsOpt, Bool.false_eq_true] at hi
   | case cs i p =>
     simp only [certCut3Ok] at h
     obtain ⟨hi, hp⟩ := h
@@ -147,12 +147,12 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           exact ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.empty),
             trivial⟩
         | some _ =>
-          simp [certCut3PayloadOk] at hp
+          simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
       | some q =>
         obtain ⟨lo, hi2⟩ := q
         cases p with
         | none =>
-          simp [certCut3PayloadOk] at hp
+          simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
         | some e =>
           simp only [certCut3PayloadOk] at hp
           have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp

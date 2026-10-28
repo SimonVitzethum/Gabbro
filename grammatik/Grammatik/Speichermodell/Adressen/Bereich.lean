@@ -48,8 +48,8 @@ theorem storeSlot_aussen (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v 
   by_cases ht : t' = t
   · subst ht
     have hk' : k' ≠ k := fun e => h' (e ▸ hk)
-    simp [hk']
-  · simp [ht]
+    simp only [↓reduceDIte, hk', ↓reduceIte]
+  · simp only [ht, ↓reduceDIte]
 
 theorem schreibSlot_aussen (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
     (v : Wert D (D.typ t f)) (hk : ImBereich D t k) : AussenGleich σ.speicher (σ.schreibSlot t Λ k f v).speicher :=
@@ -147,11 +147,11 @@ theorem execStmt_blatt_aussen {O : Orakel D} (hI : ImBereichO O) (p : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, -⟩ := h
       exact AussenGleich.refl _
-  | ret e _ => simp [execStmt] at h
-  | retWhy r _ => simp [execStmt] at h
-  | leave _ => simp [execStmt] at h
-  | next _ => simp [execStmt] at h
-  | _ => simp [Stmt.istBlatt] at hleaf
+  | ret e _ => simp only [execStmt, reduceCtorEq] at h
+  | retWhy r _ => simp only [execStmt, reduceCtorEq] at h
+  | leave _ => simp only [execStmt, reduceCtorEq] at h
+  | next _ => simp only [execStmt, reduceCtorEq] at h
+  | _ => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
 
 /-! ## 4. Every step -/
 

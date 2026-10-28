@@ -16,8 +16,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 theorem schranke_zahlE (als : List (String × (Int × Int))) (n : Int) : uSchranke als (zahlE n) = some n := by
   unfold zahlE
   split
-  · rename_i h; simp [uSchranke, Int.toNat_of_nonneg h]
-  · rename_i h; simp [uSchranke, Int.toNat_of_nonneg (show 0 ≤ -n by omega)]
+  · rename_i h; simp only [uSchranke, Int.ofNat_eq_natCast, Int.toNat_of_nonneg h]
+  · rename_i h; simp only [uSchranke, Int.ofNat_eq_natCast, Int.toNat_of_nonneg (show 0 ≤ -n by omega), Option.map_some,
+  neg_neg]
 
 theorem typS_art {otab : Int → Option Nat} {t : Ty} {st : STyp} {a : UParamArt} (ht : typS otab t = .ok st) (ha : artErg t = some a)
     (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum) (whys : List UWhy)
@@ -27,12 +28,12 @@ theorem typS_art {otab : Int → Option Nat} {t : Ty} {st : STyp} {a : UParamArt
   | int lo hi =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     simp only [typS, Except.ok.injEq] at ht; subst ht
-    simp [uParam, uTyp, schranke_zahlE, uArtVon]
+    simp only [uParam, uTyp, schranke_zahlE, Bool.false_eq_true, ↓reduceIte, uArtVon]
   | bool =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     simp only [typS, Except.ok.injEq] at ht; subst ht
     rfl
-  | _ => simp [artErg] at ha
+  | _ => simp only [artErg, reduceCtorEq] at ha
 
 theorem typS_griff {otab : Int → Option Nat} {t : Ty} {st : STyp} (ht : typS otab t = .ok st) (ha : (artErg t).isSome)
     (devs : List String) (hd : ∀ d ∈ devs, d = "Dev") : uGriffTyp devs st = none := by
@@ -42,8 +43,8 @@ theorem typS_griff {otab : Int → Option Nat} {t : Ty} {st : STyp} (ht : typS o
     simp only [typS, Except.ok.injEq] at ht; subst ht
     have : (devs.any fun x => strEq x "bool") = false := by
       rw [List.any_eq_false]; intro d hm; rw [hd d hm]; decide
-    simp [uGriffTyp, this]
-  | _ => simp [artErg] at ha
+    simp only [uGriffTyp, this, Bool.false_eq_true, ↓reduceIte]
+  | _ => simp only [artErg, Option.isSome_none, Bool.false_eq_true] at ha
 
 /-- The printed parameters read back: names `v{np-1-j}`, the types, their kinds. -/
 theorem parListe_ok (otab : Int → Option Nat) (np : Nat) (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum)
@@ -59,30 +60,31 @@ theorem parListe_ok (otab : Int → Option Nat) (np : Nat) (als : List (String �
   | nil =>
     intro j ps ks hp hk
     simp only [parListe, Except.ok.injEq] at hp; subst hp
-    simp [uOhneGriffe, uSeq]
+    simp only [uOhneGriffe, List.filter_nil, List.map_nil, uSeq, Prod.mk.eta, List.length_nil, List.range'_zero,
+  List.zip_nil_left, List.zip_nil_right, and_self]
   | cons t ts ih =>
     intro j ps ks hp hk
     simp only [parListe] at hp
     cases ht : typS otab t with
-    | error _ => simp [ht, bind, Except.bind] at hp
+    | error _ => simp only [bind, Except.bind, ht, reduceCtorEq] at hp
     | ok st =>
     cases hr : parListe otab np (j + 1) ts with
-    | error _ => simp [ht, hr, bind, Except.bind] at hp
+    | error _ => simp only [bind, Except.bind, ht, hr, reduceCtorEq] at hp
     | ok pr =>
     simp only [ht, hr, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hp
     subst hp
     simp only [List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at hk
     cases ha : artErg t with
-    | none => simp [ha] at hk
+    | none => simp only [ha, Option.bind_none, reduceCtorEq] at hk
     | some a =>
     cases hks : ts.mapM artErg with
-    | none => simp [ha, hks] at hk
+    | none => simp only [ha, hks, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hk
     | some kr =>
     simp only [ha, hks, Option.bind_some, Option.some.injEq] at hk
     subst hk
     obtain ⟨h1, h2⟩ := ih (j + 1) pr kr hr hks
     refine ⟨?_, ?_⟩
-    · simp only [uOhneGriffe, List.filter_cons, typS_griff ht (by simp [ha]) devs hd, Option.isNone_none, ite_true]
+    · simp only [uOhneGriffe, List.filter_cons, typS_griff ht (by simp only [ha, Option.isSome_some]) devs hd, Option.isNone_none, ite_true]
       exact congrArg _ h1
     · simp only [List.map_cons, uSeq, typS_art ht ha als tabs sums whys zeiger zb, h2, List.length_cons, List.range'_succ,
         List.zip_cons_cons]
@@ -97,7 +99,7 @@ theorem parNr_ok (np : Nat) : ∀ (m k : Nat), k + m ≤ np → ∀ d, k ≤ d �
     intro k hk d h1 h2
     simp only [List.range'_succ, List.map_cons, uParamNrAux]
     by_cases hd : d = k
-    · subst hd; simp
+    · subst hd; simp only [strEq_nVar, BEq.rfl, ↓reduceIte]
     · have : strEq (nVar (np - 1 - k)) (nVar (np - 1 - d)) = false := by
         simp only [strEq_nVar, beq_eq_false_iff_ne]; omega
       simp only [this, Bool.false_eq_true, ite_false]
@@ -106,7 +108,7 @@ theorem parNr_ok (np : Nat) : ∀ (m k : Nat), k + m ≤ np → ∀ d, k ≤ d �
 /-! ### Held locks -/
 
 theorem eindeutigAux_sub : ∀ (xs seen : List String) (y : String), y ∈ uEindeutigAux xs seen → y ∈ xs
-  | [], _, y, h => by simp [uEindeutigAux] at h
+  | [], _, y, h => by simp only [uEindeutigAux, List.not_mem_nil] at h
   | x :: xs, seen, y, h => by
     simp only [uEindeutigAux] at h
     split at h
@@ -118,7 +120,7 @@ theorem eindeutigAux_sub : ∀ (xs seen : List String) (y : String), y ∈ uEind
 
 theorem eindeutigAux_voll : ∀ (xs seen : List String) (y : String), y ∈ xs →
     (seen.any (strEq · y)) = true ∨ ((uEindeutigAux xs seen).any (strEq · y)) = true
-  | [], _, y, h => by simp at h
+  | [], _, y, h => by simp only [List.not_mem_nil] at h
   | x :: xs, seen, y, h => by
     simp only [uEindeutigAux]
     simp only [List.mem_cons] at h
@@ -128,7 +130,7 @@ theorem eindeutigAux_voll : ∀ (xs seen : List String) (y : String), y ∈ xs �
       · exact Or.inl hs
       · exact eindeutigAux_voll xs seen y h
     · rcases h with rfl | h
-      · right; simp [strEq_eq]
+      · right; simp only [strEq_eq, List.any_cons, decide_true, Bool.true_or]
       · rcases eindeutigAux_voll xs (x :: seen) y h with h' | h'
         · simp only [List.any_cons, Bool.or_eq_true] at h'
           rcases h' with h' | h'
@@ -141,7 +143,7 @@ theorem eindeutig_sub {xs : List String} {y : String} (h : y ∈ uEindeutig xs) 
 
 theorem eindeutig_voll {xs : List String} {y : String} (h : y ∈ xs) : ((uEindeutig xs).any (strEq · y)) = true := by
   rcases eindeutigAux_voll xs [] y h with h' | h'
-  · simp at h'
+  · simp only [List.any_nil, Bool.false_eq_true] at h'
   · exact h'
 
 /-! ### Clauses -/
@@ -190,7 +192,7 @@ theorem stelle_fremd : ∀ (ns : List String) (p : String), (∀ n ∈ ns, strEq
   | [], p, _ => ⟨_, rfl⟩
   | q :: ns, p, h => by
     obtain ⟨e, he⟩ := stelle_fremd ns p (fun n hm => h n (List.mem_cons_of_mem _ hm))
-    exact ⟨e, by simp [uStelle, h q List.mem_cons_self, he]⟩
+    exact ⟨e, by simp only [uStelle, h q List.mem_cons_self, Bool.false_eq_true, ↓reduceIte, he]⟩
 
 /-! ### Effects -/
 
@@ -217,7 +219,8 @@ theorem eff_tab {kopf : UFnKopf} {tabs : List UTab} {locks : List ULock} {globs 
       (uEffekteAux kopf tabs locks globs rest).map fun r => { r with puts := nTab i :: r.puts } := by
   have hg : uIstGriffOrt kopf (.field (.variable (nTab i)) "slots") = false := by
     simp only [uIstGriffOrt]
-    exact griffOrt_nein h _ (by simp [nTab_toList])
+    exact griffOrt_nein h _ (by simp only [nTab_toList, ↓Char.isValue, Nat.toString_eq_repr, Nat.toList_repr, List.head?_cons, ne_eq,
+  Option.some.injEq, Char.reduceEq, not_false_eq_true])
   obtain ⟨e, he⟩ := stelle_fremd kopf.names (nTab i) (fun n hm => strEq_rumpf_nTab (h.namen n hm) i)
   have hs : strEq "slots" "slots" = true := by decide
   simp only [uEffekteAux, hg, Bool.false_eq_true, ite_false, uSchreibtOrt, hs, Bool.not_true, he, hf, hn]
@@ -228,15 +231,16 @@ theorem eff_glob {kopf : UFnKopf} {tabs : List UTab} {locks : List ULock} {globs
     (rest : List SEffekt) :
     uEffekteAux kopf tabs locks globs (.writes (.variable (nGlob i)) :: rest) =
       (uEffekteAux kopf tabs locks globs rest).map fun r => { r with gputs := nGlob i :: r.gputs } := by
-  have hgr : uIstGriffOrt kopf (.variable (nGlob i)) = false := griffOrt_nein h _ (by simp [nGlob_toList])
+  have hgr : uIstGriffOrt kopf (.variable (nGlob i)) = false := griffOrt_nein h _ (by simp only [nGlob_toList, ↓Char.isValue, Nat.toString_eq_repr, Nat.toList_repr, List.head?_cons, ne_eq,
+  Option.some.injEq, Char.reduceEq, not_false_eq_true])
   have ha : (tabs.any fun x => x.arena && strEq x.name (nGlob i)) = false := by
-    rw [List.any_eq_false]; intro tb hm; simp [(h.tabsOk tb hm).1]
+    rw [List.any_eq_false]; intro tb hm; simp only [(h.tabsOk tb hm).1, Bool.false_and, Bool.false_eq_true, not_false_eq_true]
   have hn : (kopf.names.any (strEq · (nGlob i))) = false := by
-    rw [List.any_eq_false]; intro n hm; simp [strEq_rumpf_nGlob (h.namen n hm) i]
+    rw [List.any_eq_false]; intro n hm; simp only [strEq_rumpf_nGlob (h.namen n hm) i, Bool.false_eq_true, not_false_eq_true]
   have ht : (tabs.any fun x => strEq x.name (nGlob i)) = false := by
     rw [List.any_eq_false]; intro tb hm
     obtain ⟨j, hj⟩ := (h.tabsOk tb hm).2
-    rw [hj]; simp [strEq_kopf (nTab_toList j) (nGlob_toList i) (by decide)]
+    rw [hj]; simp only [strEq_kopf (nTab_toList j) (nGlob_toList i) (by decide), Bool.false_eq_true, not_false_eq_true]
   simp only [uEffekteAux, hgr, Bool.false_eq_true, ite_false, ha, uIstGlobName, hn, ht, hg, Bool.not_false,
     Bool.and_self, ite_true]
   cases uEffekteAux kopf tabs locks globs rest <;> rfl
@@ -340,41 +344,41 @@ theorem wirkungen_append (a b : List SKlausel) :
     uEffekte.uWirkungen (a ++ b) = uEffekte.uWirkungen a ++ uEffekte.uWirkungen b := by
   induction a with
   | nil => rfl
-  | cons k a ih => cases k <;> simp [uEffekte.uWirkungen, ih]
+  | cons k a ih => cases k <;> simp only [List.cons_append, uEffekte.uWirkungen, ih, List.append_assoc]
 
 theorem griffe_append (devs : List String) : ∀ (ps q : List (String × STyp)) (k : Nat),
     (∀ p ∈ ps, uGriffTyp devs p.2 = none) → uGriffe devs k (ps ++ q) = uGriffe devs (k + ps.length) q
-  | [], q, k, _ => by simp
+  | [], q, k, _ => by simp only [List.nil_append, List.length_nil, add_zero]
   | p :: ps, q, k, h => by
     simp only [List.cons_append, uGriffe, h p List.mem_cons_self]
     rw [griffe_append devs ps q (k + 1) (fun p' hm => h p' (List.mem_cons_of_mem _ hm))]
-    simp [Nat.add_assoc, Nat.add_comm 1]
+    simp only [Nat.add_assoc, Nat.add_comm 1, List.length_cons]
 
 theorem griffe_d (devs : List String) (k : Nat) (b : Bool) :
     ∀ g ∈ uGriffe devs k (if b then [("d", STyp.atom "Dev")] else []), g.2.1 = "d" ∧ k ≤ g.1 := by
   intro g hg
   cases b with
-  | false => simp [uGriffe] at hg
+  | false => simp only [Bool.false_eq_true, ↓reduceIte, uGriffe, List.not_mem_nil] at hg
   | true =>
     simp only [ite_true, uGriffe] at hg
     split at hg
-    · simp only [List.mem_cons, List.not_mem_nil, or_false] at hg; subst hg; simp
-    · simp at hg
+    · simp only [List.mem_cons, List.not_mem_nil, or_false] at hg; subst hg; simp only [Std.le_refl, and_self]
+    · simp only [List.not_mem_nil] at hg
 
 theorem mapM_length {α β : Type} (g : α → Option β) : ∀ (xs : List α) (ys : List β), xs.mapM g = some ys →
     ys.length = xs.length
-  | [], ys, h => by simp at h; subst h; rfl
+  | [], ys, h => by simp only [List.mapM_nil, Option.pure_def, Option.some.injEq, List.nil_eq] at h; subst h; rfl
   | x :: xs, ys, h => by
     simp only [List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at h
     cases hx : g x with
-    | none => simp [hx] at h
+    | none => simp only [hx, Option.bind_none, reduceCtorEq] at h
     | some y =>
     cases hr : xs.mapM g with
-    | none => simp [hx, hr] at h
+    | none => simp only [hx, hr, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at h
     | some r =>
     simp only [hx, hr, Option.bind_some, Option.some.injEq] at h
     subst h
-    simp [mapM_length g xs r hr]
+    simp only [List.length_cons, mapM_length g xs r hr, Nat.add_left_cancel_iff]
 
 theorem tripel_proj {α β γ : Type} (as : List α) (bs : List β) (cs : List γ) (h1 : as.length = bs.length)
     (h2 : cs.length = bs.length) :
@@ -384,10 +388,12 @@ theorem tripel_proj {α β γ : Type} (as : List α) (bs : List β) (cs : List �
   | nil => cases bs <;> simp_all
   | cons a as ih =>
     cases bs with
-    | nil => simp at h1
+    | nil => simp only [List.length_cons, List.length_nil, Nat.add_eq_zero_iff, List.length_eq_zero_iff, one_ne_zero,
+  and_false] at h1
     | cons b bs =>
       cases cs with
-      | nil => simp at h2
+      | nil => simp only [List.length_nil, List.length_cons, Nat.right_eq_add, Nat.add_eq_zero_iff, List.length_eq_zero_iff,
+  one_ne_zero, and_false] at h2
       | cons c cs =>
         simp only [List.length_cons, Nat.add_right_cancel_iff] at h1 h2
         obtain ⟨i1, i2, i3⟩ := ih bs cs h1 h2
@@ -413,16 +419,18 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
   obtain ⟨hfilt, hseq⟩ := parListe_ok (optTab z) np als tabs sums whys zeiger zb devs hV.devsOk S.params 0 ps ks hps hks
   have hlen := mapM_length artErg S.params ks hks
   obtain ⟨p1, p2, p3⟩ := tripel_proj ((List.range' 0 S.params.length).map fun i => nVar (np - 1 - i)) S.params ks
-    (by simp) hlen
+    (by simp only [List.length_map, List.length_range']) hlen
   -- the device handle is dropped
   have hog : uOhneGriffe devs (mitGriffPs ps mitGriff) = ps := by
     unfold mitGriffPs
     unfold uOhneGriffe at hfilt ⊢
     rw [List.filter_append, hfilt]
     cases mitGriff with
-    | false => simp
+    | false => simp only [Bool.false_eq_true, ↓reduceIte, List.filter_nil, List.append_nil]
     | true =>
-      simp [uGriffTyp]
+      simp only [uGriffTyp, List.any_eq_true, ↓reduceIte, List.append_right_eq_self, List.filter_eq_nil_iff,
+  List.mem_cons, List.not_mem_nil, or_false, Option.isNone_iff_eq_none, forall_eq, ite_eq_right_iff, reduceCtorEq,
+  imp_false, not_exists, not_and, Bool.not_eq_true, not_forall, not_imp, Bool.not_eq_false]
       exact ⟨"Dev", hV.griff rfl, by decide⟩
   -- the clauses
   have hall : ∀ k ∈ klauselnVon z P f req ens, KlauselOk k := by
@@ -452,7 +460,7 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     · simp only [he, Bool.false_eq_true, ite_false, List.cons_append, List.append_assoc, uGehalten]
       rw [gehaltenAux_ok locks _ hV.held]
       simp only [List.append_assoc] at hrest
-      simp [hrest]
+      simp only [List.nil_append, hrest, List.append_nil]
   -- the reason channel
   have hkn : (match (if S.gruende = 0 then none else some (nGrund S.gruende)) with
       | .none => .ok none
@@ -465,12 +473,12 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
           | .none => .error ("reason unknown: " ++ r) : Except String (Option (Nat × Nat))) =
       .ok (kanalVon gNr S.gruende) := by
     by_cases hg : S.gruende = 0
-    · simp [hg, kanalVon]
+    · simp only [hg, ↓reduceIte, kanalVon]
     · obtain ⟨w, hw1, hw2, hw3⟩ := hV.why hg
       rw [← hS] at hw1 hw2 hw3
       have hne : w.cases.isEmpty = false := by
         cases hc : w.cases with
-        | nil => rw [hc] at hw3; simp at hw3; exact absurd hw3.symm hg
+        | nil => rw [hc] at hw3; simp only [List.length_nil] at hw3; exact absurd hw3.symm hg
         | cons _ _ => rfl
       simp only [hg, ite_false, hw1, hw2, hne, Bool.false_eq_true, kanalVon, hw3]
   -- the effects
@@ -497,8 +505,8 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
       wirkungen_ohne ens (fun k hk => (hV.klauseln k (List.mem_append_right _ hk)).2.2)]
     unfold effKlausel
     split
-    · rename_i he; simp [uEffekte.uWirkungen, List.isEmpty_iff.1 he]
-    · simp [uEffekte.uWirkungen]
+    · rename_i he; simp only [List.append_nil, uEffekte.uWirkungen, List.isEmpty_iff.1 he]
+    · simp only [List.append_nil, uEffekte.uWirkungen, List.nil_append]
   have heff : ∀ (kopf : UFnKopf), EffOk kopf tabs globs →
       uEffekte kopf tabs locks globs (klauselnVon z P f req ens) =
         .ok { locks := lNamen z P f, puts := (tNamen z f).map nTab, gputs := (gNamen z f).map nGlob } := by
@@ -534,18 +542,18 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     · rename_i hn
       simp only [pure, Except.pure, Except.ok.injEq] at hres; subst hres
       simp only [kopfVon, ← hS, hn, ergBereich, p1, p2, p3]
-      simp [hnp]
+      simp only [hnp, reduceCtorEq, decide_false]
     · rename_i t ht
       cases t with
       | bool =>
         simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
         simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3]
-        simp [hnp]
+        simp only [hnp, decide_true]
       | int lo hi =>
         simp only [typS, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hres; subst hres
         simp only [kopfVon, ← hS, ht, ergBereich, p1, p2, p3, uErgBereich, schranke_zahlE]
-        simp [hnp]
-      | _ => have := hV.erg _ (by rw [← hS]; exact ht); simp [artErg] at this
+        simp only [hnp, Bool.false_eq_true, ↓reduceIte, Option.some.injEq, reduceCtorEq, decide_false]
+      | _ => have := hV.erg _ (by rw [← hS]; exact ht); simp only [artErg, Option.isSome_none, Bool.false_eq_true] at this
 
 end Kopf
 

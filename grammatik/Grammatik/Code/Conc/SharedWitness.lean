@@ -128,7 +128,8 @@ theorem cMem_wf : WfL cLay mem0 := by
         · subst h1; decide
         · by_cases h0 : b = 0
           · subst h0; decide
-          · simp [mem0, Mem.alloc, Mem.setBlk, h3, h2, h1, h0] at hb
+          · simp only [mem0, Mem.alloc, Mem.setBlk, Nat.lt_one_iff, and_true, Nat.zero_add, Nat.reduceAdd, h3, ↓reduceIte,
+  h2, h1, h0, Option.isSome_none, Bool.false_eq_true] at hb
   · cases t; decide
   · cases g; decide
   · cases L; exact ⟨by decide, by decide⟩

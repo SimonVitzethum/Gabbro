@@ -49,7 +49,7 @@ theorem allocate_slot {s s' : State} {i : Int} {h : Handle} (hs : s.allocate fr 
 
 theorem unten_head {Γ : Ctx} {τ : Ty} (v : Wert D τ) (ρ : Env D Γ) :
     (Env.cons v ρ).unten Γ.length = intVon τ v := by
-  simp [Env.unten]
+  simp only [Env.unten, ↓reduceIte]
 
 theorem intVon_int {lo hi : Int} (z : Wert D (.int lo hi)) : intVon (.int lo hi) z = some z.n := rfl
 
@@ -98,7 +98,7 @@ theorem allocCounter_post {k c c1 : Context} {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
       rw [← hσ2]
       exact ((MetaSame.reads A σ Λ _).trans (MetaSame.reads A _ Λ _)).trans (MetaSame.writeSlot A _ t Λ _ f _ hn)
     have hsucc := exprSucc_eval e2 he2 (σ2.lese Λ e2.orte) (σ2.lese Λ e2.orte) (.cons kv ρ) kv.n
-      (by simp [Env.unten, intVon])
+      (by simp only [Env.unten, ↓reduceIte, intVon])
     rw [intVon_umTyp A.hz, Option.some.injEq] at hsucc
     have hstand : A.stand ((σ2.lese Λ e2.orte).schreibGlob A.zaehl Λ
         (eval (σ2.lese Λ e2.orte) e2 (σ2.lese Λ e2.orte) (.cons kv ρ))) = A.stand σ2 + 1 := by
@@ -155,7 +155,7 @@ theorem allocList_post {k c c1 : Context} {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       have := hrange.2; rw [hv] at this; omega
     -- the head takes the link of the binder
     have hlink := exprSlotRead_eval e2 he2 ((σ.lese Λ e.orte).lese Λ e2.orte) ((σ.lese Λ e.orte).lese Λ e2.orte)
-      (.cons kv ρ) kv.n (by simp [Env.unten, intVon])
+      (.cons kv ρ) kv.n (by simp only [Env.unten, ↓reduceIte, intVon])
     rw [intVon_umTyp A.hkopf, intVon_umTyp A.hnxt, Option.some.injEq] at hlink
     generalize hσ2 : ((σ.lese Λ e.orte).lese Λ e2.orte).schreibGlob A.kopf Λ
       (eval ((σ.lese Λ e.orte).lese Λ e2.orte) e2 ((σ.lese Λ e.orte).lese Λ e2.orte) (.cons kv ρ)) = σ2
@@ -239,10 +239,10 @@ theorem release_post {k c c2 c1 : Context} {l : Bool} {Γ : Ctx} {Λ Λ' : List 
   have hn3 : ∀ j, A.naechst σ3 j = A.naechst σ2 j := by intro j; rw [← hσ3, FreiForm.naechst_schreibGlob]; rfl
   have hs3 : A.stand σ3 = A.stand σ := by rw [← hσ3, FreiForm.stand_schreibGlob_kopf, ← hs2]; rfl
   have hlive : A.Lebt σ hh.slot := State.owned_live ha hown
-  have hfree := A.lebt_frei hh.slot hlive hfo hk3 (by rw [hn3, hn2]; simp)
-    (fun j hj => by rw [hn3, hn2]; simp [hj]) hs3
+  have hfree := A.lebt_frei hh.slot hlive hfo hk3 (by rw [hn3, hn2]; simp only [↓reduceIte])
+    (fun j hj => by rw [hn3, hn2]; simp only [hj, ↓reduceIte]) hs3
   have hown' : s.owns fr hh := hown
-  have hrel : s.release fr hh = some (s.put hh.slot none) := by simp [State.release, hown']
+  have hrel : s.release fr hh = some (s.put hh.slot none) := by simp only [State.release, hown', ↓reduceIte]
   subst hctx
   refine ⟨gh, s.put hh.slot none, ⟨?_, hfree.1, Context.kill_bounded hb o, Context.kill_references hrefs o,
       rights_after_consumption hrights howned hgh (fun j hj => State.release_other hrel j hj)⟩,
@@ -250,8 +250,8 @@ theorem release_post {k c c2 c1 : Context} {l : Bool} {Γ : Ctx} {Λ Λ' : List 
     State.progress_trans hp (State.release_progress hrel)⟩
   apply State.release_agrees ha fr hh hrel
   intro j
-  exact A.release_live_iff hh.slot hlive hfo hk3 (by rw [hn3, hn2]; simp)
-    (fun j' hj => by rw [hn3, hn2]; simp [hj]) hs3 j
+  exact A.release_live_iff hh.slot hlive hfo hk3 (by rw [hn3, hn2]; simp only [↓reduceIte])
+    (fun j' hj => by rw [hn3, hn2]; simp only [hj, ↓reduceIte]) hs3 j
 
 end Forms
 

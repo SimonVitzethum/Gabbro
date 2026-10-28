@@ -297,8 +297,8 @@ theorem hwitschritt_kleber_voll
     exact absurd (h1.trans h2.symm) hne
   -- Source §10 Ziel.lean:1401-1404: extended chain length from the run extension.
   have hKette' : M'.welten.length = (J.schrittFaden ++ [f]).length + 1 := by
-    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp
-    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp
+    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
+    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
     omega
   -- Source §10 Ziel.lean:1405-1462: the extended step proof -- old steps replay
   -- the old chain, the new step runs the frame; single new thread only.
@@ -359,7 +359,7 @@ theorem hwitschritt_kleber_voll
             List.length_singleton]
           omega
         rw [eNone] at hk
-        simp at hk
+        simp only [reduceCtorEq] at hk
   -- Source §10 Ziel.lean:1466-1471: the replayed literal -- member and code
   -- kept by construction. The 2 identities below close by `rfl` AT THIS
   -- LITERAL (not from an opaque witness): this is the step the reuse leg
@@ -386,7 +386,7 @@ theorem hwitschritt_kleber_voll
         · exact h
         · have hle : M.lauf.length ≤ j := by omega
           rw [List.getElem?_eq_none hle] at hw
-          simp at hw
+          simp only [reduceCtorEq] at hw
       have hw' : M'.lauf[j]? = some (Schritt.mk g0 (.zugriff t₀ w Λe he)) := by
         rw [hM'l, List.getElem?_append_left hjlt]
         exact hw
@@ -411,7 +411,7 @@ theorem hwitschritt_kleber_voll
             List.length_singleton]
           omega
         rw [eNone] at hk0'
-        simp at hk0'
+        simp only [reduceCtorEq] at hk0'
   -- Source §10 Ziel.lean:1514-1515: the guard rides along from the package --
   -- definitionally over the replayed literal (`J'.faeden`/`J'.code` are `J`'s).
   · intro g hg hWr

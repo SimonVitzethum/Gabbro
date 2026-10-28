@@ -55,7 +55,7 @@ theorem spurInv_rw_schritt (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
       · rw [ht, ohneFremde_self]
         exact hI f
       · have e : (ohneFremde M f).faeden t = { M.faeden t with spur := [] } := by
-          simp [ohneFremde, ht]
+          simp only [ohneFremde, ht, ↓reduceIte]
         rw [e]
         exact ⟨konsistent_nil, fun ev hev => absurd hev List.not_mem_nil⟩
     have h2 := spurInv_schritt hO hg hI'

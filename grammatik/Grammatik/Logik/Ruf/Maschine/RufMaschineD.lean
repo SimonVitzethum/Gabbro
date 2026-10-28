@@ -110,12 +110,12 @@ def rufUpdateD (m : Faden → RufFadenD D) (f : Faden) (z : RufFadenD D) :
 
 theorem rufUpdateD_self (m : Faden → RufFadenD D) (f : Faden) (z : RufFadenD D) :
     rufUpdateD m f z f = z := by
-  simp [rufUpdateD]
+  simp only [rufUpdateD, ↓reduceIte]
 
 theorem rufUpdateD_noteq (m : Faden → RufFadenD D) (f g : Faden) (h : g ≠ f)
     (z : RufFadenD D) :
     rufUpdateD m f z g = m g := by
-  simp [rufUpdateD, h]
+  simp only [rufUpdateD, h, ↓reduceIte]
 
 /-- **One step of the call machine.** `blatt`: the running frame's head
     statement executes through `execStmt` with `keinRuf` (leaves never
@@ -301,7 +301,7 @@ theorem rufLogPasstD_mem_eintritt (stapel : List (RufRahmenD D))
     RufEreignisD.eintritt rahmen.f rahmen.rho rahmen.s0 ∈ log := by
   induction h with
   | leer =>
-      simp at hmem
+      simp only [List.not_mem_nil] at hmem
   | eintritt s l f rho s0 htail rest ih =>
       rw [List.mem_cons] at hmem
       rcases hmem with hmem | hmem
@@ -336,12 +336,12 @@ theorem rufLogPasstD_gedeckt (stapel : List (RufRahmenD D))
   induction h with
   | leer =>
       intro f rho v s0 s1 hm
-      simp at hm
+      simp only [List.not_mem_nil] at hm
   | eintritt stapel log f rho s0 htail _ ih =>
       intro g rho' v s0' s1 hm
       rw [List.mem_cons] at hm
       rcases hm with hm | hm
-      · simp at hm
+      · simp only [reduceCtorEq] at hm
       · have hmem := ih g rho' v s0' s1 hm
         rw [List.mem_cons]
         exact Or.inr hmem
@@ -425,7 +425,7 @@ def rufD : Deklaration where
   Fn := Bool
   sig := fun | true => 0 | false => 1
   sigNr := fun _ => rufSigD
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -441,7 +441,7 @@ def rufD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
@@ -750,15 +750,15 @@ theorem rufM2vertragD : VertragAmOrtMaschineD rufPD rufM2D := by
           rw [rufUpdateD_noteq _ _ _ hne]
           rfl
         rw [hnil] at hmem
-        simp at hmem
+        simp only [List.not_mem_nil] at hmem
   rw [List.mem_cons, List.mem_singleton] at hlog
   rcases hlog with hlog | hlog
   · cases hlog
     refine ⟨?_, ?_⟩
     · intro g rho s0 hev
-      simp at hev
+      simp only [reduceCtorEq] at hev
     · intro g rho v s0 s1 hev
-      simp at hev
+      simp only [RufEreignisD.rueck.injEq] at hev
       obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := hev
       show EnsAmRueck rufPD rufIncD (rufCallerMD.weltVon 0) rufWeltD rufRhoD rufVD
       have : rufCallerMD.weltVon 0 = rufWeltD := rfl
@@ -767,14 +767,14 @@ theorem rufM2vertragD : VertragAmOrtMaschineD rufPD rufM2D := by
   · cases hlog
     refine ⟨?_, ?_⟩
     · intro g rho s0 hev
-      simp at hev
+      simp only [RufEreignisD.eintritt.injEq] at hev
       obtain ⟨rfl, rfl, rfl⟩ := hev
       show ReqAmEintritt rufPD rufIncD (rufCallerMD.weltVon 0) rufRhoD
       have : rufCallerMD.weltVon 0 = rufWeltD := rfl
       rw [this]
       exact ruf_req_am_ortD
     · intro g rho v s0 s1 hev
-      simp at hev
+      simp only [reduceCtorEq] at hev
 
 
 

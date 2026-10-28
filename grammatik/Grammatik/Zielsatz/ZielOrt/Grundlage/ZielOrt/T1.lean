@@ -238,10 +238,10 @@ end
 theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
       blockOrteP P e.alsBlock.2 = endblockOrteP P e
-  | _, _, .ret _ _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
-  | _, _, .retWhy _ _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
-  | _, _, .leave _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
-  | _, _, .next _ => by simp [Endblock.alsBlock, blockOrteP, stmtOrteP, endblockOrteP]
+  | _, _, .ret _ _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
+  | _, _, .retWhy _ _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
+  | _, _, .leave _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
+  | _, _, .next _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
   | _, _, .cons s rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bind e rest => by
@@ -292,11 +292,11 @@ def waechter : List (D.Lock ⊕ (D.Marke × Nat)) → List D.Lock
 theorem waechter_mem {ws : List (D.Lock ⊕ (D.Marke × Nat))} {L : D.Lock} :
     L ∈ waechter ws ↔ Sum.inl L ∈ ws := by
   induction ws with
-  | nil => simp [waechter]
+  | nil => simp only [waechter, List.not_mem_nil]
   | cons w rest ih =>
       cases w with
-      | inl L' => simp [waechter, ih]
-      | inr _ => simp [waechter, ih]
+      | inl L' => simp only [waechter, List.mem_cons, ih, Sum.inl.injEq]
+      | inr _ => simp only [waechter, ih, List.mem_cons, reduceCtorEq, false_or]
 
 /-- The guard locks of a carrier `o`. -/
 def waechterVon : D.Tab ⊕ D.Glob → List D.Lock

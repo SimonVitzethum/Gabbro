@@ -83,15 +83,15 @@ theorem markSep_aus_B (code : D.Marke → Nat) (prog : PCProg D)
   · have e := hcov g hg
     unfold PCProg.marks at hcg
     rw [e] at hcg
-    simp at hcg
+    simp only [List.flatMap_nil, List.map_nil, List.not_mem_nil] at hcg
   · have e := hcov f hf
     unfold PCProg.marks at hcf
     rw [e] at hcf
-    simp at hcf
+    simp only [List.flatMap_nil, List.map_nil, List.not_mem_nil] at hcf
   · have e := hcov f hf
     unfold PCProg.marks at hcf
     rw [e] at hcf
-    simp at hcf
+    simp only [List.flatMap_nil, List.map_nil, List.not_mem_nil] at hcf
 
 /-- Decided carrier separation is sound: a carrier reached from two
     threads' texts is declared shared (unlisted threads reach nothing). -/
@@ -117,7 +117,7 @@ theorem unsharedSep_aus_B (prog : PCProg D) (fs : List Faden)
     have hmem := (List.all_eq_true.mp hcond) o hof
     have hany : ((prog.carriers g).any fun o' => decide (o = o')) = true := by
       rw [List.any_eq_true]
-      exact ⟨o, hog, by simp⟩
+      exact ⟨o, hog, by simp only [decide_true]⟩
     rw [hany] at hmem
     simp only [Bool.not_true, Bool.false_or] at hmem
     cases o with
@@ -134,15 +134,15 @@ theorem unsharedSep_aus_B (prog : PCProg D) (fs : List Faden)
   · have e := hcov g hg
     unfold PCProg.carriers at hog
     rw [e] at hog
-    simp at hog
+    simp only [List.flatMap_nil, List.not_mem_nil] at hog
   · have e := hcov f hf
     unfold PCProg.carriers at hof
     rw [e] at hof
-    simp at hof
+    simp only [List.flatMap_nil, List.not_mem_nil] at hof
   · have e := hcov f hf
     unfold PCProg.carriers at hof
     rw [e] at hof
-    simp at hof
+    simp only [List.flatMap_nil, List.not_mem_nil] at hof
 
 /-- The decided own-state fact is sound: no thread other than `g` names
     the table carrier in any atom (unlisted threads name nothing). This
@@ -166,12 +166,12 @@ theorem nurG_aus_B (t : D.Tab) (g : Faden) (prog : PCProg D)
     intro hcon
     have hany : ((PCAtom.carriers a).any fun o => decide (o = Sum.inl t)) = true := by
       rw [List.any_eq_true]
-      exact ⟨Sum.inl t, hcon, by simp⟩
+      exact ⟨Sum.inl t, hcon, by simp only [decide_true]⟩
     rw [hany] at hmem
-    simp at hmem
+    simp only [Bool.not_true, Bool.false_eq_true] at hmem
   · have e := hcov h hh
     rw [e] at ha
-    simp at ha
+    simp only [List.not_mem_nil] at ha
 
 /-! ## 3. Instances over the extracted thread program.
 
@@ -292,8 +292,8 @@ theorem refB_prog_abdeckung : ∀ h, h ∉ [0, 1] → refB_prog h = [] := by
   have h1 : h ≠ 1 := by
     intro e
     subst e
-    simp at hh
-  simp [refB_prog, h1]
+    simp only [List.mem_cons, Nat.succ_ne_self, List.not_mem_nil, or_false, or_true, not_true_eq_false] at hh
+  simp only [refB_prog]
 
 /-- Joint witness for `markSep_aus_B`: decided check, coverage, a table
     the function writes, and a reached run that changes memory. -/

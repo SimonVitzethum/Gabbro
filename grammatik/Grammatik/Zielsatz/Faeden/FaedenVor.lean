@@ -111,7 +111,7 @@ theorem pruefer_aus_vor_gleich (C : PrueferVor) {D : Deklaration} [DecidableEq D
     (pruefer_aus_vor C).akzeptiert E fs ls cs = C.akzeptiert E fs ls cs := by
   show (C.akzeptiert E fs ls cs && E.gestartet.isEmpty) = C.akzeptiert E fs ls cs
   rw [h]
-  simp
+  simp only [List.isEmpty_nil, Bool.and_true]
 
 /-! ## 3. The old statement, verbatim, is a corollary -/
 

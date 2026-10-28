@@ -165,7 +165,7 @@ theorem allocSeq_gelingt {k : Kap} {g : Nat} (b : Arena k g) (n : Nat)
       obtain ⟨b', l, hseq, hlen, hused', hrange⟩ := ih p.1 hu1
       have hstep : allocSeq (n + 1) b = some ⟨b', p.2.i :: l⟩ := by
         simp only [allocSeq, hp, hseq]
-      refine ⟨b', p.2.i :: l, hstep, by simp [hlen], by omega, ?_⟩
+      refine ⟨b', p.2.i :: l, hstep, by simp only [List.length_cons, hlen, Nat.add_left_cancel_iff], by omega, ?_⟩
       rw [hp2, hrange, hp1]
       rfl
 

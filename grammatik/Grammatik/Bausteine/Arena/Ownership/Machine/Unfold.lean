@@ -279,7 +279,7 @@ theorem run_travNext {Λ : List (Res D)} {t : D.Tab} {inv : Expr D Γ Λ .bool}
   cases hr with
   | trav _ _ _ _ _ hentry hinv hb hback hk h =>
     have hlen := hentry.2.2.1.trans hf.length
-    exact Next.holdsMeta hf ha ho hm (fun h' => (h'.weaken hentry).bindNone i) (by simp; omega)
+    exact Next.holdsMeta hf ha ho hm (fun h' => (h'.weaken hentry).bindNone i) (by simp only [List.length_cons]; omega)
       (.dann _ _ hb (.travRest t inv body is r hback (.travRest t inv body is r hinv hb hback hlen hk h)))
 
 theorem run_travFort {Λ : List (Res D)} {kk : Context} {t : D.Tab} {inv : Expr D Γ Λ .bool}

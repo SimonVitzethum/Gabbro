@@ -444,21 +444,21 @@ instance decBlock5Ok (D : Deklaration) (V : Vertrag D) (Γ : Ctx)
 theorem flVonTyp_eq {τ : Ty} {lo hi : Int × Int}
     (h : flVonTyp τ = some (lo, hi)) : τ = .fl lo hi := by
   cases τ with
-  | int _ _ => simp [flVonTyp] at h
-  | bool => simp [flVonTyp] at h
-  | opt _ => simp [flVonTyp] at h
-  | sum _ => simp [flVonTyp] at h
-  | why _ => simp [flVonTyp] at h
-  | never => simp [flVonTyp] at h
+  | int _ _ => simp only [flVonTyp, reduceCtorEq] at h
+  | bool => simp only [flVonTyp, reduceCtorEq] at h
+  | opt _ => simp only [flVonTyp, reduceCtorEq] at h
+  | sum _ => simp only [flVonTyp, reduceCtorEq] at h
+  | why _ => simp only [flVonTyp, reduceCtorEq] at h
+  | never => simp only [flVonTyp, reduceCtorEq] at h
   | fl lo' hi' =>
-    simp [flVonTyp] at h
+    simp only [flVonTyp, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     rfl
-  | fnptr _ => simp [flVonTyp] at h
-  | ptr _ _ => simp [flVonTyp] at h
-  | ref _ => simp [flVonTyp] at h
-  | arr _ _ => simp [flVonTyp] at h
-  | str _ => simp [flVonTyp] at h
+  | fnptr _ => simp only [flVonTyp, reduceCtorEq] at h
+  | ptr _ _ => simp only [flVonTyp, reduceCtorEq] at h
+  | ref _ => simp only [flVonTyp, reduceCtorEq] at h
+  | arr _ _ => simp only [flVonTyp, reduceCtorEq] at h
+  | str _ => simp only [flVonTyp, reduceCtorEq] at h
 
 /-- What `ctxFlTyp` promises: a `some` names a variable that EXISTS (mirror
     of `ctxTyp_var`). The `Var` witness is rebuilt here, never trusted from
@@ -467,28 +467,28 @@ theorem ctxFlTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int × Int)
     (h : ctxFlTyp Γ k = some (lo, hi)) : ∃ _ : Var Γ (.fl lo hi), True := by
   induction Γ generalizing k with
   | nil =>
-    cases k <;> simp [ctxFlTyp] at h
+    cases k <;> simp only [ctxFlTyp, reduceCtorEq] at h
   | cons τ Γ ih =>
     cases k with
     | zero =>
       cases τ with
-      | int _ _ => simp [ctxFlTyp, flVonTyp] at h
-      | bool => simp [ctxFlTyp, flVonTyp] at h
-      | opt _ => simp [ctxFlTyp, flVonTyp] at h
-      | sum _ => simp [ctxFlTyp, flVonTyp] at h
-      | why _ => simp [ctxFlTyp, flVonTyp] at h
-      | never => simp [ctxFlTyp, flVonTyp] at h
+      | int _ _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | bool => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | opt _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | sum _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | why _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | never => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
       | fl lo' hi' =>
-        simp [ctxFlTyp, flVonTyp] at h
+        simp only [ctxFlTyp, flVonTyp, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         exact ⟨.here, trivial⟩
-      | fnptr _ => simp [ctxFlTyp, flVonTyp] at h
-      | ptr _ _ => simp [ctxFlTyp, flVonTyp] at h
-      | ref _ => simp [ctxFlTyp, flVonTyp] at h
-      | arr _ _ => simp [ctxFlTyp, flVonTyp] at h
-      | str _ => simp [ctxFlTyp, flVonTyp] at h
+      | fnptr _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | ptr _ _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | ref _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | arr _ _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | str _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
     | succ k =>
-      simp [ctxFlTyp] at h
+      simp only [ctxFlTyp] at h
       obtain ⟨x, _⟩ := ih k h
       exact ⟨.there x, trivial⟩
 

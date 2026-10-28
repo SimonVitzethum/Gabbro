@@ -173,7 +173,7 @@ theorem fwP_nicht (Q : AxEns zD) (S : SperrInv zD)
   rw [← Endblock.execH_ohne S zO (fun L σ => mischU S L σ s) 1 hwRuf _
     (fvP_ohneLocks true zHaupt)] at hrun
   have := h1 σ' v hrun
-  simp [EnsAmRueck, fvP, eval, wahr?] at this
+  simp only [EnsAmRueck, wahr?, fvP, eval, Bool.false_eq_true] at this
 
 /-! ## 4. The conclusion over every budget fails on reachable machines -/
 
@@ -195,7 +195,7 @@ theorem probeD_halt : ∃ M : RufMaschineG zD,
   have h0 := h 0
   unfold PrueftG at h0
   rw [hZ2.1] at h0
-  exact absurd (h0.2.1 _ _ _ _ _ _ _ _ _ rfl) (by simp [eval, wahr?])
+  exact absurd (h0.2.1 _ _ _ _ _ _ _ _ _ rfl) (by simp only [wahr?, eval, Bool.false_eq_true, not_false_eq_true])
 
 /-- **The leaving variant: the conclusion is refuted at budget `1`.** Five
     steps of thread 0 (`endeEntf`, `dannForever`, `ewigWeiter`, the `leave`,
@@ -223,7 +223,7 @@ theorem fwP_ende_verletzt : ∃ M : RufMaschineG zD,
   rw [hZ5.1] at h0
   have := (h0 rfl false [] [] .nil (.ende (.ret .empty List.Perm.nil)) .empty rfl
     ⟨List.Perm.nil, Or.inl rfl⟩).1
-  simp [EnsAmRueck, fvP, eval, wahr?] at this
+  simp only [EnsAmRueck, wahr?, fvP, eval, Bool.false_eq_true] at this
 
 /-! ## 5. Inhabitation: a `forever` loop that meets the obligation at EVERY budget
 
@@ -246,7 +246,7 @@ theorem execEnd_ewig_leave {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ct
     (hinv : ∀ (σ₀ σ : World D) (ρ : Env D Γ), wahr? (eval σ₀ inv σ ρ) = true) :
     execEnd O (n + 1) R (.cons (.forever a inv (.cons (.leave rfl) .nil)) rest) σ ρ =
       execEnd O (n + 1) R rest (σ.lese Λ inv.orte) ρ := by
-  simp [execEnd, execStmt, foreverLauf, hinv, execBlock]
+  simp only [execEnd, execStmt, foreverLauf, hinv, Bool.true_eq_false, ↓reduceIte, execBlock]
 
 def ewSchleife {V : Vertrag zD} : Stmt zD V false [] zL zL :=
   .forever () lInv (.cons (.leave rfl) .nil)
@@ -337,7 +337,7 @@ theorem ewP_zertifiziert : ∀ (passes : Nat) (M : RufMaschineG zD),
   ziel_ort_sperre_ende ewP zO (axWahr zD) (SperrInv.leer zD) zFs zSp lInit zO_gut zO_lokal
     (axVertragO_wahr zO) axEnsLokal_wahr sperrInvOk_leer zFs_voll ewP_fragmentG ewP_fussS
     (ewP_koerper _) ewP_start (fun _ => rfl) lInit_exklusiv (fun _ => invGutS_leer rfl)
-    (fun t => by by_cases ht : t = 0 <;> simp [lInit, ht] <;> rfl)
+    (fun t => by by_cases ht : t = 0 <;> simp only [lInit, ht, ↓reduceIte] <;> rfl)
 
 /-- **WITNESS: the loop check is reached at budget `1`, and it passes BY
     THE THEOREM.** Two steps of thread 0 (`endeEntf`, `dannForever`) reach

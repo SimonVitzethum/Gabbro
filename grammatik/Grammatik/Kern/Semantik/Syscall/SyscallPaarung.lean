@@ -199,7 +199,7 @@ def swD : Deklaration where
       gschreibt := fun g => nomatch g
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []
@@ -215,7 +215,7 @@ def swD : Deklaration where
   rzusage := fun r => nomatch r
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
 
@@ -351,7 +351,7 @@ theorem swEff : ∀ σ ρ σ' roh, swKbeh swK.nummer swK.abi σ ρ σ' roh →
   · intro t _ w hw
     have hnil : swD.braucht t = [] := rfl
     rw [hnil] at hw
-    simp at hw
+    simp only [List.not_mem_nil] at hw
   · intro g hg
     exact nomatch g
   · intro m st hm

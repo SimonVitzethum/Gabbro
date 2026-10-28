@@ -114,7 +114,7 @@ def wD : Deklaration where
   sig := fun | .get => 0 | .put => 1 | .fail => 3 | _ => 2
   sigNr := fun | 0 => sigGet | 1 => sigPut | 3 => sigFail | _ => sigNoArg
   eigner_nie_erzeugt := fun n _ _ _ h => by
-    rcases n with _ | _ | _ | _ | n <;> simp [sigGet, sigPut, sigNoArg, sigFail] at h
+    rcases n with _ | _ | _ | _ | n <;> simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -161,19 +161,19 @@ def rWipe : Endblock wD (vertragVon wD WFn.wipe) false []
 theorem wHpGet : RufPasst wD (vertragVon wD WFn.main) (wD.signatur WFn.get) [] where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := fun _ h => nomatch h
 
 theorem wHpPut : RufPasst wD (vertragVon wD WFn.main) (wD.signatur WFn.put) [] where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := fun _ h => nomatch h
 
 theorem wHpWipe : RufPasst wD (vertragVon wD WFn.main) (wD.signatur WFn.wipe) [] where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := fun _ h => nomatch h
 
 /-- The argument `k` (a literal in `0 .. 3`). -/
@@ -241,7 +241,7 @@ def rFail : Endblock wD (vertragVon wD WFn.fail) false [.int 0 3]
 theorem wHpFail : RufPasst wD (vertragVon wD WFn.callf) (wD.signatur WFn.fail) [] where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := fun _ h => nomatch h
 
 /-- `callf()`: two calls that may fail, `let x = fail(3) else (r) { .. }` (answers a value: the `else` arm
@@ -335,9 +335,9 @@ theorem wLayOk : LayoutOk wLay where
     have h8 : Ar.wid 0 100 = 8 := by decide
     have hp := Conf.wb_pos
     have hal : Ty.align (.int 8) = 1 := by
-      simp [Ty.align, Ty.intAlign]
+      simp only [Ty.align, Ty.intAlign, Nat.reduceAdd, Nat.reduceDiv, Std.le_refl, ↓reduceIte]
       omega
-    simp [Ty.fieldOff, hal, Ty.roundUp, h8]⟩
+    simp only [Ty.fieldOff, Ty.roundUp, hal, Nat.zero_add, Nat.sub_self, Nat.div_one, Nat.mul_one, h8]⟩
   inj := fun _ _ _ _ _ _ => rfl
   tinj := fun _ _ _ => rfl
   gdis := fun _ g => nomatch g

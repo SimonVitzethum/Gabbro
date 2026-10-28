@@ -159,7 +159,7 @@ theorem befehl_schritt_kopf (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hp : D.
           simp only [befehl, execBlock, execStmt, istNull_eval, wahr?, hb, decide_true, ite_true, setzePc_exec]
           rfl
         case rep3 =>
-          refine ⟨by simp [execute, hb, Env.set, pcV], MultiRep.lese (MultiRep.lese hm _ _) _ _,
+          refine ⟨by simp only [Fin.isValue, pcV, Env.set, execute, hb, ↓reduceIte], MultiRep.lese (MultiRep.lese hm _ _) _ _,
             A.freiOk_gleich rfl (fun _ => rfl) rfl (A.freiOk_gleich (σ := σ) rfl (fun _ => rfl) rfl hf)⟩
       · refine ⟨?w4, ?e4, ?ex4, ?rep4⟩
         case ex4 =>
@@ -167,7 +167,7 @@ theorem befehl_schritt_kopf (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hp : D.
             ite_false, setzePc_exec]
           rfl
         case rep4 =>
-          refine ⟨by simp [execute, hb, Env.set, pcV], MultiRep.lese (MultiRep.lese hm _ _) _ _,
+          refine ⟨by simp only [pcV, Env.set, execute, Fin.isValue, hb, ↓reduceIte], MultiRep.lese (MultiRep.lese hm _ _) _ _,
             A.freiOk_gleich rfl (fun _ => rfl) rfl (A.freiOk_gleich (σ := σ) rfl (fun _ => rfl) rfl hf)⟩
   | close body =>
       by_cases hb : s.head = 0
@@ -176,7 +176,7 @@ theorem befehl_schritt_kopf (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hp : D.
           simp only [befehl, execBlock, execStmt, istNull_eval, wahr?, hb, decide_true, ite_true, setzePc_exec]
           rfl
         case rep5 =>
-          refine ⟨by simp [execute, hb, Env.set, pcV], MultiRep.lese (MultiRep.lese hm _ _) _ _,
+          refine ⟨by simp only [Fin.isValue, pcV, Env.set, execute, hb, ↓reduceIte], MultiRep.lese (MultiRep.lese hm _ _) _ _,
             A.freiOk_gleich rfl (fun _ => rfl) rfl (A.freiOk_gleich (σ := σ) rfl (fun _ => rfl) rfl hf)⟩
       · refine ⟨?w6, ?e6, ?ex6, ?rep6⟩
         case ex6 =>
@@ -184,7 +184,7 @@ theorem befehl_schritt_kopf (L : LinkFeld A) (G : Fin 4 → LinkKopf A) (hp : D.
             ite_false, setzePc_exec]
           rfl
         case rep6 =>
-          refine ⟨by simp [execute, hb, Env.set, pcV], MultiRep.lese (MultiRep.lese hm _ _) _ _,
+          refine ⟨by simp only [pcV, Env.set, execute, Fin.isValue, hb, ↓reduceIte], MultiRep.lese (MultiRep.lese hm _ _) _ _,
             A.freiOk_gleich rfl (fun _ => rfl) rfl (A.freiOk_gleich (σ := σ) rfl (fun _ => rfl) rfl hf)⟩
 
 

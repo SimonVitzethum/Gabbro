@@ -93,8 +93,8 @@ def ntD : Deklaration where
   sigNr := fun | 0 => ntSigHelfer | _ => ntSigFrei
   eigner_nie_erzeugt := fun n _ _ _ h => by
     cases n with
-    | zero => simp [ntSigHelfer] at h
-    | succ n => simp [ntSigFrei] at h
+    | zero => simp only [List.not_mem_nil] at h
+    | succ n => simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -140,7 +140,7 @@ def ntRumpfHelfer : Endblock ntD (vertragVon ntD ntHelfer) false [.int 0 10]
 theorem ntHpFrei : RufPasst ntD (vertragVon ntD ntFrei) (ntD.signatur ntHelfer) [] where
   hw := fun _ h => nomatch h
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := fun _ h => nomatch h
 
 /-- **The call from inside `locks L`: the caller holds `L`, the callee
@@ -149,7 +149,7 @@ theorem ntHpFrei : RufPasst ntD (vertragVon ntD ntFrei) (ntD.signatur ntHelfer) 
 theorem ntHpSetze : RufPasst ntD (vertragVon ntD ntSetze) (ntD.signatur ntHelfer) ntL where
   hw := fun _ h => nomatch h
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := fun _ h => nomatch h
   hx := fun L _ _ => by cases L; exact ⟨1, rfl, by decide⟩
 

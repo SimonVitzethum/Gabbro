@@ -198,8 +198,8 @@ theorem actual_run_closed (O : Orakel D) (passes : Nat) (frame : Frame) :
   have hpre : (I.contracts false).requires frame State.empty .nil := by
     refine ⟨fun _ => none, ⟨rfl, ?_⟩, ⟨?_, ?_⟩, ?_⟩
     · intro τ x; cases x
-    · intro i m h; simp [I, Flow.parameterContext, Context.empty] at h
-    · intro i j p q h; simp [I, Flow.parameterContext, Context.empty] at h
+    · intro i m h; simp only [I, Flow.parameterContext, Context.empty, List.length_nil, List.replicate_zero, reduceCtorEq] at h
+    · intro i j p q h; simp only [I, Flow.parameterContext, Context.empty, List.length_nil, List.replicate_zero, reduceCtorEq] at h
     · intro _ _ h; cases h
   obtain ⟨s', ha', _, _, _, hclosed⟩ :=
     (calls O passes 2 false frame State.empty world .nil agrees free_ok hpre).1 σ' () hrun

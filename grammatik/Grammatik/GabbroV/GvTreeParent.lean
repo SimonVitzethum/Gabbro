@@ -46,11 +46,11 @@ theorem ltB_true (a b : Nat) (h : ltB a b = true) : a < b := by
   induction a generalizing b with
   | zero =>
       cases b with
-      | zero => simp [ltB] at h
+      | zero => simp only [ltB, Bool.false_eq_true] at h
       | succ b => omega
   | succ a ih =>
       cases b with
-      | zero => simp [ltB] at h
+      | zero => simp only [ltB, Bool.false_eq_true] at h
       | succ b =>
           have h2 : ltB a b = true := by simpa [ltB] using h
           have := ih b h2
@@ -78,7 +78,7 @@ def optWahr (o : Option Nat) (f : Nat → Bool) : Bool :=
 theorem optSchritt_existiert (o : Option Nat) (f : Nat → Bool)
     (h : optSchritt o f = true) : ∃ c, o = some c := by
   cases o with
-  | none => simp [optSchritt] at h
+  | none => simp only [optSchritt, Bool.false_eq_true] at h
   | some c => exact ⟨c, rfl⟩
 
 /-- A true step through a known binding gives the step predicate. -/
@@ -99,8 +99,8 @@ theorem und_beide (a b : Bool) (h : (a && b) = true) : a = true ∧ b = true := 
   | true =>
       cases b with
       | true => exact ⟨rfl, rfl⟩
-      | false => simp at h
-  | false => simp at h
+      | false => simp only [Bool.and_false, Bool.false_eq_true] at h
+  | false => simp only [Bool.false_and, Bool.false_eq_true] at h
 
 /-- Disjunction elimination, one side. -/
 theorem oder_eins (a b : Bool) (h : (a || b) = true) : a = true ∨ b = true := by
@@ -109,7 +109,7 @@ theorem oder_eins (a b : Bool) (h : (a || b) = true) : a = true ∨ b = true := 
   | false =>
       cases b with
       | true => exact Or.inr rfl
-      | false => simp at h
+      | false => simp only [Bool.or_self, Bool.false_eq_true] at h
 
 /-- Boolean implication introduction. -/
 theorem impl_true (c b : Bool) (h : c = true → b = true) : ((!c) || b) = true := by
@@ -143,7 +143,7 @@ theorem alleAb_voll (p : Nat → Bool) (off m : Nat)
         have h1 : p off = true := h off (Nat.le_refl off) (by omega)
         have h2 : alleAb p (off + 1) m = true :=
           ih (off + 1) (fun k hlo hhi => h k (by omega) (by omega))
-        simp [h1, h2]
+        simp only [h1, h2, Bool.and_self]
       exact h'
 
 /-- Declaration shape (the `D006`/`D007`/`D008` value shadow of
@@ -222,7 +222,7 @@ theorem lokal_schliesst_fuel (s : TreeState) (fuel k d : Nat)
       · subst hkd
         exact hben
       · simp only [erreichbar, if_neg hkd] at herr
-        simp at herr
+        simp only [Bool.false_eq_true] at herr
   | succ n ih =>
       intro hkn hben herr
       have hS : (if k = d then true

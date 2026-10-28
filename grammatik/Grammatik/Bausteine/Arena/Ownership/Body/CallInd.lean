@@ -48,7 +48,7 @@ theorem References.transport {c : Context} {g : Ghost} {P1 P2 : Ctx} (hP : P1 = 
 theorem umsig_heq {f : D.Fn} {n : Nat} (hf : D.passt f n = true) (ρ : Env D (D.sigNr n).params) :
     HEq (umsig hf ρ) ρ := by
   unfold umsig
-  simp
+  simp only [eq_mpr_eq_cast]
   exact cast_heq _ _
 
 /-- Every function fitting the signature number has the signature interface. -/

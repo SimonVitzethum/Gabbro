@@ -64,13 +64,13 @@ def ohneFremde (M : RufMaschineG D) (f : Faden) : RufMaschineG D :=
   { M with faeden := fun g => if g = f then M.faeden f else { M.faeden g with spur := [] } }
 
 theorem ohneFremde_self (M : RufMaschineG D) (f : Faden) : (ohneFremde M f).faeden f = M.faeden f := by
-  simp [ohneFremde]
+  simp only [ohneFremde, ↓reduceIte]
 
 theorem ohneFremde_speicher (M : RufMaschineG D) (f : Faden) : (ohneFremde M f).speicher = M.speicher := rfl
 
 theorem ohneFremde_frei (M : RufMaschineG D) (f : Faden) (L : D.Lock) : RufFreiG (ohneFremde M f) f L := by
   intro g hg
-  have : (ohneFremde M f).faeden g = { M.faeden g with spur := [] } := by simp [ohneFremde, hg]
+  have : (ohneFremde M f).faeden g = { M.faeden g with spur := [] } := by simp only [ohneFremde, hg, ↓reduceIte]
   rw [this]
   exact List.not_mem_nil
 
@@ -279,12 +279,12 @@ theorem rwLauf_schritt {M0 : RufMaschineG D} {ms : Nat → RufMaschineG D} {fs :
       rw [hm]
       exact hs
   · have : ¬ n + 1 ≤ n := by omega
-    simp [this]
+    simp only [this, ↓reduceIte]
   · intro k hk
-    simp [hk]
-  · simp
+    simp only [hk, ↓reduceIte]
+  · simp only [Nat.lt_irrefl, ↓reduceIte]
   · intro k hk
-    simp [hk]
+    simp only [hk, ↓reduceIte]
 
 end Gabbro.Grammatik.Zielsatz
 

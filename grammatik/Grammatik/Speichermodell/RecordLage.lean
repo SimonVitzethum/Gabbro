@@ -91,7 +91,7 @@ theorem lage_ge_summe (fs : List Feld) (off : Nat)
     (hw : ∀ f ∈ fs, Wohlgeformt f) :
     off + sumSizes fs ≤ lage fs off := by
   induction fs generalizing off with
-  | nil => simp [lage, sumSizes]
+  | nil => simp only [sumSizes, Nat.add_zero, lage, Std.le_refl]
   | cons f fs ih =>
       have hwf := hw f (List.mem_cons_self ..)
       obtain ⟨hpos, _, _⟩ := hwf
@@ -116,7 +116,7 @@ theorem aufrunden_eq_of_mod (x a : Nat) (h1 : 1 ≤ a) (h2 : x % a = 0) :
   have hsplit : x + a - 1 = a * (x / a) + (a - 1) := by omega
   unfold aufrunden
   rw [hsplit, Nat.add_comm, Nat.add_mul_div_left _ _ (by omega : 0 < a), hz]
-  simp
+  simp only [Nat.zero_add]
   rw [Nat.mul_comm]
   exact hqr.symm
 
@@ -155,7 +155,7 @@ theorem absteigend_ohne_luecke (fs : List Feld)
       lage fs off = off + sumSizes fs := by
     intro fs
     induction fs with
-    | nil => intro off hs hw hd; simp [lage, sumSizes]
+    | nil => intro off hs hw hd; simp only [lage, sumSizes, Nat.add_zero]
     | cons f fs ih =>
         intro off hs hw hd
         simp only [absteigend] at hs
@@ -179,7 +179,7 @@ theorem absteigend_ohne_luecke (fs : List Feld)
         simp only [lage, sumSizes]
         rw [hau]
         omega
-  have h0 : ∀ g ∈ fs, g.align ∣ 0 := fun g _ => ⟨0, by simp⟩
+  have h0 : ∀ g ∈ fs, g.align ∣ 0 := fun g _ => ⟨0, by simp only [Nat.mul_zero]⟩
   have hmain := aux fs 0 hs hw h0
   omega
 
@@ -192,7 +192,7 @@ theorem offsetAux_ausgerichtet (fs : List Feld) (i off : Nat)
     offsetAux fs i off % f.align = 0 := by
   induction fs generalizing i off with
   | nil =>
-      simp at hmem
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hmem
   | cons g fs ih =>
       cases i with
       | zero =>

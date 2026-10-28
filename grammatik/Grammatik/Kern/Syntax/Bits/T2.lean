@@ -152,7 +152,7 @@ theorem bswap64n_nest (b0 b1 b2 b3 b4 b5 b6 b7 : Nat) :
   have e3 : (3 : Nat) + 1 = 4 := rfl
   have e2 : (2 : Nat) + 1 = 3 := rfl
   have e1 : (1 : Nat) + 1 = 2 := rfl
-  have h7 : b7 = b7 * 256 ^ 0 := by simp
+  have h7 : b7 = b7 * 256 ^ 0 := by simp only [Nat.pow_zero, Nat.mul_one]
   rw [h7, ← e6, horner_step, ← e5, horner_step, ← e4, horner_step, ← e3,
     horner_step, ← e2, horner_step, ← e1, horner_step, horner_step]
 
@@ -223,7 +223,7 @@ theorem zahlNat_bounds (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     0 < zahlNat w x ∧ zahlNat w x < 2 ^ (w + 1) := by
   have hlo := x.lo_le
   have hhi := x.le_hi
-  have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   simp only [zahlNat]
   constructor
   · have hpos : (0 : Int) < x.n := by omega
@@ -249,20 +249,20 @@ theorem log2n_le_of_bounds (w xn : Nat) (hx0 : 0 < xn)
 /-- `Zahl.clz`: leading zeros over width `w + 1`. -/
 def Zahl.clz (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     Zahl 0 (w : Int) :=
-  ⟨(clzn w (zahlNat w x) : Nat), by simp,
+  ⟨(clzn w (zahlNat w x) : Nat), by simp only [Int.natCast_nonneg],
     Int.ofNat_le.mpr (Nat.sub_le w (Nat.log2 (zahlNat w x)))⟩
 
 /-- `Zahl.ctz`: trailing zeros over width `w + 1`. -/
 def Zahl.ctz (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     Zahl 0 (w : Int) :=
-  ⟨(ctzn w (zahlNat w x) : Nat), by simp,
+  ⟨(ctzn w (zahlNat w x) : Nat), by simp only [Int.natCast_nonneg],
     Int.ofNat_le.mpr
       (ctzn_le (zahlNat_bounds w x).1 (zahlNat_bounds w x).2)⟩
 
 /-- `Zahl.log2_floor`: floor log2 over width `w + 1`. -/
 def Zahl.log2_floor (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     Zahl 0 (w : Int) :=
-  ⟨(Nat.log2 (zahlNat w x) : Nat), by simp,
+  ⟨(Nat.log2 (zahlNat w x) : Nat), by simp only [Int.natCast_nonneg],
     Int.ofNat_le.mpr
       (log2n_le_of_bounds w _ (zahlNat_bounds w x).1 (zahlNat_bounds w x).2)⟩
 
@@ -278,7 +278,7 @@ theorem zahlFull_bounds (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
     x.n.toNat < 2 ^ (w + 1) := by
   have hhi := x.le_hi
   have hnn : 0 ≤ x.n := by have := x.lo_le; omega
-  have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+  have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   have hlt : x.n < ((2 ^ (w + 1) : Nat) : Int) := by omega
   exact (Int.toNat_lt hnn).mpr hlt
 
@@ -314,16 +314,16 @@ theorem rotrn_lt (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
 /-- `Zahl.popcount`: population count over width `w + 1`. -/
 def Zahl.popcount (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1)) :
     Zahl 0 ((w : Int) + 1) :=
-  ⟨(popcountn w x.n.toNat : Nat), by simp,
+  ⟨(popcountn w x.n.toNat : Nat), by simp only [Int.natCast_nonneg],
     Int.ofNat_le.mpr (popcountn_le w _)⟩
 
 /-- `Zahl.rotl`: rotate left over width `w + 1`. -/
 def Zahl.rotl (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
     (s : Zahl 0 (w : Int)) : Zahl 0 ((2 : Int) ^ (w + 1) - 1) :=
   ⟨(rotln w s.n.toNat x.n.toNat : Nat), by
-      have := x.lo_le; simp,
+      have := x.lo_le; simp only [Int.natCast_nonneg],
     by
-      have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+      have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
       have hlt : rotln w s.n.toNat x.n.toNat < 2 ^ (w + 1) :=
         rotln_lt w _ _ (zahlAmt_le w s) (zahlFull_bounds w x)
       have hle : ((rotln w s.n.toNat x.n.toNat : Nat) : Int)
@@ -334,9 +334,9 @@ def Zahl.rotl (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
 def Zahl.rotr (w : Nat) (x : Zahl 0 ((2 : Int) ^ (w + 1) - 1))
     (s : Zahl 0 (w : Int)) : Zahl 0 ((2 : Int) ^ (w + 1) - 1) :=
   ⟨(rotrn w s.n.toNat x.n.toNat : Nat), by
-      have := x.lo_le; simp,
+      have := x.lo_le; simp only [Int.natCast_nonneg],
     by
-      have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp
+      have hcast : ((2 ^ (w + 1) : Nat) : Int) = (2 : Int) ^ (w + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
       have hlt : rotrn w s.n.toNat x.n.toNat < 2 ^ (w + 1) :=
         rotrn_lt w _ _ (zahlAmt_le w s) (zahlFull_bounds w x)
       have hle : ((rotrn w s.n.toNat x.n.toNat : Nat) : Int)
@@ -354,11 +354,11 @@ theorem pow256_eq_pow2_64 : (256 : Nat) ^ 8 = 2 ^ 64 := by decide
 def Zahl.bswap16 (x : Zahl 0 ((2 : Int) ^ 16 - 1)) :
     Zahl 0 ((2 : Int) ^ 16 - 1) :=
   ⟨((bswap16n x.n.toNat : Nat) : Int), by
-    have := x.lo_le; simp,
+    have := x.lo_le; simp only [Int.reducePow, Int.reduceSub, Int.natCast_nonneg],
    by
     have hlt : bswap16n x.n.toNat < 256 ^ 2 := bswap16n_lt _
     rw [pow256_eq_pow2_16] at hlt
-    have hcast : ((2 ^ 16 : Nat) : Int) = (2 : Int) ^ 16 := by simp
+    have hcast : ((2 ^ 16 : Nat) : Int) = (2 : Int) ^ 16 := by simp only [Nat.reducePow, Int.cast_ofNat_Int, Int.reducePow]
     have hltI : ((bswap16n x.n.toNat : Nat) : Int) < ((2 ^ 16 : Nat) : Int) :=
       Int.ofNat_lt.mpr hlt
     omega⟩
@@ -367,11 +367,11 @@ def Zahl.bswap16 (x : Zahl 0 ((2 : Int) ^ 16 - 1)) :
 def Zahl.bswap32 (x : Zahl 0 ((2 : Int) ^ 32 - 1)) :
     Zahl 0 ((2 : Int) ^ 32 - 1) :=
   ⟨((bswap32n x.n.toNat : Nat) : Int), by
-    have := x.lo_le; simp,
+    have := x.lo_le; simp only [Int.reducePow, Int.reduceSub, Int.natCast_nonneg],
    by
     have hlt : bswap32n x.n.toNat < 256 ^ 4 := bswap32n_lt _
     rw [pow256_eq_pow2_32] at hlt
-    have hcast : ((2 ^ 32 : Nat) : Int) = (2 : Int) ^ 32 := by simp
+    have hcast : ((2 ^ 32 : Nat) : Int) = (2 : Int) ^ 32 := by simp only [Nat.reducePow, Int.cast_ofNat_Int, Int.reducePow]
     have hltI : ((bswap32n x.n.toNat : Nat) : Int) < ((2 ^ 32 : Nat) : Int) :=
       Int.ofNat_lt.mpr hlt
     omega⟩
@@ -380,11 +380,11 @@ def Zahl.bswap32 (x : Zahl 0 ((2 : Int) ^ 32 - 1)) :
 def Zahl.bswap64 (x : Zahl 0 ((2 : Int) ^ 64 - 1)) :
     Zahl 0 ((2 : Int) ^ 64 - 1) :=
   ⟨((bswap64n x.n.toNat : Nat) : Int), by
-    have := x.lo_le; simp,
+    have := x.lo_le; simp only [Int.reducePow, Int.reduceSub, Int.natCast_nonneg],
    by
     have hlt : bswap64n x.n.toNat < 256 ^ 8 := bswap64n_lt _
     rw [pow256_eq_pow2_64] at hlt
-    have hcast : ((2 ^ 64 : Nat) : Int) = (2 : Int) ^ 64 := by simp
+    have hcast : ((2 ^ 64 : Nat) : Int) = (2 : Int) ^ 64 := by simp only [Nat.reducePow, Int.cast_ofNat_Int, Int.reducePow]
     have hltI : ((bswap64n x.n.toNat : Nat) : Int) < ((2 ^ 64 : Nat) : Int) :=
       Int.ofNat_lt.mpr hlt
     omega⟩
@@ -406,9 +406,9 @@ theorem log2_floor_spez (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
   obtain ⟨h1, h2⟩ := log2n_spez hne
   simp only [log2n] at h1 h2
   have hcast1 : (((2 ^ Nat.log2 (zahlNat w x) : Nat)) : Int)
-      = (2 : Int) ^ Nat.log2 (zahlNat w x) := by simp
+      = (2 : Int) ^ Nat.log2 (zahlNat w x) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   have hcast2 : (((2 ^ (Nat.log2 (zahlNat w x) + 1) : Nat)) : Int)
-      = (2 : Int) ^ (Nat.log2 (zahlNat w x) + 1) := by simp
+      = (2 : Int) ^ (Nat.log2 (zahlNat w x) + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   have hnn : 0 ≤ x.n := by have := x.lo_le; omega
   have h2n : (x.n.toNat : Int) = x.n := Int.toNat_of_nonneg hnn
   have hval : x.n.toNat = zahlNat w x := rfl
@@ -437,7 +437,7 @@ theorem clz_log2 (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
         + ((Nat.log2 (zahlNat w x) : Nat) : Int) := by
     have e : ((clzn w (zahlNat w x) + Nat.log2 (zahlNat w x) : Nat) : Int)
         = ((clzn w (zahlNat w x) : Nat) : Int)
-          + ((Nat.log2 (zahlNat w x) : Nat) : Int) := by simp
+          + ((Nat.log2 (zahlNat w x) : Nat) : Int) := by simp only [Int.natCast_add]
     omega
   omega
 
@@ -452,7 +452,7 @@ theorem ctz_spez (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
   have hval : x.n.toNat = zahlNat w x := rfl
   constructor
   · have hcast : ((2 ^ ctzn w (zahlNat w x) : Nat) : Int)
-        = (2 : Int) ^ ctzn w (zahlNat w x) := by simp
+        = (2 : Int) ^ ctzn w (zahlNat w x) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
     have h1 : ((2 ^ ctzn w (zahlNat w x) : Nat) : Int)
         ∣ ((zahlNat w x : Nat) : Int) := Int.natCast_dvd_natCast.mpr hdvd
     rw [hcast, ← hval, h2n] at h1
@@ -460,7 +460,7 @@ theorem ctz_spez (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
   · intro hdvdI
     apply hnd
     have hcast : ((2 ^ (ctzn w (zahlNat w x) + 1) : Nat) : Int)
-        = (2 : Int) ^ (ctzn w (zahlNat w x) + 1) := by simp
+        = (2 : Int) ^ (ctzn w (zahlNat w x) + 1) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
     have hnat : ((2 ^ (ctzn w (zahlNat w x) + 1) : Nat) : Int)
         ∣ ((x.n.toNat : Nat) : Int) := by
       rw [hcast, h2n]

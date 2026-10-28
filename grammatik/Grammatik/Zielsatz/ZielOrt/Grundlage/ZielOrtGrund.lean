@@ -52,8 +52,8 @@ theorem fertig_wert {M : RufMaschineG D} (hK : KeinStartGrundG M) {t : Faden} (h
           cases s with
           | ret e hp => exact ⟨e, rfl, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩
           | retWhy g hp => exact absurd ⟨g, hp, Or.inr (Or.inl ⟨rest, rfl⟩)⟩ (hKt _ _ _ _ _ hx)
-          | _ => simp [GRest.anRueck, Endblock.istRueck, Stmt.istRueck] at hret
-      | _ => simp [GRest.anRueck, Endblock.istRueck] at hret
+          | _ => simp only [GRest.anRueck, Endblock.istRueck, Stmt.istRueck, Bool.false_eq_true] at hret
+      | _ => simp only [GRest.anRueck, Endblock.istRueck, Bool.false_eq_true] at hret
   | dann b k =>
       cases b with
       | cons s rest =>
@@ -61,9 +61,9 @@ theorem fertig_wert {M : RufMaschineG D} (hK : KeinStartGrundG M) {t : Faden} (h
           | ret e hp => exact ⟨e, rfl, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩
           | retWhy g hp =>
               exact absurd ⟨g, hp, Or.inr (Or.inr ⟨_, rest, k, rfl⟩)⟩ (hKt _ _ _ _ _ hx)
-          | _ => simp [GRest.anRueck, Block.istRueck, Stmt.istRueck] at hret
-      | _ => simp [GRest.anRueck, Block.istRueck] at hret
-  | _ => simp [GRest.anRueck] at hret
+          | _ => simp only [GRest.anRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true] at hret
+      | _ => simp only [GRest.anRueck, Block.istRueck, Bool.false_eq_true] at hret
+  | _ => simp only [GRest.anRueck, Bool.false_eq_true] at hret
 
 /-! ## 2. The probe: a start function that ends in a reason -/
 

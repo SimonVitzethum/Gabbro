@@ -39,22 +39,22 @@ theorem kette_gleicht (n : Int) (weiter : Int → Option (Zahl 0 (n - 1)))
   | zero =>
       by_cases hab : a = b
       · subst hab
-        have eL : kette weiter 0 a a = true := by simp [kette]
+        have eL : kette weiter 0 a a = true := by simp only [kette, decide_true]
         have eR : ketteNext (spiegel n weiter) 0 a.toNat a.toNat = true := by
-          simp [ketteNext]
+          simp only [ketteNext, ↓reduceIte]
         rw [eL, eR]
       · have hne : a.toNat ≠ b.toNat := by omega
-        have eL : kette weiter 0 a b = false := by simp [kette, hab]
+        have eL : kette weiter 0 a b = false := by simp only [kette, hab, decide_false]
         have eR : ketteNext (spiegel n weiter) 0 a.toNat b.toNat = false := by
-          simp [ketteNext, hne]
+          simp only [ketteNext, hne, ↓reduceIte]
         rw [eL, eR]
   | succ fuel ih =>
       by_cases hab : a = b
       · subst hab
-        have eL : kette weiter (fuel + 1) a a = true := by simp [kette]
+        have eL : kette weiter (fuel + 1) a a = true := by simp only [kette, ↓reduceIte]
         have eR : ketteNext (spiegel n weiter) (fuel + 1) a.toNat a.toNat
             = true := by
-          simp [ketteNext]
+          simp only [ketteNext, ↓reduceIte]
         rw [eL, eR]
       · have hne : a.toNat ≠ b.toNat := by omega
         simp only [kette, ketteNext, if_neg hab, if_neg hne]

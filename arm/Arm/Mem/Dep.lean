@@ -185,16 +185,16 @@ theorem cmpEv_addr (r : Nat) (e e' : Ev) (t : Nat)
           | true =>
             have hvv : e.val = e'.val := of_decide_eq_true hv
             rw [if_pos hvv] at h
-            simp at h
+            simp only [List.not_mem_nil] at h
           | false =>
             have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
             rw [if_neg hvv] at h
-            simp at h
+            simp only [List.not_mem_nil] at h
         | false =>
           have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
             of_decide_eq_false hw
           rw [if_neg hww] at h
-          simp at h
+          simp only [List.not_mem_nil] at h
       | false =>
         have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
         rw [if_neg haa] at h
@@ -205,7 +205,7 @@ theorem cmpEv_addr (r : Nat) (e e' : Ev) (t : Nat)
     | false =>
       have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
       rw [if_neg hkk] at h
-      simp at h
+      simp only [List.not_mem_nil] at h
   | false =>
     have hnid : ¬ (e.id = e'.id) := of_decide_eq_false hi
     rw [if_neg hnid] at h
@@ -238,7 +238,7 @@ theorem cmpEv_data (r : Nat) (e e' : Ev) (t : Nat)
           | true =>
             have hvv : e.val = e'.val := of_decide_eq_true hv
             rw [if_pos hvv] at h
-            simp at h
+            simp only [List.not_mem_nil] at h
           | false =>
             have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
             rw [if_neg hvv] at h
@@ -257,15 +257,15 @@ theorem cmpEv_data (r : Nat) (e e' : Ev) (t : Nat)
           have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
             of_decide_eq_false hw
           rw [if_neg hww] at h
-          simp at h
+          simp only [List.not_mem_nil] at h
       | false =>
         have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
         rw [if_neg haa] at h
-        simp at h
+        simp only [List.not_mem_nil] at h
     | false =>
       have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
       rw [if_neg hkk] at h
-      simp at h
+      simp only [List.not_mem_nil] at h
   | false =>
     have hnid : ¬ (e.id = e'.id) := of_decide_eq_false hi
     rw [if_neg hnid] at h
@@ -296,20 +296,20 @@ theorem cmpEv_ctrl (r : Nat) (e e' : Ev) (t : Nat)
           | true =>
             have hvv : e.val = e'.val := of_decide_eq_true hv
             rw [if_pos hvv] at h
-            simp at h
+            simp only [List.not_mem_nil] at h
           | false =>
             have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
             rw [if_neg hvv] at h
-            simp at h
+            simp only [List.not_mem_nil] at h
         | false =>
           have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
             of_decide_eq_false hw
           rw [if_neg hww] at h
-          simp at h
+          simp only [List.not_mem_nil] at h
       | false =>
         have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
         rw [if_neg haa] at h
-        simp at h
+        simp only [List.not_mem_nil] at h
     | false =>
       have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
       rw [if_neg hkk] at h

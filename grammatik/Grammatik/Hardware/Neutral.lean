@@ -103,7 +103,7 @@ theorem anbieter_verletzt : ¬ AnbieterAnnahme 16 [.hole 64 32, .hole 64 64] := 
           | cons h3 h4 =>
               cases h3 with
               | hole hn' hnb' hb' hfrisch' =>
-                  have := hfrisch' ⟨32, 32 + 64⟩ (by simp [Zust.leer])
+                  have := hfrisch' ⟨32, 32 + 64⟩ (by simp only [Nat.reduceAdd, Zust.leer, List.mem_cons, List.not_mem_nil, or_false])
                   unfold Strecke.getrennt at this
                   simp only at this
                   omega
@@ -112,10 +112,11 @@ theorem anbieter_verletzt : ¬ AnbieterAnnahme 16 [.hole 64 32, .hole 64 64] := 
 theorem anbieter_zeuge : AnbieterAnnahme 16 [.hole 64 32, .hole 64 96] := by
   have hs1 : PStep 16 Zust.leer (.hole 64 32)
       { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp [Zust.leer])
+    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp only [Zust.leer, List.not_mem_nil, Nat.reduceAdd, false_implies, implies_true])
   have hs2 : PStep 16 { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } (.hole 64 96)
       { lebend := ⟨96, 96 + 64⟩ :: [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (by decide) (by decide) (by decide) (by simp [Strecke.getrennt])
+    PStep.hole (by decide) (by decide) (by decide) (by simp only [Nat.reduceAdd, List.mem_cons, List.not_mem_nil, or_false, Strecke.getrennt, forall_eq,
+  Nat.reduceLeDiff, Std.le_refl, or_true])
   exact ⟨_, Lauf.cons hs1 (Lauf.cons hs2 (Lauf.nil _))⟩
 
 end Gabbro.Grammatik.Anbieter

@@ -40,7 +40,7 @@ def drainKoerper : Block FD FV true [] [] [] :=
 /-- The body keeps the loop state `leer` (nothing known). -/
 theorem erk_drainKoerper : ∃ a1 : Abs, Erk KL Abs.leer drainKoerper a1 :=
   ⟨_, Erk.pop ⟨LL, LG⟩ rfl rfl (fgdarf _) fdarf vollT _ rein_vollT
-    (Erk.frei (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil (by simp [Abs.forget, Abs.ext, Var.pos])
+    (Erk.frei (.here : Var G1 _) rfl fdarf rfl (fgdarf _) .nil (by simp only [Abs.ext, Var.pos])
       (Erk.nil _))⟩
 
 /-- Up to four passes of the body. -/
@@ -80,12 +80,12 @@ theorem drain_zeuge : ∃ σ' : World FD, execBlock (V := FV) oF 0 rF drain w0 .
     subst hv
     simp only [decide_eq_true_eq] at hd
     exact ⟨σ', rfl, hpost, hd⟩
-  | ok _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | ok _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-! ### Accepted: the same body under `forever` -/
 
@@ -121,12 +121,12 @@ theorem drainForever_zeuge : ∃ σ' : World FD, execBlock (V := FV) oF 10 rF dr
     subst hv
     simp only [decide_eq_true_eq] at hd
     exact ⟨σ', rfl, hpost, hd⟩
-  | ok _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | ok _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-! ### Accepted: `traverse` with a payload store -/
 
@@ -171,12 +171,12 @@ theorem fuell_zeuge : ∃ σ' : World FD, execBlock (V := FV) oF 0 rF fuell w0 .
     cases ρ
     simp only [decide_eq_true_eq] at hd
     exact ⟨σ', rfl, hpost.1, hd⟩
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-! ### Planted defect: a slot linked in again on every pass -/
 
@@ -211,12 +211,12 @@ theorem schiebeSchleife_abgelehnt (a' : Abs) : ¬ Erk KL Abs.leer schiebeSchleif
     intro hd
     simp only [decide_eq_true_eq] at hd
     exact liste_schleife_bricht FA LL LG σ' 1 (by decide) hd.1 hd.2 (listOk_von hpost.1)
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 end InvDynZeuge
 

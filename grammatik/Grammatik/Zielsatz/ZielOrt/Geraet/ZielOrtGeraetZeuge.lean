@@ -127,7 +127,7 @@ def geD : Deklaration where
   Fn := GeFn
   sig := fun | .haupt => 0 | .leser => 1 | .schreiber => 2 | .ruhe => 3
   sigNr := fun | 0 => geSigHaupt | 1 => geSigLeser | 2 => geSigSchreiber | _ => geSigRuhe
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -178,7 +178,7 @@ theorem geHeld_ne : Res.held (D := geD) GeLock.lt ≠ Res.held GeLock.lg :=
 theorem geHpLeser : RufPasst geD (vertragVon geD geHaupt) (geD.signatur geLeser) geLg where
   hw := fun t h => by cases t <;> first | rfl | exact nomatch h
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by
     cases L
     · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
@@ -345,7 +345,8 @@ theorem geNotiz_geraet (σ : World geD) (Λ : List (Res geD)) (k : Int)
     rfl
   subst e
   funext k' f'
-  simp [World.schreibSlot, World.merke, World.storeSlot]
+  simp only [World.schreibSlot, World.merke, World.storeSlot, List.cons_append, List.nil_append, reduceCtorEq,
+  ↓reduceDIte]
 
 /-- **What `leser`'s body does for every register-local oracle**: a return
     of `true`, or a hardware outcome. The reader's own write between the

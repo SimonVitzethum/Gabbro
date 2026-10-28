@@ -249,7 +249,7 @@ def upd (m : List (Nat × Nat)) (k v : Nat) : List (Nat × Nat) :=
   (k, v) :: (m.filter fun q => match q with | (a, _) => a != k)
 
 theorem upd_lookup (m : List (Nat × Nat)) (k v : Nat) :
-    lookup (upd m k v) k = some v := by simp [upd, lookup]
+    lookup (upd m k v) k = some v := by simp only [upd, lookup, BEq.rfl, ↓reduceIte]
 
 -- Witness: `upd_lookup` is non-degenerate (overwrite and unrelated keys).
 example : lookup (upd [(1, 2)] 0 9) 0 = some 9 := rfl

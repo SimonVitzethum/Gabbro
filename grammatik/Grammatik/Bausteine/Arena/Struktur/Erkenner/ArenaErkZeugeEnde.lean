@@ -54,11 +54,11 @@ theorem kombiEnde_zeuge : ∃ σ' : World FD2, execEnd (V := FV2) oF2 0 rF2 komb
     subst hv
     simp only [decide_eq_true_eq] at hd
     exact ⟨σ', rfl, hpost, hd⟩
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 end ErkKombi
 

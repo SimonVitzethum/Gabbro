@@ -120,7 +120,7 @@ def kD : Deklaration where
   Fn := KFn
   sig := kSigOf
   sigNr := kSigNr
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []
@@ -191,7 +191,7 @@ theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
   hb := fun c hc => by
     have : (vertragVon kD caller).boden = (kD.signatur caller).boden := rfl
     rw [this, hbc] at hc; cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
+  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩
   hh := hh
   hx := fun L hL hn => absurd (hx L hL) hn
 
@@ -316,7 +316,7 @@ def kCs : List (kD.Tab ⊕ kD.Glob) := [.inl KTab.konto, .inl KTab.privA, .inl K
 
 theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
   rcases c with t | g
-  · cases t <;> simp [kCs]
+  · cases t <;> simp only [kCs, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]
   · exact nomatch g
 
 /-- **The checker accepts the program** with its declared starts `hauptA`,
@@ -344,7 +344,7 @@ theorem kInv_of_ens {κ σ2 : World kD} {ρk : Env kD (kD.params kSetze)}
 theorem kA_req {W : World kD} (h : (W.slots KTab.privA 0 ()).n = 7) :
     ReqAmEintritt kP kPruefeA W .nil := by
   show decide ((W.slots KTab.privA 0 ()).n = 7) = true
-  simp [h]
+  simp only [h, decide_true]
 
 theorem kA_lauf {O : Orakel kD} {U : Umwelt kD} (hU : HavocOk kSI U)
     {R : ∀ f : kD.Fn, World kD → Env kD (kD.params f) → RufAusgang f} (hR : RespektiertRahmen kP R)
@@ -393,7 +393,7 @@ theorem kP_koerper_A : KoerperGutS kP 0 (axWahr kD) kSI kHauptA := by
   · rw [hr] at hrun
     have h := kA_lauf hU hR σ ρ hrun
     show decide ((σ'.slots KTab.privA 0 ()).n = 7) = true
-    simp [h]
+    simp only [h, decide_true]
   · rw [hr] at hrun
     obtain ⟨σ2, e2, h20, _⟩ := kA_schreib (S := kSI) (O := O') (U := U) (passes := 0)
       (R := torRuf kP R) σ ρ
@@ -523,8 +523,9 @@ theorem kP_koerper_setze : KoerperGutS kP 0 (axWahr kD) kSI kSetze := by
     | cons x rest =>
       cases rest
       show wahr? (eval σ (kP.ensures kSetze) _ (ergEnv (kD.erg kSetze) () (Env.cons x Env.nil))) = true
-      simp [kP, kSetze, kGleich, eval, World.lese, World.merke, World.schreibSlot,
-        World.storeSlot, kI0, kI1, Zahl.weiter, wahr?, ergEnv]
+      simp only [wahr?, kSetze, kP, kGleich, kI0, Int.reduceSub, kI1, World.lese, World.merke, World.schreibSlot,
+  World.storeSlot, List.map_append, List.append_assoc, eval, Zahl.weiter, List.cons_append, List.nil_append, ergEnv,
+  Int.reduceEq, ↓reduceIte, dite_eq_ite, ite_self, Bool.and_eq_true, decide_eq_true_eq]
       exact ⟨rfl, rfl⟩
   · rw [hr] at hrun
     simp only [kRumpfSetze, execEndH, execStmtH] at hrun

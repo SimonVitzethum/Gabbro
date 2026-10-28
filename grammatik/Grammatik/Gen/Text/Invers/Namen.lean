@@ -16,7 +16,7 @@ theorem toString_nat_inj {a b : Nat} (h : (toString a).toList = (toString b).toL
   have h' : toString a = toString b := String.toList_inj.1 h
   have ha := lex_zahl_allein a
   rw [h', lex_zahl_allein b] at ha
-  simp at ha
+  simp only [Except.ok.injEq, List.cons.injEq, Token.num.injEq, and_true] at ha
   exact ha.symm
 
 theorem nVar_toList (k : Nat) : (nVar k).toList = 'v' :: (toString k).toList := by
@@ -40,7 +40,7 @@ theorem strEq_kind {c : Char} {a b : Nat} {x y : String} (hx : x.toList = c :: (
   unfold strEq
   rw [hx, hy]
   by_cases h : a = b
-  · subst h; simp
+  · subst h; simp only [Nat.toString_eq_repr, Nat.toList_repr, BEq.rfl]
   · have : ¬ (c :: (toString a).toList = c :: (toString b).toList) := fun e =>
       h (toString_nat_inj (List.cons.inj e).2)
     rw [beq_eq_false_iff_ne.2 this, beq_eq_false_iff_ne.2 h]
@@ -50,7 +50,8 @@ theorem strEq_kopf {c d : Char} {r s : List Char} {x y : String} (hx : x.toList 
     (hy : y.toList = d :: s) (h : c ≠ d) : strEq x y = false := by
   unfold strEq
   rw [hx, hy]
-  simp [h]
+  simp only [List.cons_beq_cons, Bool.and_eq_false_imp, beq_iff_eq, h, beq_eq_false_iff_ne, ne_eq,
+  IsEmpty.forall_iff]
 
 @[simp] theorem strEq_nVar (a b : Nat) : strEq (nVar a) (nVar b) = (a == b) :=
   strEq_kind (nVar_toList a) (nVar_toList b)
@@ -84,10 +85,10 @@ theorem strEq_kopf {c d : Char} {r s : List Char} {x y : String} (hx : x.toList 
 def RumpfName (n : String) : Prop := (∃ k, n = nVar k) ∨ (∃ k, n = nZeiger k)
 
 theorem strEq_rumpf_nTab {n : String} (h : RumpfName n) (b : Nat) : strEq n (nTab b) = false := by
-  rcases h with ⟨k, rfl⟩ | ⟨k, rfl⟩ <;> simp
+  rcases h with ⟨k, rfl⟩ | ⟨k, rfl⟩ <;> simp only [strEq_nVar_nTab, strEq_nZeiger_nTab]
 
 theorem strEq_rumpf_nGlob {n : String} (h : RumpfName n) (b : Nat) : strEq n (nGlob b) = false := by
-  rcases h with ⟨k, rfl⟩ | ⟨k, rfl⟩ <;> simp
+  rcases h with ⟨k, rfl⟩ | ⟨k, rfl⟩ <;> simp only [strEq_nVar_nGlob, strEq_nZeiger_nGlob]
 
 /-- A table or static name is no name of a body scope: the parameter lookup fails. -/
 theorem uParamNrAux_fremd (ns : List String) (hn : ∀ n ∈ ns, RumpfName n) (k : Nat) (x : String)
@@ -104,10 +105,10 @@ theorem uParamNrAux_fremd (ns : List String) (hn : ∀ n ∈ ns, RumpfName n) (k
 theorem strEq_eq (a b : String) : strEq a b = decide (a = b) := by
   unfold strEq
   by_cases h : a = b
-  · subst h; simp
+  · subst h; simp only [BEq.rfl, decide_true]
   · have : a.toList ≠ b.toList := fun e => h (String.toList_inj.1 e)
     rw [beq_eq_false_iff_ne.2 this]
-    simp [h]
+    simp only [h, decide_false]
 
 theorem nFn_toList (k : Nat) : (nFn k).toList = 'f' :: 'n' :: (toString k).toList := by
   simp only [nFn, String.toList_append]; rfl
@@ -116,7 +117,7 @@ theorem nFn_toList (k : Nat) : (nFn k).toList = 'f' :: 'n' :: (toString k).toLis
   unfold strEq
   rw [nFn_toList, nFn_toList]
   by_cases h : a = b
-  · subst h; simp
+  · subst h; simp only [↓Char.isValue, Nat.toString_eq_repr, Nat.toList_repr, BEq.rfl]
   · have : ¬ ('f' :: 'n' :: (toString a).toList = 'f' :: 'n' :: (toString b).toList) := fun e =>
       h (toString_nat_inj (List.cons.inj (List.cons.inj e).2).2)
     rw [beq_eq_false_iff_ne.2 this, beq_eq_false_iff_ne.2 h]

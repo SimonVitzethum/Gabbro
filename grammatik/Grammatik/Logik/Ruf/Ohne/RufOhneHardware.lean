@@ -296,30 +296,30 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
-  | .forever .., h, _, _, _, _ => by simp [Stmt.hardwareFrei] at h
-  | .axiomCall .., h, _, _, _, _ => by simp [Stmt.hardwareFrei] at h
+  | .forever .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
+  | .axiomCall .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
   | .shift .., _, _, _, _, he => by
       simp only [execStmt] at he
       split at he <;> cases he
-  | .assignSlot .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignThru .., _, _, _, _, he | .assignSlotRef .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignGlob .., _, _, _, _, he => by simp [execStmt] at he
-  | .putBytes .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignVar .., _, _, _, _, he => by simp [execStmt] at he
-  | .regWrite .., _, _, _, _, he => by simp [execStmt] at he
-  | .transition .., _, _, _, _, he => by simp [execStmt] at he
-  | .publish .., _, _, _, _, he => by simp [execStmt] at he
-  | .advances .., _, _, _, _, he => by simp [execStmt] at he
-  | .retires .., _, _, _, _, he => by simp [execStmt] at he
-  | .ret .., _, _, _, _, he => by simp [execStmt] at he
-  | .retWhy .., _, _, _, _, he => by simp [execStmt] at he
-  | .leave .., _, _, _, _, he => by simp [execStmt] at he
-  | .next .., _, _, _, _, he => by simp [execStmt] at he
+  | .assignSlot .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .assignThru .., _, _, _, _, he | .assignSlotRef .., _, _, _, _, he => by simp only [execStmt, List.append_assoc, reduceCtorEq] at he
+  | .assignGlob .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .putBytes .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .assignVar .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .regWrite .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .transition .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .publish .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .advances .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retires .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .ret .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retWhy .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .leave .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .next .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
 
 theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     (b : Block D V l Γ Λ Λ') → b.hardwareFrei = true →
       ∀ (σ : World D) (ρ : Env D Γ) (e : Hardware D), execBlock O passes R b σ ρ ≠ .hardware e
-  | .nil, _, σ, ρ, e, he => by simp [execBlock] at he
+  | .nil, _, σ, ρ, e, he => by simp only [execBlock, reduceCtorEq] at he
   | .cons s rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
@@ -365,11 +365,11 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
-  | .bindAxiom .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
-  | .bindAxiomElse .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
-  | .regRead .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
-  | .regReadElse .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
-  | .awaits .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
+  | .bindAxiom .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
+  | .regRead .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
+  | .regReadElse .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
+  | .awaits .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
   | .exchange g neu hw hL rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei] at h
       simp only [execBlock] at he
@@ -414,10 +414,10 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
 theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (b : Endblock D V l Γ Λ) → b.hardwareFrei = true →
       ∀ (σ : World D) (ρ : Env D Γ) (e : Hardware D), execEnd O passes R b σ ρ ≠ .hardware e
-  | .ret .., _, _, _, _, he => by simp [execEnd] at he
-  | .retWhy .., _, _, _, _, he => by simp [execEnd] at he
-  | .leave .., _, _, _, _, he => by simp [execEnd] at he
-  | .next .., _, _, _, _, he => by simp [execEnd] at he
+  | .ret .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .retWhy .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .leave .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .next .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .cons s rest, h, σ, ρ, e, he => by
       simp only [Endblock.hardwareFrei, Bool.and_eq_true] at h
       simp only [execEnd] at he
@@ -457,11 +457,11 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
-  | .bindAxiom .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
-  | .bindAxiomElse .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
-  | .regRead .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
-  | .regReadElse .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
-  | .awaits .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
+  | .bindAxiom .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
+  | .regRead .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
+  | .regReadElse .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
+  | .awaits .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
   | .bindCallInd p args he' hp hr rest, h, σ, ρ, e, he => by
       simp only [Endblock.hardwareFrei] at h
       simp only [execEnd] at he
@@ -546,7 +546,7 @@ theorem rufAt_ohneHardware (P : Programm D) (O : Orakel D) (passes : Nat)
     ∀ n : Nat, OhneHardware (rufAt P O passes n) := by
   intro n
   induction n with
-  | zero => intro g σ ρ e h; simp [rufAt] at h
+  | zero => intro g σ ρ e h; simp only [rufAt, reduceCtorEq] at h
   | succ m ih =>
       intro g σ ρ e h
       simp only [rufAt] at h
@@ -577,7 +577,7 @@ theorem rufAt_hardware_von_rumpf (P : Programm D) (O : Orakel D) (passes m : Nat
       (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ = .hardware e) :
     rufAt P O passes (m + 1) f σ ρ = .hardware e := by
   simp only [rufAt]
-  rw [if_neg (by rw [hreq]; simp), hb]
+  rw [if_neg (by rw [hreq]; simp only [Bool.true_eq_false, not_false_eq_true]), hb]
 
 /-- The program-level form, over a member list of the functions. -/
 theorem rufAt_ohneHardware_fs (P : Programm D) (O : Orakel D) (passes : Nat)

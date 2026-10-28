@@ -74,11 +74,11 @@ theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     cases e <;> simp_all [GRest.anRueck, Endblock.istRueck, EndEntfaltbar]
   | _ =>
     first
-    | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp))
+    | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
     | (rw [‹(M.faeden f).kopf.rest = _›] at hr
        simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
        first
-       | (simp [Stmt.istRueck] at hr; done)
+       | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
        | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
        | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
           exact Bool.noConfusion hr))
@@ -160,7 +160,7 @@ theorem maskeOk_schritt {P : Programm D} {O : Orakel D} {passes : Nat} {kern : F
     · subst hf
       constructor
       · rintro (⟨_, h2⟩ | ⟨_, h2, h3⟩)
-        · simp at h2
+        · simp only [ne_eq, not_true_eq_false, decide_false, Bool.false_eq_true] at h2
         · exact ⟨hc.symm, h2, h3⟩
       · rintro ⟨_, h2, h3⟩
         exact Or.inr ⟨rfl, h2, h3⟩

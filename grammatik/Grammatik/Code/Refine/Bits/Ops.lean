@@ -33,7 +33,7 @@ theorem val_bin_sdiv (W : Nat) (a b : Int) (hW : 0 < W) (ha1 : -(2 ^ (W - 1)) < 
     intro h
     have := congrArg BitVec.toInt h
     rw [eb] at this
-    simp at this
+    simp only [BitVec.ofNat_eq_ofNat, BitVec.toInt_zero] at this
     exact hb0 this
   have hne : ¬ ((BitVec.ofInt W b = 0) ∨
       ((BitVec.ofInt W a).toInt = -((2 : Int) ^ (W - 1)) ∧ (BitVec.ofInt W b).toInt = -1)) := by
@@ -56,7 +56,7 @@ theorem val_bin_srem (W : Nat) (a b : Int) (hW : 0 < W) (ha1 : -(2 ^ (W - 1)) < 
     intro h
     have := congrArg BitVec.toInt h
     rw [eb] at this
-    simp at this
+    simp only [BitVec.ofNat_eq_ofNat, BitVec.toInt_zero] at this
     exact hb0 this
   have hne : ¬ ((BitVec.ofInt W b = 0) ∨
       ((BitVec.ofInt W a).toInt = -((2 : Int) ^ (W - 1)) ∧ (BitVec.ofInt W b).toInt = -1)) := by
@@ -92,7 +92,7 @@ theorem val_bin_andN (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb
   congr 2
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_and, toNat_ofInt_nn ha0 ha1, toNat_ofInt_nn hb0 hb1, toNat_ofInt_nn (Int.natCast_nonneg _) hlt]
-  simp
+  simp only [Int.toNat_natCast]
 
 theorem val_bin_orN (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ W) :
     Val.bin .or W (Val.ofInt W a) (Val.ofInt W b) = some (Val.ofInt W ((a.toNat ||| b.toNat : Nat) : Int)) := by
@@ -103,7 +103,7 @@ theorem val_bin_orN (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb0
   congr 2
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_or, toNat_ofInt_nn ha0 ha1, toNat_ofInt_nn hb0 hb1, toNat_ofInt_nn (Int.natCast_nonneg _) hlt]
-  simp
+  simp only [Int.toNat_natCast]
 
 theorem val_bin_xorN (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ W) :
     Val.bin .xor W (Val.ofInt W a) (Val.ofInt W b) = some (Val.ofInt W ((a.toNat ^^^ b.toNat : Nat) : Int)) := by
@@ -114,7 +114,7 @@ theorem val_bin_xorN (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb
   congr 2
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_xor, toNat_ofInt_nn ha0 ha1, toNat_ofInt_nn hb0 hb1, toNat_ofInt_nn (Int.natCast_nonneg _) hlt]
-  simp
+  simp only [Int.toNat_natCast]
 
 /-! ## Shifts -/
 
@@ -135,7 +135,7 @@ theorem val_bin_shl (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb0
   rw [ea, BitVec.ofInt_natCast, BitVec.ofInt_natCast]
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_shiftLeft]
-  simp [Nat.shiftLeft_eq]
+  simp only [BitVec.toNat_ofNat, Nat.shiftLeft_eq, Nat.mod_mul_mod]
 
 theorem val_bin_lshr (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb0 : 0 ≤ b) (hbW : b < (W : Int)) :
     Val.bin .lshr W (Val.ofInt W a) (Val.ofInt W b) = some (Val.ofInt W (a / 2 ^ b.toNat)) := by
@@ -147,7 +147,7 @@ theorem val_bin_lshr (W : Nat) (a b : Int) (ha0 : 0 ≤ a) (ha1 : a < 2 ^ W) (hb
   rw [ea, BitVec.ofInt_natCast, BitVec.ofInt_natCast]
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_ushiftRight]
-  simp [Nat.shiftRight_eq_div_pow]
+  simp only [BitVec.toNat_ofNat, Nat.shiftRight_eq_div_pow]
   have h1 : a' < 2 ^ W := by exact_mod_cast ha1
   rw [Nat.mod_eq_of_lt h1, Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.div_le_self _ _) h1)]
 

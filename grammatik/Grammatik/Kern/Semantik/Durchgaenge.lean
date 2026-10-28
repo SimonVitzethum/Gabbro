@@ -160,7 +160,7 @@ theorem Stmt.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         show (fun σ ρ => execBlockH S O U n R ueber σ ρ) =
           (fun σ ρ => execBlockH S O U m R ueber σ ρ) from
             funext fun σ => funext fun ρ => Block.execH_passes ueber h.2 σ ρ]
-  | .forever .., h, _, _ => by simp [Stmt.ohneEwig] at h
+  | .forever .., h, _, _ => by simp only [Stmt.ohneEwig, Bool.false_eq_true] at h
   | .assignSlot .., _, _, _ => rfl
   | .assignThru .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl

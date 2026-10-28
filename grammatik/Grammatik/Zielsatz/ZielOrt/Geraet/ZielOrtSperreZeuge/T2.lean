@@ -6,7 +6,7 @@ namespace Gabbro.Grammatik
 theorem sHp : RufPasst sD (vertragVon sD sHaupt) (sD.signatur sSetze) sL where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (by
     intro L
     cases L
@@ -113,8 +113,9 @@ theorem sP_koerper_setze : KoerperGutS sP 0 (axWahr sD) sS sSetze := by
     | cons x rest =>
       cases rest
       show wahr? (eval σ sEnsSetze _ (ergEnv (sD.erg sSetze) () (Env.cons x Env.nil))) = true
-      simp [sEnsSetze, sGleich, eval, World.lese, World.merke, World.schreibSlot,
-        World.storeSlot, sIdx0, sIdx1, Zahl.weiter, wahr?, ergEnv]
+      simp only [wahr?, sEnsSetze, sGleich, sIdx0, sIdx1, World.lese, World.merke, World.schreibSlot,
+  World.storeSlot, List.map_append, List.append_assoc, eval, Zahl.weiter, dite_eq_ite, List.cons_append,
+  List.nil_append, ergEnv, Int.reduceEq, ↓reduceIte, ite_self, Bool.and_eq_true, decide_eq_true_eq]
       exact ⟨rfl, rfl⟩
   · rw [hr] at hrun
     simp only [sRumpfSetze, execEndH, execStmtH] at hrun

@@ -106,7 +106,7 @@ theorem liestTab_in_liestVertragTab (P : Programm D) (f : D.Fn) (t : D.Tab)
       exact List.mem_filterMap.mpr
         ⟨.inl t, List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl ho))), rfl⟩
   | inr _ =>
-      simp at hfo
+      simp only [reduceCtorEq] at hfo
 
 /-- Die Rumpf-Huelle liegt in der Vertrags-Huelle (Globalhaelfte). -/
 theorem liestGlob_in_liestVertragGlob (P : Programm D) (f : D.Fn) (g : D.Glob)
@@ -115,7 +115,7 @@ theorem liestGlob_in_liestVertragGlob (P : Programm D) (f : D.Fn) (g : D.Glob)
   obtain ⟨o, ho, hfo⟩ := List.mem_filterMap.mp h
   cases o with
   | inl _ =>
-      simp at hfo
+      simp only [reduceCtorEq] at hfo
   | inr g' =>
       have heq : g' = g := by simpa using hfo
       rw [heq] at ho
@@ -137,7 +137,7 @@ theorem liestVertragTab_in_MitInvTab (P : Programm D) (f : D.Fn)
       exact List.mem_filterMap.mpr
         ⟨.inl t, List.mem_append.mpr (Or.inl ho), rfl⟩
   | inr _ =>
-      simp at hfo
+      simp only [reduceCtorEq] at hfo
 
 /-- Die Vertrags-Huelle liegt in der Invarianten-Huelle (Globalhaelfte). -/
 theorem liestVertragGlob_in_MitInvGlob (P : Programm D) (f : D.Fn)
@@ -147,7 +147,7 @@ theorem liestVertragGlob_in_MitInvGlob (P : Programm D) (f : D.Fn)
   obtain ⟨o, ho, hfo⟩ := List.mem_filterMap.mp h
   cases o with
   | inl _ =>
-      simp at hfo
+      simp only [reduceCtorEq] at hfo
   | inr g' =>
       have heq : g' = g := by simpa using hfo
       rw [heq] at ho

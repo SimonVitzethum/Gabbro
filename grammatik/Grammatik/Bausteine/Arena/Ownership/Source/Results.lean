@@ -21,7 +21,7 @@ theorem returned_context (A : FreiForm D) (c : Context) (g : Ghost) (frame : Fra
   apply owning_context A (c.kill i) g frame s' σ' ρ k fresh hb' href' ha' hf' (hslot := hslot)
   apply extend_rights hr' heffect.1
   intro j mode old hj hgold
-  have hne : j ≠ i := by intro he; simp [Context.kill, he] at hj
+  have hne : j ≠ i := by intro he; simp only [Context.kill, he, ↓reduceIte, reduceCtorEq] at hj
   have hjold : c.rights j = some mode := by simpa [Context.kill, hne] using hj
   have hdiff := hr.2 j i mode .owned hjold hi hne (Or.inr rfl) old h hgold hg
   exact heffect.2.1 ▸ hdiff

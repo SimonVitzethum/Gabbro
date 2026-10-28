@@ -78,7 +78,7 @@ theorem sigCompatible_lift {n : Nat} {J : Modes (D.sigNr n).params} {owner : Boo
     SigCompatible (D := D.mitRuhe) (liftI I) (n + 1) (modesR J) owner := by
   intro f hf
   cases f with
-  | none => simp [Deklaration.mitRuhe, passtM] at hf
+  | none => simp only [passtM, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true] at hf
   | some f =>
     obtain ⟨h1, h2⟩ := h f hf
     exact ⟨(modeList_modesR _).trans (h1.trans (modeList_modesR J).symm), (isOwner_outR A _).trans h2⟩

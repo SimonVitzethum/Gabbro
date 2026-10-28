@@ -422,7 +422,7 @@ theorem schreibSlot_liestSelbe (D : Deklaration) (σ : World D) (t : D.Tab)
   have e : (σ.schreibSlot t Λ k f v).slots t k f
       = (σ.storeSlot t k f v).slots t k f := rfl
   rw [e]
-  simp [World.storeSlot]
+  simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte]
 
 /-- The checked reading, from the world at check time: the copy's user
     address, seen in `σ₁` -- the checked handle, at the model. -/
@@ -683,7 +683,7 @@ theorem schrittTraeger_geprueft (r : UserRegion) (k : Kopie) (h : validiert r k)
 theorem bereichSchritt_fordertBereich (s : BereichSchritt) (r : UserRegion)
     (k : Kopie) (h : schrittTraeger s = some (r, k)) : validiert r k := by
   cases s with
-  | rein => simp [schrittTraeger] at h
+  | rein => simp only [schrittTraeger, reduceCtorEq] at h
   | geprueft r' k' hv =>
       simp only [schrittTraeger, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h

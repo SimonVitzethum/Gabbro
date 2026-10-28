@@ -51,10 +51,10 @@ theorem reserve_bound {u n cap v : Nat} (h : reserve u n cap = some v) : v ≤ c
 
 theorem reserve_restore {u n cap : Nat} (h : u + n ≤ cap) :
     reserve u n cap = some (u + n) ∧ (u + n) - n = u := by
-  simp [reserve, h]
+  simp only [reserve, h, ↓reduceIte, Nat.add_sub_cancel, and_self]
 
 theorem reserve_failure {u n cap : Nat} (h : cap < u + n) : reserve u n cap = none := by
-  simp [reserve, Nat.not_le.mpr h]
+  simp only [reserve, Nat.not_le.mpr h, ↓reduceIte]
 
 /-- All suspended G frames remain present, regardless of how many source
     calls are represented; the dispatcher itself needs only one invocation. -/

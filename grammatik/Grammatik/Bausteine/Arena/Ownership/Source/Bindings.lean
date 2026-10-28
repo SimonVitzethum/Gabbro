@@ -7,19 +7,22 @@ variable {D : Deklaration}
 theorem Context.bind_here (c : Context) (ref : Option Nat) {Γ : Ctx} {τ : Ty}
     (hlen : c.references.length = Γ.length) :
     (c.bind ref).reference (.here : Var (τ :: Γ) τ) = ref := by
-  simp [Context.reference, Context.bind, Var.unten, hlen]
+  simp only [reference, bind, Var.unten, List.length_append, hlen, List.length_cons, List.length_nil,
+  Nat.zero_add, Nat.lt_add_one, getElem?_pos, Std.le_refl, List.getElem_append_right, Nat.sub_self,
+  List.getElem_cons_zero, Option.getD_some]
 
 theorem Context.bind_there (c : Context) (ref : Option Nat) {Γ : Ctx} {τ υ : Ty}
     (hlen : c.references.length = Γ.length) (x : Var Γ τ) :
     (c.bind ref).reference (.there x : Var (υ :: Γ) τ) = c.reference x := by
   have hx : x.unten < c.references.length := by rw [hlen]; exact Var.unten_lt x
-  simp [Context.reference, Context.bind, Var.unten, List.getElem?_append, hx]
+  simp only [reference, bind, Var.unten, List.getElem?_append, hx, ↓reduceIte, getElem?_pos, Option.getD_some]
 
 theorem References.bind {c : Context} {g : Ghost} {Γ : Ctx} {τ : Ty} {ρ : Env D Γ}
     (hr : References c g ρ) (value : Wert D τ) (ref : Option Nat)
     (hv : ∀ i, ref = some i → ∃ h, g i = some h ∧ intVon τ value = some h.slot) :
     References (c.bind ref) g (.cons value ρ) := by
-  refine ⟨by simp [Context.bind, hr.1], ?_⟩
+  refine ⟨by simp only [Context.bind, List.length_append, hr.1, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.add_left_cancel_iff], ?_⟩
   intro υ x i hi
   cases x with
   | here =>
@@ -33,7 +36,7 @@ theorem Context.reference_member {c : Context} {Γ : Ctx} {τ : Ty}
     (x : Var Γ τ) (i : Nat) (hi : c.reference x = some i) : some i ∈ c.references := by
   unfold Context.reference at hi
   cases he : c.references[x.unten]? with
-  | none => simp [he] at hi
+  | none => simp only [he, Option.getD_none, reduceCtorEq] at hi
   | some ref =>
     simp only [he, Option.getD_some] at hi
     subst ref

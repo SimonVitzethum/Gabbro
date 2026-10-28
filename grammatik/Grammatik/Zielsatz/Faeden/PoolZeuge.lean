@@ -138,7 +138,7 @@ theorem pool_ziel_zeuge : ∃ M1 M2 M3 : RufMaschineG zD.mitRuhe,
     (fun L => by
       show Res.held L ∈ ([] : List (Res zD.mitRuhe)) ↔ L ∈ offen (zPoolM0.faeden 0).spur
       rw [zPool_start_offen]
-      simp) hfrei
+      simp only [List.not_mem_nil]) hfrei
   have hr : RufErreichbarG zPool.P.mitRuhe zO.mitRuhe 0 zPoolM0 M3 :=
     .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1) s2) s3
   refine ⟨M1, M2, M3, laufzeit_initRuhe zPool, rfl, rfl, s1, s2, s3, ?_, ?_⟩

@@ -108,11 +108,11 @@ theorem anderer_platz_unberuehrt {Z L W : Type} (S : Zielsemantik Z L W)
     have e1 : Ab S.toZielraum (S.wirkung s p z) i = none := by
       show Abbild S.lies S.ort S.belegtort S.deute S.deutebelegt S.N
         (S.wirkung s p z) i = none
-      simp [Abbild, c1]
+      simp only [Abbild, c1, ↓reduceIte]
     have e2 : Ab S.toZielraum z i = none := by
       show Abbild S.lies S.ort S.belegtort S.deute S.deutebelegt S.N z i
         = none
-      simp [Abbild, c2]
+      simp only [Abbild, c2, ↓reduceIte]
     rw [e1, e2]
 
 /-- A-2: and the OCCUPANCY of the relinked slot does not move either.
@@ -161,7 +161,7 @@ theorem absenkung_am_belegten_platz {Z L W : Type} (S : Zielsemantik Z L W)
         = some ({ elter := some p } : Slot) := by
       show Abbild S.lies S.ort S.belegtort S.deute S.deutebelegt S.N
         (S.wirkung s p z) s = _
-      simp [Abbild, hs, noch, gedeutet]
+      simp only [Abbild, hs, noch, and_self, ↓reduceIte, gedeutet]
     have e2 : Umhaengen (Ab S.toZielraum z) s p s
         = some ({ elter := some p } : Slot) :=
       upd_at _ _ _
@@ -191,11 +191,11 @@ theorem relabel_am_freien_platz_ist_wirkungslos {Z L W : Type}
     have e1 : Ab S.toZielraum (S.wirkung s p z) s = none := by
       show Abbild S.lies S.ort S.belegtort S.deute S.deutebelegt S.N
         (S.wirkung s p z) s = none
-      simp [Abbild, hs, hnoch]
+      simp only [Abbild, hs, hnoch, Bool.false_eq_true, and_false, ↓reduceIte]
     have e2 : Ab S.toZielraum z s = none := by
       show Abbild S.lies S.ort S.belegtort S.deute S.deutebelegt S.N z s
         = none
-      simp [Abbild, hs, hfrei]
+      simp only [Abbild, hs, hfrei, Bool.false_eq_true, and_false, ↓reduceIte]
     rw [e1, e2]
   · exact anderer_platz_unberuehrt S s p z i hs hp heq
 
@@ -210,7 +210,7 @@ theorem absenkung_geht_am_freien_platz_auseinander {Z L W : Type}
   have hworher : Ab S.toZielraum z s = none := by
     show Abbild S.lies S.ort S.belegtort S.deute S.deutebelegt S.N z s
       = none
-    simp [Abbild, hs, hfrei]
+    simp only [Abbild, hs, hfrei, Bool.false_eq_true, and_false, ↓reduceIte]
   have hlinks : Ab S.toZielraum (S.wirkung s p z) s = none := by
     rw [relabel_am_freien_platz_ist_wirkungslos S s p z hs hp hfrei]
     exact hworher

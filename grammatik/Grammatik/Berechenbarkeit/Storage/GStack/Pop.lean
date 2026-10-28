@@ -58,7 +58,7 @@ theorem linkPop_values (L : LinkFeld A) (G : LinkKopf A)
   obtain ⟨indices, hc, hnd, hlive, hvalues⟩ := hr
   generalize hroot : G.st σ = root at hc
   cases hc with
-  | nil => simp at hvalues
+  | nil => simp only [List.map_nil, List.nil_eq, reduceCtorEq] at hvalues
   | cons i h0 hi tail ht =>
     have hv := List.cons.inj (by simpa only [List.map_cons] using hvalues)
     have htail : KetteF (D.count A.tab) (L.wert σ') (G.st σ') tail := by

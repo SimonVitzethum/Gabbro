@@ -64,9 +64,9 @@ theorem mLayOk : LayoutOk mLay where
 def mbF (c : Nat) : Nat := 4 + c
 
 theorem mDisj : MaskDisj mLay mbF where
-  lk := fun c L => by cases L; unfold mbF; exact ⟨by simp [mLay]; try omega, by simp [mLay]; try omega⟩
-  tab := fun c t => by cases t; unfold mbF; simp [mLay]; try omega
-  glob := fun c g => by cases g; unfold mbF; simp [mLay]; try omega
+  lk := fun c L => by cases L; unfold mbF; exact ⟨by simp only [mLay, ne_eq]; try omega, by simp only [mLay, ne_eq]; try omega⟩
+  tab := fun c t => by cases t; unfold mbF; simp only [mLay, ne_eq, Nat.add_eq_zero_iff, reduceCtorEq, false_and, not_false_eq_true]; try omega
+  glob := fun c g => by cases g; unfold mbF; simp only [mLay, ne_eq]; try omega
   inj := fun c c' h => by unfold mbF at h; omega
 
 /-- The table, the global, the two lock cells and the mask word of core 0, all zero. -/
@@ -87,15 +87,15 @@ theorem mM0_offen (v : Faden) : offen (mM0.faeden v).spur = [] := rfl
 def gm0 : mD.Lock → Tkt := fun _ => ⟨0, 0, fun _ => none, false⟩
 
 theorem gm0_ok : (gm0 ()).Ok :=
-  ⟨Nat.le_refl _, by decide, fun _ h1 h2 => absurd h2 (by simp [gm0] at h1 ⊢), fun i _ _ h1 h2 _ _ _ _ =>
-    absurd h2 (by simp [gm0] at h1 ⊢), fun h => absurd h (by simp [gm0])⟩
+  ⟨Nat.le_refl _, by decide, fun _ h1 h2 => absurd h2 (by simp only [gm0, Nat.zero_le, Nat.not_lt_zero, not_false_eq_true] at h1 ⊢), fun i _ _ h1 h2 _ _ _ _ =>
+    absurd h2 (by simp only [gm0, Nat.zero_le, Nat.not_lt_zero, not_false_eq_true] at h1 ⊢), fun h => absurd h (by simp only [gm0, Bool.false_eq_true, not_false_eq_true])⟩
 
 theorem mRel0 : LockRel mLay mM0 memM gm0 := by
   intro L
   cases L
   refine ⟨gm0_ok, ⟨by decide +kernel, by decide +kernel⟩, fun v => ?_⟩
   rw [mM0_offen]
-  simp [Tkt.holdsB, gm0]
+  simp only [Tkt.holdsB, gm0, reduceCtorEq, decide_false, Bool.and_self, Bool.false_eq_true, ↓reduceIte]
   rfl
 
 /-- The IR function. -/
@@ -122,11 +122,11 @@ def mM2 : RufMaschineG mD :=
 
 theorem mM1_offen (v : Faden) : offen (mM1.faeden v).spur = if v = 0 then () :: offen (mM0.faeden v).spur
     else offen (mM0.faeden v).spur := by
-  by_cases h : v = 0 <;> simp [mM1, h, offen] <;> rfl
+  by_cases h : v = 0 <;> simp only [mM1, h, ↓reduceIte, offen] <;> rfl
 
 theorem mM2_offen (v : Faden) : offen (mM2.faeden v).spur =
     if v = 0 then (offen (mM1.faeden v).spur).erase () else offen (mM1.faeden v).spur := by
-  by_cases h : v = 0 <;> simp [mM2, h, offen]
+  by_cases h : v = 0 <;> simp only [mM2, h, ↓reduceIte, offen]
 
 theorem upd_unitM (gh : mD.Lock → Tkt) (t : Tkt) : upd gh () t = fun _ => t :=
   funext fun L => by cases L; exact upd_self gh () t
@@ -153,11 +153,15 @@ theorem erase_unit : ([()] : List Unit).erase () = [] := rfl
 theorem erase_unitM : ([()] : List mD.Lock).erase () = [] := rfl
 
 theorem mk1_zero : mk1 0 = [(0, ())] := by
-  simp [mk1, mk0, maskeNach, kernM, maskEintr, mM1_spur, offen]
+  simp only [mk1, maskeNach, kernM, ↓reduceIte, ne_eq, decide_not, mk0, List.filter_nil, maskEintr, mM1_spur,
+  offen, List.nil_append]
   rfl
 
 theorem mk2_zero : mk2 0 = [] := by
-  simp [mk2, mk1, mk0, maskeNach, kernM, maskEintr, mM1_spur, mM2_spur, offen]
+  simp only [mk2, maskeNach, kernM, ↓reduceIte, ne_eq, decide_not, mk1, mk0, List.filter_nil, maskEintr,
+  mM1_spur, offen, List.nil_append, mM2_spur, List.append_eq_nil_iff, List.filter_eq_nil_iff, List.mem_map,
+  List.mem_filter, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_false_iff_not, Decidable.not_not,
+  forall_exists_index, and_imp, Prod.forall, Prod.mk.injEq, List.map_eq_nil_iff, Bool.not_eq_true]
   refine ⟨fun a b x _ _ h _ => h.symm, fun a ha => ?_⟩
   rw [erase_unitM] at ha
   exact absurd ha List.not_mem_nil
@@ -195,8 +199,8 @@ theorem mask_witness :
   -- the spin finds its ticket served: G takes the lock, its mask list gains (0, ())
   obtain ⟨hfree, T3, r3, a3, o3, m3, R3⟩ := spin_enter_step (S := Sees.shared mLay) R2 () m_blk3 m_blk4 rfl
     (sees_shared_lock (lay := mLay) (R2 ()).2.1.2 .acq) 0 a2 (a := 0) (regs_set_same _ _ _)
-    ⟨by simp [gm1, Tkt.take, gm0], by simp [gm1, Tkt.take, gm0], by simp [gm1, Tkt.take, gm0]⟩
-    (by simp [gm1, Tkt.take, gm0]) (by decide) (by rw [mM0_offen]; exact List.not_mem_nil)
+    ⟨by simp only [Tkt.take, gm0, Nat.zero_add, Std.le_refl], by simp only [Tkt.take, gm0, Nat.zero_add, Nat.lt_add_one], by simp only [Tkt.take, gm0, Nat.zero_add, ↓reduceIte]⟩
+    (by simp only [Tkt.take, gm0, Nat.zero_add]) (by decide) (by rw [mM0_offen]; exact List.not_mem_nil)
   have R3' : LockRel mLay mM1 T3.m (fun _ => gm3) := by
     have := R3 mM1 mM1_offen
     rw [upd_unitM] at this
@@ -210,7 +214,7 @@ theorem mask_witness :
   have a3' : AtB T3 0 0 4 _ [] none := a3
   obtain ⟨T4, r4, a4, o4, m4, R4⟩ := release_step (S := Sees.shared mLay) mLayOk R3' () m_blk4 m_blk5 rfl 0 a3'
     (by rw [regs_set_ne _ _ _ _ (by decide)]; exact regs_set_same _ _ _) rfl
-    (by simp [gm3, gm1, Tkt.enter, Tkt.take, gm0])
+    (by simp only [gm3, Tkt.enter, gm1, Tkt.take, gm0, Nat.zero_add, ↓reduceIte])
   have R4' : LockRel mLay mM2 T4.m (fun _ => gm5) := by
     have := R4 mM2 mM2_offen
     rw [upd_unitM] at this
@@ -222,7 +226,7 @@ theorem mask_witness :
   have hc4' : MaskCells mbF T4.m mk2 := by
     have h := maskCells_nach (mb := mbF) (m := T4.m) (mk := mk1) hc4 kernM 0 (mM2.faeden 0).spur
       (fun hne => absurd (by
-        simp [maskEintr, mM2_spur, offen]
+        simp only [maskEintr, mM2_spur, offen, List.map_eq_nil_iff, List.filter_eq_nil_iff, Bool.not_eq_true]
         intro a ha
         first | rw [erase_unitM] at ha | rw [erase_unit] at ha
         exact absurd ha List.not_mem_nil) hne)

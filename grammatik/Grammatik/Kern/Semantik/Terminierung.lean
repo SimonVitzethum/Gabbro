@@ -106,14 +106,14 @@ theorem mass_faellt_terminiert {S : Type} (step : S → Option S) (m : S → Nat
       intro s hle
       have h0 : m s = 0 := by omega
       cases hs : step s with
-      | none => exact ⟨s, by simp [laufMitTreibstoff, hs]⟩
+      | none => exact ⟨s, by simp only [laufMitTreibstoff, hs]⟩
       | some s' =>
           have hlt := hfall s s' hs
           omega
   | succ n ih =>
       intro s hle
       cases hs : step s with
-      | none => exact ⟨s, by simp [laufMitTreibstoff, hs]⟩
+      | none => exact ⟨s, by simp only [laufMitTreibstoff, hs]⟩
       | some s' =>
           have hlt : m s' < m s := hfall s s' hs
           have hle' : m s' ≤ n := by omega
@@ -139,8 +139,8 @@ def schrittUnbesucht {α : Type} : List α → Option (List α)
 theorem unbesucht_faellt {α : Type} (xs xs' : List α)
     (h : schrittUnbesucht xs = some xs') : xs'.length < xs.length := by
   cases xs with
-  | nil => simp [schrittUnbesucht] at h
-  | cons x xs => simp [schrittUnbesucht] at h; subst h; exact Nat.lt_succ_self _
+  | nil => simp only [schrittUnbesucht, reduceCtorEq] at h
+  | cons x xs => simp only [schrittUnbesucht, Option.some.injEq] at h; subst h; exact Nat.lt_succ_self _
 
 /-- `by unvisited` terminates by construction: the domain is finite, each element is
     visited at most once, so `length + 1` passes always suffice. In the model this is
@@ -185,7 +185,7 @@ theorem retry_beschraenkt_antwortet {S : Type} (step : S → Option S) (n : Nat)
     `traverse`/`retry`/`forever` from inside the body. -/
 theorem schritt_fertig_endet {S : Type} (step : S → Option S) (n : Nat) (s : S)
     (h : step s = none) : laufMitTreibstoff step (n + 1) s = some s := by
-  simp [laufMitTreibstoff, h]
+  simp only [laufMitTreibstoff, h]
 
 /-! ## 3. Where the checker ends: S005 / S008 / K009 are necessary, not sufficient -/
 
@@ -230,7 +230,7 @@ theorem endlos_schoepft_aus {S : Type} (s0 : S) :
   intro n
   induction n with
   | zero => rfl
-  | succ n ih => simp [laufMitTreibstoff, ih]
+  | succ n ih => simp only [laufMitTreibstoff, ih]
 
 /-- **No termination theorem for `forever` exists**: for EVERY fuel there is a loop
     that is still not done when it runs out. So `forever` runs iff unbounded by

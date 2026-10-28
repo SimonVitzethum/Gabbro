@@ -92,7 +92,7 @@ theorem un_fnwert_legs : ∀ (p : String) (rest : List Token) (F : Nat),
   simp only [druckToks, List.cons_append, List.nil_append,
     parseUnary, nameText_nameTok] at ⊢
   rw [sammleSeg_stop [p] rest hrs] at ⊢
-  simp
+  simp only [String.intercalate_singleton]
 
 -- Primary tower from a `wort`-headed print: the `parseUnary`
 -- fall-through (no prefix arm fires on `wort`), then `tower_up`.
@@ -194,7 +194,7 @@ theorem altLegs : ∀ (x : SExpr),
   intro x hp
   have hd : druckToks (.old x) = [.wort "old"] ++
       (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append]
   apply wortTurm _ _ hd
   intro rest' G hrs hrg hG
   exact prim_alt_legs x rest' G hp hrs hG
@@ -202,7 +202,7 @@ theorem altLegs : ∀ (x : SExpr),
 -- `result` legs (primary leg by lane 161's `prim_ergebnis`).
 theorem ergebnisLegs : Legs .res := by
   have hd : druckToks .res = [.wort "result"] ++ [] := by
-    simp [druckToks]
+    simp only [druckToks, List.append_nil]
   apply wortTurm _ _ hd
   intro rest' G hrs hrg hG
   exact prim_ergebnis rest' G (by omega)
@@ -220,7 +220,7 @@ theorem fnwertLegs : ∀ (p : String), Legs (.fnref p) := by
     exact un_fnwert_legs p rest' G hrs hG
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro rest' G hpf hrs hrg hG
-    simp [primFrei] at hpf
+    simp only [primFrei, Bool.false_eq_true] at hpf
   · intro rest' G hrs hrg hG
     exact hU rest' G hrs hrg hG
   · intro rest' G hr hrs hrg hG
@@ -250,7 +250,7 @@ theorem grundLegs : ∀ (g f : String),
   intro g f hkp hit hzuk hself
   have hd : druckToks (.why g f) = [nameTok g] ++
       [.zeichen "::", nameTok f] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append]
   apply identTurm _ _ hd
   intro rest' G hrs hrg hG
   exact prim_grund g f rest' G hkp hit hzuk hself hrs (by omega)
@@ -259,96 +259,96 @@ theorem grundLegs : ∀ (g f : String),
 theorem legsAlt : ∀ (e : SExpr), altNeu e = true → Legs e := by
   intro e hg
   cases e with
-  | lit m => simp [altNeu] at hg
-  | float s => simp [altNeu] at hg
-  | tru => simp [altNeu] at hg
-  | fls => simp [altNeu] at hg
-  | «variable» s => simp [altNeu] at hg
-  | un o x => simp [altNeu] at hg
-  | bin o l r => simp [altNeu] at hg
-  | field x f => simp [altNeu] at hg
-  | index x i => simp [altNeu] at hg
-  | arrow x f => simp [altNeu] at hg
-  | call f xs => simp [altNeu] at hg
-  | fnref f => simp [altNeu] at hg
-  | built f xs => simp [altNeu] at hg
+  | lit m => simp only [altNeu, Bool.false_eq_true] at hg
+  | float s => simp only [altNeu, Bool.false_eq_true] at hg
+  | tru => simp only [altNeu, Bool.false_eq_true] at hg
+  | fls => simp only [altNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [altNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [altNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [altNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [altNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [altNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [altNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [altNeu, Bool.false_eq_true] at hg
+  | fnref f => simp only [altNeu, Bool.false_eq_true] at hg
+  | built f xs => simp only [altNeu, Bool.false_eq_true] at hg
   | old x =>
     simp only [altNeu] at hg
     exact altLegs x hg
-  | res => simp [altNeu] at hg
-  | why g f => simp [altNeu] at hg
-  | ext xk xn xs => simp [altNeu] at hg
+  | res => simp only [altNeu, Bool.false_eq_true] at hg
+  | why g f => simp only [altNeu, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [altNeu, Bool.false_eq_true] at hg
 
 -- Every `ergebnisNeu` tree has legs.
 theorem legsErgebnis : ∀ (e : SExpr), ergebnisNeu e = true → Legs e := by
   intro e hg
   cases e with
-  | lit m => simp [ergebnisNeu] at hg
-  | float s => simp [ergebnisNeu] at hg
-  | tru => simp [ergebnisNeu] at hg
-  | fls => simp [ergebnisNeu] at hg
-  | «variable» s => simp [ergebnisNeu] at hg
-  | un o x => simp [ergebnisNeu] at hg
-  | bin o l r => simp [ergebnisNeu] at hg
-  | field x f => simp [ergebnisNeu] at hg
-  | index x i => simp [ergebnisNeu] at hg
-  | arrow x f => simp [ergebnisNeu] at hg
-  | call f xs => simp [ergebnisNeu] at hg
-  | fnref f => simp [ergebnisNeu] at hg
-  | built f xs => simp [ergebnisNeu] at hg
-  | old x => simp [ergebnisNeu] at hg
+  | lit m => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | float s => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | tru => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | fls => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | fnref f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | built f xs => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | old x => simp only [ergebnisNeu, Bool.false_eq_true] at hg
   | res => exact ergebnisLegs
-  | why g f => simp [ergebnisNeu] at hg
-  | ext xk xn xs => simp [ergebnisNeu] at hg
+  | why g f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [ergebnisNeu, Bool.false_eq_true] at hg
 
 -- Every `fnwertNeu` tree has legs.
 theorem legsFnwert : ∀ (e : SExpr), fnwertNeu e = true → Legs e := by
   intro e hg
   cases e with
-  | lit m => simp [fnwertNeu] at hg
-  | float s => simp [fnwertNeu] at hg
-  | tru => simp [fnwertNeu] at hg
-  | fls => simp [fnwertNeu] at hg
-  | «variable» s => simp [fnwertNeu] at hg
-  | un o x => simp [fnwertNeu] at hg
-  | bin o l r => simp [fnwertNeu] at hg
-  | field x f => simp [fnwertNeu] at hg
-  | index x i => simp [fnwertNeu] at hg
-  | arrow x f => simp [fnwertNeu] at hg
-  | call f xs => simp [fnwertNeu] at hg
+  | lit m => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | float s => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | tru => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | fls => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [fnwertNeu, Bool.false_eq_true] at hg
   | fnref p => exact fnwertLegs p
-  | built f xs => simp [fnwertNeu] at hg
-  | old x => simp [fnwertNeu] at hg
-  | res => simp [fnwertNeu] at hg
-  | why g f => simp [fnwertNeu] at hg
-  | ext xk xn xs => simp [fnwertNeu] at hg
+  | built f xs => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | old x => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | res => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | why g f => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [fnwertNeu, Bool.false_eq_true] at hg
 
 -- Every `grundNeu` tree has legs.
 theorem legsGrund : ∀ (e : SExpr), grundNeu e = true → Legs e := by
   intro e hg
   cases e with
-  | lit m => simp [grundNeu] at hg
-  | float s => simp [grundNeu] at hg
-  | tru => simp [grundNeu] at hg
-  | fls => simp [grundNeu] at hg
-  | «variable» s => simp [grundNeu] at hg
-  | un o x => simp [grundNeu] at hg
-  | bin o l r => simp [grundNeu] at hg
-  | field x f => simp [grundNeu] at hg
-  | index x i => simp [grundNeu] at hg
-  | arrow x f => simp [grundNeu] at hg
-  | call f xs => simp [grundNeu] at hg
-  | fnref f => simp [grundNeu] at hg
-  | built f xs => simp [grundNeu] at hg
-  | old x => simp [grundNeu] at hg
-  | res => simp [grundNeu] at hg
+  | lit m => simp only [grundNeu, Bool.false_eq_true] at hg
+  | float s => simp only [grundNeu, Bool.false_eq_true] at hg
+  | tru => simp only [grundNeu, Bool.false_eq_true] at hg
+  | fls => simp only [grundNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [grundNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [grundNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [grundNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [grundNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [grundNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [grundNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [grundNeu, Bool.false_eq_true] at hg
+  | fnref f => simp only [grundNeu, Bool.false_eq_true] at hg
+  | built f xs => simp only [grundNeu, Bool.false_eq_true] at hg
+  | old x => simp only [grundNeu, Bool.false_eq_true] at hg
+  | res => simp only [grundNeu, Bool.false_eq_true] at hg
   | why g f =>
     simp only [grundNeu, Bool.and_eq_true] at hg
     obtain ⟨hABC, hself⟩ := hg
     obtain ⟨hAB, hzuk⟩ := hABC
     obtain ⟨hkp, hit⟩ := hAB
     exact grundLegs g f hkp hit hzuk hself
-  | ext xk xn xs => simp [grundNeu] at hg
+  | ext xk xn xs => simp only [grundNeu, Bool.false_eq_true] at hg
 
 -- Every level-6-new tree has legs (the `obtain` shape mirrors
 -- `legsEmb`: the four-way `||` splits left-nested).
@@ -382,79 +382,79 @@ theorem parse_druck_prim : ∀ (e : SExpr), gutPrim e = true →
   have hrs : ruhigSuff [.ende] = true := rfl
   have hrg : ruhigGleit [.ende] = true := rfl
   have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
+    simp only [brennstoff, Std.le_refl]
   exact hL.2.2.2.2.2.2.2 [.ende] (brennstoff e) hr hrs hrg hF
 
 -- Bridge for the `alt` layer (kernel places are places).
 theorem gut_of_altNeu : ∀ (e : SExpr), altNeu e = true → gut e = true := by
   intro e hg
   cases e with
-  | lit m => simp [altNeu] at hg
-  | float s => simp [altNeu] at hg
-  | tru => simp [altNeu] at hg
-  | fls => simp [altNeu] at hg
-  | «variable» s => simp [altNeu] at hg
-  | un o x => simp [altNeu] at hg
-  | bin o l r => simp [altNeu] at hg
-  | field x f => simp [altNeu] at hg
-  | index x i => simp [altNeu] at hg
-  | arrow x f => simp [altNeu] at hg
-  | call f xs => simp [altNeu] at hg
-  | fnref f => simp [altNeu] at hg
-  | built f xs => simp [altNeu] at hg
+  | lit m => simp only [altNeu, Bool.false_eq_true] at hg
+  | float s => simp only [altNeu, Bool.false_eq_true] at hg
+  | tru => simp only [altNeu, Bool.false_eq_true] at hg
+  | fls => simp only [altNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [altNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [altNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [altNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [altNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [altNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [altNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [altNeu, Bool.false_eq_true] at hg
+  | fnref f => simp only [altNeu, Bool.false_eq_true] at hg
+  | built f xs => simp only [altNeu, Bool.false_eq_true] at hg
   | old x =>
     simp only [altNeu] at hg
     simp only [gut]
     exact gutPlatz_of_gutKernPlatz x hg
-  | res => simp [altNeu] at hg
-  | why g f => simp [altNeu] at hg
-  | ext xk xn xs => simp [altNeu] at hg
+  | res => simp only [altNeu, Bool.false_eq_true] at hg
+  | why g f => simp only [altNeu, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [altNeu, Bool.false_eq_true] at hg
 
 -- Bridge for the `res` layer.
 theorem gut_of_ergebnisNeu : ∀ (e : SExpr),
     ergebnisNeu e = true → gut e = true := by
   intro e hg
   cases e with
-  | lit m => simp [ergebnisNeu] at hg
-  | float s => simp [ergebnisNeu] at hg
-  | tru => simp [ergebnisNeu] at hg
-  | fls => simp [ergebnisNeu] at hg
-  | «variable» s => simp [ergebnisNeu] at hg
-  | un o x => simp [ergebnisNeu] at hg
-  | bin o l r => simp [ergebnisNeu] at hg
-  | field x f => simp [ergebnisNeu] at hg
-  | index x i => simp [ergebnisNeu] at hg
-  | arrow x f => simp [ergebnisNeu] at hg
-  | call f xs => simp [ergebnisNeu] at hg
-  | fnref f => simp [ergebnisNeu] at hg
-  | built f xs => simp [ergebnisNeu] at hg
-  | old x => simp [ergebnisNeu] at hg
+  | lit m => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | float s => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | tru => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | fls => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | fnref f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | built f xs => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | old x => simp only [ergebnisNeu, Bool.false_eq_true] at hg
   | res => rfl
-  | why g f => simp [ergebnisNeu] at hg
-  | ext xk xn xs => simp [ergebnisNeu] at hg
+  | why g f => simp only [ergebnisNeu, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [ergebnisNeu, Bool.false_eq_true] at hg
 
 -- Bridge for the `fnref` layer.
 theorem gut_of_fnwertNeu : ∀ (e : SExpr),
     fnwertNeu e = true → gut e = true := by
   intro e hg
   cases e with
-  | lit m => simp [fnwertNeu] at hg
-  | float s => simp [fnwertNeu] at hg
-  | tru => simp [fnwertNeu] at hg
-  | fls => simp [fnwertNeu] at hg
-  | «variable» s => simp [fnwertNeu] at hg
-  | un o x => simp [fnwertNeu] at hg
-  | bin o l r => simp [fnwertNeu] at hg
-  | field x f => simp [fnwertNeu] at hg
-  | index x i => simp [fnwertNeu] at hg
-  | arrow x f => simp [fnwertNeu] at hg
-  | call f xs => simp [fnwertNeu] at hg
+  | lit m => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | float s => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | tru => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | fls => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [fnwertNeu, Bool.false_eq_true] at hg
   | fnref p => rfl
-  | built f xs => simp [fnwertNeu] at hg
-  | old x => simp [fnwertNeu] at hg
-  | res => simp [fnwertNeu] at hg
-  | why g f => simp [fnwertNeu] at hg
-  | ext xk xn xs => simp [fnwertNeu] at hg
+  | built f xs => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | old x => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | res => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | why g f => simp only [fnwertNeu, Bool.false_eq_true] at hg
+  | ext xk xn xs => simp only [fnwertNeu, Bool.false_eq_true] at hg
 
 -- Bridge for the `grund` layer (exactly `gut`'s side
 -- conditions; stepwise `obtain` -- the flattened four-pattern
@@ -463,21 +463,21 @@ theorem gut_of_grundNeu : ∀ (e : SExpr),
     grundNeu e = true → gut e = true := by
   intro e hg
   cases e with
-  | lit m => simp [grundNeu] at hg
-  | float s => simp [grundNeu] at hg
-  | tru => simp [grundNeu] at hg
-  | fls => simp [grundNeu] at hg
-  | «variable» s => simp [grundNeu] at hg
-  | un o x => simp [grundNeu] at hg
-  | bin o l r => simp [grundNeu] at hg
-  | field x f => simp [grundNeu] at hg
-  | index x i => simp [grundNeu] at hg
-  | arrow x f => simp [grundNeu] at hg
-  | call f xs => simp [grundNeu] at hg
-  | fnref f => simp [grundNeu] at hg
-  | built f xs => simp [grundNeu] at hg
-  | old x => simp [grundNeu] at hg
-  | res => simp [grundNeu] at hg
+  | lit m => simp only [grundNeu, Bool.false_eq_true] at hg
+  | float s => simp only [grundNeu, Bool.false_eq_true] at hg
+  | tru => simp only [grundNeu, Bool.false_eq_true] at hg
+  | fls => simp only [grundNeu, Bool.false_eq_true] at hg
+  | «variable» s => simp only [grundNeu, Bool.false_eq_true] at hg
+  | un o x => simp only [grundNeu, Bool.false_eq_true] at hg
+  | bin o l r => simp only [grundNeu, Bool.false_eq_true] at hg
+  | field x f => simp only [grundNeu, Bool.false_eq_true] at hg
+  | index x i => simp only [grundNeu, Bool.false_eq_true] at hg
+  | arrow x f => simp only [grundNeu, Bool.false_eq_true] at hg
+  | call f xs => simp only [grundNeu, Bool.false_eq_true] at hg
+  | fnref f => simp only [grundNeu, Bool.false_eq_true] at hg
+  | built f xs => simp only [grundNeu, Bool.false_eq_true] at hg
+  | old x => simp only [grundNeu, Bool.false_eq_true] at hg
+  | res => simp only [grundNeu, Bool.false_eq_true] at hg
   | why g f =>
     simp only [grundNeu, Bool.and_eq_true] at hg
     obtain ⟨hABC, hself⟩ := hg
@@ -485,7 +485,7 @@ theorem gut_of_grundNeu : ∀ (e : SExpr),
     obtain ⟨hkp, hit⟩ := hAB
     simp only [gut, Bool.and_eq_true] at ⊢
     exact ⟨⟨⟨hkp, hit⟩, hzuk⟩, hself⟩
-  | ext xk xn xs => simp [grundNeu] at hg
+  | ext xk xn xs => simp only [grundNeu, Bool.false_eq_true] at hg
 
 -- Bridge for the level-6 predicate (via the four layer
 -- bridges above).

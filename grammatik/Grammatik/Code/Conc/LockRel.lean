@@ -100,11 +100,11 @@ theorem lockRel_exclusive {lay : Layout D} {M : RufMaschineG D} {m : Mem} {gh : 
   have pv : 0 < (offen (M.faeden v).spur).count L := List.count_pos_iff.mpr hv
   have bu : (gh L).holdsB u = true := by
     cases hb : (gh L).holdsB u
-    · rw [hb] at cu; simp [cu] at pu
+    · rw [hb] at cu; simp only [cu, Bool.false_eq_true, ↓reduceIte, Nat.lt_irrefl] at pu
     · rfl
   have bv : (gh L).holdsB v = true := by
     cases hb : (gh L).holdsB v
-    · rw [hb] at cv; simp [cv] at pv
+    · rw [hb] at cv; simp only [cv, Bool.false_eq_true, ↓reduceIte, Nat.lt_irrefl] at pv
     · rfl
   simp only [Tkt.holdsB, Bool.and_eq_true, decide_eq_true_eq] at bu bv
   rw [bu.2] at bv
@@ -140,10 +140,10 @@ noncomputable def upd (gh : D.Lock → Tkt) (L : D.Lock) (t : Tkt) : D.Lock → 
   fun L' => if L' = L then t else gh L'
 
 theorem upd_self (gh : D.Lock → Tkt) (L : D.Lock) (t : Tkt) : upd gh L t L = t := by
-  simp [upd]
+  simp only [upd, ↓reduceIte]
 
 theorem upd_ne (gh : D.Lock → Tkt) {L L' : D.Lock} (t : Tkt) (h : L' ≠ L) : upd gh L t L' = gh L' := by
-  simp [upd, h]
+  simp only [upd, h, ↓reduceIte]
 
 theorem take_ok {t : Tkt} (h : t.Ok) (u : Faden) (hnq : ∀ i, t.s ≤ i → i < t.n → t.who i ≠ some u)
     (hroom : t.n + 1 - t.s < 2 ^ Conf.wbits) : (t.take u).Ok := by
@@ -155,7 +155,7 @@ theorem take_ok {t : Tkt} (h : t.Ok) (u : Faden) (hnq : ∀ i, t.s ≤ i → i <
   · intro i h1 h2
     show ∃ v, (if i = t.n then some u else t.who i) = some v
     by_cases e : i = t.n
-    · exact ⟨u, by simp [e]⟩
+    · exact ⟨u, by simp only [e, ↓reduceIte]⟩
     · rw [if_neg e]
       exact h.owned i h1 (by simp only [Tkt.take] at h2; omega)
   · intro i j v h1 h2 h3 h4 e1 e2
@@ -185,15 +185,15 @@ theorem take_holdsB (t : Tkt) (h : t.Ok) (u v : Faden) : (t.take u).holdsB v = t
   by_cases hin : t.inside = true
   · have hs : t.s < t.n := h.held hin
     have : t.s ≠ t.n := by omega
-    simp [if_neg this]
-  · simp [hin]
+    simp only [if_neg this]
+  · simp only [hin, Bool.false_and]
 
 theorem enter_ok {t : Tkt} (h : t.Ok) (hs : t.s < t.n) : t.enter.Ok :=
   ⟨h.le, h.room, h.owned, h.one, fun _ => hs⟩
 
 theorem leave_ok {t : Tkt} (h : t.Ok) (hin : t.inside = true) : t.leave.Ok := by
   have hs := h.held hin
-  refine ⟨?_, ?_, ?_, ?_, fun e => absurd e (by simp [Tkt.leave])⟩
+  refine ⟨?_, ?_, ?_, ?_, fun e => absurd e (by simp only [Tkt.leave, Bool.false_eq_true, not_false_eq_true])⟩
   · show t.s + 1 ≤ t.n
     omega
   · show t.n - (t.s + 1) < 2 ^ Conf.wbits
@@ -210,7 +210,7 @@ def AtB (T : TM) (u : Faden) (fn : Nat) (lbl : Lbl) (rs : Regs) (ks : List Frame
 theorem cfg_of_atB {T : TM} {u : Faden} {fn : Nat} {lbl : Lbl} {rs : Regs} {ks : List Frame} {dst : Option Reg}
     (h : AtB T u fn lbl rs ks dst) : T.cfg u = .run T.m ⟨fn, lbl, 0, rs, dst⟩ ks := by
   have h' : T.th u = .run ⟨fn, lbl, 0, rs, dst⟩ ks := h
-  simp [TM.cfg, h']
+  simp only [TM.cfg, h']
 
 theorem dec_enc_tk (n : Nat) : Ty.dec lw (Val.enc (tk n)) = some (tk n) := dec_enc_int _ _
 
@@ -230,7 +230,7 @@ theorem take_step {lay : Layout D} (hL : LayoutOk lay) {M : RufMaschineG D} {T :
   have hreach := take_run (S := S) hb hsp hp (rs := rs) (ks := ks) (dst := dst) hcn hm'
   refine ⟨T.upd u (.run m' ⟨fn, lsp, 0, rs.set rt (tk (gh L).n), dst⟩ ks), treach_solo hreach T (cfg_of_atB hth),
     ?_, fun v hv => upd_other T _ hv, hm', ?_⟩
-  · simp [AtB, TM.upd]
+  · simp only [AtB, TM.upd, ↓reduceIte]
   · intro L'
     by_cases hLL : L' = L
     · subst hLL
@@ -264,7 +264,7 @@ theorem spin_wait_step {lay : Layout D} {M : RufMaschineG D} {T : TM} {gh : D.Lo
     hlt (ticket_cmp (hrel L).1 hq h)
   have hreach := spin_wait (S := S) hb hrt (hrel L).2.1.2 hS hne' hne (ks := ks) (dst := dst)
   exact ⟨T.upd u (.run T.m ⟨fn, lsp, 0, rs.set rd (tk (gh L).s), dst⟩ ks),
-    treach_solo hreach T (cfg_of_atB hth), by simp [AtB, TM.upd], fun v hv => upd_other T _ hv, rfl⟩
+    treach_solo hreach T (cfg_of_atB hth), by simp only [AtB, TM.upd, ↓reduceIte], fun v hv => upd_other T _ hv, rfl⟩
 
 /-- **The spin that finds ITS ticket served** (G's `dannLocks`): the lock is free in G's terms, and after the `nimmt`
     the relation holds for the machine whose `offen` gained `L` for this thread. -/
@@ -288,20 +288,20 @@ theorem spin_enter_step {lay : Layout D} {M : RufMaschineG D} {T : TM} {gh : D.L
     · rfl
     · exfalso
       have h1 := hG u
-      have h2 : (gh L).holdsB u = true := by simp [Tkt.holdsB, hin, hwho]
+      have h2 : (gh L).holdsB u = true := by simp only [Tkt.holdsB, hin, hwho, decide_true, Bool.and_self]
       rw [h2] at h1
-      have : 0 < (offen (M.faeden u).spur).count L := by simp [h1]
+      have : 0 < (offen (M.faeden u).spur).count L := by simp only [h1, ↓reduceIte, Nat.lt_add_one]
       exact hself (List.count_pos_iff.mp this)
   have hfree : RufFreiG M u L := by
     intro g hg hgl
     have h1 := hG g
-    have h2 : (gh L).holdsB g = false := by simp [Tkt.holdsB, hnin]
+    have h2 : (gh L).holdsB g = false := by simp only [Tkt.holdsB, hnin, Bool.false_and]
     rw [h2] at h1
     have : (offen (M.faeden g).spur).count L = 0 := by simpa using h1
     exact (List.count_eq_zero.mp this) hgl
   have hreach := spin_enter (S := S) hb hk hkp hrt hcs hS (by rw [ha]) hne (ks := ks) (dst := dst)
   refine ⟨hfree, T.upd u (.run T.m ⟨fn, kb, 0, rs.set rd (tk (gh L).s), dst⟩ ks),
-    treach_solo hreach T (cfg_of_atB hth), by simp [AtB, TM.upd], fun v hv => upd_other T _ hv, rfl, ?_⟩
+    treach_solo hreach T (cfg_of_atB hth), by simp only [AtB, TM.upd, ↓reduceIte], fun v hv => upd_other T _ hv, rfl, ?_⟩
   intro M' hM' L'
   by_cases hLL : L' = L
   · subst hLL
@@ -311,14 +311,14 @@ theorem spin_enter_step {lay : Layout D} {M : RufMaschineG D} {T : TM} {gh : D.L
     by_cases hv : v = u
     · subst hv
       have hz : (offen (M.faeden v).spur).count L' = 0 := List.count_eq_zero.mpr hself
-      have : (gh L').enter.holdsB v = true := by simp [Tkt.holdsB, Tkt.enter, hwho]
-      simp [this, hz]
-    · have h2 : (gh L').holdsB v = false := by simp [Tkt.holdsB, hnin]
+      have : (gh L').enter.holdsB v = true := by simp only [Tkt.holdsB, Tkt.enter, hwho, decide_true, Bool.and_self]
+      simp only [↓reduceIte, List.count_cons_self, hz, Nat.zero_add, this]
+    · have h2 : (gh L').holdsB v = false := by simp only [Tkt.holdsB, hnin, Bool.false_and]
       have h3 : (gh L').enter.holdsB v = false := by
-        simp [Tkt.holdsB, Tkt.enter, hwho, Ne.symm hv]
+        simp only [Tkt.holdsB, Tkt.enter, hwho, Option.some.injEq, Ne.symm hv, decide_false, Bool.and_false]
       have h1 := hG v
       rw [h2] at h1
-      simp [hv, h3, h1]
+      simp only [hv, ↓reduceIte, h1, Bool.false_eq_true, h3]
   · rw [upd_ne _ _ hLL]
     obtain ⟨hok', hc', hG'⟩ := hrel L'
     refine ⟨hok', hc', fun v => ?_⟩
@@ -326,8 +326,8 @@ theorem spin_enter_step {lay : Layout D} {M : RufMaschineG D} {T : TM} {gh : D.L
     by_cases hv : v = u
     · subst hv
       have := hG' v
-      simp [this, Ne.symm hLL]
-    · simp [hv, hG' v]
+      simp only [↓reduceIte, ne_eq, Ne.symm hLL, not_false_eq_true, List.count_cons_of_ne, this]
+    · simp only [hv, ↓reduceIte, hG' v]
 
 /-- **The release** (G's `freiGib`): the serving cell becomes `s + 1`; the relation holds for the machine whose `offen`
     lost `L` for this thread. -/
@@ -347,7 +347,7 @@ theorem release_step {lay : Layout D} (hL : LayoutOk lay) {M : RufMaschineG D} {
   obtain ⟨m', hm'⟩ := store_of_load hcs (tk_ty _)
   have hreach := rel_run (S := S) hb hk hkp hrt hm' (ks := ks) (dst := dst)
   refine ⟨T.upd u (.run m' ⟨fn, k, 0, rs.set ru (tk ((gh L).s + 1)), dst⟩ ks),
-    treach_solo hreach T (cfg_of_atB hth), by simp [AtB, TM.upd], fun v hv => upd_other T _ hv, hm', ?_⟩
+    treach_solo hreach T (cfg_of_atB hth), by simp only [AtB, TM.upd, ↓reduceIte], fun v hv => upd_other T _ hv, hm', ?_⟩
   intro M' hM' L'
   by_cases hLL : L' = L
   · subst hLL
@@ -360,17 +360,17 @@ theorem release_step {lay : Layout D} (hL : LayoutOk lay) {M : RufMaschineG D} {
     · rw [hM' v]
       have hL1 : (offen (M.faeden u).spur).count L' = 1 := by
         have := hG u
-        have h2 : (gh L').holdsB u = true := by simp [Tkt.holdsB, hin, hwho]
+        have h2 : (gh L').holdsB u = true := by simp only [Tkt.holdsB, hin, hwho, decide_true, Bool.and_self]
         simpa [h2] using this
-      have hfalse : (gh L').leave.holdsB v = false := by simp [Tkt.holdsB, Tkt.leave]
+      have hfalse : (gh L').leave.holdsB v = false := by simp only [Tkt.holdsB, Tkt.leave, Bool.false_and]
       by_cases hv : v = u
       · subst hv
-        simp [hfalse, List.count_erase_self, hL1]
+        simp only [↓reduceIte, List.count_erase_self, hL1, Nat.sub_self, hfalse, Bool.false_eq_true]
       · have h2 : (gh L').holdsB v = false := by
-          simp [Tkt.holdsB, hin, hwho, Ne.symm hv]
+          simp only [Tkt.holdsB, hin, hwho, Option.some.injEq, Ne.symm hv, decide_false, Bool.and_false]
         have h1 := hG v
         rw [h2] at h1
-        simp [hv, hfalse, h1]
+        simp only [hv, ↓reduceIte, h1, Bool.false_eq_true, hfalse]
   · rw [upd_ne _ _ hLL]
     obtain ⟨hok', hc', hG'⟩ := hrel L'
     refine ⟨hok', cells_other hc' hm' (fun e => hL.lkX L' L e.symm) (fun e => hLL (hL.lkS _ _ e.symm)), fun v => ?_⟩
@@ -379,7 +379,7 @@ theorem release_step {lay : Layout D} (hL : LayoutOk lay) {M : RufMaschineG D} {
     · subst hv
       rw [if_pos rfl, List.count_erase_of_ne hLL]
       exact hG' v
-    · simp [hv, hG' v]
+    · simp only [hv, ↓reduceIte, hG' v]
 
 /-- **A store into a lock cell leaves everything else alone**: the representation of every world, the memory's global
     blocks and every thread's locals (the cells are no table, no global and no local). So the lock steps compose

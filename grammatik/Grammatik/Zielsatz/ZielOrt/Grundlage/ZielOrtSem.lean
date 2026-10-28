@@ -113,7 +113,7 @@ theorem gleichAuf_storeSlot {S : List (D.Tab ⊕ D.Glob)} {σ σ' : World D}
     · subst hk
       by_cases hf : f' = f
       · subst hf
-        simp [World.storeSlot]
+        simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte]
       · rw [storeSlot_fremd_feld _ _ _ _ _ _ _ rfl hf, storeSlot_fremd_feld _ _ _ _ _ _ _ rfl hf, e]
     · simp only [World.storeSlot, dif_pos rfl, if_neg hk]
       rw [e]
@@ -131,7 +131,7 @@ theorem gleichAuf_schreibGlob {S : List (D.Tab ⊕ D.Glob)} {σ σ' : World D}
   refine ⟨fun t ht => h.1 t ht, fun g' hg' => ?_⟩
   by_cases hgg : g' = g
   · subst hgg
-    simp [World.schreibGlob, World.merke, World.storeGlob]
+    simp only [World.schreibGlob, World.merke, World.storeGlob, List.cons_append, List.nil_append, ↓reduceDIte]
   · show (σ.storeGlob g v).globs g' = (σ'.storeGlob g v).globs g'
     rw [storeGlob_fremd_global _ hgg, storeGlob_fremd_global _ hgg]
     exact h.2 g' hg'
@@ -261,12 +261,12 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
   | retWhy r hp => simp only [execStmt] at h; cases h
   | leave h' => simp only [execStmt] at h; cases h
   | next h' => simp only [execStmt] at h; cases h
-  | axiomCall => simp [Stmt.kOk] at hk
-  | callInd => simp [Stmt.kOk] at hk
-  | traverse => simp [Stmt.kOk] at hk
-  | retry => simp [Stmt.kOk] at hk
-  | forever => simp [Stmt.kOk] at hk
-  | _ => simp [Stmt.istBlatt] at hb
+  | axiomCall => simp only [Stmt.kOk, Bool.false_eq_true] at hk
+  | callInd => simp only [Stmt.kOk, Bool.false_eq_true] at hk
+  | traverse => simp only [Stmt.kOk, Bool.false_eq_true] at hk
+  | retry => simp only [Stmt.kOk, Bool.false_eq_true] at hk
+  | forever => simp only [Stmt.kOk, Bool.false_eq_true] at hk
+  | _ => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
 
 /-! ## 3. The frame semantics with the logic outcome -/
 
@@ -285,7 +285,7 @@ def ZErg.gleich {V : Vertrag D} : ZErg V → ZErg V → Prop
   | _, _ => False
 
 theorem ZErg.gleich_refl {V : Vertrag D} (r : ZErg V) : r.gleich r := by
-  cases r <;> simp [ZErg.gleich, SG]
+  cases r <;> simp only [gleich, SG, and_self]
 
 theorem ZErg.gleich_symm {V : Vertrag D} {r r' : ZErg V} (h : r.gleich r') : r'.gleich r := by
   cases r <;> cases r' <;> simp_all [ZErg.gleich, SG]

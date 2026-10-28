@@ -402,10 +402,10 @@ theorem storeSlot_worldR (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t)
     simp only [dite_true]
     by_cases hk : k' = k
     · by_cases hf : f' = f
-      · subst hf; simp [hk]
-      · simp [hk, hf]
-    · simp [hk]
-  · simp [ht]
+      · subst hf; simp only [hk, ↓reduceIte, ↓reduceDIte]
+      · simp only [hk, ↓reduceIte, hf, ↓reduceDIte]
+    · simp only [hk, ↓reduceIte]
+  · simp only [ht, ↓reduceDIte]
 
 theorem storeGlob_worldR (σ : World D) (g : D.Glob) (v : Wert D (D.gtyp g)) :
     (worldR σ).storeGlob g (valR (D.gtyp g) v) = worldR (σ.storeGlob g v) := by
@@ -413,8 +413,8 @@ theorem storeGlob_worldR (σ : World D) (g : D.Glob) (v : Wert D (D.gtyp g)) :
   funext g'
   simp only [World.storeGlob, worldR]
   by_cases hg : g' = g
-  · subst hg; simp
-  · simp [hg]
+  · subst hg; simp only [↓reduceDIte]
+  · simp only [hg, ↓reduceDIte]
 
 theorem schreibSlot_worldR (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
     (v : Wert D (D.typ t f)) :
@@ -526,7 +526,8 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
               have hzn : z n = Option.none := by rw [← h, hz']; rfl
               have hs : ¬ (D.mitRuhe).passt Option.none (m + 1) = true := by
                 show ¬ decide (m + 1 = 0) = true
-                simp
+                simp only [Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true,
+  not_false_eq_true]
               simp only [zeigerPasst, hz', hzn, dif_neg hs]
               try rfl
           | some f =>

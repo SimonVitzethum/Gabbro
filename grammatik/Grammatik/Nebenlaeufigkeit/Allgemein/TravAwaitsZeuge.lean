@@ -134,7 +134,7 @@ def taD : Deklaration where
   sig := fun | .haupt0 => 0 | .fuelle => 1 | .haupt1 => 2 | .warte => 3 | .ruhe => 4
   sigNr := fun n => match n with
     | 0 => taSigHaupt0 | 1 => taSigFuelle | 2 => taSigHaupt1 | 3 => taSigWarte | _ => taSigRuhe
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -216,7 +216,7 @@ def taEnsFuelle : Expr taD (ErgCtx (taD.params taFuelle) (taD.erg taFuelle))
 theorem taHpFuelle : RufPasst taD (vertragVon taD taHaupt0) (taD.signatur taFuelle) taLL where
   hw := fun _ _ => rfl
   hg := fun _ h => by cases h
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by
     cases L
     · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
@@ -260,7 +260,7 @@ def taRumpfHaupt0 : Endblock taD (vertragVon taD taHaupt0) false [] taLL :=
 theorem taHpWarte : RufPasst taD (vertragVon taD taHaupt1) (taD.signatur taWarte) taKL where
   hw := fun _ h => h
   hg := fun _ h => h
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by
     cases L
     · exact ⟨fun h => absurd (List.mem_singleton.mp h) (Ne.symm taHeld_ne),

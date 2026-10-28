@@ -18,11 +18,11 @@ def natBits (w x : Nat) : List Bool :=
   List.ofFn (fun i : Fin w => Nat.testBit x i.val)
 
 theorem natBits_length (w x : Nat) : (natBits w x).length = w := by
-  simp [natBits]
+  simp only [natBits, List.length_ofFn]
 
 theorem natBits_get (w x i : Nat) (hi : i < w) :
     (natBits w x)[i]'(by rw [natBits_length]; exact hi) = Nat.testBit x i := by
-  simp [natBits]
+  simp only [natBits, List.getElem_ofFn]
 
 /-! ## Nat-level intrinsics over a `w + 1` wide field.
 
@@ -75,13 +75,13 @@ def ctzn (w x : Nat) : Nat := ctzAux (w + 1) x
 
 theorem ctzAux_rw {fuel x : Nat} (hne : x ≠ 0) (heven : x % 2 = 0) :
     ctzAux (fuel + 1) x = 1 + ctzAux fuel (x / 2) := by
-  simp [ctzAux, hne, heven]
+  simp only [ctzAux, hne, ↓reduceIte, heven, Nat.zero_ne_one, Nat.add_left_cancel_iff]
 
 theorem ctzAux_spez (fuel x : Nat) (hx0 : 0 < x) (hxW : x < 2 ^ fuel) :
     2 ^ ctzAux fuel x ∣ x ∧ ¬ 2 ^ (ctzAux fuel x + 1) ∣ x := by
   induction fuel generalizing x with
   | zero =>
-    simp at hxW
+    simp only [Nat.pow_zero, Nat.lt_one_iff] at hxW
     omega
   | succ fuel ih =>
     have hne : x ≠ 0 := by omega
@@ -91,10 +91,10 @@ theorem ctzAux_spez (fuel x : Nat) (hx0 : 0 < x) (hxW : x < 2 ^ fuel) :
       · exact Or.inl h
     cases hcase with
     | inl hodd =>
-      have hrw : ctzAux (fuel + 1) x = 0 := by simp [ctzAux, hodd, hne]
+      have hrw : ctzAux (fuel + 1) x = 0 := by simp only [ctzAux, hne, ↓reduceIte, hodd]
       rw [hrw]
       constructor
-      · simp
+      · simp only [Nat.pow_zero, Nat.one_dvd]
       · intro hdvd
         have hmod := (@Nat.dvd_iff_mod_eq_zero 2 x).mp hdvd
         omega
@@ -110,7 +110,7 @@ theorem ctzAux_spez (fuel x : Nat) (hx0 : 0 < x) (hxW : x < 2 ^ fuel) :
         omega
       generalize hgen : ctzAux fuel (x / 2) = c
       have hrw : ctzAux (fuel + 1) x = 1 + c := by
-        simp [ctzAux, hne, heven, hgen]
+        simp only [ctzAux, hne, ↓reduceIte, heven, Nat.zero_ne_one, hgen, Nat.add_left_cancel_iff]
       have hpow1 : 2 ^ (1 + c) = 2 * 2 ^ c := by
         rw [Nat.pow_add, Nat.pow_one]
       have hpow2 : 2 ^ ((1 + c) + 1) = 2 * 2 ^ (c + 1) := by
@@ -151,7 +151,7 @@ theorem ctzn_le {w x : Nat} (hx0 : 0 < x) (hxW : x < 2 ^ (w + 1)) :
       Nat.pow_le_pow_right (by decide) hge
     have hqpos : 0 < q := by
       cases Decidable.em (q = 0) with
-      | inl h0 => simp [h0] at hq; omega
+      | inl h0 => simp only [h0, Nat.mul_zero] at hq; omega
       | inr h0 =>
         have : 0 < q := Nat.pos_of_ne_zero h0
         exact this
@@ -173,7 +173,7 @@ def popcountn (w x : Nat) : Nat := popAux (w + 1) x
 
 theorem popAux_le (fuel x : Nat) : popAux fuel x ≤ fuel := by
   induction fuel generalizing x with
-  | zero => simp [popAux]
+  | zero => simp only [popAux, Std.le_refl]
   | succ fuel ih =>
     simp only [popAux]
     have hmod : x % 2 ≤ 1 := by
@@ -189,7 +189,7 @@ theorem popcountn_le (w x : Nat) : popcountn w x ≤ w + 1 :=
 theorem popAux_add_fuel (a b x : Nat) :
     popAux (a + b) x = popAux a x + popAux b (x / 2 ^ a) := by
   induction a generalizing x with
-  | zero => simp [popAux]
+  | zero => simp only [Nat.zero_add, popAux, Nat.pow_zero, Nat.div_one]
   | succ a ih =>
     have e : a + 1 + b = (a + b) + 1 := by omega
     rw [e]
@@ -207,8 +207,8 @@ theorem popAux_add_mul_pow (s t lo hi : Nat) (hlo : lo < 2 ^ s) :
     popAux (s + t) (lo + hi * 2 ^ s) = popAux s lo + popAux t hi := by
   induction s generalizing lo hi with
   | zero =>
-    simp at hlo
-    simp [popAux, hlo]
+    simp only [Nat.pow_zero, Nat.lt_one_iff] at hlo
+    simp only [Nat.zero_add, hlo, Nat.pow_zero, Nat.mul_one, popAux]
   | succ s ih =>
     have e : s + 1 + t = (s + t) + 1 := by omega
     rw [e]
@@ -293,7 +293,7 @@ theorem rotrn_rotln (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
         = hi * 2 ^ (w + 1 - s) := by rw [hhi, Nat.mul_comm]
     omega
   have hrot : rotln w s x = hi + lo * 2 ^ s := by
-    simp [rotln, hlo, hhi, Nat.add_comm]
+    simp only [rotln, hlo, hhi, Nat.add_comm, Nat.add_left_cancel_iff]
   have hmod : (hi + lo * 2 ^ s) % 2 ^ s = hi % 2 ^ s :=
     Nat.add_mul_mod_self_right hi lo (2 ^ s)
   have hmodhi : hi % 2 ^ s = hi := Nat.mod_eq_of_lt hhix
@@ -301,7 +301,7 @@ theorem rotrn_rotln (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
     Nat.add_mul_div_right hi lo (Nat.pow_pos (by decide))
   have hdivhi : hi / 2 ^ s = 0 := Nat.div_eq_zero_iff.mpr (Or.inr hhix)
   have hfin : rotrn w s (hi + lo * 2 ^ s) = hi * 2 ^ (w + 1 - s) + lo := by
-    simp [rotrn, hmod, hmodhi, hdiv, hdivhi]
+    simp only [rotrn, hmod, hmodhi, hdiv, hdivhi, Nat.zero_add, Nat.add_left_cancel_iff]
   rw [← hrot, hfin] at *
   omega
 
@@ -321,7 +321,7 @@ theorem popcountn_rotln (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
     have hdiv : x / 2 ^ t < 2 ^ s := Nat.div_lt_of_lt_mul hxW
     omega
   have hrot : rotln w s x = hi + lo * 2 ^ s := by
-    simp [rotln, ht, hlo, hhi, Nat.add_comm]
+    simp only [rotln, ht, hlo, hhi, Nat.add_comm, Nat.add_left_cancel_iff]
   have hsplit : x = lo + hi * 2 ^ t := by
     have h := Nat.div_add_mod x (2 ^ t)
     have hc : 2 ^ t * (x / 2 ^ t) = hi * 2 ^ t := by rw [hhi, Nat.mul_comm]
@@ -333,7 +333,7 @@ theorem popcountn_rotln (w s x : Nat) (hs : s ≤ w) (hx : x < 2 ^ (w + 1)) :
   have hRHS : popAux (w + 1) x = popAux t lo + popAux s hi := by
     rw [← hW2, hsplit]
     exact popAux_add_mul_pow t s lo hi hlox
-  simp [popcountn, hrot, hLHS, hRHS, Nat.add_comm]
+  simp only [popcountn, hrot, hLHS, hRHS, Nat.add_comm, Nat.add_left_cancel_iff]
 
 /-! ## Byteswap at `Nat` level: one byte reader, three widths. -/
 
@@ -477,7 +477,7 @@ theorem bswap16n_lt (x : Nat) : bswap16n x < 256 ^ 2 := by
     rw [e]; exact h0
   have hA := pkt_lt (byteOf x 0) (byteOf x 1) 1 h0' h1
   rw [show (1 : Nat) + 1 = 2 from rfl] at hA
-  simp [bswap16n]
+  simp only [bswap16n, Nat.reducePow, gt_iff_lt]
   exact hA
 
 /-- `bswap16` is an involution on `u16`. Uses `hx` (value fits). -/

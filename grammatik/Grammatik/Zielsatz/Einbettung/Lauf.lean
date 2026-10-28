@@ -226,7 +226,7 @@ theorem lese_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
   | cons x X =>
       have hl := h.lese E Λ Λ' (x :: X)
       have hgr : σ.spur.length < (σ.lese Λ (x :: X)).spur.length := by
-        rw [lese_laenge]; simp
+        rw [lese_laenge]; simp only [List.length_cons, Nat.lt_add_left_iff_pos, Nat.zero_lt_succ]
       have hk := hl.merkeA E (fun p hp => Nat.lt_of_le_of_lt (h.aKurz p hp) hgr)
       let σl := σ.lese Λ (x :: X)
       let σl' := σ'.lese Λ' ((x :: X).map E.ortE)
@@ -263,7 +263,7 @@ theorem umwelt_schritt {M : Keys D D'} {σ : World D} {σ' : World D'}
       E.treu_misch hk.treu (fun c => c ∈ S.orte L) (fun c hc => mischU_innen S L σ _ c hc)
         (fun c hc => ⟨mischU_aussen S L σ _ c hc, (hU' (E.lock L) σ').2.1 _ (by
           rw [hSo]; exact fun hm => hc (E.mem_map_ortE.mp hm))⟩)
-    exact hk.wachs E (by simp [World.nimmt, mischU_spur]) ht
+    exact hk.wachs E (by simp only [World.nimmt, mischU_spur, List.length_cons, Nat.lt_add_one]) ht
 
 /-- The memory of a `D'`-world beside a `D`-memory, restricted, is that memory. -/
 theorem speicherZ_treu {s : Speicher D} {σ' : World D'} (h : E.Treu hZ s σ') :

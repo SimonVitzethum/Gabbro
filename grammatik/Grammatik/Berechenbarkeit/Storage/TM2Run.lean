@@ -70,9 +70,9 @@ theorem drive_complete (program : Λ → Turing.TM2.Stmt Γ Λ σ) (frame : Fram
   rw [he] at hh
   cases hd : drive program true frame fuel C with
   | halted C' => exact ⟨C', rfl, by simpa [hd, RunResult.Matches] using hh⟩
-  | exhausted C' => simp [hd, RunResult.Matches] at hh
-  | outOfMemory S => simp [hd, RunResult.Matches] at hh
-  | invalid S => simp [hd, RunResult.Matches] at hh
+  | exhausted C' => simp only [RunResult.Matches, hd] at hh
+  | outOfMemory S => simp only [RunResult.Matches, hd] at hh
+  | invalid S => simp only [RunResult.Matches, hd] at hh
 
 theorem drive_sound (program : Λ → Turing.TM2.Stmt Γ Λ σ) (frame : Frame) (fuel : Nat)
     {C C' : Configuration Γ Λ σ} {c : Turing.TM2.Cfg Γ Λ σ} (hr : C.Represents frame c)
@@ -82,7 +82,7 @@ theorem drive_sound (program : Λ → Turing.TM2.Stmt Γ Λ σ) (frame : Frame) 
   rw [he] at hh
   cases hs : Brainfuck.runFor (Turing.TM2.step program) fuel c with
   | halted c' => exact ⟨c', rfl, by simpa [hs, RunResult.Matches] using hh⟩
-  | exhausted c' => simp [hs, RunResult.Matches] at hh
+  | exhausted c' => simp only [RunResult.Matches, hs] at hh
 
 /-- Failure retains a safe prefix; it is the only additional allowed outcome.
 Every normal result still matches exactly the same finite TM2 budget. -/
@@ -125,7 +125,7 @@ theorem drive_partial_correct (program : Λ → Turing.TM2.Stmt Γ Λ σ) (avail
         dsimp only
         rw [he]
         simpa [RunResult.PartialMatches, he, Outcome.Compatible] using hs
-      | invalid S' => simp [he, Outcome.Compatible] at hs
+      | invalid S' => simp only [Outcome.Compatible, he] at hs
 
 theorem drive_sound_any (program : Λ → Turing.TM2.Stmt Γ Λ σ) (available : Bool) (frame : Frame)
     (fuel : Nat) {C C' : Configuration Γ Λ σ} {c : Turing.TM2.Cfg Γ Λ σ}
@@ -135,6 +135,6 @@ theorem drive_sound_any (program : Λ → Turing.TM2.Stmt Γ Λ σ) (available :
   rw [he] at hh
   cases hs : Brainfuck.runFor (Turing.TM2.step program) fuel c with
   | halted c' => exact ⟨c', rfl, by simpa [hs, RunResult.PartialMatches, RunResult.Matches] using hh⟩
-  | exhausted c' => simp [hs, RunResult.PartialMatches, RunResult.Matches] at hh
+  | exhausted c' => simp only [RunResult.PartialMatches, RunResult.Matches, hs] at hh
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap

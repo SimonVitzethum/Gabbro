@@ -13,14 +13,15 @@ def Context.parameter {Γ : Ctx} {τ : Ty} (x : Var Γ τ) (mode : PassingMode) 
 theorem Context.parameter_reference {Γ : Ctx} {τ υ : Ty} (x : Var Γ τ) (y : Var Γ υ)
     (mode : PassingMode) : (Context.parameter x mode).reference y =
       if y.unten = x.unten then some 0 else none := by
-  simp [Context.reference, Context.parameter, List.getElem?_map, Var.unten_lt y]
+  simp only [reference, parameter, List.length_map, List.length_range, Var.unten_lt y, getElem?_pos,
+  List.getElem_map, List.getElem_range, Option.getD_some]
 
 theorem Context.parameter_bounded {Γ : Ctx} {τ : Ty} (x : Var Γ τ) (mode : PassingMode) :
     (Context.parameter x mode).bounded := by
   constructor
   · intro i hi
     have hn : i ≠ 0 := by change 1 ≤ i at hi; omega
-    simp [Context.parameter, hn]
+    simp only [parameter, hn, ↓reduceIte]
   · intro ref hm i he
     obtain ⟨j, _, hj⟩ := List.mem_map.mp hm
     by_cases hz : j = x.unten
@@ -40,7 +41,7 @@ theorem parameter_realizes (A : FreiForm D) {Γ : Ctx}
     (ho : mode.permits s frame h) (hx : h.slot = (ρ.get x).n) :
     Realizes (Context.parameter x mode) (fun i => if i = 0 then some h else none) A frame s σ ρ := by
   refine ⟨ha, hf, Context.parameter_bounded x mode, ⟨?_, ?_⟩, ?_⟩
-  · simp [Context.parameter]
+  · simp only [Context.parameter, List.length_map, List.length_range]
   · intro υ y i hi
     rw [Context.parameter_reference] at hi
     split at hi
@@ -57,16 +58,16 @@ theorem parameter_realizes (A : FreiForm D) {Γ : Ctx}
         have he : m = mode := by simpa [Context.parameter] using hi.symm
         subst m
         exact ⟨h, rfl, ho⟩
-      · simp [Context.parameter, hz] at hi
+      · simp only [Context.parameter, hz, ↓reduceIte, reduceCtorEq] at hi
     · intro i j p q hi hj hne _ _ _ _ _
       have hiz : i = 0 := by
         by_cases hn : i = 0
         · exact hn
-        · simp [Context.parameter, hn] at hi
+        · simp only [Context.parameter, hn, ↓reduceIte, reduceCtorEq] at hi
       have hjz : j = 0 := by
         by_cases hn : j = 0
         · exact hn
-        · simp [Context.parameter, hn] at hj
+        · simp only [Context.parameter, hn, ↓reduceIte, reduceCtorEq] at hj
       exact False.elim (hne (hiz.trans hjz.symm))
 
 #print axioms parameter_realizes

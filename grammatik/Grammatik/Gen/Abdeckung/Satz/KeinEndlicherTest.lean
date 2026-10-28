@@ -60,7 +60,7 @@ theorem lang_sperre (L : z0.deklaration.Lock) : ∀ (k : Nat) (Γ : Ctx),
 
 /-- The skeleton of `z0` with the long body. -/
 def langHaut (k : Nat) : Haut z0.deklaration :=
-  ⟨fun f => (show f = f0 from Fin.ext (by have := f.isLt; simp [z0, Spez.deklaration] at this ⊢; omega)) ▸ lang k [],
+  ⟨fun f => (show f = f0 from Fin.ext (by have := f.isLt; simp only [z0, List.length_cons, List.length_nil, Nat.reduceAdd, zero_add, Nat.lt_one_iff] at this ⊢; omega)) ▸ lang k [],
    fun _ => false⟩
 
 theorem langHaut_rumpf (k : Nat) : (langHaut k).rumpf f0 = lang k [] := rfl
@@ -68,7 +68,7 @@ theorem langHaut_rumpf (k : Nat) : (langHaut k).rumpf f0 = lang k [] := rfl
 theorem langHaut_boden (k : Nat) : z0.bodenOk (langHaut k).programm = true := by
   simp only [Spez.bodenOk, List.all_eq_true, beq_iff_eq]
   intro f _
-  have hf : f = f0 := Fin.ext (by have := f.isLt; simp [z0, Spez.deklaration] at this ⊢; omega)
+  have hf : f = f0 := Fin.ext (by have := f.isLt; simp only [z0, List.length_cons, List.length_nil, Nat.reduceAdd, zero_add, Nat.lt_one_iff] at this ⊢; omega)
   subst hf
   rfl
 
@@ -95,7 +95,7 @@ theorem langEinsatz_groesse (k : Nat) : k ≤ (langEinsatz k).groesse := by
 theorem kein_endlicher_test_gabbro (T : List Einsatz) :
     ∃ C : Einsatz → Bool, (∀ t ∈ T, C t = t.gueltig) ∧ ∃ e : Einsatz, C e ≠ e.gueltig := by
   refine ⟨zaehler (maxGroesse T), fun t ht => ?_, langEinsatz (maxGroesse T + 1), ?_⟩
-  · simp [zaehler, le_maxGroesse ht]
+  · simp only [zaehler, le_maxGroesse ht, ↓reduceIte]
   · have := langEinsatz_groesse (maxGroesse T + 1)
     have hn : ¬ (langEinsatz (maxGroesse T + 1)).groesse ≤ maxGroesse T := by omega
     simp only [zaehler, hn, if_false]

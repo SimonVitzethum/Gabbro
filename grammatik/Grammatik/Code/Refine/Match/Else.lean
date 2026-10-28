@@ -56,27 +56,29 @@ theorem else_after_call {M : Modl} {S : Sees} {fn : Nat} {lb tl el : Lbl} {blk :
   rw [Int.tmod_eq_emod_of_nonneg hz0] at hurem
   have e1 : (Opd.int W (L : Int)).ev (rs1.set r1 (Val.ofInt W z)) = some (Val.ofInt W (L : Int)) := rfl
   have hr : (Opd.reg r1).ev (rs1.set r1 (Val.ofInt W z)) = some (Val.ofInt W z) := by
-    simp [Opd.ev, regs_set_same]
+    simp only [Opd.ev, regs_set_same]
   have hstep : stepI (.bin (r1 + 1) .urem W (.reg r1) (.int W (L : Int))) m' (rs1.set r1 (Val.ofInt W z))
       = some (m', (rs1.set r1 (Val.ofInt W z)).set (r1 + 1) (Val.ofInt W (z % (L : Int)))) := by
     simp only [stepI, hr, e1, hurem, Option.map_some]
   have hseq : seqI [Instr.bin (r1 + 1) .urem W (.reg r1) (.int W (L : Int))] m'
       (rs1.set r1 (Val.ofInt W z))
       = some (m', (rs1.set r1 (Val.ofInt W z)).set (r1 + 1) (Val.ofInt W (z % (L : Int)))) := by
-    simp [seqI, hstep]
+    simp only [seqI, hstep]
   have hstr : Stretch M fn lb (ca.length + 1)
       [Instr.bin (r1 + 1) .urem W (.reg r1) (.int W (L : Int))] := ⟨blk, hb0, fun i hi => by
     have hi0 : i = 0 := by simpa using hi
     subst hi0
     rw [hbody]
-    simp [List.getElem?_append_right]⟩
+    simp only [Nat.add_zero, List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd,
+  Nat.lt_add_one, getElem?_pos, Nat.le_add_right, List.getElem_append_right, Nat.add_sub_cancel_left,
+  List.getElem_cons_succ, List.getElem_cons_zero]⟩
   have h1 := reach_seq M S [Instr.bin (r1 + 1) .urem W (.reg r1) (.int W (L : Int))] m'
     ⟨fn, lb, ca.length + 1, rs1.set r1 (Val.ofInt W z), dst⟩ ks m' _ hstr hseq
   have hat : Frame.atTerm M ⟨fn, lb, ca.length + 1 + 1, (rs1.set r1 (Val.ofInt W z)).set (r1 + 1)
       (Val.ofInt W (z % (L : Int))), dst⟩ (.brc .eq W (.reg (r1 + 1)) (.int W 0) tl el) blk :=
-    ⟨hb0, by rw [hbody]; simp, hterm⟩
+    ⟨hb0, by rw [hbody]; simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Std.le_refl], hterm⟩
   have ha : (Opd.reg (r1 + 1)).ev ((rs1.set r1 (Val.ofInt W z)).set (r1 + 1) (Val.ofInt W (z % (L : Int))))
-      = some (Val.ofInt W (z % (L : Int))) := by simp [Opd.ev, regs_set_same]
+      = some (Val.ofInt W (z % (L : Int))) := by simp only [Opd.ev, regs_set_same]
   have hb : (Opd.int W 0).ev ((rs1.set r1 (Val.ofInt W z)).set (r1 + 1) (Val.ofInt W (z % (L : Int))))
       = some (Val.ofInt W 0) := rfl
   have f1 : FitS false W (z % (L : Int)) := by
@@ -123,7 +125,7 @@ theorem bindCallElse_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
       (execBlock O passes R (Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest) σ ρ) := by
   unfold lowerB at h
   rcases hla : lowerArgs lay cenv args st.r with _ | ⟨ca, ops, r1⟩
-  · simp [hla] at h
+  · simp only [hla, reduceCtorEq] at h
   have hm1 := lowerArgs_mono lay cenv args st.r _ hla
   simp only [hla] at h
   unfold lowerElse at h
@@ -134,19 +136,19 @@ theorem bindCallElse_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
         apply Classical.byContradiction
         intro hn
         rw [if_neg hn] at h
-        simp at h
+        simp only [reduceCtorEq] at h
       rw [if_pos hfit] at h
       rcases hpc : payCode (failTop (D.gruende f) (some (.int lo hi))) (retW (D.gruende f) (some (.int lo hi)))
           (D.gruende f + 1) lo hi (.reg r1) (r1 + 2) with _ | ⟨cp, op, r2⟩
-      · simp [hpc] at h
+      · simp only [hpc, reduceCtorEq] at h
       have m2 := payCode_mono hpc
       simp only [hpc] at h
       rcases hb : bindCode (.int lo hi) op r2 with _ | ⟨cb, a, r3⟩
-      · simp [hb] at h
+      · simp only [hb, reduceCtorEq] at h
       have m3 := bindCode_mono hb
       simp only [hb] at h
       rcases hb1 : lowerB lay (a :: cenv) lv rest (st.l + 2) k ⟨r3, st.l + 4⟩ with _ | ⟨bo, s1⟩
-      · simp [hb1] at h
+      · simp only [hb1, reduceCtorEq] at h
       have S1 := lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k ⟨r3, st.l + 4⟩ s1 bo hb1
       simp only [hb1] at h
       rcases hc' : cvt (retW (D.gruende f) (some (.int lo hi))) (Ar.wid 0 ((D.gruende f : Int) - 1)) false
@@ -156,11 +158,11 @@ theorem bindCallElse_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
       rw [hc'] at m4 h
       simp only at m4 h
       rcases hb2 : bindCode (.why (D.gruende f)) ov r4 with _ | ⟨cb2, a2, r5⟩
-      · simp [hb2] at h
+      · simp only [hb2, reduceCtorEq] at h
       have m5 := bindCode_mono hb2
       simp only [hb2] at h
       rcases hb3 : lowerEnd lay (a2 :: cenv) lv err (st.l + 3) ⟨r5, s1.l⟩ with _ | ⟨be, s2⟩
-      · simp [hb3] at h
+      · simp only [hb3, reduceCtorEq] at h
       have S2 := lowerEnd_shape lay (a2 :: cenv) lv err (st.l + 3) ⟨r5, s1.l⟩ s2 be hb3
       simp only [hb3] at h
       have h' := Option.some.inj h
@@ -258,7 +260,7 @@ theorem bindCallElse_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
             ((D.gruende f + 1 : Nat) : Int)))) = some (Val.ofInt (retW (D.gruende f) (some (.int lo hi)))
             (((0 : Nat) : Int) + ((D.gruende f + 1 : Nat) : Int) * (vz - lo))) := by
           rw [Opd.ev, regs_set_ne _ (r1 + 1) r1 _ (Nat.ne_of_lt (Nat.lt_succ_self r1)), regs_set_same]
-          simp
+          simp only [Int.natCast_add, Int.cast_ofNat_Int, Int.zero_add]
         have F := payCode_frag (failTop (D.gruende f) (some (.int lo hi))) (retW (D.gruende f) (some (.int lo hi)))
           (D.gruende f + 1) lo hi (.reg r1) (r1 + 2) m' _ 0 vz (payCode_fits hpc) hn1 hv1 hv2
           (by simpa using hzT) hTW hLtop hrw (opdlt_reg r1 (r1 + 2) (by omega)) (cp, op, r2) hpc
@@ -387,6 +389,6 @@ theorem bindCallElse_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (
         exact outok_lift (Reach.trans hreach hafter) hFtot (by omega) hc _ (outok_of_endok _ hscope)
       · simp only [hRf, OutOk]
       · simp only [hRf, OutOk]
-  | _ => simp at h
+  | _ => simp only [reduceCtorEq] at h
 
 end Gabbro.Code.Lower

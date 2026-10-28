@@ -566,7 +566,7 @@ theorem trichotomie_bricht : ∃ x k : PWert, ple x k = false ∧ ple k x = fals
     nicht drei -- `<`, `=`, `>` und "unvergleichbar". -/
 theorem vier_ausgaenge : ∃ x k : PWert, ¬ (ple x k = true ∨ ple k x = true) := by
   refine ⟨PWert.nan, PWert.zahl 0, ?_⟩
-  simp [ple]
+  simp only [ple, Bool.false_eq_true, or_self, not_false_eq_true]
 
 /-! ## 8. V2 -- die relationale Verengung
 
@@ -740,8 +740,8 @@ theorem fakten_ueberleben_schreiben
   intro p i hp
   unfold nach_schreiben at hp
   by_cases h : p = o
-  · simp [h] at hp
-  · simp [h] at hp
+  · simp only [h, ↓reduceIte, reduceCtorEq] at hp
+  · simp only [h, ↓reduceIte] at hp
     rw [andere_unveraendert p h]
     exact hg p i hp
 
@@ -752,6 +752,6 @@ theorem fakten_ueberleben_schreiben
     Entscheidung buchbar macht -- eine LEERE Menge ist unter JEDEM Zustand gueltig. -/
 theorem leere_fakten_immer_gueltig (w : Ort → Int) : gueltig leere_fakten w := by
   intro o i h
-  simp [leere_fakten] at h
+  simp only [leere_fakten, reduceCtorEq] at h
 
 end Passlogik.Bereich

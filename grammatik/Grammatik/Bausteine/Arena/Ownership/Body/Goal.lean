@@ -23,7 +23,7 @@ variable {D : Deklaration}
 theorem witness_passes : checkProgram Witness.P Witness.A Witness.I [true, false] = true := by decide
 
 theorem witness_checked : Checked Witness.P Witness.A Witness.I :=
-  checkProgram_sound (fun f => by cases f <;> simp) witness_passes
+  checkProgram_sound (fun f => by cases f <;> simp only [List.mem_cons, Bool.false_eq_true, List.not_mem_nil, or_false, or_true, Bool.true_eq_false, or_self]) witness_passes
 
 #print axioms witness_checked
 

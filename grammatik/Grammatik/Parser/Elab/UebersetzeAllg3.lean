@@ -1489,18 +1489,18 @@ theorem lowerEach_all_ok (u : UProg) (fs : List (Fin u.fns.length))
     ∃ v, lowerFnAt u f = .ok v := by
   induction fs with
   | nil =>
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   | cons g gs ih =>
     simp only [List.mem_cons] at hm
     cases hg : lowerFnAt u g with
     | error e =>
       have hE : lowerEach u (g :: gs) = .error e := by
-        simp [lowerEach, hg]
+        simp only [lowerEach, hg]
       rw [hE] at h
-      simp at h
+      simp only [reduceCtorEq] at h
     | ok v =>
       have hO : lowerEach u (g :: gs) = lowerEach u gs := by
-        simp [lowerEach, hg]
+        simp only [lowerEach, hg]
       cases hm with
       | inl he =>
         subst he
@@ -1519,7 +1519,7 @@ def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     exfalso
     obtain ⟨v, hv⟩ := h
     rw [hv] at hm
-    simp at hm
+    simp only [reduceCtorEq] at hm
 
 /-- The type of a lowered invariant: a predicate over no parameter, under the guards of its carriers. -/
 abbrev InvTy (u : UProg) (i : Fin u.invs.length) := Expr (declOf u) [] (invSicht (declOf u) i) .bool
@@ -1566,16 +1566,16 @@ def lowerInvs (u : UProg) : List (Fin u.invs.length) → Except String Unit
 theorem lowerInvs_all_ok (u : UProg) (is : List (Fin u.invs.length)) (i : Fin u.invs.length) (hm : i ∈ is)
     (h : lowerInvs u is = .ok ()) : ∃ v, lowerInvAt u i = .ok v := by
   induction is with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | cons j js ih =>
     simp only [List.mem_cons] at hm
     cases hj : lowerInvAt u j with
     | error e =>
-      have hE : lowerInvs u (j :: js) = .error e := by simp [lowerInvs, hj]
+      have hE : lowerInvs u (j :: js) = .error e := by simp only [lowerInvs, hj]
       rw [hE] at h
-      simp at h
+      simp only [reduceCtorEq] at h
     | ok v =>
-      have hO : lowerInvs u (j :: js) = lowerInvs u js := by simp [lowerInvs, hj]
+      have hO : lowerInvs u (j :: js) = lowerInvs u js := by simp only [lowerInvs, hj]
       cases hm with
       | inl he => subst he; exact ⟨v, hj⟩
       | inr hm' => rw [hO] at h; exact ih hm' h
@@ -1588,7 +1588,7 @@ def lowerInvGut (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i =
     exfalso
     obtain ⟨v, hv⟩ := h
     rw [hv] at hm
-    simp at hm
+    simp only [reduceCtorEq] at hm
 
 /-- The generically lowered program: every function of the
     elaborated program over the declaration built from it. -/

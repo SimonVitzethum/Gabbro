@@ -10,7 +10,7 @@ theorem bswap_bswap16 (x : Zahl 0 ((2 : Int) ^ 16 - 1)) :
   have h2n : (x.n.toNat : Int) = x.n := Int.toNat_of_nonneg hnn
   have hx : x.n.toNat < 256 ^ 2 := by
     have hhi := x.le_hi
-    have hcast : ((2 ^ 16 : Nat) : Int) = (2 : Int) ^ 16 := by simp
+    have hcast : ((2 ^ 16 : Nat) : Int) = (2 : Int) ^ 16 := by simp only [Nat.reducePow, Int.cast_ofNat_Int, Int.reducePow]
     have e : (256 : Nat) ^ 2 = 2 ^ 16 := by decide
     rw [e]
     have hlt : x.n < ((2 ^ 16 : Nat) : Int) := by omega
@@ -31,7 +31,7 @@ theorem bswap_bswap32 (x : Zahl 0 ((2 : Int) ^ 32 - 1)) :
     have e : (256 : Nat) ^ 4 = 2 ^ 32 := by decide
     rw [e]
     have hlt : x.n < ((2 ^ 32 : Nat) : Int) := by
-      have hcast : ((2 ^ 32 : Nat) : Int) = (2 : Int) ^ 32 := by simp
+      have hcast : ((2 ^ 32 : Nat) : Int) = (2 : Int) ^ 32 := by simp only [Nat.reducePow, Int.cast_ofNat_Int, Int.reducePow]
       omega
     exact (Int.toNat_lt hnn).mpr hlt
   have hmid : (Zahl.bswap32 x).n.toNat = bswap32n x.n.toNat := by
@@ -50,7 +50,7 @@ theorem bswap_bswap64 (x : Zahl 0 ((2 : Int) ^ 64 - 1)) :
     have e : (256 : Nat) ^ 8 = 2 ^ 64 := by decide
     rw [e]
     have hlt : x.n < ((2 ^ 64 : Nat) : Int) := by
-      have hcast : ((2 ^ 64 : Nat) : Int) = (2 : Int) ^ 64 := by simp
+      have hcast : ((2 ^ 64 : Nat) : Int) = (2 : Int) ^ 64 := by simp only [Nat.reducePow, Int.cast_ofNat_Int, Int.reducePow]
       omega
     exact (Int.toNat_lt hnn).mpr hlt
   have hmid : (Zahl.bswap64 x).n.toNat = bswap64n x.n.toNat := by

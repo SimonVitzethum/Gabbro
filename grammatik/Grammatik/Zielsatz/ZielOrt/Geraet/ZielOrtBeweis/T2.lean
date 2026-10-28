@@ -135,7 +135,7 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
     refine ⟨fadenOk_lokal hF hhead ρ (.dann (.cons s .nil) (.ende rest)) (M.faeden u).spur
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨hks, hss, hrest⟩ := okZ_ende_cons hok
-    refine ⟨σ, Nat.le_refl _, hg, ⟨by simp [Block.kOk, hks], ?_, hrest⟩,
+    refine ⟨σ, Nat.le_refl _, hg, ⟨by simp only [Block.kOk, hks, Bool.and_self], ?_, hrest⟩,
       fun R => ZErg.gleich_of_eq (semZ_endeEntf O passes R s rest σ ρ)⟩
     simpa [blockOrteP] using hss
   | endeForm l Γ Λ e ρ hl hent hhead =>
@@ -452,7 +452,7 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
         simp only [blockOrteP, List.append_subset] at hss
         exact ⟨hks, hss.2, hk⟩)
       (fun R σ e h => semZ_bindCall_logik O passes R g args he hp hr rest k σ ρ e h)
-      (fun R σ σa v h => ⟨fun hw => by simp [GRest.wartend] at hw,
+      (fun R σ σa v h => ⟨fun hw => by simp only [GRest.wartend, Bool.true_eq_false] at hw,
         fun _ _ _ _ _ _ _ _ heq he' => by
           cases heq
           exact semZ_bindCall O passes R g args he hp hr rest k σ ρ σa v h⟩)
@@ -560,7 +560,7 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
   -- every other rule: the head residue is outside the fragment
   | _ =>
     exact absurd (kopf_okZ hF.1 ‹(M.faeden u).kopf.rest = _›)
-      (by simp [GRest.okZ, Block.kOk, Stmt.kOk, Endblock.kOk])
+      (by simp only [GRest.okZ, Endblock.kOk, Bool.false_eq_true, false_and, not_false_eq_true, Block.kOk, Stmt.kOk, Bool.false_and, and_false, and_self])
 
 end Akteur
 

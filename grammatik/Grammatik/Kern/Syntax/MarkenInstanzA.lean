@@ -121,7 +121,7 @@ theorem laufProjInstanz_get (codeI : InstanzCode D) (l : Lauf D)
     (h : l[i]? = some (Schritt.mk f ei)) :
     (laufProjInstanz codeI l)[i]? =
       some (Marken.Schritt.mk f (instEreignisProj codeI f ei)) := by
-  simp [laufProjInstanz, instSchrittProj, List.getElem?_map, h]
+  simp only [laufProjInstanz, List.getElem?_map, h, Option.map_some, instSchrittProj]
 
 /-- Mark membership survives the instance projection, under the owner's code. -/
 theorem instMarkenProj_mem (codeI : InstanzCode D) (f : Faden)
@@ -175,13 +175,13 @@ theorem pc_discharge_einfaedig_instanz (codeI : InstanzCode D)
   cases hxi : M.lauf[i]? with
   | none =>
       rw [hxi] at hi
-      simp at hi
+      simp only [Option.map_none, reduceCtorEq] at hi
   | some si =>
       rw [hxi] at hi
       cases hxj : M.lauf[j]? with
       | none =>
           rw [hxj] at hj
-          simp at hj
+          simp only [Option.map_none, reduceCtorEq] at hj
       | some sj =>
           rw [hxj] at hj
           cases si with

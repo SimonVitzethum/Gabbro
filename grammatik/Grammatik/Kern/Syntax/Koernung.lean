@@ -161,7 +161,7 @@ theorem schreibBytes_event_count (σ : World D) (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) (k : Int) (bs : List Byte) :
     (σ.schreibBytes t f hf Λ k bs).spur.length = σ.spur.length + bs.length := by
   induction bs generalizing σ k with
-  | nil => simp [World.schreibBytes]
+  | nil => simp only [World.schreibBytes, List.length_nil, Nat.add_zero]
   | cons b bs ih =>
     simp only [World.schreibBytes]
     rw [ih, writeSlot_trace_singleton]
@@ -189,7 +189,7 @@ theorem leseBytes_single_event (t : D.Tab) (f : D.Feld t)
     (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo)
     (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) (hi0 : i.orte = []) :
     (Expr.getBytes t f hf n i hlo hhi hL).orte = [.inl t] := by
-  simp [Expr.orte, hi0]
+  simp only [Expr.orte, hi0]
 
 /-- **The negative read case.** For 2 <= n the single event of a
     `leseBytes` cannot be the indivisible unit of the whole read: one
@@ -248,7 +248,7 @@ theorem schreibSlot_slots_same (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k
   have hss : (σ.schreibSlot t Λ k f v).slots t k f
     = (σ.storeSlot t k f v).slots t k f := rfl
   rw [hss]
-  simp [World.storeSlot]
+  simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte]
 
 /-- Same, at any other key: the value there is untouched. -/
 theorem schreibSlot_slots_other (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k k₀ : Int) (f : D.Feld t)
@@ -257,7 +257,7 @@ theorem schreibSlot_slots_other (σ : World D) (t : D.Tab) (Λ : List (Res D)) (
   have hss : (σ.schreibSlot t Λ k f v).slots t k₀ f
     = (σ.storeSlot t k f v).slots t k₀ f := rfl
   rw [hss]
-  simp [World.storeSlot, h]
+  simp only [World.storeSlot, ↓reduceDIte, h, ↓reduceIte]
 
 
 /-- Recording trace entries (`World.merke`) does not move `slots`, hence never
@@ -287,7 +287,7 @@ theorem storeSlot_bytesAb_other (σ : World D) (t : D.Tab) (f : D.Feld t)
     intro k k₀ h
     have hne : k ≠ k₀ := by omega
     have hhead : (σ.storeSlot t k₀ f v).slots t k f = σ.slots t k f := by
-      simp [World.storeSlot, hne]
+      simp only [World.storeSlot, ↓reduceDIte, hne, ↓reduceIte]
     have htail := ih (k + 1) k₀ (by omega : k₀ < k + 1 ∨ (k + 1) + n ≤ k₀)
     simp only [World.bytesAb, hhead, htail]
 
@@ -382,13 +382,13 @@ theorem schreibBytes_prefix_readback (t : D.Tab) (f : D.Feld t)
     have hn : new = [] := List.length_eq_zero_iff.mp hnew
     have ho : old = [] := by rw [hold]; rfl
     subst hn; subst ho
-    simp [World.bytesAb, interrupted]
+    simp only [World.bytesAb, interrupted, List.take_nil, List.drop_nil, List.append_nil]
   | succ n ih =>
     intro m k σ' old new hold hnew
     have hold0 : old = σ'.bytesAb t f hf (n + 1) k := hold
     have hlen_old : old.length = n + 1 := by rw [hold, World.bytesAb_length]
-    have hne_old : old ≠ [] := by intro h; subst h; simp at hlen_old
-    have hne_new : new ≠ [] := by intro h; subst h; simp at hnew
+    have hne_old : old ≠ [] := by intro h; subst h; simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at hlen_old
+    have hne_new : new ≠ [] := by intro h; subst h; simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at hnew
     obtain ⟨b₀, old_tl, hold_eq⟩ := List.exists_cons_of_ne_nil hne_old
     obtain ⟨c, new_tl, hnew_eq⟩ := List.exists_cons_of_ne_nil hne_new
     simp only [World.bytesAb] at hold

@@ -130,20 +130,20 @@ abbrev EInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Nat �
 /-! ### Reading back -/
 
 theorem tiefe_lt : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), tiefe x < Γ.length
-  | _ :: _, _, .here => by simp [tiefe]
-  | _ :: _, _, .there v => by simp [tiefe]; exact tiefe_lt v
+  | _ :: _, _, .here => by simp only [tiefe, List.length_cons, Nat.zero_lt_succ]
+  | _ :: _, _, .there v => by simp only [tiefe, List.length_cons, Nat.add_lt_add_iff_right]; exact tiefe_lt v
 
 variable {z}
 
 theorem tabNrAux_at : ∀ (tabs : List UTab) (k0 : Nat) (n : String) (j : Nat) (c : Int),
     uTabNrAux tabs k0 n = .ok (j, c) → k0 ≤ j ∧ ∃ tb, tabs[j - k0]? = some tb ∧ tb.count = c
-  | [], _, _, _, _, h => by simp [uTabNrAux] at h
+  | [], _, _, _, _, h => by simp only [uTabNrAux, reduceCtorEq] at h
   | tb :: rest, k0, n, j, c, h => by
     simp only [uTabNrAux] at h
     split at h
     · simp only [Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨le_refl _, tb, by simp, rfl⟩
+      exact ⟨le_refl _, tb, by simp only [Nat.sub_self, List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero], rfl⟩
     · obtain ⟨hk, tb', h1, h2⟩ := tabNrAux_at rest (k0 + 1) n j c h
       refine ⟨by omega, tb', ?_, h2⟩
       have hj : j - k0 = (j - (k0 + 1)) + 1 := by omega
@@ -154,7 +154,7 @@ theorem EInvK.tabFind {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {a
     {kopf : Option Nat} (H : EInvK z ctx Γ Λ art kopf) (t : z.deklaration.Tab) :
     uAnzahlTab ctx.tabs (nTab (tN z t)) = .ok (z.deklaration.count t) := by
   obtain ⟨tb, hf, _, _, hc, _⟩ := H.tab t
-  simp [uAnzahlTab, hf, hc]
+  simp only [uAnzahlTab, hf, hc]
 
 /-- **The index**: `uIndex` reads the printed index back. -/
 theorem idx_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -176,20 +176,20 @@ theorem idx_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Na
       simp only [Option.some.injEq] at hu
       subst hu
       simp only [zahlE, h.1, ite_true, uIndex, H.tabFind t]
-      have : (Int.ofNat n.toNat) = n := by simp [h.1]
+      have : (Int.ofNat n.toNat) = n := by simp only [Int.ofNat_eq_natCast, Int.ofNat_toNat, h.1, sup_of_le_left]
       rw [this]
-      simp [h.2]
-    · simp at hu
+      simp only [h.2, ↓reduceIte]
+    · simp only [reduceCtorEq] at hu
   | widen h1 h2 e =>
     simp only [delabE] at hd
     simp only [uOfIdx] at hu
-    exact ih e (by simp at hn; omega) s ix hd hu
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) s ix hd hu
   | var x =>
     simp only [delabE, Except.ok.injEq] at hd
     subst hd
     simp only [uOfIdx] at hu
     split at hu
-    · simp at hu
+    · simp only [reduceCtorEq] at hu
     · rename_i hk
       simp only [hk, ite_false, uIndex]
       obtain ⟨j, hj, ha⟩ := H.var (tiefe x) (tiefe_lt x) hk
@@ -205,7 +205,7 @@ theorem idx_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Na
           simp only [Option.some.injEq] at hu; subst hu
           have hg : (m == tN z t || uGleicheAnzahl ctx.tabs m (tN z t)) = true := by
             rcases hc with rfl | hc
-            · simp
+            · simp only [BEq.rfl, Bool.true_or]
             · obtain ⟨t', _, ht'⟩ := List.any_eq_true.1 hc
               simp only [Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at ht'
               obtain ⟨hm, hcnt⟩ := ht'
@@ -217,16 +217,16 @@ theorem idx_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Na
                 unfold uGleicheAnzahl
                 show (match ctx.tabs[tN z t']?, ctx.tabs[tN z t]? with
                   | some a, some b => a.count == b.count | _, _ => false) = true
-                rw [h1, h2]; simp [c1, c2, hcnt]
-              simp [this]
+                rw [h1, h2]; simp only [c1, hcnt, c2, BEq.rfl]
+              simp only [this, Bool.or_true]
           simp only [hg, ite_true]
-        · simp at hu
+        · simp only [reduceCtorEq] at hu
       | int =>
         rw [hart] at hu
         simp only [Option.some.injEq] at hu; subst hu
         rfl
-      | _ => rw [hart] at hu; simp at hu
-  | _ => simp [uOfIdx] at hu
+      | _ => rw [hart] at hu; simp only [reduceCtorEq] at hu
+  | _ => simp only [uOfIdx, reduceCtorEq] at hu
 
 /-- The printed slot read `T.slots[i].f`. -/
 def slotS (tn fn : String) (i : SExpr) : SExpr := .field (.index (.field (.variable tn) "slots") i) fn
@@ -258,7 +258,7 @@ theorem EInvK.optFeld {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {a
     {kopf : Option Nat} (H : EInvK z ctx Γ Λ art kopf) (t : z.deklaration.Tab) (f : z.deklaration.Feld t) :
     uOptFeld ctx (nTab (tN z t)) (nFeld (show Fin _ from f).val) = none := by
   obtain ⟨tb, hf, _, _, _, ho, _⟩ := H.tab t
-  simp [uOptFeld, hf, ho]
+  simp only [uOptFeld, hf, ho, List.find?_nil, Option.map_none]
 
 /-- What a leaf reader must answer on the printed leaves (both `uSeiteBlatt` and `uWertBlatt` do). -/
 structure Blatt (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Nat → UParamArt) (kopf : Option Nat)
@@ -290,8 +290,8 @@ theorem var_typ : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), Γ.reverse[Γ.length
   have h : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), Γ[tiefe x]? = some τ := by
     intro Γ τ x
     induction x with
-    | here => simp [tiefe]
-    | there v ih => simp [tiefe, ih]
+    | here => simp only [tiefe, List.length_cons, Nat.zero_lt_succ, getElem?_pos, List.getElem_cons_zero]
+    | there v ih => simp only [tiefe, List.getElem?_cons_succ, ih]
   have hl := tiefe_lt x
   rw [List.getElem?_reverse (by omega)]
   have : Γ.length - 1 - (Γ.length - 1 - tiefe x) = tiefe x := by omega
@@ -302,13 +302,13 @@ def ErgOk (ctx : UCtx) (Γ : Ctx) (kopf : Option Nat) : Prop :=
   ∀ n, kopf = some n → n < Γ.length ∧ (∀ lo hi, Γ.reverse[n]? = some (.int lo hi) → ctx.res.isSome) ∧
     (Γ.reverse[n]? = some .bool → ctx.resBool = true)
 
-theorem ergOk_none (ctx : UCtx) (Γ : Ctx) : ErgOk ctx Γ none := fun n h => by simp at h
+theorem ergOk_none (ctx : UCtx) (Γ : Ctx) : ErgOk ctx Γ none := fun n h => by simp only [reduceCtorEq] at h
 
 theorem ErgOk.auf {ctx ctx' : UCtx} {Γ : Ctx} {kopf : Option Nat} (h : ErgOk ctx Γ kopf) (hres : ctx'.res = ctx.res)
     (hb : ctx'.resBool = ctx.resBool) (τ : Ty) : ErgOk ctx' (τ :: Γ) kopf := by
   intro n hn
   obtain ⟨h1, h2, h3⟩ := h n hn
-  refine ⟨by simp; omega, fun lo hi hg => ?_, fun hg => ?_⟩
+  refine ⟨by simp only [List.length_cons]; omega, fun lo hi hg => ?_, fun hg => ?_⟩
   · rw [hres]
     apply h2 lo hi
     rw [List.reverse_cons, List.getElem?_append_left (by simpa using h1)] at hg
@@ -321,7 +321,7 @@ theorem ErgOk.auf {ctx ctx' : UCtx} {Γ : Ctx} {kopf : Option Nat} (h : ErgOk ct
 theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     {kopf : Option Nat} (H : EInvK z ctx Γ Λ art kopf) (hr : ErgOk ctx Γ kopf) :
     Blatt (z := z) ctx Γ Λ art kopf (uSeiteBlatt ctx) where
-  lit v := by simp [uSeiteBlatt]
+  lit v := by simp only [uSeiteBlatt, Int.ofNat_eq_natCast]
   var d hd hk hp hb _ := by
     obtain ⟨j, hj, ha⟩ := H.var d hd hk
     simp only [uSeiteBlatt, hj, ha]
@@ -332,9 +332,9 @@ theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
       have := (hr _ hk).2.1 lo hi hx
       simp only [uSeiteBlatt]
       cases h : ctx.res with
-      | none => simp [h] at this
+      | none => simp only [h, Option.isSome_none, Bool.false_eq_true] at this
       | some _ => rfl
-    | _ => simp [tyInt] at hτ
+    | _ => simp only [tyInt, Bool.false_eq_true] at hτ
   glob g hg := by
     obtain ⟨e, he⟩ := H.param_fremd (nGlob (gN z g)) (fun n hn => strEq_rumpf_nGlob hn _)
     simp only [uSeiteBlatt, he, H.lits, H.arrKonst, List.find?_nil]
@@ -347,11 +347,11 @@ theorem blatt_seite {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art
 
 theorem blatt_wert {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : EInv z ctx Γ Λ art) : Blatt (z := z) ctx Γ Λ art none (uWertBlatt ctx) where
-  lit v := by simp [uWertBlatt]
+  lit v := by simp only [uWertBlatt, Int.ofNat_eq_natCast]
   var d hd hk hp hb hr := by
     obtain ⟨j, hj, ha⟩ := H.var d hd hk
     simp only [uWertBlatt, hj, ha]
-  res x _ hk := by simp at hk
+  res x _ hk := by simp only [reduceCtorEq] at hk
   glob g hg := by
     obtain ⟨e, he⟩ := H.param_fremd (nGlob (gN z g)) (fun n hn => strEq_rumpf_nGlob hn _)
     simp only [uWertBlatt, he, H.lits, H.arrKonst, List.find?_nil]
@@ -367,7 +367,7 @@ theorem rechne_bin (ctx : UCtx) (bl : SExpr → Except String USide) (op : Strin
     (op = "+" → uRechne ctx bl (.bin op a b) = .ok (.add x y)) ∧
     (op = "-" → uRechne ctx bl (.bin op a b) = .ok (.sub x y)) ∧
     (op = "*" → uRechne ctx bl (.bin op a b) = .ok (.mul x y)) := by
-  refine ⟨?_, ?_, ?_⟩ <;> intro h <;> subst h <;> simp [uRechne, ha, hb, strEq_eq]
+  refine ⟨?_, ?_, ?_⟩ <;> intro h <;> subst h <;> simp only [uRechne, strEq_eq, decide_true, String.reduceEq, decide_false, Bool.or_false, ↓reduceIte, ha, hb, Bool.or_true, Bool.false_eq_true, Bool.or_self]
 
 /-- **The side**: the arithmetic layer over a leaf reader that answers the printed leaves reads every printed
     number back. -/
@@ -389,10 +389,10 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     by_cases h : 0 ≤ m
     · simp only [zahlE, h, ite_true]
       simp only [uRechne, hB.lit]
-      simp [Int.toNat_of_nonneg h]
+      simp only [Int.ofNat_eq_natCast, Int.toNat_of_nonneg h]
     · simp only [zahlE, h, ite_false]
       simp only [uRechne]
-      simp [Int.toNat_of_nonneg (show 0 ≤ -m by omega)]
+      simp only [Int.ofNat_eq_natCast, Int.toNat_of_nonneg (show 0 ≤ -m by omega), neg_neg]
   | var x =>
     simp only [delabE, Except.ok.injEq] at hd
     subst hd
@@ -405,13 +405,13 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
         subst hu
         simp only [hk, ite_true, uRechne]
         exact hB.res x hτ hk
-      · simp at hu
+      · simp only [reduceCtorEq] at hu
     · rename_i hk
       simp only [hk, ite_false, uRechne]
       split at hu
-      · simp at hu
-      · simp at hu
-      · simp at hu
+      · simp only [reduceCtorEq] at hu
+      · simp only [reduceCtorEq] at hu
+      · simp only [reduceCtorEq] at hu
       · rename_i hp hb hr
         simp only [Option.some.injEq] at hu
         subst hu
@@ -421,7 +421,7 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     subst hd
     simp only [uOfS] at hu
     split at hu
-    · simp at hu
+    · simp only [reduceCtorEq] at hu
     · rename_i hg
       simp only [Option.some.injEq] at hu
       subst hu
@@ -430,16 +430,16 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   | slot t f i hL =>
     simp only [delabE] at hd
     cases hi : delabE z kopf i with
-    | error _ => simp [hi] at hd; cases hd
+    | error _ => simp only [hi] at hd; cases hd
     | ok i' =>
       simp only [hi, bind, Except.bind, Except.ok.injEq] at hd
       subst hd
       simp only [uOfS] at hu
       split at hu
-      · simp at hu
+      · simp only [reduceCtorEq] at hu
       · rename_i hb
         cases hx : uOfIdx z art kopf (tN z t) (z.deklaration.count t) i with
-        | none => simp [hx] at hu
+        | none => simp only [hx, Option.map_none, reduceCtorEq] at hu
         | some ix =>
           simp only [hx, Option.map_some, Option.some.injEq] at hu
           subst hu
@@ -450,89 +450,89 @@ theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   | widen h1 h2 e =>
     simp only [delabE] at hd
     simp only [uOfS] at hu
-    exact ih e (by simp at hn; omega) s u hd hu
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) s u hd hu
   | add a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfS] at hu
     cases xa : uOfS z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfS z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.add.sizeOf_spec] at hn
     exact (rechne_bin ctx bl "+" sa sb x y (ih a (by omega) sa x ha xa) (ih b (by omega) sb y hb xb)).1 rfl
   | sub a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfS] at hu
     cases xa : uOfS z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfS z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.sub.sizeOf_spec] at hn
     exact (rechne_bin ctx bl "-" sa sb x y (ih a (by omega) sa x ha xa) (ih b (by omega) sb y hb xb)).2.1 rfl
   | mul a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfS] at hu
     cases xa : uOfS z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfS z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.mul.sizeOf_spec] at hn
     exact (rechne_bin ctx bl "*" sa sb x y (ih a (by omega) sa x ha xa) (ih b (by omega) sb y hb xb)).2.2 rfl
   | neg a =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfS] at hu
     cases xa : uOfS z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
-    simp [xa] at hu
+    simp only [xa, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.neg.sizeOf_spec] at hn
     have hx := ih a (by omega) sa x ha xa
     cases sa with
     | lit m => simp only [uRechne] at hx ⊢; simp only [hx]
     | _ => simp only [uRechne] at hx ⊢ <;> simp only [hx]
-  | _ => simp [uOfS] at hu
+  | _ => simp only [uOfS, reduceCtorEq] at hu
 
 /-- **A number in an `ensures`/`requires`**. -/
 theorem seite_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
@@ -549,11 +549,11 @@ theorem wert_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : N
 
 theorem uParamNrAux_succ : ∀ (ns : List String) (k : Nat) (y : String) (j : Nat),
     uParamNrAux ns k y = .ok j → uParamNrAux ns (k + 1) y = .ok (j + 1)
-  | [], _, _, _, h => by simp [uParamNrAux] at h
+  | [], _, _, _, h => by simp only [uParamNrAux, reduceCtorEq] at h
   | q :: rest, k, y, j, h => by
     simp only [uParamNrAux] at h ⊢
     split at h
-    · simp only [Except.ok.injEq] at h; subst h; simp [*]
+    · simp only [Except.ok.injEq] at h; subst h; simp only [↓reduceIte, *]
     · simp only [*, Bool.false_eq_true, ite_false]
       exact uParamNrAux_succ rest (k + 1) y j h
 
@@ -570,7 +570,8 @@ theorem EInvK.auf {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
     cases d with
     | zero =>
       refine ⟨0, ?_, rfl⟩
-      simp [uParamNr, ctxAuf, uParamNrAux]
+      simp only [uParamNr, ctxAuf, List.length_cons, Nat.add_one_sub_one, Nat.sub_zero, uParamNrAux, strEq_nVar,
+  BEq.rfl, ↓reduceIte]
     | succ d =>
       simp only [List.length_cons] at hd hk
       have hk' : kopf ≠ some (Γ.length - 1 - d) := by
@@ -600,7 +601,7 @@ theorem EInvK.auf {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
 theorem rechne_vgl (ctx : UCtx) (op : String) (a b : SExpr) (x y : USide)
     (ha : uSeite ctx a = .ok x) (hb : uSeite ctx b = .ok y) (hop : op = "<" ∨ op = "<=" ∨ op = "==") :
     uSichert ctx (.bin op a b) = .ok (.cmp op x y) := by
-  rcases hop with rfl | rfl | rfl <;> simp [uSichert, uIstVgl, ha, hb]
+  rcases hop with rfl | rfl | rfl <;> simp only [uSichert, uIstVgl, ↓reduceIte, ha, hb]
 
 /-- **A truth value in an `ensures`/`requires`**. -/
 theorem sichert_ok (kopf : Option Nat) (n : Nat) :
@@ -616,11 +617,11 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
   | tru =>
     simp only [delabE, Except.ok.injEq] at hd; subst hd
     simp only [uOfB, Option.some.injEq] at hu; subst hu
-    simp [uSichert]
+    simp only [uSichert]
   | fls =>
     simp only [delabE, Except.ok.injEq] at hd; subst hd
     simp only [uOfB, Option.some.injEq] at hu; subst hu
-    simp [uSichert]
+    simp only [uSichert]
   | var x =>
     simp only [delabE, Except.ok.injEq] at hd; subst hd
     simp only [uOfB] at hu
@@ -632,16 +633,16 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
         subst hτ
         have hx := var_typ x
         have := (hr _ hk).2.2 hx
-        simp [hk, uSichert, this]
-      · simp at hu
+        simp only [hk, ↓reduceIte, uSichert, this]
+      · simp only [reduceCtorEq] at hu
     · rename_i hk
       simp only [hk, ite_false]
       obtain ⟨j, hj, ha⟩ := H.var (tiefe x) (tiefe_lt x) hk
       split at hu
       · rename_i hb
         simp only [Option.some.injEq] at hu; subst hu
-        simp [uSichert, hj, ha, hb]
-      · simp at hu
+        simp only [uSichert, hj, ha, hb]
+      · simp only [reduceCtorEq] at hu
   | glob g hL =>
     simp only [delabE, Except.ok.injEq] at hd; subst hd
     simp only [uOfB] at hu
@@ -652,11 +653,11 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
       obtain ⟨gl, hf, hb⟩ := H.glob g
       have hgl : gl.ty = .bool := hb.2 hg
       simp only [uSichert, he, hf, hgl]
-    · simp at hu
+    · simp only [reduceCtorEq] at hu
   | slot t f i hL =>
     simp only [delabE] at hd
     cases hi : delabE z kopf i with
-    | error _ => simp [hi] at hd; cases hd
+    | error _ => simp only [hi] at hd; cases hd
     | ok i' =>
       simp only [hi, bind, Except.bind, Except.ok.injEq] at hd
       subst hd
@@ -664,171 +665,175 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
       split at hu
       · rename_i hb
         cases hx : uOfIdx z art kopf (tN z t) (z.deklaration.count t) i with
-        | none => simp [hx] at hu
+        | none => simp only [hx, Option.map_none, reduceCtorEq] at hu
         | some ix =>
           simp only [hx, Option.map_some, Option.some.injEq] at hu
           subst hu
           have hz := zugriff_slot H t f i' ix (idx_ok H t (sizeOf i + 1) i (by omega) i' ix hi hx) hL
           simp only [slotS] at hz
           simp only [uSichert, hz, H.boolFeld t f, hb, decide_true, ite_true]
-      · simp at hu
+      · simp only [reduceCtorEq] at hu
   | lt a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfS z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfS z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    exact rechne_vgl ctx "<" sa sb x y (seite_ok H hr a sa x ha xa) (seite_ok H hr b sb y hb xb) (by simp)
+    exact rechne_vgl ctx "<" sa sb x y (seite_ok H hr a sa x ha xa) (seite_ok H hr b sb y hb xb) (by simp only [String.reduceEq, or_self, or_false])
   | le a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfS z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfS z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    exact rechne_vgl ctx "<=" sa sb x y (seite_ok H hr a sa x ha xa) (seite_ok H hr b sb y hb xb) (by simp)
+    exact rechne_vgl ctx "<=" sa sb x y (seite_ok H hr a sa x ha xa) (seite_ok H hr b sb y hb xb) (by simp only [String.reduceEq, or_false, or_true])
   | eq a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfS z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfS z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    exact rechne_vgl ctx "==" sa sb x y (seite_ok H hr a sa x ha xa) (seite_ok H hr b sb y hb xb) (by simp)
+    exact rechne_vgl ctx "==" sa sb x y (seite_ok H hr a sa x ha xa) (seite_ok H hr b sb y hb xb) (by simp only [String.reduceEq, or_true])
   | and a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfB z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfB z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.and.sizeOf_spec] at hn
     have h1 := ih H hr a (by omega) sa x ha xa
     have h2 := ih H hr b (by omega) sb y hb xb
-    simp [uSichert, uIstVgl, strEq_eq, h1, h2]
+    simp only [uSichert, uIstVgl, String.reduceEq, imp_self, Bool.false_eq_true, ↓reduceIte, strEq_eq,
+  decide_true, h1, h2]
   | or a b =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     cases hb : delabE z kopf b with
-    | error _ => simp [ha, hb, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, hb, reduceCtorEq] at hd
     | ok sb =>
     simp only [ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfB z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
     cases xb : uOfB z art kopf b with
-    | none => simp [xa, xb] at hu
+    | none => simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq] at hu
     | some y =>
-    simp [xa, xb] at hu
+    simp only [xa, xb, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.or.sizeOf_spec] at hn
     have h1 := ih H hr a (by omega) sa x ha xa
     have h2 := ih H hr b (by omega) sb y hb xb
-    simp [uSichert, uIstVgl, strEq_eq, h1, h2]
+    simp only [uSichert, uIstVgl, String.reduceEq, imp_self, Bool.false_eq_true, ↓reduceIte, strEq_eq,
+  decide_false, decide_true, h1, h2]
   | not a =>
     simp only [delabE] at hd
     cases ha : delabE z kopf a with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfB z art kopf a with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
-    simp [xa] at hu
+    simp only [xa, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.not.sizeOf_spec] at hn
     have h1 := ih H hr a (by omega) sa x ha xa
-    simp [uSichert, h1]
+    simp only [uSichert, h1]
   | forallSlots t body hL =>
     simp only [delabE] at hd
     cases ha : delabE z kopf body with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfB z (artAuf (.index (tN z t)) art) kopf body with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
-    simp [xa] at hu
+    simp only [xa, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.forallSlots.sizeOf_spec, sizeOf_default, add_zero] at hn
     have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
-    simp [uSichert, uTabNr, H.tabNr t, h1, strEq_eq]
+    simp only [uSichert, BEq.rfl, Bool.true_or, Bool.not_true, Bool.false_eq_true, ↓reduceIte, strEq_eq,
+  decide_true, uTabNr, H.tabNr t, h1]
   | existsSlots t body hL =>
     simp only [delabE] at hd
     cases ha : delabE z kopf body with
-    | error _ => simp [ha, bind, Except.bind] at hd
+    | error _ => simp only [bind, Except.bind, ha, reduceCtorEq] at hd
     | ok sa =>
     simp only [ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at hd
     subst hd
     simp only [uOfB] at hu
     cases xa : uOfB z (artAuf (.index (tN z t)) art) kopf body with
-    | none => simp [xa] at hu
+    | none => simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hu
     | some x =>
-    simp [xa] at hu
+    simp only [xa, Option.bind_eq_bind, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp at hn
+    simp only [Expr.existsSlots.sizeOf_spec, sizeOf_default, add_zero] at hn
     have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
-    simp [uSichert, uTabNr, H.tabNr t, h1, strEq_eq]
-  | _ => simp [uOfB] at hu
+    simp only [uSichert, BEq.rfl, Bool.or_true, Bool.not_true, Bool.false_eq_true, ↓reduceIte, strEq_eq,
+  decide_true, uTabNr, H.tabNr t, h1, beq_iff_eq, reduceCtorEq]
+  | _ => simp only [uOfB, reduceCtorEq] at hu
 
 /-- Without a result, a read-back side holds no `old` and no `result`. -/
 theorem seite_ohne_erg (art : Nat → UParamArt) (n : Nat) :
@@ -845,32 +850,32 @@ theorem seite_ohne_erg (art : Nat → UParamArt) (n : Nat) :
   | var x =>
     simp only [uOfS] at hu
     split at hu
-    · rename_i h; simp at h
-    · split at hu <;> simp at hu; subst hu; rfl
+    · rename_i h; simp only [reduceCtorEq] at h
+    · split at hu <;> simp only [reduceCtorEq, Option.some.injEq] at hu; subst hu; rfl
   | glob g hL =>
     simp only [uOfS] at hu
-    split at hu <;> simp at hu; subst hu; rfl
+    split at hu <;> simp only [reduceCtorEq, Option.some.injEq] at hu; subst hu; rfl
   | slot t f i hL =>
     simp only [uOfS] at hu
     split at hu
-    · simp at hu
-    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp [hx] at hu; subst hu; rfl
+    · simp only [reduceCtorEq] at hu
+    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp only [hx, Option.map_none, reduceCtorEq, Option.map_some, Option.some.injEq] at hu; subst hu; rfl
   | widen h1 h2 e =>
     simp only [uOfS] at hu
-    exact ih e (by simp at hn; omega) u hu
+    exact ih e (by simp only [Expr.widen.sizeOf_spec, sizeOf_default, add_zero] at hn; omega) u hu
   | add a b | sub a b | mul a b =>
     simp only [uOfS] at hu
-    simp at hn
-    cases xa : uOfS z art none a <;> cases xb : uOfS z art none b <;> simp [xa, xb] at hu
+    simp only [Expr.add.sizeOf_spec, Expr.sub.sizeOf_spec, Expr.mul.sizeOf_spec] at hn
+    cases xa : uOfS z art none a <;> cases xb : uOfS z art none b <;> simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp [seiteAltErg, ih a (by omega) _ xa, ih b (by omega) _ xb]
+    simp only [seiteAltErg, ih a (by omega) _ xa, ih b (by omega) _ xb, Bool.or_self]
   | neg a =>
     simp only [uOfS] at hu
-    simp at hn
-    cases xa : uOfS z art none a <;> simp [xa] at hu
+    simp only [Expr.neg.sizeOf_spec] at hn
+    cases xa : uOfS z art none a <;> simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp [seiteAltErg, ih a (by omega) _ xa]
-  | _ => simp [uOfS] at hu
+    simp only [seiteAltErg, ih a (by omega) _ xa]
+  | _ => simp only [uOfS, reduceCtorEq] at hu
 
 theorem ens_ohne_erg (n : Nat) :
     ∀ {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt} {τ : Ty} (e : Expr z.deklaration Γ Λ τ),
@@ -880,45 +885,45 @@ theorem ens_ohne_erg (n : Nat) :
   | succ n ih =>
   intro Γ Λ art τ e hn u hu
   cases e with
-  | tru | fls => simp [uOfB] at hu; subst hu; rfl
+  | tru | fls => simp only [uOfB, Option.some.injEq] at hu; subst hu; rfl
   | var x =>
     simp only [uOfB] at hu
     split at hu
-    · rename_i h; simp at h
-    · split at hu <;> simp at hu; subst hu; rfl
+    · rename_i h; simp only [reduceCtorEq] at h
+    · split at hu <;> simp only [Option.some.injEq, reduceCtorEq] at hu; subst hu; rfl
   | glob g hL =>
     simp only [uOfB] at hu
-    split at hu <;> simp at hu; subst hu; rfl
+    split at hu <;> simp only [Option.some.injEq, reduceCtorEq] at hu; subst hu; rfl
   | slot t f i hL =>
     simp only [uOfB] at hu
     split at hu
-    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp [hx] at hu; subst hu; rfl
-    · simp at hu
+    · cases hx : uOfIdx z art none (tN z t) (z.deklaration.count t) i <;> simp only [hx, Option.map_none, reduceCtorEq, Option.map_some, Option.some.injEq] at hu; subst hu; rfl
+    · simp only [reduceCtorEq] at hu
   | lt a b | le a b | eq a b =>
     simp only [uOfB] at hu
-    cases xa : uOfS z art none a <;> cases xb : uOfS z art none b <;> simp [xa, xb] at hu
+    cases xa : uOfS z art none a <;> cases xb : uOfS z art none b <;> simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp [ensAltErg, seite_ohne_erg art (sizeOf a + 1) a (by omega) _ xa,
-      seite_ohne_erg art (sizeOf b + 1) b (by omega) _ xb]
+    simp only [ensAltErg, seite_ohne_erg art (sizeOf a + 1) a (by omega) _ xa,
+  seite_ohne_erg art (sizeOf b + 1) b (by omega) _ xb, Bool.or_self]
   | and a b | or a b =>
     simp only [uOfB] at hu
-    simp at hn
-    cases xa : uOfB z art none a <;> cases xb : uOfB z art none b <;> simp [xa, xb] at hu
+    simp only [Expr.and.sizeOf_spec, Expr.or.sizeOf_spec] at hn
+    cases xa : uOfB z art none a <;> cases xb : uOfB z art none b <;> simp only [xa, xb, Option.bind_eq_bind, Option.bind_none, Option.bind_fun_none, reduceCtorEq, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp [ensAltErg, ih a (by omega) _ xa, ih b (by omega) _ xb]
+    simp only [ensAltErg, ih a (by omega) _ xa, ih b (by omega) _ xb, Bool.or_self]
   | not a =>
     simp only [uOfB] at hu
-    simp at hn
-    cases xa : uOfB z art none a <;> simp [xa] at hu
+    simp only [Expr.not.sizeOf_spec] at hn
+    cases xa : uOfB z art none a <;> simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp [ensAltErg, ih a (by omega) _ xa]
+    simp only [ensAltErg, ih a (by omega) _ xa]
   | forallSlots t body hL | existsSlots t body hL =>
     simp only [uOfB] at hu
-    simp at hn
-    cases xa : uOfB z (artAuf (.index (tN z t)) art) none body <;> simp [xa] at hu
+    simp only [Expr.forallSlots.sizeOf_spec, sizeOf_default, add_zero, Expr.existsSlots.sizeOf_spec] at hn
+    cases xa : uOfB z (artAuf (.index (tN z t)) art) none body <;> simp only [xa, Option.bind_eq_bind, Option.bind_none, reduceCtorEq, Option.bind_some, Option.some.injEq] at hu
     subst hu
-    simp [ensAltErg, ih body (by omega) _ xa]
-  | _ => simp [uOfB] at hu
+    simp only [ensAltErg, ih body (by omega) _ xa]
+  | _ => simp only [uOfB, reduceCtorEq] at hu
 
 /-- **A truth value in a body** (`uBool`: the predicate reader without `old`/`result`). -/
 theorem bool_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}

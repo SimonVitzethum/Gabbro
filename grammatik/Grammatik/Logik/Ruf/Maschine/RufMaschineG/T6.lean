@@ -67,7 +67,7 @@ theorem M7G_moves : M7G.speicher.slots () 0 () ≠
   have hn : ((⟨2, by decide, by decide⟩ :
       Wert rufDF (rufDF.typ () ())).n) = ((⟨0, by decide, by decide⟩ :
       Wert rufDF (rufDF.typ () ())).n) := congrArg Zahl.n hcon
-  simp at hn
+  simp only [Int.reduceEq] at hn
 
 /-- **Witness for `rufG_treu`.** The premises of `rufG_treu` are
     instantiated JOINTLY with concrete values: the program `gP` (callee

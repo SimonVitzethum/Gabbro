@@ -58,7 +58,7 @@ namespace HashZeuge
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -74,9 +74,9 @@ namespace HashZeuge
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 def FA3 : FreiForm FD3 where
   tab := false
@@ -116,22 +116,22 @@ def wd3 (st kopf : Int) (nx ln hd : Int → Int) : World FD3 where
   slots := fun t k f =>
     if ht : t = true then (by
       subst ht
-      have : FD3.typ true f = .int 0 4 := by simp
+      have : FD3.typ true f = .int 0 4 := by simp only [↓reduceIte]
       rw [this]; exact zc (hd k))
     else if h0 : f = 0 then (by
       have ht' : t = false := by simpa using ht
       subst ht'
-      have : FD3.typ false f = .int 0 255 := by simp [h0]
+      have : FD3.typ false f = .int 0 255 := by simp only [Bool.false_eq_true, ↓reduceIte, h0, Fin.isValue]
       rw [this]; exact (⟨0, by decide, by decide⟩ : Zahl 0 255))
     else if h1 : f = 1 then (by
       have ht' : t = false := by simpa using ht
       subst ht'
-      have : FD3.typ false f = .int 0 4 := by simp [h0]
+      have : FD3.typ false f = .int 0 4 := by simp only [Bool.false_eq_true, ↓reduceIte, Fin.isValue, h0]
       rw [this]; exact zc (nx k))
     else (by
       have ht' : t = false := by simpa using ht
       subst ht'
-      have : FD3.typ false f = .int 0 4 := by simp [h0]
+      have : FD3.typ false f = .int 0 4 := by simp only [Bool.false_eq_true, ↓reduceIte, Fin.isValue, h0]
       rw [this]; exact zc (ln k))
   globs := fun g => if g = 0 then zc st else if g = 1 then zc st else zc kopf
   spur := []
@@ -157,7 +157,7 @@ theorem kette_wh : FA3.Kette wh 3 [3] :=
 
 theorem freiOk_wh : FA3.FreiOk wh := by
   refine ⟨[3], by rw [kopf_wh]; exact kette_wh, by decide, ?_⟩
-  intro i hi; simp at hi; subst hi; rw [stand_wh]; omega
+  intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; rw [stand_wh]; omega
 
 theorem aufListe_wh (i : Int) : FA3.AufListe wh i ↔ i = 3 := by
   constructor
@@ -166,7 +166,7 @@ theorem aufListe_wh (i : Int) : FA3.AufListe wh i ↔ i = 3 := by
     have := FreiForm.Kette.eindeutig hL kette_wh
     subst this; simpa using hm
   · rintro rfl
-    exact ⟨[3], by rw [kopf_wh]; exact kette_wh, by simp⟩
+    exact ⟨[3], by rw [kopf_wh]; exact kette_wh, by simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
 
 theorem lebt_wh (i : Int) : FA3.Lebt wh i ↔ (0 ≤ i ∧ i < 4 ∧ i ≠ 3) := by
   unfold FreiForm.Lebt
@@ -191,18 +191,18 @@ theorem hashOk_wh : HashOk LL3 HB3 wh := by
       omega
     rcases hb with rfl | rfl
     · refine ⟨[1], kette0_wh, by decide, ?_⟩
-      intro i hi; simp at hi; subst hi; exact (lebt_wh 1).mpr (by decide)
-    · exact ⟨[], kette1_wh, by decide, by simp⟩
+      intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; exact (lebt_wh 1).mpr (by decide)
+    · exact ⟨[], kette1_wh, by decide, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]⟩
   · have hb : b = 0 ∨ b = 1 := by have h2 : b < 2 := hb1; omega
     have hb' : b' = 0 ∨ b' = 1 := by have h2 : b' < 2 := hb1'; omega
     rcases hb with rfl | rfl <;> rcases hb' with rfl | rfl
     · exact absurd rfl hne
     · obtain ⟨L, hL, hm⟩ := hj'
       have := KetteF.eindeutig hL kette1_wh
-      subst this; simp at hm
+      subst this; simp only [List.not_mem_nil] at hm
     · obtain ⟨L, hL, hm⟩ := hj
       have := KetteF.eindeutig hL kette1_wh
-      subst this; simp at hm
+      subst this; simp only [List.not_mem_nil] at hm
     · exact absurd rfl hne
 
 /-! ### The contract, the oracle and the environments of the bodies -/
@@ -246,10 +246,10 @@ theorem nicht_auf_2 : ∀ b', 0 ≤ b' → b' < FD3.count HB3.bt →
   rcases hb with rfl | rfl
   · obtain ⟨L, hL, hm⟩ := hj
     have := KetteF.eindeutig hL kette0_wh
-    subst this; simp at hm
+    subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
   · obtain ⟨L, hL, hm⟩ := hj
     have := KetteF.eindeutig hL kette1_wh
-    subst this; simp at hm
+    subst this; simp only [List.not_mem_nil] at hm
 
 /-- The environment: bucket `0`, slot `2`. -/
 def rP02 : Env FD3 GP := rhoP 0 2 (by decide) (by decide) (by decide) (by decide)
@@ -326,15 +326,15 @@ theorem push_defekt :
         intro b hb
         have hb' : HB3.wert σ' b = 1 := by rcases hb with rfl | rfl; exact h0; exact h1
         rw [hb']
-        exact ⟨[1], KetteF.cons 1 (by decide) (by decide) [] (by rw [hl]; exact KetteF.nil), by simp⟩
+        exact ⟨[1], KetteF.cons 1 (by decide) (by decide) [] (by rw [hl]; exact KetteF.nil), by simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
       exact hh.2 0 1 (by decide) (by decide) (by decide) (by decide) (by decide) 1 (hmem 0 (Or.inl rfl))
         (hmem 1 (Or.inr rfl))
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 end HashZeuge
 

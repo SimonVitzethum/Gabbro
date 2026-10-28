@@ -43,14 +43,14 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           have e : RufFadenSchluesselG (M.faeden f) =
               RufSchluesselG (M.faeden f).kopf ::
                 ((M.faeden f).stapel.map RufSchluesselG) := by
-            simp [RufFadenSchluesselG]
+            simp only [RufFadenSchluesselG, List.map_cons]
           rw [e, hpop]
         have htail : RufFadenSchluesselG
             (⟨rest, caller, s1.spur,
              (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
               RufFadenG D) =
             (caller :: rest).map RufSchluesselG := by
-          simp [RufFadenSchluesselG]
+          simp only [RufFadenSchluesselG, List.map_cons]
         unfold RufFadenPasstG at h ⊢
         rw [hk, hhead] at h
         rw [htail]
@@ -64,7 +64,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           (⟨rest, caller, s1.spur,
            (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho hrho
@@ -88,7 +88,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
             (⟨g, rho, s0⟩ :
               Σ f : D.Fn, Env D (D.params f) × World D) ::
               RufFadenSchluesselG (M.faeden f) := by
-          simp [RufFadenSchluesselG, RufSchluesselG]
+          simp only [RufFadenSchluesselG, List.map_cons, RufSchluesselG]
         unfold RufFadenPasstG
         rw [e]
         exact RufLogPasstG.eintritt _ _ g rho s0 h
@@ -109,7 +109,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              rho, .ende (P.rumpf g)⟩⟩,
            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv
@@ -140,7 +140,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              rho, .ende (P.rumpf g)⟩⟩,
            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv
@@ -182,7 +182,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              rho, .ende (P.rumpf g)⟩⟩,
            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0
@@ -213,7 +213,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              rho, .ende (P.rumpf g)⟩⟩,
            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0
@@ -244,7 +244,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              rho, .ende (P.rumpf g)⟩⟩,
            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | rueckBind caller rest hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ
@@ -258,7 +258,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
             ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc,
              .dann restb (.schrumpf k)⟩⟩ : RufRahmenG D) =
           RufSchluesselG caller := by
-        simp [RufSchluesselG]
+        simp only [RufSchluesselG]
       have hkeys := rufPopG_passt (M.faeden f) caller rest hpop
         ⟨caller.f, caller.rho, caller.s0,
          ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc,
@@ -281,7 +281,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
            s1.spur,
            (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1
@@ -301,7 +301,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           (⟨rst, caller, s1.spur,
            (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | rueckCons caller rst hpop Γ Λ e hperm rest ρ hh g hfg rho hrho s0 hs0
@@ -321,7 +321,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           (⟨rst, caller, s1.spur,
            (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
             RufFadenG D) := by
-        simp [rufUpdateG_self]
+        simp only [rufUpdateG_self]
       rw [heq]
       exact hkeys
   | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hh caller rst hpop l Γ Λ Λ' τ restb
@@ -333,7 +333,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
       have hkeys := rufPopG_passt (M.faeden f) caller rst hpop
         ⟨caller.f, caller.rho, caller.s0,
          ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc, .dann restb (.schrumpf k)⟩⟩
-        (by simp [RufSchluesselG]) g rho v s0 s1 hheadkey s1.spur h
+        (by simp only [RufSchluesselG]) g rho v s0 s1 hheadkey s1.spur h
       simp only [rufUpdateG_self]
       exact hkeys
   | rueckConsBind lk Γk Λk e hperm restk ρ hh caller rst hpop l Γ Λ Λ' τ restb
@@ -345,7 +345,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
       have hkeys := rufPopG_passt (M.faeden f) caller rst hpop
         ⟨caller.f, caller.rho, caller.s0,
          ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρc, .dann restb (.schrumpf k)⟩⟩
-        (by simp [RufSchluesselG]) g rho v s0 s1 hheadkey s1.spur h
+        (by simp only [RufSchluesselG]) g rho v s0 s1 hheadkey s1.spur h
       simp only [rufUpdateG_self]
       exact hkeys
   | rueckGrund r hperm ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
@@ -356,7 +356,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
       have hkeys := rufPopGrundG_passt (M.faeden f) caller rst hpop
         ⟨caller.f, caller.rho, caller.s0,
          ⟨l, .why n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩
-        (by simp [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
+        (by simp only [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
       simp only [rufUpdateG_self]
       exact hkeys
   | rueckConsGrund r hperm restk ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
@@ -367,7 +367,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
       have hkeys := rufPopGrundG_passt (M.faeden f) caller rst hpop
         ⟨caller.f, caller.rho, caller.s0,
          ⟨l, .why n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩
-        (by simp [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
+        (by simp only [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
       simp only [rufUpdateG_self]
       exact hkeys
   | dannRetGrund r hperm restk kk ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
@@ -378,7 +378,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
       have hkeys := rufPopGrundG_passt (M.faeden f) caller rst hpop
         ⟨caller.f, caller.rho, caller.s0,
          ⟨l, .why n :: Γ, Λ, .cons (Fin.cast hn rg) ρc, .ende err⟩⟩
-        (by simp [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
+        (by simp only [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
       simp only [rufUpdateG_self]
       exact hkeys
   | _ =>

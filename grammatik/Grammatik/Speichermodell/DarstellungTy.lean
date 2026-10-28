@@ -119,15 +119,15 @@ theorem encN_lt {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty)
           have := v.isLt
           omega
         exact Grammatik.Speichermodell.Darstellung.enc_lt_two_pow 0 _ _ h1 h2
-      · simp at hb
-  | sum _ => simp only [tyBits] at hb; simp at hb
-  | never => simp only [tyBits] at hb; simp at hb
-  | fl _ => simp only [tyBits] at hb; simp at hb
-  | fnptr _ => simp only [tyBits] at hb; simp at hb
-  | ptr _ _ => simp only [tyBits] at hb; simp at hb
-  | ref _ => simp only [tyBits] at hb; simp at hb
-  | arr _ _ => simp only [tyBits] at hb; simp at hb
-  | str _ => simp only [tyBits] at hb; simp at hb
+      · simp only [reduceCtorEq] at hb
+  | sum _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | never => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | fl _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | fnptr _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | ptr _ _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | ref _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | arr _ _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | str _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
 
 /-! ## 3. The round trip (with the `option` side condition).
 

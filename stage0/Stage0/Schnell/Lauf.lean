@@ -17,7 +17,7 @@ variable {D : Deklaration} {P : Programm D} {kf : (a : D.Ax) → Env D (D.aparam
 /-- **The start**: the normal form of the start machine. -/
 def FStand.start (K : Kodierung D) (ww : World D) (M0 : RufMaschineG D) (n : Nat) (A : AWelt D) : FStand K n :=
   ⟨A, (Array.range n).map (fun g => fadenNormal ww (M0.faeden g)),
-    (Array.range n).map (fun g => fremdZahl (M0.faeden g).spur), by simp, by simp⟩
+    (Array.range n).map (fun g => fremdZahl (M0.faeden g).spur), by simp only [Array.size_map, Array.size_range], by simp only [Array.size_map, Array.size_range]⟩
 
 theorem SInv.start (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (log : List (Antwort D))
     (passes : Nat) (ww : World D) (M0 : RufMaschineG D) (K : Kodierung D) (n : Nat) (A : AWelt D)
@@ -26,10 +26,10 @@ theorem SInv.start (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) →
   · simp only [FStand.F, FStand.start, sMaschine, normal, RufMaschineG.mk.injEq, hA, true_and, and_true]
     funext g
     by_cases hg : g < n
-    · simp [tabelle, hg]
-    · simp [tabelle, hg]
+    · simp only [tabelle, Array.size_map, Array.size_range, hg, getElem?_pos, Array.getElem_map, Array.getElem_range, Option.getD_some]
+    · simp only [tabelle, Array.size_map, Array.size_range, hg, not_false_eq_true, getElem?_neg, Option.getD_none]
   · intro g hg
-    simp [FStand.c, FStand.start, hg]
+    simp only [FStand.c, FStand.start, Array.size_map, Array.size_range, hg, getElem?_pos, Array.getElem_map, Array.getElem_range, Option.getD_some]
 
 /-- The start of a run. -/
 def SStand.start (P : Programm D) (kf : (a : D.Ax) → Env D (D.aparams a) → List Int) (log : List (Antwort D))

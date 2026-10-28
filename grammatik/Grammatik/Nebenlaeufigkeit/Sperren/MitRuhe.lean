@@ -107,7 +107,7 @@ theorem SigPasst.sigR {Tab Glob Lock Marke : Type} {rang : Lock → Int} {S T : 
 theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
     SigPasst D.rang (sigNrM D (sigM D f)) (sigNrM D n)
   | some f, n + 1, h => SigPasst.sigR (D.passt_ok f n h)
-  | some _, 0, h => by simp [passtM] at h
+  | some _, 0, h => by simp only [passtM, Bool.false_eq_true] at h
   | none, n, h => by
     have : n = 0 := of_decide_eq_true h
     subst this; exact SigPasst.refl _ _
@@ -139,7 +139,8 @@ def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.pa
   | .fl _ _, v => v
   | .fnptr n, v => match v with
     | ⟨some f, h⟩ => ⟨f, h⟩
-    | ⟨none, h⟩ => absurd h (by simp [passtM])
+    | ⟨none, h⟩ => absurd h (by simp only [passtM, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true,
+  not_false_eq_true])
   | .ptr _ _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun j => valZ τ (v j)
@@ -168,7 +169,8 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   | .never, _ => rfl
   | .fl _ _, _ => rfl
   | .fnptr n, ⟨some f, h⟩ => rfl
-  | .fnptr n, ⟨none, h⟩ => absurd h (by simp [passtM])
+  | .fnptr n, ⟨none, h⟩ => absurd h (by simp only [passtM, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true,
+  not_false_eq_true])
   | .ptr _ _, _ => rfl
   | .ref _, _ => rfl
   | .arr τ _, v => funext fun j => valR_valZ τ (v j)
@@ -211,7 +213,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   passt := passtM D
   passt_ok := passtM_ok D
   eigner_nie_erzeugt := fun n t m s hm => match n with
-    | 0 => by simp [sigNrM, sigRuheM]
+    | 0 => by simp only [sigNrM, sigRuheM, List.not_mem_nil, not_false_eq_true]
     | n + 1 => D.eigner_nie_erzeugt n t m s hm
   Inv := D.Inv
   traeger := D.traeger
@@ -225,7 +227,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   anbieter := D.anbieter
   anbieter_passt := fun t a h => by
     obtain ⟨h1, h2, n, h3, h4⟩ := D.anbieter_passt t a h
-    exact ⟨h1, by simp [h2], n, by simp [h3, tyR], h4⟩
+    exact ⟨h1, by simp only [h2, List.map_nil], n, by simp only [h3, Option.map_some, tyR], h4⟩
   Reg := D.Reg
   rtyp := fun r => tyR (D.rtyp r)
   rklasse := D.rklasse
@@ -236,7 +238,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   a10 := D.a10
   geteilt_bewacht := D.geteilt_bewacht
   invarianten_gehalten := fun n i h t ht L hL => match n with
-    | 0 => by simp [sigNrM, sigRuheM] at h
+    | 0 => by simp only [sigNrM, sigRuheM, List.any_eq_true, Bool.false_eq_true, and_false, exists_false] at h
     | n + 1 => D.invarianten_gehalten n i h t ht L hL
   ggeteilt_bewacht := D.ggeteilt_bewacht
   geist := D.geist
@@ -370,9 +372,9 @@ theorem erase_map_rm (Λ : List (Res D)) (a : Res D) :
   | cons b Λ ih =>
       by_cases h : b = a
       · subst h
-        simp
+        simp only [List.erase_cons_head, List.map_cons]
       · have h' : resR b ≠ resR a := fun e => h (rm_inj e)
-        simp [h, h', ih]
+        simp only [beq_iff_eq, h, not_false_eq_true, List.erase_cons_tail, List.map_cons, ih, h']
 
 theorem map_held_rm (l : List D.Lock) :
     (l.map (Res.held (D := D))).map resR = l.map (Res.held (D := D.mitRuhe)) := by

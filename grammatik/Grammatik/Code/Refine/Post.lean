@@ -91,7 +91,7 @@ theorem lowerErg_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) {Γ :
   | val e =>
       simp only [lowerErg] at h
       rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-      · simp [he] at h
+      · simp only [he, reduceCtorEq] at h
       simp only [he] at h
       have h' := Option.some.inj h
       simp only [Prod.mk.injEq] at h'
@@ -132,13 +132,13 @@ theorem lowerRet_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (n : 
           have hb := hM _ (List.mem_singleton_self _)
           exact ⟨⟨fn, lb, 0, rs, dst⟩, Reach.refl _, rfl, rfl,
             ⟨_, hb, Nat.le_refl _, Or.inr ⟨_, _, rfl, rfl, rfl⟩⟩, fr_regs (fun _ _ => rfl)⟩
-        · simp at h
+        · simp only [reduceCtorEq] at h
     | @val τ e =>
         cases τ with
         | int lo hi =>
             simp only [lowerErgF] at h
             rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-            · simp [he] at h
+            · simp only [he, reduceCtorEq] at h
             simp only [he] at h
             split at h
             · rename_i hf
@@ -158,15 +158,15 @@ theorem lowerRet_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (n : 
                 rw [hnc] at F
                 have e0 : ((0 : Nat) : Int) + ((n + 1 : Nat) : Int) * ((eval σ₀ e σ ρ).n - lo)
                     = okZ n (some (.int lo hi)) (evalErg σ₀ (.val e) σ ρ) := by
-                  simp [okZ, evalErg]
+                  simp only [Int.cast_ofNat_Int, Int.natCast_add, Int.zero_add, okZ, evalErg]
                 rw [e0] at F
                 exact F
               obtain ⟨rs1, hs1, _, hag1, _, hev⟩ := Fn
               have hr := reach_block_end (S := S) (ks := ks) (dst := dst) hb hs1
               exact ⟨⟨fn, lb, (ce ++ cn).length, rs1, dst⟩, hr, rfl, rfl, ⟨_, hb, Nat.le_refl _,
                 Or.inr ⟨on, _, rfl, rfl, hev⟩⟩, fr_regs hag1⟩
-            · simp at h
-        | _ => simp [lowerErgF] at h
+            · simp only [reduceCtorEq] at h
+        | _ => simp only [lowerErgF, reduceCtorEq] at h
 
 /-- `return why r`. -/
 theorem lowerWhy_ok (lay : Layout D) (cenv : List Reg) (n : Nat) (eo : Option GTy) (r : Nat) (lb : Lbl)
@@ -183,6 +183,6 @@ theorem lowerWhy_ok (lay : Layout D) (cenv : List Reg) (n : Nat) (eo : Option GT
     have hb := hM _ (List.mem_singleton_self _)
     exact ⟨⟨fn, lb, 0, rs, dst⟩, Reach.refl _, rfl, rfl,
       ⟨_, hb, Nat.le_refl _, Or.inr ⟨_, _, rfl, rfl, rfl⟩⟩, fr_regs (fun _ _ => rfl)⟩
-  · simp at h
+  · simp only [reduceCtorEq] at h
 
 end Gabbro.Code.Lower

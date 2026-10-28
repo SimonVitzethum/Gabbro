@@ -73,9 +73,9 @@ theorem stmt_gx (lay : Layout D) (hL : LayoutOk lay) {Tg : D.Tab ⊕ D.Glob → 
     (sp0.welt tr) ρ T.m rs ks dst hR0 hE hW hc
   rw [hstep] at hok
   obtain ⟨m', rs', hreach, ⟨hRp, hEp, hWp, _⟩, hF⟩ := hok
-  have hcfg : T.cfg u = .run T.m ⟨fn, lb, 0, rs, dst⟩ ks := by simp [TM.cfg, hth]
+  have hcfg : T.cfg u = .run T.m ⟨fn, lb, 0, rs, dst⟩ ks := by simp only [TM.cfg, hth]
   refine ⟨T.upd u (.run m' ⟨fn, k, 0, rs', dst⟩ ks), rs', treach_solo hreach T hcfg, ?_, ?_, ?_, hEp, hWp, hF⟩
-  · simp [TM.upd]
+  · simp only [TM.upd, ↓reduceIte]
   · intro v hv
     exact upd_other T _ hv
   · exact rep_successor hT hsucc (rep_welt [] hRp)

@@ -98,7 +98,7 @@ def eD : Deklaration where
   Fn := EFn
   sig := fun | .setze => 0 | .haupt => 0 | _ => 1
   sigNr := fun | 0 => eSigSetze | _ => eSigLeer
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -142,7 +142,7 @@ theorem eHp (caller callee : eD.Fn) (hw : ∀ t, (eD.signatur callee).schreibt t
   hw := hw
   hg := fun g => nomatch g
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
+  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := RufPasst.hh_von (by
     intro L
     rw [hh]

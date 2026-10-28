@@ -85,11 +85,11 @@ theorem lauf_ein (K : Kontext σ) (t : Baum σ) : A.lauf (K.ein t) = A.laufK K (
       congr 1
       funext j
       by_cases h : j = i
-      · subst h; simp [ih]
-      · simp [Function.update_of_ne h]
+      · subst h; simp only [Function.update_self, ih]
+      · simp only [Function.update_of_ne h]
 
 theorem sem_ein (K : Kontext σ) (t : Baum σ) : A.sem (K.ein t) = A.semK K (A.lauf t) := by
-  simp [sem, semK, lauf_ein]
+  simp only [sem, lauf_ein, semK]
 
 end Automat
 

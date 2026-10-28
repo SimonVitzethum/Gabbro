@@ -441,7 +441,7 @@ abbrev D59D : Deklaration where
   Fn := Empty
   sig := fun e => nomatch e
   sigNr := fun _ => D59SigDummy
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -554,7 +554,7 @@ abbrev D109D : Deklaration where
   Fn := Empty
   sig := fun e => nomatch e
   sigNr := fun _ => D109SigDummy
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -659,7 +659,7 @@ abbrev D112D : Deklaration where
   Fn := Empty
   sig := fun e => nomatch e
   sigNr := fun _ => D112SigDummy
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -749,7 +749,7 @@ abbrev D44D : Deklaration where
   Fn := Empty
   sig := fun e => nomatch e
   sigNr := fun _ => D44SigDummy
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []

@@ -177,21 +177,21 @@ theorem offen_nurZugriff : ∀ (neu s : List (Ereignis D)), NurZugriff neu →
       | zugriff => simpa [offen] using ih
       | gzugriff => simpa [offen] using ih
       | fremd => simpa [offen] using ih
-      | nimmt => simp [Ereignis.istZugriff] at he
-      | gibt => simp [Ereignis.istZugriff] at he
+      | nimmt => simp only [Ereignis.istZugriff, Bool.false_eq_true] at he
+      | gibt => simp only [Ereignis.istZugriff, Bool.false_eq_true] at he
 
 theorem kein_nimmt {neu : List (Ereignis D)} (h : NurZugriff neu) :
     ∀ (L : D.Lock) (hs : List D.Lock), Ereignis.nimmt L hs ∉ neu := by
   intro L hs hm
   have := h _ hm
-  simp [Ereignis.istZugriff] at this
+  simp only [Ereignis.istZugriff, Bool.false_eq_true] at this
 
 /-- `σ'` extends `σ` by access events only. -/
 def Erw (σ σ' : World D) : Prop :=
   ∃ neu, σ'.spur = neu ++ σ.spur ∧ NurZugriff neu
 
 theorem Erw.refl (σ : World D) : Erw σ σ :=
-  ⟨[], rfl, fun e he => by simp at he⟩
+  ⟨[], rfl, fun e he => by simp only [List.not_mem_nil] at he⟩
 
 theorem Erw.trans {a b c : World D} (h1 : Erw a b) (h2 : Erw b c) : Erw a c := by
   obtain ⟨n1, e1, z1⟩ := h1

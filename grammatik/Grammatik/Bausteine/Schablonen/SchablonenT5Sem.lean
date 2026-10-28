@@ -123,7 +123,7 @@ theorem kette_steigt (e : List (D.Lock × D.Lock))
       ∀ y ∈ xs, D.rang x < D.rang y := by
   intro xs
   induction xs generalizing x with
-  | nil => intro _ y hy; simp at hy
+  | nil => intro _ y hy; simp only [List.not_mem_nil] at hy
   | cons a rest ih =>
     intro hc y hy
     have hmem : (x, a) ∈ e ∧ ketteR e (a :: rest) := hc
@@ -165,7 +165,7 @@ vacuously; running `refP`'s write under it shows the whole footprint
 theorem fragHr : ∀ M : refD.Lock,
     Res.held M ∈ ([] : List (Res refD)) → refD.rang M < refD.rang () := by
   intro M hM
-  simp at hM
+  simp only [List.not_mem_nil] at hM
 
 /-- A real `locks` fragment over `refD`: take `()` holding nothing,
     run `refP`'s write site, give back. -/
@@ -255,7 +255,7 @@ theorem sperrabdruck_zeuge :
       refD.rang p.1 < refD.rang p.2 := by
     intro p hp
     rw [hedges] at hp
-    simp at hp
+    simp only [List.not_mem_nil] at hp
   refine ⟨hedges, fragLocks_wohlgeordnet, fragLocks_geschlossen,
     fragLocks_schreibt, ?_⟩
   intro x xs hc

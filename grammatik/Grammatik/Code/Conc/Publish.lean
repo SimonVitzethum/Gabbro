@@ -65,11 +65,11 @@ theorem publish_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : 
     apply Classical.byContradiction
     intro hn
     rw [if_neg hn] at h
-    simp at h
+    simp only [reduceCtorEq] at h
   rw [if_pos hat] at h
   have hs := atomicG_supp hat
   rcases he : lowerE lay cenv e st.r with _ | ⟨ce, oe, r1⟩
-  · simp [he] at h
+  · simp only [he, reduceCtorEq] at h
   simp only [he] at h
   have h' := Option.some.inj h
   simp only [Prod.mk.injEq] at h'
@@ -94,7 +94,7 @@ theorem publish_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : 
     simp only [stepI, hev1', hgl, atomicG_ok hat, if_true, hm', Option.map_some]
   have hseq : seqI (ce ++ [.astor (memTy (D.gtyp g)) oe (.glob (lay.ggblk g)) .rel]) m rs = some (m', rs1) := by
     rw [seqI_append, hs1']
-    simp [seqI, hst]
+    simp only [seqI, Option.bind_some, hst]
   have hFr : Fr lay cenv st.r m rs m' rs1 := fr_store hm' (Or.inl (not_fresh_glob g)) hag1
   refine ⟨m', rs1, reach_block_jmp hb rfl hbk hkp hseq, ?_, hFr⟩
   have hRn : Rep lay (σl.schreibGlob g Λ (eval σl e σl ρ)) m' :=

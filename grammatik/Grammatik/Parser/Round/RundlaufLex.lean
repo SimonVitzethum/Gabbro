@@ -143,7 +143,9 @@ theorem nimmFolge_name : ∀ (cs rest : List Char), cs.all istFolge = true →
     nimmFolge (cs ++ ' ' :: rest) = (cs, ' ' :: rest) := by
   intro cs rest h
   induction cs with
-  | nil => simp [nimmFolge, istFolge, istAnfang, istZiffer]
+  | nil => simp only [↓Char.isValue, List.nil_append, nimmFolge, istFolge, istAnfang, Char.reduceEq, imp_self,
+  Char.reduceToNat, Nat.reduceLeDiff, decide_false, decide_true, Bool.and_true, Bool.or_self, istZiffer,
+  Bool.false_eq_true, ↓reduceIte]
   | cons c cs ih =>
     simp only [List.all_cons, Bool.and_eq_true] at h
     simp only [List.cons_append, nimmFolge, h.1, ite_true, ih h.2]
@@ -185,25 +187,27 @@ theorem nimmZiffern_go : ∀ (ds r : List Char) (acc : Nat) (g : Bool),
       nimmZiffern.go 10 r (Nat.ofDigitChars 10 ds acc) (g || !ds.isEmpty) := by
   intro ds r acc g h
   induction ds generalizing acc g with
-  | nil => simp
+  | nil => simp only [List.nil_append, Nat.ofDigitChars_nil, List.isEmpty_nil, Bool.not_true, Bool.or_false]
   | cons c ds ih =>
     simp only [List.all_cons, Bool.and_eq_true] at h
     have hc : (c == '_') = false := by
       cases e : (c == '_')
       · rfl
-      · simp only [beq_iff_eq] at e; subst e; simp [istZiffer] at h
+      · simp only [beq_iff_eq] at e; subst e; simp only [istZiffer, ↓Char.isValue, Char.reduceToNat, Nat.reduceLeDiff, decide_true, decide_false,
+  Bool.and_false, Bool.false_eq_true, List.all_eq_true, Bool.and_eq_true, decide_eq_true_eq, false_and] at h
     simp only [List.cons_append, nimmZiffern.go, hc, Bool.false_eq_true, ite_false,
       hexWert_ziffer h.1]
     rw [ih _ _ h.2, Nat.ofDigitChars_cons]
-    simp [Nat.mul_comm]
+    simp only [Bool.true_or, Nat.mul_comm, ↓Char.isValue, Char.reduceToNat, List.isEmpty_cons, Bool.not_false,
+  Bool.or_true]
 
 theorem nimmZiffern_go_stop (c : Char) (r : List Char) (acc : Nat) (g : Bool)
     (hz : istZiffer c = false) (hu : c ≠ '_') :
     nimmZiffern.go 10 (c :: r) acc g = (acc, g, c :: r) := by
   have hc : (c == '_') = false := by simpa using hu
   rcases hexWert_nicht hz 10 with h | h
-  · simp [nimmZiffern.go, hc, h]
-  · simp at h
+  · simp only [nimmZiffern.go, ↓Char.isValue, hc, Bool.false_eq_true, ↓reduceIte, h]
+  · simp only [Nat.reduceBEq, Bool.false_eq_true] at h
 
 theorem toDigits_ziffern : ∀ (n : Nat), (Nat.toDigits 10 n).all istZiffer = true := by
   intro n
@@ -212,7 +216,7 @@ theorem toDigits_ziffern : ∀ (n : Nat), (Nat.toDigits 10 n).all istZiffer = tr
     rw [Nat.toDigits_eq_ite (by decide)]
     have hd : ∀ k, k < 10 → istZiffer (Nat.digitChar k) = true := by decide
     split
-    · simp [hd n (by omega)]
+    · simp only [List.all_cons, hd n (by omega), List.all_nil, Bool.and_self]
     · simp only [List.all_append, Bool.and_eq_true, List.all_cons, List.all_nil, Bool.and_true]
       exact ⟨ih (n / 10) (by omega), hd (n % 10) (Nat.mod_lt _ (by decide))⟩
 
@@ -276,12 +280,14 @@ theorem scan_zahl (b : Bool) (n : Nat) (rest : List Char) (m : Nat) :
     cases h : Nat.toDigits 10 n with
     | nil => exact absurd h hne
     | cons c cs => exact ⟨c, cs, rfl⟩
-  have hc : istZiffer c = true := by rw [hcs] at hd; simp at hd; exact hd.1
+  have hc : istZiffer c = true := by rw [hcs] at hd; simp only [List.all_cons, Bool.and_eq_true, List.all_eq_true] at hd; exact hd.1
   have hk := scanZahlKopf_lauf (Nat.toDigits 10 n) ' ' rest hne hd (by decide)
   have hz := nimmZiffern_kanon _ ' ' rest hne hd (by decide) (by decide)
   rw [hcs, List.cons_append, scan_ziffer_kopf b c _ _ hc, ← List.cons_append, ← hcs, hk]
   simp only [zahlBasis, hz, Nat.ofDigitChars_ten_toDigits]
-  simp [zahlWeiter, istAnfang, istZiffer, scan_leer]
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, BEq.rfl, ↓Char.isValue, List.cons.injEq,
+  Char.reduceEq, false_and, imp_self, implies_true, zahlWeiter, istAnfang, Char.reduceToNat, Nat.reduceLeDiff,
+  decide_false, decide_true, Bool.and_true, Bool.or_self, istZiffer, scan_leer]
 
 /-! ### Floats -/
 
@@ -292,34 +298,37 @@ theorem nimmDez_ziffern : ∀ (ds : List Char) (c : Char) (r : List Char),
   induction ds with
   | nil =>
     have : (c == '_') = false := by simpa using hu
-    simp [nimmDez, this, hz]
+    simp only [List.nil_append, nimmDez, ↓Char.isValue, this, Bool.false_eq_true, ↓reduceIte, hz]
   | cons d ds ih =>
     simp only [List.all_cons, Bool.and_eq_true] at hd
     have : (d == '_') = false := by
       cases e : (d == '_')
       · rfl
-      · simp only [beq_iff_eq] at e; subst e; simp [istZiffer] at hd
-    simp [nimmDez, this, hd.1, ih hd.2]
+      · simp only [beq_iff_eq] at e; subst e; simp only [istZiffer, ↓Char.isValue, Char.reduceToNat, Nat.reduceLeDiff, decide_true, decide_false,
+  Bool.and_false, Bool.false_eq_true, List.all_eq_true, Bool.and_eq_true, decide_eq_true_eq, false_and] at hd
+    simp only [List.cons_append, nimmDez, ↓Char.isValue, this, Bool.false_eq_true, ↓reduceIte, hd.1, ih hd.2]
 
 theorem nimmDezStreng_ziffern : ∀ (ds : List Char) (r : List Char),
     ds.all istZiffer = true →
     nimmDezStreng (ds ++ ' ' :: r) = (ds, ' ' :: r) := by
   intro ds r hd
   induction ds with
-  | nil => simp [nimmDezStreng, istZiffer]
+  | nil => simp only [↓Char.isValue, List.nil_append, nimmDezStreng, istZiffer, Char.reduceToNat, Nat.reduceLeDiff,
+  decide_false, decide_true, Bool.and_true, Bool.false_eq_true, ↓reduceIte]
   | cons d ds ih =>
     simp only [List.all_cons, Bool.and_eq_true] at hd
-    simp [nimmDezStreng, hd.1, ih hd.2]
+    simp only [↓Char.isValue, List.cons_append, nimmDezStreng, hd.1, ↓reduceIte, ih hd.2]
 
 theorem nimmExponent_kanon (ex r : List Char) (h : ExpForm ex) :
     nimmExponent (ex ++ ' ' :: r) = (String.ofList ex, ' ' :: r) := by
   rcases h with rfl | ⟨p, ds, hp, rfl, hne, hd⟩
-  · simp [nimmExponent]
+  · simp only [nimmExponent, ↓Char.isValue, List.nil_append, List.cons.injEq, Char.reduceEq, false_and, imp_self,
+  implies_true, String.ofList_nil]
   · obtain ⟨d, ds', rfl⟩ : ∃ d ds', ds = d :: ds' := by
       cases ds with
       | nil => exact absurd rfl hne
       | cons d ds' => exact ⟨d, ds', rfl⟩
-    have hdz : istZiffer d = true := by simp at hd; exact hd.1
+    have hdz : istZiffer d = true := by simp only [List.all_cons, Bool.and_eq_true, List.all_eq_true] at hd; exact hd.1
     rcases hp with rfl | rfl | rfl
     · have h1 : d ≠ '+' := istZiffer_ne hdz _ (by decide)
       have h2 : d ≠ '-' := istZiffer_ne hdz _ (by decide)
@@ -358,17 +367,19 @@ theorem scan_gleit (b : Bool) (s : String) (rest : List Char) (m : Nat) (h : Gle
     cases frac with
     | nil => exact absurd rfl hfne
     | cons f fs => exact ⟨f, fs, rfl⟩
-  have hfz : istZiffer f = true := by simp at hfd; exact hfd.1
-  have hfsd : fs.all istZiffer = true := by simp at hfd ⊢; exact fun x hx => hfd.2 x hx
+  have hfz : istZiffer f = true := by simp only [List.all_cons, Bool.and_eq_true, List.all_eq_true] at hfd; exact hfd.1
+  have hfsd : fs.all istZiffer = true := by simp only [List.all_cons, Bool.and_eq_true, List.all_eq_true] at hfd ⊢; exact fun x hx => hfd.2 x hx
   have hl : (toString v ++ "." ++ String.ofList (f :: fs) ++ String.ofList ex).toList ++
       ' ' :: rest = Nat.toDigits 10 v ++ '.' :: (f :: fs ++ (ex ++ ' ' :: rest)) := by
-    simp [String.toList_append]
+    simp only [Nat.toString_eq_repr, String.ofList_cons, String.toList_append, Nat.toList_repr,
+  String.reduceToList, ↓Char.isValue, String.toList_singleton, String.toList_ofList, List.cons_append, List.nil_append,
+  List.append_assoc]
   rw [hl]
   obtain ⟨c, cs, hcs⟩ : ∃ c cs, Nat.toDigits 10 v = c :: cs := by
     cases h : Nat.toDigits 10 v with
     | nil => exact absurd h hne
     | cons c cs => exact ⟨c, cs, rfl⟩
-  have hc : istZiffer c = true := by rw [hcs] at hd; simp at hd; exact hd.1
+  have hc : istZiffer c = true := by rw [hcs] at hd; simp only [List.all_cons, Bool.and_eq_true, List.all_eq_true] at hd; exact hd.1
   have hk := scanZahlKopf_lauf (Nat.toDigits 10 v) '.' (f :: fs ++ (ex ++ ' ' :: rest)) hne hd
     (by decide)
   have hz := nimmZiffern_kanon _ '.' (f :: fs ++ (ex ++ ' ' :: rest)) hne hd (by decide)
@@ -383,7 +394,7 @@ theorem scan_gleit (b : Bool) (s : String) (rest : List Char) (m : Nat) (h : Gle
   rw [← List.cons_append, hnd]
   simp only
   rw [nimmExponent_kanon ex rest hex]
-  simp [scan_leer]
+  simp only [Nat.toString_eq_repr, String.ofList_cons, ↓Char.isValue, scan_leer]
 
 /-! ### Strings -/
 
@@ -391,13 +402,13 @@ theorem nimmText_kanon : ∀ (cs r : List Char), (∀ c ∈ cs, c ≠ '"' ∧ c 
     nimmText (cs ++ '"' :: r) = some (cs, r) := by
   intro cs r h
   induction cs with
-  | nil => simp [nimmText]
+  | nil => simp only [↓Char.isValue, List.nil_append, nimmText]
   | cons c cs ih =>
-    have hc := h c (by simp)
-    have ih' := ih (fun x hx => h x (by simp [hx]))
+    have hc := h c (by simp only [List.mem_cons, true_or])
+    have ih' := ih (fun x hx => h x (by simp only [List.mem_cons, hx, or_true]))
     simp only [List.cons_append]
     rw [nimmText.eq_4]
-    · simp [ih']
+    · simp only [↓Char.isValue, ih']
     · simp_all
     · simp_all
 
@@ -407,7 +418,7 @@ theorem scan_text (b : Bool) (s : String) (rest : List Char) (m : Nat)
       Except.map (Token.text s :: ·) (scan b rest m) := by
   simp only [List.cons_append, List.append_assoc, List.nil_append]
   rw [scan.eq_6, nimmText_kanon _ _ h]
-  simp [scan_leer, String.ofList_toList]
+  simp only [String.ofList_toList, ↓Char.isValue, scan_leer]
 
 /-! ### Marks -/
 
@@ -424,7 +435,7 @@ theorem nimmZeichen_mark (l rest : List Char) (h : l ∈ markTafel) :
   simp only [markTafel, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
     h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
-    h | h | h | h <;> subst h <;> simp [nimmZeichen, istEinfach] <;> rfl
+    h | h | h | h <;> subst h <;> simp only [nimmZeichen, ↓Char.isValue, List.cons_append, List.nil_append, String.ofList_cons, String.reduceSingleton, String.ofList_nil, String.append_empty, String.reduceAppend, List.cons.injEq, Char.reduceEq, false_and, imp_self, implies_true, istEinfach, ↓reduceIte] <;> rfl
 
 theorem scan_zeichen (b : Bool) (s : String) (rest : List Char) (m : Nat)
     (h : s.toList ∈ markTafel) :
@@ -446,19 +457,19 @@ theorem scan_zeichen (b : Bool) (s : String) (rest : List Char) (m : Nat)
     · intro r e e2
       rcases hs with hs | hs
       · exact hs e
-      · subst hs; simp at e2
+      · subst hs; simp only [↓Char.isValue, List.nil_append, List.cons.injEq, Char.reduceEq, false_and] at e2
     · intro r e e2
       rcases hs with hs | hs
       · exact hs e
-      · subst hs; simp at e2
+      · subst hs; simp only [↓Char.isValue, List.nil_append, List.cons.injEq, Char.reduceEq, false_and] at e2
     · intro r e e2
       rcases hs with hs | hs
       · exact hs e
-      · subst hs; simp at e2
+      · subst hs; simp only [↓Char.isValue, List.nil_append, List.cons.injEq, Char.reduceEq, false_and] at e2
     · intro r e e2
       rcases hs with hs | hs
       · exact hs e
-      · subst hs; simp at e2
+      · subst hs; simp only [↓Char.isValue, List.nil_append, List.cons.injEq, Char.reduceEq, false_and] at e2
     · exact hq
 
 /-! ### The list -/
@@ -485,13 +496,13 @@ theorem scan_render : ∀ (ts : List Token) (n : Nat), (∀ t ∈ ts, TokGut t) 
     2 * ts.length ≤ n → scan false (render ts) n = .ok (ts ++ [.ende]) := by
   intro ts
   induction ts with
-  | nil => intro n _ _; simp [render, scan]
+  | nil => intro n _ _; simp only [render, scan, List.nil_append]
   | cons t ts ih =>
     intro n h hn
-    obtain ⟨m, rfl⟩ : ∃ m, n = m + 2 := ⟨n - 2, by simp at hn; omega⟩
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 2 := ⟨n - 2, by simp only [List.length_cons] at hn; omega⟩
     simp only [render]
-    rw [scan_token false t _ m (h t (by simp)),
-      ih m (fun x hx => h x (by simp [hx])) (by simp at hn; omega)]
+    rw [scan_token false t _ m (h t (by simp only [List.mem_cons, true_or])),
+      ih m (fun x hx => h x (by simp only [List.mem_cons, hx, or_true])) (by simp only [List.length_cons] at hn; omega)]
     rfl
 
 theorem spell_ne_nil (t : Token) (h : TokGut t) : spell t ≠ [] := by
@@ -499,20 +510,23 @@ theorem spell_ne_nil (t : Token) (h : TokGut t) : spell t ≠ [] := by
   | ident s =>
     simp only [TokGut, nameForm] at h
     simp only [spell]
-    intro e; rw [e] at h; simp at h
+    intro e; rw [e] at h; simp only [Bool.false_eq_true, false_and] at h
   | wort s =>
     simp only [TokGut, nameForm] at h
     simp only [spell]
-    intro e; rw [e] at h; simp at h
+    intro e; rw [e] at h; simp only [Bool.false_eq_true, false_and] at h
   | num n => exact Nat.toDigits_ne_nil
   | float s =>
     obtain ⟨v, frac, ex, rfl, _⟩ := h
-    simp [spell, String.toList_append]
-  | text s => simp [spell]
+    simp only [spell, Nat.toString_eq_repr, String.toList_append, Nat.toList_repr, String.reduceToList,
+  ↓Char.isValue, String.toList_ofList, List.append_assoc, List.cons_append, List.nil_append, ne_eq,
+  List.append_eq_nil_iff, Nat.toDigits_ne_nil, reduceCtorEq, and_self, not_false_eq_true]
+  | text s => simp only [spell, ↓Char.isValue, ne_eq, reduceCtorEq, not_false_eq_true]
   | zeichen s =>
     simp only [TokGut] at h
     simp only [spell]
-    intro e; rw [e] at h; simp [markTafel] at h
+    intro e; rw [e] at h; simp only [markTafel, ↓Char.isValue, List.mem_cons, List.nil_eq, reduceCtorEq, List.ne_cons_self,
+  List.not_mem_nil, or_self] at h
   | doku _ => exact absurd h id
   | ende => exact absurd h id
 
@@ -520,15 +534,16 @@ theorem render_laenge : ∀ (ts : List Token), (∀ t ∈ ts, TokGut t) →
     2 * ts.length ≤ (render ts).length := by
   intro ts
   induction ts with
-  | nil => simp [render]
+  | nil => simp only [List.not_mem_nil, false_implies, implies_true, List.length_nil, Nat.mul_zero, render, Std.le_refl,
+  imp_self]
   | cons t ts ih =>
     intro h
-    have h1 := spell_ne_nil t (h t (by simp))
-    have h2 := ih (fun x hx => h x (by simp [hx]))
+    have h1 := spell_ne_nil t (h t (by simp only [List.mem_cons, true_or]))
+    have h2 := ih (fun x hx => h x (by simp only [List.mem_cons, hx, or_true]))
     have h3 : 1 ≤ (spell t).length := by
       cases e : spell t with
       | nil => exact absurd e h1
-      | cons _ _ => simp
+      | cons _ _ => simp only [List.length_cons, Nat.le_add_left]
     simp only [render, List.length_append, List.length_cons, List.length_cons]
     omega
 
@@ -554,15 +569,15 @@ theorem tokGutB_gut : ∀ (t : Token), tokGutB t = true → TokGut t := by
     simp only [tokGutB, Bool.and_eq_true] at h
     exact h
   | num n => trivial
-  | float s => simp [tokGutB] at h
+  | float s => simp only [tokGutB, Bool.false_eq_true] at h
   | text s =>
     simp only [tokGutB, List.all_eq_true, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
     exact h
   | zeichen s =>
     simp only [tokGutB, List.contains_iff_mem] at h
     exact h
-  | doku _ => simp [tokGutB] at h
-  | ende => simp [tokGutB] at h
+  | doku _ => simp only [tokGutB, Bool.false_eq_true] at h
+  | ende => simp only [tokGutB, Bool.false_eq_true] at h
 
 theorem tokGut_of_all : ∀ (ts : List Token), ts.all tokGutB = true → ∀ t ∈ ts, TokGut t := by
   intro ts h t ht

@@ -119,31 +119,31 @@ theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
   | .axiomCall a args h' hw hg hd hgd, _, σ, ρ, e', he => by
       simp only [execStmt, axiomAntwort] at he
       split at he <;> cases he
-  | .shift .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
-  | .traverse .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
-  | .forever .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
-  | .onTag .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
-  | .onWhy .., h, _, _, _, _ => by simp [Stmt.logikFrei] at h
-  | .assignSlot .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignThru .., _, _, _, _, he | .assignSlotRef .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignGlob .., _, _, _, _, he => by simp [execStmt] at he
-  | .putBytes .., _, _, _, _, he => by simp [execStmt] at he
-  | .assignVar .., _, _, _, _, he => by simp [execStmt] at he
-  | .regWrite .., _, _, _, _, he => by simp [execStmt] at he
-  | .transition .., _, _, _, _, he => by simp [execStmt] at he
-  | .publish .., _, _, _, _, he => by simp [execStmt] at he
-  | .advances .., _, _, _, _, he => by simp [execStmt] at he
-  | .retires .., _, _, _, _, he => by simp [execStmt] at he
-  | .ret .., _, _, _, _, he => by simp [execStmt] at he
-  | .retWhy .., _, _, _, _, he => by simp [execStmt] at he
-  | .leave .., _, _, _, _, he => by simp [execStmt] at he
-  | .next .., _, _, _, _, he => by simp [execStmt] at he
+  | .shift .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
+  | .traverse .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
+  | .forever .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
+  | .onTag .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
+  | .onWhy .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
+  | .assignSlot .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .assignThru .., _, _, _, _, he | .assignSlotRef .., _, _, _, _, he => by simp only [execStmt, List.append_assoc, reduceCtorEq] at he
+  | .assignGlob .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .putBytes .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .assignVar .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .regWrite .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .transition .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .publish .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .advances .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retires .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .ret .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retWhy .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .leave .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .next .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
 
 theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e → Ok e)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     (b : Block D V l Γ Λ Λ') → b.logikFrei = true →
       ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execBlock O passes R b σ ρ = .logik e → Ok e
-  | .nil, _, σ, ρ, e, he => by simp [execBlock] at he
+  | .nil, _, σ, ρ, e, he => by simp only [execBlock, reduceCtorEq] at he
   | .cons s rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
@@ -241,7 +241,7 @@ theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
       split at he
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ he
       · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_logik he)
-  | .float .., h, _, _, _, _ => by simp [Block.logikFrei] at h
+  | .float .., h, _, _, _, _ => by simp only [Block.logikFrei, Bool.false_eq_true] at h
   | .floatLit q lo hi rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
@@ -249,8 +249,8 @@ theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
       · rename_i hn
         rw [hn] at h
-        simp at h
-  | .floatOf .., h, _, _, _, _ => by simp [Block.logikFrei] at h
+        simp only [Option.isSome_none, Bool.false_eq_true, false_and] at h
+  | .floatOf .., h, _, _, _, _ => by simp only [Block.logikFrei, Bool.false_eq_true] at h
   | .floatNarrow x lo hi sonst rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
@@ -262,10 +262,10 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (b : Endblock D V l Γ Λ) → b.logikFrei = true →
       ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execEnd O passes R b σ ρ = .logik e → Ok e
-  | .ret .., _, _, _, _, he => by simp [execEnd] at he
-  | .retWhy .., _, _, _, _, he => by simp [execEnd] at he
-  | .leave .., _, _, _, _, he => by simp [execEnd] at he
-  | .next .., _, _, _, _, he => by simp [execEnd] at he
+  | .ret .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .retWhy .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .leave .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .next .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .cons s rest, h, σ, ρ, e, he => by
       simp only [Endblock.logikFrei, Bool.and_eq_true] at h
       simp only [execEnd] at he

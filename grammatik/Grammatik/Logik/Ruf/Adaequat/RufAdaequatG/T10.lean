@@ -39,14 +39,14 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     obtain ⟨he, ho⟩ := hcov.ende_inv
     obtain ⟨hs, hr, _⟩ := he.cons_inv
     simp only [Endblock.ohneOrakel, Bool.and_eq_true] at ho
-    refine Or.inl ⟨_, _, _, _, .dann (.cons s .nil) (.ende rest), _, rufUpdateG_self _ _ _, RestG.dann _ _ (BlockG.cons s .nil hs BlockG.nil) (by simp [Block.ohneOrakel, ho.1]) (RestG.ende rest hr ho.2), ?_⟩
+    refine Or.inl ⟨_, _, _, _, .dann (.cons s .nil) (.ende rest), _, rufUpdateG_self _ _ _, RestG.dann _ _ (BlockG.cons s .nil hs BlockG.nil) (by simp only [Block.ohneOrakel, ho.1, Bool.and_self]) (RestG.ende rest hr ho.2), ?_⟩
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (sem_endeEntf O passes s rest _ _)
   | endeForm l2 Γ2 Λ2 e ρ2 hl hent hhead =>
     rw [hR] at hhead
     cases hhead
     obtain ⟨he, ho⟩ := hcov.ende_inv
-    cases he <;> simp [EndEntfaltbar] at hent
+    cases he <;> simp only [EndEntfaltbar, Bool.false_eq_true] at hent
   | dannBlatt l2 Γ2 Λ2 Λ2' Λ2'' s rest k ρ2 hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
     rw [hR] at hhead
     cases hhead
@@ -467,11 +467,11 @@ theorem rufG_adaequat_umkehr (P : Programm D) (O : Orakel D) (passes : Nat)
   rcases invB_lauf hl h0 with ⟨l, Γ', Λ', ρ', r, sp, hM'', _, _⟩ | ⟨v, s1, ext, hlog', hg⟩
   · rw [hM''] at hlog
     have hlen := congrArg List.length hlog
-    simp at hlen
+    simp only [List.length_cons, Nat.left_eq_add, Nat.succ_ne_self] at hlen
   · rw [hlog'] at hlog
     have hext : ext = [] := by
       have hlen := congrArg List.length hlog
-      simp at hlen
+      simp only [List.length_append, List.length_cons, Nat.add_eq_right, List.length_eq_zero_iff] at hlen
       exact hlen
     subst hext
     simp only [List.nil_append, List.cons.injEq, RufEreignisF.rueck.injEq] at hlog

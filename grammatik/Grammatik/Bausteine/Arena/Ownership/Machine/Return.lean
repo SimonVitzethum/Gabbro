@@ -35,7 +35,7 @@ theorem result_owner {erg : Option Ty} (out : Flow.Output A erg) (v : ErgVal D e
   | owner =>
     cases he
     obtain ⟨hh, hown, hslot, hsingle⟩ := h
-    exact ⟨hh, hown, hsingle, by simp [ergWert, intVon, hslot]⟩
+    exact ⟨hh, hown, hsingle, by simp only [intVon, ergWert, hslot]⟩
 
 theorem result_ownerAny {erg : Option Ty} (out : Flow.Output A erg) (v : ErgVal D erg)
     (h : out.result A cf s v) (ho : Flow.Output.isOwner out = true) :
@@ -140,7 +140,7 @@ theorem ownInv_pop {A : FreiForm D} {I : Interfaces A} {M M' : RufMaschineG D} {
     funext t
     simp only [depthOf, hM']
     by_cases htu : t = u
-    · subst htu; simp [rufUpdateG_self, lower_self]
+    · subst htu; simp only [rufUpdateG_self, lower_self]
     · rw [rufUpdateG_noteq _ _ _ htu, lower_other _ _ htu]; rfl
   have hd' := Pop.disciplined hd hdu
   refine ⟨_, by rw [hmem]; exact Pop.agrees hag, by rw [hmem]; exact hfo, hdepth ▸ hd', fun t => ?_⟩

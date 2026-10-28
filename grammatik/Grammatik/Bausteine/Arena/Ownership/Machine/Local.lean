@@ -47,20 +47,20 @@ theorem Head.other {σ σ' : World D} {f : D.Fn} {x} (h : Head A I fr s σ f x)
   cases h with
   | run ρ r hk hf hr => exact .run ρ r hk (hf.transfer hd hd' hrun hrun' hv) hr
   | list x ρ e2 hw hL b r he2 hx hlt hk hf hr =>
-    have hg := hglob A.kopf (by simp [pendWord])
+    have hg := hglob A.kopf (by simp only [pendWord, true_or, ↓reduceIte])
     have hkopf : A.kopfSt σ' = A.kopfSt σ := by simp only [FreiForm.kopfSt, hg]
     exact .list x ρ e2 hw hL b r he2 (hkopf ▸ hx) (hkopf ▸ hlt) hk (hf.transfer hd hd' hrun hrun' hv) hr
   | counter x ρ e2 hw hL b r he2 hx hlt hk hf hr =>
-    have hg := hglob A.zaehl (by simp [pendWord])
+    have hg := hglob A.zaehl (by simp only [pendWord, or_true, ↓reduceIte])
     have hst : A.stand σ' = A.stand σ := by simp only [ArenaForm.stand, hg]
     exact .counter x ρ e2 hw hL b r he2 (hst ▸ hx) (hst ▸ hlt) hk (hf.transfer hd hd' hrun hrun' hv) hr
   | store x ρ t f' i ev hws hLs hn e2 hw hL b r he2 hx hlt hk hf hr =>
-    have hg := hglob A.zaehl (by simp [pendWord])
+    have hg := hglob A.zaehl (by simp only [pendWord, ↓reduceIte])
     have hst : A.stand σ' = A.stand σ := by simp only [ArenaForm.stand, hg]
     exact .store x ρ t f' i ev hws hLs hn e2 hw hL b r he2 (hst ▸ hx) (hst ▸ hlt) hk
       (hf.transfer hd hd' hrun hrun' hv) hr
   | release ρ e2 hw hL b r p o h he2 hp ho hg hlink' hk hf hr =>
-    have hgk := hglob A.kopf (by simp [pendWord])
+    have hgk := hglob A.kopf (by simp only [pendWord, true_or, ↓reduceIte])
     have hkopf : A.kopfSt σ' = A.kopfSt σ := by simp only [FreiForm.kopfSt, hgk]
     obtain ⟨h', hg', howns⟩ := hf.2.2.1.1 o .owned ho
     rw [hg] at hg'; cases hg'
@@ -79,7 +79,7 @@ theorem StackOk.transfer {t : Faden} :
       (∀ a < stack.length, s.viewAt ⟨t, a⟩ = s'.viewAt ⟨t, a⟩) → StackOk A I s' t callee stack
   | _, [], _, _ => trivial
   | _, r :: rest, ⟨hs, hr⟩, hv =>
-    ⟨hs.transfer (hv _ (by simp)), StackOk.transfer hr (fun a ha => hv a (by simp; omega))⟩
+    ⟨hs.transfer (hv _ (by simp only [List.length_cons, Nat.lt_add_one])), StackOk.transfer hr (fun a ha => hv a (by simp only [List.length_cons]; omega))⟩
 
 /-- Every cell the running activation owns carries no loan. -/
 theorem Head.owned_loans {σ : World D} {f : D.Fn} {x} (h : Head A I fr s σ f x) :
@@ -120,8 +120,8 @@ theorem ownInv_local {A : FreiForm D} {I : Interfaces A} {M M' : RufMaschineG D}
     funext t
     simp only [depthOf, hM']
     by_cases htu : t = u
-    · subst htu; simp [rufUpdateG_self]
-    · simp [rufUpdateG_noteq _ _ _ htu]
+    · subst htu; simp only [rufUpdateG_self]
+    · simp only [rufUpdateG_noteq _ _ _ htu]
   have hrun : View.Running (depthOf M) ⟨u, (M.faeden u).stapel.length⟩ := rfl
   have hd' : s'.Disciplined (depthOf M) := View.local_disciplined hd hrun hloc hhead.owned_loans
   refine ⟨s', State.agrees_meta hag' hσ', freiOk_meta hfo' hσ', hdepth ▸ hd', fun t => ?_⟩

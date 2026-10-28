@@ -113,7 +113,7 @@ def zD : Deklaration where
   Fn := ZFn
   sig := fun | .ein => 0 | .lies => 1 | .wrap => 2 | .haupt => 3
   sigNr := fun | 0 => zSigEin | 1 => zSigLies | 2 => zSigWrap | _ => zSigHaupt
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -186,7 +186,7 @@ theorem zHp (caller callee : zD.Fn) (hw : ∀ t, (zD.signatur callee).schreibt t
   hw := hw
   hg := fun g => nomatch g
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp⟩
+  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (by
     intro L
     cases L
@@ -327,7 +327,7 @@ theorem execBlock_eins_logik {V : Vertrag zD} {l : Bool} {Γ : Ctx} {Λ Λ' : Li
   simp only [execBlock] at h
   revert h
   cases execStmt O passes R s σ ρ with
-  | ok σ' ρ' => intro h; simp [execBlock] at h
+  | ok σ' ρ' => intro h; simp only [reduceCtorEq] at h
   | _ => intro h; exact h
 
 theorem zP_koerper_lies : KoerperGut zP zO 0 zLies := by

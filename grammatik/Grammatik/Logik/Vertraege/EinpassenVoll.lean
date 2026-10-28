@@ -540,7 +540,7 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
       · rintro ⟨r, _⟩ h
         subst h
         exact (r : Fin 0).elim0
-  | .never => ⟨fun h => absurd h (by simp [antwortTyB]), fun h => by
+  | .never => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun h => by
       obtain ⟨v, _⟩ := h
       exact (v : Empty).elim⟩
   | .fl lo hi => by
@@ -553,8 +553,8 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
         fun ⟨v, _⟩ => ⟨(v : {f : D.Fn // D.passt f m = true}).1, hvoll _, v.2⟩⟩
   | .ptr _ _ => ⟨fun _ => ⟨(() : Unit), trivial⟩, fun _ => rfl⟩
   | .ref _ => ⟨fun _ => ⟨(Val.vonZelle 0 : Wert D (.ref _)), trivial⟩, fun _ => rfl⟩
-  | .arr _ _ => ⟨fun h => absurd h (by simp [antwortTyB]), fun ⟨_, h⟩ => h.elim⟩
-  | .str _ => ⟨fun h => absurd h (by simp [antwortTyB]), fun ⟨_, h⟩ => h.elim⟩
+  | .arr _ _ => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun ⟨_, h⟩ => h.elim⟩
+  | .str _ => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun ⟨_, h⟩ => h.elim⟩
 
 /-- **The answer class, decided exactly** (W1): given the complete function list, the Bool
     says "answerable" exactly when the class is not empty (`antwortLeer_iff`). -/

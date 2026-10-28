@@ -42,7 +42,8 @@ theorem free_prefix (A : FreiForm D) (x : Var Γ (Ty.index (D.count A.tab)))
   case execution => intro Λ' rest; rfl
   case payload =>
     intro i
-    simp [eval, World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ (Ne.symm A.hf)]
+    simp only [eval, World.slots_schreibGlob, World.slots_lese,
+  World.slots_schreibSlot_ne _ _ _ _ _ _ _ _ (Ne.symm A.hf)]
 
 theorem free_values (A : FreiForm D) (L : LinkFeld A) (G : LinkKopf A)
     (x : Var Γ (Ty.index (D.count A.tab)))

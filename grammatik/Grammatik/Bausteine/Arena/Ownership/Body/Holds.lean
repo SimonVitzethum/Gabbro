@@ -68,9 +68,9 @@ theorem storeSlot_link (A : FreiForm D) (σ : World D) (t : D.Tab) (k : Int) (f 
     have hf : A.nxt ≠ f := hn rfl
     simp only [World.storeSlot, dite_true]
     split
-    · simp [hf]
+    · simp only
     · rfl
-  · simp [World.storeSlot, ht]
+  · simp only [World.storeSlot, ht, ↓reduceDIte]
 
 theorem MetaSame.writeSlot (A : FreiForm D) (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int)
     (f : D.Feld t) (v : Wert D (D.typ t f)) (hn : NotLink A t f) :
@@ -86,8 +86,10 @@ instance (A : FreiForm D) (g : D.Glob) : Decidable (NotMetaGlob A g) :=
 theorem MetaSame.writeGlob (A : FreiForm D) (σ : World D) (g : D.Glob) (Λ : List (Res D))
     (v : Wert D (D.gtyp g)) (hg : NotMetaGlob A g) : MetaSame A σ (σ.schreibGlob g Λ v) := by
   apply MetaSame.of_cells A
-  · simp [World.schreibGlob, World.merke, World.storeGlob, Ne.symm hg.1]
-  · simp [World.schreibGlob, World.merke, World.storeGlob, Ne.symm hg.2]
+  · simp only [World.schreibGlob, World.merke, World.storeGlob, List.cons_append, List.nil_append, Ne.symm hg.1,
+  ↓reduceDIte]
+  · simp only [World.schreibGlob, World.merke, World.storeGlob, List.cons_append, List.nil_append, Ne.symm hg.2,
+  ↓reduceDIte]
   · intro j; rfl
 
 theorem MetaSame.writeBytes (A : FreiForm D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
@@ -169,7 +171,8 @@ theorem Context.drop_reference (c : Context) {Γ : Ctx} {τ υ : Ty}
     c.drop.reference x = c.reference (.there x : Var (υ :: Γ) τ) := by
   have hx : x.unten < c.references.length - 1 := by rw [hlen]; simpa using Var.unten_lt x
   have hx' : x.unten < c.references.length := by omega
-  simp [Context.reference, Context.drop, Var.unten, hx, List.getElem?_eq_getElem hx']
+  simp only [Context.reference, Context.drop, List.length_dropLast, hx, getElem?_pos, List.getElem_dropLast,
+  Option.getD_some, Var.unten, List.getElem?_eq_getElem hx']
 
 /-- Leaving a binder's scope forgets its name, never its right. -/
 theorem Holds.drop {c : Context} {σ : World D} {Γ : Ctx} {τ : Ty} {v : Wert D τ} {ρ : Env D Γ}
@@ -178,7 +181,7 @@ theorem Holds.drop {c : Context} {σ : World D} {Γ : Ctx} {τ : Ty} {v : Wert D
   have hlen : c.references.length = Γ.length + 1 := by simpa using href.1
   refine ⟨g, s, ⟨ha, hf, ⟨hb.1, fun ref hm => hb.2 ref (List.dropLast_subset _ hm)⟩, ?_, hr⟩,
     Complete.drop hc, hl, hp⟩
-  refine ⟨by simp [Context.drop, hlen], ?_⟩
+  refine ⟨by simp only [Context.drop, List.length_dropLast, hlen, Nat.add_one_sub_one], ?_⟩
   intro υ x i hi
   rw [Context.drop_reference c hlen x (υ := τ)] at hi
   exact href.2 (.there x) i hi
@@ -216,11 +219,11 @@ theorem Holds.weaken {k c : Context} {σ : World D} {Γ : Ctx} {ρ : Env D Γ}
     apply href.2 x i
     unfold Context.reference at hi ⊢
     cases hk : k.references[x.unten]? with
-    | none => simp [hk] at hi
+    | none => simp only [hk, Option.getD_none, reduceCtorEq] at hi
     | some ref =>
       simp only [hk, Option.getD_some] at hi
       subst ref
-      simp [(hw.2.2.2 _ _ hk).1]
+      simp only [(hw.2.2.2 _ _ hk).1, Option.getD_some]
   · exact ⟨fun i mode hi => hr.1 i mode (hw.1 i ▸ hi),
       fun i j p q hi hj => hr.2 i j p q (hw.1 i ▸ hi) (hw.1 j ▸ hj)⟩
   · intro slot cell hcell howner
@@ -235,7 +238,7 @@ def ExitsTo (k c : Context) : Prop :=
 
 theorem ExitsTo.drop {k c : Context} (h : ExitsTo k c)
     (hlt : k.references.length < c.references.length) : ExitsTo k c.drop := by
-  refine ⟨by simp [Context.drop]; omega, ?_⟩
+  refine ⟨by simp only [Context.drop, List.length_dropLast]; omega, ?_⟩
   have htake : c.references.dropLast.take k.references.length =
       c.references.take k.references.length := by
     rw [List.dropLast_eq_take, List.take_take]

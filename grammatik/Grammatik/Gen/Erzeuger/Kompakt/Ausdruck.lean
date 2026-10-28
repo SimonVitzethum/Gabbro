@@ -52,11 +52,11 @@ theorem ersetzeN (P : SE D Γ Λ → Prop) {o : Option (Int × Int)} (x : Nutzla
     ∃ x' : NutzlastExpr D Γ Λ o, (∀ c, c ∈ x'.orte ↔ c ∈ x.orte) ∧ groesseNutz x' ≤ groesseNutz x ∧
       ∀ y ∈ x'.teile, P y := by
   cases x with
-  | empty => exact ⟨.empty, fun _ => Iff.rfl, Nat.le_refl _, by simp [NutzlastExpr.teile]⟩
+  | empty => exact ⟨.empty, fun _ => Iff.rfl, Nat.le_refl _, by simp only [NutzlastExpr.teile, List.not_mem_nil, false_implies, implies_true]⟩
   | num e =>
-    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp [NutzlastExpr.teile])
-    exact ⟨.num e', fun c => by simp [NutzlastExpr.orte, g1.orte c],
-      by have := g1.groesse; simp only [groesseNutz]; omega, by simp [NutzlastExpr.teile, h1]⟩
+    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp only [NutzlastExpr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.num e', fun c => by simp only [NutzlastExpr.orte, g1.orte c],
+      by have := g1.groesse; simp only [groesseNutz]; omega, by simp only [NutzlastExpr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1]⟩
 
 set_option maxHeartbeats 4000000 in
 /-- **Replacing the parts.** If every immediate part of `e` and its quantifier body have representatives satisfying
@@ -67,196 +67,228 @@ theorem ersetzeE (P : SE D Γ Λ → Prop) (PQ : (Σ Γ' : Ctx, SE D Γ' Λ) →
     ∃ e' : Expr D Γ Λ τ, GlE e' e ∧ (∀ x ∈ e'.teile, P x) ∧ (∀ x ∈ e'.qteil, PQ x) := by
   cases e with
   | add a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.add a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.add a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | sub a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.sub a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.sub a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | mul a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.mul a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.mul a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | div h0 h1 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.div h0 h1 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.div h0 h1 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | rem h0 h1 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.rem h0 h1 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.rem h0 h1 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | sdiv q0 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.sdiv q0 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.sdiv q0 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | srem q0 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.srem q0 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.srem q0 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | band h0 h1 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.band h0 h1 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.band h0 h1 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | bor w h0 h1 h2 h3 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.bor w h0 h1 h2 h3 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.bor w h0 h1 h2 h3 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | bxor w h0 h1 h2 h3 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.bxor w h0 h1 h2 h3 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.bxor w h0 h1 h2 h3 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | shl w h0 h1 h2 h3 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.shl w h0 h1 h2 h3 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.shl w h0 h1 h2 h3 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | shr w h0 h1 h2 h3 a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.shr w h0 h1 h2 h3 a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.shr w h0 h1 h2 h3 a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | lt a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.lt a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.lt a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | le a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.le a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.le a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | eq a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.eq a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.int.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.eq a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | fllt a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.fllt a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.fl.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.fl.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.fllt a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | flle a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.flle a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.fl.injEq, List.not_mem_nil, or_false, true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, Ty.fl.injEq, List.not_mem_nil, or_false, or_true])
+    exact ⟨.flle a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | and a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.and a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  or_true])
+    exact ⟨.and a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | or a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.or a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  or_true])
+    exact ⟨.or a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | slot t f i hL =>
-    obtain ⟨i', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp [Expr.teile])
-    exact ⟨.slot t f i' hL, ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨i', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.slot t f i' hL, ⟨fun c => by simp only [Expr.orte, List.mem_cons, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | oldS t f i hL =>
-    obtain ⟨i', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp [Expr.teile])
-    exact ⟨.oldS t f i' hL, ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨i', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.oldS t f i' hL, ⟨fun c => by simp only [Expr.orte, List.mem_cons, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | getBytes t f hf n i hlo hhi hL =>
-    obtain ⟨i', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp [Expr.teile])
-    exact ⟨.getBytes t f hf n i' hlo hhi hL, ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨i', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.getBytes t f hf n i' hlo hhi hL, ⟨fun c => by simp only [Expr.orte, List.mem_cons, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | widen q1 q2 e =>
-    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp [Expr.teile])
-    exact ⟨.widen q1 q2 e', ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.widen q1 q2 e', ⟨fun c => by simp only [Expr.orte, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | neg a =>
-    obtain ⟨a', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    exact ⟨.neg a', ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨a', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.neg a', ⟨fun c => by simp only [Expr.orte, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | not a =>
-    obtain ⟨a', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    exact ⟨.not a', ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨a', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.not a', ⟨fun c => by simp only [Expr.orte, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | some e =>
-    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp [Expr.teile])
-    exact ⟨.some e', ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.some e', ⟨fun c => by simp only [Expr.orte, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | istSome e =>
-    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp [Expr.teile])
-    exact ⟨.istSome e', ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.istSome e', ⟨fun c => by simp only [Expr.orte, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | thru p t ht f i hL =>
-    obtain ⟨p', hp, gp⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y p := h ⟨_, p⟩ (by simp [Expr.teile])
-    obtain ⟨i', hi, gi⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp [Expr.teile])
-    exact ⟨.thru p' t ht f i' hL, ⟨fun c => by simp [Expr.orte, gp.orte c, gi.orte c],
+    obtain ⟨p', hp, gp⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y p := h ⟨_, p⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, reduceCtorEq, false_and, List.not_mem_nil, or_self,
+  or_false])
+    obtain ⟨i', hi, gi⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, reduceCtorEq, false_and, List.not_mem_nil, or_false,
+  or_true])
+    exact ⟨.thru p' t ht f i' hL, ⟨fun c => by simp only [Expr.orte, List.mem_append, gp.orte c, List.mem_cons, gi.orte c],
       by have := gp.groesse; have := gi.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, hp, hi], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, hp, forall_eq, hi,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | refEq a b =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.refEq a' b', ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  or_true])
+    exact ⟨.refEq a' b', ⟨fun c => by simp only [Expr.orte, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | slotRef r t ht ho f hL =>
-    obtain ⟨r', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y r := h ⟨_, r⟩ (by simp [Expr.teile])
-    exact ⟨.slotRef r' t ht ho f hL, ⟨fun c => by simp [Expr.orte, g1.orte c],
+    obtain ⟨r', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y r := h ⟨_, r⟩ (by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false])
+    exact ⟨.slotRef r' t ht ho f hL, ⟨fun c => by simp only [Expr.orte, List.mem_cons, g1.orte c],
       by have := g1.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, h1], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | reaches t f hf a b hL =>
-    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp [Expr.teile])
-    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp [Expr.teile])
-    exact ⟨.reaches t f hf a' b' hL, ⟨fun c => by simp [Expr.orte, ga.orte c, gb.orte c],
+    obtain ⟨a', ha, ga⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y a := h ⟨_, a⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  true_or])
+    obtain ⟨b', hb, gb⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y b := h ⟨_, b⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, heq_eq_eq, true_and, List.not_mem_nil, or_false,
+  or_true])
+    exact ⟨.reaches t f hf a' b' hL, ⟨fun c => by simp only [Expr.orte, List.cons_append, List.mem_cons, List.mem_append, ga.orte c, gb.orte c],
       by have := ga.groesse; have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile, ha, hb], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, ha, forall_eq, hb,
+  and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | case cs i nutz =>
     obtain ⟨n', g1, g2, h1⟩ := ersetzeN P nutz fun y hy => h y (by simpa [Expr.teile] using hy)
-    exact ⟨.case cs i n', ⟨fun c => by simp [Expr.orte, g1 c], by simp only [groesseExpr]; omega⟩,
-      by simpa [Expr.teile] using h1, by simp [Expr.qteil]⟩
+    exact ⟨.case cs i n', ⟨fun c => by simp only [Expr.orte, List.get_eq_getElem, g1 c], by simp only [groesseExpr]; omega⟩,
+      by simpa [Expr.teile] using h1, by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
   | forallSlots t body hL =>
-    obtain ⟨b', hb, gb⟩ : ∃ y, PQ ⟨_, ⟨_, y⟩⟩ ∧ GlE y body := hq ⟨_, ⟨_, body⟩⟩ (by simp [Expr.qteil])
-    exact ⟨.forallSlots t b' hL, ⟨fun c => by simp [Expr.orte, gb.orte c],
+    obtain ⟨b', hb, gb⟩ : ∃ y, PQ ⟨_, ⟨_, y⟩⟩ ∧ GlE y body := hq ⟨_, ⟨_, body⟩⟩ (by simp only [Expr.qteil, Option.mem_def])
+    exact ⟨.forallSlots t b' hL, ⟨fun c => by simp only [Expr.orte, List.mem_cons, gb.orte c],
       by have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile], by simpa [Expr.qteil] using hb⟩
+      by simp only [Expr.teile, List.not_mem_nil, false_implies, implies_true], by simpa [Expr.qteil] using hb⟩
   | existsSlots t body hL =>
-    obtain ⟨b', hb, gb⟩ : ∃ y, PQ ⟨_, ⟨_, y⟩⟩ ∧ GlE y body := hq ⟨_, ⟨_, body⟩⟩ (by simp [Expr.qteil])
-    exact ⟨.existsSlots t b' hL, ⟨fun c => by simp [Expr.orte, gb.orte c],
+    obtain ⟨b', hb, gb⟩ : ∃ y, PQ ⟨_, ⟨_, y⟩⟩ ∧ GlE y body := hq ⟨_, ⟨_, body⟩⟩ (by simp only [Expr.qteil, Option.mem_def])
+    exact ⟨.existsSlots t b' hL, ⟨fun c => by simp only [Expr.orte, List.mem_cons, gb.orte c],
       by have := gb.groesse; simp only [groesseExpr]; omega⟩,
-      by simp [Expr.teile], by simpa [Expr.qteil] using hb⟩
-  | _ => exact ⟨_, GlE.refl _, by simp [Expr.teile], by simp [Expr.qteil]⟩
+      by simp only [Expr.teile, List.not_mem_nil, false_implies, implies_true], by simpa [Expr.qteil] using hb⟩
+  | _ => exact ⟨_, GlE.refl _, by simp only [Expr.teile, List.not_mem_nil, false_implies, implies_true], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
 
 end Gabbro.Grammatik.Gen

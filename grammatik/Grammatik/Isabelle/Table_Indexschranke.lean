@@ -114,7 +114,7 @@ theorem zσ_wohlgeformt : wohlgeformt 5 zσ := by
 
 theorem zσ_belegt : belegt zσ 0 := by
   have h' : (if (0 : Nat) = 0 then (some () : Option Unit) else none) ≠ none := by
-    simp
+    simp only [↓reduceIte, ne_eq, reduceCtorEq, not_false_eq_true]
   exact h'
 
 theorem zfeld_schreibstellen : schreibstellen_im_typ 5 zσ zfeld := by

@@ -224,14 +224,14 @@ theorem start_nolibc_haken (rsp : Nat) (hrsp : 16 ≤ rsp) (anfang ende : Bool)
   | none =>
     refine ⟨?_, ?_, rfl⟩
     · intro r hr
-      cases anfang <;> simp [startLaufH] at hr <;> subst_vars <;> exact ha
+      cases anfang <;> simp only [startLaufH, Bool.false_eq_true, ↓reduceIte, List.nil_append, List.mem_cons, List.not_mem_nil, or_false, List.cons_append, or_self] at hr <;> subst_vars <;> exact ha
     · intro v h; exact nomatch h
   | some v =>
     have he : ende = true := hende rfl
     subst he
     refine ⟨?_, ?_, hnie⟩
     · intro r hr
-      cases anfang <;> simp [startLaufH] at hr <;> subst_vars <;> exact ha
+      cases anfang <;> simp only [startLaufH, ↓reduceIte, Bool.false_eq_true, List.nil_append, List.mem_cons, List.not_mem_nil, or_false, or_self, List.cons_append] at hr <;> subst_vars <;> exact ha
     · intro w h
       cases h
       rfl
@@ -292,7 +292,7 @@ theorem packe_grund (z : Int → Option D.Fn) (n : Nat) {lo hi : Int} (r : Fin n
   simp only [sonstPasst, packe, hm]
   rw [if_neg (by omega), dif_pos (by omega)]
   congr
-  simp
+  simp only [Int.add_sub_cancel, Int.toNat_natCast]
 
 theorem packe_unerwartet (z : Int → Option D.Fn) (n : Nat) {lo hi : Int} (u : Int) :
     sonstPasst z (some (.int lo hi)) n (packe (lo := lo) (hi := hi) n (.unerwartet u)) = none := by

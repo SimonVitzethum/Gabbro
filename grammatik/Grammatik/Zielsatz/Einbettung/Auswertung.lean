@@ -115,7 +115,7 @@ theorem kette_gleich {n n' : Int} (hn : n' = n) (w' : Int → Option (Zahl 0 (n'
     funext k
     have := hw k
     rcases h1 : w' k with _ | z1 <;> rcases h2 : w k with _ | z2 <;> rw [h1, h2] at this <;>
-      simp at this
+      simp only [Option.map_none, Option.map_some, reduceCtorEq, Option.some.injEq] at this
     all_goals first
       | rfl
       | (cases z1; cases z2; simp only at this; subst this; rfl)

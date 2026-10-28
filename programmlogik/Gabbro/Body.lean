@@ -164,18 +164,18 @@ def bindLocal (β : Binding) (n : String) (v : Value) : Binding :=
   fun m => if m = n then v else β m
 
 @[simp] theorem store_here (σ : World) (p : Place) (v : Value) : store σ p v p = v := by
-  simp [store]
+  simp only [store, ↓reduceIte]
 
 @[simp] theorem store_elsewhere (σ : World) (p q : Place) (v : Value) (h : q ≠ p) :
     store σ p v q = σ q := by
-  simp [store, h]
+  simp only [store, h, ↓reduceIte]
 
 @[simp] theorem bindLocal_here (β : Binding) (n : String) (v : Value) : bindLocal β n v n = v := by
-  simp [bindLocal]
+  simp only [bindLocal, ↓reduceIte]
 
 @[simp] theorem bindLocal_elsewhere (β : Binding) (n m : String) (v : Value) (h : m ≠ n) :
     bindLocal β n v m = β m := by
-  simp [bindLocal, h]
+  simp only [bindLocal, h, ↓reduceIte]
 
 /-! ## 3. Expressions
 
@@ -233,13 +233,13 @@ def Shape.caseOk (cases : List (String × Option (Option (Int × Int)))) (t : St
 /-! **`payloadOk`, computed** -- on a literal case, `simp` turns it into what the payload
     is: nothing, a number, or a number in its range. -/
 @[simp] theorem Shape.payloadOk_none_iff (p : Option Int) : Shape.payloadOk none p = true ↔ p = none := by
-  cases p <;> simp [Shape.payloadOk]
+  cases p <;> simp only [payloadOk, Bool.false_eq_true, reduceCtorEq]
 @[simp] theorem Shape.payloadOk_some_none_iff (p : Option Int) :
     Shape.payloadOk (some none) p = true ↔ ∃ n, p = some n := by
-  cases p <;> simp [Shape.payloadOk]
+  cases p <;> simp only [payloadOk, Bool.false_eq_true, reduceCtorEq, exists_const, Option.some.injEq, exists_eq']
 @[simp] theorem Shape.payloadOk_range_iff (lo hi : Int) (p : Option Int) :
     Shape.payloadOk (some (some (lo, hi))) p = true ↔ ∃ n, p = some n ∧ lo ≤ n ∧ n ≤ hi := by
-  cases p <;> simp [Shape.payloadOk]
+  cases p <;> simp only [payloadOk, Bool.false_eq_true, reduceCtorEq, false_and, exists_const, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq, Option.some.injEq, exists_eq_left']
 @[simp] theorem Shape.payloadOk_none_none : Shape.payloadOk none none = true := rfl
 @[simp] theorem Shape.payloadOk_none_some (n : Int) : Shape.payloadOk none (some n) = false := rfl
 @[simp] theorem Shape.payloadOk_some_none_none : Shape.payloadOk (some none) none = false := rfl
@@ -296,31 +296,31 @@ def Value.hasShape : Value → Shape → Bool
 /-! **A shape, as a witness.** `v.hasShape .int = true` says WHAT `v` is; these turn that
     into the equation a proof rewrites with. -/
 theorem Value.hasShape_int_true (v : Value) (h : v.hasShape .int = true) : ∃ n, v = .int n := by
-  cases v <;> simp [Value.hasShape] at h ⊢
+  cases v <;> simp only [hasShape, int.injEq, exists_eq', Bool.false_eq_true] at h ⊢
 theorem Value.hasShape_bool_true (v : Value) (h : v.hasShape .bool = true) : ∃ b, v = .bool b := by
-  cases v <;> simp [Value.hasShape] at h ⊢
+  cases v <;> simp only [hasShape, Bool.false_eq_true, bool.injEq, exists_eq'] at h ⊢
 theorem Value.hasShape_intIn_true (v : Value) (lo hi : Int) (h : v.hasShape (.intIn lo hi) = true) :
     ∃ n, v = .int n ∧ lo ≤ n ∧ n ≤ hi := by
-  cases v <;> simp [Value.hasShape] at h ⊢
+  cases v <;> simp only [hasShape, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq, int.injEq, exists_eq_left', Bool.false_eq_true] at h ⊢
   exact h
 theorem Value.hasShape_sum_true (v : Value) (cs : List (String × Option (Option (Int × Int)))) (h : v.hasShape (.sum cs) = true) :
     ∃ t p, v = .tagged t p ∧ Shape.caseOk cs t p = true := by
-  cases v <;> simp [Value.hasShape] at h ⊢
+  cases v <;> simp only [hasShape, Bool.false_eq_true, tagged.injEq] at h ⊢
   exact ⟨_, _, ⟨rfl, rfl⟩, h⟩
 
 /-- **`caseOk`, computed** -- for a literal case list, `simp` decides the names and leaves
     the payload: `p.isSome = true` or `p.isSome = false`. -/
 @[simp] theorem Shape.caseOk_cons (c : String × Option (Option (Int × Int))) (cs : List (String × Option (Option (Int × Int)))) (t : String) (p : Option Int) :
     Shape.caseOk (c :: cs) t p = ((c.1 == t && Shape.payloadOk c.2 p) || Shape.caseOk cs t p) := by
-  simp [Shape.caseOk, List.any_cons]
+  simp only [caseOk, List.any_cons]
 @[simp] theorem Shape.caseOk_nil (t : String) (p : Option Int) : Shape.caseOk [] t p = false := rfl
 @[simp] theorem isSome_true_iff (o : Option Int) : o.isSome = true ↔ ∃ n, o = some n := by
-  cases o <;> simp
+  cases o <;> simp only [Option.isSome_none, Bool.false_eq_true, reduceCtorEq, exists_const, Option.isSome_some, Option.some.injEq, exists_eq']
 @[simp] theorem isSome_false_iff (o : Option Int) : o.isSome = false ↔ o = none := by
-  cases o <;> simp
+  cases o <;> simp only [Option.isSome_none, Option.isSome_some, Bool.true_eq_false, reduceCtorEq]
 theorem Value.hasShape_opt_true (v : Value) (h : v.hasShape .opt = true) :
     v = .absent ∨ ∃ n, v = .present n := by
-  cases v <;> simp [Value.hasShape] at h ⊢
+  cases v <;> simp only [hasShape, Bool.false_eq_true, reduceCtorEq, exists_const, or_false, present.injEq, exists_eq', or_true] at h ⊢
 
 inductive Expr where
   | lit (v : Value)
@@ -553,16 +553,16 @@ def orBool : Option Value → Option Value → Option Value
   constructor
   · intro h
     cases x with
-    | none => simp [andBool] at h
+    | none => simp only [andBool, reduceCtorEq] at h
     | some v =>
       cases y with
-      | none => simp [andBool] at h
+      | none => simp only [andBool, reduceCtorEq] at h
       | some w =>
-        cases v <;> cases w <;> simp [andBool] at h
+        cases v <;> cases w <;> simp only [andBool, reduceCtorEq, Option.some.injEq, Value.bool.injEq, Bool.and_eq_true] at h
         rename_i a b
-        simp [h.1, h.2]
+        simp only [h.1, h.2, and_self]
   · intro ⟨hx, hy⟩
-    simp [hx, hy]
+    simp only [hx, hy, andBool_some, Bool.and_self]
 
 /-- **A disjunction that evaluates to true**: both halves are truth values, and one is true. -/
 theorem orBool_true_iff (x y : Option Value) :
@@ -571,16 +571,16 @@ theorem orBool_true_iff (x y : Option Value) :
   constructor
   · intro h
     cases x with
-    | none => simp [orBool] at h
+    | none => simp only [orBool, reduceCtorEq] at h
     | some v =>
       cases y with
-      | none => simp [orBool] at h
+      | none => simp only [orBool, reduceCtorEq] at h
       | some w =>
-        cases v <;> cases w <;> simp [orBool] at h
+        cases v <;> cases w <;> simp only [orBool, reduceCtorEq, Option.some.injEq, Value.bool.injEq, Bool.or_eq_true] at h
         rename_i a b
         exact ⟨a, b, rfl, rfl, by simpa using h⟩
   · intro ⟨a, b, hx, hy, hab⟩
-    simp [hx, hy, hab]
+    simp only [hx, hy, orBool_some, hab]
 
 def eval (s : State) : Expr → Option Value
   | .lit v => some v
@@ -674,7 +674,7 @@ theorem rem_follows_the_dividend :
     and `a`; C answers nothing. -/
 theorem division_by_zero_is_stuck (a : Int) :
     binop .div (.int a) (.int 0) = none ∧ binop .rem (.int a) (.int 0) = none := by
-  simp [binop]
+  simp only [binop, ↓reduceIte, and_self]
 
 /-- **A negative operand gets a bit operation stuck** -- all five of them, on either side.
     This is the refusal the model makes instead of guessing a width. -/
@@ -683,7 +683,7 @@ theorem a_negative_operand_stops_the_bits (a : Int) (h : a < 0) :
     ∧ binop .bor (.int a) (.int 1) = none ∧ binop .bxor (.int a) (.int 1) = none
     ∧ binop .shl (.int a) (.int 1) = none ∧ binop .shr (.int a) (.int 1) = none
     ∧ binop .shl (.int 1) (.int a) = none ∧ binop .shr (.int 1) (.int a) = none := by
-  simp [binop, bits, Int.not_le.mpr h]
+  simp only [binop, bits, Int.not_le.mpr h, Int.zero_le_ofNat, and_true, ↓reduceIte, and_false, and_self]
 
 /-- **The shifts are a multiplication and a division**, under the guard and under the `M104`
     booking the arm names. Stated in general and not on an example, because it is the claim
@@ -691,14 +691,14 @@ theorem a_negative_operand_stops_the_bits (a : Int) (h : a < 0) :
 theorem a_shift_is_arithmetic (a b : Int) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     binop .shl (.int a) (.int b) = some (.int (a * 2 ^ b.toNat))
     ∧ binop .shr (.int a) (.int b) = some (.int (a.tdiv (2 ^ b.toNat))) := by
-  simp [binop, ha, hb]
+  simp only [binop, ha, hb, and_self, ↓reduceIte]
 
 /-- **Where a mask answers at all, it answers with a non-negative number.** That is the
     half of the width-independence claim this file can state on its own; that the result
     also fits the DECLARED range is `M104`'s half, and `typen::bitweise` computes it. -/
 theorem a_mask_stays_non_negative (a b : Int) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     ∃ n : Nat, binop .band (.int a) (.int b) = some (.int (n : Int)) := by
-  exact ⟨a.toNat &&& b.toNat, by simp [binop, bits, ha, hb]⟩
+  exact ⟨a.toNat &&& b.toNat, by simp only [binop, bits, ha, hb, and_self, ↓reduceIte]⟩
 
 /-! ### 3.3 The quantifier and the chain, read as propositions
 
@@ -747,8 +747,8 @@ theorem chase_succ (σ : World) (c via : String) (to k : Int) (n : Nat) :
 @[simp] theorem chase_refl (σ : World) (c via : String) (to : Int) (n : Nat) :
     chase σ c via to to n = some (.bool true) := by
   cases n with
-  | zero => rw [chase_zero]; simp
-  | succ n => rw [chase_succ]; simp
+  | zero => rw [chase_zero]; simp only [decide_true]
+  | succ n => rw [chase_succ]; simp only [↓reduceIte]
 
 /-- **A chain does not see a store beside it.** A store into another field, another
     carrier, a global or a record field leaves every `via`-chain as it was -- the frame of
@@ -762,7 +762,7 @@ theorem chase_store_ne (σ : World) (c via : String) (to : Int) (p : Place) (v :
   | succ n ih =>
     rw [chase_succ, chase_succ]
     by_cases hk : k = to
-    · simp [hk]
+    · simp only [hk, ↓reduceIte]
     · simp only [hk, if_false]
       rw [store_elsewhere _ _ _ _ (fun e => h k e.symm)]
       cases σ (.slot c k via) <;> simp [ih]
@@ -788,7 +788,7 @@ theorem chase_store_ne (σ : World) (c via : String) (to : Int) (p : Place) (v :
 theorem allBelow_true_iff (f : Nat → Option Value) (n : Nat) :
     allBelow f n = some (.bool true) ↔ ∀ k, k < n → f k = some (.bool true) := by
   induction n with
-  | zero => simp
+  | zero => simp only [allBelow_zero, Nat.not_lt_zero, false_implies, implies_true]
   | succ n ih =>
     constructor
     · intro h k hk
@@ -799,7 +799,7 @@ theorem allBelow_true_iff (f : Nat → Option Value) (n : Nat) :
         rcases Nat.lt_succ_iff_lt_or_eq.mp hk with hlt | heq
         · exact ih.mp (by rw [ha, h.1]) k hlt
         · subst heq; rw [hb, h.2]
-      · exact absurd h (by simp)
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
     · intro h
       have hn : allBelow f n = some (.bool true) := ih.mpr (fun k hk => h k (Nat.lt_succ_of_lt hk))
       have hf : f n = some (.bool true) := h n (Nat.lt_succ_self n)
@@ -824,14 +824,14 @@ theorem anyBelow_true_of (f : Nat → Option Value) (n k : Nat) (hk : k < n)
       have : ∃ a, anyBelow f k = some (.bool a) := by
         clear ih h hb hk
         induction k with
-        | zero => exact ⟨false, by simp⟩
+        | zero => exact ⟨false, by simp only [anyBelow_zero]⟩
         | succ m ihm =>
           obtain ⟨a, ha⟩ := ihm (fun j hj => hall j (Nat.lt_succ_of_lt hj))
           obtain ⟨c, hc⟩ := hall m (Nat.lt_succ_of_lt (Nat.lt_succ_self m))
           exact ⟨a || c, by rw [anyBelow_succ, ha, hc]⟩
       obtain ⟨a, ha⟩ := this
       rw [anyBelow_succ, ha, h]
-      simp
+      simp only [Bool.or_true]
 
 /-- The chain as a relation -- `hier`/`hoeher`, the same two rules `Table_Ops_Erhaltung.thy`
     calls `ueber`. -/
@@ -857,21 +857,21 @@ theorem reaches_of_chase (σ : World) (c via : String) (to : Int) :
     · rename_i hk; subst hk; exact .here k
     · split at h
       · rename_i m hm; exact .hoeher k m to hm (ih m h)
-      · simp at h
-      · simp at h
+      · simp only [Option.some.injEq, Value.bool.injEq, Bool.false_eq_true] at h
+      · simp only [reduceCtorEq] at h
 
 /-- **And a real chain is found with enough fuel** -- one unit per edge. -/
 theorem chase_of_reaches (σ : World) (c via : String) (k to : Int)
     (r : Reaches σ c via k to) : ∃ n, chase σ c via to k n = some (.bool true) := by
   induction r with
-  | here k => exact ⟨0, by rw [chase_zero]; simp⟩
+  | here k => exact ⟨0, by rw [chase_zero]; simp only [decide_true]⟩
   | hoeher k m n h _ ih =>
     obtain ⟨f, hf⟩ := ih
     refine ⟨f + 1, ?_⟩
     rw [chase_succ]
     split
     · rfl
-    · simp [h, hf]
+    · simp only [h, hf]
 
 /-! ### 3.4 Opening a precondition
 
@@ -903,36 +903,36 @@ theorem eval_and_true_iff (s : State) (a b : Expr) :
     into a witness. -/
 theorem eval_hasShape_true_iff (s : State) (n : String) (sh : Shape) :
     eval s (.hasShape n sh) = some (.bool true) ↔ (s.local' n).hasShape sh = true := by
-  simp [eval]
+  simp only [eval, Option.some.injEq, Value.bool.injEq]
 
 theorem shape_int (s : State) (n : String) (h : eval s (.hasShape n .int) = some (.bool true)) :
     ∃ k, s.local' n = .int k := by
   simp only [eval, Option.some.injEq, Value.bool.injEq] at h
-  cases hv : s.local' n <;> simp [hv, Value.hasShape] at h ⊢
+  cases hv : s.local' n <;> simp only [Value.hasShape, hv, Value.int.injEq, exists_eq', Bool.false_eq_true] at h ⊢
 
 /-- A local of a ranged type: its witness and its bounds. -/
 theorem shape_intIn (s : State) (n : String) (lo hi : Int)
     (h : eval s (.hasShape n (.intIn lo hi)) = some (.bool true)) :
     ∃ k, s.local' n = .int k ∧ lo ≤ k ∧ k ≤ hi := by
   simp only [eval, Option.some.injEq, Value.bool.injEq] at h
-  cases hv : s.local' n <;> simp [hv, Value.hasShape] at h ⊢
+  cases hv : s.local' n <;> simp only [Value.hasShape, hv, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq, Value.int.injEq, exists_eq_left', Bool.false_eq_true] at h ⊢
   exact h
 
 theorem shape_bool (s : State) (n : String) (h : eval s (.hasShape n .bool) = some (.bool true)) :
     ∃ b, s.local' n = .bool b := by
   simp only [eval, Option.some.injEq, Value.bool.injEq] at h
-  cases hv : s.local' n <;> simp [hv, Value.hasShape] at h ⊢
+  cases hv : s.local' n <;> simp only [Value.hasShape, hv, Bool.false_eq_true, Value.bool.injEq, exists_eq'] at h ⊢
 
 theorem shape_opt (s : State) (n : String) (h : eval s (.hasShape n .opt) = some (.bool true)) :
     s.local' n = .absent ∨ ∃ k, s.local' n = .present k := by
   simp only [eval, Option.some.injEq, Value.bool.injEq] at h
-  cases hv : s.local' n <;> simp [hv, Value.hasShape] at h ⊢
+  cases hv : s.local' n <;> simp only [Value.hasShape, hv, Bool.false_eq_true, reduceCtorEq, exists_const, or_false, Value.present.injEq, exists_eq', or_true] at h ⊢
 
 theorem shape_sum (s : State) (n : String) (cs : List (String × Option (Option (Int × Int))))
     (h : eval s (.hasShape n (.sum cs)) = some (.bool true)) :
     ∃ t p, s.local' n = .tagged t p ∧ Shape.caseOk cs t p = true := by
   simp only [eval, Option.some.injEq, Value.bool.injEq] at h
-  cases hv : s.local' n <;> simp [hv, Value.hasShape] at h ⊢
+  cases hv : s.local' n <;> simp only [Value.hasShape, hv, Bool.false_eq_true, Value.tagged.injEq] at h ⊢
   exact ⟨_, _, ⟨rfl, rfl⟩, h⟩
 
 /-- **A ranged integer parameter** -- `n : u32 in lo .. hi` -- is an integer within its
@@ -948,7 +948,7 @@ theorem shape_int_in (s : State) (n : String) (lo hi : Int)
   obtain ⟨k, hk⟩ := shape_int s n h1
   have hlo := and_left _ _ _ h2
   have hhi := and_right _ _ _ h2
-  simp [eval, binop, hk] at hlo hhi
+  simp only [eval, hk, binop, Option.some.injEq, Value.bool.injEq, decide_eq_true_eq] at hlo hhi
   exact ⟨k, hk, hlo, hhi⟩
 
 /-! ## 4. Statements -- the SEQUENTIAL CORE
@@ -1137,29 +1137,29 @@ theorem WF_store (Γ : Typing) (σ : World) (p : Place) (v : Value) (h : WF Γ �
 theorem WF_int (Γ : Typing) (σ : World) (p : Place) (h : WF Γ σ) (hp : Γ p = some .int) :
     ∃ n, σ p = .int n := by
   have := h p .int hp
-  cases hv : σ p <;> simp [hv, Value.hasShape] at this ⊢
+  cases hv : σ p <;> simp only [Value.hasShape, hv, Value.int.injEq, exists_eq', Bool.false_eq_true] at this ⊢
 
 theorem WF_intIn (Γ : Typing) (σ : World) (p : Place) (lo hi : Int) (h : WF Γ σ)
     (hp : Γ p = some (.intIn lo hi)) : ∃ n, σ p = .int n ∧ lo ≤ n ∧ n ≤ hi := by
   have := h p (.intIn lo hi) hp
-  cases hv : σ p <;> simp [hv, Value.hasShape] at this ⊢
+  cases hv : σ p <;> simp only [Value.hasShape, hv, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq, Value.int.injEq, exists_eq_left', Bool.false_eq_true] at this ⊢
   exact this
 
 theorem WF_bool (Γ : Typing) (σ : World) (p : Place) (h : WF Γ σ) (hp : Γ p = some .bool) :
     ∃ b, σ p = .bool b := by
   have := h p .bool hp
-  cases hv : σ p <;> simp [hv, Value.hasShape] at this ⊢
+  cases hv : σ p <;> simp only [Value.hasShape, hv, Bool.false_eq_true, Value.bool.injEq, exists_eq'] at this ⊢
 
 theorem WF_opt (Γ : Typing) (σ : World) (p : Place) (h : WF Γ σ) (hp : Γ p = some .opt) :
     σ p = .absent ∨ ∃ n, σ p = .present n := by
   have := h p .opt hp
-  cases hv : σ p <;> simp [hv, Value.hasShape] at this ⊢
+  cases hv : σ p <;> simp only [Value.hasShape, hv, Bool.false_eq_true, reduceCtorEq, exists_const, or_false, Value.present.injEq, exists_eq', or_true] at this ⊢
 
 theorem WF_sum (Γ : Typing) (σ : World) (p : Place) (cs : List (String × Option (Option (Int × Int)))) (h : WF Γ σ)
     (hp : Γ p = some (.sum cs)) :
     ∃ t q, σ p = .tagged t q ∧ Shape.caseOk cs t q = true := by
   have := h p (.sum cs) hp
-  cases hv : σ p <;> simp [hv, Value.hasShape] at this ⊢
+  cases hv : σ p <;> simp only [Value.hasShape, hv, Bool.false_eq_true, Value.tagged.injEq] at this ⊢
   exact ⟨_, _, ⟨rfl, rfl⟩, this⟩
 
 /-- **The callee's contract.** `pre` is a `Prop` over the entry state: the world is
@@ -1585,23 +1585,23 @@ theorem looprule_of_body (ρ : Env) (id : String) (wf : State → Prop) (inv : E
   rw [heq]
   clear heq
   induction ks generalizing t with
-  | nil => simp [iterate] at hit; subst hit; exact ⟨hw, ht⟩
+  | nil => simp only [iterate, Option.some.injEq] at hit; subst hit; exact ⟨hw, ht⟩
   | cons k ks ih =>
     simp only [iterate] at hit
     split at hit
     · rename_i u hu
       obtain ⟨u', hu', hwf, hinv⟩ := hb t k hw ht
-      rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+      rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
       exact ih u hwf hinv hit
     · rename_i u hu
       obtain ⟨u', hu', hwf, hinv⟩ := hb t k hw ht
-      rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+      rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
       exact ih u hwf hinv hit
     · rename_i u hu
       obtain ⟨u', hu', hwf, hinv⟩ := hb t k hw ht
-      rw [hu] at hu'; simp [finalState] at hu'; subst hu'
-      simp at hit; subst hit; exact ⟨hwf, hinv⟩
-    · exact absurd hit (by simp)
+      rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
+      simp only [Option.some.injEq] at hit; subst hit; exact ⟨hwf, hinv⟩
+    · exact absurd hit (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **`ρ id` runs the loop `id` over indices of a RANGE** -- what a `traverse … over slots
     of T` (or any domain inside one table) visits: indices of that table, `lo ≤ k < hi`.
@@ -1622,25 +1622,25 @@ theorem looprule_of_body_in (ρ : Env) (id : String) (wf : State → Prop) (inv 
   rw [heq]
   clear heq
   induction ks generalizing t with
-  | nil => simp [iterate] at hit; subst hit; exact ⟨hw, ht⟩
+  | nil => simp only [iterate, Option.some.injEq] at hit; subst hit; exact ⟨hw, ht⟩
   | cons k ks ih =>
-    have hk : lo ≤ k ∧ k < hi := hks k (by simp)
-    have hks' : ∀ k ∈ ks, lo ≤ k ∧ k < hi := fun k' hk' => hks k' (by simp [hk'])
+    have hk : lo ≤ k ∧ k < hi := hks k (by simp only [List.mem_cons, true_or])
+    have hks' : ∀ k ∈ ks, lo ≤ k ∧ k < hi := fun k' hk' => hks k' (by simp only [List.mem_cons, hk', or_true])
     simp only [iterate] at hit
     split at hit
     · rename_i u hu
       obtain ⟨u', hu', hwf, hinv⟩ := hb t k hk.1 hk.2 hw ht
-      rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+      rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
       exact ih u hwf hinv hks' hit
     · rename_i u hu
       obtain ⟨u', hu', hwf, hinv⟩ := hb t k hk.1 hk.2 hw ht
-      rw [hu] at hu'; simp [finalState] at hu'; subst hu'
+      rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
       exact ih u hwf hinv hks' hit
     · rename_i u hu
       obtain ⟨u', hu', hwf, hinv⟩ := hb t k hk.1 hk.2 hw ht
-      rw [hu] at hu'; simp [finalState] at hu'; subst hu'
-      simp at hit; subst hit; exact ⟨hwf, hinv⟩
-    · exact absurd hit (by simp)
+      rw [hu] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
+      simp only [Option.some.injEq] at hit; subst hit; exact ⟨hwf, hinv⟩
+    · exact absurd hit (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-! ### 5.1a Counting the passes -- `#pass` (agent b, 2026-09-08)
 
@@ -1694,11 +1694,11 @@ theorem looprule_passes_aux (ρ : Env) (wf : State → Prop) (inv : Expr) (body 
   induction ks with
   | nil =>
     intro i t u _ _ _ _ hw ht hit
-    simp [iterate] at hit; subst hit; exact ⟨hw, ht⟩
+    simp only [iterate, Option.some.injEq] at hit; subst hit; exact ⟨hw, ht⟩
   | cons k ks ih =>
     intro i t u hks h0 hlen hpv hw ht hit
-    have hk : lo ≤ k ∧ k < hi := hks k (by simp)
-    have hks' : ∀ k' ∈ ks, lo ≤ k' ∧ k' < hi := fun k' hk' => hks k' (by simp [hk'])
+    have hk : lo ≤ k ∧ k < hi := hks k (by simp only [List.mem_cons, true_or])
+    have hks' : ∀ k' ∈ ks, lo ≤ k' ∧ k' < hi := fun k' hk' => hks k' (by simp only [List.mem_cons, hk', or_true])
     simp only [List.length_cons] at hlen
     have hlt : i < np := by omega
     have hlen' : i + 1 + (ks.length : Int) ≤ np := by omega
@@ -1706,15 +1706,15 @@ theorem looprule_passes_aux (ρ : Env) (wf : State → Prop) (inv : Expr) (body 
     simp only [iterate] at hit
     split at hit
     · rename_i w hw'
-      rw [hw'] at hu'; simp [finalState] at hu'; subst hu'
+      rw [hw'] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
       exact ih (i + 1) w u hks' (by omega) hlen' hpv' hwf hinv hit
     · rename_i w hw'
-      rw [hw'] at hu'; simp [finalState] at hu'; subst hu'
+      rw [hw'] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
       exact ih (i + 1) w u hks' (by omega) hlen' hpv' hwf hinv hit
     · rename_i w hw'
-      rw [hw'] at hu'; simp [finalState] at hu'; subst hu'
-      simp at hit; subst hit; exact ⟨hwf, hinv⟩
-    · exact absurd hit (by simp)
+      rw [hw'] at hu'; simp only [finalState, Option.some.injEq] at hu'; subst hu'
+      simp only [Option.some.injEq] at hit; subst hit; exact ⟨hwf, hinv⟩
+    · exact absurd hit (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **The loop rule from a pass that may assume its index is in range AND that it is the
     `i`-th of at most `np` passes.** -/
@@ -1739,7 +1739,7 @@ theorem looprule_of_body_p (ρ : Env) (id : String) (wf : State → Prop) (inv :
 
 /-- **An empty sequence changes nothing.** -/
 @[simp] theorem exec_nil (ρ : Env) (s : State) : exec ρ [] s = .running s := by
-  simp [exec]
+  simp only [exec]
 
 /-- **The descent is deterministic** -- it is a function, so this holds by construction. The
     theorem stands here anyway, because it is the statement a RELATIONAL model would have to
@@ -1763,7 +1763,7 @@ theorem assign_leaves_others (ρ : Env) (c : String) (i e : Expr) (f : String) (
     subst h
     simp only [store]
     rw [if_neg (hne k)]
-  · exact absurd h (by simp)
+  · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
 
 end Gabbro.Body
 

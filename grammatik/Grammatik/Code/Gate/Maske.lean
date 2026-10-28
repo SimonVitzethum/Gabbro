@@ -66,6 +66,6 @@ theorem imsk_ist_maskSpec {mb : Nat} {m m' : Mem} {rs : Regs} {d : Reg} {v : Opd
     (hv : v.ev rs = some w) (hl : m.load mb 0 lw = some x) (hs : m.store mb 0 lw w = some m') :
     (maskSpec mb).post m [w] m' (some x) ∧ (maskSpec mb).pre m [w] ∧
       stepI (.imsk d (.glob mb) v) m rs = some (m', rs.set d x) :=
-  ⟨⟨w, x, rfl, hl, hs, rfl⟩, ⟨w, rfl, by simp [hl], by simp [hs]⟩, stepI_imsk hl hv hs⟩
+  ⟨⟨w, x, rfl, hl, hs, rfl⟩, ⟨w, rfl, by simp only [hl, Option.isSome_some], by simp only [hs, Option.isSome_some]⟩, stepI_imsk hl hv hs⟩
 
 end Gabbro.Code

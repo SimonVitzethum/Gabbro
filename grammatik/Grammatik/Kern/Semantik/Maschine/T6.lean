@@ -255,44 +255,47 @@ theorem zaehler_aus_konstruktion_einzelblatt_lauf
           have hne : pcmid f ≠ 0 :=
             pc_ne_zero_with_prior_step P O passes prog M0 f hpre hfire
           have hlt : 0 < pcmid f := Nat.pos_of_ne_zero hne
-          have h1 : ([PCAtom.leaf Λ cs₀]).length = 1 := by simp
+          have h1 : ([PCAtom.leaf Λ cs₀]).length = 1 := by simp only [List.length_cons, List.length_nil, Nat.zero_add]
           have hlen : ([PCAtom.leaf Λ cs₀]).length ≤ pcmid f := by
             rw [h1]
             exact Nat.succ_le_of_lt hlt
           have hnone := List.getElem?_eq_none hlen
           rw [hprog, hnone] at hpc
-          simp at hpc
+          simp only [reduceCtorEq] at hpc
         have hhead : HeadAtom prog f Λ cs₀ := by
           show (prog f)[0]? = some (PCAtom.leaf Λ cs₀)
-          simp [hprog]
+          simp only [hprog, List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero]
         exact zaehler_aus_konstruktion_erstschritt prog f Λ cs₀ P O passes M0
           Mmid pcmid _ _ hs0 hpre hfrei hhead
       · exfalso
         rw [hprog] at hpcT
         by_cases hz : pcmid f = 0
         · rw [hz] at hpcT
-          simp at hpcT
+          simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, reduceCtorEq] at hpcT
         · have hlt : 0 < pcmid f := Nat.pos_of_ne_zero hz
-          have h1 : ([PCAtom.leaf Λ cs₀]).length = 1 := by simp
+          have h1 : ([PCAtom.leaf Λ cs₀]).length = 1 := by simp only [List.length_cons, List.length_nil, Nat.zero_add]
           have hlen : ([PCAtom.leaf Λ cs₀]).length ≤ pcmid f := by
             rw [h1]
             exact Nat.succ_le_of_lt hlt
           have hnone := List.getElem?_eq_none hlen
           rw [hnone] at hpcT
-          simp at hpcT
+          simp only [reduceCtorEq] at hpcT
       · exfalso
         rw [hprog] at hpcR
         by_cases hz : pcmid f = 0
         · rw [hz] at hpcR
-          simp at hpcR
+          simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, reduceCtorEq] at hpcR
         · have hlt : 0 < pcmid f := Nat.pos_of_ne_zero hz
-          have h1 : ([PCAtom.leaf Λ cs₀]).length = 1 := by simp
+          have h1 : ([PCAtom.leaf Λ cs₀]).length = 1 := by simp only [List.length_cons, List.length_nil, Nat.zero_add]
           have hlen : ([PCAtom.leaf Λ cs₀]).length ≤ pcmid f := by
             rw [h1]
             exact Nat.succ_le_of_lt hlt
           have hnone := List.getElem?_eq_none hlen
           rw [hnone] at hpcR
-          simp at hpcR
+          simp only [reduceCtorEq] at hpcR
   | frueher _ _ _ ih =>
       exact ih
 

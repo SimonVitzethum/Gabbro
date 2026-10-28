@@ -129,7 +129,7 @@ theorem blattTest_wahr (Lf Rf : LinkFeld A) (i : Var Γ (Ty.index (D.count A.tab
   simp only [wahr?] at h1 h2
   rw [← h1, ← h2]
   simp only [Block.blattTest, eval, wahr?]
-  cases eval s (Block.leerTest Lf i hLT) s ρ <;> cases eval s (Block.leerTest Rf i hLT) s ρ <;> simp
+  cases eval s (Block.leerTest Lf i hLT) s ρ <;> cases eval s (Block.leerTest Rf i hLT) s ρ <;> simp only [Bool.and_self, Bool.false_eq_true, and_self, Bool.and_true, and_true, Bool.and_false, and_false]
 
 theorem wurzelLeer_wahr (Wz : LinkKopf A) (hLG : gdarf D Wz.g Λ) (s : World D) (ρ : Env D Γ) :
     wahr? (eval s (Block.wurzelLeerTest (Γ := Γ) Wz hLG) s ρ) = true ↔ Wz.st s = D.count A.tab := by

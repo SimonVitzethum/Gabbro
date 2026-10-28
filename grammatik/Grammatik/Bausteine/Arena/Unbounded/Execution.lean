@@ -55,7 +55,7 @@ theorem Heap.access_bounded (hv : H.Valid capacity) {frame : Frame} {reference :
     0 ≤ reference.handle.slot ∧ reference.handle.slot < (H.extent : Int) := by
   unfold ArenaOwnership.State.access at ha
   cases hc : H.rights.cells reference.handle.slot with
-  | none => simp [hc] at ha
+  | none => simp only [hc] at ha
   | some c => exact hv.support _ c hc
 
 /-- Memory safety for arbitrary mixed executions of the storage component:
@@ -73,12 +73,12 @@ theorem Heap.access_has_payload (hv : H.Valid capacity) {frame : Frame} {referen
     unfold ArenaOwnership.State.access at ha
     split at ha
     · contradiction
-    · rename_i c he; simp [he]
+    · rename_i c he; simp only [he, Option.isSome_some]
   have hp := hv.coherent reference.handle.slot
   rw [hc] at hp
   cases he : H.payload reference.handle.slot with
-  | none => simp [he] at hp
-  | some value => exact ⟨value, by simp [Heap.read, ha, he]⟩
+  | none => simp only [he, Option.isSome_none, Bool.false_eq_true] at hp
+  | some value => exact ⟨value, by simp only [read, ha, ↓reduceIte, he]⟩
 
 theorem Heap.write_requires_access {frame : Frame} {reference : Ref region} {value : α}
     (he : H.write frame reference value = some H') : H.rights.access frame reference.handle := by
@@ -100,14 +100,14 @@ theorem Heap.release_twice_none {frame other : Frame} {r : Ref region}
     rw [(Heap.release_valid hv he).2 other] at hv'
     contradiction
   have ho : ¬ H'.rights.owns other r.handle := fun ha => hn (ArenaOwnership.State.owner_access ha)
-  simp [Heap.release, ArenaOwnership.State.release, ho]
+  simp only [release, ArenaOwnership.State.release, ho, ↓reduceIte, Option.bind_eq_bind, Option.bind_none]
 
 /-- Returning a scoped loan restores the exact original heap and owning grant. -/
 theorem Heap.lend_endLoan {f g : Frame} {r : Ref region}
     (he : H.lend f g r = some H') : H'.endLoan g r = some H := by
   unfold Heap.lend at he
   cases hr : H.rights.lend f g r.handle with
-  | none => simp [hr] at he
+  | none => simp only [hr, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at he
   | some rights =>
     simp only [hr] at he
     cases he

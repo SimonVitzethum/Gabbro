@@ -319,7 +319,7 @@ theorem bin_turm3 : ∀ (op : String) (l r : SExpr),
   have hsize : groesse (.bin op l r) = groesse l + groesse r + 1 := rfl
   have hd : druckToks (.bin op l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen op] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hP : ∀ (rest' : List Token) (G : Nat),
       12 * (groesse (.bin op l r) + 1) + groesse (.bin op l r) + 1 ≤ G →
       parsePrimary G (druckToks (.bin op l r) ++ rest') =
@@ -412,12 +412,12 @@ theorem legsCmp : ∀ (e : SExpr), gutCmp e = true → Legs e := by
   obtain hker | hnew := hg
   · exact legsKern e hker
   · cases e with
-    | lit m => simp [cmpNeu] at hnew
-    | float s => simp [cmpNeu] at hnew
-    | tru => simp [cmpNeu] at hnew
-    | fls => simp [cmpNeu] at hnew
-    | «variable» s => simp [cmpNeu] at hnew
-    | un o x => simp [cmpNeu] at hnew
+    | lit m => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [cmpNeu, Bool.false_eq_true] at hnew
     | bin o l r =>
       simp only [cmpNeu, Bool.and_eq_true, and_assoc] at hnew
       obtain ⟨hop, hl, hr2⟩ := hnew
@@ -431,16 +431,16 @@ theorem legsCmp : ∀ (e : SExpr), gutCmp e = true → Legs e := by
       · exact cmpLegs ">=" l r hco Hl Hr
       · exact cmpLegs "<" l r hco Hl Hr
       · exact cmpLegs ">" l r hco Hl Hr
-    | field x f => simp [cmpNeu] at hnew
-    | index x i => simp [cmpNeu] at hnew
-    | arrow x f => simp [cmpNeu] at hnew
-    | call f xs => simp [cmpNeu] at hnew
-    | fnref f => simp [cmpNeu] at hnew
-    | built f xs => simp [cmpNeu] at hnew
-    | old x => simp [cmpNeu] at hnew
-    | res => simp [cmpNeu] at hnew
-    | why g f => simp [cmpNeu] at hnew
-    | ext xk xn xs => simp [cmpNeu] at hnew
+    | field x f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | res => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [cmpNeu, Bool.false_eq_true] at hnew
 
 -- Level-1 goal: every `gutCmp` tree parses back from its printed
 -- tokens with `brennstoff` fuel (the `Or` leg, `ende` follows by
@@ -454,7 +454,7 @@ theorem parse_druck_cmp : ∀ (e : SExpr), gutCmp e = true →
   have hrs : ruhigSuff [.ende] = true := rfl
   have hrg : ruhigGleit [.ende] = true := rfl
   have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
+    simp only [brennstoff, Std.le_refl]
   exact hL.2.2.2.2.2.2.2 [.ende] (brennstoff e) hr hrs hrg hF
 
 -- Level-1 witnesses, corpus-flavoured (`01-tabelle` compares a
@@ -726,12 +726,12 @@ theorem legsBit : ∀ (e : SExpr), gutBit e = true → Legs e := by
   obtain hold | hnew := hg
   · exact legsCmp e hold
   · cases e with
-    | lit m => simp [bitNeu] at hnew
-    | float s => simp [bitNeu] at hnew
-    | tru => simp [bitNeu] at hnew
-    | fls => simp [bitNeu] at hnew
-    | «variable» s => simp [bitNeu] at hnew
-    | un o x => simp [bitNeu] at hnew
+    | lit m => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [bitNeu, Bool.false_eq_true] at hnew
     | bin o l r =>
       simp only [bitNeu, Bool.and_eq_true, and_assoc] at hnew
       obtain ⟨hop, hl, hr2⟩ := hnew
@@ -745,16 +745,16 @@ theorem legsBit : ∀ (e : SExpr), gutBit e = true → Legs e := by
       · exact bitLegs "<<" l r hbo Hl Hr
       · exact bitLegs ">>" l r hbo Hl Hr
       · exact bitLegs "<<%" l r hbo Hl Hr
-    | field x f => simp [bitNeu] at hnew
-    | index x i => simp [bitNeu] at hnew
-    | arrow x f => simp [bitNeu] at hnew
-    | call f xs => simp [bitNeu] at hnew
-    | fnref f => simp [bitNeu] at hnew
-    | built f xs => simp [bitNeu] at hnew
-    | old x => simp [bitNeu] at hnew
-    | res => simp [bitNeu] at hnew
-    | why g f => simp [bitNeu] at hnew
-    | ext xk xn xs => simp [bitNeu] at hnew
+    | field x f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | res => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [bitNeu, Bool.false_eq_true] at hnew
 
 -- Level-2 goal: every `gutBit` tree parses back from its printed
 -- tokens with `brennstoff` fuel.
@@ -767,7 +767,7 @@ theorem parse_druck_bit : ∀ (e : SExpr), gutBit e = true →
   have hrs : ruhigSuff [.ende] = true := rfl
   have hrg : ruhigGleit [.ende] = true := rfl
   have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
+    simp only [brennstoff, Std.le_refl]
   exact hL.2.2.2.2.2.2.2 [.ende] (brennstoff e) hr hrs hrg hF
 
 -- Level-2 witnesses, corpus-flavoured (`45-gemischte-
@@ -1194,12 +1194,12 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
   · obtain hold2 | hadd := hold
     · exact legsBit e hold2
     · cases e with
-      | lit m => simp [addNeu] at hadd
-      | float s => simp [addNeu] at hadd
-      | tru => simp [addNeu] at hadd
-      | fls => simp [addNeu] at hadd
-      | «variable» s => simp [addNeu] at hadd
-      | un o x => simp [addNeu] at hadd
+      | lit m => simp only [addNeu, Bool.false_eq_true] at hadd
+      | float s => simp only [addNeu, Bool.false_eq_true] at hadd
+      | tru => simp only [addNeu, Bool.false_eq_true] at hadd
+      | fls => simp only [addNeu, Bool.false_eq_true] at hadd
+      | «variable» s => simp only [addNeu, Bool.false_eq_true] at hadd
+      | un o x => simp only [addNeu, Bool.false_eq_true] at hadd
       | bin o l r =>
         simp only [addNeu, Bool.and_eq_true, and_assoc] at hadd
         obtain ⟨hop, hl, hr2⟩ := hadd
@@ -1212,23 +1212,23 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
         · exact addLegs "+%" l r hao Hl Hr
         · exact addLegs "-%" l r hao Hl Hr
         · exact addLegs "+|" l r hao Hl Hr
-      | field x f => simp [addNeu] at hadd
-      | index x i => simp [addNeu] at hadd
-      | arrow x f => simp [addNeu] at hadd
-      | call f xs => simp [addNeu] at hadd
-      | fnref f => simp [addNeu] at hadd
-      | built f xs => simp [addNeu] at hadd
-      | old x => simp [addNeu] at hadd
-      | res => simp [addNeu] at hadd
-      | why g f => simp [addNeu] at hadd
-      | ext xk xn xs => simp [addNeu] at hadd
+      | field x f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | index x i => simp only [addNeu, Bool.false_eq_true] at hadd
+      | arrow x f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | call f xs => simp only [addNeu, Bool.false_eq_true] at hadd
+      | fnref f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | built f xs => simp only [addNeu, Bool.false_eq_true] at hadd
+      | old x => simp only [addNeu, Bool.false_eq_true] at hadd
+      | res => simp only [addNeu, Bool.false_eq_true] at hadd
+      | why g f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | ext xk xn xs => simp only [addNeu, Bool.false_eq_true] at hadd
   · cases e with
-    | lit m => simp [mulNeu] at hnew
-    | float s => simp [mulNeu] at hnew
-    | tru => simp [mulNeu] at hnew
-    | fls => simp [mulNeu] at hnew
-    | «variable» s => simp [mulNeu] at hnew
-    | un o x => simp [mulNeu] at hnew
+    | lit m => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [mulNeu, Bool.false_eq_true] at hnew
     | bin o l r =>
       simp only [mulNeu, Bool.and_eq_true, and_assoc] at hnew
       obtain ⟨hop, hl, hr2⟩ := hnew
@@ -1240,16 +1240,16 @@ theorem legsAM : ∀ (e : SExpr), gutAM e = true → Legs e := by
       · exact mulLegs "/" l r hmo Hl Hr
       · exact mulLegs "%" l r hmo Hl Hr
       · exact mulLegs "*%" l r hmo Hl Hr
-    | field x f => simp [mulNeu] at hnew
-    | index x i => simp [mulNeu] at hnew
-    | arrow x f => simp [mulNeu] at hnew
-    | call f xs => simp [mulNeu] at hnew
-    | fnref f => simp [mulNeu] at hnew
-    | built f xs => simp [mulNeu] at hnew
-    | old x => simp [mulNeu] at hnew
-    | res => simp [mulNeu] at hnew
-    | why g f => simp [mulNeu] at hnew
-    | ext xk xn xs => simp [mulNeu] at hnew
+    | field x f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | res => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [mulNeu, Bool.false_eq_true] at hnew
 
 -- Level-3 goal: every `gutAM` tree parses back from its printed
 -- tokens with `brennstoff` fuel.
@@ -1262,7 +1262,7 @@ theorem parse_druck_am : ∀ (e : SExpr), gutAM e = true →
   have hrs : ruhigSuff [.ende] = true := rfl
   have hrg : ruhigGleit [.ende] = true := rfl
   have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
+    simp only [brennstoff, Std.le_refl]
   exact hL.2.2.2.2.2.2.2 [.ende] (brennstoff e) hr hrs hrg hF
 
 -- Level-3 witnesses, corpus-flavoured (the corpus subtracts
@@ -1299,19 +1299,19 @@ theorem zeuge_am_div_rech : (match parseOr
 theorem gutOpBin_of_cmp : ∀ (o : String),
     istCmpOp o = true → gutOpBin o = true := by
   intro o h
-  simp [gutOpBin, gutOpCmp, h]
+  simp only [gutOpBin, gutOpCmp, h, Bool.or_true, Bool.true_or]
 theorem gutOpBin_of_bit : ∀ (o : String),
     istBitOp o = true → gutOpBin o = true := by
   intro o h
-  simp [gutOpBin, gutOpBit, h]
+  simp only [gutOpBin, gutOpBit, h, Bool.or_true, Bool.true_or]
 theorem gutOpBin_of_add : ∀ (o : String),
     istAddOp o = true → gutOpBin o = true := by
   intro o h
-  simp [gutOpBin, gutOpAdd, h]
+  simp only [gutOpBin, gutOpAdd, h, Bool.or_true, Bool.true_or]
 theorem gutOpBin_of_mul : ∀ (o : String),
     istMulOp o = true → gutOpBin o = true := by
   intro o h
-  simp [gutOpBin, gutOpMul, h]
+  simp only [gutOpBin, gutOpMul, h, Bool.or_true]
 
 theorem gut_of_gutCmp : ∀ (e : SExpr), gutCmp e = true → gut e = true := by
   intro e hg
@@ -1319,28 +1319,28 @@ theorem gut_of_gutCmp : ∀ (e : SExpr), gutCmp e = true → gut e = true := by
   obtain hker | hnew := hg
   · exact gut_of_gutKern e hker
   · cases e with
-    | lit m => simp [cmpNeu] at hnew
-    | float s => simp [cmpNeu] at hnew
-    | tru => simp [cmpNeu] at hnew
-    | fls => simp [cmpNeu] at hnew
-    | «variable» s => simp [cmpNeu] at hnew
-    | un o x => simp [cmpNeu] at hnew
+    | lit m => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [cmpNeu, Bool.false_eq_true] at hnew
     | bin o l r =>
       simp only [cmpNeu, Bool.and_eq_true, and_assoc] at hnew
       obtain ⟨hop, hl, hr2⟩ := hnew
       have hbin := gutOpBin_of_cmp o hop
       simp only [gut, Bool.and_eq_true, and_assoc] at ⊢
       exact ⟨hbin, gut_of_gutKern l hl, gut_of_gutKern r hr2⟩
-    | field x f => simp [cmpNeu] at hnew
-    | index x i => simp [cmpNeu] at hnew
-    | arrow x f => simp [cmpNeu] at hnew
-    | call f xs => simp [cmpNeu] at hnew
-    | fnref f => simp [cmpNeu] at hnew
-    | built f xs => simp [cmpNeu] at hnew
-    | old x => simp [cmpNeu] at hnew
-    | res => simp [cmpNeu] at hnew
-    | why g f => simp [cmpNeu] at hnew
-    | ext xk xn xs => simp [cmpNeu] at hnew
+    | field x f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | res => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [cmpNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [cmpNeu, Bool.false_eq_true] at hnew
 
 theorem gut_of_gutBit : ∀ (e : SExpr), gutBit e = true → gut e = true := by
   intro e hg
@@ -1348,28 +1348,28 @@ theorem gut_of_gutBit : ∀ (e : SExpr), gutBit e = true → gut e = true := by
   obtain hold | hnew := hg
   · exact gut_of_gutCmp e hold
   · cases e with
-    | lit m => simp [bitNeu] at hnew
-    | float s => simp [bitNeu] at hnew
-    | tru => simp [bitNeu] at hnew
-    | fls => simp [bitNeu] at hnew
-    | «variable» s => simp [bitNeu] at hnew
-    | un o x => simp [bitNeu] at hnew
+    | lit m => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [bitNeu, Bool.false_eq_true] at hnew
     | bin o l r =>
       simp only [bitNeu, Bool.and_eq_true, and_assoc] at hnew
       obtain ⟨hop, hl, hr2⟩ := hnew
       have hbin := gutOpBin_of_bit o hop
       simp only [gut, Bool.and_eq_true, and_assoc] at ⊢
       exact ⟨hbin, gut_of_gutCmp l hl, gut_of_gutCmp r hr2⟩
-    | field x f => simp [bitNeu] at hnew
-    | index x i => simp [bitNeu] at hnew
-    | arrow x f => simp [bitNeu] at hnew
-    | call f xs => simp [bitNeu] at hnew
-    | fnref f => simp [bitNeu] at hnew
-    | built f xs => simp [bitNeu] at hnew
-    | old x => simp [bitNeu] at hnew
-    | res => simp [bitNeu] at hnew
-    | why g f => simp [bitNeu] at hnew
-    | ext xk xn xs => simp [bitNeu] at hnew
+    | field x f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | res => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [bitNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [bitNeu, Bool.false_eq_true] at hnew
 
 theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
   intro e hg
@@ -1378,51 +1378,51 @@ theorem gut_of_gutAM : ∀ (e : SExpr), gutAM e = true → gut e = true := by
   · obtain hold2 | hadd := hold
     · exact gut_of_gutBit e hold2
     · cases e with
-      | lit m => simp [addNeu] at hadd
-      | float s => simp [addNeu] at hadd
-      | tru => simp [addNeu] at hadd
-      | fls => simp [addNeu] at hadd
-      | «variable» s => simp [addNeu] at hadd
-      | un o x => simp [addNeu] at hadd
+      | lit m => simp only [addNeu, Bool.false_eq_true] at hadd
+      | float s => simp only [addNeu, Bool.false_eq_true] at hadd
+      | tru => simp only [addNeu, Bool.false_eq_true] at hadd
+      | fls => simp only [addNeu, Bool.false_eq_true] at hadd
+      | «variable» s => simp only [addNeu, Bool.false_eq_true] at hadd
+      | un o x => simp only [addNeu, Bool.false_eq_true] at hadd
       | bin o l r =>
         simp only [addNeu, Bool.and_eq_true, and_assoc] at hadd
         obtain ⟨hop, hl, hr2⟩ := hadd
         have hbin := gutOpBin_of_add o hop
         simp only [gut, Bool.and_eq_true, and_assoc] at ⊢
         exact ⟨hbin, gut_of_gutBit l hl, gut_of_gutBit r hr2⟩
-      | field x f => simp [addNeu] at hadd
-      | index x i => simp [addNeu] at hadd
-      | arrow x f => simp [addNeu] at hadd
-      | call f xs => simp [addNeu] at hadd
-      | fnref f => simp [addNeu] at hadd
-      | built f xs => simp [addNeu] at hadd
-      | old x => simp [addNeu] at hadd
-      | res => simp [addNeu] at hadd
-      | why g f => simp [addNeu] at hadd
-      | ext xk xn xs => simp [addNeu] at hadd
+      | field x f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | index x i => simp only [addNeu, Bool.false_eq_true] at hadd
+      | arrow x f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | call f xs => simp only [addNeu, Bool.false_eq_true] at hadd
+      | fnref f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | built f xs => simp only [addNeu, Bool.false_eq_true] at hadd
+      | old x => simp only [addNeu, Bool.false_eq_true] at hadd
+      | res => simp only [addNeu, Bool.false_eq_true] at hadd
+      | why g f => simp only [addNeu, Bool.false_eq_true] at hadd
+      | ext xk xn xs => simp only [addNeu, Bool.false_eq_true] at hadd
   · cases e with
-    | lit m => simp [mulNeu] at hnew
-    | float s => simp [mulNeu] at hnew
-    | tru => simp [mulNeu] at hnew
-    | fls => simp [mulNeu] at hnew
-    | «variable» s => simp [mulNeu] at hnew
-    | un o x => simp [mulNeu] at hnew
+    | lit m => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [mulNeu, Bool.false_eq_true] at hnew
     | bin o l r =>
       simp only [mulNeu, Bool.and_eq_true, and_assoc] at hnew
       obtain ⟨hop, hl, hr2⟩ := hnew
       have hbin := gutOpBin_of_mul o hop
       simp only [gut, Bool.and_eq_true, and_assoc] at ⊢
       exact ⟨hbin, gut_of_gutBit l hl, gut_of_gutBit r hr2⟩
-    | field x f => simp [mulNeu] at hnew
-    | index x i => simp [mulNeu] at hnew
-    | arrow x f => simp [mulNeu] at hnew
-    | call f xs => simp [mulNeu] at hnew
-    | fnref f => simp [mulNeu] at hnew
-    | built f xs => simp [mulNeu] at hnew
-    | old x => simp [mulNeu] at hnew
-    | res => simp [mulNeu] at hnew
-    | why g f => simp [mulNeu] at hnew
-    | ext xk xn xs => simp [mulNeu] at hnew
+    | field x f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | res => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [mulNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [mulNeu, Bool.false_eq_true] at hnew
 
 -- LEVEL CALLS (calls with argument lists).
 --
@@ -1457,7 +1457,7 @@ theorem legsListeAM : ∀ (xs : List SExpr),
     gutListeAM xs = true → ∀ (x : SExpr), x ∈ xs → Legs x := by
   intro xs h x hm
   induction xs with
-  | nil => simp at hm
+  | nil => simp only [List.not_mem_nil] at hm
   | cons y ys ih =>
     simp only [gutListeAM, Bool.and_eq_true] at h
     obtain ⟨hy, hys⟩ := h
@@ -1485,7 +1485,7 @@ theorem arg_legs : ∀ (x : SExpr) (sep : Token) (S : List Token) (F : Nat),
       intro he
       have hlen := toksLang (groesse x) x (Nat.le_refl _)
       rw [he] at hlen
-      simp at hlen
+      simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
     obtain ⟨a, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
     rw [hxb] at hcon
     simp only [List.cons_append] at hcon
@@ -1498,15 +1498,15 @@ theorem arg_legs : ∀ (x : SExpr) (sep : Token) (S : List Token) (F : Nat),
       cases hsep with
       | inl h =>
         subst h
-        simp at hsep2
+        simp only [Token.zeichen.injEq, String.reduceEq] at hsep2
       | inr h =>
         subst h
-        simp at hsep2
+        simp only [Token.zeichen.injEq, String.reduceEq] at hsep2
     | cons b R3 =>
       rw [hR] at ht
       simp only [List.cons_append] at ht
       injection ht with hb _
-      have hbmem : b ∈ druckToks x := by simp [hxb, hR]
+      have hbmem : b ∈ druckToks x := by simp only [hxb, hR, List.mem_cons, true_or, or_true]
       have hne2 := keinDP_tree (groesse x) x (Nat.le_refl _) hxg b hbmem
       exact hne2 hb
   simp only [parseArg] at ⊢
@@ -1563,7 +1563,7 @@ theorem args_legs : ∀ (xs : List SExpr) (rest : List Token) (F : Nat),
           intro he
           have hlen := toksLang (groesse x) x (Nat.le_refl _)
           rw [he] at hlen
-          simp at hlen
+          simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
         obtain ⟨a, R3, hxb⟩ := List.exists_cons_of_ne_nil hne
         have ha := hkop a R3 hxb
         rw [hxb] at hcon
@@ -1594,7 +1594,7 @@ theorem args_legs : ∀ (xs : List SExpr) (rest : List Token) (F : Nat),
           intro he
           have hlen := toksLang (groesse x) x (Nat.le_refl _)
           rw [he] at hlen
-          simp at hlen
+          simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
         obtain ⟨a, R3, hxb⟩ := List.exists_cons_of_ne_nil hne
         have ha := hkop a R3 hxb
         rw [hxb] at hcon
@@ -1667,7 +1667,7 @@ theorem rufLegs : ∀ (f : String) (xs : List SExpr),
     have hd : druckToks (.call f xs) =
         [nameTok f] ++ (([.zeichen "("] ++ druckToksListe xs) ++
           [.zeichen ")"]) := by
-      simp [druckToks]
+      simp only [druckToks, List.cons_append, List.nil_append]
     simp only [hd, List.append_assoc] at hP' ⊢
     -- The name head fires no prefix arm: fall through to
     -- `parsePrimary`.
@@ -1718,26 +1718,26 @@ theorem legsRuf : ∀ (e : SExpr), gutRuf e = true → Legs e := by
   obtain hold | hnew := hg
   · exact legsAM e hold
   · cases e with
-    | lit m => simp [rufNeu] at hnew
-    | float s => simp [rufNeu] at hnew
-    | tru => simp [rufNeu] at hnew
-    | fls => simp [rufNeu] at hnew
-    | «variable» s => simp [rufNeu] at hnew
-    | un o x => simp [rufNeu] at hnew
-    | bin o l r => simp [rufNeu] at hnew
-    | field x f => simp [rufNeu] at hnew
-    | index x i => simp [rufNeu] at hnew
-    | arrow x f => simp [rufNeu] at hnew
+    | lit m => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | bin o l r => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | field x f => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [rufNeu, Bool.false_eq_true] at hnew
     | call f xs =>
       simp only [rufNeu, Bool.and_eq_true] at hnew
       obtain ⟨hf, hxs⟩ := hnew
       exact rufLegs f xs hf hxs
-    | fnref f => simp [rufNeu] at hnew
-    | built f xs => simp [rufNeu] at hnew
-    | old x => simp [rufNeu] at hnew
-    | res => simp [rufNeu] at hnew
-    | why g f => simp [rufNeu] at hnew
-    | ext xk xn xs => simp [rufNeu] at hnew
+    | fnref f => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | res => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [rufNeu, Bool.false_eq_true] at hnew
 
 -- Level-4 goal: every `gutRuf` tree parses back from its
 -- printed tokens with `brennstoff` fuel.
@@ -1750,7 +1750,7 @@ theorem parse_druck_ruf : ∀ (e : SExpr), gutRuf e = true →
   have hrs : ruhigSuff [.ende] = true := rfl
   have hrg : ruhigGleit [.ende] = true := rfl
   have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
+    simp only [brennstoff, Std.le_refl]
   exact hL.2.2.2.2.2.2.2 [.ende] (brennstoff e) hr hrs hrg hF
 
 -- Level-4 witnesses, corpus-flavoured (`107-summe-zwei-rufe`
@@ -1792,7 +1792,7 @@ theorem suffGutKern_idx : ∀ (suff : List SuffFrag) (i : SExpr),
   induction suff with
   | nil =>
     intro i _ hm
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   | cons f s ih =>
     intro i hg hm
     cases f with
@@ -1800,13 +1800,13 @@ theorem suffGutKern_idx : ∀ (suff : List SuffFrag) (i : SExpr),
       simp only [suffGutKern] at hg
       simp only [List.mem_cons] at hm
       obtain h | h := hm
-      · simp at h
+      · simp only [reduceCtorEq] at h
       · exact ih i hg h
     | arrow g =>
       simp only [suffGutKern] at hg
       simp only [List.mem_cons] at hm
       obtain h | h := hm
-      · simp at h
+      · simp only [reduceCtorEq] at h
       · exact ih i hg h
     | idx j =>
       simp only [suffGutKern, Bool.and_eq_true] at hg
@@ -2054,7 +2054,7 @@ theorem embTower : ∀ (w : String) (xs : List SExpr),
     have hP' := hP rest' G' hrs hrg (by omega)
     have hd : druckToks (.built w xs) = [.wort w] ++
         (([.zeichen "("] ++ druckToksListe xs) ++ [.zeichen ")"]) := by
-      simp [druckToks]
+      simp only [druckToks, List.cons_append, List.nil_append]
     simp only [hd, List.append_assoc] at hP' ⊢
     simp only [List.cons_append, List.nil_append] at hP' ⊢
     simp only [parseUnary, hP'] at ⊢
@@ -2112,28 +2112,28 @@ theorem gut_of_gutRuf : ∀ (e : SExpr), gutRuf e = true → gut e = true := by
   obtain hold | hnew := hg
   · exact gut_of_gutAM e hold
   · cases e with
-    | lit m => simp [rufNeu] at hnew
-    | float s => simp [rufNeu] at hnew
-    | tru => simp [rufNeu] at hnew
-    | fls => simp [rufNeu] at hnew
-    | «variable» s => simp [rufNeu] at hnew
-    | un o x => simp [rufNeu] at hnew
-    | bin o l r => simp [rufNeu] at hnew
-    | field x f => simp [rufNeu] at hnew
-    | index x i => simp [rufNeu] at hnew
-    | arrow x f => simp [rufNeu] at hnew
+    | lit m => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | bin o l r => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | field x f => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [rufNeu, Bool.false_eq_true] at hnew
     | call f xs =>
       simp only [rufNeu, Bool.and_eq_true] at hnew
       obtain ⟨hf, hxs⟩ := hnew
       have hgl := gutListe_of_gutListeAM xs hxs
       simp only [gut, Bool.and_eq_true] at ⊢
       exact ⟨hf, hgl⟩
-    | fnref f => simp [rufNeu] at hnew
-    | built f xs => simp [rufNeu] at hnew
-    | old x => simp [rufNeu] at hnew
-    | res => simp [rufNeu] at hnew
-    | why g f => simp [rufNeu] at hnew
-    | ext xk xn xs => simp [rufNeu] at hnew
+    | fnref f => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | built f xs => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | old x => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | res => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [rufNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [rufNeu, Bool.false_eq_true] at hnew
 
 -- The three new builtin layers: `sizeof`/`lenof` over kernel
 -- places (minus bare type words), `aligned` over level-4
@@ -2171,23 +2171,23 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
     · obtain hold2 | hlen := hold3
       · exact legsRuf e hold2
       · cases e with
-        | lit m => simp [sizeofNeu] at hlen
-        | float s => simp [sizeofNeu] at hlen
-        | tru => simp [sizeofNeu] at hlen
-        | fls => simp [sizeofNeu] at hlen
-        | «variable» s => simp [sizeofNeu] at hlen
-        | un o x => simp [sizeofNeu] at hlen
-        | bin o l r => simp [sizeofNeu] at hlen
-        | field x f => simp [sizeofNeu] at hlen
-        | index x i => simp [sizeofNeu] at hlen
-        | arrow x f => simp [sizeofNeu] at hlen
-        | call f xs => simp [sizeofNeu] at hlen
-        | fnref f => simp [sizeofNeu] at hlen
+        | lit m => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | float s => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | tru => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | fls => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | «variable» s => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | un o x => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | bin o l r => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | field x f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | index x i => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | arrow x f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | call f xs => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | fnref f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
         | built f xs =>
           simp only [sizeofNeu, Bool.and_eq_true] at hlen
           obtain ⟨hw, hargs⟩ := hlen
           cases xs with
-          | nil => simp [argsPlatz1] at hargs
+          | nil => simp only [argsPlatz1, Bool.false_eq_true] at hargs
           | cons y ys =>
             cases ys with
             | nil =>
@@ -2196,29 +2196,29 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
               have heq : f = "sizeof" := strKlingt f "sizeof" hw
               subst heq
               exact sizeofLegs y hp htw
-            | cons z zs => simp [argsPlatz1] at hargs
-        | old x => simp [sizeofNeu] at hlen
-        | res => simp [sizeofNeu] at hlen
-        | why g f => simp [sizeofNeu] at hlen
-        | ext xk xn xs => simp [sizeofNeu] at hlen
+            | cons z zs => simp only [argsPlatz1, Bool.false_eq_true] at hargs
+        | old x => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | res => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | why g f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | ext xk xn xs => simp only [sizeofNeu, Bool.false_eq_true] at hlen
     · cases e with
-      | lit m => simp [lenofNeu] at hsz
-      | float s => simp [lenofNeu] at hsz
-      | tru => simp [lenofNeu] at hsz
-      | fls => simp [lenofNeu] at hsz
-      | «variable» s => simp [lenofNeu] at hsz
-      | un o x => simp [lenofNeu] at hsz
-      | bin o l r => simp [lenofNeu] at hsz
-      | field x f => simp [lenofNeu] at hsz
-      | index x i => simp [lenofNeu] at hsz
-      | arrow x f => simp [lenofNeu] at hsz
-      | call f xs => simp [lenofNeu] at hsz
-      | fnref f => simp [lenofNeu] at hsz
+      | lit m => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | float s => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | tru => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | fls => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | «variable» s => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | un o x => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | bin o l r => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | field x f => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | index x i => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | arrow x f => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | call f xs => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | fnref f => simp only [lenofNeu, Bool.false_eq_true] at hsz
       | built f xs =>
         simp only [lenofNeu, Bool.and_eq_true] at hsz
         obtain ⟨hw, hargs⟩ := hsz
         cases xs with
-        | nil => simp [argsPlatz1] at hargs
+        | nil => simp only [argsPlatz1, Bool.false_eq_true] at hargs
         | cons y ys =>
           cases ys with
           | nil =>
@@ -2227,32 +2227,32 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
             have heq : f = "lenof" := strKlingt f "lenof" hw
             subst heq
             exact lenofLegs y hp htw
-          | cons z zs => simp [argsPlatz1] at hargs
-      | old x => simp [lenofNeu] at hsz
-      | res => simp [lenofNeu] at hsz
-      | why g f => simp [lenofNeu] at hsz
-      | ext xk xn xs => simp [lenofNeu] at hsz
+          | cons z zs => simp only [argsPlatz1, Bool.false_eq_true] at hargs
+      | old x => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | res => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | why g f => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | ext xk xn xs => simp only [lenofNeu, Bool.false_eq_true] at hsz
   · cases e with
-    | lit m => simp [alignedNeu] at hnew
-    | float s => simp [alignedNeu] at hnew
-    | tru => simp [alignedNeu] at hnew
-    | fls => simp [alignedNeu] at hnew
-    | «variable» s => simp [alignedNeu] at hnew
-    | un o x => simp [alignedNeu] at hnew
-    | bin o l r => simp [alignedNeu] at hnew
-    | field x f => simp [alignedNeu] at hnew
-    | index x i => simp [alignedNeu] at hnew
-    | arrow x f => simp [alignedNeu] at hnew
-    | call f xs => simp [alignedNeu] at hnew
-    | fnref f => simp [alignedNeu] at hnew
+    | lit m => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | bin o l r => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | field x f => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [alignedNeu, Bool.false_eq_true] at hnew
     | built f xs =>
       simp only [alignedNeu, Bool.and_eq_true] at hnew
       obtain ⟨hw, hargs⟩ := hnew
       cases xs with
-      | nil => simp [argsRuf2] at hargs
+      | nil => simp only [argsRuf2, Bool.false_eq_true] at hargs
       | cons y ys =>
         cases ys with
-        | nil => simp [argsRuf2] at hargs
+        | nil => simp only [argsRuf2, Bool.false_eq_true] at hargs
         | cons z zs =>
           cases zs with
           | nil =>
@@ -2261,11 +2261,11 @@ theorem legsEmb : ∀ (e : SExpr), gutEmb e = true → Legs e := by
             have heq : f = "aligned" := strKlingt f "aligned" hw
             subst heq
             exact alignedLegs y z (legsRuf y ha) (legsRuf z hb)
-          | cons w2 ws => simp [argsRuf2] at hargs
-    | old x => simp [alignedNeu] at hnew
-    | res => simp [alignedNeu] at hnew
-    | why g f => simp [alignedNeu] at hnew
-    | ext xk xn xs => simp [alignedNeu] at hnew
+          | cons w2 ws => simp only [argsRuf2, Bool.false_eq_true] at hargs
+    | old x => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | res => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [alignedNeu, Bool.false_eq_true] at hnew
 
 -- Bridge for the builtins predicate (via lane 161's shape
 -- equations `gut_sizeof_one`, `gut_lenof_one`,
@@ -2278,23 +2278,23 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
     · obtain hold2 | hlen := hold3
       · exact gut_of_gutRuf e hold2
       · cases e with
-        | lit m => simp [sizeofNeu] at hlen
-        | float s => simp [sizeofNeu] at hlen
-        | tru => simp [sizeofNeu] at hlen
-        | fls => simp [sizeofNeu] at hlen
-        | «variable» s => simp [sizeofNeu] at hlen
-        | un o x => simp [sizeofNeu] at hlen
-        | bin o l r => simp [sizeofNeu] at hlen
-        | field x f => simp [sizeofNeu] at hlen
-        | index x i => simp [sizeofNeu] at hlen
-        | arrow x f => simp [sizeofNeu] at hlen
-        | call f xs => simp [sizeofNeu] at hlen
-        | fnref f => simp [sizeofNeu] at hlen
+        | lit m => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | float s => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | tru => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | fls => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | «variable» s => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | un o x => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | bin o l r => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | field x f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | index x i => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | arrow x f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | call f xs => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | fnref f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
         | built f xs =>
           simp only [sizeofNeu, Bool.and_eq_true] at hlen
           obtain ⟨hw, hargs⟩ := hlen
           cases xs with
-          | nil => simp [argsPlatz1] at hargs
+          | nil => simp only [argsPlatz1, Bool.false_eq_true] at hargs
           | cons y ys =>
             cases ys with
             | nil =>
@@ -2305,29 +2305,29 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
               rw [gut_sizeof_one]
               simp only [Bool.and_eq_true]
               exact ⟨gutPlatz_of_gutKernPlatz y hp, htw⟩
-            | cons z zs => simp [argsPlatz1] at hargs
-        | old x => simp [sizeofNeu] at hlen
-        | res => simp [sizeofNeu] at hlen
-        | why g f => simp [sizeofNeu] at hlen
-        | ext xk xn xs => simp [sizeofNeu] at hlen
+            | cons z zs => simp only [argsPlatz1, Bool.false_eq_true] at hargs
+        | old x => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | res => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | why g f => simp only [sizeofNeu, Bool.false_eq_true] at hlen
+        | ext xk xn xs => simp only [sizeofNeu, Bool.false_eq_true] at hlen
     · cases e with
-      | lit m => simp [lenofNeu] at hsz
-      | float s => simp [lenofNeu] at hsz
-      | tru => simp [lenofNeu] at hsz
-      | fls => simp [lenofNeu] at hsz
-      | «variable» s => simp [lenofNeu] at hsz
-      | un o x => simp [lenofNeu] at hsz
-      | bin o l r => simp [lenofNeu] at hsz
-      | field x f => simp [lenofNeu] at hsz
-      | index x i => simp [lenofNeu] at hsz
-      | arrow x f => simp [lenofNeu] at hsz
-      | call f xs => simp [lenofNeu] at hsz
-      | fnref f => simp [lenofNeu] at hsz
+      | lit m => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | float s => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | tru => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | fls => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | «variable» s => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | un o x => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | bin o l r => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | field x f => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | index x i => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | arrow x f => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | call f xs => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | fnref f => simp only [lenofNeu, Bool.false_eq_true] at hsz
       | built f xs =>
         simp only [lenofNeu, Bool.and_eq_true] at hsz
         obtain ⟨hw, hargs⟩ := hsz
         cases xs with
-        | nil => simp [argsPlatz1] at hargs
+        | nil => simp only [argsPlatz1, Bool.false_eq_true] at hargs
         | cons y ys =>
           cases ys with
           | nil =>
@@ -2338,32 +2338,32 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
             rw [gut_lenof_one]
             simp only [Bool.and_eq_true]
             exact ⟨gutPlatz_of_gutKernPlatz y hp, htw⟩
-          | cons z zs => simp [argsPlatz1] at hargs
-      | old x => simp [lenofNeu] at hsz
-      | res => simp [lenofNeu] at hsz
-      | why g f => simp [lenofNeu] at hsz
-      | ext xk xn xs => simp [lenofNeu] at hsz
+          | cons z zs => simp only [argsPlatz1, Bool.false_eq_true] at hargs
+      | old x => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | res => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | why g f => simp only [lenofNeu, Bool.false_eq_true] at hsz
+      | ext xk xn xs => simp only [lenofNeu, Bool.false_eq_true] at hsz
   · cases e with
-    | lit m => simp [alignedNeu] at hnew
-    | float s => simp [alignedNeu] at hnew
-    | tru => simp [alignedNeu] at hnew
-    | fls => simp [alignedNeu] at hnew
-    | «variable» s => simp [alignedNeu] at hnew
-    | un o x => simp [alignedNeu] at hnew
-    | bin o l r => simp [alignedNeu] at hnew
-    | field x f => simp [alignedNeu] at hnew
-    | index x i => simp [alignedNeu] at hnew
-    | arrow x f => simp [alignedNeu] at hnew
-    | call f xs => simp [alignedNeu] at hnew
-    | fnref f => simp [alignedNeu] at hnew
+    | lit m => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | float s => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | tru => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | fls => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | «variable» s => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | un o x => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | bin o l r => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | field x f => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | index x i => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | arrow x f => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | call f xs => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | fnref f => simp only [alignedNeu, Bool.false_eq_true] at hnew
     | built f xs =>
       simp only [alignedNeu, Bool.and_eq_true] at hnew
       obtain ⟨hw, hargs⟩ := hnew
       cases xs with
-      | nil => simp [argsRuf2] at hargs
+      | nil => simp only [argsRuf2, Bool.false_eq_true] at hargs
       | cons y ys =>
         cases ys with
-        | nil => simp [argsRuf2] at hargs
+        | nil => simp only [argsRuf2, Bool.false_eq_true] at hargs
         | cons z zs =>
           cases zs with
           | nil =>
@@ -2374,11 +2374,11 @@ theorem gut_of_gutEmb : ∀ (e : SExpr), gutEmb e = true → gut e = true := by
             rw [gut_aligned_two]
             simp only [Bool.and_eq_true]
             exact ⟨gut_of_gutRuf y ha, gut_of_gutRuf z hb⟩
-          | cons w2 ws => simp [argsRuf2] at hargs
-    | old x => simp [alignedNeu] at hnew
-    | res => simp [alignedNeu] at hnew
-    | why g f => simp [alignedNeu] at hnew
-    | ext xk xn xs => simp [alignedNeu] at hnew
+          | cons w2 ws => simp only [argsRuf2, Bool.false_eq_true] at hargs
+    | old x => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | res => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | why g f => simp only [alignedNeu, Bool.false_eq_true] at hnew
+    | ext xk xn xs => simp only [alignedNeu, Bool.false_eq_true] at hnew
 
 -- Level-5 goal: every `gutEmb` tree parses back from its
 -- printed tokens with `brennstoff` fuel.
@@ -2391,7 +2391,7 @@ theorem parse_druck_emb : ∀ (e : SExpr), gutEmb e = true →
   have hrs : ruhigSuff [.ende] = true := rfl
   have hrg : ruhigGleit [.ende] = true := rfl
   have hF : 12 * (groesse e + 1) + groesse e + 8 ≤ brennstoff e := by
-    simp [brennstoff]
+    simp only [brennstoff, Std.le_refl]
   exact hL.2.2.2.2.2.2.2 [.ende] (brennstoff e) hr hrs hrg hF
 
 -- Level-5 witnesses, corpus-flavoured (`02-geraet` and

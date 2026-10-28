@@ -178,7 +178,7 @@ def huelleZu (items : List SItemTief) : Bool :=
 /-- **A unit without `pub` has a closed hull**: it is unchanged by the rule. -/
 theorem huelle_ohne_pub {items : List SItemTief} (h : (exporteL [] items).isEmpty = true) :
     huelleZu items = true := by
-  simp [huelleZu, h]
+  simp only [huelleZu, h, Bool.true_or]
 
 /-- **In a closed unit every `pub` item is sound**: it may carry `pub`, and every name of its head
     resolves to nothing, to the item itself, or to a `pub` item. -/

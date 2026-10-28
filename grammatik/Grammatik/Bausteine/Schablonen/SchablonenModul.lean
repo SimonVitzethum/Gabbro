@@ -98,9 +98,9 @@ theorem arena_modul_inv_reserve (d d' : Desk) (V : Nat) (h : reserve d V = some 
     Inv d' V ∧ d'.committed = d.floor ∧ d'.elem = d.elem ∧ d'.max = d.max := by
   unfold reserve at h
   split at h
-  · exact absurd h (by simp)
+  · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   · split at h
-    · exact absurd h (by simp)
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
     · rename_i h1 h2
       simp only [Option.some.injEq] at h
       subst h
@@ -113,9 +113,9 @@ theorem arena_modul_inv_grow (d d' : Desk) (V n : Nat) (_hI : Inv d V)
       d'.elem = d.elem ∧ d'.max = d.max := by
   unfold grow at h
   split at h
-  · exact absurd h (by simp)
+  · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   · split at h
-    · exact absurd h (by simp)
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
     · rename_i h1 h2
       simp only [Wachs.ja.injEq] at h
       subst h
@@ -129,10 +129,10 @@ theorem arena_modul_monoton (d d' : Desk) (V n : Nat) (h : grow d V n = .ja d') 
     d.committed ≤ d'.committed := by
   unfold grow at h
   split at h
-  · exact absurd h (by simp)
+  · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
   · split at h
-    · exact absurd h (by simp)
-    · simp only [Wachs.ja.injEq] at h; subst h; simp
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    · simp only [Wachs.ja.injEq] at h; subst h; simp only [Nat.le_add_right]
 
 /-- **Every slot the unit can reach lies inside its pool**: slot `i < committed` occupies the
     bytes `[i * elem, (i+1) * elem)`, all below `V` (the static `uint8_t [V]` row). -/
@@ -163,7 +163,7 @@ theorem arena_modul_kein_ueberlauf (d : Desk) (neu : Nat) (hm : d.max < 2 ^ 32)
 /-- A grow past the ceiling is the fail-stop, never a commit. -/
 theorem arena_modul_ueber_der_decke (d : Desk) (V n : Nat) (h : d.max < d.committed + n) :
     grow d V n = .stopp := by
-  unfold grow; simp [h]
+  unfold grow; simp only [h, ↓reduceIte]
 
 /-! ### Witness: the `halde` probe (`messung/proben/kmodul/halde-treiber.gab`) -/
 
@@ -233,19 +233,22 @@ theorem bindeAlle_spec (i : Nat) (bs : List Bool) :
       Schritt.exit ∉ (bindeAlle i bs).1 ∧ (∀ w, Schritt.start w ∉ (bindeAlle i bs).1) ∧
       ((bindeAlle i bs).2 = true → (bindeAlle i bs).1 = (List.range bs.length).map (fun k => Schritt.binde (i + k))) := by
   induction bs generalizing i with
-  | nil => simp [bindeAlle]
+  | nil => simp only [bindeAlle, List.all_nil, List.not_mem_nil, not_false_eq_true, implies_true, List.length_nil,
+  List.range_zero, List.map_nil, imp_self, and_self]
   | cons b rest ih =>
     cases b
-    · simp [bindeAlle]
+    · simp only [bindeAlle, Bool.false_eq_true, ↓reduceIte, List.all_cons, id_eq, Bool.false_and, List.mem_cons,
+  reduceCtorEq, List.not_mem_nil, or_self, not_false_eq_true, implies_true, List.length_cons, false_implies, and_self]
     · obtain ⟨h1, h2, h3, h4, h5⟩ := ih (i + 1)
       simp only [bindeAlle, if_true, List.all_cons, id, Bool.true_and]
       refine ⟨h1, ?_, ?_, ?_, ?_⟩
-      · simp [h2]
-      · simp [h3]
-      · intro w; simp [h4 w]
+      · simp only [List.mem_cons, reduceCtorEq, h2, or_self, not_false_eq_true]
+      · simp only [List.mem_cons, reduceCtorEq, h3, or_self, not_false_eq_true]
+      · intro w; simp only [List.mem_cons, reduceCtorEq, h4 w, or_self, not_false_eq_true]
       · intro h
         rw [h5 h, List.length_cons, List.range_succ_eq_map]
-        simp [Function.comp_def, Nat.add_assoc, Nat.add_comm 1]
+        simp only [Nat.add_assoc, Nat.add_comm 1, List.map_cons, Nat.add_zero, List.map_map, Function.comp_def,
+  Nat.succ_eq_add_one]
 
 /-- **A load that answers 0**: every arena bound, the init answered 0 with no fail-stop, and
     every root started -- in exactly the order bind, lock, init, start. -/
@@ -257,24 +260,26 @@ theorem laden_erfolg (L : Lage) (h : (laden L).2 = true) :
   obtain ⟨hA1, -, -, -, hA5⟩ := bindeAlle_spec 0 L.arenen
   have hok : (bindeAlle 0 L.arenen).2 = true := by
     cases hn : (bindeAlle 0 L.arenen).2
-    · unfold laden at h; simp [hn] at h
+    · unfold laden at h; simp only [hn, Bool.false_eq_true, not_false_eq_true, ↓reduceIte] at h
     · rfl
   have ha : L.antwort = 0 := by
     by_cases hn : L.antwort = 0
     · exact hn
-    · unfold laden at h; simp [hok, hn] at h
+    · unfold laden at h; simp only [hok, not_true_eq_false, ↓reduceIte, ne_eq, hn, not_false_eq_true, List.append_assoc,
+  Bool.false_eq_true] at h
   have hs : L.stopp = false := by
     cases hn : L.stopp
     · rfl
-    · unfold laden at h; simp [hok, ha, hn] at h
+    · unfold laden at h; simp only [hok, not_true_eq_false, ↓reduceIte, ha, ne_eq, hn, List.append_assoc, Bool.false_eq_true] at h
   have hw : L.wurzeln.all id = true := by
     cases hn : L.wurzeln.all id
-    · unfold laden at h; simp [hok, ha, hs, hn] at h
+    · unfold laden at h; simp only [hok, not_true_eq_false, ↓reduceIte, ha, ne_eq, hs, Bool.false_eq_true, hn, List.append_assoc,
+  List.cons_append, List.nil_append] at h
     · rfl
   refine ⟨hA1 ▸ hok, ha, hs, hw, ?_⟩
   unfold laden
   simp only [hok, ha, hs, hw, not_true_eq_false, ne_eq, if_false, if_true, Bool.false_eq_true]
-  rw [hA5 hok]; simp
+  rw [hA5 hok]; simp only [Nat.zero_add, List.append_assoc, List.cons_append, List.nil_append]
 
 /-- **The unit's init runs only after every arena is bound** -- a refused reservation returns
     before any lock or any of the unit's code. -/
@@ -284,7 +289,7 @@ theorem laden_init_erst_nach_bindung (L : Lage) (h : Schritt.init ∈ (laden L).
   unfold laden at h
   by_cases hok : (bindeAlle 0 L.arenen).2 = true
   · exact hA1 ▸ hok
-  · simp [hok] at h; exact absurd h hA2
+  · simp only [hok, Bool.false_eq_true, not_false_eq_true, ↓reduceIte] at h; exact absurd h hA2
 
 /-- **The load never calls the unit's exit** -- on a refusal the unit was never loaded. -/
 theorem laden_ruft_kein_exit (L : Lage) : Schritt.exit ∉ (laden L).1 := by
@@ -293,11 +298,14 @@ theorem laden_ruft_kein_exit (L : Lage) : Schritt.exit ∉ (laden L).1 := by
   by_cases hok : (bindeAlle 0 L.arenen).2 = true
   · simp only [hok, not_true_eq_false, if_false]
     split
-    · simp [hA3]
+    · simp only [List.append_assoc, List.mem_append, hA3, List.mem_map, List.mem_range, reduceCtorEq, and_false,
+  exists_const, List.mem_cons, List.not_mem_nil, or_self, not_false_eq_true]
     · split
-      · simp [hA3]
-      · split <;> simp [hA3]
-  · simp [hok, hA3]
+      · simp only [List.append_assoc, List.mem_append, hA3, List.mem_map, List.mem_range, reduceCtorEq, and_false,
+  exists_const, List.mem_cons, List.not_mem_nil, or_self, not_false_eq_true]
+      · split <;> simp only [List.append_assoc, List.cons_append, List.nil_append, List.mem_append, hA3, List.mem_map,
+  List.mem_range, reduceCtorEq, and_false, exists_const, List.mem_cons, or_self, not_false_eq_true]
+  · simp only [hok, Bool.false_eq_true, not_false_eq_true, ↓reduceIte, hA3]
 
 /-- **Roots start only after an init that answered 0 and fired no fail-stop.** -/
 theorem laden_start_nach_init (L : Lage) (w : Nat) (h : Schritt.start w ∈ (laden L).1) :
@@ -310,9 +318,11 @@ theorem laden_start_nach_init (L : Lage) (w : Nat) (h : Schritt.start w ∈ (lad
     · simp only [ha, ne_eq, not_true_eq_false, if_false] at h
       cases hs : L.stopp
       · exact ⟨ha, rfl, hA1 ▸ hok⟩
-      · simp [hs, hA4] at h
-    · simp [ha, hA4] at h
-  · simp [hok, hA4] at h
+      · simp only [hs, ↓reduceIte, List.append_assoc, List.mem_append, hA4, List.mem_map, List.mem_range,
+  reduceCtorEq, and_false, exists_const, List.mem_cons, List.not_mem_nil, or_self] at h
+    · simp only [ne_eq, ha, not_false_eq_true, ↓reduceIte, List.append_assoc, List.mem_append, hA4, List.mem_map,
+  List.mem_range, reduceCtorEq, and_false, exists_const, List.mem_cons, List.not_mem_nil, or_self] at h
+  · simp only [hok, Bool.false_eq_true, not_false_eq_true, ↓reduceIte, hA4] at h
 
 /-- **A refused load waits for every root it started** -- no thread of the unit outlives a
     load that did not succeed. -/
@@ -327,28 +337,30 @@ theorem laden_verweigert_wartet (L : Lage) (w : Nat) (hv : (laden L).2 = false)
       cases hs : L.stopp
       · simp only [hs, Bool.false_eq_true, if_false] at h hv ⊢
         by_cases hw : L.wurzeln.all id = true
-        · simp [hw] at hv
+        · simp only [hw, ↓reduceIte, List.append_assoc, List.cons_append, List.nil_append, Bool.true_eq_false] at hv
         · simp only [hw, Bool.false_eq_true, if_false] at h ⊢
-          have hS : Schritt.start w ∉ (List.range L.sperren).map Schritt.sperre := by simp
+          have hS : Schritt.start w ∉ (List.range L.sperren).map Schritt.sperre := by simp only [List.mem_map, List.mem_range, reduceCtorEq, and_false, exists_const, not_false_eq_true]
           have hk : w < L.wurzeln.length := by
             simp only [List.mem_append, List.mem_singleton] at h
             rcases h with (((h | h) | h) | h) | h
             · exact absurd h (hA4 w)
             · exact absurd h hS
-            · exact absurd h (by simp)
+            · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
             · simpa using h
-            · simp at h
+            · simp only [List.mem_map, List.mem_range, reduceCtorEq, and_false, exists_const] at h
           simp only [List.mem_append, List.mem_map, List.mem_range]
           exact Or.inr ⟨w, hk, rfl⟩
-      · simp [hs, hA4] at h
-    · simp [ha, hA4] at h
-  · simp [hok, hA4] at h
+      · simp only [hs, ↓reduceIte, List.append_assoc, List.mem_append, hA4, List.mem_map, List.mem_range,
+  reduceCtorEq, and_false, exists_const, List.mem_cons, List.not_mem_nil, or_self] at h
+    · simp only [ne_eq, ha, not_false_eq_true, ↓reduceIte, List.append_assoc, List.mem_append, hA4, List.mem_map,
+  List.mem_range, reduceCtorEq, and_false, exists_const, List.mem_cons, List.not_mem_nil, or_self] at h
+  · simp only [hok, Bool.false_eq_true, not_false_eq_true, ↓reduceIte, hA4] at h
 
 /-- **The unload waits for every root before the unit's exit**, and calls the exit once. -/
 theorem entladen_wartet_vor_exit (n w : Nat) (hw : w < n) :
     ∃ vor nach, entladen n = vor ++ [Schritt.exit] ++ nach ∧ Schritt.warte w ∈ vor ∧
       nach = [] := by
-  refine ⟨(List.range n).map Schritt.warte, [], by simp [entladen], ?_, rfl⟩
+  refine ⟨(List.range n).map Schritt.warte, [], by simp only [entladen, List.append_nil], ?_, rfl⟩
   simp only [List.mem_map, List.mem_range]
   exact ⟨w, hw, rfl⟩
 
@@ -418,7 +430,7 @@ theorem fwort_replicate (w0 k : Nat) (r : List FEreignis) :
 theorem ftake_vor_dem_ende (k m : Nat) (r : List FEreignis) (h : m ≤ k) :
     (List.replicate k FEreignis.lauf ++ r).take m = List.replicate m FEreignis.lauf := by
   induction k generalizing m with
-  | zero => simp at h; subst h; rfl
+  | zero => simp only [Nat.le_zero_eq] at h; subst h; rfl
   | succ k ih =>
     cases m with
     | zero => rfl
@@ -430,7 +442,7 @@ theorem ftake_alles (k m : Nat) (h : k < m) :
     (List.replicate k FEreignis.lauf ++ [FEreignis.ende]).take m =
       List.replicate k FEreignis.lauf ++ [FEreignis.ende] := by
   apply List.take_of_length_le
-  simp; omega
+  simp only [List.length_append, List.length_replicate, List.length_cons, List.length_nil, Nat.zero_add]; omega
 
 /-- **Soundness of the join (`faden_modul_warte_korrekt`).** The wait begins after the start
     returned -- a prefix holding the store of 1 and the start's answer (`n ≥ 2`) -- and returns
@@ -442,7 +454,7 @@ theorem faden_modul_warte_korrekt (gut : Bool) (k w0 n : Nat) (hn : 2 ≤ n)
     (gut = true ∧ (fSpur gut k).take n = fSpur gut k) ∨
       (gut = false ∧ FEreignis.lauf ∉ fSpur gut k) := by
   cases gut with
-  | false => right; exact ⟨rfl, by simp [fSpur]⟩
+  | false => right; exact ⟨rfl, by simp only [fSpur, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, not_false_eq_true]⟩
   | true =>
     left
     refine ⟨rfl, ?_⟩
@@ -455,7 +467,7 @@ theorem faden_modul_warte_korrekt (gut : Bool) (k w0 n : Nat) (hn : 2 ≤ n)
       have e := fwort_replicate 1 m []
       simp only [List.append_nil] at e
       rw [e] at h0
-      simp [fwort] at h0
+      simp only [fwort, Nat.succ_ne_self] at h0
     · rw [ftake_alles k m (by omega)]
 
 /-- The store of 1 is not decoration: the word is a ZEROED static, so without it a waiter that

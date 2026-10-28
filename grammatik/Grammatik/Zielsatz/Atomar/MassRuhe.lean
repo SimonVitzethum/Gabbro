@@ -42,7 +42,7 @@ theorem Mass.laenge_mitRuhe (m : Mass D) (f : D.Fn) : (m.mitRuhe (some f)).lengt
   List.length_map _
 
 theorem Mass.hat_mitRuhe (m : Mass D) (f : D.Fn) : m.mitRuhe.hat (some f) = m.hat f := by
-  simp [Mass.hat, Mass.mitRuhe]
+  simp only [hat, mitRuhe, List.isEmpty_map]
 
 /-! ## 2. The cycles, translated -/
 
@@ -66,12 +66,13 @@ theorem zykS_mitRuhe (f g : D.Fn) : zykS P.mitRuhe (fsRuhe fs) (some f) (some g)
 omit hvoll hA in
 theorem zykS_mitRuhe_ruhe (g : D.mitRuhe.Fn) : zykS P.mitRuhe (fsRuhe fs) none g = false := by
   unfold zykS
-  simp [ruftB_mitRuhe_ruhe]
+  simp only [ruftB_mitRuhe_ruhe, Bool.false_and, Bool.and_eq_false_imp, List.any_eq_false, Bool.false_eq_true,
+  not_false_eq_true, implies_true]
 
 omit hvoll hA in
 theorem zykS_mitRuhe_zur_ruhe (f : D.Fn) : zykS P.mitRuhe (fsRuhe fs) (some f) none = false := by
   unfold zykS zyklusMit
-  simp [reachB_mitRuhe_ruhe]
+  simp only [reachB_mitRuhe_ruhe, Bool.and_false, Bool.false_and]
 
 end Zyklus
 
@@ -302,7 +303,7 @@ theorem ewigFrei_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : ∀ w, AbgK P fs
   refine ⟨?_, ?_⟩
   · have := reachB_mitRuhe_nicht_ruhe P hA w
     simp only [fsRuhe] at this
-    simp [this]
+    simp only [this, Bool.not_false, Bool.true_or]
   · rw [← h]
     apply congrArg (List.all fs)
     funext x
@@ -315,10 +316,10 @@ theorem ewigFrei_mitRuhe_ruhe : ewigFrei P.mitRuhe (fsRuhe fs) none = true := by
   simp only [fsRuhe, List.all_cons, List.all_map, Function.comp_def, Bool.and_eq_true]
   refine ⟨?_, List.all_eq_true.2 fun x _ => ?_⟩
   · have hb : (befund P.mitRuhe none).ewig = false := rfl
-    simp [hb]
+    simp only [hb, Bool.not_false, Bool.or_true]
   · have := reachB_mitRuhe_ruhe (P := P) (fs := fs) x
     simp only [fsRuhe] at this
-    simp [this]
+    simp only [this, Bool.not_false, Bool.true_or]
 
 end EwigFrei
 

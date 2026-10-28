@@ -56,7 +56,7 @@ def cD [Conf] : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => sigC
-  eigner_nie_erzeugt := fun n _ _ _ h => by simp [sigC] at h
+  eigner_nie_erzeugt := fun n _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []

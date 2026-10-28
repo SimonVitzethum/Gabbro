@@ -147,7 +147,7 @@ theorem vertragAmOrtB_leer (P : Programm D) (L : ContrLauf D)
     (hempty : L.schritte = []) : VertragAmOrtB P L := by
   intro c hc
   rw [hempty] at hc
-  simp at hc
+  simp only [List.not_mem_nil] at hc
 
 /-- A place-check implies the quantified check at the SAME values: the link
     between `EnsAmRueck` and `QEnsuresB` when entry and return worlds agree.
@@ -210,7 +210,7 @@ def miniContrD : Deklaration where
   Fn := Bool
   sig := fun | true => 0 | false => 1
   sigNr := fun _ => miniContrSig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -226,7 +226,7 @@ def miniContrD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
@@ -459,7 +459,7 @@ theorem rueck_ohne_nachbedingung (P : Programm D) (O : Orakel D)
   refine ⟨hens_pos, ?_⟩
   intro e he hcon
   rw [hruf] at hcon
-  exact absurd hcon (by cases he <;> simp)
+  exact absurd hcon (by cases he <;> simp only [reduceCtorEq, not_false_eq_true])
 
 /-! ## CUTS
   - `rueck_ohne_nachbedingung`: the proved half is that an `.ok` outcome

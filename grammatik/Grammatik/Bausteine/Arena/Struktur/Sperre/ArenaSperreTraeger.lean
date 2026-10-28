@@ -55,7 +55,7 @@ theorem mem_lesGlobs {g : D.Glob} : g ∈ K.lesGlobs ↔
 theorem tab_mem_orte : Sum.inl A.tab ∈ K.orte := List.mem_cons_self
 
 theorem komm_mem_orte : Sum.inr A.komm ∈ K.orte := by
-  simp [orte]
+  simp only [orte, List.mem_cons, reduceCtorEq, List.mem_map, Sum.inr.injEq, exists_eq_right, true_or, or_true]
 
 theorem glob_mem_orte {g : D.Glob} (h : g ∈ K.lesGlobs) : Sum.inr g ∈ K.orte := by
   simp only [orte, List.mem_cons, List.mem_map]
@@ -107,19 +107,19 @@ noncomputable def Dekl.sperr : SperrInv D where
 variable {K L0}
 
 theorem Dekl.sperr_inv_iff (s : Speicher D) : (K.sperr L0).inv L0 s = true ↔ K.Ok (s.welt []) := by
-  simp [Dekl.sperr]
+  simp only [sperr, Bool.ite_true_right, decide_true, Bool.not_true, Bool.false_or, decide_eq_true_eq]
 
 theorem Dekl.sperr_inv_iff' (σ : World D) : (K.sperr L0).inv L0 σ.speicher = true ↔ K.Ok σ := by
   rw [Dekl.sperr_inv_iff, Dekl.ok_spur]
 
 theorem Dekl.sperr_inv_andere {L : D.Lock} (h : L ≠ L0) (s : Speicher D) : (K.sperr L0).inv L s = true := by
-  simp [Dekl.sperr, h]
+  simp only [sperr, Bool.ite_true_right, h, decide_false, Bool.not_false, Bool.true_or]
 
 theorem Dekl.sperr_orte_andere {L : D.Lock} (h : L ≠ L0) : (K.sperr L0).orte L = [] := by
-  simp [Dekl.sperr, h]
+  simp only [sperr, Bool.ite_true_right, h, ↓reduceIte]
 
 theorem Dekl.sperr_orte_self : (K.sperr L0).orte L0 = K.orte := by
-  simp [Dekl.sperr]
+  simp only [sperr, Bool.ite_true_right, ↓reduceIte]
 
 /-- **The invariant reads only the protected carriers** (`SperrInvLokal`, the user's duty in (b), discharged here
     once for every arena). -/
@@ -134,7 +134,7 @@ theorem Dekl.sperr_lokal : SperrInvLokal (K.sperr L0) := by
     have := Dekl.ok_gleich_wort_iff (K := K) hs hg
     simp only [Dekl.sperr, if_true]
     exact decide_eq_decide.mpr this.symm
-  · simp [Dekl.sperr, hL]
+  · simp only [sperr, Bool.ite_true_right, hL, decide_false, Bool.not_false, Bool.true_or]
 
 /-- **`SperrInvOk` of the arena family**, from the one declaration fact: every carrier of the arena is guarded by `L0`
     (`protects`; the checker's `sperrOrte`). -/

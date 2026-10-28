@@ -60,7 +60,8 @@ theorem genInv_gibt (_P : Programm D) (_O : Orakel D) (_passes : Nat)
   · show ForeignExclusion (M.lauf ++ genEigen f [Ereignis.gibt L])
     exact genAuss_gibt M.lauf f L hM.auss
   · show (M.welten ++ [M.speicher.welt (Ereignis.gibt L :: M.spuren f)]).length = (M.tiefe + 1) + 1
-    simp [List.length_append, hM.tiefe_len]
+    simp only [List.length_append, hM.tiefe_len, List.length_cons, List.length_nil, Nat.zero_add,
+  Nat.add_left_cancel_iff]
 
 /-- Every step preserves the invariant. -/
 theorem genSchritt_inv (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
@@ -336,11 +337,11 @@ def pcAdvance (pc : PCStand) (f : Faden) : PCStand :=
 
 theorem pcAdvance_self (pc : PCStand) (f : Faden) :
     pcAdvance pc f f = pc f + 1 := by
-  simp [pcAdvance]
+  simp only [pcAdvance, ↓reduceIte, Nat.add_left_cancel_iff]
 
 theorem pcAdvance_noteq (pc : PCStand) (f g : Faden) (h : g ≠ f) :
     pcAdvance pc f g = pc g := by
-  simp [pcAdvance, h]
+  simp only [pcAdvance, h, ↓reduceIte]
 
 /-- The marks named anywhere in one thread's program text. -/
 def PCProg.marks (prog : PCProg D) (f : Faden) : List D.Marke :=

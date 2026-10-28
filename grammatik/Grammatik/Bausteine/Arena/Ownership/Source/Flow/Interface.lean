@@ -103,7 +103,7 @@ theorem Output.check_sound (A : FreiForm D) (c : Context) (g : Ghost) (frame : F
     | val e =>
       have ht := (Bool.and_eq_true_iff.mp checked).2
       cases ho : origin c e with
-      | none => simp [ho] at ht
+      | none => simp only [ho, Bool.false_eq_true] at ht
       | some i =>
         rw [ho] at ht
         obtain ⟨hmode, hfinish⟩ := Bool.and_eq_true_iff.mp ht

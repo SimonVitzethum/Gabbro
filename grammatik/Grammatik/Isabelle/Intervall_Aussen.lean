@@ -51,12 +51,12 @@ theorem huelle_haelt (h_le_refl : ∀ a, le a a)
     (h_nachbarn : ∀ z, le (nd (fl z)) z ∧ le z (nu (fl z))) (z : R) :
     le (aussenLo fl nd z) z ∧ le z (aussenHi fl nu z) := by
   by_cases h : fl z = z
-  · have e1 : aussenLo fl nd z = z := by simp [aussenLo, h]
-    have e2 : aussenHi fl nu z = z := by simp [aussenHi, h]
+  · have e1 : aussenLo fl nd z = z := by simp only [aussenLo, h, ↓reduceIte]
+    have e2 : aussenHi fl nu z = z := by simp only [aussenHi, h, ↓reduceIte]
     rw [e1, e2]
     exact ⟨h_le_refl _, h_le_refl _⟩
-  · have e1 : aussenLo fl nd z = nd (fl z) := by simp [aussenLo, h]
-    have e2 : aussenHi fl nu z = nu (fl z) := by simp [aussenHi, h]
+  · have e1 : aussenLo fl nd z = nd (fl z) := by simp only [aussenLo, h, ↓reduceIte]
+    have e2 : aussenHi fl nu z = nu (fl z) := by simp only [aussenHi, h, ↓reduceIte]
     rw [e1, e2]
     exact h_nachbarn z
 
@@ -94,7 +94,7 @@ theorem summe_liegt_in_der_gerechneten_schranke
 /-- Sharpness: exact means UNCHANGED. -/
 theorem exakt_wandert_nicht {z : R} (h : fl z = z) :
     aussenLo fl nd z = z ∧ aussenHi fl nu z = z := by
-  simp [aussenLo, aussenHi, h]
+  simp only [aussenLo, h, ↓reduceIte, aussenHi, and_self]
 
 end Rundung
 

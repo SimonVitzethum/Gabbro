@@ -48,7 +48,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         refine ⟨_ :: leseEv σ Λ (.inl t :: i.orte), rfl, ?_⟩
         exact evOk_append (X := [_]) (evOk_schreibT hw) (evOk_lese σ Λ hC)
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .axiomCall a args _ hw hg hd hgd, _, hC, σ, ρ, hh, σ', h => by
       simp only [execStmt] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh
@@ -67,7 +67,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
           evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese σ Λ hC))⟩
         rw [e1, hX, List.append_assoc]
         rfl
-      · simp [Ausgang.welt] at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regWrite r _ e, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨leseEv σ Λ e.orte, rfl, evOk_lese σ Λ hC⟩
@@ -96,17 +96,17 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .next _, _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨[], rfl, evOk_nil⟩
-  | .ite .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onOption .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onTag .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .onWhy .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .call .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .callInd .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .locks .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .breaking .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .traverse .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .retry .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
-  | .forever .., hleaf, _, _, _, _, _, _ => by simp [Stmt.istBlatt] at hleaf
+  | .ite .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .onOption .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .onTag .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .onWhy .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .call .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .callInd .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .locks .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .breaking .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .traverse .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .retry .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .forever .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
 
 set_option hygiene false in
 /-- A step whose trace grows by the reads of one list of carriers of the

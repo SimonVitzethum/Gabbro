@@ -154,7 +154,7 @@ def bedD : Deklaration where
   Fn := Bool
   sig := fun | true => 0 | false => 1
   sigNr := fun | 0 => bedSigSchreib | _ => bedSigLies
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -203,7 +203,7 @@ theorem bedMemWechsel : bedW1.slots true 0 () ≠ bedW0.slots true 0 () := by
   rw [bedW1_slot, bedW0_slot]
   intro hcon
   have hn := congrArg Zahl.n hcon
-  simp [bedV100] at hn
+  simp only [bedV100, Int.reduceEq] at hn
 
 /-- The writer writes `konto`. -/
 theorem bedSchreibt_konto : TraegerSchreibt (D := bedD) true (.inl true) = true :=
@@ -273,14 +273,16 @@ def bedJ : GemeinsamerLauf (D := bedD) bedNb :=
         subst hf
         subst hv
         subst hn
-        exact ⟨by simp, bedRahmen⟩
+        exact ⟨by simp only [List.mem_cons, List.not_mem_nil, or_false], bedRahmen⟩
       | succ n =>
         cases n with
-        | zero => simp at hkn
-        | succ n => simp at hkv
+        | zero => simp only [Nat.zero_add, Nat.reduceAdd, List.length_cons, List.length_nil, Nat.lt_irrefl, not_false_eq_true,
+  getElem?_neg, reduceCtorEq] at hkn
+        | succ n => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.not_lt, Nat.le_add_left,
+  getElem?_neg, reduceCtorEq] at hkv
     hPaar := by
       intro f hf g hg hne
-      simp at hf hg
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hf hg
       subst hf
       subst hg
       exact absurd rfl hne
@@ -288,26 +290,26 @@ def bedJ : GemeinsamerLauf (D := bedD) bedNb :=
       show Gesittet ([] : Lauf bedD)
       refine ⟨?_, ?_, ?_, ?_, ?_⟩
       · intro f j
-        have hsp : Lauf.spur ([] : Lauf bedD) f j = [] := by simp [Lauf.spur]
+        have hsp : Lauf.spur ([] : Lauf bedD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
         rw [hsp]
         exact konsistent_nil
       · intro f j e he
-        have hsp : Lauf.spur ([] : Lauf bedD) f j = [] := by simp [Lauf.spur]
+        have hsp : Lauf.spur ([] : Lauf bedD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
         rw [hsp] at he
-        simp at he
+        simp only [List.not_mem_nil] at he
       · intro j f L h hi g hne
-        simp at hi
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
       · intro i j f g m s s' ei ej hi hj hm hm'
-        simp at hi
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
       · intro i j f g o ei ej hi hj ht1 ht2 hu
-        simp at hi
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     hBeschraenkt := by
       show BeschraenkteVerschraenkung (D := bedD) bedNb ([] : Lauf bedD)
       intro i j f g ei ej hi hj hne
-      simp at hi
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
     hEintritt := by
       intro f hf
-      simp at hf
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
       subst hf
       show HeldGenau (Signatur.anfang bedD (bedD.signatur true)) bedW0.haelt
       rw [bedAnfang_schreib]
@@ -328,13 +330,13 @@ def bedJ : GemeinsamerLauf (D := bedD) bedNb :=
         exact List.mem_singleton.mpr rfl
     hSchuld := by
       intro f hf
-      simp at hf
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
       subst hf
       intro i hs
       exact nomatch i
     hInvSicht := by
       intro f hf
-      simp at hf
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
       subst hf
       intro i hs
       exact nomatch i
@@ -411,7 +413,7 @@ theorem bedGuardBedarf : ∀ c : bedD.Tab ⊕ bedD.Glob,
   intro c h
   obtain ⟨g, hg, hw⟩ := h
   rw [bedJ_faeden] at hg
-  simp at hg
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hg
   subst hg
   cases c with
   | inl t =>
@@ -441,7 +443,7 @@ theorem bedReturn : ∀ (c : bedD.Tab ⊕ bedD.Glob) (L : bedD.Lock) (k : Nat)
   rw [bedJ_welten] at hkn
   have hk0 : k = 0 := by
     have hlen : k + 1 < [bedW0, bedW1].length := lt_of_belegt _ _ _ hkn
-    simp at hlen
+    simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd] at hlen
     omega
   subst hk0
   have hn : bedW1 = nach := by simpa using hkn
@@ -457,12 +459,12 @@ theorem bedWatch : ∀ (c : bedD.Tab ⊕ bedD.Glob) (L : bedD.Lock) (k : Nat)
         TraegerSchreibt (bedJ.code g) c = true → L ∈ bedD.haelt (bedJ.code g) := by
   intro c L k g vor nach hB hg hkg hkv hkn hw
   rw [bedJ_faeden] at hg
-  simp at hg
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hg
   subst hg
   rw [bedJ_welten] at hkn
   have hk0 : k = 0 := by
     have hlen : k + 1 < [bedW0, bedW1].length := lt_of_belegt _ _ _ hkn
-    simp at hlen
+    simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd] at hlen
     omega
   subst hk0
   cases c with
@@ -487,7 +489,7 @@ theorem bedGuardEx_falsch :
   intro h
   obtain ⟨L, hL⟩ := h (.inl false)
   simp only [Bewacht, bedBraucht_config] at hL
-  simp at hL
+  simp only [List.not_mem_nil] at hL
 
 /-- **Inhabitation (rule 13).** All premises of
     `invariantenKontext_aus_disziplin_bedarf` hold jointly on the
@@ -535,7 +537,9 @@ theorem invariantenKontext_aus_disziplin_bedarf_zeuge :
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
   refine ⟨bedAb, bedFrameT, bedFrameG, bedGuardBedarf, bedEntry, bedReturn,
     bedWatch, ?_, bedGuardEx_falsch, ⟨true, bedSchreibt_konto⟩,
-    ⟨0, bedW0, bedW1, by simp [bedJ_welten], by simp [bedJ_welten],
+    ⟨0, bedW0, bedW1, by simp only [bedJ_welten, List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ,
+  getElem?_pos, List.getElem_cons_zero], by simp only [bedJ_welten, Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.lt_add_one,
+  getElem?_pos, List.getElem_cons_succ, List.getElem_cons_zero],
       Ne.symm bedMemWechsel⟩,
     refPC2, refB_pc2, refB_pc_erreicht, refB_pc_schreibt⟩
   exact invariantenKontext_aus_disziplin_bedarf bedNb bedJ bedI bedWc bedGc

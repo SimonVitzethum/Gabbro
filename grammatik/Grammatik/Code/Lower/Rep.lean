@@ -150,7 +150,7 @@ theorem encM_ty (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = true)
     (encM lay τ v).ty = memTy τ := by
   cases τ <;> simp_all [supp, encM, encR, memTy, regTy, Val.ty, Val.ofInt, Val.bool]
   rename_i n rw
-  cases D.tabNr n <;> simp [Val.ty]
+  cases D.tabNr n <;> simp only
 
 theorem dec_enc_encM (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = true) :
     Ty.dec (memTy τ) (Val.enc (encM lay τ v)) = some (encM lay τ v) := by
@@ -163,7 +163,7 @@ theorem dec_enc_encM (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = 
   | opt n => exact dec_enc_int _ _
   | why n => exact dec_enc_int _ _
   | sum cs => exact dec_enc_int _ _
-  | _ => simp [supp] at h
+  | _ => simp only [supp, Bool.false_eq_true] at h
 
 /-! ## The world in memory -/
 
@@ -183,7 +183,7 @@ theorem load_blk_lt {m : Mem} (hw : m.Wf) {b : Nat} {o : Int} {t : Ty} {v : Val}
   apply hw
   unfold Mem.load at h
   cases hb : m.blks b with
-  | none => simp [hb] at h
+  | none => simp only [hb, reduceCtorEq] at h
   | some _ => rfl
 
 /-- Two different fields (or slots) of one table do not overlap. -/
@@ -199,7 +199,7 @@ theorem Layout.off_disj {lay : Layout D} (hL : LayoutOk lay) (t : D.Tab) (k k' :
     intro i o ty h
     cases hr : lay.rty t with
     | fld a b => rw [hr] at h; exact Ty.field_in_size a b i o ty h
-    | _ => rw [hr] at h; simp [Ty.fieldOff] at h
+    | _ => rw [hr] at h; simp only [Ty.fieldOff, reduceCtorEq] at h
   have s1 := sz _ _ _ h1
   have s2 := sz _ _ _ h2
   have st1 := Ty.store_le_size _ (memTy_scalar hs)
@@ -266,25 +266,25 @@ theorem rep_store_slot {lay : Layout D} (hL : LayoutOk lay) {σ : World D} {m m'
       · subst hkk
         by_cases hff : f' = f
         · subst hff
-          have e : (σ.storeSlot t' k' f' v).slots t' k' f' = v := by simp [World.storeSlot]
+          have e : (σ.storeSlot t' k' f' v).slots t' k' f' = v := by simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte]
           rw [e]
           exact load_store_of h (dec_enc_encM lay v hs)
         · have e : (σ.storeSlot t' k' f v).slots t' k' f' = σ.slots t' k' f' := by
-            simp [World.storeSlot, hff]
+            simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte, hff]
           rw [e, load_store_other h (Or.inr (by
             rcases Layout.off_disj hL t' k' k' f' f hs' hs h0' h0' (Or.inr hff) with d | d
             · exact Or.inl d
             · exact Or.inr d))]
           exact hR.1 t' k' f' hs' h0' h1'
       · have e : (σ.storeSlot t' k f v).slots t' k' f' = σ.slots t' k' f' := by
-          simp [World.storeSlot, hkk]
+          simp only [World.storeSlot, ↓reduceDIte, hkk, ↓reduceIte]
         rw [e, load_store_other h (Or.inr (by
           rcases Layout.off_disj hL t' k' k f' f hs' hs h0' hk0 (Or.inl hkk) with d | d
           · exact Or.inl d
           · exact Or.inr d))]
         exact hR.1 t' k' f' hs' h0' h1'
     · have e : (σ.storeSlot t k f v).slots t' k' f' = σ.slots t' k' f' := by
-        simp [World.storeSlot, ht]
+        simp only [World.storeSlot, ht, ↓reduceDIte]
       rw [e, load_store_other h (Or.inl (fun e => ht (hL.tinj _ _ e)))]
       exact hR.1 t' k' f' hs' h0' h1'
   · have e : (σ.storeSlot t k f v).globs g = σ.globs g := rfl
@@ -302,11 +302,11 @@ theorem rep_store_glob {lay : Layout D} (hL : LayoutOk lay) {σ : World D} {m m'
     exact hR.1 t' k' f' hs' h0' h1'
   · by_cases hg : g' = g
     · subst hg
-      have e : (σ.storeGlob g' v).globs g' = v := by simp [World.storeGlob]
+      have e : (σ.storeGlob g' v).globs g' = v := by simp only [World.storeGlob, ↓reduceDIte]
       rw [e]
       have hl := load_store_of h (dec_enc_encM lay v hs)
       exact ⟨⟨_, hl⟩, fun _ => hl⟩
-    · have e : (σ.storeGlob g v).globs g' = σ.globs g' := by simp [World.storeGlob, hg]
+    · have e : (σ.storeGlob g v).globs g' = σ.globs g' := by simp only [World.storeGlob, hg, ↓reduceDIte]
       rw [e,
         load_store_other h (Or.inl (fun e => hg (hL.ginj _ _ e)))]
       exact hR.2 g' hs'

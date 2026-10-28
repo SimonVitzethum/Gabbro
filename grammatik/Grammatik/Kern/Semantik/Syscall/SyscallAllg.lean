@@ -107,7 +107,8 @@ def klonTorArm : CloneAbiG Arm.SysAbiArm := ⟨Arm.gateKlon, Arm.klonStapelReg�
     registers distinct, `x8` no input, `x1` bound and neither answer nor clobbered. -/
 theorem klonTorArm_good : klonTorArm.good := by
   have hg : ArchAbi.gut Arm.gateKlon :=
-    arm_tore_arch_gut (Arm.gateKlon, 220) (by simp [Arm.alleTore])
+    arm_tore_arch_gut (Arm.gateKlon, 220) (by simp only [Arm.alleTore, List.mem_cons, Prod.mk.injEq, Nat.reduceEqDiff, and_false, List.not_mem_nil,
+  or_false, or_true])
   obtain ⟨h1, h2, _, h4⟩ := Arm.klon_stapelreg_gut
   exact ⟨hg, h1, h2, h4⟩
 
@@ -214,7 +215,7 @@ theorem swEffArm : ∀ σ ρ σ' roh, swKbehArm swKArm.nummer swKArm.abi σ ρ �
   · intro t _ w hw
     have hnil : swD.braucht t = [] := rfl
     rw [hnil] at hw
-    simp at hw
+    simp only [List.not_mem_nil] at hw
   · intro g hg
     exact nomatch g
   · intro m st hm

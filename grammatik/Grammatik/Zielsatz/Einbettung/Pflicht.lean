@@ -407,7 +407,7 @@ theorem orakelΦ_regLokal {O' : Orakel D'} (hRL : RegLokal O') : RegLokal (E.ora
     by_cases hz : (D.gtyp g).zeigerfrei = true
     · simp only [hz, if_true]
       apply hRL.2
-      refine ⟨fun t' ht' => by simp at ht', fun g' hg' => ?_⟩
+      refine ⟨fun t' ht' => by simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at ht', fun g' hg' => ?_⟩
       rw [List.mem_singleton] at hg'
       cases hg'
       exact E.bild_globs hZ (hΦ σ₁) (hΦ σ₂) hz (hg.2 g (List.mem_singleton.mpr rfl))

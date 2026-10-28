@@ -91,12 +91,12 @@ def rufUpdateF (m : Faden → RufFadenF D) (f : Faden) (z : RufFadenF D) :
 
 theorem rufUpdateF_self (m : Faden → RufFadenF D) (f : Faden) (z : RufFadenF D) :
     rufUpdateF m f z f = z := by
-  simp [rufUpdateF]
+  simp only [rufUpdateF, ↓reduceIte]
 
 theorem rufUpdateF_noteq (m : Faden → RufFadenF D) (f g : Faden) (h : g ≠ f)
     (z : RufFadenF D) :
     rufUpdateF m f z g = m g := by
-  simp [rufUpdateF, h]
+  simp only [rufUpdateF, h, ↓reduceIte]
 
 /-- **One step of the call machine with local environments.**
     `blatt`: the running frame's head statement executes through `execStmt`
@@ -293,7 +293,7 @@ theorem rufLogPasstF_mem_eintritt (ks : List (Σ f : D.Fn, Env D (D.params f) ×
     RufEreignisF.eintritt k.1 k.2.1 k.2.2 ∈ log := by
   induction h with
   | leer =>
-      simp at hmem
+      simp only [List.not_mem_nil] at hmem
   | eintritt s l f rho s0 htail ih =>
       rw [List.mem_cons] at hmem
       rcases hmem with hmem | hmem
@@ -326,12 +326,12 @@ theorem rufLogPasstF_gedeckt (ks : List (Σ f : D.Fn, Env D (D.params f) × Worl
   induction h with
   | leer =>
       intro f rho v s0 s1 hm
-      simp at hm
+      simp only [List.not_mem_nil] at hm
   | eintritt ks log f rho s0 htail ih =>
       intro g rho' v s0' s1 hm
       rw [List.mem_cons] at hm
       rcases hm with hm | hm
-      · simp at hm
+      · simp only [reduceCtorEq] at hm
       · have hmem := ih g rho' v s0' s1 hm
         rw [List.mem_cons]
         exact Or.inr hmem
@@ -359,7 +359,7 @@ theorem RufFadenSchluesselF_ruf (z : RufFadenF D)
     RufFadenSchluesselF
       ⟨z.kopf :: z.stapel, neu, spur, log⟩ =
       RufSchluesselF neu :: RufFadenSchluesselF z := by
-  simp [RufFadenSchluesselF]
+  simp only [RufFadenSchluesselF, List.map_cons]
 
 /-- Key-stack helper: the `blatt` step changes the residue (and the
     stored local environment) but keeps function, parameters, and entry
@@ -373,7 +373,7 @@ theorem RufFadenSchluesselF_blatt (z : RufFadenF D)
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l, Γ, Λ', ρ', rb⟩⟩,
        z.spur, z.log⟩ =
       RufFadenSchluesselF z := by
-  simp [RufFadenSchluesselF, RufSchluesselF]
+  simp only [RufFadenSchluesselF, List.map_cons, RufSchluesselF]
 
 /-- The machine invariant: every thread's log matches its key stack. -/
 def RufMaschinePasstF (M : RufMaschineF D) : Prop :=

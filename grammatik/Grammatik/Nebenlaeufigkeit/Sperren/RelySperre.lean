@@ -31,7 +31,7 @@ theorem lese_globs_gleich (σ : World D) (Λ : List (Res D))
 theorem storeGlob_fremd_global (σ : World D) {x g : D.Glob} (h : x ≠ g)
     (v : Wert D (D.gtyp g)) :
     (σ.storeGlob g v).globs x = σ.globs x := by
-  simp [World.storeGlob, h]
+  simp only [World.storeGlob, h, ↓reduceDIte]
 
 /-- A slot write leaves every global untouched. -/
 theorem schreibSlot_globs_gleich (σ : World D) (u : D.Tab) (Λ : List (Res D))
@@ -133,18 +133,18 @@ theorem blatt_erhaelt_globs
       · simp only [Ausgang.welt, Option.some.injEq] at hstep
         subst hstep
         rfl
-      · simp [Ausgang.welt] at hstep
-  | ite c tb eb => simp [Stmt.istBlatt] at hleaf
-  | onOption o pb ab => simp [Stmt.istBlatt] at hleaf
-  | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
-  | call fn args hp hr => simp [Stmt.istBlatt] at hleaf
-  | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
-  | locks Lk hr body => simp [Stmt.istBlatt] at hleaf
-  | breaking ii body => simp [Stmt.istBlatt] at hleaf
-  | traverse u inv body => simp [Stmt.istBlatt] at hleaf
-  | retry n bis body ueber => simp [Stmt.istBlatt] at hleaf
-  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+      · simp only [Ausgang.welt, reduceCtorEq] at hstep
+  | ite c tb eb => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onOption o pb ab => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onTag v arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | call fn args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | locks Lk hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | traverse u inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | retry n bis body ueber => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args _ _ _ _ hgd =>
       simp only [execStmt] at hstep
       split at hstep
@@ -173,7 +173,7 @@ theorem blatt_erhaelt_globs
               rw [← hfst]
               exact hframe.2 x heq
             exact e1.trans (lese_globs_gleich _ _ _ _)
-      · simp [Ausgang.welt] at hstep
+      · simp only [Ausgang.welt, reduceCtorEq] at hstep
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
@@ -248,7 +248,7 @@ theorem sperre_exklusiv (P : Programm D) (O : Orakel D) (passes : Nat) (hO : Gut
       intro f g hfg L hLf
       have e : (GenStart sp).spuren f = [] := rfl
       rw [e] at hLf
-      simp [offen] at hLf
+      simp only [offen, List.not_mem_nil] at hLf
   | schritt M M' f0 _ hs ih =>
       intro f g hfg L hLf
       cases hs with
@@ -468,24 +468,24 @@ theorem wit_leaf :
       Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
         [Res.held (D := refD) ()] (refPC1pre.weltVon 1).haelt] := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   have hmark : ∀ e ∈ [Ereignis.zugriff () true [Res.held (D := refD) ()]
       (refPC1pre.weltVon 1).haelt], ∀ (m : refD.Marke) (st : Nat),
       Res.marke m st ∈ e.lambda →
         m ∈ PCAtom.marks (PCAtom.leaf [Res.held (D := refD) ()]
           [Sum.inl (())]) := by
     intro e hm m st hlam
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.lambda] at hlam
+    simp only [Ereignis.lambda, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hlam
   have hcar : ∀ e ∈ [Ereignis.zugriff () true [Res.held (D := refD) ()]
       (refPC1pre.weltVon 1).haelt], ∀ o, e.traeger = some o →
         o ∈ PCAtom.carriers (PCAtom.leaf [Res.held (D := refD) ()]
           [Sum.inl (())]) := by
     intro e hm o ho
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.traeger] at ho
+    simp only [Ereignis.traeger, Option.some.injEq] at ho
     subst ho
     have hc : PCAtom.carriers (D := refD)
         (PCAtom.leaf [Res.held (D := refD) ()] [Sum.inl (())]) =
@@ -534,14 +534,14 @@ theorem wit_step0 :
     have e : refPC2.spuren 0 = [] := rfl
     rw [e]
     intro L
-    simp [offen]
+    simp only [List.not_mem_nil, offen]
   have hstep : (execStmt (D := refD) (V := vertragVon refD refEin) refO 0
       keinRuf witStmt0 (refPC2.weltVon 0) witRho0).welt = some witW0' := rfl
   have hneu : witW0'.spur = [] ++ refPC2.spuren 0 := rfl
   have hkn : ∀ (L : refD.Lock) (h : List refD.Lock),
       Ereignis.nimmt L h ∉ ([] : List (Ereignis refD)) := by
     intro L h hm
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   have hpc : (witProg 0)[refB_pc2 0]? =
       some (PCAtom.leaf (D := refD) [] []) := rfl
   refine PCSchritt.leaf refPC2 refB_pc2 0 (V := vertragVon refD refEin)
@@ -556,9 +556,9 @@ theorem wit_step0 :
   · exact hpc
   · rfl
   · intro e he m st hm
-    simp at he
+    simp only [List.not_mem_nil] at he
   · intro e he o ho
-    simp at he
+    simp only [List.not_mem_nil] at he
 
 /-- Thread 1 holds the lock after the writing leaf. -/
 theorem wit_haelt1 : (() : refD.Lock) ∈ offen (refPC2.spuren 1) := by
@@ -737,24 +737,24 @@ theorem gLeaf :
       Ereignis.nimmt L h ∉ [Ereignis.gzugriff () true
         [Res.held (D := gD) ()] (gM1.weltVon 1).haelt] := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   have hmark : ∀ e ∈ [Ereignis.gzugriff () true [Res.held (D := gD) ()]
       (gM1.weltVon 1).haelt], ∀ (m : gD.Marke) (st : Nat),
       Res.marke m st ∈ e.lambda →
         m ∈ PCAtom.marks (PCAtom.leaf [Res.held (D := gD) ()]
           [Sum.inr (())]) := by
     intro e hm m st hlam
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.lambda] at hlam
+    simp only [Ereignis.lambda, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hlam
   have hcar : ∀ e ∈ [Ereignis.gzugriff () true [Res.held (D := gD) ()]
       (gM1.weltVon 1).haelt], ∀ o, e.traeger = some o →
         o ∈ PCAtom.carriers (PCAtom.leaf [Res.held (D := gD) ()]
           [Sum.inr (())]) := by
     intro e hm o ho
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.traeger] at ho
+    simp only [Ereignis.traeger, Option.some.injEq] at ho
     subst ho
     have hc : PCAtom.carriers (D := gD)
         (PCAtom.leaf [Res.held (D := gD) ()] [Sum.inr (())]) =
@@ -801,7 +801,7 @@ theorem gStep0 :
     have e : gM2.spuren 0 = [] := rfl
     rw [e]
     intro L
-    simp [offen]
+    simp only [List.not_mem_nil, offen]
   have hstep : (execStmt (D := gD)
       (V := Vertrag.vonSig gD (gD.signatur ())) gO 0
       keinRuf gStmt0 (gM2.weltVon 0) gRho0).welt = some gW0' := rfl
@@ -809,7 +809,7 @@ theorem gStep0 :
   have hkn : ∀ (L : gD.Lock) (h : List gD.Lock),
       Ereignis.nimmt L h ∉ ([] : List (Ereignis gD)) := by
     intro L h hm
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   have hpc : (gProg 0)[gPc2 0]? =
       some (PCAtom.leaf (D := gD) [] []) := rfl
   refine PCSchritt.leaf gM2 gPc2 0 (Vertrag.vonSig gD (gD.signatur ()))
@@ -824,9 +824,9 @@ theorem gStep0 :
   · exact hpc
   · rfl
   · intro e he m st hm
-    simp at he
+    simp only [List.not_mem_nil] at he
   · intro e he o ho
-    simp at he
+    simp only [List.not_mem_nil] at he
 
 /-- Thread 1 holds the lock after the global write. -/
 theorem gHaelt1 : (() : gD.Lock) ∈ offen (gM2.spuren 1) := by

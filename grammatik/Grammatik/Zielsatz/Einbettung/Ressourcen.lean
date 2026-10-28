@@ -89,9 +89,9 @@ theorem erase_mapE (Λ : List (Res D)) (a : Res D) :
   | cons b Λ ih =>
       by_cases h : b = a
       · subst h
-        simp
+        simp only [List.erase_cons_head, List.map_cons]
       · have h' : E.resE b ≠ E.resE a := fun e => h (E.resE_inj e)
-        simp [h, h', ih]
+        simp only [beq_iff_eq, h, not_false_eq_true, List.erase_cons_tail, List.map_cons, ih, h']
 
 theorem map_heldE (l : List D.Lock) :
     (l.map (Res.held (D := D))).map E.resE = (l.map E.lock).map (Res.held (D := D')) := by

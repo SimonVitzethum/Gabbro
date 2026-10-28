@@ -43,7 +43,7 @@ theorem passArgument_owned {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       i ∉ flow.loans ∧ next.remaining = flow.remaining.kill i ∧ next.loans = flow.loans := by
   unfold passArgument at hp
   cases hc : consume flow.remaining e with
-  | none => simp [hc] at hp
+  | none => simp only [hc, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at hp
   | some pair =>
     obtain ⟨c, i⟩ := pair
     rw [hc] at hp
@@ -66,13 +66,14 @@ theorem consumed_argument_cannot_repeat {Γ : Ctx} {Λ : List (Res D)} {τ υ : 
   subst j
   have ho : origin next.remaining second = some i := by rw [he]; exact hs
   have hr : next.remaining.rights i = none := by rw [he]; exact Context.kill_at _ _
-  simp [passArgument, consume, ho, hr]
+  simp only [passArgument, consume, ho, Option.bind_eq_bind, Option.bind_some, hr, reduceCtorEq, ↓reduceIte,
+  Option.bind_none, Option.isSome_none, Bool.false_eq_true, and_self]
 
 theorem loan_reservation_blocks_consumption {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (flow : ArgumentFlow) (e : Expr D Γ Λ τ) (i : Nat)
     (hi : origin flow.remaining e = some i) (hr : flow.remaining.rights i = some .owned)
     (loaned : i ∈ flow.loans) : passArgument flow (some .owned) e = none := by
-  simp [passArgument, consume, hi, hr, loaned]
+  simp only [passArgument, consume, hi, Option.bind_eq_bind, Option.bind_some, hr, ↓reduceIte, loaned]
 
 #print axioms consumed_argument_cannot_repeat
 #print axioms loan_reservation_blocks_consumption

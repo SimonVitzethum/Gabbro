@@ -24,7 +24,7 @@ abbrev Λ0 : List (Res bD) := Signatur.anfang bD (bD.signatur ())
 theorem hpB : RufPasst bD (vertragVon bD ()) (bD.signatur ()) Λ0 where
   hw := fun t => t.elim
   hg := fun g => g.elim
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩
   hh := fun L => L.elim
 
 /-- `return;` -/

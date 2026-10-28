@@ -629,11 +629,11 @@ theorem stecken_heisst_benannt (a : AusF V l Γ) (h : IstStecken a) :
   | fehler k => trivial
   | widen o =>
       cases o with
-      | ok σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
-      | zurueck σ v => exact absurd h (by simp [IstStecken, endZustandF])
-      | why σ r => exact absurd h (by simp [IstStecken, endZustandF])
-      | leave h' σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
-      | next h' σ ρ => exact absurd h (by simp [IstStecken, endZustandF])
+      | ok σ ρ => exact absurd h (by simp only [IstStecken, endZustandF, reduceCtorEq, not_false_eq_true])
+      | zurueck σ v => exact absurd h (by simp only [IstStecken, endZustandF, reduceCtorEq, not_false_eq_true])
+      | why σ r => exact absurd h (by simp only [IstStecken, endZustandF, reduceCtorEq, not_false_eq_true])
+      | leave h' σ ρ => exact absurd h (by simp only [IstStecken, endZustandF, reduceCtorEq, not_false_eq_true])
+      | next h' σ ρ => exact absurd h (by simp only [IstStecken, endZustandF, reduceCtorEq, not_false_eq_true])
       | logik e => trivial
       | hardware e => trivial
 

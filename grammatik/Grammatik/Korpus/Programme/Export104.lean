@@ -89,7 +89,7 @@ abbrev gD : Deklaration where
   Fn := GFn
   sig := fun | .einzahlen => 0 | .lies => 1
   sigNr := fun | 0 => gSig_einzahlen | 1 => gSig_lies | _ => gSig_lies
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -122,7 +122,7 @@ theorem gDarf_lies_Konto : darf gD GTab.Konto gL_lies := by unfold darf; decide
 theorem gHp_einzahlen_lies : RufPasst gD (vertragVon gD g_einzahlen) (gD.signatur g_lies) gL_einzahlen where
   hw := fun t => by cases t <;> decide
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by cases L <;> decide)
   hx := RufPasst.hx_von (fun L => by cases L <;> decide)
 

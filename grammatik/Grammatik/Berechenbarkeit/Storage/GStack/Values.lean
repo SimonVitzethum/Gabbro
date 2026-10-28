@@ -31,7 +31,7 @@ theorem Represents.unique {L : LinkFeld A} {G : LinkKopf A} {σ : World D} {xs y
 
 theorem represents_empty {L : LinkFeld A} {G : LinkKopf A} {σ : World D}
     (hh : G.st σ = D.count A.tab) : Represents L G σ [] := by
-  exact ⟨[], hh ▸ KetteF.nil, .nil, by simp, rfl⟩
+  exact ⟨[], hh ▸ KetteF.nil, .nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true], rfl⟩
 
 /-- A non-empty observed stack has an actual in-bounds head cell. -/
 theorem Represents.nonempty {L : LinkFeld A} {G : LinkKopf A} {σ : World D} {value values}
@@ -39,7 +39,7 @@ theorem Represents.nonempty {L : LinkFeld A} {G : LinkKopf A} {σ : World D} {va
   obtain ⟨indices, hc, _, _, hv⟩ := hr
   generalize hhead : G.st σ = head at hc ⊢
   cases hc with
-  | nil => simp at hv
+  | nil => simp only [List.map_nil, List.nil_eq, reduceCtorEq] at hv
   | cons i _ hi _ _ => exact hi
 
 /-- Exact framing, including payloads, not merely the linked shape. -/

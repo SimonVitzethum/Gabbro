@@ -38,11 +38,11 @@ theorem envRep_get {lay : Layout D} {rs : Regs} {m : Mem} :
       EnvRep lay rs m cenv ρ →
       ∃ r b, cenv[varIdx x]? = some r ∧ supp τ = true ∧ rs r = some (.ptr b 0) ∧ Fresh lay b ∧
         m.load b 0 (memTy τ) = some (encM lay τ (ρ.get x))
-  | _, _, .here, [], .cons v ρ, h => absurd h (by simp [EnvRep])
+  | _, _, .here, [], .cons v ρ, h => absurd h (by simp only [EnvRep, not_false_eq_true])
   | _, _, .here, r :: cs, .cons v ρ, h => by
       obtain ⟨⟨hs, b, hr, hf, hl, _⟩, _⟩ := h
       exact ⟨r, b, rfl, hs, hr, hf, hl⟩
-  | _, _, .there x, [], .cons w ρ, h => absurd h (by simp [EnvRep])
+  | _, _, .there x, [], .cons w ρ, h => absurd h (by simp only [EnvRep, not_false_eq_true])
   | _, _, .there x, r :: cs, .cons w ρ, h => by
       obtain ⟨_, h2⟩ := h
       obtain ⟨r', b, h1, hs, hr, hf, hl⟩ := envRep_get x cs ρ h2
@@ -60,8 +60,8 @@ theorem envRep_regs {lay : Layout D} {rs rs' : Regs} {m : Mem} :
       · intro r' hr' b' hb'
         rw [hag r' (List.mem_cons_of_mem _ hr')] at hb'
         exact hd r' hr' b' hb'
-  | _, [], .cons .., _, h => absurd h (by simp [EnvRep])
-  | _, _ :: _, .nil, _, h => absurd h (by simp [EnvRep])
+  | _, [], .cons .., _, h => absurd h (by simp only [EnvRep, not_false_eq_true])
+  | _, _ :: _, .nil, _, h => absurd h (by simp only [EnvRep, not_false_eq_true])
 
 theorem envRep_load {lay : Layout D} {rs : Regs} {m m' : Mem} :
     ∀ {Γ : Ctx} (cenv : List Reg) (ρ : Env D Γ),
@@ -73,14 +73,14 @@ theorem envRep_load {lay : Layout D} {rs : Regs} {m m' : Mem} :
       obtain ⟨⟨hs, b, hr, hf, hl, hd⟩, h2⟩ := h
       exact ⟨⟨hs, b, hr, hf, hm r (List.mem_cons_self ..) b hr hf _ _ _ hl, hd⟩,
         envRep_load cs ρ (fun r' hr' => hm r' (List.mem_cons_of_mem _ hr')) h2⟩
-  | _, [], .cons .., _, h => absurd h (by simp [EnvRep])
-  | _, _ :: _, .nil, _, h => absurd h (by simp [EnvRep])
+  | _, [], .cons .., _, h => absurd h (by simp only [EnvRep, not_false_eq_true])
+  | _, _ :: _, .nil, _, h => absurd h (by simp only [EnvRep, not_false_eq_true])
 
 /-- The blocks of the locals exist. -/
 theorem envRep_blocks_lt {lay : Layout D} {rs : Regs} {m : Mem} (hw : m.Wf) :
     ∀ {Γ : Ctx} (cenv : List Reg) (ρ : Env D Γ), EnvRep lay rs m cenv ρ →
       ∀ r ∈ cenv, ∀ b, rs r = some (.ptr b 0) → b < m.next
-  | _, [], .nil, _, r, hr, b, hb => absurd hr (by simp)
+  | _, [], .nil, _, r, hr, b, hb => absurd hr (by simp only [List.not_mem_nil, not_false_eq_true])
   | _, c :: cs, .cons v ρ, h, r, hr, b, hb => by
       obtain ⟨⟨hs, b0, hb0, hf, hl, hd⟩, h2⟩ := h
       rcases List.mem_cons.mp hr with rfl | hr'
@@ -90,15 +90,15 @@ theorem envRep_blocks_lt {lay : Layout D} {rs : Regs} {m : Mem} (hw : m.Wf) :
         subst e1
         exact load_blk_lt hw hl
       · exact envRep_blocks_lt hw cs ρ h2 r hr' b hb
-  | _, [], .cons .., h, _, _, _, _ => absurd h (by simp [EnvRep])
-  | _, _ :: _, .nil, h, _, _, _, _ => absurd h (by simp [EnvRep])
+  | _, [], .cons .., h, _, _, _, _ => absurd h (by simp only [EnvRep, not_false_eq_true])
+  | _, _ :: _, .nil, h, _, _, _, _ => absurd h (by simp only [EnvRep, not_false_eq_true])
 
 /-- Storing into a local's cell sets that variable. -/
 theorem envRep_set {lay : Layout D} {rs : Regs} {m m' : Mem} {b : Nat} :
     ∀ {Γ : Ctx} {τ : GTy} (x : Var Γ τ) (cenv : List Reg) (ρ : Env D Γ) (v : Wert D τ) (r : Reg),
       EnvRep lay rs m cenv ρ → cenv[varIdx x]? = some r → rs r = some (.ptr b 0) →
       m.store b 0 (memTy τ) (encM lay τ v) = some m' → EnvRep lay rs m' cenv (ρ.set x v)
-  | _, _, .here, [], .cons w ρ, v, r, hE, _, _, _ => absurd hE (by simp [EnvRep])
+  | _, _, .here, [], .cons w ρ, v, r, hE, _, _, _ => absurd hE (by simp only [EnvRep, not_false_eq_true])
   | _, _, .here, c :: cs, .cons w ρ, v, r, hE, hcen, hr, hst => by
       have hc : c = r := by simpa [varIdx] using hcen
       subst hc
@@ -111,7 +111,7 @@ theorem envRep_set {lay : Layout D} {rs : Regs} {m m' : Mem} {b : Nat} :
       refine envRep_load cs ρ (fun r' hr' b' hb' hf' o t v' hl' => ?_) h2
       rw [load_store_other hst (Or.inl (hd r' hr' b' hb'))]
       exact hl'
-  | _, _, .there x, [], .cons w ρ, v, r, hE, _, _, _ => absurd hE (by simp [EnvRep])
+  | _, _, .there x, [], .cons w ρ, v, r, hE, _, _, _ => absurd hE (by simp only [EnvRep, not_false_eq_true])
   | _, _, .there x, c :: cs, .cons w ρ, v, r, hE, hcen, hr, hst => by
       obtain ⟨⟨hs, b0, hb0, hf, hl, hd⟩, h2⟩ := hE
       have hcen' : cs[varIdx x]? = some r := by simpa [varIdx] using hcen
@@ -159,7 +159,7 @@ theorem wfL_alloc {lay : Layout D} {m : Mem} (hw : WfL lay m) (n : Nat) (z : Boo
 
 theorem alloc_blk (m : Mem) (n : Nat) (z : Bool) :
     ∃ cells, (m.alloc n z).1.blks m.next = some ⟨n, cells⟩ := by
-  exact ⟨fun k => if k < n ∧ z = true then some (.byte 0) else none, by simp [Mem.alloc, Mem.setBlk]⟩
+  exact ⟨fun k => if k < n ∧ z = true then some (.byte 0) else none, by simp only [Mem.alloc, Mem.setBlk, ↓reduceIte]⟩
 
 theorem alloc_store_ok (m : Mem) (t : Ty) (x : Val) (hs : t.scalar = true) (hx : x.ty = t) :
     ∃ m', (m.alloc t.size false).1.store m.next 0 t x = some m' := by
@@ -168,6 +168,6 @@ theorem alloc_store_ok (m : Mem) (t : Ty) (x : Val) (hs : t.scalar = true) (hx :
   unfold Mem.store
   rw [hb]
   have hin : Mem.inside t.size 0 t := ⟨Int.le_refl _, hs, by simpa using hle, Int.zero_emod _⟩
-  simp [hin, hx]
+  simp only [hin, hx, and_self, ↓reduceIte, Int.toNat_zero, Option.some.injEq, exists_eq']
 
 end Gabbro.Code.Lower

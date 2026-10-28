@@ -32,7 +32,7 @@ theorem Store.load_correct (frame : Frame) (k : K) (input : List (Γ k))
   | cons value rest ih =>
     obtain ⟨S', he, hr'⟩ := ih S values hr
     obtain ⟨S'', hp, hr''⟩ := Store.push_correct hr' k value
-    exact ⟨S'', by simp [Store.load, he, hp], by simpa using hr''⟩
+    exact ⟨S'', by simp only [load, he, hp], by simpa using hr''⟩
 
 def LoadResult.Compatible (result : LoadResult Γ) (frame : Frame) (values : ∀ k, List (Γ k)) : Prop :=
   match result with
@@ -70,13 +70,13 @@ theorem loadInput_correct (machine : Turing.FinTM2) (frame : Frame)
       C.Represents frame (Turing.initList machine input) := by
   obtain ⟨S, he, hr⟩ := Store.load_correct frame machine.k₀ input
     (Store.empty : Store machine.Γ) (fun _ => []) (Store.empty_represents frame)
-  refine ⟨⟨some machine.main, machine.initialState, S⟩, by simp [loadInput, he], rfl, rfl, ?_⟩
+  refine ⟨⟨some machine.main, machine.initialState, S⟩, by simp only [loadInput, he], rfl, rfl, ?_⟩
   have hvalues : Function.update (fun k => ([] : List (machine.Γ k))) machine.k₀ input =
       (Turing.initList machine input).stk := by
     funext k
     by_cases hk : k = machine.k₀
-    · subst k; simp [Turing.initList]
-    · simp [Turing.initList, hk]
+    · subst k; simp only [Function.update_self, Turing.initList, eq_mpr_eq_cast, ↓reduceDIte, cast_eq]
+    · simp only [ne_eq, hk, not_false_eq_true, Function.update_of_ne, Turing.initList, eq_mpr_eq_cast, ↓reduceDIte]
   simpa only [List.append_nil, hvalues] using hr
 
 theorem loadInput_safe (machine : Turing.FinTM2) (available : Bool) (frame : Frame)
@@ -93,8 +93,8 @@ theorem loadInput_safe (machine : Turing.FinTM2) (available : Bool) (frame : Fra
         (Turing.initList machine input).stk := by
       funext k
       by_cases hk : k = machine.k₀
-      · subst k; simp [Turing.initList]
-      · simp [Turing.initList, hk]
+      · subst k; simp only [Function.update_self, Turing.initList, eq_mpr_eq_cast, ↓reduceDIte, cast_eq]
+      · simp only [ne_eq, hk, not_false_eq_true, Function.update_of_ne, Turing.initList, eq_mpr_eq_cast, ↓reduceDIte]
     rw [hvalues] at hr
     simp only [loadInput, hl, Outcome.Compatible]
     exact ⟨rfl, rfl, hr⟩

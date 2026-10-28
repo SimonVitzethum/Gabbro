@@ -50,7 +50,7 @@ theorem agree_outside {lay : Layout D} {Tg : D.Tab ⊕ D.Glob → Prop} (hT : Tg
   refine ⟨fun t k f => ?_, fun g hg => ?_⟩
   · have hn : ¬ Tg (.inl t) := fun ht => by
       obtain ⟨g, hg, _⟩ := hT _ ht
-      exact absurd hg (by simp)
+      exact absurd hg (by simp only [reduceCtorEq, not_false_eq_true])
     have := h _ hn
     simp only [TraegerGleich] at this
     rw [this]

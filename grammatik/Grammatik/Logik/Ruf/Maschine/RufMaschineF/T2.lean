@@ -30,7 +30,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
               ⟨l, Γ, Λ', ρ', rest⟩⟩,
              σ'.spur, (M.faeden f).log⟩ : RufFadenF D) =
             RufFadenSchluesselF (M.faeden f) := by
-          simp [RufFadenSchluesselF, RufSchluesselF]
+          simp only [RufFadenSchluesselF, List.map_cons, RufSchluesselF]
         unfold RufFadenPasstF
         rw [e]
         exact h
@@ -45,7 +45,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
             ⟨l, Γ, Λ', ρ', rest⟩⟩,
            σ'.spur, (M.faeden f).log⟩ : RufFadenF D) := by
-        simp [rufUpdateF_self]
+        simp only [rufUpdateF_self]
       rw [heq]
       exact hkeys
   | nimmt L hself hrang hfrei =>
@@ -58,7 +58,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              Ereignis.nimmt L (offen (M.faeden f).spur) :: (M.faeden f).spur,
              (M.faeden f).log⟩ : RufFadenF D) =
             RufFadenSchluesselF (M.faeden f) := by
-          simp [RufFadenSchluesselF]
+          simp only [RufFadenSchluesselF, List.map_cons]
         unfold RufFadenPasstF
         rw [e]
         exact h
@@ -72,7 +72,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           (⟨(M.faeden f).stapel, (M.faeden f).kopf,
            Ereignis.nimmt L (offen (M.faeden f).spur) :: (M.faeden f).spur,
            (M.faeden f).log⟩ : RufFadenF D) := by
-        simp [rufUpdateF_self]
+        simp only [rufUpdateF_self]
       rw [heq]
       exact hkeys
   | gibt L hhaelt =>
@@ -85,7 +85,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩ :
               RufFadenF D) =
             RufFadenSchluesselF (M.faeden f) := by
-          simp [RufFadenSchluesselF]
+          simp only [RufFadenSchluesselF, List.map_cons]
         unfold RufFadenPasstF
         rw [e]
         exact h
@@ -98,7 +98,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           (⟨(M.faeden f).stapel, (M.faeden f).kopf,
            Ereignis.gibt L :: (M.faeden f).spur, (M.faeden f).log⟩ :
             RufFadenF D) := by
-        simp [rufUpdateF_self]
+        simp only [rufUpdateF_self]
       rw [heq]
       exact hkeys
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
@@ -119,7 +119,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
             (⟨g, rho, s0⟩ :
               Σ f : D.Fn, Env D (D.params f) × World D) ::
               RufFadenSchluesselF (M.faeden f) := by
-          simp [RufFadenSchluesselF, RufSchluesselF]
+          simp only [RufFadenSchluesselF, List.map_cons, RufSchluesselF]
         unfold RufFadenPasstF
         rw [e]
         exact RufLogPasstF.eintritt _ _ g rho s0 h
@@ -138,7 +138,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
              rho, P.rumpf g⟩⟩,
            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
             RufFadenF D) := by
-        simp [rufUpdateF_self]
+        simp only [rufUpdateF_self]
       rw [heq]
       exact hkeys
   | rueck caller rest hpop Γ Λ e hperm ρ hh g hfg rho hr s0 hs0 hΛ s1 hs1 v hv neu hneu =>
@@ -156,14 +156,14 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           have e : RufFadenSchluesselF (M.faeden f) =
               RufSchluesselF (M.faeden f).kopf ::
                 ((M.faeden f).stapel.map RufSchluesselF) := by
-            simp [RufFadenSchluesselF]
+            simp only [RufFadenSchluesselF, List.map_cons]
           rw [e, hpop]
         have htail : RufFadenSchluesselF
             (⟨rest, caller, s1.spur,
              (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
               RufFadenF D) =
             (caller :: rest).map RufSchluesselF := by
-          simp [RufFadenSchluesselF]
+          simp only [RufFadenSchluesselF, List.map_cons]
         unfold RufFadenPasstF at h ⊢
         rw [hk, hhead] at h
         rw [htail]
@@ -177,7 +177,7 @@ theorem rufSchrittF_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           (⟨rest, caller, s1.spur,
            (RufEreignisF.rueck g rho v s0 s1) :: (M.faeden f).log⟩ :
             RufFadenF D) := by
-        simp [rufUpdateF_self]
+        simp only [rufUpdateF_self]
       rw [heq]
       exact hkeys
 
@@ -287,7 +287,7 @@ def rufDF : Deklaration where
       gschreibt := fun e => nomatch e
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -303,7 +303,7 @@ def rufDF : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 

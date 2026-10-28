@@ -208,18 +208,18 @@ theorem blatt_erhaelt_slots
             rw [hslot]
             exact lese_slots_gleich _ _ _ _ _ _
           exact hgoal
-      · simp [Ausgang.welt] at hstep
-  | ite c tb eb => simp [Stmt.istBlatt] at hleaf
-  | onOption o pb ab => simp [Stmt.istBlatt] at hleaf
-  | onTag v arms => simp [Stmt.istBlatt] at hleaf
-  | onWhy r arms => simp [Stmt.istBlatt] at hleaf
-  | call fn args hp hr => simp [Stmt.istBlatt] at hleaf
-  | callInd p args hp hr => simp [Stmt.istBlatt] at hleaf
-  | locks Lk hr body => simp [Stmt.istBlatt] at hleaf
-  | breaking ii body => simp [Stmt.istBlatt] at hleaf
-  | traverse u inv body => simp [Stmt.istBlatt] at hleaf
-  | retry n bis body ueber => simp [Stmt.istBlatt] at hleaf
-  | forever a inv body => simp [Stmt.istBlatt] at hleaf
+      · simp only [Ausgang.welt, reduceCtorEq] at hstep
+  | ite c tb eb => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onOption o pb ab => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onTag v arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | call fn args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | locks Lk hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | traverse u inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | retry n bis body ueber => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args _ _ _ hd _ =>
       simp only [execStmt] at hstep
       split at hstep
@@ -248,7 +248,7 @@ theorem blatt_erhaelt_slots
               rw [← hfst]
               exact hframe.1 t heq k fld
             exact e1
-      · simp [Ausgang.welt] at hstep
+      · simp only [Ausgang.welt, reduceCtorEq] at hstep
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
@@ -429,16 +429,19 @@ theorem refB_prog_kein_rel (f : Faden) (n : Nat) (L' : refD.Lock) :
         [PCAtom.take (), PCAtom.leaf [Res.held (D := refD) ()] [Sum.inl (())]] := rfl
     rw [e] at hcon
     cases n with
-    | zero => simp at hcon
+    | zero => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, reduceCtorEq] at hcon
     | succ n =>
         cases n with
-        | zero => simp at hcon
-        | succ n => simp at hcon
+        | zero => simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_succ, List.getElem_cons_zero, Option.some.injEq, reduceCtorEq] at hcon
+        | succ n => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.not_lt, Nat.le_add_left,
+  getElem?_neg, reduceCtorEq] at hcon
   ·
     have e : refB_prog f = [] := by
-      simp [refB_prog]
+      simp only [refB_prog]
     rw [e] at hcon
-    simp at hcon
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hcon
 
 /-- The witness guard: `konto` is guarded by its lock. -/
 theorem refInv81_guard : Sum.inl () ∈ refD.braucht () :=
@@ -512,7 +515,7 @@ theorem badSp81_neg : ¬ refInv81 badSp81 := by
   unfold refInv81 at h
   rw [h0, h1] at h
   have hn := congrArg Zahl.n h
-  simp at hn
+  simp only [Int.reduceEq] at hn
 
 /-! ## 5. Inhabitation (rule 13): all premises hold jointly -/
 

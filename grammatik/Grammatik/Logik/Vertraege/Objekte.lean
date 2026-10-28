@@ -64,7 +64,7 @@ theorem Obj.ext' {o o' : Obj D} (ht : o.tab = o'.tab) (hn : o.nr = o'.nr) : o = 
 theorem storeSlot_anderer_slot (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t)
     (v : Wert D (D.typ t f)) (k' : Int) (hk : k' ≠ k) (f' : D.Feld t) :
     (σ.storeSlot t k f v).slots t k' f' = σ.slots t k' f' := by
-  simp [World.storeSlot, hk]
+  simp only [World.storeSlot, ↓reduceDIte, hk, ↓reduceIte]
 
 /-- **A store into object `o` leaves every field of every other object `o'`.** -/
 theorem storeObj_andere (σ : World D) (o : Obj D) (f : D.Feld o.tab) (v : Wert D (D.typ o.tab f))
@@ -126,7 +126,7 @@ def einObj (D : Deklaration) (ps : List Ty) : Fin ps.length → Option (Obj D) :
 
 theorem einObj_inj {a b : Option D.Tab} :
     a.map (fun t => (⟨t, 0⟩ : Obj D)) = b.map (fun t => (⟨t, 0⟩ : Obj D)) ↔ a = b := by
-  cases a <;> cases b <;> simp
+  cases a <;> cases b <;> simp only [Option.map_none, Option.map_some, reduceCtorEq, Option.some.injEq, Obj.mk.injEq, and_true]
 
 /-- **`ParamGetrennt` (slice 2) is `ObjGetrennt` with one object per carrier.** -/
 theorem objGetrennt_ein_obj_iff (ps : List Ty) :

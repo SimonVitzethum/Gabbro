@@ -109,8 +109,8 @@ theorem agrees : state.agrees A world := by
   refine ⟨ArenaOwnership.Witness.valid, fun i => ?_⟩
   rw [live]
   by_cases hi : i = 0
-  · simp [state, hi]
-  · simp [state, hi]
+  · simp only [hi, state, ↓reduceIte, Option.some.injEq, exists_eq']
+  · simp only [hi, state, ↓reduceIte, reduceCtorEq, exists_false]
 
 def context : Context := Context.parameter (.here : Var [Ty.index 4] (Ty.index 4)) .owned
 def ghosts : Ghost := fun i => if i = 0 then some handle else none
@@ -144,7 +144,7 @@ theorem nested_return_and_release (O : Orakel D) (passes : Nat) :
       exact hrun)
   have hold : old = handle := by simpa [ghosts] using hg.symm
   subst old
-  obtain ⟨h, hh, ho⟩ := hreal.2.2.2.2.1 context.next .owned (by simp [Context.bindFresh, Context.kill])
+  obtain ⟨h, hh, ho⟩ := hreal.2.2.2.2.1 context.next .owned (by simp only [Context.bindFresh, Context.kill, ↓reduceIte])
   have hid : h = fresh := by simpa [Ghost.set] using hh.symm
   subst h
   have hx : (ergWert (τ := Ty.index 4) rfl v).n = fresh.slot := by

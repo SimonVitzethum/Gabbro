@@ -31,7 +31,7 @@ variable {D : Deklaration}
 
 /-- The word `1` is the ticket value `1`. -/
 theorem wone_eq : Val.ofInt Conf.wbits 1 = tk 1 := by
-  simp [Val.ofInt, tk]
+  simp only [Val.ofInt, BitVec.ofInt_ofNat, tk]
 
 /-- A set mask word is not the zero word. -/
 theorem tk_one_ne : tk 1 ≠ tk 0 := by
@@ -74,7 +74,7 @@ theorem maskOn_run {mb : Nat} {rm : Reg} {M : Modl} {S : Sees} {fn : Nat} {lb k 
     (hl : m.load mb 0 lw = some x) (hs : m.store mb 0 lw (tk 1) = some m') :
     Reach M S (.run m ⟨fn, lb, 0, rs, dst⟩ ks) (.run m' ⟨fn, k, 0, rs.set rm x, dst⟩ ks) :=
   reach_block_jmp (b := maskOn mb rm lb k) hb rfl hk hkp (by
-    have hv : (Opd.int Conf.wbits 1).ev rs = some (tk 1) := by simp [Opd.ev, wone_eq]
+    have hv : (Opd.int Conf.wbits 1).ev rs = some (tk 1) := by simp only [Opd.ev, wone_eq]
     simp only [maskOn, seqI, stepI_imsk hl hv hs])
 
 /-- **Restore**: from `maskOff` to the next block; the mask word is the saved one. -/

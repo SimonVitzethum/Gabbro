@@ -53,7 +53,7 @@ theorem Chain.owned {H : Memory region α} {frame : Frame} {head entries}
     (hc : Chain H frame head entries) :
     ∀ entry ∈ entries, H.rights.owns frame entry.1.handle := by
   induction hc with
-  | empty => simp
+  | empty => simp only [List.not_mem_nil, false_implies, implies_true]
   | cell ho _ _ _ ih =>
     intro entry he
     rcases List.mem_cons.mp he with rfl | he
@@ -66,7 +66,7 @@ theorem Chain.transport {H H' : Memory region α} {frame : Frame} {head entries}
   induction hc with
   | empty => exact .empty
   | @cell reference value next entries ho hr hc hn ih =>
-    have hh := hf (reference, value) (by simp)
+    have hh := hf (reference, value) (by simp only [List.mem_cons, true_or])
     refine .cell (hh.owns rfl ho) ((hh.read frame reference rfl).trans hr)
       (ih (fun entry he => hf entry (List.mem_cons_of_mem _ he))) hn
 
@@ -76,7 +76,7 @@ theorem push_correct {H H' : Memory region α} {frame : Frame} {head entries val
     H'.Valid .unbounded ∧ Chain H' frame (some reference) ((reference, value) :: entries) := by
   have hp := Heap.allocate_valid hv he
   refine ⟨hp.1, .cell (next := head) hp.2.1 ?_ ?_ ?_⟩
-  · simp [Heap.read, ArenaOwnership.State.owner_access hp.2.1, hp.2.2.2]
+  · simp only [Heap.read, ArenaOwnership.State.owner_access hp.2.1, ↓reduceIte, hp.2.2.2]
   · apply hc.transport
     intro entry he'
     exact Heap.allocate_frame he _ (Heap.owned_candidate_ne hv (hc.owned _ he'))
@@ -99,7 +99,7 @@ theorem pop_correct {H : Memory region α} {frame : Frame} {reference value entr
   cases hc with
   | @cell _ _ actualNext _ ho hr ht hn =>
     obtain ⟨H', he⟩ := Heap.release_exists ho
-    refine ⟨H', actualNext, by simp [pop, hr, he], (Heap.release_valid hv he).1,
+    refine ⟨H', actualNext, by simp only [pop, hr, he, Option.bind_eq_bind, Option.bind_some], (Heap.release_valid hv he).1,
       ?_, (Heap.release_valid hv he).2, fun i hi => Heap.release_frame he i hi⟩
     exact ht.transport (fun entry hm => Heap.release_frame he _ (hn entry hm))
 
@@ -115,14 +115,14 @@ theorem push_represents {H H' : Memory region α} {frame : Frame} {head values v
     H'.Valid .unbounded ∧ Represents H' frame (some reference) (value :: values) := by
   obtain ⟨entries, hc, hvalues⟩ := hr
   have hh := push_correct hv hc he
-  exact ⟨hh.1, (reference, value) :: entries, hh.2, by simp [hvalues]⟩
+  exact ⟨hh.1, (reference, value) :: entries, hh.2, by simp only [List.map_cons, hvalues]⟩
 
 theorem peek_represents {H : Memory region α} {frame : Frame} {head values}
     (hr : Represents H frame head values) : peek H frame head = some values.head? := by
   obtain ⟨entries, hc, rfl⟩ := hr
   cases hc with
   | empty => rfl
-  | cell _ hr _ _ => simp [peek, hr]
+  | cell _ hr _ _ => simp only [peek, hr, Option.map_some, List.map_cons, List.head?_cons]
 
 theorem pop_represents {H : Memory region α} {frame : Frame} {head values}
     (hv : H.Valid .unbounded) (hr : Represents H frame head values) :
@@ -153,8 +153,10 @@ theorem Chain.readAll {H : Memory region α} {frame : Frame} {head entries}
   | empty => cases fuel <;> rfl
   | cell _ hr _ _ ih =>
     cases fuel with
-    | zero => simp at hbound
+    | zero => simp only [List.length_cons, Nat.le_zero_eq, Nat.add_eq_zero_iff, List.length_eq_zero_iff, Nat.succ_ne_self,
+  and_false] at hbound
     | succ fuel =>
-      simp [Linked.readAll, hr, ih fuel (by simpa using hbound)]
+      simp only [Linked.readAll, hr, Option.bind_eq_bind, Option.bind_some, ih fuel (by simpa using hbound),
+  List.map_cons]
 
 end Gabbro.Grammatik.ArenaStorage.Linked

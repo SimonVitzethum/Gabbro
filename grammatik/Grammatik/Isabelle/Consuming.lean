@@ -122,8 +122,8 @@ theorem kante_leer_wf :
   · rw [if_pos hseq] at hσ'
     have hsl : sl = ⟨none, none⟩ := (Option.some_inj.mp hσ').symm
     rcases hfd with hfc | hns
-    · rw [hsl] at hfc; simp at hfc
-    · rw [hsl] at hns; simp at hns
+    · rw [hsl] at hfc; simp only [reduceCtorEq] at hfc
+    · rw [hsl] at hns; simp only [reduceCtorEq] at hns
   · rw [if_neg hseq] at hσ'
     cases hσ'
 
@@ -136,7 +136,7 @@ theorem umhaengen_kann_zyklus_erzeugen :
     kante_leer_wf, ?_⟩
   apply nicht_wf_bei_schlinge (a := 0)
   exact ⟨{ firstChild := none, nextSibling := some 0 },
-    by simp [haengeUm], Or.inr rfl⟩
+    by simp only [haengeUm, ↓reduceIte], Or.inr rfl⟩
 
 /-! ## K-3 -- leafness does NOT fall from `wf` -/
 
@@ -177,11 +177,11 @@ def zeugenTabelle : Tabelle :=
 theorem leermenge_ist_zustandsabhaengig :
     ∃ σ v s, (∃ d, zeugen σ s d) ∧ ∀ d, ¬ zeugen (verbrauche σ v) s d := by
   refine ⟨zeugenTabelle, 0, 0,
-    ⟨1, ⟨⟨some 1, none⟩, by simp [zeugenTabelle], Or.inl rfl⟩⟩, ?_⟩
+    ⟨1, ⟨⟨some 1, none⟩, by simp only [zeugenTabelle, ↓reduceIte], Or.inl rfl⟩⟩, ?_⟩
   intro d hd
   obtain ⟨sl, hσ, -⟩ := hd
   have hσ' : verbrauche zeugenTabelle 0 0 = some sl := hσ
-  have h0 : verbrauche zeugenTabelle 0 0 = none := by simp [verbrauche]
+  have h0 : verbrauche zeugenTabelle 0 0 = none := by simp only [verbrauche, ↓reduceIte]
   rw [h0] at hσ'
   cases hσ'
 
@@ -195,7 +195,7 @@ theorem verbrauche_zeuge :
     (∃ d, zeugen zeugenTabelle 0 d) ∧
     WellFounded (kante (verbrauche zeugenTabelle 0)) := by
   constructor
-  · exact ⟨1, ⟨⟨some 1, none⟩, by simp [zeugenTabelle], Or.inl rfl⟩⟩
+  · exact ⟨1, ⟨⟨some 1, none⟩, by simp only [zeugenTabelle, ↓reduceIte], Or.inl rfl⟩⟩
   · apply wf_of_leer
     intro d s hs
     obtain ⟨sl, hσ, hfd⟩ := hs
@@ -211,8 +211,8 @@ theorem verbrauche_zeuge :
         have h1 : (some ⟨none, none⟩ : Option Slot) = some sl := hσ''
         have hsl : sl = ⟨none, none⟩ := (Option.some_inj.mp h1).symm
         rcases hfd with hfc | hns
-        · rw [hsl] at hfc; simp at hfc
-        · rw [hsl] at hns; simp at hns
+        · rw [hsl] at hfc; simp only [reduceCtorEq] at hfc
+        · rw [hsl] at hns; simp only [reduceCtorEq] at hns
       · have hσ''' : (if s = 0 then (some ⟨some 1, none⟩ : Option Slot)
             else if s = 1 then some ⟨none, none⟩ else none) = some sl := hσ''
         rw [if_neg hseq, if_neg hs1] at hσ'''

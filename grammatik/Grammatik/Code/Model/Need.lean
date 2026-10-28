@@ -40,21 +40,22 @@ theorem code_pre_div (op : BinOp) (hop : op = .udiv ∨ op = .urem ∨ op = .sdi
     (w : Nat) (a b : BitVec w) (h : (op.ap w a b).isSome = true) : b ≠ 0 := by
   intro hb
   subst hb
-  rcases hop with rfl | rfl | rfl | rfl <;> simp [BinOp.ap] at h
+  rcases hop with rfl | rfl | rfl | rfl <;> simp only [BinOp.ap, BitVec.ofNat_eq_ofNat, ↓reduceIte, Option.isSome_none, Bool.false_eq_true, BitVec.toInt_zero, Int.reduceNeg, reduceCtorEq, and_false, or_false] at h
 
 /-- A defined signed division or remainder is not `INT_MIN / -1`. -/
 theorem code_pre_sdiv (op : BinOp) (hop : op = .sdiv ∨ op = .srem) (w : Nat) (a b : BitVec w)
     (h : (op.ap w a b).isSome = true) :
     ¬ (a.toInt = -((2 : Int) ^ (w - 1)) ∧ b.toInt = -1) := by
   intro hc
-  rcases hop with rfl | rfl <;> simp [BinOp.ap, hc] at h
+  rcases hop with rfl | rfl <;> simp only [BinOp.ap, BitVec.ofNat_eq_ofNat, hc, Int.reduceNeg, and_self, or_true, ↓reduceIte,
+  Option.isSome_none, Bool.false_eq_true] at h
 
 /-- A defined shift has an amount below the width. -/
 theorem code_pre_shift (op : BinOp) (hop : op = .shl ∨ op = .lshr ∨ op = .ashr) (w : Nat)
     (a b : BitVec w) (h : (op.ap w a b).isSome = true) : b.toNat < w := by
   cases hc : decide (b.toNat < w)
   · have hn : ¬ b.toNat < w := by simpa using hc
-    rcases hop with rfl | rfl | rfl <;> simp [BinOp.ap, hn] at h
+    rcases hop with rfl | rfl | rfl <;> simp only [BinOp.ap, hn, ↓reduceIte, Option.isSome_none, Bool.false_eq_true] at h
   · simpa using hc
 
 /-- A defined load or store is aligned. -/
@@ -62,12 +63,12 @@ theorem code_pre_align_load {m : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
     (h : m.load b o t = some v) : o % (t.align : Int) = 0 := by
   unfold Mem.load at h
   cases hb : m.blks b with
-  | none => simp [hb] at h
+  | none => simp only [hb, reduceCtorEq] at h
   | some blk =>
       simp only [hb] at h
       by_cases hi : Mem.inside blk.size o t
       · exact hi.2.2.2
-      · simp [hi] at h
+      · simp only [hi, ↓reduceIte, reduceCtorEq] at h
 
 theorem code_pre_align_store {m m' : Mem} {b : Nat} {o : Int} {t : Ty} {v : Val}
     (h : m.store b o t v = some m') : o % (t.align : Int) = 0 := by

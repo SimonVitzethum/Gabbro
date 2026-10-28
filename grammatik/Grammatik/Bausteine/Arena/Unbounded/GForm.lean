@@ -32,7 +32,7 @@ theorem allocationAttempt_refused (available : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ) (he : eval (σ.lese Λ available.orte) available (σ.lese Λ available.orte) ρ = false) :
     execBlock O passes R (Block.allocationAttempt available failure success) σ ρ =
       (execEnd O passes R failure (σ.lese Λ available.orte) ρ).zuAusgang := by
-  simp [Block.allocationAttempt, execBlock, he, wahr?]
+  simp only [Block.allocationAttempt, execBlock, wahr?, he, Bool.false_eq_true, ↓reduceIte]
 
 /-- Positive availability only selects the normal, fully checked G continuation. -/
 theorem allocationAttempt_available (available : Expr D Γ Λ .bool)
@@ -40,7 +40,7 @@ theorem allocationAttempt_available (available : Expr D Γ Λ .bool)
     (σ : World D) (ρ : Env D Γ) (he : eval (σ.lese Λ available.orte) available (σ.lese Λ available.orte) ρ = true) :
     execBlock O passes R (Block.allocationAttempt available failure success) σ ρ =
       execBlock O passes R success (σ.lese Λ available.orte) ρ := by
-  simp [Block.allocationAttempt, execBlock, he, wahr?]
+  simp only [Block.allocationAttempt, execBlock, wahr?, he, ↓reduceIte]
 
 /-- Both source branches remain visible to the existing termination classifier. -/
 theorem allocationAttempt_termination (available : Expr D Γ Λ .bool)

@@ -19,7 +19,7 @@ set_option linter.unusedSectionVars false
 theorem mem_alleZellen {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
     {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} {z : Zelle} :
     z ∈ alleZellen P S fs ls cs ws ↔ ∃ c : Fin 10, z ∈ zellen P S fs ls cs ws c := by
-  simp [alleZellen, List.mem_flatMap]
+  simp only [alleZellen, List.mem_flatMap, List.mem_finRange, true_and]
 
 /-- Every cell of component `c` carries `c`. -/
 theorem zellen_komp {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
@@ -78,7 +78,8 @@ theorem zelle_7_1_110 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : L
   simp only [zellen] at h0
   obtain ⟨c, _, h1⟩ := List.mem_flatMap.1 h0
   rcases List.mem_append.1 h1 with h2 | h2
-  · simp at h2
+  · simp only [List.mem_cons, Zelle.mk.injEq, Nat.succ_ne_self, Bool.false_eq_true, List.cons.injEq, Bool.true_eq,
+  List.cons_ne_self, and_false, and_self, List.not_mem_nil, or_self] at h2
   · simp only [schreibGetrenntZellen, List.mem_flatMap, List.mem_map] at h2
     obtain ⟨w1, _, w2, _, h3⟩ := h2
     simp only [Zelle.mk.injEq, List.cons.injEq, true_and, and_true] at h3
@@ -103,12 +104,12 @@ theorem zelle_8_never (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : L
   simp only [zellen, List.mem_flatMap, List.mem_map, Zelle.mk.injEq, List.cons.injEq] at h0
   obtain ⟨f, _, x, _, -, -, -, -, hb, hc, -⟩ := h0
   cases x with
-  | inr r => simp at hb
+  | inr r => simp only [Bool.false_eq_true] at hb
   | inl a =>
     simp only at hb hc
     have hn : D.aerg a = some Ty.never := of_decide_eq_true hb
     rw [hn] at hc
-    simp [antwortB, antwortTyB] at hc
+    simp only [antwortB, antwortTyB, Bool.false_eq_true] at hc
 
 /-! ## The pool cells of a start that holds a lock or has reasons come with a bad root cell -/
 
@@ -145,16 +146,16 @@ section Huelle
 variable (P : Programm D) (fs : List D.Fn) (w : D.Fn)
 
 theorem erreich_mono (n : Nat) (g : D.Fn) (h : erreichB P fs w n g = true) : erreichB P fs w (n + 1) g = true := by
-  simp [erreichB, erreichSchritt, h]
+  simp only [erreichB, erreichSchritt, h, Bool.true_or]
 
 theorem filter_laenge_le {α : Type} (l : List α) (p q : α → Bool) (h : ∀ x ∈ l, p x = true → q x = true) :
     (l.filter p).length ≤ (l.filter q).length := by
   induction l with
-  | nil => simp
+  | nil => simp only [List.filter_nil, List.length_nil, Std.le_refl]
   | cons a t ih =>
     have ih' := ih fun x hx => h x (List.mem_cons_of_mem a hx)
-    cases hp : p a <;> cases hq : q a <;> simp [List.filter_cons, hp, hq] <;> try omega
-    exact absurd (h a List.mem_cons_self hp) (by simp [hq])
+    cases hp : p a <;> cases hq : q a <;> simp only [hp, Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg, hq, ge_iff_le, List.filter_cons_of_pos, List.length_cons, Nat.add_le_add_iff_right] <;> try omega
+    exact absurd (h a List.mem_cons_self hp) (by simp only [hq, Bool.false_eq_true, not_false_eq_true])
 
 theorem filter_laenge_lt {α : Type} (l : List α) (p q : α → Bool) (h : ∀ x ∈ l, p x = true → q x = true)
     (x : α) (hx : x ∈ l) (hq : q x = true) (hp : p x = false) : (l.filter p).length < (l.filter q).length := by
@@ -163,10 +164,11 @@ theorem filter_laenge_lt {α : Type} (l : List α) (p q : α → Bool) (h : ∀ 
   | cons a t ih =>
     have hle := filter_laenge_le t p q fun y hy => h y (List.mem_cons_of_mem a hy)
     rcases List.mem_cons.1 hx with rfl | hxt
-    · simp [List.filter_cons, hp, hq]; omega
+    · simp only [hp, Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg, hq, List.filter_cons_of_pos,
+  List.length_cons, gt_iff_lt]; omega
     · have ih' := ih (fun y hy => h y (List.mem_cons_of_mem a hy)) hxt
-      cases hpa : p a <;> cases hqa : q a <;> simp [List.filter_cons, hpa, hqa] <;> try omega
-      exact absurd (h a List.mem_cons_self hpa) (by simp [hqa])
+      cases hpa : p a <;> cases hqa : q a <;> simp only [hpa, Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg, hqa, gt_iff_lt, List.filter_cons_of_pos, List.length_cons, Nat.add_lt_add_iff_right] <;> try omega
+      exact absurd (h a List.mem_cons_self hpa) (by simp only [hqa, Bool.false_eq_true, not_false_eq_true])
 
 /-- A round that changes nothing changes nothing afterwards. -/
 theorem erreich_fix (n : Nat) (hfix : erreichB P fs w (n + 1) = erreichB P fs w n) :
@@ -187,7 +189,7 @@ theorem reach_fix (hvoll : ∀ g : D.Fn, g ∈ fs) :
   let cnt := fun n => (fs.filter (erreichB P fs w n)).length
   have hcnt0 : 1 ≤ cnt 0 := by
     have : 0 < (fs.filter (erreichB P fs w 0)).length :=
-      List.length_pos_iff.2 (List.ne_nil_of_mem (List.mem_filter.2 ⟨hvoll w, by simp [erreichB]⟩))
+      List.length_pos_iff.2 (List.ne_nil_of_mem (List.mem_filter.2 ⟨hvoll w, by simp only [erreichB, decide_true]⟩))
     exact this
   have hle : ∀ n, cnt n ≤ fs.length := fun n => List.length_filter_le _ _
   -- if a round changes something, the count grows
@@ -198,7 +200,7 @@ theorem reach_fix (hvoll : ∀ g : D.Fn, g ∈ fs) :
     obtain ⟨g, hg⟩ := this
     have hg1 : erreichB P fs w (n + 1) g = true ∧ erreichB P fs w n g = false := by
       cases h1 : erreichB P fs w (n + 1) g <;> cases h0 : erreichB P fs w n g <;> simp_all
-      exact absurd (erreich_mono P fs w n g h0) (by simp [h1])
+      exact absurd (erreich_mono P fs w n g h0) (by simp only [h1, Bool.false_eq_true, not_false_eq_true])
     exact filter_laenge_lt fs _ _ (fun x _ hx => erreich_mono P fs w n x hx) g (hvoll g) hg1.1 hg1.2
   -- if no round below `|fs|` were a fixed point, the count would exceed `|fs|`
   have hexists : ∃ n, n < fs.length + 1 ∧ erreichB P fs w (n + 1) = erreichB P fs w n := by
@@ -208,7 +210,7 @@ theorem reach_fix (hvoll : ∀ g : D.Fn, g ∈ fs) :
     have hgrow : ∀ n, n ≤ fs.length + 1 → cnt 0 + n ≤ cnt n := by
       intro n hn
       induction n with
-      | zero => simp
+      | zero => simp only [Nat.add_zero, Std.le_refl]
       | succ n ih =>
         have := hstep n (hc n (by omega))
         have := ih (by omega)

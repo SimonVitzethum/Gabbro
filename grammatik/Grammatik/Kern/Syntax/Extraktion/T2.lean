@@ -66,7 +66,7 @@ def miniD : Deklaration where
   Fn := Bool
   sig := fun | true => 0 | false => 1
   sigNr := fun | 0 => miniSigA | _ => miniSigB
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -82,7 +82,7 @@ def miniD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
 
@@ -145,8 +145,8 @@ example : kantenVoll miniP miniFns miniFnCode := by
   have h1 : ruftDirekt miniP true = [] := rfl
   have h2 : ruftDirekt miniP false = [] := rfl
   cases f with
-  | true => rw [h1] at hg; simp at hg
-  | false => rw [h2] at hg; simp at hg
+  | true => rw [h1] at hg; simp only [List.not_mem_nil] at hg
+  | false => rw [h2] at hg; simp only [List.not_mem_nil] at hg
 
 /-- Die Treue-Saetze greifen am errechneten Bau. -/
 example := kantenTreue_aus_bau miniP miniFns miniFnCode miniTabs miniTabCode
@@ -441,7 +441,7 @@ theorem kette_gleich {n : Int} {weiter weiter' : Int → Option (Zahl 0 (n - 1))
           | none => false
           | some m => kette weiter' fuel m.n ziel)
       by_cases hk : k = ziel
-      · simp [hk]
+      · simp only [hk, ↓reduceIte]
       · simp only [if_neg hk]
         rw [h k]
         cases hm : weiter' k with
@@ -456,7 +456,7 @@ theorem list_all_congr {α : Type} {l : List α} {p q : α → Bool}
   | cons x xs ih =>
       have hx : p x = q x := h x List.mem_cons_self
       have ih' := ih (fun y hy => h y (List.mem_cons_of_mem _ hy))
-      simp [List.all_cons, hx, ih']
+      simp only [List.all_cons, hx, ih']
 
 /-- Punktweise gleiche Praedikate zaehlen gleich (`any`). -/
 theorem list_any_congr {α : Type} {l : List α} {p q : α → Bool}
@@ -466,7 +466,7 @@ theorem list_any_congr {α : Type} {l : List α} {p q : α → Bool}
   | cons x xs ih =>
       have hx : p x = q x := h x List.mem_cons_self
       have ih' := ih (fun y hy => h y (List.mem_cons_of_mem _ hy))
-      simp [List.any_cons, hx, ih']
+      simp only [List.any_cons, hx, ih']
 
 
 end Gabbro.Grammatik.Extraktion

@@ -13,7 +13,7 @@ theorem zErgG_gleich_grund {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgang
       obtain ⟨hs, hr⟩ := h
       subst hr
       exact ⟨σ', rfl, hs⟩
-  | _ => simp [zErgG, ZErgG.gleich] at h
+  | _ => simp only [ZErgG.gleich, zErgG] at h
 
 /-! ## 3. The frame semantics of every residue, with lock invariants
 

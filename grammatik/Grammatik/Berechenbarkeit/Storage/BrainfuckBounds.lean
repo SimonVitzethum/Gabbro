@@ -13,7 +13,7 @@ theorem jump_operation_bound {n : Nat} (pc : Fin (n + 1)) : operationBound (Brai
 /-- At most one allocation and one pop, plus final control transfer. -/
 theorem instruction_operation_bound {n : Nat} (op : Brainfuck.Instruction n) (next : Fin (n + 1)) :
     operationBound (Brainfuck.compileInstruction op next) ≤ 4 := by
-  cases op <;> simp [Brainfuck.compileInstruction, operationBound, jump_operation_bound]
+  cases op <;> simp only [Brainfuck.compileInstruction, Fin.isValue, operationBound, jump_operation_bound, Nat.reduceAdd, Std.le_refl, Nat.reduceLeDiff, max_self]
 
 theorem program_operation_bound {n : Nat} (p : Brainfuck.Program n) (label : Fin (n + 1)) :
     operationBound (Brainfuck.compile p label) ≤ 4 := by

@@ -58,7 +58,7 @@ open InvDynZeuge
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -74,9 +74,9 @@ open InvDynZeuge
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t _ => by simp
+  geteilt_bewacht := fun t _ => by simp only [ne_eq, List.cons_ne_self, not_false_eq_true]
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g _ => Or.inl (by simp)
+  ggeteilt_bewacht := fun g _ => Or.inl (by simp only [ne_eq, List.cons_ne_self, not_false_eq_true])
 
 /-- The arena with slot release, over the shared declaration. -/
 def FAL : FreiForm FDL where
@@ -132,7 +132,7 @@ theorem kette_w0L : FAL.Kette w0L 1 [1] :=
 
 theorem freiOk_w0L : FAL.FreiOk w0L := by
   refine ⟨[1], by rw [kopf_w0L]; exact kette_w0L, by decide, ?_⟩
-  intro i hi; simp at hi; subst hi; rw [stand_w0L]; omega
+  intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; rw [stand_w0L]; omega
 
 theorem aufListe_w0L (i : Int) : FAL.AufListe w0L i ↔ i = 1 := by
   constructor
@@ -141,7 +141,7 @@ theorem aufListe_w0L (i : Int) : FAL.AufListe w0L i ↔ i = 1 := by
     have := FreiForm.Kette.eindeutig hL kette_w0L
     subst this; simpa using hm
   · rintro rfl
-    exact ⟨[1], by rw [kopf_w0L]; exact kette_w0L, by simp⟩
+    exact ⟨[1], by rw [kopf_w0L]; exact kette_w0L, by simp only [List.mem_cons, List.not_mem_nil, or_false]⟩
 
 theorem lebt_w0L (i : Int) : FAL.Lebt w0L i ↔ (0 ≤ i ∧ i < 4 ∧ i ≠ 1) := by
   unfold FreiForm.Lebt
@@ -185,7 +185,7 @@ theorem alle_orte (c : FDL.Tab ⊕ FDL.Glob) : c ∈ KLL.orte := by
     the carriers (`SperrInvOk`, the premise `sperrOrte` of the checker's acceptance). -/
 theorem sperr_ok_zeuge : SperrInvOk (KLL.sperr ()) :=
   Dekl.sperr_ok (fun c _ => by
-    rcases c with t | g <;> simp [Bewacht, FDL])
+    rcases c with t | g <;> simp only [Bewacht, FDL, Fin.isValue, List.mem_cons, List.not_mem_nil, or_false])
 
 end SperreZeuge
 

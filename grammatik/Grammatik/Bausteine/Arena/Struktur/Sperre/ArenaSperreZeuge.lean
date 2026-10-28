@@ -38,13 +38,13 @@ theorem fdarfL : darf FDL () HL := by
   intro w hw
   simp only [FDL, List.mem_singleton] at hw
   subst hw
-  simp [HL, Res.von]
+  simp only [HL, Res.von, List.mem_cons, List.not_mem_nil, or_false]
 
 theorem fgdarfL (g : FDL.Glob) : gdarf FDL g HL := by
   intro w hw
   simp only [FDL, List.mem_singleton] at hw
   subst hw
-  simp [HL, Res.von]
+  simp only [HL, Res.von, List.mem_cons, List.not_mem_nil, or_false]
 
 /-- The payload `7`, at the payload field's declared type. -/
 def siebenL : Expr FDL [] HL (FDL.typ FAL.tab FAL.feld) :=
@@ -67,12 +67,12 @@ theorem rein_vollL : Rein vollL := Rein.ret _ _
 theorem erk_nimmPushL :
     Erk KLL Abs.leer (nimmPushL vollL) (((Abs.leer.ext .frei).set 0 .liste).tail) :=
   Erk.nimm siebenL rfl fdarfL rfl (fgdarfL _) vollL _ rein_vollL
-    (Erk.push ⟨LLL, LGL⟩ rfl (.here : Var GL1 _) rfl fdarfL rfl (fgdarfL _) .nil (by simp [Abs.ext, Var.pos])
+    (Erk.push ⟨LLL, LGL⟩ rfl (.here : Var GL1 _) rfl fdarfL rfl (fgdarfL _) .nil (by simp only [Abs.ext, Var.pos])
       (Erk.nil _))
 
 /-- The section itself. -/
 def abschnittL : Stmt FDL FVL false [] [] [] :=
-  Stmt.locks () (fun M hM => by simp at hM) (nimmPushL vollL)
+  Stmt.locks () (fun M hM => by simp only [List.not_mem_nil] at hM) (nimmPushL vollL)
 
 /-- An environment move of the acquire that hands over the scenario world (and keeps the trace). -/
 def U0 : Umwelt FDL := fun _ σ => ⟨w0L.slots, w0L.globs, σ.spur⟩
@@ -154,7 +154,7 @@ theorem schlecht_ohneLocks : schlechtL.ohneLocks = true := rfl
 
 /-- The section of the defect. -/
 def schlechtAbschnitt : Stmt FDL FVL false [] [] [] :=
-  Stmt.locks () (fun M hM => by simp at hM) schlechtL
+  Stmt.locks () (fun M hM => by simp only [List.not_mem_nil] at hM) schlechtL
 
 /-- **The stray store, run:** from any world the body returns `.ok`, with the link of slot `2` now `2`, and the head
     word as it was. -/
@@ -198,7 +198,7 @@ theorem abschnitt_defekt_schleife (O : Orakel FDL) (passes : Nat)
     stray_bricht h2 (by rw [hg]; exact lg_w0L) ((Dekl.sperr_inv_iff' σ1).mp h)
   show freiH (KLL.sperr ()) () (execBlockH (KLL.sperr ()) O U0 passes R schlechtL ((U0 () σ).nimmt ()) .nil) = _
   rw [Block.execH_ohne (KLL.sperr ()) O U0 passes R schlechtL schlecht_ohneLocks, hrun]
-  simp [freiH, hbad]
+  simp only [freiH, hbad, Bool.false_eq_true, ↓reduceIte]
 
 /-- **The defect has no derivation:** the recognizer is sound (`erk_erhaelt`), and this body breaks the invariant in a
     real run from a world where it holds, so no `Erk` derivation of it exists; `abschnitt_erk` does not apply. -/

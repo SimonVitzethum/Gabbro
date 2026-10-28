@@ -128,7 +128,7 @@ theorem gepopptGrund_zustand {M : RufMaschineG D} {f : Faden} {caller : RufRahme
       ((RufEreignisF.why g rhoG r s1 σ' :: e2 ++ [e]) ++ log) ρ rr σ' := by
   refine ⟨?_, h.2⟩
   rw [h.1, hc]
-  simp
+  simp only [List.cons_append, List.append_assoc, List.nil_append]
 
 /-- After the callee's pop the resumed caller frame IS a thread state of the
     caller's frame, whose log gained the call's events. -/
@@ -143,7 +143,7 @@ theorem gepoppt_zustand {M : RufMaschineG D} {f : Faden} {caller : RufRahmenG D}
       ((RufEreignisF.rueck g rhoG v s1 σ' :: e2 ++ [e]) ++ log) ρ r σ' := by
   refine ⟨?_, h.2⟩
   rw [h.1, hc]
-  simp
+  simp only [List.cons_append, List.append_assoc, List.nil_append]
 
 
 

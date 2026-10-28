@@ -524,7 +524,7 @@ theorem seite_zerlegt (w : SeitenWahl D) (t : D.Tab) (k : Int) :
 theorem seite_rahmen_fremd (σ : World D) {t t' : D.Tab} (h : t' ≠ t)
     (k k' : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) (f' : D.Feld t') :
     (σ.storeSlot t k f v).slots t' k' f' = σ.slots t' k' f' := by
-  simp [World.storeSlot, h]
+  simp only [World.storeSlot, h, ↓reduceDIte]
 
 /-! ### 7.2 The async device write beside `Orakel.wirkt` -/
 

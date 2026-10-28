@@ -163,8 +163,8 @@ theorem disj_kontinuation_einmal_zeuge :
       σ ρ = Ausgang.ok σ' ρ') := by
   refine ⟨hoare_skip _ _ _ _, (fun _ _ _ => trivial), (fun _ _ _ => trivial),
     ⟨rufWeltD, Env.nil, rfl⟩, ⟨weltFalschD, Env.nil, rfl⟩,
-    ⟨rufWeltD, Env.nil, rfl, by simp [Q2w, rufWeltD]⟩,
-    ⟨weltFalschD, Env.nil, rfl, by simp [Q1w, weltFalschD]⟩,
+    ⟨rufWeltD, Env.nil, rfl, by simp only [Q2w, rufWeltD, reduceCtorEq, not_false_eq_true]⟩,
+    ⟨weltFalschD, Env.nil, rfl, by simp only [Q1w, weltFalschD, reduceCtorEq, not_false_eq_true]⟩,
     ⟨rufWeltD, Env.nil, rufWeltD, Env.nil, rfl⟩⟩
 
 /-- **Joint witness for `disj_monoton_staerker`.** `Q1w` implies the weak
@@ -179,7 +179,7 @@ theorem disj_monoton_staerker_zeuge :
       (Block.nil : Block rufD (vertragVon rufD rufIncD) false [] [] [])
       σ ρ = Ausgang.ok σ' ρ') := by
   refine ⟨hoare_skip _ _ _ _, (fun _ _ _ => trivial),
-    ⟨rufWeltD, Env.nil, rfl⟩, ⟨weltFalschD, Env.nil, trivial, by simp [Q1w, weltFalschD]⟩,
+    ⟨rufWeltD, Env.nil, rfl⟩, ⟨weltFalschD, Env.nil, trivial, by simp only [Q1w, weltFalschD, reduceCtorEq, not_false_eq_true]⟩,
     ⟨rufWeltD, Env.nil, rufWeltD, Env.nil, rfl⟩⟩
 
 /-- **One witness link**: append a single trace event, touching nothing
@@ -210,7 +210,7 @@ theorem invw_start : Invw rufWeltD Env.nil := by
 theorem invw_falsch : ¬ Invw weltFalschD Env.nil := by
   intro h
   have h0 := h () 0 ()
-  simp [weltFalschD] at h0
+  simp only [weltFalschD, reduceCtorEq] at h0
 
 /-- **Joint witness for `kette_invariant`: a real moving chain.** Both
     premises hold (`hSchrittw`, `invw_start`), and a 2-link chain over

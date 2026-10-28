@@ -38,45 +38,47 @@ theorem erk_ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {a a' : Abs}
   | push d hd x hwT hLT hwG hLG rest hx h ih =>
     simpa [Block.linkPush, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin] using ih
   | pop d hd hwG hLG hLT voll rest hv h ih =>
-    simp [Block.linkPop, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
+    simp only [Block.linkPop, Block.ohneLocks, hv.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | unlink d hd p hwT hLT voll rest hp hv h ih =>
-    simp [Block.linkUnlink, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
+    simp only [Block.linkUnlink, Block.ohneLocks, hv.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | kopf d hd hLG voll rest hv h ih =>
-    simp [Block.linkKopfBind, Block.ohneLocks, hv.ohneLocks, ih]
+    simp only [Block.linkKopfBind, Block.ohneLocks, hv.ohneLocks, ih, Bool.and_self]
   | nach d hd p hLT voll rest hp hv h ih =>
-    simp [Block.linkNachBind, Block.ohneLocks, hv.ohneLocks, ih]
+    simp only [Block.linkNachBind, Block.ohneLocks, hv.ohneLocks, ih, Bool.and_self]
   | frisch v hwT hLT hwG hLG voll rest hv h ih =>
-    simp [Block.arenaAlloc, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
+    simp only [Block.arenaAlloc, Block.arenaRumpf, Block.ohneLocks, hv.ohneLocks, Stmt.ohneLocks, ih,
+  Bool.and_self]
   | nimm v hwT hLT hwK hLK voll rest hv h ih =>
-    simp [Block.freiNimm, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
+    simp only [Block.freiNimm, Block.ohneLocks, hv.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | frei x hwT hLT hwK hLK rest hx h ih =>
-    simp [Block.freiVar, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, ih]
+    simp only [Block.freiVar, Block.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | wachs n hn hwK hLK voll rest hv h ih =>
-    simp [Block.dynGrowB, Block.dynSumme, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
+    simp only [Block.dynGrowB, Block.dynSumme, Block.ohneLocks, hv.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | pruefe c voll rest hv h ih =>
-    simp [Block.ohneLocks, hv.ohneLocks, ih]
+    simp only [Block.ohneLocks, hv.ohneLocks, ih, Bool.and_self]
   | nutzlast i e hwT hLT rest h ih =>
-    simp [Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, ih]
+    simp only [Block.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | ite c t e rest ht he h1 h2 h iht ihe ih =>
-    simp [Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, iht, ihe, ih]
+    simp only [Block.ohneLocks, Stmt.ohneLocks, iht, ihe, Bool.and_self, ih]
   | wurzelEin b hb x hwT hLT hwG hLG voll rest hx hv h ih =>
-    simp [Block.wurzelEin, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
+    simp only [Block.wurzelEin, Block.wurzelSetze, Block.ohneLocks, hv.ohneLocks, Stmt.ohneLocks, ih,
+  Bool.and_self]
   | wurzelKopf b hb hLG voll rest hv h ih =>
-    simp [Block.linkKopfBind, Block.ohneLocks, hv.ohneLocks, ih]
+    simp only [Block.linkKopfBind, Block.ohneLocks, hv.ohneLocks, ih, Bool.and_self]
   | kind b hb C hC p hLT voll rest hp hv h ih =>
-    simp [Block.linkNachBind, Block.ohneLocks, hv.ohneLocks, ih]
+    simp only [Block.linkNachBind, Block.ohneLocks, hv.ohneLocks, ih, Bool.and_self]
   | haengen b hb Cp Co hs p i hwT hLT voll rest hp hi hv h ih =>
-    simp [Block.haengen, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, ih]
+    simp only [Block.haengen, Block.blattEin, Block.ohneLocks, hv.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | abschneiden b hb C hC p hwT hLT voll voll2 rest hp hv hv2 h ih =>
-    simp [Block.abschneiden, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, hv2.ohneLocks, ih]
+    simp only [Block.abschneiden, Block.ohneLocks, hv.ohneLocks, hv2.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | wurzelAus b hb hwG hLG hLT voll voll2 rest hv hv2 h ih =>
-    simp [Block.wurzelAus, Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, hv.ohneLocks, hv2.ohneLocks, ih]
+    simp only [Block.wurzelAus, Block.ohneLocks, hv.ohneLocks, hv2.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | forever an inv body rest hin hb hs h ihb ih =>
-    simp [Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, ihb, ih]
+    simp only [Block.ohneLocks, Stmt.ohneLocks, ihb, ih, Bool.and_self]
   | traverse t inv body rest hin hb hs h ihb ih =>
-    simp [Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, ihb, ih]
+    simp only [Block.ohneLocks, Stmt.ohneLocks, ihb, ih, Bool.and_self]
   | retry n bis body ueber rest hin hb hs hu h3 h4 h ihb ihu ih =>
-    simp [Block.ohneLocks, Stmt.ohneLocks, Block.arenaRumpf, Block.wurzelSetze, Block.blattEin, ihb, ihu, ih]
+    simp only [Block.ohneLocks, Stmt.ohneLocks, ihb, ihu, Bool.and_self, ih]
 
 /-- **A recognized end block contains no `locks`.** -/
 theorem erkE_ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {a : Abs} {e : Endblock D V l Γ Λ}
@@ -84,15 +86,15 @@ theorem erkE_ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {a : Abs} {e : 
   induction h with
   | ret e hΛ => rfl
   | retWhy r hΛ => rfl
-  | nutzlast i e hwT hLT rest h ih => simp [Endblock.ohneLocks, Stmt.ohneLocks, ih]
+  | nutzlast i e hwT hLT rest h ih => simp only [Endblock.ohneLocks, Stmt.ohneLocks, ih, Bool.and_self]
   | ite c t e rest ht he h1 h2 h ih =>
-    simp [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks ht, erk_ohneLocks he, ih]
+    simp only [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks ht, erk_ohneLocks he, Bool.and_self, ih]
   | forever an inv body rest hin hb hs h ih =>
-    simp [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks hb, ih]
+    simp only [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks hb, ih, Bool.and_self]
   | traverse t inv body rest hin hb hs h ih =>
-    simp [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks hb, ih]
+    simp only [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks hb, ih, Bool.and_self]
   | retry n bis body ueber rest hin hb hs hu h3 h4 h ih =>
-    simp [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks hb, erk_ohneLocks hu, ih]
+    simp only [Endblock.ohneLocks, Stmt.ohneLocks, erk_ohneLocks hb, erk_ohneLocks hu, Bool.and_self, ih]
 
 end Ohne
 

@@ -60,7 +60,7 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     refine ⟨fadenA_lokal hF hhead ρ (.dann (.cons s .nil) (.ende rest)) (M.faeden u).spur
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨hks, hss, hrest⟩ := okV_ende_cons hok
-    refine ⟨σ, Nat.le_refl _, hg, ⟨by simp [Block.vOk, hks], ?_, hrest⟩,
+    refine ⟨σ, Nat.le_refl _, hg, ⟨by simp only [Block.vOk, hks, Bool.and_self], ?_, hrest⟩,
       fun R O' => ZErg.folgt_of_eq (semV_endeEntf O' passes R s rest σ ρ)⟩
     simpa [blockOrteP] using hss
   | endeForm l Γ Λ e ρ hl hent hhead =>
@@ -416,25 +416,25 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenA_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, _, _, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelDann O' passes R rest b k σ ρ hleave true)⟩
   | peelDannNext l Γ Λ rest b k ρ hnext hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenA_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, _, _, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelDann O' passes R rest b k σ ρ hnext false)⟩
   | peelSchrumpfLeave l Γ Λ τ rest k ρ hleave hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenA_lokal hF hhead ρ.tail _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelSchrumpf O' passes R rest k σ ρ hleave true)⟩
   | peelSchrumpfNext l Γ Λ τ rest k ρ hnext hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenA_lokal hF hhead ρ.tail _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelSchrumpf O' passes R rest k σ ρ hnext false)⟩
   | peelFreiLeave l Γ Λ L rest k ρ hleave hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -442,7 +442,7 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, hk⟩ := hok
     exact ⟨σ.gibt L, Nat.le_succ _, hg,
-      ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+      ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelFrei O' passes R L rest k σ ρ hleave true)⟩
   | peelFreiNext l Γ Λ L rest k ρ hnext hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -450,19 +450,19 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
       (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, hk⟩ := hok
     exact ⟨σ.gibt L, Nat.le_succ _, hg,
-      ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+      ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelFrei O' passes R L rest k σ ρ hnext false)⟩
   | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenA_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, _, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelAbbruch O' passes R rest k σ ρ hleave true)⟩
   | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     refine ⟨fadenA_lokal hF hhead ρ _ (M.faeden u).spur (fun σ hg hok => ?_), hL⟩
     obtain ⟨_, _, _, hk⟩ := hok
-    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp [blockOrteP, stmtOrteP] at h, hk⟩,
+    exact ⟨σ, Nat.le_refl _, hg, ⟨rfl, fun _ h => by simp only [blockOrteP, stmtOrteP, List.append_nil, List.not_mem_nil] at h, hk⟩,
       fun R O' => ZErg.folgt_of_eq (semV_peelAbbruch O' passes R rest k σ ρ hnext false)⟩
   | dannExchange l Γ Λ Λ' g neuE hw hLg rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
@@ -760,7 +760,7 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
         cases R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
           with
         | ok σa v =>
-            refine ⟨fun hw => by simp [RufRahmenG.wartend, GRest.wartend] at hw,
+            refine ⟨fun hw => by simp only [RufRahmenG.wartend, GRest.wartend, Bool.true_eq_false] at hw,
               fun _ _ _ _ _ _ _ _ hc he' => ?_⟩
             rcases hc with hc | ⟨_, _, hc⟩
             · cases hc
@@ -795,7 +795,7 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
         cases R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
           with
         | ok σa v =>
-            refine ⟨fun hw => by simp [RufRahmenG.wartend, GRest.wartend] at hw,
+            refine ⟨fun hw => by simp only [RufRahmenG.wartend, GRest.wartend, Bool.true_eq_false] at hw,
               fun _ _ _ _ _ _ _ _ hc he' => ?_⟩
             rcases hc with hc | ⟨_, _, hc⟩
             · cases hc
@@ -913,7 +913,7 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
             (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
               (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
         | ok σa v =>
-            refine ⟨fun hw => by simp [RufRahmenG.wartend, GRest.wartend] at hw,
+            refine ⟨fun hw => by simp only [RufRahmenG.wartend, GRest.wartend, Bool.true_eq_false] at hw,
               fun _ _ _ _ _ _ _ _ hc he' => ?_⟩
             rcases hc with hc | ⟨_, _, hc⟩
             · cases hc
@@ -1077,7 +1077,7 @@ theorem akteurA (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q)
   -- every other rule: the head residue is outside the fragment
   | _ =>
     exact absurd (kopfA_okV hF.1 ‹(M.faeden u).kopf.rest = _›)
-      (by simp [GRest.okV, Block.vOk, Stmt.vOk, Endblock.vOk])
+      (by simp only [GRest.okV, Block.vOk, Bool.false_eq_true, false_and, not_false_eq_true])
 
 end Akteur
 

@@ -280,12 +280,12 @@ theorem GRest.anRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
       | ret _ hp => exact hp
       | retWhy _ hp => exact hp
       | cons s _ => exact s.istRueck_perm h
-      | _ => simp [GRest.anRueck, Endblock.istRueck] at h
+      | _ => simp only [anRueck, Endblock.istRueck, Bool.false_eq_true] at h
   | dann b _ =>
       cases b with
       | cons s _ => exact s.istRueck_perm h
-      | _ => simp [GRest.anRueck, Block.istRueck] at h
-  | _ => simp [GRest.anRueck] at h
+      | _ => simp only [anRueck, Block.istRueck, Bool.false_eq_true] at h
+  | _ => simp only [anRueck, Bool.false_eq_true] at h
 
 /-- **Thread `t` is finished**: its stack is empty and its head stands at a
     return. -/

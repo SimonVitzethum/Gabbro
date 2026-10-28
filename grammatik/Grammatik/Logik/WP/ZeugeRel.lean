@@ -40,7 +40,7 @@ theorem fuellen_unabhaengig (σ : World (fD N)) :
     exact ⟨_, _, rfl, rfl, fun j _ _ => h j (fun k hk => by cases hk)⟩
   case inv =>
     intro k ks σ₁ ρ₁ σ₂ ρ₂ _
-    exact ⟨by simp [wahr?, eval], by simp [wahr?, eval]⟩
+    exact ⟨by simp only [wahr?, eval], by simp only [wahr?, eval]⟩
   case schritt =>
     intro k ks σ₁ ρ₁ σ₂ ρ₂ h
     cases ρ₁; cases ρ₂

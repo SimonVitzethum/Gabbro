@@ -93,8 +93,8 @@ theorem rufUpdateG_plus (j : Nat) (m : Faden → RufFadenG D) (f : Faden) (z : R
     (fun t => (rufUpdateG m f z t).plus j) = rufUpdateG (fun t => (m t).plus j) f (z.plus j) := by
   funext t
   by_cases h : t = f
-  · subst h; simp [rufUpdateG]
-  · simp [rufUpdateG, h]
+  · subst h; simp only [rufUpdateG, ↓reduceIte]
+  · simp only [rufUpdateG, h, ↓reduceIte]
 
 theorem GRest.plus_zero {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (g : GRest D V l Γ Λ),
     g.plus 0 = g
@@ -165,7 +165,7 @@ theorem GRest.plus_anRueck (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
 theorem fertigG_plus (j : Nat) (M : RufMaschineG D) (t : Faden) : FertigG (M.plus j) t ↔ FertigG M t := by
   unfold FertigG
   refine and_congr ?_ ?_
-  · simp
+  · simp only [RufMaschineG.plus_faeden, RufFadenG.plus_stapel, List.map_eq_nil_iff]
   · exact Eq.to_iff (congrArg (· = true) (GRest.plus_anRueck j (M.faeden t).kopf.rest.2.2.2.2))
 
 /-! ## 3. Every step at budget `p` is a step at budget `p + j` -/

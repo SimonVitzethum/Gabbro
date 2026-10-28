@@ -147,7 +147,7 @@ theorem abb_schrumpf {l : Bool} {τ : Ty} {o : Ausgang V l (τ :: Γ)} {w : Bool
     simp only [Ausgang.schrumpf, Ausgang.abb?, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact ⟨ρ, rfl, rfl⟩
-  | _ => simp [Ausgang.schrumpf, Ausgang.abb?] at h
+  | _ => simp only [Ausgang.abb?, Ausgang.schrumpf, reduceCtorEq] at h
 
 theorem abb_mapWelt {l : Bool} (g : World D → World D) {o : Ausgang V l Γ} {w : Bool} {σ' : World D}
     {ρ' : Env D Γ} (h : (o.mapWelt g).abb? = some (w, σ', ρ')) :
@@ -161,7 +161,7 @@ theorem abb_mapWelt {l : Bool} (g : World D → World D) {o : Ausgang V l Γ} {w
     simp only [Ausgang.mapWelt, Ausgang.abb?, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact ⟨σ, rfl, rfl⟩
-  | _ => simp [Ausgang.mapWelt, Ausgang.abb?] at h
+  | _ => simp only [Ausgang.abb?, Ausgang.mapWelt, reduceCtorEq] at h
 
 /-- The two ends of a frame: a return with a value, or a reason. -/
 inductive EndeW (V : Vertrag D) where
@@ -208,7 +208,7 @@ theorem ende_mapWelt_none {l : Bool} (g : World D → World D) {o : Ausgang V l 
 
 theorem EndeW.zuAusgang_ne_ok {l : Bool} (o : EndAusgang V l Γ) (σ' : World D) (ρ' : Env D Γ) :
     o.zuAusgang ≠ .ok σ' ρ' := by
-  cases o <;> simp [EndAusgang.zuAusgang]
+  cases o <;> simp only [EndAusgang.zuAusgang, ne_eq, reduceCtorEq, not_false_eq_true]
 
 end Aus
 theorem execBlock_cons_abb (O : Orakel D) (passes : Nat)

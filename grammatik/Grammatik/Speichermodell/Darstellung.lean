@@ -94,13 +94,13 @@ theorem zellBytes_fits (b : Nat) (h : b ≤ 64) : b ≤ 8 * zellBytes b := by
 theorem zellBytes_minimal (b : Nat) : zellBytes b ≤ 1 ∨ 8 * (zellBytes b / 2) < b := by
   unfold zellBytes
   by_cases h1 : b ≤ 8
-  · simp [h1]
+  · simp only [h1, ↓reduceIte, Std.le_refl, Nat.reduceDiv, Nat.mul_zero, true_or]
   · right
     by_cases h2 : b ≤ 16
-    · simp [h1, h2]; omega
+    · simp only [h1, ↓reduceIte, h2, Nat.zero_lt_succ, Nat.div_self, Nat.mul_one]; omega
     · by_cases h3 : b ≤ 32
-      · simp [h1, h2, h3]; omega
-      · simp [h1, h2, h3]; omega
+      · simp only [h1, ↓reduceIte, h2, h3, Nat.reduceDiv, Nat.reduceMul]; omega
+      · simp only [h1, ↓reduceIte, h2, h3, Nat.reduceDiv, Nat.reduceMul]; omega
 
 /-- Narrow storage of a ranged value, in bytes. -/
 def schmalBytes (lo hi : Int) : Nat := zellBytes (bits lo hi)
@@ -117,7 +117,7 @@ theorem schmal_le_wort (lo hi : Int) (w : Nat) (hw : w = 1 ∨ w = 2 ∨ w = 4 �
   unfold schmalBytes wortBytes
   have hz : anzahl lo hi ≤ 2 ^ (8 * w) := by
     unfold anzahl
-    have : ((2 ^ (8 * w) : Nat) : Int) = (2 : Int) ^ (8 * w) := by simp
+    have : ((2 ^ (8 * w) : Nat) : Int) = (2 : Int) ^ (8 * w) := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
     have hp : (0 : Int) < (2 : Int) ^ (8 * w) := by exact_mod_cast Nat.two_pow_pos (8 * w)
     omega
   have hb := bits_minimal lo hi (8 * w) hz

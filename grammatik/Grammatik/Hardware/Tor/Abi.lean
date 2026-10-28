@@ -148,7 +148,7 @@ theorem sysabi_zu_tor {a : SysAbi} (h : a.gut) (f : Falle)
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · simp only [sysAbiZuTor, List.map_map, Function.comp_def]
     have : (a.ein.map Prod.fst).map sysRegName = a.ein.map (fun p => sysRegName p.1) := by
-      simp [List.map_map, Function.comp_def]
+      simp only [List.map_map, Function.comp_def]
     rw [← this]
     exact List.Pairwise.map sysRegName (fun _ _ h e => h (hinj e)) h1
   · simpa [sysAbiZuTor, Function.comp_def] using h2
@@ -219,7 +219,7 @@ theorem schreib_gut : schreibX86.gut ∧ schreibArm.gut ∧ schreibRv.gut := by 
 
 theorem schreib_deckt : schreibX86.deckt 3 ∧ schreibArm.deckt 3 ∧ schreibRv.deckt 3 := by
   unfold TorAbi.deckt schreibX86 schreibArm schreibRv
-  refine ⟨?_, ?_, ?_⟩ <;> simp [r, List.range, List.range.loop] <;> decide
+  refine ⟨?_, ?_, ?_⟩ <;> simp only [r, List.map_cons, List.map_nil, List.range, List.range.loop, List.Perm.refl] <;> decide
 
 /-- Three targets as data; the last is 32-bit big endian, to show `Code.Conf` follows the data. -/
 def zielX86 : ZielDaten :=

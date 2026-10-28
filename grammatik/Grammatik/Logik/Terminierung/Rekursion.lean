@@ -93,7 +93,7 @@ theorem ketteW_tail {x : Gewicht} : ∀ {t : List Gewicht}, KetteW (x :: t) → 
 
 /-- **The stack order is well-founded on falling stacks.** -/
 theorem acc_sltK : ∀ b : List Gewicht, KetteW b → Acc sltK b := by
-  have nil : Acc sltK [] := ⟨_, fun a ⟨_, h⟩ => by cases a <;> simp [slt] at h⟩
+  have nil : Acc sltK [] := ⟨_, fun a ⟨_, h⟩ => by cases a <;> simp only [slt] at h⟩
   intro b hb
   cases b with
   | nil => exact nil
@@ -293,7 +293,7 @@ theorem schritt_rang (hvoll : ∀ g, g ∈ fs)
   have hfa' : M'.faeden t = M''.faeden t := by rw [hfa]
   have hfm : (mitSpeicher M σ).faeden t = M.faeden t := rfl
   have hlen : ∀ z : RufFadenG D, (RufFadenSchluesselG z).length = z.stapel.length + 1 := by
-    intro z; simp [RufFadenSchluesselG]
+    intro z; simp only [RufFadenSchluesselG, List.map_cons, List.length_cons, List.length_map, Nat.add_left_cancel_iff]
   rcases schrittArt hg (fun _ => 0) (tor zyk rk (M.faeden t).kopf.f) (torS zyk rk fs (M.faeden t).kopf.f) true with
     ⟨hst, hpot⟩ | ⟨g, caller', rho, s0, hst, hkopf, hpush⟩ | ⟨caller, rst, hst, hst', hpop⟩
   · -- the head steps: same stack, same key, lower potential

@@ -248,7 +248,7 @@ theorem sperre_schritt {M M' : RufMaschineG D} {t : Faden} {L : D.Lock}
   | _ =>
       exfalso
       rw [‹(M.faeden t).kopf.rest = _›] at hK
-      simp [GRest.kopfSperre, Block.sperreVon, Stmt.sperreVon] at hK
+      simp only [GRest.kopfSperre, reduceCtorEq, Block.sperreVon, Stmt.sperreVon] at hK
 
 set_option maxHeartbeats 4000000 in
 /-- **What a step does to the held set, with the `locks` head named**: the
@@ -380,9 +380,9 @@ theorem anSperre_of_kopf {M : RufMaschineG D} {t : Faden} {L : D.Lock}
                 Option.some.injEq] at h
               subst h
               exact ⟨l, Γ, Λ, _, ρ, hr, body, rest, k, rfl⟩
-          | _ => simp [GRest.kopfSperre, Block.sperreVon, Stmt.sperreVon] at h
-      | _ => simp [GRest.kopfSperre, Block.sperreVon] at h
-  | _ => simp [GRest.kopfSperre] at h
+          | _ => simp only [GRest.kopfSperre, Block.sperreVon, Stmt.sperreVon, reduceCtorEq] at h
+      | _ => simp only [GRest.kopfSperre, Block.sperreVon, reduceCtorEq] at h
+  | _ => simp only [GRest.kopfSperre, reduceCtorEq] at h
 
 /-- A thread at `locks L` while another thread holds `L` cannot step. -/
 theorem nicht_bereit_an_sperre {M : RufMaschineG D} {t u : Faden} {L : D.Lock}
@@ -411,7 +411,7 @@ theorem ende_ret_kein_schritt {M M' : RufMaschineG D} {t : Faden}
       cases e <;> simp_all [GRest.istEndeRet, EndEntfaltbar]
   | _ =>
       rw [‹(M.faeden t).kopf.rest = _›] at hk
-      simp [GRest.istEndeRet] at hk
+      simp only [GRest.istEndeRet, Bool.false_eq_true] at hk
 
 /-- A named hardware stop, read off the head residue. -/
 theorem halt_kopf {M : RufMaschineG D} {t : Faden} {k : Zielsatz.HaltArt}

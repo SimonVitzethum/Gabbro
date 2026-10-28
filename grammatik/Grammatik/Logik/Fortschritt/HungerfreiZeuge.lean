@@ -20,7 +20,7 @@ def hzQ (j : Nat) (_ : Unit) : List Faden := (if lA0 j then [0] else []) ++ (if 
 theorem hzQ_spaet (j : Nat) (hj : 16 ≤ j) : hzQ j () = [] := by
   have h0 : lA0 j = false := by simp only [lA0]; exact decide_eq_false (by omega)
   have h1 : lA1 j = false := by simp only [lA1]; exact decide_eq_false (by omega)
-  simp [hzQ, h0, h1]
+  simp only [hzQ, h0, Bool.false_eq_true, ↓reduceIte, h1, List.append_nil]
 
 /-- The queue keeps its order, up to step 16 (after it the queue is empty), by evaluation. -/
 theorem hz_ordnung_klein : ∀ n, n ≤ 16 →
@@ -38,20 +38,20 @@ theorem hz_lauf : ∃ R : FifoLauf mP mO 0,
     glied := fun n L u => by
       cases L
       rw [hAn]
-      cases ha : lA0 n <;> cases hb : lA1 n <;> simp [hzQ, ha, hb]
+      cases ha : lA0 n <;> cases hb : lA1 n <;> simp only [hzQ, ha, Bool.false_eq_true, ↓reduceIte, hb, List.append_nil, List.not_mem_nil, and_false, or_self, List.nil_append, List.mem_cons, or_false, and_true, false_or, List.cons_append]
     eindeutig := fun n L => by
-      cases ha : lA0 n <;> cases hb : lA1 n <;> simp [hzQ, ha, hb]
+      cases ha : lA0 n <;> cases hb : lA1 n <;> simp only [hzQ, ha, Bool.false_eq_true, ↓reduceIte, hb, List.append_nil, List.nodup_nil, List.nil_append, List.nodup_cons, List.not_mem_nil, not_false_eq_true, and_self, List.cons_append, List.mem_cons, Nat.zero_ne_one, or_self]
     kopf := fun n u L hk hA => by
       cases L
       rw [hakt] at hk
       rcases (hAn n u).mp hA with ⟨rfl, h⟩ | ⟨rfl, h⟩
-      · simp [hzQ, h]
+      · simp only [hzQ, h, ↓reduceIte, List.cons_append, List.nil_append, List.head?_cons]
       · have h0' : lA0 n = false := by
           rcases lAkt_some hk with ⟨e, _⟩ | ⟨_, hn⟩
           · cases e
           · simp only [lA1, decide_eq_true_eq] at h
             simp only [lA0]; exact decide_eq_false (by omega)
-        simp [hzQ, h, h0']
+        simp only [hzQ, h0', Bool.false_eq_true, ↓reduceIte, h, List.nil_append, List.head?_cons]
     ordnung := fun n L => by
       cases L
       by_cases hn : n ≤ 16

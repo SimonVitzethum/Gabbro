@@ -62,7 +62,7 @@ theorem orteOk_korrekt (os : List (D.Tab ⊕ D.Glob))
     istGeist (D := D) o = false := by
   unfold orteOk at h
   have hpoint := List.all_eq_true.mp h o ho
-  simp at hpoint
+  simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at hpoint
   exact hpoint
 
 /-- Bool-negation from `= false`: every `orteOk` leaf ends here, since the
@@ -538,7 +538,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rcases ho' with rfl | ho' | ho'
       · simp only [orteOk, List.all_eq_true, List.mem_singleton] at h1
         have hg' := h1.1 _ rfl
-        simp at hg'
+        simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at hg'
         exact nge_of_eq_false hg'
       · exact (List.not_mem_nil ho').elim
       · exact g001_korrekt rest h1.2 o ho'
@@ -812,7 +812,7 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       rcases ho' with rfl | ho' | ho'
       · simp only [orteOk, List.all_eq_true, List.mem_singleton] at h1
         have hg' := h1.1 _ rfl
-        simp at hg'
+        simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at hg'
         exact nge_of_eq_false hg'
       · exact (List.not_mem_nil ho').elim
       · exact g001End_korrekt rest h1.2 o ho'

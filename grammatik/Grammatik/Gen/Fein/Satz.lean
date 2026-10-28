@@ -11,7 +11,7 @@ namespace Gabbro.Grammatik.Gen.Fein
 
 open Gabbro.Grammatik
 
-theorem kopf_lt (τ : Ty) : τ.kopf < 12 := by cases τ <;> simp [Ty.kopf]
+theorem kopf_lt (τ : Ty) : τ.kopf < 12 := by cases τ <;> simp only [Ty.kopf, Nat.zero_lt_succ, Nat.reduceLT, Nat.lt_add_one]
 
 theorem kopfOk_none (τ : Ty) : kopfOk none τ.kopf = true := decide_eq_true (kopf_lt τ)
 
@@ -21,10 +21,10 @@ theorem all_cons {α : Type} {p : α → Bool} {x : α} {xs : List α} (h : p x 
     (x :: xs).all p = true := by simp only [List.all_cons, h, Bool.true_and]; exact hs
 
 theorem all_app {α : Type} {p : α → Bool} {xs ys : List α} (h : xs.all p = true) (hs : ys.all p = true) :
-    (xs ++ ys).all p = true := by simp [List.all_append, h, hs]
+    (xs ++ ys).all p = true := by simp only [List.all_append, h, hs, Bool.and_self]
 
 theorem kc {q : Option Nat} {qs : List (Option Nat)} {h : Nat} {hs : List Nat} (h1 : kopfOk q h = true)
-    (h2 : koepfeOk qs hs = true) : koepfeOk (q :: qs) (h :: hs) = true := by simp [koepfeOk, h1, h2]
+    (h2 : koepfeOk qs hs = true) : koepfeOk (q :: qs) (h :: hs) = true := by simp only [koepfeOk, h1, h2, Bool.and_self]
 
 theorem eig_ok {f k : Nat} {l : Bool} {hs : List Nat} {r : Zeile} (hr : zeile f k = some r)
     (h1 : (decide (4 ≤ f) || !l) = true) (h2 : (!r.fremd && (!r.lnoetig || l)) = true)
@@ -192,7 +192,8 @@ theorem fzE_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .slotRef (r := i) .. => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) all_nil)) (fzE_ok hax i))
   | .arrNil .. => by simp only [fzE]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
   | .strLit .. => by simp only [fzE]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
-  | .arrCons a b => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp [koepfeOk, exprReqs, tk, kopfOk, kopf_lt, Ty.index] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a (kopfOk_none _) _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
+  | .arrCons a b => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp only [exprReqs, ↓reduceIte, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil, tk,
+  koepfeOk, kopfOk, kopf_lt, decide_true, Bool.and_self] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a (kopfOk_none _) _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .arrGet a b => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .strCat a b => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .strLen i => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) all_nil)) (fzE_ok hax i))
@@ -200,9 +201,11 @@ theorem fzE_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .strEq a b => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .strLt a b => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b rfl _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .strWeit _ i => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) all_nil)) (fzE_ok hax i))
-  | .wenn c a b => by simp only [fzE]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp [koepfeOk, exprReqs, tk, kopfOk, kopf_lt] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ c rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a (kopfOk_none _) _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b (kopfOk_none _) _)) all_nil)))) (fzE_ok hax c)) (fzE_ok hax a)) (fzE_ok hax b))
+  | .wenn c a b => by simp only [fzE]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp only [exprReqs, ↓reduceIte, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil, tk,
+  koepfeOk, kopfOk, kopf_lt, decide_true, Bool.and_self, Bool.and_true, beq_iff_eq] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ c rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a (kopfOk_none _) _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b (kopfOk_none _) _)) all_nil)))) (fzE_ok hax c)) (fzE_ok hax a)) (fzE_ok hax b))
   | .eng e _ _ s => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ s rfl _)) all_nil))) (fzE_ok hax e)) (fzE_ok hax s))
-  | .arrSet a i v => by simp only [fzE]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp [koepfeOk, exprReqs, tk, kopfOk, kopf_lt, Ty.index] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ v (kopfOk_none _) _)) all_nil)))) (fzE_ok hax a)) (fzE_ok hax i)) (fzE_ok hax v))
+  | .arrSet a i v => by simp only [fzE]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp only [exprReqs, ↓reduceIte, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil, tk,
+  Ty.index, koepfeOk, kopfOk, kopf_lt, decide_true, Bool.and_self, Bool.and_true, Bool.true_and, beq_iff_eq] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ v (kopfOk_none _) _)) all_nil)))) (fzE_ok hax a)) (fzE_ok hax i)) (fzE_ok hax v))
 
 theorem fzN_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : (e : NutzlastExpr D Γ Λ o) → (fzN e).all moeglich = true
   | .empty .. => by simp only [fzN]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)

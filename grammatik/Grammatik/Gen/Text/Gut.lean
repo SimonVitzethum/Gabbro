@@ -24,7 +24,7 @@ theorem typGutB_sound (t : STyp) (h : typGutB t = true) : TypGut t := by
   match t, h with
   | .atom a, h =>
     have ha : typKopf a = false := by simpa [typGutB] using h
-    have := TypGut.kette (.atom a) [] (.atom a ha) (by simp [TsGut])
+    have := TypGut.kette (.atom a) [] (.atom a ha) (by simp only [TsGut, List.not_mem_nil, IsEmpty.forall_iff, implies_true])
     simpa [applyTS] using this
   | .range (.atom a) lo hi x, h =>
     simp only [typGutB, Bool.and_eq_true, Bool.not_eq_true'] at h
@@ -145,13 +145,13 @@ def anwGutB : Nat → Bool → SAnw → Bool
   | _ + 1, false, .ret (some e) => gut e
   | _ + 1, false, _ => false
 
-theorem rohTrav_leer : RohTrav "" := ⟨[], rfl, by simp⟩
+theorem rohTrav_leer : RohTrav "" := ⟨[], rfl, by simp only [List.not_mem_nil, ne_eq, IsEmpty.forall_iff, implies_true]⟩
 
 theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = true →
     AnwGut (if b then .block else .anw) s := by
   intro n
   induction n with
-  | zero => intro b s h; simp [anwGutB] at h
+  | zero => intro b s h; simp only [anwGutB, Bool.false_eq_true] at h
   | succ n ih =>
     intro b s h
     cases b with
@@ -183,7 +183,7 @@ theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = tru
         exact .call f xs h.1.1 h.1.2 h.2
       | .cond c t [] s, h =>
         simp only [anwGutB, Bool.and_eq_true] at h
-        refine .cond c t [] s h.1.1 (by simpa using ih true t h.1.2) (by simp) ?_
+        refine .cond c t [] s h.1.1 (by simpa using ih true t h.1.2) (by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true]) ?_
         intro b hb; subst hb; simpa using ih true b (by simpa using h.2)
       | .locks false o b, h =>
         simp only [anwGutB, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
@@ -197,7 +197,7 @@ theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = tru
       | .each b none k s m r i body, h =>
         simp only [anwGutB, Bool.and_eq_true, beq_iff_eq] at h
         obtain ⟨⟨⟨hs, rfl⟩, hi⟩, hb⟩ := h
-        refine .each b none k s m "" i body (by simp) hs rohTrav_leer ?_ (by simpa using ih true body hb)
+        refine .each b none k s m "" i body (by simp only [reduceCtorEq, IsEmpty.forall_iff, implies_true]) hs rohTrav_leer ?_ (by simpa using ih true body hb)
         intro e he; subst he; exact predGutB_sound 50 e (by simpa using hi)
       | .ret none, _ => exact .retLeer
       | .ret (some e), h => exact .ret e (by simpa [anwGutB] using h)
@@ -220,7 +220,7 @@ theorem effGutB_sound (e : SEffekt) (h : effGutB e = true) : EffGut e := by
     subst hs
     rcases h.2 with h2 | h2
     · cases h2
-    · rw [hd] at h2; simp at h2
+    · rw [hd] at h2; simp only [bne_self_eq_false, Bool.false_eq_true] at h2
 
 def klauselGutB : SKlausel → Bool
   | .needs p => predGutB 50 p
@@ -258,7 +258,7 @@ theorem regGutB_sound (r : SReg) (h : regGutB r = true) : RegGut r := by
   simp only [regGutB, Bool.and_eq_true, Bool.or_eq_true, bne_iff_ne, ne_eq, List.isEmpty_iff,
     List.all_eq_true, beq_iff_eq, Option.isSome_iff_exists, Option.isNone_iff_eq_none] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨ht, ha⟩, hk⟩, hs⟩, hf⟩, hv⟩, he⟩, hc⟩ := h
-  refine ⟨typGutB_sound _ ht, ?_, fun e => absurd e hk, Or.inl hs, by simp [hf], ?_, ?_, fun c hm => hc c hm⟩
+  refine ⟨typGutB_sound _ ht, ?_, fun e => absurd e hk, Or.inl hs, by simp only [hf, List.not_mem_nil, IsEmpty.forall_iff, implies_true], ?_, ?_, fun c hm => hc c hm⟩
   · exact fun _ => ha
   · intro p hp
     rw [hp] at hv
@@ -319,13 +319,13 @@ def itemGutB : Nat → SItemTief → Bool
 theorem itemGutB_sound : ∀ (n : Nat) (it : SItemTief), itemGutB n it = true → ItemGut it := by
   intro n
   induction n with
-  | zero => intro it h; simp [itemGutB] at h
+  | zero => intro it h; simp only [itemGutB, Bool.false_eq_true] at h
   | succ n ih =>
     intro it h
     match it, h with
     | .modT name its, h =>
       simp only [itemGutB, Bool.and_eq_true, List.all_eq_true] at h
-      have := ItemGut.modT [name] its ⟨by simp, by simpa using h.1⟩ (fun it hm => ih it (h.2 it hm))
+      have := ItemGut.modT [name] its ⟨by simp only [ne_eq, List.cons_ne_self, not_false_eq_true], by simpa using h.1⟩ (fun it hm => ih it (h.2 it hm))
       simpa using this
     | .tableT x v cnt b o sh parts, h =>
       simp only [itemGutB, Bool.and_eq_true, List.all_eq_true] at h

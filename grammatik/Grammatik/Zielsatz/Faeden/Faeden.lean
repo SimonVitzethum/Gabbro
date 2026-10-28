@@ -214,7 +214,7 @@ theorem fortschrittF_aus {K : FadenMaschine D}
         · refine Or.inr ⟨_, FadenSchritt.join K t hl hw fun u hu =>
             Classical.byContradiction fun hfu => hj ⟨u, hu, hfu⟩, rfl, ?_⟩
           show (if t = t then [] else K.wartet t) = []
-          simp
+          simp only [↓reduceIte]
 
 #print axioms Gabbro.Grammatik.Zielsatz.wartet_leer_of_haelt
 #print axioms Gabbro.Grammatik.Zielsatz.lebt_of_haelt

@@ -42,13 +42,13 @@ theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {�
         rw [← Nat.mul_add]
         exact Nat.mul_le_mul_left _ (by omega)
       simp only [kostenStmt, kostenKS, zusatzS]; omega
-  | .callInd .., h => by simp [spiegelS] at h
-  | .retry .., h => by simp [spiegelS] at h
-  | .forever .., h => by simp [spiegelS] at h
-  | .axiomCall .., h => by simp [spiegelS] at h
-  | .transition .., h => by simp [spiegelS] at h
-  | .advances .., h => by simp [spiegelS] at h
-  | .retires .., h => by simp [spiegelS] at h
+  | .callInd .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .retry .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .forever .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .axiomCall .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .transition .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .advances .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .retires .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .assignSlot .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .assignThru .., _ | .assignSlotRef .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .assignGlob .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
@@ -79,14 +79,14 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
   | .bindCall _ _ _ _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .bindCallInd .., h => by simp [spiegelB] at h
+  | .bindCallInd .., h => by simp only [spiegelB, Bool.false_eq_true] at h
   | .bindCallElse _ _ _ _ _ err rest, h => by
       simp only [spiegelB, Bool.and_eq_true] at h
       have h1 := spiegel_sonst c pa err h.1
       have h2 := spiegel_block c pa rest h.2
       simp only [kostenBlock, kostenKB, zusatzB]; omega
-  | .bindAxiom .., h => by simp [spiegelB] at h
-  | .bindAxiomElse .., h => by simp [spiegelB] at h
+  | .bindAxiom .., h => by simp only [spiegelB, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h => by simp only [spiegelB, Bool.false_eq_true] at h
   | .regRead _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
@@ -172,8 +172,8 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
       have h1 := spiegel_sonst c pa err h.1
       have h2 := spiegel_sonst c pa rest h.2
       simp only [kostenEnd, kostenKE, zusatzE]; omega
-  | .bindAxiom .., h => by simp [spiegelE] at h
-  | .bindAxiomElse .., h => by simp [spiegelE] at h
+  | .bindAxiom .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .regRead _ _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
@@ -185,7 +185,7 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
   | .awaits _ _ _ _ _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
-  | .bindCallInd .., h => by simp [spiegelE] at h
+  | .bindCallInd .., h => by simp only [spiegelE, Bool.false_eq_true] at h
 
 theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} :
@@ -211,8 +211,8 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_sonst c pa err h.1
       have h2 := spiegel_sonst c pa rest h.2
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
-  | .bindAxiom .., h => by simp [spiegelE] at h
-  | .bindAxiomElse .., h => by simp [spiegelE] at h
+  | .bindAxiom .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .regRead _ _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
@@ -224,7 +224,7 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
   | .awaits _ _ _ _ _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
-  | .bindCallInd .., h => by simp [spiegelE] at h
+  | .bindCallInd .., h => by simp only [spiegelE, Bool.false_eq_true] at h
 end
 /-- **TARGET 3 over a frame.** For a body in the mirrored forms, the own
     steps of its frame are at most the checker's number of the body plus

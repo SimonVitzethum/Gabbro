@@ -44,11 +44,12 @@ theorem vorne_filter (p : Faden → Bool) (t : Faden) (hp : p t = true) :
       have ih := vorne_filter p t hp l
       unfold vorne at ih ⊢
       by_cases hu : u = t
-      · subst hu; simp [List.filter_cons, hp]
-      · have hd : decide (u ≠ t) = true := by simp [hu]
+      · subst hu; simp only [ne_eq, decide_not, hp, List.filter_cons_of_pos, decide_true, Bool.not_true, Bool.false_eq_true,
+  not_false_eq_true, List.takeWhile_cons_of_neg, List.filter_nil]
+      · have hd : decide (u ≠ t) = true := by simp only [ne_eq, hu, not_false_eq_true, decide_true]
         cases hpu : p u
-        · rw [List.filter_cons_of_neg (by simp [hpu]), List.takeWhile_cons_of_pos (p := fun x => decide (x ≠ t)) (a := u) hd,
-            List.filter_cons_of_neg (by simp [hpu])]
+        · rw [List.filter_cons_of_neg (by simp only [hpu, Bool.false_eq_true, not_false_eq_true]), List.takeWhile_cons_of_pos (p := fun x => decide (x ≠ t)) (a := u) hd,
+            List.filter_cons_of_neg (by simp only [hpu, Bool.false_eq_true, not_false_eq_true])]
           exact ih
         · rw [List.filter_cons_of_pos hpu, List.takeWhile_cons_of_pos (p := fun x => decide (x ≠ t)) (a := u) hd, List.takeWhile_cons_of_pos (p := fun x => decide (x ≠ t)) (a := u) hd,
             List.filter_cons_of_pos hpu, ih]
@@ -59,7 +60,8 @@ theorem vorne_praefix {F G : List Faden} {t : Faden} (ht : t ∈ F) (h : F <+: G
   | nil => exact absurd ht List.not_mem_nil
   | cons u F ih =>
       by_cases hu : u = t
-      · subst hu; simp [vorne]
+      · subst hu; simp only [vorne, ne_eq, decide_not, List.cons_append, decide_true, Bool.not_true, Bool.false_eq_true,
+  not_false_eq_true, List.takeWhile_cons_of_neg]
       · have ht' : t ∈ F := by
           rcases List.mem_cons.mp ht with h | h
           · exact absurd h.symm hu
@@ -69,11 +71,12 @@ theorem vorne_praefix {F G : List Faden} {t : Faden} (ht : t ∈ F) (h : F <+: G
         exact ih ht'
 
 theorem mem_vorne {t u : Faden} : ∀ {l : List Faden}, u ∈ vorne l t → u ∈ l ∧ u ≠ t
-  | [], h => by simp [vorne] at h
+  | [], h => by simp only [vorne, ne_eq, decide_not, List.takeWhile_nil, List.not_mem_nil] at h
   | x :: l, h => by
       unfold vorne at h
       by_cases hx : x = t
-      · subst hx; simp at h
+      · subst hx; simp only [ne_eq, decide_not, decide_true, Bool.not_true, Bool.false_eq_true, not_false_eq_true,
+  List.takeWhile_cons_of_neg, List.not_mem_nil] at h
       · simp only [List.takeWhile_cons, ne_eq, hx, not_false_eq_true, decide_true, ↓reduceIte,
           List.mem_cons] at h
         rcases h with rfl | h
@@ -88,7 +91,8 @@ theorem kopf_vorne {l : List Faden} {h t : Faden} (hk : l.head? = some h) (hne :
   | cons u l =>
       simp only [List.head?_cons, Option.some.injEq] at hk
       subst hk
-      simp [vorne, hne]
+      simp only [vorne, ne_eq, decide_not, hne, decide_false, Bool.not_false, List.takeWhile_cons_of_pos,
+  List.mem_cons, true_or]
 
 /-- `t` is the head exactly when nobody is ahead. -/
 theorem vorne_leer {l : List Faden} {t : Faden} (ht : t ∈ l) (h : vorne l t = []) : l.head? = some t := by
@@ -97,7 +101,8 @@ theorem vorne_leer {l : List Faden} {t : Faden} (ht : t ∈ l) (h : vorne l t = 
   | cons u l =>
       by_cases hu : u = t
       · subst hu; rfl
-      · simp [vorne, hu] at h
+      · simp only [vorne, ne_eq, decide_not, hu, decide_false, Bool.not_false, List.takeWhile_cons_of_pos,
+  reduceCtorEq] at h
 
 end Listen
 
@@ -203,7 +208,7 @@ theorem kopfHalt_keineSperre {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
   | cons s _ =>
       cases k <;> simp only [Zielsatz.KopfHalt] at h
       exact Stmt.blatt_sperreVon s h.1
-  | _ => simp [Block.sperreVon]
+  | _ => simp only [Block.sperreVon]
 
 /-- A residue at a named stop stands at no lock. -/
 theorem restHalt_keineSperre {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {σ : World D} {ρ : Env D Γ}
@@ -264,7 +269,8 @@ theorem kopf_nimmt {n : Nat} {h : Faden} {L : D.Lock} (hk : (R.q n L).head? = so
                 rw [hq] at hkd
                 simp only [List.head?_cons, Option.some.injEq] at hkd
                 subst hkd
-                simp [vorne]
+                simp only [vorne, ne_eq, decide_not, decide_true, Bool.not_true, Bool.false_eq_true, not_false_eq_true,
+  List.takeWhile_cons_of_neg]
           rw [h0] at hle
           exact vorne_leer hm' (List.eq_nil_of_length_eq_zero (Nat.le_zero.mp hle))
         · intro u hu
@@ -369,7 +375,7 @@ theorem hungerfrei {n : Nat} {t : Faden} {L : D.Lock} (hA : AnSperre (R.M n) t L
         have hfr := (sperre_rang hw hA1).1
         have e2 := (sperre_schritt hjA (R.schritt _ h hja)).2
         rw [e2] at hfr
-        simp [offen] at hfr
+        simp only [offen, List.mem_cons, true_or, not_true_eq_false] at hfr
       -- `h` was ahead of `t` at `j`: it heads the queue there, as it did at `m`
       have hvj : h ∈ vorne (R.q (n + d + e) L) t :=
         kopf_vorne (R.kopf _ h L hja hjA) hht

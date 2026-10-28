@@ -91,7 +91,7 @@ theorem rufRumpf_grund {P : Programm D} {O : Orakel D} {passes : Nat} {n : Nat} 
 theorem rufRumpf_null {P : Programm D} {O : Orakel D} {passes : Nat} {g : D.Fn}
     {σ σ' : World D} {ρ : Env D (D.params g)} {v : ErgVal D (D.erg g)} :
     rufRumpf P O passes 0 g σ ρ ≠ .ok σ' v := by
-  simp [rufRumpf]
+  simp only [rufRumpf, ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-! ## 2. The covered fragment, extended by calls, loops and exits
 

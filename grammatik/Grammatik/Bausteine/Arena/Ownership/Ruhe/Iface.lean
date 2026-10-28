@@ -21,7 +21,7 @@ theorem modeList_modesR : ∀ {Γ : Ctx} (m : Modes Γ), modeList (modesR m) = m
   | _, .cons m rest => by simp only [modesR, modeList, modeList_modesR rest]
 
 theorem tyR_eq_int {τ : Ty} {a b : Int} : tyR τ = .int a b ↔ τ = .int a b := by
-  cases τ <;> simp [tyR]
+  cases τ <;> simp only [tyR, Ty.int.injEq, reduceCtorEq]
 
 theorem validParameters_modesR (A : FreiForm D) :
     ∀ {Γ : Ctx} (m : Modes Γ), Flow.validParameters (liftA A) (modesR m) = Flow.validParameters A m

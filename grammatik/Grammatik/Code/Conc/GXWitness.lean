@@ -75,7 +75,7 @@ theorem stmt_gx_zeuge (σ' : World cD) (ρ' : Env cD [])
       Rep cLay (Speicher.welt ⟨σ'.slots, fun _ => ⟨3, by decide, by decide⟩⟩ []) T'.m := by
   obtain ⟨T', rs', h1, h2, h3, h4, _⟩ := stmt_gx cLay cLayOk cTgShared [] (0, 0) cO 0 cR cS 1 2 ⟨0, 3⟩ cSt2 cBlks2
     cLow2_eq cMod2 (Sees.shared cLay) 0 cIn2 ⟨_, rfl, rfl⟩ ⟨⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩ cFn2 cCall2 cTM 0
-    (fun _ => none) [] none (by simp [cTM]) wld5.speicher ⟨wld5.slots, fun _ => ⟨9, by decide, by decide⟩⟩
+    (fun _ => none) [] none (by simp only [cTM, ↓reduceIte]) wld5.speicher ⟨wld5.slots, fun _ => ⟨9, by decide, by decide⟩⟩
     ⟨σ'.slots, fun _ => ⟨3, by decide, by decide⟩⟩ [] (rep_welt [] rep_free_witness) (fun c hc => by
       cases c with
       | inl t => rfl

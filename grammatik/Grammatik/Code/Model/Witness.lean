@@ -102,7 +102,7 @@ theorem main64_runs :
   have hr := main64_returns
   simp only [result, hc] at hr
   cases he : exec (modl 64) 2000 c with
-  | run m f ks => simp [he] at hr
+  | run m f ks => simp only [he, reduceCtorEq] at hr
   | fin m v =>
       simp only [he] at hr
       subst hr
@@ -146,13 +146,18 @@ theorem weak_two_successors :
       obtain ⟨rfl, rfl⟩ := hp
       simp only [Option.some.injEq] at hld
       subst hld
-      exact ⟨n, ⟨hm, by simp [Sicht.null]⟩, rfl⟩
+      exact ⟨n, ⟨hm, by simp only [Sicht.null, Nat.zero_le]⟩, rfl⟩
     · simp only [step, wstart, Modl.blk, Modl.init, wmod, Opd.ev, hty, atomicOk]
-      simp
+      simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.bind_some, BEq.rfl, List.find?_cons_of_pos, decide_eq_true_eq, List.foldl_cons,
+  List.foldl_nil, ↓reduceIte, Option.ite_none_right_eq_some, Option.some.injEq, Cfg.run.injEq, and_true, true_and]
       exact ⟨⟨by decide +kernel, by decide +kernel⟩, rfl⟩
-  refine ⟨_, _, key ⟨1, Val.ofInt 64 5, Sicht.null⟩ (by simp [whist]) rfl,
-    key ⟨0, Val.ofInt 64 0, Sicht.null⟩ (by simp [whist]) rfl, ?_⟩
-  simp [regOf, Frame.setr, Regs.set, Val.ofInt]
+  refine ⟨_, _, key ⟨1, Val.ofInt 64 5, Sicht.null⟩ (by simp only [whist, List.mem_cons, Nachricht.mk.injEq, Nat.succ_ne_self, and_true, false_and, List.not_mem_nil,
+  or_self, or_false]) rfl,
+    key ⟨0, Val.ofInt 64 0, Sicht.null⟩ (by simp only [whist, List.mem_cons, Nachricht.mk.injEq, Nat.zero_ne_one, and_true, false_and, List.not_mem_nil,
+  or_false, or_true]) rfl, ?_⟩
+  simp only [regOf, Frame.setr, Val.ofInt, BitVec.ofInt_ofNat, Regs.set, ↓reduceIte, ne_eq, Option.some.injEq,
+  Val.int.injEq, heq_eq_eq, BitVec.reduceEq, and_false, not_false_eq_true]
 
 end W64
 

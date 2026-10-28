@@ -102,7 +102,7 @@ def fdD : Deklaration where
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => fdSigArbeit
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -118,7 +118,7 @@ def fdD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
@@ -187,12 +187,12 @@ theorem fdD_darf (t : fdD.Tab) : darf fdD t [] := by
   intro w hw
   have hb : fdD.braucht t = [] := rfl
   rw [hb] at hw
-  simp at hw
+  simp only [List.not_mem_nil] at hw
 
 /-- No holdings are held anywhere: `HeldIn` of the empty list. -/
 theorem fdHeldIn_nil (h : List fdD.Lock) : HeldIn ([] : List (Res fdD)) h := by
   intro L hL
-  simp at hL
+  simp only [List.not_mem_nil] at hL
 
 /-- Frame of the handing-out call: the marker write plus the recording. -/
 theorem fdO_rahmen_open (σ : World fdD) (ρ : Env fdD (fdD.aparams true)) :

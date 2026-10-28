@@ -31,7 +31,7 @@ theorem MultiRep.stapel {K : Type} {L : LinkFeld A} {G : K → LinkKopf A} {σ :
 /-- No stacks hold no cells: every arena with empty heads represents empty stacks. -/
 theorem multiRep_leer {K : Type} (L : LinkFeld A) (G : K → LinkKopf A) (σ : World D)
     (hh : ∀ k, (G k).st σ = D.count A.tab) : MultiRep L G σ (fun _ => []) :=
-  ⟨fun _ => [], fun k => ⟨hh k ▸ KetteF.nil, .nil, by simp, rfl⟩, by simp⟩
+  ⟨fun _ => [], fun k => ⟨hh k ▸ KetteF.nil, .nil, by simp only [List.not_mem_nil, IsEmpty.forall_iff, implies_true], rfl⟩, by simp only [ne_eq, List.not_mem_nil, not_false_eq_true, implies_true]⟩
 
 section Execution
 
@@ -101,7 +101,7 @@ theorem push_multi {K : Type} [DecidableEq K] (allocator : Allocator A V l Γ Λ
         apply List.map_congr_left
         intro i hi
         have hne : i ≠ slot := fun he => hfresh j (he ▸ hi)
-        simp [hbytes2, hbytes, hne]
+        simp only [hne, ↓reduceIte]
     · simp only [Function.update_of_ne hj]
       have hg : (G j).g ∉ [(G k).g] := by
         simp only [List.mem_singleton]
@@ -115,7 +115,7 @@ theorem push_multi {K : Type} [DecidableEq K] (allocator : Allocator A V l Γ Λ
         apply List.map_congr_left
         intro i hi
         have hne : i ≠ slot := fun he => hfresh j (he ▸ hi)
-        simp [hbytes2, hbytes, hne]
+        simp only [hbytes2, hbytes, hne, ↓reduceIte]
   · intro a b hab i hi hi'
     by_cases ha : a = k
     · subst ha
@@ -158,7 +158,7 @@ theorem pop_multi {K : Type} [DecidableEq K] (L : LinkFeld A) (G : K → LinkKop
   generalize hixk : ix k = xs at hc hnd hlv hvals
   generalize hroot : (G k).st σ = root at hc
   cases hc with
-  | nil => simp at hvals
+  | nil => simp only [List.map_nil, List.nil_eq, reduceCtorEq] at hvals
   | cons _ h0 hi0 tail ht =>
     have hv := List.cons.inj (by simpa only [List.map_cons] using hvals)
     have hne : (G k).st σ < D.count A.tab := hroot ▸ hi0

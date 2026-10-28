@@ -657,12 +657,12 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       obtain ⟨rfl, rfl⟩ := h
       simp only [stmtOrteP, lese_nil]
       exact Nat.le_refl _
-  | axiomCall => simp [Stmt.istAxiom] at ha
-  | ret e hp => simp [execStmt] at h
-  | retWhy r hp => simp [execStmt] at h
-  | leave hl => simp [execStmt] at h
-  | next hl => simp [execStmt] at h
-  | _ => simp [Stmt.istBlatt] at hb
+  | axiomCall => simp only [Stmt.istAxiom, Bool.true_eq_false] at ha
+  | ret e hp => simp only [execStmt, reduceCtorEq] at h
+  | retWhy r hp => simp only [execStmt, reduceCtorEq] at h
+  | leave hl => simp only [execStmt, reduceCtorEq] at h
+  | next hl => simp only [execStmt, reduceCtorEq] at h
+  | _ => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
 
 theorem vorA_eq {A : AUmwelt D} {σ w : World D} {Λ : List (Res D)} {X : List (D.Tab ⊕ D.Glob)}
     (h : leseA A σ Λ X = w) : vorA A σ Λ X = ⟨w.slots, w.globs, σ.spur⟩ := by
@@ -733,7 +733,7 @@ theorem fadenSA_blatt (hO : GutO O) (hQ : AxVertragO Q O)
           simp only [execStmtHA, axiomAntwort, hκ, hw]
           simp only [(show O'.zeiger = O.zeiger from hz), hu]
           rfl
-      | _ => simp [Stmt.istAxiom] at hax
+      | _ => simp only [Stmt.istAxiom, Bool.false_eq_true] at hax
 
 /-- **The acquire keeps the replay** (as `fadenS_locks`). -/
 theorem fadenSA_locks {z : RufFadenG D} {W : World D} (hF : FadenSA P O passes Q S lok Tg m zyk z W)

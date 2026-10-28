@@ -104,7 +104,7 @@ theorem erst_zeuge :
     (Γ := G2k) (Λ := []) (Λ' := []) (by decide) (by decide)
     (by decide) (.here : Var G2k _) (.there .here : Var G2k _) rfl fdarf2 (Block.nil (Γ := G2k) (Λ := [])) wk2 rho02
     freiOk_wk2 baumOk_wk2 sibOk_wk2
-    (by rw [rho02_p]; exact ⟨[0, 3], by rw [wz_wk2]; exact baumF_wk2, by simp⟩)
+    (by rw [rho02_p]; exact ⟨[0, 3], by rw [wz_wk2]; exact baumF_wk2, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩)
     (by rw [rho02_p, lf_wk2])
     (by rw [rho02_i]; exact (lebt_wk2 2).mpr (by decide))
     (by rw [rho02_i]; exact nicht_in_2)
@@ -133,7 +133,7 @@ theorem bruder_zeuge :
     (Γ := G2k) (Λ := []) (Λ' := []) (by decide) (by decide)
     (by decide) (.here : Var G2k _) (.there .here : Var G2k _) rfl fdarf2 (Block.nil (Γ := G2k) (Λ := [])) wk2 rho32
     freiOk_wk2 baumOk_wk2 sibOk_wk2
-    (by rw [rho32_p]; exact ⟨[0, 3], by rw [wz_wk2]; exact baumF_wk2, by simp⟩)
+    (by rw [rho32_p]; exact ⟨[0, 3], by rw [wz_wk2]; exact baumF_wk2, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_false, or_true]⟩)
     (by rw [rho32_p, rf_wk2]; unfold rf0; decide)
     (by rw [rho32_i]; exact (lebt_wk2 2).mpr (by decide))
     (by rw [rho32_i]; exact nicht_in_2)
@@ -223,14 +223,14 @@ theorem revoke_zeuge :
   obtain ⟨σ', k, he, hkn, hb, hs, -, -, -, hout⟩ := baum_unterbaum_aus_links_zug oF2 0 rF2 Wz2 Lf2 Rf2 LL2
     (V := FV2) (l := false) (Γ := G1k) (Λ := []) (Λ' := []) (by decide) (by decide) (.here : Var G1k _) rfl fdarf2
     vollK1 (Block.nil (Γ := Ty.index (FD2.count FA2.tab) :: G1k) (Λ := [])) wk3 rhoR0 freiOk_wk3 baumOk_wk3 sibOk_wk3
-    (by rw [rhoR0_p]; exact ⟨[0, 3, 2], by rw [wz_wk3]; exact baumF_wk3, by simp⟩)
+    (by rw [rhoR0_p]; exact ⟨[0, 3, 2], by rw [wz_wk3]; exact baumF_wk3, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩)
     (by rw [rhoR0_p, lf_wk3]; unfold lf3; decide)
   have hk3 : k.n = 3 := by rw [hkn, rhoR0_p, lf_wk3]; rfl
   have hsub : ∀ j, j = 3 ∨ j = 2 → InBaum 4 (Lf2.wert wk3) (Rf2.wert wk3) k.n j := by
     intro j hj
     rw [hk3]
     refine ⟨[3, 2], baumF3_wk3, ?_⟩
-    rcases hj with rfl | rfl <;> simp
+    rcases hj with rfl | rfl <;> simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false, or_true]
   obtain ⟨h2, l2⟩ := hout 2 (hsub 2 (Or.inr rfl))
   obtain ⟨h3, l3⟩ := hout 3 (hsub 3 (Or.inl rfl))
   exact ⟨σ', k, he, hk3, hb, hs, h2, l2, h3, l3⟩
@@ -280,14 +280,14 @@ theorem bruderOhneVater_defekt :
         (by rw [hl0]; exact BaumF.nil) (by rw [hr0]; exact h3)
       simpa using this
     have hin : InBaum 4 (Lf2.wert σ') (Rf2.wert σ') (Wz2.st σ') 3 := by
-      rw [hw]; exact ⟨[0, 3, 2], h0, by simp⟩
+      rw [hw]; exact ⟨[0, 3, 2], h0, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false, or_true]⟩
     exact sib_ohne_vater_bricht hin hr3 (by decide) (by rw [hp2, hp3]; decide) hs
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 /-! ### Planted defect: a child released while it is still linked -/
 
@@ -333,14 +333,14 @@ theorem freiOhneSchnitt_defekt :
         rw [hk]
         exact FreiForm.Kette.cons 3 (by decide) (by decide) [1] (by
           rw [hn3]
-          exact FreiForm.Kette.cons 1 (by decide) (by decide) [] (by rw [hn1]; exact FreiForm.Kette.nil)), by simp⟩
+          exact FreiForm.Kette.cons 1 (by decide) (by decide) [] (by rw [hn1]; exact FreiForm.Kette.nil)), by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩
     exact hlebt.2.2 hauf
-  | zurueck _ _ => intro hd; exact absurd hd (by simp)
-  | why _ _ => intro hd; exact absurd hd (by simp)
-  | leave _ _ _ => intro hd; exact absurd hd (by simp)
-  | next _ _ _ => intro hd; exact absurd hd (by simp)
-  | logik _ => intro hd; exact absurd hd (by simp)
-  | hardware _ => intro hd; exact absurd hd (by simp)
+  | zurueck _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | why _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | leave _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | next _ _ _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | logik _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
+  | hardware _ => intro hd; exact absurd hd (by simp only [Bool.false_eq_true, not_false_eq_true])
 
 end ErkKombi
 

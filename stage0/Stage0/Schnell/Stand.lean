@@ -61,7 +61,7 @@ def FStand.nach (s : FStand K n) (ww : World D) (f : Faden) (F' : RufMaschineG D
   let c := s.c f + fremdZahl (F'.faeden f).spur
   let fa := s.faeden.setIfInBounds f z
   let za := s.zahl.setIfInBounds f c
-  ⟨s.A.schreibe K w, fa, za, by simp [fa, s.groesse], by simp [za, s.groesseZ]⟩
+  ⟨s.A.schreibe K w, fa, za, by simp only [Array.size_setIfInBounds, s.groesse, fa], by simp only [Array.size_setIfInBounds, s.groesseZ, za]⟩
 
 /-- **One step of thread `f`** on the fast machine under the log `log`: the stepped machine, or the unchanged one
     handed back (so no caller keeps a second reference to the arrays). -/

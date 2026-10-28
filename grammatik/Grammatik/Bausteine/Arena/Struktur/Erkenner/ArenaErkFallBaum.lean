@@ -27,10 +27,10 @@ theorem Dekl.GlL.baum {b : BaumDekl A} (hb : K.baum = some b) {fs : List (D.Feld
   Dekl.GlL.rahmen hr (fun d hd => by
     obtain ⟨h1, h2, h3⟩ := K.getrennt d b hd hb
     refine ⟨fun e => ?_, fun e => h3 ?_⟩
-    · have := hf e; simp at this
+    · have := hf e; simp only [List.mem_cons, List.not_mem_nil, or_false] at this
       rcases this with h | h
       exacts [h1 h, h2 h]
-    · have := hg e; simp at this; exact this)
+    · have := hg e; simp only [List.mem_cons, List.not_mem_nil, or_false] at this; exact this)
 
 /-! ## 1. The first node -/
 
@@ -45,7 +45,7 @@ theorem kern_wurzelEin {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
   obtain ⟨σ', he, hrm, hbok, hok', hlebt', hmem⟩ :=
     baum_wurzel_ein_zug O passes R b.Lf b.Rf b.Wz b.hd x hwT hLT hwG hLG rest σ ρ hS.1 hlebt
   rw [he]
-  have hGL : Dekl.GlL K σ σ' := Dekl.GlL.baum K hb hrm (by simp) (by simp)
+  have hGL : Dekl.GlL K σ σ' := Dekl.GlL.baum K hb hrm (by simp only [List.Subset.refl]) (by simp only [List.Subset.refl])
   have hleer : ∀ j, ¬ K.InB σ j := fun j h =>
     (wurzel_aus_ok (c := D.count A.tab) (l := b.Lf.wert σ) (r := b.Rf.wert σ) (Live := A.Lebt σ)).2 j (by
       have := (Dekl.InB_some hb σ j).mp h
@@ -139,7 +139,7 @@ theorem haengen_nach {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (i : V
     {rest : Block D V l Γ Λ Λ'} (ih : Folgt K O passes R (a.set i.pos .baum) rest a') :
     StrukturPost K a' (execBlock O passes R rest σ' ρ) := by
   obtain ⟨hlebt, hnotL, hnotB⟩ := hP.1 i hx
-  have hGL : Dekl.GlL K σ σ' := Dekl.GlL.baum K hb hrm (by simp) (by simp)
+  have hGL : Dekl.GlL K σ σ' := Dekl.GlL.baum K hb hrm (by simp only [List.Subset.refl]) (by simp only [List.Subset.refl, List.subset_cons_of_subset])
   have hmemK : ∀ j, K.InB σ' j ↔ (j = (ρ.get i).n ∨ K.InB σ j) := fun j => by
     rw [Dekl.InB_some hb, Dekl.InB_some hb]; exact hmem j
   have hOk : K.Ok σ' := by
@@ -188,8 +188,8 @@ theorem kern_haengen {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (Cp Co
       baum_einfuegen_rechts_zug O passes R b.Wz b.Lf b.Rf b.hd.symm p i hwT hLT rest σ ρ hS.1 hbok hpb hg hlebt hnb
     rw [he]
     refine haengen_nach O passes R K b hb i hi ρ hS hP (hrm.mono ?_ ?_) hbok' hok' hlebt' hmem ih
-    · intro f hf; simp at hf ⊢; tauto
-    · intro g hg; simp at hg
+    · intro f hf; simp only [List.mem_cons, List.not_mem_nil, or_false] at hf ⊢; tauto
+    · intro g hg; simp only [List.not_mem_nil] at hg
 
 theorem fall_haengen {a a' : Abs} (b : BaumDekl A) (hb : K.baum = some b) (Cp Co : LinkFeld A)
     (hs : (Cp = b.Lf ∧ Co = b.Rf) ∨ (Cp = b.Rf ∧ Co = b.Lf))
@@ -252,7 +252,8 @@ theorem fall_abschneiden {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
             hpb hi hl.1 hl.2
         rw [he]
         apply StrukturPost.schrumpf
-        exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp) (by simp)) hok'
+        exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp only [List.cons_subset, List.mem_cons, List.not_mem_nil, or_false, true_or, List.Subset.refl,
+  List.subset_cons_of_subset, and_self]) (by simp only [List.Subset.refl, List.subset_cons_of_subset])) hok'
           ((Dekl.BOk_some hb σ').mpr hbok') hlebt'
           (fun j hj => (Dekl.InB_some hb σ j).mpr (hsub j ((Dekl.InB_some hb σ' j).mp hj)))
           ((Dekl.InB_some hb σ _).mpr hkin) (fun h => hnotin ((Dekl.InB_some hb σ' _).mp h)) hlebtk ih
@@ -261,7 +262,7 @@ theorem fall_abschneiden {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
             hpb hi hl.1 hl.2
         rw [he]
         apply StrukturPost.schrumpf
-        exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp) (by simp)) hok'
+        exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp only [List.Subset.refl, List.subset_cons_of_subset]) (by simp only [List.Subset.refl, List.subset_cons_of_subset])) hok'
           ((Dekl.BOk_some hb σ').mpr hbok') hlebt'
           (fun j hj => (Dekl.InB_some hb σ j).mpr (hsub j ((Dekl.InB_some hb σ' j).mp hj)))
           ((Dekl.InB_some hb σ _).mpr hkin) (fun h => hnotin ((Dekl.InB_some hb σ' _).mp h)) hlebtk ih
@@ -286,7 +287,7 @@ theorem fall_wurzelAus {a a'' : Abs} (b : BaumDekl A) (hb : K.baum = some b)
         baum_wurzel_aus_zug O passes R b.Lf b.Rf b.Wz hwG hLG hLT voll voll2 rest σ ρ hS.1 hbok hi hl.1 hl.2
       rw [he]
       apply StrukturPost.schrumpf
-      exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp) (by simp)) hok'
+      exact nach_schnitt O passes R K ρ hS hP (Dekl.GlL.baum K hb hrm (by simp only [List.Subset.refl, List.subset_cons_of_subset]) (by simp only [List.Subset.refl])) hok'
         ((Dekl.BOk_some hb σ').mpr hbok') hlebt'
         (fun j hj => absurd ((Dekl.InB_some hb σ' j).mp hj) (hempty j))
         ((Dekl.InB_some hb σ _).mpr hkin) (fun h => hempty _ ((Dekl.InB_some hb σ' _).mp h)) hlebtk ih

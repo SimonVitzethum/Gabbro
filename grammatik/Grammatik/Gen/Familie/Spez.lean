@@ -23,7 +23,7 @@ open Gabbro.Grammatik
 def fin? (n i : Nat) : Option (Fin n) := if h : i < n then some ⟨i, h⟩ else none
 
 theorem mem_fin? {n i : Nat} (h : i < n) : (⟨i, h⟩ : Fin n) ∈ (fin? n i).toList := by
-  simp [fin?, h]
+  simp only [fin?, h, ↓reduceDIte, Option.toList_some, List.mem_cons, List.not_mem_nil, or_false]
 
 /-! ## The specification -/
 
@@ -197,7 +197,7 @@ theorem eigner_ok (n : Nat) (t : Fin z.tabs.length) (m : Fin z.marken.length) (s
     unfold istEigner
     exact List.any_eq_true.2 ⟨t, List.mem_finRange t, decide_eq_true h⟩
   simp only [hown] at this
-  exact absurd this (by simp)
+  exact absurd this (by simp only [Bool.not_true, Bool.false_eq_true, not_false_eq_true])
 
 theorem inv_ok (n : Nat) (i : Fin z.invs.length) (h : (z.traeger i).any (z.sigNr n).schreibt = true)
     (t : Fin z.tabs.length) (ht : t ∈ z.traeger i) (L : Fin z.locks.length) (hL : Sum.inl L ∈ z.braucht t) :
@@ -259,7 +259,7 @@ def deklaration : Deklaration where
   anbieter_passt := fun t a h => by
     have hp := (Option.filter_eq_some_iff.1 h).2
     simp only [anbieterPasst, Bool.and_eq_true, List.isEmpty_iff, beq_iff_eq] at hp
-    exact ⟨hp.1.1, hp.1.2, t.val, hp.2, by simp [fin?, t.isLt]⟩
+    exact ⟨hp.1.1, hp.1.2, t.val, hp.2, by simp only [fin?, t.isLt, ↓reduceDIte, Fin.eta]⟩
   Reg := Fin z.regs.length
   rtyp := fun r => (z.regs.get r).typ
   rklasse := fun r => (z.regs.get r).klasse
@@ -271,7 +271,7 @@ def deklaration : Deklaration where
   geteilt_bewacht := fun t h => by
     intro hb
     simp only [hb, List.isEmpty_nil, Bool.not_true, Bool.and_false] at h
-    exact absurd h (by simp)
+    exact absurd h (by simp only [Bool.false_eq_true, not_false_eq_true])
   invarianten_gehalten := fun n i h t ht L hL => z.inv_ok n i h t ht L hL
   ggeteilt_bewacht := fun g h => by
     by_cases hb : z.gbraucht g = []

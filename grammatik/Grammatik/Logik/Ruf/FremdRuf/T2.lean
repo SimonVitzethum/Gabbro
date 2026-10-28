@@ -52,23 +52,23 @@ theorem fdPCschritt :
       Ereignis.nimmt L h ∉ [Ereignis.zugriff () true ([] : List (Res fdD))
         (fdPC0.weltVon 1).haelt] := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   have hmark : ∀ e ∈ [Ereignis.zugriff () true ([] : List (Res fdD))
       (fdPC0.weltVon 1).haelt], ∀ (m : fdD.Marke) (st : Nat),
       Res.marke m st ∈ e.lambda →
         m ∈ PCAtom.marks (PCAtom.leaf ([] : List (Res fdD)) [Sum.inl (())]) := by
     intro e hm m st hlam
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.lambda] at hlam
+    simp only [Ereignis.lambda, List.not_mem_nil] at hlam
   have hcar : ∀ e ∈ [Ereignis.zugriff () true ([] : List (Res fdD))
       (fdPC0.weltVon 1).haelt], ∀ o, e.traeger = some o →
         o ∈ PCAtom.carriers
           (PCAtom.leaf ([] : List (Res fdD)) [Sum.inl (())]) := by
     intro e hm o ho
-    simp at hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
     subst hm
-    simp [Ereignis.traeger] at ho
+    simp only [Ereignis.traeger, Option.some.injEq] at ho
     subst ho
     have hc : PCAtom.carriers (D := fdD)
         (PCAtom.leaf ([] : List (Res fdD)) [Sum.inl (())]) =
@@ -110,7 +110,7 @@ theorem fdPC_schreibt : fdPC1.speicher.slots () 0 () ≠
   intro hcon
   have hn : (fdV5.n) = ((⟨0, by decide, by decide⟩ :
       Wert fdD (fdD.typ () ())).n) := congrArg Zahl.n hcon
-  simp [fdV5] at hn
+  simp only [fdV5, Int.reduceEq] at hn
 
 /-! ## 8. Witnesses: joint premises on a non-degenerate program -/
 
@@ -280,7 +280,7 @@ theorem hardware_aus_vertragP {D : Deklaration} (Pre : AxPre D) (Q : AxEns D) (O
       rw [if_neg hp]
     have hz : (mitVorbedingung Pre O raus).zeiger = O.zeiger := rfl
     rw [hn, hz, hraus a] at hfit
-    exact absurd hfit (by simp)
+    exact absurd hfit (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-! ### The fixture's preconditions, and an oracle only the split premise admits -/
 

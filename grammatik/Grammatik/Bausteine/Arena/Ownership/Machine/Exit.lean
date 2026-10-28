@@ -79,7 +79,7 @@ theorem travExit {Λ : List (Res D)} {kk : Context} {t : D.Tab} {inv : Expr D Γ
       Weaker kk c1.drop ∧ k0.references.length ≤ Γ.length ∧ OR A I (I f).output k0 kk r := by
   obtain ⟨k0, c1, hinv, hb, hback, hlen, hk0, h⟩ := ox_shim hX
   have hcl : c.references.length = Γ.length + 1 := by simpa using hf.length
-  refine ⟨(hx.drop (by omega)).weaker (by simp [Context.drop, hcl, hlen]), k0, c1, hinv, hb, hback, hk0, h⟩
+  refine ⟨(hx.drop (by omega)).weaker (by simp only [Context.drop, List.length_dropLast, hcl, Nat.add_one_sub_one, hlen]), k0, c1, hinv, hb, hback, hk0, h⟩
 
 /-! ## The exit steps -/
 
@@ -101,7 +101,7 @@ theorem run_peelSchrumpf {Λ1 : List (Res D)} {τ : Ty} {v : Wert D τ} {st : St
 /-- The exit context of a shrink. -/
 theorem exitsTo_shrink {τ : Ty} {v : Wert D τ} (hf : FrameOk c g s fr (.cons v ρ)) (hx : ExitsTo k c)
     (hk : k.references.length ≤ Γ.length) : ExitsTo k c.drop :=
-  hx.drop (by have := hf.length; simp at this; omega)
+  hx.drop (by have := hf.length; simp only [List.length_cons] at this; omega)
 
 /-- `leave` at the traverse shim leaves the loop. -/
 theorem run_leaveTrav {Λ : List (Res D)} {kk : Context} {t : D.Tab} {inv : Expr D Γ Λ .bool}

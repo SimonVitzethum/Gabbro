@@ -64,7 +64,7 @@ theorem index_bound_zeuge :
   have hZ : ∀ z ∈ ([0, 1] : List Nat), z < (refD.count ()).toNat := by
     intro z hz
     rw [h2]
-    simp at hz
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hz
     rcases hz with rfl | rfl <;> decide
   exact index_bound_holds _ _ _ hN hZ 0 rfl
 
@@ -431,12 +431,12 @@ theorem entry_keeps_zeuge :
 := by
   have hPres : ∀ w ∈ ([("t0", 1)] : List (String × Nat)), w.1 ∉ (["s0"] : List String) := by
     intro w hw
-    simp at hw
-    simp [hw]
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    simp only [hw, List.mem_cons, String.reduceEq, List.not_mem_nil, or_self, not_false_eq_true]
   have hClob : ∀ w ∈ ([("t0", 1)] : List (String × Nat)), w.1 ∈ (["t0"] : List String) := by
     intro w hw
-    simp at hw
-    simp [hw]
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    simp only [hw, List.mem_cons, List.not_mem_nil, or_false]
   have hkeep := entry_keeps _ ["s0"] hPres (fun _ => 0) "s0" (by decide)
   have hchange := entry_clobbers _ ["t0"] hClob (fun _ => 0) "t0" (by decide)
   exact ⟨hkeep, hchange⟩
@@ -470,7 +470,7 @@ theorem joint_move_hidden (σ : Nat → Nat) (p1 p2 v1 v2 : Nat)
   have h1 : q ≠ p1 := fun he => hObs.1 (he ▸ hq)
   have h2 : q ≠ p2 := fun he => hObs.2 (he ▸ hq)
   simp only [jointTrace, List.mem_cons] at hw
-  simp at hw
+  simp only [List.not_mem_nil, or_false] at hw
   rcases hw with rfl | rfl
   · rfl
   · simp only [jointMove, if_neg h1, if_neg h2]
@@ -483,7 +483,7 @@ theorem joint_move_hidden_zeuge :
   have hObs : (0 : Nat) ∉ ([2] : List Nat) ∧ 1 ∉ ([2] : List Nat) := by
     decide
   have hw : (fun _ => (0 : Nat)) ∈ jointTrace (fun _ => 0) 0 1 7 8 := by
-    simp [jointTrace]
+    simp only [jointTrace, List.mem_cons, List.not_mem_nil, or_false, true_or]
   have hq : (2 : Nat) ∈ ([2] : List Nat) := by decide
   exact joint_move_hidden _ 0 1 7 8 [2] hObs _ hw 2 hq
 

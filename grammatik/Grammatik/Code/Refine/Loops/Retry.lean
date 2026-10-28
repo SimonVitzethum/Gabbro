@@ -146,7 +146,7 @@ theorem retry_loop {lay : Layout D} (hL : LayoutOk lay) {cenv : List Reg} {lv : 
             rw [hF.1 c (by omega), hcj1]
           have hinc : seqI [Instr.bin c .add (Ar.wid 0 (n : Int)) (.reg c) (.int (Ar.wid 0 (n : Int)) 1)]
               m' rs' = some (m', rs'.set c (Val.ofInt (Ar.wid 0 (n : Int)) ((j + 1 : Nat) : Int))) := by
-            simp [seqI, stepI, Opd.ev, hcR, val_bin_add]
+            simp only [seqI, stepI, Opd.ev, hcR, val_bin_add, Option.map_some, Int.natCast_add, Int.cast_ofNat_Int]
           obtain ⟨bkh, hbkh, hkph⟩ := hKH
           have hI := reach_block_jmp (S := S) (ks := ks) (dst := dst) hMI rfl hbkh hkph hinc
           have hE' := envRep_regs (rs' := rs'.set c (Val.ofInt (Ar.wid 0 (n : Int)) ((j + 1 : Nat) : Int)))

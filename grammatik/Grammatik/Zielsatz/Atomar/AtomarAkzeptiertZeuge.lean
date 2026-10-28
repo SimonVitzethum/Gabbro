@@ -49,10 +49,9 @@ theorem nP_zurueck (S : SperrInv nD) (O' : Orakel nD) (U : Umwelt nD) (A : AUmwe
     (passes : Nat) (R : ∀ f : nD.Fn, World nD → Env nD (nD.params f) → RufAusgang f)
     (f : nD.Fn) (σ : World nD) (ρ : Env nD (nD.params f)) (e : Logik nD) :
     execEndHA (V := vertragVon nD f) S O' U A passes R (nP.rumpf f) σ ρ ≠ EndAusgang.logik e := by
-  cases f <;> simp [nP, nRumpfA, nRumpfB, nRumpfKern, nKernS, nRumpfZA, nRumpfZB, nRumpfLeck,
-    lkS, lkW, lkRet, execEndHA, execStmtHA, execBlockHA]
+  cases f <;> simp only [nP, nRumpfA, nRumpfB, nRumpfKern, nKernS, nRumpfZA, nRumpfZB, nRumpfLeck, lkS, lkW, lkRet, execEndHA, execStmtHA, ne_eq, reduceCtorEq, not_false_eq_true, execBlockHA]
   split
-  all_goals first | (simp; done) | (rename_i heq; split at heq <;> simp at heq)
+  all_goals first | (simp only [reduceCtorEq, not_false_eq_true]; done) | (rename_i heq; split at heq <;> simp only [reduceCtorEq] at heq)
 
 /-- **(b) with the rely on configuration 1**: no contract, no invariant, no reason, and no
     `logik` outcome whatever a shared atomic read answers. -/

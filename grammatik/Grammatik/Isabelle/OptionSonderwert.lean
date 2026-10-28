@@ -38,7 +38,7 @@ def kodiere (N : Nat) : Option Idx → Nat
 
 /-- The special value is outside. (Isabelle: `sonderwert_ausserhalb`.) -/
 theorem sonderwert_ausserhalb (N : Nat) : ¬ indextyp N N := by
-  simp [indextyp]
+  simp only [indextyp, Nat.lt_irrefl, not_false_eq_true]
 
 /-- The encoding is injective on the valid range.
     (Isabelle: `kodiere_injektiv`.) -/

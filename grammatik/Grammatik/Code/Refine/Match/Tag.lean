@@ -39,17 +39,17 @@ theorem onTag_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
       (execStmt O passes R (Gabbro.Grammatik.Stmt.onTag v arms) σ ρ) := by
   simp only [lowerS] at h
   rcases hv : lowerE lay cenv v st.r with _ | ⟨cv, ov, r1⟩
-  · simp [hv] at h
+  · simp only [hv, reduceCtorEq] at h
   simp only [hv] at h
   have hfit : Ar.Fits 0 (sumTop cs) 128 := by
     apply Classical.byContradiction
     intro hn
     rw [if_neg hn] at h
-    simp at h
+    simp only [reduceCtorEq] at h
   rw [if_pos hfit] at h
   rcases hga : lowerAr lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms (st.l + 1) k
       ⟨r1 + 1, st.l + 1 + cs.length⟩ with _ | ⟨ba, s1⟩
-  · simp [hga] at h
+  · simp only [hga, reduceCtorEq] at h
   simp only [hga] at h
   have h' := Option.some.inj h
   simp only [Prod.mk.injEq] at h'
@@ -90,7 +90,7 @@ theorem onTag_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
       (.int (Ar.wid 0 (sumTop cs)) (cs.length : Int))]) m rs
       = some (m, rsA.set r1 (Val.ofInt (Ar.wid 0 (sumTop cs)) (i.val : Int))) := by
     rw [seqI_append, hsA', Option.bind_some]
-    simp [seqI, hstep]
+    simp only [seqI, hstep]
   have hagS : ∀ x, x < r1 → (rsA.set r1 (Val.ofInt (Ar.wid 0 (sumTop cs)) (i.val : Int))) x = rsA x :=
     fun x hx => regs_set_ne rsA r1 x _ (Nat.ne_of_lt hx)
   have hovS : ov.ev (rsA.set r1 (Val.ofInt (Ar.wid 0 (sumTop cs)) (i.val : Int)))
@@ -98,7 +98,7 @@ theorem onTag_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     rw [ev_agree hagS hltA]; exact hev
   have hrS : (Opd.reg r1).ev (rsA.set r1 (Val.ofInt (Ar.wid 0 (sumTop cs)) (i.val : Int)))
       = some (.int (Ar.wid 0 (sumTop cs)) (BitVec.ofInt (Ar.wid 0 (sumTop cs)) (i.val : Int))) := by
-    simp [Opd.ev, regs_set_same, Val.ofInt]
+    simp only [Opd.ev, Val.ofInt, BitVec.ofInt_natCast, regs_set_same]
   -- the arm
   obtain ⟨bi, si, si', hlow, hsub, hle1, hle2⟩ := lowerAr_get lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs))
     cs.length ov arms (st.l + 1) k ⟨r1 + 1, st.l + 1 + cs.length⟩ s1 ba hga i
@@ -118,7 +118,7 @@ theorem onTag_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
     (by
       intro hc'
       rw [find_tbl _ cs.length i.val (st.l + 1) hin i.isLt] at hc'
-      exact absurd hc' (by simp))
+      exact absurd hc' (by simp only [reduceCtorEq, not_false_eq_true]))
     hbkb hkpb
   have hagR : ∀ x, x < st.r →
       (rsA.set r1 (Val.ofInt (Ar.wid 0 (sumTop cs)) (i.val : Int))) x = rs x := fun x hx => by

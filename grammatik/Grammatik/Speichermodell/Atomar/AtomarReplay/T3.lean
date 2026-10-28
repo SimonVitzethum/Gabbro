@@ -118,7 +118,7 @@ theorem fadenSA_peelFrei (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   obtain ⟨_, _, hk⟩ := hok
   refine ⟨σ.gibt L, HX, hfx, kurzX_mono hkx (Nat.le_succ _), fun _ h => h, Nat.le_succ _,
     GleichAuf.mono (fun _ hc => stabilS_mono hΛ1 hc) ⟨fun t ht => hg.1 t ht, fun g hg' => hg.2 g hg'⟩,
-    ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp [blockOrteP, stmtOrteP] at hc, hk⟩,
+    ⟨by cases x <;> rfl, fun _ hc => by cases x <;> simp only [blockOrteP, Bool.false_eq_true, ↓reduceIte, stmtOrteP, List.append_nil, List.not_mem_nil] at hc, hk⟩,
     fun R O' U A _ _ _ => ZErgG.folgt_of_eq (semHA_peelFrei S O' U A passes R L rest k σ ρ h x hiσ)⟩
 
 end Frei

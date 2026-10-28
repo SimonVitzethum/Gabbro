@@ -22,7 +22,7 @@ def checkProgram (P : Programm D) (A : FreiForm D) (I : Interfaces A) (fs : List
     (Flow.parameterContext (I f).parameters)
 
 theorem noLoop_bounded : (noLoop : Context).bounded :=
-  ⟨fun _ _ => rfl, fun ref hm => by simp [noLoop, Context.empty] at hm⟩
+  ⟨fun _ _ => rfl, fun ref hm => by simp only [noLoop, Context.empty, List.length_nil, List.replicate_zero, List.not_mem_nil] at hm⟩
 
 /-- **A program that passes the check is `Checked`.** -/
 theorem checkProgram_sound {P : Programm D} {A : FreiForm D} {I : Interfaces A} {fs : List D.Fn}

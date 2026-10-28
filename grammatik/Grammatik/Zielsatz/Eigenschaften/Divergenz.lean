@@ -86,7 +86,7 @@ theorem foreverLauf_noexit {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ct
       intro σ ρ
       have hI : (invcl σ ρ).2 = true := hInv σ ρ
       simp only [foreverLauf]
-      rw [if_neg (by simp [hI])]
+      rw [if_neg (by simp only [hI, Bool.true_eq_false, not_false_eq_true])]
       rcases hNo (invcl σ ρ).1 ρ with ⟨σ', ρ', h⟩ | ⟨h, σ', ρ', h⟩
       · rw [h]; exact ih _ _
       · rw [h]; exact ih _ _
@@ -207,7 +207,7 @@ theorem spin_prueft {D : Deklaration} {O : Orakel D} {passes : Nat}
       fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_⟩
     all_goals (rw [h] at hr; first | (cases hr; done) | skip)
   · cases hr
-    simp [wahr?, eval]
+    simp only [wahr?, eval]
 
 /-- A thread at a bare `return` passes every check vacuously. -/
 theorem ret_prueft {D : Deklaration} {O : Orakel D} {passes : Nat}
@@ -240,7 +240,7 @@ theorem ewig_wahr_schreitet {D : Deklaration} {P : Programm D} {O : Orakel D} {p
   refine ⟨_, RufSchrittG.ewigWeiter M t l Γ Λ a n (.tru : Expr D Γ Λ .bool)
     (.nil : Block D (vertragVon D (M.faeden t).kopf.f) true Γ Λ Λ) k ρ hhead
     ((M.weltVon t).lese Λ ((.tru : Expr D Γ Λ .bool)).orte) rfl rfl [] ?_ hHeld⟩
-  simp [hspur]
+  simp only [hspur, List.nil_append]
 
 /-- **A `bindAxiom` head is no leaf head** (review G10 F3: a
     discrimination fact, vacuous -- the two leaf clauses of `PrueftG` never
@@ -339,7 +339,7 @@ def divD : Deklaration where
   Fn := Bool
   sig := fun | true => 0 | false => 1
   sigNr := fun | 0 => divSigW | _ => divSigR
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -600,7 +600,7 @@ theorem divSchrittBF : RufSchrittF divP divO 0 divM1F 1 divM2F := by
       Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
         [Res.held (D := divD) ()] (divM1F.weltVon 1).haelt] := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   exact RufSchrittF.blatt divM1F 1 false [.int 0 10]
     [Res.held (D := divD) ()] [Res.held (D := divD) ()]
     divWriteStAt _ divRho7 rfl hhead divM1Fhaelt _ _ _ hstep hneu hkn
@@ -641,7 +641,7 @@ theorem divB_schreibt : divM2F.speicher.slots () 0 () ≠
   intro hcon
   have hn : (divV100.n) = ((⟨0, by decide, by decide⟩ :
       Wert divD (divD.typ () ())).n) := congrArg Zahl.n hcon
-  simp [divV100] at hn
+  simp only [divV100, Int.reduceEq] at hn
 
 /-- After step B the head stands at the diverging `forever`. -/
 theorem divM2kopf : (divM2F.faeden 1).kopf.rest =

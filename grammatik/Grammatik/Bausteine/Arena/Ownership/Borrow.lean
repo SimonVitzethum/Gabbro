@@ -29,7 +29,7 @@ theorem borrow_result (A : FreiForm D) (C : ∀ f, Contract D f)
   subst ended
   have hreturn := State.lend_endLoan caller callee h hlend
   refine ⟨State.endLoan_agrees hae callee h hreturn, hfe, hvalue.trans hx.symm, hreturn, ?_⟩
-  simp [State.release, hl.2.2.1]
+  simp only [State.release, hl.2.2.1, ↓reduceIte]
 
 #print axioms borrow_result
 

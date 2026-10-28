@@ -108,7 +108,7 @@ theorem spec_aus_fuehrung_fremd
           List.getElem?_eq_none_iff, List.length_singleton]
         omega
       rw [hJ'sf, eNone] at hkg
-      simp at hkg
+      simp only [reduceCtorEq] at hkg
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro σ₀ h0
     rw [hJ'code]
@@ -175,10 +175,10 @@ theorem spec_aus_lauf_voll
         exact hSeedPost σ₀ (by rw [← hJw]; exact h0)
       · intro k vor nach hkg _ _
         rw [hJsf] at hkg
-        simp at hkg
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hkg
       · intro k vor nach hkg _ _
         rw [hJsf] at hkg
-        simp at hkg
+        simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hkg
   | schritt M M' pc pc' g h hs tr htr ih =>
       intro J' hJ'w hJ'sf hJ'code
       have hGen : GenSchritt P O passes M g M' :=
@@ -208,7 +208,7 @@ theorem spec_aus_lauf_voll
         have hlt : k < tr.length := by
           by_cases hle : tr.length ≤ k
           · rw [List.getElem?_eq_none hle] at hkg
-            simp at hkg
+            simp only [reduceCtorEq] at hkg
           · omega
         have hltM : k < M.welten.length := by omega
         have hltM1 : k + 1 < M.welten.length := by omega
@@ -408,45 +408,45 @@ theorem speicherfest_speicher
     σ'.speicher = σ.speicher := by
   cases s with
   | assignSlot t f i e hw hL =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | assignThru p t ht f i e hw hL =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | assignSlotRef r t ht ho f e hw hL =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | assignGlob g e hw hL =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | putBytes t f hf n i hlo hhi e hw hL =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | assignVar x e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
   | shift t f hτ i von nach hn he hw hL =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | ite c t e =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | onOption o p a =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | onTag v arms =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | onWhy r arms =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | call f args hp hr =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | callInd p args hp hr =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | locks L hr body =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | breaking i body =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | traverse t inv body =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | retry n bis body ueberlauf =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | forever a inv body =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | axiomCall a args h hw hg hd hgd =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
@@ -456,7 +456,7 @@ theorem speicherfest_speicher
       subst hstep
       rfl
   | publish g e payload hp hw hL =>
-      simp [Stmt.speicherfest] at hFest
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | advances m a h hs =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep

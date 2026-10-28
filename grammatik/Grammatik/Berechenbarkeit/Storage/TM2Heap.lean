@@ -63,7 +63,7 @@ theorem Store.push_correct {S : Store Γ} {frame : Frame} {values : ∀ k, List 
   obtain ⟨memory, reference, he⟩ := Heap.allocate_exists (hr k).1 frame
     (Linked.Node.mk value (S.regions k).head) rfl
   have hh := Linked.push_represents (hr k).1 (hr k).2 he
-  exact ⟨S.put k ⟨memory, some reference⟩, by simp [Store.push, Linked.push, he],
+  exact ⟨S.put k ⟨memory, some reference⟩, by simp only [push, Linked.push, he, Option.bind_eq_bind, Option.bind_some],
     Store.put_represents hr k _ _ hh.1 hh.2⟩
 
 theorem Store.push_spec {S S' : Store Γ} {frame : Frame} {values : ∀ k, List (Γ k)} {available : Bool}
@@ -72,7 +72,7 @@ theorem Store.push_spec {S S' : Store Γ} {frame : Frame} {values : ∀ k, List 
     S'.Represents frame (Function.update values k (value :: values k)) := by
   unfold Store.push at he
   cases hp : Linked.push (S.regions k).memory available frame (S.regions k).head value with
-  | none => simp [hp] at he
+  | none => simp only [hp, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at he
   | some pair =>
     rcases pair with ⟨memory, reference⟩
     simp only [hp] at he
@@ -90,6 +90,6 @@ theorem Store.pop_correct {S : Store Γ} {frame : Frame} {values : ∀ k, List (
     ∃ S', S.pop frame k = some (S', (values k).head?) ∧
       S'.Represents frame (Function.update values k (values k).tail) := by
   obtain ⟨memory, head, he, hv, hc⟩ := Linked.pop_represents (hr k).1 (hr k).2
-  exact ⟨S.put k ⟨memory, head⟩, by simp [Store.pop, he], Store.put_represents hr k _ _ hv hc⟩
+  exact ⟨S.put k ⟨memory, head⟩, by simp only [pop, he, Option.bind_eq_bind, Option.bind_some], Store.put_represents hr k _ _ hv hc⟩
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap

@@ -145,7 +145,7 @@ def gt (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) : Expr D 
 def ge (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) : Expr D Γ Λ .bool := .le b a
 theorem two_pow_pos_int (w : Nat) : (0 : Int) < 2 ^ w := by
   have := Nat.two_pow_pos w
-  have e : ((2 ^ w : Nat) : Int) = (2 : Int) ^ w := by simp
+  have e : ((2 ^ w : Nat) : Int) = (2 : Int) ^ w := by simp only [Int.natCast_pow, Int.cast_ofNat_Int]
   omega
 
 /-- `~a` in der Breite `w`: `a ^ (2^w − 1)` (`M137`). -/

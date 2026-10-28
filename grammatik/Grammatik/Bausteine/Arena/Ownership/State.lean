@@ -49,10 +49,10 @@ def State.put (s : State) (i : Int) (c : Option Cell) : State :=
   { s with cells := fun j => if j = i then c else s.cells j }
 
 @[simp] theorem State.put_at (s : State) (i : Int) (c : Option Cell) :
-    (s.put i c).cells i = c := by simp [State.put]
+    (s.put i c).cells i = c := by simp only [put, ↓reduceIte]
 
 @[simp] theorem State.put_other (s : State) (i j : Int) (c : Option Cell) (h : j ≠ i) :
-    (s.put i c).cells j = s.cells j := by simp [State.put, h]
+    (s.put i c).cells j = s.cells j := by simp only [put, h, ↓reduceIte]
 
 def State.valid (s : State) : Prop :=
   ∀ i c, s.cells i = some c →
@@ -131,16 +131,16 @@ theorem State.owner_access {s : State} {f : Frame} {h : Handle} (ho : s.owns f h
   unfold State.owns at ho
   unfold State.access
   cases hc : s.cells h.slot with
-  | none => simp [hc] at ho
+  | none => simp only [hc] at ho
   | some c =>
     rw [hc] at ho
-    exact ⟨ho.1, by simp [Cell.holder, ho.2.2, ho.2.1]⟩
+    exact ⟨ho.1, by simp only [Cell.holder, ho.2.2, ho.2.1, List.headD_eq_head?_getD, List.head?_nil, Option.getD_none]⟩
 
 theorem State.owner_unique {s : State} {f g : Frame} {h : Handle}
     (hf : s.owns f h) (hg : s.owns g h) : f = g := by
   unfold State.owns at hf hg
   cases hc : s.cells h.slot with
-  | none => simp [hc] at hf
+  | none => simp only [hc] at hf
   | some c =>
     rw [hc] at hf hg
     exact hf.2.1.symm.trans hg.2.1
@@ -149,7 +149,7 @@ theorem State.access_unique {s : State} {f g : Frame} {h : Handle}
     (hf : s.access f h) (hg : s.access g h) : f = g := by
   unfold State.access at hf hg
   cases hc : s.cells h.slot with
-  | none => simp [hc] at hf
+  | none => simp only [hc] at hf
   | some c =>
     rw [hc] at hf hg
     exact hf.2.symm.trans hg.2
@@ -158,7 +158,7 @@ theorem State.own_clock {s : State} {f : Frame} {h : Handle}
     (hv : s.valid) (ho : s.owns f h) : h.allocation ≤ h.grant ∧ h.grant < s.next := by
   unfold State.owns at ho
   cases hc : s.cells h.slot with
-  | none => simp [hc] at ho
+  | none => simp only [hc] at ho
   | some c =>
     rw [hc] at ho
     have hh := hv h.slot c hc
@@ -178,11 +178,11 @@ theorem State.allocate_valid {s : State} (hv : s.valid) (f : Frame) (i : Int)
       · subst j
         simp only [State.put, ite_true, Option.some.injEq] at hc
         subst c
-        exact ⟨Nat.le_refl _, Nat.lt_succ_self _, List.nodup_nil, by simp⟩
+        exact ⟨Nat.le_refl _, Nat.lt_succ_self _, List.nodup_nil, by simp only [List.not_mem_nil, not_false_eq_true]⟩
       · simp only [State.put, ite_eq_right hj] at hc
         have hh := hv j c hc
         exact ⟨hh.1, Nat.lt_succ_of_lt hh.2.1, hh.2.2⟩
-    · simp [State.owns, State.put, Cell.matches]
+    · simp only [owns, put, ↓reduceIte, Cell.matches, and_self]
 
 theorem State.release_valid {s : State} (hv : s.valid) (f : Frame) (h : Handle)
     {s' : State} (he : s.release f h = some s') :
@@ -193,10 +193,10 @@ theorem State.release_valid {s : State} (hv : s.valid) (f : Frame) (h : Handle)
     constructor
     · intro i c hc
       by_cases hi : i = h.slot
-      · subst i; simp at hc
+      · subst i; simp only [put_at, reduceCtorEq] at hc
       · exact hv i c (by simpa [State.put, hi] using hc)
     · intro g
-      simp [State.access, State.put]
+      simp only [access, put, ↓reduceIte, not_false_eq_true]
   · cases he
 
 theorem State.move_valid {s : State} (hv : s.valid) (f g : Frame) (h : Handle)
@@ -215,11 +215,11 @@ theorem State.move_valid {s : State} (hv : s.valid) (f g : Frame) (h : Handle)
         simp only [State.put, ite_true, Option.some.injEq] at hc
         subst c
         exact ⟨Nat.le_trans hclock.1 (Nat.le_of_lt hclock.2), Nat.lt_succ_self _,
-          List.nodup_nil, by simp⟩
+          List.nodup_nil, by simp only [List.not_mem_nil, not_false_eq_true]⟩
       · simp only [State.put, ite_eq_right hi] at hc
         have hh := hv i c hc
         exact ⟨hh.1, Nat.lt_succ_of_lt hh.2.1, hh.2.2⟩
-    · simp [State.owns, State.put, Cell.matches]
+    · simp only [owns, put, ↓reduceIte, Cell.matches, and_self]
     · intro k
       simp only [State.access, State.put, ite_true, Cell.matches]
       intro ha
@@ -231,14 +231,14 @@ theorem State.reset_valid (s : State) : s.reset.valid := by
   cases h
 
 theorem State.reset_no_access (s : State) (f : Frame) (h : Handle) :
-    ¬ s.reset.access f h := by simp [State.reset, State.access]
+    ¬ s.reset.access f h := by simp only [access, reset, not_false_eq_true]
 
 /-- A live grant cannot survive a later grant for the same storage. -/
 theorem State.future_no_access {s : State} (hv : s.valid) (f : Frame) (h : Handle)
     (hn : s.next ≤ h.grant) : ¬ s.access f h := by
   unfold State.access
   cases hc : s.cells h.slot with
-  | none => simp
+  | none => simp only [not_false_eq_true]
   | some c =>
     intro ha
     have hh := hv h.slot c hc
@@ -262,14 +262,14 @@ theorem State.released_twice_no {s s' : State} {f : Frame} {h : Handle}
     (hv : s.valid) (he : s.release f h = some s') (g : Frame) : s'.release g h = none := by
   have hn := (State.release_valid hv f h he).2 g
   have hno : ¬ s'.owns g h := fun ho => hn (State.owner_access ho)
-  simp [State.release, hno]
+  simp only [release, hno, ↓reduceIte]
 
 theorem State.moved_twice_no {s s' : State} {f g : Frame} {h h' : Handle}
     (hv : s.valid) (he : s.move f g h = some (s', h')) (k l : Frame) :
     s'.move k l h = none := by
   have hn := (State.move_valid hv f g h he).2.2.1 k
   have hno : ¬ s'.owns k h := fun ho => hn (State.owner_access ho)
-  simp [State.move, hno]
+  simp only [move, hno, false_and, ↓reduceIte]
 
 theorem State.move_next {s s' : State} {f g : Frame} {h h' : Handle}
     (he : s.move f g h = some (s', h')) : s'.next = s.next + 1 := by
@@ -297,19 +297,20 @@ theorem State.release_excludes_slot {s s' : State} {f : Frame} {h old : Handle}
   split at he
   · cases he
     intro k
-    simp [State.access, State.put, hs]
+    simp only [access, put, hs, ↓reduceIte, not_false_eq_true]
   · cases he
 
 theorem State.move_exists {s : State} {f g : Frame} {h : Handle}
     (ho : s.owns f h) (ht : f.thread = g.thread) : ∃ s' h', s.move f g h = some (s', h') := by
-  simp [State.move, ho, ht]
+  simp only [move, ho, ht, and_self, ↓reduceIte, Option.some.injEq, Prod.mk.injEq, exists_and_left, exists_eq',
+  and_true]
 
 theorem State.own_handles_equal {s : State} {f g : Frame} {h k : Handle}
     (hh : s.owns f h) (hk : s.owns g k) (hs : h.slot = k.slot) : h = k := by
   unfold State.owns at hh hk
   rw [hs] at hh
   cases hc : s.cells k.slot with
-  | none => simp [hc] at hk
+  | none => simp only [hc] at hk
   | some c =>
     rw [hc] at hh hk
     have ha := hh.1.1.symm.trans hk.1.1
@@ -322,7 +323,7 @@ theorem State.own_cell {s : State} {f : Frame} {h : Handle} (ho : s.owns f h) :
     ∃ c, s.cells h.slot = some c := by
   unfold State.owns at ho
   cases hc : s.cells h.slot with
-  | none => simp [hc] at ho
+  | none => simp only [hc] at ho
   | some c => exact ⟨c, rfl⟩
 
 theorem State.allocate_empty {s s' : State} {f : Frame} {i : Int} {h : Handle}
@@ -337,20 +338,20 @@ theorem State.allocate_other {s s' : State} {f : Frame} {i : Int} {h : Handle}
   unfold State.allocate at he
   split at he
   · cases he
-  · cases he; simp [State.put, hj]
+  · cases he; simp only [put, hj, ↓reduceIte]
 
 theorem State.move_other {s s' : State} {f g : Frame} {h h' : Handle}
     (he : s.move f g h = some (s', h')) (j : Int) (hj : j ≠ h.slot) : s'.cells j = s.cells j := by
   unfold State.move at he
   split at he
-  · cases he; simp [State.put, hj]
+  · cases he; simp only [put, hj, ↓reduceIte]
   · cases he
 
 theorem State.release_other {s s' : State} {f : Frame} {h : Handle}
     (he : s.release f h = some s') (j : Int) (hj : j ≠ h.slot) : s'.cells j = s.cells j := by
   unfold State.release at he
   split at he
-  · cases he; simp [State.put, hj]
+  · cases he; simp only [put, hj, ↓reduceIte]
   · cases he
 
 theorem State.owns_from_same_cell {s s' : State} {f : Frame} {h : Handle}
@@ -379,7 +380,8 @@ theorem State.lend_valid {s : State} (hv : s.valid) (f g : Frame) (h : Handle)
         · have hmemb : c.holder ∈ c.loans := by
             cases heq : c.loans with
             | nil => exact False.elim (hl heq)
-            | cons a rest => simp [Cell.holder, heq]
+            | cons a rest => simp only [Cell.holder, heq, List.headD_eq_head?_getD, List.head?_cons, Option.getD_some, List.mem_cons,
+  true_or]
           exact hgl (by simpa [hf, eq] using hmemb)
       cases he
       refine ⟨?_, ?_, ?_, ?_⟩
@@ -389,11 +391,12 @@ theorem State.lend_valid {s : State} (hv : s.valid) (f g : Frame) (h : Handle)
           simp only [State.put_at, Option.some.injEq] at hd
           subst d
           exact ⟨hh.1, hh.2.1, List.nodup_cons.mpr ⟨hgl, hh.2.2.1⟩,
-            by simp [Ne.symm hgo, hh.2.2.2]⟩
+            by simp only [List.mem_cons, Ne.symm hgo, hh.2.2.2, or_self, not_false_eq_true]⟩
         · exact hv i d (by simpa [State.put, hi] using hd)
       · simpa [State.access, State.put, Cell.holder, Cell.matches] using hm
-      · simp [State.owns, State.put]
-      · simp [State.access, State.put, Cell.holder, hgf]
+      · simp only [owns, put, ↓reduceIte, reduceCtorEq, and_false, not_false_eq_true]
+      · simp only [access, put, ↓reduceIte, Cell.holder, List.headD_eq_head?_getD, List.head?_cons, Option.getD_some,
+  hgf, and_false, not_false_eq_true]
     · cases he
 
 theorem State.endLoan_valid {s : State} (hv : s.valid) (f : Frame) (h : Handle)
@@ -435,8 +438,8 @@ theorem State.lend_endLoan {s : State} (f g : Frame) (h : Handle)
       · rfl
       · funext i
         by_cases hi : i = h.slot
-        · subst i; simp [State.put, hc]
-        · simp [State.put, hi]
+        · subst i; simp only [put, ↓reduceIte, hc]
+        · simp only [put, hi, ↓reduceIte]
     · cases he
 
 theorem State.release_requires_owner {s s' : State} {f : Frame} {h : Handle}
@@ -451,7 +454,7 @@ theorem State.owned_live {D : Deklaration} {s : State} {A : FreiForm D} {σ : Wo
   apply (ha.2 h.slot).mpr
   unfold State.owns at ho
   cases hc : s.cells h.slot with
-  | none => simp [hc] at ho
+  | none => simp only [hc] at ho
   | some c => exact ⟨c, rfl⟩
 
 theorem State.access_live {D : Deklaration} {s : State} {A : FreiForm D} {σ : World D}
@@ -459,7 +462,7 @@ theorem State.access_live {D : Deklaration} {s : State} {A : FreiForm D} {σ : W
   apply (ha.2 h.slot).mpr
   unfold State.access at ho
   cases hc : s.cells h.slot with
-  | none => simp [hc] at ho
+  | none => simp only [hc] at ho
   | some c => exact ⟨c, rfl⟩
 
 theorem State.reset_blocked_by_other {s : State} {f g : Frame} {h : Handle}
@@ -467,7 +470,7 @@ theorem State.reset_blocked_by_other {s : State} {f g : Frame} {h : Handle}
   intro hr
   unfold State.owns at ho
   cases hc : s.cells h.slot with
-  | none => simp [hc] at ho
+  | none => simp only [hc] at ho
   | some c =>
     rw [hc] at ho
     exact hne (ho.2.1.symm.trans (hr h.slot c hc).1)

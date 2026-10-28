@@ -6,9 +6,9 @@ variable {D : Deklaration}
 
 def Ghost.set (g : Ghost) (i : Nat) (h : Handle) : Ghost := fun j => if j = i then some h else g j
 
-@[simp] theorem Ghost.set_at (g : Ghost) (i : Nat) (h : Handle) : (g.set i h) i = some h := by simp [Ghost.set]
+@[simp] theorem Ghost.set_at (g : Ghost) (i : Nat) (h : Handle) : (g.set i h) i = some h := by simp only [set, ↓reduceIte]
 @[simp] theorem Ghost.set_other (g : Ghost) (i j : Nat) (h : Handle) (hne : j ≠ i) :
-    (g.set i h) j = g j := by simp [Ghost.set, hne]
+    (g.set i h) j = g j := by simp only [set, hne, ↓reduceIte]
 
 theorem Context.bindFresh_bounded {c : Context} (hb : c.bounded) : c.bindFresh.bounded := by
   constructor

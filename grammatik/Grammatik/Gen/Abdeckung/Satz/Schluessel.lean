@@ -75,7 +75,7 @@ end Teile
 theorem ruf_zerlegt (g : D.Fn) :
     (⟨fun h => !(decide (h = g)), fun n => !(D.passt g n), fun _ => true⟩ : Merkmal D) =
       (rufNur g).und ⟨fun _ => true, fun n => !(D.passt g n), fun _ => true⟩ :=
-  Merkmal.gleich (fun _ => by simp [rufNur]) (fun _ => by simp [rufNur]) (fun _ => by simp [rufNur])
+  Merkmal.gleich (fun _ => by simp only [rufNur, Merkmal.und_ruf, Bool.and_true]) (fun _ => by simp only [rufNur, Merkmal.und_ind, Bool.true_and]) (fun _ => by simp only [rufNur, Merkmal.und_sperre, Bool.and_self])
 
 
 section Atome

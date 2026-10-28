@@ -46,8 +46,8 @@ def besucht {α : Type} (f : α → Nat → Option α) : α → List Nat → Lis
 /-- A window has exactly `n` indices. -/
 theorem indizes_laenge (s n : Nat) : (indizes s n).length = n := by
   induction n generalizing s with
-  | zero => simp [indizes]
-  | succ n ih => simp [indizes, ih]
+  | zero => simp only [indizes, List.length_nil]
+  | succ n ih => simp only [indizes, List.length_cons, ih, Nat.add_left_cancel_iff]
 
 /-- Membership is the interval. -/
 theorem indizes_mem (s n k : Nat) :
@@ -57,7 +57,7 @@ theorem indizes_mem (s n k : Nat) :
       constructor
       · intro h
         simp only [indizes] at h
-        simp at h
+        simp only [List.not_mem_nil] at h
       · rintro ⟨h1, h2⟩
         exact False.elim (by omega)
   | succ n ih =>
@@ -75,7 +75,7 @@ theorem indizes_mem (s n k : Nat) :
 /-- A window holds no index twice. -/
 theorem indizes_nodup (s n : Nat) : (indizes s n).Nodup := by
   induction n generalizing s with
-  | zero => simp [indizes]
+  | zero => simp only [indizes, List.nodup_nil]
   | succ n ih =>
       simp only [indizes]
       refine List.Pairwise.cons ?_ (ih _)
@@ -87,7 +87,7 @@ theorem indizes_nodup (s n : Nat) : (indizes s n).Nodup := by
 theorem indizes_append (s m n : Nat) :
     indizes s (m + n) = indizes s m ++ indizes (s + m) n := by
   induction m generalizing s with
-  | zero => simp [indizes]
+  | zero => simp only [Nat.zero_add, indizes, Nat.add_zero, List.nil_append]
   | succ m ih =>
       have e : m + 1 + n = (m + n) + 1 := by omega
       have e2 : s + 1 + m = s + (m + 1) := by omega
@@ -102,7 +102,7 @@ theorem lauf_append {α : Type} (f : α → Nat → Option α) (a : α)
     (xs ys : List Nat) (h : ∀ b k, k ∈ xs → f b k ≠ none) :
     lauf f a (xs ++ ys) = lauf f (lauf f a xs) ys := by
   induction xs generalizing a with
-  | nil => simp [lauf]
+  | nil => simp only [List.nil_append, lauf]
   | cons x xs ih =>
       have hmem : ∀ b k, k ∈ xs → f b k ≠ none :=
         fun b k hk => h b k (List.mem_cons_of_mem _ hk)

@@ -50,7 +50,7 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
               (eval (σ.lese Λ (i.orte ++ e.orte)) e
                 (σ.lese Λ (i.orte ++ e.orte)) ρ).n
             rw [hbl] at hlen2
-            simp at hlen2
+            simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at hlen2
         | cons b0 bs => exact ⟨b0, bs, rfl⟩
       clear hz
       -- Rewrite `n` to `m+1` everywhere it matters.
@@ -199,10 +199,10 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
             simp only at hcon
             have hflag := congrArg (ereignisSchreibt (D := D)) hcon
             simp only [ereignisSchreibt] at hflag
-            exact absurd hflag (by simp)
+            exact absurd hflag (by simp only [Option.some.injEq, Bool.false_eq_true, not_false_eq_true])
         | inr g' =>
             simp only at hcon
-            exact absurd hcon (by simp)
+            exact absurd hcon (by simp only [reduceCtorEq, not_false_eq_true])
       · -- Old: the head write coincides with an old event. Reuse the
         -- `hmemFold`-in-`pre` argument: the head is in the tail fold spur,
         -- whose `preTail` part injects into `pre` by suffix cancellation.
@@ -229,10 +229,10 @@ theorem schreibBytes_neu (O : Orakel D) (passes : Nat)
                   simp only at hcon
                   have hflag := congrArg (ereignisSchreibt (D := D)) hcon
                   simp only [ereignisSchreibt] at hflag
-                  exact absurd hflag (by simp)
+                  exact absurd hflag (by simp only [Option.some.injEq, Bool.false_eq_true, not_false_eq_true])
               | inr g' =>
                   simp only at hcon
-                  exact absurd hcon (by simp)
+                  exact absurd hcon (by simp only [reduceCtorEq, not_false_eq_true])
             · -- Old again at the `hpre` level: iterate once more via
               -- `hpreTail` -- the tail fold spur is strictly shorter, so
               -- one unroll reaches `preTail` or the head world. The head

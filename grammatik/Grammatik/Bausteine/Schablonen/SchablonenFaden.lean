@@ -131,7 +131,7 @@ theorem wort_replicate (w0 k : Nat) (r : List Ereignis) :
 theorem take_vor_dem_ende (s m : Nat) (r : List Ereignis) (h : m ≤ s) :
     (List.replicate s Ereignis.laeuft ++ r).take m = List.replicate m Ereignis.laeuft := by
   induction s generalizing m with
-  | zero => simp at h; subst h; rfl
+  | zero => simp only [Nat.le_zero_eq] at h; subst h; rfl
   | succ s ih =>
     cases m with
     | zero => rfl
@@ -144,7 +144,7 @@ theorem ende_im_take (s m : Nat) (h : s < m) :
   induction s generalizing m with
   | zero =>
     obtain ⟨m, rfl⟩ : ∃ k, m = k + 1 := ⟨m - 1, by omega⟩
-    simp
+    simp only [List.replicate_zero, List.nil_append, List.take_succ_cons, List.mem_cons, true_or]
   | succ s ih =>
     obtain ⟨m, rfl⟩ : ∃ k, m = k + 1 := ⟨m - 1, by omega⟩
     simp only [List.replicate_succ, List.cons_append, List.take_succ_cons, List.mem_cons]

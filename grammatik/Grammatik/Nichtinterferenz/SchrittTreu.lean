@@ -74,7 +74,7 @@ theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
       rfl
   | endeForm l Γ Λ e ρ hl hent hhead =>
       kstart
-      cases e <;> try (simp [EndEntfaltbar] at hent; done)
+      cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
       all_goals (simp only [kr, kEnde, hl, if_true]; rfl)
   | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hk =>
       kstart

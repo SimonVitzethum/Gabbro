@@ -77,7 +77,7 @@ def refD : Deklaration where
   Fn := Bool
   sig := fun | true => 0 | false => 1
   sigNr := fun | 0 => refSigEin | _ => refSigLies
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -220,7 +220,7 @@ theorem refHpLiesAt :
       [Res.held (D := refD) ()] where
   hw := fun t ht => by cases t <;> rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (by
     intro L
     have eH : (refD.signatur refLies).haelt = [()] := rfl
@@ -495,7 +495,7 @@ theorem refSchrittB : RufSchrittD refP refO 0 refM1B 1 refM2B := by
       Ereignis.nimmt L h ∉ [Ereignis.zugriff () true
         [Res.held (D := refD) ()] (refM1B.weltVon 1).haelt] := by
     intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   exact RufSchrittD.blatt refM1B 1 false [.int 0 10]
     [Res.held (D := refD) ()] [Res.held (D := refD) ()]
     refWriteStAt _ refRho7 rfl hhead refM1haelt _ _ hstep hneu hkn

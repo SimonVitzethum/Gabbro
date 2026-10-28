@@ -153,17 +153,17 @@ theorem blatt_paar (hS : Schwanz c sF sM) (hO : OrakelPaar c OF OM) (passes : Na
   | .next _, _, σF, σM, h, ρ => by
     simp only [execStmt]
     exact .next h
-  | .ite .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .onOption .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .onTag .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .onWhy .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .call .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .callInd .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .locks .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .breaking .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .traverse .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .retry .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .forever .., hb, _, _, _, _ => by simp [Stmt.istBlatt] at hb
+  | .ite .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .onOption .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .onTag .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .onWhy .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .call .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .callInd .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .locks .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .breaking .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .traverse .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .retry .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .forever .., hb, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
 
 /-- `blatt_paar` from the fast step's equation: the machine's outcome exists and is paired. -/
 theorem blatt_paar' (hS : Schwanz c sF sM) (hO : OrakelPaar c OF OM) {passes : Nat}

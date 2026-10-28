@@ -54,7 +54,7 @@ def Var.unten : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
   | _ :: _, _, .there x => x.unten
 
 theorem Var.unten_lt : ∀ {Γ : Ctx} {τ : Ty} (x : Var Γ τ), x.unten < Γ.length
-  | _ :: _, _, .here => by simp [Var.unten]
+  | _ :: _, _, .here => by simp only [unten, List.length_cons, Nat.lt_add_one]
   | _ :: _, _, .there x => by have := Var.unten_lt x; simp only [Var.unten, List.length_cons]; omega
 
 /-- The integer a value carries, where its type is a number. -/
@@ -69,7 +69,7 @@ def Env.unten : {Γ : Ctx} → Env D Γ → Nat → Option Int
 
 theorem Env.unten_lt : ∀ {Γ : Ctx} (ρ : Env D Γ) {j : Nat} {n : Int}, ρ.unten j = some n →
     j < Γ.length
-  | _, .nil, _, _, h => by simp [Env.unten] at h
+  | _, .nil, _, _, h => by simp only [unten, reduceCtorEq] at h
   | _ :: Γ, .cons v ρ, j, n, h => by
       simp only [Env.unten] at h
       by_cases hj : j = Γ.length
@@ -93,7 +93,7 @@ theorem Env.unten_tail_some {τ : Ty} {Γ : Ctx} (ρ : Env D (τ :: Γ)) {j : Na
 
 theorem Env.unten_get : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ),
     ρ.unten x.unten = intVon τ (ρ.get x)
-  | _ :: Γ, _, .cons v ρ, .here => by simp [Env.unten, Var.unten, Env.get]
+  | _ :: Γ, _, .cons v ρ, .here => by simp only [unten, Var.unten, ↓reduceIte, get]
   | _ :: _, _, .cons _ ρ, .there x => by
       simp only [Env.unten, Var.unten, Env.get]
       rw [if_neg (by have := Var.unten_lt x; omega)]
@@ -363,7 +363,7 @@ theorem varUnten_eval {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ
 theorem evalArgs_unten {Γ : Ctx} {Λ : List (Res D)} : ∀ {τs : List Ty} (args : Args D Γ Λ τs)
     {j b : Nat}, args.anUnten j = some b → ∀ (σ0 σ : World D) (ρ : Env D Γ),
     (evalArgs σ0 args σ ρ).unten j = ρ.unten b
-  | _, .nil, _, _, h, _, _, _ => by simp [Args.anUnten] at h
+  | _, .nil, _, _, h, _, _, _ => by simp only [Args.anUnten, reduceCtorEq] at h
   | _ :: τs, .cons e rest, j, b, h, σ0, σ, ρ => by
       simp only [Args.anUnten] at h
       simp only [evalArgs, Env.unten]

@@ -62,7 +62,7 @@ theorem step_plain {M : Modl} {S : Sees} {f : Frame} {blk : Block} {i : Instr} {
     (hs : stepI i m f.regs = some (m', rs')) :
     Step M S (.run m f ks) (.run m' { f with regs := rs', pc := f.pc + 1 } ks) := by
   have hp := stepI_plain hs
-  have hnext : Cfg.nextI M (.run m f ks) = some i := by simp [Cfg.nextI, hb, hi]
+  have hnext : Cfg.nextI M (.run m f ks) = some i := by simp only [Cfg.nextI, hb, Option.bind_some, hi]
   refine ⟨⟨fun _ _ _ _ _ => none⟩,
     legal_of_not_oracular S M _ _ ?_, ?_⟩
   · intro j hj
@@ -89,19 +89,19 @@ theorem reach_seq (M : Modl) (S : Sees) :
       obtain ⟨blk, hb, hcode⟩ := hc
       simp only [seqI] at h
       cases hs : stepI i m f.regs with
-      | none => simp [hs] at h
+      | none => simp only [hs, reduceCtorEq] at h
       | some r =>
           simp only [hs] at h
           have hi : blk.body[f.pc]? = some i := by
-            have := hcode 0 (by simp)
+            have := hcode 0 (by simp only [List.length_cons, Nat.zero_lt_succ])
             simpa using this
           have h1 := step_plain (S := S) ks hb hi hs
           have h2 := ih r.1 { f with regs := r.2, pc := f.pc + 1 } ks m' rs'
             ⟨blk, hb, fun j hj => by
-              have := hcode (j + 1) (by simp; omega)
+              have := hcode (j + 1) (by simp only [List.length_cons, Nat.add_lt_add_iff_right]; omega)
               simpa [Nat.add_assoc, Nat.add_comm 1 j] using this⟩ h
           have h3 := Reach.trans (Reach.one h1) h2
-          have e : f.pc + 1 + is.length = f.pc + (i :: is).length := by simp; omega
+          have e : f.pc + 1 + is.length = f.pc + (i :: is).length := by simp only [List.length_cons]; omega
           simpa only [e] using h3
 
 /-! ## 2. Terminators -/
@@ -114,11 +114,11 @@ theorem step_term {M : Modl} {S : Sees} {f : Frame} {t : Term} {blk : Block} {m 
     {ks : List Frame} {c : Cfg} (h : Frame.atTerm M f t blk) (hs : stepTerm M t m f ks = some c) :
     Step M S (.run m f ks) c := by
   obtain ⟨hb, hl, ht⟩ := h
-  have hnone : blk.body[f.pc]? = none := by simp [hl]
+  have hnone : blk.body[f.pc]? = none := by simp only [Nat.not_lt, hl, getElem?_neg]
   refine ⟨⟨fun _ _ _ _ _ => none⟩,
     legal_of_not_oracular S M _ _ ?_, ?_⟩
   · intro j hj
-    simp [Cfg.nextI, hb, hnone] at hj
+    simp only [Cfg.nextI, hb, Option.bind_some, hnone, reduceCtorEq] at hj
   · simp only [step, hb, hnone]
     rw [← ht] at hs
     exact hs
@@ -126,13 +126,13 @@ theorem step_term {M : Modl} {S : Sees} {f : Frame} {t : Term} {blk : Block} {m 
 /-- A block with no phis is entered with its registers unchanged. -/
 theorem enter_nophi {M : Modl} {f : Frame} {l : Lbl} {blk : Block} (hb : M.blk f.fn l = some blk)
     (hp : blk.phis = []) : f.enter M l = some { f with lbl := l, pc := 0 } := by
-  simp [Frame.enter, hb, hp]
+  simp only [Frame.enter, hb, hp, List.mapM_nil, Option.pure_def, List.foldl_nil]
 
 theorem reach_jmp {M : Modl} {S : Sees} {f : Frame} {l : Lbl} {blk blk' : Block} {m : Mem}
     {ks : List Frame} (h : Frame.atTerm M f (.jmp l) blk) (hb : M.blk f.fn l = some blk')
     (hp : blk'.phis = []) :
     Reach M S (.run m f ks) (.run m { f with lbl := l, pc := 0 } ks) :=
-  Reach.one (step_term h (by simp [stepTerm, enter_nophi hb hp]))
+  Reach.one (step_term h (by simp only [stepTerm, enter_nophi hb hp, Option.map_some]))
 
 theorem reach_br {M : Modl} {S : Sees} {f : Frame} {c : Opd} {t e : Lbl} {blk blk' : Block}
     {m : Mem} {ks : List Frame} {x : BitVec 1} (h : Frame.atTerm M f (.br c t e) blk)
@@ -147,7 +147,7 @@ theorem reach_br {M : Modl} {S : Sees} {f : Frame} {c : Opd} {t e : Lbl} {blk bl
 theorem reach_ret_top {M : Modl} {S : Sees} {f : Frame} {o : Opd} {blk : Block} {m : Mem}
     {v : Val} (h : Frame.atTerm M f (.ret (some o)) blk) (hv : o.ev f.regs = some v) :
     Reach M S (.run m f []) (.fin m (some v)) :=
-  Reach.one (step_term h (by simp [stepTerm, hv, finish]))
+  Reach.one (step_term h (by simp only [stepTerm, hv, finish]))
 
 /-! ## 3. Determinism under sequential consistency -/
 
@@ -158,11 +158,11 @@ def Oracle.mem : Oracle := ⟨fun m b o t _ => m.load b o t⟩
 theorem step_sc_oracle (M : Modl) (O : Oracle) (c c' : Cfg) (hl : O.legal Sees.sc M c)
     (h : step M O c = some c') : step M Oracle.mem c = some c' := by
   cases c with
-  | fin m v => simp [step] at h
+  | fin m v => simp only [step, reduceCtorEq] at h
   | run m f ks =>
       simp only [step] at h ⊢
       cases hb : M.blk f.fn f.lbl with
-      | none => simp [hb] at h
+      | none => simp only [hb, reduceCtorEq] at h
       | some blk =>
           simp only [hb] at h ⊢
           cases hi : blk.body[f.pc]? with
@@ -173,18 +173,18 @@ theorem step_sc_oracle (M : Modl) (O : Oracle) (c c' : Cfg) (hl : O.legal Sees.s
               | aload d t p ord =>
                   simp only at h ⊢
                   cases hp : p.ev f.regs with
-                  | none => simp [hp] at h
+                  | none => simp only [hp, reduceCtorEq] at h
                   | some pv =>
                       cases pv with
-                      | int w x => simp [hp] at h
-                      | flt g => simp [hp] at h
-                      | dbl g => simp [hp] at h
+                      | int w x => simp only [hp, reduceCtorEq] at h
+                      | flt g => simp only [hp, reduceCtorEq] at h
+                      | dbl g => simp only [hp, reduceCtorEq] at h
                       | ptr b o =>
                           simp only [hp] at h ⊢
                           split at h
                           · rename_i hal
                             cases hld : O.ld m b o t ord with
-                            | none => simp [hld] at h
+                            | none => simp only [hld, reduceCtorEq] at h
                             | some v =>
                                 have hleg : Sees.sc m b o t ord v := by
                                   have := hl
@@ -194,7 +194,7 @@ theorem step_sc_oracle (M : Modl) (O : Oracle) (c c' : Cfg) (hl : O.legal Sees.s
                                 simp only [hld] at h
                                 simp only [Oracle.mem, hal, this]
                                 exact h
-                          · simp at h
+                          · simp only [reduceCtorEq] at h
               | _ => simpa [step] using h
 
 /-- **Determinism.** Under sequential consistency, with no opaque instruction next, the step

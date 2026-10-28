@@ -170,7 +170,7 @@ theorem schuldet_hat_schreibtraeger (f : D.Fn) (i : D.Inv) (hs : schuldet f i = 
       ∃ t ∈ ts, D.schreibt f t = true := by
     intro ts
     induction ts with
-    | nil => intro h; simp at h
+    | nil => intro h; simp only [List.any_nil, Bool.false_eq_true] at h
     | cons x xs ih =>
         intro h
         simp only [List.any_cons] at h

@@ -199,7 +199,7 @@ theorem pool_filter_nil {l : List D.Fn} {w : D.Fn} (h : w ∉ l) :
 theorem nodup_filter_length_le_one {ws : List D.Fn} (hnd : ws.Nodup)
     (w : D.Fn) : (ws.filter (fun v => decide (v = w))).length ≤ 1 := by
   induction ws with
-  | nil => simp
+  | nil => simp only [List.filter_nil, List.length_nil, Nat.zero_le]
   | cons a l ih =>
       obtain ⟨hna, hndl⟩ := List.nodup_cons.mp hnd
       by_cases he : decide (a = w) = true
@@ -207,8 +207,9 @@ theorem nodup_filter_length_le_one {ws : List D.Fn} (hnd : ws.Nodup)
         subst w
         have hempty : l.filter (fun v => decide (v = a)) = [] :=
           pool_filter_nil hna
-        simp [hempty]
-      · simp [he]
+        simp only [decide_true, List.filter_cons_of_pos, hempty, List.length_cons, List.length_nil, Nat.zero_add,
+  Std.le_refl]
+      · simp only [he, Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg]
         exact ih hndl
 
 /-- **The pool condition is vacuous on distinct starts** -- the old

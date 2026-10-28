@@ -110,7 +110,7 @@ inductive Lauf (g : Nat) : Zust → List Ereig → Zust → Prop where
 /-! ## 1. The invariant -/
 
 theorem gut_leer : Gut Zust.leer :=
-  ⟨by simp [Zust.leer], by simp [Zust.leer], by simp [Zust.leer]⟩
+  ⟨by simp only [Zust.leer, List.not_mem_nil, false_implies, implies_true], by simp only [Zust.leer, List.Pairwise.nil], by simp only [Zust.leer, Bool.false_eq_true, List.not_mem_nil, false_and, exists_false, imp_self, implies_true]⟩
 
 theorem gut_nach {g : Nat} {s s' : Zust} {e : Ereig} (hg : Gut s) (h : PStep g s e s') :
     Gut s' := by
@@ -207,7 +207,7 @@ theorem hole_neu_null {g : Nat} {s s' : Zust} {n b : Nat} (hg : Gut s)
   intro i hi
   simp only [List.mem_range] at hi
   have := hp (b + i) (by omega) (by omega)
-  simp [this]
+  simp only [this, Bool.false_eq_true, not_false_eq_true]
 
 /-- **No RAM without a commit.** On every run from a state `s0`, an address that is resident at
     the end was resident at `s0` or lies in the range of a `fuell` of the run. -/
@@ -238,7 +238,7 @@ theorem ram_gefuellt {g : Nat} {s0 s : Zust} {es : List Ereig} (h : Lauf g s0 es
 theorem ram_nur_gefuellt {g : Nat} {s : Zust} {es : List Ereig} (h : Lauf g Zust.leer es s)
     (a : Nat) (ha : s.ram a = true) : ∃ lo hi, Ereig.fuell lo hi ∈ es ∧ lo ≤ a ∧ a < hi := by
   rcases ram_gefuellt h a ha with h0 | h1
-  · simp [Zust.leer] at h0
+  · simp only [Zust.leer, Bool.false_eq_true] at h0
   · exact h1
 
 /-- A legal access: a resident address (which the invariant puts inside a live reservation). -/
@@ -260,7 +260,7 @@ theorem ueberlapp_verweigert (g : Nat) (s' : Zust) :
   intro h
   cases h with
   | hole hn hnb hb hfrisch =>
-      have := hfrisch ⟨0, 100⟩ (by simp)
+      have := hfrisch ⟨0, 100⟩ (by simp only [List.mem_cons, List.not_mem_nil, or_false])
       unfold Strecke.getrennt at this
       simp only at this
       omega
@@ -291,17 +291,17 @@ def zeugeLauf : List Ereig :=
 theorem zeuge_lauf_geht : ∃ s, Lauf 16 Zust.leer zeugeLauf s ∧ s.lebend = [] :=
   ⟨_, Lauf.cons
     (PStep.hole (s := Zust.leer) (n := 64) (b := 32) (by decide) (by decide) (by decide)
-      (by simp [Zust.leer]))
-    (Lauf.cons (PStep.fuell (r := ⟨32, 96⟩) (lo := 48) (hi := 64) (by simp) (by decide) (by decide))
-    (Lauf.cons (PStep.zurueck (r := ⟨32, 96⟩) (lo := 48) (hi := 64) (by simp) (by decide) (by decide))
-    (Lauf.cons (PStep.gib (r := ⟨32, 96⟩) (by simp)) (Lauf.nil _)))), rfl⟩
+      (by simp only [Zust.leer, List.not_mem_nil, Nat.reduceAdd, false_implies, implies_true]))
+    (Lauf.cons (PStep.fuell (r := ⟨32, 96⟩) (lo := 48) (hi := 64) (by simp only [Nat.reduceAdd, List.mem_cons, true_or]) (by decide) (by decide))
+    (Lauf.cons (PStep.zurueck (r := ⟨32, 96⟩) (lo := 48) (hi := 64) (by simp only [Nat.reduceAdd, List.mem_cons, true_or]) (by decide) (by decide))
+    (Lauf.cons (PStep.gib (r := ⟨32, 96⟩) (by simp only [Nat.reduceAdd, List.mem_cons, true_or])) (Lauf.nil _)))), rfl⟩
 
 /-- The witness of `hole_neu_null`: the fresh range of the first reserve holds nothing. -/
 theorem hole_neu_null_zeuge :
     ∃ s', PStep 16 Zust.leer (.hole 64 32) s' ∧ ramZahl s' 32 64 = 0 := by
   have h1 : PStep 16 Zust.leer (.hole 64 32)
       { lebend := [⟨32, 32 + 64⟩], ram := Zust.leer.ram } :=
-    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp [Zust.leer])
+    PStep.hole (s := Zust.leer) (by decide) (by decide) (by decide) (by simp only [Zust.leer, List.not_mem_nil, Nat.reduceAdd, false_implies, implies_true])
   exact ⟨_, h1, hole_neu_null gut_leer h1⟩
 
 end Gabbro.Grammatik.Anbieter

@@ -84,7 +84,7 @@ theorem zaehler_sem (t : Baum σ) :
   · rw [if_neg (by omega), if_neg hh]
 
 theorem zaehler_zustaende [Fintype Q] : Fintype.card (Q × Fin (h + 2)) = Fintype.card Q * (h + 2) := by
-  simp [Fintype.card_prod, Fintype.card_fin]
+  simp only [Fintype.card_prod, Fintype.card_fin]
 
 end Zaehler
 
@@ -112,7 +112,7 @@ theorem hoehe_turm {k0 k1 : σ.K} (h0 : σ.ar k0 = 0) (h1 : 0 < σ.ar k1) (j : N
 /-- A member's height is at most the sum of the heights. -/
 theorem hoehe_le_summe {M : List (Baum σ)} {p : Baum σ} (hp : p ∈ M) : hoehe p ≤ (M.map hoehe).sum := by
   induction M with
-  | nil => simp at hp
+  | nil => simp only [List.not_mem_nil] at hp
   | cons a M ih =>
       simp only [List.map_cons, List.sum_cons]
       rcases List.mem_cons.mp hp with rfl | hp

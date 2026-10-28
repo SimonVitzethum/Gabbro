@@ -101,7 +101,7 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     (fun L => by
       show Res.held L ∈ ([] : List (Res D0)) ↔ L ∈ offen ((wM0 false).faeden 1).spur
       rw [wM0_offen]
-      simp) hfrei
+      simp only [List.not_mem_nil]) hfrei
   have h2spur : (M2.faeden 1).spur = Ereignis.nimmt () (offen (M1.weltVon 1).spur) ::
       (M1.weltVon 1).spur := by
     rw [hZ2.1]
@@ -135,7 +135,7 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     (fun L => by
       show Res.held L ∈ ([] : List (Res D0)) ↔ L ∈ offen (M2.weltVon 2).spur
       rw [wsp2]
-      simp) (ohneFremde_frei M3 2 ())
+      simp only [List.not_mem_nil]) (ohneFremde_frei M3 2 ())
   have hoff3 : ∀ g, g ≠ 1 → g ≠ 2 → offen (M3.faeden g).spur = [] := by
     intro g h1 h2
     rw [rufSchrittG_fremd s3 g h2, rufSchrittG_fremd s2 g h1, rufSchrittG_fremd s1 g h1]
@@ -194,7 +194,7 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     (fun L => by
       show Res.held L ∈ ([] : List (Res D0)) ↔ L ∈ offen (M4.weltVon 0).spur
       rw [wsp4]
-      simp) (ohneFremde_frei M5 0 ())
+      simp only [List.not_mem_nil]) (ohneFremde_frei M5 0 ())
   have hwspur : (Mw.faeden 0).spur =
       Ereignis.nimmt () (offen ((ohneFremde M5 0).weltVon 0).spur) :: ((ohneFremde M5 0).weltVon 0).spur := by
     rw [hZw.1]
@@ -232,7 +232,7 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
   have h7 : offen (M7.faeden 1).spur = [] := by
     rw [e7, e6, h2spur]
     have e1' : offen (M1.weltVon 1).spur = [] := e1
-    simp [offen, e1']
+    simp only [offen, e1']
     first | rfl | decide
   -- thread 2: dannLeer, release
   have f2_7 : M7.faeden 2 = Mh.faeden 2 := by
@@ -255,7 +255,7 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     rfl
   have h9 : offen (M9.faeden 2).spur = [] := by
     rw [e9, e8, hhMh]
-    simp [offen, wsp3]
+    simp only [offen, wsp3]
     first | rfl | decide
   -- the writer takes the lock, alone
   have f0_9 : M9.faeden 0 = M5.faeden 0 := by
@@ -283,7 +283,7 @@ theorem leser_schreiber_lauf : ∃ (ms : Nat → RufMaschineG D0) (fs : Nat → 
     (fun L => by
       show Res.held L ∈ ([] : List (Res D0)) ↔ L ∈ offen (M4.weltVon 0).spur
       rw [wsp4]
-      simp) hfrei10
+      simp only [List.not_mem_nil]) hfrei10
   have h10spur : (M10.faeden 0).spur =
       Ereignis.nimmt () (offen (M9.weltVon 0).spur) :: (M9.weltVon 0).spur := by
     rw [hZ10.1]

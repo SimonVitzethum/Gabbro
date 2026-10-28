@@ -207,7 +207,7 @@ theorem sim_rueckBind {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZa
   obtain ⟨cM, rM, hM, hc, hr⟩ : ∃ cM rM, (M.faeden f).stapel = cM :: rM ∧ caller = cM.ohne ww ∧
       rest = rM.map (RufRahmenG.ohne ww) := by
     cases hs : (M.faeden f).stapel with
-    | nil => simp [normal, fadenNormal, hs] at hpop
+    | nil => simp only [normal, fadenNormal, hs, List.map_nil, List.nil_eq, reduceCtorEq] at hpop
     | cons cM rM =>
       simp only [normal, fadenNormal, hs, List.map_cons, List.cons.injEq] at hpop
       exact ⟨cM, rM, rfl, hpop.1.symm, hpop.2.symm⟩

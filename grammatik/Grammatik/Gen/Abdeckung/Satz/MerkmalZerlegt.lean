@@ -42,18 +42,18 @@ theorem sperrMerkmal_zerlegt (ls : List D.Lock) (hls : ∀ L : D.Lock, L ∈ ls)
           show (!(decide (L' = L))) = true
           by_cases he : L' = L
           · subst he; exact absurd h hL
-          · simp [he]
+          · simp only [he, decide_false, Bool.not_false]
       · intro h
         have := h L' (hls L')
         split at this
         · assumption
-        · simp [ohneSperre] at this
+        · simp only [ohneSperre, decide_true, Bool.not_true, Bool.false_eq_true] at this
   rw [hA, mE_alle, List.all_map]
   apply congrArg (List.all ls); funext L
   simp only [Function.comp_def]
   split
   · rename_i h; rw [h, mE_top]; rfl
-  · rename_i h; simp [h]
+  · rename_i h; simp only [h, Bool.false_or]
 
 /-- The probe "does not call `g`, not even through `g`'s signature" (the probe of `ruftB`). -/
 def ohneRuf (g : D.Fn) : Merkmal D :=
@@ -79,18 +79,18 @@ theorem rufM_zerlegt (fs : List D.Fn) (hvoll : ∀ g : D.Fn, g ∈ fs) (Z : D.Fn
           show (!(decide (h = g))) = true
           by_cases he : h = g
           · subst he; exact absurd hz hg
-          · simp [he]
+          · simp only [he, decide_false, Bool.not_false]
       · intro hh
         have := hh h (hvoll h)
         split at this
         · assumption
-        · simp [ohneRuf] at this
+        · simp only [ohneRuf, decide_true, Bool.not_true, Bool.false_eq_true] at this
     · intro n
       rw [alle_ind]; simp only [List.all_map, Function.comp_def]
       show (fs.all fun g => !(D.passt g n) || Z g) = _
       apply congrArg (List.all fs); funext g
       split
-      · rename_i h; simp [h, Merkmal.top]
+      · rename_i h; simp only [h, Bool.or_true, Merkmal.top]
       · rename_i h
         simp only [h, ohneRuf, Bool.or_false]
     · intro L
@@ -101,7 +101,7 @@ theorem rufM_zerlegt (fs : List D.Fn) (hvoll : ∀ g : D.Fn, g ∈ fs) (Z : D.Fn
   simp only [Function.comp_def]
   split
   · rename_i h; rw [h, mE_top]; rfl
-  · rename_i h; simp [h]
+  · rename_i h; simp only [h, Bool.false_or]
 
 theorem nimmtB_eq (P : Programm D) (f : D.Fn) (L : D.Lock) : nimmtB P f L = !(mE (ohneSperre L) (P.rumpf f)) := rfl
 

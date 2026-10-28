@@ -61,7 +61,7 @@ theorem Complete.bindOwning {c : Context} {g : Ghost} {s : State} {frame : Frame
   by_cases hs : slot = fresh.slot
   · subst slot
     have hh := State.owned_cell ho hc
-    exact ⟨hh.2.2, c.next, fresh, by simp [Context.bindFresh], Ghost.set_at _ _ _, rfl, hh.1⟩
+    exact ⟨hh.2.2, c.next, fresh, by simp only [Context.bindFresh, ↓reduceIte], Ghost.set_at _ _ _, rfl, hh.1⟩
   · obtain ⟨hl, i, h, hi, hg, hslot, hm⟩ := rest slot cell hc hf hs
     have hlt : i < c.next := by
       by_cases hlt : i < c.next

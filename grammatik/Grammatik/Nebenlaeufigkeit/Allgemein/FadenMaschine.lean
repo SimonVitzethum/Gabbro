@@ -190,14 +190,14 @@ theorem fadenInv_schritt {M0 : RufMaschineG D} {K K' : FadenMaschine D}
         rw [rufSchrittG_passt_anders P O passes K.m M' f t hne hs']
         exact hI.joinFrei t ht
   | start p cs hp hw hfrei hcs =>
-      have hpcs : p ∉ cs := fun h => by simp [hcs p h] at hp
+      have hpcs : p ∉ cs := fun h => by simp only [hcs p h, Bool.false_eq_true] at hp
       -- a live thread is no spawned slot
       have hlebt_nicht : ∀ t, K.lebt t = true → t ∉ cs := fun t ht h => by
-        simp [hcs t h] at ht
+        simp only [hcs t h, Bool.false_eq_true] at ht
       refine ⟨hI.lauf, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_, fun t u hu => ?_,
         fun t u hu => ?_, fun t => ?_⟩
       · by_cases hc : t ∈ cs
-        · simp [hc] at ht
+        · simp only [hc, ↓reduceIte, Bool.true_eq_false] at ht
         · simp only [hc, if_false] at ht
           exact hI.schlaeft t ht
       · by_cases htp : t = p
@@ -205,7 +205,7 @@ theorem fadenInv_schritt {M0 : RufMaschineG D} {K K' : FadenMaschine D}
         · simp only [htp, if_false] at ht
           exact hI.joinFrei t ht
       · by_cases hc : t ∈ cs
-        · simp [hc]
+        · simp only [hc, ↓reduceIte]
         · simp only [hc, if_false]
           by_cases htp : t = p
           · subst htp; exact hp
@@ -215,16 +215,16 @@ theorem fadenInv_schritt {M0 : RufMaschineG D} {K K' : FadenMaschine D}
         by_cases htp : t = p
         · subst htp
           simp only [if_true] at hu
-          simp [hu]
+          simp only [hu, ↓reduceIte]
         · simp only [htp, if_false] at hu
           have := hI.kindLebt t u hu
-          simp [this]
+          simp only [this, ite_self]
       · show (if t ∈ cs then K.rang p + 1 else K.rang t) <
           (if u ∈ cs then K.rang p + 1 else K.rang u)
         by_cases htp : t = p
         · subst htp
           simp only [if_true] at hu
-          simp [hpcs, hu]
+          simp only [hpcs, ↓reduceIte, hu, Nat.lt_add_one]
         · simp only [htp, if_false] at hu
           have hu' := hlebt_nicht u (hI.kindLebt t u hu)
           have ht' := hlebt_nicht t (hI.joinLebt t (List.ne_nil_of_mem hu))
@@ -238,17 +238,17 @@ theorem fadenInv_schritt {M0 : RufMaschineG D} {K K' : FadenMaschine D}
           exact Nat.le_succ_of_le (hI.rangUhr t)
   | kind p c hp hw hc =>
       have hlebt_nicht : ∀ t, K.lebt t = true → t ≠ c := fun t ht h => by
-        subst h; simp [hc] at ht
+        subst h; simp only [hc, Bool.false_eq_true] at ht
       refine ⟨hI.lauf, fun t ht => ?_, hI.joinFrei, fun t ht => ?_, fun t u hu => ?_,
         fun t u hu => ?_, fun t => ?_⟩
       · by_cases htc : t = c
-        · simp [htc] at ht
+        · simp only [htc, ↓reduceIte, Bool.true_eq_false] at ht
         · simp only [htc, if_false] at ht
           exact hI.schlaeft t ht
       · show (if t = c then true else K.lebt t) = true
-        simp [hI.joinLebt t ht]
+        simp only [hI.joinLebt t ht, ite_self]
       · show (if u = c then true else K.lebt u) = true
-        simp [hI.kindLebt t u hu]
+        simp only [hI.kindLebt t u hu, ite_self]
       · show (if t = c then K.rang p + 1 else K.rang t) <
           (if u = c then K.rang p + 1 else K.rang u)
         have hu' := hlebt_nicht u (hI.kindLebt t u hu)
@@ -265,19 +265,19 @@ theorem fadenInv_schritt {M0 : RufMaschineG D} {K K' : FadenMaschine D}
       refine ⟨hI.lauf, hI.schlaeft, fun t ht => ?_, fun t ht => ?_, fun t u hu => ?_,
         fun t u hu => ?_, hI.rangUhr⟩
       · by_cases htp : t = p
-        · subst htp; simp at ht
+        · subst htp; simp only [↓reduceIte, ne_eq, not_true_eq_false] at ht
         · simp only [htp, if_false] at ht
           exact hI.joinFrei t ht
       · by_cases htp : t = p
-        · subst htp; simp at ht
+        · subst htp; simp only [↓reduceIte, ne_eq, not_true_eq_false] at ht
         · simp only [htp, if_false] at ht
           exact hI.joinLebt t ht
       · by_cases htp : t = p
-        · subst htp; simp at hu
+        · subst htp; simp only [↓reduceIte, List.not_mem_nil] at hu
         · simp only [htp, if_false] at hu
           exact hI.kindLebt t u hu
       · by_cases htp : t = p
-        · subst htp; simp at hu
+        · subst htp; simp only [↓reduceIte, List.not_mem_nil] at hu
         · simp only [htp, if_false] at hu
           exact hI.rangSteigt t u hu
 
@@ -300,10 +300,10 @@ theorem faden_lebt_bleibt {K0 K : FadenMaschine D} (h : FadenErreichbar P O pass
       | lauf => exact ih
       | start p cs _ _ _ _ =>
           show (if t ∈ cs then true else K.lebt t) = true
-          simp [ih]
+          simp only [ih, ite_self]
       | kind p c _ _ _ =>
           show (if t = c then true else K.lebt t) = true
-          simp [ih]
+          simp only [ih, ite_self]
       | join => exact ih
 
 /-- **A dormant slot holds nothing** when its root holds nothing by signature (the model side of

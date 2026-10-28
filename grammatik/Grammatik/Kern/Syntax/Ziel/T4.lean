@@ -310,8 +310,8 @@ theorem kette_mit_zeugen_schritt
     have h2 := hfaden j g2 e2 hj
     exact absurd (h1.trans h2.symm) hne
   have hKette' : M'.welten.length = (J.schrittFaden ++ [f]).length + 1 := by
-    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp
-    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp
+    have h1 : (J.schrittFaden ++ [f]).length = J.schrittFaden.length + 1 := by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
+    have h2 : M'.welten.length = M.welten.length + 1 := by rw [hM'w]; simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add, Nat.add_left_cancel_iff]
     omega
   have hSchritt' : ∀ (k : Nat) (g0 : Faden) (vor nach0 : World D),
       (J.schrittFaden ++ [f])[k]? = some g0 → M'.welten[k]? = some vor →
@@ -370,7 +370,7 @@ theorem kette_mit_zeugen_schritt
             List.length_singleton]
           omega
         rw [eNone] at hk
-        simp at hk
+        simp only [reduceCtorEq] at hk
   -- DELTA: the extended chain keeps member and code by construction; the link
   -- below is unconditional for `t₀` (witnessed, via `hLinkOld` and `hneu_wit`)
   -- and the guard rides along from the package.
@@ -394,7 +394,7 @@ theorem kette_mit_zeugen_schritt
         · exact h
         · have hle : M.lauf.length ≤ j := by omega
           rw [List.getElem?_eq_none hle] at hw
-          simp at hw
+          simp only [reduceCtorEq] at hw
       have hw' : M'.lauf[j]? = some (Schritt.mk g0 (.zugriff t₀ w Λe he)) := by
         rw [hM'l, List.getElem?_append_left hjlt]
         exact hw
@@ -421,7 +421,7 @@ theorem kette_mit_zeugen_schritt
             List.length_singleton]
           omega
         rw [eNone] at hk0'
-        simp at hk0'
+        simp only [reduceCtorEq] at hk0'
   · intro g hg hWr
     exact hGuardOld g hg hWr
 

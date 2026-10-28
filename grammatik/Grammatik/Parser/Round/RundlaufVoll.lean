@@ -191,14 +191,16 @@ theorem unLegs : ∀ (o : String) (x : SExpr), gutOpUn o = true → Legs x → L
     | true =>
       have hpf := primFrei_of_istAtom x hat
       have hd : druckToks (.un o x) = [.zeichen o] ++ druckToks x := by
-        simp [druckToks, hat, un_ne_klammer _ ho]
+        simp only [druckToks, un_ne_klammer _ ho, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
       have hP' := Hx.1 rest G' hpf hrs hrg (by omega)
       simp only [hd, List.append_assoc] at ⊢
       exact bang_arm_gen _ _ _ _ _ ho hP' (atom_bed x rest)
     | false =>
       have hd : druckToks (.un o x) = [.zeichen o] ++
           (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-        simp [druckToks, hat, un_ne_klammer _ ho]
+        simp only [druckToks, un_ne_klammer _ ho, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
       have hF2 : 1 ≤ G' := by omega
       obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
       have hO' := Hx.2.2.2.2.2.2.2 _ G'' (hr_paren rest) (hrs_paren rest) (hrg_paren rest)
@@ -208,7 +210,7 @@ theorem unLegs : ∀ (o : String) (x : SExpr), gutOpUn o = true → Legs x → L
       simp only [hd, List.append_assoc] at ⊢
       exact hBang
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro rest G hpf; simp [primFrei] at hpf
+  · intro rest G hpf; simp only [primFrei, Bool.false_eq_true] at hpf
   · exact hU
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.1 G hG
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.1 G hG
@@ -237,7 +239,7 @@ theorem negLitLegs (n : Nat) (Hx : Legs (.lit n)) : Legs (.un "-()" (.lit n)) :=
   have hT : ∀ (rest : List Token), ruhig rest = true → ruhigSuff rest = true → ruhigGleit rest = true → _ :=
     fun rest hr hrs hrg => tower_up (.un "-()" (.lit n)) rest hr (fun G hG => hU rest G hrs hrg hG)
   refine ⟨?_, hU, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · intro rest G hpf; simp [primFrei] at hpf
+  · intro rest G hpf; simp only [primFrei, Bool.false_eq_true] at hpf
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).1 G hG
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.1 G hG
   · intro rest G hr hrs hrg hG; exact (hT rest hr hrs hrg).2.2.1 G hG
@@ -312,7 +314,7 @@ theorem gut_built_faelle : ∀ (w : String) (xs : List SExpr), gut (.built w xs)
   unfold gut at h
   split at h
   all_goals first
-    | (simp at h; done)
+    | (simp only [Bool.false_eq_true] at h; done)
     | skip
   all_goals
     rename_i heq

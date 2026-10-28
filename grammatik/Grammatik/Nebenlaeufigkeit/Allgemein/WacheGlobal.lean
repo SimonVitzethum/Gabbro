@@ -86,7 +86,7 @@ def gD : Deklaration where
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun i => nomatch i
   invs := []
@@ -105,13 +105,13 @@ def gD : Deklaration where
   geteilt_bewacht := fun t _ => by
     cases t
     show [Sum.inl ()] ≠ []
-    simp
+    simp only [ne_eq, List.cons_ne_self, not_false_eq_true]
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g _ => by
     cases g
     refine Or.inl ?_
     show [Sum.inl ()] ≠ []
-    simp
+    simp only [ne_eq, List.cons_ne_self, not_false_eq_true]
 
 /-- The witness thread runs the single function. -/
 def gCode : Faden → gD.Fn := fun _ => ()
@@ -163,24 +163,24 @@ def gEintritt : Faden → World gD := fun _ => gW0
 theorem gGes : Gesittet ([] : Lauf gD) := by
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro f j
-    have hsp : Lauf.spur ([] : Lauf gD) f j = [] := by simp [Lauf.spur]
+    have hsp : Lauf.spur ([] : Lauf gD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
     rw [hsp]
     exact konsistent_nil
   · intro f j e he
-    have hsp : Lauf.spur ([] : Lauf gD) f j = [] := by simp [Lauf.spur]
+    have hsp : Lauf.spur ([] : Lauf gD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
     rw [hsp] at he
-    simp at he
+    simp only [List.not_mem_nil] at he
   · intro j f L h hi g hne
-    simp at hi
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   · intro i j f g m s s' ei ej hi hj hm hm'
-    simp at hi
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
   · intro i j f g o ei ej hi hj ht1 ht2 hu
-    simp at hi
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
 
 /-- The empty run interleaves only declared pairs. -/
 theorem gBeschr : BeschraenkteVerschraenkung (D := gD) gNb ([] : Lauf gD) := by
   intro i j f g ei ej hi hj hne
-  simp at hi
+  simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
 
 /-- The single chain step stays in the writer's frame: the function
     writes everything, so both frame conditions are vacuous. -/
@@ -214,7 +214,8 @@ theorem gSchritt : ∀ (k : Nat) (f' : Faden) (vor nach : World gD),
         rw [hG] at hg'
         exact absurd hg' (by decide)
   | succ n =>
-      simp at hk
+      simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
 
 /-- The witness thread enters holding exactly the lock. -/
 theorem gEintritt0 :

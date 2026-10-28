@@ -31,14 +31,14 @@ def zaehle (p : Nat → Bool) : Nat → Nat
 /-- A count never exceeds the range. -/
 theorem zaehle_le (p : Nat → Bool) (n : Nat) : zaehle p n ≤ n := by
   induction n with
-  | zero => simp [zaehle]
+  | zero => simp only [zaehle, Std.le_refl]
   | succ n ih =>
       cases hn : p n with
       | true =>
-          have e : zaehle p (n + 1) = zaehle p n + 1 := by simp [zaehle, hn]
+          have e : zaehle p (n + 1) = zaehle p n + 1 := by simp only [zaehle, hn, ↓reduceIte, Nat.add_left_cancel_iff]
           omega
       | false =>
-          have e : zaehle p (n + 1) = zaehle p n := by simp [zaehle, hn]
+          have e : zaehle p (n + 1) = zaehle p n := by simp only [zaehle, hn, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
           omega
 
 /-- Zero count means no index satisfies `p`. -/
@@ -56,11 +56,11 @@ theorem zaehle_null_iff (p : Nat → Bool) (n : Nat) :
       · intro h k hk
         cases hn : p n with
         | true =>
-            have e : zaehle p (n + 1) = zaehle p n + 1 := by simp [zaehle, hn]
+            have e : zaehle p (n + 1) = zaehle p n + 1 := by simp only [zaehle, hn, ↓reduceIte, Nat.add_left_cancel_iff]
             exfalso
             omega
         | false =>
-            have e : zaehle p (n + 1) = zaehle p n := by simp [zaehle, hn]
+            have e : zaehle p (n + 1) = zaehle p n := by simp only [zaehle, hn, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
             have hz : zaehle p n = 0 := by rw [e] at h; exact h
             by_cases hks : k = n
             · rw [hks]
@@ -69,7 +69,7 @@ theorem zaehle_null_iff (p : Nat → Bool) (n : Nat) :
       · intro h
         have hn : p n = false := h n (by omega)
         have hz : zaehle p n = 0 := ih.mpr (fun k hk => h k (by omega))
-        simp [zaehle, hn, hz]
+        simp only [zaehle, hz, hn, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
 
 /-- Full count means every index satisfies `p`. -/
 theorem zaehle_voll_iff (p : Nat → Bool) (n : Nat) :
@@ -86,40 +86,40 @@ theorem zaehle_voll_iff (p : Nat → Bool) (n : Nat) :
       · intro h k hk
         cases hn : p n with
         | true =>
-            have e : zaehle p (n + 1) = zaehle p n + 1 := by simp [zaehle, hn]
+            have e : zaehle p (n + 1) = zaehle p n + 1 := by simp only [zaehle, hn, ↓reduceIte, Nat.add_left_cancel_iff]
             by_cases hks : k = n
             · rw [hks]
               exact hn
             · have hz : zaehle p n = n := by omega
               exact (ih.mp hz) k (by omega)
         | false =>
-            have e : zaehle p (n + 1) = zaehle p n := by simp [zaehle, hn]
+            have e : zaehle p (n + 1) = zaehle p n := by simp only [zaehle, hn, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
             have hle := zaehle_le p n
             exfalso
             omega
       · intro h
         have hn : p n = true := h n (by omega)
         have hz : zaehle p n = n := ih.mpr (fun k hk => h k (by omega))
-        simp [zaehle, hn, hz]
+        simp only [zaehle, hz, hn, ↓reduceIte, Nat.add_left_cancel_iff]
 
 /-- Pointwise implication lifts to counts. -/
 theorem zaehle_mono (p q : Nat → Bool) (n : Nat)
     (h : ∀ k < n, p k = true → q k = true) :
     zaehle p n ≤ zaehle q n := by
   induction n with
-  | zero => simp [zaehle]
+  | zero => simp only [zaehle, Std.le_refl]
   | succ n ih =>
       cases hn : p n with
       | true =>
           have hqn : q n = true := h n (by omega) hn
-          have e1 : zaehle p (n + 1) = zaehle p n + 1 := by simp [zaehle, hn]
-          have e2 : zaehle q (n + 1) = zaehle q n + 1 := by simp [zaehle, hqn]
+          have e1 : zaehle p (n + 1) = zaehle p n + 1 := by simp only [zaehle, hn, ↓reduceIte, Nat.add_left_cancel_iff]
+          have e2 : zaehle q (n + 1) = zaehle q n + 1 := by simp only [zaehle, hqn, ↓reduceIte, Nat.add_left_cancel_iff]
           have ih' := ih (fun k hk => h k (by omega))
           omega
       | false =>
-          have e1 : zaehle p (n + 1) = zaehle p n := by simp [zaehle, hn]
+          have e1 : zaehle p (n + 1) = zaehle p n := by simp only [zaehle, hn, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
           have e2 : zaehle q (n + 1) = zaehle q n + (if q n then 1 else 0) := by
-            simp [zaehle]
+            simp only [zaehle, Nat.add_left_cancel_iff]
           have ih' := ih (fun k hk => h k (by omega))
           omega
 
@@ -129,13 +129,13 @@ theorem zaehle_mono (p q : Nat → Bool) (n : Nat)
 theorem zaehle_gleich (p q : Nat → Bool) (n : Nat)
     (h : ∀ k < n, q k = p k) : zaehle q n = zaehle p n := by
   induction n with
-  | zero => simp [zaehle]
+  | zero => simp only [zaehle]
   | succ n ih =>
       have hqn : q n = p n := h n (by omega)
       have e1 : zaehle q (n + 1) = zaehle q n + (if q n then 1 else 0) := by
-        simp [zaehle]
+        simp only [zaehle, Nat.add_left_cancel_iff]
       have e2 : zaehle p (n + 1) = zaehle p n + (if p n then 1 else 0) := by
-        simp [zaehle]
+        simp only [zaehle, Nat.add_left_cancel_iff]
       have ih' := ih (fun k hk => h k (by omega))
       rw [hqn] at e1
       omega
@@ -145,7 +145,7 @@ theorem zaehle_gleich (p q : Nat → Bool) (n : Nat)
 theorem zaehle_add (p : Nat → Bool) (m n : Nat) :
     zaehle p (m + n) = zaehle p m + zaehle (fun k => p (m + k)) n := by
   induction n generalizing m with
-  | zero => simp [zaehle]
+  | zero => simp only [Nat.add_zero, zaehle]
   | succ n ih =>
       have e : m + (n + 1) = (m + n) + 1 := by omega
       rw [e]
@@ -171,9 +171,9 @@ theorem zaehle_schreibe (p q : Nat → Bool) (n j : Nat) (hjn : j < n)
       by_cases hnj : n = j
       · rw [hnj]
         have e1 : zaehle q (j + 1) = zaehle q j + (if q j then 1 else 0) := by
-          simp [zaehle]
+          simp only [zaehle, Nat.add_left_cancel_iff]
         have e2 : zaehle p (j + 1) = zaehle p j + (if p j then 1 else 0) := by
-          simp [zaehle]
+          simp only [zaehle, Nat.add_left_cancel_iff]
         have heq : zaehle q j = zaehle p j :=
           zaehle_gleich p q j (fun k hk => h k (by omega) (by omega))
         omega
@@ -181,9 +181,9 @@ theorem zaehle_schreibe (p q : Nat → Bool) (n j : Nat) (hjn : j < n)
         have ih' := ih hjn' h'
         have hqn : q n = p n := h n (by omega) hnj
         have e1 : zaehle q (n + 1) = zaehle q n + (if q n then 1 else 0) := by
-          simp [zaehle]
+          simp only [zaehle, Nat.add_left_cancel_iff]
         have e2 : zaehle p (n + 1) = zaehle p n + (if p n then 1 else 0) := by
-          simp [zaehle]
+          simp only [zaehle, Nat.add_left_cancel_iff]
         rw [hqn] at e1
         omega
 
@@ -243,7 +243,7 @@ theorem refcount_erhalten (ziel ziel' : Nat → Nat) (t : Nat)
   have e2 : (if ziel' j = t then (1 : Nat) else 0) =
       (if b = t then 1 else 0) := by
     rw [hb]
-  simp at h
+  simp only [decide_eq_true_eq] at h
   rw [e1, e2] at h
   omega
 

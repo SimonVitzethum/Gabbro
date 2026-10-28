@@ -28,7 +28,7 @@ def schreibAuf (w : List (Schreib D)) (S : Speicher D) : Speicher D := w.foldl (
 
 theorem schreibAuf_append (w w' : List (Schreib D)) (S : Speicher D) :
     schreibAuf (w ++ w') S = schreibAuf w' (schreibAuf w S) := by
-  simp [schreibAuf, List.foldl_append]
+  simp only [schreibAuf, List.foldl_append]
 
 /-- **An oracle whose answers name their writes.** -/
 def OrakelSchreibt (O : Orakel D) (ow : ∀ a : D.Ax, World D → Env D (D.aparams a) → List (Schreib D)) : Prop :=
@@ -166,20 +166,20 @@ theorem blatt_schreib {O : Orakel D} {ow : ∀ a : D.Ax, World D → Env D (D.ap
     simp only [execStmt, Ausgang.ok.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     rfl
-  | .ret .., _, _, _, _, _, h => by simp [execStmt] at h
-  | .retWhy .., _, _, _, _, _, h => by simp [execStmt] at h
-  | .leave _, _, _, _, _, _, h => by simp [execStmt] at h
-  | .next _, _, _, _, _, _, h => by simp [execStmt] at h
-  | .ite .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .onOption .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .onTag .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .onWhy .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .call .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .callInd .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .locks .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .breaking .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .traverse .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .retry .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
-  | .forever .., hb, _, _, _, _, _ => by simp [Stmt.istBlatt] at hb
+  | .ret .., _, _, _, _, _, h => by simp only [execStmt, reduceCtorEq] at h
+  | .retWhy .., _, _, _, _, _, h => by simp only [execStmt, reduceCtorEq] at h
+  | .leave _, _, _, _, _, _, h => by simp only [execStmt, reduceCtorEq] at h
+  | .next _, _, _, _, _, _, h => by simp only [execStmt, reduceCtorEq] at h
+  | .ite .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .onOption .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .onTag .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .onWhy .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .call .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .callInd .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .locks .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .breaking .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .traverse .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .retry .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | .forever .., hb, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
 
 end Gabbro.Stage0

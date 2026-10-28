@@ -69,7 +69,7 @@ def D1 : Deklaration where
       gschreibt := fun e => nomatch e
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -85,7 +85,7 @@ def D1 : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun g => nomatch g
 
@@ -247,7 +247,7 @@ theorem hblatt_post_falsch (O : Orakel D1) (passes : Nat)
       Extraktion.QEnsures (D := D1) P1 () s') := by
   have hvor : ¬ Extraktion.QEnsures (D := D1) P1 () s := by
     rw [qensures_ist_slot]
-    simp [hb]
+    simp only [hb, reduceCtorEq, not_false_eq_true]
   have hnach : Extraktion.QEnsures (D := D1) P1 () s' := by
     rw [qensures_ist_slot]
     have hw := feuerung_schreibt O passes r false s hb s' hstep

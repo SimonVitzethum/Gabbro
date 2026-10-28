@@ -47,8 +47,8 @@ theorem einzahlen_post (O : Orakel gD) (U : Umwelt gD) (A : AUmwelt gD) (hA : Ha
     erw [schreibSlot_slots_same]
     exact decide_eq_true (σ.slots _ _ _).le_hi
   | why _ r => exact (Fin.cast rfl r).elim0
-  | logik e => unfold RueckPost; exact ⟨fun _ _ h => (by simp at h), fun _ _ h => (by simp at h)⟩
-  | hardware e => unfold RueckPost; exact ⟨fun _ _ h => (by simp at h), fun _ _ h => (by simp at h)⟩
+  | logik e => unfold RueckPost; exact ⟨fun _ _ h => (by simp only [reduceCtorEq] at h), fun _ _ h => (by simp only [reduceCtorEq] at h)⟩
+  | hardware e => unfold RueckPost; exact ⟨fun _ _ h => (by simp only [reduceCtorEq] at h), fun _ _ h => (by simp only [reduceCtorEq] at h)⟩
 
 /-- `einzahlen` under the gated call meaning ends in no precondition stop. -/
 theorem einzahlen_kein_vor (O : Orakel gD) (U : Umwelt gD) (A : AUmwelt gD) (hA : HavocA (GeteiltA gP gE.ws) A)
@@ -60,10 +60,10 @@ theorem einzahlen_kein_vor (O : Orakel gD) (U : Umwelt gD) (A : AUmwelt gD) (hA 
   simp only [eval, wahr?, if_true]
   generalize hout : R GFn.lies _ _ = out
   cases out with
-  | ok σ2 v => simp
+  | ok σ2 v => simp only [ne_eq, reduceCtorEq, not_false_eq_true]
   | why _ r => exact (Fin.cast rfl r).elim0
   | logik e => simpa using hOV _ _ _ e hout g
-  | hardware e => simp
+  | hardware e => simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- `einzahlen` under a call meaning without `logik` ends in no `logik` stop at all. -/
 theorem einzahlen_kein_logik (O : Orakel gD) (U : Umwelt gD) (A : AUmwelt gD) (hA : HavocA (GeteiltA gP gE.ws) A)
@@ -73,10 +73,10 @@ theorem einzahlen_kein_logik (O : Orakel gD) (U : Umwelt gD) (A : AUmwelt gD) (h
   simp only [gBody_einzahlen, execEndHA, execStmtHA, leseA_ohneAtomar keinAtomar hA]
   generalize hout : R g_lies _ _ = out
   cases out with
-  | ok σ2 v => simp
+  | ok σ2 v => simp only [ne_eq, reduceCtorEq, not_false_eq_true]
   | why _ r => exact (Fin.cast rfl r).elim0
   | logik e' => exact absurd hout (hOL _ _ _ e')
-  | hardware e' => simp
+  | hardware e' => simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- **The body obligations, as weakest preconditions**, at every budget. -/
 theorem pflicht (passes : Nat) (f : gD.Fn) : PflichtWP gP passes gE.Q gS (GeteiltA gP gE.ws) f := by
@@ -109,7 +109,7 @@ theorem sperrInvLokal : SperrInvLokal gS := by
   rfl
 
 theorem startPflicht : StartPflicht gE :=
-  ⟨fun L => by cases L; rfl, fun a ha => by simp [gE] at ha⟩
+  ⟨fun L => by cases L; rfl, fun a ha => by simp only [gE, List.append_nil, List.not_mem_nil] at ha⟩
 
 /-- **Premise (b) of the goal theorem, proved.** -/
 theorem nutzerPflicht_bewiesen : NutzerPflichtA gE :=

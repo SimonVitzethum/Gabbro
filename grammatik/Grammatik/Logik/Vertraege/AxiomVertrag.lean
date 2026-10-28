@@ -171,7 +171,7 @@ def axD : Deklaration where
   Fn := AxFn
   sig := fun | .haupt => 0 | .zaehle => 1 | .ruhe => 2
   sigNr := fun n => match n with | 0 => axSigHaupt | 1 => axSigZaehle | _ => axSigRuhe
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -227,7 +227,7 @@ def axRumpfZaehle : Endblock axD (vertragVon axD axZaehle) false [] axL := .cons
 theorem axHpZaehle : RufPasst axD (vertragVon axD axHaupt) (axD.signatur axZaehle) axL where
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
-  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (fun L => by
     cases L
     exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)

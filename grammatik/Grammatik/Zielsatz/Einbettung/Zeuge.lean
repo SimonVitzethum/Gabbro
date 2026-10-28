@@ -128,7 +128,7 @@ def einE : Einbettung D (erweitert D g₀) where
   globZ_glob := fun _ => rfl
   glob_globZ := fun _ _ h => (Option.some.inj h).symm
   gtyp := fun g => (tyN_id (D.gtyp g)).symm
-  nutzlast := fun _ => by simp [erweitert]
+  nutzlast := fun _ => by simp only [erweitert, List.map_id_fun', id_eq]
   atomar := fun _ => rfl
   ggeteilt := fun _ => rfl
   ggeist := fun _ => rfl
@@ -155,7 +155,7 @@ def einE : Einbettung D (erweitert D g₀) where
     congr 1
     funext w
     rcases w with L | ⟨m, s⟩ <;> rfl
-  eigner := fun _ => by simp [erweitert]
+  eigner := fun _ => by simp only [erweitert, List.map_id_fun', id_eq]
   fn := Sum.inl
   fnZ := fun f => match f with | .inl f => some f | .inr _ => none
   fnZ_fn := fun _ => rfl
@@ -167,7 +167,7 @@ def einE : Einbettung D (erweitert D g₀) where
   invZ := some
   invZ_inv := fun _ => rfl
   inv_invZ := fun _ _ h => (Option.some.inj h).symm
-  traeger := fun _ => by simp [erweitert]
+  traeger := fun _ => by simp only [erweitert, List.map_id_fun', id_eq]
   invs := fun _ => Iff.rfl
   ax := fun a => a
   axZ := some
@@ -187,14 +187,14 @@ def einE : Einbettung D (erweitert D g₀) where
   agruende := fun _ => rfl
   aschreibt := fun _ _ => rfl
   agschreibt := fun _ _ => rfl
-  anbieter := fun _ => by simp [erweitert]
+  anbieter := fun _ => by simp only [erweitert, Option.map_id_fun', id_eq]
   reg := fun r => r
   regZ := some
   regZ_reg := fun _ => rfl
   reg_regZ := fun _ _ h => (Option.some.inj h).symm
   rtyp := fun r => (tyN_id (D.rtyp r)).symm
   rklasse := fun _ => rfl
-  spiegel := fun _ => by simp [erweitert]
+  spiegel := fun _ => by simp only [erweitert, Option.map_id_fun', id_eq]
   rtraeger := fun r => by
     show D.rtraeger r = _
     conv => lhs; rw [← List.map_id (D.rtraeger r)]
@@ -203,7 +203,7 @@ def einE : Einbettung D (erweitert D g₀) where
     rcases c with t | g <;> rfl
   annahme := fun a => a
   a10 := rfl
-  tabNr := fun n => by simp [erweitert]
+  tabNr := fun n => by simp only [erweitert, Option.map_id_fun', id_eq]
   sig := fun _ => rfl
   passt := fun _ _ => rfl
 
@@ -262,7 +262,7 @@ def rueckE (hA : Einbettung.AntwortFrei D) : (einE D g₀).Rueck where
     | inl f => cases hz
     | inr _ =>
         have hp : D.passt g₀ n = true := h
-        simp [hp]
+        simp only [hp, ↓reduceIte, Option.isSome_some]
   frei := hA
 
 /-- **The program of the extension**: the images of `P`'s functions, and the callback with the
@@ -389,7 +389,7 @@ theorem einbettung_zeuge {P : Programm D} {S : SperrInv D} {Q : AxEns D} {T : D.
 theorem rueckruf_echt (n : Nat) (h : D.passt g₀ n = true) :
     (einE D g₀).fnZ (.inr ()) = none ∧ (erweitert D g₀).passt (.inr ()) n = true ∧
       (rueckE D g₀ hA).rep n = some g₀ :=
-  ⟨rfl, h, by simp [rueckE, h]⟩
+  ⟨rfl, h, by simp only [rueckE, h, ↓reduceIte]⟩
 
 
 

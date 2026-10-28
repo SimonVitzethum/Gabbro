@@ -811,7 +811,7 @@ theorem bin_turmM (m : Nat) (op : String) (l r : SExpr)
     LegsB (m + 10) (.bin op l r) := by
   have hd : druckToks (.bin op l r) = [.zeichen "("] ++ druckToks l ++
       [.zeichen op] ++ druckToks r ++ [.zeichen ")"] := by
-    simp [druckToks]
+    simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
   have hP : ∀ (rest' : List Token) (G : Nat), m + 10 + 1 ≤ G →
       parsePrimary G (druckToks (.bin op l r) ++ rest') = .ok (.bin op l r, rest') := by
     intro rest' G hG
@@ -933,8 +933,9 @@ theorem unLegsM_atom (m : Nat) (o : String) (x : SExpr) (ho : gutOpUn o = true)
     (hat : istAtom x = true) (Hx : LegsB m x) : LegsB m (.un o x) := by
   have hpf := primFrei_of_istAtom x hat
   have hd : druckToks (.un o x) = [.zeichen o] ++ druckToks x := by
-    simp [druckToks, hat, un_ne_klammer _ ho]
-  apply legsB_aus m _ (fun rest G h => by simp [primFrei] at h)
+    simp only [druckToks, un_ne_klammer _ ho, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
+  apply legsB_aus m _ (fun rest G h => by simp only [primFrei, Bool.false_eq_true] at h)
   intro rest G hrs hrg hG
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   have hP' := Hx.1 rest G' hpf hrs hrg (by omega)
@@ -946,8 +947,9 @@ theorem unLegsM_klammer (m : Nat) (o : String) (x : SExpr) (ho : gutOpUn o = tru
     (hat : istAtom x = false) (Hx : LegsB m x) : LegsB (m + 8) (.un o x) := by
   have hd : druckToks (.un o x) = [.zeichen o] ++
       (([.zeichen "("] ++ druckToks x) ++ [.zeichen ")"]) := by
-    simp [druckToks, hat, un_ne_klammer _ ho]
-  apply legsB_aus _ _ (fun rest G h => by simp [primFrei] at h)
+    simp only [druckToks, un_ne_klammer _ ho, Bool.false_eq_true, ↓reduceIte, hat, List.cons_append,
+  List.nil_append]
+  apply legsB_aus _ _ (fun rest G h => by simp only [primFrei, Bool.false_eq_true] at h)
   intro rest G hrs hrg hG
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
@@ -963,7 +965,7 @@ theorem negLitLegsM (m : Nat) (n : Nat) (Hx : LegsB m (.lit n)) : LegsB (m + 8) 
   have hs0 : strEq "-()" "-()" = true := by decide
   have hd : druckToks (.un "-()" (.lit n)) = [.zeichen "-", .zeichen "("] ++ (druckToks (.lit n) ++ [.zeichen ")"]) := by
     simp only [druckToks, hs0, ite_true, List.append_assoc]
-  apply legsB_aus _ _ (fun rest G h => by simp [primFrei] at h)
+  apply legsB_aus _ _ (fun rest G h => by simp only [primFrei, Bool.false_eq_true] at h)
   intro rest G hrs hrg hG
   obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by omega⟩
   obtain ⟨G'', rfl⟩ : ∃ G'', G' = G'' + 1 := ⟨G' - 1, by omega⟩
@@ -1019,7 +1021,7 @@ theorem suffM : ∀ (suff : List SuffFrag) (base : SExpr) (rest : List Token) (F
       simp only [suffToks, List.length_cons] at hF
       exact ih _ rest F' hs' hr (by omega)
     | idx i =>
-      have hLi := hs i (by simp)
+      have hLi := hs i (by simp only [List.mem_cons, true_or])
       obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
       simp only [suffToks, List.length_cons, List.length_append, List.length_singleton] at hF
       simp only [suffToks, List.cons_append]
@@ -1073,7 +1075,7 @@ theorem suff_idx_mem : ∀ (suff : List SuffFrag) (i : SExpr), SuffFrag.idx i �
     suffGut suff = true → groesse i ≤ suffGroesse suff ∧ gut i = true := by
   intro suff
   induction suff with
-  | nil => intro i h; simp at h
+  | nil => intro i h; simp only [List.not_mem_nil] at h
   | cons f s ih =>
     intro i h hg
     simp only [List.mem_cons] at h
@@ -1109,7 +1111,7 @@ theorem argM (x : SExpr) (sep : Token) (S : List Token) (F : Nat)
       intro he
       have hlen := toksLang (groesse x) x (Nat.le_refl _)
       rw [he] at hlen
-      simp at hlen
+      simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
     obtain ⟨a, R2, hxb⟩ := List.exists_cons_of_ne_nil hne
     rw [hxb] at hcon
     simp only [List.cons_append] at hcon
@@ -1120,13 +1122,13 @@ theorem argM (x : SExpr) (sep : Token) (S : List Token) (F : Nat)
       simp only [List.nil_append, List.cons_append] at ht
       injection ht with hsep2 _
       cases hsep with
-      | inl h => subst h; simp at hsep2
-      | inr h => subst h; simp at hsep2
+      | inl h => subst h; simp only [Token.zeichen.injEq, String.reduceEq] at hsep2
+      | inr h => subst h; simp only [Token.zeichen.injEq, String.reduceEq] at hsep2
     | cons b R3 =>
       rw [hR] at ht
       simp only [List.cons_append] at ht
       injection ht with hb _
-      have hbmem : b ∈ druckToks x := by simp [hxb, hR]
+      have hbmem : b ∈ druckToks x := by simp only [hxb, hR, List.mem_cons, true_or, or_true]
       exact keinDP_tree (groesse x) x (Nat.le_refl _) hxg b hbmem hb
   simp only [parseArg]
   have hr1 : ruhig ([sep] ++ S) = true := by
@@ -1152,7 +1154,7 @@ theorem kopf_nicht_zu (x : SExpr) (hxg : gut x = true) (S : List Token) (R2 : Li
     intro he
     have hlen := toksLang (groesse x) x (Nat.le_refl _)
     rw [he] at hlen
-    simp at hlen
+    simp only [List.length_nil, Nat.le_zero_eq, Nat.succ_ne_self] at hlen
   obtain ⟨a, R3, hxb⟩ := List.exists_cons_of_ne_nil hne
   have ha := hkop a R3 hxb
   rw [hxb] at hcon
@@ -1173,7 +1175,7 @@ theorem argsM : ∀ (xs : List SExpr) (rest : List Token) (F : Nat),
     simp only [parseArgs, druckToksListe, List.nil_append, List.cons_append]
   | cons x zs ihzs =>
     intro rest F hs hF
-    obtain ⟨hLx, hxg⟩ := hs x (by simp)
+    obtain ⟨hLx, hxg⟩ := hs x (by simp only [List.mem_cons, true_or])
     have hzs : ∀ y ∈ zs, LegsB (fb y) y ∧ gut y = true :=
       fun y hy => hs y (List.mem_cons_of_mem _ hy)
     obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
@@ -1236,7 +1238,7 @@ theorem suffWeiterM : ∀ (suff : List SuffFrag) (base : SExpr) (R : List Token)
     parseSuffixe F base (suffToks suff ++ R) = parseSuffixe (F - suff.length) (applySuff base suff) R := by
   intro suff
   induction suff with
-  | nil => intro base R F _ _; simp [suffToks, applySuff]
+  | nil => intro base R F _ _; simp only [suffToks, List.nil_append, List.length_nil, Nat.sub_zero, applySuff]
   | cons frag suff ih =>
     intro base R F hs hF
     have hs' := suffLegs_tail hs
@@ -1257,7 +1259,7 @@ theorem suffWeiterM : ∀ (suff : List SuffFrag) (base : SExpr) (R : List Token)
       simp only [suffToks, List.length_cons] at hF
       exact ih _ R F' hs' (by omega)
     | idx i =>
-      have hLi := hs i (by simp)
+      have hLi := hs i (by simp only [List.mem_cons, true_or])
       simp only [suffToks, List.length_cons, List.length_append, List.length_singleton] at hF
       simp only [suffToks, List.cons_append]
       simp only [parseSuffixe]
@@ -1278,7 +1280,7 @@ theorem suff_ruf (G : Nat) (c : SExpr) (T : List Token) (hc : istVar c = false) 
       | .ok (args, rest') => parseSuffixe G (.ext .call [] (c :: args)) rest'
       | .error e => .error e := by
   cases c with
-  | «variable» s => simp [istVar] at hc
+  | «variable» s => simp only [istVar, Bool.true_eq_false] at hc
   | _ => simp only [parseSuffixe] <;> rfl
 
 theorem istVar_applySuff : ∀ (suff : List SuffFrag) (base : SExpr), istVar base = false →
@@ -1304,7 +1306,7 @@ theorem kette_nopar (suff : List SuffFrag) (hne : suff ≠ []) (R R2 : List Toke
     suffToks suff ++ R ≠ .zeichen "(" :: R2 := by
   cases suff with
   | nil => exact absurd rfl hne
-  | cons f s => cases f <;> simp [suffToks]
+  | cons f s => cases f <;> simp only [suffToks, List.cons_append, ne_eq, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, not_false_eq_true, List.append_assoc, List.nil_append]
 
 /-- Calls through a place through `parsePrimary` at token fuel. -/
 theorem prim_methM (a : String) (suff : List SuffFrag) (xs : List SExpr) (rest : List Token) (F : Nat)
@@ -1453,8 +1455,9 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         | lit k =>
           have hk : groesse (SExpr.lit k) ≤ n := by simp only [groesse] at hs ⊢; omega
           apply LegsB_mono _ (negLitLegsM _ k (ih (.lit k) hk rfl))
-          simp [fb, druckToks, ho]
-        | _ => simp [istLit] at hl
+          simp only [fb, druckToks, List.length_cons, List.length_nil, Nat.zero_add, Nat.mul_one, Nat.reduceAdd, ho,
+  ↓reduceIte, List.cons_append, List.nil_append, Nat.reduceMul, Nat.reduceLeDiff]
+        | _ => simp only [istLit, Bool.false_eq_true] at hl
     | bin o l r =>
       simp only [gut, Bool.and_eq_true] at hg
       have hl : groesse l ≤ n := by simp only [groesse] at hs; omega
@@ -1475,7 +1478,7 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         exact ⟨ih x hsx hgx, hgx⟩
       have hd : druckToks (.call f xs) = [nameTok f] ++
           ([.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")"]) := by
-        simp [druckToks]
+        simp only [druckToks, List.cons_append, List.nil_append]
       apply legsB_kopf _ (nameTok f) _ (nameTok_form f) hd
       intro rest' G _ _ hG
       apply prim_rufM f xs rest' G hg.1 hxs
@@ -1496,7 +1499,7 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         have hd : druckToks (.built w [applySuff (.variable c) suff]) = [.wort w] ++
             ([.zeichen "("] ++ druckToksListe [applySuff (.variable c) suff] ++
               [.zeichen ")"]) := by
-          simp [druckToks]
+          simp only [druckToks, List.cons_append, List.nil_append]
         apply legsB_kopf _ (.wort w) _ (Or.inr ⟨w, rfl⟩) hd
         intro rest' G hrs _ hG
         apply prim_emb1M w c suff rest' G hw hka hsl hp htw hrs
@@ -1508,7 +1511,7 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         have hb' : groesse b ≤ n := by simp only [groesse, groesseListe] at hs; omega
         have hd : druckToks (.built "aligned" [a, b]) = [.wort "aligned"] ++
             ([.zeichen "("] ++ druckToksListe [a, b] ++ [.zeichen ")"]) := by
-          simp [druckToks]
+          simp only [druckToks, List.cons_append, List.nil_append]
         apply legsB_kopf _ (.wort "aligned") _ (Or.inr ⟨_, rfl⟩) hd
         intro rest' G _ _ hG
         apply prim_alignedM (max (fb a) (fb b)) a b rest' G
@@ -1527,7 +1530,7 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
         exact ih i (by omega) hi'
       have hd : druckToks (.old (applySuff (.variable c) suff)) = [.wort "old"] ++
           ([.zeichen "("] ++ druckToks (applySuff (.variable c) suff) ++ [.zeichen ")"]) := by
-        simp [druckToks]
+        simp only [druckToks, List.cons_append, List.nil_append]
       apply legsB_kopf _ (.wort "old") _ (Or.inr ⟨_, rfl⟩) hd
       intro rest' G hrs _ hG
       apply prim_altM c suff rest' G hka hsl hrs
@@ -1543,7 +1546,7 @@ theorem legs_tok_n : ∀ (n : Nat) (e : SExpr), groesse e ≤ n → gut e = true
       obtain ⟨rfl, rfl, c, ys, rfl, hp, hv, hys⟩ := gut_ruf_faelle k ns xs hg
       have hcs : groesse c ≤ n + 1 := by simp only [groesse, groesseListe] at hs; omega
       obtain ⟨a, suff, rfl, hka, hgs, hsz⟩ := zerlege (n + 1) c hcs hp
-      have hne : suff ≠ [] := by rintro rfl; simp [applySuff, istVar] at hv
+      have hne : suff ≠ [] := by rintro rfl; simp only [istVar, applySuff, Bool.true_eq_false] at hv
       have hsl : SuffLegs suff := by
         intro i hi
         obtain ⟨hgi, hi'⟩ := suff_idx_mem suff i hi hgs

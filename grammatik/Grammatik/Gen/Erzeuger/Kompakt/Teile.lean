@@ -64,7 +64,7 @@ theorem argsS_rep {E : Sz (SE D Γ Λ)} {K : Nat} (hE : ERU E K) :
       ∃ a' : Args D Γ Λ τs, a' ∈ argsS E τs (groesseArgs a') ∧ GlArgs a' a := by
   intro τs a
   induction a with
-  | nil => intro _; exact ⟨.nil, Sz.mem_blatt (by simp), ⟨fun _ => Iff.rfl, Nat.le_refl _⟩⟩
+  | nil => intro _; exact ⟨.nil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false]), ⟨fun _ => Iff.rfl, Nat.le_refl _⟩⟩
   | cons e rest ih =>
     intro h
     simp only [groesseArgs] at h
@@ -78,7 +78,7 @@ theorem argsS_rep {E : Sz (SE D Γ Λ)} {K : Nat} (hE : ERU E K) :
 theorem ergS_rep {E : Sz (SE D Γ Λ)} {K : Nat} (hE : ERU E K) {o : Option Ty} (a : ErgExpr D Γ Λ o)
     (h : groesseErg a ≤ K) : ∃ a' : ErgExpr D Γ Λ o, a' ∈ ergS E o (groesseErg a') ∧ GlErg a' a := by
   cases a with
-  | empty => exact ⟨.empty, Sz.mem_blatt (by simp), ⟨fun _ => Iff.rfl, Nat.le_refl _⟩⟩
+  | empty => exact ⟨.empty, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false]), ⟨fun _ => Iff.rfl, Nat.le_refl _⟩⟩
   | val e =>
     simp only [groesseErg] at h
     obtain ⟨e', he, ⟨_, _⟩⟩ := hE _ e (by omega)
@@ -94,7 +94,7 @@ theorem armsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
       (a : Arms D V l Γ Λ Λ' cs), groesseArms a ≤ K →
       ∃ a' : Arms D V l Γ Λ Λ' cs,
         (⟨Λ', a'⟩ : Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs) ∈ armsS O l Γ Λ cs (groesseArms a') ∧ GlArms a' a
-  | _, _, _, _, .nil, _ => ⟨.nil, Sz.mem_blatt (by simp), GlArms.mk (fun _ => rfl) (fun _ _ => rfl)
+  | _, _, _, _, .nil, _ => ⟨.nil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false]), GlArms.mk (fun _ => rfl) (fun _ _ => rfl)
       (fun _ => Iff.rfl) (fun _ => Iff.rfl) (fun _ => Iff.rfl) (Nat.le_refl _)⟩
   | Γ, Λ, _, _, .cons b rest, h => by
     simp only [groesseArms] at h
@@ -117,7 +117,7 @@ theorem grundArmsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
       ∃ a' : GrundArms D V l Γ Λ Λ' n,
         (⟨Λ', a'⟩ : Σ Λ' : List (Res D), GrundArms D V l Γ Λ Λ' n) ∈ grundArmsS O l Γ Λ n (groesseGrundArms a') ∧
           GlGArms a' a
-  | _, _, _, _, .nil, _ => ⟨.nil, Sz.mem_blatt (by simp), GlGArms.mk (fun _ => rfl) (fun _ _ => rfl)
+  | _, _, _, _, .nil, _ => ⟨.nil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false]), GlGArms.mk (fun _ => rfl) (fun _ _ => rfl)
       (fun _ => Iff.rfl) (fun _ => Iff.rfl) (fun _ => Iff.rfl) (Nat.le_refl _)⟩
   | Γ, Λ, _, _, .cons b rest, h => by
     simp only [groesseGrundArms] at h

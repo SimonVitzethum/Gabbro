@@ -110,7 +110,7 @@ theorem axiomCallRecordsWrite (O : Orakel D) (hO : GutO O) (passes : Nat)
           exact ⟨_, hmem2, rfl⟩
       | none =>
           rw [hfire, hAns, Ausgang.welt] at hstep
-          simp at hstep
+          simp only [reduceCtorEq] at hstep
 
 /-- A foreign step keeps the slots of `t`: invert the `PCSchritt`.
     Take/release keep `M.speicher` by construction. For a leaf, run the
@@ -296,15 +296,15 @@ theorem axiomMemStep (σ' : World EZD.AxGegen.D2)
   · exact hfire'
   · exact hneu'
   · intro L h hm
-    simp at hm
+    simp only [List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self] at hm
   · rfl
   · rfl
   · intro e he m st hm
     rcases List.mem_cons.mp he with rfl | he
-    · simp [Ereignis.lambda] at hm
+    · simp only [Ereignis.lambda, List.not_mem_nil] at hm
     · simp only [List.mem_singleton] at he
       subst he
-      simp [Ereignis.lambda] at hm
+      simp only [Ereignis.lambda, List.not_mem_nil] at hm
   · intro e he o ho
     rcases List.mem_cons.mp he with rfl | he
     · have h2 : (Ereignis.zugriff () true []
@@ -317,7 +317,7 @@ theorem axiomMemStep (σ' : World EZD.AxGegen.D2)
       exact List.mem_singleton.mpr rfl
     · simp only [List.mem_singleton] at he
       subst he
-      simp [Ereignis.traeger] at ho
+      simp only [Ereignis.traeger, reduceCtorEq] at ho
 
 /-- The witnessed foreign step on the one-axiom declaration: thread `1`
     fires `leave` (memory-preserving, empty recorded list, carrier-free
@@ -348,13 +348,13 @@ theorem axiomLeaveStep (M : GenMaschine EZD.AxGegen.D2)
     rw [hspur, hempty]
     rfl
   · intro L h hm
-    simp at hm
+    simp only [List.not_mem_nil] at hm
   · rfl
   · rfl
   · intro e he m st hm
-    simp at he
+    simp only [List.not_mem_nil] at he
   · intro e he o ho
-    simp at he
+    simp only [List.not_mem_nil] at he
 
 /-- Second witness (rule 13) on the one-axiom unguarded declaration
     (`AxGegen`): the target's premises hold here too -- `hNurG` over the

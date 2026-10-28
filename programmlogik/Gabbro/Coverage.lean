@@ -421,8 +421,8 @@ theorem call_carried : CallCarried := by
       · intro p hp
         cases hstep
         exact hfr _ p hp
-    · exact absurd hstep (by simp)
-  · exact absurd hstep (by simp)
+    · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
+  · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **A call whose answer is bound** -- the commonest call shape, and the shape a call
     inside an expression becomes after the emitter hoists it. Same premises; in addition
@@ -468,11 +468,11 @@ theorem bindCall_core (ρ : Env) (Γ : Typing) (f n : String) (ps : List String)
       · rename_i v hv
         refine ⟨vs, v, hvs, hc _ ⟨hwf, hpre⟩, hv, ?_, ?_, ?_⟩
         · cases hstep; rfl
-        · cases hstep; simp [bindLocal]
-        · intro m hm; cases hstep; simp [bindLocal, hm]
-      · exact absurd hstep (by simp)
-    · exact absurd hstep (by simp)
-  · exact absurd hstep (by simp)
+        · cases hstep; simp only [bindLocal, ↓reduceIte]
+        · intro m hm; cases hstep; simp only [bindLocal, hm, ↓reduceIte]
+      · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
+    · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
+  · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 theorem call_result_carried : CallResultCarried := by
   intro ρ Γ f n ps as pre Q w s s' hc hfr hwf hstep
@@ -575,7 +575,7 @@ theorem answer_without_shape_carried : AnswerWithoutShapeCarried := by
   intro ρ Γ f n ps as pre s vs hc hwf hvs hpre
   obtain ⟨v, hv⟩ := hc ⟨s.world, bindAll ps vs (fun _ => .absent)⟩ ⟨hwf, hpre⟩
   simp only [step, hvs, hpre, hv]
-  simp
+  simp only [ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-! ### 5.3 The world -- a store keeps it well typed, a read draws a witness from it -/
 
@@ -606,21 +606,21 @@ theorem store_carried : StoreCarried := by
     · rename_i k v hi he
       cases hstep
       exact ⟨WF_store Γ s.world _ v hwf (hsh k v hi he), rfl⟩
-    · exact absurd hstep (by simp)
+    · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
   · intro c fld e hsh hstep
     simp only [step] at hstep
     split at hstep
     · rename_i v he
       cases hstep
       exact ⟨WF_store Γ s.world _ v hwf (hsh v he), rfl⟩
-    · exact absurd hstep (by simp)
+    · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
   · intro g e hsh hstep
     simp only [step] at hstep
     split at hstep
     · rename_i v he
       cases hstep
       exact ⟨WF_store Γ s.world _ v hwf (hsh v he), rfl⟩
-    · exact absurd hstep (by simp)
+    · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **Every read of a declared place has a witness** -- one per shape of the model, and
     the ranged one comes with its bounds. -/
@@ -650,7 +650,7 @@ def DeclaredRangeCarried : Prop :=
 
 theorem declared_range_carried : DeclaredRangeCarried := by
   intro v lo hi
-  cases v <;> simp [Value.hasShape]
+  cases v <;> simp only [Value.hasShape, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq, Value.int.injEq, exists_eq_left', Bool.false_eq_true, reduceCtorEq, false_and, exists_const]
 
 /-! ### 5.4 Control flow -- and the third outcome, which is stuck and never silent -/
 
@@ -665,7 +665,7 @@ def ControlFlowCarried : Prop :=
 
 theorem control_flow_carried : ControlFlowCarried := by
   intro ρ c a b s
-  refine ⟨fun h => by simp [step, h], fun h => by simp [step, h], fun h => ?_⟩
+  refine ⟨fun h => by simp only [step, h], fun h => by simp only [step, h], fun h => ?_⟩
   simp only [step]
   split
   · rename_i ht; exact absurd ht (h true)
@@ -682,7 +682,7 @@ def OptionMatchCarried : Prop :=
 
 theorem option_match_carried : OptionMatchCarried := by
   intro ρ g bn onP onA s
-  exact ⟨fun k h => by simp [step, h], fun h => by simp [step, h]⟩
+  exact ⟨fun k h => by simp only [step, h], fun h => by simp only [step, h]⟩
 
 /-- **A `let` binds one name and touches nothing else** -- not the world, not another
     local. -/
@@ -698,8 +698,8 @@ theorem local_binding_carried : LocalBindingCarried := by
   split at hstep
   · rename_i v he
     cases hstep
-    exact ⟨v, he, by simp [bindLocal], rfl, fun m hm => by simp [bindLocal, hm]⟩
-  · exact absurd hstep (by simp)
+    exact ⟨v, he, by simp only [bindLocal, ↓reduceIte], rfl, fun m hm => by simp only [bindLocal, hm, ↓reduceIte]⟩
+  · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **Two statements in a row.** The second runs at the state the first left, and where
     the first does not leave a running state, the sequence ends there -- a `return` in the
@@ -712,14 +712,14 @@ def SequencingCarried : Prop :=
 theorem sequencing_carried : SequencingCarried := by
   intro ρ a rest s
   constructor
-  · intro u h; simp [exec, h]
+  · intro u h; simp only [exec, h]
   · intro hno
     cases hst : step ρ a s with
     | running u => exact absurd hst (hno u)
-    | returned u v => simp [exec, hst]
-    | exited u => simp [exec, hst]
-    | left u => simp [exec, hst]
-    | stuck => simp [exec, hst]
+    | returned u v => simp only [exec, hst]
+    | exited u => simp only [exec, hst]
+    | left u => simp only [exec, hst]
+    | stuck => simp only [exec, hst]
 
 /-- **`next` ends the pass and `leave` ends the loop** -- and `iterate` does the right
     thing with each: after `next` the remaining indices are visited, after `leave` they are
@@ -735,8 +735,8 @@ def LoopExitCarried : Prop :=
 theorem loop_exit_carried : LoopExitCarried := by
   intro ρ s t t' body v k ks
   refine ⟨rfl, rfl, ?_, ?_⟩
-  · intro h; simp [iterate, h]
-  · intro h; simp [iterate, h]
+  · intro h; simp only [iterate, h]
+  · intro h; simp only [iterate, h]
 
 /-- **The arms fit the value**: some arm carries this case's name, and every arm that
     carries it binds a payload exactly when the value has one. Both halves are decided by
@@ -778,11 +778,11 @@ theorem tagged_match_carried : TaggedMatchCarried := by
       have hq : q.isSome = c.2.isSome := by
         cases hc2 : c.2 with
         | none => cases q with
-          | none => simp
-          | some n => rw [hc2] at hcp; simp [Shape.payloadOk] at hcp
+          | none => simp only [Option.isSome_none]
+          | some n => rw [hc2] at hcp; simp only [Shape.payloadOk, Bool.false_eq_true] at hcp
         | some p => cases q with
-          | none => rw [hc2] at hcp; cases p <;> simp [Shape.payloadOk] at hcp
-          | some n => simp
+          | none => rw [hc2] at hcp; cases p <;> simp only [Shape.payloadOk, Bool.false_eq_true] at hcp
+          | some n => simp only [Option.isSome_some]
       rw [hq]
       exact hpay a ha c hc (by rw [hat, hct])
   · intro ρ arms g s t q hg hfit
@@ -790,20 +790,20 @@ theorem tagged_match_carried : TaggedMatchCarried := by
     obtain ⟨⟨a, ha, hat⟩, hpay⟩ := hfit
     clear hg
     induction arms with
-    | nil => exact absurd ha (by simp)
+    | nil => exact absurd ha (by simp only [List.not_mem_nil, not_false_eq_true])
     | cons b rest ih =>
       obtain ⟨bn, bd, bb⟩ := b
       simp only [pickTag]
       by_cases hb : bn = t
       · subst hb
-        have hfit := hpay (bn, bd, bb) (by simp) rfl
+        have hfit := hpay (bn, bd, bb) (by simp only [List.mem_cons, true_or]) rfl
         simp only
         cases bd with
         | none => exact ⟨bb, s, rfl⟩
         | some vn =>
           simp only [Option.isSome] at hfit
           cases q with
-          | none => simp at hfit
+          | none => simp only [Bool.true_eq_false] at hfit
           | some k =>
             exact ⟨bb, { s with local' := bindLocal s.local' vn (.int k) }, rfl⟩
       · simp only [if_neg hb]
@@ -828,7 +828,7 @@ theorem store_beside_read_carried : StoreBesideReadCarried := by
   intro σ p q v
   refine ⟨store_here σ p v, fun h => store_elsewhere σ p q v h, ?_⟩
   intro c fld k j h
-  exact store_elsewhere σ _ _ v (by simp [h.symm])
+  exact store_elsewhere σ _ _ v (by simp only [ne_eq, Place.slot.injEq, h.symm, and_true, and_false, not_false_eq_true])
 
 /-- **A store beside a chain leaves the chain as it was.** The premise is a SYNTACTIC side
     condition the emitter decides -- the place written is not a link of this chain -- and
@@ -1031,7 +1031,7 @@ theorem reason_match_carried : ReasonMatchCarried := by
     simp only [step, hg]
     clear hg
     induction arms with
-    | nil => exact absurd ha (by simp)
+    | nil => exact absurd ha (by simp only [List.not_mem_nil, not_false_eq_true])
     | cons b rest ih =>
       obtain ⟨bn, bb⟩ := b
       simp only [pickArm]
@@ -1044,15 +1044,15 @@ theorem reason_match_carried : ReasonMatchCarried := by
         · exact ih h
   · intro ρ arms g s hno
     cases hg : eval s g with
-    | none => simp [step, hg]
+    | none => simp only [step, hg]
     | some v =>
       cases v with
       | reason x => exact absurd hg (hno x)
-      | int _ => simp [step, hg]
-      | bool _ => simp [step, hg]
-      | absent => simp [step, hg]
-      | present _ => simp [step, hg]
-      | tagged _ _ => simp [step, hg]
+      | int _ => simp only [step, hg]
+      | bool _ => simp only [step, hg]
+      | absent => simp only [step, hg]
+      | present _ => simp only [step, hg]
+      | tagged _ _ => simp only [step, hg]
 
 /-- **`return f(a);`** -- the callee's contract fires, the answer returned is the callee's,
     the world is the one the callee left and the caller's locals are untouched. Same
@@ -1083,8 +1083,8 @@ theorem call_result_returned_carried : CallResultReturnedCarried := by
       · cases hstep; rfl
       · cases hstep; rfl
       · cases hstep; rfl
-    · exact absurd hstep (by simp)
-  · exact absurd hstep (by simp)
+    · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
+  · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **`let n = f(a) else (e) { ... };`** -- the one error propagation. The callee's contract
     fires exactly as at any other call; what the answer IS then decides the continuation: a
@@ -1156,7 +1156,7 @@ theorem publish_atomic_carried : PublishAtomicCarried := by
   · rename_i v hv
     cases hstep
     exact ⟨v, hv, rfl, rfl⟩
-  · exact absurd hstep (by simp)
+  · exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **`awaits n = a;`** -- a read of the world into a binding; the world is untouched and no
     other name moves. -/
@@ -1170,7 +1170,7 @@ theorem await_atomic_carried : AwaitAtomicCarried := by
   intro ρ n a pl s s' hstep
   simp only [step] at hstep
   cases hstep
-  exact ⟨by simp [bindLocal], rfl, fun m hm => by simp [bindLocal, hm]⟩
+  exact ⟨by simp only [bindLocal, ↓reduceIte], rfl, fun m hm => by simp only [bindLocal, hm, ↓reduceIte]⟩
 
 /-! ### 5.9 The premises are not decoration -- two theorems that say so
 
@@ -1187,7 +1187,7 @@ theorem store_without_the_shape_can_break_WF :
   have hbad := h (fun _ => some .int) (fun _ => .int 0) (.global "g") (.bool true)
     (by intro p sh hp; cases hp; rfl)
   have := hbad (.global "g") .int rfl
-  simp [store, Value.hasShape] at this
+  simp only [Value.hasShape, store, ↓reduceIte, Bool.false_eq_true] at this
 
 /-- **A contract says nothing where its precondition fails.** So the `V` duty at a call
     site -- that the caller established the callee's `requires` -- cannot be dropped, and
@@ -1295,16 +1295,16 @@ theorem carried_discharges : ∀ f : Form, classify f = .carried → Discharges 
       | exact publish_atomic_carried
       | exact await_atomic_carried
       | exact critical_section_carried
-      | (rename_i r; cases r <;> simp [Reason.kind] at h)
-      | exact absurd h (by simp)
+      | (rename_i r; cases r <;> simp only [Reason.kind, reduceCtorEq] at h)
+      | exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **The classifier answers for every form.** Not "for every form I remembered to look
     at" -- `Verdict.unhandled` exists for exactly this proposition to have content. -/
 theorem classify_total : ∀ f : Form, classify f ≠ .unhandled := by
   intro f
   cases f
-  case refusedOrAssumed r => cases r <;> simp [classify, Reason.kind]
-  all_goals simp [classify]
+  case refusedOrAssumed r => cases r <;> simp only [classify, Reason.kind, ne_eq, reduceCtorEq, not_false_eq_true]
+  all_goals simp only [classify, ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- **Everything the classifier hands back to the person is a clause the person wrote.**
     `IsOwnLogic` is defined in section 4 without mentioning `classify`, so this is a claim
@@ -1312,12 +1312,12 @@ theorem classify_total : ∀ f : Form, classify f ≠ .unhandled := by
 theorem ownLogic_is_the_persons : ∀ f : Form, classify f = .ownLogic → IsOwnLogic f := by
   intro f h
   cases f
-  case refusedOrAssumed r => cases r <;> simp [classify, Reason.kind] at h
-  case ownEnsures => exact ⟨rfl, "ensures", rfl, by simp [personalClauses]⟩
-  case ownInvariant => exact ⟨rfl, "invariant", rfl, by simp [personalClauses]⟩
-  case ownRequires => exact ⟨rfl, "requires", rfl, by simp [personalClauses]⟩
-  case ownReaches => exact ⟨rfl, "reaches", rfl, by simp [personalClauses]⟩
-  all_goals simp [classify] at h
+  case refusedOrAssumed r => cases r <;> simp only [classify, Reason.kind, reduceCtorEq] at h
+  case ownEnsures => exact ⟨rfl, "ensures", rfl, by simp only [personalClauses, List.mem_cons, String.reduceEq, List.not_mem_nil, or_self, or_false]⟩
+  case ownInvariant => exact ⟨rfl, "invariant", rfl, by simp only [personalClauses, List.mem_cons, String.reduceEq, List.not_mem_nil, or_self, or_false, or_true]⟩
+  case ownRequires => exact ⟨rfl, "requires", rfl, by simp only [personalClauses, List.mem_cons, String.reduceEq, List.not_mem_nil, or_self, or_false, or_true]⟩
+  case ownReaches => exact ⟨rfl, "reaches", rfl, by simp only [personalClauses, List.mem_cons, String.reduceEq, List.not_mem_nil, or_false, or_true]⟩
+  all_goals simp only [classify, reduceCtorEq] at h
 
 /-- **And nothing whose statement the language fixes is left in the person's lap.** This is
     the other half of Simon's sentence, and the half a coverage claim usually skips. -/
@@ -1325,19 +1325,19 @@ theorem nothing_of_the_language_is_left_to_the_person :
     ∀ f : Form, origin f = .language → classify f ≠ .ownLogic := by
   intro f h
   cases f
-  case refusedOrAssumed r => cases r <;> simp [classify, Reason.kind]
-  case ownEnsures => simp [origin] at h
-  case ownInvariant => simp [origin] at h
-  case ownRequires => simp [origin] at h
-  case ownReaches => simp [origin] at h
-  all_goals simp [classify]
+  case refusedOrAssumed r => cases r <;> simp only [classify, Reason.kind, ne_eq, reduceCtorEq, not_false_eq_true]
+  case ownEnsures => simp only [origin, reduceCtorEq] at h
+  case ownInvariant => simp only [origin, reduceCtorEq] at h
+  case ownRequires => simp only [origin, reduceCtorEq] at h
+  case ownReaches => simp only [origin, reduceCtorEq] at h
+  all_goals simp only [classify, ne_eq, reduceCtorEq, not_false_eq_true]
 
 /-- **A form with no personal clause is not the person's.** -/
 theorem no_clause_no_own_logic : ∀ f : Form, personalClause f = none → ¬ IsOwnLogic f := by
   intro f h hown
   obtain ⟨_, c, hc, _⟩ := hown
   rw [h] at hc
-  exact absurd hc (by simp)
+  exact absurd hc (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- **Every refusal carries a tag the emitter actually prints**, and no tag is empty. -/
 theorem every_refusal_has_an_emitter_tag :
@@ -1348,8 +1348,8 @@ theorem every_refusal_has_an_emitter_tag :
     have ht : r.tag = t := by cases r <;> simp_all [classify, Reason.kind, Reason.tag]
     refine ⟨r, ht, ?_⟩
     subst ht
-    cases r <;> simp [Reason.tag]
-  all_goals simp [classify] at h
+    cases r <;> simp only [Reason.tag, ne_eq, String.reduceEq, not_false_eq_true]
+  all_goals simp only [classify, reduceCtorEq] at h
 
 /-- **Every assumption carries a name**, and no name is empty. -/
 theorem every_assumption_has_a_name :
@@ -1357,14 +1357,14 @@ theorem every_assumption_has_a_name :
   intro f n h
   cases f
   case refusedOrAssumed r =>
-    cases r <;> simp_all [classify, Reason.kind, Reason.tag] <;> simp [← h]
-  case initialState => simp only [classify] at h; cases h; simp
-  case environmentRunsBody => simp only [classify] at h; cases h; simp
-  case environmentRunsLoop => simp only [classify] at h; cases h; simp
-  case environmentBoundsPasses => simp only [classify] at h; cases h; simp
-  case distinctCarriers => simp only [classify] at h; cases h; simp
-  case checkerAndEmitterTrusted => simp only [classify] at h; cases h; simp
-  all_goals simp [classify] at h
+    cases r <;> simp_all [classify, Reason.kind, Reason.tag] <;> simp only [← h, String.reduceEq, not_false_eq_true]
+  case initialState => simp only [classify] at h; cases h; simp only [ne_eq, String.reduceEq, not_false_eq_true]
+  case environmentRunsBody => simp only [classify] at h; cases h; simp only [ne_eq, String.reduceEq, not_false_eq_true]
+  case environmentRunsLoop => simp only [classify] at h; cases h; simp only [ne_eq, String.reduceEq, not_false_eq_true]
+  case environmentBoundsPasses => simp only [classify] at h; cases h; simp only [ne_eq, String.reduceEq, not_false_eq_true]
+  case distinctCarriers => simp only [classify] at h; cases h; simp only [ne_eq, String.reduceEq, not_false_eq_true]
+  case checkerAndEmitterTrusted => simp only [classify] at h; cases h; simp only [ne_eq, String.reduceEq, not_false_eq_true]
+  all_goals simp only [classify, reduceCtorEq] at h
 
 /-- ## The sentence the plan serves, as a proposition
 

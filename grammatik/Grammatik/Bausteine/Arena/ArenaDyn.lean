@@ -44,7 +44,7 @@ theorem dynGrow_monoton (A : DynArena) (n : Nat) (B : DynArena)
   split at h
   · cases h
     exact Nat.le_add_right _ _
-  · exact absurd h (by simp)
+  · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- The committed prefix is usable storage: every committed slot is reserved. -/
 theorem dynCommit_innerhalb (A : DynArena) (i : Nat) (h : i < A.c) : i < A.M := by
@@ -65,9 +65,9 @@ theorem dynGrow_isSome (A : DynArena) (n : Nat) :
   unfold dynGrow
   by_cases h : A.c + n ≤ A.M
   · rw [dif_pos h]
-    simp [h]
+    simp only [ne_eq, reduceCtorEq, not_false_eq_true, h]
   · rw [dif_neg h]
-    simp [h]
+    simp only [ne_eq, not_true_eq_false, h]
 
 /-- The model arena: `used` is the committed prefix, the bound is the
     ceiling. This is the anchor lane 244's simulation builds on: one
@@ -89,7 +89,7 @@ theorem dynGrow1_gdw_alloc (A : DynArena) :
       omega
     have he := Arena.alloc_erfolg (arenaModell A) hlt
     rw [he]
-    simp
+    simp only [ne_eq, reduceCtorEq, not_false_eq_true]
   · intro h
     by_cases hlt : A.c < A.M
     · omega
@@ -162,7 +162,7 @@ theorem dynGrowListe_gelingt :
   induction ns with
   | nil =>
     intro A _
-    exact ⟨A, rfl, by simp⟩
+    exact ⟨A, rfl, by simp only [List.sum_nil, Nat.add_zero]⟩
   | cons n ns ih =>
     intro A h
     rw [List.sum_cons] at h
@@ -187,7 +187,7 @@ theorem dynGrowListe_scheitert :
   | nil =>
     intro A h
     have := A.hceil
-    simp at h
+    simp only [List.sum_nil, Nat.add_zero] at h
     omega
   | cons n ns ih =>
     intro A h
@@ -577,7 +577,7 @@ def DD : Deklaration where
       gschreibt := fun _ => true
       konsumiert := []
       produziert := [] }
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -593,9 +593,9 @@ def DD : Deklaration where
   rzusage := fun e => nomatch e
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t h => by simp at h
+  geteilt_bewacht := fun t h => by simp only [Bool.false_eq_true] at h
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun g h => by simp at h
+  ggeteilt_bewacht := fun g h => by simp only [Bool.false_eq_true] at h
 
 /-- `arena Halde capacity 2 .. 4 max 4 of u8` -- the ceiling is the table's
     `count`, the committed prefix is the second word. -/
@@ -866,7 +866,7 @@ structure FreiZustand where
 /-- `alloc`: von der Liste (Marke unverändert) oder vom Hochwasser (+1). -/
 def freiAlloc : FreiZustand → Nat × FreiZustand
   | ⟨belegt, [], _⟩ =>
-    (belegt, ⟨belegt + 1, [], fun _ hm => absurd hm (by simp)⟩)
+    (belegt, ⟨belegt + 1, [], fun _ hm => absurd hm (by simp only [List.not_mem_nil, not_false_eq_true])⟩)
   | ⟨belegt, i :: rest, hfrei⟩ =>
     (i, ⟨belegt, rest, fun j hj => hfrei j (List.mem_cons_of_mem _ hj)⟩)
 
@@ -875,7 +875,7 @@ def freiAlloc : FreiZustand → Nat × FreiZustand
 def freiFree (F : FreiZustand) (i : Nat) : Option FreiZustand :=
   if h : i < F.belegt ∧ i ∉ F.frei then
     some ⟨F.belegt, i :: F.frei, fun j hj => by
-      simp at hj
+      simp only [List.mem_cons] at hj
       cases hj with
       | inl heq => rw [heq]; exact h.1
       | inr hmem => exact F.hfrei j hmem⟩
@@ -887,8 +887,8 @@ theorem freiAlloc_unter_marke (F : FreiZustand) :
   cases F with
   | mk belegt frei hfrei =>
     cases frei with
-    | nil => simp [freiAlloc]
-    | cons i rest => simp [freiAlloc, hfrei]
+    | nil => simp only [freiAlloc, Nat.lt_add_one]
+    | cons i rest => simp only [freiAlloc, List.mem_cons, true_or, hfrei]
 
 /-- Die Marke wächst nie zurück (auch nicht durch Wiederverwendung). -/
 theorem freiAlloc_marke_monoton (F : FreiZustand) :
@@ -896,8 +896,8 @@ theorem freiAlloc_marke_monoton (F : FreiZustand) :
   cases F with
   | mk belegt frei hfrei =>
     cases frei with
-    | nil => simp [freiAlloc]
-    | cons _ _ => simp [freiAlloc]
+    | nil => simp only [freiAlloc, Nat.le_add_right]
+    | cons _ _ => simp only [freiAlloc, Std.le_refl]
 
 /-- Freigeben dann nehmen gibt denselben Slot zurück (LIFO-Rundlauf). -/
 theorem frei_rundlauf (F : FreiZustand) (i : Nat)
@@ -906,7 +906,7 @@ theorem frei_rundlauf (F : FreiZustand) (i : Nat)
   unfold freiFree at hg
   rw [dif_pos ⟨h, hn⟩] at hg
   cases hg
-  simp [freiAlloc]
+  simp only [freiAlloc]
 
 /-- Doppel-Freigabe ist eine Abweisung, kein zweites Glied: der Slot steht
     schon an der Spitze, also versagt die Bedingung (`i ∉`) beim zweiten Mal. -/
@@ -917,7 +917,7 @@ theorem frei_doppelt_nein (F : FreiZustand) (i : Nat) (G : FreiZustand)
     split at hg
     · cases hg
       rfl
-    · exact absurd hg (by simp)
+    · exact absurd hg (by simp only [reduceCtorEq, not_false_eq_true])
   have hmem : i ∈ G.frei := by
     rw [hG]
     exact List.mem_cons_self

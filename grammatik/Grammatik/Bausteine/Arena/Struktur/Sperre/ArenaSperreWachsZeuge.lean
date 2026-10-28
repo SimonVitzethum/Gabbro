@@ -37,7 +37,7 @@ theorem ok_w0K : KLL.Ok w0K :=
       have := Dekl.lesGlobs_ne_komm hg
       have h1 : ¬ g = 1 := this
       show w0K.globs g = w0L.globs g
-      simp [w0K, h1]) ok_w0L
+      simp only [w0K, h1, ↓reduceIte]) ok_w0L
 
 /-- **A commit by one, on the real world.** -/
 theorem grow_zeuge_L (Λ : List (Res FDL)) :

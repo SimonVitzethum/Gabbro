@@ -60,7 +60,7 @@ def payOff : (c : Option (Int × Int)) → Nutzlast c → Int
 
 theorem payOff_bounds : ∀ (c : Option (Int × Int)) (z : Nutzlast c),
     0 ≤ payOff c z ∧ payOff c z ≤ spreadOf c - 1
-  | none, _ => by simp [payOff, spreadOf]
+  | none, _ => by simp only [payOff, Std.le_refl, spreadOf, Int.sub_self, and_self]
   | some (lo, hi), z => by
       have h1 := (z : Zahl lo hi).lo_le
       have h2 := (z : Zahl lo hi).le_hi

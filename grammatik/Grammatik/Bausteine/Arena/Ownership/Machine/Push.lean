@@ -21,15 +21,15 @@ theorem fresh (hd : s.Disciplined depth) (hdepth : depth t = a) :
   intro j cell hc
   obtain ⟨_, hown, hloans⟩ := hd j cell hc
   refine ⟨fun he => ?_, fun hm => ?_⟩
-  · rw [he, hdepth] at hown; exact absurd hown (by simp)
+  · rw [he, hdepth] at hown; exact absurd hown (by simp only [Nat.not_le, Nat.lt_add_one])
   · have := hloans _ hm; simp only at this; rw [hdepth] at this; omega
 
 theorem holder_thread {c : Cell} (ho : c.Ordered) {fr : Frame} (hh : c.holder = fr) :
     c.owner.thread = fr.thread ∧ c.owner.activation ≤ fr.activation := by
   cases hl : c.loans with
-  | nil => simp [Cell.holder, hl] at hh; rw [hh]; exact ⟨rfl, Nat.le_refl _⟩
+  | nil => simp only [Cell.holder, hl, List.headD_eq_head?_getD, List.head?_nil, Option.getD_none] at hh; rw [hh]; exact ⟨rfl, Nat.le_refl _⟩
   | cons g rest =>
-    simp [Cell.holder, hl] at hh
+    simp only [Cell.holder, hl, List.headD_eq_head?_getD, List.head?_cons, Option.getD_some] at hh
     have := ho.1 g (by rw [hl]; exact List.mem_cons_self)
     subst hh
     exact ⟨this.1.symm, Nat.le_of_lt this.2⟩
@@ -66,16 +66,16 @@ theorem disciplined (hd : s.Disciplined depth) (hdepth : depth t = a)
       refine ⟨⟨?_, ?_⟩, Nat.le_trans hown (mono _), ?_⟩
       · intro g hg
         rcases List.mem_cons.mp hg with rfl | hg
-        · exact ⟨hth.symm, by simp; omega⟩
+        · exact ⟨hth.symm, by simp only; omega⟩
         · exact hdeep g hg
       · refine List.Pairwise.cons (fun b hb => ?_) hsort
-        have := hloansa b hb; simp; omega
+        have := hloansa b hb; simp only [gt_iff_lt]; omega
       · intro g hg
         rcases List.mem_cons.mp hg with rfl | hg
-        · simp [Pop.lower]
+        · simp only [Pop.lower, ↓reduceIte, Std.le_refl]
         · exact Nat.le_trans (hloans g hg) (mono _)
   · simp only [handoffCell, hm, Bool.cond_true]
-    exact ⟨⟨by simp, by simp⟩, by simp [Pop.lower], by simp⟩
+    exact ⟨⟨by simp only [List.not_mem_nil, false_implies, implies_true], by simp only [List.Pairwise.nil]⟩, by simp only [Pop.lower, ↓reduceIte, Std.le_refl], by simp only [List.not_mem_nil, false_implies, implies_true]⟩
 
 /-- **No view below or beside the caller moves.** -/
 theorem view_other (hd : s.Disciplined depth) (hdepth : depth t = a)
@@ -105,8 +105,9 @@ theorem view_other (hd : s.Disciplined depth) (hdepth : depth t = a)
             refine ⟨hth.symm.trans hsee.1, ?_⟩
             rcases hne with h | h
             · exact absurd (hth.symm.trans hsee.1).symm h
-            · simp; omega
-          simp [Cell.at, hdeep]
+            · simp only; omega
+          simp only [Cell.at, hdeep, decide_true, Bool.not_true, Bool.false_eq_true, not_false_eq_true,
+  List.filter_cons_of_neg]
         · have hsee' : ¬ fr2.Sees { cell with loans := ⟨t, a + 1⟩ :: cell.loans } := hsee
           rw [if_neg hsee, if_neg hsee']
     · simp only [handoffCell, hm, Bool.cond_true]
@@ -116,13 +117,13 @@ theorem view_other (hd : s.Disciplined depth) (hdepth : depth t = a)
       cases hmc
       have h1 : ¬ fr2.Sees ⟨h.allocation, s.next, ⟨t, a + 1⟩, []⟩ := by
         rintro ⟨ht, hlt⟩
-        simp at ht hlt
+        simp only at ht hlt
         rcases hne with hn | hn
         · exact hn ht.symm
         · omega
       have h2 : ¬ fr2.Sees ⟨h.allocation, h.grant, ⟨t, a⟩, []⟩ := by
         rintro ⟨ht, hlt⟩
-        simp at ht hlt
+        simp only at ht hlt
         rcases hne with hn | hn
         · exact hn ht.symm
         · omega
@@ -143,14 +144,15 @@ theorem view_caller (hok : HandoffOk s ⟨t, a⟩ ⟨t, a + 1⟩ moved lent) (j 
       · simp only [handoffCell, hm, hl, Bool.cond_false, Bool.cond_true, Bool.false_eq_true, if_false]
         have hsee : ((⟨t, a⟩ : Frame).Sees { cell with loans := ⟨t, a + 1⟩ :: cell.loans }) ↔
             (⟨t, a⟩ : Frame).Sees cell := Iff.rfl
-        have hdeep : (⟨t, a⟩ : Frame).Deeper ⟨t, a + 1⟩ := ⟨rfl, by simp⟩
+        have hdeep : (⟨t, a⟩ : Frame).Deeper ⟨t, a + 1⟩ := ⟨rfl, by simp only [Nat.lt_add_one]⟩
         by_cases h : (⟨t, a⟩ : Frame).Sees cell
         · rw [if_pos (hsee.mpr h), if_pos h]
-          simp [Cell.at, hdeep]
+          simp only [Cell.at, hdeep, decide_true, Bool.not_true, Bool.false_eq_true, not_false_eq_true,
+  List.filter_cons_of_neg]
         · rw [if_neg (fun h' => h (hsee.mp h')), if_neg h]
     · simp only [handoffCell, hm, Bool.cond_true, if_true]
       have : ¬ (⟨t, a⟩ : Frame).Sees ⟨cell.allocation, s.next, ⟨t, a + 1⟩, []⟩ := by
-        rintro ⟨_, hlt⟩; exact absurd hlt (by simp)
+        rintro ⟨_, hlt⟩; exact absurd hlt (by simp only [Nat.not_le, Nat.lt_add_one])
       rw [if_neg this]
 
 /-! ## The two activations after the call -/

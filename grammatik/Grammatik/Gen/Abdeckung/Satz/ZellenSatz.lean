@@ -22,7 +22,7 @@ set_option linter.unusedSectionVars false
 /-- A cell of a verdict kind is bad exactly when its test fails. -/
 theorem schlecht_urteil {k a : Nat} {v : List Bool} :
     (Zelle.mk k a true v).schlecht = !(Zelle.mk k a true v).kern := by
-  simp [Zelle.schlecht]
+  simp only [Zelle.schlecht, Bool.true_and]
 
 /-- **Component 5 (roots)**: the cells decide it. -/
 theorem urteil_5 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
@@ -74,11 +74,11 @@ theorem urteil_9 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D
     Function.comp_def, Zelle.schlecht, Zelle.kern, Zelle.kern?, Option.getD_some, Bool.true_and, Bool.not_not]
   apply congrArg (List.all fs); funext w
   cases P.unterbricht w
-  · simp
+  · simp only [Bool.not_false, Bool.true_or, List.all_eq_true, implies_true]
   · simp only [Bool.not_true, Bool.false_or, Bool.true_and]
     apply congrArg (List.all fs); funext f
     cases reachB P fs w f
-    · simp
+    · simp only [Bool.not_false, Bool.true_or, List.all_eq_true, implies_true]
     · simp only [Bool.not_true, Bool.false_or, Bool.true_and]
       rw [show NurMaskiert D = (⟨fun _ => true, fun _ => true, D.maskiert⟩ : Merkmal D) from rfl,
         sperrMerkmal_zerlegt ls hls]
@@ -97,7 +97,7 @@ theorem urteil_1 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D
   apply congrArg (List.all fs); funext w
   apply congrArg (List.all fs); funext f
   cases reachB P fs w f
-  · simp
+  · simp only [Bool.not_false, Bool.true_or, List.all_eq_true, implies_true]
   · simp only [Bool.not_true, Bool.false_or, Bool.true_and]
     rw [rufM_zerlegt fs hvoll]
     apply congrArg (List.all fs); funext g
@@ -117,11 +117,11 @@ theorem all_und {α : Type} (l : List α) (p q : α → Bool) :
   | nil => rfl
   | cons a t ih =>
     simp only [List.all_cons, ← ih]
-    cases p a <;> cases q a <;> simp
+    cases p a <;> cases q a <;> simp only [Bool.false_and, Bool.and_self, Bool.true_and, Bool.and_true, Bool.and_false]
 
 theorem all_oder {α : Type} (l : List α) (b : Bool) (p : α → Bool) :
     (l.all fun x => b || p x) = (b || l.all p) := by
-  cases b <;> simp [all_wahr]
+  cases b <;> simp only [Bool.false_or, Bool.true_or, all_wahr]
 
 /-- **Component 8 (answers)**, over the complete lists of foreign bodies and registers. -/
 theorem urteil_8 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
@@ -144,7 +144,7 @@ theorem urteil_8 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D
     by_cases hx : x ∈ (P.rumpf f).ants
     · have := h x hx
       cases x <;> simp_all [stelleB]
-    · simp [hx]
+    · simp only [hx, decide_false, Bool.not_false, Bool.true_or]
 
 /-- **Component 7 (race freedom)**: its verdict cells decide it; the cells of `schreibGetrennt` are derived and never
     refuse. -/
@@ -164,7 +164,7 @@ theorem urteil_6 (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D
     Bool.true_and, Bool.not_not]
   rw [all_und]
   apply congrArg (List.all ws); funext w
-  cases mehrfachB ws w <;> simp [all_oder, all_wahr, Bool.or_assoc]
+  cases mehrfachB ws w <;> simp only [Bool.not_false, Bool.true_or, all_wahr, Bool.and_self, Bool.not_true, Bool.false_or, Bool.or_assoc, all_oder]
 
 /-- **Component 2 (footprint)**: its verdict cells (the footprint and the register part) decide it; the cells of
     `getrennt` and `geteilt` are derived and never refuse. -/
@@ -243,6 +243,6 @@ theorem akzeptiertX_zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
     apply List.all_eq_true.2
     intro z hz
     have := h z (List.mem_flatMap.2 ⟨c, List.mem_finRange c, hz⟩)
-    simp [this]
+    simp only [this, Bool.not_false]
 
 end Gabbro.Grammatik.Gen

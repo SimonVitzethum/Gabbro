@@ -62,7 +62,7 @@ theorem exprVarPos_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {p : Nat}, exprVar
     rfl
   | empty => trivial
   | num _ _ => trivial
-  | _ => intro p h; simp [exprVarPos] at h
+  | _ => intro p h; simp only [exprVarPos, reduceCtorEq] at h
 
 theorem exprLit_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {n : Int}, exprLit e = some n →
     ∀ (σa σb : World D) (ρ : Env D Γ), intVon τ (eval σa e σb ρ) = some n := by
@@ -94,7 +94,7 @@ theorem exprSucc_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {p : Nat}, exprSucc 
     rfl
   | empty => trivial
   | num _ _ => trivial
-  | _ => intro p h; simp [exprSucc] at h
+  | _ => intro p h; simp only [exprSucc, reduceCtorEq] at h
 
 theorem exprSlotRead_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {t : D.Tab} {f : D.Feld t} {p : Nat},
     exprSlotRead e = some ⟨t, f, p⟩ → ∀ (σa σb : World D) (ρ : Env D Γ) (n : Int), ρ.unten p = some n →

@@ -481,7 +481,7 @@ theorem bitlenAux_succ (n fuel : Nat) :
 theorem bitlenAux_null_all (fuel : Nat) : bitlenAux 0 fuel = 0 := by
   induction fuel with
   | zero => rfl
-  | succ fuel _ => simp [bitlenAux_succ]
+  | succ fuel _ => simp only [bitlenAux_succ, ↓reduceIte]
 
 theorem zweiHoch_succ (k : Nat) : (2 : Nat) ^ (1 + k) = 2 * 2 ^ k := by
   rw [Nat.pow_add]
@@ -494,7 +494,7 @@ theorem bitlenAux_obere (fuel n : Nat) (h : n < 2 ^ fuel) :
   | succ fuel ih =>
     rw [bitlenAux_succ]
     by_cases hn : n = 0
-    · simp [hn]
+    · simp only [hn, ↓reduceIte, Nat.pow_zero, Nat.lt_add_one]
     · simp only [hn, if_false]
       have hhalf : n / 2 < 2 ^ fuel := by
         have e : (2 : Nat) ^ (fuel + 1) = 2 ^ fuel * 2 := Nat.pow_succ 2 fuel

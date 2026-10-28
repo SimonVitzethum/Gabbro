@@ -163,11 +163,11 @@ theorem hashOk0 : HashOkF 4 nxH hdH 2 (fun j => 0 ≤ j ∧ j < 4) := by
     · refine ⟨[2, 0], ?_, by decide, ?_⟩
       · have : hdH 0 = 2 := by unfold hdH; decide
         rw [this]; exact kette_b0
-      · intro i hi; simp at hi; rcases hi with rfl | rfl <;> decide
+      · intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; rcases hi with rfl | rfl <;> decide
     · refine ⟨[1], ?_, by decide, ?_⟩
       · have : hdH 1 = 1 := by unfold hdH; decide
         rw [this]; exact kette_b1
-      · intro i hi; simp at hi; subst hi; decide
+      · intro i hi; simp only [List.mem_cons, List.not_mem_nil, or_false] at hi; subst hi; decide
   · have hb : b = 0 ∨ b = 1 := by omega
     have hb' : b' = 0 ∨ b' = 1 := by omega
     obtain ⟨L, hL, hm⟩ := hj
@@ -179,14 +179,14 @@ theorem hashOk0 : HashOkF 4 nxH hdH 2 (fun j => 0 ≤ j ∧ j < 4) := by
       rw [e1] at hL; rw [e2] at hL'
       have := KetteF.eindeutig hL kette_b0; subst this
       have := KetteF.eindeutig hL' kette_b1; subst this
-      simp at hm hm'
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hm hm'
       rcases hm with rfl | rfl <;> omega
     · have e1 : hdH 0 = 2 := by unfold hdH; decide
       have e2 : hdH 1 = 1 := by unfold hdH; decide
       rw [e1] at hL'; rw [e2] at hL
       have := KetteF.eindeutig hL' kette_b0; subst this
       have := KetteF.eindeutig hL kette_b1; subst this
-      simp at hm hm'
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hm hm'
       rcases hm' with rfl | rfl <;> omega
     · exact hne rfl
 
@@ -203,16 +203,16 @@ theorem hash_push_zeuge : HashOkF 4 nxH1 hdH1 2 (fun j => 0 ≤ j ∧ j < 4) ∧
     rcases hb with rfl | rfl
     · have e : hdH 0 = 2 := by unfold hdH; decide
       rw [e] at hL
-      have := KetteF.eindeutig hL kette_b0; subst this; simp at hm
+      have := KetteF.eindeutig hL kette_b0; subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
     · have e : hdH 1 = 1 := by unfold hdH; decide
       rw [e] at hL
-      have := KetteF.eindeutig hL kette_b1; subst this; simp at hm
+      have := KetteF.eindeutig hL kette_b1; subst this; simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self] at hm
   refine ⟨hash_push hashOk0 (b0 := 1) (i := 3) ⟨by decide, by decide⟩ (by decide) (by decide) (by decide)
-    (fun j hj => hj) hnot (fun b hb => by unfold hdH1; simp [hb]) (by unfold hdH1; decide)
-    (by unfold nxH1 hdH; decide) (fun j hj => by unfold nxH1; simp [hj]), ?_⟩
-  have e : hdH1 1 = 3 := by unfold hdH1; simp
+    (fun j hj => hj) hnot (fun b hb => by unfold hdH1; simp only [hb, ↓reduceIte]) (by unfold hdH1; decide)
+    (by unfold nxH1 hdH; decide) (fun j hj => by unfold nxH1; simp only [hj, ↓reduceIte]), ?_⟩
+  have e : hdH1 1 = 3 := by unfold hdH1; simp only [↓reduceIte]
   rw [e]
-  refine ⟨[3, 1], ?_, by simp⟩
+  refine ⟨[3, 1], ?_, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_false, or_true]⟩
   refine KetteF.cons 3 (by decide) (by decide) [1] ?_
   have : nxH1 3 = 1 := by unfold nxH1; decide
   rw [this]
@@ -238,7 +238,7 @@ theorem hash_defekt_bricht : ¬ HashOkF 4 nxH2 hdH2 2 (fun j => 0 ≤ j ∧ j < 
   have e0 : hdH2 0 = 2 := rfl
   have e1 : hdH2 1 = 2 := rfl
   exact h.2 0 1 (by decide) (by decide) (by decide) (by decide) (by decide) 2
-    (by rw [e0]; exact ⟨[2, 1], hchain, by simp⟩) (by rw [e1]; exact ⟨[2, 1], hchain, by simp⟩)
+    (by rw [e0]; exact ⟨[2, 1], hchain, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩) (by rw [e1]; exact ⟨[2, 1], hchain, by simp only [List.mem_cons, Int.reduceEq, List.not_mem_nil, or_self, or_false]⟩)
 
 end Zeuge
 

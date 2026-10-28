@@ -36,8 +36,8 @@ def ketteNext (nxt : Nat → Option Nat) : Nat → Nat → Nat → Bool
 theorem ketteNext_refl (nxt : Nat → Option Nat) (fuel h : Nat) :
     ketteNext nxt fuel h h = true := by
   cases fuel with
-  | zero => simp [ketteNext]
-  | succ fuel => simp [ketteNext]
+  | zero => simp only [ketteNext, ↓reduceIte]
+  | succ fuel => simp only [ketteNext, ↓reduceIte]
 
 /-- One unfolding step, away from the target. -/
 theorem ketteNext_schritt (nxt : Nat → Option Nat) (fuel a d : Nat)
@@ -46,7 +46,7 @@ theorem ketteNext_schritt (nxt : Nat → Option Nat) (fuel a d : Nat)
       match nxt a with
       | none => false
       | some m => ketteNext nxt fuel m d := by
-  simp [ketteNext, if_neg heq]
+  simp only [ketteNext, if_neg heq]
 
 /-- More fuel reaches at least as far. -/
 theorem ketteNext_mono (nxt : Nat → Option Nat) (fuel extra a d : Nat)
@@ -60,7 +60,7 @@ theorem ketteNext_mono (nxt : Nat → Option Nat) (fuel extra a d : Nat)
         rw [h0]
         exact ketteNext_refl nxt extra a
       · exfalso
-        simp [ketteNext, if_neg heq] at h
+        simp only [ketteNext, if_neg heq, Bool.false_eq_true] at h
   | succ fuel ih =>
       cases extra with
       | zero =>
@@ -77,7 +77,7 @@ theorem ketteNext_mono (nxt : Nat → Option Nat) (fuel extra a d : Nat)
             rw [ketteNext_schritt nxt _ _ _ heq] at hS
             rw [hfuel, ketteNext_schritt nxt _ _ _ heq]
             cases hm : nxt a with
-            | none => simp [hm] at hS
+            | none => simp only [hm, Bool.false_eq_true] at hS
             | some m =>
                 have hrest : ketteNext nxt fuel m d = true := by
                   rw [hm] at hS
@@ -165,7 +165,7 @@ theorem geh_schritt (nxt : Nat → Option Nat) (fuel s : Nat) :
       match nxt s with
       | none => none
       | some m => geh nxt fuel m := by
-  simp [geh]
+  simp only [geh]
 
 /-- In-range edges keep a started walk in range. -/
 theorem geh_bereich (nxt : Nat → Option Nat) (n s : Nat) (hs : s < n)
@@ -181,7 +181,7 @@ theorem geh_bereich (nxt : Nat → Option Nat) (n s : Nat) (hs : s < n)
           have hstop : geh nxt (k + 1) s = none := by
             rw [geh_schritt, hsm]
           rw [hstop] at hm
-          simp at hm
+          simp only [reduceCtorEq] at hm
       | some t =>
           have hrest : geh nxt k t = some m := by
             have h2 := hm
@@ -210,7 +210,7 @@ theorem kette_schranke (nxt : Nat → Option Nat) (n s : Nat) (hs : s < n)
       | none => exact absurd hgm hne
       | some m =>
           have hmlt : m < n := geh_bereich nxt n s hs hrand k m hgm
-          have hwm : wert nxt n s k = m := by simp [wert, hgm]
+          have hwm : wert nxt n s k = m := by simp only [wert, hgm]
           omega
     obtain ⟨i, j, hij, hjn, heq⟩ := schubladenSatz (wert nxt n s) n hall
     have hilt : wert nxt n s i < n := hall i (by omega)
@@ -248,14 +248,14 @@ theorem kettePop_simuliert (nxt : Nat → Option Nat) (h : Nat)
         exact ketteNext_refl nxt _ _
       · rw [ketteNext_schritt _ _ _ _ heq] at hp
         cases hpa : kettePop nxt h a with
-        | none => simp [hpa] at hp
+        | none => simp only [hpa, Bool.false_eq_true] at hp
         | some m =>
             have hrest : ketteNext (kettePop nxt h) fuel m d = true := by
               rw [hpa] at hp
               exact hp
             by_cases hah : a = h
             · subst hah
-              simp [kettePop] at hpa
+              simp only [kettePop, ↓reduceIte, reduceCtorEq] at hpa
             · have hold : nxt a = some m := by
                 simpa [kettePop, if_neg hah] using hpa
               rw [ketteNext_schritt nxt _ _ _ heq, hold]
@@ -295,9 +295,9 @@ theorem kettePop_erhaelt_azyklisch (nxt : Nat → Option Nat) (n h : Nat)
         by_cases hw : ketteNext (kettePop nxt h) n m' s = true
         · have hold2 := kettePop_simuliert nxt h n m' s hw
           rw [hold2] at hold
-          simp at hold
+          simp only [beq_false, Bool.not_true, Bool.false_eq_true] at hold
         · have hneg : ((ketteNext (kettePop nxt h) n m' s) == false) = true := by
-            simp [hw]
+            simp only [hw, BEq.rfl]
           simpa [hpop] using hneg
 
 /-! ## Witnesses: three slots, a cycle, an escape -/
@@ -406,11 +406,11 @@ theorem schubladenSatz_zeuge :
     intro k hk
     have h3 : k = 0 ∨ k = 1 ∨ k = 2 := by omega
     cases h3 with
-    | inl h => simp [h]
+    | inl h => simp only [h, reduceCtorEq, ↓reduceIte, Nat.zero_lt_succ]
     | inr h =>
         cases h with
-        | inl h => simp [h]
-        | inr h => simp [h])
+        | inl h => simp only [h, Nat.reduceEqDiff, ↓reduceIte, Nat.lt_add_one]
+        | inr h => simp only [h, ↓reduceIte, Nat.zero_lt_succ])
 
 /-- Witness (`geh_bereich` at work): two steps from 0 stay below 3. -/
 theorem geh_bereich_zeuge : 2 < 3 :=

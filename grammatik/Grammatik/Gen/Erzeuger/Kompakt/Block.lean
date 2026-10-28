@@ -25,7 +25,7 @@ theorem blockS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ
   | nil =>
     refine ⟨.nil, ?_, GlB.refl _⟩
     simp only [groesseBlock]
-    blk bNil, Sz.mem_blatt (by simp)
+    blk bNil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
   | cons s rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO
     obtain ⟨s', hs, ⟨_, _, _, _, _, _⟩⟩ := hS _ s (by omega)
@@ -256,15 +256,15 @@ theorem endS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
   | retWhy r hΛ =>
     refine ⟨.retWhy r hΛ, ?_, GlN.refl _⟩
     simp only [groesseEnd]
-    blk eRetWhy, Sz.mem_blatt (List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp⟩)
+    blk eRetWhy, Sz.mem_blatt (List.mem_flatMap.2 ⟨r, List.mem_finRange r, by rw [dif_pos hΛ]; simp only [List.mem_cons, List.not_mem_nil, or_false]⟩)
   | leave hl =>
     refine ⟨.leave hl, ?_, GlN.refl _⟩
     simp only [groesseEnd]
-    blk eLeave, Sz.mem_blatt (by rw [dif_pos hl]; simp)
+    blk eLeave, Sz.mem_blatt (by rw [dif_pos hl]; simp only [List.mem_cons, List.not_mem_nil, or_false])
   | next hl =>
     refine ⟨.next hl, ?_, GlN.refl _⟩
     simp only [groesseEnd]
-    blk eNext, Sz.mem_blatt (by rw [dif_pos hl]; simp)
+    blk eNext, Sz.mem_blatt (by rw [dif_pos hl]; simp only [List.mem_cons, List.not_mem_nil, or_false])
   | cons s rest =>
     simp only [groesseEnd] at hu hE hS hO
     obtain ⟨s', hs, ⟨_, _, _, _, _, _⟩⟩ := hS _ s (by omega)

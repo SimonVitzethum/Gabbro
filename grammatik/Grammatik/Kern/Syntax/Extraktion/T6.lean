@@ -167,7 +167,7 @@ theorem stmtAtome_blatt_eq {V : Vertrag D} {l : Bool} {Γ : Ctx}
     (tabs : List D.Tab) (globs : List D.Glob) (h : s.istBlatt = true) :
     stmtAtome tabs globs s =
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)] := by
-  cases s <;> first | exact rfl | (simp [Stmt.istBlatt] at h)
+  cases s <;> first | exact rfl | (simp only [Stmt.istBlatt, Bool.false_eq_true] at h)
 
 /-- **Mark cover.** Every held mark of a leaf statement is named in its
     atom's mark text: what `hmark` must find is there. -/
@@ -289,7 +289,7 @@ theorem rep_append_single {α : Type} (n : Nat) (a : α) :
     List.replicate n a ++ [a] = a :: List.replicate n a := by
   induction n with
   | zero => rfl
-  | succ n ih => simp [List.replicate_succ, ih]
+  | succ n ih => simp only [List.replicate_succ, List.cons_append, ih]
 
 /-- `schreibBytes` emits exactly one `zugriff` event per byte, all with the
     statement `Λ` on the written carrier (lock state is untouched by
@@ -364,7 +364,7 @@ theorem uebergang_ereignis_aus_blatt (O : Orakel D) (passes : Nat)
         · exact List.mem_append.mpr (Or.inl (List.mem_singleton.mpr rfl))
         · exact List.mem_append.mpr (Or.inr hm)
   · simp only [Ausgang.welt] at hstep
-    simp at hstep
+    simp only [reduceCtorEq] at hstep
 
 
 end Gabbro.Grammatik.Extraktion

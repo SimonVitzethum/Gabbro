@@ -20,7 +20,7 @@ theorem val_icmp_sge (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS true W a) (hb
     Val.icmp .sge W (Val.ofInt W a) (Val.ofInt W b) = some (Val.bool (decide (b ≤ a))) := by
   obtain ⟨_, a0, a1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ a ∧ a < 2 ^ (W - 1) := by simpa [FitS] using ha
   obtain ⟨_, b0, b1⟩ : 0 < W ∧ -(2 ^ (W - 1)) ≤ b ∧ b < 2 ^ (W - 1) := by simpa [FitS] using hb
-  simp [Val.icmp, IPred.ap, Val.ofInt, Ar.sle_ofInt hW b0 b1 a0 a1]
+  simp only [Val.icmp, Val.ofInt, ↓reduceDIte, IPred.ap, Ar.sle_ofInt hW b0 b1 a0 a1]
 
 /-- A constant integer operand, as a fragment. -/
 theorem frag_intc (m : Mem) (rs : Regs) (r : Nat) (w : Nat) (z : Int) :

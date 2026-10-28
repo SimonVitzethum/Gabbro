@@ -34,7 +34,7 @@ def t5D : Deklaration where
   Fn := Fin 5
   sig := fun f => if f.val = 1 ∨ f.val = 4 then 1 else 0
   sigNr := t5Sig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []

@@ -71,7 +71,7 @@ def rdRel (lay : Layout D) (L : D.Lock) (rd : Reg) (lb k : Lbl) : Block :=
 /-! ## 2. The words -/
 
 theorem ofInt_tk (n : Nat) : Val.ofInt Conf.wbits (n : Int) = tk n := by
-  simp [Val.ofInt, tk]
+  simp only [Val.ofInt, BitVec.ofInt_natCast, tk]
 
 theorem tk_ne_of_lt {a b : Nat} (ha : a < 2 ^ Conf.wbits) (hb : b < 2 ^ Conf.wbits) (h : a ≠ b) :
     tk a ≠ tk b := by
@@ -119,13 +119,13 @@ theorem stepI_sub2 {m m' : Mem} {rs : Regs} {d : Reg} {b : Nat} {n : Nat} {o : O
   have hap : RmwOp.ap .sub (tk (n + 2)) (Val.ofInt Conf.wbits 2) = some (tk n) := by
     have h2 : Val.ofInt Conf.wbits 2 = tk 2 := ofInt_tk 2
     rw [h2]
-    simp [RmwOp.ap, tk, bv_sub2]
+    simp only [RmwOp.ap, tk, ↓reduceDIte, bv_sub2]
   have h1 : (Opd.glob b).ev rs = some (.ptr b 0) := rfl
   simp only [stepI, Opd.ev, atomicOk_lw, if_true, hl, hap, hs, Option.map_some]
 
 /-- The constants of the blocks. -/
 theorem opd_n (n : Nat) (rs : Regs) : (Opd.int Conf.wbits (n : Int)).ev rs = some (tk n) := by
-  simp [Opd.ev, ofInt_tk]
+  simp only [Opd.ev, ofInt_tk]
 
 theorem opd_0 (rs : Regs) : (Opd.int Conf.wbits 0).ev rs = some (tk 0) := opd_n 0 rs
 theorem opd_1 (rs : Regs) : (Opd.int Conf.wbits 1).ev rs = some (tk 1) := opd_n 1 rs
@@ -144,7 +144,7 @@ theorem stepI_add2 {m : Mem} {rs : Regs} {d r : Reg} {x : Nat} (hr : rs r = some
   have h2 : (Opd.int Conf.wbits 2).ev rs = some (tk 2) := opd_2 rs
   have h1 : (Opd.reg r).ev rs = some (tk x) := hr
   simp only [stepI, h1, h2]
-  simp [Val.bin, tk, BinOp.ap, BitVec.ofNat_add]
+  simp only [Val.bin, tk, ↓reduceDIte, BinOp.ap, Option.map_some, BitVec.ofNat_add]
 
 theorem bool_true : Val.bool true = .int 1 1 := rfl
 theorem bool_false : Val.bool false = .int 1 0 := rfl
@@ -210,10 +210,11 @@ theorem rd_load_wait {lay : Layout D} {L : D.Lock} {rs' : Reg} {M : Modl} {S : S
     hbody rfl atomicOk_lw (inside_of_load hld) hS rfl
   have h2 : Step M S (.run m ⟨fn, lb, 1, rs.set rs' (tk 1), dst⟩ ks)
       (.run m ⟨fn, lb, 0, rs.set rs' (tk 1), dst⟩ ks) := by
-    refine step_term (blk := rdLoad lay L rs' lb kc) ⟨hb, by simp [rdLoad], rfl⟩ ?_
+    refine step_term (blk := rdLoad lay L rs' lb kc) ⟨hb, by simp only [rdLoad, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl], rfl⟩ ?_
     have e1 : (Opd.reg rs').ev (rs.set rs' (tk 1)) = some (tk 1) := regs_set_same _ _ _
     have e2 : (Opd.int Conf.wbits 1).ev (rs.set rs' (tk 1)) = some (tk 1) := opd_1 _
-    simp [rdLoad, stepTerm, e1, e2, icmp_tk, bool_true, Frame.enter, hb]
+    simp only [stepTerm, rdLoad, e1, e2, icmp_tk, decide_true, bool_true, BitVec.ofNat_eq_ofNat, Frame.enter,
+  ↓reduceIte, hb, List.mapM_nil, Option.pure_def, List.foldl_nil, Option.map_some]
   exact Reach.trans (Reach.one h1) (Reach.one h2)
 
 /-- **A reader's load that finds no writer** (`state = x`, `x ≠ 1`) goes to the take, with the word in its
@@ -230,13 +231,14 @@ theorem rd_load_go {lay : Layout D} {L : D.Lock} {rs' : Reg} {M : Modl} {S : See
     hbody rfl atomicOk_lw (inside_of_load hld) hS rfl
   have h2 : Step M S (.run m ⟨fn, lb, 1, rs.set rs' (tk x), dst⟩ ks)
       (.run m ⟨fn, kc, 0, rs.set rs' (tk x), dst⟩ ks) := by
-    refine step_term (blk := rdLoad lay L rs' lb kc) ⟨hb, by simp [rdLoad], rfl⟩ ?_
+    refine step_term (blk := rdLoad lay L rs' lb kc) ⟨hb, by simp only [rdLoad, List.length_cons, List.length_nil, Nat.zero_add, Std.le_refl], rfl⟩ ?_
     have e1 : (Opd.reg rs').ev (rs.set rs' (tk x)) = some (tk x) := regs_set_same _ _ _
     have e2 : (Opd.int Conf.wbits 1).ev (rs.set rs' (tk x)) = some (tk 1) := opd_1 _
     have hbool : Val.bool (decide (BitVec.ofNat Conf.wbits x = BitVec.ofNat Conf.wbits 1)) = .int 1 0 := by
-      simp [Val.bool, hne]
+      simp only [Val.bool, hne, decide_false, Bool.false_eq_true, ↓reduceIte, BitVec.ofNat_eq_ofNat]
     simp only [rdLoad, stepTerm, e1, e2, icmp_tk, hbool]
-    simp [Frame.enter, hk, hkp, rdLoad]
+    simp only [Frame.enter, BitVec.ofNat_eq_ofNat, BitVec.zero_eq_one_iff, Nat.succ_ne_self, ↓reduceIte, hk, hkp,
+  List.mapM_nil, Option.pure_def, List.foldl_nil, Option.map_some]
   exact Reach.trans (Reach.one h1) (Reach.one h2)
 
 /-- **A reader's take that wins the race**: the state word is still `x`, becomes `x + 2`; the section is

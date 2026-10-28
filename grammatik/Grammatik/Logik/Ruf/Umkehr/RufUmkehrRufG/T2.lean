@@ -152,7 +152,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | ok => exact hRg.elim
         | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
-  | _, _, _, _, _, .callInd .., _, ho => by simp [Stmt.kOk] at ho
+  | _, _, _, _, _, .callInd .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .locks L hr body, hs, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hb, _⟩ := hs.locks_inv
@@ -165,18 +165,18 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [Stmt.kOk] at ho
       simp only [execStmt]
       exact blockSGK body hb ho _ _ _ h
-  | _, _, _, _, _, .traverse .., _, ho => by simp [Stmt.kOk] at ho
-  | _, _, _, _, _, .retry .., _, ho => by simp [Stmt.kOk] at ho
-  | _, _, _, _, _, .forever .., _, ho => by simp [Stmt.kOk] at ho
-  | _, _, _, _, _, .axiomCall .., _, ho => by simp [Stmt.kOk] at ho
+  | _, _, _, _, _, .traverse .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .retry .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .forever .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .axiomCall .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, Λ₀, _, .ret e hperm, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
       exact ⟨h1, h1.evalErg e ρ⟩
-  | _, _, _, _, _, .retWhy .., _, ho => by simp [Stmt.kOk] at ho
-  | _, _, _, _, _, .leave .., _, ho => by simp [Stmt.kOk] at ho
-  | _, _, _, _, _, .next .., _, ho => by simp [Stmt.kOk] at ho
+  | _, _, _, _, _, .retWhy .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .leave .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .next .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
 
 theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ'), BlockR A C mr b → b.kOk = true → SGBK O passes R b
@@ -232,13 +232,13 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | ok => exact hRg.elim
         | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
-  | _, _, _, _, _, .bindCallInd .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .bindCallElse .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .bindAxiom .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .bindAxiomElse .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .regRead .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .regReadElse .., _, ho => by simp [Block.kOk] at ho
-  | _, _, _, _, _, .awaits .., _, ho => by simp [Block.kOk] at ho
+  | _, _, _, _, _, .bindCallInd .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .bindCallElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .bindAxiom .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .bindAxiomElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .regRead .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .regReadElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .awaits .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, Λ₀, _, .exchange g neuE hw hL rest, hb, ho => by
       intro σ σ' ρ h
       have hr := hb.exchange_inv
@@ -317,9 +317,9 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       have h1 := h.lese Λ₀ e.orte
       simp only [execEnd]
       exact ⟨h1, h1.evalErg e ρ⟩
-  | _, _, _, .retWhy .., _, ho => by simp [Endblock.kOk] at ho
-  | _, _, _, .leave .., _, ho => by simp [Endblock.kOk] at ho
-  | _, _, _, .next .., _, ho => by simp [Endblock.kOk] at ho
+  | _, _, _, .retWhy .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
+  | _, _, _, .leave .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
+  | _, _, _, .next .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
   | _, _, _, .cons s rest, he, ho => by
       intro σ σ' ρ h
       obtain ⟨hs, hr, _⟩ := he.cons_inv

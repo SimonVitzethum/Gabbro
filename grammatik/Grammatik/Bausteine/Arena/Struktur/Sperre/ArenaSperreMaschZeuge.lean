@@ -60,7 +60,7 @@ theorem schreiberL_R (A : FDL.Lock → Prop) (n : Nat) : EndR A (Tief PL A n) sc
 theorem held_spurL : HeldGenau HL (offen spurL) := by
   intro L
   cases L
-  simp [HL, spurL, offen]
+  simp only [HL, List.mem_cons, List.not_mem_nil, or_false, spurL, offen]
 
 theorem frei_ML (A : FDL.Lock → Prop) (hA : ∀ L, ¬ A L) : ∀ L, A L → RufFreiG ML 0 L := fun L h => absurd h (hA L)
 
@@ -88,7 +88,7 @@ theorem schreiber_exec (O : Orakel FDL) (passes : Nat)
     rfl
   refine ⟨σ2.lese HL [], (), ?_, ?_⟩
   · have hl : σ0.lese HL (Expr.tru : Expr FDL [] HL Ty.bool).orte = σ0 := by
-      simp [World.lese, World.merke, Expr.orte]
+      simp only [World.lese, World.merke, Expr.orte, List.map_nil, List.nil_append]
     simp only [schreiberL, execEnd, execStmt, eval, wahr?]
     rw [hl]
     simp only [if_true, hrun]
@@ -121,13 +121,13 @@ theorem hpL : RufPasst FDL FVL (FDL.signatur ()) HL where
       cases L
       rfl
     subst this
-    simp [Deklaration.signatur, FDL]) hn
+    simp only [FDL, Fin.isValue, Deklaration.signatur, List.mem_cons, List.not_mem_nil, or_false]) hn
   hh := fun L hL => by
     have : L = () := by
       cases L
       rfl
     subst this
-    simp [HL]
+    simp only [HL, List.mem_cons, List.not_mem_nil, or_false]
 
 /-- The section body of the call form: `f();` -- the writer is a function, called with the lock held. -/
 def rufeL : Block FDL FVL false [] HL HL :=
@@ -135,7 +135,7 @@ def rufeL : Block FDL FVL false [] HL HL :=
 
 /-- The call section: `locks () { f(); }`. -/
 def abschnittRufe : Stmt FDL FVL false [] [] [] :=
-  Stmt.locks () (fun M hM => by simp at hM) rufeL
+  Stmt.locks () (fun M hM => by simp only [List.not_mem_nil] at hM) rufeL
 
 theorem rufe_L : Rufe (fun _ => True) rufeL := Rufe.cons () Args.nil hpL rfl Block.nil trivial Rufe.nil
 
@@ -148,7 +148,7 @@ theorem rErhaelt_PL (n : Nat) : RErhaelt KLL (fun _ => True) (rufAt PL oL 0 n) :
     meets the arena invariant. -/
 theorem abschnitt_rufe_zeuge (n : Nat) (σ : World FDL) :
     StrukturPost KLL Abs.leer (execStmtH (KLL.sperr ()) oL U0 0 (rufAt PL oL 0 n) abschnittRufe σ .nil) :=
-  abschnitt_rufe KLL () oL U0 0 (rufAt PL oL 0 n) (rErhaelt_PL n) (fun M hM => by simp at hM) rufe_L havoc_U0 σ .nil
+  abschnitt_rufe KLL () oL U0 0 (rufAt PL oL 0 n) (rErhaelt_PL n) (fun M hM => by simp only [List.not_mem_nil] at hM) rufe_L havoc_U0 σ .nil
 
 /-- **`rufAt` of the writer, run** from a world that holds the scenario memory: at depth `n + 1` the call answers a value,
     the arena invariant holds in the answer's world, and the head of the list is slot `1`. -/
@@ -166,7 +166,7 @@ theorem rufAt_PL_lauf (n : Nat) (σ1 : World FDL) (hs : σ1.slots = w0L.slots) (
     rw [hW]
     simp only [PL, wahr?, eval, Expr.orte]
     erw [hex]
-    simp
+    simp only [Bool.true_eq_false, ↓reduceIte, List.filter_nil, List.foldl_nil, List.find?_nil]
   · exact (Dekl.Ok.lese KLL _ _ hpost)
   · exact hlg
 
