@@ -104,6 +104,36 @@ def threads : List B :=
         .lab MF, .zeros 4096 ] )
     MF
 
+/-- `n` threads (`spawn`, each a real OS thread the kernel schedules) each add 1 `k` times to one shared word with
+    `cas`, then add 1 to a second word and `exit`; `main` waits for the second word to reach `n` and prints the first.
+    Worker frames at labels `1000 ..`. -/
+def threadsN (n k : Nat) : List B :=
+  let spawnW (w : Nat) : List IItem := [.adr 60 WORKER, .adr 61 (1000 + w), .op 24 62 60 0]
+  irImage
+    ( (List.range n).flatMap spawnW ++
+      [ .lab WAIT, .adr 43 DONEC, .op 15 44 43 0, c 45 n, .op 14 46 44 45, .brzL 46 WAIT,
+        .adr 47 CNT, .op 15 21 47 0,
+        .op 17 22 40 0, c 23 24, .op 3 24 22 23, c 25 10, c 26 48, c 27 1,
+        c 29 255, c 31 (-1), .op 10 29 29 31,
+        .lab PLOOP,
+        .op 7 28 21 25, .op 3 28 28 26, .op 4 24 24 27,
+        .op 15 32 24 0, .op 8 32 32 29, .op 9 32 32 28, .op 16 24 32 0,
+        .op 6 21 21 25, .brzL 21 PDONE, .jmpL PLOOP,
+        .lab PDONE,
+        c 33 10, .op 3 34 22 23, .op 16 34 33 0, .op 4 35 34 24, .op 3 35 35 27,
+        c 50 1, c 51 1, .op 2 52 24 0, .op 2 53 35 0, c 54 0, c 55 0, c 56 0, .op 23 57 50 0,
+        c 50 231, c 51 0, .op 23 57 50 0,
+        .lab WORKER, c 1 k, c 2 1, .adr 3 CNT,
+        .lab WLOOP, .op 15 6 3 0, .op 3 7 6 2, .op 22 8 3 6, .op 14 9 8 6, .brzL 9 WLOOP,
+        .op 4 1 1 2, .brzL 1 WDONE, .jmpL WLOOP,
+        .lab WDONE, .adr 3 DONEC,
+        .lab WRETRY, .op 15 6 3 0, .op 3 7 6 2, .op 22 8 3 6, .op 14 9 8 6, .brzL 9 WRETRY,
+        c 10 60, c 11 0, .op 23 12 10 0,
+        .lab CNT, .zeros 8, .lab DONEC, .zeros 8 ] ++
+      (List.range n).flatMap (fun w => [.lab (1000 + w), .zeros 128]) ++
+      [ .lab MF, .zeros 4096 ] )
+    MF
+
 end Runner.Prog
 
 namespace Runner.Prog
