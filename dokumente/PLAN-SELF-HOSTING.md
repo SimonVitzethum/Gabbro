@@ -281,8 +281,9 @@ the decoder). seL4 did the same as planned here: its binary verification (Sewell
 against Anthony Fox's ARMv7 model (HOL4, later L3), which is not proved but VALIDATED -- instructions executed at
 random on real processors and compared with the model; that the CPU follows the model stays a named assumption.
 For the runner:
-1. **Only the instructions the runner uses** (about 22, §2.1.3: `MOV ADD SUB IMUL MUL CQO IDIV AND OR XOR SHL SHR
-   CMP SETcc MOVZX LEA TEST JMP Jcc REP MOVSQ LOCK CMPXCHG SYSCALL`, no floating point), their semantics in Lean written after the most
+1. **Only the instructions the runner uses** (23 mnemonics in about 40 encodings, §2.1.3: `MOV MOVSXD MOVZX LEA ADD SUB IMUL
+   MUL CQO IDIV AND OR XOR SHL SHR CMP TEST SETcc JMP Jcc REP MOVSQ LOCK CMPXCHG SYSCALL`, no floating point; the model
+   decodes only these encodings), their semantics in Lean written after the most
    validated x86-64 definitions -- ACL2 `x86isa` (Goel, co-simulated against real CPUs) and Fox's L3 x64 model
    (CakeML's x64 back end) -- with the Intel and AMD manuals as the cross-check; what a vendor leaves undefined (some
    flags) stays FREE.
@@ -297,8 +298,9 @@ For the runner:
 * **Why not C:** a verified C runner needs a verified C compiler; CompCert is Coq and not freely licensed, and gcc/clang
   bring LLVM back. Handwritten C is also against `AGENTS.md` §3.
 * **Speed:** §2.1.8.
-* **Size and risk:** the runner about 300 - 700 machine instructions with the base set, 500 - 1 000 with the speed
-  set; the proofs 8 000 - 20 000 lines of Lean with the base set, 15 000 - 30 000 with the speed set (budget 60 000,
+* **Size and risk:** the runner, counted handler by handler (2026-10-28): the 24 base handlers about 250 machine
+  instructions, the speed set about 100, loader and argument parsing about 100 - 150, `spawn`'s thread entry about 25:
+  about 450 - 650 in all (the dispatch table is data); the proofs 8 000 - 20 000 lines of Lean with the base set, 15 000 - 30 000 with the speed set (budget 60 000,
   hard limit 80 000): the x86-64 subset with its CPU tests, an instruction layer that makes symbolic execution of a
   handler cheap, the handlers, the loader, `spawn`, `runner_tso` over x86-TSO for `MOV` and `LOCK CMPXCHG`. The least charted part is
   `ir_parallel` with `runner_tso`.
