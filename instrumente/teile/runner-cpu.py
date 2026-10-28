@@ -12,6 +12,9 @@ BIN is the `runner` executable of the Lean package `runner/`; DIR a scratch dire
    registers, data area and every flag the model defines must equal the model's `exec`.
 3. Fault programs: every instruction the model says faults ends the program with the named signal, and the model
    does say fault for it.
+4. Litmus tests of x86-TSO (the memory model of the multi-thread theorem), run by the runner on real threads:
+   20000 synchronised rounds each; the outcomes TSO forbids must not occur (SB with locked stores (0,0),
+   MP (1,0), LB (1,1)); the count of SB's allowed (0,0) is printed (the store buffer at work).
 
 Exit 0 all green, 1 a difference (printed), 2 nothing or not everything measured.
 """
@@ -132,6 +135,27 @@ def main():
         if q.returncode != -int(sig) or model != "true":
             bad += 1
             print(f"runner-cpu: fault {name}: ended {q.returncode}, expected signal {sig}, model says fault: {model}")
+    # 4. litmus tests
+    forbidden = {"lit-sbcas": (0, 0), "lit-mp": (1, 0), "lit-lb": (1, 1)}
+    counts = {}
+    for t in ["lit-sb", "lit-sbcas", "lit-mp", "lit-lb"]:
+        q = subprocess.run([os.path.join(d, "runner"), os.path.join(d, t + ".img")], capture_output=True,
+                           cwd=d, timeout=600)
+        measured += 1
+        out = q.stdout
+        if q.returncode != 0 or len(out) != 16 * 20000:
+            bad += 1
+            print(f"runner-cpu: {t}: exit {q.returncode}, {len(out)} bytes")
+            continue
+        c = {}
+        for k in range(len(out) // 16):
+            key = (int.from_bytes(out[16 * k:16 * k + 8], "little"), int.from_bytes(out[16 * k + 8:16 * k + 16], "little"))
+            c[key] = c.get(key, 0) + 1
+        counts[t] = c
+        if t in forbidden and c.get(forbidden[t], 0):
+            bad += 1
+            print(f"runner-cpu: {t}: the outcome {forbidden[t]} TSO forbids occurred {c[forbidden[t]]} times")
+    print("runner-cpu: litmus", {t: {f"{a}{b}": n for (a, b), n in sorted(c.items())} for t, c in counts.items()})
     print(f"runner-cpu: {measured} checks, {bad} differences")
     if measured == 0 or missing:
         print("runner-cpu: kinds not measured:", missing)

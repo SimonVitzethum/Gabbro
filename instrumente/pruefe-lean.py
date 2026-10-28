@@ -19,8 +19,8 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      executable on `NAME.ein` (written after `NAME.warte` seconds when that file exists, so a thread blocked in
      `read(2)` must leave the others running) and must print exactly `NAME.aus` with exit code 0.
   8. The verified x86-64 runner (`runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
-     `Nachpruefung.lean` -- `runner_tso`, `runner_sc`, `runner_mt`, the memory models, the file facts, the witness and
-     standard axioms; then `teile/runner-cpu.py` on this processor: the runner binary runs the probe images with
+     `Nachpruefung.lean` -- `runner_tso`, `runner_sc`, `runner_mt`, the memory models, the file facts, the witness and `decode_enc`
+     depend on exactly the three standard axioms; then `teile/runner-cpu.py` on this processor: the runner binary runs the probe images with
      the IR semantics' output and exit code, the differential tests of the x86-64 model (every instruction form,
      every flag the model defines) show no difference, and every instruction the model says faults ends its
      program with the named signal. Stage 3 covers the package's Lean files too.

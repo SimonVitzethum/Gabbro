@@ -153,3 +153,69 @@ def io : List B :=
   put (put (put img PATH path) MSG msg) PING ping
 
 end Runner.Prog
+
+namespace Runner.Prog
+open Runner.X86
+
+/-! ## Litmus tests of x86-TSO, run by the runner on real threads
+
+Two threads run `N` rounds; a barrier (`cas` on a counter) starts each round together. Round `k` uses its own
+`x` at `XS + 16k` and `y` at `XS + 16k + 8`; each thread stores what it read at `RS + 16k + 8w`. `main` writes the
+result area to stdout. Slots of a thread: 16 = x, 17 = y, 19 = its result address, 5 = 1, 21/23 = values read. -/
+
+def LX : Nat := 80
+def LRS : Nat := 81
+def LBAR : Nat := 82
+def LDONE : Nat := 83
+def LT0 : Nat := 84
+def LT1 : Nat := 85
+def LF0 : Nat := 86
+def LF1 : Nat := 87
+def LMF : Nat := 88
+def LWAIT : Nat := 89
+
+/-- One thread of a litmus test, labels from `b`: the body runs in each round with `16` = x, `17` = y,
+    `19` = the result address. -/
+def litmusThread (b : Nat) (w : Nat) (n : Nat) (body : List IItem) : List IItem :=
+  let LOOP := b; let RETRY := b + 1; let WT := b + 2; let GO := b + 3; let END := b + 4; let DR := b + 5
+  [ c 1 0, c 2 n, .adr 3 LX, .adr 4 LRS, c 5 1, .adr 6 LBAR, c 7 16, c 20 2, c 18 8, c 24 0,
+    .lab LOOP,
+    .lab RETRY, .op 15 8 6 0, .op 3 9 8 5, .op 22 10 6 8, .op 14 11 10 8, .brzL 11 RETRY,
+    .op 3 13 1 5, .op 5 12 13 20,
+    .lab WT, .op 15 8 6 0, .op 13 14 8 12, .brzL 14 GO, .jmpL WT,
+    .lab GO, .op 5 15 1 7, .op 3 16 3 15, .op 3 17 16 18, .op 3 19 4 15, c 25 (8 * w), .op 3 19 19 25 ] ++
+  body ++
+  [ .op 3 1 1 5, .op 13 22 1 2, .brzL 22 END, .jmpL LOOP,
+    .lab END, .adr 6 LDONE,
+    .lab DR, .op 15 8 6 0, .op 3 9 8 5, .op 22 10 6 8, .op 14 11 10 8, .brzL 11 DR,
+    c 30 60, c 31 0, .op 23 32 30 0 ]
+
+/-- A litmus image: two thread bodies, `n` rounds. -/
+def litmus (n : Nat) (b0 b1 : List IItem) : List B :=
+  irImage
+    ( [ .adr 60 LT0, .adr 61 LF0, .op 24 62 60 0, .adr 60 LT1, .adr 61 LF1, .op 24 62 60 0,
+        .lab LWAIT, .adr 43 LDONE, .op 15 44 43 0, c 45 2, .op 14 46 44 45, .brzL 46 LWAIT,
+        c 50 1, c 51 1, .adr 52 LRS, c 53 (16 * n), c 54 0, c 55 0, c 56 0, .op 23 57 50 0,
+        c 50 231, c 51 0, .op 23 57 50 0,
+        .lab LT0 ] ++ litmusThread 100 0 n b0 ++ [.lab LT1] ++ litmusThread 110 1 n b1 ++
+      [ .lab LBAR, .zeros 8, .lab LDONE, .zeros 8, .lab LX, .zeros (16 * n), .lab LRS, .zeros (16 * n),
+        .lab LF0, .zeros 1024, .lab LF1, .zeros 1024, .lab LMF, .zeros 4096 ] )
+    LMF
+
+def LN : Nat := 20000
+
+/-- store x then load y, against store y then load x: (0, 0) is allowed by TSO. -/
+def litSB : List B := litmus LN [.op 16 16 5 0, .op 15 21 17 0, .op 16 19 21 0]
+                                [.op 16 17 5 0, .op 15 21 16 0, .op 16 19 21 0]
+/-- the stores by `cas` (locked, the buffer empty): (0, 0) is forbidden. -/
+def litSBcas : List B := litmus LN [c 26 0, c 27 1, .op 22 28 16 26, .op 15 21 17 0, .op 16 19 21 0]
+                                   [c 26 0, c 27 1, .op 22 28 17 26, .op 15 21 16 0, .op 16 19 21 0]
+/-- store x, store y, against load y, load x (results at +0 and +8 of thread 1's slot pair): (1, 0) forbidden. -/
+def litMP : List B := litmus LN [.op 16 16 5 0, .op 16 17 5 0]
+                                [.op 15 21 17 0, .op 15 23 16 0, c 25 8, .op 4 19 19 25, .op 16 19 21 0,
+                                 .op 3 29 19 25, .op 16 29 23 0]
+/-- load x then store y, against load y then store x: (1, 1) forbidden. -/
+def litLB : List B := litmus LN [.op 15 21 16 0, .op 16 17 5 0, .op 16 19 21 0]
+                                [.op 15 21 17 0, .op 16 16 5 0, .op 16 19 21 0]
+
+end Runner.Prog
