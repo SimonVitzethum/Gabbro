@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/AusdruckSim.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Sim.lean
   Subject:   `ir_sim` for expressions: the lowered code of `e` computes the word of `eval e` into its slot.
 
   `Pre`: the code at `pc`, apart from the frame; the frame's slots `0 .. K-1` readable and writable; the

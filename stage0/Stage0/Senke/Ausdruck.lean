@@ -44,6 +44,15 @@ def ci (o : Nat) (a b c : Int) : II := ⟨o, a, b, c⟩
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
 
+/-- The range of an integer expression lies in 64 bits. -/
+def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
+
+/-- A shift count below 64. -/
+def lt64 {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := decide (hi < 64)
+
+/-- The least value of an integer expression lies above `-2^63`. -/
+def nichtMin {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := decide (-2 ^ 63 < lo)
+
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
@@ -71,14 +80,55 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
     else none
   | _, _, .and a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 8 d ca cb)
   | _, _, .or a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 9 d ca cb)
+  | _, _, .div _ _ a b, d =>
+    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 6 d ca cb) else none
+  | _, _, .rem _ _ a b, d =>
+    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 7 d ca cb) else none
+  | _, _, .sdiv _ a b, d =>
+    if inWE a && inWE b && nichtMin a then do
+      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 6 d ca cb)
+    else none
+  | _, _, .srem _ a b, d =>
+    if inWE a && inWE b && nichtMin a then do
+      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 7 d ca cb)
+    else none
+  | _, _, .band _ _ a b, d =>
+    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 8 d ca cb) else none
+  | _, _, .bor _ _ _ _ _ a b, d =>
+    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 9 d ca cb) else none
+  | _, _, .bxor _ _ _ _ _ a b, d =>
+    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 10 d ca cb) else none
+  | _, _, .shl _ _ _ _ _ a b, d =>
+    if inWE b && lt64 b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 11 d ca cb) else none
+  | _, _, .shr _ _ _ _ _ a b, d =>
+    if inWE a && inWE b && lt64 b then do
+      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 12 d ca cb)
+    else none
+  | _, _, .none _, d => some ([ci 1 d (-1) 0], d + 1)
+  | _, _, .some e, d => lowE L e d
+  | _, _, @Expr.istSome _ _ _ n e, d =>
+    if decide (n ≤ 2 ^ 63) then do
+      let ce ← lowE L e d
+      pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
+    else none
+  | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
+  | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
   | _, _, _, _ => none
 
 /-! ## Values in words -/
+
+/-- The number of an option: `-1` for absent, the index otherwise. -/
+def optN {n : Int} : Option (Zahl 0 (n - 1)) → Int
+  | Option.none => -1
+  | Option.some k => k.n
 
 /-- `w` is the word of the value `v` of type `τ`. -/
 def Enc : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .int _ _, v, w => w = BitVec.ofInt 64 v.n
   | .bool, v, w => w = (if wahr? (D := D) v = true then 1 else 0)
+  | .opt _, v, w => w = BitVec.ofInt 64 (optN v)
+  | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
+  | .ptr _ _, _, _ => True
   | _, _, _ => False
 
 /-- The variables of `ρ` are in their slots of the frame at `fp`. -/

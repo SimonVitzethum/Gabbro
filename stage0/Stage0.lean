@@ -36,8 +36,10 @@ import Stage0.Schnell.Lauf
 import Stage0.Lauf.Memo
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Hilfe
-import Stage0.Senke.AusdruckSim
-import Stage0.Senke.AusdruckSatz
+import Stage0.Senke.Ausdruck.Sim
+import Stage0.Senke.Ausdruck.Wort
+import Stage0.Senke.Ausdruck.Top
+import Stage0.Senke.Ausdruck.Satz
 import Stage0.Senke.Umgebung
 import Stage0.Senke.Anweisung
 import Stage0.Senke.AnweisungSatz

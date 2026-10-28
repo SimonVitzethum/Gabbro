@@ -7,7 +7,7 @@
   (`weltAt_stab`). It describes the slots and globals only, so asking or reading (`lese`, `fragt`, which only
   record events) keeps it by definition.
 -/
-import Stage0.Senke.AusdruckSim
+import Stage0.Senke.Ausdruck.Sim
 
 namespace Gabbro.Stage0.Senke
 

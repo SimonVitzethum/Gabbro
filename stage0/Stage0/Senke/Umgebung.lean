@@ -2,7 +2,7 @@
   File:      stage0/Stage0/Senke/Umgebung.lean
   Subject:   The environment in the frame: setting a variable, binding a new one, leaving its scope.
 -/
-import Stage0.Senke.AusdruckSatz
+import Stage0.Senke.Ausdruck.Satz
 
 namespace Gabbro.Stage0.Senke
 
