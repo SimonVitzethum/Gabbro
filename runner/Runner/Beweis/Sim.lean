@@ -1,99 +1,188 @@
-import Runner.Beweis.Holen
+import Runner.Beweis.Lauf
 import Runner.IR.Step
 import Runner.Prog.Code
 
-/-! # The simulation relation between `S0IR` and the runner on the x86-64 model
+/-! # The simulation of one thread: the x86 thread makes the IR's requests
 
-* `Lay`: where the runner lies, the handler of each opcode and the dispatch table. `ImgInv L m`: the runner's
-  code and table are in memory, readable and not writable.
-* `R L s x`: `x` stands at a copy of the dispatch code with `r12 = pc`, `r13 = fp`, `r14` = the table, the same
-  memory as `s`, and the runner in place.
-* `HSim L r y`: from `y` (just after the dispatch jumped to the handler) the model does what the IR step `r`
-  does: the same fault, the same request to the kernel and after every answer the same continuation, or a state
-  related to the IR's next state. -/
+* `Lay`: the runner's code `C`, the handler of each opcode and the dispatch table. `CInv L`: every handler lies
+  at its address in `C`.
+* `Disp L t x`: `x` stands at a copy of the dispatch with `r12 = pc`, `r13 = fp` and `r14` the table.
+* `Match L r x`: run from `x`, the x86 thread makes exactly the requests of the IR tree `r`, in the same order,
+  and after each answer goes on matching what the IR does with that answer -- up to steps of its own (`priv`)
+  and reads of the dispatch table (`tbl`, answered by the table's word). It ends where the IR ends: the same
+  fault, or a dispatch copy related to the IR's next state.
+
+`Match` speaks of requests, not of a memory: it holds under every memory model that answers a table read with
+the table's word. -/
 
 namespace Runner.Beweis
 open Runner.X86 Runner.Prog
 
-def wbytes (v : W) : List B := (List.range 8).map fun i => byte (v.toNat / 256 ^ i)
-
 structure Lay where
+  C : W → B
   H : Nat → W
   T : W
 
-def ImgInv (L : Lay) (m : Mem) : Prop :=
-  (∀ op : B, Bytes m (L.T + op.setWidth 64 * BitVec.ofNat 64 (2 ^ 3) + sx32 0) (wbytes (L.H op.toNat))) ∧
-  (∀ k, Code m (L.H k) (handler k))
+/-- The address of the table entry of opcode byte `op`, as the dispatch computes it. -/
+def taddr (L : Lay) (op : W) : W := L.T + op * BitVec.ofNat 64 (2 ^ 3) + sx32 0
 
-theorem ImgInv.keep {L : Lay} {m m' : Mem} (hk : Keeps m m') (h : ImgInv L m) : ImgInv L m' :=
-  ⟨fun op => (h.1 op).keep hk, fun k => (h.2 k).keep hk⟩
+def CInv (L : Lay) : Prop := ∀ k, Code L.C (L.H k) (handler k)
 
-structure R (L : Lay) (s : IR.S) (x : X) : Prop where
-  code : Code x.mem x.rip dispatch
-  pc : x.r12 = s.pc
-  fp : x.r13 = s.fp
+structure Disp (L : Lay) (t : IR.T) (x : X) : Prop where
+  code : Code L.C x.rip dispatch
+  pc : x.r12 = t.pc
+  fp : x.r13 = t.fp
   tb : x.r14 = L.T
-  mem : x.mem = s.mem
-  img : ImgInv L x.mem
 
-def HSim (L : Lay) : Res IR.S → X → Prop
-  | .next s', y => ∃ z, Star y z ∧ R L s' z
-  | .fault, y => Reach y .fault
-  | .sys q k, y => ∃ z k', Star y z ∧ step z = .sys q k' ∧ ∀ resp, ImgInv L resp.mem →
-      ∃ z', k' resp = some z' ∧
-        match k resp with
-        | none => Reach z' .fault
-        | some s' => ∃ w, Star z' w ∧ R L s' w
-  | .unk, _ => False
+mutual
+inductive Match (L : Lay) : Res IR.T → X → Prop
+  | priv {r : Res IR.T} {x y : X} : step L.C x = .next y → Match L r y → Match L r x
+  | tbl {r : Res IR.T} {x : X} {k : Ans → Res X} (op : Nat) :
+      step L.C x = .ask (.rd 8 (taddr L (BitVec.ofNat 64 op))) k →
+      (∀ w, MatchK L r (k (some (L.H op, w)))) → Match L r x
+  | ask {o : Op} {kI : Ans → Res IR.T} {kX : Ans → Res X} {x : X} :
+      step L.C x = .ask o kX → (∀ a, MatchK L (kI a) (kX a)) → Match L (.ask o kI) x
+  | fault {x : X} : step L.C x = .fault → Match L .fault x
+  | disp {t : IR.T} {x : X} : Disp L t x → Match L (.next t) x
 
-/-! ## Reading a word placed as bytes -/
+/-- After an answer: both fault, or the x86 thread continues in a state that goes on matching. -/
+inductive MatchK (L : Lay) : Res IR.T → Res X → Prop
+  | fault : MatchK L .fault .fault
+  | next {r : Res IR.T} {y : X} : Match L r y → MatchK L r (.next y)
+end
 
-theorem rd64_bytes {m : Mem} {a v : W} (h : Bytes m a (wbytes v)) : m.rd64 a = some v := by
-  have hv := v.isLt
-  have hb : ∀ j, j < 8 → m.b (a + BitVec.ofNat 64 j) = byte (v.toNat / 256 ^ j) ∧
-      m.rd (a + BitVec.ofNat 64 j) = true := fun j hj => by
-    obtain ⟨b1, b2, _⟩ := h j (by simp [wbytes]; exact hj)
-    simp only [wbytes, List.getElem_map, List.getElem_range] at b1
-    exact ⟨b1, b2⟩
-  have ha : Mem.all m.rd a 8 = true := all_of fun j hj => (hb j hj).2
-  simp only [Mem.rd64, ha, ↓reduceIte, Option.some.injEq]
-  simp only [Mem.le, (hb 0 (by decide)).1, (hb 1 (by decide)).1, (hb 2 (by decide)).1, (hb 3 (by decide)).1,
-    (hb 4 (by decide)).1, (hb 5 (by decide)).1, (hb 6 (by decide)).1, (hb 7 (by decide)).1]
-  apply BitVec.eq_of_toNat_eq
-  simp only [byte, BitVec.toNat_ofNat]
-  omega
+/-! ## Straight code: the trees side by side -/
 
-/-! ## Dispatch -/
+/-- The IR tree and the tree of a straight body from `y0`: the same requests, the same faults, and ends that
+    agree on `r12`, `r13` and keep `r14`. -/
+def Corr (y0 : X) : Res IR.T → Res X → Prop
+  | .next t, .next z => z.r12 = t.pc ∧ z.r13 = t.fp ∧ z.r14 = y0.r14
+  | .fault, .fault => True
+  | .ask o k, .ask o' k' => o = o' ∧ ∀ a, Corr y0 (k a) (k' a)
+  | _, _ => False
 
-@[simp] theorem sx32_zero : sx32 0#32 = 0#64 := by decide
+/-- After an answer, an instruction is done: it never asks twice. -/
+theorem exec_once (i : Ins) (n : Nat) (x : X) {o : Op} {k : Ans → Res X} (h : exec i n x = .ask o k) (a : Ans) :
+    k a = .fault ∨ ∃ y, k a = .next y := by
+  cases i <;> simp only [exec, rd64, rd32, rd8, wr64, cas] at h
+  all_goals first
+    | (cases h; cases a <;> simp)
+    | (split at h <;> cases h)
+    | (split at h; cases h; split at h <;> cases h)
+    | cases h
 
-theorem dispatch_ok {L : Lay} {s : IR.S} {x : X} (hR : R L s x) :
-    (s.mem.rd8 s.pc = none → Reach x .fault) ∧
-    (∀ op, s.mem.rd8 s.pc = some op → ∃ y, Plus x y ∧ y.rip = L.H op.toNat ∧ y.r12 = x.r12 ∧
-      y.r13 = x.r13 ∧ y.r14 = x.r14 ∧ y.mem = x.mem) := by
-  have h1 := step_code hR.code
-  have hc2 : Code x.mem (x.rip + BitVec.ofNat 64 (enc (.ldzx .rax (mb .r12))).length) [.jmpm (ms .r14 .rax)] :=
-    hR.code.2.2
-  have hea : ea x (mb .r12) = s.pc := by simp [ea, mb, X.get, sx32_zero, hR.pc]
-  constructor
-  · intro hn
-    refine Reach.here ?_ (by simp)
-    rw [h1]
-    simp only [exec, hea, hR.mem, hn, opt_none]
-  · intro op hop
-    have hx : exec (.ldzx .rax (mb .r12)) (enc (.ldzx .rax (mb .r12))).length x =
-        .next ({ x with rip := x.rip + BitVec.ofNat 64 (enc (.ldzx .rax (mb .r12))).length }.set .rax
-          (op.setWidth 64)) := by
-      simp only [exec, hea, hR.mem, hop, opt_some]
-    let x1 := ({ x with rip := x.rip + BitVec.ofNat 64 (enc (.ldzx .rax (mb .r12))).length }.set .rax
-      (op.setWidth 64))
-    have h2 : step x1 = exec (.jmpm (ms .r14 .rax)) (enc (.jmpm (ms .r14 .rax))).length x1 :=
-      step_code (x := x1) hc2
-    have ht := rd64_bytes (hR.img.1 op)
-    refine ⟨{ x1 with rip := L.H op.toNat }, ⟨x1, h1.trans hx, ?_⟩, rfl, rfl, rfl, rfl, rfl⟩
-    refine Star.step ?_ (Star.refl _)
-    rw [h2]
-    simp only [exec, ea, ms, X.get, x1, X.set, hR.tb] at ht ⊢
-    simp only [ht, opt_some]
+theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) :
+    ∀ (is : List Ins) (x : X) (r : Res IR.T), (∀ i ∈ is, Fall i = true) →
+    Code L.C x.rip (is ++ dispatch) → Corr y0 r (runL is x) → Match L r x
+  | [], x, r, _, hc, hco => by
+    cases r with
+    | next t =>
+      obtain ⟨h1, h2, h3⟩ := hco
+      exact .disp ⟨hc, h1, h2, h3.trans htb⟩
+    | _ => simp [runL, Corr] at hco
+  | i :: is, x, r, hf, hc, hco => by
+    have hs := step_code hc
+    have hfi := hf i (List.mem_cons_self ..)
+    have hfs : ∀ j ∈ is, Fall j = true := fun j hj => hf j (List.mem_cons_of_mem _ hj)
+    have hrip := exec_rip hfi (enc i).length x
+    have hc' : ∀ y : X, y.rip = x.rip + BitVec.ofNat 64 (enc i).length → Code L.C y.rip (is ++ dispatch) :=
+      fun y hy => by rw [hy]; exact hc.2.2
+    simp only [runL] at hco
+    cases he : exec i (enc i).length x with
+    | next y =>
+      rw [he, bind_next] at hco
+      rw [he] at hrip
+      exact .priv (hs.trans he) (straight_go htb is y r hfs (hc' y hrip) hco)
+    | fault =>
+      rw [he] at hco
+      cases r <;> simp [Corr] at hco
+      exact .fault (hs.trans he)
+    | unk => rw [he] at hco; cases r <;> simp [Corr] at hco
+    | ask o k =>
+      rw [he, bind_ask] at hco
+      cases r with
+      | ask o' kI =>
+        obtain ⟨rfl, hk⟩ := hco
+        refine .ask (hs.trans he) fun a => ?_
+        rw [he] at hrip
+        rcases exec_once i _ x he a with hka | ⟨y, hka⟩
+        · have : Corr y0 (kI a) ((k a).bind (runL is)) := hk a
+          rw [hka, bind_fault] at this
+          cases hkI : kI a <;> rw [hkI] at this <;> simp [Corr] at this
+          rw [hka]; exact .fault
+        · have : Corr y0 (kI a) ((k a).bind (runL is)) := hk a
+          rw [hka, bind_next] at this
+          have hy := hrip a
+          rw [hka] at hy
+          rw [hka]; exact .next (straight_go htb is y (kI a) hfs (hc' y hy) this)
+      | _ => simp [Corr] at hco
+
+/-! ## Code ending in a jump: the trees side by side, the ends matched by `Match` itself -/
+
+def CorrM (L : Lay) : Res IR.T → Res X → Prop
+  | r, .next z => Match L r z
+  | .fault, .fault => True
+  | .ask o k, .ask o' k' => o = o' ∧ ∀ a, CorrM L (k a) (k' a)
+  | _, _ => False
+
+theorem go {L : Lay} : ∀ (is : List Ins) (x : X) (r : Res IR.T), (∀ i ∈ is.dropLast, Fall i = true) →
+    Code L.C x.rip is → CorrM L r (runL is x) → Match L r x
+  | [], x, r, _, _, hco => by simpa [runL, CorrM] using hco
+  | i :: is, x, r, hf, hc, hco => by
+    have hs := step_code hc
+    have hnext : ∀ y : X, y.rip = x.rip + BitVec.ofNat 64 (enc i).length → Code L.C y.rip is :=
+      fun y hy => by rw [hy]; exact hc.2.2
+    have hfs : ∀ j ∈ is.dropLast, Fall j = true := by
+      intro j hj
+      cases is with
+      | nil => simp at hj
+      | cons _ _ => exact hf j (by rw [List.dropLast_cons_cons]; exact List.mem_cons_of_mem _ hj)
+    -- the rest of the list: when it is empty the end is matched directly
+    have hrest : ∀ (y : X) (r' : Res IR.T), (is ≠ [] → y.rip = x.rip + BitVec.ofNat 64 (enc i).length) →
+        CorrM L r' (runL is y) → Match L r' y := by
+      intro y r' hy hc'
+      cases is with
+      | nil => simpa [runL, CorrM] using hc'
+      | cons j js => exact go (j :: js) y r' hfs (hnext y (hy (by simp))) hc'
+    have hrip : is ≠ [] → Leaves (fun y => y.rip = x.rip + BitVec.ofNat 64 (enc i).length)
+        (exec i (enc i).length x) := by
+      intro hne
+      cases is with
+      | nil => exact absurd rfl hne
+      | cons _ _ => exact exec_rip (hf i (by simp)) _ x
+    simp only [runL] at hco
+    cases he : exec i (enc i).length x with
+    | next y =>
+      rw [he, bind_next] at hco
+      refine .priv (hs.trans he) (hrest y r (fun hne => ?_) hco)
+      have := hrip hne
+      rw [he] at this
+      exact this
+    | fault =>
+      rw [he] at hco
+      cases r <;> simp [CorrM] at hco
+      exact .fault (hs.trans he)
+    | unk => rw [he] at hco; cases r <;> simp [CorrM] at hco
+    | ask o k =>
+      rw [he, bind_ask] at hco
+      cases r with
+      | ask o' kI =>
+        obtain ⟨rfl, hk⟩ := hco
+        refine .ask (hs.trans he) fun a => ?_
+        rcases exec_once i _ x he a with hka | ⟨y, hka⟩
+        · have : CorrM L (kI a) ((k a).bind (runL is)) := hk a
+          rw [hka, bind_fault] at this
+          cases hkI : kI a <;> rw [hkI] at this <;> simp [CorrM] at this
+          rw [hka]; exact .fault
+        · have : CorrM L (kI a) ((k a).bind (runL is)) := hk a
+          rw [hka, bind_next] at this
+          rw [hka]
+          refine .next (hrest y (kI a) (fun hne => ?_) this)
+          have := hrip hne
+          rw [he] at this
+          have := this a
+          rw [hka] at this
+          exact this
+      | _ => simp [CorrM] at hco
 
 end Runner.Beweis
