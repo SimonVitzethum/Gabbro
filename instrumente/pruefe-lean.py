@@ -19,7 +19,7 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      executable on `NAME.ein` (written after `NAME.warte` seconds when that file exists, so a thread blocked in
      `read(2)` must leave the others running) and must print exactly `NAME.aus` with exit code 0.
   8. The verified x86-64 runner (`runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
-     `Nachpruefung.lean` -- `runner_ok`, `image_ok`, the witnesses and `decode_enc` depend on exactly the three
+     `Nachpruefung.lean` -- `runner_tso`, `runner_sc`, `runner_mt`, the memory models, the file facts, the witness and
      standard axioms; then `teile/runner-cpu.py` on this processor: the runner binary runs the probe images with
      the IR semantics' output and exit code, the differential tests of the x86-64 model (every instruction form,
      every flag the model defines) show no difference, and every instruction the model says faults ends its
@@ -191,9 +191,9 @@ def stufe_runner():
     rc, out = lauf(["lake", "env", "lean", "Nachpruefung.lean"], RN, 1800)
     zeilen = re.findall(r"'([^']+)' depends on axioms: \[([^\]]*)\]", out)
     schlecht = [n for n, a in zeilen if not {x.strip() for x in a.split(",") if x.strip()} <= STANDARD]
-    satz = any(n.endswith(".runner_ok") for n, _ in zeilen)
-    ok_ax = rc == 0 and satz and len(zeilen) >= 7 and not schlecht
-    print(f"  8 runner:  {'ok' if ok_ax else 'ROT'} ({jobs[-1]} Jobs, {len(zeilen)} Saetze, runner_ok "
+    satz = any(n.endswith(".runner_tso") for n, _ in zeilen)
+    ok_ax = rc == 0 and satz and len(zeilen) >= 10 and not schlecht
+    print(f"  8 runner:  {'ok' if ok_ax else 'ROT'} ({jobs[-1]} Jobs, {len(zeilen)} Saetze, runner_tso "
           f"{'gefunden' if satz else 'FEHLT'}, {len(schlecht)} mit fremden Axiomen)")
     kratz = RN / ".lake" / "cpu"
     rc, out = lauf([sys.executable, str(W / "instrumente/teile/runner-cpu.py"), str(RN / ".lake/build/bin/runner"),
