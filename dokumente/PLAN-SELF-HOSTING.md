@@ -98,6 +98,11 @@ IR instructions is LOWERED in Lean (cheap to prove) and never added to the runne
 unsigned and wide arithmetic, floats, byte buffers, contract checks and stops are all lowerings. The price is speed
 (more IR instructions per G step, §2.1.8); the runner stays a few hundred machine instructions.
 
+**Proof budget** (Simon, 2026-10-28): the runner's proofs (x86-64 subset, handlers, loader, threads, `runner_tso`)
+may take up to 60 000 lines of Lean; 80 000 is the hard limit. Inside that budget an instruction is added to the
+base set only for speed that a measurement asks for, and only if it needs no new hardware assumption (§2.1.3, speed
+set).
+
 #### 2.1.1 Two modes
 
 Machine G checks at run time: `requires` at every call (`Logik.vorbedingung`), `ensures` and the owed invariants at
@@ -154,6 +159,23 @@ variable-length decoding to prove.
 | 22 | `cas d a e n` | atomically: if `M[a] = e` then `M[a] := n`; `d := ` old `M[a]` | `LOCK CMPXCHG` |
 | 23 | `sys d a` | Linux system call: number in slot `a`, six arguments in `a+1 … a+6`, result in `d` | `SYSCALL` |
 | 24 | `spawn a k` | a new OS thread (`clone`) whose first frame is at address `k`-slot `a` and which calls the function number stored there; the thread ends by `exit` | `SYSCALL` (clone) |
+
+**Speed set (10 opcodes, planned, 2026-10-28).** Each replaces a frequent sequence of the base set by one handler and
+uses only integer x86 instructions already in the subset, so it adds handler proofs, not model:
+
+| # | Instruction | Replaces | x86-64 |
+|---|---|---|---|
+| 25 | `ldx d a i` | `d := M[a + 8·i]` (a table or aggregate element: `shl`, `add`, `ld`) | `MOV r, [a + i*8]` |
+| 26 | `stx a i b` | `M[a + 8·i] := b` | `MOV [a + i*8], r` |
+| 27 | `addi d a k` | `add` with an immediate (indices, counters, budgets) | `ADD`/`LEA` |
+| 28-30 | `blt a b L`, `beq a b L`, `bne a b L` | compare and branch (every loop and condition) | `CMP; Jcc` |
+| 31 | `ltu d a b` | unsigned compare (limbs, unsigned ranges) | `CMP; SETB; MOVZX` |
+| 32 | `jtab a L0 n` | jump to `L0 + a` through a table of `n` entries (`onTag`, `onWhy`, a compiler's `match` over tags; `a < n` by `ir_typed`) | `JMP [table + a*8]` |
+| 33 | `copy d a n` | `n` words from `a` to `d`, non-overlapping (aggregates and strings by value) | `REP MOVSQ` |
+| 34 | `mulhi d a b` | the high word of the unsigned 128-bit product (wide ranges, hashing) | `MUL` |
+
+The base set is complete without them: the lowering uses a speed instruction where present and the base sequence
+otherwise, and `ir_sim` covers both.
 
 The runner checks nothing
 at run time: the image is the lowering of an accepted program, and the typing invariant `ir_typed` (every slot holds
@@ -228,12 +250,16 @@ carries locks, reasons, wide integers and gates); soft-float with `ir_softfloat`
 
 #### 2.1.8 Speed
 
-A G step becomes about 2-10 IR instructions (a slot read alone is three); a handler is 2-5 machine instructions plus
-the dispatch (one load, one indirect jump). Expected about 10^8 - 2 * 10^8 IR instructions a second per core, about 20
-times that with the threads of a parallel `gkomp`, so `gkomp -O3` (about 10^11 - 1.5 * 10^12 G steps) takes about
-5 min - 1.5 h: the one-hour target holds in the low and middle range and is tight at the top. Speed is bought later
-only where a measurement shows it, one instruction at a time and each with its proof (first candidates: a load with
-scaled index, compare-and-branch).
+Base set: a G step becomes about 2-10 IR instructions (a slot read alone is three); a handler is 2-5 machine
+instructions plus the dispatch (one load, one indirect jump); about 10^8 - 2 * 10^8 IR instructions a second per core.
+With the speed set: about 1.5-4 IR instructions per G step, about 2 * 10^8 - 3 * 10^8 a second per core. Times about
+20 for the threads of a parallel `gkomp`, `gkomp -O3` (about 10^11 - 1.5 * 10^12 G steps) takes about 5 min - 1.5 h
+on the base set and about 30 s - 25 min with the speed set. Estimates, to be measured on the first runner.
+
+**Further, only if a measurement demands it:** a copy-and-patch translator in the runner (each IR instruction copied
+as a fixed machine-code template with its operands patched in, no dispatch at run time; about 3-5 times faster). Its
+proof reuses the handler lemmas as template lemmas but adds the translation loop and instruction fetch from memory
+the runner wrote; estimated +20 000 - 35 000 lines, so it fits under the hard limit only if the rest stays low.
 
 ### 2.2 The verified x86-64 runner (Simon, 2026-10-28)
 
@@ -255,8 +281,8 @@ the decoder). seL4 did the same as planned here: its binary verification (Sewell
 against Anthony Fox's ARMv7 model (HOL4, later L3), which is not proved but VALIDATED -- instructions executed at
 random on real processors and compared with the model; that the CPU follows the model stays a named assumption.
 For the runner:
-1. **Only the instructions the runner uses** (about 20, §2.1.3: `MOV ADD SUB IMUL CQO IDIV AND OR XOR SHL SHR CMP
-   SETcc MOVZX LEA TEST JMP Jcc LOCK CMPXCHG SYSCALL`, no floating point), their semantics in Lean written after the most
+1. **Only the instructions the runner uses** (about 22, §2.1.3: `MOV ADD SUB IMUL MUL CQO IDIV AND OR XOR SHL SHR
+   CMP SETcc MOVZX LEA TEST JMP Jcc REP MOVSQ LOCK CMPXCHG SYSCALL`, no floating point), their semantics in Lean written after the most
    validated x86-64 definitions -- ACL2 `x86isa` (Goel, co-simulated against real CPUs) and Fox's L3 x64 model
    (CakeML's x64 back end) -- with the Intel and AMD manuals as the cross-check; what a vendor leaves undefined (some
    flags) stays FREE.
@@ -271,9 +297,10 @@ For the runner:
 * **Why not C:** a verified C runner needs a verified C compiler; CompCert is Coq and not freely licensed, and gcc/clang
   bring LLVM back. Handwritten C is also against `AGENTS.md` §3.
 * **Speed:** §2.1.8.
-* **Size and risk:** the runner about 300 - 700 machine instructions; the proofs 8 000 - 20 000 lines of Lean: the
-  x86-64 subset with its CPU tests, an instruction layer that makes symbolic execution of a handler cheap, the 24
-  handlers, the loader, `spawn`, `runner_tso` over x86-TSO for `MOV` and `LOCK CMPXCHG`. The least charted part is
+* **Size and risk:** the runner about 300 - 700 machine instructions with the base set, 500 - 1 000 with the speed
+  set; the proofs 8 000 - 20 000 lines of Lean with the base set, 15 000 - 30 000 with the speed set (budget 60 000,
+  hard limit 80 000): the x86-64 subset with its CPU tests, an instruction layer that makes symbolic execution of a
+  handler cheap, the handlers, the loader, `spawn`, `runner_tso` over x86-TSO for `MOV` and `LOCK CMPXCHG`. The least charted part is
   `ir_parallel` with `runner_tso`.
 
 **Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; beside it the x86-64 subset written anew with its
@@ -460,7 +487,7 @@ Rust counterpart and 2-3x its Lean definition.
 | **Lean, specification and proof** | | |
 | language needs of §5 (region release, strings in G, file-gate contracts, measure-based loops) | region in G ≈ 5 000 | 8 000-20 000 |
 | stage 0 (`stage0/`) as the translator into `S0IR` over the whole language: semantics, image, lowering, soft-float, `ir_typed`, `ir_sim`, `ir_budget`, `ir_erase`, `ir_parallel`, `ir_decode` (§2.1.7) | stage 0 ≈ 6 900 | 17 000-39 000 |
-| the verified x86-64 runner of `S0IR` (§2.2): about 300-700 machine instructions, the x86-64 subset (about 20 instructions) written anew with its CPU tests, x86-TSO, `runner_ok`, `runner_tso` | -- | 8 000-20 000 |
+| the verified x86-64 runner of `S0IR` (§2.2): 500-1 000 machine instructions (base and speed set), the x86-64 subset (about 22 instructions) written anew with its CPU tests, x86-TSO, `runner_ok`, `runner_tso`; budget 60 000, hard limit 80 000 | -- | 15 000-30 000 |
 | GabbroV: libraries' contracts | GabbroV today 115 000 | 8 000-20 000 |
 | GabbroV: front end against `lex`/`parseTopTief`/`elabU` | | 30 000-70 000 |
 | GabbroV: helpers, IR printer, refusal reports | | 15 000-35 000 |
