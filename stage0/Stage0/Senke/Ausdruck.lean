@@ -46,6 +46,13 @@ def lowE {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → 
   | _, _, .add a b, d => do let ca ← lowE a d; let cb ← lowE b (d + 1); pure (bin2 3 d ca cb)
   | _, _, .sub a b, d => do let ca ← lowE a d; let cb ← lowE b (d + 1); pure (bin2 4 d ca cb)
   | _, _, .mul a b, d => do let ca ← lowE a d; let cb ← lowE b (d + 1); pure (bin2 5 d ca cb)
+  | _, _, .neg a, d => do let ca ← lowE a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
+  | _, _, .not a, d => do let ca ← lowE a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
+  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d =>
+    if inW l1 h1 && inW l2 h2 then do
+      let cb ← lowE b d; let ca ← lowE a (d + 1)
+      pure (bin2 10 d (bin2 13 d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
+    else none
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d =>
     if inW l1 h1 && inW l2 h2 then do
       let ca ← lowE a d; let cb ← lowE b (d + 1); pure (bin2 13 d ca cb)

@@ -41,6 +41,9 @@ theorem and_word (x y : Bool) : ((if x = true then (1 : Runner.W) else 0) &&& (i
 theorem or_word (x y : Bool) : ((if x = true then (1 : Runner.W) else 0) ||| (if y = true then 1 else 0)) =
     if (x || y) = true then 1 else 0 := by cases x <;> cases y <;> decide
 
+theorem not_word (x : Bool) : ((if x = true then (1 : Runner.W) else 0) ^^^ BitVec.ofInt 64 1) =
+    if (!x) = true then 1 else 0 := by cases x <;> decide
+
 theorem bool_word (b : Bool) : Runner.IR.bool b = (if b = true then 1 else 0) := by cases b <;> rfl
 
 /-! ## The slot the lowering stops at -/
@@ -64,6 +67,24 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       have := lowE_top a d ca ta ha
       omega
     · cases h
+  | _, _, .neg a, d, c, top, h => by
+    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, _, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    omega
+  | _, _, .not a, d, c, top, h => by
+    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, _, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    omega
+  | _, _, .le a b, d, c, top, h => by
+    simp only [lowE] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cb, tb⟩, _, ⟨ca, ta⟩, _, he⟩ := h
+      simp only [bin2, Prod.mk.injEq] at he
+      omega
+    · cases h
   | _, _, .lit n, d, c, top, h => by
     simp only [lowE] at h
     split at h
@@ -72,8 +93,6 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .tru, d, c, top, h | _, _, .fls, d, c, top, h | _, _, .var _, d, c, top, h => by
     simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, _, .glob .., _, _, _, h
-  | _, _, .neg .., _, _, _, h
-  | _, _, .not .., _, _, _, h
   | _, _, .slot .., _, _, _, h
   | _, _, .thru .., _, _, _, h
   | _, _, .ptrOf .., _, _, _, h
@@ -90,7 +109,6 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .bxor .., _, _, _, h
   | _, _, .shl .., _, _, _, h
   | _, _, .shr .., _, _, _, h
-  | _, _, .le .., _, _, _, h
   | _, _, .fllt .., _, _, _, h
   | _, _, .flle .., _, _, _, h
   | _, _, .none .., _, _, _, h
@@ -209,6 +227,67 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} (σ₀ σ : World 
     rw [pa, pb]
     simp only [wahr?]
     exact or_word _ _
+  | _, _, .neg a, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, ha, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    obtain ⟨rfl, rfl⟩ := he
+    have := lowE_top a (d + 1) ca ta ha
+    refine bin_ok (ca := [ci 1 d 0 0]) (fun m pc hp => const_ok hp (by decide) (by omega))
+      (fun m pc hp => lowE_ok σ₀ σ a (d + 1) ca ta ha (by omega) m pc ρ hp)
+      (g := fun x y => some (x - y)) ?_ rfl (by decide) (by omega) hp
+    intro wa wb pa pb
+    refine ⟨_, rfl, ?_⟩
+    simp only [Enc] at pb ⊢
+    rw [pa, pb]
+    simp [eval, Zahl.neg, BitVec.ofInt_neg]
+  | _, _, .not a, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, ha, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    obtain ⟨rfl, rfl⟩ := he
+    have := lowE_top a d ca ta ha
+    refine bin_ok (cb := [ci 1 (d + 1) 1 0]) (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
+      (fun m pc hp => const_ok hp (by decide) (by omega))
+      (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
+    intro wa wb pa pb
+    refine ⟨_, rfl, ?_⟩
+    simp only [Enc, eval] at pa ⊢
+    rw [pa, pb]
+    simp only [wahr?]
+    exact not_word _
+  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE] at h
+    split at h
+    · next hw =>
+      simp only [Bool.and_eq_true] at hw
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cb, tb⟩, hb, ⟨ca, ta⟩, ha, he⟩ := h
+      simp only [bin2, Prod.mk.injEq] at he
+      obtain ⟨rfl, rfl⟩ := he
+      have := lowE_top b d cb tb hb
+      have := lowE_top a (d + 1) ca ta ha
+      have ra := inW_spec hw.1 (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
+      have rb := inW_spec hw.2 (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+      refine bin_ok (cb := [ci 1 (d + 1) 1 0])
+        (Pa := fun w => w = if decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n) = true then 1 else 0)
+        (fun m pc hp => bin_ok (fun m pc hp => lowE_ok σ₀ σ b d cb tb hb (by omega) m pc ρ hp)
+          (fun m pc hp => lowE_ok σ₀ σ a (d + 1) ca ta ha (by omega) m pc ρ hp)
+          (g := fun x y => some (Runner.IR.bool (x.slt y))) (fun wb wa pb pa => ⟨_, rfl, by
+            simp only [Enc] at pa pb
+            rw [pa, pb, slt_in rb ra, bool_word]⟩) rfl (by decide) (by omega) hp)
+        (fun m pc hp => const_ok hp (by decide) (by omega))
+        (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
+      intro wa wb pa pb
+      refine ⟨_, rfl, ?_⟩
+      simp only [Enc, eval] at ⊢
+      rw [pa, pb]
+      by_cases hl : (eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n
+      · have : ¬ (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
+        simp [hl, this, wahr?]
+      · have : (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
+        simp [hl, this, wahr?]
+    · cases h
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE] at h
     split at h
@@ -250,8 +329,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} (σ₀ σ : World 
   | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
-  | _, _, .neg .., _, _, _, h, _, _, _, _, _
-  | _, _, .not .., _, _, _, h, _, _, _, _, _
   | _, _, .div .., _, _, _, h, _, _, _, _, _
   | _, _, .rem .., _, _, _, h, _, _, _, _, _
   | _, _, .sdiv .., _, _, _, h, _, _, _, _, _
@@ -262,7 +339,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} (σ₀ σ : World 
   | _, _, .bxor .., _, _, _, h, _, _, _, _, _
   | _, _, .shl .., _, _, _, h, _, _, _, _, _
   | _, _, .shr .., _, _, _, h, _, _, _, _, _
-  | _, _, .le .., _, _, _, h, _, _, _, _, _
   | _, _, .fllt .., _, _, _, h, _, _, _, _, _
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
   | _, _, .none .., _, _, _, h, _, _, _, _, _
