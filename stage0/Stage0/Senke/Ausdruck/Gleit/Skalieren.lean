@@ -751,4 +751,26 @@ theorem floatOfIntScaleL_left {Γ : Ctx} {ρ : Env D Γ}
       simpa only [mag] using hl h t m pc pre)
     (by intro h; cases h) hpre
 
+/-- Actual sign instructions derive their contribution from the signed input. -/
+theorem floatOfIntSignL_ok {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (signBit : Nat) (hb : signBit < 2^64) :
+    WordCode (L := L) ρ W
+      (fun j => wordL 5 j (wordK 13 j (input j) 0)
+        (some (konstWL 4 signBit (j + 1))))
+      (BitVec.ofNat 64 (if z < 0 then signBit else 0)) := by
+  have hs : WordCode (L := L) ρ W _ _ := WordCode.bin hi
+    (WordCode.const 0 (by decide))
+    (g := fun a b => some (Runner.IR.bool (a.slt b))) rfl rfl (by decide : 13 < 256)
+  have ht : WordCode (L := L) ρ W _ _ := WordCode.bin hs (WordCode.konst signBit hb)
+    (g := fun a b => some (a * b)) rfl rfl (by decide : 5 < 256)
+  have hz' : (BitVec.ofInt 64 z).toInt = z := toInt_ofInt_in hz.1 hz.2
+  intro fp K d c top hc hK m pc hp
+  have result := ht hc hK m pc hp
+  split <;> rename_i hsign
+  · simpa [BitVec.slt, hz', Runner.IR.bool, hsign] using result
+  · simpa [BitVec.slt, hz', Runner.IR.bool, hsign] using result
+
 end Gabbro.Stage0.Senke
