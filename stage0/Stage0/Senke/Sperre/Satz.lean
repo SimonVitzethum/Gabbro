@@ -95,14 +95,14 @@ theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → E
     (hs18 : frei Γ + 18 ≤ Ks) (hW : WIn L fp Ks K) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ) {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
     (hbody : ∀ m' σ', PreS L m' (pc + BitVec.ofNat 64 (16 * 48)) fp K (frei Γ) cb ρ → Umf L A C dv m' fp (Ks - 1) K →
-      Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+      Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 48), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * 48) + BitVec.ofNat 64 (16 * cb.length))
         (pc + BitVec.ofNat 64 (16 * 48) + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 (16 * 30))
         (pc + BitVec.ofNat 64 (16 * 48) + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 (16 * 60))
         (execBlock O passes R body σ' ρ))
     (hp : PreS L m pc fp K (frei Γ) (locksCode L (L.lk Lk) (frei Γ) cb ex.1 ex.2) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ) cb ex.1 ex.2).length))
       (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ) cb ex.1 ex.2).length) + BitVec.ofInt 64 ex.1)
@@ -157,7 +157,7 @@ theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → E
   have hu1 : Umf L A C dv m1 fp (Ks - 1) K :=
     ⟨hL1.ag.pcode hu.code hfa ha31, by rw [hL1.ag.rd_low (i := 2) (by omega) hfa ha31]; exact hu.depth, hu.big,
      sync1, hu.hiK⟩
-  have hk1 : Kopf L f m1 fp K rp cfp ρ0 := AgreeK.kopf hk hL1.ag (by omega) hfa ha31
+  have hk1 : Kopf L f m1 fp K rp cfp ρ0 P σ0 := AgreeK.kopf hk hL1.ag (by omega) hfa ha31
   have hWa1 : WeltAt m1 L (σ.nimmt Lk) := hL1.ag.weltAt hWa hW.lay hfl (by omega)
   have ih := hbody m1 (σ.nimmt Lk) hp1 hu1 hk1 hWa1
   -- the give, on every way out

@@ -178,7 +178,7 @@ theorem indBind_ok {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
     (hc : lowInd L p args = some (cc, tc)) (ht : tc + cap ≤ Ks)
     (hp : PreS L m pc fp K (frei Γ) (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr) ρ)
     (hW : WIn L fp Ks K) (hlo0 : lo = FB + (D.params f).length) (hlo : lo ≤ frei Γ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ)
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ)
     (k : World D → Wert D τ → β) (err : Logik D → β) (hwerr : Hardware D → β)
     (J : T → Runner.Mem → β → Prop)
     (jprefix : ∀ {t0 t1 m0 m1 b}, Star t0 m0 t1 m1 → AgreeW L fp lo K m0 m1 →
@@ -187,7 +187,7 @@ theorem indBind_ok {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
     (jhw : ∀ t m e, Stops t m (hwCode e) → J t m (hwerr e))
     (kont : ∀ m' σ' v, let pc' := pc + BitVec.ofNat 64 (16 * (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0]).length)
       PreS L m' pc' fp K (frei (τ :: Γ)) cr (Env.cons v ρ) →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' → J ⟨pc', fp⟩ m' (k σ' v)) :
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' → J ⟨pc', fp⟩ m' (k σ' v)) :
     J ⟨pc, fp⟩ m (indAntwort R p args he hr σ ρ k err hwerr) := by
   have hb := lowInd_top hc
   have hFB3 : FB = 4 := rfl

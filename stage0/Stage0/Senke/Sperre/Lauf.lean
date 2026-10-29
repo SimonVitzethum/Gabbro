@@ -96,12 +96,15 @@ theorem AgreeK.preS {m m1 : Mem} {pc fp : W} {K d s a : Nat} {xs ys : List II} {
     fun i hi => by rw [ha.wr]; exact h.frame.wr i hi⟩, ha.codeAt hf ha31 (codeAt_right h.code) hcf, hcf,
    ha.envAt h.env hs hf ha31, trivial, wstab_true _ _⟩
 
-theorem AgreeK.kopf {m m1 : Mem} {fp : W} {K s a : Nat} {f : D.Fn} {rp cfp : W} {ρ0 : Env D (D.params f)}
-    (h : Kopf L f m fp K rp cfp ρ0) (ha : AgreeK fp s a m m1) (hs : FB + (D.params f).length ≤ s)
-    (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha31 : a + 24 < 2 ^ 31) : Kopf L f m1 fp K rp cfp ρ0 := by
+theorem AgreeK.kopf {P : Programm D} {σ0 : World D} {m m1 : Mem} {fp : W} {K s a : Nat} {f : D.Fn} {rp cfp : W} {ρ0 : Env D (D.params f)}
+    (h : Kopf L f m fp K rp cfp ρ0 P σ0) (ha : AgreeK fp s a m m1) (hs : FB + (D.params f).length ≤ s)
+    (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha31 : a + 24 < 2 ^ 31) : Kopf L f m1 fp K rp cfp ρ0 P σ0 := by
   have hFB3 : FB = 4 := rfl
   refine ⟨by rw [ha.rd_low (by omega) hf ha31]; exact h.r0, by rw [ha.rd_low (by omega) hf ha31]; exact h.r1,
-    ha.envAt h.env (by simp only [frei]; omega) hf ha31, h.big⟩
+    ha.envAt h.env (by simp only [frei]; omega) hf ha31, h.big, ?_⟩
+  intro c hc
+  obtain ⟨w, hw, he⟩ := h.entry c hc
+  exact ⟨w, by rw [ha.rd_low (by omega) hf ha31]; exact hw, he⟩
 
 theorem weltAt_keep {m m' : Mem} {L : Lay D} {σ : World D} (h : WeltAt m L σ) (hl : LayIn L) (hrd : m'.rd = m.rd)
     (hwr : m'.wr = m.wr) (hb : ∀ x : W, L.lo ≤ x.toNat → x.toNat < L.hi → m'.b x = m.b x) : WeltAt m' L σ := by

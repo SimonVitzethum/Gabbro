@@ -28,13 +28,13 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hthen : ∀ (k : Zahl 0 (n - 1)), eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = some k →
-      ∀ m' pc', PreS L m' pc' fp K (frei Γ + 1) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 →
+      ∀ m' pc', PreS L m' pc' fp K (frei Γ + 1) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ o.orte) →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2)
         (execBlock O passes R t (σ.lese Λ o.orte) (Env.cons (τ := .index n) k ρ)))
-    (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ) ce ρ → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 →
+    (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ) ce ρ → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ o.orte) →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.1)
@@ -43,7 +43,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     (hp : PreS L m pc fp K (frei Γ) (cc ++ [ci 1 (frei Γ + 1) (-1) 0, ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
         [ci 19 (frei Γ + 1) (16 * (ct.length + 2)) 0] ++ ct ++
       [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 1 (frei Γ + 1) (-1) 0, ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
         [ci 19 (frei Γ + 1) (16 * (ct.length + 2)) 0] ++ ct ++

@@ -22,12 +22,12 @@ theorem retryTest_ok (hcc : lowE L bis (frei Γ) = some (cc, tc)) (ht : tc ≤ K
     (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
     {oe : Ausgang (vertragVon D f) l Γ}
     (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ) rest ρ →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ →
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * rest.length))
         (pc' + BitVec.ofNat 64 (16 * rest.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * rest.length) + BitVec.ofInt 64 ex.2) oe)
     (hp : PreS L m pc fp K (frei Γ) (retryTest (frei Γ) cc rest) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (retryTest (frei Γ) cc rest).length))
       (pc + BitVec.ofNat 64 (16 * (retryTest (frei Γ) cc rest).length) + BitVec.ofInt 64 ex.1)
