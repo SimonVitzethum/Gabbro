@@ -5,17 +5,17 @@ import Stage0.Senke.Ausdruck.Lesen
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem reachEqL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc : Runner.W} {a b : Option (List II × Nat)} {c : List II} {x y : Int}
     (hx : -2 ^ 63 ≤ x ∧ x < 2 ^ 63) (hy : -2 ^ 63 ≤ y ∧ y < 2 ^ 63)
     (h : reachEqL d a b = some (c, top)) (hK : top ≤ K)
-    (ha : ∀ c t, a = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W →
+    (ha : ∀ c t, a = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved →
       Ok m pc fp K d c (fun w => w = BitVec.ofInt 64 x))
-    (hb : ∀ c t, b = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K (d + 1) c ρ W →
+    (hb : ∀ c t, b = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K (d + 1) c ρ W reserved →
       Ok m pc fp K (d + 1) c (fun w => w = BitVec.ofInt 64 y))
-    (hp : Pre L m pc fp K d c ρ W) :
+    (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (fun w => w = if decide (x = y) then 1 else 0) := by
   simp only [reachEqL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨cb, tb⟩, hcb, h⟩ := h
@@ -32,11 +32,11 @@ theorem reachL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .opt 
     (goal : Zahl 0 (D.count t - 1)) :
     ∀ fuel (a b : Option (List II × Nat)) (k : Zahl 0 (D.count t - 1)) c top,
     reachL L t f d fuel a b = some (c, top) → top ≤ K →
-    (∀ c t', a = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W →
+    (∀ c t', a = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved →
       Ok m pc fp K d c (fun w => w = BitVec.ofInt 64 k.n)) →
-    (∀ c t', b = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K (d + 1) c ρ W →
+    (∀ c t', b = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K (d + 1) c ρ W reserved →
       Ok m pc fp K (d + 1) c (fun w => w = BitVec.ofInt 64 goal.n)) →
-    ∀ m pc, Pre L m pc fp K d c ρ W → Ok m pc fp K d c
+    ∀ m pc, Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c
       (fun w => w = if kette (fun i => hf ▸ σ.slots t i f) fuel k.n goal.n then 1 else 0)
   | 0, a, b, k, c, top, h, hK, ha, hb, m, pc, hp => by
     have hk0 := k.lo_le; have hk1 := k.le_hi
@@ -47,7 +47,7 @@ theorem reachL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .opt 
     have hg0 := goal.lo_le; have hg1 := goal.le_hi
     let next := a.bind (slotC L t f d)
     have hnxt : ∀ c top, next = some (c, top) → top ≤ K → ∀ m pc,
-        Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L (.opt (D.count t)) (hf ▸ σ.slots t k.n f)) := by
+        Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.opt (D.count t)) (hf ▸ σ.slots t k.n f)) := by
       intro c top h ht m pc hp
       simp only [next, Option.bind_eq_some_iff] at h
       obtain ⟨⟨ca, ta⟩, he, hs⟩ := h
@@ -94,11 +94,11 @@ theorem reachesL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .op
     {m : Runner.Mem} {pc : Runner.W} {a b : Option (List II × Nat)} {c : List II}
     (hWL : ∀ m, W m → WeltAt m L σ) (k goal : Zahl 0 (D.count t - 1))
     (h : reachesL L t f d a b = some (c, top)) (hK : top ≤ K)
-    (ha : ∀ c t', a = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W →
+    (ha : ∀ c t', a = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved →
       Ok m pc fp K d c (fun w => w = BitVec.ofInt 64 k.n))
-    (hb : ∀ c t', b = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K (d + 1) c ρ W →
+    (hb : ∀ c t', b = some (c, t') → t' ≤ K → ∀ m pc, Pre L m pc fp K (d + 1) c ρ W reserved →
       Ok m pc fp K (d + 1) c (fun w => w = BitVec.ofInt 64 goal.n))
-    (hp : Pre L m pc fp K d c ρ W) : Ok m pc fp K d c
+    (hp : Pre L m pc fp K d c ρ W reserved) : Ok m pc fp K d c
       (fun w => w = if kette (fun i => hf ▸ σ.slots t i f) (D.count t).toNat k.n goal.n then 1 else 0) := by
   simp only [reachesL, bind, Option.bind_eq_some_iff] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨cb, tb⟩, hcb, h⟩ := h

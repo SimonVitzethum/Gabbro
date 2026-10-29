@@ -3,7 +3,7 @@ import Stage0.Senke.Ausdruck.Lesen
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
-variable {D : Deklaration} {L : Lay D}
+variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- Different slots of a frame are apart. -/
 theorem slot_far {fp : Runner.W} {K i j : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (hi : i < K) (hj : j < K)
@@ -14,16 +14,16 @@ theorem idx_lt : {Γ : Ctx} → {τ : Ty} → (x : Var Γ τ) → Var.idx x < Γ
   | _, _, .here => by simp [Var.idx]
   | _, _, .there x => by have := idx_lt x; simp [Var.idx]; omega
 
-theorem vslot_here {Γ : Ctx} {τ : Ty} : vslot (Var.here : Var (τ :: Γ) τ) = frei Γ := by
+theorem vslot_here {Γ : Ctx} {τ : Ty} : vslot (Var.here : Var (τ :: Γ) τ) reserved = frei Γ reserved := by
   simp [vslot, frei, Var.idx]
 
-theorem vslot_there {Γ : Ctx} {τ σ : Ty} (y : Var Γ τ) : vslot (Var.there y : Var (σ :: Γ) τ) = vslot y := by
+theorem vslot_there {Γ : Ctx} {τ σ : Ty} (y : Var Γ τ) : vslot (Var.there y : Var (σ :: Γ) τ) reserved = vslot y reserved := by
   have := idx_lt y
   simp [vslot, Var.idx]; omega
 
 theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {v : Wert D τ}
-    {w : Runner.W} (h : EnvAt L m fp ρ) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
-    (he : Enc L τ v w) : EnvAt L m fp (Env.cons v ρ : Env D (τ :: Γ)) := by
+    {w : Runner.W} (h : EnvAt L m fp ρ reserved) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
+    (he : Enc L τ v w) : EnvAt L m fp (Env.cons v ρ : Env D (τ :: Γ)) reserved := by
   intro τ' y
   cases y with
   | here => exact ⟨w, by rw [vslot_here]; exact hw, he⟩
@@ -31,8 +31,8 @@ theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {
     obtain ⟨w', hw', he'⟩ := h τ' y
     exact ⟨w', by rw [vslot_there]; exact hw', he'⟩
 
-theorem envAt_tail {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {τ : Ty} {ρ : Env D (τ :: Γ)} (h : EnvAt L m fp ρ) :
-    EnvAt L m fp ρ.tail := by
+theorem envAt_tail {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {τ : Ty} {ρ : Env D (τ :: Γ)} (h : EnvAt L m fp ρ reserved) :
+    EnvAt L m fp ρ.tail reserved := by
   intro τ' y
   obtain ⟨w, hw, he⟩ := h τ' (.there y)
   rw [vslot_there] at hw

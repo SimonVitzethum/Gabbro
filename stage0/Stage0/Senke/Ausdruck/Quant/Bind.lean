@@ -4,19 +4,19 @@ import Stage0.Senke.Ausdruck.Quant.Frame
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem quantBind_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {n : Int} {k : Zahl 0 (n - 1)} {cb : List II} {P : Runner.W → Prop}
-    (hk : lit32 k.n = true) (hd : frei Γ < d) (hK : d + 2 < K)
-    (hp : Pre L m pc fp K d (quantBindC (frei Γ) d k.n cb) ρ W)
-    (ih : ∀ m pc, Pre L m pc fp K (d + 2) cb (Env.cons (show Wert D (.index n) from k) ρ) W →
+    (hk : lit32 k.n = true) (hd : frei Γ reserved < d) (hK : d + 2 < K)
+    (hp : Pre L m pc fp K d (quantBindC (frei Γ reserved) d k.n cb) ρ W reserved)
+    (ih : ∀ m pc, Pre L m pc fp K (d + 2) cb (Env.cons (show Wert D (.index n) from k) ρ) W reserved →
       Ok m pc fp K (d + 2) cb P) :
-    Ok m pc fp K d (quantBindC (frei Γ) d k.n cb) P := by
-  let s := frei Γ
+    Ok m pc fp K d (quantBindC (frei Γ reserved) d k.n cb) P := by
+  let s := frei Γ reserved
   have hs : s < d := hd
   have h' : Pre L m pc fp K d ([ci 2 (d + 1) s 0] ++ ([ci 1 s k.n 0] ++
-      (cb ++ ([ci 2 s (d + 1) 0] ++ [ci 2 d (d + 2) 0])))) ρ W := by
+      (cb ++ ([ci 2 s (d + 1) 0] ++ [ci 2 d (d + 2) 0])))) ρ W reserved := by
     simpa [quantBindC, List.append_assoc, s] using hp
   obtain ⟨v, hv⟩ : ∃ v, m.rd64 (slot fp (BitVec.ofNat 64 s)) = some v := by
     refine ⟨BitVec.ofNat 64 (m.le (slot fp (BitVec.ofNat 64 s)) 8), ?_⟩
@@ -31,11 +31,11 @@ theorem quantBind_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} 
   have r2 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 k.n) :=
     (wr_slot h1.frame (by omega) (BitVec.ofInt 64 k.n)).2.1
   have s2 := quant_lit h1.frame hp.small (by omega) h1.left.code hk
-  have h1s : Pre L m1 _ fp K s ([ci 1 s k.n 0] ++ (cb ++ ([ci 2 s (d + 1) 0] ++ [ci 2 d (d + 2) 0]))) ρ W :=
+  have h1s : Pre L m1 _ fp K s ([ci 1 s k.n 0] ++ (cb ++ ([ci 2 s (d + 1) 0] ++ [ci 2 d (d + 2) 0]))) ρ W reserved :=
     { h1 with ctx := Nat.le_refl _ }
   have h2 := h1s.next a2 (show s ≤ d + 2 by omega) (by omega)
-  have he : EnvAt L m2 fp (Env.cons (show Wert D (.index n) from k) ρ) := envAt_cons h2.env r2 rfl
-  have hb : Pre L m2 _ fp K (d + 2) cb (Env.cons (show Wert D (.index n) from k) ρ) W :=
+  have he : EnvAt L m2 fp (Env.cons (show Wert D (.index n) from k) ρ) reserved := envAt_cons h2.env r2 rfl
+  have hb : Pre L m2 _ fp K (d + 2) cb (Env.cons (show Wert D (.index n) from k) ρ) W reserved :=
     { h2.left with ctx := by simp only [frei, List.length_cons] at *; omega, env := he }
   obtain ⟨m3, s3, a3, w, rw3, pw⟩ := ih m2 _ hb
   have h3 := h2.next a3 (Nat.le_refl _) (by omega)
@@ -46,7 +46,7 @@ theorem quantBind_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} 
   let m4 := write m3 (slot fp (BitVec.ofNat 64 s)) 8 v.toNat
   have a4 : Agree fp s K m3 m4 := agree_write h3.frame.room (by omega) (by omega) _
   have s4 := quant_mov (dst := s) (src := d + 1) h3.frame hp.small (by omega) (by omega) h3.left.code rs3
-  have h3s : Pre L m3 _ fp K s ([ci 2 s (d + 1) 0] ++ [ci 2 d (d + 2) 0]) ρ W :=
+  have h3s : Pre L m3 _ fp K s ([ci 2 s (d + 1) 0] ++ [ci 2 d (d + 2) 0]) ρ W reserved :=
     { h3 with ctx := Nat.le_refl _ }
   have h4 := h3s.next a4 (show s ≤ d by omega) (by omega)
   have rw4 : m4.rd64 (slot fp (BitVec.ofNat 64 (d + 2))) = some w := by
