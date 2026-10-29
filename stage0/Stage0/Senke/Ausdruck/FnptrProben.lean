@@ -1,11 +1,10 @@
 /-
   Subject: Non-degenerate function-pointer fixtures, including a global unavailable in the surface front end.
 -/
-import Stage0.Senke.Bild
+import Stage0.Senke.BildLese
 
 namespace Gabbro.Stage0.Senke.FnptrProben
 open Gabbro.Grammatik Runner.IR
-set_option maxHeartbeats 4000000
 set_option maxRecDepth 10000
 
 /-- Three functions with one signature and one global holding a function of that signature. -/
@@ -138,5 +137,37 @@ theorem fnref_encoding_zeuge :
     Enc refLayout (.fnptr 0) (⟨0, by decide⟩ : Wert D (.fnptr 0)) (BitVec.ofNat 64 64) ∧
     Enc refLayout (.fnptr 0) (⟨1, by decide⟩ : Wert D (.fnptr 0)) (BitVec.ofNat 64 80) := by
   constructor <;> rfl
+
+/-- A concrete instruction and writable frame, disjoint from the code. -/
+def refCode : List II := [ci 1 3 64 0]
+
+def refMem : Runner.Mem where
+  b a := ((refCode.flatMap encII)[a.toNat]?).getD 0
+  rd _ := true
+  wr _ := true
+
+theorem refBytes : BytesAt refMem 0 (refCode.flatMap encII) := by
+  intro i hi
+  refine ⟨rfl, rfl, ?_⟩
+  have h16 : i < 16 := by simpa only [flatMap_enc_len, refCode, List.length_singleton] using hi
+  simp only [refMem, Nat.zero_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega),
+    List.getElem?_eq_getElem hi, Option.getD_some]
+
+theorem refPre [Kern] : PreS refLayout refMem 0 1024 16 3 refCode (Env.nil : Env D []) := by
+  refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩, ?_, ?_, ?_, trivial, wstab_true _ _⟩
+  · exact codeAt_bytes refCode 0 (by decide +kernel) refBytes
+  · unfold CodeFar; decide +kernel
+  · intro _ x; nomatch x
+
+set_option maxHeartbeats 1200000 in
+/-- All premises of the function-reference simulation hold jointly on a concrete nonzero target. -/
+theorem fnref_ok_zeuge [Kern] :
+    lowE refLayout (Expr.fnref (D := D) (Γ := []) (Λ := []) 0 0 (by decide)) 3 = some (refCode, 4) ∧
+    PreS refLayout refMem 0 1024 16 3 refCode (Env.nil : Env D []) ∧
+    Ok refMem 0 1024 16 3 refCode (Enc refLayout (.fnptr 0) (⟨0, by decide⟩ : Wert D (.fnptr 0))) := by
+  refine ⟨rfl, refPre, ?_⟩
+  exact fnref_ok (L := refLayout) (Γ := []) (Λ := []) (f := 0) (n := 0) (hf := by decide)
+    (d := 3) (top := 4) (K := 16) (c := refCode) (m := refMem) (pc := 0) (fp := 1024)
+    (ρ := Env.nil) (W := fun _ => True) world world rfl (by decide) refPre
 
 end Gabbro.Stage0.Senke.FnptrProben
