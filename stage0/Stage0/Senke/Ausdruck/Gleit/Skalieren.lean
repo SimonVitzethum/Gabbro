@@ -817,4 +817,18 @@ theorem floatOfIntLeftPackL_ok {Γ : Ctx} {ρ : Env D Γ}
   have hpow : 2^(p - 1) < 2^63 := Nat.pow_lt_pow_right (by decide) hpb
   omega
 
+/-- Signed input execution supplies the canonical normal exponent field bounds. -/
+theorem floatOfIntAssemblyL_normal_exponent {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (F : Gleitkomma.Format) (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64]) :
+    let E := Gleitkomma.findeExp z.natAbs 1
+    F.emin ≤ E ∧ E < (F.emax : Int) ∧
+      0 < (E - F.emin + 1).toNat ∧
+      (E - F.emin + 1).toNat + 1 < F.bexpMax := by
+  have h := floatOfIntAssembly_scale_bounds F hF _
+    (floatOfIntAssemblyL_prefix z hz hn hi).2
+  exact ⟨h.1, h.2.1, h.2.2.2.2⟩
+
 end Gabbro.Stage0.Senke
