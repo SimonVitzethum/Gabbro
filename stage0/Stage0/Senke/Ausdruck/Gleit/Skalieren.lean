@@ -592,4 +592,45 @@ theorem floatOfIntAssemblyL_zero {Γ : Ctx} {ρ : Env D Γ}
     (fun _ _ _ he ht => floatPackZeroL_ok ρ W he ht)
     (by intro h; cases h) hp
 
+/-- The emitted magnitude/exponent prefix computes the canonical exponent directly
+    from a nonzero signed input, with the range needed by normal packing. -/
+theorem floatOfIntAssemblyL_prefix {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z)) :
+    WordCode (L := L) ρ W
+      (fun d => floatExponentL d (fun j => floatMagnitudeL j input))
+      (BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1)) ∧
+    (0 ≤ Gleitkomma.findeExp z.natAbs 1 ∧
+      Gleitkomma.findeExp z.natAbs 1 ≤ 63) := by
+  have hm := floatOfIntAssembly_magnitude_bound z hz
+  have hnabs : z.natAbs ≠ 0 := by omega
+  have hu := Gleitkomma.bitlen_obere z.natAbs
+  have hl := Gleitkomma.bitlen_untere z.natAbs hnabs
+  have hb : 0 < Gleitkomma.bitlen z.natAbs := by
+    by_cases h : Gleitkomma.bitlen z.natAbs = 0
+    · have he : Gleitkomma.bitlen z.natAbs = 0 := h
+      simp [he] at hu
+      omega
+    · omega
+  have hp : 2 ^ (Gleitkomma.bitlen z.natAbs - 1) ≤ z.natAbs := by
+    have he : Gleitkomma.bitlen z.natAbs =
+        (Gleitkomma.bitlen z.natAbs - 1) + 1 := by omega
+    rw [he, Nat.pow_succ] at hl
+    omega
+  have he : Gleitkomma.bitlen z.natAbs - 1 ≤ 63 :=
+    (Nat.pow_le_pow_iff_right (by decide : 1 < 2)).mp (by omega)
+  constructor
+  · have hc : WordCode (L := L) ρ W
+        (fun d => floatExponentL d (fun j => floatMagnitudeL j input))
+        (BitVec.ofInt 64 (Gleitkomma.findeExp
+          (floatMagnitudeWord (BitVec.ofInt 64 z)).toNat 1)) :=
+      floatExponentL_canonical (floatMagnitudeL_ok hi)
+      (show (floatMagnitudeWord (BitVec.ofInt 64 z)).toNat ≠ 0 by rw [hm.1]; exact hnabs)
+    rw [hm.1] at hc
+    intro fp K d c top h ht m pc hp
+    exact hc h ht m pc hp
+  · rw [findeExp_integer_nonzero z.natAbs hnabs]
+    omega
+
 end Gabbro.Stage0.Senke
