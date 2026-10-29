@@ -246,6 +246,58 @@ theorem floatPackCarryL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   intro fp K d c top h hK m pc hp
   exact floatPackNormalL_ok hs hx hq' unit (by omega) h hK m pc hp
 
+/-- Transfer the actual carry comparison and shift to natural fields. -/
+theorem floatPackCarry_nat (q u : Nat) (hu : 2*u < 2^64)
+    (hq : u ≤ q ∧ q ≤ 2*u) :
+    let c := Runner.IR.bool (BitVec.ofNat 64 q == BitVec.ofNat 64 (2*u))
+    c.toNat = (if q = 2*u then 1 else 0) ∧
+    (BitVec.ofNat 64 q >>> (c.toNat % 64)).toNat =
+      (if q = 2*u then u else q) := by
+  have hq64 : q < 2^64 := by omega
+  have eqv : (BitVec.ofNat 64 q == BitVec.ofNat 64 (2*u)) = decide (q = 2*u) := by
+    apply Bool.eq_iff_iff.mpr
+    simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt hq64, Nat.mod_eq_of_lt hu]
+  dsimp only
+  rw [eqv]
+  by_cases h : q = 2*u
+  · subst q
+    simp [Runner.IR.bool, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow,
+      Nat.mod_eq_of_lt hu, Nat.mul_div_cancel_left]
+  · simp [h, Runner.IR.bool, BitVec.toNat_ushiftRight,
+      Nat.mod_eq_of_lt hq64]
+
+/-- The packing expression uses the natural renormalized significand. -/
+theorem floatPackCarry_word (q u : Nat) (hu : 2*u < 2^64)
+    (hq : u ≤ q ∧ q ≤ 2*u) :
+    let c := Runner.IR.bool (BitVec.ofNat 64 q == BitVec.ofNat 64 (2*u))
+    (BitVec.ofNat 64 q >>> (c.toNat % 64)) - BitVec.ofNat 64 u =
+      BitVec.ofNat 64 (if q = 2*u then u else q) - BitVec.ofNat 64 u := by
+  have bridge := (floatPackCarry_nat q u hu hq).2
+  have hb : (if q = 2*u then u else q) < 2^64 := by split <;> omega
+  have hw : (BitVec.ofNat 64 q >>>
+      ((Runner.IR.bool (BitVec.ofNat 64 q == BitVec.ofNat 64 (2*u))).toNat % 64)) =
+      BitVec.ofNat 64 (if q = 2*u then u else q) := by
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hb]
+    exact bridge
+  dsimp only
+  rw [hw]
+
+/-- Renormalization preserves the normal field interval, including carry. -/
+theorem floatPackCarry_bounds (q u e max : Nat) (hu : 0 < u)
+    (hq : u ≤ q ∧ q ≤ 2*u) (he : 0 < e ∧ e + 1 < max) :
+    (0 < e + (if q = 2*u then 1 else 0) ∧
+      e + (if q = 2*u then 1 else 0) < max) ∧
+    (u ≤ (if q = 2*u then u else q) ∧
+      (if q = 2*u then u else q) < 2*u) := by
+  split <;> omega
+
+ theorem floatPackCarry_nat_zeuge :
+    (Runner.IR.bool (BitVec.ofNat 64 16 == BitVec.ofNat 64 16)).toNat = 1 ∧
+    (Runner.IR.bool (BitVec.ofNat 64 15 == BitVec.ofNat 64 16)).toNat = 0 := by
+  decide +kernel
+
 /-- The zero path emits positive zero, including signed integer zero. -/
 def floatPackZeroL (d : Nat) : Option (List II × Nat) :=
   some (konstWL 4 0 d)
