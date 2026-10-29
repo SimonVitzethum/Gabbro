@@ -8,7 +8,7 @@
   ends (`WIn`). The world starts as the image's zero bytes. The code is the start code (`startC`) and
   then every function of the program in the order of `fs`, at the addresses `A`.
 
-  The addresses enter the code only as call targets and world addresses (`const`), so a function's code length
+  The addresses enter the code only as call targets, function references and world addresses (`const`), so a function's code length
   does not depend on them: `bild` lowers once with the address 0 for every function and the world at 0, lays the
   functions out by those lengths, lowers again with the real addresses and refuses unless every length came out
   the same (checked, not assumed).
@@ -132,7 +132,7 @@ def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → N
     let k := roots.length
     let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * headLen k) lens).getD (pos g) 0
     let fp0 := codeBase + 16 * (headLen k + lens.sum)
-    let Yb := { Y (fp0 + 8 * (Ks * (k + 1))) with sb := fp0, st := 8 * Ks }
+    let Yb := { Y (fp0 + 8 * (Ks * (k + 1))) with fa := A, sb := fp0, st := 8 * Ks }
     let K := Ks * (k + 1) + (Yb.sye - Yb.lo + 7) / 8
     match lowAll P Yb name A fs with
     | .error e => .error e

@@ -18,7 +18,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- A word above the frame keeps its value while only the frame's slots change. -/
 theorem agree_rd_far {m m' : Runner.Mem} {fp : Runner.W} {lo K x : Nat} (ha : Agree fp lo K m m')
@@ -68,7 +68,7 @@ theorem ex_tail {L : Lay D} {σ : World D} {g : D.Glob} {v : Wert D (D.gtyp g)} 
     (h0 : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some old)
     (h1 : m.rd64 (slot fp (BitVec.ofNat 64 (s + 1))) = some new)
     (hg : m.rd64 (BitVec.ofNat 64 (L.ga g)) = some old) (hWa : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L)
-    (hfar : fp.toNat + 8 * K ≤ L.lo) (he : Enc (D.gtyp g) v new) :
+    (hfar : fp.toNat + 8 * K ≤ L.lo) (he : Enc L (D.gtyp g) v new) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ AgreeW L fp (s + 2) K m m' ∧
       WeltAt m' L (σ.storeGlob g v) ∧ m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some old := by
   have hgin := hl.2.1 g
@@ -194,10 +194,10 @@ variable {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.
 theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn cr : List II} {tn : Nat}
     (hn : lowE L neu (frei Γ + 1) = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ + 4 ≤ Ks)
     (hW : WIn L fp Ks K) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hWa : WeltAt m L σ) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length), fp⟩ m' ∧
       AgreeW L fp (frei Γ) K m m' ∧
-      PreS m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr
+      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr
         (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) ∧
       WeltAt m' L ((σ.lese Λ (.inr g :: neu.orte)).schreibGlob g Λ (eval (σ.lese Λ (.inr g :: neu.orte)) neu
         (σ.lese Λ (.inr g :: neu.orte)) (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ))) := by
@@ -223,7 +223,7 @@ theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn
   have hq := hp'.next a1 (Nat.le_refl _) (by omega)
   -- the new value
   have hσ : WeltAt m L (σ.lese Λ (.inr g :: neu.orte)) := hWa
-  have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * 2)) fp K (s + 1) (cn ++ ([ci 1 ((s + 2 : Nat) : Int) (L.ga g) 0,
+  have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * 2)) fp K (s + 1) (cn ++ ([ci 1 ((s + 2 : Nat) : Int) (L.ga g) 0,
       ci 22 ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int) s, ci 14 ((s + 3 : Nat) : Int) ((s + 3 : Nat) : Int) s,
       ci 19 ((s + 3 : Nat) : Int) (-(16 * ((cn.length + 5 : Nat) : Int))) 0] ++ cr))
       (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) :=
@@ -253,7 +253,7 @@ theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn
       pc + BitVec.ofNat 64 (16 * (exC s (L.ga g) cn).length) := by
     simp only [List.length_cons, List.length_nil]
     rw [pc_jump, pc_jump, hlen]; congr 2; omega
-  have hp3 : PreS m3 (pc + BitVec.ofNat 64 (16 * (exC s (L.ga g) cn).length)) fp K (s + 1) cr
+  have hp3 : PreS L m3 (pc + BitVec.ofNat 64 (16 * (exC s (L.ga g) cn).length)) fp K (s + 1) cr
       (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) := by
     rw [← e3]
     exact ⟨Nat.le_of_eq hfr, hq3.small, hq3.frame, hq3.code, hq3.far, envAt_cons hq3.env (by rw [hsd]; exact r3) he0,
@@ -267,8 +267,8 @@ theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
-      PreS m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr ρ' →
-      Umf L A C dv m' fp Ks K → Kopf f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr ρ' →
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
@@ -276,8 +276,8 @@ theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
           BitVec.ofInt 64 ex.2)
         (execBlock O passes R rest σ' ρ'))
-    (hp : PreS m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hu : Umf L A C dv m fp Ks K)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.2)
@@ -291,10 +291,10 @@ theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
 /-- The load of `awaits`: the global's word into the new variable's slot. -/
 theorem awaits_head {g : D.Glob} {cr : List II} (hl : lit32 (L.ga g) = true) (hs1 : frei Γ + 1 ≤ Ks)
     (hW : WIn L fp Ks K) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
+    (hp : PreS L m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
     (hWa : WeltAt m L σ) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m' ∧ AgreeW L fp (frei Γ) K m m' ∧
-      PreS m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr (Env.cons (σ.globs g) ρ) ∧ WeltAt m' L σ := by
+      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr (Env.cons (σ.globs g) ρ) ∧ WeltAt m' L σ := by
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, w, hw, hen⟩ := glob_ok (σ := σ) hl hpw (fun _ h => h) (by omega)
@@ -310,15 +310,15 @@ theorem awaits_ok [SichtOK O] {g : D.Glob} {pl : List D.Glob} {hpl : pl = D.nutz
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
-      PreS m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr ρ' →
-      Umf L A C dv m' fp Ks K → Kopf f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr ρ' →
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2)
         (execBlock O passes R rest σ' ρ'))
-    (hp : PreS m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr).length) +

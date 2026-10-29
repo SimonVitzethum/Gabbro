@@ -14,7 +14,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem axiomAntwortSonst_eq (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     axiomAntwortSonst O a σ ρ = ((O.wirkt a (σ.fragt (.inl a)) ρ).1,
@@ -29,13 +29,13 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
     (hJ : 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.length) < 2 ^ 31)
     {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (htt : tt ≤ Ks) (htk : frei Γ + 10 ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS m pc fp K (frei Γ)
+    (hp : PreS L m pc fp K (frei Γ)
       (ct ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int) ++ ck ++ cr ++ ce) ρ)
     (hWa : WeltAt m L σ) :
     (∃ v m2 w, axiomAntwortSonst O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, some (.inl v)) ∧
       Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ct.length + 6 * b.fehler.length + ck.length)), fp⟩ m2 ∧
-      AgreeW L fp (frei Γ) K m m2 ∧ m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w ∧ Enc τ (ergWert he v) w ∧
+      AgreeW L fp (frei Γ) K m m2 ∧ m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w ∧ Enc L τ (ergWert he v) w ∧
       WeltAt m2 L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1) ∨
     (∃ r m2, axiomAntwortSonst O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, some (.inr r)) ∧
@@ -60,12 +60,12 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
   have hFs := frameOK_sub hp.frame hks
   have hroom := hFs.room
   have hn1 := hp'.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
-  have hpF : PreS m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ + 1)
+  have hpF : PreS L m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ + 1)
       (fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int)) ρ :=
     mkPreS (by omega) (by omega) (frameOK_sub hn1.frame hks) hn1.left.code (codeFar_sub2 hn1.left.far hks) hn1.env
   have hfc := fehlC_ok b.fehler ((16 * (ck.length + cr.length) : Nat) : Int) m1 _ hpF hf (by omega) (by push_cast; omega)
     (by omega) hw1
-  have hdec := sonst_dec (z := O.zeiger) he hτ' hlo hn hf w
+  have hdec := sonst_dec (L := L) (z := O.zeiger) he hτ' hlo hn hf w
   rw [axiomAntwortSonst_eq, hroh]
   revert hfc hdec
   cases b.fehler.find? (fun x => x.1 == w.toInt) with
@@ -83,7 +83,7 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
       rw [agree_rd_low a2 hroom (by omega) (by omega)]; exact hw1
     have hnF := hn1.next ((Agree.widen a2 hks).mono (Nat.le_succ _)) (a := fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int))
       (Nat.le_refl _) (by omega)
-    have hpk : PreS m2 _ fp Ks (frei Γ + 1) ck ρ :=
+    have hpk : PreS L m2 _ fp Ks (frei Γ + 1) ck ρ :=
       mkPreS (by omega) (by omega) (frameOK_sub hnF.frame hks) hnF.left.code (codeFar_sub2 hnF.left.far hks) hnF.env
     obtain ⟨hin, hout⟩ := chkC_ok hck hpk htk hw2
     have s12 := s1.trans s2

@@ -13,16 +13,16 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- What the code from `t` does when G returns `v` in the world `σ'` from the body of `f`, without the world:
     `ensures` fails, the stop 102; else back to the caller with the result in slot 2, nothing below changed. -/
-def RetZ0 (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
+def RetZ0 (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
     (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
   if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
   then Stops t m 102
   else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
-    ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w
+    ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w
 
 /-- `RetZ0` and the world `σ'` in memory after the return (`WeltAt`). -/
 def RetZ (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
@@ -30,7 +30,7 @@ def RetZ (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D
   if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
   then Stops t m 102
   else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-    (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
+    (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w) ∧ WeltAt m' L σ'
 
 theorem RetZ.prefix {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W}
     {K : Nat} {rp cfp : Runner.W} {t0 t : T} {m0 m : Runner.Mem} {σ' : World D} {v : ErgVal D (D.erg f)}
@@ -45,16 +45,16 @@ theorem RetZ.prefix {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0
     exact ⟨m', h.trans s, ha.trans a, hw, hw'⟩
 
 /-- The callee's header and parameters, below `lo`. -/
-structure Kopf (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
+structure Kopf (L : Lay D) (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
     (ρ0 : Env D (D.params f)) : Prop where
   r0 : m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp
   r1 : m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp
-  env : EnvAt m fp ρ0
+  env : EnvAt L m fp ρ0
   big : FB + (D.params f).length ≤ K
 
 theorem Kopf.agree {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W}
-    {ρ0 : Env D (D.params f)} (h : Kopf f m fp K rp cfp ρ0) (ha : Agree fp lo K m m') (hF : FrameOK m fp K)
-    (hl : FB + (D.params f).length ≤ lo) : Kopf f m' fp K rp cfp ρ0 := by
+    {ρ0 : Env D (D.params f)} (h : Kopf L f m fp K rp cfp ρ0) (ha : Agree fp lo K m m') (hF : FrameOK m fp K)
+    (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 := by
   have hb := h.big
   have hFB3 : FB = 3 := rfl
   have ha' := ha.mono hl
@@ -75,8 +75,8 @@ theorem codeAt_agreeWIn {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo
   codeAt_agreeW ha hW.top hW.lay.2.2 hW.ord hc hf
 
 theorem envAt_agreeWIn {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K d : Nat} {Γ : Ctx} {ρ : Env D Γ}
-    (hW : WIn L fp Ks K) (h : EnvAt m fp ρ) (ha : AgreeW L fp d K m m') (hd : frei Γ ≤ d) (hK : d ≤ K) :
-    EnvAt m' fp ρ :=
+    (hW : WIn L fp Ks K) (h : EnvAt L m fp ρ) (ha : AgreeW L fp d K m m') (hd : frei Γ ≤ d) (hK : d ≤ K) :
+    EnvAt L m' fp ρ :=
   envAt_agreeW h ha hW.top (by have := hW.room; omega) hd hK
 
 theorem keeps_of_agreeW {L : Lay D} {fp : Runner.W} {pr : List Nat} {Ks K d : Nat} {m m' : Runner.Mem}
@@ -93,8 +93,8 @@ theorem Umf.agreeW {L : Lay D} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : R
     exact h.depth, h.big, h.sync.agreeW ha h.hiK, h.hiK⟩
 
 theorem Kopf.agreeW {L : Lay D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo : Nat} {rp cfp : Runner.W}
-    {ρ0 : Env D (D.params f)} (hW : WIn L fp Ks K) (h : Kopf f m fp K rp cfp ρ0) (ha : AgreeW L fp lo K m m')
-    (hl : FB + (D.params f).length ≤ lo) : Kopf f m' fp K rp cfp ρ0 := by
+    {ρ0 : Env D (D.params f)} (hW : WIn L fp Ks K) (h : Kopf L f m fp K rp cfp ρ0) (ha : AgreeW L fp lo K m m')
+    (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 := by
   have hb := h.big
   have hFB3 : FB = 3 := rfl
   have ha' := ha.mono hl
@@ -104,15 +104,15 @@ theorem Kopf.agreeW {L : Lay D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {
 
 /-- `Pre.next` after a statement that changed the slots from `lo` on and the world. -/
 theorem Pre.nextW {L : Lay D} {m m' : Runner.Mem} {pc fp : Runner.W} {Ks K d d' lo : Nat} {a b : List II}
-    {Γ : Ctx} {ρ : Env D Γ} (hW : WIn L fp Ks K) (h : PreS m pc fp K d (a ++ b) ρ) (ha : AgreeW L fp lo K m m')
-    (hlo : frei Γ ≤ lo) (hd : d ≤ d') (hK : lo ≤ K) : PreS m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d' b ρ :=
+    {Γ : Ctx} {ρ : Env D Γ} (hW : WIn L fp Ks K) (h : PreS L m pc fp K d (a ++ b) ρ) (ha : AgreeW L fp lo K m m')
+    (hlo : frei Γ ≤ lo) (hd : d ≤ d') (hK : lo ≤ K) : PreS L m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d' b ρ :=
   have hf := codeFar_right (n := a.length) (k := b.length) (by simpa using h.far)
   ⟨Nat.le_trans h.ctx hd, h.small, frameOK_agreeW h.frame ha, codeAt_agreeWIn hW ha (codeAt_right h.code) hf, hf,
    envAt_agreeWIn hW h.env ha hlo hK, trivial, wstab_true _ _⟩
 
 theorem envAt_ergEnv {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} :
-    {e : Option Ty} → {v : ErgVal D e} → {w : Runner.W} → EnvAt m fp ρ →
-    m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w → EncErg e v w → EnvAt m fp (ergEnv e v ρ)
+    {e : Option Ty} → {v : ErgVal D e} → {w : Runner.W} → EnvAt L m fp ρ →
+    m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w → EncErg L e v w → EnvAt L m fp (ergEnv e v ρ)
   | none, _, _, h, _, _ => h
   | some _, _, _, h, hw, he => envAt_cons h hw he
 
@@ -129,7 +129,7 @@ theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem 
     (hWL : ∀ m, W m → WeltAt m L σ) {Γ : Ctx} :
     {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) → (c : List II) → (top : Nat) →
     lowErg L x d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
-    Pre m pc fp K d c ρ W → Ok m pc fp K d c (EncErg e (evalErg σ₀ x σ ρ))
+    Pre L m pc fp K d c ρ W → Ok m pc fp K d c (EncErg L e (evalErg σ₀ x σ ρ))
   | _, .empty, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -152,9 +152,9 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
     (he : lowErg L e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ K)
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
-    (hp : PreS m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
-    (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) (hl : LayIn L) (hwl : fp.toNat + 8 * K ≤ L.lo) :
-    RetZ0 P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
+    (hp : PreS L m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) (hl : LayIn L) (hwl : fp.toNat + 8 * K ≤ L.lo) :
+    RetZ0 L P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
     have hFB3 : FB = 3 := rfl
     have htop := lowErg_top e _ _ _ he
     have hsm := hp.small
@@ -166,7 +166,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
       (fun _ h => h) e _ ce te he (by omega) m pc ρ hpw
     have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1.mono (Nat.zero_le _))
     have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
-    have hq : PreS m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ)
+    have hq : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ)
         ([ci 2 lo (frei Γ) 0] ++ (cens ++ ([ci 19 ((lo + 1 : Nat) : Int) 48 0] ++
           ([ci 2 2 lo 0] ++ ([ci 21 0 0 0] ++ stopC 102 (lo + 1)))))) ρ := by
       simpa [retC, List.append_assoc] using hp1
@@ -180,7 +180,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
     have hk2 := hk.agree ((a1.mono hlo).trans a2) hp.frame (by omega)
     have hWa2 : WeltAt m2 L σ := weltAt_stab hl hwl m1 m2 hWa1 (a2.mono (Nat.zero_le _))
     -- `ensures` over the result and the parameters, into slot `lo + 1`
-    have hpe : PreS m2 _ fp K (lo + 1) cens (ergEnv (D.erg f) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ0) :=
+    have hpe : PreS L m2 _ fp K (lo + 1) cens (ergEnv (D.erg f) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ0) :=
       ⟨Nat.le_trans (frei_ergCtx _ _) (by simp only [frei]; omega), hsm, hF2, codeAt_left hc2,
        codeFar_left (by rw [← List.length_append]; exact hf2),
        envAt_ergEnv hk2.env (by
@@ -249,16 +249,16 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp c
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
     (he : lowErg L e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ Ks)
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
-    (hp : PreS m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
-    (hk : Kopf f m fp K rp cfp ρ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     RetZ L P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte)
       (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
   have hks := hW.ks
   have hts := lowErg_top e _ _ _ he
-  have hpS : PreS m pc fp Ks (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ :=
+  have hpS : PreS L m pc fp Ks (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ :=
     ⟨hp.ctx, by have := hp.small; omega, frameOK_sub hp.frame hks, hp.code, codeFar_sub2 hp.far hks, hp.env,
      trivial, wstab_true _ _⟩
-  have hkS : Kopf f m fp Ks rp cfp ρ0 := ⟨hk.r0, hk.r1, hk.env, by simp only [retTop] at hK; omega⟩
+  have hkS : Kopf L f m fp Ks rp cfp ρ0 := ⟨hk.r0, hk.r1, hk.env, by simp only [retTop] at hK; omega⟩
   have h0 := ret_ok0 (σ0 := σ0) hlo0 hens e he hK m pc σ ρ hpS hlo hkS hWa hW.lay hW.lo
   simp only [RetZ0] at h0
   simp only [RetZ]

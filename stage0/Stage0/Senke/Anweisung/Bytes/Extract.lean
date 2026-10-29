@@ -26,18 +26,18 @@ theorem byte_word {z : Int} (hz0 : 0 ≤ z) (hz : z < 2 ^ 64) (j : Nat) (hj : j 
   | 7, _ => simp only [dropBytes]; omega
 
 
-variable [Kern] {D : Deklaration}
+variable [Kern] {D : Deklaration} {L : Lay D}
 
 theorem bytePartC_ok {Γ : Ctx} {a b H : Int} {z : Zahl 0 H} {k : Zahl a b} {ρ : Env D Γ}
     {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {W : Runner.Mem → Prop}
     (hz : z.n < 2 ^ 64) (hj : j < 8) (hK : frei Γ + 4 ≤ K)
-    (hp : Pre m pc fp K (frei Γ + 2) (bytePartC (frei Γ) (frei Γ + 2) j)
+    (hp : Pre L m pc fp K (frei Γ + 2) (bytePartC (frei Γ) (frei Γ + 2) j)
       (Env.cons (τ := .int a b) k (Env.cons (τ := .int 0 H) z ρ)) W) :
     Ok m pc fp K (frei Γ + 2) (bytePartC (frei Γ) (frei Γ + 2) j)
       (fun w => w = BitVec.ofInt 64 (dropBytes j z.n % 256)) := by
   have hs : (BitVec.ofInt 64 ((8 * j : Nat) : Int)).toNat % 64 = 8 * j := by
     rw [BitVec.ofInt_natCast, BitVec.toNat_ofNat]; omega
-  have hp' : Pre m pc fp K (frei Γ + 2)
+  have hp' : Pre L m pc fp K (frei Γ + 2)
       (([ci 2 (frei Γ + 2) (frei Γ) 0] ++ [ci 1 (frei Γ + 3) (8 * j) 0] ++
         [ci 12 (frei Γ + 2) (frei Γ + 2) (frei Γ + 3)]) ++
         [ci 1 (frei Γ + 3) 255 0] ++ [ci 8 (frei Γ + 2) (frei Γ + 2) (frei Γ + 3)])

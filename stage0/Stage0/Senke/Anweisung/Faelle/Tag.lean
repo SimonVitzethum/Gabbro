@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Anweisung/Tag.lean
+  File:      stage0/Stage0/Senke/Anweisung/Faelle/Tag.lean
   Subject:   Tagged dispatch, payload binding and the simulation of G's execArms.
 -/
 import Stage0.Senke.Anweisung.Verzweigung
@@ -11,7 +11,7 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 set_option maxHeartbeats 1000000
 set_option maxRecDepth 2048
-variable [Kern] {D : Deklaration}
+variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- The empty computation keeps the input word. -/
 theorem input_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {w : Runner.W}
@@ -21,10 +21,10 @@ theorem input_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {w : Runner.W}
 theorem tagTest_ok {m : Runner.Mem} {pc fp : Runner.W} {K s k : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {w : Runner.W} {i : Nat} (hi : i < 256) (hk : k < 256)
     (htag : w &&& 255 = BitVec.ofNat 64 i)
-    (hK : s + 3 ≤ K) (hp : PreS m pc fp K (s + 1) (tagTestC s k) ρ)
+    (hK : s + 3 ≤ K) (hp : PreS L m pc fp K (s + 1) (tagTestC s k) ρ)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     Ok m pc fp K (s + 1) (tagTestC s k) (fun w => w = if i == k then 1 else 0) := by
-  have hq : PreS m pc fp K (s + 1)
+  have hq : PreS L m pc fp K (s + 1)
     (([ci 2 (s + 1) s 0] ++ [ci 1 (s + 2) 255 0] ++ [ci 8 (s + 1) (s + 1) (s + 2)]) ++
       [ci 1 (s + 2) k 0] ++ [ci 14 (s + 1) (s + 1) (s + 2)]) ρ := hp
   refine bin_ok2 (Pa := fun w => w = BitVec.ofNat 64 i)
@@ -50,14 +50,14 @@ theorem tagTest_ok {m : Runner.Mem} {pc fp : Runner.W} {K s k : Nat} {Γ : Ctx} 
 
 theorem tagPayload_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {lo hi : Int} {v : Zahl lo hi} {w : Runner.W} (hl : lit32 lo = true) (hK : s + 2 ≤ K)
-    (hp : Pre m pc fp K s
+    (hp : Pre L m pc fp K s
       [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)] ρ W)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w)
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (some (lo, hi)) v)) :
     Ok m pc fp K s
       [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
-      (Enc (D := D) (.int lo hi) v) := by
-  have hq : Pre m pc fp K s (([] ++ [ci 1 (s + 1) 8 0] ++ [ci 12 s s (s + 1)]) ++
+      (Enc (D := D) L (.int lo hi) v) := by
+  have hq : Pre L m pc fp K s (([] ++ [ci 1 (s + 1) 8 0] ++ [ci 12 s s (s + 1)]) ++
       [ci 1 (s + 1) lo 0] ++ [ci 3 s s (s + 1)]) ρ W := hp
   refine bin_ok2 (Pa := fun x => x = w >>> 8)
     (bin_ok2 (input_ok hw) (fun m pc hp => const_ok hp (by decide) (by omega))
@@ -105,8 +105,8 @@ def BlockRuns (O : Orakel D) (passes : Nat)
     (lo Ks K : Nat) (ens : List II × Nat) (pr : List Nat)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D (vertragVon D f) l Γ Λ Λ') : Prop :=
   ∀ ex cb tb, lowB A L lo ens pr ex b = some (cb, tb) → tb + cap ≤ Ks → 16 * cb.length < 2 ^ 31 →
-  ∀ m pc σ ρ, PreS m pc fp K (frei Γ) cb ρ → lo ≤ frei Γ →
-    Umf L A C dv m fp Ks K → Kopf f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+  ∀ m pc σ ρ, PreS L m pc fp K (frei Γ) cb ρ → lo ≤ frei Γ →
+    Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cb.length))
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ)
@@ -122,8 +122,8 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} {w : Runner.W}
     (v : Nutzlast c) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff c v))
-    (hp : PreS m pc fp K (frei Γ) (cp ++ cb) ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) (cp ++ cb) ρ) (hu : Umf L A C dv m fp Ks K)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length))
       (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length) + BitVec.ofInt 64 ex.2)
@@ -146,7 +146,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
       have a1 := Agree.widen a1s hks
       have hq := hp.next a1 (Nat.le_refl _) (by omega)
       have hfr : frei (ArmCtx Γ (some (a, z))) = frei Γ + 1 := by simp [frei, ArmCtx, Nat.add_assoc]
-      have hp1 : PreS m1 _ fp K (frei (ArmCtx Γ (some (a, z)))) cb (armEnv v ρ) :=
+      have hp1 : PreS L m1 _ fp K (frei (ArmCtx Γ (some (a, z)))) cb (armEnv v ρ) :=
         ⟨by simp [frei, ArmCtx], hq.small, hq.frame, hq.code, hq.far, envAt_cons hq.env r1 e1,
          trivial, wstab_true _ _⟩
       have ih := hb ex cb tb hcb htb (by omega) m1 _ σ _ hp1
@@ -170,8 +170,8 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
     (htag : w &&& 255 = BitVec.ofNat 64 (k + v.1.val))
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (cs.get v.1) v.2))
-    (hp : PreS m pc fp K (frei Γ) cd ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) cd ρ) (hu : Umf L A C dv m fp Ks K)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.2)
@@ -187,7 +187,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [Prod.mk.injEq] at he
       obtain ⟨rfl, rfl⟩ := he
       simp only [List.length_append, tagTestC, List.length_cons, List.length_nil] at hs
-      have hp' : PreS m pc fp K (frei Γ)
+      have hp' : PreS L m pc fp K (frei Γ)
           (tagTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * ((cp ++ cb).length + 2)) 0] ++
             (cp ++ cb) ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr) ρ := by
         simpa only [List.length_append, List.append_assoc, Int.natCast_add] using hp
@@ -238,8 +238,8 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
     (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS m pc fp K (frei Γ) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.2)

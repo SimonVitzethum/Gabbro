@@ -21,7 +21,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- The kernel changes nothing but the world's bytes. -/
 def KernW (L : Lay D) (m m' : Runner.Mem) : Prop :=
@@ -48,9 +48,9 @@ theorem reqArg_mk (nr : Runner.W) (f : Nat → Runner.W) :
   | _ + 6, h => absurd h (by omega)
 
 /-- The words `f 0, f 1, …` are the arguments `ρ`. -/
-def ArgsW (f : Nat → Runner.W) : {τs : List Ty} → Env D τs → Prop
+def ArgsW (L : Lay D) (f : Nat → Runner.W) : {τs : List Ty} → Env D τs → Prop
   | [], .nil => True
-  | τ :: _, .cons v ρ => Enc τ v (f 0) ∧ ArgsW (fun j => f (j + 1)) ρ
+  | τ :: _, .cons v ρ => Enc L τ v (f 0) ∧ ArgsW L (fun j => f (j + 1)) ρ
 
 /-- The kernel's word as the oracle's raw answer, for a gate with `n` reasons: the signed word; with reasons, a
     listed `-errno` is its case `i + 1`, another error the word of no answer, a value `v` is `v * (n + 1)`. -/
@@ -65,8 +65,8 @@ def rohW (b : TorB) (n : Nat) (w : Runner.W) : Int :=
 /-- The world `σ` in memory, apart from column `f` of table `t`. -/
 def WeltOhne (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld t) : Prop :=
   (∀ t' f' (k : Nat), (k : Int) < D.count t' → (∀ k' : Nat, (Zelle.elem t' f' k : Zelle D) ≠ .elem t f k') →
-    ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t' f' k)) = some w ∧ Enc (D.typ t' f') (σ.slots t' k f') w) ∧
-  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc (D.gtyp g) (σ.globs g) w)
+    ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t' f' k)) = some w ∧ Enc L (D.typ t' f') (σ.slots t' k f') w) ∧
+  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc L (D.gtyp g) (σ.globs g) w)
 
 /-- **The named assumption at the gates**: the kernel answers a bound gate's request as the oracle says. -/
 class TorOK (L : Lay D) (O : Orakel D) : Prop where
@@ -74,7 +74,7 @@ class TorOK (L : Lay D) (O : Orakel D) : Prop where
   ans : ∀ (a : D.Ax) (b : TorB), L.tor a = some b → torGut b (D.aparams a).length = true →
     ptrParam (D.aparams a) = none →
     ∀ (σ : World D) (ρ : Env D (D.aparams a)) (q : Runner.Req) (m : Runner.Mem),
-    q.nr = BitVec.ofNat 64 b.nr → ArgsW (reqArg q) ρ → (∀ i, (D.aparams a).length ≤ i → i < 6 → reqArg q i = 0) →
+    q.nr = BitVec.ofNat 64 b.nr → ArgsW L (reqArg q) ρ → (∀ i, (D.aparams a).length ≤ i → i < 6 → reqArg q i = 0) →
     WeltAt m L σ →
     ∃ w x m', Kern.ans q m (some (w, x)) m' ∧ KernW L m m' ∧ WeltAt m' L (O.wirkt a σ ρ).1 ∧
       (O.wirkt a σ ρ).2 = rohW b (D.agruende a) w
@@ -85,7 +85,7 @@ class TorOK (L : Lay D) (O : Orakel D) : Prop where
     ∀ (j nt : Nat) (rw : Bool) (t : D.Tab) (f : D.Feld t), ptrParam (D.aparams a) = some (j, nt, rw) →
     D.tabNr nt = some t → L.byte t = some f → D.typ t f = .int 0 255 →
     ∀ (σ : World D) (ρ : Env D (D.aparams a)) (q : Runner.Req) (m : Runner.Mem),
-    q.nr = BitVec.ofNat 64 b.nr → ArgsW (reqArg q) ρ → (∀ i, (D.aparams a).length ≤ i → i < 6 → reqArg q i = 0) →
+    q.nr = BitVec.ofNat 64 b.nr → ArgsW L (reqArg q) ρ → (∀ i, (D.aparams a).length ≤ i → i < 6 → reqArg q i = 0) →
     WeltAt m L σ →
     (∀ i, i < pufW (D.count t).toNat → m.rd64 (reqArg q j + BitVec.ofNat 64 (8 * i)) =
       some (packV (fun k => wAt m (L.elem t f k)) (D.count t).toNat i 8)) →
@@ -93,7 +93,7 @@ class TorOK (L : Lay D) (O : Orakel D) : Prop where
       (∀ y : Runner.W, ¬ ((reqArg q j).toNat ≤ y.toNat ∧
         y.toNat < (reqArg q j).toNat + 8 * pufW (D.count t).toNat) → m'.b y = m.b y) ∧
       WeltOhne m L (O.wirkt a σ ρ).1 t f ∧
-      (∀ k, k < (D.count t).toNat → Enc (D.typ t f) ((O.wirkt a σ ρ).1.slots t k f)
+      (∀ k, k < (D.count t).toNat → Enc L (D.typ t f) ((O.wirkt a σ ρ).1.slots t k f)
         (if rw then byteOf m' (reqArg q j) k else wAt m (L.elem t f k))) ∧
       (O.wirkt a σ ρ).2 = rohW b (D.agruende a) w
 
@@ -109,7 +109,7 @@ theorem packV_congr {ws ws' : Nat → Runner.W} {c i : Nat} (h : ∀ k, k < c �
 theorem wAt_of {m : Runner.Mem} {a : Nat} {w : Runner.W} (h : m.rd64 (BitVec.ofNat 64 a) = some w) : wAt m a = w := by
   simp only [wAt, h, Option.getD_some]
 
-theorem enc_byte {τ : Ty} (hτ : τ = .int 0 255) {v : Wert D τ} {w : Runner.W} (h : Enc τ v w) : w.toNat < 256 := by
+theorem enc_byte {τ : Ty} (hτ : τ = .int 0 255) {v : Wert D τ} {w : Runner.W} (h : Enc L τ v w) : w.toNat < 256 := by
   subst hτ
   simp only [Enc] at h
   subst h
@@ -158,7 +158,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
   · rw [hO]; simp [rohW]
 
 theorem argsW_congr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs) →
-    (∀ j, j < τs.length → f j = g j) → ArgsW f ρ → ArgsW g ρ
+    (∀ j, j < τs.length → f j = g j) → ArgsW L f ρ → ArgsW L g ρ
   | [], .nil, _, _ => trivial
   | _ :: τs, .cons _ ρ, he, h => by
     simp only [ArgsW] at h ⊢
@@ -247,9 +247,9 @@ theorem lowR_ok {Λ : List (Res D)} {L : Lay D} {fp : Runner.W} {K : Nat} {W : R
     (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (d : Nat) → (c : List II) → (top : Nat) →
     lowR L args d = some (c, top) → top ≤ K → d + τs.length ≤ K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre m pc fp K d c ρ W →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp d K m m' ∧
-      ArgsW (fun j => rdW m' fp (d + j)) (evalArgs σ₀ args σ ρ)
+      ArgsW L (fun j => rdW m' fp (d + j)) (evalArgs σ₀ args σ ρ)
   | _, _, .nil, d, c, top, h, _, _, m, pc, ρ, _ => by
     simp only [lowR, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h

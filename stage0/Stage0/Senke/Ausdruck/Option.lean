@@ -8,9 +8,9 @@ theorem istSome_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
     (e : Expr D Γ Λ (.opt n)) {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat}
     {W : Runner.Mem → Prop} {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
     (ih : ∀ ce te, lowE L e d = some (ce, te) → te ≤ K → ∀ m pc,
-      Pre m pc fp K d ce ρ W → Ok m pc fp K d ce (Enc (.opt n) (eval σ₀ e σ ρ)))
+      Pre L m pc fp K d ce ρ W → Ok m pc fp K d ce (Enc L (.opt n) (eval σ₀ e σ ρ)))
     (h : lowE L (.istSome e) d = some (c, top)) (hK : top ≤ K)
-    (hp : Pre m pc fp K d c ρ W) : Ok m pc fp K d c (Enc .bool (eval σ₀ (.istSome e) σ ρ)) := by
+    (hp : Pre L m pc fp K d c ρ W) : Ok m pc fp K d c (Enc L .bool (eval σ₀ (.istSome e) σ ρ)) := by
     simp only [lowE_eqs] at h
     split at h
     · next hn =>

@@ -9,7 +9,7 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem get_set_same : {Γ : Ctx} → {τ : Ty} → (ρ : Env D Γ) → (x : Var Γ τ) → (v : Wert D τ) →
     (ρ.set x v).get x = v
@@ -39,10 +39,10 @@ theorem vslot_ne {Γ : Ctx} {τ τ' : Ty} {x : Var Γ τ} {y : Var Γ τ'} (h : 
   unfold vslot; omega
 
 theorem envAt_set {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {x : Var Γ τ}
-    {v : Wert D τ} {w : Runner.W} (h : EnvAt m fp ρ) (hx : m'.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w)
-    (he : Enc τ v w) (hothers : ∀ (τ' : Ty) (y : Var Γ τ'), Var.idx y ≠ Var.idx x →
+    {v : Wert D τ} {w : Runner.W} (h : EnvAt L m fp ρ) (hx : m'.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w)
+    (he : Enc L τ v w) (hothers : ∀ (τ' : Ty) (y : Var Γ τ'), Var.idx y ≠ Var.idx x →
       m'.rd64 (slot fp (BitVec.ofNat 64 (vslot y))) = m.rd64 (slot fp (BitVec.ofNat 64 (vslot y)))) :
-    EnvAt m' fp (ρ.set x v) := by
+    EnvAt L m' fp (ρ.set x v) := by
   intro τ' y
   by_cases hy : Var.idx y = Var.idx x
   · obtain ⟨rfl, hh⟩ := idx_eq x y hy

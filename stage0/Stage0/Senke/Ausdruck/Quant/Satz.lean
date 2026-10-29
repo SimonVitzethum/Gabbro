@@ -5,7 +5,7 @@ import Stage0.Senke.Ausdruck.Quant.Indices
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration}
+variable [Kern] {D : Deklaration} {L : Lay D}
 
 def quantVal (all : Bool) {α : Type} (xs : List α) (p : α → Bool) : Bool :=
   if all then xs.all p else xs.any p
@@ -13,24 +13,24 @@ def quantVal (all : Bool) {α : Type} (xs : List α) (p : α → Bool) : Bool :=
 theorem quantC_ok {fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (all : Bool) (count : Int) (cb : List II) (p : Zahl 0 (count - 1) → Bool)
     (hc : count.toNat < 2 ^ 31) (hd : d + 3 < K)
-    (ih : ∀ k m pc, Pre m pc fp K (d + 3) cb (Env.cons (show Wert D (.index count) from k) ρ) W →
+    (ih : ∀ k m pc, Pre L m pc fp K (d + 3) cb (Env.cons (show Wert D (.index count) from k) ρ) W →
       Ok m pc fp K (d + 3) cb (fun w => w = if p k then 1 else 0)) :
     ∀ n j, j + n ≤ count.toNat → ∀ m pc,
-      Pre m pc fp K d (quantC all (frei Γ) d cb j n) ρ W →
+      Pre L m pc fp K d (quantC all (frei Γ) d cb j n) ρ W →
       Ok m pc fp K d (quantC all (frei Γ) d cb j n) (fun w => w = if quantVal all (idxAb count j n) p then 1 else 0)
   | 0, j, _, m, pc, hp => by
     simp only [quantC, idxAb_zero, quantVal, List.all_nil, List.any_nil] at hp ⊢
     cases all <;> exact const_ok hp (by decide) (by omega)
   | n + 1, j, hj, m, pc, hp => by
     obtain ⟨x, hx, hxs⟩ := idxAb_succ count j n (by omega)
-    have hp' : Pre m pc fp K d
+    have hp' : Pre L m pc fp K d
         (quantC all (frei Γ) d cb (j + 1) n ++ quantBindC (frei Γ) (d + 1) j cb ++
           [ci (if all then 8 else 9) d d (d + 1)]) ρ W := hp
     have hctx := hp.ctx
-    have hbind : ∀ m pc, Pre m pc fp K (d + 1) (quantBindC (frei Γ) (d + 1) j cb) ρ W →
+    have hbind : ∀ m pc, Pre L m pc fp K (d + 1) (quantBindC (frei Γ) (d + 1) j cb) ρ W →
         Ok m pc fp K (d + 1) (quantBindC (frei Γ) (d + 1) j cb) (fun w => w = if p x then 1 else 0) := by
       intro m pc hp
-      have hp'' : Pre m pc fp K (d + 1) (quantBindC (frei Γ) (d + 1) x.n cb) ρ W := by rw [hx]; exact hp
+      have hp'' : Pre L m pc fp K (d + 1) (quantBindC (frei Γ) (d + 1) x.n cb) ρ W := by rw [hx]; exact hp
       have hh := quantBind_ok (n := count) (k := x) (by rw [hx]; exact lit32_nat (by omega))
         (by omega) (by omega) hp'' (by simpa [Nat.add_assoc] using ih x)
       rw [← hx]
@@ -51,9 +51,9 @@ theorem quantL_ok {fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Ru
     (all : Bool) (count : Int) (body : Option (List II × Nat)) (p : Zahl 0 (count - 1) → Bool)
     (h : quantL all (frei Γ) d count body = some (c, top)) (hK : top ≤ K)
     (ih : ∀ cb tb, body = some (cb, tb) → tb ≤ K → ∀ k m pc,
-      Pre m pc fp K (d + 3) cb (Env.cons (show Wert D (.index count) from k) ρ) W →
+      Pre L m pc fp K (d + 3) cb (Env.cons (show Wert D (.index count) from k) ρ) W →
       Ok m pc fp K (d + 3) cb (fun w => w = if p k then 1 else 0))
-    (hp : Pre m pc fp K d c ρ W) :
+    (hp : Pre L m pc fp K d c ρ W) :
     Ok m pc fp K d c (fun w => w = if quantVal all (alleIndizes count) p then 1 else 0) := by
   simp only [quantL] at h
   split at h

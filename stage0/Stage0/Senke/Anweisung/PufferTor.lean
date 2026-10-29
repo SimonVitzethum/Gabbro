@@ -15,7 +15,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- A slot at or above `K` keeps its word under a change of the slots `lo .. K-1`. -/
 theorem agree_rd_high {m m' : Runner.Mem} {fp : Runner.W} {lo K i R : Nat} (ha : Agree fp lo K m m')
@@ -48,7 +48,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
     (hP : P = packI L t f c B (B + Wn) (B + Wn + 1) Wn) (hU : U = if rw then unpackK L t f B (B + Wn + 1) c else [])
     {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (hKs : B + Wn + 3 ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS m pc fp K s (((((ca ++ P) ++ [ci 17 ((s + 1 + j : Nat) : Int) (B : Int) 0]) ++
+    (hp : PreS L m pc fp K s (((((ca ++ P) ++ [ci 17 ((s + 1 + j : Nat) : Int) (B : Int) 0]) ++
       zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length)) ++ [ci 1 s b.nr 0, ci 23 s s 0]) ++ U) ρ)
     (hWa : WeltAt m L σ) :
     ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2 +
@@ -76,7 +76,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
   simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil, zeroC_len] at hfar
   -- the arguments
   have hpU := hp.up (d' := s + 1) (by omega)
-  have hq : PreS m pc fp K (s + 1) ca ρ := hpU.left.left.left.left.left
+  have hq : PreS L m pc fp K (s + 1) ca ρ := hpU.left.left.left.left.left
   have hpw := PreS.welt hq hks hWa hl (by omega)
   obtain ⟨m1, s1, a1, hA1⟩ := lowR_ok σ σ (fun _ h => h) args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
   have hW1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1.mono (Nat.zero_le _))
@@ -96,7 +96,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
   -- the packing
   have a1K := Agree.widen a1 hks
   have hnP := (hpU.left.left.left.left).next' a1K (by have := hp.ctx; omega) (by omega) (by omega)
-  have hpP : Pre m1 (pc + BitVec.ofNat 64 (16 * ca.length)) fp Ks (B + Wn + 1) P ρ Wc :=
+  have hpP : Pre L m1 (pc + BitVec.ofNat 64 (16 * ca.length)) fp Ks (B + Wn + 1) P ρ Wc :=
     ⟨by have := hp.ctx; omega, by omega, frameOK_sub hnP.frame hks, hnP.code, codeFar_sub2 hnP.far hks, hnP.env,
      hWc1, hWcs⟩
   rw [hP] at hpP
@@ -148,7 +148,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
     show rdW m5 fp (s + 1 + j) = _
     rw [h35 j hjn]
     exact rdW_of (rd64_write_same (by rw [a12.rd]; exact hFs.rd _ (by omega)))
-  have hArgs : ArgsW (reqArg q) (evalArgs σ args σ ρ) := by
+  have hArgs : ArgsW L (reqArg q) (evalArgs σ args σ ρ) := by
     refine argsW_ptr _ (fun i hi => ?_) hA1
     by_cases hij : i = j
     · subst hij; exact .inr ⟨nt, rw, hjt⟩
@@ -242,7 +242,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
         U.length fp K := by
       have := hn7.far; rwa [show ca.length + P.length + 1 + (6 - (D.aparams a).length) + (1 + 1) =
         ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2 by omega] at this
-    have hpre7 : PreS m7 (pc + BitVec.ofNat 64 (16 * (ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2)))
+    have hpre7 : PreS L m7 (pc + BitVec.ofNat 64 (16 * (ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2)))
         fp Ks (B + Wn + 1) U ρ :=
       ⟨by have := hp.ctx; omega, by omega, frameOK_sub hF7 hks,
        by have := hn7.code; rwa [show ca.length + P.length + 1 + (6 - (D.aparams a).length) + (1 + 1) =

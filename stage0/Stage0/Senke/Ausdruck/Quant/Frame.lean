@@ -3,7 +3,7 @@ import Stage0.Senke.Ausdruck.Lesen
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- Different slots of a frame are apart. -/
 theorem slot_far {fp : Runner.W} {K i j : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (hi : i < K) (hj : j < K)
@@ -22,8 +22,8 @@ theorem vslot_there {Γ : Ctx} {τ σ : Ty} (y : Var Γ τ) : vslot (Var.there y
   simp [vslot, Var.idx]; omega
 
 theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {v : Wert D τ}
-    {w : Runner.W} (h : EnvAt m fp ρ) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
-    (he : Enc τ v w) : EnvAt m fp (Env.cons v ρ : Env D (τ :: Γ)) := by
+    {w : Runner.W} (h : EnvAt L m fp ρ) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
+    (he : Enc L τ v w) : EnvAt L m fp (Env.cons v ρ : Env D (τ :: Γ)) := by
   intro τ' y
   cases y with
   | here => exact ⟨w, by rw [vslot_here]; exact hw, he⟩
@@ -31,8 +31,8 @@ theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {
     obtain ⟨w', hw', he'⟩ := h τ' y
     exact ⟨w', by rw [vslot_there]; exact hw', he'⟩
 
-theorem envAt_tail {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {τ : Ty} {ρ : Env D (τ :: Γ)} (h : EnvAt m fp ρ) :
-    EnvAt m fp ρ.tail := by
+theorem envAt_tail {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {τ : Ty} {ρ : Env D (τ :: Γ)} (h : EnvAt L m fp ρ) :
+    EnvAt L m fp ρ.tail := by
   intro τ' y
   obtain ⟨w, hw, he⟩ := h τ' (.there y)
   rw [vslot_there] at hw

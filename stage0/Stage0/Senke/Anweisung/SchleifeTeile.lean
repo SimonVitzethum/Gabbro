@@ -14,7 +14,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-! ## The indices -/
 
@@ -177,7 +177,7 @@ end
 /-- A statement's precondition from its parts. -/
 theorem mkPreS {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
     (hctx : frei Γ ≤ d) (hK : K < 2 ^ 31) (hF : FrameOK m fp K) (hc : CodeAt m pc c) (hf : CodeFar pc c.length fp K)
-    (he : EnvAt m fp ρ) : PreS m pc fp K d c ρ :=
+    (he : EnvAt L m fp ρ) : PreS L m pc fp K d c ρ :=
   ⟨hctx, hK, hF, hc, hf, he, trivial, wstab_true _ _⟩
 
 theorem slt_k {k : Nat} {n : Int} (hk : k < 2 ^ 31) (hn : lit32 n = true) :
@@ -191,13 +191,13 @@ theorem slt_k {k : Nat} {n : Int} (hk : k < 2 ^ 31) (hn : lit32 n = true) :
 theorem trav_head {L : Lay D} {fp pc : Runner.W} {K Ks : Nat} {Γ : Ctx} {Λ : List (Res D)} {inv : Expr D Γ Λ .bool}
     {ci' : List II × Nat} {cb : List II} {n : Int} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (hci : lowE L inv (frei Γ + 1) = some ci') (htop : ci'.2 ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS m pc fp K (frei Γ) (travCode (frei Γ) n ci'.1 cb) ρ) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) (travCode (frei Γ) n ci'.1 cb) ρ) (hWa : WeltAt m L σ) :
     ∃ m1 w, Star ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (1 + ci'.1.length)), fp⟩ m1 ∧
       Agree fp (frei Γ + 1) Ks m m1 ∧ m1.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 1))) = some w ∧
       w = (if wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = true then 1 else 0) ∧ WeltAt m1 L σ := by
   have hks := hW.ks
   have hlen := travCode_len (s := frei Γ) (n := n) (ci' := ci'.1) (cb := cb)
-  have hq : PreS m (pc + BitVec.ofNat 64 (16 * 1)) fp K (frei Γ + 1) ci'.1 ρ :=
+  have hq : PreS L m (pc + BitVec.ofNat 64 (16 * 1)) fp K (frei Γ + 1) ci'.1 ρ :=
     mkPreS (by omega) hp.small hp.frame (trav_inv hp.code) (codeFar_at hp.far (by omega)) hp.env
   have hpw := PreS.welt hq hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ inv.orte) (σ.lese Λ inv.orte) (fun _ h => h) inv _ ci'.1
@@ -209,7 +209,7 @@ theorem trav_head {L : Lay D} {fp pc : Runner.W} {K Ks : Nat} {Γ : Ctx} {Λ : L
 /-- `k < count` into slot `s + 1`. -/
 theorem trav_cmp_ok {L : Lay D} {fp pc : Runner.W} {K Ks k : Nat} {Γ : Ctx} {ci' cb : List II} {n : Int}
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ} (hn : lit32 n = true)
-    (hp : PreS m pc fp K (frei Γ) (travCode (frei Γ) n ci' cb) ρ) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
+    (hp : PreS L m pc fp K (frei Γ) (travCode (frei Γ) n ci' cb) ρ) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
     (hks : frei Γ + 9 ≤ Ks) (hk0 : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 k))
     (hk : k < 2 ^ 31) :
     ∃ m2, Star ⟨pc + BitVec.ofNat 64 (16 * (2 + ci'.length)), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (5 + ci'.length)), fp⟩ m2 ∧
@@ -218,7 +218,7 @@ theorem trav_cmp_ok {L : Lay D} {fp pc : Runner.W} {K Ks k : Nat} {Γ : Ctx} {ci
       WeltAt m2 L σ := by
   have hlen := travCode_len (s := frei Γ) (n := n) (ci' := ci') (cb := cb)
   have hksK := hW.ks
-  have hq : PreS m (pc + BitVec.ofNat 64 (16 * (2 + ci'.length))) fp K (frei Γ + 1)
+  have hq : PreS L m (pc + BitVec.ofNat 64 (16 * (2 + ci'.length))) fp K (frei Γ + 1)
       ([ci 2 ((frei Γ + 1 : Nat) : Int) (frei Γ) 0] ++ [ci 1 (((frei Γ + 1 : Nat) : Int) + 1) n 0,
         ci 13 ((frei Γ + 1 : Nat) : Int) ((frei Γ + 1 : Nat) : Int) (((frei Γ + 1 : Nat) : Int) + 1)]) ρ :=
     mkPreS (by omega) hp.small hp.frame (trav_cmp hp.code) (codeFar_at hp.far (by simp; omega)) hp.env

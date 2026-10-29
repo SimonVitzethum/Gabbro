@@ -13,7 +13,7 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- Every element and every global, one word each, inside `[lo, hi)`, below `2^31`. -/
 def LayIn (L : Lay D) : Prop :=
@@ -54,8 +54,8 @@ def WeltWr (m : Runner.Mem) (L : Lay D) : Prop :=
 
 def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) : Prop :=
   (∀ t f (k : Nat), (k : Int) < D.count t → ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
-    Enc (D.typ t f) (σ.slots t k f) w) ∧
-  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc (D.gtyp g) (σ.globs g) w) ∧
+    Enc L (D.typ t f) (σ.slots t k f) w) ∧
+  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc L (D.gtyp g) (σ.globs g) w) ∧
   WeltWr m L
 
 /-- A word of the world may be written. -/
@@ -186,8 +186,8 @@ theorem Agree.widen {m m' : Runner.Mem} {fp : Runner.W} {lo Ks K : Nat} (h : Agr
 
 /-- An expression of a statement runs in the frame below `Ks`, with the world above it. -/
 theorem PreS.welt {m : Runner.Mem} {pc fp : Runner.W} {K Ks d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {L : Lay D} {σ : World D} (hp : PreS m pc fp K d c ρ) (hs : Ks ≤ K) (hw : WeltAt m L σ) (hl : LayIn L)
-    (hwl : fp.toNat + 8 * Ks ≤ L.lo) : Pre m pc fp Ks d c ρ (fun m => WeltAt m L σ) :=
+    {L : Lay D} {σ : World D} (hp : PreS L m pc fp K d c ρ) (hs : Ks ≤ K) (hw : WeltAt m L σ) (hl : LayIn L)
+    (hwl : fp.toNat + 8 * Ks ≤ L.lo) : Pre L m pc fp Ks d c ρ (fun m => WeltAt m L σ) :=
   ⟨hp.ctx, by have := hp.small; omega, frameOK_sub hp.frame hs, hp.code, codeFar_sub2 hp.far hs, hp.env, hw, weltAt_stab hl hwl⟩
 
 end Gabbro.Stage0.Senke

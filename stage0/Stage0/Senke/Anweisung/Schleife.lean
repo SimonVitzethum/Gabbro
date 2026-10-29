@@ -18,7 +18,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-! ## The loop -/
 
@@ -31,7 +31,7 @@ variable {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D
 
 /-- The stop at the end of the loop's code, from the first `brz` of the head or of the leave part. -/
 theorem trav_stopped {m : Runner.Mem} {ρ : Env D Γ}
-    (hp : PreS m pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ) (hks : frei Γ + 9 ≤ K) :
+    (hp : PreS L m pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ) (hks : frei Γ + 9 ≤ K) :
     Stops ⟨pc + BitVec.ofNat 64 (16 * (11 + 2 * ci'.1.length + cb.1.length)), fp⟩ m 104 := by
   have hlen := travCode_len (s := frei Γ) (n := D.count t) (ci' := ci'.1) (cb := cb.1)
   exact stop_ok (trav_stop hp.code) (codeFar_at (k := 3) hp.far (by rw [hlen]; omega)) hp.frame (by omega) hp.small
@@ -41,15 +41,15 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
     (hlenc : 16 * (10 + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (D.params f).length)
     (htop : max ci'.2 (max cb.2 (frei Γ + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ)
-    (hbody : ∀ m' pc' σ' ρ', PreS m' pc' fp K (frei (.index (D.count t) :: Γ)) cb.1 ρ' → Umf L A C dv m' fp Ks K →
-      Kopf f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+    (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ)) cb.1 ρ' → Umf L A C dv m' fp Ks K →
+      Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K (frei Γ :: pr) ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cb.1.length))
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 48)
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ')) :
     ∀ (n k : Nat) (m' : Runner.Mem) (σ' : World D) (ρ' : Env D Γ), k + n = (D.count t).toNat →
-    PreS m' pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ' →
+    PreS L m' pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ' →
     m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 k) →
-    Umf L A C dv m' fp Ks K → Kopf f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+    Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m'
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
@@ -65,7 +65,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
     obtain ⟨m1, w, s1, a1s, hw, hwe, hWa1⟩ := trav_head (cb := cb.1) hci (by omega) hW hp hWa
     have a1 := Agree.widen a1s hks
     have hc1 := hp.code.agree (a1.mono (Nat.le_succ _)) hp.far
-    have hp1 : PreS m1 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ' :=
+    have hp1 : PreS L m1 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ' :=
       mkPreS (Nat.le_refl _) hp.small (hp.frame.agree a1) hc1 hp.far
         (envAt_agree hp.env (a1.mono (Nat.le_succ _)) hp.frame (Nat.le_refl _) (by omega))
     simp only [idxAb_zero, traverseLauf]
@@ -103,7 +103,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
     obtain ⟨m1, w, s1, a1s, hw, hwe, hWa1⟩ := trav_head (cb := cb.1) hci (by omega) hW hp hWa
     have a1 := Agree.widen a1s hks
     have hc1 := hp.code.agree (a1.mono (Nat.le_succ _)) hp.far
-    have hp1 : PreS m1 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ' :=
+    have hp1 : PreS L m1 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ' :=
       mkPreS (Nat.le_refl _) hp.small (hp.frame.agree a1) hc1 hp.far
         (envAt_agree hp.env (a1.mono (Nat.le_succ _)) hp.frame (Nat.le_refl _) (by omega))
     obtain ⟨x, hxn, hxs⟩ := idxAb_succ (D.count t) k n (by omega)
@@ -132,10 +132,10 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
       have hk2 : m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 k) := by
         rw [agree_rd_low a2s (frameOK_sub hp.frame hks).room (Nat.lt_succ_self _) (by omega)]; exact hk1
       have hF2 := hp.frame.agree A12
-      have hE2 : EnvAt m2 fp ρ' := envAt_agree hp.env (A12.mono (Nat.le_succ _)) hp.frame (Nat.le_refl _) (by omega)
-      have hex : Enc (D := D) (.index (D.count t)) x (BitVec.ofNat 64 k) := by
+      have hE2 : EnvAt L m2 fp ρ' := envAt_agree hp.env (A12.mono (Nat.le_succ _)) hp.frame (Nat.le_refl _) (by omega)
+      have hex : Enc L (D := D) (.index (D.count t)) x (BitVec.ofNat 64 k) := by
         simp only [Enc]; rw [hxn, BitVec.ofInt_natCast]
-      have hpb : PreS m2 (pc + BitVec.ofNat 64 (16 * (6 + ci'.1.length))) fp K (frei (.index (D.count t) :: Γ)) cb.1
+      have hpb : PreS L m2 (pc + BitVec.ofNat 64 (16 * (6 + ci'.1.length))) fp K (frei (.index (D.count t) :: Γ)) cb.1
           (Env.cons (show Wert D (Ty.index (D.count t)) from x) ρ') :=
         mkPreS (Nat.le_refl _) hp.small hF2 (trav_body hc2) (codeFar_at hp.far (by omega)) (envAt_cons hE2 hk2 hex)
       have hu2 := hu.agree A12 hp.frame (by omega)
@@ -150,7 +150,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
       have nx : ∀ (σ1 : World D) (ρ1 : Env D (.index (D.count t) :: Γ)) (m4 : Runner.Mem),
           Star ⟨pc + BitVec.ofNat 64 (16 * (6 + ci'.1.length)), fp⟩ m2
             ⟨pc + BitVec.ofNat 64 (16 * (6 + ci'.1.length + cb.1.length)), fp⟩ m4 →
-          AgreeW L fp lo K m2 m4 → EnvAt m4 fp ρ1 → WeltAt m4 L σ1 → Keeps fp (frei Γ :: pr) m2 m4 →
+          AgreeW L fp lo K m2 m4 → EnvAt L m4 fp ρ1 → WeltAt m4 L σ1 → Keeps fp (frei Γ :: pr) m2 m4 →
           Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m'
             (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ) (D.count t) ci'.1 cb.1).length)) eL eN
             (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
@@ -162,7 +162,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
         have hk4 : m4.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 k) := by
           rw [k4 _ List.mem_cons_self]; exact hk2
         have hF4 := frameOK_agreeW hp.frame A14
-        have hq : PreS m4 (pc + BitVec.ofNat 64 (16 * (6 + ci'.1.length + cb.1.length))) fp K (frei Γ)
+        have hq : PreS L m4 (pc + BitVec.ofNat 64 (16 * (6 + ci'.1.length + cb.1.length))) fp K (frei Γ)
             [ci 1 (frei Γ + 1) 1 0, ci 3 (frei Γ) (frei Γ) (frei Γ + 1)] ρ1.tail :=
           mkPreS (Nat.le_refl _) hp.small hF4 (trav_next hc4) (codeFar_at hp.far (by simp; omega)) (envAt_tail e4)
         have hpw := PreS.welt hq hks w4 hW.lay (by have := hW.lo; omega)
@@ -175,7 +175,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
         have hc5 := codeAt_agreeWIn hW A15 hp.code hp.far
         have sj := jmp_go (fp := fp) (trav_back hc5) (lit_ok (by omega) (by omega))
         rw [adr_eq pc (y := 1) (by push_cast; omega)] at sj
-        have hp5 : PreS m5 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ1.tail :=
+        have hp5 : PreS L m5 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ1.tail :=
           mkPreS (Nat.le_refl _) hp.small (frameOK_agreeW hp.frame A15) hc5 hp.far
             (envAt_agree (envAt_tail e4) a5 hF4 (Nat.le_refl _) (by omega))
         have ih5 := ih (k + 1) m5 σ1 ρ1.tail (by omega) hp5 hv5' (hu.agreeW hW A15 hlo)
@@ -205,7 +205,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
         have A14 : AgreeW L fp lo K m' m4 := (agreeW_of (A12.mono (by omega))).trans a4
         have hc4 := codeAt_agreeWIn hW A14 hp.code hp.far
         have hF4 := frameOK_agreeW hp.frame A14
-        have hq : PreS m4 (pc + BitVec.ofNat 64 (16 * (9 + ci'.1.length + cb.1.length))) fp K (frei Γ + 1) ci'.1
+        have hq : PreS L m4 (pc + BitVec.ofNat 64 (16 * (9 + ci'.1.length + cb.1.length))) fp K (frei Γ + 1) ci'.1
             ρ1.tail :=
           mkPreS (by simp only [frei]; omega) hp.small hF4 (trav_inv2 hc4) (codeFar_at hp.far (by omega)) (envAt_tail e4)
         have hpw := PreS.welt hq hks w4 hW.lay (by have := hW.lo; omega)
@@ -234,7 +234,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
           have hw0 : w' = 0 := by rw [hen']; simpa using hinv
           have sb3 := brz_go (trav_brz3 hc6) (by omega) hp.small (by decide) (by rw [← hw0]; exact hw')
           rw [adr_eq pc (y := 11 + 2 * ci'.1.length + cb.1.length) (by push_cast; omega)] at sb3
-          have hp6 : PreS m6 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ1.tail :=
+          have hp6 : PreS L m6 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ1.tail :=
             mkPreS (Nat.le_refl _) hp.small (frameOK_agreeW hp.frame A16) hc6 hp.far
               (envAt_agree (envAt_tail e4) (a6.mono (Nat.le_succ _)) hF4 (Nat.le_refl _) (by omega))
           exact Stops.prefix (pre.trans (s4.trans (s6.trans sb3))) (trav_stopped hp6 (by omega))
@@ -254,14 +254,14 @@ theorem trav_ok (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1) 
     (hlenc : 16 * (10 + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (D.params f).length)
     (htop : max ci'.2 (max cb.2 (frei Γ + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ)
-    (hbody : ∀ m' pc' σ' ρ', PreS m' pc' fp K (frei (.index (D.count t) :: Γ)) cb.1 ρ' → Umf L A C dv m' fp Ks K →
-      Kopf f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+    (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ)) cb.1 ρ' → Umf L A C dv m' fp Ks K →
+      Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K (frei Γ :: pr) ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cb.1.length))
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 48)
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ'))
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS m pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ)
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
@@ -276,7 +276,7 @@ theorem trav_ok (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1) 
   have a0 := Agree.widen a0s hks
   have hk0 : m0.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 0) := by
     rw [show BitVec.ofNat 64 0 = BitVec.ofInt 64 (0 : Int) by decide]; exact rd_same hp.frame (by omega) _
-  have hp0 : PreS m0 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ :=
+  have hp0 : PreS L m0 pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ :=
     mkPreS (Nat.le_refl _) hp.small (hp.frame.agree a0) (hp.code.agree a0 hp.far) hp.far
       (envAt_agree hp.env a0 hp.frame (Nat.le_refl _) (by omega))
   have hl := trav_loop (l := l) (eL := eL) (eN := eN) hn hci hlenc hlo0 htop hW hlo hlo2 hpr hbody

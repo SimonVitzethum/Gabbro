@@ -1,0 +1,24 @@
+// IR probe: ignored and bound indirect results inside a return-free lock body.
+module ir_probe {
+lock L protects { } rank 0 held <= 1000 ops;
+lock M protects { } rank 1 held <= 1000 ops;
+impl fn target() -> u32 in 0 .. 100
+    effects { locks M }
+    costs <= 32 ops
+{
+    locks M { }
+    return 43;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { locks L, locks M }
+{
+    let mut value : u32 in 0 .. 100 = 0;
+    locks L {
+        let p = &target;
+        p();
+        let answer = p();
+        value = answer;
+    }
+    return value;
+}
+}

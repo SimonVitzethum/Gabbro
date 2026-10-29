@@ -18,7 +18,7 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (h : lowS A L lo ens pr ex (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) = some (c, top))
-    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS m pc fp K (frei Γ) c ρ)
+    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ) c ρ)
     (hlow : lo ≤ frei Γ) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
@@ -38,7 +38,7 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     let σE := σ.lese Λ (i.orte ++ e.orte)
     let z := eval σE e σE ρ
     let k := eval σE i σE ρ
-    have hq : PreS m pc fp K (frei Γ) (ce ++ (ci' ++ cb)) ρ := by simpa only [List.append_assoc] using hp
+    have hq : PreS L m pc fp K (frei Γ) (ce ++ (ci' ++ cb)) ρ := by simpa only [List.append_assoc] using hp
     have hpe := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
     obtain ⟨m1, s1, a1s, we, re, ene⟩ := lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hpe
     have a1 := Agree.widen a1s hks
@@ -48,16 +48,16 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     obtain ⟨m2, s2, a2s, wi, ri, eni⟩ := lowE_ok σE σE (fun _ h => h) i _ ci' ti hi (by omega) m1 _ ρ hpi
     have a2 := Agree.widen a2s hks
     have hw2 : WeltAt m2 L σE := hpi.wstab m1 m2 hw1 (a2s.mono (Nat.zero_le _))
-    have enz1 : EnvAt m1 fp (Env.cons z ρ) :=
+    have enz1 : EnvAt L m1 fp (Env.cons z ρ) :=
       envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) re ene
-    have enz2 : EnvAt m2 fp (Env.cons z ρ) := envAt_agree enz1 a2 hp1.frame
+    have enz2 : EnvAt L m2 fp (Env.cons z ρ) := envAt_agree enz1 a2 hp1.frame
       (by simp only [frei, List.length_cons]; omega) (by omega)
-    have enk : EnvAt m2 fp (Env.cons k (Env.cons z ρ)) := by
+    have enk : EnvAt L m2 fp (Env.cons k (Env.cons z ρ)) := by
       have hr : m2.rd64 (slot fp (BitVec.ofNat 64 (frei ((.int 0 (256 ^ n - 1)) :: Γ)))) = some wi := by
         simpa only [frei, List.length_cons, Nat.add_succ] using ri
       exact envAt_cons enz2 hr eni
     have hp2 := hp1.next (a := ci') (a2.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
-    have hpb : PreS m2 (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * ci'.length)) fp K
+    have hpb : PreS L m2 (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * ci'.length)) fp K
         (frei Γ + 2) cb (Env.cons k (Env.cons z ρ)) :=
       ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp2.frame, hp2.code, hp2.far, enk,
         trivial, wstab_true _ _⟩
