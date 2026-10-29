@@ -217,6 +217,12 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ck ← chkC (D.aerg a) (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
+  | _, Γ, _, _, .check c err rest => do
+    let cc ← lowE L c (frei Γ)
+    let ce ← lowEnd A L lo ens pr ex err
+    let cr ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (cc.1 ++ [ci 19 (frei Γ) (16 * (cr.1.length + 2)) 0] ++ cr.1 ++
+      [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1, max cc.2 (max cr.2 ce.2))
   | _, Γ, _, _, .awaits g _ _ _ _ rest =>
     if lit32 (L.ga g) then do
       let cr ← lowB A L lo ens pr ex rest
