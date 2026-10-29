@@ -1450,6 +1450,23 @@ theorem floatOfIntContinuationL_first_step (F : Gleitkomma.Format)
   obtain ⟨tail, rfl⟩ := floatOfIntContinuationL_first F input hc
   exact floatOfIntContinuationL_load (Pre.left (a := [_]) (b := tail) h) hk hr
 
+/-- The actual first step preserves the retained input as well as loading the
+    first magnitude temporary. Both reads concern the same executed memory. -/
+theorem floatOfIntContinuationL_first_step_retained (F : Gleitkomma.Format)
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
+    {code : List II} {v : Runner.W}
+    (hc : floatOfIntContinuationL F input = some (code, top))
+    (h : Pre L m pc fp K (input + 1) code ρ W reserved)
+    (hk : input + 1 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧
+      Agree fp (input + 1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 input)) = some v ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some v := by
+  obtain ⟨m', hs, ha, hd⟩ := floatOfIntContinuationL_first_step F hc h hk hr
+  exact ⟨m', hs, ha, slotRead_agree h.frame ha (by omega) (by omega) hr, hd⟩
+
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
     This helper is deliberately not accepted by `lowE` before its simulation proof. -/
