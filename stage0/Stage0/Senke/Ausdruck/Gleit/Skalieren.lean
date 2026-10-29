@@ -2376,16 +2376,16 @@ theorem floatOfIntContinuationL_zero_endjump (F : Gleitkomma.Format)
     (hk : input + 5 < K)
     (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some (BitVec.ofInt 64 0))
     (fetch : ∀ m', Agree fp (input + 1) K m m' →
-      CodeAt m' (pc + 208) [ci 18 offset 0 0])
+      CodeAt m' (pc + 464) [ci 18 offset 0 0])
     (hl : lit32 offset = true) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 208 + BitVec.ofInt 64 offset, fp⟩ m' ∧
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 464 + BitVec.ofInt 64 offset, fp⟩ m' ∧
       Agree fp (input + 1) K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some 0 := by
-  obtain ⟨m', hs, ha, hr'⟩ := floatOfIntContinuationL_zero_output F hc h hk hr
+  obtain ⟨m', hs, ha, hr'⟩ := floatOfIntContinuationL_zero_constant F hc h hk hr
   have hi := fetch m' ha 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  have sj := Star.one (run_step (t := ⟨pc + 208, fp⟩) hi (by decide)
-    (run_jmp (t := ⟨pc + 208, fp⟩) hi))
+  have sj := Star.one (run_step (t := ⟨pc + 464, fp⟩) hi (by decide)
+    (run_jmp (t := ⟨pc + 464, fp⟩) hi))
   refine ⟨m', hs.trans ?_, ha, hr'⟩
   simpa only [sx_lit hl] using sj
 
