@@ -12,6 +12,16 @@ abbrev WordCode (ρ : Env D Γ) (W : Runner.Mem → Prop)
   ∀ {fp K d c top}, a d = some (c, top) → top ≤ K → ∀ m pc,
     Pre L m pc fp K d c ρ W → Ok m pc fp K d c (· = v)
 
+/-- An input retained below the temporary interval survives composition. -/
+theorem slotRead_agree {m m' : Runner.Mem} {fp : Runner.W}
+    {K d input : Nat} {v : Runner.W}
+    (frame : FrameOK m fp K) (ha : Agree fp d K m m')
+    (hi : input < d) (hd : d ≤ K)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v) :
+    m'.rd64 (slot fp (BitVec.ofNat 64 input)) = some v := by
+  rw [agree_rd_low ha frame.room hi hd]
+  exact read
+
 theorem WordCode.bin {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a b : Nat → Option (List II × Nat)} {va vb v : Runner.W} {o : Nat}
     {g : Runner.W → Runner.W → Option Runner.W}
