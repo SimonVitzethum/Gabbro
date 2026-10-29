@@ -209,7 +209,7 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 @[lowE_eqs] theorem lowE_reaches (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
       (a b : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.reaches t f hf a b hL) d =
-    (none) := rfl
+    reachesL L t f d (lowE L a d) (lowE L b (d + 1)) := rfl
 
 @[lowE_eqs] theorem lowE_refEq (a b : Expr D Γ Λ (.ref n)) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.refEq a b) d =

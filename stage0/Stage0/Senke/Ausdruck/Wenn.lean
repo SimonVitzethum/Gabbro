@@ -68,4 +68,24 @@ theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List
       rw [hlen', pc_add, pc_add]
       congr 2 <;> simp <;> omega
 
+/-- Conditional lowering with the component code and slot bounds still packaged as options. -/
+theorem wennL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc : Runner.W} {cc ca cb : Option (List II × Nat)} {c : List II}
+    {bc : Bool} {P : Runner.W → Prop}
+    (h : wennL d cc ca cb = some (c, top)) (hK : top ≤ K) (hd : d < K)
+    (hc : ∀ c t, cc = some (c, t) → t ≤ K → ∀ m pc, Pre m pc fp K d c ρ W →
+      Ok m pc fp K d c (fun w => w = if bc then 1 else 0))
+    (ha : bc = true → ∀ c t, ca = some (c, t) → t ≤ K → ∀ m pc, Pre m pc fp K d c ρ W → Ok m pc fp K d c P)
+    (hb : bc = false → ∀ c t, cb = some (c, t) → t ≤ K → ∀ m pc, Pre m pc fp K d c ρ W → Ok m pc fp K d c P)
+    (hp : Pre m pc fp K d c ρ W) : Ok m pc fp K d c P := by
+  simp only [wennL, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨⟨cc', tc⟩, hcc, ⟨ca', ta⟩, hca, ⟨cb', tb⟩, hcb, h⟩ := h
+  split at h
+  · next hlen =>
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact wenn_ok hp hlen hd (hc _ _ hcc (by omega))
+      (fun he => ha he _ _ hca (by omega)) (fun he => hb he _ _ hcb (by omega))
+  · cases h
+
 end Gabbro.Stage0.Senke

@@ -151,6 +151,33 @@ def quantL (all : Bool) (s d : Nat) (count : Int) (body : Option (List II × Nat
       some (quantC all s d cb.1 0 count.toNat, max cb.2 (d + 4))
     else none
 
+/-- Equality of two recomputable words, with room for both operands. -/
+def reachEqL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let ca ← a
+  let cb ← b
+  pure ((bin2 14 d ca cb).1, max ca.2 (max cb.2 (d + 2)))
+
+/-- Follow an optional-index column. Failed links are tested before the next access.
+    Recomputing pure operands avoids keeping a live index across condition code. -/
+def reachL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) :
+    Nat → Option (List II × Nat) → Option (List II × Nat) → Option (List II × Nat)
+  | 0, a, b => reachEqL d a b
+  | n + 1, a, b =>
+    let next := a.bind (slotC L t f d)
+    wennL d (reachEqL d a b) (some ([ci 1 d 1 0], d + 1))
+      (wennL d (reachEqL d next (some ([ci 1 (d + 1) (-1) 0], d + 2)))
+        (some ([ci 1 d 0 0], d + 1)) (reachL L t f d n next b))
+
+/-- Check a conservative bound before constructing the bounded chain code. -/
+def reachesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat)
+    (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let ca ← a
+  let cb ← b
+  let n := (D.count t).toNat
+  if n < 2 ^ 31 ∧ 16 * (n + 1) * (ca.1.length + cb.1.length + 20 + 6 * (n + 1)) < 2 ^ 31 then
+    reachL L t f d n (some ca) (some cb)
+  else none
+
 mutual
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
@@ -221,6 +248,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
     if n ≤ 8 then readBytesL L t f (lowE L i) 0 n d else none
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ) d (D.count t) (lowE L body (d + 3))
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ) d (D.count t) (lowE L body (d + 3))
+  | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L a d) (lowE L b (d + 1))
   | _, _, .refEq .., _ | _, _, .slotRef .., _ => none
   | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none

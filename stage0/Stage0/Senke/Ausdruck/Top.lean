@@ -54,6 +54,25 @@ theorem readBytesL_top (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Opt
     simp only [bin2, Prod.mk.injEq] at h
     omega
 
+theorem reachEqL_top {d top : Nat} {a b : Option (List II × Nat)} {c : List II}
+    (h : reachEqL d a b = some (c, top)) : d < top := by
+  simp only [reachEqL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨ca, _, cb, _, he⟩ := h
+  simp only [Prod.mk.injEq] at he
+  omega
+
+theorem reachL_top {d top : Nat} {L : Lay D} {t : D.Tab} {f : D.Feld t} {c : List II}
+    (n : Nat) (a b : Option (List II × Nat)) (h : reachL L t f d n a b = some (c, top)) : d < top := by
+  cases n with
+  | zero => exact reachEqL_top h
+  | succ n =>
+    simp only [reachL, wennL, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨⟨cc, tc⟩, hc, ca, _, cb, _, h⟩ := h
+    have := reachEqL_top hc
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · cases h
+
 theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
     (top : Nat) → lowE L e d = some (c, top) → d < top
   | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
@@ -153,12 +172,17 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       split at h
       · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
       · cases h
+  | _, _, .reaches .., d, c, top, h => by
+    simp only [lowE_eqs, reachesL, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨ca, _, cb, _, h⟩ := h
+    split at h
+    · exact reachL_top _ _ _ h
+    · cases h
   | _, _, .fnref .., _, _, _, h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h
   | _, _, .fllt .., _, _, _, h
   | _, _, .flle .., _, _, _, h
-  | _, _, .reaches .., _, _, _, h
   | _, _, .refEq .., _, _, _, h
   | _, _, .slotRef .., _, _, _, h
   | _, _, .arrNil .., _, _, _, h

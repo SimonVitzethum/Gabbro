@@ -9,6 +9,7 @@ import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Option
 import Stage0.Senke.Ausdruck.Bytes
 import Stage0.Senke.Ausdruck.Quant.Satz
+import Stage0.Senke.Ausdruck.Quant.Reach
 import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
@@ -416,12 +417,15 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .existsSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
     quantL_ok false (D.count t) (lowE L body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp => lowE_ok σ₀ σ hWL body (d + 3) cb tb hb htb m pc (.cons k ρ) hp) hp
+  | _, _, .reaches t f hf a b _, d, c, top, h, hK, m, pc, ρ, hp =>
+    reachesL_ok hf hWL (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+      (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp) hp
   | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
   | _, _, .fllt .., _, _, _, h, _, _, _, _, _
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
-  | _, _, .reaches .., _, _, _, h, _, _, _, _, _
   | _, _, .refEq .., _, _, _, h, _, _, _, _, _
   | _, _, .slotRef .., _, _, _, h, _, _, _, _, _
   | _, _, .arrNil .., _, _, _, h, _, _, _, _, _
