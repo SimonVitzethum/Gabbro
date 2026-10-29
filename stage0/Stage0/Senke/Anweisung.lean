@@ -7,7 +7,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
@@ -120,6 +120,9 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
       let cb ← lowB A L lo ens (frei Γ :: pr) (48, 0) body
       travC (frei Γ) (D.count t) ci' cb
     else none
+  | _, _, _, _, .breaking _ body => lowB A L lo ens pr ex body
+  | _, Γ, _, _, .advances .. => some ([], frei Γ)
+  | _, Γ, _, _, .retires .. => some ([], frei Γ)
   | _, Γ, _, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
   | _, Γ, _, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
   | _, _, _, _, _ => none

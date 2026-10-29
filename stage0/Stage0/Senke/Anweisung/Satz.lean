@@ -254,6 +254,17 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
               · have := hpr j hj; simp only [frei] at this; omega)) hp hu hk hWa
       · cases htr
     · cases h
+  | _, Γ, Λ, _, .breaking _ body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowS] at h
+    simp only [execStmt]
+    exact lowB_ok (O := O) (passes := passes) (σ0 := σ0) (pr := pr) (ex := ex) hS hA hlo0 hens body c top h hK hs hW
+      m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+  | _, Γ, Λ, _, .advances .., c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa, _
+  | _, Γ, Λ, _, .retires .., c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa, _ => by
+    simp only [lowS, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp only [execStmt, Sim]
+    exact ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
   | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
@@ -261,15 +272,12 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
   | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .locks .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .breaking .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .retry .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .axiomCall .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .publish .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .advances .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .retires .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .retWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .assignSlotRef .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
 
