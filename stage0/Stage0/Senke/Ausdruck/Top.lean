@@ -144,13 +144,20 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     split at h
     · exact readBytesL_top L t f (lowE L i) n 0 d c top h
     · cases h
+  | _, _, .forallSlots .., d, c, top, h | _, _, .existsSlots .., d, c, top, h => by
+    simp only [lowE_eqs, quantL] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · simp only [bind, Option.bind_eq_some_iff] at h
+      obtain ⟨cb, _, h⟩ := h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+      · cases h
   | _, _, .fnref .., _, _, _, h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h
   | _, _, .fllt .., _, _, _, h
   | _, _, .flle .., _, _, _, h
-  | _, _, .forallSlots .., _, _, _, h
-  | _, _, .existsSlots .., _, _, _, h
   | _, _, .reaches .., _, _, _, h
   | _, _, .refEq .., _, _, _, h
   | _, _, .slotRef .., _, _, _, h

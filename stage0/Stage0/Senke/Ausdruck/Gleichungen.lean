@@ -200,11 +200,11 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_forallSlots (t : D.Tab) (body : Expr D (.index (D.count t) :: Γ) Λ .bool) (hL : darf D t Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.forallSlots t body hL) d =
-    (none) := rfl
+    quantL true (frei Γ) d (D.count t) (lowE L body (d + 3)) := rfl
 
 @[lowE_eqs] theorem lowE_existsSlots (t : D.Tab) (body : Expr D (.index (D.count t) :: Γ) Λ .bool) (hL : darf D t Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.existsSlots t body hL) d =
-    (none) := rfl
+    quantL false (frei Γ) d (D.count t) (lowE L body (d + 3)) := rfl
 
 @[lowE_eqs] theorem lowE_reaches (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .opt (D.count t))
       (a b : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) :

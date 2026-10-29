@@ -5,6 +5,11 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable {D : Deklaration}
 
+/-- Different slots of a frame are apart. -/
+theorem slot_far {fp : Runner.W} {K i j : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (hi : i < K) (hj : j < K)
+    (hne : i ≠ j) : Far (slot fp (BitVec.ofNat 64 i)) 8 (slot fp (BitVec.ofNat 64 j)) 8 := by
+  rw [Far, slot_toNat hr hi, slot_toNat hr hj]; omega
+
 theorem idx_lt : {Γ : Ctx} → {τ : Ty} → (x : Var Γ τ) → Var.idx x < Γ.length
   | _, _, .here => by simp [Var.idx]
   | _, _, .there x => by have := idx_lt x; simp [Var.idx]; omega
@@ -50,6 +55,22 @@ theorem quant_mov [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K dst src : Nat} {
   simp only [ret1]
   refine f1_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]
+  exact run_wr64 (wr64_some (hf.wr dst hd))
+
+/-- An immediate assignment, with the resulting memory explicit. -/
+theorem quant_lit [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K dst : Nat} {v : Int}
+    (hf : FrameOK m fp K) (hk : K < 2 ^ 31) (hd : dst < K)
+    (hc : CodeAt m pc [ci 1 dst v 0]) (hv : lit32 v = true) :
+    Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 dst)) 8 (BitVec.ofInt 64 v).toNat) := by
+  have hi := hc 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  apply Star.one
+  apply run_step (t := ⟨pc, fp⟩) hi (by decide)
+  simp only [op]
+  refine f2_run (t := ⟨pc, fp⟩) hi ?_
+  simp only [ret1]
+  refine f1_run (t := ⟨pc, fp⟩) hi ?_
+  rw [sx_lit hv, sx_nat (by omega)]
   exact run_wr64 (wr64_some (hf.wr dst hd))
 
 /-- Reading a word and writing it back preserves each byte of that word. -/

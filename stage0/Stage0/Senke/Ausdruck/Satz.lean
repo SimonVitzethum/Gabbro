@@ -8,6 +8,7 @@ import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Option
 import Stage0.Senke.Ausdruck.Bytes
+import Stage0.Senke.Ausdruck.Quant.Satz
 import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
@@ -409,13 +410,17 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         change w = BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n (eval σ₀ i σ ρ).n))
         simpa only [Int.natCast_zero, Int.add_zero] using hw)
     · cases h
+  | _, _, .forallSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
+    quantL_ok true (D.count t) (lowE L body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
+      (fun cb tb hb htb k m pc hp => lowE_ok σ₀ σ hWL body (d + 3) cb tb hb htb m pc (.cons k ρ) hp) hp
+  | _, _, .existsSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
+    quantL_ok false (D.count t) (lowE L body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
+      (fun cb tb hb htb k m pc hp => lowE_ok σ₀ σ hWL body (d + 3) cb tb hb htb m pc (.cons k ρ) hp) hp
   | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
   | _, _, .fllt .., _, _, _, h, _, _, _, _, _
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
-  | _, _, .forallSlots .., _, _, _, h, _, _, _, _, _
-  | _, _, .existsSlots .., _, _, _, h, _, _, _, _, _
   | _, _, .reaches .., _, _, _, h, _, _, _, _, _
   | _, _, .refEq .., _, _, _, h, _, _, _, _, _
   | _, _, .slotRef .., _, _, _, h, _, _, _, _, _

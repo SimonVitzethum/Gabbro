@@ -38,11 +38,6 @@ theorem vslot_ne {Γ : Ctx} {τ τ' : Ty} {x : Var Γ τ} {y : Var Γ τ'} (h : 
   have := idx_lt x; have := idx_lt y
   unfold vslot; omega
 
-/-- Different slots of a frame are apart. -/
-theorem slot_far {fp : Runner.W} {K i j : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (hi : i < K) (hj : j < K)
-    (hne : i ≠ j) : Far (slot fp (BitVec.ofNat 64 i)) 8 (slot fp (BitVec.ofNat 64 j)) 8 := by
-  rw [Far, slot_toNat hr hi, slot_toNat hr hj]; omega
-
 theorem envAt_set {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {x : Var Γ τ}
     {v : Wert D τ} {w : Runner.W} (h : EnvAt m fp ρ) (hx : m'.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w)
     (he : Enc τ v w) (hothers : ∀ (τ' : Ty) (y : Var Γ τ'), Var.idx y ≠ Var.idx x →
