@@ -1,0 +1,39 @@
+// IR probe: two targets selected by a parameter, stored locally, called for a result.
+module ir_probe {
+impl fn first(x : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { pure }
+    costs <= 4 ops
+{
+    return x + 1;
+}
+impl fn second(x : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { pure }
+    costs <= 4 ops
+{
+    return x + 2;
+}
+impl fn apply(p : fn(u32 in 0 .. 100) -> u32 in 0 .. 200
+        effects { pure } costs <= 4 ops) -> u32 in 0 .. 200
+    effects { pure }
+{
+    let value = p(20);
+    return value;
+}
+impl fn select(flag : bool) -> u32 in 0 .. 200
+    effects { pure }
+{
+    if flag {
+        let value = apply(&second);
+        return value;
+    }
+    let value = apply(&first);
+    return value;
+}
+impl fn main() -> u32 in 0 .. 400
+    effects { pure }
+{
+    let a = select(false);
+    let b = select(true);
+    return a + b;
+}
+}

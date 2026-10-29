@@ -47,6 +47,19 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 #print axioms Gabbro.Stage0.Senke.sichtOK_zeuge
 
 #print axioms Gabbro.Stage0.Senke.onOption_ok
+#print axioms Gabbro.Stage0.Senke.fnref_ok
+#print axioms Gabbro.Stage0.Senke.call_ok
+#print axioms Gabbro.Stage0.Senke.lowInd_ok
+#print axioms Gabbro.Stage0.Senke.indStmt_ok
+#print axioms Gabbro.Stage0.Senke.indBind_ok
+#print axioms Gabbro.Stage0.Senke.FnptrProben.global_call_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.image_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_encoding_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.lowInd_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.indStmt_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.indBind_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_address_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.encSum_inj
 #print axioms Gabbro.Stage0.Senke.encSum_inj_zeuge
 #print axioms Gabbro.Stage0.Senke.sumWord_tag

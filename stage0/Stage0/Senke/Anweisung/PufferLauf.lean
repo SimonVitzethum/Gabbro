@@ -14,7 +14,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- `lea d a`: slot `d` gets the address of slot `a`. -/
 theorem lea_step {m : Runner.Mem} {pc fp : Runner.W} {K d a : Nat} (hc : CodeAt m pc [ci 17 d a 0])
@@ -33,7 +33,7 @@ theorem lea_step {m : Runner.Mem} {pc fp : Runner.W} {K d a : Nat} (hc : CodeAt 
 
 /-- Arguments whose words agree apart from pointers. -/
 theorem argsW_ptr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs) →
-    (∀ i, i < τs.length → f i = g i ∨ ∃ n rw, τs[i]? = some (.ptr n rw)) → ArgsW f ρ → ArgsW g ρ
+    (∀ i, i < τs.length → f i = g i ∨ ∃ n rw, τs[i]? = some (.ptr n rw)) → ArgsW L f ρ → ArgsW L g ρ
   | [], .nil, _, _ => trivial
   | τ :: τs, .cons _ ρ, he, h => by
     simp only [ArgsW] at h ⊢
@@ -74,7 +74,7 @@ theorem rd64_write_slot {m : Runner.Mem} {fp : Runner.W} {Ks i a : Nat} {v : Nat
 theorem weltAt_puf {L : Lay D} {t : D.Tab} {f : D.Feld t} {σ' : World D} {m0 mF : Runner.Mem} {fp : Runner.W}
     {Ks : Nat} (hl : LayIn L) (hd : LayDis L) (hwlo : fp.toNat + 8 * Ks ≤ L.lo) (hO : WeltOhne m0 L σ' t f)
     (hcol : ∀ k, k < (D.count t).toNat → ∃ w, mF.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
-      Enc (D.typ t f) (σ'.slots t k f) w)
+      Enc L (D.typ t f) (σ'.slots t k f) w)
     (hrest : ∀ a : Nat, a + 8 ≤ 2 ^ 64 → fp.toNat + 8 * Ks ≤ a →
       (∀ k, k < (D.count t).toNat → Far (BitVec.ofNat 64 a) 8 (BitVec.ofNat 64 (L.elem t f k)) 8) →
       mF.rd64 (BitVec.ofNat 64 a) = m0.rd64 (BitVec.ofNat 64 a)) (hwr : WeltWr mF L) :

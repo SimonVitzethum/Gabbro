@@ -78,9 +78,9 @@ theorem vslot_lt {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : vslot x < frei Γ := by
     | there x ih => simp [Var.idx]; omega
   unfold vslot frei; omega
 
-theorem envAt_agree {D : Deklaration} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat}
-    (h : EnvAt m fp ρ) (ha : Agree fp d K m m') (hF : FrameOK m fp K) (hd : frei Γ ≤ d) (hK : d ≤ K) :
-    EnvAt m' fp ρ := by
+theorem envAt_agree {D : Deklaration} {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat}
+    (h : EnvAt L m fp ρ) (ha : Agree fp d K m m') (hF : FrameOK m fp K) (hd : frei Γ ≤ d) (hK : d ≤ K) :
+    EnvAt L m' fp ρ := by
   intro τ x
   obtain ⟨w, hw, he⟩ := h τ x
   refine ⟨w, ?_, he⟩

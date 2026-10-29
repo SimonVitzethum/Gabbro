@@ -6,7 +6,7 @@ import Stage0.Senke.Ausdruck.Top
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem sumOff_lt {cs : List (Option (Int × Int))} (h : sumFits cs = true)
     (i : Fin cs.length) (v : Nutzlast (cs.get i)) : sumOff (cs.get i) v < 2 ^ 56 := by
@@ -60,7 +60,7 @@ theorem sumOff_inj (c : Option (Int × Int)) (a b : Nutzlast c) (h : sumOff c a 
     cases a; cases b; cases hn; rfl
 
 theorem encSum_inj {cs : List (Option (Int × Int))} {a b : Wert D (.sum cs)} {w : Runner.W}
-    (ha : Enc (.sum cs) a w) (hb : Enc (.sum cs) b w) : a = b := by
+    (ha : Enc L (.sum cs) a w) (hb : Enc L (.sum cs) b w) : a = b := by
   have hn : sumN a = sumN b := by
     have hw := congrArg BitVec.toNat (ha.2.symm.trans hb.2)
     simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (sumN_lt ha.1 a),
@@ -112,10 +112,10 @@ theorem sumWord_payload {cs : List (Option (Int × Int))} (h : sumFits cs = true
 theorem encSum_inj_zeuge :
     let cs := [none, some (-7, 13)]
     let a : Wert D (.sum cs) := ⟨⟨1, by decide⟩, ⟨-2, by decide, by decide⟩⟩
-    Enc (.sum cs) a (1281 : Runner.W) ∧
-      (∀ b, Enc (.sum cs) b (1281 : Runner.W) → b = a) := by
+    Enc L (.sum cs) a (1281 : Runner.W) ∧
+      (∀ b, Enc L (.sum cs) b (1281 : Runner.W) → b = a) := by
   dsimp
-  have h : Enc (.sum [none, some (-7, 13)])
+  have h : Enc L (.sum [none, some (-7, 13)])
       (D := D) ⟨⟨1, by decide⟩, ⟨-2, by decide, by decide⟩⟩ 1281 := by constructor <;> rfl
   exact ⟨h, fun _ hb => encSum_inj hb h⟩
 
@@ -133,8 +133,8 @@ variable [Kern]
 theorem packSum_ok {m : Runner.Mem} {pc fp : Runner.W} {K d tag : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {lo hi : Int} {v : Zahl lo hi} {ce : List II × Nat}
     (hl : lit32 lo = true) (htag : tag < 256) (hK : d + 2 ≤ K)
-    (ih : ∀ m pc, Pre m pc fp K d ce.1 ρ W → Ok m pc fp K d ce.1 (Enc (D := D) (.int lo hi) v))
-    (hp : Pre m pc fp K d (packSum d lo tag ce).1 ρ W) :
+    (ih : ∀ m pc, Pre L m pc fp K d ce.1 ρ W → Ok m pc fp K d ce.1 (Enc (D := D) L (.int lo hi) v))
+    (hp : Pre L m pc fp K d (packSum d lo tag ce).1 ρ W) :
     Ok m pc fp K d (packSum d lo tag ce).1
       (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff (some (lo, hi)) v)) := by
   simp only [packSum, bin2] at hp ⊢

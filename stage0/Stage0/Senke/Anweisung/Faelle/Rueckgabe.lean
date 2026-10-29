@@ -9,7 +9,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- What the body's code from `t` does for G's outcome of an end block: `zurueck` returns (`RetZ`), `logik` stops
     with its code, `leave` and `next` reach the loop's targets `eL` and `eN`. -/

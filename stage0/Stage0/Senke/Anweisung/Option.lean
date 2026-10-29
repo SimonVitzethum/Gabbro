@@ -14,7 +14,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
@@ -28,22 +28,22 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hthen : ∀ (k : Zahl 0 (n - 1)), eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = some k →
-      ∀ m' pc', PreS m' pc' fp K (frei Γ + 1) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K → Kopf f m' fp K rp cfp ρ0 →
+      ∀ m' pc', PreS L m' pc' fp K (frei Γ + 1) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 →
       WeltAt m' L (σ.lese Λ o.orte) →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2)
         (execBlock O passes R t (σ.lese Λ o.orte) (Env.cons (τ := .index n) k ρ)))
-    (helse : ∀ m' pc', PreS m' pc' fp K (frei Γ) ce ρ → Umf L A C dv m' fp Ks K → Kopf f m' fp K rp cfp ρ0 →
+    (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ) ce ρ → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 →
       WeltAt m' L (σ.lese Λ o.orte) →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.2)
         (execBlock O passes R e (σ.lese Λ o.orte) ρ))
-    (hp : PreS m pc fp K (frei Γ) (cc ++ [ci 1 (frei Γ + 1) (-1) 0, ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
+    (hp : PreS L m pc fp K (frei Γ) (cc ++ [ci 1 (frei Γ + 1) (-1) 0, ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
         [ci 19 (frei Γ + 1) (16 * (ct.length + 2)) 0] ++ ct ++
       [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 1 (frei Γ + 1) (-1) 0, ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
         [ci 19 (frei Γ + 1) (16 * (ct.length + 2)) 0] ++ ct ++
@@ -56,7 +56,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.2)
       (execStmt O passes R (.onOption o t e) σ ρ) := by
     have hsm := hp.small
-    have hq : PreS m pc fp K (frei Γ) (cc ++ ([ci 1 (frei Γ + 1) (-1) 0] ++
+    have hq : PreS L m pc fp K (frei Γ) (cc ++ ([ci 1 (frei Γ + 1) (-1) 0] ++
       ([ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
       ([ci 19 (frei Γ + 1) (16 * (ct.length + 2)) 0] ++ (ct ++
         ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))))) ρ := by simpa [List.append_assoc] using hp
@@ -108,7 +108,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     simp only [execStmt]
     split
     · next k hb =>
-      have hi : Enc (D := D) (.index n) k w := by simpa only [Enc, hb, optN] using hen
+      have hi : Enc L (D := D) (.index n) k w := by simpa only [Enc, hb, optN] using hen
       have hne : w ^^^ BitVec.ofInt 64 (-1) ≠ 0 := by
         intro hz
         have heq := BitVec.xor_eq_zero_iff.mp (show w ^^^ BitVec.ofInt 64 (-1) = 0#64 from hz)
@@ -119,7 +119,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         omega
       have sb := star_ins (fp := fp) (m' := m3) (codeAt_left h1.code) (by simp [ci])
         (by simp only [ci]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact rx) hne)
-      have hpt : PreS m3 _ fp K (frei Γ + 1) ct (Env.cons (τ := .index n) k ρ) :=
+      have hpt : PreS L m3 _ fp K (frei Γ + 1) ct (Env.cons (τ := .index n) k ρ) :=
         ⟨by simp only [frei, List.length_cons]; omega, h2.small, h2.frame, h2.left.code, h2.left.far,
           envAt_cons h2.env ri hi, trivial, wstab_true _ _⟩
       have ih := Sim.schrumpf (hthen k hb m3 _ hpt hu1 hk1 hWa1)

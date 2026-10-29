@@ -65,6 +65,15 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     · next r _ => exact (Fin.cast hr r).elim0
     · rfl
     · rfl
+  | _, _, _, _, .callInd _ _ _ hr, _, σ, ρ => by
+    simp only [execStmt]
+    split
+    next g hg hv =>
+      split
+      · rfl
+      · next r _ => exact keinGrundSig hg hr r
+      · rfl
+      · rfl
   | _, _, _, _, .axiomCall .., _, σ, ρ => by
     simp only [execStmt]
     split <;> rfl
@@ -96,7 +105,7 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     rw [istZ_mapWelt]
     exact retFreiB_istZ b h _ _
   | _, _, _, _, .shift .., _, _, _ => by simp only [execStmt]; split <;> rfl
-  | _, _, _, _, .onWhy .., h, _, _ | _, _, _, _, .callInd .., h, _, _
+  | _, _, _, _, .onWhy .., h, _, _
   | _, _, _, _, .retry .., h, _, _ | _, _, _, _, .forever .., h, _, _ | _, _, _, _, .regWrite .., h, _, _
   | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _
   | _, _, _, _, .retWhy .., h, _, _ | _, _, _, _, .assignSlotRef .., h, _, _ => by simp [retFreiS] at h
@@ -124,6 +133,16 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     · next r' _ => exact (Fin.cast hr r').elim0
     · rfl
     · rfl
+  | _, _, _, _, .bindCallInd _ _ _ _ hr r, h, σ, ρ => by
+    simp only [retFreiB] at h
+    simp only [execBlock]
+    split
+    next g hg hv =>
+      split
+      · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
+      · next r' _ => exact keinGrundSig hg hr r'
+      · rfl
+      · rfl
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ r, h, σ, ρ => by
     simp only [retFreiB] at h
     simp only [execBlock]
@@ -140,7 +159,7 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     simp only [retFreiB] at h
     simp only [execBlock]
     rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
-  | _, _, _, _, .bindCallInd .., h, _, _ | _, _, _, _, .bindCallElse .., h, _, _
+  | _, _, _, _, .bindCallElse .., h, _, _
   | _, _, _, _, .bindAxiomElse .., h, _, _ | _, _, _, _, .regRead .., h, _, _
   | _, _, _, _, .regReadElse .., h, _, _
   | _, _, _, _, .narrow .., h, _, _ | _, _, _, _, .check .., h, _, _ | _, _, _, _, .float .., h, _, _

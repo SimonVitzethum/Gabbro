@@ -14,7 +14,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- `d := g a b` in one step. -/
 theorem bin_star {m : Runner.Mem} {pc fp : Runner.W} {K o d a b : Nat} {g : Runner.W → Runner.W → Option Runner.W}
@@ -43,20 +43,20 @@ theorem shl_amt {j : Nat} (hj : j < 8) : (BitVec.ofInt 64 (8 * (j : Int))).toNat
 /-- One byte: `u := cell`, `u := u << 8 j`, `acc := acc + u`. -/
 theorem pack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K acc u adr j : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {A w : Runner.W}
-    (hp : Pre m pc fp K u (pack1 acc u adr j) ρ W) (hacc : acc < u) (hu : u + 2 ≤ K) (hadr : adr < 2 ^ 31)
+    (hp : Pre L m pc fp K u (pack1 acc u adr j) ρ W) (hacc : acc < u) (hu : u + 2 ≤ K) (hadr : adr < 2 ^ 31)
     (hj : j < 8) (hA : m.rd64 (slot fp (BitVec.ofNat 64 acc)) = some A)
     (hw : ∀ m', W m' → m'.rd64 (BitVec.ofNat 64 adr) = some w) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 5), fp⟩ m' ∧ Agree fp acc K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 acc)) = some (A + (w <<< (8 * j))) := by
   have hsmall := hp.small
-  have hp' : Pre m pc fp K u (([ci 1 u adr 0] ++ [ci 15 u u 0]) ++
+  have hp' : Pre L m pc fp K u (([ci 1 u adr 0] ++ [ci 15 u u 0]) ++
       ([ci 1 ((u : Int) + 1) (8 * j) 0, ci 11 u u ((u : Int) + 1)] ++ [ci 3 acc acc u])) ρ W := hp
   have hX : Ok m pc fp K u ([ci 1 u adr 0] ++ [ci 15 u u 0]) (· = w) :=
     ok_seq hp'.left (const_ok hp'.left.left (lit_ok (by omega) (by omega)) (by omega))
       (fun m' w' hp'' hr he => by
         rw [he, BitVec.ofInt_natCast] at hr
         exact ld_ok hp'' (by omega) hr (hw m' hp''.welt)) (by omega)
-  have hp3 : Pre m pc fp K u ((([ci 1 u adr 0] ++ [ci 15 u u 0]) ++
+  have hp3 : Pre L m pc fp K u ((([ci 1 u adr 0] ++ [ci 15 u u 0]) ++
       [ci 1 ((u : Int) + 1) (8 * j) 0, ci 11 u u ((u : Int) + 1)]) ++ [ci 3 acc acc u]) ρ W := hp
   have hq := hp3.left
   obtain ⟨m1, s1, a1, v, hv, rfl⟩ := ok_seq hq hX (Pb := (· = w <<< (8 * j)))
@@ -75,8 +75,8 @@ theorem pack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K acc u adr j : Nat} {Γ :
 
 /-- `Pre.next` after code that changed the slots from `lo` on, below `d`. -/
 theorem Pre.next' {m m' : Runner.Mem} {pc fp : Runner.W} {K d lo : Nat} {a b : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} (h : Pre m pc fp K d (a ++ b) ρ W) (ha : Agree fp lo K m m') (hlo : frei Γ ≤ lo)
-    (hd : lo ≤ d) (hK : d ≤ K) : Pre m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d b ρ W :=
+    {W : Runner.Mem → Prop} (h : Pre L m pc fp K d (a ++ b) ρ W) (ha : Agree fp lo K m m') (hlo : frei Γ ≤ lo)
+    (hd : lo ≤ d) (hK : d ≤ K) : Pre L m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d b ρ W :=
   have hf := codeFar_right (n := a.length) (k := b.length) (by simpa using h.far)
   ⟨h.ctx, h.small, h.frame.agree ha, (codeAt_right h.code).agree ha hf, hf,
    envAt_agree h.env ha h.frame hlo (by omega), h.wstab m m' h.welt (ha.mono (Nat.zero_le _)), h.wstab⟩
@@ -86,13 +86,13 @@ theorem packJ_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {c i acc u : Nat} {fp : 
     {ρ : Env D Γ} {W : Runner.Mem → Prop} {ws : Nat → Runner.W} (hacc : acc < u) (hu : u + 2 ≤ K)
     (hctx : frei Γ ≤ acc) (hadr : ∀ k, k < c → L.elem t f k < 2 ^ 31)
     (hw : ∀ k, k < c → ∀ m', W m' → m'.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (ws k)) :
-    (J : Nat) → J ≤ 8 → (m : Runner.Mem) → (pc : Runner.W) → Pre m pc fp K u (packJ L t f c i acc u J) ρ W →
+    (J : Nat) → J ≤ 8 → (m : Runner.Mem) → (pc : Runner.W) → Pre L m pc fp K u (packJ L t f c i acc u J) ρ W →
     m.rd64 (slot fp (BitVec.ofNat 64 acc)) = some 0 →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (packJ L t f c i acc u J).length), fp⟩ m' ∧
       Agree fp acc K m m' ∧ m'.rd64 (slot fp (BitVec.ofNat 64 acc)) = some (packV ws c i J)
   | 0, _, m, pc, _, h0 => ⟨m, by simpa [packJ] using Star.refl _ m, Agree.refl _ _ _ _, h0⟩
   | J + 1, hJ, m, pc, hp, h0 => by
-    have hp' : Pre m pc fp K u (packJ L t f c i acc u J ++
+    have hp' : Pre L m pc fp K u (packJ L t f c i acc u J ++
         (if 8 * i + J < c then pack1 acc u (L.elem t f (8 * i + J)) J else [])) ρ W := hp
     obtain ⟨m1, s1, a1, hr1⟩ := packJ_ok hacc hu hctx hadr hw J (by omega) m pc hp'.left h0
     have hn := hp'.next' a1 hctx (Nat.le_of_lt hacc) (by omega)
@@ -116,14 +116,14 @@ theorem packI_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {c B Wn : Nat} {fp : Run
     (hadr : ∀ k, k < c → L.elem t f k < 2 ^ 31)
     (hw : ∀ k, k < c → ∀ m', W m' → m'.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (ws k)) :
     (I : Nat) → I ≤ Wn → (m : Runner.Mem) → (pc : Runner.W) →
-    Pre m pc fp K (B + Wn + 1) (packI L t f c B (B + Wn) (B + Wn + 1) I) ρ W →
+    Pre L m pc fp K (B + Wn + 1) (packI L t f c B (B + Wn) (B + Wn + 1) I) ρ W →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (packI L t f c B (B + Wn) (B + Wn + 1) I).length), fp⟩ m' ∧
       Agree fp B K m m' ∧ ∀ i, i < I → m'.rd64 (slot fp (BitVec.ofNat 64 (B + i))) = some (packV ws c i 8)
   | 0, _, m, pc, _ => ⟨m, by simpa [packI] using Star.refl _ m, Agree.refl _ _ _ _, fun _ h => absurd h (by omega)⟩
   | I + 1, hI, m, pc, hp => by
     have hsmall := hp.small
     have hroom := hp.frame.room
-    have hp' : Pre m pc fp K (B + Wn + 1) (packI L t f c B (B + Wn) (B + Wn + 1) I ++
+    have hp' : Pre L m pc fp K (B + Wn + 1) (packI L t f c B (B + Wn) (B + Wn + 1) I ++
         ([ci 1 ((B + Wn : Nat) : Int) 0 0] ++ packJ L t f c I (B + Wn) (B + Wn + 1) 8 ++
           [ci 2 ((B + I : Nat) : Int) ((B + Wn : Nat) : Int) 0])) ρ W := hp
     obtain ⟨m1, s1, a1, hr1⟩ := packI_ok hu hctx hadr hw I (by omega) m pc hp'.left
@@ -161,7 +161,7 @@ theorem shr_amt {k : Nat} : (BitVec.ofInt 64 ((8 * (k % 8) : Nat) : Int)).toNat 
     the store. The frame below `u` and every word of the world apart from the cell keep their contents. -/
 theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {Ks B u adr k : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {bw : Runner.W}
-    {L : Lay D} (hp : Pre m pc fp Ks u (unpack1 B u adr k) ρ W) (hB : B + k / 8 < u)
+    {L : Lay D} (hp : Pre L m pc fp Ks u (unpack1 B u adr k) ρ W) (hB : B + k / 8 < u)
     (hu : u + 2 ≤ Ks) (hadr : adr < 2 ^ 31) (hrd : Runner.Mem.all m.rd (BitVec.ofNat 64 adr) 8 = true)
     (hwr0 : Runner.Mem.all m.wr (BitVec.ofNat 64 adr) 8 = true) (ha1 : L.lo ≤ adr) (ha2 : adr + 8 ≤ L.hi)
     (hl3 : L.hi < 2 ^ 31) (htop : fp.toNat + 8 * Ks ≤ L.lo)
@@ -172,7 +172,7 @@ theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {Ks B u adr k : Nat} {Γ 
         m'.rd64 (BitVec.ofNat 64 a) = m.rd64 (BitVec.ofNat 64 a) := by
   have hsmall := hp.small
   have hroom := hp.frame.room
-  have hp3 : Pre m pc fp Ks u ((([ci 2 u ((B + k / 8 : Nat) : Int) 0] ++
+  have hp3 : Pre L m pc fp Ks u ((([ci 2 u ((B + k / 8 : Nat) : Int) 0] ++
       [ci 1 ((u : Int) + 1) ((8 * (k % 8) : Nat) : Int) 0, ci 12 u u ((u : Int) + 1)]) ++
       [ci 1 ((u : Int) + 1) 255 0, ci 8 u u ((u : Int) + 1)]) ++
       ([ci 1 ((u + 1 : Nat) : Int) adr 0] ++ [ci 16 ((u + 1 : Nat) : Int) u 0])) ρ W := hp
@@ -229,7 +229,7 @@ theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runn
     {ρ : Env D Γ} (hl : LayIn L) (hd : LayDis L) (hu : u + 2 ≤ Ks) (hwlo : fp.toNat + 8 * Ks ≤ L.lo)
     (hord : L.lo ≤ L.hi) :
     (K' : Nat) → (K' : Int) ≤ D.count t → (∀ k, k < K' → B + k / 8 < u) → (m : Runner.Mem) → (pc : Runner.W) →
-    PreS m pc fp Ks u (unpackK L t f B u K') ρ → WeltWr m L →
+    PreS L m pc fp Ks u (unpackK L t f B u K') ρ → WeltWr m L →
     (∀ k : Nat, (k : Int) < D.count t → Runner.Mem.all m.rd (BitVec.ofNat 64 (L.elem t f k)) 8 = true) →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (unpackK L t f B u K').length), fp⟩ m' ∧ AgreeW L fp u Ks m m' ∧
       (∀ k, k < K' → m'.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (byteOf m (slot fp (BitVec.ofNat 64 B)) k)) ∧
@@ -242,11 +242,11 @@ theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runn
     have hroom := hp.frame.room
     have hsmall := hp.small
     have hl3 := hl.2.2
-    have hp' : PreS m pc fp Ks u (unpackK L t f B u K' ++ unpack1 B u (L.elem t f K') K') ρ := hp
+    have hp' : PreS L m pc fp Ks u (unpackK L t f B u K' ++ unpack1 B u (L.elem t f K') K') ρ := hp
     obtain ⟨m1, s1, a1, hc1, ho1⟩ := unpackK_ok hl hd hu hwlo hord K' (by omega)
       (fun k hk => hB k (by omega)) m pc hp'.left hwr hrdc
     have hfr := codeFar_right (by simpa using hp'.far)
-    have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * (unpackK L t f B u K').length)) fp Ks u
+    have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * (unpackK L t f B u K').length)) fp Ks u
         (unpack1 B u (L.elem t f K') K') ρ :=
       ⟨hp.ctx, hsmall, ⟨hp.frame.lt, fun i hi => by rw [a1.rd]; exact hp.frame.rd i hi,
         fun i hi => by rw [a1.wr]; exact hp.frame.wr i hi⟩,

@@ -47,7 +47,7 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_fnref (f : D.Fn) (n : Nat) (h : D.passt f n = true) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.fnref f n h) d =
-    (none) := rfl
+    (if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none) := rfl
 
 @[lowE_eqs] theorem lowE_oldG (g : D.Glob) (hL : gdarf D g Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.oldG g hL) d =

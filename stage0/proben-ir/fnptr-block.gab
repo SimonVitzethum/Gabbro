@@ -1,0 +1,33 @@
+// IR probe: a result binder inside a block, and a function pointer as a call argument.
+module ir_probe {
+impl fn first(x : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { pure }
+    costs <= 4 ops
+{
+    return x + 1;
+}
+impl fn second(x : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { pure }
+    costs <= 4 ops
+{
+    return x + 2;
+}
+impl fn apply(p : fn(u32 in 0 .. 100) -> u32 in 0 .. 200
+        effects { pure } costs <= 4 ops, flag : bool) -> u32 in 0 .. 200
+    effects { pure }
+{
+    let mut value : u32 in 0 .. 200 = 0;
+    if flag {
+        let answer = p(20);
+        value = answer;
+    }
+    return value;
+}
+impl fn main() -> u32 in 0 .. 400
+    effects { pure }
+{
+    let a = apply(&first, true);
+    let b = apply(&second, true);
+    return a + b;
+}
+}

@@ -7,8 +7,8 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onOption` (the index word kept for the bound variable), `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
@@ -33,17 +33,33 @@ def lowA (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Ar
     let ce ← lowE L e (p + τs.length)
     pure (cr.1 ++ ce.1, max cr.2 ce.2)
 
-/-- A call of `f` with its frame at slot `F` of the caller: the arguments (`ca`), the depth one less, the
-    address of `f`, `call`. -/
-def callTail (A : D.Fn → Nat) (f : D.Fn) (F : Nat) : List II :=
-  [ci 1 ((F + FB + (D.params f).length : Nat) : Int) 1 0,
-   ci 4 ((F + 2 : Nat) : Int) 2 ((F + FB + (D.params f).length : Nat) : Int),
-   ci 1 ((F + FB + (D.params f).length : Nat) : Int) (A f) 0,
-   ci 20 ((F + FB + (D.params f).length : Nat) : Int) F 0]
+/-- The shared call tail: depth one less, a constant target or the pointer saved at `F` before arguments
+    are evaluated, then `call`. The argument count determines the scratch slot above the callee frame. -/
+def callTailN (np address F : Nat) (indirect : Bool) : List II :=
+  [ci 1 ((F + FB + np : Nat) : Int) 1 0,
+   ci 4 ((F + 2 : Nat) : Int) 2 ((F + FB + np : Nat) : Int),
+   if indirect then ci 2 ((F + FB + np : Nat) : Int) F 0
+   else ci 1 ((F + FB + np : Nat) : Int) address 0,
+   ci 20 ((F + FB + np : Nat) : Int) F 0]
+
+def callTail (A : D.Fn → Nat) (f : D.Fn) (F : Nat) (indirect : Bool := false) : List II :=
+  callTailN (D.params f).length (A f) F indirect
 
 def callC (A : D.Fn → Nat) (f : D.Fn) (F : Nat) (ca : List II) : List II := ca ++ callTail A f F
 
 def callTop (f : D.Fn) (F t : Nat) : Nat := max t (F + FB + (D.params f).length + 1)
+
+/-- The pointer is evaluated before the arguments, into the future callee's return-pc slot.
+    Argument evaluation and the depth calculation preserve it until the call loads its target. -/
+def indC (n F : Nat) (cp ca : List II) : List II := cp ++ (ca ++ callTailN (D.sigNr n).params.length 0 F true)
+
+def indTop (n F tp ta : Nat) : Nat := max tp (max ta (F + FB + (D.sigNr n).params.length + 1))
+
+def lowInd (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) : Option (List II × Nat) := do
+  let cp ← lowE L p (frei Γ)
+  let ca ← lowA L args (frei Γ + FB)
+  pure (indC (D := D) n (frei Γ) cp.1 ca.1, indTop (D := D) n (frei Γ) cp.2 ca.2)
 
 def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
   | _, .empty, d => some ([], d + 1)
@@ -127,6 +143,7 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
         [ci 18 (16 * (ca.1.length + 1)) 0 0] ++ ca.1,
         max co.2 (max (frei Γ + 2) (max cp.2 ca.2)))
     else none
+  | _, _, _, _, .callInd p args _ _ => lowInd L p args
   | _, Γ, _, _, .onTag (cs := cs) v arms =>
     if sumFits cs then do
       let cv ← lowE L v (frei Γ)
@@ -212,6 +229,10 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
+  | _, Γ, _, _, .bindCallInd p args _ _ _ rest => do
+    let cc ← lowInd L p args
+    let cr ← lowB A L lo ens pr ex rest
+    pure (cc.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max cc.2 cr.2)
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest => do
     let ct ← torC0 L a args (frei Γ)
     let ck ← chkC (D.aerg a) (frei Γ)
@@ -264,6 +285,10 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowEnd A L lo ens pr ex rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
+  | _, Γ, _, .bindCallInd p args _ _ _ rest => do
+    let cc ← lowInd L p args
+    let cr ← lowEnd A L lo ens pr ex rest
+    pure (cc.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max cc.2 cr.2)
   | _, Γ, _, .ite c t e => do
     let cc ← lowE L c (frei Γ)
     let ce ← lowEnd A L lo ens pr ex e

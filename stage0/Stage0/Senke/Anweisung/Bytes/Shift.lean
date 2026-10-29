@@ -22,7 +22,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (h : lowS A L lo ens pr ex (Stmt.shift (l := l) t field ht i von nach hn he hw hl) = some (c, top))
-    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS m pc fp K (frei Γ) c ρ)
+    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ) c ρ)
     (hlo : lo ≤ frei Γ) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
@@ -47,13 +47,13 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     let σE := σ.lese Λ (.inl t :: i.orte)
     have hWE : WeltAt m L σE := hWa
     let old : Wert D (.int a b) := ht ▸ σE.slots t (eval σE i σE ρ).n field
-    have heq : Enc (D.typ t field) (σE.slots t (eval σE i σE ρ).n field) =
+    have heq : Enc L (D.typ t field) (σE.slots t (eval σE i σE ρ).n field) =
         (fun w => w = BitVec.ofInt 64 old.n) := by funext w; exact propext (enc_int_cast ht _ w)
     let test := cr ++ [ci 1 (frei Γ + 1) von 0] ++ [ci 14 (frei Γ) (frei Γ) (frei Γ + 1)]
     let tail := [ci 1 (frei Γ) nach 0] ++ ca ++ [stC (frei Γ)]
-    have hp' : PreS m pc fp K (frei Γ) (test ++ (guardC (frei Γ) 106 (frei Γ) ++ tail)) ρ := hp
+    have hp' : PreS L m pc fp K (frei Γ) (test ++ (guardC (frei Γ) 106 (frei Γ) ++ tail)) ρ := hp
     have hpw := PreS.welt hp'.left hks hWE hW.lay (by have := hW.lo; omega)
-    have hread : ∀ m pc, Pre m pc fp Ks (frei Γ) cr ρ (fun m => WeltAt m L σE) →
+    have hread : ∀ m pc, Pre L m pc fp Ks (frei Γ) cr ρ (fun m => WeltAt m L σE) →
         Ok m pc fp Ks (frei Γ) cr (fun w => w = BitVec.ofInt 64 old.n) := by
       intro m pc hp
       rw [← heq]
@@ -86,7 +86,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
         (fun m pc hp => slotA_ok ha (by omega)
           (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp) hp)
         (hW.lay.1 t field _ hkc) (fun m w hm hw => by
-          have hnw : Enc (D.typ t field) ((ht ▸ (⟨nach, hn.1, hn.2⟩ : Zahl a b) : Wert D (D.typ t field))) w := hw
+          have hnw : Enc L (D.typ t field) ((ht ▸ (⟨nach, hn.1, hn.2⟩ : Zahl a b) : Wert D (D.typ t field))) w := hw
           have hh := weltAt_slot hm hW.lay hW.dis hkc hnw
           rw [hkn] at hh
           exact hh)

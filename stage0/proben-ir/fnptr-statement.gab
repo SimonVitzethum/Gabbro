@@ -1,0 +1,36 @@
+// IR probe: runtime targets and a pointer parameter, called without a result.
+module ir_probe {
+static mut VALUE : u32 in 0 .. 100 = 0;
+impl fn first(x : u32 in 0 .. 50)
+    effects { writes VALUE }
+    costs <= 4 ops
+{
+    VALUE = x + 1;
+}
+impl fn second(x : u32 in 0 .. 50)
+    effects { writes VALUE }
+    costs <= 4 ops
+{
+    VALUE = x + 2;
+}
+impl fn apply(p : fn(u32 in 0 .. 50) effects { writes VALUE } costs <= 4 ops) -> u32 in 0 .. 100
+    effects { reads VALUE, writes VALUE }
+{
+    p(20);
+    return VALUE;
+}
+impl fn select(flag : bool) -> u32 in 0 .. 100
+    effects { reads VALUE, writes VALUE }
+{
+    if flag { let value = apply(&second); return value; }
+    let value = apply(&first);
+    return value;
+}
+impl fn main() -> u32 in 0 .. 200
+    effects { reads VALUE, writes VALUE }
+{
+    let a = select(false);
+    let b = select(true);
+    return a + b;
+}
+}

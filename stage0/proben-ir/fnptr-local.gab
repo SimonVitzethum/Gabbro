@@ -1,0 +1,22 @@
+// IR probe: function references stored in local variables and called for results.
+module ir_probe {
+impl fn first() -> u32 in 0 .. 100
+    effects { pure }
+{
+    return 21;
+}
+impl fn second() -> u32 in 0 .. 100
+    effects { pure }
+{
+    return 22;
+}
+impl fn main() -> u32 in 0 .. 200
+    effects { pure }
+{
+    let p = &first;
+    let a = p();
+    let q = &second;
+    let b = q();
+    return a + b;
+}
+}
