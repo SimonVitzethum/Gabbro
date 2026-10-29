@@ -411,6 +411,50 @@ theorem floatPackCarryL_rundeBruchKern {Γ : Ctx} {ρ : Env D Γ}
   exact floatPackCarryL_canonical F sign _ _ hs hecode hqcode hu hm he hq
 
 
+/-- Both signs and formats jointly exercise a halfway integer that carries. -/
+theorem floatPackCarryL_rundeBruchKern_zeuge {Γ : Ctx} (ρ : Env D Γ)
+    (W : Runner.Mem → Prop) :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64], ∀ sign : Bool,
+      let n := 2^(F.p + 1) - 1
+      let E : Int := F.p
+      let lit := fun n d => some (konstWL 4 n d)
+      Gleitkomma.normQ F.p E n 1 = 2 * 2^F.fracBits ∧
+      WordCode (L := L) ρ W
+        (fun dst => floatPackCarryL dst
+          (lit (if sign then 2^(F.ebits + F.fracBits) else 0))
+          (lit (E - F.emin + 1).toNat)
+          (lit (Gleitkomma.normQ F.p E n 1)) (2^F.fracBits))
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F
+          (Gleitkomma.rundeBruchKern F sign n 1 E))) := by
+  intro F hF sign
+  have hb : 1 ≤ F.p ∧ F.fracBits = F.p - 1 ∧
+      F.emin ≤ (F.p : Int) ∧ (F.p : Int) < F.emax ∧
+      2 * 2^F.fracBits < 2^64 ∧ F.bexpMax ≤ 2^64 ∧
+      (0 < ((F.p : Int) - F.emin + 1).toNat ∧
+        ((F.p : Int) - F.emin + 1).toNat + 1 < F.bexpMax) ∧
+      Gleitkomma.normQ F.p (F.p : Int) (2^(F.p + 1) - 1) 1 = 2 * 2^F.fracBits ∧
+      (if sign then 2^(F.ebits + F.fracBits) else 0) < 2^64 ∧
+      ((F.p : Int) - F.emin + 1).toNat < 2^64 := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hF
+    rcases hF with rfl | rfl <;> cases sign <;> decide +kernel
+  refine ⟨hb.2.2.2.2.2.2.2.1, ?_⟩
+  apply floatPackCarryL_rundeBruchKern
+  · exact WordCode.konst _ hb.2.2.2.2.2.2.2.2.1
+  · exact WordCode.konst _ hb.2.2.2.2.2.2.2.2.2
+  · apply WordCode.konst
+    rw [hb.2.2.2.2.2.2.2.1]
+    exact hb.2.2.2.2.1
+  · exact hb.1
+  · exact hb.2.1
+  · exact hb.2.2.1
+  · exact hb.2.2.2.1
+  · exact hb.2.2.2.2.1
+  · exact hb.2.2.2.2.2.1
+  · exact hb.2.2.2.2.2.2.1
+  · rw [hb.2.2.2.2.2.2.2.1]
+    constructor <;> omega
+
+
  theorem floatPackCarry_nat_zeuge :
     (Runner.IR.bool (BitVec.ofNat 64 16 == BitVec.ofNat 64 16)).toNat = 1 ∧
     (Runner.IR.bool (BitVec.ofNat 64 15 == BitVec.ofNat 64 16)).toNat = 0 := by
