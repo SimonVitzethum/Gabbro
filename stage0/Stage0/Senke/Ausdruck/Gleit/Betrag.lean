@@ -23,8 +23,8 @@ def floatMagnitudeL (d : Nat) (e : Nat → Option (List II × Nat)) :
     assumption for the retained input. This is the sign instruction of magnitude. -/
 theorem floatMagnitude_sign_instruction {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
-    {K d : Nat} {v : Runner.W}
-    (hp : Pre L m pc fp K d [ci 13 d d (d + 1)] ρ W)
+    {K d reserved : Nat} {v : Runner.W}
+    (hp : Pre L m pc fp K d [ci 13 d d (d + 1)] ρ W reserved)
     (hk : d + 1 < K)
     (hv : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some v)
     (hz : m.rd64 (slot fp (BitVec.ofNat 64 (d + 1))) = some 0) :

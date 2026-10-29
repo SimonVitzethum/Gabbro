@@ -1672,7 +1672,7 @@ theorem floatOfIntContinuationL_sign_step (F : Gleitkomma.Format)
     {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
     {code : List II} {v : Runner.W}
     (hc : floatOfIntContinuationL F input = some (code, top))
-    (h : Pre L m pc fp K (input + 1) code ρ W)
+    (h : Pre L m pc fp K (input + 1) code ρ W reserved)
     (hk : input + 5 < K)
     (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 96, fp⟩ m' ∧
