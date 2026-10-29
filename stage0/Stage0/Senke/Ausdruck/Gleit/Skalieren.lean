@@ -305,6 +305,31 @@ theorem floatPackCarry_exponent (q u e max : Nat) (hu : 2*u < 2^64)
   rw [BitVec.toNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt he64, hc,
     Nat.mod_eq_of_lt hn]
 
+/-- The actual carry packing expression equals canonical normalized fields. -/
+theorem floatPackCarry_canonical (F : Gleitkomma.Format) (sign : Bool) (e q : Nat)
+    (hu : 2 * 2^F.fracBits < 2^64) (hm : F.bexpMax ≤ 2^64)
+    (he : 0 < e ∧ e + 1 < F.bexpMax)
+    (hq : 2^F.fracBits ≤ q ∧ q ≤ 2 * 2^F.fracBits) :
+    let c := Runner.IR.bool (BitVec.ofNat 64 q == BitVec.ofNat 64 (2 * 2^F.fracBits))
+    BitVec.ofNat 64 (if sign then 2^(F.ebits + F.fracBits) else 0) +
+      (BitVec.ofNat 64 e + c) * BitVec.ofNat 64 (2^F.fracBits) +
+      ((BitVec.ofNat 64 q >>> (c.toNat % 64)) - BitVec.ofNat 64 (2^F.fracBits)) =
+    BitVec.ofNat 64 (Gleitkomma.zuBits F
+      ⟨sign, e + (if q = 2 * 2^F.fracBits then 1 else 0),
+        (if q = 2 * 2^F.fracBits then 2^F.fracBits else q) - 2^F.fracBits⟩) := by
+  have hb := floatPackCarry_bounds q (2^F.fracBits) e F.bexpMax
+    (Nat.pow_pos (by decide)) hq he
+  have hx : BitVec.ofNat 64 e +
+      Runner.IR.bool (BitVec.ofNat 64 q == BitVec.ofNat 64 (2 * 2^F.fracBits)) =
+      BitVec.ofNat 64 (e + (if q = 2 * 2^F.fracBits then 1 else 0)) := by
+    apply BitVec.eq_of_toNat_eq
+    rw [floatPackCarry_exponent q _ e F.bexpMax hu hq he.2 hm,
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  dsimp only
+  rw [hx, floatPackCarry_word q _ hu hq]
+  apply floatPackNormal_canonical F sign _ _ (by omega) hb.1
+  simpa [Nat.pow_succ, Nat.mul_comm] using hb.2
+
  theorem floatPackCarry_nat_zeuge :
     (Runner.IR.bool (BitVec.ofNat 64 16 == BitVec.ofNat 64 16)).toNat = 1 ∧
     (Runner.IR.bool (BitVec.ofNat 64 15 == BitVec.ofNat 64 16)).toNat = 0 := by
