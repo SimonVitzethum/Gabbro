@@ -221,6 +221,22 @@ theorem write_simulation_zeuge :
     rw [he', show BitVec.ofNat 64 (layout.elem () () 1) = (8200 : Runner.W) by decide] at hr
     exact hr
 
+/-- Runner fixtures supply the region and reference words explicitly, before the lowered G fragment.
+    This bootstrap is test setup, not an implementation of G's provider call. -/
+def runnerImage (writing : Bool) : List Runner.B :=
+  let base := Runner.Prog.IMG
+  let L := { layout with col := fun _ _ => base + 8192, lo := base + 8192, hi := base + 8208 }
+  let setupCode := [ci 1 3 1 0, ci 1 4 0 0, ci 1 7 (base + 8192) 0, ci 1 6 11 0, ci 16 7 6 0,
+    ci 1 7 (base + 8200) 0, ci 1 6 22 0, ci 16 7 6 0]
+  let body := if writing then
+      ((lowS (fun _ => 0) L 3 ([], 0) [] (0, 0) assignment).getD ([], 0)).1 ++
+        ((lowE L (read second) 5).getD ([], 0)).1
+    else ((lowE L checks 5).getD ([], 0)).1
+  let code := setupCode ++ body ++ [ci 1 10 231 0, ci 2 11 5 0, ci 1 12 0 0, ci 1 13 0 0,
+    ci 1 14 0 0, ci 1 15 0 0, ci 1 16 0 0, ci 23 17 10 0]
+  let bs := Runner.Prog.leN 8 (base + 4096) ++ Runner.Prog.leN 8 0 ++ code.flatMap encII
+  bs ++ List.replicate (9000 - bs.length) 0
+
 /-- Static images have no supplied region; raw provider words are not accepted as regions. -/
 theorem refused_zeuge : chkC (some (.ref 0)) 5 = none ∧
     lowEnd (fun _ => 0) layout 3 ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel

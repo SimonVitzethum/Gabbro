@@ -1,0 +1,10 @@
+// Refused: a reference-returning provider has no checked region-transfer gate ABI.
+module ir_probe {
+table T from provider { slot { x : u64 in 0 .. 255, } }
+extern fn provider() -> index into T effects { pure } costs <= 1000 ops;
+impl fn main() -> u64 in 0 .. 100 effects { writes T.slots } {
+    let r = alloc T;
+    r->x = 73;
+    return 0;
+}
+}

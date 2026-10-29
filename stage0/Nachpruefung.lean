@@ -88,7 +88,7 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.ByteProbe.shift_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
-#print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_lowered_zeuge
 
 #print axioms Gabbro.Stage0.Senke.blockCheck_case
 #print axioms Gabbro.Stage0.Senke.Ret.toSim
@@ -168,3 +168,15 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.representation_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.image_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.read_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.enc_ref_cell
+#print axioms Gabbro.Stage0.Senke.slotRefA_ok
+#print axioms Gabbro.Stage0.Senke.slotRefC_ok
+#print axioms Gabbro.Stage0.Senke.refEq_ok
+#print axioms Gabbro.Stage0.Senke.assignSlotRef_case
+#print axioms Gabbro.Stage0.Senke.ReferenceProbe.region_zeuge
+#print axioms Gabbro.Stage0.Senke.ReferenceProbe.encoded_zeuge
+#print axioms Gabbro.Stage0.Senke.ReferenceProbe.lowering_zeuge
+#print axioms Gabbro.Stage0.Senke.ReferenceProbe.read_simulation_zeuge
+#print axioms Gabbro.Stage0.Senke.ReferenceProbe.write_simulation_zeuge
+#print axioms Gabbro.Stage0.Senke.ReferenceProbe.refused_zeuge

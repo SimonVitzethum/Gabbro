@@ -1731,6 +1731,21 @@ program can use storage without a declared element ceiling. The Lean model comes
   memory) is Gabbro code, checked as user logic like any other. No macro layer and no compile-time execution: the
   form is fixed, and nothing runs at compile time beyond the `const` fragment.
 
+**Stage-0 IR representation (2026-10-29).** A reference word is its exact unsigned cell index,
+not an address supplied as an integer. `Enc` requires an index below `2^64`, the declared open table,
+and membership in its represented region. `Lay.regionCells` explicitly supplies additional open-table
+cells; `Lay.count` extends the existing cell prefix only for open tables. `LayIn`, `LayDis` and `WeltAt`
+cover those cells with the existing column bases, address bounds, separation and permissions. Bounded
+tables keep their previous meaning. This is a partial machine representation, not a source allocation
+ceiling: G still admits every natural cell index. `slotRef`, `refEq` and `assignSlotRef` are lowered and
+proved using the shared address/load/store machinery. Static `layU` images supply no extra region;
+`alloc T` and other reference-returning gates remain refused because the scalar gate ABI does not
+transfer a checked region. Buffer gates also refuse a target with cells beyond their count-based ABI.
+The Lean front end currently refuses arrow access through reference parameters; the successful
+non-degenerate stage-0 witnesses therefore use typed G directly, with explicit region memory and
+provider references. The kernel-checked witnesses and runner fixtures are in
+`stage0/Stage0/Senke/Ausdruck/Referenz/Proben.lean`.
+
 ### 14.2 The address leg of the goal (Simon, 2026-10-24: address spaces)
 
 An address is a pair (space, byte). Closed tables and the globals lie in space `0` as before; every open region lies in a space of
