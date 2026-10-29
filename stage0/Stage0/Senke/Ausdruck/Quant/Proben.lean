@@ -85,7 +85,7 @@ def program : Programm D where
     exact body
 
 def image : Except String (List Runner.B) := do
-  let b ← bild program (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry [] 1024
+  let b ← bild 1 program (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry [] 1024
   pure b.bytes
 
 theorem quant_image_zeuge : image.isOk = true := by decide +kernel

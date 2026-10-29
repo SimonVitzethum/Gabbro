@@ -15,7 +15,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {passes : Nat}
 
 theorem leN_len (n v : Nat) : (Runner.Prog.leN n v).length = n := by simp [Runner.Prog.leN]
 
@@ -40,10 +40,10 @@ theorem bild_code {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {A : D.
     (hbody : body = cs.flatMap (·.1)) (hfp : fp0 = codeBase + 16 * (hd.length + body.length))
     (hA : ∀ g, A g = (addrs (codeBase + 16 * hd.length) (cs.map (·.1.length))).getD (pos g) 0)
     (hcl : cs.length = fs.length)
-    (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i])
+    (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun passes P A Yb fs[i] = some cs[i])
     (hfs : ∀ g, fs[pos g]? = some g) (hops : (hd ++ body).all (fun i => decide (i.o < 256)) = true)
     {m : Runner.Mem} (hcode : BytesAt m codeBase ((hd ++ body).flatMap encII)) :
-    (∀ g, ∃ top, lowFun P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
+    (∀ g, ∃ top, lowFun passes P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
     (∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ A g + 16 * (C g).length ≤ fp0) ∧
     CodeAt m (BitVec.ofNat 64 codeBase) hd := by
   rw [List.flatMap_append] at hcode
@@ -51,7 +51,7 @@ theorem bild_code {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {A : D.
   have hBb := hcode.right
   rw [flatMap_enc_len] at hBb
   rw [List.all_append, Bool.and_eq_true] at hops
-  have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun P A Yb g = some cs[pos g] ∧ C g = cs[pos g].1 := by
+  have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun passes P A Yb g = some cs[pos g] ∧ C g = cs[pos g].1 := by
     intro g
     obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp (hfs g)
     have hc : pos g < cs.length := by omega
@@ -113,7 +113,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : 
   {n fp0 : Nat} {sp : List (Nat × Nat)}
 
 /-- What `bild` lays out, as hypotheses on one image. -/
-structure BildLage (P : Programm D) (fs : List D.Fn) (pos : D.Fn → Nat) (main : D.Fn) (roots : List D.Fn)
+structure BildLage (passes : Nat) (P : Programm D) (fs : List D.Fn) (pos : D.Fn → Nat) (main : D.Fn) (roots : List D.Fn)
     (K Ks : Nat) (Yb : Lay D) (A : D.Fn → Nat) (cs : List (List II × Nat)) (body : List II) (n fp0 : Nat)
     (sp : List (Nat × Nat)) : Prop where
   hfa : Yb.fa = A
@@ -124,7 +124,7 @@ structure BildLage (P : Programm D) (fs : List D.Fn) (pos : D.Fn → Nat) (main 
   hfp : fp0 = codeBase + 16 * (headLen roots.length + body.length)
   haddr : ∀ g, A g = (addrs (codeBase + 16 * headLen roots.length) (cs.map (·.1.length))).getD (pos g) 0
   hlen : cs.length = fs.length
-  hlow : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i]
+  hlow : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun passes P A Yb fs[i] = some cs[i]
   hpos : ∀ g, fs[pos g]? = some g
   hpar : (D.params main).isEmpty = true
   hrpar : roots.all (fun f => (D.params f).isEmpty) = true
@@ -144,17 +144,17 @@ structure BildLage (P : Programm D) (fs : List D.Fn) (pos : D.Fn → Nat) (main 
   hysye : Yb.sye ≤ fp0 + 8 * K
   hops : (spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).all (fun i => decide (i.o < 256)) = true
 
-theorem BildLage.head (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) :
+theorem BildLage.head (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp) :
     (spawnC sp ++ startC A main n 231 true ++ rootsC A n roots).length = headLen roots.length := by
   rw [h.hsp]
   simp only [List.length_append, spawnC_len, List.length_map, List.length_range, startC_len, rootsC_len, headLen]
 
 /-- The functions of an image and their code below the stacks. -/
-theorem BildLage.code (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
+theorem BildLage.code (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
     (hm : BytesAt m codeBase ((spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
       List.replicate (8 * K) 0)) :
     let C : D.Fn → List II := fun g => ((cs[pos g]?).map (·.1)).getD []
-    (∀ g, ∃ top, lowFun P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
+    (∀ g, ∃ top, lowFun passes P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
     (∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ A g + 16 * (C g).length ≤ fp0) ∧
     CodeAt m (BitVec.ofNat 64 codeBase) (spawnC sp ++ startC A main n 231 true ++ rootsC A n roots) ∧
     BytesAt m fp0 (List.replicate (8 * K) 0) := by
@@ -168,7 +168,7 @@ theorem BildLage.code (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 
   rwa [show codeBase + 16 * (headLen roots.length + body.length) = fp0 from h.hfp.symm] at hz
 
 /-- The world above the stacks, for the frame of stack `j`. -/
-theorem BildLage.win (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {j : Nat}
+theorem BildLage.win (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp) {j : Nat}
     (hj : j ≤ roots.length) : WIn Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * j))) Ks Ks := by
   have hs : Ks * (roots.length + 1) = Ks * roots.length + Ks := Nat.mul_succ Ks _
   have hm : Ks * j ≤ Ks * roots.length := Nat.mul_le_mul_left Ks hj
@@ -198,7 +198,7 @@ theorem zero_word {m : Runner.Mem} {p n y : Nat} (hz : BytesAt m p (List.replica
   rfl
 
 /-- The locks at the start: every word 0 in the zero area, every frame of a stack in its band. -/
-theorem BildLage.sync (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
+theorem BildLage.sync (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
     (hz : BytesAt m fp0 (List.replicate (8 * K) 0)) {j : Nat} (hj : j ≤ roots.length) :
     SyncOK m Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * j))) Ks := by
   have hs : Ks * (roots.length + 1) = Ks * roots.length + Ks := Nat.mul_succ Ks _
@@ -222,7 +222,7 @@ theorem BildLage.sync (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 
 
 /-- **`main`'s thread**: the spawns of the roots, then `main` as `rufAt n main`, then `exit_group`. -/
 theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : Nat}
-    (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
+    (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
     (hm : BytesAt m codeBase ((spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
       List.replicate (8 * K) 0))
     (σ : World D) (ρ : Env D (D.params main)) (hWa : WeltAt m Yb σ) :
@@ -291,7 +291,7 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
 
 /-- **The thread of root `j`**, from its start code on its stack: the root as `rufAt n`, then `exit`. -/
 theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : Nat}
-    (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
+    (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
     (hm : BytesAt m codeBase ((spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
       List.replicate (8 * K) 0))
     (j : Nat) (hj : j < roots.length) (σ : World D) (ρ : Env D (D.params roots[j])) (hWa : WeltAt m Yb σ) :
@@ -345,10 +345,10 @@ end Bild
 /-- What `bild` lays out holds of its image. -/
 theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name : D.Fn → String} {main : D.Fn}
     {roots : List D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
-    (hb : bild P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hb : bild passes P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
     (hYsync : ∀ x, LaySync (Y x)) :
-    ∃ cs body sp, BildLage P fs pos main roots b.K b.Ks b.Y b.A cs body b.depth b.fp0 sp ∧
+    ∃ cs body sp, BildLage b.passes P fs pos main roots b.K b.Ks b.Y b.A cs body b.depth b.fp0 sp ∧
       b.code = spawnC sp ++ startC b.A main b.depth 231 true ++ rootsC b.A b.depth roots ++ body ∧
       b.roots = roots := by
   simp only [bild] at hb
@@ -384,11 +384,11 @@ theorem bild_bytes {b : Bild D} {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG
     `rufAt b.depth main`, then `exit_group` of its result -- or the stop of G's outcome. -/
 theorem bild_ok [CloneOK] {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
     {name : D.Fn → String} {main : D.Fn} {roots : List D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
-    (hb : bild P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hb : bild passes P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
     (hYsync : ∀ x, LaySync (Y x)) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O passes b.depth main σ ρ with
+    match rufAt P O b.passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg b.Y (D.erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
@@ -397,17 +397,17 @@ theorem bild_ok [CloneOK] {P : Programm D} {O : Orakel D} {passes : Nat} {fs : L
   obtain ⟨cs, body, sp, hl, hc, _⟩ := bild_lage hb hfs hYin hYdis hYord hYsync
   have hm2 := bild_bytes hm
   rw [hc] at hm2
-  exact bild_kern (hT := hT) (hV := hV) (passes := passes) hl hm2 σ ρ hWa
+  exact bild_kern (hT := hT) (hV := hV) (passes := b.passes) hl hm2 σ ρ hWa
 
 /-- **The program theorem**, the thread of root `j`: from its start code on its stack, the root as
     `rufAt b.depth`, then `exit` -- or the stop of G's outcome. -/
 theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
     {name : D.Fn → String} {main : D.Fn} {roots : List D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
-    (hb : bild P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hb : bild passes P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
     (hYsync : ∀ x, LaySync (Y x)) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat) (hj : j < roots.length) (σ : World D)
     (ρ : Env D (D.params roots[j])) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O passes b.depth roots[j] σ ρ with
+    match rufAt P O b.passes b.depth roots[j] σ ρ with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
     | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
@@ -418,6 +418,6 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
   obtain ⟨cs, body, sp, hl, hc, _⟩ := bild_lage hb hfs hYin hYdis hYord hYsync
   have hm2 := bild_bytes hm
   rw [hc] at hm2
-  exact bild_wurzel (hT := hT) (hV := hV) (passes := passes) hl hm2 j hj σ ρ hWa
+  exact bild_wurzel (hT := hT) (hV := hV) (passes := b.passes) hl hm2 j hj σ ρ hWa
 
 end Gabbro.Stage0.Senke

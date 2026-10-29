@@ -23,12 +23,12 @@ open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration} {V : Vertrag D}
 
 /-- The code of `f`, and the first slot it does not write. -/
-def lowFun (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D.Fn) : Option (List II × Nat) :=
+def lowFun (passes : Nat) (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D.Fn) : Option (List II × Nat) :=
   let np := (D.params f).length
   if (D.invs.filter (schuldet f)).isEmpty then do
     let req ← lowE L (P.requires f) (FB + np)
     let ens ← lowEns L (P.ensures f) (FB + np + 1)
-    let body ← lowEnd A L (FB + np) ens [] (0, 0) (P.rumpf f)
+    let body ← lowEnd passes A L (FB + np) ens [] (0, 0) (P.rumpf f)
     let snap ← snapC L (oldCells (P.ensures f))
     pure (guardC 2 105 (FB + np) ++ req.1 ++ guardC (FB + np) 101 (FB + np) ++ snap ++ body.1,
       max (FB + np + 8) (max req.2 body.2))

@@ -55,7 +55,7 @@ local notation "BR" => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp l
 theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Nat} (arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n)
     (hblocks : GrundAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
-    (hc : lowGrund A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
+    (hc : lowGrund passes A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
     (hs : 16 * cd.length < 2 ^ 31) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
     (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} 
@@ -123,7 +123,7 @@ theorem onWhy_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     {cv ca : List II} {tv ta : Nat} {ex : Int × Int}
     (hn : n < 2 ^ 31) (hblocks : GrundAll (fun b => BR b) arms)
     (hcv : lowE L v (frei Γ) = some (cv, tv))
-    (hca : lowGrund A L lo ens pr ex arms 0 = some (ca, ta))
+    (hca : lowGrund passes A L lo ens pr ex arms 0 = some (ca, ta))
     (htv : tv ≤ Ks) (hta : ta + cap ≤ Ks) (hs : 16 * (cv.length + ca.length) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
     (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
@@ -157,7 +157,7 @@ theorem onWhy_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II 
     (pr : List Nat) (ex : Int × Int) (f : D.Fn) :
     let arms : GrundArms D (vertragVon D f) false [.why 3] [] [] 3 :=
       .cons .nil (.cons .nil (.cons .nil .nil))
-    ∃ code top, lowS A L lo ens pr ex (.onWhy (.var .here) arms) = some (code, top) := by
+    ∃ code top, lowS passes A L lo ens pr ex (.onWhy (.var .here) arms) = some (code, top) := by
   exact ⟨_, _, rfl⟩
 
 end

@@ -40,8 +40,8 @@ def assignment : Stmt D (vertragVon D ()) false Γ [] [] :=
 
 def readCode : List II := ((lowE layout checks 6).getD ([], 0)).1
 def readTop : Nat := ((lowE layout checks 6).getD ([], 0)).2
-def writeCode : List II := ((lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).1
-def writeTop : Nat := ((lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).2
+def writeCode : List II := ((lowS 1 (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).1
+def writeTop : Nat := ((lowS 1 (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).2
 
 /-- A real code segment, a frame containing provider references 1 and 0, and two region cells. -/
 def memory (code : List II) : Runner.Mem where
@@ -79,7 +79,7 @@ theorem region_zeuge : D.count () = 0 ∧ layout.count () = 2 ∧ LayIn layout �
   ⟨rfl, rfl, layout_in, layout_dis⟩
 
 theorem lowering_zeuge : lowE layout checks 6 = some (readCode, readTop) ∧
-    lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
+    lowS 1 (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
     readCode ≠ [] ∧ writeCode ≠ [] ∧ readTop ≤ 64 ∧ writeTop ≤ 64 := by decide +kernel
 
 theorem semantics_zeuge : eval world checks world env = true ∧
@@ -187,7 +187,7 @@ def after : World D := world.storeSlot () 1 () ⟨73, by decide, by decide⟩
 
 /-- The write's actual store runs, preserving both reference variables and the neighboring cell. -/
 theorem write_simulation_zeuge :
-    lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
+    lowS 1 (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
     PreS layout (memory writeCode) 0 4096 64 6 writeCode env ∧
     ∃ m', Star ⟨0, 4096⟩ (memory writeCode)
         ⟨0 + BitVec.ofNat 64 (16 * writeCode.length), 4096⟩ m' ∧
@@ -229,7 +229,7 @@ def runnerImage (writing : Bool) : List Runner.B :=
   let setupCode := [ci 1 4 1 0, ci 1 5 0 0, ci 1 7 (base + 8192) 0, ci 1 6 11 0, ci 16 7 6 0,
     ci 1 7 (base + 8200) 0, ci 1 6 22 0, ci 16 7 6 0]
   let body := if writing then
-      ((lowS (fun _ => 0) L 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).1 ++
+      ((lowS 1 (fun _ => 0) L 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).1 ++
         ((lowE L (read second) 6).getD ([], 0)).1
     else ((lowE L checks 6).getD ([], 0)).1
   let code := setupCode ++ body ++ [ci 1 10 231 0, ci 2 11 6 0, ci 1 12 0 0, ci 1 13 0 0,
@@ -239,6 +239,6 @@ def runnerImage (writing : Bool) : List Runner.B :=
 
 /-- Static images have no supplied region; raw provider words are not accepted as regions. -/
 theorem refused_zeuge : chkC (some (.ref 0)) 5 = none ∧
-    lowEnd (fun _ => 0) layout 4 ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel
+    lowEnd 1 (fun _ => 0) layout 4 ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel
 
 end Gabbro.Stage0.Senke.ReferenceProbe

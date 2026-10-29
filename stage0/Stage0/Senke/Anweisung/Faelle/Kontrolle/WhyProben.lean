@@ -55,7 +55,7 @@ def callLayout : Lay D where
   sb := 4096
   st := 2048
 
-def target (f : D.Fn) : List II := ((lowFun P addresses callLayout f).getD ([], 0)).1
+def target (f : D.Fn) : List II := ((lowFun 1 P addresses callLayout f).getD ([], 0)).1
 
 def caller (f : D.Fn) : List II :=
   elseC 9 4 (callC addresses f 4 []) [ci 1 5 11 0] [ci 1 5 22 0]
@@ -71,8 +71,8 @@ def callMem (f : D.Fn) : Runner.Mem :=
     wr := fun _ => true }
   write (write base 8192 8 64) 4112 8 3
 
-theorem target_lower : ∀ f : Fin 3, lowFun P addresses callLayout f = some (target f, 13) := by
-  exact @allFin 3 (fun f => lowFun P addresses callLayout f = some (target f, 13))
+theorem target_lower : ∀ f : Fin 3, lowFun 1 P addresses callLayout f = some (target f, 13) := by
+  exact @allFin 3 (fun f => lowFun 1 P addresses callLayout f = some (target f, 13))
     (fun _ => inferInstance) (by first | decide +kernel | (revert g; apply allFin; decide +kernel))
 
 theorem targets_code (g : D.Fn) : PCode (callMem g) addresses target 4096 256 := by

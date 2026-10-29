@@ -76,7 +76,7 @@ theorem forever_body_zeuge :
 
 /-- Even an immediately leaving forever must be refused: fuel zero never enters its body. -/
 theorem forever_refused_zeuge :
-    lowS (fun _ => 0) (layU uf (fun _ => none) 0) 3 ([], 0) [] (0, 0)
+    lowS 1 (fun _ => 0) (layU uf (fun _ => none) 0) 3 ([], 0) [] (0, 0)
       (Stmt.forever (V := vertragVon DF main) (l := false) (Λ := []) progress .tru (.cons (.leave rfl) .nil) :
         Stmt DF (vertragVon DF main) false [] [] []) = none := rfl
 

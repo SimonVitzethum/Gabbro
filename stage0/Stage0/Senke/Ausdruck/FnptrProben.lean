@@ -109,7 +109,7 @@ theorem global_call_zeuge :
     (match rufAt P O 1 4 2 world .nil with | .ok _ v => v.n | _ => -1) = 22 := by
   decide +kernel
 
-def image : Except String (Bild D) := bild P layout [0, 1, 2] Fin.val (fun f => toString f.val) 2 [] 512
+def image : Except String (Bild D) := bild 1 P layout [0, 1, 2] Fin.val (fun f => toString f.val) 2 [] 512
 
 theorem image_nonempty : image.toOption.isSome = true := by decide +kernel
 

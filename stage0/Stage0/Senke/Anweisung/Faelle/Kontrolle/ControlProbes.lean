@@ -65,7 +65,7 @@ def gateBinding : TorB :=
   ⟨1, [some 0, some 1, some 2, none, none, none], [(-9, 0), (-4, 1)]⟩
 
 def imageOf (body : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
-  let b ← bild (programOf body) (layU u (fun _ => some gateBinding)) [entry] Fin.val (fun _ => "main") entry [] 1024
+  let b ← bild 1 (programOf body) (layU u (fun _ => some gateBinding)) [entry] Fin.val (fun _ => "main") entry [] 1024
   pure b.bytes
 
 def blockImageOf (body : Block D (vertragVon D entry) false [] [] []) : Except String (List Runner.B) :=
@@ -94,7 +94,7 @@ theorem blockAxiomElse_case_zeuge :
 
 /-- The value never fits an unrepresentable source interval or bound. -/
 theorem narrow_refused_zeuge :
-    lowEnd (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0) (narrowEnd (2^63)) = none := by
+    lowEnd 1 (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0) (narrowEnd (2^63)) = none := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.ControlProbe

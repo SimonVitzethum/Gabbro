@@ -61,7 +61,7 @@ theorem byte_roundtrip_zeuge :
 
 /-- The same G program is lowered by the ordinary image builder. -/
 def imageOf (code : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
-  let b ← bild (programOf code) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry [] 1024
+  let b ← bild 1 (programOf code) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry [] 1024
   pure b.bytes
 
 def image : Except String (List Runner.B) := imageOf body
@@ -145,7 +145,7 @@ theorem shift_ok_zeuge :
     let s : Stmt (declOf shiftU) (vertragVon (declOf shiftU) fn) false [] [] [] :=
       .shift t f rfl (.widen (by decide) (by decide) (.lit 1)) 0 1 (by decide) (by decide) (by decide)
         (by intro w hw; change w ∈ [] at hw; cases hw)
-    (lowS (fun _ => 0) (layU shiftU (fun _ => none) 65536) 3 ([], 0) [] (0, 0) s).isSome = true := by
+    (lowS 1 (fun _ => 0) (layU shiftU (fun _ => none) 65536) 3 ([], 0) [] (0, 0) s).isSome = true := by
   decide +kernel
 
 /-- Open cells are not bounded by count and currently have no IR world representation. -/
@@ -161,7 +161,7 @@ theorem open_refs_lowered_zeuge :
     let L := layU openU (fun _ => none) 65536
     (lowE L (.refEq r r) 4).isSome = true ∧
     (lowE L (.slotRef r t rfl rfl f (by intro w hw; change w ∈ [] at hw; cases hw)) 4).isSome = true ∧
-    (lowS (fun _ => 0) L 3 ([], 0) [] (0, 0)
+    (lowS 1 (fun _ => 0) L 3 ([], 0) [] (0, 0)
       (V := vertragVon (declOf openU) fn) (l := false)
       (.assignSlotRef r t rfl rfl f (.widen (by decide) (by decide) (.lit 7)) (by decide)
         (by intro w hw; change w ∈ [] at hw; cases hw))).isSome = true := by
