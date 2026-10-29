@@ -217,7 +217,6 @@ theorem sim_rueckBind {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZa
     Paar.evalErg (sF := kompakt (M.faeden f).spur) (sM := (M.faeden f).spur) (by paar) (by paar) e ρ
   refine ⟨_, RufSchrittG.rueckBind M f cM rM hM l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hkopf_ _ rfl rho hrho ((M.faeden f).kopf.s0) (rfl) ?_ ((M.weltVon f).lese Λc e.orte) (rfl) v (hv.trans hE) he neu ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannLeaveTrav {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -271,7 +270,6 @@ theorem sim_dannLeaveTrav {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fre
   subst hs₁
   refine ⟨_, RufSchrittG.dannLeaveTrav M f l Γ Λ t inv body is k rest i ρ hleave hhead ((M.weltVon f)) _ neu rfl ?_ hkein_nimmt (((M.weltVon f)).lese Λ inv.orte) (rfl) ?_ neu₁ ?_ ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannNextTrav {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (t : D.Tab) (inv : Expr D Γ Λ .bool)
@@ -320,7 +318,6 @@ theorem sim_dannNextTrav {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (frem
   cases hstep
   refine ⟨_, RufSchrittG.dannNextTrav M f l Γ Λ t inv body is k rest i ρ hnext hhead ((M.weltVon f)) _ neu rfl ?_ hkein_nimmt ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannLeaveWieder {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -366,7 +363,6 @@ theorem sim_dannLeaveWieder {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (f
   cases hstep
   refine ⟨_, RufSchrittG.dannLeaveWieder M f l Γ Λ n bis body ueber k rest ρ hleave hhead ((M.weltVon f)) _ neu rfl ?_ hkein_nimmt ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannNextWieder {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (n : Nat) (bis : Expr D Γ Λ .bool)
@@ -412,7 +408,6 @@ theorem sim_dannNextWieder {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fr
   cases hstep
   refine ⟨_, RufSchrittG.dannNextWieder M f l Γ Λ n bis body ueber k rest ρ hnext hhead ((M.weltVon f)) _ neu rfl ?_ hkein_nimmt ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannLeaveEwig {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
@@ -457,7 +452,6 @@ theorem sim_dannLeaveEwig {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fre
   cases hstep
   refine ⟨_, RufSchrittG.dannLeaveEwig M f l Γ Λ a n inv body k rest ρ hleave hhead ((M.weltVon f)) _ neu rfl ?_ hkein_nimmt ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannNextEwig {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ : List (Res D))
       (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
@@ -502,5 +496,4 @@ theorem sim_dannNextEwig {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (frem
   cases hstep
   refine ⟨_, RufSchrittG.dannNextEwig M f l Γ Λ a n inv body k rest ρ hnext hhead ((M.weltVon f)) _ neu rfl ?_ hkein_nimmt ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 end Gabbro.Stage0

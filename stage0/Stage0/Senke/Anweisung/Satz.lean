@@ -9,9 +9,9 @@ import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Sperre.Satz
 import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
 import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
-import Stage0.Senke.Anweisung.Faelle.Wahl
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Wahl
 import Stage0.Senke.Anweisung.Option
-import Stage0.Senke.Anweisung.Faelle.Why
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Why
 import Stage0.Senke.Anweisung.Faelle.CallElse
 import Stage0.Senke.Anweisung.Faelle.Fnptr
 import Stage0.Senke.Anweisung.Bytes.Shift
@@ -120,13 +120,13 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     have hn0 := (eval σE i σE ρ).lo_le
     have hkc : ((eval σE i σE ρ).n.toNat : Int) < D.count t := by have := (eval σE i σE ρ).le_hi; omega
     have hkn : (((eval σE i σE ρ).n.toNat : Nat) : Int) = (eval σE i σE ρ).n := Int.toNat_of_nonneg hn0
-    have hin := hW.lay.1 t f _ hkc
+    have hin := hW.lay.1 t f _ (L.bounded hkc)
     obtain ⟨m', s', a', en, hw'⟩ := store_ok (σ := σE) hp hW hWaE (by omega)
       (fun m pc hp => lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
       (fun m pc hp => slotA_ok ha (by omega)
         (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ ci1 ti hi (by omega) m pc ρ hp) hp)
       hin (fun m w hm hpe => by
-        have := weltAt_slot hm hW.lay hW.dis hkc hpe
+        have := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hpe
         rw [hkn] at this
         exact this)
     exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agreeW hW a' hpr (by have := hW.ks; omega)⟩
@@ -219,7 +219,9 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .retWhy r hp0, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
     exact retWhy_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (r := r) (proof0 := hp0)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  | _, _, _, _, .assignSlotRef .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .assignSlotRef r t ht ho field e hw hL, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
+    assignSlotRef_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens r t ht ho field e
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
 
 theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)

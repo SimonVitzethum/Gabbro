@@ -132,13 +132,13 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
           · next f hbf =>
             split at h
             · next hcond =>
-              obtain ⟨hτ, _, hc0, _⟩ := hcond
+              obtain ⟨hτ, _, hc0, _, hcount⟩ := hcond
               simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
               obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
               simp only [Prod.mk.injEq] at hc
               obtain ⟨rfl, rfl⟩ := hc
               refine ⟨b, hb, ?_⟩
-              obtain ⟨m', w, st, ag, hw, hW', hroh⟩ := torPuf_ok (O := O) hb hg hpp htn hbf hτ hc0 hca rfl rfl rfl rfl rfl
+              obtain ⟨m', w, st, ag, hw, hW', hroh⟩ := torPuf_ok (O := O) hb hg hpp htn hbf hτ hc0 hcount hca rfl rfl rfl rfl rfl
                 hKs hW hp hWa
               refine ⟨m', w, star_cast st rfl ?_, ag, hw, hW', hroh⟩
               simp only [T.mk.injEq, and_true, torCode, List.length_append, List.length_singleton, List.length_cons,

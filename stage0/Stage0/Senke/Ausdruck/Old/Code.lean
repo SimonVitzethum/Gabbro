@@ -36,13 +36,13 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
 def SnapAt (L : Lay D) (cs : List (Zelle D)) (σ : World D) (m : Runner.Mem) (fp : Runner.W) : Prop :=
   ∀ c ∈ cs, ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 3)) = some w ∧ Enc L c.ty (c.val σ) w
 
-instance (c : Zelle D) : Decidable c.da := by
+instance (L : Lay D) (c : Zelle D) : Decidable (c.da L) := by
   cases c <;> unfold Zelle.da <;> infer_instance
 
 /-- Snapshot code writes only the reserved header word. -/
 def snapC (L : Lay D) : List (Zelle D) → Option (List II)
   | [] => some []
-  | [c] => if decide c.da && lit32 (c.adr L) then some [ci 1 3 (c.adr L) 0, ci 15 3 3 0] else none
+  | [c] => if decide (c.da L) && lit32 (c.adr L) then some [ci 1 3 (c.adr L) 0, ci 15 3 3 0] else none
   | _ => none
 
 /-- Postcondition lowering uses the same arithmetic instructions as ordinary expressions.

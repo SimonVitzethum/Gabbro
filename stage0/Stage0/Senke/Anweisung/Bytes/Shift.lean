@@ -85,9 +85,9 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
         (fun m pc hp => (const_ok hp hfit.2 (by omega)).mono (fun w hw => (enc_int_back ht ⟨nach, hn.1, hn.2⟩ w).mpr hw))
         (fun m pc hp => slotA_ok ha (by omega)
           (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp) hp)
-        (hW.lay.1 t field _ hkc) (fun m w hm hw => by
+        (hW.lay.1 t field _ (L.bounded hkc)) (fun m w hm hw => by
           have hnw : Enc L (D.typ t field) ((ht ▸ (⟨nach, hn.1, hn.2⟩ : Zahl a b) : Wert D (D.typ t field))) w := hw
-          have hh := weltAt_slot hm hW.lay hW.dis hkc hnw
+          have hh := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hnw
           rw [hkn] at hh
           exact hh)
       have aa : AgreeW L fp (frei Γ) K m m2 := (agreeW_of a1).trans a2

@@ -62,10 +62,10 @@ theorem putBytesL_ok {L : Lay D} {Γ : Ctx} {Λ : List (Res D)} {t : D.Tab} {f :
         (fun w hw => (enc_int_cast_back hf part w).mpr hw))
       (fun m pc hp => slotA_ok (σ₀ := σ) (σ := σ) (i := ix) ha (by omega)
         (fun m pc hp => lowE_ok σ σ (fun _ h => h) ix _ ci' ti hi (by omega) m pc _ hp) hp)
-      (by simpa only [hixn] using (hW.lay.1 t f (k.n + j).toNat hkc))
+      (by simpa only [hixn] using (hW.lay.1 t f (k.n + j).toNat (L.bounded hkc)))
       (fun m w hm hw => by
         have hnw : Enc L (D.typ t f) (cast (congrArg (Wert D) hf).symm part) w := hw
-        have hh := weltAt_slot hm hW.lay hW.dis hkc hnw
+        have hh := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hnw
         rw [hkn] at hh
         exact hh)
     have hcf := codeFar_right (n := (ce ++ ca ++ [stC (frei Γ + 2)]).length) (k := rest.length) (by simpa only [List.length_append] using hp'.far)

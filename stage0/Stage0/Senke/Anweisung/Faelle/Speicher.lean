@@ -12,6 +12,43 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 
+theorem assignSlotRef_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
+    (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
+    (field : D.Feld t) (e : Expr D Γ Λ (D.typ t field)) {hw : _} {hL : _} :
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex
+      (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignSlotRef r t ht ho field e hw hL) := by
+  intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ _ hWa hpr
+  simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, ⟨ca, ta⟩, ha, hc⟩ := h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+  simp only [execStmt, Sim]
+  have hks := hW.ks
+  have heTop := lowE_top e _ _ _ he
+  have haTop := slotA_top ha
+  generalize hσE : σ.lese Λ _ = σE
+  have hWaE : WeltAt m L σE := by rw [← hσE]; exact hWa
+  -- Inspecting the reference code at its address establishes membership before the store.
+  -- No execution is assumed here: a reflexive frame agreement preserves the same environment.
+  have hpa := PreS.welt ((hp.left.next (Agree.refl _ _ _ _) (Nat.le_succ _) (by omega)))
+    hW.ks hWaE hW.lay (by have := hW.lo; omega)
+  have haddr := slotRefA_ok ht ha (by omega : ta ≤ Ks)
+    (fun m pc hp => lowE_ok σE σE (fun _ h => h) r _ cr tr hr (by omega) m pc ρ hp) hpa
+  obtain ⟨_, _, _, _, _, _, hk⟩ := haddr
+  have hin := hW.lay.1 t field (eval σE r σE ρ).zelle hk
+  obtain ⟨m', s', a', en, hw'⟩ := store_ok (σ := σE) hp hW hWaE (by omega)
+    (fun m pc hp => lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
+    (fun m pc hp => (slotRefA_ok ht ha (by omega)
+      (fun m pc hp => lowE_ok σE σE (fun _ h => h) r _ cr tr hr (by omega) m pc ρ hp) hp).mono
+        (fun _ he => he.1))
+    hin (fun m w hm hpe => weltAt_slot hm hW.lay hW.dis hk hpe)
+  exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agreeW hW a' hpr (by have := hW.ks; omega)⟩
+
 theorem leave_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}

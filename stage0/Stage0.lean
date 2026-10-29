@@ -66,9 +66,10 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 import Stage0.Senke.Tore.Proben
 
-import Stage0.Senke.Anweisung.Faelle.WhyProben
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 import Stage0.Senke.Ausdruck.Aggregat.Proben
 
+import Stage0.Senke.Ausdruck.Referenz.Proben
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 
 import Stage0.Senke.Ausdruck.Old.Proben

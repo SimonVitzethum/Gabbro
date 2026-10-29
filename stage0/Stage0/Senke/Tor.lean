@@ -112,7 +112,7 @@ def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ
           match L.byte t with
           | some f =>
             if D.typ t f = .int 0 255 ∧ ((D.aparams a).filter isPtr).length = 1 ∧ 0 ≤ D.count t ∧
-                D.count t < 2 ^ 20 then do
+                D.count t < 2 ^ 20 ∧ L.count t = D.count t then do
               let ca ← lowR L args (s + 1)
               let c := (D.count t).toNat
               let B := max ca.2 (s + 7)

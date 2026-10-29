@@ -252,7 +252,7 @@ theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runn
         fun i hi => by rw [a1.wr]; exact hp.frame.wr i hi⟩,
        codeAt_agreeW a1 hwlo hl3 hord (codeAt_right hp'.code) hfr, hfr,
        envAt_agreeW hp.env a1 hwlo hroom hp.ctx (by omega), trivial, wstab_true _ _⟩
-    have hcell := hl.1 t f K' (by omega)
+    have hcell := hl.1 t f K' (L.bounded (by omega))
     have hbw : m1.rd64 (slot fp (BitVec.ofNat 64 (B + K' / 8))) =
         some ((m.rd64 (slot fp (BitVec.ofNat 64 B) + BitVec.ofNat 64 (8 * (K' / 8)))).getD 0) := by
       rw [agreeW_rd_low a1 hwlo hroom (hB K' (by omega)) (by omega), slot_succ]
@@ -266,10 +266,10 @@ theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runn
       congr 2
     · by_cases hkK : k = K'
       · subst hkK; rw [hc2]; rfl
-      · obtain ⟨hck1, hck2⟩ := hl.1 t f k (by omega)
+      · obtain ⟨hck1, hck2⟩ := hl.1 t f k (L.bounded (by omega))
         obtain ⟨hcl1, hcl2⟩ := hcell
-        have hfar := cell_far (c := .elem t f k) (c' := .elem t f K') hl hd (by simp [Zelle.da]; omega)
-          (by simp [Zelle.da]; omega) (by simpa [Zelle.adr] using hck2) (by simpa [Zelle.adr] using hcl2)
+        have hfar := cell_far (c := .elem t f k) (c' := .elem t f K') hl hd (by simp only [Zelle.da]; apply L.bounded; omega)
+          (by simp only [Zelle.da]; apply L.bounded; omega) (by simpa [Zelle.adr] using hck2) (by simpa [Zelle.adr] using hcl2)
           (by simp; omega)
         simp only [Zelle.adr] at hfar
         rw [ho2 _ (by omega) (by omega) hfar]

@@ -153,18 +153,18 @@ def openU : UProg := { u with
   tabs := [{name := "Bytes", count := 0, cols := [("byte", (0, 255))], von := some "provider"}]
 }
 
-theorem open_refs_refused_zeuge :
+theorem open_refs_lowered_zeuge :
     let t : (declOf openU).Tab := ⟨0, by decide⟩
     let f : (declOf openU).Feld t := ⟨0, by decide⟩
     let fn : (declOf openU).Fn := ⟨0, by decide⟩
     let r : Expr (declOf openU) [.ref 0] [] (.ref 0) := .var .here
     let L := layU openU (fun _ => none) 65536
-    lowE L (.refEq r r) 4 = none ∧
-    lowE L (.slotRef r t rfl rfl f (by intro w hw; change w ∈ [] at hw; cases hw)) 4 = none ∧
-    lowS (fun _ => 0) L 3 ([], 0) [] (0, 0)
+    (lowE L (.refEq r r) 4).isSome = true ∧
+    (lowE L (.slotRef r t rfl rfl f (by intro w hw; change w ∈ [] at hw; cases hw)) 4).isSome = true ∧
+    (lowS (fun _ => 0) L 3 ([], 0) [] (0, 0)
       (V := vertragVon (declOf openU) fn) (l := false)
       (.assignSlotRef r t rfl rfl f (.widen (by decide) (by decide) (.lit 7)) (by decide)
-        (by intro w hw; change w ∈ [] at hw; cases hw)) = none := by
-  exact ⟨rfl, rfl, rfl⟩
+        (by intro w hw; change w ∈ [] at hw; cases hw))).isSome = true := by
+  decide +kernel
 
 end Gabbro.Stage0.Senke.ByteProbe

@@ -64,7 +64,7 @@ def rohW (b : TorB) (n : Nat) (w : Runner.W) : Int :=
 
 /-- The world `σ` in memory, apart from column `f` of table `t`. -/
 def WeltOhne (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld t) : Prop :=
-  (∀ t' f' (k : Nat), (k : Int) < D.count t' → (∀ k' : Nat, (Zelle.elem t' f' k : Zelle D) ≠ .elem t f k') →
+  (∀ t' f' (k : Nat), (k : Int) < L.count t' → (∀ k' : Nat, (Zelle.elem t' f' k : Zelle D) ≠ .elem t f k') →
     ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t' f' k)) = some w ∧ Enc L (D.typ t' f') (σ.slots t' k f') w) ∧
   (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc L (D.gtyp g) (σ.globs g) w)
 
@@ -137,7 +137,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
   · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2.1⟩
   · intro k hk
     rw [hO]
-    obtain ⟨w, hw, he⟩ := hW.1 t f k (by omega)
+    obtain ⟨w, hw, he⟩ := hW.1 t f k (L.bounded (by omega))
     have hwk : wAt m (L.elem t f k) = w := wAt_of hw
     cases rw
     · simp only [Bool.false_eq_true, ↓reduceIte, hwk]; exact he
@@ -146,7 +146,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
       have hws : ∀ k, (ws k).toNat < 256 := fun k => by
         simp only [ws]; split
         · next hk' =>
-          obtain ⟨w', hw', he'⟩ := hW.1 t f k (by omega)
+          obtain ⟨w', hw', he'⟩ := hW.1 t f k (L.bounded (by omega))
           rw [wAt_of hw']; exact enc_byte hτ he'
         · decide
       have hb := hB (k / 8) (by simp only [pufW]; omega)

@@ -213,12 +213,12 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_refEq (a b : Expr D Γ Λ (.ref n)) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.refEq a b) d =
-    (none) := rfl
+    wordL 14 d (lowE L a d) (lowE L b (d + 1)) := rfl
 
 @[lowE_eqs] theorem lowE_slotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
       (f : D.Feld t) (hL : darf D t Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.slotRef r t ht ho f hL) d =
-    (none) := rfl
+    (do let cr ← lowE L r d; slotC L t f d cr) := rfl
 
 @[lowE_eqs] theorem lowE_arrNil :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.arrNil (τ := τ)) d =

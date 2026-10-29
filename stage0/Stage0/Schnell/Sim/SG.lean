@@ -135,7 +135,6 @@ theorem sim_rueckConsBind {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fre
             (RufEreignisF.rueck g rho v s0 s1) :: ((normal ww M).faeden f).log⟩,
          (normal ww M).lauf ++ rufEigenG f neu,
          (normal ww M).start⟩
-
   /- The error channel of `let x = g(…) else { err }`: a callee that answers
      a reason (`retGrund r`, from `ende`, an `ende` cons head, or a block)
      pops into its caller waiting in `wartetSonst`, which runs `err` with
@@ -157,7 +156,6 @@ theorem sim_rueckConsBind {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fre
     Paar.evalErg (sF := kompakt (M.faeden f).spur) (sM := (M.faeden f).spur) (by paar) (by paar) e ρ
   refine ⟨_, RufSchrittG.rueckConsBind M f lk Γk Λk e hperm restk ρ hhead cM rM hM l Γ Λ Λ' τ restb k ρc hcaller ?_ ((M.weltVon f).lese Λk e.orte) (rfl) _ rfl rho hrho ((M.faeden f).kopf.s0) (rfl) v (hv.trans hE) he neu ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_rueckGrund {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     {lk : Bool} {Γk : Ctx} {Λk : List (Res D)}
       (r : Fin (vertragVon D ((normal ww M).faeden f).kopf.f).gruende)
@@ -210,7 +208,6 @@ theorem sim_rueckGrund {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZ
   subst hfg
   refine ⟨_, RufSchrittG.rueckGrund M f r hperm ρ hhead cM rM hM l Γ Λ Λ' τ n err restb k ρc hcaller ?_ _ rfl rho hrho ((M.faeden f).kopf.s0) (rfl) rg hrg hn, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_rueckConsGrund {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     {lk : Bool} {Γk : Ctx} {Λk : List (Res D)}
       (r : Fin (vertragVon D ((normal ww M).faeden f).kopf.f).gruende)
@@ -265,7 +262,6 @@ theorem sim_rueckConsGrund {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fr
   subst hfg
   refine ⟨_, RufSchrittG.rueckConsGrund M f r hperm restk ρ hhead cM rM hM l Γ Λ Λ' τ n err restb k ρc hcaller ?_ _ rfl rho hrho ((M.faeden f).kopf.s0) (rfl) rg hrg hn, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannRetGrund {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     {lk : Bool} {Γk : Ctx} {Λk Λk'' : List (Res D)}
       (r : Fin (vertragVon D ((normal ww M).faeden f).kopf.f).gruende)
@@ -321,7 +317,6 @@ theorem sim_dannRetGrund {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (frem
   subst hfg
   refine ⟨_, RufSchrittG.dannRetGrund M f r hperm restk kk ρ hhead cM rM hM l Γ Λ Λ' τ n err restb k ρc hcaller ?_ _ rfl rho hrho ((M.faeden f).kopf.s0) (rfl) rg hrg hn, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannRegLies {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
@@ -354,7 +349,6 @@ theorem sim_dannRegLies {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremd
          (normal ww M).lauf ++ rufEigenG f [Ereignis.fremd (.inr (.inl r))], (normal ww M).start⟩ : RufMaschineG D)).faeden f).spur + fremdZahl (M.faeden f).spur := by
   refine ⟨_, RufSchrittG.dannRegLies M f l Γ Λ Λ' r hk rest k ρ hhead v (by rw [← hO.zeiger, ← hO.regLies r (schwanz_normal M f) (Paar.fragt (paar_normal (w := ww) M f) _)]; exact hv) hz ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannRegLiesElseWahr {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
@@ -392,7 +386,6 @@ theorem sim_dannRegLiesElseWahr {M : RufMaschineG D} {f : Faden} (hO : OrakelPaa
   subst hs₁
   refine ⟨_, RufSchrittG.dannRegLiesElseWahr M f l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v (by rw [← hO.zeiger, ← hO.regLies r (schwanz_normal M f) (Paar.fragt (paar_normal (w := ww) M f) _)]; exact hv) (((M.weltVon f).fragt (.inr (.inl r))).lese Λ zusage.orte) (rfl) ?_ neu ?_ ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannRegLiesElseFalsch {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (r : D.Reg) (hk : (D.rklasse r).lesbar = true)
@@ -428,7 +421,6 @@ theorem sim_dannRegLiesElseFalsch {M : RufMaschineG D} {f : Faden} (hO : OrakelP
   subst hs₁
   refine ⟨_, RufSchrittG.dannRegLiesElseFalsch M f l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v (by rw [← hO.zeiger, ← hO.regLies r (schwanz_normal M f) (Paar.fragt (paar_normal (w := ww) M f) _)]; exact hv) (((M.weltVon f).fragt (.inr (.inl r))).lese Λ zusage.orte) (rfl) ?_ neu ?_ ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannAwaits {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (g : D.Glob) (payload : List D.Glob) (hp : payload = D.nutzlast g)
@@ -463,7 +455,6 @@ theorem sim_dannAwaits {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZ
   subst hs₁
   refine ⟨_, RufSchrittG.dannAwaits M f l Γ Λ Λ' g payload hp hL hat rest k ρ hhead (by rw [← hO.sichtbar g (schwanz_normal M f) (Paar.fragt (paar_normal (w := ww) M f) _)]; exact hvis) (((M.weltVon f).fragt (.inr (.inr g))).lese Λ [.inr g]) (rfl) neu ?_ ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
-
 theorem sim_dannExchange {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (fremdZahl (M.faeden f).spur) OF OM)
     (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (g : D.Glob) (neuE : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g))
@@ -505,5 +496,4 @@ theorem sim_dannExchange {M : RufMaschineG D} {f : Faden} (hO : OrakelPaar (frem
   refine ⟨_, RufSchrittG.dannExchange M f l Γ Λ Λ' g neuE hw hL rest k ρ hhead ((M.weltVon f).lese Λ (.inr g :: neuE.orte)) (rfl) (((M.weltVon f).lese Λ (.inr g :: neuE.orte)).schreibGlob g Λ (eval ((M.weltVon f).lese Λ (.inr g :: neuE.orte)) neuE ((M.weltVon f).lese Λ (.inr g :: neuE.orte)) (.cons (((M.weltVon f).lese Λ (.inr g :: neuE.orte)).globs g) ρ))) (rfl) neu ?_ ?_, sim_schluss ?_ ?_ ?_ (neu := ?neu) ?_ ?_⟩
   all_goals try sim_ziel
   all_goals try (rw [hE]; sim_ziel)
-
 end Gabbro.Stage0

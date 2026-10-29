@@ -2,6 +2,7 @@
   File:      stage0/Stage0/Senke/Ausdruck/Satz.lean
   Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
 -/
+import Stage0.Senke.Ausdruck.Referenz.Lesen
 import Stage0.Senke.Ausdruck.Gleit.Fall
 import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Wenn
@@ -32,6 +33,14 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE L e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L τ (eval σ₀ e σ ρ))
+  | _, _, .refEq a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    refEq_ok a b (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL b (d + 1) ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .slotRef r t ht _ f _, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨⟨cr, tr⟩, hr, hs⟩ := h
+    exact slotRefC_ok ht hs hK (fun m pc hp => lowE_ok σ₀ σ hWL r d cr tr hr
+      (Nat.le_trans (slotC_top hs) hK) m pc ρ hp) hWL hp
   | _, _, .arrNil, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
   | _, _, .arrCons a rest, d, c, top, h, hK, m, pc, ρ, hp =>
     arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp) h hK hp
@@ -464,10 +473,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp) hp
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
-  | _, _, .refEq .., _, _, _, h, _, _, _, _, _
-  | _, _, .slotRef .., _, _, _, h, _, _, _, _, _
     => by simp [lowE_eqs] at h
-
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option (Int × Int)} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
@@ -490,5 +496,4 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (fun m pc hp => lowE_ok σ₀ σ hWL e d ce te he (by simp only [packSum, bin2] at hK; omega) m pc ρ hp) hp
     · cases h
 end
-
 end Gabbro.Stage0.Senke
