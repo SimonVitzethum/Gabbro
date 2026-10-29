@@ -546,6 +546,21 @@ theorem floatOfIntAssembly_magnitude_bound (z : Int)
     Nat.mod_eq_of_lt (show z.natAbs < 2^64 by omega)]
   exact ⟨rfl, hb⟩
 
+/-- Both IEEE formats keep every signed-word exponent and scaling count in range.
+    These bounds include minInt and do not assume a precomputed exponent. -/
+theorem floatOfIntAssembly_scale_bounds (F : Gleitkomma.Format)
+    (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64]) (E : Int)
+    (hE : 0 ≤ E ∧ E ≤ 63) :
+    F.emin ≤ E ∧ E < (F.emax : Int) ∧
+    (E - ((F.p : Int) - 1)).toNat < 63 ∧
+    (((F.p : Int) - 1) - E).toNat < 64 ∧
+    (0 < (E - F.emin + 1).toNat ∧
+      (E - F.emin + 1).toNat + 1 < F.bexpMax) := by
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hF
+  rcases hF with rfl | rfl <;>
+    simp only [Gleitkomma.f32, Gleitkomma.f64, Gleitkomma.Format.emin,
+      Gleitkomma.Format.emax, Gleitkomma.Format.bexpMax] <;> omega
+
 /-- The actual assembled zero branch includes magnitude computation and the jump.
     The generic branch rule preserves the frame and validates emitted offsets. -/
 theorem floatOfIntAssemblyL_zero {Γ : Ctx} {ρ : Env D Γ}
