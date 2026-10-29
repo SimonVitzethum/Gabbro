@@ -1574,6 +1574,68 @@ theorem floatOfIntContinuationL_third_step (F : Gleitkomma.Format)
   · exact slotRead_agree hp.frame a2 (by omega) (by omega) r2
   · exact slotRead_agree hp.frame a2 (by omega) (by omega) r3
 
+set_option maxRecDepth 4096 in
+theorem floatOfIntContinuationL_first_four (F : Gleitkomma.Format) (input : Nat)
+    {code : List II} {top : Nat}
+    (h : floatOfIntContinuationL F input = some (code, top)) :
+    ∃ tail, code = ci 2 (input + 1) input 0 :: ci 1 (input + 2) 1 0 :: ci 1 (input + 3) 2 0 :: ci 2 (input + 4) input 0 :: tail := by
+  obtain ⟨assembly, ha, rfl⟩ := floatOfIntContinuationL_parts F input h
+  simp only [floatOfIntAssemblyL, wennL, wordK, floatMagnitudeL, wordL,
+    bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at ha
+  obtain ⟨cc, hc, ca, ha, cb, hb, he⟩ := ha
+  obtain ⟨a, ha, b, hb, hab⟩ := hc
+  obtain ⟨a', ha', b', hb', hab'⟩ := ha
+  cases ha'
+  obtain ⟨x, hx, y, hy, hxy⟩ := hb'
+  obtain ⟨u, hu, z, hz, huz⟩ := hy
+  obtain ⟨q, hq, r, hr, hqr⟩ := hz
+  cases hq
+  cases hqr
+  cases hu
+  cases huz
+  cases hx
+  cases hxy
+  cases hab'
+  cases hab
+  split at he
+  · cases he
+    simp only [wennC, bin2, List.cons_append, List.nil_append, List.append_assoc]
+    exact ⟨_, rfl⟩
+  · cases he
+
+/-- Execute the next actual magnitude constant, preserving both input reads. -/
+theorem floatOfIntContinuationL_fourth_step (F : Gleitkomma.Format)
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
+    {code : List II} {v : Runner.W}
+    (hc : floatOfIntContinuationL F input = some (code, top))
+    (h : Pre L m pc fp K (input + 1) code ρ W reserved)
+    (hk : input + 4 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 64, fp⟩ m' ∧
+      Agree fp (input + 1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 input)) = some v ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some v ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 2))) = some 1 ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 3))) = some 2 ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 4))) = some v := by
+  obtain ⟨m1, s1, a1, r1, r2, r3, r4⟩ :=
+    floatOfIntContinuationL_third_step F hc h (by omega) hr
+  obtain ⟨tail, he⟩ := floatOfIntContinuationL_first_four F input hc
+  rw [he] at h
+  have hp := Pre.next (a := [ci 2 (input + 1) input 0, ci 1 (input + 2) 1 0, ci 1 (input + 3) 2 0]) h a1
+    (show input + 1 ≤ input + 4 by omega) (by omega)
+  obtain ⟨m2, s2, a2, w, rw2, hw⟩ := mov_ok hp.left (by omega) hk r1
+  subst w
+  refine ⟨m2, ?_, a1.trans (a2.mono (by omega)), ?_, ?_, ?_, ?_, rw2⟩
+  · have ss := s1.trans s2
+    simpa [BitVec.add_assoc] using ss
+  · exact slotRead_agree hp.frame a2 (by omega) (by omega) r1
+  · exact slotRead_agree hp.frame a2 (by omega) (by omega) r2
+  · exact slotRead_agree hp.frame a2 (by omega) (by omega) r3
+  · exact slotRead_agree hp.frame a2 (by omega) (by omega) r4
+
+
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
     This helper is deliberately not accepted by `lowE` before its simulation proof. -/
