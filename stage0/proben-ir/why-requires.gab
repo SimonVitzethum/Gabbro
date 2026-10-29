@@ -1,0 +1,19 @@
+// Failed contracts remain stops, even when an else handler is available.
+module ir_why_contract {
+reason Fault {
+    Failed = 1 "reason channel"
+    exhaustive
+}
+impl fn choose() -> u32 in 0 .. 42 or Fault
+    effects { pure }
+    requires false
+{
+    return Fault::Failed;
+}
+impl fn main() -> u32 in 0 .. 42
+    effects { pure }
+{
+    let value = choose() else (reason) { return 0; }
+    return value;
+}
+}
