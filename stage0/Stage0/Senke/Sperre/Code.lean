@@ -85,6 +85,7 @@ def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D 
   | _, _, _, _, .assignThru .. | _, _, _, _, .call .. | _, _, _, _, .advances .. | _, _, _, _, .retires ..
   | _, _, _, _, .leave _ | _, _, _, _, .next _ | _, _, _, _, .axiomCall .. | _, _, _, _, .publish .. => true
   | _, _, _, _, .ite _ t e => retFreiB t && retFreiB e
+  | _, _, _, _, .onOption _ p a => retFreiB p && retFreiB a
   | _, _, _, _, .traverse _ _ b => retFreiB b
   | _, _, _, _, .breaking _ b => retFreiB b
   | _, _, _, _, .locks _ _ b => retFreiB b
