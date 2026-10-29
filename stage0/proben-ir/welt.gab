@@ -1,0 +1,24 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): stage0 --ir, then the runner; exit code 145
+module ir_probe {
+static mut g : u32 in 0 .. 1000 = 0;
+table t count 4 { slot { a : u32 in 0 .. 255, b : u32 in 0 .. 100000, } }
+impl fn setze(k : u32 in 0 .. 3, v : u32 in 0 .. 255)
+    effects { writes t.slots }
+{
+    t.slots[k].a = v;
+}
+impl fn main() -> u64
+    effects { reads g, writes g, reads t.slots, writes t.slots }
+{
+    g = 30;
+    t.slots[1].b = 4000;
+    setze(2, 200);
+    setze(3, 11);
+    let x = g;
+    let y = t.slots[2].a;
+    let z = t.slots[1].b;
+    let w = t.slots[3].a;
+    let u = t.slots[0].a;
+    return x + y + z + w + u;
+}
+}

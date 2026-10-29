@@ -6,6 +6,7 @@
              else for a lowered block (`Sim`).
 -/
 import Stage0.Senke.Rueckkehr
+import Stage0.Senke.Schreiben
 
 namespace Gabbro.Stage0.Senke
 
@@ -197,9 +198,46 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     obtain ⟨rfl, rfl⟩ := hc
     simp only [execStmt, Sim]
     exact ret_ok hlo0 hens e he (by omega) m pc σ ρ hp hlo2 hk hW hWa
-  | _, _, _, _, .assignSlot .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .assignThru .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .assignGlob .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .assignGlob g e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa => by
+    simp only [lowS] at h
+    split at h
+    · next hl =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ce, te⟩, he, hc⟩ := h
+      simp only [Prod.mk.injEq] at hc
+      obtain ⟨rfl, rfl⟩ := hc
+      simp only [execStmt, Sim]
+      have htop := lowE_top e _ _ _ he
+      have hin := hW.lay.2.1 g
+      exact store_ok (σ := σ.lese Λ e.orte) hp hW hWa hlo2 (by omega)
+        (fun m pc hp => lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
+        (fun m pc hp => (const_ok hp hl (by omega)).mono fun x hx => hx.trans (BitVec.ofInt_natCast _ _))
+        hin (fun m w hm hpe => weltAt_glob hm hW.lay hW.dis hpe)
+    · cases h
+  | _, Γ, Λ, _, .assignSlot t f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa
+  | _, Γ, Λ, _, .assignThru _ t _ f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa => by
+    simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ce, te⟩, he, ⟨ci1, ti⟩, hi, ⟨ca, ta⟩, ha, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    simp only [execStmt, Sim]
+    have htop := lowE_top e _ _ _ he
+    have hst := slotA_top ha
+    simp only at hst
+    generalize hσE : σ.lese Λ _ = σE
+    have hWaE : WeltAt m L σE := by rw [← hσE]; exact hWa
+    have hn0 := (eval σE i σE ρ).lo_le
+    have hkc : ((eval σE i σE ρ).n.toNat : Int) < D.count t := by have := (eval σE i σE ρ).le_hi; omega
+    have hkn : (((eval σE i σE ρ).n.toNat : Nat) : Int) = (eval σE i σE ρ).n := Int.toNat_of_nonneg hn0
+    have hin := hW.lay.1 t f _ hkc
+    refine store_ok (σ := σE) hp hW hWaE hlo2 (by omega)
+      (fun m pc hp => lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
+      (fun m pc hp => slotA_ok ha (by omega)
+        (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ ci1 ti hi (by omega) m pc ρ hp) hp)
+      hin (fun m w hm hpe => ?_)
+    have := weltAt_slot hm hW.lay hW.dis hkc hpe
+    rw [hkn] at this
+    exact this
   | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h

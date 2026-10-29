@@ -1,0 +1,17 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): stage0 --ir, then the runner; exit code 102
+module ir_probe {
+impl fn twice(x : u32 in 0 .. 100) -> u32 in 0 .. 200
+    effects { pure }
+    requires x <= 100
+    ensures result == x + x + 1
+{
+    return x + x;
+}
+impl fn main() -> u32 in 0 .. 400
+    effects { pure }
+{
+    let a = twice(20);
+    let b = twice(1);
+    return a + b;
+}
+}

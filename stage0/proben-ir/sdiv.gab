@@ -1,0 +1,16 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): stage0 --ir, then the runner; exit code 108
+module ir_probe {
+impl fn sm(a : i32 in -1000 .. 1000, b : i32 in 1 .. 7) -> i32
+    effects { pure }
+{
+    let q = a / b;
+    let r = a % b;
+    return q + r;
+}
+impl fn main() -> i32
+    effects { pure }
+{
+    let m = sm(-1000, 7);
+    return m;
+}
+}

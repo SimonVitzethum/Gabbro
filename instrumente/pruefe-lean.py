@@ -18,6 +18,9 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
      executable on `NAME.ein` (written after `NAME.warte` seconds when that file exists, so a thread blocked in
      `read(2)` must leave the others running) and must print exactly `NAME.aus` with exit code 0.
+     `stage0/Nachpruefung.lean`: the lowering's theorems (`bild_ok_u`, `lowS_ok`, ...) depend on exactly the three
+     standard axioms. Every probe `stage0/proben-ir/NAME.gab` is lowered by `stage0 --ir` to an `S0IR` image, which
+     the runner binary (written by `lake exe runner`) runs; its exit code must be `NAME.code`.
   8. The verified x86-64 runner (`runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
      `Nachpruefung.lean` -- `runner_tso`, `runner_sc`, `runner_mt`, the memory models, the file facts, the witness and `decode_enc`
      depend on exactly the three standard axioms; then `teile/runner-cpu.py` on this processor: the runner binary runs the probe images with
@@ -173,7 +176,36 @@ def stufe_stage0():
             falsch.append(f"{gab.name} (rc {p.returncode}: {(aus + err)[:200]!r})")
     print(f"  7 proben:  {'ok' if proben and not falsch else 'ROT'} ({len(proben) - len(falsch)} of {len(proben)})")
     for f in falsch: print("     ", f)
-    return bool(proben) and not falsch
+    rc, out = lauf(["lake", "env", "lean", "Nachpruefung.lean"], S0, 1800)
+    zeilen = re.findall(r"'([^']+)' depends on axioms: \[([^\]]*)\]", out)
+    schlecht = [n for n, a in zeilen if not {x.strip() for x in a.split(",") if x.strip()} <= STANDARD]
+    satz = any(n.endswith(".bild_ok_u") for n, _ in zeilen)
+    ok_ax = rc == 0 and satz and len(zeilen) >= 12 and not schlecht
+    print(f"  7 senke:   {'ok' if ok_ax else 'ROT'} ({len(zeilen)} Saetze, bild_ok_u "
+          f"{'gefunden' if satz else 'FEHLT'}, {len(schlecht)} mit fremden Axiomen)")
+    kratz = S0 / ".lake" / "ir"
+    kratz.mkdir(parents=True, exist_ok=True)
+    rc, out = lauf(["lake", "exe", "runner", str(kratz)], RN, 3600)
+    runner = kratz / "runner"
+    irproben = sorted((S0 / "proben-ir").glob("*.gab"))
+    irfalsch = []
+    if rc != 0 or not runner.exists():
+        irfalsch.append(f"runner binary not written: {out.strip()[-200:]}")
+    else:
+        runner.chmod(0o755)
+        for gab in irproben:
+            img = kratz / (gab.stem + ".img")
+            q = subprocess.run([str(exe), "--ir", str(gab), str(img)], cwd=S0, env=ENV, capture_output=True, timeout=600)
+            if q.returncode != 0:
+                irfalsch.append(f"{gab.name}: stage0 --ir rc {q.returncode}: {(q.stdout + q.stderr)[:200]!r}")
+                continue
+            r = subprocess.run([str(runner), str(img)], cwd=kratz, capture_output=True, timeout=600)
+            soll = int(gab.with_suffix(".code").read_text())
+            if r.returncode != soll:
+                irfalsch.append(f"{gab.name}: exit {r.returncode}, expected {soll}")
+    print(f"  7 ir:      {'ok' if irproben and not irfalsch else 'ROT'} ({len(irproben) - len(irfalsch)} of {len(irproben)})")
+    for f in irfalsch: print("     ", f)
+    return bool(proben) and not falsch and ok_ax and bool(irproben) and not irfalsch
 
 
 RUNNER_FAELLE = "20000"

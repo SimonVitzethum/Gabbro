@@ -89,7 +89,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
     (hcl : cs.length = fs.length) (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i])
     (hfs : ∀ g, fs[pos g]? = some g) (hpar : (D.params main).isEmpty = true) (hfit : fp0 + 8 * K < 2 ^ 31)
     (hroomK : FB + 2 * L ≤ Ks) (hexK : exitSlot + 8 ≤ Ks) (hks : Ks ≤ K) (hYlo : fp0 + 8 * Ks ≤ Yb.lo)
-    (hYhi : Yb.hi ≤ fp0 + 8 * K) (hY : LayIn Yb)
+    (hYhi : Yb.hi ≤ fp0 + 8 * K) (hY : LayIn Yb) (hYd : LayDis Yb)
     (hops : (startC A main n ++ body).all (fun i => decide (i.o < 256)) = true)
     {m : Runner.Mem} (hm : BytesAt m codeBase ((startC A main n ++ body).flatMap encII ++ List.replicate (8 * K) 0))
     (σ : World D) (ρ : Env D (D.params main)) (hWa : WeltAt m Yb σ) :
@@ -170,7 +170,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   have a1 : Agree (BitVec.ofNat 64 fp0) 2 K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
   have hF1 := hF.agree a1
   have hfp0 : (BitVec.ofNat 64 fp0).toNat = fp0 := by simp only [BitVec.toNat_ofNat]; omega
-  have hW : WIn Yb (BitVec.ofNat 64 fp0) Ks K := ⟨hY, by rw [hfp0]; omega, by rw [hfp0]; omega, hks⟩
+  have hW : WIn Yb (BitVec.ofNat 64 fp0) Ks K := ⟨hY, hYd, by rw [hfp0]; omega, by rw [hfp0]; omega, hks⟩
   have hWa1 : WeltAt m1 Yb σ := weltAt_stab hY (by rw [hfp0]; omega) m m1 hWa
     ((agree_write (K := Ks) (by rw [hfp0]; omega) (Nat.le_refl 2) (by omega) _).mono (Nat.zero_le _))
   have hfC : CodeFar (BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * [ci 1 2 ((n + 1 : Nat) : Int) 0].length))
@@ -210,11 +210,13 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   | why _ _ => exact hcall.elim
   | hardware _ => exact hcall.elim
 
-/-- **The program theorem.** For every world `σ` the image's world bytes hold (`WeltAt`), in a world layout that
-    keeps every element in its range (`LayIn`). -/
+/-- **The program theorem.** For every world `σ` the image's world bytes hold (`WeltAt`), under a world layout
+    `Y` that keeps every cell in the world once it ends below `2^31` (`LayIn`) and gives no two cells one word
+    (`LayDis`); `layU` is such a layout (`layU_in`, `layU_dis`). -/
 theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
     {name : D.Fn → String} {main : D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
-    (hb : bild P Y fs pos name main Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g) (hY : LayIn b.Y)
+    (hb : bild P Y fs pos name main Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x))
     {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main))
     (hWa : WeltAt m b.Y σ) :
     match rufAt P O passes b.depth main σ ρ with
@@ -234,12 +236,15 @@ theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} 
         simp only [Except.ok.injEq] at hb
         subst hb
         obtain ⟨⟨hpar, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hks⟩, hfp⟩ := hg
+        have hY := hYin (codeBase + 16 * (startLen + (List.map (fun x => x.1.length) cs0).sum) + 8 * Ks)
+          (Nat.lt_of_le_of_lt hYhi hfit)
+        have hYd := hYdis (codeBase + 16 * (startLen + (List.map (fun x => x.1.length) cs0).sum) + 8 * Ks)
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
         have hm' := hm
         simp only [Bild.bytes, List.append_assoc] at hm'
         have hm2 := hm'.right.right
         simp only [leN_len] at hm2
-        exact bild_kern rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi hY
+        exact bild_kern rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi hY hYd
           hops (by simpa [codeBase] using hm2) σ ρ hWa
       · exfalso
         revert hb

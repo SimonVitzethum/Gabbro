@@ -20,12 +20,37 @@ def LayIn (L : Lay D) : Prop :=
   (∀ t f (k : Nat), (k : Int) < D.count t → L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 ≤ L.hi) ∧
   (∀ g, L.lo ≤ L.ga g ∧ L.ga g + 8 ≤ L.hi) ∧ L.hi < 2 ^ 31
 
-/-- The value word of an element: the low byte for a byte column. -/
-def cellW {t : D.Tab} (f : D.Feld t) (w : Runner.W) : Runner.W := if byteCol t f then w &&& 255 else w
+/-- A cell of the world: a global, or element `k` of column `f` of table `t`. -/
+inductive Zelle (D : Deklaration) where
+  | glob (g : D.Glob)
+  | elem (t : D.Tab) (f : D.Feld t) (k : Nat)
+
+/-- The address of a cell. -/
+def Zelle.adr (L : Lay D) : Zelle D → Nat
+  | .glob g => L.ga g
+  | .elem t f k => L.elem t f k
+
+/-- A cell the world has: every global, the elements below the table's count. -/
+def Zelle.da : Zelle D → Prop
+  | .glob _ => True
+  | .elem t _ k => (k : Int) < D.count t
+
+/-- No two cells share a word: different cells have different addresses, all on one grid of 8. -/
+structure LayDis (L : Lay D) : Prop where
+  inj : ∀ c c' : Zelle D, c.da → c'.da → c.adr L = c'.adr L → c = c'
+  grid : ∀ c : Zelle D, c.da → c.adr L % 8 = L.lo % 8
+
+/-- Two different cells: their words do not overlap. -/
+theorem LayDis.far {L : Lay D} (h : LayDis L) {c c' : Zelle D} (hc : c.da) (hc' : c'.da) (hne : c ≠ c') :
+    c.adr L + 8 ≤ c'.adr L ∨ c'.adr L + 8 ≤ c.adr L := by
+  have h1 := h.grid c hc
+  have h2 := h.grid c' hc'
+  have h3 : c.adr L ≠ c'.adr L := fun e => hne (h.inj c c' hc hc' e)
+  omega
 
 def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) : Prop :=
   (∀ t f (k : Nat), (k : Int) < D.count t → ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
-    Enc (D.typ t f) (σ.slots t k f) (cellW f w)) ∧
+    Enc (D.typ t f) (σ.slots t k f) w) ∧
   (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc (D.gtyp g) (σ.globs g) w)
 
 /-- A word outside the changed slots reads the same. -/

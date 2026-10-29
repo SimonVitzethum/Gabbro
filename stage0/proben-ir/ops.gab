@@ -1,0 +1,18 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): stage0 --ir, then the runner; exit code 172
+module ir_probe {
+impl fn mix(a : u32 in 0 .. 100000, b : u32 in 1 .. 100) -> u64
+    effects { pure }
+{
+    let q = a / b;
+    let r = a % b;
+    let x = (q & 255) | (r ^ 3);
+    let s = (x << 2) >> 1;
+    return s + q;
+}
+impl fn main() -> u64
+    effects { pure }
+{
+    let m = mix(1000, 7);
+    return m;
+}
+}

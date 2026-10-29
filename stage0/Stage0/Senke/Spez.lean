@@ -25,6 +25,7 @@ def PCode (m : Runner.Mem) (A : D.Fn → Nat) (C : D.Fn → List II) (fp : Runne
     Every frame nested in it ends at the same address, so the world lies in each of them (`WIn.sub`). -/
 structure WIn (L : Lay D) (fp : Runner.W) (Ks K : Nat) : Prop where
   lay : LayIn L
+  dis : LayDis L
   lo : fp.toNat + 8 * Ks ≤ L.lo
   hi : L.hi ≤ fp.toNat + 8 * K
   ks : Ks ≤ K
@@ -109,6 +110,6 @@ theorem WIn.sub {L : Lay D} {fp : Runner.W} {Ks K F : Nat} (h : WIn L fp Ks K) (
     simp only [slot, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
     rw [Nat.mod_eq_of_lt (a := F) (by have := h.ks; omega)]; have := h.ks; omega
   have := h.lo; have := h.hi; have := h.ks
-  exact ⟨h.lay, by rw [hs]; omega, by rw [hs]; omega, by omega⟩
+  exact ⟨h.lay, h.dis, by rw [hs]; omega, by rw [hs]; omega, by omega⟩
 
 end Gabbro.Stage0.Senke

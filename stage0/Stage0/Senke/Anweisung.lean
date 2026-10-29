@@ -7,7 +7,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
@@ -52,6 +52,9 @@ def retC (q r : Nat) (ens : List II) : List II :=
 
 def retTop (q : Nat) : Nat := q + 1 + 8
 
+/-- `st (s+1) s`: the word of slot `s` to the address in slot `s + 1`. -/
+def stC (s : Nat) : II := ci 16 ((s + 1 : Nat) : Int) s 0
+
 mutual
 def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' →
     Option (List II × Nat)
@@ -72,6 +75,21 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) : {l :
   | _, Γ, _, _, .ret e _ => do
     let ce ← lowErg L e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
+  | _, Γ, _, _, .assignGlob g e _ _ =>
+    if lit32 (L.ga g) then do
+      let ce ← lowE L e (frei Γ)
+      pure (ce.1 ++ [ci 1 ((frei Γ + 1 : Nat) : Int) (L.ga g) 0] ++ [stC (frei Γ)], max ce.2 (frei Γ + 2))
+    else none
+  | _, Γ, _, _, .assignSlot t f i e _ _ => do
+    let ce ← lowE L e (frei Γ)
+    let ci' ← lowE L i (frei Γ + 1)
+    let ca ← slotA L t f (frei Γ + 1) ci'
+    pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
+  | _, Γ, _, _, .assignThru _ t _ f i e _ _ => do
+    let ce ← lowE L e (frei Γ)
+    let ci' ← lowE L i (frei Γ + 1)
+    let ca ← slotA L t f (frei Γ + 1) ci'
+    pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
   | _, _, _, _, _ => none
 
 def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' →

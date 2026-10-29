@@ -85,17 +85,52 @@ theorem addr_w {n : Int} {s c : Nat} (hn : 0 ≤ n) :
   rw [Int.natCast_add, Int.natCast_mul, Int.toNat_of_nonneg hn]
   rw [Int.mul_comm, Int.add_comm]
 
-theorem stride_lit {t : D.Tab} {f : D.Feld t} : lit32 (stride t f : Int) = true := by
-  unfold stride; split <;> decide
-
-theorem slotC_top {L : Lay D} {t : D.Tab} {f : D.Feld t} {d : Nat} {ci' : List II × Nat} {c : List II} {top : Nat}
-    (hs : slotC L t f d ci' = some (c, top)) : ci'.2 ≤ top := by
-  simp only [slotC] at hs
+theorem slotA_top {L : Lay D} {t : D.Tab} {f : D.Feld t} {d : Nat} {ci' : List II × Nat} {c : List II} {top : Nat}
+    (hs : slotA L t f d ci' = some (c, top)) : ci'.2 ≤ top ∧ d + 2 ≤ top := by
+  simp only [slotA] at hs
   split at hs
   · simp only [Option.some.injEq, Prod.mk.injEq] at hs; omega
   · cases hs
 
-/-- An element of a column (`slotC`): the index, the address, the word, for a byte column its low byte. -/
+theorem slotC_top {L : Lay D} {t : D.Tab} {f : D.Feld t} {d : Nat} {ci' : List II × Nat} {c : List II} {top : Nat}
+    (hs : slotC L t f d ci' = some (c, top)) : ci'.2 ≤ top := by
+  simp only [slotC, Option.map_eq_some_iff] at hs
+  obtain ⟨⟨a, ta⟩, ha, he⟩ := hs
+  simp only [Prod.mk.injEq] at he
+  obtain ⟨rfl, rfl⟩ := he
+  exact (slotA_top ha).1
+
+/-- The address of an element (`slotA`): the index, times 8, plus the column. -/
+theorem slotA_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : Expr D Γ Λ (.index (D.count t))}
+    {σ₀ σ : World D} {L : Lay D} {d : Nat} {ci' : List II × Nat} {c : List II} {top K : Nat} {m : Runner.Mem}
+    {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (hs : slotA L t f d ci' = some (c, top)) (hK : top ≤ K)
+    (ih : ∀ m pc, Pre m pc fp K d ci'.1 ρ W → Ok m pc fp K d ci'.1 (Enc (.index (D.count t)) (eval σ₀ i σ ρ)))
+    (hp : Pre m pc fp K d c ρ W) :
+    Ok m pc fp K d c (· = BitVec.ofNat 64 (L.elem t f (eval σ₀ i σ ρ).n.toNat)) := by
+  simp only [slotA] at hs
+  split at hs
+  · next hcol =>
+    simp only [Option.some.injEq, Prod.mk.injEq] at hs
+    obtain ⟨rfl, rfl⟩ := hs
+    have hn0 := (eval σ₀ i σ ρ).lo_le
+    have hq : Pre m pc fp K d (ci'.1 ++ ([ci 1 (d + 1) 8 0, ci 5 d d (d + 1)] ++
+        [ci 1 (d + 1) (L.col t f) 0, ci 3 d d (d + 1)])) ρ W := by
+      simpa [List.append_assoc] using hp
+    have := hq.small
+    have hc := ok_seq hq (ih m pc hq.left) (Pb := (· = BitVec.ofNat 64 (L.elem t f (eval σ₀ i σ ρ).n.toNat)))
+      (fun m1 w1 hp1 r1 e1 => ok_seq hp1 (binK_ok hp1.left r1 (by decide) rfl (by decide) rfl (by omega))
+        (Pb := (· = BitVec.ofNat 64 (L.elem t f (eval σ₀ i σ ρ).n.toNat)))
+        (fun m2 w2 hp2 r2 e2 => (binK_ok hp2 r2 hcol rfl (by decide) rfl (by omega)).mono fun x hx => by
+          simp only [Enc] at e1
+          have := addr_w (s := 8) (c := L.col t f) hn0
+          rw [e2, e1] at hx
+          rw [hx]; exact this) (by omega))
+      (by omega)
+    simpa [List.append_assoc] using hc
+  · cases hs
+
+/-- An element of a column (`slotC`): its address, the word there. -/
 theorem slotC_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : Expr D Γ Λ (.index (D.count t))}
     {σ₀ σ : World D} {L : Lay D} {d : Nat} {ci' : List II × Nat} {c : List II} {top K : Nat} {m : Runner.Mem}
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
@@ -103,42 +138,18 @@ theorem slotC_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : 
     (ih : ∀ m pc, Pre m pc fp K d ci'.1 ρ W → Ok m pc fp K d ci'.1 (Enc (.index (D.count t)) (eval σ₀ i σ ρ)))
     (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre m pc fp K d c ρ W) :
     Ok m pc fp K d c (Enc (D.typ t f) (σ.slots t (eval σ₀ i σ ρ).n f)) := by
-  simp only [slotC] at hs
-  split at hs
-  · next hcol =>
-    simp only [Option.some.injEq, Prod.mk.injEq] at hs
-    obtain ⟨rfl, rfl⟩ := hs
-    have hn0 := (eval σ₀ i σ ρ).lo_le
-    have hn1 := (eval σ₀ i σ ρ).le_hi
-    have hkc : ((eval σ₀ i σ ρ).n.toNat : Int) < D.count t := by omega
-    have hkn : (((eval σ₀ i σ ρ).n.toNat : Nat) : Int) = (eval σ₀ i σ ρ).n := Int.toNat_of_nonneg hn0
-    have hq : Pre m pc fp K d (ci'.1 ++ ([ci 1 (d + 1) (stride t f) 0, ci 5 d d (d + 1)] ++
-        ([ci 1 (d + 1) (L.col t f) 0, ci 3 d d (d + 1)] ++ ([ci 15 d d 0] ++
-        (if byteCol t f then [ci 1 (d + 1) 255 0, ci 8 d d (d + 1)] else []))))) ρ W := by
-      simpa [List.append_assoc] using hp
-    have := hq.small
-    have hc := ok_seq hq (ih m pc hq.left) (Pb := Enc (D.typ t f) (σ.slots t (eval σ₀ i σ ρ).n f))
-      (fun m1 w1 hp1 r1 e1 => ok_seq hp1 (binK_ok hp1.left r1 stride_lit rfl (by decide) rfl (by omega))
-        (fun m2 w2 hp2 r2 e2 => ok_seq hp2 (binK_ok hp2.left r2 hcol rfl (by decide) rfl (by omega))
-          (fun m3 w3 hp3 r3 e3 => by
-            obtain ⟨v, hv, he⟩ := (hWL m3 hp3.welt).1 t f _ hkc
-            simp only [Enc] at e1
-            have ha : w3 = BitVec.ofNat 64 (L.elem t f (eval σ₀ i σ ρ).n.toNat) := by
-              rw [e3, e2, e1]; exact addr_w hn0
-            rw [ha] at r3
-            rw [hkn] at he
-            cases hb : byteCol t f
-            · simp only [hb, Bool.false_eq_true, ↓reduceIte, List.append_nil] at hp3 ⊢
-              simp only [cellW, hb, Bool.false_eq_true, ↓reduceIte] at he
-              exact (ld_ok hp3 (by omega) r3 hv).mono fun x hx => hx ▸ he
-            · simp only [hb, ↓reduceIte] at hp3 ⊢
-              simp only [cellW, hb, ↓reduceIte] at he
-              refine ok_seq hp3 (ld_ok hp3.left (by omega) r3 hv)
-                (fun m4 w4 hp4 r4 e4 => (binK_ok hp4 r4 (by decide) rfl (by decide) rfl (by omega)).mono
-                  fun x hx => ?_) (by omega)
-              rw [hx, e4]; simpa using he) (by omega)) (by omega))
-      (by omega)
-    simpa [List.append_assoc] using hc
-  · cases hs
+  simp only [slotC, Option.map_eq_some_iff] at hs
+  obtain ⟨⟨a, ta⟩, ha, he⟩ := hs
+  simp only [Prod.mk.injEq] at he
+  obtain ⟨rfl, rfl⟩ := he
+  have ht := slotA_top ha
+  have hn0 := (eval σ₀ i σ ρ).lo_le
+  have hkc : ((eval σ₀ i σ ρ).n.toNat : Int) < D.count t := by have := (eval σ₀ i σ ρ).le_hi; omega
+  have hkn : (((eval σ₀ i σ ρ).n.toNat : Nat) : Int) = (eval σ₀ i σ ρ).n := Int.toNat_of_nonneg hn0
+  refine ok_seq hp (slotA_ok ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
+  obtain ⟨v, hv, he⟩ := (hWL m3 hp3.welt).1 t f _ hkc
+  rw [e3] at r3
+  rw [hkn] at he
+  exact (ld_ok hp3 (by omega) r3 hv).mono fun x hx => hx ▸ he
 
 end Gabbro.Stage0.Senke

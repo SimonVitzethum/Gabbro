@@ -53,13 +53,17 @@ def lt64 {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo
 /-- The least value of an integer expression lies above `-2^63`. -/
 def nichtMin {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := decide (-2 ^ 63 < lo)
 
-/-- An element of column `f` of table `t`, its index computed by `ci` into slot `d`: the address
-    `col + stride · i`, the word there, for a byte column its low byte. -/
-def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
+/-- The address of an element of column `f` of table `t`, its index computed by `ci'` into slot `d`:
+    `col + 8 · i` into slot `d`. -/
+def slotA (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
   if lit32 (L.col t f) then
-    some (ci'.1 ++ [ci 1 (d + 1) (stride t f) 0, ci 5 d d (d + 1), ci 1 (d + 1) (L.col t f) 0, ci 3 d d (d + 1),
-      ci 15 d d 0] ++ (if byteCol t f then [ci 1 (d + 1) 255 0, ci 8 d d (d + 1)] else []), max ci'.2 (d + 2))
+    some (ci'.1 ++ [ci 1 (d + 1) 8 0, ci 5 d d (d + 1), ci 1 (d + 1) (L.col t f) 0, ci 3 d d (d + 1)],
+      max ci'.2 (d + 2))
   else none
+
+/-- An element of column `f` of table `t`: its address (`slotA`), the word there. -/
+def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
+  (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
 
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
