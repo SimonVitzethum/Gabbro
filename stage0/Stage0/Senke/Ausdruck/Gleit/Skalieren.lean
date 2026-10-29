@@ -2,6 +2,7 @@
 import Stage0.Senke.Ausdruck.Gleit.RundCode
 import Stage0.Senke.Ausdruck.Gleit.Schieben
 import Stage0.Senke.Ausdruck.Gleit.Exponent
+import Stage0.Senke.Ausdruck.Gleit.Betrag
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -512,5 +513,26 @@ theorem floatPackZeroL_canonical_zeuge {Γ : Ctx} (ρ : Env D Γ)
         (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F 0))) := by
   intro F _
   exact ⟨by decide, floatPackZeroL_canonical ρ W F⟩
+
+/-- Integer conversion candidate, kept off lowE until full simulation is proved.
+    Binary combinators reserve d and evaluate the right operand at d+1.
+    Branches share d; pure inputs are recomputed in separate temporary ranges. -/
+def floatOfIntAssemblyL (p bias signBit : Nat) (d : Nat)
+    (input : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
+  let magnitude := fun j => floatMagnitudeL j input
+  let exponent := fun j => floatExponentL j magnitude
+  let threshold := fun j => some (konstWL 4 (p - 1) j)
+  let leftCount := fun j => wordL 4 j (threshold j) (exponent (j + 1))
+  let rightCount := fun j => wordL 4 j (exponent j) (threshold (j + 1))
+  let left := fun j => wordL 11 j (magnitude j) (leftCount (j + 1))
+  let right := fun j => floatRoundShiftL j magnitude rightCount
+  let scale := fun j => wennL j
+    (wordL 13 j (exponent j) (threshold (j + 1))) (left j) (right j)
+  let sign := fun j => wordL 5 j (wordK 13 j (input j) 0)
+    (some (konstWL 4 signBit (j + 1)))
+  let biased := fun j => wordL 3 j (exponent j)
+    (some (konstWL 4 bias (j + 1)))
+  wennL d (wordK 14 d (magnitude d) 0) (floatPackZeroL d)
+    (floatPackCarryL d sign biased scale (2^(p - 1)))
 
 end Gabbro.Stage0.Senke
