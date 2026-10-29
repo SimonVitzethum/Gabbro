@@ -26,6 +26,7 @@ import Stage0.Senke.Anweisung.Faelle.EndAtomar
 
 import Stage0.Senke.Anweisung.Faelle.Check
 import Stage0.Senke.Anweisung.Faelle.NarrowCases
+import Stage0.Senke.Anweisung.Faelle.BlockFehler
 
 namespace Gabbro.Stage0.Senke
 
@@ -235,7 +236,11 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     exact blockAxiom_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (a := a) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3) (rest := rest)
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  | _, _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .bindAxiomElse a args he proof0 proof1 proof2 proof3 proof4 err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact blockAxiomElse_case hS hA hlo0 hens
+      (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, Γ, Λ, _, .awaits g _ _ _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by

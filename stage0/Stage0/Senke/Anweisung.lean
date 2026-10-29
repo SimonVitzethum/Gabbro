@@ -229,6 +229,20 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ck ← chkC (D.aerg a) (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
+  | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest =>
+    match L.tor a, D.aerg a with
+    | some b, some (.int lo' hi') =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a then do
+        let ct ← torC L a args (frei Γ)
+        let ck ← chkC (some (.int lo' hi')) (frei Γ)
+        let ce ← lowEnd A L lo ens pr ex err
+        let cr ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ ck ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
+            max ct.2 (max (frei Γ + 10) (max cr.2 ce.2)))
+        else none
+      else none
+    | _, _ => none
   | _, Γ, _, _, .check c err rest => do
     let cc ← lowE L c (frei Γ)
     let ce ← lowEnd A L lo ens pr ex err
