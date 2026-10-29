@@ -26,14 +26,15 @@ theorem rd_same {m : Runner.Mem} {fp : Runner.W} {K a : Nat} (hF : FrameOK m fp 
     (write m (slot fp (BitVec.ofNat 64 a)) 8 v.toNat).rd64 (slot fp (BitVec.ofNat 64 a)) = some v :=
   rd64_wr64 (wr64_some (hF.wr a ha)) (hF.rd a ha)
 
-theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
+theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
     {dv : Runner.W} {c : Nat} (hS : FunSpec L A C R dv c)
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks F : Nat} {f : D.Fn} {σ : World D} {ρa : Env D (D.params f)}
-    (hc : CodeAt m pc (callTail A f F)) (hcf : CodeFar pc 4 fp K) (hF : FrameOK m fp K) (hK : K < 2 ^ 31)
+    (hc : CodeAt m pc (callTail A f F indirect)) (hcf : CodeFar pc 4 fp K) (hF : FrameOK m fp K) (hK : K < 2 ^ 31)
     (hFB : FB ≤ F) (hT : F + FB + (D.params f).length + 1 ≤ Ks) (hcap : F + c ≤ Ks) (hA : A f < 2 ^ 31)
     (hP : PCode m A C fp K) (hdv : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (dv + 1))
     (hE : EnvAt L m (slot fp (BitVec.ofNat 64 F)) ρa) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
-    (hy : SyncOK m L fp Ks) :
+    (hy : SyncOK m L fp Ks)
+    (htarget : indirect = true → m.rd64 (slot fp (BitVec.ofNat 64 F)) = some (BitVec.ofNat 64 (A f)) := by simp) :
     match R f σ ρa with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ AgreeW L fp F K m m' ∧
         (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some w ∧ EncErg L (D.erg f) v w) ∧ WeltAt m' L σ'
@@ -55,11 +56,11 @@ theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wor
     have hx : (pc + BitVec.ofNat 64 (16 * k)).toNat = pc.toNat + 16 * k := by
       simp only [BitVec.toNat_add, BitVec.toNat_ofNat]; omega
     rw [hx]; omega
-  have i0 := hc 0 (by simp [callTail])
-  have i1 := hc 1 (by simp [callTail])
-  have i2 := hc 2 (by simp [callTail])
-  have i3 := hc 3 (by simp [callTail])
-  simp only [callTail, ci, List.getElem_cons_zero, List.getElem_cons_succ] at i0 i1 i2 i3
+  have i0 := hc 0 (by simp [callTail, callTailN])
+  have i1 := hc 1 (by simp [callTail, callTailN])
+  have i2 := hc 2 (by simp [callTail, callTailN])
+  have i3 := hc 3 (by simp [callTail, callTailN])
+  simp only [callTail, callTailN, ci, List.getElem_cons_zero, List.getElem_cons_succ] at i0 i1 i2 i3
   -- the writes
   let T := F + FB + (D.params f).length
   have hsT : sx (II.f (T : Int)) = BitVec.ofNat 64 T := sx_nat (by omega)
@@ -111,16 +112,32 @@ theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wor
     · rw [hs2]; exact wr64_some (hF1.wr _ (by omega))
   -- 3: const T (A f)
   have s3 : Star ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m3 := by
-    refine Star.one ?_
-    have r : Run (op 1 ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩) m2 (nxt ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩) m3 := by
-      simp only [op]
-      refine f2_run (t := ⟨_, fp⟩) j2 ?_
-      simp only [ret1]
-      refine f1_run (t := ⟨_, fp⟩) j2 ?_
-      rw [hsT, sx_lit (n := ((A f : Nat) : Int)) (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)]
-      exact run_wr64 (wr64_some (hF2.wr _ (by omega)))
-    have r2 := run_step (t := ⟨_, fp⟩) j2 (by decide) r
-    simp only [nxt] at r2; rw [e16] at r2; exact r2
+    cases indirect with
+    | false =>
+      simp only [Bool.false_eq_true, ↓reduceIte] at j2
+      refine Star.one ?_
+      have r : Run (op 1 ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩) m2 (nxt ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩) m3 := by
+        simp only [op]
+        refine f2_run (t := ⟨_, fp⟩) j2 ?_
+        simp only [ret1]
+        refine f1_run (t := ⟨_, fp⟩) j2 ?_
+        rw [hsT, sx_lit (n := ((A f : Nat) : Int)) (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)]
+        exact run_wr64 (wr64_some (hF2.wr _ (by omega)))
+      have r2 := run_step (t := ⟨_, fp⟩) j2 (by decide) r
+      simp only [nxt] at r2; rw [e16] at r2; exact r2
+    | true =>
+      simp only [↓reduceIte] at j2
+      have hread : m2.rd64 (slot fp (BitVec.ofNat 64 F)) = some (BitVec.ofInt 64 (A f)) := by
+        simp only [m2, m1]
+        rw [rd_other hroom (by omega) (by omega) (by omega), rd_other hroom (by omega) (by omega) (by omega)]
+        simpa only [BitVec.ofInt_natCast] using htarget rfl
+      have hc2 : CodeAt m2 (pc + BitVec.ofNat 64 (16 * 2)) [ci 2 T F 0] := by
+        intro k hk
+        have : k = 0 := by simp only [List.length_singleton] at hk; omega
+        subst k
+        simpa only [ci, T, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] using j2
+      have st := mov_to hc2 hF2 (j := T) (s := F) (by omega) (by omega) hK hread
+      simpa only [List.length_singleton, show BitVec.ofNat 64 (16 * 1) = (16 : Runner.W) by decide, e16] using st
   -- 4: call T F
   have s4 : Star ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m3 ⟨BitVec.ofNat 64 (A f), slot fp (BitVec.ofNat 64 F)⟩ m5 := by
     refine Star.one ?_
@@ -161,7 +178,7 @@ theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wor
     exact hw
   have hW5 : WeltAt m5 L σ := weltAt_stab hW.lay (by have := hW.lo; omega) m m5 hWa
     ((a1s.trans (a2s.trans (a3s.trans (a4s.trans a5s)))).mono (Nat.zero_le _))
-  have hspec := hS f m5 (slot fp (BitVec.ofNat 64 F)) (K - F) (Ks - F) _ fp σ ρa (by omega)
+  have hspec := hS.run f m5 (slot fp (BitVec.ofNat 64 F)) (K - F) (Ks - F) _ fp σ ρa (by omega)
     (hW.sub (by omega) hlt) (by omega)
     (frame_sub hF5 hFF) (pcode_sub (pcode_agree hP a15) hF5.lt hFF) g0 g1 g2 gE hW5
     ((hy.agree a15 (by have := hW.top; have := hW.ord; omega)).call (by omega))

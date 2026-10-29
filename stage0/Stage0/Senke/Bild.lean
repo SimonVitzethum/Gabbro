@@ -132,7 +132,7 @@ def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → N
     let k := roots.length
     let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * headLen k) lens).getD (pos g) 0
     let fp0 := codeBase + 16 * (headLen k + lens.sum)
-    let Yb := { Y (fp0 + 8 * (Ks * (k + 1))) with sb := fp0, st := 8 * Ks }
+    let Yb := { Y (fp0 + 8 * (Ks * (k + 1))) with fa := A, sb := fp0, st := 8 * Ks }
     let K := Ks * (k + 1) + (Yb.sye - Yb.lo + 7) / 8
     match lowAll P Yb name A fs with
     | .error e => .error e

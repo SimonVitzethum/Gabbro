@@ -44,9 +44,10 @@ def EncErg (L : Lay D) : (e : Option Ty) → ErgVal D e → Runner.W → Prop
   | some τ, v, w => Enc L τ v w
   | none, _, _ => True
 
-def FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
-    (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (dv : Runner.W) (c : Nat) : Prop :=
-  ∀ (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K Ks : Nat) (rp cfp : Runner.W) (σ : World D)
+structure FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
+    (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (dv : Runner.W) (c : Nat) : Prop where
+  addr : L.fa = A
+  run : ∀ (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K Ks : Nat) (rp cfp : Runner.W) (σ : World D)
     (ρ : Env D (D.params f)),
     c ≤ Ks → WIn L fp Ks K → K < 2 ^ 31 → FrameOK m fp K → PCode m A C fp K →
     m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp → m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →

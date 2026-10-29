@@ -34,11 +34,15 @@ def lowA (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Ar
 
 /-- A call of `f` with its frame at slot `F` of the caller: the arguments (`ca`), the depth one less, the
     address of `f`, `call`. -/
-def callTail (A : D.Fn → Nat) (f : D.Fn) (F : Nat) : List II :=
-  [ci 1 ((F + FB + (D.params f).length : Nat) : Int) 1 0,
-   ci 4 ((F + 2 : Nat) : Int) 2 ((F + FB + (D.params f).length : Nat) : Int),
-   ci 1 ((F + FB + (D.params f).length : Nat) : Int) (A f) 0,
-   ci 20 ((F + FB + (D.params f).length : Nat) : Int) F 0]
+def callTailN (np address F : Nat) (indirect : Bool) : List II :=
+  [ci 1 ((F + FB + np : Nat) : Int) 1 0,
+   ci 4 ((F + 2 : Nat) : Int) 2 ((F + FB + np : Nat) : Int),
+   if indirect then ci 2 ((F + FB + np : Nat) : Int) F 0
+   else ci 1 ((F + FB + np : Nat) : Int) address 0,
+   ci 20 ((F + FB + np : Nat) : Int) F 0]
+
+def callTail (A : D.Fn → Nat) (f : D.Fn) (F : Nat) (indirect : Bool := false) : List II :=
+  callTailN (D.params f).length (A f) F indirect
 
 def callC (A : D.Fn → Nat) (f : D.Fn) (F : Nat) (ca : List II) : List II := ca ++ callTail A f F
 

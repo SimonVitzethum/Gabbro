@@ -26,13 +26,15 @@ theorem ofNat_succ (k : Nat) : BitVec.ofNat 64 (k + 1) = BitVec.ofNat 64 k + 1 :
   omega
 
 theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {L : Nat}
-    (hC : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L) (hA : ∀ g, A g < 2 ^ 31)
+    (hLA : Y.fa = A) (hC : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L) (hA : ∀ g, A g < 2 ^ 31)
     (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) :
     ∀ n, n < 2 ^ 64 → FunSpec Y A C (rufAt P O passes n) (BitVec.ofNat 64 n) ((n + 1) * L) := by
   intro n
   induction n with
   | zero =>
-    intro _ f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa _
+    intro _
+    refine ⟨hLA, ?_⟩
+    intro f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa _
     have hks := hW.ks
     obtain ⟨top, hlf, htop⟩ := hC f
     simp only [lowFun] at hlf
@@ -52,7 +54,9 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
       simpa [guardC, stopC, sysC] using this
     · simp at hlf
   | succ k ih =>
-    intro hn f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa hy
+    intro hn
+    refine ⟨hLA, ?_⟩
+    intro f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa hy
     have hks := hW.ks
     have ih := ih (by omega)
     obtain ⟨top, hlf, htop⟩ := hC f
