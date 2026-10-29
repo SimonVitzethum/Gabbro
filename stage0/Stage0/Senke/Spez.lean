@@ -157,13 +157,13 @@ theorem WIn.sub {L : Lay D} {fp : Runner.W} {Ks K F : Nat} (h : WIn L fp Ks K) (
 
 /-! ## What a statement keeps -/
 
-theorem envAt_agreeW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat}
-    (h : EnvAt L m fp ρ) (ha : AgreeW L fp d K m m') (htop : fp.toNat + 8 * K ≤ L.lo) (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
-    (hd : frei Γ ≤ d) (hK : d ≤ K) : EnvAt L m' fp ρ := by
+theorem envAt_agreeW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K reserved : Nat}
+    (h : EnvAt L m fp ρ reserved) (ha : AgreeW L fp d K m m') (htop : fp.toNat + 8 * K ≤ L.lo) (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
+    (hd : frei Γ reserved ≤ d) (hK : d ≤ K) : EnvAt L m' fp ρ reserved := by
   intro τ x
   obtain ⟨w, hw, he⟩ := h τ x
   refine ⟨w, ?_, he⟩
-  rw [agreeW_rd_low ha htop hr (by have := vslot_lt (reserved := 0) x; omega) hK]
+  rw [agreeW_rd_low ha htop hr (by have := vslot_lt (reserved := reserved) x; omega) hK]
   exact hw
 
 theorem pcode_agreeW {L : Lay D} {m m' : Runner.Mem} {A : D.Fn → Nat} {C : D.Fn → List II} {fp : Runner.W}

@@ -76,9 +76,9 @@ theorem codeAt_agreeWIn {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo
     (hf : CodeFar pc is.length fp K) : CodeAt m' pc is :=
   codeAt_agreeW ha hW.top hW.lay.2.2 hW.ord hc hf
 
-theorem envAt_agreeWIn {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K d : Nat} {Γ : Ctx} {ρ : Env D Γ}
-    (hW : WIn L fp Ks K) (h : EnvAt L m fp ρ) (ha : AgreeW L fp d K m m') (hd : frei Γ ≤ d) (hK : d ≤ K) :
-    EnvAt L m' fp ρ :=
+theorem envAt_agreeWIn {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K d reserved : Nat} {Γ : Ctx} {ρ : Env D Γ}
+    (hW : WIn L fp Ks K) (h : EnvAt L m fp ρ reserved) (ha : AgreeW L fp d K m m') (hd : frei Γ reserved ≤ d) (hK : d ≤ K) :
+    EnvAt L m' fp ρ reserved :=
   envAt_agreeW h ha hW.top (by have := hW.room; omega) hd hK
 
 theorem keeps_of_agreeW {L : Lay D} {fp : Runner.W} {pr : List Nat} {Ks K d : Nat} {m m' : Runner.Mem}
