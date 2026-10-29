@@ -657,6 +657,28 @@ theorem floatOfIntAssemblyL_compare {Γ : Ctx} {ρ : Env D Γ}
   intro fp K d c top h ht m pc hp
   exact result h ht m pc hp
 
+/-- Canonical exponent bounds discharge the signed machine comparison.
+    Equality belongs to the right branch, including its zero shift. -/
+theorem floatOfIntAssemblyL_compare_canonical {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (p : Nat) (hp : p - 1 < 2^63) :
+    WordCode (L := L) ρ W
+      (fun d => wordL 13 d
+        (floatExponentL d (fun j => floatMagnitudeL j input))
+        (some (konstWL 4 (p - 1) (d + 1))))
+      (Runner.IR.bool (Gleitkomma.findeExp z.natAbs 1 < (p - 1 : Nat))) := by
+  have he := (floatOfIntAssemblyL_prefix z hz hn hi).2
+  have ha : (BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1)).toInt =
+      Gleitkomma.findeExp z.natAbs 1 := toInt_ofInt_in (by omega) (by omega)
+  have hb : (BitVec.ofNat 64 (p - 1)).toInt = (p - 1 : Nat) := by
+    change (BitVec.ofInt 64 ((p - 1 : Nat) : Int)).toInt = _
+    exact toInt_ofInt_in (by omega) (by omega)
+  intro fp K d c top h ht m pc hpre
+  have result := floatOfIntAssemblyL_compare z hz hn hi p (by omega) h ht m pc hpre
+  simpa only [ha, hb] using result
+
 /-- Entry into the actual emitted left scale branch. The comparison prefix runs
     before the branch and its temporary writes satisfy the ordinary frame rule. -/
 theorem floatOfIntAssemblyL_left_entry {Γ : Ctx} {ρ : Env D Γ}
