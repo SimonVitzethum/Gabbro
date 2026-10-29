@@ -137,12 +137,28 @@ def optN {n : Int} : Option (Zahl 0 (n - 1)) → Int
   | Option.none => -1
   | Option.some k => k.n
 
+/-- A sum fits one word: eight tag bits and a 56-bit unsigned payload offset. -/
+def sumFits (cs : List (Option (Int × Int))) : Bool :=
+  decide (cs.length ≤ 256) && cs.all (fun c => match c with
+    | none => true
+    | some (lo, hi) => decide (hi - lo < 2 ^ 56))
+
+/-- The payload's distance from the lower bound; a bare arm has offset zero. -/
+def sumOff : (c : Option (Int × Int)) → Nutzlast c → Nat
+  | none, _ => 0
+  | some (lo, _), v => (v.n - lo).toNat
+
+/-- The representation shared by frames, tables and globals. -/
+def sumN {cs : List (Option (Int × Int))} (v : Wert D (.sum cs)) : Nat :=
+  v.1.val + 256 * sumOff (cs.get v.1) v.2
+
 /-- `w` is the word of the value `v` of type `τ`. -/
 def Enc : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .int _ _, v, w => w = BitVec.ofInt 64 v.n
   | .bool, v, w => w = (if wahr? (D := D) v = true then 1 else 0)
   | .opt _, v, w => w = BitVec.ofInt 64 (optN v)
   | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
+  | .sum cs, v, w => sumFits cs = true ∧ w = BitVec.ofNat 64 (sumN v)
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 
