@@ -167,7 +167,7 @@ theorem torC0_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ 
   · cases h
 
 theorem torC_top1 {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {s : Nat}
-    {c : List II} {t : Nat} (h : torC L a args s = some (c, t)) : s + 7 ≤ t := by
+    {reserved : Nat} {c : List II} {t : Nat} (h : torC L a args s reserved = some (c, t)) : s + 7 ≤ t := by
   simp only [torC] at h
   split at h
   · split at h
@@ -188,7 +188,7 @@ theorem torC_top1 {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : 
   · cases h
 
 theorem torC_top {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {s : Nat}
-    {c : List II} {t : Nat} (h : torC0 L a args s = some (c, t)) : s + 7 ≤ t := by
+    {reserved : Nat} {c : List II} {t : Nat} (h : torC0 L a args s reserved = some (c, t)) : s + 7 ≤ t := by
   simp only [torC0] at h
   split at h
   · exact torC_top1 h
