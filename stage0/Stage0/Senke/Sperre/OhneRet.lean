@@ -95,7 +95,8 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     simp only [execStmt]
     rw [istZ_mapWelt]
     exact retFreiB_istZ b h _ _
-  | _, _, _, _, .putBytes .., h, _, _ | _, _, _, _, .shift .., h, _, _
+  | _, _, _, _, .shift .., _, _, _ => by simp only [execStmt]; split <;> rfl
+  | _, _, _, _, .putBytes .., h, _, _
   | _, _, _, _, .onWhy .., h, _, _ | _, _, _, _, .callInd .., h, _, _
   | _, _, _, _, .retry .., h, _, _ | _, _, _, _, .forever .., h, _, _ | _, _, _, _, .regWrite .., h, _, _
   | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _

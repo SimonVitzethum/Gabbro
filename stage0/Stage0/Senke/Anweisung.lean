@@ -158,6 +158,17 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ci' ← lowE L i (frei Γ + 1)
     let ca ← slotA L t f (frei Γ + 1) ci'
     pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
+  | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _ =>
+    if inW a b && lit32 von && lit32 nach then do
+      let ci' ← lowE L i (frei Γ)
+      let cr ← slotC L t f (frei Γ) ci'
+      let cj ← lowE L i (frei Γ + 1)
+      let ca ← slotA L t f (frei Γ + 1) cj
+      let test := bin2 14 (frei Γ) cr ([ci 1 (frei Γ + 1) von 0], frei Γ + 2)
+      pure (test.1 ++ (guardC (frei Γ) 106 (frei Γ) ++
+        ([ci 1 (frei Γ) nach 0] ++ ca.1 ++ [stC (frei Γ)])),
+        max test.2 (max ca.2 (frei Γ + 8)))
+    else none
   | _, Γ, _, _, .traverse t inv body =>
     if lit32 (D.count t) then do
       let ci' ← lowE L inv (frei Γ + 1)
