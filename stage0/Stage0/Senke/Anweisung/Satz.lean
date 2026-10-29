@@ -17,6 +17,7 @@ import Stage0.Senke.Anweisung.Bytes.Put
 import Stage0.Senke.Anweisung.Faelle.Schreiben
 import Stage0.Senke.Anweisung.Faelle.Speicher
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
 import Stage0.Senke.Anweisung.Faelle.Bloecke
 import Stage0.Senke.Anweisung.Faelle.BlockRuf
 import Stage0.Senke.Anweisung.Faelle.Ende
@@ -191,7 +192,11 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
           (ex := (16 * 30, 16 * 60)) hS hA hlo0 hens body cb tb hcb (by omega) (by rw [hlen] at hs; omega)
           ⟨hW.lay, hW.dis, hW.top, hW.ord, by omega⟩ m' _ σ' ρ hp' hlo hlo2 hu' hk' hw' hpr) hp hu hk hWa
     · cases h
-  | _, _, _, _, .retry .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .retry n bis body overflow, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hw, hpr => by
+    exact retry_case hlo0
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens body)
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens overflow)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
   | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, Γ, Λ, _, .axiomCall a args hn proof0 proof1 proof2 proof3, c, top, h, hK, arg4, hW, m, pc, σ, ρ, hp, arg11, hlo2, arg13, arg14, hWa, hpr => by
     exact axiomCall_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (a := a) (args := args) (hn := hn) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3)

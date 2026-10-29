@@ -93,4 +93,41 @@ theorem retryC_ok (hlo0 : lo = FB + (D.params f).length)
     | leave h σ1 ρ1 => simpa only [Sim, hEnd] using ib
     | zurueck | why | logik | hardware => exact ib
 end
+
+theorem retry_case {O : Orakel D} {passes : Nat}
+    {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat}
+    {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {bis : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ} {overflow : Block D (vertragVon D f) l Γ Λ Λ}
+    (ihBody : ∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex body)
+    (ihOverflow : ∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex overflow) :
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.retry n bis body overflow) := by
+  intro c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
+  simp only [lowS, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨cc, hcc, cu, hcu, hc⟩ := h
+  exact retryC_ok hlo0 hcc hcu ihBody ihOverflow n c top hc hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
+
+/-- Fuel zero stops before even reading the invariant. -/
+theorem forever_zero {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
+    (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
+    (O : Orakel D) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) :
+    execStmt O 0 R (show Stmt D V l Γ Λ Λ from .forever a inv body) σ ρ = .hardware (.fortschritt a) := rfl
+
+/-- One pass checks a false invariant, whereas zero passes answers the progress assumption. -/
+theorem forever_one_false {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
+    (a : D.Annahme) (body : Block D V true Γ Λ Λ)
+    (O : Orakel D) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) :
+    execStmt O 1 R (show Stmt D V l Γ Λ Λ from .forever a .fls body) σ ρ = .logik .schleife := rfl
+
+/-- Refuse until the lowering and its call interface receive the same fuel as G. -/
+theorem forever_refused {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
+    (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int)
+    (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ) :
+    lowS A L lo ens pr ex (show Stmt D V l Γ Λ Λ from .forever a inv body) = none := rfl
+
 end Gabbro.Stage0.Senke
