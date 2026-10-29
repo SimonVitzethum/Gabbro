@@ -121,6 +121,9 @@ every return (`nachbedingung`, `invariante`), loop invariants at every pass boun
   range widening, are supported. Additional occurrences and nonliteral table indices are explicitly refused.
   G evaluates an `oldS` index with the current world and supplied environment while reading its cell from the
   entry world; capturing a result-dependent cell therefore remains open rather than freezing that index.
+  Numeric source `old(global)` uses the local `stage0/Stage0/Senke/Ausdruck/Old/Source.lean` bridge:
+  shared elaboration resolves names and types, the bridge restores the existing G `oldG` node at its source
+  occurrence, and the complete `AkzeptiertX` runs on that final program before image generation.
 Budget stops are never erased: `abstieg` (call depth), `fortschritt` (`forever` passes) and `retry` exhaustion are
 outcomes of G for some budget and stay exact.
 
