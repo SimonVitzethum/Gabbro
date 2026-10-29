@@ -879,4 +879,48 @@ theorem floatOfInt_left_canonical (F : Gleitkomma.Format) (z : Int)
     Gleitkomma.rundeBruch, Gleitkomma.rundeBruchBei, Nat.one_ne_zero, ha]
   rw [floatPackCarry_rundeBruchKern F _ _ _ _ hp hlo hhi, if_pos hq.2]
 
+/-- The actual left packer returns the canonical integer-conversion bits. -/
+theorem floatOfIntLeftPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (F : Gleitkomma.Format) (z : Int)
+    (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (hp : 1 ≤ F.p) (hpb : F.p - 1 < 63)
+    (hfrac : F.fracBits = F.p - 1)
+    (bias : Nat) (hb : bias < 2^64)
+    (hsb : 2^(F.ebits + F.fracBits) < 2^64)
+    (hu : 2 * 2^F.fracBits < 2^64) (hm : F.bexpMax ≤ 2^64)
+    (hlo : F.emin ≤ Gleitkomma.findeExp z.natAbs 1)
+    (hhi : Gleitkomma.findeExp z.natAbs 1 < (F.emax : Int))
+    (he : 0 < (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat ∧
+      (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat + 1 < F.bexpMax)
+    (heb : BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1) + BitVec.ofNat 64 bias =
+      BitVec.ofNat 64 (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat)
+    (hlt : Gleitkomma.findeExp z.natAbs 1 < (F.p - 1 : Nat)) :
+    WordCode (L := L) ρ W (fun d => floatPackCarryL d
+      (fun j => wordL 5 j (wordK 13 j (input j) 0)
+        (some (konstWL 4 (2^(F.ebits + F.fracBits)) (j + 1))))
+      (fun j => wordL 3 j (floatExponentL j (fun k => floatMagnitudeL k input))
+        (some (konstWL 4 bias (j + 1))))
+      (fun j => floatOfIntScaleL F.p j input) (2^(F.p - 1)))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
+  have hq := floatOfInt_left_significand_bounds z.natAbs F.p (by omega) hlt
+  have poweq : 2 * 2^(F.p - 1) = 2^F.p := by
+    rw [Nat.mul_comm, ← Nat.pow_succ]
+    congr 1
+    omega
+  have pack := floatPackCarry_canonical F (decide (z < 0))
+    (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat
+    (Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1)
+    hu hm he (by rw [hfrac, poweq]; exact ⟨hq.1, Nat.le_of_lt hq.2⟩)
+  have hncarry : Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1 ≠
+      2 * 2^F.fracBits := by rw [hfrac, poweq]; omega
+  simp only [hncarry, ↓reduceIte, Nat.add_zero] at pack
+  rw [floatOfInt_left_canonical F z hn hp hlo hhi hlt]
+  rw [hfrac] at pack
+  rw [← pack]
+  intro fp K d c top hc ht m pc pre
+  simpa only [decide_eq_true_eq, heb, hfrac] using
+    floatOfIntLeftPackL_ok z hz hn hi F.p bias (2^(F.ebits + F.fracBits)) hp hpb hb hsb hlt hc ht m pc pre
+
 end Gabbro.Stage0.Senke
