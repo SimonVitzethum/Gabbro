@@ -2257,6 +2257,32 @@ theorem floatOfIntContinuationL_final_copy (F : Gleitkomma.Format) (input : Nat)
   obtain ⟨assembly, _, he⟩ := floatOfIntContinuationL_parts F input hc
   refine ⟨assembly, he, ?_, ?_⟩ <;> simp [he]
 
+/-- Execute the end jump after the zero write. The code premise records the
+    actual instruction fetch; connecting it to the emitted suffix remains required. -/
+theorem floatOfIntContinuationL_zero_endjump (F : Gleitkomma.Format)
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
+    {code : List II} {offset : Int}
+    (hc : floatOfIntContinuationL F input = some (code, top))
+    (h : Pre L m pc fp K (input + 1) code ρ W reserved)
+    (hk : input + 5 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some (BitVec.ofInt 64 0))
+    (fetch : ∀ m', Agree fp (input + 1) K m m' →
+      CodeAt m' (pc + 208) [ci 18 offset 0 0])
+    (hl : lit32 offset = true) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 208 + BitVec.ofInt 64 offset, fp⟩ m' ∧
+      Agree fp (input + 1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some 0 := by
+  obtain ⟨m', hs, ha, hr'⟩ := floatOfIntContinuationL_zero_output F hc h hk hr
+  have hi := fetch m' ha 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  have sj := Star.one (run_step (t := ⟨pc + 208, fp⟩) hi (by decide)
+    (run_jmp (t := ⟨pc + 208, fp⟩) hi))
+  refine ⟨m', hs.trans ?_, ha, hr'⟩
+  simpa only [sx_lit hl] using sj
+
+#print axioms floatOfIntContinuationL_zero_endjump
+
 #print axioms floatOfIntContinuationL_final_copy
 
 /-- Candidate composition: evaluate the child once, retain its word below all
