@@ -147,11 +147,11 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_fllt (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.fllt a b) d =
-    (none) := rfl
+    floatExprL false d (lowE L a) (lowE L b) := rfl
 
 @[lowE_eqs] theorem lowE_flle (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.flle a b) d =
-    (none) := rfl
+    floatExprL true d (lowE L b) (lowE L a) := rfl
 
 @[lowE_eqs] theorem lowE_and (a b : Expr D Γ Λ .bool) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.and a b) d =

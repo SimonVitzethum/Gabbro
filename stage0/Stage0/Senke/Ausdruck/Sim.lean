@@ -62,18 +62,18 @@ theorem Pre.next {m m' : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {a b : Li
    envAt_agree h.env ha h.frame h.ctx hK, h.wstab m m' h.welt (ha.mono (Nat.zero_le _)), h.wstab⟩
 
 /-- A binary operation whose first part has run (`hA` for this memory). -/
-theorem bin_ok2 {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
+theorem bin_ok_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop}
     {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
     (hA : Ok m pc fp K d ca Pa)
-    (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W → Ok m pc fp K (d + 1) cb Pb)
+    (hB : ∀ m' pc, Agree fp d K m m' → Pre L m' pc fp K (d + 1) cb ρ W → Ok m' pc fp K (d + 1) cb Pb)
     (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
     (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W) :
     Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P := by
   have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W := by simpa using h
   obtain ⟨m1, s1, a1, wa, ra, pa⟩ := hA
   have h1 := h'.next a1 (Nat.le_succ d) (by omega)
-  obtain ⟨m2, s2, a2, wb, rb, pb⟩ := hB m1 _ h1.left
+  obtain ⟨m2, s2, a2, wb, rb, pb⟩ := hB m1 _ a1 h1.left
   have h2 := h1.next (d := d + 1) (d' := d + 1) a2 (Nat.le_refl _) (by omega)
   obtain ⟨r, hr, pr⟩ := hg wa wb pa pb
   have hF2 : FrameOK m2 fp K := h1.frame.agree a2
@@ -101,6 +101,16 @@ theorem bin_ok2 {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List 
     simp only [List.length_append, List.length_singleton, pc_add]
   rw [e]
   exact s3
+
+/-- A binary operation with a memory-independent proof for its second operand. -/
+theorem bin_ok2 {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
+    (hA : Ok m pc fp K d ca Pa)
+    (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W → Ok m pc fp K (d + 1) cb Pb)
+    (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
+    (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W) :
+    Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P :=
+  bin_ok_keep hA (fun m pc _ hp => hB m pc hp) hg hop ho hK h
 
 /-- A binary operation: `a` into `d`, `b` into `d+1`, then the instruction `o` (whose step is `bin g`). -/
 theorem bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}

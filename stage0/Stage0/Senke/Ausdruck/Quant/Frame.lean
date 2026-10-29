@@ -118,4 +118,15 @@ theorem quant_restore {m m' : Runner.Mem} {fp v : Runner.W} {s d K : Nat}
     exact ((agree_write (K := s + 1) hsmall (lo := s) (by omega) (by omega) v.toNat).b x hb).trans (ha x hx hb)
 
 
+/-- A read of slot `b` after a write of slot `a ≠ b`. -/
+theorem rd_other {m : Runner.Mem} {fp : Runner.W} {K a b : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (ha : a < K)
+    (hb : b < K) (hne : a ≠ b) (v : Nat) :
+    (write m (slot fp (BitVec.ofNat 64 a)) 8 v).rd64 (slot fp (BitVec.ofNat 64 b)) =
+      m.rd64 (slot fp (BitVec.ofNat 64 b)) :=
+  rd64_write_far (slot_far hr ha hb hne)
+
+theorem rd_same {m : Runner.Mem} {fp : Runner.W} {K a : Nat} (hF : FrameOK m fp K) (ha : a < K) (v : Runner.W) :
+    (write m (slot fp (BitVec.ofNat 64 a)) 8 v.toNat).rd64 (slot fp (BitVec.ofNat 64 a)) = some v :=
+  rd64_wr64 (wr64_some (hF.wr a ha)) (hF.rd a ha)
+
 end Gabbro.Stage0.Senke

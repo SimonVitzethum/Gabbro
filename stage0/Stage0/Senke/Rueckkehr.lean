@@ -4,6 +4,7 @@
              result in slot 2 or `exit_group(102)` (`RetZ`, `ret_ok`); the callee's header and parameters (`Kopf`).
 -/
 import Stage0.Senke.Aufruf
+import Stage0.Senke.Ausdruck.Old.Capture
 
 namespace Gabbro.Stage0.Senke
 
@@ -46,19 +47,20 @@ theorem RetZ.prefix {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0
 
 /-- The callee's header and parameters, below `lo`. -/
 structure Kopf (L : Lay D) (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
-    (ρ0 : Env D (D.params f)) : Prop where
+    (ρ0 : Env D (D.params f)) (P : Programm D) (σ0 : World D) : Prop where
   r0 : m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp
   r1 : m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp
   env : EnvAt L m fp ρ0
   big : FB + (D.params f).length ≤ K
+  entry : SnapAt L (oldCells (P.ensures f)) σ0 m fp
 
-theorem Kopf.agree {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W}
-    {ρ0 : Env D (D.params f)} (h : Kopf L f m fp K rp cfp ρ0) (ha : Agree fp lo K m m') (hF : FrameOK m fp K)
-    (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 := by
+theorem Kopf.agree {P : Programm D} {σ0 : World D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W}
+    {ρ0 : Env D (D.params f)} (h : Kopf L f m fp K rp cfp ρ0 P σ0) (ha : Agree fp lo K m m') (hF : FrameOK m fp K)
+    (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 P σ0 := by
   have hb := h.big
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have ha' := ha.mono hl
-  refine ⟨?_, ?_, envAt_agree h.env ha' hF (Nat.le_refl _) hb, hb⟩
+  refine ⟨?_, ?_, envAt_agree h.env ha' hF (Nat.le_refl _) hb, hb, h.entry.agree hF ha' (by omega) hb⟩
   · rw [agree_rd_low ha' hF.room (by omega) hb]; exact h.r0
   · rw [agree_rd_low ha' hF.room (by omega) hb]; exact h.r1
 
@@ -87,20 +89,23 @@ theorem Umf.agreeW {L : Lay D} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : R
     {fp : Runner.W} {Ks Ks' K lo : Nat} (hW : WIn L fp Ks' K) (h : Umf L A C dv m fp Ks K) (ha : AgreeW L fp lo K m m')
     (hlo : FB ≤ lo) : Umf L A C dv m' fp Ks K :=
   ⟨pcode_agreeW h.code ha hW.top hW.lay.2.2 hW.ord, by
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     have hb := h.big
     rw [agreeW_rdW hW (ha.mono (Nat.min_le_left lo K)) (by omega) (Nat.min_le_right lo K)]
     exact h.depth, h.big, h.sync.agreeW ha h.hiK, h.hiK⟩
 
-theorem Kopf.agreeW {L : Lay D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo : Nat} {rp cfp : Runner.W}
-    {ρ0 : Env D (D.params f)} (hW : WIn L fp Ks K) (h : Kopf L f m fp K rp cfp ρ0) (ha : AgreeW L fp lo K m m')
-    (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 := by
+theorem Kopf.agreeW {P : Programm D} {σ0 : World D} {L : Lay D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo : Nat} {rp cfp : Runner.W}
+    {ρ0 : Env D (D.params f)} (hW : WIn L fp Ks K) (h : Kopf L f m fp K rp cfp ρ0 P σ0) (ha : AgreeW L fp lo K m m')
+    (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 P σ0 := by
   have hb := h.big
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have ha' := ha.mono hl
-  refine ⟨?_, ?_, envAt_agreeWIn hW h.env ha' (Nat.le_refl _) hb, hb⟩
+  refine ⟨?_, ?_, envAt_agreeWIn hW h.env ha' (Nat.le_refl _) hb, hb, ?_⟩
   · rw [agreeW_rdW hW ha' (by omega) hb]; exact h.r0
   · rw [agreeW_rdW hW ha' (by omega) hb]; exact h.r1
+  · intro c hc
+    obtain ⟨w, hw, he⟩ := h.entry c hc
+    exact ⟨w, by rw [agreeW_rdW hW ha' (by omega) hb]; exact hw, he⟩
 
 /-- `Pre.next` after a statement that changed the slots from `lo` on and the world. -/
 theorem Pre.nextW {L : Lay D} {m m' : Runner.Mem} {pc fp : Runner.W} {Ks K d d' lo : Nat} {a b : List II}
@@ -148,14 +153,14 @@ theorem slot_one (fp : Runner.W) : slot fp (BitVec.ofNat 64 1) = fp + 8 := by si
 /-- `ret e`: the result, `ensures`, back or the stop (`retC`), in a frame of `K` slots. -/
 theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
     (he : lowErg L e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ K)
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
     (hp : PreS L m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) (hl : LayIn L) (hwl : fp.toNat + 8 * K ≤ L.lo) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) (hl : LayIn L) (hwl : fp.toNat + 8 * K ≤ L.lo) :
     RetZ0 L P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     have htop := lowErg_top e _ _ _ he
     have hsm := hp.small
     have hroom := hp.frame.room
@@ -186,9 +191,9 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
        envAt_ergEnv hk2.env (by
          show m2.rd64 (slot fp (BitVec.ofNat 64 (FB + (D.params f).length))) = some w
          rw [← hlo0]; exact rd_same hF1 (by omega) w) hen, trivial, wstab_true _ _⟩
-    obtain ⟨m3, s3, a3, b, hb, hbe⟩ := lowE_ok (fp := fp) (K := K) σ0
+    obtain ⟨m3, s3, a3, b, hb, hbe⟩ := lowEns_ok (fp := fp) (K := K) σ0
       ((σ.lese Λ e.orte).lese (vertragVon D f).ende (P.ensures f).orte) (fun _ h => h) (P.ensures f) (lo + 1) cens
-      tens hens (by omega) m2 _ _ (PreS.welt hpe (Nat.le_refl K) hWa2 hl hwl)
+      tens hens (by omega) m2 _ _ (PreS.welt hpe (Nat.le_refl K) hWa2 hl hwl) hk2.entry
     have hF3 := hF2.agree a3
     have hf3 := codeFar_tail (a := cens) hf2
     have hc3 := (codeAt_right hc2).agree a3 hf3
@@ -250,12 +255,12 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
 /-- `ret e` in the frame below the world: its code writes only slots below `Ks`, so the world stays. -/
 theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
     (he : lowErg L e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ Ks)
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
     (hp : PreS L m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     RetZ L P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte)
       (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
   have hks := hW.ks
@@ -263,7 +268,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp c
   have hpS : PreS L m pc fp Ks (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ :=
     ⟨hp.ctx, by have := hp.small; omega, frameOK_sub hp.frame hks, hp.code, codeFar_sub2 hp.far hks, hp.env,
      trivial, wstab_true _ _⟩
-  have hkS : Kopf L f m fp Ks rp cfp ρ0 := ⟨hk.r0, hk.r1, hk.env, by simp only [retTop] at hK; omega⟩
+  have hkS : Kopf L f m fp Ks rp cfp ρ0 P σ0 := ⟨hk.r0, hk.r1, hk.env, by simp only [retTop] at hK; omega, hk.entry⟩
   have h0 := ret_ok0 (σ0 := σ0) hlo0 hens e he hK m pc σ ρ hpS hlo hkS hWa hW.lay hW.lo
   simp only [RetZ0] at h0
   simp only [RetZ]
@@ -281,9 +286,9 @@ theorem retWhy_ok {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ : World D} {ρ : Env D Γ} (r : Fin (D.gruende f))
     (hlo0 : lo = FB + (D.params f).length) (hr : r.val < 2 ^ 31) (hK : lo + 2 ≤ Ks)
     (hp : PreS L m pc fp K (frei Γ) (retWhyC lo r.val) ρ)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     RetWhy L f fp K rp cfp ⟨pc, fp⟩ m σ r := by
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hlo : 3 ≤ lo := by omega
   have hs := hp.small

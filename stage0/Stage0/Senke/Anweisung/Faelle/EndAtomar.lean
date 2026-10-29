@@ -16,7 +16,7 @@ theorem endAwaits_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {g : D.Glob} {proof0 : List D.Glob} {proof1 : _} {proof2 : _} {proof3 : _} {rest : Endblock D (vertragVon D f) l (D.gtyp g :: Γ) Λ} :
@@ -31,7 +31,7 @@ theorem endAwaits_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append] at hs
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     have hks := hW.ks
     obtain ⟨m1, s1, A, hp1, hW1⟩ := awaits_head hl (by omega) hW hp hWa
     simp only [execEnd, SichtOK.sicht, ↓reduceIte]
@@ -47,7 +47,7 @@ theorem endExchange_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {proof0 : _} {proof1 : _} {rest : Endblock D (vertragVon D f) l (D.gtyp g :: Γ) Λ} :
@@ -63,7 +63,7 @@ theorem endExchange_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
       obtain ⟨rfl, rfl⟩ := h
       have hlen := exC_len (frei Γ) (L.ga g) cn
       simp only [List.length_append, hlen] at hs
-      have hFB3 : FB = 3 := rfl
+      have hFB3 : FB = 4 := rfl
       have hks := hW.ks
       obtain ⟨m3, s3, A, hp3, hW3⟩ := exch_head (Λ := Λ) hn (by omega) (by omega) hW hp hWa
       simp only [execEnd]

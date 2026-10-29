@@ -8,7 +8,7 @@
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
   a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallElse`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`,
   `leave` and `next`; the latter two retain the enclosing loop targets.
 -/
@@ -147,6 +147,11 @@ def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
 def whyTestC (s k : Nat) : List II :=
   [ci 2 (s + 1) s 0, ci 1 (s + 2) k 0, ci 14 (s + 1) (s + 1) (s + 2)]
 
+/-- Check the range first; the selected success arm then binds the unchanged raw value. -/
+def floatNarrowC (d : Nat) (cc cx ce cr : List II) : List II :=
+  cc ++ [ci 19 d (16 * (cx.length + 2)) 0] ++ cx ++
+    [ci 18 (16 * (ce.length + cr.length + 1)) 0 0] ++ (ce ++ cr)
+
 mutual
 def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
@@ -278,6 +283,22 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let cr ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
     pure (elseC (frei Γ + FB + (D.params f).length + 1) (frei Γ) (callC A f (frei Γ) ca.1) cr.1 ce.1,
       elseTop f (frei Γ) ca.2 cr.2 ce.2)
+  | _, Γ, _, _, .floatNarrow e low high err rest =>
+    if decide (Gleitkomma.klasse Gleitkomma.f64 (bruch low) ≠ .nan) &&
+        decide (Gleitkomma.klasse Gleitkomma.f64 (bruch high) ≠ .nan) then do
+      let cc ← floatRangeL (frei Γ) low high (lowE L e)
+      let ce ← lowE L e (frei Γ)
+      let cr ← lowB A L lo ens pr ex rest
+      let cx ← lowEnd A L lo ens pr (exPlus ex (ce.1.length + cr.1.length + 1)) err
+      pure (floatNarrowC (frei Γ) cc.1 cx.1 ce.1 cr.1, max cc.2 (max ce.2 (max cr.2 cx.2)))
+    else lowEnd A L lo ens pr ex err
+  | _, Γ, _, _, .floatLit q low high rest =>
+    match gleitPasst low high (bruch q) with
+    | none => some (stopC 107 (frei Γ), frei Γ + 8)
+    | some _ => do
+      let cr ← lowB A L lo ens pr ex rest
+      let cw := konstWL 4 (Gleitkomma.zuBits Gleitkomma.f64 (bruch q)) (frei Γ)
+      pure (cw.1 ++ cr.1, max cw.2 cr.2)
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest
@@ -331,6 +352,8 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
         pure (exC (frei Γ) (L.ga g) cn.1 ++ cr.1, max (max cn.2 (frei Γ + 4)) cr.2)
       else none
     else none
+  -- Rounded integer conversion and IEEE arithmetic need their software algorithms and proofs.
+  | _, _, _, _, .float .. | _, _, _, _, .floatOf .. => none
   | _, _, _, _, _ => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits

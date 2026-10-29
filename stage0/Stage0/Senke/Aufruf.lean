@@ -15,17 +15,6 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 
-/-- A read of slot `b` after a write of slot `a ≠ b`. -/
-theorem rd_other {m : Runner.Mem} {fp : Runner.W} {K a b : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (ha : a < K)
-    (hb : b < K) (hne : a ≠ b) (v : Nat) :
-    (write m (slot fp (BitVec.ofNat 64 a)) 8 v).rd64 (slot fp (BitVec.ofNat 64 b)) =
-      m.rd64 (slot fp (BitVec.ofNat 64 b)) :=
-  rd64_write_far (slot_far hr ha hb hne)
-
-theorem rd_same {m : Runner.Mem} {fp : Runner.W} {K a : Nat} (hF : FrameOK m fp K) (ha : a < K) (v : Runner.W) :
-    (write m (slot fp (BitVec.ofNat 64 a)) 8 v.toNat).rd64 (slot fp (BitVec.ofNat 64 a)) = some v :=
-  rd64_wr64 (wr64_some (hF.wr a ha)) (hF.rd a ha)
-
 theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
     {dv : Runner.W} {c : Nat} (hS : FunSpec L A C R dv c)
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks F : Nat} {f : D.Fn} {σ : World D} {ρa : Env D (D.params f)}
@@ -46,7 +35,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
         ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (D.params f).length false ∧ WeltAt m' L σ' := by
   have hroom := hF.room
   have hlt := hF.lt
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hroomS : fp.toNat + 8 * Ks ≤ 2 ^ 64 := by omega
   -- the four instructions, read where they lie
@@ -223,7 +212,7 @@ theorem Umf.agree {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m
     {Ks K lo : Nat} (h : Umf L A C dv m fp Ks K) (ha : Agree fp lo K m m') (hF : FrameOK m fp K) (hlo : FB ≤ lo) :
     Umf L A C dv m' fp Ks K :=
   ⟨pcode_agree h.code ha, by
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     have hb := h.big
     rw [agree_rd_low (ha.mono (Nat.min_le_left lo K)) hF.room (by omega) (Nat.min_le_right lo K)]
     exact h.depth, h.big, h.sync.agree ha h.hiK, h.hiK⟩

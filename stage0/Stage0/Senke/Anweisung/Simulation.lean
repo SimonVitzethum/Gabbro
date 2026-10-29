@@ -53,11 +53,11 @@ theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner
   | leave _ σ ρ => exact Reach.prefix h ha hk hs
   | next _ σ ρ => exact Reach.prefix h ha hk hs
   | zurueck σ' v =>
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     exact RetZ.prefix h (ha.mono (by omega)) hs
   | logik c => exact Stops.prefix h hs
   | hardware c => exact Stops.prefix h hs
-  | why σ' r => exact RetWhy.prefix h (ha.mono (by have : FB = 3 := rfl; omega)) hs
+  | why σ' r => exact RetWhy.prefix h (ha.mono (by have : FB = 4 := rfl; omega)) hs
 
 /-- `ok` goes on from `e1` to `e2`; `leave` and `next` keep their targets. -/
 theorem Sim.cont {o : Ausgang (vertragVon D f) l Γ} {t : T} {m : Runner.Mem} {e1 e2 eL eN eL' eN' : Runner.W}

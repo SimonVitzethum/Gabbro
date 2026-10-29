@@ -7,7 +7,7 @@ import Stage0
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
-import Stage0.Senke.Anweisung.Faelle.ControlProbes
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -180,3 +180,22 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.ReferenceProbe.read_simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.ReferenceProbe.write_simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.ReferenceProbe.refused_zeuge
+#print axioms Gabbro.Stage0.Senke.wordL_ok
+#print axioms Gabbro.Stage0.Senke.float_word_injective
+#print axioms Gabbro.Stage0.Senke.float_lt_key
+#print axioms Gabbro.Stage0.Senke.float_lt_key_not_nan
+#print axioms Gabbro.Stage0.Senke.float_key_word
+#print axioms Gabbro.Stage0.Senke.floatKeyL_ok
+#print axioms Gabbro.Stage0.Senke.floatExprE_ok
+#print axioms Gabbro.Stage0.Senke.floatRangeL_ok
+#print axioms Gabbro.Stage0.Senke.bindValue_ok
+#print axioms Gabbro.Stage0.Senke.blockFloatLit_case
+#print axioms Gabbro.Stage0.Senke.blockFloatNarrow_case
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_lowering_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_signed_zero_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.lowEns_ok
+#print axioms Gabbro.Stage0.Senke.snapC_ok
+#print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.OldProbe.snapC_ok_zeuge

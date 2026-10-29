@@ -139,7 +139,7 @@ theorem fnref_encoding_zeuge :
   constructor <;> rfl
 
 /-- A concrete instruction and writable frame, disjoint from the code. -/
-def refCode : List II := [ci 1 3 64 0]
+def refCode : List II := [ci 1 4 64 0]
 
 def refMem : Runner.Mem where
   b a := ((refCode.flatMap encII)[a.toNat]?).getD 0
@@ -153,7 +153,7 @@ theorem refBytes : BytesAt refMem 0 (refCode.flatMap encII) := by
   simp only [refMem, Nat.zero_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega),
     List.getElem?_eq_getElem hi, Option.getD_some]
 
-theorem refPre [Kern] : PreS refLayout refMem 0 1024 16 3 refCode (Env.nil : Env D []) := by
+theorem refPre [Kern] : PreS refLayout refMem 0 1024 16 4 refCode (Env.nil : Env D []) := by
   refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩, ?_, ?_, ?_, trivial, wstab_true _ _⟩
   · exact codeAt_bytes refCode 0 (by decide +kernel) refBytes
   · unfold CodeFar; decide +kernel
@@ -162,12 +162,12 @@ theorem refPre [Kern] : PreS refLayout refMem 0 1024 16 3 refCode (Env.nil : Env
 set_option maxHeartbeats 1200000 in
 /-- All premises of the function-reference simulation hold jointly on a concrete nonzero target. -/
 theorem fnref_ok_zeuge [Kern] :
-    lowE refLayout (Expr.fnref (D := D) (Γ := []) (Λ := []) 0 0 (by decide)) 3 = some (refCode, 4) ∧
-    PreS refLayout refMem 0 1024 16 3 refCode (Env.nil : Env D []) ∧
-    Ok refMem 0 1024 16 3 refCode (Enc refLayout (.fnptr 0) (⟨0, by decide⟩ : Wert D (.fnptr 0))) := by
+    lowE refLayout (Expr.fnref (D := D) (Γ := []) (Λ := []) 0 0 (by decide)) 4 = some (refCode, 5) ∧
+    PreS refLayout refMem 0 1024 16 4 refCode (Env.nil : Env D []) ∧
+    Ok refMem 0 1024 16 4 refCode (Enc refLayout (.fnptr 0) (⟨0, by decide⟩ : Wert D (.fnptr 0))) := by
   refine ⟨rfl, refPre, ?_⟩
   exact fnref_ok (L := refLayout) (Γ := []) (Λ := []) (f := 0) (n := 0) (hf := by decide)
-    (d := 3) (top := 4) (K := 16) (c := refCode) (m := refMem) (pc := 0) (fp := 1024)
+    (d := 4) (top := 5) (K := 16) (c := refCode) (m := refMem) (pc := 0) (fp := 1024)
     (ρ := Env.nil) (W := fun _ => True) world world rfl (by decide) refPre
 
 end Gabbro.Stage0.Senke.FnptrProben

@@ -1,5 +1,5 @@
 /- One signed interval test for block and end-block narrowing. -/
-import Stage0.Senke.Anweisung.Faelle.Check
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
 import Stage0.Senke.Ausdruck.Eng
 
 namespace Gabbro.Stage0.Senke
@@ -24,19 +24,19 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {m : Runner.Mem} {pc : Runner.W}
     (herr : ¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high') →
       ∀ m' pc', PreS L m' pc' fp K (frei Γ) cx ρ → Umf L A C dv m' fp Ks K →
-      Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ →
+      Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cx.length))
         (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).2) out)
     (hrest : ∀ hin : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high',
       ∀ m' pc', PreS L m' pc' fp K (frei Γ + 1) cr (Env.cons (τ := .int low' high')
         ⟨(eval σ e σ ρ).n, hin.1, hin.2⟩ ρ) → Umf L A C dv m' fp Ks K →
-      Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ →
+      Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out)
     (hp : PreS L m pc fp K (frei Γ) (narrowC (frei Γ) low' high' ce cx cr) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ) low' high' ce cx cr).length))
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ) low' high' ce cx cr).length) + BitVec.ofInt 64 ex.1)

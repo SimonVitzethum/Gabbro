@@ -3,6 +3,7 @@
   Subject:   The slot an expression's code stops at (`lowE_top`), and the shape of a binary operation's code
              (`bin_some`, `binE_ok`): its two operands, then one instruction.
 -/
+import Stage0.Senke.Ausdruck.Gleit.Grenze
 import Stage0.Senke.Ausdruck.Gleichungen
 import Stage0.Senke.Ausdruck.Sim
 import Stage0.Senke.Ausdruck.Wort
@@ -153,6 +154,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     split at h
     · exact bin_top (fun c t h => lowE_top a d c t h) h
     · cases h
+  | _, _, .fllt a b, d, c, top, h | _, _, .flle a b, d, c, top, h => floatExprL_top h
   | _, _, .neg a, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, _, he⟩ := h
@@ -249,8 +251,6 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     · cases h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h
-  | _, _, .fllt .., _, _, _, h
-  | _, _, .flle .., _, _, _, h
     => by simp [lowE_eqs] at h
 
 theorem Ok.mono {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {P Q : Runner.W → Prop}

@@ -60,7 +60,7 @@ import Stage0.Senke.Ausdruck.FnptrProben
 import Stage0.Senke.Ausdruck.FnptrAufrufProben
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
-import Stage0.Senke.Anweisung.Faelle.ControlProbes
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
@@ -70,3 +70,6 @@ import Stage0.Senke.Anweisung.Faelle.WhyProben
 import Stage0.Senke.Ausdruck.Aggregat.Proben
 
 import Stage0.Senke.Ausdruck.Referenz.Proben
+import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
+
+import Stage0.Senke.Ausdruck.Old.Proben

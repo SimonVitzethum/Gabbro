@@ -7,6 +7,8 @@
 -/
 import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Sperre.Satz
+import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
+import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
 import Stage0.Senke.Anweisung.Faelle.Wahl
 import Stage0.Senke.Anweisung.Option
 import Stage0.Senke.Anweisung.Faelle.Why
@@ -27,8 +29,8 @@ import Stage0.Senke.Anweisung.Faelle.EndWahl
 import Stage0.Senke.Anweisung.Faelle.EndFehler
 import Stage0.Senke.Anweisung.Faelle.EndAtomar
 
-import Stage0.Senke.Anweisung.Faelle.Check
-import Stage0.Senke.Anweisung.Faelle.NarrowCases
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.NarrowCases
 import Stage0.Senke.Anweisung.Faelle.BlockFehler
 
 namespace Gabbro.Stage0.Senke
@@ -46,12 +48,12 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
     lowS A L lo (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execStmt O passes R s σ ρ)
@@ -225,12 +227,12 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
     lowB A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ)
@@ -314,20 +316,27 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .float .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .floatLit .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .floatLit q low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact blockFloatLit_case hS hA hlo0 hens
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .floatOf .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .floatNarrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .floatNarrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact blockFloatNarrow_case hS hA hlo0 hens
+      (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
 
 theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → (b : Endblock D (vertragVon D f) l Γ Λ) → (c : List II) →
     (top : Nat) → lowEnd A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
-    lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R b σ ρ)
   | _, Γ, Λ, .ret e proof0, c, top, h, hK, arg4, hW, m, pc, σ, ρ, hp, hlo, arg12, hk, hWa, hpr => by
@@ -400,7 +409,7 @@ theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
     (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs) →
@@ -416,7 +425,7 @@ theorem lowGrund_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
     (arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n) →

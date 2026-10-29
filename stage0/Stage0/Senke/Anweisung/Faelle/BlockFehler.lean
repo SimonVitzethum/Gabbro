@@ -1,7 +1,7 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
 import Stage0.Senke.Anweisung.Faelle.Kontext
 import Stage0.Senke.Anweisung.FehlerLauf
-import Stage0.Senke.Anweisung.Faelle.Check
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
 
 namespace Gabbro.Stage0.Senke
 
@@ -17,7 +17,7 @@ theorem blockAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {τ : Ty} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = some τ} {proof0 : _} {proof1 : _} {proof2 : _} {proof3 : _} {proof4 : _} {err : Endblock D (vertragVon D f) l (.why (D.agruende a) :: Γ) Λ} {rest : Block D (vertragVon D f) l (τ :: Γ) Λ Λ'} :
@@ -38,7 +38,7 @@ theorem blockAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
         simp only [Option.some.injEq, Prod.mk.injEq] at hc
         obtain ⟨rfl, rfl⟩ := hc
         simp only [List.length_append, List.length_singleton, fehlC_len] at hs
-        have hFB3 : FB = 3 := rfl
+        have hFB3 : FB = 4 := rfl
         have hks := hW.ks
         have h7 := torC_top1 ht
         simp only [execBlock]

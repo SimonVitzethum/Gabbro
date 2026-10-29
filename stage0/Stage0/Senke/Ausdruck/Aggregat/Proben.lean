@@ -52,14 +52,14 @@ def checks : Expr D [] [] .bool :=
 
 theorem semantics_zeuge : wahr? (eval world checks world .nil) = true := by decide +kernel
 
-def lowered := lowE layout checks 3
+def lowered := lowE layout checks 4
 
 theorem lowered_zeuge : lowered.isSome = true := by decide +kernel
 
 def code : List II := (lowered.getD ([], 0)).1
 def top : Nat := (lowered.getD ([], 0)).2
 
-theorem lowering_zeuge : lowE layout checks 3 = some (code, top) := by decide +kernel
+theorem lowering_zeuge : lowE layout checks 4 = some (code, top) := by decide +kernel
 
 def memory : Runner.Mem where
   b a := ((code.flatMap encII)[a.toNat]?).getD 0
@@ -73,7 +73,7 @@ theorem bytes : BytesAt memory 0 (code.flatMap encII) := by
   simp only [memory, Nat.zero_add, BitVec.toNat_ofNat,
     Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), List.getElem?_eq_getElem hi, Option.getD_some]
 
-theorem pre [Kern] : PreS layout memory 0 65536 64 3 code (Env.nil : Env D []) := by
+theorem pre [Kern] : PreS layout memory 0 65536 64 4 code (Env.nil : Env D []) := by
   refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩, ?_, ?_, ?_, trivial, wstab_true _ _⟩
   · exact codeAt_bytes code 0 (by decide +kernel) bytes
   · unfold CodeFar; decide +kernel
@@ -81,9 +81,9 @@ theorem pre [Kern] : PreS layout memory 0 65536 64 3 code (Env.nil : Env D []) :
 
 /-- The lowering equation, nonempty code, real frame and simulation hold together. -/
 theorem simulation_zeuge [Kern] :
-    lowE layout checks 3 = some (code, top) ∧ code ≠ [] ∧ top ≤ 64 ∧
-    PreS layout memory 0 65536 64 3 code (Env.nil : Env D []) ∧
-    Ok memory 0 65536 64 3 code (Enc layout .bool true) := by
+    lowE layout checks 4 = some (code, top) ∧ code ≠ [] ∧ top ≤ 64 ∧
+    PreS layout memory 0 65536 64 4 code (Env.nil : Env D []) ∧
+    Ok memory 0 65536 64 4 code (Enc layout .bool true) := by
   refine ⟨lowering_zeuge, by decide +kernel, by decide +kernel, pre, ?_⟩
   have hw : ∀ m, WeltAt m layout world := by
     intro m
@@ -95,7 +95,7 @@ theorem simulation_zeuge [Kern] :
       change x < 65536 at hh
       omega
   have h := lowE_ok world world (W := fun _ => True) (fun m _ => hw m)
-    checks 3 code top lowering_zeuge (by decide +kernel) memory 0 .nil pre
+    checks 4 code top lowering_zeuge (by decide +kernel) memory 0 .nil pre
   simpa only [show eval world checks world .nil = true from semantics_zeuge] using h
 
 def program : Programm D where

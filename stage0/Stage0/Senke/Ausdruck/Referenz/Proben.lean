@@ -38,15 +38,15 @@ def assignment : Stmt D (vertragVon D ()) false Γ [] [] :=
   .assignSlotRef second () rfl rfl () (.widen (by decide) (by decide) (.lit 73)) rfl
     (fun _ h => nomatch h)
 
-def readCode : List II := ((lowE layout checks 5).getD ([], 0)).1
-def readTop : Nat := ((lowE layout checks 5).getD ([], 0)).2
-def writeCode : List II := ((lowS (fun _ => 0) layout 3 ([], 0) [] (0, 0) assignment).getD ([], 0)).1
-def writeTop : Nat := ((lowS (fun _ => 0) layout 3 ([], 0) [] (0, 0) assignment).getD ([], 0)).2
+def readCode : List II := ((lowE layout checks 6).getD ([], 0)).1
+def readTop : Nat := ((lowE layout checks 6).getD ([], 0)).2
+def writeCode : List II := ((lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).1
+def writeTop : Nat := ((lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).2
 
 /-- A real code segment, a frame containing provider references 1 and 0, and two region cells. -/
 def memory (code : List II) : Runner.Mem where
   b a := if a.toNat < (code.flatMap encII).length then ((code.flatMap encII)[a.toNat]?).getD 0
-    else if a.toNat = 4120 then 1 else if a.toNat = 8192 then 11 else if a.toNat = 8200 then 22 else 0
+    else if a.toNat = 4128 then 1 else if a.toNat = 8192 then 11 else if a.toNat = 8200 then 22 else 0
   rd _ := true
   wr _ := true
 
@@ -78,8 +78,8 @@ theorem layout_dis : LayDis layout := by
 theorem region_zeuge : D.count () = 0 ∧ layout.count () = 2 ∧ LayIn layout ∧ LayDis layout :=
   ⟨rfl, rfl, layout_in, layout_dis⟩
 
-theorem lowering_zeuge : lowE layout checks 5 = some (readCode, readTop) ∧
-    lowS (fun _ => 0) layout 3 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
+theorem lowering_zeuge : lowE layout checks 6 = some (readCode, readTop) ∧
+    lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
     readCode ≠ [] ∧ writeCode ≠ [] ∧ readTop ≤ 64 ∧ writeTop ≤ 64 := by decide +kernel
 
 theorem semantics_zeuge : eval world checks world env = true ∧
@@ -128,14 +128,14 @@ theorem env_memory (code : List II) (hc : (code.flatMap encII).length ≤ 4096) 
   cases x with
   | here =>
     refine ⟨0, ?_, encoded_zeuge.1⟩
-    change (memory code).rd64 (BitVec.ofNat 64 4128) = some 0
+    change (memory code).rd64 (BitVec.ofNat 64 4136) = some 0
     rw [memory_data code hc (by decide) (by decide)]
     decide +kernel
   | there x =>
     cases x with
     | here =>
       refine ⟨1, ?_, encoded_zeuge.2.1⟩
-      change (memory code).rd64 (BitVec.ofNat 64 4120) = some 1
+      change (memory code).rd64 (BitVec.ofNat 64 4128) = some 1
       rw [memory_data code hc (by decide) (by decide)]
       decide +kernel
     | there x => nomatch x
@@ -157,7 +157,7 @@ theorem world_memory (code : List II) (hc : (code.flatMap encII).length ≤ 4096
 
 theorem pre (code : List II) (hc : (code.flatMap encII).length ≤ 4096)
     (ho : code.all (fun i => decide (i.o < 256)) = true) :
-    PreS layout (memory code) 0 4096 64 5 code env := by
+    PreS layout (memory code) 0 4096 64 6 code env := by
   refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
     ?_, ?_, env_memory code hc, trivial, wstab_true _ _⟩
   · exact codeAt_bytes code 0 ho (bytes code (by omega))
@@ -170,44 +170,44 @@ theorem pre (code : List II) (hc : (code.flatMap encII).length ≤ 4096)
 
 /-- The equality and reads run in an inhabited world with all simulation premises supplied. -/
 theorem read_simulation_zeuge :
-    lowE layout checks 5 = some (readCode, readTop) ∧
-    Pre layout (memory readCode) 0 4096 64 5 readCode env (fun m => WeltAt m layout world) ∧
-    Ok (memory readCode) 0 4096 64 5 readCode (Enc layout .bool true) := by
+    lowE layout checks 6 = some (readCode, readTop) ∧
+    Pre layout (memory readCode) 0 4096 64 6 readCode env (fun m => WeltAt m layout world) ∧
+    Ok (memory readCode) 0 4096 64 6 readCode (Enc layout .bool true) := by
   have hc : (readCode.flatMap encII).length ≤ 4096 := by decide +kernel
   have hp := PreS.welt (pre readCode hc (by decide +kernel)) (Nat.le_refl _) (world_memory readCode hc) layout_in (by decide)
   refine ⟨lowering_zeuge.1, hp, ?_⟩
-  have h := lowE_ok world world (fun _ h => h) checks 5 readCode readTop lowering_zeuge.1
+  have h := lowE_ok world world (fun _ h => h) checks 6 readCode readTop lowering_zeuge.1
     (by decide +kernel) (memory readCode) 0 env hp
   exact h
 
 def value : Expr D Γ [] (.int 0 255) := .widen (by decide) (by decide) (.lit 73)
-def valueCode : List II := [ci 1 5 73 0]
-def addressCode : List II := [ci 2 6 3 0, ci 1 7 8 0, ci 5 6 6 7, ci 1 7 8192 0, ci 3 6 6 7]
+def valueCode : List II := [ci 1 6 73 0]
+def addressCode : List II := [ci 2 7 4 0, ci 1 8 8 0, ci 5 7 7 8, ci 1 8 8192 0, ci 3 7 7 8]
 def after : World D := world.storeSlot () 1 () ⟨73, by decide, by decide⟩
 
 /-- The write's actual store runs, preserving both reference variables and the neighboring cell. -/
 theorem write_simulation_zeuge :
-    lowS (fun _ => 0) layout 3 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
-    PreS layout (memory writeCode) 0 4096 64 5 writeCode env ∧
+    lowS (fun _ => 0) layout 4 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
+    PreS layout (memory writeCode) 0 4096 64 6 writeCode env ∧
     ∃ m', Star ⟨0, 4096⟩ (memory writeCode)
         ⟨0 + BitVec.ofNat 64 (16 * writeCode.length), 4096⟩ m' ∧
-      AgreeW layout 4096 5 64 (memory writeCode) m' ∧ EnvAt layout m' 4096 env ∧
+      AgreeW layout 4096 6 64 (memory writeCode) m' ∧ EnvAt layout m' 4096 env ∧
       WeltAt m' layout after ∧ m'.rd64 8192 = some 11 ∧ m'.rd64 8200 = some 73 := by
   have hc : (writeCode.flatMap encII).length ≤ 4096 := by decide +kernel
   have hp := pre writeCode hc (by decide +kernel)
   have hw := world_memory writeCode hc
   have hW : WIn layout 4096 64 64 :=
     ⟨layout_in, layout_dis, by decide, by decide, by decide⟩
-  have hcode : writeCode = valueCode ++ addressCode ++ [stC 5] := by decide +kernel
+  have hcode : writeCode = valueCode ++ addressCode ++ [stC 6] := by decide +kernel
   refine ⟨lowering_zeuge.2.1, hp, ?_⟩
-  have hp' : PreS layout (memory writeCode) 0 4096 64 5
-      (valueCode ++ addressCode ++ [stC 5]) env := by rw [← hcode]; exact hp
+  have hp' : PreS layout (memory writeCode) 0 4096 64 6
+      (valueCode ++ addressCode ++ [stC 6]) env := by rw [← hcode]; exact hp
   obtain ⟨m', hs, ha, he, hw'⟩ := store_ok (σ := world) (σ' := after) hp' hW hw (by decide)
-    (fun m pc hp => lowE_ok world world (fun _ h => h) value 5 valueCode 6
+    (fun m pc hp => lowE_ok world world (fun _ h => h) value 6 valueCode 7
       (by decide +kernel) (by decide) m pc env hp)
     (fun m pc hp => (slotRefA_ok (t := ()) (n := 0) rfl
-      (cr := ([ci 2 6 3 0], 7)) (top := 8) (by decide +kernel) (by decide)
-      (fun m pc hp => lowE_ok world world (fun _ h => h) second 6 [ci 2 6 3 0] 7
+      (cr := ([ci 2 7 4 0], 8)) (top := 9) (by decide +kernel) (by decide)
+      (fun m pc hp => lowE_ok world world (fun _ h => h) second 7 [ci 2 7 4 0] 8
         (by decide +kernel) (by decide) m pc env hp) hp).mono (fun _ h => h.1))
     (by decide) (fun m w hm henc => weltAt_slot hm layout_in layout_dis (by decide) henc)
   refine ⟨m', ?_, ha, he, hw', ?_, ?_⟩
@@ -226,19 +226,19 @@ theorem write_simulation_zeuge :
 def runnerImage (writing : Bool) : List Runner.B :=
   let base := Runner.Prog.IMG
   let L := { layout with col := fun _ _ => base + 8192, lo := base + 8192, hi := base + 8208 }
-  let setupCode := [ci 1 3 1 0, ci 1 4 0 0, ci 1 7 (base + 8192) 0, ci 1 6 11 0, ci 16 7 6 0,
+  let setupCode := [ci 1 4 1 0, ci 1 5 0 0, ci 1 7 (base + 8192) 0, ci 1 6 11 0, ci 16 7 6 0,
     ci 1 7 (base + 8200) 0, ci 1 6 22 0, ci 16 7 6 0]
   let body := if writing then
-      ((lowS (fun _ => 0) L 3 ([], 0) [] (0, 0) assignment).getD ([], 0)).1 ++
-        ((lowE L (read second) 5).getD ([], 0)).1
-    else ((lowE L checks 5).getD ([], 0)).1
-  let code := setupCode ++ body ++ [ci 1 10 231 0, ci 2 11 5 0, ci 1 12 0 0, ci 1 13 0 0,
+      ((lowS (fun _ => 0) L 4 ([], 0) [] (0, 0) assignment).getD ([], 0)).1 ++
+        ((lowE L (read second) 6).getD ([], 0)).1
+    else ((lowE L checks 6).getD ([], 0)).1
+  let code := setupCode ++ body ++ [ci 1 10 231 0, ci 2 11 6 0, ci 1 12 0 0, ci 1 13 0 0,
     ci 1 14 0 0, ci 1 15 0 0, ci 1 16 0 0, ci 23 17 10 0]
   let bs := Runner.Prog.leN 8 (base + 4096) ++ Runner.Prog.leN 8 0 ++ code.flatMap encII
   bs ++ List.replicate (9000 - bs.length) 0
 
 /-- Static images have no supplied region; raw provider words are not accepted as regions. -/
 theorem refused_zeuge : chkC (some (.ref 0)) 5 = none ∧
-    lowEnd (fun _ => 0) layout 3 ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel
+    lowEnd (fun _ => 0) layout 4 ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel
 
 end Gabbro.Stage0.Senke.ReferenceProbe
