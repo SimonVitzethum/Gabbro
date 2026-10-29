@@ -773,9 +773,8 @@ theorem floatOfIntScaleL_right {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
     (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
     (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
-    (p : Nat) (hp : 1 ≤ p) (hb : p - 1 < 64)
+    (p : Nat) (hp : 2 ≤ p) (hb : p - 1 < 64)
     (hr : ((p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1)
-    (hs : (Gleitkomma.findeExp z.natAbs 1 - ((p : Int) - 1)).toNat < 63)
     {m : Runner.Mem} {pc fp : Runner.W} {K d top : Nat} {c : List II}
     (hc : floatOfIntScaleL p d input = some (c, top))
     (ht : top ≤ K) (hd : d < K)
@@ -783,6 +782,9 @@ theorem floatOfIntScaleL_right {Γ : Ctx} {ρ : Env D Γ}
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64
       (Gleitkomma.normQ p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1)) := by
   have he := floatOfIntAssemblyL_prefix z hz hn hi
+  have hs : (Gleitkomma.findeExp z.natAbs 1 - ((p : Int) - 1)).toNat < 63 := by
+    have bounds := he.2
+    omega
   have hk : WordCode (L := L) ρ W
       (fun j => wordL 4 j
         (floatExponentL j (fun k => floatMagnitudeL k input))
