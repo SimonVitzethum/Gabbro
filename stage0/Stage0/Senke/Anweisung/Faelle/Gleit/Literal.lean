@@ -1,5 +1,5 @@
 /- Literal rounding is performed in Lean; the IR only materialises the resulting bits. -/
-import Stage0.Senke.Anweisung.Faelle.Kontext
+import Stage0.Senke.Anweisung.Faelle.Binden
 import Stage0.Senke.Ausdruck.Gleit.Wort
 
 namespace Gabbro.Stage0.Senke
@@ -43,29 +43,15 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     have hks := hW.ks
     have htop : frei Γ + 2 ≤ max cw.2 tr := by simp only [cw, wordL, bin2]; omega
     change max cw.2 tr + cap ≤ Ks at hK
-    have hq : PreS L m pc fp K (frei Γ) (cw.1 ++ cr) ρ := hp
-    have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, w, hw, hen⟩ :=
-      wordL_ok 4 _ (by simpa only [hx] using hb) (by change frei Γ + 2 ≤ Ks; omega) hpw
-    have a1 := Agree.widen a1s hks
-    have hen : Enc L (.fl low high) v w := ⟨hwf, by simpa only [hx] using hen⟩
-    have hf := codeFar_right (n := cw.1.length) (k := cr.length) (by simpa using hp.far)
-    have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * cw.1.length)) fp K (frei Γ + 1) cr
-        (Env.cons (τ := .fl low high) v ρ) :=
-      ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp.frame.agree a1,
-       (codeAt_right hp.code).agree a1 hf, hf,
-       envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen,
-       trivial, wstab_true _ _⟩
-    have ih := ihRest (ex := ex) cr tr hr (by omega)
-      (by simp only [List.length_append] at hs; omega) hW m1 _ σ _ hp1 hlo
-      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
-      (hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo)
-      (hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega))
-      (hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _)))
-      (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
     simp only [execBlock, hv]
-    rw [pc_add1]
-    exact Sim.prefix hlo s1 (agreeW_of (a1.mono hlo2))
-      (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.schrumpf ih)
+    refine bindValue_ok (L := L) (τ := .fl low high) (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp hu hk hWa
+    · intro m pc hp
+      exact (wordL_ok 4 _ (by simpa only [hx] using hb) (by omega) hp).mono
+        fun w hen => ⟨hwf, by simpa only [hx] using hen⟩
+    · intro m pc hp hu hk hw
+      exact ihRest (ex := ex) cr tr hr (by omega)
+        (by simp only [List.length_append] at hs; omega) hW m pc σ _ hp hlo
+        (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu hk hw
+        (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
 
 end Gabbro.Stage0.Senke

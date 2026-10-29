@@ -125,6 +125,11 @@ def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
   ce ++ (engTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
     [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
 
+/-- Check the range first; the selected success arm then binds the unchanged raw value. -/
+def floatNarrowC (d : Nat) (cc cx ce cr : List II) : List II :=
+  cc ++ [ci 19 d (16 * (cx.length + 2)) 0] ++ cx ++
+    [ci 18 (16 * (ce.length + cr.length + 1)) 0 0] ++ (ce ++ cr)
+
 mutual
 def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
@@ -238,6 +243,14 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ce ← lowE L e (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
+  | _, Γ, _, _, .floatNarrow e low high err rest =>
+    if gleitEndlich (bruch low) && gleitEndlich (bruch high) then do
+      let cc ← floatRangeL (frei Γ) low high (lowE L e)
+      let ce ← lowE L e (frei Γ)
+      let cr ← lowB A L lo ens pr ex rest
+      let cx ← lowEnd A L lo ens pr (exPlus ex (ce.1.length + cr.1.length + 1)) err
+      pure (floatNarrowC (frei Γ) cc.1 cx.1 ce.1 cr.1, max cc.2 (max ce.2 (max cr.2 cx.2)))
+    else none
   | _, Γ, _, _, .floatLit q low high rest =>
     match gleitPasst low high (bruch q) with
     | none => some (stopC 107 (frei Γ), frei Γ + 8)

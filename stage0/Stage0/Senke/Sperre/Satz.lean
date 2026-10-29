@@ -140,7 +140,7 @@ theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → E
   have s1' : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 48), fp⟩ m1 := star_cast s1 (by simp) rfl
   -- the body's start
   have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * 48)) fp K s cb ρ :=
-    ⟨by rw [← hsd]; exact Nat.le_refl _, hp.small, ⟨hp.frame.lt, fun i hi => by rw [hL1.ag.rd]; exact hp.frame.rd i hi,
+    ⟨by omega, hp.small, ⟨hp.frame.lt, fun i hi => by rw [hL1.ag.rd]; exact hp.frame.rd i hi,
       fun i hi => by rw [hL1.ag.wr]; exact hp.frame.wr i hi⟩,
      At.codeAt (hL1.ag.codeAt hfa ha31 hp.code hcf) Atb, At.codeFar hcf (by rw [hlen]; omega),
      hL1.ag.envAt hp.env (by omega) hfa ha31, trivial, wstab_true _ _⟩

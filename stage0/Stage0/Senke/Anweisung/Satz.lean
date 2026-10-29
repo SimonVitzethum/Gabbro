@@ -7,6 +7,7 @@
 -/
 import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Sperre.Satz
+import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
 import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
 import Stage0.Senke.Anweisung.Faelle.Wahl
 import Stage0.Senke.Anweisung.Option
@@ -301,7 +302,11 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .floatOf .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .floatNarrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .floatNarrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact blockFloatNarrow_case hS hA hlo0 hens
+      (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
 
 theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
