@@ -768,6 +768,47 @@ theorem floatOfIntScaleL_left {Γ : Ctx} {ρ : Env D Γ}
       simpa only [mag] using hl h t m pc pre)
     (by intro h; cases h) hpre
 
+/-- The actual right scale executes subtraction, nearest-even rounding and jumps. -/
+theorem floatOfIntScaleL_right {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (p : Nat) (hp : 1 ≤ p) (hb : p - 1 < 64)
+    (hr : ((p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1)
+    (hs : (Gleitkomma.findeExp z.natAbs 1 - ((p : Int) - 1)).toNat < 63)
+    {m : Runner.Mem} {pc fp : Runner.W} {K d top : Nat} {c : List II}
+    (hc : floatOfIntScaleL p d input = some (c, top))
+    (ht : top ≤ K) (hd : d < K)
+    (pre : Pre L m pc fp K d c ρ W 0) :
+    Ok m pc fp K d c (fun w => w = BitVec.ofNat 64
+      (Gleitkomma.normQ p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1)) := by
+  have he := floatOfIntAssemblyL_prefix z hz hn hi
+  have hk : WordCode (L := L) ρ W
+      (fun j => wordL 4 j
+        (floatExponentL j (fun k => floatMagnitudeL k input))
+        (some (konstWL 4 (p - 1) (j + 1))))
+      (BitVec.ofNat 64 (Gleitkomma.findeExp z.natAbs 1 - ((p : Int) - 1)).toNat) := by
+    have eq : BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1) -
+        BitVec.ofNat 64 (p - 1) =
+        BitVec.ofNat 64 (Gleitkomma.findeExp z.natAbs 1 - ((p : Int) - 1)).toNat := by
+      have ee : Gleitkomma.findeExp z.natAbs 1 =
+          (Gleitkomma.findeExp z.natAbs 1).toNat := by omega
+      rw [ee, BitVec.ofInt_natCast]
+      rw [BitVec.ofNat_sub_ofNat_of_le _ _ (by omega) (by omega)]
+      congr 1
+      omega
+    rw [← eq]
+    intro fp K d c top h ht m pc pre
+    exact WordCode.bin he.1 (WordCode.konst (p - 1) (by omega))
+      (o := 4) (g := fun a b => some (a - b)) rfl rfl (by decide) h ht m pc pre
+  have round : WordCode (L := L) ρ W _ _ := floatRoundShiftL_normQ_precision (p := p)
+    (floatMagnitudeL_ok hi) hk (by omega) hs
+  exact wennL_ok hc ht hd (bc := false)
+    (fun _ _ h t m pc pre => floatOfIntAssemblyL_right_compare z hz hn hi p (by omega) hr h t m pc pre)
+    (by intro h; cases h)
+    (fun _ _ _ h t m pc pre => by
+      simpa only [(floatOfIntAssembly_magnitude_bound z hz).1] using round h t m pc pre) pre
+
 /-- Actual sign instructions derive their contribution from the signed input. -/
 theorem floatOfIntSignL_ok {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
