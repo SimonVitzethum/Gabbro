@@ -831,4 +831,35 @@ theorem floatOfIntAssemblyL_normal_exponent {Γ : Ctx} {ρ : Env D Γ}
     (floatOfIntAssemblyL_prefix z hz hn hi).2
   exact ⟨h.1, h.2.1, h.2.2.2.2⟩
 
+/-- Integer left normalization derives both significand bounds from the input. -/
+theorem floatOfInt_left_significand_bounds (n p : Nat) (hn : n ≠ 0)
+    (hlt : Gleitkomma.findeExp n 1 < (p - 1 : Nat)) :
+    2^(p - 1) ≤ Gleitkomma.normQ p (Gleitkomma.findeExp n 1) n 1 ∧
+    Gleitkomma.normQ p (Gleitkomma.findeExp n 1) n 1 < 2^p := by
+  have he := findeExp_integer_nonzero n hn
+  have hu := Gleitkomma.bitlen_obere n
+  have hl := Gleitkomma.bitlen_untere n hn
+  have hb : 0 < Gleitkomma.bitlen n := by
+    cases h : Gleitkomma.bitlen n with
+    | zero => simp [h] at hu; omega
+    | succ k => omega
+  have hp : 1 ≤ p := by omega
+  rw [floatNormQ_left p _ n (by omega)]
+  have hs : ((p : Int) - 1 - Gleitkomma.findeExp n 1).toNat =
+      p - Gleitkomma.bitlen n := by omega
+  rw [hs]
+  have hsum : Gleitkomma.bitlen n + (p - Gleitkomma.bitlen n) = p := by omega
+  have hsum' : (Gleitkomma.bitlen n - 1) + (p - Gleitkomma.bitlen n) = p - 1 := by omega
+  have hlo : 2^(Gleitkomma.bitlen n - 1) ≤ n := by
+    have hh : Gleitkomma.bitlen n = (Gleitkomma.bitlen n - 1) + 1 := by omega
+    rw [hh, Nat.pow_succ] at hl
+    omega
+  constructor
+  · calc
+      2^(p - 1) = 2^(Gleitkomma.bitlen n - 1) * 2^(p - Gleitkomma.bitlen n) := by rw [← Nat.pow_add, hsum']
+      _ ≤ n * 2^(p - Gleitkomma.bitlen n) := Nat.mul_le_mul_right _ hlo
+  · calc
+      n * 2^(p - Gleitkomma.bitlen n) < 2^Gleitkomma.bitlen n * 2^(p - Gleitkomma.bitlen n) := Nat.mul_lt_mul_of_pos_right hu (Nat.pow_pos (by decide))
+      _ = 2^p := by rw [← Nat.pow_add, hsum]
+
 end Gabbro.Stage0.Senke
