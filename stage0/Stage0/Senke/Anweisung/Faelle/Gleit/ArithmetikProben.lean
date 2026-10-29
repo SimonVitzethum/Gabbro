@@ -3,6 +3,7 @@
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 import Stage0.Senke.Ausdruck.Gleit.RundCode
 import Stage0.Senke.Ausdruck.Gleit.Betrag
+import Stage0.Senke.Ausdruck.Gleit.Schieben
 
 namespace Gabbro.Stage0.Senke.FloatArithmeticProbe
 open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR
@@ -39,8 +40,27 @@ def magnitudeImage (n : Int) : Except String (List Runner.B) :=
   wordImage (floatMagnitudeL 8
     (fun d => some (konstWL 4 (BitVec.ofInt 64 n).toNat d))) n.natAbs
 
+def shiftImage (a k expected : Nat) : Except String (List Runner.B) :=
+  wordImage (floatShiftJamL 8 (fun d => some (konstWL 4 a d))
+    (fun d => some (konstWL 4 k d))) expected
+
 def images : List (String × Except String (List Runner.B) × Nat) :=
-  [("magnitude-zero", magnitudeImage 0, 7),
+  [("shift-zero", shiftImage 11 0 11, 7),
+   ("shift-exact", shiftImage 12 1 6, 7),
+   ("shift-sticky", shiftImage 13 1 7, 7),
+   ("shift-odd", shiftImage 11 1 5, 7),
+   ("shift-small", shiftImage 1 63 1, 7),
+   ("shift-high-bit", shiftImage (2^63) 1 (2^62), 7),
+   ("shift-full-word", shiftImage (2^64 - 1) 1 (2^63 - 1), 7),
+   ("shift-63-exact", shiftImage (2^63) 63 1, 7),
+   ("shift-63-sticky", shiftImage (2^63 + 1) 63 1, 7),
+   ("shift-64-zero", shiftImage 0 64 0, 7),
+   ("shift-64", shiftImage 12 64 1, 7),
+   ("shift-65", shiftImage 12 65 1, 7),
+   ("shift-subnormal-distance", shiftImage 42 1074 1, 7),
+   ("shift-high-count", shiftImage 42 (2^63) 1, 7),
+   ("shift-max-count", shiftImage 42 (2^64 - 1) 1, 7),
+   ("magnitude-zero", magnitudeImage 0, 7),
    ("magnitude-negative", magnitudeImage (-42), 7),
    ("magnitude-positive", magnitudeImage 42, 7),
    ("magnitude-signed-min", magnitudeImage (-2^63), 7),
