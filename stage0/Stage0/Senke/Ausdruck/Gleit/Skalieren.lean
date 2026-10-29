@@ -1397,4 +1397,13 @@ theorem computedFloatOfL_ceiling (F : Gleitkomma.Format) (d : Nat)
   obtain ⟨ce, ca, he, ha, _, htop⟩ := computedFloatOfL_parts F d child h
   exact ⟨ce, ca, he, ha, by omega, by omega⟩
 
+/-- Recover the signed assembly input from the child's actual encoding. -/
+theorem computedFloatOfL_encodedInput {lo hi : Int} (v : Zahl lo hi)
+    (hlo : -2^63 ≤ lo) (hhi : hi < 2^63) (w : Runner.W)
+    (hw : Enc L (.int lo hi) v w) :
+    w = BitVec.ofInt 64 v.n ∧ -2^63 ≤ v.n ∧ v.n < 2^63 := by
+  have hvl := v.lo_le
+  have hvh := v.le_hi
+  exact ⟨hw, by omega, by omega⟩
+
 end Gabbro.Stage0.Senke
