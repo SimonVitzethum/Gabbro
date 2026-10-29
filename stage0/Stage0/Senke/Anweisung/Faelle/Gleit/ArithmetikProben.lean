@@ -2,6 +2,7 @@
    General conversion and float arithmetic remain outside the accepted fragment. -/
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 import Stage0.Senke.Ausdruck.Gleit.RundCode
+import Stage0.Senke.Ausdruck.Gleit.Betrag
 
 namespace Gabbro.Stage0.Senke.FloatArithmeticProbe
 open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR
@@ -19,19 +20,32 @@ def conversion (n : Int) (expected lo hi : Int × Int) : Body :=
 
 /-- Test the actual shared fragment, including its scratch-slot placement.
     Equality to the expected word returns 7; a mismatch returns 41. -/
-def roundingImage (q r den expected : Nat) : Except String (List Runner.B) := do
-  let cr ← match floatRoundL 8 (fun d => some (konstWL 4 q d))
-      (fun d => some (konstWL 4 r d)) (fun d => some (konstWL 4 den d)) with
+def wordImage (fragment : Option (List II × Nat)) (expected : Nat) :
+    Except String (List Runner.B) := do
+  let cr ← match fragment with
     | some c => Except.ok c
-    | none => Except.error "rounding code refused"
+    | none => Except.error "word fragment refused"
   let code := cr.1 ++ (konstWL 4 expected 9).1 ++
     [ci 14 8 8 9, ci 1 9 34 0, ci 5 8 8 9, ci 1 1 41 0, ci 4 1 1 8,
      ci 1 0 231 0, ci 1 2 0 0, ci 1 3 0 0, ci 1 4 0 0, ci 1 5 0 0, ci 1 6 0 0, ci 23 7 0 0]
   pure (Runner.Prog.irImage ((code.map fun i => .op i.o i.a i.b i.c) ++
     [.lab 99, .zeros 1024]) 99)
 
+def roundingImage (q r den expected : Nat) : Except String (List Runner.B) :=
+  wordImage (floatRoundL 8 (fun d => some (konstWL 4 q d))
+    (fun d => some (konstWL 4 r d)) (fun d => some (konstWL 4 den d))) expected
+
+def magnitudeImage (n : Int) : Except String (List Runner.B) :=
+  wordImage (floatMagnitudeL 8
+    (fun d => some (konstWL 4 (BitVec.ofInt 64 n).toNat d))) n.natAbs
+
 def images : List (String × Except String (List Runner.B) × Nat) :=
-  [("round-below-half", roundingImage 4 1 4 4, 7),
+  [("magnitude-zero", magnitudeImage 0, 7),
+   ("magnitude-negative", magnitudeImage (-42), 7),
+   ("magnitude-positive", magnitudeImage 42, 7),
+   ("magnitude-signed-min", magnitudeImage (-2^63), 7),
+   ("magnitude-signed-max", magnitudeImage (2^63 - 1), 7),
+   ("round-below-half", roundingImage 4 1 4 4, 7),
    ("round-above-half", roundingImage 4 3 4 5, 7),
    ("round-tie-even", roundingImage 4 1 2 4, 7),
    ("round-tie-odd", roundingImage 5 1 2 6, 7),
