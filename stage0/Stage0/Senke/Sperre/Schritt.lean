@@ -99,6 +99,10 @@ structure LS (m0 m : Mem) (fp : W) (s a : Nat) (f : Nat → W) (o c w : W) : Pro
   w : m.rd64 (BitVec.ofNat 64 (a + 16)) = some w
   ag : AgreeK fp s a m0 m
 
+theorem LS.congr {m0 m : Mem} {fp : W} {s a : Nat} {f : Nat → W} {o c w o' c' w' : W}
+    (h : LS m0 m fp s a f o c w) (ho : o = o') (hc : c = c') (hw : w = w') : LS m0 m fp s a f o' c' w' := by
+  subst ho hc hw; exact h
+
 theorem far_slot_lk {fp : W} {s a d y : Nat} (hr : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31)
     (hd : d < 18) (hy : a ≤ y) (hk : y ≤ a + 16) : Far (slot fp (BitVec.ofNat 64 (s + d))) 8 (BitVec.ofNat 64 y) 8 := by
   have hs := slot_toNat (fp := fp) (K := s + 18) (i := s + d) (by omega) (by omega)
