@@ -124,4 +124,7 @@ theorem stop_ok {m : Runner.Mem} {pc fp : Runner.W} {K c s : Nat} (hc : CodeAt m
     simp only [BitVec.toNat_ofInt, BitVec.toNat_ofNat]
     omega
 
+/-- `brz a` over a stop: if slot `a` is zero, `exit_group(c)`; else on after it. -/
+def guardC (a c s : Nat) : List II := [ci 19 a 32 0, ci 18 64 0 0] ++ stopC c s
+
 end Gabbro.Stage0.Senke

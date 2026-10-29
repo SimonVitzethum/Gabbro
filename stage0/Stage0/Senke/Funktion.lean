@@ -44,9 +44,6 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
   | _, _, _, _ => none
 
-/-- `brz a` over a stop: if slot `a` is zero, `exit_group(c)`; else on after it. -/
-def guardC (a c s : Nat) : List II := [ci 19 a 32 0, ci 18 64 0 0] ++ stopC c s
-
 /-- The code of `f`, and the first slot it does not write. -/
 def lowFun (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D.Fn) : Option (List II × Nat) :=
   let np := (D.params f).length

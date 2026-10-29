@@ -2,7 +2,7 @@
   File:      stage0/Stage0/Senke/Anweisung/Hilfe.lean
   Subject:   Small steps for statements: `mov` into a slot, code addresses after concatenation.
 -/
-import Stage0.Senke.Umgebung
+import Stage0.Senke.Stopp
 
 namespace Gabbro.Stage0.Senke
 
@@ -61,5 +61,44 @@ theorem keeps_write {fp : Runner.W} {pr : List Nat} {K x : Nat} {m : Runner.Mem}
     (hx : x < K) (hp : ∀ j ∈ pr, j < K) (hn : x ∉ pr) (v : Nat) :
     Keeps fp pr m (write m (slot fp (BitVec.ofNat 64 x)) 8 v) := fun j hj =>
   rd64_write_far (slot_far hr hx (hp j hj) (fun e => hn (e ▸ hj)))
+
+/-! ## The guard over a slot -/
+
+theorem guard_brz {m : Runner.Mem} {pc : Runner.W} {a c s : Nat} (hc : CodeAt m pc (guardC a c s)) :
+    InsAt m pc 19 (II.f (a : Int)) (II.f 32) (II.f 0) := by
+  have h := hc 0 (by simp [guardC])
+  simpa [guardC, ci] using h
+
+/-- The guard over slot `a`, which holds zero: `exit_group(c)`. -/
+theorem guard_stop {m : Runner.Mem} {pc fp : Runner.W} {K a c s : Nat} (hc : CodeAt m pc (guardC a c s))
+    (hf : CodeFar pc 5 fp K) (hF : FrameOK m fp K) (ha : a < K) (hs : s + 8 ≤ K) (hK : K < 2 ^ 31)
+    (hcode : c < 2 ^ 31) (h0 : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some 0) : Stops ⟨pc, fp⟩ m c := by
+  have hbrz := guard_brz hc
+  have hd : sx (II.f (a : Int)) = BitVec.ofNat 64 a := sx_nat (by omega)
+  have hl : sx (II.f 32) = BitVec.ofNat 64 32 := sx_nat (d := 32) (by omega)
+  have sb := Star.one (run_step (t := ⟨pc, fp⟩) hbrz (by decide)
+    (run_brz_zero (t := ⟨pc, fp⟩) hbrz (by rw [hd]; exact h0)))
+  rw [hl] at sb
+  exact Stops.prefix sb (stop_ok (codeAt_right (a := [ci 19 a 32 0, ci 18 64 0 0]) hc)
+    (codeFar_right (n := 2) (k := 3) hf) hF hs hK hcode)
+
+/-- The guard over slot `a`, which holds a nonzero word: on after the guard, nothing written. -/
+theorem guard_pass {m : Runner.Mem} {pc fp : Runner.W} {a c s : Nat} {v : Runner.W}
+    (hc : CodeAt m pc (guardC a c s)) (ha : a < 2 ^ 31) (hv : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some v)
+    (hne : v ≠ 0) : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (guardC a c s).length), fp⟩ m := by
+  have hbrz := guard_brz hc
+  have hd : sx (II.f (a : Int)) = BitVec.ofNat 64 a := sx_nat (by omega)
+  have rb := run_brz_ne (t := ⟨pc, fp⟩) hbrz (by rw [hd]; exact hv) hne
+  have sb := star_ins (fp := fp) (m' := m) (codeAt_left (a := [ci 19 a 32 0]) hc) (by simp [ci])
+    (by simp only [ci]; exact rb)
+  have hj := codeAt_right (a := [ci 19 a 32 0]) hc
+  have hjmp := hj 0 (by simp [guardC])
+  simp only [guardC, ci, List.cons_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hjmp
+  have sj := Star.one (run_step (t := ⟨_, fp⟩) hjmp (by decide) (run_jmp (t := ⟨_, fp⟩) hjmp))
+  have hl : sx (II.f 64) = BitVec.ofNat 64 64 := sx_nat (d := 64) (by omega)
+  rw [hl] at sj
+  refine star_cast (sb.trans sj) rfl ?_
+  simp only [T.mk.injEq, and_true, List.length_singleton, addr_norm]
+  rfl
 
 end Gabbro.Stage0.Senke
