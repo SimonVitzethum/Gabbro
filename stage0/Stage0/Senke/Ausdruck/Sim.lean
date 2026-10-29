@@ -68,11 +68,11 @@ theorem bin_ok_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : L
     {W : Runner.Mem → Prop}
     {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
     (hA : Ok m pc fp K d ca Pa)
-    (hB : ∀ m' pc, Agree fp d K m m' → Pre L m' pc fp K (d + 1) cb ρ W → Ok m' pc fp K (d + 1) cb Pb)
+    (hB : ∀ m' pc, Agree fp d K m m' → Pre L m' pc fp K (d + 1) cb ρ W reserved → Ok m' pc fp K (d + 1) cb Pb)
     (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
-    (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W) :
+    (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W reserved) :
     Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P := by
-  have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W := by simpa using h
+  have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W reserved := by simpa using h
   obtain ⟨m1, s1, a1, wa, ra, pa⟩ := hA
   have h1 := h'.next a1 (Nat.le_succ d) (by omega)
   obtain ⟨m2, s2, a2, wb, rb, pb⟩ := hB m1 _ a1 h1.left
@@ -108,9 +108,9 @@ theorem bin_ok_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : L
 theorem bin_ok2 {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
     (hA : Ok m pc fp K d ca Pa)
-    (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W → Ok m pc fp K (d + 1) cb Pb)
+    (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb Pb)
     (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
-    (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W) :
+    (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W reserved) :
     Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P :=
   bin_ok_keep hA (fun m pc _ hp => hB m pc hp) hg hop ho hK h
 
@@ -118,18 +118,18 @@ theorem bin_ok2 {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List 
 theorem bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d o : Nat} {ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop}
     {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
-    (hA : ∀ m pc, Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca Pa)
-    (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W → Ok m pc fp K (d + 1) cb Pb)
+    (hA : ∀ m pc, Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca Pa)
+    (hB : ∀ m pc, Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb Pb)
     (hg : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r) (hop : op o = bin g) (ho : o < 256)
-    (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W) :
+    (hK : d + 1 < K) (h : Pre L m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) ρ W reserved) :
     Ok m pc fp K d (ca ++ cb ++ [ci o d d (d + 1)]) P := by
-  have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W := by simpa using h
+  have h' : Pre L m pc fp K d (ca ++ (cb ++ [ci o d d (d + 1)])) ρ W reserved := by simpa using h
   exact bin_ok2 (hA m pc h'.left) hB hg hop ho hK h
 
 /-- One instruction that writes slot `d` from a step `ret1 t v`. -/
 theorem one_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II} {Γ : Ctx} {ρ : Env D Γ} {v : Runner.W}
     {W : Runner.Mem → Prop}
-    {P : Runner.W → Prop} (h : Pre L m pc fp K d [i] ρ W) (ho : i.o < 256) (hd : d < K) (hv : P v)
+    {P : Runner.W → Prop} (h : Pre L m pc fp K d [i] ρ W reserved) (ho : i.o < 256) (hd : d < K) (hv : P v)
     (hr : ∀ m', m.wr64 (slot fp (BitVec.ofNat 64 d)) v = some m' → Run (op i.o ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ m') :
     Ok m pc fp K d [i] P := by
   obtain ⟨hw, hrd, a3⟩ := wr_slot h.frame hd v
@@ -137,7 +137,7 @@ theorem one_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {i : II} {Γ : Ct
 
 theorem const_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {k : Int} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop}
-    (h : Pre L m pc fp K d [ci 1 d k 0] ρ W) (hk : lit32 k = true) (hd : d < K) :
+    (h : Pre L m pc fp K d [ci 1 d k 0] ρ W reserved) (hk : lit32 k = true) (hd : d < K) :
     Ok m pc fp K d [ci 1 d k 0] (· = BitVec.ofInt 64 k) := by
   have := h.small
   refine one_ok h (by simp [ci]) hd rfl fun m' hw => ?_
@@ -152,7 +152,7 @@ theorem const_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {k : Int} {Γ :
 
 theorem mov_ok {m : Runner.Mem} {pc fp : Runner.W} {K d s : Nat} {Γ : Ctx} {ρ : Env D Γ} {v : Runner.W}
     {W : Runner.Mem → Prop}
-    (h : Pre L m pc fp K d [ci 2 d s 0] ρ W) (hs : s < K) (hd : d < K)
+    (h : Pre L m pc fp K d [ci 2 d s 0] ρ W reserved) (hs : s < K) (hd : d < K)
     (hv : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some v) :
     Ok m pc fp K d [ci 2 d s 0] (· = v) := by
   have := h.small
