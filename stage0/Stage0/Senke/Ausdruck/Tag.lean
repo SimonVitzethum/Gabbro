@@ -75,6 +75,39 @@ theorem encSum_inj {cs : List (Option (Int × Int))} {a b : Wert D (.sum cs)} {w
   rw [sumN_off (D := D) ha.1 ⟨i, a⟩, sumN_off (D := D) hb.1 ⟨i, b⟩] at this
   exact this
 
+theorem sumWord_tag {cs : List (Option (Int × Int))} (h : sumFits cs = true)
+    (v : Wert D (.sum cs)) : BitVec.ofNat 64 (sumN v) &&& 255 = BitVec.ofNat 64 v.1.val := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_and, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (sumN_lt h v)]
+  change sumN v &&& (2 ^ 8 - 1) = v.1.val % 2 ^ 64
+  rw [Nat.and_two_pow_sub_one_eq_mod, sumN_tag (D := D) h v]
+  have := v.1.isLt
+  have hl : cs.length ≤ 256 := by
+    simp only [sumFits, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.1
+  omega
+
+theorem sumWord_off {cs : List (Option (Int × Int))} (h : sumFits cs = true)
+    (v : Wert D (.sum cs)) : BitVec.ofNat 64 (sumN v) >>> 8 = BitVec.ofNat 64 (sumOff (cs.get v.1) v.2) := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_ushiftRight, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (sumN_lt h v),
+    Nat.shiftRight_eq_div_pow]
+  change sumN v / 256 = sumOff (cs.get v.1) v.2 % 2 ^ 64
+  rw [sumN_off (D := D) h v, Nat.mod_eq_of_lt (by have := sumOff_lt h v.1 v.2; omega)]
+
+theorem sumWord_payload {cs : List (Option (Int × Int))} (h : sumFits cs = true)
+    (i : Fin cs.length) {lo hi : Int} (hc : cs.get i = some (lo, hi)) (v : Nutzlast (cs.get i)) :
+    (BitVec.ofNat 64 (sumN (D := D) ⟨i, v⟩) >>> 8) + BitVec.ofInt 64 lo =
+      BitVec.ofInt 64 (hc ▸ v).n := by
+  rw [sumWord_off (D := D) h ⟨i, v⟩]
+  change BitVec.ofNat 64 (sumOff (cs.get i) v) + BitVec.ofInt 64 lo = BitVec.ofInt 64 (hc ▸ v).n
+  generalize he : cs.get i = c at v hc ⊢
+  subst hc
+  simp only [sumOff]
+  have hv := v.lo_le
+  rw [← BitVec.ofInt_natCast, ← BitVec.ofInt_add]
+  congr 1
+  omega
+
 /-- Both a bare arm and a nonzero, negative payload have different words. -/
 theorem encSum_inj_zeuge :
     let cs := [none, some (-7, 13)]
@@ -85,5 +118,13 @@ theorem encSum_inj_zeuge :
   have h : Enc (.sum [none, some (-7, 13)])
       (D := D) ⟨⟨1, by decide⟩, ⟨-2, by decide, by decide⟩⟩ 1281 := by constructor <;> rfl
   exact ⟨h, fun _ hb => encSum_inj hb h⟩
+
+set_option maxRecDepth 2048 in
+/-- Accept both exact limits and refuse the first tag count or payload width beyond them. -/
+theorem sumFits_zeuge :
+    sumFits (List.replicate 256 none) = true ∧
+    sumFits (List.replicate 257 none) = false ∧
+    sumFits [some (0, 2 ^ 56 - 1)] = true ∧
+    sumFits [some (0, 2 ^ 56)] = false := by decide
 
 end Gabbro.Stage0.Senke
