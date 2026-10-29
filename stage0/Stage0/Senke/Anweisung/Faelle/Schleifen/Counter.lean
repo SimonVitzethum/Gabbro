@@ -2,6 +2,7 @@
 (the entry snapshot). The body and callees must stay below this reservation before
 this fragment can replace the current refusal of forever. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+import Stage0.Senke.Rueckkehr
 
 namespace Gabbro.Stage0.Senke
 open Runner Runner.IR
@@ -46,6 +47,17 @@ theorem counter_decrement {t : T} {m m' : Mem} {d one : BitVec 32} {v : W}
   apply run_step hi (by decide)
   exact run_bin hi hv h1 rfl hw
 end
+
+/-- The existing statement/call frame contract protects a reserved counter below
+its writable suffix, including world writes. This is an interface lemma: lowering
+must still establish the reservation bound for the body and every callee. -/
+theorem counter_preserved [Kern] {D : Gabbro.Grammatik.Deklaration} {L : Lay D}
+    {fp : W} {Ks K d counter : Nat} {m m' : Mem}
+    (layout : WIn L fp Ks K) (frame : AgreeW L fp d K m m')
+    (reserved : counter < d) (bound : d ≤ K) :
+    m'.rd64 (slot fp (BitVec.ofNat 64 counter)) =
+      m.rd64 (slot fp (BitVec.ofNat 64 counter)) :=
+  agreeW_rdW layout frame reserved bound
 
 /-- Reserving [counter,counter+1) preserves every other byte and permissions. -/
 theorem counter_protected {m : Mem} {fp : W} {counter : Nat}
