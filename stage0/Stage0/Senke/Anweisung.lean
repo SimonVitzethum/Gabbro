@@ -15,6 +15,7 @@ import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
 import Stage0.Senke.Sperre.Code
+import Stage0.Senke.Anweisung.Bytes.Code
 
 namespace Gabbro.Stage0.Senke
 
@@ -158,6 +159,12 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ci' ← lowE L i (frei Γ + 1)
     let ca ← slotA L t f (frei Γ + 1) ci'
     pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
+  | _, Γ, Λ, _, .putBytes t f _ n i hlo hhi e _ _ => do
+    let ce ← lowE L e (frei Γ)
+    let ci' ← lowE L i (frei Γ + 1)
+    let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f _ _ (256 ^ n - 1) hlo n 0 (by simpa using hhi)
+    pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
+  | _, _, _, _, .assignSlotRef .. => none
   | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _ =>
     if inW a b && lit32 von && lit32 nach then do
       let ci' ← lowE L i (frei Γ)
