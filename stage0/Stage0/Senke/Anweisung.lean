@@ -25,6 +25,17 @@ open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration} {V : Vertrag D}
 
+/-- Materialise a kernel-rounded constant, or stop exactly at G's range check.
+    The continuation is lazy: a failing range never lowers unreachable code. -/
+def floatLiteralL (d : Nat) (q low high : Int × Int)
+    (rest : Unit → Option (List II × Nat)) : Option (List II × Nat) :=
+  match gleitPasst low high (bruch q) with
+  | none => some (stopC 107 d, d + 8)
+  | some _ => do
+    let cr ← rest ()
+    let cw := konstWL 4 (Gleitkomma.zuBits Gleitkomma.f64 (bruch q)) d
+    pure (cw.1 ++ cr.1, max cw.2 cr.2)
+
 /-- The arguments of a call into the callee's parameter slots from `p` (the callee frame's first variable slot);
     the head goes highest. The last argument is computed first, so a later one's scratch slots lie above every
     argument already in place. -/
@@ -293,12 +304,11 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
       pure (floatNarrowC (frei Γ) cc.1 cx.1 ce.1 cr.1, max cc.2 (max ce.2 (max cr.2 cx.2)))
     else lowEnd A L lo ens pr ex err
   | _, Γ, _, _, .floatLit q low high rest =>
-    match gleitPasst low high (bruch q) with
-    | none => some (stopC 107 (frei Γ), frei Γ + 8)
-    | some _ => do
-      let cr ← lowB A L lo ens pr ex rest
-      let cw := konstWL 4 (Gleitkomma.zuBits Gleitkomma.f64 (bruch q)) (frei Γ)
-      pure (cw.1 ++ cr.1, max cw.2 cr.2)
+    floatLiteralL (frei Γ) q low high (fun _ => lowB A L lo ens pr ex rest)
+  | _, Γ, _, _, .floatOf e low high rest =>
+    match e with
+    | .lit n => floatLiteralL (frei Γ) (n, 1) low high (fun _ => lowB A L lo ens pr ex rest)
+    | _ => none
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest
@@ -353,7 +363,7 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
       else none
     else none
   -- Rounded integer conversion and IEEE arithmetic need their software algorithms and proofs.
-  | _, _, _, _, .float .. | _, _, _, _, .floatOf .. => none
+  | _, _, _, _, .float .. => none
   | _, _, _, _, _ => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits

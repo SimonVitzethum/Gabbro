@@ -320,7 +320,13 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     exact blockFloatLit_case hS hA hlo0 hens
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  | _, _, _, _, .floatOf .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .floatOf e low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowB] at h
+    split at h
+    · exact blockFloatOfLit_case (pr := pr) (ex := ex) hS hA hlo0 hens
+        (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+        c top (by simpa only [lowB] using h) hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+    · cases h
   | _, Γ, Λ, _, .floatNarrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
     exact blockFloatNarrow_case hS hA hlo0 hens
       (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)

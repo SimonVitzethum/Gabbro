@@ -70,10 +70,10 @@ theorem float_signed_zero_zeuge :
     gleitLt ⟨false, 0, 0⟩ ⟨true, 0, 0⟩ = false ∧
     gleitLe ⟨true, 0, 0⟩ ⟨false, 0, 0⟩ = true := by decide +kernel
 
-/-- Arithmetic and integer conversion still require their software algorithms and proofs. -/
+/-- Arithmetic and dynamic integer conversion still require their complete software proofs. -/
 theorem float_refused_zeuge :
     lowB (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0)
-      (show Body from .floatOf (.lit 42) (0, 1) (100, 1) .nil) = none ∧
+      (show Body from .bind (.lit 42) (.floatOf (.var .here) (0, 1) (100, 1) .nil)) = none ∧
     lowB (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0)
       (show Body from .floatLit (1, 1) (0, 1) (10, 1)
         (.float .add (.var .here) (.var .here) (0, 1) (10, 1) .nil)) = none := by
