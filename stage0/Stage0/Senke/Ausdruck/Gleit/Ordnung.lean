@@ -1,5 +1,4 @@
 /- Relate the kernel's exact binary64 comparison to signed magnitude ordering. -/
-import Mathlib.Tactic.Linarith
 import Stage0.Senke.Ausdruck.Gleit.Wort
 import Grammatik.Logik.Vertraege.EinpassenVoll
 
@@ -22,19 +21,23 @@ theorem floatUnits_bounds (a : GFloat) (hw : wf f64 a) :
   · simp only [hz, ↓reduceIte, Nat.pow_zero, Nat.mul_one]
     exact ⟨hf, fun h => False.elim (h rfl)⟩
   · rw [if_neg hz]
-    have he : a.bexp = (a.bexp - 1) + 1 := by omega
     have hp := Nat.two_pow_pos (a.bexp - 1)
     constructor
-    · conv_rhs => rw [he, Nat.pow_succ]
-      nlinarith
-    · intro _; nlinarith
+    · calc
+        _ < (4503599627370496 * 2) * 2 ^ (a.bexp - 1) :=
+          Nat.mul_lt_mul_of_pos_right (by omega) hp
+        _ = 4503599627370496 * 2 ^ a.bexp := by
+          rw [Nat.mul_assoc, ← Nat.pow_succ']
+          exact congrArg (fun e => 4503599627370496 * 2 ^ e) (by omega)
+    · intro _
+      exact Nat.mul_le_mul_right _ (by omega)
 
 theorem floatUnits_exp_lt {a b : GFloat} (ha : wf f64 a) (hb : wf f64 b)
     (he : a.bexp < b.bexp) : floatUnits a < floatUnits b := by
   have aa := (floatUnits_bounds a ha).1
   have bb := (floatUnits_bounds b hb).2 (by omega)
   have hp := Nat.pow_le_pow_right (n := 2) (by decide) (show a.bexp ≤ b.bexp - 1 by omega)
-  nlinarith
+  exact Nat.lt_of_lt_of_le aa (Nat.le_trans (Nat.mul_le_mul_left _ hp) bb)
 
 theorem floatUnits_lt {a b : GFloat} (ha : wf f64 a) (hb : wf f64 b) :
     floatUnits a < floatUnits b ↔ floatMag a < floatMag b := by
@@ -47,7 +50,8 @@ theorem floatUnits_lt {a b : GFloat} (ha : wf f64 a) (hb : wf f64 b) :
     · simp only [hz, ↓reduceIte, Nat.zero_mul, Nat.zero_add]
     · rw [if_neg hz, if_neg hz]
       have hp := Nat.two_pow_pos (b.bexp - 1)
-      constructor <;> intro h <;> nlinarith
+      rw [Nat.mul_lt_mul_right hp]
+      omega
   · rcases Nat.lt_or_gt_of_ne he with he | he
     · have hm := floatUnits_exp_lt ha hb he
       unfold floatMag
@@ -105,7 +109,7 @@ theorem float_exact_units {a : GFloat} (hf : gleitEndlich a = true) :
       have ee : ((a.bexp : Int) - 1023 - (53 - 1) + 1074).toNat = a.bexp - 1 := by omega
       rw [ee]
       simp only [floatSignedUnits, floatUnits, if_neg he, Int.natCast_mul, Int.natCast_add]
-      cases a.sign <;> simp <;> nlinarith
+      cases a.sign <;> simp [Int.neg_mul]
 
 theorem float_lt_key {a b : GFloat} (ha : wf f64 a) (hb : wf f64 b)
     (af : gleitEndlich a = true) (bf : gleitEndlich b = true) :
