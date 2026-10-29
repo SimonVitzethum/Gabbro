@@ -151,3 +151,8 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.endNext_case
 #print axioms Gabbro.Stage0.Senke.WhyProbe.outcomes_zeuge
 #print axioms Gabbro.Stage0.Senke.WhyProbe.callElse_ok_zeuge
+
+#print axioms Gabbro.Stage0.Senke.lowEns_ok
+#print axioms Gabbro.Stage0.Senke.snapC_ok
+#print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.OldProbe.snapC_ok_zeuge

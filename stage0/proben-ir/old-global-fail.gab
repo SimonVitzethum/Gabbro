@@ -1,0 +1,13 @@
+// Entry snapshot must survive a nested call that changes the global.
+module ir_probe {
+static mut g : u32 in 0 .. 100 = 0;
+impl fn write() effects { writes g } { g = 19; }
+impl fn change() effects { reads g, writes g }
+    ensures g == old(g) + 11
+{ write(); }
+impl fn main() -> u32 in 0 .. 100 effects { reads g, writes g } {
+    g = 7;
+    change();
+    return g;
+}
+}

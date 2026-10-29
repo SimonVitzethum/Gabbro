@@ -118,4 +118,12 @@ theorem oldS_parameter_refused_zeuge :
 
 theorem multiple_occurrences_refused_zeuge : snapC layout [.glob (), .glob ()] = none := rfl
 
+theorem lowEns_top_zeuge : lowEns layout expr 4 = some (readCode, 5) ∧ 4 < 5 :=
+  ⟨rfl, by decide⟩
+
+theorem entryIndex_ok_zeuge :
+    entryIndex (QuantProbe.index 1 (by decide)) = some 1 ∧
+    intValue (eval QuantProbe.initial (QuantProbe.index 1 (by decide)) QuantProbe.initial .nil) = some 1 :=
+  ⟨rfl, rfl⟩
+
 end Gabbro.Stage0.Senke.OldProbe
