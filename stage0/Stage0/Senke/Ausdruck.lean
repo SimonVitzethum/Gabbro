@@ -45,10 +45,23 @@ def Var.idx : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
 def FB : Nat := 4
 
 /-- The first free slot of a frame whose variables are `Γ`. -/
-def frei (Γ : Ctx) : Nat := FB + Γ.length
+def frei (Γ : Ctx) (reserved : Nat := 0) : Nat := FB + reserved + Γ.length
 
 /-- The frame slot of a variable: counted from the bottom of the context, after the frame's first slots. -/
-def vslot {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : Nat := FB + (Γ.length - 1 - Var.idx x)
+def vslot {Γ : Ctx} {τ : Ty} (x : Var Γ τ) (reserved : Nat := 0) : Nat :=
+  FB + reserved + (Γ.length - 1 - Var.idx x)
+
+/-- Reserve a prefix after the ABI header consistently for bindings and scratch. -/
+theorem frei_reserved (Γ : Ctx) (reserved : Nat) :
+    FB + reserved ≤ frei Γ reserved := by simp [frei]
+
+theorem vslot_reserved {Γ : Ctx} {τ : Ty} (x : Var Γ τ) (reserved : Nat) :
+    FB + reserved ≤ vslot x reserved := by simp [vslot]
+
+/-- Extending the context allocates exactly its first free unreserved word. -/
+theorem vslot_here_reserved (Γ : Ctx) (τ : Ty) (reserved : Nat) :
+    vslot (Var.here : Var (τ :: Γ) τ) reserved = frei Γ reserved := by
+  simp [vslot, frei, Var.idx]
 
 /-- A range of integers that 64 bits hold. -/
 def inW (lo hi : Int) : Bool := decide (-2 ^ 63 ≤ lo) && decide (hi < 2 ^ 63)
