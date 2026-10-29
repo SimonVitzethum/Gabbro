@@ -28,11 +28,6 @@ theorem byte_word {z : Int} (hz0 : 0 ≤ z) (hz : z < 2 ^ 64) (j : Nat) (hj : j 
 
 variable [Kern] {D : Deklaration}
 
-/-- The captured word's byte `j` into `d`, with one scratch slot. -/
-def bytePartC (src d j : Nat) : List II :=
-  [ci 2 d src 0, ci 1 (d + 1) (8 * j) 0, ci 12 d d (d + 1),
-   ci 1 (d + 1) 255 0, ci 8 d d (d + 1)]
-
 theorem bytePartC_ok {Γ : Ctx} {a b H : Int} {z : Zahl 0 H} {k : Zahl a b} {ρ : Env D Γ}
     {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {W : Runner.Mem → Prop}
     (hz : z.n < 2 ^ 64) (hj : j < 8) (hK : frei Γ + 4 ≤ K)
