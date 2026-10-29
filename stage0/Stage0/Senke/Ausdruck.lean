@@ -92,6 +92,24 @@ def wordL : Nat → Nat → Nat → List II × Nat
       ([ci 1 (d + 1) 65536 0], d + 2))
       ([ci 1 (d + 1) (n % 65536) 0], d + 2)
 
+/-- Signed magnitude key: strip the sign, multiply by `1 - 2 * sign`.
+    The two supplied operand codes evaluate the same pure expression at `d` and `d+3`. -/
+def floatKeyL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  pure (bin2 5 d
+    (bin2 12 d (bin2 11 d a ([ci 1 (d+1) 1 0], d+2)) ([ci 1 (d+1) 1 0], d+2))
+    (bin2 4 (d+1) ([ci 1 (d+1) 1 0], d+2)
+      (bin2 5 (d+2) ([ci 1 (d+2) 2 0], d+3)
+        (bin2 13 (d+3) b ([ci 1 (d+4) 0 0], d+5)))))
+
+/-- Compare two signed keys; non-strict order negates the reverse strict order. -/
+def floatCmpL (le : Bool) (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  let c := bin2 13 d a b
+  pure (if le then bin2 10 d c ([ci 1 (d+1) 1 0], d+2) else c)
+
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
 
