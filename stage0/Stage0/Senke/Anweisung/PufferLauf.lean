@@ -47,11 +47,6 @@ theorem argsW_ptr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs
       subst e; trivial
 
 /-- A word whose bytes and readability are kept reads the same. -/
-theorem rd64_keep {m m' : Runner.Mem} {a : Runner.W} (hrd : m'.rd = m.rd)
-    (hb : ∀ j, j < 8 → m'.b (a + BitVec.ofNat 64 j) = m.b (a + BitVec.ofNat 64 j)) : m'.rd64 a = m.rd64 a := by
-  simp only [Runner.Mem.rd64, hrd]
-  rw [le_congr (m := m') (m' := m) hb]
-
 theorem ptrParam_spec {τs : List Ty} {j n : Nat} {rw : Bool} (h : ptrParam τs = some (j, n, rw)) :
     j < τs.length ∧ τs[j]? = some (.ptr n rw) := by
   simp only [ptrParam] at h

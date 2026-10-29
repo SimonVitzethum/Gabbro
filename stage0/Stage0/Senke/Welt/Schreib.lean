@@ -175,4 +175,10 @@ theorem weltAt_slot {m : Runner.Mem} {L : Lay D} {σ : World D} {t : D.Tab} {f :
     rw [rd64_write_far hf]
     exact hw'
 
+/-- A word whose bytes are kept reads the same. -/
+theorem rd64_keep {m m' : Runner.Mem} {a : Runner.W} (hrd : m'.rd = m.rd)
+    (hb : ∀ j, j < 8 → m'.b (a + BitVec.ofNat 64 j) = m.b (a + BitVec.ofNat 64 j)) : m'.rd64 a = m.rd64 a := by
+  simp only [Runner.Mem.rd64, hrd]
+  rw [le_congr (m := m') (m' := m) hb]
+
 end Gabbro.Stage0.Senke
