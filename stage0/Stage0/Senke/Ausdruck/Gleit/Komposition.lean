@@ -22,6 +22,20 @@ theorem slotRead_agree {m m' : Runner.Mem} {fp : Runner.W}
   rw [agree_rd_low ha frame.room hi hd]
   exact read
 
+/-- Executing temporaries retains the concrete input together with the result.
+    This rule requires no universal producer for the retained slot. -/
+theorem slotRead_after_ok {m : Runner.Mem} {pc fp : Runner.W}
+    {K d input : Nat} {code : List II} {P : Runner.W → Prop} {v : Runner.W}
+    (frame : FrameOK m fp K) (hi : input < d) (hd : d ≤ K)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v)
+    (run : Ok m pc fp K d code P) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧
+      Agree fp d K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 input)) = some v ∧
+      ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some w ∧ P w := by
+  obtain ⟨m', steps, agree, result⟩ := run
+  exact ⟨m', steps, agree, slotRead_agree frame agree hi hd read, result⟩
+
 /-- Slot-bound continuations consume the actual child result. The retained input
     is explicit, and the frame and environment retain their reserved prefix. -/
 theorem slotContinuation {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
