@@ -216,4 +216,40 @@ theorem floatPackNormal_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Pro
   rw [floatPackNormal_canonical F sign e q bounds.1 bounds.2.2.2.2.1 bounds.2.2.2.2.2] at result
   exact result h hK m pc hp
 
+/-- Renormalize a rounded significand at the carry boundary using integer IR.
+    Equality produces the shift count and the exponent increment. -/
+def floatPackCarryL (d : Nat) (s e q : Nat → Option (List II × Nat))
+    (unit : Nat) : Option (List II × Nat) :=
+  let limit := fun j => some (konstWL 4 (2 * unit) j)
+  let carry := fun j => wordL 14 j (q j) (limit (j + 1))
+  let exponent := fun j => wordL 3 j (e j) (carry (j + 1))
+  let significand := fun j => wordL 12 j (q j) (carry (j + 1))
+  floatPackNormalL d s exponent significand unit
+
+theorem floatPackCarryL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {s e q : Nat → Option (List II × Nat)} {sv ev qv : Runner.W}
+    (hs : WordCode (L := L) ρ W s sv) (he : WordCode (L := L) ρ W e ev)
+    (hq : WordCode (L := L) ρ W q qv) (unit : Nat) (hu : 2 * unit < 2^64) :
+    let carry := Runner.IR.bool (qv == BitVec.ofNat 64 (2 * unit))
+    WordCode (L := L) ρ W (fun d => floatPackCarryL d s e q unit)
+      (sv + (ev + carry) * BitVec.ofNat 64 unit +
+        ((qv >>> (carry.toNat % 64)) - BitVec.ofNat 64 unit)) := by
+  have hc : WordCode (L := L) ρ W _ _ := WordCode.bin hq
+    (WordCode.konst (2 * unit) hu)
+    (g := fun a b => some (Runner.IR.bool (a == b))) rfl rfl (by decide : 14 < 256)
+  have hx : WordCode (L := L) ρ W _ _ := WordCode.bin he hc
+    (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
+  have hq' : WordCode (L := L) ρ W _ _ := WordCode.bin hq hc
+    (g := fun a b => some (a >>> (b.toNat % 64))) rfl rfl (by decide : 12 < 256)
+  intro fp K d c top h hK m pc hp
+  exact floatPackNormalL_ok hs hx hq' unit (by omega) h hK m pc hp
+
+/-- The zero path emits positive zero, including signed integer zero. -/
+def floatPackZeroL (d : Nat) : Option (List II × Nat) :=
+  some (konstWL 4 0 d)
+
+theorem floatPackZeroL_ok {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
+    WordCode (L := L) ρ W floatPackZeroL (BitVec.ofNat 64 0) :=
+  WordCode.konst 0 (by decide)
+
 end Gabbro.Stage0.Senke
