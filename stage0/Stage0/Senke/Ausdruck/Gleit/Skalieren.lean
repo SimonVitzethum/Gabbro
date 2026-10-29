@@ -514,6 +514,17 @@ theorem floatPackZeroL_canonical_zeuge {Γ : Ctx} (ρ : Env D Γ)
   intro F _
   exact ⟨by decide, floatPackZeroL_canonical ρ W F⟩
 
+/-- The scale branch shared by the actual integer assembly and its entry proof. -/
+def floatOfIntScaleL (p d : Nat) (input : Nat → Option (List II × Nat)) :=
+  let magnitude := fun j => floatMagnitudeL j input
+  let exponent := fun j => floatExponentL j magnitude
+  let threshold := fun j => some (konstWL 4 (p - 1) j)
+  wennL d (wordL 13 d (exponent d) (threshold (d + 1)))
+    (wordL 11 d (magnitude d)
+      (wordL 4 (d + 1) (threshold (d + 1)) (exponent (d + 2))))
+    (floatRoundShiftL d magnitude
+      (fun j => wordL 4 j (exponent j) (threshold (j + 1))))
+
 /-- Integer conversion candidate, kept off lowE until full simulation is proved.
     Binary combinators reserve d and evaluate the right operand at d+1.
     Branches share d; pure inputs are recomputed in separate temporary ranges. -/
@@ -521,13 +532,7 @@ def floatOfIntAssemblyL (p bias signBit : Nat) (d : Nat)
     (input : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
   let magnitude := fun j => floatMagnitudeL j input
   let exponent := fun j => floatExponentL j magnitude
-  let threshold := fun j => some (konstWL 4 (p - 1) j)
-  let leftCount := fun j => wordL 4 j (threshold j) (exponent (j + 1))
-  let rightCount := fun j => wordL 4 j (exponent j) (threshold (j + 1))
-  let left := fun j => wordL 11 j (magnitude j) (leftCount (j + 1))
-  let right := fun j => floatRoundShiftL j magnitude rightCount
-  let scale := fun j => wennL j
-    (wordL 13 j (exponent j) (threshold (j + 1))) (left j) (right j)
+  let scale := fun j => floatOfIntScaleL p j input
   let sign := fun j => wordL 5 j (wordK 13 j (input j) 0)
     (some (konstWL 4 signBit (j + 1)))
   let biased := fun j => wordL 3 j (exponent j)
@@ -651,5 +656,31 @@ theorem floatOfIntAssemblyL_compare {Γ : Ctx} {ρ : Env D Γ}
     rfl rfl (by decide : 13 < 256)
   intro fp K d c top h ht m pc hp
   exact result h ht m pc hp
+
+/-- Entry into the actual emitted left scale branch. The comparison prefix runs
+    before the branch and its temporary writes satisfy the ordinary frame rule. -/
+theorem floatOfIntAssemblyL_left_entry {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (p : Nat) (hb : p - 1 < 2^64)
+    (hlt : (BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1)).toInt <
+      (BitVec.ofNat 64 (p - 1)).toInt)
+    {m : Runner.Mem} {pc fp : Runner.W} {K d top : Nat}
+    {cc ca cb : List II} {tc : Nat}
+    (hc : wordL 13 d
+      (floatExponentL d (fun j => floatMagnitudeL j input))
+      (some (konstWL 4 (p - 1) (d + 1))) = some (cc, tc))
+    (hemit : floatOfIntScaleL p d input = some (wennC d cc ca cb, top))
+    (ht : tc ≤ K) (hd : d < K)
+    (hp : Pre L m pc fp K d (wennC d cc ca cb) ρ W 0) :
+    ∃ m', Star ⟨pc, fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16 * (cc.length + 1)), fp⟩ m' ∧
+      Agree fp d K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some 1 := by
+  apply wenn_taken_entry hp hd
+  intro m pc hp
+  have h := floatOfIntAssemblyL_compare z hz hn hi p hb hc ht m pc hp
+  simpa only [Runner.IR.bool, decide_eq_true hlt, ite_true] using h
 
 end Gabbro.Stage0.Senke
