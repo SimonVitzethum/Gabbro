@@ -249,6 +249,16 @@ world lies above every stack):
    the start code spawns the roots (`spawn`, frames below the world), a root thread ends with `exit`.
 2. *Locks as mutexes*: a lock word per lock above the world; `locks L { .. }` takes it by `cas` (wait: `futex`) and
    gives it back on every way out (`leave`, `next`, `return`); G's `nimmt`/`gibt` steps match.
+   Design (2026-10-29): three words per lock in a sync region above the world -- owner, count, waiters. The owner is
+   the holding thread's number + 1 (computed from `fp`: `(fp - sb) / st + 1`, `sb` the first stack, `st` a stack's
+   size), so a lock is re-entrant, as G's `offen` is a multiset (`rufAt` lets a thread take a lock it holds). Take:
+   the owner is me -- count + 1; else `cas owner 0 -> me` (count := 1), on failure waiters + 1, `futex_wait` on the
+   owner word with the seen owner, waiters - 1, again. Give: count - 1; at 0 `cas owner me -> 0` (a locked operation:
+   the store of the release cannot pass the read of the waiters under TSO), and `futex_wake` only when waiters is
+   not 0. One thread alone never waits and never wakes. A statement keeps the sync words (`AgreeW` exempts only the
+   world); `leave`/`next` out of `locks` give the locks taken inside the loop before the jump, so their targets allow
+   exactly those words to change; `ret` inside `locks` cannot be typed (`Λ ~ ende`). The precondition `SyncAt` --
+   the exact state of every lock word for the locks the thread holds -- holds where a `locks` starts.
 3. *Atomics* (`publish`, `awaits`, `exchange`) as `cas`/loads on their cells, against GX.
 4. *The structural half*: a thread state of the runner's machine at a statement boundary corresponds to a thread state
    of `RufSchrittG` (the residue `.ende`/`.dann`, the call stack as the chain of frames).
