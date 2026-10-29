@@ -633,4 +633,23 @@ theorem floatOfIntAssemblyL_prefix {Γ : Ctx} {ρ : Env D Γ}
   · rw [findeExp_integer_nonzero z.natAbs hnabs]
     omega
 
+/-- The actual post-prefix comparison, including both operand temporary ranges.
+    Its signed comparison operands are the canonical exponent and fraction width. -/
+theorem floatOfIntAssemblyL_compare {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z)) (p : Nat) (hp : p - 1 < 2^64) :
+    WordCode (L := L) ρ W
+      (fun d => wordL 13 d
+        (floatExponentL d (fun j => floatMagnitudeL j input))
+        (some (konstWL 4 (p - 1) (d + 1))))
+      (Runner.IR.bool ((BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1)).toInt <
+        (BitVec.ofNat 64 (p - 1)).toInt)) := by
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin (floatOfIntAssemblyL_prefix z hz hn hi).1
+    (WordCode.konst (p - 1) hp)
+    (g := fun a b => some (Runner.IR.bool (a.toInt < b.toInt)))
+    rfl rfl (by decide : 13 < 256)
+  intro fp K d c top h ht m pc hp
+  exact result h ht m pc hp
+
 end Gabbro.Stage0.Senke
