@@ -174,4 +174,24 @@ theorem normalize_integer_zero (F : Gleitkomma.Format) (s : Bool) :
     Gleitkomma.rundeBruchBei F s 0 1 = ⟨s, 0, 0⟩ := by
   simp [Gleitkomma.rundeBruchBei]
 
+/-- Joint fixtures discharge simulation and nonzero premises together. -/
+theorem floatExponentL_canonical_zeuge {Γ : Ctx} (ρ : Env D Γ)
+    (W : Runner.Mem → Prop) :
+    ∀ n ∈ ([2^16, 2^24 + 1, 2^64 - 1, 2^63] : List Nat),
+      let a := fun d => some (konstWL 4 n d)
+      let v := BitVec.ofNat 64 n
+      WordCode (L := L) ρ W a v ∧ v.toNat ≠ 0 ∧
+      WordCode (L := L) ρ W (fun d => floatExponentL d a)
+        (BitVec.ofInt 64 (Gleitkomma.findeExp v.toNat 1)) := by
+  intro n hn
+  have bounds : n < 2^64 ∧ n % 2^64 ≠ 0 := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+    rcases hn with h | h | h | h <;> subst n <;> decide
+  have hc : WordCode (L := L) ρ W (fun d => some (konstWL 4 n d)) (BitVec.ofNat 64 n) := WordCode.konst (L := L) (ρ := ρ) (W := W) n bounds.1
+  exact ⟨hc, bounds.2, floatExponentL_canonical hc bounds.2⟩
+
+theorem normalize_integer_zero_zeuge :
+    Gleitkomma.rundeBruchBei Gleitkomma.f32 false 0 1 = ⟨false, 0, 0⟩ := by
+  exact normalize_integer_zero _ _
+
 end Gabbro.Stage0.Senke

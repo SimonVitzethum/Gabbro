@@ -1,3 +1,4 @@
+import Stage0.Senke.Ausdruck.Gleit.Exponent
 /-
   File:      stage0/Nachpruefung.lean
   Subject:   The axioms of the lowering's theorems (`Stage0/Senke/`), read by stage 7 of the Lean guardian: each must
@@ -228,3 +229,10 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.OldProbe.snapC_ok_zeuge
 
 #print axioms Gabbro.Stage0.Senke.floatNormQ_left
+
+#print axioms Gabbro.Stage0.Senke.findeExp_integer_nonzero
+#print axioms Gabbro.Stage0.Senke.floatExponentWord_canonical
+#print axioms Gabbro.Stage0.Senke.floatExponentL_canonical
+#print axioms Gabbro.Stage0.Senke.floatExponentL_canonical_zeuge
+#print axioms Gabbro.Stage0.Senke.normalize_integer_zero
+#print axioms Gabbro.Stage0.Senke.normalize_integer_zero_zeuge
