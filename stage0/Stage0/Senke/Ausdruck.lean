@@ -110,6 +110,11 @@ def floatCmpL (le : Bool) (d : Nat) (a b : Option (List II × Nat)) : Option (Li
   let c := bin2 13 d a b
   pure (if le then bin2 10 d c ([ci 1 (d+1) 1 0], d+2) else c)
 
+/-- Apply the same key transformation to both pure operands. -/
+def floatExprL (le : Bool) (d : Nat) (a b : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
+  floatCmpL le d (floatKeyL d (a d) (a (d+3)))
+    (floatKeyL (d+1) (b (d+1)) (b (d+4)))
+
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
 
@@ -234,6 +239,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
     if inW l1 h1 && inW l2 h2 then do
       let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 14 d ca cb)
     else none
+  | _, _, .fllt a b, d => floatExprL false d (lowE L a) (lowE L b)
+  | _, _, .flle a b, d => floatExprL true d (lowE L b) (lowE L a)
   | _, _, .and a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 8 d ca cb)
   | _, _, .or a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 9 d ca cb)
   | _, _, .div _ _ a b, d =>
