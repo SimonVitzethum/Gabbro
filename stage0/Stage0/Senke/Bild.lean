@@ -115,7 +115,8 @@ def BildGut (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat
     (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Prop :=
   (D.params main).isEmpty = true ∧ roots.all (fun f => (D.params f).isEmpty) = true ∧ cs.map (·.1.length) = lens ∧
     fp0 + 8 * K < 2 ^ 31 ∧ FB + 2 * maxTop cs ≤ Ks ∧ exitSlot + 8 ≤ Ks ∧
-    code.all (fun i => decide (i.o < 256)) = true ∧ fp0 + 8 * (Ks * (roots.length + 1)) ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K
+    code.all (fun i => decide (i.o < 256)) = true ∧ fp0 + 8 * (Ks * (roots.length + 1)) ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K ∧
+    Y.sye ≤ fp0 + 8 * K
 
 instance (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
     (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Decidable (BildGut D main roots lens cs fp0 Ks K Y code) := by

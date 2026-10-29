@@ -89,7 +89,8 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
     {pc fpI : Nat} {m : Runner.Mem} (hfit : fpI + 8 * Ks < 2 ^ 31)
     (hc : CodeAt m (BitVec.ofNat 64 pc) (startC A f n e keep)) (hpc : pc + 16 * startLen ≤ fpI)
     (hF : FrameOK m (BitVec.ofNat 64 fpI) Ks) (hP : PCode m A C (BitVec.ofNat 64 fpI) Ks)
-    (hW : WIn Y (BitVec.ofNat 64 fpI) Ks Ks) (σ : World D) (ρ : Env D (D.params f)) (hWa : WeltAt m Y σ) :
+    (hW : WIn Y (BitVec.ofNat 64 fpI) Ks Ks) (σ : World D) (ρ : Env D (D.params f)) (hWa : WeltAt m Y σ)
+    (hy : SyncOK m Y (BitVec.ofNat 64 fpI) Ks) :
     match rufAt P O passes n f σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = BitVec.ofNat 64 e ∧ (keep = true → EncErg (D.erg f) v q.a1)
@@ -138,6 +139,7 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
   have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by
       have h4 : (callTail A f FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 hK (Nat.le_refl _)
     (by omega) (by rw [hn1]; omega) (hAlt f) (pcode_agree hP a1) hdv hE hW hWa1
+    (hy.agree a1 (by have := hW.top; have := hW.ord; omega))
   generalize rufAt P O passes n f σ ρ = o at hcall ⊢
   cases o with
   | ok σ' v =>

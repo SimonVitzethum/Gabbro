@@ -37,6 +37,13 @@ def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : Lay (decl
   lk L := b + 8 * u.globs.length + tabsSz u + 24 * L.val
   sye := b + 8 * u.globs.length + tabsSz u + 24 * u.locks.length
 
+/-- The words of the locks after the tables, three each. -/
+theorem layU_sync (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : LaySync (layU u tor b) := by
+  refine ⟨fun Lk => ?_, fun Lk Lk' hne => ?_⟩
+  · have := Lk.isLt; simp only [layU]; omega
+  · have : Lk.val ≠ Lk'.val := fun h => hne (Fin.ext h)
+    simp only [layU]; omega
+
 /-- A part of a sum and the next summand lie inside the sum. -/
 theorem take_sum_add (xs : List Nat) (i : Nat) (hi : i < xs.length) : (xs.take i).sum + xs[i] ≤ xs.sum := by
   have h := List.take_append_drop (i + 1) xs
@@ -204,7 +211,7 @@ theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (d
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by
   have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h) (fun x => layU_dis u tor x)
-    (fun x => by simp only [layU]; omega) hm σ ρ hWa hT
+    (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm σ ρ hWa hT
   generalize rufAt P O passes b.depth main σ ρ = o at h ⊢
   cases o <;> exact h
 
@@ -225,7 +232,7 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
   have h := bild_wurzel_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h)
-    (fun x => layU_dis u tor x) (fun x => by simp only [layU]; omega) hm j hj σ ρ hWa hT
+    (fun x => layU_dis u tor x) (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm j hj σ ρ hWa hT
   generalize rufAt P O passes b.depth roots[j] σ ρ = o at h ⊢
   cases o <;> exact h
 

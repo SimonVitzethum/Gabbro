@@ -11,6 +11,7 @@
 -/
 import Stage0.Senke.Funktion
 import Stage0.Senke.Welt.WeltAt
+import Stage0.Senke.Sperre.Sync
 
 namespace Gabbro.Stage0.Senke
 
@@ -49,7 +50,7 @@ def FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     (ρ : Env D (D.params f)),
     c ≤ Ks → WIn L fp Ks K → K < 2 ^ 31 → FrameOK m fp K → PCode m A C fp K →
     m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp → m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →
-    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt m fp ρ → WeltAt m L σ →
+    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt m fp ρ → WeltAt m L σ → SyncOK m L fp Ks →
     match S f σ ρ with
     | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
         (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'

@@ -38,6 +38,11 @@ structure Lay (D : Deklaration) where
   lk : D.Lock → Nat := fun _ => 0
   sye : Nat := 0
 
+/-- The words of every lock lie between the world's end and `sye`, three words each, apart from each other. -/
+def LaySync {D : Deklaration} (L : Lay D) : Prop :=
+  (∀ Lk, L.hi ≤ L.lk Lk ∧ L.lk Lk + 24 ≤ L.sye) ∧
+    ∀ Lk Lk', Lk ≠ Lk' → L.lk Lk + 24 ≤ L.lk Lk' ∨ L.lk Lk' + 24 ≤ L.lk Lk
+
 /-- The address of element `k` of the column `f` of table `t`. -/
 def Lay.elem {D : Deklaration} (L : Lay D) (t : D.Tab) (f : D.Feld t) (k : Nat) : Nat := L.col t f + 8 * k
 

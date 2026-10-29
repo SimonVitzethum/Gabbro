@@ -32,7 +32,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] {passes : Nat} {
   intro n
   induction n with
   | zero =>
-    intro _ f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa
+    intro _ f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa _
     have hks := hW.ks
     obtain ⟨top, hlf, htop⟩ := hC f
     simp only [lowFun] at hlf
@@ -52,7 +52,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] {passes : Nat} {
       simpa [guardC, stopC, sysC] using this
     · simp at hlf
   | succ k ih =>
-    intro hn f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa
+    intro hn f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa hy
     have hks := hW.ks
     have ih := ih (by omega)
     obtain ⟨top, hlf, htop⟩ := hC f
@@ -121,9 +121,10 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] {passes : Nat} {
         have hf3 := codeFar_tail hf2
         have hc3 := codeAt_right hc2
         -- the body, its calls at depth `k`
-        have hu : Umf A C (BitVec.ofNat 64 k) m1 fp K :=
+        have hu : Umf Y A C (BitVec.ofNat 64 k) m1 fp Ks K :=
           ⟨pcode_agree hP a1, by
-            rw [agree_rd_low a1 hroom (by omega) (by omega), h2, ofNat_succ], by omega⟩
+            rw [agree_rd_low a1 hroom (by omega) (by omega), h2, ofNat_succ], by omega,
+            hy.agree a1 (by have := hW.top; have := hW.ord; omega), by have := hW.top; have := hW.ord; omega⟩
         have hk : Kopf f m1 fp K rp cfp ρ := Kopf.agree ⟨h0, h1, hE, by omega⟩ a1 hF (Nat.le_refl _)
         have hpb : PreS m1 _ fp K (frei (D.params f)) cb ρ :=
           ⟨Nat.le_refl _, hK, hF1, hc3, hf3, envAt_agree hE a1 hF (Nat.le_refl _) (by omega), trivial, wstab_true _ _⟩

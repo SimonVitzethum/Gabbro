@@ -84,13 +84,13 @@ theorem keeps_of_agreeW {L : Lay D} {fp : Runner.W} {pr : List Nat} {Ks K d : Na
   fun j hj => agreeW_rdW hW ha (hp j hj) hd
 
 theorem Umf.agreeW {L : Lay D} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m' : Runner.Mem}
-    {fp : Runner.W} {Ks K lo : Nat} (hW : WIn L fp Ks K) (h : Umf A C dv m fp K) (ha : AgreeW L fp lo K m m')
-    (hlo : FB ≤ lo) : Umf A C dv m' fp K :=
+    {fp : Runner.W} {Ks Ks' K lo : Nat} (hW : WIn L fp Ks' K) (h : Umf L A C dv m fp Ks K) (ha : AgreeW L fp lo K m m')
+    (hlo : FB ≤ lo) : Umf L A C dv m' fp Ks K :=
   ⟨pcode_agreeW h.code ha hW.top hW.lay.2.2 hW.ord, by
     have hFB3 : FB = 3 := rfl
     have hb := h.big
     rw [agreeW_rdW hW (ha.mono (Nat.min_le_left lo K)) (by omega) (Nat.min_le_right lo K)]
-    exact h.depth, h.big⟩
+    exact h.depth, h.big, h.sync.agreeW ha h.hiK, h.hiK⟩
 
 theorem Kopf.agreeW {L : Lay D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo : Nat} {rp cfp : Runner.W}
     {ρ0 : Env D (D.params f)} (hW : WIn L fp Ks K) (h : Kopf f m fp K rp cfp ρ0) (ha : AgreeW L fp lo K m m')
