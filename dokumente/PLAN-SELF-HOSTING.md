@@ -220,6 +220,21 @@ check. The x86-64 subset the runner needs is therefore about 20 instructions.
 * **Refused by name** (a Linux user process): device registers (`regRead regReadElse regWrite transition`), interrupt
   handlers (`via idt`), a `fnptr` answered by a gate (`Orakel.zeiger`), and any form the model does not yet carry.
 
+**Implemented aggregate fragment (2026-10-29).** `Stage0/Senke/Ausdruck/Aggregat/` extends `Enc` and
+`lowE_ok` without changing G, frame slots or the one-word call convention. Empty arrays use zero; singleton
+arrays recursively reuse their element word, including signed integers, function pointers and nested singleton
+arrays. All four array expression forms are proved. Strings with a static maximum of zero or one byte use zero
+for empty and `256 + byte` for nonempty, so a zero byte remains distinct from empty. Literal, length,
+concatenation, byte indexing (zero outside the actual length, including negative indices), equality,
+lexicographic order and `strWeit` truncation are proved. Constructors and reads refuse larger aggregates,
+including unsupported element aggregates inside singleton arrays. Concatenation requires the sum of the static
+maxima to be at most one; string indices must fit the existing signed-word fragment. The surface front end still
+refuses mutable aggregate locals; G fixtures cover replacement and truncation directly. These are representation
+limits of this lowering, not restrictions of G. Packing several small elements would extend the fragment while
+preserving the ABI; unrestricted aggregates need multiword frames/calls or a proved allocation and lifetime
+discipline for indirect immutable values. `AggregateProbe.simulation_zeuge` supplies concrete nonempty code,
+code memory and a writable disjoint frame jointly; surface probes and the exported G fixture exercise the runner.
+
 #### 2.1.5 The runner's part, in full
 
 Load the image (`open`, `read`/`mmap` at its fixed address, the reserved ranges), set up the first frame, then the

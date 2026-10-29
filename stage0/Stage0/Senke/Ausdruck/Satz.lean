@@ -74,12 +74,15 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simp [Enc, eval, wahr?, hw]
   | _, τ, .var x, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨w, hw, he⟩ := hp.env τ x
-    have := vslot_lt x
-    have := hp.ctx
-    exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨w, hw, he⟩ := hp.env τ x
+      have := vslot_lt x
+      have := hp.ctx
+      exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
+    · cases h
   | _, _, .add a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
@@ -389,7 +392,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     · next hl =>
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact glob_ok hl hp hWL (by omega)
+      simp only [Bool.and_eq_true] at hl
+      exact glob_ok hl.1 hp hWL (by omega)
     · cases h
   | _, _, .slot t f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ t _ f i _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h

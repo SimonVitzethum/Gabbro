@@ -11,6 +11,10 @@
   A function pointer is the code address `L.fa f`. The layout is explicit in every value and storage encoding;
   `FunSpec.addr` ties those words to the callee code addresses. This reuses the IR's slot-based call target
   without a second dispatch mechanism. Function references outside the literal range are refused.
+
+  Empty arrays use zero; singleton arrays reuse their element word recursively. Strings with maximum zero
+  or one use zero for empty and 256 + byte otherwise. Larger aggregates are refused at constructors and reads,
+  including variables, globals and table cells. No allocation, layout or call-ABI change is needed.
 -/
 import Lean.Meta.Tactic.Simp.RegisterCommand
 import Grammatik.Kern.Semantik.Semantik
@@ -116,9 +120,18 @@ def slotA (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat
       max ci'.2 (d + 2))
   else none
 
+/-- The aggregate representations admitted by frames and reads, recursively through singleton arrays.
+    Empty arrays need no representation for their element type. Other scalar fragments keep their own checks. -/
+def aggregateFits : Ty → Bool
+  | .arr τ n => if n = 0 then true else decide (n = 1) && aggregateFits τ
+  | .str n => decide (n ≤ 1)
+  | _ => true
+
 /-- An element of column `f` of table `t`: its address (`slotA`), the word there. -/
 def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
-  (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
+  if aggregateFits (D.typ t f) then
+    (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
+  else none
 
 /-- A sum fits one word: eight tag bits and a 56-bit unsigned payload offset. -/
 def sumFits (cs : List (Option (Int × Int))) : Bool :=
@@ -203,7 +216,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
-  | _, _, .var x, d => some ([ci 2 d (vslot x) 0], d + 1)
+  | _, τ, .var x, d => if aggregateFits τ then some ([ci 2 d (vslot x) 0], d + 1) else none
   | _, _, .widen _ _ e, d => lowE L e d
   | _, _, .add a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 3 d ca cb)
   | _, _, .sub a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 4 d ca cb)
@@ -278,7 +291,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
-  | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
+  | _, _, .glob g _, d => if lit32 (L.ga g) && aggregateFits (D.gtyp g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L e d) (lowE L b d)

@@ -98,6 +98,31 @@ theorem simulation_zeuge [Kern] :
     checks 3 code top lowering_zeuge (by decide +kernel) memory 0 .nil pre
   simpa only [show eval world checks world .nil = true from semantics_zeuge] using h
 
+def program : Programm D where
+  invariante _ := .tru
+  requires _ := .tru
+  ensures _ := .tru
+  rumpf f := by
+    obtain ⟨f, hf⟩ := f
+    have hz : f = 0 := by change f < 1 at hf; omega
+    subst f
+    exact .ret (.val (.wenn checks (.widen (by decide) (by decide) (.lit 42))
+      (.widen (by decide) (by decide) (.lit 0)))) (.refl [])
+
+def image : Except String (List Runner.B) := do
+  let b ← bild program (layU u (fun _ => none)) [⟨0, by decide⟩] Fin.val
+    (fun _ => "main") ⟨0, by decide⟩ [] 1024
+  pure b.bytes
+
+theorem image_zeuge : image.isOk = true := by decide +kernel
+
+/-- Unsupported aggregates are refused at reads as well as constructors, including nested types. -/
+theorem read_refused_zeuge :
+    lowE layout (Expr.var (D := D) (Λ := []) (Γ := [.arr .bool 2]) .here) 3 = none ∧
+    lowE layout (Expr.var (D := D) (Λ := []) (Γ := [.str 2]) .here) 3 = none ∧
+    lowE layout (Expr.var (D := D) (Λ := []) (Γ := [.arr (.str 2) 1]) .here) 3 = none ∧
+    aggregateFits (.arr (.str 2) 0) = true := by decide +kernel
+
 /-- Each unsupported operation fails at its own static representation guard. -/
 theorem refused_zeuge :
     lowE layout (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) .arrNil)) 3 = none ∧

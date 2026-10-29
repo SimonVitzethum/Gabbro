@@ -26,11 +26,11 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_var (x : Var Γ τ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.var x) d =
-    (some ([ci 2 d (vslot x) 0], d + 1)) := rfl
+    (if aggregateFits τ then some ([ci 2 d (vslot x) 0], d + 1) else none) := rfl
 
 @[lowE_eqs] theorem lowE_glob (g : D.Glob) (hL : gdarf D g Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.glob g hL) d =
-    (if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none) := rfl
+    (if lit32 (L.ga g) && aggregateFits (D.gtyp g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none) := rfl
 
 @[lowE_eqs] theorem lowE_slot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.slot t f i hL) d =

@@ -151,3 +151,5 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.refused_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.representation_zeuge
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.image_zeuge
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.read_refused_zeuge

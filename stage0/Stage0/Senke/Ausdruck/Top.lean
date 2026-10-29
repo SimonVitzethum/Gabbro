@@ -179,12 +179,12 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       omega
     · cases h
   | _, _, .lit n, d, c, top, h | _, _, .why .., d, c, top, h
-  | _, _, .fnref .., d, c, top, h => by
+  | _, _, .fnref .., d, c, top, h | _, _, .var _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
-  | _, _, .tru, d, c, top, h | _, _, .fls, d, c, top, h | _, _, .var _, d, c, top, h
+  | _, _, .tru, d, c, top, h | _, _, .fls, d, c, top, h
   | _, _, .none _, d, c, top, h | _, _, .ptrOf .., d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, _, .glob .., d, c, top, h => by
@@ -195,11 +195,14 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨ci', _, hs⟩ := h
-    simp only [slotC, slotA, Option.map_eq_some_iff] at hs
-    obtain ⟨a, ha, he⟩ := hs
-    split at ha
-    · simp only [Option.some.injEq] at ha; subst ha; simp only [Prod.mk.injEq] at he; omega
-    · cases ha
+    simp only [slotC] at hs
+    split at hs
+    · simp only [slotA, Option.map_eq_some_iff] at hs
+      obtain ⟨a, ha, he⟩ := hs
+      split at ha
+      · simp only [Option.some.injEq] at ha; subst ha; simp only [Prod.mk.injEq] at he; omega
+      · cases ha
+    · cases hs
   | _, _, .case cs i nutz, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

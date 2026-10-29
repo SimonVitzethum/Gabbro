@@ -110,11 +110,14 @@ theorem slotA_top {L : Lay D} {t : D.Tab} {f : D.Feld t} {d : Nat} {ci' : List I
 
 theorem slotC_top {L : Lay D} {t : D.Tab} {f : D.Feld t} {d : Nat} {ci' : List II × Nat} {c : List II} {top : Nat}
     (hs : slotC L t f d ci' = some (c, top)) : ci'.2 ≤ top := by
-  simp only [slotC, Option.map_eq_some_iff] at hs
-  obtain ⟨⟨a, ta⟩, ha, he⟩ := hs
-  simp only [Prod.mk.injEq] at he
-  obtain ⟨rfl, rfl⟩ := he
-  exact (slotA_top ha).1
+  simp only [slotC] at hs
+  split at hs
+  · simp only [Option.map_eq_some_iff] at hs
+    obtain ⟨⟨a, ta⟩, ha, he⟩ := hs
+    simp only [Prod.mk.injEq] at he
+    obtain ⟨rfl, rfl⟩ := he
+    exact (slotA_top ha).1
+  · cases hs
 
 /-- The address of an element (`slotA`): the index, times 8, plus the column. -/
 theorem slotA_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.count t - 1)}
@@ -163,19 +166,22 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) k))
     (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre L m pc fp K d c ρ W) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t k.n f)) := by
-  simp only [slotC, Option.map_eq_some_iff] at hs
-  obtain ⟨⟨a, ta⟩, ha, he⟩ := hs
-  simp only [Prod.mk.injEq] at he
-  obtain ⟨rfl, rfl⟩ := he
-  have ht := slotA_top ha
-  have hn0 := k.lo_le
-  have hkc : (k.n.toNat : Int) < D.count t := by have := k.le_hi; omega
-  have hkn : ((k.n.toNat : Nat) : Int) = k.n := Int.toNat_of_nonneg hn0
-  refine ok_seq hp (slotA_value_ok ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
-  obtain ⟨v, hv, he⟩ := (hWL m3 hp3.welt).1 t f _ hkc
-  rw [e3] at r3
-  rw [hkn] at he
-  exact (ld_ok hp3 (by omega) r3 hv).mono fun x hx => hx ▸ he
+  simp only [slotC] at hs
+  split at hs
+  · simp only [Option.map_eq_some_iff] at hs
+    obtain ⟨⟨a, ta⟩, ha, he⟩ := hs
+    simp only [Prod.mk.injEq] at he
+    obtain ⟨rfl, rfl⟩ := he
+    have ht := slotA_top ha
+    have hn0 := k.lo_le
+    have hkc : (k.n.toNat : Int) < D.count t := by have := k.le_hi; omega
+    have hkn : ((k.n.toNat : Nat) : Int) = k.n := Int.toNat_of_nonneg hn0
+    refine ok_seq hp (slotA_value_ok ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
+    obtain ⟨v, hv, he⟩ := (hWL m3 hp3.welt).1 t f _ hkc
+    rw [e3] at r3
+    rw [hkn] at he
+    exact (ld_ok hp3 (by omega) r3 hv).mono fun x hx => hx ▸ he
+  · cases hs
 
 theorem slotC_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : Expr D Γ Λ (.index (D.count t))}
     {σ₀ σ : World D} {L : Lay D} {d : Nat} {ci' : List II × Nat} {c : List II} {top K : Nat} {m : Runner.Mem}
