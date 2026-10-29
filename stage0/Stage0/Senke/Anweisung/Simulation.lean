@@ -20,8 +20,8 @@ variable {D : Deklaration} {L : Lay D} {V : Vertrag D}
 /-- The code from `t` reaches `e` with the environment `ρ'` in the frame and the world `σ'` in memory, changing no
     slot below `lo`. -/
 abbrev Reach (L : Lay D) {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (pr : List Nat) (t : T) (m : Runner.Mem)
-    (e : Runner.W) (σ' : World D) (ρ' : Env D Γ) : Prop :=
-  ∃ m', Star t m ⟨e, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧ EnvAt L m' fp ρ' ∧ WeltAt m' L σ' ∧ Keeps fp pr m m'
+    (e : Runner.W) (σ' : World D) (ρ' : Env D Γ) (reserved : Nat := 0) : Prop :=
+  ∃ m', Star t m ⟨e, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧ EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧ Keeps fp pr m m'
 
 /-- What the code from `t` does for G's outcome `o` in the body of `f`: `ok` reaches the end `e`, `leave` and `next`
     the loop's targets `eL` and `eN`, `zurueck` returns (`RetZ`), `why` returns (`RetWhy`), `logik` stops with its code. -/
@@ -38,11 +38,11 @@ def Sim (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.
 
 section
 variable {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp : Runner.W}
-  {l : Bool} {Γ : Ctx} {fp : Runner.W} {lo K : Nat} {pr : List Nat}
+  {l : Bool} {Γ : Ctx} {fp : Runner.W} {lo K : Nat} {pr : List Nat} {reserved : Nat}
 
 theorem Reach.prefix {t0 t : T} {m0 m : Runner.Mem} {e : Runner.W} {σ' : World D} {ρ' : Env D Γ}
-    (h : Star t0 m0 t m) (ha : AgreeW L fp lo K m0 m) (hk : Keeps fp pr m0 m) (hs : Reach L fp lo K pr t m e σ' ρ') :
-    Reach L fp lo K pr t0 m0 e σ' ρ' := by
+    (h : Star t0 m0 t m) (ha : AgreeW L fp lo K m0 m) (hk : Keeps fp pr m0 m) (hs : Reach L fp lo K pr t m e σ' ρ' reserved) :
+    Reach L fp lo K pr t0 m0 e σ' ρ' reserved := by
   obtain ⟨m', s, a, en, hw, kp⟩ := hs; exact ⟨m', h.trans s, ha.trans a, en, hw, hk.trans kp⟩
 
 theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner.Mem} {e eL eN : Runner.W}
