@@ -14,22 +14,23 @@ variable {D : Deklaration} {L : Lay D}
 /-- What the body's code from `t` does for G's outcome of an end block: `zurueck` returns (`RetZ`), `logik` stops
     with its code, `leave` and `next` reach the loop's targets `eL` and `eN`. -/
 def Ret (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (lo K : Nat)
-    (pr : List Nat) (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (eL eN : Runner.W) {l : Bool} {Γ : Ctx} :
-    EndAusgang (vertragVon D f) l Γ → Prop
+    (pr : List Nat) (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (eL eN : Runner.W) {l : Bool} {Γ : Ctx}
+    (o : EndAusgang (vertragVon D f) l Γ) (reserved : Nat := 0) : Prop :=
+  match o with
   | .zurueck σ' v => RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v
   | .logik e => Stops t m (logikCode e)
   | .hardware h => Stops t m (hwCode h)
-  | .leave _ σ' ρ' => Reach L fp lo K pr t m eL σ' ρ'
-  | .next _ σ' ρ' => Reach L fp lo K pr t m eN σ' ρ'
+  | .leave _ σ' ρ' => Reach L fp lo K pr t m eL σ' ρ' reserved
+  | .next _ σ' ρ' => Reach L fp lo K pr t m eN σ' ρ' reserved
   | .why σ' r => RetWhy L f fp K rp cfp t m σ' r
 
 section
 variable {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W} {lo K : Nat}
-  {pr : List Nat} {rp cfp : Runner.W} {l : Bool} {Γ : Ctx}
+  {reserved : Nat} {pr : List Nat} {rp cfp : Runner.W} {l : Bool} {Γ : Ctx}
 
 theorem Ret.prefix {o : EndAusgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner.Mem} {eL eN : Runner.W}
-    (hl : 2 ≤ lo) (h : Star t0 m0 t m) (ha : AgreeW L fp lo K m0 m) (hk : Keeps fp pr m0 m) (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) :
-    Ret L P f σ0 ρ0 fp lo K pr rp cfp t0 m0 eL eN o := by
+    (hl : 2 ≤ lo) (h : Star t0 m0 t m) (ha : AgreeW L fp lo K m0 m) (hk : Keeps fp pr m0 m) (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved) :
+    Ret L P f σ0 ρ0 fp lo K pr rp cfp t0 m0 eL eN o reserved := by
   cases o with
   | zurueck σ' v => exact RetZ.prefix h (ha.mono hl) hs
   | logik e => exact Stops.prefix h hs
@@ -39,12 +40,12 @@ theorem Ret.prefix {o : EndAusgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Run
   | why σ' r => exact RetWhy.prefix h (ha.mono hl) hs
 
 theorem Ret.cast {o : EndAusgang (vertragVon D f) l Γ} {t t' : T} {m : Runner.Mem} {eL eN eL' eN' : Runner.W}
-    (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) (h : t = t') (h3 : eL = eL') (h4 : eN = eN') :
-    Ret L P f σ0 ρ0 fp lo K pr rp cfp t' m eL' eN' o := by
+    (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved) (h : t = t') (h3 : eL = eL') (h4 : eN = eN') :
+    Ret L P f σ0 ρ0 fp lo K pr rp cfp t' m eL' eN' o reserved := by
   subst h h3 h4; exact hs
 
 theorem Ret.schrumpf {τ : Ty} {o : EndAusgang (vertragVon D f) l (τ :: Γ)} {t : T} {m : Runner.Mem} {eL eN : Runner.W}
-    (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o.schrumpf := by
+    (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved) : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o.schrumpf reserved := by
   cases o with
   | leave _ σ ρ => obtain ⟨m', s, a, en, hw, kp⟩ := hs; exact ⟨m', s, a, envAt_tail en, hw, kp⟩
   | next _ σ ρ => obtain ⟨m', s, a, en, hw, kp⟩ := hs; exact ⟨m', s, a, envAt_tail en, hw, kp⟩
@@ -54,11 +55,11 @@ end
 
 /-- End-block outcomes keep their return or loop target when used as an else statement. -/
 theorem Ret.zuAusgang {P : Programm D} {f : D.Fn} {σ0 : World D}
-    {ρ0 : Env D (D.params f)} {fp : Runner.W} {lo K : Nat} {pr : List Nat} {rp cfp : Runner.W}
+    {ρ0 : Env D (D.params f)} {fp : Runner.W} {lo K : Nat} {reserved : Nat} {pr : List Nat} {rp cfp : Runner.W}
     {t : T} {m : Runner.Mem} {e eL eN : Runner.W} {l : Bool} {Γ : Ctx}
     {o : EndAusgang (vertragVon D f) l Γ}
-    (h : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) :
-    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang := by
+    (h : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved) :
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang reserved := by
   cases o <;> exact h
 
 end Gabbro.Stage0.Senke
