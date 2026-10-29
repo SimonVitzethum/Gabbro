@@ -199,6 +199,13 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatShiftJamWord_model_zeuge
 #print axioms Gabbro.Stage0.Senke.floatShiftQuotL_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.floatShiftJamL_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.floatShiftBackWord_toNat
+#print axioms Gabbro.Stage0.Senke.floatShiftRemainderWord_model
+#print axioms Gabbro.Stage0.Senke.floatRoundShiftL_ok
+#print axioms Gabbro.Stage0.Senke.floatNormQ_shift
+#print axioms Gabbro.Stage0.Senke.floatRoundShiftL_normQ
+#print axioms Gabbro.Stage0.Senke.floatRoundShiftL_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.floatRoundShiftL_normQ_zeuge
 #print axioms Gabbro.Stage0.Senke.blockFloatOfLit_case
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_arithmetic_images_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_sub_model_zeuge

@@ -200,8 +200,10 @@ and overflow) and the same range stop as G. `floatRoundL` is an integer-only nea
 against `rundeInt` when `remainder < denominator < 2^63`; it avoids doubling the remainder and supports an
 arbitrary unsigned quotient, with a modular word result. This is not yet a complete soft-float operation.
 `floatMagnitudeL` now extracts the unsigned magnitude with generic IR simulation, including `-2^63`.
-Pure input-code composition is shared with rounding. Dynamic `floatOf` still needs exponent discovery,
-significand scaling and packing, with their IR simulation. `floatShiftJamL` aligns an unsigned word with
+Pure input-code composition is shared with rounding. `floatRoundShiftL` rounds an unsigned magnitude after
+a right shift of 0–62 bits, with generic IR simulation against `rundeInt` and G's normal-path `normQ`.
+It retains the full remainder and allows a carry out of the significand. Dynamic `floatOf` still needs
+exponent discovery, left scaling, packing and block simulation. `floatShiftJamL` aligns an unsigned word with
 generic IR simulation: discarded bits become a sticky low bit, exactly the nonzero remainder modulo
 the alignment power. Counts at least 64 saturate, including counts with the sign bit set, despite the
 IR's masked shifts. `add/sub` still need the full guard/sticky alignment argument against G, cancellation,

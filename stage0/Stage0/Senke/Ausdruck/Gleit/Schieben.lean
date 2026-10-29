@@ -52,15 +52,17 @@ theorem floatShiftBackWord_model (a k : Runner.W) :
   · rw [BitVec.ushiftRight_eq_zero (by omega)]
     simp
 
+theorem floatShiftBackWord_toNat (a : Runner.W) (k : Nat) :
+    ((a >>> k) <<< k).toNat = a.toNat / 2^k * 2^k := by
+  simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight,
+    Nat.shiftLeft_eq, Nat.shiftRight_eq_div_pow]
+  exact Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.div_mul_le_self _ _) a.isLt)
+
 /-- The sticky bit is exactly the nonzero remainder of division by the alignment power. -/
 theorem floatShiftJamWord_model (a k : Runner.W) :
     floatShiftJamWord a k = (a >>> k.toNat) |||
       Runner.IR.bool (decide (a.toNat % 2^k.toNat ≠ 0)) := by
-  have back : ((a >>> k.toNat) <<< k.toNat).toNat =
-      a.toNat / 2^k.toNat * 2^k.toNat := by
-    simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight,
-      Nat.shiftLeft_eq, Nat.shiftRight_eq_div_pow]
-    exact Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.div_mul_le_self _ _) a.isLt)
+  have back := floatShiftBackWord_toNat a k.toNat
   have same : (a == ((a >>> k.toNat) <<< k.toNat)) =
       decide (a.toNat % 2^k.toNat = 0) := by
     apply Bool.eq_iff_iff.mpr

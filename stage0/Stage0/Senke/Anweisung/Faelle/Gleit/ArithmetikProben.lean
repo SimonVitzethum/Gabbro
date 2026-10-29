@@ -4,6 +4,7 @@ import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 import Stage0.Senke.Ausdruck.Gleit.RundCode
 import Stage0.Senke.Ausdruck.Gleit.Betrag
 import Stage0.Senke.Ausdruck.Gleit.Schieben
+import Stage0.Senke.Ausdruck.Gleit.Skalieren
 
 namespace Gabbro.Stage0.Senke.FloatArithmeticProbe
 open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR
@@ -44,8 +45,23 @@ def shiftImage (a k expected : Nat) : Except String (List Runner.B) :=
   wordImage (floatShiftJamL 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 k d))) expected
 
+def scaleImage (a k expected : Nat) : Except String (List Runner.B) :=
+  wordImage (floatRoundShiftL 8 (fun d => some (konstWL 4 a d))
+    (fun d => some (konstWL 4 k d))) expected
+
 def images : List (String × Except String (List Runner.B) × Nat) :=
-  [("shift-zero", shiftImage 11 0 11, 7),
+  [("scale-zero", scaleImage 0 0 0, 7),
+   ("scale-full-word", scaleImage (2^64 - 1) 0 (2^64 - 1), 7),
+   ("scale-tie-odd", scaleImage 15 1 8, 7),
+   ("scale-tie-even", scaleImage 13 1 6, 7),
+   ("scale-two-odd", scaleImage 14 2 4, 7),
+   ("scale-two-even", scaleImage 10 2 2, 7),
+   ("scale-signed-min-magnitude", scaleImage (2^63) 11 (2^52), 7),
+   ("scale-significand-carry", scaleImage (2^64 - 1) 11 (2^53), 7),
+   ("scale-large-den-tie-even", scaleImage (2^63 + 2^61) 62 2, 7),
+   ("scale-large-den-tie-odd", scaleImage (3 * 2^62 + 2^61) 62 4, 7),
+   ("scale-kernel-normal", scaleImage (2^53 + 3) 1 (2^52 + 2), 7),
+   ("shift-zero", shiftImage 11 0 11, 7),
    ("shift-exact", shiftImage 12 1 6, 7),
    ("shift-sticky", shiftImage 13 1 7, 7),
    ("shift-odd", shiftImage 11 1 5, 7),
