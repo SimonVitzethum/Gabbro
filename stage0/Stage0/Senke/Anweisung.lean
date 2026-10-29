@@ -7,7 +7,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onOption` (the index word kept for the bound variable), `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onOption` (the index word kept for the bound variable), `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
   give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
@@ -15,6 +15,7 @@ import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
 import Stage0.Senke.Sperre.Code
+import Stage0.Senke.Anweisung.Bytes.Code
 
 namespace Gabbro.Stage0.Senke
 
@@ -158,6 +159,25 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ci' ← lowE L i (frei Γ + 1)
     let ca ← slotA L t f (frei Γ + 1) ci'
     pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
+  | _, Γ, Λ, _, .putBytes t f _ n i hlo hhi e _ _ =>
+    if n ≤ 8 then do
+      let ce ← lowE L e (frei Γ)
+      let ci' ← lowE L i (frei Γ + 1)
+      let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f _ _ (256 ^ n - 1) hlo n 0 (by simpa using hhi)
+      pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
+    else none
+  | _, _, _, _, .assignSlotRef .. => none
+  | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _ =>
+    if inW a b && lit32 von && lit32 nach then do
+      let ci' ← lowE L i (frei Γ)
+      let cr ← slotC L t f (frei Γ) ci'
+      let cj ← lowE L i (frei Γ + 1)
+      let ca ← slotA L t f (frei Γ + 1) cj
+      let test := bin2 14 (frei Γ) cr ([ci 1 (frei Γ + 1) von 0], frei Γ + 2)
+      pure (test.1 ++ (guardC (frei Γ) 106 (frei Γ) ++
+        ([ci 1 (frei Γ) nach 0] ++ ca.1 ++ [stC (frei Γ)])),
+        max test.2 (max ca.2 (frei Γ + 8)))
+    else none
   | _, Γ, _, _, .traverse t inv body =>
     if lit32 (D.count t) then do
       let ci' ← lowE L inv (frei Γ + 1)

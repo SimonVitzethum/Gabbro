@@ -7,9 +7,11 @@
 -/
 import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Sperre.Satz
-import Stage0.Senke.Anweisung.Wahl
+import Stage0.Senke.Anweisung.Faelle.Wahl
 import Stage0.Senke.Anweisung.Option
 import Stage0.Senke.Anweisung.Tag
+import Stage0.Senke.Anweisung.Bytes.Shift
+import Stage0.Senke.Anweisung.Bytes.Put
 
 import Stage0.Senke.Anweisung.Faelle.Schreiben
 import Stage0.Senke.Anweisung.Faelle.Speicher
@@ -140,8 +142,10 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     obtain ⟨rfl, rfl⟩ := h
     simp only [execStmt, Sim]
     exact ⟨m, by simpa using Star.refl _ m, AgreeW.refl _ _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
-  | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .putBytes t field hf n i hlo hhi e hw hl, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr =>
+    putBytes_ok hf n i hlo hhi e hw hl h (by omega) hW hp hlo2 hWa hpr
+  | _, Γ, Λ, _, .shift t field ht i von nach hn he hw hl, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr =>
+    shift_ok ht i von nach hn he hw hl h (by omega) hW hp hlo2 hWa hpr
   | _, Γ, Λ, _, .onOption o p a, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
     simp only [lowS] at h
     split at h

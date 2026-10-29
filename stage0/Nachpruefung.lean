@@ -5,6 +5,7 @@
 -/
 import Stage0
 import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Anweisung.Bytes.Proben
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -58,3 +59,18 @@ import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.sumFits_zeuge
 #print axioms Gabbro.Stage0.Senke.lowN_ok
 #print axioms Gabbro.Stage0.Senke.packSum_ok
+
+#print axioms Gabbro.Stage0.Senke.shift_ok
+#print axioms Gabbro.Stage0.Senke.readBytesL_ok
+#print axioms Gabbro.Stage0.Senke.putBytesL_ok
+#print axioms Gabbro.Stage0.Senke.putBytes_ok
+#print axioms Gabbro.Stage0.Senke.bytePartC_ok
+#print axioms Gabbro.Stage0.Senke.byte_word
+#print axioms Gabbro.Stage0.Senke.ByteProbe.byte_roundtrip_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.byte_roundtrip8_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes8_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.shift_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_refused_zeuge

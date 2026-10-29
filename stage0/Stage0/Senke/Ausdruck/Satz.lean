@@ -6,6 +6,8 @@ import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Ausdruck.Option
+import Stage0.Senke.Ausdruck.Bytes
 import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
@@ -349,44 +351,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     · cases h
   | _, _, .some e, d, c, top, h, hK, m, pc, ρ, hp =>
     (lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp).mono fun w hw => by simpa [Enc, eval, optN] using hw
-  | _, _, .istSome e, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hn =>
-      simp only [decide_eq_true_eq] at hn
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-      simp only [bin2, Prod.mk.injEq] at hc
-      obtain ⟨rfl, rfl⟩ := hc
-      have := lowE_top e d ce te he
-      refine bin_ok (cb := [ci 1 (d + 1) 1 0])
-        (Pa := fun w => w = if (eval σ₀ e σ ρ).isSome = false then 1 else 0)
-        (fun m pc hp => bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL e d ce te he (by omega) m pc ρ hp)
-          (fun m pc hp => const_ok hp (by decide) (by omega))
-          (g := fun x y => some (Runner.IR.bool (x == y))) (fun we wm pe pm => ⟨_, rfl, by
-            simp only [Enc] at pe
-            rw [pe, pm, bool_word]
-            cases hv : eval σ₀ e σ ρ with
-            | none => simp [optN]
-            | some k =>
-              have := k.lo_le; have := k.le_hi
-              have hne : k.n ≠ -1 := by omega
-              have hb : (BitVec.ofInt 64 (optN (some k)) == BitVec.ofInt 64 (-1)) = false := by
-                simp only [optN]
-                rw [beq_in (by omega) (by decide)]
-                simp [hne]
-              simp only [hb, Option.isSome_some, Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte]⟩) rfl (by decide) (by omega) hp)
-        (fun m pc hp => const_ok hp (by decide) (by omega))
-        (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
-      intro wa wb pa pb
-      refine ⟨_, rfl, ?_⟩
-      simp only [Enc, eval] at ⊢
-      rw [pa, pb]
-      by_cases hs : (eval σ₀ e σ ρ).isSome = true
-      · simp only [hs, wahr?, Bool.true_eq_false, ↓reduceIte]; decide
-      · simp only [Bool.not_eq_true] at hs
-        simp only [hs, wahr?, Bool.false_eq_true, ↓reduceIte]; decide
-    · cases h
+  | _, _, .istSome e, d, c, top, h, hK, m, pc, ρ, hp =>
+    istSome_ok e (fun ce te he hte m pc hp => lowE_ok σ₀ σ hWL e d ce te he hte m pc ρ hp) h hK hp
   | _, _, .glob g _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
@@ -432,10 +398,20 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     eng_ok h hK
       (fun ce te he hte m pc hp => lowE_ok σ₀ σ hWL e d ce te he hte m pc ρ hp)
       (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b d cb tb hb htb m pc ρ hp) hp
+  | _, _, .getBytes t f hf n i hlo hhi _, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE_eqs] at h
+    split at h
+    · next hn =>
+      have hr := readBytesL_ok i hf hWL hlo
+        (fun d ci ti hi ht m pc hp => lowE_ok σ₀ σ hWL i d ci ti hi ht m pc ρ hp)
+        n 0 d c top (by simpa using hhi) (by omega) h hK m pc hp
+      exact hr.mono (fun w hw => by
+        change w = BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n (eval σ₀ i σ ρ).n))
+        simpa only [Int.natCast_zero, Int.add_zero] using hw)
+    · cases h
   | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
-  | _, _, .getBytes .., _, _, _, h, _, _, _, _, _
   | _, _, .fllt .., _, _, _, h, _, _, _, _, _
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
   | _, _, .forallSlots .., _, _, _, h, _, _, _, _, _

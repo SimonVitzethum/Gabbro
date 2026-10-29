@@ -31,24 +31,24 @@ theorem st_step {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {va vb : Runner.
   exact run_st (t := ⟨pc, fp⟩) hi (by rw [sx_nat (by omega)]; exact ha) (by rw [sx_nat (by omega)]; exact hb) hw
 
 /-- The store of a cell at address `a`: the value code `ce` into `s`, the address code `ca` into `s + 1`, `st`. -/
-theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a : Nat} {Γ : Ctx} {ρ : Env D Γ} {L : Lay D}
+theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a d : Nat} {Γ : Ctx} {ρ : Env D Γ} {L : Lay D}
     {σ σ' : World D} {ce ca : List II} {Pe : Runner.W → Prop}
-    (hp : PreS m pc fp K (frei Γ) (ce ++ ca ++ [stC (frei Γ)]) ρ)
-    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) (htop : frei Γ + 2 ≤ Ks)
-    (hE : ∀ m pc, Pre m pc fp Ks (frei Γ) ce ρ (fun m => WeltAt m L σ) → Ok m pc fp Ks (frei Γ) ce Pe)
-    (hA : ∀ m pc, Pre m pc fp Ks (frei Γ + 1) ca ρ (fun m => WeltAt m L σ) →
-      Ok m pc fp Ks (frei Γ + 1) ca (· = BitVec.ofNat 64 a))
+    (hp : PreS m pc fp K (d) (ce ++ ca ++ [stC (d)]) ρ)
+    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) (htop : d + 2 ≤ Ks)
+    (hE : ∀ m pc, Pre m pc fp Ks (d) ce ρ (fun m => WeltAt m L σ) → Ok m pc fp Ks (d) ce Pe)
+    (hA : ∀ m pc, Pre m pc fp Ks (d + 1) ca ρ (fun m => WeltAt m L σ) →
+      Ok m pc fp Ks (d + 1) ca (· = BitVec.ofNat 64 a))
     (ha : L.lo ≤ a ∧ a + 8 ≤ L.hi)
     (hnew : ∀ m w, WeltAt m L σ → Pe w → WeltAt (write m (BitVec.ofNat 64 a) 8 w.toNat) L σ') :
     ∃ m', Star ⟨pc, fp⟩ m
-        ⟨pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (frei Γ)]).length), fp⟩ m' ∧
-      AgreeW L fp (frei Γ) K m m' ∧ EnvAt m' fp ρ ∧ WeltAt m' L σ' := by
+        ⟨pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (d)]).length), fp⟩ m' ∧
+      AgreeW L fp (d) K m m' ∧ EnvAt m' fp ρ ∧ WeltAt m' L σ' := by
   have hks := hW.ks
   have hwl := hW.lo
   have htp := hW.top
   have hl3 := hW.lay.2.2
   have hsm := hp.small
-  have hq : PreS m pc fp K (frei Γ) (ce ++ (ca ++ [stC (frei Γ)])) ρ := by
+  have hq : PreS m pc fp K (d) (ce ++ (ca ++ [stC (d)])) ρ := by
     simpa [List.append_assoc] using hp
   -- the value
   have hpw := PreS.welt hq.left hks hWa hW.lay (by omega)
@@ -57,11 +57,11 @@ theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a : Nat} {Γ : Ctx} {
   have a1 := Agree.widen a1s hks
   have hq1 := hq.next a1 (Nat.le_refl _) (by omega)
   -- the address
-  have hpa := PreS.welt (hq1.left.up (d' := frei Γ + 1) (by omega)) hks hWa1 hW.lay (by omega)
+  have hpa := PreS.welt (hq1.left.up (d' := d + 1) (by omega)) hks hWa1 hW.lay (by omega)
   obtain ⟨m2, s2, a2s, adr, hadr, hae⟩ := hA m1 _ hpa
   have a2 := Agree.widen a2s hks
   have hF2 := hq1.frame.agree a2
-  have hw2 : m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w := by
+  have hw2 : m2.rd64 (slot fp (BitVec.ofNat 64 (d))) = some w := by
     rw [agree_rd_low a2s (frameOK_sub hq1.frame hks).room (Nat.lt_succ_self _) (by omega)]; exact hw
   have hWa2 : WeltAt m2 L σ := hpa.wstab m1 m2 hWa1 (a2s.mono (Nat.zero_le _))
   have hq2 := hq1.next (a := ca) (a2.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
@@ -70,13 +70,13 @@ theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a : Nat} {Γ : Ctx} {
   have hwr := hWa2.2.2.word ha.1 ha.2 hl3
   subst hae
   have s3 := st_step hq2.code (by omega) hsm hadr hw2 (wr64_some hwr)
-  have a3 : AgreeW L fp (frei Γ) K m2 (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
+  have a3 : AgreeW L fp (d) K m2 (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
     agreeW_write_welt ha.1 ha.2 hl3 _
-  have a13 : AgreeW L fp (frei Γ) K m (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
+  have a13 : AgreeW L fp (d) K m (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
     (agreeW_of (a1.trans (a2.mono (Nat.le_succ _)))).trans a3
-  refine ⟨_, s1.trans (s2.trans ?_), a13, envAt_agreeW hp.env a13 htp hp.frame.room (Nat.le_refl _) (by omega),
+  refine ⟨_, s1.trans (s2.trans ?_), a13, envAt_agreeW hp.env a13 htp hp.frame.room hp.ctx (by omega),
     hnew m2 w hWa2 hpe⟩
-  have e : pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (frei Γ)]).length) =
+  have e : pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (d)]).length) =
       pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * ca.length) + BitVec.ofNat 64 (16 * 1) := by
     simp only [List.length_append, List.length_singleton, pc_add]
   rw [e]; exact s3
