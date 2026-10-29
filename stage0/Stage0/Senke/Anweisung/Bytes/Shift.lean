@@ -11,14 +11,6 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration}
 
-theorem enc_int_cast {τ : Ty} {a b : Int} (h : τ = .int a b) (v : Wert D τ) (w : Runner.W) :
-    Enc τ v w ↔ w = BitVec.ofInt 64 (h ▸ v : Wert D (.int a b)).n := by
-  cases h; rfl
-
-theorem enc_int_back {τ : Ty} {a b : Int} (h : τ = .int a b) (v : Wert D (.int a b)) (w : Runner.W) :
-    Enc τ (h ▸ v) w ↔ w = BitVec.ofInt 64 v.n := by
-  cases h; rfl
-
 /-- State-field lowering preserves G's successful write and its failed-prestate stop. -/
 theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {rp cfp fp pc : Runner.W} {K Ks lo : Nat} {pr : List Nat}

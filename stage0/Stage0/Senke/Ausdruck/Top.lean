@@ -43,6 +43,17 @@ theorem lowN_top {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
       omega
     · cases h
 
+theorem readBytesL_top (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
+    (n j d : Nat) → (c : List II) → (top : Nat) →
+    readBytesL L t f idx j n d = some (c, top) → d < top
+  | 0, j, d, c, top, h => by
+    simp only [readBytesL, Option.some.injEq, Prod.mk.injEq] at h; omega
+  | n + 1, j, d, c, top, h => by
+    simp only [readBytesL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨ci', _, head, _, tail, _, h⟩ := h
+    simp only [bin2, Prod.mk.injEq] at h
+    omega
+
 theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
     (top : Nat) → lowE L e d = some (c, top) → d < top
   | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
@@ -119,10 +130,14 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       have := lowE_top cond d cc tc hc
       omega
     · cases h
+  | _, _, .getBytes t f _ n i _ _ _, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact readBytesL_top L t f (lowE L i) n 0 d c top h
+    · cases h
   | _, _, .fnref .., _, _, _, h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h
-  | _, _, .getBytes .., _, _, _, h
   | _, _, .fllt .., _, _, _, h
   | _, _, .flle .., _, _, _, h
   | _, _, .forallSlots .., _, _, _, h
