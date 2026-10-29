@@ -9,7 +9,7 @@ import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Sperre.Satz
 import Stage0.Senke.Anweisung.Faelle.Wahl
 import Stage0.Senke.Anweisung.Option
-import Stage0.Senke.Anweisung.Faelle.Tag
+import Stage0.Senke.Anweisung.Faelle.Why
 import Stage0.Senke.Anweisung.Faelle.Fnptr
 import Stage0.Senke.Anweisung.Bytes.Shift
 import Stage0.Senke.Anweisung.Bytes.Put
@@ -167,7 +167,17 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
           hS hA hlo0 hens a ce te hce (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr)
         hp hu hk hWa
     · cases h
-  | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .onWhy v arms, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowS] at h
+    split at h
+    · next hn =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cv, tv⟩, hcv, ⟨ca, ta⟩, hca, he⟩ := h
+      simp only [Prod.mk.injEq] at he
+      obtain ⟨rfl, rfl⟩ := he
+      exact onWhy_ok hn (lowGrund_all hS hA hlo0 hens hW hlo arms) hcv hca (by omega) (by omega)
+        (by simpa only [List.length_append] using hs) hW hlo hlo0 hlo2 hpr hp hu hk hWa
+    · cases h
   | _, Γ, Λ, _, .callInd p args hf hr, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, hu, _, hWa, hpr =>
     indStmt_ok hS hA p args hf hr h hK hW hp hlo2 hu hWa hpr
   | _, Γ, Λ, _, .locks Lk hr body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
@@ -356,6 +366,22 @@ theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     ⟨(fun ex cb tb hc ht hs m pc σ ρ hp hlo2 hu hk hw hpr =>
         lowB_ok hS hA hlo0 hens b cb tb hc ht hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr),
       lowArms_all hS hA hlo0 hens hW hlo rest⟩
+
+theorem lowGrund_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
+    {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
+    (arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n) →
+    GrundAll (fun b => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K (cens, tens) pr b) arms
+  | _, _, _, _, _, .nil => trivial
+  | _, _, _, _, _, .cons b rest =>
+    ⟨(fun ex cb tb hc ht hs m pc σ ρ hp hlo2 hu hk hw hpr =>
+        lowB_ok hS hA hlo0 hens b cb tb hc ht hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr),
+      lowGrund_all hS hA hlo0 hens hW hlo rest⟩
 
 end
 

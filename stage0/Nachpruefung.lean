@@ -87,3 +87,8 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.whyTest_ok
+#print axioms Gabbro.Stage0.Senke.lowGrund_ok
+#print axioms Gabbro.Stage0.Senke.onWhy_ok
+#print axioms Gabbro.Stage0.Senke.onWhy_ok_zeuge

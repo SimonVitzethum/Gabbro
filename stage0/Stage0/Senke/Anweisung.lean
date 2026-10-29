@@ -119,6 +119,10 @@ def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
       some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
     else none
 
+/-- Compare a reason's entire word, preserving its slot for subsequent arms. -/
+def whyTestC (s k : Nat) : List II :=
+  [ci 2 (s + 1) s 0, ci 1 (s + 2) k 0, ci 14 (s + 1) (s + 1) (s + 2)]
+
 mutual
 def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
@@ -148,6 +152,12 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     if sumFits cs then do
       let cv ← lowE L v (frei Γ)
       let ca ← lowTags A L lo ens pr ex arms 0
+      pure (cv.1 ++ ca.1, max cv.2 ca.2)
+    else none
+  | _, Γ, _, _, .onWhy (n := n) r arms =>
+    if n < 2 ^ 31 then do
+      let cv ← lowE L r (frei Γ)
+      let ca ← lowGrund A L lo ens pr ex arms 0
       pure (cv.1 ++ ca.1, max cv.2 ca.2)
     else none
   | _, Γ, _, _, .call f args _ _ => do
@@ -265,6 +275,19 @@ def lowTags (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr
       let cb ← lowB A L lo ens pr (exPlus ex (cr.1.length + 1)) b
       pure (tagTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * (cp.length + cb.1.length + 2)) 0] ++
         cp ++ cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
+        max (frei Γ + 3) (max cb.2 cr.2))
+    else none
+
+/-- Reason dispatch uses full word comparisons in declaration order. -/
+def lowGrund (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
+    GrundArms D V l Γ Λ Λ' n → Nat → Option (List II × Nat)
+  | _, Γ, _, _, _, .nil, _ => some ([], frei Γ + 3)
+  | _, Γ, _, _, _, .cons b rest, k => if k < 2 ^ 31 then do
+      let cr ← lowGrund A L lo ens pr ex rest (k + 1)
+      let cb ← lowB A L lo ens pr (exPlus ex (cr.1.length + 1)) b
+      pure (whyTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * (cb.1.length + 2)) 0] ++
+        cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
         max (frei Γ + 3) (max cb.2 cr.2))
     else none
 
