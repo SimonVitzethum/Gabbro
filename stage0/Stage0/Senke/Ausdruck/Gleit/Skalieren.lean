@@ -330,6 +330,22 @@ theorem floatPackCarry_canonical (F : Gleitkomma.Format) (sign : Bool) (e q : Na
   apply floatPackNormal_canonical F sign _ _ (by omega) hb.1
   simpa [Nat.pow_succ, Nat.mul_comm] using hb.2
 
+/-- The normal branch of the actual rounding kernel, before field packing. -/
+theorem floatPackCarry_rundeBruchKern (F : Gleitkomma.Format) (sign : Bool)
+    (n d : Nat) (E : Int) (hp : 1 ≤ F.p)
+    (hlo : F.emin ≤ E) (hhi : E < (F.emax : Int)) :
+    Gleitkomma.rundeBruchKern F sign n d E =
+      if Gleitkomma.normQ F.p E n d < 2^F.p then
+        ⟨sign, (E - F.emin + 1).toNat,
+          Gleitkomma.normQ F.p E n d - 2^(F.p - 1)⟩
+      else ⟨sign, (E - F.emin + 2).toNat, 0⟩ := by
+  have hn : ¬ E < F.emin - (F.p : Int) := by omega
+  unfold Gleitkomma.rundeBruchKern
+  rw [if_neg (by omega), if_neg hn, if_pos hlo]
+  split
+  · rfl
+  · rfl
+
 /-- Actual emitted carry IR simulates canonical normalized G fields. -/
 theorem floatPackCarryL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {s ex qcode : Nat → Option (List II × Nat)}
