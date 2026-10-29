@@ -185,9 +185,9 @@ theorem Agree.widen {m m' : Runner.Mem} {fp : Runner.W} {lo Ks K : Nat} (h : Agr
   ⟨h.rd, h.wr, fun x hx => h.b x fun ⟨h1, h2⟩ => hx ⟨h1, by omega⟩⟩
 
 /-- An expression of a statement runs in the frame below `Ks`, with the world above it. -/
-theorem PreS.welt {m : Runner.Mem} {pc fp : Runner.W} {K Ks d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {L : Lay D} {σ : World D} (hp : PreS L m pc fp K d c ρ) (hs : Ks ≤ K) (hw : WeltAt m L σ) (hl : LayIn L)
-    (hwl : fp.toNat + 8 * Ks ≤ L.lo) : Pre L m pc fp Ks d c ρ (fun m => WeltAt m L σ) :=
+theorem PreS.welt {reserved : Nat} {m : Runner.Mem} {pc fp : Runner.W} {K Ks d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
+    {L : Lay D} {σ : World D} (hp : PreS L m pc fp K d c ρ reserved) (hs : Ks ≤ K) (hw : WeltAt m L σ) (hl : LayIn L)
+    (hwl : fp.toNat + 8 * Ks ≤ L.lo) : Pre L m pc fp Ks d c ρ (fun m => WeltAt m L σ) reserved :=
   ⟨hp.ctx, by have := hp.small; omega, frameOK_sub hp.frame hs, hp.code, codeFar_sub2 hp.far hs, hp.env, hw, weltAt_stab hl hwl⟩
 
 end Gabbro.Stage0.Senke
