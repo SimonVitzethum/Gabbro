@@ -277,108 +277,109 @@ def reachesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat)
 
 mutual
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
-def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
+def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ τ) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
+  match Γ, τ, e, d with
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
-  | _, τ, .var x, d => if aggregateFits τ then some ([ci 2 d (vslot x) 0], d + 1) else none
-  | _, _, .widen _ _ e, d => lowE L e d
-  | _, _, .add a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 3 d ca cb)
-  | _, _, .sub a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 4 d ca cb)
-  | _, _, .mul a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 5 d ca cb)
-  | _, _, .neg a, d => do let ca ← lowE L a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
-  | _, _, .not a, d => do let ca ← lowE L a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
+  | _, τ, .var x, d => if aggregateFits τ then some ([ci 2 d (vslot x reserved) 0], d + 1) else none
+  | _, _, .widen _ _ e, d => lowE L (reserved := reserved) e d
+  | _, _, .add a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
+  | _, _, .sub a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)
+  | _, _, .mul a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 5 d ca cb)
+  | _, _, .neg a, d => do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
+  | _, _, .not a, d => do let ca ← lowE L (reserved := reserved) a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
   | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d =>
     if inW l1 h1 && inW l2 h2 then do
-      let cb ← lowE L b d; let ca ← lowE L a (d + 1)
+      let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
       pure (bin2 10 d (bin2 13 d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
     else none
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d =>
     if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 13 d ca cb)
+      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 13 d ca cb)
     else none
   | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d =>
     if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 14 d ca cb)
+      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
     else none
-  | _, _, .fllt a b, d => floatExprL false d (lowE L a) (lowE L b)
-  | _, _, .flle a b, d => floatExprL true d (lowE L b) (lowE L a)
-  | _, _, .and a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 8 d ca cb)
-  | _, _, .or a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 9 d ca cb)
+  | _, _, .fllt a b, d => floatExprL false d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .flle a b, d => floatExprL true d (lowE L (reserved := reserved) b) (lowE L (reserved := reserved) a)
+  | _, _, .and a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb)
+  | _, _, .or a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb)
   | _, _, .div _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 6 d ca cb) else none
+    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 6 d ca cb) else none
   | _, _, .rem _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 7 d ca cb) else none
+    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 7 d ca cb) else none
   | _, _, .sdiv _ a b, d =>
     if inWE a && inWE b && nichtMin a then do
-      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 6 d ca cb)
+      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 6 d ca cb)
     else none
   | _, _, .srem _ a b, d =>
     if inWE a && inWE b && nichtMin a then do
-      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 7 d ca cb)
+      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 7 d ca cb)
     else none
   | _, _, .band _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 8 d ca cb) else none
+    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none
   | _, _, .bor _ _ _ _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 9 d ca cb) else none
+    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb) else none
   | _, _, .bxor _ _ _ _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 10 d ca cb) else none
+    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb) else none
   | _, _, .shl _ _ _ _ _ a b, d =>
-    if inWE b && lt64 b then do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 11 d ca cb) else none
+    if inWE b && lt64 b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb) else none
   | _, _, .shr _ _ _ _ _ a b, d =>
     if inWE a && inWE b && lt64 b then do
-      let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 12 d ca cb)
+      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 12 d ca cb)
     else none
   | _, _, .arrNil, d => some ([ci 1 d 0 0], d + 1)
-  | _, _, @Expr.arrCons _ _ _ _ n a _, d => if n = 0 then lowE L a d else none
-  | _, _, @Expr.arrGet _ _ _ _ n a _, d => if n = 1 then lowE L a d else none
-  | _, _, @Expr.arrSet _ _ _ _ n _ _ v, d => if n = 1 then lowE L v d else none
+  | _, _, @Expr.arrCons _ _ _ _ n a _, d => if n = 0 then lowE L (reserved := reserved) a d else none
+  | _, _, @Expr.arrGet _ _ _ _ n a _, d => if n = 1 then lowE L (reserved := reserved) a d else none
+  | _, _, @Expr.arrSet _ _ _ _ n _ _ v, d => if n = 1 then lowE L (reserved := reserved) v d else none
   | _, _, @Expr.strLit _ n _ _ bs _, d =>
     if n ≤ 1 then some ([ci 1 d (strN bs) 0], d + 1) else none
   | _, _, @Expr.strLen _ _ _ n s, d =>
-    if n ≤ 1 then wordK 12 d (lowE L s d) 8 else none
+    if n ≤ 1 then wordK 12 d (lowE L (reserved := reserved) s d) 8 else none
   | _, _, @Expr.strCat _ _ _ n m s t, d =>
-    if n + m ≤ 1 then (if n = 0 then lowE L t d else lowE L s d) else none
+    if n + m ≤ 1 then (if n = 0 then lowE L (reserved := reserved) t d else lowE L (reserved := reserved) s d) else none
   | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
-    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L s d) (lowE L i d) else none
+    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d) else none
   | _, _, @Expr.strEq _ _ _ n m s t, d =>
-    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L s d) (lowE L t (d + 1)) else none
+    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
   | _, _, @Expr.strLt _ _ _ n m s t, d =>
-    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L s d) (lowE L t (d + 1)) else none
+    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
   | _, _, @Expr.strWeit _ _ _ n m s, d =>
-    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L s d) else none
+    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L (reserved := reserved) s d) else none
   | _, _, .none _, d => some ([ci 1 d (-1) 0], d + 1)
-  | _, _, .some e, d => lowE L e d
+  | _, _, .some e, d => lowE L (reserved := reserved) e d
   | _, _, @Expr.istSome _ _ _ n e, d =>
     if decide (n ≤ 2 ^ 63) then do
-      let ce ← lowE L e d
+      let ce ← lowE L (reserved := reserved) e d
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
     else none
-  | _, _, .case cs i nutz, d => if sumFits cs then lowN L i.val nutz d else none
+  | _, _, .case cs i nutz, d => if sumFits cs then lowN L (reserved := reserved) i.val nutz d else none
   | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
   | _, _, .glob g _, d => if lit32 (L.ga g) && aggregateFits (D.gtyp g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
-  | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
-  | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
-  | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L e d) (lowE L b d)
+  | _, _, .slot t f i _, d => do let ci' ← lowE L (reserved := reserved) i d; slotC L t f d ci'
+  | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L (reserved := reserved) i d; slotC L t f d ci'
+  | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) b d)
   | _, _, .getBytes t f _ n i _ _ _, d =>
-    if n ≤ 8 then readBytesL L t f (lowE L i) 0 n d else none
-  | Γ, _, .forallSlots t body _, d => quantL true (frei Γ) d (D.count t) (lowE L body (d + 3))
-  | Γ, _, .existsSlots t body _, d => quantL false (frei Γ) d (D.count t) (lowE L body (d + 3))
-  | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L a d) (lowE L b (d + 1))
-  | _, _, .refEq a b, d => wordL 14 d (lowE L a d) (lowE L b (d + 1))
-  | _, _, .slotRef r t _ _ f _, d => do let cr ← lowE L r d; slotC L t f d cr
-  | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
+    if n ≤ 8 then readBytesL L t f (lowE L (reserved := reserved) i) 0 n d else none
+  | Γ, _, .forallSlots t body _, d => quantL true (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
+  | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
+  | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+  | _, _, .refEq a b, d => wordL 14 d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+  | _, _, .slotRef r t _ _ f _, d => do let cr ← lowE L (reserved := reserved) r d; slotC L t f d cr
+  | _, _, .wenn c a b, d => wennL d (lowE L (reserved := reserved) c d) (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b d)
   | _, _, _, _ => none
 
 
 /-- Lower a tagged payload through the same expression recursion. -/
-def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) :
-    {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c → Nat → Option (List II × Nat)
+def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option (Int × Int)} (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
+  match c, e, d with
   | _, .empty, d => some ([ci 1 d tag 0], d + 1)
   | some (lo, _), .num e, d => if lit32 lo then do
-      let ce ← lowE L e d
+      let ce ← lowE L (reserved := reserved) e d
       pure (packSum d lo tag ce)
     else none
 end
@@ -411,7 +412,7 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | _, _, _ => False
 
 /-- The variables of `ρ` are in their slots of the frame at `fp`. -/
-def EnvAt (L : Lay D) (m : Runner.Mem) (fp : Runner.W) {Γ : Ctx} (ρ : Env D Γ) : Prop :=
-  ∀ (τ : Ty) (x : Var Γ τ), ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w ∧ Enc L τ (ρ.get x) w
+def EnvAt (L : Lay D) (m : Runner.Mem) (fp : Runner.W) {Γ : Ctx} (ρ : Env D Γ) (reserved : Nat := 0) : Prop :=
+  ∀ (τ : Ty) (x : Var Γ τ), ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 (vslot x reserved))) = some w ∧ Enc L τ (ρ.get x) w
 
 end Gabbro.Stage0.Senke
