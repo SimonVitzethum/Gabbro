@@ -28,4 +28,12 @@ theorem float_raw_sign {a : GFloat} (ha : wf f64 a) :
   cases a.sign <;> simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_add]
   all_goals split <;> simp_all <;> omega
 
+theorem float_raw_mag {a : GFloat} (ha : wf f64 a) :
+    ((BitVec.ofNat 64 (zuBits f64 a) <<< 1) >>> 1) = BitVec.ofNat 64 (floatMag a) := by
+  have hm := floatMag_lt ha
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_ushiftRight, BitVec.toNat_shiftLeft, BitVec.toNat_ofNat,
+    Nat.shiftLeft_eq, Nat.shiftRight_eq_div_pow, float_bits]
+  cases a.sign <;> simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_add] <;> omega
+
 end Gabbro.Stage0.Senke
