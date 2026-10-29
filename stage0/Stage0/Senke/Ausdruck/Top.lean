@@ -21,18 +21,18 @@ variable {D : Deklaration} {L : Lay D}
 /-! ## The slot the lowering stops at -/
 
 /-- The code of a binary operation stops above `d` once its first operand does. -/
-theorem bin_top {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {o d : Nat}
-    {c : List II} {top : Nat} (ht : ∀ c t, lowE L a d = some (c, t) → d < t)
-    (h : (do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 o d ca cb)) = some (c, top)) : d < top := by
+theorem bin_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {o d : Nat}
+    {c : List II} {top : Nat} (ht : ∀ c t, lowE L (reserved := reserved) a d = some (c, t) → d < t)
+    (h : (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 o d ca cb)) = some (c, top)) : d < top := by
   simp only [bind, Option.bind_eq_some_iff] at h
   obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, he⟩ := h
   simp only [bin2, pure, Option.some.injEq, Prod.mk.injEq] at he
   have := ht ca ta ha
   omega
 
-theorem lowN_top {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
+theorem lowN_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
     {a : Option (Int × Int)} → (e : NutzlastExpr D Γ Λ a) → (d : Nat) → (c : List II) →
-    (top : Nat) → lowN L tag e d = some (c, top) → d < top
+    (top : Nat) → lowN L (reserved := reserved) tag e d = some (c, top) → d < top
   | _, .empty, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, .num e, d, c, top, h => by
@@ -90,8 +90,8 @@ theorem strGetL_top {d top : Nat} {a b : Option (List II × Nat)} {c : List II}
   · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
   · cases h
 
-theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
-    (top : Nat) → lowE L e d = some (c, top) → d < top
+theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
+    (top : Nat) → lowE L (reserved := reserved) e d = some (c, top) → d < top
   | _, _, .arrNil, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, _, .arrCons a _, d, c, top, h => by
@@ -232,7 +232,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .getBytes t f _ n i _ _ _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
-    · exact readBytesL_top L t f (lowE L i) n 0 d c top h
+    · exact readBytesL_top L t f (lowE L (reserved := reserved) i) n 0 d c top h
     · cases h
   | _, _, .forallSlots .., d, c, top, h | _, _, .existsSlots .., d, c, top, h => by
     simp only [lowE_eqs, quantL] at h
@@ -285,4 +285,14 @@ theorem binE_ok {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ 
   have := lowE_top b (d + 1) cb tb hb
   exact bin_ok (iha ca ta ha (by omega)) (ihb cb tb hb (by omega)) hg hop ho (by omega) hp
 
+end Gabbro.Stage0.Senke
+
+namespace Gabbro.Stage0.Senke
+open Gabbro.Grammatik Runner.IR
+/-- A real variable read and temporary computation with a nonzero reservation. -/
+theorem lowE_reserved_top_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    ∃ c top, lowE L (reserved := 3)
+      (.and (.var .here) .tru : Expr D [.bool] [] .bool) 10 = some (c, top) ∧ 10 < top := by
+  refine ⟨_, _, rfl, ?_⟩
+  decide
 end Gabbro.Stage0.Senke

@@ -71,20 +71,20 @@ theorem star_ins {m m' : Runner.Mem} {pc fp : Runner.W} {i : II} (hc : CodeAt m 
     Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [i].length), fp⟩ m' :=
   Star.one (run_step (t := ⟨pc, fp⟩) (by simpa using hc 0 (by simp)) ho hr)
 
-theorem vslot_lt {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : vslot x < frei Γ := by
+theorem vslot_lt {reserved : Nat} {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : vslot x reserved < frei Γ reserved := by
   have : Var.idx x < Γ.length := by
     induction x with
     | here => simp [Var.idx]
     | there x ih => simp [Var.idx]; omega
   unfold vslot frei; omega
 
-theorem envAt_agree {D : Deklaration} {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat}
-    (h : EnvAt L m fp ρ) (ha : Agree fp d K m m') (hF : FrameOK m fp K) (hd : frei Γ ≤ d) (hK : d ≤ K) :
-    EnvAt L m' fp ρ := by
+theorem envAt_agree {D : Deklaration} {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat} {reserved : Nat}
+    (h : EnvAt L m fp ρ reserved) (ha : Agree fp d K m m') (hF : FrameOK m fp K) (hd : frei Γ reserved ≤ d) (hK : d ≤ K) :
+    EnvAt L m' fp ρ reserved := by
   intro τ x
   obtain ⟨w, hw, he⟩ := h τ x
   refine ⟨w, ?_, he⟩
-  rw [agree_rd_low ha hF.room (by have := vslot_lt x; omega) hK]
+  rw [agree_rd_low ha hF.room (by have := vslot_lt (reserved := reserved) x; omega) hK]
   exact hw
 
 end Gabbro.Stage0.Senke
