@@ -540,6 +540,22 @@ def floatOfIntAssemblyL (p bias signBit : Nat) (d : Nat)
   wennL d (wordK 14 d (magnitude d) 0) (floatPackZeroL d)
     (floatPackCarryL d sign biased scale (2^(p - 1)))
 
+/-- The emitted zero branch alone reserves the assembly destination. -/
+theorem floatOfIntAssemblyL_ceiling {p bias signBit d : Nat}
+    {input : Nat → Option (List II × Nat)} {out : List II × Nat}
+    (h : floatOfIntAssemblyL p bias signBit d input = some out) :
+    d + 1 ≤ out.2 := by
+  simp only [floatOfIntAssemblyL, wennL, floatPackZeroL, bind,
+    Option.bind_eq_some_iff] at h
+  obtain ⟨cc, hc, ca, ha, cb, hb, h⟩ := h
+  split at h
+  · cases h
+    simp only [Option.some.injEq] at ha
+    subst ca
+    simp only [konstWL, bin2] at *
+    omega
+  · contradiction
+
 /-- The signed input interval bounds the unsigned magnitude, including minInt. -/
 theorem floatOfIntAssembly_magnitude_bound (z : Int)
     (hz : -2^63 ≤ z ∧ z < 2^63) :
