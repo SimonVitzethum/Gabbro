@@ -13,12 +13,12 @@ theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e
   subst he; exact h
 
 /-- Transport of the context preserves every encoded variable. -/
-theorem envAt_cast {ts us : Ctx} (e : ts = us) {m : Runner.Mem} {fp : Runner.W} {ρ : Env D ts}
-    (h : EnvAt L m fp ρ) : EnvAt L m fp ((congrArg (Env D) e).mp ρ) := by cases e; exact h
+theorem envAt_cast {ts us : Ctx} (e : ts = us) {reserved : Nat} {m : Runner.Mem} {fp : Runner.W} {ρ : Env D ts}
+    (h : EnvAt L m fp ρ reserved) : EnvAt L m fp ((congrArg (Env D) e).mp ρ) reserved := by cases e; exact h
 
 /-- Reindexing the parameter environment changes no value word or frame slot. -/
-theorem envAt_umsig {f : D.Fn} {n : Nat} (hf : D.passt f n = true) {m : Runner.Mem} {fp : Runner.W}
-    {ρ : Env D (D.sigNr n).params} (h : EnvAt L m fp ρ) : EnvAt L m fp (umsig hf ρ) := by
+theorem envAt_umsig {f : D.Fn} {n : Nat} (hf : D.passt f n = true) {reserved : Nat} {m : Runner.Mem} {fp : Runner.W}
+    {ρ : Env D (D.sigNr n).params} (h : EnvAt L m fp ρ reserved) : EnvAt L m fp (umsig hf ρ) reserved := by
   exact envAt_cast (show (D.sigNr n).params = D.params f from (D.passt_sig hf).params.symm) h
 
 /-- An indirect call evaluates the pointer and arguments once, resolves its signature witness,
