@@ -4,7 +4,7 @@ import Stage0.Senke.Ausdruck.Top
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem konstWL_top (k n d : Nat) : d < (konstWL k n d).2 ∧ (konstWL k n d).2 ≤ d + 2 := by
   induction k generalizing n with
@@ -18,7 +18,7 @@ theorem konstWL_top (k n d : Nat) : d < (konstWL k n d).2 ∧ (konstWL k n d).2 
 theorem konstWL_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} (k n : Nat)
     (hn : n < 65536 ^ k) (hK : d + 2 ≤ K)
-    (hp : Pre L m pc fp K d (konstWL k n d).1 ρ W) :
+    (hp : Pre L m pc fp K d (konstWL k n d).1 ρ W reserved) :
     Ok m pc fp K d (konstWL k n d).1 (· = BitVec.ofNat 64 n) := by
   induction k generalizing n m pc with
   | zero =>
