@@ -1,0 +1,55 @@
+// stage-0 IR probe: locks -- two threads count 1000 each under one lock (`locks L`, a `leave` out of it); main waits
+// for the root's mark, then answers the count: 2000 mod 256 = 208
+module ir_probe {
+
+table zaehler count 1 { slot { stand : u16 wrapping, fertig : u32 in 0 .. 1, } }
+table runden count 1000 { slot { x : bool, } }
+table warten count 4000000 { slot { x : bool, } }
+
+lock L protects { zaehler } rank 0 held <= 64 ops;
+
+impl fn neben()
+    effects  { reads zaehler.slots, writes zaehler.slots, reads runden.slots, locks L }
+    costs    <= 100000 ops
+{
+    traverse i over slots of runden by unvisited
+        touches reads runden.slots, reads zaehler.slots, writes zaehler.slots, locks L
+    {
+        locks L {
+            zaehler.slots[0].stand = zaehler.slots[0].stand + 1;
+        }
+    }
+    locks L {
+        zaehler.slots[0].fertig = 1;
+    }
+}
+
+concurrent { neben };
+
+impl fn main() -> u16
+    effects  { reads zaehler.slots, writes zaehler.slots, reads runden.slots, reads warten.slots, locks L }
+    costs    <= 100000000 ops
+{
+    traverse i over slots of runden by unvisited
+        touches reads runden.slots, reads zaehler.slots, writes zaehler.slots, locks L
+    {
+        locks L {
+            zaehler.slots[0].stand = zaehler.slots[0].stand + 1;
+        }
+    }
+    traverse j over slots of warten by unvisited
+        touches reads warten.slots, reads zaehler.slots, locks L
+    {
+        locks L {
+            if zaehler.slots[0].fertig == 1 {
+                leave j;
+            }
+        }
+    }
+    let mut r : u16 = 0;
+    locks L {
+        r = zaehler.slots[0].stand;
+    }
+    return r;
+}
+}

@@ -30,3 +30,10 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.bild_wurzel_ok_u
 #print axioms Gabbro.Stage0.Senke.start_ok
 #print axioms Gabbro.Stage0.Senke.spawnC_ok
+#print axioms Gabbro.Stage0.Senke.locks_ok
+#print axioms Gabbro.Stage0.Senke.nimm_paar
+#print axioms Gabbro.Stage0.Senke.gib_paar
+#print axioms Gabbro.Stage0.Senke.retFreiB_istZ
+#print axioms Gabbro.Stage0.Senke.SyncOK.call
+#print axioms Gabbro.Stage0.Senke.BildLage.sync
+#print axioms Gabbro.Stage0.Senke.lk_bytes

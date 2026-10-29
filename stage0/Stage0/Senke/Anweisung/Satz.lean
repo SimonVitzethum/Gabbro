@@ -9,6 +9,7 @@ import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Anweisung.Schleife
 import Stage0.Senke.Anweisung.TorLauf
+import Stage0.Senke.Sperre.Satz
 
 namespace Gabbro.Stage0.Senke
 
@@ -276,7 +277,23 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
   | _, _, _, _, .onTag .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .locks .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .locks Lk hr body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowS] at h
+    split at h
+    · next hc =>
+      obtain ⟨hrf, hex1, hex2⟩ := hc
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cb, tb⟩, hcb, hc⟩ := h
+      simp only [Prod.mk.injEq] at hc
+      obtain ⟨rfl, rfl⟩ := hc
+      have hlen := locksCode_len L (L.lk Lk) (frei Γ) cb ex.1 ex.2
+      have hks := hW.ks
+      simp only [execStmt]
+      exact locks_ok hrf hex1 hex2 (by omega) hW hlo0 hlo2 hpr
+        (fun m' σ' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0) (pr := pr)
+          (ex := (16 * 30, 16 * 60)) hS hA hlo0 hens body cb tb hcb (by omega) (by rw [hlen] at hs; omega)
+          ⟨hW.lay, hW.dis, hW.top, hW.ord, by omega⟩ m' _ σ' ρ hp' hlo hlo2 hu' hk' hw' hpr) hp hu hk hWa
+    · cases h
   | _, _, _, _, .retry .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, Γ, Λ, _, .axiomCall a args hn _ _ _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by

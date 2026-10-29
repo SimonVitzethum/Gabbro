@@ -7,7 +7,8 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), and the gates `axiomCall` and `bindAxiom` (`torC`), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `locks` without `ret` in its body (`locksCode`: take, the body,
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
@@ -128,6 +129,11 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
   | _, Γ, _, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
   | _, Γ, _, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
   | _, Γ, _, _, .axiomCall a args _ _ _ _ _ => torC0 L a args (frei Γ)
+  | _, Γ, _, _, .locks Lk _ body =>
+    if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
+      let cb ← lowB A L lo ens pr (16 * 30, 16 * 60) body
+      pure (locksCode L (L.lk Lk) (frei Γ) cb.1 ex.1 ex.2, max (cb.2 + 1) (frei Γ + 18))
+    else none
   | _, _, _, _, _ => none
 
 def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
