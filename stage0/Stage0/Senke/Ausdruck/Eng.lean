@@ -151,4 +151,45 @@ theorem eng_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi lo' hi' : Int}
     · cases h
   · cases h
 
+/-- Both inclusive endpoints and both fallback directions satisfy the recursive proof premises. -/
+theorem eng_ok_zeuge {Λ : List (Res D)} {Γ : Ctx} (L : Lay D) (σ₀ σ : World D) (ρ : Env D Γ)
+    (n : Int) (hn : n = -4 ∨ n = -3 ∨ n = 5 ∨ n = 6)
+    {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {W : Runner.Mem → Prop}
+    (hd : d + 3 ≤ K)
+    (hp : Pre m pc fp K d (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0]) ρ W) :
+    Ok m pc fp K d (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0])
+      (· = BitVec.ofInt 64 (if -3 ≤ n ∧ n ≤ 5 then n else 2)) := by
+  let b : Expr D Γ Λ (.int (-3) 5) := .widen (by decide) (by decide) (.lit 2)
+  have hl : lit32 n = true := by
+    rcases hn with rfl | rfl | rfl | rfl <;> decide
+  have he : lowE L (.eng (.lit n) (-3) 5 b) d =
+      some (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0], d + 3) := by
+    have hw : inW n n = true := by
+      rcases hn with rfl | rfl | rfl | rfl <;> decide
+    simp only [lowE_eqs, b, engL, hl, hw]
+    change some (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0],
+      max (d+1) (max (d+1) (d+3))) = _
+    congr 2
+    omega
+  refine (eng_ok (σ₀ := σ₀) (σ := σ) he hd ?_ ?_ hp).mono ?_
+  · intro ce te he hte m pc hp
+    simp only [lowE_eqs, hl, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at he
+    obtain ⟨rfl, rfl⟩ := he
+    exact const_ok hp hl (by omega)
+  · intro cb tb hb htb m pc hp
+    have hb' : some ([ci 1 d 2 0], d+1) = some (cb, tb) := hb
+    cases Option.some.inj hb'
+    exact const_ok hp (by decide) (by omega)
+  · intro w hw
+    rcases hn with rfl | rfl | rfl | rfl <;> exact hw
+
+/-- Refuse a source outside signed 64 bits and either bound outside the signed literal field. -/
+theorem eng_refused_zeuge {Λ : List (Res D)} {Γ : Ctx} (L : Lay D) (d : Nat) :
+    lowE L (Γ := Γ) (Λ := Λ) (.eng (.lit (2^63)) 0 0 (.lit 0)) d = none ∧
+    lowE L (Γ := Γ) (Λ := Λ) (.eng (.lit 0) (-(2^31)-1) 0
+      (.widen (by decide) (by decide) (.lit 0))) d = none ∧
+    lowE L (Γ := Γ) (Λ := Λ) (.eng (.lit 0) 0 (2^31)
+      (.widen (by decide) (by decide) (.lit 0))) d = none := by
+  exact ⟨rfl, rfl, rfl⟩
+
 end Gabbro.Stage0.Senke
