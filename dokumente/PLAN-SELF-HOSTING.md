@@ -114,6 +114,16 @@ every return (`nachbedingung`, `invariante`), loop invariants at every pass boun
   excludes is read from `NutzerPflichtA`, never assumed.
 * **Checked mode.** Every check G makes is emitted, as ordinary IR code. For diagnosis and for programs without a
   certificate. An `old(T.slots[i].f)` whose index depends on the result saves the whole field at entry.
+  The implemented IR fragment currently captures one `old` occurrence per function in immutable frame
+  header slot 3, after `requires` and before the body. Parameters start at slot 4. Postcondition arithmetic,
+  equality, strict comparison and Boolean conjunction/disjunction read the saved word; every normal return
+  still checks the contract (stop 102 on failure). Globals and table cells with literal indices, including
+  range widening, are supported. Additional occurrences and nonliteral table indices are explicitly refused.
+  G evaluates an `oldS` index with the current world and supplied environment while reading its cell from the
+  entry world; capturing a result-dependent cell therefore remains open rather than freezing that index.
+  Numeric source `old(global)` uses the local `stage0/Stage0/Senke/Ausdruck/Old/Source.lean` bridge:
+  shared elaboration resolves names and types, the bridge restores the existing G `oldG` node at its source
+  occurrence, and the complete `AkzeptiertX` runs on that final program before image generation.
 Budget stops are never erased: `abstieg` (call depth), `fortschritt` (`forever` passes) and `retry` exhaustion are
 outcomes of G for some budget and stay exact.
 

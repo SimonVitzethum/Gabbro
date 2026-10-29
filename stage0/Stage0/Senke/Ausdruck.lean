@@ -40,8 +40,9 @@ def Var.idx : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
   | _, _, .there x => Var.idx x + 1
 
 /-- The first slots of every frame: 0 the return `pc` and 1 the caller's `fp` (both written by `call`), 2 the
-    remaining call depth (G's `fuel`; a call with depth 0 stops with `abstieg`). The variables follow. -/
-def FB : Nat := 3
+    remaining call depth (G's `fuel`; a call with depth 0 stops with `abstieg`),
+    and 3 is reserved for an entry snapshot. The variables follow. -/
+def FB : Nat := 4
 
 /-- The first free slot of a frame whose variables are `Γ`. -/
 def frei (Γ : Ctx) : Nat := FB + Γ.length

@@ -6,6 +6,7 @@
 import Stage0.Tor.LaufIO
 import Stage0.Senke.Bild
 import Stage0.Senke.Welt.Anordnung
+import Stage0.Senke.Ausdruck.Old.Source
 
 namespace Gabbro.Stage0
 
@@ -19,10 +20,12 @@ def irStapel : Nat := 2 ^ 19
 def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) := do
   let toks ← (lex src).mapError fun _ => "lex"
   let items ← parseTopTief toks
-  let u ← elabU (pre108 items)
-  if (← akzeptiertU u) = false then throw "refused by the checker (AkzeptiertX)"
+  let members := uMembers (pre108 items)
+  let u ← elabU (members.map OldSource.normalizeItem)
   let main ← fnIdx u.fns "main"
   let (P, _) ← lowerAllg u
+  let P ← OldSource.restore members u P
+  if (← OldSource.accepts u P) = false then throw "refused by the checker (AkzeptiertX)"
   let tore ← toreVon (uMembers (pre108 items))
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩

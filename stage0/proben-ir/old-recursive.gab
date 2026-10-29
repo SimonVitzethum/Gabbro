@@ -1,0 +1,20 @@
+// Each recursive frame preserves its own entry value, result and parameters.
+module ir_probe {
+static mut g : u32 in 0 .. 100 = 0;
+impl fn descend(n : u32 in 0 .. 1) -> u32 in 0 .. 100
+    effects { reads g, writes g }
+    ensures result == old(g)
+{
+    let saved = g;
+    if n == 1 {
+        g = 19;
+        let ignored = descend(0);
+    }
+    return saved;
+}
+impl fn main() -> u32 in 0 .. 100 effects { reads g, writes g } {
+    g = 7;
+    let value = descend(1);
+    return value;
+}
+}

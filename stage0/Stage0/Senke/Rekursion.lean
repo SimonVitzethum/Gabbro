@@ -40,16 +40,16 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
     simp only [lowFun] at hlf
     split at hlf
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
-      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, hCf, htf⟩ := hlf
-      have hFB3 : FB = 3 := rfl
+      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, cs, hcs, hCf, htf⟩ := hlf
+      have hFB3 : FB = 4 := rfl
       have hcode := (hP f).1
       have hfar := (hP f).2
       rw [← hCf] at hcode hfar
       simp only [rufAt]
-      refine guard_stop (codeAt_left (codeAt_left (codeAt_left hcode))) ?_ hF (by omega) (by omega) hK
+      refine guard_stop (codeAt_left (codeAt_left (codeAt_left (codeAt_left hcode)))) ?_ hF (by omega) (by omega) hK
         (by simp [logikCode]) h2
       have := codeFar_left (n := (guardC 2 105 (FB + (D.params f).length)).length)
-        (k := cq.length + (guardC (FB + (D.params f).length) 101 (FB + (D.params f).length)).length + cb.length)
+        (k := cq.length + (guardC (FB + (D.params f).length) 101 (FB + (D.params f).length)).length + cs.length + cb.length)
         (by simpa [Nat.add_assoc] using hfar)
       simpa [guardC, stopC, sysC] using this
     · simp at hlf
@@ -64,8 +64,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
     split at hlf
     · next hcond =>
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
-      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, hCf, htf⟩ := hlf
-      have hFB3 : FB = 3 := rfl
+      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, cs, hcs, hCf, htf⟩ := hlf
+      have hFB3 : FB = 4 := rfl
       have hmul : (k + 1 + 1) * L = (k + 1) * L + L := Nat.succ_mul _ _
       have hroom := hF.room
       let s := FB + (D.params f).length
@@ -76,8 +76,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
       rw [← hCf] at hlenf
       simp only [List.length_append] at hlenf
       have hcode : CodeAt m (BitVec.ofNat 64 (A f))
-          (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ cb))) := by simpa [List.append_assoc] using hcode0
-      have hfar : CodeFar (BitVec.ofNat 64 (A f)) (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ cb))).length fp K := by
+          (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ cb)))) := by simpa [List.append_assoc] using hcode0
+      have hfar : CodeFar (BitVec.ofNat 64 (A f)) (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ cb)))).length fp K := by
         simpa [List.append_assoc, Nat.add_assoc] using hfar0
       have hgl : ∀ a c, (guardC a c s).length = 5 := fun _ _ => rfl
       -- the depth guard passes
@@ -114,7 +114,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
           · exact hbe
         rw [hb0] at hb1
         exact Stops.prefix (sg.trans s1) (guard_stop (codeAt_left hc2)
-          (by have := codeFar_left (n := 5) (k := cb.length) (by rw [← hgl s 101, ← List.length_append]; exact hf2)
+          (by have := codeFar_left (n := 5) (k := cs.length + cb.length) (by simpa only [List.length_append, hgl] using hf2)
               simpa [hgl] using this) hF1 (by omega) (by omega) hK (by simp [logikCode]) hb1)
       · rw [if_neg hreq]
         have hbt : b = 1 := by
@@ -124,18 +124,37 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
         have sg2 := guard_pass (codeAt_left hc2) (by omega) hb1 (by rw [hbt]; decide)
         have hf3 := codeFar_tail hf2
         have hc3 := codeAt_right hc2
-        -- the body, its calls at depth `k`
-        have hu : Umf Y A C (BitVec.ofNat 64 k) m1 fp Ks K :=
-          ⟨pcode_agree hP a1, by
-            rw [agree_rd_low a1 hroom (by omega) (by omega), h2, ofNat_succ], by omega,
-            hy.agree a1 (by have := hW.top; have := hW.ord; omega), by have := hW.top; have := hW.ord; omega⟩
-        have hk : Kopf Y f m1 fp K rp cfp ρ := Kopf.agree ⟨h0, h1, hE, by omega⟩ a1 hF (Nat.le_refl _)
-        have hpb : PreS Y m1 _ fp K (frei (D.params f)) cb ρ :=
-          ⟨Nat.le_refl _, hK, hF1, hc3, hf3, envAt_agree hE a1 hF (Nat.le_refl _) (by omega), trivial, wstab_true _ _⟩
+        -- Capture entry cells after requires, before the first body step.
+        obtain ⟨mS, sS, aS, hSnap, hKeep⟩ := snapC_ok hcs hF1 hK (by omega)
+          (codeAt_left hc3) (codeFar_left (by rw [← List.length_append]; exact hf3)) hWa1 hW.lay
+          (by have := hW.top; omega)
+        have hFS := hF1.agree aS
+        have aPre : Agree fp 3 K m mS := (a1.mono (by unfold s FB; omega)).trans aS
+        have hES : EnvAt Y mS fp ρ := by
+          intro τ x
+          obtain ⟨w, hw, he⟩ := (envAt_agree hE a1 hF (Nat.le_refl _) (by omega)) τ x
+          have hx := vslot_lt x
+          exact ⟨w, by rw [hKeep (vslot x) (by unfold frei at hx; omega)
+            (by unfold vslot FB; omega)]; exact hw, he⟩
+        have hWaS : WeltAt mS Y σR := weltAt_stab hW.lay (by have := hW.top; omega)
+          m1 mS hWa1 (aS.mono (Nat.zero_le _))
+        have hfB := codeFar_tail hf3
+        have hcB := (codeAt_right hc3).agree aS hfB
+        -- The body, its calls at depth `k`.
+        have hu : Umf Y A C (BitVec.ofNat 64 k) mS fp Ks K :=
+          ⟨pcode_agree hP aPre, by
+            rw [agree_rd_low aPre hroom (by decide) (by omega), h2, ofNat_succ], by omega,
+            hy.agree aPre (by have := hW.top; have := hW.ord; omega), by have := hW.top; have := hW.ord; omega⟩
+        have hk : Kopf Y f mS fp K rp cfp ρ P σR :=
+          ⟨by rw [agree_rd_low aPre hroom (by decide) (by omega)]; exact h0,
+           by rw [agree_rd_low aPre hroom (by decide) (by omega)]; exact h1,
+           hES, by omega, hSnap⟩
+        have hpb : PreS Y mS _ fp K (frei (D.params f)) cb ρ :=
+          ⟨Nat.le_refl _, hK, hFS, hcB, hfB, hES, trivial, wstab_true _ _⟩
         have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (pr := []) (P.rumpf f) cb tb hb
-          (by omega) (by omega) hW m1 _ σR ρ hpb (Nat.le_refl _) hu hk hWa1 (fun _ h => nomatch h)
-        have spre := sg.trans (s1.trans sg2)
-        have apre : Agree fp 2 K m m1 := a1.mono (by omega)
+          (by omega) (by omega) hW mS _ σR ρ hpb (Nat.le_refl _) hu hk hWaS (fun _ h => nomatch h)
+        have spre := sg.trans (s1.trans (sg2.trans sS))
+        have apre : Agree fp 2 K m mS := aPre.mono (by decide)
         generalize execEnd O passes (rufAt P O passes k) (P.rumpf f) σR ρ = o at hret ⊢
         cases o with
         | zurueck σ' v =>

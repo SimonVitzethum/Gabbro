@@ -15,12 +15,12 @@ theorem bindValue_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
     (hcode : ∀ m pc, Pre L m pc fp Ks (frei Γ) ce ρ (fun m => WeltAt m L σ) →
       Ok m pc fp Ks (frei Γ) ce (Enc L τ v))
     (hrest : ∀ m' pc', PreS L m' pc' fp K (frei Γ + 1) cr (Env.cons v ρ) →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ →
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cr.length))
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc' + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2) out)
     {m : Runner.Mem} {pc : Runner.W} (hp : PreS L m pc fp K (frei Γ) (ce ++ cr) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (ce ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * (ce ++ cr).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (ce ++ cr).length) + BitVec.ofInt 64 ex.2) out.schrumpf := by

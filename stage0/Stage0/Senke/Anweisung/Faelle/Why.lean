@@ -62,7 +62,7 @@ theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (v : Fin n) (hi : k + v.val < 2 ^ 64)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 (k + v.val)))
     (hp : PreS L m pc fp K (frei Γ) cd ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.2)
@@ -129,7 +129,7 @@ theorem onWhy_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS L m pc fp K (frei Γ) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.2)
@@ -166,7 +166,7 @@ theorem retWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {r : Fin (D.gruende f)} {proof0 : _} :
@@ -184,7 +184,7 @@ theorem endWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {r : Fin (D.gruende f)} {proof0 : _} :

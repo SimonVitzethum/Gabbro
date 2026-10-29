@@ -97,8 +97,8 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
     | .logik l => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (logikCode l)
     | .hardware h => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (hwCode h)
     | _ => False := by
-  have hFB3 : FB = 3 := rfl
-  have hex : exitSlot = 8 := rfl
+  have hFB3 : FB = 4 := rfl
+  have hex : exitSlot = 10 := rfl
   have hsl : startLen = 8 := rfl
   have hK : Ks < 2 ^ 31 := by omega
   have hroom := hF.room
@@ -175,7 +175,7 @@ theorem spawn1_ok [CloneOK] {m : Runner.Mem} {pc fp : Runner.W} {K a f : Nat}
       ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0]) (hF : FrameOK m fp K) (hK : exitSlot + 3 ≤ K)
     (hK2 : K < 2 ^ 31) (ha : a < 2 ^ 31) (hf : f < 2 ^ 31) (hcf : CodeFar pc 3 fp K) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m' ∧ Agree fp exitSlot K m m' := by
-  have hex : exitSlot = 8 := rfl
+  have hex : exitSlot = 10 := rfl
   have hroom := hF.room
   have hc' : CodeAt m pc ([ci 1 exitSlot a 0] ++ ([ci 1 ((exitSlot + 1 : Nat) : Int) f 0] ++
       [ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0])) := hc

@@ -183,3 +183,8 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.FloatProbe.float_lowering_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatProbe.float_signed_zero_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatProbe.float_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.lowEns_ok
+#print axioms Gabbro.Stage0.Senke.snapC_ok
+#print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.OldProbe.snapC_ok_zeuge
