@@ -7,7 +7,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
@@ -56,6 +56,26 @@ def retTop (q : Nat) : Nat := q + 1 + 8
     instructions sees them `16 n` further. -/
 def exPlus (ex : Int × Int) (n : Nat) : Int × Int := (ex.1 + 16 * n, ex.2 + 16 * n)
 
+/-- The code of `traverse` (`PLAN-SELF-HOSTING.md` §2.1.4), the counter `k` in slot `s` (the index's own slot, which
+    the body may not write), the invariant's code `ci'` into slot `s + 1`, the body's code `cb`:
+
+    `k := 0`; head: the invariant, false: the stop 104; `k < n`, false: the end; the body (its `leave` to the leave
+    part, its `next` and its end to the next part); next part: `k := k + 1`, back to the head; leave part: the
+    invariant, false: the stop, true: the end; the stop; the end. -/
+def travCode (s : Nat) (n : Int) (ci' cb : List II) : List II :=
+  [ci 1 s 0 0] ++ (ci' ++
+    ([ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0, ci 2 ((s + 1 : Nat) : Int) s 0,
+      ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
+      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
+      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ (cb ++
+    ([ci 1 (s + 1) 1 0, ci 3 s s (s + 1), ci 18 (-(16 * (7 + ci'.length + cb.length))) 0 0] ++ (ci' ++
+    ([ci 19 ((s + 1 : Nat) : Int) 32 0, ci 18 64 0 0] ++ stopC 104 (s + 1)))))))
+
+def travC (s : Nat) (n : Int) (ci' cb : List II × Nat) : Option (List II × Nat) :=
+  if 16 * (10 + ci'.1.length + cb.1.length) < 2 ^ 31 then
+    some (travCode s n ci'.1 cb.1, max ci'.2 (max cb.2 (s + 9)))
+  else none
+
 /-- `st (s+1) s`: the word of slot `s` to the address in slot `s + 1`. -/
 def stC (s : Nat) : II := ci 16 ((s + 1 : Nat) : Int) s 0
 
@@ -94,6 +114,12 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ci' ← lowE L i (frei Γ + 1)
     let ca ← slotA L t f (frei Γ + 1) ci'
     pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
+  | _, Γ, _, _, .traverse t inv body =>
+    if lit32 (D.count t) then do
+      let ci' ← lowE L inv (frei Γ + 1)
+      let cb ← lowB A L lo ens (frei Γ :: pr) (48, 0) body
+      travC (frei Γ) (D.count t) ci' cb
+    else none
   | _, Γ, _, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
   | _, Γ, _, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
   | _, _, _, _, _ => none

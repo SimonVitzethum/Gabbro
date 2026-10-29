@@ -13,6 +13,7 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.lowEnd_ok
 #print axioms Gabbro.Stage0.Senke.lowE_ok
 #print axioms Gabbro.Stage0.Senke.store_ok
+#print axioms Gabbro.Stage0.Senke.trav_ok
 #print axioms Gabbro.Stage0.Senke.weltAt_glob
 #print axioms Gabbro.Stage0.Senke.weltAt_slot
 #print axioms Gabbro.Stage0.Senke.layU_in

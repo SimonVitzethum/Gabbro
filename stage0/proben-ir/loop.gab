@@ -1,0 +1,23 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): stage0 --ir, then the runner; exit code 75
+module ir_probe {
+static mut summe : u32 in 0 .. 100000 = 0;
+table t count 10 { slot { a : u32 in 0 .. 255, } }
+impl fn fuelle()
+    effects { writes t.slots }
+{
+    traverse i over slots of t by unvisited touches writes t.slots {
+        t.slots[i].a = i + 3;
+    }
+}
+impl fn main() -> u32 in 0 .. 100000
+    effects { reads t.slots, writes t.slots, reads summe, writes summe }
+{
+    fuelle();
+    traverse j over slots of t by unvisited touches reads t.slots, reads summe, writes summe {
+        if summe <= 50000 {
+            summe = (summe + t.slots[j].a) % 60000;
+        }
+    }
+    return summe;
+}
+}

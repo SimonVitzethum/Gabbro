@@ -180,7 +180,7 @@ def stufe_stage0():
     zeilen = re.findall(r"'([^']+)' depends on axioms: \[([^\]]*)\]", out)
     schlecht = [n for n, a in zeilen if not {x.strip() for x in a.split(",") if x.strip()} <= STANDARD]
     satz = any(n.endswith(".bild_ok_u") for n, _ in zeilen)
-    ok_ax = rc == 0 and satz and len(zeilen) >= 12 and not schlecht
+    ok_ax = rc == 0 and satz and len(zeilen) >= 13 and not schlecht
     print(f"  7 senke:   {'ok' if ok_ax else 'ROT'} ({len(zeilen)} Saetze, bild_ok_u "
           f"{'gefunden' if satz else 'FEHLT'}, {len(schlecht)} mit fremden Axiomen)")
     kratz = S0 / ".lake" / "ir"

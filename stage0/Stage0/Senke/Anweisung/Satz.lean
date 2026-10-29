@@ -7,6 +7,7 @@
 -/
 import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Anweisung.Schreiben
+import Stage0.Senke.Anweisung.Schleife
 
 namespace Gabbro.Stage0.Senke
 
@@ -228,6 +229,31 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       simp only [execStmt, Sim]
       exact jmp_reach hp.code hl hp.env hWa
     · cases h
+  | _, Γ, Λ, _, .traverse t inv body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowS] at h
+    split at h
+    · next hn =>
+      simp only [bind, Option.bind_eq_some_iff] at h
+      obtain ⟨ci', hci, cb, hcb, htr⟩ := h
+      simp only [travC] at htr
+      split at htr
+      · next hlenc =>
+        simp only [Option.some.injEq, Prod.mk.injEq] at htr
+        obtain ⟨rfl, rfl⟩ := htr
+        have hlen := travCode_len (s := frei Γ) (n := D.count t) (ci' := ci'.1) (cb := cb.1)
+        simp only [execStmt]
+        exact trav_ok hn hci hlenc hlo0 (by omega) hW hlo hlo2 hpr
+          (fun m' pc' σ' ρ' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0) (pr := frei Γ :: pr)
+            (ex := (48, 0)) hS hA hlo0 hens body cb.1 cb.2 hcb (by omega) (by omega) hW m' pc' σ' ρ' hp' hlo
+            (by have := hlo2; simp only [frei, List.length_cons] at this ⊢; omega) hu' hk' hw'
+            (fun j hj => by
+              simp only [List.mem_cons] at hj
+              simp only [frei, List.length_cons]
+              rcases hj with rfl | hj
+              · simp only [frei]; omega
+              · have := hpr j hj; simp only [frei] at this; omega)) hp hu hk hWa
+      · cases htr
+    · cases h
   | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
@@ -236,7 +262,6 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
   | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .locks .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .breaking .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .traverse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .retry .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .axiomCall .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
