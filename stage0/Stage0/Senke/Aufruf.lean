@@ -15,17 +15,6 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 
-/-- A read of slot `b` after a write of slot `a ≠ b`. -/
-theorem rd_other {m : Runner.Mem} {fp : Runner.W} {K a b : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (ha : a < K)
-    (hb : b < K) (hne : a ≠ b) (v : Nat) :
-    (write m (slot fp (BitVec.ofNat 64 a)) 8 v).rd64 (slot fp (BitVec.ofNat 64 b)) =
-      m.rd64 (slot fp (BitVec.ofNat 64 b)) :=
-  rd64_write_far (slot_far hr ha hb hne)
-
-theorem rd_same {m : Runner.Mem} {fp : Runner.W} {K a : Nat} (hF : FrameOK m fp K) (ha : a < K) (v : Runner.W) :
-    (write m (slot fp (BitVec.ofNat 64 a)) 8 v.toNat).rd64 (slot fp (BitVec.ofNat 64 a)) = some v :=
-  rd64_wr64 (wr64_some (hF.wr a ha)) (hF.rd a ha)
-
 theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
     {dv : Runner.W} {c : Nat} (hS : FunSpec L A C R dv c)
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks F : Nat} {f : D.Fn} {σ : World D} {ρa : Env D (D.params f)}
