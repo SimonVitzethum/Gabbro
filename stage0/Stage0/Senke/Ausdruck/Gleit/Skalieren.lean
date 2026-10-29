@@ -330,6 +330,26 @@ theorem floatPackCarry_canonical (F : Gleitkomma.Format) (sign : Bool) (e q : Na
   apply floatPackNormal_canonical F sign _ _ (by omega) hb.1
   simpa [Nat.pow_succ, Nat.mul_comm] using hb.2
 
+/-- Actual emitted carry IR simulates canonical normalized G fields. -/
+theorem floatPackCarryL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {s ex qcode : Nat → Option (List II × Nat)}
+    (F : Gleitkomma.Format) (sign : Bool) (e q : Nat)
+    (hs : WordCode (L := L) ρ W s
+      (BitVec.ofNat 64 (if sign then 2^(F.ebits + F.fracBits) else 0)))
+    (hecode : WordCode (L := L) ρ W ex (BitVec.ofNat 64 e))
+    (hqcode : WordCode (L := L) ρ W qcode (BitVec.ofNat 64 q))
+    (hu : 2 * 2^F.fracBits < 2^64) (hm : F.bexpMax ≤ 2^64)
+    (he : 0 < e ∧ e + 1 < F.bexpMax)
+    (hq : 2^F.fracBits ≤ q ∧ q ≤ 2 * 2^F.fracBits) :
+    WordCode (L := L) ρ W (fun d => floatPackCarryL d s ex qcode (2^F.fracBits))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F
+        ⟨sign, e + (if q = 2 * 2^F.fracBits then 1 else 0),
+          (if q = 2 * 2^F.fracBits then 2^F.fracBits else q) - 2^F.fracBits⟩)) := by
+  rw [← floatPackCarry_canonical F sign e q hu hm he hq]
+  intro fp K d c top h hK m pc hp
+  exact floatPackCarryL_ok hs hecode hqcode (2^F.fracBits) hu h hK m pc hp
+
+
  theorem floatPackCarry_nat_zeuge :
     (Runner.IR.bool (BitVec.ofNat 64 16 == BitVec.ofNat 64 16)).toNat = 1 ∧
     (Runner.IR.bool (BitVec.ofNat 64 15 == BitVec.ofNat 64 16)).toNat = 0 := by
