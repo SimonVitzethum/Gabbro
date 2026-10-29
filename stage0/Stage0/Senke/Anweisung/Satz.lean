@@ -215,8 +215,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨ct, tt⟩, hct, hc⟩ := h
       simp only [Prod.mk.injEq] at hc
       obtain ⟨rfl, rfl⟩ := hc
-      simp only [List.length_append, List.length_cons, List.length_nil, List.length_singleton] at hs
-      exact onOption_ok (o := o) (t := p) (e := a) (cc := cc) (ct := ct) (ce := ce) hn (by omega) hcc (by omega) (by omega) (by omega) (by omega) hW hlo hlo0 hlo2 hpr
+      simp only [List.length_append, List.length_cons, List.length_nil] at hs
+      exact onOption_ok (o := o) (t := p) (e := a) (cc := cc) (ct := ct) (ce := ce) hn (by omega) hcc (by omega) (by omega) hW hlo hlo0 hlo2 hpr
         (fun k _ m' pc' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0)
           (ex := exPlus ex (ce.length + 1)) hS hA hlo0 hens p ct tt hct (by omega) (by omega) hW m' pc' _ (.cons k ρ)
           (by simpa only [frei, List.length_cons, Nat.add_succ] using hp') hlo
