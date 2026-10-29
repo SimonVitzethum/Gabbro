@@ -16,6 +16,7 @@ import Lean.Meta.Tactic.Simp.RegisterCommand
 import Grammatik.Kern.Semantik.Semantik
 import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
+import Stage0.Senke.Ausdruck.Aggregat.Wert
 
 namespace Gabbro.Stage0.Senke
 
@@ -83,6 +84,20 @@ def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Opt
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
+
+/-- A word operation whose operands have already been lowered; reserve its two operand slots explicitly. -/
+def wordL (o d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  pure ((bin2 o d a b).1, max (max a.2 b.2) (d + 2))
+
+/-- A word operation against a small constant. -/
+def wordK (o d : Nat) (a : Option (List II × Nat)) (k : Int) : Option (List II × Nat) :=
+  wordL o d a (some ([ci 1 (d + 1) k 0], d + 2))
+
+/-- A short string's byte at zero, or zero at every other signed index. -/
+def strGetL (d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) :=
+  wennL d (wordK 14 d i 0) (wordK 8 d s 255) (some ([ci 1 d 0 0], d + 1))
 
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
@@ -238,6 +253,20 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, @Expr.arrCons _ _ _ _ n a _, d => if n = 0 then lowE L a d else none
   | _, _, @Expr.arrGet _ _ _ _ n a _, d => if n = 1 then lowE L a d else none
   | _, _, @Expr.arrSet _ _ _ _ n _ _ v, d => if n = 1 then lowE L v d else none
+  | _, _, @Expr.strLit _ n _ _ bs _, d =>
+    if n ≤ 1 then some ([ci 1 d (strN bs) 0], d + 1) else none
+  | _, _, @Expr.strLen _ _ _ n s, d =>
+    if n ≤ 1 then wordK 12 d (lowE L s d) 8 else none
+  | _, _, @Expr.strCat _ _ _ n m s t, d =>
+    if n + m ≤ 1 then (if n = 0 then lowE L t d else lowE L s d) else none
+  | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
+    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L s d) (lowE L i d) else none
+  | _, _, @Expr.strEq _ _ _ n m s t, d =>
+    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L s d) (lowE L t (d + 1)) else none
+  | _, _, @Expr.strLt _ _ _ n m s t, d =>
+    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L s d) (lowE L t (d + 1)) else none
+  | _, _, @Expr.strWeit _ _ _ n m s, d =>
+    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L s d) else none
   | _, _, .none _, d => some ([ci 1 d (-1) 0], d + 1)
   | _, _, .some e, d => lowE L e d
   | _, _, @Expr.istSome _ _ _ n e, d =>
@@ -292,6 +321,7 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
     | 0 => w = 0
     | 1 => Enc L τ (v ⟨0, by decide⟩) w
     | _ => False
+  | .str n, v, w => n ≤ 1 ∧ w = BitVec.ofNat 64 (strN v.1)
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 

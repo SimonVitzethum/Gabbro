@@ -8,6 +8,7 @@ import Stage0.Senke.Ausdruck.Fnptr
 import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Aggregat.Array
+import Stage0.Senke.Ausdruck.Aggregat.StringOps
 import Stage0.Senke.Ausdruck.Option
 import Stage0.Senke.Ausdruck.Bytes
 import Stage0.Senke.Ausdruck.Quant.Satz
@@ -37,6 +38,23 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     arrGet_ok a i (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .arrSet a i v, d, c, top, h, hK, m, pc, ρ, hp =>
     arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL v d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strLit bs hb, d, c, top, h, hK, m, pc, ρ, hp => strLit_ok bs hb h hK hp
+  | _, _, .strLen s, d, c, top, h, hK, m, pc, ρ, hp =>
+    strLen_ok s (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strCat s t, d, c, top, h, hK, m, pc, ρ, hp =>
+    strCat_ok s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL t d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strWeit q s, d, c, top, h, hK, m, pc, ρ, hp =>
+    strWeit_ok q s (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strGet s i, d, c, top, h, hK, m, pc, ρ, hp =>
+    strGet_ok s i (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL i d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strEq s t, d, c, top, h, hK, m, pc, ρ, hp =>
+    strCompare_ok false s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL t (d + 1) ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strLt s t, d, c, top, h, hK, m, pc, ρ, hp =>
+    strCompare_ok true s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL t (d + 1) ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
@@ -437,13 +455,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
   | _, _, .refEq .., _, _, _, h, _, _, _, _, _
   | _, _, .slotRef .., _, _, _, h, _, _, _, _, _
-  | _, _, .strLit .., _, _, _, h, _, _, _, _, _
-  | _, _, .strLen .., _, _, _, h, _, _, _, _, _
-  | _, _, .strCat .., _, _, _, h, _, _, _, _, _
-  | _, _, .strGet .., _, _, _, h, _, _, _, _, _
-  | _, _, .strEq .., _, _, _, h, _, _, _, _, _
-  | _, _, .strLt .., _, _, _, h, _, _, _, _, _
-  | _, _, .strWeit .., _, _, _, h, _, _, _, _, _ => by simp [lowE_eqs] at h
+    => by simp [lowE_eqs] at h
 
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (tag : Nat) (htag : tag < 256) :

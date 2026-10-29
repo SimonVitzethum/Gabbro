@@ -73,6 +73,22 @@ theorem reachL_top {d top : Nat} {L : Lay D} {t : D.Tab} {f : D.Feld t} {c : Lis
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
 
+theorem wordL_top {o d top : Nat} {a b : Option (List II × Nat)} {c : List II}
+    (h : wordL o d a b = some (c, top)) : d < top := by
+  simp only [wordL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨ca, _, cb, _, h⟩ := h
+  obtain ⟨_, rfl⟩ := Prod.mk.inj h
+  omega
+
+theorem strGetL_top {d top : Nat} {a b : Option (List II × Nat)} {c : List II}
+    (h : strGetL d a b = some (c, top)) : d < top := by
+  simp only [strGetL, wennL, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨⟨cc, tc⟩, hc, ca, _, cb, _, h⟩ := h
+  have := wordL_top hc
+  split at h
+  · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+  · cases h
+
 theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
     (top : Nat) → lowE L e d = some (c, top) → d < top
   | _, _, .arrNil, d, c, top, h => by
@@ -91,6 +107,36 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     simp only [lowE_eqs] at h
     split at h
     · exact lowE_top v d c top h
+    · cases h
+  | _, _, .strLit .., d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · cases h
+  | _, _, .strLen _, d, c, top, h | _, _, .strEq _ _, d, c, top, h
+  | _, _, .strLt _ _, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact wordL_top h
+    · cases h
+  | _, _, .strGet _ _, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact strGetL_top h
+    · cases h
+  | _, _, .strCat s t, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · split at h
+      · exact lowE_top t d c top h
+      · exact lowE_top s d c top h
+    · cases h
+  | _, _, .strWeit _ s, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+      · exact lowE_top s d c top h
     · cases h
   | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
   | _, _, .some e, d, c, top, h => lowE_top e d c top h
@@ -202,13 +248,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .flle .., _, _, _, h
   | _, _, .refEq .., _, _, _, h
   | _, _, .slotRef .., _, _, _, h
-  | _, _, .strLit .., _, _, _, h
-  | _, _, .strLen .., _, _, _, h
-  | _, _, .strCat .., _, _, _, h
-  | _, _, .strGet .., _, _, _, h
-  | _, _, .strEq .., _, _, _, h
-  | _, _, .strLt .., _, _, _, h
-  | _, _, .strWeit .., _, _, _, h => by simp [lowE_eqs] at h
+    => by simp [lowE_eqs] at h
 
 theorem Ok.mono {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {P Q : Runner.W → Prop}
     (h : Ok m pc fp K d c P) (hq : ∀ w, P w → Q w) : Ok m pc fp K d c Q := by

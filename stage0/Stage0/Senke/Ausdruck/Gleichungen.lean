@@ -235,31 +235,30 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_strLit (bs : List (Zahl 0 255)) (h : bs.length ≤ n) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.strLit bs h) d =
-    (none) := rfl
+    (if n ≤ 1 then some ([ci 1 d (strN bs) 0], d + 1) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strLen (s : Expr D Γ Λ (.str n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strLen s) d =
-    (none) := rfl
+    lowE L (.strLen s) d = (if n ≤ 1 then wordK 12 d (lowE L s d) 8 else none) := rfl
 
 @[lowE_eqs] theorem lowE_strCat (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strCat s t) d =
-    (none) := rfl
+    lowE L (.strCat s t) d =
+    (if n + m ≤ 1 then (if n = 0 then lowE L t d else lowE L s d) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strGet (s : Expr D Γ Λ (.str n)) (i : Expr D Γ Λ (.int lo hi)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strGet s i) d =
-    (none) := rfl
+    lowE L (.strGet s i) d =
+    (if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L s d) (lowE L i d) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strEq (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strEq s t) d =
-    (none) := rfl
+    lowE L (.strEq s t) d =
+    (if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L s d) (lowE L t (d + 1)) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strLt (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strLt s t) d =
-    (none) := rfl
+    lowE L (.strLt s t) d =
+    (if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L s d) (lowE L t (d + 1)) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strWeit (m : Nat) (s : Expr D Γ Λ (.str n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strWeit m s) d =
-    (none) := rfl
+    lowE L (.strWeit m s) d =
+    (if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L s d) else none) := rfl
 
 @[lowE_eqs] theorem lowE_wenn (c : Expr D Γ Λ .bool) (a b : Expr D Γ Λ τ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.wenn c a b) d =
