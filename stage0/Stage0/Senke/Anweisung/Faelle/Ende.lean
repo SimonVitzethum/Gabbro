@@ -72,7 +72,7 @@ theorem endCons_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
   | leave _ σ' ρ' => exact (show Reach L fp lo K pr _ m _ σ' ρ' from hL ▸ ih)
   | next _ σ' ρ' => exact (show Reach L fp lo K pr _ m _ σ' ρ' from hN ▸ ih)
   | hardware e => exact ih
-  | why => exact (ih : False).elim
+  | why => exact ih
 
 theorem endBind_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)

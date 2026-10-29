@@ -49,7 +49,7 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
       (by omega)
     have hp2 : PreS L m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
       ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
-       envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert he hew), trivial, wstab_true _ _⟩
+       envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert he hew.1), trivial, wstab_true _ _⟩
     have ih := ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m2 _ σ' _ hp2
       (by simp only [frei, List.length_cons] at hlo ⊢; omega)
       (hu.agreeW hW (a1.trans (agreeW_of a2)) (by omega)) (hk.agreeW hW (a1.trans (agreeW_of a2)) (by omega)) hw2
@@ -58,7 +58,7 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
     exact Ret.prefix (by omega) (s1.trans s2) ((a1.trans (agreeW_of a2)).mono (by omega))
       (keeps_of_agreeW hW (a1.trans (agreeW_of a2)) hpr (by have := hW.ks; omega)) (Ret.schrumpf ih)
   | logik e => exact hc
-  | why _ _ => exact hc.elim
+  | why _ r => exact (keinGrund proof1 r : False).elim
   | hardware e => exact hc
 
 theorem endAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}

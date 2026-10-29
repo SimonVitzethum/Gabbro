@@ -1,0 +1,27 @@
+// Reason handlers jump directly to the surrounding loop's next and leave targets.
+module ir_why_jumps {
+reason Fault {
+    Again = 1 "repeat or leave"
+    exhaustive
+}
+table rounds count 4 { slot { value : bool, } }
+static mut total : u32 in 0 .. 100 = 0;
+impl fn fail() -> u32 in 0 .. 1 or Fault
+    effects { pure }
+{
+    return Fault::Again;
+}
+impl fn main() -> u32 in 0 .. 142
+    effects { reads rounds.slots, reads total, writes total }
+{
+    traverse i over slots of rounds by unvisited touches reads rounds.slots, reads total, writes total {
+        let value = fail() else (reason) { next i; }
+        total = (total + value) % 100;
+    }
+    traverse j over slots of rounds by unvisited touches reads rounds.slots, reads total, writes total {
+        let value = fail() else (reason) { leave j; }
+        total = (total + value) % 100;
+    }
+    return total + 42;
+}
+}

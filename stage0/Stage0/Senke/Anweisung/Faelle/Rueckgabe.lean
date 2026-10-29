@@ -21,7 +21,7 @@ def Ret (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.
   | .hardware h => Stops t m (hwCode h)
   | .leave _ σ' ρ' => Reach L fp lo K pr t m eL σ' ρ'
   | .next _ σ' ρ' => Reach L fp lo K pr t m eN σ' ρ'
-  | _ => False
+  | .why σ' r => RetWhy L f fp K rp cfp t m σ' r
 
 section
 variable {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W} {lo K : Nat}
@@ -36,7 +36,7 @@ theorem Ret.prefix {o : EndAusgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Run
   | hardware e => exact Stops.prefix h hs
   | leave _ σ' ρ' => exact Reach.prefix h ha hk hs
   | next _ σ' ρ' => exact Reach.prefix h ha hk hs
-  | why => exact hs
+  | why σ' r => exact RetWhy.prefix h (ha.mono hl) hs
 
 theorem Ret.cast {o : EndAusgang (vertragVon D f) l Γ} {t t' : T} {m : Runner.Mem} {eL eN eL' eN' : Runner.W}
     (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) (h : t = t') (h3 : eL = eL') (h4 : eN = eN') :
@@ -51,5 +51,14 @@ theorem Ret.schrumpf {τ : Ty} {o : EndAusgang (vertragVon D f) l (τ :: Γ)} {t
   | zurueck | logik | why | hardware => exact hs
 
 end
+
+/-- End-block outcomes keep their return or loop target when used as an else statement. -/
+theorem Ret.zuAusgang {P : Programm D} {f : D.Fn} {σ0 : World D}
+    {ρ0 : Env D (D.params f)} {fp : Runner.W} {lo K : Nat} {pr : List Nat} {rp cfp : Runner.W}
+    {t : T} {m : Runner.Mem} {e eL eN : Runner.W} {l : Bool} {Γ : Ctx}
+    {o : EndAusgang (vertragVon D f) l Γ}
+    (h : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) :
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang := by
+  cases o <;> exact h
 
 end Gabbro.Stage0.Senke

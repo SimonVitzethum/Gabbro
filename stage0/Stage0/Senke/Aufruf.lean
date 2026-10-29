@@ -37,10 +37,13 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
     (htarget : indirect = true → m.rd64 (slot fp (BitVec.ofNat 64 F)) = some (BitVec.ofNat 64 (A f)) := by simp) :
     match R f σ ρa with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ AgreeW L fp F K m m' ∧
-        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some w ∧ EncErg L (D.erg f) v w) ∧ WeltAt m' L σ'
+        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (D.params f).length true) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
-    | _ => False := by
+    | .why σ' r => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧
+        AgreeW L fp F K m m' ∧
+        m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some (BitVec.ofNat 64 r.val) ∧
+        ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (D.params f).length false ∧ WeltAt m' L σ' := by
   have hroom := hF.room
   have hlt := hF.lt
   have hFB3 : FB = 3 := rfl
@@ -186,15 +189,21 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
   cases hR : R f σ ρa with
   | ok σ' v =>
     rw [hR] at hspec
-    obtain ⟨m6, s6, a6, ⟨w, hw, he⟩, hw6⟩ := hspec
+    obtain ⟨m6, s6, a6, ⟨w, hw, he, flag⟩, hw6⟩ := hspec
     refine ⟨m6, s14.trans ?_, (agreeW_of a15).trans ((agreeW_sub hF5.lt hFF a6).mono (by omega)),
-      ⟨w, by rw [← slot_slot]; exact hw, he⟩, hw6⟩
+      ⟨w, by rw [← slot_slot]; exact hw, he, flag⟩, hw6⟩
     rw [e16] at s6
     exact s6
   | logik e =>
     rw [hR] at hspec
     exact Stops.prefix s14 hspec
-  | why σ' r => rw [hR] at hspec; exact hspec
+  | why σ' r =>
+    rw [hR] at hspec
+    obtain ⟨m6, s6, a6, hw, flag, hw6⟩ := hspec
+    refine ⟨m6, s14.trans ?_, (agreeW_of a15).trans ((agreeW_sub hF5.lt hFF a6).mono (by omega)),
+      by rw [← slot_slot]; exact hw, flag, hw6⟩
+    rw [e16] at s6
+    exact s6
   | hardware e =>
     rw [hR] at hspec
     exact Stops.prefix s14 hspec
@@ -273,11 +282,14 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     match R f σ (evalArgs σ₀ args σ ρ) with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (callC A f (frei Γ) ca).length), fp⟩ m' ∧
         AgreeW L fp (frei Γ) K m m' ∧
-        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 2))) = some w ∧ EncErg L (D.erg f) v w) ∧
+        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 2))) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' (slot fp (BitVec.ofNat 64 (frei Γ))) (D.params f).length true) ∧
         WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
-    | _ => False := by
+    | .why σ' r => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (callC A f (frei Γ) ca).length), fp⟩ m' ∧
+        AgreeW L fp (frei Γ) K m m' ∧
+        m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 2))) = some (BitVec.ofNat 64 r.val) ∧
+        ReturnFlag m' (slot fp (BitVec.ofNat 64 (frei Γ))) (D.params f).length false ∧ WeltAt m' L σ' := by
   simp only [callTop] at htop
   have hFB : FB ≤ frei Γ := by simp only [frei]; omega
   have hks := hW.ks
@@ -300,7 +312,12 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     rw [pc_add1, hl4]
     exact s2
   | logik e => exact Stops.prefix s1 hc
-  | why _ _ => exact hc.elim
+  | why σ' r =>
+    obtain ⟨m2, s2, a2, hw, flag, hw2⟩ := hc
+    refine ⟨m2, s1.trans ?_, (agreeW_of (a1.mono (by omega))).trans a2, hw, flag, hw2⟩
+    simp only [callC]
+    rw [pc_add1, hl4]
+    exact s2
   | hardware e => exact Stops.prefix s1 hc
 
 end Gabbro.Stage0.Senke

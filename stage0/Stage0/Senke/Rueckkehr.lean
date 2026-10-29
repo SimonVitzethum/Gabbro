@@ -22,7 +22,7 @@ def RetZ0 (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (
   if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
   then Stops t m 102
   else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
-    ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w
+    ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' fp (D.params f).length true
 
 /-- `RetZ0` and the world `σ'` in memory after the return (`WeltAt`). -/
 def RetZ (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
@@ -30,7 +30,7 @@ def RetZ (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D
   if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
   then Stops t m 102
   else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-    (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w) ∧ WeltAt m' L σ'
+    (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' fp (D.params f).length true) ∧ WeltAt m' L σ'
 
 theorem RetZ.prefix {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W}
     {K : Nat} {rp cfp : Runner.W} {t0 t : T} {m0 m : Runner.Mem} {σ' : World D} {v : ErgVal D (D.erg f)}
@@ -240,7 +240,12 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
       have sr := Star.one (run_step (t := ⟨_, fp⟩) hret (by decide) (run_ret (t := ⟨_, fp⟩) h0 h1))
       refine ⟨m4, s1.trans (s2.trans (s3.trans (sb.trans (s5.trans sr)))),
         (a1.mono (by omega)).trans ((a2.mono (by omega)).trans ((a3.mono (by omega)).trans a4)), w,
-        rd_same hF3 (by omega) w, hen⟩
+        rd_same hF3 (by omega) w, hen, ?_⟩
+      change m4.rd64 (slot fp (BitVec.ofNat 64 (FB + (D.params f).length + 1))) = some 1
+      rw [← hlo0]
+      dsimp only [m4]
+      rw [rd_other hF3.room (by omega) (by omega) (by omega)]
+      simpa only [hb1] using hb
 
 /-- `ret e` in the frame below the world: its code writes only slots below `Ks`, so the world stays. -/
 theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W} {σ0 : World D}
@@ -269,5 +274,58 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp c
     obtain ⟨m', s, a, hw⟩ := h0
     exact ⟨m', s, agreeW_of (Agree.widen a hks), hw,
       weltAt_stab hW.lay (by have := hW.lo; omega) m m' hWa (a.mono (Nat.zero_le _))⟩
+
+/-- Reason returns bypass the normal postcondition and preserve the world and frame header. -/
+theorem retWhy_ok {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {ρ0 : Env D (D.params f)} {Γ : Ctx} {m : Runner.Mem} {pc : Runner.W}
+    {σ : World D} {ρ : Env D Γ} (r : Fin (D.gruende f))
+    (hlo0 : lo = FB + (D.params f).length) (hr : r.val < 2 ^ 31) (hK : lo + 2 ≤ Ks)
+    (hp : PreS L m pc fp K (frei Γ) (retWhyC lo r.val) ρ)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    RetWhy L f fp K rp cfp ⟨pc, fp⟩ m σ r := by
+  have hFB3 : FB = 3 := rfl
+  have hks := hW.ks
+  have hlo : 3 ≤ lo := by omega
+  have hs := hp.small
+  have hF := hp.frame
+  have hF0 := frameOK_sub hF hks
+  have hc : CodeAt m pc ([ci 1 2 r.val 0] ++ [ci 1 (lo + 1) 0 0, ci 21 0 0 0]) := hp.code
+  have s1 := const_to (j := 2) (k := r.val) (codeAt_left hc) hF (by omega) hs (lit32_nat hr)
+  let m1 := write m (slot fp (BitVec.ofNat 64 2)) 8 (BitVec.ofNat 64 r.val).toNat
+  have a1s : Agree fp 2 Ks m m1 := agree_write hF0.room (by omega) (by omega) _
+  have a1 := Agree.widen a1s hks
+  have hf1 := codeFar_tail (a := [ci 1 2 r.val 0]) hp.far
+  have hc1 := (codeAt_right hc).agree a1 hf1
+  have hF1 := hF.agree a1
+  have s2 := const_to (j := lo + 1) (k := 0) (codeAt_left (a := [ci 1 (lo + 1) 0 0]) hc1) hF1 (by omega) hs (by decide)
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (lo + 1))) 8 0
+  have a2s : Agree fp 2 Ks m1 m2 := agree_write hF0.room (by omega) (by omega) _
+  have a2 := Agree.widen a2s hks
+  have hf2 := codeFar_tail (a := [ci 1 (lo + 1) 0 0]) hf1
+  have hc2 := (codeAt_right (a := [ci 1 (lo + 1) 0 0]) hc1).agree a2 hf2
+  have hret := hc2 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hret
+  have h0 : m2.rd64 fp = some rp := by
+    rw [← slot_zero fp]
+    dsimp only [m2, m1]
+    rw [rd_other hF.room (by omega) (by omega) (by omega),
+      rd_other hF.room (by omega) (by omega) (by omega)]
+    exact hk.r0
+  have h1 : m2.rd64 (fp + 8) = some cfp := by
+    rw [← slot_one fp]
+    dsimp only [m2, m1]
+    rw [rd_other hF.room (by omega) (by omega) (by omega),
+      rd_other hF.room (by omega) (by omega) (by omega)]
+    exact hk.r1
+  have sr := Star.one (run_step (t := ⟨_, fp⟩) hret (by decide) (run_ret (t := ⟨_, fp⟩) h0 h1))
+  refine ⟨m2, ?_, agreeW_of (a1.trans a2), ?_, ?_,
+    weltAt_stab hW.lay (by have := hW.lo; omega) m m2 hWa ((a1s.trans a2s).mono (Nat.zero_le _))⟩
+  · apply s1.trans (s2.trans sr)
+  · dsimp only [m2]
+    rw [rd_other hF.room (by omega) (by omega) (by omega)]
+    exact rd_same hF (by omega) (BitVec.ofNat 64 r.val)
+  · change m2.rd64 (slot fp (BitVec.ofNat 64 (FB + (D.params f).length + 1))) = some 0
+    rw [← hlo0]
+    exact rd_same hF1 (by omega) 0
 
 end Gabbro.Stage0.Senke

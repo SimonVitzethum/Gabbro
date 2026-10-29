@@ -7,9 +7,10 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `retry` (finite expansion `retryC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
-  number is an upper bound of the slots the code writes.
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallElse`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`,
+  `leave` and `next`; the latter two retain the enclosing loop targets.
 -/
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp
@@ -58,18 +59,35 @@ def indTop (n F tp ta : Nat) : Nat := max tp (max ta (F + FB + (D.sigNr n).param
 
 def lowInd (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
     (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) : Option (List II × Nat) := do
-  let cp ← lowE L p (frei Γ)
-  let ca ← lowA L args (frei Γ + FB)
-  pure (indC (D := D) n (frei Γ) cp.1 ca.1, indTop (D := D) n (frei Γ) cp.2 ca.2)
+  if (D.sigNr n).gruende = 0 then do
+    let cp ← lowE L p (frei Γ)
+    let ca ← lowA L args (frei Γ + FB)
+    pure (indC (D := D) n (frei Γ) cp.1 ca.1, indTop (D := D) n (frei Γ) cp.2 ca.2)
+  else none
 
 def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
   | _, .empty, d => some ([], d + 1)
   | _, .val e, d => lowE L e d
 
+/-- A call binds either word into the same slot. Zero status takes the reason arm;
+    normal fallthrough skips that arm after the success continuation. -/
+def elseC (flag s : Nat) (cc cr ce : List II) : List II :=
+  cc ++ [ci 2 s (s + 2) 0] ++ [ci 19 flag (16 * (cr.length + 2)) 0] ++
+    cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce
+
+def elseTop (f : D.Fn) (s ta tr te : Nat) : Nat :=
+  max (callTop f s ta) (max (s + FB + (D.params f).length + 2) (max tr te))
+
 /-- `ret`: the result from slot `r` into slot `q` (`FB + np`, the slot of `ensures`' result variable), the
-    `ensures` code `ens`, the check, slot 2, back. -/
+    `ensures` code `ens`, the check, slot 2, back. The successful ensures word
+    in `q + 1` is the normal return flag and is preserved by the return tail. -/
 def retC (q r : Nat) (ens : List II) : List II :=
   [ci 2 q r 0] ++ ens ++ [ci 19 ((q + 1 : Nat) : Int) 48 0, ci 2 2 q 0, ci 21 0 0 0] ++ stopC 102 (q + 1)
+
+/-- A reason bypasses ensures, as in G. Slot 2 carries the ordinal; the ensures
+    result slot carries zero, distinguishing it from every successful normal return. -/
+def retWhyC (q r : Nat) : List II :=
+  [ci 1 2 r 0, ci 1 (q + 1) 0 0, ci 21 0 0 0]
 
 def retTop (q : Nat) : Nat := q + 1 + 8
 
@@ -125,6 +143,10 @@ def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
   ce ++ (engTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
     [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
 
+/-- Compare a reason's entire word, preserving its slot for subsequent arms. -/
+def whyTestC (s k : Nat) : List II :=
+  [ci 2 (s + 1) s 0, ci 1 (s + 2) k 0, ci 14 (s + 1) (s + 1) (s + 2)]
+
 mutual
 def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
@@ -156,9 +178,17 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
       let ca ← lowTags A L lo ens pr ex arms 0
       pure (cv.1 ++ ca.1, max cv.2 ca.2)
     else none
+  | _, Γ, _, _, .onWhy (n := n) r arms =>
+    if n < 2 ^ 31 then do
+      let cv ← lowE L r (frei Γ)
+      let ca ← lowGrund A L lo ens pr ex arms 0
+      pure (cv.1 ++ ca.1, max cv.2 ca.2)
+    else none
   | _, Γ, _, _, .call f args _ _ => do
     let ca ← lowA L args (frei Γ + FB)
     pure (callC A f (frei Γ) ca.1, callTop f (frei Γ) ca.2)
+  | _, Γ, _, _, .retWhy r _ =>
+    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max (frei Γ) (retTop lo)) else none
   | _, Γ, _, _, .ret e _ => do
     let ce ← lowErg L e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
@@ -238,6 +268,12 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ce ← lowE L e (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
+  | _, Γ, _, _, .bindCallElse f args _ _ _ err rest => do
+    let ca ← lowA L args (frei Γ + FB)
+    let ce ← lowEnd A L lo ens pr ex err
+    let cr ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (frei Γ + FB + (D.params f).length + 1) (frei Γ) (callC A f (frei Γ) ca.1) cr.1 ce.1,
+      elseTop f (frei Γ) ca.2 cr.2 ce.2)
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest
@@ -308,8 +344,25 @@ def lowTags (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr
         max (frei Γ + 3) (max cb.2 cr.2))
     else none
 
+/-- Reason dispatch uses full word comparisons in declaration order. -/
+def lowGrund (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
+    GrundArms D V l Γ Λ Λ' n → Nat → Option (List II × Nat)
+  | _, Γ, _, _, _, .nil, _ => some ([], frei Γ + 3)
+  | _, Γ, _, _, _, .cons b rest, k => if k < 2 ^ 31 then do
+      let cr ← lowGrund A L lo ens pr ex rest (k + 1)
+      let cb ← lowB A L lo ens pr (exPlus ex (cr.1.length + 1)) b
+      pure (whyTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * (cb.1.length + 2)) 0] ++
+        cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
+        max (frei Γ + 3) (max cb.2 cr.2))
+    else none
+
 def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (List II × Nat)
+  | _, Γ, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
+  | _, Γ, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
+  | _, Γ, _, .retWhy r _ =>
+    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max (frei Γ) (retTop lo)) else none
   | _, Γ, _, .ret e _ => do
     let ce ← lowErg L e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
@@ -321,6 +374,12 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ce ← lowE L e (frei Γ)
     let cr ← lowEnd A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
+  | _, Γ, _, .bindCallElse f args _ _ _ err rest => do
+    let ca ← lowA L args (frei Γ + FB)
+    let ce ← lowEnd A L lo ens pr ex err
+    let cr ← lowEnd A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (frei Γ + FB + (D.params f).length + 1) (frei Γ) (callC A f (frei Γ) ca.1) cr.1 ce.1,
+      elseTop f (frei Γ) ca.2 cr.2 ce.2)
   | _, Γ, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowEnd A L lo ens pr ex rest

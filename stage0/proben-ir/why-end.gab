@@ -1,0 +1,28 @@
+// G bypasses ensures on a reason return, including an end-block return.
+module ir_why_end {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+    Third = 3 "third reason"
+    exhaustive
+}
+impl fn fail() -> u32 in 0 .. 42 or Fault
+    effects { pure }
+    ensures false
+{
+    return Fault::Third;
+}
+impl fn main() -> u32 in 0 .. 42
+    effects { pure }
+{
+    let value = fail() else (reason) {
+        match reason {
+            First => { return 1; }
+            Second => { return 2; }
+            Third => { return 42; }
+        }
+        return 0;
+    }
+    return value;
+}
+}

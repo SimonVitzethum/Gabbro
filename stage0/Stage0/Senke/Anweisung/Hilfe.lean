@@ -12,6 +12,23 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
+/-- Write an immediate into any frame slot, including the return slots below the environment. -/
+theorem const_to {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : Int}
+    (hc : CodeAt m pc [ci 1 j k 0]) (hF : FrameOK m fp K) (hj : j < K)
+    (hK : K < 2 ^ 31) (hk : lit32 k = true) :
+    Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
+      (write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) := by
+  have hi := hc 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  change Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [ci 1 j k 0].length), fp⟩ _
+  refine star_ins hc (by simp [ci]) ?_
+  simp only [op]
+  refine f2_run (t := ⟨pc, fp⟩) hi ?_
+  simp only [ret1]
+  refine f1_run (t := ⟨pc, fp⟩) hi ?_
+  rw [sx_lit hk, sx_nat (by omega)]
+  exact run_wr64 (wr64_some (hF.wr j hj))
+
 /-- `mov j s`: slot `j` gets the word of slot `s`. -/
 theorem mov_to {m : Runner.Mem} {pc fp : Runner.W} {K j s : Nat} {w : Runner.W}
     (hc : CodeAt m pc [ci 2 j s 0]) (hF : FrameOK m fp K) (hj : j < K) (hs : s < K) (hK : K < 2 ^ 31)

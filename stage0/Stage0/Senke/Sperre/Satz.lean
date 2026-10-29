@@ -228,7 +228,7 @@ theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → E
     · rw [show (16 + ex.2 : Int) = ex.2 + 16 * ((1 : Nat) : Int) by push_cast; omega,
         tgt_eq (a := 16 * (137 + cb.length)) (b := 16 * (cb.length + 138)) (by omega)]
   | zurueck σ' v => simp [istZ] at hZ
-  | why σ' r => exact ih.elim
+  | why σ' r => simp [istZ] at hZ
   | logik e => exact Stops.prefix s1' ih
   | hardware e => exact Stops.prefix s1' ih
 

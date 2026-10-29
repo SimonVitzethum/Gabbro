@@ -128,6 +128,8 @@ structure BildLage (P : Programm D) (fs : List D.Fn) (pos : D.Fn → Nat) (main 
   hpos : ∀ g, fs[pos g]? = some g
   hpar : (D.params main).isEmpty = true
   hrpar : roots.all (fun f => (D.params f).isEmpty) = true
+  hwhy : D.gruende main = 0
+  hrwhy : roots.all (fun f => decide (D.gruende f = 0)) = true
   hfit : fp0 + 8 * K < 2 ^ 31
   hroom : FB + 2 * maxTop cs ≤ Ks
   hex : exitSlot + 8 ≤ Ks
@@ -271,7 +273,7 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
     ⟨(c2 g).1.agree a1 (codeFar_nat' (c2 g).2 (by omega)), codeFar_nat' (c2 g).2 (by omega)⟩
   have hst := start_ok (Y := Yb) (P := P) (O := O) (passes := passes) (f := main) (e := 231) (keep := true)
     (pc := codeBase + 16 * (3 * roots.length)) (fpI := fp0) (m := m1) h.hfa c1
-    (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) h.hpar hroom hex
+    (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) h.hpar h.hwhy hroom hex
     (maxTop_pos cs) h.hdepth (by decide) (by omega) hcM1 (by simp only [startLen]; omega)
     (hF0.agree a1) hPC hW0 σ ρ (weltAt_stab hW0.lay hW0.top m m1 hWa (a1.mono (Nat.zero_le _)))
     ((by simpa using h.sync hz (j := 0) (Nat.zero_le _) : SyncOK m Yb (BitVec.ofNat 64 fp0) Ks).agree a1
@@ -328,7 +330,7 @@ theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : 
   have hPC : PCode m A (fun g => ((cs[pos g]?).map (·.1)).getD []) (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) Ks :=
     fun g => ⟨(c2 g).1, codeFar_nat' (by have := (c2 g).2; dsimp only at this ⊢; omega) (by omega)⟩
   have hst := start_ok (Y := Yb) (P := P) (O := O) (passes := passes) (f := roots[j]) (e := 60) (keep := false)
-    (m := m) h.hfa c1 (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) hrp h.hroom h.hex
+    (m := m) h.hfa c1 (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) hrp (by have := List.all_eq_true.mp h.hrwhy roots[j] (List.getElem_mem hj); simpa using this) h.hroom h.hex
     (maxTop_pos cs) h.hdepth (by decide) (by omega) hcR (by simp only [startLen]; omega)
     hF hPC (h.win (by omega)) σ ρ hWa (h.sync hz (by omega))
   generalize rufAt P O passes n roots[j] σ ρ = o at hst ⊢
@@ -360,9 +362,9 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
       · next hg =>
         simp only [Except.ok.injEq] at hb
         subst hb
-        obtain ⟨⟨hpar, hrpar, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hYsye⟩, hfp⟩ := hg
+        obtain ⟨⟨hpar, hrpar, hwhy, hrwhy, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hYsye⟩, hfp⟩ := hg
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
-        refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens], hcl, hcs, hfs, hpar, hrpar,
+        refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, rfl, hfp, fun g => by rw [hlens], hcl, hcs, hfs, hpar, hrpar, hwhy, hrwhy,
           hfit, hroomK, hexK, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit),
           ⟨(hYdis _).inj, (hYdis _).grid⟩, rfl, rfl, hYsync _, hYsye, hops⟩, rfl, rfl⟩
       · exfalso

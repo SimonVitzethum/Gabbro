@@ -84,7 +84,7 @@ theorem codeFar_nat' {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2
 theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT : TorOK Y O] [hV : SichtOK O] {A : D.Fn → Nat}
     {C : D.Fn → List II} {L Ks n : Nat} {f : D.Fn} {e : Nat} {keep : Bool}
     (hLA : Y.fa = A) (hC : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L) (hAlt : ∀ g, A g < 2 ^ 31)
-    (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) (hpar : (D.params f).isEmpty = true)
+    (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) (hpar : (D.params f).isEmpty = true) (hwhy : D.gruende f = 0)
     (hroomK : FB + 2 * L ≤ Ks) (hexK : exitSlot + 8 ≤ Ks) (hL1 : 1 ≤ L) (hn : n = depthOf Ks L) (he : e < 2 ^ 31)
     {pc fpI : Nat} {m : Runner.Mem} (hfit : fpI + 8 * Ks < 2 ^ 31)
     (hc : CodeAt m (BitVec.ofNat 64 pc) (startC A f n e keep)) (hpc : pc + 16 * startLen ≤ fpI)
@@ -143,7 +143,7 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
   generalize rufAt P O passes n f σ ρ = o at hcall ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨m2, s2, a2, ⟨w, hw, hew⟩, _⟩ := hcall
+    obtain ⟨m2, s2, a2, ⟨w, hw, hew, _⟩, _⟩ := hcall
     have hfE := codeFar_tail (a := callTail A f FB) hfC
     have hexC := codeAt_agreeWIn hW (a2.mono (Nat.zero_le _)) (codeAt_right (a := callTail A f FB) hc1) hfE
     have hF2 := frameOK_agreeW hF1 a2
@@ -158,7 +158,7 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
       simp only [hk, Bool.true_and, Option.isSome_iff_ne_none, ne_eq, Decidable.not_not] at hs
       exact encErg_none' hs v _
   | logik l => exact Stops.prefix s1 hcall
-  | why _ _ => exact hcall.elim
+  | why _ r => exact (keinGrund hwhy r : False).elim
   | hardware h => exact Stops.prefix s1 hcall
 
 /-! ## `main` starts the roots -/

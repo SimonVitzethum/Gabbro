@@ -11,9 +11,9 @@ open Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}
 
-/-- The outcome is G's `zurueck`. -/
+/-- The outcome leaves the function, normally or with a reason. -/
 def istZ {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Bool
-  | .zurueck .. => true
+  | .zurueck .. | .why .. => true
   | _ => false
 
 theorem istZ_schrumpf {l : Bool} {Γ : Ctx} {τ : Ty} (o : Ausgang V l (τ :: Γ)) : istZ o.schrumpf = istZ o := by
@@ -44,7 +44,7 @@ theorem trav_istZ {l : Bool} {Γ : Ctx} {τ : Ty} {schritt : World D → Env D (
       · exact trav_istZ h ks _ _
       · split <;> rfl
       · next heq => rw [heq] at hk; cases hk
-      · rfl
+      · next heq => rw [heq] at hk; cases hk
       · rfl
       · rfl
 

@@ -1,0 +1,38 @@
+// All three ordinals are dispatched; external reason codes differ from their ordinals.
+module ir_why_dispatch {
+reason Fault {
+    First = 7 "first reason"
+    Second = 19 "second reason"
+    Third = 201 "third reason"
+    exhaustive
+}
+impl fn choose(x : u32 in 0 .. 2) -> u32 in 0 .. 19 or Fault
+    effects { pure }
+{
+    if x == 0 { return Fault::First; }
+    if x == 1 { return Fault::Second; }
+    return Fault::Third;
+}
+impl fn decode(x : u32 in 0 .. 2) -> u32 in 0 .. 19
+    effects { pure }
+{
+    let value = choose(x) else (reason) {
+        let mut answer : u32 in 0 .. 19 = 0;
+        match reason {
+            First => { answer = 10; }
+            Second => { answer = 13; }
+            Third => { answer = 19; }
+        }
+        return answer;
+    }
+    return value;
+}
+impl fn main() -> u32 in 0 .. 57
+    effects { pure }
+{
+    let a = decode(0);
+    let b = decode(1);
+    let c = decode(2);
+    return a + b + c;
+}
+}

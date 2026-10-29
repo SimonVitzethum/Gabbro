@@ -247,7 +247,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
       | hardware e =>
         simp only [Sim] at hb ⊢
         exact Stops.prefix pre hb
-      | why => exact hb.elim
+      | why => exact RetWhy.prefix pre (agreeW_of (A12.mono (by omega))) hb
 
 /-- **`traverse`**: the code of `travC` runs G's `traverseLauf` over all indices. -/
 theorem trav_ok (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1) = some ci')
