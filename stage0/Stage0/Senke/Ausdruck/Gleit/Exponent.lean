@@ -29,6 +29,43 @@ theorem floatExponentWordAux_prefix (a : Runner.W) (bound n : Nat)
     · simp [hb, Runner.IR.bool, Nat.min_eq_left (by omega : n ≤ bound),
         Nat.min_eq_left (by omega : n + 1 ≤ bound), BitVec.ofNat_add]
 
+theorem floatExponentWordAux_bitlen (a : Runner.W) (ha : a.toNat ≠ 0) :
+    floatExponentWordAux a 63 =
+      BitVec.ofNat 64 (Gleitkomma.bitlen a.toNat - 1) := by
+  have hu := Gleitkomma.bitlen_obere a.toNat
+  have hl := Gleitkomma.bitlen_untere a.toNat ha
+  have hb : 0 < Gleitkomma.bitlen a.toNat := by
+    by_cases h : Gleitkomma.bitlen a.toNat = 0
+    · simp [h] at hu; omega
+    · omega
+  have low : 2 ^ (Gleitkomma.bitlen a.toNat - 1) ≤ a.toNat := by
+    have he : Gleitkomma.bitlen a.toNat = (Gleitkomma.bitlen a.toNat - 1) + 1 := by omega
+    rw [he, Nat.pow_succ] at hl
+    omega
+  have bound : Gleitkomma.bitlen a.toNat - 1 ≤ 63 := by
+    have ht := a.isLt
+    have hp : 2 ^ (Gleitkomma.bitlen a.toNat - 1) < 2 ^ 64 := by omega
+    have := (Nat.pow_lt_pow_iff_right (by decide : 1 < 2)).mp hp
+    omega
+  rw [floatExponentWordAux_prefix a (Gleitkomma.bitlen a.toNat - 1) 63,
+    Nat.min_eq_right bound]
+  intro k hk hk63
+  have hz : (a >>> (k % 64) = 0) ↔ Gleitkomma.bitlen a.toNat - 1 < k := by
+    rw [BitVec.toNat_eq]
+    simp only [BitVec.toNat_ushiftRight, BitVec.toNat_zero,
+      Nat.mod_eq_of_lt (by omega : k < 64), Nat.shiftRight_eq_div_pow]
+    change a.toNat / 2 ^ k = 0 ↔ Gleitkomma.bitlen a.toNat - 1 < k
+    rw [Nat.div_eq_zero_iff, or_iff_right (Nat.ne_of_gt (Nat.two_pow_pos k))]
+    constructor
+    · intro h
+      have hp : 2 ^ (Gleitkomma.bitlen a.toNat - 1) < 2 ^ k := by omega
+      exact (Nat.pow_lt_pow_iff_right (by decide : 1 < 2)).mp hp
+    · intro h
+      have hp : 2 ^ Gleitkomma.bitlen a.toNat ≤ 2 ^ k :=
+        (Nat.pow_le_pow_iff_right (by decide : 1 < 2)).mpr (by omega)
+      omega
+  exact Bool.eq_iff_iff.mpr (by simpa using hz)
+
 def floatExponentAuxL (a : Nat → Option (List II × Nat)) :
     Nat → Nat → Option (List II × Nat)
   | 0, d => some ([ci 1 d 0 0], d + 1)
