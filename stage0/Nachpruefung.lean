@@ -74,3 +74,11 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.quant_restore
+#print axioms Gabbro.Stage0.Senke.quantBind_ok
+#print axioms Gabbro.Stage0.Senke.quantC_ok
+#print axioms Gabbro.Stage0.Senke.quantL_ok
+#print axioms Gabbro.Stage0.Senke.reachEqL_ok
+#print axioms Gabbro.Stage0.Senke.reachL_ok
+#print axioms Gabbro.Stage0.Senke.reachesL_ok
