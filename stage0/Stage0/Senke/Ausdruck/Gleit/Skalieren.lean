@@ -1400,6 +1400,56 @@ theorem floatOfIntContinuationL_parts (F : Gleitkomma.Format) (input : Nat)
   cases he
   exact ⟨assembly, ha, rfl⟩
 
+set_option maxRecDepth 4096 in
+/-- The continuation really starts with the input-slot load. -/
+theorem floatOfIntContinuationL_first (F : Gleitkomma.Format) (input : Nat)
+    {code : List II} {top : Nat}
+    (h : floatOfIntContinuationL F input = some (code, top)) :
+    ∃ tail, code = ci 2 (input + 1) input 0 :: tail := by
+  obtain ⟨assembly, ha, rfl⟩ := floatOfIntContinuationL_parts F input h
+  simp only [floatOfIntAssemblyL, wennL, wordK, floatMagnitudeL, wordL,
+    bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at ha
+  obtain ⟨cc, hc, ca, ha, cb, hb, he⟩ := ha
+  obtain ⟨a, ha, b, hb, hab⟩ := hc
+  obtain ⟨a', ha', b', hb', hab'⟩ := ha
+  cases ha'
+  cases hab'
+  cases hab
+  split at he
+  · cases he
+    simp only [wennC, bin2, List.cons_append, List.nil_append, List.append_assoc]
+    exact ⟨_, rfl⟩
+  · cases he
+
+/-- Execute the input load with an explicit memory premise. The result includes
+    the next PC and preservation outside the destination frame suffix. -/
+theorem floatOfIntContinuationL_load {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K input : Nat} {v : Runner.W}
+    (h : Pre L m pc fp K (input + 1) [ci 2 (input + 1) input 0] ρ W reserved)
+    (hk : input + 1 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧
+      Agree fp (input + 1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some v := by
+  obtain ⟨m', hs, hf, w, hw, rfl⟩ := mov_ok h (by omega) hk hr
+  exact ⟨m', by simpa using hs, hf, hw⟩
+
+/-- Execute the first instruction of the exact emitted continuation. -/
+theorem floatOfIntContinuationL_first_step (F : Gleitkomma.Format)
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
+    {code : List II} {v : Runner.W}
+    (hc : floatOfIntContinuationL F input = some (code, top))
+    (h : Pre L m pc fp K (input + 1) code ρ W reserved)
+    (hk : input + 1 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧
+      Agree fp (input + 1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some v := by
+  obtain ⟨tail, rfl⟩ := floatOfIntContinuationL_first F input hc
+  exact floatOfIntContinuationL_load (Pre.left (a := [_]) (b := tail) h) hk hr
+
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
     This helper is deliberately not accepted by `lowE` before its simulation proof. -/
