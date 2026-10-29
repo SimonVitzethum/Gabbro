@@ -38,18 +38,18 @@ theorem kern_agree_puf {m m' : Runner.Mem} {fp : Runner.W} {B Wn Ks : Nat} (hr :
   · rw [slot_toNat (K := Ks) hr (by omega)] at h2; omega
 
 set_option maxHeartbeats 1600000 in
-theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax}
+theorem torPuf_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax}
     {args : Args D Γ Λ (D.aparams a)} {s : Nat} {b : TorB} (hb : L.tor a = some b)
     (hg : torGut b (D.aparams a).length = true) {j nt : Nat} {rw : Bool} {t : D.Tab} {f : D.Feld t}
     (hpp : ptrParam (D.aparams a) = some (j, nt, rw)) (htn : D.tabNr nt = some t) (hbf : L.byte t = some f)
     (hτ : D.typ t f = .int 0 255) (hc0 : 0 ≤ D.count t) (hcount : L.count t = D.count t) {ca : List II} {ta : Nat}
-    (hca : lowR L args (s + 1) = some (ca, ta)) {c B Wn : Nat} (hc : c = (D.count t).toNat)
+    (hca : lowR L args (s + 1) reserved = some (ca, ta)) {c B Wn : Nat} (hc : c = (D.count t).toNat)
     (hB : B = max ta (s + 7)) (hWn : Wn = pufW c) {P U : List II}
     (hP : P = packI L t f c B (B + Wn) (B + Wn + 1) Wn) (hU : U = if rw then unpackK L t f B (B + Wn + 1) c else [])
     {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (hKs : B + Wn + 3 ≤ Ks) (hW : WIn L fp Ks K)
     (hp : PreS L m pc fp K s (((((ca ++ P) ++ [ci 17 ((s + 1 + j : Nat) : Int) (B : Int) 0]) ++
-      zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length)) ++ [ci 1 s b.nr 0, ci 23 s s 0]) ++ U) ρ)
+      zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length)) ++ [ci 1 s b.nr 0, ci 23 s s 0]) ++ U) ρ reserved)
     (hWa : WeltAt m L σ) :
     ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2 +
         U.length)), fp⟩ m' ∧ AgreeW L fp s K m m' ∧
@@ -76,7 +76,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
   simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil, zeroC_len] at hfar
   -- the arguments
   have hpU := hp.up (d' := s + 1) (by omega)
-  have hq : PreS L m pc fp K (s + 1) ca ρ := hpU.left.left.left.left.left
+  have hq : PreS L m pc fp K (s + 1) ca ρ reserved := hpU.left.left.left.left.left
   have hpw := PreS.welt hq hks hWa hl (by omega)
   obtain ⟨m1, s1, a1, hA1⟩ := lowR_ok σ σ (fun _ h => h) args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
   have hW1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1.mono (Nat.zero_le _))
@@ -96,7 +96,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
   -- the packing
   have a1K := Agree.widen a1 hks
   have hnP := (hpU.left.left.left.left).next' a1K (by have := hp.ctx; omega) (by omega) (by omega)
-  have hpP : Pre L m1 (pc + BitVec.ofNat 64 (16 * ca.length)) fp Ks (B + Wn + 1) P ρ Wc :=
+  have hpP : Pre L m1 (pc + BitVec.ofNat 64 (16 * ca.length)) fp Ks (B + Wn + 1) P ρ Wc reserved :=
     ⟨by have := hp.ctx; omega, by omega, frameOK_sub hnP.frame hks, hnP.code, codeFar_sub2 hnP.far hks, hnP.env,
      hWc1, hWcs⟩
   rw [hP] at hpP
@@ -243,7 +243,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
       have := hn7.far; rwa [show ca.length + P.length + 1 + (6 - (D.aparams a).length) + (1 + 1) =
         ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2 by omega] at this
     have hpre7 : PreS L m7 (pc + BitVec.ofNat 64 (16 * (ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2)))
-        fp Ks (B + Wn + 1) U ρ :=
+        fp Ks (B + Wn + 1) U ρ reserved :=
       ⟨by have := hp.ctx; omega, by omega, frameOK_sub hF7 hks,
        by have := hn7.code; rwa [show ca.length + P.length + 1 + (6 - (D.aparams a).length) + (1 + 1) =
         ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2 by omega] at this,
