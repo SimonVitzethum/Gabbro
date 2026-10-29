@@ -36,4 +36,34 @@ theorem float_raw_mag {a : GFloat} (ha : wf f64 a) :
     Nat.shiftLeft_eq, Nat.shiftRight_eq_div_pow, float_bits]
   cases a.sign <;> simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_add] <;> omega
 
+theorem float_key_algebra (n : Nat) (s : Bool) :
+    BitVec.ofNat 64 n * (1 - 2 * Runner.IR.bool s) =
+      BitVec.ofInt 64 (if s then -(n : Int) else n) := by
+  cases s
+  · have hc : (1 - 2 * Runner.IR.bool false : Runner.W) = 1 := by decide
+    rw [hc]
+    exact (BitVec.mul_one _).trans (BitVec.ofInt_natCast _ _).symm
+  · have hc : (1 - 2 * Runner.IR.bool true : Runner.W) = -(1#64) := by decide
+    rw [hc]
+    calc
+      _ = -(BitVec.ofNat 64 n * (1#64)) := BitVec.mul_neg _ _
+      _ = -(BitVec.ofNat 64 n) := congrArg Neg.neg (BitVec.mul_one _)
+      _ = BitVec.ofInt 64 (if true then -(n : Int) else n) := by
+        rw [show (if true then -(n : Int) else n) = -(n : Int) from rfl,
+          BitVec.ofInt_neg, BitVec.ofInt_natCast]
+
+/-- Removing the sign bit and applying its sign yields a signed, zero-normalised key. -/
+theorem float_key_word {a : GFloat} (ha : wf f64 a) :
+    ((BitVec.ofNat 64 (zuBits f64 a) <<< 1) >>> 1) *
+      (1 - 2 * Runner.IR.bool ((BitVec.ofNat 64 (zuBits f64 a)).slt 0)) =
+        BitVec.ofInt 64 (floatKey a) := by
+  rw [float_raw_mag ha, float_raw_sign ha]
+  exact float_key_algebra _ _
+
+theorem float_key_range {a : GFloat} (ha : wf f64 a) :
+    -2 ^ 63 ≤ floatKey a ∧ floatKey a < 2 ^ 63 := by
+  have hm := floatMag_lt ha
+  unfold floatKey
+  cases a.sign <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
+
 end Gabbro.Stage0.Senke
