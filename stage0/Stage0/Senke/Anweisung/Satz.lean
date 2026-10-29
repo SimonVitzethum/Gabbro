@@ -16,7 +16,7 @@ import Stage0.Senke.Anweisung.Bytes.Put
 
 import Stage0.Senke.Anweisung.Faelle.Schreiben
 import Stage0.Senke.Anweisung.Faelle.Speicher
-import Stage0.Senke.Anweisung.Faelle.Traversal
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
 import Stage0.Senke.Anweisung.Faelle.Bloecke
 import Stage0.Senke.Anweisung.Faelle.BlockRuf
 import Stage0.Senke.Anweisung.Faelle.Ende
