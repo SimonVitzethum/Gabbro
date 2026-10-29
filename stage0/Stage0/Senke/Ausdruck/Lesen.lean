@@ -16,6 +16,14 @@ variable [Kern]
 
 variable {D : Deklaration}
 
+theorem enc_int_cast {τ : Ty} {a b : Int} (h : τ = .int a b) (v : Wert D τ) (w : Runner.W) :
+    Enc τ v w ↔ w = BitVec.ofInt 64 (h ▸ v : Wert D (.int a b)).n := by
+  cases h; rfl
+
+theorem enc_int_back {τ : Ty} {a b : Int} (h : τ = .int a b) (v : Wert D (.int a b)) (w : Runner.W) :
+    Enc τ (h ▸ v) w ↔ w = BitVec.ofInt 64 v.n := by
+  cases h; rfl
+
 /-- Code in two parts: what the first leaves in slot `d` is what the second starts from. -/
 theorem ok_seq {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {a b : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {Pa Pb : Runner.W → Prop} (h : Pre m pc fp K d (a ++ b) ρ W)

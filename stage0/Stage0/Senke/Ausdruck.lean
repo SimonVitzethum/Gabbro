@@ -121,6 +121,17 @@ def packSum (d : Nat) (lo : Int) (tag : Nat) (ce : List II × Nat) : List II × 
   bin2 3 d (bin2 5 d (bin2 4 d ce ([ci 1 (d + 1) lo 0], d + 2))
     ([ci 1 (d + 1) 256 0], d + 2)) ([ci 1 (d + 1) tag 0], d + 2)
 
+/-- Read a little-endian byte span, one aligned world word per byte. The index code is
+    repeated without changing the world. `j` is the byte offset into the span. -/
+def readBytesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
+    Nat → Nat → Nat → Option (List II × Nat)
+  | _, 0, d => some ([ci 1 d 0 0], d + 1)
+  | j, n + 1, d => do
+    let ci' ← idx d
+    let head ← slotC L t f d (bin2 3 d ci' ([ci 1 (d + 1) j 0], d + 2))
+    let tail ← readBytesL L t f idx (j + 1) n (d + 1)
+    pure (bin2 3 d head (bin2 5 (d + 1) tail ([ci 1 (d + 2) 256 0], d + 3)))
+
 mutual
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
@@ -187,6 +198,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L e d) (lowE L b d)
+  | _, _, .getBytes t f _ n i _ _ _, d =>
+    if n ≤ 8 then readBytesL L t f (lowE L i) 0 n d else none
+  | _, _, .refEq .., _ | _, _, .slotRef .., _ => none
   | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none
 
