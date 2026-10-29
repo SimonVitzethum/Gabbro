@@ -87,8 +87,8 @@ theorem lowInd_ok {A : D.Fn → Nat} {C : D.Fn → List II}
 
 /-- Every indirect call reserves the callee header, arguments and target temporary. -/
 theorem lowInd_top {Λ : List (Res D)} {Γ : Ctx} {n : Nat} {p : Expr D Γ Λ (.fnptr n)}
-    {args : Args D Γ Λ (D.sigNr n).params} {c : List II} {top : Nat}
-    (h : lowInd L p args = some (c, top)) : frei Γ + FB + (D.sigNr n).params.length + 1 ≤ top := by
+    {args : Args D Γ Λ (D.sigNr n).params} {reserved : Nat} {c : List II} {top : Nat}
+    (h : lowInd L p args reserved = some (c, top)) : frei Γ reserved + FB + (D.sigNr n).params.length + 1 ≤ top := by
   simp only [lowInd] at h
   split at h
   rotate_left
@@ -106,14 +106,14 @@ theorem indStmt_ok {O : Orakel D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn �
     (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
     (hfit : RufPasst D (vertragVon D f) (D.sigNr n) Λ) (hr : (D.sigNr n).gruende = 0)
     {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp pc : Runner.W} {lo K Ks : Nat}
-    {pr : List Nat} {ex : Int × Int} {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (hc : lowInd L p args = some (c, top)) (ht : top + cap ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS L m pc fp K (frei Γ) c ρ) (hlo : lo ≤ frei Γ) (hu : Umf L A C dv m fp Ks K)
-    (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int} {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
+    (hc : lowInd L p args reserved = some (c, top)) (ht : top + cap ≤ Ks) (hW : WIn L fp Ks K)
+    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K)
+    (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (Stmt.callInd (l := l) p args hfit hr) σ ρ) := by
+      (execStmt O passes R (Stmt.callInd (l := l) p args hfit hr) σ ρ) reserved := by
   have hb := lowInd_top hc
   have hks := hW.ks
   have hi := lowInd_ok hS hA p args (σ.lese Λ (p.orte ++ args.orte)) (σ.lese Λ (p.orte ++ args.orte)) hc ht hp hu hW hWa
