@@ -1,0 +1,15 @@
+// IR retry probe: zero attempts still checks then overflows; expected exit 9.
+module ir_retry {
+assume tick "The environment permits the bounded attempt." falsifier probe_tick;
+syscall sched_yield()
+    abi linux arch x86_64 number 24
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    
+    retry attempt until false bounded 0 ops progress tick on_exceeded sched_yield {
+        return 41;
+    }
+    return 9;
+}
+}

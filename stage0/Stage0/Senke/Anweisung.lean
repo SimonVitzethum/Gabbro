@@ -7,7 +7,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `retry` (finite expansion `retryC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
   give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
@@ -16,6 +16,7 @@ import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
 import Stage0.Senke.Sperre.Code
 import Stage0.Senke.Anweisung.Bytes.Code
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
 
 namespace Gabbro.Stage0.Senke
 
@@ -206,6 +207,13 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
       let cb ← lowB A L lo ens (frei Γ :: pr) (48, 0) body
       travC (frei Γ) (D.count t) ci' cb
     else none
+  | _, Γ, _, _, .retry n bis body overflow => do
+    let cc ← lowE L bis (frei Γ)
+    let cu ← lowB A L lo ens pr ex overflow
+    retryC (frei Γ) cc cu (fun targets => lowB A L lo ens pr targets body) n
+  -- The simulation quantifies over every fuel, but lowering receives none. A finite stop or an
+  -- infinite backedge cannot implement both fuel zero (progress stop 111) and positive fuel.
+  | _, _, _, _, .forever .. => none
   | _, _, _, _, .breaking _ body => lowB A L lo ens pr ex body
   | _, Γ, _, _, .advances .. => some ([], frei Γ)
   | _, Γ, _, _, .retires .. => some ([], frei Γ)

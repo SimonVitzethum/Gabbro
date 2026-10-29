@@ -1,0 +1,15 @@
+// IR retry probe: success on the final allowed attempt; expected exit 13.
+module ir_retry {
+assume tick "The environment permits the bounded attempt." falsifier probe_tick;
+syscall sched_yield()
+    abi linux arch x86_64 number 24
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let mut done : bool = false;
+    retry attempt until done bounded 1 ops progress tick on_exceeded sched_yield {
+        done = true;
+    }
+    return 13;
+}
+}

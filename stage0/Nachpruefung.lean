@@ -114,3 +114,15 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_image_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.retryTest_ok
+#print axioms Gabbro.Stage0.Senke.retryC_ok
+#print axioms Gabbro.Stage0.Senke.retry_case
+#print axioms Gabbro.Stage0.Senke.forever_zero
+#print axioms Gabbro.Stage0.Senke.forever_one_false
+#print axioms Gabbro.Stage0.Senke.forever_refused
+#print axioms Gabbro.Stage0.Senke.RetryProbe.retry_case_zeuge
+#print axioms Gabbro.Stage0.Senke.LoopProbe.retry_overflow_zeuge
+#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_fuel_zeuge
+#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_body_zeuge
+#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_refused_zeuge
