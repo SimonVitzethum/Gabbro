@@ -57,6 +57,25 @@ def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Na
     some (wennC d cc.1 ca.1 cb.1, max cc.2 (max ca.2 cb.2))
   else none
 
+/-- Test whether the word in `d` lies outside the signed interval; the flag is in `d+1`. -/
+def engTest (d : Nat) (lo hi : Int) : List II :=
+  [ci 1 (d + 1) lo 0, ci 13 (d + 1) d (d + 1), ci 1 (d + 2) hi 0,
+   ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]
+
+/-- Evaluate once, test the interval and skip the fallback when the value already fits. -/
+def engC (d : Nat) (lo hi : Int) (ce cb : List II) : List II :=
+  ce ++ engTest d lo hi ++ [ci 19 (d + 1) ((16 * (cb.length + 1) : Nat) : Int) 0] ++ cb
+
+/-- Bounds must fit the signed literal fields; all compared values must fit a signed word. -/
+def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Option (List II × Nat) := do
+  if inW lo hi && lit32 lo' && lit32 hi' then
+    let ce ← ce
+    let cb ← cb
+    if 16 * (cb.1.length + 1) < 2 ^ 31 then
+      some (engC d lo' hi' ce.1 cb.1, max ce.2 (max cb.2 (d + 3)))
+    else none
+  else none
+
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
@@ -167,6 +186,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
+  | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L e d) (lowE L b d)
   | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none
 
