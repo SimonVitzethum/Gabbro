@@ -318,6 +318,8 @@ def lowGrund (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (p
 
 def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (List II × Nat)
+  | _, Γ, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
+  | _, Γ, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
   | _, Γ, _, .retWhy r _ =>
     if r.val < 2 ^ 31 then some (retWhyC lo r.val, max (frei Γ) (retTop lo)) else none
   | _, Γ, _, .ret e _ => do

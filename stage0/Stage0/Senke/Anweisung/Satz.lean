@@ -331,8 +331,12 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
   | _, Γ, Λ, .retWhy r hp0, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
     exact endWhy_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (r := r) (proof0 := hp0)
       c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  | _, _, _, .leave .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
-  | _, _, _, .next .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
+  | _, Γ, Λ, .leave hp0, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    exact endLeave_case hS hA hlo0 hens (proof0 := hp0)
+      c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
+  | _, Γ, Λ, .next hp0, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    exact endNext_case hS hA hlo0 hens (proof0 := hp0)
+      c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   | _, Γ, Λ, .bindCallElse g args he p0 p1 err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
     exact endCallElse_case hS hA hlo0 hens
       (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)

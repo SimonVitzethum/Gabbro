@@ -50,6 +50,42 @@ theorem next_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     exact jmp_reach hp.code hl hp.env hWa
   · cases h
 
+theorem endLeave_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+     {proof0 : _} :
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .leave proof0) := by
+  intro c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
+  simp only [lowEnd] at h
+  split at h
+  · next hl =>
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact jmp_reach hp.code hl hp.env hWa
+  · cases h
+
+theorem endNext_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+     {proof0 : _} :
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .next proof0) := by
+  intro c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
+  simp only [lowEnd] at h
+  split at h
+  · next hl =>
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact jmp_reach hp.code hl hp.env hWa
+  · cases h
+
 theorem axiomCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
