@@ -48,6 +48,18 @@ def callC (A : D.Fn → Nat) (f : D.Fn) (F : Nat) (ca : List II) : List II := ca
 
 def callTop (f : D.Fn) (F t : Nat) : Nat := max t (F + FB + (D.params f).length + 1)
 
+/-- The pointer is evaluated before the arguments, into the future callee's return-pc slot.
+    Argument evaluation and the depth calculation preserve it until the call loads its target. -/
+def indC (n F : Nat) (cp ca : List II) : List II := cp ++ (ca ++ callTailN (D.sigNr n).params.length 0 F true)
+
+def indTop (n F tp ta : Nat) : Nat := max tp (max ta (F + FB + (D.sigNr n).params.length + 1))
+
+def lowInd (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) : Option (List II × Nat) := do
+  let cp ← lowE L p (frei Γ)
+  let ca ← lowA L args (frei Γ + FB)
+  pure (indC (D := D) n (frei Γ) cp.1 ca.1, indTop (D := D) n (frei Γ) cp.2 ca.2)
+
 def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
   | _, .empty, d => some ([], d + 1)
   | _, .val e, d => lowE L e d
