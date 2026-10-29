@@ -118,6 +118,13 @@ theorem enc_byte {τ : Ty} (hτ : τ = .int 0 255) {v : Wert D τ} {w : Runner.W
   rw [BitVec.toNat_ofInt]
   omega
 
+/-- **The named assumption at `awaits`** (A10, the memory model): a publication an acquire read meets is visible --
+    the oracle never answers G's `sichtbarkeit` stop. -/
+class SichtOK (O : Orakel D) : Prop where
+  sicht : ∀ g σ, O.sichtbar g σ = true
+
+theorem sichtOK_zeuge (O : Orakel D) (h : ∀ g σ, O.sichtbar g σ = true) : SichtOK O := ⟨h⟩
+
 /-- **Witness** (the assumption is not empty): a kernel that may give any answer, and an oracle that leaves the
     world and answers 0, meet it for every layout. -/
 theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0)) :

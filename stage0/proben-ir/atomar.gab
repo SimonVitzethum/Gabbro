@@ -1,0 +1,45 @@
+// stage-0 IR probe: atomics -- two threads add 1000 each to `ZAEHLER` with `exchange` (a `cas` loop); the root
+// publishes its end, main `awaits` it and answers the count: 2000 mod 256 = 208
+module ir_probe {
+
+table runden count 1000 { slot { x : bool, } }
+table warten count 4000000 { slot { x : bool, } }
+
+type Stand = u16 in 0 .. 4000;
+
+atomic ZAEHLER : Stand relaxed;
+atomic FERTIG : bool release;
+
+impl fn neben()
+    effects  { reads runden.slots, reads ZAEHLER, writes ZAEHLER, writes FERTIG }
+    costs    <= 100000 ops
+{
+    traverse i over slots of runden by unvisited
+        touches reads runden.slots, reads ZAEHLER, writes ZAEHLER
+    {
+        let alt = ZAEHLER exchange update(v) { return (v + 1) % 4000; } publishes nothing;
+    }
+    FERTIG = true publishes nothing;
+}
+
+concurrent { neben };
+
+impl fn main() -> Stand
+    effects  { reads runden.slots, reads warten.slots, reads ZAEHLER, writes ZAEHLER, reads FERTIG }
+    costs    <= 100000000 ops
+{
+    traverse i over slots of runden by unvisited
+        touches reads runden.slots, reads ZAEHLER, writes ZAEHLER
+    {
+        let alt = ZAEHLER exchange update(v) { return (v + 1) % 4000; } publishes nothing;
+    }
+    traverse j over slots of warten by unvisited
+        touches reads warten.slots, reads FERTIG
+    {
+        let f = FERTIG awaits { };
+        if f { leave j; }
+    }
+    let r = ZAEHLER awaits { };
+    return r;
+}
+}

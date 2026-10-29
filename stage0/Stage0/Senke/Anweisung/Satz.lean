@@ -10,6 +10,7 @@ import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Anweisung.Schleife
 import Stage0.Senke.Anweisung.TorLauf
 import Stage0.Senke.Sperre.Satz
+import Stage0.Senke.Anweisung.Atomar
 
 namespace Gabbro.Stage0.Senke
 
@@ -26,7 +27,7 @@ theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e
   subst he; exact h
 
 mutual
-theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
@@ -175,7 +176,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     obtain ⟨rfl, rfl⟩ := hc
     simp only [execStmt, Sim]
     exact ret_ok hlo0 hens e he (by omega) m pc σ ρ hp hlo2 hk hW hWa
-  | _, Γ, Λ, _, .assignGlob g e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
+  | _, Γ, Λ, _, .assignGlob g e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr
+  | _, Γ, Λ, _, .publish g e _ _ _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
     simp only [lowS] at h
     split at h
     · next hl =>
@@ -309,11 +311,10 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
       keeps_of_agreeW hW a1 hpr (by omega)⟩
   | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .publish .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .retWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .assignSlotRef .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
 
-theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
@@ -454,8 +455,36 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
   | _, _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .awaits .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .exchange .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .awaits g _ _ _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowB] at h
+    split at h
+    · next hl =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cr, tr⟩, hr, hc⟩ := h
+      simp only [Prod.mk.injEq] at hc
+      obtain ⟨rfl, rfl⟩ := hc
+      simp only [List.length_append] at hs
+      exact awaits_ok hl (by omega) hW hlo hlo0 hlo2 hpr (fun m' σ' ρ' hp' hu' hk' hw' =>
+        lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
+          (by omega) hW m' _ σ' ρ' hp' hlo (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu' hk' hw'
+          (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)) hp hu hk hWa
+    · cases h
+  | _, Γ, Λ, _, .exchange g neu _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowB] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure] at h
+      obtain ⟨⟨cn, tn⟩, hn, ⟨cr, tr⟩, hr, h⟩ := h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hlen := exC_len (frei Γ) (L.ga g) cn
+        simp only [List.length_append, hlen] at hs
+        exact exch_ok hn (by omega) (by omega) hW hlo hlo0 hlo2 hpr (fun m' σ' ρ' hp' hu' hk' hw' =>
+          lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
+            (by omega) hW m' _ σ' ρ' hp' hlo (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu' hk' hw'
+            (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)) hp hu hk hWa
+      · cases h
+    · cases h
   | _, _, _, _, .narrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .check .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .float .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h

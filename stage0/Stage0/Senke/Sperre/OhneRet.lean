@@ -50,7 +50,8 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .assignVar .., _, _, _ | _, _, _, _, .assignGlob .., _, _, _
   | _, _, _, _, .assignSlot .., _, _, _ | _, _, _, _, .assignThru .., _, _, _
   | _, _, _, _, .advances .., _, _, _ | _, _, _, _, .retires .., _, _, _
-  | _, _, _, _, .leave _, _, _, _ | _, _, _, _, .next _, _, _, _ => by simp only [execStmt]; rfl
+  | _, _, _, _, .leave _, _, _, _ | _, _, _, _, .next _, _, _, _
+  | _, _, _, _, .publish .., _, _, _ => by simp only [execStmt]; rfl
   | _, _, _, _, .call _ _ _ hr, _, σ, ρ => by
     simp only [execStmt]
     split
@@ -83,7 +84,7 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .putBytes .., h, _, _ | _, _, _, _, .shift .., h, _, _ | _, _, _, _, .onOption .., h, _, _
   | _, _, _, _, .onTag .., h, _, _ | _, _, _, _, .onWhy .., h, _, _ | _, _, _, _, .callInd .., h, _, _
   | _, _, _, _, .retry .., h, _, _ | _, _, _, _, .forever .., h, _, _ | _, _, _, _, .regWrite .., h, _, _
-  | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .publish .., h, _, _ | _, _, _, _, .ret .., h, _, _
+  | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _
   | _, _, _, _, .retWhy .., h, _, _ | _, _, _, _, .assignSlotRef .., h, _, _ => by simp [retFreiS] at h
 
 theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D V l Γ Λ Λ') →
@@ -115,9 +116,19 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     split
     · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
     · rfl
+  | _, _, _, _, .awaits _ _ _ _ _ r, h, σ, ρ => by
+    simp only [retFreiB] at h
+    simp only [execBlock]
+    split
+    · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
+    · rfl
+  | _, _, _, _, .exchange _ _ _ _ r, h, σ, ρ => by
+    simp only [retFreiB] at h
+    simp only [execBlock]
+    rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
   | _, _, _, _, .bindCallInd .., h, _, _ | _, _, _, _, .bindCallElse .., h, _, _
   | _, _, _, _, .bindAxiomElse .., h, _, _ | _, _, _, _, .regRead .., h, _, _
-  | _, _, _, _, .regReadElse .., h, _, _ | _, _, _, _, .awaits .., h, _, _ | _, _, _, _, .exchange .., h, _, _
+  | _, _, _, _, .regReadElse .., h, _, _
   | _, _, _, _, .narrow .., h, _, _ | _, _, _, _, .check .., h, _, _ | _, _, _, _, .float .., h, _, _
   | _, _, _, _, .floatLit .., h, _, _ | _, _, _, _, .floatOf .., h, _, _
   | _, _, _, _, .floatNarrow .., h, _, _ => by simp [retFreiB] at h

@@ -7,8 +7,8 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
@@ -79,6 +79,14 @@ def travC (s : Nat) (n : Int) (ci' cb : List II × Nat) : Option (List II × Nat
     some (travCode s n ci'.1 cb.1, max ci'.2 (max cb.2 (s + 9)))
   else none
 
+/-- The code of `exchange` (`PLAN-SELF-HOSTING.md` §2.1.6): the old word of the global at `ga` into slot `s` (the new
+    variable's), the new value `cn` into `s + 1`, `cas` of the global from `s` to `s + 1`; when another thread changed
+    it in between (the old word read back differs): again from the start. -/
+def exC (s ga : Nat) (cn : List II) : List II :=
+  [ci 1 s ga 0, ci 15 s s 0] ++ cn ++
+  [ci 1 ((s + 2 : Nat) : Int) ga 0, ci 22 ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int) s,
+   ci 14 ((s + 3 : Nat) : Int) ((s + 3 : Nat) : Int) s, ci 19 ((s + 3 : Nat) : Int) (-(16 * ((cn.length + 5 : Nat) : Int))) 0]
+
 /-- `st (s+1) s`: the word of slot `s` to the address in slot `s + 1`. -/
 def stC (s : Nat) : II := ci 16 ((s + 1 : Nat) : Int) s 0
 
@@ -103,6 +111,11 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ce ← lowErg L e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
   | _, Γ, _, _, .assignGlob g e _ _ =>
+    if lit32 (L.ga g) then do
+      let ce ← lowE L e (frei Γ)
+      pure (ce.1 ++ [ci 1 ((frei Γ + 1 : Nat) : Int) (L.ga g) 0] ++ [stC (frei Γ)], max ce.2 (frei Γ + 2))
+    else none
+  | _, Γ, _, _, .publish g e _ _ _ _ =>
     if lit32 (L.ga g) then do
       let ce ← lowE L e (frei Γ)
       pure (ce.1 ++ [ci 1 ((frei Γ + 1 : Nat) : Int) (L.ga g) 0] ++ [stC (frei Γ)], max ce.2 (frei Γ + 2))
@@ -156,6 +169,19 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ck ← chkC (D.aerg a) (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
+  | _, Γ, _, _, .awaits g _ _ _ _ rest =>
+    if lit32 (L.ga g) then do
+      let cr ← lowB A L lo ens pr ex rest
+      pure ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr.1, max (frei Γ + 1) cr.2)
+    else none
+  | _, Γ, _, _, .exchange g neu _ _ rest =>
+    if lit32 (L.ga g) then do
+      let cn ← lowE L neu (frei Γ + 1)
+      let cr ← lowB A L lo ens pr ex rest
+      if 16 * (cn.1.length + 5) < 2 ^ 31 then
+        pure (exC (frei Γ) (L.ga g) cn.1 ++ cr.1, max (max cn.2 (frei Γ + 4)) cr.2)
+      else none
+    else none
   | _, _, _, _, _ => none
 end
 

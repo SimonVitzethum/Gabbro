@@ -8,6 +8,7 @@
   caller `fp`, depth) and the parameters stay as the call left them (`Kopf`).
 -/
 import Stage0.Senke.Anweisung.Satz
+import Stage0.Senke.Anweisung.Atomar
 import Stage0.Senke.Anweisung.FehlerLauf
 
 namespace Gabbro.Stage0.Senke
@@ -61,7 +62,7 @@ theorem Ret.schrumpf {τ : Ty} {o : EndAusgang (vertragVon D f) l (τ :: Γ)} {t
 
 end
 
-theorem lowEnd_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
@@ -334,9 +335,49 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → 
     · cases h
   | _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
-  | _, _, _, .awaits .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
+  | _, Γ, Λ, .awaits g _ _ _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    simp only [lowEnd] at h
+    split at h
+    · next hl =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cr, tr⟩, hr, hc⟩ := h
+      simp only [Prod.mk.injEq] at hc
+      obtain ⟨rfl, rfl⟩ := hc
+      simp only [List.length_append] at hs
+      have hFB3 : FB = 3 := rfl
+      have hks := hW.ks
+      obtain ⟨m1, s1, A, hp1, hW1⟩ := awaits_head hl (by omega) hW hp hWa
+      simp only [execEnd, SichtOK.sicht, ↓reduceIte]
+      have ih := lowEnd_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (ex := ex) rest cr tr hr (by omega)
+        (by omega) hW m1 _ ((σ.fragt (.inr (.inr g))).lese Λ [.inr g]) _ hp1
+        (by simp only [frei, List.length_cons] at hlo ⊢; omega) (hu.agreeW hW (A.mono hlo) (by omega))
+        (hk.agreeW hW (A.mono hlo) (by omega)) hW1 (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      rw [pc_add1]
+      exact Ret.prefix (by omega) s1 (A.mono hlo) (keeps_of_agreeW hW A hpr (by omega)) (Ret.schrumpf ih)
+    · cases h
   | _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .narrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
-  | _, _, _, .exchange .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
+  | _, Γ, Λ, .exchange g neu _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    simp only [lowEnd] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure] at h
+      obtain ⟨⟨cn, tn⟩, hn, ⟨cr, tr⟩, hr, h⟩ := h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hlen := exC_len (frei Γ) (L.ga g) cn
+        simp only [List.length_append, hlen] at hs
+        have hFB3 : FB = 3 := rfl
+        have hks := hW.ks
+        obtain ⟨m3, s3, A, hp3, hW3⟩ := exch_head (Λ := Λ) hn (by omega) (by omega) hW hp hWa
+        simp only [execEnd]
+        have ih := lowEnd_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (ex := ex) rest cr tr hr (by omega)
+          (by omega) hW m3 _ _ _ hp3
+          (by simp only [frei, List.length_cons] at hlo ⊢; omega) (hu.agreeW hW (A.mono hlo) (by omega))
+          (hk.agreeW hW (A.mono hlo) (by omega)) hW3 (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+        rw [pc_add1]
+        exact Ret.prefix (by omega) s3 (A.mono hlo) (keeps_of_agreeW hW A hpr (by omega)) (Ret.schrumpf ih)
+      · cases h
+    · cases h
 
 end Gabbro.Stage0.Senke

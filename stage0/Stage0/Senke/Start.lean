@@ -81,7 +81,7 @@ theorem codeFar_nat' {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2
 /-- **A thread's start**: from its start code at `pc` in its frame at `fpI` (`Ks` slots, the world above), the thread
     runs `f` as G's `rufAt n f` and ends with the system call `e` -- with `f`'s result when `keep` -- or with the stop
     of G's outcome. -/
-theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT : TorOK Y O] {A : D.Fn → Nat}
+theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT : TorOK Y O] [hV : SichtOK O] {A : D.Fn → Nat}
     {C : D.Fn → List II} {L Ks n : Nat} {f : D.Fn} {e : Nat} {keep : Bool}
     (hC : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L) (hAlt : ∀ g, A g < 2 ^ 31)
     (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) (hpar : (D.params f).isEmpty = true)

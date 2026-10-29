@@ -83,7 +83,7 @@ mutual
 def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Bool
   | _, _, _, _, .assignVar .. | _, _, _, _, .assignGlob .. | _, _, _, _, .assignSlot ..
   | _, _, _, _, .assignThru .. | _, _, _, _, .call .. | _, _, _, _, .advances .. | _, _, _, _, .retires ..
-  | _, _, _, _, .leave _ | _, _, _, _, .next _ | _, _, _, _, .axiomCall .. => true
+  | _, _, _, _, .leave _ | _, _, _, _, .next _ | _, _, _, _, .axiomCall .. | _, _, _, _, .publish .. => true
   | _, _, _, _, .ite _ t e => retFreiB t && retFreiB e
   | _, _, _, _, .traverse _ _ b => retFreiB b
   | _, _, _, _, .breaking _ b => retFreiB b
@@ -96,6 +96,8 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .bind _ r => retFreiB r
   | _, _, _, _, .bindCall _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ r => retFreiB r
+  | _, _, _, _, .awaits _ _ _ _ _ r => retFreiB r
+  | _, _, _, _, .exchange _ _ _ _ r => retFreiB r
   | _, _, _, _, _ => false
 end
 

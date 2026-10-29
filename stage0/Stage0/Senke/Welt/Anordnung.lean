@@ -203,7 +203,7 @@ theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (d
     {roots : List (declOf u).Fn} {Ks : Nat} {b : Bild (declOf u)}
     {tor : (declOf u).Ax → Option TorB} (hb : bild P (layU u tor) fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World (declOf u))
-    (ρ : Env (declOf u) ((declOf u).params main)) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) :
+    (ρ : Env (declOf u) ((declOf u).params main)) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
     match rufAt P O passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg ((declOf u).erg main) v q.a1
@@ -211,7 +211,7 @@ theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (d
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by
   have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h) (fun x => layU_dis u tor x)
-    (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm σ ρ hWa hT
+    (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm σ ρ hWa hT hV
   generalize rufAt P O passes b.depth main σ ρ = o at h ⊢
   cases o <;> exact h
 
@@ -222,7 +222,7 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
     {tor : (declOf u).Ax → Option TorB} (hb : bild P (layU u tor) fs pos name main roots Ks = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat)
     (hj : j < roots.length) (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params roots[j]))
-    (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) :
+    (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
     match rufAt P O passes b.depth roots[j] σ ρ with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
@@ -232,7 +232,7 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
   have h := bild_wurzel_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h)
-    (fun x => layU_dis u tor x) (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm j hj σ ρ hWa hT
+    (fun x => layU_dis u tor x) (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm j hj σ ρ hWa hT hV
   generalize rufAt P O passes b.depth roots[j] σ ρ = o at h ⊢
   cases o <;> exact h
 

@@ -47,6 +47,19 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ck ← chkC (D.aerg a) (frei Γ)
     let cr ← lowEnd A L lo ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
+  | _, Γ, _, .awaits g _ _ _ _ rest =>
+    if lit32 (L.ga g) then do
+      let cr ← lowEnd A L lo ens pr ex rest
+      pure ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr.1, max (frei Γ + 1) cr.2)
+    else none
+  | _, Γ, _, .exchange g neu _ _ rest =>
+    if lit32 (L.ga g) then do
+      let cn ← lowE L neu (frei Γ + 1)
+      let cr ← lowEnd A L lo ens pr ex rest
+      if 16 * (cn.1.length + 5) < 2 ^ 31 then
+        pure (exC (frei Γ) (L.ga g) cn.1 ++ cr.1, max (max cn.2 (frei Γ + 4)) cr.2)
+      else none
+    else none
   | _, Γ, _, .bindAxiomElse a args _ _ _ _ _ _ err rest =>
     match L.tor a, D.aerg a with
     | some b, some (.int lo' hi') =>

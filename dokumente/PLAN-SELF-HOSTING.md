@@ -260,6 +260,11 @@ world lies above every stack):
    exactly those words to change; `ret` inside `locks` cannot be typed (`Λ ~ ende`). The precondition `SyncAt` --
    the exact state of every lock word for the locks the thread holds -- holds where a `locks` starts.
 3. *Atomics* (`publish`, `awaits`, `exchange`) as `cas`/loads on their cells, against GX.
+   Done for one thread (2026-10-29): `publish` is the store of an assignment to a global (a release under TSO);
+   `awaits` a load (acquire under TSO), with the named assumption `SichtOK` (A10: the oracle never answers G's
+   `sichtbarkeit` stop); `exchange` a `cas` loop (`exC`: the old word into the variable's slot, the new value,
+   `cas` from old to new, again when the word read back differs), proved where one thread alone finds the old
+   word still there (`exch_ok`, `awaits_ok`, also at a function's end). Probe `proben-ir/atomar`.
 4. *The structural half*: a thread state of the runner's machine at a statement boundary corresponds to a thread state
    of `RufSchrittG` (the residue `.ende`/`.dann`, the call stack as the chain of frames).
 5. *The reduction*: in a run of the runner's machine every thread's code since its last boundary ran on its own stack
