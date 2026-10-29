@@ -6,7 +6,8 @@
              its declared range (`chkC`): outside it, the stop 110, G's hardware outcome `annahme`.
 
   Accepted: a gate bound on this machine whose parameters go in order into the first argument registers
-  (`torGut`), without a reason channel, its parameters words; an answer of an integer type.
+  (`torGut`), without a reason channel, its parameters words; integer and boolean answers, or never.
+  A returning never gate stops with 110; a terminating system call never reaches that fallback.
 -/
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp
@@ -144,7 +145,7 @@ def loC (s : Nat) (lo : Int) : List II :=
 def hiC (s : Nat) (hi : Int) : List II := sltC s (hi + 1) ++ guardC (s + 1) 110 (s + 2)
 
 /-- The test of the answer in slot `s` against its declared type; it writes the slots `s + 1 .. s + 9`. A bound beyond
-    64 bits needs no test; any other must be a 32-bit literal. -/
+    64 bits needs no test; any other must be a 32-bit literal. Boolean words are normalized; never stops. -/
 def chkC : Option Ty → Nat → Option (List II)
   | some (.int lo hi), s =>
     let a := if lo ≤ -2 ^ 63 then some [] else if lit32 lo then some (loC s lo) else none
@@ -152,6 +153,9 @@ def chkC : Option Ty → Nat → Option (List II)
     match a, b with
     | some a, some b => some (a ++ b)
     | _, _ => none
+  | some .bool, s => some [ci 1 (s + 1) 0 0, ci 14 s s (s + 1),
+      ci 1 (s + 1) 0 0, ci 14 s s (s + 1)]
+  | some .never, s => some (stopC 110 s)
   | _, _ => none
 
 /-- The test of one listed errno `e` with its case `i` (`d = s + 1`): if slot `s` holds `e`, the case into slot `s`

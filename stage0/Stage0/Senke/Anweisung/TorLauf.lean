@@ -217,6 +217,19 @@ theorem einpassen_int {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} (he : 
     exact (BitVec.ofInt_toInt).symm
   · simp [einpassenErg, einpassen, h]; try rfl
 
+/-- No raw integer answers a never gate. -/
+theorem einpassen_never {z : Int → Option D.Fn} {e : Option Ty}
+    (he : e = some .never) (n : Int) : einpassenErg z e n = none := by
+  subst he
+  rfl
+
+/-- Boolean answers always fit, with zero false and every other raw integer true. -/
+theorem einpassen_bool {z : Int → Option D.Fn} {e : Option Ty}
+    (he : e = some .bool) (n : Int) :
+    ∃ v, einpassenErg z e n = some v ∧ ergWert he v = decide (n ≠ 0) := by
+  subst he
+  exact ⟨decide (n ≠ 0), rfl, rfl⟩
+
 /-- **A gate bound in a block** (`bindAxiom`): the call, then the test of its answer. Inside the range the value is in
     slot `frei Γ` and the oracle's world in memory; outside it, G has no answer and the code stops with 110. -/
 theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax}
@@ -257,6 +270,29 @@ theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
       · rw [agree_rd_low a2 hroom (by omega) (by omega)]; exact hw1
       · exact weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hW1 (a2.mono (Nat.zero_le _))
     · exact .inr ⟨by rw [g2 hr], Stops.prefix s1 (hout hr)⟩
+  | bool =>
+    have hp' : PreS L m pc fp K (frei Γ) (ct ++ (ck ++ cr)) ρ := (List.append_assoc ct ck cr) ▸ hp
+    obtain ⟨m1, w, s1, a1, hw1, hW1, hroh⟩ := torC0_ok (O := O) ht htt hW hp'.left hWa
+    have hn := hp'.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
+    simp only [chkC, Option.some.injEq] at hck'
+    subst ck
+    have hpk := mkPreS (d := frei Γ) (by have := hp.ctx; omega) (by have := hp.small; omega)
+      (frameOK_sub hn.frame hks) hn.left.code (codeFar_sub2 hn.left.far hks) hn.env
+    obtain ⟨m2, s2, a2, w2, hw2, he2⟩ := boolC_ok hpk (by omega) hw1
+    obtain ⟨v, hv, hev⟩ := einpassen_bool (z := O.zeiger) he w.toInt
+    refine .inl ⟨v, m2, w2, ?_, ?_, a1.trans (agreeW_of (Agree.widen a2 hks)), hw2, ?_, ?_⟩
+    · rw [axiomAntwort_eq, hroh, hv]
+    · exact s1.trans (by rw [List.length_append, ← pc_add]; exact s2)
+    · simpa only [hev] using he2
+    · exact weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hW1 (a2.mono (Nat.zero_le _))
+  | never =>
+    have hp' : PreS L m pc fp K (frei Γ) (ct ++ (ck ++ cr)) ρ := (List.append_assoc ct ck cr) ▸ hp
+    obtain ⟨m1, w, s1, a1, hw1, hW1, hroh⟩ := torC0_ok (O := O) ht htt hW hp'.left hWa
+    have hn := hp'.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
+    simp only [chkC, Option.some.injEq] at hck'
+    subst ck
+    refine .inr ⟨by rw [axiomAntwort_eq, einpassen_never he], Stops.prefix s1 ?_⟩
+    exact stop_ok hn.left.code hn.left.far hn.frame (by omega) hp.small (by decide)
   | _ => simp [chkC] at hck'
 
 end Gabbro.Stage0.Senke

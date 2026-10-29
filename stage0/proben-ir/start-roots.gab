@@ -1,0 +1,13 @@
+// IR gate regression probe.
+module ir_probe {
+impl fn worker()
+    effects { pure }
+{ }
+
+impl fn main() -> u64 in 0 .. 100
+    effects { pure }
+{
+    start { worker };
+    return 23;
+}
+}

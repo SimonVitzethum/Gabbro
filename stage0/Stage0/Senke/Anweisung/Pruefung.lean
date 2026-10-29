@@ -148,4 +148,25 @@ theorem chkC_ok {lo hi : Int} {s : Nat} {c : List II} (h : chkC (some (.int lo h
       · exact hA2 hl
   · cases h
 
+/-- Every nonzero kernel word becomes true, including negative words. -/
+theorem boolC_ok {s : Nat} {m : Runner.Mem} {pc fp : Runner.W} {K : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
+    (hp : PreS L m pc fp K s
+      ([ci 1 (s + 1) 0 0, ci 14 s s (s + 1)] ++ [ci 1 (s + 1) 0 0, ci 14 s s (s + 1)]) ρ)
+    (hK : s + 2 ≤ K) (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
+    Ok m pc fp K s
+      ([ci 1 (s + 1) 0 0, ci 14 s s (s + 1)] ++ [ci 1 (s + 1) 0 0, ci 14 s s (s + 1)])
+      (Enc L .bool (decide (w.toInt ≠ 0))) := by
+  have ho := ok_seq hp (binK_ok (r := Runner.IR.bool (w == 0)) hp.left hw (by decide) rfl (by decide) rfl (by omega))
+    (Pb := Enc L .bool (decide (w.toInt ≠ 0)))
+    (fun m' w' hp' hr he => (binK_ok (r := Runner.IR.bool (w' == 0)) hp' hr (by decide) rfl (by decide) rfl (by omega)).mono
+      fun x hx => by
+        rw [hx, he]
+        by_cases hz : w = 0
+        · subst w; simp [Enc, wahr?, Runner.IR.bool]
+        · have hi : w.toInt ≠ 0 := by simpa [← BitVec.toInt_inj] using hz
+          simp [Enc, wahr?, Runner.IR.bool, hi]
+          exact hz) (by omega)
+  exact ho
+
 end Gabbro.Stage0.Senke

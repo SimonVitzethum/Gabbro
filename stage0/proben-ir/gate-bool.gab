@@ -1,0 +1,54 @@
+// IR gate regression probe.
+module ir_probe {
+assume kernel_zero
+    "The probe uses the Linux x86_64 gate zero."
+    falsifier probe_zero;
+syscall zero() -> bool
+    abi linux arch x86_64 number 24
+    regs in {  }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume kernel_zero falsifier probe_zero;
+assume kernel_positive
+    "The probe uses the Linux x86_64 gate positive."
+    falsifier probe_positive;
+syscall positive() -> bool
+    abi linux arch x86_64 number 39
+    regs in {  }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume kernel_positive falsifier probe_positive;
+assume kernel_negative
+    "The probe uses the Linux x86_64 gate negative."
+    falsifier probe_negative;
+syscall negative() -> bool
+    abi linux arch x86_64 number 9999
+    regs in {  }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume kernel_negative falsifier probe_negative;
+
+impl fn main() -> u64 in 0 .. 100
+    effects { pure }
+{
+    let z = zero();
+    if z { return 50; }
+    let p = positive();
+    if p { } else { return 51; }
+    if true {
+        let n = negative();
+        if n { } else { return 52; }
+        positive();
+    }
+    return 17;
+}
+}

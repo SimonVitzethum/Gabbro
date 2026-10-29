@@ -64,3 +64,4 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
+import Stage0.Senke.Tore.Proben

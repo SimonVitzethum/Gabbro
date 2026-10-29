@@ -1,0 +1,21 @@
+// IR gate regression probe.
+module ir_probe {
+assume kernel_finish
+    "The probe uses the Linux x86_64 gate finish."
+    falsifier probe_finish;
+syscall finish(code : u64) -> never
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume kernel_finish falsifier probe_finish;
+
+impl fn main() -> never
+    effects { pure }
+{
+    finish(37);
+}
+}
