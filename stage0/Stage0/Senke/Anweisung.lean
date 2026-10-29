@@ -130,6 +130,7 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
         [ci 18 (16 * (ca.1.length + 1)) 0 0] ++ ca.1,
         max co.2 (max (frei Γ + 2) (max cp.2 ca.2)))
     else none
+  | _, _, _, _, .callInd p args _ _ => lowInd L p args
   | _, Γ, _, _, .call f args _ _ => do
     let ca ← lowA L args (frei Γ + FB)
     pure (callC A f (frei Γ) ca.1, callTop f (frei Γ) ca.2)
@@ -190,6 +191,10 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
+  | _, Γ, _, _, .bindCallInd p args _ _ _ rest => do
+    let cc ← lowInd L p args
+    let cr ← lowB A L lo ens pr ex rest
+    pure (cc.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max cc.2 cr.2)
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest => do
     let ct ← torC0 L a args (frei Γ)
     let ck ← chkC (D.aerg a) (frei Γ)

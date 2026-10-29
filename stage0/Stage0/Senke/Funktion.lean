@@ -37,6 +37,10 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowEnd A L lo ens pr ex rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
+  | _, Γ, _, .bindCallInd p args _ _ _ rest => do
+    let cc ← lowInd L p args
+    let cr ← lowEnd A L lo ens pr ex rest
+    pure (cc.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max cc.2 cr.2)
   | _, Γ, _, .ite c t e => do
     let cc ← lowE L c (frei Γ)
     let ce ← lowEnd A L lo ens pr ex e

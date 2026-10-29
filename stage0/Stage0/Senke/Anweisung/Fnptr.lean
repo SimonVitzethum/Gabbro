@@ -8,6 +8,10 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 
+theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e} {w : Runner.W}
+    (h : EncErg L e v w) : Enc L τ (ergWert he v) w := by
+  subst he; exact h
+
 /-- Transport of the context preserves every encoded variable. -/
 theorem envAt_cast {ts us : Ctx} (e : ts = us) {m : Runner.Mem} {fp : Runner.W} {ρ : Env D ts}
     (h : EnvAt L m fp ρ) : EnvAt L m fp ((congrArg (Env D) e).mp ρ) := by cases e; exact h
@@ -75,5 +79,135 @@ theorem lowInd_ok {A : D.Fn → Nat} {C : D.Fn → List II}
   | logik e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
   | hardware e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
   | why _ _ => exact hc2.elim
+
+/-- Every indirect call reserves the callee header, arguments and target temporary. -/
+theorem lowInd_top {Λ : List (Res D)} {Γ : Ctx} {n : Nat} {p : Expr D Γ Λ (.fnptr n)}
+    {args : Args D Γ Λ (D.sigNr n).params} {c : List II} {top : Nat}
+    (h : lowInd L p args = some (c, top)) : frei Γ + FB + (D.sigNr n).params.length + 1 ≤ top := by
+  simp only [lowInd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cp, tp⟩, _, ⟨ca, ta⟩, _, _, rfl⟩ := h
+  simp only [indTop]; omega
+
+/-- An ignored indirect result keeps the caller environment and protected slots. -/
+theorem indStmt_ok {O : Orakel D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II}
+    {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {dv : Runner.W} {cap : Nat}
+    (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
+    {P : Programm D} {f : D.Fn} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+    (hfit : RufPasst D (vertragVon D f) (D.sigNr n) Λ) (hr : (D.sigNr n).gruende = 0)
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp pc : Runner.W} {lo K Ks : Nat}
+    {pr : List Nat} {ex : Int × Int} {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
+    (hc : lowInd L p args = some (c, top)) (ht : top + cap ≤ Ks) (hW : WIn L fp Ks K)
+    (hp : PreS L m pc fp K (frei Γ) c ρ) (hlo : lo ≤ frei Γ) (hu : Umf L A C dv m fp Ks K)
+    (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
+      (execStmt O passes R (Stmt.callInd (l := l) p args hfit hr) σ ρ) := by
+  have hb := lowInd_top hc
+  have hks := hW.ks
+  have hi := lowInd_ok hS hA p args (σ.lese Λ (p.orte ++ args.orte)) (σ.lese Λ (p.orte ++ args.orte)) hc ht hp hu hW hWa
+  simp only [execStmt]
+  dsimp only at hi
+  generalize hv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = v at hi ⊢
+  obtain ⟨g, hg⟩ := v
+  dsimp only at hi ⊢
+  generalize R g (σ.lese Λ (p.orte ++ args.orte))
+    (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) = o at hi ⊢
+  cases o with
+  | ok σ' v =>
+    obtain ⟨m1, s1, a1, _, hw1⟩ := hi
+    exact ⟨m1, s1, a1.mono hlo, envAt_agreeWIn hW hp.env a1 (Nat.le_refl _) (by omega), hw1,
+      keeps_of_agreeW hW a1 hpr (by omega)⟩
+  | logik e => exact hi
+  | hardware e => exact hi
+  | why _ _ => exact hi.elim
+
+/-- The shared result dispatch of the two indirect binder forms. -/
+def indAntwort {β : Type} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+    (he : (D.sigNr n).erg = some τ) (hr : (D.sigNr n).gruende = 0) (σ : World D) (ρ : Env D Γ)
+    (k : World D → Wert D τ → β) (err : Logik D → β) (hwerr : Hardware D → β) : β :=
+  let ⟨f, hf⟩ := eval σ p σ ρ
+  match R f σ (umsig hf (evalArgs σ args σ ρ)) with
+  | .ok σ' r => k σ' (ergWert (ergSig hf he) r)
+  | .why _ r => keinGrundSig hf hr r
+  | .logik e => err e
+  | .hardware e => hwerr e
+
+section
+variable {V : Vertrag D} {O : Orakel D} {passes : Nat}
+  {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
+  {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} {τ : Ty}
+  {p : Expr D Γ Λ (.fnptr n)} {args : Args D Γ Λ (D.sigNr n).params}
+  {he : (D.sigNr n).erg = some τ} {hf : RufPasst D V (D.sigNr n) Λ} {hr : (D.sigNr n).gruende = 0}
+
+theorem execBlock_ind_eq (rest : Block D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ) Λ') (σ : World D) (ρ : Env D Γ) :
+    execBlock O passes R (.bindCallInd p args he hf hr rest) σ ρ =
+      indAntwort R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execBlock O passes R rest σ' (.cons v ρ)).schrumpf) .logik .hardware := rfl
+
+theorem execEnd_ind_eq (rest : Endblock D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ)) (σ : World D) (ρ : Env D Γ) :
+    execEnd O passes R (.bindCallInd p args he hf hr rest) σ ρ =
+      indAntwort R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execEnd O passes R rest σ' (.cons v ρ)).schrumpf) .logik .hardware := rfl
+
+end
+
+/-- One binder prefix, independent of whether its continuation is a block or an end block.
+    The continuation predicate supplies only prefix closure and the two stopping outcomes. -/
+theorem indBind_ok {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
+    {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {dv : Runner.W} {cap : Nat}
+    (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
+    {f : D.Fn} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+    (he : (D.sigNr n).erg = some τ) (hr : (D.sigNr n).gruende = 0)
+    {fp rp cfp pc : Runner.W} {ρ0 : Env D (D.params f)} {lo K Ks : Nat} {pr : List Nat}
+    {cc cr : List II} {tc : Nat} {m : Runner.Mem} (σ : World D) (ρ : Env D Γ)
+    (hc : lowInd L p args = some (cc, tc)) (ht : tc + cap ≤ Ks)
+    (hp : PreS L m pc fp K (frei Γ) (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr) ρ)
+    (hW : WIn L fp Ks K) (hlo0 : lo = FB + (D.params f).length) (hlo : lo ≤ frei Γ) (hu : Umf L A C dv m fp Ks K)
+    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ)
+    (k : World D → Wert D τ → β) (err : Logik D → β) (hwerr : Hardware D → β)
+    (J : T → Runner.Mem → β → Prop)
+    (jprefix : ∀ {t0 t1 m0 m1 b}, Star t0 m0 t1 m1 → AgreeW L fp lo K m0 m1 →
+      Keeps fp pr m0 m1 → J t1 m1 b → J t0 m0 b)
+    (jerr : ∀ t m e, Stops t m (logikCode e) → J t m (err e))
+    (jhw : ∀ t m e, Stops t m (hwCode e) → J t m (hwerr e))
+    (kont : ∀ m' σ' v, let pc' := pc + BitVec.ofNat 64 (16 * (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0]).length)
+      PreS L m' pc' fp K (frei (τ :: Γ)) cr (Env.cons v ρ) →
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' → J ⟨pc', fp⟩ m' (k σ' v)) :
+    J ⟨pc, fp⟩ m (indAntwort R p args he hr σ ρ k err hwerr) := by
+  have hb := lowInd_top hc
+  have hFB3 : FB = 3 := rfl
+  have hks := hW.ks
+  have hi := lowInd_ok hS hA p args σ σ hc ht hp.left.left hu hW hWa
+  dsimp only [indAntwort] at hi ⊢
+  generalize hv : eval σ p σ ρ = v at hi ⊢
+  obtain ⟨g, hg⟩ := v
+  dsimp only at hi ⊢
+  generalize R g σ (umsig hg (evalArgs σ args σ ρ)) = o at hi ⊢
+  cases o with
+  | ok σ' v =>
+    obtain ⟨m1, s1, a1, ⟨w, hw, hew⟩, hw1⟩ := hi
+    have hp1 := hp.left.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
+    have s2 := mov_to hp1.code hp1.frame (j := frei Γ) (s := frei Γ + 2) (by omega) (by omega) hp.small hw
+    rw [← pc_add1] at s2
+    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ))) 8 w.toNat
+    have a2s : Agree fp (frei Γ) Ks m1 m2 := agree_write (frameOK_sub hp1.frame hks).room (Nat.le_refl _) (by omega) _
+    have a2 : Agree fp (frei Γ) K m1 m2 := Agree.widen a2s hks
+    have hw2 : WeltAt m2 L σ' := weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hw1 (a2s.mono (Nat.zero_le _))
+    have hq := hp.nextW hW (a1.trans (agreeW_of a2)) (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega) (by omega)
+    have hp2 : PreS L m2 _ fp K (frei (τ :: Γ)) cr (Env.cons (ergWert (ergSig hg he) v) ρ) :=
+      ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
+       envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert (ergSig hg he) hew), trivial, wstab_true _ _⟩
+    exact jprefix (s1.trans s2) ((a1.trans (agreeW_of a2)).mono hlo)
+      (keeps_of_agreeW hW (a1.trans (agreeW_of a2)) hpr (by omega))
+      (kont m2 σ' _ hp2 (hu.agreeW hW (a1.trans (agreeW_of a2)) (by omega))
+        (hk.agreeW hW (a1.trans (agreeW_of a2)) (by omega)) hw2)
+  | logik e => exact jerr _ _ e hi
+  | hardware e => exact jhw _ _ e hi
+  | why _ _ => exact hi.elim
 
 end Gabbro.Stage0.Senke

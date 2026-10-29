@@ -355,7 +355,18 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
       rw [pc_add1]
       exact Ret.prefix (by omega) s1 (A.mono hlo) (keeps_of_agreeW hW A hpr (by omega)) (Ret.schrumpf ih)
     · cases h
-  | _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
+  | _, Γ, Λ, .bindCallInd p args he _ hr rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨cc, tc⟩, hc, ⟨cr, tr⟩, hrest, rfl, rfl⟩ := h
+    simp only [List.length_append] at hs
+    rw [execEnd_ind_eq, pc_add1 pc (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0]) cr]
+    exact indBind_ok hS hA p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ hc (by omega) hp hW hlo0 hlo hu hk hWa hpr
+      _ _ _ (fun t m o => Ret L P f σ0 ρ0 fp lo K pr rp cfp t m _ _ o)
+      (Ret.prefix (by simp only [FB] at hlo0; omega)) (fun _ _ _ h => h) (fun _ _ _ h => h)
+      (fun m' σ' v hp' hu' hk' hw' => Ret.schrumpf (lowEnd_ok (O := O) (passes := passes) (σ0 := σ0)
+        (ex := ex) hS hA hlo0 hens rest cr tr hrest (by omega) (by omega) hW m' _ σ' _ hp'
+        (by simp only [frei, List.length_cons] at hlo ⊢; omega) hu' hk' hw'
+        (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)))
   | _, _, _, .narrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, Γ, Λ, .exchange g neu _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
     simp only [lowEnd] at h

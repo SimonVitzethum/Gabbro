@@ -13,6 +13,7 @@ import Stage0.Senke.Sperre.Satz
 import Stage0.Senke.Anweisung.Atomar
 import Stage0.Senke.Anweisung.Wahl
 import Stage0.Senke.Anweisung.Option
+import Stage0.Senke.Anweisung.Fnptr
 
 namespace Gabbro.Stage0.Senke
 
@@ -24,9 +25,6 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {V : Vertrag D}
 
-theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e} {w : Runner.W}
-    (h : EncErg L e v w) : Enc L τ (ergWert he v) w := by
-  subst he; exact h
 
 mutual
 theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
@@ -228,7 +226,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     · cases h
   | _, _, _, _, .onTag .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .callInd p args hf hr, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, hu, _, hWa, hpr =>
+    indStmt_ok hS hA p args hf hr h hK hW hp hlo2 hu hWa hpr
   | _, Γ, Λ, _, .locks Lk hr body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
     simp only [lowS] at h
     split at h
@@ -375,7 +374,18 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     | logik e => exact hc
     | why _ _ => exact hc.elim
     | hardware e => exact hc
-  | _, _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .bindCallInd p args he _ hr rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨⟨cc, tc⟩, hc, ⟨cr, tr⟩, hrest, rfl, rfl⟩ := h
+    simp only [List.length_append] at hs
+    rw [execBlock_ind_eq, pc_add1 pc (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0]) cr]
+    exact indBind_ok hS hA p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ hc (by omega) hp hW hlo0 hlo2 hu hk hWa hpr
+      _ _ _ (fun t m o => Sim L P f σ0 ρ0 rp cfp fp lo K pr t m _ _ _ o)
+      (Sim.prefix hlo) (fun _ _ _ h => h) (fun _ _ _ h => h)
+      (fun m' σ' v hp' hu' hk' hw' => Sim.schrumpf (lowB_ok (O := O) (passes := passes) (σ0 := σ0)
+        (ex := ex) hS hA hlo0 hens rest cr tr hrest (by omega) (by omega) hW m' _ σ' _ hp' hlo
+        (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu' hk' hw'
+        (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)))
   | _, _, _, _, .bindCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, Γ, Λ, _, .bindAxiom a args he _ _ _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa,
       hpr => by
