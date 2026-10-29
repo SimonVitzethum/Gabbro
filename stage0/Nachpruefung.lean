@@ -5,6 +5,7 @@
 -/
 import Stage0
 import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.ControlProbes
 
@@ -101,3 +102,15 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.ControlProbe.endNarrow_case_zeuge
 #print axioms Gabbro.Stage0.Senke.ControlProbe.narrow_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.ControlProbe.blockAxiomElse_case_zeuge
+#print axioms Gabbro.Stage0.Senke.quant_restore
+#print axioms Gabbro.Stage0.Senke.quantBind_ok
+#print axioms Gabbro.Stage0.Senke.quantC_ok
+#print axioms Gabbro.Stage0.Senke.quantL_ok
+#print axioms Gabbro.Stage0.Senke.reachEqL_ok
+#print axioms Gabbro.Stage0.Senke.reachL_ok
+#print axioms Gabbro.Stage0.Senke.reachesL_ok
+#print axioms Gabbro.Stage0.Senke.QuantProbe.quantifiers_zeuge
+#print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_zeuge
+#print axioms Gabbro.Stage0.Senke.QuantProbe.quant_image_zeuge
+#print axioms Gabbro.Stage0.Senke.QuantProbe.quant_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_refused_zeuge

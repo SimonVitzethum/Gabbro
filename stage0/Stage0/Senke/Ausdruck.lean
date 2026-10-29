@@ -136,6 +136,52 @@ def readBytesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (Lis
     let tail ← readBytesL L t f idx (j + 1) n (d + 1)
     pure (bin2 3 d head (bin2 5 (d + 1) tail ([ci 1 (d + 2) 256 0], d + 3)))
 
+/-- Borrow the binder's canonical slot, retaining its previous word above the result. -/
+def quantBindC (s d : Nat) (k : Int) (cb : List II) : List II :=
+  [ci 2 (d + 1) s 0, ci 1 s k 0] ++ cb ++ [ci 2 s (d + 1) 0, ci 2 d (d + 2) 0]
+
+/-- Finite Boolean fold. Every iteration reuses the same scratch slots. -/
+def quantC (all : Bool) (s d : Nat) (cb : List II) : Nat → Nat → List II
+  | _, 0 => [ci 1 d (if all then 1 else 0) 0]
+  | j, n + 1 => quantC all s d cb (j + 1) n ++ quantBindC s (d + 1) j cb ++
+      [ci (if all then 8 else 9) d d (d + 1)]
+
+/-- The code-size bound is checked before materialising the finite fold. -/
+def quantL (all : Bool) (s d : Nat) (count : Int) (body : Option (List II × Nat)) : Option (List II × Nat) :=
+  if count.toNat = 0 then some ([ci 1 d (if all then 1 else 0) 0], d + 1)
+  else do
+    let cb ← body
+    if count.toNat < 2 ^ 31 ∧ 1 + count.toNat * (cb.1.length + 5) < 2 ^ 31 then
+      some (quantC all s d cb.1 0 count.toNat, max cb.2 (d + 4))
+    else none
+
+/-- Equality of two recomputable words, with room for both operands. -/
+def reachEqL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let ca ← a
+  let cb ← b
+  pure ((bin2 14 d ca cb).1, max ca.2 (max cb.2 (d + 2)))
+
+/-- Follow an optional-index column. Failed links are tested before the next access.
+    Recomputing pure operands avoids keeping a live index across condition code. -/
+def reachL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) :
+    Nat → Option (List II × Nat) → Option (List II × Nat) → Option (List II × Nat)
+  | 0, a, b => reachEqL d a b
+  | n + 1, a, b =>
+    let next := a.bind (slotC L t f d)
+    wennL d (reachEqL d a b) (some ([ci 1 d 1 0], d + 1))
+      (wennL d (reachEqL d next (some ([ci 1 (d + 1) (-1) 0], d + 2)))
+        (some ([ci 1 d 0 0], d + 1)) (reachL L t f d n next b))
+
+/-- Check a conservative bound before constructing the bounded chain code. -/
+def reachesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat)
+    (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let ca ← a
+  let cb ← b
+  let n := (D.count t).toNat
+  if n < 2 ^ 31 ∧ 16 * (n + 1) * (ca.1.length + cb.1.length + 20 + 6 * (n + 1)) < 2 ^ 31 then
+    reachL L t f d n (some ca) (some cb)
+  else none
+
 mutual
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
@@ -205,6 +251,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L e d) (lowE L b d)
   | _, _, .getBytes t f _ n i _ _ _, d =>
     if n ≤ 8 then readBytesL L t f (lowE L i) 0 n d else none
+  | Γ, _, .forallSlots t body _, d => quantL true (frei Γ) d (D.count t) (lowE L body (d + 3))
+  | Γ, _, .existsSlots t body _, d => quantL false (frei Γ) d (D.count t) (lowE L body (d + 3))
+  | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L a d) (lowE L b (d + 1))
   | _, _, .refEq .., _ | _, _, .slotRef .., _ => none
   | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none

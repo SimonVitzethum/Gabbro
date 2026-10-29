@@ -1,0 +1,18 @@
+// A universal precondition passes, then fails after one cell changes.
+module ir_probe {
+table cells count 3 { slot { value : u32 in 0 .. 10, } }
+impl fn check() -> u32 in 0 .. 10
+    effects { reads cells.slots }
+    requires forall i in slots of cells : cells.slots[i].value == 0
+{
+    return 1;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads cells.slots, writes cells.slots }
+{
+    let first = check();
+    cells.slots[1].value = 7;
+    let second = check();
+    return first + second;
+}
+}

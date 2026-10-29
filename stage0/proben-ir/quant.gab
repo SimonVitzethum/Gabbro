@@ -1,0 +1,26 @@
+// Finite quantifiers: both Boolean outcomes, nested binders and preserved surrounding operands.
+module ir_probe {
+table cells count 3 { slot { value : u32 in 0 .. 10, } }
+impl fn check() -> u32 in 0 .. 100
+    effects { reads cells.slots }
+    requires
+        forall i in slots of cells : cells.slots[i].value <= 10,
+        exists i in slots of cells : cells.slots[i].value == 7,
+        !(forall i in slots of cells : cells.slots[i].value == 7),
+        !(exists i in slots of cells : cells.slots[i].value == 9),
+        forall i in slots of cells :
+            cells.slots[i].value <= 10 && (exists j in slots of cells : cells.slots[j].value == cells.slots[i].value)
+
+{
+    return 73;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { reads cells.slots, writes cells.slots }
+{
+    cells.slots[0].value = 2;
+    cells.slots[1].value = 7;
+    cells.slots[2].value = 4;
+    let answer = check();
+    return answer;
+}
+}
