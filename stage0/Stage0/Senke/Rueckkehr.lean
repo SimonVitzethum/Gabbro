@@ -281,11 +281,11 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo reserved : N
       weltAt_stab hW.lay (by have := hW.lo; omega) m m' hWa (a.mono (Nat.zero_le _))⟩
 
 /-- Reason returns bypass the normal postcondition and preserve the world and frame header. -/
-theorem retWhy_ok {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+theorem retWhy_ok {reserved : Nat} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {ρ0 : Env D (D.params f)} {Γ : Ctx} {m : Runner.Mem} {pc : Runner.W}
     {σ : World D} {ρ : Env D Γ} (r : Fin (D.gruende f))
     (hlo0 : lo = FB + (D.params f).length) (hr : r.val < 2 ^ 31) (hK : lo + 2 ≤ Ks)
-    (hp : PreS L m pc fp K (frei Γ) (retWhyC lo r.val) ρ)
+    (hp : PreS L m pc fp K (frei Γ reserved) (retWhyC lo r.val) ρ reserved)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     RetWhy L f fp K rp cfp ⟨pc, fp⟩ m σ r := by
   have hFB3 : FB = 4 := rfl
