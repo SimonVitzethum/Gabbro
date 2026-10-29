@@ -89,11 +89,13 @@ structure Bild (D : Deklaration) where
   Y : Lay D
   /-- `main` runs at this depth -/
   depth : Nat
+  /-- The environment fuel compiled into every forever loop. -/
+  passes : Nat
   /-- the roots, each on a thread of its own with the `j`-th stack after `main`'s -/
   roots : List D.Fn
 
-def lowFunE (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) (g : D.Fn) : Except String (List II × Nat) :=
-  match lowFun P A Y g with
+def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) (g : D.Fn) : Except String (List II × Nat) :=
+  match lowFun passes P A Y g with
   | some ct => .ok ct
   | none => .error ("ir: the function " ++ name g ++
       if (oldCells (P.ensures g)).length > 1 then
@@ -103,11 +105,11 @@ def lowFunE (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → 
       else " uses a form outside the IR fragment")
 
 /-- Every function of `fs`, lowered with the addresses `A`. -/
-def lowAll (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) : List D.Fn → Except String (List (List II × Nat))
+def lowAll (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) : List D.Fn → Except String (List (List II × Nat))
   | [] => .ok []
   | g :: gs => do
-    let c ← lowFunE P Y name A g
-    let r ← lowAll P Y name A gs
+    let c ← lowFunE passes P Y name A g
+    let r ← lowAll passes P Y name A gs
     pure (c :: r)
 
 /-- The largest stack need of the functions (at least 1). -/
@@ -129,9 +131,9 @@ instance (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (
   unfold BildGut; infer_instance
 
 /-- The image of a program, or why not: `Ks` slots of stack, the world laid out by `Y` from its first byte. -/
-def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn)
+def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn)
     (roots : List D.Fn) (Ks : Nat) : Except String (Bild D) :=
-  match lowAll P (Y 0) name (fun _ => 0) fs with
+  match lowAll passes P (Y 0) name (fun _ => 0) fs with
   | .error e => .error e
   | .ok cs0 =>
     let lens := cs0.map (·.1.length)
@@ -140,7 +142,7 @@ def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → N
     let fp0 := codeBase + 16 * (headLen k + lens.sum)
     let Yb := { Y (fp0 + 8 * (Ks * (k + 1))) with fa := A, sb := fp0, st := 8 * Ks }
     let K := Ks * (k + 1) + (Yb.sye - Yb.lo + 7) / 8
-    match lowAll P Yb name A fs with
+    match lowAll passes P Yb name A fs with
     | .error e => .error e
     | .ok cs =>
       let body := cs.flatMap (·.1)
@@ -148,7 +150,7 @@ def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → N
       let sp := (List.range k).map fun j => (codeBase + 16 * (3 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
       let code := spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
       if BildGut D main roots lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
-        .ok ⟨code, A, fp0, K, Ks, Yb, n, roots⟩
+        .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots⟩
       else if D.gruende main != 0 then .error "ir: main has an uncaught reason channel"
       else if (roots.all fun f => decide (D.gruende f = 0)) = false then .error "ir: a root has an uncaught reason channel"
       else if (D.params main).isEmpty = false then .error "ir: main takes parameters"

@@ -17,6 +17,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 /-- The stack of an image, in slots (4 MiB); the world lies above it (`Senke.layU`). -/
 def irStapel : Nat := 2 ^ 19
 
+/-- Per-loop environment fuel compiled into the image; independent of call depth. -/
+def irDurchlaeufe : Nat := 2 ^ 20
+
 def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) := do
   let toks ← (lex src).mapError fun _ => "lex"
   let items ← parseTopTief toks
@@ -31,7 +34,7 @@ def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) 
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩
   let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)
   let roots := rs.filter (· != main)
-  let b ← Senke.bild P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
+  let b ← Senke.bild irDurchlaeufe P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
     (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main roots K
   pure b.bytes
 

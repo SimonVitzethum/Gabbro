@@ -18,11 +18,11 @@ variable {O : Orakel D} {passes : Nat}
 
 theorem retryC_ok (hlo0 : lo = FB + (D.params f).length)
     (hcc : lowE L bis (frei Γ) = some cc)
-    (hcu : lowB A L lo (cens, tens) pr ex overflow = some cu)
+    (hcu : lowB passes A L lo (cens, tens) pr ex overflow = some cu)
     (ihBody : ∀ {ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex body)
     (ihOverflow : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex overflow) :
     ∀ (n : Nat) (c : List II) (top : Nat),
-    retryC (frei Γ) cc cu (fun ex => lowB A L lo (cens, tens) pr ex body) n = some (c, top) →
+    retryC (frei Γ) cc cu (fun ex => lowB passes A L lo (cens, tens) pr ex body) n = some (c, top) →
     top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ m pc σ ρ, PreS L m pc fp K (frei Γ) c ρ → FB ≤ lo → lo ≤ frei Γ →
     Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ →
@@ -128,6 +128,6 @@ theorem forever_one_false {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bo
 theorem forever_refused {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
     (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int)
     (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ) :
-    lowS A L lo ens pr ex (show Stmt D V l Γ Λ Λ from .forever a inv body) = none := rfl
+    lowS passes A L lo ens pr ex (show Stmt D V l Γ Λ Λ from .forever a inv body) = none := rfl
 
 end Gabbro.Stage0.Senke

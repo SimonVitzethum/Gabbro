@@ -104,7 +104,7 @@ def BlockRuns (O : Orakel D) (passes : Nat)
     (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp fp : Runner.W)
     (lo Ks K : Nat) (ens : List II × Nat) (pr : List Nat)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D (vertragVon D f) l Γ Λ Λ') : Prop :=
-  ∀ ex cb tb, lowB A L lo ens pr ex b = some (cb, tb) → tb + cap ≤ Ks → 16 * cb.length < 2 ^ 31 →
+  ∀ ex cb tb, lowB passes A L lo ens pr ex b = some (cb, tb) → tb + cap ≤ Ks → 16 * cb.length < 2 ^ 31 →
   ∀ m pc σ ρ, PreS L m pc fp K (frei Γ) cb ρ → lo ≤ frei Γ →
     Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cb.length))
@@ -115,7 +115,7 @@ local notation "BR" => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp l
 
 theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int × Int)}
     {b : Block D (vertragVon D f) l (ArmCtx Γ c) Λ Λ'} {cp cb : List II} {tb : Nat} {ex : Int × Int}
-    (hb : BR b) (hcb : lowB A L lo ens pr ex b = some (cb, tb)) (htb : tb + cap ≤ Ks)
+    (hb : BR b) (hcb : lowB passes A L lo ens pr ex b = some (cb, tb)) (htb : tb + cap ≤ Ks)
     (hcp : tagPayloadC (frei Γ) c = some cp) (hs : 16 * (cp.length + cb.length) < 2 ^ 31)
     (hK : frei Γ + 3 ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
     (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
@@ -162,7 +162,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
 theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs)
     (hblocks : ArmsAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
-    (hc : lowTags A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
+    (hc : lowTags passes A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
     (hs : 16 * cd.length < 2 ^ 31) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
     (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} {w : Runner.W}
@@ -233,7 +233,7 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
     {cv ca : List II} {tv ta : Nat} {ex : Int × Int}
     (hblocks : ArmsAll (fun b => BR b) arms)
     (hcv : lowE L v (frei Γ) = some (cv, tv))
-    (hca : lowTags A L lo ens pr ex arms 0 = some (ca, ta))
+    (hca : lowTags passes A L lo ens pr ex arms 0 = some (ca, ta))
     (htv : tv ≤ Ks) (hta : ta + cap ≤ Ks) (hs : 16 * (cv.length + ca.length) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
     (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
@@ -274,7 +274,7 @@ theorem onTag_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II 
     (pr : List Nat) (ex : Int × Int) (f : D.Fn) :
     let cs := [none, some (-7, 13)]
     let arms : Arms D (vertragVon D f) false [.sum cs] [] [] cs := .cons .nil (.cons .nil .nil)
-    ∃ code top, lowS A L lo ens pr ex (.onTag (.var .here) arms) = some (code, top) := by
+    ∃ code top, lowS passes A L lo ens pr ex (.onTag (.var .here) arms) = some (code, top) := by
   exact ⟨_, _, rfl⟩
 
 end

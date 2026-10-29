@@ -21,7 +21,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hn : a ≤ nach ∧ nach ≤ b) (he : D.erlaubt t field von nach = true)
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (h : lowS A L lo ens pr ex (Stmt.shift (l := l) t field ht i von nach hn he hw hl) = some (c, top))
+    (h : lowS passes A L lo ens pr ex (Stmt.shift (l := l) t field ht i von nach hn he hw hl) = some (c, top))
     (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ) c ρ)
     (hlo : lo ≤ frei Γ) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))

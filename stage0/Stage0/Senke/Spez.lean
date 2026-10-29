@@ -163,7 +163,7 @@ theorem envAt_agreeW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} 
   intro τ x
   obtain ⟨w, hw, he⟩ := h τ x
   refine ⟨w, ?_, he⟩
-  rw [agreeW_rd_low ha htop hr (by have := vslot_lt x; omega) hK]
+  rw [agreeW_rd_low ha htop hr (by have := vslot_lt (reserved := 0) x; omega) hK]
   exact hw
 
 theorem pcode_agreeW {L : Lay D} {m m' : Runner.Mem} {A : D.Fn → Nat} {C : D.Fn → List II} {fp : Runner.W}

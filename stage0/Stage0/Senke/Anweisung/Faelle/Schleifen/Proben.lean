@@ -1,5 +1,6 @@
 /- Runtime images for overflow blocks the source reader cannot construct, and forever fuel witnesses. -/
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
 
 namespace Gabbro.Stage0.Senke.LoopProbe
@@ -76,7 +77,7 @@ theorem forever_body_zeuge :
 
 /-- Even an immediately leaving forever must be refused: fuel zero never enters its body. -/
 theorem forever_refused_zeuge :
-    lowS (fun _ => 0) (layU uf (fun _ => none) 0) 3 ([], 0) [] (0, 0)
+    lowS 1 (fun _ => 0) (layU uf (fun _ => none) 0) 3 ([], 0) [] (0, 0)
       (Stmt.forever (V := vertragVon DF main) (l := false) (Λ := []) progress .tru (.cons (.leave rfl) .nil) :
         Stmt DF (vertragVon DF main) false [] [] []) = none := rfl
 

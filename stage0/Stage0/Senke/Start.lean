@@ -83,7 +83,7 @@ theorem codeFar_nat' {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2
     of G's outcome. -/
 theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT : TorOK Y O] [hV : SichtOK O] {A : D.Fn → Nat}
     {C : D.Fn → List II} {L Ks n : Nat} {f : D.Fn} {e : Nat} {keep : Bool}
-    (hLA : Y.fa = A) (hC : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L) (hAlt : ∀ g, A g < 2 ^ 31)
+    (hLA : Y.fa = A) (hC : ∀ g, ∃ top, lowFun passes P A Y g = some (C g, top) ∧ top ≤ L) (hAlt : ∀ g, A g < 2 ^ 31)
     (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) (hpar : (D.params f).isEmpty = true) (hwhy : D.gruende f = 0)
     (hroomK : FB + 2 * L ≤ Ks) (hexK : exitSlot + 8 ≤ Ks) (hL1 : 1 ≤ L) (hn : n = depthOf Ks L) (he : e < 2 ^ 31)
     {pc fpI : Nat} {m : Runner.Mem} (hfit : fpI + 8 * Ks < 2 ^ 31)

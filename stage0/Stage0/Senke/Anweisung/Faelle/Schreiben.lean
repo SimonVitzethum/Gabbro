@@ -36,7 +36,7 @@ theorem assignVar_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
       m pc ρ hpw
     have a1 := Agree.widen a1s hks
     have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
-    have hxs := vslot_lt x
+    have hxs := vslot_lt (reserved := 0) x
     have hsm := hp.small
     have s2 := mov_to hp1.code hp1.frame (j := vslot x) (by omega) (by omega) hsm hw
     have hF1 := hp1.frame
@@ -46,7 +46,7 @@ theorem assignVar_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
       (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)).trans (keeps_write hF1.room (by omega) (fun j hj => by have := hpr j hj; omega) hlx.2 _)⟩
     refine envAt_set hp1.env (rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))) hen ?_
     intro τ' y hy
-    have := vslot_lt y
+    have := vslot_lt (reserved := 0) y
     exact rd64_write_far (slot_far hF1.room (by omega) (by omega) (vslot_ne hy).symm)
   · simp at h
 

@@ -207,3 +207,9 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.snapC_ok
 #print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.OldProbe.snapC_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.counter_init
+#print axioms Gabbro.Stage0.Senke.counter_zero
+#print axioms Gabbro.Stage0.Senke.counter_positive
+#print axioms Gabbro.Stage0.Senke.counter_decrement
+#print axioms Gabbro.Stage0.Senke.counter_protected
+#print axioms Gabbro.Stage0.Senke.counter_decrement_zeuge
