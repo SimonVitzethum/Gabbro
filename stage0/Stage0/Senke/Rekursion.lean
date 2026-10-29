@@ -151,7 +151,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] {passes : Nat} {
               List.find?_eq_none.mpr fun i hi => by simp [hsch i hi]
             simp only [hfil, List.foldl_nil, hno]
             obtain ⟨m', s', a', hw, hw'⟩ := hret
-            exact ⟨m', spre.trans s', apre.trans a', hw, hw'⟩
+            exact ⟨m', spre.trans s', (agreeW_of apre).trans a', hw, hw'⟩
         | logik e => exact Stops.prefix spre hret
         | why _ _ => exact hret.elim
         | leave h _ _ => exact absurd h Bool.false_ne_true

@@ -201,7 +201,8 @@ theorem bild_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (declOf u)} 
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by
-  have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h) (fun x => layU_dis u tor x) hm σ ρ hWa hT
+  have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h) (fun x => layU_dis u tor x)
+    (fun x => by simp only [layU]; omega) hm σ ρ hWa hT
   generalize rufAt P O passes b.depth main σ ρ = o at h ⊢
   cases o <;> exact h
 

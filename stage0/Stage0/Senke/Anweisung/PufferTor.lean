@@ -52,13 +52,13 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
       zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length)) ++ [ci 1 s b.nr 0, ci 23 s s 0]) ++ U) ρ)
     (hWa : WeltAt m L σ) :
     ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2 +
-        U.length)), fp⟩ m' ∧ Agree fp s K m m' ∧
+        U.length)), fp⟩ m' ∧ AgreeW L fp s K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w ∧
       WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
       (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = rohW b (D.agruende a) w := by
   have hks := hW.ks
   have hlo := hW.lo
-  have hhi := hW.hi
+  have hord := hW.ord
   have hl := hW.lay
   have hd := hW.dis
   have hl3 := hl.2.2
@@ -226,7 +226,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
   | false =>
     simp only [Bool.false_eq_true, ↓reduceIte] at hU
     subst hU
-    refine ⟨m7, w, by simpa using s16, a17, hs7, ?_, by rw [hroh]⟩
+    refine ⟨m7, w, by simpa using s16, agreeW_of a17, hs7, ?_, by rw [hroh]⟩
     refine weltAt_puf hl hd (by omega) hOhne (fun k hk => ?_) (fun a h1 h2 _ => hworld7 a h1 h2)
       (hW5.2.2.keep (by rw [a67.wr, hwr6]))
     have hk' : k < c := by omega
@@ -249,13 +249,17 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
         ca.length + P.length + 1 + (6 - (D.aparams a).length) + 2 by omega] at this,
        codeFar_sub2 hfU hks, hn7.env, trivial, wstab_true _ _⟩
     rw [hU] at hpre7 hfU
-    obtain ⟨m8, s8, a8, hc8, ho8⟩ := unpackK_ok hl hd hks (by omega) (by omega) hhi c (by omega)
-      (fun k hk => by have : k / 8 < Wn := (by rw [hWn]; simp only [pufW]; omega); omega) m7 _ hpre7 hF7 hfU
+    have hW7 : WeltWr m7 L := hW5.2.2.keep (by rw [a67.wr, hwr6])
+    obtain ⟨m8, s8, a8, hc8, ho8⟩ := unpackK_ok hl hd (by omega) (by omega) hord c (by omega)
+      (fun k hk => by have : k / 8 < Wn := (by rw [hWn]; simp only [pufW]; omega); omega) m7 _ hpre7 hW7
+      (fun k hk => by
+        obtain ⟨w', hw', _⟩ := hW5.1 t f k hk
+        rw [a67.rd, hrd6]; exact rd64_some_all hw')
     rw [← hU] at s8
-    refine ⟨m8, w, s16.trans s8 |> fun h => star_cast h rfl ?_, a17.trans (a8.mono (by omega)), ?_, ?_, by rw [hroh]⟩
+    refine ⟨m8, w, s16.trans s8 |> fun h => star_cast h rfl ?_, (agreeW_of a17).trans (AgreeW.widen (a8.mono (by omega)) hks), ?_, ?_, by rw [hroh]⟩
     · simp only [T.mk.injEq, and_true, p16]
       exact congrArg (fun x => pc + BitVec.ofNat 64 x) (by omega)
-    · rw [agree_rd_low a8 hroomK (by omega) (by omega)]; exact hs7
+    · rw [agreeW_rd_low a8 (by omega) hroom (by omega) (by omega)]; exact hs7
     · refine weltAt_puf hl hd (by omega) hOhne (fun k hk => ?_)
         (fun a h1 h2 h3 => by rw [ho8 a h1 h2 (fun k hk => h3 k (by omega)), hworld7 a h1 h2])
         (hW5.2.2.keep (by rw [a8.wr, a67.wr, hwr6]))

@@ -59,9 +59,9 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
       have s2 := mov_to hp1.code hp1.frame (j := vslot x) (by omega) (by omega) hsm hw
       have hF1 := hp1.frame
       have a2s : Agree fp lo Ks m1 _ := agree_write (frameOK_sub hF1 hks).room hlx.1 (by omega) w.toNat
-      refine ⟨_, s1.trans (by rw [pc_add1]; exact s2), (a1.mono hlo2).trans (Agree.widen a2s hks), ?_,
+      refine ⟨_, s1.trans (by rw [pc_add1]; exact s2), agreeW_of ((a1.mono hlo2).trans (Agree.widen a2s hks)), ?_,
         hpw.wstab m _ hWa ((a1s.mono (Nat.zero_le _)).trans (a2s.mono (Nat.zero_le _))),
-        (keeps_of_agree a1 hp.frame.room hpr (by have := hW.ks; omega)).trans (keeps_write hF1.room (by omega) (fun j hj => by have := hpr j hj; omega) hlx.2 _)⟩
+        (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)).trans (keeps_write hF1.room (by omega) (fun j hj => by have := hpr j hj; omega) hlx.2 _)⟩
       refine envAt_set hp1.env (rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))) hen ?_
       intro τ' y hy
       have := vslot_lt y
@@ -84,8 +84,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     have a1 := Agree.widen a1s hks
     have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have h1 := hq.next a1 (Nat.le_refl _) (by omega)
-    have hu1 := hu.agree (a1.mono hlo2) hp.frame hlo
-    have hk1 := hk.agree (a1.mono hlo2) hp.frame (by omega)
+    have hu1 := hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo
+    have hk1 := hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega)
     have hF1 := h1.frame
     have hbrz := h1.code 0 (by simp)
     simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
@@ -105,13 +105,13 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
         t ct tt hct (by omega) (by omega) hW m1 _ (σ.lese Λ cnd.orte) ρ h2.left hlo hlo2 hu1 hk1 hWa1 hpr
       have hf3 := codeFar_right (n := ct.length) (k := ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length)
         (by simpa using h2.far)
-      refine Sim.prefix hlo (s1.trans sb) (a1.mono hlo2) (keeps_of_agree a1 hp.frame.room hpr (by have := hW.ks; omega)) (Sim.cont ih (fun m2 a2 => ?_) ?_ ?_)
+      refine Sim.prefix hlo (s1.trans sb) (agreeW_of (a1.mono hlo2)) (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)) (Sim.cont ih (fun m2 a2 => ?_) ?_ ?_)
       rotate_left
       · simp only [exPlus, List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
         exact tgt_eq (by omega)
       · simp only [exPlus, List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
         exact tgt_eq (by omega)
-      have hc3 := (codeAt_right h2.code).agree a2 hf3
+      have hc3 := codeAt_agreeWIn hW a2 (codeAt_right h2.code) hf3
       have hjmp := hc3 0 (by simp)
       simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hjmp
       have sj := Star.one (run_step (t := ⟨_, fp⟩) hjmp (by decide) (run_jmp (t := ⟨_, fp⟩) hjmp))
@@ -137,7 +137,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
         (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega))
       have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens e ce te hce (by omega)
         (by omega) hW m1 _ (σ.lese Λ cnd.orte) ρ h4 hlo hlo2 hu1 hk1 hWa1 hpr
-      refine Sim.prefix hlo (s1.trans sb) (a1.mono hlo2) (keeps_of_agree a1 hp.frame.room hpr (by have := hW.ks; omega)) (Sim.cast ih ?_ ?_ ?_ ?_)
+      refine Sim.prefix hlo (s1.trans sb) (agreeW_of (a1.mono hlo2)) (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)) (Sim.cast ih ?_ ?_ ?_ ?_)
       · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, List.length_cons,
           List.length_nil, addr_norm]
         congr 2
@@ -162,8 +162,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     | ok σ' v =>
       obtain ⟨m1, s1, a1, _, hw1⟩ := hc
       have := hW.ks
-      exact ⟨m1, s1, a1.mono hlo2, envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega), hw1,
-        keeps_of_agree a1 hp.frame.room hpr (by omega)⟩
+      exact ⟨m1, s1, a1.mono hlo2, envAt_agreeWIn hW hp.env a1 (Nat.le_refl _) (by omega), hw1,
+        keeps_of_agreeW hW a1 hpr (by omega)⟩
     | logik e => exact hc
     | why _ _ => exact hc.elim
     | hardware e => exact hc
@@ -189,7 +189,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
         (fun m pc hp => lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
         (fun m pc hp => (const_ok hp hl (by omega)).mono fun x hx => hx.trans (BitVec.ofInt_natCast _ _))
         hin (fun m w hm hpe => weltAt_glob hm hW.lay hW.dis hpe)
-      exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agree a' hp.frame.room hpr (by have := hW.ks; omega)⟩
+      exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agreeW hW a' hpr (by have := hW.ks; omega)⟩
     · cases h
   | _, Γ, Λ, _, .assignSlot t f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr
   | _, Γ, Λ, _, .assignThru _ t _ f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
@@ -215,7 +215,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
         have := weltAt_slot hm hW.lay hW.dis hkc hpe
         rw [hkn] at this
         exact this)
-    exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agree a' hp.frame.room hpr (by have := hW.ks; omega)⟩
+    exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agreeW hW a' hpr (by have := hW.ks; omega)⟩
   | _, Γ, Λ, _, .leave _, c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa, _ => by
     simp only [lowS] at h
     split at h
@@ -269,7 +269,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     simp only [lowS, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp only [execStmt, Sim]
-    exact ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
+    exact ⟨m, by simpa using Star.refl _ m, AgreeW.refl _ _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
   | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
@@ -288,8 +288,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
       (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a)) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2
     simp only [execStmt]
     rw [axiomAntwort_eq, hu]
-    exact ⟨m1, s1, a1.mono hlo2, envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega), hw1,
-      keeps_of_agree a1 hp.frame.room hpr (by omega)⟩
+    exact ⟨m1, s1, a1.mono hlo2, envAt_agreeWIn hW hp.env a1 (Nat.le_refl _) (by omega), hw1,
+      keeps_of_agreeW hW a1 hpr (by omega)⟩
   | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .publish .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
@@ -313,7 +313,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     simp only [lowB, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp only [execBlock, Sim]
-    exact ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
+    exact ⟨m, by simpa using Star.refl _ m, AgreeW.refl _ _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
   | _, Γ, _, _, .cons s rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
     simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs1, hc⟩ := h
@@ -335,9 +335,10 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
       obtain ⟨m1, s1, a1, e1, hw1, k1⟩ := ih
       have hf := codeFar_right (n := cs.length) (k := cr.length) (by simpa using hp.far)
       have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K (frei Γ) cr ρ1 :=
-        ⟨hp.ctx, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf, e1, trivial, wstab_true _ _⟩
+        ⟨hp.ctx, hp.small, frameOK_agreeW hp.frame a1, codeAt_agreeWIn hW a1 (codeAt_right hp.code) hf, hf, e1, trivial,
+          wstab_true _ _⟩
       have ih2 := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
-        (by omega) hW m1 _ σ1 ρ1 hp1 hlo hlo2 (hu.agree a1 hp.frame hlo) (hk.agree a1 hp.frame (by omega)) hw1 hpr
+        (by omega) hW m1 _ σ1 ρ1 hp1 hlo hlo2 (hu.agreeW hW a1 hlo) (hk.agreeW hW a1 (by omega)) hw1 hpr
       rw [pc_add1]
       exact Sim.prefix hlo s1 a1 k1 ih2
     | zurueck | why | leave | next | logik | hardware => exact Sim.ziel ih (fun _ _ h => by cases h) hL hN
@@ -362,10 +363,10 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
        envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen, trivial, wstab_true _ _⟩
     have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
       (by omega) hW m1 _ (σ.lese Λ e.orte) _ hp1 hlo
-      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) (hu.agree (a1.mono hlo2) hp.frame hlo)
-      (hk.agree (a1.mono hlo2) hp.frame (by omega)) hWa1 (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) (hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo)
+      (hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega)) hWa1 (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
     rw [pc_add1]
-    exact Sim.prefix hlo s1 (a1.mono hlo2) (keeps_of_agree a1 hp.frame.room hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
+    exact Sim.prefix hlo s1 (agreeW_of (a1.mono hlo2)) (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
   | _, Γ, Λ, _, .bindCall f args he _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
     simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, hca, ⟨cr, tr⟩, hr, hc⟩ := h
@@ -381,7 +382,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     cases o with
     | ok σ' v =>
       obtain ⟨m1, s1, a1, ⟨w, hw, hew⟩, hw1⟩ := hc
-      have hp1 := hp.left.next a1 (Nat.le_refl _) (by omega)
+      have hp1 := hp.left.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
       have s2 := mov_to hp1.code hp1.frame (j := frei Γ) (s := frei Γ + 2) (by omega) (by omega) hp.small hw
       rw [← pc_add1] at s2
       let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ))) 8 w.toNat
@@ -389,18 +390,20 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
       have a2 : Agree fp (frei Γ) K m1 m2 := Agree.widen a2s hks
       have hw2 : WeltAt m2 L σ' :=
         weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hw1 (a2s.mono (Nat.zero_le _))
-      have hq := hp.next (a1.trans a2) (d' := frei Γ + 1) (by omega) (by omega)
+      have hq := hp.nextW hW (a1.trans (agreeW_of a2)) (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega)
+        (by omega)
       have hp2 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
         ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
          envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert he hew), trivial, wstab_true _ _⟩
       have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
         (by omega) hW m2 _ σ' _ hp2 hlo
         (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
-        (hu.agree ((a1.trans a2).mono hlo2) hp.frame hlo) (hk.agree ((a1.trans a2).mono hlo2) hp.frame (by omega)) hw2
+        (hu.agreeW hW ((a1.trans (agreeW_of a2)).mono hlo2) hlo)
+        (hk.agreeW hW ((a1.trans (agreeW_of a2)).mono hlo2) (by omega)) hw2
         (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
       rw [pc_add1 pc (callC A f (frei Γ) ca ++ [ci 2 (frei Γ) (frei Γ + 2) 0]) cr]
-      exact Sim.prefix hlo (s1.trans s2) ((a1.trans a2).mono hlo2)
-        (keeps_of_agree (a1.trans a2) hp.frame.room hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
+      exact Sim.prefix hlo (s1.trans s2) ((a1.trans (agreeW_of a2)).mono hlo2)
+        (keeps_of_agreeW hW (a1.trans (agreeW_of a2)) hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
     | logik e => exact hc
     | why _ _ => exact hc.elim
     | hardware e => exact hc
@@ -418,17 +421,17 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     rcases torBind_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he ht hck (by omega) (by omega) hW hp hWa with
       ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨hAA, hst⟩
     · rw [hAA]
-      have hq := hp.next a12 (d' := frei Γ + 1) (by omega) (by omega)
+      have hq := hp.nextW hW a12 (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega) (by omega)
       have hp2 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
         ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
          envAt_cons hq.env hw2 hen, trivial, wstab_true _ _⟩
       have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
         (by omega) hW m2 _ _ _ hp2 hlo
         (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
-        (hu.agree (a12.mono hlo2) hp.frame hlo) (hk.agree (a12.mono hlo2) hp.frame (by omega)) hW2
+        (hu.agreeW hW (a12.mono hlo2) hlo) (hk.agreeW hW (a12.mono hlo2) (by omega)) hW2
         (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
       rw [pc_add1 pc (ct ++ ck) cr]
-      exact Sim.prefix hlo s12 (a12.mono hlo2) (keeps_of_agree a12 hp.frame.room hpr (by omega)) (Sim.schrumpf ih)
+      exact Sim.prefix hlo s12 (a12.mono hlo2) (keeps_of_agreeW hW a12 hpr (by omega)) (Sim.schrumpf ih)
     · rw [hAA]
       exact hst
   | _, _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h

@@ -159,18 +159,19 @@ theorem shr_amt {k : Nat} : (BitVec.ofInt 64 ((8 * (k % 8) : Nat) : Int)).toNat 
 
 /-- One element back: `u := buffer word`, `u := u >> 8 (k % 8)`, `u := u & 255`, the cell's address into `u + 1`,
     the store. The frame below `u` and every word of the world apart from the cell keep their contents. -/
-theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks B u adr k : Nat} {Γ : Ctx} {ρ : Env D Γ}
+theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {Ks B u adr k : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {bw : Runner.W}
-    (hp : Pre m pc fp Ks u (unpack1 B u adr k) ρ W) (hF : FrameOK m fp K) (hks : Ks ≤ K) (hB : B + k / 8 < u)
-    (hu : u + 2 ≤ Ks) (hadr : adr < 2 ^ 31) (ha1 : fp.toNat + 8 * Ks ≤ adr) (ha2 : adr + 8 ≤ fp.toNat + 8 * K)
+    {L : Lay D} (hp : Pre m pc fp Ks u (unpack1 B u adr k) ρ W) (hB : B + k / 8 < u)
+    (hu : u + 2 ≤ Ks) (hadr : adr < 2 ^ 31) (hrd : Runner.Mem.all m.rd (BitVec.ofNat 64 adr) 8 = true)
+    (hwr0 : Runner.Mem.all m.wr (BitVec.ofNat 64 adr) 8 = true) (ha1 : L.lo ≤ adr) (ha2 : adr + 8 ≤ L.hi)
+    (hl3 : L.hi < 2 ^ 31) (htop : fp.toNat + 8 * Ks ≤ L.lo)
     (hbw : m.rd64 (slot fp (BitVec.ofNat 64 (B + k / 8))) = some bw) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 7), fp⟩ m' ∧ Agree fp u K m m' ∧
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 7), fp⟩ m' ∧ AgreeW L fp u Ks m m' ∧
       m'.rd64 (BitVec.ofNat 64 adr) = some ((bw >>> (8 * (k % 8))) &&& 255) ∧
       ∀ a : Nat, a + 8 ≤ 2 ^ 64 → fp.toNat + 8 * Ks ≤ a → Far (BitVec.ofNat 64 a) 8 (BitVec.ofNat 64 adr) 8 →
         m'.rd64 (BitVec.ofNat 64 a) = m.rd64 (BitVec.ofNat 64 a) := by
   have hsmall := hp.small
   have hroom := hp.frame.room
-  have hroomK := hF.room
   have hp3 : Pre m pc fp Ks u ((([ci 2 u ((B + k / 8 : Nat) : Int) 0] ++
       [ci 1 ((u : Int) + 1) ((8 * (k % 8) : Nat) : Int) 0, ci 12 u u ((u : Int) + 1)]) ++
       [ci 1 ((u : Int) + 1) 255 0, ci 8 u u ((u : Int) + 1)]) ++
@@ -199,7 +200,7 @@ theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks B u adr k : Nat} {�
     rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]; exact hv
   have a12 : Agree fp u Ks m m2 := a1.trans a2
   have hwr : all m2.wr (BitVec.ofNat 64 adr) 8 = true := by
-    rw [a12.wr]; exact frame_wr_at hF (by omega) ha2
+    rw [a12.wr]; exact hwr0
   have s3 := star_ins (fp := fp) (m' := write m2 (BitVec.ofNat 64 adr) 8 ((bw >>> (8 * (k % 8))) &&& 255).toNat) hc3
     (by simp [ci]) (by
       simp only [ci, op]
@@ -209,11 +210,11 @@ theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks B u adr k : Nat} {�
       refine f2_run (t := ⟨_, fp⟩) hi ?_
       rw [sx_nat (by omega)]
       exact run_rd64 hrb (run_wr64 (wr64_some hwr)))
-  refine ⟨_, s1.trans (s2.trans (star_cast s3 rfl ?_)), (Agree.widen a12 hks).trans
-    (agree_write_at hroomK (by omega) ha2 _), ?_, fun a h1 h2 h3 => ?_⟩
+  refine ⟨_, s1.trans (s2.trans (star_cast s3 rfl ?_)), (agreeW_of a12).trans
+    (agreeW_write_welt ha1 ha2 hl3 _), ?_, fun a h1 h2 h3 => ?_⟩
   · simp only [T.mk.injEq, and_true, List.length_singleton]
     rw [show (16 : Runner.W) = BitVec.ofNat 64 16 from rfl, addr_norm, addr_norm]
-  · exact rd64_write_same (by rw [a12.rd]; exact frame_rd_at hF (by omega) ha2)
+  · exact rd64_write_same (by rw [a12.rd]; exact hrd)
   · rw [rd64_write_far (by exact ⟨h3.2.1, h3.1, h3.2.2.symm⟩), rd64_agree_out a12 h1 (.inr h2)]
 
 theorem unpackK_len (L : Lay D) (t : D.Tab) (f : D.Feld t) (B u : Nat) :
@@ -224,42 +225,41 @@ theorem unpackK_len (L : Lay D) (t : D.Tab) (f : D.Feld t) (B u : Nat) :
 
 /-- **The elements `k < K'` back from the buffer at slot `B`**: each cell holds `byteOf` the buffer; every other word
     of the world above the frame keeps its contents, and so does the frame below `u`. -/
-theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runner.W} {K Ks : Nat} {Γ : Ctx}
-    {ρ : Env D Γ} (hl : LayIn L) (hd : LayDis L) (hks : Ks ≤ K) (hu : u + 2 ≤ Ks)
-    (hwlo : fp.toNat + 8 * Ks ≤ L.lo) (hwhi : L.hi ≤ fp.toNat + 8 * K) :
+theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runner.W} {Ks : Nat} {Γ : Ctx}
+    {ρ : Env D Γ} (hl : LayIn L) (hd : LayDis L) (hu : u + 2 ≤ Ks) (hwlo : fp.toNat + 8 * Ks ≤ L.lo)
+    (hord : L.lo ≤ L.hi) :
     (K' : Nat) → (K' : Int) ≤ D.count t → (∀ k, k < K' → B + k / 8 < u) → (m : Runner.Mem) → (pc : Runner.W) →
-    PreS m pc fp Ks u (unpackK L t f B u K') ρ → FrameOK m fp K → CodeFar pc (unpackK L t f B u K').length fp K →
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (unpackK L t f B u K').length), fp⟩ m' ∧ Agree fp u K m m' ∧
+    PreS m pc fp Ks u (unpackK L t f B u K') ρ → WeltWr m L →
+    (∀ k : Nat, (k : Int) < D.count t → Runner.Mem.all m.rd (BitVec.ofNat 64 (L.elem t f k)) 8 = true) →
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (unpackK L t f B u K').length), fp⟩ m' ∧ AgreeW L fp u Ks m m' ∧
       (∀ k, k < K' → m'.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (byteOf m (slot fp (BitVec.ofNat 64 B)) k)) ∧
       ∀ a : Nat, a + 8 ≤ 2 ^ 64 → fp.toNat + 8 * Ks ≤ a →
         (∀ k, k < K' → Far (BitVec.ofNat 64 a) 8 (BitVec.ofNat 64 (L.elem t f k)) 8) →
         m'.rd64 (BitVec.ofNat 64 a) = m.rd64 (BitVec.ofNat 64 a)
-  | 0, _, _, m, pc, _, _, _ => ⟨m, by simpa [unpackK] using Star.refl _ m, Agree.refl _ _ _ _,
+  | 0, _, _, m, pc, _, _, _ => ⟨m, by simpa [unpackK] using Star.refl _ m, AgreeW.refl _ _ _ _ _,
       fun _ h => absurd h (by omega), fun _ _ _ _ => rfl⟩
-  | K' + 1, hK', hB, m, pc, hp, hF, hcf => by
-    have hroomK := hF.room
+  | K' + 1, hK', hB, m, pc, hp, hwr, hrdc => by
+    have hroom := hp.frame.room
     have hsmall := hp.small
     have hl3 := hl.2.2
     have hp' : PreS m pc fp Ks u (unpackK L t f B u K' ++ unpack1 B u (L.elem t f K') K') ρ := hp
-    have hcf' : CodeFar pc ((unpackK L t f B u K').length + (unpack1 B u (L.elem t f K') K').length) fp K := by
-      simpa [unpackK] using hcf
-    obtain ⟨m1, s1, a1, hc1, ho1⟩ := unpackK_ok hl hd hks hu hwlo hwhi K' (by omega)
-      (fun k hk => hB k (by omega)) m pc hp'.left hF (codeFar_left hcf')
-    have hfr := codeFar_right hcf'
+    obtain ⟨m1, s1, a1, hc1, ho1⟩ := unpackK_ok hl hd hu hwlo hord K' (by omega)
+      (fun k hk => hB k (by omega)) m pc hp'.left hwr hrdc
+    have hfr := codeFar_right (by simpa using hp'.far)
     have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * (unpackK L t f B u K').length)) fp Ks u
         (unpack1 B u (L.elem t f K') K') ρ :=
       ⟨hp.ctx, hsmall, ⟨hp.frame.lt, fun i hi => by rw [a1.rd]; exact hp.frame.rd i hi,
         fun i hi => by rw [a1.wr]; exact hp.frame.wr i hi⟩,
-       (codeAt_right hp'.code).agree a1 hfr, codeFar_sub2 hfr hks, envAt_agree hp.env a1 hF hp.ctx (by omega),
-       trivial, wstab_true _ _⟩
+       codeAt_agreeW a1 hwlo hl3 hord (codeAt_right hp'.code) hfr, hfr,
+       envAt_agreeW hp.env a1 hwlo hroom hp.ctx (by omega), trivial, wstab_true _ _⟩
     have hcell := hl.1 t f K' (by omega)
     have hbw : m1.rd64 (slot fp (BitVec.ofNat 64 (B + K' / 8))) =
         some ((m.rd64 (slot fp (BitVec.ofNat 64 B) + BitVec.ofNat 64 (8 * (K' / 8)))).getD 0) := by
-      rw [agree_rd_low a1 hroomK (hB K' (by omega)) (by omega), slot_succ]
-      exact rd64_rdW hF (by have := hB K' (by omega); omega)
-    have hF1 : FrameOK m1 fp K := ⟨hF.lt, fun i hi => by rw [a1.rd]; exact hF.rd i hi,
-      fun i hi => by rw [a1.wr]; exact hF.wr i hi⟩
-    obtain ⟨m2, s2, a2, hc2, ho2⟩ := unpack1_ok hp1 hF1 hks (hB K' (by omega)) hu (by omega) (by omega) (by omega) hbw
+      rw [agreeW_rd_low a1 hwlo hroom (hB K' (by omega)) (by omega), slot_succ]
+      exact rd64_rdW hp.frame (by have := hB K' (by omega); omega)
+    obtain ⟨m2, s2, a2, hc2, ho2⟩ := unpack1_ok hp1 (hB K' (by omega)) hu (by omega)
+      (by rw [a1.rd]; exact hrdc K' (by omega)) (by rw [a1.wr]; exact hwr.word hcell.1 hcell.2 hl3)
+      hcell.1 hcell.2 hl3 hwlo hbw
     refine ⟨m2, s1.trans (star_cast s2 rfl ?_), a1.trans a2, fun k hk => ?_, fun a h1 h2 h3 => ?_⟩
     · simp only [T.mk.injEq, and_true, unpackK, List.length_append, unpack1, List.length_cons, List.length_nil,
         addr_norm]

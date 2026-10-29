@@ -34,7 +34,7 @@ theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wor
     (hP : PCode m A C fp K) (hdv : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (dv + 1))
     (hE : EnvAt m (slot fp (BitVec.ofNat 64 F)) ρa) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     match R f σ ρa with
-    | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ Agree fp F K m m' ∧
+    | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ AgreeW L fp F K m m' ∧
         (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
@@ -168,7 +168,7 @@ theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wor
   | ok σ' v =>
     rw [hR] at hspec
     obtain ⟨m6, s6, a6, ⟨w, hw, he⟩, hw6⟩ := hspec
-    refine ⟨m6, s14.trans ?_, a15.trans ((agree_sub hF5.lt hFF a6).mono (by omega)),
+    refine ⟨m6, s14.trans ?_, (agreeW_of a15).trans ((agreeW_sub hF5.lt hFF a6).mono (by omega)),
       ⟨w, by rw [← slot_slot]; exact hw, he⟩, hw6⟩
     rw [e16] at s6
     exact s6
@@ -247,7 +247,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     match R f σ (evalArgs σ₀ args σ ρ) with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (callC A f (frei Γ) ca).length), fp⟩ m' ∧
-        Agree fp (frei Γ) K m m' ∧
+        AgreeW L fp (frei Γ) K m m' ∧
         (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 2))) = some w ∧ EncErg (D.erg f) v w) ∧
         WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
@@ -270,7 +270,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
   cases o with
   | ok σ' v =>
     obtain ⟨m2, s2, a2, hw, hw2⟩ := hc
-    refine ⟨m2, s1.trans ?_, (a1.mono (by omega)).trans a2, hw, hw2⟩
+    refine ⟨m2, s1.trans ?_, (agreeW_of (a1.mono (by omega))).trans a2, hw, hw2⟩
     simp only [callC]
     rw [pc_add1, hl4]
     exact s2

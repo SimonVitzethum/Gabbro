@@ -42,10 +42,11 @@ theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a : Nat} {Γ : Ctx} {
     (hnew : ∀ m w, WeltAt m L σ → Pe w → WeltAt (write m (BitVec.ofNat 64 a) 8 w.toNat) L σ') :
     ∃ m', Star ⟨pc, fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (frei Γ)]).length), fp⟩ m' ∧
-      Agree fp (frei Γ) K m m' ∧ EnvAt m' fp ρ ∧ WeltAt m' L σ' := by
+      AgreeW L fp (frei Γ) K m m' ∧ EnvAt m' fp ρ ∧ WeltAt m' L σ' := by
   have hks := hW.ks
   have hwl := hW.lo
-  have hwh := hW.hi
+  have htp := hW.top
+  have hl3 := hW.lay.2.2
   have hsm := hp.small
   have hq : PreS m pc fp K (frei Γ) (ce ++ (ca ++ [stC (frei Γ)])) ρ := by
     simpa [List.append_assoc] using hp
@@ -66,14 +67,14 @@ theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a : Nat} {Γ : Ctx} {
   have hq2 := hq1.next (a := ca) (a2.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
   -- the store
   have hroom := hF2.room
-  have hwr := frame_wr_at hF2 (a := a) (by omega) (by omega)
+  have hwr := hWa2.2.2.word ha.1 ha.2 hl3
   subst hae
   have s3 := st_step hq2.code (by omega) hsm hadr hw2 (wr64_some hwr)
-  have a3 : Agree fp (frei Γ) K m2 (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
-    agree_write_at hroom (by omega) (by omega) _
-  have a13 : Agree fp (frei Γ) K m (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
-    a1.trans ((a2.mono (Nat.le_succ _)).trans a3)
-  refine ⟨_, s1.trans (s2.trans ?_), a13, envAt_agree hp.env a13 hp.frame (Nat.le_refl _) (by omega),
+  have a3 : AgreeW L fp (frei Γ) K m2 (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
+    agreeW_write_welt ha.1 ha.2 hl3 _
+  have a13 : AgreeW L fp (frei Γ) K m (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
+    (agreeW_of (a1.trans (a2.mono (Nat.le_succ _)))).trans a3
+  refine ⟨_, s1.trans (s2.trans ?_), a13, envAt_agreeW hp.env a13 htp hp.frame.room (Nat.le_refl _) (by omega),
     hnew m2 w hWa2 hpe⟩
   have e : pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (frei Γ)]).length) =
       pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * ca.length) + BitVec.ofNat 64 (16 * 1) := by

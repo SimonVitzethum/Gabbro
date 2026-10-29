@@ -93,7 +93,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
     (hcl : cs.length = fs.length) (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i])
     (hfs : ∀ g, fs[pos g]? = some g) (hpar : (D.params main).isEmpty = true) (hfit : fp0 + 8 * K < 2 ^ 31)
     (hroomK : FB + 2 * L ≤ Ks) (hexK : exitSlot + 8 ≤ Ks) (hks : Ks ≤ K) (hYlo : fp0 + 8 * Ks ≤ Yb.lo)
-    (hYhi : Yb.hi ≤ fp0 + 8 * K) (hY : LayIn Yb) (hYd : LayDis Yb)
+    (hYhi : Yb.hi ≤ fp0 + 8 * K) (hYord : Yb.lo ≤ Yb.hi) (hY : LayIn Yb) (hYd : LayDis Yb)
     (hops : (startC A main n ++ body).all (fun i => decide (i.o < 256)) = true)
     {m : Runner.Mem} (hm : BytesAt m codeBase ((startC A main n ++ body).flatMap encII ++ List.replicate (8 * K) 0))
     (σ : World D) (ρ : Env D (D.params main)) (hWa : WeltAt m Yb σ) :
@@ -143,7 +143,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
     refine ⟨by rw [hAg]; exact hb, by rw [hAg, ← htl]; omega, hops.2.2.1⟩
   have hAlt : ∀ g, A g < 2 ^ 31 := fun g => by have := (hseg g).2.1; omega
   have hlen : ∀ g, 16 * (C g).length < 2 ^ 31 := fun g => by have := (hseg g).2.1; omega
-  have hP : PCode m A C (BitVec.ofNat 64 fp0) K := fun g =>
+  have hP : PCode m A C (BitVec.ofNat 64 fp0) Ks := fun g =>
     ⟨codeAt_bytes (C g) (A g) (hseg g).2.2 (hseg g).1, codeFar_nat (hseg g).2.1 (by omega)⟩
   have hC' : ∀ g, ∃ top, lowFun P A Yb g = some (C g, top) ∧ top ≤ L := fun g => by
     obtain ⟨hc, hl, hC⟩ := hpos g
@@ -154,6 +154,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
     rw [List.flatMap_append, List.length_append, flatMap_enc_len, flatMap_enc_len, startC_len] at hz
     exact frameOK_bytes (by rw [hfp]; rwa [show codeBase + (16 * startLen + 16 * body.length) =
       codeBase + 16 * (startLen + body.length) by omega] at hz) (by simp) (by omega)
+  have hF : FrameOK m (BitVec.ofNat 64 fp0) Ks := frameOK_sub hF hks
   have hroom := hF.room
   -- the depth
   have hq : 2 ≤ (Ks - FB) / L := (Nat.le_div_iff_mul_le (by omega)).mpr (by omega)
@@ -169,20 +170,20 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
        else ci 1 ((exitSlot + 1 : Nat) : Int) 0 0,
        ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0])) := by
     simpa [startC, List.append_assoc] using hS0
-  have s1 := const_step (j := 2) (k := ((n + 1 : Nat) : Int)) (codeAt_left hS0') hF (by omega) hK
+  have s1 := const_step (j := 2) (k := ((n + 1 : Nat) : Int)) (codeAt_left hS0') hF (by omega) (by omega)
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
   let m1 := write m (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 2)) 8 (BitVec.ofInt 64 ((n + 1 : Nat) : Int)).toNat
-  have a1 : Agree (BitVec.ofNat 64 fp0) 2 K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
+  have a1 : Agree (BitVec.ofNat 64 fp0) 2 Ks m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
   have hF1 := hF.agree a1
   have hfp0 : (BitVec.ofNat 64 fp0).toNat = fp0 := by simp only [BitVec.toNat_ofNat]; omega
-  have hW : WIn Yb (BitVec.ofNat 64 fp0) Ks K := ⟨hY, hYd, by rw [hfp0]; omega, by rw [hfp0]; omega, hks⟩
+  have hW : WIn Yb (BitVec.ofNat 64 fp0) Ks Ks := ⟨hY, hYd, by rw [hfp0]; omega, hYord, Nat.le_refl _⟩
   have hWa1 : WeltAt m1 Yb σ := weltAt_stab hY (by rw [hfp0]; omega) m m1 hWa
     ((agree_write (K := Ks) (by rw [hfp0]; omega) (Nat.le_refl 2) (by omega) _).mono (Nat.zero_le _))
   have hfC : CodeFar (BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * [ci 1 2 ((n + 1 : Nat) : Int) 0].length))
       (callTail A main FB ++ [ci 1 exitSlot 231 0,
        if (D.erg main).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
        else ci 1 ((exitSlot + 1 : Nat) : Int) 0 0,
-       ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0]).length (BitVec.ofNat 64 fp0) K := by
+       ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0]).length (BitVec.ofNat 64 fp0) Ks := by
     rw [ofNat_add64]; exact codeFar_nat (by simp [callTail]; omega) (by omega)
   have hc1 := (codeAt_right hS0').agree a1 hfC
   have hdv : m1.rd64 (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 n + 1) := by
@@ -193,22 +194,21 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   have hnp : (D.params main).length = 0 := by simpa using hpar
   have hE : EnvAt m1 (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 FB)) ρ := fun τ x => by
     have := idx_lt x; omega
-  have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by have h4 : (callTail A main FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 hK (Nat.le_refl _)
+  have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by have h4 : (callTail A main FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 (by omega) (Nat.le_refl _)
     (by omega) (by rw [hn1]; omega) (hAlt main) (pcode_agree hP a1) hdv hE hW hWa1
   generalize rufAt P O passes n main σ ρ = o at hcall ⊢
   cases o with
   | ok σ' v =>
     obtain ⟨m2, s2, a2, ⟨w, hw, hew⟩, _⟩ := hcall
-    have a12 : Agree (BitVec.ofNat 64 fp0) 2 K m m2 := a1.trans (a2.mono (by omega))
     have hfE := codeFar_tail (a := callTail A main FB) hfC
-    have hexC := (codeAt_right (a := callTail A main FB) hc1).agree (a2.mono (Nat.zero_le _)) hfE
-    have hF2 := hF1.agree a2
+    have hexC := codeAt_agreeWIn hW (a2.mono (Nat.zero_le _)) (codeAt_right (a := callTail A main FB) hc1) hfE
+    have hF2 := frameOK_agreeW hF1 a2
     by_cases hs : (D.erg main).isSome = true
     · simp only [hs, ite_true] at hexC hfE
-      obtain ⟨t', m', q, sx, hq, hnr, ha⟩ := exitw_ok hexC hfE hF2 (by omega) (by omega) hK hw
+      obtain ⟨t', m', q, sx, hq, hnr, ha⟩ := exitw_ok hexC hfE hF2 (by omega) (by omega) (by omega) hw
       exact ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, by rw [ha]; exact hew⟩
     · simp only [hs, Bool.false_eq_true, ite_false] at hexC hfE
-      obtain ⟨t', m', q, sx, hq, hnr, _⟩ := stop_ok (c := 0) (s := exitSlot) hexC hfE hF2 (by omega) hK (by decide)
+      obtain ⟨t', m', q, sx, hq, hnr, _⟩ := stop_ok (c := 0) (s := exitSlot) hexC hfE hF2 (by omega) (by omega) (by decide)
       exact ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr,
         encErg_none (by simpa using hs) v _⟩
   | logik e => exact Stops.prefix s1 hcall
@@ -221,7 +221,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
 theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
     {name : D.Fn → String} {main : D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
     (hb : bild P Y fs pos name main Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
-    (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x))
+    (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
     {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) :
     match rufAt P O passes b.depth main σ ρ with
@@ -250,7 +250,7 @@ theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} 
         simp only [Bild.bytes, List.append_assoc] at hm'
         have hm2 := hm'.right.right
         simp only [leN_len] at hm2
-        exact bild_kern (hT := hT) rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi hY hYd
+        exact bild_kern (hT := hT) rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi (hYord _) hY hYd
           hops (by simpa [codeBase] using hm2) σ ρ hWa
       · exfalso
         revert hb

@@ -29,12 +29,12 @@ def RetZ (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D
     (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
   if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
   then Stops t m 102
-  else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
+  else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
     (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
 
 theorem RetZ.prefix {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W}
     {K : Nat} {rp cfp : Runner.W} {t0 t : T} {m0 m : Runner.Mem} {σ' : World D} {v : ErgVal D (D.erg f)}
-    (h : Star t0 m0 t m) (ha : Agree fp 2 K m0 m) (hs : RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v) :
+    (h : Star t0 m0 t m) (ha : AgreeW L fp 2 K m0 m) (hs : RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v) :
     RetZ L P f σ0 ρ0 fp K rp cfp t0 m0 σ' v := by
   simp only [RetZ] at hs ⊢
   split
@@ -61,6 +61,54 @@ theorem Kopf.agree {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {K lo : Nat} {
   refine ⟨?_, ?_, envAt_agree h.env ha' hF (Nat.le_refl _) hb, hb⟩
   · rw [agree_rd_low ha' hF.room (by omega) hb]; exact h.r0
   · rw [agree_rd_low ha' hF.room (by omega) hb]; exact h.r1
+
+/-! ## What a statement keeps, under the frame's `WIn` -/
+
+theorem agreeW_rdW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo i : Nat} (hW : WIn L fp Ks K)
+    (ha : AgreeW L fp lo K m m') (hi : i < lo) (hK : lo ≤ K) :
+    m'.rd64 (slot fp (BitVec.ofNat 64 i)) = m.rd64 (slot fp (BitVec.ofNat 64 i)) :=
+  agreeW_rd_low ha hW.top (by have := hW.room; omega) hi hK
+
+theorem codeAt_agreeWIn {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo : Nat} (hW : WIn L fp Ks K)
+    (ha : AgreeW L fp lo K m m') {pc : Runner.W} {is : List II} (hc : CodeAt m pc is)
+    (hf : CodeFar pc is.length fp K) : CodeAt m' pc is :=
+  codeAt_agreeW ha hW.top hW.lay.2.2 hW.ord hc hf
+
+theorem envAt_agreeWIn {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Ks K d : Nat} {Γ : Ctx} {ρ : Env D Γ}
+    (hW : WIn L fp Ks K) (h : EnvAt m fp ρ) (ha : AgreeW L fp d K m m') (hd : frei Γ ≤ d) (hK : d ≤ K) :
+    EnvAt m' fp ρ :=
+  envAt_agreeW h ha hW.top (by have := hW.room; omega) hd hK
+
+theorem keeps_of_agreeW {L : Lay D} {fp : Runner.W} {pr : List Nat} {Ks K d : Nat} {m m' : Runner.Mem}
+    (hW : WIn L fp Ks K) (ha : AgreeW L fp d K m m') (hp : ∀ j ∈ pr, j < d) (hd : d ≤ K) : Keeps fp pr m m' :=
+  fun j hj => agreeW_rdW hW ha (hp j hj) hd
+
+theorem Umf.agreeW {L : Lay D} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m' : Runner.Mem}
+    {fp : Runner.W} {Ks K lo : Nat} (hW : WIn L fp Ks K) (h : Umf A C dv m fp K) (ha : AgreeW L fp lo K m m')
+    (hlo : FB ≤ lo) : Umf A C dv m' fp K :=
+  ⟨pcode_agreeW h.code ha hW.top hW.lay.2.2 hW.ord, by
+    have hFB3 : FB = 3 := rfl
+    have hb := h.big
+    rw [agreeW_rdW hW (ha.mono (Nat.min_le_left lo K)) (by omega) (Nat.min_le_right lo K)]
+    exact h.depth, h.big⟩
+
+theorem Kopf.agreeW {L : Lay D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {Ks K lo : Nat} {rp cfp : Runner.W}
+    {ρ0 : Env D (D.params f)} (hW : WIn L fp Ks K) (h : Kopf f m fp K rp cfp ρ0) (ha : AgreeW L fp lo K m m')
+    (hl : FB + (D.params f).length ≤ lo) : Kopf f m' fp K rp cfp ρ0 := by
+  have hb := h.big
+  have hFB3 : FB = 3 := rfl
+  have ha' := ha.mono hl
+  refine ⟨?_, ?_, envAt_agreeWIn hW h.env ha' (Nat.le_refl _) hb, hb⟩
+  · rw [agreeW_rdW hW ha' (by omega) hb]; exact h.r0
+  · rw [agreeW_rdW hW ha' (by omega) hb]; exact h.r1
+
+/-- `Pre.next` after a statement that changed the slots from `lo` on and the world. -/
+theorem Pre.nextW {L : Lay D} {m m' : Runner.Mem} {pc fp : Runner.W} {Ks K d d' lo : Nat} {a b : List II}
+    {Γ : Ctx} {ρ : Env D Γ} (hW : WIn L fp Ks K) (h : PreS m pc fp K d (a ++ b) ρ) (ha : AgreeW L fp lo K m m')
+    (hlo : frei Γ ≤ lo) (hd : d ≤ d') (hK : lo ≤ K) : PreS m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d' b ρ :=
+  have hf := codeFar_right (n := a.length) (k := b.length) (by simpa using h.far)
+  ⟨Nat.le_trans h.ctx hd, h.small, frameOK_agreeW h.frame ha, codeAt_agreeWIn hW ha (codeAt_right h.code) hf, hf,
+   envAt_agreeWIn hW h.env ha hlo hK, trivial, wstab_true _ _⟩
 
 theorem envAt_ergEnv {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} :
     {e : Option Ty} → {v : ErgVal D e} → {w : Runner.W} → EnvAt m fp ρ →
@@ -219,7 +267,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp c
   · next hf =>
     rw [if_neg hf] at h0
     obtain ⟨m', s, a, hw⟩ := h0
-    exact ⟨m', s, Agree.widen a hks, hw,
+    exact ⟨m', s, agreeW_of (Agree.widen a hks), hw,
       weltAt_stab hW.lay (by have := hW.lo; omega) m m' hWa (a.mono (Nat.zero_le _))⟩
 
 end Gabbro.Stage0.Senke

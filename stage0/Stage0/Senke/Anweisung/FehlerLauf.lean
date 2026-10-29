@@ -35,13 +35,13 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
     (∃ v m2 w, axiomAntwortSonst O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, some (.inl v)) ∧
       Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ct.length + 6 * b.fehler.length + ck.length)), fp⟩ m2 ∧
-      Agree fp (frei Γ) K m m2 ∧ m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w ∧ Enc τ (ergWert he v) w ∧
+      AgreeW L fp (frei Γ) K m m2 ∧ m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w ∧ Enc τ (ergWert he v) w ∧
       WeltAt m2 L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1) ∨
     (∃ r m2, axiomAntwortSonst O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, some (.inr r)) ∧
       Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ct.length + 6 * b.fehler.length + ck.length + cr.length)), fp⟩
         m2 ∧
-      Agree fp (frei Γ) K m m2 ∧ m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 r.val) ∧
+      AgreeW L fp (frei Γ) K m m2 ∧ m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 r.val) ∧
       WeltAt m2 L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1) ∨
     (axiomAntwortSonst O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, none) ∧ Stops ⟨pc, fp⟩ m 110) := by
@@ -59,7 +59,7 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
   have hsmall := hp.small
   have hFs := frameOK_sub hp.frame hks
   have hroom := hFs.room
-  have hn1 := hp'.next a1 (Nat.le_refl _) (by omega)
+  have hn1 := hp'.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
   have hpF : PreS m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ + 1)
       (fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int)) ρ :=
     mkPreS (by omega) (by omega) (frameOK_sub hn1.frame hks) hn1.left.code (codeFar_sub2 hn1.left.far hks) hn1.env
@@ -72,7 +72,7 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
   | some x =>
     intro ⟨m2, s2, a2, hw2⟩ ⟨hx, hs⟩
     refine .inr (.inl ⟨⟨x.2, hx⟩, m2, by rw [hs], s1.trans (star_cast s2 rfl ?_),
-      a1.trans (Agree.widen a2 hks), hw2, weltAt_stab hW.lay hlo2 m1 m2 hW1 (a2.mono (Nat.zero_le _))⟩)
+      a1.trans (agreeW_of (Agree.widen a2 hks)), hw2, weltAt_stab hW.lay hlo2 m1 m2 hW1 (a2.mono (Nat.zero_le _))⟩)
     rw [adr_int, show ((16 * ct.length : Nat) : Int) + (16 * (6 * (b.fehler.length : Int)) +
       ((16 * (ck.length + cr.length) : Nat) : Int)) =
       ((16 * (ct.length + 6 * b.fehler.length + ck.length + cr.length) : Nat) : Int) by push_cast; omega,
@@ -93,7 +93,8 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
     · obtain ⟨v, hv, hen⟩ := din hr
       obtain ⟨m3, s3, a3⟩ := hin hr
       refine .inl ⟨v, m3, w, by rw [hv], s12.trans (by rw [pc_add] at s3; exact s3), ?_, ?_, hen, ?_⟩
-      · exact a1.trans ((Agree.widen a2 hks).mono (Nat.le_succ _) |>.trans ((Agree.widen a3 hks).mono (Nat.le_succ _)))
+      · exact a1.trans (agreeW_of ((Agree.widen a2 hks).mono (Nat.le_succ _) |>.trans
+          ((Agree.widen a3 hks).mono (Nat.le_succ _))))
       · rw [agree_rd_low a3 hroom (by omega) (by omega)]; exact hw2
       · exact weltAt_stab hW.lay hlo2 m1 m3 hW1 ((a2.trans a3).mono (Nat.zero_le _))
     · exact .inr (.inr ⟨by rw [dout hr], Stops.prefix s12 (hout hr)⟩)

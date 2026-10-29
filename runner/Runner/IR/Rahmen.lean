@@ -87,8 +87,7 @@ theorem agree_rd_low {m m' : Mem} {fp : W} {lo K i : Nat} (ha : Agree fp lo K m 
 
 /-- Code apart from the frame's slots survives. -/
 def CodeFar (pc : W) (n : Nat) (fp : W) (K : Nat) : Prop :=
-  pc.toNat + 16 * n < 2 ^ 64 ∧ fp.toNat + 8 * K ≤ 2 ^ 64 ∧
-    (pc.toNat + 16 * n ≤ fp.toNat ∨ fp.toNat + 8 * K ≤ pc.toNat)
+  pc.toNat + 16 * n < 2 ^ 64 ∧ fp.toNat + 8 * K ≤ 2 ^ 64 ∧ pc.toNat + 16 * n ≤ fp.toNat
 
 theorem far_bytes {m m' : Mem} {fp : W} {lo K : Nat} (ha : Agree fp lo K m m') {a : W} {n : Nat}
     (hfar : a.toNat + n ≤ 2 ^ 64 ∧ (a.toNat + n ≤ fp.toNat ∨ fp.toNat + 8 * K ≤ a.toNat)) :

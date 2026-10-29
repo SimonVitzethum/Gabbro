@@ -21,7 +21,7 @@ variable {D : Deklaration} {V : Vertrag D}
     slot below `lo`. -/
 abbrev Reach (L : Lay D) {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (pr : List Nat) (t : T) (m : Runner.Mem)
     (e : Runner.W) (σ' : World D) (ρ' : Env D Γ) : Prop :=
-  ∃ m', Star t m ⟨e, fp⟩ m' ∧ Agree fp lo K m m' ∧ EnvAt m' fp ρ' ∧ WeltAt m' L σ' ∧ Keeps fp pr m m'
+  ∃ m', Star t m ⟨e, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧ EnvAt m' fp ρ' ∧ WeltAt m' L σ' ∧ Keeps fp pr m m'
 
 /-- What the code from `t` does for G's outcome `o` in the body of `f`: `ok` reaches the end `e`, `leave` and `next`
     the loop's targets `eL` and `eN`, `zurueck` returns (`RetZ`), `logik` stops with its code. -/
@@ -41,12 +41,12 @@ variable {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D
   {l : Bool} {Γ : Ctx} {fp : Runner.W} {lo K : Nat} {pr : List Nat}
 
 theorem Reach.prefix {t0 t : T} {m0 m : Runner.Mem} {e : Runner.W} {σ' : World D} {ρ' : Env D Γ}
-    (h : Star t0 m0 t m) (ha : Agree fp lo K m0 m) (hk : Keeps fp pr m0 m) (hs : Reach L fp lo K pr t m e σ' ρ') :
+    (h : Star t0 m0 t m) (ha : AgreeW L fp lo K m0 m) (hk : Keeps fp pr m0 m) (hs : Reach L fp lo K pr t m e σ' ρ') :
     Reach L fp lo K pr t0 m0 e σ' ρ' := by
   obtain ⟨m', s, a, en, hw, kp⟩ := hs; exact ⟨m', h.trans s, ha.trans a, en, hw, hk.trans kp⟩
 
 theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner.Mem} {e eL eN : Runner.W}
-    (hl : FB ≤ lo) (h : Star t0 m0 t m) (ha : Agree fp lo K m0 m) (hk : Keeps fp pr m0 m)
+    (hl : FB ≤ lo) (h : Star t0 m0 t m) (ha : AgreeW L fp lo K m0 m) (hk : Keeps fp pr m0 m)
     (hs : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o) : Sim L P f σ0 ρ0 rp cfp fp lo K pr t0 m0 e eL eN o := by
   cases o with
   | ok σ ρ => exact Reach.prefix h ha hk hs
@@ -62,7 +62,7 @@ theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner
 /-- `ok` goes on from `e1` to `e2`; `leave` and `next` keep their targets. -/
 theorem Sim.cont {o : Ausgang (vertragVon D f) l Γ} {t : T} {m : Runner.Mem} {e1 e2 eL eN eL' eN' : Runner.W}
     (hs : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e1 eL eN o)
-    (hj : ∀ m', Agree fp lo K m m' → Star ⟨e1, fp⟩ m' ⟨e2, fp⟩ m') (hL : eL = eL') (hN : eN = eN') :
+    (hj : ∀ m', AgreeW L fp lo K m m' → Star ⟨e1, fp⟩ m' ⟨e2, fp⟩ m') (hL : eL = eL') (hN : eN = eN') :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e2 eL' eN' o := by
   subst hL hN
   cases o with
@@ -115,7 +115,7 @@ theorem jmp_reach {L : Lay D} {Γ : Ctx} {m : Runner.Mem} {pc fp : Runner.W} {lo
   have hi := hc 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   refine ⟨m, star_cast (Star.one (run_step (t := ⟨pc, fp⟩) hi (by decide) (run_jmp (t := ⟨pc, fp⟩) hi))) rfl ?_,
-    Agree.refl _ _ _ _, he, hw, Keeps.refl _ _ _⟩
+    AgreeW.refl _ _ _ _ _, he, hw, Keeps.refl _ _ _⟩
   simp only [T.mk.injEq, and_true]
   have h16 : BitVec.ofInt 64 16 = BitVec.ofNat 64 (16 * 1) := by decide
   rw [sx_lit hl, BitVec.ofInt_add, List.length_singleton, h16, BitVec.add_assoc]

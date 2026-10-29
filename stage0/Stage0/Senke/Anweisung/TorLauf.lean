@@ -27,7 +27,7 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (h : torC L a args s = some (c, top)) (hKs : top ≤ Ks) (hW : WIn L fp Ks K)
     (hp : PreS m pc fp K s c ρ) (hWa : WeltAt m L σ) :
-    ∃ b, L.tor a = some b ∧ ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp s K m m' ∧
+    ∃ b, L.tor a = some b ∧ ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ AgreeW L fp s K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w ∧
       WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
       (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = rohW b (D.agruende a) w := by
@@ -120,8 +120,8 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
           refine s1.trans (s2'.trans (s3.trans (star_cast s4 rfl ?_)))
           simp only [T.mk.injEq, and_true, List.length_singleton, torCode_len]
           rw [show (16 : Runner.W) = BitVec.ofNat 64 16 from rfl, addr_norm, addr_norm]; congr 2
-        · exact ((Agree.widen a1 hks).mono (by omega)).trans (((Agree.widen a2 hks).mono (by omega)).trans
-            ((Agree.widen a3 hks).trans (((kernW_agree hW hKW).mono (by omega)).trans (Agree.widen a5 hks))))
+        · exact (agreeW_of (((Agree.widen a1 hks).mono (by omega)).trans (((Agree.widen a2 hks).mono (by omega)).trans
+            (Agree.widen a3 hks)))).trans ((kernW_agreeW hKW).trans (agreeW_of (Agree.widen a5 hks)))
         · exact rd64_write_same (by rw [hKW.1]; exact hF3.rd s (by omega))
         · exact weltAt_stab hW.lay hlo m4 m5 hW4 (a5.mono (Nat.zero_le _))
         · exact hroh
@@ -155,7 +155,7 @@ theorem torC0_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ 
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (h : torC0 L a args s = some (c, top)) (hKs : top ≤ Ks) (hW : WIn L fp Ks K)
     (hp : PreS m pc fp K s c ρ) (hWa : WeltAt m L σ) :
-    ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp s K m m' ∧
+    ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ AgreeW L fp s K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w ∧
       WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
       (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = w.toInt := by
@@ -227,7 +227,7 @@ theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
     (hWa : WeltAt m L σ) :
     (∃ v m2 w, axiomAntwort O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, some v) ∧
-      Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ct ++ ck).length), fp⟩ m2 ∧ Agree fp (frei Γ) K m m2 ∧
+      Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ct ++ ck).length), fp⟩ m2 ∧ AgreeW L fp (frei Γ) K m m2 ∧
       m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w ∧ Enc τ (ergWert he v) w ∧
       WeltAt m2 L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1) ∨
     (axiomAntwort O a σ (evalArgs σ args σ ρ) = ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, none) ∧
@@ -240,7 +240,7 @@ theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
   | int lo hi =>
     have hp' : PreS m pc fp K (frei Γ) (ct ++ (ck ++ cr)) ρ := (List.append_assoc ct ck cr) ▸ hp
     obtain ⟨m1, w, s1, a1, hw1, hW1, hroh⟩ := torC0_ok (O := O) ht htt hW hp'.left hWa
-    have hn := hp'.next a1 (Nat.le_refl _) (by omega)
+    have hn := hp'.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
     have hpk : PreS m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ + 1) ck ρ :=
       mkPreS (by omega) (by have := hp.small; omega) (frameOK_sub hn.frame hks) hn.left.code
         (codeFar_sub2 hn.left.far hks) hn.env
@@ -251,7 +251,8 @@ theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
     · obtain ⟨v, hv, hen⟩ := g1 hr
       obtain ⟨m2, s2, a2⟩ := hin hr
       have hroom := (frameOK_sub hp.frame hks).room
-      refine .inl ⟨v, m2, w, by rw [hv], ?_, a1.trans (Agree.widen (a2.mono (by omega)) hks), ?_, hen, ?_⟩
+      refine .inl ⟨v, m2, w, by rw [hv], ?_, a1.trans (agreeW_of (Agree.widen (a2.mono (Nat.le_succ _)) hks)), ?_,
+        hen, ?_⟩
       · exact s1.trans (by rw [List.length_append, ← pc_add]; exact s2)
       · rw [agree_rd_low a2 hroom (by omega) (by omega)]; exact hw1
       · exact weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hW1 (a2.mono (Nat.zero_le _))

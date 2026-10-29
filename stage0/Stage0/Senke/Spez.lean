@@ -25,14 +25,18 @@ variable {D : Deklaration}
 def PCode (m : Runner.Mem) (A : D.Fn → Nat) (C : D.Fn → List II) (fp : Runner.W) (K : Nat) : Prop :=
   ∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ CodeFar (BitVec.ofNat 64 (A g)) (C g).length fp K
 
-/-- The world lies in the slots of the frame at `fp` from `Ks` to `K`; the slots below `Ks` are the frame's own.
-    Every frame nested in it ends at the same address, so the world lies in each of them (`WIn.sub`). -/
+/-- The frame at `fp` has `K` slots, the current body's own below `Ks`; the world lies above the whole frame, apart
+    from every frame (each thread's stack lies below it). Every frame nested in it ends at the same address
+    (`WIn.sub`). -/
 structure WIn (L : Lay D) (fp : Runner.W) (Ks K : Nat) : Prop where
   lay : LayIn L
   dis : LayDis L
-  lo : fp.toNat + 8 * Ks ≤ L.lo
-  hi : L.hi ≤ fp.toNat + 8 * K
+  top : fp.toNat + 8 * K ≤ L.lo
+  ord : L.lo ≤ L.hi
   ks : Ks ≤ K
+
+theorem WIn.lo {L : Lay D} {fp : Runner.W} {Ks K : Nat} (h : WIn L fp Ks K) : fp.toNat + 8 * Ks ≤ L.lo := by
+  have := h.top; have := h.ks; omega
 
 /-- The word of a result. -/
 def EncErg : (e : Option Ty) → ErgVal D e → Runner.W → Prop
@@ -47,7 +51,7 @@ def FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp → m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →
     m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt m fp ρ → WeltAt m L σ →
     match S f σ ρ with
-    | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
+    | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
         (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (hwCode h)
@@ -88,6 +92,17 @@ theorem agree_sub {m m' : Runner.Mem} {fp : Runner.W} {K F lo : Nat} (hr : fp.to
   · rw [hs] at h1; omega
   · rw [hs] at h2; omega
 
+theorem agreeW_sub {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {K F lo : Nat} (hr : fp.toNat + 8 * K < 2 ^ 64)
+    (hF : F ≤ K) (h : AgreeW L (slot fp (BitVec.ofNat 64 F)) lo (K - F) m m') : AgreeW L fp (F + lo) K m m' := by
+  have hs : (slot fp (BitVec.ofNat 64 F)).toNat = fp.toNat + 8 * F := by
+    have := fp.isLt
+    have h8 : (8 : Runner.W).toNat = 8 := rfl
+    simp only [slot, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
+    rw [Nat.mod_eq_of_lt (a := F) (by omega)]; omega
+  refine ⟨h.rd, h.wr, fun x hx hw => h.b x (fun ⟨h1, h2⟩ => hx ⟨?_, ?_⟩) hw⟩
+  · rw [hs] at h1; omega
+  · rw [hs] at h2; omega
+
 theorem codeFar_sub {pc fp : Runner.W} {n K F : Nat} (h : CodeFar pc n fp K) (hlt : fp.toNat + 8 * K < 2 ^ 64)
     (hF : F ≤ K) : CodeFar pc n (slot fp (BitVec.ofNat 64 F)) (K - F) := by
   obtain ⟨h1, h2, h3⟩ := h
@@ -114,7 +129,26 @@ theorem WIn.sub {L : Lay D} {fp : Runner.W} {Ks K F : Nat} (h : WIn L fp Ks K) (
     have h8 : (8 : Runner.W).toNat = 8 := rfl
     simp only [slot, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
     rw [Nat.mod_eq_of_lt (a := F) (by have := h.ks; omega)]; have := h.ks; omega
-  have := h.lo; have := h.hi; have := h.ks
-  exact ⟨h.lay, h.dis, by rw [hs]; omega, by rw [hs]; omega, by omega⟩
+  have := h.top; have := h.ks
+  exact ⟨h.lay, h.dis, by rw [hs]; omega, h.ord, by omega⟩
+
+/-! ## What a statement keeps -/
+
+theorem envAt_agreeW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat}
+    (h : EnvAt m fp ρ) (ha : AgreeW L fp d K m m') (htop : fp.toNat + 8 * K ≤ L.lo) (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
+    (hd : frei Γ ≤ d) (hK : d ≤ K) : EnvAt m' fp ρ := by
+  intro τ x
+  obtain ⟨w, hw, he⟩ := h τ x
+  refine ⟨w, ?_, he⟩
+  rw [agreeW_rd_low ha htop hr (by have := vslot_lt x; omega) hK]
+  exact hw
+
+theorem pcode_agreeW {L : Lay D} {m m' : Runner.Mem} {A : D.Fn → Nat} {C : D.Fn → List II} {fp : Runner.W}
+    {K lo : Nat} (h : PCode m A C fp K) (ha : AgreeW L fp lo K m m') (htop : fp.toNat + 8 * K ≤ L.lo)
+    (hl : L.hi < 2 ^ 31) (hord : L.lo ≤ L.hi) : PCode m' A C fp K :=
+  fun g => ⟨codeAt_agreeW ha htop hl hord (h g).1 (h g).2, (h g).2⟩
+
+theorem WIn.room {L : Lay D} {fp : Runner.W} {Ks K : Nat} (h : WIn L fp Ks K) : fp.toNat + 8 * K < 2 ^ 31 := by
+  have := h.top; have := h.lay.2.2; have := h.ord; omega
 
 end Gabbro.Stage0.Senke

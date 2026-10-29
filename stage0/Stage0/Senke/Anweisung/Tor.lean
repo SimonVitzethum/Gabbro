@@ -157,13 +157,11 @@ theorem argsW_congr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D �
     simp only [ArgsW] at h ⊢
     exact ⟨by rw [← he 0 (by simp)]; exact h.1, argsW_congr ρ (fun j hj => he (j + 1) (by simp; omega)) h.2⟩
 
-/-- The kernel's change lies in the frame's slots from `Ks`, where the world is. -/
-theorem kernW_agree {L : Lay D} {fp : Runner.W} {Ks K : Nat} {m m' : Runner.Mem} (hW : WIn L fp Ks K)
-    (h : KernW L m m') : Agree fp Ks K m m' := by
+/-- The kernel changes only the world. -/
+theorem kernW_agreeW {L : Lay D} {fp : Runner.W} {lo K : Nat} {m m' : Runner.Mem} (h : KernW L m m') :
+    AgreeW L fp lo K m m' := by
   obtain ⟨h1, h2, h3⟩ := h
-  refine ⟨h1, h2, fun x hx => h3 x fun ⟨a, b⟩ => hx ⟨?_, ?_⟩⟩
-  · have := hW.lo; omega
-  · have := hW.hi; omega
+  exact ⟨h1, h2, fun x _ hx => h3 x hx⟩
 
 /-- The word of slot `i`, zero where none is read. -/
 def rdW (m : Runner.Mem) (fp : Runner.W) (i : Nat) : Runner.W := (m.rd64 (slot fp (BitVec.ofNat 64 i))).getD 0
