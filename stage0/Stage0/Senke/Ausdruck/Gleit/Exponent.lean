@@ -51,4 +51,18 @@ theorem floatExponentAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     simpa only [floatExponentWordAux, hv, BitVec.ofInt_ofNat, BitVec.ofNat_eq_ofNat] using
       result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
+/-- Simulation includes the zero correction after prefix counting. -/
+theorem floatExponentL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {a : Nat → Option (List II × Nat)} {av : Runner.W}
+    (ha : WordCode (L := L) ρ W a av) :
+    WordCode (L := L) ρ W (fun d => floatExponentL d a)
+      (floatExponentWordAux av 63 - Runner.IR.bool (av == 0)) := by
+  have ze : WordCode (L := L) ρ W _ _ := WordCode.bin ha (WordCode.const 0 (by decide))
+    (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin (floatExponentAuxL_ok ha 63 (by decide)) ze
+    (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
+
+  intro fp K d c top h hK m pc hp
+  exact result h hK m pc hp
+
 end Gabbro.Stage0.Senke
