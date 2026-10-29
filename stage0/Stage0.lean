@@ -67,3 +67,5 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 import Stage0.Senke.Tore.Proben
 
 import Stage0.Senke.Anweisung.Faelle.WhyProben
+
+import Stage0.Senke.Ausdruck.Old.Proben

@@ -109,8 +109,8 @@ theorem call_sync : SyncOK callMem callLayout 4096 128 :=
 theorem call_umf [Kern] : Umf callLayout addresses target 2 callMem 4096 128 256 :=
   ⟨targets_code, by decide +kernel, by decide, call_sync, by decide⟩
 
-theorem call_head : Kopf callLayout 2 callMem 4096 256 0 0 (Env.nil : Env D []) :=
-  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide⟩
+theorem call_head : Kopf callLayout 2 callMem 4096 256 0 0 (Env.nil : Env D []) tiny world :=
+  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
 
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a

@@ -64,8 +64,8 @@ theorem sync : SyncOK memory callLayout 4096 128 :=
 theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 256 :=
   ⟨functions_at, by decide +kernel, by decide, sync, by decide⟩
 
-theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) :=
-  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide⟩
+theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world :=
+  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
 
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
@@ -77,7 +77,7 @@ theorem retry_case_zeuge [Kern] :
     lowS addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) ∧
     PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) ∧
     WIn callLayout 4096 128 256 ∧ Umf callLayout addresses target 2 memory 4096 128 256 ∧
-    Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) ∧ WeltAt memory callLayout world ∧
+    Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world ∧ WeltAt memory callLayout world ∧
     Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] ⟨2048, 4096⟩ memory
       (2048 + BitVec.ofNat 64 (16 * code.length)) (2048 + BitVec.ofNat 64 (16 * code.length))
       (2048 + BitVec.ofNat 64 (16 * code.length))
