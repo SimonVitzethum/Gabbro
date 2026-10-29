@@ -1,0 +1,10 @@
+// Inclusive narrowing: both endpoints and both outside directions.
+module ir_probe {
+impl fn main() -> u64 in 0 .. 100
+    effects { pure }
+{
+    let x = 8;
+    narrow x to 3 .. 7 else { return 41; }
+    return x;
+}
+}

@@ -119,6 +119,11 @@ def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
       some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
     else none
 
+/-- An outside flag selects the terminating error arm; the value stays in `d`. -/
+def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
+  ce ++ (engTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+    [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
+
 mutual
 def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
@@ -233,11 +238,38 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let cc ← lowInd L p args
     let cr ← lowB A L lo ens pr ex rest
     pure (cc.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max cc.2 cr.2)
+  | _, Γ, _, _, .narrow (lo := lo') (hi := hi') e low high err rest =>
+    if inW lo' hi' && lit32 low && lit32 high then do
+      let ce ← lowE L e (frei Γ)
+      let cr ← lowB A L lo ens pr ex rest
+      let cx ← lowEnd A L lo ens pr (exPlus ex (cr.1.length + 1)) err
+      pure (narrowC (frei Γ) low high ce.1 cx.1 cr.1, max ce.2 (max (frei Γ + 3) (max cx.2 cr.2)))
+    else none
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest => do
     let ct ← torC0 L a args (frei Γ)
     let ck ← chkC (D.aerg a) (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
+  | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest =>
+    match L.tor a, D.aerg a with
+    | some b, some (.int lo' hi') =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a then do
+        let ct ← torC L a args (frei Γ)
+        let ck ← chkC (some (.int lo' hi')) (frei Γ)
+        let ce ← lowEnd A L lo ens pr ex err
+        let cr ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ ck ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
+            max ct.2 (max (frei Γ + 10) (max cr.2 ce.2)))
+        else none
+      else none
+    | _, _ => none
+  | _, Γ, _, _, .check c err rest => do
+    let cc ← lowE L c (frei Γ)
+    let ce ← lowEnd A L lo ens pr ex err
+    let cr ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (cc.1 ++ [ci 19 (frei Γ) (16 * (cr.1.length + 2)) 0] ++ cr.1 ++
+      [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1, max cc.2 (max cr.2 ce.2))
   | _, Γ, _, _, .awaits g _ _ _ _ rest =>
     if lit32 (L.ga g) then do
       let cr ← lowB A L lo ens pr ex rest
@@ -294,6 +326,13 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ce ← lowEnd A L lo ens pr ex e
     let ct ← lowEnd A L lo ens pr (exPlus ex ce.1.length) t
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
+  | _, Γ, _, .narrow (lo := lo') (hi := hi') e low high err rest =>
+    if inW lo' hi' && lit32 low && lit32 high then do
+      let ce ← lowE L e (frei Γ)
+      let cr ← lowEnd A L lo ens pr ex rest
+      let cx ← lowEnd A L lo ens pr (exPlus ex (cr.1.length + 1)) err
+      pure (narrowC (frei Γ) low high ce.1 cx.1 cr.1, max ce.2 (max (frei Γ + 3) (max cx.2 cr.2)))
+    else none
   | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest => do
     let ct ← torC0 L a args (frei Γ)
     let ck ← chkC (D.aerg a) (frei Γ)
