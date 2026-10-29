@@ -180,6 +180,47 @@ theorem read_simulation_zeuge :
     (by decide +kernel) (memory readCode) 0 env hp
   exact h
 
+def value : Expr D Γ [] (.int 0 255) := .widen (by decide) (by decide) (.lit 73)
+def valueCode : List II := [ci 1 5 73 0]
+def addressCode : List II := [ci 2 6 3 0, ci 1 7 8 0, ci 5 6 6 7, ci 1 7 8192 0, ci 3 6 6 7]
+def after : World D := world.storeSlot () 1 () ⟨73, by decide, by decide⟩
+
+/-- The write's actual store runs, preserving both reference variables and the neighboring cell. -/
+theorem write_simulation_zeuge :
+    lowS (fun _ => 0) layout 3 ([], 0) [] (0, 0) assignment = some (writeCode, writeTop) ∧
+    PreS layout (memory writeCode) 0 4096 64 5 writeCode env ∧
+    ∃ m', Star ⟨0, 4096⟩ (memory writeCode)
+        ⟨0 + BitVec.ofNat 64 (16 * writeCode.length), 4096⟩ m' ∧
+      AgreeW layout 4096 5 64 (memory writeCode) m' ∧ EnvAt layout m' 4096 env ∧
+      WeltAt m' layout after ∧ m'.rd64 8192 = some 11 ∧ m'.rd64 8200 = some 73 := by
+  have hc : (writeCode.flatMap encII).length ≤ 4096 := by decide +kernel
+  have hp := pre writeCode hc (by decide +kernel)
+  have hw := world_memory writeCode hc
+  have hW : WIn layout 4096 64 64 :=
+    ⟨layout_in, layout_dis, by decide, by decide, by decide⟩
+  have hcode : writeCode = valueCode ++ addressCode ++ [stC 5] := by decide +kernel
+  refine ⟨lowering_zeuge.2.1, hp, ?_⟩
+  have hp' : PreS layout (memory writeCode) 0 4096 64 5
+      (valueCode ++ addressCode ++ [stC 5]) env := by rw [← hcode]; exact hp
+  obtain ⟨m', hs, ha, he, hw'⟩ := store_ok (σ := world) (σ' := after) hp' hW hw (by decide)
+    (fun m pc hp => lowE_ok world world (fun _ h => h) value 5 valueCode 6
+      (by decide +kernel) (by decide) m pc env hp)
+    (fun m pc hp => (slotRefA_ok (t := ()) (n := 0) rfl
+      (cr := ([ci 2 6 3 0], 7)) (top := 8) (by decide +kernel) (by decide)
+      (fun m pc hp => lowE_ok world world (fun _ h => h) second 6 [ci 2 6 3 0] 7
+        (by decide +kernel) (by decide) m pc env hp) hp).mono (fun _ h => h.1))
+    (by decide) (fun m w hm henc => weltAt_slot hm layout_in layout_dis (by decide) henc)
+  refine ⟨m', ?_, ha, he, hw', ?_, ?_⟩
+  · simpa only [← hcode] using hs
+  · obtain ⟨w, hr, he⟩ := hw'.1 () () 0 (by decide)
+    have he' : w = 11 := he
+    rw [he', show BitVec.ofNat 64 (layout.elem () () 0) = (8192 : Runner.W) by decide] at hr
+    exact hr
+  · obtain ⟨w, hr, he⟩ := hw'.1 () () 1 (by decide)
+    have he' : w = 73 := he
+    rw [he', show BitVec.ofNat 64 (layout.elem () () 1) = (8200 : Runner.W) by decide] at hr
+    exact hr
+
 /-- Static images have no supplied region; raw provider words are not accepted as regions. -/
 theorem refused_zeuge : chkC (some (.ref 0)) 5 = none ∧
     lowEnd (fun _ => 0) layout 3 ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel
