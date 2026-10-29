@@ -17,7 +17,7 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hlo : 0 ≤ a) (hhi : b + n ≤ D.count t) (e : Expr D Γ Λ (.int 0 (256 ^ n - 1)))
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (h : lowS A L lo ens pr ex (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) = some (c, top))
+    (h : lowS passes A L lo ens pr ex (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) = some (c, top))
     (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ) c ρ)
     (hlow : lo ≤ frei Γ) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))

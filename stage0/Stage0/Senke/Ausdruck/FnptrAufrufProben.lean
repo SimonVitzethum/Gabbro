@@ -30,7 +30,7 @@ def addresses (f : D.Fn) : Nat := 64 + 512 * f.val
 
 def callLayout : Lay D := { layout 8192 with fa := addresses, sb := 4096, st := 2048 }
 
-def target (f : D.Fn) : List II := ((lowFun tiny addresses callLayout f).getD ([], 0)).1
+def target (f : D.Fn) : List II := ((lowFun 1 tiny addresses callLayout f).getD ([], 0)).1
 
 def pointer : Expr D [] [] (.fnptr 0) := .glob () (by intro w h; cases h)
 
@@ -50,8 +50,8 @@ def callMem : Runner.Mem :=
     wr := fun _ => true }
   write (write base 8192 8 64) 4112 8 3
 
-theorem target_lower : ∀ f : Fin 3, lowFun tiny addresses callLayout f = some (target f, 13) := by
-  exact @allFin 3 (fun f => lowFun tiny addresses callLayout f = some (target f, 13))
+theorem target_lower : ∀ f : Fin 3, lowFun 1 tiny addresses callLayout f = some (target f, 13) := by
+  exact @allFin 3 (fun f => lowFun 1 tiny addresses callLayout f = some (target f, 13))
     (fun _ => inferInstance) (by decide +kernel)
 
 theorem targets_code : PCode callMem addresses target 4096 256 := by

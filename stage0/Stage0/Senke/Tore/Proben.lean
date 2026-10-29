@@ -58,7 +58,7 @@ def binding (a : D.Ax) : Option TorB :=
   some ⟨if a.val = 0 then 39 else 231, regsIn 0, []⟩
 
 def imageOf (body : Endblock D (vertragVon D main) false [] []) : Except String (List Runner.B) := do
-  let b ← bild (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main [] 1024
+  let b ← bild 1 (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main [] 1024
   pure b.bytes
 
 theorem boolean_images_zeuge : (imageOf boolBody).isOk = true ∧
@@ -101,7 +101,7 @@ def startRoots : Except String (List Nat) := do
   let entry ← fnIdx p.fns "main"
   let (P, _) ← lowerAllg p
   let rs ← (uOhneDoppelte (p.roots ++ p.gestartet)).mapM (fnIdx p.fns)
-  let b ← bild P (layU p (fun _ => none)) (List.finRange p.fns.length) Fin.val
+  let b ← bild 1 P (layU p (fun _ => none)) (List.finRange p.fns.length) Fin.val
     (fun _ => "probe") entry (rs.filter (fun f => f.val != entry.val)) 1024
   pure (b.roots.map Fin.val)
 

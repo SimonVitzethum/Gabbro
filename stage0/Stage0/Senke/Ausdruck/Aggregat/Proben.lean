@@ -110,7 +110,7 @@ def program : Programm D where
       (.widen (by decide) (by decide) (.lit 0)))) (.refl [])
 
 def image : Except String (List Runner.B) := do
-  let b ← bild program (layU u (fun _ => none)) [⟨0, by decide⟩] Fin.val
+  let b ← bild 1 program (layU u (fun _ => none)) [⟨0, by decide⟩] Fin.val
     (fun _ => "main") ⟨0, by decide⟩ [] 1024
   pure b.bytes
 

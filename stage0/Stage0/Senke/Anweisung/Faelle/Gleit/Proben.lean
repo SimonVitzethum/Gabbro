@@ -72,9 +72,9 @@ theorem float_signed_zero_zeuge :
 
 /-- Arithmetic and integer conversion still require their software algorithms and proofs. -/
 theorem float_refused_zeuge :
-    lowB (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0)
+    lowB 1 (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0)
       (show Body from .floatOf (.lit 42) (0, 1) (100, 1) .nil) = none ∧
-    lowB (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0)
+    lowB 1 (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0)
       (show Body from .floatLit (1, 1) (0, 1) (10, 1)
         (.float .add (.var .here) (.var .here) (0, 1) (10, 1) .nil)) = none := by
   decide +kernel
