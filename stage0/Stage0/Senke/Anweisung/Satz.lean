@@ -8,6 +8,7 @@
 import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Anweisung.Schleife
+import Stage0.Senke.Anweisung.TorLauf
 
 namespace Gabbro.Stage0.Senke
 
@@ -24,7 +25,7 @@ theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e
   subst he; exact h
 
 mutual
-theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
@@ -278,14 +279,24 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
   | _, _, _, _, .locks .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .retry .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .axiomCall .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .axiomCall a args hn _ _ _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
+    simp only [lowS] at h
+    have hks := hW.ks
+    have h7 := torC_top h
+    obtain ⟨_, m1, w, s1, a1, _, hw1, _⟩ := torC_ok (O := O) (σ := σ.lese Λ args.orte) h (by omega) hW hp hWa
+    obtain ⟨u, hu⟩ := einpassenErg_none (z := O.zeiger) hn
+      (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a)) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2
+    simp only [execStmt]
+    rw [axiomAntwort_eq, hu]
+    exact ⟨m1, s1, a1.mono hlo2, envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega), hw1,
+      keeps_of_agree a1 hp.frame.room hpr (by omega)⟩
   | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .publish .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .retWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .assignSlotRef .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
 
-theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+theorem lowB_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
@@ -395,7 +406,31 @@ theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     | hardware e => exact hc
   | _, _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .bindCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .bindAxiom .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .bindAxiom a args he _ _ _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa,
+      hpr => by
+    simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨cr, tr⟩, hr, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    simp only [List.length_append] at hs
+    have hks := hW.ks
+    simp only [execBlock]
+    rcases torBind_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he ht hck (by omega) (by omega) hW hp hWa with
+      ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨hAA, hst⟩
+    · rw [hAA]
+      have hq := hp.next a12 (d' := frei Γ + 1) (by omega) (by omega)
+      have hp2 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+        ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
+         envAt_cons hq.env hw2 hen, trivial, wstab_true _ _⟩
+      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
+        (by omega) hW m2 _ _ _ hp2 hlo
+        (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
+        (hu.agree (a12.mono hlo2) hp.frame hlo) (hk.agree (a12.mono hlo2) hp.frame (by omega)) hW2
+        (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      rw [pc_add1 pc (ct ++ ck) cr]
+      exact Sim.prefix hlo s12 (a12.mono hlo2) (keeps_of_agree a12 hp.frame.room hpr (by omega)) (Sim.schrumpf ih)
+    · rw [hAA]
+      exact hst
   | _, _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h

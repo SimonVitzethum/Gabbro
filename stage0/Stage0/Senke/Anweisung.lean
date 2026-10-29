@@ -7,11 +7,12 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), and the gates `axiomCall` and `bindAxiom` (`torC`), and the blocks `nil`, `cons`, `bind`, `bindCall`; everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp
+import Stage0.Senke.Tor
 
 namespace Gabbro.Stage0.Senke
 
@@ -125,6 +126,7 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
   | _, Γ, _, _, .retires .. => some ([], frei Γ)
   | _, Γ, _, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
   | _, Γ, _, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
+  | _, Γ, _, _, .axiomCall a args _ _ _ _ _ => torC L a args (frei Γ)
   | _, _, _, _, _ => none
 
 def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
@@ -142,6 +144,11 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
+  | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest => do
+    let ct ← torC L a args (frei Γ)
+    let ck ← chkC (D.aerg a) (frei Γ)
+    let cr ← lowB A L lo ens pr ex rest
+    pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
   | _, _, _, _, _ => none
 end
 

@@ -1,0 +1,54 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): three gates through the kernel; exit code 7
+module ir_probe {
+
+assume linux_getpid
+    "The Linux x86_64 `getpid` answers the calling process's id, in 1 .. 4194304."
+    falsifier sonde_getpid;
+
+assume linux_kill0
+    "The Linux x86_64 `kill` with signal 0 to the process itself answers 0 and sends nothing."
+    falsifier sonde_kill0;
+
+assume linux_yield
+    "The Linux x86_64 `sched_yield` answers 0."
+    falsifier sonde_yield;
+
+syscall getpid() -> u64 in 1 .. 4194304
+    abi linux arch x86_64 number 39
+    regs in { }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_getpid falsifier sonde_getpid;
+
+syscall kill(pid : u64, sig : u64) -> u64 in 0 .. 0
+    abi linux arch x86_64 number 62
+    regs in { rdi = pid, rsi = sig }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_kill0 falsifier sonde_kill0;
+
+syscall sched_yield()
+    abi linux arch x86_64 number 24
+    regs in { }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_yield falsifier sonde_yield;
+
+impl fn main() -> u64 in 0 .. 100
+    effects { pure }
+{
+    sched_yield();
+    let p = getpid();
+    let r = kill(p, 0);
+    return r + 7;
+}
+}

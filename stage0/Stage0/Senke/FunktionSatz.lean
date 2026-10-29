@@ -60,7 +60,7 @@ theorem Ret.schrumpf {τ : Ty} {o : EndAusgang (vertragVon D f) l (τ :: Γ)} {t
 
 end
 
-theorem lowEnd_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+theorem lowEnd_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
@@ -238,7 +238,32 @@ theorem lowEnd_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → 
   | _, _, _, .leave .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .next .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .bindCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
-  | _, _, _, .bindAxiom .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
+  | _, Γ, Λ, .bindAxiom a args he _ _ _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨cr, tr⟩, hr, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    simp only [List.length_append] at hs
+    have hks := hW.ks
+    have hFB3 : FB = 3 := rfl
+    simp only [execEnd]
+    rcases torBind_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he ht hck (by omega) (by omega) hW hp hWa with
+      ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨hAA, hst⟩
+    · rw [hAA]
+      have hq := hp.next a12 (d' := frei Γ + 1) (by omega) (by omega)
+      have hp2 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+        ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
+         envAt_cons hq.env hw2 hen, trivial, wstab_true _ _⟩
+      have ih := lowEnd_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (ex := ex) rest cr tr hr (by omega)
+        (by omega) hW m2 _ _ _ hp2
+        (by simp only [frei, List.length_cons] at hlo ⊢; omega)
+        (hu.agree a12 hp.frame (by omega)) (hk.agree a12 hp.frame (by omega)) hW2
+        (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      rw [pc_add1 pc (ct ++ ck) cr]
+      exact Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agree a12 hp.frame.room hpr (by omega))
+        (Ret.schrumpf ih)
+    · rw [hAA]
+      exact hst
   | _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h

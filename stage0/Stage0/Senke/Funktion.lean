@@ -42,6 +42,11 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ce ← lowEnd A L lo ens pr ex e
     let ct ← lowEnd A L lo ens pr (exPlus ex ce.1.length) t
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
+  | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest => do
+    let ct ← torC L a args (frei Γ)
+    let ck ← chkC (D.aerg a) (frei Γ)
+    let cr ← lowEnd A L lo ens pr ex rest
+    pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
   | _, _, _, _ => none
 
 /-- The code of `f`, and the first slot it does not write. -/

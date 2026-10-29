@@ -86,7 +86,7 @@ theorem codeFar_nat {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2 
   omega
 
 theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat} {main : D.Fn}
-    {K Ks : Nat} {Yb : Lay D} {A : D.Fn → Nat} {cs : List (List II × Nat)} {body : List II} {L n fp0 : Nat}
+    {K Ks : Nat} {Yb : Lay D} [hT : TorOK Yb O] {A : D.Fn → Nat} {cs : List (List II × Nat)} {body : List II} {L n fp0 : Nat}
     (hbody : body = cs.flatMap (·.1)) (hL : L = maxTop cs) (hn : n = depthOf Ks L)
     (hfp : fp0 = codeBase + 16 * (startLen + body.length))
     (hA : ∀ g, A g = (addrs (codeBase + 16 * startLen) (cs.map (·.1.length))).getD (pos g) 0)
@@ -223,7 +223,7 @@ theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} 
     (hb : bild P Y fs pos name main Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x))
     {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main))
-    (hWa : WeltAt m b.Y σ) :
+    (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) :
     match rufAt P O passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg (D.erg main) v q.a1
@@ -250,7 +250,7 @@ theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} 
         simp only [Bild.bytes, List.append_assoc] at hm'
         have hm2 := hm'.right.right
         simp only [leN_len] at hm2
-        exact bild_kern rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi hY hYd
+        exact bild_kern (hT := hT) rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi hY hYd
           hops (by simpa [codeBase] using hm2) σ ρ hWa
       · exfalso
         revert hb

@@ -18,3 +18,7 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.weltAt_slot
 #print axioms Gabbro.Stage0.Senke.layU_in
 #print axioms Gabbro.Stage0.Senke.layU_dis
+#print axioms Gabbro.Stage0.Senke.torC_ok
+#print axioms Gabbro.Stage0.Senke.torBind_ok
+#print axioms Gabbro.Stage0.Senke.chkC_ok
+#print axioms Gabbro.Stage0.Senke.torOK_zeuge
