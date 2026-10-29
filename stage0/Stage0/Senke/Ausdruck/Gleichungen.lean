@@ -270,6 +270,6 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_eng (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int) (sonst : Expr D Γ Λ (.int lo' hi')) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.eng e lo' hi' sonst) d =
-    (none) := rfl
+    engL d lo hi lo' hi' (lowE L e d) (lowE L sonst d) := rfl
 
 end Gabbro.Stage0.Senke

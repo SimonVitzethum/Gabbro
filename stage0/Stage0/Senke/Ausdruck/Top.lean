@@ -119,6 +119,15 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       have := lowE_top cond d cc tc hc
       omega
     · cases h
+  | _, _, .eng e lo' hi' b, d, c, top, h => by
+    simp only [lowE_eqs, engL] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff] at h
+      obtain ⟨⟨ce, te⟩, _, ⟨cb, tb⟩, _, h⟩ := h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+      · cases h
+    · cases h
   | _, _, .fnref .., _, _, _, h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h
@@ -140,8 +149,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .strGet .., _, _, _, h
   | _, _, .strEq .., _, _, _, h
   | _, _, .strLt .., _, _, _, h
-  | _, _, .strWeit .., _, _, _, h
-  | _, _, .eng .., _, _, _, h => by simp [lowE_eqs] at h
+  | _, _, .strWeit .., _, _, _, h => by simp [lowE_eqs] at h
 
 theorem Ok.mono {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {P Q : Runner.W → Prop}
     (h : Ok m pc fp K d c P) (hq : ∀ w, P w → Q w) : Ok m pc fp K d c Q := by

@@ -14,6 +14,7 @@ import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.lowEnd_ok
 #print axioms Gabbro.Stage0.Senke.lowE_ok
 #print axioms Gabbro.Stage0.Senke.wenn_ok
+#print axioms Gabbro.Stage0.Senke.eng_ok
 #print axioms Gabbro.Stage0.Senke.store_ok
 #print axioms Gabbro.Stage0.Senke.trav_ok
 #print axioms Gabbro.Stage0.Senke.weltAt_glob
