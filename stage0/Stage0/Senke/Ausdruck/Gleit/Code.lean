@@ -19,7 +19,7 @@ theorem floatKeyL_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : Env 
     (ha : ∀ m pc, Pre L m pc fp K d a ρ W → Ok m pc fp K d a (Enc L (.fl lo hi) v))
     (hb : ∀ m pc, Pre L m pc fp K (d+3) b ρ W → Ok m pc fp K (d+3) b (Enc L (.fl lo hi) v))
     {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
-    Ok m pc fp K d c (· = BitVec.ofInt 64 (floatKey v.x)) := by
+    Ok m pc fp K d c (fun w => Gleitkomma.wf Gleitkomma.f64 v.x ∧ w = BitVec.ofInt 64 (floatKey v.x)) := by
   have ht := floatKeyL_top h
   simp only [floatKeyL, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
@@ -58,7 +58,7 @@ theorem floatKeyL_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : Env 
     · intro x y hx hy
       exact ⟨_, rfl, by rw [hx, hy]; rfl⟩
   · intro x y hx hy
-    refine ⟨_, rfl, ?_⟩
+    refine ⟨_, rfl, hx.1, ?_⟩
     rw [hx.2, hy]
     exact float_key_word hx.1
 
