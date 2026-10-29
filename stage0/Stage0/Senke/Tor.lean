@@ -152,6 +152,9 @@ def chkC : Option Ty → Nat → Option (List II)
     match a, b with
     | some a, some b => some (a ++ b)
     | _, _ => none
+  | some .bool, s => some [ci 1 (s + 1) 0 0, ci 14 s s (s + 1),
+      ci 1 (s + 1) 0 0, ci 14 s s (s + 1)]
+  | some .never, s => some (stopC 110 s)
   | _, _ => none
 
 /-- The test of one listed errno `e` with its case `i` (`d = s + 1`): if slot `s` holds `e`, the case into slot `s`
