@@ -1175,6 +1175,54 @@ theorem floatOfIntAssemblyL_left_ofInt {Γ : Ctx} {ρ : Env D Γ}
     (by intro h; cases h)
     (fun _ _ _ he ht => pack he ht) pre
 
+/-- The complete outer assembly executes canonical signed integer conversion on
+    the right path, deriving all format and packing premises. -/
+theorem floatOfIntAssemblyL_right_ofInt {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (F : Gleitkomma.Format) (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64])
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (hr : ((F.p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1) :
+    WordCode (L := L) ρ W
+      (fun d => floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) d input)
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
+  obtain ⟨hp, hpb, hf, hs, hu, hm⟩ := floatOfIntLeftPack_format F hF
+  obtain ⟨hlo, hhi, he⟩ := floatOfIntAssemblyL_normal_exponent z hz hn hi F hF
+  have hb : F.bias < 2^64 := by
+    rcases (show F = Gleitkomma.f32 ∨ F = Gleitkomma.f64 by simpa using hF) with rfl | rfl <;> decide
+  have hp2 : 2 ≤ F.p := by
+    rcases (show F = Gleitkomma.f32 ∨ F = Gleitkomma.f64 by simpa using hF) with rfl | rfl <;> decide
+  have pack : WordCode (L := L) ρ W _ _ := floatOfIntRightPackL_ofInt F z hz hn hi hp2 hpb hf F.bias hb hs hu hm hlo hhi he
+    (floatOfIntAssemblyL_bias F hF z hz hn hi) hr
+  have mag : WordCode (L := L) ρ W _ _ := floatMagnitudeL_ok hi
+  have nz : floatMagnitudeWord (BitVec.ofInt 64 z) ≠ 0 := by
+    intro h
+    have hh := (floatOfIntAssembly_magnitude_bound z hz).1
+    rw [h] at hh
+    simp at hh
+    omega
+  have cond : WordCode (L := L) ρ W
+      (fun d => wordK 14 d (floatMagnitudeL d input) 0) 0 := by
+    intro fp K d c top h ht m pc pre
+    exact wordK_ok h ht (by decide) (fun _ _ he ht => mag he ht)
+      (g := fun a b => some (Runner.IR.bool (a == b)))
+      (fun a ha => by subst a; exact ⟨0, by simpa [Runner.IR.bool] using nz, rfl⟩)
+      rfl (by decide) pre
+  intro fp K d c top h ht m pc pre
+  have hd : d < K := by
+    have hh := h
+    simp only [floatOfIntAssemblyL, wennL, bind, Option.bind_eq_some_iff] at hh
+    obtain ⟨⟨cc, tc⟩, _, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, hh⟩ := hh
+    simp only [floatPackZeroL, Option.some.injEq, Prod.mk.injEq] at ha
+    cases ha
+    split at hh
+    · cases hh; simp only [konstWL, bin2] at ht; omega
+    · contradiction
+  exact wennL_ok h ht hd (bc := false)
+    (fun _ _ he ht => cond he ht)
+    (by intro h; cases h)
+    (fun _ _ _ he ht => pack he ht) pre
+
 /-- Four joint fixtures discharge every outer-left premise and execute the
     emitted assembly with the canonical conversion result. -/
 theorem floatOfIntAssemblyL_left_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
