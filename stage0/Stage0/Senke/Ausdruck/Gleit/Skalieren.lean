@@ -83,6 +83,25 @@ theorem floatNormQ_left (p : Nat) (E : Int) (n : Nat)
   have hs : 0 ≤ (p : Int) - 1 - E := by omega
   simp [Gleitkomma.normQ, Gleitkomma.normQD, hs, he, Gleitkomma.rundeInt, Nat.mod_one]
 
+/-- Actual left-shift IR agrees with G's integer normalization. -/
+theorem floatLeftShiftL_normQ {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {a k : Nat → Option (List II × Nat)} {av : Runner.W} {E : Int}
+    (ha : WordCode (L := L) ρ W a av)
+    (hk : WordCode (L := L) ρ W k (BitVec.ofNat 64 (52 - E).toNat))
+    (he : E ≤ 52) (hs : (52 - E).toNat < 64) :
+    WordCode (L := L) ρ W (fun d => wordL 11 d (a d) (k (d + 1)))
+      (BitVec.ofNat 64 (Gleitkomma.normQ 53 E av.toNat 1)) := by
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin ha hk
+    (g := fun a b => some (a <<< (b.toNat % 64))) rfl rfl (by decide : 11 < 256)
+  have hv : av <<< ((BitVec.ofNat 64 (52 - E).toNat).toNat % 64) =
+      BitVec.ofNat 64 (Gleitkomma.normQ 53 E av.toNat 1) := by
+    rw [floatNormQ_left 53 E av.toNat (by simpa using he)]
+    apply BitVec.eq_of_toNat_eq
+    simp [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq,
+      Nat.mod_eq_of_lt hs, Nat.mod_eq_of_lt (show (52 - E).toNat < 2^64 by omega)]
+  intro fp K d c top h hK m pc hp
+  exact (result h hK m pc hp).mono fun w hw => hw.trans hv
+
 /-- This component already agrees with G's normal significand computation;
     exponent selection and packing are still separate obligations. -/
 theorem floatRoundShiftL_normQ {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
