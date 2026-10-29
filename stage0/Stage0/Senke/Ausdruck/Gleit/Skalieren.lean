@@ -1998,6 +1998,66 @@ theorem floatOfIntContinuationL_magnitude_model (F : Gleitkomma.Format)
   rw [floatMagnitudeWord_model z hz] at hr'
   exact ⟨m', hs, ha, hr'⟩
 
+theorem floatOfIntContinuationL_first_ten (F : Gleitkomma.Format) (input : Nat)
+    {code : List II} {top : Nat}
+    (h : floatOfIntContinuationL F input = some (code, top)) :
+    ∃ tail, code = ci 2 (input + 1) input 0 :: ci 1 (input + 2) 1 0 :: ci 1 (input + 3) 2 0 :: ci 2 (input + 4) input 0 :: ci 1 (input + 5) 0 0 :: ci 13 (input + 4) (input + 4) (input + 5) :: ci 5 (input + 3) (input + 3) (input + 4) :: ci 4 (input + 2) (input + 2) (input + 3) :: ci 5 (input + 1) (input + 1) (input + 2) :: ci 1 (input + 2) 0 0 :: tail := by
+  obtain ⟨assembly, ha, rfl⟩ := floatOfIntContinuationL_parts F input h
+  simp only [floatOfIntAssemblyL, wennL, wordK, floatMagnitudeL, wordL,
+    bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at ha
+  obtain ⟨cc, hc, ca, ha, cb, hb, he⟩ := ha
+  obtain ⟨a, ha, b, hb, hab⟩ := hc
+  obtain ⟨a', ha', b', hb', hab'⟩ := ha
+  cases ha'
+  obtain ⟨x, hx, y, hy, hxy⟩ := hb'
+  obtain ⟨u, hu, z, hz, huz⟩ := hy
+  obtain ⟨q, hq, r, hr, hqr⟩ := hz
+  cases hr
+  cases hq
+  cases hqr
+  cases hu
+  cases huz
+  cases hx
+  cases hxy
+  cases hab'
+  cases hb
+  cases hab
+  split at he
+  · cases he
+    simp only [wennC, bin2, List.cons_append, List.nil_append, List.append_assoc]
+    exact ⟨_, rfl⟩
+  · cases he
+
+/-- Execute the actual zero operand load immediately after magnitude production. -/
+theorem floatOfIntContinuationL_zero_operand (F : Gleitkomma.Format)
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
+    {code : List II} (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63)
+    (hc : floatOfIntContinuationL F input = some (code, top))
+    (h : Pre L m pc fp K (input + 1) code ρ W reserved)
+    (hk : input + 5 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some (BitVec.ofInt 64 z)) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 160, fp⟩ m' ∧
+      Agree fp (input + 1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some (BitVec.ofNat 64 z.natAbs) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 2))) = some 0 := by
+  obtain ⟨m1, s1, a1, r1⟩ := floatOfIntContinuationL_magnitude_model F z hz hc h hk hr
+  obtain ⟨tail, he⟩ := floatOfIntContinuationL_first_ten F input hc
+  rw [he] at h
+  have hp := Pre.next (a := [ci 2 (input + 1) input 0, ci 1 (input + 2) 1 0,
+    ci 1 (input + 3) 2 0, ci 2 (input + 4) input 0, ci 1 (input + 5) 0 0,
+    ci 13 (input + 4) (input + 4) (input + 5),
+    ci 5 (input + 3) (input + 3) (input + 4),
+    ci 4 (input + 2) (input + 2) (input + 3),
+    ci 5 (input + 1) (input + 1) (input + 2)]) h a1
+    (show input + 1 ≤ input + 2 by omega) (by omega)
+  obtain ⟨m2, s2, a2, w, r2, hw⟩ := const_ok hp.left (by decide) (by omega)
+  subst w
+  refine ⟨m2, ?_, a1.trans (a2.mono (by omega)),
+    slotRead_agree hp.frame a2 (by omega) (by omega) r1, r2⟩
+  have ss := s1.trans s2
+  simpa [BitVec.add_assoc] using ss
+
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
     This helper is deliberately not accepted by `lowE` before its simulation proof. -/
