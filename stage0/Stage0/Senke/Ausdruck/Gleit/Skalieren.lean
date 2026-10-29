@@ -1377,15 +1377,23 @@ theorem floatOfIntAssemblyL_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
 #print axioms floatOfIntAssemblyL_left_ofInt
 #print axioms floatOfIntAssemblyL_left_ofInt_zeuge
 
+/-- Canonical continuation after a producer has stored its result in `input`.
+    All conversion temporaries start at `input + 1`; the final copy restores
+    the public destination. The input slot is read explicitly by the assembly. -/
+def floatOfIntContinuationL (F : Gleitkomma.Format) (input : Nat) :
+    Option (List II × Nat) := do
+  let ca ← floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) (input + 1)
+    (fun j => some ([ci 2 j input 0], j + 1))
+  pure (ca.1 ++ [ci 2 input (input + 1) 0], ca.2)
+
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
     This helper is deliberately not accepted by `lowE` before its simulation proof. -/
 def computedFloatOfL (F : Gleitkomma.Format) (d : Nat)
     (child : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
   let ce ← child d
-  let ca ← floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) (d + 1)
-    (fun j => some ([ci 2 j d 0], j + 1))
-  pure (ce.1 ++ ca.1 ++ [ci 2 d (d + 1) 0], max ce.2 ca.2)
+  let suffix ← floatOfIntContinuationL F d
+  pure (ce.1 ++ suffix.1, max ce.2 suffix.2)
 
 /-- Child and assembly ceilings both contribute to the candidate's frame bound. -/
 theorem computedFloatOfL_parts (F : Gleitkomma.Format) (d : Nat)
@@ -1396,11 +1404,12 @@ theorem computedFloatOfL_parts (F : Gleitkomma.Format) (d : Nat)
         (fun j => some ([ci 2 j d 0], j + 1)) = some ca ∧
       c = ce.1 ++ ca.1 ++ [ci 2 d (d + 1) 0] ∧
       top = max ce.2 ca.2 := by
-  simp only [computedFloatOfL, bind, Option.bind_eq_some_iff, pure,
+  simp only [computedFloatOfL, floatOfIntContinuationL, bind, Option.bind_eq_some_iff, pure,
     Option.some.injEq] at h
   obtain ⟨ce, he, ca, ha, hc⟩ := h
+  obtain ⟨assembly, ha, rfl⟩ := ha
   cases hc
-  exact ⟨ce, ca, he, ha, rfl, rfl⟩
+  exact ⟨ce, assembly, he, ha, (List.append_assoc _ _ _).symm, rfl⟩
 
 /-- A successful composition preserves both independently computed ceilings. -/
 theorem computedFloatOfL_ceiling (F : Gleitkomma.Format) (d : Nat)
