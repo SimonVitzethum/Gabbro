@@ -705,4 +705,50 @@ theorem floatOfIntAssemblyL_left_entry {Γ : Ctx} {ρ : Env D Γ}
   have h := floatOfIntAssemblyL_compare z hz hn hi p hb hc ht m pc hp
   simpa only [Runner.IR.bool, decide_eq_true hlt, ite_true] using h
 
+/-- The actual scale conditional executes its comparison, left subtraction and
+    shift, and end jump; Ok includes the complete temporary frame. -/
+theorem floatOfIntScaleL_left {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (p : Nat) (hp1 : 1 ≤ p) (hpb : p - 1 < 64)
+    (hlt : Gleitkomma.findeExp z.natAbs 1 < (p - 1 : Nat))
+    {m : Runner.Mem} {pc fp : Runner.W} {K d top : Nat} {c : List II}
+    (hc : floatOfIntScaleL p d input = some (c, top))
+    (ht : top ≤ K) (hd : d < K)
+    (hpre : Pre L m pc fp K d c ρ W 0) :
+    Ok m pc fp K d c
+      (fun w => w = BitVec.ofNat 64
+        (Gleitkomma.normQ p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1)) := by
+  have he := floatOfIntAssemblyL_prefix z hz hn hi
+  have hm : WordCode (L := L) ρ W (fun j => floatMagnitudeL j input)
+      (floatMagnitudeWord (BitVec.ofInt 64 z)) := floatMagnitudeL_ok hi
+  have hk : WordCode (L := L) ρ W
+      (fun j => wordL 4 j (some (konstWL 4 (p - 1) j))
+        (floatExponentL (j + 1) (fun k => floatMagnitudeL k input)))
+      (BitVec.ofNat 64 (((p : Int) - 1) - Gleitkomma.findeExp z.natAbs 1).toNat) := by
+    have hs : BitVec.ofNat 64 (p - 1) -
+        BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1) =
+        BitVec.ofNat 64 (((p : Int) - 1) - Gleitkomma.findeExp z.natAbs 1).toNat := by
+      have ee : Gleitkomma.findeExp z.natAbs 1 =
+          (Gleitkomma.findeExp z.natAbs 1).toNat := by omega
+      rw [ee, BitVec.ofInt_natCast]
+      rw [BitVec.ofNat_sub_ofNat_of_le _ _ (by omega) (by omega)]
+      congr 1
+      omega
+    rw [← hs]
+    intro fp K d c top h ht m pc pre
+    exact WordCode.bin (WordCode.konst (p - 1) (by omega)) he.1
+      (o := 4) (g := fun a b => some (a - b)) rfl rfl (by decide) h ht m pc pre
+  have hl : WordCode (L := L) ρ W _ _ := floatLeftShiftL_normQ_precision (p := p) hm hk
+    (by omega) (by omega)
+  have mag := (floatOfIntAssembly_magnitude_bound z hz).1
+  exact wennL_ok hc ht hd (bc := true)
+    (fun _ _ h t m pc pre => by
+      have r := floatOfIntAssemblyL_compare_canonical z hz hn hi p (by omega) h t m pc pre
+      simpa [Runner.IR.bool, hlt] using r)
+    (fun _ _ _ h t m pc pre => by
+      simpa only [mag] using hl h t m pc pre)
+    (by intro h; cases h) hpre
+
 end Gabbro.Stage0.Senke
