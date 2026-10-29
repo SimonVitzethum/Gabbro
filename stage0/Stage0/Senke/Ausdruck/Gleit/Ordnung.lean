@@ -6,15 +6,9 @@ import Grammatik.Logik.Vertraege.EinpassenVoll
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gabbro.Grammatik.Gleitkomma
 
-/-- The raw magnitude field, without the sign bit. -/
-def floatMag (a : GFloat) : Nat := a.bexp * 4503599627370496 + a.frac
-
 /-- Exact nonnegative value in units of the least binary64 subnormal. -/
 def floatUnits (a : GFloat) : Nat :=
   if a.bexp = 0 then a.frac else (4503599627370496 + a.frac) * 2 ^ (a.bexp - 1)
-
-/-- The mathematical ordering key; both signed zeros have key zero. -/
-def floatKey (a : GFloat) : Int := if a.sign then -(floatMag a : Int) else floatMag a
 
 def floatSignedUnits (a : GFloat) : Int :=
   if a.sign then -(floatUnits a : Int) else floatUnits a

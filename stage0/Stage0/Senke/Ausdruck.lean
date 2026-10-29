@@ -84,6 +84,12 @@ def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Opt
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
 
+/-- The raw magnitude field, without the sign bit. -/
+def floatMag (a : GFloat) : Nat := a.bexp * 4503599627370496 + a.frac
+
+/-- The mathematical ordering key; both signed zeros have key zero. -/
+def floatKey (a : GFloat) : Int := if a.sign then -(floatMag a : Int) else floatMag a
+
 /-- Build an arbitrary word from base-65536 digits, using only signed immediate fields. -/
 def wordL : Nat → Nat → Nat → List II × Nat
   | 0, _, d => ([ci 1 d 0 0], d + 1)
@@ -114,6 +120,17 @@ def floatCmpL (le : Bool) (d : Nat) (a b : Option (List II × Nat)) : Option (Li
 def floatExprL (le : Bool) (d : Nat) (a b : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
   floatCmpL le d (floatKeyL d (a d) (a (d+3)))
     (floatKeyL (d+1) (b (d+1)) (b (d+4)))
+
+/-- A constant ordering key, including its sign in two's complement. -/
+def floatConstL (x : GFloat) (d : Nat) : List II × Nat :=
+  wordL 4 (BitVec.ofInt 64 (floatKey x)).toNat d
+
+/-- Outside the inclusive interval: `x < lo || hi < x`. -/
+def floatRangeL (d : Nat) (lo hi : Int × Int) (e : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← floatKeyL d (e d) (e (d+3))
+  let b ← floatKeyL (d+2) (e (d+2)) (e (d+5))
+  pure (bin2 9 d (bin2 13 d a (floatConstL (bruch lo) (d+1)))
+    (bin2 13 (d+1) (floatConstL (bruch hi) (d+1)) b))
 
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
