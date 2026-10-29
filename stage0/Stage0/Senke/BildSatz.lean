@@ -82,16 +82,17 @@ theorem codeFar_nat {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2 
   omega
 
 theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat} {main : D.Fn}
-    {K : Nat} {A : D.Fn → Nat} {cs : List (List II × Nat)} {body : List II} {L n fp0 : Nat}
-    (hbody : body = cs.flatMap (·.1)) (hL : L = maxTop cs) (hn : n = depthOf K L)
+    {K Ks : Nat} {Yb : Lay D} {A : D.Fn → Nat} {cs : List (List II × Nat)} {body : List II} {L n fp0 : Nat}
+    (hbody : body = cs.flatMap (·.1)) (hL : L = maxTop cs) (hn : n = depthOf Ks L)
     (hfp : fp0 = codeBase + 16 * (startLen + body.length))
     (hA : ∀ g, A g = (addrs (codeBase + 16 * startLen) (cs.map (·.1.length))).getD (pos g) 0)
-    (hcl : cs.length = fs.length) (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Y fs[i] = some cs[i])
+    (hcl : cs.length = fs.length) (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i])
     (hfs : ∀ g, fs[pos g]? = some g) (hpar : (D.params main).isEmpty = true) (hfit : fp0 + 8 * K < 2 ^ 31)
-    (hroomK : FB + 2 * L ≤ K) (hexK : exitSlot + 8 ≤ K)
+    (hroomK : FB + 2 * L ≤ Ks) (hexK : exitSlot + 8 ≤ Ks) (hks : Ks ≤ K) (hYlo : fp0 + 8 * Ks ≤ Yb.lo)
+    (hYhi : Yb.hi ≤ fp0 + 8 * K) (hY : LayIn Yb)
     (hops : (startC A main n ++ body).all (fun i => decide (i.o < 256)) = true)
     {m : Runner.Mem} (hm : BytesAt m codeBase ((startC A main n ++ body).flatMap encII ++ List.replicate (8 * K) 0))
-    (σ : World D) (ρ : Env D (D.params main)) :
+    (σ : World D) (ρ : Env D (D.params main)) (hWa : WeltAt m Yb σ) :
     match rufAt P O passes n main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg (D.erg main) v q.a1
@@ -111,7 +112,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   rw [List.all_append, Bool.and_eq_true] at hops
   -- the functions, each at its address
   let C : D.Fn → List II := fun g => ((cs[pos g]?).map (·.1)).getD []
-  have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun P A Y g = some cs[pos g] ∧ C g = cs[pos g].1 := by
+  have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun P A Yb g = some cs[pos g] ∧ C g = cs[pos g].1 := by
     intro g
     obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp (hfs g)
     have hc : pos g < cs.length := by omega
@@ -139,7 +140,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   have hlen : ∀ g, 16 * (C g).length < 2 ^ 31 := fun g => by have := (hseg g).2.1; omega
   have hP : PCode m A C (BitVec.ofNat 64 fp0) K := fun g =>
     ⟨codeAt_bytes (C g) (A g) (hseg g).2.2 (hseg g).1, codeFar_nat (hseg g).2.1 (by omega)⟩
-  have hC' : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L := fun g => by
+  have hC' : ∀ g, ∃ top, lowFun P A Yb g = some (C g, top) ∧ top ≤ L := fun g => by
     obtain ⟨hc, hl, hC⟩ := hpos g
     exact ⟨cs[pos g].2, by rw [hl, hC], hL ▸ maxTop_ge hc⟩
   -- the stack
@@ -150,11 +151,11 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
       codeBase + 16 * (startLen + body.length) by omega] at hz) (by simp) (by omega)
   have hroom := hF.room
   -- the depth
-  have hq : 2 ≤ (K - FB) / L := (Nat.le_div_iff_mul_le (by omega)).mpr (by omega)
-  have hn1 : n + 1 = (K - FB) / L := by rw [hn, depthOf]; omega
-  have hdm := Nat.div_mul_le_self (K - FB) L
-  have hnK : n + 1 ≤ K := by have := Nat.div_le_self (K - FB) L; omega
-  have hS := lowFun_spec (P := P) (O := O) (passes := passes) hC' hAlt hlen n (by omega)
+  have hq : 2 ≤ (Ks - FB) / L := (Nat.le_div_iff_mul_le (by omega)).mpr (by omega)
+  have hn1 : n + 1 = (Ks - FB) / L := by rw [hn, depthOf]; omega
+  have hdm := Nat.div_mul_le_self (Ks - FB) L
+  have hnK : n + 1 ≤ Ks := by have := Nat.div_le_self (Ks - FB) L; omega
+  have hS := lowFun_spec (Y := Yb) (P := P) (O := O) (passes := passes) hC' hAlt hlen n (by omega)
   -- the start code
   have hS0 := codeAt_bytes _ _ hops.1 hSb
   have hS0' : CodeAt m (BitVec.ofNat 64 codeBase) ([ci 1 2 ((n + 1 : Nat) : Int) 0] ++ (callTail A main FB ++
@@ -168,6 +169,10 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   let m1 := write m (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 2)) 8 (BitVec.ofInt 64 ((n + 1 : Nat) : Int)).toNat
   have a1 : Agree (BitVec.ofNat 64 fp0) 2 K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
   have hF1 := hF.agree a1
+  have hfp0 : (BitVec.ofNat 64 fp0).toNat = fp0 := by simp only [BitVec.toNat_ofNat]; omega
+  have hW : WIn Yb (BitVec.ofNat 64 fp0) Ks K := ⟨hY, by rw [hfp0]; omega, by rw [hfp0]; omega, hks⟩
+  have hWa1 : WeltAt m1 Yb σ := weltAt_stab hY (by rw [hfp0]; omega) m m1 hWa
+    ((agree_write (K := Ks) (by rw [hfp0]; omega) (Nat.le_refl 2) (by omega) _).mono (Nat.zero_le _))
   have hfC : CodeFar (BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * [ci 1 2 ((n + 1 : Nat) : Int) 0].length))
       (callTail A main FB ++ [ci 1 exitSlot 231 0,
        if (D.erg main).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
@@ -184,11 +189,11 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   have hE : EnvAt m1 (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 FB)) ρ := fun τ x => by
     have := idx_lt x; omega
   have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by have h4 : (callTail A main FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 hK (Nat.le_refl _)
-    (by omega) (by rw [hn1]; omega) (hAlt main) (pcode_agree hP a1) hdv hE
+    (by omega) (by rw [hn1]; omega) (hAlt main) (pcode_agree hP a1) hdv hE hW hWa1
   generalize rufAt P O passes n main σ ρ = o at hcall ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨m2, s2, a2, w, hw, hew⟩ := hcall
+    obtain ⟨m2, s2, a2, ⟨w, hw, hew⟩, _⟩ := hcall
     have a12 : Agree (BitVec.ofNat 64 fp0) 2 K m m2 := a1.trans (a2.mono (by omega))
     have hfE := codeFar_tail (a := callTail A main FB) hfC
     have hexC := (codeAt_right (a := callTail A main FB) hc1).agree (a2.mono (Nat.zero_le _)) hfE
@@ -205,11 +210,13 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
   | why _ _ => exact hcall.elim
   | hardware _ => exact hcall.elim
 
-/-- **The program theorem.** -/
+/-- **The program theorem.** For every world `σ` the image's world bytes hold (`WeltAt`), in a world layout that
+    keeps every element in its range (`LayIn`). -/
 theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
-    {name : D.Fn → String} {main : D.Fn} {K : Nat} {b : Bild D}
-    (hb : bild P Y fs pos name main K = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
-    {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main)) :
+    {name : D.Fn → String} {main : D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
+    (hb : bild P Y fs pos name main Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g) (hY : LayIn b.Y)
+    {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main))
+    (hWa : WeltAt m b.Y σ) :
     match rufAt P O passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg (D.erg main) v q.a1
@@ -226,14 +233,14 @@ theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} 
       · next hg =>
         simp only [Except.ok.injEq] at hb
         subst hb
-        obtain ⟨hpar, hlens, hfit, hroomK, hexK, hops⟩ := hg
+        obtain ⟨⟨hpar, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hks⟩, hfp⟩ := hg
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
         have hm' := hm
         simp only [Bild.bytes, List.append_assoc] at hm'
         have hm2 := hm'.right.right
         simp only [leN_len] at hm2
-        exact bild_kern rfl rfl rfl rfl (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hops
-          (by simpa [codeBase] using hm2) σ ρ
+        exact bild_kern rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi hY
+          hops (by simpa [codeBase] using hm2) σ ρ hWa
       · exfalso
         revert hb
         repeat' split

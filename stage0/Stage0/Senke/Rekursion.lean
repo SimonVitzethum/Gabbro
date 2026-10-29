@@ -61,11 +61,12 @@ theorem ofNat_succ (k : Nat) : BitVec.ofNat 64 (k + 1) = BitVec.ofNat 64 k + 1 :
 theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {L : Nat}
     (hC : ∀ g, ∃ top, lowFun P A Y g = some (C g, top) ∧ top ≤ L) (hA : ∀ g, A g < 2 ^ 31)
     (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) :
-    ∀ n, n < 2 ^ 64 → FunSpec A C (rufAt P O passes n) (BitVec.ofNat 64 n) ((n + 1) * L) := by
+    ∀ n, n < 2 ^ 64 → FunSpec Y A C (rufAt P O passes n) (BitVec.ofNat 64 n) ((n + 1) * L) := by
   intro n
   induction n with
   | zero =>
-    intro _ f m fp K rp cfp σ ρ hc hK hF hP h0 h1 h2 hE
+    intro _ f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa
+    have hks := hW.ks
     obtain ⟨top, hlf, htop⟩ := hC f
     simp only [lowFun] at hlf
     split at hlf
@@ -84,7 +85,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
       simpa [guardC, stopC] using this
     · simp at hlf
   | succ k ih =>
-    intro hn f m fp K rp cfp σ ρ hc hK hF hP h0 h1 h2 hE
+    intro hn f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa
+    have hks := hW.ks
     have ih := ih (by omega)
     obtain ⟨top, hlf, htop⟩ := hC f
     simp only [lowFun] at hlf
@@ -119,11 +121,15 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
       have hf1 := codeFar_tail hfar
       have hc1 := codeAt_right hcode
       simp only [rufAt]
-      generalize σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte = σR
+      have hWaR : WeltAt m Y (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) := hWa
+      generalize σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte = σR at hWaR ⊢
       have hpq : PreS m _ fp K s cq ρ :=
         ⟨Nat.le_refl _, hK, hF, codeAt_left hc1, codeFar_left (by rw [← List.length_append]; exact hf1), hE, trivial, wstab_true _ _⟩
-      obtain ⟨m1, s1, a1, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := K) σR σR (P.requires f) s cq tq hq (by omega) m _
-        ρ hpq
+      have hpw := PreS.welt hpq hks hWaR hW.lay (by have := hW.lo; omega)
+      obtain ⟨m1, s1, a1s, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := Ks) σR σR (P.requires f) s cq tq hq (by omega) m _
+        ρ hpw
+      have a1 := Agree.widen a1s hks
+      have hWa1 : WeltAt m1 Y σR := hpw.wstab m m1 hWaR (a1s.mono (Nat.zero_le _))
       have hF1 := hF.agree a1
       have hf2 := codeFar_tail hf1
       have hc2 := (codeAt_right hc1).agree a1 hf2
@@ -155,7 +161,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
         have hpb : PreS m1 _ fp K (frei (D.params f)) cb ρ :=
           ⟨Nat.le_refl _, hK, hF1, hc3, hf3, envAt_agree hE a1 hF (Nat.le_refl _) (by omega), trivial, wstab_true _ _⟩
         have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (P.rumpf f) cb tb hb
-          (by omega) (by omega) m1 _ σR ρ hpb (Nat.le_refl _) hu hk
+          (by omega) (by omega) hW m1 _ σR ρ hpb (Nat.le_refl _) hu hk hWa1
         have spre := sg.trans (s1.trans sg2)
         have apre : Agree fp 2 K m m1 := a1.mono (by omega)
         generalize execEnd O passes (rufAt P O passes k) (P.rumpf f) σR ρ = o at hret ⊢
@@ -177,8 +183,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
             have hno : ∀ q : D.Inv → Bool, D.invs.find? (fun i => schuldet f i && q i) = none := fun q =>
               List.find?_eq_none.mpr fun i hi => by simp [hsch i hi]
             simp only [hfil, List.foldl_nil, hno]
-            obtain ⟨m', s', a', w, hw, he⟩ := hret
-            exact ⟨m', spre.trans s', apre.trans a', w, hw, he⟩
+            obtain ⟨m', s', a', hw, hw'⟩ := hret
+            exact ⟨m', spre.trans s', apre.trans a', hw, hw'⟩
         | logik e => exact Stops.prefix spre hret
         | why _ _ => exact hret.elim
         | leave _ _ _ => exact hret.elim

@@ -11,26 +11,34 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 
 variable {D : Deklaration}
 
-/-- What the code from `t` does when G returns `v` in the world `σ'` from the body of `f`: `ensures` fails, the
-    stop 102; else back to the caller with the result in slot 2, nothing below changed. -/
-def RetZ (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
+/-- What the code from `t` does when G returns `v` in the world `σ'` from the body of `f`, without the world:
+    `ensures` fails, the stop 102; else back to the caller with the result in slot 2, nothing below changed. -/
+def RetZ0 (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
     (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
   if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
   then Stops t m 102
   else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
     ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w
 
-theorem RetZ.prefix {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W} {K : Nat}
-    {rp cfp : Runner.W} {t0 t : T} {m0 m : Runner.Mem} {σ' : World D} {v : ErgVal D (D.erg f)}
-    (h : Star t0 m0 t m) (ha : Agree fp 2 K m0 m) (hs : RetZ P f σ0 ρ0 fp K rp cfp t m σ' v) :
-    RetZ P f σ0 ρ0 fp K rp cfp t0 m0 σ' v := by
+/-- `RetZ0` and the world `σ'` in memory after the return (`WeltAt`). -/
+def RetZ (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
+    (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
+  if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
+  then Stops t m 102
+  else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
+    (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
+
+theorem RetZ.prefix {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W}
+    {K : Nat} {rp cfp : Runner.W} {t0 t : T} {m0 m : Runner.Mem} {σ' : World D} {v : ErgVal D (D.erg f)}
+    (h : Star t0 m0 t m) (ha : Agree fp 2 K m0 m) (hs : RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v) :
+    RetZ L P f σ0 ρ0 fp K rp cfp t0 m0 σ' v := by
   simp only [RetZ] at hs ⊢
   split
   · next hf => rw [if_pos hf] at hs; exact Stops.prefix h hs
   · next hf =>
     rw [if_neg hf] at hs
-    obtain ⟨m', s, a, w, hw, he⟩ := hs
-    exact ⟨m', h.trans s, ha.trans a, w, hw, he⟩
+    obtain ⟨m', s, a, hw, hw'⟩ := hs
+    exact ⟨m', h.trans s, ha.trans a, hw, hw'⟩
 
 /-- The callee's header and parameters, below `lo`. -/
 structure Kopf (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
@@ -84,8 +92,8 @@ theorem slot_zero (fp : Runner.W) : slot fp (BitVec.ofNat 64 0) = fp := by simp 
 
 theorem slot_one (fp : Runner.W) : slot fp (BitVec.ofNat 64 1) = fp + 8 := by simp [slot]
 
-/-- `ret e`: the result, `ensures`, back or the stop (`retC`). -/
-theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W} {σ0 : World D}
+/-- `ret e`: the result, `ensures`, back or the stop (`retC`), in a frame of `K` slots. -/
+theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
@@ -93,7 +101,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp 
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
     (hp : PreS m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
     (hk : Kopf f m fp K rp cfp ρ0) :
-    RetZ P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
+    RetZ0 P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
     have hFB3 : FB = 3 := rfl
     have htop := lowErg_top e _ _ _ he
     have hsm := hp.small
@@ -132,7 +140,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp 
     simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
     have hd1 : sx (II.f ((lo + 1 : Nat) : Int)) = BitVec.ofNat 64 (lo + 1) := sx_nat (by omega)
     simp only [Enc] at hbe
-    simp only [RetZ]
+    simp only [RetZ0]
     split
     · next hfalse =>
       -- `ensures` fails: brz to the stop
@@ -177,5 +185,33 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp 
       refine ⟨m4, s1.trans (s2.trans (s3.trans (sb.trans (s5.trans sr)))),
         (a1.mono (by omega)).trans ((a2.mono (by omega)).trans ((a3.mono (by omega)).trans a4)), w,
         rd_same hF3 (by omega) w, hen⟩
+
+/-- `ret e` in the frame below the world: its code writes only slots below `Ks`, so the world stays. -/
+theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W} {σ0 : World D}
+    {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg) {ce : List II} {te : Nat}
+    (he : lowErg L e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ Ks)
+    (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
+    (hp : PreS m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
+    (hk : Kopf f m fp K rp cfp ρ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
+    RetZ L P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte)
+      (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
+  have hks := hW.ks
+  have hts := lowErg_top e _ _ _ he
+  have hpS : PreS m pc fp Ks (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ :=
+    ⟨hp.ctx, by have := hp.small; omega, frameOK_sub hp.frame hks, hp.code, codeFar_sub2 hp.far hks, hp.env,
+     trivial, wstab_true _ _⟩
+  have hkS : Kopf f m fp Ks rp cfp ρ0 := ⟨hk.r0, hk.r1, hk.env, by simp only [retTop] at hK; omega⟩
+  have h0 := ret_ok0 (σ0 := σ0) hlo0 hens e he hK m pc σ ρ hpS hlo hkS
+  simp only [RetZ0] at h0
+  simp only [RetZ]
+  split
+  · next hf => rw [if_pos hf] at h0; exact h0
+  · next hf =>
+    rw [if_neg hf] at h0
+    obtain ⟨m', s, a, hw⟩ := h0
+    exact ⟨m', s, Agree.widen a hks, hw,
+      weltAt_stab hW.lay (by have := hW.lo; omega) m m' hWa (a.mono (Nat.zero_le _))⟩
 
 end Gabbro.Stage0.Senke

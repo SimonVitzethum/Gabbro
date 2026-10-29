@@ -10,6 +10,7 @@
   where it answers `logik e`, the IR stops with `exit_group (logikCode e)`; no other answer.
 -/
 import Stage0.Senke.Funktion
+import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
 
@@ -20,21 +21,29 @@ variable {D : Deklaration}
 def PCode (m : Runner.Mem) (A : D.Fn → Nat) (C : D.Fn → List II) (fp : Runner.W) (K : Nat) : Prop :=
   ∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ CodeFar (BitVec.ofNat 64 (A g)) (C g).length fp K
 
+/-- The world lies in the slots of the frame at `fp` from `Ks` to `K`; the slots below `Ks` are the frame's own.
+    Every frame nested in it ends at the same address, so the world lies in each of them (`WIn.sub`). -/
+structure WIn (L : Lay D) (fp : Runner.W) (Ks K : Nat) : Prop where
+  lay : LayIn L
+  lo : fp.toNat + 8 * Ks ≤ L.lo
+  hi : L.hi ≤ fp.toNat + 8 * K
+  ks : Ks ≤ K
+
 /-- The word of a result. -/
 def EncErg : (e : Option Ty) → ErgVal D e → Runner.W → Prop
   | some τ, v, w => Enc τ v w
   | none, _, _ => True
 
-def FunSpec (A : D.Fn → Nat) (C : D.Fn → List II) (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    (dv : Runner.W) (c : Nat) : Prop :=
-  ∀ (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W) (σ : World D)
+def FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
+    (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (dv : Runner.W) (c : Nat) : Prop :=
+  ∀ (f : D.Fn) (m : Runner.Mem) (fp : Runner.W) (K Ks : Nat) (rp cfp : Runner.W) (σ : World D)
     (ρ : Env D (D.params f)),
-    c ≤ K → K < 2 ^ 31 → FrameOK m fp K → PCode m A C fp K →
+    c ≤ Ks → WIn L fp Ks K → K < 2 ^ 31 → FrameOK m fp K → PCode m A C fp K →
     m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp → m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →
-    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt m fp ρ →
+    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt m fp ρ → WeltAt m L σ →
     match S f σ ρ with
-    | .ok _ v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
-        ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w
+    | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
+        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (logikCode e)
     | _ => False
 
@@ -91,5 +100,15 @@ theorem pcode_sub {m : Runner.Mem} {A : D.Fn → Nat} {C : D.Fn → List II} {fp
 theorem pcode_agree {m m' : Runner.Mem} {A : D.Fn → Nat} {C : D.Fn → List II} {fp : Runner.W} {K lo : Nat}
     (h : PCode m A C fp K) (ha : Agree fp lo K m m') : PCode m' A C fp K :=
   fun g => ⟨(h g).1.agree ha (h g).2, (h g).2⟩
+
+theorem WIn.sub {L : Lay D} {fp : Runner.W} {Ks K F : Nat} (h : WIn L fp Ks K) (hF : F ≤ Ks)
+    (hr : fp.toNat + 8 * K < 2 ^ 64) : WIn L (slot fp (BitVec.ofNat 64 F)) (Ks - F) (K - F) := by
+  have hs : (slot fp (BitVec.ofNat 64 F)).toNat = fp.toNat + 8 * F := by
+    have := fp.isLt
+    have h8 : (8 : Runner.W).toNat = 8 := rfl
+    simp only [slot, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
+    rw [Nat.mod_eq_of_lt (a := F) (by have := h.ks; omega)]; have := h.ks; omega
+  have := h.lo; have := h.hi; have := h.ks
+  exact ⟨h.lay, by rw [hs]; omega, by rw [hs]; omega, by omega⟩
 
 end Gabbro.Stage0.Senke

@@ -15,23 +15,23 @@ variable {D : Deklaration} {V : Vertrag D}
 
 /-- What the code from `t` to `e` does for G's outcome `o` in the body of `f`: `ok` runs to `e`, `zurueck` returns
     (`RetZ`), `logik` stops with its code. -/
-def Sim (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp : Runner.W) {l : Bool}
+def Sim (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp : Runner.W) {l : Bool}
     {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (t : T) (m : Runner.Mem) (e : Runner.W) :
     Ausgang (vertragVon D f) l Γ → Prop
-  | .ok _ ρ' => ∃ m', Star t m ⟨e, fp⟩ m' ∧ Agree fp lo K m m' ∧ EnvAt m' fp ρ'
-  | .zurueck σ' v => RetZ P f σ0 ρ0 fp K rp cfp t m σ' v
+  | .ok σ' ρ' => ∃ m', Star t m ⟨e, fp⟩ m' ∧ Agree fp lo K m m' ∧ EnvAt m' fp ρ' ∧ WeltAt m' L σ'
+  | .zurueck σ' v => RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v
   | .logik c => Stops t m (logikCode c)
   | _ => False
 
 section
-variable {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp : Runner.W} {l : Bool}
+variable {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp : Runner.W} {l : Bool}
   {Γ : Ctx} {fp : Runner.W} {lo K : Nat}
 
 theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner.Mem} {e : Runner.W} (hl : FB ≤ lo)
-    (h : Star t0 m0 t m) (ha : Agree fp lo K m0 m) (hs : Sim P f σ0 ρ0 rp cfp fp lo K t m e o) :
-    Sim P f σ0 ρ0 rp cfp fp lo K t0 m0 e o := by
+    (h : Star t0 m0 t m) (ha : Agree fp lo K m0 m) (hs : Sim L P f σ0 ρ0 rp cfp fp lo K t m e o) :
+    Sim L P f σ0 ρ0 rp cfp fp lo K t0 m0 e o := by
   cases o with
-  | ok σ ρ => obtain ⟨m', s, a, en⟩ := hs; exact ⟨m', h.trans s, ha.trans a, en⟩
+  | ok σ ρ => obtain ⟨m', s, a, en, hw⟩ := hs; exact ⟨m', h.trans s, ha.trans a, en, hw⟩
   | zurueck σ' v =>
     have hFB3 : FB = 3 := rfl
     exact RetZ.prefix h (ha.mono (by omega)) hs
@@ -39,21 +39,21 @@ theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner
   | why | leave | next | hardware => exact hs
 
 theorem Sim.cont {o : Ausgang (vertragVon D f) l Γ} {t : T} {m : Runner.Mem} {e1 e2 : Runner.W}
-    (hs : Sim P f σ0 ρ0 rp cfp fp lo K t m e1 o)
-    (hj : ∀ m', Agree fp lo K m m' → Star ⟨e1, fp⟩ m' ⟨e2, fp⟩ m') : Sim P f σ0 ρ0 rp cfp fp lo K t m e2 o := by
+    (hs : Sim L P f σ0 ρ0 rp cfp fp lo K t m e1 o)
+    (hj : ∀ m', Agree fp lo K m m' → Star ⟨e1, fp⟩ m' ⟨e2, fp⟩ m') : Sim L P f σ0 ρ0 rp cfp fp lo K t m e2 o := by
   cases o with
-  | ok σ ρ => obtain ⟨m', s, a, en⟩ := hs; exact ⟨m', s.trans (hj m' a), a, en⟩
+  | ok σ ρ => obtain ⟨m', s, a, en, hw⟩ := hs; exact ⟨m', s.trans (hj m' a), a, en, hw⟩
   | logik c => exact hs
   | zurueck | why | leave | next | hardware => exact hs
 
 theorem Sim.cast {o : Ausgang (vertragVon D f) l Γ} {t t' : T} {m : Runner.Mem} {e e' : Runner.W}
-    (hs : Sim P f σ0 ρ0 rp cfp fp lo K t m e o) (h1 : t = t') (h2 : e = e') :
-    Sim P f σ0 ρ0 rp cfp fp lo K t' m e' o := by subst h1; subst h2; exact hs
+    (hs : Sim L P f σ0 ρ0 rp cfp fp lo K t m e o) (h1 : t = t') (h2 : e = e') :
+    Sim L P f σ0 ρ0 rp cfp fp lo K t' m e' o := by subst h1; subst h2; exact hs
 
 theorem Sim.schrumpf {τ : Ty} {o : Ausgang (vertragVon D f) l (τ :: Γ)} {t : T} {m : Runner.Mem} {e : Runner.W}
-    (hs : Sim P f σ0 ρ0 rp cfp fp lo K t m e o) : Sim P f σ0 ρ0 rp cfp fp lo K t m e o.schrumpf := by
+    (hs : Sim L P f σ0 ρ0 rp cfp fp lo K t m e o) : Sim L P f σ0 ρ0 rp cfp fp lo K t m e o.schrumpf := by
   cases o with
-  | ok σ ρ => obtain ⟨m', s, a, en⟩ := hs; exact ⟨m', s, a, envAt_tail en⟩
+  | ok σ ρ => obtain ⟨m', s, a, en, hw⟩ := hs; exact ⟨m', s, a, envAt_tail en, hw⟩
   | logik c => exact hs
   | zurueck | why | leave | next | hardware => exact hs
 
@@ -65,16 +65,16 @@ theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e
 
 mutual
 theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec A C R dv cap)
-    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens)) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowS A L lo (cens, tens) s = some (c, top) → top + cap ≤ K → 16 * c.length < 2 ^ 31 →
+    lowS A L lo (cens, tens) s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf A C dv m fp K → Kopf f m fp K rp cfp ρ0 →
-    Sim P f σ0 ρ0 rp cfp fp lo K ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (execStmt O passes R s σ ρ)
-  | _, Γ, Λ, _, .assignVar x e, c, top, h, hK, _, m, pc, σ, ρ, hp, _, hlo2, _, _ => by
+    FB ≤ lo → lo ≤ frei Γ → Umf A C dv m fp K → Kopf f m fp K rp cfp ρ0 → WeltAt m L σ →
+    Sim L P f σ0 ρ0 rp cfp fp lo K ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (execStmt O passes R s σ ρ)
+  | _, Γ, Λ, _, .assignVar x e, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa => by
     simp only [lowS] at h
     split at h
     · next hlx =>
@@ -83,22 +83,26 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       simp only [Prod.mk.injEq] at hc
       obtain ⟨rfl, rfl⟩ := hc
       simp only [execStmt, Sim]
+      have hks := hW.ks
       have htop := lowE_top e _ _ _ he
-      obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega)
-        m pc ρ hp.left
+      have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
+      obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega)
+        m pc ρ hpw
+      have a1 := Agree.widen a1s hks
       have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
       have hxs := vslot_lt x
       have hsm := hp.small
       have s2 := mov_to hp1.code hp1.frame (j := vslot x) (by omega) (by omega) hsm hw
-      refine ⟨_, s1.trans (by rw [pc_add1]; exact s2), (a1.mono hlo2).trans
-        (agree_write hp1.frame.room hlx (by omega) _), ?_⟩
       have hF1 := hp1.frame
+      have a2s : Agree fp lo Ks m1 _ := agree_write (frameOK_sub hF1 hks).room hlx (by omega) w.toNat
+      refine ⟨_, s1.trans (by rw [pc_add1]; exact s2), (a1.mono hlo2).trans (Agree.widen a2s hks), ?_,
+        hpw.wstab m _ hWa ((a1s.mono (Nat.zero_le _)).trans (a2s.mono (Nat.zero_le _)))⟩
       refine envAt_set hp1.env (rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))) hen ?_
       intro τ' y hy
       have := vslot_lt y
       exact rd64_write_far (slot_far hF1.room (by omega) (by omega) (vslot_ne hy).symm)
     · simp at h
-  | _, Γ, Λ, _, .ite cnd t e, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk => by
+  | _, Γ, Λ, _, .ite cnd t e, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cc, tc⟩, hcc, ⟨ct, tt⟩, hct, ⟨ce, te⟩, hce, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
@@ -108,8 +112,12 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     have htop := lowE_top cnd (frei Γ) cc tc hcc
     have hq : PreS m pc fp K (frei Γ) (cc ++ ([ci 19 (frei Γ) (16 * (ct.length + 2)) 0] ++ (ct ++
         ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ := by simpa [List.append_assoc] using hp
-    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) cnd
-      (frei Γ) cc tc hcc (by omega) m pc ρ hq.left
+    have hks := hW.ks
+    have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
+    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) cnd
+      (frei Γ) cc tc hcc (by omega) m pc ρ hpw
+    have a1 := Agree.widen a1s hks
+    have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have h1 := hq.next a1 (Nat.le_refl _) (by omega)
     have hu1 := hu.agree (a1.mono hlo2) hp.frame hlo
     have hk1 := hk.agree (a1.mono hlo2) hp.frame (by omega)
@@ -128,7 +136,7 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
         rw [hen, if_pos hb]
       have sb := star_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
         (by simp only [ci]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact hw) (by rw [hw1]; decide))
-      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens t ct tt hct (by omega) (by omega) m1 _ (σ.lese Λ cnd.orte) ρ h2.left hlo hlo2 hu1 hk1
+      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens t ct tt hct (by omega) (by omega) hW m1 _ (σ.lese Λ cnd.orte) ρ h2.left hlo hlo2 hu1 hk1 hWa1
       have hf3 := codeFar_right (n := ct.length) (k := ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length)
         (by simpa using h2.far)
       refine Sim.prefix hlo (s1.trans sb) (a1.mono hlo2) (Sim.cont ih fun m2 a2 => ?_)
@@ -156,7 +164,7 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       rw [hl] at sb
       have h4 := ((h2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)).next
         (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega))
-      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens e ce te hce (by omega) (by omega) m1 _ (σ.lese Λ cnd.orte) ρ h4 hlo hlo2 hu1 hk1
+      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens e ce te hce (by omega) (by omega) hW m1 _ (σ.lese Λ cnd.orte) ρ h4 hlo hlo2 hu1 hk1 hWa1
       refine Sim.prefix hlo (s1.trans sb) (a1.mono hlo2) (Sim.cast ih ?_ ?_)
       · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, List.length_cons,
           List.length_nil, addr_norm]
@@ -165,154 +173,166 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       · simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
         congr 2
         omega
-  | _, Γ, Λ, _, .call f args _ _, c, top, h, hK, _, m, pc, σ, ρ, hp, _, hlo2, hu, hk => by
+  | _, Γ, Λ, _, .call f args _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, hu, hk, hWa => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     have hct : frei Γ + FB + (D.params f).length + 1 ≤ callTop f (frei Γ) ta := by simp only [callTop]; omega
-    have hc := callC_ok hS (hA f) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp hu
+    have hc := callC_ok hS (hA f) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp hu hW hWa
     simp only [execStmt]
     generalize R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
     cases o with
     | ok σ' v =>
-      obtain ⟨m1, s1, a1, _⟩ := hc
-      exact ⟨m1, s1, a1.mono hlo2, envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)⟩
+      obtain ⟨m1, s1, a1, _, hw1⟩ := hc
+      have := hW.ks
+      exact ⟨m1, s1, a1.mono hlo2, envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega), hw1⟩
     | logik e => exact hc
     | why _ _ => exact hc.elim
     | hardware _ => exact hc.elim
-  | _, Γ, Λ, _, .ret e _, c, top, h, hK, _, m, pc, σ, ρ, hp, _, hlo2, _, hk => by
+  | _, Γ, Λ, _, .ret e _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, hk, hWa => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ce, te⟩, he, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [execStmt, Sim]
-    exact ret_ok hlo0 hens e he (by omega) m pc σ ρ hp hlo2 hk
-  | _, _, _, _, .assignSlot .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .assignThru .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .assignGlob .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .onTag .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .locks .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .breaking .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .traverse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .retry .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .axiomCall .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .publish .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .advances .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .retires .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .retWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .leave .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .next .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .assignSlotRef .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+    exact ret_ok hlo0 hens e he (by omega) m pc σ ρ hp hlo2 hk hW hWa
+  | _, _, _, _, .assignSlot .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .assignThru .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .assignGlob .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .onTag .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .locks .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .breaking .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .traverse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .retry .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .axiomCall .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .publish .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .advances .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .retires .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .retWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .leave .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .next .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, _, _, _, .assignSlotRef .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
 
 theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
-    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec A C R dv cap)
-    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp : Runner.W}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens)) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowB A L lo (cens, tens) b = some (c, top) → top + cap ≤ K → 16 * c.length < 2 ^ 31 →
+    lowB A L lo (cens, tens) b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf A C dv m fp K → Kopf f m fp K rp cfp ρ0 →
-    Sim P f σ0 ρ0 rp cfp fp lo K ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (execBlock O passes R b σ ρ)
-  | _, Γ, _, _, .nil, c, top, h, _, _, m, pc, σ, ρ, hp, _, _, _, _ => by
+    FB ≤ lo → lo ≤ frei Γ → Umf A C dv m fp K → Kopf f m fp K rp cfp ρ0 → WeltAt m L σ →
+    Sim L P f σ0 ρ0 rp cfp fp lo K ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length)) (execBlock O passes R b σ ρ)
+  | _, Γ, _, _, .nil, c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa => by
     simp only [lowB, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp only [execBlock, Sim]
-    exact ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, hp.env⟩
-  | _, Γ, _, _, .cons s rest, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk => by
+    exact ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, hp.env, hWa⟩
+  | _, Γ, _, _, .cons s rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa => by
     simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cs, ts⟩, hs1, ⟨cr, tr⟩, hr, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append] at hs
-    have ih := lowS_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens s cs ts hs1 (by omega) (by omega) m pc σ ρ hp.left hlo hlo2 hu hk
+    have ih := lowS_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens s cs ts hs1 (by omega) (by omega) hW
+      m pc σ ρ hp.left hlo hlo2 hu hk hWa
     simp only [execBlock]
     generalize execStmt O passes R s σ ρ = o at ih ⊢
     cases o with
     | ok σ1 ρ1 =>
-      obtain ⟨m1, s1, a1, e1⟩ := ih
+      obtain ⟨m1, s1, a1, e1, hw1⟩ := ih
       have hf := codeFar_right (n := cs.length) (k := cr.length) (by simpa using hp.far)
       have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K (frei Γ) cr ρ1 :=
         ⟨hp.ctx, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf, e1, trivial, wstab_true _ _⟩
-      have ih2 := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens rest cr tr hr (by omega) (by omega) m1 _ σ1 ρ1 hp1 hlo hlo2
-        (hu.agree a1 hp.frame hlo) (hk.agree a1 hp.frame (by omega))
+      have ih2 := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens rest cr tr hr (by omega) (by omega)
+        hW m1 _ σ1 ρ1 hp1 hlo hlo2 (hu.agree a1 hp.frame hlo) (hk.agree a1 hp.frame (by omega)) hw1
       rw [pc_add1]
       exact Sim.prefix hlo s1 a1 ih2
     | zurueck | why | leave | next | logik | hardware => exact ih
-  | _, Γ, Λ, _, .bind e rest, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk => by
+  | _, Γ, Λ, _, .bind e rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa => by
     simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append] at hs
     simp only [execBlock]
+    have hks := hW.ks
     have htop := lowE_top e _ _ _ he
-    obtain ⟨m1, s1, a1, w, hw, hen⟩ :=
-      lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega) m pc ρ hp.left
+    have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
+    obtain ⟨m1, s1, a1s, w, hw, hen⟩ :=
+      lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega) m pc ρ hpw
+    have a1 := Agree.widen a1s hks
+    have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
     have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ + 1) cr
         (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) :=
       ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf,
        envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen, trivial, wstab_true _ _⟩
-    have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens rest cr tr hr (by omega) (by omega) m1 _ (σ.lese Λ e.orte) _ hp1 hlo
+    have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens rest cr tr hr (by omega) (by omega) hW
+      m1 _ (σ.lese Λ e.orte) _ hp1 hlo
       (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) (hu.agree (a1.mono hlo2) hp.frame hlo)
-      (hk.agree (a1.mono hlo2) hp.frame (by omega))
+      (hk.agree (a1.mono hlo2) hp.frame (by omega)) hWa1
     rw [pc_add1]
     exact Sim.prefix hlo s1 (a1.mono hlo2) (Sim.schrumpf ih)
-  | _, Γ, Λ, _, .bindCall f args he _ _ rest, c, top, h, hK, hs, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk => by
+  | _, Γ, Λ, _, .bindCall f args he _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa => by
     simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, hca, ⟨cr, tr⟩, hr, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append] at hs
     have hFB3 : FB = 3 := rfl
+    have hks := hW.ks
     have hct : frei Γ + FB + (D.params f).length + 1 ≤ callTop f (frei Γ) ta := by simp only [callTop]; omega
-    have hc := callC_ok hS (hA f) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu
+    have hc := callC_ok hS (hA f) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
     simp only [execBlock]
     generalize R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
     cases o with
     | ok σ' v =>
-      obtain ⟨m1, s1, a1, w, hw, hew⟩ := hc
+      obtain ⟨m1, s1, a1, ⟨w, hw, hew⟩, hw1⟩ := hc
       have hp1 := hp.left.next a1 (Nat.le_refl _) (by omega)
       have s2 := mov_to hp1.code hp1.frame (j := frei Γ) (s := frei Γ + 2) (by omega) (by omega) hp.small hw
       rw [← pc_add1] at s2
       let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ))) 8 w.toNat
-      have a2 : Agree fp (frei Γ) K m1 m2 := agree_write hp1.frame.room (Nat.le_refl _) (by omega) _
+      have a2s : Agree fp (frei Γ) Ks m1 m2 := agree_write (frameOK_sub hp1.frame hks).room (Nat.le_refl _) (by omega) _
+      have a2 : Agree fp (frei Γ) K m1 m2 := Agree.widen a2s hks
+      have hw2 : WeltAt m2 L σ' :=
+        weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hw1 (a2s.mono (Nat.zero_le _))
       have hq := hp.next (a1.trans a2) (d' := frei Γ + 1) (by omega) (by omega)
       have hp2 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
         ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
          envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert he hew), trivial, wstab_true _ _⟩
-      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens rest cr tr hr (by omega) (by omega) m2 _ σ' _ hp2 hlo
+      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens rest cr tr hr (by omega) (by omega) hW
+        m2 _ σ' _ hp2 hlo
         (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
-        (hu.agree ((a1.trans a2).mono hlo2) hp.frame hlo) (hk.agree ((a1.trans a2).mono hlo2) hp.frame (by omega))
+        (hu.agree ((a1.trans a2).mono hlo2) hp.frame hlo) (hk.agree ((a1.trans a2).mono hlo2) hp.frame (by omega)) hw2
       rw [pc_add1 pc (callC A f (frei Γ) ca ++ [ci 2 (frei Γ) (frei Γ + 2) 0]) cr]
       exact Sim.prefix hlo (s1.trans s2) ((a1.trans a2).mono hlo2) (Sim.schrumpf ih)
     | logik e => exact hc
     | why _ _ => exact hc.elim
     | hardware _ => exact hc.elim
-  | _, _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .bindCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .bindAxiom .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .awaits .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .exchange .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .narrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .check .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .float .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .floatLit .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .floatOf .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .floatNarrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .bindCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .bindAxiom .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .awaits .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .exchange .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .narrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .check .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .float .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .floatLit .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .floatOf .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .floatNarrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
 end
 
 end Gabbro.Stage0.Senke

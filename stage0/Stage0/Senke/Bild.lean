@@ -3,12 +3,15 @@
   Subject:   The `S0IR` image of a whole program: header, start code, every function, the stack.
 
   Layout at `IMG` (the runner's loader maps the file there): word 0 the first frame's address, word 1 zero, the code
-  from byte 16 (the loader's first `pc`), then the stack of `K` slots. The code is the start code (`startC`) and
+  from byte 16 (the loader's first `pc`), then the stack of `Ks` slots, then the world (`Y b` with `b` its first
+  byte, `Senke/Welt/Lay.lean`); the first frame's `K` slots reach over both, so every frame ends where the world
+  ends (`WIn`). The world starts as the image's zero bytes. The code is the start code (`startC`) and
   then every function of the program in the order of `fs`, at the addresses `A`.
 
-  The addresses enter the code only as call targets (`const`), so a function's code length does not depend on
-  them: `bild` lowers once with the address 0 for every function, lays the functions out by those lengths, lowers
-  again with the real addresses and refuses unless every length came out the same (checked, not assumed).
+  The addresses enter the code only as call targets and world addresses (`const`), so a function's code length
+  does not depend on them: `bild` lowers once with the address 0 for every function and the world at 0, lays the
+  functions out by those lengths, lowers again with the real addresses and refuses unless every length came out
+  the same (checked, not assumed).
 
   `bild` then checks the finished layout as one decidable proposition (`BildGut`): `main` without parameters,
   the lengths unmoved, the image below `2^31`, room for one call, every opcode a byte.
@@ -53,8 +56,12 @@ structure Bild (D : Deklaration) where
   A : D.Fn → Nat
   /-- the first frame, an address -/
   fp0 : Nat
-  /-- the stack, in slots -/
+  /-- the stack and the world, in slots -/
   K : Nat
+  /-- the stack, in slots -/
+  Ks : Nat
+  /-- the world -/
+  Y : Lay D
   /-- `main` runs at this depth -/
   depth : Nat
 
@@ -77,36 +84,41 @@ def maxTop (cs : List (List II × Nat)) : Nat := cs.foldl (fun a c => max a c.2)
 def depthOf (K L : Nat) : Nat := (K - FB) / L - 1
 
 /-- What `bild` checks of the finished layout. -/
-def BildGut (D : Deklaration) (main : D.Fn) (lens : List Nat) (cs : List (List II × Nat)) (fp0 K : Nat)
-    (code : List II) : Prop :=
+def BildGut (D : Deklaration) (main : D.Fn) (lens : List Nat) (cs : List (List II × Nat)) (fp0 Ks K : Nat)
+    (Y : Lay D) (code : List II) : Prop :=
   (D.params main).isEmpty = true ∧ cs.map (·.1.length) = lens ∧ fp0 + 8 * K < 2 ^ 31 ∧
-    FB + 2 * maxTop cs ≤ K ∧ exitSlot + 8 ≤ K ∧ code.all (fun i => decide (i.o < 256)) = true
+    FB + 2 * maxTop cs ≤ Ks ∧ exitSlot + 8 ≤ Ks ∧ code.all (fun i => decide (i.o < 256)) = true ∧
+    fp0 + 8 * Ks ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K ∧ Ks ≤ K
 
-instance (D : Deklaration) (main : D.Fn) (lens : List Nat) (cs : List (List II × Nat)) (fp0 K : Nat)
-    (code : List II) : Decidable (BildGut D main lens cs fp0 K code) := by
+instance (D : Deklaration) (main : D.Fn) (lens : List Nat) (cs : List (List II × Nat)) (fp0 Ks K : Nat)
+    (Y : Lay D) (code : List II) : Decidable (BildGut D main lens cs fp0 Ks K Y code) := by
   unfold BildGut; infer_instance
 
-/-- The image of a program, or why not. -/
-def bild (P : Programm D) (Y : Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn) (K : Nat) :
-    Except String (Bild D) :=
-  match lowAll P Y name (fun _ => 0) fs with
+/-- The image of a program, or why not: `Ks` slots of stack, the world laid out by `Y` from its first byte. -/
+def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn)
+    (Ks : Nat) : Except String (Bild D) :=
+  match lowAll P (Y 0) name (fun _ => 0) fs with
   | .error e => .error e
   | .ok cs0 =>
     let lens := cs0.map (·.1.length)
     let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * startLen) lens).getD (pos g) 0
-    match lowAll P Y name A fs with
+    let fp0 := codeBase + 16 * (startLen + lens.sum)
+    let Yb := Y (fp0 + 8 * Ks)
+    let K := Ks + (Yb.hi - Yb.lo + 7) / 8
+    match lowAll P Yb name A fs with
     | .error e => .error e
     | .ok cs =>
       let body := cs.flatMap (·.1)
-      let fp0 := codeBase + 16 * (startLen + body.length)
-      let n := depthOf K (maxTop cs)
+      let n := depthOf Ks (maxTop cs)
       let code := startC A main n ++ body
-      if BildGut D main lens cs fp0 K code then .ok ⟨code, A, fp0, K, n⟩
+      if BildGut D main lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (startLen + body.length) then
+        .ok ⟨code, A, fp0, K, Ks, Yb, n⟩
       else if (D.params main).isEmpty = false then .error "ir: main takes parameters"
       else if cs.map (·.1.length) != lens then .error "ir: a code length moved with the addresses"
       else if fp0 + 8 * K ≥ 2 ^ 31 then .error "ir: the image does not fit below 2^31"
-      else if K < FB + 2 * maxTop cs ∨ K < exitSlot + 8 then .error "ir: the stack is too small for one call"
-      else .error "ir: an opcode above 255"
+      else if Ks < FB + 2 * maxTop cs ∨ Ks < exitSlot + 8 then .error "ir: the stack is too small for one call"
+      else if (code.all fun i => decide (i.o < 256)) = false then .error "ir: an opcode above 255"
+      else .error "ir: the world does not lie above the stack"
 
 def encII (i : II) : List Runner.B := Runner.Prog.insB i.o i.a i.b i.c
 

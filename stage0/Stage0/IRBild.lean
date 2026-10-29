@@ -5,6 +5,7 @@
 -/
 import Stage0.Tor.LaufIO
 import Stage0.Senke.Bild
+import Stage0.Senke.Welt.Anordnung
 
 namespace Gabbro.Stage0
 
@@ -12,7 +13,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.GabbroV
   Gabbro.Grammatik.Parser.Cover.Differenz
 
-/-- The stack of an image, in slots (4 MiB). -/
+/-- The stack of an image, in slots (4 MiB); the world lies above it (`Senke.layU`). -/
 def irStapel : Nat := 2 ^ 19
 
 def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) := do
@@ -22,8 +23,7 @@ def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) 
   if (← akzeptiertU u) = false then throw "refused by the checker (AkzeptiertX)"
   let main ← fnIdx u.fns "main"
   let (P, _) ← lowerAllg u
-  let Y0 : Senke.Lay (declOf u) := ⟨fun _ _ => 0, fun _ => 0, 0, 0⟩
-  let b ← Senke.bild P Y0 (List.finRange u.fns.length) Fin.val
+  let b ← Senke.bild P (Senke.layU u) (List.finRange u.fns.length) Fin.val
     (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main K
   pure b.bytes
 
