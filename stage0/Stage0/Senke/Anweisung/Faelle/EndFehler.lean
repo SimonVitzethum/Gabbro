@@ -37,7 +37,7 @@ theorem endAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
         simp only [Option.some.injEq, Prod.mk.injEq] at hc
         obtain ⟨rfl, rfl⟩ := hc
         simp only [List.length_append, fehlC_len] at hs
-        have hFB3 : FB = 3 := rfl
+        have hFB3 : FB = 4 := rfl
         have hks := hW.ks
         have h7 := torC_top1 ht
         simp only [execEnd]

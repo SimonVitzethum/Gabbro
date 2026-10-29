@@ -9,13 +9,13 @@ set_option maxRecDepth 100000
 def statement : Stmt D (vertragVon D 2) false [.bool] [] [] :=
   .retry 2 (.var .here) (.cons (.assignVar .here .tru) (.cons (.next rfl) .nil)) .nil
 
-def code : List II := ((lowS addresses callLayout 3 ([ci 1 4 1 0], 5) [] (0, 0) statement).getD ([], 0)).1
+def code : List II := ((lowS addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) statement).getD ([], 0)).1
 
 def memory : Runner.Mem := { callMem with
   b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2048 + 16 * code.length then
       ((code.flatMap encII)[a.toNat - 2048]?).getD 0 else callMem.b a }
 
-theorem lowered : lowS addresses callLayout 3 ([ci 1 4 1 0], 5) [] (0, 0) statement = some (code, 5) := by
+theorem lowered : lowS addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) := by
   decide +kernel
 
 local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
@@ -44,7 +44,7 @@ theorem functions_at : PCode memory addresses target 4096 256 := by
 
 theorem frame : FrameOK memory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
-theorem pre [Kern] : PreS callLayout memory 2048 4096 256 4 code (Env.cons (τ := .bool) false Env.nil) := by
+theorem pre [Kern] : PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) := by
   refine ⟨by decide, by decide, frame, code_at, ?_, ?_, trivial, wstab_true _ _⟩
   · unfold CodeFar; decide +kernel
   · apply envAt_cons (w := 0)
@@ -74,17 +74,17 @@ local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 
 /-- The general retry proof has all premises together, and next reaches a true second check. -/
 theorem retry_case_zeuge [Kern] :
-    lowS addresses callLayout 3 ([ci 1 4 1 0], 5) [] (0, 0) statement = some (code, 5) ∧
-    PreS callLayout memory 2048 4096 256 4 code (Env.cons (τ := .bool) false Env.nil) ∧
+    lowS addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) ∧
+    PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) ∧
     WIn callLayout 4096 128 256 ∧ Umf callLayout addresses target 2 memory 4096 128 256 ∧
     Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) ∧ WeltAt memory callLayout world ∧
-    Sim callLayout tiny 2 world Env.nil 0 0 4096 3 256 [] ⟨2048, 4096⟩ memory
+    Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] ⟨2048, 4096⟩ memory
       (2048 + BitVec.ofNat 64 (16 * code.length)) (2048 + BitVec.ofNat 64 (16 * code.length))
       (2048 + BitVec.ofNat 64 (16 * code.length))
       (execStmt O 1 (rufAt tiny O 1 2) statement world (Env.cons (τ := .bool) false Env.nil)) := by
   refine ⟨lowered, pre, call_win, surroundings, head, world_at, ?_⟩
   have h := lowS_ok (O := O) (passes := 1) (P := tiny) (f := 2) (σ0 := world)
-    (ρ0 := Env.nil) (lo := 3) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl statement code 5
+    (ρ0 := Env.nil) (lo := 4) (pr := []) (ex := (0, 0)) call_spec addresses_bound rfl rfl statement code 6
     lowered (by decide) (by decide +kernel) call_win memory 2048 world (Env.cons (τ := .bool) false Env.nil)
     pre (by decide) (by decide) surroundings head world_at (fun _ h => nomatch h)
   simpa using h

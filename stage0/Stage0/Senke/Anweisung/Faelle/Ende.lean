@@ -45,7 +45,7 @@ theorem endCons_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have ih := ihS (ex := exPlus ex cr.length) cs ts
     hs1 (by omega) (by omega) hW m pc σ ρ hp.left (by omega) hlo hu hk hWa hpr
   have hL : pc + BitVec.ofNat 64 (16 * cs.length) + BitVec.ofInt 64 (exPlus ex cr.length).1 =
@@ -90,7 +90,7 @@ theorem endBind_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   simp only [execEnd]
   have htop := lowE_top e _ _ _ he
   have hks := hW.ks

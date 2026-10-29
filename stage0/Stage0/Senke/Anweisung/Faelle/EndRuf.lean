@@ -28,7 +28,7 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hct : frei Γ + FB + (D.params g).length + 1 ≤ callTop g (frei Γ) ta := by simp only [callTop]; omega
   have hc := callC_ok hS (hA g) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
   simp only [execEnd]
@@ -78,7 +78,7 @@ theorem endAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
   have hks := hW.ks
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   simp only [execEnd]
   rcases torBind_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he ht hck (by omega) (by omega) hW hp hWa with
     ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨hAA, hst⟩

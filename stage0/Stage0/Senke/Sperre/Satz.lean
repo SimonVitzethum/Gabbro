@@ -119,7 +119,7 @@ theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → E
   have hord := hW.ord
   have hks := hW.ks
   have hK31 := hp.small
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hfa : fp.toNat + 8 * (s + 18) ≤ a := by omega
   have hfh : fp.toNat + 8 * (s + 18) ≤ L.hi := by omega
   have hfl : fp.toNat + 8 * (s + 18) ≤ L.lo := by omega

@@ -99,7 +99,7 @@ theorem AgreeK.preS {m m1 : Mem} {pc fp : W} {K d s a : Nat} {xs ys : List II} {
 theorem AgreeK.kopf {m m1 : Mem} {fp : W} {K s a : Nat} {f : D.Fn} {rp cfp : W} {ρ0 : Env D (D.params f)}
     (h : Kopf L f m fp K rp cfp ρ0) (ha : AgreeK fp s a m m1) (hs : FB + (D.params f).length ≤ s)
     (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha31 : a + 24 < 2 ^ 31) : Kopf L f m1 fp K rp cfp ρ0 := by
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   refine ⟨by rw [ha.rd_low (by omega) hf ha31]; exact h.r0, by rw [ha.rd_low (by omega) hf ha31]; exact h.r1,
     ha.envAt h.env (by simp only [frei]; omega) hf ha31, h.big⟩
 

@@ -99,7 +99,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
     intro k m' σ' ρ' hkn hp hk0 hu hk hWa
     have hlen := travCode_len (s := frei Γ) (n := D.count t) (ci' := ci'.1) (cb := cb.1)
     have hroom := hp.frame.room
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     obtain ⟨m1, w, s1, a1s, hw, hwe, hWa1⟩ := trav_head (cb := cb.1) hci (by omega) hW hp hWa
     have a1 := Agree.widen a1s hks
     have hc1 := hp.code.agree (a1.mono (Nat.le_succ _)) hp.far
@@ -268,7 +268,7 @@ theorem trav_ok (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1) 
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (alleIndizes (D.count t)) σ ρ) := by
   have hks := hW.ks
   have hroom := hp.frame.room
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have s0 := const_step (j := frei Γ) (k := 0) (codeAt_left (a := [ci 1 (frei Γ) 0 0]) (by simpa [travCode] using hp.code))
     hp.frame (by omega) hp.small (by decide)
   let m0 := write m (slot fp (BitVec.ofNat 64 (frei Γ))) 8 (BitVec.ofInt 64 (0 : Int)).toNat

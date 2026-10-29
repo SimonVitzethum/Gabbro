@@ -46,7 +46,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
         ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (D.params f).length false ∧ WeltAt m' L σ' := by
   have hroom := hF.room
   have hlt := hF.lt
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hroomS : fp.toNat + 8 * Ks ≤ 2 ^ 64 := by omega
   -- the four instructions, read where they lie
@@ -223,7 +223,7 @@ theorem Umf.agree {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m m
     {Ks K lo : Nat} (h : Umf L A C dv m fp Ks K) (ha : Agree fp lo K m m') (hF : FrameOK m fp K) (hlo : FB ≤ lo) :
     Umf L A C dv m' fp Ks K :=
   ⟨pcode_agree h.code ha, by
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     have hb := h.big
     rw [agree_rd_low (ha.mono (Nat.min_le_left lo K)) hF.room (by omega) (Nat.min_le_right lo K)]
     exact h.depth, h.big, h.sync.agree ha h.hiK, h.hiK⟩

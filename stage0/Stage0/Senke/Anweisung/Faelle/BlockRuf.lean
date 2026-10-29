@@ -28,7 +28,7 @@ theorem blockCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hct : frei Γ + FB + (D.params callee).length + 1 ≤ callTop callee (frei Γ) ta := by simp only [callTop]; omega
   have hc := callC_ok hS (hA callee) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa

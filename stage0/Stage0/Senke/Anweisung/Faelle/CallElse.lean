@@ -33,7 +33,7 @@ theorem callBranch_ok {Γ : Ctx} {τ : Ty} {np : Nat} {cc cr ce : List II}
       AgreeW L fp (frei Γ) K m m2 ∧
       PreS L m2 (callBranchPC pc cc cr ok) fp K (frei (τ :: Γ)) (if ok then cr else ce) (.cons v ρ) ∧
       WeltAt m2 L σ := by
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hq : PreS L m pc fp K (frei Γ)
       (cc ++ ([ci 2 (frei Γ) (frei Γ + 2) 0] ++
@@ -186,7 +186,7 @@ theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [elseTop] at hK
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) := by
     intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
   have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende callee) :: Γ) := by
@@ -237,7 +237,7 @@ theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [elseTop] at hK
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hlo : FB ≤ lo := by omega
   have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) := by
     intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega

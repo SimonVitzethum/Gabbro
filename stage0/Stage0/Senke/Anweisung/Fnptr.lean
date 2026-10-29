@@ -49,7 +49,7 @@ theorem lowInd_ok {A : D.Fn → Nat} {C : D.Fn → List II}
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hc
   obtain ⟨⟨cp, tp⟩, hcp, ⟨ca, ta⟩, hca, rfl, rfl⟩ := hc
   simp only [indTop] at ht
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hFB : FB ≤ frei Γ := by simp only [frei]; omega
   have hpar := (D.passt_sig (eval σ₀ p σ ρ).2).params
@@ -190,7 +190,7 @@ theorem indBind_ok {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
       Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' → J ⟨pc', fp⟩ m' (k σ' v)) :
     J ⟨pc, fp⟩ m (indAntwort R p args he hr σ ρ k err hwerr) := by
   have hb := lowInd_top hc
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hi := lowInd_ok hS hA p args σ σ hc ht hp.left.left hu hW hWa
   dsimp only [indAntwort] at hi ⊢

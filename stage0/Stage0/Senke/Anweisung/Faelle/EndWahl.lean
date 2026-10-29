@@ -29,7 +29,7 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append, List.length_singleton] at hs
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hsm := hp.small
   have htop := lowE_top cnd (frei Γ) cc tc hcc
   have hq : PreS L m pc fp K (frei Γ) (cc ++ ([ci 19 (frei Γ) (16 * (ct.length + 1)) 0] ++ (ct ++ ce))) ρ := by

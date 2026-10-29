@@ -41,7 +41,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
     split at hlf
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
       obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, hCf, htf⟩ := hlf
-      have hFB3 : FB = 3 := rfl
+      have hFB3 : FB = 4 := rfl
       have hcode := (hP f).1
       have hfar := (hP f).2
       rw [← hCf] at hcode hfar
@@ -65,7 +65,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
     · next hcond =>
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
       obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, hCf, htf⟩ := hlf
-      have hFB3 : FB = 3 := rfl
+      have hFB3 : FB = 4 := rfl
       have hmul : (k + 1 + 1) * L = (k + 1) * L + L := Nat.succ_mul _ _
       have hroom := hF.room
       let s := FB + (D.params f).length

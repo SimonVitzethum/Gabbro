@@ -56,7 +56,7 @@ theorem Kopf.agree {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {K lo : Nat} {
     {ρ0 : Env D (D.params f)} (h : Kopf L f m fp K rp cfp ρ0) (ha : Agree fp lo K m m') (hF : FrameOK m fp K)
     (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 := by
   have hb := h.big
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have ha' := ha.mono hl
   refine ⟨?_, ?_, envAt_agree h.env ha' hF (Nat.le_refl _) hb, hb⟩
   · rw [agree_rd_low ha' hF.room (by omega) hb]; exact h.r0
@@ -87,7 +87,7 @@ theorem Umf.agreeW {L : Lay D} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : R
     {fp : Runner.W} {Ks Ks' K lo : Nat} (hW : WIn L fp Ks' K) (h : Umf L A C dv m fp Ks K) (ha : AgreeW L fp lo K m m')
     (hlo : FB ≤ lo) : Umf L A C dv m' fp Ks K :=
   ⟨pcode_agreeW h.code ha hW.top hW.lay.2.2 hW.ord, by
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     have hb := h.big
     rw [agreeW_rdW hW (ha.mono (Nat.min_le_left lo K)) (by omega) (Nat.min_le_right lo K)]
     exact h.depth, h.big, h.sync.agreeW ha h.hiK, h.hiK⟩
@@ -96,7 +96,7 @@ theorem Kopf.agreeW {L : Lay D} {f : D.Fn} {m m' : Runner.Mem} {fp : Runner.W} {
     {ρ0 : Env D (D.params f)} (hW : WIn L fp Ks K) (h : Kopf L f m fp K rp cfp ρ0) (ha : AgreeW L fp lo K m m')
     (hl : FB + (D.params f).length ≤ lo) : Kopf L f m' fp K rp cfp ρ0 := by
   have hb := h.big
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have ha' := ha.mono hl
   refine ⟨?_, ?_, envAt_agreeWIn hW h.env ha' (Nat.le_refl _) hb, hb⟩
   · rw [agreeW_rdW hW ha' (by omega) hb]; exact h.r0
@@ -155,7 +155,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
     (hp : PreS L m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
     (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) (hl : LayIn L) (hwl : fp.toNat + 8 * K ≤ L.lo) :
     RetZ0 L P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     have htop := lowErg_top e _ _ _ he
     have hsm := hp.small
     have hroom := hp.frame.room
@@ -283,7 +283,7 @@ theorem retWhy_ok {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     (hp : PreS L m pc fp K (frei Γ) (retWhyC lo r.val) ρ)
     (hk : Kopf L f m fp K rp cfp ρ0) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     RetWhy L f fp K rp cfp ⟨pc, fp⟩ m σ r := by
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hks := hW.ks
   have hlo : 3 ≤ lo := by omega
   have hs := hp.small
