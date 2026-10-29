@@ -1327,6 +1327,32 @@ theorem floatOfIntAssemblyL_ofInt {Γ : Ctx} {ρ : Env D Γ}
     · exact floatOfIntAssemblyL_left_ofInt F hF z hz hn hi hl
     · exact floatOfIntAssemblyL_right_ofInt F hF z hz hn hi (by omega)
 
+/-- A constant producer jointly witnesses every supported signed input. -/
+theorem floatOfIntAssemblyL_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
+    (W : Runner.Mem → Prop) (F : Gleitkomma.Format)
+    (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64])
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) :
+    let input := fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d)
+    WordCode (L := L) ρ W input (BitVec.ofInt 64 z) ∧
+    WordCode (L := L) ρ W
+      (fun d => floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) d input)
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
+  dsimp only
+  have hi : WordCode (L := L) ρ W
+      (fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d)) (BitVec.ofInt 64 z) := by
+    have h : WordCode (L := L) ρ W
+        (fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d))
+        (BitVec.ofNat 64 (BitVec.ofInt 64 z).toNat) := WordCode.konst (L := L) (ρ := ρ) (W := W)
+      (BitVec.ofInt 64 z).toNat (BitVec.isLt _)
+    have eq : BitVec.ofNat 64 (BitVec.ofInt 64 z).toNat = BitVec.ofInt 64 z := by
+      exact (BitVec.ofNat_toNat 64 (BitVec.ofInt 64 z)).trans (BitVec.setWidth_eq _)
+    rw [eq] at h
+    intro fp K d c top hc ht m pc pre
+    exact h hc ht m pc pre
+  exact ⟨hi, floatOfIntAssemblyL_ofInt F hF z hz hi⟩
+
+#print axioms floatOfIntAssemblyL_ofInt_zeuge
+
 #print axioms floatOfIntAssemblyL_ofInt
 
 #print axioms floatOfIntAssemblyL_right_ofInt
