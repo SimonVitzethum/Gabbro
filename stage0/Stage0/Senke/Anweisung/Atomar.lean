@@ -268,7 +268,7 @@ theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
     (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
       PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr ρ' →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
@@ -277,7 +277,7 @@ theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
           BitVec.ofInt 64 ex.2)
         (execBlock O passes R rest σ' ρ'))
     (hp : PreS L m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.2)
@@ -311,14 +311,14 @@ theorem awaits_ok [SichtOK O] {g : D.Glob} {pl : List D.Glob} {hpl : pl = D.nutz
     (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
       PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr ρ' →
-      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+      Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2)
         (execBlock O passes R rest σ' ρ'))
     (hp : PreS L m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr).length) +

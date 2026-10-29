@@ -71,3 +71,5 @@ import Stage0.Senke.Ausdruck.Aggregat.Proben
 
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
+
+import Stage0.Senke.Ausdruck.Old.Proben

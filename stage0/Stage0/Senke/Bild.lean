@@ -95,7 +95,12 @@ structure Bild (D : Deklaration) where
 def lowFunE (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) (g : D.Fn) : Except String (List II × Nat) :=
   match lowFun P A Y g with
   | some ct => .ok ct
-  | none => .error ("ir: the function " ++ name g ++ " uses a form outside the IR fragment")
+  | none => .error ("ir: the function " ++ name g ++
+      if (oldCells (P.ensures g)).length > 1 then
+        " needs multiple old occurrences; the IR entry header currently holds one snapshot word"
+      else if (lowEns Y (P.ensures g) (FB + (D.params g).length + 1)).isNone then
+        " has an unsupported postcondition; old table indices must be literal constants (possibly widened)"
+      else " uses a form outside the IR fragment")
 
 /-- Every function of `fs`, lowered with the addresses `A`. -/
 def lowAll (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) : List D.Fn → Except String (List (List II × Nat))

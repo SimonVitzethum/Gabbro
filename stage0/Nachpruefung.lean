@@ -191,3 +191,8 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_arithmetic_images_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_sub_model_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_operations_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.lowEns_ok
+#print axioms Gabbro.Stage0.Senke.snapC_ok
+#print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.OldProbe.snapC_ok_zeuge

@@ -25,7 +25,7 @@ theorem retryC_ok (hlo0 : lo = FB + (D.params f).length)
     retryC (frei Γ) cc cu (fun ex => lowB A L lo (cens, tens) pr ex body) n = some (c, top) →
     top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ m pc σ ρ, PreS L m pc fp K (frei Γ) c ρ → FB ≤ lo → lo ≤ frei Γ →
-    Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ →
+    Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ →
     (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)

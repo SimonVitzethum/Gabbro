@@ -106,7 +106,7 @@ def BlockRuns (O : Orakel D) (passes : Nat)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D (vertragVon D f) l Γ Λ Λ') : Prop :=
   ∀ ex cb tb, lowB A L lo ens pr ex b = some (cb, tb) → tb + cap ≤ Ks → 16 * cb.length < 2 ^ 31 →
   ∀ m pc σ ρ, PreS L m pc fp K (frei Γ) cb ρ → lo ≤ frei Γ →
-    Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cb.length))
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ)
@@ -123,7 +123,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
     (v : Nutzlast c) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff c v))
     (hp : PreS L m pc fp K (frei Γ) (cp ++ cb) ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length))
       (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cp ++ cb).length) + BitVec.ofInt 64 ex.2)
@@ -171,7 +171,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (htag : w &&& 255 = BitVec.ofNat 64 (k + v.1.val))
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (cs.get v.1) v.2))
     (hp : PreS L m pc fp K (frei Γ) cd ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.2)
@@ -239,7 +239,7 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
     (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS L m pc fp K (frei Γ) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.2)

@@ -42,14 +42,14 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
     (htop : max ci'.2 (max cb.2 (frei Γ + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ)
     (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ)) cb.1 ρ' → Umf L A C dv m' fp Ks K →
-      Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+      Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K (frei Γ :: pr) ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cb.1.length))
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 48)
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ')) :
     ∀ (n k : Nat) (m' : Runner.Mem) (σ' : World D) (ρ' : Env D Γ), k + n = (D.count t).toNat →
     PreS L m' pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ' →
     m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 k) →
-    Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+    Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m'
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
@@ -99,7 +99,7 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
     intro k m' σ' ρ' hkn hp hk0 hu hk hWa
     have hlen := travCode_len (s := frei Γ) (n := D.count t) (ci' := ci'.1) (cb := cb.1)
     have hroom := hp.frame.room
-    have hFB3 : FB = 3 := rfl
+    have hFB3 : FB = 4 := rfl
     obtain ⟨m1, w, s1, a1s, hw, hwe, hWa1⟩ := trav_head (cb := cb.1) hci (by omega) hW hp hWa
     have a1 := Agree.widen a1s hks
     have hc1 := hp.code.agree (a1.mono (Nat.le_succ _)) hp.far
@@ -255,20 +255,20 @@ theorem trav_ok (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1) 
     (htop : max ci'.2 (max cb.2 (frei Γ + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ)
     (hpr : ∀ j ∈ pr, j < frei Γ)
     (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ)) cb.1 ρ' → Umf L A C dv m' fp Ks K →
-      Kopf L f m' fp K rp cfp ρ0 → WeltAt m' L σ' →
+      Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K (frei Γ :: pr) ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cb.1.length))
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 48)
         (pc' + BitVec.ofNat 64 (16 * cb.1.length) + BitVec.ofInt 64 0) (execBlock O passes R body σ' ρ'))
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (hp : PreS L m pc fp K (frei Γ) (travCode (frei Γ) (D.count t) ci'.1 cb.1) ρ)
-    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) :
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (alleIndizes (D.count t)) σ ρ) := by
   have hks := hW.ks
   have hroom := hp.frame.room
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have s0 := const_step (j := frei Γ) (k := 0) (codeAt_left (a := [ci 1 (frei Γ) 0 0]) (by simpa [travCode] using hp.code))
     hp.frame (by omega) hp.small (by decide)
   let m0 := write m (slot fp (BitVec.ofNat 64 (frei Γ))) 8 (BitVec.ofInt 64 (0 : Int)).toNat

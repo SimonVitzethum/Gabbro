@@ -58,7 +58,7 @@ def callLayout : Lay D where
 def target (f : D.Fn) : List II := ((lowFun P addresses callLayout f).getD ([], 0)).1
 
 def caller (f : D.Fn) : List II :=
-  elseC 7 3 (callC addresses f 3 []) [ci 1 4 11 0] [ci 1 4 22 0]
+  elseC 9 4 (callC addresses f 4 []) [ci 1 5 11 0] [ci 1 5 22 0]
 
 def callMem (f : D.Fn) : Runner.Mem :=
   let segments := [(64, (target 0).flatMap encII), (576, (target 1).flatMap encII),
@@ -71,8 +71,8 @@ def callMem (f : D.Fn) : Runner.Mem :=
     wr := fun _ => true }
   write (write base 8192 8 64) 4112 8 3
 
-theorem target_lower : ∀ f : Fin 3, lowFun P addresses callLayout f = some (target f, 12) := by
-  exact @allFin 3 (fun f => lowFun P addresses callLayout f = some (target f, 12))
+theorem target_lower : ∀ f : Fin 3, lowFun P addresses callLayout f = some (target f, 13) := by
+  exact @allFin 3 (fun f => lowFun P addresses callLayout f = some (target f, 13))
     (fun _ => inferInstance) (by first | decide +kernel | (revert g; apply allFin; decide +kernel))
 
 theorem targets_code (g : D.Fn) : PCode (callMem g) addresses target 4096 256 := by
@@ -98,7 +98,7 @@ theorem caller_code (g : D.Fn) : CodeAt (callMem g) 2048 (caller g) := by
 
 theorem call_frame (g : D.Fn) : FrameOK (callMem g) 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
-theorem call_pre [Kern] (g : D.Fn) : PreS callLayout (callMem g) 2048 4096 256 3 (caller g) (Env.nil : Env D []) := by
+theorem call_pre [Kern] (g : D.Fn) : PreS callLayout (callMem g) 2048 4096 256 4 (caller g) (Env.nil : Env D []) := by
   refine ⟨by decide, by decide, call_frame g, caller_code g, ?_, ?_, trivial, wstab_true _ _⟩
   · unfold CodeFar; first | decide +kernel | (revert g; apply allFin; decide +kernel)
   · intro _ x; nomatch x
@@ -145,9 +145,9 @@ theorem target_bound : ∀ f : Fin 3, 16 * (target f).length < 2 ^ 31 := by
   apply allFin
   first | decide +kernel | (revert g; apply allFin; decide +kernel)
 
-theorem call_spec [Kern] : FunSpec callLayout addresses target (rufAt P O 1 2) 2 36 := by
-  exact lowFun_spec (P := P) (O := O) (passes := 1) (L := 12) rfl
-    (fun f => ⟨12, target_lower f, Nat.le_refl _⟩)
+theorem call_spec [Kern] : FunSpec callLayout addresses target (rufAt P O 1 2) 2 39 := by
+  exact lowFun_spec (P := P) (O := O) (passes := 1) (L := 13) rfl
+    (fun f => ⟨13, target_lower f, Nat.le_refl _⟩)
     addresses_bound
     (fun f => target_bound f) 2 (by decide)
 
@@ -163,18 +163,18 @@ theorem outcomes_zeuge :
 def Arrived [Kern] (g : D.Fn) : Prop :=
   match rufAt P O 1 2 g world .nil with
   | .ok σ v => ∃ m', Star ⟨2048, 4096⟩ (callMem g) ⟨2144, 4096⟩ m' ∧
-      PreS callLayout m' 2144 4096 256 4 [ci 1 4 11 0]
+      PreS callLayout m' 2144 4096 256 5 [ci 1 5 11 0]
         (Env.cons (τ := .int 0 100) v .nil) ∧ WeltAt m' callLayout σ
   | .why σ r => ∃ m', Star ⟨2048, 4096⟩ (callMem g) ⟨2176, 4096⟩ m' ∧
-      PreS callLayout m' 2176 4096 256 4 [ci 1 4 22 0]
+      PreS callLayout m' 2176 4096 256 5 [ci 1 5 22 0]
         (Env.cons (τ := .why 3) r .nil) ∧ WeltAt m' callLayout σ
   | _ => False
 
 /-- All premises of the shared call simulation hold jointly for each of three distinct outcomes. -/
 theorem callElse_ok_zeuge [Kern] (g : D.Fn) :
-    FunSpec callLayout addresses target (rufAt P O 1 2) 2 36 ∧
+    FunSpec callLayout addresses target (rufAt P O 1 2) 2 39 ∧
     lowA callLayout (Γ := []) (Λ := []) (Args.nil : Args D [] [] (D.params g)) 6 = some ([], 6) ∧
-    PreS callLayout (callMem g) 2048 4096 256 3 (caller g) (Env.nil : Env D []) ∧
+    PreS callLayout (callMem g) 2048 4096 256 4 (caller g) (Env.nil : Env D []) ∧
     Umf callLayout addresses target 2 (callMem g) 4096 128 256 ∧
     WIn callLayout 4096 128 256 ∧ WeltAt (callMem g) callLayout world ∧ Arrived g := by
   refine ⟨call_spec, rfl, call_pre g, call_umf g, call_win, call_world g, ?_⟩
@@ -182,8 +182,8 @@ theorem callElse_ok_zeuge [Kern] (g : D.Fn) :
     revert g
     apply allFin
     decide +kernel
-  have h := callElse_ok (g := g) (ca := []) (ta := 6) call_spec (addresses_bound g)
-    (Args.nil : Args D [] [] (D.params g)) rfl world rfl (by change 44 ≤ 128; decide) (call_pre g)
+  have h := callElse_ok (g := g) (ca := []) (ta := 8) call_spec (addresses_bound g)
+    (Args.nil : Args D [] [] (D.params g)) rfl world rfl (by change 49 ≤ 128; decide) (call_pre g)
     (by change 144 < 2 ^ 31; decide) (call_umf g) call_win (call_world g)
   rcases h with ⟨σ, v, m', hr, st, _, hp, hw⟩ | ⟨σ, r, m', hr, st, _, hp, hw⟩ |
     ⟨e, hr, _⟩ | ⟨e, hr, _⟩

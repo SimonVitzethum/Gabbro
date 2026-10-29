@@ -1,0 +1,12 @@
+// The selected entry cell survives a write to the same table cell.
+module ir_probe {
+table t count 2 { slot { a : u32 in 0 .. 100, } }
+impl fn change() effects { reads t.slots, writes t.slots }
+    ensures t.slots[1].a == old(t.slots[1].a) + 6
+{ t.slots[1].a = 9; }
+impl fn main() -> u32 in 0 .. 100 effects { reads t.slots, writes t.slots } {
+    t.slots[1].a = 3;
+    change();
+    return t.slots[1].a;
+}
+}

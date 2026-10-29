@@ -16,7 +16,7 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {cnd : Expr D Γ Λ .bool} {t : Endblock D (vertragVon D f) l Γ Λ} {e : Endblock D (vertragVon D f) l Γ Λ} :
@@ -29,7 +29,7 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append, List.length_singleton] at hs
-  have hFB3 : FB = 3 := rfl
+  have hFB3 : FB = 4 := rfl
   have hsm := hp.small
   have htop := lowE_top cnd (frei Γ) cc tc hcc
   have hq : PreS L m pc fp K (frei Γ) (cc ++ ([ci 19 (frei Γ) (16 * (ct.length + 1)) 0] ++ (ct ++ ce))) ρ := by
