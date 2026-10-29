@@ -679,6 +679,23 @@ theorem floatOfIntAssemblyL_compare_canonical {Γ : Ctx} {ρ : Env D Γ}
   have result := floatOfIntAssemblyL_compare z hz hn hi p (by omega) h ht m pc hpre
   simpa only [ha, hb] using result
 
+/-- The actual comparison selects the right branch also at equality (shift zero).
+    Its execution and frame follow from the canonical signed-input prefix. -/
+theorem floatOfIntAssemblyL_right_compare {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (p : Nat) (hp : p - 1 < 2^63)
+    (hr : ((p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1) :
+    WordCode (L := L) ρ W
+      (fun d => wordL 13 d
+        (floatExponentL d (fun j => floatMagnitudeL j input))
+        (some (konstWL 4 (p - 1) (d + 1)))) 0 := by
+  have hnot : ¬ Gleitkomma.findeExp z.natAbs 1 < ((p - 1 : Nat) : Int) := by omega
+  intro fp K d c top hc ht m pc pre
+  have result := floatOfIntAssemblyL_compare_canonical z hz hn hi p hp hc ht m pc pre
+  simpa [Runner.IR.bool, hnot] using result
+
 /-- Entry into the actual emitted left scale branch. The comparison prefix runs
     before the branch and its temporary writes satisfy the ordinary frame rule. -/
 theorem floatOfIntAssemblyL_left_entry {Γ : Ctx} {ρ : Env D Γ}
