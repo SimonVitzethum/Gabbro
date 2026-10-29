@@ -108,9 +108,9 @@ theorem Kopf.agreeW {P : Programm D} {σ0 : World D} {L : Lay D} {f : D.Fn} {m m
     exact ⟨w, by rw [agreeW_rdW hW ha' (by omega) hb]; exact hw, he⟩
 
 /-- `Pre.next` after a statement that changed the slots from `lo` on and the world. -/
-theorem Pre.nextW {L : Lay D} {m m' : Runner.Mem} {pc fp : Runner.W} {Ks K d d' lo : Nat} {a b : List II}
-    {Γ : Ctx} {ρ : Env D Γ} (hW : WIn L fp Ks K) (h : PreS L m pc fp K d (a ++ b) ρ) (ha : AgreeW L fp lo K m m')
-    (hlo : frei Γ ≤ lo) (hd : d ≤ d') (hK : lo ≤ K) : PreS L m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d' b ρ :=
+theorem Pre.nextW {L : Lay D} {m m' : Runner.Mem} {pc fp : Runner.W} {Ks K d d' lo reserved : Nat} {a b : List II}
+    {Γ : Ctx} {ρ : Env D Γ} (hW : WIn L fp Ks K) (h : PreS L m pc fp K d (a ++ b) ρ reserved) (ha : AgreeW L fp lo K m m')
+    (hlo : frei Γ reserved ≤ lo) (hd : d ≤ d') (hK : lo ≤ K) : PreS L m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d' b ρ reserved :=
   have hf := codeFar_right (n := a.length) (k := b.length) (by simpa using h.far)
   ⟨Nat.le_trans h.ctx hd, h.small, frameOK_agreeW h.frame ha, codeAt_agreeWIn hW ha (codeAt_right h.code) hf, hf,
    envAt_agreeWIn hW h.env ha hlo hK, trivial, wstab_true _ _⟩
