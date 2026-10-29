@@ -13,6 +13,22 @@ def floatExponentWordAux (a : Runner.W) : Nat → Runner.W
   | n + 1 => floatExponentWordAux a n +
       (1 - Runner.IR.bool ((a >>> ((n + 1) % 64)) == 0))
 
+/-- Generic prefix invariant: a threshold counts exactly the first positive shifts. -/
+theorem floatExponentWordAux_prefix (a : Runner.W) (bound n : Nat)
+    (hprefix : ∀ k, 1 ≤ k → k ≤ n →
+      (a >>> (k % 64) == 0) = decide (bound < k)) :
+    floatExponentWordAux a n = BitVec.ofNat 64 (min n bound) := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    rw [floatExponentWordAux, ih (fun k hk hn => hprefix k hk (by omega)),
+      hprefix (n + 1) (by omega) (by omega)]
+    by_cases hb : bound < n + 1
+    · simp [hb, Runner.IR.bool, Nat.min_eq_right (by omega : bound ≤ n),
+        Nat.min_eq_right (by omega : bound ≤ n + 1)]
+    · simp [hb, Runner.IR.bool, Nat.min_eq_left (by omega : n ≤ bound),
+        Nat.min_eq_left (by omega : n + 1 ≤ bound), BitVec.ofNat_add]
+
 def floatExponentAuxL (a : Nat → Option (List II × Nat)) :
     Nat → Nat → Option (List II × Nat)
   | 0, d => some ([ci 1 d 0 0], d + 1)
