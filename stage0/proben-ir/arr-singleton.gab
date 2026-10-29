@@ -1,0 +1,12 @@
+// Singleton arrays keep element words; a copied local preserves the original.
+// Mutable aggregate locals are not yet admitted by the front end; arrSet is covered in Lean.
+module ir_probe {
+const INITIAL : [u8; 1] = [17];
+const UPDATED : [u8; 1] = [25];
+impl fn main() -> u32 in 0 .. 600 effects { pure } {
+    let a : [u8; 1] = INITIAL;
+    let original : [u8; 1] = a;
+    let replacement : [u8; 1] = UPDATED;
+    return original[0] + replacement[0];
+}
+}

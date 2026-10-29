@@ -7,6 +7,8 @@ import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Ausdruck.Fnptr
 import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Ausdruck.Aggregat.Array
+import Stage0.Senke.Ausdruck.Aggregat.StringOps
 import Stage0.Senke.Ausdruck.Option
 import Stage0.Senke.Ausdruck.Bytes
 import Stage0.Senke.Ausdruck.Quant.Satz
@@ -29,6 +31,30 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE L e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L τ (eval σ₀ e σ ρ))
+  | _, _, .arrNil, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
+  | _, _, .arrCons a rest, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .arrGet a i, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrGet_ok a i (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .arrSet a i v, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL v d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strLit bs hb, d, c, top, h, hK, m, pc, ρ, hp => strLit_ok bs hb h hK hp
+  | _, _, .strLen s, d, c, top, h, hK, m, pc, ρ, hp =>
+    strLen_ok s (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strCat s t, d, c, top, h, hK, m, pc, ρ, hp =>
+    strCat_ok s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL t d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strWeit q s, d, c, top, h, hK, m, pc, ρ, hp =>
+    strWeit_ok q s (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strGet s i, d, c, top, h, hK, m, pc, ρ, hp =>
+    strGet_ok s i (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL i d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strEq s t, d, c, top, h, hK, m, pc, ρ, hp =>
+    strCompare_ok false s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL t (d + 1) ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .strLt s t, d, c, top, h, hK, m, pc, ρ, hp =>
+    strCompare_ok true s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL t (d + 1) ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
@@ -48,12 +74,15 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simp [Enc, eval, wahr?, hw]
   | _, τ, .var x, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨w, hw, he⟩ := hp.env τ x
-    have := vslot_lt x
-    have := hp.ctx
-    exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨w, hw, he⟩ := hp.env τ x
+      have := vslot_lt x
+      have := hp.ctx
+      exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
+    · cases h
   | _, _, .add a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
@@ -363,7 +392,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     · next hl =>
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact glob_ok hl hp hWL (by omega)
+      simp only [Bool.and_eq_true] at hl
+      exact glob_ok hl.1 hp hWL (by omega)
     · cases h
   | _, _, .slot t f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ t _ f i _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
@@ -429,17 +459,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
   | _, _, .refEq .., _, _, _, h, _, _, _, _, _
   | _, _, .slotRef .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrNil .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrCons .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrGet .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrSet .., _, _, _, h, _, _, _, _, _
-  | _, _, .strLit .., _, _, _, h, _, _, _, _, _
-  | _, _, .strLen .., _, _, _, h, _, _, _, _, _
-  | _, _, .strCat .., _, _, _, h, _, _, _, _, _
-  | _, _, .strGet .., _, _, _, h, _, _, _, _, _
-  | _, _, .strEq .., _, _, _, h, _, _, _, _, _
-  | _, _, .strLt .., _, _, _, h, _, _, _, _, _
-  | _, _, .strWeit .., _, _, _, h, _, _, _, _, _ => by simp [lowE_eqs] at h
+    => by simp [lowE_eqs] at h
 
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (tag : Nat) (htag : tag < 256) :

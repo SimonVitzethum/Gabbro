@@ -39,7 +39,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     have hks := hW.ks
     have htop := slotA_top ha
     have htopr : frei Γ + 2 ≤ tr := by
-      simp only [slotC, Option.map_eq_some_iff] at hr
+      simp only [slotC, ht, aggregateFits, ↓reduceIte, Option.map_eq_some_iff] at hr
       obtain ⟨⟨cc, tc⟩, hc, hh⟩ := hr
       have := slotA_top hc
       simp only [Option.some.injEq, Prod.mk.injEq] at hh

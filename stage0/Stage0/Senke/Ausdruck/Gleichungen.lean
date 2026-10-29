@@ -26,11 +26,11 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_var (x : Var Γ τ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.var x) d =
-    (some ([ci 2 d (vslot x) 0], d + 1)) := rfl
+    (if aggregateFits τ then some ([ci 2 d (vslot x) 0], d + 1) else none) := rfl
 
 @[lowE_eqs] theorem lowE_glob (g : D.Glob) (hL : gdarf D g Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.glob g hL) d =
-    (if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none) := rfl
+    (if lit32 (L.ga g) && aggregateFits (D.gtyp g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none) := rfl
 
 @[lowE_eqs] theorem lowE_slot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.slot t f i hL) d =
@@ -222,47 +222,43 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_arrNil :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.arrNil (τ := τ)) d =
-    (none) := rfl
+    some ([ci 1 d 0 0], d + 1) := rfl
 
 @[lowE_eqs] theorem lowE_arrCons (a : Expr D Γ Λ τ) (rest : Expr D Γ Λ (.arr τ n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.arrCons a rest) d =
-    (none) := rfl
+    lowE L (.arrCons a rest) d = (if n = 0 then lowE L a d else none) := rfl
 
 @[lowE_eqs] theorem lowE_arrGet (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.arrGet a i) d =
-    (none) := rfl
+    lowE L (.arrGet a i) d = (if n = 1 then lowE L a d else none) := rfl
 
 @[lowE_eqs] theorem lowE_arrSet (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n)) (v : Expr D Γ Λ τ) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.arrSet a i v) d =
-    (none) := rfl
+    lowE L (.arrSet a i v) d = (if n = 1 then lowE L v d else none) := rfl
 
 @[lowE_eqs] theorem lowE_strLit (bs : List (Zahl 0 255)) (h : bs.length ≤ n) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.strLit bs h) d =
-    (none) := rfl
+    (if n ≤ 1 then some ([ci 1 d (strN bs) 0], d + 1) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strLen (s : Expr D Γ Λ (.str n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strLen s) d =
-    (none) := rfl
+    lowE L (.strLen s) d = (if n ≤ 1 then wordK 12 d (lowE L s d) 8 else none) := rfl
 
 @[lowE_eqs] theorem lowE_strCat (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strCat s t) d =
-    (none) := rfl
+    lowE L (.strCat s t) d =
+    (if n + m ≤ 1 then (if n = 0 then lowE L t d else lowE L s d) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strGet (s : Expr D Γ Λ (.str n)) (i : Expr D Γ Λ (.int lo hi)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strGet s i) d =
-    (none) := rfl
+    lowE L (.strGet s i) d =
+    (if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L s d) (lowE L i d) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strEq (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strEq s t) d =
-    (none) := rfl
+    lowE L (.strEq s t) d =
+    (if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L s d) (lowE L t (d + 1)) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strLt (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strLt s t) d =
-    (none) := rfl
+    lowE L (.strLt s t) d =
+    (if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L s d) (lowE L t (d + 1)) else none) := rfl
 
 @[lowE_eqs] theorem lowE_strWeit (m : Nat) (s : Expr D Γ Λ (.str n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.strWeit m s) d =
-    (none) := rfl
+    lowE L (.strWeit m s) d =
+    (if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L s d) else none) := rfl
 
 @[lowE_eqs] theorem lowE_wenn (c : Expr D Γ Λ .bool) (a b : Expr D Γ Λ τ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.wenn c a b) d =

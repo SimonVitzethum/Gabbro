@@ -11,11 +11,16 @@
   A function pointer is the code address `L.fa f`. The layout is explicit in every value and storage encoding;
   `FunSpec.addr` ties those words to the callee code addresses. This reuses the IR's slot-based call target
   without a second dispatch mechanism. Function references outside the literal range are refused.
+
+  Empty arrays use zero; singleton arrays reuse their element word recursively. Strings with maximum zero
+  or one use zero for empty and 256 + byte otherwise. Larger aggregates are refused at constructors and reads,
+  including variables, globals and table cells. No allocation, layout or call-ABI change is needed.
 -/
 import Lean.Meta.Tactic.Simp.RegisterCommand
 import Grammatik.Kern.Semantik.Semantik
 import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
+import Stage0.Senke.Ausdruck.Aggregat.Wert
 
 namespace Gabbro.Stage0.Senke
 
@@ -84,6 +89,20 @@ def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Opt
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
 
+/-- A word operation whose operands have already been lowered; reserve its two operand slots explicitly. -/
+def wordL (o d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  pure ((bin2 o d a b).1, max (max a.2 b.2) (d + 2))
+
+/-- A word operation against a small constant. -/
+def wordK (o d : Nat) (a : Option (List II × Nat)) (k : Int) : Option (List II × Nat) :=
+  wordL o d a (some ([ci 1 (d + 1) k 0], d + 2))
+
+/-- A short string's byte at zero, or zero at every other signed index. -/
+def strGetL (d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) :=
+  wennL d (wordK 14 d i 0) (wordK 8 d s 255) (some ([ci 1 d 0 0], d + 1))
+
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
 
@@ -101,9 +120,18 @@ def slotA (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat
       max ci'.2 (d + 2))
   else none
 
+/-- The aggregate representations admitted by frames and reads, recursively through singleton arrays.
+    Empty arrays need no representation for their element type. Other scalar fragments keep their own checks. -/
+def aggregateFits : Ty → Bool
+  | .arr τ n => if n = 0 then true else decide (n = 1) && aggregateFits τ
+  | .str n => decide (n ≤ 1)
+  | _ => true
+
 /-- An element of column `f` of table `t`: its address (`slotA`), the word there. -/
 def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
-  (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
+  if aggregateFits (D.typ t f) then
+    (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
+  else none
 
 /-- A sum fits one word: eight tag bits and a 56-bit unsigned payload offset. -/
 def sumFits (cs : List (Option (Int × Int))) : Bool :=
@@ -188,7 +216,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
-  | _, _, .var x, d => some ([ci 2 d (vslot x) 0], d + 1)
+  | _, τ, .var x, d => if aggregateFits τ then some ([ci 2 d (vslot x) 0], d + 1) else none
   | _, _, .widen _ _ e, d => lowE L e d
   | _, _, .add a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 3 d ca cb)
   | _, _, .sub a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 4 d ca cb)
@@ -234,6 +262,24 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
     if inWE a && inWE b && lt64 b then do
       let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 12 d ca cb)
     else none
+  | _, _, .arrNil, d => some ([ci 1 d 0 0], d + 1)
+  | _, _, @Expr.arrCons _ _ _ _ n a _, d => if n = 0 then lowE L a d else none
+  | _, _, @Expr.arrGet _ _ _ _ n a _, d => if n = 1 then lowE L a d else none
+  | _, _, @Expr.arrSet _ _ _ _ n _ _ v, d => if n = 1 then lowE L v d else none
+  | _, _, @Expr.strLit _ n _ _ bs _, d =>
+    if n ≤ 1 then some ([ci 1 d (strN bs) 0], d + 1) else none
+  | _, _, @Expr.strLen _ _ _ n s, d =>
+    if n ≤ 1 then wordK 12 d (lowE L s d) 8 else none
+  | _, _, @Expr.strCat _ _ _ n m s t, d =>
+    if n + m ≤ 1 then (if n = 0 then lowE L t d else lowE L s d) else none
+  | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
+    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L s d) (lowE L i d) else none
+  | _, _, @Expr.strEq _ _ _ n m s t, d =>
+    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L s d) (lowE L t (d + 1)) else none
+  | _, _, @Expr.strLt _ _ _ n m s t, d =>
+    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L s d) (lowE L t (d + 1)) else none
+  | _, _, @Expr.strWeit _ _ _ n m s, d =>
+    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L s d) else none
   | _, _, .none _, d => some ([ci 1 d (-1) 0], d + 1)
   | _, _, .some e, d => lowE L e d
   | _, _, @Expr.istSome _ _ _ n e, d =>
@@ -245,7 +291,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
-  | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
+  | _, _, .glob g _, d => if lit32 (L.ga g) && aggregateFits (D.gtyp g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L e d) (lowE L b d)
@@ -284,6 +330,11 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
   | .fnptr _, v, w => w = BitVec.ofNat 64 (L.fa v.1)
   | .sum cs, v, w => sumFits cs = true ∧ w = BitVec.ofNat 64 (sumN v)
+  | .arr τ n, v, w => match n with
+    | 0 => w = 0
+    | 1 => Enc L τ (v ⟨0, by decide⟩) w
+    | _ => False
+  | .str n, v, w => n ≤ 1 ∧ w = BitVec.ofNat 64 (strN v.1)
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 
