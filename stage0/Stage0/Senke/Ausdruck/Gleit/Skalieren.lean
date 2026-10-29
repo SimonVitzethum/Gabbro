@@ -365,6 +365,29 @@ theorem floatPackCarryL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem →
   intro fp K d c top h hK m pc hp
   exact floatPackCarryL_ok hs hecode hqcode (2^F.fracBits) hu h hK m pc hp
 
+/-- Actual normal rounding outputs are exactly the carry packer's fields. -/
+theorem floatPackCarry_fields (F : Gleitkomma.Format) (sign : Bool)
+    (n d : Nat) (E : Int) (hp : 1 ≤ F.p) (hf : F.fracBits = F.p - 1)
+    (hlo : F.emin ≤ E) (hhi : E < (F.emax : Int))
+    (hq : Gleitkomma.normQ F.p E n d ≤ 2 * 2^F.fracBits) :
+    Gleitkomma.rundeBruchKern F sign n d E =
+      ⟨sign, (E - F.emin + 1).toNat +
+          (if Gleitkomma.normQ F.p E n d = 2 * 2^F.fracBits then 1 else 0),
+        (if Gleitkomma.normQ F.p E n d = 2 * 2^F.fracBits
+          then 2^F.fracBits else Gleitkomma.normQ F.p E n d) - 2^F.fracBits⟩ := by
+  have hpow : 2^F.p = 2 * 2^F.fracBits := by
+    have he : F.p = F.fracBits + 1 := by omega
+    rw [he, Nat.pow_succ]
+    omega
+  rw [floatPackCarry_rundeBruchKern F sign n d E hp hlo hhi, hpow]
+  by_cases hc : Gleitkomma.normQ F.p E n d = 2 * 2^F.fracBits
+  · simp only [hc, Nat.lt_irrefl, ↓reduceIte, Nat.sub_self]
+    congr 1
+    omega
+  · have hl : Gleitkomma.normQ F.p E n d < 2 * 2^F.fracBits := by omega
+    simp only [hl, hc, ↓reduceIte, Nat.add_zero]
+    rw [hf]
+
 
  theorem floatPackCarry_nat_zeuge :
     (Runner.IR.bool (BitVec.ofNat 64 16 == BitVec.ofNat 64 16)).toNat = 1 ∧
