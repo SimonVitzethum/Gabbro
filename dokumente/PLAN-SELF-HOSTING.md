@@ -199,8 +199,14 @@ check. The x86-64 subset the runner needs is therefore about 20 instructions.
 and overflow) and the same range stop as G. `floatRoundL` is an integer-only nearest-even fragment, proved
 against `rundeInt` when `remainder < denominator < 2^63`; it avoids doubling the remainder and supports an
 arbitrary unsigned quotient, with a modular word result. This is not yet a complete soft-float operation.
-Dynamic `floatOf` needs signed-magnitude extraction, exponent discovery, significand scaling and packing,
-with their IR simulation. `add/sub` also need alignment with guard/sticky information, cancellation,
+`floatMagnitudeL` now extracts the unsigned magnitude with generic IR simulation, including `-2^63`.
+Pure input-code composition is shared with rounding. `floatRoundShiftL` rounds an unsigned magnitude after
+a right shift of 0–62 bits, with generic IR simulation against `rundeInt` and G's normal-path `normQ`.
+It retains the full remainder and allows a carry out of the significand. Dynamic `floatOf` still needs
+exponent discovery, left scaling, packing and block simulation. `floatShiftJamL` aligns an unsigned word with
+generic IR simulation: discarded bits become a sticky low bit, exactly the nonzero remainder modulo
+the alignment power. Counts at least 64 saturate, including counts with the sign bit set, despite the
+IR's masked shifts. `add/sub` still need the full guard/sticky alignment argument against G, cancellation,
 normalisation, all signed-zero/infinity/NaN rules (including G's payload choice), and the final range test.
 `mul/div` remain refused: multiplication needs a proved wide significand product and exponent combination;
 division needs a proved quotient/remainder algorithm with sufficient precision for final nearest-even
