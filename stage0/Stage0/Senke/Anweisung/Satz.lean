@@ -9,9 +9,9 @@ import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Sperre.Satz
 import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
 import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
-import Stage0.Senke.Anweisung.Faelle.Wahl
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Wahl
 import Stage0.Senke.Anweisung.Option
-import Stage0.Senke.Anweisung.Faelle.Why
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Why
 import Stage0.Senke.Anweisung.Faelle.CallElse
 import Stage0.Senke.Anweisung.Faelle.Fnptr
 import Stage0.Senke.Anweisung.Bytes.Shift

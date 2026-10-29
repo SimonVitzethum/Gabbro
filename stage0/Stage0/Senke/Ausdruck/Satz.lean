@@ -474,7 +474,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
     => by simp [lowE_eqs] at h
-
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option (Int × Int)} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
@@ -497,5 +496,4 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (fun m pc hp => lowE_ok σ₀ σ hWL e d ce te he (by simp only [packSum, bin2] at hK; omega) m pc ρ hp) hp
     · cases h
 end
-
 end Gabbro.Stage0.Senke
