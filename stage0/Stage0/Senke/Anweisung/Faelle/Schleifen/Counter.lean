@@ -75,4 +75,12 @@ theorem counter_protected_zeuge (m : Mem) :
     (3 : W) - 1 = 2 ∧ (foreverCounter 12 13 64).length = 2 := by
   exact ⟨counter_protected (by decide) 2, by decide, by decide⟩
 
+/-- The actual expression layout writes at the first free slot, so this slot
+    cannot simultaneously hold a loop counter without changing allocation. -/
+theorem counter_expression_collision [Kern] {D : Gabbro.Grammatik.Deklaration}
+    (L : Lay D) {Γ : Gabbro.Grammatik.Ctx}
+    {Λ : List (Gabbro.Grammatik.Res D)} :
+    lowE L (show Gabbro.Grammatik.Expr D Γ Λ .bool from .tru) (frei Γ) =
+      some ([ci 1 (frei Γ) 1 0], frei Γ + 1) := rfl
+
 end Gabbro.Stage0.Senke
