@@ -389,6 +389,28 @@ theorem floatPackCarry_fields (F : Gleitkomma.Format) (sign : Bool)
     rw [hf]
 
 
+/-- The emitted carry fragment returns the actual canonical rounding-kernel bits. -/
+theorem floatPackCarryL_rundeBruchKern {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {s ex qcode : Nat → Option (List II × Nat)}
+    (F : Gleitkomma.Format) (sign : Bool) (n d : Nat) (E : Int)
+    (hs : WordCode (L := L) ρ W s
+      (BitVec.ofNat 64 (if sign then 2^(F.ebits + F.fracBits) else 0)))
+    (hecode : WordCode (L := L) ρ W ex (BitVec.ofNat 64 (E - F.emin + 1).toNat))
+    (hqcode : WordCode (L := L) ρ W qcode
+      (BitVec.ofNat 64 (Gleitkomma.normQ F.p E n d)))
+    (hp : 1 ≤ F.p) (hf : F.fracBits = F.p - 1)
+    (hlo : F.emin ≤ E) (hhi : E < (F.emax : Int))
+    (hu : 2 * 2^F.fracBits < 2^64) (hm : F.bexpMax ≤ 2^64)
+    (he : 0 < (E - F.emin + 1).toNat ∧
+      (E - F.emin + 1).toNat + 1 < F.bexpMax)
+    (hq : 2^F.fracBits ≤ Gleitkomma.normQ F.p E n d ∧
+      Gleitkomma.normQ F.p E n d ≤ 2 * 2^F.fracBits) :
+    WordCode (L := L) ρ W (fun dst => floatPackCarryL dst s ex qcode (2^F.fracBits))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.rundeBruchKern F sign n d E))) := by
+  rw [floatPackCarry_fields F sign n d E hp hf hlo hhi hq.2]
+  exact floatPackCarryL_canonical F sign _ _ hs hecode hqcode hu hm he hq
+
+
  theorem floatPackCarry_nat_zeuge :
     (Runner.IR.bool (BitVec.ofNat 64 16 == BitVec.ofNat 64 16)).toNat = 1 ∧
     (Runner.IR.bool (BitVec.ofNat 64 15 == BitVec.ofNat 64 16)).toNat = 0 := by
