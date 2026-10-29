@@ -167,7 +167,7 @@ end
 
 /-- One binder prefix, independent of whether its continuation is a block or an end block.
     The continuation predicate supplies only prefix closure and the two stopping outcomes. -/
-theorem indBind_ok {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
+theorem indBind_ok {reserved : Nat} {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
     {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {dv : Runner.W} {cap : Nat}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
     {f : D.Fn} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
@@ -175,18 +175,18 @@ theorem indBind_ok {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
     (he : (D.sigNr n).erg = some τ) (hr : (D.sigNr n).gruende = 0)
     {fp rp cfp pc : Runner.W} {ρ0 : Env D (D.params f)} {lo K Ks : Nat} {pr : List Nat}
     {cc cr : List II} {tc : Nat} {m : Runner.Mem} (σ : World D) (ρ : Env D Γ)
-    (hc : lowInd L p args = some (cc, tc)) (ht : tc + cap ≤ Ks)
-    (hp : PreS L m pc fp K (frei Γ) (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr) ρ)
-    (hW : WIn L fp Ks K) (hlo0 : lo = FB + (D.params f).length) (hlo : lo ≤ frei Γ) (hu : Umf L A C dv m fp Ks K)
-    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ)
+    (hc : lowInd L p args reserved = some (cc, tc)) (ht : tc + cap ≤ Ks)
+    (hp : PreS L m pc fp K (frei Γ reserved) (cc ++ [ci 2 (frei Γ reserved) (frei Γ reserved + 2) 0] ++ cr) ρ reserved)
+    (hW : WIn L fp Ks K) (hlo0 : lo = FB + (D.params f).length) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K)
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (k : World D → Wert D τ → β) (err : Logik D → β) (hwerr : Hardware D → β)
     (J : T → Runner.Mem → β → Prop)
     (jprefix : ∀ {t0 t1 m0 m1 b}, Star t0 m0 t1 m1 → AgreeW L fp lo K m0 m1 →
       Keeps fp pr m0 m1 → J t1 m1 b → J t0 m0 b)
     (jerr : ∀ t m e, Stops t m (logikCode e) → J t m (err e))
     (jhw : ∀ t m e, Stops t m (hwCode e) → J t m (hwerr e))
-    (kont : ∀ m' σ' v, let pc' := pc + BitVec.ofNat 64 (16 * (cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0]).length)
-      PreS L m' pc' fp K (frei (τ :: Γ)) cr (Env.cons v ρ) →
+    (kont : ∀ m' σ' v, let pc' := pc + BitVec.ofNat 64 (16 * (cc ++ [ci 2 (frei Γ reserved) (frei Γ reserved + 2) 0]).length)
+      PreS L m' pc' fp K (frei (τ :: Γ) reserved) cr (Env.cons v ρ) reserved →
       Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' → J ⟨pc', fp⟩ m' (k σ' v)) :
     J ⟨pc, fp⟩ m (indAntwort R p args he hr σ ρ k err hwerr) := by
   have hb := lowInd_top hc
@@ -202,14 +202,14 @@ theorem indBind_ok {β : Type} {A : D.Fn → Nat} {C : D.Fn → List II}
   | ok σ' v =>
     obtain ⟨m1, s1, a1, ⟨w, hw, hew⟩, hw1⟩ := hi
     have hp1 := hp.left.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
-    have s2 := mov_to hp1.code hp1.frame (j := frei Γ) (s := frei Γ + 2) (by omega) (by omega) hp.small hw
+    have s2 := mov_to hp1.code hp1.frame (j := frei Γ reserved) (s := frei Γ reserved + 2) (by omega) (by omega) hp.small hw
     rw [← pc_add1] at s2
-    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ))) 8 w.toNat
-    have a2s : Agree fp (frei Γ) Ks m1 m2 := agree_write (frameOK_sub hp1.frame hks).room (Nat.le_refl _) (by omega) _
-    have a2 : Agree fp (frei Γ) K m1 m2 := Agree.widen a2s hks
+    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 w.toNat
+    have a2s : Agree fp (frei Γ reserved) Ks m1 m2 := agree_write (frameOK_sub hp1.frame hks).room (Nat.le_refl _) (by omega) _
+    have a2 : Agree fp (frei Γ reserved) K m1 m2 := Agree.widen a2s hks
     have hw2 : WeltAt m2 L σ' := weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hw1 (a2s.mono (Nat.zero_le _))
-    have hq := hp.nextW hW (a1.trans (agreeW_of a2)) (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega) (by omega)
-    have hp2 : PreS L m2 _ fp K (frei (τ :: Γ)) cr (Env.cons (ergWert (ergSig hg he) v) ρ) :=
+    have hq := hp.nextW hW (a1.trans (agreeW_of a2)) (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
+    have hp2 : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert (ergSig hg he) v) ρ) reserved :=
       ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
        envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert (ergSig hg he) hew), trivial, wstab_true _ _⟩
     exact jprefix (s1.trans s2) ((a1.trans (agreeW_of a2)).mono hlo)
