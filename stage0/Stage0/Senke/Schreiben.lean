@@ -27,10 +27,10 @@ theorem st_step {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {va vb : Runner.
   exact run_st (t := ⟨pc, fp⟩) hi (by rw [sx_nat (by omega)]; exact ha) (by rw [sx_nat (by omega)]; exact hb) hw
 
 /-- The store of a cell at address `a`: the value code `ce` into `s`, the address code `ca` into `s + 1`, `st`. -/
-theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks lo a : Nat} {Γ : Ctx} {ρ : Env D Γ} {L : Lay D}
+theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a : Nat} {Γ : Ctx} {ρ : Env D Γ} {L : Lay D}
     {σ σ' : World D} {ce ca : List II} {Pe : Runner.W → Prop}
     (hp : PreS m pc fp K (frei Γ) (ce ++ ca ++ [stC (frei Γ)]) ρ)
-    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) (hlo : lo ≤ frei Γ) (htop : frei Γ + 2 ≤ Ks)
+    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) (htop : frei Γ + 2 ≤ Ks)
     (hE : ∀ m pc, Pre m pc fp Ks (frei Γ) ce ρ (fun m => WeltAt m L σ) → Ok m pc fp Ks (frei Γ) ce Pe)
     (hA : ∀ m pc, Pre m pc fp Ks (frei Γ + 1) ca ρ (fun m => WeltAt m L σ) →
       Ok m pc fp Ks (frei Γ + 1) ca (· = BitVec.ofNat 64 a))
@@ -38,7 +38,7 @@ theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks lo a : Nat} {Γ : Ctx
     (hnew : ∀ m w, WeltAt m L σ → Pe w → WeltAt (write m (BitVec.ofNat 64 a) 8 w.toNat) L σ') :
     ∃ m', Star ⟨pc, fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (frei Γ)]).length), fp⟩ m' ∧
-      Agree fp lo K m m' ∧ EnvAt m' fp ρ ∧ WeltAt m' L σ' := by
+      Agree fp (frei Γ) K m m' ∧ EnvAt m' fp ρ ∧ WeltAt m' L σ' := by
   have hks := hW.ks
   have hwl := hW.lo
   have hwh := hW.hi
@@ -69,7 +69,7 @@ theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks lo a : Nat} {Γ : Ctx
     agree_write_at hroom (by omega) (by omega) _
   have a13 : Agree fp (frei Γ) K m (write m2 (BitVec.ofNat 64 a) 8 w.toNat) :=
     a1.trans ((a2.mono (Nat.le_succ _)).trans a3)
-  refine ⟨_, s1.trans (s2.trans ?_), a13.mono hlo, envAt_agree hp.env a13 hp.frame (Nat.le_refl _) (by omega),
+  refine ⟨_, s1.trans (s2.trans ?_), a13, envAt_agree hp.env a13 hp.frame (Nat.le_refl _) (by omega),
     hnew m2 w hWa2 hpe⟩
   have e : pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (frei Γ)]).length) =
       pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * ca.length) + BitVec.ofNat 64 (16 * 1) := by

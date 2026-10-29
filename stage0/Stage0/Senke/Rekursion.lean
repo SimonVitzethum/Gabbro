@@ -160,8 +160,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
         have hk : Kopf f m1 fp K rp cfp ρ := Kopf.agree ⟨h0, h1, hE, by omega⟩ a1 hF (Nat.le_refl _)
         have hpb : PreS m1 _ fp K (frei (D.params f)) cb ρ :=
           ⟨Nat.le_refl _, hK, hF1, hc3, hf3, envAt_agree hE a1 hF (Nat.le_refl _) (by omega), trivial, wstab_true _ _⟩
-        have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (P.rumpf f) cb tb hb
-          (by omega) (by omega) hW m1 _ σR ρ hpb (Nat.le_refl _) hu hk hWa1
+        have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (pr := []) (P.rumpf f) cb tb hb
+          (by omega) (by omega) hW m1 _ σR ρ hpb (Nat.le_refl _) hu hk hWa1 (fun _ h => nomatch h)
         have spre := sg.trans (s1.trans sg2)
         have apre : Agree fp 2 K m m1 := a1.mono (by omega)
         generalize execEnd O passes (rufAt P O passes k) (P.rumpf f) σR ρ = o at hret ⊢

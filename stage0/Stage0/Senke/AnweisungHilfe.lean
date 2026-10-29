@@ -38,4 +38,24 @@ theorem pc_add1 (pc : Runner.W) (a b : List II) :
       BitVec.ofNat 64 (16 * b.length) := by
   rw [pc_add, List.length_append]
 
+/-- The protected slots `pr` (a loop's counter) read the same. -/
+def Keeps (fp : Runner.W) (pr : List Nat) (m m' : Runner.Mem) : Prop :=
+  ∀ j ∈ pr, m'.rd64 (slot fp (BitVec.ofNat 64 j)) = m.rd64 (slot fp (BitVec.ofNat 64 j))
+
+theorem Keeps.refl (fp : Runner.W) (pr : List Nat) (m : Runner.Mem) : Keeps fp pr m m := fun _ _ => rfl
+
+theorem Keeps.trans {fp : Runner.W} {pr : List Nat} {m1 m2 m3 : Runner.Mem} (h1 : Keeps fp pr m1 m2)
+    (h2 : Keeps fp pr m2 m3) : Keeps fp pr m1 m3 := fun j hj => (h2 j hj).trans (h1 j hj)
+
+/-- Code that changes only slots from `d` on keeps the protected slots below `d`. -/
+theorem keeps_of_agree {fp : Runner.W} {pr : List Nat} {d K : Nat} {m m' : Runner.Mem} (ha : Agree fp d K m m')
+    (hr : fp.toNat + 8 * K ≤ 2 ^ 64) (hp : ∀ j ∈ pr, j < d) (hd : d ≤ K) : Keeps fp pr m m' :=
+  fun j hj => agree_rd_low ha hr (hp j hj) hd
+
+/-- Writing slot `x` keeps the protected slots when `x` is none of them. -/
+theorem keeps_write {fp : Runner.W} {pr : List Nat} {K x : Nat} {m : Runner.Mem} (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
+    (hx : x < K) (hp : ∀ j ∈ pr, j < K) (hn : x ∉ pr) (v : Nat) :
+    Keeps fp pr m (write m (slot fp (BitVec.ofNat 64 x)) 8 v) := fun j hj =>
+  rd64_write_far (slot_far hr hx (hp j hj) (fun e => hn (e ▸ hj)))
+
 end Gabbro.Stage0.Senke

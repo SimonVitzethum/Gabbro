@@ -60,17 +60,17 @@ def exPlus (ex : Int × Int) (n : Nat) : Int × Int := (ex.1 + 16 * n, ex.2 + 16
 def stC (s : Nat) : II := ci 16 ((s + 1 : Nat) : Int) s 0
 
 mutual
-def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (ex : Int × Int) :
+def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
   | _, Γ, _, _, .assignVar x e =>
-    if lo ≤ vslot x then do
+    if lo ≤ vslot x ∧ vslot x ∉ pr then do
       let ce ← lowE L e (frei Γ)
       pure (ce.1 ++ [ci 2 (vslot x) (frei Γ) 0], ce.2)
     else none
   | _, Γ, _, _, .ite c t e => do
     let cc ← lowE L c (frei Γ)
-    let ce ← lowB A L lo ens ex e
-    let ct ← lowB A L lo ens (exPlus ex (ce.1.length + 1)) t
+    let ce ← lowB A L lo ens pr ex e
+    let ct ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) t
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 2)) 0] ++ ct.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
       max cc.2 (max ct.2 ce.2))
   | _, Γ, _, _, .call f args _ _ => do
@@ -96,20 +96,20 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (ex : 
     pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
   | _, _, _, _, _ => none
 
-def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (ex : Int × Int) :
+def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → Option (List II × Nat)
   | _, Γ, _, _, .nil => some ([], frei Γ)
   | _, _, _, _, .cons s rest => do
-    let cr ← lowB A L lo ens ex rest
-    let cs ← lowS A L lo ens (exPlus ex cr.1.length) s
+    let cr ← lowB A L lo ens pr ex rest
+    let cs ← lowS A L lo ens pr (exPlus ex cr.1.length) s
     pure (cs.1 ++ cr.1, max cs.2 cr.2)
   | _, Γ, _, _, .bind e rest => do
     let ce ← lowE L e (frei Γ)
-    let cr ← lowB A L lo ens ex rest
+    let cr ← lowB A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
-    let cr ← lowB A L lo ens ex rest
+    let cr ← lowB A L lo ens pr ex rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
   | _, _, _, _, _ => none
 end
