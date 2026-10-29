@@ -3,15 +3,15 @@ import Stage0.Senke.Ausdruck.Aggregat.String
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
-variable [Kern] {D : Deklaration} {L : Lay D} {Λ : List (Res D)} {Γ : Ctx}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx}
 variable {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
 variable {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
 
 theorem strLen_ok {n : Nat} (s : Expr D Γ Λ (.str n))
-    (ih : ∀ ca ta, lowE L s d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
-    (h : lowE L (.strLen s) d = some (c, top)) (hK : top ≤ K)
-    (hp : Pre L m pc fp K d c ρ W) :
+    (ih : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
+    (h : lowE L (reserved := reserved) (.strLen s) d = some (c, top)) (hK : top ≤ K)
+    (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (.int 0 n) (eval σ₀ (.strLen s) σ ρ)) := by
   simp only [lowE_eqs] at h
   split at h
@@ -25,12 +25,12 @@ theorem strLen_ok {n : Nat} (s : Expr D Γ Λ (.str n))
   · cases h
 
 theorem strGet_ok {n : Nat} {lo hi : Int} (s : Expr D Γ Λ (.str n)) (i : Expr D Γ Λ (.int lo hi))
-    (ihs : ∀ ca ta, lowE L s d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
-    (ihi : ∀ ca ta, lowE L i d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca (Enc L (.int lo hi) (eval σ₀ i σ ρ)))
-    (h : lowE L (.strGet s i) d = some (c, top)) (hK : top ≤ K)
-    (hp : Pre L m pc fp K d c ρ W) :
+    (ihs : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
+    (ihi : ∀ ca ta, lowE L (reserved := reserved) i d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.int lo hi) (eval σ₀ i σ ρ)))
+    (h : lowE L (reserved := reserved) (.strGet s i) d = some (c, top)) (hK : top ≤ K)
+    (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (.int 0 255) (eval σ₀ (.strGet s i) σ ρ)) := by
   simp only [lowE_eqs] at h
   split at h
@@ -59,13 +59,13 @@ theorem strGet_ok {n : Nat} {lo hi : Int} (s : Expr D Γ Λ (.str n)) (i : Expr 
 
 /-- Both comparisons share evaluation and the same bounded word representation. -/
 theorem strCompare_ok {n q : Nat} (lt : Bool) (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str q))
-    (ihs : ∀ ca ta, lowE L s d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
-    (iht : ∀ ca ta, lowE L t (d + 1) = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K (d + 1) ca ρ W → Ok m pc fp K (d + 1) ca (Enc L (.str q) (eval σ₀ t σ ρ)))
+    (ihs : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
+    (iht : ∀ ca ta, lowE L (reserved := reserved) t (d + 1) = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K (d + 1) ca ρ W reserved → Ok m pc fp K (d + 1) ca (Enc L (.str q) (eval σ₀ t σ ρ)))
     (h : (if n ≤ 1 ∧ q ≤ 1 then wordL (if lt then 13 else 14) d
-      (lowE L s d) (lowE L t (d + 1)) else none) = some (c, top)) (hK : top ≤ K)
-    (hp : Pre L m pc fp K d c ρ W) :
+      (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none) = some (c, top)) (hK : top ≤ K)
+    (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L .bool (if lt then strLtW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ)
       else strEqW (eval σ₀ s σ ρ) (eval σ₀ t σ ρ))) := by
   split at h

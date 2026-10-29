@@ -3,13 +3,13 @@ import Stage0.Senke.Ausdruck.Aggregat.Wort
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
-variable [Kern] {D : Deklaration} {L : Lay D} {Λ : List (Res D)} {Γ : Ctx}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx}
 variable {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
 variable {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
 
 theorem strLit_ok {n : Nat} (bs : List (Zahl 0 255)) (hb : bs.length ≤ n)
-    (h : lowE L (Γ := Γ) (Λ := Λ) (.strLit bs hb) d = some (c, top))
-    (hK : top ≤ K) (hp : Pre L m pc fp K d c ρ W) :
+    (h : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.strLit bs hb) d = some (c, top))
+    (hK : top ≤ K) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (.str n) (eval σ₀ (Expr.strLit (Λ := Λ) bs hb) σ ρ)) := by
   simp only [lowE_eqs] at h
   split at h
@@ -21,12 +21,12 @@ theorem strLit_ok {n : Nat} (bs : List (Zahl 0 255)) (hb : bs.length ≤ n)
   · cases h
 
 theorem strCat_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str q))
-    (ihs : ∀ ca ta, lowE L s d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
-    (iht : ∀ ca ta, lowE L t d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca (Enc L (.str q) (eval σ₀ t σ ρ)))
-    (h : lowE L (.strCat s t) d = some (c, top)) (hK : top ≤ K)
-    (hp : Pre L m pc fp K d c ρ W) :
+    (ihs : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
+    (iht : ∀ ca ta, lowE L (reserved := reserved) t d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.str q) (eval σ₀ t σ ρ)))
+    (h : lowE L (reserved := reserved) (.strCat s t) d = some (c, top)) (hK : top ≤ K)
+    (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (.str (n + q)) (eval σ₀ (.strCat s t) σ ρ)) := by
   simp only [lowE_eqs] at h
   split at h
@@ -43,10 +43,10 @@ theorem strCat_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.st
   · cases h
 
 theorem strWeit_ok {n : Nat} (q : Nat) (s : Expr D Γ Λ (.str n))
-    (ih : ∀ ca ta, lowE L s d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
-    (h : lowE L (.strWeit q s) d = some (c, top)) (hK : top ≤ K)
-    (hp : Pre L m pc fp K d c ρ W) :
+    (ih : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.str n) (eval σ₀ s σ ρ)))
+    (h : lowE L (reserved := reserved) (.strWeit q s) d = some (c, top)) (hK : top ≤ K)
+    (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (.str q) (eval σ₀ (.strWeit q s) σ ρ)) := by
   simp only [lowE_eqs] at h
   split at h
