@@ -19,6 +19,8 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 
+variable {reserved : Nat}
+
 /-- `W` survives every run that writes only the frame's slots: a fact about memory outside the frame (the world). -/
 def WStab (W : Runner.Mem → Prop) (fp : Runner.W) (K : Nat) : Prop := ∀ m m', W m → Agree fp 0 K m m' → W m'
 
@@ -27,13 +29,13 @@ theorem wstab_true (fp : Runner.W) (K : Nat) : WStab (fun _ => True) fp K := fun
 /-- What a piece of code may rely on: the context's slots below `d`, the frame of `K` slots, the code at `pc`, the
     environment in the frame, and a fact `W` about the memory outside the frame. -/
 structure Pre (L : Lay D) (m : Runner.Mem) (pc fp : Runner.W) (K d : Nat) (cd : List II) {Γ : Ctx} (ρ : Env D Γ)
-    (W : Runner.Mem → Prop) : Prop where
-  ctx : frei Γ ≤ d
+    (W : Runner.Mem → Prop) (reserved : Nat := 0) : Prop where
+  ctx : frei Γ reserved ≤ d
   small : K < 2 ^ 31
   frame : FrameOK m fp K
   code : CodeAt m pc cd
   far : CodeFar pc cd.length fp K
-  env : EnvAt L m fp ρ
+  env : EnvAt L m fp ρ reserved
   welt : W m
   wstab : WStab W fp K
 
@@ -51,12 +53,12 @@ theorem pc_add16 (pc : Runner.W) (n : Nat) :
 
 /-- The first part of a code, and the rest from where it ends. -/
 theorem Pre.left {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {a b : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} (h : Pre L m pc fp K d (a ++ b) ρ W) : Pre L m pc fp K d a ρ W :=
+    {W : Runner.Mem → Prop} (h : Pre L m pc fp K d (a ++ b) ρ W reserved) : Pre L m pc fp K d a ρ W reserved :=
   ⟨h.ctx, h.small, h.frame, codeAt_left h.code, codeFar_left (by simpa using h.far), h.env, h.welt, h.wstab⟩
 
 theorem Pre.next {m m' : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {a b : List II} {Γ : Ctx}
-    {ρ : Env D Γ} {W : Runner.Mem → Prop} (h : Pre L m pc fp K d (a ++ b) ρ W) (ha : Agree fp d K m m') (hd : d ≤ d')
-    (hK : d ≤ K) : Pre L m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d' b ρ W :=
+    {ρ : Env D Γ} {W : Runner.Mem → Prop} (h : Pre L m pc fp K d (a ++ b) ρ W reserved) (ha : Agree fp d K m m') (hd : d ≤ d')
+    (hK : d ≤ K) : Pre L m' (pc + BitVec.ofNat 64 (16 * a.length)) fp K d' b ρ W reserved :=
   have hf := codeFar_right (n := a.length) (k := b.length) (by simpa using h.far)
   ⟨Nat.le_trans h.ctx hd, h.small, h.frame.agree ha, (codeAt_right h.code).agree ha hf, hf,
    envAt_agree h.env ha h.frame h.ctx hK, h.wstab m m' h.welt (ha.mono (Nat.zero_le _)), h.wstab⟩

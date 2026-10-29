@@ -89,7 +89,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     · simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨w, hw, he⟩ := hp.env τ x
-      have := vslot_lt x
+      have := vslot_lt (reserved := 0) x
       have := hp.ctx
       exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
     · cases h
