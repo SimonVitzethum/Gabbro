@@ -1361,4 +1361,29 @@ theorem floatOfIntAssemblyL_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
 #print axioms floatOfIntAssemblyL_left_ofInt
 #print axioms floatOfIntAssemblyL_left_ofInt_zeuge
 
+/-- Candidate composition: evaluate the child once, retain its word below all
+    conversion temporaries, then place the converted word in the destination.
+    This helper is deliberately not accepted by `lowB` before its simulation proof. -/
+def computedFloatOfL (F : Gleitkomma.Format) (d : Nat)
+    (child : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
+  let ce ← child d
+  let ca ← floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) (d + 1)
+    (fun j => some ([ci 2 j d 0], j + 1))
+  pure (ce.1 ++ ca.1 ++ [ci 2 d (d + 1) 0], max ce.2 ca.2)
+
+/-- Child and assembly ceilings both contribute to the candidate's frame bound. -/
+theorem computedFloatOfL_parts (F : Gleitkomma.Format) (d : Nat)
+    (child : Nat → Option (List II × Nat)) {c : List II} {top : Nat}
+    (h : computedFloatOfL F d child = some (c, top)) :
+    ∃ ce ca, child d = some ce ∧
+      floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) (d + 1)
+        (fun j => some ([ci 2 j d 0], j + 1)) = some ca ∧
+      c = ce.1 ++ ca.1 ++ [ci 2 d (d + 1) 0] ∧
+      top = max ce.2 ca.2 := by
+  simp only [computedFloatOfL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq] at h
+  obtain ⟨ce, he, ca, ha, hc⟩ := h
+  cases hc
+  exact ⟨ce, ca, he, ha, rfl, rfl⟩
+
 end Gabbro.Stage0.Senke
