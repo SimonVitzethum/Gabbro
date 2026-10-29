@@ -1027,6 +1027,38 @@ theorem floatOfIntLeftPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
   simpa only [decide_eq_true_eq, heb, hfrac] using
     floatOfIntLeftPackL_ok z hz hn hi F.p bias (2^(F.ebits + F.fracBits)) hp hpb hb hsb hlt hc ht m pc pre
 
+/-- Canonical right normalization includes the zero-shift boundary. -/
+theorem floatOfInt_right_significand_bounds (n p : Nat) (hn : n ≠ 0)
+    (hp : 1 ≤ p) (hr : ((p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp n 1) :
+    2^(p - 1) ≤ Gleitkomma.normQ p (Gleitkomma.findeExp n 1) n 1 ∧
+    Gleitkomma.normQ p (Gleitkomma.findeExp n 1) n 1 ≤ 2 * 2^(p - 1) := by
+  have he := findeExp_integer_nonzero n hn
+  have hu := Gleitkomma.bitlen_obere n
+  have hl := Gleitkomma.bitlen_untere n hn
+  have hb : 0 < Gleitkomma.bitlen n := by
+    cases h : Gleitkomma.bitlen n with
+    | zero => simp [h] at hu; omega
+    | succ k => omega
+  let k := Gleitkomma.bitlen n - p
+  have hs : (Gleitkomma.findeExp n 1 - ((p : Int) - 1)).toNat = k := by
+    dsimp [k]; omega
+  have hlo : 2^(p - 1) * 2^k ≤ n := by
+    rw [← Nat.pow_add]
+    have hx : p - 1 + k + 1 = Gleitkomma.bitlen n := by dsimp [k]; omega
+    rw [← hx, Nat.pow_succ] at hl
+    omega
+  have hupper : n < (2 * 2^(p - 1)) * 2^k := by
+    have hx : p - 1 + k + 1 = Gleitkomma.bitlen n := by dsimp [k]; omega
+    calc
+      n < 2^Gleitkomma.bitlen n := hu
+      _ = (2 * 2^(p - 1)) * 2^k := by rw [← hx, Nat.pow_succ, Nat.pow_add]; ac_rfl
+  rw [floatNormQ_shift p _ n (by omega), hs]
+  have hd : 0 < 2^k := Nat.pow_pos (by decide)
+  have hlowq : 2^(p - 1) ≤ n / 2^k := (Nat.le_div_iff_mul_le hd).2 hlo
+  have hhighq : n / 2^k < 2 * 2^(p - 1) := (Nat.div_lt_iff_lt_mul hd).2 hupper
+  unfold Gleitkomma.rundeInt
+  split <;> (try split) <;> (try split) <;> omega
+
 /-- The actual right packer, given rounded-significand bounds, returns the canonical integer-conversion bits. -/
 theorem floatOfIntRightPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
@@ -1044,9 +1076,7 @@ theorem floatOfIntRightPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
       (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat + 1 < F.bexpMax)
     (heb : BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1) + BitVec.ofNat 64 bias =
       BitVec.ofNat 64 (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat)
-    (hr : ((F.p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1)
-    (hq : 2^F.fracBits ≤ Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1 ∧
-      Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1 ≤ 2 * 2^F.fracBits) :
+    (hr : ((F.p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1) :
     WordCode (L := L) ρ W (fun d => floatPackCarryL d
       (fun j => wordL 5 j (wordK 13 j (input j) 0)
         (some (konstWL 4 (2^(F.ebits + F.fracBits)) (j + 1))))
@@ -1055,6 +1085,8 @@ theorem floatOfIntRightPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
       (fun j => floatOfIntScaleL F.p j input) (2^(F.p - 1)))
       (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
   have ha : z.natAbs ≠ 0 := by omega
+  have hq := floatOfInt_right_significand_bounds z.natAbs F.p ha (by omega) hr
+  rw [← hfrac] at hq
   have canonical : Gleitkomma.ofInt F z = Gleitkomma.rundeBruchKern F
       (decide (z < 0)) z.natAbs 1 (Gleitkomma.findeExp z.natAbs 1) := by
     simp [Gleitkomma.ofInt, Gleitkomma.rundeExakt, Gleitkomma.exaktBruch,
