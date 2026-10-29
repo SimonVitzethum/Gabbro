@@ -143,3 +143,44 @@ theorem representation_zeuge :
     Enc layout (.arr .bool 0) (fun i => i.elim0) 0 := by
   exact ⟨⟨by decide, rfl⟩, ⟨by decide, rfl⟩, ⟨by decide, rfl⟩, rfl⟩
 end Gabbro.Stage0.Senke.AggregateProbe
+
+namespace Gabbro.Stage0.Senke.AggregateProbe.Reserved
+open Gabbro.Grammatik Runner.IR Runner.Mem
+
+def expr : Expr D [.bool] [] .bool := .and (.var .here) .tru
+def env : Env D [.bool] := .cons false .nil
+def code : List II := ((lowE layout (reserved := 3) expr 10).getD ([], 0)).1
+def memory : Runner.Mem where
+  b a := ((code.flatMap encII)[a.toNat]?).getD 0
+  rd _ := true
+  wr _ := true
+
+theorem simulation_zeuge [Kern] :
+    lowE layout (reserved := 3) expr 10 = some (code, 12) ∧
+    Pre layout memory 0 65536 64 10 code env (fun _ => True) 3 ∧
+    Ok memory 0 65536 64 10 code (Enc layout .bool false) := by
+  have hl : lowE layout (reserved := 3) expr 10 = some (code, 12) := by decide +kernel
+  have hp : Pre layout memory 0 65536 64 10 code env (fun _ => True) 3 := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩, ?_, ?_, ?_, trivial, wstab_true _ _⟩
+    · apply codeAt_bytes code 0 (by decide +kernel)
+      intro i hi
+      have hs : (code.flatMap encII).length < 2 ^ 64 := by decide +kernel
+      refine ⟨rfl, rfl, ?_⟩
+      simp only [memory, Nat.zero_add, BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), List.getElem?_eq_getElem hi, Option.getD_some]
+    · unfold CodeFar; decide +kernel
+    · intro τ x
+      cases x with
+      | here => exact ⟨0, by decide +kernel, rfl⟩
+      | there x => nomatch x
+  refine ⟨hl, hp, ?_⟩
+  have hw : ∀ m, WeltAt m layout world := by
+    intro m
+    refine ⟨(fun t => Fin.elim0 t), (fun g => Fin.elim0 g), ?_⟩
+    intro x hl hh
+    change 65536 ≤ x at hl
+    change x < 65536 at hh
+    omega
+  exact lowE_ok world world (W := fun _ => True) (fun m _ => hw m)
+    expr 10 code 12 hl (by decide) memory 0 env hp
+end Gabbro.Stage0.Senke.AggregateProbe.Reserved
