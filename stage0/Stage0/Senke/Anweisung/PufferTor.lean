@@ -42,7 +42,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
     {args : Args D Γ Λ (D.aparams a)} {s : Nat} {b : TorB} (hb : L.tor a = some b)
     (hg : torGut b (D.aparams a).length = true) {j nt : Nat} {rw : Bool} {t : D.Tab} {f : D.Feld t}
     (hpp : ptrParam (D.aparams a) = some (j, nt, rw)) (htn : D.tabNr nt = some t) (hbf : L.byte t = some f)
-    (hτ : D.typ t f = .int 0 255) (hc0 : 0 ≤ D.count t) {ca : List II} {ta : Nat}
+    (hτ : D.typ t f = .int 0 255) (hc0 : 0 ≤ D.count t) (hcount : L.count t = D.count t) {ca : List II} {ta : Nat}
     (hca : lowR L args (s + 1) = some (ca, ta)) {c B Wn : Nat} (hc : c = (D.count t).toNat)
     (hB : B = max ta (s + 7)) (hWn : Wn = pufW c) {P U : List II}
     (hP : P = packI L t f c B (B + Wn) (B + Wn + 1) Wn) (hU : U = if rw then unpackK L t f B (B + Wn + 1) c else [])
@@ -83,9 +83,9 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
   -- the cells' words
   let ws : Nat → Runner.W := fun k => wAt m (L.elem t f k)
   have hcell : ∀ k, k < c → (L.elem t f k : Int) < 2 ^ 31 ∧ L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 ≤ L.hi := fun k hk => by
-    have := hl.1 t f k (by omega); exact ⟨by omega, this.1, this.2⟩
+    have := hl.1 t f k (L.bounded (by omega)); exact ⟨by omega, this.1, this.2⟩
   have hwsm : ∀ k, k < c → m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (ws k) := fun k hk => by
-    obtain ⟨w, hw, _⟩ := hWa.1 t f k (by omega)
+    obtain ⟨w, hw, _⟩ := hWa.1 t f k (L.bounded (by omega))
     show _ = some (wAt m (L.elem t f k))
     rw [wAt_of hw]; exact hw
   let Wc : Runner.Mem → Prop := fun m' => ∀ k, k < c → m'.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (ws k)
@@ -227,7 +227,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
     simp only [Bool.false_eq_true, ↓reduceIte] at hU
     subst hU
     refine ⟨m7, w, by simpa using s16, agreeW_of a17, hs7, ?_, by rw [hroh]⟩
-    refine weltAt_puf hl hd (by omega) hOhne (fun k hk => ?_) (fun a h1 h2 _ => hworld7 a h1 h2)
+    refine weltAt_puf hl hd (by omega) hcount hOhne (fun k hk => ?_) (fun a h1 h2 _ => hworld7 a h1 h2)
       (hW5.2.2.keep (by rw [a67.wr, hwr6]))
     have hk' : k < c := by omega
     refine ⟨ws k, by rw [hworld7 _ (by have := hcell k hk'; omega) (by have := hcell k hk'; omega)]; exact hWc5 k hk', ?_⟩
@@ -253,14 +253,14 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
     obtain ⟨m8, s8, a8, hc8, ho8⟩ := unpackK_ok hl hd (by omega) (by omega) hord c (by omega)
       (fun k hk => by have : k / 8 < Wn := (by rw [hWn]; simp only [pufW]; omega); omega) m7 _ hpre7 hW7
       (fun k hk => by
-        obtain ⟨w', hw', _⟩ := hW5.1 t f k hk
+        obtain ⟨w', hw', _⟩ := hW5.1 t f k (L.bounded hk)
         rw [a67.rd, hrd6]; exact rd64_some_all hw')
     rw [← hU] at s8
     refine ⟨m8, w, s16.trans s8 |> fun h => star_cast h rfl ?_, (agreeW_of a17).trans (AgreeW.widen (a8.mono (by omega)) hks), ?_, ?_, by rw [hroh]⟩
     · simp only [T.mk.injEq, and_true, p16]
       exact congrArg (fun x => pc + BitVec.ofNat 64 x) (by omega)
     · rw [agreeW_rd_low a8 (by omega) hroom (by omega) (by omega)]; exact hs7
-    · refine weltAt_puf hl hd (by omega) hOhne (fun k hk => ?_)
+    · refine weltAt_puf hl hd (by omega) hcount hOhne (fun k hk => ?_)
         (fun a h1 h2 h3 => by rw [ho8 a h1 h2 (fun k hk => h3 k (by omega)), hworld7 a h1 h2])
         (hW5.2.2.keep (by rw [a8.wr, a67.wr, hwr6]))
       have hk' : k < c := by omega

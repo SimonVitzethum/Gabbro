@@ -177,7 +177,7 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     have hkc : (k.n.toNat : Int) < D.count t := by have := k.le_hi; omega
     have hkn : ((k.n.toNat : Nat) : Int) = k.n := Int.toNat_of_nonneg hn0
     refine ok_seq hp (slotA_value_ok ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
-    obtain ⟨v, hv, he⟩ := (hWL m3 hp3.welt).1 t f _ hkc
+    obtain ⟨v, hv, he⟩ := (hWL m3 hp3.welt).1 t f _ (L.bounded hkc)
     rw [e3] at r3
     rw [hkn] at he
     exact (ld_ok hp3 (by omega) r3 hv).mono fun x hx => hx ▸ he

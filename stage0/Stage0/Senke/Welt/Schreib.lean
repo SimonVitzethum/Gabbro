@@ -77,7 +77,7 @@ theorem agree_write_at {m : Runner.Mem} {fp : Runner.W} {lo K a : Nat} (hr : fp.
   · rfl
 
 /-- The words of two different cells are apart. -/
-theorem cell_far {L : Lay D} (hl : LayIn L) (hd : LayDis L) {c c' : Zelle D} (hc : c.da) (hc' : c'.da)
+theorem cell_far {L : Lay D} (hl : LayIn L) (hd : LayDis L) {c c' : Zelle D} (hc : c.da L) (hc' : c'.da L)
     (hin : c.adr L + 8 ≤ L.hi) (hin' : c'.adr L + 8 ≤ L.hi) (hne : c ≠ c') :
     Far (BitVec.ofNat 64 (c.adr L)) 8 (BitVec.ofNat 64 (c'.adr L)) 8 := by
   have := hl.2.2
@@ -149,7 +149,7 @@ theorem storeSlot_other {σ : World D} {t t' : D.Tab} {f : D.Feld t} {f' : D.Fel
 /-- Writing the word of `v` at element `kn` of column `f` of table `t`. -/
 theorem weltAt_slot {m : Runner.Mem} {L : Lay D} {σ : World D} {t : D.Tab} {f : D.Feld t} {kn : Nat}
     {v : Wert D (D.typ t f)} {w : Runner.W} (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L)
-    (hk : (kn : Int) < D.count t) (he : Enc L (D.typ t f) v w) :
+    (hk : (kn : Int) < L.count t) (he : Enc L (D.typ t f) v w) :
     WeltAt (write m (BitVec.ofNat 64 (L.elem t f kn)) 8 w.toNat) L (σ.storeSlot t kn f v) := by
   obtain ⟨hs, hg, hwr⟩ := hW
   have hin := hl.1 t f kn hk

@@ -25,6 +25,9 @@ structure TorB where
 structure Lay (D : Deklaration) where
   /-- Code addresses, shared by function pointer words and call targets. -/
   fa : D.Fn → Nat := fun _ => 0
+  /-- Extra cells supplied by an open table region; zero in static images. This is a
+      representation capacity, never the source table count or an allocation guarantee. -/
+  regionCells : D.Tab → Nat := fun _ => 0
   col : (t : D.Tab) → D.Feld t → Nat
   ga : D.Glob → Nat
   lo : Nat
@@ -47,5 +50,15 @@ def LaySync {D : Deklaration} (L : Lay D) : Prop :=
 
 /-- The address of element `k` of the column `f` of table `t`. -/
 def Lay.elem {D : Deklaration} (L : Lay D) (t : D.Tab) (f : D.Feld t) (k : Nat) : Nat := L.col t f + 8 * k
+
+/-- Cells represented by supplied regions, extending storage only for open tables. -/
+def Lay.count {D : Deklaration} (L : Lay D) (t : D.Tab) : Int :=
+  D.count t + if D.offen t then (L.regionCells t : Int) else 0
+
+/-- Every previously represented bounded cell remains represented. -/
+theorem Lay.bounded {D : Deklaration} (L : Lay D) {t : D.Tab} {k : Int}
+    (h : k < D.count t) : k < L.count t := by
+  unfold Lay.count
+  split <;> omega
 
 end Gabbro.Stage0.Senke

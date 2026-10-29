@@ -72,7 +72,8 @@ theorem col_le (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (t : 
 /-- The layout keeps every element and every global inside the world, once the world ends below `2^31`. -/
 theorem layU_in (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (h : (layU u tor b).hi < 2 ^ 31) : LayIn (layU u tor b) := by
   refine ⟨fun t f k hk => ?_, fun g => ?_, h⟩
-  · have h1 := colSz_ge u t f k hk
+  · simp only [Lay.count, layU, Int.natCast_zero, ite_self, Int.add_zero] at hk
+    have h1 := colSz_ge u t f k hk
     have h2 := col_le u tor b t f
     simp only [Lay.elem]
     constructor
@@ -157,7 +158,7 @@ theorem layU_dis (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : L
         simp only [Zelle.adr, Lay.elem, layU] at he
         omega
       | elem t' f' k' =>
-        simp only [Zelle.da] at hc hc'
+        simp only [Zelle.da, Lay.count, layU, Int.natCast_zero, ite_self, Int.add_zero] at hc hc'
         simp only [Zelle.adr, Lay.elem, layU] at he
         have it := in_tab u t f k hc
         have it' := in_tab u t' f' k' hc'

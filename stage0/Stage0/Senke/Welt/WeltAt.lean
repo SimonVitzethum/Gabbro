@@ -17,7 +17,7 @@ variable {D : Deklaration} {L : Lay D}
 
 /-- Every element and every global, one word each, inside `[lo, hi)`, below `2^31`. -/
 def LayIn (L : Lay D) : Prop :=
-  (∀ t f (k : Nat), (k : Int) < D.count t → L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 ≤ L.hi) ∧
+  (∀ t f (k : Nat), (k : Int) < L.count t → L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 ≤ L.hi) ∧
   (∀ g, L.lo ≤ L.ga g ∧ L.ga g + 8 ≤ L.hi) ∧ L.hi < 2 ^ 31
 
 /-- A cell of the world: a global, or element `k` of column `f` of table `t`. -/
@@ -31,17 +31,17 @@ def Zelle.adr (L : Lay D) : Zelle D → Nat
   | .elem t f k => L.elem t f k
 
 /-- A cell the world has: every global, the elements below the table's count. -/
-def Zelle.da : Zelle D → Prop
+def Zelle.da (L : Lay D) : Zelle D → Prop
   | .glob _ => True
-  | .elem t _ k => (k : Int) < D.count t
+  | .elem t _ k => (k : Int) < L.count t
 
 /-- No two cells share a word: different cells have different addresses, all on one grid of 8. -/
 structure LayDis (L : Lay D) : Prop where
-  inj : ∀ c c' : Zelle D, c.da → c'.da → c.adr L = c'.adr L → c = c'
-  grid : ∀ c : Zelle D, c.da → c.adr L % 8 = L.lo % 8
+  inj : ∀ c c' : Zelle D, c.da L → c'.da L → c.adr L = c'.adr L → c = c'
+  grid : ∀ c : Zelle D, c.da L → c.adr L % 8 = L.lo % 8
 
 /-- Two different cells: their words do not overlap. -/
-theorem LayDis.far {L : Lay D} (h : LayDis L) {c c' : Zelle D} (hc : c.da) (hc' : c'.da) (hne : c ≠ c') :
+theorem LayDis.far {L : Lay D} (h : LayDis L) {c c' : Zelle D} (hc : c.da L) (hc' : c'.da L) (hne : c ≠ c') :
     c.adr L + 8 ≤ c'.adr L ∨ c'.adr L + 8 ≤ c.adr L := by
   have h1 := h.grid c hc
   have h2 := h.grid c' hc'
@@ -53,7 +53,7 @@ def WeltWr (m : Runner.Mem) (L : Lay D) : Prop :=
   ∀ x : Nat, L.lo ≤ x → x < L.hi → m.wr (BitVec.ofNat 64 x) = true
 
 def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) : Prop :=
-  (∀ t f (k : Nat), (k : Int) < D.count t → ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
+  (∀ t f (k : Nat), (k : Int) < L.count t → ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
     Enc L (D.typ t f) (σ.slots t k f) w) ∧
   (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc L (D.gtyp g) (σ.globs g) w) ∧
   WeltWr m L

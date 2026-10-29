@@ -72,7 +72,7 @@ theorem rd64_write_slot {m : Runner.Mem} {fp : Runner.W} {Ks i a : Nat} {v : Nat
 /-- **The oracle's world after a buffer**: the world apart from the byte field as before, the field's elements the
     words now in its cells. -/
 theorem weltAt_puf {L : Lay D} {t : D.Tab} {f : D.Feld t} {σ' : World D} {m0 mF : Runner.Mem} {fp : Runner.W}
-    {Ks : Nat} (hl : LayIn L) (hd : LayDis L) (hwlo : fp.toNat + 8 * Ks ≤ L.lo) (hO : WeltOhne m0 L σ' t f)
+    {Ks : Nat} (hl : LayIn L) (hd : LayDis L) (hwlo : fp.toNat + 8 * Ks ≤ L.lo) (hcount : L.count t = D.count t) (hO : WeltOhne m0 L σ' t f)
     (hcol : ∀ k, k < (D.count t).toNat → ∃ w, mF.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
       Enc L (D.typ t f) (σ'.slots t k f) w)
     (hrest : ∀ a : Nat, a + 8 ≤ 2 ^ 64 → fp.toNat + 8 * Ks ≤ a →
@@ -80,17 +80,17 @@ theorem weltAt_puf {L : Lay D} {t : D.Tab} {f : D.Feld t} {σ' : World D} {m0 mF
       mF.rd64 (BitVec.ofNat 64 a) = m0.rd64 (BitVec.ofNat 64 a)) (hwr : WeltWr mF L) :
     WeltAt mF L σ' := by
   have hl3 := hl.2.2
-  have far : ∀ (c : Zelle D), c.da → (∀ k : Nat, c ≠ .elem t f k) → ∀ k, k < (D.count t).toNat →
+  have far : ∀ (c : Zelle D), c.da L → (∀ k : Nat, c ≠ .elem t f k) → ∀ k, k < (D.count t).toNat →
       Far (BitVec.ofNat 64 (c.adr L)) 8 (BitVec.ofNat 64 (L.elem t f k)) 8 := fun c hc hne k hk => by
     have hin : c.adr L + 8 ≤ L.hi := by
       cases c with
       | glob g => exact (hl.2.1 g).2
       | elem t' f' k' => exact (hl.1 t' f' k' hc).2
-    have hk' := (hl.1 t f k (by omega)).2
-    have := cell_far (c := c) (c' := .elem t f k) hl hd hc (by simp [Zelle.da]; omega) hin
+    have hk' := (hl.1 t f k (L.bounded (by omega))).2
+    have := cell_far (c := c) (c' := .elem t f k) hl hd hc (by simp only [Zelle.da]; apply L.bounded; omega) hin
       (by simpa [Zelle.adr] using hk') (hne k)
     simpa [Zelle.adr] using this
-  have lo : ∀ (c : Zelle D), c.da → L.lo ≤ c.adr L := fun c hc => by
+  have lo : ∀ (c : Zelle D), c.da L → L.lo ≤ c.adr L := fun c hc => by
     cases c with
     | glob g => exact (hl.2.1 g).1
     | elem t' f' k' => exact (hl.1 t' f' k' hc).1
@@ -98,7 +98,7 @@ theorem weltAt_puf {L : Lay D} {t : D.Tab} {f : D.Feld t} {σ' : World D} {m0 mF
   · by_cases hc : ∃ k'' : Nat, (Zelle.elem t' f' k : Zelle D) = .elem t f k''
     · obtain ⟨k'', he⟩ := hc
       cases he
-      exact hcol k (by omega)
+      exact hcol k (by rw [hcount] at hk; omega)
     · have hne : ∀ k'' : Nat, (Zelle.elem t' f' k : Zelle D) ≠ .elem t f k'' := fun k'' e => hc ⟨k'', e⟩
       obtain ⟨w, hw, he⟩ := hO.1 t' f' k hk hne
       refine ⟨w, ?_, he⟩

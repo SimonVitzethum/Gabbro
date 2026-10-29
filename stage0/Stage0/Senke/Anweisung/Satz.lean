@@ -118,13 +118,13 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     have hn0 := (eval σE i σE ρ).lo_le
     have hkc : ((eval σE i σE ρ).n.toNat : Int) < D.count t := by have := (eval σE i σE ρ).le_hi; omega
     have hkn : (((eval σE i σE ρ).n.toNat : Nat) : Int) = (eval σE i σE ρ).n := Int.toNat_of_nonneg hn0
-    have hin := hW.lay.1 t f _ hkc
+    have hin := hW.lay.1 t f _ (L.bounded hkc)
     obtain ⟨m', s', a', en, hw'⟩ := store_ok (σ := σE) hp hW hWaE (by omega)
       (fun m pc hp => lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
       (fun m pc hp => slotA_ok ha (by omega)
         (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ ci1 ti hi (by omega) m pc ρ hp) hp)
       hin (fun m w hm hpe => by
-        have := weltAt_slot hm hW.lay hW.dis hkc hpe
+        have := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hpe
         rw [hkn] at this
         exact this)
     exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agreeW hW a' hpr (by have := hW.ks; omega)⟩
