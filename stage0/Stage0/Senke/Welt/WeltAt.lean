@@ -48,10 +48,26 @@ theorem LayDis.far {L : Lay D} (h : LayDis L) {c c' : Zelle D} (hc : c.da) (hc' 
   have h3 : c.adr L ≠ c'.adr L := fun e => hne (h.inj c c' hc hc' e)
   omega
 
+/-- Every byte of the world may be written. -/
+def WeltWr (m : Runner.Mem) (L : Lay D) : Prop :=
+  ∀ x : Nat, L.lo ≤ x → x < L.hi → m.wr (BitVec.ofNat 64 x) = true
+
 def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) : Prop :=
   (∀ t f (k : Nat), (k : Int) < D.count t → ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
     Enc (D.typ t f) (σ.slots t k f) w) ∧
-  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc (D.gtyp g) (σ.globs g) w)
+  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc (D.gtyp g) (σ.globs g) w) ∧
+  WeltWr m L
+
+/-- A word of the world may be written. -/
+theorem WeltWr.word {m : Runner.Mem} {L : Lay D} (h : WeltWr m L) {a : Nat} (h1 : L.lo ≤ a) (h2 : a + 8 ≤ L.hi)
+    (hl : L.hi < 2 ^ 31) : Runner.Mem.all m.wr (BitVec.ofNat 64 a) 8 = true := by
+  refine all_of fun j hj => ?_
+  have e : BitVec.ofNat 64 a + BitVec.ofNat 64 j = BitVec.ofNat 64 (a + j) := by rw [BitVec.ofNat_add]
+  rw [e]
+  exact h (a + j) (by omega) (by omega)
+
+theorem WeltWr.keep {m m' : Runner.Mem} {L : Lay D} (h : WeltWr m L) (hw : m'.wr = m.wr) : WeltWr m' L := by
+  intro x h1 h2; rw [hw]; exact h x h1 h2
 
 /-- A word outside the changed slots reads the same. -/
 theorem rd64_agree_out {m m' : Runner.Mem} {fp : Runner.W} {lo K a : Nat} (ha : Agree fp lo K m m')
@@ -65,9 +81,9 @@ theorem rd64_agree_out {m m' : Runner.Mem} {fp : Runner.W} {lo K a : Nat} (ha : 
 theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat} (hl : LayIn L)
     (hwl : fp.toNat + 8 * K ≤ L.lo) : WStab (fun m => WeltAt m L σ) fp K := by
   intro m m' hm ha
-  obtain ⟨hs, hg⟩ := hm
+  obtain ⟨hs, hg, hwr⟩ := hm
   obtain ⟨hl1, hl2, hl3⟩ := hl
-  refine ⟨fun t f k hk => ?_, fun g => ?_⟩
+  refine ⟨fun t f k hk => ?_, fun g => ?_, hwr.keep ha.wr⟩
   · obtain ⟨w, hw, he⟩ := hs t f k hk
     have := hl1 t f k hk
     exact ⟨w, by rw [rd64_agree_out ha (by omega) (Or.inr (by omega))]; exact hw, he⟩

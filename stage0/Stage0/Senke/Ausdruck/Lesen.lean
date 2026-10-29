@@ -77,7 +77,7 @@ theorem glob_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ :
     Ok m pc fp K d [ci 1 d (L.ga g) 0, ci 15 d d 0] (Enc (D.gtyp g) (σ.globs g)) := by
   have h' : Pre m pc fp K d ([ci 1 d (L.ga g) 0] ++ [ci 15 d d 0]) ρ W := h
   refine ok_seq h' (const_ok h'.left hl hd) (fun m' w hp' hr hw => ?_) (by omega)
-  obtain ⟨v, hv, he⟩ := (hWL m' hp'.welt).2 g
+  obtain ⟨v, hv, he⟩ := (hWL m' hp'.welt).2.1 g
   rw [hw, BitVec.ofInt_natCast] at hr
   exact (ld_ok hp' hd hr hv).mono fun x hx => hx ▸ he
 

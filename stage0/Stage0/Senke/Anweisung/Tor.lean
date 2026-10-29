@@ -127,7 +127,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
     fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩⟩
   · rw [hO]; exact hW
   · rw [hO]; simp [rohW]
-  · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2⟩
+  · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2.1⟩
   · intro k hk
     rw [hO]
     obtain ⟨w, hw, he⟩ := hW.1 t f k (by omega)

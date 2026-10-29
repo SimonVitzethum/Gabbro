@@ -228,6 +228,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
     subst hU
     refine ⟨m7, w, by simpa using s16, a17, hs7, ?_, by rw [hroh]⟩
     refine weltAt_puf hl hd (by omega) hOhne (fun k hk => ?_) (fun a h1 h2 _ => hworld7 a h1 h2)
+      (hW5.2.2.keep (by rw [a67.wr, hwr6]))
     have hk' : k < c := by omega
     refine ⟨ws k, by rw [hworld7 _ (by have := hcell k hk'; omega) (by have := hcell k hk'; omega)]; exact hWc5 k hk', ?_⟩
     have := hCol k hk
@@ -257,6 +258,7 @@ theorem torPuf_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ
     · rw [agree_rd_low a8 hroomK (by omega) (by omega)]; exact hs7
     · refine weltAt_puf hl hd (by omega) hOhne (fun k hk => ?_)
         (fun a h1 h2 h3 => by rw [ho8 a h1 h2 (fun k hk => h3 k (by omega)), hworld7 a h1 h2])
+        (hW5.2.2.keep (by rw [a8.wr, a67.wr, hwr6]))
       have hk' : k < c := by omega
       refine ⟨_, hc8 k hk', ?_⟩
       have := hCol k hk

@@ -82,7 +82,7 @@ theorem weltAt_puf {L : Lay D} {t : D.Tab} {f : D.Feld t} {σ' : World D} {m0 mF
       Enc (D.typ t f) (σ'.slots t k f) w)
     (hrest : ∀ a : Nat, a + 8 ≤ 2 ^ 64 → fp.toNat + 8 * Ks ≤ a →
       (∀ k, k < (D.count t).toNat → Far (BitVec.ofNat 64 a) 8 (BitVec.ofNat 64 (L.elem t f k)) 8) →
-      mF.rd64 (BitVec.ofNat 64 a) = m0.rd64 (BitVec.ofNat 64 a)) :
+      mF.rd64 (BitVec.ofNat 64 a) = m0.rd64 (BitVec.ofNat 64 a)) (hwr : WeltWr mF L) :
     WeltAt mF L σ' := by
   have hl3 := hl.2.2
   have far : ∀ (c : Zelle D), c.da → (∀ k : Nat, c ≠ .elem t f k) → ∀ k, k < (D.count t).toNat →
@@ -99,7 +99,7 @@ theorem weltAt_puf {L : Lay D} {t : D.Tab} {f : D.Feld t} {σ' : World D} {m0 mF
     cases c with
     | glob g => exact (hl.2.1 g).1
     | elem t' f' k' => exact (hl.1 t' f' k' hc).1
-  refine ⟨fun t' f' k hk => ?_, fun g => ?_⟩
+  refine ⟨fun t' f' k hk => ?_, fun g => ?_, hwr⟩
   · by_cases hc : ∃ k'' : Nat, (Zelle.elem t' f' k : Zelle D) = .elem t f k''
     · obtain ⟨k'', he⟩ := hc
       cases he

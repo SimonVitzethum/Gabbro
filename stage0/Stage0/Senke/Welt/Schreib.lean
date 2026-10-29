@@ -102,9 +102,9 @@ theorem rd64_write_same {m : Runner.Mem} {a w : Runner.W} (hr : all m.rd a 8 = t
 theorem weltAt_glob {m : Runner.Mem} {L : Lay D} {σ : World D} {g : D.Glob} {v : Wert D (D.gtyp g)} {w : Runner.W}
     (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L) (he : Enc (D.gtyp g) v w) :
     WeltAt (write m (BitVec.ofNat 64 (L.ga g)) 8 w.toNat) L (σ.storeGlob g v) := by
-  obtain ⟨hs, hg⟩ := hW
+  obtain ⟨hs, hg, hwr⟩ := hW
   have hgin := hl.2.1 g
-  refine ⟨fun t f k hk => ?_, fun g' => ?_⟩
+  refine ⟨fun t f k hk => ?_, fun g' => ?_, hwr.keep rfl⟩
   · obtain ⟨w', hw', he'⟩ := hs t f k hk
     have := hl.1 t f k hk
     refine ⟨w', ?_, he'⟩
@@ -151,9 +151,9 @@ theorem weltAt_slot {m : Runner.Mem} {L : Lay D} {σ : World D} {t : D.Tab} {f :
     {v : Wert D (D.typ t f)} {w : Runner.W} (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L)
     (hk : (kn : Int) < D.count t) (he : Enc (D.typ t f) v w) :
     WeltAt (write m (BitVec.ofNat 64 (L.elem t f kn)) 8 w.toNat) L (σ.storeSlot t kn f v) := by
-  obtain ⟨hs, hg⟩ := hW
+  obtain ⟨hs, hg, hwr⟩ := hW
   have hin := hl.1 t f kn hk
-  refine ⟨fun t' f' k' hk' => ?_, fun g => ?_⟩
+  refine ⟨fun t' f' k' hk' => ?_, fun g => ?_, hwr.keep rfl⟩
   · by_cases hc : (Zelle.elem t' f' k' : Zelle D) = .elem t f kn
     · cases hc
       obtain ⟨w0, hw0, _⟩ := hs t f kn hk
