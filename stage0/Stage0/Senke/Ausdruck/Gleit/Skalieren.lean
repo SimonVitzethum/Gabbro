@@ -1301,6 +1301,34 @@ theorem floatOfIntAssemblyL_right_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
   exact ⟨hF, bounds, nonzero, left, input,
     floatOfIntAssemblyL_right_ofInt F hF z bounds nonzero input left⟩
 
+/-- The emitted conversion is correct for every supported signed input. -/
+theorem floatOfIntAssemblyL_ofInt {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (F : Gleitkomma.Format) (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64])
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z)) :
+    WordCode (L := L) ρ W
+      (fun d => floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) d input)
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
+  by_cases hn : z = 0
+  · subst z
+    have h : WordCode (L := L) ρ W
+        (fun d => floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) d input)
+        (BitVec.ofNat 64 0) := floatOfIntAssemblyL_zero hi F.p F.bias (2^(F.ebits + F.fracBits))
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hF
+    rcases hF with rfl | rfl
+    · have eq : BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f32 (Gleitkomma.ofInt Gleitkomma.f32 0)) = BitVec.ofNat 64 0 := by decide +kernel
+      rw [eq]
+      exact h
+    · have eq : BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 (Gleitkomma.ofInt Gleitkomma.f64 0)) = BitVec.ofNat 64 0 := by decide +kernel
+      rw [eq]
+      exact h
+  · by_cases hl : Gleitkomma.findeExp z.natAbs 1 < (F.p - 1 : Nat)
+    · exact floatOfIntAssemblyL_left_ofInt F hF z hz hn hi hl
+    · exact floatOfIntAssemblyL_right_ofInt F hF z hz hn hi (by omega)
+
+#print axioms floatOfIntAssemblyL_ofInt
+
 #print axioms floatOfIntAssemblyL_right_ofInt
 #print axioms floatOfIntAssemblyL_right_ofInt_zeuge
 
