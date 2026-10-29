@@ -1262,6 +1262,48 @@ theorem floatOfIntAssemblyL_left_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
   exact ⟨hF, bounds, nonzero, left, input,
     floatOfIntAssemblyL_left_ofInt F hF z bounds nonzero input left⟩
 
+/-- Joint minimum-integer, tie, carry and shift-zero fixtures discharge every outer-right premise and execute the
+    emitted assembly with the canonical conversion result. -/
+theorem floatOfIntAssemblyL_right_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
+    (W : Runner.Mem → Prop) :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64], ∀ z ∈ ([-9223372036854775808, 9007199254740993, 18014398509481983, 4503599627370496] : List Int),
+      F ∈ [Gleitkomma.f32, Gleitkomma.f64] ∧
+      (-2^63 ≤ z ∧ z < 2^63) ∧ z ≠ 0 ∧
+      ((F.p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1 ∧
+      WordCode (L := L) ρ W
+        (fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d)) (BitVec.ofInt 64 z) ∧
+      WordCode (L := L) ρ W
+        (fun d => floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) d
+          (fun j => some (konstWL 4 (BitVec.ofInt 64 z).toNat j)))
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
+  intro F hF z hz
+  have bounds : -2^63 ≤ z ∧ z < 2^63 := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hz
+    rcases hz with rfl | rfl | rfl | rfl <;> decide
+  have nonzero : z ≠ 0 := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hz
+    rcases hz with rfl | rfl | rfl | rfl <;> decide
+  have left : ((F.p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1 := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hz hF
+    rcases hF with rfl | rfl <;> rcases hz with rfl | rfl | rfl | rfl <;> decide +kernel
+  have input : WordCode (L := L) ρ W
+      (fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d)) (BitVec.ofInt 64 z) := by
+    have h : WordCode (L := L) ρ W
+        (fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d))
+        (BitVec.ofNat 64 (BitVec.ofInt 64 z).toNat) := WordCode.konst (L := L) (ρ := ρ) (W := W)
+      (BitVec.ofInt 64 z).toNat (BitVec.isLt _)
+    have eq : BitVec.ofNat 64 (BitVec.ofInt 64 z).toNat = BitVec.ofInt 64 z := by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hz
+      rcases hz with rfl | rfl | rfl | rfl <;> decide
+    rw [eq] at h
+    intro fp K d c top hc ht m pc pre
+    exact h hc ht m pc pre
+  exact ⟨hF, bounds, nonzero, left, input,
+    floatOfIntAssemblyL_right_ofInt F hF z bounds nonzero input left⟩
+
+#print axioms floatOfIntAssemblyL_right_ofInt
+#print axioms floatOfIntAssemblyL_right_ofInt_zeuge
+
 #print axioms floatOfIntAssemblyL_left_ofInt
 #print axioms floatOfIntAssemblyL_left_ofInt_zeuge
 
