@@ -6,6 +6,7 @@
 import Stage0
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Anweisung.Bytes.Proben
+import Stage0.Senke.Anweisung.Faelle.ControlProbes
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -74,3 +75,16 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.blockCheck_case
+#print axioms Gabbro.Stage0.Senke.Ret.toSim
+#print axioms Gabbro.Stage0.Senke.Ret.ofSim
+#print axioms Gabbro.Stage0.Senke.narrow_ok
+#print axioms Gabbro.Stage0.Senke.blockNarrow_case
+#print axioms Gabbro.Stage0.Senke.endNarrow_case
+#print axioms Gabbro.Stage0.Senke.blockAxiomElse_case
+#print axioms Gabbro.Stage0.Senke.ControlProbe.blockCheck_case_zeuge
+#print axioms Gabbro.Stage0.Senke.ControlProbe.blockNarrow_case_zeuge
+#print axioms Gabbro.Stage0.Senke.ControlProbe.endNarrow_case_zeuge
+#print axioms Gabbro.Stage0.Senke.ControlProbe.narrow_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.ControlProbe.blockAxiomElse_case_zeuge
