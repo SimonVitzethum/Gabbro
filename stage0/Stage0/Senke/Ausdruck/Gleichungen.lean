@@ -222,19 +222,16 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_arrNil :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.arrNil (τ := τ)) d =
-    (none) := rfl
+    some ([ci 1 d 0 0], d + 1) := rfl
 
 @[lowE_eqs] theorem lowE_arrCons (a : Expr D Γ Λ τ) (rest : Expr D Γ Λ (.arr τ n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.arrCons a rest) d =
-    (none) := rfl
+    lowE L (.arrCons a rest) d = (if n = 0 then lowE L a d else none) := rfl
 
 @[lowE_eqs] theorem lowE_arrGet (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n)) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.arrGet a i) d =
-    (none) := rfl
+    lowE L (.arrGet a i) d = (if n = 1 then lowE L a d else none) := rfl
 
 @[lowE_eqs] theorem lowE_arrSet (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n)) (v : Expr D Γ Λ τ) :
-    lowE L (Γ := Γ) (Λ := Λ) (Expr.arrSet a i v) d =
-    (none) := rfl
+    lowE L (.arrSet a i v) d = (if n = 1 then lowE L v d else none) := rfl
 
 @[lowE_eqs] theorem lowE_strLit (bs : List (Zahl 0 255)) (h : bs.length ≤ n) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.strLit bs h) d =

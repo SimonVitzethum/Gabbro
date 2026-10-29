@@ -234,6 +234,10 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
     if inWE a && inWE b && lt64 b then do
       let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 12 d ca cb)
     else none
+  | _, _, .arrNil, d => some ([ci 1 d 0 0], d + 1)
+  | _, _, @Expr.arrCons _ _ _ _ n a _, d => if n = 0 then lowE L a d else none
+  | _, _, @Expr.arrGet _ _ _ _ n a _, d => if n = 1 then lowE L a d else none
+  | _, _, @Expr.arrSet _ _ _ _ n _ _ v, d => if n = 1 then lowE L v d else none
   | _, _, .none _, d => some ([ci 1 d (-1) 0], d + 1)
   | _, _, .some e, d => lowE L e d
   | _, _, @Expr.istSome _ _ _ n e, d =>
@@ -284,6 +288,10 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
   | .fnptr _, v, w => w = BitVec.ofNat 64 (L.fa v.1)
   | .sum cs, v, w => sumFits cs = true ∧ w = BitVec.ofNat 64 (sumN v)
+  | .arr τ n, v, w => match n with
+    | 0 => w = 0
+    | 1 => Enc L τ (v ⟨0, by decide⟩) w
+    | _ => False
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 

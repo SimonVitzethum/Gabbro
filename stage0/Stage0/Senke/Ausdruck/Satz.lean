@@ -7,6 +7,7 @@ import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Ausdruck.Fnptr
 import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Ausdruck.Aggregat.Array
 import Stage0.Senke.Ausdruck.Option
 import Stage0.Senke.Ausdruck.Bytes
 import Stage0.Senke.Ausdruck.Quant.Satz
@@ -29,6 +30,13 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE L e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L τ (eval σ₀ e σ ρ))
+  | _, _, .arrNil, d, c, top, h, hK, m, pc, ρ, hp => arrNil_ok h hK hp
+  | _, _, .arrCons a rest, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrCons_ok a rest (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .arrGet a i, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrGet_ok a i (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp) h hK hp
+  | _, _, .arrSet a i v, d, c, top, h, hK, m, pc, ρ, hp =>
+    arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL v d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
@@ -429,10 +437,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
   | _, _, .refEq .., _, _, _, h, _, _, _, _, _
   | _, _, .slotRef .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrNil .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrCons .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrGet .., _, _, _, h, _, _, _, _, _
-  | _, _, .arrSet .., _, _, _, h, _, _, _, _, _
   | _, _, .strLit .., _, _, _, h, _, _, _, _, _
   | _, _, .strLen .., _, _, _, h, _, _, _, _, _
   | _, _, .strCat .., _, _, _, h, _, _, _, _, _
