@@ -1,6 +1,7 @@
 /- A compositional proof of the integer-only nearest-even software fragment.
    Inputs are pure code generators; their existing expression proofs are reused. -/
 import Stage0.Senke.Ausdruck.Gleit.Runden
+import Stage0.Senke.Ausdruck.Gleit.Komposition
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -37,27 +38,6 @@ theorem float_parity_word (q : Runner.W) :
       (fun h => Or.inr (BitVec.eq_of_toNat_eq h))
   rcases hz with hz | hz <;> rw [hz] <;> decide
 
-private abbrev WordCode (ρ : Env D Γ) (W : Runner.Mem → Prop)
-    (a : Nat → Option (List II × Nat)) (v : Runner.W) : Prop :=
-  ∀ {fp K d c top}, a d = some (c, top) → top ≤ K → ∀ m pc,
-    Pre L m pc fp K d c ρ W → Ok m pc fp K d c (· = v)
-
-private theorem code_bin {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    {a b : Nat → Option (List II × Nat)} {va vb v : Runner.W} {o : Nat}
-    {g : Runner.W → Runner.W → Option Runner.W}
-    (ha : WordCode (L := L) ρ W a va) (hb : WordCode (L := L) ρ W b vb)
-    (hg : g va vb = some v) (hop : op o = bin g) (ho : o < 256) :
-    WordCode (L := L) ρ W (fun d => wordL o d (a d) (b (d + 1))) v := by
-  intro fp K d c top h hK m pc hp
-  exact wordL_ok h hK (fun _ _ he ht => ha he ht) (fun _ _ he ht => hb he ht)
-    (fun x y hx hy => ⟨v, by simpa only [hx, hy] using hg, rfl⟩) hop ho hp
-
-private theorem code_one {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} :
-    WordCode (L := L) ρ W (fun d => some ([ci 1 d 1 0], d + 1)) 1 := by
-  intro fp K d c top h hK m pc hp
-  cases h
-  exact const_ok hp (by decide) (by omega)
-
 /-- Every execution of the fragment agrees with G's rounding kernel.
     The assumptions are precisely the input-code proofs and arithmetic bounds;
     in particular no correctness premise about a float routine is assumed. -/
@@ -74,20 +54,23 @@ theorem floatRoundL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (h : floatRoundL d q r den = some (c, top)) (hK : top ≤ K)
     {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
     Ok m pc fp K d c (· = BitVec.ofNat 64 (Gleitkomma.rundeInt qn rn dn)) := by
-  have gap : WordCode (L := L) ρ W _ _ := code_bin hdc hrc (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
-  have above : WordCode (L := L) ρ W _ _ := code_bin gap hrc (g := fun a b => some (Runner.IR.bool (a.slt b)))
+  have gap : WordCode (L := L) ρ W _ _ := WordCode.bin hdc hrc (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
+  have above : WordCode (L := L) ρ W _ _ := WordCode.bin gap hrc (g := fun a b => some (Runner.IR.bool (a.slt b)))
     rfl rfl (by decide : 13 < 256)
-  have tie : WordCode (L := L) ρ W _ _ := code_bin hrc gap (g := fun a b => some (Runner.IR.bool (a == b)))
+  have tie : WordCode (L := L) ρ W _ _ := WordCode.bin hrc gap (g := fun a b => some (Runner.IR.bool (a == b)))
     rfl rfl (by decide : 14 < 256)
-  have odd : WordCode (L := L) ρ W _ _ := code_bin hq code_one (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
-  have both : WordCode (L := L) ρ W _ _ := code_bin tie odd (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
-  have bump : WordCode (L := L) ρ W _ _ := code_bin above both (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
-  have result : WordCode (L := L) ρ W _ _ := code_bin hq bump (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
+  have odd : WordCode (L := L) ρ W _ _ := WordCode.bin hq (WordCode.const 1 (by decide)) (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
+  have both : WordCode (L := L) ρ W _ _ := WordCode.bin tie odd (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
+  have bump : WordCode (L := L) ρ W _ _ := WordCode.bin above both (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin hq bump (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
   have res := result (fp := fp) (K := K) (d := d) (c := c) (top := top)
     (by simpa [floatRoundL, wordK, Nat.add_assoc, Int.add_assoc] using h) hK m pc
     (by simpa [floatRoundL, wordK, Nat.add_assoc, Int.add_assoc] using hp)
   exact res.mono fun w hw => by
-    rw [float_parity_word] at hw
+    simp only [BitVec.ofInt_ofNat] at hw
+    have parity := float_parity_word (BitVec.ofNat 64 qn)
+    simp only [BitVec.ofNat_eq_ofNat] at parity
+    rw [parity] at hw
     exact hw.trans (floatRoundWord_model qn rn dn hr hd)
 
 end Gabbro.Stage0.Senke
