@@ -311,7 +311,8 @@ theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name :
         obtain ⟨⟨hpar, hrpar, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi⟩, hfp⟩ := hg
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
         refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, hfp, fun g => by rw [hlens], hcl, hcs, hfs, hpar, hrpar,
-          hfit, hroomK, hexK, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit), hYdis _, hops⟩, rfl, rfl⟩
+          hfit, hroomK, hexK, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit),
+          ⟨(hYdis _).inj, (hYdis _).grid⟩, hops⟩, rfl, rfl⟩
       · exfalso
         revert hb
         repeat' split

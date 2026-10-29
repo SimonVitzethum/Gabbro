@@ -1,7 +1,8 @@
 /-
   File:      stage0/Stage0/Senke/Welt/Lay.lean
   Subject:   Where the world lies in memory: every column of a table (field `f` of table `t`, its elements one after the
-             other from `col t f`) and every global (`ga g`, one word); and how each gate is bound (`tor`).
+             other from `col t f`) and every global (`ga g`, one word); how each gate is bound (`tor`); where the threads' stacks
+             lie (`sb`, `st`) and the words of each lock (`lk`).
 
   Every element of every column is one word, also in a column of bytes: a system call's buffer is packed into
   bytes at the call (`PLAN-SELF-HOSTING.md` §2.1.4), so every cell of the world is one aligned word. All of it lies
@@ -30,6 +31,12 @@ structure Lay (D : Deklaration) where
   tor : D.Ax → Option TorB
   /-- The field of a table a gate's buffer carries: its bytes, one per element. -/
   byte : (t : D.Tab) → Option (D.Feld t)
+  /-- The first thread's stack (its first byte), and the bytes of one stack: thread `j` has the `j`-th. -/
+  sb : Nat := 0
+  st : Nat := 1
+  /-- The three words of a lock (owner, count, waiters) from this address, above the world, below `sye`. -/
+  lk : D.Lock → Nat := fun _ => 0
+  sye : Nat := 0
 
 /-- The address of element `k` of the column `f` of table `t`. -/
 def Lay.elem {D : Deklaration} (L : Lay D) (t : D.Tab) (f : D.Feld t) (k : Nat) : Nat := L.col t f + 8 * k
