@@ -33,6 +33,7 @@ def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : Lay (decl
   lo := b
   hi := b + 8 * u.globs.length + tabsSz u
   tor := tor
+  byte t := (List.finRange (fieldCount u t)).find? (fun f => decide ((declOf u).typ t f = .int 0 255))
 
 /-- A part of a sum and the next summand lie inside the sum. -/
 theorem take_sum_add (xs : List Nat) (i : Nat) (hi : i < xs.length) : (xs.take i).sum + xs[i] ≤ xs.sum := by

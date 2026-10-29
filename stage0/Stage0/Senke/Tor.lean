@@ -17,14 +17,19 @@ open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration}
 
+def isPtr : Ty → Bool
+  | .ptr _ _ => true
+  | _ => false
+
 /-- The arguments of a gate, the first into slot `d`, each next one a slot higher. A later argument's scratch slots
-    lie above every argument already in place. -/
+    lie above every argument already in place. A pointer has no code here: its slot gets the buffer's address. -/
 def lowR (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → Option (List II × Nat)
   | _, _, .nil, d => some ([], d)
-  | _, _, .cons e rest, d => do
-    let ce ← lowE L e d
-    let cr ← lowR L rest (d + 1)
-    pure (ce.1 ++ cr.1, max ce.2 cr.2)
+  | _, τ :: _, .cons e rest, d =>
+    if isPtr τ then lowR L rest (d + 1) else do
+      let ce ← lowE L e d
+      let cr ← lowR L rest (d + 1)
+      pure (ce.1 ++ cr.1, max ce.2 cr.2)
 
 /-- Zero into the `k` slots from `d`. -/
 def zeroC (d : Nat) : Nat → List II
@@ -45,15 +50,78 @@ def torCode (nr s n : Nat) (ca : List II) : List II :=
 def wortTy : Ty → Bool
   | .int _ _ => true
   | .bool => true
+  | .ptr _ _ => true
   | _ => false
+
+/-! ## A buffer
+
+A gate may take one table by pointer (`ptr<..> T`): the kernel reads and writes bytes, and every cell of the world is
+a word, so the table's byte field (`L.byte t`) is packed into a buffer of words in the frame -- element `8 i + j`
+into byte `j` of word `i` -- whose address goes in the parameter's register; a writable buffer is unpacked into the
+field after the call. The buffer lies in the frame, so no other thread sees it. -/
+
+/-- The pointer parameter of a gate: its position, its table number, whether it is writable. -/
+def ptrParam (τs : List Ty) : Option (Nat × Nat × Bool) :=
+  match τs.findIdx? isPtr with
+  | some j => match τs[j]? with
+    | some (.ptr n rw) => some (j, n, rw)
+    | _ => none
+  | none => none
+
+/-- Byte `j` of word `i`: element `8 i + j` at address `adr`, shifted into place and added into `acc` (`u` scratch). -/
+def pack1 (acc u adr j : Nat) : List II :=
+  [ci 1 u adr 0, ci 15 u u 0, ci 1 ((u : Int) + 1) (8 * j) 0, ci 11 u u ((u : Int) + 1), ci 3 acc acc u]
+
+/-- The bytes `j < J` of word `i` of a buffer of `c` elements of column `f` of `t`. -/
+def packJ (L : Lay D) (t : D.Tab) (f : D.Feld t) (c i acc u : Nat) : Nat → List II
+  | 0 => []
+  | j + 1 => packJ L t f c i acc u j ++ (if 8 * i + j < c then pack1 acc u (L.elem t f (8 * i + j)) j else [])
+
+/-- The words `i < I` of the buffer from slot `B`. -/
+def packI (L : Lay D) (t : D.Tab) (f : D.Feld t) (c B acc u : Nat) : Nat → List II
+  | 0 => []
+  | i + 1 => packI L t f c B acc u i ++ ([ci 1 acc 0 0] ++ packJ L t f c i acc u 8 ++ [ci 2 (B + i) acc 0])
+
+/-- Element `k` back from the buffer at slot `B` into its cell at `adr` (`u` scratch). -/
+def unpack1 (B u adr k : Nat) : List II :=
+  [ci 2 u ((B + k / 8 : Nat) : Int) 0, ci 1 ((u : Int) + 1) ((8 * (k % 8) : Nat) : Int) 0, ci 12 u u ((u : Int) + 1),
+    ci 1 ((u : Int) + 1) 255 0, ci 8 u u ((u : Int) + 1), ci 1 ((u + 1 : Nat) : Int) adr 0,
+    ci 16 ((u + 1 : Nat) : Int) u 0]
+
+/-- The elements `k < K` back from the buffer. -/
+def unpackK (L : Lay D) (t : D.Tab) (f : D.Feld t) (B u : Nat) : Nat → List II
+  | 0 => []
+  | k + 1 => unpackK L t f B u k ++ unpack1 B u (L.elem t f k) k
+
+/-- The words of a buffer of `c` elements. -/
+def pufW (c : Nat) : Nat := (c + 7) / 8
 
 def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (s : Nat) :
     Option (List II × Nat) :=
   match L.tor a with
   | some b =>
-    if torGut b (D.aparams a).length = true ∧ (D.aparams a).all wortTy = true then do
-      let ca ← lowR L args (s + 1)
-      pure (torCode b.nr s (D.aparams a).length ca.1, max ca.2 (s + 7))
+    if torGut b (D.aparams a).length = true ∧ (D.aparams a).all wortTy = true then
+      match ptrParam (D.aparams a) with
+      | none => do
+        let ca ← lowR L args (s + 1)
+        pure (torCode b.nr s (D.aparams a).length ca.1, max ca.2 (s + 7))
+      | some (j, nt, rw) =>
+        match D.tabNr nt with
+        | some t =>
+          match L.byte t with
+          | some f =>
+            if D.typ t f = .int 0 255 ∧ ((D.aparams a).filter isPtr).length = 1 ∧ 0 ≤ D.count t ∧
+                D.count t < 2 ^ 20 then do
+              let ca ← lowR L args (s + 1)
+              let c := (D.count t).toNat
+              let B := max ca.2 (s + 7)
+              pure (torCode b.nr s (D.aparams a).length
+                  (ca.1 ++ packI L t f c B (B + pufW c) (B + pufW c + 1) (pufW c) ++ [ci 17 ((s + 1 + j : Nat) : Int) (B : Int) 0]) ++
+                  (if rw then unpackK L t f B (B + pufW c + 1) c else []),
+                B + pufW c + 3)
+            else none
+          | none => none
+        | none => none
     else none
   | none => none
 

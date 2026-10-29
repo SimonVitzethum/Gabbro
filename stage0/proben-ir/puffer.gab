@@ -1,0 +1,38 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): a gate with a buffer -- writes "Hi!\n" from a table's
+// byte field, reads its answer back; exit code 4
+module ir_probe {
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    exhaustive
+}
+
+assume linux_write
+    "The Linux x86_64 `write` writes the buffer's first len bytes and answers how many."
+    falsifier sonde_write;
+
+table puffer count 12 { slot { b : u32 in 0 .. 255, } }
+
+syscall write(fd : u64, buf : ptr<normal, rw> puffer, len : u64) -> u64 in 0 .. 4096 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted }
+    effects { writes puffer.slots }
+    costs <= 8 ops
+    assume linux_write falsifier sonde_write;
+
+impl fn main() -> u64 in 0 .. 4096
+    effects { writes puffer.slots }
+{
+    puffer.slots[0].b = 72;
+    puffer.slots[1].b = 105;
+    puffer.slots[2].b = 33;
+    puffer.slots[3].b = 10;
+    puffer.slots[9].b = 7;
+    let n = write(1, &puffer, 4) else (e) { return 99; }
+    return n;
+}
+}

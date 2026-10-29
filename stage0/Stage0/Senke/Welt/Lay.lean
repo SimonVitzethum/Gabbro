@@ -28,6 +28,8 @@ structure Lay (D : Deklaration) where
   hi : Nat
   /-- The binding of each gate, if it has one on this machine. -/
   tor : D.Ax → Option TorB
+  /-- The field of a table a gate's buffer carries: its bytes, one per element. -/
+  byte : (t : D.Tab) → Option (D.Feld t)
 
 /-- The address of element `k` of the column `f` of table `t`. -/
 def Lay.elem {D : Deklaration} (L : Lay D) (t : D.Tab) (f : D.Feld t) (k : Nat) : Nat := L.col t f + 8 * k

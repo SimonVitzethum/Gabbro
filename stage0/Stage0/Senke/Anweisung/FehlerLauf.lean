@@ -52,15 +52,7 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
       ct ++ (fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int) ++ (ck ++ (cr ++ ce))) := by
     simp only [List.append_assoc]
   have hp' := e ▸ hp
-  have h7 : frei Γ + 7 ≤ tt := by
-    have : torC0 L a args (frei Γ) = some (ct, tt) ∨ True := .inr trivial
-    simp only [torC] at ht
-    split at ht
-    · split at ht
-      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at ht
-        obtain ⟨_, _, _, rfl⟩ := ht; omega
-      · cases ht
-    · cases ht
+  have h7 := torC_top1 ht
   obtain ⟨b', hb', m1, w, s1, a1, hw1, hW1, hroh⟩ := torC_ok (O := O) ht htt hW hp'.left hWa
   rw [hb] at hb'
   cases hb'

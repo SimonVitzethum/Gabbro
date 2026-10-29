@@ -11,6 +11,7 @@
 -/
 import Stage0.Senke.Anweisung.Schleife
 import Stage0.Senke.Anweisung.Schreiben
+import Stage0.Senke.Welt.Packen
 
 namespace Gabbro.Stage0.Senke
 
@@ -36,6 +37,16 @@ def reqArg (q : Runner.Req) : Nat → Runner.W
   | 5 => q.a6
   | _ => 0
 
+theorem reqArg_mk (nr : Runner.W) (f : Nat → Runner.W) :
+    ∀ i, i < 6 → reqArg ⟨nr, f 0, f 1, f 2, f 3, f 4, f 5⟩ i = f i
+  | 0, _ => rfl
+  | 1, _ => rfl
+  | 2, _ => rfl
+  | 3, _ => rfl
+  | 4, _ => rfl
+  | 5, _ => rfl
+  | _ + 6, h => absurd h (by omega)
+
 /-- The words `f 0, f 1, …` are the arguments `ρ`. -/
 def ArgsW (f : Nat → Runner.W) : {τs : List Ty} → Env D τs → Prop
   | [], .nil => True
@@ -51,22 +62,92 @@ def rohW (b : TorB) (n : Nat) (w : Runner.W) : Int :=
     | none => -((n : Int) + 1)
   else w.toInt * ((n : Int) + 1)
 
+/-- The world `σ` in memory, apart from column `f` of table `t`. -/
+def WeltOhne (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld t) : Prop :=
+  (∀ t' f' (k : Nat), (k : Int) < D.count t' → (∀ k' : Nat, (Zelle.elem t' f' k : Zelle D) ≠ .elem t f k') →
+    ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t' f' k)) = some w ∧ Enc (D.typ t' f') (σ.slots t' k f') w) ∧
+  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc (D.gtyp g) (σ.globs g) w)
+
 /-- **The named assumption at the gates**: the kernel answers a bound gate's request as the oracle says. -/
 class TorOK (L : Lay D) (O : Orakel D) : Prop where
+  /-- A gate without a buffer: the kernel changes only the world, which then holds the oracle's. -/
   ans : ∀ (a : D.Ax) (b : TorB), L.tor a = some b → torGut b (D.aparams a).length = true →
+    ptrParam (D.aparams a) = none →
     ∀ (σ : World D) (ρ : Env D (D.aparams a)) (q : Runner.Req) (m : Runner.Mem),
     q.nr = BitVec.ofNat 64 b.nr → ArgsW (reqArg q) ρ → (∀ i, (D.aparams a).length ≤ i → i < 6 → reqArg q i = 0) →
     WeltAt m L σ →
     ∃ w x m', Kern.ans q m (some (w, x)) m' ∧ KernW L m m' ∧ WeltAt m' L (O.wirkt a σ ρ).1 ∧
       (O.wirkt a σ ρ).2 = rohW b (D.agruende a) w
+  /-- A gate with a buffer at the address in its pointer's register, holding the table's bytes: the kernel changes
+      only the buffer; the oracle's world is the old one apart from the table's byte field, whose elements are the
+      buffer's bytes afterwards (a read-only buffer: the old ones). -/
+  puf : ∀ (a : D.Ax) (b : TorB), L.tor a = some b → torGut b (D.aparams a).length = true →
+    ∀ (j nt : Nat) (rw : Bool) (t : D.Tab) (f : D.Feld t), ptrParam (D.aparams a) = some (j, nt, rw) →
+    D.tabNr nt = some t → L.byte t = some f → D.typ t f = .int 0 255 →
+    ∀ (σ : World D) (ρ : Env D (D.aparams a)) (q : Runner.Req) (m : Runner.Mem),
+    q.nr = BitVec.ofNat 64 b.nr → ArgsW (reqArg q) ρ → (∀ i, (D.aparams a).length ≤ i → i < 6 → reqArg q i = 0) →
+    WeltAt m L σ →
+    (∀ i, i < pufW (D.count t).toNat → m.rd64 (reqArg q j + BitVec.ofNat 64 (8 * i)) =
+      some (packV (fun k => wAt m (L.elem t f k)) (D.count t).toNat i 8)) →
+    ∃ w x m', Kern.ans q m (some (w, x)) m' ∧ m'.rd = m.rd ∧ m'.wr = m.wr ∧
+      (∀ y : Runner.W, ¬ ((reqArg q j).toNat ≤ y.toNat ∧
+        y.toNat < (reqArg q j).toNat + 8 * pufW (D.count t).toNat) → m'.b y = m.b y) ∧
+      WeltOhne m L (O.wirkt a σ ρ).1 t f ∧
+      (∀ k, k < (D.count t).toNat → Enc (D.typ t f) ((O.wirkt a σ ρ).1.slots t k f)
+        (if rw then byteOf m' (reqArg q j) k else wAt m (L.elem t f k))) ∧
+      (O.wirkt a σ ρ).2 = rohW b (D.agruende a) w
+
+theorem packV_congr {ws ws' : Nat → Runner.W} {c i : Nat} (h : ∀ k, k < c → ws k = ws' k) :
+    (J : Nat) → packV ws c i J = packV ws' c i J
+  | 0 => rfl
+  | J + 1 => by
+    simp only [packV]
+    split
+    · next hc => rw [packV_congr h J, h _ hc]
+    · exact packV_congr h J
+
+theorem wAt_of {m : Runner.Mem} {a : Nat} {w : Runner.W} (h : m.rd64 (BitVec.ofNat 64 a) = some w) : wAt m a = w := by
+  simp only [wAt, h, Option.getD_some]
+
+theorem enc_byte {τ : Ty} (hτ : τ = .int 0 255) {v : Wert D τ} {w : Runner.W} (h : Enc τ v w) : w.toNat < 256 := by
+  subst hτ
+  simp only [Enc] at h
+  subst h
+  have h1 := v.lo_le
+  have h2 := v.le_hi
+  rw [BitVec.toNat_ofInt]
+  omega
 
 /-- **Witness** (the assumption is not empty): a kernel that may give any answer, and an oracle that leaves the
     world and answers 0, meet it for every layout. -/
 theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0)) :
     @TorOK ⟨fun _ _ _ _ => True⟩ D L O := by
   letI : Kern := ⟨fun _ _ _ _ => True⟩
-  refine ⟨fun a b _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩⟩
+  refine ⟨fun a b _ _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩,
+    fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩⟩
   · rw [hO]; exact hW
+  · rw [hO]; simp [rohW]
+  · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2⟩
+  · intro k hk
+    rw [hO]
+    obtain ⟨w, hw, he⟩ := hW.1 t f k (by omega)
+    have hwk : wAt m (L.elem t f k) = w := wAt_of hw
+    cases rw
+    · simp only [Bool.false_eq_true, ↓reduceIte, hwk]; exact he
+    · simp only [↓reduceIte]
+      let ws : Nat → Runner.W := fun k => if k < (D.count t).toNat then wAt m (L.elem t f k) else 0
+      have hws : ∀ k, (ws k).toNat < 256 := fun k => by
+        simp only [ws]; split
+        · next hk' =>
+          obtain ⟨w', hw', he'⟩ := hW.1 t f k (by omega)
+          rw [wAt_of hw']; exact enc_byte hτ he'
+        · decide
+      have hb := hB (k / 8) (by simp only [pufW]; omega)
+      rw [packV_congr (ws' := ws) (fun k hk => by simp only [ws, hk, ↓reduceIte])] at hb
+      simp only [byteOf, hb, Option.getD_some]
+      rw [byte_packV ws _ _ _ (by omega) hws, if_pos (by omega)]
+      simp only [ws, show 8 * (k / 8) + k % 8 = k by omega, hk, ↓reduceIte, hwk]
+      exact he
   · rw [hO]; simp [rohW]
 
 theorem argsW_congr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs) →
@@ -168,8 +249,17 @@ theorem lowR_ok {Λ : List (Res D)} {L : Lay D} {fp : Runner.W} {K : Nat} {W : R
     simp only [lowR, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, trivial⟩
-  | _, _ :: τs, .cons e rest, d, c, top, h, hK, hL, m, pc, ρ, hp => by
-    simp only [lowR, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  | _, τ :: τs, .cons e rest, d, c, top, h, hK, hL, m, pc, ρ, hp => by
+    simp only [lowR] at h
+    split at h
+    · next hτ =>
+      simp only [List.length_cons] at hL
+      obtain ⟨m2, s2, a2, hA⟩ := lowR_ok σ₀ σ hWL rest (d + 1) c top h hK (by omega) m pc ρ (hp.up (by omega))
+      refine ⟨m2, s2, a2.mono (by omega), ?_⟩
+      simp only [evalArgs, ArgsW]
+      refine ⟨?_, argsW_congr _ (fun j _ => by simp only [show d + 1 + j = d + (j + 1) by omega]) hA⟩
+      cases τ <;> simp_all [isPtr, Enc]
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc

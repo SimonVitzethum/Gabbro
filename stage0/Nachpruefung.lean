@@ -25,3 +25,5 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.torElse_ok
 #print axioms Gabbro.Stage0.Senke.fehlC_ok
 #print axioms Gabbro.Stage0.Senke.sonst_dec
+#print axioms Gabbro.Stage0.Senke.torPuf_ok
+#print axioms Gabbro.Stage0.Senke.byte_packV

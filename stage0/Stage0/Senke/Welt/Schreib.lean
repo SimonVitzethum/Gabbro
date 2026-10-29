@@ -36,6 +36,30 @@ theorem frame_wr_at {m : Runner.Mem} {fp : Runner.W} {K : Nat} (hF : FrameOK m f
   rw [e]
   exact frame_wr_byte hF (by omega) (by omega)
 
+/-- A byte inside the frame's slots is readable. -/
+theorem frame_rd_byte {m : Runner.Mem} {fp : Runner.W} {K : Nat} (hF : FrameOK m fp K) {x : Nat}
+    (h1 : fp.toNat ≤ x) (h2 : x < fp.toNat + 8 * K) : m.rd (BitVec.ofNat 64 x) = true := by
+  have hr := hF.room
+  have hw := all_spec (hF.rd ((x - fp.toNat) / 8) (by omega)) (j := (x - fp.toNat) % 8) (by omega)
+  have e : slot fp (BitVec.ofNat 64 ((x - fp.toNat) / 8)) + BitVec.ofNat 64 ((x - fp.toNat) % 8) =
+      BitVec.ofNat 64 x := by
+    apply BitVec.eq_of_toNat_eq
+    have := fp.isLt
+    have h8 : (8 : Runner.W).toNat = 8 := rfl
+    simp only [slot, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
+    omega
+  rwa [e] at hw
+
+/-- A word inside the frame's slots is readable. -/
+theorem frame_rd_at {m : Runner.Mem} {fp : Runner.W} {K : Nat} (hF : FrameOK m fp K) {a : Nat}
+    (h1 : fp.toNat ≤ a) (h2 : a + 8 ≤ fp.toNat + 8 * K) : all m.rd (BitVec.ofNat 64 a) 8 = true := by
+  have hr := hF.room
+  refine all_of fun j hj => ?_
+  have e : BitVec.ofNat 64 a + BitVec.ofNat 64 j = BitVec.ofNat 64 (a + j) := by
+    rw [BitVec.ofNat_add]
+  rw [e]
+  exact frame_rd_byte hF (by omega) (by omega)
+
 /-- Writing a word inside the slots from `lo` changes only the slots from `lo` on. -/
 theorem agree_write_at {m : Runner.Mem} {fp : Runner.W} {lo K a : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
     (h1 : fp.toNat + 8 * lo ≤ a) (h2 : a + 8 ≤ fp.toNat + 8 * K) (v : Nat) :
