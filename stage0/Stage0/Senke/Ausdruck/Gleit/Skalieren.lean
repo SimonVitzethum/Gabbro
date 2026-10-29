@@ -1027,6 +1027,49 @@ theorem floatOfIntLeftPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
   simpa only [decide_eq_true_eq, heb, hfrac] using
     floatOfIntLeftPackL_ok z hz hn hi F.p bias (2^(F.ebits + F.fracBits)) hp hpb hb hsb hlt hc ht m pc pre
 
+/-- The actual right packer, given rounded-significand bounds, returns the canonical integer-conversion bits. -/
+theorem floatOfIntRightPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (F : Gleitkomma.Format) (z : Int)
+    (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z))
+    (hp : 2 ≤ F.p) (hpb : F.p - 1 < 63)
+    (hfrac : F.fracBits = F.p - 1)
+    (bias : Nat) (hb : bias < 2^64)
+    (hsb : 2^(F.ebits + F.fracBits) < 2^64)
+    (hu : 2 * 2^F.fracBits < 2^64) (hm : F.bexpMax ≤ 2^64)
+    (hlo : F.emin ≤ Gleitkomma.findeExp z.natAbs 1)
+    (hhi : Gleitkomma.findeExp z.natAbs 1 < (F.emax : Int))
+    (he : 0 < (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat ∧
+      (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat + 1 < F.bexpMax)
+    (heb : BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1) + BitVec.ofNat 64 bias =
+      BitVec.ofNat 64 (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat)
+    (hr : ((F.p - 1 : Nat) : Int) ≤ Gleitkomma.findeExp z.natAbs 1)
+    (hq : 2^F.fracBits ≤ Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1 ∧
+      Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1 ≤ 2 * 2^F.fracBits) :
+    WordCode (L := L) ρ W (fun d => floatPackCarryL d
+      (fun j => wordL 5 j (wordK 13 j (input j) 0)
+        (some (konstWL 4 (2^(F.ebits + F.fracBits)) (j + 1))))
+      (fun j => wordL 3 j (floatExponentL j (fun k => floatMagnitudeL k input))
+        (some (konstWL 4 bias (j + 1))))
+      (fun j => floatOfIntScaleL F.p j input) (2^(F.p - 1)))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
+  have ha : z.natAbs ≠ 0 := by omega
+  have canonical : Gleitkomma.ofInt F z = Gleitkomma.rundeBruchKern F
+      (decide (z < 0)) z.natAbs 1 (Gleitkomma.findeExp z.natAbs 1) := by
+    simp [Gleitkomma.ofInt, Gleitkomma.rundeExakt, Gleitkomma.exaktBruch,
+      Gleitkomma.rundeBruch, Gleitkomma.rundeBruchBei, ha]
+  rw [canonical, floatPackCarry_fields F _ _ _ _ (by omega) hfrac hlo hhi hq.2]
+  have pack := floatPackCarry_canonical F (decide (z < 0))
+    (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat
+    (Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1)
+    hu hm he hq
+  rw [hfrac] at pack
+  rw [hfrac, ← pack]
+  intro fp K d c top hc ht m pc pre
+  simpa only [decide_eq_true_eq, heb, hfrac] using
+    floatOfIntRightPackL_ok z hz hn hi F.p bias (2^(F.ebits + F.fracBits)) hp hpb hb hsb hr hc ht m pc pre
+
 /-- Supported formats discharge the static premises of the actual left packer. -/
 theorem floatOfIntLeftPack_format (F : Gleitkomma.Format)
     (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64]) :
