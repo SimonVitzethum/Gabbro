@@ -3,7 +3,7 @@
   Subject:   The call site: the depth one less, the address, `call` -- then the callee's `FunSpec`.
 -/
 import Stage0.Senke.Spez
-import Stage0.Senke.AnweisungHilfe
+import Stage0.Senke.Anweisung.Hilfe
 
 namespace Gabbro.Stage0.Senke
 

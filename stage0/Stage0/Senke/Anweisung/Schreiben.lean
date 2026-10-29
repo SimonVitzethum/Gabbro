@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Schreiben.lean
+  File:      stage0/Stage0/Senke/Anweisung/Schreiben.lean
   Subject:   A statement that writes one cell of the world (`assignGlob`, `assignSlot`, `assignThru`): the value into
              slot `s = frei Γ`, the cell's address into `s + 1`, `st` (`store_ok`). Both parts run in the frame below
              `Ks`, so the world stays until the store; the store writes the cell's word, which lies in the world, so

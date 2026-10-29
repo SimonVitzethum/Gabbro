@@ -7,7 +7,7 @@
   The body runs in the callee's frame with `lo = FB + np`: it writes no slot below, so the header (return `pc`,
   caller `fp`, depth) and the parameters stay as the call left them (`Kopf`).
 -/
-import Stage0.Senke.AnweisungSatz
+import Stage0.Senke.Anweisung.Satz
 
 namespace Gabbro.Stage0.Senke
 

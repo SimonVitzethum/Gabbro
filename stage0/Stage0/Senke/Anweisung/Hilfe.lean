@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/AnweisungHilfe.lean
+  File:      stage0/Stage0/Senke/Anweisung/Hilfe.lean
   Subject:   Small steps for statements: `mov` into a slot, code addresses after concatenation.
 -/
 import Stage0.Senke.Umgebung
