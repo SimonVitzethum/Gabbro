@@ -4,27 +4,27 @@ import Stage0.Senke.Ausdruck.Aggregat.Wort
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- A pure generator may be evaluated at any free slot and reread without effects. -/
 abbrev WordCode (ρ : Env D Γ) (W : Runner.Mem → Prop)
-    (a : Nat → Option (List II × Nat)) (v : Runner.W) : Prop :=
+    (a : Nat → Option (List II × Nat)) (v : Runner.W) (reserved : Nat := 0) : Prop :=
   ∀ {fp K d c top}, a d = some (c, top) → top ≤ K → ∀ m pc,
-    Pre L m pc fp K d c ρ W → Ok m pc fp K d c (· = v)
+    Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (· = v)
 
 theorem WordCode.bin {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a b : Nat → Option (List II × Nat)} {va vb v : Runner.W} {o : Nat}
     {g : Runner.W → Runner.W → Option Runner.W}
-    (ha : WordCode (L := L) ρ W a va) (hb : WordCode (L := L) ρ W b vb)
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a va) (hb : WordCode (L := L) (reserved := reserved) ρ W b vb)
     (hg : g va vb = some v) (hop : op o = bin g) (ho : o < 256) :
-    WordCode (L := L) ρ W (fun d => wordL o d (a d) (b (d + 1))) v := by
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => wordL o d (a d) (b (d + 1))) v := by
   intro fp K d c top h hK m pc hp
   exact wordL_ok h hK (fun _ _ he ht => ha he ht) (fun _ _ he ht => hb he ht)
     (fun x y hx hy => ⟨v, by simpa only [hx, hy] using hg, rfl⟩) hop ho hp
 
 theorem WordCode.const {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (n : Int) (hn : lit32 n = true) :
-    WordCode (L := L) ρ W (fun d => some ([ci 1 d n 0], d + 1))
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => some ([ci 1 d n 0], d + 1))
       (BitVec.ofInt 64 n) := by
   intro fp K d c top h hK m pc hp
   cases h
@@ -33,7 +33,7 @@ theorem WordCode.const {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 /-- All unsigned words, including those above the signed range. -/
 theorem WordCode.konst {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (n : Nat) (hn : n < 2^64) :
-    WordCode (L := L) ρ W (fun d => some (konstWL 4 n d)) (BitVec.ofNat 64 n) := by
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => some (konstWL 4 n d)) (BitVec.ofNat 64 n) := by
   intro fp K d c top h hK m pc hp
   cases h
   exact konstWL_ok 4 n (by simpa using hn)

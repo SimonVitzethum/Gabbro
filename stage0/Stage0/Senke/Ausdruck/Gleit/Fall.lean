@@ -5,7 +5,7 @@ import Stage0.Senke.Ausdruck.Gleit.Code
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 abbrev FloatKeyEnc (x : GFloat) (w : Runner.W) : Prop :=
   Gleitkomma.wf Gleitkomma.f64 x ∧ w = BitVec.ofInt 64 (floatKey x)
@@ -14,13 +14,13 @@ abbrev FloatKeyEnc (x : GFloat) (w : Runner.W) : Prop :=
 theorem floatKeyE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} {W : Runner.Mem → Prop} (σ₀ σ : World D) {lo hi : Int × Int}
     (e : Expr D Γ Λ (.fl lo hi)) {c : List II}
-    (ih : ∀ d c top, lowE L e d = some (c, top) → top ≤ K →
-      ∀ m pc, Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L (.fl lo hi) (eval σ₀ e σ ρ)))
-    (h : floatKeyL d (lowE L e d) (lowE L e (d+3)) = some (c, top)) (hK : top ≤ K)
-    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
+    (ih : ∀ d c top, lowE L e (reserved := reserved) d = some (c, top) → top ≤ K →
+      ∀ m pc, Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.fl lo hi) (eval σ₀ e σ ρ)))
+    (h : floatKeyL d (lowE L e (reserved := reserved) d) (lowE L e (reserved := reserved) (d+3)) = some (c, top)) (hK : top ≤ K)
+    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (FloatKeyEnc (eval σ₀ e σ ρ).x) := by
-  generalize ha : lowE L e d = ca at h
-  generalize hb : lowE L e (d+3) = cb at h
+  generalize ha : lowE L e (reserved := reserved) d = ca at h
+  generalize hb : lowE L e (reserved := reserved) (d+3) = cb at h
   cases ca with
   | none => cases h
   | some ca => cases cb with
@@ -34,11 +34,11 @@ theorem floatCompare_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : E
     {W : Runner.Mem → Prop} {a b c : List II} {x y : GFloat} (le : Bool)
     (xf : Gleitkomma.klasse Gleitkomma.f64 x ≠ .nan) (yf : Gleitkomma.klasse Gleitkomma.f64 y ≠ .nan)
     (h : floatCmpL le d (some (a, ta)) (some (b, tb)) = some (c, top)) (hd : d+2 ≤ K)
-    (ha : ∀ m pc, Pre L m pc fp K d a ρ W → Ok m pc fp K d a (FloatKeyEnc x))
-    (hb : ∀ m pc, Pre L m pc fp K (d+1) b ρ W → Ok m pc fp K (d+1) b (FloatKeyEnc y))
-    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
+    (ha : ∀ m pc, Pre L m pc fp K d a ρ W reserved → Ok m pc fp K d a (FloatKeyEnc x))
+    (hb : ∀ m pc, Pre L m pc fp K (d+1) b ρ W reserved → Ok m pc fp K (d+1) b (FloatKeyEnc y))
+    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (· = Runner.IR.bool (if le then !gleitLt x y else gleitLt x y)) := by
-  have hcmp : ∀ {m pc}, Pre L m pc fp K d (bin2 13 d (a, ta) (b, tb)).1 ρ W →
+  have hcmp : ∀ {m pc}, Pre L m pc fp K d (bin2 13 d (a, ta) (b, tb)).1 ρ W reserved →
       Ok m pc fp K d (bin2 13 d (a, ta) (b, tb)).1 (· = Runner.IR.bool (gleitLt x y)) := by
     intro m pc hp
     exact bin_ok ha hb (fun a b ha hb => ⟨_, rfl, by
@@ -58,17 +58,17 @@ theorem floatCompare_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : E
 theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} {W : Runner.Mem → Prop} (σ₀ σ : World D) {l1 h1 l2 h2 : Int × Int}
     (le : Bool) (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) {c : List II}
-    (iha : ∀ d c top, lowE L a d = some (c, top) → top ≤ K →
-      ∀ m pc, Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L (.fl l1 h1) (eval σ₀ a σ ρ)))
-    (ihb : ∀ d c top, lowE L b d = some (c, top) → top ≤ K →
-      ∀ m pc, Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L (.fl l2 h2) (eval σ₀ b σ ρ)))
-    (h : floatExprL le d (lowE L a) (lowE L b) = some (c, top)) (hK : top ≤ K)
-    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
+    (iha : ∀ d c top, lowE L a (reserved := reserved) d = some (c, top) → top ≤ K →
+      ∀ m pc, Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.fl l1 h1) (eval σ₀ a σ ρ)))
+    (ihb : ∀ d c top, lowE L b (reserved := reserved) d = some (c, top) → top ≤ K →
+      ∀ m pc, Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.fl l2 h2) (eval σ₀ b σ ρ)))
+    (h : floatExprL le d (lowE L a (reserved := reserved)) (lowE L b (reserved := reserved)) = some (c, top)) (hK : top ≤ K)
+    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L .bool
       (eval σ₀ (if le then Expr.flle b a else Expr.fllt a b) σ ρ)) := by
   unfold floatExprL at h
-  generalize ha : floatKeyL d (lowE L a d) (lowE L a (d+3)) = ca at h
-  generalize hb : floatKeyL (d+1) (lowE L b (d+1)) (lowE L b (d+4)) = cb at h
+  generalize ha : floatKeyL d (lowE L a (reserved := reserved) d) (lowE L a (reserved := reserved) (d+3)) = ca at h
+  generalize hb : floatKeyL (d+1) (lowE L b (reserved := reserved) (d+1)) (lowE L b (reserved := reserved) (d+4)) = cb at h
   cases ca with
   | none => cases h
   | some ca => cases cb with

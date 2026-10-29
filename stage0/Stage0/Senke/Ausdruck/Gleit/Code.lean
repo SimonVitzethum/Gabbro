@@ -4,15 +4,15 @@ import Stage0.Senke.Ausdruck.Gleit.Schluessel
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- A template consumes the two ordinary expression proofs; it adds no semantic assumption. -/
 theorem floatKeyL_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {a b c : List II} {lo hi : Int × Int} {v : Gleit lo hi}
     (h : floatKeyL d (some (a, ta)) (some (b, tb)) = some (c, top)) (hK : top ≤ K)
-    (ha : ∀ m pc, Pre L m pc fp K d a ρ W → Ok m pc fp K d a (Enc L (.fl lo hi) v))
-    (hb : ∀ m pc, Pre L m pc fp K (d+3) b ρ W → Ok m pc fp K (d+3) b (Enc L (.fl lo hi) v))
-    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
+    (ha : ∀ m pc, Pre L m pc fp K d a ρ W reserved → Ok m pc fp K d a (Enc L (.fl lo hi) v))
+    (hb : ∀ m pc, Pre L m pc fp K (d+3) b ρ W reserved → Ok m pc fp K (d+3) b (Enc L (.fl lo hi) v))
+    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (fun w => Gleitkomma.wf Gleitkomma.f64 v.x ∧ w = BitVec.ofInt 64 (floatKey v.x)) := by
   have ht := floatKeyL_top h
   simp only [floatKeyL, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at h
