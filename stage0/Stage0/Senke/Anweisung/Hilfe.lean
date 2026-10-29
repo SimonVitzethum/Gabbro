@@ -30,9 +30,6 @@ theorem mov_to {m : Runner.Mem} {pc fp : Runner.W} {K j s : Nat} {w : Runner.W}
   rw [sx_nat (by omega)]
   exact run_wr64 (wr64_some (hF.wr j hj))
 
-theorem star_cast {t t' u u' : T} {m m' : Runner.Mem} (h : Star t m t' m') (h1 : t = u) (h2 : t' = u') :
-    Star u m u' m' := by subst h1; subst h2; exact h
-
 theorem addr_norm (pc : Runner.W) (a b : Nat) :
     pc + BitVec.ofNat 64 a + BitVec.ofNat 64 b = pc + BitVec.ofNat 64 (a + b) := by
   rw [BitVec.add_assoc, ← BitVec.ofNat_add]
