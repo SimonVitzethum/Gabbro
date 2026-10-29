@@ -1,0 +1,8 @@
+// The empty array has a word but no readable index.
+module ir_probe {
+const EMPTY : [u8; 0] = [];
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    let a : [u8; 0] = EMPTY;
+    return lenof(a) + 42;
+}
+}

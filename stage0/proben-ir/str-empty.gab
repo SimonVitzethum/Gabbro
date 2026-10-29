@@ -1,0 +1,12 @@
+// Empty strings stay distinct from nonempty strings and read zero at every index.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    let s : string max 0 = "";
+    if s == "" {
+        if s[0] == 0 {
+            return lenof(s) + 42;
+        }
+    }
+    return 0;
+}
+}

@@ -1,0 +1,18 @@
+// Runtime short-string length, concatenation, byte access and comparisons.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 300 effects { pure } {
+    let a : string max 1 = "A" + "";
+    let b : string max 1 = "" + a;
+    let empty : string max 1 = "";
+    if empty < a {
+        if a == b {
+            if b[-1] == 0 {
+                if b[1] == 0 {
+                    return b[0] - 24 + lenof(a);
+                }
+            }
+        }
+    }
+    return 0;
+}
+}
