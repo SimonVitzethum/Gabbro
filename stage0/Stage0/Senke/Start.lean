@@ -70,7 +70,7 @@ theorem exitw_ok {m : Runner.Mem} {pc fp : Runner.W} {K nr s r : Nat} {w : Runne
   · rw [hsx, show (40 : Runner.W) = BitVec.ofNat 64 (8 * 5) by rfl, slot_plus]; exact r5
   · rw [hsx, show (48 : Runner.W) = BitVec.ofNat 64 (8 * 6) by rfl, slot_plus]; exact r6
 
-theorem encErg_none' {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : EncErg e v w := by
+theorem encErg_none' {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : EncErg Y e v w := by
   subst h; trivial
 
 theorem codeFar_nat' {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2 ^ 64) :
@@ -93,7 +93,7 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
     (hy : SyncOK m Y (BitVec.ofNat 64 fpI) Ks) :
     match rufAt P O passes n f σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = BitVec.ofNat 64 e ∧ (keep = true → EncErg (D.erg f) v q.a1)
+        q.nr = BitVec.ofNat 64 e ∧ (keep = true → EncErg Y (D.erg f) v q.a1)
     | .logik l => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (logikCode l)
     | .hardware h => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (hwCode h)
     | _ => False := by
@@ -134,7 +134,7 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
     simp only [m1]
     rw [rd_same hF (by omega), hconv]
   have hnp : (D.params f).length = 0 := by simpa using hpar
-  have hE : EnvAt m1 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 FB)) ρ := fun τ x => by
+  have hE : EnvAt Y m1 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 FB)) ρ := fun τ x => by
     have := idx_lt x; omega
   have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by
       have h4 : (callTail A f FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 hK (Nat.le_refl _)

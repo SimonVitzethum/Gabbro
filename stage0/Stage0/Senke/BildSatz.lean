@@ -25,7 +25,7 @@ theorem bild_kopf {b : Bild D} {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG 
   simp only [Bild.bytes, List.append_assoc] at hm
   exact rd64_leN hm hfp
 
-theorem encErg_none {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : EncErg e v w := by
+theorem encErg_none {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : EncErg Yb e v w := by
   subst h; trivial
 
 theorem codeFar_nat {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2 ^ 64) :
@@ -225,7 +225,7 @@ theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {p
     (σ : World D) (ρ : Env D (D.params main)) (hWa : WeltAt m Yb σ) :
     match rufAt P O passes n main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = BitVec.ofNat 64 231 ∧ EncErg (D.erg main) v q.a1
+        q.nr = BitVec.ofNat 64 231 ∧ EncErg Yb (D.erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (logikCode e)
     | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (hwCode e)
     | _ => False := by
@@ -387,7 +387,7 @@ theorem bild_ok [CloneOK] {P : Programm D} {O : Orakel D} {passes : Nat} {fs : L
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
     match rufAt P O passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = 231 ∧ EncErg (D.erg main) v q.a1
+        q.nr = 231 ∧ EncErg b.Y (D.erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by

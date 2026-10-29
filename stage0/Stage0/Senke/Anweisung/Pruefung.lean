@@ -13,7 +13,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem bool_ne_zero {b : Bool} : Runner.IR.bool b ≠ 0 ↔ b = true := by cases b <;> decide
 
@@ -23,10 +23,10 @@ theorem slt_lit {w : Runner.W} {k : Int} (hk : lit32 k = true) : w.slt (BitVec.o
 
 /-- `d := slot s < k` with `d = s + 1`. -/
 theorem sltC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {k : Int} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
-    (hp : PreS m pc fp K (s + 1) (sltC s k) ρ) (hk : lit32 k = true) (hs : s + 2 < K)
+    (hp : PreS L m pc fp K (s + 1) (sltC s k) ρ) (hk : lit32 k = true) (hs : s + 2 < K)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     Ok m pc fp K (s + 1) (sltC s k) (· = Runner.IR.bool (decide (w.toInt < k))) := by
-  have hp' : PreS m pc fp K (s + 1) ([ci 2 ((s + 1 : Nat) : Int) s 0] ++ [ci 1 (((s + 1 : Nat) : Int) + 1) k 0,
+  have hp' : PreS L m pc fp K (s + 1) ([ci 2 ((s + 1 : Nat) : Int) s 0] ++ [ci 1 (((s + 1 : Nat) : Int) + 1) k 0,
       ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1)]) ρ := hp
   have := hp.small
   exact ok_seq hp' (mov_ok hp'.left (by omega) (by omega) hw)
@@ -35,7 +35,7 @@ theorem sltC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {k : Int} {Γ : 
 
 /-- A test `c` leaving `v` in slot `d`, then the guard over `d`. -/
 theorem test_ok {m : Runner.Mem} {pc fp : Runner.W} {K d s : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {v : Runner.W} (hp : PreS m pc fp K d (c ++ guardC d 110 s) ρ) (ho : Ok m pc fp K d c (· = v))
+    {v : Runner.W} (hp : PreS L m pc fp K d (c ++ guardC d 110 s) ρ) (ho : Ok m pc fp K d c (· = v))
     (hd : d < K) (hs : s + 8 ≤ K) :
     (v ≠ 0 → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (c ++ guardC d 110 s).length), fp⟩ m' ∧
       Agree fp d K m m') ∧ (v = 0 → Stops ⟨pc, fp⟩ m 110) := by
@@ -52,11 +52,11 @@ theorem test_ok {m : Runner.Mem} {pc fp : Runner.W} {K d s : Nat} {c : List II} 
 
 /-- The lower bound. -/
 theorem loC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {lo : Int} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
-    (hp : PreS m pc fp K (s + 1) (loC s lo) ρ) (hk : lit32 lo = true) (hs : s + 10 ≤ K)
+    (hp : PreS L m pc fp K (s + 1) (loC s lo) ρ) (hk : lit32 lo = true) (hs : s + 10 ≤ K)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     (lo ≤ w.toInt → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (loC s lo).length), fp⟩ m' ∧
       Agree fp (s + 1) K m m') ∧ (¬ lo ≤ w.toInt → Stops ⟨pc, fp⟩ m 110) := by
-  have hp' : PreS m pc fp K (s + 1) ((sltC s lo ++ [ci 1 (((s + 1 : Nat) : Int) + 1) 0 0,
+  have hp' : PreS L m pc fp K (s + 1) ((sltC s lo ++ [ci 1 (((s + 1 : Nat) : Int) + 1) 0 0,
       ci 14 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1)]) ++ guardC (s + 1) 110 (s + 2)) ρ :=
     hp
   have := hp.small
@@ -73,7 +73,7 @@ theorem loC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {lo : Int} {Γ : 
 
 /-- The upper bound. -/
 theorem hiC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {hi : Int} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
-    (hp : PreS m pc fp K (s + 1) (hiC s hi) ρ) (hk : lit32 (hi + 1) = true) (hs : s + 10 ≤ K)
+    (hp : PreS L m pc fp K (s + 1) (hiC s hi) ρ) (hk : lit32 (hi + 1) = true) (hs : s + 10 ≤ K)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     (w.toInt ≤ hi → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (hiC s hi).length), fp⟩ m' ∧
       Agree fp (s + 1) K m m') ∧ (¬ w.toInt ≤ hi → Stops ⟨pc, fp⟩ m 110) := by
@@ -86,7 +86,7 @@ theorem hiC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {hi : Int} {Γ : 
 
 /-- A part of the test: nothing, or a test that passes in the range `P` and stops outside it. -/
 theorem part_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {P : Prop} (hp : PreS m pc fp K (s + 1) c ρ)
+    {P : Prop} (hp : PreS L m pc fp K (s + 1) c ρ)
     (h : (c = [] ∧ P) ∨ ((P → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
       Agree fp (s + 1) K m m') ∧ (¬ P → Stops ⟨pc, fp⟩ m 110))) :
     (P → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp (s + 1) K m m') ∧
@@ -98,7 +98,7 @@ theorem part_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {c : List II} {�
 /-- **The test of an answer**: inside `lo .. hi` on to the end, outside the stop 110. -/
 theorem chkC_ok {lo hi : Int} {s : Nat} {c : List II} (h : chkC (some (.int lo hi)) s = some c)
     {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
-    (hp : PreS m pc fp K (s + 1) c ρ) (hK : s + 10 ≤ K) (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
+    (hp : PreS L m pc fp K (s + 1) c ρ) (hK : s + 10 ≤ K) (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     (lo ≤ w.toInt ∧ w.toInt ≤ hi → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
       Agree fp (s + 1) K m m') ∧ (¬ (lo ≤ w.toInt ∧ w.toInt ≤ hi) → Stops ⟨pc, fp⟩ m 110) := by
   have hwi := BitVec.toInt_lt (x := w)

@@ -8,7 +8,7 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem idx_lt : {Γ : Ctx} → {τ : Ty} → (x : Var Γ τ) → Var.idx x < Γ.length
   | _, _, .here => by simp [Var.idx]
@@ -47,10 +47,10 @@ theorem slot_far {fp : Runner.W} {K i j : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64
   rw [Far, slot_toNat hr hi, slot_toNat hr hj]; omega
 
 theorem envAt_set {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {x : Var Γ τ}
-    {v : Wert D τ} {w : Runner.W} (h : EnvAt m fp ρ) (hx : m'.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w)
-    (he : Enc τ v w) (hothers : ∀ (τ' : Ty) (y : Var Γ τ'), Var.idx y ≠ Var.idx x →
+    {v : Wert D τ} {w : Runner.W} (h : EnvAt L m fp ρ) (hx : m'.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w)
+    (he : Enc L τ v w) (hothers : ∀ (τ' : Ty) (y : Var Γ τ'), Var.idx y ≠ Var.idx x →
       m'.rd64 (slot fp (BitVec.ofNat 64 (vslot y))) = m.rd64 (slot fp (BitVec.ofNat 64 (vslot y)))) :
-    EnvAt m' fp (ρ.set x v) := by
+    EnvAt L m' fp (ρ.set x v) := by
   intro τ' y
   by_cases hy : Var.idx y = Var.idx x
   · obtain ⟨rfl, hh⟩ := idx_eq x y hy
@@ -67,8 +67,8 @@ theorem vslot_there {Γ : Ctx} {τ σ : Ty} (y : Var Γ τ) : vslot (Var.there y
   simp [vslot, Var.idx]; omega
 
 theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {v : Wert D τ}
-    {w : Runner.W} (h : EnvAt m fp ρ) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
-    (he : Enc τ v w) : EnvAt m fp (Env.cons v ρ : Env D (τ :: Γ)) := by
+    {w : Runner.W} (h : EnvAt L m fp ρ) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w)
+    (he : Enc L τ v w) : EnvAt L m fp (Env.cons v ρ : Env D (τ :: Γ)) := by
   intro τ' y
   cases y with
   | here => exact ⟨w, by rw [vslot_here]; exact hw, he⟩
@@ -76,8 +76,8 @@ theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {
     obtain ⟨w', hw', he'⟩ := h τ' y
     exact ⟨w', by rw [vslot_there]; exact hw', he'⟩
 
-theorem envAt_tail {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {τ : Ty} {ρ : Env D (τ :: Γ)} (h : EnvAt m fp ρ) :
-    EnvAt m fp ρ.tail := by
+theorem envAt_tail {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {τ : Ty} {ρ : Env D (τ :: Γ)} (h : EnvAt L m fp ρ) :
+    EnvAt L m fp ρ.tail := by
   intro τ' y
   obtain ⟨w, hw, he⟩ := h τ' (.there y)
   rw [vslot_there] at hw

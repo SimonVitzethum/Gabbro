@@ -21,7 +21,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 def PCode (m : Runner.Mem) (A : D.Fn → Nat) (C : D.Fn → List II) (fp : Runner.W) (K : Nat) : Prop :=
   ∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ CodeFar (BitVec.ofNat 64 (A g)) (C g).length fp K
@@ -40,8 +40,8 @@ theorem WIn.lo {L : Lay D} {fp : Runner.W} {Ks K : Nat} (h : WIn L fp Ks K) : fp
   have := h.top; have := h.ks; omega
 
 /-- The word of a result. -/
-def EncErg : (e : Option Ty) → ErgVal D e → Runner.W → Prop
-  | some τ, v, w => Enc τ v w
+def EncErg (L : Lay D) : (e : Option Ty) → ErgVal D e → Runner.W → Prop
+  | some τ, v, w => Enc L τ v w
   | none, _, _ => True
 
 def FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
@@ -50,10 +50,10 @@ def FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     (ρ : Env D (D.params f)),
     c ≤ Ks → WIn L fp Ks K → K < 2 ^ 31 → FrameOK m fp K → PCode m A C fp K →
     m.rd64 (slot fp (BitVec.ofNat 64 0)) = some rp → m.rd64 (slot fp (BitVec.ofNat 64 1)) = some cfp →
-    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt m fp ρ → WeltAt m L σ → SyncOK m L fp Ks →
+    m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt L m fp ρ → WeltAt m L σ → SyncOK m L fp Ks →
     match S f σ ρ with
     | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
+        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (hwCode h)
     | _ => False
@@ -136,8 +136,8 @@ theorem WIn.sub {L : Lay D} {fp : Runner.W} {Ks K F : Nat} (h : WIn L fp Ks K) (
 /-! ## What a statement keeps -/
 
 theorem envAt_agreeW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat}
-    (h : EnvAt m fp ρ) (ha : AgreeW L fp d K m m') (htop : fp.toNat + 8 * K ≤ L.lo) (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
-    (hd : frei Γ ≤ d) (hK : d ≤ K) : EnvAt m' fp ρ := by
+    (h : EnvAt L m fp ρ) (ha : AgreeW L fp d K m m') (htop : fp.toNat + 8 * K ≤ L.lo) (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
+    (hd : frei Γ ≤ d) (hK : d ≤ K) : EnvAt L m' fp ρ := by
   intro τ x
   obtain ⟨w, hw, he⟩ := h τ x
   refine ⟨w, ?_, he⟩

@@ -206,7 +206,7 @@ theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (d
     (ρ : Env (declOf u) ((declOf u).params main)) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
     match rufAt P O passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = 231 ∧ EncErg ((declOf u).erg main) v q.a1
+        q.nr = 231 ∧ EncErg b.Y ((declOf u).erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by

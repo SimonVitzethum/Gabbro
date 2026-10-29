@@ -17,7 +17,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- `st (s+1) s`: the word of slot `s` to the address in slot `s + 1`. -/
 theorem st_step {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {va vb : Runner.W} {m' : Runner.Mem}
@@ -33,22 +33,22 @@ theorem st_step {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {va vb : Runner.
 /-- The store of a cell at address `a`: the value code `ce` into `s`, the address code `ca` into `s + 1`, `st`. -/
 theorem store_ok {m : Runner.Mem} {pc fp : Runner.W} {K Ks a : Nat} {Γ : Ctx} {ρ : Env D Γ} {L : Lay D}
     {σ σ' : World D} {ce ca : List II} {Pe : Runner.W → Prop}
-    (hp : PreS m pc fp K (frei Γ) (ce ++ ca ++ [stC (frei Γ)]) ρ)
+    (hp : PreS L m pc fp K (frei Γ) (ce ++ ca ++ [stC (frei Γ)]) ρ)
     (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) (htop : frei Γ + 2 ≤ Ks)
-    (hE : ∀ m pc, Pre m pc fp Ks (frei Γ) ce ρ (fun m => WeltAt m L σ) → Ok m pc fp Ks (frei Γ) ce Pe)
-    (hA : ∀ m pc, Pre m pc fp Ks (frei Γ + 1) ca ρ (fun m => WeltAt m L σ) →
+    (hE : ∀ m pc, Pre L m pc fp Ks (frei Γ) ce ρ (fun m => WeltAt m L σ) → Ok m pc fp Ks (frei Γ) ce Pe)
+    (hA : ∀ m pc, Pre L m pc fp Ks (frei Γ + 1) ca ρ (fun m => WeltAt m L σ) →
       Ok m pc fp Ks (frei Γ + 1) ca (· = BitVec.ofNat 64 a))
     (ha : L.lo ≤ a ∧ a + 8 ≤ L.hi)
     (hnew : ∀ m w, WeltAt m L σ → Pe w → WeltAt (write m (BitVec.ofNat 64 a) 8 w.toNat) L σ') :
     ∃ m', Star ⟨pc, fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (ce ++ ca ++ [stC (frei Γ)]).length), fp⟩ m' ∧
-      AgreeW L fp (frei Γ) K m m' ∧ EnvAt m' fp ρ ∧ WeltAt m' L σ' := by
+      AgreeW L fp (frei Γ) K m m' ∧ EnvAt L m' fp ρ ∧ WeltAt m' L σ' := by
   have hks := hW.ks
   have hwl := hW.lo
   have htp := hW.top
   have hl3 := hW.lay.2.2
   have hsm := hp.small
-  have hq : PreS m pc fp K (frei Γ) (ce ++ (ca ++ [stC (frei Γ)])) ρ := by
+  have hq : PreS L m pc fp K (frei Γ) (ce ++ (ca ++ [stC (frei Γ)])) ρ := by
     simpa [List.append_assoc] using hp
   -- the value
   have hpw := PreS.welt hq.left hks hWa hW.lay (by omega)

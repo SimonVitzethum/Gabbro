@@ -4,6 +4,7 @@
 -/
 import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Wenn
+import Stage0.Senke.Ausdruck.Fnptr
 import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
@@ -14,13 +15,13 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
     (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE L e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
-    Pre m pc fp K d c ρ W → Ok m pc fp K d c (Enc τ (eval σ₀ e σ ρ))
+    Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L τ (eval σ₀ e σ ρ))
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
@@ -30,6 +31,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       obtain ⟨rfl, rfl⟩ := h
       exact (const_ok hp hn (by omega)).mono fun w hw => hw
     · cases h
+  | _, _, .fnref f n hf, d, c, top, h, hK, m, pc, ρ, hp => fnref_ok σ₀ σ h hK hp
   | _, _, .tru, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -414,7 +416,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         exact (lowE_ok σ₀ σ hWL b d cb tb hb (by omega) m pc ρ hp).mono fun w hw => by
           simpa only [eval, hcond, Bool.false_eq_true, ↓reduceIte] using hw
     · cases h
-  | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
   | _, _, .getBytes .., _, _, _, h, _, _, _, _, _

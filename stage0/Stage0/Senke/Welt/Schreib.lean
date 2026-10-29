@@ -10,7 +10,7 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- A byte inside the frame's slots is writable. -/
 theorem frame_wr_byte {m : Runner.Mem} {fp : Runner.W} {K : Nat} (hF : FrameOK m fp K) {x : Nat}
@@ -100,7 +100,7 @@ theorem rd64_write_same {m : Runner.Mem} {a w : Runner.W} (hr : all m.rd a 8 = t
 
 /-- Writing the word of `v` at the global `g`. -/
 theorem weltAt_glob {m : Runner.Mem} {L : Lay D} {σ : World D} {g : D.Glob} {v : Wert D (D.gtyp g)} {w : Runner.W}
-    (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L) (he : Enc (D.gtyp g) v w) :
+    (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L) (he : Enc L (D.gtyp g) v w) :
     WeltAt (write m (BitVec.ofNat 64 (L.ga g)) 8 w.toNat) L (σ.storeGlob g v) := by
   obtain ⟨hs, hg, hwr⟩ := hW
   have hgin := hl.2.1 g
@@ -149,7 +149,7 @@ theorem storeSlot_other {σ : World D} {t t' : D.Tab} {f : D.Feld t} {f' : D.Fel
 /-- Writing the word of `v` at element `kn` of column `f` of table `t`. -/
 theorem weltAt_slot {m : Runner.Mem} {L : Lay D} {σ : World D} {t : D.Tab} {f : D.Feld t} {kn : Nat}
     {v : Wert D (D.typ t f)} {w : Runner.W} (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L)
-    (hk : (kn : Int) < D.count t) (he : Enc (D.typ t f) v w) :
+    (hk : (kn : Int) < D.count t) (he : Enc L (D.typ t f) v w) :
     WeltAt (write m (BitVec.ofNat 64 (L.elem t f kn)) 8 w.toNat) L (σ.storeSlot t kn f v) := by
   obtain ⟨hs, hg, hwr⟩ := hW
   have hin := hl.1 t f kn hk

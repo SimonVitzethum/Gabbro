@@ -22,10 +22,10 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration} {V : Vertrag D}
+variable {D : Deklaration} {L : Lay D} {V : Vertrag D}
 
 theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e} {w : Runner.W}
-    (h : EncErg e v w) : Enc τ (ergWert he v) w := by
+    (h : EncErg L e v w) : Enc L τ (ergWert he v) w := by
   subst he; exact h
 
 mutual
@@ -37,8 +37,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
     lowS A L lo (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
+    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execStmt O passes R s σ ρ)
@@ -272,8 +272,8 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
     lowB A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
+    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ)
@@ -302,7 +302,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     | ok σ1 ρ1 =>
       obtain ⟨m1, s1, a1, e1, hw1, k1⟩ := ih
       have hf := codeFar_right (n := cs.length) (k := cr.length) (by simpa using hp.far)
-      have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K (frei Γ) cr ρ1 :=
+      have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K (frei Γ) cr ρ1 :=
         ⟨hp.ctx, hp.small, frameOK_agreeW hp.frame a1, codeAt_agreeWIn hW a1 (codeAt_right hp.code) hf, hf, e1, trivial,
           wstab_true _ _⟩
       have ih2 := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
@@ -325,7 +325,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     have a1 := Agree.widen a1s hks
     have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
-    have hp1 : PreS m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ + 1) cr
+    have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ + 1) cr
         (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) :=
       ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf,
        envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen, trivial, wstab_true _ _⟩
@@ -360,7 +360,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
         weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hw1 (a2s.mono (Nat.zero_le _))
       have hq := hp.nextW hW (a1.trans (agreeW_of a2)) (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega)
         (by omega)
-      have hp2 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+      have hp2 : PreS L m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
         ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
          envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert he hew), trivial, wstab_true _ _⟩
       have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
@@ -390,7 +390,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨hAA, hst⟩
     · rw [hAA]
       have hq := hp.nextW hW a12 (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega) (by omega)
-      have hp2 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+      have hp2 : PreS L m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
         ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
          envAt_cons hq.env hw2 hen, trivial, wstab_true _ _⟩
       have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)

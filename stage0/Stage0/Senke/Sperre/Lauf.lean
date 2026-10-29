@@ -16,7 +16,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-! ## Bytes from a word -/
 
@@ -77,8 +77,8 @@ theorem AgreeK.rd_low {fp : W} {s a i : Nat} {m m' : Mem} (h : AgreeK fp s a m m
     simp only [BitVec.toNat_add, BitVec.toNat_ofNat, hs] at h1; omega
 
 theorem AgreeK.envAt {fp : W} {s a : Nat} {m m' : Mem} {Γ : Ctx} {ρ : Env D Γ} (h : AgreeK fp s a m m')
-    (he : EnvAt m fp ρ) (hs : frei Γ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31) :
-    EnvAt m' fp ρ := fun τ x => by
+    (he : EnvAt L m fp ρ) (hs : frei Γ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31) :
+    EnvAt L m' fp ρ := fun τ x => by
   obtain ⟨w, hw, hen⟩ := he τ x
   have := vslot_lt x
   exact ⟨w, by rw [h.rd_low (by omega) hf ha]; exact hw, hen⟩
@@ -89,16 +89,16 @@ theorem AgreeK.codeAt {fp : W} {s a : Nat} {m m' : Mem} (h : AgreeK fp s a m m')
   hc.agree (h.big hf ha) (by obtain ⟨h1, h2, h3⟩ := hcf; have := fp.isLt; exact ⟨h1, by omega, h3⟩)
 
 theorem AgreeK.preS {m m1 : Mem} {pc fp : W} {K d s a : Nat} {xs ys : List II} {Γ : Ctx} {ρ : Env D Γ}
-    (h : PreS m pc fp K d (xs ++ ys) ρ) (ha : AgreeK fp s a m m1) (hs : frei Γ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a)
-    (ha31 : a + 24 < 2 ^ 31) : PreS m1 (pc + BitVec.ofNat 64 (16 * xs.length)) fp K d ys ρ :=
+    (h : PreS L m pc fp K d (xs ++ ys) ρ) (ha : AgreeK fp s a m m1) (hs : frei Γ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a)
+    (ha31 : a + 24 < 2 ^ 31) : PreS L m1 (pc + BitVec.ofNat 64 (16 * xs.length)) fp K d ys ρ :=
   have hcf := codeFar_right (n := xs.length) (k := ys.length) (by simpa using h.far)
   ⟨h.ctx, h.small, ⟨h.frame.lt, fun i hi => by rw [ha.rd]; exact h.frame.rd i hi,
     fun i hi => by rw [ha.wr]; exact h.frame.wr i hi⟩, ha.codeAt hf ha31 (codeAt_right h.code) hcf, hcf,
    ha.envAt h.env hs hf ha31, trivial, wstab_true _ _⟩
 
 theorem AgreeK.kopf {m m1 : Mem} {fp : W} {K s a : Nat} {f : D.Fn} {rp cfp : W} {ρ0 : Env D (D.params f)}
-    (h : Kopf f m fp K rp cfp ρ0) (ha : AgreeK fp s a m m1) (hs : FB + (D.params f).length ≤ s)
-    (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha31 : a + 24 < 2 ^ 31) : Kopf f m1 fp K rp cfp ρ0 := by
+    (h : Kopf L f m fp K rp cfp ρ0) (ha : AgreeK fp s a m m1) (hs : FB + (D.params f).length ≤ s)
+    (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha31 : a + 24 < 2 ^ 31) : Kopf L f m1 fp K rp cfp ρ0 := by
   have hFB3 : FB = 3 := rfl
   refine ⟨by rw [ha.rd_low (by omega) hf ha31]; exact h.r0, by rw [ha.rd_low (by omega) hf ha31]; exact h.r1,
     ha.envAt h.env (by simp only [frei]; omega) hf ha31, h.big⟩

@@ -15,13 +15,13 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration} {V : Vertrag D}
+variable {D : Deklaration} {L : Lay D} {V : Vertrag D}
 
 /-- The code from `t` reaches `e` with the environment `ρ'` in the frame and the world `σ'` in memory, changing no
     slot below `lo`. -/
 abbrev Reach (L : Lay D) {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (pr : List Nat) (t : T) (m : Runner.Mem)
     (e : Runner.W) (σ' : World D) (ρ' : Env D Γ) : Prop :=
-  ∃ m', Star t m ⟨e, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧ EnvAt m' fp ρ' ∧ WeltAt m' L σ' ∧ Keeps fp pr m m'
+  ∃ m', Star t m ⟨e, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧ EnvAt L m' fp ρ' ∧ WeltAt m' L σ' ∧ Keeps fp pr m m'
 
 /-- What the code from `t` does for G's outcome `o` in the body of `f`: `ok` reaches the end `e`, `leave` and `next`
     the loop's targets `eL` and `eN`, `zurueck` returns (`RetZ`), `logik` stops with its code. -/
@@ -110,7 +110,7 @@ theorem tgt_eq0 {p : Runner.W} {a b : Nat} {x : Int} (h : a = b) :
 /-- `jmp` to a target `x` bytes after the end of the one instruction. -/
 theorem jmp_reach {L : Lay D} {Γ : Ctx} {m : Runner.Mem} {pc fp : Runner.W} {lo K : Nat} {pr : List Nat} {x : Int}
     {σ : World D} {ρ : Env D Γ} (hc : CodeAt m pc [ci 18 (16 + x) 0 0]) (hl : lit32 (16 + x) = true)
-    (he : EnvAt m fp ρ) (hw : WeltAt m L σ) :
+    (he : EnvAt L m fp ρ) (hw : WeltAt m L σ) :
     Reach L fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * [ci 18 (16 + x) 0 0].length) + BitVec.ofInt 64 x) σ ρ := by
   have hi := hc 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi

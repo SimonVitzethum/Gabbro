@@ -16,7 +16,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 theorem torCode_len (nr s n : Nat) (ca : List II) :
     (torCode nr s n ca).length = ca.length + (6 - n) + 2 := by
@@ -26,7 +26,7 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
     {args : Args D Γ Λ (D.aparams a)} {s : Nat} {c : List II} {top : Nat} {fp pc : Runner.W} {K Ks : Nat}
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (h : torC L a args s = some (c, top)) (hKs : top ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS m pc fp K s c ρ) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K s c ρ) (hWa : WeltAt m L σ) :
     ∃ b, L.tor a = some b ∧ ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ AgreeW L fp s K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w ∧
       WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
@@ -56,9 +56,9 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
         have hfar := codeFar_sub2 hp.far hks
         rw [torCode_len] at hfar
         -- the arguments
-        have hp0 : PreS m pc fp K s ((ca ++ zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length)) ++
+        have hp0 : PreS L m pc fp K s ((ca ++ zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length)) ++
             [ci 1 s b.nr 0, ci 23 s s 0]) ρ := hp
-        have hq : PreS m pc fp K (s + 1) ca ρ := (hp0.up (d' := s + 1) (by omega)).left.left
+        have hq : PreS L m pc fp K (s + 1) ca ρ := (hp0.up (d' := s + 1) (by omega)).left.left
         have hpw := PreS.welt hq hks hWa hW.lay (by omega)
         obtain ⟨m1, s1, a1, hA⟩ := lowR_ok σ σ (fun _ h => h) args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
         have hF1 := hFs.agree a1
@@ -97,7 +97,7 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
         have h32 : ∀ i, 0 < i → i < 7 → rdW m3 fp (s + i) = rdW m2 fp (s + i) := fun i h1 h2 => by
           simp only [rdW, m3]
           rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]
-        have hArgs : ArgsW (reqArg q) (evalArgs σ args σ ρ) := by
+        have hArgs : ArgsW L (reqArg q) (evalArgs σ args σ ρ) := by
           refine argsW_congr _ (fun j hj => ?_) hA
           rw [reqArg_mk _ f j (by omega)]
           simp only [f, show s + 1 + j = s + (1 + j) by omega, h32 (1 + j) (by omega) (by omega)]
@@ -154,7 +154,7 @@ theorem torC0_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ 
     {args : Args D Γ Λ (D.aparams a)} {s : Nat} {c : List II} {top : Nat} {fp pc : Runner.W} {K Ks : Nat}
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (h : torC0 L a args s = some (c, top)) (hKs : top ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS m pc fp K s c ρ) (hWa : WeltAt m L σ) :
+    (hp : PreS L m pc fp K s c ρ) (hWa : WeltAt m L σ) :
     ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ AgreeW L fp s K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w ∧
       WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
@@ -208,7 +208,7 @@ theorem einpassenErg_none {z : Int → Option D.Fn} {e : Option Ty} (he : e = no
 /-- An integer answer: inside its range the kernel's word is the value's word; outside, no answer. -/
 theorem einpassen_int {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} (he : e = some τ) {lo hi : Int}
     (hτ : τ = .int lo hi) (w : Runner.W) :
-    (lo ≤ w.toInt ∧ w.toInt ≤ hi → ∃ v, einpassenErg z e w.toInt = some v ∧ Enc τ (ergWert he v) w) ∧
+    (lo ≤ w.toInt ∧ w.toInt ≤ hi → ∃ v, einpassenErg z e w.toInt = some v ∧ Enc L τ (ergWert he v) w) ∧
     (¬ (lo ≤ w.toInt ∧ w.toInt ≤ hi) → einpassenErg z e w.toInt = none) := by
   subst he hτ
   refine ⟨fun h => ⟨⟨w.toInt, h.1, h.2⟩, ?_, ?_⟩, fun h => ?_⟩
@@ -223,12 +223,12 @@ theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
     {args : Args D Γ Λ (D.aparams a)} {τ : Ty} (he : D.aerg a = some τ) {ct ck cr : List II} {tt : Nat}
     {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (ht : torC0 L a args (frei Γ) = some (ct, tt)) (hck : chkC (D.aerg a) (frei Γ) = some ck)
-    (htt : tt ≤ Ks) (htk : frei Γ + 10 ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS m pc fp K (frei Γ) (ct ++ ck ++ cr) ρ)
+    (htt : tt ≤ Ks) (htk : frei Γ + 10 ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ) (ct ++ ck ++ cr) ρ)
     (hWa : WeltAt m L σ) :
     (∃ v m2 w, axiomAntwort O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, some v) ∧
       Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ct ++ ck).length), fp⟩ m2 ∧ AgreeW L fp (frei Γ) K m m2 ∧
-      m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w ∧ Enc τ (ergWert he v) w ∧
+      m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some w ∧ Enc L τ (ergWert he v) w ∧
       WeltAt m2 L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1) ∨
     (axiomAntwort O a σ (evalArgs σ args σ ρ) = ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, none) ∧
       Stops ⟨pc, fp⟩ m 110) := by
@@ -238,10 +238,10 @@ theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
   rw [he] at hck'
   cases τ with
   | int lo hi =>
-    have hp' : PreS m pc fp K (frei Γ) (ct ++ (ck ++ cr)) ρ := (List.append_assoc ct ck cr) ▸ hp
+    have hp' : PreS L m pc fp K (frei Γ) (ct ++ (ck ++ cr)) ρ := (List.append_assoc ct ck cr) ▸ hp
     obtain ⟨m1, w, s1, a1, hw1, hW1, hroh⟩ := torC0_ok (O := O) ht htt hW hp'.left hWa
     have hn := hp'.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
-    have hpk : PreS m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ + 1) ck ρ :=
+    have hpk : PreS L m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ + 1) ck ρ :=
       mkPreS (by omega) (by have := hp.small; omega) (frameOK_sub hn.frame hks) hn.left.code
         (codeFar_sub2 hn.left.far hks) hn.env
     obtain ⟨hin, hout⟩ := chkC_ok hck' hpk htk hw1

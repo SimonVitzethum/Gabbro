@@ -23,6 +23,8 @@ structure TorB where
   deriving DecidableEq, Repr
 
 structure Lay (D : Deklaration) where
+  /-- Code addresses, shared by function pointer words and call targets. -/
+  fa : D.Fn → Nat := fun _ => 0
   col : (t : D.Tab) → D.Feld t → Nat
   ga : D.Glob → Nat
   lo : Nat

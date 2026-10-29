@@ -20,7 +20,7 @@ open Gabbro.Grammatik Runner.IR
 /-- Constructor equations for expression lowering; kept separate from generated recursive equations. -/
 register_simp_attr lowE_eqs
 
-variable {D : Deklaration}
+variable {D : Deklaration} {L : Lay D}
 
 /-- The position of a variable, counted from the head of the context. -/
 def Var.idx : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
@@ -141,6 +141,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
     else none
   | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
+  | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
   | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
@@ -156,16 +157,17 @@ def optN {n : Int} : Option (Zahl 0 (n - 1)) → Int
   | Option.some k => k.n
 
 /-- `w` is the word of the value `v` of type `τ`. -/
-def Enc : (τ : Ty) → Wert D τ → Runner.W → Prop
+def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .int _ _, v, w => w = BitVec.ofInt 64 v.n
   | .bool, v, w => w = (if wahr? (D := D) v = true then 1 else 0)
   | .opt _, v, w => w = BitVec.ofInt 64 (optN v)
   | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
+  | .fnptr _, v, w => w = BitVec.ofNat 64 (L.fa v.1)
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 
 /-- The variables of `ρ` are in their slots of the frame at `fp`. -/
-def EnvAt (m : Runner.Mem) (fp : Runner.W) {Γ : Ctx} (ρ : Env D Γ) : Prop :=
-  ∀ (τ : Ty) (x : Var Γ τ), ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w ∧ Enc τ (ρ.get x) w
+def EnvAt (L : Lay D) (m : Runner.Mem) (fp : Runner.W) {Γ : Ctx} (ρ : Env D Γ) : Prop :=
+  ∀ (τ : Ty) (x : Var Γ τ), ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 (vslot x))) = some w ∧ Enc L τ (ρ.get x) w
 
 end Gabbro.Stage0.Senke
