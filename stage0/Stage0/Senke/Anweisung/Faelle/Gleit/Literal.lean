@@ -18,7 +18,7 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
     BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .floatLit q low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB] at h
+  simp only [lowB, floatLiteralL] at h
   cases hv : gleitPasst low high (bruch q) with
   | none =>
     rw [hv] at h
@@ -53,5 +53,24 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
         (by simp only [List.length_append] at hs; omega) hW m pc σ _ hp hlo
         (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu hk hw
         (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+
+theorem blockFloatOfLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Int} {low high : Int × Int} {rest : Block D (vertragVon D f) l (.fl low high :: Γ) Λ Λ'} :
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
+    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .floatOf (.lit n) low high rest) := by
+  intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+  have hx : gleitAusInt n = bruch (n, 1) := by
+    simpa only [gleitAusInt, bruch, show ¬(1 : Int) < 0 by omega, ↓reduceIte,
+      Int.natAbs_one] using Gleitkomma.ofInt_bruch Gleitkomma.f64 n
+  have result := blockFloatLit_case hS hA hlo0 hens ihRest c top
+    (by simpa only [lowB] using h) hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+  simpa only [execBlock, eval, Expr.orte, World.lese, World.merke,
+    List.map_nil, List.nil_append, hx] using result
 
 end Gabbro.Stage0.Senke

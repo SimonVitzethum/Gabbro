@@ -184,6 +184,19 @@ check. The x86-64 subset the runner needs is therefore about 20 instructions.
 
 #### 2.1.4 What is lowered instead of built in
 
+**Measured float fragment (2026-10-29):** binary64 literals, comparisons and narrowing are lowered.
+`floatOf (.lit n)` reuses literal materialisation, with a generic proof for every `Int` (including rounding
+and overflow) and the same range stop as G. `floatRoundL` is an integer-only nearest-even fragment, proved
+against `rundeInt` when `remainder < denominator < 2^63`; it avoids doubling the remainder and supports an
+arbitrary unsigned quotient, with a modular word result. This is not yet a complete soft-float operation.
+Dynamic `floatOf` needs signed-magnitude extraction, exponent discovery, significand scaling and packing,
+with their IR simulation. `add/sub` also need alignment with guard/sticky information, cancellation,
+normalisation, all signed-zero/infinity/NaN rules (including G's payload choice), and the final range test.
+`mul/div` remain refused: multiplication needs a proved wide significand product and exponent combination;
+division needs a proved quotient/remainder algorithm with sufficient precision for final nearest-even
+rounding. Both additionally need special cases, normal/subnormal packing, range checks and block simulation.
+No arithmetic operation is accepted on the strength of the rounding fragment alone.
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access
