@@ -53,3 +53,5 @@ import Stage0.Senke.Ausdruck.Tag
 #print axioms Gabbro.Stage0.Senke.retFreiArms_istZ
 #print axioms Gabbro.Stage0.Senke.onTag_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.sumFits_zeuge
+#print axioms Gabbro.Stage0.Senke.lowN_ok
+#print axioms Gabbro.Stage0.Senke.packSum_ok

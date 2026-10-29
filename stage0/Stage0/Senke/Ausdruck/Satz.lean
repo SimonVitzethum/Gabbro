@@ -4,6 +4,7 @@
 -/
 import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Wenn
+import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
@@ -16,6 +17,7 @@ variable [Kern]
 
 variable {D : Deklaration}
 
+mutual
 theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
     (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
@@ -397,6 +399,17 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
     have := slotC_top hs
     exact slotC_ok hs hK (fun m pc hp => lowE_ok σ₀ σ hWL i d ci1 ti hci (by simp only at this; omega) m pc ρ hp) hWL hp
+  | _, _, .case cs i nutz, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE_eqs] at h
+    split at h
+    · next hfit =>
+      have hl : cs.length ≤ 256 := by
+        simpa only [sumFits, Bool.and_eq_true, decide_eq_true_eq] using
+          (show decide (cs.length ≤ 256) = true from (by
+            simp only [sumFits, Bool.and_eq_true] at hfit; exact hfit.1))
+      exact (lowN_ok σ₀ σ hWL i.val (by have := i.isLt; omega) nutz d c top h hK m pc ρ hp).mono
+        (fun w hw => ⟨hfit, hw⟩)
+    · cases h
   | _, _, .wenn cond a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, h⟩ := h
@@ -420,7 +433,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .getBytes .., _, _, _, h, _, _, _, _, _
   | _, _, .fllt .., _, _, _, h, _, _, _, _, _
   | _, _, .flle .., _, _, _, h, _, _, _, _, _
-  | _, _, .case .., _, _, _, h, _, _, _, _, _
   | _, _, .forallSlots .., _, _, _, h, _, _, _, _, _
   | _, _, .existsSlots .., _, _, _, h, _, _, _, _, _
   | _, _, .reaches .., _, _, _, h, _, _, _, _, _
@@ -438,5 +450,28 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .strLt .., _, _, _, h, _, _, _, _, _
   | _, _, .strWeit .., _, _, _, h, _, _, _, _, _
   | _, _, .eng .., _, _, _, h, _, _, _, _, _ => by simp [lowE_eqs] at h
+
+theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (tag : Nat) (htag : tag < 256) :
+    {Γ : Ctx} → {a : Option (Int × Int)} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
+    (c : List II) → (top : Nat) → lowN L tag nutz d = some (c, top) → top ≤ K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre m pc fp K d c ρ W →
+    Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff a (evalNutz σ₀ nutz σ ρ)))
+  | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact (const_ok hp (lit32_nat (by omega)) (by omega)).mono (fun w hw => by
+      simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw)
+  | _, _, .num e, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE_eqs] at h
+    split at h
+    · next hl =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ce, te⟩, he, hc⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+      exact packSum_ok hl htag (by simp only [packSum, bin2] at hK; omega)
+        (fun m pc hp => lowE_ok σ₀ σ hWL e d ce te he (by simp only [packSum, bin2] at hK; omega) m pc ρ hp) hp
+    · cases h
+end
 
 end Gabbro.Stage0.Senke

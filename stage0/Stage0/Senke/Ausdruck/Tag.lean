@@ -127,4 +127,31 @@ theorem sumFits_zeuge :
     sumFits [some (0, 2 ^ 56 - 1)] = true ∧
     sumFits [some (0, 2 ^ 56)] = false := by decide
 
+section
+variable [Kern]
+/-- Construct a sum word from its payload expression, using wrapping word arithmetic. -/
+theorem packSum_ok {m : Runner.Mem} {pc fp : Runner.W} {K d tag : Nat} {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {lo hi : Int} {v : Zahl lo hi} {ce : List II × Nat}
+    (hl : lit32 lo = true) (htag : tag < 256) (hK : d + 2 ≤ K)
+    (ih : ∀ m pc, Pre m pc fp K d ce.1 ρ W → Ok m pc fp K d ce.1 (Enc (D := D) (.int lo hi) v))
+    (hp : Pre m pc fp K d (packSum d lo tag ce).1 ρ W) :
+    Ok m pc fp K d (packSum d lo tag ce).1
+      (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff (some (lo, hi)) v)) := by
+  simp only [packSum, bin2] at hp ⊢
+  refine bin_ok (Pa := fun w => w = BitVec.ofInt 64 ((v.n - lo) * 256))
+    (fun m pc hp => bin_ok (Pa := fun w => w = BitVec.ofInt 64 (v.n - lo))
+      (fun m pc hp => bin_ok ih (fun m pc hp => const_ok hp hl (by omega))
+        (g := fun a b => some (a - b))
+        (fun a b ha hb => ⟨_, rfl, by rw [ha, hb, ← ofInt_sub']⟩) rfl (by decide) (by omega) hp)
+      (fun m pc hp => const_ok hp (by decide) (by omega)) (g := fun a b => some (a * b))
+      (fun a b ha hb => ⟨_, rfl, by rw [ha, hb, ← BitVec.ofInt_mul]⟩) rfl (by decide) (by omega) hp)
+    (fun m pc hp => const_ok hp (lit32_nat (by omega)) (by omega)) (g := fun a b => some (a + b))
+    (fun a b ha hb => ⟨_, rfl, ?_⟩) rfl (by decide) (by omega) hp
+  rw [ha, hb, ← BitVec.ofInt_add, ← BitVec.ofInt_natCast]
+  congr 1
+  have := v.lo_le
+  simp only [sumOff]
+  omega
+end
+
 end Gabbro.Stage0.Senke

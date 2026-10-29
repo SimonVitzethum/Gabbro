@@ -13,6 +13,9 @@ variable {D : Deklaration}
 
 /-! ## Words of values -/
 
+theorem lit32_nat {n : Nat} (h : n < 2 ^ 31) : lit32 (n : Int) = true := by
+  simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega
+
 theorem toInt_ofInt_in {x : Int} (h1 : -2 ^ 63 ≤ x) (h2 : x < 2 ^ 63) : (BitVec.ofInt 64 x).toInt = x := by
   rw [BitVec.toInt_ofInt, Int.bmod_eq_of_le (by omega) (by omega)]
 

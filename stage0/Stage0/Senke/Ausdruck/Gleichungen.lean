@@ -183,7 +183,16 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 @[lowE_eqs] theorem lowE_case (cs : List (Option (Int × Int))) (i : Fin cs.length)
       (nutz : NutzlastExpr D Γ Λ (cs.get i)) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.case cs i nutz) d =
-    (none) := rfl
+    (if sumFits cs then lowN L i.val nutz d else none) := rfl
+
+@[lowE_eqs] theorem lowN_empty (tag : Nat) :
+    lowN L (Γ := Γ) (Λ := Λ) tag .empty d = some ([ci 1 d tag 0], d + 1) := rfl
+
+@[lowE_eqs] theorem lowN_num (tag : Nat) (e : Expr D Γ Λ (.int lo hi)) :
+    lowN L tag (.num e) d = (if lit32 lo then do
+      let ce ← lowE L e d
+      pure (packSum d lo tag ce)
+    else none) := rfl
 
 @[lowE_eqs] theorem lowE_why (n : Nat) (r : Fin n) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.why n r) d =
