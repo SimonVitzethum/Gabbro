@@ -289,12 +289,12 @@ theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
   exact Sim.prefix hlo s3 (A.mono hlo2) (keeps_of_agreeW hW A hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
 
 /-- The load of `awaits`: the global's word into the new variable's slot. -/
-theorem awaits_head {g : D.Glob} {cr : List II} (hl : lit32 (L.ga g) = true) (hs1 : frei Γ + 1 ≤ Ks)
+theorem awaits_head {reserved : Nat} {g : D.Glob} {cr : List II} (hl : lit32 (L.ga g) = true) (hs1 : frei Γ reserved + 1 ≤ Ks)
     (hW : WIn L fp Ks K) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS L m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
+    (hp : PreS L m pc fp K (frei Γ reserved) ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr) ρ reserved)
     (hWa : WeltAt m L σ) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m' ∧ AgreeW L fp (frei Γ) K m m' ∧
-      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr (Env.cons (σ.globs g) ρ) ∧ WeltAt m' L σ := by
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m' ∧ AgreeW L fp (frei Γ reserved) K m m' ∧
+      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ reserved + 1) cr (Env.cons (σ.globs g) ρ) reserved ∧ WeltAt m' L σ := by
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, w, hw, hen⟩ := glob_ok (σ := σ) hl hpw (fun _ h => h) (by omega)
