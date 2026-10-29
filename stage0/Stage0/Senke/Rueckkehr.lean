@@ -9,6 +9,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-- What the code from `t` does when G returns `v` in the world `σ'` from the body of `f`, without the world:

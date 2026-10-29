@@ -8,6 +8,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 theorem pc_add (pc : Runner.W) (a b : Nat) :
     pc + BitVec.ofNat 64 (16 * a) + BitVec.ofNat 64 (16 * b) = pc + BitVec.ofNat 64 (16 * (a + b)) := by
   rw [BitVec.add_assoc, ← BitVec.ofNat_add, Nat.mul_add]

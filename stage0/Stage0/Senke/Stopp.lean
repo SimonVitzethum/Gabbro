@@ -12,6 +12,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-- The exit code of a logic outcome: 100 + its kind. -/
@@ -23,6 +27,15 @@ def logikCode : Logik D → Nat
   | .abstieg _ => 105
   | .vorzustand => 106
   | _ => 107
+
+/-- The exit code of a hardware outcome: 110 + its kind. -/
+def hwCode : Hardware D → Nat
+  | .annahme _ => 110
+  | .fortschritt _ => 111
+  | .ieee => 112
+  | .register _ => 113
+  | .geraet _ => 114
+  | .sichtbarkeit _ => 115
 
 def stopC (c s : Nat) : List II := [ci 1 s 231 0, ci 1 ((s + 1 : Nat) : Int) c 0, ci 23 ((s + 7 : Nat) : Int) s 0]
 

@@ -11,6 +11,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Runner.IR
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 /-- The bytes of one column. -/
 def colSz (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Nat :=
   8 * ((declOf u).count t).toNat
@@ -192,6 +196,7 @@ theorem bild_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (declOf u)} 
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg ((declOf u).erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
+    | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by
   have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u x h) (fun x => layU_dis u x) hm σ ρ hWa
   generalize rufAt P O passes b.depth main σ ρ = o at h ⊢

@@ -8,6 +8,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 /-- `mov j s`: slot `j` gets the word of slot `s`. -/
 theorem mov_to {m : Runner.Mem} {pc fp : Runner.W} {K j s : Nat} {w : Runner.W}
     (hc : CodeAt m pc [ci 2 j s 0]) (hF : FrameOK m fp K) (hj : j < K) (hs : s < K) (hK : K < 2 ^ 31)

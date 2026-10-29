@@ -13,6 +13,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-- `st (s+1) s`: the word of slot `s` to the address in slot `s + 1`. -/

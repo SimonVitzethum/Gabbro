@@ -10,6 +10,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-- `exit_group` with the word of slot `r`. -/
@@ -97,6 +101,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg (D.erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (logikCode e)
+    | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (hwCode h)
     | _ => False := by
   have hcb : codeBase = 268435472 := rfl
   have hFB3 : FB = 3 := rfl
@@ -208,7 +213,7 @@ theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn
         encErg_none (by simpa using hs) v _⟩
   | logik e => exact Stops.prefix s1 hcall
   | why _ _ => exact hcall.elim
-  | hardware _ => exact hcall.elim
+  | hardware e => exact Stops.prefix s1 hcall
 
 /-- **The program theorem.** For every world `σ` the image's world bytes hold (`WeltAt`), under a world layout
     `Y` that keeps every cell in the world once it ends below `2^31` (`LayIn`) and gives no two cells one word
@@ -223,6 +228,7 @@ theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} 
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ EncErg (D.erg main) v q.a1
     | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
+    | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by
   simp only [bild] at hb
   split at hb

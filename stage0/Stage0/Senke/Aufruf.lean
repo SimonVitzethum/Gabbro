@@ -9,6 +9,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-- A read of slot `b` after a write of slot `a ≠ b`. -/
@@ -33,6 +37,7 @@ theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wor
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ Agree fp F K m m' ∧
         (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some w ∧ EncErg (D.erg f) v w) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
+    | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
     | _ => False := by
   have hroom := hF.room
   have hlt := hF.lt
@@ -171,7 +176,9 @@ theorem call_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wor
     rw [hR] at hspec
     exact Stops.prefix s14 hspec
   | why σ' r => rw [hR] at hspec; exact hspec
-  | hardware e => rw [hR] at hspec; exact hspec
+  | hardware e =>
+    rw [hR] at hspec
+    exact Stops.prefix s14 hspec
 
 /-! ## The arguments, and a whole call -/
 
@@ -244,6 +251,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
         (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 2))) = some w ∧ EncErg (D.erg f) v w) ∧
         WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
+    | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
     | _ => False := by
   simp only [callTop] at htop
   have hFB : FB ≤ frei Γ := by simp only [frei]; omega
@@ -268,6 +276,6 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     exact s2
   | logik e => exact Stops.prefix s1 hc
   | why _ _ => exact hc.elim
-  | hardware _ => exact hc.elim
+  | hardware e => exact Stops.prefix s1 hc
 
 end Gabbro.Stage0.Senke

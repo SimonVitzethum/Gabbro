@@ -13,6 +13,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration} {V : Vertrag D}
 
 theorem encErg_wert {e : Option Ty} {τ : Ty} (he : e = some τ) {v : ErgVal D e} {w : Runner.W}
@@ -161,7 +165,7 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
         keeps_of_agree a1 hp.frame.room hpr (by omega)⟩
     | logik e => exact hc
     | why _ _ => exact hc.elim
-    | hardware _ => exact hc.elim
+    | hardware e => exact hc
   | _, Γ, Λ, _, .ret e _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, hk, hWa, hpr => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ce, te⟩, he, hc⟩ := h
@@ -388,7 +392,7 @@ theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
         (keeps_of_agree (a1.trans a2) hp.frame.room hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
     | logik e => exact hc
     | why _ _ => exact hc.elim
-    | hardware _ => exact hc.elim
+    | hardware e => exact hc
   | _, _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .bindCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .bindAxiom .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h

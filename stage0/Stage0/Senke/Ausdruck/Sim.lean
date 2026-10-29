@@ -13,6 +13,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-- `W` survives every run that writes only the frame's slots: a fact about memory outside the frame (the world). -/

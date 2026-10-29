@@ -13,6 +13,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 theorem guard_brz {m : Runner.Mem} {pc : Runner.W} {a c s : Nat} (hc : CodeAt m pc (guardC a c s)) :
@@ -189,7 +193,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
         | why _ _ => exact hret.elim
         | leave h _ _ => exact absurd h Bool.false_ne_true
         | next h _ _ => exact absurd h Bool.false_ne_true
-        | hardware _ => exact hret.elim
+        | hardware e => exact Stops.prefix spre hret
     · simp at hlf
 
 end Gabbro.Stage0.Senke

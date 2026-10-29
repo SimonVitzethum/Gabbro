@@ -3,8 +3,8 @@ import Runner.Basis.MemLemma
 
 /-! # One `S0IR` thread on one memory, and the steps of single instructions
 
-`Run r m t m'`: the request tree `r`, answered by the memory `m` (sequentially consistent, no system call),
-ends in the thread state `t` with the memory `m'`. `Star t m t' m'`: instruction after instruction. This is the
+`Run r m t m'`: the request tree `r`, answered by the memory `m` (sequentially consistent) and by the kernel
+(`Kern`, a system call), ends in the thread state `t` with the memory `m'`. `Star t m t' m'`: instruction after instruction. This is the
 IR side of `ir_sim` (the lowering of stage 0 against machine G); with `runner_sc` it reaches the runner.
 
 `InsAt m pc o a b c`: the memory holds the instruction with opcode `o` and fields `a b c` at `pc`. The lemmas
@@ -21,10 +21,19 @@ def memAns (m : Mem) : Op → Option (Ans × Mem)
   | .cas a e n => some (match m.cas a e n with | some (o, m') => (some (o, 0), m') | none => (none, m))
   | .sys _ => none
 
+/-- **The kernel**: which answer and which memory a system call may leave. Any relation; what a program may rely
+    on is the named assumption at its gates (`Stage0/Senke/Tor`). -/
+class Kern where
+  ans : Req → Mem → Ans → Mem → Prop
+
+variable [Kern]
+
 inductive Run : Res T → Mem → T → Mem → Prop
   | next {t : T} {m : Mem} : Run (.next t) m t m
   | ask {o : Op} {k : Ans → Res T} {m m' m'' : Mem} {a : Ans} {t : T} :
       memAns m o = some (a, m') → Run (k a) m' t m'' → Run (.ask o k) m t m''
+  | sys {q : Req} {k : Ans → Res T} {m m' m'' : Mem} {a : Ans} {t : T} :
+      Kern.ans q m a m' → Run (k a) m' t m'' → Run (.ask (.sys q) k) m t m''
 
 inductive Star : T → Mem → T → Mem → Prop
   | refl (t : T) (m : Mem) : Star t m t m

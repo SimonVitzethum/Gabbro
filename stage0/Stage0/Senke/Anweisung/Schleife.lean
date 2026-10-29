@@ -14,6 +14,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-! ## The indices -/
@@ -477,7 +481,10 @@ theorem trav_loop (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1
       | logik e =>
         simp only [Sim] at hb ⊢
         exact Stops.prefix pre hb
-      | why | hardware => exact hb.elim
+      | hardware e =>
+        simp only [Sim] at hb ⊢
+        exact Stops.prefix pre hb
+      | why => exact hb.elim
 
 /-- **`traverse`**: the code of `travC` runs G's `traverseLauf` over all indices. -/
 theorem trav_ok (hn : lit32 (D.count t) = true) (hci : lowE L inv (frei Γ + 1) = some ci')

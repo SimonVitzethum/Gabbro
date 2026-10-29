@@ -11,6 +11,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration} {V : Vertrag D}
 
 /-- The code from `t` reaches `e` with the environment `ρ'` in the frame and the world `σ'` in memory, changing no
@@ -29,6 +33,7 @@ def Sim (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.
   | .next _ σ' ρ' => Reach L fp lo K pr t m eN σ' ρ'
   | .zurueck σ' v => RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v
   | .logik c => Stops t m (logikCode c)
+  | .hardware h => Stops t m (hwCode h)
   | _ => False
 
 section
@@ -51,7 +56,8 @@ theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner
     have hFB3 : FB = 3 := rfl
     exact RetZ.prefix h (ha.mono (by omega)) hs
   | logik c => exact Stops.prefix h hs
-  | why | hardware => exact hs
+  | hardware c => exact Stops.prefix h hs
+  | why => exact hs
 
 /-- `ok` goes on from `e1` to `e2`; `leave` and `next` keep their targets. -/
 theorem Sim.cont {o : Ausgang (vertragVon D f) l Γ} {t : T} {m : Runner.Mem} {e1 e2 eL eN eL' eN' : Runner.W}

@@ -13,6 +13,10 @@ namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
+set_option linter.unusedSectionVars false
+
+variable [Kern]
+
 variable {D : Deklaration}
 
 /-- What the body's code from `t` does for G's outcome of an end block: `zurueck` returns (`RetZ`), `logik` stops
@@ -22,6 +26,7 @@ def Ret (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.
     EndAusgang (vertragVon D f) l Γ → Prop
   | .zurueck σ' v => RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v
   | .logik e => Stops t m (logikCode e)
+  | .hardware h => Stops t m (hwCode h)
   | .leave _ σ' ρ' => Reach L fp lo K pr t m eL σ' ρ'
   | .next _ σ' ρ' => Reach L fp lo K pr t m eN σ' ρ'
   | _ => False
@@ -36,9 +41,10 @@ theorem Ret.prefix {o : EndAusgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Run
   cases o with
   | zurueck σ' v => exact RetZ.prefix h (ha.mono hl) hs
   | logik e => exact Stops.prefix h hs
+  | hardware e => exact Stops.prefix h hs
   | leave _ σ' ρ' => exact Reach.prefix h ha hk hs
   | next _ σ' ρ' => exact Reach.prefix h ha hk hs
-  | why | hardware => exact hs
+  | why => exact hs
 
 theorem Ret.cast {o : EndAusgang (vertragVon D f) l Γ} {t t' : T} {m : Runner.Mem} {eL eN eL' eN' : Runner.W}
     (hs : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) (h : t = t') (h3 : eL = eL') (h4 : eN = eN') :
@@ -104,7 +110,8 @@ theorem lowEnd_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → 
     | logik e => exact ih
     | leave _ σ' ρ' => exact (show Reach L fp lo K pr _ m _ σ' ρ' from hL ▸ ih)
     | next _ σ' ρ' => exact (show Reach L fp lo K pr _ m _ σ' ρ' from hN ▸ ih)
-    | why | hardware => exact (ih : False).elim
+    | hardware e => exact ih
+    | why => exact (ih : False).elim
   | _, Γ, Λ, .bind e rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
     simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
@@ -166,7 +173,7 @@ theorem lowEnd_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → 
         (keeps_of_agree (a1.trans a2) hp.frame.room hpr (by have := hW.ks; omega)) (Ret.schrumpf ih)
     | logik e => exact hc
     | why _ _ => exact hc.elim
-    | hardware _ => exact hc.elim
+    | hardware e => exact hc
   | _, Γ, Λ, .ite cnd t e, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
     simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨ct, tt⟩, hct, hc⟩ := h
