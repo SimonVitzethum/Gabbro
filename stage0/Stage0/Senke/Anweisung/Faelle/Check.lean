@@ -21,6 +21,14 @@ theorem Ret.toSim {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang := by
   cases o <;> exact h
 
+theorem Ret.ofSim {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
+    {ρ0 : Env D (D.params f)} {fp rp cfp : Runner.W} {lo K : Nat} {pr : List Nat}
+    {t : T} {m : Runner.Mem} {e eL eN : Runner.W} {l : Bool} {Γ : Ctx}
+    {o : EndAusgang (vertragVon D f) l Γ}
+    (h : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang) :
+    Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o := by
+  cases o <;> exact h
+
 theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}

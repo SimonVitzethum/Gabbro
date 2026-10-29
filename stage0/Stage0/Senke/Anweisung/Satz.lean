@@ -25,6 +25,7 @@ import Stage0.Senke.Anweisung.Faelle.EndFehler
 import Stage0.Senke.Anweisung.Faelle.EndAtomar
 
 import Stage0.Senke.Anweisung.Faelle.Check
+import Stage0.Senke.Anweisung.Faelle.NarrowCases
 
 namespace Gabbro.Stage0.Senke
 
@@ -267,7 +268,11 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
             (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)) hp hu hk hWa
       · cases h
     · cases h
-  | _, _, _, _, .narrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .narrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact blockNarrow_case hS hA hlo0 hens
+      (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .check cnd err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
     exact blockCheck_case hS hA hlo0 hens
       (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)
@@ -331,7 +336,11 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
       (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
       c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   | _, _, _, .bindCallInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
-  | _, _, _, .narrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
+  | _, Γ, Λ, .narrow e low high err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    exact endNarrow_case hS hA hlo0 hens
+      (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens err)
+      (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+      c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   | _, Γ, Λ, .exchange g neu proof0 proof1 rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
     exact endExchange_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (g := g) (neu := neu) (proof0 := proof0) (proof1 := proof1) (rest := rest)
       (fun {pr ex} => lowEnd_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
