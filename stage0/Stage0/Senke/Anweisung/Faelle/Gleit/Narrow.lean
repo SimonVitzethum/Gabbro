@@ -81,7 +81,7 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
       simp only [Bool.and_eq_true, decide_eq_true_eq] at hnan
       by_cases hl : Gleitkomma.klasse Gleitkomma.f64 (bruch low') = .nan
       · exact Or.inl hl
-      · exact Or.inr (by by_contra hh; exact hnan ⟨hl, hh⟩)
+      · exact Or.inr (Classical.byContradiction fun hh => hnan ⟨hl, hh⟩)
     simp only [execBlock, floatPasst_nan_bound _ hn]
     exact Ret.toSim (ihErr (ex := ex) c top h hK hs hW m pc _ ρ hp hlo2 hu hk hWa hpr)
 

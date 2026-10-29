@@ -6,12 +6,6 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 
-theorem floatKeyL_top {d ta tb top : Nat} {a b c : List II}
-    (h : floatKeyL d (some (a, ta)) (some (b, tb)) = some (c, top)) :
-    d + 5 ≤ top ∧ ta ≤ top ∧ tb ≤ top := by
-  simp only [floatKeyL, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq, bin2] at h
-  omega
-
 /-- A template consumes the two ordinary expression proofs; it adds no semantic assumption. -/
 theorem floatKeyL_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {a b c : List II} {lo hi : Int × Int} {v : Gleit lo hi}

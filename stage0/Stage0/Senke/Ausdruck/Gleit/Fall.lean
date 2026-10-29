@@ -1,6 +1,6 @@
 /- Expression induction is used only for the float operands. -/
 import Stage0.Senke.Ausdruck.Gleit.NichtNaN
-import Stage0.Senke.Ausdruck.Gleit.Vergleich
+import Stage0.Senke.Ausdruck.Gleit.Code
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -28,11 +28,6 @@ theorem floatKeyE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res 
     | some cb =>
       have ht := floatKeyL_top h
       exact floatKeyL_ok h hK (ih _ _ _ ha (by omega)) (ih _ _ _ hb (by omega)) hp
-
-theorem floatCmpL_bounds {le : Bool} {d ta tb top : Nat} {a b c : List II}
-    (h : floatCmpL le d (some (a, ta)) (some (b, tb)) = some (c, top)) : ta ≤ top ∧ tb ≤ top := by
-  cases le <;> simp only [floatCmpL, bind, Option.bind_some, pure, Bool.false_eq_true,
-    ↓reduceIte, Option.some.injEq, Prod.mk.injEq, bin2] at h <;> omega
 
 /-- A comparison retains the well-formedness facts until the two keys meet. -/
 theorem floatCompare_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : Env D Γ}

@@ -34,7 +34,7 @@ def images : List (String × Except String (List Runner.B) × Nat) :=
    ("float-literal-subnormal", blockImageOf (literal (1, 2^1074) (0, 1) (1, 1)), 7),
    ("float-literal-range", blockImageOf (literal (12, 1) (0, 1) (10, 1)), 107),
    ("float-literal-nan", blockImageOf (literal (0, 0) (-10, 1) (10, 1)), 107),
-   ("float-literal-infinity", blockImageOf (literal (1, 0) (-10, 1) (10, 1)), 107),
+   ("float-literal-infinity", blockImageOf (literal (2^1024, 1) (-10, 1) (10, 1)), 107),
    ("float-lt", blockImageOf (compare (3, 2) (2, 1)), 7),
    ("float-lt-reverse", blockImageOf (compare (2, 1) (3, 2)), 41),
    ("float-lt-equal", blockImageOf (compare (3, 2) (3, 2)), 41),
@@ -51,7 +51,13 @@ def images : List (String × Except String (List Runner.B) × Nat) :=
    ("float-narrow-upper", blockImageOf (narrow (2, 1) (0, 1) (2, 1)), 7),
    ("float-narrow-below", blockImageOf (narrow (-1, 1) (0, 1) (2, 1)), 41),
    ("float-narrow-above", blockImageOf (narrow (3, 1) (0, 1) (2, 1)), 41),
-   ("float-narrow-empty", blockImageOf (narrow (1, 1) (2, 1) (0, 1)), 41)]
+   ("float-narrow-empty", blockImageOf (narrow (1, 1) (2, 1) (0, 1)), 41),
+   ("float-narrow-unbounded", blockImageOf (narrow (1, 1) (-(2^1024), 1) (2^1024, 1)), 7),
+   ("float-narrow-infinite-lower", blockImageOf (narrow (1, 1) (2^1024, 1) (2^1024, 1)), 41),
+   ("float-narrow-infinite-upper", blockImageOf (narrow (1, 1) (-(2^1024), 1) (-(2^1024), 1)), 41),
+   ("float-narrow-nan-lower", blockImageOf (narrow (1, 1) (0, 0) (2, 1)), 41),
+   ("float-narrow-nan-upper", blockImageOf (narrow (1, 1) (0, 1) (0, 0)), 41),
+   ("float-literal-max-finite", blockImageOf (literal (2^1024 - 2^971, 1) (-(2^1024), 1) (2^1024, 1)), 7)]
 
 /-- Nonempty programs jointly exercise literal binding, both comparisons and both range arms. -/
 theorem float_lowering_zeuge : images.all (fun x => x.2.1.isOk) = true := by

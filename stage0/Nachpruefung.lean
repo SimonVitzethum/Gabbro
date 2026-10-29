@@ -126,3 +126,18 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.LoopProbe.forever_fuel_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.forever_body_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.forever_refused_zeuge
+
+#print axioms Gabbro.Stage0.Senke.wordL_ok
+#print axioms Gabbro.Stage0.Senke.float_word_injective
+#print axioms Gabbro.Stage0.Senke.float_lt_key
+#print axioms Gabbro.Stage0.Senke.float_lt_key_not_nan
+#print axioms Gabbro.Stage0.Senke.float_key_word
+#print axioms Gabbro.Stage0.Senke.floatKeyL_ok
+#print axioms Gabbro.Stage0.Senke.floatExprE_ok
+#print axioms Gabbro.Stage0.Senke.floatRangeL_ok
+#print axioms Gabbro.Stage0.Senke.bindValue_ok
+#print axioms Gabbro.Stage0.Senke.blockFloatLit_case
+#print axioms Gabbro.Stage0.Senke.blockFloatNarrow_case
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_lowering_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_signed_zero_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatProbe.float_refused_zeuge

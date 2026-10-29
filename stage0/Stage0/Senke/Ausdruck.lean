@@ -8,6 +8,9 @@
   first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
   compares, or a literal outside 32 bits is refused (`none`); wide integers and the other forms follow.
 
+  A float occupies its IEEE-754 binary64 bit pattern. Its encoding also requires well-formed exponent and
+  fraction fields; finiteness and the declared range are already properties of G's value type.
+
   A function pointer is the code address `L.fa f`. The layout is explicit in every value and storage encoding;
   `FunSpec.addr` ties those words to the callee code addresses. This reuses the IR's slot-based call target
   without a second dispatch mechanism. Function references outside the literal range are refused.
