@@ -932,4 +932,22 @@ theorem floatOfIntLeftPack_format (F : Gleitkomma.Format)
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hF
   rcases hF with rfl | rfl <;> decide
 
+/-- Actual signed-input exponent bounds determine the encoded bias field. -/
+theorem floatOfIntAssemblyL_bias {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (F : Gleitkomma.Format) (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64])
+    (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 z)) :
+    BitVec.ofInt 64 (Gleitkomma.findeExp z.natAbs 1) + BitVec.ofNat 64 F.bias =
+      BitVec.ofNat 64 (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat := by
+  have he := (floatOfIntAssemblyL_prefix z hz hn hi).2
+  have hn : Gleitkomma.findeExp z.natAbs 1 =
+      ((Gleitkomma.findeExp z.natAbs 1).toNat : Int) := by omega
+  rw [hn, BitVec.ofInt_natCast, ← BitVec.ofNat_add]
+  congr 1
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hF
+  rcases hF with rfl | rfl <;>
+    simp only [Gleitkomma.Format.bias, Gleitkomma.Format.emax,
+      Gleitkomma.Format.emin, Gleitkomma.f32, Gleitkomma.f64] <;> omega
+
 end Gabbro.Stage0.Senke
