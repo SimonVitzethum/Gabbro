@@ -152,4 +152,49 @@ theorem call_spec [Kern] : FunSpec callLayout addresses target (rufAt P O 1 2) 2
     (fun f => target_bound f) 2 (by decide)
 
 
+/-- Both reason callees and the successful callee are live, and G bypasses false ensures on reasons. -/
+theorem outcomes_zeuge :
+    (match rufAt P O 1 2 0 world .nil with | .why _ r => r.val | _ => 99) = 1 ∧
+    (match rufAt P O 1 2 1 world .nil with | .why _ r => r.val | _ => 99) = 2 ∧
+    (match rufAt P O 1 2 2 world .nil with | .ok _ v => v.n | _ => -1) = 42 := by
+  decide +kernel
+
+/-- The selected continuation has the encoded binding and the resulting world. -/
+def Arrived [Kern] (g : D.Fn) : Prop :=
+  match rufAt P O 1 2 g world .nil with
+  | .ok σ v => ∃ m', Star ⟨2048, 4096⟩ (callMem g) ⟨2144, 4096⟩ m' ∧
+      PreS callLayout m' 2144 4096 256 4 [ci 1 4 11 0]
+        (Env.cons (τ := .int 0 100) v .nil) ∧ WeltAt m' callLayout σ
+  | .why σ r => ∃ m', Star ⟨2048, 4096⟩ (callMem g) ⟨2176, 4096⟩ m' ∧
+      PreS callLayout m' 2176 4096 256 4 [ci 1 4 22 0]
+        (Env.cons (τ := .why 3) r .nil) ∧ WeltAt m' callLayout σ
+  | _ => False
+
+/-- All premises of the shared call simulation hold jointly for each of three distinct outcomes. -/
+theorem callElse_ok_zeuge [Kern] (g : D.Fn) :
+    FunSpec callLayout addresses target (rufAt P O 1 2) 2 36 ∧
+    lowA callLayout (Γ := []) (Λ := []) (Args.nil : Args D [] [] (D.params g)) 6 = some ([], 6) ∧
+    PreS callLayout (callMem g) 2048 4096 256 3 (caller g) (Env.nil : Env D []) ∧
+    Umf callLayout addresses target 2 (callMem g) 4096 128 256 ∧
+    WIn callLayout 4096 128 256 ∧ WeltAt (callMem g) callLayout world ∧ Arrived g := by
+  refine ⟨call_spec, rfl, call_pre g, call_umf g, call_win, call_world g, ?_⟩
+  have hn : (match rufAt P O 1 2 g world .nil with | .logik _ | .hardware _ => false | _ => true) = true := by
+    revert g
+    apply allFin
+    decide +kernel
+  have h := callElse_ok (g := g) (ca := []) (ta := 6) call_spec (addresses_bound g)
+    (Args.nil : Args D [] [] (D.params g)) rfl world rfl (by change 44 ≤ 128; decide) (call_pre g)
+    (by change 144 < 2 ^ 31; decide) (call_umf g) call_win (call_world g)
+  rcases h with ⟨σ, v, m', hr, st, _, hp, hw⟩ | ⟨σ, r, m', hr, st, _, hp, hw⟩ |
+    ⟨e, hr, _⟩ | ⟨e, hr, _⟩
+  all_goals simp only [evalArgs] at hr
+  · unfold Arrived
+    rw [hr]
+    exact ⟨m', st, hp, hw⟩
+  · unfold Arrived
+    rw [hr]
+    exact ⟨m', st, hp, hw⟩
+  · rw [hr] at hn; cases hn
+  · rw [hr] at hn; cases hn
+
 end Gabbro.Stage0.Senke.WhyProbe

@@ -101,3 +101,5 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 #print axioms Gabbro.Stage0.Senke.endCallElse_case
 #print axioms Gabbro.Stage0.Senke.endLeave_case
 #print axioms Gabbro.Stage0.Senke.endNext_case
+#print axioms Gabbro.Stage0.Senke.WhyProbe.outcomes_zeuge
+#print axioms Gabbro.Stage0.Senke.WhyProbe.callElse_ok_zeuge
