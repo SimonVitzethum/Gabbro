@@ -862,4 +862,21 @@ theorem floatOfInt_left_significand_bounds (n p : Nat) (hn : n ≠ 0)
       n * 2^(p - Gleitkomma.bitlen n) < 2^Gleitkomma.bitlen n * 2^(p - Gleitkomma.bitlen n) := Nat.mul_lt_mul_of_pos_right hu (Nat.pow_pos (by decide))
       _ = 2^p := by rw [← Nat.pow_add, hsum]
 
+/-- Canonical integer conversion on the left path has no carry or rounding loss. -/
+theorem floatOfInt_left_canonical (F : Gleitkomma.Format) (z : Int)
+    (hn : z ≠ 0) (hp : 1 ≤ F.p)
+    (hlo : F.emin ≤ Gleitkomma.findeExp z.natAbs 1)
+    (hhi : Gleitkomma.findeExp z.natAbs 1 < (F.emax : Int))
+    (hlt : Gleitkomma.findeExp z.natAbs 1 < (F.p - 1 : Nat)) :
+    Gleitkomma.ofInt F z =
+      ⟨decide (z < 0), (Gleitkomma.findeExp z.natAbs 1 - F.emin + 1).toNat,
+        Gleitkomma.normQ F.p (Gleitkomma.findeExp z.natAbs 1) z.natAbs 1 -
+          2^(F.p - 1)⟩ := by
+  have ha : z.natAbs ≠ 0 := by omega
+  have hq := floatOfInt_left_significand_bounds z.natAbs F.p ha hlt
+  simp only [Gleitkomma.ofInt, Gleitkomma.rundeExakt, Gleitkomma.exaktBruch,
+    Int.le_refl, ↓reduceIte, Int.toNat_zero, Nat.pow_zero, Int.natCast_one, Int.mul_one,
+    Gleitkomma.rundeBruch, Gleitkomma.rundeBruchBei, Nat.one_ne_zero, ha]
+  rw [floatPackCarry_rundeBruchKern F _ _ _ _ hp hlo hhi, if_pos hq.2]
+
 end Gabbro.Stage0.Senke
