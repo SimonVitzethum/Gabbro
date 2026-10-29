@@ -535,4 +535,15 @@ def floatOfIntAssemblyL (p bias signBit : Nat) (d : Nat)
   wennL d (wordK 14 d (magnitude d) 0) (floatPackZeroL d)
     (floatPackCarryL d sign biased scale (2^(p - 1)))
 
+/-- The signed input interval bounds the unsigned magnitude, including minInt. -/
+theorem floatOfIntAssembly_magnitude_bound (z : Int)
+    (hz : -2^63 ≤ z ∧ z < 2^63) :
+    (floatMagnitudeWord (BitVec.ofInt 64 z)).toNat = z.natAbs ∧
+      z.natAbs ≤ 2^63 := by
+  have hb : z.natAbs ≤ 2^63 := by
+    omega
+  rw [floatMagnitudeWord_model z hz, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (show z.natAbs < 2^64 by omega)]
+  exact ⟨rfl, hb⟩
+
 end Gabbro.Stage0.Senke
