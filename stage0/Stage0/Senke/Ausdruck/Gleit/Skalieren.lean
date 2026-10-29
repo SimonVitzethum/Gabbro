@@ -546,4 +546,35 @@ theorem floatOfIntAssembly_magnitude_bound (z : Int)
     Nat.mod_eq_of_lt (show z.natAbs < 2^64 by omega)]
   exact ⟨rfl, hb⟩
 
+/-- The actual assembled zero branch includes magnitude computation and the jump.
+    The generic branch rule preserves the frame and validates emitted offsets. -/
+theorem floatOfIntAssemblyL_zero {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
+    (hi : WordCode (L := L) ρ W input (BitVec.ofInt 64 0))
+    (p bias signBit : Nat) :
+    WordCode (L := L) ρ W (fun d => floatOfIntAssemblyL p bias signBit d input)
+      (BitVec.ofNat 64 0) := by
+  have hm : WordCode (L := L) ρ W (fun d => floatMagnitudeL d input) (floatMagnitudeWord (BitVec.ofInt 64 0)) := floatMagnitudeL_ok hi
+  have hc : WordCode (L := L) ρ W
+      (fun d => wordK 14 d (floatMagnitudeL d input) 0) 1 := by
+    intro fp K d c top h ht m pc hp
+    exact wordK_ok h ht (by decide) (fun _ _ he ht => hm he ht)
+      (g := fun a b => some (Runner.IR.bool (a == b)))
+      (fun a ha => by subst a; exact ⟨1, by decide, rfl⟩)
+      rfl (by decide) hp
+  intro fp K d c top h ht m pc hp
+  have hd : d < K := by
+    have hh := h
+    simp only [floatOfIntAssemblyL, wennL, bind, Option.bind_eq_some_iff] at hh
+    obtain ⟨⟨cc, tc⟩, _, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, hh⟩ := hh
+    simp only [floatPackZeroL, Option.some.injEq, Prod.mk.injEq] at ha
+    cases ha
+    split at hh
+    · cases hh; simp only [konstWL, bin2] at ht; omega
+    · contradiction
+  exact wennL_ok h ht hd (bc := true)
+    (fun _ _ he ht => hc he ht)
+    (fun _ _ _ he ht => floatPackZeroL_ok ρ W he ht)
+    (by intro h; cases h) hp
+
 end Gabbro.Stage0.Senke
