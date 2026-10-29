@@ -1,0 +1,46 @@
+// Stage-0 IR probe: value conditionals inside an atomic update. Two threads perform 1000 updates each;
+// even values add 1, odd values add 3 through a longer arm. Both arms run 1000 times in total:
+// 4000 mod 256 = 160. The remainder guard needs no range narrowing (Expr.eng).
+module ir_probe {
+
+table runden count 1000 { slot { x : bool, } }
+table warten count 4000000 { slot { x : bool, } }
+
+type Stand = u16 in 0 .. 4001;
+
+atomic ZAEHLER : Stand relaxed;
+atomic FERTIG : bool release;
+
+impl fn neben()
+    effects  { reads runden.slots, reads ZAEHLER, writes ZAEHLER, writes FERTIG }
+    costs    <= 100000 ops
+{
+    traverse i over slots of runden by unvisited
+        touches reads runden.slots, reads ZAEHLER, writes ZAEHLER
+    {
+        let alt = ZAEHLER exchange update(v) { if v % 2 == 0 { return (v + 1) % 4001; } return (v + 1 + 2) % 4001; } publishes nothing;
+    }
+    FERTIG = true publishes nothing;
+}
+
+concurrent { neben };
+
+impl fn main() -> Stand
+    effects  { reads runden.slots, reads warten.slots, reads ZAEHLER, writes ZAEHLER, reads FERTIG }
+    costs    <= 100000000 ops
+{
+    traverse i over slots of runden by unvisited
+        touches reads runden.slots, reads ZAEHLER, writes ZAEHLER
+    {
+        let alt = ZAEHLER exchange update(v) { if v % 2 == 0 { return (v + 1) % 4001; } return (v + 1 + 2) % 4001; } publishes nothing;
+    }
+    traverse j over slots of warten by unvisited
+        touches reads warten.slots, reads FERTIG
+    {
+        let f = FERTIG awaits { };
+        if f { leave j; }
+    }
+    let r = ZAEHLER awaits { };
+    return r;
+}
+}

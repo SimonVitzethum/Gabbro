@@ -8,6 +8,7 @@
   first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
   compares, or a literal outside 32 bits is refused (`none`); wide integers and the other forms follow.
 -/
+import Lean.Meta.Tactic.Simp.RegisterCommand
 import Grammatik.Kern.Semantik.Semantik
 import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
@@ -15,6 +16,9 @@ import Stage0.Senke.Welt.Lay
 namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR
+
+/-- Constructor equations for expression lowering; kept separate from generated recursive equations. -/
+register_simp_attr lowE_eqs
 
 variable {D : Deklaration}
 
@@ -39,6 +43,19 @@ def inW (lo hi : Int) : Bool := decide (-2 ^ 63 ≤ lo) && decide (hi < 2 ^ 63)
 def lit32 (n : Int) : Bool := decide (-2 ^ 31 ≤ n) && decide (n < 2 ^ 31)
 
 def ci (o : Nat) (a b c : Int) : II := ⟨o, a, b, c⟩
+
+/-- `if c then a else b` as a value into slot `d`: the condition, `brz` over the `then` code and its jump. -/
+def wennC (d : Nat) (cc ca cb : List II) : List II :=
+  cc ++ [ci 19 d ((16 * (ca.length + 2) : Nat) : Int) 0] ++ ca ++ [ci 18 ((16 * (cb.length + 1) : Nat) : Int) 0 0] ++ cb
+
+/-- The code of `if c then a else b` from the codes of its parts. -/
+def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Nat) := do
+  let cc ← cc
+  let ca ← ca
+  let cb ← cb
+  if 16 * (ca.1.length + cb.1.length + 2) < 2 ^ 31 then
+    some (wennC d cc.1 ca.1 cb.1, max cc.2 (max ca.2 cb.2))
+  else none
 
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
@@ -128,6 +145,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
+  | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none
 
 /-! ## Values in words -/
