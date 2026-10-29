@@ -1386,6 +1386,20 @@ def floatOfIntContinuationL (F : Gleitkomma.Format) (input : Nat) :
     (fun j => some ([ci 2 j input 0], j + 1))
   pure (ca.1 ++ [ci 2 input (input + 1) 0], ca.2)
 
+/-- Recover the actual assembly and final copy without a universal input producer. -/
+theorem floatOfIntContinuationL_parts (F : Gleitkomma.Format) (input : Nat)
+    {code : List II} {top : Nat}
+    (h : floatOfIntContinuationL F input = some (code, top)) :
+    ∃ assembly,
+      floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) (input + 1)
+        (fun j => some ([ci 2 j input 0], j + 1)) = some (assembly, top) ∧
+      code = assembly ++ [ci 2 input (input + 1) 0] := by
+  simp only [floatOfIntContinuationL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq] at h
+  obtain ⟨⟨assembly, ceiling⟩, ha, he⟩ := h
+  cases he
+  exact ⟨assembly, ha, rfl⟩
+
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
     This helper is deliberately not accepted by `lowE` before its simulation proof. -/
