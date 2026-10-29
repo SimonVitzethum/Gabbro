@@ -16,42 +16,43 @@ variable [Kern] {D : Deklaration} {L : Lay D}
 def callBranchPC (pc : Runner.W) (cc cr : List II) (ok : Bool) : Runner.W :=
   pc + BitVec.ofNat 64 (16 * (cc.length + if ok then 2 else cr.length + 3))
 
+set_option maxHeartbeats 4000000 in
 /-- Bind either encoded answer in the same variable slot, then read the disjoint status slot.
     This is independent of call semantics and of the continuation's kind. -/
-theorem callBranch_ok {Γ : Ctx} {τ : Ty} {np : Nat} {cc cr ce : List II}
+theorem callBranch_ok {reserved : Nat} {Γ : Ctx} {τ : Ty} {np : Nat} {cc cr ce : List II}
     {fp pc : Runner.W} {K Ks : Nat} {m m1 : Runner.Mem} {ρ : Env D Γ} {σ : World D}
     {w : Runner.W} {v : Wert D τ} {ok : Bool}
-    (hp : PreS L m pc fp K (frei Γ) (elseC (frei Γ + FB + np + 1) (frei Γ) cc cr ce) ρ)
-    (hs : 16 * (elseC (frei Γ + FB + np + 1) (frei Γ) cc cr ce).length < 2 ^ 31)
-    (hW : WIn L fp Ks K) (ht : frei Γ + FB + np + 2 ≤ Ks)
+    (hp : PreS L m pc fp K (frei Γ reserved) (elseC (frei Γ reserved + FB + np + 1) (frei Γ reserved) cc cr ce) ρ reserved)
+    (hs : 16 * (elseC (frei Γ reserved + FB + np + 1) (frei Γ reserved) cc cr ce).length < 2 ^ 31)
+    (hW : WIn L fp Ks K) (ht : frei Γ reserved + FB + np + 2 ≤ Ks)
     (s1 : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * cc.length), fp⟩ m1)
-    (a1 : AgreeW L fp (frei Γ) K m m1)
-    (hw : m1.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 2))) = some w)
-    (hen : Enc L τ v w) (flag : ReturnFlag m1 (slot fp (BitVec.ofNat 64 (frei Γ))) np ok)
+    (a1 : AgreeW L fp (frei Γ reserved) K m m1)
+    (hw : m1.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 2))) = some w)
+    (hen : Enc L τ v w) (flag : ReturnFlag m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) np ok)
     (hWa : WeltAt m1 L σ) :
     ∃ m2, Star ⟨pc, fp⟩ m ⟨callBranchPC pc cc cr ok, fp⟩ m2 ∧
-      AgreeW L fp (frei Γ) K m m2 ∧
-      PreS L m2 (callBranchPC pc cc cr ok) fp K (frei (τ :: Γ)) (if ok then cr else ce) (.cons v ρ) ∧
+      AgreeW L fp (frei Γ reserved) K m m2 ∧
+      PreS L m2 (callBranchPC pc cc cr ok) fp K (frei (τ :: Γ) reserved) (if ok then cr else ce) (.cons v ρ) reserved ∧
       WeltAt m2 L σ := by
   have hFB3 : FB = 4 := rfl
   have hks := hW.ks
-  have hq : PreS L m pc fp K (frei Γ)
-      (cc ++ ([ci 2 (frei Γ) (frei Γ + 2) 0] ++
-        ([ci 19 (frei Γ + FB + np + 1) (16 * (cr.length + 2)) 0] ++
-          (cr ++ ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce))))) ρ := by
+  have hq : PreS L m pc fp K (frei Γ reserved)
+      (cc ++ ([ci 2 (frei Γ reserved) (frei Γ reserved + 2) 0] ++
+        ([ci 19 (frei Γ reserved + FB + np + 1) (16 * (cr.length + 2)) 0] ++
+          (cr ++ ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce))))) ρ reserved := by
     simpa only [elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
   have hp1 := hq.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
-  have s2 := mov_to hp1.left.code hp1.frame (j := frei Γ) (s := frei Γ + 2)
+  have s2 := mov_to hp1.left.code hp1.frame (j := frei Γ reserved) (s := frei Γ reserved + 2)
     (by omega) (by omega) hp.small hw
-  let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ))) 8 w.toNat
-  have a2s : Agree fp (frei Γ) Ks m1 m2 :=
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 w.toNat
+  have a2s : Agree fp (frei Γ reserved) Ks m1 m2 :=
     agree_write (frameOK_sub hp1.frame hks).room (Nat.le_refl _) (by omega) _
   have a2 := Agree.widen a2s hks
-  have hp2 := hp1.next a2 (d' := frei Γ + 1) (by omega) (by omega)
+  have hp2 := hp1.next a2 (d' := frei Γ reserved + 1) (by omega) (by omega)
   have hw2 : WeltAt m2 L σ := weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hWa
     (a2s.mono (Nat.zero_le _))
-  have en : EnvAt L m2 fp (.cons v ρ) := envAt_cons hp2.env (rd_same hp1.frame (by omega) w) hen
-  have hf : m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + FB + np + 1))) = some (if ok then 1 else 0) := by
+  have en : EnvAt L m2 fp (.cons v ρ) reserved := envAt_cons hp2.env (rd_same hp1.frame (by omega) w) hen
+  have hf : m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + FB + np + 1))) = some (if ok then 1 else 0) := by
     dsimp only [m2]
     rw [rd_other hp1.frame.room (by omega) (by omega) (by omega)]
     simpa only [ReturnFlag, slot_slot, Nat.add_assoc] using flag
@@ -61,22 +62,22 @@ theorem callBranch_ok {Γ : Ctx} {τ : Ty} {np : Nat} {cc cr ce : List II}
     omega
   cases ok with
   | true =>
-    have sb := brz_stay hp2.left.code (j := frei Γ + FB + np + 1) (by omega) hp.small hf (by decide)
-    have hp3 := hp2.next (a := [ci 19 (frei Γ + FB + np + 1) (16 * (cr.length + 2)) 0])
+    have sb := brz_stay hp2.left.code (j := frei Γ reserved + FB + np + 1) (by omega) hp.small hf (by decide)
+    have hp3 := hp2.next (a := [ci 19 (frei Γ reserved + FB + np + 1) (16 * (cr.length + 2)) 0])
       (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
     have heq : pc + BitVec.ofNat 64 (16 * cc.length) + BitVec.ofNat 64 (16 * 1) +
         BitVec.ofNat 64 (16 * 1) = callBranchPC pc cc cr true := by
       simp only [callBranchPC, Bool.false_eq_true, ↓reduceIte, addr_norm]
       congr 2 <;> omega
     refine ⟨m2, s1.trans (s2.trans (star_cast sb rfl (by simp only [List.length_singleton]; rw [heq]))), a1.trans (agreeW_of a2), ?_, hw2⟩
-    change PreS L m2 (callBranchPC pc cc cr true) fp K (frei (τ :: Γ)) cr (.cons v ρ)
+    change PreS L m2 (callBranchPC pc cc cr true) fp K (frei (τ :: Γ) reserved) cr (.cons v ρ) reserved
     rw [← heq]
     exact ⟨by simp only [frei, List.length_cons]; omega, hp3.small, hp3.frame, hp3.left.code, hp3.left.far,
       en, trivial, wstab_true _ _⟩
   | false =>
-    have sb := brz_go hp2.left.code (j := frei Γ + FB + np + 1) (by omega) hp.small
+    have sb := brz_go hp2.left.code (j := frei Γ reserved + FB + np + 1) (by omega) hp.small
       (lit32_nat hlen) hf
-    have hp3 := ((hp2.next (a := [ci 19 (frei Γ + FB + np + 1) (16 * (cr.length + 2)) 0])
+    have hp3 := ((hp2.next (a := [ci 19 (frei Γ reserved + FB + np + 1) (16 * (cr.length + 2)) 0])
       (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)).next (a := cr)
       (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)).next
       (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
@@ -92,7 +93,7 @@ theorem callBranch_ok {Γ : Ctx} {τ : Ty} {np : Nat} {cc cr ce : List II}
         BitVec.ofInt_natCast]
       simp only [addr_norm]
       congr 2 <;> omega
-    · change PreS L m2 (callBranchPC pc cc cr false) fp K (frei (τ :: Γ)) ce (.cons v ρ)
+    · change PreS L m2 (callBranchPC pc cc cr false) fp K (frei (τ :: Γ) reserved) ce (.cons v ρ) reserved
       rw [← heq]
       exact ⟨by simp only [frei, List.length_cons]; omega, hp3.small, hp3.frame, hp3.code, hp3.far,
         en, trivial, wstab_true _ _⟩
@@ -100,29 +101,29 @@ theorem callBranch_ok {Γ : Ctx} {τ : Ty} {np : Nat} {cc cr ce : List II}
 /-- A call followed by the common binder reaches precisely the continuation selected by G. -/
 theorem callElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {dv : Runner.W} {cap : Nat}
-    (hS : FunSpec L A C R dv cap) {Γ : Ctx} {Λ : List (Res D)} {g : D.Fn} {τ : Ty}
+    (hS : FunSpec L A C R dv cap) {reserved : Nat} {Γ : Ctx} {Λ : List (Res D)} {g : D.Fn} {τ : Ty}
     (hA : A g < 2 ^ 31) (args : Args D Γ Λ (D.params g)) (he : D.erg g = some τ)
     {ca cr ce : List II} {ta : Nat} {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem}
     {ρ : Env D Γ} (σ : World D)
-    (hca : lowA L args (frei Γ + FB) = some (ca, ta))
-    (ht : max (callTop g (frei Γ) ta) (frei Γ + FB + (D.params g).length + 2) + cap ≤ Ks)
-    (hp : PreS L m pc fp K (frei Γ)
-      (elseC (frei Γ + FB + (D.params g).length + 1) (frei Γ) (callC A g (frei Γ) ca) cr ce) ρ)
-    (hs : 16 * (elseC (frei Γ + FB + (D.params g).length + 1) (frei Γ) (callC A g (frei Γ) ca) cr ce).length < 2 ^ 31)
+    (hca : lowA L args (frei Γ reserved + FB) reserved = some (ca, ta))
+    (ht : max (callTop g (frei Γ reserved) ta) (frei Γ reserved + FB + (D.params g).length + 2) + cap ≤ Ks)
+    (hp : PreS L m pc fp K (frei Γ reserved)
+      (elseC (frei Γ reserved + FB + (D.params g).length + 1) (frei Γ reserved) (callC A g (frei Γ reserved) ca) cr ce) ρ reserved)
+    (hs : 16 * (elseC (frei Γ reserved + FB + (D.params g).length + 1) (frei Γ reserved) (callC A g (frei Γ reserved) ca) cr ce).length < 2 ^ 31)
     (hu : Umf L A C dv m fp Ks K) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) :
     (∃ σ' v m2, R g σ (evalArgs σ args σ ρ) = .ok σ' v ∧
-      Star ⟨pc, fp⟩ m ⟨callBranchPC pc (callC A g (frei Γ) ca) cr true, fp⟩ m2 ∧
-      AgreeW L fp (frei Γ) K m m2 ∧
-      PreS L m2 (callBranchPC pc (callC A g (frei Γ) ca) cr true) fp K (frei (τ :: Γ)) cr (.cons (ergWert he v) ρ) ∧ WeltAt m2 L σ') ∨
+      Star ⟨pc, fp⟩ m ⟨callBranchPC pc (callC A g (frei Γ reserved) ca) cr true, fp⟩ m2 ∧
+      AgreeW L fp (frei Γ reserved) K m m2 ∧
+      PreS L m2 (callBranchPC pc (callC A g (frei Γ reserved) ca) cr true) fp K (frei (τ :: Γ) reserved) cr (.cons (ergWert he v) ρ) reserved ∧ WeltAt m2 L σ') ∨
     (∃ σ' r m2, R g σ (evalArgs σ args σ ρ) = .why σ' r ∧
-      Star ⟨pc, fp⟩ m ⟨callBranchPC pc (callC A g (frei Γ) ca) cr false, fp⟩ m2 ∧
-      AgreeW L fp (frei Γ) K m m2 ∧
-      PreS L m2 (callBranchPC pc (callC A g (frei Γ) ca) cr false) fp K (frei (.why (D.gruende g) :: Γ)) ce (Env.cons (τ := .why (D.gruende g)) r ρ) ∧ WeltAt m2 L σ') ∨
+      Star ⟨pc, fp⟩ m ⟨callBranchPC pc (callC A g (frei Γ reserved) ca) cr false, fp⟩ m2 ∧
+      AgreeW L fp (frei Γ reserved) K m m2 ∧
+      PreS L m2 (callBranchPC pc (callC A g (frei Γ reserved) ca) cr false) fp K (frei (.why (D.gruende g) :: Γ) reserved) ce (Env.cons (τ := .why (D.gruende g)) r ρ) reserved ∧ WeltAt m2 L σ') ∨
     (∃ e, R g σ (evalArgs σ args σ ρ) = .logik e ∧ Stops ⟨pc, fp⟩ m (logikCode e)) ∨
     (∃ e, R g σ (evalArgs σ args σ ρ) = .hardware e ∧ Stops ⟨pc, fp⟩ m (hwCode e)) := by
-  have hpc : PreS L m pc fp K (frei Γ) (callC A g (frei Γ) ca ++
-      ([ci 2 (frei Γ) (frei Γ + 2) 0] ++ [ci 19 (frei Γ + FB + (D.params g).length + 1) (16 * (cr.length + 2)) 0] ++
-       cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ := by
+  have hpc : PreS L m pc fp K (frei Γ reserved) (callC A g (frei Γ reserved) ca ++
+      ([ci 2 (frei Γ reserved) (frei Γ reserved + 2) 0] ++ [ci 19 (frei Γ reserved + FB + (D.params g).length + 1) (16 * (cr.length + 2)) 0] ++
+       cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
   have hc := callC_ok hS hA args σ σ hca (by omega) hpc.left hu hW hWa
   cases hr : R g σ (evalArgs σ args σ ρ) with
