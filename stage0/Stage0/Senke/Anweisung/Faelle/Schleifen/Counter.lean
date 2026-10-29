@@ -57,4 +57,10 @@ theorem counter_protected {m : Mem} {fp : W} {counter : Nat}
 theorem counter_decrement_zeuge : (3 : W) - 1 = 2 ∧ (3 : W) ≠ 0 ∧
     (foreverCounter 12 13 64).length = 2 := by decide
 
+/-- A nonempty reservation above the ABI and ordinary variable slots. -/
+theorem counter_protected_zeuge (m : Mem) :
+    Agree 0 12 13 m (Mem.write m (slot 0 (BitVec.ofNat 64 12)) 8 2) ∧
+    (3 : W) - 1 = 2 ∧ (foreverCounter 12 13 64).length = 2 := by
+  exact ⟨counter_protected (by decide) 2, by decide, by decide⟩
+
 end Gabbro.Stage0.Senke
