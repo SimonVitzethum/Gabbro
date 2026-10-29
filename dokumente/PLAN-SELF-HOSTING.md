@@ -242,6 +242,24 @@ the 24 handlers and `spawn`'s thread entry are all the machine code there is.
   atomics; planted mis-lowerings (a wrong slot, a missing release on a `leave` edge, a dropped check in checked mode)
   must fail.
 
+**`ir_parallel`, the route (2026-10-29).** Built on `ir_sim` (one thread against `rufAt`, done for the sequential
+forms and the gates) and on `AgreeW` (a statement of a thread changes its own stack and the world, nothing else; the
+world lies above every stack):
+1. *Threads in the image*: `main` and every root (`concurrent`, `entry`, the roots of `start`) on a stack of its own;
+   the start code spawns the roots (`spawn`, frames below the world), a root thread ends with `exit`.
+2. *Locks as mutexes*: a lock word per lock above the world; `locks L { .. }` takes it by `cas` (wait: `futex`) and
+   gives it back on every way out (`leave`, `next`, `return`); G's `nimmt`/`gibt` steps match.
+3. *Atomics* (`publish`, `awaits`, `exchange`) as `cas`/loads on their cells, against GX.
+4. *The structural half*: a thread state of the runner's machine at a statement boundary corresponds to a thread state
+   of `RufSchrittG` (the residue `.ende`/`.dann`, the call stack as the chain of frames).
+5. *The reduction*: in a run of the runner's machine every thread's code since its last boundary ran on its own stack
+   and on world cells no other in-flight statement writes -- if one did, the two statements would be a race of G from
+   a reachable machine, against `RennfreiBis` (carrier-level, lock-ordered; atomics apart). So a run is a run with
+   whole statements, each one `ir_sim`'s forward step, made unique by the determinism of a thread's run.
+6. *The statement*: every observation of the runner's process (under SC, then TSO by `runner_tso`) is a run of the
+   thread machine from the start machine, or ends in a stop of a check (101-105, 110+) after a prefix that is one;
+   premises: the goal theorem's (a)-(d), `TorOK`.
+
 #### 2.1.7 Size
 
 Lean: syntax, semantics, image 2 000 - 4 000 lines; lowering with `ir_lower_ok`/`ir_typed` 5 000 - 10 000 (it now
