@@ -7,7 +7,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onOption` (the index word kept for the bound variable), `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
   give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
@@ -104,6 +104,16 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ct ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) t
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 2)) 0] ++ ct.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
       max cc.2 (max ct.2 ce.2))
+  | _, Γ, _, _, .onOption (n := n) o p a =>
+    if decide (n ≤ 2 ^ 63) then do
+      let co ← lowE L o (frei Γ)
+      let ca ← lowB A L lo ens pr ex a
+      let cp ← lowB A L lo ens pr (exPlus ex (ca.1.length + 1)) p
+      pure (co.1 ++ [ci 1 (frei Γ + 1) (-1) 0, ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
+        [ci 19 (frei Γ + 1) (16 * (cp.1.length + 2)) 0] ++ cp.1 ++
+        [ci 18 (16 * (ca.1.length + 1)) 0 0] ++ ca.1,
+        max co.2 (max (frei Γ + 2) (max cp.2 ca.2)))
+    else none
   | _, Γ, _, _, .call f args _ _ => do
     let ca ← lowA L args (frei Γ + FB)
     pure (callC A f (frei Γ) ca.1, callTop f (frei Γ) ca.2)

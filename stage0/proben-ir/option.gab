@@ -1,0 +1,59 @@
+// stage-0 IR probe: Some keeps its index word; None takes the other branch, also inside locks.
+// Calls, nested matches, binding cleanup, next and leave all contribute to exit code 146.
+module ir_probe {
+table cells count 4 { slot { value : u32 in 0 .. 100, } }
+lock L protects { cells } rank 0 held <= 200 ops;
+
+impl fn choose(o : option index into cells) -> u32 in 0 .. 100
+    effects { pure }
+{
+    match o {
+        Some(k) => { return k + 10; }
+        None => { return 7; }
+    }
+}
+
+impl fn main() -> u32 in 0 .. 1000
+    effects { reads cells.slots, writes cells.slots, locks L }
+{
+    let mut total : u32 in 0 .. 1000 = 0;
+    let present : option index into cells = Some(3);
+    let absent : option index into cells = None;
+    let zero : option index into cells = Some(0);
+    let a = choose(present);
+    let b = choose(absent);
+    let c = choose(zero);
+    total = a + b + c;
+    locks L {
+        cells.slots[3].value = 50;
+        match present {
+            Some(k) => {
+                let saved = cells.slots[k].value;
+                match absent {
+                    Some(j) => { total = 201; }
+                    None => { total = (total + saved) % 1000; }
+                }
+            }
+            None => { total = 202; }
+        }
+        match absent {
+            Some(k) => { total = 203; }
+            None => { total = (total + 60) % 1000; }
+        }
+    }
+    traverse i over slots of cells by unvisited
+        touches reads cells.slots
+    {
+        let current : option index into cells = Some(i);
+        match current {
+            Some(k) => {
+                if k == 1 { next i; }
+                if k == 3 { leave i; }
+                total = (total + k + 2) % 1000;
+            }
+            None => { total = 204; }
+        }
+    }
+    return total;
+}
+}

@@ -42,3 +42,5 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.awaits_ok
 #print axioms Gabbro.Stage0.Senke.ex_tail
 #print axioms Gabbro.Stage0.Senke.sichtOK_zeuge
+
+#print axioms Gabbro.Stage0.Senke.onOption_ok

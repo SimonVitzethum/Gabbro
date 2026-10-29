@@ -68,6 +68,12 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     split
     · exact retFreiB_istZ t h.1 _ _
     · exact retFreiB_istZ e h.2 _ _
+  | _, _, _, _, .onOption _ p a, h, σ, ρ => by
+    simp only [retFreiS, Bool.and_eq_true] at h
+    simp only [execStmt]
+    split
+    · rw [istZ_schrumpf]; exact retFreiB_istZ p h.1 _ _
+    · exact retFreiB_istZ a h.2 _ _
   | _, _, _, _, .traverse _ _ b, h, σ, ρ => by
     simp only [retFreiS] at h
     simp only [execStmt]
@@ -81,7 +87,7 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     simp only [execStmt]
     rw [istZ_mapWelt]
     exact retFreiB_istZ b h _ _
-  | _, _, _, _, .putBytes .., h, _, _ | _, _, _, _, .shift .., h, _, _ | _, _, _, _, .onOption .., h, _, _
+  | _, _, _, _, .putBytes .., h, _, _ | _, _, _, _, .shift .., h, _, _
   | _, _, _, _, .onTag .., h, _, _ | _, _, _, _, .onWhy .., h, _, _ | _, _, _, _, .callInd .., h, _, _
   | _, _, _, _, .retry .., h, _, _ | _, _, _, _, .forever .., h, _, _ | _, _, _, _, .regWrite .., h, _, _
   | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _

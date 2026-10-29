@@ -12,6 +12,7 @@ import Stage0.Senke.Anweisung.TorLauf
 import Stage0.Senke.Sperre.Satz
 import Stage0.Senke.Anweisung.Atomar
 import Stage0.Senke.Anweisung.Wahl
+import Stage0.Senke.Anweisung.Option
 
 namespace Gabbro.Stage0.Senke
 
@@ -205,7 +206,26 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     exact ⟨m, by simpa using Star.refl _ m, AgreeW.refl _ _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
   | _, _, _, _, .putBytes .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .shift .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
-  | _, _, _, _, .onOption .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .onOption o p a, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowS] at h
+    split at h
+    · next hn =>
+      simp only [decide_eq_true_eq] at hn
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨ct, tt⟩, hct, hc⟩ := h
+      simp only [Prod.mk.injEq] at hc
+      obtain ⟨rfl, rfl⟩ := hc
+      simp only [List.length_append, List.length_cons, List.length_nil] at hs
+      exact onOption_ok (o := o) (t := p) (e := a) (cc := cc) (ct := ct) (ce := ce) hn (by omega) hcc (by omega) (by omega) hW hlo hlo0 hlo2 hpr
+        (fun k _ m' pc' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0)
+          (ex := exPlus ex (ce.length + 1)) hS hA hlo0 hens p ct tt hct (by omega) (by omega) hW m' pc' _ (.cons k ρ)
+          (by simpa only [frei, List.length_cons, Nat.add_succ] using hp') hlo
+          (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu' hk' hw'
+          (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega))
+        (fun m' pc' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex)
+          hS hA hlo0 hens a ce te hce (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr)
+        hp hu hk hWa
+    · cases h
   | _, _, _, _, .onTag .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
