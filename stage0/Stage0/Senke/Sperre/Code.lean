@@ -79,15 +79,16 @@ theorem gibC_len (L : Lay D) (a s : Nat) : (gibC L a s).length = 7 + 7 + 4 + 3 +
 variable {V : Vertrag D}
 
 mutual
-/-- A statement without `ret` or `retWhy` in the forms the lowering takes. -/
+/-- A statement without `ret` or `retWhy`, among the forms the lowering takes (every other form: `false`). -/
 def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Bool
-  | _, _, _, _, .ret .. => false
-  | _, _, _, _, .retWhy .. => false
+  | _, _, _, _, .assignVar .. | _, _, _, _, .assignGlob .. | _, _, _, _, .assignSlot ..
+  | _, _, _, _, .assignThru .. | _, _, _, _, .call .. | _, _, _, _, .advances .. | _, _, _, _, .retires ..
+  | _, _, _, _, .leave _ | _, _, _, _, .next _ | _, _, _, _, .axiomCall .. => true
   | _, _, _, _, .ite _ t e => retFreiB t && retFreiB e
   | _, _, _, _, .traverse _ _ b => retFreiB b
   | _, _, _, _, .breaking _ b => retFreiB b
   | _, _, _, _, .locks _ _ b => retFreiB b
-  | _, _, _, _, _ => true
+  | _, _, _, _, _ => false
 
 def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → Bool
   | _, _, _, _, .nil => true
@@ -95,7 +96,7 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .bind _ r => retFreiB r
   | _, _, _, _, .bindCall _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ r => retFreiB r
-  | _, _, _, _, _ => true
+  | _, _, _, _, _ => false
 end
 
 /-- The code of `locks Lk { body }` around the body's code `cb`, with `g` the length of `gibC`: take; the body (its
