@@ -126,7 +126,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
       have hpq : PreS m _ fp K s cq ρ :=
         ⟨Nat.le_refl _, hK, hF, codeAt_left hc1, codeFar_left (by rw [← List.length_append]; exact hf1), hE, trivial, wstab_true _ _⟩
       have hpw := PreS.welt hpq hks hWaR hW.lay (by have := hW.lo; omega)
-      obtain ⟨m1, s1, a1s, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := Ks) σR σR (P.requires f) s cq tq hq (by omega) m _
+      obtain ⟨m1, s1, a1s, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := Ks) σR σR (fun _ h => h) (P.requires f) s cq tq hq (by omega) m _
         ρ hpw
       have a1 := Agree.widen a1s hks
       have hWa1 : WeltAt m1 Y σR := hpw.wstab m m1 hWaR (a1s.mono (Nat.zero_le _))

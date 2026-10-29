@@ -2,7 +2,7 @@
   File:      stage0/Stage0/Senke/Ausdruck/Satz.lean
   Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
 -/
-import Stage0.Senke.Ausdruck.Top
+import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
@@ -11,11 +11,12 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 
 variable {D : Deklaration}
 
-theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) :
+theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+    (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowE L e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre m pc fp K d c ρ W → Ok m pc fp K d c (Enc τ (eval σ₀ e σ ρ))
-  | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ e d c top h hK m pc ρ hp
+  | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE] at h
     split at h
@@ -42,32 +43,32 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .add a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
-    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
-      (fun m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb (by omega) m pc ρ hp)
+    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
+      (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
       (g := fun x y => some (x + y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← BitVec.ofInt_add]; rfl⟩
   | _, _, .sub a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
-    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
-      (fun m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb (by omega) m pc ρ hp)
+    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
+      (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
       (g := fun x y => some (x - y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← ofInt_sub']; rfl⟩
   | _, _, .mul a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
-    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
-      (fun m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb (by omega) m pc ρ hp)
+    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
+      (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
       (g := fun x y => some (x * y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← BitVec.ofInt_mul]; rfl⟩
   | _, _, .and a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
-    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
-      (fun m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb (by omega) m pc ρ hp)
+    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
+      (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
       (g := fun x y => some (x &&& y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     refine ⟨_, rfl, ?_⟩
@@ -78,8 +79,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .or a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
-    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
-      (fun m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb (by omega) m pc ρ hp)
+    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
+      (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
       (g := fun x y => some (x ||| y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     refine ⟨_, rfl, ?_⟩
@@ -94,7 +95,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     obtain ⟨rfl, rfl⟩ := he
     have := lowE_top a (d + 1) ca ta ha
     refine bin_ok (ca := [ci 1 d 0 0]) (fun m pc hp => const_ok hp (by decide) (by omega))
-      (fun m pc hp => lowE_ok σ₀ σ a (d + 1) ca ta ha (by omega) m pc ρ hp)
+      (fun m pc hp => lowE_ok σ₀ σ hWL a (d + 1) ca ta ha (by omega) m pc ρ hp)
       (g := fun x y => some (x - y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     refine ⟨_, rfl, ?_⟩
@@ -107,7 +108,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [bin2, Prod.mk.injEq] at he
     obtain ⟨rfl, rfl⟩ := he
     have := lowE_top a d ca ta ha
-    refine bin_ok (cb := [ci 1 (d + 1) 1 0]) (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
+    refine bin_ok (cb := [ci 1 (d + 1) 1 0]) (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
       (fun m pc hp => const_ok hp (by decide) (by omega))
       (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
@@ -131,8 +132,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       have rb := inW_spec hw.2 (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
       refine bin_ok (cb := [ci 1 (d + 1) 1 0])
         (Pa := fun w => w = if decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n) = true then 1 else 0)
-        (fun m pc hp => bin_ok (fun m pc hp => lowE_ok σ₀ σ b d cb tb hb (by omega) m pc ρ hp)
-          (fun m pc hp => lowE_ok σ₀ σ a (d + 1) ca ta ha (by omega) m pc ρ hp)
+        (fun m pc hp => bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL b d cb tb hb (by omega) m pc ρ hp)
+          (fun m pc hp => lowE_ok σ₀ σ hWL a (d + 1) ca ta ha (by omega) m pc ρ hp)
           (g := fun x y => some (Runner.IR.bool (x.slt y))) (fun wb wa pb pa => ⟨_, rfl, by
             simp only [Enc] at pa pb
             rw [pa, pb, slt_in rb ra, bool_word]⟩) rfl (by decide) (by omega) hp)
@@ -155,8 +156,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       simp only [Bool.and_eq_true] at hw
       obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
       have := lowE_top b (d + 1) cb tb hb
-      refine bin_ok (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
-        (fun m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb (by omega) m pc ρ hp)
+      refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
+        (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
         (g := fun x y => some (Runner.IR.bool (x.slt y))) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       refine ⟨_, rfl, ?_⟩
@@ -172,8 +173,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       simp only [Bool.and_eq_true] at hw
       obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
       have := lowE_top b (d + 1) cb tb hb
-      refine bin_ok (fun m pc hp => lowE_ok σ₀ σ a d ca ta ha (by omega) m pc ρ hp)
-        (fun m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb (by omega) m pc ρ hp)
+      refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
+        (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
         (g := fun x y => some (Runner.IR.bool (x == y))) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       refine ⟨_, rfl, ?_⟩
@@ -187,8 +188,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -202,8 +203,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -217,8 +218,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, nichtMin, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -232,8 +233,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, nichtMin, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -247,8 +248,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -262,8 +263,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -277,8 +278,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -292,8 +293,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, lt64, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -307,8 +308,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, lt64, inW, decide_eq_true_eq] at hw
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ a d ca ta ha hta m pc ρ hp)
-        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ b (d + 1) cb tb hb htb m pc ρ hp)
+      refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
       intro wa wb pa pb
       have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
@@ -339,7 +340,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact BitVec.ofInt_natCast _ _
     · cases h
   | _, _, .some e, d, c, top, h, hK, m, pc, ρ, hp =>
-    (lowE_ok σ₀ σ e d c top h hK m pc ρ hp).mono fun w hw => by simpa [Enc, eval, optN] using hw
+    (lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp).mono fun w hw => by simpa [Enc, eval, optN] using hw
   | _, _, .istSome e, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE] at h
     split at h
@@ -352,7 +353,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       have := lowE_top e d ce te he
       refine bin_ok (cb := [ci 1 (d + 1) 1 0])
         (Pa := fun w => w = if (eval σ₀ e σ ρ).isSome = false then 1 else 0)
-        (fun m pc hp => bin_ok (fun m pc hp => lowE_ok σ₀ σ e d ce te he (by omega) m pc ρ hp)
+        (fun m pc hp => bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL e d ce te he (by omega) m pc ρ hp)
           (fun m pc hp => const_ok hp (by decide) (by omega))
           (g := fun x y => some (Runner.IR.bool (x == y))) (fun we wm pe pm => ⟨_, rfl, by
             simp only [Enc] at pe
@@ -378,9 +379,19 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       · simp only [Bool.not_eq_true] at hs
         simp only [hs, wahr?, Bool.false_eq_true, ↓reduceIte]; decide
     · cases h
-  | _, _, .glob .., _, _, _, h, _, _, _, _, _
-  | _, _, .slot .., _, _, _, h, _, _, _, _, _
-  | _, _, .thru .., _, _, _, h, _, _, _, _, _
+  | _, _, .glob g _, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE] at h
+    split at h
+    · next hl =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact glob_ok hl hp hWL (by omega)
+    · cases h
+  | _, _, .slot t f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ t _ f i _, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
+    have := slotC_top hs
+    exact slotC_ok hs hK (fun m pc hp => lowE_ok σ₀ σ hWL i d ci1 ti hci (by simp only at this; omega) m pc ρ hp) hWL hp
   | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _

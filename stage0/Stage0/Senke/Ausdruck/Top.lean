@@ -74,9 +74,18 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .tru, d, c, top, h | _, _, .fls, d, c, top, h | _, _, .var _, d, c, top, h
   | _, _, .none _, d, c, top, h | _, _, .ptrOf .., d, c, top, h => by
     simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h; omega
-  | _, _, .glob .., _, _, _, h
-  | _, _, .slot .., _, _, _, h
-  | _, _, .thru .., _, _, _, h
+  | _, _, .glob .., d, c, top, h => by
+    simp only [lowE] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · cases h
+  | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h => by
+    simp only [lowE, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨ci', _, hs⟩ := h
+    simp only [slotC] at hs
+    split at hs
+    · simp only [Option.some.injEq, Prod.mk.injEq] at hs; omega
+    · cases hs
   | _, _, .fnref .., _, _, _, h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h

@@ -73,7 +73,8 @@ theorem lowErg_top {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → (x : Erg
   | _, .empty, d, c, top, h => by simp only [lowErg, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, .val e, d, c, top, h => lowE_top e d c top h
 
-theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) {Γ : Ctx} :
+theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+    (hWL : ∀ m, W m → WeltAt m L σ) {Γ : Ctx} :
     {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) → (c : List II) → (top : Nat) →
     lowErg L x d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
     Pre m pc fp K d c ρ W → Ok m pc fp K d c (EncErg e (evalErg σ₀ x σ ρ))
@@ -82,7 +83,7 @@ theorem lowErg_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem 
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨m, by simpa using Star.refl _ m, Agree.refl _ _ _ _, ?_⟩
     exact ⟨_, by simp only [Runner.Mem.rd64, hp.frame.rd d (by omega), ↓reduceIte]; rfl, trivial⟩
-  | _, .val e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ e d c top h hK m pc ρ hp
+  | _, .val e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp
 
 theorem codeFar_tail {pc fp : Runner.W} {K : Nat} {a b : List II} (h : CodeFar pc (a ++ b).length fp K) :
     CodeFar (pc + BitVec.ofNat 64 (16 * a.length)) b.length fp K :=
@@ -100,7 +101,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
     (he : lowErg L e (frei Γ) = some (ce, te)) (hK : max te (max tens (retTop lo)) ≤ K)
     (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ)
     (hp : PreS m pc fp K (frei Γ) (ce ++ retC lo (frei Γ) cens) ρ) (hlo : lo ≤ frei Γ)
-    (hk : Kopf f m fp K rp cfp ρ0) :
+    (hk : Kopf f m fp K rp cfp ρ0) (hWa : WeltAt m L σ) (hl : LayIn L) (hwl : fp.toNat + 8 * K ≤ L.lo) :
     RetZ0 P f σ0 ρ0 fp K rp cfp ⟨pc, fp⟩ m (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by
     have hFB3 : FB = 3 := rfl
     have htop := lowErg_top e _ _ _ he
@@ -108,8 +109,10 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
     have hroom := hp.frame.room
     simp only [retTop] at hK
     -- the result into slot `frei Γ`, then into slot `lo`
-    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowErg_ok (fp := fp) (K := K) (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te
-      he (by omega) m pc ρ hp.left
+    have hpw := PreS.welt hp.left (Nat.le_refl K) hWa hl hwl
+    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowErg_ok (fp := fp) (K := K) (σ.lese Λ e.orte) (σ.lese Λ e.orte)
+      (fun _ h => h) e _ ce te he (by omega) m pc ρ hpw
+    have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1.mono (Nat.zero_le _))
     have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
     have hq : PreS m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ)
         ([ci 2 lo (frei Γ) 0] ++ (cens ++ ([ci 19 ((lo + 1 : Nat) : Int) 48 0] ++
@@ -123,6 +126,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
     have hf2 := codeFar_tail (a := [ci 2 lo (frei Γ) 0]) hq.far
     have hc2 := (codeAt_right hq.code).agree a2 hf2
     have hk2 := hk.agree ((a1.mono hlo).trans a2) hp.frame (by omega)
+    have hWa2 : WeltAt m2 L σ := weltAt_stab hl hwl m1 m2 hWa1 (a2.mono (Nat.zero_le _))
     -- `ensures` over the result and the parameters, into slot `lo + 1`
     have hpe : PreS m2 _ fp K (lo + 1) cens (ergEnv (D.erg f) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ0) :=
       ⟨Nat.le_trans (frei_ergCtx _ _) (by simp only [frei]; omega), hsm, hF2, codeAt_left hc2,
@@ -131,8 +135,8 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo : Nat} {rp cfp
          show m2.rd64 (slot fp (BitVec.ofNat 64 (FB + (D.params f).length))) = some w
          rw [← hlo0]; exact rd_same hF1 (by omega) w) hen, trivial, wstab_true _ _⟩
     obtain ⟨m3, s3, a3, b, hb, hbe⟩ := lowE_ok (fp := fp) (K := K) σ0
-      ((σ.lese Λ e.orte).lese (vertragVon D f).ende (P.ensures f).orte) (P.ensures f) (lo + 1) cens tens hens
-      (by omega) m2 _ _ hpe
+      ((σ.lese Λ e.orte).lese (vertragVon D f).ende (P.ensures f).orte) (fun _ h => h) (P.ensures f) (lo + 1) cens
+      tens hens (by omega) m2 _ _ (PreS.welt hpe (Nat.le_refl K) hWa2 hl hwl)
     have hF3 := hF2.agree a3
     have hf3 := codeFar_tail (a := cens) hf2
     have hc3 := (codeAt_right hc2).agree a3 hf3
@@ -203,7 +207,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp c
     ⟨hp.ctx, by have := hp.small; omega, frameOK_sub hp.frame hks, hp.code, codeFar_sub2 hp.far hks, hp.env,
      trivial, wstab_true _ _⟩
   have hkS : Kopf f m fp Ks rp cfp ρ0 := ⟨hk.r0, hk.r1, hk.env, by simp only [retTop] at hK; omega⟩
-  have h0 := ret_ok0 (σ0 := σ0) hlo0 hens e he hK m pc σ ρ hpS hlo hkS
+  have h0 := ret_ok0 (σ0 := σ0) hlo0 hens e he hK m pc σ ρ hpS hlo hkS hWa hW.lay hW.lo
   simp only [RetZ0] at h0
   simp only [RetZ]
   split

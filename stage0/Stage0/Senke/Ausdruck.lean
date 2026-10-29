@@ -53,6 +53,14 @@ def lt64 {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo
 /-- The least value of an integer expression lies above `-2^63`. -/
 def nichtMin {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := decide (-2 ^ 63 < lo)
 
+/-- An element of column `f` of table `t`, its index computed by `ci` into slot `d`: the address
+    `col + stride · i`, the word there, for a byte column its low byte. -/
+def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
+  if lit32 (L.col t f) then
+    some (ci'.1 ++ [ci 1 (d + 1) (stride t f) 0, ci 5 d d (d + 1), ci 1 (d + 1) (L.col t f) 0, ci 3 d d (d + 1),
+      ci 15 d d 0] ++ (if byteCol t f then [ci 1 (d + 1) 255 0, ci 8 d d (d + 1)] else []), max ci'.2 (d + 2))
+  else none
+
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
@@ -113,6 +121,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
     else none
   | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
+  | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
+  | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
+  | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, _, _ => none
 
 /-! ## Values in words -/

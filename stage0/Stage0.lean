@@ -39,6 +39,7 @@ import Stage0.Senke.Hilfe
 import Stage0.Senke.Ausdruck.Sim
 import Stage0.Senke.Ausdruck.Wort
 import Stage0.Senke.Ausdruck.Top
+import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Satz
 import Stage0.Senke.Umgebung
 import Stage0.Senke.Anweisung

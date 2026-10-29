@@ -196,7 +196,8 @@ theorem Pre.up {m : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {c : List II} 
   ⟨Nat.le_trans h.ctx hd, h.small, h.frame, h.code, h.far, h.env, h.welt, h.wstab⟩
 
 /-- The arguments land in the parameter slots of the frame at slot `F`, and nothing below `F + FB` changes. -/
-theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) :
+theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+    (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (c : List II) → (top : Nat) →
     lowA L args (F + FB) = some (c, top) → top ≤ K → F + FB + τs.length ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre m pc fp K (F + FB) c ρ W →
@@ -212,9 +213,9 @@ theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {W : Runner.Mem 
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_cons] at hL
-    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok σ₀ σ rest cr tr hr (by omega) (by omega) m pc ρ hp.left
+    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok σ₀ σ hWL rest cr tr hr (by omega) (by omega) m pc ρ hp.left
     have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := F + FB + τs.length) (by omega)
-    obtain ⟨m2, s2, a2, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ₀ σ e _ ce te he (by omega) m1 _ ρ hp1
+    obtain ⟨m2, s2, a2, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ₀ σ hWL e _ ce te he (by omega) m1 _ ρ hp1
     have hF1 := hp1.frame
     refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans (a2.mono (by omega)), ?_⟩
     simp only [evalArgs]
@@ -249,7 +250,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
   have hks := hW.ks
   have hp' : PreS m pc fp K (frei Γ + FB) (ca ++ callTail A f (frei Γ)) ρ := hp.up (by omega)
   have hpw := PreS.welt hp'.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, e1⟩ := lowA_ok (F := frei Γ) σ₀ σ args ca ta hca (by omega) (by omega) m pc ρ hpw
+  obtain ⟨m1, s1, a1s, e1⟩ := lowA_ok (F := frei Γ) σ₀ σ (fun _ h => h) args ca ta hca (by omega) (by omega) m pc ρ hpw
   have a1 := Agree.widen a1s hks
   have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
   have hp1 := hp'.next a1 (Nat.le_refl _) (by omega)

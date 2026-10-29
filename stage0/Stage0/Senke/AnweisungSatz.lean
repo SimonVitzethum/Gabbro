@@ -86,7 +86,7 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
       have hks := hW.ks
       have htop := lowE_top e _ _ _ he
       have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
-      obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega)
+      obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) e _ ce te he (by omega)
         m pc ρ hpw
       have a1 := Agree.widen a1s hks
       have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
@@ -114,7 +114,7 @@ theorem lowS_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
         ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ := by simpa [List.append_assoc] using hp
     have hks := hW.ks
     have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) cnd
+    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) (fun _ h => h) cnd
       (frei Γ) cc tc hcc (by omega) m pc ρ hpw
     have a1 := Agree.widen a1s hks
     have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
@@ -269,7 +269,7 @@ theorem lowB_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → En
     have htop := lowE_top e _ _ _ he
     have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
     obtain ⟨m1, s1, a1s, w, hw, hen⟩ :=
-      lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) e _ ce te he (by omega) m pc ρ hpw
+      lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) e _ ce te he (by omega) m pc ρ hpw
     have a1 := Agree.widen a1s hks
     have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
