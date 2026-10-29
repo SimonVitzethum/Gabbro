@@ -10,13 +10,15 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 
 set_option linter.unusedSectionVars false
 
+variable {reserved : Nat}
+
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- A binary instruction may read any two frame slots, including its destination. -/
 theorem eng_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d a b o : Nat}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {va vb r : Runner.W}
     {g : Runner.W → Runner.W → Option Runner.W}
-    (hp : Pre L m pc fp K d [ci o d a b] ρ W) (hd : d < K) (ha : a < K) (hb : b < K)
+    (hp : Pre L m pc fp K d [ci o d a b] ρ W reserved) (hd : d < K) (ha : a < K) (hb : b < K)
     (ra : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some va)
     (rb : m.rd64 (slot fp (BitVec.ofNat 64 b)) = some vb)
     (hop : op o = bin g) (ho : o < 256) (hg : g va vb = some r) :
@@ -36,13 +38,13 @@ theorem eng_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d a b o : Nat}
 /-- The five test instructions preserve the value in `d` and put the outside flag in `d+1`. -/
 theorem eng_test_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {lo hi : Int}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {v : Runner.W}
-    (hp : Pre L m pc fp K (d + 1) (engTest d lo hi) ρ W) (hd : d + 2 < K)
+    (hp : Pre L m pc fp K (d + 1) (engTest d lo hi) ρ W reserved) (hd : d + 2 < K)
     (hl : lit32 lo = true) (hh : lit32 hi = true)
     (rv : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some v) :
     Ok m pc fp K (d + 1) (engTest d lo hi)
       (· = Runner.IR.bool (v.slt (BitVec.ofInt 64 lo) || (BitVec.ofInt 64 hi).slt v)) := by
   change Pre L _ _ _ _ _ ([ci 1 (d+1) lo 0] ++ ([ci 13 (d+1) d (d+1)] ++
-    ([ci 1 (d+2) hi 0] ++ ([ci 13 (d+2) (d+2) d] ++ [ci 9 (d+1) (d+1) (d+2)])))) _ _ at hp
+    ([ci 1 (d+2) hi 0] ++ ([ci 13 (d+2) (d+2) d] ++ [ci 9 (d+1) (d+1) (d+2)])))) _ _ reserved at hp
   obtain ⟨m1, s1, a1, w1, r1, rfl⟩ := const_ok hp.left hl (by omega)
   have h1 := hp.next a1 (Nat.le_refl _) (by omega)
   have rv1 : m1.rd64 (slot fp (BitVec.ofNat 64 d)) = some v := by
@@ -74,12 +76,12 @@ theorem eng_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi lo' hi' : Int}
     {e : Expr D Γ Λ (.int lo hi)} {b : Expr D Γ Λ (.int lo' hi')}
     {L : Lay D} {fp : Runner.W} {K d top : Nat} {c : List II} {W : Runner.Mem → Prop}
     {σ₀ σ : World D} {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W}
-    (h : lowE L (.eng e lo' hi' b) d = some (c, top)) (hK : top ≤ K)
-    (ihe : ∀ ce te, lowE L e d = some (ce, te) → te ≤ K → ∀ m pc,
-      Pre L m pc fp K d ce ρ W → Ok m pc fp K d ce (Enc L (.int lo hi) (eval σ₀ e σ ρ)))
-    (ihb : ∀ cb tb, lowE L b d = some (cb, tb) → tb ≤ K → ∀ m pc,
-      Pre L m pc fp K d cb ρ W → Ok m pc fp K d cb (Enc L (.int lo' hi') (eval σ₀ b σ ρ)))
-    (hp : Pre L m pc fp K d c ρ W) :
+    (h : lowE L (reserved := reserved) (.eng e lo' hi' b) d = some (c, top)) (hK : top ≤ K)
+    (ihe : ∀ ce te, lowE L (reserved := reserved) e d = some (ce, te) → te ≤ K → ∀ m pc,
+      Pre L m pc fp K d ce ρ W reserved → Ok m pc fp K d ce (Enc L (.int lo hi) (eval σ₀ e σ ρ)))
+    (ihb : ∀ cb tb, lowE L (reserved := reserved) b d = some (cb, tb) → tb ≤ K → ∀ m pc,
+      Pre L m pc fp K d cb ρ W reserved → Ok m pc fp K d cb (Enc L (.int lo' hi') (eval σ₀ b σ ρ)))
+    (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (.int lo' hi') (eval σ₀ (.eng e lo' hi' b) σ ρ)) := by
   simp only [lowE_eqs, engL] at h
   split at h
@@ -94,7 +96,7 @@ theorem eng_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi lo' hi' : Int}
       obtain ⟨rfl, rfl⟩ := h
       have hd : d + 2 < K := by omega
       have hp' : Pre L m pc fp K d
-          (ce ++ (engTest d lo' hi' ++ ([ci 19 (d+1) ((16 * (cb.length+1) : Nat) : Int) 0] ++ cb))) ρ W := by
+          (ce ++ (engTest d lo' hi' ++ ([ci 19 (d+1) ((16 * (cb.length+1) : Nat) : Int) 0] ++ cb))) ρ W reserved := by
         simpa only [engC, List.append_assoc] using hp
       obtain ⟨m1, s1, a1, w1, r1, p1⟩ := ihe ce te he (by omega) _ _ hp'.left
       simp only [Enc] at p1
@@ -156,13 +158,13 @@ theorem eng_ok_zeuge {Λ : List (Res D)} {Γ : Ctx} (L : Lay D) (σ₀ σ : Worl
     (n : Int) (hn : n = -4 ∨ n = -3 ∨ n = 5 ∨ n = 6)
     {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {W : Runner.Mem → Prop}
     (hd : d + 3 ≤ K)
-    (hp : Pre L m pc fp K d (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0]) ρ W) :
+    (hp : Pre L m pc fp K d (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0]) ρ W reserved) :
     Ok m pc fp K d (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0])
       (· = BitVec.ofInt 64 (if -3 ≤ n ∧ n ≤ 5 then n else 2)) := by
   let b : Expr D Γ Λ (.int (-3) 5) := .widen (by decide) (by decide) (.lit 2)
   have hl : lit32 n = true := by
     rcases hn with rfl | rfl | rfl | rfl <;> decide
-  have he : lowE L (.eng (.lit n) (-3) 5 b) d =
+  have he : lowE L (reserved := reserved) (.eng (.lit n) (-3) 5 b) d =
       some (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0], d + 3) := by
     have hw : inW n n = true := by
       rcases hn with rfl | rfl | rfl | rfl <;> decide
@@ -185,10 +187,10 @@ theorem eng_ok_zeuge {Λ : List (Res D)} {Γ : Ctx} (L : Lay D) (σ₀ σ : Worl
 
 /-- Refuse a source outside signed 64 bits and either bound outside the signed literal field. -/
 theorem eng_refused_zeuge {Λ : List (Res D)} {Γ : Ctx} (L : Lay D) (d : Nat) :
-    lowE L (Γ := Γ) (Λ := Λ) (.eng (.lit (2^63)) 0 0 (.lit 0)) d = none ∧
-    lowE L (Γ := Γ) (Λ := Λ) (.eng (.lit 0) (-(2^31)-1) 0
+    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.eng (.lit (2^63)) 0 0 (.lit 0)) d = none ∧
+    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.eng (.lit 0) (-(2^31)-1) 0
       (.widen (by decide) (by decide) (.lit 0))) d = none ∧
-    lowE L (Γ := Γ) (Λ := Λ) (.eng (.lit 0) 0 (2^31)
+    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.eng (.lit 0) 0 (2^31)
       (.widen (by decide) (by decide) (.lit 0))) d = none := by
   exact ⟨rfl, rfl, rfl⟩
 
