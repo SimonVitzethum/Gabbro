@@ -92,7 +92,7 @@ section
 variable {m : Runner.Mem} {pc : Runner.W} {s : Nat} {n : Int} {ci' cb : List II}
 
 theorem travCode_len : (travCode s n ci' cb).length = 14 + 2 * ci'.length + cb.length := by
-  simp only [travCode, stopC, List.length_append, List.length_cons, List.length_nil]; omega
+  simp only [travCode, stopC, sysC, List.length_append, List.length_cons, List.length_nil]; omega
 
 theorem trav_inv (hc : CodeAt m pc (travCode s n ci' cb)) : CodeAt m (pc + BitVec.ofNat 64 (16 * 1)) ci' :=
   codeAt_at (xs := [ci 1 s 0 0]) (by simpa [travCode] using hc) (by simp)

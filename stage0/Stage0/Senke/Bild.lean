@@ -35,16 +35,41 @@ def codeBase : Nat := Runner.Prog.IMG + 16
 /-- The scratch slot of the start code's `exit_group`: above `main`'s frame header and the call's temporary. -/
 def exitSlot : Nat := 2 * FB + 2
 
-def startC (A : D.Fn → Nat) (main : D.Fn) (n : Nat) : List II :=
-  [ci 1 2 ((n + 1 : Nat) : Int) 0] ++ callTail A main FB ++
-    [ci 1 exitSlot 231 0,
-     if (D.erg main).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
+/-- The code a thread starts with, in its frame: the depth `n + 1`, the call of its root `f`, then the system call `e`
+    (`exit_group` 231 for `main`, with `main`'s result; `exit` 60 for a root, with 0). -/
+def startC (A : D.Fn → Nat) (f : D.Fn) (n e : Nat) (keep : Bool) : List II :=
+  [ci 1 2 ((n + 1 : Nat) : Int) 0] ++ callTail A f FB ++
+    [ci 1 exitSlot e 0,
+     if keep && (D.erg f).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
      else ci 1 ((exitSlot + 1 : Nat) : Int) 0 0,
      ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0]
 
 def startLen : Nat := 8
 
-theorem startC_len (A : D.Fn → Nat) (main : D.Fn) (n : Nat) : (startC A main n).length = startLen := rfl
+theorem startC_len (A : D.Fn → Nat) (f : D.Fn) (n e : Nat) (keep : Bool) : (startC A f n e keep).length = startLen := rfl
+
+/-- `main`'s first code: for every root, its start code's address and its frame's address into `exitSlot`,
+    `exitSlot + 1`, then `spawn` (the thread id into `exitSlot + 2`). -/
+def spawnC : List (Nat × Nat) → List II
+  | [] => []
+  | (a, f) :: r => [ci 1 exitSlot a 0, ci 1 ((exitSlot + 1 : Nat) : Int) f 0,
+      ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0] ++ spawnC r
+
+theorem spawnC_len : (l : List (Nat × Nat)) → (spawnC l).length = 3 * l.length
+  | [] => rfl
+  | _ :: r => by simp only [spawnC, List.length_append, List.length_cons, List.length_nil, spawnC_len r]; omega
+
+/-- The start codes of the roots, one after the other. -/
+def rootsC (A : D.Fn → Nat) (n : Nat) : List D.Fn → List II
+  | [] => []
+  | f :: r => startC A f n 60 false ++ rootsC A n r
+
+theorem rootsC_len (A : D.Fn → Nat) (n : Nat) : (r : List D.Fn) → (rootsC A n r).length = startLen * r.length
+  | [] => rfl
+  | f :: r => by simp only [rootsC, List.length_append, startC_len, rootsC_len A n r, List.length_cons]; rw [Nat.mul_succ]; omega
+
+/-- The code before the functions, for `k` roots: the spawns, `main`'s start, the roots' starts. -/
+def headLen (k : Nat) : Nat := 3 * k + startLen + startLen * k
 
 /-- The start address of every piece, from `b` on. -/
 def addrs : Nat → List Nat → List Nat
@@ -64,6 +89,8 @@ structure Bild (D : Deklaration) where
   Y : Lay D
   /-- `main` runs at this depth -/
   depth : Nat
+  /-- the roots, each on a thread of its own with the `j`-th stack after `main`'s -/
+  roots : List D.Fn
 
 def lowFunE (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) (g : D.Fn) : Except String (List II × Nat) :=
   match lowFun P A Y g with
@@ -84,36 +111,39 @@ def maxTop (cs : List (List II × Nat)) : Nat := cs.foldl (fun a c => max a c.2)
 def depthOf (K L : Nat) : Nat := (K - FB) / L - 1
 
 /-- What `bild` checks of the finished layout. -/
-def BildGut (D : Deklaration) (main : D.Fn) (lens : List Nat) (cs : List (List II × Nat)) (fp0 Ks K : Nat)
-    (Y : Lay D) (code : List II) : Prop :=
-  (D.params main).isEmpty = true ∧ cs.map (·.1.length) = lens ∧ fp0 + 8 * K < 2 ^ 31 ∧
-    FB + 2 * maxTop cs ≤ Ks ∧ exitSlot + 8 ≤ Ks ∧ code.all (fun i => decide (i.o < 256)) = true ∧
-    fp0 + 8 * Ks ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K ∧ Ks ≤ K
+def BildGut (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
+    (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Prop :=
+  (D.params main).isEmpty = true ∧ roots.all (fun f => (D.params f).isEmpty) = true ∧ cs.map (·.1.length) = lens ∧
+    fp0 + 8 * K < 2 ^ 31 ∧ FB + 2 * maxTop cs ≤ Ks ∧ exitSlot + 8 ≤ Ks ∧
+    code.all (fun i => decide (i.o < 256)) = true ∧ fp0 + 8 * (Ks * (roots.length + 1)) ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K
 
-instance (D : Deklaration) (main : D.Fn) (lens : List Nat) (cs : List (List II × Nat)) (fp0 Ks K : Nat)
-    (Y : Lay D) (code : List II) : Decidable (BildGut D main lens cs fp0 Ks K Y code) := by
+instance (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
+    (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Decidable (BildGut D main roots lens cs fp0 Ks K Y code) := by
   unfold BildGut; infer_instance
 
 /-- The image of a program, or why not: `Ks` slots of stack, the world laid out by `Y` from its first byte. -/
 def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn)
-    (Ks : Nat) : Except String (Bild D) :=
+    (roots : List D.Fn) (Ks : Nat) : Except String (Bild D) :=
   match lowAll P (Y 0) name (fun _ => 0) fs with
   | .error e => .error e
   | .ok cs0 =>
     let lens := cs0.map (·.1.length)
-    let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * startLen) lens).getD (pos g) 0
-    let fp0 := codeBase + 16 * (startLen + lens.sum)
-    let Yb := Y (fp0 + 8 * Ks)
-    let K := Ks + (Yb.hi - Yb.lo + 7) / 8
+    let k := roots.length
+    let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * headLen k) lens).getD (pos g) 0
+    let fp0 := codeBase + 16 * (headLen k + lens.sum)
+    let Yb := Y (fp0 + 8 * (Ks * (k + 1)))
+    let K := Ks * (k + 1) + (Yb.hi - Yb.lo + 7) / 8
     match lowAll P Yb name A fs with
     | .error e => .error e
     | .ok cs =>
       let body := cs.flatMap (·.1)
       let n := depthOf Ks (maxTop cs)
-      let code := startC A main n ++ body
-      if BildGut D main lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (startLen + body.length) then
-        .ok ⟨code, A, fp0, K, Ks, Yb, n⟩
+      let sp := (List.range k).map fun j => (codeBase + 16 * (3 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
+      let code := spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
+      if BildGut D main roots lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
+        .ok ⟨code, A, fp0, K, Ks, Yb, n, roots⟩
       else if (D.params main).isEmpty = false then .error "ir: main takes parameters"
+      else if (roots.all fun f => (D.params f).isEmpty) = false then .error "ir: a root takes parameters"
       else if cs.map (·.1.length) != lens then .error "ir: a code length moved with the addresses"
       else if fp0 + 8 * K ≥ 2 ^ 31 then .error "ir: the image does not fit below 2^31"
       else if Ks < FB + 2 * maxTop cs ∨ Ks < exitSlot + 8 then .error "ir: the stack is too small for one call"

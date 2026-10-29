@@ -49,7 +49,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] {passes : Nat} {
       have := codeFar_left (n := (guardC 2 105 (FB + (D.params f).length)).length)
         (k := cq.length + (guardC (FB + (D.params f).length) 101 (FB + (D.params f).length)).length + cb.length)
         (by simpa [Nat.add_assoc] using hfar)
-      simpa [guardC, stopC] using this
+      simpa [guardC, stopC, sysC] using this
     · simp at hlf
   | succ k ih =>
     intro hn f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa

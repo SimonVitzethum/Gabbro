@@ -27,3 +27,6 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.sonst_dec
 #print axioms Gabbro.Stage0.Senke.torPuf_ok
 #print axioms Gabbro.Stage0.Senke.byte_packV
+#print axioms Gabbro.Stage0.Senke.bild_wurzel_ok_u
+#print axioms Gabbro.Stage0.Senke.start_ok
+#print axioms Gabbro.Stage0.Senke.spawnC_ok

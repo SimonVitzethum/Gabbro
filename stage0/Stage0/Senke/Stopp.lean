@@ -37,7 +37,10 @@ def hwCode : Hardware D → Nat
   | .geraet _ => 114
   | .sichtbarkeit _ => 115
 
-def stopC (c s : Nat) : List II := [ci 1 s 231 0, ci 1 ((s + 1 : Nat) : Int) c 0, ci 23 ((s + 7 : Nat) : Int) s 0]
+/-- The system call `nr` with first argument `c`, its request block at slot `s`. -/
+def sysC (nr c s : Nat) : List II := [ci 1 s nr 0, ci 1 ((s + 1 : Nat) : Int) c 0, ci 23 ((s + 7 : Nat) : Int) s 0]
+
+def stopC (c s : Nat) : List II := sysC 231 c s
 
 /-- The thread at `t` stops with `exit_group(c)` after zero or more instructions. -/
 def Stops (t : T) (m : Runner.Mem) (c : Nat) : Prop :=
@@ -70,16 +73,19 @@ theorem slot_plus (fp : Runner.W) (s i : Nat) :
   rw [h8]
   omega
 
-theorem stop_ok {m : Runner.Mem} {pc fp : Runner.W} {K c s : Nat} (hc : CodeAt m pc (stopC c s))
-    (hf : CodeFar pc 3 fp K) (hF : FrameOK m fp K) (hs : s + 8 ≤ K) (hK : K < 2 ^ 31) (hcode : c < 2 ^ 31) :
-    Stops ⟨pc, fp⟩ m c := by
+/-- The thread stands at the request `nr (c, ..)` after the two constants. -/
+theorem sys_ok {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : CodeAt m pc (sysC nr c s))
+    (hf : CodeFar pc 3 fp K) (hF : FrameOK m fp K) (hs : s + 8 ≤ K) (hK : K < 2 ^ 31) (hcode : c < 2 ^ 31)
+    (hnr : nr < 2 ^ 31) :
+    ∃ t' m' q, Star ⟨pc, fp⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 nr ∧ q.a1 = BitVec.ofNat 64 c := by
   have hroom := hF.room
   -- the two constants
-  have s1 := const_step (k := 231) (codeAt_left (a := [ci 1 s 231 0]) hc) hF (by omega) hK (by decide)
-  let m1 := write m (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 231).toNat
+  have s1 := const_step (k := (nr : Int)) (codeAt_left (a := [ci 1 s nr 0]) hc) hF (by omega) hK
+    (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
+  let m1 := write m (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 (nr : Int)).toNat
   have a1 : Agree fp 0 K m m1 := agree_write hroom (Nat.zero_le _) (by omega) _
   have hc1 : CodeAt m1 (pc + 16) [ci 1 ((s + 1 : Nat) : Int) c 0, ci 23 ((s + 7 : Nat) : Int) s 0] := by
-    have := (codeAt_right (a := [ci 1 s 231 0]) hc).agree a1 (codeFar_right (n := 1) (k := 2) hf)
+    have := (codeAt_right (a := [ci 1 s nr 0]) hc).agree a1 (codeFar_right (n := 1) (k := 2) hf)
     simpa using this
   have hF1 := hF.agree a1
   have s2 := const_step (j := s + 1) (k := c) (codeAt_left (a := [ci 1 ((s + 1 : Nat) : Int) c 0]) hc1) hF1 (by omega) hK
@@ -98,7 +104,7 @@ theorem stop_ok {m : Runner.Mem} {pc fp : Runner.W} {K c s : Nat} (hc : CodeAt m
   have hi := hc2 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
   have hsx : sx (II.f (s : Int)) = BitVec.ofNat 64 s := sx_nat (by omega)
-  have r0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 231) := by
+  have r0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (nr : Int)) := by
     simp only [m2]
     rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]
     exact rd64_wr64 (wr64_some (hF.wr s (by omega))) (hF.rd s (by omega))
@@ -111,9 +117,9 @@ theorem stop_ok {m : Runner.Mem} {pc fp : Runner.W} {K c s : Nat} (hc : CodeAt m
   obtain ⟨v4, r4⟩ := rd 4 (by decide)
   obtain ⟨v5, r5⟩ := rd 5 (by decide)
   obtain ⟨v6, r6⟩ := rd 6 (by decide)
-  refine ⟨_, m2, ⟨BitVec.ofInt 64 231, BitVec.ofInt 64 c, v2, v3, v4, v5, v6⟩, s1.trans s2,
+  refine ⟨_, m2, ⟨BitVec.ofInt 64 (nr : Int), BitVec.ofInt 64 c, v2, v3, v4, v5, v6⟩, s1.trans s2,
     runTo_sys (t := ⟨pc + 16 + 16, fp⟩) hi (by rw [hsx]; exact r0) ?_ ?_ ?_ ?_ ?_ ?_,
-    rfl, ?_⟩
+    by rw [BitVec.ofInt_natCast], ?_⟩
   · rw [hsx, show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]; exact r1
   · rw [hsx, show (16 : Runner.W) = BitVec.ofNat 64 (8 * 2) by rfl, slot_plus]; exact r2
   · rw [hsx, show (24 : Runner.W) = BitVec.ofNat 64 (8 * 3) by rfl, slot_plus]; exact r3
@@ -123,6 +129,12 @@ theorem stop_ok {m : Runner.Mem} {pc fp : Runner.W} {K c s : Nat} (hc : CodeAt m
   · apply BitVec.eq_of_toNat_eq
     simp only [BitVec.toNat_ofInt, BitVec.toNat_ofNat]
     omega
+
+theorem stop_ok {m : Runner.Mem} {pc fp : Runner.W} {K c s : Nat} (hc : CodeAt m pc (stopC c s))
+    (hf : CodeFar pc 3 fp K) (hF : FrameOK m fp K) (hs : s + 8 ≤ K) (hK : K < 2 ^ 31) (hcode : c < 2 ^ 31) :
+    Stops ⟨pc, fp⟩ m c := by
+  obtain ⟨t', m', q, h1, h2, h3, h4⟩ := sys_ok hc hf hF hs hK hcode (by decide)
+  exact ⟨t', m', q, h1, h2, by rw [h3]; rfl, h4⟩
 
 /-- `brz a` over a stop: if slot `a` is zero, `exit_group(c)`; else on after it. -/
 def guardC (a c s : Nat) : List II := [ci 19 a 32 0, ci 18 64 0 0] ++ stopC c s

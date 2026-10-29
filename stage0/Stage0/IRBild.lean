@@ -26,8 +26,10 @@ def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) 
   let tore ← toreVon (uMembers (pre108 items))
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩
+  let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)
+  let roots := rs.filter (· != main)
   let b ← Senke.bild P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
-    (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main K
+    (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main roots K
   pure b.bytes
 
 end Gabbro.Stage0

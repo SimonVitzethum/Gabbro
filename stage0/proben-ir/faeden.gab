@@ -1,0 +1,55 @@
+// stage-0 IR probe: main and a concurrent root, each writing through its own buffer; exit code 2
+module ir_probe {
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    exhaustive
+}
+
+assume linux_write
+    "The Linux x86_64 `write` writes the buffer's first len bytes and answers how many."
+    falsifier sonde_write;
+
+table pa count 2 { slot { b : u32 in 0 .. 255, } }
+table pb count 2 { slot { b : u32 in 0 .. 255, } }
+
+syscall writea(fd : u64, buf : ptr<normal, rw> pa, len : u64) -> u64 in 0 .. 4096 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted }
+    effects { writes pa.slots }
+    costs <= 8 ops
+    assume linux_write falsifier sonde_write;
+
+syscall writeb(fd : u64, buf : ptr<normal, rw> pb, len : u64) -> u64 in 0 .. 4096 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted }
+    effects { writes pb.slots }
+    costs <= 8 ops
+    assume linux_write falsifier sonde_write;
+
+impl fn neben()
+    effects { writes pb.slots }
+{
+    pb.slots[0].b = 66;
+    pb.slots[1].b = 10;
+    let n = writeb(1, &pb, 2) else (e) { return; }
+}
+
+concurrent { neben };
+
+impl fn main() -> u64 in 0 .. 4096
+    effects { writes pa.slots }
+{
+    pa.slots[0].b = 65;
+    pa.slots[1].b = 10;
+    let n = writea(1, &pa, 2) else (e) { return 99; }
+    return n;
+}
+}

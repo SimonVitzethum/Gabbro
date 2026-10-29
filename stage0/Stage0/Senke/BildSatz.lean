@@ -1,10 +1,11 @@
 /-
   File:      stage0/Stage0/Senke/BildSatz.lean
-  Subject:   The whole program: where the image's bytes lie at `IMG`, the IR thread the loader starts (`pc = IMG + 16`,
-             `fp` = the image's first word) runs `main` as G's `rufAt n main` (`n` the image's depth) and ends with
-             `exit_group` of `main`'s result, or with the stop of G's logic outcome (`bild_ok`).
+  Subject:   The whole program: where the image's bytes lie at `IMG`. The IR thread the loader starts (`pc = IMG + 16`,
+             `fp` = the image's first word) spawns every root on a stack of its own, runs `main` as G's `rufAt n main`
+             (`n` the image's depth) and ends with `exit_group` of `main`'s result, or with the stop of G's outcome
+             (`bild_ok`); the thread of root `j` runs it as `rufAt n` and ends with `exit` (`bild_wurzel_ok`).
 -/
-import Stage0.Senke.BildLese
+import Stage0.Senke.Start
 
 namespace Gabbro.Stage0.Senke
 
@@ -15,59 +16,6 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration}
-
-/-- `exit_group` with the word of slot `r`. -/
-theorem exitw_ok {m : Runner.Mem} {pc fp : Runner.W} {K s r : Nat} {w : Runner.W}
-    (hc : CodeAt m pc [ci 1 s 231 0, ci 2 ((s + 1 : Nat) : Int) r 0, ci 23 ((s + 7 : Nat) : Int) s 0])
-    (hf : CodeFar pc 3 fp K) (hF : FrameOK m fp K) (hs : s + 8 ≤ K) (hr : r < s) (hK : K < 2 ^ 31)
-    (hw : m.rd64 (slot fp (BitVec.ofNat 64 r)) = some w) :
-    ∃ t' m' q, Star ⟨pc, fp⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 231 ∧ q.a1 = w := by
-  have hroom := hF.room
-  have s1 := const_step (k := 231) (codeAt_left (a := [ci 1 s 231 0]) hc) hF (by omega) hK (by decide)
-  let m1 := write m (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 231).toNat
-  have a1 : Agree fp 0 K m m1 := agree_write hroom (Nat.zero_le _) (by omega) _
-  have hc1 : CodeAt m1 (pc + 16) [ci 2 ((s + 1 : Nat) : Int) r 0, ci 23 ((s + 7 : Nat) : Int) s 0] := by
-    have := (codeAt_right (a := [ci 1 s 231 0]) hc).agree a1 (codeFar_right (n := 1) (k := 2) hf)
-    simpa using this
-  have hF1 := hF.agree a1
-  have hw1 : m1.rd64 (slot fp (BitVec.ofNat 64 r)) = some w := by
-    simp only [m1]; rw [rd_other hroom (by omega) (by omega) (by omega)]; exact hw
-  have s2 := mov_to (codeAt_left (a := [ci 2 ((s + 1 : Nat) : Int) r 0]) hc1) hF1 (j := s + 1) (s := r) (by omega)
-    (by omega) hK hw1
-  let m2 := write m1 (slot fp (BitVec.ofNat 64 (s + 1))) 8 w.toNat
-  have a2 : Agree fp 0 K m1 m2 := agree_write hroom (Nat.zero_le _) (by omega) _
-  have hc2 : CodeAt m2 (pc + 16 + 16) [ci 23 ((s + 7 : Nat) : Int) s 0] := by
-    have := (codeAt_right (a := [ci 2 ((s + 1 : Nat) : Int) r 0]) hc1).agree a2 (by
-      have := codeFar_right (n := 2) (k := 1) hf
-      simp only [List.length_singleton, Nat.mul_one]
-      rw [BitVec.add_assoc, show (16 : Runner.W) + BitVec.ofNat 64 16 = BitVec.ofNat 64 (16 * 2) by decide]
-      exact this)
-    simpa using this
-  have hF2 := hF1.agree a2
-  have hi := hc2 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  have hsx : sx (II.f (s : Int)) = BitVec.ofNat 64 s := sx_nat (by omega)
-  have r0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 231) := by
-    simp only [m2]
-    rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]
-    exact rd64_wr64 (wr64_some (hF.wr s (by omega))) (hF.rd s (by omega))
-  have r1 : m2.rd64 (slot fp (BitVec.ofNat 64 (s + 1))) = some w :=
-    rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))
-  have rd : ∀ i, i < 7 → ∃ v, m2.rd64 (slot fp (BitVec.ofNat 64 (s + i))) = some v := fun i hi =>
-    ⟨_, by simp only [Runner.Mem.rd64, hF2.rd (s + i) (by omega), ↓reduceIte]; rfl⟩
-  obtain ⟨v2, r2⟩ := rd 2 (by decide)
-  obtain ⟨v3, r3⟩ := rd 3 (by decide)
-  obtain ⟨v4, r4⟩ := rd 4 (by decide)
-  obtain ⟨v5, r5⟩ := rd 5 (by decide)
-  obtain ⟨v6, r6⟩ := rd 6 (by decide)
-  refine ⟨_, m2, ⟨BitVec.ofInt 64 231, w, v2, v3, v4, v5, v6⟩, s1.trans s2,
-    runTo_sys (t := ⟨pc + 16 + 16, fp⟩) hi (by rw [hsx]; exact r0) ?_ ?_ ?_ ?_ ?_ ?_, rfl, rfl⟩
-  · rw [hsx, show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]; exact r1
-  · rw [hsx, show (16 : Runner.W) = BitVec.ofNat 64 (8 * 2) by rfl, slot_plus]; exact r2
-  · rw [hsx, show (24 : Runner.W) = BitVec.ofNat 64 (8 * 3) by rfl, slot_plus]; exact r3
-  · rw [hsx, show (32 : Runner.W) = BitVec.ofNat 64 (8 * 4) by rfl, slot_plus]; exact r4
-  · rw [hsx, show (40 : Runner.W) = BitVec.ofNat 64 (8 * 5) by rfl, slot_plus]; exact r5
-  · rw [hsx, show (48 : Runner.W) = BitVec.ofNat 64 (8 * 6) by rfl, slot_plus]; exact r6
 
 theorem leN_len (n v : Nat) : (Runner.Prog.leN n v).length = n := by simp [Runner.Prog.leN]
 
@@ -85,151 +33,270 @@ theorem codeFar_nat {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2 
   simp only [CodeFar, BitVec.toNat_ofNat]
   omega
 
-theorem bild_kern {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat} {main : D.Fn}
-    {K Ks : Nat} {Yb : Lay D} [hT : TorOK Yb O] {A : D.Fn → Nat} {cs : List (List II × Nat)} {body : List II} {L n fp0 : Nat}
-    (hbody : body = cs.flatMap (·.1)) (hL : L = maxTop cs) (hn : n = depthOf Ks L)
-    (hfp : fp0 = codeBase + 16 * (startLen + body.length))
-    (hA : ∀ g, A g = (addrs (codeBase + 16 * startLen) (cs.map (·.1.length))).getD (pos g) 0)
-    (hcl : cs.length = fs.length) (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i])
-    (hfs : ∀ g, fs[pos g]? = some g) (hpar : (D.params main).isEmpty = true) (hfit : fp0 + 8 * K < 2 ^ 31)
-    (hroomK : FB + 2 * L ≤ Ks) (hexK : exitSlot + 8 ≤ Ks) (hks : Ks ≤ K) (hYlo : fp0 + 8 * Ks ≤ Yb.lo)
-    (hYhi : Yb.hi ≤ fp0 + 8 * K) (hYord : Yb.lo ≤ Yb.hi) (hY : LayIn Yb) (hYd : LayDis Yb)
-    (hops : (startC A main n ++ body).all (fun i => decide (i.o < 256)) = true)
-    {m : Runner.Mem} (hm : BytesAt m codeBase ((startC A main n ++ body).flatMap encII ++ List.replicate (8 * K) 0))
-    (σ : World D) (ρ : Env D (D.params main)) (hWa : WeltAt m Yb σ) :
-    match rufAt P O passes n main σ ρ with
-    | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = 231 ∧ EncErg (D.erg main) v q.a1
-    | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (logikCode e)
-    | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (hwCode h)
-    | _ => False := by
-  have hcb : codeBase = 268435472 := rfl
-  have hFB3 : FB = 3 := rfl
-  have hex : exitSlot = 8 := rfl
-  have hsl : startLen = 8 := rfl
-  have hL1 : 1 ≤ L := hL ▸ maxTop_pos cs
-  have hK : K < 2 ^ 31 := by omega
-  have hcode := hm.left
+/-- The code of an image: the head `hd`, then every function at its address, all below the stacks. -/
+theorem bild_code {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {A : D.Fn → Nat}
+    {cs : List (List II × Nat)} {body hd : List II} {Yb : Lay D} {fp0 : Nat} {C : D.Fn → List II}
+    (hC : ∀ g, C g = ((cs[pos g]?).map (·.1)).getD [])
+    (hbody : body = cs.flatMap (·.1)) (hfp : fp0 = codeBase + 16 * (hd.length + body.length))
+    (hA : ∀ g, A g = (addrs (codeBase + 16 * hd.length) (cs.map (·.1.length))).getD (pos g) 0)
+    (hcl : cs.length = fs.length)
+    (hcs : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i])
+    (hfs : ∀ g, fs[pos g]? = some g) (hops : (hd ++ body).all (fun i => decide (i.o < 256)) = true)
+    {m : Runner.Mem} (hcode : BytesAt m codeBase ((hd ++ body).flatMap encII)) :
+    (∀ g, ∃ top, lowFun P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
+    (∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ A g + 16 * (C g).length ≤ fp0) ∧
+    CodeAt m (BitVec.ofNat 64 codeBase) hd := by
   rw [List.flatMap_append] at hcode
   have hSb := hcode.left
   have hBb := hcode.right
-  rw [flatMap_enc_len, startC_len] at hBb
+  rw [flatMap_enc_len] at hBb
   rw [List.all_append, Bool.and_eq_true] at hops
-  -- the functions, each at its address
-  let C : D.Fn → List II := fun g => ((cs[pos g]?).map (·.1)).getD []
   have hpos : ∀ g, ∃ h : pos g < cs.length, lowFun P A Yb g = some cs[pos g] ∧ C g = cs[pos g].1 := by
     intro g
     obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp (hfs g)
     have hc : pos g < cs.length := by omega
     refine ⟨hc, ?_, ?_⟩
     · have := hcs (pos g) h1 hc; rwa [h2] at this
-    · simp only [C, List.getElem?_eq_getElem hc, Option.map_some, Option.getD_some]
+    · simp only [hC, List.getElem?_eq_getElem hc, Option.map_some, Option.getD_some]
   have hseg : ∀ g, BytesAt m (A g) ((C g).flatMap encII) ∧ A g + 16 * (C g).length ≤ fp0 ∧
       (C g).all (fun i => decide (i.o < 256)) = true := by
     intro g
-    obtain ⟨hc, _, hC⟩ := hpos g
-    rw [hC]
+    obtain ⟨hc, _, hCg⟩ := hpos g
+    rw [hCg]
     have hsp := flat_split cs (pos g) hc
     have htl := flat_take_len cs (pos g)
-    have hAg : A g = codeBase + 16 * startLen + 16 * ((cs.map (·.1.length)).take (pos g)).sum := by
+    have hAg : A g = codeBase + 16 * hd.length + 16 * ((cs.map (·.1.length)).take (pos g)).sum := by
       rw [hA g, addrs_getD _ _ _ (by simpa using hc)]
-    rw [hbody, hsp] at hBb
-    rw [hbody, hsp] at hops
-    rw [hbody, hsp] at hfp
-    simp only [List.flatMap_append, List.length_append] at hBb hfp
-    simp only [List.all_append, Bool.and_eq_true] at hops
-    have hb := hBb.right.left
+    have hBb' := hBb
+    have hops' := hops.2
+    have hfp' := hfp
+    rw [hbody, hsp] at hBb' hops' hfp'
+    simp only [List.flatMap_append, List.length_append] at hBb' hfp'
+    simp only [List.all_append, Bool.and_eq_true] at hops'
+    have hb := hBb'.right.left
     rw [flatMap_enc_len, htl] at hb
-    refine ⟨by rw [hAg]; exact hb, by rw [hAg, ← htl]; omega, hops.2.2.1⟩
-  have hAlt : ∀ g, A g < 2 ^ 31 := fun g => by have := (hseg g).2.1; omega
-  have hlen : ∀ g, 16 * (C g).length < 2 ^ 31 := fun g => by have := (hseg g).2.1; omega
-  have hP : PCode m A C (BitVec.ofNat 64 fp0) Ks := fun g =>
-    ⟨codeAt_bytes (C g) (A g) (hseg g).2.2 (hseg g).1, codeFar_nat (hseg g).2.1 (by omega)⟩
-  have hC' : ∀ g, ∃ top, lowFun P A Yb g = some (C g, top) ∧ top ≤ L := fun g => by
-    obtain ⟨hc, hl, hC⟩ := hpos g
-    exact ⟨cs[pos g].2, by rw [hl, hC], hL ▸ maxTop_ge hc⟩
-  -- the stack
-  have hF : FrameOK m (BitVec.ofNat 64 fp0) K := by
-    have hz := hm.right
-    rw [List.flatMap_append, List.length_append, flatMap_enc_len, flatMap_enc_len, startC_len] at hz
-    exact frameOK_bytes (by rw [hfp]; rwa [show codeBase + (16 * startLen + 16 * body.length) =
-      codeBase + 16 * (startLen + body.length) by omega] at hz) (by simp) (by omega)
-  have hF : FrameOK m (BitVec.ofNat 64 fp0) Ks := frameOK_sub hF hks
-  have hroom := hF.room
-  -- the depth
-  have hq : 2 ≤ (Ks - FB) / L := (Nat.le_div_iff_mul_le (by omega)).mpr (by omega)
-  have hn1 : n + 1 = (Ks - FB) / L := by rw [hn, depthOf]; omega
-  have hdm := Nat.div_mul_le_self (Ks - FB) L
-  have hnK : n + 1 ≤ Ks := by have := Nat.div_le_self (Ks - FB) L; omega
-  have hS := lowFun_spec (Y := Yb) (P := P) (O := O) (passes := passes) hC' hAlt hlen n (by omega)
-  -- the start code
-  have hS0 := codeAt_bytes _ _ hops.1 hSb
-  have hS0' : CodeAt m (BitVec.ofNat 64 codeBase) ([ci 1 2 ((n + 1 : Nat) : Int) 0] ++ (callTail A main FB ++
-      [ci 1 exitSlot 231 0,
-       if (D.erg main).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
-       else ci 1 ((exitSlot + 1 : Nat) : Int) 0 0,
-       ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0])) := by
-    simpa [startC, List.append_assoc] using hS0
-  have s1 := const_step (j := 2) (k := ((n + 1 : Nat) : Int)) (codeAt_left hS0') hF (by omega) (by omega)
-    (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
-  let m1 := write m (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 2)) 8 (BitVec.ofInt 64 ((n + 1 : Nat) : Int)).toNat
-  have a1 : Agree (BitVec.ofNat 64 fp0) 2 Ks m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
-  have hF1 := hF.agree a1
-  have hfp0 : (BitVec.ofNat 64 fp0).toNat = fp0 := by simp only [BitVec.toNat_ofNat]; omega
-  have hW : WIn Yb (BitVec.ofNat 64 fp0) Ks Ks := ⟨hY, hYd, by rw [hfp0]; omega, hYord, Nat.le_refl _⟩
-  have hWa1 : WeltAt m1 Yb σ := weltAt_stab hY (by rw [hfp0]; omega) m m1 hWa
-    ((agree_write (K := Ks) (by rw [hfp0]; omega) (Nat.le_refl 2) (by omega) _).mono (Nat.zero_le _))
-  have hfC : CodeFar (BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * [ci 1 2 ((n + 1 : Nat) : Int) 0].length))
-      (callTail A main FB ++ [ci 1 exitSlot 231 0,
-       if (D.erg main).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
-       else ci 1 ((exitSlot + 1 : Nat) : Int) 0 0,
-       ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0]).length (BitVec.ofNat 64 fp0) Ks := by
-    rw [ofNat_add64]; exact codeFar_nat (by simp [callTail]; omega) (by omega)
-  have hc1 := (codeAt_right hS0').agree a1 hfC
-  have hdv : m1.rd64 (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 n + 1) := by
-    have hconv : BitVec.ofInt 64 ((n + 1 : Nat) : Int) = BitVec.ofNat 64 n + 1 := by
-      rw [BitVec.ofInt_natCast]; exact ofNat_succ n
-    simp only [m1]
-    rw [rd_same hF (by omega), hconv]
-  have hnp : (D.params main).length = 0 := by simpa using hpar
-  have hE : EnvAt m1 (slot (BitVec.ofNat 64 fp0) (BitVec.ofNat 64 FB)) ρ := fun τ x => by
-    have := idx_lt x; omega
-  have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by have h4 : (callTail A main FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 (by omega) (Nat.le_refl _)
-    (by omega) (by rw [hn1]; omega) (hAlt main) (pcode_agree hP a1) hdv hE hW hWa1
-  generalize rufAt P O passes n main σ ρ = o at hcall ⊢
+    refine ⟨by rw [hAg]; exact hb, by rw [hAg, ← htl]; omega, hops'.2.1⟩
+  refine ⟨fun g => ?_, fun g => ⟨codeAt_bytes (C g) (A g) (hseg g).2.2 (hseg g).1, (hseg g).2.1⟩,
+    codeAt_bytes hd codeBase hops.1 hSb⟩
+  obtain ⟨hc, hl, hCg⟩ := hpos g
+  exact ⟨cs[pos g].2, by rw [hl, hCg], maxTop_ge hc⟩
+
+theorem rootsC_at (A : D.Fn → Nat) (n : Nat) {m : Runner.Mem} :
+    (roots : List D.Fn) → (p j : Nat) → (hj : j < roots.length) → CodeAt m (BitVec.ofNat 64 p) (rootsC A n roots) →
+    CodeAt m (BitVec.ofNat 64 (p + 16 * (startLen * j))) (startC A roots[j] n 60 false)
+  | [], _, _, hj, _ => absurd hj (by simp)
+  | f :: r, p, 0, _, hc => by simpa [rootsC] using codeAt_left (a := startC A f n 60 false) hc
+  | f :: r, p, j + 1, hj, hc => by
+    have h := codeAt_right (a := startC A f n 60 false) (b := rootsC A n r) hc
+    rw [startC_len, ofNat_add64] at h
+    have := rootsC_at A n r (p + 16 * startLen) j (by simpa using hj) h
+    rw [show p + 16 * startLen + 16 * (startLen * j) = p + 16 * (startLen * (j + 1)) by rw [Nat.mul_succ]; omega]
+      at this
+    simpa using this
+
+/-- The frame of the `j`-th stack: `Ks` zero slots readable and writable. -/
+theorem frame_stack {m : Runner.Mem} {fp0 K Ks j : Nat} (hz : BytesAt m fp0 (List.replicate (8 * K) 0))
+    (hj : Ks * (j + 1) ≤ K) (hfit : fp0 + 8 * K < 2 ^ 31) :
+    FrameOK m (BitVec.ofNat 64 (fp0 + 8 * (Ks * j))) Ks := by
+  have hs : Ks * (j + 1) = Ks * j + Ks := Nat.mul_succ Ks j
+  have e : List.replicate (8 * K) (0 : Runner.B) =
+      List.replicate (8 * (Ks * j)) 0 ++ List.replicate (8 * K - 8 * (Ks * j)) 0 := by
+    rw [List.replicate_append_replicate]; congr 1; omega
+  rw [e] at hz
+  have h := hz.right
+  simp only [List.length_replicate] at h
+  exact frameOK_bytes h (by simp only [List.length_replicate]; omega) (by omega)
+
+section Bild
+variable {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat} {main : D.Fn}
+  {roots : List D.Fn} {K Ks : Nat} {Yb : Lay D} {A : D.Fn → Nat} {cs : List (List II × Nat)} {body : List II}
+  {n fp0 : Nat} {sp : List (Nat × Nat)}
+
+/-- What `bild` lays out, as hypotheses on one image. -/
+structure BildLage (P : Programm D) (fs : List D.Fn) (pos : D.Fn → Nat) (main : D.Fn) (roots : List D.Fn)
+    (K Ks : Nat) (Yb : Lay D) (A : D.Fn → Nat) (cs : List (List II × Nat)) (body : List II) (n fp0 : Nat)
+    (sp : List (Nat × Nat)) : Prop where
+  hbody : body = cs.flatMap (·.1)
+  hdepth : n = depthOf Ks (maxTop cs)
+  hsp : sp = (List.range roots.length).map fun j =>
+    (codeBase + 16 * (3 * roots.length + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
+  hfp : fp0 = codeBase + 16 * (headLen roots.length + body.length)
+  haddr : ∀ g, A g = (addrs (codeBase + 16 * headLen roots.length) (cs.map (·.1.length))).getD (pos g) 0
+  hlen : cs.length = fs.length
+  hlow : ∀ i (hi : i < fs.length) (hc : i < cs.length), lowFun P A Yb fs[i] = some cs[i]
+  hpos : ∀ g, fs[pos g]? = some g
+  hpar : (D.params main).isEmpty = true
+  hrpar : roots.all (fun f => (D.params f).isEmpty) = true
+  hfit : fp0 + 8 * K < 2 ^ 31
+  hroom : FB + 2 * maxTop cs ≤ Ks
+  hex : exitSlot + 8 ≤ Ks
+  hylo : fp0 + 8 * (Ks * (roots.length + 1)) ≤ Yb.lo
+  hyhi : Yb.hi ≤ fp0 + 8 * K
+  hyord : Yb.lo ≤ Yb.hi
+  hlay : LayIn Yb
+  hdis : LayDis Yb
+  hops : (spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).all (fun i => decide (i.o < 256)) = true
+
+theorem BildLage.head (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) :
+    (spawnC sp ++ startC A main n 231 true ++ rootsC A n roots).length = headLen roots.length := by
+  rw [h.hsp]
+  simp only [List.length_append, spawnC_len, List.length_map, List.length_range, startC_len, rootsC_len, headLen]
+
+/-- The functions of an image and their code below the stacks. -/
+theorem BildLage.code (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
+    (hm : BytesAt m codeBase ((spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
+      List.replicate (8 * K) 0)) :
+    let C : D.Fn → List II := fun g => ((cs[pos g]?).map (·.1)).getD []
+    (∀ g, ∃ top, lowFun P A Yb g = some (C g, top) ∧ top ≤ maxTop cs) ∧
+    (∀ g, CodeAt m (BitVec.ofNat 64 (A g)) (C g) ∧ A g + 16 * (C g).length ≤ fp0) ∧
+    CodeAt m (BitVec.ofNat 64 codeBase) (spawnC sp ++ startC A main n 231 true ++ rootsC A n roots) ∧
+    BytesAt m fp0 (List.replicate (8 * K) 0) := by
+  intro C
+  have hl := h.head
+  obtain ⟨c1, c2, c3⟩ := bild_code (C := C) (fp0 := fp0) (fun _ => rfl) h.hbody (by rw [hl]; exact h.hfp)
+    (by rw [hl]; exact h.haddr) h.hlen h.hlow h.hpos h.hops hm.left
+  refine ⟨c1, c2, c3, ?_⟩
+  have hz := hm.right
+  rw [flatMap_enc_len, List.length_append, hl] at hz
+  rwa [show codeBase + 16 * (headLen roots.length + body.length) = fp0 from h.hfp.symm] at hz
+
+/-- The world above the stacks, for the frame of stack `j`. -/
+theorem BildLage.win (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {j : Nat}
+    (hj : j ≤ roots.length) : WIn Yb (BitVec.ofNat 64 (fp0 + 8 * (Ks * j))) Ks Ks := by
+  have hs : Ks * (roots.length + 1) = Ks * roots.length + Ks := Nat.mul_succ Ks _
+  have hm : Ks * j ≤ Ks * roots.length := Nat.mul_le_mul_left Ks hj
+  have := h.hylo; have := h.hyhi; have := h.hfit
+  refine ⟨h.hlay, h.hdis, ?_, h.hyord, Nat.le_refl _⟩
+  simp only [BitVec.toNat_ofNat]; omega
+
+/-- **`main`'s thread**: the spawns of the roots, then `main` as `rufAt n main`, then `exit_group`. -/
+theorem bild_kern [CloneOK] {O : Orakel D} [hT : TorOK Yb O] {passes : Nat}
+    (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
+    (hm : BytesAt m codeBase ((spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
+      List.replicate (8 * K) 0))
+    (σ : World D) (ρ : Env D (D.params main)) (hWa : WeltAt m Yb σ) :
+    match rufAt P O passes n main σ ρ with
+    | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m t' m' ∧ StopAt t' m' q ∧
+        q.nr = BitVec.ofNat 64 231 ∧ EncErg (D.erg main) v q.a1
+    | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (logikCode e)
+    | .hardware e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 fp0⟩ m (hwCode e)
+    | _ => False := by
+  obtain ⟨c1, c2, c3, hz⟩ := h.code hm
+  have hfit := h.hfit
+  have hroom := h.hroom
+  have hex := h.hex
+  have hylo := h.hylo
+  have hyhi := h.hyhi
+  have hs : Ks * (roots.length + 1) = Ks * roots.length + Ks := Nat.mul_succ Ks _
+  have hK : Ks ≤ K := by
+    have := Nat.le_mul_of_pos_right Ks (Nat.succ_pos roots.length); have := h.hyord; omega
+  have hF0 : FrameOK m (BitVec.ofNat 64 fp0) Ks := by
+    simpa using frame_stack (j := 0) hz (by omega) hfit
+  have hW0 : WIn Yb (BitVec.ofNat 64 fp0) Ks Ks := by simpa using h.win (j := 0) (Nat.zero_le _)
+  have hfp := h.hfp
+  have hcb : codeBase = 268435472 := rfl
+  have hsl8 : startLen = 8 := rfl
+  simp only [headLen, startLen] at hfp
+  have hl := h.head
+  -- the spawns
+  have hcS : CodeAt m (BitVec.ofNat 64 codeBase) (spawnC sp) := codeAt_left (codeAt_left c3)
+  have hsl : (spawnC sp).length = 3 * roots.length := by rw [spawnC_len, h.hsp]; simp
+  have hspb : ∀ x ∈ sp, x.1 < 2 ^ 31 ∧ x.2 < 2 ^ 31 := by
+    intro x hx
+    rw [h.hsp] at hx
+    simp only [List.mem_map, List.mem_range] at hx
+    obtain ⟨j, hj, rfl⟩ := hx
+    have : Ks * (j + 1) ≤ Ks * roots.length := Nat.mul_le_mul_left Ks (by omega)
+    have := h.hyord
+    simp only [startLen]
+    constructor <;> omega
+  obtain ⟨m1, s1, a1⟩ := spawnC_ok (fp := BitVec.ofNat 64 fp0) (K := Ks) (by omega) (by omega) sp hspb m _ hcS hF0
+    (codeFar_nat' (by rw [hsl]; omega) (by omega))
+  -- `main`
+  have hcM : CodeAt m (BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length))) (startC A main n 231 true) := by
+    have := codeAt_right (codeAt_left (a := spawnC sp ++ startC A main n 231 true) c3)
+    rw [ofNat_add64, hsl] at this
+    exact this
+  have hcM1 := hcM.agree a1 (codeFar_nat' (by rw [startC_len]; simp only [startLen]; omega) (by omega))
+  have hPC : PCode m1 A (fun g => ((cs[pos g]?).map (·.1)).getD []) (BitVec.ofNat 64 fp0) Ks := fun g =>
+    ⟨(c2 g).1.agree a1 (codeFar_nat' (c2 g).2 (by omega)), codeFar_nat' (c2 g).2 (by omega)⟩
+  have hst := start_ok (Y := Yb) (P := P) (O := O) (passes := passes) (f := main) (e := 231) (keep := true)
+    (pc := codeBase + 16 * (3 * roots.length)) (fpI := fp0) (m := m1) c1
+    (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) h.hpar hroom hex
+    (maxTop_pos cs) h.hdepth (by decide) (by omega) hcM1 (by simp only [startLen]; omega)
+    (hF0.agree a1) hPC hW0 σ ρ (weltAt_stab hW0.lay hW0.top m m1 hWa (a1.mono (Nat.zero_le _)))
+  rw [show BitVec.ofNat 64 codeBase + BitVec.ofNat 64 (16 * (spawnC sp).length) =
+    BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length)) by rw [ofNat_add64, hsl]] at s1
+  generalize rufAt P O passes n main σ ρ = o at hst ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨m2, s2, a2, ⟨w, hw, hew⟩, _⟩ := hcall
-    have hfE := codeFar_tail (a := callTail A main FB) hfC
-    have hexC := codeAt_agreeWIn hW (a2.mono (Nat.zero_le _)) (codeAt_right (a := callTail A main FB) hc1) hfE
-    have hF2 := frameOK_agreeW hF1 a2
-    by_cases hs : (D.erg main).isSome = true
-    · simp only [hs, ite_true] at hexC hfE
-      obtain ⟨t', m', q, sx, hq, hnr, ha⟩ := exitw_ok hexC hfE hF2 (by omega) (by omega) (by omega) hw
-      exact ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, by rw [ha]; exact hew⟩
-    · simp only [hs, Bool.false_eq_true, ite_false] at hexC hfE
-      obtain ⟨t', m', q, sx, hq, hnr, _⟩ := stop_ok (c := 0) (s := exitSlot) hexC hfE hF2 (by omega) (by omega) (by decide)
-      exact ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr,
-        encErg_none (by simpa using hs) v _⟩
-  | logik e => exact Stops.prefix s1 hcall
-  | why _ _ => exact hcall.elim
-  | hardware e => exact Stops.prefix s1 hcall
+    obtain ⟨t', m', q, sx, hq, hnr, he⟩ := hst
+    exact ⟨t', m', q, s1.trans sx, hq, hnr, he rfl⟩
+  | logik e => exact Stops.prefix s1 hst
+  | hardware e => exact Stops.prefix s1 hst
+  | why _ _ => exact hst.elim
 
-/-- **The program theorem.** For every world `σ` the image's world bytes hold (`WeltAt`), under a world layout
-    `Y` that keeps every cell in the world once it ends below `2^31` (`LayIn`) and gives no two cells one word
-    (`LayDis`); `layU` is such a layout (`layU_in`, `layU_dis`). -/
-theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
-    {name : D.Fn → String} {main : D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
-    (hb : bild P Y fs pos name main Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
-    (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
-    {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main))
-    (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) :
-    match rufAt P O passes b.depth main σ ρ with
-    | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = 231 ∧ EncErg (D.erg main) v q.a1
-    | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
-    | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
+/-- **The thread of root `j`**, from its start code on its stack: the root as `rufAt n`, then `exit`. -/
+theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] {passes : Nat}
+    (h : BildLage P fs pos main roots K Ks Yb A cs body n fp0 sp) {m : Runner.Mem}
+    (hm : BytesAt m codeBase ((spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
+      List.replicate (8 * K) 0))
+    (j : Nat) (hj : j < roots.length) (σ : World D) (ρ : Env D (D.params roots[j])) (hWa : WeltAt m Yb σ) :
+    match rufAt P O passes n roots[j] σ ρ with
+    | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 60
+    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m (logikCode e)
+    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m (hwCode e)
     | _ => False := by
+  obtain ⟨c1, c2, c3, hz⟩ := h.code hm
+  have hfit := h.hfit
+  have hfp := h.hfp
+  have hcb : codeBase = 268435472 := rfl
+  have hsl8 : startLen = 8 := rfl
+  simp only [headLen, startLen] at hfp
+  have hylo := h.hylo
+  have hyhi := h.hyhi
+  have hs : Ks * (roots.length + 1) = Ks * roots.length + Ks := Nat.mul_succ Ks _
+  have hjj : Ks * (j + 1) ≤ Ks * roots.length := Nat.mul_le_mul_left Ks (by omega)
+  have hs2 : Ks * (j + 1 + 1) = Ks * (j + 1) + Ks := Nat.mul_succ Ks _
+  have hyord := h.hyord
+  have hF : FrameOK m (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) Ks :=
+    frame_stack hz (by have := h.hyord; omega) hfit
+  have hsl : (spawnC sp).length = 3 * roots.length := by rw [spawnC_len, h.hsp]; simp
+  have hcR : CodeAt m (BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)))
+      (startC A roots[j] n 60 false) := by
+    have h1 := codeAt_right (a := spawnC sp ++ startC A main n 231 true) c3
+    rw [ofNat_add64, List.length_append, hsl, startC_len] at h1
+    have := rootsC_at A n roots _ j hj h1
+    rwa [show codeBase + 16 * (3 * roots.length + startLen) + 16 * (startLen * j) =
+      codeBase + 16 * (3 * roots.length + startLen + startLen * j) by omega] at this
+  have hrp : (D.params roots[j]).isEmpty = true := by
+    have := h.hrpar; rw [List.all_eq_true] at this; exact this _ (List.getElem_mem hj)
+  have hPC : PCode m A (fun g => ((cs[pos g]?).map (·.1)).getD []) (BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))) Ks :=
+    fun g => ⟨(c2 g).1, codeFar_nat' (by have := (c2 g).2; dsimp only at this ⊢; omega) (by omega)⟩
+  have hst := start_ok (Y := Yb) (P := P) (O := O) (passes := passes) (f := roots[j]) (e := 60) (keep := false)
+    (m := m) c1 (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) (fun g => by have := (c2 g).2; dsimp only at this ⊢; omega) hrp h.hroom h.hex
+    (maxTop_pos cs) h.hdepth (by decide) (by omega) hcR (by simp only [startLen]; omega)
+    hF hPC (h.win (by omega)) σ ρ hWa
+  generalize rufAt P O passes n roots[j] σ ρ = o at hst ⊢
+  cases o with
+  | ok σ' v => obtain ⟨t', m', q, sx, hq, hnr, _⟩ := hst; exact ⟨t', m', q, sx, hq, hnr⟩
+  | logik e => exact hst
+  | hardware e => exact hst
+  | why _ _ => exact hst.elim
+
+end Bild
+
+/-- What `bild` lays out holds of its image. -/
+theorem bild_lage {P : Programm D} {fs : List D.Fn} {pos : D.Fn → Nat} {name : D.Fn → String} {main : D.Fn}
+    {roots : List D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
+    (hb : bild P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi) :
+    ∃ cs body sp, BildLage P fs pos main roots b.K b.Ks b.Y b.A cs body b.depth b.fp0 sp ∧
+      b.code = spawnC sp ++ startC b.A main b.depth 231 true ++ rootsC b.A b.depth roots ++ body ∧
+      b.roots = roots := by
   simp only [bild] at hb
   split at hb
   · cases hb
@@ -241,20 +308,61 @@ theorem bild_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} 
       · next hg =>
         simp only [Except.ok.injEq] at hb
         subst hb
-        obtain ⟨⟨hpar, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi, hks⟩, hfp⟩ := hg
-        have hY := hYin (codeBase + 16 * (startLen + (List.map (fun x => x.1.length) cs0).sum) + 8 * Ks)
-          (Nat.lt_of_le_of_lt hYhi hfit)
-        have hYd := hYdis (codeBase + 16 * (startLen + (List.map (fun x => x.1.length) cs0).sum) + 8 * Ks)
+        obtain ⟨⟨hpar, hrpar, hlens, hfit, hroomK, hexK, hops, hYlo, hYhi⟩, hfp⟩ := hg
         obtain ⟨hcl, hcs⟩ := lowAll_ok fs cs h1
-        have hm' := hm
-        simp only [Bild.bytes, List.append_assoc] at hm'
-        have hm2 := hm'.right.right
-        simp only [leN_len] at hm2
-        exact bild_kern (hT := hT) rfl rfl rfl hfp (fun g => by rw [hlens]) hcl hcs hfs hpar hfit hroomK hexK hks hYlo hYhi (hYord _) hY hYd
-          hops (by simpa [codeBase] using hm2) σ ρ hWa
+        refine ⟨cs, cs.flatMap (·.1), _, ⟨rfl, rfl, rfl, hfp, fun g => by rw [hlens], hcl, hcs, hfs, hpar, hrpar,
+          hfit, hroomK, hexK, hYlo, hYhi, hYord _, hYin _ (Nat.lt_of_le_of_lt hYhi hfit), hYdis _, hops⟩, rfl, rfl⟩
       · exfalso
         revert hb
         repeat' split
         all_goals intro hb; cases hb
+
+theorem bild_bytes {b : Bild D} {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) :
+    BytesAt m codeBase (b.code.flatMap encII ++ List.replicate (8 * b.K) 0) := by
+  have hm' := hm
+  simp only [Bild.bytes, List.append_assoc] at hm'
+  have hm2 := hm'.right.right
+  simp only [leN_len] at hm2
+  simpa [codeBase] using hm2
+
+/-- **The program theorem**, `main`'s thread: from the loader's first instruction, the roots spawned, `main` as
+    `rufAt b.depth main`, then `exit_group` of its result -- or the stop of G's outcome. -/
+theorem bild_ok [CloneOK] {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
+    {name : D.Fn → String} {main : D.Fn} {roots : List D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
+    (hb : bild P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
+    {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World D) (ρ : Env D (D.params main))
+    (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) :
+    match rufAt P O passes b.depth main σ ρ with
+    | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
+        q.nr = 231 ∧ EncErg (D.erg main) v q.a1
+    | .logik e => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (logikCode e)
+    | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
+    | _ => False := by
+  obtain ⟨cs, body, sp, hl, hc, _⟩ := bild_lage hb hfs hYin hYdis hYord
+  have hm2 := bild_bytes hm
+  rw [hc] at hm2
+  exact bild_kern (hT := hT) (passes := passes) hl hm2 σ ρ hWa
+
+/-- **The program theorem**, the thread of root `j`: from its start code on its stack, the root as
+    `rufAt b.depth`, then `exit` -- or the stop of G's outcome. -/
+theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List D.Fn} {pos : D.Fn → Nat}
+    {name : D.Fn → String} {main : D.Fn} {roots : List D.Fn} {Ks : Nat} {Y : Nat → Lay D} {b : Bild D}
+    (hb : bild P Y fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
+    {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat) (hj : j < roots.length) (σ : World D)
+    (ρ : Env D (D.params roots[j])) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) :
+    match rufAt P O passes b.depth roots[j] σ ρ with
+    | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
+    | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (logikCode e)
+    | .hardware e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
+        BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m (hwCode e)
+    | _ => False := by
+  obtain ⟨cs, body, sp, hl, hc, _⟩ := bild_lage hb hfs hYin hYdis hYord
+  have hm2 := bild_bytes hm
+  rw [hc] at hm2
+  exact bild_wurzel (hT := hT) (passes := passes) hl hm2 j hj σ ρ hWa
 
 end Gabbro.Stage0.Senke
