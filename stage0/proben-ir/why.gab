@@ -1,0 +1,37 @@
+// Both return channels share a frame; only the selected continuation runs.
+module ir_why {
+reason Fault {
+    First = 1 "first reason"
+    Second = 2 "second reason"
+    Third = 3 "third reason"
+    exhaustive
+}
+impl fn choose(x : i32 in 0 .. 2) -> i32 in 0 .. 39 or Fault
+    effects { pure }
+{
+    if x == 0 { return Fault::First; }
+    if x == 1 { return Fault::Second; }
+    return 39;
+}
+impl fn recover(x : i32 in 0 .. 2) -> i32 in 0 .. 39
+    effects { pure }
+{
+    let value = choose(x) else (reason) {
+        match reason {
+            First => { return 1; }
+            Second => { return 2; }
+            Third => { return 3; }
+        }
+        return 0;
+    }
+    return value;
+}
+impl fn main() -> i32 in 0 .. 117
+    effects { pure }
+{
+    let a = recover(0);
+    let b = recover(1);
+    let c = recover(2);
+    return a + b + c;
+}
+}

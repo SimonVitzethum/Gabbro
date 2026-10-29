@@ -254,6 +254,12 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ce ← lowE L e (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
+  | _, Γ, _, _, .bindCallElse f args _ _ _ err rest => do
+    let ca ← lowA L args (frei Γ + FB)
+    let ce ← lowEnd A L lo ens pr ex err
+    let cr ← lowB A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (frei Γ + FB + (D.params f).length + 1) (frei Γ) (callC A f (frei Γ) ca.1) cr.1 ce.1,
+      elseTop f (frei Γ) ca.2 cr.2 ce.2)
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest
@@ -325,6 +331,12 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ce ← lowE L e (frei Γ)
     let cr ← lowEnd A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
+  | _, Γ, _, .bindCallElse f args _ _ _ err rest => do
+    let ca ← lowA L args (frei Γ + FB)
+    let ce ← lowEnd A L lo ens pr ex err
+    let cr ← lowEnd A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (frei Γ + FB + (D.params f).length + 1) (frei Γ) (callC A f (frei Γ) ca.1) cr.1 ce.1,
+      elseTop f (frei Γ) ca.2 cr.2 ce.2)
   | _, Γ, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowEnd A L lo ens pr ex rest

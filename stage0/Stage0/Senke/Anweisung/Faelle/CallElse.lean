@@ -169,4 +169,107 @@ theorem callElse_jump {Γ : Ctx} {flag : Nat} {cc cr ce : List II}
       BitVec.ofInt_natCast, addr_norm]
     exact congrArg (fun n : Nat => pc + BitVec.ofNat 64 n) (by omega)
 
+theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {τ : Ty} {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {he : D.erg callee = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende callee) :: Γ) (nach D callee Λ)} {rest : Block D (vertragVon D f) l (τ :: Γ) (nach D callee Λ) Λ'} :
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
+    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCallElse callee args he proof0 proof1 err rest) := by
+  intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+  simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
+  simp only [Prod.mk.injEq] at hc
+  obtain ⟨rfl, rfl⟩ := hc
+  simp only [elseTop] at hK
+  have hFB3 : FB = 3 := rfl
+  have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) := by
+    intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
+  have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende callee) :: Γ) := by
+    intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
+  simp only [execBlock]
+  rcases callElse_ok hS (hA callee) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa with
+    ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
+    ⟨e, hR, st⟩ | ⟨e, hR, st⟩
+  · rw [hR]
+    have ih := ihRest (ex := exPlus ex (ce.length + 1)) cr tr hcr (by omega)
+      (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2 hlo
+      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
+      (hu.agreeW hW a (by omega)) (hk.agreeW hW a (by omega)) hw2 hpr'
+    refine Sim.prefix hlo st (a.mono hlo2) (keeps_of_agreeW hW a hpr (by have := hW.ks; omega))
+      (Sim.cont (Sim.schrumpf ih) (fun m3 a3 => callElse_jump hp hs hW ((a.mono hlo2).trans a3)) ?_ ?_)
+    · simp only [callBranchPC, exPlus, elseC, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq (by omega)
+    · simp only [callBranchPC, exPlus, elseC, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq (by omega)
+  · rw [hR]
+    have ih := ihErr (ex := ex) ce te hce (by omega)
+      (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2
+      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
+      (hu.agreeW hW a (by omega)) (hk.agreeW hW a (by omega)) hw2 hprE
+    refine Sim.prefix hlo st (a.mono hlo2) (keeps_of_agreeW hW a hpr (by have := hW.ks; omega))
+      (Ret.zuAusgang (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_))
+    · simp only [callBranchPC, elseC, Bool.false_eq_true, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq0 (by omega)
+    · simp only [callBranchPC, elseC, Bool.false_eq_true, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq0 (by omega)
+  · rw [hR]; exact st
+  · rw [hR]; exact st
+
+theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {τ : Ty} {g : D.Fn} {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende g) :: Γ) (nach D g Λ)} {rest : Endblock D (vertragVon D f) l (τ :: Γ) (nach D g Λ)} :
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCallElse g args he proof0 proof1 err rest) := by
+  intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
+  simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
+  simp only [Prod.mk.injEq] at hc
+  obtain ⟨rfl, rfl⟩ := hc
+  simp only [elseTop] at hK
+  have hFB3 : FB = 3 := rfl
+  have hlo : FB ≤ lo := by omega
+  have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) := by
+    intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
+  have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende g) :: Γ) := by
+    intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
+  simp only [execEnd]
+  rcases callElse_ok hS (hA g) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa with
+    ⟨σ', v, m2, hR, st, a, hp2, hw2⟩ | ⟨σ', r, m2, hR, st, a, hp2, hw2⟩ |
+    ⟨e, hR, st⟩ | ⟨e, hR, st⟩
+  · rw [hR]
+    have ih := ihRest (ex := exPlus ex (ce.length + 1)) cr tr hcr (by omega)
+      (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2
+      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
+      (hu.agreeW hW a (by omega)) (hk.agreeW hW a (by omega)) hw2 hpr'
+    refine Ret.prefix (by omega) st (a.mono hlo2) (keeps_of_agreeW hW a hpr (by have := hW.ks; omega))
+      (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
+    · simp only [callBranchPC, exPlus, elseC, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq (by omega)
+    · simp only [callBranchPC, exPlus, elseC, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq (by omega)
+  · rw [hR]
+    have ih := ihErr (ex := ex) ce te hce (by omega)
+      (by simp only [elseC, List.length_append, List.length_singleton] at hs; omega) hW m2 _ σ' _ hp2
+      (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
+      (hu.agreeW hW a (by omega)) (hk.agreeW hW a (by omega)) hw2 hprE
+    refine Ret.prefix (by omega) st (a.mono hlo2) (keeps_of_agreeW hW a hpr (by have := hW.ks; omega))
+      (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
+    · simp only [callBranchPC, elseC, Bool.false_eq_true, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq0 (by omega)
+    · simp only [callBranchPC, elseC, Bool.false_eq_true, ↓reduceIte, List.length_append, List.length_singleton, addr_norm]
+      exact tgt_eq0 (by omega)
+  · rw [hR]; exact st
+  · rw [hR]; exact st
+
 end Gabbro.Stage0.Senke

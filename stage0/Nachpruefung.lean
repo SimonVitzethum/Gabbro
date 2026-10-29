@@ -97,3 +97,5 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 #print axioms Gabbro.Stage0.Senke.callBranch_ok
 #print axioms Gabbro.Stage0.Senke.callElse_ok
 #print axioms Gabbro.Stage0.Senke.callElse_jump
+#print axioms Gabbro.Stage0.Senke.blockCallElse_case
+#print axioms Gabbro.Stage0.Senke.endCallElse_case
