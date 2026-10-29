@@ -2246,6 +2246,19 @@ theorem floatOfIntContinuationL_zero_output (F : Gleitkomma.Format)
   refine ⟨m2, ?_, a1.trans a2, r⟩
   simpa [BitVec.add_assoc] using s1.trans s2
 
+/-- The public destination copy is the actual last instruction, at the
+    penultimate machine boundary of the continuation. -/
+theorem floatOfIntContinuationL_final_copy (F : Gleitkomma.Format) (input : Nat)
+    {code : List II} {top : Nat}
+    (hc : floatOfIntContinuationL F input = some (code, top)) :
+    ∃ assembly, code = assembly ++ [ci 2 input (input + 1) 0] ∧
+      code.length = assembly.length + 1 ∧
+      code[ assembly.length ]? = some (ci 2 input (input + 1) 0) := by
+  obtain ⟨assembly, _, he⟩ := floatOfIntContinuationL_parts F input hc
+  refine ⟨assembly, he, ?_, ?_⟩ <;> simp [he]
+
+#print axioms floatOfIntContinuationL_final_copy
+
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
     This helper is deliberately not accepted by `lowE` before its simulation proof. -/
