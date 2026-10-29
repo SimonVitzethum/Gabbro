@@ -284,6 +284,8 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
   | .fnptr _, v, w => w = BitVec.ofNat 64 (L.fa v.1)
   | .sum cs, v, w => sumFits cs = true ∧ w = BitVec.ofNat 64 (sumN v)
+  | .fl _ _, v, w => Gleitkomma.wf Gleitkomma.f64 v.x ∧
+      w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 
