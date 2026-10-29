@@ -1363,7 +1363,7 @@ theorem floatOfIntAssemblyL_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
 
 /-- Candidate composition: evaluate the child once, retain its word below all
     conversion temporaries, then place the converted word in the destination.
-    This helper is deliberately not accepted by `lowB` before its simulation proof. -/
+    This helper is deliberately not accepted by `lowE` before its simulation proof. -/
 def computedFloatOfL (F : Gleitkomma.Format) (d : Nat)
     (child : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
   let ce ← child d
@@ -1385,5 +1385,16 @@ theorem computedFloatOfL_parts (F : Gleitkomma.Format) (d : Nat)
   obtain ⟨ce, he, ca, ha, hc⟩ := h
   cases hc
   exact ⟨ce, ca, he, ha, rfl, rfl⟩
+
+/-- A successful composition preserves both independently computed ceilings. -/
+theorem computedFloatOfL_ceiling (F : Gleitkomma.Format) (d : Nat)
+    (child : Nat → Option (List II × Nat)) {c : List II} {top K : Nat}
+    (h : computedFloatOfL F d child = some (c, top)) (ht : top ≤ K) :
+    ∃ ce ca, child d = some ce ∧
+      floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) (d + 1)
+        (fun j => some ([ci 2 j d 0], j + 1)) = some ca ∧
+      ce.2 ≤ K ∧ ca.2 ≤ K := by
+  obtain ⟨ce, ca, he, ha, _, htop⟩ := computedFloatOfL_parts F d child h
+  exact ⟨ce, ca, he, ha, by omega, by omega⟩
 
 end Gabbro.Stage0.Senke
