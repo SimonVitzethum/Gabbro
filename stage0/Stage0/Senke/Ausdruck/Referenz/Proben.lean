@@ -110,6 +110,76 @@ theorem encoded_zeuge : Enc layout (.ref 0) (Val.vonZelle 0) 0 ∧
     have := h.2.1
     exact (Nat.lt_irrefl (2 ^ 64)) this
 
+/-- Code below 4096 cannot change the provider data or frame variables in this fixture. -/
+theorem memory_data (code : List II) (hc : (code.flatMap encII).length ≤ 4096)
+    {a : Nat} (ha : 4096 ≤ a) (ha' : a + 8 ≤ 2 ^ 64) :
+    (memory code).rd64 (BitVec.ofNat 64 a) = (memory []).rd64 (BitVec.ofNat 64 a) := by
+  apply rd64_keep (m := memory []) (m' := memory code) rfl
+  intro j hj
+  have he : (BitVec.ofNat 64 a + BitVec.ofNat 64 j).toNat = a + j := by
+    simp only [BitVec.toNat_add, BitVec.toNat_ofNat]
+    omega
+  simp only [memory, he, List.flatMap_nil, List.length_nil, Nat.not_lt_zero, ↓reduceIte]
+  rw [if_neg (by omega)]
+
+theorem env_memory (code : List II) (hc : (code.flatMap encII).length ≤ 4096) :
+    EnvAt layout (memory code) 4096 env := by
+  intro τ x
+  cases x with
+  | here =>
+    refine ⟨0, ?_, encoded_zeuge.1⟩
+    change (memory code).rd64 (BitVec.ofNat 64 4128) = some 0
+    rw [memory_data code hc (by decide) (by decide)]
+    decide +kernel
+  | there x =>
+    cases x with
+    | here =>
+      refine ⟨1, ?_, encoded_zeuge.2.1⟩
+      change (memory code).rd64 (BitVec.ofNat 64 4120) = some 1
+      rw [memory_data code hc (by decide) (by decide)]
+      decide +kernel
+    | there x => nomatch x
+
+theorem world_memory (code : List II) (hc : (code.flatMap encII).length ≤ 4096) :
+    WeltAt (memory code) layout world := by
+  refine ⟨fun t f k hk => ?_, (fun g => nomatch g), fun _ _ _ => rfl⟩
+  change (k : Int) < 2 at hk
+  have : k = 0 ∨ k = 1 := by omega
+  rcases this with rfl | rfl
+  · refine ⟨11, ?_, rfl⟩
+    change (memory code).rd64 (BitVec.ofNat 64 8192) = some 11
+    rw [memory_data code hc (by decide) (by decide)]
+    decide +kernel
+  · refine ⟨22, ?_, rfl⟩
+    change (memory code).rd64 (BitVec.ofNat 64 8200) = some 22
+    rw [memory_data code hc (by decide) (by decide)]
+    decide +kernel
+
+theorem pre (code : List II) (hc : (code.flatMap encII).length ≤ 4096)
+    (ho : code.all (fun i => decide (i.o < 256)) = true) :
+    PreS layout (memory code) 0 4096 64 5 code env := by
+  refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+    ?_, ?_, env_memory code hc, trivial, wstab_true _ _⟩
+  · exact codeAt_bytes code 0 ho (bytes code (by omega))
+  · have hn : (code.flatMap encII).length = 16 * code.length := by
+      exact flatMap_enc_len code
+    unfold CodeFar
+    simp only [show (0 : Runner.W).toNat = 0 by decide,
+      show (4096 : Runner.W).toNat = 4096 by decide, Nat.zero_add]
+    omega
+
+/-- The equality and reads run in an inhabited world with all simulation premises supplied. -/
+theorem read_simulation_zeuge :
+    lowE layout checks 5 = some (readCode, readTop) ∧
+    Pre layout (memory readCode) 0 4096 64 5 readCode env (fun m => WeltAt m layout world) ∧
+    Ok (memory readCode) 0 4096 64 5 readCode (Enc layout .bool true) := by
+  have hc : (readCode.flatMap encII).length ≤ 4096 := by decide +kernel
+  have hp := PreS.welt (pre readCode hc (by decide +kernel)) (Nat.le_refl _) (world_memory readCode hc) layout_in (by decide)
+  refine ⟨lowering_zeuge.1, hp, ?_⟩
+  have h := lowE_ok world world (fun _ h => h) checks 5 readCode readTop lowering_zeuge.1
+    (by decide +kernel) (memory readCode) 0 env hp
+  exact h
+
 /-- Static images have no supplied region; raw provider words are not accepted as regions. -/
 theorem refused_zeuge : chkC (some (.ref 0)) 5 = none ∧
     lowEnd (fun _ => 0) layout 3 ([], 0) [] (0, 0) GRegion.rumpf = none := by decide +kernel
