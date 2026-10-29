@@ -66,6 +66,28 @@ theorem floatExponentL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   intro fp K d c top h hK m pc hp
   exact result h hK m pc hp
 
+/-- For a positive integer, the canonical exponent is its bit length minus one. -/
+theorem findeExp_integer_nonzero (n : Nat) (hn : n ≠ 0) :
+    Gleitkomma.findeExp n 1 = (Gleitkomma.bitlen n : Int) - 1 := by
+  have hu := Gleitkomma.bitlen_obere n
+  have hl := Gleitkomma.bitlen_untere n hn
+  have hb : 0 < Gleitkomma.bitlen n := by
+    cases h : Gleitkomma.bitlen n with
+    | zero => simp [h] at hu; omega
+    | succ k => omega
+  have he : (Gleitkomma.bitlen n - 1) + 1 = Gleitkomma.bitlen n := by omega
+  have hp : 2 ^ (Gleitkomma.bitlen n - 1) ≤ n := by
+    rw [← he, Nat.pow_succ] at hl
+    omega
+  have hc : ((Gleitkomma.bitlen n : Int) - 1).toNat =
+      Gleitkomma.bitlen n - 1 := by omega
+  unfold Gleitkomma.findeExp Gleitkomma.findeExpBei
+  have h1 : Gleitkomma.bitlen 1 = 1 := rfl
+  rw [h1]
+  change Gleitkomma.findeExpBei n 1 ((Gleitkomma.bitlen n : Int) - 1) = _
+  unfold Gleitkomma.findeExpBei
+  rw [if_pos (by omega), hc, Nat.one_mul, if_pos hp]
+
 theorem normalize_integer_zero (F : Gleitkomma.Format) (s : Bool) :
     Gleitkomma.rundeBruchBei F s 0 1 = ⟨s, 0, 0⟩ := by
   simp [Gleitkomma.rundeBruchBei]
