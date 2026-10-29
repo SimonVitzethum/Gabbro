@@ -114,3 +114,13 @@ import Stage0.Senke.Anweisung.Faelle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_image_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.boolC_ok
+#print axioms Gabbro.Stage0.Senke.einpassen_bool
+#print axioms Gabbro.Stage0.Senke.einpassen_never
+#print axioms Gabbro.Stage0.Senke.GateProbe.boolean_images_zeuge
+#print axioms Gabbro.Stage0.Senke.GateProbe.never_images_zeuge
+#print axioms Gabbro.Stage0.Senke.GateProbe.never_outcome_zeuge
+#print axioms Gabbro.Stage0.Senke.GateProbe.boolean_decode_zeuge
+#print axioms Gabbro.Stage0.Senke.GateProbe.start_frontend_zeuge
+#print axioms Gabbro.Stage0.Senke.GateProbe.start_image_zeuge
+#print axioms Gabbro.Stage0.Senke.GateProbe.unsupported_answers_zeuge

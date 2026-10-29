@@ -1,0 +1,24 @@
+// IR gate regression probe.
+module ir_probe {
+assume kernel_unexpected
+    "The probe uses the Linux x86_64 gate unexpected."
+    falsifier probe_unexpected;
+syscall unexpected() -> never
+    abi linux arch x86_64 number 39
+    regs in {  }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume kernel_unexpected falsifier probe_unexpected;
+
+impl fn main() -> u64 in 0 .. 100
+    effects { pure }
+{
+    if true {
+        unexpected();
+    }
+    return 99;
+}
+}
