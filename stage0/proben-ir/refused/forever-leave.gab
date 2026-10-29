@@ -1,0 +1,10 @@
+// Expected lowering refusal (exit 1): G's fuel is absent from the IR lowering interface.
+module ir_forever {
+assume tick "The environment ends the service." falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    forever service per_pass bounded 16 ops on_exceeded stopped effects { pure } progress tick {
+        leave service;
+    }
+    return 7;
+}
+}

@@ -1,0 +1,19 @@
+// IR retry probe: return exits the enclosing function; expected exit 110.
+module ir_retry {
+assume tick "The environment permits the bounded attempt." falsifier probe_tick;
+syscall sched_yield()
+    abi linux arch x86_64 number 24
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+syscall getpid() -> u64 in 0 .. 0
+    abi linux arch x86_64 number 39
+    regs in { } regs out { rax } clobbers { rcx, r11 } errors { }
+    effects { pure } costs <= 8 ops assume tick falsifier probe_tick;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    
+    retry attempt until false bounded 16 ops progress tick on_exceeded sched_yield {
+        let value = getpid(); return value;
+    }
+    return 29;
+}
+}
