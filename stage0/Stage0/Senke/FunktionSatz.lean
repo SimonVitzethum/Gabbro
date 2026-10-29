@@ -8,6 +8,7 @@
   caller `fp`, depth) and the parameters stay as the call left them (`Kopf`).
 -/
 import Stage0.Senke.Anweisung.Satz
+import Stage0.Senke.Anweisung.FehlerLauf
 
 namespace Gabbro.Stage0.Senke
 
@@ -264,7 +265,71 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → 
         (Ret.schrumpf ih)
     · rw [hAA]
       exact hst
-  | _, _, _, .bindAxiomElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
+  | _, Γ, Λ, .bindAxiomElse a args he _ _ _ _ _ err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa,
+      hpr => by
+    simp only [lowEnd] at h
+    split at h
+    · next b lo' hi' hb hτ =>
+      split at h
+      · next hc =>
+        obtain ⟨hf, hlo', hn⟩ := hc
+        simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+        obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h
+        split at hc
+        · next hJ =>
+          simp only [Option.some.injEq, Prod.mk.injEq] at hc
+          obtain ⟨rfl, rfl⟩ := hc
+          simp only [List.length_append, fehlC_len] at hs
+          have hFB3 : FB = 3 := rfl
+          have hks := hW.ks
+          have h7 := torC_top1 ht
+          simp only [execEnd]
+          rcases torElse_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hτ hb hf hlo' hn ht hck hJ (by omega)
+            (by omega) hW hp hWa with ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨r, m2, hAA, s12, a12, hw2, hW2⟩ |
+            ⟨hAA, hst⟩
+          · rw [hAA]
+            have hp2 : PreS m pc fp K (frei Γ) ((ct ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int)
+                ++ ck) ++ (cr ++ ce)) ρ := by simpa only [List.append_assoc] using hp
+            have hq := hp2.next a12 (d' := frei Γ + 1) (by omega) (by omega)
+            simp only [List.length_append, fehlC_len] at hq
+            have hp3 : PreS m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+              ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.left.code, hq.left.far,
+               envAt_cons hq.env hw2 hen, trivial, wstab_true _ _⟩
+            have ih := lowEnd_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (ex := exPlus ex ce.length)
+              rest cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3
+              (by simp only [frei, List.length_cons] at hlo ⊢; omega)
+              (hu.agree a12 hp.frame (by omega)) (hk.agree a12 hp.frame (by omega)) hW2
+              (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+            refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agree a12 hp.frame.room hpr (by omega))
+              (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
+            · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
+              exact tgt_eq (by omega)
+            · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
+              exact tgt_eq (by omega)
+          · rw [hAA]
+            have hp2 : PreS m pc fp K (frei Γ) ((ct ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int)
+                ++ ck ++ cr) ++ ce) ρ := by simpa only [List.append_assoc] using hp
+            have hq := hp2.next a12 (d' := frei Γ + 1) (by omega) (by omega)
+            simp only [List.length_append, fehlC_len] at hq
+            have hp3 : PreS m2 _ fp K (frei Γ + 1) ce (Env.cons (τ := .why (D.agruende a)) r ρ) :=
+              ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
+               envAt_cons hq.env hw2 rfl, trivial, wstab_true _ _⟩
+            have ih := lowEnd_ok (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (ex := ex)
+              err ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
+              (by simp only [frei, List.length_cons] at hlo ⊢; omega)
+              (hu.agree a12 hp.frame (by omega)) (hk.agree a12 hp.frame (by omega)) hW2
+              (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+            refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agree a12 hp.frame.room hpr (by omega))
+              (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
+            · simp only [List.length_append, fehlC_len, addr_norm]
+              exact tgt_eq0 (by omega)
+            · simp only [List.length_append, fehlC_len, addr_norm]
+              exact tgt_eq0 (by omega)
+          · rw [hAA]
+            exact hst
+        · cases hc
+      · cases h
+    · cases h
   | _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h
   | _, _, _, .awaits .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd] at h

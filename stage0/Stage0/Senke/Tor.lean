@@ -51,11 +51,16 @@ def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ
     Option (List II × Nat) :=
   match L.tor a with
   | some b =>
-    if torGut b (D.aparams a).length = true ∧ D.agruende a = 0 ∧ (D.aparams a).all wortTy = true then do
+    if torGut b (D.aparams a).length = true ∧ (D.aparams a).all wortTy = true then do
       let ca ← lowR L args (s + 1)
       pure (torCode b.nr s (D.aparams a).length ca.1, max ca.2 (s + 7))
     else none
   | none => none
+
+/-- The call of a gate without a reason channel: its raw answer is the kernel's word. -/
+def torC0 (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (s : Nat) :
+    Option (List II × Nat) :=
+  if D.agruende a = 0 then torC L a args s else none
 
 /-- `d := slot s` with `d = s + 1`, then `d := d < k` (the constant into `d + 1`). -/
 def sltC (s : Nat) (k : Int) : List II :=
@@ -80,5 +85,21 @@ def chkC : Option Ty → Nat → Option (List II)
     | some a, some b => some (a ++ b)
     | _, _ => none
   | _, _ => none
+
+/-- The test of one listed errno `e` with its case `i` (`d = s + 1`): if slot `s` holds `e`, the case into slot `s`
+    and a jump to `J` bytes past the end of this test; else on after it. -/
+def fehlC1 (s : Nat) (e : Int) (i : Nat) (J : Int) : List II :=
+  [ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) e 0,
+    ci 14 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
+    ci 19 ((s + 1 : Nat) : Int) 48 0, ci 1 s i 0, ci 18 (16 + J) 0 0]
+
+/-- The tests of the listed errnos, in order; a hit jumps to `J` bytes past the end of all of them. -/
+def fehlC (s : Nat) : List (Int × Nat) → Int → List II
+  | [], _ => []
+  | (e, i) :: r, J => fehlC1 s e i (16 * (6 * r.length) + J) ++ fehlC s r J
+
+/-- An errno map the lowering takes for a gate with `n` reasons: every errno an error word, every case a reason. -/
+def fehlGut (n : Nat) (l : List (Int × Nat)) : Bool :=
+  l.all fun x => decide (-4095 ≤ x.1) && decide (x.1 ≤ -1) && decide (x.2 < n) && decide (x.2 < 2 ^ 31)
 
 end Gabbro.Stage0.Senke

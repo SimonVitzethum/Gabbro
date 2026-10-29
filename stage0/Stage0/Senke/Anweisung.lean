@@ -126,7 +126,7 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
   | _, Γ, _, _, .retires .. => some ([], frei Γ)
   | _, Γ, _, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
   | _, Γ, _, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
-  | _, Γ, _, _, .axiomCall a args _ _ _ _ _ => torC L a args (frei Γ)
+  | _, Γ, _, _, .axiomCall a args _ _ _ _ _ => torC0 L a args (frei Γ)
   | _, _, _, _, _ => none
 
 def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
@@ -145,7 +145,7 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let cr ← lowB A L lo ens pr ex rest
     pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest => do
-    let ct ← torC L a args (frei Γ)
+    let ct ← torC0 L a args (frei Γ)
     let ck ← chkC (D.aerg a) (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))

@@ -22,3 +22,6 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.torBind_ok
 #print axioms Gabbro.Stage0.Senke.chkC_ok
 #print axioms Gabbro.Stage0.Senke.torOK_zeuge
+#print axioms Gabbro.Stage0.Senke.torElse_ok
+#print axioms Gabbro.Stage0.Senke.fehlC_ok
+#print axioms Gabbro.Stage0.Senke.sonst_dec

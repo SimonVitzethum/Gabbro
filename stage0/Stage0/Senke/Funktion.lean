@@ -43,10 +43,24 @@ def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr 
     let ct ← lowEnd A L lo ens pr (exPlus ex ce.1.length) t
     pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
   | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest => do
-    let ct ← torC L a args (frei Γ)
+    let ct ← torC0 L a args (frei Γ)
     let ck ← chkC (D.aerg a) (frei Γ)
     let cr ← lowEnd A L lo ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
+  | _, Γ, _, .bindAxiomElse a args _ _ _ _ _ _ err rest =>
+    match L.tor a, D.aerg a with
+    | some b, some (.int lo' hi') =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a then do
+        let ct ← torC L a args (frei Γ)
+        let ck ← chkC (some (.int lo' hi')) (frei Γ)
+        let ce ← lowEnd A L lo ens pr ex err
+        let cr ← lowEnd A L lo ens pr (exPlus ex ce.1.length) rest
+        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.1.length) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.1.length) : Nat) : Int) ++ ck ++ cr.1 ++ ce.1,
+            max ct.2 (max (frei Γ + 10) (max cr.2 ce.2)))
+        else none
+      else none
+    | _, _ => none
   | _, _, _, _ => none
 
 /-- The code of `f`, and the first slot it does not write. -/

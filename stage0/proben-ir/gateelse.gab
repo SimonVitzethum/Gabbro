@@ -1,0 +1,32 @@
+// stage-0 IR probe (instrumente/pruefe-lean.py stage 7): a fallible gate through the kernel -- a value, then a
+// listed errno to its reason; exit code 9
+module ir_probe {
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    exhaustive
+}
+
+assume linux_write0
+    "The Linux x86_64 `write` of zero bytes answers 0 on an open descriptor and -EBADF on a closed one."
+    falsifier sonde_write0;
+
+syscall write(fd : u64, buf : u64, len : u64) -> u64 in 0 .. 4096 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write0 falsifier sonde_write0;
+
+impl fn main() -> u64 in 0 .. 100
+    effects { pure }
+{
+    let n = write(1, 0, 0) else (e) { return 50; }
+    let k = write(99, 0, 0) else (e) { return 9; }
+    return 77;
+}
+}

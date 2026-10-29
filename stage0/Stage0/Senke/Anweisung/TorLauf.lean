@@ -36,17 +36,17 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
     (h : torC L a args s = some (c, top)) (hKs : top ≤ Ks) (hW : WIn L fp Ks K)
     (hp : PreS m pc fp K s c ρ) (hWa : WeltAt m L σ) :
-    D.agruende a = 0 ∧ ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp s K m m' ∧
+    ∃ b, L.tor a = some b ∧ ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp s K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w ∧
       WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
-      (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = w.toInt := by
+      (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = rohW b (D.agruende a) w := by
   have hks := hW.ks
   simp only [torC] at h
   split at h
   · next b hb =>
     split at h
     · next hc =>
-      obtain ⟨hg, hr0, _⟩ := hc
+      obtain ⟨hg, _⟩ := hc
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
       obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
       simp only [Prod.mk.injEq] at hc
@@ -54,7 +54,7 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
       have hg' := hg
       simp only [torGut, Bool.and_eq_true, decide_eq_true_eq] at hg'
       obtain ⟨⟨hn6, _⟩, hnr⟩ := hg'
-      refine ⟨hr0, ?_⟩
+      refine ⟨b, hb, ?_⟩
       have hsmall := hp.small
       have hFs : FrameOK m fp Ks := frameOK_sub hp.frame hks
       have hroom := hFs.room
@@ -131,11 +131,28 @@ theorem torC_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ :
           ((Agree.widen a3 hks).trans (((kernW_agree hW hKW).mono (by omega)).trans (Agree.widen a5 hks))))
       · exact rd64_write_same (by rw [hKW.1]; exact hF3.rd s (by omega))
       · exact weltAt_stab hW.lay hlo m4 m5 hW4 (a5.mono (Nat.zero_le _))
-      · rw [hroh]; simp only [rohW, hr0, ↓reduceIte]
+      · exact hroh
     · cases h
   · cases h
 
-theorem torC_top {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {s : Nat}
+/-- The call of a gate without a reason channel: the raw answer is the kernel's word read signed. -/
+theorem torC0_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax}
+    {args : Args D Γ Λ (D.aparams a)} {s : Nat} {c : List II} {top : Nat} {fp pc : Runner.W} {K Ks : Nat}
+    {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
+    (h : torC0 L a args s = some (c, top)) (hKs : top ≤ Ks) (hW : WIn L fp Ks K)
+    (hp : PreS m pc fp K s c ρ) (hWa : WeltAt m L σ) :
+    ∃ m' w, Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp s K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some w ∧
+      WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
+      (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = w.toInt := by
+  simp only [torC0] at h
+  split at h
+  · next h0 =>
+    obtain ⟨b, _, m', w, s1, a1, hw, hW', hroh⟩ := torC_ok (O := O) h hKs hW hp hWa
+    exact ⟨m', w, s1, a1, hw, hW', by rw [hroh]; simp only [rohW, h0, ↓reduceIte]⟩
+  · cases h
+
+theorem torC_top1 {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {s : Nat}
     {c : List II} {t : Nat} (h : torC L a args s = some (c, t)) : s + 7 ≤ t := by
   simp only [torC] at h
   split at h
@@ -143,6 +160,19 @@ theorem torC_top {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : A
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨_, _, _, rfl⟩ := h
       omega
+    · cases h
+  · cases h
+
+theorem torC_top {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {s : Nat}
+    {c : List II} {t : Nat} (h : torC0 L a args s = some (c, t)) : s + 7 ≤ t := by
+  simp only [torC0, torC] at h
+  split at h
+  · split at h
+    · split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨_, _, _, rfl⟩ := h
+        omega
+      · cases h
     · cases h
   · cases h
 
@@ -174,7 +204,7 @@ theorem einpassen_int {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} (he : 
 theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax}
     {args : Args D Γ Λ (D.aparams a)} {τ : Ty} (he : D.aerg a = some τ) {ct ck cr : List II} {tt : Nat}
     {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (ht : torC L a args (frei Γ) = some (ct, tt)) (hck : chkC (D.aerg a) (frei Γ) = some ck)
+    (ht : torC0 L a args (frei Γ) = some (ct, tt)) (hck : chkC (D.aerg a) (frei Γ) = some ck)
     (htt : tt ≤ Ks) (htk : frei Γ + 10 ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS m pc fp K (frei Γ) (ct ++ ck ++ cr) ρ)
     (hWa : WeltAt m L σ) :
     (∃ v m2 w, axiomAntwort O a σ (evalArgs σ args σ ρ) =
@@ -191,7 +221,7 @@ theorem torBind_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
   cases τ with
   | int lo hi =>
     have hp' : PreS m pc fp K (frei Γ) (ct ++ (ck ++ cr)) ρ := (List.append_assoc ct ck cr) ▸ hp
-    obtain ⟨_, m1, w, s1, a1, hw1, hW1, hroh⟩ := torC_ok (O := O) ht htt hW hp'.left hWa
+    obtain ⟨m1, w, s1, a1, hw1, hW1, hroh⟩ := torC0_ok (O := O) ht htt hW hp'.left hWa
     have hn := hp'.next a1 (Nat.le_refl _) (by omega)
     have hpk : PreS m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ + 1) ck ρ :=
       mkPreS (by omega) (by have := hp.small; omega) (frameOK_sub hn.frame hks) hn.left.code

@@ -283,7 +283,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] {passes : Nat} {R : (f : D.Fn) → Wo
     simp only [lowS] at h
     have hks := hW.ks
     have h7 := torC_top h
-    obtain ⟨_, m1, w, s1, a1, _, hw1, _⟩ := torC_ok (O := O) (σ := σ.lese Λ args.orte) h (by omega) hW hp hWa
+    obtain ⟨m1, w, s1, a1, _, hw1, _⟩ := torC0_ok (O := O) (σ := σ.lese Λ args.orte) h (by omega) hW hp hWa
     obtain ⟨u, hu⟩ := einpassenErg_none (z := O.zeiger) hn
       (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a)) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2
     simp only [execStmt]
