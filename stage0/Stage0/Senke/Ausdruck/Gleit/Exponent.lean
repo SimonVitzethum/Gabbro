@@ -6,7 +6,8 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- Count nonzero prefixes at shifts 1 through fuel. Zero has exponent -1,
-    matching the canonical integer-ratio exponent rather than log2's zero convention. -/
+    while canonical `findeExp 0 1` is -2. Normalization bypasses exponent
+    selection for zero; correspondence requires a nonzero magnitude. -/
 def floatExponentWordAux (a : Runner.W) : Nat → Runner.W
   | 0 => 0
   | n + 1 => floatExponentWordAux a n +
@@ -64,5 +65,9 @@ theorem floatExponentL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 
   intro fp K d c top h hK m pc hp
   exact result h hK m pc hp
+
+theorem normalize_integer_zero (F : Gleitkomma.Format) (s : Bool) :
+    Gleitkomma.rundeBruchBei F s 0 1 = ⟨s, 0, 0⟩ := by
+  simp [Gleitkomma.rundeBruchBei]
 
 end Gabbro.Stage0.Senke
