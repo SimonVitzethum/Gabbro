@@ -187,8 +187,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Fn →
             exact ⟨m', spre.trans s', apre.trans a', hw, hw'⟩
         | logik e => exact Stops.prefix spre hret
         | why _ _ => exact hret.elim
-        | leave _ _ _ => exact hret.elim
-        | next _ _ _ => exact hret.elim
+        | leave h _ _ => exact absurd h Bool.false_ne_true
+        | next h _ _ => exact absurd h Bool.false_ne_true
         | hardware _ => exact hret.elim
     · simp at hlf
 
