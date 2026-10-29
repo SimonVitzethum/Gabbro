@@ -3,6 +3,7 @@
   Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
 -/
 import Stage0.Senke.Ausdruck.Lesen
+import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Welt.WeltAt
 
 namespace Gabbro.Stage0.Senke
@@ -396,6 +397,23 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
     have := slotC_top hs
     exact slotC_ok hs hK (fun m pc hp => lowE_ok σ₀ σ hWL i d ci1 ti hci (by simp only at this; omega) m pc ρ hp) hWL hp
+  | _, _, .wenn cond a b, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, h⟩ := h
+    split at h
+    · next hlen =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have := lowE_top cond d cc tc hc
+      refine wenn_ok (bc := wahr? (eval σ₀ cond σ ρ)) hp hlen (by omega)
+        (fun m pc hp => lowE_ok σ₀ σ hWL cond d cc tc hc (by omega) m pc ρ hp) ?_ ?_
+      · intro hcond m pc hp
+        exact (lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp).mono fun w hw => by
+          simpa only [eval, hcond, ↓reduceIte] using hw
+      · intro hcond m pc hp
+        exact (lowE_ok σ₀ σ hWL b d cb tb hb (by omega) m pc ρ hp).mono fun w hw => by
+          simpa only [eval, hcond, Bool.false_eq_true, ↓reduceIte] using hw
+    · cases h
   | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
@@ -419,7 +437,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .strEq .., _, _, _, h, _, _, _, _, _
   | _, _, .strLt .., _, _, _, h, _, _, _, _, _
   | _, _, .strWeit .., _, _, _, h, _, _, _, _, _
-  | _, _, .wenn .., _, _, _, h, _, _, _, _, _
   | _, _, .eng .., _, _, _, h, _, _, _, _, _ => by simp [lowE_eqs] at h
 
 end Gabbro.Stage0.Senke

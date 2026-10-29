@@ -257,7 +257,7 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_wenn (c : Expr D Γ Λ .bool) (a b : Expr D Γ Λ τ) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.wenn c a b) d =
-    (none) := rfl
+    wennL d (lowE L c d) (lowE L a d) (lowE L b d) := rfl
 
 @[lowE_eqs] theorem lowE_eng (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int) (sonst : Expr D Γ Λ (.int lo' hi')) :
     lowE L (Γ := Γ) (Λ := Λ) (Expr.eng e lo' hi' sonst) d =

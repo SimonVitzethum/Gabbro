@@ -12,6 +12,9 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
+theorem star_cast {t t' u u' : T} {m m' : Runner.Mem} (h : Star t m t' m') (h1 : t = u) (h2 : t' = u') :
+    Star u m u' m' := by subst h1; subst h2; exact h
+
 theorem pc_add (pc : Runner.W) (a b : Nat) :
     pc + BitVec.ofNat 64 (16 * a) + BitVec.ofNat 64 (16 * b) = pc + BitVec.ofNat 64 (16 * (a + b)) := by
   rw [BitVec.add_assoc, ← BitVec.ofNat_add, Nat.mul_add]

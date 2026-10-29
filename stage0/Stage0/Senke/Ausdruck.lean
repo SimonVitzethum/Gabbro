@@ -44,6 +44,19 @@ def lit32 (n : Int) : Bool := decide (-2 ^ 31 ≤ n) && decide (n < 2 ^ 31)
 
 def ci (o : Nat) (a b c : Int) : II := ⟨o, a, b, c⟩
 
+/-- `if c then a else b` as a value into slot `d`: the condition, `brz` over the `then` code and its jump. -/
+def wennC (d : Nat) (cc ca cb : List II) : List II :=
+  cc ++ [ci 19 d ((16 * (ca.length + 2) : Nat) : Int) 0] ++ ca ++ [ci 18 ((16 * (cb.length + 1) : Nat) : Int) 0 0] ++ cb
+
+/-- The code of `if c then a else b` from the codes of its parts. -/
+def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Nat) := do
+  let cc ← cc
+  let ca ← ca
+  let cb ← cb
+  if 16 * (ca.1.length + cb.1.length + 2) < 2 ^ 31 then
+    some (wennC d cc.1 ca.1 cb.1, max cc.2 (max ca.2 cb.2))
+  else none
+
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
@@ -132,6 +145,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
+  | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none
 
 /-! ## Values in words -/
