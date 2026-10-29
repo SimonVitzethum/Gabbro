@@ -7,7 +7,7 @@
   its guard (`exit_group(101)`), the body (`lowEnd_ok`, whose calls go to depth `n - 1`). The stack each call
   needs is at most `L` slots (the largest `top` of all functions), so a call at depth `n` needs `(n + 1) * L`.
 -/
-import Stage0.Senke.FunktionSatz
+import Stage0.Senke.Anweisung.Satz
 
 namespace Gabbro.Stage0.Senke
 

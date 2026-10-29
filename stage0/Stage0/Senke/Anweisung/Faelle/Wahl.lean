@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Anweisung/Verzweigung/Wahl.lean
+  File:      stage0/Stage0/Senke/Anweisung/Faelle/Wahl.lean
   Subject:   `ir_sim` for `if c { t } else { e }` (`ite`): the condition into slot `frei Γ`, `brz` to the `else` code, the
              `then` code and a jump over the `else` code; G's branch is the code's (`ite_ok`). The branches' own
              simulations come in as hypotheses (the induction of `lowS_ok`).
