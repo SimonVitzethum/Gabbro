@@ -29,6 +29,20 @@ theorem bin_top {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ 
   have := ht ca ta ha
   omega
 
+theorem lowN_top {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
+    {a : Option (Int × Int)} → (e : NutzlastExpr D Γ Λ a) → (d : Nat) → (c : List II) →
+    (top : Nat) → lowN L tag e d = some (c, top) → d < top
+  | _, .empty, d, c, top, h => by
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
+  | _, .num e, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ce, te⟩, _, he⟩ := h
+      simp only [packSum, bin2, Prod.mk.injEq] at he
+      omega
+    · cases h
+
 theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
     (top : Nat) → lowE L e d = some (c, top) → d < top
   | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
@@ -92,6 +106,11 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     split at ha
     · simp only [Option.some.injEq] at ha; subst ha; simp only [Prod.mk.injEq] at he; omega
     · cases ha
+  | _, _, .case cs i nutz, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact lowN_top nutz _ _ _ h
+    · cases h
   | _, _, .wenn cond a b, d, c, top, h => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, _, ⟨cb, tb⟩, _, h⟩ := h
@@ -106,7 +125,6 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .getBytes .., _, _, _, h
   | _, _, .fllt .., _, _, _, h
   | _, _, .flle .., _, _, _, h
-  | _, _, .case .., _, _, _, h
   | _, _, .forallSlots .., _, _, _, h
   | _, _, .existsSlots .., _, _, _, h
   | _, _, .reaches .., _, _, _, h

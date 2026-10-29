@@ -58,8 +58,6 @@ theorem bool_eq_self (x : W) : bool (x == x) = 1 := by simp [Runner.IR.bool]
 
 theorem bool_ne {x y : W} (h : x ≠ y) : bool (x == y) = 0 := by simp [Runner.IR.bool, h]
 
-theorem lit32_nat {n : Nat} (h : n < 2 ^ 31) : lit32 (n : Int) = true := by
-  simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega
 
 section
 variable {m0 m : Mem} {pc fp : W} {s a : Nat} {code : List II} {f : Nat → W} {o c w : W}

@@ -13,6 +13,7 @@ import Stage0.Senke.Sperre.Satz
 import Stage0.Senke.Anweisung.Atomar
 import Stage0.Senke.Anweisung.Wahl
 import Stage0.Senke.Anweisung.Option
+import Stage0.Senke.Anweisung.Tag
 
 namespace Gabbro.Stage0.Senke
 
@@ -82,6 +83,16 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
         hS hA hlo0 hens t ct tt hct (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr)
       (fun m' pc' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens e ce te
         hce (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr) hp hu hk hWa
+  | _, Γ, Λ, _, .onTag v arms, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    simp only [lowS] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cv, tv⟩, hcv, ⟨ca, ta⟩, hca, he⟩ := h
+      simp only [Prod.mk.injEq] at he
+      obtain ⟨rfl, rfl⟩ := he
+      exact onTag_ok (lowArms_all hS hA hlo0 hens hW hlo arms) hcv hca (by omega) (by omega)
+        (by simpa only [List.length_append] using hs) hW hlo hlo0 hlo2 hpr hp hu hk hWa
+    · cases h
   | _, Γ, Λ, _, .call f args _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, hu, hk, hWa, hpr => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
@@ -226,7 +237,6 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
           hS hA hlo0 hens a ce te hce (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr)
         hp hu hk hWa
     · cases h
-  | _, _, _, _, .onTag .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .onWhy .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, _, _, _, .callInd .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
   | _, Γ, Λ, _, .locks Lk hr body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
@@ -441,6 +451,23 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, _, _, _, .floatLit .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .floatOf .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .floatNarrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+
+theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
+    {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs) →
+    ArmsAll (fun b => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K (cens, tens) pr b) arms
+  | _, _, _, _, _, .nil => trivial
+  | _, _, _, _, _, .cons b rest =>
+    ⟨(fun ex cb tb hc ht hs m pc σ ρ hp hlo2 hu hk hw hpr =>
+        lowB_ok hS hA hlo0 hens b cb tb hc ht hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr),
+      lowArms_all hS hA hlo0 hens hW hlo rest⟩
+
 end
 
 end Gabbro.Stage0.Senke

@@ -4,6 +4,7 @@
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
 import Stage0
+import Stage0.Senke.Ausdruck.Tag
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -44,3 +45,15 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.sichtOK_zeuge
 
 #print axioms Gabbro.Stage0.Senke.onOption_ok
+#print axioms Gabbro.Stage0.Senke.encSum_inj
+#print axioms Gabbro.Stage0.Senke.encSum_inj_zeuge
+#print axioms Gabbro.Stage0.Senke.sumWord_tag
+#print axioms Gabbro.Stage0.Senke.sumWord_off
+#print axioms Gabbro.Stage0.Senke.choice_ok
+#print axioms Gabbro.Stage0.Senke.onTag_ok
+#print axioms Gabbro.Stage0.Senke.lowTags_ok
+#print axioms Gabbro.Stage0.Senke.retFreiArms_istZ
+#print axioms Gabbro.Stage0.Senke.onTag_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.sumFits_zeuge
+#print axioms Gabbro.Stage0.Senke.lowN_ok
+#print axioms Gabbro.Stage0.Senke.packSum_ok

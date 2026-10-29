@@ -1,0 +1,45 @@
+// Stage-0 IR probe: bind and match four tags, including negative and 56-bit payloads.
+// The wide offset sets bit 63 in the packed word. Its decoded value modulo 101 is 69.
+// Arm assignments survive payload scope removal; -2 + 5 + 39 + 69 - 69 = 42.
+module ir_probe {
+
+tagged type Message = { Empty, Item(i32 in -7 .. 13), Last(u32 in 0 .. 100), Wide(u64 in 0 .. 72057594037927935) };
+
+impl fn main() -> i32 in -100 .. 400
+    effects { pure }
+{
+    let mut answer : i32 in -7 .. 100 = 0;
+    let m1 = Item(-2);
+    match m1 {
+        Empty => { answer = 5; }
+        Item(x) => { answer = x; }
+        Last(x) => { answer = x; }
+        Wide(x) => { answer = x % 101; }
+    }
+    let a = answer;
+    let m2 = Empty;
+    match m2 {
+        Empty => { answer = 5; }
+        Item(x) => { answer = x; }
+        Last(x) => { answer = x; }
+        Wide(x) => { answer = x % 101; }
+    }
+    let b = answer;
+    let m3 = Last(39);
+    match m3 {
+        Empty => { answer = 5; }
+        Item(x) => { answer = x; }
+        Last(x) => { answer = x; }
+        Wide(x) => { answer = x % 101; }
+    }
+    let c = answer;
+    let m4 = Wide(1048576 * 1048576 * 32768);
+    match m4 {
+        Empty => { answer = 5; }
+        Item(x) => { answer = x; }
+        Last(x) => { answer = x; }
+        Wide(x) => { answer = x % 101; }
+    }
+    return a + b + c + answer - 69;
+}
+}
