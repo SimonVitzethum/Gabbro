@@ -1,5 +1,6 @@
 /- Signed magnitude extraction without signed overflow, including -2^63. -/
 import Stage0.Senke.Ausdruck.Gleit.Komposition
+import Stage0.Senke.Ausdruck.Eng
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -17,6 +18,20 @@ def floatMagnitudeL (d : Nat) (e : Nat → Option (List II × Nat)) :
   let twice := fun d => wordL 5 d (some ([ci 1 d 2 0], d + 1)) (sign (d + 1))
   let factor := fun d => wordL 4 d (some ([ci 1 d 1 0], d + 1)) (twice (d + 1))
   wordL 5 d (e d) (factor (d + 1))
+
+/-- The emitted signed comparison consumes concrete reads, with no producer
+    assumption for the retained input. This is the sign instruction of magnitude. -/
+theorem floatMagnitude_sign_instruction {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K d : Nat} {v : Runner.W}
+    (hp : Pre L m pc fp K d [ci 13 d d (d + 1)] ρ W)
+    (hk : d + 1 < K)
+    (hv : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some v)
+    (hz : m.rd64 (slot fp (BitVec.ofNat 64 (d + 1))) = some 0) :
+    Ok m pc fp K d [ci 13 d d (d + 1)]
+      (· = Runner.IR.bool (v.slt 0)) := by
+  exact eng_bin_ok hp (by omega) (by omega) hk hv hz
+    (g := fun x y => some (Runner.IR.bool (x.slt y))) rfl (by decide) rfl
 
 /-- The signed minimum is handled with modular negation, not a signed absolute value. -/
 theorem floatMagnitudeWord_model (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) :
