@@ -22,7 +22,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     Pre m pc fp K d c ρ W → Ok m pc fp K d c (Enc τ (eval σ₀ e σ ρ))
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp => lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp
   | _, _, .lit n, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hn =>
       simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -30,15 +30,15 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact (const_ok hp hn (by omega)).mono fun w hw => hw
     · cases h
   | _, _, .tru, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simp [Enc, eval, wahr?, hw]
   | _, _, .fls, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simp [Enc, eval, wahr?, hw]
   | _, τ, .var x, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨w, hw, he⟩ := hp.env τ x
     have := vslot_lt x
@@ -93,7 +93,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [wahr?]
     exact or_word _ _
   | _, _, .neg a, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, ha, he⟩ := h
     simp only [bin2, Prod.mk.injEq] at he
     obtain ⟨rfl, rfl⟩ := he
@@ -107,7 +107,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     rw [pa, pb]
     simp [eval, Zahl.neg, BitVec.ofInt_neg]
   | _, _, .not a, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, ha, he⟩ := h
     simp only [bin2, Prod.mk.injEq] at he
     obtain ⟨rfl, rfl⟩ := he
@@ -122,7 +122,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [wahr?]
     exact not_word _
   | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true] at hw
@@ -154,7 +154,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         simp [hl, this, wahr?]
     · cases h
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true] at hw
@@ -171,7 +171,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       rfl
     · cases h
   | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true] at hw
@@ -188,7 +188,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       rfl
     · cases h
   | _, _, .div h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
@@ -203,7 +203,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, sdiv_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
     · cases h
   | _, _, .rem h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
@@ -218,7 +218,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, srem_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
     · cases h
   | _, _, .sdiv hb a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, nichtMin, inW, decide_eq_true_eq] at hw
@@ -233,7 +233,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, sdiv_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
     · cases h
   | _, _, .srem hb a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, nichtMin, inW, decide_eq_true_eq] at hw
@@ -248,7 +248,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, srem_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
     · cases h
   | _, _, .band h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
@@ -263,7 +263,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, rfl, and_w (by omega) (by omega) (by omega) (by omega)⟩
     · cases h
   | _, _, .bor _ h0 h0' _ _ a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
@@ -278,7 +278,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, rfl, or_w (by omega) (by omega) (by omega) (by omega)⟩
     · cases h
   | _, _, .bxor _ h0 h0' _ _ a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
@@ -293,7 +293,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, rfl, xor_w (by omega) (by omega) (by omega) (by omega)⟩
     · cases h
   | _, _, .shl _ _ _ h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, lt64, inW, decide_eq_true_eq] at hw
@@ -308,7 +308,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, rfl, shl_w _ (by omega) (by omega)⟩
     · cases h
   | _, _, .shr _ _ _ h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hw =>
       simp only [Bool.and_eq_true, inWE, lt64, inW, decide_eq_true_eq] at hw
@@ -323,15 +323,15 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact ⟨_, rfl, shr_w (by omega) (by omega) (by omega) (by omega)⟩
     · cases h
   | _, _, .none _, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simp [Enc, eval, optN, hw]
   | _, _, .ptrOf .., d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (by decide) (by omega)).mono fun _ _ => trivial
   | _, _, .why n r, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hn =>
       simp only [decide_eq_true_eq] at hn
@@ -346,7 +346,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .some e, d, c, top, h, hK, m, pc, ρ, hp =>
     (lowE_ok σ₀ σ hWL e d c top h hK m pc ρ hp).mono fun w hw => by simpa [Enc, eval, optN] using hw
   | _, _, .istSome e, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hn =>
       simp only [decide_eq_true_eq] at hn
@@ -384,7 +384,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         simp only [hs, wahr?, Bool.false_eq_true, ↓reduceIte]; decide
     · cases h
   | _, _, .glob g _, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · next hl =>
       simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -392,7 +392,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       exact glob_ok hl hp hWL (by omega)
     · cases h
   | _, _, .slot t f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ t _ f i _, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE, bind, Option.bind_eq_some_iff] at h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
     have := slotC_top hs
     exact slotC_ok hs hK (fun m pc hp => lowE_ok σ₀ σ hWL i d ci1 ti hci (by simp only at this; omega) m pc ρ hp) hWL hp
@@ -420,6 +420,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .strLt .., _, _, _, h, _, _, _, _, _
   | _, _, .strWeit .., _, _, _, h, _, _, _, _, _
   | _, _, .wenn .., _, _, _, h, _, _, _, _, _
-  | _, _, .eng .., _, _, _, h, _, _, _, _, _ => by simp [lowE] at h
+  | _, _, .eng .., _, _, _, h, _, _, _, _, _ => by simp [lowE_eqs] at h
 
 end Gabbro.Stage0.Senke

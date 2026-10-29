@@ -3,6 +3,7 @@
   Subject:   The slot an expression's code stops at (`lowE_top`), and the shape of a binary operation's code
              (`bin_some`, `binE_ok`): its two operands, then one instruction.
 -/
+import Stage0.Senke.Ausdruck.Gleichungen
 import Stage0.Senke.Ausdruck.Sim
 import Stage0.Senke.Ausdruck.Wort
 
@@ -40,22 +41,22 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .band _ _ a b, d, c, top, h | _, _, .bor _ _ _ _ _ a b, d, c, top, h
   | _, _, .bxor _ _ _ _ _ a b, d, c, top, h | _, _, .shl _ _ _ _ _ a b, d, c, top, h
   | _, _, .shr _ _ _ _ _ a b, d, c, top, h => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · exact bin_top (fun c t h => lowE_top a d c t h) h
     · cases h
   | _, _, .neg a, d, c, top, h => by
-    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, _, he⟩ := h
     simp only [bin2, Prod.mk.injEq] at he
     omega
   | _, _, .not a, d, c, top, h => by
-    simp only [lowE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, _, he⟩ := h
     simp only [bin2, Prod.mk.injEq] at he
     omega
   | _, _, .istSome e, d, c, top, h => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
       obtain ⟨⟨ce, te⟩, _, he⟩ := h
@@ -63,7 +64,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       omega
     · cases h
   | _, _, .le a b, d, c, top, h => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
       obtain ⟨⟨cb, tb⟩, _, ⟨ca, ta⟩, _, he⟩ := h
@@ -71,20 +72,20 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       omega
     · cases h
   | _, _, .lit n, d, c, top, h | _, _, .why .., d, c, top, h => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
   | _, _, .tru, d, c, top, h | _, _, .fls, d, c, top, h | _, _, .var _, d, c, top, h
   | _, _, .none _, d, c, top, h | _, _, .ptrOf .., d, c, top, h => by
-    simp only [lowE, Option.some.injEq, Prod.mk.injEq] at h; omega
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, _, .glob .., d, c, top, h => by
-    simp only [lowE] at h
+    simp only [lowE_eqs] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
   | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h => by
-    simp only [lowE, bind, Option.bind_eq_some_iff] at h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨ci', _, hs⟩ := h
     simp only [slotC, slotA, Option.map_eq_some_iff] at hs
     obtain ⟨a, ha, he⟩ := hs
@@ -115,7 +116,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .strLt .., _, _, _, h
   | _, _, .strWeit .., _, _, _, h
   | _, _, .wenn .., _, _, _, h
-  | _, _, .eng .., _, _, _, h => by simp [lowE] at h
+  | _, _, .eng .., _, _, _, h => by simp [lowE_eqs] at h
 
 theorem Ok.mono {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {P Q : Runner.W → Prop}
     (h : Ok m pc fp K d c P) (hq : ∀ w, P w → Q w) : Ok m pc fp K d c Q := by

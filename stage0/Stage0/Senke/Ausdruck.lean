@@ -8,6 +8,7 @@
   first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
   compares, or a literal outside 32 bits is refused (`none`); wide integers and the other forms follow.
 -/
+import Lean.Meta.Tactic.Simp.RegisterCommand
 import Grammatik.Kern.Semantik.Semantik
 import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
@@ -15,6 +16,9 @@ import Stage0.Senke.Welt.Lay
 namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR
+
+/-- Constructor equations for expression lowering; kept separate from generated recursive equations. -/
+register_simp_attr lowE_eqs
 
 variable {D : Deklaration}
 
