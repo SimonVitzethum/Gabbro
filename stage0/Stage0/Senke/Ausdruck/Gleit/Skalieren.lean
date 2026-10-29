@@ -923,4 +923,13 @@ theorem floatOfIntLeftPackL_ofInt {Γ : Ctx} {ρ : Env D Γ}
   simpa only [decide_eq_true_eq, heb, hfrac] using
     floatOfIntLeftPackL_ok z hz hn hi F.p bias (2^(F.ebits + F.fracBits)) hp hpb hb hsb hlt hc ht m pc pre
 
+/-- Supported formats discharge the static premises of the actual left packer. -/
+theorem floatOfIntLeftPack_format (F : Gleitkomma.Format)
+    (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64]) :
+    1 ≤ F.p ∧ F.p - 1 < 63 ∧ F.fracBits = F.p - 1 ∧
+    2^(F.ebits + F.fracBits) < 2^64 ∧
+    2 * 2^F.fracBits < 2^64 ∧ F.bexpMax ≤ 2^64 := by
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hF
+  rcases hF with rfl | rfl <;> decide
+
 end Gabbro.Stage0.Senke
