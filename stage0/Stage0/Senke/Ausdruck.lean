@@ -84,6 +84,14 @@ def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Opt
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
 
+/-- Build an arbitrary word from base-65536 digits, using only signed immediate fields. -/
+def wordL : Nat → Nat → Nat → List II × Nat
+  | 0, _, d => ([ci 1 d 0 0], d + 1)
+  | k + 1, n, d =>
+    bin2 3 d (bin2 5 d (wordL k (n / 65536) d)
+      ([ci 1 (d + 1) 65536 0], d + 2))
+      ([ci 1 (d + 1) (n % 65536) 0], d + 2)
+
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
 
