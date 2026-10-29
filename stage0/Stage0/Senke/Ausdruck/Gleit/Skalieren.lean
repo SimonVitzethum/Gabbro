@@ -2149,6 +2149,50 @@ theorem floatOfIntContinuationL_first_output (F : Gleitkomma.Format) (input : Na
     exact ⟨_, _, rfl⟩
   · cases he
 
+/-- The end jump and its displacement are recovered from the generated list. -/
+theorem floatOfIntContinuationL_zero_jump_encoding (F : Gleitkomma.Format) (input : Nat)
+    {code : List II} {top : Nat}
+    (h : floatOfIntContinuationL F input = some (code, top)) :
+    ∃ normal : List II,
+      code[29]? = some (ci 18 ((16 * (normal.length + 1) : Nat) : Int) 0 0) ∧
+      code.length = 31 + normal.length := by
+  obtain ⟨assembly, ha, rfl⟩ := floatOfIntContinuationL_parts F input h
+  simp only [floatOfIntAssemblyL, wennL, floatPackZeroL, konstWL, wordK, floatMagnitudeL, wordL,
+    bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at ha
+  obtain ⟨cc, hc, ca, hzero, cb, hb, he⟩ := ha
+  obtain ⟨a, ha, b, hb, hab⟩ := hc
+  obtain ⟨a', ha', b', hb', hab'⟩ := ha
+  cases ha'
+  obtain ⟨x, hx, y, hy, hxy⟩ := hb'
+  obtain ⟨u, hu, z, hz, huz⟩ := hy
+  obtain ⟨q, hq, r, hr, hqr⟩ := hz
+  cases hr
+  cases hq
+  cases hqr
+  cases hu
+  cases huz
+  cases hx
+  cases hxy
+  cases hab'
+  cases hb
+  cases hab
+  cases hzero
+  split at he
+  · cases he
+    simp only [wennC, bin2, List.cons_append, List.nil_append, List.append_assoc]
+    exact ⟨_, rfl, by simp [bin2]; omega⟩
+  · cases he
+
+/-- The encoded displacement lands exactly on the canonical final copy. -/
+theorem floatOfIntContinuationL_zero_jump_position (F : Gleitkomma.Format) (input : Nat)
+    {code : List II} {top : Nat}
+    (h : floatOfIntContinuationL F input = some (code, top)) :
+    ∃ normal : List II,
+      code[29]? = some (ci 18 ((16 * (normal.length + 1) : Nat) : Int) 0 0) ∧
+      464 + 16 * (normal.length + 1) = 16 * (code.length - 1) := by
+  obtain ⟨normal, hi, hn⟩ := floatOfIntContinuationL_zero_jump_encoding F input h
+  exact ⟨normal, hi, by omega⟩
+
 /-- Execute the emitted equality from the concrete magnitude and zero reads. -/
 theorem floatOfIntContinuationL_zero_comparison (F : Gleitkomma.Format)
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
