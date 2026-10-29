@@ -7,7 +7,9 @@
   function `f`, entered with a frame whose header the `call` wrote, depth `dv` in slot 2 and the arguments in the
   parameter slots, and a stack of at least `c` slots: where `S f` (the call semantics) answers `ok v`, the IR
   returns to the caller with the word of `v` in slot 2, having changed nothing but its own frame from slot 2 on;
-  where it answers `logik e`, the IR stops with `exit_group (logikCode e)`; no other answer.
+  Normal returns additionally keep status 1 in `FB + parameter count + 1`, the successful ensures output.
+  A `why` answer returns its ordinal in slot 2 and status 0, bypassing ensures exactly as G does.
+  Logic and hardware outcomes retain their named stops.
 -/
 import Stage0.Senke.Funktion
 import Stage0.Senke.Welt.WeltAt

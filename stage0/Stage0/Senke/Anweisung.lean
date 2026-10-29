@@ -7,9 +7,10 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
-  number is an upper bound of the slots the code writes.
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallElse`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`,
+  `leave` and `next`; the latter two retain the enclosing loop targets.
 -/
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp

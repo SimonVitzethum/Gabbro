@@ -2,7 +2,7 @@
   File:      stage0/Stage0/Senke/Anweisung/Simulation.lean
   Subject:   What the code of a statement does for each outcome of machine G (`Sim`): `ok` reaches the end, `leave`
              and `next` the loop's targets (`Reach`: the new environment in the frame, the new world in memory, the
-             protected slots kept), `zurueck` returns (`RetZ`), `logik` stops. The targets of a part of the code
+             protected slots kept), `zurueck` returns (`RetZ`), `why` returns (`RetWhy`), `logik` stops. The targets of a part of the code
              against the whole (`tgt_eq`), and `jmp` to a target (`jmp_reach`).
 -/
 import Stage0.Senke.Rueckkehr
@@ -24,7 +24,7 @@ abbrev Reach (L : Lay D) {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (pr : List Nat)
   ∃ m', Star t m ⟨e, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧ EnvAt L m' fp ρ' ∧ WeltAt m' L σ' ∧ Keeps fp pr m m'
 
 /-- What the code from `t` does for G's outcome `o` in the body of `f`: `ok` reaches the end `e`, `leave` and `next`
-    the loop's targets `eL` and `eN`, `zurueck` returns (`RetZ`), `logik` stops with its code. -/
+    the loop's targets `eL` and `eN`, `zurueck` returns (`RetZ`), `why` returns (`RetWhy`), `logik` stops with its code. -/
 def Sim (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp : Runner.W)
     {l : Bool} {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (pr : List Nat) (t : T) (m : Runner.Mem) (e eL eN : Runner.W) :
     Ausgang (vertragVon D f) l Γ → Prop
