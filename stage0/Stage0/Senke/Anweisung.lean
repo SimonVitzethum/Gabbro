@@ -7,8 +7,8 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onOption` (the index word kept for the bound variable), `call`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
 import Stage0.Senke.Ausdruck
@@ -32,8 +32,8 @@ def lowA (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Ar
     let ce ← lowE L e (p + τs.length)
     pure (cr.1 ++ ce.1, max cr.2 ce.2)
 
-/-- A call of `f` with its frame at slot `F` of the caller: the arguments (`ca`), the depth one less, the
-    address of `f`, `call`. -/
+/-- The shared call tail: depth one less, a constant target or the pointer saved at `F` before arguments
+    are evaluated, then `call`. The argument count determines the scratch slot above the callee frame. -/
 def callTailN (np address F : Nat) (indirect : Bool) : List II :=
   [ci 1 ((F + FB + np : Nat) : Int) 1 0,
    ci 4 ((F + 2 : Nat) : Int) 2 ((F + FB + np : Nat) : Int),

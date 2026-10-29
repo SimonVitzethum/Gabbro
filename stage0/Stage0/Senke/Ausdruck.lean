@@ -7,6 +7,10 @@
   (`Enc`). `lowE L e d` computes `e` into slot `d`, using the slots above `d` as scratch; it answers the code and the
   first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
   compares, or a literal outside 32 bits is refused (`none`); wide integers and the other forms follow.
+
+  A function pointer is the code address `L.fa f`. The layout is explicit in every value and storage encoding;
+  `FunSpec.addr` ties those words to the callee code addresses. This reuses the IR's slot-based call target
+  without a second dispatch mechanism. Function references outside the literal range are refused.
 -/
 import Lean.Meta.Tactic.Simp.RegisterCommand
 import Grammatik.Kern.Semantik.Semantik

@@ -8,7 +8,7 @@
   ends (`WIn`). The world starts as the image's zero bytes. The code is the start code (`startC`) and
   then every function of the program in the order of `fs`, at the addresses `A`.
 
-  The addresses enter the code only as call targets and world addresses (`const`), so a function's code length
+  The addresses enter the code only as call targets, function references and world addresses (`const`), so a function's code length
   does not depend on them: `bild` lowers once with the address 0 for every function and the world at 0, lays the
   functions out by those lengths, lowers again with the real addresses and refuses unless every length came out
   the same (checked, not assumed).

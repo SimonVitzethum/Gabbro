@@ -52,3 +52,8 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.FnptrProben.global_call_zeuge
 #print axioms Gabbro.Stage0.Senke.FnptrProben.image_zeuge
 #print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_encoding_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.lowInd_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.indStmt_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.indBind_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_address_refused_zeuge
