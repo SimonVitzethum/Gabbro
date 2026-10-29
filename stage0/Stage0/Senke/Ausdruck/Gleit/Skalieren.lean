@@ -1,6 +1,7 @@
 /- Quotient/remainder scaling followed by G's nearest-even rounding. -/
 import Stage0.Senke.Ausdruck.Gleit.RundCode
 import Stage0.Senke.Ausdruck.Gleit.Schieben
+import Stage0.Senke.Ausdruck.Gleit.Exponent
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -252,5 +253,29 @@ def floatPackZeroL (d : Nat) : Option (List II × Nat) :=
 theorem floatPackZeroL_ok {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
     WordCode (L := L) ρ W floatPackZeroL (BitVec.ofNat 64 0) :=
   WordCode.konst 0 (by decide)
+
+/-- Signed integer zero has positive sign in the canonical G conversion. -/
+theorem floatPackZeroL_canonical {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop)
+    (F : Gleitkomma.Format) :
+    WordCode (L := L) ρ W floatPackZeroL
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F 0))) := by
+  have hz : Gleitkomma.ofInt F 0 = ⟨false, 0, 0⟩ := by
+    change Gleitkomma.rundeBruchBei F false 0 1 = _
+    exact normalize_integer_zero F false
+  rw [hz]
+  simp only [Gleitkomma.zuBits, Bool.false_eq_true, ite_false, Nat.zero_mul, Nat.zero_add]
+  change WordCode (L := L) ρ W floatPackZeroL (BitVec.ofNat 64 0)
+  intro fp K d c top h hK m pc hp
+  exact floatPackZeroL_ok (L := L) ρ W h hK m pc hp
+
+/-- Both formats jointly witness emitted code and canonical signed conversion. -/
+theorem floatPackZeroL_canonical_zeuge {Γ : Ctx} (ρ : Env D Γ)
+    (W : Runner.Mem → Prop) :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+      (floatPackZeroL 8).isSome = true ∧
+      WordCode (L := L) ρ W floatPackZeroL
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F 0))) := by
+  intro F _
+  exact ⟨by decide, floatPackZeroL_canonical ρ W F⟩
 
 end Gabbro.Stage0.Senke
