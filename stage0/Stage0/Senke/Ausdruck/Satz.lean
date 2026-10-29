@@ -2,6 +2,7 @@
   File:      stage0/Stage0/Senke/Ausdruck/Satz.lean
   Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
 -/
+import Stage0.Senke.Ausdruck.Gleit.Fall
 import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Ausdruck.Fnptr
@@ -107,6 +108,14 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (g := fun x y => some (x * y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← BitVec.ofInt_mul]; rfl⟩
+  | _, _, .fllt a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    floatExprE_ok σ₀ σ false a b
+      (fun d c top h hK m pc hp => lowE_ok σ₀ σ hWL a d c top h hK m pc ρ hp)
+      (fun d c top h hK m pc hp => lowE_ok σ₀ σ hWL b d c top h hK m pc ρ hp) h hK hp
+  | _, _, .flle a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    floatExprE_ok σ₀ σ true b a
+      (fun d c top h hK m pc hp => lowE_ok σ₀ σ hWL b d c top h hK m pc ρ hp)
+      (fun d c top h hK m pc hp => lowE_ok σ₀ σ hWL a d c top h hK m pc ρ hp) h hK hp
   | _, _, .and a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
     have := lowE_top b (d + 1) cb tb hb
@@ -455,8 +464,6 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp) hp
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
-  | _, _, .fllt .., _, _, _, h, _, _, _, _, _
-  | _, _, .flle .., _, _, _, h, _, _, _, _, _
   | _, _, .refEq .., _, _, _, h, _, _, _, _, _
   | _, _, .slotRef .., _, _, _, h, _, _, _, _, _
     => by simp [lowE_eqs] at h

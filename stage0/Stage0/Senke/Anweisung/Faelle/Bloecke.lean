@@ -1,5 +1,5 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
-import Stage0.Senke.Anweisung.Faelle.Kontext
+import Stage0.Senke.Anweisung.Faelle.Binden
 
 namespace Gabbro.Stage0.Senke
 
@@ -67,24 +67,14 @@ theorem blockBind_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
+  have ht := lowE_top e _ _ _ he
   simp only [execBlock]
-  have hks := hW.ks
-  have htop := lowE_top e _ _ _ he
-  have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, w, hw, hen⟩ :=
-    lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) e _ ce te he (by omega) m pc ρ hpw
-  have a1 := Agree.widen a1s hks
-  have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
-  have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)
-  have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ + 1) cr
-      (Env.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) :=
-    ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp.frame.agree a1, (codeAt_right hp.code).agree a1 hf, hf,
-     envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) hw hen, trivial, wstab_true _ _⟩
-  have ih := ihRest (ex := ex) cr tr hr (by omega)
-    (by omega) hW m1 _ (σ.lese Λ e.orte) _ hp1 hlo
-    (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) (hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo)
-    (hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega)) hWa1 (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
-  rw [pc_add1]
-  exact Sim.prefix hlo s1 (agreeW_of (a1.mono hlo2)) (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
+  refine bindValue_ok hW hlo hlo0 hlo2 hpr (by omega)
+    (fun m pc hp => lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
+    ?_ hp hu hk hWa
+  intro m pc hp hu hk hw
+  exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc _ _ hp hlo
+    (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu hk hw
+    (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
 
 end Gabbro.Stage0.Senke

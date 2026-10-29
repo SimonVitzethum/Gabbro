@@ -8,6 +8,9 @@
   first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
   compares, or a literal outside 32 bits is refused (`none`); wide integers and the other forms follow.
 
+  A float occupies its IEEE-754 binary64 bit pattern. Its encoding also requires well-formed exponent and
+  fraction fields; finiteness and the declared range are already properties of G's value type.
+
   A function pointer is the code address `L.fa f`. The layout is explicit in every value and storage encoding;
   `FunSpec.addr` ties those words to the callee code addresses. This reuses the IR's slot-based call target
   without a second dispatch mechanism. Function references outside the literal range are refused.
@@ -102,6 +105,54 @@ def wordK (o d : Nat) (a : Option (List II × Nat)) (k : Int) : Option (List II 
 /-- A short string's byte at zero, or zero at every other signed index. -/
 def strGetL (d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) :=
   wennL d (wordK 14 d i 0) (wordK 8 d s 255) (some ([ci 1 d 0 0], d + 1))
+
+/-- The raw magnitude field, without the sign bit. -/
+def floatMag (a : GFloat) : Nat := a.bexp * 4503599627370496 + a.frac
+
+/-- The mathematical ordering key; both signed zeros have key zero. -/
+def floatKey (a : GFloat) : Int := if a.sign then -(floatMag a : Int) else floatMag a
+
+/-- Build an arbitrary word from base-65536 digits, using only signed immediate fields. -/
+def konstWL : Nat → Nat → Nat → List II × Nat
+  | 0, _, d => ([ci 1 d 0 0], d + 1)
+  | k + 1, n, d =>
+    bin2 3 d (bin2 5 d (konstWL k (n / 65536) d)
+      ([ci 1 (d + 1) 65536 0], d + 2))
+      ([ci 1 (d + 1) (n % 65536) 0], d + 2)
+
+/-- Signed magnitude key: strip the sign, multiply by `1 - 2 * sign`.
+    The two supplied operand codes evaluate the same pure expression at `d` and `d+3`. -/
+def floatKeyL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  pure (bin2 5 d
+    (bin2 12 d (bin2 11 d a ([ci 1 (d+1) 1 0], d+2)) ([ci 1 (d+1) 1 0], d+2))
+    (bin2 4 (d+1) ([ci 1 (d+1) 1 0], d+2)
+      (bin2 5 (d+2) ([ci 1 (d+2) 2 0], d+3)
+        (bin2 13 (d+3) b ([ci 1 (d+4) 0 0], d+5)))))
+
+/-- Compare two signed keys; non-strict order negates the reverse strict order. -/
+def floatCmpL (le : Bool) (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  let c := bin2 13 d a b
+  pure (if le then bin2 10 d c ([ci 1 (d+1) 1 0], d+2) else c)
+
+/-- Apply the same key transformation to both pure operands. -/
+def floatExprL (le : Bool) (d : Nat) (a b : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
+  floatCmpL le d (floatKeyL d (a d) (a (d+3)))
+    (floatKeyL (d+1) (b (d+1)) (b (d+4)))
+
+/-- A constant ordering key, including its sign in two's complement. -/
+def floatConstL (x : GFloat) (d : Nat) : List II × Nat :=
+  konstWL 4 (BitVec.ofInt 64 (floatKey x)).toNat d
+
+/-- Outside the inclusive interval: `x < lo || hi < x`. -/
+def floatRangeL (d : Nat) (lo hi : Int × Int) (e : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← floatKeyL d (e d) (e (d+3))
+  let b ← floatKeyL (d+2) (e (d+2)) (e (d+5))
+  pure (bin2 9 d (bin2 13 d a (floatConstL (bruch lo) (d+1)))
+    (bin2 13 (d+1) (floatConstL (bruch hi) (d+1)) b))
 
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
@@ -236,6 +287,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
     if inW l1 h1 && inW l2 h2 then do
       let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 14 d ca cb)
     else none
+  | _, _, .fllt a b, d => floatExprL false d (lowE L a) (lowE L b)
+  | _, _, .flle a b, d => floatExprL true d (lowE L b) (lowE L a)
   | _, _, .and a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 8 d ca cb)
   | _, _, .or a b, d => do let ca ← lowE L a d; let cb ← lowE L b (d + 1); pure (bin2 9 d ca cb)
   | _, _, .div _ _ a b, d =>
@@ -335,6 +388,8 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
     | 1 => Enc L τ (v ⟨0, by decide⟩) w
     | _ => False
   | .str n, v, w => n ≤ 1 ∧ w = BitVec.ofNat 64 (strN v.1)
+  | .fl _ _, v, w => Gleitkomma.wf Gleitkomma.f64 v.x ∧
+      w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 
