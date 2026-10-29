@@ -222,15 +222,15 @@ theorem Umf.mono {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {m : 
   ⟨h.code, h.depth, h.big, h.sync.mono hs, h.hiK⟩
 
 theorem Pre.up {m : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} (h : Pre L m pc fp K d c ρ W) (hd : d ≤ d') : Pre L m pc fp K d' c ρ W :=
+    {W : Runner.Mem → Prop} {reserved : Nat} (h : Pre L m pc fp K d c ρ W reserved) (hd : d ≤ d') : Pre L m pc fp K d' c ρ W reserved :=
   ⟨Nat.le_trans h.ctx hd, h.small, h.frame, h.code, h.far, h.env, h.welt, h.wstab⟩
 
 /-- The arguments land in the parameter slots of the frame at slot `F`, and nothing below `F + FB` changes. -/
-theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {reserved : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
     (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (c : List II) → (top : Nat) →
-    lowA L args (F + FB) = some (c, top) → top ≤ K → F + FB + τs.length ≤ K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K (F + FB) c ρ W →
+    lowA L args (F + FB) reserved = some (c, top) → top ≤ K → F + FB + τs.length ≤ K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K (F + FB) c ρ W reserved →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp (F + FB) K m m' ∧
       EnvAt L m' (slot fp (BitVec.ofNat 64 F)) (evalArgs σ₀ args σ ρ)
   | _, _, .nil, c, top, h, _, _, m, pc, ρ, _ => by
@@ -243,7 +243,7 @@ theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {W : Runner.Mem 
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_cons] at hL
-    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok σ₀ σ hWL rest cr tr hr (by omega) (by omega) m pc ρ hp.left
+    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok (reserved := reserved) σ₀ σ hWL rest cr tr hr (by omega) (by omega) m pc ρ hp.left
     have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := F + FB + τs.length) (by omega)
     obtain ⟨m2, s2, a2, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ₀ σ hWL e _ ce te he (by omega) m1 _ ρ hp1
     have hF1 := hp1.frame

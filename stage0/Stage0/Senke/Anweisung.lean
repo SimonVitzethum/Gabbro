@@ -39,11 +39,11 @@ def floatLiteralL (d : Nat) (q low high : Int × Int)
 /-- The arguments of a call into the callee's parameter slots from `p` (the callee frame's first variable slot);
     the head goes highest. The last argument is computed first, so a later one's scratch slots lie above every
     argument already in place. -/
-def lowA (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → Option (List II × Nat)
-  | _, _, .nil, p => some ([], p)
-  | _, _ :: τs, .cons e rest, p => do
-    let cr ← lowA L rest p
-    let ce ← lowE L e (p + τs.length)
+def lowA (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, _, .nil, p, _ => some ([], p)
+  | _, _ :: τs, .cons e rest, p, reserved => do
+    let cr ← lowA L rest p reserved
+    let ce ← lowE L e (p + τs.length) reserved
     pure (cr.1 ++ ce.1, max cr.2 ce.2)
 
 /-- The shared call tail: depth one less, a constant target or the pointer saved at `F` before arguments
