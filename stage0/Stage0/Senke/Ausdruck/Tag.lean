@@ -6,7 +6,7 @@ import Stage0.Senke.Ausdruck.Top
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
-variable {D : Deklaration} {L : Lay D}
+variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem sumOff_lt {cs : List (Option (Int × Int))} (h : sumFits cs = true)
     (i : Fin cs.length) (v : Nutzlast (cs.get i)) : sumOff (cs.get i) v < 2 ^ 56 := by
@@ -133,8 +133,8 @@ variable [Kern]
 theorem packSum_ok {m : Runner.Mem} {pc fp : Runner.W} {K d tag : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {lo hi : Int} {v : Zahl lo hi} {ce : List II × Nat}
     (hl : lit32 lo = true) (htag : tag < 256) (hK : d + 2 ≤ K)
-    (ih : ∀ m pc, Pre L m pc fp K d ce.1 ρ W → Ok m pc fp K d ce.1 (Enc (D := D) L (.int lo hi) v))
-    (hp : Pre L m pc fp K d (packSum d lo tag ce).1 ρ W) :
+    (ih : ∀ m pc, Pre L m pc fp K d ce.1 ρ W reserved → Ok m pc fp K d ce.1 (Enc (D := D) L (.int lo hi) v))
+    (hp : Pre L m pc fp K d (packSum d lo tag ce).1 ρ W reserved) :
     Ok m pc fp K d (packSum d lo tag ce).1
       (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff (some (lo, hi)) v)) := by
   simp only [packSum, bin2] at hp ⊢

@@ -159,7 +159,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
     intro τ x
     obtain ⟨w, hw, he⟩ := hE τ x
     refine ⟨w, ?_, he⟩
-    have h1 := vslot_lt x
+    have h1 := vslot_lt (reserved := 0) x
     have h2 : FB ≤ vslot x := by unfold vslot; omega
     simp only [frei] at h1
     rw [slot_slot] at hw ⊢
@@ -254,7 +254,7 @@ theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {W : Runner.Mem 
     intro τ' y
     obtain ⟨w', hw', he'⟩ := e1 τ' y
     refine ⟨w', ?_, he'⟩
-    have := vslot_lt y
+    have := vslot_lt (reserved := 0) y
     rw [slot_slot] at hw' ⊢
     rw [agree_rd_low a2 hF1.room (by simp only [frei] at this; omega) (by omega)]
     exact hw'

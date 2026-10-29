@@ -80,7 +80,7 @@ theorem AgreeK.envAt {fp : W} {s a : Nat} {m m' : Mem} {Γ : Ctx} {ρ : Env D Γ
     (he : EnvAt L m fp ρ) (hs : frei Γ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31) :
     EnvAt L m' fp ρ := fun τ x => by
   obtain ⟨w, hw, hen⟩ := he τ x
-  have := vslot_lt x
+  have := vslot_lt (reserved := 0) x
   exact ⟨w, by rw [h.rd_low (by omega) hf ha]; exact hw, hen⟩
 
 theorem AgreeK.codeAt {fp : W} {s a : Nat} {m m' : Mem} (h : AgreeK fp s a m m') (hf : fp.toNat + 8 * (s + 18) ≤ a)

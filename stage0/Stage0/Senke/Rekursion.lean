@@ -133,7 +133,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
         have hES : EnvAt Y mS fp ρ := by
           intro τ x
           obtain ⟨w, hw, he⟩ := (envAt_agree hE a1 hF (Nat.le_refl _) (by omega)) τ x
-          have hx := vslot_lt x
+          have hx := vslot_lt (reserved := 0) x
           exact ⟨w, by rw [hKeep (vslot x) (by unfold frei at hx; omega)
             (by unfold vslot FB; omega)]; exact hw, he⟩
         have hWaS : WeltAt mS Y σR := weltAt_stab hW.lay (by have := hW.top; omega)
