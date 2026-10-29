@@ -241,6 +241,7 @@ theorem floatPackCarryL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
   have hq' : WordCode (L := L) ρ W _ _ := WordCode.bin hq hc
     (g := fun a b => some (a >>> (b.toNat % 64))) rfl rfl (by decide : 12 < 256)
+  dsimp only
   intro fp K d c top h hK m pc hp
   exact floatPackNormalL_ok hs hx hq' unit (by omega) h hK m pc hp
 
