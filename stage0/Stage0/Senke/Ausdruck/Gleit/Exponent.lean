@@ -141,6 +141,35 @@ theorem findeExp_integer_nonzero (n : Nat) (hn : n ≠ 0) :
   unfold Gleitkomma.findeExpBei
   rw [if_pos (by omega), hc, Nat.one_mul, if_pos hp]
 
+theorem floatExponentWord_canonical (av : Runner.W) (hn : av.toNat ≠ 0) :
+    floatExponentWordAux av 63 - Runner.IR.bool (av == 0) =
+      BitVec.ofInt 64 (Gleitkomma.findeExp av.toNat 1) := by
+  have hz : av ≠ 0 := by intro h; simp [h] at hn
+  have hb : 0 < Gleitkomma.bitlen av.toNat := by
+    have h := Gleitkomma.bitlen_obere av.toNat
+    by_cases hh : Gleitkomma.bitlen av.toNat = 0
+    · have : Gleitkomma.bitlen av.toNat = 0 := hh
+      simp [this] at h
+      omega
+    · omega
+  rw [floatExponentWordAux_bitlen av hn, findeExp_integer_nonzero av.toNat hn]
+  simp only [beq_eq_false_iff_ne.mpr hz, Runner.IR.bool, Bool.false_eq_true, ite_false,
+    ]
+  have he : (Gleitkomma.bitlen av.toNat : Int) - 1 =
+      Int.ofNat (Gleitkomma.bitlen av.toNat - 1) := by
+    simp only [Int.ofNat_eq_coe]
+    omega
+  rw [he]
+  simp [BitVec.ofInt_ofNat]
+
+theorem floatExponentL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {a : Nat → Option (List II × Nat)} {av : Runner.W}
+    (ha : WordCode (L := L) ρ W a av) (hn : av.toNat ≠ 0) :
+    WordCode (L := L) ρ W (fun d => floatExponentL d a)
+      (BitVec.ofInt 64 (Gleitkomma.findeExp av.toNat 1)) := by
+  rw [← floatExponentWord_canonical av hn]
+  exact floatExponentL_ok ha
+
 theorem normalize_integer_zero (F : Gleitkomma.Format) (s : Bool) :
     Gleitkomma.rundeBruchBei F s 0 1 = ⟨s, 0, 0⟩ := by
   simp [Gleitkomma.rundeBruchBei]
