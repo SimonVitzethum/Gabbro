@@ -1,16 +1,12 @@
 /-
   File:      stage0/Stage0/Senke/Anweisung/Satz.lean
-  Subject:   `ir_sim` for statements and blocks, calls included: where machine G ends a block normally (`ok`), the
+  Subject:   Mutual `ir_sim` for statements, blocks and function end blocks, calls included: where machine G ends a block normally (`ok`), the
              lowered code runs to its end and leaves the new environment in the frame, changing no slot below
              `lo`; where G ends in a logic outcome, the code stops with its `exit_group` code. G answers nothing
              else for a lowered block (`Sim`).
 -/
-import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Anweisung.Schreiben
-import Stage0.Senke.Anweisung.Schleife
-import Stage0.Senke.Anweisung.TorLauf
 import Stage0.Senke.Sperre.Satz
-import Stage0.Senke.Anweisung.Atomar
 import Stage0.Senke.Anweisung.Wahl
 import Stage0.Senke.Anweisung.Option
 import Stage0.Senke.Anweisung.Tag

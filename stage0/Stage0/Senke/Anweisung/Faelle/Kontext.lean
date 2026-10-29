@@ -1,5 +1,6 @@
 /- Continuation types for case proofs; the dispatcher keeps the original theorem statements. -/
 import Stage0.Senke.Anweisung.Faelle.Rueckgabe
+import Stage0.Senke.Anweisung.Tor
 
 namespace Gabbro.Stage0.Senke
 
