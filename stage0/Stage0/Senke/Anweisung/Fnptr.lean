@@ -41,7 +41,12 @@ theorem lowInd_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
     | _ => False := by
-  simp only [lowInd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hc
+  simp only [lowInd] at hc
+  split at hc
+  rotate_left
+  · cases hc
+  next hzero =>
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hc
   obtain ⟨⟨cp, tp⟩, hcp, ⟨ca, ta⟩, hca, rfl, rfl⟩ := hc
   simp only [indTop] at ht
   have hFB3 : FB = 3 := rfl
@@ -73,18 +78,23 @@ theorem lowInd_ok {A : D.Fn → Nat} {C : D.Fn → List II}
   generalize R (eval σ₀ p σ ρ).1 σ (umsig (eval σ₀ p σ ρ).2 (evalArgs σ₀ args σ ρ)) = o at hc2 ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨m3, s3, a3, w3, hw3⟩ := hc2
-    refine ⟨m3, s1.trans (s2.trans ?_), (agreeW_of a1).trans ((agreeW_of (a2.mono (by omega))).trans a3), w3, hw3⟩
+    obtain ⟨m3, s3, a3, ⟨w, hw, he, _⟩, hw3⟩ := hc2
+    refine ⟨m3, s1.trans (s2.trans ?_), (agreeW_of a1).trans ((agreeW_of (a2.mono (by omega))).trans a3), ⟨w, hw, he⟩, hw3⟩
     simpa only [indC, List.length_append, callTail, callTailN, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.add_assoc, pc_add] using s3
   | logik e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
   | hardware e => exact Stops.prefix s1 (Stops.prefix s2 hc2)
-  | why _ _ => exact hc2.elim
+  | why _ r => exact (keinGrundSig (eval σ₀ p σ ρ).2 hzero r : False).elim
 
 /-- Every indirect call reserves the callee header, arguments and target temporary. -/
 theorem lowInd_top {Λ : List (Res D)} {Γ : Ctx} {n : Nat} {p : Expr D Γ Λ (.fnptr n)}
     {args : Args D Γ Λ (D.sigNr n).params} {c : List II} {top : Nat}
     (h : lowInd L p args = some (c, top)) : frei Γ + FB + (D.sigNr n).params.length + 1 ≤ top := by
-  simp only [lowInd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [lowInd] at h
+  split at h
+  rotate_left
+  · cases h
+  next hr =>
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨⟨cp, tp⟩, _, ⟨ca, ta⟩, _, _, rfl⟩ := h
   simp only [indTop]; omega
 

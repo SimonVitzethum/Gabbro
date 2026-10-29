@@ -44,6 +44,25 @@ def EncErg (L : Lay D) : (e : Option Ty) → ErgVal D e → Runner.W → Prop
   | some τ, v, w => Enc L τ v w
   | none, _, _ => True
 
+/-- The checked normal return keeps the successful ensures Boolean in its output slot.
+    A reason return writes zero there and its ordinal in slot 2. No parameter slot changes. -/
+def ReturnFlag (m : Runner.Mem) (fp : Runner.W) (np : Nat) (ok : Bool) : Prop :=
+  m.rd64 (slot fp (BitVec.ofNat 64 (FB + np + 1))) = some (if ok then 1 else 0)
+
+/-- A reason return preserves the frame header and carries the resulting world. -/
+def RetWhy (L : Lay D) (f : D.Fn) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
+    (t : T) (m : Runner.Mem) (σ : World D) (r : Fin (D.gruende f)) : Prop :=
+  ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
+    m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 r.val) ∧
+    ReturnFlag m' fp (D.params f).length false ∧ WeltAt m' L σ
+
+theorem RetWhy.prefix {f : D.Fn} {fp : Runner.W} {K : Nat} {rp cfp : Runner.W}
+    {t0 t : T} {m0 m : Runner.Mem} {σ : World D} {r : Fin (D.gruende f)}
+    (h : Star t0 m0 t m) (ha : AgreeW L fp 2 K m0 m) (hs : RetWhy L f fp K rp cfp t m σ r) :
+    RetWhy L f fp K rp cfp t0 m0 σ r := by
+  obtain ⟨m', s, a, hw, flag, hw'⟩ := hs
+  exact ⟨m', h.trans s, ha.trans a, hw, flag, hw'⟩
+
 structure FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (dv : Runner.W) (c : Nat) : Prop where
   addr : L.fa = A
@@ -54,10 +73,10 @@ structure FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt L m fp ρ → WeltAt m L σ → SyncOK m L fp Ks →
     match S f σ ρ with
     | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w) ∧ WeltAt m' L σ'
+        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' fp (D.params f).length true) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (hwCode h)
-    | _ => False
+    | .why σ' r => RetWhy L f fp K rp cfp ⟨BitVec.ofNat 64 (A f), fp⟩ m σ' r
 
 /-! ## Frames inside frames -/
 

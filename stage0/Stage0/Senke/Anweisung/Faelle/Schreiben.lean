@@ -75,7 +75,7 @@ theorem call_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     exact ⟨m1, s1, a1.mono hlo2, envAt_agreeWIn hW hp.env a1 (Nat.le_refl _) (by omega), hw1,
       keeps_of_agreeW hW a1 hpr (by omega)⟩
   | logik e => exact hc
-  | why _ _ => exact hc.elim
+  | why _ r => exact (keinGrund proof1 r : False).elim
   | hardware e => exact hc
 
 theorem ret_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}

@@ -158,7 +158,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
             obtain ⟨m', s', a', hw, hw'⟩ := hret
             exact ⟨m', spre.trans s', (agreeW_of apre).trans a', hw, hw'⟩
         | logik e => exact Stops.prefix spre hret
-        | why _ _ => exact hret.elim
+        | why σ' r => exact RetWhy.prefix spre (agreeW_of apre) hret
         | leave h _ _ => exact absurd h Bool.false_ne_true
         | next h _ _ => exact absurd h Bool.false_ne_true
         | hardware e => exact Stops.prefix spre hret

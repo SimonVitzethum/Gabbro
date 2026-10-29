@@ -57,18 +57,35 @@ def indTop (n F tp ta : Nat) : Nat := max tp (max ta (F + FB + (D.sigNr n).param
 
 def lowInd (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
     (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) : Option (List II × Nat) := do
-  let cp ← lowE L p (frei Γ)
-  let ca ← lowA L args (frei Γ + FB)
-  pure (indC (D := D) n (frei Γ) cp.1 ca.1, indTop (D := D) n (frei Γ) cp.2 ca.2)
+  if (D.sigNr n).gruende = 0 then do
+    let cp ← lowE L p (frei Γ)
+    let ca ← lowA L args (frei Γ + FB)
+    pure (indC (D := D) n (frei Γ) cp.1 ca.1, indTop (D := D) n (frei Γ) cp.2 ca.2)
+  else none
 
 def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
   | _, .empty, d => some ([], d + 1)
   | _, .val e, d => lowE L e d
 
+/-- A call binds either word into the same slot. Zero status takes the reason arm;
+    normal fallthrough skips that arm after the success continuation. -/
+def elseC (flag s : Nat) (cc cr ce : List II) : List II :=
+  cc ++ [ci 2 s (s + 2) 0] ++ [ci 19 flag (16 * (cr.length + 2)) 0] ++
+    cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce
+
+def elseTop (f : D.Fn) (s ta tr te : Nat) : Nat :=
+  max (callTop f s ta) (max (s + FB + (D.params f).length + 2) (max tr te))
+
 /-- `ret`: the result from slot `r` into slot `q` (`FB + np`, the slot of `ensures`' result variable), the
-    `ensures` code `ens`, the check, slot 2, back. -/
+    `ensures` code `ens`, the check, slot 2, back. The successful ensures word
+    in `q + 1` is the normal return flag and is preserved by the return tail. -/
 def retC (q r : Nat) (ens : List II) : List II :=
   [ci 2 q r 0] ++ ens ++ [ci 19 ((q + 1 : Nat) : Int) 48 0, ci 2 2 q 0, ci 21 0 0 0] ++ stopC 102 (q + 1)
+
+/-- A reason bypasses ensures, as in G. Slot 2 carries the ordinal; the ensures
+    result slot carries zero, distinguishing it from every successful normal return. -/
+def retWhyC (q r : Nat) : List II :=
+  [ci 1 2 r 0, ci 1 (q + 1) 0 0, ci 21 0 0 0]
 
 def retTop (q : Nat) : Nat := q + 1 + 8
 
@@ -163,6 +180,8 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
   | _, Γ, _, _, .call f args _ _ => do
     let ca ← lowA L args (frei Γ + FB)
     pure (callC A f (frei Γ) ca.1, callTop f (frei Γ) ca.2)
+  | _, Γ, _, _, .retWhy r _ =>
+    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max (frei Γ) (retTop lo)) else none
   | _, Γ, _, _, .ret e _ => do
     let ce ← lowErg L e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
@@ -293,6 +312,8 @@ def lowGrund (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (p
 
 def lowEnd (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (List II × Nat)
+  | _, Γ, _, .retWhy r _ =>
+    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max (frei Γ) (retTop lo)) else none
   | _, Γ, _, .ret e _ => do
     let ce ← lowErg L e (frei Γ)
     pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))

@@ -2,6 +2,7 @@
   Subject: Full word reason dispatch and its simulation of G's execGrund.
 -/
 import Stage0.Senke.Anweisung.Faelle.Tag
+import Stage0.Senke.Anweisung.Faelle.Kontext
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -160,5 +161,41 @@ theorem onWhy_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II 
   exact ⟨_, _, rfl⟩
 
 end
+
+theorem retWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+     {r : Fin (D.gruende f)} {proof0 : _} :
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .retWhy r proof0) := by
+  intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
+  simp only [lowS] at h
+  split at h
+  · next hr =>
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact retWhy_ok r hlo0 hr (by simp only [retTop] at hK; omega) hp hk hW hWa
+  · cases h
+
+theorem endWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
+    (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length) (hens : lowE L (P.ensures f) (lo + 1) = some (cens, tens))
+    {pr : List Nat} {ex : Int × Int}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+     {r : Fin (D.gruende f)} {proof0 : _} :
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .retWhy r proof0) := by
+  intro c top h hK _ hW m pc σ ρ hp hlo2 _ hk hWa hpr
+  simp only [lowEnd] at h
+  split at h
+  · next hr =>
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact retWhy_ok r hlo0 hr (by simp only [retTop] at hK; omega) hp hk hW hWa
+  · cases h
 
 end Gabbro.Stage0.Senke

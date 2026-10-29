@@ -92,3 +92,8 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 #print axioms Gabbro.Stage0.Senke.lowGrund_ok
 #print axioms Gabbro.Stage0.Senke.onWhy_ok
 #print axioms Gabbro.Stage0.Senke.onWhy_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.retWhy_ok
+#print axioms Gabbro.Stage0.Senke.RetWhy.prefix
+#print axioms Gabbro.Stage0.Senke.callBranch_ok
+#print axioms Gabbro.Stage0.Senke.callElse_ok
+#print axioms Gabbro.Stage0.Senke.callElse_jump

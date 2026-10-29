@@ -34,7 +34,7 @@ def Sim (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.
   | .zurueck σ' v => RetZ L P f σ0 ρ0 fp K rp cfp t m σ' v
   | .logik c => Stops t m (logikCode c)
   | .hardware h => Stops t m (hwCode h)
-  | _ => False
+  | .why σ' r => RetWhy L f fp K rp cfp t m σ' r
 
 section
 variable {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp : Runner.W}
@@ -57,7 +57,7 @@ theorem Sim.prefix {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner
     exact RetZ.prefix h (ha.mono (by omega)) hs
   | logik c => exact Stops.prefix h hs
   | hardware c => exact Stops.prefix h hs
-  | why => exact hs
+  | why σ' r => exact RetWhy.prefix h (ha.mono (by have : FB = 3 := rfl; omega)) hs
 
 /-- `ok` goes on from `e1` to `e2`; `leave` and `next` keep their targets. -/
 theorem Sim.cont {o : Ausgang (vertragVon D f) l Γ} {t : T} {m : Runner.Mem} {e1 e2 eL eN eL' eN' : Runner.W}

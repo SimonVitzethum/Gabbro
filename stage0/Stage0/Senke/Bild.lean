@@ -113,7 +113,8 @@ def depthOf (K L : Nat) : Nat := (K - FB) / L - 1
 /-- What `bild` checks of the finished layout. -/
 def BildGut (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (cs : List (List II × Nat))
     (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Prop :=
-  (D.params main).isEmpty = true ∧ roots.all (fun f => (D.params f).isEmpty) = true ∧ cs.map (·.1.length) = lens ∧
+  (D.params main).isEmpty = true ∧ roots.all (fun f => (D.params f).isEmpty) = true ∧
+    D.gruende main = 0 ∧ roots.all (fun f => decide (D.gruende f = 0)) = true ∧ cs.map (·.1.length) = lens ∧
     fp0 + 8 * K < 2 ^ 31 ∧ FB + 2 * maxTop cs ≤ Ks ∧ exitSlot + 8 ≤ Ks ∧
     code.all (fun i => decide (i.o < 256)) = true ∧ fp0 + 8 * (Ks * (roots.length + 1)) ≤ Y.lo ∧ Y.hi ≤ fp0 + 8 * K ∧
     Y.sye ≤ fp0 + 8 * K
@@ -143,6 +144,8 @@ def bild (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → N
       let code := spawnC sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
       if BildGut D main roots lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
         .ok ⟨code, A, fp0, K, Ks, Yb, n, roots⟩
+      else if D.gruende main != 0 then .error "ir: main has an uncaught reason channel"
+      else if (roots.all fun f => decide (D.gruende f = 0)) = false then .error "ir: a root has an uncaught reason channel"
       else if (D.params main).isEmpty = false then .error "ir: main takes parameters"
       else if (roots.all fun f => (D.params f).isEmpty) = false then .error "ir: a root takes parameters"
       else if cs.map (·.1.length) != lens then .error "ir: a code length moved with the addresses"
