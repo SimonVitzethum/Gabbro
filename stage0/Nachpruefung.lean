@@ -44,3 +44,11 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.sichtOK_zeuge
 
 #print axioms Gabbro.Stage0.Senke.onOption_ok
+#print axioms Gabbro.Stage0.Senke.fnref_ok
+#print axioms Gabbro.Stage0.Senke.call_ok
+#print axioms Gabbro.Stage0.Senke.lowInd_ok
+#print axioms Gabbro.Stage0.Senke.indStmt_ok
+#print axioms Gabbro.Stage0.Senke.indBind_ok
+#print axioms Gabbro.Stage0.Senke.FnptrProben.global_call_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.image_zeuge
+#print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_encoding_zeuge

@@ -57,3 +57,4 @@ import Stage0.Senke.Bild
 import Stage0.Senke.BildLese
 import Stage0.Senke.BildSatz
 import Stage0.Senke.Welt.Anordnung
+import Stage0.Senke.Ausdruck.FnptrProben
