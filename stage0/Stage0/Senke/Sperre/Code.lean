@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Sperre.lean
+  File:      stage0/Stage0/Senke/Sperre/Code.lean
   Subject:   The code of a lock (`PLAN-SELF-HOSTING.md` §2.1.6): three words per lock at `L.lk` -- owner (the holding
              thread's number + 1), count, waiters. `nimmC`: the owner is me -- count + 1; else `cas owner 0 -> me`
              and count 1, and on failure waiters + 1, `futex_wait` on the owner word, waiters - 1, again. `gibC`:

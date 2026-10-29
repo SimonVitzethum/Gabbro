@@ -13,7 +13,7 @@
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
-import Stage0.Senke.Sperre
+import Stage0.Senke.Sperre.Code
 
 namespace Gabbro.Stage0.Senke
 
