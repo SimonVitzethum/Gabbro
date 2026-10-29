@@ -11,6 +11,7 @@ import Stage0.Senke.Anweisung.Schleife
 import Stage0.Senke.Anweisung.TorLauf
 import Stage0.Senke.Sperre.Satz
 import Stage0.Senke.Anweisung.Atomar
+import Stage0.Senke.Anweisung.Wahl
 
 namespace Gabbro.Stage0.Senke
 
@@ -75,82 +76,11 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append, List.length_singleton] at hs
-    have hsm := hp.small
-    have htop := lowE_top cnd (frei Γ) cc tc hcc
-    have hq : PreS m pc fp K (frei Γ) (cc ++ ([ci 19 (frei Γ) (16 * (ct.length + 2)) 0] ++ (ct ++
-        ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ := by simpa [List.append_assoc] using hp
-    have hks := hW.ks
-    have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) (fun _ h => h) cnd
-      (frei Γ) cc tc hcc (by omega) m pc ρ hpw
-    have a1 := Agree.widen a1s hks
-    have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
-    have h1 := hq.next a1 (Nat.le_refl _) (by omega)
-    have hu1 := hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo
-    have hk1 := hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega)
-    have hF1 := h1.frame
-    have hbrz := h1.code 0 (by simp)
-    simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hbrz
-    have h2 := h1.next (a := [ci 19 (frei Γ) (16 * (ct.length + 2)) 0]) (Agree.refl _ _ _ _) (Nat.le_refl _)
-      (by omega)
-    have hd0 : sx (II.f (frei Γ : Int)) = BitVec.ofNat 64 (frei Γ) := sx_nat (by omega)
-    simp only [execStmt]
-    split
-    · next hb =>
-      -- the condition holds: brz falls through, the `then` block, jmp to the end
-      have hw1 : w = 1 := by
-        simp only [Enc] at hen
-        rw [hen, if_pos hb]
-      have sb := star_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
-        (by simp only [ci]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact hw) (by rw [hw1]; decide))
-      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := exPlus ex (ce.length + 1)) hS hA hlo0 hens
-        t ct tt hct (by omega) (by omega) hW m1 _ (σ.lese Λ cnd.orte) ρ h2.left hlo hlo2 hu1 hk1 hWa1 hpr
-      have hf3 := codeFar_right (n := ct.length) (k := ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length)
-        (by simpa using h2.far)
-      refine Sim.prefix hlo (s1.trans sb) (agreeW_of (a1.mono hlo2)) (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)) (Sim.cont ih (fun m2 a2 => ?_) ?_ ?_)
-      rotate_left
-      · simp only [exPlus, List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
-        exact tgt_eq (by omega)
-      · simp only [exPlus, List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
-        exact tgt_eq (by omega)
-      have hc3 := codeAt_agreeWIn hW a2 (codeAt_right h2.code) hf3
-      have hjmp := hc3 0 (by simp)
-      simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at hjmp
-      have sj := Star.one (run_step (t := ⟨_, fp⟩) hjmp (by decide) (run_jmp (t := ⟨_, fp⟩) hjmp))
-      have hl : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
-        have := sx_nat (d := 16 * (ce.length + 1)) (by omega); simpa using this
-      rw [hl] at sj
-      refine star_cast sj rfl ?_
-      simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, List.length_cons,
-        List.length_nil, addr_norm]
-      congr 2
-      omega
-    · next hb =>
-      -- the condition fails: brz jumps to the `else` block
-      have hw0 : w = 0 := by
-        simp only [Enc] at hen
-        rw [hen, if_neg hb]
-      have hl : sx (II.f (16 * ((ct.length : Int) + 2))) = BitVec.ofNat 64 (16 * (ct.length + 2)) := by
-        have := sx_nat (d := 16 * (ct.length + 2)) (by omega); simpa using this
-      have sb := Star.one (run_step (t := ⟨_, fp⟩) hbrz (by decide)
-        (run_brz_zero (t := ⟨_, fp⟩) hbrz (by rw [hd0, ← hw0]; exact hw)))
-      rw [hl] at sb
-      have h4 := ((h2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)).next
-        (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega))
-      have ih := lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens e ce te hce (by omega)
-        (by omega) hW m1 _ (σ.lese Λ cnd.orte) ρ h4 hlo hlo2 hu1 hk1 hWa1 hpr
-      refine Sim.prefix hlo (s1.trans sb) (agreeW_of (a1.mono hlo2)) (keeps_of_agreeW hW a1 hpr (by have := hW.ks; omega)) (Sim.cast ih ?_ ?_ ?_ ?_)
-      · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, List.length_cons,
-          List.length_nil, addr_norm]
-        congr 2
-        omega
-      · simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
-        congr 2
-        omega
-      · simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
-        exact tgt_eq0 (by omega)
-      · simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil, addr_norm]
-        exact tgt_eq0 (by omega)
+    exact ite_ok hcc (by omega) (by omega) (by omega) (by omega) hW hlo hlo0 hlo2 hpr
+      (fun m' pc' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := exPlus ex (ce.length + 1))
+        hS hA hlo0 hens t ct tt hct (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr)
+      (fun m' pc' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens e ce te
+        hce (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr) hp hu hk hWa
   | _, Γ, Λ, _, .call f args _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, hu, hk, hWa, hpr => by
     simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, hca, hc⟩ := h
