@@ -152,4 +152,68 @@ theorem floatRoundShiftL_normQ_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem 
     exact result h hK m pc hp
   · decide +kernel
 
+/-- Pack a normal rounded significand. The caller supplies the already biased
+    exponent and the sign contribution (zero or the format's sign bit). -/
+def floatPackNormalL (d : Nat) (s e q : Nat → Option (List II × Nat))
+    (unit : Nat) : Option (List II × Nat) :=
+  let k := fun j => some (konstWL 4 unit j)
+  let fraction := fun j => wordL 4 j (q j) (k (j + 1))
+  let exponent := fun j => wordL 5 j (e j) (k (j + 1))
+  let upper := fun j => wordL 3 j (s j) (exponent (j + 1))
+  wordL 3 d (upper d) (fraction (d + 1))
+
+/-- Generic simulation, using only the existing integer IR operations. -/
+theorem floatPackNormalL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {s e q : Nat → Option (List II × Nat)} {sv ev qv : Runner.W}
+    (hs : WordCode (L := L) ρ W s sv) (he : WordCode (L := L) ρ W e ev)
+    (hq : WordCode (L := L) ρ W q qv) (unit : Nat) (hu : unit < 2^64) :
+    WordCode (L := L) ρ W (fun d => floatPackNormalL d s e q unit)
+      (sv + ev * BitVec.ofNat 64 unit + (qv - BitVec.ofNat 64 unit)) := by
+  have hk : WordCode (L := L) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W) unit hu
+  have hf : WordCode (L := L) ρ W _ _ := WordCode.bin hq hk (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
+  have hx : WordCode (L := L) ρ W _ _ := WordCode.bin he hk (g := fun a b => some (a * b)) rfl rfl (by decide : 5 < 256)
+  have ht : WordCode (L := L) ρ W _ _ := WordCode.bin hs hx (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
+  intro fp K d c top h hK m pc hp
+  exact (WordCode.bin ht hf (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)) h hK m pc hp
+
+/-- Correspondence to the model's canonical encoder on normal field bounds.
+    The rounded significand includes its implicit leading bit; no carry is allowed. -/
+theorem floatPackNormal_canonical (F : Gleitkomma.Format) (sign : Bool) (e q : Nat)
+    (hu : 2^F.fracBits < 2^64) (he : 0 < e ∧ e < F.bexpMax)
+    (hq : 2^F.fracBits ≤ q ∧ q < 2^(F.fracBits + 1)) :
+    BitVec.ofNat 64 (if sign then 2^(F.ebits + F.fracBits) else 0) +
+      BitVec.ofNat 64 e * BitVec.ofNat 64 (2^F.fracBits) +
+      (BitVec.ofNat 64 q - BitVec.ofNat 64 (2^F.fracBits)) =
+    BitVec.ofNat 64 (Gleitkomma.zuBits F ⟨sign, e, q - 2^F.fracBits⟩) := by
+  rw [← BitVec.ofNat_mul, BitVec.ofNat_sub_ofNat_of_le q _ hu hq.1, ← BitVec.ofNat_add, ← BitVec.ofNat_add]
+  rfl
+
+/-- Joint sign and field-boundary fixtures for both supported IEEE formats. -/
+theorem floatPackNormal_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64], ∀ sign : Bool,
+    ∀ e ∈ [1, F.bexpMax - 1], ∀ q ∈ [2^F.fracBits, 2^(F.fracBits + 1) - 1],
+      let signWord := if sign then 2^(F.ebits + F.fracBits) else 0
+      let lit := fun n d => some (konstWL 4 n d)
+      (0 < e ∧ e < F.bexpMax) ∧
+      (2^F.fracBits ≤ q ∧ q < 2^(F.fracBits + 1)) ∧
+      WordCode (L := L) ρ W
+        (fun d => floatPackNormalL d (lit signWord) (lit e) (lit q) (2^F.fracBits))
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F ⟨sign, e, q - 2^F.fracBits⟩)) := by
+  intro F hF sign e he q hq
+  have bounds : 2^F.fracBits < 2^64 ∧
+      (if sign then 2^(F.ebits + F.fracBits) else 0) < 2^64 ∧
+      e < 2^64 ∧ q < 2^64 ∧ (0 < e ∧ e < F.bexpMax) ∧
+      (2^F.fracBits ≤ q ∧ q < 2^(F.fracBits + 1)) := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hF he hq
+    rcases hF with rfl | rfl <;>
+      rcases he with rfl | rfl <;> rcases hq with rfl | rfl <;>
+      cases sign <;> decide +kernel
+  refine ⟨bounds.2.2.2.2.1, bounds.2.2.2.2.2, ?_⟩
+  intro fp K d c top h hK m pc hp
+  have result : WordCode (L := L) ρ W _ _ := floatPackNormalL_ok
+    (WordCode.konst _ bounds.2.1) (WordCode.konst _ bounds.2.2.1)
+    (WordCode.konst _ bounds.2.2.2.1) _ bounds.1
+  rw [floatPackNormal_canonical F sign e q bounds.1 bounds.2.2.2.2.1 bounds.2.2.2.2.2] at result
+  exact result h hK m pc hp
+
 end Gabbro.Stage0.Senke
