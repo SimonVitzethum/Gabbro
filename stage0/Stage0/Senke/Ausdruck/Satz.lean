@@ -4,6 +4,7 @@
 -/
 import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Wenn
+import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Welt.WeltAt
 
@@ -427,6 +428,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         exact (lowE_ok σ₀ σ hWL b d cb tb hb (by omega) m pc ρ hp).mono fun w hw => by
           simpa only [eval, hcond, Bool.false_eq_true, ↓reduceIte] using hw
     · cases h
+  | _, _, .eng e lo' hi' b, d, c, top, h, hK, m, pc, ρ, hp =>
+    eng_ok h hK
+      (fun ce te he hte m pc hp => lowE_ok σ₀ σ hWL e d ce te he hte m pc ρ hp)
+      (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b d cb tb hb htb m pc ρ hp) hp
   | _, _, .fnref .., _, _, _, h, _, _, _, _, _
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
@@ -448,8 +453,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .strGet .., _, _, _, h, _, _, _, _, _
   | _, _, .strEq .., _, _, _, h, _, _, _, _, _
   | _, _, .strLt .., _, _, _, h, _, _, _, _, _
-  | _, _, .strWeit .., _, _, _, h, _, _, _, _, _
-  | _, _, .eng .., _, _, _, h, _, _, _, _, _ => by simp [lowE_eqs] at h
+  | _, _, .strWeit .., _, _, _, h, _, _, _, _, _ => by simp [lowE_eqs] at h
 
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (tag : Nat) (htag : tag < 256) :

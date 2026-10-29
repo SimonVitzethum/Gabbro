@@ -69,4 +69,86 @@ theorem eng_test_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {lo hi : Int
       Nat.reduceAdd] using s1.trans (s2.trans (s3.trans (s4.trans s5)))
   · simp only [bool_word]; exact or_word _ _
 
+/-- Successful lowering of `eng` computes its model value, including the fallback outside the interval. -/
+theorem eng_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi lo' hi' : Int}
+    {e : Expr D Γ Λ (.int lo hi)} {b : Expr D Γ Λ (.int lo' hi')}
+    {L : Lay D} {fp : Runner.W} {K d top : Nat} {c : List II} {W : Runner.Mem → Prop}
+    {σ₀ σ : World D} {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W}
+    (h : lowE L (.eng e lo' hi' b) d = some (c, top)) (hK : top ≤ K)
+    (ihe : ∀ ce te, lowE L e d = some (ce, te) → te ≤ K → ∀ m pc,
+      Pre m pc fp K d ce ρ W → Ok m pc fp K d ce (Enc (.int lo hi) (eval σ₀ e σ ρ)))
+    (ihb : ∀ cb tb, lowE L b d = some (cb, tb) → tb ≤ K → ∀ m pc,
+      Pre m pc fp K d cb ρ W → Ok m pc fp K d cb (Enc (.int lo' hi') (eval σ₀ b σ ρ)))
+    (hp : Pre m pc fp K d c ρ W) :
+    Ok m pc fp K d c (Enc (.int lo' hi') (eval σ₀ (.eng e lo' hi' b) σ ρ)) := by
+  simp only [lowE_eqs, engL] at h
+  split at h
+  · next hfit =>
+    simp only [Bool.and_eq_true] at hfit
+    obtain ⟨⟨heW, hl⟩, hh⟩ := hfit
+    simp only [bind, Option.bind_eq_some_iff] at h
+    obtain ⟨⟨ce, te⟩, he, ⟨cb, tb⟩, hb, h⟩ := h
+    split at h
+    · next hlen =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hd : d + 2 < K := by omega
+      have hp' : Pre m pc fp K d
+          (ce ++ (engTest d lo' hi' ++ ([ci 19 (d+1) ((16 * (cb.length+1) : Nat) : Int) 0] ++ cb))) ρ W := by
+        simpa only [engC, List.append_assoc] using hp
+      obtain ⟨m1, s1, a1, w1, r1, p1⟩ := ihe ce te he (by omega) _ _ hp'.left
+      simp only [Enc] at p1
+      subst w1
+      have h1 := hp'.next a1 (Nat.le_refl _) (by omega)
+      obtain ⟨m2, s2, a2, w2, r2, p2⟩ := eng_test_ok
+        { h1.left with ctx := by have := hp.ctx; omega } hd hl hh r1
+      subst w2
+      have h2 := h1.next (a2.mono (by omega : d ≤ d+1)) (Nat.le_refl _) (by omega)
+      have hi := h2.code 0 (by simp)
+      simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+      rw [← sx_nat (d := d+1) (by have := hp.small; omega)] at r2
+      have hx := inW_spec heW (eval σ₀ e σ ρ).lo_le (eval σ₀ e σ ρ).le_hi
+      have hlW : -2^63 ≤ lo' ∧ lo' < 2^63 := by
+        simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at hl; omega
+      have hhW : -2^63 ≤ hi' ∧ hi' < 2^63 := by
+        simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at hh; omega
+      by_cases hin : lo' ≤ (eval σ₀ e σ ρ).n ∧ (eval σ₀ e σ ρ).n ≤ hi'
+      · have hz : Runner.IR.bool ((BitVec.ofInt 64 (eval σ₀ e σ ρ).n).slt (BitVec.ofInt 64 lo') ||
+            (BitVec.ofInt 64 hi').slt (BitVec.ofInt 64 (eval σ₀ e σ ρ).n)) = 0 := by
+          rw [slt_in hx hlW, slt_in hhW hx]
+          have hlow : ¬ (eval σ₀ e σ ρ).n < lo' := by omega
+          have hhigh : ¬ hi' < (eval σ₀ e σ ρ).n := by omega
+          simp [Runner.IR.bool, hlow, hhigh]
+        rw [hz] at r2
+        have sb := Star.one (run_step (t := ⟨_, fp⟩) hi (by decide) (run_brz_zero hi r2))
+        have rv : m2.rd64 (slot fp (BitVec.ofNat 64 d)) = some (BitVec.ofInt 64 (eval σ₀ e σ ρ).n) := by
+          rw [agree_rd_low a2 h1.frame.room (by omega) (by omega)]; exact r1
+        refine ⟨m2, s1.trans (s2.trans (star_cast sb rfl ?_)),
+          a1.trans (a2.mono (by omega)), _, rv, ?_⟩
+        · simp only [T.mk.injEq, and_true]
+          rw [sx_nat hlen, pc_add, pc_add]
+          congr 2 <;> simp [engC, engTest] <;> omega
+        · simp only [Enc, eval]
+          erw [dite_eq_left hin]
+      · have hn : Runner.IR.bool ((BitVec.ofInt 64 (eval σ₀ e σ ρ).n).slt (BitVec.ofInt 64 lo') ||
+            (BitVec.ofInt 64 hi').slt (BitVec.ofInt 64 (eval σ₀ e σ ρ).n)) = 1 := by
+          rw [slt_in hx hlW, slt_in hhW hx]
+          have hout : (eval σ₀ e σ ρ).n < lo' ∨ hi' < (eval σ₀ e σ ρ).n := by omega
+          simp [Runner.IR.bool, hout]
+        rw [hn] at r2
+        have sb := Star.one (run_step (t := ⟨_, fp⟩) hi (by decide) (run_brz_ne hi r2 (by decide)))
+        have h3 := h2.next (Agree.refl fp d K m2) (Nat.le_refl _) (by omega)
+        obtain ⟨m3, s3, a3, w3, r3, p3⟩ := ihb cb tb hb (by omega) _ _ h3
+        refine ⟨m3, s1.trans (s2.trans ((star_cast sb rfl ?_).trans (star_cast s3 rfl ?_))),
+          a1.trans ((a2.mono (by omega)).trans a3), w3, r3, ?_⟩
+        · rfl
+        · simp only [T.mk.injEq, and_true]
+          rw [pc_add, pc_add, pc_add]
+          congr 2 <;> simp [engC, engTest] <;> omega
+        · simp only [Enc, eval]
+          erw [dite_eq_right hin]
+          exact p3
+    · cases h
+  · cases h
+
 end Gabbro.Stage0.Senke
