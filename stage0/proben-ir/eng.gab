@@ -1,0 +1,24 @@
+// Stage-0 IR probe: guarded atomic updates introduce Expr.eng for the narrowed binder.
+// Twelve updates cycle through 0, 1, 2, 3, 4, 0: both source arms run, and main returns 2.
+module ir_probe {
+
+table runden count 12 { slot { x : bool, } }
+type Stand = u16 in 0 .. 5;
+atomic ZAEHLER : Stand relaxed;
+
+impl fn main() -> Stand
+    effects { reads runden.slots, reads ZAEHLER, writes ZAEHLER }
+    costs <= 100000 ops
+{
+    traverse i over slots of runden by unvisited
+        touches reads runden.slots, reads ZAEHLER, writes ZAEHLER
+    {
+        let alt = ZAEHLER exchange update(v) {
+            if v < 4 { return v + 1; }
+            return 0;
+        } publishes nothing;
+    }
+    let r = ZAEHLER awaits { };
+    return r;
+}
+}

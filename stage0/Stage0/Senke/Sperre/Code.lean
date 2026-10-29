@@ -82,10 +82,11 @@ mutual
 /-- A statement without `ret` or `retWhy`, among the forms the lowering takes (every other form: `false`). -/
 def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Bool
   | _, _, _, _, .assignVar .. | _, _, _, _, .assignGlob .. | _, _, _, _, .assignSlot ..
-  | _, _, _, _, .assignThru .. | _, _, _, _, .call .. | _, _, _, _, .callInd .. | _, _, _, _, .advances .. | _, _, _, _, .retires ..
+  | _, _, _, _, .putBytes .. | _, _, _, _, .shift .. | _, _, _, _, .assignThru .. | _, _, _, _, .call .. | _, _, _, _, .callInd .. | _, _, _, _, .advances .. | _, _, _, _, .retires ..
   | _, _, _, _, .leave _ | _, _, _, _, .next _ | _, _, _, _, .axiomCall .. | _, _, _, _, .publish .. => true
   | _, _, _, _, .ite _ t e => retFreiB t && retFreiB e
   | _, _, _, _, .onOption _ p a => retFreiB p && retFreiB a
+  | _, _, _, _, .onTag _ arms => retFreiArms arms
   | _, _, _, _, .traverse _ _ b => retFreiB b
   | _, _, _, _, .breaking _ b => retFreiB b
   | _, _, _, _, .locks _ _ b => retFreiB b
@@ -100,6 +101,10 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .awaits _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .exchange _ _ _ _ r => retFreiB r
   | _, _, _, _, _ => false
+def retFreiArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    Arms D V l Γ Λ Λ' cs → Bool
+  | _, _, _, _, _, .nil => true
+  | _, _, _, _, _, .cons b rest => retFreiB b && retFreiArms rest
 end
 
 /-- The code of `locks Lk { body }` around the body's code `cb`, with `g` the length of `gibC`: take; the body (its

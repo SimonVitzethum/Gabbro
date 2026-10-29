@@ -7,7 +7,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `lo` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the function's `ensures` code, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
   give on every way out), and the blocks `nil`, `cons`, `bind`, `bindCall`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes.
 -/
@@ -15,6 +15,7 @@ import Stage0.Senke.Ausdruck
 import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
 import Stage0.Senke.Sperre.Code
+import Stage0.Senke.Anweisung.Bytes.Code
 
 namespace Gabbro.Stage0.Senke
 
@@ -106,6 +107,18 @@ def exC (s ga : Nat) (cn : List II) : List II :=
 /-- `st (s+1) s`: the word of slot `s` to the address in slot `s + 1`. -/
 def stC (s : Nat) : II := ci 16 ((s + 1 : Nat) : Int) s 0
 
+/-- Test the low byte of the packed sum in `s` against arm `k`, preserving `s`. -/
+def tagTestC (s k : Nat) : List II :=
+  [ci 2 (s + 1) s 0, ci 1 (s + 2) 255 0, ci 8 (s + 1) (s + 1) (s + 2),
+   ci 1 (s + 2) k 0, ci 14 (s + 1) (s + 1) (s + 2)]
+
+/-- Decode a payload in its binding slot. Its lower bound must currently fit a literal. -/
+def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
+  | none => some []
+  | some (lo, _) => if lit32 lo then
+      some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
+    else none
+
 mutual
 def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
@@ -131,6 +144,12 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
         max co.2 (max (frei Γ + 2) (max cp.2 ca.2)))
     else none
   | _, _, _, _, .callInd p args _ _ => lowInd L p args
+  | _, Γ, _, _, .onTag (cs := cs) v arms =>
+    if sumFits cs then do
+      let cv ← lowE L v (frei Γ)
+      let ca ← lowTags A L lo ens pr ex arms 0
+      pure (cv.1 ++ ca.1, max cv.2 ca.2)
+    else none
   | _, Γ, _, _, .call f args _ _ => do
     let ca ← lowA L args (frei Γ + FB)
     pure (callC A f (frei Γ) ca.1, callTop f (frei Γ) ca.2)
@@ -157,6 +176,25 @@ def lowS (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ci' ← lowE L i (frei Γ + 1)
     let ca ← slotA L t f (frei Γ + 1) ci'
     pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
+  | _, Γ, Λ, _, .putBytes t f _ n i hlo hhi e _ _ =>
+    if n ≤ 8 then do
+      let ce ← lowE L e (frei Γ)
+      let ci' ← lowE L i (frei Γ + 1)
+      let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f _ _ (256 ^ n - 1) hlo n 0 (by simpa using hhi)
+      pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
+    else none
+  | _, _, _, _, .assignSlotRef .. => none
+  | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _ =>
+    if inW a b && lit32 von && lit32 nach then do
+      let ci' ← lowE L i (frei Γ)
+      let cr ← slotC L t f (frei Γ) ci'
+      let cj ← lowE L i (frei Γ + 1)
+      let ca ← slotA L t f (frei Γ + 1) cj
+      let test := bin2 14 (frei Γ) cr ([ci 1 (frei Γ + 1) von 0], frei Γ + 2)
+      pure (test.1 ++ (guardC (frei Γ) 106 (frei Γ) ++
+        ([ci 1 (frei Γ) nach 0] ++ ca.1 ++ [stC (frei Γ)])),
+        max test.2 (max ca.2 (frei Γ + 8)))
+    else none
   | _, Γ, _, _, .traverse t inv body =>
     if lit32 (D.count t) then do
       let ci' ← lowE L inv (frei Γ + 1)
@@ -214,6 +252,22 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
       else none
     else none
   | _, _, _, _, _ => none
+
+/-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
+    are measured from the end of the entire dispatch. The empty case is unreachable. -/
+def lowTags (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    Arms D V l Γ Λ Λ' cs → Nat → Option (List II × Nat)
+  | _, Γ, _, _, _, .nil, _ => some ([], frei Γ + 3)
+  | _, Γ, _, _, c :: _, .cons b rest, k => if k < 256 then do
+      let cr ← lowTags A L lo ens pr ex rest (k + 1)
+      let cp ← tagPayloadC (frei Γ) c
+      let cb ← lowB A L lo ens pr (exPlus ex (cr.1.length + 1)) b
+      pure (tagTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * (cp.length + cb.1.length + 2)) 0] ++
+        cp ++ cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
+        max (frei Γ + 3) (max cb.2 cr.2))
+    else none
+
 end
 
 end Gabbro.Stage0.Senke

@@ -4,6 +4,8 @@
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
 import Stage0
+import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Anweisung.Bytes.Proben
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -13,6 +15,7 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.lowEnd_ok
 #print axioms Gabbro.Stage0.Senke.lowE_ok
 #print axioms Gabbro.Stage0.Senke.wenn_ok
+#print axioms Gabbro.Stage0.Senke.eng_ok
 #print axioms Gabbro.Stage0.Senke.store_ok
 #print axioms Gabbro.Stage0.Senke.trav_ok
 #print axioms Gabbro.Stage0.Senke.weltAt_glob
@@ -57,3 +60,30 @@ import Stage0
 #print axioms Gabbro.Stage0.Senke.FnptrProben.indStmt_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.FnptrProben.indBind_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.FnptrProben.fnref_address_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.encSum_inj
+#print axioms Gabbro.Stage0.Senke.encSum_inj_zeuge
+#print axioms Gabbro.Stage0.Senke.sumWord_tag
+#print axioms Gabbro.Stage0.Senke.sumWord_off
+#print axioms Gabbro.Stage0.Senke.choice_ok
+#print axioms Gabbro.Stage0.Senke.onTag_ok
+#print axioms Gabbro.Stage0.Senke.lowTags_ok
+#print axioms Gabbro.Stage0.Senke.retFreiArms_istZ
+#print axioms Gabbro.Stage0.Senke.onTag_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.sumFits_zeuge
+#print axioms Gabbro.Stage0.Senke.lowN_ok
+#print axioms Gabbro.Stage0.Senke.packSum_ok
+
+#print axioms Gabbro.Stage0.Senke.shift_ok
+#print axioms Gabbro.Stage0.Senke.readBytesL_ok
+#print axioms Gabbro.Stage0.Senke.putBytesL_ok
+#print axioms Gabbro.Stage0.Senke.putBytes_ok
+#print axioms Gabbro.Stage0.Senke.bytePartC_ok
+#print axioms Gabbro.Stage0.Senke.byte_word
+#print axioms Gabbro.Stage0.Senke.ByteProbe.byte_roundtrip_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.byte_roundtrip8_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes8_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.shift_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
+#print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_refused_zeuge

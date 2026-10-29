@@ -29,6 +29,31 @@ theorem bin_top {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ 
   have := ht ca ta ha
   omega
 
+theorem lowN_top {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
+    {a : Option (Int × Int)} → (e : NutzlastExpr D Γ Λ a) → (d : Nat) → (c : List II) →
+    (top : Nat) → lowN L tag e d = some (c, top) → d < top
+  | _, .empty, d, c, top, h => by
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
+  | _, .num e, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ce, te⟩, _, he⟩ := h
+      simp only [packSum, bin2, Prod.mk.injEq] at he
+      omega
+    · cases h
+
+theorem readBytesL_top (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
+    (n j d : Nat) → (c : List II) → (top : Nat) →
+    readBytesL L t f idx j n d = some (c, top) → d < top
+  | 0, j, d, c, top, h => by
+    simp only [readBytesL, Option.some.injEq, Prod.mk.injEq] at h; omega
+  | n + 1, j, d, c, top, h => by
+    simp only [readBytesL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨ci', _, head, _, tail, _, h⟩ := h
+    simp only [bin2, Prod.mk.injEq] at h
+    omega
+
 theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
     (top : Nat) → lowE L e d = some (c, top) → d < top
   | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
@@ -93,6 +118,11 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     split at ha
     · simp only [Option.some.injEq] at ha; subst ha; simp only [Prod.mk.injEq] at he; omega
     · cases ha
+  | _, _, .case cs i nutz, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact lowN_top nutz _ _ _ h
+    · cases h
   | _, _, .wenn cond a b, d, c, top, h => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, _, ⟨cb, tb⟩, _, h⟩ := h
@@ -101,12 +131,24 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
       have := lowE_top cond d cc tc hc
       omega
     · cases h
+  | _, _, .eng e lo' hi' b, d, c, top, h => by
+    simp only [lowE_eqs, engL] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff] at h
+      obtain ⟨⟨ce, te⟩, _, ⟨cb, tb⟩, _, h⟩ := h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+      · cases h
+    · cases h
+  | _, _, .getBytes t f _ n i _ _ _, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact readBytesL_top L t f (lowE L i) n 0 d c top h
+    · cases h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h
-  | _, _, .getBytes .., _, _, _, h
   | _, _, .fllt .., _, _, _, h
   | _, _, .flle .., _, _, _, h
-  | _, _, .case .., _, _, _, h
   | _, _, .forallSlots .., _, _, _, h
   | _, _, .existsSlots .., _, _, _, h
   | _, _, .reaches .., _, _, _, h
@@ -122,8 +164,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .strGet .., _, _, _, h
   | _, _, .strEq .., _, _, _, h
   | _, _, .strLt .., _, _, _, h
-  | _, _, .strWeit .., _, _, _, h
-  | _, _, .eng .., _, _, _, h => by simp [lowE_eqs] at h
+  | _, _, .strWeit .., _, _, _, h => by simp [lowE_eqs] at h
 
 theorem Ok.mono {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {P Q : Runner.W → Prop}
     (h : Ok m pc fp K d c P) (hq : ∀ w, P w → Q w) : Ok m pc fp K d c Q := by

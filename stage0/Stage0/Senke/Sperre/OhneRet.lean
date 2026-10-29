@@ -19,6 +19,12 @@ def istZ {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Bool
 theorem istZ_schrumpf {l : Bool} {Γ : Ctx} {τ : Ty} (o : Ausgang V l (τ :: Γ)) : istZ o.schrumpf = istZ o := by
   cases o <;> rfl
 
+theorem istZ_schrumpfArm {l : Bool} {Γ : Ctx} (c : Option (Int × Int))
+    (o : Ausgang V l (ArmCtx Γ c)) : istZ (o.schrumpfArm c) = istZ o := by
+  cases c with
+  | none => rfl
+  | some p => rcases p with ⟨lo, hi⟩; exact istZ_schrumpf o
+
 theorem istZ_mapWelt {l : Bool} {Γ : Ctx} (g : World D → World D) (o : Ausgang V l Γ) :
     istZ (o.mapWelt g) = istZ o := by
   cases o <;> rfl
@@ -51,7 +57,7 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .assignSlot .., _, _, _ | _, _, _, _, .assignThru .., _, _, _
   | _, _, _, _, .advances .., _, _, _ | _, _, _, _, .retires .., _, _, _
   | _, _, _, _, .leave _, _, _, _ | _, _, _, _, .next _, _, _, _
-  | _, _, _, _, .publish .., _, _, _ => by simp only [execStmt]; rfl
+  | _, _, _, _, .publish .., _, _, _ | _, _, _, _, .putBytes .., _, _, _ => by simp only [execStmt]; rfl
   | _, _, _, _, .call _ _ _ hr, _, σ, ρ => by
     simp only [execStmt]
     split
@@ -83,6 +89,8 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     split
     · rw [istZ_schrumpf]; exact retFreiB_istZ p h.1 _ _
     · exact retFreiB_istZ a h.2 _ _
+  | _, _, _, _, .onTag v arms, h, σ, ρ => by
+    exact retFreiArms_istZ arms h _ _ _
   | _, _, _, _, .traverse _ _ b, h, σ, ρ => by
     simp only [retFreiS] at h
     simp only [execStmt]
@@ -96,8 +104,8 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     simp only [execStmt]
     rw [istZ_mapWelt]
     exact retFreiB_istZ b h _ _
-  | _, _, _, _, .putBytes .., h, _, _ | _, _, _, _, .shift .., h, _, _
-  | _, _, _, _, .onTag .., h, _, _ | _, _, _, _, .onWhy .., h, _, _
+  | _, _, _, _, .shift .., _, _, _ => by simp only [execStmt]; split <;> rfl
+  | _, _, _, _, .onWhy .., h, _, _
   | _, _, _, _, .retry .., h, _, _ | _, _, _, _, .forever .., h, _, _ | _, _, _, _, .regWrite .., h, _, _
   | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _
   | _, _, _, _, .retWhy .., h, _, _ | _, _, _, _, .assignSlotRef .., h, _, _ => by simp [retFreiS] at h
@@ -157,6 +165,18 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .narrow .., h, _, _ | _, _, _, _, .check .., h, _, _ | _, _, _, _, .float .., h, _, _
   | _, _, _, _, .floatLit .., h, _, _ | _, _, _, _, .floatOf .., h, _, _
   | _, _, _, _, .floatNarrow .., h, _, _ => by simp [retFreiB] at h
+theorem retFreiArms_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
+    {cs : List (Option (Int × Int))} → (arms : Arms D V l Γ Λ Λ' cs) →
+    retFreiArms arms = true → ∀ v σ ρ, istZ (execArms O passes R arms v σ ρ) = false
+  | _, _, _, _, _, .nil, _, ⟨i, _⟩, _, _ => Fin.elim0 i
+  | _, _, _, _, _, .cons b rest, h, ⟨⟨0, _⟩, nutz⟩, σ, ρ => by
+    simp only [retFreiArms, Bool.and_eq_true] at h
+    simp only [execArms]
+    have hb := retFreiB_istZ b h.1 σ (armEnv nutz ρ)
+    exact (istZ_schrumpfArm _ _).trans hb
+  | _, _, _, _, _, .cons _ rest, h, ⟨⟨i + 1, _⟩, nutz⟩, σ, ρ => by
+    simp only [retFreiArms, Bool.and_eq_true] at h
+    exact retFreiArms_istZ rest h.2 _ σ ρ
 end
 
 end Gabbro.Stage0.Senke

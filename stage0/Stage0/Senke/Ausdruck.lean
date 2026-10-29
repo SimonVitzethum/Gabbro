@@ -61,6 +61,25 @@ def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Na
     some (wennC d cc.1 ca.1 cb.1, max cc.2 (max ca.2 cb.2))
   else none
 
+/-- Test whether the word in `d` lies outside the signed interval; the flag is in `d+1`. -/
+def engTest (d : Nat) (lo hi : Int) : List II :=
+  [ci 1 (d + 1) lo 0, ci 13 (d + 1) d (d + 1), ci 1 (d + 2) hi 0,
+   ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]
+
+/-- Evaluate once, test the interval and skip the fallback when the value already fits. -/
+def engC (d : Nat) (lo hi : Int) (ce cb : List II) : List II :=
+  ce ++ engTest d lo hi ++ [ci 19 (d + 1) ((16 * (cb.length + 1) : Nat) : Int) 0] ++ cb
+
+/-- Bounds must fit the signed literal fields; all compared values must fit a signed word. -/
+def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Option (List II × Nat) := do
+  if inW lo hi && lit32 lo' && lit32 hi' then
+    let ce ← ce
+    let cb ← cb
+    if 16 * (cb.1.length + 1) < 2 ^ 31 then
+      some (engC d lo' hi' ce.1 cb.1, max ce.2 (max cb.2 (d + 3)))
+    else none
+  else none
+
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
@@ -86,6 +105,38 @@ def slotA (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat
 def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
   (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
 
+/-- A sum fits one word: eight tag bits and a 56-bit unsigned payload offset. -/
+def sumFits (cs : List (Option (Int × Int))) : Bool :=
+  decide (cs.length ≤ 256) && cs.all (fun c => match c with
+    | none => true
+    | some (lo, hi) => decide (hi - lo < 2 ^ 56))
+
+/-- The payload's distance from the lower bound; a bare arm has offset zero. -/
+def sumOff : (c : Option (Int × Int)) → Nutzlast c → Nat
+  | none, _ => 0
+  | some (lo, _), v => (v.n - lo).toNat
+
+/-- The representation shared by frames, tables and globals. -/
+def sumN {cs : List (Option (Int × Int))} (v : Wert D (.sum cs)) : Nat :=
+  v.1.val + 256 * sumOff (cs.get v.1) v.2
+
+/-- Pack the payload word in `d`: subtract its lower bound, multiply by 256, add the tag. -/
+def packSum (d : Nat) (lo : Int) (tag : Nat) (ce : List II × Nat) : List II × Nat :=
+  bin2 3 d (bin2 5 d (bin2 4 d ce ([ci 1 (d + 1) lo 0], d + 2))
+    ([ci 1 (d + 1) 256 0], d + 2)) ([ci 1 (d + 1) tag 0], d + 2)
+
+/-- Read a little-endian byte span, one aligned world word per byte. The index code is
+    repeated without changing the world. `j` is the byte offset into the span. -/
+def readBytesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
+    Nat → Nat → Nat → Option (List II × Nat)
+  | _, 0, d => some ([ci 1 d 0 0], d + 1)
+  | j, n + 1, d => do
+    let ci' ← idx d
+    let head ← slotC L t f d (bin2 3 d ci' ([ci 1 (d + 1) j 0], d + 2))
+    let tail ← readBytesL L t f idx (j + 1) n (d + 1)
+    pure (bin2 3 d head (bin2 5 (d + 1) tail ([ci 1 (d + 2) 256 0], d + 3)))
+
+mutual
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
@@ -144,14 +195,30 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
       let ce ← lowE L e d
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
     else none
+  | _, _, .case cs i nutz, d => if sumFits cs then lowN L i.val nutz d else none
   | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
   | _, _, .glob g _, d => if lit32 (L.ga g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
   | _, _, .slot t f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L i d; slotC L t f d ci'
+  | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L e d) (lowE L b d)
+  | _, _, .getBytes t f _ n i _ _ _, d =>
+    if n ≤ 8 then readBytesL L t f (lowE L i) 0 n d else none
+  | _, _, .refEq .., _ | _, _, .slotRef .., _ => none
   | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none
+
+
+/-- Lower a tagged payload through the same expression recursion. -/
+def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) :
+    {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c → Nat → Option (List II × Nat)
+  | _, .empty, d => some ([ci 1 d tag 0], d + 1)
+  | some (lo, _), .num e, d => if lit32 lo then do
+      let ce ← lowE L e d
+      pure (packSum d lo tag ce)
+    else none
+end
 
 /-! ## Values in words -/
 
@@ -167,6 +234,7 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .opt _, v, w => w = BitVec.ofInt 64 (optN v)
   | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
   | .fnptr _, v, w => w = BitVec.ofNat 64 (L.fa v.1)
+  | .sum cs, v, w => sumFits cs = true ∧ w = BitVec.ofNat 64 (sumN v)
   | .ptr _ _, _, _ => True
   | _, _, _ => False
 
