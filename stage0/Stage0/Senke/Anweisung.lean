@@ -244,13 +244,14 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let cr ← lowB A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
   | _, Γ, _, _, .floatNarrow e low high err rest =>
-    if gleitEndlich (bruch low) && gleitEndlich (bruch high) then do
+    if decide (Gleitkomma.klasse Gleitkomma.f64 (bruch low) ≠ .nan) &&
+        decide (Gleitkomma.klasse Gleitkomma.f64 (bruch high) ≠ .nan) then do
       let cc ← floatRangeL (frei Γ) low high (lowE L e)
       let ce ← lowE L e (frei Γ)
       let cr ← lowB A L lo ens pr ex rest
       let cx ← lowEnd A L lo ens pr (exPlus ex (ce.1.length + cr.1.length + 1)) err
       pure (floatNarrowC (frei Γ) cc.1 cx.1 ce.1 cr.1, max cc.2 (max ce.2 (max cr.2 cx.2)))
-    else none
+    else lowEnd A L lo ens pr ex err
   | _, Γ, _, _, .floatLit q low high rest =>
     match gleitPasst low high (bruch q) with
     | none => some (stopC 107 (frei Γ), frei Γ + 8)

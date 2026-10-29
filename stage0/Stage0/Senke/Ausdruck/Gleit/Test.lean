@@ -27,7 +27,8 @@ theorem floatRangeL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Re
     (e : Expr D Γ Λ (.fl l1 h1)) {c : List II}
     (ih : ∀ d c top, lowE L e d = some (c, top) → top ≤ K →
       ∀ m pc, Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L (.fl l1 h1) (eval σ₀ e σ ρ)))
-    (hl : gleitEndlich (bruch lo) = true) (hh : gleitEndlich (bruch hi) = true)
+    (hl : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) ≠ .nan)
+    (hh : Gleitkomma.klasse Gleitkomma.f64 (bruch hi) ≠ .nan)
     (h : floatRangeL d lo hi (lowE L e) = some (c, top)) (hK : top ≤ K)
     {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
     Ok m pc fp K d c (· = Runner.IR.bool (floatOutside lo hi (eval σ₀ e σ ρ).x)) := by
@@ -41,11 +42,11 @@ theorem floatRangeL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Re
     (Pa := fun w => w = Runner.IR.bool (gleitLt (eval σ₀ e σ ρ).x (bruch lo)))
     (Pb := fun w => w = Runner.IR.bool (gleitLt (bruch hi) (eval σ₀ e σ ρ).x)) ?_ ?_ ?_ rfl (by decide) (by omega) hp
   · intro m pc hp
-    exact floatCompare_ok false (eval σ₀ e σ ρ).endlich hl rfl (by omega)
+    exact floatCompare_ok false (endlich_nicht_nan (eval σ₀ e σ ρ).endlich) hl rfl (by omega)
       (fun m pc hp => floatKeyE_ok σ₀ σ e ih ha haT hp)
       (fun m pc hp => floatConstL_ok _ (Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _) (by omega) hp) hp
   · intro m pc hp
-    exact floatCompare_ok false hh (eval σ₀ e σ ρ).endlich rfl (by omega)
+    exact floatCompare_ok false hh (endlich_nicht_nan (eval σ₀ e σ ρ).endlich) rfl (by omega)
       (fun m pc hp => floatConstL_ok _ (Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _) (by omega) hp)
       (fun m pc hp => floatKeyE_ok σ₀ σ e ih hb hbT hp) hp
   · intro x y hx hy

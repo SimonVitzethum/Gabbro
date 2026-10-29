@@ -1,4 +1,5 @@
 /- Expression induction is used only for the float operands. -/
+import Stage0.Senke.Ausdruck.Gleit.NichtNaN
 import Stage0.Senke.Ausdruck.Gleit.Vergleich
 
 namespace Gabbro.Stage0.Senke
@@ -36,7 +37,7 @@ theorem floatCmpL_bounds {le : Bool} {d ta tb top : Nat} {a b c : List II}
 /-- A comparison retains the well-formedness facts until the two keys meet. -/
 theorem floatCompare_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {a b c : List II} {x y : GFloat} (le : Bool)
-    (xf : gleitEndlich x = true) (yf : gleitEndlich y = true)
+    (xf : Gleitkomma.klasse Gleitkomma.f64 x ≠ .nan) (yf : Gleitkomma.klasse Gleitkomma.f64 y ≠ .nan)
     (h : floatCmpL le d (some (a, ta)) (some (b, tb)) = some (c, top)) (hd : d+2 ≤ K)
     (ha : ∀ m pc, Pre L m pc fp K d a ρ W → Ok m pc fp K d a (FloatKeyEnc x))
     (hb : ∀ m pc, Pre L m pc fp K (d+1) b ρ W → Ok m pc fp K (d+1) b (FloatKeyEnc y))
@@ -47,7 +48,7 @@ theorem floatCompare_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : E
     intro m pc hp
     exact bin_ok ha hb (fun a b ha hb => ⟨_, rfl, by
       rw [ha.2, hb.2, slt_in (float_key_range ha.1) (float_key_range hb.1),
-        float_lt_key ha.1 hb.1 xf yf]⟩)
+        float_lt_key_not_nan ha.1 hb.1 xf yf]⟩)
       (g := fun a b => some (Runner.IR.bool (a.slt b))) rfl (by decide) (by omega) hp
   cases le <;> simp only [floatCmpL, bind, Option.bind_some, pure, Bool.false_eq_true,
     ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at h ⊢
@@ -80,7 +81,7 @@ theorem floatExprE_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res
     | some cb =>
       have ht := floatCmpL_bounds h
       have hr := floatKeyL_room ha
-      exact (floatCompare_ok le (eval σ₀ a σ ρ).endlich (eval σ₀ b σ ρ).endlich h (by omega)
+      exact (floatCompare_ok le (endlich_nicht_nan (eval σ₀ a σ ρ).endlich) (endlich_nicht_nan (eval σ₀ b σ ρ).endlich) h (by omega)
         (fun m pc hp => floatKeyE_ok σ₀ σ a iha ha (by omega) hp)
         (fun m pc hp => floatKeyE_ok σ₀ σ b ihb hb (by omega) hp) hp).mono fun w hw => by
           cases le

@@ -24,7 +24,7 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
   simp only [lowB] at h
   split at h
   · next hfit =>
-    simp only [Bool.and_eq_true] at hfit
+    simp only [Bool.and_eq_true, decide_eq_true_eq] at hfit
     obtain ⟨hl, hh⟩ := hfit
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, he, ⟨cr, tr⟩, hr, ⟨cx, tx⟩, hx, hc⟩ := h
@@ -75,6 +75,15 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
           exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc σr _ hp hlo
             (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu hk hw
             (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
-  · cases h
+  · next hnan =>
+    have hn : Gleitkomma.klasse Gleitkomma.f64 (bruch low') = .nan ∨
+        Gleitkomma.klasse Gleitkomma.f64 (bruch high') = .nan := by
+      simp only [Bool.and_eq_true, decide_eq_true_eq] at hnan
+      by_cases hl : Gleitkomma.klasse Gleitkomma.f64 (bruch low') = .nan
+      · exact Or.inl hl
+      · exact Or.inr (by by_contra hh; exact hnan ⟨hl, hh⟩)
+    simp only [execBlock, floatPasst_nan_bound _ hn]
+    exact Ret.toSim (ihErr (ex := ex) c top h hK hs hW m pc _ ρ hp hlo2 hu hk hWa hpr)
+
 
 end Gabbro.Stage0.Senke
