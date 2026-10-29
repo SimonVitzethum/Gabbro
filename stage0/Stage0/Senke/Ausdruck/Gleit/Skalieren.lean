@@ -293,6 +293,18 @@ theorem floatPackCarry_bounds (q u e max : Nat) (hu : 0 < u)
       (if q = 2*u then u else q) < 2*u) := by
   split <;> omega
 
+/-- Real exponent bounds exclude machine-word wrap after carry addition. -/
+theorem floatPackCarry_exponent (q u e max : Nat) (hu : 2*u < 2^64)
+    (hq : u ≤ q ∧ q ≤ 2*u) (he : e + 1 < max) (hm : max ≤ 2^64) :
+    let c := Runner.IR.bool (BitVec.ofNat 64 q == BitVec.ofNat 64 (2*u))
+    (BitVec.ofNat 64 e + c).toNat = e + (if q = 2*u then 1 else 0) := by
+  have hc := (floatPackCarry_nat q u hu hq).1
+  have he64 : e < 2^64 := by omega
+  have hn : e + (if q = 2*u then 1 else 0) < 2^64 := by split <;> omega
+  dsimp only at hc ⊢
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt he64, hc,
+    Nat.mod_eq_of_lt hn]
+
  theorem floatPackCarry_nat_zeuge :
     (Runner.IR.bool (BitVec.ofNat 64 16 == BitVec.ofNat 64 16)).toNat = 1 ∧
     (Runner.IR.bool (BitVec.ofNat 64 15 == BitVec.ofNat 64 16)).toNat = 0 := by
