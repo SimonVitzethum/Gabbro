@@ -1,5 +1,5 @@
 /- One signed interval test for block and end-block narrowing. -/
-import Stage0.Senke.Anweisung.Faelle.Check
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
 import Stage0.Senke.Ausdruck.Eng
 
 namespace Gabbro.Stage0.Senke

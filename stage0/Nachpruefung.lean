@@ -7,7 +7,7 @@ import Stage0
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
-import Stage0.Senke.Anweisung.Faelle.ControlProbes
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok

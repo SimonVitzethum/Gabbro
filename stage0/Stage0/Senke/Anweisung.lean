@@ -238,6 +238,13 @@ def lowB (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : 
     let ce ← lowE L e (frei Γ)
     let cr ← lowB A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
+  | _, Γ, _, _, .floatLit q low high rest =>
+    match gleitPasst low high (bruch q) with
+    | none => some (stopC 107 (frei Γ), frei Γ + 8)
+    | some _ => do
+      let cr ← lowB A L lo ens pr ex rest
+      let cw := wordL 4 (Gleitkomma.zuBits Gleitkomma.f64 (bruch q)) (frei Γ)
+      pure (cw.1 ++ cr.1, max cw.2 cr.2)
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB A L lo ens pr ex rest

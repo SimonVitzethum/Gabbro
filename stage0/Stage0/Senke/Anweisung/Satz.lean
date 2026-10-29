@@ -7,6 +7,7 @@
 -/
 import Stage0.Senke.Anweisung.Schreiben
 import Stage0.Senke.Sperre.Satz
+import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
 import Stage0.Senke.Anweisung.Faelle.Wahl
 import Stage0.Senke.Anweisung.Option
 import Stage0.Senke.Anweisung.Faelle.Tag
@@ -26,8 +27,8 @@ import Stage0.Senke.Anweisung.Faelle.EndWahl
 import Stage0.Senke.Anweisung.Faelle.EndFehler
 import Stage0.Senke.Anweisung.Faelle.EndAtomar
 
-import Stage0.Senke.Anweisung.Faelle.Check
-import Stage0.Senke.Anweisung.Faelle.NarrowCases
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
+import Stage0.Senke.Anweisung.Faelle.Kontrolle.NarrowCases
 import Stage0.Senke.Anweisung.Faelle.BlockFehler
 
 namespace Gabbro.Stage0.Senke
@@ -295,7 +296,10 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .float .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
-  | _, _, _, _, .floatLit .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, Γ, Λ, _, .floatLit q low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact blockFloatLit_case hS hA hlo0 hens
+      (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .floatOf .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .floatNarrow .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
 
