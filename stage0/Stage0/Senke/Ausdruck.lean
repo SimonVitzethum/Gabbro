@@ -300,7 +300,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → Expr D �
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ) d (D.count t) (lowE L body (d + 3))
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ) d (D.count t) (lowE L body (d + 3))
   | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L a d) (lowE L b (d + 1))
-  | _, _, .refEq .., _ | _, _, .slotRef .., _ => none
+  | _, _, .refEq a b, d => wordL 14 d (lowE L a d) (lowE L b (d + 1))
+  | _, _, .slotRef r t _ _ f _, d => do let cr ← lowE L r d; slotC L t f d cr
   | _, _, .wenn c a b, d => wennL d (lowE L c d) (lowE L a d) (lowE L b d)
   | _, _, _, _ => none
 
@@ -328,6 +329,8 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .bool, v, w => w = (if wahr? (D := D) v = true then 1 else 0)
   | .opt _, v, w => w = BitVec.ofInt 64 (optN v)
   | .why _, v, w => w = BitVec.ofNat 64 (Fin.val (n := _) v)
+  | .ref n, v, w => w = BitVec.ofNat 64 v.zelle ∧ v.zelle < 2 ^ 64 ∧
+      ∃ t, D.tabNr n = some t ∧ D.offen t = true ∧ (v.zelle : Int) < L.count t
   | .fnptr _, v, w => w = BitVec.ofNat 64 (L.fa v.1)
   | .sum cs, v, w => sumFits cs = true ∧ w = BitVec.ofNat 64 (sumN v)
   | .arr τ n, v, w => match n with

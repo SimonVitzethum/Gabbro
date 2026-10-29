@@ -140,6 +140,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     · cases h
   | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
   | _, _, .some e, d, c, top, h => lowE_top e d c top h
+  | _, _, .refEq a b, d, c, top, h => wordL_top h
   | _, _, .add a b, d, c, top, h | _, _, .sub a b, d, c, top, h | _, _, .mul a b, d, c, top, h
   | _, _, .and a b, d, c, top, h | _, _, .or a b, d, c, top, h =>
     bin_top (fun c t h => lowE_top a d c t h) h
@@ -192,6 +193,7 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
+  | _, _, .slotRef i _ _ _ _ _, d, c, top, h
   | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨ci', _, hs⟩ := h
@@ -249,8 +251,6 @@ theorem lowE_top {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D 
   | _, _, .oldS .., _, _, _, h
   | _, _, .fllt .., _, _, _, h
   | _, _, .flle .., _, _, _, h
-  | _, _, .refEq .., _, _, _, h
-  | _, _, .slotRef .., _, _, _, h
     => by simp [lowE_eqs] at h
 
 theorem Ok.mono {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {P Q : Runner.W → Prop}

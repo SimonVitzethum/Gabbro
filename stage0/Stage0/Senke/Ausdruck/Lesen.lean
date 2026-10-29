@@ -120,28 +120,26 @@ theorem slotC_top {L : Lay D} {t : D.Tab} {f : D.Feld t} {d : Nat} {ci' : List I
   · cases hs
 
 /-- The address of an element (`slotA`): the index, times 8, plus the column. -/
-theorem slotA_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.count t - 1)}
+theorem slotA_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Int} (hn0 : 0 ≤ k)
     {L : Lay D} {d : Nat} {ci' : List II × Nat} {c : List II} {top K : Nat} {m : Runner.Mem}
     {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     (hs : slotA L t f d ci' = some (c, top)) (hK : top ≤ K)
-    (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) k))
+    (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W → Ok m pc fp K d ci'.1 (· = BitVec.ofInt 64 k))
     (hp : Pre L m pc fp K d c ρ W) :
-    Ok m pc fp K d c (· = BitVec.ofNat 64 (L.elem t f k.n.toNat)) := by
+    Ok m pc fp K d c (· = BitVec.ofNat 64 (L.elem t f k.toNat)) := by
   simp only [slotA] at hs
   split at hs
   · next hcol =>
     simp only [Option.some.injEq, Prod.mk.injEq] at hs
     obtain ⟨rfl, rfl⟩ := hs
-    have hn0 := k.lo_le
     have hq : Pre L m pc fp K d (ci'.1 ++ ([ci 1 (d + 1) 8 0, ci 5 d d (d + 1)] ++
         [ci 1 (d + 1) (L.col t f) 0, ci 3 d d (d + 1)])) ρ W := by
       simpa [List.append_assoc] using hp
     have := hq.small
-    have hc := ok_seq hq (ih m pc hq.left) (Pb := (· = BitVec.ofNat 64 (L.elem t f k.n.toNat)))
+    have hc := ok_seq hq (ih m pc hq.left) (Pb := (· = BitVec.ofNat 64 (L.elem t f k.toNat)))
       (fun m1 w1 hp1 r1 e1 => ok_seq hp1 (binK_ok hp1.left r1 (by decide) rfl (by decide) rfl (by omega))
-        (Pb := (· = BitVec.ofNat 64 (L.elem t f k.n.toNat)))
+        (Pb := (· = BitVec.ofNat 64 (L.elem t f k.toNat)))
         (fun m2 w2 hp2 r2 e2 => (binK_ok hp2 r2 hcol rfl (by decide) rfl (by omega)).mono fun x hx => by
-          simp only [Enc] at e1
           have := addr_w (s := 8) (c := L.col t f) hn0
           rw [e2, e1] at hx
           rw [hx]; exact this) (by omega))
@@ -156,7 +154,7 @@ theorem slotA_ok {Λ : List (Res D)} {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {i : 
     (ih : ∀ m pc, Pre L m pc fp K d ci'.1 ρ W → Ok m pc fp K d ci'.1 (Enc L (.index (D.count t)) (eval σ₀ i σ ρ)))
     (hp : Pre L m pc fp K d c ρ W) :
     Ok m pc fp K d c (· = BitVec.ofNat 64 (L.elem t f (eval σ₀ i σ ρ).n.toNat)) :=
-  slotA_value_ok hs hK ih hp
+  slotA_value_ok (eval σ₀ i σ ρ).lo_le hs hK ih hp
 
 /-- An element of a column (`slotC`): its address, the word there. -/
 theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.count t - 1)}
@@ -176,7 +174,7 @@ theorem slotC_value_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {k : Zahl 0 (D.coun
     have hn0 := k.lo_le
     have hkc : (k.n.toNat : Int) < D.count t := by have := k.le_hi; omega
     have hkn : ((k.n.toNat : Nat) : Int) = k.n := Int.toNat_of_nonneg hn0
-    refine ok_seq hp (slotA_value_ok ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
+    refine ok_seq hp (slotA_value_ok k.lo_le ha hK ih hp.left) (fun m3 w3 hp3 r3 e3 => ?_) (by have := hp.small; omega)
     obtain ⟨v, hv, he⟩ := (hWL m3 hp3.welt).1 t f _ (L.bounded hkc)
     rw [e3] at r3
     rw [hkn] at he
