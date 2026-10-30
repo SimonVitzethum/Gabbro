@@ -17,12 +17,12 @@ theorem assignSlotRef_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
     (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
     (field : D.Feld t) (e : Expr D Γ Λ (D.typ t field)) {hw : _} {hL : _} :
     StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex
-      (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignSlotRef r t ht ho field e hw hL) := by
+      (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignSlotRef r t ht ho field e hw hL) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ _ hWa hpr
   simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, ⟨ca, ta⟩, ha, hc⟩ := h
@@ -54,10 +54,10 @@ theorem leave_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {proof0 : _} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .leave proof0) := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .leave proof0) reserved := by
   intro c top h _ _ _ m pc σ ρ hp _ _ _ _ hWa _
   simp only [lowS] at h
   split at h
@@ -73,10 +73,10 @@ theorem next_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {proof0 : _} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .next proof0) := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .next proof0) reserved := by
   intro c top h _ _ _ m pc σ ρ hp _ _ _ _ hWa _
   simp only [lowS] at h
   split at h
@@ -128,10 +128,10 @@ theorem axiomCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {hn : _} {proof0 : _} {proof1 : _} {proof2 : _} {proof3 : _} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .axiomCall a args hn proof0 proof1 proof2 proof3) := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .axiomCall a args hn proof0 proof1 proof2 proof3) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ _ hWa hpr
   simp only [lowS] at h
   have hks := hW.ks
