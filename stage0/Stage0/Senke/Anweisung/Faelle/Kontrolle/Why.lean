@@ -9,14 +9,14 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 set_option maxHeartbeats 1000000
 set_option maxRecDepth 2048
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem whyTest_ok {m : Runner.Mem} {pc fp : Runner.W} {K s k : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {i : Nat} (hi : i < 2 ^ 64) (hk : k < 2 ^ 31)
-    (hK : s + 3 ≤ K) (hp : PreS L m pc fp K (s + 1) (whyTestC s k) ρ)
+    (hK : s + 3 ≤ K) (hp : PreS (reserved := reserved) L m pc fp K (s + 1) (whyTestC s k) ρ)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofNat 64 i)) :
     Ok m pc fp K (s + 1) (whyTestC s k) (fun w => w = if i == k then 1 else 0) := by
-  have hq : PreS L m pc fp K (s + 1)
+  have hq : PreS (reserved := reserved) L m pc fp K (s + 1)
     ([ci 2 (s + 1) s 0] ++ [ci 1 (s + 2) k 0] ++ [ci 14 (s + 1) (s + 1) (s + 2)]) ρ := hp
   refine bin_ok2 (mov_ok hq.left.left (by omega) (by omega) hw)
     (fun m pc hp => const_ok hp (lit32_nat hk) (by omega))
@@ -50,20 +50,20 @@ variable {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.
   {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp : Runner.W} {lo Ks K : Nat}
   {ens : List II × Nat} {pr : List Nat}
 
-local notation "BR" => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr
+local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr
 
 theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Nat} (arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n)
     (hblocks : GrundAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
-    (hc : lowGrund passes A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
+    (hc : lowGrund (reserved := reserved) passes A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
     (hs : 16 * cd.length < 2 ^ 31) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
-    (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
+    (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} 
     (v : Fin n) (hi : k + v.val < 2 ^ 64)
-    (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 (k + v.val)))
-    (hp : PreS L m pc fp K (frei Γ) cd ρ) (hu : Umf L A C dv m fp Ks K)
+    (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 (k + v.val)))
+    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) cd ρ) (hu : Umf L A C dv m fp Ks K)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
-    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
+    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * cd.length) + BitVec.ofInt 64 ex.2)
       (execGrund O passes R arms v σ ρ) := by
@@ -78,11 +78,11 @@ theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [Prod.mk.injEq] at he
       obtain ⟨rfl, rfl⟩ := he
       simp only [List.length_append, whyTestC, List.length_cons, List.length_nil] at hs
-      have hp' : PreS L m pc fp K (frei Γ)
-          (whyTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * (cb.length + 2)) 0] ++
+      have hp' : PreS (reserved := reserved) L m pc fp K (frei Γ reserved)
+          (whyTestC (frei Γ reserved) k ++ [ci 19 (frei Γ reserved + 1) (16 * (cb.length + 2)) 0] ++
             cb ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr) ρ := by
         simpa only [List.length_append, List.append_assoc, Int.natCast_add] using hp
-      have hh := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ + 1) (b := k + v.val == k)
+      have hh := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + 1) (b := k + v.val == k)
         (ot := execGrund O passes R (.cons b rest) v σ ρ)
         (oe := execGrund O passes R (.cons b rest) v σ ρ)
         (by omega) (by have := hW.ks; omega) (by
@@ -99,7 +99,7 @@ theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         change i = 0 at hz
         subst i
         simp only [execGrund]
-        have hr : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 (k + 0)) := by
+        have hr : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 (k + 0)) := by
           rw [agree_rd_low ha hp.frame.room (by omega) (by have := hW.ks; omega)]; exact hw
         exact hblocks.1 (exPlus ex (cr.length + 1)) cb tb hcb (by omega) (by omega)
           m' pc' σ ρ hp1 hlo2 hu1 hk1 hw1 hpr
@@ -109,7 +109,7 @@ theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | zero => exact (hn rfl).elim
         | succ i =>
           simp only [execGrund]
-          have hr : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 (k + (i + 1))) := by
+          have hr : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 (k + (i + 1))) := by
             rw [agree_rd_low ha hp.frame.room (by omega) (by have := hW.ks; omega)]; exact hw
           exact lowGrund_ok rest hblocks.2 hcr (by omega) (by omega) hW hlo hlo0 hlo2 hpr ⟨i, Nat.lt_of_succ_lt_succ hiv⟩
             (by simpa only [Fin.val_mk, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hi)
@@ -122,15 +122,15 @@ theorem onWhy_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     {v : Expr D Γ Λ (.why n)} {arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n}
     {cv ca : List II} {tv ta : Nat} {ex : Int × Int}
     (hn : n < 2 ^ 31) (hblocks : GrundAll (fun b => BR b) arms)
-    (hcv : lowE L v (frei Γ) = some (cv, tv))
-    (hca : lowGrund passes A L lo ens pr ex arms 0 = some (ca, ta))
+    (hcv : lowE (reserved := reserved) L v (frei Γ reserved) = some (cv, tv))
+    (hca : lowGrund (reserved := reserved) passes A L lo ens pr ex arms 0 = some (ca, ta))
     (htv : tv ≤ Ks) (hta : ta + cap ≤ Ks) (hs : 16 * (cv.length + ca.length) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
-    (hlo2 : lo ≤ frei Γ) (hpr : ∀ j ∈ pr, j < frei Γ)
+    (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS L m pc fp K (frei Γ) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
+    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
-    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
+    Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length))
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cv ++ ca).length) + BitVec.ofInt 64 ex.2)
       (execStmt O passes R (.onWhy v arms) σ ρ) := by
@@ -167,10 +167,10 @@ theorem retWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {r : Fin (D.gruende f)} {proof0 : _} :
-    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .retWhy r proof0) := by
+    StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .retWhy r proof0) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
   simp only [lowS] at h
   split at h
