@@ -2423,6 +2423,34 @@ theorem floatOfIntContinuationL_zero_finalcopyPC (F : Gleitkomma.Format)
     BitVec.ofNat 64 (16 * (code.length - 1)) at wp
   simpa only [BitVec.ofInt_natCast, BitVec.add_assoc, wp] using hs
 
+/-- Execute the final emitted move after the concrete zero jump. -/
+theorem floatOfIntContinuationL_zero_ok (F : Gleitkomma.Format)
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K input top reserved : Nat}
+    {code : List II}
+    (hc : floatOfIntContinuationL F input = some (code, top))
+    (h : Pre L m pc fp K input code ρ W reserved)
+    (hk : input + 5 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some (BitVec.ofInt 64 0)) :
+    Ok m pc fp K input code (· = 0) := by
+  have ht : Pre L m pc fp K (input + 1) code ρ W reserved :=
+    { h with ctx := Nat.le_trans h.ctx (Nat.le_succ _) }
+  obtain ⟨m1, s1, a1, r1⟩ := floatOfIntContinuationL_zero_finalcopyPC F hc ht hk hr
+  obtain ⟨assembly, he, hl, _⟩ := floatOfIntContinuationL_final_copy F input hc
+  have hp := h
+  rw [he] at hp
+  have hp1 := hp.next (a1.mono (Nat.le_succ input)) (Nat.le_refl _) (by omega)
+  obtain ⟨m2, s2, a2, w, r2, hw⟩ := mov_ok (s := input + 1) (d := input) hp1 (by omega) (by omega) r1
+  subst w
+  refine ⟨m2, ?_, (a1.mono (Nat.le_succ input)).trans a2, 0, r2, rfl⟩
+  have sl : code.length - 1 = assembly.length := by omega
+  rw [sl] at s1
+  have endpc := pc_add16 pc assembly.length
+  simpa only [List.length_singleton, Nat.mul_one, BitVec.ofNat_eq_ofNat,
+    endpc, hl] using s1.trans s2
+
+#print axioms floatOfIntContinuationL_zero_ok
+
 #print axioms floatOfIntContinuationL_zero_endjump
 
 #print axioms floatOfIntContinuationL_final_copy
