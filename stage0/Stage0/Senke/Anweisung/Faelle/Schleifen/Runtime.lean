@@ -15,7 +15,7 @@ theorem Reach.counter_backedge {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {t : T} {m : Mem} {σ : World D} {ρ : Env D Γ} {reserved : Nat}
     {jump b c : BitVec 32} {value : W}
     (body : Reach L fp lo K pr t m pc σ ρ reserved)
-    (layout : WIn L fp Ks K) (below : counter < lo) (bound : lo ≤ K)
+    (layout : WIn L fp Ks K) (hprotected : counter < lo ∨ counter ∈ pr) (bound : lo ≤ K)
     (initial : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value)
     (edge : InsAt m pc 18 jump b c) (far : CodeFar pc 1 fp K) :
     ∃ m', Star t m ⟨pc + sx jump, fp⟩ m' ∧
@@ -35,8 +35,9 @@ theorem Reach.counter_backedge {D : Deklaration} {L : Lay D} {Γ : Ctx}
     (run_jmp (t := ⟨pc, fp⟩) edge'))
   refine ⟨m', run.trans ?_, frame, env, world, keeps, ?_⟩
   · simpa [II.f] using hj
-  · rw [counter_preserved layout frame below bound]
-    exact initial
+  · cases hprotected with
+    | inl below => rw [counter_preserved layout frame below bound]; exact initial
+    | inr member => rw [keeps counter member]; exact initial
 
 /-- A zero budget executes the real conditional branch into the progress stop,
 before an invariant or body can execute. -/

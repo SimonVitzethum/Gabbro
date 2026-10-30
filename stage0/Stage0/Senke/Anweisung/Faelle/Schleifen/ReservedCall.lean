@@ -98,4 +98,22 @@ theorem write_call_reserved_zeuge [Kern] :
   rw [hk 4 (by simp)]
   decide +kernel
 
+/-- The emitted backward jump really returns to the body entry after its store
+and reachable call; the live reserved sentinel survives the complete cycle. -/
+theorem write_call_backedge_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ memory ⟨2048, 4096⟩ m' ∧
+      m'.rd64 (slot 4096 (BitVec.ofNat 64 4)) = some 77 := by
+  have edge : InsAt memory (2048 + BitVec.ofNat 64 (16 * code.length)) 18
+      (II.f (-(16 * (code.length : Int)))) 0 0 := by decide +kernel
+  have far : CodeFar (2048 + BitVec.ofNat 64 (16 * code.length)) 1 4096 256 := by
+    unfold CodeFar
+    decide +kernel
+  obtain ⟨m', run, _, _, _, _, kept⟩ := Reach.counter_backedge
+    (counter := 4) (value := 77) body_simulation call_win (Or.inr (by simp))
+    (by decide) (by decide +kernel) edge far
+  refine ⟨m', ?_, kept⟩
+  have target : (2048 : Runner.W) + BitVec.ofNat 64 (16 * code.length) +
+      sx (II.f (-(16 * (code.length : Int)))) = 2048 := by decide +kernel
+  simpa only [target] using run
+
 end Gabbro.Stage0.Senke.ReservedCallProbe
