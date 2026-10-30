@@ -182,7 +182,7 @@ theorem callElse_ok_zeuge [Kern] (g : D.Fn) :
     revert g
     apply allFin
     decide +kernel
-  have h := callElse_ok (g := g) (ca := []) (ta := 8) call_spec (addresses_bound g)
+  have h := callElse_ok (reserved := 0) (g := g) (ca := []) (ta := 8) call_spec (addresses_bound g)
     (Args.nil : Args D [] [] (D.params g)) rfl world rfl (by change 49 ≤ 128; decide) (call_pre g)
     (by change 144 < 2 ^ 31; decide) (call_umf g) call_win (call_world g)
   rcases h with ⟨σ, v, m', hr, st, _, hp, hw⟩ | ⟨σ, r, m', hr, st, _, hp, hw⟩ |
