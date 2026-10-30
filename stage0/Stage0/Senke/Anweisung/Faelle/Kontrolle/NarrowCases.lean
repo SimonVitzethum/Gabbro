@@ -16,14 +16,14 @@ theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
     {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Block D (vertragVon D f) l (.int low' high' :: Γ) Λ Λ'} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.narrow e low' high' err rest) := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err reserved) →
+    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
+    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.narrow e low' high' err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB] at h
   split at h
@@ -35,7 +35,7 @@ theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [execBlock]
-    refine narrow_ok (σ := σ.lese Λ e.orte) he (by omega) hw hl hh (by omega) hs hW hlo hlo0 hlo2 hpr ?_ ?_ hp hu hk hWa
+    refine narrow_ok (reserved := reserved) (σ := σ.lese Λ e.orte) he (by omega) hw hl hh (by omega) hs hW hlo hlo0 hlo2 hpr ?_ ?_ hp hu hk hWa
     · intro hout m' pc' hp' hu' hk' hw'
       rw [dif_neg hout]
       exact Ret.toSim (ihErr (ex := exPlus ex (cr.length + 1)) cx tx hx (by omega) (by
@@ -54,14 +54,14 @@ theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
     {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Endblock D (vertragVon D f) l (.int low' high' :: Γ) Λ} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.narrow e low' high' err rest) := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err reserved) →
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.narrow e low' high' err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
   simp only [lowEnd] at h
   split at h
@@ -72,9 +72,9 @@ theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, ⟨cx, tx⟩, hx, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
-    apply Ret.ofSim (e := pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ) low' high' ce cx cr).length))
+    apply Ret.ofSim (e := pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length))
     simp only [execEnd]
-    refine narrow_ok (σ := σ.lese Λ e.orte) he (by omega) hw hl hh (by omega) hs hW (by omega) hlo0 hlo2 hpr ?_ ?_ hp hu hk hWa
+    refine narrow_ok (reserved := reserved) (σ := σ.lese Λ e.orte) he (by omega) hw hl hh (by omega) hs hW (by omega) hlo0 hlo2 hpr ?_ ?_ hp hu hk hWa
     · intro hout m' pc' hp' hu' hk' hw'
       rw [dif_neg hout]
       exact Ret.toSim (ihErr (ex := exPlus ex (cr.length + 1)) cx tx hx (by omega) (by

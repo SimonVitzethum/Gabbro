@@ -14,19 +14,19 @@ variable {D : Deklaration}
 
 /-- End blocks have no normal fallthrough target. -/
 theorem Ret.toSim {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
-    {ρ0 : Env D (D.params f)} {fp rp cfp : Runner.W} {lo K : Nat} {pr : List Nat}
+    {ρ0 : Env D (D.params f)} {fp rp cfp : Runner.W} {lo K : Nat} {reserved : Nat} {pr : List Nat}
     {t : T} {m : Runner.Mem} {e eL eN : Runner.W} {l : Bool} {Γ : Ctx}
     {o : EndAusgang (vertragVon D f) l Γ}
-    (h : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o) :
-    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang := by
+    (h : Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved) :
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang reserved := by
   cases o <;> exact h
 
 theorem Ret.ofSim {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
-    {ρ0 : Env D (D.params f)} {fp rp cfp : Runner.W} {lo K : Nat} {pr : List Nat}
+    {ρ0 : Env D (D.params f)} {fp rp cfp : Runner.W} {lo K : Nat} {reserved : Nat} {pr : List Nat}
     {t : T} {m : Runner.Mem} {e eL eN : Runner.W} {l : Bool} {Γ : Ctx}
     {o : EndAusgang (vertragVon D f) l Γ}
-    (h : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang) :
-    Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o := by
+    (h : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o.zuAusgang reserved) :
+    Ret L P f σ0 ρ0 fp lo K pr rp cfp t m eL eN o reserved := by
   cases o <;> exact h
 
 theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}

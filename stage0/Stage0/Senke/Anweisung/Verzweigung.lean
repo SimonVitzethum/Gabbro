@@ -12,26 +12,26 @@ variable [Kern] {D : Deklaration}
 theorem choice_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W}
     {K Ks lo d : Nat} {rp cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)}
-    {pr : List Nat} {ex : Int × Int} {l : Bool} {Γ : Ctx}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int} {l : Bool} {Γ : Ctx}
     {cc ct ce : List II} {b : Bool} {ot oe : Ausgang (vertragVon D f) l Γ}
-    (hd : frei Γ ≤ d) (hdk : d < K)
+    (hd : frei Γ reserved ≤ d) (hdk : d < K)
     (hs : 16 * (cc.length + 1 + ct.length + 1 + ce.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
-    (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hcond : PreS L m pc fp K (frei Γ) cc ρ →
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved)
+    (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
+    (hcond : PreS L m pc fp K (frei Γ reserved) cc ρ reserved →
       Ok m pc fp K d cc (fun w => w = if b then 1 else 0))
-    (hthen : b = true → ∀ m' pc', PreS L m' pc' fp K (frei Γ) ct ρ → Agree fp d K m m' →
+    (hthen : b = true → ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ct ρ reserved → Agree fp d K m m' →
       Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
-        (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2) ot)
-    (helse : b = false → ∀ m' pc', PreS L m' pc' fp K (frei Γ) ce ρ → Agree fp d K m m' →
+        (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).2) ot reserved)
+    (helse : b = false → ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ce ρ reserved → Agree fp d K m m' →
       Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ce.length))
         (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.1)
-        (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.2) oe)
-    (hp : PreS L m pc fp K (frei Γ) (cc ++ [ci 19 d (16 * (ct.length + 2)) 0] ++ ct ++
-      [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ)
+        (pc' + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofInt 64 ex.2) oe reserved)
+    (hp : PreS L m pc fp K (frei Γ reserved) (cc ++ [ci 19 d (16 * (ct.length + 2)) 0] ++ ct ++
+      [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ reserved)
     (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 19 d (16 * (ct.length + 2)) 0] ++ ct ++
@@ -40,11 +40,11 @@ theorem choice_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (cc ++ [ci 19 d (16 * (ct.length + 2)) 0] ++ ct ++
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.2)
-      (if b then ot else oe) := by
+      (if b then ot else oe) reserved := by
     have hsm := hp.small
     have hsm' := hsm
-    have hq : PreS L m pc fp K (frei Γ) (cc ++ ([ci 19 d (16 * (ct.length + 2)) 0] ++ (ct ++
-        ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ := by simpa [List.append_assoc] using hp
+    have hq : PreS L m pc fp K (frei Γ reserved) (cc ++ ([ci 19 d (16 * (ct.length + 2)) 0] ++ (ct ++
+        ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ reserved := by simpa [List.append_assoc] using hp
     have hks := hW.ks
     obtain ⟨m1, s1, a1, w, hw, hen⟩ := hcond hq.left
     have hWa1 : WeltAt m1 L σ := weltAt_stab hW.lay (by have := hW.top; omega) m m1 hWa (a1.mono (Nat.zero_le _))
