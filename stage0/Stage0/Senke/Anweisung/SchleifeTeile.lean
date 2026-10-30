@@ -175,9 +175,9 @@ end
 /-! ## The head of the loop -/
 
 /-- A statement's precondition from its parts. -/
-theorem mkPreS {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    (hctx : frei Γ ≤ d) (hK : K < 2 ^ 31) (hF : FrameOK m fp K) (hc : CodeAt m pc c) (hf : CodeFar pc c.length fp K)
-    (he : EnvAt L m fp ρ) : PreS L m pc fp K d c ρ :=
+theorem mkPreS {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ} {reserved : Nat}
+    (hctx : frei Γ reserved ≤ d) (hK : K < 2 ^ 31) (hF : FrameOK m fp K) (hc : CodeAt m pc c) (hf : CodeFar pc c.length fp K)
+    (he : EnvAt L m fp ρ reserved) : PreS L m pc fp K d c ρ reserved :=
   ⟨hctx, hK, hF, hc, hf, he, trivial, wstab_true _ _⟩
 
 theorem slt_k {k : Nat} {n : Int} (hk : k < 2 ^ 31) (hn : lit32 n = true) :
