@@ -191,18 +191,18 @@ variable {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.
   {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 /-- **`exchange`**: what G answers for the block, the code does. -/
-theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn cr : List II} {tn : Nat}
-    (hn : lowE L neu (frei Γ + 1) = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ + 4 ≤ Ks)
+theorem exch_head {reserved : Nat} {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn cr : List II} {tn : Nat}
+    (hn : lowE L neu (frei Γ reserved + 1) reserved = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ reserved + 4 ≤ Ks)
     (hW : WIn L fp Ks K) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS L m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hWa : WeltAt m L σ) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length), fp⟩ m' ∧
-      AgreeW L fp (frei Γ) K m m' ∧
-      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr
-        (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) ∧
+    (hp : PreS L m pc fp K (frei Γ reserved) (exC (frei Γ reserved) (L.ga g) cn ++ cr) ρ reserved) (hWa : WeltAt m L σ) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length), fp⟩ m' ∧
+      AgreeW L fp (frei Γ reserved) K m m' ∧
+      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length)) fp K (frei Γ reserved + 1) cr
+        (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) reserved ∧
       WeltAt m' L ((σ.lese Λ (.inr g :: neu.orte)).schreibGlob g Λ (eval (σ.lese Λ (.inr g :: neu.orte)) neu
         (σ.lese Λ (.inr g :: neu.orte)) (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ))) := by
-  generalize hsd : frei Γ = s at hn hs4 hp ⊢
-  have hfr : frei (D.gtyp g :: Γ) = s + 1 := by simp only [frei, List.length_cons] at hsd ⊢; omega
+  generalize hsd : frei Γ reserved = s at hn hs4 hp ⊢
+  have hfr : frei (D.gtyp g :: Γ) reserved = s + 1 := by simp only [frei, List.length_cons] at hsd ⊢; omega
   have hks := hW.ks
   have hK := hp.small
   have hl := hW.lay
@@ -226,7 +226,7 @@ theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn
   have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * 2)) fp K (s + 1) (cn ++ ([ci 1 ((s + 2 : Nat) : Int) (L.ga g) 0,
       ci 22 ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int) s, ci 14 ((s + 3 : Nat) : Int) ((s + 3 : Nat) : Int) s,
       ci 19 ((s + 3 : Nat) : Int) (-(16 * ((cn.length + 5 : Nat) : Int))) 0] ++ cr))
-      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) :=
+      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) reserved :=
     ⟨Nat.le_of_eq hfr, hK, hq.frame, hq.code, hq.far, envAt_cons hq.env (by rw [hsd]; exact r1) he0, trivial,
      wstab_true _ _⟩
   have hpw := PreS.welt hp1.left hks (weltAt_stab hl (by have := hW.top; omega) m m1 hσ (a1.mono (Nat.zero_le _)))
@@ -254,7 +254,7 @@ theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn
     simp only [List.length_cons, List.length_nil]
     rw [pc_jump, pc_jump, hlen]; congr 2; omega
   have hp3 : PreS L m3 (pc + BitVec.ofNat 64 (16 * (exC s (L.ga g) cn).length)) fp K (s + 1) cr
-      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) := by
+      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) reserved := by
     rw [← e3]
     exact ⟨Nat.le_of_eq hfr, hq3.small, hq3.frame, hq3.code, hq3.far, envAt_cons hq3.env (by rw [hsd]; exact r3) he0,
       trivial, wstab_true _ _⟩
