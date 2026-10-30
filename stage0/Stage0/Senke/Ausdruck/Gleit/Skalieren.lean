@@ -2155,7 +2155,8 @@ theorem floatOfIntContinuationL_zero_jump_encoding (F : Gleitkomma.Format) (inpu
     (h : floatOfIntContinuationL F input = some (code, top)) :
     ∃ normal : List II,
       code[29]? = some (ci 18 ((16 * (normal.length + 1) : Nat) : Int) 0 0) ∧
-      code.length = 31 + normal.length := by
+      code.length = 31 + normal.length ∧
+      lit32 ((16 * (normal.length + 1) : Nat) : Int) = true := by
   obtain ⟨assembly, ha, rfl⟩ := floatOfIntContinuationL_parts F input h
   simp only [floatOfIntAssemblyL, wennL, floatPackZeroL, konstWL, wordK, floatMagnitudeL, wordL,
     bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at ha
@@ -2180,7 +2181,9 @@ theorem floatOfIntContinuationL_zero_jump_encoding (F : Gleitkomma.Format) (inpu
   split at he
   · cases he
     simp only [wennC, bin2, List.cons_append, List.nil_append, List.append_assoc]
-    exact ⟨_, rfl, by simp [bin2]; omega⟩
+    refine ⟨_, rfl, by simp [bin2]; omega, ?_⟩
+    simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
+    constructor <;> omega
   · cases he
 
 /-- The entire zero constant lies between the comparison branch and the end jump. -/
@@ -2230,7 +2233,7 @@ theorem floatOfIntContinuationL_zero_jump_position (F : Gleitkomma.Format) (inpu
     ∃ normal : List II,
       code[29]? = some (ci 18 ((16 * (normal.length + 1) : Nat) : Int) 0 0) ∧
       464 + 16 * (normal.length + 1) = 16 * (code.length - 1) := by
-  obtain ⟨normal, hi, hn⟩ := floatOfIntContinuationL_zero_jump_encoding F input h
+  obtain ⟨normal, hi, hn, _⟩ := floatOfIntContinuationL_zero_jump_encoding F input h
   exact ⟨normal, hi, by omega⟩
 
 /-- Execute the emitted equality from the concrete magnitude and zero reads. -/
@@ -2395,6 +2398,30 @@ theorem floatOfIntContinuationL_zero_endjump (F : Gleitkomma.Format)
     (run_jmp (t := ⟨pc + 464, fp⟩) hi))
   refine ⟨m', hs.trans ?_, ha, hr'⟩
   simpa only [sx_lit hl] using sj
+
+/-- The generated zero jump reaches the exact final-copy boundary without
+    an encoding or displacement assumption supplied by the caller. -/
+theorem floatOfIntContinuationL_zero_finalcopyPC (F : Gleitkomma.Format)
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
+    {code : List II}
+    (hc : floatOfIntContinuationL F input = some (code, top))
+    (h : Pre L m pc fp K (input + 1) code ρ W reserved)
+    (hk : input + 5 < K)
+    (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some (BitVec.ofInt 64 0)) :
+    ∃ m', Star ⟨pc, fp⟩ m
+        ⟨pc + BitVec.ofNat 64 (16 * (code.length - 1)), fp⟩ m' ∧
+      Agree fp (input + 1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some 0 := by
+  obtain ⟨normal, hi, hn, hl⟩ := floatOfIntContinuationL_zero_jump_encoding F input hc
+  obtain ⟨m', hs, ha, hr'⟩ := floatOfIntContinuationL_zero_endjump F hc h hk hr hi hl
+  refine ⟨m', ?_, ha, hr'⟩
+  have pos : 464 + 16 * (normal.length + 1) = 16 * (code.length - 1) := by omega
+  have wp := congrArg (BitVec.ofNat 64) pos
+  rw [BitVec.ofNat_add] at wp
+  change (464 : Runner.W) + BitVec.ofNat 64 (16 * (normal.length + 1)) =
+    BitVec.ofNat 64 (16 * (code.length - 1)) at wp
+  simpa only [BitVec.ofInt_natCast, BitVec.add_assoc, wp] using hs
 
 #print axioms floatOfIntContinuationL_zero_endjump
 
