@@ -2365,8 +2365,7 @@ theorem floatOfIntContinuationL_final_copy (F : Gleitkomma.Format) (input : Nat)
   obtain ⟨assembly, _, he⟩ := floatOfIntContinuationL_parts F input hc
   refine ⟨assembly, he, ?_, ?_⟩ <;> simp [he]
 
-/-- Execute the end jump after the zero write. The code premise records the
-    actual instruction fetch; connecting it to the emitted suffix remains required. -/
+/-- Execute the end jump after the zero write, fetching from the emitted code. -/
 theorem floatOfIntContinuationL_zero_endjump (F : Gleitkomma.Format)
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc fp : Runner.W} {K input top : Nat}
@@ -2375,15 +2374,23 @@ theorem floatOfIntContinuationL_zero_endjump (F : Gleitkomma.Format)
     (h : Pre L m pc fp K (input + 1) code ρ W reserved)
     (hk : input + 5 < K)
     (hr : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some (BitVec.ofInt 64 0))
-    (fetch : ∀ m', Agree fp (input + 1) K m m' →
-      CodeAt m' (pc + 464) [ci 18 offset 0 0])
+    (encoded : code[29]? = some (ci 18 offset 0 0))
     (hl : lit32 offset = true) :
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 464 + BitVec.ofInt 64 offset, fp⟩ m' ∧
       Agree fp (input + 1) K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (input + 1))) = some 0 := by
   obtain ⟨m', hs, ha, hr'⟩ := floatOfIntContinuationL_zero_constant F hc h hk hr
-  have hi := fetch m' ha 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  have bound : 29 < code.length := by
+    by_cases hb : 29 < code.length
+    · exact hb
+    · have he : code[29]? = none := List.getElem?_eq_none (by omega)
+      rw [he] at encoded
+      cases encoded
+  have hi := (h.code.agree ha h.far) 29 bound
+  have entry : code[29] = ci 18 offset 0 0 := by
+    simpa only [List.getElem?_eq_getElem bound, Option.some.injEq] using encoded
+  rw [entry] at hi
+  simp only [ci] at hi
   have sj := Star.one (run_step (t := ⟨pc + 464, fp⟩) hi (by decide)
     (run_jmp (t := ⟨pc + 464, fp⟩) hi))
   refine ⟨m', hs.trans ?_, ha, hr'⟩
