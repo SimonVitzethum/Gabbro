@@ -157,6 +157,42 @@ theorem computedFloatOfL_ok_samples (L : Lay D) :
 
 #print axioms computedFloatOfL_ok_samples
 #print axioms computedFloatOfL_ok_zeuge
+/-- Witness for the actual expression constructor with a nonzero reservation.
+    The literal is compiled by `lowE`, not supplied as a separate word template. -/
+theorem computedFloatOfE_ok_zeuge (F : Gleitkomma.Format)
+    (hF : F ∈ [Gleitkomma.f32, Gleitkomma.f64]) (σ₀ σ : World D) :
+    ∃ code top,
+      computedFloatOfE L F (Expr.lit (Γ := []) (Λ := []) 37) 8 4 = some (code, top) ∧
+      Pre L (SlotProbe.memory code) 0 4294967296 256 8 code
+        (Env.nil : Env D []) (fun _ => True) 4 ∧
+      Ok (SlotProbe.memory code) 0 4294967296 256 8 code
+        (· = BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F 37))) := by
+  obtain ⟨suffix, st, hs, ls, ts, os⟩ := FloatEmission.continuation F 8
+  let code := [ci 1 8 37 0] ++ suffix
+  have hc : computedFloatOfE L F (Expr.lit (Γ := []) (Λ := []) 37) 8 4 =
+      some (code, max 9 st) := by
+    simp only [computedFloatOfE, hF, show -(2^63 : Int) ≤ 37 by decide,
+      show (37 : Int) < 2^63 by decide, and_self, ↓reduceIte,
+      computedFloatOfL, lowE_eqs, show lit32 37 = true by decide, ↓reduceIte,
+      bind, Option.bind_some, hs, pure, code]
+    rfl
+  have hp : Pre L (SlotProbe.memory code) 0 4294967296 256 8 code
+      (Env.nil : Env D []) (fun _ => True) 4 := by
+    apply SlotProbe.pre code
+    · simp only [code, List.length_append, List.length_singleton, ls]; omega
+    · simp [code, List.all_append, os, ci]
+    · decide
+  refine ⟨code, max 9 st, hc, hp, ?_⟩
+  have run := computedFloatOfE_ok (σ₀ := σ₀) (σ := σ) hc hp (by omega) ?_
+  · simpa only [eval] using run
+  · intro ce ct he ht pre
+    simp only [lowE_eqs, show lit32 37 = true by decide, ↓reduceIte,
+      Option.some.injEq, Prod.mk.injEq] at he
+    obtain ⟨rfl, rfl⟩ := he
+    exact const_ok pre (by decide) (by omega)
+
+#print axioms computedFloatOfE_ok_zeuge
+
 end ComputedConversionProbe
 
 end Gabbro.Stage0.Senke
