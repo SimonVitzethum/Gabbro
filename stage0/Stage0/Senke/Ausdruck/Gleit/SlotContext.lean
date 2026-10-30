@@ -112,6 +112,68 @@ theorem computedFloatOfL_ok (F : Gleitkomma.Format)
   exact floatOfIntContinuationL_ok F hF v.n ⟨lower, upper⟩ ha pre
     (by omega) read
 
+/-- Candidate for the computed-integer hook. The source interval is checked before
+    emitting the child; unsupported intervals remain refusals. Reservation is passed
+    to the ordinary expression lowering unchanged. -/
+def computedFloatOfE (L : Lay D) {Γ : Ctx} {Λ : List (Res D)}
+    {lo hi : Int} (F : Gleitkomma.Format) (e : Expr D Γ Λ (.int lo hi))
+    (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
+  if F ∈ [Gleitkomma.f32, Gleitkomma.f64] ∧ -2^63 ≤ lo ∧ hi < 2^63 then
+    computedFloatOfL F d (fun j => lowE L e j reserved)
+  else none
+
+/-- Top and both child/suffix budgets follow from the actual candidate. -/
+theorem computedFloatOfE_bounds {Γ : Ctx} {Λ : List (Res D)}
+    {lo hi : Int} {F : Gleitkomma.Format} {e : Expr D Γ Λ (.int lo hi)}
+    {d reserved top : Nat} {code : List II}
+    (hc : computedFloatOfE L F e d reserved = some (code, top)) :
+    d < top ∧ ∃ ce ca,
+      lowE L e d reserved = some ce ∧
+      floatOfIntContinuationL F d = some ca ∧
+      code = ce.1 ++ ca.1 ∧ top = max ce.2 ca.2 := by
+  unfold computedFloatOfE at hc
+  split at hc
+  · simp only [computedFloatOfL, bind, Option.bind_eq_some_iff, pure,
+      Option.some.injEq] at hc
+    obtain ⟨ce, he, ca, ha, hc⟩ := hc
+    cases hc
+    obtain ⟨assembly, assemblyOk, _⟩ := floatOfIntContinuationL_parts F d ha
+    have bound := floatOfIntAssemblyL_ceiling assemblyOk
+    exact ⟨by omega, ce, ca, he, ha, rfl, rfl⟩
+  · cases hc
+
+/-- A hook consumes the ordinary child's simulation at the same reservation.
+    No universally movable fixed-slot code is assumed. The returned `Ok` includes
+    the footprint agreement below `d` and above the complete frame budget. -/
+theorem computedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
+    {lo hi : Int} {F : Gleitkomma.Format} {e : Expr D Γ Λ (.int lo hi)}
+    {ρ : Env D Γ} {W : Runner.Mem → Prop} {σ₀ σ : World D}
+    {m : Runner.Mem} {pc fp : Runner.W} {K d top reserved : Nat} {code : List II}
+    (hc : computedFloatOfE L F e d reserved = some (code, top))
+    (hp : Pre L m pc fp K d code ρ W reserved) (ht : top ≤ K)
+    (child : ∀ ce ct, lowE L e d reserved = some (ce, ct) → ct ≤ K →
+      Pre L m pc fp K d ce ρ W reserved →
+      Ok m pc fp K d ce (Enc L (.int lo hi) (eval σ₀ e σ ρ))) :
+    Ok m pc fp K d code
+      (· = BitVec.ofNat 64 (Gleitkomma.zuBits F
+        (Gleitkomma.ofInt F (eval σ₀ e σ ρ).n))) := by
+  have shape := computedFloatOfE_bounds hc
+  unfold computedFloatOfE at hc
+  split at hc
+  · next guard =>
+    apply computedFloatOfL_ok F guard.1 (eval σ₀ e σ ρ)
+      guard.2.1 guard.2.2 hc hp ht
+    intro ce he
+    obtain ⟨ce', ca, he', _, codeEq, topEq⟩ := shape.2
+    have eq : ce = ce' := Option.some.inj (he.symm.trans he')
+    subst ce'
+    apply child ce.1 ce.2 he (by omega)
+    rw [codeEq] at hp
+    exact hp.left
+  · cases hc
+
+#print axioms computedFloatOfE_ok
+
 #print axioms computedFloatOfL_ok
 
 #print axioms floatOfIntContinuationL_ok
