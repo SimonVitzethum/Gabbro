@@ -26,27 +26,28 @@ theorem byte_word {z : Int} (hz0 : 0 ≤ z) (hz : z < 2 ^ 64) (j : Nat) (hj : j 
   | 7, _ => simp only [dropBytes]; omega
 
 
+variable {reserved : Nat}
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 theorem bytePartC_ok {Γ : Ctx} {a b H : Int} {z : Zahl 0 H} {k : Zahl a b} {ρ : Env D Γ}
     {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {W : Runner.Mem → Prop}
-    (hz : z.n < 2 ^ 64) (hj : j < 8) (hK : frei Γ + 4 ≤ K)
-    (hp : Pre L m pc fp K (frei Γ + 2) (bytePartC (frei Γ) (frei Γ + 2) j)
-      (Env.cons (τ := .int a b) k (Env.cons (τ := .int 0 H) z ρ)) W) :
-    Ok m pc fp K (frei Γ + 2) (bytePartC (frei Γ) (frei Γ + 2) j)
+    (hz : z.n < 2 ^ 64) (hj : j < 8) (hK : frei Γ reserved + 4 ≤ K)
+    (hp : Pre L m pc fp K (frei Γ reserved + 2) (bytePartC (frei Γ reserved) (frei Γ reserved + 2) j)
+      (Env.cons (τ := .int a b) k (Env.cons (τ := .int 0 H) z ρ)) W reserved) :
+    Ok m pc fp K (frei Γ reserved + 2) (bytePartC (frei Γ reserved) (frei Γ reserved + 2) j)
       (fun w => w = BitVec.ofInt 64 (dropBytes j z.n % 256)) := by
   have hs : (BitVec.ofInt 64 ((8 * j : Nat) : Int)).toNat % 64 = 8 * j := by
     rw [BitVec.ofInt_natCast, BitVec.toNat_ofNat]; omega
-  have hp' : Pre L m pc fp K (frei Γ + 2)
-      (([ci 2 (frei Γ + 2) (frei Γ) 0] ++ [ci 1 (frei Γ + 3) (8 * j) 0] ++
-        [ci 12 (frei Γ + 2) (frei Γ + 2) (frei Γ + 3)]) ++
-        [ci 1 (frei Γ + 3) 255 0] ++ [ci 8 (frei Γ + 2) (frei Γ + 2) (frei Γ + 3)])
-      (Env.cons (τ := .int a b) k (Env.cons (τ := .int 0 H) z ρ)) W := by
+  have hp' : Pre L m pc fp K (frei Γ reserved + 2)
+      (([ci 2 (frei Γ reserved + 2) (frei Γ reserved) 0] ++ [ci 1 (frei Γ reserved + 3) (8 * j) 0] ++
+        [ci 12 (frei Γ reserved + 2) (frei Γ reserved + 2) (frei Γ reserved + 3)]) ++
+        [ci 1 (frei Γ reserved + 3) 255 0] ++ [ci 8 (frei Γ reserved + 2) (frei Γ reserved + 2) (frei Γ reserved + 3)])
+      (Env.cons (τ := .int a b) k (Env.cons (τ := .int 0 H) z ρ)) W reserved := by
     simpa [bytePartC, Int.add_assoc] using hp
   have hh := bin_ok (P := fun w => w = BitVec.ofInt 64 (dropBytes j z.n % 256)) (Pa := fun w => w = BitVec.ofInt 64 z.n >>> (8 * j))
     (fun m pc hp => bin_ok (Pa := fun w => w = BitVec.ofInt 64 z.n) (fun m pc hp => by
       obtain ⟨v, hr, hv⟩ := hp.env (.int 0 H) (.there .here)
-      have hrd : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofInt 64 z.n) := by
+      have hrd : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofInt 64 z.n) := by
         simp only [vslot_there, vslot_here] at hr
         exact hv ▸ hr
       exact mov_ok hp (by omega) (by omega) hrd)

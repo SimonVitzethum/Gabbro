@@ -23,14 +23,14 @@ def byteIndex {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (a b : Int) (H : Int)
 
 /-- Extract from the captured word and reuse ordinary index lowering and world stores. -/
 def putBytesL (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
-    (a b H : Int) (hlo : 0 ≤ a) : (n j : Nat) → b + j + n ≤ D.count t → Option (List II × Nat)
-  | 0, _, _ => some ([], frei Γ + 2)
+    (a b H : Int) (hlo : 0 ≤ a) (reserved : Nat := 0) : (n j : Nat) → b + j + n ≤ D.count t → Option (List II × Nat)
+  | 0, _, _ => some ([], frei Γ reserved + 2)
   | n + 1, j, hhi => do
-    let ce := (bytePartC (frei Γ) (frei Γ + 2) j, frei Γ + 4)
-    let ci' ← lowE L (byteIndex (Γ := Γ) (Λ := Λ) t a b H j hlo (by omega)) (frei Γ + 3)
-    let ca ← slotA L t f (frei Γ + 3) ci'
-    let rest ← putBytesL L (Γ := Γ) (Λ := Λ) t f a b H hlo n (j + 1) (by omega)
-    pure (ce.1 ++ ca.1 ++ [ci 16 (frei Γ + 3) (frei Γ + 2) 0] ++ rest.1,
+    let ce := (bytePartC (frei Γ reserved) (frei Γ reserved + 2) j, frei Γ reserved + 4)
+    let ci' ← lowE (reserved := reserved) L (byteIndex (Γ := Γ) (Λ := Λ) t a b H j hlo (by omega)) (frei Γ reserved + 3)
+    let ca ← slotA L t f (frei Γ reserved + 3) ci'
+    let rest ← putBytesL L (Γ := Γ) (Λ := Λ) t f a b H hlo reserved n (j + 1) (by omega)
+    pure (ce.1 ++ ca.1 ++ [ci 16 (frei Γ reserved + 3) (frei Γ reserved + 2) 0] ++ rest.1,
       max (max ce.2 ca.2) rest.2)
 
 end Gabbro.Stage0.Senke

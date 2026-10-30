@@ -232,7 +232,7 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
     if n ≤ 8 then do
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
       let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
-      let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f _ _ (256 ^ n - 1) hlo n 0 (by simpa using hhi)
+      let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f _ _ (256 ^ n - 1) hlo reserved n 0 (by simpa using hhi)
       pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
     else none
   | _, Γ, _, _, .assignSlotRef r t _ _ f e _ _, reserved => do
