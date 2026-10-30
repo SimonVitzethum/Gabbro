@@ -75,3 +75,6 @@ import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 import Stage0.Senke.Ausdruck.Old.Proben
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+
+import Stage0.Senke.Ausdruck.Gleit.SlotComposition
+import Stage0.Senke.Ausdruck.Gleit.SlotProbes
