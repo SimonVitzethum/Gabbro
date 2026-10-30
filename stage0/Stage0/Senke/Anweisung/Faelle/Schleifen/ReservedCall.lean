@@ -1,5 +1,6 @@
 /- A real world store and call preserve a live sentinel in a nonzero reserved frame. -/
 import Stage0.Senke.Ausdruck.FnptrAufrufProben
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
 
 namespace Gabbro.Stage0.Senke.ReservedCallProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem FnptrProben
@@ -14,9 +15,11 @@ def lowered := lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [
 def code : List II := (lowered.getD ([], 0)).1
 def top : Nat := (lowered.getD ([], 0)).2
 
+def image : List II := code ++ [ci 18 (-(16 * (code.length : Int))) 0 0]
+
 def memory : Runner.Mem := { callMem with
-  b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2048 + 16 * code.length then
-      ((code.flatMap encII)[a.toNat - 2048]?).getD 0 else if a.toNat = 4128 then 77 else callMem.b a }
+  b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2048 + 16 * image.length then
+      ((image.flatMap encII)[a.toNat - 2048]?).getD 0 else if a.toNat = 4128 then 77 else callMem.b a }
 
 theorem lowering : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4] (0, 0) body = some (code, top) := by
   decide +kernel
@@ -72,11 +75,10 @@ local instance [Kern] : TorOK callLayout O where
   puf a := nomatch a
 local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 
-/-- All premises hold together; the actual write and callee preserve the live reserved sentinel. -/
-theorem write_call_reserved_zeuge [Kern] :
-    ∃ m', Star ⟨2048, 4096⟩ memory
-      ⟨2048 + BitVec.ofNat 64 (16 * code.length), 4096⟩ m' ∧
-      m'.rd64 (slot 4096 (BitVec.ofNat 64 4)) = some 77 := by
+/-- The generic block theorem supplies the complete runtime and frame result. -/
+theorem body_simulation [Kern] :
+    Reach callLayout 4096 4 256 [4] ⟨2048, 4096⟩ memory
+      (2048 + BitVec.ofNat 64 (16 * code.length)) world Env.nil 4 := by
   have h := lowB_ok (reserved := 4) (O := O) (passes := 1) (P := tiny) (f := 2)
     (σ0 := world) (ρ0 := Env.nil) (lo := 4) (pr := [4]) (ex := (0, 0))
     call_spec addresses_bound rfl rfl body code top lowering (by decide +kernel)
@@ -84,7 +86,14 @@ theorem write_call_reserved_zeuge [Kern] :
     surroundings head world_at (by intro j hj; simp only [List.mem_singleton] at hj; subst j; decide)
   change Reach callLayout 4096 4 256 [4] ⟨2048, 4096⟩ memory
     (2048 + BitVec.ofNat 64 (16 * code.length)) _ Env.nil 4 at h
-  obtain ⟨m', hs, _, _, _, hk⟩ := h
+  exact h
+
+/-- All premises hold together; the actual write and callee preserve the live reserved sentinel. -/
+theorem write_call_reserved_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ memory
+      ⟨2048 + BitVec.ofNat 64 (16 * code.length), 4096⟩ m' ∧
+      m'.rd64 (slot 4096 (BitVec.ofNat 64 4)) = some 77 := by
+  obtain ⟨m', hs, _, _, _, hk⟩ := body_simulation
   refine ⟨m', hs, ?_⟩
   rw [hk 4 (by simp)]
   decide +kernel
