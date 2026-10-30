@@ -141,16 +141,16 @@ theorem callElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
   | hardware e => rw [hr] at hc; exact .inr (.inr (.inr ⟨e, rfl, hc⟩))
 
 /-- A normal block continuation skips the reason handler at its fallthrough. -/
-theorem callElse_jump {Γ : Ctx} {flag : Nat} {cc cr ce : List II}
+theorem callElse_jump {reserved : Nat} {Γ : Ctx} {flag : Nat} {cc cr ce : List II}
     {fp pc : Runner.W} {K Ks lo : Nat} {m m' : Runner.Mem} {ρ : Env D Γ}
-    (hp : PreS L m pc fp K (frei Γ) (elseC flag (frei Γ) cc cr ce) ρ)
-    (hs : 16 * (elseC flag (frei Γ) cc cr ce).length < 2 ^ 31)
+    (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (elseC flag (frei Γ reserved) cc cr ce) ρ)
+    (hs : 16 * (elseC flag (frei Γ reserved) cc cr ce).length < 2 ^ 31)
     (hW : WIn L fp Ks K) (ha : AgreeW L fp lo K m m') :
     Star ⟨callBranchPC pc cc cr true + BitVec.ofNat 64 (16 * cr.length), fp⟩ m'
-      ⟨pc + BitVec.ofNat 64 (16 * (elseC flag (frei Γ) cc cr ce).length), fp⟩ m' := by
-  let before := cc ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++
+      ⟨pc + BitVec.ofNat 64 (16 * (elseC flag (frei Γ reserved) cc cr ce).length), fp⟩ m' := by
+  let before := cc ++ [ci 2 (frei Γ reserved) (frei Γ reserved + 2) 0] ++
     [ci 19 flag (16 * (cr.length + 2)) 0] ++ cr
-  have hq : PreS L m pc fp K (frei Γ)
+  have hq : PreS (reserved := reserved) L m pc fp K (frei Γ reserved)
       (before ++ ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ := by
     simpa only [before, elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
   have hf := codeFar_right (n := before.length) (k := ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length)
@@ -175,12 +175,12 @@ theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {τ : Ty} {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {he : D.erg callee = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende callee) :: Γ) (nach D callee Λ)} {rest : Block D (vertragVon D f) l (τ :: Γ) (nach D callee Λ) Λ'} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCallElse callee args he proof0 proof1 err rest) := by
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
+    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
+    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCallElse callee args he proof0 proof1 err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
@@ -188,9 +188,9 @@ theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   obtain ⟨rfl, rfl⟩ := hc
   simp only [elseTop] at hK
   have hFB3 : FB = 4 := rfl
-  have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) := by
+  have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
-  have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende callee) :: Γ) := by
+  have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende callee) :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
   simp only [execBlock]
   rcases callElse_ok hS (hA callee) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa with
@@ -226,12 +226,12 @@ theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {g : D.Fn} {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende g) :: Γ) (nach D g Λ)} {rest : Endblock D (vertragVon D f) l (τ :: Γ) (nach D g Λ)} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCallElse g args he proof0 proof1 err rest) := by
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
+    EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCallElse g args he proof0 proof1 err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
   simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
@@ -240,9 +240,9 @@ theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
   simp only [elseTop] at hK
   have hFB3 : FB = 4 := rfl
   have hlo : FB ≤ lo := by omega
-  have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) := by
+  have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
-  have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende g) :: Γ) := by
+  have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende g) :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega
   simp only [execEnd]
   rcases callElse_ok hS (hA g) args he (σ.lese Λ args.orte) hca (by omega) hp hs hu hW hWa with
