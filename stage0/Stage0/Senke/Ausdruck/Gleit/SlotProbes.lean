@@ -142,17 +142,18 @@ theorem computedFloatOfL_ok_zeuge (F : Gleitkomma.Format)
   have run := konstWL_ok 4 (BitVec.ofInt 64 z).toNat (BitVec.isLt _) (by decide) hp.left
   simpa only [Enc, v, BitVec.ofNat_toNat, BitVec.setWidth_eq] using run
 
-/-- Zero, both signs, minInt, tie, carry and shift-zero runs in both formats. -/
+/-- Zero, both signs, signed endpoints, ties, carries and shift-zero runs in both formats. -/
 theorem computedFloatOfL_ok_samples (L : Lay D) :
     ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
     ∀ z ∈ ([0, 37, -37, -9223372036854775808, 9007199254740993,
-      18014398509481983, 4503599627370496] : List Int),
+      18014398509481983, 4503599627370496, 9223372036854775807,
+      16777217, 33554431, 8388608] : List Int),
     Ok (memory F z) 0 4294967296 256 8 (code F z)
       (· = BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) := by
   intro F hF z hz
   have bounds : -2^63 ≤ z ∧ z < 2^63 := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hz
-    rcases hz with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+    rcases hz with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
   exact (computedFloatOfL_ok_zeuge (L := L) F hF z bounds).2.2.2
 
 #print axioms computedFloatOfL_ok_samples
