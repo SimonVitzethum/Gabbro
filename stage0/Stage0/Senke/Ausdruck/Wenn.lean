@@ -16,6 +16,36 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
+/-- The nonzero branch reaches the then entry without changing condition temporaries. -/
+theorem wenn_taken_entry {m : Runner.Mem} {pc fp : Runner.W}
+    {K d : Nat} {cc ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop}
+    (hp : Pre L m pc fp K d (wennC d cc ca cb) ρ W reserved)
+    (hd : d < K)
+    (hc : ∀ m pc, Pre L m pc fp K d cc ρ W reserved →
+      Ok m pc fp K d cc (fun w => w = 1)) :
+    ∃ m', Star ⟨pc, fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16 * (cc.length + 1)), fp⟩ m' ∧
+      Agree fp d K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some 1 := by
+  have h' : Pre L m pc fp K d
+      (cc ++ ([ci 19 d ((16 * (ca.length + 2) : Nat) : Int) 0] ++
+        (ca ++ [ci 18 ((16 * (cb.length + 1) : Nat) : Int) 0 0] ++ cb)))
+      ρ W reserved := by simpa [wennC, List.append_assoc] using hp
+  obtain ⟨m1, s1, a1, w, r, hw⟩ := hc m pc h'.left
+  subst w
+  have h1 := h'.next a1 (Nat.le_refl _) (by omega)
+  have hi := h1.code 0 (by simp)
+  simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero,
+    Nat.mul_zero, BitVec.add_zero] at hi
+  have rr := r
+  rw [← sx_nat (d := d) (by have := hp.small; omega)] at rr
+  have sb := Star.one (run_step (t := ⟨_, fp⟩) hi (by decide)
+    (run_brz_ne hi rr (by decide)))
+  refine ⟨m1, s1.trans (star_cast sb rfl ?_), a1, r⟩
+  simp only [nxt, T.mk.injEq, and_true]
+  exact pc_add16 pc cc.length
+
 theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {P : Runner.W → Prop} {bc : Bool}
     (hp : Pre L m pc fp K d (wennC d cc ca cb) ρ W reserved) (hlen : 16 * (ca.length + cb.length + 2) < 2 ^ 31) (hd : d < K)

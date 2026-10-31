@@ -242,3 +242,85 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatExponentL_canonical_zeuge
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatRangeReject_none
+#print axioms Gabbro.Stage0.Senke.floatRangeReject_accept
+#print axioms Gabbro.Stage0.Senke.floatRangeReject_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computedSamples_bits
+
+#print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computed_range_decisions_zeuge
+#print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan_ok
+#print axioms Gabbro.Stage0.Senke.floatKeyL_ok
+#print axioms Gabbro.Stage0.Senke.floatRangeL_raw_ok
+#print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok
+#print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok_zeuge
+
+#print axioms Gabbro.Stage0.Senke.blockFloatOfComputed_case
+
+#print axioms Gabbro.Stage0.Senke.floatNegL_model
+#print axioms Gabbro.Stage0.Senke.floatFieldWord_canonical
+#print axioms Gabbro.Stage0.Senke.floatFieldL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatFieldL_joint_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatCoefficientWord_canonical
+#print axioms Gabbro.Stage0.Senke.floatCoefficient_exact
+#print axioms Gabbro.Stage0.Senke.floatCoefficientL_ok
+#print axioms Gabbro.Stage0.Senke.floatCoefficientL_shape
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatCoefficientL_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.coefficientImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumWord_model
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumWord_round
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumL_ok
+
+#print axioms Gabbro.Stage0.Senke.floatCoefficientAlignSumL_ok
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumL_shape
+
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatAlignSumL_joint_zeuge
+
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.alignmentImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatCoefficientAlignSumWord_add
+#print axioms Gabbro.Stage0.Senke.floatCoefficientAlignSumWord_add_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatGuardSticky_round
+#print axioms Gabbro.Stage0.Senke.floatGuardSticky_round_zeuge
+#print axioms Gabbro.Stage0.Senke.floatGuardRoundL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatGuardRoundL_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.guardImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatGuardSticky_div
+#print axioms Gabbro.Stage0.Senke.floatNegativeAlign_div
+#print axioms Gabbro.Stage0.Senke.floatSignedAlign_reconstruct
+#print axioms Gabbro.Stage0.Senke.floatNegativeQuotL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeQuotL_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.negativeQuotImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatShiftTailL_ok
+#print axioms Gabbro.Stage0.Senke.floatNegativeShiftL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeShiftL_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.negativeShiftImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatNegativeAlign_range
+#print axioms Gabbro.Stage0.Senke.floatNegativeShift_toInt
+#print axioms Gabbro.Stage0.Senke.floatNegativeShift_toInt_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatNegativeSumL_ok
+#print axioms Gabbro.Stage0.Senke.floatNegativeSum_toInt
+#print axioms Gabbro.Stage0.Senke.floatNegativeSum_reconstruct
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.negativeSumImages_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeSumL_joint_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatNegativeAlign_bounds
+
+#print axioms Gabbro.Stage0.Senke.floatAddNormalOutputL_ok
+#print axioms Gabbro.Stage0.Senke.floatPackCarry_top_f64
+#print axioms Gabbro.Stage0.Senke.floatAddNormalOutputL_top_f64
+#print axioms Gabbro.Stage0.Senke.floatAddSubnormal_fields
+#print axioms Gabbro.Stage0.Senke.floatAddSubnormalOutputL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatAddOutput_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.outputImages_zeuge

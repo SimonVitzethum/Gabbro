@@ -50,4 +50,78 @@ theorem floatPasst_x {lo hi : Int × Int} {x : GFloat} {v : Gleit lo hi}
   split at h <;> cases h
   rfl
 
+/-- Canonical signed-key decision, including unordered endpoints. This is the
+    source range check: rounding has already happened before this decision. -/
+def floatRangeReject (lo hi : Int × Int) (x : GFloat) : Bool :=
+  if Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan then true
+  else decide (floatKey x < floatKey (bruch lo)) ||
+    decide (floatKey (bruch hi) < floatKey x)
+
+/-- Emit the canonical outside flag. Unordered bounds reject without evaluating
+    the producer; all ordered bounds reuse the ordinary signed-key range code. -/
+def canonicalFloatRangeL (d : Nat) (lo hi : Int × Int)
+    (producer : Nat → Option (List Runner.IR.II × Nat)) :
+    Option (List Runner.IR.II × Nat) :=
+  if Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan then
+    some ([ci 1 d 1 0], d + 1)
+  else floatRangeL d lo hi producer
+
+/-- NaN bounds reject even when the child has no lowering. -/
+theorem canonicalFloatRangeL_nan (d : Nat) (lo hi : Int × Int)
+    (producer : Nat → Option (List Runner.IR.II × Nat))
+    (hn : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan) :
+    canonicalFloatRangeL d lo hi producer = some ([ci 1 d 1 0], d + 1) := by
+  simp [canonicalFloatRangeL, hn]
+
+/-- Exact rejection criterion for the source's range failure (Stop 107),
+    including infinite, reversed and NaN bounds. -/
+theorem floatRangeReject_none {lo hi : Int × Int} {x : GFloat}
+    (hw : Gleitkomma.wf Gleitkomma.f64 x) (hf : gleitEndlich x = true) :
+    gleitPasst lo hi x = none ↔ floatRangeReject lo hi x = true := by
+  by_cases hn : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan
+  · rw [floatPasst_nan_bound x hn]
+    simp [floatRangeReject, hn]
+  · have hl : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) ≠ .nan :=
+      fun h => hn (Or.inl h)
+    have hh : Gleitkomma.klasse Gleitkomma.f64 (bruch hi) ≠ .nan :=
+      fun h => hn (Or.inr h)
+    rw [floatOutside_none hl hh hf]
+    unfold floatRangeReject floatOutside
+    rw [if_neg hn, float_lt_key_not_nan (a := x) (b := bruch lo) hw (Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _)
+      (endlich_nicht_nan hf) hl,
+      float_lt_key_not_nan (a := bruch hi) (b := x) (Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _) hw
+        hh (endlich_nicht_nan hf)]
+
+/-- Acceptance provides the actual dependent source value, rather than just a flag. -/
+theorem floatRangeReject_accept {lo hi : Int × Int} {x : GFloat}
+    (hw : Gleitkomma.wf Gleitkomma.f64 x) (hf : gleitEndlich x = true) :
+    floatRangeReject lo hi x = false ↔ ∃ v, gleitPasst lo hi x = some v := by
+  have h := floatRangeReject_none (lo := lo) (hi := hi) hw hf
+  cases hp : gleitPasst lo hi x with
+  | none => simp_all
+  | some v =>
+    have hn : floatRangeReject lo hi x ≠ true := by
+      intro ht
+      have := h.mpr ht
+      simp [hp] at this
+    cases hr : floatRangeReject lo hi x <;> simp_all
+
+/-- Rounded-result boundaries, reversed bounds, NaN and infinities jointly
+    witness the source range decision. In particular maxInt rounds to 2^63. -/
+theorem floatRangeReject_zeuge :
+    floatRangeReject (0, 1) (2^53, 1) (gleitAusInt (2^53 + 1)) = false ∧
+    floatRangeReject (0, 1) (2^53 + 2, 1) (gleitAusInt (2^53 + 3)) = true ∧
+    floatRangeReject (0, 1) (2^63, 1) (gleitAusInt (2^63 - 1)) = false ∧
+    floatRangeReject (2, 1) (0, 1) (gleitAusInt 1) = true ∧
+    floatRangeReject (0, 0) (1, 1) (gleitAusInt 0) = true ∧
+    floatRangeReject (-(2^1024), 1) (2^1024, 1) (gleitAusInt (-37)) = false := by
+  decide +kernel
+
+#print axioms floatRangeReject_zeuge
+#print axioms floatRangeReject_none
+#print axioms floatRangeReject_accept
 end Gabbro.Stage0.Senke

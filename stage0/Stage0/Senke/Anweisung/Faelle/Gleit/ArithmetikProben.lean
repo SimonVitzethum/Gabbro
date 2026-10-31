@@ -1,10 +1,12 @@
 /- Arithmetic foundations: executable rounding and literal-conversion images.
-   General conversion and float arithmetic remain outside the accepted fragment. -/
+   Computed binary64 conversion is connected to the block hook; float arithmetic remains refused. -/
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 import Stage0.Senke.Ausdruck.Gleit.RundCode
 import Stage0.Senke.Ausdruck.Gleit.Betrag
 import Stage0.Senke.Ausdruck.Gleit.Schieben
 import Stage0.Senke.Ausdruck.Gleit.Skalieren
+import Stage0.Senke.Ausdruck.Gleit.SlotContext
+import Stage0.Senke.Ausdruck.Gleit.Bereich
 
 namespace Gabbro.Stage0.Senke.FloatArithmeticProbe
 open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR
@@ -19,6 +21,25 @@ def conversion (n : Int) (expected lo hi : Int × Int) : Body :=
         (.flle (.var .here) (.var (.there .here))))
       (returnBlock 7 (by decide) (by decide))
       (returnBlock 41 (by decide) (by decide))) .nil))
+
+/-- Exercise conversion through the user-facing Block hook with a bound child. -/
+def hookConversion (n : Int) (expected lo hi : Int × Int) : Body :=
+  .bind (.add (.lit n) (.lit 0))
+    (.floatOf (.var .here) lo hi (.floatLit expected lo hi
+      (.cons (.ite
+        (.and (.flle (.var (.there .here)) (.var .here))
+          (.flle (.var .here) (.var (.there .here))))
+        (returnBlock 7 (by decide) (by decide))
+        (returnBlock 41 (by decide) (by decide))) .nil)))
+
+def hookImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("hook-float-positive", blockImageOf (hookConversion 37 (37, 1) (0, 1) (100, 1)), 7),
+   ("hook-float-negative", blockImageOf (hookConversion (-37) (-37, 1) (-100, 1) (0, 1)), 7),
+   ("hook-float-zero", blockImageOf (hookConversion 0 (0, 1) (0, 1) (0, 1)), 7),
+   ("hook-float-lower", blockImageOf (hookConversion 37 (37, 1) (38, 1) (100, 1)), 107),
+   ("hook-float-upper", blockImageOf (hookConversion 37 (37, 1) (0, 1) (36, 1)), 107),
+   ("hook-float-nan", blockImageOf (hookConversion 37 (37, 1) (0, 0) (100, 1)), 107),
+   ("hook-float-reversed", blockImageOf (hookConversion 37 (37, 1) (100, 1) (0, 1)), 107)]
 
 /-- Test the actual shared fragment, including its scratch-slot placement.
     Equality to the expected word returns 7; a mismatch returns 41. -/
@@ -48,6 +69,98 @@ def shiftImage (a k expected : Nat) : Except String (List Runner.B) :=
 def scaleImage (a k expected : Nat) : Except String (List Runner.B) :=
   wordImage (floatRoundShiftL 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 k d))) expected
+
+/-- Expected words are explicit IEEE encodings, independently obtained by rounding
+    the integer significand to 24/53 bits with ties to even, then packing sign,
+    biased exponent and fraction. The kernel also checks agreement with ofInt. -/
+def computedSamples : List (Gleitkomma.Format × Int × Nat) :=
+  [
+    (Gleitkomma.f32, 0, 0),
+    (Gleitkomma.f32, 37, 1108606976),
+    (Gleitkomma.f32, -37, 3256090624),
+    (Gleitkomma.f32, -9223372036854775808, 3741319168),
+    (Gleitkomma.f32, 9223372036854775807, 1593835520),
+    (Gleitkomma.f32, 16777217, 1266679808),
+    (Gleitkomma.f32, 33554431, 1275068416),
+    (Gleitkomma.f32, 8388608, 1258291200),
+    (Gleitkomma.f32, 9007199254740993, 1509949440),
+    (Gleitkomma.f32, 18014398509481983, 1518338048),
+    (Gleitkomma.f32, 4503599627370496, 1501560832),
+    (Gleitkomma.f64, 0, 0),
+    (Gleitkomma.f64, 37, 4630404104378646528),
+    (Gleitkomma.f64, -37, 13853776141233422336),
+    (Gleitkomma.f64, -9223372036854775808, 14114281232179134464),
+    (Gleitkomma.f64, 9223372036854775807, 4890909195324358656),
+    (Gleitkomma.f64, 16777217, 4715268810125344768),
+    (Gleitkomma.f64, 33554431, 4719772409215844352),
+    (Gleitkomma.f64, 8388608, 4710765210229538816),
+    (Gleitkomma.f64, 9007199254740993, 4845873199050653696),
+    (Gleitkomma.f64, 18014398509481983, 4850376798678024192),
+    (Gleitkomma.f64, 4503599627370496, 4841369599423283200)]
+
+theorem computedSamples_bits : computedSamples.all (fun (f, z, bits) =>
+    decide (Gleitkomma.zuBits f (Gleitkomma.ofInt f z) = bits)) = true := by
+  decide +kernel
+
+/-- Execute the emitted conversion, including a real integer-producing child.
+    These format-specific fragment probes complement the binary64 block-hook probes. -/
+def computedImage (f : Gleitkomma.Format) (z : Int) (expected : Nat) :
+    Except String (List Runner.B) :=
+  wordImage (computedFloatOfL f 8
+    (fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d))) expected
+
+def computedImages : List (String × Except String (List Runner.B) × Nat) :=
+  computedSamples.zipIdx |>.map fun ((f, z, expected), i) =>
+    (s!"computed-float-{i}", computedImage f z expected, 7)
+
+/-- Real expression children exercise ordinary lowering, including its reservation. -/
+def expressionImage : Except String (List Runner.B) :=
+  wordImage (computedFloatOfE (layU u (fun _ => some gateBinding) 0) Gleitkomma.f64
+    (Expr.add (Γ := []) (Λ := []) (.lit 19) (.lit 18)) 8 4)
+    4630404104378646528
+
+/-- Execute range rejection and the actual Stop107 exit sequence. The conversion
+    producer is emitted by the ordinary expression candidate at every requested slot. -/
+def rangeImage (z : Int) (lo hi : Int × Int) : Except String (List Runner.B) := do
+  let cc ← match canonicalFloatRangeL 8 lo hi
+      (fun d => computedFloatOfE (layU u (fun _ => some gateBinding) 0) Gleitkomma.f64
+        (Expr.add (Γ := []) (Λ := [])
+          (.mul (.lit (z / 1073741824)) (.lit 1073741824))
+          (.lit (z % 1073741824))) d 4) with
+    | some c => Except.ok c
+    | none => Except.error "computed range fragment refused"
+  let code := wennC 8 cc.1 (stopC 107 0) (stopC 7 0)
+  pure (Runner.Prog.irImage ((code.map fun i => .op i.o i.a i.b i.c) ++
+    [.lab 99, .zeros 1024]) 99)
+
+def rangeImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("computed-expression-add", expressionImage, 7),
+   ("computed-range-inside", rangeImage 37 (0, 1) (100, 1), 7),
+   ("computed-range-lower", rangeImage 0 (0, 1) (100, 1), 7),
+   ("computed-range-upper", rangeImage 100 (0, 1) (100, 1), 7),
+   ("computed-range-below", rangeImage (-1) (0, 1) (100, 1), 107),
+   ("computed-range-above", rangeImage 101 (0, 1) (100, 1), 107),
+   ("computed-range-reversed", rangeImage 1 (2, 1) (0, 1), 107),
+   ("computed-range-nan-lower", rangeImage 0 (0, 0) (1, 1), 107),
+   ("computed-range-nan-upper", rangeImage 0 (0, 1) (0, 0), 107),
+   ("computed-range-infinite", rangeImage (-37) (-(2^1024), 1) (2^1024, 1), 7),
+   ("computed-range-positive-infinity", rangeImage 37 (2^1024, 1) (2^1024, 1), 107),
+   ("computed-range-negative-infinity", rangeImage (-37) (-(2^1024), 1) (-(2^1024), 1), 107),
+   ("computed-range-round-in", rangeImage (2^53 + 1) (0, 1) (2^53, 1), 7),
+   ("computed-range-round-out", rangeImage (2^53 + 3) (0, 1) (2^53 + 2, 1), 107)]
+
+/-- The expected range exits agree with the source decision after rounding.
+    Emission and processor execution are measured separately. -/
+theorem computed_range_decisions_zeuge :
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 37) = false ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 0) = false ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 100) = false ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt (-1)) = true ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 101) = true ∧
+    floatRangeReject (0, 1) (0, 0) (gleitAusInt 0) = true ∧
+    floatRangeReject (2^1024, 1) (2^1024, 1) (gleitAusInt 37) = true ∧
+    floatRangeReject (-(2^1024), 1) (-(2^1024), 1) (gleitAusInt (-37)) = true := by
+  decide +kernel
 
 def images : List (String × Except String (List Runner.B) × Nat) :=
   [("scale-zero", scaleImage 0 0 0, 7),

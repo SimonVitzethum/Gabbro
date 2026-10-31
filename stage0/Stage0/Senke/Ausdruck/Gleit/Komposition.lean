@@ -12,6 +12,52 @@ abbrev WordCode (ρ : Env D Γ) (W : Runner.Mem → Prop)
   ∀ {fp K d c top}, a d = some (c, top) → top ≤ K → ∀ m pc,
     Pre L m pc fp K d c ρ W → Ok m pc fp K d c (· = v)
 
+/-- An input retained below the temporary interval survives composition. -/
+theorem slotRead_agree {m m' : Runner.Mem} {fp : Runner.W}
+    {K d input : Nat} {v : Runner.W}
+    (frame : FrameOK m fp K) (ha : Agree fp d K m m')
+    (hi : input < d) (hd : d ≤ K)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v) :
+    m'.rd64 (slot fp (BitVec.ofNat 64 input)) = some v := by
+  rw [agree_rd_low ha frame.room hi hd]
+  exact read
+
+/-- Executing temporaries retains the concrete input together with the result.
+    This rule requires no universal producer for the retained slot. -/
+theorem slotRead_after_ok {m : Runner.Mem} {pc fp : Runner.W}
+    {K d input : Nat} {code : List II} {P : Runner.W → Prop} {v : Runner.W}
+    (frame : FrameOK m fp K) (hi : input < d) (hd : d ≤ K)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some v)
+    (run : Ok m pc fp K d code P) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧
+      Agree fp d K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 input)) = some v ∧
+      ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some w ∧ P w := by
+  obtain ⟨m', steps, agree, result⟩ := run
+  exact ⟨m', steps, agree, slotRead_agree frame agree hi hd read, result⟩
+
+/-- Slot-bound continuations consume the actual child result. The retained input
+    is explicit, and the frame and environment retain their reserved prefix. -/
+theorem slotContinuation {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K d reserved : Nat}
+    {child suffix : List II} {P Q : Runner.W → Prop}
+    (hp : Pre L m pc fp K d (child ++ suffix) ρ W reserved)
+    (hd : d ≤ K) (childRun : Ok m pc fp K d child P)
+    (continuation : ∀ m' w,
+      Pre L m' (pc + BitVec.ofNat 64 (16 * child.length)) fp K d suffix ρ W reserved →
+      m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some w → P w →
+      Ok m' (pc + BitVec.ofNat 64 (16 * child.length)) fp K d suffix Q) :
+    Ok m pc fp K d (child ++ suffix) Q := by
+  obtain ⟨m1, runChild, agreeChild, w, readChild, resultChild⟩ := childRun
+  obtain ⟨m2, runSuffix, agreeSuffix, r, readResult, result⟩ :=
+    continuation m1 w (hp.next agreeChild (Nat.le_refl _) hd) readChild resultChild
+  refine ⟨m2, runChild.trans ?_, agreeChild.trans agreeSuffix, r, readResult, result⟩
+  have endPc : pc + BitVec.ofNat 64 (16 * (child ++ suffix).length) =
+      pc + BitVec.ofNat 64 (16 * child.length) + BitVec.ofNat 64 (16 * suffix.length) := by
+    rw [List.length_append, pc_add]
+  rw [endPc]
+  exact runSuffix
+
 theorem WordCode.bin {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a b : Nat → Option (List II × Nat)} {va vb v : Runner.W} {o : Nat}
     {g : Runner.W → Runner.W → Option Runner.W}

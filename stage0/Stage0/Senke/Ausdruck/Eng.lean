@@ -13,10 +13,10 @@ set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- A binary instruction may read any two frame slots, including its destination. -/
-theorem eng_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d a b o : Nat}
+theorem eng_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d a b o reserved : Nat}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {va vb r : Runner.W}
     {g : Runner.W → Runner.W → Option Runner.W}
-    (hp : Pre L m pc fp K d [ci o d a b] ρ W) (hd : d < K) (ha : a < K) (hb : b < K)
+    (hp : Pre L m pc fp K d [ci o d a b] ρ W reserved) (hd : d < K) (ha : a < K) (hb : b < K)
     (ra : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some va)
     (rb : m.rd64 (slot fp (BitVec.ofNat 64 b)) = some vb)
     (hop : op o = bin g) (ho : o < 256) (hg : g va vb = some r) :

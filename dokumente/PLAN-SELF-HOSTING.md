@@ -202,8 +202,15 @@ arbitrary unsigned quotient, with a modular word result. This is not yet a compl
 `floatMagnitudeL` now extracts the unsigned magnitude with generic IR simulation, including `-2^63`.
 Pure input-code composition is shared with rounding. `floatRoundShiftL` rounds an unsigned magnitude after
 a right shift of 0–62 bits, with generic IR simulation against `rundeInt` and G's normal-path `normQ`.
-It retains the full remainder and allows a carry out of the significand. Dynamic `floatOf` still needs
-exponent discovery, left scaling, packing and block simulation. `floatShiftJamL` aligns an unsigned word with
+It retains the full remainder and allows a carry out of the significand. Computed binary64 `floatOf`
+now uses `computedFloatOfE` through the actual `lowB` hook for signed-64-bit source intervals.
+The canonical range producer, Stop 107 and binding continuation are connected to
+`blockFloatOfComputed_case` and the mutual statement/block/end-block soundness proof.
+The existing literal path continues to support arbitrary `Int` constants. Unsupported computed
+intervals remain refused. The conversion and range simulations retain arbitrary reserved prefixes.
+Validation (2026-10-31): all 78 affected Stage-0 modules and the root checked directly against existing
+model oleans; `Nachpruefung`, standard axioms and layout passed. The actual runner passed 98 emitted
+images, including seven computed block-hook cases covering value equality and exact Stop 107 exits. `floatShiftJamL` aligns an unsigned word with
 generic IR simulation: discarded bits become a sticky low bit, exactly the nonzero remainder modulo
 the alignment power. Counts at least 64 saturate, including counts with the sign bit set, despite the
 IR's masked shifts. `add/sub` still need the full guard/sticky alignment argument against G, cancellation,
@@ -212,6 +219,134 @@ normalisation, all signed-zero/infinity/NaN rules (including G's payload choice)
 division needs a proved quotient/remainder algorithm with sufficient precision for final nearest-even
 rounding. Both additionally need special cases, normal/subnormal packing, range checks and block simulation.
 No arithmetic operation is accepted on the strength of the rounding fragment alone.
+
+The shared add/sub dispatcher is proved equivalent to G, including NaN priority, subtraction's
+right-operand sign change and both-zero signs. Actual integer IR now also implements the sign change,
+field extraction and connected signed significand decoding (fraction, exponent-dependent hidden bit,
+and sign arithmetic). The coefficient decoder agrees with `wertExakt` for finite operands; its generic
+`WordCode` proof preserves frame/footprint agreement. A producer of length `n` and relative temporary
+ceiling `t` yields exactly `3*n+88` instructions and ceiling `max(d+t+3,d+6)`. It rereads a pure producer
+three times. This coefficient proof currently uses `WordCode`'s default reserved prefix; it does not
+establish the requested arbitrary-reserved full arithmetic simulation. Joint witnesses check canonical
+values, actual production, simulation and sizes together. Direct coefficient/probe/root/`Nachpruefung`
+checks against cached model objects, standard-axiom audits and layout passed (2026-10-31). Actual runner:
+122 emitted images, zero failures (114 previous plus eight coefficient boundary cases). Complete finite
+alignment, signed summation, cancellation, rounding, packing/overflow, arbitrary-reserved simulation
+and range-107/block integration remain open; add/sub remain refused. The computed `floatOf` hook is
+unchanged.
+
+The connected exact-word alignment prefix now decodes both signed IEEE coefficients,
+left-aligns the higher-exponent coefficient and sums before any rounding. Generic simulation
+covers arbitrary pure producers using the existing default-reserved `WordCode` discipline.
+The exact cost is `na+nb+nk+2` instructions and temporary ceiling
+`max(d+ta,max(d+1+tb,max(d+2+tk,d+3)))`. The value bridge to canonical `add`
+requires ordered exact exponents, distance below 64 and a signed-word-sized exact sum;
+these are explicit premises, not an acceptance test or an enabled arithmetic hook.
+A joint fixture proves cancellation across the normal/subnormal boundary together with
+actual production, simulation and sizes (297 instructions, ceiling 15 at base 8).
+Direct prefix/probe/root/`Nachpruefung` checks and standard-axiom audits passed;
+actual runner: 129 images, zero failures (122 previous plus seven connected alignment
+images), and layout passed (2026-10-31). Large-distance precision preservation and
+emitted result rounding/renormalization/packing remain unimplemented. The canonical
+rounding bridge is not a simulation of emitted rounding. Arbitrary-reserved full-block
+simulation, budgets and range 107 remain open. No grammar rebuild was run.
+
+
+The post-cancellation rounding continuation now has a generic guard/sticky
+compression theorem for every positive denominator, without an exponent-distance
+bound. Three guard bits plus one Boolean tail give the same canonical `rundeInt`
+result as the complete remainder. `floatGuardRoundL` emits this continuation using
+the existing integer rounding fragment; its `WordCode` simulation is connected to
+the uncompressed canonical remainder and carries the existing frame discipline.
+Joint witnesses include an exact halfway tie plus a tail at distance 1074, both tie
+parities, and significand carry. Direct alignment/probe/root/`Nachpruefung` checks,
+standard axioms and layout passed; actual runner: 136 images, zero failures
+(2026-10-31). This does not yet construct the post-cancellation quotient/guard/tail
+from arbitrary finite operands. In particular it does not justify jamming signed
+operands before cancellation. Packing/overflow, arbitrary-reserved full arithmetic
+simulation, complete costs and range 107 remain open. Add/sub remain refused;
+computed `floatOf` is unchanged. No grammar rebuild was run.
+
+
+Negative alignment now has an emitted Euclidean-borrow fragment: the positive
+quotient is negated and a discarded tail subtracts one more. Its generic simulation
+agrees with signed division for every positive denominator. An exact signed-tail
+reconstruction identity preserves cancellation, and the guard/sticky theorem now
+also derives guards from Euclidean division of an arbitrary magnitude. A joint
+witness combines cancellation to one unit, the emitted borrow simulation and exact
+sizes (37 instructions, ceiling 11 at base 8). Direct checks and standard-axiom
+audits passed; actual runner: 141 images, zero failures (five added borrow cases),
+and layout passed (2026-10-31). The complete signed sum-to-packed-result path remains
+open and add/sub remain refused. No grammar rebuild was run.
+
+
+The emitted negative-alignment fragment is now connected to the saturating
+unsigned quotient and an independently computed nonzero-remainder Boolean.
+`floatNegativeShiftL_ok` proves its word result equals the exact signed Euclidean
+quotient for every input word and every word-sized shift count. Counts at least
+64 do not wrap; odd quotients retain the tail separately. The distance-1074 joint
+witness includes canonical quotient/remainder, production simulation and exact
+sizes (157 instructions, ceiling 14 at base 8). Direct distance/probe/root/
+`Nachpruefung` checks and standard-axiom audits passed. Actual runner: 150 images,
+zero failures, including counts 63, 64, 65, 1074 and the maximum unsigned word
+(2026-10-31). This quotient is a modular word representation; subsequent signed
+interpretation still needs a range proof. Complete cancellation-to-final-guard
+construction, result packing/overflow, arbitrary-reserved simulation, full costs
+and range 107 remain open. Add/sub remain refused and computed `floatOf` is
+unchanged. No grammar rebuild was run.
+
+
+The signed interpretation bridge for negative alignment is now proved as well:
+if the input magnitude is at most `2^63`, the exact aligned negative quotient
+lies in the signed-word range for every positive denominator. Reading the emitted
+word back with `toInt` therefore recovers that quotient without wraparound. The
+minimum signed coefficient, a tiny negative tail at distance 1074 and zero have
+joint kernel witnesses. Direct distance/probe/root/`Nachpruefung`, standard axioms
+and layout passed (2026-10-31). This proof-only extension changes no emitted code;
+the last actual-runner measurement remains 150 images, zero failures. The complete
+finite sum-to-packed-IEEE and arbitrary-reserved/range-107 obligations remain open.
+
+
+The emitted negative-alignment fragment now composes with an arbitrary signed
+high-coefficient producer in `floatNegativeSumL`. Its generic `WordCode` theorem
+covers every word-sized distance and preserves the existing frame/footprint
+contract. The shared arbitrary-denominator bounds theorem also supplies the old
+signed-quotient range bridge, avoiding duplicate borrow arguments. For coefficients
+bounded by `2^61` (ample room for guard-extended binary64 coefficients), the sum
+recovers its exact signed integer without a separate sum-range assumption.
+`floatNegativeSum_reconstruct` then recovers the exact pre-alignment integer from
+that sum and the original Euclidean remainder. In particular, a zero sum word
+with a positive remainder is not exact cancellation. This fragment does not yet
+emit the complete remainder-to-magnitude normalization and final packing path;
+its `WordCode` contract does not establish the requested whole-operation cost or
+arbitrary-reserved simulation. Full add/sub and range 107 remain refused, and
+computed `floatOf` is unchanged. Direct distance/probe/root/`Nachpruefung`
+checks, standard-axiom audit and layout passed; actual runner: 160 images,
+zero failures (2026-10-31). No grammar rebuild was run.
+
+
+The post-cancellation output now has emitted normal and subnormal continuations
+(`Arithmetik/Output.lean`). The normal continuation composes the existing
+arbitrary-denominator guard/sticky nearest-even rounder with carry normalization
+and field packing. Its generic theorem reaches `rundeBruchKern` under explicit
+`normQD` quotient/remainder decomposition and normal exponent bounds. A separate
+binary64 top-exponent theorem proves the emitted carry to infinity's canonical
+fields. Subnormal output adds the rounded field directly to the sign; its generic
+canonical theorem includes zero and the carry to minimum normal. Joint simulation
+witnesses cover a halfway normal, negative overflow and a halfway subnormal zero.
+
+This is an output-stage step, not a completed finite adder: selection of the final
+magnitude/exponent and production of these quotient/guard/tail inputs from the
+existing exact sum/remainder reconstruction are still missing. In particular the
+normal theorem's scaled denominator must have the explicit form `8 * den`; left
+normalization is not inferred. The top-exponent theorem proves rounded fields,
+not a full exact-sum-to-`rundeExakt` bridge. Arbitrary-reserved whole-fragment
+simulation, complete temporary and cost bounds and range 107 remain open and
+refused. `computedBlock.floatOf` is unchanged. Direct output/probe/root/
+`Nachpruefung` checks, standard axioms and layout passed; actual runner: 178
+images, zero failures (18 new output boundary images, 2026-10-31). Checks used
+the global build lock and 5G/7G/Swap0 scope with existing grammar oleans only.
+
 
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
@@ -631,3 +766,150 @@ All decided:
 
 First step (Simon, 2026-10-25): complete GabbroV so that full logic proofs of Gabbro programs are possible -- it is what
 §3.4 and §4 rest on.
+
+
+The normalization Runner simulation uses one explicit head invariant
+(`Arithmetik/Simulation.lean`): actual code/frame/environment precondition,
+six state-slot reads, signed-word bounds, canonical remainder, exact scaled
+reconstruction, and conserved completed/remaining budget. Both complete active
+paths (LARGE, including the boundary carry, and SMALL), state copies, counter
+updates and actual backedge are proved. `floatNormalizeLoopL_complete` therefore
+executes the whole emitted loop without an assumed iteration simulation. It
+returns the full head, footprint agreement, stopped/exhausted condition and
+transfer-count bounds for arbitrary reserved prefixes. The initial fuel bound
+and budget conservation discharge subsequent counter bounds.
+
+The same theorem additionally derives the final
+Euclidean quotient and exact remainder directly from that execution: for final
+count `c`, distance `d`, quotient `q`, remainder `r`, original magnitude `n` and
+original distance `k`, the numerator `n * 2^(c+d)` divided by `2^(d+k)` has
+quotient `q` and remainder `r * 2^k`. These mathematical factors are never
+materialized in machine words. The concrete nonzero-tail memory witness also
+instantiates this strengthened whole-loop theorem with a nonzero reserved
+prefix. This is the canonical arithmetic boundary for the rounding connection;
+it does not yet execute that continuation.
+
+The exact word-sized operand prefix now composes encoded f64 inputs through
+`floatCoefficientL`, `floatAlignSumL` and `floatSumMagnitudeL` in one WordCode
+proof (`floatCoefficientAlignMagnitudeL_ok`). The theorem requires distance
+below 64 and a signed-word sum bound; it derives the actual magnitude without
+assuming intermediate slot values. Its joint witness cancels opposite signs to
+one smallest-subnormal unit. Three Runner images exercise this connected prefix.
+This does not yet initialize the normalization loop or execute its continuation.
+
+The whole-loop theorem now also has a numerator-entry interface
+(`floatNormalizeLoopL_from_numerator`). For `0 ≤ n < 2^61`, it derives the
+initial quotient/remainder bounds and reconstruction from Euclidean division,
+with caller-selected fuel, zero initial count and separate signed-word bounds
+on distance and fuel. Only actual entry reads
+and the generic frame/fetch contract remain as memory premises; the caller no
+longer supplies a normalization invariant. The shared concrete witness uses
+this interface with numerator 13, distance 4 and a nonzero reserved prefix.
+This is a bounded-numerator entry theorem, not yet an encoded-operand bridge:
+the operand fragment still has to execute the initialization writes. The actual loop now also proves target attainment for positive original
+numerators: `FloatNormalizeHead.active_count_bound` derives an active transfer
+count below `originDistance + precision` directly from exact reconstruction and
+the canonical tail, and `floatNormalizeLoopL_reaches_target` excludes exhaustion
+when the supplied budget covers that sum and the target is at most
+`2^precision`. This shares the precision/distance mechanism across formats;
+it does not yet derive the distance or target from executed operand decoding.
+The concrete frame witness satisfies execution and sufficiency jointly. Runner
+boundaries include precision 24 at distance 149, precision 53 at distance 1074,
+and precision 60 at distance zero. The executed round/pack continuation remains
+open.
+
+The central `floatFiniteAddL_read_fields_align` execution theorem now carries
+an exact signed alignment equation from the reached exponent, significand,
+sign and jam slot reads. Its correction is the discarded remainder minus the
+sticky increment times the denominator, multiplied by the reached smaller
+operand's sign. The same f32/f64 execution witness checks the stronger result.
+The same theorem now also executes the subsequent jam copy, sign comparison,
+conditional ADD/SUB and both branch jumps. Its returned arithmetic slot belongs
+to the very same run from encoded operands, with the original frame agreement;
+the f32/f64 witness satisfies the strengthened conclusion jointly. The generic
+`floatFiniteAddL_signed_execute` interface additionally preserves the actual
+continuation precondition. The central encoded-operand theorem and its joint
+witness now expose that same reached continuation after ADD/SUB, together with
+its literal emitted suffix; no independently supplied intermediate memory is
+needed to continue the run.
+`finiteAddRemainingValue_bounds` transfers canonical finite-input bounds through
+the literal decoder word arithmetic for all four fields, with a joint f32/f64
+minimum-subnormal/maximum-finite witness. These are bounds on exactly the values
+in the central theorem's retained field correspondence. The central connected
+execution now also transports these four bounds through its actual SORTSWAP
+reads: both significands and the actual jam result remain below `2^56`, and both effective exponents
+are positive and below `F.bexpMax`. The latter are read from the same reached
+post-ADD/SUB memory, using the signed execution's preserved slots. This conclusion
+is conditional on the four decoder bounds, discharged for canonical finite
+inputs by `finiteAddRemainingValue_bounds`; it introduces no new execution
+precondition or independently supplied intermediate memory. The actual signed
+ADD/SUB word has integer value strictly between `-2^57` and `2^57`, proved
+without signed overflow from those reached significand/jam bounds. Its
+nonnegativity, exact magnitude and signed correction transfer through
+normalization are not yet proved.
+
+The connected execution also retains the pre-ADD/SUB source significand read
+and reconstructs its exact numerator from the reached result word plus the
+signed jam correction. Its Euclidean quotient and full remainder instantiate
+`floatSumMagnitude_reconstruct` (borrow and remainder complement),
+`floatSumSign_exact`, and exact cancellation. This is an arithmetic consequence
+of the same executed reads, not execution of a magnitude routine: the actual
+`floatFiniteAddL` candidate goes directly from ADD/SUB to zero dispatch and its
+own right/left normalization. It does not call `floatSumMagnitudeL`, the exact
+normalization loop, or the five-field/slot RoundPack pipeline. Connecting those
+isolated routines requires an explicit lowering/composition change or a proof
+of this candidate's own continuation. The arithmetic reconstruction alone does
+not establish that continuation or canonical output bits.
+
+Concrete composition goals at this boundary are:
+1. The joint decoded field correspondence and executed SORT permutation now
+   transport both significand bounds, the exponent bounds and the jam bound
+   into the bounded signed result. Establish that the word exponent difference
+   equals the bounded natural exponent difference.
+2. Signed ADD/SUB now executes from the retained sign and jam reads. Derive its
+   bounded magnitude and signed fractional correction together, then execute
+   zero dispatch.
+   Preserve that correction through cancellation; a jammed integer difference
+   alone is not the exact source numerator.
+3. Construct the normalization head from those actual writes, carry its exact
+   reconstruction through the actual loop exit, then execute guard/sticky and
+   RoundPack to canonical IEEE bits, including zero and subnormal boundaries.
+4. Only for that whole execution, discharge resources, arbitrary reserved
+   prefixes, budget/cost and Range107/Block integration. The cost API is being
+   handled separately; the computed `floatOf` hook remains unchanged.
+
+Remaining finite-adder gaps: derive every initial head bound and state read from
+the actual format/operand alignment and magnitude producers; compose the actual
+loop exit with guard/sticky selection and IEEE round/pack (normal, top-exponent
+overflow, subnormal and zero); prove the combined fragment's temporary, resource
+and instruction-cost bounds; connect special dispatch, range 107 and the generic
+Block constructor proofs. Separate output-stage proofs already exist, but they
+are not a complete finite-adder execution theorem. Add/sub remain refused and
+the computed `floatOf` hook is unchanged. No grammar semantics or goal theorem
+was changed.
+
+
+The actual finite candidate's literal rounding expression now has a retained-read
+execution theorem, `floatFiniteAddL_round_retained`. It derives both signed
+division by eight and the low-three-bit guard from one nonnegative signed-word
+read and executes the existing `floatGuardRoundL` with its actual constant-zero
+tail producer. Its result is `rundeInt (q / 8) (q % 8) 8`; frame, footprint and
+arbitrary reserved-prefix premises use the existing retained-context mechanism.
+A joint execution witness covers an odd halfway significand (44 rounds to 6).
+This adds no emitted code or alternate rounding algorithm. It does not show that
+the reached normalization word represents the original exact numerator: the
+actual right/left continuation, including its jam correction and the final
+carry/packing path, still needs execution and canonical IEEE correspondence.
+The isolated five-field pipeline is still not composed with the candidate.
+
+
+The actual left-normalization body's four instructions now have a joint Runner
+execution proof, `floatFiniteAddL_left_body`: multiply the retained quotient by
+two and decrement the retained exponent, preserving both output reads, the frame
+and the arbitrary reserved-prefix continuation. Its arithmetic companion proves
+signed-word bounds and propagates the exact signed correction by doubling it.
+A nonzero execution witness uses quotient 13, exponent 4 and correction -3 at
+denominator 16. This is a body-step proof only: extraction and execution of the
+actual condition/backedge from the reached ADD/SUB state, the right shift/jam,
+and the connected carry/pack-to-IEEE theorem remain open. No validation hook,
+resource/cost claim, Range107 acceptance or computed `Block.floatOf` changes.
