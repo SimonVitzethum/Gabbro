@@ -1688,6 +1688,19 @@ theorem EndCost.result_read {Δ snapshot ens lo V l Γ Λ b σ ρ n}
   | bind value tail ih => exact ih result post
   | branch condition jumpFits child ih => exact ih result post
 
+/-- Normal and reason status belongs to the same endpoint as the result read. -/
+theorem EndCost.result_status {Δ snapshot ens lo V l Γ Λ b σ ρ n}
+    (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n)
+    {fp : W} {m : Mem} (post : certificate.Post fp m) :
+    m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) =
+      some (if certificate.result.isSome then 1 else 0) := by
+  induction certificate with
+  | reason => exact post
+  | normal => exact post.choose_spec.2.2
+  | assign value tail ih => exact ih post
+  | bind value tail ih => exact ih post
+  | branch condition jumpFits child ih => exact ih post
+
 /-- Structural induction discharges recursive terminal executions. No complete
     body execution or complete body cost is a premise. ABI reads are preserved
     across each prefix by the existing frame agreement theorems. -/
@@ -2504,13 +2517,15 @@ theorem RecursiveEndCost.sound
     ∃ n m', n ≤ budget ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
       AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
       (∀ τ v, output = some ⟨τ, v⟩ →
-        ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) := by
+        ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) =
+        some (if output.isSome then 1 else 0) := by
   induction certificate generalizing K top code m pc fp rp cfp pr ex with
   | source cert =>
     obtain ⟨m', run, post, agree, frame, rpc, rfp, hw⟩ :=
       cert.sound lower fits inside low abi lowBound hprotected pre world
         parameters parameterEnv base entry savedPC savedFP
-    exact ⟨_, m', Nat.le_refl _, run, agree, frame, hw, fun τ v result => cert.result_read result post⟩
+    exact ⟨_, m', Nat.le_refl _, run, agree, frame, hw, (fun τ v result => cert.result_read result post), cert.result_status post⟩
   | @call depth Ks reserved V l Δ snapshot ens lo Γ Λ f args σ₀ σ ρ na nq nb declared returned
       arguments topF lowerFun fitsFun address requirement body declaration rest nr output hp hr tail body_ih tail_ih =>
     let childKs := Ks - frei Γ reserved
@@ -2590,7 +2605,7 @@ theorem RecursiveEndCost.sound
             childUmf.sync.agree all childUmf.hiK, childUmf.hiK⟩
           rw [agree_rd_low (i := 2) all pre.frame.room (by decide) (by omega)]
           exact childUmf.depth
-        obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead⟩ :=
+        obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead, _status⟩ :=
           body_ih ens hens (rdW mR fp 3) hb (by omega) inside
           (by simp only [frei]; omega) (by simp only [FB]; omega) (by omega)
           (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
@@ -2637,13 +2652,13 @@ theorem RecursiveEndCost.sound
     have rfp2 : m2.rd64 (fp + 8) = some cfp := by
       have h := agreeW_rdW inside agree (i := 1) (by omega) (by omega)
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
-    obtain ⟨nRest, m3, boundRest, restRun, finalAgree, frame, hw, resultRead⟩ :=
+    obtain ⟨nRest, m3, boundRest, restRun, finalAgree, frame, hw, resultRead, status⟩ :=
       tail_ih hr (by omega) inside low abi lowBound hprotected nextPre hw parameters
         (envAt_agreeWIn inside parameterEnv agree (by omega) (by omega)) base
         (by rw [agreeW_rdW inside agree (i := 3) (by omega) (by omega)]; exact entry)
         rpc2 rfp2 (Umf.agreeW inside surroundings agree (by unfold frei FB; omega)) depthBound
     refine ⟨na + 4 + nCall + nRest, m3, by omega, ?_,
-      (agree.mono (by omega)).trans finalAgree, frame, hw, resultRead⟩
+      (agree.mono (by omega)).trans finalAgree, frame, hw, resultRead, status⟩
     rw [← len] at rpc
     have joined := entryRun.trans callRun
     rw [← len] at joined
@@ -2668,12 +2683,12 @@ theorem RecursiveEndCost.sound
     have rfp : m1.rd64 (fp + 8) = some cfp := by
       have h := agreeW_rdW inside agree1 (i := 1) (by omega) hK
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
-    obtain ⟨n2, m2, bound2, run2, finalAgree, frame, hw, result2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits) inside
+    obtain ⟨n2, m2, bound2, run2, finalAgree, frame, hw, result2, status⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits) inside
       low abi lowBound hprotected nextPre world1
       parameters (envAt_agreeWIn inside parameterEnv agree1 (by omega) lowBound) base
       (by rw [agreeW_rdW inside agree1 (i := 3) (by omega) lowBound]; exact entry) rpc rfp
       (Umf.agreeW inside surroundings agree1 (by unfold FB; omega)) depthBound
-    exact ⟨_, m2, by omega, run1.trans run2, (agree1.mono (by omega)).trans finalAgree, frame, hw, result2⟩
+    exact ⟨_, m2, by omega, run1.trans run2, (agree1.mono (by omega)).trans finalAgree, frame, hw, result2, status⟩
   | @bind depth Ks reserved V l Δ snapshot ens lo output Γ Λ τ e rest σ ρ v ne nr value tail ih =>
     simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, out⟩ := lower
@@ -2697,14 +2712,14 @@ theorem RecursiveEndCost.sound
     have rfp : m1.rd64 (fp + 8) = some cfp := by
       have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
-    obtain ⟨n2, m2, bound2, run2, finalAgree, frame, hw, result2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits) inside
+    obtain ⟨n2, m2, bound2, run2, finalAgree, frame, hw, result2, status⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits) inside
       (by simp only [frei, List.length_cons] at low ⊢; omega)
       abi lowBound (fun j hj => by have := hprotected j hj; simp only [frei, List.length_cons] at this ⊢; omega)
       nextPre (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _)))
       parameters (envAt_agree parameterEnv a1 pre.frame (by omega) (by omega)) base
       (by rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry) rpc rfp
       (surroundings.agree a1 pre.frame (by unfold frei FB; omega)) depthBound
-    exact ⟨_, m2, by omega, run1.trans run2, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, hw, result2⟩
+    exact ⟨_, m2, by omega, run1.trans run2, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, hw, result2, status⟩
 
   | @branch depth Ks reserved V l Δ snapshot ens lo output Γ Λ c t e σ ρ choice nc nb condition jumpFits child ih =>
     simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
@@ -2741,14 +2756,14 @@ theorem RecursiveEndCost.sound
       subst w
       have sb := counted_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
         (by simp only [ci]; exact run_brz_ne ins (by rw [hd]; exact read) (by decide))
-      obtain ⟨n2, m2, bound2, run2, agree, frame, hw, result2⟩ :=
+      obtain ⟨n2, m2, bound2, run2, agree, frame, hw, result2, status⟩ :=
         ih ht (by omega) inside low abi lowBound hprotected h2.left world1 parameters params1 base entry1 rpc rfp
           (surroundings.agree a1 pre.frame (by unfold frei FB; omega)) depthBound
       have run : Counted (nc + (1 + n2)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m2 := by
         refine run1.trans (sb.trans ?_)
         simpa [List.length_singleton, pc_add, addr_norm] using run2
       exact ⟨nc + (1 + n2), m2, by omega, by simpa only [Nat.add_assoc] using run,
-        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2⟩
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2, status⟩
     | false =>
       simp only [Bool.false_eq_true, ↓reduceIte] at value child ih
       subst w
@@ -2761,14 +2776,14 @@ theorem RecursiveEndCost.sound
       rw [offset] at step
       have sb := Counted.next step (Counted.refl _ _)
       have h4 := h2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
-      obtain ⟨n2, m2, bound2, run2, agree, frame, hw, result2⟩ :=
+      obtain ⟨n2, m2, bound2, run2, agree, frame, hw, result2, status⟩ :=
         ih he (by omega) inside low abi lowBound hprotected h4 world1 parameters params1 base entry1 rpc rfp
           (surroundings.agree a1 pre.frame (by unfold frei FB; omega)) depthBound
       have run : Counted (nc + (1 + n2)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m2 := by
         refine run1.trans (sb.trans ?_)
         simpa [List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using run2
       exact ⟨nc + (1 + n2), m2, by omega, by simpa only [Nat.add_assoc] using run,
-        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2⟩
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2, status⟩
 
   | @bindCall depth Ks reserved V l Δ snapshot ens lo Γ τ v Λ f args σ₀ σ ρ na nq nb declared returned
       arguments topF lowerFun fitsFun address requirement body declaration result he rest nr output hp hr tail body_ih tail_ih =>
@@ -2849,7 +2864,7 @@ theorem RecursiveEndCost.sound
             childUmf.sync.agree all childUmf.hiK, childUmf.hiK⟩
           rw [agree_rd_low (i := 2) all pre.frame.room (by decide) (by omega)]
           exact childUmf.depth
-        obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead⟩ :=
+        obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead, _status⟩ :=
           body_ih ens hens (rdW mR fp 3) hb (by omega) inside
           (by simp only [frei]; omega) (by simp only [FB]; omega) (by omega)
           (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
@@ -2914,14 +2929,14 @@ theorem RecursiveEndCost.sound
     have rfp2 : mMoved.rd64 (fp + 8) = some cfp := by
       have h := agreeW_rdW inside joinedAgree (i := 1) (by omega) (by omega)
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
-    obtain ⟨nRest, m3, boundRest, restRun, finalAgree, frame, hw, resultRead⟩ :=
+    obtain ⟨nRest, m3, boundRest, restRun, finalAgree, frame, hw, resultRead, status⟩ :=
       tail_ih hr (by omega) inside (by simp [frei] at low ⊢; omega) abi lowBound
         (fun j hj => by have := hprotected j hj; simp [frei] at this ⊢; omega) nextPre hwMoved parameters
         (envAt_agreeWIn inside parameterEnv joinedAgree (by omega) (by omega)) base
         (by rw [agreeW_rdW inside joinedAgree (i := 3) (by omega) (by omega)]; exact entry)
         rpc2 rfp2 (Umf.agreeW inside surroundings joinedAgree (by unfold frei FB; omega)) depthBound
     refine ⟨na + 4 + nCall + 1 + nRest, m3, by omega, ?_,
-      (joinedAgree.mono (by omega)).trans finalAgree, frame, hw, resultRead⟩
+      (joinedAgree.mono (by omega)).trans finalAgree, frame, hw, resultRead, status⟩
     rw [← len] at rpc
     have joined := entryRun.trans callRun
     rw [← len] at joined
@@ -3035,7 +3050,7 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
           childUmf.sync.agree all childUmf.hiK, childUmf.hiK⟩
         rw [agree_rd_low (i := 2) all pre.frame.room (by decide) (by omega)]
         exact childUmf.depth
-      obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead⟩ :=
+      obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead, _status⟩ :=
         (body ens hens (rdW mR fp 3)).sound hb (by omega) inside
         (by simp only [frei]; omega) (by simp only [FB]; omega) (by omega)
         (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
@@ -3914,6 +3929,7 @@ theorem sound_zeuge : ∃ n m', n ≤ 23 ∧
     Counted n ⟨2048, 4096⟩ memory ⟨3072, 16384⟩ m' ∧
     AgreeW layout 4096 2 256 memory m' ∧ FrameOK m' 4096 256 ∧
     WeltAt m' layout world ∧
+    m'.rd64 (slot 4096 5) = some 1 ∧
     ∃ w, m'.rd64 (slot 4096 2) = some w ∧ Enc layout (.int 37 37)
       (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) w := by
   have targets : PCode memory addresses target 4096 256 := by
@@ -3966,11 +3982,11 @@ theorem sound_zeuge : ∃ n m', n ≤ 23 ∧
   have around : Umf layout addresses target 2 memory 4096 128 256 :=
     ⟨targets, by decide +kernel, by decide, sync, by decide⟩
   obtain ⟨cert⟩ := recursiveEndCost_zeuge
-  obtain ⟨n, m', bound, run, agree, frame, hw, result⟩ :=
+  obtain ⟨n, m', bound, run, agree, frame, hw, result, status⟩ :=
     cert.sound (K := 256) (top := 13) (pr := []) (ex := (0, 0))
       (code := image) (m := memory) (pc := 2048) (fp := 4096) (rp := 3072) (cfp := 16384)
       (by decide +kernel) (by decide) inside (by decide) (by decide) (by decide)
       (fun _ h => nomatch h) pre hw Env.nil (fun _ x => nomatch x) rfl
       (by decide +kernel) (by decide +kernel) (by decide +kernel) around (by decide)
-  exact ⟨n, m', bound, run, agree, frame, hw, result _ _ rfl⟩
+  exact ⟨n, m', bound, run, agree, frame, hw, status, result _ _ rfl⟩
 end Gabbro.Stage0.Senke.RecursiveTerminalProbe
