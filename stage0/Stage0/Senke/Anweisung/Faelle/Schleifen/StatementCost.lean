@@ -2407,6 +2407,54 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
     recursiveBlockCost L reserved P passes A C dv Ks V l
       (.bindCall f args he hp hr rest) σ ρ σ' (ρ'.tail) (na + 4 + declared + 1 + nr)
 
+/-- Reconstruct the callee call environment at the actual entry endpoint.
+    Its slot-2 convention is one less than the depth installed by callEntry. -/
+theorem ArgsCost.recursiveEntry {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na : Nat}
+    (certificate : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W}
+    {ca : List II} {ta K Ks : Nat} {m : Mem} {pc fp : Runner.W}
+    (lower : lowA L args (frei Γ reserved + FB) reserved = some (ca, ta))
+    (fits : callTop f (frei Γ reserved) ta ≤ Ks)
+    (address : A f < 2 ^ 31)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (callC A f (frei Γ reserved) ca) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K)
+    (inside : WIn L fp Ks K) (world : WeltAt m L σ) :
+    ∃ m', Counted (na + 4) ⟨pc, fp⟩ m
+        ⟨BitVec.ofNat 64 (A f), slot fp (BitVec.ofNat 64 (frei Γ reserved))⟩ m' ∧
+      Agree fp (frei Γ reserved) K m m' ∧
+      FrameOK m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved) ∧
+      Umf L A C (dv - 1) m' (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
+        (Ks - frei Γ reserved) (K - frei Γ reserved) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) =
+        some (pc + BitVec.ofNat 64 (16 * (ca.length + 4))) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved)) + 8) = some fp ∧
+      EnvAt L m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (evalArgs σ₀ args σ ρ) ∧
+      WeltAt m' L σ := by
+  obtain ⟨m', run, agree, frame, code, rpc, rfp, depth, env, hw, sync⟩ :=
+    certificate.callEntry lower fits address pre surroundings inside world
+  have hks := inside.ks
+  have bounds := fits
+  simp only [callTop] at bounds
+  have room : frei Γ reserved ≤ K := by omega
+  have hs : (slot fp (BitVec.ofNat 64 (frei Γ reserved))).toNat =
+      fp.toNat + 8 * frei Γ reserved := by
+    have := fp.isLt
+    have hr := pre.frame.lt
+    have h8 : (8 : W).toNat = 8 := rfl
+    simp only [slot, BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
+    rw [Nat.mod_eq_of_lt (a := frei Γ reserved) (by omega)]
+    omega
+  refine ⟨m', run, agree, frame, ?_, rpc, rfp, env, hw⟩
+  refine ⟨code, ?_, ?_, sync, ?_⟩
+  · simpa only [BitVec.sub_add_cancel] using depth
+  · simp only [callTop, FB] at bounds ⊢
+    omega
+  · rw [hs]
+    have := surroundings.hiK
+    omega
+
 /-- Terminal call trees certify actual callee source bodies. The depth index
     decreases at each callee edge; continuations retain the parent's depth.
     Returned values are shared through an index, rather than a callee contract.
@@ -2426,7 +2474,7 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
     {top : Nat}
     (lowerFun : lowFun passes P A L f = some (C f, top))
     (fitsFun : top ≤ Ks - frei Γ reserved)
-    (address : A f < 2 ^ 31) (positive : 0 < depth)
+    (address : A f < 2 ^ 31)
     (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
     (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
       ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
@@ -2448,7 +2496,7 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
     {top : Nat}
     (lowerFun : lowFun passes P A L f = some (C f, top))
     (fitsFun : top ≤ Ks - frei Γ reserved)
-    (address : A f < 2 ^ 31) (positive : 0 < depth)
+    (address : A f < 2 ^ 31)
     (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
     (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
       ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
@@ -2466,6 +2514,29 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
     RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo
       (.bindCall f args he hp hr rest) σ ρ output (na + 4 + declared + 1 + nr)
 
+
+  | assign {depth Ks reserved V l Δ snapshot ens lo output} {Γ Λ τ} {x : Var Γ τ} {e : Expr D Γ Λ τ}
+      {rest : Endblock D V l Γ Λ} {σ : World D} {ρ : Env D Γ}
+      {v : Wert D τ} {ne nr : Nat}
+      (value : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
+      (tail : RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo rest σ (ρ.set x v) output nr) :
+      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo (.cons (.assignVar x e) rest) σ ρ output (ne + 1 + nr)
+  | bind {depth Ks reserved V l Δ snapshot ens lo output} {Γ Λ τ} {e : Expr D Γ Λ τ} {rest : Endblock D V l (τ :: Γ) Λ}
+      {σ : World D} {ρ : Env D Γ} {v : Wert D τ} {ne nr : Nat}
+      (value : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
+      (tail : RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo rest σ (.cons v ρ) output nr) :
+      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo (.bind e rest) σ ρ output (ne + nr)
+
+  | branch {depth Ks reserved V l Δ snapshot ens lo output} {Γ Λ} {c : Expr D Γ Λ .bool} {t e : Endblock D V l Γ Λ}
+      {σ : World D} {ρ : Env D Γ} {choice : Bool} {nc nb : Nat}
+      (condition : ExprCost L reserved c (frei Γ reserved) nc
+        (· = if choice then 1 else 0))
+      (jumpFits : ∀ passes A pr ex ct tt,
+        lowEnd (reserved := reserved) passes A L lo ens pr ex t = some (ct, tt) →
+        16 * (ct.length + 1) < 2 ^ 31)
+      (child : RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo
+        (if choice then t else e) σ ρ output nb) :
+      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo (.ite c t e) σ ρ output (nc + 1 + nb)
 
 /-- Induction composes each full call and its child certificate at the identical
     counted endpoint, retaining world, environment, frame and protected cells. -/
