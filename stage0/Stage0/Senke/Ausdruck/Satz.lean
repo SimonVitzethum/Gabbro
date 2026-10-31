@@ -8,6 +8,7 @@ import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Ausdruck.Fnptr
 import Stage0.Senke.Ausdruck.Eng
+import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 import Stage0.Senke.Ausdruck.Aggregat.Array
@@ -198,67 +199,52 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [wahr?]
     exact not_word _
   | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    obtain ⟨o, order, h⟩ := Option.bind_eq_some_iff.mp h
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨cb, tb⟩, hb, ⟨ca, ta⟩, ha, he⟩ := h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨cc, tc⟩, hc, he⟩ := h
     simp only [bin2, Prod.mk.injEq] at he
     obtain ⟨rfl, rfl⟩ := he
-    have := lowE_top b d cb tb hb
-    have := lowE_top a (d + 1) ca ta ha
-    obtain ⟨opcode, byte, values, _⟩ := scalarOrder_spec order
-      (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
-      (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
     refine bin_ok (cb := [ci 1 (d + 1) 1 0])
-      (Pa := fun w => w = if decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n) = true then 1 else 0)
-      (fun m pc hp => bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL b d cb tb hb (by omega) m pc ρ hp)
-        (fun m pc hp => lowE_ok σ₀ σ hWL a (d + 1) ca ta ha (by omega) m pc ρ hp)
-        (g := fun x y => some (Runner.IR.bool (scalarCmp o x y))) (fun wb wa pb pa => ⟨_, rfl, by
-          simp only [Enc] at pa pb
-          rw [pa, pb, values, bool_word]⟩) opcode byte (by omega) hp)
+      (Pa := fun w => w = Runner.IR.bool (decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n)))
+      (fun m pc hp => scalarCompareL_ok false
+        (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
+        (fun cb tb hb => lowE_top a (d + 1) cb tb hb)
+        (fun ca ta ha fits m pc pre => lowE_ok σ₀ σ hWL b d ca ta ha fits m pc ρ pre)
+        (fun cb tb hb fits m pc pre => lowE_ok σ₀ σ hWL a (d + 1) cb tb hb fits m pc ρ pre)
+        hc (by omega) hp)
       (fun m pc hp => const_ok hp (by decide) (by omega))
       (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
     intro wa wb pa pb
     refine ⟨_, rfl, ?_⟩
     simp only [Enc, eval] at ⊢
-    rw [pa, pb]
+    rw [pa, pb, bool_word]
     by_cases hl : (eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n
-    · have : ¬ (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
-      simp [hl, this, wahr?]
-    · have : (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
-      simp [hl, this, wahr?]
+    · have hn : ¬ (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
+      simp [hl, hn, wahr?]
+    · have hn : (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
+      simp [hl, hn, wahr?]
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    obtain ⟨o, order, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
-    have := lowE_top b (d + 1) cb tb hb
-    obtain ⟨opcode, byte, values, _⟩ := scalarOrder_spec order
+    have run := scalarCompareL_ok false
       (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
       (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
-    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
-      (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
-      (g := fun x y => some (Runner.IR.bool (scalarCmp o x y))) ?_ opcode byte (by omega) hp
-    intro wa wb pa pb
-    refine ⟨_, rfl, ?_⟩
-    simp only [Enc, eval] at pa pb ⊢
-    rw [pa, pb, values, bool_word]
-    rfl
+      (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
+      (fun ca ta ha fits m pc pre => lowE_ok σ₀ σ hWL a d ca ta ha fits m pc ρ pre)
+      (fun cb tb hb fits m pc pre => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb fits m pc ρ pre)
+      h hK hp
+    exact run.mono (fun w value => by
+      by_cases comparison : (eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n <;>
+        simpa [Enc, eval, bool_word, wahr?, comparison] using value)
   | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    obtain ⟨o, order, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
-    have := lowE_top b (d + 1) cb tb hb
-    obtain ⟨_, _, _, equal⟩ := scalarOrder_spec order
+    have run := scalarCompareL_ok true
       (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
       (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
-    refine bin_ok (fun m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha (by omega) m pc ρ hp)
-      (fun m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb (by omega) m pc ρ hp)
-      (g := fun x y => some (Runner.IR.bool (x == y))) ?_ rfl (by decide) (by omega) hp
-    intro wa wb pa pb
-    refine ⟨_, rfl, ?_⟩
-    simp only [Enc, eval] at pa pb ⊢
-    rw [pa, pb, equal, bool_word]
-    rfl
+      (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
+      (fun ca ta ha fits m pc pre => lowE_ok σ₀ σ hWL a d ca ta ha fits m pc ρ pre)
+      (fun cb tb hb fits m pc pre => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb fits m pc ρ pre)
+      h hK hp
+    exact run.mono (fun w value => by
+      by_cases comparison : (eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n <;>
+        simpa [Enc, eval, bool_word, wahr?, comparison] using value)
   | _, _, .div h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h

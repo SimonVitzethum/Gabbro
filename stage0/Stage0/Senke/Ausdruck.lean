@@ -133,6 +133,28 @@ def wordConstant (d : Nat) (n : Int) : List II × Nat :=
   if lit32 n then ([ci 1 d n 0], d + 1)
   else konstWL 4 (BitVec.ofInt 64 n).toNat d
 
+/-- Compare previously evaluated scalar operands, guarding the signed operand
+    before its raw word is compared with an unsigned operand. -/
+def mixedCmpC (leftSigned equal : Bool) (d : Nat) : List II :=
+  [ci 1 (d + 2) 0 0,
+   ci 13 (d + 2) ((if leftSigned then d else d + 1) : Nat) (d + 2),
+   ci (if equal then 14 else 27) (d + 3) d (d + 1)] ++
+  if leftSigned && !equal then [ci 9 d (d + 2) (d + 3)]
+  else [ci 1 (d + 4) 1 0, ci 10 (d + 4) (d + 2) (d + 4), ci 8 d (d + 3) (d + 4)]
+
+/-- Compare each complete scalar domain, with a sign guard when no common raw
+    interpretation exists. Both operand programs are evaluated exactly once. -/
+def scalarCompareL (equal : Bool) (d : Nat) (l1 h1 l2 h2 : Int)
+    (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  match scalarOrder l1 h1 l2 h2 with
+  | some o => pure (bin2 (if equal then 14 else o) d a b)
+  | none =>
+    if scalarFits l1 h1 && scalarFits l2 h2 then
+      pure (a.1 ++ b.1 ++ mixedCmpC (inW l1 h1) equal d, max (max a.2 b.2) (d + 5))
+    else none
+
 /-- One raw interval predicate. Its flag is in `d+1`; the input in `d` is preserved. -/
 def engTest (o d : Nat) (lo hi : Int) : List II × Nat :=
   ((wordConstant (d + 1) lo).1 ++ [ci o (d + 1) d (d + 1)] ++
@@ -305,15 +327,15 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, .neg a, d => do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
   | _, _, .not a, d => do let ca ← lowE L (reserved := reserved) a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
   | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d => do
-    let o ← scalarOrder l2 h2 l1 h1
-    let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
-    pure (bin2 10 d (bin2 o d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
-  | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d => do
-    let o ← scalarOrder l1 h1 l2 h2
-    let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 o d ca cb)
-  | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d => do
-    let _ ← scalarOrder l1 h1 l2 h2
-    let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
+    let c ← scalarCompareL false d l2 h2 l1 h1
+      (lowE L (reserved := reserved) b d) (lowE L (reserved := reserved) a (d + 1))
+    pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))
+  | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d =>
+    scalarCompareL false d l1 h1 l2 h2
+      (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+  | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d =>
+    scalarCompareL true d l1 h1 l2 h2
+      (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
   | _, _, .fllt a b, d => floatExprL false d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, .flle a b, d => floatExprL true d (lowE L (reserved := reserved) b) (lowE L (reserved := reserved) a)
   | _, _, .and a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb)

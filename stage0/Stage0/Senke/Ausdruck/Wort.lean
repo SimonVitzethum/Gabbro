@@ -118,6 +118,44 @@ theorem scalarOrder_zeuge :
     scalarOrder (-9223372036854775808) 9223372036854775807 0 255 = some 13 ∧
     scalarOrder (-1) (-1) 9223372036854775808 18446744073709551615 = none := by decide
 
+/-- A signed scalar against an unsigned scalar needs an explicit sign guard:
+    the same raw word can denote both `-1` and `2^64-1`. -/
+theorem mixed_left_lt {x y : Int}
+    (hx : -2 ^ 63 ≤ x ∧ x < 2 ^ 63) (hy : 0 ≤ y ∧ y < 2 ^ 64) :
+    (decide (x < 0) || (BitVec.ofInt 64 x).ult (BitVec.ofInt 64 y)) = decide (x < y) := by
+  by_cases neg : x < 0
+  · have less : x < y := by omega
+    simp [neg, less]
+  · rw [ult_in (by omega) hy]
+    simp [neg]
+
+theorem mixed_right_lt {x y : Int}
+    (hx : 0 ≤ x ∧ x < 2 ^ 64) (hy : -2 ^ 63 ≤ y ∧ y < 2 ^ 63) :
+    ((!decide (y < 0)) && (BitVec.ofInt 64 x).ult (BitVec.ofInt 64 y)) = decide (x < y) := by
+  by_cases neg : y < 0
+  · have less : ¬ x < y := by omega
+    simp [neg, less]
+  · rw [ult_in hx (by omega)]
+    simp [neg]
+
+theorem mixed_left_eq {x y : Int}
+    (hx : -2 ^ 63 ≤ x ∧ x < 2 ^ 63) (hy : 0 ≤ y ∧ y < 2 ^ 64) :
+    ((!decide (x < 0)) && (BitVec.ofInt 64 x == BitVec.ofInt 64 y)) = decide (x = y) := by
+  by_cases neg : x < 0
+  · have unequal : x ≠ y := by omega
+    simp [neg, unequal]
+  · rw [beq_unsigned (by omega) hy]
+    simp [neg]
+
+theorem mixed_right_eq {x y : Int}
+    (hx : 0 ≤ x ∧ x < 2 ^ 64) (hy : -2 ^ 63 ≤ y ∧ y < 2 ^ 63) :
+    ((!decide (y < 0)) && (BitVec.ofInt 64 x == BitVec.ofInt 64 y)) = decide (x = y) := by
+  by_cases neg : y < 0
+  · have unequal : x ≠ y := by omega
+    simp [neg, unequal]
+  · rw [beq_unsigned hx (by omega)]
+    simp [neg]
+
 /-- Unsigned IR division agrees with the canonical nonnegative integer quotient. -/
 theorem udiv_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64)
     (hb0 : 0 < b) (hb1 : b < 2 ^ 64) :
