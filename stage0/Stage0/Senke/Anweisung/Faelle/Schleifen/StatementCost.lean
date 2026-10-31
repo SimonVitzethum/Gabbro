@@ -3421,6 +3421,138 @@ theorem recursiveBlockCost.forever_false_invariant
   · exact hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))
   · exact keeps_of_agreeW inside (agreeW_of a1) hprotected (by omega)
 
+/-- A false invariant executes the emitted failure path: the expression,
+    branch and two stop constants. The syscall stays pending. -/
+theorem forever_false_stop_counted
+    {P : Programm D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II}
+    {dv : W} {Ks : Nat} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+    {inv : Expr D Γ Λ .bool} {body : Block D V true Γ Λ Λ}
+    {σ σ' : World D} {ρ ρ' : Env D Γ} {ni : Nat}
+    (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 0))
+    {lo K tc tb : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {cc cb : List II} {m : Mem} {pc fp : W}
+    (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (lowerBody : lowB (reserved := reserved) passes A L lo ens pr (exPlus ex 4) body = some (cb, tb))
+    (jumpFits : 16 * (cb.length + 2) < 2 ^ 31)
+    (stopRoom : frei Γ reserved + 8 ≤ K)
+    (fitsInv : tc ≤ Ks) (fitsBody : tb ≤ Ks)
+    (inside : WIn L fp Ks K) (low : lo ≤ frei Γ reserved)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+        (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))))) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ) :
+    CountedStops (ni + 3) ⟨pc, fp⟩ m 104 := by
+  have hks := inside.ks
+  have room := lowE_top _ _ _ _ lowerInv
+  have hpw := PreS.welt pre.left inside.ks world inside.lay (by have := inside.lo; omega)
+  obtain ⟨m1, run1, a1s, w, read, value⟩ := invariant.sound lowerInv (by omega) hpw
+  subst w
+  have a1 := Agree.widen a1s inside.ks
+  have h1 := pre.next a1 (Nat.le_refl _) (by omega)
+  have ins := h1.code 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at ins
+  have hd : sx (II.f (frei Γ reserved : Int)) = BitVec.ofNat 64 (frei Γ reserved) :=
+    sx_nat (by have := pre.small; omega)
+  have branch := run_step (t := ⟨_, fp⟩) ins (by decide)
+    (run_brz_zero ins (by rw [hd]; exact read))
+  have h1assoc : PreS L m1 (pc + BitVec.ofNat 64 (16 * cc.length)) fp K
+      (frei Γ reserved) (([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+        (cb ++ [ci 18 64 0 0])) ++ stopC 104 (frei Γ reserved)) ρ reserved := by
+    simpa only [List.append_assoc] using h1
+  have stopPre := h1assoc.next (a :=
+      [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+        (cb ++ [ci 18 64 0 0]))
+    (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+  have jumpEq : sx (II.f (16 * (cb.length + 2) : Int)) =
+      BitVec.ofNat 64 (16 * (cb.length + 2)) := sx_nat jumpFits
+  have address : pc + BitVec.ofNat 64 (16 * cc.length) +
+      sx (II.f (16 * (cb.length + 2) : Int)) =
+      (pc + BitVec.ofNat 64 (16 * cc.length)) +
+        BitVec.ofNat 64 (16 *
+          ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+            (cb ++ [ci 18 64 0 0])).length) := by
+    rw [jumpEq]
+    simp [List.length_append, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+  have stopCode : CodeAt m1
+      (pc + BitVec.ofNat 64 (16 * cc.length) +
+        sx (II.f (16 * (cb.length + 2) : Int)))
+      (stopC 104 (frei Γ reserved)) := by
+    rw [address]
+    exact stopPre.code
+  have stopFar : CodeFar
+      (pc + BitVec.ofNat 64 (16 * cc.length) +
+        sx (II.f (16 * (cb.length + 2) : Int))) 3 fp K := by
+    rw [address]
+    exact stopPre.far
+  obtain ⟨t, m2, q, runStop, stopped, nr, arg⟩ :=
+    sys_counted stopCode stopFar stopPre.frame stopRoom pre.small (by decide) (by decide)
+  refine ⟨t, m2, q, ?_, stopped, nr, arg⟩
+  have firstRun : Counted (ni + 1) ⟨pc, fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16 * cc.length) +
+        sx (II.f (16 * (cb.length + 2) : Int)), fp⟩ m1 :=
+    run1.trans (Counted.next branch (Counted.refl _ _))
+  simpa [Nat.add_assoc] using firstRun.trans runStop
+
+/-- Execute the actual invariant and positive dispatch before a body with any
+    canonical outcome. In particular, returns keep their caller frame endpoint.
+    Only the child body is a premise; the invariant/branch count is derived. -/
+theorem forever_positive_counted
+    {P : Programm D} {f : D.Fn} {passes : Nat}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
+    {Γ : Ctx} {Λ : List (Res D)} {inv : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ}
+    {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
+    {rp cfp : W} {ni nb : Nat}
+    {outcome : Ausgang (vertragVon D f) true Γ}
+    (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+    {lo K tc tb : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {cc cb : List II} {m : Mem} {pc fp e eL eN : W}
+    (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (lowerBody : lowB (reserved := reserved) passes A L lo ens pr
+      (exPlus ex 4) body = some (cb, tb))
+    (fitsInv : tc ≤ Ks) (inside : WIn L fp Ks K)
+    (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+        (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))))) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ)
+    (child : ∀ m1,
+      PreS L m1 (pc + BitVec.ofNat 64 (16 * cc.length) + 16) fp K
+        (frei Γ reserved) cb ρ reserved →
+      Umf L A C dv m1 fp Ks K → WeltAt m1 L σ →
+      CountedSim nb L P f σ0 ρ0 rp cfp fp lo K pr
+        ⟨pc + BitVec.ofNat 64 (16 * cc.length) + 16, fp⟩ m1
+        e eL eN outcome reserved) :
+    CountedSim (ni + 1 + nb) L P f σ0 ρ0 rp cfp fp lo K pr
+      ⟨pc, fp⟩ m e eL eN outcome reserved := by
+  have hks := inside.ks
+  have room := lowE_top _ _ _ _ lowerInv
+  have hpw := PreS.welt pre.left inside.ks world inside.lay
+    (by have := inside.lo; omega)
+  obtain ⟨m1, run1, a1s, w, read, value⟩ := invariant.sound lowerInv (by omega) hpw
+  subst w
+  have a1 := Agree.widen a1s inside.ks
+  have h1 := pre.next a1 (Nat.le_refl _) (by omega)
+  have h2 := h1.next (a := [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0])
+    (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+  have ins := h1.code 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at ins
+  have hd : sx (II.f (frei Γ reserved : Int)) = BitVec.ofNat 64 (frei Γ reserved) :=
+    sx_nat (by have := pre.small; omega)
+  have branch := counted_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
+    (by simp only [ci]; exact run_brz_ne ins (by rw [hd]; exact read) (by decide))
+  have bodyPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * cc.length) + 16)
+      fp K (frei Γ reserved) cb ρ reserved := by simpa using h2.left
+  have aw : AgreeW L fp lo K m m1 := agreeW_of (a1.mono low)
+  exact CountedSim.prefix abi (by simpa using run1.trans branch) aw
+    (keeps_of_agreeW inside (agreeW_of a1) hprotected (by omega))
+    (child m1 bodyPre
+      (Umf.agreeW inside surroundings (agreeW_of a1) (by simp [frei]; omega))
+      (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))))
+
+
 namespace FullCallProbe
 open FnptrProben
 open FullFunProbe (fixtureDecl program layout world)
