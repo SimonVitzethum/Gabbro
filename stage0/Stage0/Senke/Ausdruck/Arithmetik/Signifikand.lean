@@ -26,6 +26,84 @@ def floatCoefficientL (d : Nat) (e : Nat → Option (List II × Nat)) :
   wordL 5 d (sign d)
     (wordL 3 (d + 1) (floatFieldL 0 52 (d + 1) e) (hidden (d + 2)))
 
+/-- Canonical integer coefficient, with no hidden bit for subnormals. -/
+def floatCoefficient (a : GFloat) : Int :=
+  (if a.sign then -1 else 1) *
+    ((a.frac : Int) + if a.bexp = 0 then 0 else (2^52 : Int))
+
+/-- The connected word arithmetic agrees with the canonical decoded fields. -/
+theorem floatCoefficientWord_canonical (a : GFloat)
+    (ha : Gleitkomma.wf Gleitkomma.f64 a) :
+    floatCoefficientWord (BitVec.ofNat 64 (Gleitkomma.zuBits _ a)) =
+      BitVec.ofInt 64 (floatCoefficient a) := by
+  let w := BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 a)
+  obtain ⟨hf, he⟩ := floatFieldWord_canonical a ha
+  have hs : (floatFieldWord w 63 1).toNat = if a.sign then 1 else 0 := by
+    have inv := congrArg (fun x : GFloat => x.sign)
+      (Gleitkomma.ausBits_zuBits _ Gleitkomma.f64_dicht a ha)
+    have bound := Gleitkomma.zuBits_lt _ Gleitkomma.f64_dicht a ha
+    change Gleitkomma.zuBits Gleitkomma.f64 a < 2^64 at bound
+    rw [floatFieldWord_model _ 63 1 (by decide)]
+    simp only [w, BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound]
+    change (Gleitkomma.zuBits Gleitkomma.f64 a / 2^63 % 2 == 1) = a.sign at inv
+    have small := Nat.mod_lt (Gleitkomma.zuBits Gleitkomma.f64 a / 2^63) (by decide : 0 < 2)
+    cases hsign : a.sign <;> simp only [hsign, Bool.false_eq_true, ↓reduceIte]
+    · have hn : Gleitkomma.zuBits Gleitkomma.f64 a / 2^63 % 2 ≠ 1 := by simpa [hsign] using inv
+      omega
+    · have hn : Gleitkomma.zuBits Gleitkomma.f64 a / 2^63 % 2 = 1 := by simpa [hsign] using inv
+      exact hn
+  have wf : floatFieldWord w 0 52 = BitVec.ofNat 64 a.frac := by
+    rw [← hf]; simp [w]
+  have we : floatFieldWord w 52 11 = BitVec.ofNat 64 a.bexp := by
+    rw [← he]; simp [w]
+  have ws : floatFieldWord w 63 1 = BitVec.ofNat 64 (if a.sign then 1 else 0) := by
+    rw [← hs]; simp
+  have ez : (BitVec.ofNat 64 a.bexp == 0) = decide (a.bexp = 0) := by
+    apply Bool.eq_iff_iff.mpr
+    simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj, BitVec.toNat_ofNat]
+    have hb : a.bexp < 2^64 := by have := ha.1; change a.bexp ≤ 2047 at this; omega
+    rw [Nat.mod_eq_of_lt hb]; rfl
+  change floatCoefficientWord w = _
+  unfold floatCoefficientWord
+  rw [wf, we, ws, ez]
+  cases hsign : a.sign <;> by_cases hz : a.bexp = 0 <;>
+    simp [floatCoefficient, hsign, hz, Runner.IR.bool, BitVec.ofInt_neg, BitVec.ofInt_mul, BitVec.ofInt_add,
+      BitVec.ofInt_natCast] <;>
+      change (-1 : Runner.W) * _ = -_ <;> rw [BitVec.neg_mul] <;> exact congrArg Neg.neg (BitVec.one_mul _)
+
+/-- Link to the exact finite operand semantics, including zero and subnormal
+    coefficients. Zero's canonical exponent is intentionally left untouched. -/
+theorem floatCoefficient_exact (a : GFloat) (h : a.bexp ≠ 2047) :
+    ∃ e, Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a, e⟩ := by
+  by_cases hz : a.bexp = 0
+  · by_cases hf : a.frac = 0
+    · refine ⟨0, ?_⟩
+      simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
+        Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
+        floatCoefficient, hz, hf]
+    · refine ⟨-1074, ?_⟩
+      simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
+        Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
+        floatCoefficient, hz, hf]
+  · refine ⟨(a.bexp : Int) - 1023 - 52, ?_⟩
+    simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
+      Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
+      floatCoefficient, hz, h, Int.add_comm]
+
+/-- Exact emitted instruction count and temporary ceiling. Rereading the
+    pure input costs three producer executions; no unbounded loop is hidden. -/
+theorem floatCoefficientL_shape (d t n : Nat)
+    (e : Nat → Option (List II × Nat)) (code : Nat → List II)
+    (he : ∀ k, e k = some (code k, k + t))
+    (hl : ∀ k, (code k).length = n) :
+    ∃ output, floatCoefficientL d e =
+      some (output, max (d + t + 3) (d + 6)) ∧ output.length = 3*n + 88 := by
+  simp [floatCoefficientL, floatFieldL, wordL, he, konstWL, bin2, hl,
+    Nat.max_assoc]
+  refine ⟨_, ⟨rfl, ?_⟩, ?_⟩
+  · omega
+  · simp [hl]; omega
+
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- Simulation of the actual connected fragment for every input producer,
