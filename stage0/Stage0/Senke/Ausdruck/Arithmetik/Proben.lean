@@ -1,9 +1,25 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Output
+import Stage0.Senke.Ausdruck.Arithmetik.Normalisierung
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
 open Gabbro.Grammatik Runner.IR Gleitkomma
+
+/-- Actual alignment-to-magnitude images, including borrow after cancellation. -/
+def sumMagnitudeImages : List (String × Except String (List Runner.B) × Nat) :=
+  let lit := fun n j => some (konstWL 4 n j)
+  [("sum-magnitude-positive", 10, 13, 2, 1, 6),
+   ("sum-magnitude-negative", 2^64-10, 13, 2, 1, 13),
+   ("sum-magnitude-exact", 0, 16, 2, 0, 4),
+   ("sum-magnitude-cancel", 4, 16, 2, 0, 0),
+   ("sum-magnitude-tiny", 0, 13, 1074, 1, 0),
+   ("sum-magnitude-above-word", 7, 13, 65, 1, 6),
+   ("sum-magnitude-negative-tail", 2^64-7, 13, 65, 1, 7)].map
+    (fun (name, h, a, k, sticky, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatSumMagnitudeL 8
+          (fun j => floatNegativeSumL j (lit h) (lit a) (lit k))
+          (lit sticky)) expected, 7))
 
 /-- Actual output fragments, including the top-exponent carry and the
     subnormal/normal boundary. Expected words are independent IEEE fields. -/
