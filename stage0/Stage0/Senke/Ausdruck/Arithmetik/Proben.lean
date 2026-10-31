@@ -1,5 +1,5 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Ausrichtung
+import Stage0.Senke.Ausdruck.Arithmetik.Distanz
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
@@ -63,6 +63,53 @@ def alignmentImages : List (String × Except String (List Runner.B) × Nat) :=
           (fun d => floatCoefficientL d (fun j => some (konstWL 4 lo j)))
           (fun d => floatCoefficientL d (fun j => some (konstWL 4 hi j)))
           (fun d => some (konstWL 4 k d))) expected, 7))
+
+/-- Actual signed alignment at large exponent distances, using saturating
+    shifts and an independently preserved tail. Counts never wrap at 64. -/
+def negativeShiftImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("negative-shift-exact", 12, 1, 2^64-6),
+   ("negative-shift-borrow", 13, 1, 2^64-7),
+   ("negative-shift-zero", 0, 1074, 0),
+   ("negative-shift-63-exact", 2^63, 63, 2^64-1),
+   ("negative-shift-63-tail", 2^63+1, 63, 2^64-2),
+   ("negative-shift-64", 13, 64, 2^64-1),
+   ("negative-shift-65", 13, 65, 2^64-1),
+   ("negative-shift-1074", 13, 1074, 2^64-1),
+   ("negative-shift-maxcount", 13, 2^64-1, 2^64-1)].map
+    (fun (name, a, k, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatNegativeShiftL 8 (fun d => some (konstWL 4 a d))
+          (fun d => some (konstWL 4 k d))) expected, 7))
+
+theorem negativeShiftImages_zeuge : negativeShiftImages.length = 9 ∧
+    negativeShiftImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+set_option maxRecDepth 10000 in
+set_option exponentiation.threshold 2048 in
+/-- At a subnormal-scale distance the exact negative quotient is minus one;
+    the code, canonical quotient and producer premises hold together. -/
+theorem floatNegativeShiftL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    (-(13 : Int)) / (2^1074 : Nat) = -1 ∧
+    (13 : Nat) % 2^1074 = 13 ∧
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun d => floatNegativeShiftL d (fun j => some (konstWL 4 13 j))
+        (fun j => some (konstWL 4 1074 j))) (BitVec.ofInt 64 (-1)) ∧
+    ∃ c, floatNegativeShiftL 8 (fun j => some (konstWL 4 13 j))
+      (fun j => some (konstWL 4 1074 j)) = some (c, 14) ∧ c.length = 157 := by
+  refine ⟨by decide +kernel, by decide +kernel, ?_, ?_⟩
+  · have result : WordCode (L := L) (Env.nil : Env D []) (fun _ => True) _ _ :=
+      floatNegativeShiftL_ok (WordCode.konst 13 (by decide))
+        (WordCode.konst 1074 (by decide))
+    have hv : (-(13 : Int)) / (2^1074 : Nat) = -1 := by decide +kernel
+    intro fp K d c top hc hK m pc hp
+    apply (result hc hK m pc hp).mono
+    intro w hw
+    change w = BitVec.ofInt 64 ((-(13 : Int)) / (2^1074 : Nat)) at hw
+    exact hw.trans (congrArg (BitVec.ofInt 64) hv)
+
+  · refine ⟨((floatNegativeShiftL 8 (fun j => some (konstWL 4 13 j))
+        (fun j => some (konstWL 4 1074 j))).getD ([], 0)).1, ?_, ?_⟩ <;> decide +kernel
 
 /-- Negative alignment executes the production borrow rather than rounding a
     negated sticky operand. Zero, exact, tiny and wide quotients are covered. -/

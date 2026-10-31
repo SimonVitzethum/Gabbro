@@ -299,3 +299,8 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatNegativeQuotL_ok
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeQuotL_joint_zeuge
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.negativeQuotImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatShiftTailL_ok
+#print axioms Gabbro.Stage0.Senke.floatNegativeShiftL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeShiftL_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.negativeShiftImages_zeuge

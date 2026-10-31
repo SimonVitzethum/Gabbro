@@ -280,6 +280,22 @@ and layout passed (2026-10-31). The complete signed sum-to-packed-result path re
 open and add/sub remain refused. No grammar rebuild was run.
 
 
+The emitted negative-alignment fragment is now connected to the saturating
+unsigned quotient and an independently computed nonzero-remainder Boolean.
+`floatNegativeShiftL_ok` proves its word result equals the exact signed Euclidean
+quotient for every input word and every word-sized shift count. Counts at least
+64 do not wrap; odd quotients retain the tail separately. The distance-1074 joint
+witness includes canonical quotient/remainder, production simulation and exact
+sizes (157 instructions, ceiling 14 at base 8). Direct distance/probe/root/
+`Nachpruefung` checks and standard-axiom audits passed. Actual runner: 150 images,
+zero failures, including counts 63, 64, 65, 1074 and the maximum unsigned word
+(2026-10-31). This quotient is a modular word representation; subsequent signed
+interpretation still needs a range proof. Complete cancellation-to-final-guard
+construction, result packing/overflow, arbitrary-reserved simulation, full costs
+and range 107 remain open. Add/sub remain refused and computed `floatOf` is
+unchanged. No grammar rebuild was run.
+
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access
