@@ -92,6 +92,18 @@ theorem floatRangeReject_accept {lo hi : Int × Int} {x : GFloat}
       simp [hp] at this
     cases hr : floatRangeReject lo hi x <;> simp_all
 
+/-- Rounded-result boundaries, reversed bounds, NaN and infinities jointly
+    witness the source range decision. In particular maxInt rounds to 2^63. -/
+theorem floatRangeReject_zeuge :
+    floatRangeReject (0, 1) (2^53, 1) (gleitAusInt (2^53 + 1)) = false ∧
+    floatRangeReject (0, 1) (2^53 + 2, 1) (gleitAusInt (2^53 + 3)) = true ∧
+    floatRangeReject (0, 1) (2^63, 1) (gleitAusInt (2^63 - 1)) = false ∧
+    floatRangeReject (2, 1) (0, 1) (gleitAusInt 1) = true ∧
+    floatRangeReject (0, 0) (1, 1) (gleitAusInt 0) = true ∧
+    floatRangeReject (-(2^1024), 1) (2^1024, 1) (gleitAusInt (-37)) = false := by
+  decide +kernel
+
+#print axioms floatRangeReject_zeuge
 #print axioms floatRangeReject_none
 #print axioms floatRangeReject_accept
 end Gabbro.Stage0.Senke

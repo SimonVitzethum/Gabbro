@@ -242,3 +242,8 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatExponentL_canonical_zeuge
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatRangeReject_none
+#print axioms Gabbro.Stage0.Senke.floatRangeReject_accept
+#print axioms Gabbro.Stage0.Senke.floatRangeReject_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computedSamples_bits
