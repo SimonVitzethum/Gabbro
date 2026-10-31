@@ -470,3 +470,27 @@ The controlling coverage domain is existing userspace syntax: embedded ASM, boot
 syntax and device-register operations are excluded. Safe regions/references, generic calls and
 syscalls, supported entry/image/profile obligations remain in scope. Translator and ordinary
 record semantics remain explicit canonical-model prerequisites; this validator is not lane closure.
+
+### IR-01 jointly inhabited source/image witness
+
+`SourceWitness` constructs one actual `emit` result for a character-pinned source declaring
+`type A = u8; type B = A; const C : B = 40 + 2` and an ordinary function returning `C`.
+`accepted_image` proves acceptance of this exact image; `source_scopes` proves the two original
+alias ranges, scalar scope `C = 42`, one function and nonempty generated code. Generic helper
+constructors instantiate a concrete empty-carrier world/oracle and empty entry environment,
+plus memory containing the actual image bytes. `InitialState` holds all four inherited initial
+contracts together, not independent hypothetical implications. `source_image_joint_zeuge`
+combines accepted emission, nondegenerate source/image facts and that inhabited initial state.
+`entry_ir_simulation_zeuge` applies the generic image theorem to those exact values.
+
+`Emitted.Simulates` names the unchanged execution conclusion previously inline in `Correct`;
+this avoids repeatedly unfolding the entire concrete compiler result during dependent elaboration.
+The witness uses an explicit local IR kernel relation and a proved clone instance, with no external
+axioms or foreign gates. It is a satisfiability witness for the inherited abstract IR contracts,
+not verification of a physical syscall implementation or ASM hardware execution. The generic
+source/image theorem retains all of its original assumptions.
+
+Measured direct IRBild and SourceWitness checks green under slot 1 / 4G soft / 5G hard scope.
+Axiom audits for Emitted.correct, irBild_correct and both joint/entry witnesses report exactly
+propext, Classical.choice and Quot.sound. No additional language form or totality claim follows
+from this fixture; remaining userspace form adapters and named canonical prerequisites stay open.

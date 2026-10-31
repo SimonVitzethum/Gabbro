@@ -5,10 +5,16 @@ import Stage0.Senke.Ausdruck.Gleit.Exponent
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
 import Stage0
+
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+
+-- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
+#print axioms Gabbro.Stage0.irBild_correct
+#print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge
+#print axioms Gabbro.Stage0.SourceWitness.entry_ir_simulation_zeuge
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
