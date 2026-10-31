@@ -1,0 +1,6 @@
+// An exclusive upper bound is not silently made inclusive.
+module inline_bound_exclusive {
+const LIMIT : u8 = 43;
+const BAD : u8 in 0 ..< LIMIT = LIMIT;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

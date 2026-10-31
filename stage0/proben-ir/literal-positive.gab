@@ -1,0 +1,8 @@
+// Signed64 constants retain their value across source lowering and ASM execution.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 42 effects { pure } {
+    let value = 9223372036854775807;
+    if value % 256 == 255 { return 42; }
+    return 0;
+}
+}

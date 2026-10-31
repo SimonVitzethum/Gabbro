@@ -75,6 +75,7 @@ theorem exec_once (i : Ins) (n : Nat) (x : X) {o : Op} {k : Ans → Res X} (h : 
     | (cases h; cases a <;> simp)
     | (split at h <;> cases h)
     | (split at h; cases h; split at h <;> cases h)
+    | (simp only [opt] at h; split at h <;> cases h)
     | cases h
 
 theorem straight_go {L : Lay} {y0 : X} (htb : y0.r14 = L.T) :

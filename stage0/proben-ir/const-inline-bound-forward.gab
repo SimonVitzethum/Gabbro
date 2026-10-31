@@ -1,0 +1,6 @@
+// Discovery cannot use later scalar declarations as earlier inline type bounds.
+module inline_bound_forward {
+const BAD : u8 in 0 .. LIMIT = 42;
+const LIMIT : u8 = 42;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

@@ -23,6 +23,21 @@ def colSz (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Nat :
 def tabSz (u : UProg) (t : Fin u.tabs.length) : Nat :=
   ((List.finRange (fieldCount u t)).map (colSz u t)).sum
 
+omit [Kern] in
+/-- Empty columns contribute no storage and have no field/cell domain.
+    The original declared count is retained exactly, including large logical counts;
+    the usual image and word bounds still apply to every remaining stored column. -/
+theorem fieldless_table_layout (u : UProg) (t : Fin u.tabs.length)
+    (h : fieldCount u t = 0) :
+    (declOf u).count t = (tabAt u t).count ∧ tabSz u t = 0 ∧
+      IsEmpty ((declOf u).Feld t) := by
+  refine ⟨rfl, ?_, ⟨fun f => ?_⟩⟩
+  · have empty : List.finRange (fieldCount u t) = [] :=
+      List.length_eq_zero_iff.mp (by simpa using h)
+    simp [tabSz, empty]
+  · have hf : f.val < fieldCount u t := f.isLt
+    omega
+
 /-- The bytes of all tables. -/
 def tabsSz (u : UProg) : Nat := ((List.finRange u.tabs.length).map (tabSz u)).sum
 

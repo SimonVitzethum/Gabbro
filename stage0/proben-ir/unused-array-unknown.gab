@@ -1,0 +1,5 @@
+// An unused initializer must still have a canonical compile-time denotation.
+module unused_array_unknown {
+const VALUES : [u8; 1] = [missing(42)];
+impl fn main() -> u8 effects { pure } { return 0; }
+}

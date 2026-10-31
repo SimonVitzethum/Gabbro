@@ -22,7 +22,7 @@ import os
 import subprocess
 import sys
 
-KINDS = 19  # Runner.Test.KINDS
+KINDS = 20  # Runner.Test.KINDS
 
 
 def listing_matches(binary, listing):

@@ -1,0 +1,7 @@
+// The same certified source function scope reaches a leaf at arbitrary constant-row depth.
+module alias_const_array_nested {
+type Small = u8;
+const fn identity(x : Small) -> Small effects { pure } { return x; }
+const VALUES : [[Small; 1]; 1] = [[identity(42)]];
+impl fn main() -> Small effects { pure } { return VALUES[0][0]; }
+}

@@ -5,6 +5,7 @@
 -/
 import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Ausdruck.Quant.Indices
+import Stage0.Senke.Ausdruck.Gleit.Wort
 
 namespace Gabbro.Stage0.Senke
 
@@ -15,6 +16,46 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
+
+@[simp] theorem travCountC_length (d : Nat) (n : Int) :
+    (travCountC d n).length = travCountSize n := by
+  unfold travCountC travCountSize
+  split <;> simp [konstWL, bin2]
+
+attribute [local irreducible] konstWL travCountC travCountSize
+
+/-- A count constant preserves every lower frame word. -/
+theorem travCountC_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} (n : Int)
+    (room : d + 2 ≤ K) (hp : Pre L m pc fp K d (travCountC d n) ρ W reserved) :
+    Ok m pc fp K d (travCountC d n) (· = BitVec.ofInt 64 n) := by
+  unfold travCountC at hp ⊢
+  split at hp
+  · rename_i h
+    rw [ite_eq_left h]
+    exact const_ok hp h (by omega)
+  · rename_i h
+    rw [ite_eq_right h]
+    exact (konstWL_ok 4 _ (BitVec.isLt _) room hp).mono
+      (fun _ h => by simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using h)
+
+/-- Materialize the count above the saved index, then compare signed words. -/
+theorem trav_compare_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {v : Runner.W} (n : Int)
+    (hp : Pre L m pc fp K d
+      (travCountC (d + 1) n ++ [ci 13 d d (d + 1)]) ρ W reserved)
+    (room : d + 3 ≤ K) (rv : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some v) :
+    Ok m pc fp K d (travCountC (d + 1) n ++ [ci 13 d d (d + 1)])
+      (· = Runner.IR.bool (v.slt (BitVec.ofInt 64 n))) := by
+  obtain ⟨m1, s1, a1, w1, r1, rfl⟩ := travCountC_ok n (by omega)
+    { hp.left with ctx := by have := hp.ctx; omega }
+  have h1 := hp.next (a1.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
+  have rv1 : m1.rd64 (slot fp (BitVec.ofNat 64 d)) = some v := by
+    rw [agree_rd_low a1 hp.frame.room (by omega) (by omega)]; exact rv
+  obtain ⟨m2, s2, a2, w2, r2, rfl⟩ := eng_bin_ok (d := d) (a := d) (b := d + 1) h1 (by omega) (by omega) (by omega)
+    rv1 r1 (g := fun x y => some (Runner.IR.bool (x.slt y))) rfl (by decide) rfl
+  refine ⟨m2, ?_, (a1.mono (Nat.le_succ _)).trans a2, _, r2, rfl⟩
+  simpa only [List.length_append, List.length_singleton, pc_add] using s1.trans s2
 
 /-! ## The indices -/
 
@@ -75,100 +116,91 @@ theorem codeFar_at {pc fp : Runner.W} {n K i k : Nat} (h : CodeFar pc n fp K) (h
 section
 variable {m : Runner.Mem} {pc : Runner.W} {s : Nat} {n : Int} {ci' cb : List II}
 
-theorem travCode_len : (travCode s n ci' cb).length = 14 + 2 * ci'.length + cb.length := by
-  simp only [travCode, stopC, sysC, List.length_append, List.length_cons, List.length_nil]; omega
+theorem travCode_len : (travCode s n ci' cb).length = 13 + travCountSize n + 2 * ci'.length + cb.length := by
+  simp only [travCode, travCountC_length, stopC, sysC, List.length_append, List.length_cons, List.length_nil]; omega
 
 theorem trav_inv (hc : CodeAt m pc (travCode s n ci' cb)) : CodeAt m (pc + BitVec.ofNat 64 (16 * 1)) ci' :=
   codeAt_at (xs := [ci 1 s 0 0]) (by simpa [travCode] using hc) (by simp)
 
 theorem trav_brz1 (hc : CodeAt m pc (travCode s n ci' cb)) :
     CodeAt m (pc + BitVec.ofNat 64 (16 * (1 + ci'.length)))
-      [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0] :=
+      [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0] :=
   codeAt_at (xs := [ci 1 s 0 0] ++ ci') (by simpa [travCode, List.append_assoc] using hc)
     (by simp only [List.length_append, List.length_singleton])
 
 theorem trav_cmp (hc : CodeAt m pc (travCode s n ci' cb)) :
     CodeAt m (pc + BitVec.ofNat 64 (16 * (2 + ci'.length)))
-      [ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-       ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1)] :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0])
+      ([ci 2 ((s + 1 : Nat) : Int) s 0] ++ (travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int)])) :=
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0])
     (by simpa [travCode, List.append_assoc] using hc)
     (by simp only [List.length_append, List.length_singleton]; congr 2; omega)
 
 theorem trav_brz2 (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (5 + ci'.length)))
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (4 + travCountSize n + ci'.length)))
       [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1)])
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int)])
     (by simpa [travCode, List.append_assoc] using hc)
-    (by simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega)
+    (by simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega)
 
 theorem trav_body (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (6 + ci'.length))) cb :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (5 + travCountSize n + ci'.length))) cb :=
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
       ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0])
     (by simpa [travCode, List.append_assoc] using hc)
-    (by simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega)
+    (by simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega)
 
 theorem trav_next (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (6 + ci'.length + cb.length))) [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (5 + travCountSize n + ci'.length + cb.length))) [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] :=
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
       ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb)
     (by simpa [travCode, List.append_assoc] using hc)
-    (by simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega)
+    (by simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega)
 
 theorem trav_back (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (8 + ci'.length + cb.length))) [ci 18 (-(16 * (7 + ci'.length + cb.length))) 0 0] :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (7 + travCountSize n + ci'.length + cb.length))) [ci 18 (-(16 * (6 + travCountSize n + ci'.length + cb.length))) 0 0] :=
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
       ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)])
     (by simpa [travCode, List.append_assoc] using hc)
-    (by simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega)
+    (by simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega)
 
 theorem trav_inv2 (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (9 + ci'.length + cb.length))) ci' :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
-      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (7 + ci'.length + cb.length))) 0 0])
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (8 + travCountSize n + ci'.length + cb.length))) ci' :=
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
+      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (6 + travCountSize n + ci'.length + cb.length))) 0 0])
     (by simpa [travCode, List.append_assoc] using hc)
-    (by simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega)
+    (by simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega)
 
 theorem trav_brz3 (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (9 + 2 * ci'.length + cb.length))) [ci 19 ((s + 1 : Nat) : Int) 32 0] :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
-      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (7 + ci'.length + cb.length))) 0 0] ++ ci')
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (8 + travCountSize n + 2 * ci'.length + cb.length))) [ci 19 ((s + 1 : Nat) : Int) 32 0] :=
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
+      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (6 + travCountSize n + ci'.length + cb.length))) 0 0] ++ ci')
     (by simpa [travCode, List.append_assoc] using hc)
-    (by simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega)
+    (by simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega)
 
 theorem trav_jmp2 (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (10 + 2 * ci'.length + cb.length))) [ci 18 64 0 0] :=
-  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
-      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (7 + ci'.length + cb.length))) 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) 32 0])
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (9 + travCountSize n + 2 * ci'.length + cb.length))) [ci 18 64 0 0] :=
+  codeAt_at (xs := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
+      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (6 + travCountSize n + ci'.length + cb.length))) 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) 32 0])
     (by simpa [travCode, List.append_assoc] using hc)
-    (by simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega)
+    (by simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega)
 
 theorem trav_stop (hc : CodeAt m pc (travCode s n ci' cb)) :
-    CodeAt m (pc + BitVec.ofNat 64 (16 * (11 + 2 * ci'.length + cb.length))) (stopC 104 (s + 1)) := by
-  have := codeAt_right (a := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0,
-      ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
-      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (7 + ci'.length + cb.length))) 0 0] ++ ci' ++
+    CodeAt m (pc + BitVec.ofNat 64 (16 * (10 + travCountSize n + 2 * ci'.length + cb.length))) (stopC 104 (s + 1)) := by
+  have := codeAt_right (a := [ci 1 s 0 0] ++ ci' ++ [ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0,
+      ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
+      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ cb ++ [ci 1 (s + 1) 1 0, ci 3 s s (s + 1)] ++ [ci 18 (-(16 * (6 + travCountSize n + ci'.length + cb.length))) 0 0] ++ ci' ++
     [ci 19 ((s + 1 : Nat) : Int) 32 0, ci 18 64 0 0]) (b := stopC 104 (s + 1)) (by simpa [travCode, List.append_assoc] using hc)
   have e : ∀ p q : Runner.W, p = q → CodeAt m p (stopC 104 (s + 1)) → CodeAt m q (stopC 104 (s + 1)) := by
     intro p q h hc; subst h; exact hc
   refine e _ _ ?_ this
-  simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]; congr 2; omega
+  simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]; congr 2; omega
 
 end
 
@@ -180,9 +212,9 @@ theorem mkPreS {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {Γ
     (he : EnvAt L m fp ρ reserved) : PreS L m pc fp K d c ρ reserved :=
   ⟨hctx, hK, hF, hc, hf, he, trivial, wstab_true _ _⟩
 
-theorem slt_k {k : Nat} {n : Int} (hk : k < 2 ^ 31) (hn : lit32 n = true) :
+theorem slt_k {k : Nat} {n : Int} (hk : k < 2 ^ 63) (hn : inW n n = true) :
     (BitVec.ofNat 64 k).slt (BitVec.ofInt 64 n) = decide ((k : Int) < n) := by
-  simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at hn
+  simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at hn
   rw [← BitVec.ofInt_natCast]
   exact slt_in (by omega) (by omega)
 
@@ -208,31 +240,29 @@ theorem trav_head {L : Lay D} {fp pc : Runner.W} {K Ks : Nat} {Γ : Ctx} {Λ : L
 
 /-- `k < count` into slot `s + 1`. -/
 theorem trav_cmp_ok {L : Lay D} {fp pc : Runner.W} {K Ks k : Nat} {Γ : Ctx} {ci' cb : List II} {n : Int}
-    {m : Runner.Mem} {σ : World D} {ρ : Env D Γ} (hn : lit32 n = true)
+    {m : Runner.Mem} {σ : World D} {ρ : Env D Γ} (hn : inW n n = true)
     (hp : PreS L m pc fp K (frei Γ reserved) (travCode (frei Γ reserved) n ci' cb) ρ reserved) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
     (hks : frei Γ reserved + 9 ≤ Ks) (hk0 : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 k))
-    (hk : k < 2 ^ 31) :
-    ∃ m2, Star ⟨pc + BitVec.ofNat 64 (16 * (2 + ci'.length)), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (5 + ci'.length)), fp⟩ m2 ∧
+    (hk : k < 2 ^ 63) :
+    ∃ m2, Star ⟨pc + BitVec.ofNat 64 (16 * (2 + ci'.length)), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (4 + travCountSize n + ci'.length)), fp⟩ m2 ∧
       Agree fp (frei Γ reserved + 1) Ks m m2 ∧
       m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 1))) = some (Runner.IR.bool (decide ((k : Int) < n))) ∧
       WeltAt m2 L σ := by
   have hlen := travCode_len (s := frei Γ reserved) (n := n) (ci' := ci') (cb := cb)
   have hksK := hW.ks
   have hq : PreS L m (pc + BitVec.ofNat 64 (16 * (2 + ci'.length))) fp K (frei Γ reserved + 1)
-      ([ci 2 ((frei Γ reserved + 1 : Nat) : Int) (frei Γ reserved) 0] ++ [ci 1 (((frei Γ reserved + 1 : Nat) : Int) + 1) n 0,
-        ci 13 ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 1 : Nat) : Int) (((frei Γ reserved + 1 : Nat) : Int) + 1)]) ρ reserved :=
+      ([ci 2 ((frei Γ reserved + 1 : Nat) : Int) (frei Γ reserved) 0] ++ (travCountC (frei Γ reserved + 2) n ++ [ci 13 ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 2 : Nat) : Int)])) ρ reserved :=
     mkPreS (by omega) hp.small hp.frame (trav_cmp hp.code) (codeFar_at hp.far (by simp; omega)) hp.env
   have hpw := PreS.welt hq hksK hWa hW.lay (by have := hW.lo; omega)
   have := hpw.small
   obtain ⟨m2, s2, a2, w, hw, hwe⟩ := ok_seq hpw (mov_ok hpw.left (by omega) (by omega) hk0)
     (Pb := (· = Runner.IR.bool ((BitVec.ofNat 64 k).slt (BitVec.ofInt 64 n))))
-    (fun m' w' hp' hr he => (binK_ok (r := Runner.IR.bool (w'.slt (BitVec.ofInt 64 n))) hp' hr hn rfl (by decide)
-      rfl (by omega)).mono fun x hx => by rw [hx, he]) (by omega)
+    (fun m' w' hp' hr he => (trav_compare_ok n hp' (by omega) hr).mono
+      fun x hx => by rw [hx, he]) (by omega)
   refine ⟨m2, ?_, a2, by rw [hw, hwe, slt_k hk hn], hpw.wstab m m2 hWa (a2.mono (Nat.zero_le _))⟩
-  have e : pc + BitVec.ofNat 64 (16 * (2 + ci'.length)) + BitVec.ofNat 64 (16 * ([ci 2 ((frei Γ reserved + 1 : Nat) : Int) (frei Γ reserved) 0] ++ [ci 1 (((frei Γ reserved + 1 : Nat) : Int) + 1) n 0,
-        ci 13 ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 1 : Nat) : Int) (((frei Γ reserved + 1 : Nat) : Int) + 1)]).length) =
-      pc + BitVec.ofNat 64 (16 * (5 + ci'.length)) := by
-    rw [addr_norm]; simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]
+  have e : pc + BitVec.ofNat 64 (16 * (2 + ci'.length)) + BitVec.ofNat 64 (16 * ([ci 2 ((frei Γ reserved + 1 : Nat) : Int) (frei Γ reserved) 0] ++ (travCountC (frei Γ reserved + 2) n ++ [ci 13 ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 2 : Nat) : Int)])).length) =
+      pc + BitVec.ofNat 64 (16 * (4 + travCountSize n + ci'.length)) := by
+    rw [addr_norm]; simp only [travCountC_length, List.length_append, List.length_cons, List.length_nil]
     congr 2; omega
   rw [← e]; exact s2
 

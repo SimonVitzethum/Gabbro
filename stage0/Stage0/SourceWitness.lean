@@ -26,7 +26,7 @@ theorem InitialState.simulates [Runner.IR.Kern] [Senke.CloneOK]
     state.bytes state.loaded state.gates state.view
 
 /-- Character-pinned source avoids reducing the UTF decoder through a whole compiler witness. -/
-def characters : List Char := ['t', 'y', 'p', 'e', ' ', 'A', ' ', '=', ' ', 'u', '8', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', ' ', '=', ' ', 'A', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'C', ' ', ':', ' ', 'B', ' ', '=', ' ', '4', '0', ' ', '+', ' ', '2', ';', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'B', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'C', ';', ' ', '}']
+def characters : List Char := ['t', 'y', 'p', 'e', ' ', 'A', ' ', '=', ' ', 'i', '8', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', ' ', '=', ' ', 'A', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'f', 'n', ' ', 'n', 'e', 'g', 'a', 't', 'i', 'v', 'e', '(', ')', ' ', '-', '>', ' ', 'B', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '0', ' ', '-', ' ', '1', ';', ' ', '}', ' ', 'c', 'o', 'n', 's', 't', ' ', 'N', 'E', 'G', 'A', 'T', 'I', 'V', 'E', ' ', ':', ' ', 'B', ' ', '=', ' ', 'n', 'e', 'g', 'a', 't', 'i', 'v', 'e', '(', ')', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'C', ' ', ':', ' ', 'B', ' ', '=', ' ', 'N', 'E', 'G', 'A', 'T', 'I', 'V', 'E', ' ', '+', ' ', '4', '3', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', 'o', 'u', 'n', 'd', ' ', '=', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', 'C', ';', ' ', 't', 'y', 'p', 'e', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '=', ' ', 'B', 'o', 'u', 'n', 'd', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'A', 'N', 'S', 'W', 'E', 'R', ' ', ':', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '=', ' ', 'C', ';', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'E', 'm', 'p', 't', 'y', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', '2', '9', '4', '9', '6', '7', '2', '9', '6', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', '}', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'A', 'N', 'S', 'W', 'E', 'R', ';', ' ', '}']
 def text : String := String.ofList characters
 
 def candidate : Except String (Emitted text 64) := emit text 64
@@ -36,15 +36,15 @@ theorem candidate_present : candidate.toOption.isSome = true := by decide +kerne
 def output : Emitted text 64 := candidate.toOption.get candidate_present
 
 
-theorem empty_carriers :
-    output.compiled.unit.tabs.length = 0 ∧ output.compiled.unit.globs.length = 0 ∧
+theorem carrier_shape :
+    output.compiled.unit.tabs.length = 1 ∧ output.compiled.unit.globs.length = 0 ∧
     output.compiled.unit.axs.length = 0 ∧ output.compiled.unit.regs.length = 0 := by
   decide +kernel
 
 theorem params_empty : (declOf output.compiled.unit).params output.compiled.main = [] := by
   decide +kernel
 
-theorem result_type : (declOf output.compiled.unit).erg output.compiled.main = some (.int 0 255) := by
+theorem result_type : (declOf output.compiled.unit).erg output.compiled.main = some (.int 0 42) := by
   decide +kernel
 
 abbrev D := declOf output.compiled.unit
@@ -60,15 +60,20 @@ private def emptyOracle (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length 
   regSchreib r := (noIndex hr r).elim
   sichtbar _ _ := true
 
-def oracle : Orakel D := emptyOracle output.compiled.unit empty_carriers.2.2.1 empty_carriers.2.2.2
+def oracle : Orakel D := emptyOracle output.compiled.unit carrier_shape.2.2.1 carrier_shape.2.2.2
 
-private def emptyWorld (u : UProg) (ht : u.tabs.length = 0) (hg : u.globs.length = 0) :
-    World (declOf u) where
-  slots t := (noIndex ht t).elim
+theorem fieldless : ∀ t : Fin output.compiled.unit.tabs.length,
+    fieldCount output.compiled.unit t = 0 := by decide +kernel
+
+theorem table_count : output.compiled.unit.tabs.map (·.count) = [2 ^ 32] := by decide +kernel
+
+private def fieldlessWorld (u : UProg) (ht : ∀ t : Fin u.tabs.length, fieldCount u t = 0)
+    (hg : u.globs.length = 0) : World (declOf u) where
+  slots t _ f := (noIndex (ht t) f).elim
   globs g := (noIndex hg g).elim
   spur := []
 
-def world : World D := emptyWorld output.compiled.unit empty_carriers.1 empty_carriers.2.1
+def world : World D := fieldlessWorld output.compiled.unit fieldless carrier_shape.2.1
 
 private def emptyArguments (D : Deklaration) (ctx : Ctx) (h : ctx = []) : Env D ctx :=
   Eq.mpr (congrArg (fun ctx => Env D ctx) h) (Env.nil : Env D [])
@@ -86,11 +91,11 @@ private theorem emptyGates [Runner.IR.Kern] (u : UProg) (ha : u.axs.length = 0)
   ⟨(fun a => (noIndex ha a).elim), (fun a => (noIndex ha a).elim)⟩
 
 local instance gates : Senke.TorOK output.image.Y oracle :=
-  emptyGates output.compiled.unit empty_carriers.2.2.1 empty_carriers.2.2.2 output.image.Y
+  emptyGates output.compiled.unit carrier_shape.2.2.1 carrier_shape.2.2.2 output.image.Y
 private theorem emptyView (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length = 0) :
     Senke.SichtOK (emptyOracle u ha hr) := ⟨fun _ _ => rfl⟩
 
-local instance view : Senke.SichtOK oracle := emptyView _ empty_carriers.2.2.1 empty_carriers.2.2.2
+local instance view : Senke.SichtOK oracle := emptyView _ carrier_shape.2.2.1 carrier_shape.2.2.2
 
 private def loadedMemory (bytes : List Runner.B) : Runner.Mem where
   b a := (bytes[a.toNat - Runner.Prog.IMG]?).getD 0
@@ -104,9 +109,14 @@ theorem accepted_image : emit text 64 = .ok output :=
 
 
 theorem source_scopes :
-    output.compiled.source.scopes.values = [("C", 42)] ∧
-    output.compiled.source.scopes.declared = [("A", (0, 255)), ("B", (0, 255))] ∧
+    output.compiled.source.scopes.values = [("NEGATIVE", -1), ("C", 42), ("ANSWER", 42)] ∧
+    output.compiled.source.scopes.declared = [("A", (-128, 127)), ("B", (-128, 127)), ("Bound", (0, 42)), ("Final", (0, 42))] ∧
     output.compiled.unit.fns.length = 1 ∧ 0 < output.image.code.length := by
+  decide +kernel
+
+/-- This accepted image actually uses the new final-original-values alias path. -/
+theorem aliases_final :
+    output.compiled.source.scopes.aliasConstants = output.compiled.source.scopes.values := by
   decide +kernel
 
 theorem image_bound : Runner.Prog.IMG + output.image.bytes.length < 2 ^ 64 := by decide +kernel
@@ -122,15 +132,29 @@ private theorem loadedBytes (bytes : List Runner.B) (bound : Runner.Prog.IMG + b
 theorem bytes_loaded : Senke.BytesAt memory Runner.Prog.IMG output.image.bytes :=
   loadedBytes _ image_bound
 
-private theorem emptyWorldLoaded (u : UProg) (ht : u.tabs.length = 0) (hg : u.globs.length = 0)
+private theorem fieldlessWorldLoaded (u : UProg)
+    (ht : ∀ t : Fin u.tabs.length, fieldCount u t = 0) (hg : u.globs.length = 0)
     (L : Senke.Lay (declOf u)) (bytes : List Runner.B) :
-    Senke.WeltAt (loadedMemory bytes) L (emptyWorld u ht hg) :=
-  ⟨(fun t => (noIndex ht t).elim), (fun g => (noIndex hg g).elim), fun _ _ _ => rfl⟩
+    Senke.WeltAt (loadedMemory bytes) L (fieldlessWorld u ht hg) :=
+  ⟨(fun t f _ => (noIndex (ht t) f).elim), (fun g => (noIndex hg g).elim), fun _ _ _ => rfl⟩
 
 theorem world_loaded : Senke.WeltAt memory output.image.Y world :=
-  emptyWorldLoaded output.compiled.unit empty_carriers.1 empty_carriers.2.1 output.image.Y _
+  fieldlessWorldLoaded output.compiled.unit fieldless carrier_shape.2.1 output.image.Y _
 
 
+/-- Reuse the same concrete initial-state construction for another actual emitted pure image. -/
+def InitialState.ofFieldless [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options}
+    (image : Emitted src K options)
+    (fields : ∀ t : Fin image.compiled.unit.tabs.length, fieldCount image.compiled.unit t = 0)
+    (globals : image.compiled.unit.globs.length = 0) (foreign : image.compiled.unit.axs.length = 0)
+    (registers : image.compiled.unit.regs.length = 0)
+    (params : (declOf image.compiled.unit).params image.compiled.main = [])
+    (bound : Runner.Prog.IMG + image.image.bytes.length < 2 ^ 64) : InitialState image :=
+  ⟨emptyOracle image.compiled.unit foreign registers, loadedMemory image.image.bytes,
+    fieldlessWorld image.compiled.unit fields globals,
+    emptyArguments (declOf image.compiled.unit) _ params,
+    loadedBytes _ bound, fieldlessWorldLoaded _ fields globals _ _,
+    emptyGates _ foreign registers _, emptyView _ foreign registers⟩
 
 attribute [irreducible] output
 
@@ -142,12 +166,14 @@ attribute [irreducible] initial
 
 theorem source_image_joint_zeuge :
     emit text 64 = .ok output ∧
-    output.compiled.source.scopes.values = [("C", 42)] ∧
-    output.compiled.source.scopes.declared = [("A", (0, 255)), ("B", (0, 255))] ∧
+    output.compiled.source.scopes.values = [("NEGATIVE", -1), ("C", 42), ("ANSWER", 42)] ∧
+    output.compiled.source.scopes.declared = [("A", (-128, 127)), ("B", (-128, 127)), ("Bound", (0, 42)), ("Final", (0, 42))] ∧
     output.compiled.unit.fns.length = 1 ∧ 0 < output.image.code.length ∧
+    output.compiled.unit.tabs.map (·.count) = [2 ^ 32] ∧
+    output.compiled.source.scopes.aliasConstants = output.compiled.source.scopes.values ∧
     Nonempty (InitialState output) :=
   ⟨accepted_image, source_scopes.1, source_scopes.2.1, source_scopes.2.2.1,
-    source_scopes.2.2.2, ⟨initial⟩⟩
+    source_scopes.2.2.2, table_count, aliases_final, ⟨initial⟩⟩
 
 /-- Instantiation of the generic execution theorem at this concrete, inhabited entry state. -/
 theorem entry_ir_simulation_zeuge :

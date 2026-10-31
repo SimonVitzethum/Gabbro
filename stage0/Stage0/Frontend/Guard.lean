@@ -79,6 +79,30 @@ def safeConstantValues (items : List SItemTief) : List SKonstWert → Bool
   | value :: rest => safeConstantValue items value && safeConstantValues items rest
 end
 
+/-- A scalar expression at any depth of the canonical nested constant payload. -/
+inductive ConstantLeaf (expr : SExpr) : SKonstWert → Prop
+  | one : ConstantLeaf expr (.one expr)
+  | row {value values} : value ∈ values → ConstantLeaf expr value → ConstantLeaf expr (.rows values)
+
+theorem safeConstantValues_member (items : List SItemTief) (values : List SKonstWert)
+    (h : safeConstantValues items values = true) (value : SKonstWert) (hm : value ∈ values) :
+    safeConstantValue items value = true := by
+  induction values with
+  | nil => simp at hm
+  | cons head rest ih =>
+    have hh : safeConstantValue items head = true ∧ safeConstantValues items rest = true :=
+      by simpa only [safeConstantValues, Bool.and_eq_true] using h
+    rcases List.mem_cons.mp hm with he | hr
+    · subst value; exact hh.1
+    · exact ih hh.2 hr
+
+theorem safeConstantValue_leaf (items : List SItemTief) {value : SKonstWert} {expr : SExpr}
+    (leaf : ConstantLeaf expr value) (h : safeConstantValue items value = true) :
+    (calls expr).all (safeConstantName items (items.length + 1) []) = true := by
+  induction leaf with
+  | one => exact h
+  | row hm _ ih => exact ih (safeConstantValues_member items _ h _ hm)
+
 /-- Guard the original declarations before any baseline constant evaluator is called. -/
 def compileTimeSafe (items : List SItemTief) : Bool :=
   items.all fun
@@ -90,5 +114,20 @@ theorem compileTimeSafe_constants {items : List SItemTief} (h : compileTimeSafe 
     {name : String} {ty : STyp} {value : SKonstWert} (hm : SItemTief.constT name ty value ∈ items) :
     safeConstantValue items value = true := by
   exact (List.all_eq_true.mp h) _ hm
+
+/-- Two nested rows and an actual declared pure const function satisfy the same leaf guard. -/
+theorem safeConstantValue_leaf_zeuge :
+    let fn := SItemTief.fnT ⟨"const", "identity", [("x", .atom "u8")], some (.atom "u8"), none, []⟩
+      (.block [] (some (.ret (some (.variable "x")))))
+    let expr := SExpr.call "identity" [.lit 42]
+    let payload := SKonstWert.rows [.rows [.one expr]]
+    ConstantLeaf expr payload ∧ safeConstantValue [fn] payload = true ∧ SafeHull [fn] [] "identity" := by
+  dsimp only
+  have leaf : ConstantLeaf (.call "identity" [.lit 42]) (.rows [.rows [.one (.call "identity" [.lit 42])]]) :=
+    .row (value := .rows [.one (.call "identity" [.lit 42])]) (by simp)
+      (.row (value := .one (.call "identity" [.lit 42])) (by simp) .one)
+  refine ⟨leaf, by decide, ?_⟩
+  apply safeConstantName_sound _ 2 [] "identity"
+  decide
 
 end Gabbro.Stage0.Frontend
