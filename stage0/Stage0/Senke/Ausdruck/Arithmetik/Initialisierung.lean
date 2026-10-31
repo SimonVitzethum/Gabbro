@@ -2822,6 +2822,9 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
             1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56 ∧ jam.toNat < 2^56 ∧
             -2^57 < (if sx == sy then q+jam else q-jam).toInt ∧
             (if sx == sy then q+jam else q-jam).toInt < 2^57 ∧
+            ((sx = sy ∨ ex = ey) →
+              (if sx == sy then q+jam else q-jam) ≠ 0 →
+              0 < (if sx == sy then q+jam else q-jam).toInt) ∧
             ∃ source : Runner.W,
               out.rd64 (slot fp (BitVec.ofNat 64 (dst+8))) = some source ∧
               let den : Int := (2^(ex-ey).toNat : Nat)
@@ -3146,8 +3149,40 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
       split
       · rw [BitVec.toInt_add, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
       · rw [BitVec.toInt_sub, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
+    -- Positivity is derived from the executed words, including cancellation at
+    -- equal exponents. Unequal-exponent subtraction still needs normal bounds.
+    have positiveResult : (vs (dst+3) = vs (dst+4) ∨ vs (dst+5) = vs (dst+6)) →
+        (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)) ≠ 0 →
+        0 < (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)).toInt := by
+      intro cases nonzero
+      have nz : (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)).toInt ≠ 0 := by
+        simpa [← BitVec.toInt_inj] using nonzero
+      rw [exactResult] at nz ⊢
+      rcases cases with same | equal
+      · simp only [same, beq_self_eq_true, ↓reduceIte] at nz ⊢
+        omega
+      · have eqx : vs (dst+5) = ex := Option.some.inj
+          ((vreads _ (by omega)).symm.trans ((keep _ (by omega)).trans rx))
+        have eqy : vs (dst+6) = ey := Option.some.inj
+          ((vreads _ (by omega)).symm.trans ((keep _ (by omega)).trans ry))
+        have eqq : vs (dst+7) = q := Option.some.inj
+          ((vreads _ (by omega)).symm.trans ((keep _ (by omega)).trans rq))
+        have ee : ex = ey := eqx.symm.trans (equal.trans eqy)
+        have jr : vs (dst+16) = r := by
+          rw [jeq, ee]
+          simp [floatShiftJamWord, Runner.IR.bool]
+        have order := dominance.2 ee.symm
+        have ir : r.toInt = (r.toNat : Int) :=
+          BitVec.toInt_eq_toNat_of_lt (by rw [← req]; omega)
+        rw [← eqq, iq, ir] at order
+        rw [jr] at nz ⊢
+        by_cases hs : vs (dst+3) = vs (dst+4) <;>
+          simp [hs] at nz ⊢ <;> omega
     refine ⟨vs (dst+5),vs (dst+6),?_,?_,bx.1,bx.2,byy.1,byy.2,bq,bj,
-      resultBounds.1,resultBounds.2, r, (keep _ (by omega)).trans rr, ?_⟩
+      resultBounds.1,resultBounds.2,positiveResult, r, (keep _ (by omega)).trans rr, ?_⟩
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
         (vreads _ (by omega))
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
@@ -3285,6 +3320,9 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
             1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56 ∧ jam.toNat < 2^56 ∧
             -2^57 < (if sx == sy then q+jam else q-jam).toInt ∧
             (if sx == sy then q+jam else q-jam).toInt < 2^57 ∧
+            ((sx = sy ∨ ex = ey) →
+              (if sx == sy then q+jam else q-jam) ≠ 0 →
+              0 < (if sx == sy then q+jam else q-jam).toInt) ∧
             ∃ source : Runner.W,
               out.rd64 (slot fp (BitVec.ofNat 64 (16+8))) = some source ∧
               let den : Int := (2^(ex-ey).toNat : Nat)
