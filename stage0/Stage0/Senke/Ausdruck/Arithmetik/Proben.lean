@@ -233,6 +233,53 @@ theorem scaleIndexImages_zeuge : scaleIndexImages.length = 20 ∧
 
 #print axioms scaleIndexImages_zeuge
 
+/-- Ordering and subtraction execute in both directions, including zero versus
+    subnormal, equal exponents, and the largest finite gap of each format. -/
+def scaleDistanceImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("f32", f32), ("f64", f64)].flatMap fun (name, F) =>
+    [("zero-subnormal", 0, 0, 0, 1), ("normal-subnormal", 1, 0, 0, 1),
+     ("adjacent", 2, 0, 1, 0), ("max-gap", F.bexpMax-1, 0, 0, 1)].flatMap
+      fun (tag, ae, af, be, bf) => [false, true].flatMap fun reverse =>
+        let a : GBits F := ⟨true, ae, af⟩
+        let b : GBits F := ⟨false, be, bf⟩
+        let (a,b) := if reverse then (b,a) else (a,b)
+        let lit := fun v d => some (konstWL 4 (zuBits F v) d)
+        [("distance", floatScaleDistanceL F 8 (lit a) (lit b),
+            max a.bexp 1 - max b.bexp 1 + (max b.bexp 1 - max a.bexp 1)),
+         ("order", floatScaleOrderL F 8 (lit a) (lit b),
+            if max a.bexp 1 < max b.bexp 1 then 1 else 0)].map
+          fun (field, code, expected) =>
+            ("scale-" ++ field ++ "-" ++ name ++ "-" ++ tag ++ "-" ++ toString reverse,
+              FloatArithmeticProbe.wordImage code expected, 7)
+
+theorem scaleDistanceImages_zeuge : scaleDistanceImages.length = 32 ∧
+    scaleDistanceImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms scaleDistanceImages_zeuge
+
+/-- Both source operations execute every effective sign pair, including signed
+    zeros and the subnormal/normal boundary, through the same packed decoder. -/
+def sameSignImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("f32", f32), ("f64", f64)].flatMap fun (name, F) =>
+    [false, true].flatMap fun subtract =>
+      [false, true].flatMap fun sa => [false, true].flatMap fun sb =>
+        [("zero", 0, 0), ("subnormal", 0, 1), ("normal", 1, 0)].map
+          fun (tag, exp, frac) =>
+            let a : GBits F := ⟨sa, exp, frac⟩
+            let b : GBits F := ⟨sb, exp, frac⟩
+            let lit := fun v d => some (konstWL 4 (zuBits F v) d)
+            ("effective-sign-" ++ name ++ "-" ++ tag ++ "-" ++ toString subtract ++
+                "-" ++ toString sa ++ "-" ++ toString sb,
+              FloatArithmeticProbe.wordImage (floatSameSignL F subtract 8 (lit a) (lit b))
+                (if sa == (if subtract then !sb else sb) then 1 else 0), 7)
+
+theorem sameSignImages_zeuge : sameSignImages.length = 48 ∧
+    sameSignImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms sameSignImages_zeuge
+
 /-- Production coefficient decoding at the normal/subnormal and sign edges. -/
 def coefficientImages : List (String × Except String (List Runner.B) × Nat) :=
   [("coefficient-positive-zero", 0, 0),
