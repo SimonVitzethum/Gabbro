@@ -650,6 +650,110 @@ theorem floatNormalizeLoopL_small_dispatch
 
 #print axioms floatNormalizeLoopL_small_dispatch
 
+set_option maxHeartbeats 800000 in
+/-- The large continuation changes the actual quotient word. Every other
+    frame read is retained, as are code, environment and the external world.
+    The old head is deliberately not asserted after this state mutation. -/
+theorem floatNormalizeLoopL_large_double
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K)
+    (loaded : m.rd64 (slot fp (BitVec.ofNat 64 (base+6))) = some 2)
+    (active : q < target) :
+    ∃ m', Star ⟨pc+112, fp⟩ m ⟨pc+128, fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      Pre L m' pc fp K base code ρ W reserved ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 base)) = some (BitVec.ofInt 64 (2*q)) ∧
+      (∀ i, i < K → i ≠ base →
+        m'.rd64 (slot fp (BitVec.ofNat 64 i)) =
+          m.rd64 (slot fp (BitVec.ofNat 64 i))) ∧
+      0 ≤ 2*q ∧ 2*q < 2^61 := by
+  have h := head.pre
+  have shape : 7 < code.length ∧ code[7]? = some (ci 5 base base (base+6)) := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    norm_num [bin2]
+  have entry : code[7] = ci 5 base base (base+6) := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2
+  have ins := h.code 7 shape.1
+  rw [entry] at ins
+  simp only [ci] at ins
+  let value := BitVec.ofInt 64 (2*q)
+  let next := write m (slot fp (BitVec.ofNat 64 base)) 8 value.toNat
+  have ag : Agree fp base K m next := agree_write h.frame.room (by omega) (by omega) value.toNat
+  have sx0 : sx (II.f (base : Int)) = BitVec.ofNat 64 base := sx_nat (by have := h.small; omega)
+  have sx6 : sx (II.f ((base : Int)+6)) = BitVec.ofNat 64 (base+6) := by
+    exact_mod_cast (sx_nat (d := base+6) (by have := h.small; omega))
+  have result : BitVec.ofInt 64 q * (2 : Runner.W) = value := by
+    change BitVec.ofInt 64 q * BitVec.ofInt 64 2 = BitVec.ofInt 64 (2*q)
+    rw [← BitVec.ofInt_mul, Int.mul_comm]
+  have run : Run (step ⟨pc+112, fp⟩) m ⟨pc+128, fp⟩ next := by
+    have wr : m.wr64 (slot fp (sx (II.f (base : Int)))) value = some next := by
+      rw [sx0]; exact wr64_some (h.frame.wr base (by omega))
+    have run := run_step (t := ⟨pc+112, fp⟩) ins (by decide)
+      (run_bin (g := fun a b => some (a*b)) ins
+        (by rw [sx0]; exact head.readQ) (by rw [sx6]; exact loaded)
+        (congrArg some result) wr)
+    simpa [nxt, BitVec.add_assoc] using run
+  have preNext : Pre L next pc fp K base code ρ W reserved :=
+    ⟨h.ctx, h.small, h.frame.agree ag, h.code.agree ag h.far, h.far,
+      envAt_agree h.env ag h.frame h.ctx (by omega),
+      h.wstab m next h.welt (ag.mono (by omega)), h.wstab⟩
+  refine ⟨next, Star.one run, ag, preNext, ?_, ?_,
+    floatNormalizeLoop_large_word_bounds q target head.quotient.1 active head.targetBound.2⟩
+  · change (write m (slot fp (BitVec.ofNat 64 base)) 8 value.toNat).rd64 _ = some value
+    simp only [Runner.Mem.rd64, write_rd, h.frame.rd base (by omega), ↓reduceIte,
+      le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+  · intro i hi ne
+    apply rd64_write_far
+    have a := slot_toNat (fp := fp) (i := i) h.frame.room hi
+    have b := slot_toNat (fp := fp) (i := base) h.frame.room (show base < K by omega)
+    unfold Far
+    simp only [a, b]
+    have hr := h.frame.room
+    omega
+
+#print axioms floatNormalizeLoopL_large_double
+
+/-- Continue the retained dispatcher through the first state-changing large
+    instruction. The quotient is doubled and the other five state words retain
+    their exact meanings; this boundary is inside the active iteration. -/
+theorem floatNormalizeLoopL_large_dispatch
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K) (large : 61 < distance) (active : q < target) :
+    ∃ m', Star ⟨pc+48, fp⟩ m ⟨pc+128, fp⟩ m' ∧
+      Agree fp base K m m' ∧ Pre L m' pc fp K base code ρ W reserved ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 base)) = some (BitVec.ofInt 64 (2*q)) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+1))) = some (BitVec.ofInt 64 r) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+2))) = some (BitVec.ofNat 64 distance) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofInt 64 target) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 fuel) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some (BitVec.ofNat 64 count) ∧
+      0 ≤ 2*q ∧ 2*q < 2^61 := by
+  obtain ⟨m1, dispatch, ag1, head1⟩ := floatNormalizeLoopL_active_dispatch hc head room
+  have dispatch' : Star ⟨pc+48, fp⟩ m ⟨pc+96, fp⟩ m1 := by
+    simpa [large] using dispatch
+  obtain ⟨m2, entry, ag2, head2, loaded⟩ :=
+    floatNormalizeLoopL_transfer_entry hc head1 room true
+  obtain ⟨m3, double, ag3, pre3, readQ, kept, bounds⟩ :=
+    floatNormalizeLoopL_large_double hc head2 room (by simpa using loaded) active
+  have entry' : Star ⟨pc+96, fp⟩ m1 ⟨pc+112, fp⟩ m2 := by simpa using entry
+  refine ⟨m3, dispatch'.trans (entry'.trans double), ag1.trans (ag2.trans ag3),
+    pre3, readQ, ?_, ?_, ?_, ?_, ?_, bounds⟩
+  · rw [kept (base+1) (by omega) (by omega)]; exact head2.readR
+  · rw [kept (base+2) (by omega) (by omega)]; exact head2.readDistance
+  · rw [kept (base+3) (by omega) (by omega)]; exact head2.readTarget
+  · rw [kept (base+4) (by omega) (by omega)]; exact head2.readFuel
+  · rw [kept (base+5) (by omega) (by omega)]; exact head2.readCount
+
+#print axioms floatNormalizeLoopL_large_dispatch
+
 /-- Central induction, with the complete active iteration still explicit.
     The target exit is discharged by actual emitted execution above.
     The iteration premise is not an implementation of the missing proof.
