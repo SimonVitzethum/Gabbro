@@ -257,3 +257,8 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok_zeuge
 
 #print axioms Gabbro.Stage0.Senke.blockFloatOfComputed_case
+
+#print axioms Gabbro.Stage0.Senke.floatNegL_model
+#print axioms Gabbro.Stage0.Senke.floatFieldWord_canonical
+#print axioms Gabbro.Stage0.Senke.floatFieldL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatFieldL_joint_zeuge
