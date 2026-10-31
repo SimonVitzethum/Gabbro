@@ -42,6 +42,31 @@ def normalizationLoopImages : List (String × Except String (List Runner.B) × N
         ("normalize-loop-" ++ name ++ "-" ++ toString field,
           FloatArithmeticProbe.wordImage fragment expected, 7)
 
+/-- Actual packed operands execute all initialization writes and the loop.
+    Every state word is read back independently, including cancellation. -/
+def decodedInitializationImages : List (String × Except String (List Runner.B) × Nat) :=
+  let lit := fun n j => some (konstWL 4 n j)
+  [("unit", 0x800fffffffffffff, 0x0010000000000000, 0, 2^53, 53),
+   ("negative-unit", 0x000fffffffffffff, 0x8010000000000000, 0, 2^53, 53),
+   ("cancel", 0xbff0000000000000, 0x3ff0000000000000, 0, 0, 53),
+   ("shift", 1, 3, 2, 13*2^50, 50)].flatMap
+    fun (name, a, b, k, q, count) =>
+      [(0,q), (1,0), (2,0), (3,2^53), (4,53-count), (5,count)].map
+        fun (field, expected) =>
+          let fragment := do
+            let init ← floatStateSlotsL 16
+              (floatExactAddInitProducers (lit a) (lit b) (lit k))
+            let loop ← floatNormalizeLoopL 16
+            pure (init.1 ++ loop.1 ++ [ci 2 8 (16+field) 0], max init.2 loop.2)
+          ("decoded-init-" ++ name ++ "-" ++ toString field,
+            FloatArithmeticProbe.wordImage fragment expected, 7)
+
+theorem decodedInitializationImages_zeuge : decodedInitializationImages.length = 24 ∧
+    decodedInitializationImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms decodedInitializationImages_zeuge
+
 /-- All boundary fixtures use the production loop and encode successfully;
     actual execution is measured separately by the runner regression. -/
 theorem normalizationLoopImages_zeuge : normalizationLoopImages.length = 105 ∧
@@ -625,5 +650,43 @@ theorem floatNormalizeLoopL_finite_magnitude_zeuge [Kern]
   · exact positive.2
 
 #print axioms floatNormalizeLoopL_finite_magnitude_zeuge
+
+/-- Joint decoded-input witness: opposite signs cancel to one subnormal unit,
+    then the production loop performs all 53 transfers from executed writes. -/
+def decodedInitWitness : List II × Nat :=
+  let lit := fun n j => some (konstWL 4 n j)
+  (floatStateSlotsL 16 (floatExactAddInitProducers
+    (lit 0x800fffffffffffff) (lit 0x0010000000000000) (lit 0))).getD ([],0)
+
+set_option maxHeartbeats 4000000 in
+set_option maxRecDepth 8192 in
+theorem floatExactAddNormalize_ok_zeuge [Kern] {D : Deklaration} (L : Lay D)
+    {m : Runner.Mem} {pc fp : Runner.W}
+    (pre : Pre L m pc fp 64 16 (decodedInitWitness.1 ++ normalizationWitnessCode)
+      (Env.nil : Env D []) (fun _ => True)) :
+    ∃ m' q, Star ⟨pc,fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16*(decodedInitWitness.1 ++ normalizationWitnessCode).length),fp⟩ m' ∧
+      (2^53 : Int) ≤ q := by
+  let lit := fun n j => some (konstWL 4 n j)
+  have hc : floatStateSlotsL 16 (floatExactAddInitProducers
+      (lit 0x800fffffffffffff) (lit 0x0010000000000000) (lit 0)) =
+      some decodedInitWitness := by decide +kernel
+  have hl : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
+      ((floatNormalizeLoopL 16).getD ([],0)).2) := by decide +kernel
+  obtain ⟨m', f, c, d, q, r, run, _, _, result, _⟩ :=
+    floatExactAddNormalize_ok (L := L)
+      (lo := lit 0x800fffffffffffff) (hi := lit 0x0010000000000000) (distance := lit 0)
+      (ρ := (Env.nil : Env D [])) (W := fun _ => True)
+      (⟨true,0,2^52-1⟩ : GFloat) (⟨false,1,0⟩ : GFloat) 0
+      (by decide) (by decide) (by decide) (by decide +kernel)
+      (WordCode.konst 0x800fffffffffffff (by decide))
+      (WordCode.konst 0x0010000000000000 (by decide))
+      (WordCode.konst 0 (by decide)) hc (by decide +kernel) (by decide)
+      hl (by decide +kernel) pre
+  refine ⟨m', q, run, ?_⟩
+  norm_num [floatCoefficient, floatSumMagnitude] at result
+  exact result
+
+#print axioms floatExactAddNormalize_ok_zeuge
 
 end Gabbro.Stage0.Senke.AddSubProbe

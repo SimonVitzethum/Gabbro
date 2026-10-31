@@ -180,6 +180,89 @@ theorem floatExactAddInit_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     by simpa [values] using reads 4 (by simp [floatExactAddInitProducers]),
     by simpa [values] using reads 5 (by simp [floatExactAddInitProducers])⟩
 
+/-- Executed operand initialization establishes the actual loop head, including
+    its fetch/frame precondition and the format's sufficient 53-transfer budget.
+    The signed 61-bit bound identifies this exact-alignment branch explicitly. -/
+theorem floatExactAddInit_head {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {lo hi distance : Nat → Option (List II × Nat)}
+    (a b : GFloat) (k : Nat)
+    (ha : Gleitkomma.wf Gleitkomma.f64 a) (hb : Gleitkomma.wf Gleitkomma.f64 b)
+    (hk : k < 64)
+    (hr : -2^61 < floatCoefficient a + floatCoefficient b * (2^k : Nat) ∧
+      floatCoefficient a + floatCoefficient b * (2^k : Nat) < 2^61)
+    (hlo : WordCode (L := L) ρ W lo (BitVec.ofNat 64 (Gleitkomma.zuBits _ a)))
+    (hhi : WordCode (L := L) ρ W hi (BitVec.ofNat 64 (Gleitkomma.zuBits _ b)))
+    (hd : WordCode (L := L) ρ W distance (BitVec.ofNat 64 k))
+    {base top K : Nat} {code loop : List II} {m : Runner.Mem} {pc fp : Runner.W}
+    (compiled : floatStateSlotsL base (floatExactAddInitProducers lo hi distance) =
+      some (code,top)) (room : top ≤ K) (slots : base+6 ≤ K)
+    (pre : Pre L m pc fp K base (code ++ loop) ρ W) :
+    ∃ m', Star ⟨pc,fp⟩ m ⟨pc + BitVec.ofNat 64 (16*code.length),fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W (pc + BitVec.ofNat 64 (16*code.length)) fp
+        K base 0 loop
+        (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)
+        0 53 (2^53) m' 53 0 0
+        (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0) 0 := by
+  obtain ⟨m', run, agree, rq, rr, rd, rt, rf, rc⟩ :=
+    floatExactAddInit_ok a b k ha hb hk (by constructor <;> omega)
+      hlo hhi hd compiled room slots pre.left
+  have next := pre.next agree (Nat.le_refl base) (by omega)
+  have magnitude : 0 ≤ floatSumMagnitude
+      (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 ∧
+      floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 < 2^61 := by
+    unfold floatSumMagnitude
+    split <;> omega
+  refine ⟨m', run, agree, ?_⟩
+  simpa only [pow_zero, Int.ediv_one, Int.emod_one] using FloatNormalizeHead.of_numerator (target := (2^53 : Int))
+    (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)
+    0 53 magnitude (by decide) (by decide) (by norm_num) next (by omega)
+    (by simpa using rq) (by simpa using rr) rd (by norm_num at rt ⊢; exact rt) rf rc
+
+/-- The actual decoded-operand prefix and the entire emitted normalization
+    loop compose. Zero/cancellation is included; 53 transfers suffice on this
+    zero-distance branch. No loop-head memory is assumed by the caller. -/
+theorem floatExactAddNormalize_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {lo hi distance : Nat → Option (List II × Nat)}
+    (a b : GFloat) (k : Nat)
+    (ha : Gleitkomma.wf Gleitkomma.f64 a) (hb : Gleitkomma.wf Gleitkomma.f64 b)
+    (hk : k < 64)
+    (hr : -2^61 < floatCoefficient a + floatCoefficient b * (2^k : Nat) ∧
+      floatCoefficient a + floatCoefficient b * (2^k : Nat) < 2^61)
+    (hlo : WordCode (L := L) ρ W lo (BitVec.ofNat 64 (Gleitkomma.zuBits _ a)))
+    (hhi : WordCode (L := L) ρ W hi (BitVec.ofNat 64 (Gleitkomma.zuBits _ b)))
+    (hd : WordCode (L := L) ρ W distance (BitVec.ofNat 64 k))
+    {base top K : Nat} {code loop : List II} {loopTop : Nat} {m : Runner.Mem} {pc fp : Runner.W}
+    (compiled : floatStateSlotsL base (floatExactAddInitProducers lo hi distance) =
+      some (code,top)) (room : top ≤ K) (slots : base+6 ≤ K)
+    (loopCompiled : floatNormalizeLoopL base = some (loop,loopTop))
+    (loopRoom : loopTop ≤ K)
+    (pre : Pre L m pc fp K base (code ++ loop) ρ W) :
+    ∃ m' fuel count distance' q r,
+      Star ⟨pc,fp⟩ m ⟨pc + BitVec.ofNat 64 (16*(code ++ loop).length),fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W (pc + BitVec.ofNat 64 (16*code.length)) fp
+        K base 0 loop
+        (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)
+        0 53 (2^53) m' fuel count distance' q r ∧
+      ((floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 = 0 ∧
+        q = 0 ∧ r = 0) ∨
+       (0 < floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 ∧
+        (2^53 : Int) ≤ q)) ∧ count ≤ 53 := by
+  obtain ⟨m1, initRun, initAgree, head⟩ := floatExactAddInit_head a b k ha hb hk hr
+    hlo hhi hd compiled room slots pre
+  have nonnegative := head.quotient.1
+  obtain ⟨m2, f, c, d, q, r, run, agree, finalHead, result, bound, _, _⟩ :=
+    floatNormalizeLoopL_finite_magnitude loopCompiled loopRoom head nonnegative
+      53 (by rfl) (by omega)
+  refine ⟨m2, f, c, d, q, r, ?_, initAgree.trans agree, finalHead, result, bound⟩
+  rw [List.length_append, ← pc_add]
+  exact initRun.trans run
+
+#print axioms floatExactAddNormalize_ok
+
+#print axioms floatExactAddInit_head
+
 #print axioms floatExactAddInit_ok
 #print axioms floatStateSlotsL_ok_zeuge
 #print axioms floatStateSlotsL_ok
