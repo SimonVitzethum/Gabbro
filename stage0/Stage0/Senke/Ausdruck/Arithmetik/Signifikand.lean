@@ -73,24 +73,60 @@ theorem floatCoefficientWord_canonical (a : GFloat)
       BitVec.ofInt_natCast] <;>
       change (-1 : Runner.W) * _ = -_ <;> rw [BitVec.neg_mul] <;> exact congrArg Neg.neg (BitVec.one_mul _)
 
-/-- Link to the exact finite operand semantics, including zero and subnormal
-    coefficients. Zero's canonical exponent is intentionally left untouched. -/
-theorem floatCoefficient_exact (a : GFloat) (h : a.bexp ≠ 2047) :
-    ∃ e, Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a, e⟩ := by
+/-- The source dyadic exponent is computed from the encoded operand. Signed
+    zero keeps the canonical exponent zero; subnormals use the minimum scale.
+    No correctness premise about an internal exponent is needed. -/
+theorem floatCoefficient_exact_scale (a : GFloat) (h : a.bexp ≠ 2047) :
+    Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a,
+      if a.bexp = 0 then (if a.frac = 0 then 0 else -1074)
+      else (a.bexp : Int) - 1023 - 52⟩ := by
   by_cases hz : a.bexp = 0
-  · by_cases hf : a.frac = 0
-    · refine ⟨0, ?_⟩
+  · by_cases hf : a.frac = 0 <;>
       simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
         Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
         floatCoefficient, hz, hf]
-    · refine ⟨-1074, ?_⟩
-      simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
-        Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
-        floatCoefficient, hz, hf]
-  · refine ⟨(a.bexp : Int) - 1023 - 52, ?_⟩
-    simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
+  · simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
       Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
       floatCoefficient, hz, h, Int.add_comm]
+
+/-- Bounds on the actual source scale follow from the encoded finite input,
+    including zero. They are not assumptions on a normalization temporary. -/
+theorem floatCoefficient_exact_bounds (a : GFloat)
+    (ha : Gleitkomma.wf Gleitkomma.f64 a) (h : a.bexp ≠ 2047) :
+    ∃ e, Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a, e⟩ ∧
+      -1074 ≤ e ∧ e ≤ 971 := by
+  refine ⟨_, floatCoefficient_exact_scale a h, ?_⟩
+  have hb := ha.1
+  change a.bexp ≤ 2047 at hb
+  split
+  · split <;> decide
+  · change (-1074 : Int) ≤ (a.bexp : Int) - 1023 - 52 ∧
+      (a.bexp : Int) - 1023 - 52 ≤ (971 : Int)
+    omega
+
+/-- Link to the exact finite operand semantics, including zero and subnormal
+    coefficients. -/
+theorem floatCoefficient_exact (a : GFloat) (h : a.bexp ≠ 2047) :
+    ∃ e, Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a, e⟩ :=
+  ⟨_, floatCoefficient_exact_scale a h⟩
+
+/-- Joint source-scale fixtures: signed zero, least subnormal, least normal,
+    and greatest finite exponent, with both signs. -/
+theorem floatCoefficient_exact_scale_zeuge :
+    ∀ a ∈ ([⟨true, 0, 0⟩, ⟨false, 0, 1⟩, ⟨false, 1, 0⟩,
+      ⟨true, 2046, 2^52-1⟩] : List GFloat),
+      Gleitkomma.wf Gleitkomma.f64 a ∧ a.bexp ≠ 2047 ∧
+      ∃ e, Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a, e⟩ ∧
+        -1074 ≤ e ∧ e ≤ 971 := by
+  intro a ha
+  have valid : Gleitkomma.wf Gleitkomma.f64 a ∧ a.bexp ≠ 2047 := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at ha
+    rcases ha with h | h | h | h <;> subst a <;> decide
+  exact ⟨valid.1, valid.2, floatCoefficient_exact_bounds a valid.1 valid.2⟩
+
+#print axioms floatCoefficient_exact_scale
+#print axioms floatCoefficient_exact_bounds
+#print axioms floatCoefficient_exact_scale_zeuge
 
 /-- Exact emitted instruction count and temporary ceiling. Rereading the
     pure input costs three producer executions; no unbounded loop is hidden. -/
