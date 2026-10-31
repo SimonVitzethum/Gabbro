@@ -65,6 +65,37 @@ theorem normalizationQuotientImages_zeuge : normalizationQuotientImages.length =
 
 #print axioms normalizationQuotientImages_zeuge
 
+/-- All output writes execute after the actual loop. Checking each field
+    after all five writes detects clobbering by later producer temporaries. -/
+def normalizationFieldsImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("tail", 0, 13, 4, 8, 68, 13, 0, 4),
+   ("sticky", 13, 3, 4, 8, 68, 13, 3, 0),
+   ("zero", 0, 0, 4, 8, 68, 0, 0, 68),
+   ("large", 0, 1, 1074, 2^53, 1127, 2^53, 0, 1127),
+   ("floor", 0, 13, 1074, 0, 1127, 0, 13, 0)].flatMap
+    fun (name, q, r, k, target, fuel, qo, ro, count) =>
+      [31,63].flatMap fun signBit => [false,true].flatMap fun negative =>
+        [(0, if negative then 2^signBit else 0), (1,1500-count),
+         (2,qo/8), (3,qo%8), (4,if ro = 0 then 0 else 1)].map fun (field,expected) =>
+          let fragment := do
+            let loop ← floatNormalizeLoopL 16
+            let fields ← floatStateSlotsL 24 (floatNormalizedFieldsL 16 14 15 signBit)
+            let init := (konstWL 4 q 16).1 ++ (konstWL 4 r 17).1 ++
+              (konstWL 4 k 18).1 ++ (konstWL 4 target 19).1 ++
+              (konstWL 4 fuel 20).1 ++ [ci 1 21 0 0, ci 1 14
+                (if negative then -1 else 1) 0, ci 1 15 1500 0]
+            pure (init ++ loop.1 ++ fields.1 ++ [ci 2 8 (24+field) 0],
+              max loop.2 fields.2)
+          ("normalize-fields-" ++ name ++ "-" ++ toString signBit ++ "-" ++
+            toString negative ++ "-" ++ toString field,
+            FloatArithmeticProbe.wordImage fragment expected,7)
+
+theorem normalizationFieldsImages_zeuge : normalizationFieldsImages.length = 100 ∧
+    normalizationFieldsImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms normalizationFieldsImages_zeuge
+
 /-- Actual packed operands execute all initialization writes and the loop.
     Every state word is read back independently, including cancellation. -/
 def decodedInitializationImages : List (String × Except String (List Runner.B) × Nat) :=
@@ -658,6 +689,81 @@ theorem floatFieldL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
       decide +kernel
 
 #print axioms floatNegL_joint_zeuge
+
+/-- A nonzero quotient and tail jointly witness actual field execution with
+    a negative retained sum and an arbitrary nonzero reservation. -/
+def fieldsWitnessCode : List II :=
+  ((floatStateSlotsL 24 (floatNormalizedFieldsL 16 22 23 63)).getD ([],0)).1
+
+def fieldsWitnessMemory : Runner.Mem where
+  b a := if a.toNat < 4294967296 then
+      ((fieldsWitnessCode.flatMap encII)[a.toNat]?).getD 0
+    else if a.toNat = 4294967296+8*16 then 13
+    else if a.toNat = 4294967296+8*17 then 3
+    else if a.toNat = 4294967296+8*18 then 4
+    else if a.toNat = 4294967296+8*19 then 8
+    else if a.toNat = 4294967296+8*20 then 68
+    else if 4294967296+8*22 ≤ a.toNat ∧ a.toNat < 4294967296+8*23 then 255
+    else if a.toNat = 4294967296+8*23 then 220
+    else if a.toNat = 4294967296+8*23+1 then 5 else 0
+  rd _ := true
+  wr _ := true
+
+set_option maxRecDepth 8192 in
+set_option maxHeartbeats 4000000 in
+theorem normalizationFields_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    ∃ m', Star ⟨0,4294967296⟩ fieldsWitnessMemory
+        ⟨BitVec.ofNat 64 (16*fieldsWitnessCode.length),4294967296⟩ m' ∧
+      Agree 4294967296 24 64 fieldsWitnessMemory m' ∧
+      ∀ i, (hi : i < 5) →
+        m'.rd64 (slot 4294967296 (BitVec.ofNat 64 (24+i))) =
+          some (([2^63,1500,1,5,1] : List Runner.W)[i]'(by simpa using hi)) := by
+  have pre : Pre L fieldsWitnessMemory 0 4294967296 64 16
+      fieldsWitnessCode (Env.nil : Env D []) (fun _ => True) 7 := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      ?_, ?_, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    · apply codeAt_bytes fieldsWitnessCode 0 (by decide +kernel)
+      intro i hi
+      refine ⟨rfl, rfl, ?_⟩
+      have bound : (fieldsWitnessCode.flatMap encII).length < 4294967296 := by
+        decide +kernel
+      simp only [fieldsWitnessMemory, Nat.zero_add, BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt (show i < 2^64 by omega),
+        if_pos (show i < 4294967296 by omega),
+        List.getElem?_eq_getElem hi, Option.getD_some]
+    · change 0 + 16 * fieldsWitnessCode.length < 2^64 ∧
+        4294967296 + 8 * 64 ≤ 2^64 ∧
+        0 + 16 * fieldsWitnessCode.length ≤ 4294967296
+      decide +kernel
+  have head := FloatNormalizeHead.of_numerator (target := (8 : Int)) 211 4 68
+    (by decide) (by decide) (by decide) (by decide) pre (by decide)
+    (by decide +kernel) (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel) (by decide +kernel)
+  have pre' : Pre L fieldsWitnessMemory 0 4294967296 64 24
+      fieldsWitnessCode (Env.nil : Env D []) (fun _ => True) 7 :=
+    { pre with ctx := by decide }
+  have result := head.write_fields (signedSum := 22) (exponent := 23)
+    (signBit := 63) (dst := 24) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (-1) 1500
+    (by decide +kernel) (by decide +kernel)
+    (top := ((floatStateSlotsL 24 (floatNormalizedFieldsL 16 22 23 63)).getD ([],0)).2)
+    (by decide +kernel) (by decide +kernel) (by decide) pre'
+  obtain ⟨last, run, agree, reads⟩ := result
+  refine ⟨last, by simpa using run, agree, ?_⟩
+  intro i hi
+  interval_cases i
+  · convert reads 0 (by decide) using 1 <;>
+      simp only [List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel
+  · convert reads 1 (by decide) using 1 <;>
+      simp only [List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel
+  · convert reads 2 (by decide) using 1 <;>
+      simp only [List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel
+  · convert reads 3 (by decide) using 1 <;>
+      simp only [List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel
+  · convert reads 4 (by decide) using 1 <;>
+      simp only [List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel
+
+#print axioms normalizationFields_joint_zeuge
 
 /-- A nonzero exact tail requiring several actual SMALL iterations. -/
 def normalizationWitnessCode : List II :=

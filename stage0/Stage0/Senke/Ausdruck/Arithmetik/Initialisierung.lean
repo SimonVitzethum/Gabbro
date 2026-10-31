@@ -314,4 +314,147 @@ theorem FloatNormalizeHead.write_quotient
 
 #print axioms FloatNormalizeHead.write_quotient
 
+/-- The reached invariant supplies the rounding bounds, including the exact
+    residual scale. No output-range premise is added to field execution. -/
+theorem FloatNormalizeHead.output_ranges
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K base reserved : Nat} {code : List II}
+    {origin target q r : Int} {originDistance budget fuel count distance : Nat}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r) :
+    0 ≤ q/8 ∧ q/8 < 2^58 ∧ 0 ≤ q%8 ∧ q%8 < 8 ∧
+      0 ≤ r * 2^originDistance ∧
+      r * 2^originDistance < (2 : Int)^(distance+originDistance) := by
+  have quotient := head.quotient
+  have guardLow := Int.emod_nonneg q (by decide : (8 : Int) ≠ 0)
+  have guardHigh := Int.emod_lt_of_pos q (by decide : (0 : Int) < 8)
+  have positive : (0 : Int) < 2^originDistance := Int.pow_pos (by decide)
+  refine ⟨by omega, by omega, guardLow, guardHigh,
+    mul_nonneg head.remainder.1 (le_of_lt positive), ?_⟩
+  rw [pow_add]
+  exact mul_lt_mul_of_pos_right head.remainder.2.2 positive
+
+#print axioms FloatNormalizeHead.output_ranges
+
+/-- Materialize all five output fields together. The signed sum and the initial
+    biased exponent remain in retained input slots; normalization supplies the
+    magnitude, exact tail, and completed transfer count. -/
+def floatNormalizedFieldsL (base signedSum exponent signBit : Nat) :
+    List (Nat → Option (List II × Nat)) :=
+  let load := fun (s j : Nat) => some ([ci 2 j s 0], j+1)
+  [fun j => wordL 5 j (wordK 13 j (load signedSum j) 0)
+      (some (konstWL 4 (2^signBit) (j+1))),
+   fun j => wordL 4 j (load exponent j) (load (base+5) (j+1)),
+   fun j => wordK 6 j (load base j) 8,
+   fun j => wordK 8 j (load base j) 7,
+   fun j => wordL 4 j (some ([ci 1 j 1 0], j+1))
+      (wordK 14 (j+1) (load (base+1) (j+1)) 0)]
+
+set_option maxHeartbeats 2000000 in
+/-- Execute the complete field materialization against actual retained memory.
+    This proves the machine field expressions jointly, including preservation
+    of every earlier output and the arbitrary reserved prefix. Identification
+    of sign and exponent with the canonical IEEE result is a separate boundary. -/
+theorem FloatNormalizeHead.write_fields
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp next : Runner.W}
+    {K base reserved dst top signedSum exponent signBit : Nat} {code out : List II}
+    {origin target q r : Int} {originDistance budget fuel count distance : Nat}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (input : FB ≤ base) (sumInput : FB ≤ signedSum) (exInput : FB ≤ exponent)
+    (retained : base+6 ≤ dst) (sumRetained : signedSum < dst)
+    (exRetained : exponent < dst) (bitBound : signBit < 64)
+    (sumWord exponentWord : Runner.W)
+    (readSum : m.rd64 (slot fp (BitVec.ofNat 64 signedSum)) = some sumWord)
+    (readExponent : m.rd64 (slot fp (BitVec.ofNat 64 exponent)) = some exponentWord)
+    (compiled : floatStateSlotsL dst
+      (floatNormalizedFieldsL base signedSum exponent signBit) = some (out,top))
+    (room : top ≤ K) (slots : dst+5 ≤ K)
+    (pre : Pre L m next fp K dst out ρ W reserved) :
+    ∃ m', Star ⟨next,fp⟩ m ⟨next + BitVec.ofNat 64 (16*out.length),fp⟩ m' ∧
+      Agree fp dst K m m' ∧
+      ∀ i, (hi : i < 5) →
+        m'.rd64 (slot fp (BitVec.ofNat 64 (dst+i))) = some
+          (([Runner.IR.bool (sumWord.slt 0) * BitVec.ofNat 64 (2^signBit),
+            exponentWord - BitVec.ofNat 64 count, BitVec.ofInt 64 (q/8),
+            BitVec.ofInt 64 q &&& 7,
+            1 - Runner.IR.bool (BitVec.ofInt 64 r == 0)] : List Runner.W)[i]'(by simpa using hi)) := by
+  obtain ⟨env, envAt⟩ := frameWordEnv (L := L) (n := dst-FB) pre.frame (by omega)
+  have loads : ∀ s v, FB ≤ s → s < dst →
+      m.rd64 (slot fp (BitVec.ofNat 64 s)) = some v →
+      WordCode (L := L) env (fun _ => True)
+        (fun j => some ([ci 2 j s 0],j+1)) v := by
+    intro s v low high read
+    have idx : s-FB < dst-FB := by omega
+    have slotEq : FB+(s-FB) = s := by omega
+    obtain ⟨w, hr, he⟩ := envAt _ (frameWordVar (dst-FB) (s-FB) idx)
+    rw [frameWordVar_slot, slotEq, read] at hr
+    cases hr
+    change v = BitVec.ofInt 64 (env.get (frameWordVar (dst-FB) (s-FB) idx)).n at he
+    rw [he]
+    have slotInt : (FB : Int) + ((s-FB : Nat) : Int) = s := by omega
+    intro fp' K' j c t hc ht mm pp hp
+    exact frameWordLoad (L := L) (dst-FB) (s-FB) idx env
+      (by simpa only [slotInt] using hc) ht mm pp hp
+  have lq : WordCode (L := L) env (fun _ => True) _ _ := loads base _ input (by omega) head.readQ
+  have lr : WordCode (L := L) env (fun _ => True) _ _ := loads (base+1) _ (by omega) (by omega) head.readR
+  have lc : WordCode (L := L) env (fun _ => True) _ _ := loads (base+5) _ (by omega) (by omega) head.readCount
+  have ls : WordCode (L := L) env (fun _ => True) _ _ := loads signedSum _ sumInput sumRetained readSum
+  have le : WordCode (L := L) env (fun _ => True) _ _ := loads exponent _ exInput exRetained readExponent
+  have zero : WordCode (L := L) env (fun _ => True) _ _ := WordCode.const (L := L) (ρ := env) (W := fun _ => True) 0 (by decide)
+  have sign : WordCode (L := L) env (fun _ => True) _ _ := WordCode.bin ls zero
+    (g := fun a b => some (Runner.IR.bool (a.slt b)))
+    rfl rfl (by decide : 13 < 256)
+  have signField : WordCode (L := L) env (fun _ => True) _ _ := WordCode.bin sign
+    (WordCode.konst (2^signBit) (by exact Nat.pow_lt_pow_right (by decide) bitBound))
+    (g := fun a b => some (a*b)) rfl rfl (by decide : 5 < 256)
+  have exponentField : WordCode (L := L) env (fun _ => True) _ _ := WordCode.bin le lc
+    (g := fun a b => some (a-b)) rfl rfl (by decide : 4 < 256)
+  have div := sdiv_w (a := q) (b := 8)
+    (by have := head.quotient; omega) (by have := head.quotient; omega)
+    (by norm_num) (by norm_num) (by norm_num)
+  rw [Gabbro.Grammatik.Int.tdiv_eq_ediv_nonneg head.quotient.1] at div
+  have quotientField : WordCode (L := L) env (fun _ => True) _ _ := WordCode.bin lq (WordCode.const 8 (by decide)) div
+    (rfl : op 6 = bin sdiv) (by decide : 6 < 256)
+  have guardField : WordCode (L := L) env (fun _ => True) _ _ := WordCode.bin lq (WordCode.const 7 (by decide))
+    (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
+  have same : WordCode (L := L) env (fun _ => True) _ _ := WordCode.bin lr zero
+    (g := fun a b => some (Runner.IR.bool (a == b))) rfl rfl (by decide : 14 < 256)
+  have stickyField : WordCode (L := L) env (fun _ => True) _ _ := WordCode.bin (WordCode.const 1 (by decide)) same
+    (g := fun a b => some (a-b)) rfl rfl (by decide : 4 < 256)
+  have pre' : Pre L m next fp K dst out env (fun _ => True) :=
+    ⟨by simp [frei, frameWordCtx]; omega, pre.small, pre.frame, pre.code,
+      pre.far, envAt, trivial, wstab_true _ _⟩
+  let values : Nat → Runner.W := fun i =>
+    if i = 0 then Runner.IR.bool (sumWord.slt 0) * BitVec.ofNat 64 (2^signBit)
+    else if i = 1 then exponentWord - BitVec.ofNat 64 count
+    else if i = 2 then BitVec.ofInt 64 (q/8)
+    else if i = 3 then BitVec.ofInt 64 q &&& 7
+    else 1 - Runner.IR.bool (BitVec.ofInt 64 r == 0)
+  obtain ⟨m', run, agree, reads⟩ := floatStateSlotsL_ok (L := L) (ρ := env) (W := fun _ => True)
+    (base := dst) (top := top) (code := out) (K := K) (reserved := 0) (fp := fp)
+    (floatNormalizedFieldsL base signedSum exponent signBit) values compiled room (by simpa [floatNormalizedFieldsL] using slots)
+    (by
+      intro i hi c t hc ht mm pp hp
+      have bound : i < 5 := by simpa [floatNormalizedFieldsL] using hi
+      interval_cases i <;> dsimp only [values] <;>
+        dsimp only [floatNormalizedFieldsL, List.getElem_cons_zero, List.getElem_cons_succ] at hc
+      · exact signField hc ht mm pp hp
+      · exact exponentField hc ht mm pp hp
+      · exact quotientField hc ht mm pp hp
+      · exact guardField hc ht mm pp hp
+      · exact stickyField hc ht mm pp hp)
+    m next pre'
+  refine ⟨m', run, agree, ?_⟩
+  intro i hi
+  interval_cases i
+  · simpa [values] using reads 0 (by simp [floatNormalizedFieldsL])
+  · simpa [values] using reads 1 (by simp [floatNormalizedFieldsL])
+  · simpa [values] using reads 2 (by simp [floatNormalizedFieldsL])
+  · simpa [values] using reads 3 (by simp [floatNormalizedFieldsL])
+  · simpa [values] using reads 4 (by simp [floatNormalizedFieldsL])
+
+#print axioms FloatNormalizeHead.write_fields
+
 end Gabbro.Stage0.Senke
