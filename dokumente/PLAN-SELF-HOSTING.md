@@ -800,14 +800,23 @@ This does not yet initialize the normalization loop or execute its continuation.
 The whole-loop theorem now also has a numerator-entry interface
 (`floatNormalizeLoopL_from_numerator`). For `0 ≤ n < 2^61`, it derives the
 initial quotient/remainder bounds and reconstruction from Euclidean division,
-with fuel `d+64`, zero initial count and `d+64 < 2^63`. Only actual entry reads
+with caller-selected fuel, zero initial count and separate signed-word bounds
+on distance and fuel. Only actual entry reads
 and the generic frame/fetch contract remain as memory premises; the caller no
 longer supplies a normalization invariant. The shared concrete witness uses
 this interface with numerator 13, distance 4 and a nonzero reserved prefix.
 This is a bounded-numerator entry theorem, not yet an encoded-operand bridge:
-the operand fragment still has to execute the initialization writes. The fuel
-word ceiling is proved; reaching the target before fuel exhaustion is not yet
-proved. The executed round/pack continuation remains open.
+the operand fragment still has to execute the initialization writes. The actual loop now also proves target attainment for positive original
+numerators: `FloatNormalizeHead.active_count_bound` derives an active transfer
+count below `originDistance + precision` directly from exact reconstruction and
+the canonical tail, and `floatNormalizeLoopL_reaches_target` excludes exhaustion
+when the supplied budget covers that sum and the target is at most
+`2^precision`. This shares the precision/distance mechanism across formats;
+it does not yet derive the distance or target from executed operand decoding.
+The concrete frame witness satisfies execution and sufficiency jointly. Runner
+boundaries include precision 24 at distance 149, precision 53 at distance 1074,
+and precision 60 at distance zero. The executed round/pack continuation remains
+open.
 
 Remaining finite-adder gaps: derive every initial head bound and state read from
 the actual format/operand alignment and magnitude producers; compose the actual

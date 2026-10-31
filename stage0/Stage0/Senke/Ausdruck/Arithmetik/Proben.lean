@@ -9,7 +9,9 @@ open Gabbro.Grammatik Runner.IR Gleitkomma
 /-- Actual backward-branch loop images; output slots are checked independently.
     The 1074 case takes 1127 transfers before recovering 53 quotient bits. -/
 def normalizationLoopImages : List (String × Except String (List Runner.B) × Nat) :=
-  [("below61", 0, 2^61-1, 61, 8, 1, 1, 2^61-2, 1),
+  [("precision24-distance149", 0, 1, 149, 2^24, 173, 2^24, 0, 173),
+   ("precision60-distance0", 1, 0, 0, 2^60, 60, 2^60, 0, 60),
+   ("below61", 0, 2^61-1, 61, 8, 1, 1, 2^61-2, 1),
    ("below62", 0, 2^61-1, 62, 8, 1, 0, 2^61-1, 1),
    ("above62", 0, 2^61+1, 62, 8, 1, 1, 1, 1),
    ("maximum63", 0, 2^63-1, 63, 8, 1, 1, 2^62-1, 1),
@@ -42,7 +44,7 @@ def normalizationLoopImages : List (String × Except String (List Runner.B) × N
 
 /-- All boundary fixtures use the production loop and encode successfully;
     actual execution is measured separately by the runner regression. -/
-theorem normalizationLoopImages_zeuge : normalizationLoopImages.length = 95 ∧
+theorem normalizationLoopImages_zeuge : normalizationLoopImages.length = 105 ∧
     normalizationLoopImages.all (fun x => x.2.1.isOk) = true := by
   decide +kernel
 
@@ -505,7 +507,7 @@ theorem normalizationLoopHead_zeuge [Kern] {D : Deklaration} (L : Lay D) :
         0 + 16 * normalizationWitnessCode.length ≤ 4294967296
       decide +kernel
 
-  exact FloatNormalizeHead.of_numerator 13 4 (by decide) (by decide)
+  exact FloatNormalizeHead.of_numerator 13 4 68 (by decide) (by decide) (by decide)
     (by decide) pre (by decide) (by decide +kernel) (by decide +kernel)
     (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
 
@@ -525,9 +527,29 @@ theorem floatNormalizeLoopL_from_numerator_zeuge [Kern] {D : Deklaration} (L : L
   have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
       ((floatNormalizeLoopL 16).getD ([], 0)).2) := by decide +kernel
   have h := normalizationLoopHead_zeuge L
-  exact floatNormalizeLoopL_from_numerator hc (by decide +kernel) 13 4
-    (by decide) (by decide) (by decide) h.pre h.room
+  exact floatNormalizeLoopL_from_numerator hc (by decide +kernel) 13 4 68
+    (by decide) (by decide) (by decide) (by decide) h.pre h.room
     h.readQ h.readR h.readDistance h.readTarget h.readFuel h.readCount
+
+/-- The concrete nonzero-tail frame also satisfies the sufficient precision
+    budget jointly with the actual emitted-loop execution premises. -/
+theorem floatNormalizeLoopL_reaches_target_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    ∃ m' fuel' count' distance' q' r',
+      Star ⟨0, 4294967296⟩ normalizationWitnessMemory
+        ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
+      Agree 4294967296 16 64 normalizationWitnessMemory m' ∧
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 13 4 68 8
+        m' fuel' count' distance' q' r' ∧
+      8 ≤ q' ∧ count' ≤ 68 ∧
+      (13 * 2^(count'+distance') : Int) / 2^(distance'+4) = q' ∧
+      (13 * 2^(count'+distance') : Int) % 2^(distance'+4) = r' * 2^4 := by
+  have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
+      ((floatNormalizeLoopL 16).getD ([], 0)).2) := by decide +kernel
+  exact floatNormalizeLoopL_reaches_target hc (by decide +kernel)
+    (normalizationLoopHead_zeuge L) 3 (by decide) (by decide) (by decide)
+
+#print axioms floatNormalizeLoopL_reaches_target_zeuge
 
 #print axioms normalizationLoopHead_zeuge
 #print axioms floatNormalizeLoopL_from_numerator_zeuge

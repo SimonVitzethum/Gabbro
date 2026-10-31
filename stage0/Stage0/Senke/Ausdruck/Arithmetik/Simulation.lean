@@ -3,6 +3,7 @@ import Stage0.Senke.Ausdruck.Arithmetik.Schleife
 import Stage0.Senke.Ausdruck.Quant.Frame
 import Stage0.Senke.Anweisung.SchleifeTeile
 import Mathlib.Tactic.IntervalCases
+import Mathlib.Tactic.Linarith
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem
@@ -2494,23 +2495,56 @@ theorem floatNormalizeLoopL_complete
     exact Int.mul_lt_mul_of_pos_right finalHead.remainder.2.2 positive
 
 
+/-- Exact reconstruction bounds the number of active transfers by the original
+    alignment distance and the target precision, independently of machine fuel.
+    A positive numerator cannot remain below a target at most `2^precision` after
+    `originDistance + precision` doublings. -/
+theorem FloatNormalizeHead.active_count_bound
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (precision : Nat) (targetFits : target ≤ 2^precision)
+    (positive : 0 < origin) (active : q < target) :
+    count < originDistance + precision := by
+  by_contra h
+  have lower : originDistance + precision ≤ count := by omega
+  have powers : (2 : Int)^(originDistance+precision) ≤ 2^count := by
+    exact_mod_cast (Nat.pow_le_pow_right (by decide : 1 ≤ 2) lower)
+  have pd : (0 : Int) < 2^distance := Int.pow_pos (by decide)
+  have po : (0 : Int) < 2^originDistance := Int.pow_pos (by decide)
+  have pc : (0 : Int) < 2^count := Int.pow_pos (by decide)
+  have qbound : q + 1 ≤ 2^precision := by omega
+  have small : q * 2^distance + r < 2^precision * (2^distance : Int) := by
+    have := mul_le_mul_of_nonneg_right qbound (le_of_lt pd)
+    have := head.remainder
+    nlinarith
+  have strict := mul_lt_mul_of_pos_right small po
+  have reconstruction := head.reconstruction
+  rw [pow_add] at reconstruction powers
+  have originLower : 1 ≤ origin := by omega
+  have grows : (2 : Int)^count ≤ origin * 2^count := by
+    simpa using mul_le_mul_of_nonneg_right originLower (le_of_lt pc)
+  have scaled := mul_le_mul_of_nonneg_right (le_trans powers grows) (le_of_lt pd)
+  nlinarith [reconstruction]
+
+#print axioms FloatNormalizeHead.active_count_bound
+
 /-- Construct the actual loop invariant from a nonnegative word-sized numerator.
     The six reads describe the entry memory; no reconstruction, canonical-tail
-    or internal loop-correctness premise is required. The budget reserves one
-    transfer per denominator bit and 64 further transfers. -/
+    or internal loop-correctness premise is required. The caller chooses the fuel; sufficient precision budgets are proved separately. -/
 theorem FloatNormalizeHead.of_numerator
-    {m : Runner.Mem} (n : Int) (d : Nat)
-    (hn : 0 ≤ n ∧ n < 2^61) (hd : d + 64 < 2^63)
+    {m : Runner.Mem} (n : Int) (d fuel : Nat)
+    (hn : 0 ≤ n ∧ n < 2^61) (hd : d < 2^63) (hf : fuel < 2^63)
     (ht : 0 ≤ target ∧ target ≤ 2^60)
     (pre : Pre L m pc fp K base code ρ W reserved) (slots : base+5 < K)
     (readQ : m.rd64 (slot fp (BitVec.ofNat 64 base)) = some (BitVec.ofInt 64 (n / 2^d)))
     (readR : m.rd64 (slot fp (BitVec.ofNat 64 (base+1))) = some (BitVec.ofInt 64 (n % 2^d)))
     (readD : m.rd64 (slot fp (BitVec.ofNat 64 (base+2))) = some (BitVec.ofNat 64 d))
     (readT : m.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofInt 64 target))
-    (readF : m.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 (d+64)))
+    (readF : m.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 fuel))
     (readC : m.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some 0) :
-    FloatNormalizeHead L ρ W pc fp K base reserved code n d (d+64) target
-      m (d+64) 0 d (n / 2^d) (n % 2^d) := by
+    FloatNormalizeHead L ρ W pc fp K base reserved code n d fuel target
+      m fuel 0 d (n / 2^d) (n % 2^d) := by
   have pos : (0 : Int) < 2^d := Int.pow_pos (by decide)
   have qpos := Int.ediv_nonneg hn.1 (by omega : (0 : Int) ≤ 2^d)
   have qle := Int.ediv_le_self (2^d) hn.1
@@ -2518,7 +2552,7 @@ theorem FloatNormalizeHead.of_numerator
   have rlt := Int.emod_lt_of_pos n pos
   have split := Int.ediv_mul_add_emod n ((2 : Int)^d)
   have prod := Int.mul_nonneg qpos (by omega : (0 : Int) ≤ 2^d)
-  refine ⟨pre, slots, hd, by decide, by omega, ⟨qpos, by omega⟩,
+  refine ⟨pre, slots, hf, by decide, by omega, ⟨qpos, by omega⟩,
     ⟨rpos, by omega, rlt⟩, ht, readQ, readR, readD, readT, readF, readC,
     by omega, ?_⟩
   simp only [Nat.zero_add]
@@ -2528,27 +2562,57 @@ theorem FloatNormalizeHead.of_numerator
     numerator, rather than accepting an internal invariant as an assumption. -/
 theorem floatNormalizeLoopL_from_numerator
     (hc : floatNormalizeLoopL base = some (code, top)) (room : top ≤ K)
-    {m : Runner.Mem} (n : Int) (d : Nat)
-    (hn : 0 ≤ n ∧ n < 2^61) (hd : d + 64 < 2^63)
+    {m : Runner.Mem} (n : Int) (d fuel : Nat)
+    (hn : 0 ≤ n ∧ n < 2^61) (hd : d < 2^63) (hf : fuel < 2^63)
     (ht : 0 ≤ target ∧ target ≤ 2^60)
     (pre : Pre L m pc fp K base code ρ W reserved) (slots : base+5 < K)
     (readQ : m.rd64 (slot fp (BitVec.ofNat 64 base)) = some (BitVec.ofInt 64 (n / 2^d)))
     (readR : m.rd64 (slot fp (BitVec.ofNat 64 (base+1))) = some (BitVec.ofInt 64 (n % 2^d)))
     (readD : m.rd64 (slot fp (BitVec.ofNat 64 (base+2))) = some (BitVec.ofNat 64 d))
     (readT : m.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofInt 64 target))
-    (readF : m.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 (d+64)))
+    (readF : m.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 fuel))
     (readC : m.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some 0) :
     ∃ m' fuel' count' distance' q' r',
       Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16*code.length), fp⟩ m' ∧
       Agree fp base K m m' ∧
-      FloatNormalizeHead L ρ W pc fp K base reserved code n d (d+64) target
+      FloatNormalizeHead L ρ W pc fp K base reserved code n d fuel target
         m' fuel' count' distance' q' r' ∧
-      (fuel' = 0 ∨ target ≤ q') ∧ count' ≤ d+64 ∧
+      (fuel' = 0 ∨ target ≤ q') ∧ count' ≤ fuel ∧
       (n * 2^(count'+distance')) / (2^(distance'+d) : Int) = q' ∧
       (n * 2^(count'+distance')) % (2^(distance'+d) : Int) = r' * 2^d := by
   exact floatNormalizeLoopL_complete hc room
-    (FloatNormalizeHead.of_numerator n d hn hd ht pre slots
+    (FloatNormalizeHead.of_numerator n d fuel hn hd hf ht pre slots
       readQ readR readD readT readF readC)
+
+/-- With a positive aligned numerator and enough fuel for the format precision,
+    actual execution reaches the target; fuel exhaustion is no longer an
+    alternative conclusion. Entry reads still need an executed producer. -/
+theorem floatNormalizeLoopL_reaches_target
+    (hc : floatNormalizeLoopL base = some (code, top)) (room : top ≤ K)
+    {m : Runner.Mem} {fuel distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel 0 distance q r)
+    (precision : Nat) (targetFits : target ≤ 2^precision)
+    (positive : 0 < origin) (sufficient : originDistance + precision ≤ budget) :
+    ∃ m' fuel' count' distance' q' r',
+      Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16*code.length), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel' count' distance' q' r' ∧
+      target ≤ q' ∧ count' ≤ budget ∧
+      (origin * 2^(count'+distance')) / (2^(distance'+originDistance) : Int) = q' ∧
+      (origin * 2^(count'+distance')) % (2^(distance'+originDistance) : Int) =
+        r' * 2^originDistance := by
+  obtain ⟨m', f, c, d, a, b, run, agree, finalHead, stop, bound, exactQ, exactR⟩ :=
+    floatNormalizeLoopL_complete hc room head
+  refine ⟨m', f, c, d, a, b, run, agree, finalHead, ?_, bound, exactQ, exactR⟩
+  by_contra active
+  have small := finalHead.active_count_bound precision targetFits positive (by omega)
+  have exhausted : f = 0 := stop.resolve_right (by omega)
+  have := finalHead.conservedBudget
+  omega
+
+#print axioms floatNormalizeLoopL_reaches_target
 
 #print axioms FloatNormalizeHead.of_numerator
 #print axioms floatNormalizeLoopL_from_numerator
