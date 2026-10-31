@@ -9,6 +9,63 @@ variable [Kern]
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 set_option maxHeartbeats 2000000
 
+/-- Argument costs follow the actual right-to-left lowering. Each expression
+    has its own source certificate; no bound on an argument execution is assumed. -/
+inductive ArgsCost (L : Lay D) (reserved F : Nat) :
+    {Γ : Ctx} → {Λ : List (Res D)} → {ts : List Ty} →
+      Args D Γ Λ ts → World D → World D → Env D Γ → Nat → Type
+  | nil {Γ Λ σ₀ σ} {ρ : Env D Γ} :
+      ArgsCost L reserved F (.nil (Γ := Γ) (Λ := Λ)) σ₀ σ ρ 0
+  | cons {Γ Λ τ ts} {e : Expr D Γ Λ τ} {rest : Args D Γ Λ ts}
+      {σ₀ σ : World D} {ρ : Env D Γ} {nr ne : Nat}
+      (tail : ArgsCost L reserved F rest σ₀ σ ρ nr)
+      (head : ExprCost L reserved e (F + FB + ts.length) ne
+        (Enc L τ (eval σ₀ e σ ρ))) :
+      ArgsCost L reserved F (.cons e rest) σ₀ σ ρ (nr + ne)
+
+/-- Count actual argument instructions and retain the callee parameter frame.
+    Evaluation order, scratch preservation and world stability are inherited
+    from the existing expression contract and the canonical `lowA`. -/
+theorem ArgsCost.sound {Γ : Ctx} {Λ : List (Res D)} {ts : List Ty}
+    {args : Args D Γ Λ ts} {σ₀ σ : World D} {ρ : Env D Γ} {n F : Nat}
+    (certificate : ArgsCost L reserved F args σ₀ σ ρ n)
+    {c : List II} {top K : Nat} {m : Mem} {pc fp : W} {W : Mem → Prop}
+    (lower : lowA L args (F + FB) reserved = some (c, top))
+    (fits : top ≤ K) (room : F + FB + ts.length ≤ K)
+    (pre : Pre L m pc fp K (F + FB) c ρ W reserved) :
+    ∃ m', Counted n ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
+      Agree fp (F + FB) K m m' ∧
+      EnvAt L m' (slot fp (BitVec.ofNat 64 F)) (evalArgs σ₀ args σ ρ) := by
+  induction certificate generalizing c top m pc with
+  | nil =>
+    simp only [lowA, Option.some.injEq, Prod.mk.injEq] at lower
+    obtain ⟨rfl, rfl⟩ := lower
+    exact ⟨m, by simpa using Counted.refl ⟨pc, fp⟩ m,
+      Agree.refl _ _ _ _, fun _ x => nomatch x⟩
+  | @cons τ ts e rest σ₀ σ ρ nr ne tail head ih =>
+    simp only [lowA, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨cr, tr⟩, hr, ⟨ce, te⟩, he, hc⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+    simp only [List.length_cons] at room
+    obtain ⟨m1, s1, a1, e1⟩ := ih hr (by omega) (by omega) pre.left
+    have hp1 := (pre.next a1 (Nat.le_refl _) (by omega)).up
+      (d' := F + FB + ts.length) (by omega)
+    obtain ⟨m2, s2, a2, w, hw, hen⟩ := head.sound he (by omega) hp1
+    refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2),
+      a1.trans (a2.mono (by omega)), ?_⟩
+    simp only [evalArgs]
+    have hfr : F + frei ts = F + FB + ts.length := by simp only [frei]; omega
+    refine envAt_cons (fp := slot fp (BitVec.ofNat 64 F)) ?_
+      (by rw [slot_slot, hfr]; exact hw) hen
+    intro τ' y
+    obtain ⟨w', hw', he'⟩ := e1 τ' y
+    refine ⟨w', ?_, he'⟩
+    have := vslot_lt (reserved := 0) y
+    rw [slot_slot] at hw' ⊢
+    rw [agree_rd_low a2 hp1.frame.room
+      (by simp only [frei] at this; omega) (by omega)]
+    exact hw'
+
 theorem st_step_counted {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {va vb : Runner.W} {m' : Runner.Mem}
     (hc : CodeAt m pc [ci 16 ((s + 1 : Nat) : Int) s 0]) (hK : s + 1 < K) (hK2 : K < 2 ^ 31)
     (ha : m.rd64 (slot fp (BitVec.ofNat 64 (s + 1))) = some va) (hb : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some vb)
@@ -345,6 +402,15 @@ def memory : Mem := { callMem with
     ((image.flatMap encII)[a.toNat]?).getD 0 else callMem.b a }
 
 open FnptrProben in
+omit [Kern] in
+/-- Two actual argument expressions inhabit the recursive certificate. -/
+theorem args_certificate_zeuge (σ : World FnptrProben.D) :
+    Nonempty (ArgsCost callLayout 0 0
+      (show Args FnptrProben.D [] [] [.int 2 2, .int 2 2] from
+        .cons (.lit 2) (.cons (.lit 2) .nil)) σ σ .nil 2) := by
+  exact ⟨.cons (nr := 1) (ne := 1) (.cons (nr := 0) (ne := 1) .nil .literal) .literal⟩
+
+open FnptrProben in
 /-- The certificate and every simulation premise are inhabited together on a
     loaded accepted body; this is not merely a syntactic certificate fixture. -/
 theorem block_sound_zeuge :
@@ -375,6 +441,43 @@ theorem block_sound_zeuge :
     (vertragVon FnptrProben.D 2) world
   exact cert.sound lower (by decide) call_win (by decide)
     (by intro j hj; cases hj) pre hw
+
+open FnptrProben in
+/-- The certificate executes jointly with a loaded image and frame. Argument
+    slots 4 and 5 contain both source values after exactly two instructions. -/
+theorem args_sound_zeuge :
+    ∃ m', Counted 2 ⟨0, 4096⟩ memory ⟨32, 4096⟩ m' ∧
+      Agree 4096 4 256 memory m' ∧
+      EnvAt callLayout m' 4096
+        (evalArgs world
+          (show Args FnptrProben.D [] [] [.int 2 2, .int 2 2] from
+            .cons (.lit 2) (.cons (.lit 2) .nil)) world .nil) := by
+  let args : Args FnptrProben.D [] [] [.int 2 2, .int 2 2] :=
+    .cons (.lit 2) (.cons (.lit 2) .nil)
+  have lower : lowA callLayout args 4 =
+      some ([ci 1 4 2 0, ci 1 5 2 0], 6) := rfl
+  have code : CodeAt memory 0 [ci 1 4 2 0, ci 1 5 2 0] := by
+    intro k hk
+    have cases : k = 0 ∨ k = 1 := by change k < 2 at hk; omega
+    rcases cases with rfl | rfl <;>
+      exact ⟨by decide +kernel +revert, by decide +kernel +revert, by decide +kernel +revert, by decide +kernel +revert⟩
+  have pre : PreS callLayout memory 0 4096 256 4
+      [ci 1 4 2 0, ci 1 5 2 0] (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, ?_, code, ?_, ?_, trivial, wstab_true _ _⟩
+    · exact ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+    · unfold CodeFar; decide +kernel
+    · intro _ x; nomatch x
+  obtain ⟨certificate⟩ := args_certificate_zeuge world
+  have result := certificate.sound lower (by decide) (by decide)
+    (W := fun m => WeltAt m callLayout world)
+    (show Pre callLayout memory 0 4096 256 4
+      [ci 1 4 2 0, ci 1 5 2 0] .nil (fun m => WeltAt m callLayout world) from
+      ⟨pre.ctx, pre.small, pre.frame, pre.code, pre.far, pre.env, ?_, ?_⟩)
+  · simpa [slot, FB] using result
+  · refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  · exact fun m m' h a => weltAt_stab call_win.lay (by decide) m m' h (a.mono (Nat.zero_le _))
 
 open FnptrProben in
 def storeImage : List II := [ci 1 4 576 0, ci 1 5 8192 0, stC 4]
