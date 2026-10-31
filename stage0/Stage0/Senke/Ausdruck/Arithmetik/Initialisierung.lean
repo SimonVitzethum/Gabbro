@@ -117,12 +117,13 @@ def floatExactAddInitProducers (lo hi distance : Nat → Option (List II × Nat)
       (fun j => some ([ci 1 j 0 0], j+1)),
    fun j => some ([ci 1 j 0 0], j+1),
    fun j => some ([ci 1 j 0 0], j+1),
-   fun j => some (konstWL 4 (2^53) j),
-   fun j => some ([ci 1 j 53 0], j+1),
+   fun j => some (konstWL 4 (2^(Gleitkomma.f64.p - 1 + 3)) j),
+   fun j => some ([ci 1 j (Gleitkomma.f64.p - 1 + 3) 0], j+1),
    fun j => some ([ci 1 j 0 0], j+1)]
 
 /-- Source-word producers are instantiated through the actual decoder and
-    alignment code. No hypothesis supplies any of the six initial reads.
+    alignment code. The normalization target includes the three bits consumed by field division.
+    No hypothesis supplies any of the six initial reads.
     This exact-alignment entry is only the word-sized f64 branch. -/
 theorem floatExactAddInit_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {lo hi distance : Nat → Option (List II × Nat)}
@@ -145,14 +146,14 @@ theorem floatExactAddInit_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
           (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)) ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (base+1))) = some 0 ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (base+2))) = some 0 ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofNat 64 (2^53)) ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some 53 ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofNat 64 (2^55)) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some 55 ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some 0 := by
   let q := BitVec.ofInt 64 (floatSumMagnitude
     (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)
   let values : Nat → Runner.W := fun i =>
-    if i = 0 then q else if i = 3 then BitVec.ofNat 64 (2^53)
-    else if i = 4 then 53 else 0
+    if i = 0 then q else if i = 3 then BitVec.ofNat 64 (2^55)
+    else if i = 4 then 55 else 0
   obtain ⟨m', run, agree, reads⟩ := floatStateSlotsL_ok
     (floatExactAddInitProducers lo hi distance) values compiled room
     (by simpa [floatExactAddInitProducers] using slots) (by
@@ -166,7 +167,7 @@ theorem floatExactAddInit_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
       · simp [floatExactAddInitProducers] at hc
         obtain ⟨rfl,rfl⟩ := hc
         exact const_ok hp (by decide) (by omega)
-      · exact WordCode.konst (2^53) (by decide) hc ht m pc hp
+      · exact WordCode.konst (2^55) (by decide) hc ht m pc hp
       · simp [floatExactAddInitProducers] at hc
         obtain ⟨rfl,rfl⟩ := hc
         exact const_ok hp (by decide) (by omega)
@@ -181,7 +182,7 @@ theorem floatExactAddInit_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     by simpa [values] using reads 5 (by simp [floatExactAddInitProducers])⟩
 
 /-- Executed operand initialization establishes the actual loop head, including
-    its fetch/frame precondition and the format's sufficient 53-transfer budget.
+    its fetch/frame precondition and the format's sufficient guard-precision transfer budget.
     The signed 61-bit bound identifies this exact-alignment branch explicitly. -/
 theorem floatExactAddInit_head {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {lo hi distance : Nat → Option (List II × Nat)}
@@ -202,7 +203,7 @@ theorem floatExactAddInit_head {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
       FloatNormalizeHead L ρ W (pc + BitVec.ofNat 64 (16*code.length)) fp
         K base 0 loop
         (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)
-        0 53 (2^53) m' 53 0 0
+        0 55 (2^55) m' 55 0 0
         (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0) 0 := by
   obtain ⟨m', run, agree, rq, rr, rd, rt, rf, rc⟩ :=
     floatExactAddInit_ok a b k ha hb hk (by constructor <;> omega)
@@ -214,13 +215,13 @@ theorem floatExactAddInit_head {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     unfold floatSumMagnitude
     split <;> omega
   refine ⟨m', run, agree, ?_⟩
-  simpa only [pow_zero, Int.ediv_one, Int.emod_one] using FloatNormalizeHead.of_numerator (target := (2^53 : Int))
+  simpa only [pow_zero, Int.ediv_one, Int.emod_one] using FloatNormalizeHead.of_numerator (target := (2^55 : Int))
     (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)
-    0 53 magnitude (by decide) (by decide) (by norm_num) next (by omega)
+    0 55 magnitude (by decide) (by decide) (by norm_num) next (by omega)
     (by simpa using rq) (by simpa using rr) rd (by norm_num at rt ⊢; exact rt) rf rc
 
 /-- The actual decoded-operand prefix and the entire emitted normalization
-    loop compose. Zero/cancellation is included; 53 transfers suffice on this
+    loop compose. Zero/cancellation is included; 55 transfers suffice on this
     zero-distance branch. No loop-head memory is assumed by the caller. -/
 theorem floatExactAddNormalize_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {lo hi distance : Nat → Option (List II × Nat)}
@@ -244,11 +245,11 @@ theorem floatExactAddNormalize_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem →
       FloatNormalizeHead L ρ W (pc + BitVec.ofNat 64 (16*code.length)) fp
         K base 0 loop
         (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)
-        0 53 (2^53) m' fuel count distance' q r ∧
+        0 55 (2^55) m' fuel count distance' q r ∧
       ((floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 = 0 ∧
         q = 0 ∧ r = 0) ∨
        (0 < floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 ∧
-        (2^53 : Int) ≤ q)) ∧ count ≤ 53 ∧
+        (2^55 : Int) ≤ q)) ∧ count ≤ 55 ∧
       ∀ p : Nat,
         let nd := Gleitkomma.normQD p ((p : Int)-1-count)
           ((floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0).toNat *
@@ -261,7 +262,7 @@ theorem floatExactAddNormalize_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem →
   have nonnegative := head.quotient.1
   obtain ⟨m2, f, c, d, q, r, run, agree, finalHead, result, bound, _, _⟩ :=
     floatNormalizeLoopL_finite_magnitude loopCompiled loopRoom head nonnegative
-      53 (by rfl) (by omega)
+      55 (by rfl) (by omega)
   refine ⟨m2, f, c, d, q, r, ?_, initAgree.trans agree, finalHead, result, bound, ?_⟩
   · rw [List.length_append, ← pc_add]
     exact initRun.trans run
@@ -465,5 +466,53 @@ theorem FloatNormalizeHead.write_fields
   · simpa [values] using reads 4 (by simp [floatNormalizedFieldsL])
 
 #print axioms FloatNormalizeHead.write_fields
+
+/-- Carry a source dyadic denominator through the canonical normalizer.
+    `scale + 3` is the source denominator exponent; three bits are consumed
+    by the emitted guard split. The output exponent changes with that scale,
+    while quotient and exact remainder follow from the executed loop head. -/
+theorem FloatNormalizeHead.normQD_source_output
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K base reserved : Nat} {code : List II}
+    {origin target q r : Int} {originDistance budget fuel count distance : Nat}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r) (p scale : Nat) :
+    let nd := Gleitkomma.normQD p ((p : Int)-1-count-scale)
+      (origin.toNat * 2^distance) (8 * 2^(distance+originDistance+scale))
+    nd.1 / nd.2 = (q/8).toNat ∧
+    nd.1 % nd.2 = ((q%8).toNat * 2^(distance+originDistance) +
+      r.toNat * 2^originDistance) * 2^scale ∧
+    nd.2 = (8 * 2^(distance+originDistance)) * 2^scale := by
+  have shift : (p : Int)-1-((p : Int)-1-count-scale) = (count+scale : Nat) := by
+    push_cast; omega
+  have pair := head.normQD_output p
+  simp only [Gleitkomma.normQD, show (p : Int)-1-((p : Int)-1-count) = count by omega,
+    shift, Nat.cast_nonneg, ↓reduceIte, Int.toNat_natCast] at pair ⊢
+  rw [pow_add (2:Nat) count scale, pow_add (2:Nat) (distance+originDistance) scale]
+  simp only [← Nat.mul_assoc]
+  rw [Nat.mul_div_mul_right _ _ (by positivity : 0 < (2:Nat)^scale),
+    Nat.mul_mod_mul_right]
+  exact ⟨pair.1, congrArg (· * 2^scale) pair.2.1, True.intro⟩
+
+#print axioms FloatNormalizeHead.normQD_source_output
+
+/-- A target derived from format precision supplies the hidden bit after
+    the actual three-bit quotient split, for every precision. -/
+theorem floatGuardTarget_hiddenBit (p : Nat) (q : Int)
+    (reached : (2 : Int)^(p-1+3) ≤ q) :
+    (2 : Int)^(p-1) ≤ q/8 := by
+  have power : (2 : Int)^(p-1+3) = 8 * 2^(p-1) := by
+    rw [pow_add]; ring
+  rw [power] at reached
+  omega
+
+theorem floatGuardTarget_hiddenBit_zeuge :
+    (2 : Int)^52 ≤ (2^55 : Int)/8 ∧
+    (2 : Int)^23 ≤ (2^26 : Int)/8 := by
+  exact ⟨floatGuardTarget_hiddenBit 53 (2^55) (by decide),
+    floatGuardTarget_hiddenBit 24 (2^26) (by decide)⟩
+
+#print axioms floatGuardTarget_hiddenBit
+#print axioms floatGuardTarget_hiddenBit_zeuge
 
 end Gabbro.Stage0.Senke

@@ -100,12 +100,12 @@ theorem normalizationFieldsImages_zeuge : normalizationFieldsImages.length = 100
     Every state word is read back independently, including cancellation. -/
 def decodedInitializationImages : List (String × Except String (List Runner.B) × Nat) :=
   let lit := fun n j => some (konstWL 4 n j)
-  [("unit", 0x800fffffffffffff, 0x0010000000000000, 0, 2^53, 53),
-   ("negative-unit", 0x000fffffffffffff, 0x8010000000000000, 0, 2^53, 53),
-   ("cancel", 0xbff0000000000000, 0x3ff0000000000000, 0, 0, 53),
-   ("shift", 1, 3, 2, 13*2^50, 50)].flatMap
+  [("unit", 0x800fffffffffffff, 0x0010000000000000, 0, 2^55, 55),
+   ("negative-unit", 0x000fffffffffffff, 0x8010000000000000, 0, 2^55, 55),
+   ("cancel", 0xbff0000000000000, 0x3ff0000000000000, 0, 0, 55),
+   ("shift", 1, 3, 2, 13*2^52, 52)].flatMap
     fun (name, a, b, k, q, count) =>
-      [(0,q), (1,0), (2,0), (3,2^53), (4,53-count), (5,count)].map
+      [(0,q), (1,0), (2,0), (3,2^55), (4,55-count), (5,count)].map
         fun (field, expected) =>
           let fragment := do
             let init ← floatStateSlotsL 16
@@ -950,7 +950,7 @@ theorem normalizationOutputFields_zeuge [Kern] {D : Deklaration} (L : Lay D) :
 #print axioms floatNormalizeLoopL_finite_magnitude_zeuge
 
 /-- Joint decoded-input witness: opposite signs cancel to one subnormal unit,
-    then the production loop performs all 53 transfers from executed writes. -/
+    then the production loop performs all 55 guard-precision transfers from executed writes. -/
 def decodedInitWitness : List II × Nat :=
   let lit := fun n j => some (konstWL 4 n j)
   (floatStateSlotsL 16 (floatExactAddInitProducers
@@ -964,7 +964,7 @@ theorem floatExactAddNormalize_ok_zeuge [Kern] {D : Deklaration} (L : Lay D)
       (Env.nil : Env D []) (fun _ => True)) :
     ∃ m' q, Star ⟨pc,fp⟩ m
       ⟨pc + BitVec.ofNat 64 (16*(decodedInitWitness.1 ++ normalizationWitnessCode).length),fp⟩ m' ∧
-      (2^53 : Int) ≤ q := by
+      (2^55 : Int) ≤ q := by
   let lit := fun n j => some (konstWL 4 n j)
   have hc : floatStateSlotsL 16 (floatExactAddInitProducers
       (lit 0x800fffffffffffff) (lit 0x0010000000000000) (lit 0)) =
@@ -987,30 +987,41 @@ theorem floatExactAddNormalize_ok_zeuge [Kern] {D : Deklaration} (L : Lay D)
 
 #print axioms floatExactAddNormalize_ok_zeuge
 
-/-- Regression for the proposed direct composition, not a supported lowering.
-    The exact initialization has no guard-bit scaling. Feeding its normalized
-    quotient into the normal packer therefore violates the hidden-bit bound.
-    Keep the entire emitted chain measurable until the source bridge is fixed. -/
-def exactCompositionBoundaryFragment : Option (List II × Nat) := do
+/-- Whole emitted regression with a guard-precision target and matching
+    exponent offset. This is a witness, not a generic source bridge. -/
+def exactCompositionBoundaryFragment (a b k : Nat) : Option (List II × Nat) := do
   let lit := fun n j => some (konstWL 4 n j)
+  let retained ← floatStateSlotsL 8
+    [fun j => floatAlignSumL j (fun n => floatCoefficientL n (lit a))
+        (fun n => floatCoefficientL n (lit b)) (lit k),
+     fun j => wordK 3 j (floatScaleIndexL f64 j (lit a)) 3]
   let init ← floatStateSlotsL 16
-    (floatExactAddInitProducers (lit 0x3ff0000000000000) (lit 0) (lit 0))
+    (floatExactAddInitProducers (lit a) (lit b) (lit k))
   let loop ← floatNormalizeLoopL 16
   let fields ← floatStateSlotsL 40 (floatNormalizedFieldsL 16 8 9 63)
   let load := fun (s j : Nat) => some ([ci 2 j s 0], j+1)
   let packed ← floatAddNormalOutputL 48
     (load 40) (load 41) (load 42) (load 43) (load 44) (2^52)
-  pure ((konstWL 4 (2^52) 8).1 ++ [ci 1 9 1023 0] ++
-    init.1 ++ loop.1 ++ fields.1 ++ packed.1 ++ [ci 2 8 48 0],
-    max (max init.2 loop.2) (max fields.2 packed.2))
+  pure (retained.1 ++ init.1 ++ loop.1 ++ fields.1 ++ packed.1 ++ [ci 2 8 48 0],
+    max retained.2 (max (max init.2 loop.2) (max fields.2 packed.2)))
 
-/-- The measured result of the naive whole-fragment connection is 0.3125,
-    whereas the canonical finite source addition is 1.0. This is a refusal
-    boundary, never a correctness premise for the production block hook. -/
+/-- Canonical expected bits for the complete executed normal-result branch.
+    Both retained fields are decoded from the input words by emitted code. -/
+def exactCompositionCases : List (String × Nat × Nat × Nat × Nat) :=
+  [("one-plus-zero", 0x3ff0000000000000, 0, 0, 0x3ff0000000000000),
+   ("one-plus-negative-zero", 0x3ff0000000000000, 0x8000000000000000, 0, 0x3ff0000000000000),
+   ("negative-one-plus-zero", 0xbff0000000000000, 0, 0, 0xbff0000000000000),
+   ("negative-one-plus-negative-zero", 0xbff0000000000000, 0x8000000000000000, 0, 0xbff0000000000000),
+   ("carry", 0x3ff0000000000000, 0x3ff0000000000000, 0, 0x4000000000000000),
+   ("partial-cancellation", 0x3ff8000000000000, 0xbff0000000000000, 0, 0x3fe0000000000000),
+   ("minimum-normal-identity", 0x0010000000000000, 0, 0, 0x0010000000000000),
+   ("maximum-finite-identity", 0x7fefffffffffffff, 0, 0, 0x7fefffffffffffff),
+   ("aligned-gap", 0x3fe0000000000000, 0x3ff0000000000000, 1, 0x3ff8000000000000)]
+
 def exactCompositionBoundaryImages : List (String × Except String (List Runner.B) × Nat) :=
-  [("exact-composition-missing-guards",
-    FloatArithmeticProbe.wordImage exactCompositionBoundaryFragment
-      0x3fd4000000000000, 7)]
+  exactCompositionCases.map fun (name,a,b,k,expected) =>
+    ("exact-composition-" ++ name,
+      FloatArithmeticProbe.wordImage (exactCompositionBoundaryFragment a b k) expected, 7)
 
 set_option maxRecDepth 8192 in
 set_option maxHeartbeats 2000000 in
@@ -1018,10 +1029,48 @@ theorem exactCompositionBoundary_zeuge :
     wf f64 (⟨false,1023,0⟩ : GFloat) ∧
     wf f64 (⟨false,0,0⟩ : GFloat) ∧
     zuBits f64 (add f64 ⟨false,1023,0⟩ ⟨false,0,0⟩) = 0x3ff0000000000000 ∧
-    (0x3fd4000000000000 : Nat) ≠ 0x3ff0000000000000 ∧
+    exactCompositionCases.length = 9 ∧
     exactCompositionBoundaryImages.all (fun x => x.2.1.isOk) = true := by
   decide +kernel
 
 #print axioms exactCompositionBoundary_zeuge
+
+set_option maxRecDepth 8192 in
+set_option maxHeartbeats 4000000 in
+/-- Independent canonical IEEE expectations for every whole-chain fixture. -/
+theorem exactCompositionCanonical_zeuge :
+    exactCompositionCases.all (fun (_,a,b,_,expected) =>
+      let x : GBits f64 := ⟨a / 2^63 == 1, a / 2^52 % 2048, a % 2^52⟩
+      let y : GBits f64 := ⟨b / 2^63 == 1, b / 2^52 % 2048, b % 2^52⟩
+      decide (wf f64 x ∧ wf f64 y) && (zuBits f64 (add f64 x y) == expected)) = true := by
+  decide +kernel
+
+#print axioms exactCompositionCanonical_zeuge
+
+/-- The source-scale bridge has a nonzero executed-loop witness, including
+    the same fetch, frame and exact-tail premises as the generic theorem. -/
+theorem normalizationSourceScale_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    ∃ m' fuel count distance q r,
+      Star ⟨0, 4294967296⟩ normalizationWitnessMemory
+        ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 13 4 68 8
+        m' fuel count distance q r ∧ 8 ≤ q ∧
+      let nd := normQD 53 (3-(count : Int)) (13 * 2^distance)
+        (8 * 2^(distance+4+49))
+      nd.1 / nd.2 = (q/8).toNat := by
+  obtain ⟨m', f, c, d, q, r, run, _, head, reached⟩ :=
+    floatNormalizeLoopL_finite_magnitude_zeuge L
+  refine ⟨m', f, c, d, q, r, run, head, reached, ?_⟩
+  have h := head.normQD_source_output 53 49
+  have exponent : (53 : Int)-1-c-49 = 3-c := by omega
+  have hh : (normQD 53 ((53 : Int)-1-c-49) (13 * 2^d)
+      (8 * 2^(d+4+49))).1 /
+      (normQD 53 ((53 : Int)-1-c-49) (13 * 2^d)
+      (8 * 2^(d+4+49))).2 = (q/8).toNat := h.1
+  rw [exponent] at hh
+  exact hh
+
+#print axioms normalizationSourceScale_zeuge
 
 end Gabbro.Stage0.Senke.AddSubProbe
