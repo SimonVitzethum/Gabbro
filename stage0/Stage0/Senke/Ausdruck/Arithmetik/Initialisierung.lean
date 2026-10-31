@@ -643,6 +643,63 @@ theorem FloatNormalizeHead.round_source_ok
 
 #print axioms FloatNormalizeHead.round_source_ok
 
+omit [Kern] in
+/-- Bounds for the actual finite candidate's decoded input words. They follow
+    from the packed source operand, including either zero sign and subnormals;
+    neither an exponent slot nor a magnitude slot is assumed correct. The
+    three guard bits leave room for signed comparisons and a sum of two inputs. -/
+theorem floatFiniteAdd_input_bounds (F : Gleitkomma.Format)
+    (dense : F.dicht) (width : F.ebits + F.fracBits + 1 ≤ 64)
+    (precision : F.fracBits ≤ 52) (exponents : 1 < F.bexpMax)
+    (a : Gleitkomma.GBits F) (valid : Gleitkomma.wf F a)
+    (finite : a.bexp ≠ F.bexpMax) :
+    let w := BitVec.ofNat 64 (Gleitkomma.zuBits F a)
+    let e := (floatFieldWord w F.fracBits F.ebits).toNat
+    let m := (floatFieldWord w 0 F.fracBits).toNat +
+      (if e = 0 then 0 else 2^F.fracBits)
+    1 ≤ max e 1 ∧ max e 1 < F.bexpMax ∧
+      8*m < 2^(F.fracBits+4) ∧ 8*m < 2^56 := by
+  obtain ⟨fraction, exponent⟩ := floatFieldWord_canonical F dense width a valid
+  dsimp only
+  rw [fraction, exponent]
+  have hb := valid.1
+  have hf := valid.2
+  have hp : 0 < (2^F.fracBits : Nat) := Nat.pow_pos (by decide)
+  have magnitude : a.frac + (if a.bexp = 0 then 0 else 2^F.fracBits) <
+      2 * 2^F.fracBits := by
+    split <;> omega
+  have scale : (2 : Nat)^(F.fracBits+4) = 16 * 2^F.fracBits := by
+    rw [Nat.pow_add]; omega
+  have cap : (2 : Nat)^(F.fracBits+4) ≤ 2^56 :=
+    Nat.pow_le_pow_right (by decide) (by omega)
+  refine ⟨Nat.le_max_right _ _, ?_, ?_, ?_⟩
+  · omega
+  · rw [scale]; omega
+  · rw [scale] at cap; omega
+
+omit [Kern] in
+/-- Both supported formats satisfy all generic decoding premises jointly.
+    The operand fixture crosses the hidden-bit boundary without a normal
+    exponent and retains a negative sign in its packed representation. -/
+theorem floatFiniteAdd_input_bounds_zeuge :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+      let a : Gleitkomma.GBits F := ⟨true, 0, 1⟩
+      let w := BitVec.ofNat 64 (Gleitkomma.zuBits F a)
+      let e := (floatFieldWord w F.fracBits F.ebits).toNat
+      let m := (floatFieldWord w 0 F.fracBits).toNat +
+        (if e = 0 then 0 else 2^F.fracBits)
+      1 ≤ max e 1 ∧ max e 1 < F.bexpMax ∧
+        8*m < 2^(F.fracBits+4) ∧ 8*m < 2^56 := by
+  intro F member
+  apply floatFiniteAdd_input_bounds
+  all_goals
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    all_goals first | exact Gleitkomma.f32_dicht | exact Gleitkomma.f64_dicht | decide +kernel
+
+#print axioms floatFiniteAdd_input_bounds
+#print axioms floatFiniteAdd_input_bounds_zeuge
+
 /-- Shared finite add candidate. Operands are decoded at runtime; alignment
     retains guard/round/sticky bits before signed cancellation. No validator
     hook is enabled until the complete source-to-bytes theorem is available. -/
