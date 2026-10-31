@@ -13,7 +13,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   compilation and its formal lowering proofs are partitioned into IR-01..IR-14 in
   [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md), with dependencies, exhaustive primary form ownership and shared
   completion gates. Preserve the two worker worktrees and their uncommitted changes; no legacy Lean source
-  runtime, grammar rebuild, new side project outside the authorized rounds.
+  runtime, grammar rebuild or unrelated side project.
 
 
 - **Phase A step 4 (the combined `Spec.lean` diff "M8": arena plus payload) is PAUSED** (Simon, 2026-10-19). Nothing is merged or pushed.

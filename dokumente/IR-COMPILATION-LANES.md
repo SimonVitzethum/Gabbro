@@ -37,7 +37,7 @@ worktrees. Ordinary reboot retains this state; no claim is made that uncommitted
 **Resume procedure.** Inspect actual HEAD/status and the checkpoint hashes first. Preserve all work; never
 reset, clean, delete worktrees or reapply a patch blindly. Do not trust an interrupted build or its cache as a
 green result. Recheck the dirty modules under the global lock before committing them. Continue the two
-implementation lanes below only after an explicit resume. Reuse existing compiler checks; do not rerun
+implementation lanes below under the explicit resume now recorded above. Reuse existing compiler checks; do not rerun
 unchanged broad suites in place of closing a connected translation case.
 
 ## Work packages
