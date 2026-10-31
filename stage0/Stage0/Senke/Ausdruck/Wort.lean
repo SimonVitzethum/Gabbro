@@ -69,6 +69,28 @@ theorem ofInt_nat {x : Int} (h0 : 0 ≤ x) (h1 : x < 2 ^ 64) : (BitVec.ofInt 64 
 theorem ofInt_natCast (n : Nat) (h : n < 2 ^ 64) : (BitVec.ofInt 64 (n : Int)).toNat = n := by
   rw [BitVec.toNat_ofInt]; omega
 
+/-- Unsigned IR division agrees with the canonical nonnegative integer quotient. -/
+theorem udiv_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64)
+    (hb0 : 0 < b) (hb1 : b < 2 ^ 64) :
+    udiv (BitVec.ofInt 64 a) (BitVec.ofInt 64 b) = some (BitVec.ofInt 64 (a.tdiv b)) := by
+  have hb : b.toNat ≠ 0 := by omega
+  rw [udiv, ofInt_nat ha0 ha1, ofInt_nat (by omega) hb1]
+  simp only [hb, ↓reduceIte]
+  rw [Int.tdiv_eq_ediv_of_nonneg ha0, ← Int.toNat_of_nonneg ha0,
+    ← Int.toNat_of_nonneg (by omega : 0 ≤ b)]
+  rfl
+
+/-- Unsigned IR remainder agrees with the canonical nonnegative integer remainder. -/
+theorem urem_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64)
+    (hb0 : 0 < b) (hb1 : b < 2 ^ 64) :
+    urem (BitVec.ofInt 64 a) (BitVec.ofInt 64 b) = some (BitVec.ofInt 64 (a.tmod b)) := by
+  have hb : b.toNat ≠ 0 := by omega
+  rw [urem, ofInt_nat ha0 ha1, ofInt_nat (by omega) hb1]
+  simp only [hb, ↓reduceIte]
+  rw [Int.tmod_eq_emod_of_nonneg ha0, ← Int.toNat_of_nonneg ha0,
+    ← Int.toNat_of_nonneg (by omega : 0 ≤ b)]
+  rfl
+
 theorem and_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ 64) :
     BitVec.ofInt 64 a &&& BitVec.ofInt 64 b = BitVec.ofInt 64 ((a.toNat &&& b.toNat : Nat) : Int) := by
   apply BitVec.eq_of_toNat_eq

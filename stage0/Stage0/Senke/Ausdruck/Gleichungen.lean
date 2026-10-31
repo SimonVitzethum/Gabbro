@@ -126,11 +126,11 @@ theorem lowE_signed64_boundaries_zeuge :
 
 @[lowE_eqs] theorem lowE_div (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.div h0 h1' a b) d =
-    (if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 6 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 25 d ca cb) else none) := rfl
 
 @[lowE_eqs] theorem lowE_rem (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.rem h0 h1' a b) d =
-    (if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 7 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 26 d ca cb) else none) := rfl
 
 @[lowE_eqs] theorem lowE_sdiv (hb : 1 ≤ l2 ∨ h2 ≤ -1) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.sdiv hb a b) d =
