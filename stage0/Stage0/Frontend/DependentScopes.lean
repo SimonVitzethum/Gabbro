@@ -4,13 +4,14 @@ namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
 /-- Discovery uses candidate scalar bounds in const-function signatures. Its partial collector
-    output remains untrusted until resolveCandidate rechecks the full original source fold. -/
+    output remains untrusted until resolveCandidate rechecks the full original source fold.
+    Reuse canonical typed evaluation directly: custom-range negatives need no source materialization.
+    Failed declarations are skipped only here; final validation checks every original scalar. -/
 def nextCandidates (items : List SItemTief) (values : List (String × Int)) : List (String × Int) :=
   let expanded := aliases values [] items
   let env := uAliase values expanded
   let fns := constantFunctions (env ++ values.map (fun c => (c.1, (c.2, c.2)))) expanded
-  let normalized := constants env fns [] expanded
-  uConstsRech (uKonstFns normalized) normalized []
+  items.foldl (fun collected item => (typedItem env fns collected item).getD collected) []
 
 /-- A new candidate cannot hide unresolved integer alias declarations, including unused cycles. -/
 def aliasesResolved (env : List (String × (Int × Int))) (items : List SItemTief) : Bool :=
@@ -190,6 +191,29 @@ theorem elaborateScopes_call_bound_zeuge :
       result.scope.declared = [("Base", (0, 255)), ("Result", (0, 42))] ∧
       result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
         [("identity", [("x", (0, 42))], (0, 42))] ∧
+      result.scope.functionsUseValues = true ∧ (deriveScopes items).toOption.isNone = true := by
+  dsimp only
+  refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact Gabbro.Grammatik.except_ok_get _
+  all_goals decide +kernel
+
+/-- A custom negative range cannot be re-encoded by the frozen collector, but its canonical
+    value must still seed dependent aliases. Acceptance rechecks all original scalar declarations. -/
+theorem elaborateScopes_custom_negative_bound_zeuge :
+    let items := [SItemTief.typeT [] "Small" [] []
+        (some (.range (.atom "i8") (.un "-" (.lit 10)) (.lit 100) false)),
+      .fnT ⟨"const", "negative", [], some (.atom "Small"), none, []⟩
+        (.block [] (some (.ret (some (.bin "-" (.lit 0) (.lit 1)))))),
+      .constT "NEGATIVE" (.atom "Small") (.one (.call "negative" [])),
+      .typeT [] "Bound" [] []
+        (some (.range (.atom "i8") (.variable "NEGATIVE") (.lit 100) false)),
+      .constT "ANSWER" (.atom "Bound") (.one (.lit 42))]
+    nextCandidates items [] = [("NEGATIVE", -1)] ∧
+    ∃ result, elaborateScopes items = .ok result ∧
+      result.scope.values = [("NEGATIVE", -1), ("ANSWER", 42)] ∧
+      result.scope.declared = [("Small", (-10, 100)), ("Bound", (-1, 100))] ∧
+      result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
+        [("negative", [], (-10, 100))] ∧
       result.scope.functionsUseValues = true ∧ (deriveScopes items).toOption.isNone = true := by
   dsimp only
   refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩

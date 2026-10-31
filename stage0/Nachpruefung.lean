@@ -18,6 +18,7 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.SourceWitness.entry_ir_simulation_zeuge
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_call_bound_zeuge
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_custom_negative_bound_zeuge
 #print axioms Gabbro.Stage0.ArrayWitness.array_constant_typed_zeuge
 #print axioms Gabbro.Stage0.ArrayWitness.arrayMeaning_collected_zeuge
 #print axioms Gabbro.Stage0.ArrayWitness.source_image_joint_zeuge
