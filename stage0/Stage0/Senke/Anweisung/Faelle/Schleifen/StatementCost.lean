@@ -147,6 +147,55 @@ theorem mov_to_counted {m : Mem} {pc fp : W} {K j s : Nat} {w : W}
   rw [sx_nat (by omega)]
   exact run_wr64 (wr64_some (hF.wr j hj))
 
+/-- The successful suffix emitted by `retC` takes exactly three S0IR
+    instructions: check the ensures flag, copy the result to ABI slot 2,
+    restore the caller PC and frame. The flag is a checked memory premise;
+    this lemma does not establish execution of the preceding ensures code. -/
+theorem returnTail_counted {m : Mem} {pc fp rp cfp w : W} {K lo : Nat}
+    (code : CodeAt m pc
+      [ci 19 ((lo + 1 : Nat) : Int) 48 0, ci 2 2 lo 0, ci 21 0 0 0])
+    (far : CodeFar pc 3 fp K) (frame : FrameOK m fp K)
+    (small : K < 2 ^ 31) (abi : 2 < lo) (room : lo + 1 < K)
+    (flag : m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1)
+    (value : m.rd64 (slot fp (BitVec.ofNat 64 lo)) = some w)
+    (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
+    ∃ m', Counted 3 ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
+      Agree fp 2 K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 := by
+  have branch := code 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at branch
+  have stepBranch : Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m :=
+    .next (run_step branch (by decide)
+      (run_brz_ne branch (by rw [sx_nat (by omega)]; exact flag) (by decide))) (.refl _ _)
+  have tail := codeAt_right (a := [ci 19 ((lo + 1 : Nat) : Int) 48 0]) code
+  have moved := mov_to_counted (codeAt_left tail) frame (j := 2) (s := lo)
+    (by omega) (by omega) small value
+  let m' := write m (slot fp (BitVec.ofNat 64 2)) 8 w.toNat
+  have agree : Agree fp 2 K m m' := agree_write frame.room (by omega) (by omega) _
+  have farRet : CodeFar (pc + 16 + 16) 1 fp K := by
+    simpa using codeFar_tail (a := [ci 2 2 lo 0])
+      (codeFar_tail (a := [ci 19 ((lo + 1 : Nat) : Int) 48 0])
+        (b := [ci 2 2 lo 0, ci 21 0 0 0]) far)
+  have retBefore : CodeAt m (pc + 16 + 16) [ci 21 0 0 0] := by
+    simpa using codeAt_right (a := [ci 2 2 lo 0]) tail
+  have retCode := retBefore.agree agree farRet
+  have ret := retCode 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ret
+  have rpc : m'.rd64 fp = some rp := by
+    have h := agree_rd_low (i := 0) agree frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedPC)
+  have rfp : m'.rd64 (fp + 8) = some cfp := by
+    have h := agree_rd_low (i := 1) agree frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedFP)
+  have leave : Counted 1 ⟨pc + 16 + 16, fp⟩ m' ⟨rp, cfp⟩ m' :=
+    .next (run_step ret (by decide) (run_ret rpc rfp)) (.refl _ _)
+  refine ⟨m', ?_, agree, rd_same frame (by omega) w, ?_⟩
+  · exact (stepBranch.trans (by simpa using moved)).trans leave
+  · change (write m (slot fp (BitVec.ofNat 64 2)) 8 w.toNat).rd64 _ = _
+    rw [rd_other frame.room (by omega) (by omega) (by omega)]
+    exact flag
+
 /-- The four actual call-tail instructions establish the callee ABI, parameter
     frame and decremented depth together. No callee execution is assumed. -/
 theorem callTail_counted {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II}
@@ -592,6 +641,40 @@ theorem countedEndCons_case
       far, env1, trivial, wstab_true _ _⟩
   obtain ⟨u, b, run2, done⟩ := restRuns cr tr hr m1 _ nextPre world1
   exact ⟨u, b, run1.trans run2, done⟩
+
+namespace ReturnTailProbe
+open FnptrProben
+
+def image : List II := [ci 19 5 48 0, ci 2 2 4 0, ci 21 0 0 0]
+
+def memory : Mem :=
+  let base : Mem := {
+    b := fun a => ((image.flatMap encII)[a.toNat]?).getD 0
+    rd := fun _ => true
+    wr := fun _ => true }
+  write (write (write (write base 4096 8 2048) 4104 8 8192) 4128 8 37) 4136 8 1
+
+/-- Loaded nonzero result and distinct caller frame exercise the real return. -/
+theorem return_tail_zeuge :
+    ∃ m', Counted 3 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' ∧
+      Agree 4096 2 16 memory m' ∧ m'.rd64 4112 = some 37 ∧
+      m'.rd64 4136 = some 1 := by
+  have code : CodeAt memory 0 image := by
+    have h : ∀ k : Fin image.length,
+        memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f image[k.val].a) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f image[k.val].b) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f image[k.val].c) := by
+      apply allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  exact returnTail_counted code (by unfold CodeFar; decide +kernel)
+    ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩ (by decide) (by decide)
+    (by decide) (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
+
+end ReturnTailProbe
 
 namespace BlockCostProbe
 /-- A genuine nonempty statement body under a lexical binding. -/
