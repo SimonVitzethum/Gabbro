@@ -268,6 +268,18 @@ simulation, complete costs and range 107 remain open. Add/sub remain refused;
 computed `floatOf` is unchanged. No grammar rebuild was run.
 
 
+Negative alignment now has an emitted Euclidean-borrow fragment: the positive
+quotient is negated and a discarded tail subtracts one more. Its generic simulation
+agrees with signed division for every positive denominator. An exact signed-tail
+reconstruction identity preserves cancellation, and the guard/sticky theorem now
+also derives guards from Euclidean division of an arbitrary magnitude. A joint
+witness combines cancellation to one unit, the emitted borrow simulation and exact
+sizes (37 instructions, ceiling 11 at base 8). Direct checks and standard-axiom
+audits passed; actual runner: 141 images, zero failures (five added borrow cases),
+and layout passed (2026-10-31). The complete signed sum-to-packed-result path remains
+open and add/sub remain refused. No grammar rebuild was run.
+
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access

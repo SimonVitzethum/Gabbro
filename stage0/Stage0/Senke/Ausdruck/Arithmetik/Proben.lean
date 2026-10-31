@@ -64,6 +64,39 @@ def alignmentImages : List (String × Except String (List Runner.B) × Nat) :=
           (fun d => floatCoefficientL d (fun j => some (konstWL 4 hi j)))
           (fun d => some (konstWL 4 k d))) expected, 7))
 
+/-- Negative alignment executes the production borrow rather than rounding a
+    negated sticky operand. Zero, exact, tiny and wide quotients are covered. -/
+def negativeQuotImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("negative-quot-zero", 0, 0, 0),
+   ("negative-quot-tiny", 0, 1, 2^64-1),
+   ("negative-quot-exact", 6, 0, 2^64-6),
+   ("negative-quot-borrow", 6, 1, 2^64-7),
+   ("negative-quot-wide", 2^52, 1, 2^64-2^52-1)].map
+    (fun (name, q, sticky, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatNegativeQuotL 8 (fun d => some (konstWL 4 q d))
+          (fun d => some (konstWL 4 sticky d))) expected, 7))
+
+theorem negativeQuotImages_zeuge : negativeQuotImages.length = 5 ∧
+    negativeQuotImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+/-- The borrow and exact signed tail jointly describe cancellation to one
+    unit; the actual emitted fragment has its simulation and exact sizes. -/
+theorem floatNegativeQuotL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    (-(13 : Int)) / 2 = -7 ∧ (-(13 : Int)) % 2 = 1 ∧
+    7 * (2 : Int) - 13 = (7 + -7) * 2 + 1 ∧
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun d => floatNegativeQuotL d (fun j => some (konstWL 4 6 j))
+        (fun j => some (konstWL 4 1 j))) (BitVec.ofInt 64 (-7)) ∧
+    ∃ c, floatNegativeQuotL 8 (fun j => some (konstWL 4 6 j))
+      (fun j => some (konstWL 4 1 j)) = some (c, 11) ∧ c.length = 37 := by
+  refine ⟨by decide, by decide, by decide, ?_, ?_⟩
+  · exact floatNegativeQuotL_ok 13 2 (by decide)
+      (WordCode.konst 6 (by decide)) (WordCode.konst 1 (by decide))
+  · refine ⟨((floatNegativeQuotL 8 (fun j => some (konstWL 4 6 j))
+        (fun j => some (konstWL 4 1 j))).getD ([], 0)).1, ?_, ?_⟩ <;> decide +kernel
+
 /-- The production rounding fragment checks exact ties, tails at distance 1074,
     the significand carry, and both sides of the halfway boundary. -/
 def guardImages : List (String × Except String (List Runner.B) × Nat) :=

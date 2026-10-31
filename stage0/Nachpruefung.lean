@@ -292,3 +292,10 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatGuardRoundL_ok
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatGuardRoundL_joint_zeuge
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.guardImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatGuardSticky_div
+#print axioms Gabbro.Stage0.Senke.floatNegativeAlign_div
+#print axioms Gabbro.Stage0.Senke.floatSignedAlign_reconstruct
+#print axioms Gabbro.Stage0.Senke.floatNegativeQuotL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeQuotL_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.negativeQuotImages_zeuge

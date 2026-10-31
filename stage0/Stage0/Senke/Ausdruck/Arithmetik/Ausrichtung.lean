@@ -106,6 +106,40 @@ theorem floatGuardSticky_round (q guard rest den : Nat)
         split <;> omega
       simp only [rundeInt, habove, hlarge, ↓reduceIte]
 
+/-- Compression of the complete remainder of an arbitrary magnitude. The
+    quotient and guard are derived by Euclidean division, including after
+    cancellation down into the subnormal range. -/
+theorem floatGuardSticky_div (n den : Nat) (hd : 0 < den) :
+    rundeInt (n / (8 * den)) (n % (8 * den)) (8 * den) =
+      rundeInt (n / (8 * den))
+        (2 * (n / den % 8) + if n % den = 0 then 0 else 1) 16 := by
+  have hmod : n % (8 * den) = (n / den % 8) * den + n % den := by
+    rw [Nat.mul_comm 8 den, Nat.mod_mul]
+    ac_rfl
+  rw [hmod]
+  exact floatGuardSticky_round _ _ _ _ hd (Nat.mod_lt _ hd)
+    (Nat.mod_lt _ (by decide))
+
+/-- Negative alignment must round the quotient downward, borrowing exactly
+    when a tail was discarded. Negating a jammed positive quotient alone is
+    insufficient to represent its remainder correctly. -/
+theorem floatNegativeAlign_div (n den : Nat) (hd : 0 < den) :
+    (-(n : Int)) / (den : Int) =
+      -(n / den : Nat) - if n % den = 0 then 0 else 1 := by
+  rw [Int.neg_ediv, ← Int.natCast_ediv]
+  have hs : (den : Int).sign = 1 := Int.sign_eq_one_of_pos (by omega)
+  simp only [hs, Int.ofNat_dvd, Nat.dvd_iff_mod_eq_zero]
+
+/-- Reconstruction keeps the complete signed tail, rather than treating its
+    sticky bit as an exact low-order value. This identity survives arbitrary
+    cancellation with an aligned high coefficient. -/
+theorem floatSignedAlign_reconstruct (hi lo : Int) (den : Nat) :
+    hi * (den : Int) + lo =
+      (hi + lo / (den : Int)) * (den : Int) + lo % (den : Int) := by
+  have h := Int.mul_ediv_add_emod lo (den : Int)
+  rw [Int.add_mul, Int.mul_comm (lo / (den : Int))]
+  omega
+
 /-- Joint boundary witnesses include both tie parities and a distance of 1074
     bits; the sticky bit distinguishes an exact tie from an arbitrarily small
     positive tail. -/
@@ -117,6 +151,45 @@ theorem floatGuardSticky_round_zeuge :
   decide +kernel
 
 variable [Kern] {D : Deklaration} {L : Lay D}
+
+/-- Borrow the discarded tail when aligning a negative coefficient. Keeping
+    this correction separate from the positive remainder prevents the sticky
+    bit from being mistaken for an exact signed operand. -/
+def floatNegativeQuotL (d : Nat) (q sticky : Nat → Option (List II × Nat)) :
+    Option (List II × Nat) :=
+  wordL 4 d (wordL 4 d (some ([ci 1 d 0 0], d + 1)) (q (d + 1)))
+    (sticky (d + 1))
+
+/-- The emitted negative quotient includes the exact Euclidean borrow, for
+    any positive alignment denominator. Word representation is modular here;
+    recovering a signed integer additionally requires the usual range bound. -/
+theorem floatNegativeQuotL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {q sticky : Nat → Option (List II × Nat)} (n den : Nat) (hd : 0 < den)
+    (hq : WordCode (L := L) ρ W q (BitVec.ofNat 64 (n / den)))
+    (hsticky : WordCode (L := L) ρ W sticky
+      (BitVec.ofNat 64 (if n % den = 0 then 0 else 1))) :
+    WordCode (L := L) ρ W (fun d => floatNegativeQuotL d q sticky)
+      (BitVec.ofInt 64 ((-(n : Int)) / (den : Int))) := by
+  have neg : WordCode (L := L) ρ W _ _ := WordCode.bin
+    (WordCode.const 0 (by decide)) hq (g := fun a b => some (a - b))
+    rfl rfl (by decide : 4 < 256)
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin neg hsticky
+    (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
+  intro fp K d c top hc hK m pc hp
+  exact (result hc hK m pc hp).mono fun w hw => by
+    rw [floatNegativeAlign_div n den hd]
+    by_cases hz : n % den = 0
+    · simp only [hz, ↓reduceIte] at hw ⊢
+      rw [Int.sub_zero, BitVec.ofInt_neg, BitVec.ofInt_natCast]
+      change w = ((0#64) - BitVec.ofNat 64 (n / den)) - (0#64) at hw
+      simpa only [BitVec.zero_sub, BitVec.sub_zero] using hw
+    · simp only [hz, ↓reduceIte] at hw ⊢
+      rw [Int.sub_eq_add_neg, BitVec.ofInt_add, BitVec.ofInt_neg,
+        BitVec.ofInt_natCast]
+      change w = -BitVec.ofNat 64 (n / den) + (-1 : Runner.W)
+      change w = ((0#64) - BitVec.ofNat 64 (n / den)) - (1#64) at hw
+      rw [BitVec.zero_sub, BitVec.sub_eq_add_neg] at hw
+      exact hw
 
 /-- Round a post-cancellation quotient with three guard bits and a Boolean
     tail. The denominator is constant even for arbitrarily distant operands. -/
@@ -199,6 +272,10 @@ theorem floatAlignSumL_shape (d ta tb tk na nb nk : Nat)
       output.length = na + nb + nk + 2 := by
   simp [floatAlignSumL, wordL, ha, hb, hk, bin2, hla, hlb, hlk, Nat.add_assoc]
 
+#print axioms floatGuardSticky_div
+#print axioms floatNegativeQuotL_ok
+#print axioms floatNegativeAlign_div
+#print axioms floatSignedAlign_reconstruct
 #print axioms floatGuardSticky_round
 #print axioms floatGuardRoundL_ok
 #print axioms floatAlignSumWord_round
