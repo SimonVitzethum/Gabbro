@@ -299,6 +299,18 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   memory into `BlockCost.call`; source-certificate-derived nested-forever
   instantiation. The bounded returning execution alone does not discharge those
   continuation premises.
+  `RecursiveEndCost.sound` now proves execution of the actual recursive terminal
+  certificate by induction on its source tree: `call` and `bindCall` descend into
+  `P.rumpf`, with decreasing call depth and the same returned-value index.
+  Guard/requires, snapshot and parameter relocation are counted before applying
+  the genuine child induction hypothesis; the continuation uses the identical
+  returned memory. Assignment, binding and branch prefixes transport the frame,
+  world, entry parameters, saved caller header and `Umf`.
+  `RecursiveTerminalProbe.sound_zeuge` jointly instantiates these premises with
+  argument/result 37, distinct caller addresses and a bound of 23 S0IR steps.
+  This does not yet replace the `EndCost` premises in `recursiveBlockCost`:
+  its call/bindCall integration, a nested-forever cost constructor and the
+  whole-source bound remain OPEN.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,

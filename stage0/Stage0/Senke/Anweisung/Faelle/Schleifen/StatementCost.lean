@@ -2538,6 +2538,454 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
         (if choice then t else e) σ ρ output nb) :
       RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo (.ite c t e) σ ρ output (nc + 1 + nb)
 
+/-- Execute actual recursive callee bodies with their decreasing child induction hypotheses. -/
+theorem RecursiveEndCost.sound
+    {passes depth Ks reserved V l Δ snapshot ens lo Γ Λ b σ ρ output budget}
+    {A : D.Fn → Nat} {C : D.Fn → List II}
+    (certificate : RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo
+      (Γ := Γ) (Λ := Λ) b σ ρ output budget)
+    {K top : Nat} {pr : List Nat} {ex : Int × Int} {code : List II}
+    {m : Mem} {pc fp rp cfp : W}
+    (lower : lowEnd (reserved := reserved) passes A L lo ens pr ex b = some (code, top))
+    (fits : top ≤ Ks) (inside : WIn L fp Ks K)
+    (low : lo ≤ frei Γ reserved) (abi : 3 < lo) (lowBound : lo ≤ K)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (world : WeltAt m L σ)
+    (parameters : Env D Δ) (parameterEnv : EnvAt L m fp parameters)
+    (base : lo = frei Δ)
+    (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
+    (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp)
+    (surroundings : Umf L A C (BitVec.ofNat 64 depth) m fp Ks K)
+    (depthBound : depth + 1 < 2 ^ 64) :
+    ∃ n m', n ≤ budget ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
+      AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
+      (∀ τ v, output = some ⟨τ, v⟩ →
+        ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) := by
+  induction certificate generalizing K top code m pc fp rp cfp pr ex with
+  | source cert =>
+    obtain ⟨m', run, post, agree, frame, rpc, rfp, hw⟩ :=
+      cert.sound lower fits inside low abi lowBound hprotected pre world
+        parameters parameterEnv base entry savedPC savedFP
+    exact ⟨_, m', Nat.le_refl _, run, agree, frame, hw, fun τ v result => cert.result_read result post⟩
+  | @call depth Ks reserved V l Δ snapshot ens lo Γ Λ f args σ₀ σ ρ na nq nb declared returned
+      arguments topF lowerFun fitsFun address requirement body declaration rest nr output hp hr tail body_ih tail_ih =>
+    let childKs := Ks - frei Γ reserved
+    have calleeRun {m : Mem} {pc fp rp cfp : W} {K : Nat}
+        (fits : topF ≤ childKs)
+        (inside : WIn L fp childKs K)
+        (pre : PreS L m pc fp K (FB + (D.params f).length) (C f)
+          (evalArgs σ₀ args σ ρ))
+        (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
+        (savedFP : m.rd64 (fp + 8) = some cfp)
+        (childUmf : Umf L A C (BitVec.ofNat 64 depth) m fp childKs K) :
+        ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
+          AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
+          (∀ τ v, returned = some ⟨τ, v⟩ →
+            ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) := by
+      have depthRead := childUmf.depth
+      have positive : (BitVec.ofNat 64 depth : W) + 1 ≠ 0 := by
+        bv_omega
+      have hks := inside.ks
+      have lower := lowerFun
+      simp only [lowFun] at lower
+      split at lower
+      next accepted =>
+        simp only [Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
+        obtain ⟨⟨cq, tq⟩, hq, ens, hens, ⟨cb, tb⟩, hb, cs, hcs, hc, ht⟩ := lower
+        rw [← hc] at pre
+        let s := FB + (D.params f).length
+        let reserved := (D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)
+        have bounds := fits
+        rw [← ht] at bounds
+        simp only [frei] at bounds
+        have hp : PreS L m pc fp K s
+            (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++
+              (relocateC FB reserved (D.params f).length ++ cb))))) (evalArgs σ₀ args σ ρ) := by
+          simpa [s, reserved, List.append_assoc] using pre
+        have first := guard_pass_counted hp.left.code (by decide) depthRead positive
+        have hp1 := hp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+        have phases : PreS L m (pc + BitVec.ofNat 64 (16 * (guardC 2 105 s).length)) fp K s ((cq ++ guardC s 101 s) ++
+            (cs ++ (relocateC FB reserved (D.params f).length ++ cb))) (evalArgs σ₀ args σ ρ) := by
+          simpa [List.append_assoc] using hp1
+        have hpq := phases.left
+        obtain ⟨m1, rq, a1, env1, _⟩ := requirement.guard hq (by omega) hpq
+        have hf1 := hp.frame.agree a1
+        have rest := phases.next a1 (Nat.le_refl _) (by omega)
+        have world1 := weltAt_stab inside.lay (by have := inside.top; omega) m m1 world (a1.mono (Nat.zero_le _))
+        obtain ⟨mS, rs, aS, snap, keep⟩ := snapC_counted hcs hf1 pre.small (by omega)
+          rest.left.code rest.left.far world1 inside.lay (by have := inside.top; omega)
+        have hfS := hf1.agree aS
+        have envS : EnvAt L mS fp (evalArgs σ₀ args σ ρ) := by
+          intro τ x
+          obtain ⟨w, hw, enc⟩ := env1 τ x
+          exact ⟨w, (keep (vslot x) (by have := vslot_lt (reserved := 0) x; unfold frei at this; omega)
+            (by unfold vslot FB; omega)).trans hw, enc⟩
+        have farS := codeFar_tail rest.far
+        have rem : PreS L mS _ fp K s (relocateC FB reserved (D.params f).length ++ cb) (evalArgs σ₀ args σ ρ) :=
+          ⟨rest.ctx, pre.small, hfS, (codeAt_right rest.code).agree aS farS,
+            farS, envS, trivial, wstab_true _ _⟩
+        obtain ⟨mR, rr, aR, moved⟩ := relocate_env_counted hfS pre.small
+          (by unfold frei reserved; omega)
+          envS rem.left.code (by simpa [relocateC_length] using rem.left.far)
+        have ar := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + reserved) ≤ K by unfold frei reserved; omega)
+        have original := envAt_agree envS ar hfS (by unfold frei FB; omega) (by omega)
+        have hpB := rem.next (ar.mono (by simp only [s, FB]; omega)) (Nat.le_refl _) (by omega)
+        have bodyPre : PreS L mR _ fp K (frei (D.params f) reserved) cb (evalArgs σ₀ args σ ρ) reserved :=
+          ⟨Nat.le_refl _, pre.small, hfS.agree ar, hpB.code, hpB.far,
+            by simpa using moved, trivial, wstab_true _ _⟩
+        have all : Agree fp 3 K m mR := (a1.mono (by simp only [s, FB]; omega)).trans (aS.trans (ar.mono (by unfold FB; omega)))
+        have worldR := weltAt_stab inside.lay (by have := inside.top; omega) m mR world (all.mono (by decide))
+        have rpc : mR.rd64 fp = some rp := by
+          have h := agree_rd_low (i := 0) all pre.frame.room (by decide) (by omega)
+          simpa [slot] using h.trans (by simpa [slot] using savedPC)
+        have rfp : mR.rd64 (fp + 8) = some cfp := by
+          have h := agree_rd_low (i := 1) all pre.frame.room (by decide) (by omega)
+          simpa [slot] using h.trans (by simpa [slot] using savedFP)
+        have bodyUmf : Umf L A C (BitVec.ofNat 64 depth) mR fp childKs K := by
+          refine ⟨pcode_agree childUmf.code all, ?_, childUmf.big,
+            childUmf.sync.agree all childUmf.hiK, childUmf.hiK⟩
+          rw [agree_rd_low (i := 2) all pre.frame.room (by decide) (by omega)]
+          exact childUmf.depth
+        obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead⟩ :=
+          body_ih ens hens (rdW mR fp 3) hb (by omega) inside
+          (by simp only [frei]; omega) (by simp only [FB]; omega) (by omega)
+          (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
+          (rd64_rdW (hfS.agree ar) (by omega)) rpc rfp bodyUmf (by omega)
+        simp only [relocateC_length] at rb
+        refine ⟨2 + nq + 2 + cs.length + (D.params f).length + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
+        simpa [s, pc_add, relocateC_length, List.length_append, Nat.add_assoc] using
+          first.trans (rq.trans (rs.trans (rr.trans rb)))
+      next refused => simp at lower
+    simp only [lowEnd, lowS, Bind.bind, Option.bind_eq_some_iff, pure,
+      Option.some.injEq, Prod.mk.injEq] at lower
+    obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, rfl, rfl⟩ := lower
+    obtain ⟨⟨ca, ta⟩, ha, out⟩ := hs
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    simp only [Prod.fst, Prod.snd] at fits pre
+    have fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks := by omega
+    have hks := inside.ks
+    have room : frei Γ reserved ≤ Ks := by
+      have h := fitsArgs
+      simp only [callTop] at h
+      omega
+    have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
+      simp [callC, callTail, callTailN, List.length_append]
+    obtain ⟨m1, entryRun, entryAgree, childFrame, childUmf, rpc, rfp, env, hw⟩ :=
+      arguments.recursiveEntry ha fitsArgs address pre.left surroundings inside world
+    have childUmf' : Umf L A C (BitVec.ofNat 64 depth) m1
+        (slot fp (BitVec.ofNat 64 (frei Γ reserved))) childKs (K - frei Γ reserved) := by
+      have deq : (BitVec.ofNat 64 (depth + 1) : W) - 1 = BitVec.ofNat 64 depth := by bv_omega
+      simpa only [deq] using childUmf
+    have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
+        (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
+        (FB + (D.params f).length) (C f) (evalArgs σ₀ args σ ρ) :=
+      ⟨by simp [frei], by have := pre.small; omega, childFrame,
+        (childUmf'.code f).1, (childUmf'.code f).2, env, trivial, wstab_true _ _⟩
+    obtain ⟨nCall, m2, boundCall, callRun, calleeAgree, frame, hw, resultRead⟩ :=
+      calleeRun fitsFun (inside.sub room pre.frame.lt) calleePre hw rpc rfp childUmf'
+    have agree : AgreeW L fp (frei Γ reserved) K m m2 :=
+      (agreeW_of entryAgree).trans
+        ((agreeW_sub pre.frame.lt (by omega) calleeAgree).mono (by omega))
+    have nextPre := pre.nextW inside agree (Nat.le_refl _) (Nat.le_refl _) (by omega)
+    have rpc2 : m2.rd64 fp = some rp := by
+      have h := agreeW_rdW inside agree (i := 0) (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp2 : m2.rd64 (fp + 8) = some cfp := by
+      have h := agreeW_rdW inside agree (i := 1) (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    obtain ⟨nRest, m3, boundRest, restRun, finalAgree, frame, hw, resultRead⟩ :=
+      tail_ih hr (by omega) inside low abi lowBound hprotected nextPre hw parameters
+        (envAt_agreeWIn inside parameterEnv agree (by omega) (by omega)) base
+        (by rw [agreeW_rdW inside agree (i := 3) (by omega) (by omega)]; exact entry)
+        rpc2 rfp2 (Umf.agreeW inside surroundings agree (by unfold frei FB; omega)) depthBound
+    refine ⟨na + 4 + nCall + nRest, m3, by omega, ?_,
+      (agree.mono (by omega)).trans finalAgree, frame, hw, resultRead⟩
+    rw [← len] at rpc
+    have joined := entryRun.trans callRun
+    rw [← len] at joined
+    exact joined.trans restRun
+  | @assign depth Ks reserved V l Δ snapshot ens lo output Γ Λ τ x e rest σ ρ v ne nr value tail ih =>
+    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    obtain ⟨m1, run1, agree1, env1, world1, keep1⟩ :=
+      countedAssignVar_case value hs (Nat.le_trans (Nat.le_max_left _ _) fits)
+        inside low hprotected pre.left world
+    have far := codeFar_right (n := cs.length) (k := cr.length) (by simpa using pre.far)
+    have nextPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K
+        (frei _ reserved) cr _ reserved :=
+      ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame agree1,
+        codeAt_agreeWIn inside agree1 (codeAt_right pre.code) far,
+        far, env1, trivial, wstab_true _ _⟩
+    have hK : lo ≤ K := lowBound
+    have rpc : m1.rd64 fp = some rp := by
+      have h := agreeW_rdW inside agree1 (i := 0) (by omega) hK
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp : m1.rd64 (fp + 8) = some cfp := by
+      have h := agreeW_rdW inside agree1 (i := 1) (by omega) hK
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    obtain ⟨n2, m2, bound2, run2, finalAgree, frame, hw, result2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits) inside
+      low abi lowBound hprotected nextPre world1
+      parameters (envAt_agreeWIn inside parameterEnv agree1 (by omega) lowBound) base
+      (by rw [agreeW_rdW inside agree1 (i := 3) (by omega) lowBound]; exact entry) rpc rfp
+      (Umf.agreeW inside surroundings agree1 (by unfold FB; omega)) depthBound
+    exact ⟨_, m2, by omega, run1.trans run2, (agree1.mono (by omega)).trans finalAgree, frame, hw, result2⟩
+  | @bind depth Ks reserved V l Δ snapshot ens lo output Γ Λ τ e rest σ ρ v ne nr value tail ih =>
+    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    have hks := inside.ks
+    have room := lowE_top _ _ _ _ he
+    have hpw := PreS.welt pre.left inside.ks world inside.lay (by have := inside.lo; omega)
+    obtain ⟨m1, run1, a1s, w, read, encoded⟩ :=
+      value.sound he (Nat.le_trans (Nat.le_max_left _ _) fits) hpw
+    have a1 := Agree.widen a1s inside.ks
+    have far := codeFar_right (n := ce.length) (k := cr.length) (by simpa using pre.far)
+    have nextPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K
+        (frei Γ reserved + 1) cr (Env.cons v ρ) reserved :=
+      ⟨by simp only [frei, List.length_cons]; omega, pre.small, pre.frame.agree a1,
+        (codeAt_right pre.code).agree a1 far, far,
+        envAt_cons (envAt_agree pre.env a1 pre.frame (Nat.le_refl _) (by omega)) read encoded,
+        trivial, wstab_true _ _⟩
+    have rpc : m1.rd64 fp = some rp := by
+      have h := agree_rd_low (i := 0) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp : m1.rd64 (fp + 8) = some cfp := by
+      have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    obtain ⟨n2, m2, bound2, run2, finalAgree, frame, hw, result2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits) inside
+      (by simp only [frei, List.length_cons] at low ⊢; omega)
+      abi lowBound (fun j hj => by have := hprotected j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      nextPre (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _)))
+      parameters (envAt_agree parameterEnv a1 pre.frame (by omega) (by omega)) base
+      (by rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry) rpc rfp
+      (surroundings.agree a1 pre.frame (by unfold frei FB; omega)) depthBound
+    exact ⟨_, m2, by omega, run1.trans run2, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, hw, result2⟩
+
+  | @branch depth Ks reserved V l Δ snapshot ens lo output Γ Λ c t e σ ρ choice nc nb condition jumpFits child ih =>
+    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨cc, tc⟩, hc, ⟨ce, te⟩, he, ⟨ct, tt⟩, ht, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    have hks := inside.ks
+    have room := lowE_top _ _ _ _ hc
+    have hq : PreS L m pc fp K (frei Γ reserved)
+        (cc ++ ([ci 19 (frei Γ reserved) (16 * (ct.length + 1)) 0] ++ (ct ++ ce))) ρ reserved := by
+      simpa [List.append_assoc] using pre
+    have hpw := PreS.welt hq.left inside.ks world inside.lay (by have := inside.lo; omega)
+    obtain ⟨m1, run1, a1s, w, read, value⟩ := condition.sound hc (by omega) hpw
+    have a1 := Agree.widen a1s inside.ks
+    have h1 := hq.next a1 (Nat.le_refl _) (by omega)
+    have h2 := h1.next (a := [ci 19 (frei Γ reserved) (16 * (ct.length + 1)) 0])
+      (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+    have ins := h1.code 0 (by simp)
+    simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at ins
+    have hd : sx (II.f (frei Γ reserved : Int)) = BitVec.ofNat 64 (frei Γ reserved) :=
+      sx_nat (by have := pre.small; omega)
+    have world1 := hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))
+    have params1 := envAt_agree parameterEnv a1 pre.frame (by omega) (by omega)
+    have entry1 : m1.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot := by
+      rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry
+    have rpc : m1.rd64 fp = some rp := by
+      have h := agree_rd_low (i := 0) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp : m1.rd64 (fp + 8) = some cfp := by
+      have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    cases choice with
+    | true =>
+      simp only [Bool.true_eq, ↓reduceIte] at value child ih
+      subst w
+      have sb := counted_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
+        (by simp only [ci]; exact run_brz_ne ins (by rw [hd]; exact read) (by decide))
+      obtain ⟨n2, m2, bound2, run2, agree, frame, hw, result2⟩ :=
+        ih ht (by omega) inside low abi lowBound hprotected h2.left world1 parameters params1 base entry1 rpc rfp
+          (surroundings.agree a1 pre.frame (by unfold frei FB; omega)) depthBound
+      have run : Counted (nc + (1 + n2)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m2 := by
+        refine run1.trans (sb.trans ?_)
+        simpa [List.length_singleton, pc_add, addr_norm] using run2
+      exact ⟨nc + (1 + n2), m2, by omega, by simpa only [Nat.add_assoc] using run,
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2⟩
+    | false =>
+      simp only [Bool.false_eq_true, ↓reduceIte] at value child ih
+      subst w
+      have step := run_step (t := ⟨_, fp⟩) ins (by decide)
+        (run_brz_zero ins (by rw [hd]; exact read))
+      have offset : sx (II.f (16 * ((ct.length : Int) + 1))) =
+          BitVec.ofNat 64 (16 * (ct.length + 1)) := by
+        have h := sx_nat (d := 16 * (ct.length + 1)) (jumpFits _ _ _ _ _ _ ht)
+        simpa using h
+      rw [offset] at step
+      have sb := Counted.next step (Counted.refl _ _)
+      have h4 := h2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+      obtain ⟨n2, m2, bound2, run2, agree, frame, hw, result2⟩ :=
+        ih he (by omega) inside low abi lowBound hprotected h4 world1 parameters params1 base entry1 rpc rfp
+          (surroundings.agree a1 pre.frame (by unfold frei FB; omega)) depthBound
+      have run : Counted (nc + (1 + n2)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m2 := by
+        refine run1.trans (sb.trans ?_)
+        simpa [List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using run2
+      exact ⟨nc + (1 + n2), m2, by omega, by simpa only [Nat.add_assoc] using run,
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2⟩
+
+  | @bindCall depth Ks reserved V l Δ snapshot ens lo Γ τ v Λ f args σ₀ σ ρ na nq nb declared returned
+      arguments topF lowerFun fitsFun address requirement body declaration result he rest nr output hp hr tail body_ih tail_ih =>
+    let childKs := Ks - frei Γ reserved
+    have calleeRun {m : Mem} {pc fp rp cfp : W} {K : Nat}
+        (fits : topF ≤ childKs)
+        (inside : WIn L fp childKs K)
+        (pre : PreS L m pc fp K (FB + (D.params f).length) (C f)
+          (evalArgs σ₀ args σ ρ))
+        (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
+        (savedFP : m.rd64 (fp + 8) = some cfp)
+        (childUmf : Umf L A C (BitVec.ofNat 64 depth) m fp childKs K) :
+        ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
+          AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
+          (∀ τ v, returned = some ⟨τ, v⟩ →
+            ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) := by
+      have depthRead := childUmf.depth
+      have positive : (BitVec.ofNat 64 depth : W) + 1 ≠ 0 := by
+        bv_omega
+      have hks := inside.ks
+      have lower := lowerFun
+      simp only [lowFun] at lower
+      split at lower
+      next accepted =>
+        simp only [Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
+        obtain ⟨⟨cq, tq⟩, hq, ens, hens, ⟨cb, tb⟩, hb, cs, hcs, hc, ht⟩ := lower
+        rw [← hc] at pre
+        let s := FB + (D.params f).length
+        let reserved := (D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)
+        have bounds := fits
+        rw [← ht] at bounds
+        simp only [frei] at bounds
+        have hp : PreS L m pc fp K s
+            (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++
+              (relocateC FB reserved (D.params f).length ++ cb))))) (evalArgs σ₀ args σ ρ) := by
+          simpa [s, reserved, List.append_assoc] using pre
+        have first := guard_pass_counted hp.left.code (by decide) depthRead positive
+        have hp1 := hp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+        have phases : PreS L m (pc + BitVec.ofNat 64 (16 * (guardC 2 105 s).length)) fp K s ((cq ++ guardC s 101 s) ++
+            (cs ++ (relocateC FB reserved (D.params f).length ++ cb))) (evalArgs σ₀ args σ ρ) := by
+          simpa [List.append_assoc] using hp1
+        have hpq := phases.left
+        obtain ⟨m1, rq, a1, env1, _⟩ := requirement.guard hq (by omega) hpq
+        have hf1 := hp.frame.agree a1
+        have rest := phases.next a1 (Nat.le_refl _) (by omega)
+        have world1 := weltAt_stab inside.lay (by have := inside.top; omega) m m1 world (a1.mono (Nat.zero_le _))
+        obtain ⟨mS, rs, aS, snap, keep⟩ := snapC_counted hcs hf1 pre.small (by omega)
+          rest.left.code rest.left.far world1 inside.lay (by have := inside.top; omega)
+        have hfS := hf1.agree aS
+        have envS : EnvAt L mS fp (evalArgs σ₀ args σ ρ) := by
+          intro τ x
+          obtain ⟨w, hw, enc⟩ := env1 τ x
+          exact ⟨w, (keep (vslot x) (by have := vslot_lt (reserved := 0) x; unfold frei at this; omega)
+            (by unfold vslot FB; omega)).trans hw, enc⟩
+        have farS := codeFar_tail rest.far
+        have rem : PreS L mS _ fp K s (relocateC FB reserved (D.params f).length ++ cb) (evalArgs σ₀ args σ ρ) :=
+          ⟨rest.ctx, pre.small, hfS, (codeAt_right rest.code).agree aS farS,
+            farS, envS, trivial, wstab_true _ _⟩
+        obtain ⟨mR, rr, aR, moved⟩ := relocate_env_counted hfS pre.small
+          (by unfold frei reserved; omega)
+          envS rem.left.code (by simpa [relocateC_length] using rem.left.far)
+        have ar := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + reserved) ≤ K by unfold frei reserved; omega)
+        have original := envAt_agree envS ar hfS (by unfold frei FB; omega) (by omega)
+        have hpB := rem.next (ar.mono (by simp only [s, FB]; omega)) (Nat.le_refl _) (by omega)
+        have bodyPre : PreS L mR _ fp K (frei (D.params f) reserved) cb (evalArgs σ₀ args σ ρ) reserved :=
+          ⟨Nat.le_refl _, pre.small, hfS.agree ar, hpB.code, hpB.far,
+            by simpa using moved, trivial, wstab_true _ _⟩
+        have all : Agree fp 3 K m mR := (a1.mono (by simp only [s, FB]; omega)).trans (aS.trans (ar.mono (by unfold FB; omega)))
+        have worldR := weltAt_stab inside.lay (by have := inside.top; omega) m mR world (all.mono (by decide))
+        have rpc : mR.rd64 fp = some rp := by
+          have h := agree_rd_low (i := 0) all pre.frame.room (by decide) (by omega)
+          simpa [slot] using h.trans (by simpa [slot] using savedPC)
+        have rfp : mR.rd64 (fp + 8) = some cfp := by
+          have h := agree_rd_low (i := 1) all pre.frame.room (by decide) (by omega)
+          simpa [slot] using h.trans (by simpa [slot] using savedFP)
+        have bodyUmf : Umf L A C (BitVec.ofNat 64 depth) mR fp childKs K := by
+          refine ⟨pcode_agree childUmf.code all, ?_, childUmf.big,
+            childUmf.sync.agree all childUmf.hiK, childUmf.hiK⟩
+          rw [agree_rd_low (i := 2) all pre.frame.room (by decide) (by omega)]
+          exact childUmf.depth
+        obtain ⟨nBody, m', boundBody, rb, bodyAgree, frame, finalWorld, resultRead⟩ :=
+          body_ih ens hens (rdW mR fp 3) hb (by omega) inside
+          (by simp only [frei]; omega) (by simp only [FB]; omega) (by omega)
+          (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
+          (rd64_rdW (hfS.agree ar) (by omega)) rpc rfp bodyUmf (by omega)
+        simp only [relocateC_length] at rb
+        refine ⟨2 + nq + 2 + cs.length + (D.params f).length + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
+        simpa [s, pc_add, relocateC_length, List.length_append, Nat.add_assoc] using
+          first.trans (rq.trans (rs.trans (rr.trans rb)))
+      next refused => simp at lower
+    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨ca, ta⟩, ha, ⟨cr, tr⟩, hr, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    change max (callTop f (frei Γ reserved) ta) tr ≤ Ks at fits
+    have fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks := by omega
+    have hks := inside.ks
+    have room : frei Γ reserved ≤ Ks := by
+      have h := fitsArgs
+      simp only [callTop] at h
+      omega
+    have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
+      simp [callC, callTail, callTailN, List.length_append]
+    obtain ⟨m1, entryRun, entryAgree, childFrame, childUmf, rpc, rfp, env, hw⟩ :=
+      arguments.recursiveEntry ha fitsArgs address pre.left.left surroundings inside world
+    have childUmf' : Umf L A C (BitVec.ofNat 64 depth) m1
+        (slot fp (BitVec.ofNat 64 (frei Γ reserved))) childKs (K - frei Γ reserved) := by
+      have deq : (BitVec.ofNat 64 (depth + 1) : W) - 1 = BitVec.ofNat 64 depth := by bv_omega
+      simpa only [deq] using childUmf
+    have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
+        (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
+        (FB + (D.params f).length) (C f) (evalArgs σ₀ args σ ρ) :=
+      ⟨by simp [frei], by have := pre.small; omega, childFrame,
+        (childUmf'.code f).1, (childUmf'.code f).2, env, trivial, wstab_true _ _⟩
+    obtain ⟨nCall, m2, boundCall, callRun, calleeAgree, frame, hw, resultRead⟩ :=
+      calleeRun fitsFun (inside.sub room pre.frame.lt) calleePre hw rpc rfp childUmf'
+    have agree : AgreeW L fp (frei Γ reserved) K m m2 :=
+      (agreeW_of entryAgree).trans
+        ((agreeW_sub pre.frame.lt (by omega) calleeAgree).mono (by omega))
+    obtain ⟨w, read, enc⟩ := resultRead τ v result
+    change m2.rd64 (slot (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (BitVec.ofNat 64 2)) = some w at read
+    rw [slot_slot] at read
+    have parentFrame := frameOK_agreeW pre.frame agree
+    have hp1 := pre.left.nextW inside agree (Nat.le_refl _) (Nat.le_refl _) (by omega)
+    have move := mov_to_counted hp1.code parentFrame (j := frei Γ reserved) (s := frei Γ reserved + 2)
+      (by have h := fitsArgs; simp only [callTop, FB] at h; omega)
+      (by have h := fitsArgs; simp only [callTop, FB] at h; omega) pre.small read
+    let mMoved := write m2 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 w.toNat
+    have moveAgree : Agree fp (frei Γ reserved) K m2 mMoved :=
+      agree_write parentFrame.room (Nat.le_refl _) (by have h := fitsArgs; simp only [callTop, FB] at h; omega) _
+    have joinedAgree := agree.trans (agreeW_of moveAgree)
+    have next := pre.nextW inside joinedAgree (d' := frei Γ reserved + 1)
+      (by have := pre.ctx; omega) (by omega)
+      (by have h := fitsArgs; simp only [callTop, FB] at h; omega)
+    have nextPre : PreS L mMoved _ fp K (frei (τ :: Γ) reserved) cr (.cons v ρ) reserved :=
+      ⟨by simp [frei], next.small, next.frame, next.code, next.far,
+        envAt_cons next.env (rd_same parentFrame (by have h := fitsArgs; simp only [callTop, FB] at h; omega) w) enc,
+        trivial, wstab_true _ _⟩
+    have hwMoved : WeltAt mMoved L σ :=
+      weltAt_stab inside.lay (by have := inside.top; omega) m2 mMoved hw (moveAgree.mono (Nat.zero_le _))
+    have rpc2 : mMoved.rd64 fp = some rp := by
+      have h := agreeW_rdW inside joinedAgree (i := 0) (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp2 : mMoved.rd64 (fp + 8) = some cfp := by
+      have h := agreeW_rdW inside joinedAgree (i := 1) (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    obtain ⟨nRest, m3, boundRest, restRun, finalAgree, frame, hw, resultRead⟩ :=
+      tail_ih hr (by omega) inside (by simp [frei] at low ⊢; omega) abi lowBound
+        (fun j hj => by have := hprotected j hj; simp [frei] at this ⊢; omega) nextPre hwMoved parameters
+        (envAt_agreeWIn inside parameterEnv joinedAgree (by omega) (by omega)) base
+        (by rw [agreeW_rdW inside joinedAgree (i := 3) (by omega) (by omega)]; exact entry)
+        rpc2 rfp2 (Umf.agreeW inside surroundings joinedAgree (by unfold frei FB; omega)) depthBound
+    refine ⟨na + 4 + nCall + 1 + nRest, m3, by omega, ?_,
+      (joinedAgree.mono (by omega)).trans finalAgree, frame, hw, resultRead⟩
+    rw [← len] at rpc
+    have joined := entryRun.trans callRun
+    rw [← len] at joined
+    simp only [pc_add1] at restRun
+    have combined := (joined.trans move).trans restRun
+    simpa only [pc_add1] using combined
+
 /-- Induction composes each full call and its child certificate at the identical
     counted endpoint, retaining world, environment, frame and protected cells. -/
 theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
@@ -2901,4 +3349,94 @@ theorem recursiveEndCost_zeuge : Nonempty
         (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
         (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
     exact RecursiveEndCost.source cert
+end Gabbro.Stage0.Senke.RecursiveTerminalProbe
+
+namespace Gabbro.Stage0.Senke.RecursiveTerminalProbe
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem FnptrProben
+open FullFunProbe (fixtureDecl program layout world)
+variable [Kern]
+local instance (m : Mem) (pc : W) (o : Nat) (a b c : BitVec 32) :
+    Decidable (InsAt m pc o a b c) :=
+  if h : m.rd8 pc = some (BitVec.ofNat 8 o) ∧ m.rd32 (pc + 4) = some a ∧
+      m.rd32 (pc + 8) = some b ∧ m.rd32 (pc + 12) = some c then
+    .isTrue ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
+
+set_option maxHeartbeats 4000000
+def target := FullCallProbe.target
+def image : List II := ((lowEnd (D := fixtureDecl) 2 addresses FullFunProbe.layout 4 ([ci 1 5 1 0], 6) [] (0, 0) terminalCall).getD ([], 0)).1
+def memory : Mem :=
+  let segments := [(64, (target 0).flatMap encII), (576, (target 1).flatMap encII),
+    (1088, (target 2).flatMap encII), (2048, image.flatMap encII)]
+  let base : Mem := {
+    b := fun a => match segments.find? (fun s => s.1 ≤ a.toNat && a.toNat < s.1 + s.2.length) with
+      | some s => (s.2[a.toNat - s.1]?).getD 0
+      | none => 0
+    rd := fun _ => true
+    wr := fun _ => true }
+  write (write (write (write (write base 8192 8 64) 4112 8 3) 4096 8 3072) 4104 8 16384) 4120 8 64
+
+theorem sound_zeuge : ∃ n m', n ≤ 23 ∧
+    Counted n ⟨2048, 4096⟩ memory ⟨3072, 16384⟩ m' ∧
+    AgreeW layout 4096 2 256 memory m' ∧ FrameOK m' 4096 256 ∧
+    WeltAt m' layout world ∧
+    ∃ w, m'.rd64 (slot 4096 2) = some w ∧ Enc layout (.int 37 37)
+      (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) w := by
+  have targets : PCode memory addresses target 4096 256 := by
+    have h : ∀ f : Fin 3, ∀ k : Fin (target f).length,
+        InsAt memory (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val))
+          (target f)[k.val].o (II.f (target f)[k.val].a)
+          (II.f (target f)[k.val].b) (II.f (target f)[k.val].c) := by
+      apply allFin
+      decide +kernel
+    intro f
+    refine ⟨fun k hk => h f ⟨k, hk⟩, ?_⟩
+    have far : ∀ f : Fin 3, CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256 := by
+      unfold CodeFar
+      apply allFin
+      decide +kernel
+    exact far f
+  have ccode : CodeAt memory 2048 image := by
+    have h : ∀ k : Fin image.length,
+        InsAt memory (2048 + BitVec.ofNat 64 (16 * k.val))
+          image[k.val].o (II.f image[k.val].a) (II.f image[k.val].b) (II.f image[k.val].c) := by
+      apply allFin
+      decide +kernel
+    exact fun k hk => h ⟨k, hk⟩
+  have frame : FrameOK memory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+  have pre : PreS layout memory 2048 4096 256 4 image (Env.nil : Env fixtureDecl []) :=
+    ⟨by decide, by decide, frame, ccode, by unfold CodeFar; decide +kernel,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  have inside : WIn layout 4096 128 256 := by
+    refine ⟨⟨(fun t => nomatch t), fun _ => ⟨by change 8192 ≤ 8192; decide, by change 8192 + 8 ≤ 8200; decide⟩, by decide⟩,
+      ?_, by decide, by decide, by decide⟩
+    constructor
+    · intro c c' hc hc' h
+      cases c with
+      | elem t => nomatch t
+      | glob g =>
+        cases c' with
+        | elem t => nomatch t
+        | glob g' => cases g; cases g'; rfl
+    · intro c hc
+      cases c with
+      | elem t => nomatch t
+      | glob _ => rfl
+  have hw : WeltAt memory layout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  have sync : SyncOK memory layout 4096 128 :=
+    ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+      (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
+  have around : Umf layout addresses target 2 memory 4096 128 256 :=
+    ⟨targets, by decide +kernel, by decide, sync, by decide⟩
+  obtain ⟨cert⟩ := recursiveEndCost_zeuge
+  obtain ⟨n, m', bound, run, agree, frame, hw, result⟩ :=
+    cert.sound (K := 256) (top := 13) (pr := []) (ex := (0, 0))
+      (code := image) (m := memory) (pc := 2048) (fp := 4096) (rp := 3072) (cfp := 16384)
+      (by decide +kernel) (by decide) inside (by decide) (by decide) (by decide)
+      (fun _ h => nomatch h) pre hw Env.nil (fun _ x => nomatch x) rfl
+      (by decide +kernel) (by decide +kernel) (by decide +kernel) around (by decide)
+  exact ⟨n, m', bound, run, agree, frame, hw, result _ _ rfl⟩
 end Gabbro.Stage0.Senke.RecursiveTerminalProbe
