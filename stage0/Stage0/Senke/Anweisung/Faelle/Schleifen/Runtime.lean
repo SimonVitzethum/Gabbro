@@ -66,6 +66,55 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     exact Mem.rd64_write_far (slot_far pre.frame.room inside (hprotected j hj).1
       (Ne.symm (hprotected j hj).2))
 
+/-- Both emitted initialization instructions preserve the complete source entry.
+    The second write protects the freshly initialized counter as well as the
+    enclosing sentinels; neither value is supplied as a runtime assumption. -/
+theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
+    {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
+    {fp pc rp cfp : W} {K Ks lo reserved counter one budget : Nat} {pr : List Nat}
+    {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
+    {m : Mem} {code : List II}
+    (layout : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (foreverCounterInit counter budget ++ [ci 1 one 1 0] ++ code) ρ reserved)
+    (surround : Umf L A C dv m fp Ks K)
+    (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
+    (abi : FB + (D.params f).length ≤ lo)
+    (lowCounter : lo ≤ counter) (lowOne : lo ≤ one)
+    (allocatedCounter : counter < FB + reserved) (allocatedOne : one < FB + reserved)
+    (distinct : counter ≠ one) (bound : frei Γ reserved ≤ K)
+    (fuel : budget < 2 ^ 31)
+    (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ counter ∧ j ≠ one) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 32, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+      PreS L m' (pc + 32) fp K (frei Γ reserved) code ρ reserved ∧
+      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      WeltAt m' L σ ∧ Keeps fp pr m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 budget) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1 := by
+  have counterBound : counter < K := by unfold frei at bound; omega
+  have literal : lit32 (budget : Int) = true := by
+    simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
+    omega
+  obtain ⟨m1, run1, frame1, pre1, surround1, head1, world1, keeps1, read1⟩ :=
+    reserved_literal_entry layout pre surround head world abi lowCounter
+      allocatedCounter bound literal (fun j hj => ⟨(hprotected j hj).1, (hprotected j hj).2.1⟩)
+  obtain ⟨m2, run2, frame2, pre2, surround2, head2, world2, keeps2, read2⟩ :=
+    reserved_literal_entry (pr := counter :: pr) layout pre1 surround1 head1 world1 abi lowOne
+      allocatedOne bound (by decide) (by
+        intro j hj
+        rcases List.mem_cons.mp hj with h | h
+        · subst j; exact ⟨counterBound, distinct⟩
+        · exact ⟨(hprotected j h).1, (hprotected j h).2.2⟩)
+  have pcEq : pc + 16 + 16 = pc + 32 := by
+    rw [BitVec.add_assoc]; rfl
+  rw [pcEq] at run2 pre2
+  refine ⟨m2, run1.trans run2, frame1.trans frame2, pre2, surround2, head2,
+    world2, ?_, ?_, read2⟩
+  · intro j hj
+    exact (keeps2 j (by simp [hj])).trans (keeps1 j hj)
+  · rw [keeps2 counter (by simp)]
+    simpa only [BitVec.ofInt_natCast] using read1
+
 /-- The emitted word decrement agrees with canonical natural fuel, without
     wrapping, for every representable positive budget. -/
 theorem counter_fuel_step (n : Nat) (fits : n + 1 < 2 ^ 64) :

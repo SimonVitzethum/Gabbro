@@ -15,11 +15,11 @@ def lowered := lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [
 def code : List II := (lowered.getD ([], 0)).1
 def top : Nat := (lowered.getD ([], 0)).2
 
-def image : List II := [ci 1 6 2 0] ++ code ++ [ci 18 (-(16 * (code.length : Int))) 0 0]
+def image : List II := [ci 1 7 2 0, ci 1 6 1 0] ++ code ++ [ci 18 (-(16 * (code.length : Int))) 0 0]
 
 def memory : Runner.Mem := { callMem with
-  b := fun a => if 2032 ≤ a.toNat ∧ a.toNat < 2032 + 16 * image.length then
-      ((image.flatMap encII)[a.toNat - 2032]?).getD 0 else if a.toNat = 4128 then 77 else callMem.b a }
+  b := fun a => if 2016 ≤ a.toNat ∧ a.toNat < 2016 + 16 * image.length then
+      ((image.flatMap encII)[a.toNat - 2016]?).getD 0 else if a.toNat = 4128 then 77 else callMem.b a }
 
 theorem lowering : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4] (0, 0) body = some (code, top) := by
   decide +kernel
@@ -79,27 +79,59 @@ theorem reserved_literal_entry_zeuge [Kern] :
       Umf callLayout addresses target 2 m' 4096 128 256 ∧
       Kopf callLayout 2 m' 4096 256 0 0 (Env.nil : Env D []) tiny world ∧
       WeltAt m' callLayout world ∧ Keeps 4096 [4, 5] memory m' ∧
-      m'.rd64 (slot 4096 6) = some 2 := by
-  have entry : CodeAt memory 2032 ([ci 1 6 2 0] ++ code) := by
+      m'.rd64 (slot 4096 6) = some 1 := by
+  have entry : CodeAt memory 2032 ([ci 1 6 1 0] ++ code) := by
     have h : ∀ k : Fin (1 + code.length),
         InsAt memory (2032 + BitVec.ofNat 64 (16 * k.val))
-          (([ci 1 6 2 0] ++ code)[k.val]'(by simp; omega)).o
-          (II.f (([ci 1 6 2 0] ++ code)[k.val]'(by simp; omega)).a)
-          (II.f (([ci 1 6 2 0] ++ code)[k.val]'(by simp; omega)).b)
-          (II.f (([ci 1 6 2 0] ++ code)[k.val]'(by simp; omega)).c) := by
+          (([ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).o
+          (II.f (([ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).a)
+          (II.f (([ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).b)
+          (II.f (([ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).c) := by
       apply allFin
       decide +kernel
-    exact fun k hk => h ⟨k, by simpa [Nat.add_comm] using hk⟩
+    exact fun k hk => h ⟨k, by simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using hk⟩
   have hp : PreS callLayout memory 2032 4096 256 8
-      ([ci 1 6 2 0] ++ code) (Env.nil : Env D []) 4 := by
+      ([ci 1 6 1 0] ++ code) (Env.nil : Env D []) 4 := by
     refine ⟨by decide, by decide, frame, entry, ?_,
       (fun _ x => nomatch x), trivial, wstab_true _ _⟩
     unfold CodeFar
     decide +kernel
   exact reserved_literal_entry (lo := 4) (pr := [4, 5]) (cell := 6)
-    (reserved := 4) (Γ := []) (value := 2) (code := code)
+    (reserved := 4) (Γ := []) (value := 1) (code := code)
     call_win hp surroundings head world_at (by decide) (by decide)
     (by decide) (by decide) (by decide)
+    (by intro j hj; simp only [List.mem_cons, List.not_mem_nil, or_false] at hj; rcases hj with rfl | rfl <;> decide)
+
+/-- Both initializations precede the same real store/call body, with two
+    protected sentinels and a nonzero reservation. -/
+theorem forever_initialize_entry_zeuge [Kern] :
+    ∃ m', Star ⟨2016, 4096⟩ memory ⟨2048, 4096⟩ m' ∧
+      AgreeW callLayout 4096 4 256 memory m' ∧
+      PreS callLayout m' 2048 4096 256 8 code (Env.nil : Env D []) 4 ∧
+      Umf callLayout addresses target 2 m' 4096 128 256 ∧
+      Kopf callLayout 2 m' 4096 256 0 0 (Env.nil : Env D []) tiny world ∧
+      WeltAt m' callLayout world ∧ Keeps 4096 [4, 5] memory m' ∧
+      m'.rd64 (slot 4096 7) = some 2 ∧ m'.rd64 (slot 4096 6) = some 1 := by
+  have entry : CodeAt memory 2016 ([ci 1 7 2 0, ci 1 6 1 0] ++ code) := by
+    have h : ∀ k : Fin (2 + code.length),
+        InsAt memory (2016 + BitVec.ofNat 64 (16 * k.val))
+          (([ci 1 7 2 0, ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).o
+          (II.f (([ci 1 7 2 0, ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).a)
+          (II.f (([ci 1 7 2 0, ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).b)
+          (II.f (([ci 1 7 2 0, ci 1 6 1 0] ++ code)[k.val]'(by simp; omega)).c) := by
+      apply allFin
+      decide +kernel
+    exact fun k hk => h ⟨k, by simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using hk⟩
+  have hp : PreS callLayout memory 2016 4096 256 8
+      ([ci 1 7 2 0, ci 1 6 1 0] ++ code) (Env.nil : Env D []) 4 := by
+    refine ⟨by decide, by decide, frame, entry, ?_,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    unfold CodeFar
+    decide +kernel
+  exact forever_initialize_entry (lo := 4) (pr := [4, 5]) (counter := 7) (one := 6)
+    (reserved := 4) (Γ := []) (budget := 2) (code := code)
+    call_win hp surroundings head world_at (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (by decide)
     (by intro j hj; simp only [List.mem_cons, List.not_mem_nil, or_false] at hj; rcases hj with rfl | rfl <;> decide)
 
 local instance [Kern] : TorOK callLayout O where
