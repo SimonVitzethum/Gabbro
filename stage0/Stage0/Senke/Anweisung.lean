@@ -261,8 +261,9 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
     let cc ← lowE (reserved := reserved) L bis ((frei Γ reserved))
     let cu ← lowB (reserved := reserved) passes A L lo ens pr ex overflow
     retryC ((frei Γ reserved)) cc cu (fun targets => lowB (reserved := reserved) passes A L lo ens pr targets body) n
-  -- The simulation quantifies over every fuel, but lowering receives none. A finite stop or an
-  -- infinite backedge cannot implement both fuel zero (progress stop 111) and positive fuel.
+  -- `passes` already reaches this lowering. Enabling this case still requires the actual
+  -- header/pass/backedge composition, recursive counter reservation and its frame bound.
+  -- Nested loops initialize from `passes`, not the enclosing loop's decreasing remainder.
   | _, _, _, _, .forever .., reserved => none
   | _, _, _, _, .breaking _ body, reserved => lowB (reserved := reserved) passes A L lo ens pr ex body
   | _, Γ, _, _, .advances .., reserved => some ([], (frei Γ reserved))
