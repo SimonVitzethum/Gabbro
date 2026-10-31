@@ -231,13 +231,13 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       omega
     · cases h
   | _, _, .eng e lo' hi' b, d, c, top, h => by
-    simp only [lowE_eqs, engL] at h
+    simp only [lowE_eqs, engL, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨⟨ce, te⟩, he, ⟨cb, tb⟩, _, ⟨ct, tt⟩, _, h⟩ := h
     split at h
-    · simp only [bind, Option.bind_eq_some_iff] at h
-      obtain ⟨⟨ce, te⟩, _, ⟨cb, tb⟩, _, h⟩ := h
-      split at h
-      · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
-      · cases h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have := lowE_top e d ce te he
+      omega
     · cases h
   | _, _, .getBytes t f _ n i _ _ _, d, c, top, h => by
     simp only [lowE_eqs] at h

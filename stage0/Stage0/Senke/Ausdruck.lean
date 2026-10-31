@@ -96,25 +96,6 @@ def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Na
     some (wennC d cc.1 ca.1 cb.1, max cc.2 (max ca.2 cb.2))
   else none
 
-/-- Test whether the word in `d` lies outside the signed interval; the flag is in `d+1`. -/
-def engTest (d : Nat) (lo hi : Int) : List II :=
-  [ci 1 (d + 1) lo 0, ci 13 (d + 1) d (d + 1), ci 1 (d + 2) hi 0,
-   ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]
-
-/-- Evaluate once, test the interval and skip the fallback when the value already fits. -/
-def engC (d : Nat) (lo hi : Int) (ce cb : List II) : List II :=
-  ce ++ engTest d lo hi ++ [ci 19 (d + 1) ((16 * (cb.length + 1) : Nat) : Int) 0] ++ cb
-
-/-- Bounds must fit the signed literal fields; all compared values must fit a signed word. -/
-def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Option (List II × Nat) := do
-  if inW lo hi && lit32 lo' && lit32 hi' then
-    let ce ← ce
-    let cb ← cb
-    if 16 * (cb.1.length + 1) < 2 ^ 31 then
-      some (engC d lo' hi' ce.1 cb.1, max ce.2 (max cb.2 (d + 3)))
-    else none
-  else none
-
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
 def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
   (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
@@ -151,6 +132,35 @@ def konstWL : Nat → Nat → Nat → List II × Nat
 def wordConstant (d : Nat) (n : Int) : List II × Nat :=
   if lit32 n then ([ci 1 d n 0], d + 1)
   else konstWL 4 (BitVec.ofInt 64 n).toNat d
+
+/-- One raw interval predicate. Its flag is in `d+1`; the input in `d` is preserved. -/
+def engTest (o d : Nat) (lo hi : Int) : List II × Nat :=
+  ((wordConstant (d + 1) lo).1 ++ [ci o (d + 1) d (d + 1)] ++
+    (wordConstant (d + 2) hi).1 ++
+    [ci o (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)],
+   max (wordConstant (d + 1) lo).2 (wordConstant (d + 2) hi).2)
+
+/-- Normalize a scalar interval test in the input's interpretation. Disjoint
+    intervals produce a true outside flag after the input has been evaluated. -/
+def intervalTestL (d : Nat) (lo hi lo' hi' : Int) : Option (List II × Nat) :=
+  if scalarFits lo hi && scalarFits lo' hi' then
+    if hi < lo' ∨ hi' < lo then some ([ci 1 (d + 1) 1 0], d + 2)
+    else do
+      let o ← scalarOrder lo hi lo hi
+      pure (engTest o d (max lo lo') (min hi hi'))
+  else none
+
+/-- Evaluate the input once, test it, and evaluate the fallback only outside. -/
+def engC (d : Nat) (ce ct cb : List II) : List II :=
+  ce ++ ct ++ [ci 19 (d + 1) ((16 * (cb.length + 1) : Nat) : Int) 0] ++ cb
+
+def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Option (List II × Nat) := do
+  let ce ← ce
+  let cb ← cb
+  let ct ← intervalTestL d lo hi lo' hi'
+  if 16 * (cb.1.length + 1) < 2 ^ 31 then
+    some (engC d ce.1 ct.1 cb.1, max ce.2 (max ct.2 cb.2))
+  else none
 
 /-- Signed magnitude key: strip the sign, multiply by `1 - 2 * sign`.
     The two supplied operand codes evaluate the same pure expression at `d` and `d+3`. -/

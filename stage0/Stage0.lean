@@ -61,3 +61,5 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
 import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost
 
 import Stage0.Senke.Ausdruck.Arithmetik.ScalarProbe
+
+import Stage0.Senke.Ausdruck.Arithmetik.IntervalProbe

@@ -153,7 +153,7 @@ def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
 
 /-- An outside flag selects the terminating error arm; the value stays in `d`. -/
 def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
-  ce ++ (engTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+  ce ++ ((engTest 13 d lo hi).1 ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
     [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
 
 /-- Compare a reason's entire word, preserving its slot for subsequent arms. -/

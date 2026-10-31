@@ -1,6 +1,6 @@
 /- One signed interval test for block and end-block narrowing. -/
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
-import Stage0.Senke.Ausdruck.Eng
+import Stage0.Senke.Ausdruck.Arithmetik.Interval
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -42,7 +42,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length) + BitVec.ofInt 64 ex.2) out reserved := by
   have hks := hW.ks
-  have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ (engTest (frei Γ reserved) low' high' ++
+  have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ ((engTest 13 (frei Γ reserved) low' high').1 ++
       [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)) ρ reserved := hp
   have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, w, r1, hen⟩ := lowE_ok (reserved := reserved) σ σ (fun _ h => h) e _ ce te he hte m pc ρ hpw
@@ -57,15 +57,15 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have hsim : Sim L P f σ0 ρ0 rp cfp fp lo K pr
       ⟨pc + BitVec.ofNat 64 (16 * ce.length), fp⟩ m1
       (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 *
-        (engTest (frei Γ reserved) low' high' ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+        ((engTest 13 (frei Γ reserved) low' high').1 ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
           [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr).length))
       (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 *
-        (engTest (frei Γ reserved) low' high' ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+        ((engTest 13 (frei Γ reserved) low' high').1 ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
           [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr).length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 *
-        (engTest (frei Γ reserved) low' high' ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+        ((engTest 13 (frei Γ reserved) low' high').1 ++ [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++
           [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr).length) + BitVec.ofInt 64 ex.2) out reserved := by
-    have hs' : 16 * ((engTest (frei Γ reserved) low' high').length + 1 + cx.length + 1 + cr.length) < 2 ^ 31 := by
+    have hs' : 16 * (((engTest 13 (frei Γ reserved) low' high').1).length + 1 + cx.length + 1 + cr.length) < 2 ^ 31 := by
       simp only [narrowC, List.length_append, List.length_singleton] at hs; omega
     have hc := choice_ok (reserved := reserved) (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved + 1)
       (b := decide (¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high')))
@@ -75,10 +75,12 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     · simpa only [ite_self, Int.natCast_add, Int.natCast_one] using hc
     · intro hpc
       obtain ⟨m2, s2, a2, w2, r2, hen2⟩ := eng_test_ok
-        { hpc with ctx := by have := hp.ctx; omega } (by omega) hl hh r1
+        { hpc with ctx := by have := hp.ctx; omega }
+        (by simp only [engTest, wordConstant, hl, hh, ↓reduceIte]; omega) rfl (by decide) r1
       refine ⟨m2, s2, a2, w2, r2, ?_⟩
       simp only [Enc] at hen
       subst w
+      simp only [scalarCmp, ↓reduceIte] at hen2
       rw [hen2, slt_in hx hlW, slt_in hhW hx]
       by_cases hin : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high'
       · have h1 : ¬ (eval σ e σ ρ).n < low' := by omega
