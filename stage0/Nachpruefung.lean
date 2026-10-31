@@ -304,3 +304,7 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatNegativeShiftL_ok
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeShiftL_joint_zeuge
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.negativeShiftImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatNegativeAlign_range
+#print axioms Gabbro.Stage0.Senke.floatNegativeShift_toInt
+#print axioms Gabbro.Stage0.Senke.floatNegativeShift_toInt_zeuge

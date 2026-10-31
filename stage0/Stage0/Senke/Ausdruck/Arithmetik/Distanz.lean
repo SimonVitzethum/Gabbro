@@ -73,6 +73,53 @@ theorem floatNegativeShiftL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     exact (q hc hK m pc hp).mono fun w hw => hw.trans hqv
   · exact floatShiftTailL_ok ha hk
 
+omit [Kern] in
+/-- A finite coefficient's negative aligned quotient fits the signed word.
+    The discarded tail's borrow cannot make its magnitude exceed the original
+    magnitude, even at the minimum signed-word boundary. -/
+theorem floatNegativeAlign_range (n den : Nat) (hd : 0 < den) (hn : n ≤ 2^63) :
+    -(2^63) ≤ (-(n : Int)) / (den : Int) ∧
+      (-(n : Int)) / (den : Int) < 2^63 := by
+  rw [floatNegativeAlign_div n den hd]
+  have hq := Nat.div_le_self n den
+  have hq0 : (0 : Int) ≤ (n / den : Nat) := Int.natCast_nonneg _
+  by_cases hz : n % den = 0
+  · simp only [hz, ↓reduceIte]
+    omega
+  · have hn0 : 0 < n := by
+      by_cases h : n = 0
+      · simp [h] at hz
+      · omega
+    have hd1 : 1 < den := by
+      by_cases h : den = 1
+      · simp [h, Nat.mod_one] at hz
+      · omega
+    have hlt := Nat.div_lt_self hn0 hd1
+    simp only [hz, ↓reduceIte]
+    omega
+
+omit [Kern] in
+/-- Recover the exact signed quotient from its emitted word representation;
+    no exponent-distance restriction or positive-only approximation is used. -/
+theorem floatNegativeShift_toInt (a k : Runner.W) (ha : a.toNat ≤ 2^63) :
+    (BitVec.ofInt 64 ((-(a.toNat : Int)) / (2^k.toNat : Nat))).toInt =
+      (-(a.toNat : Int)) / (2^k.toNat : Nat) := by
+  have h := floatNegativeAlign_range a.toNat (2^k.toNat)
+    (Nat.pow_pos (by decide)) ha
+  exact toInt_ofInt_in h.1 h.2
+
+omit [Kern] in
+/-- The minimum signed coefficient, cancellation-scale shift, tiny negative
+    tail and zero satisfy the range bridge jointly. -/
+theorem floatNegativeShift_toInt_zeuge :
+    (BitVec.ofInt 64 (-(2^63))).toInt = -(2^63) ∧
+    (BitVec.ofInt 64 ((-(13 : Int)) / (2^1074 : Nat))).toInt = -1 ∧
+    (BitVec.ofInt 64 ((0 : Int) / (2^1074 : Nat))).toInt = 0 := by
+  decide +kernel
+
+#print axioms floatNegativeAlign_range
+#print axioms floatNegativeShift_toInt
+#print axioms floatNegativeShift_toInt_zeuge
 #print axioms floatShiftTailL_ok
 #print axioms floatNegativeShiftL_ok
 end Gabbro.Stage0.Senke

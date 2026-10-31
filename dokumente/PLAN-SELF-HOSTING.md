@@ -296,6 +296,17 @@ and range 107 remain open. Add/sub remain refused and computed `floatOf` is
 unchanged. No grammar rebuild was run.
 
 
+The signed interpretation bridge for negative alignment is now proved as well:
+if the input magnitude is at most `2^63`, the exact aligned negative quotient
+lies in the signed-word range for every positive denominator. Reading the emitted
+word back with `toInt` therefore recovers that quotient without wraparound. The
+minimum signed coefficient, a tiny negative tail at distance 1074 and zero have
+joint kernel witnesses. Direct distance/probe/root/`Nachpruefung`, standard axioms
+and layout passed (2026-10-31). This proof-only extension changes no emitted code;
+the last actual-runner measurement remains 150 images, zero failures. The complete
+finite sum-to-packed-IEEE and arbitrary-reserved/range-107 obligations remain open.
+
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access
