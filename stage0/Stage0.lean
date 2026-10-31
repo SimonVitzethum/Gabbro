@@ -1,4 +1,6 @@
 import Stage0.IRBild
+import Stage0.SourceWitness
+import Stage0.ArrayWitness
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Hilfe
 import Stage0.Senke.Ausdruck.Sim
@@ -51,11 +53,11 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCall
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
-import Stage0.Senke.Anweisung.Faelle.Schleifen.EarlyExit
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
 import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.HookProben
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
-import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost
+
+import Stage0.Senke.Ausdruck.Arithmetik.ScalarProbe

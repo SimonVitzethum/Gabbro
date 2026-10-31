@@ -1,5 +1,6 @@
 /- Simulation of finite retry expansion, including both loop exits and an enclosing loop's overflow exits. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Test
+import Stage0.Senke.Anweisung.SchleifeTeile
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -17,7 +18,7 @@ variable {O : Orakel D} {passes : Nat}
   {bis : Expr D Γ Λ .bool} {body : Block D (vertragVon D f) true Γ Λ Λ}
   {overflow : Block D (vertragVon D f) l Γ Λ Λ} {cc cu : List II × Nat}
 
-theorem retryC_ok (hlo0 : lo = FB + (D.params f).length)
+theorem retryC_ok (hlo0 : lo = FB + (contextWords (D.params f)))
     (hcc : lowE (reserved := reserved) L bis (frei Γ reserved) = some cc)
     (hcu : lowB (reserved := reserved) passes A L lo (cens, tens) pr ex overflow = some cu)
     (ihBody : ∀ {ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex body reserved)
@@ -100,14 +101,14 @@ theorem retry_case {O : Orakel D} {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat}
     {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) {pr : List Nat} {ex : Int × Int}
+    (hlo0 : lo = FB + (contextWords (D.params f))) {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {bis : Expr D Γ Λ .bool}
     {body : Block D (vertragVon D f) true Γ Λ Λ} {overflow : Block D (vertragVon D f) l Γ Λ Λ}
     (ihBody : ∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex body reserved)
     (ihOverflow : ∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex overflow reserved) :
     StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.retry n bis body overflow) reserved := by
   intro c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
-  simp only [lowS, bind, Option.bind_eq_some_iff] at h
+  simp only [lowS, resultWords_vertragVon, bind, Option.bind_eq_some_iff] at h
   obtain ⟨cc, hcc, cu, hcu, hc⟩ := h
   exact retryC_ok hlo0 hcc hcu ihBody ihOverflow n c top hc hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
 

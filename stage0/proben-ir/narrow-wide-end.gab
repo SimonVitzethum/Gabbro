@@ -1,0 +1,9 @@
+// Full signed-word narrowing bounds; the operand is evaluated once.
+module ir_probe {
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let x = 7;
+    narrow x to -4294967296 .. 4294967296 else { return 41; }
+    narrow x to 0 .. 100 else { return 42; }
+    return x;
+}
+}

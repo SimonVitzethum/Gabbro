@@ -1,0 +1,7 @@
+// A high-bit dividend must use unsigned division, including its low quotient bits.
+module ir_probe {
+impl fn main() -> u64 in 0 .. 255 effects { pure } {
+    let quotient = 18446744073709551615 / 3;
+    return 255 & quotient;
+}
+}

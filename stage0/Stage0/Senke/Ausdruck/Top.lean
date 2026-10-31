@@ -7,6 +7,7 @@ import Stage0.Senke.Ausdruck.Gleit.Grenze
 import Stage0.Senke.Ausdruck.Gleichungen
 import Stage0.Senke.Ausdruck.Sim
 import Stage0.Senke.Ausdruck.Wort
+import Stage0.Senke.Welt.Spans.CellCode
 
 namespace Gabbro.Stage0.Senke
 
@@ -19,6 +20,47 @@ variable [Kern]
 variable {D : Deklaration} {L : Lay D}
 
 /-! ## The slot the lowering stops at -/
+
+theorem constValue_top {τ : Ty} (v : Wert D τ) {d top : Nat} {c : List II}
+    (lower : some (constWords (encodeWords L τ v) d) = some (c, top)) : d < top := by
+  have eq := congrArg (fun p => p.map Prod.snd) lower
+  simp only [Option.map_some, Option.some.injEq] at eq
+  have span := constWords_span (encodeWords L τ v) d
+  have width := encodeWords_length L τ v
+  have positive := valueWords_pos τ
+  omega
+
+theorem integerExtensionL_span {lo : Int} {extra base top : Nat} {c : List II}
+    (lower : integerExtensionL lo extra base = some (c, top)) : base + extra ≤ top := by
+  have zeros := constWords_span (List.replicate extra (0 : Runner.W)) base
+  simp only [List.length_replicate] at zeros
+  simp only [integerExtensionL] at lower
+  split at lower
+  · simp only [wennL, bind, Option.bind_some] at lower
+    split at lower
+    · have ceiling := congrArg Prod.snd (Option.some.inj lower)
+      dsimp only at ceiling
+      omega
+    · cases lower
+  · have ceiling := congrArg Prod.snd (Option.some.inj lower)
+    dsimp only at ceiling
+    omega
+
+theorem resizeIntegerL_top {lo hi lo' hi' : Int} {d top : Nat}
+    {child : Option (List II × Nat)} {c : List II}
+    (lower : resizeIntegerL lo hi lo' hi' d child = some (c, top))
+    (childTop : ∀ cc tt, child = some (cc, tt) → d < tt) : d < top := by
+  simp only [resizeIntegerL, bind, Option.bind_eq_some_iff] at lower
+  obtain ⟨⟨cc, tt⟩, hc, lower⟩ := lower
+  have bound := childTop cc tt hc
+  split at lower
+  · simp only [pure, Option.some.injEq, Prod.mk.injEq] at lower; omega
+  · change (integerExtensionL lo (integerWords lo' hi' - integerWords lo hi) (d + integerWords lo hi)).bind
+      (fun extension => some (cc ++ extension.1, max tt extension.2)) = some (c, top) at lower
+    rw [Option.bind_eq_some_iff] at lower
+    obtain ⟨⟨ce, te⟩, _, lower⟩ := lower
+    simp only [pure, Option.some.injEq, Prod.mk.injEq] at lower
+    omega
 
 /-- The code of a binary operation stops above `d` once its first operand does. -/
 theorem bin_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {o d : Nat}
@@ -94,27 +136,48 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     (top : Nat) → lowE L (reserved := reserved) e d = some (c, top) → d < top
   | _, _, .arrNil, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
-  | _, _, .arrCons a _, d, c, top, h => by
+  | _, _, .arrCons a rest, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · exact lowE_top a d c top h
-    · cases h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, _, rfl⟩ := h
+      have := lowE_top a d ca ta ha
+      omega
   | _, _, .arrGet a _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · exact lowE_top a d c top h
-    · cases h
+    · simp only [arrGetL] at h
+      split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, _, rfl⟩ := h
+        have := lowE_top a d ca ta ha
+        omega
+      · cases h
   | _, _, .arrSet _ _ v, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · exact lowE_top v d c top h
     · cases h
-  | _, _, .strLit .., d, c, top, h => by
+  | _, _, @Expr.strLit _ n _ _ bs hb, d, c, top, h => by
+    simp only [lowE_eqs, Option.some.injEq] at h
+    have ceiling := congrArg Prod.snd h
+    dsimp only at ceiling
+    have span := constWords_span (encodeWords L (.str n) ⟨bs, hb⟩) d
+    have width := encodeWords_length L (.str n) ⟨bs, hb⟩
+    have positive := valueWords_pos (.str n)
+    omega
+  | _, _, .strLen s, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
-    · cases h
-  | _, _, .strLen _, d, c, top, h | _, _, .strEq _ _, d, c, top, h
+    · exact wordL_top h
+    · simp only [Option.map_eq_some_iff] at h
+      obtain ⟨⟨cs, ts⟩, hs, out⟩ := h
+      cases out
+      have := lowE_top s d cs ts hs
+      omega
+  | _, _, .strEq _ _, d, c, top, h
   | _, _, .strLt _ _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -139,27 +202,49 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
       · exact lowE_top s d c top h
     · cases h
-  | _, _, .widen _ _ e, d, c, top, h => lowE_top e d c top h
-  | _, _, .some e, d, c, top, h => lowE_top e d c top h
+  | _, _, .widen _ _ e, d, c, top, h =>
+    resizeIntegerL_top h (fun cc tt hc => lowE_top e d cc tt hc)
+  | _, _, .some e, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact lowE_top e d c top h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨⟨ce, te⟩, he, _, rfl⟩ := h
+      have := lowE_top e (d + 1) ce te he
+      omega
   | _, _, .refEq a b, d, c, top, h => wordL_top h
-  | _, _, .add a b, d, c, top, h | _, _, .sub a b, d, c, top, h | _, _, .mul a b, d, c, top, h
   | _, _, .and a b, d, c, top, h | _, _, .or a b, d, c, top, h =>
     bin_top (fun c t h => lowE_top a d c t h) h
   | _, _, .lt a b, d, c, top, h | _, _, .eq a b, d, c, top, h | _, _, .div _ _ a b, d, c, top, h
+  | _, _, .add a b, d, c, top, h | _, _, .sub a b, d, c, top, h | _, _, .mul a b, d, c, top, h
   | _, _, .rem _ _ a b, d, c, top, h | _, _, .sdiv _ a b, d, c, top, h | _, _, .srem _ a b, d, c, top, h
-  | _, _, .band _ _ a b, d, c, top, h | _, _, .bor _ _ _ _ _ a b, d, c, top, h
-  | _, _, .bxor _ _ _ _ _ a b, d, c, top, h | _, _, .shl _ _ _ _ _ a b, d, c, top, h
+  | _, _, .band _ _ a b, d, c, top, h
   | _, _, .shr _ _ _ _ _ a b, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · exact bin_top (fun c t h => lowE_top a d c t h) h
     · cases h
+  | _, _, .bor _ _ _ _ _ a b, d, c, top, h | _, _, .bxor _ _ _ _ _ a b, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact resizeIntegerL_top h (fun cc tt hc => bin_top (fun c t h => lowE_top a d c t h) hc)
+    · cases h
+  | _, _, .shl _ _ _ _ _ a b, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · split at h
+      · exact bin_top (fun c t h => lowE_top a d c t h) h
+      · cases h
+    · cases h
   | _, _, .fllt a b, d, c, top, h | _, _, .flle a b, d, c, top, h => floatExprL_top h
   | _, _, .neg a, d, c, top, h => by
-    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ca, ta⟩, _, he⟩ := h
-    simp only [bin2, Prod.mk.injEq] at he
-    omega
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ca, ta⟩, _, he⟩ := h
+      simp only [bin2, Prod.mk.injEq] at he
+      omega
+    · cases h
   | _, _, .not a, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, _, he⟩ := h
@@ -181,32 +266,38 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       simp only [bin2, Prod.mk.injEq] at he
       omega
     · cases h
-  | _, _, .lit n, d, c, top, h | _, _, .why .., d, c, top, h
-  | _, _, .fnref .., d, c, top, h | _, _, .var _, d, c, top, h => by
+  | _, _, .lit n, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · exact constValue_top (L := L) (τ := .int n n) ⟨n, by omega, by omega⟩ h
+  | _, _, .why n r, d, c, top, h => constValue_top (L := L) (τ := .why n) r h
+  | _, _, .none n, d, c, top, h => constValue_top (L := L) (τ := .opt n) none h
+  | _, _, .fnref .., d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
+  | _, τ, .var _, d, c, top, h => by
+    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
+    have := valueWords_pos τ
+    omega
   | _, _, .tru, d, c, top, h | _, _, .fls, d, c, top, h
-  | _, _, .none _, d, c, top, h | _, _, .ptrOf .., d, c, top, h => by
+  | _, _, .ptrOf .., d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
-  | _, _, .glob .., d, c, top, h => by
-    simp only [lowE_eqs] at h
+  | _, _, .glob g _, d, c, top, h => by
+    simp only [lowE_eqs, globalValueC] at h
     split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · have positive := valueWords_pos (D.gtyp g)
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
   | _, _, .slotRef i _ _ _ _ _, d, c, top, h
   | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨ci', _, hs⟩ := h
-    simp only [slotC] at hs
-    split at hs
-    · simp only [slotA, Option.map_eq_some_iff] at hs
-      obtain ⟨a, ha, he⟩ := hs
-      split at ha
-      · simp only [Option.some.injEq] at ha; subst ha; simp only [Prod.mk.injEq] at he; omega
-      · cases ha
-    · cases hs
+    simp only [slotValueC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hs
+    obtain ⟨_, _, rfl, rfl⟩ := hs
+    omega
   | _, _, .case cs i nutz, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

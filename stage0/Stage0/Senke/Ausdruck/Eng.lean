@@ -14,6 +14,15 @@ variable {reserved : Nat}
 
 variable [Kern] {D : Deklaration} {L : Lay D}
 
+theorem eng_width {lo hi lo' hi' : Int} {d top : Nat} {a b : Option (List II × Nat)} {c : List II}
+    (lower : engL d lo hi lo' hi' a b = some (c, top)) : valueWords (.int lo' hi') = 1 := by
+  simp only [engL] at lower
+  split at lower
+  · next fits =>
+    simp only [Bool.and_eq_true, lit32, decide_eq_true_eq] at fits
+    exact integerWords_word (by omega) (by omega)
+  · cases lower
+
 /-- A binary instruction may read any two frame slots, including its destination. -/
 theorem eng_bin_ok {m : Runner.Mem} {pc fp : Runner.W} {K d a b o reserved : Nat}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {va vb r : Runner.W}
@@ -164,11 +173,18 @@ theorem eng_ok_zeuge {Λ : List (Res D)} {Γ : Ctx} (L : Lay D) (σ₀ σ : Worl
   let b : Expr D Γ Λ (.int (-3) 5) := .widen (by decide) (by decide) (.lit 2)
   have hl : lit32 n = true := by
     rcases hn with rfl | rfl | rfl | rfl <;> decide
+  have hbLower : lowE L b d reserved = some ([ci 1 d 2 0], d + 1) := by
+    have source : integerWords 2 2 = 1 := by decide
+    have target : integerWords (-3) 5 = 1 := by decide
+    simp only [b, lowE_eqs, resizeIntegerL, source, target,
+      show lit32 2 = true from rfl, ite_true, bind, Option.bind_some, pure,
+      Nat.le_refl, Nat.max_self]
   have he : lowE L (reserved := reserved) (.eng (.lit n) (-3) 5 b) d =
       some (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0], d + 3) := by
     have hw : inW n n = true := by
       rcases hn with rfl | rfl | rfl | rfl <;> decide
-    simp only [lowE_eqs, b, engL, hl, hw]
+    rw [lowE_eng, hbLower, lowE_lit]
+    simp only [engL, hl, hw, ite_true]
     change some (engC d (-3) 5 [ci 1 d n 0] [ci 1 d 2 0],
       max (d+1) (max (d+1) (d+3))) = _
     congr 2
@@ -179,7 +195,7 @@ theorem eng_ok_zeuge {Λ : List (Res D)} {Γ : Ctx} (L : Lay D) (σ₀ σ : Worl
     obtain ⟨rfl, rfl⟩ := he
     exact const_ok hp hl (by omega)
   · intro cb tb hb htb m pc hp
-    have hb' : some ([ci 1 d 2 0], d+1) = some (cb, tb) := hb
+    have hb' : some ([ci 1 d 2 0], d+1) = some (cb, tb) := hbLower.symm.trans hb
     cases Option.some.inj hb'
     exact const_ok hp (by decide) (by omega)
   · intro w hw

@@ -1,0 +1,6 @@
+// Discovery cannot seed a cyclic type/initializer dependency from a successful lookup.
+module dependent_alias_cycle {
+type Bound = u8 in 0 .. LIMIT;
+const LIMIT : Bound = 40 + 2;
+impl fn main() -> u8 effects { pure } { return 0; }
+}

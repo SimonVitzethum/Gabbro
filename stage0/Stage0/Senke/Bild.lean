@@ -100,7 +100,7 @@ def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String)
   | none => .error ("ir: the function " ++ name g ++
       if (oldCells (P.ensures g)).length > 1 then
         " needs multiple old occurrences; the IR entry header currently holds one snapshot word"
-      else if (lowEns Y (P.ensures g) (FB + (D.params g).length + 1)).isNone then
+      else if (lowEns Y (P.ensures g) (FB + (contextWords (D.params g)) + 1)).isNone then
         " has an unsupported postcondition; old table indices must be literal constants (possibly widened)"
       else " uses a form outside the IR fragment")
 

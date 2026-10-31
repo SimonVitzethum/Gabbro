@@ -34,7 +34,7 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
 /-- All captured occurrences currently share the one reserved header word.
     The entry compiler refuses more than one occurrence before emitting any image. -/
 def SnapAt (L : Lay D) (cs : List (Zelle D)) (σ : World D) (m : Runner.Mem) (fp : Runner.W) : Prop :=
-  ∀ c ∈ cs, ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 3)) = some w ∧ Enc L c.ty (c.val σ) w
+  ∀ c ∈ cs, valueWords c.ty = 1 ∧ ValueAt L m fp 3 c.ty (c.val σ)
 
 instance (L : Lay D) (c : Zelle D) : Decidable (c.da L) := by
   cases c <;> unfold Zelle.da <;> infer_instance
@@ -42,21 +42,30 @@ instance (L : Lay D) (c : Zelle D) : Decidable (c.da L) := by
 /-- Snapshot code writes only the reserved header word. -/
 def snapC (L : Lay D) : List (Zelle D) → Option (List II)
   | [] => some []
-  | [c] => if decide (c.da L) && lit32 (c.adr L) then some [ci 1 3 (c.adr L) 0, ci 15 3 3 0] else none
+  | [c] => if decide (c.da L) && lit32 (c.adr L) && decide (valueWords c.ty = 1) then
+      some [ci 1 3 (c.adr L) 0, ci 15 3 3 0] else none
   | _ => none
 
 /-- Postcondition lowering uses the same arithmetic instructions as ordinary expressions.
     Ordinary expression lowering continues to refuse entry reads outside this context. -/
 def lowEns (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} :
     {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
-  | _, .oldG _ _, d => some ([ci 2 d 3 0], d + 1)
-  | _, .oldS _ _ i _, d => do
+  | _, .oldG g _, d => if valueWords (D.gtyp g) = 1 then some ([ci 2 d 3 0], d + 1) else none
+  | _, .oldS t f i _, d => if valueWords (D.typ t f) = 1 then do
       let _ ← entryIndex i
-      pure ([ci 2 d 3 0], d + 1)
-  | _, .widen _ _ e, d => lowEns L e d
-  | _, .add a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 3 d ca cb)
-  | _, .sub a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 4 d ca cb)
-  | _, .mul a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 5 d ca cb)
+      pure ([ci 2 d 3 0], d + 1) else none
+  | _, .widen (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') _ _ e, d =>
+      resizeIntegerL lo hi lo' hi' d (lowEns L e d)
+  | _, .add (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, d =>
+      if valueWords (.int (l1+l2) (h1+h2)) = 1 then
+        do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 3 d ca cb) else none
+  | _, .sub (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, d =>
+      if valueWords (.int (l1-h2) (h1-l2)) = 1 then
+        do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 4 d ca cb) else none
+  | _, .mul (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b, d =>
+      if valueWords (.int (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
+        (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2)))) = 1 then
+        do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 5 d ca cb) else none
   | _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d =>
       if inW l1 h1 && inW l2 h2 then do
         let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 14 d ca cb)

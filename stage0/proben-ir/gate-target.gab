@@ -1,0 +1,21 @@
+// Source target selection must choose the second same-architecture binding.
+module gate {
+assume contract "The selected Linux sched_yield service returns zero." falsifier probe;
+syscall sys_gate;
+syscall gate_call() -> u64 in 0 .. 4194304
+ via sys_gate
+ effects { pure }
+ costs <= 8 ops;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+ let n = gate_call();
+ if n == 0 { return 23; }
+ return 24;
+}
+target first abi linux arch x86_64 {
+ sys_gate = number 39 regs in { } regs out { rax } clobbers { rcx, r11 } errors { } assume contract falsifier probe;
+}
+target second abi linux arch x86_64 {
+ sys_gate = number 24 regs in { } regs out { rax } clobbers { rcx, r11 } errors { } assume contract falsifier probe;
+}
+target second;
+}

@@ -22,15 +22,23 @@ def isPtr : Ty → Bool
   | .ptr _ _ => true
   | _ => false
 
+/-- A parameter type whose value is one word of the request. -/
+def wortTy : Ty → Bool
+  | .int lo hi => decide (valueWords (.int lo hi) = 1)
+  | .bool => true
+  | .ptr _ _ => true
+  | _ => false
+
 /-- The arguments of a gate, the first into slot `d`, each next one a slot higher. A later argument's scratch slots
     lie above every argument already in place. A pointer has no code here: its slot gets the buffer's address. -/
 def lowR (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → (reserved : Nat := 0) → Option (List II × Nat)
   | _, _, .nil, d, reserved => some ([], d)
   | _, τ :: _, .cons e rest, d, reserved =>
-    if isPtr τ then lowR (reserved := reserved) L rest (d + 1) else do
+    if isPtr τ then lowR (reserved := reserved) L rest (d + 1) else if wortTy τ then do
       let ce ← lowE L e d reserved
       let cr ← lowR (reserved := reserved) L rest (d + 1)
       pure (ce.1 ++ cr.1, max ce.2 cr.2)
+    else none
 
 /-- Zero into the `k` slots from `d`. -/
 def zeroC (d : Nat) : Nat → List II
@@ -47,12 +55,6 @@ def torGut (b : TorB) (n : Nat) : Bool := decide (n ≤ 6) && b.regs == regsIn n
 def torCode (nr s n : Nat) (ca : List II) : List II :=
   ca ++ zeroC (s + 1 + n) (6 - n) ++ [ci 1 s nr 0, ci 23 s s 0]
 
-/-- A parameter type whose value is one word of the request. -/
-def wortTy : Ty → Bool
-  | .int _ _ => true
-  | .bool => true
-  | .ptr _ _ => true
-  | _ => false
 
 /-! ## A buffer
 
@@ -144,19 +146,35 @@ def loC (s : Nat) (lo : Int) : List II :=
 /-- `slot s ≤ hi`, else the stop 110: `d := s < hi + 1`, the guard over `d`. -/
 def hiC (s : Nat) (hi : Int) : List II := sltC s (hi + 1) ++ guardC (s + 1) 110 (s + 2)
 
-/-- The test of the answer in slot `s` against its declared type; it writes the slots `s + 1 .. s + 9`. A bound beyond
-    64 bits needs no test; any other must be a 32-bit literal. Boolean words are normalized; never stops. -/
+/-- The test of the answer in slot `s` against its declared type; it writes the slots `s + 1 .. s + 9`. A bound covering
+    the signed-word range needs no test; any other must be a 32-bit literal. Multiword
+    results are refused by this register profile. Boolean words are normalized; never stops. -/
 def chkC : Option Ty → Nat → Option (List II)
   | some (.int lo hi), s =>
-    let a := if lo ≤ -2 ^ 63 then some [] else if lit32 lo then some (loC s lo) else none
-    let b := if 2 ^ 63 - 1 ≤ hi then some [] else if lit32 (hi + 1) then some (hiC s hi) else none
-    match a, b with
-    | some a, some b => some (a ++ b)
-    | _, _ => none
+    if valueWords (.int lo hi) = 1 then
+      let a := if lo ≤ -2 ^ 63 then some [] else if lit32 lo then some (loC s lo) else none
+      let b := if 2 ^ 63 - 1 ≤ hi then some [] else if lit32 (hi + 1) then some (hiC s hi) else none
+      match a, b with
+      | some a, some b => some (a ++ b)
+      | _, _ => none
+    else none
   | some .bool, s => some [ci 1 (s + 1) 0 0, ci 14 s s (s + 1),
       ci 1 (s + 1) 0 0, ci 14 s s (s + 1)]
   | some .never, s => some (stopC 110 s)
   | _, _ => none
+
+/-- This register profile materializes every returning result in exactly one word. -/
+theorem chkC_width {τ : Ty} {s : Nat} {c : List II}
+    (h : chkC (some τ) s = some c) : valueWords τ = 1 := by
+  cases τ with
+  | int lo hi =>
+    simp only [chkC] at h
+    split at h
+    · assumption
+    · cases h
+  | bool => rfl
+  | never => rfl
+  | _ => simp [chkC] at h
 
 /-- The test of one listed errno `e` with its case `i` (`d = s + 1`): if slot `s` holds `e`, the case into slot `s`
     and a jump to `J` bytes past the end of this test; else on after it. -/

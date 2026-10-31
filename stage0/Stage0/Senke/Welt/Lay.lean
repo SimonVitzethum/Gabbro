@@ -1,14 +1,6 @@
-/-
-  File:      stage0/Stage0/Senke/Welt/Lay.lean
-  Subject:   Where the world lies in memory: every column of a table (field `f` of table `t`, its elements one after the
-             other from `col t f`) and every global (`ga g`, one word); how each gate is bound (`tor`); where the threads' stacks
-             lie (`sb`, `st`) and the words of each lock (`lk`).
-
-  Every element of every column is one word, also in a column of bytes: a system call's buffer is packed into
-  bytes at the call (`PLAN-SELF-HOSTING.md` §2.1.4), so every cell of the world is one aligned word. All of it lies
-  in `[lo, hi)`.
--/
-import Grammatik.Kern.Semantik.Semantik
+/- Typed world storage: each cell occupies its complete canonical value span.
+   Logical pointer values remain distinct from checked physical layout addresses. -/
+import Stage0.Senke.Ausdruck.Aggregat.Layout
 
 namespace Gabbro.Stage0.Senke
 
@@ -49,7 +41,7 @@ def LaySync {D : Deklaration} (L : Lay D) : Prop :=
     ∀ Lk Lk', Lk ≠ Lk' → L.lk Lk + 24 ≤ L.lk Lk' ∨ L.lk Lk' + 24 ≤ L.lk Lk
 
 /-- The address of element `k` of the column `f` of table `t`. -/
-def Lay.elem {D : Deklaration} (L : Lay D) (t : D.Tab) (f : D.Feld t) (k : Nat) : Nat := L.col t f + 8 * k
+def Lay.elem {D : Deklaration} (L : Lay D) (t : D.Tab) (f : D.Feld t) (k : Nat) : Nat := L.col t f + 8 * valueWords (D.typ t f) * k
 
 /-- Cells represented by supplied regions, extending storage only for open tables. -/
 def Lay.count {D : Deklaration} (L : Lay D) (t : D.Tab) : Int :=

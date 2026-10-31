@@ -108,46 +108,50 @@ theorem chkC_ok {lo hi : Int} {s : Nat} {c : List II} (h : chkC (some (.int lo h
   simp only [Nat.reduceSub] at hwi hwl
   simp only [chkC] at h
   split at h
-  · next a b ha hb =>
-    simp only [Option.some.injEq] at h
-    subst h
-    have hroom := hp.frame.room
-    have hA : (a = [] ∧ lo ≤ w.toInt) ∨ ((lo ≤ w.toInt → ∃ m', Star ⟨pc, fp⟩ m
-        ⟨pc + BitVec.ofNat 64 (16 * a.length), fp⟩ m' ∧ Agree fp (s + 1) K m m') ∧
-        (¬ lo ≤ w.toInt → Stops ⟨pc, fp⟩ m 110)) := by
-      split at ha
-      · cases ha; exact .inl ⟨rfl, by omega⟩
-      · split at ha
-        · cases ha; exact .inr (loC_ok hp.left (by assumption) (by omega) hw)
-        · cases ha
-    obtain ⟨hA1, hA2⟩ := part_ok hp.left hA
-    refine ⟨fun ⟨hl, hh⟩ => ?_, fun hn => ?_⟩
-    · obtain ⟨m1, s1, a1⟩ := hA1 hl
-      have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
-      have hw1 : m1.rd64 (slot fp (BitVec.ofNat 64 s)) = some w := by
-        rw [agree_rd_low a1 hroom (by omega) (by omega)]; exact hw
-      have hB : (b = [] ∧ w.toInt ≤ hi) ∨ ((w.toInt ≤ hi → ∃ m', Star ⟨pc + BitVec.ofNat 64 (16 * a.length), fp⟩ m1
-          ⟨pc + BitVec.ofNat 64 (16 * a.length) + BitVec.ofNat 64 (16 * b.length), fp⟩ m' ∧
-          Agree fp (s + 1) K m1 m') ∧ (¬ w.toInt ≤ hi → Stops ⟨pc + BitVec.ofNat 64 (16 * a.length), fp⟩ m1 110)) := by
-        split at hb
-        · cases hb; exact .inl ⟨rfl, by omega⟩
-        · split at hb
-          · cases hb; exact .inr (hiC_ok hp1 (by assumption) (by omega) hw1)
-          · cases hb
-      obtain ⟨m2, s2, a2⟩ := (part_ok hp1 hB).1 hh
-      exact ⟨m2, s1.trans (by rw [List.length_append, ← pc_add]; exact s2), a1.trans a2⟩
-    · by_cases hl : lo ≤ w.toInt
+  · next width =>
+    split at h
+    · next a b ha hb =>
+      simp only [Option.some.injEq] at h
+      subst h
+      have hroom := hp.frame.room
+      have hA : (a = [] ∧ lo ≤ w.toInt) ∨ ((lo ≤ w.toInt → ∃ m', Star ⟨pc, fp⟩ m
+          ⟨pc + BitVec.ofNat 64 (16 * a.length), fp⟩ m' ∧ Agree fp (s + 1) K m m') ∧
+          (¬ lo ≤ w.toInt → Stops ⟨pc, fp⟩ m 110)) := by
+        split at ha
+        · cases ha; exact .inl ⟨rfl, by omega⟩
+        · split at ha
+          · cases ha; exact .inr (loC_ok hp.left (by assumption) (by omega) hw)
+          · cases ha
+      obtain ⟨hA1, hA2⟩ := part_ok hp.left hA
+      refine ⟨fun ⟨hl, hh⟩ => ?_, fun hn => ?_⟩
       · obtain ⟨m1, s1, a1⟩ := hA1 hl
         have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
         have hw1 : m1.rd64 (slot fp (BitVec.ofNat 64 s)) = some w := by
           rw [agree_rd_low a1 hroom (by omega) (by omega)]; exact hw
-        have hh : ¬ w.toInt ≤ hi := fun hh => hn ⟨hl, hh⟩
-        split at hb
-        · omega
-        · split at hb
-          · cases hb; exact Stops.prefix s1 ((hiC_ok hp1 (by assumption) (by omega) hw1).2 hh)
-          · cases hb
-      · exact hA2 hl
+        have hB : (b = [] ∧ w.toInt ≤ hi) ∨ ((w.toInt ≤ hi → ∃ m', Star ⟨pc + BitVec.ofNat 64 (16 * a.length), fp⟩ m1
+            ⟨pc + BitVec.ofNat 64 (16 * a.length) + BitVec.ofNat 64 (16 * b.length), fp⟩ m' ∧
+            Agree fp (s + 1) K m1 m') ∧ (¬ w.toInt ≤ hi → Stops ⟨pc + BitVec.ofNat 64 (16 * a.length), fp⟩ m1 110)) := by
+          split at hb
+          · cases hb; exact .inl ⟨rfl, by omega⟩
+          · split at hb
+            · cases hb; exact .inr (hiC_ok hp1 (by assumption) (by omega) hw1)
+            · cases hb
+        obtain ⟨m2, s2, a2⟩ := (part_ok hp1 hB).1 hh
+        exact ⟨m2, s1.trans (by rw [List.length_append, ← pc_add]; exact s2), a1.trans a2⟩
+      · by_cases hl : lo ≤ w.toInt
+        · obtain ⟨m1, s1, a1⟩ := hA1 hl
+          have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
+          have hw1 : m1.rd64 (slot fp (BitVec.ofNat 64 s)) = some w := by
+            rw [agree_rd_low a1 hroom (by omega) (by omega)]; exact hw
+          have hh : ¬ w.toInt ≤ hi := fun hh => hn ⟨hl, hh⟩
+          split at hb
+          · omega
+          · split at hb
+            · cases hb; exact Stops.prefix s1 ((hiC_ok hp1 (by assumption) (by omega) hw1).2 hh)
+            · cases hb
+        · exact hA2 hl
+    · cases h
+
   · cases h
 
 /-- Every nonzero kernel word becomes true, including negative words. -/

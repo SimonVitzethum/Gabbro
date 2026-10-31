@@ -5,10 +5,26 @@ import Stage0.Senke.Ausdruck.Gleit.Exponent
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
 import Stage0
+
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+import Stage0.Bindung.Proben
+
+-- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
+#print axioms Gabbro.Stage0.irBild_correct
+#print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge
+#print axioms Gabbro.Stage0.SourceWitness.entry_ir_simulation_zeuge
+#print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected
+#print axioms Gabbro.Stage0.ArrayWitness.array_constant_typed_zeuge
+#print axioms Gabbro.Stage0.ArrayWitness.arrayMeaning_collected_zeuge
+#print axioms Gabbro.Stage0.ArrayWitness.source_image_joint_zeuge
+#print axioms Gabbro.Stage0.ArrayWitness.entry_ir_simulation_zeuge
+#print axioms Gabbro.Stage0.validateTargetFor_supported
+#print axioms Gabbro.Stage0.BindingProbes.literal_metal_refused_zeuge
+#print axioms Gabbro.Stage0.BindingProbes.gate_free_metal_refused_zeuge
+#print axioms Gabbro.Stage0.BindingProbes.unselected_metal_preserved_zeuge
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -169,7 +185,8 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.refused_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.representation_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.image_zeuge
-#print axioms Gabbro.Stage0.Senke.AggregateProbe.read_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.read_accepted_zeuge
+#print axioms Gabbro.Stage0.Senke.AggregateProbe.accepted_zeuge
 
 #print axioms Gabbro.Stage0.Senke.enc_ref_cell
 #print axioms Gabbro.Stage0.Senke.slotRefA_ok
@@ -325,11 +342,6 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatAddSubnormalOutputL_ok
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatAddOutput_joint_zeuge
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.outputImages_zeuge
-#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.answer_sound
-#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.execute_sound
-#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_exit_zeuge
-#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.exact_cost_zeuge
-#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_runner_zeuge
 
 -- Canonical prefix reservation: lexical placement, writes and nested offsets.
 #print axioms Gabbro.Stage0.Senke.reserved_write_preserves
@@ -349,3 +361,17 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_outcomes_zeuge
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge
+
+-- The shared value ABI and the complete-span world consumers.
+#print axioms Gabbro.Stage0.Senke.copyValue_run
+#print axioms Gabbro.Stage0.Senke.globalValueC_ok
+#print axioms Gabbro.Stage0.Senke.globalStoreC_ok
+#print axioms Gabbro.Stage0.Senke.slotValueC_ok
+#print axioms Gabbro.Stage0.Senke.slotStoreC_ok
+#print axioms Gabbro.Stage0.Senke.selectFrameSpan_ok
+#print axioms Gabbro.Stage0.Senke.arrCons_ok
+#print axioms Gabbro.Stage0.Senke.arrGet_ok
+#print axioms Gabbro.Stage0.Senke.resultAt_exit
+#print axioms Gabbro.Stage0.Senke.weltAt_slotWord
+#print axioms Gabbro.Stage0.Senke.weltAt_globWord
+#print axioms Gabbro.Stage0.Senke.weltAt_slot

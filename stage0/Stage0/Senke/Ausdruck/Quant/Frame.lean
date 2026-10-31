@@ -1,5 +1,6 @@
 /- Frame facts for expression binders. -/
 import Stage0.Senke.Ausdruck.Lesen
+import Stage0.Senke.Ausdruck.Quant.Literal
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -10,34 +11,87 @@ theorem slot_far {fp : Runner.W} {K i j : Nat} (hr : fp.toNat + 8 * K ≤ 2 ^ 64
     (hne : i ≠ j) : Far (slot fp (BitVec.ofNat 64 i)) 8 (slot fp (BitVec.ofNat 64 j)) 8 := by
   rw [Far, slot_toNat hr hi, slot_toNat hr hj]; omega
 
+/-- Header/status writes preserve every limb of a disjoint value, on either side
+    of the write. In particular a return cache cannot stand in for its payload. -/
+theorem ValueAt.write_slot {m : Runner.Mem} {fp : Runner.W} {K base j : Nat}
+    {τ : Ty} {v : Wert D τ} (value : ValueAt L m fp base τ v)
+    (room : fp.toNat + 8 * K ≤ 2 ^ 64) (fits : base + valueWords τ ≤ K)
+    (index : j < K) (apart : j < base ∨ base + valueWords τ ≤ j) (w : Runner.W) :
+    ValueAt L (write m (slot fp (BitVec.ofNat 64 j)) 8 w.toNat) fp base τ v := by
+  refine ⟨value.1, ?_⟩
+  intro i hi
+  have width := encodeWords_length L τ v
+  rw [rd64_write_far (slot_far room index (by omega) (by omega))]
+  exact value.2 i hi
+
+theorem ResultAt.write_slot {m : Runner.Mem} {fp : Runner.W} {K base j : Nat}
+    {e : Option Ty} {v : ErgVal D e} (value : ResultAt L m fp base e v)
+    (room : fp.toNat + 8 * K ≤ 2 ^ 64) (fits : base + resultWords e ≤ K)
+    (index : j < K) (apart : j < base ∨ base + resultWords e ≤ j) (w : Runner.W) :
+    ResultAt L (write m (slot fp (BitVec.ofNat 64 j)) 8 w.toNat) fp base e v := by
+  cases e with
+  | some τ => exact ValueAt.write_slot value room fits index apart w
+  | none =>
+    intro i hi
+    have zero : i = 0 := by simpa using hi
+    subst i
+    rw [rd64_write_far (slot_far room index (by change base + 1 ≤ K at fits; omega)
+      (by change j < base ∨ base + 1 ≤ j at apart; omega))]
+    exact value 0 (by simp)
+
 theorem idx_lt : {Γ : Ctx} → {τ : Ty} → (x : Var Γ τ) → Var.idx x < Γ.length
   | _, _, .here => by simp [Var.idx]
   | _, _, .there x => by have := idx_lt x; simp [Var.idx]; omega
 
 theorem vslot_here {Γ : Ctx} {τ : Ty} : vslot (Var.here : Var (τ :: Γ) τ) reserved = frei Γ reserved := by
-  simp [vslot, frei, Var.idx]
+  simp [vslot, frei, variableOffset]
 
 theorem vslot_there {Γ : Ctx} {τ σ : Ty} (y : Var Γ τ) : vslot (Var.there y : Var (σ :: Γ) τ) reserved = vslot y reserved := by
-  have := idx_lt y
-  simp [vslot, Var.idx]; omega
+  rfl
 
 theorem envAt_cons {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {v : Wert D τ}
-    {w : Runner.W} (h : EnvAt L m fp ρ reserved) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
-    (he : Enc L τ v w) : EnvAt L m fp (Env.cons v ρ : Env D (τ :: Γ)) reserved := by
+    (h : EnvAt L m fp ρ reserved) (hv : ValueAt L m fp (frei Γ reserved) τ v) :
+    EnvAt L m fp (Env.cons v ρ : Env D (τ :: Γ)) reserved := by
   intro τ' y
   cases y with
-  | here => exact ⟨w, by rw [vslot_here]; exact hw, he⟩
+  | here => rw [vslot_here]; exact hv
   | there y =>
-    obtain ⟨w', hw', he'⟩ := h τ' y
-    exact ⟨w', by rw [vslot_there]; exact hw', he'⟩
+    rw [vslot_there]; exact h τ' y
 
 theorem envAt_tail {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {τ : Ty} {ρ : Env D (τ :: Γ)} (h : EnvAt L m fp ρ reserved) :
     EnvAt L m fp ρ.tail reserved := by
   intro τ' y
-  obtain ⟨w, hw, he⟩ := h τ' (.there y)
-  rw [vslot_there] at hw
+  have value := h τ' (.there y)
+  rw [vslot_there] at value
   cases ρ with
-  | cons _ ρ => exact ⟨w, hw, he⟩
+  | cons _ ρ => exact value
+
+/-- One complete parameter sequence is exactly the variable-wise frame relation.
+    This supplies the same ABI to a typed start environment and runtime calls. -/
+theorem envAt_encoding {m : Runner.Mem} {fp : Runner.W} {Γ : Ctx} (ρ : Env D Γ) :
+    EnvAt L m fp ρ reserved ↔
+      (∀ τ (x : Var Γ τ), ValueValid L τ (ρ.get x)) ∧
+      WordsAt m fp (FB + reserved) (encodeEnv L ρ) := by
+  induction ρ with
+  | nil =>
+    constructor
+    · intro env
+      constructor
+      · intro τ x; nomatch x
+      · intro i hi; simp [encodeEnv] at hi
+    · intro words τ x; nomatch x
+  | @cons τ Γ v ρ ih =>
+    constructor
+    · intro env
+      refine ⟨fun τ x => (env τ x).1, ?_⟩
+      rw [encodeEnv, wordsAt_append]
+      refine ⟨(ih.mp (envAt_tail env)).2, ?_⟩
+      simpa only [encodeEnv_length, vslot_here, Env.get, frei] using (env τ .here).2
+    · rintro ⟨valid, words⟩
+      rw [encodeEnv, wordsAt_append] at words
+      apply envAt_cons
+      · exact ih.mpr ⟨fun τ x => valid τ (.there x), words.1⟩
+      · exact ⟨valid τ .here, by simpa only [encodeEnv_length, frei] using words.2⟩
 
 /-- Moving one frame word, with the resulting memory explicit. -/
 theorem quant_mov [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K dst src : Nat} {v : Runner.W}
@@ -55,22 +109,6 @@ theorem quant_mov [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K dst src : Nat} {
   simp only [ret1]
   refine f1_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]
-  exact run_wr64 (wr64_some (hf.wr dst hd))
-
-/-- An immediate assignment, with the resulting memory explicit. -/
-theorem quant_lit [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K dst : Nat} {v : Int}
-    (hf : FrameOK m fp K) (hk : K < 2 ^ 31) (hd : dst < K)
-    (hc : CodeAt m pc [ci 1 dst v 0]) (hv : lit32 v = true) :
-    Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 dst)) 8 (BitVec.ofInt 64 v).toNat) := by
-  have hi := hc 0 (by simp)
-  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  apply Star.one
-  apply run_step (t := ⟨pc, fp⟩) hi (by decide)
-  simp only [op]
-  refine f2_run (t := ⟨pc, fp⟩) hi ?_
-  simp only [ret1]
-  refine f1_run (t := ⟨pc, fp⟩) hi ?_
-  rw [sx_lit hv, sx_nat (by omega)]
   exact run_wr64 (wr64_some (hf.wr dst hd))
 
 /-- Reading a word and writing it back preserves each byte of that word. -/

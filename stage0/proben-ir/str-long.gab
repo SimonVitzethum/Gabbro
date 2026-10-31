@@ -1,0 +1,8 @@
+// Strings longer than one byte keep a length word and every byte word.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 300 effects { pure } {
+    let s : string max 3 = "abc";
+    let t : string max 3 = s;
+    return lenof(t);
+}
+}

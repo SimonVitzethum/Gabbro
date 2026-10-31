@@ -1,0 +1,9 @@
+// Arrays of any length keep every element word: a copied three-element local, constant indexing.
+module ir_probe {
+const VALUES : [u8; 3] = [1, 2, 3];
+impl fn main() -> u32 in 0 .. 1000 effects { pure } {
+    let a : [u8; 3] = VALUES;
+    let b : [u8; 3] = a;
+    return b[0] + b[1] + b[2];
+}
+}

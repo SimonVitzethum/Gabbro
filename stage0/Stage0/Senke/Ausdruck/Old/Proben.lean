@@ -37,11 +37,11 @@ theorem lay : LayIn layout := by
   cases g
   decide +kernel
 
-theorem world (c : List II) : WeltAt (memory c) layout exitWorld := by
+theorem world [Kern] (c : List II) : WeltAt (memory c) layout exitWorld := by
   refine ⟨(fun t => nomatch t), ?_, fun _ _ _ => rfl⟩
   intro g
   cases g
-  refine ⟨80, ?_, rfl⟩
+  refine ValueAt.ofCellWord (w := 80) (by decide) ?_ rfl
   change (memory c).rd64 2048 = some 80
   simp [Runner.Mem.rd64, Runner.Mem.all, Runner.Mem.le, memory]
 
@@ -70,7 +70,7 @@ theorem saved : SnapAt layout (oldCells expr) entry (memory readCode) 1024 := by
   intro c hc
   simp only [expr, oldCells, List.mem_singleton] at hc
   subst c
-  exact ⟨64, by decide +kernel, rfl⟩
+  exact ⟨by decide, ValueAt.of_enc (w := 64) (by decide) (by decide +kernel) rfl⟩
 
 /-- A real entry word differing from the exit global satisfies every simulation premise. -/
 theorem lowEns_ok_zeuge [Kern] :
@@ -78,13 +78,13 @@ theorem lowEns_ok_zeuge [Kern] :
     PreS layout (memory readCode) 0 1024 16 4 readCode (Env.nil : Env D []) ∧
     SnapAt layout (oldCells expr) entry (memory readCode) 1024 ∧
     eval entry expr exitWorld .nil ≠ eval exitWorld expr exitWorld .nil ∧
-    Ok (memory readCode) 0 1024 16 4 readCode (Enc layout (.fnptr 0) (eval entry expr exitWorld .nil)) := by
+    ValueOk layout (memory readCode) 0 1024 16 4 readCode (.fnptr 0) (eval entry expr exitWorld .nil) := by
   refine ⟨rfl, read_pre, saved, ?_, ?_⟩
   · intro h
     have hh := congrArg (fun v : Wert D (.fnptr 0) => v.1.val) h
     change (0 : Nat) = 1 at hh
     omega
-  · exact lowEns_ok entry exitWorld (fun _ h => h) expr 4 readCode 5 rfl (by decide)
+  · exact lowEns_ok entry exitWorld (fun _ h => h) lay expr 4 readCode 5 rfl (by decide)
       (memory readCode) 0 .nil (PreS.welt read_pre (Nat.le_refl _) (world readCode) lay (by decide)) saved
 
 /-- Capture starts from a different header word and obtains the current world's global. -/

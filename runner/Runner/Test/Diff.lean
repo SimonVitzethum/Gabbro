@@ -84,7 +84,7 @@ def Rng.addr (g : Rng) (i : Nat) (avoid : List Reg) :
 
 def aluAll : List Alu := [.add, .or, .and, .sub, .xor, .cmp, .test]
 def aluImm : List Alu := [.add, .or, .and, .sub, .xor, .cmp]
-def conds : List Cond := [.z, .nz, .s, .l]
+def conds : List Cond := [.z, .nz, .s, .l, .b]
 
 /-- The instruction of a case of kind `k`, with the registers its memory operand fixes. `base` is excluded. -/
 def Rng.ins (g : Rng) (k : Nat) (i : Nat) (base : Reg) : List Ins × List (Reg × W) × Rng :=
@@ -107,14 +107,15 @@ def Rng.ins (g : Rng) (k : Nat) (i : Nat) (base : Reg) : List Ins × List (Reg �
   | 10 => ([.imul d s], [], g)
   | 11 => ([.cqo], [], g)
   | 12 => ([.idiv s], [], g)
+  | 19 => ([.udiv s], [], g)
   | 13 => ([.shl d], [], g)
   | 14 => ([.shr d], [], g)
-  | 15 => let (c, g) := g.below 4; ([.set (conds.getD c .z) d], [], g)
-  | 16 => let (c, g) := g.below 4; ([.jcc (conds.getD c .z) 7, .movi .rcx 0x1234], [], g)
+  | 15 => let (c, g) := g.below conds.length; ([.set (conds.getD c .z) d], [], g)
+  | 16 => let (c, g) := g.below conds.length; ([.jcc (conds.getD c .z) 7, .movi .rcx 0x1234], [], g)
   | 17 => ([.jmp 7, .movi .rcx 0x1234], [], g)
   | _ => let (m, fix, g) := g.addr i (s :: .rax :: av); ([.cmpxchg m s], fix, g)
 
-def KINDS : Nat := 19
+def KINDS : Nat := 20
 
 /-! ## The model's answer -/
 
@@ -248,6 +249,8 @@ partial def gen (n : Nat) : List B × List B × List (Nat × Nat) := Id.run do
     let (sgn, g4) := g4.below 2
     if k = 12 ∧ sgn = 0 then
       rv := rv.set! Reg.rdx.num (if rv[Reg.rax.num]!.msb then BitVec.allOnes 64 else 0)
+    if k = 19 ∧ sgn = 0 then
+      rv := rv.set! Reg.rdx.num 0
     let regsF : Reg → W := fun r =>
       match fix.find? (·.1 == r) with
       | some (_, v) => v
@@ -335,7 +338,9 @@ def faults : List FaultCase :=
   let mk (name : String) (regs : List (Reg × W)) (i : Ins) (sig : Nat) : FaultCase :=
     { name := name, prog := faultProg (regs.map fun (r, v) => Ins.movi r (v.setWidth 32)) i, signal := sig,
       model := faultModel (regs.map fun (r, v) => (r, (v.setWidth 32).signExtend 64)) i }
-  [ mk "idiv-zero" [(.rax, 7), (.rdx, 0), (.rsi, 0)] (.idiv .rsi) 8,
+  [ mk "div-zero" [(.rax, 7), (.rdx, 0), (.rsi, 0)] (.udiv .rsi) 8,
+    mk "div-overflow" [(.rax, 0), (.rdx, 1), (.rsi, 1)] (.udiv .rsi) 8,
+    mk "idiv-zero" [(.rax, 7), (.rdx, 0), (.rsi, 0)] (.idiv .rsi) 8,
     -- rdx:rax = -2^63 as a 128-bit value: rax = 2^63 is not a 32-bit immediate, so shift it there
     { name := "idiv-overflow",
       prog := faultProg [.movi .rax 1, .movi .rcx 63, .shl .rax, .cqo, .movi .rsi (BitVec.ofInt 32 (-1))] (.idiv .rsi),

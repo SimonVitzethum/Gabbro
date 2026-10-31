@@ -200,6 +200,13 @@ def stufe_stage0():
         for gab in irproben:
             img = kratz / (gab.stem + ".img")
             q = subprocess.run([str(exe), "--ir", str(gab), str(img)], cwd=S0, env=ENV, capture_output=True, timeout=600)
+            refusal = gab.with_suffix(".error")
+            if refusal.exists():
+                expected = refusal.read_bytes().strip()
+                if q.returncode != 1 or expected not in q.stderr:
+                    irfalsch.append(f"{gab.name}: expected compiler refusal {expected!r}, "
+                                    f"got rc {q.returncode}: {(q.stdout + q.stderr)[:200]!r}")
+                continue
             if q.returncode != 0:
                 irfalsch.append(f"{gab.name}: stage0 --ir rc {q.returncode}: {(q.stdout + q.stderr)[:200]!r}")
                 continue

@@ -12,6 +12,7 @@
   Logic and hardware outcomes retain their named stops.
 -/
 import Stage0.Senke.Funktion
+import Stage0.Senke.Ausdruck.Aggregat.Scalar
 import Stage0.Senke.Welt.WeltAt
 import Stage0.Senke.Sperre.Sync
 
@@ -46,24 +47,32 @@ def EncErg (L : Lay D) : (e : Option Ty) → ErgVal D e → Runner.W → Prop
   | some τ, v, w => Enc L τ v w
   | none, _, _ => True
 
+/-- What the exit status of a finished thread says about its result: the low word of the canonical
+    encoding, and for a word-compatible type also the full scalar relation. Wider results exit with
+    their first word. -/
+def ExitErg (L : Lay D) : (e : Option Ty) → ErgVal D e → Runner.W → Prop
+  | some τ, v, w => w = (encodeWords L τ v).headD 0 ∧ (WordCompatible τ → Enc L τ v w)
+  | none, _, _ => True
+
 /-- The checked normal return keeps the successful ensures Boolean in its output slot.
     A reason return writes zero there and its ordinal in slot 2. No parameter slot changes. -/
-def ReturnFlag (m : Runner.Mem) (fp : Runner.W) (np : Nat) (ok : Bool) : Prop :=
-  m.rd64 (slot fp (BitVec.ofNat 64 (FB + np + 1))) = some (if ok then 1 else 0)
+def ReturnFlag (m : Runner.Mem) (fp : Runner.W) (np : Nat) (ok : Bool) (nr : Nat := 1) : Prop :=
+  m.rd64 (slot fp (BitVec.ofNat 64 (FB + np + nr))) = some (if ok then 1 else 0)
 
 /-- A reason return preserves the frame header and carries the resulting world. -/
 def RetWhy (L : Lay D) (f : D.Fn) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
     (t : T) (m : Runner.Mem) (σ : World D) (r : Fin (D.gruende f)) : Prop :=
   ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-    m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 r.val) ∧
-    ReturnFlag m' fp (D.params f).length false ∧ WeltAt m' L σ
+    ValueAt L m' fp (FB + contextWords (D.params f)) (.why (D.gruende f)) r ∧
+    ReturnMirror m' fp (FB + contextWords (D.params f)) ∧
+    ReturnFlag m' fp (contextWords (D.params f)) false (returnWords (D.erg f) (D.gruende f)) ∧ WeltAt m' L σ
 
 theorem RetWhy.prefix {f : D.Fn} {fp : Runner.W} {K : Nat} {rp cfp : Runner.W}
     {t0 t : T} {m0 m : Runner.Mem} {σ : World D} {r : Fin (D.gruende f)}
     (h : Star t0 m0 t m) (ha : AgreeW L fp 2 K m0 m) (hs : RetWhy L f fp K rp cfp t m σ r) :
     RetWhy L f fp K rp cfp t0 m0 σ r := by
-  obtain ⟨m', s, a, hw, flag, hw'⟩ := hs
-  exact ⟨m', h.trans s, ha.trans a, hw, flag, hw'⟩
+  obtain ⟨m', s, a, value, mirror, flag, world⟩ := hs
+  exact ⟨m', h.trans s, ha.trans a, value, mirror, flag, world⟩
 
 structure FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     (S : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (dv : Runner.W) (c : Nat) : Prop where
@@ -75,21 +84,14 @@ structure FunSpec (L : Lay D) (A : D.Fn → Nat) (C : D.Fn → List II)
     m.rd64 (slot fp (BitVec.ofNat 64 2)) = some dv → EnvAt L m fp ρ → WeltAt m L σ → SyncOK m L fp Ks →
     match S f σ ρ with
     | .ok σ' v => ∃ m', Star ⟨BitVec.ofNat 64 (A f), fp⟩ m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' fp (D.params f).length true) ∧ WeltAt m' L σ'
+        (ResultAt L m' fp (FB + contextWords (D.params f)) (D.erg f) v ∧
+          ReturnMirror m' fp (FB + contextWords (D.params f)) ∧
+          ReturnFlag m' fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨BitVec.ofNat 64 (A f), fp⟩ m (hwCode h)
     | .why σ' r => RetWhy L f fp K rp cfp ⟨BitVec.ofNat 64 (A f), fp⟩ m σ' r
 
 /-! ## Frames inside frames -/
-
-/-- Slot `i` of the frame at slot `F` is slot `F + i`. -/
-theorem slot_slot (fp : Runner.W) (F i : Nat) :
-    slot (slot fp (BitVec.ofNat 64 F)) (BitVec.ofNat 64 i) = slot fp (BitVec.ofNat 64 (F + i)) := by
-  simp only [slot]
-  apply BitVec.eq_of_toNat_eq
-  have h8 : (8 : Runner.W).toNat = 8 := rfl
-  simp only [BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
-  omega
 
 theorem frame_sub {m : Runner.Mem} {fp : Runner.W} {K F : Nat} (h : FrameOK m fp K) (hF : F ≤ K) :
     FrameOK m (slot fp (BitVec.ofNat 64 F)) (K - F) := by
@@ -157,15 +159,27 @@ theorem WIn.sub {L : Lay D} {fp : Runner.W} {Ks K F : Nat} (h : WIn L fp Ks K) (
 
 /-! ## What a statement keeps -/
 
+/-- A userspace world update preserves every limb of a value below the local write area. -/
+theorem ValueAt.agreeW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {base d K : Nat}
+    {τ : Ty} {v : Wert D τ} (value : ValueAt L m fp base τ v)
+    (changed : AgreeW L fp d K m m') (world : fp.toNat + 8 * K ≤ L.lo)
+    (room : fp.toNat + 8 * K ≤ 2 ^ 64) (below : base + valueWords τ ≤ d)
+    (fits : d ≤ K) : ValueAt L m' fp base τ v := by
+  refine ⟨value.1, ?_⟩
+  intro i hi
+  have width : i < valueWords τ := by simpa only [encodeWords_length] using hi
+  rw [agreeW_rd_low changed world room (by omega) fits]
+  exact value.2 i hi
+
 theorem envAt_agreeW {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K reserved : Nat}
     (h : EnvAt L m fp ρ reserved) (ha : AgreeW L fp d K m m') (htop : fp.toNat + 8 * K ≤ L.lo) (hr : fp.toNat + 8 * K ≤ 2 ^ 64)
     (hd : frei Γ reserved ≤ d) (hK : d ≤ K) : EnvAt L m' fp ρ reserved := by
   intro τ x
-  obtain ⟨w, hw, he⟩ := h τ x
-  refine ⟨w, ?_, he⟩
-  rw [agreeW_rd_low ha htop hr (by have := vslot_lt (reserved := reserved) x; omega) hK]
-  exact hw
-
+  have placed : vslot x reserved + valueWords τ ≤ frei Γ reserved := by
+    have bound := variableOffset_bound x
+    unfold vslot frei
+    omega
+  exact (h τ x).agreeW ha htop hr (by omega) hK
 theorem pcode_agreeW {L : Lay D} {m m' : Runner.Mem} {A : D.Fn → Nat} {C : D.Fn → List II} {fp : Runner.W}
     {K lo : Nat} (h : PCode m A C fp K) (ha : AgreeW L fp lo K m m') (htop : fp.toNat + 8 * K ≤ L.lo)
     (hl : L.hi < 2 ^ 31) (hord : L.lo ≤ L.hi) : PCode m' A C fp K :=

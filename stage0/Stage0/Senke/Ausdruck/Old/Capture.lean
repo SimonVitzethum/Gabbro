@@ -12,9 +12,9 @@ theorem SnapAt.lese {cs : List (Zelle D)} {σ : World D} {m : Runner.Mem} {fp : 
     (h : SnapAt L cs σ m fp) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
     SnapAt L cs (σ.lese Λ os) m fp := by
   intro c hc
-  obtain ⟨w, hw, he⟩ := h c hc
-  refine ⟨w, hw, ?_⟩
-  cases c <;> exact he
+  obtain ⟨width, value⟩ := h c hc
+  refine ⟨width, ?_⟩
+  cases c <;> exact value
 
 /-- Loading a world word into a reserved slot needs no variable environment at that slot. -/
 theorem capture_load {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {a w : Runner.W}
@@ -57,18 +57,27 @@ theorem snapC_ok {cs : List (Zelle D)} {c : List II} {m : Runner.Mem} {pc fp : R
       split at hc
       · next htest =>
         simp only [Bool.and_eq_true, decide_eq_true_eq] at htest
+        obtain ⟨⟨existsCell, addressFits⟩, width⟩ := htest
         cases hc
         let m1 := write m (slot fp (BitVec.ofNat 64 3)) 8 (BitVec.ofInt 64 (z.adr L)).toNat
-        have s1 := quant_lit (m := m) (pc := pc) (fp := fp) (K := K) (dst := 3) (v := (z.adr L : Int)) hf hk hd (codeAt_left (b := [ci 15 3 3 0]) hcode) htest.2
+        have s1 := quant_lit (m := m) (pc := pc) (fp := fp) (K := K) (dst := 3) (v := (z.adr L : Int)) hf hk hd (codeAt_left (b := [ci 15 3 3 0]) hcode) addressFits
         have a1 : Agree fp 3 K m m1 := agree_write hf.room (Nat.le_refl _) hd _
         have hf1 := hf.agree a1
         have hfar1 := codeFar_right (n := 1) (k := 1) hfar
         have hc1 := (codeAt_right (a := [ci 1 3 (z.adr L) 0]) hcode).agree a1 hfar1
         have hw1 : WeltAt m1 L σ := weltAt_stab hl hwl m m1 hw (a1.mono (Nat.zero_le _))
-        obtain ⟨w, hword, he⟩ : ∃ w, m1.rd64 (BitVec.ofNat 64 (z.adr L)) = some w ∧ Enc L z.ty (z.val σ) w := by
+        obtain ⟨hvalid, hwords⟩ : ValueAt L m1 (BitVec.ofNat 64 (z.adr L)) 0 z.ty (z.val σ) := by
           cases z with
           | glob g => exact hw1.2.1 g
-          | elem t f k => exact hw1.1 t f k htest.1
+          | elem t f k => exact hw1.1 t f k existsCell
+        have length : (encodeWords L z.ty (z.val σ)).length = 1 := by
+          rw [encodeWords_length]; exact width
+        obtain ⟨w, hwEq⟩ := List.length_eq_one_iff.mp length
+        have hword : m1.rd64 (BitVec.ofNat 64 (z.adr L)) = some w := by
+          have h0 := hwords 0 (by omega)
+          simp only [Nat.zero_add] at h0
+          rw [slot_zero] at h0
+          simpa [hwEq] using h0
         have ha : m1.rd64 (slot fp (BitVec.ofNat 64 3)) = some (BitVec.ofNat 64 (z.adr L)) := by
           simpa only [m1, BitVec.ofInt_natCast] using rd_same (a := 3) hf hd (BitVec.ofInt 64 (z.adr L))
         have s2 := capture_load hf1 hk hd hc1 ha hword
@@ -79,7 +88,12 @@ theorem snapC_ok {cs : List (Zelle D)} {c : List II} {m : Runner.Mem} {pc fp : R
         · intro z' hz
           simp only [List.mem_singleton] at hz
           subst z'
-          exact ⟨w, rd_same (a := 3) hf1 hd w, he⟩
+          refine ⟨width, hvalid, ?_⟩
+          rw [hwEq]
+          intro i hi
+          have zero : i = 0 := by simpa using hi
+          subst zero
+          simpa using rd_same (a := 3) hf1 hd w
         · intro j hj hne
           dsimp only [m2, m1]
           rw [rd_other (a := 3) (b := j) hf1.room hd hj (Ne.symm hne), rd_other (a := 3) (b := j) hf.room hd hj (Ne.symm hne)]

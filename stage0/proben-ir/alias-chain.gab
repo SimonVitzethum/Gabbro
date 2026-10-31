@@ -1,0 +1,9 @@
+// Alias chains elaborate to their exact canonical ranges before IR lowering.
+module alias_probe {
+type Byte = u8;
+type Count = Byte;
+type Result = Count;
+impl fn main() -> Result effects { pure } {
+    return 42;
+}
+}

@@ -20,7 +20,7 @@ theorem enc_ref_cell {n k : Nat} {w : Runner.W} {t : D.Tab}
 theorem slotRefA_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {n k : Nat}
     {d top K : Nat} {cr : List II × Nat} {c : List II} {m : Runner.Mem} {pc fp : Runner.W}
     {ρ : Env D Γ} {W : Runner.Mem → Prop} (ht : D.tabNr n = some t)
-    (hs : slotA L t f d cr = some (c, top)) (hK : top ≤ K)
+    (hw : valueWords (D.typ t f) = 1) (hs : slotA L t f d cr = some (c, top)) (hK : top ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d cr.1 ρ W reserved → Ok m pc fp K d cr.1 (Enc L (.ref n) k))
     (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 (L.elem t f k) ∧ (k : Int) < L.count t) := by
@@ -31,7 +31,7 @@ theorem slotRefA_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {n k : Nat}
     obtain ⟨rfl, rfl⟩ := hs
     obtain ⟨_, _, _, _, _, he⟩ := ih m pc hp.left
     have hk := enc_ref_cell he ht
-    have ha := slotA_value_ok (k := (k : Int)) (Int.natCast_nonneg k) hs0 hK
+    have ha := slotA_value_ok (k := (k : Int)) (Int.natCast_nonneg k) hw hs0 hK
       (fun m pc hp => (ih m pc hp).mono fun w hw => hw.1.trans (BitVec.ofInt_natCast 64 k).symm) hp
     exact ha.mono fun w hw => ⟨by simpa only [Int.toNat_natCast] using hw, hk⟩
   · cases hs
@@ -44,14 +44,16 @@ theorem slotRefC_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {n k : Nat}
     (ih : ∀ m pc, Pre L m pc fp K d cr.1 ρ W reserved → Ok m pc fp K d cr.1 (Enc L (.ref n) k))
     (hWL : ∀ m, W m → WeltAt m L σ) (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (D.typ t f) (σ.slots t (k : Int) f)) := by
+  have hs0 := hs
   simp only [slotC] at hs
   split at hs
   · simp only [Option.map_eq_some_iff] at hs
     obtain ⟨⟨a, ta⟩, ha, he⟩ := hs
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj he
     have hb := slotA_top ha
-    refine ok_seq hp (slotRefA_ok ht ha hK ih hp.left) (fun m' w hp' hr he => ?_) (by omega)
-    obtain ⟨v, hv, hev⟩ := (hWL m' hp'.welt).1 t f k he.2
+    refine ok_seq hp (slotRefA_ok ht (slotC_width hs0) ha hK ih hp.left) (fun m' w hp' hr he => ?_) (by omega)
+    obtain ⟨v, hv, hev⟩ := ValueAt.word _ _ (aggregateFits_compat (slotC_fits hs0)) ((hWL m' hp'.welt).1 t f k he.2)
+    rw [slot_zero] at hv
     rw [he.1] at hr
     exact (ld_ok hp' (by omega) hr hv).mono fun w hw => hw ▸ hev
   · cases hs

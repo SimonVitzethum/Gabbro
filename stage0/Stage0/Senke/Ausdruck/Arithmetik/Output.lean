@@ -95,7 +95,8 @@ theorem floatAddNormalOutputL_slots {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem �
     intro i hi
     have idx : base+i-FB < dst-FB := by omega
     have slotEq : FB + (base+i-FB) = base+i := by omega
-    obtain ⟨w, hr, he⟩ := envAt _ (frameWordVar (dst-FB) (base+i-FB) idx)
+    obtain ⟨w, hr, he⟩ := ValueAt.word frameWordTy _ trivial
+      (envAt _ (frameWordVar (dst-FB) (base+i-FB) idx))
     rw [frameWordVar_slot, slotEq, reads i hi] at hr
     cases hr
     change _ = BitVec.ofInt 64 (env.get (frameWordVar (dst-FB) (base+i-FB) idx)).n at he

@@ -25,10 +25,10 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     (hn : n ≤ 2 ^ 63) (hs2 : frei Γ reserved + 2 ≤ Ks)
     (hcc : lowE (reserved := reserved) L o (frei Γ reserved) = some (cc, tc)) (htc : tc ≤ Ks)
     (hs : 16 * (cc.length + 3 + ct.length + 1 + ce.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hthen : ∀ (k : Zahl 0 (n - 1)), eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = some k →
-      ∀ m' pc', PreS (reserved := reserved) L m' pc' fp K (frei Γ reserved + 1) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →
+      ∀ m' pc', PreS (reserved := reserved) L m' pc' fp K (frei (.index n :: Γ) reserved) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ o.orte) →
       Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * ct.length))
         (pc' + BitVec.ofNat 64 (16 * ct.length) + BitVec.ofInt 64 (exPlus ex (ce.length + 1)).1)
@@ -55,6 +55,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         [ci 19 (frei Γ reserved + 1) (16 * (ct.length + 2)) 0] ++ ct ++
         [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length) + BitVec.ofInt 64 ex.2)
       (execStmt O passes R (.onOption o t e) σ ρ) := by
+    have hindex : valueWords (.index n) = 1 := integerWords_word (by omega) (by omega)
     have hsm := hp.small
     have hq : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cc ++ ([ci 1 (frei Γ reserved + 1) (-1) 0] ++
       ([ci 10 (frei Γ reserved + 1) (frei Γ reserved) (frei Γ reserved + 1)] ++
@@ -62,8 +63,8 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))))) ρ := by simpa [List.append_assoc] using hp
     have hks := hW.ks
     have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ o.orte) (σ.lese Λ o.orte) (fun _ h => h) o
-      (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw
+    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ o.orte) (σ.lese Λ o.orte) (fun _ h => h) hW.lay o
+      (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word hn
     have ae := Agree.widen a1s hks
     have q1 := hq.next ae (Nat.le_refl _) (by omega)
     have hF := q1.frame
@@ -119,9 +120,9 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         omega
       have sb := star_ins (fp := fp) (m' := m3) (codeAt_left h1.code) (by simp [ci])
         (by simp only [ci]; exact run_brz_ne (t := ⟨_, fp⟩) hbrz (by rw [hd0]; exact rx) hne)
-      have hpt : PreS (reserved := reserved) L m3 _ fp K (frei Γ reserved + 1) ct (Env.cons (τ := .index n) k ρ) :=
-        ⟨by simp only [frei, List.length_cons]; omega, h2.small, h2.frame, h2.left.code, h2.left.far,
-          envAt_cons h2.env ri hi, trivial, wstab_true _ _⟩
+      have hpt : PreS (reserved := reserved) L m3 _ fp K (frei (.index n :: Γ) reserved) ct (Env.cons (τ := .index n) k ρ) :=
+        ⟨by simp only [frei, contextWords_cons, hindex]; omega, h2.small, h2.frame, h2.left.code, h2.left.far,
+          envAt_cons h2.env (ValueAt.of_enc hindex ri hi), trivial, wstab_true _ _⟩
       have ih := Sim.schrumpf (hthen k hb m3 _ hpt hu1 hk1 hWa1)
       have hf3 := codeFar_right (n := ct.length) (k := ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length)
         (by simpa using h2.far)

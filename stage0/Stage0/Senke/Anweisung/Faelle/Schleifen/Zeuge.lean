@@ -47,15 +47,14 @@ theorem frame : FrameOK memory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _
 theorem pre [Kern] : PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) := by
   refine ⟨by decide, by decide, frame, code_at, ?_, ?_, trivial, wstab_true _ _⟩
   · unfold CodeFar; decide +kernel
-  · apply envAt_cons (w := 0)
+  · apply envAt_cons
     · intro _ x; nomatch x
-    · decide +kernel
-    · rfl
+    · exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl
 
-theorem world_at : WeltAt memory callLayout world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem world_at [Kern] : WeltAt memory callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
-  decide +kernel
+  exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
 theorem sync : SyncOK memory callLayout 4096 128 :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,

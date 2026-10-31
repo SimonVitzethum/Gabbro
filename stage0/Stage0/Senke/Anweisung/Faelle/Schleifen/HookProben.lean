@@ -154,7 +154,19 @@ theorem hook_outcomes_zeuge :
 /-- All joint fixtures use the complete image producer and the actual source hook. -/
 theorem hook_images_zeuge :
     (List.range 3).all (fun budget => (List.range 9).all (fun mode => (image budget mode).isOk)) = true := by
-  decide +kernel
+  apply List.all_eq_true.mpr
+  intro budget hb
+  have bound : budget < 3 := by simpa using hb
+  have cases : budget = 0 ∨ budget = 1 ∨ budget = 2 := by omega
+  rcases cases with rfl | rfl | rfl
+  all_goals
+    apply List.all_eq_true.mpr
+    intro mode hm
+    have bound : mode < 9 := by simpa using hm
+    have cases : mode = 0 ∨ mode = 1 ∨ mode = 2 ∨ mode = 3 ∨ mode = 4 ∨
+        mode = 5 ∨ mode = 6 ∨ mode = 7 ∨ mode = 8 := by omega
+    rcases cases with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    all_goals decide +kernel
 
 /-- Joint successful witnesses expose actual callee effects. Mode 8 performs
     two outer passes with two inner passes each; mode 7 initially satisfies its
@@ -178,7 +190,7 @@ theorem lowE_lit_counted_zeuge [Runner.IR.Kern] :
     subst k
     simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
     exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
-  exact lowE_lit_counted (L := FnptrProben.callLayout) (Γ := []) (Λ := [])
+  exact lowE_lit32_counted (literal := by decide) (L := FnptrProben.callLayout) (Γ := []) (Λ := [])
     (reserved := 0) (d := 4) (top := 5) (K := 256) (n := 8192)
     (by decide +kernel) code FnptrProben.call_frame (by decide) (by decide)
 

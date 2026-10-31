@@ -70,8 +70,30 @@ theorem exitw_ok {m : Runner.Mem} {pc fp : Runner.W} {K nr s r : Nat} {w : Runne
   · rw [hsx, show (40 : Runner.W) = BitVec.ofNat 64 (8 * 5) by rfl, slot_plus]; exact r5
   · rw [hsx, show (48 : Runner.W) = BitVec.ofNat 64 (8 * 6) by rfl, slot_plus]; exact r6
 
-theorem encErg_none' {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : EncErg Y e v w := by
+theorem exitErg_none' {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : ExitErg Y e v w := by
   subst h; trivial
+
+/-- A returned result is read at its first canonical word, which is the exit status. -/
+theorem resultAt_exit {m : Runner.Mem} {fp : Runner.W} {base : Nat} :
+    (e : Option Ty) → (v : ErgVal D e) → ResultAt Y m fp base e v → e.isSome = true →
+    ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 base)) = some w ∧ ExitErg Y e v w
+  | none, _, _, h => by simp at h
+  | some τ, v, r, _ => by
+    have r' : ValueAt Y m fp base τ (show Wert D τ from v) := r
+    have length : 0 < (encodeWords Y τ (show Wert D τ from v)).length := by
+      rw [encodeWords_length]; exact valueWords_pos τ
+    have read := r'.2 0 length
+    simp only [Nat.add_zero] at read
+    refine ⟨(encodeWords Y τ (show Wert D τ from v))[0]'length, read, ?_, fun compatible => ?_⟩
+    · have head : ∀ (l : List Runner.W) (h : 0 < l.length), l[0]'h = l.headD 0 := fun l h => by
+        cases l with
+        | nil => simp at h
+        | cons a t => rfl
+      exact head _ length
+    · obtain ⟨w', read', encoded⟩ := ValueAt.word τ (show Wert D τ from v) compatible r'
+      rw [read'] at read
+      cases read
+      exact encoded
 
 theorem codeFar_nat' {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2 ^ 64) :
     CodeFar (BitVec.ofNat 64 a) k (BitVec.ofNat 64 f) K := by
@@ -93,7 +115,7 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
     (hy : SyncOK m Y (BitVec.ofNat 64 fpI) Ks) :
     match rufAt P O passes n f σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = BitVec.ofNat 64 e ∧ (keep = true → EncErg Y (D.erg f) v q.a1)
+        q.nr = BitVec.ofNat 64 e ∧ (keep = true → ExitErg Y (D.erg f) v q.a1)
     | .logik l => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (logikCode l)
     | .hardware h => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (hwCode h)
     | _ => False := by
@@ -133,9 +155,15 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
       rw [BitVec.ofInt_natCast]; exact ofNat_succ n
     simp only [m1]
     rw [rd_same hF (by omega), hconv]
-  have hnp : (D.params f).length = 0 := by simpa using hpar
+  have hnp : (contextWords (D.params f)) = 0 := by
+    cases hq : D.params f with
+    | nil => rfl
+    | cons a l => rw [hq] at hpar; simp at hpar
   have hE : EnvAt Y m1 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 FB)) ρ := fun τ x => by
-    have := idx_lt x; omega
+    exfalso
+    have := variableOffset_bound x
+    have := valueWords_pos τ
+    omega
   have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by
       have h4 : (callTail A f FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 hK (Nat.le_refl _)
     (by omega) (by rw [hn1]; omega) (hAlt f) (pcode_agree hP a1) hdv hE hW hWa1
@@ -143,20 +171,24 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
   generalize rufAt P O passes n f σ ρ = o at hcall ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨m2, s2, a2, ⟨w, hw, hew, _⟩, _⟩ := hcall
+    obtain ⟨m2, s2, a2, ⟨hres, hmirror, _⟩, _⟩ := hcall
     have hfE := codeFar_tail (a := callTail A f FB) hfC
     have hexC := codeAt_agreeWIn hW (a2.mono (Nat.zero_le _)) (codeAt_right (a := callTail A f FB) hc1) hfE
     have hF2 := frameOK_agreeW hF1 a2
     by_cases hs : (keep && (D.erg f).isSome) = true
     · simp only [hs, ite_true] at hexC hfE
+      obtain ⟨w, hread, hexit⟩ := resultAt_exit (D.erg f) v hres (by simp only [Bool.and_eq_true] at hs; exact hs.2)
+      have hw : m2.rd64 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 (FB + 2))) = some w := by
+        have mirrored := hmirror.trans hread
+        rwa [slot_slot] at mirrored
       obtain ⟨t', m', q, sx, hq, hnr, ha⟩ := exitw_ok hexC hfE hF2 (by omega) (by omega) hK hw he
-      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun _ => by rw [ha]; exact hew⟩
+      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun _ => by rw [ha]; exact hexit⟩
     · simp only [hs, Bool.false_eq_true, ite_false] at hexC hfE
       obtain ⟨t', m', q, sx, hq, hnr, _⟩ := sys_ok (nr := e) (c := 0) (s := exitSlot) hexC hfE hF2 (by omega) hK
         (by decide) he
       refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun hk => ?_⟩
       simp only [hk, Bool.true_and, Option.isSome_iff_ne_none, ne_eq, Decidable.not_not] at hs
-      exact encErg_none' hs v _
+      exact exitErg_none' hs v _
   | logik l => exact Stops.prefix s1 hcall
   | why _ r => exact (keinGrund hwhy r : False).elim
   | hardware h => exact Stops.prefix s1 hcall

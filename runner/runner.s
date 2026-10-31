@@ -1,7 +1,7 @@
 ; the S0IR runner, x86-64, Intel syntax; written by `lake exe runner` from Runner/Prog/Code.lean
 ; while the IR runs: r12 = IR pc, r13 = IR fp (frame), r14 = dispatch table; slot i = [r13 + 8*i]
 ; an IR instruction is 16 bytes: opcode byte, then three 32-bit fields at pc+4, pc+8, pc+12
-; ELF loaded at 0x400000, code from 0x400100, dispatch table at 0x4008c0
+; ELF loaded at 0x400000, code from 0x400100, dispatch table at 0x4009b8
 
 
 loader:
@@ -32,7 +32,7 @@ loader:
   0x40017f:  mov rcx, 0x10000000
   0x400186:  cmp rax, rcx
   0x400189:  jne 0x4001b7
-  0x40018f:  mov r14, 0x4008c0
+  0x40018f:  mov r14, 0x4009b8
   0x400196:  mov r13, qword ptr [rcx]
   0x40019e:  lea r12, [rcx+0x10]
   0x4001a6:  movzx rax, byte ptr [r12]
@@ -92,7 +92,7 @@ op5:  ; mul d a b
   0x4002f2:  movzx rax, byte ptr [r12]
   0x4002fb:  jmp qword ptr [r14+rax*8]
 
-op6:  ; div d a b
+op6:  ; sdiv d a b
   0x400303:  movsxd rax, dword ptr [r12+0x8]
   0x40030b:  mov rax, qword ptr [r13+rax*8]
   0x400313:  movsxd rsi, dword ptr [r12+0xc]
@@ -105,7 +105,7 @@ op6:  ; div d a b
   0x40033f:  movzx rax, byte ptr [r12]
   0x400348:  jmp qword ptr [r14+rax*8]
 
-op7:  ; rem d a b
+op7:  ; srem d a b
   0x400350:  movsxd rax, dword ptr [r12+0x8]
   0x400358:  mov rax, qword ptr [r13+rax*8]
   0x400360:  movsxd rsi, dword ptr [r12+0xc]
@@ -330,11 +330,51 @@ op24:  ; spawn d a (clone, a new OS thread)
   0x4008ac:  movzx rax, byte ptr [r12]
   0x4008b5:  jmp qword ptr [r14+rax*8]
 
-bad:
-  0x4008bd:  ud2
+op25:  ; udiv d a b
+  0x4008bd:  movsxd rax, dword ptr [r12+0x8]
+  0x4008c5:  mov rax, qword ptr [r13+rax*8]
+  0x4008cd:  movsxd rsi, dword ptr [r12+0xc]
+  0x4008d5:  mov rsi, qword ptr [r13+rsi*8]
+  0x4008dd:  mov rdx, 0x0
+  0x4008e4:  div rsi
+  0x4008e7:  movsxd rcx, dword ptr [r12+0x4]
+  0x4008ef:  mov qword ptr [r13+rcx*8], rax
+  0x4008f7:  add r12, 0x10
+  0x4008fe:  movzx rax, byte ptr [r12]
+  0x400907:  jmp qword ptr [r14+rax*8]
 
-table:  ; 256 handler addresses at 0x4008c0
-  dq 0x4008bd  ; opcode 0
+op26:  ; urem d a b
+  0x40090f:  movsxd rax, dword ptr [r12+0x8]
+  0x400917:  mov rax, qword ptr [r13+rax*8]
+  0x40091f:  movsxd rsi, dword ptr [r12+0xc]
+  0x400927:  mov rsi, qword ptr [r13+rsi*8]
+  0x40092f:  mov rdx, 0x0
+  0x400936:  div rsi
+  0x400939:  movsxd rcx, dword ptr [r12+0x4]
+  0x400941:  mov qword ptr [r13+rcx*8], rdx
+  0x400949:  add r12, 0x10
+  0x400950:  movzx rax, byte ptr [r12]
+  0x400959:  jmp qword ptr [r14+rax*8]
+
+op27:  ; ult d a b
+  0x400961:  movsxd rax, dword ptr [r12+0x8]
+  0x400969:  mov rax, qword ptr [r13+rax*8]
+  0x400971:  movsxd rdx, dword ptr [r12+0xc]
+  0x400979:  mov rdx, qword ptr [r13+rdx*8]
+  0x400981:  cmp rax, rdx
+  0x400984:  setb al
+  0x400988:  movzx rax, al
+  0x40098c:  movsxd rcx, dword ptr [r12+0x4]
+  0x400994:  mov qword ptr [r13+rcx*8], rax
+  0x40099c:  add r12, 0x10
+  0x4009a3:  movzx rax, byte ptr [r12]
+  0x4009ac:  jmp qword ptr [r14+rax*8]
+
+bad:
+  0x4009b4:  ud2
+
+table:  ; 256 handler addresses at 0x4009b8
+  dq 0x4009b4  ; opcode 0
   dq 0x4001b9  ; opcode 1
   dq 0x4001e9  ; opcode 2
   dq 0x400221  ; opcode 3
@@ -360,233 +400,233 @@ table:  ; 256 handler addresses at 0x4008c0
   dq 0x4007a8  ; opcode 23
   dq 0x400822  ; opcode 24
   dq 0x4008bd  ; opcode 25
-  dq 0x4008bd  ; opcode 26
-  dq 0x4008bd  ; opcode 27
-  dq 0x4008bd  ; opcode 28
-  dq 0x4008bd  ; opcode 29
-  dq 0x4008bd  ; opcode 30
-  dq 0x4008bd  ; opcode 31
-  dq 0x4008bd  ; opcode 32
-  dq 0x4008bd  ; opcode 33
-  dq 0x4008bd  ; opcode 34
-  dq 0x4008bd  ; opcode 35
-  dq 0x4008bd  ; opcode 36
-  dq 0x4008bd  ; opcode 37
-  dq 0x4008bd  ; opcode 38
-  dq 0x4008bd  ; opcode 39
-  dq 0x4008bd  ; opcode 40
-  dq 0x4008bd  ; opcode 41
-  dq 0x4008bd  ; opcode 42
-  dq 0x4008bd  ; opcode 43
-  dq 0x4008bd  ; opcode 44
-  dq 0x4008bd  ; opcode 45
-  dq 0x4008bd  ; opcode 46
-  dq 0x4008bd  ; opcode 47
-  dq 0x4008bd  ; opcode 48
-  dq 0x4008bd  ; opcode 49
-  dq 0x4008bd  ; opcode 50
-  dq 0x4008bd  ; opcode 51
-  dq 0x4008bd  ; opcode 52
-  dq 0x4008bd  ; opcode 53
-  dq 0x4008bd  ; opcode 54
-  dq 0x4008bd  ; opcode 55
-  dq 0x4008bd  ; opcode 56
-  dq 0x4008bd  ; opcode 57
-  dq 0x4008bd  ; opcode 58
-  dq 0x4008bd  ; opcode 59
-  dq 0x4008bd  ; opcode 60
-  dq 0x4008bd  ; opcode 61
-  dq 0x4008bd  ; opcode 62
-  dq 0x4008bd  ; opcode 63
-  dq 0x4008bd  ; opcode 64
-  dq 0x4008bd  ; opcode 65
-  dq 0x4008bd  ; opcode 66
-  dq 0x4008bd  ; opcode 67
-  dq 0x4008bd  ; opcode 68
-  dq 0x4008bd  ; opcode 69
-  dq 0x4008bd  ; opcode 70
-  dq 0x4008bd  ; opcode 71
-  dq 0x4008bd  ; opcode 72
-  dq 0x4008bd  ; opcode 73
-  dq 0x4008bd  ; opcode 74
-  dq 0x4008bd  ; opcode 75
-  dq 0x4008bd  ; opcode 76
-  dq 0x4008bd  ; opcode 77
-  dq 0x4008bd  ; opcode 78
-  dq 0x4008bd  ; opcode 79
-  dq 0x4008bd  ; opcode 80
-  dq 0x4008bd  ; opcode 81
-  dq 0x4008bd  ; opcode 82
-  dq 0x4008bd  ; opcode 83
-  dq 0x4008bd  ; opcode 84
-  dq 0x4008bd  ; opcode 85
-  dq 0x4008bd  ; opcode 86
-  dq 0x4008bd  ; opcode 87
-  dq 0x4008bd  ; opcode 88
-  dq 0x4008bd  ; opcode 89
-  dq 0x4008bd  ; opcode 90
-  dq 0x4008bd  ; opcode 91
-  dq 0x4008bd  ; opcode 92
-  dq 0x4008bd  ; opcode 93
-  dq 0x4008bd  ; opcode 94
-  dq 0x4008bd  ; opcode 95
-  dq 0x4008bd  ; opcode 96
-  dq 0x4008bd  ; opcode 97
-  dq 0x4008bd  ; opcode 98
-  dq 0x4008bd  ; opcode 99
-  dq 0x4008bd  ; opcode 100
-  dq 0x4008bd  ; opcode 101
-  dq 0x4008bd  ; opcode 102
-  dq 0x4008bd  ; opcode 103
-  dq 0x4008bd  ; opcode 104
-  dq 0x4008bd  ; opcode 105
-  dq 0x4008bd  ; opcode 106
-  dq 0x4008bd  ; opcode 107
-  dq 0x4008bd  ; opcode 108
-  dq 0x4008bd  ; opcode 109
-  dq 0x4008bd  ; opcode 110
-  dq 0x4008bd  ; opcode 111
-  dq 0x4008bd  ; opcode 112
-  dq 0x4008bd  ; opcode 113
-  dq 0x4008bd  ; opcode 114
-  dq 0x4008bd  ; opcode 115
-  dq 0x4008bd  ; opcode 116
-  dq 0x4008bd  ; opcode 117
-  dq 0x4008bd  ; opcode 118
-  dq 0x4008bd  ; opcode 119
-  dq 0x4008bd  ; opcode 120
-  dq 0x4008bd  ; opcode 121
-  dq 0x4008bd  ; opcode 122
-  dq 0x4008bd  ; opcode 123
-  dq 0x4008bd  ; opcode 124
-  dq 0x4008bd  ; opcode 125
-  dq 0x4008bd  ; opcode 126
-  dq 0x4008bd  ; opcode 127
-  dq 0x4008bd  ; opcode 128
-  dq 0x4008bd  ; opcode 129
-  dq 0x4008bd  ; opcode 130
-  dq 0x4008bd  ; opcode 131
-  dq 0x4008bd  ; opcode 132
-  dq 0x4008bd  ; opcode 133
-  dq 0x4008bd  ; opcode 134
-  dq 0x4008bd  ; opcode 135
-  dq 0x4008bd  ; opcode 136
-  dq 0x4008bd  ; opcode 137
-  dq 0x4008bd  ; opcode 138
-  dq 0x4008bd  ; opcode 139
-  dq 0x4008bd  ; opcode 140
-  dq 0x4008bd  ; opcode 141
-  dq 0x4008bd  ; opcode 142
-  dq 0x4008bd  ; opcode 143
-  dq 0x4008bd  ; opcode 144
-  dq 0x4008bd  ; opcode 145
-  dq 0x4008bd  ; opcode 146
-  dq 0x4008bd  ; opcode 147
-  dq 0x4008bd  ; opcode 148
-  dq 0x4008bd  ; opcode 149
-  dq 0x4008bd  ; opcode 150
-  dq 0x4008bd  ; opcode 151
-  dq 0x4008bd  ; opcode 152
-  dq 0x4008bd  ; opcode 153
-  dq 0x4008bd  ; opcode 154
-  dq 0x4008bd  ; opcode 155
-  dq 0x4008bd  ; opcode 156
-  dq 0x4008bd  ; opcode 157
-  dq 0x4008bd  ; opcode 158
-  dq 0x4008bd  ; opcode 159
-  dq 0x4008bd  ; opcode 160
-  dq 0x4008bd  ; opcode 161
-  dq 0x4008bd  ; opcode 162
-  dq 0x4008bd  ; opcode 163
-  dq 0x4008bd  ; opcode 164
-  dq 0x4008bd  ; opcode 165
-  dq 0x4008bd  ; opcode 166
-  dq 0x4008bd  ; opcode 167
-  dq 0x4008bd  ; opcode 168
-  dq 0x4008bd  ; opcode 169
-  dq 0x4008bd  ; opcode 170
-  dq 0x4008bd  ; opcode 171
-  dq 0x4008bd  ; opcode 172
-  dq 0x4008bd  ; opcode 173
-  dq 0x4008bd  ; opcode 174
-  dq 0x4008bd  ; opcode 175
-  dq 0x4008bd  ; opcode 176
-  dq 0x4008bd  ; opcode 177
-  dq 0x4008bd  ; opcode 178
-  dq 0x4008bd  ; opcode 179
-  dq 0x4008bd  ; opcode 180
-  dq 0x4008bd  ; opcode 181
-  dq 0x4008bd  ; opcode 182
-  dq 0x4008bd  ; opcode 183
-  dq 0x4008bd  ; opcode 184
-  dq 0x4008bd  ; opcode 185
-  dq 0x4008bd  ; opcode 186
-  dq 0x4008bd  ; opcode 187
-  dq 0x4008bd  ; opcode 188
-  dq 0x4008bd  ; opcode 189
-  dq 0x4008bd  ; opcode 190
-  dq 0x4008bd  ; opcode 191
-  dq 0x4008bd  ; opcode 192
-  dq 0x4008bd  ; opcode 193
-  dq 0x4008bd  ; opcode 194
-  dq 0x4008bd  ; opcode 195
-  dq 0x4008bd  ; opcode 196
-  dq 0x4008bd  ; opcode 197
-  dq 0x4008bd  ; opcode 198
-  dq 0x4008bd  ; opcode 199
-  dq 0x4008bd  ; opcode 200
-  dq 0x4008bd  ; opcode 201
-  dq 0x4008bd  ; opcode 202
-  dq 0x4008bd  ; opcode 203
-  dq 0x4008bd  ; opcode 204
-  dq 0x4008bd  ; opcode 205
-  dq 0x4008bd  ; opcode 206
-  dq 0x4008bd  ; opcode 207
-  dq 0x4008bd  ; opcode 208
-  dq 0x4008bd  ; opcode 209
-  dq 0x4008bd  ; opcode 210
-  dq 0x4008bd  ; opcode 211
-  dq 0x4008bd  ; opcode 212
-  dq 0x4008bd  ; opcode 213
-  dq 0x4008bd  ; opcode 214
-  dq 0x4008bd  ; opcode 215
-  dq 0x4008bd  ; opcode 216
-  dq 0x4008bd  ; opcode 217
-  dq 0x4008bd  ; opcode 218
-  dq 0x4008bd  ; opcode 219
-  dq 0x4008bd  ; opcode 220
-  dq 0x4008bd  ; opcode 221
-  dq 0x4008bd  ; opcode 222
-  dq 0x4008bd  ; opcode 223
-  dq 0x4008bd  ; opcode 224
-  dq 0x4008bd  ; opcode 225
-  dq 0x4008bd  ; opcode 226
-  dq 0x4008bd  ; opcode 227
-  dq 0x4008bd  ; opcode 228
-  dq 0x4008bd  ; opcode 229
-  dq 0x4008bd  ; opcode 230
-  dq 0x4008bd  ; opcode 231
-  dq 0x4008bd  ; opcode 232
-  dq 0x4008bd  ; opcode 233
-  dq 0x4008bd  ; opcode 234
-  dq 0x4008bd  ; opcode 235
-  dq 0x4008bd  ; opcode 236
-  dq 0x4008bd  ; opcode 237
-  dq 0x4008bd  ; opcode 238
-  dq 0x4008bd  ; opcode 239
-  dq 0x4008bd  ; opcode 240
-  dq 0x4008bd  ; opcode 241
-  dq 0x4008bd  ; opcode 242
-  dq 0x4008bd  ; opcode 243
-  dq 0x4008bd  ; opcode 244
-  dq 0x4008bd  ; opcode 245
-  dq 0x4008bd  ; opcode 246
-  dq 0x4008bd  ; opcode 247
-  dq 0x4008bd  ; opcode 248
-  dq 0x4008bd  ; opcode 249
-  dq 0x4008bd  ; opcode 250
-  dq 0x4008bd  ; opcode 251
-  dq 0x4008bd  ; opcode 252
-  dq 0x4008bd  ; opcode 253
-  dq 0x4008bd  ; opcode 254
-  dq 0x4008bd  ; opcode 255
+  dq 0x40090f  ; opcode 26
+  dq 0x400961  ; opcode 27
+  dq 0x4009b4  ; opcode 28
+  dq 0x4009b4  ; opcode 29
+  dq 0x4009b4  ; opcode 30
+  dq 0x4009b4  ; opcode 31
+  dq 0x4009b4  ; opcode 32
+  dq 0x4009b4  ; opcode 33
+  dq 0x4009b4  ; opcode 34
+  dq 0x4009b4  ; opcode 35
+  dq 0x4009b4  ; opcode 36
+  dq 0x4009b4  ; opcode 37
+  dq 0x4009b4  ; opcode 38
+  dq 0x4009b4  ; opcode 39
+  dq 0x4009b4  ; opcode 40
+  dq 0x4009b4  ; opcode 41
+  dq 0x4009b4  ; opcode 42
+  dq 0x4009b4  ; opcode 43
+  dq 0x4009b4  ; opcode 44
+  dq 0x4009b4  ; opcode 45
+  dq 0x4009b4  ; opcode 46
+  dq 0x4009b4  ; opcode 47
+  dq 0x4009b4  ; opcode 48
+  dq 0x4009b4  ; opcode 49
+  dq 0x4009b4  ; opcode 50
+  dq 0x4009b4  ; opcode 51
+  dq 0x4009b4  ; opcode 52
+  dq 0x4009b4  ; opcode 53
+  dq 0x4009b4  ; opcode 54
+  dq 0x4009b4  ; opcode 55
+  dq 0x4009b4  ; opcode 56
+  dq 0x4009b4  ; opcode 57
+  dq 0x4009b4  ; opcode 58
+  dq 0x4009b4  ; opcode 59
+  dq 0x4009b4  ; opcode 60
+  dq 0x4009b4  ; opcode 61
+  dq 0x4009b4  ; opcode 62
+  dq 0x4009b4  ; opcode 63
+  dq 0x4009b4  ; opcode 64
+  dq 0x4009b4  ; opcode 65
+  dq 0x4009b4  ; opcode 66
+  dq 0x4009b4  ; opcode 67
+  dq 0x4009b4  ; opcode 68
+  dq 0x4009b4  ; opcode 69
+  dq 0x4009b4  ; opcode 70
+  dq 0x4009b4  ; opcode 71
+  dq 0x4009b4  ; opcode 72
+  dq 0x4009b4  ; opcode 73
+  dq 0x4009b4  ; opcode 74
+  dq 0x4009b4  ; opcode 75
+  dq 0x4009b4  ; opcode 76
+  dq 0x4009b4  ; opcode 77
+  dq 0x4009b4  ; opcode 78
+  dq 0x4009b4  ; opcode 79
+  dq 0x4009b4  ; opcode 80
+  dq 0x4009b4  ; opcode 81
+  dq 0x4009b4  ; opcode 82
+  dq 0x4009b4  ; opcode 83
+  dq 0x4009b4  ; opcode 84
+  dq 0x4009b4  ; opcode 85
+  dq 0x4009b4  ; opcode 86
+  dq 0x4009b4  ; opcode 87
+  dq 0x4009b4  ; opcode 88
+  dq 0x4009b4  ; opcode 89
+  dq 0x4009b4  ; opcode 90
+  dq 0x4009b4  ; opcode 91
+  dq 0x4009b4  ; opcode 92
+  dq 0x4009b4  ; opcode 93
+  dq 0x4009b4  ; opcode 94
+  dq 0x4009b4  ; opcode 95
+  dq 0x4009b4  ; opcode 96
+  dq 0x4009b4  ; opcode 97
+  dq 0x4009b4  ; opcode 98
+  dq 0x4009b4  ; opcode 99
+  dq 0x4009b4  ; opcode 100
+  dq 0x4009b4  ; opcode 101
+  dq 0x4009b4  ; opcode 102
+  dq 0x4009b4  ; opcode 103
+  dq 0x4009b4  ; opcode 104
+  dq 0x4009b4  ; opcode 105
+  dq 0x4009b4  ; opcode 106
+  dq 0x4009b4  ; opcode 107
+  dq 0x4009b4  ; opcode 108
+  dq 0x4009b4  ; opcode 109
+  dq 0x4009b4  ; opcode 110
+  dq 0x4009b4  ; opcode 111
+  dq 0x4009b4  ; opcode 112
+  dq 0x4009b4  ; opcode 113
+  dq 0x4009b4  ; opcode 114
+  dq 0x4009b4  ; opcode 115
+  dq 0x4009b4  ; opcode 116
+  dq 0x4009b4  ; opcode 117
+  dq 0x4009b4  ; opcode 118
+  dq 0x4009b4  ; opcode 119
+  dq 0x4009b4  ; opcode 120
+  dq 0x4009b4  ; opcode 121
+  dq 0x4009b4  ; opcode 122
+  dq 0x4009b4  ; opcode 123
+  dq 0x4009b4  ; opcode 124
+  dq 0x4009b4  ; opcode 125
+  dq 0x4009b4  ; opcode 126
+  dq 0x4009b4  ; opcode 127
+  dq 0x4009b4  ; opcode 128
+  dq 0x4009b4  ; opcode 129
+  dq 0x4009b4  ; opcode 130
+  dq 0x4009b4  ; opcode 131
+  dq 0x4009b4  ; opcode 132
+  dq 0x4009b4  ; opcode 133
+  dq 0x4009b4  ; opcode 134
+  dq 0x4009b4  ; opcode 135
+  dq 0x4009b4  ; opcode 136
+  dq 0x4009b4  ; opcode 137
+  dq 0x4009b4  ; opcode 138
+  dq 0x4009b4  ; opcode 139
+  dq 0x4009b4  ; opcode 140
+  dq 0x4009b4  ; opcode 141
+  dq 0x4009b4  ; opcode 142
+  dq 0x4009b4  ; opcode 143
+  dq 0x4009b4  ; opcode 144
+  dq 0x4009b4  ; opcode 145
+  dq 0x4009b4  ; opcode 146
+  dq 0x4009b4  ; opcode 147
+  dq 0x4009b4  ; opcode 148
+  dq 0x4009b4  ; opcode 149
+  dq 0x4009b4  ; opcode 150
+  dq 0x4009b4  ; opcode 151
+  dq 0x4009b4  ; opcode 152
+  dq 0x4009b4  ; opcode 153
+  dq 0x4009b4  ; opcode 154
+  dq 0x4009b4  ; opcode 155
+  dq 0x4009b4  ; opcode 156
+  dq 0x4009b4  ; opcode 157
+  dq 0x4009b4  ; opcode 158
+  dq 0x4009b4  ; opcode 159
+  dq 0x4009b4  ; opcode 160
+  dq 0x4009b4  ; opcode 161
+  dq 0x4009b4  ; opcode 162
+  dq 0x4009b4  ; opcode 163
+  dq 0x4009b4  ; opcode 164
+  dq 0x4009b4  ; opcode 165
+  dq 0x4009b4  ; opcode 166
+  dq 0x4009b4  ; opcode 167
+  dq 0x4009b4  ; opcode 168
+  dq 0x4009b4  ; opcode 169
+  dq 0x4009b4  ; opcode 170
+  dq 0x4009b4  ; opcode 171
+  dq 0x4009b4  ; opcode 172
+  dq 0x4009b4  ; opcode 173
+  dq 0x4009b4  ; opcode 174
+  dq 0x4009b4  ; opcode 175
+  dq 0x4009b4  ; opcode 176
+  dq 0x4009b4  ; opcode 177
+  dq 0x4009b4  ; opcode 178
+  dq 0x4009b4  ; opcode 179
+  dq 0x4009b4  ; opcode 180
+  dq 0x4009b4  ; opcode 181
+  dq 0x4009b4  ; opcode 182
+  dq 0x4009b4  ; opcode 183
+  dq 0x4009b4  ; opcode 184
+  dq 0x4009b4  ; opcode 185
+  dq 0x4009b4  ; opcode 186
+  dq 0x4009b4  ; opcode 187
+  dq 0x4009b4  ; opcode 188
+  dq 0x4009b4  ; opcode 189
+  dq 0x4009b4  ; opcode 190
+  dq 0x4009b4  ; opcode 191
+  dq 0x4009b4  ; opcode 192
+  dq 0x4009b4  ; opcode 193
+  dq 0x4009b4  ; opcode 194
+  dq 0x4009b4  ; opcode 195
+  dq 0x4009b4  ; opcode 196
+  dq 0x4009b4  ; opcode 197
+  dq 0x4009b4  ; opcode 198
+  dq 0x4009b4  ; opcode 199
+  dq 0x4009b4  ; opcode 200
+  dq 0x4009b4  ; opcode 201
+  dq 0x4009b4  ; opcode 202
+  dq 0x4009b4  ; opcode 203
+  dq 0x4009b4  ; opcode 204
+  dq 0x4009b4  ; opcode 205
+  dq 0x4009b4  ; opcode 206
+  dq 0x4009b4  ; opcode 207
+  dq 0x4009b4  ; opcode 208
+  dq 0x4009b4  ; opcode 209
+  dq 0x4009b4  ; opcode 210
+  dq 0x4009b4  ; opcode 211
+  dq 0x4009b4  ; opcode 212
+  dq 0x4009b4  ; opcode 213
+  dq 0x4009b4  ; opcode 214
+  dq 0x4009b4  ; opcode 215
+  dq 0x4009b4  ; opcode 216
+  dq 0x4009b4  ; opcode 217
+  dq 0x4009b4  ; opcode 218
+  dq 0x4009b4  ; opcode 219
+  dq 0x4009b4  ; opcode 220
+  dq 0x4009b4  ; opcode 221
+  dq 0x4009b4  ; opcode 222
+  dq 0x4009b4  ; opcode 223
+  dq 0x4009b4  ; opcode 224
+  dq 0x4009b4  ; opcode 225
+  dq 0x4009b4  ; opcode 226
+  dq 0x4009b4  ; opcode 227
+  dq 0x4009b4  ; opcode 228
+  dq 0x4009b4  ; opcode 229
+  dq 0x4009b4  ; opcode 230
+  dq 0x4009b4  ; opcode 231
+  dq 0x4009b4  ; opcode 232
+  dq 0x4009b4  ; opcode 233
+  dq 0x4009b4  ; opcode 234
+  dq 0x4009b4  ; opcode 235
+  dq 0x4009b4  ; opcode 236
+  dq 0x4009b4  ; opcode 237
+  dq 0x4009b4  ; opcode 238
+  dq 0x4009b4  ; opcode 239
+  dq 0x4009b4  ; opcode 240
+  dq 0x4009b4  ; opcode 241
+  dq 0x4009b4  ; opcode 242
+  dq 0x4009b4  ; opcode 243
+  dq 0x4009b4  ; opcode 244
+  dq 0x4009b4  ; opcode 245
+  dq 0x4009b4  ; opcode 246
+  dq 0x4009b4  ; opcode 247
+  dq 0x4009b4  ; opcode 248
+  dq 0x4009b4  ; opcode 249
+  dq 0x4009b4  ; opcode 250
+  dq 0x4009b4  ; opcode 251
+  dq 0x4009b4  ; opcode 252
+  dq 0x4009b4  ; opcode 253
+  dq 0x4009b4  ; opcode 254
+  dq 0x4009b4  ; opcode 255

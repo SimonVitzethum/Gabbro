@@ -3,15 +3,17 @@
   Subject:   The named assumption at a gate (`TorOK`) and the steps of a gate's code: the arguments into the request
              block (`lowR_ok`), zeros into the unused registers (`zero_ok`), the kernel's answer (`sys_step`).
 
-  `TorOK L O` is the operating system doing what it should (Simon, 2026-10-29: an allowed assumption): asked a
-  bound gate's request -- the number, the arguments' words in the first argument registers, zero in the others --
-  in a memory that holds a world `σ`, the kernel can answer with a word and a memory that holds the oracle's world,
-  having changed nothing but the world's bytes, and the oracle's raw answer is the kernel's word as the gate's
-  binding reads it (`rohW`, what stage 0's interpreter does, `Stage0/Tor/Ausfuehren.lean`).
+  `TorOK L O` is an explicit binding/user-logic premise: asked a bound gate's request -- the number,
+  the arguments' words in the first argument registers, zero in the others -- in a memory that holds
+  world `σ`, the service can answer with a word and a memory that holds the oracle's world, having
+  changed nothing but the declared bytes. The oracle's raw answer agrees with the service's word
+  decoded by `rohW`. This compiler theorem does not discharge software or OS contracts and does not
+  classify them as hardware assumptions. Execution belongs to the assembly runner.
+
 -/
-import Stage0.Senke.Anweisung.Schleife
-import Stage0.Senke.Anweisung.Schreiben
+import Stage0.Senke.Rueckkehr
 import Stage0.Senke.Welt.Packen
+import Stage0.Senke.Ausdruck.Aggregat.Scalar
 
 namespace Gabbro.Stage0.Senke
 
@@ -47,10 +49,11 @@ theorem reqArg_mk (nr : Runner.W) (f : Nat → Runner.W) :
   | 5, _ => rfl
   | _ + 6, h => absurd h (by omega)
 
-/-- The words `f 0, f 1, …` are the arguments `ρ`. -/
+/-- Request registers encode scalar arguments. Internal pointer markers are ignored here:
+    the buffer premise of `TorOK.puf` separately constrains the physical buffer address. -/
 def ArgsW (L : Lay D) (f : Nat → Runner.W) : {τs : List Ty} → Env D τs → Prop
   | [], .nil => True
-  | τ :: _, .cons v ρ => Enc L τ v (f 0) ∧ ArgsW L (fun j => f (j + 1)) ρ
+  | τ :: _, .cons v ρ => (if isPtr τ then True else Enc L τ v (f 0)) ∧ ArgsW L (fun j => f (j + 1)) ρ
 
 /-- The kernel's word as the oracle's raw answer, for a gate with `n` reasons: the signed word; with reasons, a
     listed `-errno` is its case `i + 1`, another error the word of no answer, a value `v` is `v * (n + 1)`. -/
@@ -65,8 +68,8 @@ def rohW (b : TorB) (n : Nat) (w : Runner.W) : Int :=
 /-- The world `σ` in memory, apart from column `f` of table `t`. -/
 def WeltOhne (m : Runner.Mem) (L : Lay D) (σ : World D) (t : D.Tab) (f : D.Feld t) : Prop :=
   (∀ t' f' (k : Nat), (k : Int) < L.count t' → (∀ k' : Nat, (Zelle.elem t' f' k : Zelle D) ≠ .elem t f k') →
-    ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t' f' k)) = some w ∧ Enc L (D.typ t' f') (σ.slots t' k f') w) ∧
-  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc L (D.gtyp g) (σ.globs g) w)
+    ValueAt L m (BitVec.ofNat 64 (L.elem t' f' k)) 0 (D.typ t' f') (σ.slots t' k f')) ∧
+  (∀ g, ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g))
 
 /-- **The named assumption at the gates**: the kernel answers a bound gate's request as the oracle says. -/
 class TorOK (L : Lay D) (O : Orakel D) : Prop where
@@ -137,7 +140,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
   · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2.1⟩
   · intro k hk
     rw [hO]
-    obtain ⟨w, hw, he⟩ := hW.1 t f k (L.bounded (by omega))
+    obtain ⟨w, hw, he⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hW.1 t f k (L.bounded (by omega)))
     have hwk : wAt m (L.elem t f k) = w := wAt_of hw
     cases rw
     · simp only [Bool.false_eq_true, ↓reduceIte, hwk]; exact he
@@ -146,7 +149,7 @@ theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ �
       have hws : ∀ k, (ws k).toNat < 256 := fun k => by
         simp only [ws]; split
         · next hk' =>
-          obtain ⟨w', hw', he'⟩ := hW.1 t f k (L.bounded (by omega))
+          obtain ⟨w', hw', he'⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hW.1 t f k (L.bounded (by omega)))
           rw [wAt_of hw']; exact enc_byte hτ he'
         · decide
       have hb := hB (k / 8) (by simp only [pufW]; omega)
@@ -236,15 +239,21 @@ theorem zero_ok {fp : Runner.W} {K : Nat} (hK : K < 2 ^ 31) : (k d : Nat) → (m
     obtain ⟨m2, s2, a2, hz⟩ := zero_ok hK k (d + 1) m1 _ hc1 hf1 (hF.agree a1) (by omega)
     have hr1 : m1.rd64 (slot fp (BitVec.ofNat 64 d)) = some (BitVec.ofInt 64 0) :=
       rd64_write_same (hF.rd d (by omega))
-    refine ⟨m2, s1.trans (star_cast s2 (by simp) (by rw [step_eq pc (x := 1) (y := k) (z := k + 1) (by omega)])),
+    refine ⟨m2, s1.trans (star_cast s2 (by simp) (by congr 1; rw [addr_norm]; congr 2; omega)),
       a1.trans (a2.mono (by omega)), fun i hi => ?_⟩
     rcases i with _ | i
     · rw [Nat.add_zero, agree_rd_low a2 hroom (by omega) (by omega), hr1]; rfl
     · have := hz i (by omega); rwa [show d + 1 + i = d + (i + 1) by omega] at this
 
+/-- The foreign register profile has exactly one canonical word per scalar parameter. -/
+theorem wortTy_spec {τ : Ty} (h : wortTy τ = true) :
+    valueWords τ = 1 ∧ WordCompatible τ := by
+  cases τ <;> simp_all [wortTy, valueWords, WordCompatible]
+  exact of_decide_eq_true h
+
 /-- The arguments of a gate into the slots from `d`, in order; nothing below `d` changed. -/
 theorem lowR_ok {reserved : Nat} {Λ : List (Res D)} {L : Lay D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
-    (hWL : ∀ m, W m → WeltAt m L σ) :
+    (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (d : Nat) → (c : List II) → (top : Nat) →
     lowR L args d reserved = some (c, top) → top ≤ K → d + τs.length ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
@@ -259,25 +268,30 @@ theorem lowR_ok {reserved : Nat} {Λ : List (Res D)} {L : Lay D} {fp : Runner.W}
     split at h
     · next hτ =>
       simp only [List.length_cons] at hL
-      obtain ⟨m2, s2, a2, hA⟩ := lowR_ok σ₀ σ hWL rest (d + 1) c top h hK (by omega) m pc ρ (hp.up (by omega))
+      obtain ⟨m2, s2, a2, hA⟩ := lowR_ok σ₀ σ hWL hLay rest (d + 1) c top h hK (by omega) m pc ρ (hp.up (by omega))
       refine ⟨m2, s2, a2.mono (by omega), ?_⟩
       simp only [evalArgs, ArgsW]
       refine ⟨?_, argsW_congr _ (fun j _ => by simp only [show d + 1 + j = d + (j + 1) by omega]) hA⟩
-      cases τ <;> simp_all [isPtr, Enc]
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    simp only [List.length_cons] at hL
-    have hroom := hp.frame.room
-    obtain ⟨m1, s1, a1, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ₀ σ hWL e d ce te he (by omega) m pc ρ hp.left
-    have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := d + 1) (by omega)
-    obtain ⟨m2, s2, a2, hA⟩ := lowR_ok σ₀ σ hWL rest (d + 1) cr tr hr (by omega) (by omega) m1 _ ρ hp1
-    refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans (a2.mono (by omega)), ?_⟩
-    simp only [evalArgs, ArgsW]
-    refine ⟨?_, ?_⟩
-    · rw [Nat.add_zero, rdW_of (by rw [agree_rd_low a2 hroom (by omega) (by omega)]; exact hw)]; exact hen
-    · refine argsW_congr _ (fun j _ => ?_) hA
-      simp only [show d + 1 + j = d + (j + 1) by omega]
+      simp only [if_pos hτ]
+    · next hptr =>
+      split at h
+      · next hwort =>
+        simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+        obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
+        simp only [Prod.mk.injEq] at hc
+        obtain ⟨rfl, rfl⟩ := hc
+        simp only [List.length_cons] at hL
+        have hroom := hp.frame.room
+        obtain ⟨m1, s1, a1, w, hw, hen⟩ := (lowE_ok (fp := fp) (K := K) σ₀ σ hWL hLay e d ce te he (by omega) m pc ρ hp.left).word (wortTy_spec hwort).2
+        have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := d + 1) (by omega)
+        obtain ⟨m2, s2, a2, hA⟩ := lowR_ok σ₀ σ hWL hLay rest (d + 1) cr tr hr (by omega) (by omega) m1 _ ρ hp1
+        refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans (a2.mono (by omega)), ?_⟩
+        simp only [evalArgs, ArgsW]
+        refine ⟨?_, ?_⟩
+        · simp only [if_neg hptr]
+          rw [Nat.add_zero, rdW_of (by rw [agree_rd_low a2 hroom (by omega) (by omega)]; exact hw)]; exact hen
+        · refine argsW_congr _ (fun j _ => ?_) hA
+          simp only [show d + 1 + j = d + (j + 1) by omega]
+      · cases h
 
 end Gabbro.Stage0.Senke
