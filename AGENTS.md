@@ -13,7 +13,8 @@ were organised) is in `git log`, not here.
 Sonnet 5.5 implementation agents, no others: one rolling lane on Lean slot 1 (IR-06 memory, handed back; then IR-02 wide-integer kernels
 in `t3-db31d27d`, handed back; now IR-04 floats in `t3-c3ebf14f`) and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. Additionally (owner, same day) two GPT Sol 6.1
 agents for small bounded tasks: IR-01 const-signature bounds in `t3-d342a8ed` (slot 1, shared) and IR-02
-`wideExtend`/mixed-sign multiword compare in `t3-db31d27d` (slot 2, shared; IR-03 has priority). All other lanes stay paused
+`wideExtend`/mixed-sign multiword compare in `t3-db31d27d` (slot 2, shared; IR-03 has priority). The two Sonnet lanes (IR-03, IR-04) are paused by the owner
+from 23:03 until 00:00 (2026-11-01), state preserved. All other lanes stay paused
 with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
 
 **Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
