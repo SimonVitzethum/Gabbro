@@ -1580,7 +1580,8 @@ theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
     (abi : 2 < lo) (room : lo + 1 < K) (reason : r < 2 ^ 31)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
     ∃ m', Counted 3 ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0 := by
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0 ∧
+      m'.rd64 (slot fp 2) = some (BitVec.ofNat 64 r) := by
   have first := const_step_counted (codeAt_left (a := [ci 1 2 r 0]) code)
     frame (j := 2) (k := r) (by omega) small (by simp [lit32]; omega)
   let m1 := write m (slot fp (BitVec.ofNat 64 2)) 8 (BitVec.ofInt 64 (r : Int)).toNat
@@ -1605,7 +1606,12 @@ theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
   have last : Counted 1 ⟨pc + 16 + 16, fp⟩ m2 ⟨rp, cfp⟩ m2 :=
     .next (run_step ins (by decide) (run_ret rpc rfp)) (.refl _ _)
   refine ⟨m2, (first.trans (by simpa [m1, m2] using second)).trans last, a1.trans a2, ?_⟩
-  exact rd_same frame1 room 0
+  refine ⟨rd_same frame1 room 0, ?_⟩
+  have keep := agree_write (m := m1) (lo := lo + 1) frame1.room (by omega) room 0
+  have read := agree_rd_low (i := 2) keep frame1.room (by omega) (by omega)
+  change m2.rd64 (slot fp 2) = _ at read
+  rw [read]
+  simpa [m1] using rd_same frame (a := 2) (by omega) (BitVec.ofInt 64 (r : Int))
 
 /-- Recursive terminal certificates. Counts are S0IR instructions, independent
     of source passes and G steps. The bases execute normal and reason returns; prefixes
@@ -1652,7 +1658,9 @@ def EndCost.Post {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n)
     (fp : W) (m : Mem) : Prop :=
   match certificate with
-  | .reason => m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0
+  | .reason (r := r) =>
+      m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0 ∧
+      m.rd64 (slot fp 2) = some (BitVec.ofNat 64 r.val)
   | .normal (v := v) _ _ _ _ _ =>
       ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ Enc L _ v w ∧
         m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1
@@ -1694,6 +1702,32 @@ def terminalResult {V : Vertrag D} {l Γ} (outcome : Ausgang V l Γ) :
     terminalResult outcome.schrumpf = terminalResult outcome := by
   cases outcome <;> rfl
 
+/-- Observe a reason without erasing its identity. -/
+def terminalReason {V : Vertrag D} {l Γ} (outcome : Ausgang V l Γ) :
+    Option (Fin V.gruende) :=
+  match outcome with
+  | .why _ r => some r
+  | _ => none
+
+@[simp] theorem terminalReason_shrink {V : Vertrag D} {l Γ τ}
+    (outcome : Ausgang V l (τ :: Γ)) :
+    terminalReason outcome.schrumpf = terminalReason outcome := by
+  cases outcome <;> rfl
+
+/-- Reason identity is read at the actual counted return endpoint. -/
+theorem EndCost.reason_read {Δ snapshot ens lo V l Γ Λ b σ ρ n}
+    (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n)
+    {r : Fin V.gruende} (result : terminalReason certificate.outcome = some r)
+    {fp : W} {m : Mem} (post : certificate.Post fp m) :
+    m.rd64 (slot fp 2) = some (BitVec.ofNat 64 r.val) := by
+  induction certificate with
+  | reason => cases result; exact post.2
+  | normal => cases result
+  | assign value tail ih => exact ih result post
+  | bind value tail ih =>
+    exact ih (by simpa only [outcome, terminalReason_shrink] using result) post
+  | branch condition jumpFits child ih => exact ih result post
+
 /-- The old payload observation is derived from the complete canonical exit. -/
 def EndCost.result {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
@@ -1728,7 +1762,7 @@ theorem EndCost.result_status {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) =
       some (if certificate.result.isSome then 1 else 0) := by
   induction certificate with
-  | reason => exact post
+  | reason => exact post.1
   | normal typed =>
     cases V
     cases typed
@@ -1913,11 +1947,11 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
 namespace EndCostProbe
 open FnptrProben
 
-def contract : Vertrag FnptrProben.D := { vertragVon FnptrProben.D 2 with gruende := 1 }
+def contract : Vertrag FnptrProben.D := { vertragVon FnptrProben.D 2 with gruende := 2 }
 def body : Endblock FnptrProben.D contract false [] [] :=
-  .bind (.lit 2) (.cons (.assignVar .here (.lit 2)) (.retWhy ⟨0, by decide⟩ (by decide)))
+  .bind (.lit 2) (.cons (.assignVar .here (.lit 2)) (.retWhy ⟨1, by decide⟩ (by decide)))
 def image : List II :=
-  [ci 1 4 2 0, ci 1 5 2 0, ci 2 4 5 0] ++ retWhyC 4 0
+  [ci 1 4 2 0, ci 1 5 2 0, ci 2 4 5 0] ++ retWhyC 4 1
 def memory : Mem :=
   let saved := write (write (write callMem 4096 8 2048) 4104 8 8192) 4120 8 64
   { saved with
@@ -1927,7 +1961,8 @@ def memory : Mem :=
 /-- Binding, assignment and terminal return satisfy all simulation premises
     jointly; the execution includes three prefix and three ABI instructions. -/
 theorem endCost_sound_zeuge :
-    ∃ m', Counted 6 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' := by
+    ∃ m', Counted 6 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' ∧
+      m'.rd64 (slot 4096 2) = some 1 := by
   have lower : lowEnd 2 addresses callLayout 4 ([], 6) [] (0, 0) body =
       some (image, 13) := by decide +kernel
   have code : CodeAt memory 0 image := by
@@ -1950,11 +1985,11 @@ theorem endCost_sound_zeuge :
     cases g
     decide +kernel
   let v : Wert FnptrProben.D (.int 2 2) := ⟨2, by decide, by decide⟩
-  have cert : EndCost callLayout 0 contract false [] 64 ([], 6) 4 body world .nil 6 :=
+  let cert : EndCost callLayout 0 contract false [] 64 ([], 6) 4 body world .nil 6 :=
     .bind (v := v) .literal (.assign (v := v) .literal .reason)
-  obtain ⟨mout, run, _⟩ := cert.sound (rp := 2048) (cfp := 8192) lower (by decide) call_win (by decide) (by decide) (by decide)
+  obtain ⟨mout, run, post, _⟩ := cert.sound (rp := 2048) (cfp := 8192) lower (by decide) call_win (by decide) (by decide) (by decide)
     (by intro j hj; cases hj) pre hw .nil (fun _ x => nomatch x) rfl (by decide +kernel) (by decide +kernel) (by decide +kernel)
-  exact ⟨mout, run⟩
+  exact ⟨mout, run, cert.reason_read (r := ⟨1, by decide⟩) rfl post⟩
 
 def branchChild : Endblock FnptrProben.D contract false [] [] :=
   .bind (.lit 2) (.retWhy ⟨0, by decide⟩ (by decide))
@@ -2558,13 +2593,15 @@ theorem RecursiveEndCost.sound
       (∀ τ v, terminalResult output = some ⟨τ, v⟩ →
         ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) =
-        some (if (terminalResult output).isSome then 1 else 0) := by
+        some (if (terminalResult output).isSome then 1 else 0) ∧
+      (∀ r, terminalReason output = some r →
+        m'.rd64 (slot fp 2) = some (BitVec.ofNat 64 r.val)) := by
   induction certificate generalizing K top code m pc fp rp cfp pr ex with
   | source cert =>
     obtain ⟨m', run, post, agree, frame, rpc, rfp, hw⟩ :=
       cert.sound lower fits inside low abi lowBound hprotected pre world
         parameters parameterEnv base entry savedPC savedFP
-    exact ⟨_, m', Nat.le_refl _, run, agree, frame, hw, (fun τ v result => cert.result_read (by simpa using result) post), cert.result_status post⟩
+    exact ⟨_, m', Nat.le_refl _, run, agree, frame, hw, (fun τ v result => cert.result_read (by simpa using result) post), ⟨cert.result_status post, fun _ result => cert.reason_read result post⟩⟩
   | @call depth Ks reserved V l Δ snapshot ens lo Γ Λ f args σ₀ σ ρ na nq nb declared returned
       arguments topF lowerFun fitsFun address requirement body declaration rest nr output hp hr tail body_ih tail_ih =>
     let childKs := Ks - frei Γ reserved
@@ -4027,5 +4064,5 @@ theorem sound_zeuge : ∃ n m', n ≤ 23 ∧
       (by decide +kernel) (by decide) inside (by decide) (by decide) (by decide)
       (fun _ h => nomatch h) pre hw Env.nil (fun _ x => nomatch x) rfl
       (by decide +kernel) (by decide +kernel) (by decide +kernel) around (by decide)
-  exact ⟨n, m', bound, run, agree, frame, hw, status, result _ _ rfl⟩
+  exact ⟨n, m', bound, run, agree, frame, hw, status.1, result _ _ rfl⟩
 end Gabbro.Stage0.Senke.RecursiveTerminalProbe
