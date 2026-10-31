@@ -794,7 +794,12 @@ the large-path entry (quotient doubling, distance decrement, optional carry)
 or small-path entry (denominator construction and both adaptive expressions),
 followed by state copies, counter increment, fuel decrement, head restoration
 and the already proved final backedge. The central induction still explicitly
-requires that missing execution. The resource lemmas derive the
+requires that missing execution. Direct checks of `Simulation` and `Proben`
+pass on the existing dependency oleans; the new continuation proofs use only
+`propext`, `Classical.choice`, and `Quot.sound`. Regeneration and execution of
+291 actual Runner images reports zero failures; layout and whitespace checks
+pass. Logs are retained in `.scratch-compose/active-dispatch-final.log`.
+The resource lemmas derive the
 total-budget ceiling from an initial zero count and the existing fuel bound;
 conservation then bounds the next count and decremented fuel and preserves their
 sum. A generic head with separate count/fuel bounds still does not imply the
