@@ -2810,6 +2810,15 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
         Agree fp (dst+1) K m out2 ∧
         out2.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) =
           some (if sx == sy then q+jam else q-jam) ∧
+        ((∀ i, i < 4 →
+            if i < 2 then 1 ≤ (finiteAddRemainingValue F wa wb i).toNat ∧
+              (finiteAddRemainingValue F wa wb i).toNat < F.bexpMax
+            else (finiteAddRemainingValue F wa wb i).toNat < 2^56) →
+          ∃ ex ey : Runner.W,
+            out2.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
+            out2.rd64 (slot fp (BitVec.ofNat 64 (dst+6))) = some ey ∧
+            1 ≤ ex.toNat ∧ ex.toNat < F.bexpMax ∧
+            1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56) ∧
         ∃ signedTail,
           continuation = [ci 2 (dst+8) (dst+16) 0,
             ci 14 (dst+9) (dst+3) (dst+4), ci 19 (dst+9) 48 0,
@@ -2915,7 +2924,7 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     fieldValues,?_,?_,finalPre,signedOut,vs (dst+3),vs (dst+4),vs (dst+7),vs (dst+16),
     vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),
     wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),
-    signedRead,signedTail,signedEq,signedRest⟩
+    signedRead,?_,signedTail,signedEq,signedRest⟩
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
@@ -2933,6 +2942,41 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
       signRead _ (by omega),jammed,?_⟩
     exact floatShiftJamWord_signed_exact r (ex-ey) (q.toNat : Int)
       (if sx = 0 then 1 else -1) (if sy = 0 then 1 else -1)
+
+
+  · intro bounds
+    have hfield (i : Nat) (hi : i < 4) :
+        values (dst+5+i) = finiteAddRemainingValue F wa wb i := by
+      simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using fieldValues (i+4) (by omega)
+    have h5 := hfield 0 (by omega)
+    have h6 := hfield 1 (by omega)
+    have h7 := hfield 2 (by omega)
+    have h8 := hfield 3 (by omega)
+    simp only [Nat.add_zero, Nat.add_assoc, Nat.reduceAdd] at h5 h6 h7 h8
+    have b0 := bounds 0 (by omega)
+    have b1 := bounds 1 (by omega)
+    have b2 := bounds 2 (by omega)
+    have b3 := bounds 3 (by omega)
+    simp only [Nat.reduceLT, ↓reduceIte] at b0 b1 b2 b3
+    have orderedBounds (i : Nat) (hi : i = dst+5 ∨ i = dst+6 ∨ i = dst+7) :
+        if i < dst+7 then 1 ≤ (vs i).toNat ∧ (vs i).toNat < F.bexpMax
+        else (vs i).toNat < 2^56 := by
+      have rd := (keep i (by rcases hi with rfl | rfl | rfl <;> omega)).trans
+        (sorted i (by rcases hi with rfl | rfl | rfl <;> omega))
+      have eq := Option.some.inj ((vreads i (by rcases hi with rfl | rfl | rfl <;> omega)).symm.trans rd)
+      rw [eq]
+      rcases hi with rfl | rfl | rfl <;>
+        simp [h5,h6,h7,h8] <;> split <;> assumption
+    have bx := orderedBounds (dst+5) (by omega)
+    have byy := orderedBounds (dst+6) (by omega)
+    have bq := orderedBounds (dst+7) (by omega)
+    simp only [show dst+5 < dst+7 by omega, show dst+6 < dst+7 by omega,
+      Nat.lt_irrefl, ↓reduceIte] at bx byy bq
+    refine ⟨vs (dst+5),vs (dst+6),?_,?_,bx.1,bx.2,byy.1,byy.2,bq⟩
+    · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
+        (vreads _ (by omega))
+    · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
+        (vreads _ (by omega))
 
 #print axioms floatFiniteAddL_read_fields_align
 
@@ -3017,6 +3061,15 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
         Agree fp (16+1) K m out2 ∧
         out2.rd64 (slot fp (BitVec.ofNat 64 (16+7))) =
           some (if sx == sy then q+jam else q-jam) ∧
+        ((∀ i, i < 4 →
+            if i < 2 then 1 ≤ (finiteAddRemainingValue F 7 11 i).toNat ∧
+              (finiteAddRemainingValue F 7 11 i).toNat < F.bexpMax
+            else (finiteAddRemainingValue F 7 11 i).toNat < 2^56) →
+          ∃ ex ey : Runner.W,
+            out2.rd64 (slot fp (BitVec.ofNat 64 (16+5))) = some ex ∧
+            out2.rd64 (slot fp (BitVec.ofNat 64 (16+6))) = some ey ∧
+            1 ≤ ex.toNat ∧ ex.toNat < F.bexpMax ∧
+            1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56) ∧
         ∃ signedTail,
           continuation = [ci 2 (16+8) (16+16) 0,
             ci 14 (16+9) (16+3) (16+4), ci 19 (16+9) 48 0,

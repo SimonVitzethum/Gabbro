@@ -835,15 +835,22 @@ needed to continue the run.
 `finiteAddRemainingValue_bounds` transfers canonical finite-input bounds through
 the literal decoder word arithmetic for all four fields, with a joint f32/f64
 minimum-subnormal/maximum-finite witness. These are bounds on exactly the values
-in the central theorem's retained field correspondence. Transferring them through
-the executed SORT reads and signed arithmetic remains open. The arithmetic result is still a machine word: its
+in the central theorem's retained field correspondence. The central connected
+execution now also transports these four bounds through its actual SORTSWAP
+reads: the left significand remains below `2^56`, and both effective exponents
+are positive and below `F.bexpMax`. The latter are read from the same reached
+post-ADD/SUB memory, using the signed execution's preserved slots. This conclusion
+is conditional on the four decoder bounds, discharged for canonical finite
+inputs by `finiteAddRemainingValue_bounds`; it introduces no new execution
+precondition or independently supplied intermediate memory. The arithmetic result is still a machine word: its
 natural/integer magnitude bounds and the signed correction transfer through
 normalization are not yet proved.
 
 Concrete composition goals at this boundary are:
-1. Transfer `floatFiniteAdd_ordered_input_bounds` through the joint decoded
-   field correspondence and the executed SORT permutation; establish that the
-   word exponent difference equals the bounded natural exponent difference.
+1. The joint decoded field correspondence and executed SORT permutation now
+   transport the exponent and left-significand bounds. Establish that the word exponent
+   difference equals the bounded natural exponent difference, and transfer the
+   right-significand bound through jam into the signed result.
 2. Signed ADD/SUB now executes from the retained sign and jam reads. Derive its
    bounded magnitude and signed fractional correction together, then execute
    zero dispatch.
