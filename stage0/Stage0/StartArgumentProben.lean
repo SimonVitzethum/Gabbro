@@ -3,7 +3,7 @@ import Grammatik.Parser.Elab.UebersetzeAllg3
 
 namespace Gabbro.Stage0.StartArgument
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
-  Gabbro.Grammatik.Parser.UebersetzeAllg2
+  Gabbro.Grammatik.Parser.UebersetzeAllg2 Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-- Exercise the actual canonical parser/elaborator with repeated functions and distinct
     source arguments; this adapter does not enable the still parameterless image startup. -/
@@ -63,6 +63,22 @@ theorem fromGroup_identity_zeuge :
   | error e => rw [hr] at accepted; cases accepted
   | ok starts => exact ⟨starts, rfl, fromGroup_identity _ hr⟩
 
+theorem expression_pure_zeuge (before world before' world' : World (declOf witnessUnit)) :
+    eval before (expression witnessUnit (.int (-9) 12) (.un "-" (.lit 7)) (by rfl)) world .nil =
+      eval before' (expression witnessUnit (.int (-9) 12) (.un "-" (.lit 7)) (by rfl)) world' .nil :=
+  expression_pure witnessUnit _ _ _ before world before' world'
+
+theorem arguments_pure_zeuge (before world before' world' : World (declOf witnessUnit)) :
+    evalArgs before (arguments witnessUnit [.int 0 9, .bool] [.lit 7, .tru]
+      (by constructor <;> rfl)) world .nil =
+    evalArgs before' (arguments witnessUnit [.int 0 9, .bool] [.lit 7, .tru]
+      (by constructor <;> rfl)) world' .nil :=
+  arguments_pure witnessUnit _ _ _ before world before' world'
+
+#print axioms expression_pure
+#print axioms arguments_pure
+#print axioms expression_pure_zeuge
+#print axioms arguments_pure_zeuge
 #print axioms fromItems_identity
 #print axioms fromGroup_identity
 #print axioms fromItems_identity_zeuge

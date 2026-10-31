@@ -53,6 +53,21 @@ theorem expression_literal_zeuge (u : UProg) (world : World (declOf u)) :
     (eval world (expression u (.int 0 12) (.lit 7) (by simp [uStartArg])) world .nil).n = 7 :=
   expression_literal u 0 12 7 (by simp [uStartArg]) world world
 
+/-- Canonical accepted start arguments are closed values: choosing a world cannot
+    change the environment eventually encoded into a relocated root frame. -/
+theorem expression_pure (u : UProg) (ty : Ty) (arg : SExpr)
+    (accepted : uStartArg u.tabs ty arg = true)
+    (before world before' world' : World (declOf u)) :
+    eval before (expression u ty arg accepted) world .nil =
+      eval before' (expression u ty arg accepted) world' .nil := by
+  cases ty <;> cases arg <;> simp only [uStartArg] at accepted
+  all_goals try contradiction
+  all_goals try rfl
+  case int.un lo hi op a =>
+    cases a <;> try simp only at accepted
+    all_goals try contradiction
+    all_goals split at accepted <;> simp_all <;> rfl
+
 /-- Argument environments are evaluated by the existing canonical `evalArgs`, including
     its order, and can be supplied directly to `Einheit.starts` and `RufStartG`. -/
 def arguments (u : UProg) : (types : List Ty) → (args : List SExpr) →
@@ -64,6 +79,27 @@ def arguments (u : UProg) : (types : List Ty) → (args : List SExpr) →
       (arguments u types args ⟨by simpa using checked.1, by exact (Bool.and_eq_true_iff.mp checked.2).2⟩)
   | [], _ :: _, checked => by simp at checked
   | _ :: _, [], checked => by simp at checked
+
+/-- Every complete start environment has the same canonical value in every world. -/
+theorem arguments_pure (u : UProg) (types : List Ty) (args : List SExpr)
+    (checked : types.length = args.length ∧
+      (types.zip args).all (fun p => uStartArg u.tabs p.1 p.2) = true)
+    (before world before' world' : World (declOf u)) :
+    evalArgs before (arguments u types args checked) world .nil =
+      evalArgs before' (arguments u types args checked) world' .nil := by
+  induction types generalizing args with
+  | nil =>
+    cases args with
+    | nil => rfl
+    | cons arg args => have impossible : 0 = args.length + 1 := checked.1; omega
+  | cons ty types ih =>
+    cases args with
+    | nil => simp at checked
+    | cons arg args =>
+      simp only [arguments, evalArgs]
+      congr 1
+      · exact expression_pure u ty arg _ before world before' world'
+      · exact ih args _
 
 /-- A start retains its original arguments and name resolution, together with the existing
     canonical source acceptance check and an argument term at the actual function signature. -/
