@@ -5427,5 +5427,57 @@ theorem NestedForever.initialized_sound
       have := locals; unfold frei at *; omega)) run
 
 
+/-- Recover the invariant, body, reserved counter pair and actual relocation from
+    accepted statement lowering before applying the whole-loop execution theorem.
+    The source tree is still required; this bridge does not certify recursive
+    source children containing positive loops. -/
+theorem NestedForever.accepted_sound
+    {P : Programm D} {passes A C dv Ks} {f : D.Fn} {Γ Λ}
+    {assumption : D.Annahme} {inv : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ}
+    {σ ρ outcome n}
+    (tree : NestedForever L reserved P passes A C dv Ks (vertragVon D f)
+      assumption inv body passes σ ρ outcome n)
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp pc : W}
+    {lo K top : Nat} {ens : List II × Nat} {pr : List Nat}
+    {code : List II} {m : Mem} {ex : Int × Int}
+    (lower : lowS (l := true) (reserved := reserved) passes A L lo ens pr ex
+      (.forever assumption inv body) = some (code, top))
+    (fits : top ≤ Ks) (inside : WIn L fp Ks K) (abi : FB ≤ lo)
+    (hprotected : ∀ j ∈ pr, j < (counterPair reserved (counterDepthB body)).1)
+    (jumpFits : 16 * code.length < 2 ^ 31)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (around : Umf L A C dv m fp Ks K) (world : WeltAt m L σ) :
+    ∃ k, k ≤ 5 + passes * (5 + tree.childCharge) ∧
+      CountedSim k L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
+        (pc + BitVec.ofNat 64 (16 * code.length))
+        (pc + BitVec.ofNat 64 (16 * code.length)) (pc + 16 + 16) outcome reserved := by
+  dsimp only [lowS] at lower
+  split at lower
+  next allowed =>
+    obtain ⟨⟨cc, tc⟩, lowerInv, emitted⟩ := Option.bind_eq_some_iff.mp lower
+    have budget := foreverC_budget emitted
+    obtain ⟨cb, tb, lowerBody, rfl, fitsInv, fitsBody, _, _, scratch⟩ :=
+      foreverC_actual emitted
+    have pairStep : (counterPair reserved (counterDepthB body)).2 =
+        (counterPair reserved (counterDepthB body)).1 + 1 := rfl
+    have result := tree.initialized_sound (σ0 := σ0) (ρ0 := ρ0)
+      (rp := rp) (cfp := cfp) lowerInv lowerBody
+      (by omega) (by omega) inside abi allowed.1 (by omega) (by omega)
+      allowed.2.1 (by have := inside.ks; omega) hprotected
+      (by have := inside.ks; omega)
+      (by simp only [foreverCode_length] at jumpFits; omega)
+      (lit32_nat budget.1)
+      (by simpa only [foreverCode, foreverCounterInit, List.append_assoc] using pre)
+      around world budget.2
+    have endpoint : pc + 16 + 16 + BitVec.ofNat 64 (16 * (cc.length + cb.length + 11)) =
+        pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 13)) := by
+      change pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1) + _ = _
+      simp only [pc_add]
+      congr 2 <;> omega
+    simpa only [foreverCode_length, endpoint] using result
+  next refused => simp at lower
+
+
 end NestedSound
 end Gabbro.Stage0.Senke
