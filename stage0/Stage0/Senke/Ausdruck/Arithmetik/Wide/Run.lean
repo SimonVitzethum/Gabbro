@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Ausdruck/Wide/Run.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Run.lean
   Subject:   Execution of the multiword add/subtract chain on actual memory.
 
   Layout for `k` limbs at slot `a`: operand one (and the result) in `a .. a+k-1`, operand two in
@@ -7,7 +7,7 @@
   replaced by `x + y` resp. `x - y` modulo `2^(64k)`, exactly the canonical `integerEncoding k`;
   the second operand survives; only frame slots from `a` on change.
 -/
-import Stage0.Senke.Ausdruck.Wide.Add
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Add
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
@@ -21,6 +21,24 @@ def slotVal (m : Runner.Mem) (fp : Runner.W) (j : Nat) : Runner.W :=
 theorem slotVal_rd {m : Runner.Mem} {fp : Runner.W} {K j : Nat} (hF : FrameOK m fp K) (hj : j < K) :
     m.rd64 (slot fp (BitVec.ofNat 64 j)) = some (slotVal m fp j) := by
   simp only [Runner.Mem.rd64, slotVal, hF.rd j hj, ite_true]
+
+/-- Canonical limbs in memory are the limbs the valuation reads. -/
+theorem slotVal_words {m : Runner.Mem} {fp : Runner.W} {K k base : Nat} (hF : FrameOK m fp K)
+    (hb : base + k ≤ K) (v : Int) (h : WordsAt m fp base (integerEncoding k v)) :
+    ∀ j, j < k → slotVal m fp (base + j) = lmb v j := by
+  intro j hj
+  have h1 := h j (by simpa using hj)
+  rw [slotVal_rd hF (by omega : base + j < K)] at h1
+  rw [Option.some.inj h1, integerEncoding_get]
+
+/-- The limbs a run leaves in memory, read back as canonical words. -/
+theorem words_of_slotVal {m' : Runner.Mem} {fp : Runner.W} {K k base : Nat} (v : Int)
+    (hb : base + k ≤ K) (s : Nat → Runner.W)
+    (rd : ∀ j, j < K → m'.rd64 (slot fp (BitVec.ofNat 64 j)) = some (s j))
+    (h : ∀ j, j < k → s (base + j) = lmb v j) : WordsAt m' fp base (integerEncoding k v) := by
+  intro i hi
+  have hi' : i < k := by simpa using hi
+  rw [rd (base + i) (by omega), h i hi', integerEncoding_get]
 
 theorem wideChain_run {m : Runner.Mem} {pc fp : Runner.W} {K k a : Nat} {mask carry : Int}
     (hcar : carry = 0 ∨ carry = 1) (hm : lit32 mask = true) (hcl : lit32 carry = true)

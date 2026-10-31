@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Ausdruck/Wide/Probe.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Probe.lean
   Subject:   Joint witnesses for the multiword carry chain on actual code and actual memory.
 
   Code at 2048 (the real emitted instructions, as bytes), the frame at 4096 with 24 slots and the
@@ -7,7 +7,8 @@
   `wideSub_zeuge` borrows across it for `0 - 1`.
 -/
 import Stage0.Senke.BildLese
-import Stage0.Senke.Ausdruck.Wide.Run
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
 
 namespace Gabbro.Stage0.Senke.WideProbe
 open Runner.IR Runner.Mem
@@ -106,5 +107,80 @@ theorem wideSub_zeuge [Kern] :
     rw [e] at diff; exact diff
   · have e : integerEncoding 2 1 = [1, 0] := by decide +kernel
     rw [e] at keep; exact keep
+
+/-! ## Comparisons across the limb boundary -/
+
+abbrev ltCode : List II := wideLtC 1 8
+abbrev eqCode : List II := wideEqC 1 8
+
+theorem ltCode_length : ltCode.length = 18 := by decide
+theorem eqCode_length : eqCode.length = 19 := by decide
+
+/-- `2^64 - 1 < 2^64`: operands `[2^64-1, 0]` and `[0, 1]`. -/
+def ltMem : Runner.Mem := probeMem ltCode [18446744073709551615, 0, 0, 1]
+/-- `2^64 = 0` differs only in the high limb. -/
+def eqMemDiff : Runner.Mem := probeMem eqCode [0, 1, 0, 0]
+/-- `2^64 + 7 = 2^64 + 7`. -/
+def eqMemSame : Runner.Mem := probeMem eqCode [7, 1, 7, 1]
+
+theorem ltMem_x : WordsAt ltMem 4096 8 (integerEncoding 2 18446744073709551615) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem ltMem_y : WordsAt ltMem 4096 (8 + 2) (integerEncoding 2 18446744073709551616) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem eqMemDiff_x : WordsAt eqMemDiff 4096 8 (integerEncoding 2 18446744073709551616) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem eqMemDiff_y : WordsAt eqMemDiff 4096 (8 + 2) (integerEncoding 2 0) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem eqMemSame_x : WordsAt eqMemSame 4096 8 (integerEncoding 2 18446744073709551623) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem eqMemSame_y : WordsAt eqMemSame 4096 (8 + 2) (integerEncoding 2 18446744073709551623) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem wideLt_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ ltMem ⟨2048 + BitVec.ofNat 64 (16 * 18), 4096⟩ m' ∧
+      Agree 4096 8 24 ltMem m' ∧ m'.rd64 (slot 4096 (BitVec.ofNat 64 8)) = some 1 := by
+  have far : CodeFar 2048 ltCode.length 4096 24 := by rw [ltCode_length]; unfold CodeFar; decide
+  obtain ⟨m', run, agree, flag⟩ := wideLt_run (m := ltMem) (pc := 2048) (fp := 4096) (K := 24) (n := 1) (a := 8)
+    (probe_frame _ _) (by decide) (by decide) (probe_code ltCode _ (by decide) (by decide)) far
+    18446744073709551615 18446744073709551616 ltMem_x ltMem_y (by decide) (by decide)
+  rw [ltCode_length] at run
+  exact ⟨m', run, agree, by rw [flag]; decide⟩
+
+theorem wideEq_diff_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ eqMemDiff ⟨2048 + BitVec.ofNat 64 (16 * 19), 4096⟩ m' ∧
+      Agree 4096 8 24 eqMemDiff m' ∧ m'.rd64 (slot 4096 (BitVec.ofNat 64 8)) = some 0 := by
+  have far : CodeFar 2048 eqCode.length 4096 24 := by rw [eqCode_length]; unfold CodeFar; decide
+  obtain ⟨m', run, agree, flag⟩ := wideEq_run (m := eqMemDiff) (pc := 2048) (fp := 4096) (K := 24) (n := 1) (a := 8)
+    (probe_frame _ _) (by decide) (by decide) (probe_code eqCode _ (by decide) (by decide)) far
+    18446744073709551616 0 eqMemDiff_x eqMemDiff_y (by decide) (by decide)
+  rw [eqCode_length] at run
+  exact ⟨m', run, agree, by rw [flag]; decide⟩
+
+theorem wideEq_same_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ eqMemSame ⟨2048 + BitVec.ofNat 64 (16 * 19), 4096⟩ m' ∧
+      Agree 4096 8 24 eqMemSame m' ∧ m'.rd64 (slot 4096 (BitVec.ofNat 64 8)) = some 1 := by
+  have far : CodeFar 2048 eqCode.length 4096 24 := by rw [eqCode_length]; unfold CodeFar; decide
+  obtain ⟨m', run, agree, flag⟩ := wideEq_run (m := eqMemSame) (pc := 2048) (fp := 4096) (K := 24) (n := 1) (a := 8)
+    (probe_frame _ _) (by decide) (by decide) (probe_code eqCode _ (by decide) (by decide)) far
+    18446744073709551623 18446744073709551623 eqMemSame_x eqMemSame_y (by decide) (by decide)
+  rw [eqCode_length] at run
+  exact ⟨m', run, agree, by rw [flag]; decide⟩
 
 end Gabbro.Stage0.Senke.WideProbe

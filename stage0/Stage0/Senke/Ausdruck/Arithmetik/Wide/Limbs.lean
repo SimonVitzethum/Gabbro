@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Ausdruck/Wide/Limbs.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Limbs.lean
   Subject:   Digit sequences base `2^64`: values, carry chains and the canonical integer encoding.
 
   `dval x i` is the value of the low `i` digits. A carry chain adds two digit sequences; the identity
@@ -8,7 +8,7 @@
   sequence of `v mod 2^(64k)`.
 -/
 import Mathlib.Tactic.Linarith
-import Stage0.Senke.Ausdruck.Wide.Alu
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Alu
 
 namespace Gabbro.Stage0.Senke
 

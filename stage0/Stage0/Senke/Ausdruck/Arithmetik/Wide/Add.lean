@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Ausdruck/Wide/Add.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Add.lean
   Subject:   Multiword addition and subtraction over the canonical integer encoding.
 
   `wideAdd_run` and `wideSub_run`: from two canonical `k`-limb operands (`WordsAt` of
@@ -7,8 +7,8 @@
   memory holding `integerEncoding k (x + y)` resp. `integerEncoding k (x - y)` in the first operand's
   limbs, changing only frame slots from `a` on.
 -/
-import Stage0.Senke.Ausdruck.Wide.Link
-import Stage0.Senke.Ausdruck.Wide.AddChain
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Link
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.AddChain
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Ausdruck/Wide/Alu.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Alu.lean
   Subject:   A generic executor for straight-line register code over frame slots.
 
   Multiword integer arithmetic is straight-line code of constants, moves and total word

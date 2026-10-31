@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Ausdruck/Wide/Link.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Link.lean
   Subject:   The canonical integer encoding as a digit sequence.
 
   `integerEncoding k v` has the limb `lmb v j` at position `j`. Its digit sequence has the value
@@ -8,7 +8,7 @@
 -/
 import Mathlib.Tactic.Linarith
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
-import Stage0.Senke.Ausdruck.Wide.Limbs
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
 
 namespace Gabbro.Stage0.Senke
 

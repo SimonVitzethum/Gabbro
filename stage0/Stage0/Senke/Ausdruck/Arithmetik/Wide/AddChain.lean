@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Ausdruck/Wide/AddChain.lean
+  File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/AddChain.lean
   Subject:   Multiword addition and subtraction as one carry chain over frame slots.
 
   Layout, for `k` limbs: the first operand (and the result) in `a .. a+k-1`, the second operand in
@@ -7,7 +7,7 @@
   Every limb computes `A := A + (B xor mask) + carry`. Mask 0 and carry 0 add; mask all ones and
   carry 1 subtract (`x + ~y + 1`), both modulo `2^(64k)`.
 -/
-import Stage0.Senke.Ausdruck.Wide.Limbs
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR
