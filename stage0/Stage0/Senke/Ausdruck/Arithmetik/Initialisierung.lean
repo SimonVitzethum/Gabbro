@@ -766,4 +766,115 @@ def floatFiniteAddL (F : Gleitkomma.Format) (dst : Nat)
   pure (inputs.1 ++ sort ++ aligned.1 ++ signed ++ finish ++ sign,
     max inputs.2 (max aligned.2 (max shift.2 rounded.2)))
 
+/-- Recover the actual operand-code prefix from successful compilation of the
+    complete candidate. No separately supplied instruction-list decomposition
+    is trusted by the execution theorem. -/
+theorem floatFiniteAddL_operand_code (F : Gleitkomma.Format) (dst : Nat)
+    (a b : Nat → Option (List II × Nat)) {code : List II} {top : Nat}
+    (compiled : floatFiniteAddL F dst a b = some (code, top)) :
+    ∃ ca ta cb tb tail, a (dst+1) = some (ca,ta) ∧
+      b (dst+2) = some (cb,tb) ∧ code = (ca ++ cb) ++ tail ∧
+      ta ≤ top ∧ tb ≤ top := by
+  simp only [floatFiniteAddL, bind, pure, Option.bind_eq_some_iff] at compiled
+  obtain ⟨inputs, hi, aligned, ha, shift, hs, rounded, hr, result⟩ := compiled
+  rw [floatStateSlotsL] at hi
+  simp only [bind, pure, Option.bind_eq_some_iff] at hi
+  obtain ⟨av, hav, afterA, hb, inputEq⟩ := hi
+  rw [floatStateSlotsL] at hb
+  simp only [bind, pure, Option.bind_eq_some_iff] at hb
+  obtain ⟨bv, hbv, afterB, hc, afterEq⟩ := hb
+  rcases inputs with ⟨inputCode,inputTop⟩
+  rcases afterA with ⟨restCode,restTop⟩
+  simp only [Option.some.injEq, Prod.mk.injEq] at inputEq afterEq result
+  refine ⟨av.1, av.2, bv.1, bv.2, code.drop (av.1.length + bv.1.length), hav, ?_, ?_, ?_, ?_⟩
+  · simpa [Nat.add_assoc] using hbv
+  · rw [← result.1, ← inputEq.1, ← afterEq.1]
+    simp [List.drop_append, List.append_assoc]
+  · omega
+  · omega
+
+#print axioms floatFiniteAddL_operand_code
+
+/-- Execute both operand producers inside the actual compiled finite candidate.
+    The continuation is fetched from preserved code, with the environment,
+    permissions and arbitrary reserved prefix carried through both writes.
+    This stops before field decoding; it does not assert IEEE correctness of
+    the subsequent sort, jam, normalization or packing instructions. -/
+theorem floatFiniteAddL_read_operands {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (F : Gleitkomma.Format) (dst : Nat)
+    (a b : Nat → Option (List II × Nat)) (wa wb : Runner.W)
+    {code : List II} {top K reserved : Nat} {fp pc : Runner.W} {m : Runner.Mem}
+    (compiled : floatFiniteAddL F dst a b = some (code,top))
+    (room : top ≤ K) (slots : dst+3 ≤ K)
+    (producerA : ∀ c t, a (dst+1) = some (c,t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K (dst+1) c ρ W reserved →
+      Ok m pc fp K (dst+1) c (· = wa))
+    (producerB : ∀ c t, b (dst+2) = some (c,t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K (dst+2) c ρ W reserved →
+      Ok m pc fp K (dst+2) c (· = wb))
+    (pre : Pre L m pc fp K (dst+1) code ρ W reserved) :
+    ∃ operandCode tail m', code = operandCode ++ tail ∧
+      Star ⟨pc,fp⟩ m ⟨pc + BitVec.ofNat 64 (16*operandCode.length),fp⟩ m' ∧
+      Agree fp (dst+1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+1))) = some wa ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+2))) = some wb ∧
+      Pre L m' (pc + BitVec.ofNat 64 (16*operandCode.length)) fp K (dst+3)
+        tail ρ W reserved := by
+  obtain ⟨ca,ta,cb,tb,tail,ha,hb,hcode,hta,htb⟩ :=
+    floatFiniteAddL_operand_code F dst a b compiled
+  rw [hcode] at pre
+  obtain ⟨m1,runA,agreeA,w,readA,valueA⟩ :=
+    producerA ca ta ha (by omega) m pc pre.left.left
+  subst w
+  have preB := pre.left.next agreeA (show dst+1 ≤ dst+2 by omega) (by omega)
+  obtain ⟨m2,runB,agreeB,w,readB,valueB⟩ :=
+    producerB cb tb hb (by omega) m1 _ preB
+  subst w
+  have agree := agreeA.trans (agreeB.mono (show dst+1 ≤ dst+2 by omega))
+  refine ⟨ca ++ cb,tail,m2,hcode,?_,agree,?_,readB,?_⟩
+  · simpa only [List.length_append, pc_add] using runA.trans runB
+  · exact slotRead_agree preB.frame agreeB (by omega) (by omega) readA
+  · exact pre.next agree (by omega) (by omega)
+
+#print axioms floatFiniteAddL_read_operands
+
+/-- Both IEEE formats compile and execute distinct operands jointly with a
+    nonzero reserved environment prefix and an arbitrary enclosing frame. -/
+theorem floatFiniteAddL_read_operands_zeuge {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (F : Gleitkomma.Format)
+    (format : F ∈ [Gleitkomma.f32, Gleitkomma.f64])
+    {K : Nat} {fp pc : Runner.W} {m : Runner.Mem}
+    (room : ((floatFiniteAddL F 16
+      (fun j => some ([ci 1 j 7 0],j+1))
+      (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).2 ≤ K)
+    (slots : 19 ≤ K)
+    (pre : Pre L m pc fp K 17
+      ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+        (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).1 ρ W 13) :
+    ∃ operandCode tail m',
+      ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+        (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).1 = operandCode ++ tail ∧
+      Star ⟨pc,fp⟩ m ⟨pc + BitVec.ofNat 64 (16*operandCode.length),fp⟩ m' ∧
+      Agree fp 17 K m m' ∧
+      m'.rd64 (slot fp 17) = some 7 ∧ m'.rd64 (slot fp 18) = some 11 ∧
+      Pre L m' (pc + BitVec.ofNat 64 (16*operandCode.length)) fp K 19 tail ρ W 13 := by
+  apply floatFiniteAddL_read_operands F 16
+    (fun j => some ([ci 1 j 7 0],j+1))
+    (fun j => some ([ci 1 j 11 0],j+1)) 7 11
+    (top := ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+      (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).2)
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at format
+    rcases format with rfl | rfl <;> rfl
+  · exact room
+  · exact slots
+  · intro c t hc ht m pc hp
+    cases hc
+    exact const_ok hp (by decide) (by omega)
+  · intro c t hc ht m pc hp
+    cases hc
+    exact const_ok hp (by decide) (by omega)
+  · exact pre
+
+#print axioms floatFiniteAddL_read_operands_zeuge
+
 end Gabbro.Stage0.Senke
