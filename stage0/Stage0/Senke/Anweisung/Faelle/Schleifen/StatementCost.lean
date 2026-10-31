@@ -2383,6 +2383,30 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
     recursiveBlockCost L reserved P passes A C dv Ks V l
       (.cons (.call f args hp hr) rest) σ ρ σ' ρ' (na + 4 + declared + nr)
 
+  | bindCall {Γ : Ctx} {τ : Ty} {v : Wert D τ} {Λ : List (Res D)} {f : D.Fn}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat}
+    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {top : Nat}
+    (lowerFun : lowFun passes P A L f = some (C f, top))
+    (fitsFun : top ≤ Ks - frei Γ reserved)
+    (address : A f < 2 ^ 31) (positive : dv ≠ 0)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+      ∀ snapshot, EndCost L ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) nb)
+    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
+      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+    (result : ∀ ens hens snapshot, (body ens hens snapshot).result = some ⟨τ, v⟩)
+    {he : D.erg f = some τ}
+    {Λ' : List (Res D)}
+    {rest : Block D V l (τ :: Γ) (nach D f Λ) Λ'} {σ' : World D} {ρ' : Env D (τ :: Γ)}
+    {nr : Nat}
+    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
+    (tail : recursiveBlockCost L reserved P passes A C dv Ks V l rest σ (.cons v ρ) σ' ρ' nr) :
+    recursiveBlockCost L reserved P passes A C dv Ks V l
+      (.bindCall f args he hp hr rest) σ ρ σ' (ρ'.tail) (na + 4 + declared + 1 + nr)
+
 /-- Induction composes each full call and its child certificate at the identical
     counted endpoint, retaining world, environment, frame and protected cells. -/
 theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
@@ -2401,7 +2425,7 @@ theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
       (pc + BitVec.ofNat 64 (16 * code.length)) σ' ρ' reserved := by
   induction certificate generalizing lo top code m pc ex with
   | source cert => exact ⟨_, Nat.le_refl _, cert.sound lower fits inside low hprotected pre world⟩
-  | @call Λ f args σ₀ σ ρ na nq nb declared arguments topFun lowerFun fitsFun address positive requirement body declaration Λ' rest σ' ρ' nr hp hr tail ih =>
+  | @call Γ Λ f args σ₀ σ ρ na nq nb declared arguments topFun lowerFun fitsFun address positive requirement body declaration Λ' rest σ' ρ' nr hp hr tail ih =>
     simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cr, tr⟩, lowerTail, ⟨cs, ts⟩, lowerStmt, out⟩ := lower
     simp only [lowS, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lowerStmt
@@ -2422,13 +2446,56 @@ theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
     have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
       simp [callC, callTail, callTailN, List.length_append]
     obtain ⟨nt, boundTail, m2, restRun, restAgree, env, hw2, keep⟩ :=
-      ih lowerTail (by omega) low next
+      ih lowerTail (by omega) low hprotected next
         (Umf.agreeW inside surroundings agree (by simp [frei]; omega)) hw
     refine ⟨n + nt, by omega, m2, ?_, (agree.mono low).trans restAgree, env, hw2,
       (keeps_of_agreeW inside agree hprotected (by omega)).trans keep⟩
     rw [← len] at run
     have joined := run.trans restRun
     simpa only [pc_add1] using joined
+
+  | @bindCall Γ τ v Λ f args σ₀ σ ρ na nq nb declared arguments topFun lowerFun fitsFun address positive requirement body declaration result he Λ' rest σ' ρ' nr hp hr tail ih =>
+    simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨ca, ta⟩, lowerArgs, ⟨cr, tr⟩, lowerTail, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    change max (callTop f (frei Γ reserved) ta) tr ≤ Ks at fits
+    have fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks := by omega
+    have room : frei Γ reserved + 2 < Ks := by
+      have h := fitsArgs
+      simp only [callTop, FB] at h
+      omega
+    obtain ⟨n, m1, bound, run, ⟨ens', hens, snapshot, post⟩, agree, frame, childFrame, rpc, rfp, hw⟩ :=
+      arguments.fullCall lowerArgs fitsArgs lowerFun fitsFun address positive
+        requirement body declaration pre.left.left surroundings inside world
+    obtain ⟨w, read, enc⟩ := (body ens' hens snapshot).result_read (result ens' hens snapshot) post
+    rw [slot_slot] at read
+    have hks := inside.ks
+    have hp1 := pre.left.nextW inside agree (Nat.le_refl _) (Nat.le_refl _) (by omega)
+    have move := mov_to_counted hp1.code frame (j := frei Γ reserved) (s := frei Γ reserved + 2)
+      (by omega) (by omega) pre.small read
+    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 w.toNat
+    have a2 : Agree fp (frei Γ reserved) K m1 m2 :=
+      agree_write frame.room (Nat.le_refl _) (by omega) _
+    have joinedAgree := agree.trans (agreeW_of a2)
+    have next := pre.nextW inside joinedAgree (d' := frei Γ reserved + 1)
+      (by have := pre.ctx; omega) (by omega) (by omega)
+    have nextPre : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (.cons v ρ) reserved :=
+      ⟨by simp [frei], next.small, next.frame, next.code, next.far,
+        envAt_cons next.env (rd_same frame (by omega) w) enc, trivial, wstab_true _ _⟩
+    have hw2 : WeltAt m2 L σ :=
+      weltAt_stab inside.lay (by have := inside.top; omega) m1 m2 hw (a2.mono (Nat.zero_le _))
+    obtain ⟨nt, bt, m3, rr, ar, er, wr, kr⟩ :=
+      ih lowerTail (by omega) (by simp [frei] at *; omega)
+        (fun j hj => by have := hprotected j hj; simp [frei] at *; omega) nextPre
+        (Umf.agreeW inside surroundings joinedAgree (by simp [frei]; omega)) hw2
+    have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
+      simp [callC, callTail, callTailN, List.length_append]
+    rw [← len] at run
+    simp only [pc_add1] at rr
+    have combined := (run.trans move).trans rr
+    refine ⟨n + 1 + nt, by omega, m3, ?_, (joinedAgree.mono low).trans ar,
+      envAt_tail er, wr, (keeps_of_agreeW inside joinedAgree hprotected (by omega)).trans kr⟩
+    simpa only [pc_add1] using combined
 
 namespace FullCallProbe
 open FnptrProben
@@ -2536,12 +2603,127 @@ theorem call_continuation_zeuge : ∃ n, n ≤ 17 ∧
   have joint := recursive.sound (lo := 4) (ens := ([], 4)) (pr := []) (ex := (0, 0))
     (code := caller) (top := 10) rfl (by decide) inside (by decide)
     (by intro j hj; cases hj) (by simpa [frei, FB] using pre) around hw
-  simpa [caller, callC, callTail, callTailN] using joint
+  simpa [caller, callC, callTail, callTailN, Env.tail] using joint
 theorem fullCall_zeuge : ∃ n m', n ≤ 17 ∧
     Counted n ⟨2048, 4096⟩ memory ⟨2128, 4096⟩ m' := by
   obtain ⟨n, bound, m', run, _⟩ := call_continuation_zeuge
   exact ⟨n, m', bound, run⟩
 end FullCallProbe
 
+
+namespace BindCallProbe
+open FnptrProben
+open FullFunProbe (fixtureDecl program layout world)
+local instance (m : Mem) (pc : W) (o : Nat) (a b c : BitVec 32) :
+    Decidable (InsAt m pc o a b c) :=
+  if h : m.rd8 pc = some (BitVec.ofNat 8 o) ∧ m.rd32 (pc + 4) = some a ∧
+      m.rd32 (pc + 8) = some b ∧ m.rd32 (pc + 12) = some c then
+    .isTrue ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
+
+def args : Args fixtureDecl [] [] (fixtureDecl.params 0) := .cons (.lit 37) .nil
+def target (f : fixtureDecl.Fn) : List II := ((lowFun 2 program addresses layout f).getD ([], 0)).1
+def caller : List II := callC (D := fixtureDecl) addresses (0 : fixtureDecl.Fn) 4 [ci 1 8 37 0] ++ [ci 2 4 6 0]
+def memory : Mem :=
+  let segments := [(64, (target 0).flatMap encII), (576, (target 1).flatMap encII),
+    (1088, (target 2).flatMap encII), (2048, caller.flatMap encII)]
+  let base : Mem := {
+    b := fun a => match segments.find? (fun s => s.1 ≤ a.toNat && a.toNat < s.1 + s.2.length) with
+      | some s => (s.2[a.toNat - s.1]?).getD 0
+      | none => 0
+    rd := fun _ => true
+    wr := fun _ => true }
+  write (write base 8192 8 64) 4112 8 2
+
+theorem bind_continuation_zeuge : ∃ n, n ≤ 18 ∧
+    CountedReach n layout 4096 4 256 [] ⟨2048, 4096⟩ memory
+      2144 world (Env.nil : Env fixtureDecl []) := by
+  have targets : PCode memory addresses target 4096 256 := by
+    have h : ∀ f : Fin 3, ∀ k : Fin (target f).length,
+        InsAt memory (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val))
+          (target f)[k.val].o (II.f (target f)[k.val].a)
+          (II.f (target f)[k.val].b) (II.f (target f)[k.val].c) := by
+      apply allFin
+      decide +kernel
+    intro f
+    refine ⟨fun k hk => h f ⟨k, hk⟩, ?_⟩
+    have far : ∀ f : Fin 3, CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256 := by
+      unfold CodeFar
+      apply allFin
+      decide +kernel
+    exact far f
+  have ccode : CodeAt memory 2048 caller := by
+    have h : ∀ k : Fin caller.length,
+        InsAt memory (2048 + BitVec.ofNat 64 (16 * k.val))
+          caller[k.val].o (II.f caller[k.val].a) (II.f caller[k.val].b) (II.f caller[k.val].c) := by
+      apply allFin
+      decide +kernel
+    exact fun k hk => h ⟨k, hk⟩
+  have frame : FrameOK memory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+  have pre : PreS layout memory 2048 4096 256 4 caller (Env.nil : Env fixtureDecl []) :=
+    ⟨by decide, by decide, frame, ccode, by unfold CodeFar; decide +kernel,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  have inside : WIn layout 4096 128 256 := by
+    refine ⟨⟨(fun t => nomatch t), fun _ => ⟨by change 8192 ≤ 8192; decide, by change 8192 + 8 ≤ 8200; decide⟩, by decide⟩,
+      ?_, by decide, by decide, by decide⟩
+    constructor
+    · intro c c' hc hc' h
+      cases c with
+      | elem t => nomatch t
+      | glob g =>
+        cases c' with
+        | elem t => nomatch t
+        | glob g' => cases g; cases g'; rfl
+    · intro c hc
+      cases c with
+      | elem t => nomatch t
+      | glob _ => rfl
+  have hw : WeltAt memory layout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  have sync : SyncOK memory layout 4096 128 :=
+    ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+      (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
+  have around : Umf layout addresses target 1 memory 4096 128 256 :=
+    ⟨targets, by decide +kernel, by decide, sync, by decide⟩
+  have cert : ArgsCost layout 0 4 args world world (Env.nil : Env fixtureDecl []) 1 :=
+    .cons (ne := 1) (nr := 0) .nil .literal
+  have recursive := recursiveBlockCost.bindCall (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))) (he := rfl) (L := layout) (reserved := 0) (Γ := []) (Λ := [])
+    (f := (0 : fixtureDecl.Fn)) (P := program) (passes := 2) (args := args)
+    (σ₀ := world) (σ := world) (ρ := Env.nil) (na := 1) (nq := 1) (nb := 6) (declared := 12)
+    (A := addresses) (C := target)
+    (Ks := 128) (top := 14) (dv := 1) (V := vertragVon fixtureDecl 0) (l := false)
+    (rest := Block.nil) (nr := 0)
+    (ρ' := Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil)
+    (hp := {
+      hw := fun t => nomatch t
+      hg := fun _ h => h
+      hk := ⟨[], List.Perm.nil, List.Sublist.refl []⟩
+      hh := fun l => nomatch l })
+    (hr := rfl) cert (by decide +kernel) (by decide)
+    (by decide) (by decide) .truth
+    (by
+      intro ens hens snapshot
+      have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+      subst ens
+      exact .normal (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
+        (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl)
+    (by
+      intro cs hcs
+      have eq : cs = [] := Option.some.inj hcs.symm
+      subst cs
+      decide)
+    (by
+      intro ens hens snapshot
+      have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+      subst ens
+      rfl)
+    (.source .nil)
+  have joint := recursive.sound (lo := 4) (ens := ([], 4)) (pr := []) (ex := (0, 0))
+    (code := caller) (top := 10) rfl (by decide) inside (by decide)
+    (by intro j hj; cases hj) (by simpa [frei, FB] using pre) around hw
+  exact joint
+end BindCallProbe
 
 end Gabbro.Stage0.Senke
