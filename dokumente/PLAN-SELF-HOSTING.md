@@ -772,13 +772,19 @@ The normalization Runner simulation now has a single explicit head invariant
 (`Arithmetik/Simulation.lean`): actual code/frame/environment precondition,
 six state-slot reads, signed-word bounds, canonical remainder, exact scaled
 reconstruction, and conserved completed/remaining budget. The budget induction
-is proved **conditional on** actual target-exit and full-iteration simulations.
+is proved **conditional on** a full active-iteration simulation. The target-exit
+premise has been removed: `floatNormalizeLoopL_target_exit` executes the actual
+positive-fuel branch, signed comparison, temporary write and exit jump. It preserves
+all six state words, code, frame permissions, environment and world fact. This
+requires room for `base+6`, beyond the six state slots.
 It composes Runner traces and footprint agreement and returns the invariant,
 canonical output, a stopped/exhausted condition and transfer-count bounds.
 The actual emitted final instruction is separately proved to jump back to the
 head with memory unchanged. This does not prove the full loop: the active body
 (including both branches, writes and counter tail) must still re-establish the
-head invariant, and the target exit must still be executed. Exact instruction
+head invariant. Its resource proof must also derive a total-budget bound: the
+separate signed-word bounds on count and fuel alone do not ensure that count+1
+remains below 2^63. Exact instruction
 cost, IEEE round/pack, arbitrary-reserved full finite add/sub and range 107 remain
 open. The hook remains disabled; computed `floatOf` is unchanged. No grammar
 semantics or goal theorem was changed.

@@ -69,22 +69,113 @@ theorem floatNormalizeLoopL_backedge
 
 #print axioms floatNormalizeLoopL_backedge
 
-/-- Central induction, with the two remaining emitted-code obligations explicit:
-    target exit and a complete active iteration returning to the same PC.
-    Neither obligation is an axiom or an implementation of the missing proof.
+set_option maxHeartbeats 800000 in
+/-- Execute the emitted target test and exit. Only the comparison temporary
+    changes; all six state words, frame permissions, code and environment survive. -/
+theorem floatNormalizeLoopL_target_exit
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K) (positive : 0 < fuel) (stopped : target ≤ q) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16*code.length), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel count distance q r := by
+  have h := head.pre
+  have shape : 2 < code.length ∧
+      code[1]? = some (ci 13 (base+6) base (base+3)) ∧
+      code[2]? = some (ci 19 (base+6) ((16*(code.length-2) : Nat) : Int) 0) ∧
+      lit32 (16*(code.length-2 : Nat)) = true := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    norm_num [bin2, lit32]
+  have ins1 := h.code 1 (by omega)
+  have ins2 := h.code 2 shape.1
+  have e1 : code[1] = ci 13 (base+6) base (base+3) := by
+    simpa only [List.getElem?_eq_getElem (by omega : 1 < code.length), Option.some.injEq] using shape.2.1
+  have e2 : code[2] = ci 19 (base+6) ((16*(code.length-2) : Nat) : Int) 0 := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2.2.1
+  rw [e1] at ins1
+  simp only [ci] at ins1
+  rw [e2] at ins2
+  have small := h.small
+  have entry := floatNormalizeLoopL_positive_entry hc h (by omega) head.readFuel
+    (by intro eq; have fw := head.fuelWord; have := congrArg BitVec.toNat eq; change fuel % 2^64 = 0 at this;  omega)
+  let next := write m (slot fp (BitVec.ofNat 64 (base+6))) 8 0
+  have ag : Agree fp (base+6) K m next := agree_write h.frame.room (by omega) room 0
+  have comparisonZero : Runner.IR.bool ((BitVec.ofInt 64 q).slt (BitVec.ofInt 64 target)) = 0 := by
+    rw [slt_in (by have := head.quotient; constructor <;> omega)
+      (by have := head.targetBound; constructor <;> omega)]
+    simp [Runner.IR.bool, show ¬ q < target by omega]
+  have sx0 : sx (II.f (base : Int)) = BitVec.ofNat 64 base := sx_nat (by omega)
+  have sx3 : sx (II.f ((base : Int)+3)) = BitVec.ofNat 64 (base+3) := by
+    exact_mod_cast (sx_nat (d := base+3) (by omega))
+  have sx6 : sx (II.f ((base : Int)+6)) = BitVec.ofNat 64 (base+6) := by
+    exact_mod_cast (sx_nat (d := base+6) (by omega))
+  have compare : Run (step ⟨pc+16, fp⟩) m ⟨pc+32, fp⟩ next := by
+    have ra : m.rd64 (slot fp (sx (II.f (base : Int)))) = some (BitVec.ofInt 64 q) := by
+      rw [sx0]; exact head.readQ
+    have rb : m.rd64 (slot fp (sx (II.f ((base : Int)+3)))) = some (BitVec.ofInt 64 target) := by
+      rw [sx3]; exact head.readTarget
+    have wr : m.wr64 (slot fp (sx (II.f ((base : Int)+6)))) 0 = some next := by
+      rw [sx6]; exact wr64_some (h.frame.wr (base+6) room)
+    have run := run_step (t := ⟨pc+16, fp⟩) ins1 (by decide)
+      (run_bin (g := fun a b => some (Runner.IR.bool (a.slt b))) ins1 ra rb
+        (congrArg some comparisonZero) wr)
+    simpa only [nxt, show (16 : Runner.W)+16 = 32 from rfl, BitVec.add_assoc] using run
+  have codeNext := h.code.agree ag h.far
+  have insNext := codeNext 2 shape.1
+  rw [e2] at insNext
+  simp only [ci] at insNext
+  have readZero : next.rd64 (slot fp (BitVec.ofNat 64 (base+6))) = some 0 := by
+    change (write m (slot fp (BitVec.ofNat 64 (base+6))) 8 (0 : Runner.W).toNat).rd64 _ = _
+    simp only [Runner.Mem.rd64, write_rd, h.frame.rd (base+6) room, ↓reduceIte,
+      le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+  have jump := run_step (t := ⟨pc + BitVec.ofNat 64 (16*2), fp⟩) insNext (by decide)
+    (run_brz_zero (t := ⟨pc + BitVec.ofNat 64 (16*2), fp⟩) insNext
+      (by rw [sx6]; exact readZero))
+  have offset : sx (II.f ((16*(code.length-2) : Nat) : Int)) =
+      BitVec.ofNat 64 (16*(code.length-2)) := by
+    rw [sx_lit (by simpa only [Nat.cast_mul, Nat.cast_ofNat] using shape.2.2.2)]
+    exact BitVec.ofInt_natCast 64 _
+  have pcEnd : pc + BitVec.ofNat 64 (16*2) + BitVec.ofNat 64 (16*(code.length-2)) =
+      pc + BitVec.ofNat 64 (16*code.length) := by
+    rw [BitVec.add_assoc, ← BitVec.ofNat_add]
+    congr 2
+    omega
+  have exitRun : Run (step ⟨pc+32, fp⟩) next
+      ⟨pc + BitVec.ofNat 64 (16*code.length), fp⟩ next := by
+    have pcEnd32 : pc + 32 + BitVec.ofNat 64 (16*(code.length-2)) =
+        pc + BitVec.ofNat 64 (16*code.length) := pcEnd
+    simpa only [ci, offset, show BitVec.ofNat 64 (16*2) = (32 : Runner.W) from rfl, pcEnd32] using jump
+  have preNext : Pre L next pc fp K base code ρ W reserved :=
+    ⟨h.ctx, h.small, h.frame.agree ag, codeNext, h.far,
+      envAt_agree h.env ag h.frame (by have := h.ctx; omega) (by omega),
+      h.wstab m next h.welt (ag.mono (by omega)), h.wstab⟩
+  refine ⟨next, (Star.one entry).trans ((Star.one compare).trans (Star.one exitRun)),
+    ag.mono (by omega), ?_⟩
+  have reads (i : Nat) (hi : i < base+6) := agree_rd_low ag h.frame.room hi (by omega)
+  exact { head with pre := preNext
+                    readQ := by rw [reads base (by omega)]; exact head.readQ
+                    readR := by rw [reads (base+1) (by omega)]; exact head.readR
+                    readDistance := by rw [reads (base+2) (by omega)]; exact head.readDistance
+                    readTarget := by rw [reads (base+3) (by omega)]; exact head.readTarget
+                    readFuel := by rw [reads (base+4) (by omega)]; exact head.readFuel
+                    readCount := by rw [reads (base+5) (by omega)]; exact head.readCount }
+
+#print axioms floatNormalizeLoopL_target_exit
+
+/-- Central induction, with the complete active iteration still explicit.
+    The target exit is discharged by actual emitted execution above.
+    The iteration premise is not an implementation of the missing proof.
     In particular a word-arithmetic lemma alone cannot discharge `iteration`:
     it must supply actual Runner execution and re-establish the entire head.
     This theorem is not sufficient to enable the lowering hook. -/
 theorem floatNormalizeLoopL_induction
     (hc : floatNormalizeLoopL base = some (code, top))
-    (targetExit : ∀ m fuel count distance q r,
-      FloatNormalizeHead L ρ W pc fp K base reserved code origin
-        originDistance budget target m fuel count distance q r →
-      0 < fuel → target ≤ q →
-      ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16*code.length), fp⟩ m' ∧
-        Agree fp base K m m' ∧
-        FloatNormalizeHead L ρ W pc fp K base reserved code origin
-          originDistance budget target m' fuel count distance q r)
+    (room : base+6 < K)
     (iteration : ∀ m n count distance q r,
       FloatNormalizeHead L ρ W pc fp K base reserved code origin
         originDistance budget target m (n+1) count distance q r → q < target →
@@ -117,7 +208,7 @@ theorem floatNormalizeLoopL_induction
         finalHead, stop, by omega, upper⟩
     · have stopped : target ≤ q := by omega
       obtain ⟨last, run, agree, finalHead⟩ :=
-        targetExit m (n+1) count distance q r head (by omega) stopped
+        floatNormalizeLoopL_target_exit hc head room (by omega) stopped
       exact ⟨last, n+1, count, distance, q, r, run, agree, finalHead,
         Or.inr stopped, Nat.le_refl _, by have := head.conservedBudget; omega⟩
 
