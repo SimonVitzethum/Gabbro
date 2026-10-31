@@ -2453,8 +2453,11 @@ theorem floatNormalizeLoopL_iteration
       floatNormalizeLoopL_small_iteration hc head room ceiling (by omega) active
     exact ⟨m', _, _, _, run, agree, next⟩
 
-/-- Whole emitted Runner loop: the central induction's iteration premise is
-    discharged by actual instruction execution for both branches. -/
+/-- The complete emitted loop returns the Euclidean quotient and exact remainder
+    of the original magnitude at the final scale. The common power-of-two
+    factor is mathematical only: even very large distances require no wide
+    machine denominator. This connects actual execution to canonical rounding
+    without assuming the values of either output slot. -/
 theorem floatNormalizeLoopL_complete
     (hc : floatNormalizeLoopL base = some (code, top)) (room : top ≤ K)
     {m : Runner.Mem} {fuel distance : Nat} {q r : Int}
@@ -2465,18 +2468,31 @@ theorem floatNormalizeLoopL_complete
       Agree fp base K m m' ∧
       FloatNormalizeHead L ρ W pc fp K base reserved code origin
         originDistance budget target m' fuel' count' distance' q' r' ∧
-      (fuel' = 0 ∨ target ≤ q') ∧ 0 ≤ count' ∧ count' ≤ budget := by
+      (fuel' = 0 ∨ target ≤ q') ∧ count' ≤ budget ∧
+      (origin * 2^(count'+distance')) / (2^(distance'+originDistance) : Int) = q' ∧
+      (origin * 2^(count'+distance')) % (2^(distance'+originDistance) : Int) =
+        r' * 2^originDistance := by
   have slots : base+6 < K := by
     unfold floatNormalizeLoopL at hc
     simp [floatNormalizeStepL, wordL] at hc
     obtain ⟨rfl, rfl⟩ := hc
     norm_num [bin2] at room
     omega
-  exact floatNormalizeLoopL_induction hc slots
-    (fun _ _ _ _ _ _ h a => floatNormalizeLoopL_iteration hc room
-      head.initial_budget_bound h a) head
+  obtain ⟨m', f, c, d, a, b, run, agree, finalHead, stop, _, bound⟩ :=
+    floatNormalizeLoopL_induction hc slots
+      (fun _ _ _ _ _ _ h a => floatNormalizeLoopL_iteration hc room
+        head.initial_budget_bound h a) head
+  refine ⟨m', f, c, d, a, b, run, agree, finalHead, stop, bound, ?_⟩
+  have positive : (0 : Int) < 2^originDistance := Int.pow_pos (by decide)
+  apply (Int.ediv_emod_unique (Int.pow_pos (by decide))).mpr
+  refine ⟨?_, Int.mul_nonneg finalHead.remainder.1 (by omega), ?_⟩
+  · calc
+      b * 2^originDistance + 2^(d+originDistance) * a =
+          (a * 2^d + b) * 2^originDistance := by rw [pow_add]; ring
+      _ = origin * 2^(c+d) := finalHead.reconstruction
+  · rw [pow_add]
+    exact Int.mul_lt_mul_of_pos_right finalHead.remainder.2.2 positive
 
-#print axioms floatNormalizeLoopL_iteration
 #print axioms floatNormalizeLoopL_complete
 
 end

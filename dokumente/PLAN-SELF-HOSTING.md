@@ -768,64 +768,33 @@ First step (Simon, 2026-10-25): complete GabbroV so that full logic proofs of Ga
 §3.4 and §4 rest on.
 
 
-The normalization Runner simulation now has a single explicit head invariant
+The normalization Runner simulation uses one explicit head invariant
 (`Arithmetik/Simulation.lean`): actual code/frame/environment precondition,
 six state-slot reads, signed-word bounds, canonical remainder, exact scaled
-reconstruction, and conserved completed/remaining budget. The budget induction
-is proved **conditional on** a full active-iteration simulation. The target-exit
-premise has been removed: `floatNormalizeLoopL_target_exit` executes the actual
-positive-fuel branch, signed comparison, temporary write and exit jump. It preserves
-all six state words, code, frame permissions, environment and world fact. This
-requires room for `base+6`, beyond the six state slots.
-It composes Runner traces and footprint agreement and returns the invariant,
-canonical output, a stopped/exhausted condition and transfer-count bounds.
-The actual emitted final instruction is separately proved to jump back to the
-head with memory unchanged. This does not prove the full loop: the active body
-(including both branches, writes and counter tail) must still re-establish the
-head invariant. The active prefix is now executed through the actual budget
-branch, signed target comparison and nonzero branch to `pc+48`, preserving the
-complete head (including all six reads, fetch, permissions, environment and world).
-The continuation now starts at that exact `pc+48` boundary: threshold load,
-signed distance comparison and actual conditional branch execute to `pc+96`
-when `61 < distance`, or `pc+352` otherwise. `active_dispatch` composes these
-steps and retains the complete head and footprint agreement. It does not
-restart entry or assume an active iteration. Both actual transfer-entry loads
-are now proved by `transfer_entry`: the large path reaches `pc+112` with factor
-two and the small path reaches `pc+368` with seed one. `small_denominator`
-executes the real shift to `pc+384`, proving the exact denominator word
-`BitVec.ofInt 64 (2^distance)` for every distance at most 61. `small_dispatch`
-connects the retained `pc+48` boundary through that shift. These steps preserve
-the full head and all six state reads. `large_double` now executes the actual
-quotient multiplication at `pc+112`, writes exactly `2*q`, proves its signed
-word bound under the active target, and preserves every other frame-slot read
-and the full `Pre` contract. `large_dispatch` connects the retained `pc+48`
-boundary to `pc+128` with the updated quotient and all five other state reads.
-This boundary does not assert the old head after changing the quotient.
-`large_distance` executes the actual seed load and subtraction at `pc+128`,
-writing exactly `distance-1` and retaining every frame read other than distance
-and scratch. It requires the current `Pre`, rather than the obsolete head.
-`large_distance_dispatch` connects `pc+48` through `pc+160`, retaining the doubled
-quotient, exact remainder, target, fuel and count alongside the new distance.
-The pending execution starts at `pc+160`
-for the large path (threshold test, optional carry) and
-at `pc+384` for the small path (both adaptive expressions). State copies,
-counter increment, fuel decrement, head restoration with changed canonical
-state, and composition with the proved backedge remain open. The central induction still explicitly
-requires that missing execution. Direct checks of `Simulation` and `Proben`
-pass on the existing dependency oleans; the new continuation proofs use only
-`propext`, `Classical.choice`, and `Quot.sound`. Regeneration and execution of
-291 actual Runner images reports zero failures; layout and whitespace checks
-pass. Earlier logs are retained in `.scratch-compose/active-dispatch-final.log`;
-transfer continuation validation is in `.scratch-compose/transfer-final-fixed.log`.
-Connected quotient-update validation is in `.scratch-compose/large-double-final.log`.
-Connected distance-update validation is in `.scratch-compose/large-distance-final.log`.
-The resource lemmas derive the
-total-budget ceiling from an initial zero count and the existing fuel bound;
-conservation then bounds the next count and decremented fuel and preserves their
-sum. A generic head with separate count/fuel bounds still does not imply the
-total ceiling; the eventual full-loop theorem must carry the initially derived
-ceiling through induction. No universal body assumption has been substituted for
-the missing execution. Exact instruction
-cost, IEEE round/pack, arbitrary-reserved full finite add/sub and range 107 remain
-open. The hook remains disabled; computed `floatOf` is unchanged. No grammar
-semantics or goal theorem was changed.
+reconstruction, and conserved completed/remaining budget. Both complete active
+paths (LARGE, including the boundary carry, and SMALL), state copies, counter
+updates and actual backedge are proved. `floatNormalizeLoopL_complete` therefore
+executes the whole emitted loop without an assumed iteration simulation. It
+returns the full head, footprint agreement, stopped/exhausted condition and
+transfer-count bounds for arbitrary reserved prefixes. The initial fuel bound
+and budget conservation discharge subsequent counter bounds.
+
+The same theorem additionally derives the final
+Euclidean quotient and exact remainder directly from that execution: for final
+count `c`, distance `d`, quotient `q`, remainder `r`, original magnitude `n` and
+original distance `k`, the numerator `n * 2^(c+d)` divided by `2^(d+k)` has
+quotient `q` and remainder `r * 2^k`. These mathematical factors are never
+materialized in machine words. The concrete nonzero-tail memory witness also
+instantiates this strengthened whole-loop theorem with a nonzero reserved
+prefix. This is the canonical arithmetic boundary for the rounding connection;
+it does not yet execute that continuation.
+
+Remaining finite-adder gaps: derive every initial head bound and state read from
+the actual format/operand alignment and magnitude producers; compose the actual
+loop exit with guard/sticky selection and IEEE round/pack (normal, top-exponent
+overflow, subnormal and zero); prove the combined fragment's temporary, resource
+and instruction-cost bounds; connect special dispatch, range 107 and the generic
+Block constructor proofs. Separate output-stage proofs already exist, but they
+are not a complete finite-adder execution theorem. Add/sub remain refused and
+the computed `floatOf` hook is unchanged. No grammar semantics or goal theorem
+was changed.

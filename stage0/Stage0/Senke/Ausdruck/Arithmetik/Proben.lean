@@ -500,8 +500,8 @@ theorem normalizationLoopHead_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     by decide +kernel, by decide +kernel, by decide +kernel,
     by decide, by norm_num⟩
 
-/-- The real whole-loop theorem applies with jointly satisfied premises,
-    a nonzero remainder, multiple transfers and a nonzero reserved prefix. -/
+/-- Canonical outputs and actual whole-loop execution hold jointly on a
+    nonzero tail, a nonzero reserved prefix and several normalization steps. -/
 theorem floatNormalizeLoopL_complete_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     ∃ m' fuel' count' distance' q' r',
       Star ⟨0, 4294967296⟩ normalizationWitnessMemory
@@ -510,9 +510,11 @@ theorem floatNormalizeLoopL_complete_zeuge [Kern] {D : Deklaration} (L : Lay D) 
       FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
         0 4294967296 64 16 7 normalizationWitnessCode 13 4 20 8
         m' fuel' count' distance' q' r' ∧
-      (fuel' = 0 ∨ 8 ≤ q') ∧ 0 ≤ count' ∧ count' ≤ 20 := by
-  have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode, ((floatNormalizeLoopL 16).getD ([], 0)).2) := by
-    decide +kernel
+      (fuel' = 0 ∨ 8 ≤ q') ∧ count' ≤ 20 ∧
+      (13 * 2^(count'+distance') : Int) / 2^(distance'+4) = q' ∧
+      (13 * 2^(count'+distance') : Int) % 2^(distance'+4) = r' * 2^4 := by
+  have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
+      ((floatNormalizeLoopL 16).getD ([], 0)).2) := by decide +kernel
   simpa using floatNormalizeLoopL_complete hc (by decide +kernel)
     (normalizationLoopHead_zeuge L)
 
