@@ -38,7 +38,7 @@ shared foundation is green, without exceeding six active implementation agents.
 
 **Latest Lean scheduling rule:** Up to four global concurrent Lean checks, each capped at 5 GiB
 (MemoryHigh=4G, MemoryMax=5G, MemorySwapMax=0), supersede the earlier single-check rules below.
-Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..4. IR-01/08 share slot 1,
+Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..4. IR-01/06 share slot 1,
 IR-02 uses slot 2, IR-03 uses slot 3, IR-04/10 share slot 4. Release per module/check, preserve artifact
 isolation and one check per worktree. No grammar rebuild. IR-03 foundation publication has priority
 within its slot because consumers depend on it.
@@ -606,3 +606,12 @@ IR-09 published checked lock reason-arm lowering as `e67b53dc8`. It remains inco
 shared lock holding, function returns under locks, full GX composition and dependent ABI/root integration.
 Its active slot now implements IR-10 functions/calls/snapshots; it shares Lean slot 4 with IR-04.
 This is a worker handoff, not completion of IR-09. Root integrates the coherent green checkpoint separately.
+
+## Rolling worker handoff: control checkpoint
+
+IR-08 published coherent `4ccced168`, including the source-empty-table adapter and genuine large-count
+source fixtures. It remains incomplete pending common interval-test deduplication and multiword children.
+Its active slot now implements IR-06 memory/byte/reference lowering and shares Lean slot 1 with IR-01.
+IR-03 retains frame/call ABI ownership; existing world-layout/relation changes require explicit coordination
+before IR-06 mutates shared definitions. The certified producer-v1 pair is immutable preparation evidence,
+not a public full-ABI integration milestone.
