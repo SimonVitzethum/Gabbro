@@ -262,3 +262,10 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatFieldWord_canonical
 #print axioms Gabbro.Stage0.Senke.floatFieldL_ok
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatFieldL_joint_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatCoefficientWord_canonical
+#print axioms Gabbro.Stage0.Senke.floatCoefficient_exact
+#print axioms Gabbro.Stage0.Senke.floatCoefficientL_ok
+#print axioms Gabbro.Stage0.Senke.floatCoefficientL_shape
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatCoefficientL_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.coefficientImages_zeuge

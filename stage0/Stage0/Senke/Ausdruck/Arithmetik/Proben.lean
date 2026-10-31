@@ -1,5 +1,5 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Felder
+import Stage0.Senke.Ausdruck.Arithmetik.Signifikand
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
@@ -33,6 +33,46 @@ def fieldImages : List (String × Except String (List Runner.B) × Nat) :=
     (fun (name, input, offset, width, expected) =>
       (name, FloatArithmeticProbe.wordImage
         (floatFieldL offset width 8 (fun d => some (konstWL 4 input d))) expected, 7))
+
+/-- Production coefficient decoding at the normal/subnormal and sign edges. -/
+def coefficientImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("coefficient-positive-zero", 0, 0),
+   ("coefficient-negative-zero", 0x8000000000000000, 0),
+   ("coefficient-min-subnormal", 1, 1),
+   ("coefficient-negative-min-subnormal", 0x8000000000000001, 2^64-1),
+   ("coefficient-max-subnormal", 0x000fffffffffffff, 2^52-1),
+   ("coefficient-min-normal", 0x0010000000000000, 2^52),
+   ("coefficient-negative-normal", 0xbff0000000000009, 2^64-(2^52+9)),
+   ("coefficient-max-finite", 0x7fefffffffffffff, 2^53-1)].map
+    (fun (name, input, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatCoefficientL 8 (fun d => some (konstWL 4 input d))) expected, 7))
+
+theorem coefficientImages_zeuge : coefficientImages.length = 8 ∧
+    coefficientImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+/-- Model, producer, actual simulation and exact sizes hold jointly for a
+    negative finite normal with a nonzero low significand. -/
+theorem floatCoefficientL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    let a : GFloat := ⟨true, 1023, 9⟩
+    let producer := fun d => some (konstWL 4 (Gleitkomma.zuBits _ a) d)
+    Gleitkomma.wf Gleitkomma.f64 a ∧
+    Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨-(2^52+9), -52⟩ ∧
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun d => floatCoefficientL d producer) (BitVec.ofInt 64 (-(2^52+9))) ∧
+    ∃ code, floatCoefficientL 8 producer = some (code, 14) ∧ code.length = 139 := by
+  dsimp only
+  refine ⟨by decide, by decide, ?_, ?_⟩
+  · have hc := floatCoefficientWord_canonical (⟨true, 1023, 9⟩ : GFloat) (by decide)
+    change floatCoefficientWord (BitVec.ofNat 64 0xbff0000000000009) =
+      BitVec.ofInt 64 (-(2^52+9)) at hc
+    rw [← hc]
+    intro fp K d c top h hK m pc hp
+    exact floatCoefficientL_ok (L := L) (ρ := (Env.nil : Env D []))
+      (W := fun _ => True) (WordCode.konst 0xbff0000000000009 (by decide)) h hK m pc hp
+  · refine ⟨((floatCoefficientL 8 (fun d => some
+        (konstWL 4 0xbff0000000000009 d))).getD ([], 0)).1, ?_, ?_⟩ <;> decide +kernel
 
 theorem fieldImages_zeuge : fieldImages.length = 8 ∧
     fieldImages.all (fun x => x.2.1.isOk) = true := by
