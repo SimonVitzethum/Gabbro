@@ -1426,7 +1426,8 @@ theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
     (frame : FrameOK m fp K) (small : K < 2 ^ 31)
     (abi : 2 < lo) (room : lo + 1 < K) (reason : r < 2 ^ 31)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
-    ∃ m', Counted 3 ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' := by
+    ∃ m', Counted 3 ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0 := by
   have first := const_step_counted (codeAt_left (a := [ci 1 2 r 0]) code)
     frame (j := 2) (k := r) (by omega) small (by simp [lit32]; omega)
   let m1 := write m (slot fp (BitVec.ofNat 64 2)) 8 (BitVec.ofInt 64 (r : Int)).toNat
@@ -1450,7 +1451,8 @@ theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
     simpa [slot] using h.trans (by simpa [slot] using savedFP)
   have last : Counted 1 ⟨pc + 16 + 16, fp⟩ m2 ⟨rp, cfp⟩ m2 :=
     .next (run_step ins (by decide) (run_ret rpc rfp)) (.refl _ _)
-  exact ⟨m2, (first.trans (by simpa [m1, m2] using second)).trans last⟩
+  refine ⟨m2, (first.trans (by simpa [m1, m2] using second)).trans last, a1.trans a2, ?_⟩
+  exact rd_same frame1 room 0
 
 /-- Recursive terminal certificates. Counts are S0IR instructions, independent
     of source passes and G steps. The bases execute normal and reason returns; prefixes
@@ -1481,6 +1483,18 @@ inductive EndCost (L : Lay D) (reserved : Nat) (V : Vertrag D) (l : Bool) (Δ : 
       (tail : EndCost L reserved V l Δ snapshot ens lo rest σ (.cons v ρ) nr) :
       EndCost L reserved V l Δ snapshot ens lo (.bind e rest) σ ρ (ne + nr)
 
+/-- The source certificate determines the returned value and status at the counted endpoint. -/
+def EndCost.Post {Δ snapshot ens lo V l Γ Λ b σ ρ n}
+    (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n)
+    (fp : W) (m : Mem) : Prop :=
+  match certificate with
+  | .reason => m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0
+  | .normal (v := v) _ _ _ _ _ =>
+      ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ Enc L _ v w ∧
+        m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1
+  | .assign _ tail => tail.Post fp m
+  | .bind _ tail => tail.Post fp m
+
 /-- Structural induction discharges recursive terminal executions. No complete
     body execution or complete body cost is a premise. ABI reads are preserved
     across each prefix by the existing frame agreement theorems. -/
@@ -1500,7 +1514,8 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
     (base : lo = frei Δ)
     (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
-    ∃ m', Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' := by
+    ∃ m', Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧ certificate.Post fp m' ∧ AgreeW L fp 2 K m m' ∧
+      FrameOK m' fp K ∧ m'.rd64 fp = some rp ∧ m'.rd64 (fp + 8) = some cfp ∧ WeltAt m' L σ := by
   have hks := inside.ks
   induction certificate generalizing top code m pc ex with
   | reason =>
@@ -1508,8 +1523,14 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
     split at lower
     next accepted =>
       cases lower
-      exact returnWhy_counted pre.code pre.far pre.frame pre.small (by omega)
+      obtain ⟨m', run, agree, flag⟩ := returnWhy_counted pre.code pre.far pre.frame pre.small (by omega)
         (by simp only [retTop] at fits; have := inside.ks; omega) accepted savedPC savedFP
+      refine ⟨m', run, flag, agreeW_of agree, pre.frame.agree agree, ?_, ?_, ?_⟩
+      · have h := agree_rd_low (i := 0) agree pre.frame.room (by decide) (by omega)
+        simpa [slot] using h.trans (by simpa [slot] using savedPC)
+      · have h := agree_rd_low (i := 1) agree pre.frame.room (by decide) (by omega)
+        simpa [slot] using h.trans (by simpa [slot] using savedFP)
+      · exact weltAt_stab inside.lay (by have := inside.top; omega) m m' world (agree.mono (by decide))
     next refused => simp at lower
   | @normal Γ Λ τ e σ ρ v ne nq Ξ q typed proof value post lowerPost =>
     have herg : ∀ {rt : Option Ty} (h : rt = some τ),
@@ -1522,12 +1543,12 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
       Option.some.injEq] at lower
     obtain ⟨⟨ce, te⟩, he, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
-    obtain ⟨m', w, run, _⟩ := normalRet_counted value post he lowerPost
+    obtain ⟨m', w, run, read, enc, flag, agree, frame, rpc, rfp, hw⟩ := normalRet_counted value post he lowerPost
       (Nat.le_trans (Nat.le_trans (Nat.le_max_left _ _) fits) inside.ks)
       (Nat.le_trans (Nat.le_trans (Nat.le_max_left _ _) (Nat.le_trans (Nat.le_max_right _ _) fits)) inside.ks)
       pre parameterEnv base low abi
       (by simp only [retTop] at fits; omega) entry savedPC savedFP
-    exact ⟨m', run⟩
+    exact ⟨m', run, ⟨w, read, enc, flag⟩, agreeW_of agree, frame, rpc, rfp, hw σ inside.lay (by have := inside.top; omega) world⟩
   | assign value tail ih =>
     simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, out⟩ := lower
@@ -1548,11 +1569,11 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
     have rfp : m1.rd64 (fp + 8) = some cfp := by
       have h := agreeW_rdW inside agree1 (i := 1) (by omega) hK
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
-    obtain ⟨m2, run2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits)
+    obtain ⟨m2, run2, post, finalAgree, frame, rpc, rfp, hw⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits)
       low hprotected nextPre world1
       (envAt_agreeWIn inside parameterEnv agree1 (by omega) lowBound)
       (by rw [agreeW_rdW inside agree1 (i := 3) (by omega) lowBound]; exact entry) rpc rfp
-    exact ⟨m2, run1.trans run2⟩
+    exact ⟨m2, run1.trans run2, post, (agree1.mono (by omega)).trans finalAgree, frame, rpc, rfp, hw⟩
   | @bind Γ Λ τ e rest σ ρ v ne nr value tail ih =>
     simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, out⟩ := lower
@@ -1575,13 +1596,13 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
     have rfp : m1.rd64 (fp + 8) = some cfp := by
       have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
-    obtain ⟨m2, run2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits)
+    obtain ⟨m2, run2, post, finalAgree, frame, rpc, rfp, hw⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits)
       (by simp only [frei, List.length_cons] at low ⊢; omega)
       (fun j hj => by have := hprotected j hj; simp only [frei, List.length_cons] at this ⊢; omega)
       nextPre (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _)))
       (envAt_agree parameterEnv a1 pre.frame (by omega) (by omega))
       (by rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry) rpc rfp
-    exact ⟨m2, run1.trans run2⟩
+    exact ⟨m2, run1.trans run2, post, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, rpc, rfp, hw⟩
 
 namespace EndCostProbe
 open FnptrProben
@@ -1625,8 +1646,9 @@ theorem endCost_sound_zeuge :
   let v : Wert FnptrProben.D (.int 2 2) := ⟨2, by decide, by decide⟩
   have cert : EndCost callLayout 0 contract false [] 64 ([], 6) 4 body world .nil 6 :=
     .bind (v := v) .literal (.assign (v := v) .literal .reason)
-  exact cert.sound lower (by decide) call_win (by decide) (by decide) (by decide)
+  obtain ⟨mout, run, _⟩ := cert.sound (rp := 2048) (cfp := 8192) lower (by decide) call_win (by decide) (by decide) (by decide)
     (by intro j hj; cases hj) pre hw .nil (fun _ x => nomatch x) rfl (by decide +kernel) (by decide +kernel) (by decide +kernel)
+  exact ⟨mout, run⟩
 end EndCostProbe
 
 namespace NormalEndCostProbe
@@ -1646,7 +1668,11 @@ def memory : Mem :=
 /-- Binding, assignment and terminal return satisfy all simulation premises
     jointly; the execution includes three prefix instructions followed by a six-instruction normal return. -/
 theorem endCost_sound_zeuge :
-    ∃ m', Counted 9 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' := by
+    ∃ m', Counted 9 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' ∧
+      (∃ w, m'.rd64 4112 = some w ∧ Enc callLayout (.int 37 37)
+        (⟨37, by decide, by decide⟩ : Wert FnptrProben.D (.int 37 37)) w ∧ m'.rd64 4136 = some 1) ∧
+      FrameOK m' 4096 256 ∧ m'.rd64 4096 = some 2048 ∧
+      m'.rd64 4104 = some 8192 ∧ WeltAt m' callLayout world := by
   have lower : lowEnd 2 addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) body =
       some (image, 13) := by decide +kernel
   have code : CodeAt memory 0 image := by
@@ -1669,12 +1695,13 @@ theorem endCost_sound_zeuge :
     cases g
     decide +kernel
   let v : Wert FnptrProben.D (.int 37 37) := ⟨37, by decide, by decide⟩
-  have cert : EndCost callLayout 0 contract false [] 64 ([ci 1 5 1 0], 6) 4 body world .nil 9 :=
+  let cert : EndCost callLayout 0 contract false [] 64 ([ci 1 5 1 0], 6) 4 body world .nil 9 :=
     .bind (v := v) .literal (.assign (v := v) .literal
       (.normal (v := v) (q := Expr.tru (Λ := [])) rfl (by decide)
         .literal (.ordinary rfl .truth) rfl))
-  exact cert.sound lower (by decide) call_win (by decide) (by decide) (by decide)
+  obtain ⟨mout, run, post, _agree, frame, rpc, rfp, hw⟩ := cert.sound (rp := 2048) (cfp := 8192) lower (by decide) call_win (by decide) (by decide) (by decide)
     (by intro j hj; cases hj) pre hw .nil (fun _ x => nomatch x) rfl (by decide +kernel) (by decide +kernel) (by decide +kernel)
+  exact ⟨mout, run, by simpa [cert, EndCost.Post, slot] using post, frame, rpc, rfp, hw⟩
 end NormalEndCostProbe
 
 /-- Successful full function execution derives its instruction count from
@@ -1695,7 +1722,10 @@ theorem lowFun_counted {P : Programm D} {A : D.Fn → Nat} {L : Lay D} {f : D.Fn
     (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
     (savedFP : m.rd64 (fp + 8) = some cfp)
     (depthRead : m.rd64 (slot fp 2) = some depth) (positive : depth ≠ 0) :
-    ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' := by
+    ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
+      (∃ ens, ∃ hens : lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens,
+        ∃ snapshot, (body ens hens snapshot).Post fp m') ∧
+      AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ m'.rd64 fp = some rp ∧ m'.rd64 (fp + 8) = some cfp ∧ WeltAt m' L σ := by
   have hks := inside.ks
   simp only [lowFun] at lower
   split at lower
@@ -1751,12 +1781,12 @@ theorem lowFun_counted {P : Programm D} {A : D.Fn → Nat} {L : Lay D} {f : D.Fn
     have rfp : mR.rd64 (fp + 8) = some cfp := by
       have h := agree_rd_low (i := 1) all pre.frame.room (by decide) (by omega)
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
-    obtain ⟨m', rb⟩ := (body ens hens (rdW mR fp 3)).sound hb (by omega) inside
+    obtain ⟨m', rb, post, bodyAgree, frame, finalPC, finalFP, finalWorld⟩ := (body ens hens (rdW mR fp 3)).sound hb (by omega) inside
       (by simp only [frei]; omega) (by simp only [FB]; omega) (by omega)
       (fun _ h => nomatch h) bodyPre worldR ρ original rfl
       (rd64_rdW (hfS.agree ar) (by omega)) rpc rfp
     simp only [relocateC_length] at rb
-    refine ⟨_, m', declaration cs hcs, ?_⟩
+    refine ⟨_, m', declaration cs hcs, ?_, ⟨ens, hens, _, post⟩, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalPC, finalFP, finalWorld⟩
     simpa [s, pc_add, relocateC_length, List.length_append, Nat.add_assoc] using
       first.trans (rq.trans (rs.trans (rr.trans rb)))
   next refused => simp at lower
@@ -1797,7 +1827,8 @@ def memory : Mem :=
 
 /-- The full lowered function has a nonzero result and distinct caller header. -/
 theorem lowFun_counted_zeuge :
-    ∃ n m', n ≤ 12 ∧ Counted n ⟨0, 4096⟩ memory ⟨2048, 16384⟩ m' := by
+    ∃ n m', n ≤ 12 ∧ Counted n ⟨0, 4096⟩ memory ⟨2048, 16384⟩ m' ∧
+      FrameOK m' 4096 256 ∧ WeltAt m' layout world := by
   have lower : lowFun 2 program addresses layout 0 = some (image, 14) := by decide +kernel
   have code : CodeAt memory 0 image := by
     have h : ∀ k : Fin image.length,
@@ -1832,23 +1863,33 @@ theorem lowFun_counted_zeuge :
     refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
     cases g
     decide +kernel
-  apply lowFun_counted (nq := 1) (nb := 6) (σ := world) (depth := 1)
+  have joint := lowFun_counted (declared := 12) (rp := 2048) (cfp := 16384) (nq := 1) (nb := 6) (σ := world) (depth := 1)
     (ρ := Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil) lower (by decide) inside .truth
-  · intro ens hens snapshot
-    have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
-    subst ens
-    exact .normal (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
-      (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
-  · intro cs hcs
-    have eq : cs = [] := Option.some.inj hcs.symm
-    subst cs
-    decide
-  · exact pre
-  · exact hw
-  · decide +kernel
-  · decide +kernel
-  · decide +kernel
-  · decide
+    (by
+      intro ens hens snapshot
+      have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+      subst ens
+      exact .normal (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
+        (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl)
+    (by
+      intro cs hcs
+      have eq : cs = [] := Option.some.inj hcs.symm
+      subst cs
+      decide)
+    (by
+      exact pre)
+    (by
+      exact hw)
+    (by
+      decide +kernel)
+    (by
+      decide +kernel)
+    (by
+      decide +kernel)
+    (by
+      decide)
+  obtain ⟨n, mout, bound, run, post, _agree, frame, rpc, rfp, hw⟩ := joint
+  exact ⟨n, mout, bound, run, frame, hw⟩
 end FullFunProbe
 
 
@@ -1876,12 +1917,20 @@ theorem ArgsCost.fullCall {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
     (surroundings : Umf L A C dv m fp Ks K)
     (inside : WIn L fp Ks K) (world : WeltAt m L σ) :
     ∃ n m', n ≤ na + 4 + declared ∧ Counted n ⟨pc, fp⟩ m
-      ⟨pc + BitVec.ofNat 64 (16 * (ca.length + 4)), fp⟩ m' := by
+      ⟨pc + BitVec.ofNat 64 (16 * (ca.length + 4)), fp⟩ m' ∧
+      (∃ ens, ∃ hens : lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens,
+        ∃ snapshot, (body ens hens snapshot).Post (slot fp (BitVec.ofNat 64 (frei Γ reserved))) m') ∧
+      AgreeW L fp (frei Γ reserved) K m m' ∧ FrameOK m' fp K ∧
+      FrameOK m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) =
+        some (pc + BitVec.ofNat 64 (16 * (ca.length + 4))) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved)) + 8) = some fp ∧
+      WeltAt m' L σ := by
   have hks := inside.ks
   have bounds := fitsArgs
   simp only [callTop] at bounds
   have hF : frei Γ reserved ≤ Ks := by omega
-  obtain ⟨m1, entry, _, frame, code, rpc, rfp, depth, env, hw, _⟩ :=
+  obtain ⟨m1, entry, entryAgree, frame, code, rpc, rfp, depth, env, hw, _⟩ :=
     arguments.callEntry lowerArgs fitsArgs address pre surroundings inside world
   have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
       (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
@@ -1889,9 +1938,12 @@ theorem ArgsCost.fullCall {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
     ⟨by simpa [frei] using Nat.le_refl (FB + (D.params f).length),
       by have := pre.small; omega, frame, (code f).1, (code f).2,
       env, trivial, wstab_true _ _⟩
-  obtain ⟨n, m2, bound, run⟩ := lowFun_counted lowerFun fitsFun
+  obtain ⟨n, m2, bound, run, post, calleeAgree, frame, rpc, rfp, hw⟩ := lowFun_counted lowerFun fitsFun
     (inside.sub hF pre.frame.lt) requirement body declaration calleePre hw rpc rfp depth positive
-  exact ⟨na + 4 + n, m2, by omega, entry.trans run⟩
+  have callAgree : AgreeW L fp (frei Γ reserved) K m m2 :=
+    (agreeW_of entryAgree).trans ((agreeW_sub pre.frame.lt (by omega) calleeAgree).mono (by omega))
+  exact ⟨na + 4 + n, m2, by omega, entry.trans run, post, callAgree,
+    frameOK_agreeW pre.frame callAgree, frame, rpc, rfp, hw⟩
 namespace FullCallProbe
 open FnptrProben
 open FullFunProbe (fixtureDecl program layout world)
@@ -1969,25 +2021,33 @@ theorem fullCall_zeuge : ∃ n m', n ≤ 17 ∧
     ⟨targets, by decide +kernel, by decide, sync, by decide⟩
   have cert : ArgsCost layout 0 4 args world world (Env.nil : Env fixtureDecl []) 1 :=
     .cons (ne := 1) (nr := 0) .nil .literal
-  apply ArgsCost.fullCall (L := layout) (reserved := 0) (Γ := []) (Λ := [])
+  have joint := ArgsCost.fullCall (L := layout) (reserved := 0) (Γ := []) (Λ := [])
     (f := (0 : fixtureDecl.Fn)) (P := program) (passes := 2) (args := args)
     (σ₀ := world) (σ := world) (ρ := Env.nil) (na := 1) (nq := 1) (nb := 6) (declared := 12)
     (A := addresses) (C := target) (m := memory) (pc := 2048) (fp := 4096)
     (K := 256) (Ks := 128) (ca := [ci 1 8 37 0]) (ta := 9) (top := 14) (dv := 1) cert rfl (by decide) (by decide +kernel) (by decide)
     (by decide) (by decide) .truth
-  · intro ens hens snapshot
-    have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
-    subst ens
-    exact .normal (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
-      (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
-  · intro cs hcs
-    have eq : cs = [] := Option.some.inj hcs.symm
-    subst cs
-    decide
-  · exact pre
-  · exact around
-  · exact inside
-  · exact hw
+    (by
+      intro ens hens snapshot
+      have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+      subst ens
+      exact .normal (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
+        (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl)
+    (by
+      intro cs hcs
+      have eq : cs = [] := Option.some.inj hcs.symm
+      subst cs
+      decide)
+    (by
+      exact pre)
+    (by
+      exact around)
+    (by
+      exact inside)
+    (by
+      exact hw)
+  obtain ⟨n, mout, bound, run, _⟩ := joint
+  exact ⟨n, mout, bound, run⟩
 end FullCallProbe
 
 

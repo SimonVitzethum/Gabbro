@@ -281,9 +281,19 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   that agreement. No determinism premise is needed: `Kern.ans` remains an
   arbitrary relation, and both properties follow from one constructed execution.
   The loaded normal-return witnesses now check result/status and agreement on
-  that same returned memory. `EndCost.sound` still projects away these additional
-  postconditions; propagating them through its recursive constructors and the
-  complete call contract remains necessary before any whole-loop claim.
+  that same returned memory. `EndCost.Post` now computes the result/status
+  obligation from the recursive source certificate. `EndCost.sound` carries
+  that obligation, writable frame, saved caller PC/frame and represented world
+  through assignment and binding on its single counted execution. Reason
+  returns retain their zero status at that endpoint too. The loaded recursive
+  nine-instruction witness jointly checks result, status, frame, caller header
+  and world. `lowFun_counted` and `ArgsCost.fullCall` retain the same source
+  certificate postcondition through the full function and actual call entry,
+  together with frame/world agreement, the callee frame, caller header and
+  world. The call contract also retains the writable caller frame; its
+  agreement permits changes only above the caller's free slot or in the world.
+  No independent
+  semantic endpoint or complete execution premise is introduced.
   Still OPEN: `EndCost` branching and call constructors; propagation of the
   encoded return value/status and frame/world agreement for the same returned
   memory into `BlockCost.call`; source-certificate-derived nested-forever
