@@ -65,3 +65,4 @@ import Stage0.Senke.Ausdruck.Arithmetik.ScalarProbe
 import Stage0.Senke.Ausdruck.Arithmetik.IntervalProbe
 import Stage0.Senke.Ausdruck.Arithmetik.MixedProbe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Probe
