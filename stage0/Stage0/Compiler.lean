@@ -8,8 +8,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
 /-- The actual source-to-G endpoint. Canonical elaboration consumes original runtime declarations
     and certified source scopes. The existing old(global) bridge and full checker remain mandatory. -/
-structure Compiled (text : String) where
-  source : Frontend.Source text
+structure Compiled (text : String) (options : Profil.Options := {}) where
+  source : Frontend.Source text options
   unit : UProg
   main : (declOf unit).Fn
   program : Programm (declOf unit)
@@ -22,8 +22,8 @@ structure Compiled (text : String) where
   accepted : OldSource.accepts unit program = .ok true
 
 /-- Compilation only: the result is the same canonical G program passed to the IR emitter. -/
-def compile (text : String) : Except String (Compiled text) := do
-  let source ← Frontend.source text
+def compile (text : String) (options : Profil.Options := {}) : Except String (Compiled text options) := do
+  let source ← Frontend.source text options
   let members := uMembers (pre108 source.items)
   match he : Frontend.elabWithScopes (members.map OldSource.normalizeItem)
       source.scopes.values source.scopes.types with
@@ -46,9 +46,11 @@ def compile (text : String) : Except String (Compiled text) := do
 /-- Original-source scalar and function semantics, canonical alias lookup order, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
     they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
-def CanonicalSourceProgram {text : String} (result : Compiled text) : Prop :=
+def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : Compiled text options) : Prop :=
     let original := uMembers (pre108 result.source.items)
     let scope := result.source.scopes
+    Profil.runnerCompatible options ∧
+    result.source.prepared.selected = result.source.items ∧
     lex text = .ok result.source.tokens ∧
     parseTopTief result.source.tokens = .ok result.source.items ∧
     Oeffentlich.huelleZu result.source.items = true ∧
@@ -62,9 +64,9 @@ def CanonicalSourceProgram {text : String} (result : Compiled text) : Prop :=
       OldSource.restore original result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true
 
-theorem compile_source_program (text : String) (result : Compiled text) :
+theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
-  exact ⟨result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin,
+  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted⟩
 

@@ -351,3 +351,24 @@ an explicit witness obligation; existing local fixtures and IO regressions do no
 Direct checks of the connected chain and thirty-three statement audits passed with standard axioms.
 The actual source-to-IR-to-ASM regressions continue to match expected results; no guardian or grammar
 build was run. IR-01 remains incomplete on the listed forms/model prerequisites and witness/coverage work.
+
+### IR-01 validated image options attachment
+
+`Source`, `Compiled` and `Emitted` are indexed by the same `Profil.Options`; their public
+constructors retain default options. Before `pre108`, `source` calls the identity-only
+`Profil.prepareItems` validator and retains both original-list equality and runner compatibility.
+`emit` passes that exact options value's architecture and target to `toreVonFor`; neither a
+second default nor an implicit target override occurs. `CanonicalSourceProgram` and the actual
+byte/image correctness theorem retain this options index and compatibility proof. This integrates
+IR-12 foundation 09871c8f8 and IR-11 binding selection 195d5d284; it introduces no profile semantics.
+
+Measured direct module checks: Profil, Bindung, Source, Elaboration, Compiler and IRBild green.
+Actual target fixture images executed by the existing ASM runner return 24 for explicit `first`
+and 23 for explicit `second`; explicit `aarch64` is refused before image emission with the runner
+ABI diagnostic. Checks use slot 1, MemoryHigh=4G, MemoryMax=5G, MemorySwapMax=0, isolated output,
+and frozen grammar artifacts. CLI argument parsing remains IR-12's integration responsibility.
+
+The controlling coverage domain is existing userspace syntax: embedded ASM, boot/privileged
+syntax and device-register operations are excluded. Safe regions/references, generic calls and
+syscalls, supported entry/image/profile obligations remain in scope. Translator and ordinary
+record semantics remain explicit canonical-model prerequisites; this validator is not lane closure.

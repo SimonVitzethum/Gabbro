@@ -3,7 +3,7 @@
   Subject:   The binding of a `syscall` gate to the running machine, read from the program itself (SYNTAX.md 12.1,
              12.3): the system-call number, which parameter goes to which argument register, and the `errors` map
              (`-errno` to a case of the gate's reason; the errno of a case is its declared number, or the one written
-             at the binding). Only the binding for the architecture stage 0 runs on is read (x86_64 or aarch64).
+             at the binding). Binding selection uses the execution architecture and the explicitly selected source target.
 -/
 import Grammatik.Parser.Item.ElementTief
 
@@ -11,12 +11,7 @@ namespace Gabbro.Stage0
 
 open Gabbro.Grammatik.Parser
 
-/-- The architecture stage 0 runs on, as the bindings name it. -/
-def archHier : String :=
-  if System.Platform.target.startsWith "x86_64" then "x86_64"
-  else if System.Platform.target.startsWith "aarch64" then "aarch64" else "?"
-
-/-- The Linux argument registers in order, and the answer register. -/
+/-- The six request argument registers in order, and the answer register. -/
 def argRegs : String → List String
   | "x86_64" => ["rdi", "rsi", "rdx", "r10", "r8", "r9"]
   | "aarch64" => ["x0", "x1", "x2", "x3", "x4", "x5"]
@@ -50,30 +45,55 @@ def gruendeVon (items : List SItemTief) (r : String) : Option (List (String × O
     | .pubT (.whyT n cs _) => if n == r then some (cs.map fun (c, e, _) => (c, zahlAus e)) else none
     | _ => none
 
-/-- The binding of a variable gate `via V` on this machine (`target T abi A arch X { V = … }`). -/
-def viaBindung (items : List SItemTief) (v : String) : Option SBind :=
-  items.findSome? fun it => match it with
-    | .goalT _ (some (_, arch, bs)) =>
-      if arch == archHier then bs.findSome? (fun (w, b, _) => if w == v then some b else none) else none
-    | _ => none
+/-- A binding is executable only when profile selection leaves exactly one candidate. -/
+def uniqueBinding (v arch : String) : List SBind → Except String SBind
+  | [b] => .ok b
+  | [] => .error s!"gate variable {v}: no binding for {arch} in the selected target"
+  | _ => .error s!"gate variable {v}: ambiguous binding for {arch}"
 
-/-- **The gate `sc` on this machine.** -/
-def torVon (items : List SItemTief) (sc : SSyscall) : Except String Tor := do
-  let b ← match sc.way with
-    | .lit _ arch b _ => if arch == archHier then pure b else throw s!"gate {sc.name} has no binding for {archHier}"
-    | .via v => match viaBindung items v with
-      | some b => pure b
-      | none => throw s!"gate {sc.name}: no binding of {v} for {archHier}"
+/-- Successful selection preserves the complete selected binding, including its error map. -/
+theorem uniqueBinding_ok (v arch : String) (bs : List SBind) (b : SBind) :
+    uniqueBinding v arch bs = .ok b ↔ bs = [b] := by
+  cases bs with
+  | nil => simp [uniqueBinding]
+  | cons a rest =>
+    cases rest with
+    | nil => simp [uniqueBinding]
+    | cons c rest => simp [uniqueBinding]
+
+/-- Select exactly one binding in the explicitly selected execution profile. With no command-line
+    selection, use the source's active `target NAME;`. Never select a target by declaration order. -/
+def viaBindungFor (arch : String) (target : Option String) (items : List SItemTief)
+    (v : String) : Except String SBind := do
+  let active := items.filterMap fun
+    | .goalT n none => some n
+    | _ => none
+  let selected ← match target, active with
+    | some n, _ => pure (some n)
+    | none, [] => pure none
+    | none, [n] => pure (some n)
+    | none, _ => throw "multiple active targets"
+  let bindings := items.flatMap fun it => match it with
+    | .goalT n (some (_, a, bs)) =>
+      if a == arch && (selected.isNone || selected == some n) then
+        bs.filterMap (fun (w, b, _) => if w == v then some b else none)
+      else []
+    | _ => []
+  uniqueBinding v arch bindings
+
+/-- Construct the executable gate from the complete selected source binding. -/
+def torAusBindung (arch : String) (items : List SItemTief) (sc : SSyscall)
+    (b : SBind) : Except String Tor := do
   let nummer ← match zahlAus b.id with
     | some n => if 0 ≤ n then pure n.toNat else throw s!"gate {sc.name}: negative number"
     | none => throw s!"gate {sc.name}: the number is not a literal"
-  let regs := (argRegs archHier).map fun r =>
+  let regs := (argRegs arch).map fun r =>
     b.ins.findSome? fun rb => match rb with
       | .binds r' p => if r' == r then sc.params.findIdx? (fun q => q.1 == p) else none
       | .reg _ => none
   if b.ins.length != (regs.filterMap id).length then throw s!"gate {sc.name}: a parameter in a register of no argument"
-  if !(b.outs.all fun o => match o with | .reg r => r == antwortReg archHier | _ => false) then
-    throw s!"gate {sc.name}: the answer is not in {antwortReg archHier}"
+  if !(b.outs.all fun o => match o with | .reg r => r == antwortReg arch | _ => false) then
+    throw s!"gate {sc.name}: the answer is not in {antwortReg arch}"
   let fehler ← match sc.fail with
     | none => if b.codes.isEmpty then pure [] else throw s!"gate {sc.name}: errors without a reason"
     | some r =>
@@ -84,18 +104,39 @@ def torVon (items : List SItemTief) (sc : SSyscall) : Except String Tor := do
           let i ← match cs.findIdx? (fun c => c.1 == fall) with
             | some i => pure i
             | none => throw s!"gate {sc.name}: case {fall} unknown"
-          let e ← match n.bind zahlAus, cs[i]?.bind (·.2) with
-            | some e, _ => pure e
-            | none, some e => pure e
-            | none, none => throw s!"gate {sc.name}: case {fall} has no errno"
+          let e ← match n with
+            | some expr => match zahlAus expr with
+              | some e => pure e
+              | none => throw s!"gate {sc.name}: explicit errno of {fall} is not a literal"
+            | none => match cs[i]?.bind (·.2) with
+              | some e => pure e
+              | none => throw s!"gate {sc.name}: case {fall} has no errno"
           pure (-e, i)
   pure ⟨sc.name, nummer, regs, fehler⟩
 
+/-- **The gate `sc` on this machine.** -/
+def torVonFor (arch : String) (target : Option String) (items : List SItemTief) (sc : SSyscall) : Except String Tor := do
+  if (argRegs arch).length != 6 then throw s!"unsupported gate architecture {arch}"
+  let b ← match sc.way with
+    | .lit _ a b _ => if a == arch then pure b else throw s!"gate {sc.name} has no binding for {arch}"
+    | .via v => viaBindungFor arch target items v
+  torAusBindung arch items sc b
+
+/-- Profile selection feeds the complete binding to gate construction; no error, register,
+    number or result field is reconstructed from a name match. -/
+theorem torVonFor_via (arch : String) (target : Option String) (items : List SItemTief)
+    (sc : SSyscall) (v : String) (b : SBind)
+    (supported : (argRegs arch).length = 6) (way : sc.way = .via v)
+    (selected : viaBindungFor arch target items v = .ok b) :
+    torVonFor arch target items sc = torAusBindung arch items sc b := by
+  simp [torVonFor, supported, way, selected]
+  rfl
+
 /-- The gates of a program by name. -/
-def toreVon (items : List SItemTief) : Except String (List Tor) :=
+def toreVonFor (arch : String) (target : Option String) (items : List SItemTief) : Except String (List Tor) :=
   (items.filterMap fun it => match it with
     | .callT sc => some sc
     | .pubT (.callT sc) => some sc
-    | _ => none).mapM (torVon items)
+    | _ => none).mapM (torVonFor arch target items)
 
 end Gabbro.Stage0
