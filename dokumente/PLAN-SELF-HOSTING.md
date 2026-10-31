@@ -228,6 +228,14 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
 * **Budgets:** the remaining call depth is a hidden parameter: the caller passes `depth - 1`, the callee's entry tests
   it and at 0 stops in `abstieg f` exactly where `rufAt 0` does. The runner gives the first frame the run's depth and
   reserves stacks so that this depth of the largest frame fits: stack exhaustion cannot happen.
+* **Cost proof status:** `ZeitAb` bounds G-machine own steps using `kostenTief`;
+  `passes` bounds semantic loop attempts. Neither counts emitted S0IR instructions.
+  `Schleifen/Counted.lean` counts canonical `Runner.IR.step` executions exactly,
+  erases to `Star`, and composes segment counts, including callees and nested loops.
+  The generic instruction bound for actual `foreverCode` is still OPEN: invariant,
+  body/callee, header, backedge and exit bounds must be connected to the lowering
+  simulation and then related to the source budget. `forever_runtime` alone proves
+  uncounted simulation. A finite count or a fixture's result is not that bound.
 * **Stops:** a G stop (`logik …`, `hardware …`) is `sys exit_group(code)`, the code naming the constructor and its
   argument. What was observed up to then is a prefix of a run of the thread machine, which is a run.
 * **Locks:** a lock word in memory. `locks L` = a `cas` 0→1 loop with `sys futex(WAIT)` on contention, the body, and on
