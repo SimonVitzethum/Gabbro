@@ -48,4 +48,45 @@ theorem counter_budget_stop {t : T} {m : Mem} {d jump c : BitVec 32}
     Stops t m 111 :=
   Stops.prefix (Star.one (counter_zero instruction zero)) stop
 
+/-- Test, decrement, actual simulated body and emitted backedge compose into
+one runtime iteration. The body result is the ordinary lowering simulation,
+whose frame supplies counter retention even through world writes and calls. -/
+theorem counter_iteration {D : Deklaration} {L : Lay D} {Γ : Ctx}
+    {fp pc back : W} {lo K Ks counter : Nat} {pr : List Nat}
+    {m m1 : Mem} {σ : World D} {ρ : Env D Γ} {reserved : Nat}
+    {d stop one jump b c : BitVec 32} {value : W}
+    (test : InsAt m pc 19 d stop 0)
+    (positive : m.rd64 (slot fp (sx d)) = some value) (nonzero : value ≠ 0)
+    (decrement : InsAt m (pc + 16) 4 d d one)
+    (unit : m.rd64 (slot fp (sx one)) = some 1)
+    (write : m.wr64 (slot fp (sx d)) (value - 1) = some m1)
+    (body : Reach L fp lo K pr ⟨pc + 16 + 16, fp⟩ m1 back σ ρ reserved)
+    (layout : WIn L fp Ks K) (hprotected : counter < lo ∨ counter ∈ pr)
+    (bound : lo ≤ K)
+    (location : sx d = BitVec.ofNat 64 counter)
+    (edge : InsAt m1 back 18 jump b c) (far : CodeFar back 1 fp K) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨back + sx jump, fp⟩ m' ∧
+      EnvAt L m' fp ρ reserved ∧ WeltAt m' L σ ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (value - 1) := by
+  have first := Star.one (counter_positive (t := ⟨pc, fp⟩) test positive nonzero)
+  have second := Star.one (counter_decrement (t := ⟨pc + 16, fp⟩)
+    decrement positive unit write)
+  have stored := Runner.Mem.rd64_wr64 write (rd64_some_all positive)
+  rw [location] at stored
+  obtain ⟨m', rest, _, env, world, _, kept⟩ := Reach.counter_backedge body
+    layout hprotected bound stored edge far
+  exact ⟨m', first.trans (second.trans rest), env, world, kept⟩
+
+/-- The zero arm reaches the actual emitted exit request with progress code 111.
+This does not postulate that a desired stop occurs. -/
+theorem counter_budget_stop_code {m : Mem} {pc fp : W} {d jump c : BitVec 32}
+    {K scratch : Nat}
+    (instruction : InsAt m pc 19 d jump c)
+    (zero : m.rd64 (slot fp (sx d)) = some 0)
+    (code : CodeAt m (pc + sx jump) (stopC 111 scratch))
+    (far : CodeFar (pc + sx jump) 3 fp K) (frame : FrameOK m fp K)
+    (room : scratch + 8 ≤ K) (small : K < 2 ^ 31) :
+    Stops ⟨pc, fp⟩ m 111 :=
+  counter_budget_stop instruction zero (stop_ok code far frame room small (by decide))
+
 end Gabbro.Stage0.Senke
