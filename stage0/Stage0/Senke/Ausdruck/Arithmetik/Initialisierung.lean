@@ -1474,7 +1474,14 @@ theorem floatFiniteAddL_read_fields {Γ : Ctx} {ρ : Env D Γ}
         some (floatFieldWord wb (F.fracBits+F.ebits) 1) ∧
       (∀ i, i < 4 → m'.rd64 (slot fp (BitVec.ofNat 64 (dst+5+i))) =
         some (finiteAddRemainingValue F wa wb i)) ∧
-      Pre L m' (pc+BitVec.ofNat 64 (16*executed.length)) fp K (dst+9) tail ρ W reserved := by
+      Pre L m' (pc+BitVec.ofNat 64 (16*executed.length)) fp K (dst+9) tail ρ W reserved ∧
+      ∃ inputTop, floatStateSlotsL (dst+1)
+        ([a,b,
+          fun j => floatFieldL (F.fracBits+F.ebits) 1 j
+            (fun k => some ([ci 2 k (dst+1) 0],k+1)),
+          fun j => floatFieldL (F.fracBits+F.ebits) 1 j
+            (fun k => some ([ci 2 k (dst+2) 0],k+1))] ++
+          finiteAddRemaining F dst) = some (executed,inputTop) := by
   obtain ⟨ca,ta,cb,tb,cf,tf,cg,tg,remaining,rt,tail,ha,hb,hf,hg,hr,hcode,hta,htb,htf,htg,htr⟩ :=
     floatFiniteAddL_remaining_code F dst a b compiled
   rw [hcode] at pre
@@ -1519,13 +1526,25 @@ theorem floatFiniteAddL_read_fields {Γ : Ctx} {ρ : Env D Γ}
     slotRead_agree preR.frame agreeR (by omega) (by omega) readB4,
     slotRead_agree preR.frame agreeR (by omega) (by omega)
       (slotRead_agree preG.frame agreeG (by omega) (by omega) readF),
-    slotRead_agree preR.frame agreeR (by omega) (by omega) readG,?_,?_⟩
+    slotRead_agree preR.frame agreeR (by omega) (by omega) readG,?_,?_,?_⟩
   · simpa only [List.length_append, pc_add] using runPrefix.trans
       (by simpa only [List.length_append, pc_add] using runR)
   · simpa only [finiteAddRemaining, List.length_cons, List.length_nil,
       List.length_append, pc_add] using reads
   · simpa only [finiteAddRemaining, List.length_cons, List.length_nil,
       List.length_append, pc_add, Nat.add_assoc] using rest
+
+  · refine ⟨max ta (max tb (max tf (max tg rt))), ?_⟩
+    simp only [List.cons_append, List.nil_append]
+    rw [floatStateSlotsL, ha]
+    simp only [bind, pure, Option.bind_some]
+    rw [floatStateSlotsL]
+    simp only [Nat.add_assoc, hb, bind, pure, Option.bind_some]
+    rw [floatStateSlotsL]
+    simp only [Nat.add_assoc, hf, bind, pure, Option.bind_some]
+    rw [floatStateSlotsL]
+    simp only [Nat.add_assoc, hg, bind, pure, Option.bind_some, hr,
+      List.append_assoc]
 
 #print axioms floatFiniteAddL_read_fields
 
@@ -1550,7 +1569,14 @@ theorem floatFiniteAddL_read_fields_zeuge {Γ : Ctx} {ρ : Env D Γ}
       m'.rd64 (slot fp 20) = some (floatFieldWord 11 (F.fracBits+F.ebits) 1) ∧
       (∀ i, i < 4 → m'.rd64 (slot fp (BitVec.ofNat 64 (21+i))) =
         some (finiteAddRemainingValue F 7 11 i)) ∧
-      Pre L m' (pc + BitVec.ofNat 64 (16*operandCode.length)) fp K 25 tail ρ W 13 := by
+      Pre L m' (pc + BitVec.ofNat 64 (16*operandCode.length)) fp K 25 tail ρ W 13 ∧
+      ∃ inputTop, floatStateSlotsL (16+1)
+        ([ (fun (j : Nat) => some ([ci 1 j 7 0],j+1)), (fun (j : Nat) => some ([ci 1 j 11 0],j+1)),
+          fun j => floatFieldL (F.fracBits+F.ebits) 1 j
+            (fun k => some ([ci 2 k (16+1) 0],k+1)),
+          fun j => floatFieldL (F.fracBits+F.ebits) 1 j
+            (fun k => some ([ci 2 k (16+2) 0],k+1))] ++
+          finiteAddRemaining F 16) = some (operandCode,inputTop) := by
   apply floatFiniteAddL_read_fields F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11
@@ -1639,5 +1665,103 @@ theorem floatFiniteAddL_order_first {Γ : Ctx} {ρ : Env D Γ}
   · simpa using pre.next agree (Nat.le_refl _) (by omega)
 
 #print axioms floatFiniteAddL_order_first
+
+theorem floatFiniteAddL_read_fields_to_order {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (F : Gleitkomma.Format) (dst : Nat)
+    (a b : Nat → Option (List II × Nat)) (wa wb : Runner.W)
+    {code : List II} {top K reserved : Nat} {fp pc : Runner.W} {m : Runner.Mem}
+    (compiled : floatFiniteAddL F dst a b = some (code,top))
+    (width : F.fracBits+F.ebits < 64) (lower : FB ≤ dst+1)
+    (frac : F.fracBits < 64) (mask : 2^F.ebits-1 < 2^64)
+    (fracMask : 2^F.fracBits-1 < 2^64) (hiddenBound : 2^F.fracBits < 2^64)
+    (room : top ≤ K) (slots : dst+9 ≤ K)
+    (producerA : ∀ c t, a (dst+1) = some (c,t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K (dst+1) c ρ W reserved →
+      Ok m pc fp K (dst+1) c (· = wa))
+    (producerB : ∀ c t, b (dst+2) = some (c,t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K (dst+2) c ρ W reserved →
+      Ok m pc fp K (dst+2) c (· = wb))
+    (pre : Pre L m pc fp K (dst+1) code ρ W reserved) :
+    ∃ executed tail m', code = executed ++ tail ∧
+      Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*executed.length),fp⟩ m' ∧
+      Agree fp (dst+1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+1))) = some wa ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+2))) = some wb ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+3))) =
+        some (floatFieldWord wa (F.fracBits+F.ebits) 1) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+4))) =
+        some (floatFieldWord wb (F.fracBits+F.ebits) 1) ∧
+      (∀ i, i < 4 → m'.rd64 (slot fp (BitVec.ofNat 64 (dst+5+i))) =
+        some (finiteAddRemainingValue F wa wb i)) ∧
+      Pre L m' (pc+BitVec.ofNat 64 (16*executed.length)) fp K (dst+9) tail ρ W reserved ∧
+      ∃ orderingTail, tail =
+        [ci 13 (dst+9) (dst+5) (dst+6),
+         ci 14 (dst+10) (dst+5) (dst+6),
+         ci 13 (dst+11) (dst+7) (dst+8),
+         ci 5 (dst+10) (dst+10) (dst+11),
+         ci 9 (dst+9) (dst+9) (dst+10)] ++ orderingTail := by
+  obtain ⟨executed,tail,m',hc,run,agree,ra,rb,rsx,rsy,reads,rest,it,hi⟩ :=
+    floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
+      fracMask hiddenBound room slots producerA producerB pre
+  obtain ⟨inputs,inputTop,orderingTail,hinputs,hcode,_⟩ :=
+    floatFiniteAddL_order_continuation F dst a b compiled
+  have heq : inputs = executed := by
+    rw [hi] at hinputs
+    exact (Prod.mk.inj (Option.some.inj hinputs)).1.symm
+  subst inputs
+  have ht := List.append_cancel_left (hc.symm.trans hcode)
+  exact ⟨executed,tail,m',hc,run,agree,ra,rb,rsx,rsy,reads,rest,orderingTail,ht⟩
+
+#print axioms floatFiniteAddL_read_fields_to_order
+
+theorem floatFiniteAddL_read_fields_to_order_zeuge {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (F : Gleitkomma.Format)
+    (format : F ∈ [Gleitkomma.f32, Gleitkomma.f64])
+    {K : Nat} {fp pc : Runner.W} {m : Runner.Mem}
+    (room : ((floatFiniteAddL F 16
+      (fun j => some ([ci 1 j 7 0],j+1))
+      (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).2 ≤ K)
+    (slots : 25 ≤ K)
+    (pre : Pre L m pc fp K 17
+      ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+        (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).1 ρ W 13) :
+    ∃ operandCode tail m',
+      ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+        (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).1 = operandCode ++ tail ∧
+      Star ⟨pc,fp⟩ m ⟨pc + BitVec.ofNat 64 (16*operandCode.length),fp⟩ m' ∧
+      Agree fp 17 K m m' ∧
+      m'.rd64 (slot fp 17) = some 7 ∧ m'.rd64 (slot fp 18) = some 11 ∧
+      m'.rd64 (slot fp 19) = some (floatFieldWord 7 (F.fracBits+F.ebits) 1) ∧
+      m'.rd64 (slot fp 20) = some (floatFieldWord 11 (F.fracBits+F.ebits) 1) ∧
+      (∀ i, i < 4 → m'.rd64 (slot fp (BitVec.ofNat 64 (21+i))) =
+        some (finiteAddRemainingValue F 7 11 i)) ∧
+      Pre L m' (pc + BitVec.ofNat 64 (16*operandCode.length)) fp K 25 tail ρ W 13 ∧
+      ∃ orderingTail, tail =
+        [ci 13 25 21 22, ci 14 26 21 22, ci 13 27 23 24,
+         ci 5 26 26 27, ci 9 25 25 26] ++ orderingTail := by
+  apply floatFiniteAddL_read_fields_to_order F 16
+    (fun j => some ([ci 1 j 7 0],j+1))
+    (fun j => some ([ci 1 j 11 0],j+1)) 7 11
+    (top := ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+      (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).2)
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at format
+    rcases format with rfl | rfl <;> rfl
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at format
+    rcases format with rfl | rfl <;> decide +kernel
+  · decide +kernel
+  all_goals try { simp only [List.mem_cons, List.not_mem_nil, or_false] at format
+                  rcases format with rfl | rfl <;> decide +kernel }
+  · exact room
+  · exact slots
+  · intro c t hc ht m pc hp
+    cases hc
+    exact const_ok hp (by decide) (by omega)
+  · intro c t hc ht m pc hp
+    cases hc
+    exact const_ok hp (by decide) (by omega)
+  · exact pre
+
+
+#print axioms floatFiniteAddL_read_fields_to_order_zeuge
 
 end Gabbro.Stage0.Senke
