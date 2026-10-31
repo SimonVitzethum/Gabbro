@@ -56,8 +56,8 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     lex text = .ok result.source.tokens ∧
     parseTopTief result.source.tokens = .ok result.source.items ∧
     Oeffentlich.huelleZu result.source.items = true ∧
-    scope.declared = original.foldl
-      (Frontend.aliasStep (uConstsRech (uKonstFns original) original [])) [] ∧
+    (scope.aliasConstants = uConstsRech (uKonstFns original) original [] ∨ scope.aliasConstants = scope.values) ∧
+    scope.declared = original.foldl (Frontend.aliasStep scope.aliasConstants) [] ∧
     scope.functions = Frontend.constantFunctions scope.declared original ∧
     (∀ fn ∈ scope.functions, ∃ item ∈ original, Frontend.FunctionMeaning scope.declared item fn) ∧
     (∀ names item table,
@@ -75,7 +75,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
-  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
+  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted⟩
 

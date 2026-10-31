@@ -26,7 +26,7 @@ theorem InitialState.simulates [Runner.IR.Kern] [Senke.CloneOK]
     state.bytes state.loaded state.gates state.view
 
 /-- Character-pinned source avoids reducing the UTF decoder through a whole compiler witness. -/
-def characters : List Char := ['t', 'y', 'p', 'e', ' ', 'A', ' ', '=', ' ', 'u', '8', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', ' ', '=', ' ', 'A', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'C', ' ', ':', ' ', 'B', ' ', '=', ' ', '4', '0', ' ', '+', ' ', '2', ';', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'E', 'm', 'p', 't', 'y', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', '2', '9', '4', '9', '6', '7', '2', '9', '6', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', '}', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'B', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'C', ';', ' ', '}']
+def characters : List Char := ['t', 'y', 'p', 'e', ' ', 'A', ' ', '=', ' ', 'i', '8', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', ' ', '=', ' ', 'A', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'f', 'n', ' ', 'n', 'e', 'g', 'a', 't', 'i', 'v', 'e', '(', ')', ' ', '-', '>', ' ', 'B', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', '0', ' ', '-', ' ', '1', ';', ' ', '}', ' ', 'c', 'o', 'n', 's', 't', ' ', 'N', 'E', 'G', 'A', 'T', 'I', 'V', 'E', ' ', ':', ' ', 'B', ' ', '=', ' ', 'n', 'e', 'g', 'a', 't', 'i', 'v', 'e', '(', ')', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'C', ' ', ':', ' ', 'B', ' ', '=', ' ', 'N', 'E', 'G', 'A', 'T', 'I', 'V', 'E', ' ', '+', ' ', '4', '3', ';', ' ', 't', 'y', 'p', 'e', ' ', 'B', 'o', 'u', 'n', 'd', ' ', '=', ' ', 'u', '8', ' ', 'i', 'n', ' ', '0', ' ', '.', '.', ' ', 'C', ';', ' ', 't', 'y', 'p', 'e', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '=', ' ', 'B', 'o', 'u', 'n', 'd', ';', ' ', 'c', 'o', 'n', 's', 't', ' ', 'A', 'N', 'S', 'W', 'E', 'R', ' ', ':', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '=', ' ', 'C', ';', ' ', 't', 'a', 'b', 'l', 'e', ' ', 'E', 'm', 'p', 't', 'y', ' ', 'c', 'o', 'u', 'n', 't', ' ', '4', '2', '9', '4', '9', '6', '7', '2', '9', '6', ' ', '{', ' ', 's', 'l', 'o', 't', ' ', '{', '}', ' ', '}', ' ', 'i', 'm', 'p', 'l', ' ', 'f', 'n', ' ', 'm', 'a', 'i', 'n', '(', ')', ' ', '-', '>', ' ', 'F', 'i', 'n', 'a', 'l', ' ', '{', ' ', 'r', 'e', 't', 'u', 'r', 'n', ' ', 'A', 'N', 'S', 'W', 'E', 'R', ';', ' ', '}']
 def text : String := String.ofList characters
 
 def candidate : Except String (Emitted text 64) := emit text 64
@@ -44,7 +44,7 @@ theorem carrier_shape :
 theorem params_empty : (declOf output.compiled.unit).params output.compiled.main = [] := by
   decide +kernel
 
-theorem result_type : (declOf output.compiled.unit).erg output.compiled.main = some (.int 0 255) := by
+theorem result_type : (declOf output.compiled.unit).erg output.compiled.main = some (.int 0 42) := by
   decide +kernel
 
 abbrev D := declOf output.compiled.unit
@@ -109,9 +109,14 @@ theorem accepted_image : emit text 64 = .ok output :=
 
 
 theorem source_scopes :
-    output.compiled.source.scopes.values = [("C", 42)] ∧
-    output.compiled.source.scopes.declared = [("A", (0, 255)), ("B", (0, 255))] ∧
+    output.compiled.source.scopes.values = [("NEGATIVE", -1), ("C", 42), ("ANSWER", 42)] ∧
+    output.compiled.source.scopes.declared = [("A", (-128, 127)), ("B", (-128, 127)), ("Bound", (0, 42)), ("Final", (0, 42))] ∧
     output.compiled.unit.fns.length = 1 ∧ 0 < output.image.code.length := by
+  decide +kernel
+
+/-- This accepted image actually uses the new final-original-values alias path. -/
+theorem aliases_final :
+    output.compiled.source.scopes.aliasConstants = output.compiled.source.scopes.values := by
   decide +kernel
 
 theorem image_bound : Runner.Prog.IMG + output.image.bytes.length < 2 ^ 64 := by decide +kernel
@@ -147,13 +152,14 @@ attribute [irreducible] initial
 
 theorem source_image_joint_zeuge :
     emit text 64 = .ok output ∧
-    output.compiled.source.scopes.values = [("C", 42)] ∧
-    output.compiled.source.scopes.declared = [("A", (0, 255)), ("B", (0, 255))] ∧
+    output.compiled.source.scopes.values = [("NEGATIVE", -1), ("C", 42), ("ANSWER", 42)] ∧
+    output.compiled.source.scopes.declared = [("A", (-128, 127)), ("B", (-128, 127)), ("Bound", (0, 42)), ("Final", (0, 42))] ∧
     output.compiled.unit.fns.length = 1 ∧ 0 < output.image.code.length ∧
     output.compiled.unit.tabs.map (·.count) = [2 ^ 32] ∧
+    output.compiled.source.scopes.aliasConstants = output.compiled.source.scopes.values ∧
     Nonempty (InitialState output) :=
   ⟨accepted_image, source_scopes.1, source_scopes.2.1, source_scopes.2.2.1,
-    source_scopes.2.2.2, table_count, ⟨initial⟩⟩
+    source_scopes.2.2.2, table_count, aliases_final, ⟨initial⟩⟩
 
 /-- Instantiation of the generic execution theorem at this concrete, inhabited entry state. -/
 theorem entry_ir_simulation_zeuge :

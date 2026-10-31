@@ -1,0 +1,9 @@
+// Discovery is untrusted until the full original scalar and final alias environments agree.
+module dependent_alias {
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+type Bound = u8 in 0 .. LIMIT;
+type Alias = Bound;
+const ANSWER : Alias = LIMIT;
+impl fn main() -> Alias effects { pure } { return ANSWER; }
+}

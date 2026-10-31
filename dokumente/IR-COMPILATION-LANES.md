@@ -502,3 +502,38 @@ Tables, Elaboration, Compiler, IRBild and updated SourceWitness direct checks pa
 4G/5G scope. Eight generic/whole-source/witness audits retain only the standard three axioms.
 No grammar build or Senke file was changed. Wider source traversal integration is a separate
 combined-snapshot validation with IR-08; IR-01 coverage remains incomplete.
+
+### IR-01 dependent scalar/type scope discovery
+
+`DependentScopes.elaborateScopes` preserves every successful conservative deriveScopes result
+exactly (`elaborateScopes_preserves`), and only attempts discovery after a refusal. Discovery
+reuses existing alias/constant normalization and the frozen collector to propose values; these
+proposals are untrusted. `resolveCandidate` evaluates the full ORIGINAL ordered typedConstants
+fold using canonical uFeldTyp/uKonstWert, then compares the COMPLETE alias environment against
+`original.foldl (aliasStep finalValues) []`. It stores finalValues, not discovery input. Every
+integer alias declaration must resolve on this new path; unresolved cycles refuse, and bounded
+discovery never converts exhaustion into acceptance. Existing initial-path behavior is unchanged.
+`resolveCandidate_final` and `discoverScopes_final` prove final-original-value alias provenance.
+
+Scopes now records aliasConstants and its origin: frozen canonical initial collector values
+(for the existing path), or the final strict original scalar values (for discovery). Its alias
+fold and ScopeStable are indexed by those explicit inputs. Compiler's whole-source contract
+retains this origin together with exact ordered scalar values, original function meaning and
+actual unchanged canonical elaboration/lowerAllg/checker endpoint. No new expression evaluator,
+widened builtin, default-zero binding, filtered negative or invented translator semantics occurs.
+
+Actual `dependent-alias` and `dependent-alias-negative` source->IR->ASM both return42, including
+a computed alias-typed LIMIT, dependent range, further alias chain, and negative intermediate.
+The original-range overflow case and cyclic type/initializer case measure precise refusals.
+The formal dependent-scope witness proves the former conservative path refuses its fixture.
+SourceWitness now jointly includes the actual alias-typed pure negative function, NEGATIVE=-1,
+C=42, dependent Bound/Final ranges, ANSWER=42 and count-2^32 fieldless table; aliases_final proves
+this accepted source/image uses final original values. Its concrete initial contracts and actual
+IR simulation remain jointly inhabited.
+
+Environments/DependentScopes/Source/Elaboration/Compiler/IRBild/SourceWitness checks green; nine
+relevant generic/whole-source/witness audits use only the standard three axioms. Slot1 checks
+were deferred during root's requested merge-check priority, then resumed after explicit release.
+No grammar build, Bindung change, pre-emit ABI-guard edit, Senke/ABI edit or broad unchanged suite
+rerun. Discovery completeness for all dependency graphs is not proved; nonmaterializable custom
+negative bounds and further constant/signature forms may still refuse. IR-01 remains incomplete.
