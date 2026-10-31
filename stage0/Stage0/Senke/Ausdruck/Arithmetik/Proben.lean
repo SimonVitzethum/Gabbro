@@ -3,7 +3,7 @@ import Stage0.Senke.Ausdruck.Arithmetik.Ausrichtung
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
-open Gabbro.Grammatik Runner.IR
+open Gabbro.Grammatik Runner.IR Gleitkomma
 
 /-- These images call the production fragment; they do not implement an
     alternate negation or special-case particular source programs. -/
@@ -63,6 +63,46 @@ def alignmentImages : List (String × Except String (List Runner.B) × Nat) :=
           (fun d => floatCoefficientL d (fun j => some (konstWL 4 lo j)))
           (fun d => floatCoefficientL d (fun j => some (konstWL 4 hi j)))
           (fun d => some (konstWL 4 k d))) expected, 7))
+
+/-- The production rounding fragment checks exact ties, tails at distance 1074,
+    the significand carry, and both sides of the halfway boundary. -/
+def guardImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("guard-tie-even", 4, 4, 0, 4),
+   ("guard-tie-odd", 5, 4, 0, 6),
+   ("guard-tiny-tail", 4, 4, 1, 5),
+   ("guard-below", 5, 3, 1, 5),
+   ("guard-above", 4, 5, 0, 5),
+   ("guard-carry", 2^53-1, 4, 1, 2^53),
+   ("guard-exact", 2^52, 0, 0, 2^52)].map
+    (fun (name, q, g, sticky, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatGuardRoundL 8 (fun d => some (konstWL 4 q d))
+          (fun d => some (konstWL 4 g d))
+          (fun d => some (konstWL 4 sticky d))) expected, 7))
+
+theorem guardImages_zeuge : guardImages.length = 7 ∧
+    guardImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+set_option maxRecDepth 10000 in
+set_option exponentiation.threshold 2048 in
+/-- The unbounded-distance mathematical input and actual emitted simulation
+    have jointly satisfiable premises on a value just above a halfway tie. -/
+theorem floatGuardRoundL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    0 < (2^1074 : Nat) ∧ 1 < (2^1074 : Nat) ∧ (4 : Nat) < 8 ∧
+    rundeInt 4 (4 * 2^1074 + 1) (8 * 2^1074) = 5 ∧
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun d => floatGuardRoundL d
+        (fun j => some (konstWL 4 4 j))
+        (fun j => some (konstWL 4 4 j))
+        (fun j => some (konstWL 4 1 j))) 5 := by
+  refine ⟨by decide, by decide, by decide, by decide +kernel, ?_⟩
+  have hround : rundeInt 4 (4 * 2^1074 + 1) (8 * 2^1074) = 5 := by decide +kernel
+  change WordCode (L := L) (Env.nil : Env D []) (fun _ => True) _ (BitVec.ofNat 64 5)
+  rw [← hround]
+  exact floatGuardRoundL_ok 4 4 1 (2^1074) (by decide) (by decide) (by decide)
+    (WordCode.konst 4 (by decide)) (WordCode.konst 4 (by decide))
+    (WordCode.konst 1 (by decide))
 
 /-- One fixture joins the real connected producer, its simulation, exact
     footprint ceiling and cancellation across the normal/subnormal boundary. -/

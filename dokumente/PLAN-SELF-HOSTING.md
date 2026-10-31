@@ -252,6 +252,22 @@ rounding bridge is not a simulation of emitted rounding. Arbitrary-reserved full
 simulation, budgets and range 107 remain open. No grammar rebuild was run.
 
 
+The post-cancellation rounding continuation now has a generic guard/sticky
+compression theorem for every positive denominator, without an exponent-distance
+bound. Three guard bits plus one Boolean tail give the same canonical `rundeInt`
+result as the complete remainder. `floatGuardRoundL` emits this continuation using
+the existing integer rounding fragment; its `WordCode` simulation is connected to
+the uncompressed canonical remainder and carries the existing frame discipline.
+Joint witnesses include an exact halfway tie plus a tail at distance 1074, both tie
+parities, and significand carry. Direct alignment/probe/root/`Nachpruefung` checks,
+standard axioms and layout passed; actual runner: 136 images, zero failures
+(2026-10-31). This does not yet construct the post-cancellation quotient/guard/tail
+from arbitrary finite operands. In particular it does not justify jamming signed
+operands before cancellation. Packing/overflow, arbitrary-reserved full arithmetic
+simulation, complete costs and range 107 remain open. Add/sub remain refused;
+computed `floatOf` is unchanged. No grammar rebuild was run.
+
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access

@@ -3,6 +3,7 @@
    still need a precision-preserving continuation before add/sub can be enabled. -/
 import Stage0.Senke.Ausdruck.Arithmetik.Signifikand
 import Stage0.Senke.Ausdruck.Arithmetik.AddSub
+import Stage0.Senke.Ausdruck.Gleit.RundCode
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem Gleitkomma
@@ -76,7 +77,90 @@ theorem floatCoefficientAlignSumWord_add_zeuge :
     add f64 a b = ⟨false, 0, 1⟩ := by
   decide +kernel
 
+/-- Three retained guard bits and one sticky bit preserve nearest-even rounding
+    for every denominator, including exponent distances beyond a machine word.
+    This applies after signed cancellation has established the final magnitude;
+    jamming operands before cancellation is not licensed by this theorem. -/
+theorem floatGuardSticky_round (q guard rest den : Nat)
+    (hd : 0 < den) (hr : rest < den) (hg : guard < 8) :
+    rundeInt q (guard * den + rest) (8 * den) =
+      rundeInt q (2 * guard + if rest = 0 then 0 else 1) 16 := by
+  by_cases hl : guard < 4
+  · have hm := Nat.mul_le_mul_right den (show guard ≤ 3 by omega)
+    have hbelow : 2 * (guard * den + rest) < 8 * den := by omega
+    have hsmall : 2 * (2 * guard + if rest = 0 then 0 else 1) < 16 := by
+      split <;> omega
+    simp only [rundeInt, show ¬2 * (guard * den + rest) > 8 * den by omega,
+      hbelow, show ¬2 * (2 * guard + if rest = 0 then 0 else 1) > 16 by omega,
+      hsmall, ↓reduceIte]
+  · by_cases he : guard = 4
+    · subst guard
+      by_cases hz : rest = 0
+      · simp [hz, rundeInt, show ¬2 * (4 * den) > 8 * den by omega,
+          show ¬2 * (4 * den) < 8 * den by omega]
+      · have habove : 2 * (4 * den + rest) > 8 * den := by omega
+        simp [rundeInt, habove, hz]
+    · have hm := Nat.mul_le_mul_right den (show 5 ≤ guard by omega)
+      have habove : 2 * (guard * den + rest) > 8 * den := by omega
+      have hlarge : 2 * (2 * guard + if rest = 0 then 0 else 1) > 16 := by
+        split <;> omega
+      simp only [rundeInt, habove, hlarge, ↓reduceIte]
+
+/-- Joint boundary witnesses include both tie parities and a distance of 1074
+    bits; the sticky bit distinguishes an exact tie from an arbitrarily small
+    positive tail. -/
+theorem floatGuardSticky_round_zeuge :
+    rundeInt 4 (4 * 2^1074) (8 * 2^1074) = 4 ∧
+    rundeInt 5 (4 * 2^1074) (8 * 2^1074) = 6 ∧
+    rundeInt 4 (4 * 2^1074 + 1) (8 * 2^1074) = 5 ∧
+    rundeInt 5 (3 * 2^1074 + (2^1074 - 1)) (8 * 2^1074) = 5 := by
+  decide +kernel
+
 variable [Kern] {D : Deklaration} {L : Lay D}
+
+/-- Round a post-cancellation quotient with three guard bits and a Boolean
+    tail. The denominator is constant even for arbitrarily distant operands. -/
+def floatGuardRoundL (d : Nat) (q guard sticky : Nat → Option (List II × Nat)) :
+    Option (List II × Nat) :=
+  floatRoundL d q
+    (fun j => wordL 3 j (wordK 5 j (guard j) 2) (sticky (j + 1)))
+    (fun j => some ([ci 1 j 16 0], j + 1))
+
+/-- Actual S0IR rounding agrees with the uncompressed canonical remainder.
+    There is no bound on the original denominator or exponent distance.
+    Producers must supply the final magnitude's quotient, guard and tail. -/
+theorem floatGuardRoundL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {q guard sticky : Nat → Option (List II × Nat)} (qn gn rest den : Nat)
+    (hd : 0 < den) (hr : rest < den) (hg : gn < 8)
+    (hq : WordCode (L := L) ρ W q (BitVec.ofNat 64 qn))
+    (hguard : WordCode (L := L) ρ W guard (BitVec.ofNat 64 gn))
+    (hsticky : WordCode (L := L) ρ W sticky
+      (BitVec.ofNat 64 (if rest = 0 then 0 else 1))) :
+    WordCode (L := L) ρ W (fun d => floatGuardRoundL d q guard sticky)
+      (BitVec.ofNat 64 (rundeInt qn (gn * den + rest) (8 * den))) := by
+  have twice : WordCode (L := L) ρ W
+      (fun j => wordK 5 j (guard j) 2) (BitVec.ofNat 64 (2 * gn)) := by
+    have h : WordCode (L := L) ρ W _ _ := WordCode.bin hguard (WordCode.const 2 (by decide))
+      (g := fun a b => some (a * b)) rfl rfl (by decide : 5 < 256)
+    intro fp K d c top hc hK m pc hp
+    have result := h (fp := fp) (K := K) (d := d) (c := c) (top := top)
+      (by simpa [wordK, Nat.add_assoc] using hc) hK m pc
+      (by simpa [wordK, Nat.add_assoc] using hp)
+    exact result.mono fun w hw => by
+      simpa [BitVec.ofNat_mul, Nat.mul_comm] using hw
+  have tail : WordCode (L := L) ρ W
+      (fun j => wordL 3 j (wordK 5 j (guard j) 2) (sticky (j + 1)))
+      (BitVec.ofNat 64 (2 * gn + if rest = 0 then 0 else 1)) := by
+    have h : WordCode (L := L) ρ W _ _ := WordCode.bin twice hsticky
+      (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
+    intro fp K d c top hc hK m pc hp
+    exact (h hc hK m pc hp).mono fun w hw => by
+      simpa [BitVec.ofNat_add] using hw
+  rw [floatGuardSticky_round qn gn rest den hd hr hg]
+  intro fp K d c top hc hK m pc hp
+  exact floatRoundL_ok qn (2 * gn + if rest = 0 then 0 else 1) 16
+    (by split <;> omega) (by decide) hq tail (WordCode.const 16 (by decide))
+    hc hK hp
 
 /-- Connected simulation inherits the frame, footprint and temporary checks
     of the common word composition mechanism for arbitrary producers. -/
@@ -115,6 +199,8 @@ theorem floatAlignSumL_shape (d ta tb tk na nb nk : Nat)
       output.length = na + nb + nk + 2 := by
   simp [floatAlignSumL, wordL, ha, hb, hk, bin2, hla, hlb, hlk, Nat.add_assoc]
 
+#print axioms floatGuardSticky_round
+#print axioms floatGuardRoundL_ok
 #print axioms floatAlignSumWord_round
 #print axioms floatAlignSumL_ok
 end Gabbro.Stage0.Senke
