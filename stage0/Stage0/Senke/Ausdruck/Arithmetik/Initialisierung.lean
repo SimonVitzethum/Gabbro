@@ -2939,7 +2939,85 @@ theorem floatFiniteAddL_signed_execute {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_signed_execute
 
-set_option maxHeartbeats 2400000 in
+/-- The literal RIGHT comparison keeps the positive result and exponent in the
+    same memory as its branch flag. No adaptive-loop code is substituted. -/
+theorem floatFiniteAddL_right_condition_scalar {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved : Nat} {q ex threshold : Runner.W} (tail : List II)
+    (room : dst+10 < K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
+    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
+    (rt : m.rd64 (slot fp (BitVec.ofNat 64 (dst+10))) = some threshold)
+    (pre : Pre L m pc fp K (dst+9)
+      ([ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+        ci 4 (dst+9) (dst+10) (dst+9)] ++ tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+48,fp⟩ out ∧
+      Agree fp (dst+9) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+        some (1-Runner.IR.bool (q.slt threshold)) ∧
+      Pre L out (pc+48) fp K (dst+9) tail ρ W reserved := by
+  have p0 : Pre L m pc fp K (dst+9)
+      ([ci 13 (dst+9) (dst+7) (dst+10)] ++
+        ([ci 1 (dst+10) 1 0] ++ ([ci 4 (dst+9) (dst+10) (dst+9)] ++ tail))) ρ W reserved := pre
+  obtain ⟨m1,s1,a1,w1,r1,rfl⟩ := eng_bin_ok (d := dst+9) (a := dst+7) (b := dst+10)
+    {p0.left with ctx := by have := p0.ctx; omega} (by omega) (by omega) (by omega)
+    rq rt (g := fun x y => some (Runner.IR.bool (x.slt y))) rfl (by decide) rfl
+  have p1 := p0.next a1 (Nat.le_refl _) (by omega)
+  obtain ⟨m2,s2,a2,w2,r2,rfl⟩ := const_ok (d := dst+10)
+    {p1.left with ctx := by have := p1.ctx; omega} (by decide) (by omega)
+  have p2 := p1.next (a2.mono (by omega : dst+9 ≤ dst+10)) (Nat.le_refl _) (by omega)
+  have r12 := slotRead_agree p1.frame a2 (by omega) (by omega) r1
+  obtain ⟨m3,s3,a3,w3,r3,rfl⟩ := eng_bin_ok (d := dst+9) (a := dst+10) (b := dst+9)
+    {p2.left with ctx := by have := p2.ctx; omega} (by omega) (by omega) (by omega)
+    r2 r12 (g := fun x y => some (x-y)) rfl (by decide) rfl
+  have agree := a1.trans ((a2.mono (by omega : dst+9 ≤ dst+10)).trans a3)
+  refine ⟨m3,?_,agree,slotRead_agree p0.frame agree (by omega) (by omega) rq,
+    slotRead_agree p0.frame agree (by omega) (by omega) re,?_,?_⟩
+  · simpa [BitVec.add_assoc] using s1.trans (s2.trans s3)
+  · simpa using r3
+  · simpa [BitVec.add_assoc] using p2.next a3 (Nat.le_refl _) (by omega)
+
+/-- Execute the actual RIGHT threshold materialization and comparison. -/
+theorem floatFiniteAddL_right_condition {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved : Nat} {q ex : Runner.W} (F : Gleitkomma.Format)
+    (tail : List II) (thresholdRange : 2^(F.fracBits+4) < 65536^4)
+    (room : dst+12 ≤ K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
+    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
+    (pre : Pre L m pc fp K (dst+9)
+      ((konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
+        [ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+          ci 4 (dst+9) (dst+10) (dst+9)] ++ tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m
+        ⟨pc+BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48,fp⟩ out ∧
+      Agree fp (dst+9) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+        some (1-Runner.IR.bool (q.slt (BitVec.ofNat 64 (2^(F.fracBits+4))))) ∧
+      Pre L out
+        (pc+BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)
+        fp K (dst+9) tail ρ W reserved := by
+  have hp : Pre L m pc fp K (dst+9)
+      ((konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
+        ([ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+          ci 4 (dst+9) (dst+10) (dst+9)] ++ tail)) ρ W reserved := by
+    simpa only [List.append_assoc] using pre
+  obtain ⟨m1,run,agree,w,rd,rfl⟩ := konstWL_ok 4 (2^(F.fracBits+4)) thresholdRange
+    (by omega) {hp.left with ctx := by have := hp.ctx; omega}
+  have rest := hp.next (agree.mono (by omega : dst+9 ≤ dst+10)) (Nat.le_refl _) (by omega)
+  obtain ⟨out,run2,agree2,rq2,re2,flag,done⟩ := floatFiniteAddL_right_condition_scalar tail
+    (by omega) (slotRead_agree hp.frame agree (by omega) (by omega) rq)
+    (slotRead_agree hp.frame agree (by omega) (by omega) re) rd rest
+  exact ⟨out,run.trans run2,(agree.mono (by omega)).trans agree2,rq2,re2,flag,done⟩
+
+#print axioms floatFiniteAddL_right_condition
+
+
+set_option maxHeartbeats 6000000 in
 /-- Execute decoding, SORT, alignment and signed ADD/SUB from encoded operands.
     The exact correction and arithmetic result belong to one connected run. -/
 theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
@@ -3101,7 +3179,29 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
                   (if ((if sx == sy then q+jam else q-jam) == 0) then 16 else 64))
                   fp K (dst+7) branchTail ρ W reserved ∧
                 branchTail = normalization.drop
-                  (if ((if sx == sy then q+jam else q-jam) == 0) then 1 else 4) := by
+                  (if ((if sx == sy then q+jam else q-jam) == 0) then 1 else 4) ∧
+                ((if sx == sy then q+jam else q-jam) ≠ 0 →
+                  2^(F.fracBits+4) < 65536^4 →
+                  ∃ rightTail rightOut ex,
+                    branchTail = (konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
+                      [ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+                        ci 4 (dst+9) (dst+10) (dst+9)] ++ rightTail ∧
+                    Star ⟨pc,fp⟩ m
+                      ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48,fp⟩ rightOut ∧
+                    Agree fp (dst+1) K m rightOut ∧
+                    rightOut.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) =
+                      some (if sx == sy then q+jam else q-jam) ∧
+                    rightOut.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
+                    rightOut.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+                      some (1-Runner.IR.bool ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4))))) ∧
+                    Pre L rightOut
+                      (pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)
+                      fp K (dst+9) rightTail ρ W reserved) := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
     floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
       fracMask hiddenBound room (by omega) producerA producerB pre
@@ -3291,7 +3391,7 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),
     wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),
     signedRead,?_,signedTail,signedEq,signedRest,normalization,normalizationEq,
-    tested,?_,?_,testRead,?_,?_,?_,branchDone⟩
+    tested,?_,?_,testRead,?_,?_,?_,?_⟩
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
@@ -3517,6 +3617,61 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
   · exact (zeroAgree.mono (by omega : dst+9 ≤ dst+10)).trans testAgree
   · exact slotRead_agree cmpPre.frame testAgree (by omega) (by omega) qr
 
+
+  · obtain ⟨branchTail,branchRun,branchPre,branchShape⟩ := branchDone
+    refine ⟨branchTail,branchRun,branchPre,branchShape,?_⟩
+    intro nz thresholdRange
+    have hz : ((if vs (dst+3) == vs (dst+4) then vs (dst+7)+vs (dst+16)
+      else vs (dst+7)-vs (dst+16)) == 0) = false := by
+      cases h : ((if vs (dst+3) == vs (dst+4) then vs (dst+7)+vs (dst+16)
+        else vs (dst+7)-vs (dst+16)) == (0 : Runner.W)) with
+      | false => rfl
+      | true => exact False.elim (nz (by simpa only [beq_iff_eq] using h))
+    have selected : branchTail = normalRest := by
+      rw [hz, branchEq] at branchShape
+      simpa using branchShape
+    have rightShape : ∃ rightTail, normalRest =
+        (konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
+        [ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+          ci 4 (dst+9) (dst+10) (dst+9)] ++ rightTail := by
+      have eq := hfull.symm.trans result.1.symm
+      rw [hie,tailEq,signedEq,normalizationEq,branchEq] at eq
+      simp [List.append_assoc] at eq
+      refine ⟨normalRest.drop ((konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length+3), ?_⟩
+      rw [eq.2]
+      simp [List.drop_append, List.append_assoc]
+    obtain ⟨rightTail,rightShape⟩ := rightShape
+    rw [hz] at branchRun branchPre
+    simp only [Bool.false_eq_true, ↓reduceIte] at branchRun branchPre
+    have offset :
+        (pc+BitVec.ofNat 64 (16*executed.length)+256+
+          BitVec.ofNat 64 (16*aligned.1.length))+128+64 =
+        (pc+BitVec.ofNat 64 (16*executed.length)+256+
+          BitVec.ofNat 64 (16*aligned.1.length))+192 := by
+      exact (BitVec.add_assoc _ _ _).trans
+        (congrArg (fun z : Runner.W =>
+          (pc+BitVec.ofNat 64 (16*executed.length)+256+
+            BitVec.ofNat 64 (16*aligned.1.length))+z)
+          (by decide : (128 : Runner.W)+64 = 192))
+    rw [offset] at branchRun branchPre
+    have rightPre := branchPre
+    rw [selected,rightShape] at rightPre
+    have resultRead := slotRead_agree cmpPre.frame testAgree (by omega) (by omega) qr
+    let e := (tested.rd64 (slot fp (BitVec.ofNat 64 (dst+5)))).getD 0
+    have exponentRead : tested.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some e := by
+      have rd := testedPre.frame.rd (dst+5) (by omega)
+      simp only [e,Runner.Mem.rd64,rd,↓reduceIte,Option.getD_some]
+    obtain ⟨rightOut,rightRun,rightAgree,rq,re,flag,done⟩ :=
+      floatFiniteAddL_right_condition F rightTail thresholdRange (by omega)
+        resultRead exponentRead
+        {rightPre with ctx := Nat.le_trans rightPre.ctx (by omega : dst+7 ≤ dst+9)}
+    refine ⟨rightTail,rightOut,e,selected.trans rightShape,?_,?_,rq,re,flag,?_⟩
+    · exact branchRun.trans rightRun
+    · exact (wholeAgree.trans ((signedAgree.trans
+        ((zeroAgree.mono (by omega)).trans (testAgree.mono (by omega)))).mono (by omega))).trans
+        (rightAgree.mono (by omega))
+    · exact done
+
 #print axioms floatFiniteAddL_read_fields_align
 
 theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
@@ -3673,7 +3828,29 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
                   (if ((if sx == sy then q+jam else q-jam) == 0) then 16 else 64))
                   fp K (16+7) branchTail ρ W 13 ∧
                 branchTail = normalization.drop
-                  (if ((if sx == sy then q+jam else q-jam) == 0) then 1 else 4) := by
+                  (if ((if sx == sy then q+jam else q-jam) == 0) then 1 else 4) ∧
+                ((if sx == sy then q+jam else q-jam) ≠ 0 →
+                  2^(F.fracBits+4) < 65536^4 →
+                  ∃ rightTail rightOut ex,
+                    branchTail = (konstWL 4 (2^(F.fracBits+4)) (16+10)).1 ++
+                      [ci 13 (16+9) (16+7) (16+10), ci 1 (16+10) 1 0,
+                        ci 4 (16+9) (16+10) (16+9)] ++ rightTail ∧
+                    Star ⟨pc,fp⟩ m
+                      ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48,fp⟩ rightOut ∧
+                    Agree fp (16+1) K m rightOut ∧
+                    rightOut.rd64 (slot fp (BitVec.ofNat 64 (16+7))) =
+                      some (if sx == sy then q+jam else q-jam) ∧
+                    rightOut.rd64 (slot fp (BitVec.ofNat 64 (16+5))) = some ex ∧
+                    rightOut.rd64 (slot fp (BitVec.ofNat 64 (16+9))) =
+                      some (1-Runner.IR.bool ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4))))) ∧
+                    Pre L rightOut
+                      (pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48)
+                      fp K (16+9) rightTail ρ W 13) := by
   apply floatFiniteAddL_read_fields_align F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11
@@ -4365,83 +4542,6 @@ theorem floatFiniteAddL_left_condition_zeuge {Γ : Ctx} {ρ : Env D Γ}
     finiteLeftInvariant_zeuge.1⟩
 
 #print axioms floatFiniteAddL_left_condition_zeuge
-
-/-- The literal RIGHT comparison keeps the positive result and exponent in the
-    same memory as its branch flag. No adaptive-loop code is substituted. -/
-theorem floatFiniteAddL_right_condition_scalar {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
-    {K dst reserved : Nat} {q ex threshold : Runner.W} (tail : List II)
-    (room : dst+10 < K)
-    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
-    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
-    (rt : m.rd64 (slot fp (BitVec.ofNat 64 (dst+10))) = some threshold)
-    (pre : Pre L m pc fp K (dst+9)
-      ([ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
-        ci 4 (dst+9) (dst+10) (dst+9)] ++ tail) ρ W reserved) :
-    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+48,fp⟩ out ∧
-      Agree fp (dst+9) K m out ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
-        some (1-Runner.IR.bool (q.slt threshold)) ∧
-      Pre L out (pc+48) fp K (dst+9) tail ρ W reserved := by
-  have p0 : Pre L m pc fp K (dst+9)
-      ([ci 13 (dst+9) (dst+7) (dst+10)] ++
-        ([ci 1 (dst+10) 1 0] ++ ([ci 4 (dst+9) (dst+10) (dst+9)] ++ tail))) ρ W reserved := pre
-  obtain ⟨m1,s1,a1,w1,r1,rfl⟩ := eng_bin_ok (d := dst+9) (a := dst+7) (b := dst+10)
-    {p0.left with ctx := by have := p0.ctx; omega} (by omega) (by omega) (by omega)
-    rq rt (g := fun x y => some (Runner.IR.bool (x.slt y))) rfl (by decide) rfl
-  have p1 := p0.next a1 (Nat.le_refl _) (by omega)
-  obtain ⟨m2,s2,a2,w2,r2,rfl⟩ := const_ok (d := dst+10)
-    {p1.left with ctx := by have := p1.ctx; omega} (by decide) (by omega)
-  have p2 := p1.next (a2.mono (by omega : dst+9 ≤ dst+10)) (Nat.le_refl _) (by omega)
-  have r12 := slotRead_agree p1.frame a2 (by omega) (by omega) r1
-  obtain ⟨m3,s3,a3,w3,r3,rfl⟩ := eng_bin_ok (d := dst+9) (a := dst+10) (b := dst+9)
-    {p2.left with ctx := by have := p2.ctx; omega} (by omega) (by omega) (by omega)
-    r2 r12 (g := fun x y => some (x-y)) rfl (by decide) rfl
-  have agree := a1.trans ((a2.mono (by omega : dst+9 ≤ dst+10)).trans a3)
-  refine ⟨m3,?_,agree,slotRead_agree p0.frame agree (by omega) (by omega) rq,
-    slotRead_agree p0.frame agree (by omega) (by omega) re,?_,?_⟩
-  · simpa [BitVec.add_assoc] using s1.trans (s2.trans s3)
-  · simpa using r3
-  · simpa [BitVec.add_assoc] using p2.next a3 (Nat.le_refl _) (by omega)
-
-/-- Execute the actual RIGHT threshold materialization and comparison. -/
-theorem floatFiniteAddL_right_condition {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
-    {K dst reserved : Nat} {q ex : Runner.W} (F : Gleitkomma.Format)
-    (tail : List II) (thresholdRange : 2^(F.fracBits+4) < 65536^4)
-    (room : dst+12 ≤ K)
-    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
-    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
-    (pre : Pre L m pc fp K (dst+9)
-      ((konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
-        [ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
-          ci 4 (dst+9) (dst+10) (dst+9)] ++ tail) ρ W reserved) :
-    ∃ out, Star ⟨pc,fp⟩ m
-        ⟨pc+BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48,fp⟩ out ∧
-      Agree fp (dst+9) K m out ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
-        some (1-Runner.IR.bool (q.slt (BitVec.ofNat 64 (2^(F.fracBits+4))))) ∧
-      Pre L out
-        (pc+BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)
-        fp K (dst+9) tail ρ W reserved := by
-  have hp : Pre L m pc fp K (dst+9)
-      ((konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
-        ([ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
-          ci 4 (dst+9) (dst+10) (dst+9)] ++ tail)) ρ W reserved := by
-    simpa only [List.append_assoc] using pre
-  obtain ⟨m1,run,agree,w,rd,rfl⟩ := konstWL_ok 4 (2^(F.fracBits+4)) thresholdRange
-    (by omega) {hp.left with ctx := by have := hp.ctx; omega}
-  have rest := hp.next (agree.mono (by omega : dst+9 ≤ dst+10)) (Nat.le_refl _) (by omega)
-  obtain ⟨out,run2,agree2,rq2,re2,flag,done⟩ := floatFiniteAddL_right_condition_scalar tail
-    (by omega) (slotRead_agree hp.frame agree (by omega) (by omega) rq)
-    (slotRead_agree hp.frame agree (by omega) (by omega) re) rd rest
-  exact ⟨out,run.trans run2,(agree.mono (by omega)).trans agree2,rq2,re2,flag,done⟩
-
-#print axioms floatFiniteAddL_right_condition
 
 /-- Execute the SHIFTJAM call emitted in the taken RIGHT arm, using its literal
     constant distance producer rather than the old magnitude pipeline. -/
