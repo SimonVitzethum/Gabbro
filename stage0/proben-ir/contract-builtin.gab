@@ -1,0 +1,12 @@
+// Compile-time contract calls refuse before either constant evaluator can fold them.
+module function_probe {
+type Small = u8 in 0 .. 100;
+
+const fn identity(x : u8) -> u8 requires x < 10 effects { pure } costs <= 4 ops {
+    return x;
+}
+const ANSWER : u8 = identity(42);
+impl fn main() -> u8 effects { pure } {
+    return ANSWER;
+}
+}

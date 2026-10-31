@@ -246,3 +246,227 @@ and `eng` matched their expected exit codes (19.574 seconds together). The copy
 and connected compiler theorems use only the standard axioms. Checks used IR-03's
 dedicated slot 3 with MemoryHigh=4G, MemoryMax=5G and no swap; grammar artifacts
 were reused. This validates the dependency commit, not the unfinished migration.
+## IR-01 frontend checkpoint (2026-10-31, round 1; incomplete)
+
+Implementation commits `85025ce08` and `e6147444e` add `Stage0.Frontend.Aliases`, called by
+`irBild` after `pre108` name/visibility resolution and before `elabU`/`lowerAllg`/`OldSource.restore`/
+`AkzeptiertX`/`Senke.bild`. No Senke representation or ABI definitions changed. The adapter expands
+integer alias chains in declaration order into existing canonical range syntax. It also folds scalar
+constants of alias or explicit range type to nonnegative literal results using the existing
+`uFeldTyp` and `uKonstWert` (including existing checked const-function calls). It preserves the declared
+constant type. Failed evaluation and negative results retain the prior canonical elaborator path.
+
+Generic local attachment: `bound_correct` proves canonical bound denotation, `aliasBody_correct` proves
+that generated ranges elaborate with `uTyp` to the exact looked-up canonical integer type, and
+`constant_correct` connects the canonical evaluator result to the integer actually collected by
+`uConstsRech`. `aliasBody_correct_zeuge` and `constant_correct_zeuge` jointly instantiate the premises.
+`Correctness.lean` now composes those per-declaration facts: `aliasItem_sound` and `constant_sound`
+feed `rewrite_sound`, and `normalizeAliases_sound` derives `Normalization` for the entire input list,
+including every intermediate declaration environment. `Source.lean` produces a proof-carrying `Source`
+with canonical lexer/parser provenance, checked public-interface closure and that complete normalization
+derivation. `irBild` consumes `Source.members` directly. `source_sound` and `source_names` establish the
+whole-source frontend provenance and exact existing canonical name/visibility preprocessing. The list
+proof has a nondegenerate alias-chain/constant witness. These statements do not prove exhaustive frontend
+coverage or a new whole-source-to-image execution theorem; image execution remains the existing Senke
+contract, with full global IR-14 composition still open.
+
+Measured: direct Lean checks of `Frontend/Aliases.lean` and the modified `IRBild.lean`, using only existing
+grammar/runner/compiler artifacts and locally compiled changed modules; global flock and 5G/7G memory
+scope; no grammar build. All new theorems and `gabbro_ziel` audited with exactly the three standard
+axioms; an intermediate-overflow source still refuses. Actual textual `alias-chain.gab`, `alias-constant.gab` and `alias-const-function.gab` compiled through
+`irBild` and the existing assembly runner returned 42 in all three cases. The layout check passed (1386 Lean
+files); `git diff --check` passed. These regressions measure behaviors, not complete syntax families.
+
+### Exhaustive surface ownership and remaining adapters
+
+- `modT`, `useT`, `pubT`: existing `pre108` checks `Oeffentlich.huelleZu`, then `Aufloesung.loese`
+  resolves names/imports and opens wrappers. Existing theorems include `huelle_geschlossen`,
+  `pub_sichtbar`, `ref_aufgeloest` and `schluessel_injektiv`. The actual source frontend now retains checked visibility and canonical preprocessing provenance;
+  whole-image name/contract correspondence remains an integration obligation. Cross-unit imports remain coordinated with IR-12.
+- `typeT`: canonical `uAliase` collects integer ranges and builtin integer aliases. The new adapter adds
+  chains over these ranges. Generic/type parameters, ordering clauses and noninteger alias bodies remain
+  open; no claim that silently ignored declaration metadata has semantics. `uSumTabs` separately handles
+  tagged raw types. Ordinary record/product declarations have no `Ty` constructor or source-to-model
+  adapter; do not encode them as an unrelated array or silently discard fields. IR-03 owns encoding after
+  a canonical representation and its field/type semantics are available.
+- Every nested `STyp` remains owned: `atom`, `path`, `ptr`, `index`, `range`, `array`, `wrap`, `embed`,
+  `raw`, `str`, `entry`. Existing `uTyp` supports integer atoms/ranges, normal-space table capabilities,
+  nonoptional indices, arrays and bounded strings; parameter/field elaborators add context-specific
+  float/bool/sum/reason/function-reference forms. Paths rely on prior name resolution. Named spaces,
+  unsupported capability rights, general products/records and remaining raw/entry/type wrappers are not
+  closed by this checkpoint. Field/value transport remains IR-03/06, without a second frontend ABI.
+- `constT`: new nonnegative scalar folding covers alias and explicit range types. Existing builtin-word
+  folding and integer/nested-array constant paths remain. `Functions.lean` now extracts alias/range-typed
+  single-return const-function signatures through canonical `uFeldTyp`, with `fieldType_sound`,
+  `constantFunction_sound` and `constantFunctions_sound` proving exact type denotation and source origin.
+  The whole normalization certificate includes those function-origin facts, and the actual constant
+  evaluator uses those candidates. `alias-const-function.gab` compiles through IR to ASM exit 42. Negative scalar materialization, generalized const-function bodies, noninteger constants and dependency
+  cycles/ordering require further implementation or a precise canonical prerequisite. Canonical evaluator
+  fuel remains 64; no completeness claim hides that bound. Intermediate overflow still refuses evaluation.
+- `specT`: existing `uSpecEin`, `sErsetze` and `uSpecKlauseln` inline specification predicates and refinements.
+  Generic capture-avoiding substitution, nested binder interactions and whole-pipeline attachment remain
+  open; mere collection of the spec declaration is not completion.
+- Every nested `SExpr` remains owned within these families: `lit`, `float`, `tru`, `fls`, `variable`,
+  `field`, `index`, `arrow`, `un`, `bin`, `call`, `fnref`, `built`, `old`, `res`, `why`, `ext` (all eight
+  `XKind` variants: `all`, `any`, `count`, `mem`, `reach`, `imp`, `text`, `call`). The frozen compile-time
+  evaluator only implements literals, variables, builtin min/max fields, selected integer binary operations
+  and single-return const calls. It does not establish full compile-time coverage of this list.
+- Every nested `SAnw` remains owned for const/translator bodies: `bind`, `bindElse`, `bindLib`, `set`,
+  `shift`, `call`, `lcall`, `cond`, `elsif`, `cases`, `arm`, `each`, `retry`, `loop`, `waive`, `trim`,
+  `locks`, `watch`, `leave`, `next`, `emit`, `await`, `swap`, `step`, `ret`, `alloc`, `reset`, `grow`,
+  `free`, `child`, `start`, `other`, `block`, `allocVon`, plus nested `SEnde`. Existing const-function
+  evaluation accepts only a single trailing expression return; parser success for other bodies is not support.
+
+### Named canonical prerequisite: translators and library regions
+
+`SItemTief.transT` exists in the parser, but `uRestFehler` refuses it with `item without G form`.
+`Aufloesung.item` does not resolve its signature/body; `UProg` has no translator/library-region component.
+`bindLib`/`lcall` have no actual adapter in this path. An ordinary record/product `Ty` is absent as well.
+The required canonical work is a typed translator input/result model, region literal/layout semantics,
+checked translator termination/cost/effects, library-call payload binding and desugaring correctness into G,
+including name/type and checker rules. No source interpreter, declaration erasure, default acceptance or
+invented hardware assumption is authorized as a substitute. Owner decision: compiler-side Stage0 adapters
+are allowed only when proved against existing canonical semantics; genuinely missing canonical semantics
+remain blocked by the explicit no-grammar-rebuild instruction. Separate authorization and canonical-model
+validation are needed for that change. IR-01 is therefore explicitly incomplete; the remaining independent
+frontend/proof work above also stays open rather than being transferred silently to another lane.
+
+### IR-01 contract mitigation and remaining semantic proof boundary
+
+Root review correctly distinguishes the `Normalization` rewrite trace from source/program denotational
+preservation. `source_sound` projects provenance and that local trace; it does **not** prove original
+source acceptance, equality to the originally refusing `elabU`, environment-extension preservation or
+source-to-image execution. Exact alias/constant environment collection and the semantic program bridge
+are still open, independently of translator/record model blockers.
+
+Upstream finding: `Parser/Elab/Uebersetze.lean:uKonstFns` matches `klauseln := _`; `UKonstFn` stores only
+name, parameter/result ranges and returned expression. `uKonstWert` evaluates that body without logical
+contracts or effects. `Kern/Syntax/Konstanten.lean` likewise has no const-function contract evaluator.
+Retaining clauses in `FunctionMeaning` was therefore insufficient as a contract preservation claim.
+
+Mitigation on the actual path: `Functions.evaluationClauses` (in namespace `Stage0.Frontend`) accepts
+only pure-effect and cost clauses. Extracted candidates prove that predicate. More importantly,
+`Frontend.source` checks **original** constant initializers and nested rows before invoking any baseline
+`uConstsRech` or normalization. `Guard.safeConstantName` checks the transitive static const-call hull;
+`safeConstantName_sound` derives `SafeHull`, and `source_constant_hull` attaches that derivation to calls
+in original scalar initializers. Unsupported logical clauses/effects/bodies refuse explicitly, so falling
+back to baseline extraction cannot bypass the check. Original source declarations remain present. Canonical `elabU` explicitly excludes const functions
+from runtime `fnItems`; their clauses cannot be justified by assuming a later runtime body check.
+This is a safety mitigation and incomplete coverage, not contract-aware const evaluation.
+
+Three textual refusal probes cover alias signatures, builtin signatures (the baseline fallback case)
+and a transitive wrapper. Their expected diagnostic is recorded in `.error` files; the existing Lean
+guardian's Stage-0 probe loop recognizes compiler-refusal fixtures. The guardian itself was not run,
+because it would rebuild the grammar. Direct IO compilations measured all three refusals; the three
+positive source-to-IR-to-ASM probes still return 42. The Python guardian change passes `py_compile`.
+
+### IR-01 exact ordered environments (interim accepted-subset check)
+
+`Environments.lean` proves `constants_append`, `aliases_append`, `aliasItem_collected`,
+`aliases_collected`, `constant_aliases`, `constants_aliases`, `constantStep_correct` and
+`constants_collected`. These retain declaration order and exact bindings/ranges. `typedConstants`
+uses canonical `uFeldTyp` and `uKonstWert` in declaration order and retains **all** scalar bindings,
+including negatives and duplicate/shadowed names. It does not filter to positive outputs.
+
+Before downstream `elabU`, actual `Frontend.source` now checks that the full ordered environment
+collected by canonical `uConstsRech (uKonstFns normalized)` is exactly the successful typed fold.
+It also checks stability of the complete alias range environment under those final constants.
+`normalize_environments` combines those checked equalities with generic alias collection preservation;
+successful `Source` contains `EnvironmentFacts`. This is conditional preservation for the accepted
+subset, not total support or a whole-source-to-program execution theorem.
+
+The persistent `negative-dependency` probe exposes a negative intermediate from an alias-result const
+function followed by a positive dependent. It now refuses explicitly on the environment mismatch;
+no later positive binding can conceal the missing negative. Negative materialization and dependency
+support remain implementation work. No source interpreter or grammar modification was introduced.
+
+### IR-01 negative scalar materialization
+
+The former `negative-dependency.error` is now a positive `.code` regression: the negative intermediate
+and positive dependent both survive exact canonical collection and ASM exits 42. `negative-alias-min`
+also reaches ASM exit 42 with an exact signed minimum and successive negative alias-typed constants.
+
+The actual scalar adapter represents a negative integer as builtin `min` plus a nonnegative offset.
+It selects a builtin with the **same canonical range**, checks the output type against that range,
+checks evaluation in that range, and checks the full ordered canonical collector extension. Alias
+spelling can change internally to the equivalent builtin; source alias declarations and their ranges
+are retained. `negative_expression_correct` proves all intermediate range checks and the arithmetic;
+`negative_materializes` proves coverage for a selected signed builtin range; `negative_sound` connects
+materialized value, exact canonical type and actual collector. `ConstantEquivalent` includes these
+facts and the complete normalization proof consumes them. No signed-minimum negation, widened source
+range, new source interpreter or ABI change is used. Custom negative ranges with no exact builtin
+representative still refuse through the checked environment boundary; no total constant coverage claim.
+
+Measured five textual positive source-to-IR-to-ASM cases (all exit 42), three contract refusals and the
+overflow refusal; twenty-five frontend/goal statement audits use only standard axioms. The accepted-subset
+environment validation remains in place. Whole-source/program semantic composition is still separate
+work; these new arithmetic and collector theorems do not silently close that obligation.
+
+### IR-01 original-source canonical program bridge
+
+`Frontend/Elaboration.lean:elabWithScopes` factors only the existing canonical elaborator phase body.
+`elabU_scopes` is proved by `rfl` for **every** old input, using exactly the old wrapper-derived scopes,
+including errors and every existing gate. The small frozen-body textual duplication is necessary under
+the no-grammar-rebuild rule; any divergence from the imported canonical definition breaks kernel equality.
+It introduces no evaluator, execution semantics or new interpretation of a statement.
+
+`typedConstants_aliases` and `constantFunctions_aliases` remove alias normalization from scalar/function
+origin facts. `Scopes` then certifies the original declaration-order alias fold, original const-function
+candidates and exact typed scalar fold over the **original** source declarations. `Source.scopes` derives
+that record from the checked environment facts; complete ordered bindings and canonical ranges remain.
+`compileTimeSafe`/`SafeHull` still guard original compile-time calls before any baseline evaluation.
+
+The actual source pipeline is now `Compiler.compile` -> `elabWithScopes` over original runtime declarations
+(with the existing old(global) adapter), certified scopes -> canonical `lowerAllg` -> existing snapshot
+restoration -> full `AkzeptiertX`. `irBild` consumes exactly that `Compiled.unit` and `Compiled.program`.
+`compile_source_program` connects original declaration-derived scopes, unchanged canonical phase body,
+and the identical actual `UProg`, `declOf` and `lowerAllg` endpoint. This is a conservative elaboration
+extension, **not** the false equation `elabU(original) = elabU(normalized)` under incomplete old scopes.
+The Source-to-image runner theorem still needs attachment to this endpoint; total form support remains open.
+
+Measured the changed chain directly under the global Lean lock/memory scope, thirty statement audits
+using only standard axioms, five new positive ASM results 42 and six existing call/old-global/old-slot/loop
+regressions at their expected exit codes, alongside the three contract refusals and overflow refusal.
+No grammar rebuild, additional runner, ABI change or weakened checker was used.
+
+### IR-01 actual source-to-image theorem attachment
+
+`irBild` now projects bytes from the single `emit` path. `Emitted` stores the actual `Compiled` source
+program and successful `Senke.bild` equation. `irBild_emitted` recovers that same image from any successful
+CLI byte result. `CanonicalSourceProgram` records canonical lex/parse/public provenance, original
+source-derived scopes, the unchanged canonical phase composition, actual `lowerAllg`/snapshot endpoint
+and full checker acceptance.
+
+`Emitted.correct` composes that original-source program contract with the existing generic
+`Senke.bild_ok_u` theorem for the identical program. `irBild_correct` attaches it to the actual returned
+bytes. It retains exactly the inherited runner kernel/clone, gate/view and initial-memory contracts;
+there is no added whole-run premise or execution interpreter. Successful source compilation therefore
+has a connected canonical source-program-to-IR execution statement. This does not establish total syntax
+coverage, source initial-world/image initialization beyond the inherited memory contract, or missing
+canonical source forms. A concrete joint formal fixture for the new entire source/image contract remains
+an explicit witness obligation; existing local fixtures and IO regressions do not replace it.
+
+Direct checks of the connected chain and thirty-three statement audits passed with standard axioms.
+The actual source-to-IR-to-ASM regressions continue to match expected results; no guardian or grammar
+build was run. IR-01 remains incomplete on the listed forms/model prerequisites and witness/coverage work.
+
+### IR-01 validated image options attachment
+
+`Source`, `Compiled` and `Emitted` are indexed by the same `Profil.Options`; their public
+constructors retain default options. Before `pre108`, `source` calls the identity-only
+`Profil.prepareItems` validator and retains both original-list equality and runner compatibility.
+`emit` passes that exact options value's architecture and target to `toreVonFor`; neither a
+second default nor an implicit target override occurs. `CanonicalSourceProgram` and the actual
+byte/image correctness theorem retain this options index and compatibility proof. This integrates
+IR-12 foundation 09871c8f8 and IR-11 binding selection 195d5d284; it introduces no profile semantics.
+
+Measured direct module checks: Profil, Bindung, Source, Elaboration, Compiler and IRBild green.
+Actual target fixture images executed by the existing ASM runner return 24 for explicit `first`
+and 23 for explicit `second`; explicit `aarch64` is refused before image emission with the runner
+ABI diagnostic. Checks use slot 1, MemoryHigh=4G, MemoryMax=5G, MemorySwapMax=0, isolated output,
+and frozen grammar artifacts. CLI argument parsing remains IR-12's integration responsibility.
+
+The controlling coverage domain is existing userspace syntax: embedded ASM, boot/privileged
+syntax and device-register operations are excluded. Safe regions/references, generic calls and
+syscalls, supported entry/image/profile obligations remain in scope. Translator and ordinary
+record semantics remain explicit canonical-model prerequisites; this validator is not lane closure.

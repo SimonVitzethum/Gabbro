@@ -3,11 +3,13 @@
   Subject:   The named assumption at a gate (`TorOK`) and the steps of a gate's code: the arguments into the request
              block (`lowR_ok`), zeros into the unused registers (`zero_ok`), the kernel's answer (`sys_step`).
 
-  `TorOK L O` is the operating system doing what it should (Simon, 2026-10-29: an allowed assumption): asked a
-  bound gate's request -- the number, the arguments' words in the first argument registers, zero in the others --
-  in a memory that holds a world `σ`, the kernel can answer with a word and a memory that holds the oracle's world,
-  having changed nothing but the world's bytes, and the oracle's raw answer is the kernel's word as the gate's
-  binding reads it (`rohW`, what stage 0's interpreter does, `Stage0/Tor/Ausfuehren.lean`).
+  `TorOK L O` is an explicit binding/user-logic premise: asked a bound gate's request -- the number,
+  the arguments' words in the first argument registers, zero in the others -- in a memory that holds
+  world `σ`, the service can answer with a word and a memory that holds the oracle's world, having
+  changed nothing but the declared bytes. The oracle's raw answer agrees with the service's word
+  decoded by `rohW`. This compiler theorem does not discharge software or OS contracts and does not
+  classify them as hardware assumptions. Execution belongs to the assembly runner.
+
 -/
 import Stage0.Senke.Anweisung.Schleife
 import Stage0.Senke.Anweisung.Schreiben
