@@ -3,11 +3,12 @@ import Stage0.Frontend.Environments
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
-/-- Discovery may use partial legacy collector output, but it is never an authoritative scope. -/
+/-- Discovery uses candidate scalar bounds in const-function signatures. Its partial collector
+    output remains untrusted until resolveCandidate rechecks the full original source fold. -/
 def nextCandidates (items : List SItemTief) (values : List (String × Int)) : List (String × Int) :=
   let expanded := aliases values [] items
   let env := uAliase values expanded
-  let fns := constantFunctions env expanded
+  let fns := constantFunctions (env ++ values.map (fun c => (c.1, (c.2, c.2)))) expanded
   let normalized := constants env fns [] expanded
   uConstsRech (uKonstFns normalized) normalized []
 
@@ -169,6 +170,29 @@ theorem elaborateScopes_signature_array_zeuge :
     (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _
   · decide +kernel
+  · exact Gabbro.Grammatik.except_ok_get _
+  all_goals decide +kernel
+
+/-- A bounded const call supplies a later alias bound. Discovery must advance beyond LIMIT
+    alone; acceptance still records exact original values, final aliases and bounded signatures. -/
+theorem elaborateScopes_call_bound_zeuge :
+    let bound := STyp.range (.atom "u8") (.lit 0) (.variable "LIMIT") false
+    let items := [SItemTief.typeT [] "Base" [] [] (some (.atom "u8")),
+      .constT "LIMIT" (.atom "Base") (.one (.bin "+" (.lit 40) (.lit 2))),
+      .fnT ⟨"const", "identity", [("x", bound)], some bound, none, []⟩
+        (.block [] (some (.ret (some (.variable "x"))))),
+      .constT "BOUND" (.atom "Base") (.one (.call "identity" [.lit 42])),
+      .typeT [] "Result" [] [] (some (.range (.atom "u8") (.lit 0) (.variable "BOUND") false)),
+      .constT "ANSWER" (.atom "Result") (.one (.variable "BOUND"))]
+    nextCandidates items [("LIMIT", 42)] = [("LIMIT", 42), ("BOUND", 42)] ∧
+    ∃ result, elaborateScopes items = .ok result ∧
+      result.scope.values = [("LIMIT", 42), ("BOUND", 42), ("ANSWER", 42)] ∧
+      result.scope.declared = [("Base", (0, 255)), ("Result", (0, 42))] ∧
+      result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
+        [("identity", [("x", (0, 42))], (0, 42))] ∧
+      result.scope.functionsUseValues = true ∧ (deriveScopes items).toOption.isNone = true := by
+  dsimp only
+  refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _
   all_goals decide +kernel
 
