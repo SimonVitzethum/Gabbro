@@ -2495,6 +2495,47 @@ theorem floatNormalizeLoopL_complete
     exact Int.mul_lt_mul_of_pos_right finalHead.remainder.2.2 positive
 
 
+/-- Derive quotient and guard decomposition from the actual loop memory
+    invariant. The exact tail keeps its common scale, even for large gaps;
+    no desired output fields or universal fixed-read producer is assumed. -/
+theorem FloatNormalizeHead.output_fields
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r) :
+    (origin * 2^(count+distance)) / (8 * 2^(distance+originDistance) : Int) = q / 8 ∧
+    (origin * 2^(count+distance)) % (8 * 2^(distance+originDistance) : Int) =
+      (q % 8) * 2^(distance+originDistance) + r * 2^originDistance ∧
+    0 ≤ q % 8 ∧ q % 8 < 8 ∧
+      (r * 2^originDistance = 0 ↔ r = 0) := by
+  have pd : (0 : Int) < 2^distance := Int.pow_pos (by decide)
+  have po : (0 : Int) < 2^originDistance := Int.pow_pos (by decide)
+  have pg : (0 : Int) < 2^(distance+originDistance) := Int.pow_pos (by decide)
+  have gl := Int.emod_nonneg q (by decide : (8 : Int) ≠ 0)
+  have gh := Int.emod_lt_of_pos q (by decide : (0 : Int) < 8)
+  have split := Int.ediv_mul_add_emod q 8
+  suffices pair :
+      (origin * 2^(count+distance)) / (8 * 2^(distance+originDistance) : Int) = q / 8 ∧
+      (origin * 2^(count+distance)) % (8 * 2^(distance+originDistance) : Int) =
+        (q % 8) * 2^(distance+originDistance) + r * 2^originDistance by
+    refine ⟨pair.1, pair.2, gl, gh, ?_⟩
+    constructor
+    · intro zero
+      exact (mul_eq_zero.mp zero).resolve_right (ne_of_gt po)
+    · intro zero
+      simp [zero]
+  apply (Int.ediv_emod_unique (by positivity : (0 : Int) < 8 * 2^(distance+originDistance))).mpr
+  refine ⟨?_, ?_, ?_⟩
+  · rw [← head.reconstruction, pow_add]
+    have scaled := congrArg (fun x : Int => x * 2^distance * 2^originDistance) split
+    nlinarith only [scaled]
+  · exact add_nonneg (mul_nonneg gl (le_of_lt pg))
+      (mul_nonneg head.remainder.1 (le_of_lt po))
+  · have tail := Int.mul_lt_mul_of_pos_right head.remainder.2.2 po
+    rw [pow_add] at *
+    nlinarith
+
+#print axioms FloatNormalizeHead.output_fields
+
 /-- Exact reconstruction bounds the number of active transfers by the original
     alignment distance and the target precision, independently of machine fuel.
     A positive numerator cannot remain below a target at most `2^precision` after

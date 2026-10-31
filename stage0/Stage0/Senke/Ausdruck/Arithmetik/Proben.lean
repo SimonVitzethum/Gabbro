@@ -789,6 +789,25 @@ theorem floatNormalizeLoopL_finite_magnitude_zeuge [Kern]
   · omega
   · exact positive.2
 
+/-- Output fields are derived jointly from an actually reached memory state. -/
+theorem normalizationOutputFields_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    ∃ m' fuel count distance q r,
+      Star ⟨0, 4294967296⟩ normalizationWitnessMemory
+        ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 13 4 68 8
+        m' fuel count distance q r ∧ 8 ≤ q ∧
+      (13 * 2^(count+distance) : Int) / (8 * 2^(distance+4)) = q / 8 ∧
+      (13 * 2^(count+distance) : Int) % (8 * 2^(distance+4)) =
+        (q % 8) * 2^(distance+4) + r * 2^4 ∧
+      0 ≤ q % 8 ∧ q % 8 < 8 ∧
+        (r * 2^4 = 0 ↔ r = 0) := by
+  obtain ⟨m', f, c, d, q, r, run, _, head, normalized⟩ :=
+    floatNormalizeLoopL_finite_magnitude_zeuge L
+  exact ⟨m', f, c, d, q, r, run, head, normalized, head.output_fields⟩
+
+#print axioms normalizationOutputFields_zeuge
+
 #print axioms floatNormalizeLoopL_finite_magnitude_zeuge
 
 /-- Joint decoded-input witness: opposite signs cancel to one subnormal unit,
