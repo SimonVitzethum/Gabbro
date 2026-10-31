@@ -396,3 +396,21 @@ Measured direct IRBild and SourceWitness checks green under slot 1 / 4G soft / 5
 Axiom audits for Emitted.correct, irBild_correct and both joint/entry witnesses report exactly
 propext, Classical.choice and Quot.sound. No additional language form or totality claim follows
 from this fixture; remaining userspace form adapters and named canonical prerequisites stay open.
+
+### IR-01 nested constant-array contract guard closure
+
+The frozen `elabWithScopes` body retains the canonical nested
+`uKonstArrays alias (uKonstFns ms) consts ms` call. All canonical `uKonstWert`/`uKonstFns`
+call sites were inspected: scalar collection and recursive constant arrays are the only
+function-aware evaluation paths; global integer initialization supplies an empty function list.
+`ConstantLeaf` describes scalar leaves at arbitrary row depth. `safeConstantValues_member`
+and `safeConstantValue_leaf` prove the existing whole-payload guard reaches each leaf;
+`Source.source_constant_leaf_hull` connects every original nested initializer call to its
+complete SafeHull derivation before any normalization or downstream evaluator is entered.
+The generic leaf witness contains two row levels and an actual pure const-function declaration.
+
+Direct Guard and Source checks are green. The persistent `contract-array` negative regression
+contains a logical-contract function called inside two array dimensions and measures the exact
+compile-time-contract refusal from actual `irBild`, rather than a parser failure. This is mitigation
+for the known canonical const-function clause-erasure boundary, not a contract-aware evaluator
+or total support for logical-contract compile-time functions. No unchanged broad suite rerun.

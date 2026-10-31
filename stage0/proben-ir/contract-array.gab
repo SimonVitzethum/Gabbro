@@ -1,0 +1,8 @@
+// Nested constant rows must not bypass the original-source const-call contract guard.
+module constant_array_contract {
+const fn restricted(x : u8) -> u8 requires x < 10 effects { pure } {
+    return x;
+}
+const VALUES : [[u8; 1]; 1] = [[restricted(42)]];
+impl fn main() -> u8 effects { pure } { return 0; }
+}

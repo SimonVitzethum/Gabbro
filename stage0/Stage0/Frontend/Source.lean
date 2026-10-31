@@ -28,7 +28,7 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
     match hp : parseTopTief tokens with
     | .error e => .error e
     | .ok items =>
-      match hpv : Profil.prepareItems options items with
+      match Profil.prepareItems options items with
       | .error e => .error e
       | .ok prepared =>
         if hv : Oeffentlich.huelleZu items then
@@ -66,6 +66,16 @@ theorem source_constant_hull (text : String) {options : Profil.Options} (result 
     (callee : String) (hc : callee ∈ calls expr) :
     SafeHull (uMembers (pre108 result.items)) [] callee := by
   have h := compileTimeSafe_constants result.compileTime hm
+  exact safeConstantName_sound _ _ _ _ ((List.all_eq_true.mp h) callee hc)
+
+/-- The original-source guard covers every scalar leaf in nested constant arrays, before
+    the frozen uKonstArrays/uKonstFns path can evaluate it. -/
+theorem source_constant_leaf_hull (text : String) {options : Profil.Options} (result : Source text options)
+    (name : String) (ty : STyp) (value : SKonstWert) (expr : SExpr)
+    (hm : SItemTief.constT name ty value ∈ uMembers (pre108 result.items))
+    (leaf : ConstantLeaf expr value) (callee : String) (hc : callee ∈ calls expr) :
+    SafeHull (uMembers (pre108 result.items)) [] callee := by
+  have h := safeConstantValue_leaf _ leaf (compileTimeSafe_constants result.compileTime hm)
   exact safeConstantName_sound _ _ _ _ ((List.all_eq_true.mp h) callee hc)
 
 /-- Runtime elaboration receives source-derived scopes whose scalar/function origin is proved
