@@ -4373,6 +4373,7 @@ theorem bind_continuation_zeuge : ∃ n, n ≤ 18 ∧
   exact joint
 end BindCallProbe
 
+
 end Gabbro.Stage0.Senke
 
 namespace Gabbro.Stage0.Senke.RecursiveTerminalProbe
@@ -4417,6 +4418,7 @@ theorem recursiveEndCost_zeuge : Nonempty
         (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
         (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
     exact RecursiveEndCost.source cert
+
 end Gabbro.Stage0.Senke.RecursiveTerminalProbe
 
 namespace Gabbro.Stage0.Senke.RecursiveTerminalProbe
@@ -4508,6 +4510,7 @@ theorem sound_zeuge : ∃ n m', n ≤ 23 ∧
       (fun _ h => nomatch h) pre hw Env.nil (fun _ x => nomatch x) rfl
       (by decide +kernel) (by decide +kernel) (by decide +kernel) around (by decide)
   exact ⟨n, m', bound, run, agree, frame, hw, status.1, result _ _ rfl⟩
+
 end Gabbro.Stage0.Senke.RecursiveTerminalProbe
 
 
@@ -4594,6 +4597,7 @@ theorem stopC_counted_outcome {L : Lay D} {P : Programm D} {f : D.Fn}
   rcases kind with ⟨reason, rfl, rfl⟩ | ⟨reason, rfl, rfl⟩
   · exact ⟨q, stop, nr, arg⟩
   · exact ⟨q, stop, nr, arg⟩
+
 end Gabbro.Stage0.Senke
 
 
@@ -4668,6 +4672,7 @@ theorem stopC_counted_outcome_zeuge :
     ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩ (by decide) (by decide) (by decide)
   exact ⟨u, a, run, post, CountedSimOutcome.sound run post⟩
 end ActualStopProbe
+
 end Gabbro.Stage0.Senke
 
 
@@ -4705,4 +4710,136 @@ theorem CountedSim.outcome {L : Lay D} {P : Programm D} {f : D.Fn}
     · rename_i good
       obtain ⟨a, run, rest⟩ := sim
       exact ⟨_, a, run, by rw [if_neg good]; exact ⟨rfl, rest⟩⟩
+
+/-- Counted routing of the actual backedge. Both reserved words are protected
+    by the body's own frame and protected-slot guarantee at the same endpoint. -/
+theorem CountedSim.counter_dispatch
+    {P : Programm D} {f : D.Fn} {Γ : Ctx}
+    {σ0 : World D} {ρ0 : Env D (D.params f)}
+    {rp cfp fp header back exit : W} {lo K Ks n : Nat} {pr : List Nat}
+    {t : T} {m : Mem} {o : Ausgang (vertragVon D f) true Γ}
+    {jump b c : BitVec 32}
+    (body : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m back exit header o reserved)
+    (layout : WIn L fp Ks K) (bound : lo ≤ K)
+    (edge : InsAt m back 18 jump b c) (far : CodeFar back 1 fp K)
+    (target : back + sx jump = header) :
+    match o with
+    | .ok σ ρ | .next _ σ ρ =>
+      ∃ k m', k ≤ n + 1 ∧ Counted k t m ⟨header, fp⟩ m' ∧
+        AgreeW L fp lo K m m' ∧ EnvAt L m' fp ρ reserved ∧
+        WeltAt m' L σ ∧ Keeps fp pr m m' ∧
+        ∀ j, j < lo ∨ j ∈ pr →
+          m'.rd64 (slot fp (BitVec.ofNat 64 j)) =
+            m.rd64 (slot fp (BitVec.ofNat 64 j))
+    | o => CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m header exit header o reserved := by
+  cases o with
+  | ok σ ρ =>
+    obtain ⟨m', run, frame, env, world, kept⟩ := body
+    have code : CodeAt m back [⟨18, jump.toInt, b.toInt, c.toInt⟩] := by
+      intro k hk
+      have : k = 0 := by simpa using hk
+      subst k
+      simpa [II.f] using edge
+    have edge' := (codeAt_agreeWIn layout frame code far) 0 (by simp)
+    simp only [List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at edge'
+    have last := Counted.next (run_step (t := ⟨back, fp⟩) edge' (by decide)
+      (run_jmp (t := ⟨back, fp⟩) edge')) (Counted.refl _ _)
+    refine ⟨n + 1, m', by omega, ?_, frame, env, world, kept, ?_⟩
+    · simpa [II.f, target] using run.trans last
+    · intro j hj
+      rcases hj with below | member
+      · exact counter_preserved layout frame below bound
+      · exact kept j member
+  | next h σ ρ =>
+    obtain ⟨m', run, frame, env, world, kept⟩ := body
+    refine ⟨n, m', by omega, run, frame, env, world, kept, ?_⟩
+    intro j hj
+    rcases hj with below | member
+    · exact counter_preserved layout frame below bound
+    · exact kept j member
+  | leave h σ ρ => exact body
+  | zurueck | why | logik | hardware => exact body
+
+/-- Rebuild the actual header interface after routing a body outcome.
+    Its counter and unit reads follow from OWN protection, including the already
+    decremented value supplied by the positive header. -/
+theorem CountedSim.counter_reentry
+    {P : Programm D} {f : D.Fn} {Γ : Ctx}
+    {σ0 : World D} {ρ0 : Env D (D.params f)}
+    {rp cfp fp header back exit : W} {lo K Ks n : Nat} {pr : List Nat}
+    {t : T} {m : Mem} {o : Ausgang (vertragVon D f) true Γ}
+    {jump b c : BitVec 32}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
+    {code : List II} {ρ : Env D Γ}
+    (pre : PreS L m header fp K (frei Γ reserved) code ρ reserved)
+    (surround : Umf L A C dv m fp Ks K)
+    (body : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m back exit header o reserved)
+    (layout : WIn L fp Ks K) (bound : lo ≤ K) (abi : FB ≤ lo)
+    (edge : InsAt m back 18 jump b c) (far : CodeFar back 1 fp K)
+    (target : back + sx jump = header) :
+    match o with
+    | .ok σ ρ' | .next _ σ ρ' =>
+      ∃ k m', k ≤ n + 1 ∧ Counted k t m ⟨header, fp⟩ m' ∧
+        PreS L m' header fp K (frei Γ reserved) code ρ' reserved ∧
+        Umf L A C dv m' fp Ks K ∧ WeltAt m' L σ ∧
+        ∀ j, j < lo ∨ j ∈ pr →
+          m'.rd64 (slot fp (BitVec.ofNat 64 j)) =
+            m.rd64 (slot fp (BitVec.ofNat 64 j))
+    | o => CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m header exit header o reserved := by
+  have routed := body.counter_dispatch layout bound edge far target
+  cases o with
+  | ok σ ρ' =>
+    obtain ⟨k, m', hk, run, frame, env, world, kept, words⟩ := routed
+    exact ⟨k, m', hk, run,
+      ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame frame,
+        codeAt_agreeWIn layout frame pre.code pre.far, pre.far, env,
+        trivial, wstab_true _ _⟩,
+      surround.agreeW layout frame abi, world, words⟩
+  | next h σ ρ' =>
+    obtain ⟨k, m', hk, run, frame, env, world, kept, words⟩ := routed
+    exact ⟨k, m', hk, run,
+      ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame frame,
+        codeAt_agreeWIn layout frame pre.code pre.far, pre.far, env,
+        trivial, wstab_true _ _⟩,
+      surround.agreeW layout frame abi, world, words⟩
+  | leave h σ ρ' => exact routed
+  | zurueck | why | logik | hardware => exact routed
+
+/-- Recursive source certificates supply the counted body and its own reserved-slot
+    protection before routing the actual emitted edge. No body run is assumed. -/
+theorem recursiveBlockCost.counter_dispatch {P : Programm D} {passes : Nat}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
+    {f0 : D.Fn} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {b : Block D (vertragVon D f0) true Γ Λ Λ'} {σ σ0 : World D} {ρ : Env D Γ}
+    {ρ0 : Env D (D.params f0)} {rp cfp : W} {outcome : Ausgang (vertragVon D f0) true Γ} {budget : Nat}
+    (certificate : recursiveBlockCost L reserved P passes A C dv Ks (vertragVon D f0) true b σ ρ outcome budget)
+    {lo K top : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {code : List II} {m : Mem} {pc fp : W}
+    (lower : lowB (reserved := reserved) passes A L lo ens pr ex b = some (code, top))
+    (fits : top ≤ Ks) (inside : WIn L fp Ks K) (bound : lo ≤ K)
+    (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved) (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ)
+    {jump a c : BitVec 32}
+    (edge : InsAt m (pc + BitVec.ofNat 64 (16 * code.length)) 18 jump a c)
+    (far : CodeFar (pc + BitVec.ofNat 64 (16 * code.length)) 1 fp K)
+    (target : pc + BitVec.ofNat 64 (16 * code.length) + sx jump =
+      pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2) :
+    ∃ n, n ≤ budget ∧
+    match outcome with
+    | .ok σ ρ | .next _ σ ρ =>
+      ∃ k m', k ≤ n + 1 ∧ Counted k ⟨pc, fp⟩ m ⟨(pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2), fp⟩ m' ∧
+        AgreeW L fp lo K m m' ∧ EnvAt L m' fp ρ reserved ∧
+        WeltAt m' L σ ∧ Keeps fp pr m m' ∧
+        ∀ j, j < lo ∨ j ∈ pr →
+          m'.rd64 (slot fp (BitVec.ofNat 64 j)) =
+            m.rd64 (slot fp (BitVec.ofNat 64 j))
+    | o => CountedSim n L P f0 σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2) (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2) o reserved := by
+  obtain ⟨n, hn, run⟩ := certificate.sound (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp)
+    lower fits inside abi low hprotected pre surroundings world
+  have routed := run.counter_dispatch inside bound edge far target
+  refine ⟨n, hn, ?_⟩
+  cases outcome <;> exact routed
+
+
 end Gabbro.Stage0.Senke

@@ -521,4 +521,59 @@ theorem initialized_positive_source_counted_zeuge (P : Programm D) (σ0 : World 
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (by intro j hj; simp at hj; omega) (by decide) (by decide)
     (.jump rfl next) (by decide) (by decide) (by decide) (by decide)
+
+/-- The loaded image jointly inhabits the normal backedge with both OWN words
+    protected. The same memory already supports nonempty next/leave above. -/
+theorem counter_dispatch_zeuge (P : Programm D) (σ0 : World D)
+    (ρ0 : Env D (D.params 2)) :
+    ∃ k m', k ≤ 1 ∧ Counted k ⟨2160, 4096⟩ (memory true) ⟨2224, 4096⟩ m' ∧
+      AgreeW callLayout 4096 4 256 (memory true) m' ∧
+      EnvAt callLayout m' 4096 (Env.nil : Env D []) 8 ∧
+      WeltAt m' callLayout world ∧ Keeps 4096 [8, 9] (memory true) m' ∧
+      ∀ j, j < 4 ∨ j ∈ [8, 9] →
+        m'.rd64 (slot 4096 (BitVec.ofNat 64 j)) =
+          (memory true).rd64 (slot 4096 (BitVec.ofNat 64 j)) := by
+  obtain ⟨pre, inside, hw, around⟩ := joint true
+  have body : CountedSim (l := true) 0 callLayout P 2 σ0 ρ0 3000 5000 4096 4 256 [8, 9]
+      ⟨2160, 4096⟩ (memory true) 2160 2224 2224
+      (.ok world (Env.nil : Env D [])) 8 := by
+    change CountedReach 0 callLayout 4096 4 256 [8, 9] ⟨2160, 4096⟩
+      (memory true) 2160 world (Env.nil : Env D []) 8
+    exact ⟨memory true, Counted.refl _ _, AgreeW.refl _ _ _ _ _,
+      (fun _ x => nomatch x), hw, Keeps.refl _ _ _⟩
+  exact body.counter_dispatch inside (by decide)
+    (jump := 64) (b := 0) (c := 0) (by decide +kernel)
+    (by unfold CodeFar; decide +kernel) (by decide)
+
+/-- A nonempty source next certificate protects both OWN words and reaches
+    the same endpoint as the normal backedge witness. -/
+theorem source_counter_dispatch_zeuge (P : Programm D) (σ0 : World D)
+    (ρ0 : Env D (D.params 2)) :
+    ∃ n, n ≤ 1 ∧ ∃ k m', k ≤ n + 1 ∧ Counted k ⟨2144, 4096⟩ (memory true) ⟨2224, 4096⟩ m' ∧
+      AgreeW callLayout 4096 4 256 (memory true) m' ∧
+      EnvAt callLayout m' 4096 (Env.nil : Env D []) 8 ∧
+      WeltAt m' callLayout world ∧ Keeps 4096 [8, 9] (memory true) m' ∧
+      ∀ j, j < 4 ∨ j ∈ [8, 9] →
+        m'.rd64 (slot 4096 (BitVec.ofNat 64 j)) =
+          (memory true).rd64 (slot 4096 (BitVec.ofNat 64 j)) := by
+  obtain ⟨pre, inside, hw, around⟩ := joint true
+  have code : CodeAt (memory true) 2144 [ci 18 80 0 0] := by
+    intro k hk
+    have : k = 0 := by simpa using hk
+    subst k
+    simp only [List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci]
+    exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+  have bp : PreS callLayout (memory true) 2144 4096 256 12
+      [ci 18 80 0 0] (Env.nil : Env D []) 8 :=
+    ⟨by decide, by decide, pre.frame, code,
+      (by unfold CodeFar; decide +kernel), (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  have cert : recursiveBlockCost callLayout 8 P 1 addresses (fun _ => []) 2 128
+      (vertragVon D 2) true (LoopJumpCostProbe.body true) world Env.nil
+      (.next rfl world Env.nil) 1 := .jump rfl true
+  exact cert.counter_dispatch (σ0 := σ0) (ρ0 := ρ0) (rp := 3000) (cfp := 5000)
+    (top := 12) (ens := ([], 6)) (ex := (64, 64)) (by decide +kernel) (by decide) inside (by decide)
+    (by decide) (by decide) (by intro j hj; simp at hj; unfold frei FB; omega)
+    bp around hw (jump := 64) (a := 0) (c := 0) (by decide +kernel)
+    (by unfold CodeFar; decide +kernel) (by decide)
+
 end Gabbro.Stage0.Senke.InitializedPassProbe
