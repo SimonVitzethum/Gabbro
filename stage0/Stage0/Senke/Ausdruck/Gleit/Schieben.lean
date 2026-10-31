@@ -1,5 +1,6 @@
 /- Saturating right shift with sticky information for significand alignment. -/
 import Stage0.Senke.Ausdruck.Gleit.Komposition
+import Mathlib.Tactic.Ring
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -73,6 +74,41 @@ theorem floatShiftJamWord_model (a k : Runner.W) :
   dsimp only [floatShiftJamWord]
   rw [same]
   by_cases h : a.toNat % 2^k.toNat = 0 <;> simp [h]
+
+/-- Exact signed alignment relation, including cancellation. The jammed word
+    represents a quotient with a sticky bit, not the original rational operand.
+    The correction retains the discarded remainder and removes the sticky-bit
+    increment at the common denominator. Signs may be chosen independently. -/
+theorem floatShiftJamWord_signed_exact (a k : Runner.W) (q sx sy : Int) :
+    let d : Int := (2^k.toNat : Nat)
+    let j : Int := (floatShiftJamWord a k).toNat
+    let quotient : Int := (a.toNat / 2^k.toNat : Nat)
+    let remainder : Int := (a.toNat % 2^k.toNat : Nat)
+    (sx*q + sy*j)*d + sy*(remainder - (j-quotient)*d) =
+      sx*q*d + sy*(a.toNat : Int) := by
+  dsimp only
+  have division := Nat.mod_add_div a.toNat (2^k.toNat)
+  have exactDivision : ((a.toNat % 2^k.toNat : Nat) : Int) +
+      (2^k.toNat : Nat) * (a.toNat / 2^k.toNat : Nat) = (a.toNat : Int) := by
+    exact_mod_cast division
+  calc
+    _ = sx*q*(2^k.toNat : Nat) + sy*(((a.toNat % 2^k.toNat : Nat) : Int) +
+        (2^k.toNat : Nat)*(a.toNat / 2^k.toNat : Nat)) := by ring
+    _ = _ := by rw [exactDivision]
+
+/-- Opposite signs with a discarded nonzero tail: treating the jammed operand
+    as exact would give 120 at denominator eight, whereas the exact numerator
+    is 119. The signed remainder correction is negative. -/
+theorem floatShiftJamWord_signed_exact_zeuge :
+    floatShiftJamWord 9 3 = 1 ∧
+    (16 - (floatShiftJamWord 9 3).toNat : Int)*8 +
+      (-1)*((9 % 8 : Nat) -
+        (((floatShiftJamWord 9 3).toNat : Int)-(9 / 8 : Nat))*8) = 119 ∧
+    (16 - (floatShiftJamWord 9 3).toNat : Int)*8 ≠ 119 := by
+  decide +kernel
+
+#print axioms floatShiftJamWord_signed_exact
+#print axioms floatShiftJamWord_signed_exact_zeuge
 
 theorem floatShiftQuotL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a k : Nat → Option (List II × Nat)} {av kv : Runner.W}

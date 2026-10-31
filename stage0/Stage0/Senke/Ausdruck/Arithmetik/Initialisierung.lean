@@ -679,6 +679,61 @@ theorem floatFiniteAdd_input_bounds (F : Gleitkomma.Format)
   · rw [scale] at cap; omega
 
 omit [Kern] in
+/-- Canonical finite operands bound the ordered alignment distance and both
+    guard-extended significands. The distance bound includes subnormals and
+    either operand order; it is not a premise about a manually filled slot. -/
+theorem floatFiniteAdd_ordered_input_bounds (F : Gleitkomma.Format)
+    (dense : F.dicht) (width : F.ebits + F.fracBits + 1 ≤ 64)
+    (precision : F.fracBits ≤ 52) (exponents : 1 < F.bexpMax)
+    (a b : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a)
+    (hb : Gleitkomma.wf F b)
+    (fa : a.bexp ≠ F.bexpMax) (fb : b.bexp ≠ F.bexpMax) :
+    let wa := BitVec.ofNat 64 (Gleitkomma.zuBits F a)
+    let wb := BitVec.ofNat 64 (Gleitkomma.zuBits F b)
+    let ea := max (floatFieldWord wa F.fracBits F.ebits).toNat 1
+    let eb := max (floatFieldWord wb F.fracBits F.ebits).toNat 1
+    let ma := 8*((floatFieldWord wa 0 F.fracBits).toNat +
+      if (floatFieldWord wa F.fracBits F.ebits).toNat = 0 then 0 else 2^F.fracBits)
+    let mb := 8*((floatFieldWord wb 0 F.fracBits).toNat +
+      if (floatFieldWord wb F.fracBits F.ebits).toNat = 0 then 0 else 2^F.fracBits)
+    max ea eb - min ea eb ≤ F.bexpMax-2 ∧
+      ma + mb < 2^57 ∧ ma < 2^56 ∧ mb < 2^56 := by
+  have ba := floatFiniteAdd_input_bounds F dense width precision exponents a ha fa
+  have bb := floatFiniteAdd_input_bounds F dense width precision exponents b hb fb
+  dsimp only at ba bb ⊢
+  have hi : max
+      (max (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F a)) F.fracBits F.ebits).toNat 1)
+      (max (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F b)) F.fracBits F.ebits).toNat 1)
+      < F.bexpMax := max_lt ba.2.1 bb.2.1
+  have lo : 1 ≤ min
+      (max (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F a)) F.fracBits F.ebits).toNat 1)
+      (max (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F b)) F.fracBits F.ebits).toNat 1) :=
+    le_min ba.1 bb.1
+  omega
+
+omit [Kern] in
+/-- Joint finite fixtures attain the maximum distance in both formats: a
+    negative minimum subnormal and a positive maximum finite operand. -/
+theorem floatFiniteAdd_ordered_input_bounds_zeuge :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+      let a : Gleitkomma.GBits F := ⟨true,0,1⟩
+      let b : Gleitkomma.GBits F := ⟨false,F.bexpMax-1,2^F.fracBits-1⟩
+      let wa := BitVec.ofNat 64 (Gleitkomma.zuBits F a)
+      let wb := BitVec.ofNat 64 (Gleitkomma.zuBits F b)
+      let ea := max (floatFieldWord wa F.fracBits F.ebits).toNat 1
+      let eb := max (floatFieldWord wb F.fracBits F.ebits).toNat 1
+      Gleitkomma.wf F a ∧ Gleitkomma.wf F b ∧
+      a.bexp ≠ F.bexpMax ∧ b.bexp ≠ F.bexpMax ∧
+      max ea eb - min ea eb = F.bexpMax-2 := by
+  intro F member
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl <;> decide +kernel
+
+#print axioms floatFiniteAdd_ordered_input_bounds_zeuge
+
+#print axioms floatFiniteAdd_ordered_input_bounds
+
+omit [Kern] in
 /-- Both supported formats satisfy all generic decoding premises jointly.
     The operand fixture crosses the hidden-bit boundary without a normal
     exponent and retains a negative sign in its packed representation. -/
