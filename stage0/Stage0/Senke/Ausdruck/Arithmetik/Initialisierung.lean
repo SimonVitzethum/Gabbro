@@ -1322,4 +1322,258 @@ theorem retainedWordCodes_ok_zeuge {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem �
 
 #print axioms retainedWordCodes_ok_zeuge
 
+/-- The four remaining producers, literally the exponent and magnitude
+    expressions emitted by `floatFiniteAddL`. -/
+def finiteAddRemaining (F : Gleitkomma.Format) (dst : Nat) :=
+  let load := fun (s j : Nat) => some ([ci 2 j s 0], j+1)
+  let field := fun start width j p => floatFieldL start width j p
+  let exponent := fun p j => wordL 3 j (field F.fracBits F.ebits j p)
+    (wordK 14 (j+1) (field F.fracBits F.ebits (j+1) p) 0)
+  let magnitude := fun p j => wordK 5 j
+    (wordL 3 j (field 0 F.fracBits j p)
+      (wordL 5 (j+1)
+        (wordL 4 (j+1) (some ([ci 1 (j+1) 1 0],j+2))
+          (wordK 14 (j+2) (field F.fracBits F.ebits (j+2) p) 0))
+        (some (konstWL 4 (2^F.fracBits) (j+2))))) 8
+  [exponent (load (dst+1)), exponent (load (dst+2)),
+    magnitude (load (dst+1)), magnitude (load (dst+2))]
+
+def finiteAddRemainingValue (F : Gleitkomma.Format) (a b : Runner.W) (i : Nat) : Runner.W :=
+  let w := if i % 2 = 0 then a else b
+  let e := floatFieldWord w F.fracBits F.ebits
+  if i < 2 then e + Runner.IR.bool (e == 0)
+  else (floatFieldWord w 0 F.fracBits +
+    (1 - Runner.IR.bool (e == 0)) * BitVec.ofNat 64 (2^F.fracBits)) * 8
+
+/-- All four actual decoder expressions are sound in the reconstructed frame. -/
+theorem finiteAddRemaining_sound {Δ : Ctx} (η : Env D Δ)
+    (F : Gleitkomma.Format) (dst : Nat) (a b : Runner.W)
+    (frac : F.fracBits < 64) (mask : 2^F.ebits-1 < 2^64)
+    (fracMask : 2^F.fracBits-1 < 2^64) (hiddenBound : 2^F.fracBits < 2^64)
+    (ha : WordCode (L := L) η (fun _ => True)
+      (fun j => some ([ci 2 j (dst+1) 0],j+1)) a)
+    (hb : WordCode (L := L) η (fun _ => True)
+      (fun j => some ([ci 2 j (dst+2) 0],j+1)) b) :
+    ∀ i, (hi : i < (finiteAddRemaining F dst).length) →
+      WordCode (L := L) η (fun _ => True) (finiteAddRemaining F dst)[i]
+        (finiteAddRemainingValue F a b i) := by
+  have decoder : ∀ (p : Nat → Option (List II × Nat)) (w : Runner.W),
+      WordCode (L := L) η (fun _ => True) p w →
+      WordCode (L := L) η (fun _ => True)
+        (fun j => wordL 3 j (floatFieldL F.fracBits F.ebits j p)
+          (wordK 14 (j+1) (floatFieldL F.fracBits F.ebits (j+1) p) 0))
+        (floatFieldWord w F.fracBits F.ebits + Runner.IR.bool (floatFieldWord w F.fracBits F.ebits == 0)) ∧
+      WordCode (L := L) η (fun _ => True)
+        (fun j => wordK 5 j
+          (wordL 3 j (floatFieldL 0 F.fracBits j p)
+            (wordL 5 (j+1)
+              (wordL 4 (j+1) (some ([ci 1 (j+1) 1 0],j+2))
+                (wordK 14 (j+2) (floatFieldL F.fracBits F.ebits (j+2) p) 0))
+              (some (konstWL 4 (2^F.fracBits) (j+2))))) 8)
+        ((floatFieldWord w 0 F.fracBits +
+          (1 - Runner.IR.bool (floatFieldWord w F.fracBits F.ebits == 0)) * BitVec.ofNat 64 (2^F.fracBits)) * 8) := by
+    intro p w hp
+    have e : WordCode (L := L) η (fun _ => True) _ _ := floatFieldL_ok F.fracBits F.ebits frac mask hp
+    have f : WordCode (L := L) η (fun _ => True) _ _ := floatFieldL_ok 0 F.fracBits (by decide) fracMask hp
+    have z : WordCode (L := L) η (fun _ => True) _ _ := WordCode.const (L := L) (ρ := η) (W := fun _ => True) 0 (by decide)
+    have one : WordCode (L := L) η (fun _ => True) _ _ := WordCode.const (L := L) (ρ := η) (W := fun _ => True) 1 (by decide)
+    have eight : WordCode (L := L) η (fun _ => True) _ _ := WordCode.const (L := L) (ρ := η) (W := fun _ => True) 8 (by decide)
+    have zero : WordCode (L := L) η (fun _ => True) _ _ := WordCode.bin e z (g := fun a b => some (Runner.IR.bool (a == b))) rfl rfl (by decide : 14 < 256)
+    have normal : WordCode (L := L) η (fun _ => True) _ _ := WordCode.bin one zero (g := fun a b => some (a-b)) rfl rfl (by decide : 4 < 256)
+    have hidden : WordCode (L := L) η (fun _ => True) _ _ := WordCode.bin normal (WordCode.konst (2^F.fracBits) hiddenBound)
+      (g := fun a b => some (a*b)) rfl rfl (by decide : 5 < 256)
+    have mag : WordCode (L := L) η (fun _ => True) _ _ := WordCode.bin f hidden (g := fun a b => some (a+b)) rfl rfl (by decide : 3 < 256)
+    exact ⟨WordCode.bin e zero (g := fun a b => some (a+b)) rfl rfl (by decide : 3 < 256),
+      WordCode.bin mag eight (g := fun a b => some (a*b)) rfl rfl (by decide : 5 < 256)⟩
+  intro i hi
+  have bound : i < 4 := hi
+  interval_cases i <;>
+    intro fp K d c top hc ht mm pp hp
+  all_goals simp only [finiteAddRemaining, List.getElem_cons_zero,
+    List.getElem_cons_succ] at hc
+  · simpa [finiteAddRemainingValue] using (decoder _ _ ha).1 hc ht mm pp hp
+  · simpa [finiteAddRemainingValue] using (decoder _ _ hb).1 hc ht mm pp hp
+  · simpa [finiteAddRemainingValue] using (decoder _ _ ha).2 hc ht mm pp hp
+  · simpa [finiteAddRemainingValue] using (decoder _ _ hb).2 hc ht mm pp hp
+
+#print axioms finiteAddRemaining_sound
+
+theorem floatFiniteAddL_remaining_code (F : Gleitkomma.Format) (dst : Nat)
+    (a b : Nat → Option (List II × Nat)) {code : List II} {top : Nat}
+    (compiled : floatFiniteAddL F dst a b = some (code,top)) :
+    ∃ ca ta cb tb cf tf cg tg remaining rt tail,
+      a (dst+1) = some (ca,ta) ∧ b (dst+2) = some (cb,tb) ∧
+      floatFieldL (F.fracBits+F.ebits) 1 (dst+3)
+        (fun j => some ([ci 2 j (dst+1) 0],j+1)) = some (cf,tf) ∧
+      floatFieldL (F.fracBits+F.ebits) 1 (dst+4)
+        (fun j => some ([ci 2 j (dst+2) 0],j+1)) = some (cg,tg) ∧
+      floatStateSlotsL (dst+5) (finiteAddRemaining F dst) = some (remaining,rt) ∧
+      code = (ca ++ cb) ++ (cf ++ (cg ++ (remaining ++ tail))) ∧
+      ta ≤ top ∧ tb ≤ top ∧ tf ≤ top ∧ tg ≤ top ∧ rt ≤ top := by
+  simp only [floatFiniteAddL, bind, pure, Option.bind_eq_some_iff] at compiled
+  obtain ⟨inputs, hi, aligned, ha, shift, hs, rounded, hr, result⟩ := compiled
+  rw [floatStateSlotsL] at hi
+  simp only [bind, pure, Option.bind_eq_some_iff] at hi
+  obtain ⟨av, hav, afterA, hb, inputEq⟩ := hi
+  rw [floatStateSlotsL] at hb
+  simp only [bind, pure, Option.bind_eq_some_iff] at hb
+  obtain ⟨bv, hbv, afterB, hc, afterEq⟩ := hb
+  rw [floatStateSlotsL] at hc
+  simp only [bind, pure, Option.bind_eq_some_iff] at hc
+  obtain ⟨fv, hfv, afterF, hd, fieldEq⟩ := hc
+  rw [floatStateSlotsL] at hd
+  simp only [bind, pure, Option.bind_eq_some_iff] at hd
+  obtain ⟨gv, hgv, afterG, he, signEq⟩ := hd
+  rcases afterG with ⟨gCode,gTop⟩
+  rcases inputs with ⟨inputCode,inputTop⟩
+  rcases afterA with ⟨aCode,aTop⟩
+  rcases afterB with ⟨bCode,bTop⟩
+  rcases afterF with ⟨fCode,fTop⟩
+  simp only [Option.some.injEq, Prod.mk.injEq] at inputEq afterEq fieldEq signEq result
+  refine ⟨av.1,av.2,bv.1,bv.2,fv.1,fv.2,gv.1,gv.2,
+    gCode,gTop,code.drop inputCode.length,hav,?_,?_,?_,?_,?_,?_,?_,?_,?_,?_⟩
+  · simpa [Nat.add_assoc] using hbv
+  · simpa [Nat.add_assoc] using hfv
+  · simpa [Nat.add_assoc] using hgv
+  · simpa [finiteAddRemaining, Nat.add_assoc] using he
+  · calc
+      code = inputCode ++ code.drop inputCode.length := by
+        rw [← result.1]
+        simp [List.drop_append, List.append_assoc]
+      _ = _ := by
+        rw [← inputEq.1, ← afterEq.1, ← fieldEq.1, ← signEq.1]
+        simp only [List.append_assoc]
+  all_goals omega
+
+#print axioms floatFiniteAddL_remaining_code
+
+theorem floatFiniteAddL_read_fields {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (F : Gleitkomma.Format) (dst : Nat)
+    (a b : Nat → Option (List II × Nat)) (wa wb : Runner.W)
+    {code : List II} {top K reserved : Nat} {fp pc : Runner.W} {m : Runner.Mem}
+    (compiled : floatFiniteAddL F dst a b = some (code,top))
+    (width : F.fracBits+F.ebits < 64) (lower : FB ≤ dst+1)
+    (frac : F.fracBits < 64) (mask : 2^F.ebits-1 < 2^64)
+    (fracMask : 2^F.fracBits-1 < 2^64) (hiddenBound : 2^F.fracBits < 2^64)
+    (room : top ≤ K) (slots : dst+9 ≤ K)
+    (producerA : ∀ c t, a (dst+1) = some (c,t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K (dst+1) c ρ W reserved →
+      Ok m pc fp K (dst+1) c (· = wa))
+    (producerB : ∀ c t, b (dst+2) = some (c,t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K (dst+2) c ρ W reserved →
+      Ok m pc fp K (dst+2) c (· = wb))
+    (pre : Pre L m pc fp K (dst+1) code ρ W reserved) :
+    ∃ executed tail m', code = executed ++ tail ∧
+      Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*executed.length),fp⟩ m' ∧
+      Agree fp (dst+1) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+1))) = some wa ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+2))) = some wb ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+3))) =
+        some (floatFieldWord wa (F.fracBits+F.ebits) 1) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+4))) =
+        some (floatFieldWord wb (F.fracBits+F.ebits) 1) ∧
+      (∀ i, i < 4 → m'.rd64 (slot fp (BitVec.ofNat 64 (dst+5+i))) =
+        some (finiteAddRemainingValue F wa wb i)) ∧
+      Pre L m' (pc+BitVec.ofNat 64 (16*executed.length)) fp K (dst+9) tail ρ W reserved := by
+  obtain ⟨ca,ta,cb,tb,cf,tf,cg,tg,remaining,rt,tail,ha,hb,hf,hg,hr,hcode,hta,htb,htf,htg,htr⟩ :=
+    floatFiniteAddL_remaining_code F dst a b compiled
+  rw [hcode] at pre
+  obtain ⟨m1,runA,agreeA,w,readA,valueA⟩ :=
+    producerA ca ta ha (by omega) m pc pre.left.left
+  subst w
+  have preB := pre.left.next agreeA (show dst+1 ≤ dst+2 by omega) (by omega)
+  obtain ⟨m2,runB,agreeB,w,readB,valueB⟩ :=
+    producerB cb tb hb (by omega) m1 _ preB
+  subst w
+  have agreeAB := agreeA.trans (agreeB.mono (show dst+1 ≤ dst+2 by omega))
+  have readA2 := slotRead_agree preB.frame agreeB (by omega) (by omega) readA
+  have preF := pre.next agreeAB (show dst+1 ≤ dst+3 by omega) (by omega)
+  obtain ⟨m3,runF,agreeF,w,readF,valueF⟩ :=
+    floatFieldL_retained (input := dst+1) (dst := dst+3) (F.fracBits+F.ebits) 1 width (by decide) wa hf
+      (by omega) lower (by omega) readA2 preF.left
+  subst w
+  have preG := preF.next agreeF (show dst+3 ≤ dst+4 by omega) (by omega)
+  have readB3 := slotRead_agree preF.frame agreeF (by omega) (by omega) readB
+  obtain ⟨m4,runG,agreeG,w,readG,valueG⟩ :=
+    floatFieldL_retained (input := dst+2) (dst := dst+4) (F.fracBits+F.ebits) 1 width
+      (by decide) wb hg (by omega) (by omega) (by omega) readB3 preG.left
+  subst w
+  have agreeFG := agreeF.trans (agreeG.mono (show dst+3 ≤ dst+4 by omega))
+  have preR := preG.next agreeG (show dst+4 ≤ dst+5 by omega) (by omega)
+  have readA4 := slotRead_agree preF.frame agreeFG (by omega) (by omega) readA2
+  have readB4 := slotRead_agree preF.frame agreeFG (by omega) (by omega) readB
+  obtain ⟨m5,runR,agreeR,reads,rest⟩ := retainedWordCodes_ok (L := L)
+    (finiteAddRemaining F dst) (finiteAddRemainingValue F wa wb) (by
+      intro Δ η loads
+      exact finiteAddRemaining_sound η F dst wa wb frac mask fracMask hiddenBound
+        (loads (dst+1) wa lower (by omega) readA4)
+        (loads (dst+2) wb (by omega) (by omega) readB4))
+    hr (by omega) (by omega) (by simpa [finiteAddRemaining] using slots) preR
+  have runPrefix := ((runA.trans runB).trans
+    (by simpa only [List.length_append, pc_add] using runF)).trans
+      (by simpa only [List.length_append, pc_add] using runG)
+  refine ⟨(((ca++cb)++cf)++cg)++remaining,tail,m5,
+    by simpa [List.append_assoc] using hcode,?_,
+    agreeAB.trans ((agreeFG.trans (agreeR.mono (by omega))).mono (by omega)),
+    slotRead_agree preR.frame agreeR (by omega) (by omega) readA4,
+    slotRead_agree preR.frame agreeR (by omega) (by omega) readB4,
+    slotRead_agree preR.frame agreeR (by omega) (by omega)
+      (slotRead_agree preG.frame agreeG (by omega) (by omega) readF),
+    slotRead_agree preR.frame agreeR (by omega) (by omega) readG,?_,?_⟩
+  · simpa only [List.length_append, pc_add] using runPrefix.trans
+      (by simpa only [List.length_append, pc_add] using runR)
+  · simpa only [finiteAddRemaining, List.length_cons, List.length_nil,
+      List.length_append, pc_add] using reads
+  · simpa only [finiteAddRemaining, List.length_cons, List.length_nil,
+      List.length_append, pc_add, Nat.add_assoc] using rest
+
+#print axioms floatFiniteAddL_read_fields
+
+theorem floatFiniteAddL_read_fields_zeuge {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (F : Gleitkomma.Format)
+    (format : F ∈ [Gleitkomma.f32, Gleitkomma.f64])
+    {K : Nat} {fp pc : Runner.W} {m : Runner.Mem}
+    (room : ((floatFiniteAddL F 16
+      (fun j => some ([ci 1 j 7 0],j+1))
+      (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).2 ≤ K)
+    (slots : 25 ≤ K)
+    (pre : Pre L m pc fp K 17
+      ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+        (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).1 ρ W 13) :
+    ∃ operandCode tail m',
+      ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+        (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).1 = operandCode ++ tail ∧
+      Star ⟨pc,fp⟩ m ⟨pc + BitVec.ofNat 64 (16*operandCode.length),fp⟩ m' ∧
+      Agree fp 17 K m m' ∧
+      m'.rd64 (slot fp 17) = some 7 ∧ m'.rd64 (slot fp 18) = some 11 ∧
+      m'.rd64 (slot fp 19) = some (floatFieldWord 7 (F.fracBits+F.ebits) 1) ∧
+      m'.rd64 (slot fp 20) = some (floatFieldWord 11 (F.fracBits+F.ebits) 1) ∧
+      (∀ i, i < 4 → m'.rd64 (slot fp (BitVec.ofNat 64 (21+i))) =
+        some (finiteAddRemainingValue F 7 11 i)) ∧
+      Pre L m' (pc + BitVec.ofNat 64 (16*operandCode.length)) fp K 25 tail ρ W 13 := by
+  apply floatFiniteAddL_read_fields F 16
+    (fun j => some ([ci 1 j 7 0],j+1))
+    (fun j => some ([ci 1 j 11 0],j+1)) 7 11
+    (top := ((floatFiniteAddL F 16 (fun j => some ([ci 1 j 7 0],j+1))
+      (fun j => some ([ci 1 j 11 0],j+1))).getD ([],0)).2)
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at format
+    rcases format with rfl | rfl <;> rfl
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at format
+    rcases format with rfl | rfl <;> decide +kernel
+  · decide +kernel
+  all_goals try { simp only [List.mem_cons, List.not_mem_nil, or_false] at format
+                  rcases format with rfl | rfl <;> decide +kernel }
+  · exact room
+  · exact slots
+  · intro c t hc ht m pc hp
+    cases hc
+    exact const_ok hp (by decide) (by omega)
+  · intro c t hc ht m pc hp
+    cases hc
+    exact const_ok hp (by decide) (by omega)
+  · exact pre
+
+
+#print axioms floatFiniteAddL_read_fields_zeuge
+
 end Gabbro.Stage0.Senke
