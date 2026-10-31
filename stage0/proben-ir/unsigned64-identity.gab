@@ -1,0 +1,6 @@
+// The full unsigned quotient fits when dividing the largest word by one.
+module ir_probe {
+impl fn main() -> u64 effects { pure } {
+    return (18446744073709551615 / 1) >> 63;
+}
+}

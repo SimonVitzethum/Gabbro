@@ -1,4 +1,4 @@
-import Stage0.Frontend.Environments
+import Stage0.Frontend.DependentScopes
 import Stage0.Frontend.Guard
 import Stage0.Profil
 
@@ -34,7 +34,7 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
         if hv : Oeffentlich.huelleZu items then
           if hc : compileTimeSafe (uMembers (pre108 items)) then
             let result := normalize (uMembers (pre108 items))
-            match deriveScopes (uMembers (pre108 items)) with
+            match elaborateScopes (uMembers (pre108 items)) with
             | .error e => .error e
             | .ok derived =>
               .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property, derived⟩

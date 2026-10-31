@@ -1,9 +1,66 @@
 # Gabbro-to-IR compilation lanes
 
-**Latest Lean scheduling rule:** Up to four global concurrent Lean checks, each capped at 5 GiB
+**RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
+Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree
+`t3-e67bc9a3` and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. All other lanes stay paused
+with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
+
+## Checked frontend follow-up (2026-10-31)
+
+Root integrated IR-01 through `77f74c248`: dependent original scalar/alias scopes, fixed-count
+fieldless tables and canonical typing/collector retention for every original array declaration,
+including unused declarations. The selected-ABI guard and two-check global limit are preserved.
+`Stage0.ArrayWitness` is imported by Stage0 and five generic/joint array statements are audited.
+
+Measured on the merged sources: 13 affected modules through Stage0 and Nachpruefung, all five new
+array audits on standard axioms, layout over 1414 Lean files, and 11 textual source-to-IR/ASM or
+precise-refusal regressions passed. A SourceWitness check exceeded the initial internal Lean
+4096-MiB threshold; its retry and the remaining checks passed at 4608 MiB with the unchanged
+MemoryHigh=4G/MemoryMax=5G/MemorySwapMax=0 scope. No grammar rebuild or full guardians were run.
+Logs remain in `.scratch-integration/frontend-array/`. This is an incremental compiler result,
+not a completed lane, full ABI integration or whole-language verification.
+
+## Checked integration checkpoint (2026-10-31)
+
+Root merged the coherent published IR-01 source/profile bridge through `587dfb27d`, IR-02 integer/runner
+lowering through `1f3d586f1`, IR-08 narrowing/traversal through `4c126f4db` and IR-12 source/start-byte
+proofs through `e4815ed3f`. Preserve the selected-ABI guard from `63addf850`. Full-ABI dirty work and
+later follow-up commits are excluded from this checkpoint; no lane is declared complete.
+
+Combined validation checked 184 distinct Stage0 modules (including missing cache dependencies), root and
+central axiom audit. All 37 selected textual compiler/ASM regressions passed their expected execution or
+precise refusal results, including the retained image-size bound. Layout is green. The frozen cached
+`gabbro_ziel` theorem has exactly `propext`, `Classical.choice`, `Quot.sound`; no grammar rebuild occurred.
+Split the unchanged all-27-image kernel witness into finite cases to check it within the 5-GiB limit.
+CLI regression execution used `lean --run` and the assembly runner, not a claimed native CLI rebuild.
+This is a checked incremental userspace compiler integration, not total language/ISA/platform verification.
+
+Root validation logs are retained in `.scratch-integration/merged/`. Source files stayed fixed throughout
+the successful combined checks; artifact-gap and interrupted aggregate-fixture logs are preserved too.
+Slot-1 integration priority is released; IR-01 and IR-08 may resume their deferred module checks.
+
+**Parameterized-start activation blocker:** The current fixed `exitSlot = 2*FB+2 = 10` used by
+`spawnC`/`startC` overlaps a three-word parameter span at slots 8, 9, 10 in root frame `F = FB`.
+Keep the empty-parameter guard. Before activating IR-12 startup, place scratch beyond the shared
+parameter/result/status region (using the finalized `receiveTop signature FB` convention or its proved
+equivalent), update bounds/footprints and prove initialization survives spawn/call. IR-12 owns that
+future activation after the coherent full ABI is published; no second startup ABI is authorized.
+
+**Rolling allocation update:** IR-12 handed back green source/start-byte/profile/CLI checkpoints through
+`e4815ed3f`; actual parameterized image startup remains blocked on IR-03's full ABI. Its slot now runs
+IR-09 userspace concurrency/RCU. IR-12 is not counted complete and resumes for actual image integration
+when the shared dependency is ready. The six-agent cap remains in force.
+
+**Rolling allocation:** IR-11 checkpoint `195d5d284` is green for explicit binding selection and gate
+construction; full buffers/results remain blocked on IR-03. Its worker slot now runs IR-08 control-flow
+implementation. This is a dependency handoff, not IR-11 completion. Resume IR-11 integration after the
+shared foundation is green, without exceeding six active implementation agents.
+
+**Latest Lean scheduling rule:** Up to two global concurrent Lean checks, each capped at 5 GiB
 (MemoryHigh=4G, MemoryMax=5G, MemorySwapMax=0), supersede the earlier single-check rules below.
-Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..4. IR-01/11 share slot 1,
-IR-02 uses slot 2, IR-03 uses slot 3, IR-04/12 share slot 4. Release per module/check, preserve artifact
+Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..2. IR-01/06 share slot 1;
+IR-02/03/04/10 share slot 2. Retire slots 3 and 4. This includes audits, witnesses and `lean --run`.
+Release per module/check, preserve artifact
 isolation and one check per worktree. No grammar rebuild. IR-03 foundation publication has priority
 within its slot because consumers depend on it.
 
@@ -174,6 +231,73 @@ the corresponding value/call/dispatch lanes. New discoveries must be assigned ex
 **Execution is authorized.** Follow the seven-round schedule above; preserve all interrupted work and
 never treat it as checked. Final closure is blocked while any in-scope syntax or generic proof is missing.
 
+## IR-03 shared transport checkpoint (2026-10-31)
+
+The actual variable emitter now calls `copyWords width destination source`; its connected `lowE_ok`
+variable branch uses `copyWords_ok`, including the one-word fast path. `WordsAt memory frame base words`
+states consecutive word placement using the runner's existing slot addressing. The generic execution
+contract copies arbitrary word lists from the preserved prefix (`source + width <= destination`) to
+fresh storage (`destination + width <= frame capacity`), proves actual IR execution and every output
+word, and preserves memory outside the destination suffix. It assumes no child execution. This is
+transport only, not a completed multiword ABI: callers must not infer that wide expression emission,
+type widths, argument/result placement or aggregate source coverage has been enabled.
+
+IR-03 remains incomplete. `Enc`, `EnvAt`, `frei`/`vslot`, binding, world storage and function/image
+contracts still require their coordinated multiword conversion. In particular the current array/string
+refusals remain, and no new source-form family is counted complete. IR-02/06/10 must share the transport
+interface above; the type-width and encoding interface is not frozen by this checkpoint.
+
+### IR-03 in-progress canonical interface
+
+The controlling compiler scope is existing userspace Gabbro. Source ASM bodies,
+boot/privileged syntax and device-register forms are excluded; ordinary safe
+regions/references, syscalls, profiles and entries remain in scope.
+
+The shared implementation is `Ausdruck/Aggregat/{Layout,Encoding,Kopie}.lean`.
+Consumers use `valueWords` for a type, `contextWords` for parameters/contexts,
+`variableOffset` for a variable, and `encodeWords`/`ValueAt` for its complete span.
+Integer limbs are little endian two's complement; arrays concatenate complete
+element spans and zero-length arrays retain one zero marker. Strings of capacity
+at most one retain the proved packed representation; larger strings contain a
+length word and a byte-word sequence padded to the declared capacity. `ValueValid`
+recursively retains reference and IEEE obligations. A low-word projection is only
+an internal view: it cannot establish `ValueAt` for a multiword result.
+
+The ABI reserves `returnWords result reasons`, the maximum of the normal result
+and reason widths, after the original parameter span. Status/ensures follows that
+entire area; relocated parameters and counters follow status. Headers 0/1 retain
+return PC/caller frame, 2 carries entry depth then a return cache tied by
+`ReturnMirror` to the canonical result area, and 3 retains the entry snapshot.
+`ResultAt`, `ValueOk` and `ResultOk` carry complete results. IR-02/06/10 must use
+these definitions rather than introducing another multiword path.
+
+This migration is not yet integration green: expression mutual induction and all
+call/return, snapshot, world-memory and image consumers must compile together
+before the interface is accepted or new source forms are counted. Ordinary
+records remain a named canonical-model prerequisite: `STyp.raw` has no canonical
+record/product `Ty` and no ordinary-record `UProg` adapter. Existing array/string
+types do not justify inventing record erasure or replacement source semantics.
+
+The independently publishable foundation keeps the pre-migration emitter and
+generic compiler contracts intact while importing these shared definitions into
+the actual expression compiler. `copyWords_ok` is derived from `copyWords_run`,
+whose footprint is exactly the destination span and whose forward-copy condition
+is `destination <= source` or `source + width <= destination`. `copyValue_run`
+transports complete `ValueAt`; `copyResult_run` also transports the empty result's
+zero marker. `ValueProbe.copyValue_run_zeuge` supplies real code, frame, source
+words and all execution premises for a three-word copy. `encodeEnv` orders complete
+parameter encodings exactly like `contextWords`; its length theorem is shared by
+start and call consumers. This foundation does not activate the dirty full ABI
+migration or count any additional userspace source form as complete.
+
+This dependency snapshot was checked independently of the preserved dirty ABI
+migration: 134 affected Senke modules, `IRBild`, the Stage-0 root and the explicit
+axiom audit passed. The eight existing textual source -> IR -> ASM regressions
+`arr-empty`, `arr-singleton`, `str-empty`, `str-byte`, `calls`, `old-global`, `loop`
+and `eng` matched their expected exit codes (19.574 seconds together). The copy
+and connected compiler theorems use only the standard axioms. Checks used IR-03's
+dedicated slot 3 with MemoryHigh=4G, MemoryMax=5G and no swap; grammar artifacts
+were reused. This validates the dependency commit, not the unfinished migration.
 ## IR-01 frontend checkpoint (2026-10-31, round 1; incomplete)
 
 Implementation commits `85025ce08` and `e6147444e` add `Stage0.Frontend.Aliases`, called by
@@ -497,6 +621,21 @@ Compiler, IRBild and concrete SourceWitness checks are green; six relevant gener
 use the standard three axioms. This remains a conservative scoped elaboration extension, not an
 equality claim between new supplied scopes and the incomplete old scopes for newly supported syntax.
 
+## Rolling worker handoff: concurrency checkpoint
+
+IR-09 published checked lock reason-arm lowering as `e67b53dc8`. It remains incomplete for RCU,
+shared lock holding, function returns under locks, full GX composition and dependent ABI/root integration.
+Its active slot now implements IR-10 functions/calls/snapshots; it shares Lean slot 4 with IR-04.
+This is a worker handoff, not completion of IR-09. Root integrates the coherent green checkpoint separately.
+
+## Rolling worker handoff: control checkpoint
+
+IR-08 published coherent `4ccced168`, including the source-empty-table adapter and genuine large-count
+source fixtures. It remains incomplete pending common interval-test deduplication and multiword children.
+Its active slot now implements IR-06 memory/byte/reference lowering and shares Lean slot 1 with IR-01.
+IR-03 retains frame/call ABI ownership; existing world-layout/relation changes require explicit coordination
+before IR-06 mutates shared definitions. The certified producer-v1 pair is immutable preparation evidence,
+not a public full-ABI integration milestone.
 ### IR-01 empty fixed-count tables in the existing canonical model
 
 `Frontend.Tables.tableWithEmpty` adds precisely fixed-count declarations with an explicitly empty
@@ -528,3 +667,74 @@ Tables, Elaboration, Compiler, IRBild and updated SourceWitness direct checks pa
 4G/5G scope. Eight generic/whole-source/witness audits retain only the standard three axioms.
 No grammar build or Senke file was changed. Wider source traversal integration is a separate
 combined-snapshot validation with IR-08; IR-01 coverage remains incomplete.
+
+### IR-01 dependent scalar/type scope discovery
+
+`DependentScopes.elaborateScopes` preserves every successful conservative deriveScopes result
+exactly (`elaborateScopes_preserves`), and only attempts discovery after a refusal. Discovery
+reuses existing alias/constant normalization and the frozen collector to propose values; these
+proposals are untrusted. `resolveCandidate` evaluates the full ORIGINAL ordered typedConstants
+fold using canonical uFeldTyp/uKonstWert, then compares the COMPLETE alias environment against
+`original.foldl (aliasStep finalValues) []`. It stores finalValues, not discovery input. Every
+integer alias declaration must resolve on this new path; unresolved cycles refuse, and bounded
+discovery never converts exhaustion into acceptance. Existing initial-path behavior is unchanged.
+`resolveCandidate_final` and `discoverScopes_final` prove final-original-value alias provenance.
+
+Scopes now records aliasConstants and its origin: frozen canonical initial collector values
+(for the existing path), or the final strict original scalar values (for discovery). Its alias
+fold and ScopeStable are indexed by those explicit inputs. Compiler's whole-source contract
+retains this origin together with exact ordered scalar values, original function meaning and
+actual unchanged canonical elaboration/lowerAllg/checker endpoint. No new expression evaluator,
+widened builtin, default-zero binding, filtered negative or invented translator semantics occurs.
+
+Actual `dependent-alias` and `dependent-alias-negative` source->IR->ASM both return42, including
+a computed alias-typed LIMIT, dependent range, further alias chain, and negative intermediate.
+The original-range overflow case and cyclic type/initializer case measure precise refusals.
+The formal dependent-scope witness proves the former conservative path refuses its fixture.
+SourceWitness now jointly includes the actual alias-typed pure negative function, NEGATIVE=-1,
+C=42, dependent Bound/Final ranges, ANSWER=42 and count-2^32 fieldless table; aliases_final proves
+this accepted source/image uses final original values. Its concrete initial contracts and actual
+IR simulation remain jointly inhabited.
+
+Environments/DependentScopes/Source/Elaboration/Compiler/IRBild/SourceWitness checks green; nine
+relevant generic/whole-source/witness audits use only the standard three axioms. Slot1 checks
+were deferred during root's requested merge-check priority, then resumed after explicit release.
+No grammar build, Bindung change, pre-emit ABI-guard edit, Senke/ABI edit or broad unchanged suite
+rerun. Discovery completeness for all dependency graphs is not proved; nonmaterializable custom
+negative bounds and further constant/signature forms may still refuse. IR-01 remains incomplete.
+
+### IR-01 canonical typing of every original constant array
+
+The frozen uKonstArrays collector silently filters failed folds; logical-contract call guards
+already blocked known unsafe functions, but unused unknown calls or wrong-dimensional literals
+could otherwise disappear. Actual Compiler now calls `ArrayConstants.checkArrays` after the exact
+canonical unit is elaborated and before lowerAllg. Each original array must have its exact uTyp,
+a value from the existing uKonstZeile evaluator with the certified function/value scopes, and a
+closed typed Expr from existing Allg.lowLit in the ACTUAL unit's declaration universe. This checks
+every dimension and element range; malformed non-array row initializers explicitly refuse.
+No replacement evaluator, fake declaration universe or inferred function contract is introduced.
+
+Compiled retains all original ArrayMeaning facts, and CanonicalSourceProgram/source->image
+correctness includes them. `arrayMeaning_collected` proves each such original array is present
+in the canonical collector with its exact typed literal, closing the filterMap omission boundary.
+SafeHull still checks original nested calls before any scalar/array evaluation. This strengthens
+source validity; it is not logical-contract-aware const evaluation or full aggregate transport.
+
+A combined large dependent-source/array witness exceeded the mandated kernel memory cap. The
+limit was not raised. The existing rich negative/dependent-alias/fieldless SourceWitness stays
+green; ArrayWitness separately compiles a real nondegenerate nested array source, proves exact
+parsed array shape, typed value and collector membership, and constructs the same jointly
+inhabited initial contracts through reusable InitialState.ofFieldless. Its actual entry IR
+simulation is proved. Proofs avoid full source-AST equality reduction and unsupported AST BEq
+soundness assumptions by using Option.get membership and a kernel-checked exact shape.
+
+Measured: unknown unused array call, wrong length, intermediate overflow, scalar row initializer
+all refuse with exact diagnostics; nested alias-typed const-function array access executes as
+ASM42; contracted nested array still refuses. ArrayConstants/Compiler/IRBild/SourceWitness/
+ArrayWitness direct checks pass within 4G/5G scopes. Nine generic/whole-source/witness audits
+report only propext, Classical.choice, Quot.sound; layout check passes all1399 Lean files.
+No unchanged broad suite or grammar build was run. Two Lean checks globally now control work:
+IR01 stays slot1, all own harnesses route each check/run/audit through the same capped slot1
+launcher with unset ELAN_TOOLCHAIN and isolated outputs. Other workers' slots remain root-owned.
+No Bindung/pre-emit ABI guard or Senke code was edited. IR-01 remains incomplete on the listed
+remaining constant/type/signature forms, discovery completeness and canonical prerequisites.

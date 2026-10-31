@@ -1,4 +1,5 @@
 import Stage0.Frontend.Elaboration
+import Stage0.Frontend.ArrayConstants
 import Stage0.Senke.Ausdruck.Old.Source
 
 namespace Gabbro.Stage0
@@ -21,6 +22,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (uMembers (pre108 source.items)) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
+  arrayConstants : ∀ item ∈ uMembers (pre108 source.items), Frontend.ArrayMeaning unit source.scopes item
 
 /-- Compilation only: the result is the same canonical G program passed to the IR emitter. -/
 def compile (text : String) (options : Profil.Options := {}) : Except String (Compiled text options) := do
@@ -30,7 +32,8 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
       source.scopes.values source.scopes.types source.scopes.functions
       (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
   | .error e => throw e
-  | .ok unit =>
+  | .ok unit => do
+    let arrays ← Frontend.checkArrays unit source.scopes members
     match hm : fnIdx unit.fns "main" with
     | .error e => throw e
     | .ok main =>
@@ -43,7 +46,7 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
           match ha : OldSource.accepts unit program with
           | .error e => throw e
           | .ok false => throw "refused by the checker (AkzeptiertX)"
-          | .ok true => pure ⟨source, unit, main, program, he, hm, ⟨raw, fs, hl, hr⟩, ha⟩
+          | .ok true => pure ⟨source, unit, main, program, he, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down⟩
 
 /-- Original-source scalar and function semantics, canonical alias lookup order, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
@@ -56,8 +59,8 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     lex text = .ok result.source.tokens ∧
     parseTopTief result.source.tokens = .ok result.source.items ∧
     Oeffentlich.huelleZu result.source.items = true ∧
-    scope.declared = original.foldl
-      (Frontend.aliasStep (uConstsRech (uKonstFns original) original [])) [] ∧
+    (scope.aliasConstants = uConstsRech (uKonstFns original) original [] ∨ scope.aliasConstants = scope.values) ∧
+    scope.declared = original.foldl (Frontend.aliasStep scope.aliasConstants) [] ∧
     scope.functions = Frontend.constantFunctions scope.declared original ∧
     (∀ fn ∈ scope.functions, ∃ item ∈ original, Frontend.FunctionMeaning scope.declared item fn) ∧
     (∀ names item table,
@@ -71,12 +74,13 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
       (Frontend.tableWithEmpty scope.values scope.types) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore original result.unit raw = .ok result.program) ∧
-    OldSource.accepts result.unit result.program = .ok true
+    OldSource.accepts result.unit result.program = .ok true ∧
+    (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item)
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
-  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
+  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
-    result.accepted⟩
+    result.accepted, result.arrayConstants⟩
 
 end Gabbro.Stage0

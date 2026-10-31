@@ -62,26 +62,48 @@ theorem srem_w {a b : Int} (ha1 : -2 ^ 63 < a) (ha2 : a < 2 ^ 63) (hb1 : -2 ^ 63
   simp only [srem, toInt_ofInt_in (by omega : -2 ^ 63 ≤ a) ha2, toInt_ofInt_in hb1 hb2, hb, ↓reduceIte]
   rw [ite_eq_right_iff.mpr (fun h => absurd h (by omega))]
 
-/-- A nonnegative value below `2^63` is the word of its natural number. -/
-theorem ofInt_nat {x : Int} (h0 : 0 ≤ x) (h1 : x < 2 ^ 63) : (BitVec.ofInt 64 x).toNat = x.toNat := by
+/-- A nonnegative value below `2^64` is the word of its natural number. -/
+theorem ofInt_nat {x : Int} (h0 : 0 ≤ x) (h1 : x < 2 ^ 64) : (BitVec.ofInt 64 x).toNat = x.toNat := by
   rw [BitVec.toNat_ofInt]; omega
 
 theorem ofInt_natCast (n : Nat) (h : n < 2 ^ 64) : (BitVec.ofInt 64 (n : Int)).toNat = n := by
   rw [BitVec.toNat_ofInt]; omega
 
-theorem and_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 63) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ 63) :
+/-- Unsigned IR division agrees with the canonical nonnegative integer quotient. -/
+theorem udiv_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64)
+    (hb0 : 0 < b) (hb1 : b < 2 ^ 64) :
+    udiv (BitVec.ofInt 64 a) (BitVec.ofInt 64 b) = some (BitVec.ofInt 64 (a.tdiv b)) := by
+  have hb : b.toNat ≠ 0 := by omega
+  rw [udiv, ofInt_nat ha0 ha1, ofInt_nat (by omega) hb1]
+  simp only [hb, ↓reduceIte]
+  rw [Int.tdiv_eq_ediv_of_nonneg ha0, ← Int.toNat_of_nonneg ha0,
+    ← Int.toNat_of_nonneg (by omega : 0 ≤ b)]
+  rfl
+
+/-- Unsigned IR remainder agrees with the canonical nonnegative integer remainder. -/
+theorem urem_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64)
+    (hb0 : 0 < b) (hb1 : b < 2 ^ 64) :
+    urem (BitVec.ofInt 64 a) (BitVec.ofInt 64 b) = some (BitVec.ofInt 64 (a.tmod b)) := by
+  have hb : b.toNat ≠ 0 := by omega
+  rw [urem, ofInt_nat ha0 ha1, ofInt_nat (by omega) hb1]
+  simp only [hb, ↓reduceIte]
+  rw [Int.tmod_eq_emod_of_nonneg ha0, ← Int.toNat_of_nonneg ha0,
+    ← Int.toNat_of_nonneg (by omega : 0 ≤ b)]
+  rfl
+
+theorem and_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ 64) :
     BitVec.ofInt 64 a &&& BitVec.ofInt 64 b = BitVec.ofInt 64 ((a.toNat &&& b.toNat : Nat) : Int) := by
   apply BitVec.eq_of_toNat_eq
   have hl : a.toNat &&& b.toNat < 2 ^ 64 := Nat.lt_of_le_of_lt Nat.and_le_left (by omega)
   rw [BitVec.toNat_and, ofInt_nat ha0 ha1, ofInt_nat hb0 hb1, ofInt_natCast _ hl]
 
-theorem or_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 63) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ 63) :
+theorem or_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ 64) :
     BitVec.ofInt 64 a ||| BitVec.ofInt 64 b = BitVec.ofInt 64 ((a.toNat ||| b.toNat : Nat) : Int) := by
   apply BitVec.eq_of_toNat_eq
   have hl : a.toNat ||| b.toNat < 2 ^ 64 := Nat.or_lt_two_pow (by omega) (by omega)
   rw [BitVec.toNat_or, ofInt_nat ha0 ha1, ofInt_nat hb0 hb1, ofInt_natCast _ hl]
 
-theorem xor_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 63) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ 63) :
+theorem xor_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64) (hb0 : 0 ≤ b) (hb1 : b < 2 ^ 64) :
     BitVec.ofInt 64 a ^^^ BitVec.ofInt 64 b = BitVec.ofInt 64 ((a.toNat ^^^ b.toNat : Nat) : Int) := by
   apply BitVec.eq_of_toNat_eq
   have hl : a.toNat ^^^ b.toNat < 2 ^ 64 := Nat.xor_lt_two_pow (by omega) (by omega)
@@ -98,7 +120,7 @@ theorem shl_w (a : Int) {b : Int} (hb0 : 0 ≤ b) (hb1 : b < 64) :
   rw [BitVec.toNat_twoPow, e, BitVec.toNat_ofInt]
   omega
 
-theorem shr_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 63) (hb0 : 0 ≤ b) (hb1 : b < 64) :
+theorem shr_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64) (hb0 : 0 ≤ b) (hb1 : b < 64) :
     BitVec.ofInt 64 a >>> ((BitVec.ofInt 64 b).toNat % 64) = BitVec.ofInt 64 (a / 2 ^ b.toNat) := by
   rw [ofInt_nat hb0 (by omega), Nat.mod_eq_of_lt (by omega)]
   apply BitVec.eq_of_toNat_eq
