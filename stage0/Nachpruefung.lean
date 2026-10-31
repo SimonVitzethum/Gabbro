@@ -269,3 +269,20 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatCoefficientL_shape
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatCoefficientL_joint_zeuge
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.coefficientImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumWord_model
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumWord_round
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumL_ok
+
+#print axioms Gabbro.Stage0.Senke.floatCoefficientAlignSumL_ok
+
+#print axioms Gabbro.Stage0.Senke.floatAlignSumL_shape
+
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatAlignSumL_joint_zeuge
+
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.alignmentImages_zeuge
+
+#print axioms Gabbro.Stage0.Senke.floatCoefficientAlignSumWord_add
+#print axioms Gabbro.Stage0.Senke.floatCoefficientAlignSumWord_add_zeuge

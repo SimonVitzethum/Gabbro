@@ -1,5 +1,5 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Signifikand
+import Stage0.Senke.Ausdruck.Arithmetik.Ausrichtung
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
@@ -47,6 +47,54 @@ def coefficientImages : List (String × Except String (List Runner.B) × Nat) :=
     (fun (name, input, expected) =>
       (name, FloatArithmeticProbe.wordImage
         (floatCoefficientL 8 (fun d => some (konstWL 4 input d))) expected, 7))
+
+/-- Actual coefficient extraction, exact alignment and signed sum together. -/
+def alignmentImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("align-cancel", 0xbff0000000000000, 0x3ff0000000000000, 0, 0),
+   ("align-different-exponents", 0x3fe0000000000000, 0x3ff0000000000000, 1, 3*2^52),
+   ("align-negative-result", 0x3fe0000000000000, 0xbff0000000000000, 1, 2^64-2^52),
+   ("align-subnormal-cancel", 0x800fffffffffffff, 0x0010000000000000, 0, 1),
+   ("align-negative-subnormal", 0x000fffffffffffff, 0x8010000000000000, 0, 2^64-1),
+   ("align-carry", 0x3fffffffffffffff, 0x3fffffffffffffff, 0, 2^54-2),
+   ("align-zero", 0x8000000000000000, 0x0000000000000001, 0, 1)].map
+    (fun (name, lo, hi, k, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatAlignSumL 8
+          (fun d => floatCoefficientL d (fun j => some (konstWL 4 lo j)))
+          (fun d => floatCoefficientL d (fun j => some (konstWL 4 hi j)))
+          (fun d => some (konstWL 4 k d))) expected, 7))
+
+/-- One fixture joins the real connected producer, its simulation, exact
+    footprint ceiling and cancellation across the normal/subnormal boundary. -/
+theorem floatAlignSumL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    let lo := fun d => some (konstWL 4 0x800fffffffffffff d)
+    let hi := fun d => some (konstWL 4 0x0010000000000000 d)
+    let k := fun d => some (konstWL 4 0 d)
+    let code := fun d => floatAlignSumL d
+      (fun j => floatCoefficientL j lo) (fun j => floatCoefficientL j hi) k
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True) code 1 ∧
+    (∃ c, code 8 = some (c, 15) ∧ c.length = 297) ∧
+    Gleitkomma.rundeExakt Gleitkomma.f64
+      (Gleitkomma.exaktAdd ⟨-(2^52-1), -1074⟩ ⟨2^52, -1074⟩) = ⟨false, 0, 1⟩ := by
+  dsimp only
+  refine ⟨?_, ?_, by decide +kernel⟩
+  · have he : floatAlignSumWord (floatCoefficientWord 0x800fffffffffffff)
+        (floatCoefficientWord 0x0010000000000000) 0 = 1 := by decide +kernel
+    rw [← he]
+    intro fp K d c top hcode hK m pc hp
+    exact floatCoefficientAlignSumL_ok (L := L)
+      (ρ := (Env.nil : Env D [])) (W := fun _ => True)
+      (WordCode.konst 0x800fffffffffffff (by decide))
+      (WordCode.konst 0x0010000000000000 (by decide))
+      (WordCode.konst 0 (by decide)) hcode hK m pc hp
+  · refine ⟨((floatAlignSumL 8
+        (fun d => floatCoefficientL d (fun j => some (konstWL 4 0x800fffffffffffff j)))
+        (fun d => floatCoefficientL d (fun j => some (konstWL 4 0x0010000000000000 j)))
+        (fun d => some (konstWL 4 0 d))).getD ([], 0)).1, ?_, ?_⟩ <;> decide +kernel
+
+theorem alignmentImages_zeuge : alignmentImages.length = 7 ∧
+    alignmentImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
 
 theorem coefficientImages_zeuge : coefficientImages.length = 8 ∧
     coefficientImages.all (fun x => x.2.1.isOk) = true := by

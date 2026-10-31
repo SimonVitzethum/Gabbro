@@ -235,6 +235,22 @@ alignment, signed summation, cancellation, rounding, packing/overflow, arbitrary
 and range-107/block integration remain open; add/sub remain refused. The computed `floatOf` hook is
 unchanged.
 
+The connected exact-word alignment prefix now decodes both signed IEEE coefficients,
+left-aligns the higher-exponent coefficient and sums before any rounding. Generic simulation
+covers arbitrary pure producers using the existing default-reserved `WordCode` discipline.
+The exact cost is `na+nb+nk+2` instructions and temporary ceiling
+`max(d+ta,max(d+1+tb,max(d+2+tk,d+3)))`. The value bridge to canonical `add`
+requires ordered exact exponents, distance below 64 and a signed-word-sized exact sum;
+these are explicit premises, not an acceptance test or an enabled arithmetic hook.
+A joint fixture proves cancellation across the normal/subnormal boundary together with
+actual production, simulation and sizes (297 instructions, ceiling 15 at base 8).
+Direct prefix/probe/root/`Nachpruefung` checks and standard-axiom audits passed;
+actual runner: 129 images, zero failures (122 previous plus seven connected alignment
+images), and layout passed (2026-10-31). Large-distance precision preservation and
+emitted result rounding/renormalization/packing remain unimplemented. The canonical
+rounding bridge is not a simulation of emitted rounding. Arbitrary-reserved full-block
+simulation, budgets and range 107 remain open. No grammar rebuild was run.
+
 
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
