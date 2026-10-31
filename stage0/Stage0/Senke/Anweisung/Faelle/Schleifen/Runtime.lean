@@ -105,4 +105,58 @@ theorem counter_budget_stop_code {m : Mem} {pc fp : W} {d jump c : BitVec 32}
     Stops ⟨pc, fp⟩ m 111 :=
   counter_budget_stop instruction zero (stop_ok code far frame room small (by decide))
 
+/-- Canonical fuel induction at a fixed runtime loop header. `entry` describes
+    the concrete counter, code, frame and surrounding program at that header.
+    The positive arm simulates just one invariant/body pass (not the loop).
+    Continuing passes carry the smaller-fuel entry in their actual runtime result.
+    This composition does not by itself discharge those lowering obligations. -/
+theorem forever_runtime {D : Deklaration} {L : Lay D} {P : Programm D}
+    {f : D.Fn} {Γ : Ctx} {l : Bool} {reserved : Nat}
+    {σ0 : World D} {ρ0 : Env D (D.params f)}
+    {rp cfp fp pc exit outerLeave outerNext : W} {lo K : Nat} {pr : List Nat}
+    (a : D.Annahme)
+    (body : World D → Env D Γ → Ausgang (vertragVon D f) true Γ)
+    (inv : World D → Env D Γ → World D × Bool)
+    (entry : Nat → Mem → World D → Env D Γ → Prop)
+    (lower : FB ≤ lo)
+    (zero : ∀ m σ ρ, entry 0 m σ ρ → Stops ⟨pc, fp⟩ m (hwCode (.fortschritt a)))
+    (invalid : ∀ n m σ ρ, entry (n + 1) m σ ρ → (inv σ ρ).2 = false →
+      Stops ⟨pc, fp⟩ m (logikCode (D := D) .schleife))
+    (pass : ∀ n m σ ρ, entry (n + 1) m σ ρ → (inv σ ρ).2 ≠ false →
+      match body (inv σ ρ).1 ρ with
+      | .ok σ' ρ' | .next _ σ' ρ' =>
+        ∃ m', Star ⟨pc, fp⟩ m ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+          EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧ Keeps fp pr m m' ∧ entry n m' σ' ρ'
+      | o => Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m pc exit pc o reserved) :
+    ∀ n m σ ρ, entry n m σ ρ →
+      Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
+        (foreverLauf (l := l) a body inv n σ ρ) reserved := by
+  intro n
+  induction n with
+  | zero =>
+    intro m σ ρ he
+    exact zero m σ ρ he
+  | succ n ih =>
+    intro m σ ρ he
+    simp only [foreverLauf]
+    by_cases hv : (inv σ ρ).2 = false
+    · rw [ite_eq_left hv]
+      exact invalid n m σ ρ he hv
+    · rw [ite_eq_right hv]
+      have hb := pass n m σ ρ he hv
+      have again : ∀ σ' ρ',
+          (∃ m', Star ⟨pc, fp⟩ m ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+            EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧ Keeps fp pr m m' ∧ entry n m' σ' ρ') →
+          Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
+            (foreverLauf (l := l) a body inv n σ' ρ') reserved := by
+        intro σ' ρ' hr
+        obtain ⟨m', run, frame, _, _, keeps, he'⟩ := hr
+        exact Sim.prefix lower run frame keeps (ih m' σ' ρ' he')
+      generalize body (inv σ ρ).1 ρ = o at hb ⊢
+      cases o with
+      | ok σ' ρ' => exact again σ' ρ' hb
+      | next h σ' ρ' => exact again σ' ρ' hb
+      | leave h σ' ρ' => exact hb
+      | zurueck | why | logik | hardware => exact hb
+
 end Gabbro.Stage0.Senke

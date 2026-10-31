@@ -116,4 +116,44 @@ theorem write_call_backedge_zeuge [Kern] :
       sx (II.f (-(16 * (code.length : Int)))) = 2048 := by decide +kernel
   simpa only [target] using run
 
+/-- An actual exit image witnesses the canonical induction's zero and leave
+    arms together. This is not a counted write/call-loop witness. -/
+def leaveMemory : Runner.Mem := { memory with
+  b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2096 then
+    (((stopC 111 8).flatMap encII)[a.toNat - 2048]?).getD 0 else memory.b a }
+
+theorem forever_runtime_zeuge [Kern] :
+    ∀ n : Nat, Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [4]
+      ⟨2048, 4096⟩ leaveMemory 2048 0 0
+      (foreverLauf (l := false) (() : D.Annahme)
+        (fun σ ρ => .leave rfl σ ρ) (fun σ ρ => (σ, true)) n world (Env.nil : Env D [])) 4 := by
+  have hc : CodeAt leaveMemory 2048 (stopC 111 8) := by
+    have h : ∀ k : Fin (stopC 111 8).length,
+        InsAt leaveMemory (2048 + BitVec.ofNat 64 (16 * k.val))
+          (stopC 111 8)[k.val].o (II.f (stopC 111 8)[k.val].a)
+          (II.f (stopC 111 8)[k.val].b) (II.f (stopC 111 8)[k.val].c) := by
+      apply allFin
+      decide +kernel
+    exact fun k hk => h ⟨k, hk⟩
+  have hf : FrameOK leaveMemory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+  have hw : WeltAt leaveMemory callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  have hs : Stops ⟨2048, 4096⟩ leaveMemory 111 :=
+    stop_ok hc (by unfold CodeFar; decide) hf (by decide) (by decide) (by decide)
+  intro n
+  apply forever_runtime () (fun σ ρ => .leave rfl σ ρ) (fun σ ρ => (σ, true)) (entry := fun _ m σ ρ =>
+    m = leaveMemory ∧ σ = world ∧ ρ = Env.nil) (lower := by decide)
+  · intro m σ ρ he
+    obtain ⟨rfl, rfl, rfl⟩ := he
+    exact hs
+  · intro n m σ ρ he bad
+    contradiction
+  · intro n m σ ρ he good
+    obtain ⟨rfl, rfl, rfl⟩ := he
+    exact ⟨leaveMemory, Star.refl _ _, AgreeW.refl _ _ _ _ _,
+      (fun _ x => nomatch x), hw, Keeps.refl _ _ _⟩
+  · exact ⟨rfl, rfl, rfl⟩
+
 end Gabbro.Stage0.Senke.ReservedCallProbe
