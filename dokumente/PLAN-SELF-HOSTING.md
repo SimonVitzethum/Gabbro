@@ -785,7 +785,16 @@ head with memory unchanged. This does not prove the full loop: the active body
 head invariant. The active prefix is now executed through the actual budget
 branch, signed target comparison and nonzero branch to `pc+48`, preserving the
 complete head (including all six reads, fetch, permissions, environment and world).
-This is only the prefix, not an active iteration. The resource lemmas derive the
+The continuation now starts at that exact `pc+48` boundary: threshold load,
+signed distance comparison and actual conditional branch execute to `pc+96`
+when `61 < distance`, or `pc+352` otherwise. `active_dispatch` composes these
+steps and retains the complete head and footprint agreement. It does not
+restart entry or assume an active iteration. The pending proof state is now
+the large-path entry (quotient doubling, distance decrement, optional carry)
+or small-path entry (denominator construction and both adaptive expressions),
+followed by state copies, counter increment, fuel decrement, head restoration
+and the already proved final backedge. The central induction still explicitly
+requires that missing execution. The resource lemmas derive the
 total-budget ceiling from an initial zero count and the existing fuel bound;
 conservation then bounds the next count and decremented fuel and preserves their
 sum. A generic head with separate count/fuel bounds still does not imply the

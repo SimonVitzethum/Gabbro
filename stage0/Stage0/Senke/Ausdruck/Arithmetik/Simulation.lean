@@ -284,6 +284,202 @@ theorem floatNormalizeLoopL_active_entry
 
 #print axioms floatNormalizeLoopL_active_entry
 
+set_option maxHeartbeats 800000 in
+/-- Continue the actual active entry with the distance threshold load.
+    The six state words and the entire head contract survive the temporary write. -/
+theorem floatNormalizeLoopL_distance_load
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K) :
+    ∃ m', Star ⟨pc+48, fp⟩ m ⟨pc+64, fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel count distance q r ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+6))) = some 61 := by
+  have h := head.pre
+  have shape : 3 < code.length ∧ code[3]? = some (ci 1 (base+6) 61 0) := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    norm_num [bin2]
+  have entry : code[3] = ci 1 (base+6) 61 0 := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2
+  have ins := h.code 3 shape.1
+  rw [entry] at ins
+  have singleton : CodeAt m (pc+48) [ci 1 (base+6) 61 0] := by
+    intro i hi
+    have iz : i = 0 := by simpa using hi
+    subst i
+    simpa [ci] using ins
+  let next := write m (slot fp (BitVec.ofNat 64 (base+6))) 8 61
+  have ag : Agree fp (base+6) K m next := agree_write h.frame.room (by omega) room 61
+  have run : Star ⟨pc+48, fp⟩ m ⟨pc+64, fp⟩ next := by
+    have hi := singleton 0 (by simp)
+    simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+    have run : Run (step ⟨pc+48, fp⟩) m ⟨pc+48+16, fp⟩ next := by
+      refine run_step hi (by decide) ?_
+      simp only [op]
+      refine f2_run (t := ⟨pc+48, fp⟩) hi ?_
+      simp only [ret1]
+      refine f1_run (t := ⟨pc+48, fp⟩) hi ?_
+      have sx6 : sx (II.f ((base : Int)+6)) = BitVec.ofNat 64 (base+6) := by
+        exact_mod_cast (sx_nat (d := base+6) (by have := h.small; omega))
+      rw [sx_lit (by decide : lit32 61 = true), sx6]
+      exact run_wr64 (wr64_some (h.frame.wr (base+6) room))
+    exact Star.one (by simpa [BitVec.add_assoc] using run)
+  have preNext : Pre L next pc fp K base code ρ W reserved :=
+    ⟨h.ctx, h.small, h.frame.agree ag, h.code.agree ag h.far, h.far,
+      envAt_agree h.env ag h.frame (by have := h.ctx; omega) (by omega),
+      h.wstab m next h.welt (ag.mono (by omega)), h.wstab⟩
+  refine ⟨next, run, ag.mono (by omega), ?_, ?_⟩
+  · have reads (i : Nat) (hi : i < base+6) := agree_rd_low ag h.frame.room hi (by omega)
+    exact { head with pre := preNext
+                      readQ := by rw [reads base (by omega)]; exact head.readQ
+                      readR := by rw [reads (base+1) (by omega)]; exact head.readR
+                      readDistance := by rw [reads (base+2) (by omega)]; exact head.readDistance
+                      readTarget := by rw [reads (base+3) (by omega)]; exact head.readTarget
+                      readFuel := by rw [reads (base+4) (by omega)]; exact head.readFuel
+                      readCount := by rw [reads (base+5) (by omega)]; exact head.readCount }
+  · change (write m (slot fp (BitVec.ofNat 64 (base+6))) 8 (61 : Runner.W).toNat).rd64 _ = _
+    simp only [Runner.Mem.rd64, write_rd, h.frame.rd (base+6) room, ↓reduceIte,
+      le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+
+#print axioms floatNormalizeLoopL_distance_load
+
+set_option maxHeartbeats 800000 in
+/-- Compare the loaded threshold with the actual distance word. -/
+theorem floatNormalizeLoopL_distance_compare
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K)
+    (loaded : m.rd64 (slot fp (BitVec.ofNat 64 (base+6))) = some 61) :
+    ∃ m', Star ⟨pc+64, fp⟩ m ⟨pc+80, fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel count distance q r ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+6))) =
+        some (Runner.IR.bool (decide (61 < distance))) := by
+  have h := head.pre
+  have shape : 4 < code.length ∧
+      code[4]? = some (ci 13 (base+6) (base+6) (base+2)) := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    norm_num [bin2]
+  have entry : code[4] = ci 13 (base+6) (base+6) (base+2) := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2
+  have ins := h.code 4 shape.1
+  rw [entry] at ins
+  simp only [ci] at ins
+  let value := Runner.IR.bool (decide (61 < distance))
+  let next := write m (slot fp (BitVec.ofNat 64 (base+6))) 8 value.toNat
+  have ag : Agree fp (base+6) K m next := agree_write h.frame.room (by omega) room value.toNat
+  have sx6 : sx (II.f ((base : Int)+6)) = BitVec.ofNat 64 (base+6) := by
+    exact_mod_cast (sx_nat (d := base+6) (by have := h.small; omega))
+  have sx2 : sx (II.f ((base : Int)+2)) = BitVec.ofNat 64 (base+2) := by
+    exact_mod_cast (sx_nat (d := base+2) (by have := h.small; omega))
+  have result : Runner.IR.bool ((61 : Runner.W).slt (BitVec.ofNat 64 distance)) = value := by
+    have eq : BitVec.ofNat 64 distance = BitVec.ofInt 64 (distance : Int) := by simp
+    rw [eq]
+    change Runner.IR.bool ((BitVec.ofInt 64 61).slt (BitVec.ofInt 64 (distance : Int))) = value
+    rw [slt_in (by constructor <;> norm_num)
+      (by have := head.distanceWord; constructor <;> omega)]
+    simp [value]
+  have comparison : Run (step ⟨pc+64, fp⟩) m ⟨pc+80, fp⟩ next := by
+    have wr : m.wr64 (slot fp (sx (II.f ((base : Int)+6)))) value = some next := by
+      rw [sx6]; exact wr64_some (h.frame.wr (base+6) room)
+    have run := run_step (t := ⟨pc+64, fp⟩) ins (by decide)
+      (run_bin (g := fun a b => some (Runner.IR.bool (a.slt b))) ins
+        (by rw [sx6]; exact loaded) (by rw [sx2]; exact head.readDistance)
+        (congrArg some result) wr)
+    simpa [nxt, BitVec.add_assoc] using run
+  have codeNext := h.code.agree ag h.far
+  have preNext : Pre L next pc fp K base code ρ W reserved :=
+    ⟨h.ctx, h.small, h.frame.agree ag, codeNext, h.far,
+      envAt_agree h.env ag h.frame (by have := h.ctx; omega) (by omega),
+      h.wstab m next h.welt (ag.mono (by omega)), h.wstab⟩
+  refine ⟨next, Star.one comparison, ag.mono (by omega), ?_, ?_⟩
+  · have reads (i : Nat) (hi : i < base+6) := agree_rd_low ag h.frame.room hi (by omega)
+    exact { head with pre := preNext
+                      readQ := by rw [reads base (by omega)]; exact head.readQ
+                      readR := by rw [reads (base+1) (by omega)]; exact head.readR
+                      readDistance := by rw [reads (base+2) (by omega)]; exact head.readDistance
+                      readTarget := by rw [reads (base+3) (by omega)]; exact head.readTarget
+                      readFuel := by rw [reads (base+4) (by omega)]; exact head.readFuel
+                      readCount := by rw [reads (base+5) (by omega)]; exact head.readCount }
+
+  · change (write m (slot fp (BitVec.ofNat 64 (base+6))) 8 value.toNat).rd64 _ = some value
+    simp only [Runner.Mem.rd64, write_rd, h.frame.rd (base+6) room, ↓reduceIte,
+      le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+
+#print axioms floatNormalizeLoopL_distance_compare
+
+set_option maxHeartbeats 800000 in
+/-- Dispatch from the actual distance-test result to the emitted transfer paths. -/
+theorem floatNormalizeLoopL_distance_branch
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K)
+    (tested : m.rd64 (slot fp (BitVec.ofNat 64 (base+6))) =
+      some (Runner.IR.bool (decide (61 < distance)))) :
+    Run (step ⟨pc+80, fp⟩) m
+      ⟨pc + (if 61 < distance then 96 else 352), fp⟩ m := by
+  have h := head.pre
+  have shape : 5 < code.length ∧ code[5]? = some (ci 19 (base+6) 272 0) := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    norm_num [bin2]
+  have entry : code[5] = ci 19 (base+6) 272 0 := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2
+  have ins := h.code 5 shape.1
+  rw [entry] at ins
+  simp only [ci] at ins
+  have sx6 : sx (II.f ((base : Int)+6)) = BitVec.ofNat 64 (base+6) := by
+    exact_mod_cast (sx_nat (d := base+6) (by have := h.small; omega))
+  by_cases large : 61 < distance
+  · have readOne : m.rd64 (slot fp (sx (II.f ((base : Int)+6)))) = some 1 := by
+      rw [sx6]; simpa [Runner.IR.bool, large] using tested
+    have run := run_step (t := ⟨pc+80, fp⟩) ins (by decide)
+      (run_brz_ne ins readOne (by decide))
+    simpa [large, nxt, BitVec.add_assoc] using run
+  · have readZero : m.rd64 (slot fp (sx (II.f ((base : Int)+6)))) = some 0 := by
+      rw [sx6]; simpa [Runner.IR.bool, large] using tested
+    have run := run_step (t := ⟨pc+80, fp⟩) ins (by decide)
+      (run_brz_zero ins readZero)
+    have offset : sx (II.f 272) = (272 : Runner.W) := by
+      rw [sx_lit (by decide : lit32 272 = true)]; rfl
+    simpa [large, offset, BitVec.add_assoc] using run
+
+#print axioms floatNormalizeLoopL_distance_branch
+
+/-- Connected continuation from byte 48, with the actual discriminator fetched
+    and executed. No active-iteration premise is used for this prefix. -/
+theorem floatNormalizeLoopL_active_dispatch
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K) :
+    ∃ m', Star ⟨pc+48, fp⟩ m
+        ⟨pc + (if 61 < distance then 96 else 352), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel count distance q r := by
+  obtain ⟨m1, load, ag1, head1, read61⟩ := floatNormalizeLoopL_distance_load hc head room
+  obtain ⟨m2, compare, ag2, head2, tested⟩ :=
+    floatNormalizeLoopL_distance_compare hc head1 room read61
+  have branch := floatNormalizeLoopL_distance_branch hc head2 room tested
+  exact ⟨m2, load.trans (compare.trans (Star.one branch)), ag1.trans ag2, head2⟩
+
+#print axioms floatNormalizeLoopL_active_dispatch
+
 /-- Central induction, with the complete active iteration still explicit.
     The target exit is discharged by actual emitted execution above.
     The iteration premise is not an implementation of the missing proof.
