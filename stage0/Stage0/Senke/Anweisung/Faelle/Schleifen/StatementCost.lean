@@ -1236,4 +1236,180 @@ theorem ensCost_sound_zeuge :
   decide +kernel
 end OldProbe
 
+/-- Execute the actual reason-return ABI, including both writes and `ret`. -/
+theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
+    (code : CodeAt m pc (retWhyC lo r)) (far : CodeFar pc 3 fp K)
+    (frame : FrameOK m fp K) (small : K < 2 ^ 31)
+    (abi : 2 < lo) (room : lo + 1 < K) (reason : r < 2 ^ 31)
+    (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
+    ∃ m', Counted 3 ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' := by
+  have first := const_step_counted (codeAt_left (a := [ci 1 2 r 0]) code)
+    frame (j := 2) (k := r) (by omega) small (by simp [lit32]; omega)
+  let m1 := write m (slot fp (BitVec.ofNat 64 2)) 8 (BitVec.ofInt 64 (r : Int)).toNat
+  have a1 : Agree fp 2 K m m1 := agree_write frame.room (by omega) (by omega) _
+  have far1 := codeFar_tail (a := [ci 1 2 r 0]) (b := [ci 1 (lo + 1) 0 0, ci 21 0 0 0]) far
+  have code1 := (codeAt_right (a := [ci 1 2 r 0]) code).agree a1 far1
+  have frame1 := frame.agree a1
+  have second := const_step_counted (codeAt_left (a := [ci 1 (lo + 1) 0 0]) code1)
+    frame1 (j := lo + 1) (k := 0) room small (by decide)
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (lo + 1))) 8 0
+  have a2 : Agree fp 2 K m1 m2 := (agree_write (lo := lo + 1) frame1.room (by omega) room 0).mono (by omega)
+  have far2 := codeFar_tail (a := [ci 1 (lo + 1) 0 0]) (b := [ci 21 0 0 0]) far1
+  have code2 := (codeAt_right (a := [ci 1 (lo + 1) 0 0]) code1).agree a2 far2
+  have ins := code2 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ins
+  have rpc : m2.rd64 fp = some rp := by
+    have h := agree_rd_low (i := 0) (a1.trans a2) frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedPC)
+  have rfp : m2.rd64 (fp + 8) = some cfp := by
+    have h := agree_rd_low (i := 1) (a1.trans a2) frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedFP)
+  have last : Counted 1 ⟨pc + 16 + 16, fp⟩ m2 ⟨rp, cfp⟩ m2 :=
+    .next (run_step ins (by decide) (run_ret rpc rfp)) (.refl _ _)
+  exact ⟨m2, (first.trans (by simpa [m1, m2] using second)).trans last⟩
+
+/-- Recursive terminal certificates. Counts are S0IR instructions, independent
+    of source passes and G steps. The base executes a reason return; prefixes
+    recursively derive costs from expressions and the changed environment. -/
+inductive EndCost (L : Lay D) (reserved : Nat) (V : Vertrag D) (l : Bool) :
+    {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ →
+      World D → Env D Γ → Nat → Type
+  | reason {Γ : Ctx} {Λ : List (Res D)} {σ : World D} {ρ : Env D Γ} {r : Fin V.gruende} {proof : Λ.Perm V.ende} :
+      EndCost L reserved V l (.retWhy r proof) σ ρ 3
+  | assign {Γ Λ τ} {x : Var Γ τ} {e : Expr D Γ Λ τ}
+      {rest : Endblock D V l Γ Λ} {σ : World D} {ρ : Env D Γ}
+      {v : Wert D τ} {ne nr : Nat}
+      (value : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
+      (tail : EndCost L reserved V l rest σ (ρ.set x v) nr) :
+      EndCost L reserved V l (.cons (.assignVar x e) rest) σ ρ (ne + 1 + nr)
+  | bind {Γ Λ τ} {e : Expr D Γ Λ τ} {rest : Endblock D V l (τ :: Γ) Λ}
+      {σ : World D} {ρ : Env D Γ} {v : Wert D τ} {ne nr : Nat}
+      (value : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
+      (tail : EndCost L reserved V l rest σ (.cons v ρ) nr) :
+      EndCost L reserved V l (.bind e rest) σ ρ (ne + nr)
+
+/-- Structural induction discharges recursive terminal executions. No complete
+    body execution or complete body cost is a premise. ABI reads are preserved
+    across each prefix by the existing frame agreement theorems. -/
+theorem EndCost.sound {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {b : Endblock D V l Γ Λ} {σ : World D} {ρ : Env D Γ} {n : Nat}
+    (certificate : EndCost L reserved V l b σ ρ n)
+    {passes lo K Ks top : Nat} {A : D.Fn → Nat} {ens : List II × Nat}
+    {pr : List Nat} {ex : Int × Int} {code : List II}
+    {m : Mem} {pc fp rp cfp : W}
+    (lower : lowEnd (reserved := reserved) passes A L lo ens pr ex b = some (code, top))
+    (fits : top ≤ Ks) (inside : WIn L fp Ks K)
+    (low : lo ≤ frei Γ reserved) (abi : 2 < lo) (lowBound : lo ≤ K)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (world : WeltAt m L σ)
+    (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
+    ∃ m', Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' := by
+  have hks := inside.ks
+  induction certificate generalizing top code m pc ex with
+  | reason =>
+    simp only [lowEnd] at lower
+    split at lower
+    next accepted =>
+      cases lower
+      exact returnWhy_counted pre.code pre.far pre.frame pre.small abi
+        (by simp only [retTop] at fits; have := inside.ks; omega) accepted savedPC savedFP
+    next refused => simp at lower
+  | assign value tail ih =>
+    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    obtain ⟨m1, run1, agree1, env1, world1, keep1⟩ :=
+      countedAssignVar_case value hs (Nat.le_trans (Nat.le_max_left _ _) fits)
+        inside low hprotected pre.left world
+    have far := codeFar_right (n := cs.length) (k := cr.length) (by simpa using pre.far)
+    have nextPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * cs.length)) fp K
+        (frei _ reserved) cr _ reserved :=
+      ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame agree1,
+        codeAt_agreeWIn inside agree1 (codeAt_right pre.code) far,
+        far, env1, trivial, wstab_true _ _⟩
+    have hK : lo ≤ K := lowBound
+    have rpc : m1.rd64 fp = some rp := by
+      have h := agreeW_rdW inside agree1 (i := 0) (by omega) hK
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp : m1.rd64 (fp + 8) = some cfp := by
+      have h := agreeW_rdW inside agree1 (i := 1) (by omega) hK
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    obtain ⟨m2, run2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits)
+      low hprotected nextPre world1 rpc rfp
+    exact ⟨m2, run1.trans run2⟩
+  | @bind Γ Λ τ e rest σ ρ v ne nr value tail ih =>
+    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    have room := lowE_top _ _ _ _ he
+    have hpw := PreS.welt pre.left inside.ks world inside.lay (by have := inside.lo; omega)
+    obtain ⟨m1, run1, a1s, w, read, encoded⟩ :=
+      value.sound he (Nat.le_trans (Nat.le_max_left _ _) fits) hpw
+    have a1 := Agree.widen a1s inside.ks
+    have far := codeFar_right (n := ce.length) (k := cr.length) (by simpa using pre.far)
+    have nextPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K
+        (frei Γ reserved + 1) cr (Env.cons v ρ) reserved :=
+      ⟨by simp only [frei, List.length_cons]; omega, pre.small, pre.frame.agree a1,
+        (codeAt_right pre.code).agree a1 far, far,
+        envAt_cons (envAt_agree pre.env a1 pre.frame (Nat.le_refl _) (by omega)) read encoded,
+        trivial, wstab_true _ _⟩
+    have rpc : m1.rd64 fp = some rp := by
+      have h := agree_rd_low (i := 0) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp : m1.rd64 (fp + 8) = some cfp := by
+      have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    obtain ⟨m2, run2⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits)
+      (by simp only [frei, List.length_cons] at low ⊢; omega)
+      (fun j hj => by have := hprotected j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      nextPre (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))) rpc rfp
+    exact ⟨m2, run1.trans run2⟩
+
+namespace EndCostProbe
+open FnptrProben
+
+def contract : Vertrag FnptrProben.D := { vertragVon FnptrProben.D 2 with gruende := 1 }
+def body : Endblock FnptrProben.D contract false [] [] :=
+  .bind (.lit 2) (.cons (.assignVar .here (.lit 2)) (.retWhy ⟨0, by decide⟩ (by decide)))
+def image : List II :=
+  [ci 1 4 2 0, ci 1 5 2 0, ci 2 4 5 0] ++ retWhyC 4 0
+def memory : Mem :=
+  let saved := write (write callMem 4096 8 2048) 4104 8 8192
+  { saved with
+  b := fun a => if a.toNat < 96 then
+    ((image.flatMap encII)[a.toNat]?).getD 0 else saved.b a }
+
+/-- Binding, assignment and terminal return satisfy all simulation premises
+    jointly; the execution includes three prefix and three ABI instructions. -/
+theorem endCost_sound_zeuge :
+    ∃ m', Counted 6 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' := by
+  have lower : lowEnd 2 addresses callLayout 4 ([], 6) [] (0, 0) body =
+      some (image, 13) := by decide +kernel
+  have code : CodeAt memory 0 image := by
+    have h : ∀ k : Fin image.length,
+        memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f image[k.val].a) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f image[k.val].b) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f image[k.val].c) := by
+      apply allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  have pre : PreS callLayout memory 0 4096 256 4 image (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, ?_, code, ?_, ?_, trivial, wstab_true _ _⟩
+    · exact ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+    · unfold CodeFar; decide +kernel
+    · intro _ x; nomatch x
+  have hw : WeltAt memory callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  let v : Wert FnptrProben.D (.int 2 2) := ⟨2, by decide, by decide⟩
+  have cert : EndCost callLayout 0 contract false body world .nil 6 :=
+    .bind (v := v) .literal (.assign (v := v) .literal .reason)
+  exact cert.sound lower (by decide) call_win (by decide) (by decide) (by decide)
+    (by intro j hj; cases hj) pre hw (by decide +kernel) (by decide +kernel)
+end EndCostProbe
+
 end Gabbro.Stage0.Senke
