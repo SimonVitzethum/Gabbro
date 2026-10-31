@@ -111,6 +111,55 @@ theorem floatCoefficient_source_bounds (F : Gleitkomma.Format)
     have high : max a.bexp 1 ≤ 2*F.emax := by omega
     omega
 
+/-- Nonzero source operands use exactly the emitted alignment index.
+    Zero is explicit because its canonical exponent is zero. -/
+theorem floatSourceScale_alignment {F : Gleitkomma.Format}
+    (a : Gleitkomma.GBits F) (nonzero : a.bexp ≠ 0 ∨ a.frac ≠ 0) :
+    floatSourceScale a = (max a.bexp 1 : Nat) - (F.bias : Int) - ((F.p : Int)-1) := by
+  have h : ¬(a.bexp = 0 ∧ a.frac = 0) := by omega
+  simp [floatSourceScale, h]
+
+/-- The emitted alignment index may also be used for zero: canonical zero
+    has exponent zero, but rounding the zero coefficient is scale independent.
+    This identifies the source value without assuming an internal scale. -/
+theorem floatCoefficient_source_round (F : Gleitkomma.Format)
+    (a : Gleitkomma.GBits F) (finite : a.bexp ≠ F.bexpMax) :
+    (Gleitkomma.wertExakt F a).map (Gleitkomma.rundeExakt F) =
+      some (Gleitkomma.rundeExakt F ⟨floatCoefficient a,
+        (max a.bexp 1 : Nat) - (F.bias : Int) - ((F.p : Int)-1)⟩) := by
+  rw [floatCoefficient_source_scale F a finite]
+  simp only [Option.map_some]
+  by_cases zero : a.bexp = 0 ∧ a.frac = 0
+  · have coefficient : floatCoefficient a = 0 := by simp [floatCoefficient, zero.1, zero.2]
+    rw [Gleitkomma.rundeExakt_null F _ coefficient,
+      Gleitkomma.rundeExakt_null F _ coefficient]
+  · have nonzero : a.bexp ≠ 0 ∨ a.frac ≠ 0 := by omega
+    rw [floatSourceScale_alignment a nonzero]
+
+#print axioms floatCoefficient_source_round
+
+/-- Joint format and boundary witnesses for exact source decoding and bounds. -/
+theorem floatCoefficient_source_scale_zeuge :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+      ∀ a ∈ ([⟨true, 0, 0⟩, ⟨false, 0, 1⟩, ⟨false, 1, 0⟩,
+        ⟨true, F.bexpMax-1, 2^F.fracBits-1⟩] : List (Gleitkomma.GBits F)),
+        Gleitkomma.wf F a ∧ a.bexp ≠ F.bexpMax ∧
+        Gleitkomma.wertExakt F a = some ⟨floatCoefficient a, floatSourceScale a⟩ ∧
+        F.emin - ((F.p : Int)-1) ≤ floatSourceScale a ∧
+        floatSourceScale a ≤ (F.emax : Int) - ((F.p : Int)-1) := by
+  intro F member a input
+  have formats : F = Gleitkomma.f32 ∨ F = Gleitkomma.f64 := by simpa using member
+  have valid : Gleitkomma.wf F a ∧ a.bexp ≠ F.bexpMax := by
+    rcases formats with rfl | rfl <;>
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at input <;>
+      rcases input with rfl | rfl | rfl | rfl <;> decide +kernel
+  refine ⟨valid.1, valid.2, floatCoefficient_source_scale F a valid.2, ?_⟩
+  apply floatCoefficient_source_bounds F _ _ _ a valid.1 valid.2 <;>
+    rcases formats with rfl | rfl <;> decide
+
+#print axioms floatSourceScale_alignment
+#print axioms floatCoefficient_source_scale_zeuge
+
 #print axioms floatCoefficient_source_scale
 #print axioms floatCoefficient_source_bounds
 
