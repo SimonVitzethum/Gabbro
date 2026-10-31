@@ -8,7 +8,18 @@ open Gabbro.Grammatik Runner.IR Gleitkomma
 /-- Actual backward-branch loop images; output slots are checked independently.
     The 1074 case takes 1127 transfers before recovering 53 quotient bits. -/
 def normalizationLoopImages : List (String × Except String (List Runner.B) × Nat) :=
-  [("four", 0, 13, 4, 8, 20, 13, 0, 4),
+  [("below61", 0, 2^61-1, 61, 8, 1, 1, 2^61-2, 1),
+   ("below62", 0, 2^61-1, 62, 8, 1, 0, 2^61-1, 1),
+   ("above62", 0, 2^61+1, 62, 8, 1, 1, 1, 1),
+   ("maximum63", 0, 2^63-1, 63, 8, 1, 1, 2^62-1, 1),
+   ("maximum64", 0, 2^63-1, 64, 8, 1, 0, 2^63-1, 1),
+   ("zeroFuel62", 0, 2^61, 62, 8, 0, 0, 2^61, 0),
+   ("stopped62", 8, 2^61, 62, 8, 1, 8, 2^61, 0),
+   ("boundary61", 0, 2^60, 61, 8, 1, 1, 0, 1),
+   ("boundary62", 0, 2^61, 62, 8, 1, 1, 0, 1),
+   ("boundary63", 0, 2^62, 63, 8, 1, 1, 0, 1),
+   ("tail63", 0, 2^61, 63, 8, 2, 1, 0, 2),
+   ("four", 0, 13, 4, 8, 20, 13, 0, 4),
    ("distance62", 0, 1, 62, 8, 70, 8, 0, 65),
    ("distance65", 0, 13, 65, 8, 80, 13, 0, 65),
    ("distance1074", 0, 1, 1074, 2^53, 1127, 2^53, 0, 1127),
@@ -16,7 +27,8 @@ def normalizationLoopImages : List (String × Except String (List Runner.B) × N
    ("early1074", 1, 13, 1074, 8, 1127, 8, 13, 3),
    ("fuel1074", 0, 13, 1074, 8, 1000, 0, 13, 1000)].flatMap
     fun (name, q, r, k, target, fuel, qo, ro, count) =>
-      [(0, qo), (1, ro), (5, count)].map fun (field, expected) =>
+      [(0, qo), (1, ro), (2, if 61 < k then max 61 (k-count) else k),
+       (4, fuel-count), (5, count)].map fun (field, expected) =>
         let fragment := do
           let loop ← floatNormalizeLoopL 16
           let init := (konstWL 4 q 16).1 ++ (konstWL 4 r 17).1 ++
@@ -25,6 +37,14 @@ def normalizationLoopImages : List (String × Except String (List Runner.B) × N
           pure (init ++ loop.1 ++ [ci 2 8 (16+field) 0], loop.2)
         ("normalize-loop-" ++ name ++ "-" ++ toString field,
           FloatArithmeticProbe.wordImage fragment expected, 7)
+
+/-- All boundary fixtures use the production loop and encode successfully;
+    actual execution is measured separately by the runner regression. -/
+theorem normalizationLoopImages_zeuge : normalizationLoopImages.length = 90 ∧
+    normalizationLoopImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms normalizationLoopImages_zeuge
 
 /-- Actual exact-tail adaptive normalization; check each output independently. -/
 def adaptiveImages : List (String × Except String (List Runner.B) × Nat) :=
