@@ -3651,4 +3651,26 @@ theorem finiteLeftInvariant_zeuge :
 #print axioms floatFiniteAddL_left_body_invariant
 #print axioms finiteLeftInvariant_zeuge
 
+/-- The execution witness shares its reads, frame and exact invariant;
+    the correction is negative and the significand is nonzero. -/
+theorem floatFiniteAddL_left_body_invariant_zeuge {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved : Nat} (tail : List II) (room : dst+10 < K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some 13)
+    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some 4)
+    (pre : Pre L m pc fp K (dst+5)
+      ([ci 1 (dst+10) 2 0, ci 5 (dst+7) (dst+7) (dst+10),
+        ci 1 (dst+10) 1 0, ci 4 (dst+5) (dst+5) (dst+10)] ++ tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+64,fp⟩ out ∧
+      Agree fp (dst+5) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some 26 ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some 3 ∧
+      Pre L out (pc+64) fp K (dst+5) tail ρ W reserved ∧
+      FiniteLeftInvariant 205 16 (-3) 4 1 26 3 ∧
+      (3 : Int).toNat < (4 : Int).toNat := by
+  exact floatFiniteAddL_left_body_invariant tail finiteLeftInvariant_zeuge.1
+    (by norm_num) (by norm_num) room rq re pre
+
+#print axioms floatFiniteAddL_left_body_invariant_zeuge
+
 end Gabbro.Stage0.Senke
