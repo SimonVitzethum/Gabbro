@@ -9,6 +9,7 @@ import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Ausdruck.Fnptr
 import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 import Stage0.Senke.Ausdruck.Aggregat.Array
 import Stage0.Senke.Ausdruck.Aggregat.StringOps
 import Stage0.Senke.Ausdruck.Option
@@ -75,7 +76,17 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact (const_ok hp hn (by omega)).mono fun w hw => hw
-    · cases h
+    · split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hk : d + 2 ≤ K := by
+          simp only [konstWL, bin2] at hK
+          omega
+        exact (konstWL_ok 4 (BitVec.ofInt 64 n).toNat (BitVec.isLt _) hk hp).mono
+          fun w hw => by
+            change w = BitVec.ofInt 64 n
+            simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using hw
+      · cases h
   | _, _, .fnref f n hf, d, c, top, h, hK, m, pc, ρ, hp => fnref_ok σ₀ σ h hK hp
   | _, _, .tru, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
@@ -93,7 +104,13 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       obtain ⟨w, hw, he⟩ := hp.env τ x
       have := vslot_lt (reserved := reserved) x
       have := hp.ctx
-      exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
+      obtain ⟨m', run, agree, result⟩ := copyWords_ok [w] (by simp; omega)
+        (by simp; omega) hp (by
+          intro i hi
+          have : i = 0 := by simpa using hi
+          subst i
+          exact hw)
+      exact ⟨m', run, agree, w, result 0 (by simp), he⟩
     · cases h
   | _, _, .add a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
@@ -250,7 +267,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs] at h
     split at h
     · next hw =>
-      simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
+      simp only [Bool.and_eq_true, inUE, inU, decide_eq_true_eq] at hw
       refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
@@ -259,13 +276,13 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
       simp only [Enc] at pa pb
       subst pa pb
-      exact ⟨_, sdiv_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
+      exact ⟨_, udiv_w (by omega) (by omega) (by omega) (by omega), rfl⟩
     · cases h
   | _, _, .rem h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
     · next hw =>
-      simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
+      simp only [Bool.and_eq_true, inUE, inU, decide_eq_true_eq] at hw
       refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
@@ -274,7 +291,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
       simp only [Enc] at pa pb
       subst pa pb
-      exact ⟨_, srem_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
+      exact ⟨_, urem_w (by omega) (by omega) (by omega) (by omega), rfl⟩
     · cases h
   | _, _, .sdiv hb a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
@@ -310,7 +327,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs] at h
     split at h
     · next hw =>
-      simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
+      simp only [Bool.and_eq_true, inUE, inU, inWE, inW, decide_eq_true_eq] at hw
       refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
@@ -325,7 +342,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs] at h
     split at h
     · next hw =>
-      simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
+      simp only [Bool.and_eq_true, inUE, inU, inWE, inW, decide_eq_true_eq] at hw
       refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
@@ -340,7 +357,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs] at h
     split at h
     · next hw =>
-      simp only [Bool.and_eq_true, inWE, inW, decide_eq_true_eq] at hw
+      simp only [Bool.and_eq_true, inUE, inU, inWE, inW, decide_eq_true_eq] at hw
       refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
@@ -355,7 +372,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs] at h
     split at h
     · next hw =>
-      simp only [Bool.and_eq_true, inWE, lt64, inW, decide_eq_true_eq] at hw
+      simp only [Bool.and_eq_true, inUE, inU, inWE, lt64, inW, decide_eq_true_eq] at hw
       refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp
@@ -370,7 +387,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs] at h
     split at h
     · next hw =>
-      simp only [Bool.and_eq_true, inWE, lt64, inW, decide_eq_true_eq] at hw
+      simp only [Bool.and_eq_true, inUE, inU, inWE, lt64, inW, decide_eq_true_eq] at hw
       refine binE_ok h hK (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL b (d + 1) cb tb hb htb m pc ρ hp)
         ?_ rfl (by decide) hp

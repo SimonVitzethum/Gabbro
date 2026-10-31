@@ -1,0 +1,7 @@
+// Unsigned high bits must survive literal materialization and both bit operands.
+module ir_probe {
+impl fn main() -> u64 in 0 .. 255 effects { pure } {
+    let value = 255 & (18446744073709551615 ^ 9223372036854775808);
+    return value;
+}
+}
