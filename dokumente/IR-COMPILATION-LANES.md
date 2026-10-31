@@ -12,7 +12,8 @@ source ASM, boot code, proposed privileged instructions and raw memory-address s
 alongside device-register forms. The existing assembly IR runner stays in use. IR-11 continues userspace
 foreign calls/syscalls/bindings; IR-12 continues userspace entries/profiles/images. Their earlier ASM/boot
 responsibilities below are superseded. A temporary seventh planning-only agent writes the future low-level
-language design in Markdown; no canonical grammar change or build is authorized by that planning task.
+language design in [LOW-LEVEL-SYNTAX-PLAN.md](LOW-LEVEL-SYNTAX-PLAN.md); no canonical grammar change or
+build is authorized by that planning task.
 Final coverage must state this precise domain rather than claim all syntax except registers only.
 
 **RESUMED (2026-10-31).** The owner authorized up to six parallel Sol 6.1
