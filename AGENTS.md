@@ -9,6 +9,13 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
+**PAUSED FOR REBOOT (2026-10-31).** Do not resume implementation, agents or builds until the owner explicitly
+resumes. Preserve the existing worktrees, uncommitted changes and scratch. The checkpoint and fourteen
+complete work packages are in `dokumente/PLAN-SELF-HOSTING.md` §2.1.9. Fourteen lanes do not authorize fourteen
+simultaneous agents; the last staffing limit is two Sol 6.1 implementation agents. Root owns form-based
+coverage measurement and reviews; agents implement.
+
+
 The active implementation task is **only to compile every existing Gabbro language form except register
 operations into Stage-0 IR and build the connected translation pipeline**. Device-register reads, writes,
 fallible reads and register transitions are explicitly outside this task; do not implement them or count

@@ -9,6 +9,13 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 ## Right now
 
+- **Gabbro-to-IR is paused for reboot (2026-10-31).** Resume only on explicit instruction. All non-register
+  compilation and its formal lowering proofs are partitioned into IR-01..IR-14 in
+  `dokumente/PLAN-SELF-HOSTING.md` §2.1.9, with dependencies, exhaustive primary form ownership and shared
+  completion gates. Preserve the two worker worktrees and their uncommitted changes; no legacy Lean source
+  runtime, grammar rebuild, new side project or automatic continuation.
+
+
 - **Phase A step 4 (the combined `Spec.lean` diff "M8": arena plus payload) is PAUSED** (Simon, 2026-10-19). Nothing is merged or pushed.
   The arena foundation (M3) is green on Lean/Mathlib 4.35.0 (820 jobs); the full library is not (7 modules, one a real heartbeat
   timeout in `ArenaErkZeugeBaum.lean`); the payload half still lacks its global history induction (O21 in the plan). The work sits in an
