@@ -87,6 +87,7 @@ def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D 
   | _, _, _, _, .ite _ t e => retFreiB t && retFreiB e
   | _, _, _, _, .onOption _ p a => retFreiB p && retFreiB a
   | _, _, _, _, .onTag _ arms => retFreiArms arms
+  | _, _, _, _, .onWhy _ arms => retFreiGrundArms arms
   | _, _, _, _, .traverse _ _ b => retFreiB b
   | _, _, _, _, .breaking _ b => retFreiB b
   | _, _, _, _, .locks _ _ b => retFreiB b
@@ -96,6 +97,7 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .nil => true
   | _, _, _, _, .cons s r => retFreiS s && retFreiB r
   | _, _, _, _, .bind _ r => retFreiB r
+  | _, _, _, _, .floatLit _ _ _ r | _, _, _, _, .floatOf _ _ _ r => retFreiB r
   | _, _, _, _, .bindCall _ _ _ _ _ r | _, _, _, _, .bindCallInd _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .awaits _ _ _ _ _ r => retFreiB r
@@ -105,6 +107,11 @@ def retFreiArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs 
     Arms D V l Γ Λ Λ' cs → Bool
   | _, _, _, _, _, .nil => true
   | _, _, _, _, _, .cons b rest => retFreiB b && retFreiArms rest
+def retFreiGrundArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {k : Nat} →
+    GrundArms D V l Γ Λ Λ' k → Bool
+  | _, _, _, _, _, .nil => true
+  | _, _, _, _, _, .cons b rest => retFreiB b && retFreiGrundArms rest
+
 end
 
 /-- The code of `locks Lk { body }` around the body's code `cb`, with `g` the length of `gibC`: take; the body (its

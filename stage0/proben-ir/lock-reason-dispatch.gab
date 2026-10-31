@@ -1,0 +1,35 @@
+// A reason dispatch inside a held lock must release it on normal completion.
+module ir_lock_reason_dispatch {
+reason Fault { First = 7 "first" Second = 19 "second" exhaustive }
+table state count 1 { slot { value : u32 in 0 .. 42, } }
+table rounds count 2 { slot { value : bool, } }
+lock L protects { state } rank 0 held <= 10000 ops;
+impl fn fail() -> u32 in 0 .. 42 or Fault effects { pure } { return Fault::Second; }
+impl fn main() -> u32 in 0 .. 42
+    effects { reads state.slots, writes state.slots, reads rounds.slots, locks L }
+{
+    let value = fail() else (reason) {
+        let mut answer : u32 in 0 .. 42 = 0;
+        locks L {
+            match reason {
+                First => { state.slots[0].value = 7; }
+                Second => { state.slots[0].value = 42; }
+            }
+            answer = state.slots[0].value;
+        }
+        traverse i over slots of rounds by unvisited
+            touches reads rounds.slots, locks L
+        {
+            locks L {
+                match reason {
+                    First => { next i; }
+                    Second => { leave i; }
+                }
+            }
+        }
+        locks L { answer = state.slots[0].value; }
+        return answer;
+    }
+    return value;
+}
+}
