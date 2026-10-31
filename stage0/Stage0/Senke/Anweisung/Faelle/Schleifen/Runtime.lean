@@ -211,4 +211,40 @@ theorem forever_runtime {D : Deklaration} {L : Lay D} {P : Programm D}
       | leave h σ' ρ' => exact hb
       | zurueck | why | logik | hardware => exact hb
 
+
+/-- Route every actual body outcome using the loop's real control targets.
+    Fallthrough executes the emitted backedge; next already targets the header.
+    Leave and returns retain the ordinary simulation, including its frame and ABI.
+    Counter retention is derived from the body frame, never supplied separately. -/
+theorem Sim.counter_dispatch {D : Deklaration} {L : Lay D} {P : Programm D}
+    {f : D.Fn} {Γ : Ctx} {σ0 : World D} {ρ0 : Env D (D.params f)}
+    {rp cfp fp header back exit : W} {lo K Ks counter reserved : Nat} {pr : List Nat}
+    {t : T} {m : Mem} {o : Ausgang (vertragVon D f) true Γ}
+    {jump b c : BitVec 32} {value : W}
+    (body : Sim L P f σ0 ρ0 rp cfp fp lo K pr t m back exit header o reserved)
+    (layout : WIn L fp Ks K) (hprotected : counter < lo ∨ counter ∈ pr)
+    (bound : lo ≤ K)
+    (initial : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value)
+    (edge : InsAt m back 18 jump b c) (far : CodeFar back 1 fp K)
+    (target : back + sx jump = header) :
+    match o with
+    | .ok σ' ρ' | .next _ σ' ρ' =>
+      ∃ m', Star t m ⟨header, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+        EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧ Keeps fp pr m m' ∧
+        m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value
+    | o => Sim L P f σ0 ρ0 rp cfp fp lo K pr t m header exit header o reserved := by
+  cases o with
+  | ok σ' ρ' =>
+    obtain ⟨m', run, frame, env, world, keeps, count⟩ :=
+      Reach.counter_backedge body layout hprotected bound initial edge far
+    exact ⟨m', by simpa only [target] using run, frame, env, world, keeps, count⟩
+  | next h σ' ρ' =>
+    obtain ⟨m', run, frame, env, world, keeps⟩ := body
+    refine ⟨m', run, frame, env, world, keeps, ?_⟩
+    rcases hprotected with below | member
+    · rw [counter_preserved layout frame below bound]; exact initial
+    · rw [keeps counter member]; exact initial
+  | leave h σ' ρ' => exact body
+  | zurueck | why | logik | hardware => exact body
+
 end Gabbro.Stage0.Senke

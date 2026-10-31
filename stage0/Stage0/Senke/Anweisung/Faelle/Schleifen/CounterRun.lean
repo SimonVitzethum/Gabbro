@@ -84,6 +84,22 @@ theorem positive_counter_zeuge [Kern] (n : Fin 2) :
   · rw [kept 4 (by simp)]
     exact sentinel_values ⟨n.val, by omega⟩
 
+/-- The generic outcome dispatcher is jointly inhabited by the actual lowered
+    store/call block, actual backward jump and nonzero reserved counter. -/
+theorem counter_dispatch_zeuge [Kern] (b : Fin 3) :
+    ∃ m', Star ⟨2048, 4096⟩ (loaded b) ⟨2016, 4096⟩ m' ∧
+      AgreeW callLayout 4096 4 256 (loaded b) m' ∧
+      EnvAt callLayout m' 4096 (Env.nil : Env D []) 4 ∧
+      WeltAt m' callLayout world ∧ Keeps 4096 [4, 5, 6] (loaded b) m' ∧
+      m'.rd64 (slot 4096 (BitVec.ofNat 64 6)) = some (BitVec.ofNat 64 b.val) := by
+  have hs : Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [4, 5, 6]
+      ⟨2048, 4096⟩ (loaded b) (2048 + BitVec.ofNat 64 (16 * code.length))
+      0 2016 (.ok world Env.nil : Ausgang (vertragVon D 2) true []) 4 :=
+    body_simulation_at (loaded_pre b) (loaded_surroundings b) (loaded_head b) (loaded_world b)
+  exact hs.counter_dispatch call_win (counter := 6) (Or.inr (by simp))
+    (by decide) (counter_values b) (counter_edges b)
+    (by unfold CodeFar; decide +kernel) (by decide +kernel)
+
 /-- Budget zero branches directly to the emitted progress exit. -/
 theorem zero_counter_zeuge [Kern] : Stops ⟨2016, 4096⟩ (loaded 0) 111 := by
   have test : InsAt (loaded 0) 2016 19 6
