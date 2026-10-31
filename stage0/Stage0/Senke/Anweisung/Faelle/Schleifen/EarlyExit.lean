@@ -354,3 +354,32 @@ theorem forever_false_stop_counted_zeuge (P : Programm D) :
     (hprotected := by intro j hj; simp at hj; unfold frei FB; omega)
     (pre := pre) (surroundings := around) (world := hw)
 end Gabbro.Stage0.Senke.ForeverPassCostProbe
+
+
+namespace Gabbro.Stage0.Senke.SourceStopProbe
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem
+set_option maxRecDepth 10000
+set_option maxHeartbeats 2000000
+variable {D : Deklaration}
+def source (V : Vertrag D) (assumption : D.Annahme) : Block D V false [] [] [] :=
+  .cons (.forever assumption .tru (.cons (.leave rfl) .nil)) .nil
+
+theorem sourceStop_zeuge [Kern] (L : Lay D) (P : Programm D) (A : D.Fn → Nat)
+    (C : D.Fn → List II) (V : Vertrag D) (assumption : D.Annahme) (σ : World D) :
+    Nonempty (recursiveBlockCost L 2 P 0 A C 0 32 V false
+      (source V assumption) σ Env.nil (.hardware (.fortschritt assumption)) 5) := by
+  unfold source
+  refine ⟨recursiveBlockCost.sourceStop (inv := .tru) (body := .cons (.leave rfl) .nil) (rest := .nil) rfl ?_⟩
+  intro lo ens pr ex code top lower
+  dsimp only [lowS] at lower
+  split at lower
+  · rw [show lowE L (Expr.tru (Γ := []) (Λ := [])) (frei [] 2) 2 =
+        some ([ci 1 6 1 0], 7) from rfl] at lower
+    simp only [Bind.bind, Option.bind_some] at lower
+    obtain ⟨cb, tb, lowered, rfl, _⟩ := foreverC_actual lower
+    change some ([ci 18 144 0 0], 6) = some (cb, tb) at lowered
+    have pair := Option.some.inj lowered
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj pair
+    simp [foreverCode_length]
+  · simp at lower
+end Gabbro.Stage0.Senke.SourceStopProbe

@@ -336,7 +336,10 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   reserved initializations, the zero header branch and both stop constants:
   exactly five S0IR instructions, with the named `.fortschritt assumption`
   request still pending. The image-size premise bounds the emitted branch;
-  no whole-loop execution is a certificate premise. This block constructor
+  no whole-loop execution is a certificate premise.
+  `SourceStopProbe.sourceStop_zeuge` jointly instantiates its premises on a
+  fixed source loop with an unreachable `leave` body, for arbitrary layouts,
+  programs and the named progress assumption. This block constructor
   does not yet propagate stops through recursive callee bodies: `RecursiveEndCost`
   stop cases, positive budget induction, nested loops and the structural
   whole-source bound remain OPEN.
