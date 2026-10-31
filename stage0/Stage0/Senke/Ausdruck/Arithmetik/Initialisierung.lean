@@ -266,4 +266,51 @@ theorem floatExactAddNormalize_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem →
 #print axioms floatExactAddInit_ok
 #print axioms floatStateSlotsL_ok_zeuge
 #print axioms floatStateSlotsL_ok
+/-- Execute the quotient output from the actual normalization slot. The
+    source load is derived from memory; no movable fixed-slot producer or
+    assumed output word is used. The original head and continuation may have
+    different code addresses and reserved prefixes. -/
+theorem FloatNormalizeHead.write_quotient
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp next : Runner.W}
+    {K base reserved dst top : Nat} {code out : List II}
+    {origin target q r : Int} {originDistance budget fuel count distance : Nat}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (input : FB ≤ base) (retained : base < dst)
+    (compiled : wordK 6 dst (some ([ci 2 dst base 0], dst+1)) 8 = some (out,top))
+    (room : top ≤ K) (dstRoom : dst ≤ K)
+    (pre : Pre L m next fp K dst out ρ W reserved) :
+    Ok m next fp K dst out (· = BitVec.ofInt 64 (q / 8)) := by
+  obtain ⟨env, envAt⟩ := frameWordEnv (L := L) (n := dst-FB) pre.frame (by omega)
+  have idx : base-FB < dst-FB := by omega
+  have slotEq : FB + (base-FB) = base := by omega
+  obtain ⟨w, hr, he⟩ := envAt _ (frameWordVar (dst-FB) (base-FB) idx)
+  rw [frameWordVar_slot, slotEq, head.readQ] at hr
+  cases hr
+  change BitVec.ofInt 64 q =
+    BitVec.ofInt 64 (env.get (frameWordVar (dst-FB) (base-FB) idx)).n at he
+  have load : WordCode (L := L) env (fun _ => True)
+      (fun j => some ([ci 2 j base 0], j+1)) (BitVec.ofInt 64 q) := by
+    rw [he]
+    have slotEqInt : (FB : Int) + ((base-FB : Nat) : Int) = base := by omega
+    intro fp' K' j c t hc ht mm pp hp
+    exact frameWordLoad (L := L) (dst-FB) (base-FB) idx env
+      (by simpa only [slotEqInt] using hc) ht mm pp hp
+  have div := sdiv_w (a := q) (b := 8)
+    (by have := head.quotient; omega) (by have := head.quotient; omega)
+    (by norm_num) (by norm_num) (by norm_num)
+  rw [Gabbro.Grammatik.Int.tdiv_eq_ediv_nonneg head.quotient.1] at div
+  have result : WordCode (L := L) env (fun _ => True)
+      (fun j => wordL 6 j (some ([ci 2 j base 0], j+1))
+        (some ([ci 1 (j+1) 8 0], j+2)))
+      (BitVec.ofInt 64 (q / 8)) := WordCode.bin load (WordCode.const 8 (by decide)) div
+    (rfl : op 6 = bin sdiv) (by decide : 6 < 256)
+  have pre' : Pre L m next fp K dst out env (fun _ => True) :=
+    ⟨by simp [frei, frameWordCtx]; omega, pre.small, pre.frame, pre.code,
+      pre.far, envAt, trivial, wstab_true _ _⟩
+  exact result (by simpa [wordK] using compiled) room m next pre'
+
+#print axioms FloatNormalizeHead.write_quotient
+
 end Gabbro.Stage0.Senke

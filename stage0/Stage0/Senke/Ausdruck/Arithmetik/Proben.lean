@@ -42,6 +42,29 @@ def normalizationLoopImages : List (String × Except String (List Runner.B) × N
         ("normalize-loop-" ++ name ++ "-" ++ toString field,
           FloatArithmeticProbe.wordImage fragment expected, 7)
 
+/-- Actual normalization followed by the quotient output write. -/
+def normalizationQuotientImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("tail", 13, 4, 8, 68, 1),
+   ("even", 16, 5, 16, 68, 2),
+   ("zero", 0, 4, 8, 68, 0),
+   ("large", 1, 1074, 2^53, 1127, 2^50)].map
+    fun (name, r, k, target, fuel, expected) =>
+      let fragment := do
+        let loop ← floatNormalizeLoopL 16
+        let quotient ← wordK 6 24 (some ([ci 2 24 16 0], 25)) 8
+        let init := [ci 1 16 0 0] ++ (konstWL 4 r 17).1 ++
+          (konstWL 4 k 18).1 ++ (konstWL 4 target 19).1 ++
+          (konstWL 4 fuel 20).1 ++ [ci 1 21 0 0]
+        pure (init ++ loop.1 ++ quotient.1 ++ [ci 2 8 24 0], max loop.2 quotient.2)
+      ("normalize-quotient-" ++ name,
+        FloatArithmeticProbe.wordImage fragment expected, 7)
+
+theorem normalizationQuotientImages_zeuge : normalizationQuotientImages.length = 4 ∧
+    normalizationQuotientImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms normalizationQuotientImages_zeuge
+
 /-- Actual packed operands execute all initialization writes and the loop.
     Every state word is read back independently, including cancellation. -/
 def decodedInitializationImages : List (String × Except String (List Runner.B) × Nat) :=
