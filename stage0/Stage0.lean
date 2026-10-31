@@ -33,6 +33,7 @@ import Stage0.Senke.Tore.Proben
 
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 import Stage0.Senke.Ausdruck.Aggregat.Proben
+import Stage0.Senke.Ausdruck.Aggregat.ValueProbe
 
 import Stage0.Senke.Ausdruck.Referenz.Proben
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
