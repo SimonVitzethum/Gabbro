@@ -1253,7 +1253,7 @@ theorem retC_counted {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
     ∃ m', Counted (1 + n + 3) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 := by
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 ∧ Agree fp 2 K m m' := by
   have hp : PreS L m pc fp K lo
       ([ci 2 lo r 0] ++ (ens ++
         ([ci 19 ((lo + 1 : Nat) : Int) 48 0, ci 2 2 lo 0, ci 21 0 0 0] ++ stopC 102 (lo + 1)))) ρ := by
@@ -1286,10 +1286,10 @@ theorem retC_counted {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
   have rfp : m2.rd64 (fp + 8) = some cfp := by
     have h := agree_rd_low (i := 1) all hp.frame.room (by omega) (by omega)
     simpa [slot] using h.trans (by simpa [slot] using savedFP)
-  obtain ⟨m3, last, _, result, normal⟩ := returnTail_counted
+  obtain ⟨m3, last, a3, result, normal⟩ := returnTail_counted
     tailPre.left.code tailPre.left.far tailPre.frame tailPre.small
     (by omega) room flagRead resultRead rpc rfp
-  exact ⟨m3, (first.trans post).trans last, result, normal⟩
+  exact ⟨m3, (first.trans post).trans last, result, normal, (all.mono (by omega)).trans a3⟩
 
 /-- A source result certificate and an actual ensures certificate compose
     through the emitted normal-return code. Parameter and lexical environments
@@ -1311,7 +1311,9 @@ theorem normalRet_counted {Γ Δ : Ctx} {Λ Ξ : List (Res D)} {τ : Ty}
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
     ∃ m' w', Counted (ne + (1 + nq + 3)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w' ∧
-      Enc L τ v w' ∧ m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 := by
+      Enc L τ v w' ∧ m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 ∧ Agree fp 2 K m m' ∧
+      FrameOK m' fp K ∧ m'.rd64 fp = some rp ∧ m'.rd64 (fp + 8) = some cfp ∧
+      (∀ σ, LayIn L → fp.toNat + 8 * K ≤ L.lo → WeltAt m L σ → WeltAt m' L σ) := by
   have resultRoom := lowE_top _ _ _ _ lowerResult
   obtain ⟨m1, run, agree, w, read, encoded⟩ := result.sound lowerResult fitResult pre.left
   have next := pre.next agree (Nat.le_refl _) (by omega)
@@ -1328,9 +1330,17 @@ theorem normalRet_counted {Γ Δ : Ctx} {Λ Ξ : List (Res D)} {τ : Ty}
   have rfp : m1.rd64 (fp + 8) = some cfp := by
     have h := agree_rd_low (i := 1) agree pre.frame.room (by omega) (by omega)
     simpa [slot] using h.trans (by simpa [slot] using savedFP)
-  obtain ⟨m2, tail, value, flag⟩ := retC_counted ensures lowerEnsures fitEnsures
+  obtain ⟨m2, tail, value, flag, tailAgree⟩ := retC_counted ensures lowerEnsures fitEnsures
     retPre abi room (by omega) base encoded read snap rpc rfp
-  exact ⟨m2, w, run.trans tail, value, encoded, flag⟩
+  have all : Agree fp 2 K m m2 := (agree.mono (by omega)).trans tailAgree
+  have finalPC : m2.rd64 fp = some rp := by
+    have h := agree_rd_low (i := 0) all pre.frame.room (by decide) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedPC)
+  have finalFP : m2.rd64 (fp + 8) = some cfp := by
+    have h := agree_rd_low (i := 1) all pre.frame.room (by decide) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedFP)
+  exact ⟨m2, w, run.trans tail, value, encoded, flag, all, pre.frame.agree all, finalPC, finalFP,
+    fun σ lay bound initial => weltAt_stab lay bound m m2 initial (all.mono (by decide))⟩
 
 namespace NormalReturnProbe
 open FnptrProben
@@ -1347,7 +1357,7 @@ def memory : Mem :=
     nonzero result, saved snapshot and distinct caller PC and frame. -/
 theorem retC_counted_zeuge :
     ∃ m', Counted 5 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' ∧
-      m'.rd64 4112 = some 37 ∧ m'.rd64 4136 = some 1 := by
+      m'.rd64 4112 = some 37 ∧ m'.rd64 4136 = some 1 ∧ Agree 4096 2 16 memory m' := by
   have code : CodeAt memory 0 image := by
     have h : ∀ k : Fin image.length,
         memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
@@ -1384,7 +1394,7 @@ def memory : Mem :=
 theorem normalRet_counted_zeuge :
     ∃ m' w, Counted 6 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' ∧
       m'.rd64 4112 = some w ∧
-      Enc callLayout (.int 37 37) ⟨37, by decide, by decide⟩ w ∧ m'.rd64 4136 = some 1 := by
+      Enc callLayout (.int 37 37) ⟨37, by decide, by decide⟩ w ∧ m'.rd64 4136 = some 1 ∧ Agree 4096 2 16 memory m' ∧ FrameOK m' 4096 16 := by
   have code : CodeAt memory 0 image := by
     have h : ∀ k : Fin image.length,
         memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
@@ -1399,12 +1409,15 @@ theorem normalRet_counted_zeuge :
     ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
       code, by unfold CodeFar; decide +kernel,
       (fun _ x => nomatch x), trivial, wstab_true _ _⟩
-  exact normalRet_counted (Δ := []) (reserved := 0) (parameters := Env.nil)
+  obtain ⟨mout, wout, run, read, enc, flag, agree, frame, finalPC, finalFP, world⟩ := normalRet_counted (Δ := []) (reserved := 0) (parameters := Env.nil)
+    (v := (⟨37, by decide, by decide⟩ : Wert FnptrProben.D (.int 37 37)))
+    (rp := 2048) (cfp := 8192) (ne := 1) (nq := 1)
     (e := Expr.lit (Λ := []) 37)
     (q := Expr.tru (Λ := [])) (snapshot := 64)
     (.literal) (.ordinary rfl .truth) rfl rfl (by decide) (by decide)
     pre (fun _ x => nomatch x) rfl (by decide) (by decide) (by decide)
     (by decide +kernel) (by decide +kernel) (by decide +kernel)
+  exact ⟨mout, wout, run, read, enc, flag, agree, frame⟩
 end SourceReturnProbe
 
 /-- Execute the actual reason-return ABI, including both writes and `ret`. -/

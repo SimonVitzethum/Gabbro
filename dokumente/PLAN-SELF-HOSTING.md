@@ -273,6 +273,17 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   seventeen-instruction witness executes a real argument, callee parameter
   relocation and normal return. Both generic contracts apply to the recursive
   certificate fragment, not all accepted source forms.
+  `normalRet_counted` now retains the exact same counted endpoint for the
+  encoded result, successful status slot, frame agreement from ABI slot 2,
+  writable frame and preservation of every initially represented world under
+  the existing layout separation. `retC_counted` carries its frame agreement
+  through ensures and the actual return tail; the source result prefix composes
+  that agreement. No determinism premise is needed: `Kern.ans` remains an
+  arbitrary relation, and both properties follow from one constructed execution.
+  The loaded normal-return witnesses now check result/status and agreement on
+  that same returned memory. `EndCost.sound` still projects away these additional
+  postconditions; propagating them through its recursive constructors and the
+  complete call contract remains necessary before any whole-loop claim.
   Still OPEN: `EndCost` branching and call constructors; propagation of the
   encoded return value/status and frame/world agreement for the same returned
   memory into `BlockCost.call`; source-certificate-derived nested-forever
