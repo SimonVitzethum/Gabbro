@@ -1,5 +1,10 @@
 # Gabbro-to-IR compilation lanes
 
+**PAUSED by the owner (2026-10-31).** Stop all six implementation agents and checks; resume only
+on explicit instruction. Preserve every worktree, dirty source tree, paired snapshot and scratch.
+Last checked/pushed master is `94547b852`; unintegrated worker progress remains in its own trees.
+The standing limit after resumption is two global Lean checks with the allocation below.
+
 ## Checked frontend follow-up (2026-10-31)
 
 Root integrated IR-01 through `77f74c248`: dependent original scalar/alias scopes, fixed-count

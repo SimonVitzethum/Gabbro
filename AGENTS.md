@@ -9,6 +9,11 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
+**PAUSED by the owner (2026-10-31).** All implementation agents and Lean checks are stopped.
+Do not resume agents, implementation or builds until explicitly instructed. Preserve all worktrees,
+uncommitted changes, immutable source/artifact packages and scratch. Last checked and pushed
+integration: `94547b852`. The earlier resumed allocation below applies only after explicit resumption.
+
 **Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
 checks globally, each with MemoryMax=5G, MemoryHigh=4G and MemorySwapMax=0. This supersedes all older
 one-global-Lean-check rules below and in lane instructions. One process per slot is protected by
