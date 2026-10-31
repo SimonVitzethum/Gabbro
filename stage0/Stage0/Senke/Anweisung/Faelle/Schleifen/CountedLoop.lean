@@ -12,6 +12,7 @@ set_option maxHeartbeats 2000000
 /-- Counter induction with terminal body outcomes, including early leave,
     return and a pending hardware request. The body obligation is one actual
     pass after the decrement; continuing passes execute the real backedge.
+    A source `next` already reaches the header and executes no backedge.
     `Done` describes the terminal machine state and may include `StopAt`.
     The bound counts S0IR instructions, independently of source passes and
     G steps. This control-flow theorem alone is not a source certificate. -/
@@ -29,6 +30,7 @@ theorem counted_counter_loop_exits
         nb ≤ bodyLimit ∧
         ((Counted nb ⟨pc + 32, fp⟩ a ⟨back, fp⟩ b ∧
           InsAt b back 18 (BitVec.ofInt 32 (pc.toInt - back.toInt)) 0 0 ∧ I n b) ∨
+         (Counted nb ⟨pc + 32, fp⟩ a ⟨pc, fp⟩ b ∧ I n b) ∨
          (∃ u, Counted nb ⟨pc + 32, fp⟩ a u b ∧ Done u b)))
     (edge : back + sx (BitVec.ofInt 32 (pc.toInt - back.toInt)) = pc)
     {budget m} (fits : budget < 2 ^ 64) (start : I budget m) :
@@ -55,7 +57,7 @@ theorem counted_counter_loop_exits
       change Counted 1 ⟨pc + 16, fp⟩ m ⟨pc + 16 + 16, fp⟩ a at result
       rw [eq] at result
       exact result
-    rcases outcome with ⟨run, backCode, next⟩ | ⟨u, run, done⟩
+    rcases outcome with ⟨run, backCode, next⟩ | ⟨run, next⟩ | ⟨u, run, done⟩
     · have last : Counted 1 ⟨back, fp⟩ b ⟨pc, fp⟩ b := by
         have h := run_step (t := ⟨back, fp⟩) backCode (by decide)
           (run_jmp (t := ⟨back, fp⟩) backCode)
@@ -63,6 +65,11 @@ theorem counted_counter_loop_exits
       obtain ⟨u, c, nc, hc, rest, done⟩ := ih (by omega) next
       refine ⟨u, c, 1 + 1 + nb + 1 + nc, ?_,
         (((first.trans second).trans run).trans last).trans rest, done⟩
+      rw [Nat.succ_mul]
+      omega
+    · obtain ⟨u, c, nc, hc, rest, done⟩ := ih (by omega) next
+      refine ⟨u, c, 1 + 1 + nb + nc, ?_,
+        ((first.trans second).trans run).trans rest, done⟩
       rw [Nat.succ_mul]
       omega
     · refine ⟨u, b, 1 + 1 + nb, ?_, (first.trans second).trans run, Or.inr done⟩
