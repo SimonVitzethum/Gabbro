@@ -237,6 +237,16 @@ theorem countedSim_loopJump_zeuge (P : Programm D) (σ0 : World D)
   have h := (loopJumpBlock_counted_zeuge next).2
   cases next <;> exact h
 
+/-- The canonical child certificate retains the actual abrupt source outcome. -/
+theorem recursiveBlockCost_jump_zeuge (P : Programm D) (C : D.Fn → List II)
+    (next : Bool) :
+    Nonempty (recursiveBlockCost callLayout 8 P 1 addresses C 1 128
+      (vertragVon D 2) true (body next) world (Env.nil : Env D [])
+      (if next then .next rfl world Env.nil else .leave rfl world Env.nil) 1) ∧
+    lowB (reserved := 8) 1 addresses callLayout 4 ([], 6) [6, 7]
+      (128, -48) (body next) = some (image next, 12) := by
+  exact ⟨⟨.jump rfl next⟩, (loopJumpBlock_counted_zeuge next).1⟩
+
 end Gabbro.Stage0.Senke.LoopJumpCostProbe
 
 namespace Gabbro.Stage0.Senke.ForeverPassCostProbe

@@ -3069,158 +3069,18 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
       ((agreeW_sub pre.frame.lt (by omega) calleeAgree).mono (by omega))
   exact ⟨nCall, m2, boundCall, entryRun.trans callRun, agree, hw, resultRead⟩
 
-/-- Recursive source call certificates. Every node stores source-derived callee
-    costs and a recursive continuation, never an assumed execution of the whole block. -/
-inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
-    (passes : Nat) (A : D.Fn → Nat) (C : D.Fn → List II) (dv : W) (Ks : Nat)
-    (V : Vertrag D) (l : Bool) :
-    {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' →
-      World D → Env D Γ → World D → Env D Γ → Nat → Type
-  | source {Γ Λ Λ'} {b : Block D V l Γ Λ Λ'} {σ σ' : World D}
-      {ρ ρ' : Env D Γ} {n : Nat}
-      (source : BlockCost L reserved V l b σ ρ σ' ρ' n) :
-      recursiveBlockCost L reserved P passes A C dv Ks V l b σ ρ σ' ρ' n
-  | call {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
-    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
-    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
-    {top : Nat}
-    (lowerFun : lowFun passes P A L f = some (C f, top))
-    (fitsFun : top ≤ Ks - frei Γ reserved)
-    (address : A f < 2 ^ 31) (depthEq : dv = BitVec.ofNat 64 (depth + 1))
-    (depthBound : depth + 2 < 2 ^ 64)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
-      ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
-        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
-        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
-    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
-    {Λ' : List (Res D)}
-    {rest : Block D V l Γ (nach D f Λ) Λ'} {σ' : World D} {ρ' : Env D Γ}
-    {nr : Nat}
-    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
-    (tail : recursiveBlockCost L reserved P passes A C dv Ks V l rest σ ρ σ' ρ' nr) :
-    recursiveBlockCost L reserved P passes A C dv Ks V l
-      (.cons (.call f args hp hr) rest) σ ρ σ' ρ' (na + 4 + declared + nr)
-
-  | bindCall {Γ : Ctx} {τ : Ty} {v : Wert D τ} {Λ : List (Res D)} {f : D.Fn}
-    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
-    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
-    {top : Nat}
-    (lowerFun : lowFun passes P A L f = some (C f, top))
-    (fitsFun : top ≤ Ks - frei Γ reserved)
-    (address : A f < 2 ^ 31) (depthEq : dv = BitVec.ofNat 64 (depth + 1))
-    (depthBound : depth + 2 < 2 ^ 64)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
-      ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
-        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
-        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
-    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
-    (result : returned = some ⟨τ, v⟩)
-    {he : D.erg f = some τ}
-    {Λ' : List (Res D)}
-    {rest : Block D V l (τ :: Γ) (nach D f Λ) Λ'} {σ' : World D} {ρ' : Env D (τ :: Γ)}
-    {nr : Nat}
-    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
-    (tail : recursiveBlockCost L reserved P passes A C dv Ks V l rest σ (.cons v ρ) σ' ρ' nr) :
-    recursiveBlockCost L reserved P passes A C dv Ks V l
-      (.bindCall f args he hp hr rest) σ ρ σ' (ρ'.tail) (na + 4 + declared + 1 + nr)
-
-/-- Induction composes each full call and its child certificate at the identical
-    counted endpoint, retaining world, environment, frame and protected cells. -/
-theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
-    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
-    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {b : Block D V l Γ Λ Λ'} {σ σ' : World D} {ρ ρ' : Env D Γ} {budget : Nat}
-    (certificate : recursiveBlockCost L reserved P passes A C dv Ks V l b σ ρ σ' ρ' budget)
-    {lo K top : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
-    {code : List II} {m : Mem} {pc fp : W}
-    (lower : lowB (reserved := reserved) passes A L lo ens pr ex b = some (code, top))
-    (fits : top ≤ Ks) (inside : WIn L fp Ks K)
-    (low : lo ≤ frei Γ reserved) (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
-    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
-    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ) :
-    ∃ n, n ≤ budget ∧ CountedReach n L fp lo K pr ⟨pc, fp⟩ m
-      (pc + BitVec.ofNat 64 (16 * code.length)) σ' ρ' reserved := by
-  induction certificate generalizing lo top code m pc ex with
-  | source cert => exact ⟨_, Nat.le_refl _, cert.sound lower fits inside low hprotected pre world⟩
-  | @call Γ Λ f args σ₀ σ ρ na nq nb declared depth returned arguments topFun lowerFun fitsFun address depthEq depthBound requirement body declaration Λ' rest σ' ρ' nr hp hr tail ih =>
-    simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
-    obtain ⟨⟨cr, tr⟩, lowerTail, ⟨cs, ts⟩, lowerStmt, out⟩ := lower
-    simp only [lowS, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lowerStmt
-    obtain ⟨⟨ca, ta⟩, lowerArgs, stmtOut⟩ := lowerStmt
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj stmtOut
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
-    change max (callTop f (frei Γ reserved) ta) tr ≤ Ks at fits
-    have fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks := by omega
-    have room : frei Γ reserved ≤ Ks := by
-      have h := fitsArgs
-      simp only [callTop] at h
-      omega
-    obtain ⟨n, m1, bound, run, agree, hw, resultRead⟩ :=
-      arguments.fullRecursiveCall lowerFun fitsFun address depthEq depthBound
-        requirement body declaration lowerArgs fitsArgs pre.left surroundings inside world
-    have hks := inside.ks
-    have next := pre.nextW inside agree (Nat.le_refl _) (Nat.le_refl _) (by omega)
-    have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
-      simp [callC, callTail, callTailN, List.length_append]
-    obtain ⟨nt, boundTail, m2, restRun, restAgree, env, hw2, keep⟩ :=
-      ih lowerTail (by omega) low hprotected next
-        (Umf.agreeW inside surroundings agree (by simp [frei]; omega)) hw
-    refine ⟨na + 4 + n + nt, by omega, m2, ?_, (agree.mono low).trans restAgree, env, hw2,
-      (keeps_of_agreeW inside agree hprotected (by omega)).trans keep⟩
-    rw [← len] at run
-    have joined := run.trans restRun
-    simpa only [pc_add1] using joined
-
-  | @bindCall Γ τ v Λ f args σ₀ σ ρ na nq nb declared depth returned arguments topFun lowerFun fitsFun address depthEq depthBound requirement body declaration result he Λ' rest σ' ρ' nr hp hr tail ih =>
-    simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
-    obtain ⟨⟨ca, ta⟩, lowerArgs, ⟨cr, tr⟩, lowerTail, out⟩ := lower
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
-    change max (callTop f (frei Γ reserved) ta) tr ≤ Ks at fits
-    have fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks := by omega
-    have room : frei Γ reserved + 2 < Ks := by
-      have h := fitsArgs
-      simp only [callTop, FB] at h
-      omega
-    obtain ⟨n, m1, bound, run, agree, hw, resultRead⟩ :=
-      arguments.fullRecursiveCall lowerFun fitsFun address depthEq depthBound
-        requirement body declaration lowerArgs fitsArgs pre.left.left surroundings inside world
-    obtain ⟨w, read, enc⟩ := resultRead _ _ result
-    have frame := frameOK_agreeW pre.frame agree
-    change m1.rd64 (slot (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (BitVec.ofNat 64 2)) = some w at read
-    rw [slot_slot] at read
-    have hks := inside.ks
-    have hp1 := pre.left.nextW inside agree (Nat.le_refl _) (Nat.le_refl _) (by omega)
-    have move := mov_to_counted hp1.code frame (j := frei Γ reserved) (s := frei Γ reserved + 2)
-      (by omega) (by omega) pre.small read
-    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 w.toNat
-    have a2 : Agree fp (frei Γ reserved) K m1 m2 :=
-      agree_write frame.room (Nat.le_refl _) (by omega) _
-    have joinedAgree := agree.trans (agreeW_of a2)
-    have next := pre.nextW inside joinedAgree (d' := frei Γ reserved + 1)
-      (by have := pre.ctx; omega) (by omega) (by omega)
-    have nextPre : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (.cons v ρ) reserved :=
-      ⟨by simp [frei], next.small, next.frame, next.code, next.far,
-        envAt_cons next.env (rd_same frame (by omega) w) enc, trivial, wstab_true _ _⟩
-    have hw2 : WeltAt m2 L σ :=
-      weltAt_stab inside.lay (by have := inside.top; omega) m1 m2 hw (a2.mono (Nat.zero_le _))
-    obtain ⟨nt, bt, m3, rr, ar, er, wr, kr⟩ :=
-      ih lowerTail (by omega) (by simp [frei] at *; omega)
-        (fun j hj => by have := hprotected j hj; simp [frei] at *; omega) nextPre
-        (Umf.agreeW inside surroundings joinedAgree (by simp [frei]; omega)) hw2
-    have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
-      simp [callC, callTail, callTailN, List.length_append]
-    rw [← len] at run
-    simp only [pc_add1] at rr
-    have combined := (run.trans move).trans rr
-    refine ⟨na + 4 + n + 1 + nt, by omega, m3, ?_, (joinedAgree.mono low).trans ar,
-      envAt_tail er, wr, (keeps_of_agreeW inside joinedAgree hprotected (by omega)).trans kr⟩
-    simpa only [pc_add1] using combined
+/-- Removing a bound local retains every canonical exit, including pending stops. -/
+theorem CountedSim.shrink {P : Programm D} {f : D.Fn} {σ0 : World D}
+    {ρ0 : Env D (D.params f)} {rp cfp fp : W} {l : Bool} {Γ : Ctx} {τ : Ty}
+    {n lo K : Nat} {pr : List Nat} {t : T} {m : Mem} {e eL eN : W}
+    {outcome : Ausgang (vertragVon D f) l (τ :: Γ)}
+    (h : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN outcome reserved) :
+    CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN outcome.schrumpf reserved := by
+  cases outcome with
+  | ok σ ρ | next _ σ ρ | leave _ σ ρ =>
+    obtain ⟨m', run, agree, env, world, keep⟩ := h
+    exact ⟨m', run, agree, envAt_tail env, world, keep⟩
+  | zurueck _ _ | why _ _ | logik _ | hardware _ => exact h
 
 /-- Accepted next/leave lowering executes one jump, preserving the same
     source world, environment and protected cells at its actual exit ABI. -/
@@ -3280,6 +3140,193 @@ theorem loopJumpBlock_counted (next : Bool)
   rw [target] at result
   exact result
 
+/-- Recursive source call certificates. Every node stores source-derived callee
+    costs and a recursive continuation, never an assumed execution of the whole block. -/
+inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
+    (passes : Nat) (A : D.Fn → Nat) (C : D.Fn → List II) (dv : W) (Ks : Nat)
+    (V : Vertrag D) (l : Bool) :
+    {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' →
+      World D → Env D Γ → Ausgang V l Γ → Nat → Type
+  | source {Γ Λ Λ'} {b : Block D V l Γ Λ Λ'} {σ σ' : World D}
+      {ρ ρ' : Env D Γ} {n : Nat}
+      (source : BlockCost L reserved V l b σ ρ σ' ρ' n) :
+      recursiveBlockCost L reserved P passes A C dv Ks V l b σ ρ (.ok σ' ρ') n
+  | call {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {top : Nat}
+    (lowerFun : lowFun passes P A L f = some (C f, top))
+    (fitsFun : top ≤ Ks - frei Γ reserved)
+    (address : A f < 2 ^ 31) (depthEq : dv = BitVec.ofNat 64 (depth + 1))
+    (depthBound : depth + 2 < 2 ^ 64)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+      ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
+        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
+    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
+      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+    {Λ' : List (Res D)}
+    {rest : Block D V l Γ (nach D f Λ) Λ'} {outcome : Ausgang V l Γ}
+    {nr : Nat}
+    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
+    (tail : recursiveBlockCost L reserved P passes A C dv Ks V l rest σ ρ outcome nr) :
+    recursiveBlockCost L reserved P passes A C dv Ks V l
+      (.cons (.call f args hp hr) rest) σ ρ outcome (na + 4 + declared + nr)
+
+  | bindCall {Γ : Ctx} {τ : Ty} {v : Wert D τ} {Λ : List (Res D)} {f : D.Fn}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {top : Nat}
+    (lowerFun : lowFun passes P A L f = some (C f, top))
+    (fitsFun : top ≤ Ks - frei Γ reserved)
+    (address : A f < 2 ^ 31) (depthEq : dv = BitVec.ofNat 64 (depth + 1))
+    (depthBound : depth + 2 < 2 ^ 64)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+      ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
+        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
+    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
+      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+    (result : returned = some ⟨τ, v⟩)
+    {he : D.erg f = some τ}
+    {Λ' : List (Res D)}
+    {rest : Block D V l (τ :: Γ) (nach D f Λ) Λ'} {outcome : Ausgang V l (τ :: Γ)}
+    {nr : Nat}
+    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
+    (tail : recursiveBlockCost L reserved P passes A C dv Ks V l rest σ (.cons v ρ) outcome nr) :
+    recursiveBlockCost L reserved P passes A C dv Ks V l
+      (.bindCall f args he hp hr rest) σ ρ outcome.schrumpf (na + 4 + declared + 1 + nr)
+
+  | jump {Γ Λ Ξ} {rest : Block D V l Γ Λ Ξ} {σ : World D} {ρ : Env D Γ}
+      (h : l = true) (next : Bool) :
+      recursiveBlockCost L reserved P passes A C dv Ks V l
+        (.cons (if next then .next h else .leave h) rest) σ ρ
+        (if next then .next h σ ρ else .leave h σ ρ) 1
+
+/-- Induction composes each full call and its child certificate at the identical
+    counted endpoint, retaining world, environment, frame and protected cells. -/
+theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
+    {f0 : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {b : Block D (vertragVon D f0) l Γ Λ Λ'} {σ σ0 : World D} {ρ : Env D Γ}
+    {ρ0 : Env D (D.params f0)} {rp cfp : W} {outcome : Ausgang (vertragVon D f0) l Γ} {budget : Nat}
+    (certificate : recursiveBlockCost L reserved P passes A C dv Ks (vertragVon D f0) l b σ ρ outcome budget)
+    {lo K top : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {code : List II} {m : Mem} {pc fp : W}
+    (lower : lowB (reserved := reserved) passes A L lo ens pr ex b = some (code, top))
+    (fits : top ≤ Ks) (inside : WIn L fp Ks K)
+    (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved) (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ) :
+    ∃ n, n ≤ budget ∧ CountedSim n L P f0 σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
+      (pc + BitVec.ofNat 64 (16 * code.length))
+      (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.1)
+      (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2) outcome reserved := by
+  induction certificate generalizing lo top code m pc ex with
+  | source cert => exact ⟨_, Nat.le_refl _, cert.sound lower fits inside low hprotected pre world⟩
+  | jump h next =>
+    cases h
+    refine ⟨1, Nat.le_refl _, ?_⟩
+    have run := loopJumpBlock_counted next lower pre world
+    cases next <;> exact run
+  | @call Γ Λ f args σ₀ σ ρ na nq nb declared depth returned arguments topFun lowerFun fitsFun address depthEq depthBound requirement body declaration Λ' rest outcome nr hp hr tail ih =>
+    simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨cr, tr⟩, lowerTail, ⟨cs, ts⟩, lowerStmt, out⟩ := lower
+    simp only [lowS, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lowerStmt
+    obtain ⟨⟨ca, ta⟩, lowerArgs, stmtOut⟩ := lowerStmt
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj stmtOut
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    change max (callTop f (frei Γ reserved) ta) tr ≤ Ks at fits
+    have fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks := by omega
+    have room : frei Γ reserved ≤ Ks := by
+      have h := fitsArgs
+      simp only [callTop] at h
+      omega
+    obtain ⟨n, m1, bound, run, agree, hw, resultRead⟩ :=
+      arguments.fullRecursiveCall lowerFun fitsFun address depthEq depthBound
+        requirement body declaration lowerArgs fitsArgs pre.left surroundings inside world
+    have hks := inside.ks
+    have next := pre.nextW inside agree (Nat.le_refl _) (Nat.le_refl _) (by omega)
+    have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
+      simp [callC, callTail, callTailN, List.length_append]
+    obtain ⟨nt, boundTail, restRun⟩ :=
+      ih lowerTail (by omega) abi low hprotected next
+        (Umf.agreeW inside surroundings agree (by simp [frei]; omega)) hw
+    rw [← len] at run
+    refine ⟨na + 4 + n + nt, by omega, ?_⟩
+    have result := CountedSim.prefix abi run (agree.mono low)
+      (keeps_of_agreeW inside agree hprotected (by omega)) restRun
+    simpa only [pc_add1, pc_add, List.length_append, len, exPlus, tgt_eq] using result
+
+  | @bindCall Γ τ v Λ f args σ₀ σ ρ na nq nb declared depth returned arguments topFun lowerFun fitsFun address depthEq depthBound requirement body declaration result he Λ' rest outcome nr hp hr tail ih =>
+    simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨ca, ta⟩, lowerArgs, ⟨cr, tr⟩, lowerTail, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    change max (callTop f (frei Γ reserved) ta) tr ≤ Ks at fits
+    have fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks := by omega
+    have room : frei Γ reserved + 2 < Ks := by
+      have h := fitsArgs
+      simp only [callTop, FB] at h
+      omega
+    obtain ⟨n, m1, bound, run, agree, hw, resultRead⟩ :=
+      arguments.fullRecursiveCall lowerFun fitsFun address depthEq depthBound
+        requirement body declaration lowerArgs fitsArgs pre.left.left surroundings inside world
+    obtain ⟨w, read, enc⟩ := resultRead _ _ result
+    have frame := frameOK_agreeW pre.frame agree
+    change m1.rd64 (slot (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (BitVec.ofNat 64 2)) = some w at read
+    rw [slot_slot] at read
+    have hks := inside.ks
+    have hp1 := pre.left.nextW inside agree (Nat.le_refl _) (Nat.le_refl _) (by omega)
+    have move := mov_to_counted hp1.code frame (j := frei Γ reserved) (s := frei Γ reserved + 2)
+      (by omega) (by omega) pre.small read
+    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 w.toNat
+    have a2 : Agree fp (frei Γ reserved) K m1 m2 :=
+      agree_write frame.room (Nat.le_refl _) (by omega) _
+    have joinedAgree := agree.trans (agreeW_of a2)
+    have next := pre.nextW inside joinedAgree (d' := frei Γ reserved + 1)
+      (by have := pre.ctx; omega) (by omega) (by omega)
+    have nextPre : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (.cons v ρ) reserved :=
+      ⟨by simp [frei], next.small, next.frame, next.code, next.far,
+        envAt_cons next.env (rd_same frame (by omega) w) enc, trivial, wstab_true _ _⟩
+    have hw2 : WeltAt m2 L σ :=
+      weltAt_stab inside.lay (by have := inside.top; omega) m1 m2 hw (a2.mono (Nat.zero_le _))
+    obtain ⟨nt, bt, rr⟩ :=
+      ih lowerTail (by omega) abi (by simp [frei] at *; omega)
+        (fun j hj => by have := hprotected j hj; simp [frei] at *; omega) nextPre
+        (Umf.agreeW inside surroundings joinedAgree (by simp [frei]; omega)) hw2
+    have len : (callC A f (frei Γ reserved) ca).length = ca.length + 4 := by
+      simp [callC, callTail, callTailN, List.length_append]
+    rw [← len] at run
+    refine ⟨na + 4 + n + 1 + nt, by omega, ?_⟩
+    have shrunk := CountedSim.shrink (outcome := outcome) rr
+    simp only [pc_add1] at shrunk
+    have result := CountedSim.prefix abi (run.trans move) (joinedAgree.mono low)
+      (keeps_of_agreeW inside joinedAgree hprotected (by omega)) shrunk
+    simpa only [pc_add1, pc_add, List.length_append, len, exPlus, tgt_eq, Nat.add_assoc] using result
+
+/-- Normal fallthrough is a specialization of canonical outcome soundness. -/
+theorem recursiveBlockCost.sound_normal {P : Programm D} {passes : Nat}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
+    {f0 : D.Fn} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {b : Block D (vertragVon D f0) l Γ Λ Λ'} {σ σ0 : World D} {ρ : Env D Γ}
+    {ρ0 : Env D (D.params f0)} {rp cfp : W} {σ' : World D} {ρ' : Env D Γ} {budget : Nat}
+    (certificate : recursiveBlockCost L reserved P passes A C dv Ks (vertragVon D f0) l b σ ρ (.ok σ' ρ') budget)
+    {lo K top : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {code : List II} {m : Mem} {pc fp : W}
+    (lower : lowB (reserved := reserved) passes A L lo ens pr ex b = some (code, top))
+    (fits : top ≤ Ks) (inside : WIn L fp Ks K)
+    (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved) (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ) :
+    ∃ n, n ≤ budget ∧ CountedReach n L fp lo K pr ⟨pc, fp⟩ m
+      (pc + BitVec.ofNat 64 (16 * code.length)) σ' ρ' reserved := by
+  exact certificate.sound (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp)
+    lower fits inside abi low hprotected pre surroundings world
+
 /-- The progress exit executes its real zero test and two stop constants.
     The syscall remains pending: neither hardware completion nor latency is
     inferred. All joint source-state facts refer to that same final memory. -/
@@ -3317,18 +3364,18 @@ theorem counter_budget_stop_counted
     use this result. No bound on an entire loop execution is a premise. -/
 theorem recursiveBlockCost.forever_pass
     {P : Programm D} {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II}
-    {dv : W} {Ks : Nat} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
-    {inv : Expr D Γ Λ .bool} {body : Block D V true Γ Λ Λ}
-    {σ σ' : World D} {ρ ρ' : Env D Γ} {ni nb : Nat}
+    {dv : W} {Ks : Nat} {f0 : D.Fn} {Γ : Ctx} {Λ : List (Res D)}
+    {inv : Expr D Γ Λ .bool} {body : Block D (vertragVon D f0) true Γ Λ Λ}
+    {σ σ' σ0 : World D} {ρ0 : Env D (D.params f0)} {rp cfp : W} {ρ ρ' : Env D Γ} {ni nb : Nat}
     (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
-    (child : recursiveBlockCost L reserved P passes A C dv Ks V true body
-      (σ.lese Λ inv.orte) ρ σ' ρ' nb)
+    (child : recursiveBlockCost L reserved P passes A C dv Ks (vertragVon D f0) true body
+      (σ.lese Λ inv.orte) ρ (.ok σ' ρ') nb)
     {lo K tc tb : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
     {cc cb : List II} {m : Mem} {pc fp : W}
     (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
     (lowerBody : lowB (reserved := reserved) passes A L lo ens pr (exPlus ex 4) body = some (cb, tb))
     (fitsInv : tc ≤ Ks) (fitsBody : tb ≤ Ks)
-    (inside : WIn L fp Ks K) (low : lo ≤ frei Γ reserved)
+    (inside : WIn L fp Ks K) (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved)
     (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
     (pre : PreS L m pc fp K (frei Γ reserved)
       (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
@@ -3355,8 +3402,8 @@ theorem recursiveBlockCost.forever_pass
   have branch := counted_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
     (by simp only [ci]; exact run_brz_ne ins (by rw [hd]; exact read) (by decide))
   have world1 := hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))
-  obtain ⟨n, bound, m2, run2, agree, env, hw, keep⟩ := child.sound lowerBody fitsBody inside
-    low hprotected h2.left
+  obtain ⟨n, bound, m2, run2, agree, env, hw, keep⟩ := child.sound_normal (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp) lowerBody fitsBody inside
+    abi low hprotected h2.left
     (Umf.agreeW inside surroundings (agreeW_of a1) (by simp [frei]; omega)) world1
   have h3 : PreS L m2 _ fp K (frei Γ reserved)
       ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)) ρ' reserved :=
@@ -3661,8 +3708,10 @@ theorem call_continuation_zeuge : ∃ n, n ≤ 17 ∧
       subst cs
       decide)
     (.source .nil)
-  have joint := recursive.sound (lo := 4) (ens := ([], 4)) (pr := []) (ex := (0, 0))
-    (code := caller) (top := 10) rfl (by decide) inside (by decide)
+  have joint := recursive.sound_normal (lo := 4) (ens := ([], 4)) (pr := []) (ex := (0, 0))
+    (σ0 := FullFunProbe.world) (ρ0 := Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil)
+    (rp := 0) (cfp := 0)
+    (code := caller) (top := 10) rfl (by decide) inside (by decide) (by decide)
     (by intro j hj; cases hj) (by simpa [frei, FB] using pre) around hw
   simpa [caller, callC, callTail, callTailN, Env.tail] using joint
 theorem fullCall_zeuge : ∃ n m', n ≤ 17 ∧
@@ -3757,7 +3806,7 @@ theorem bind_continuation_zeuge : ∃ n, n ≤ 18 ∧
     (Ks := 128) (top := 14) (dv := 1) (depth := 0)
     (returned := some ⟨.int 37 37, (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))⟩) (V := vertragVon fixtureDecl 0) (l := false)
     (rest := Block.nil) (nr := 0)
-    (ρ' := Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil)
+    (outcome := .ok world (Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil))
     (hp := {
       hw := fun t => nomatch t
       hg := fun _ h => h
@@ -3782,8 +3831,10 @@ theorem bind_continuation_zeuge : ∃ n, n ≤ 18 ∧
       decide)
     rfl
     (.source .nil)
-  have joint := recursive.sound (lo := 4) (ens := ([], 4)) (pr := []) (ex := (0, 0))
-    (code := caller) (top := 10) rfl (by decide) inside (by decide)
+  have joint := recursive.sound_normal (lo := 4) (ens := ([], 4)) (pr := []) (ex := (0, 0))
+    (σ0 := FullFunProbe.world) (ρ0 := Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil)
+    (rp := 0) (cfp := 0)
+    (code := caller) (top := 10) rfl (by decide) inside (by decide) (by decide)
     (by intro j hj; cases hj) (by simpa [frei, FB] using pre) around hw
   exact joint
 end BindCallProbe
