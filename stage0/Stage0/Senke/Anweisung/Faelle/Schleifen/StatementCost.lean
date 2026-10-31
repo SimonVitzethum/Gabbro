@@ -2407,6 +2407,66 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
     recursiveBlockCost L reserved P passes A C dv Ks V l
       (.bindCall f args he hp hr rest) σ ρ σ' (ρ'.tail) (na + 4 + declared + 1 + nr)
 
+/-- Terminal call trees certify actual callee source bodies. The depth index
+    decreases at each callee edge; continuations retain the parent's depth.
+    Returned values are shared through an index, rather than a callee contract.
+    Soundness for these trees is separate from the call-free EndCost theorem. -/
+inductive RecursiveEndCost (L : Lay D) (P : Programm D)
+    (passes : Nat) (A : D.Fn → Nat) (C : D.Fn → List II)  :
+    (depth Ks reserved : Nat) → (V : Vertrag D) → (l : Bool) →
+    (Δ : Ctx) → (snapshot : W) → (ens : List II × Nat) → (lo : Nat) →
+    {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ →
+      World D → Env D Γ → Option ((τ : Ty) × Wert D τ) → Nat → Type
+  | source {depth Ks reserved V l Δ snapshot ens lo Γ Λ b σ ρ n}
+      (source : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
+      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo b σ ρ source.result n
+  | call {depth Ks reserved V l Δ snapshot ens lo} {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {top : Nat}
+    (lowerFun : lowFun passes P A L f = some (C f, top))
+    (fitsFun : top ≤ Ks - frei Γ reserved)
+    (address : A f < 2 ^ 31) (positive : 0 < depth)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+      ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
+        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
+    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
+      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+    {rest : Endblock D V l Γ (nach D f Λ)}
+    {nr : Nat} {output : Option ((τ : Ty) × Wert D τ)}
+    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
+    (tail : RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo rest σ ρ output nr) :
+    RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo
+      (.cons (.call f args hp hr) rest) σ ρ output (na + 4 + declared + nr)
+
+  | bindCall {depth Ks reserved V l Δ snapshot ens lo} {Γ : Ctx} {τ : Ty} {v : Wert D τ} {Λ : List (Res D)} {f : D.Fn}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {top : Nat}
+    (lowerFun : lowFun passes P A L f = some (C f, top))
+    (fitsFun : top ≤ Ks - frei Γ reserved)
+    (address : A f < 2 ^ 31) (positive : 0 < depth)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+      ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
+        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
+    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
+      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+    (result : returned = some ⟨τ, v⟩)
+    {he : D.erg f = some τ}
+    {rest : Endblock D V l (τ :: Γ) (nach D f Λ)}
+    {nr : Nat} {output : Option ((τ : Ty) × Wert D τ)}
+    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
+    (tail : RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo rest σ (.cons v ρ) output nr) :
+    RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo
+      (.bindCall f args he hp hr rest) σ ρ output (na + 4 + declared + 1 + nr)
+
+
 /-- Induction composes each full call and its child certificate at the identical
     counted endpoint, retaining world, environment, frame and protected cells. -/
 theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
