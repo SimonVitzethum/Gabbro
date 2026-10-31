@@ -2849,7 +2849,17 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
             signedTail ρ W reserved ∧
           ∃ normalization,
             signedTail = [ci 1 (dst+10) 0 0,
-              ci 14 (dst+9) (dst+7) (dst+10)] ++ normalization := by
+              ci 14 (dst+9) (dst+7) (dst+10)] ++ normalization ∧
+            ∃ tested,
+              Star ⟨pc,fp⟩ m
+                ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
+                  BitVec.ofNat 64 (16*aligned.length)+128,fp⟩ tested ∧
+              Agree fp (dst+1) K m tested ∧
+              tested.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+                some (Runner.IR.bool ((if sx == sy then q+jam else q-jam) == 0)) ∧
+              Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
+                BitVec.ofNat 64 (16*aligned.length)+128) fp K (dst+7)
+                normalization ρ W reserved := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
     floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
       fracMask hiddenBound room (by omega) producerA producerB pre
@@ -2947,13 +2957,37 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
   have wholeRun := run.trans (sortRun.trans alignRun)
   have wholeAgree := ag.trans ((sortAgree.mono (by omega : dst+1 ≤ dst+3)).trans
     (alignAgree.mono (by omega : dst+1 ≤ dst+16)))
+  obtain ⟨normalization,normalizationEq⟩ := normalizationShape
+  have headerPre := signedRest
+  rw [normalizationEq] at headerPre
+  have hp : Pre L signedOut
+      (pc+BitVec.ofNat 64 (16*executed.length)+256+
+        BitVec.ofNat 64 (16*aligned.1.length)+96) fp K (dst+7)
+      ([ci 1 (dst+10) 0 0] ++
+        ([ci 14 (dst+9) (dst+7) (dst+10)] ++ normalization)) ρ W reserved := headerPre
+  obtain ⟨zeroMem,zeroRun,zeroAgree,zeroWord,zeroRead,zeroEq⟩ :=
+    const_ok (d := dst+10)
+      {hp.left with ctx := by have := hp.ctx; omega} (by decide) (by omega)
+  subst zeroWord
+  have cmpPre := hp.next (zeroAgree.mono (by omega : dst+7 ≤ dst+10))
+    (Nat.le_refl _) (by omega)
+  have qr := slotRead_agree hp.frame zeroAgree (by omega) (by omega) signedRead
+  obtain ⟨tested,testRun,testAgree,testWord,testRead,testEq⟩ :=
+    eng_bin_ok (a := dst+7) (b := dst+10) (d := dst+9) (o := 14)
+      {cmpPre.left with ctx := by have := cmpPre.ctx; omega}
+      (by omega) (by omega) (by omega) qr zeroRead
+      (g := fun x y => some (Runner.IR.bool (x == y))) rfl (by decide) rfl
+  subst testWord
+  have testedPre := cmpPre.next (testAgree.mono (by omega : dst+7 ≤ dst+9))
+    (Nat.le_refl _) (by omega)
   refine ⟨executed,tail,aligned.1,continuation,aligned.2,values,final,hfull,
     tailEq,ha,run.trans (sortRun.trans alignRun),
     ag.trans ((sortAgree.mono (by omega)).trans (alignAgree.mono (by omega))),
     fieldValues,?_,?_,finalPre,signedOut,vs (dst+3),vs (dst+4),vs (dst+7),vs (dst+16),
     vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),
     wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),
-    signedRead,?_,signedTail,signedEq,signedRest,normalizationShape⟩
+    signedRead,?_,signedTail,signedEq,signedRest,normalization,normalizationEq,
+    tested,?_,?_,testRead,?_⟩
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
@@ -3072,6 +3106,12 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
           rw [hq, hr] at h
           change n = 0
           simpa only [Int.mul_zero, Int.zero_add] using h.symm
+
+  · simpa [BitVec.add_assoc] using
+      wholeRun.trans (signedRun.trans (zeroRun.trans testRun))
+  · exact wholeAgree.trans ((signedAgree.trans
+      ((zeroAgree.mono (by omega)).trans (testAgree.mono (by omega)))).mono (by omega))
+  · simpa [BitVec.add_assoc] using testedPre
 
 #print axioms floatFiniteAddL_read_fields_align
 
@@ -3194,7 +3234,17 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
             signedTail ρ W 13 ∧
           ∃ normalization,
             signedTail = [ci 1 (16+10) 0 0,
-              ci 14 (16+9) (16+7) (16+10)] ++ normalization := by
+              ci 14 (16+9) (16+7) (16+10)] ++ normalization ∧
+            ∃ tested,
+              Star ⟨pc,fp⟩ m
+                ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
+                  BitVec.ofNat 64 (16*aligned.length)+128,fp⟩ tested ∧
+              Agree fp (16+1) K m tested ∧
+              tested.rd64 (slot fp (BitVec.ofNat 64 (16+9))) =
+                some (Runner.IR.bool ((if sx == sy then q+jam else q-jam) == 0)) ∧
+              Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
+                BitVec.ofNat 64 (16*aligned.length)+128) fp K (16+7)
+                normalization ρ W 13 := by
   apply floatFiniteAddL_read_fields_align F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11
