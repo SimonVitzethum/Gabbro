@@ -1576,4 +1576,68 @@ theorem floatFiniteAddL_read_fields_zeuge {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_read_fields_zeuge
 
+/-- Successful whole compilation fixes the continuation after all eight input
+    producers. In particular the ordering prefix uses the actual retained
+    exponent and magnitude slots, and its three scratch slots start at dst+9.
+    This is a code boundary only; it does not assert execution of the swap. -/
+theorem floatFiniteAddL_order_continuation (F : Gleitkomma.Format) (dst : Nat)
+    (a b : Nat → Option (List II × Nat)) {code : List II} {top : Nat}
+    (compiled : floatFiniteAddL F dst a b = some (code,top)) :
+    ∃ inputs inputTop tail,
+      floatStateSlotsL (dst+1)
+        ([a,b,
+          fun j => floatFieldL (F.fracBits+F.ebits) 1 j
+            (fun k => some ([ci 2 k (dst+1) 0],k+1)),
+          fun j => floatFieldL (F.fracBits+F.ebits) 1 j
+            (fun k => some ([ci 2 k (dst+2) 0],k+1))] ++
+          finiteAddRemaining F dst) = some (inputs,inputTop) ∧
+      code = inputs ++
+        ([ci 13 (dst+9) (dst+5) (dst+6),
+          ci 14 (dst+10) (dst+5) (dst+6),
+          ci 13 (dst+11) (dst+7) (dst+8),
+          ci 5 (dst+10) (dst+10) (dst+11),
+          ci 9 (dst+9) (dst+9) (dst+10)] ++ tail) ∧
+      inputTop ≤ top := by
+  simp only [floatFiniteAddL, bind, pure, Option.bind_eq_some_iff] at compiled
+  obtain ⟨inputs, hi, aligned, ha, shift, hs, rounded, hr, result⟩ := compiled
+  refine ⟨inputs.1,inputs.2,code.drop (inputs.1.length+5),?_,?_,?_⟩
+  · simpa [finiteAddRemaining] using hi
+  · simp only [Option.some.injEq, Prod.mk.injEq] at result
+    rw [← result.1]
+    simp [List.drop_append, List.append_assoc]
+  · simp only [Option.some.injEq, Prod.mk.injEq] at result
+    omega
+
+#print axioms floatFiniteAddL_order_continuation
+
+/-- The first ordering instruction consumes the two retained effective
+    exponents and returns the actual continuation Pre, at the same scratch
+    boundary. It makes no universally quantified fixed-slot WordCode claim. -/
+theorem floatFiniteAddL_order_first {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved : Nat} {tail : List II} {ex ey : Runner.W}
+    (room : dst+9 < K)
+    (rx : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
+    (ry : m.rd64 (slot fp (BitVec.ofNat 64 (dst+6))) = some ey)
+    (pre : Pre L m pc fp K (dst+9)
+      ([ci 13 (dst+9) (dst+5) (dst+6)] ++ tail) ρ W reserved) :
+    ∃ m', Star ⟨pc,fp⟩ m ⟨pc+16,fp⟩ m' ∧
+      Agree fp (dst+9) K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+        some (Runner.IR.bool (ex.slt ey)) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (dst+6))) = some ey ∧
+      Pre L m' (pc+16) fp K (dst+9) tail ρ W reserved := by
+  obtain ⟨m',run,agree,w,read,value⟩ := eng_bin_ok (a := dst+5) (b := dst+6) (d := dst+9) pre.left room
+    (by omega) (by omega) rx ry
+    (g := fun x y => some (Runner.IR.bool (x.slt y))) rfl (by decide) rfl
+  subst w
+  refine ⟨m',?_,agree,read,
+    slotRead_agree pre.frame agree (by omega) (by omega) rx,
+    slotRead_agree pre.frame agree (by omega) (by omega) ry,?_⟩
+  · simpa using run
+  · simpa using pre.next agree (Nat.le_refl _) (by omega)
+
+#print axioms floatFiniteAddL_order_first
+
 end Gabbro.Stage0.Senke
