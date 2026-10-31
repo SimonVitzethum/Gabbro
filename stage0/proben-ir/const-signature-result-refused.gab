@@ -1,0 +1,8 @@
+// The callee result is checked in its own narrower range, before the caller sees it.
+module const_signature_result_refused {
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+const fn successor(x : Base) -> u8 in 0 .. LIMIT effects { pure } { return x + 1; }
+const ANSWER : Base = successor(42);
+impl fn main() -> Base effects { pure } { return ANSWER; }
+}

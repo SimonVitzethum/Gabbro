@@ -61,8 +61,8 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Oeffentlich.huelleZu result.source.items = true ∧
     (scope.aliasConstants = uConstsRech (uKonstFns original) original [] ∨ scope.aliasConstants = scope.values) ∧
     scope.declared = original.foldl (Frontend.aliasStep scope.aliasConstants) [] ∧
-    scope.functions = Frontend.constantFunctions scope.declared original ∧
-    (∀ fn ∈ scope.functions, ∃ item ∈ original, Frontend.FunctionMeaning scope.declared item fn) ∧
+    scope.functions = Frontend.constantFunctions scope.functionTypes original ∧
+    (∀ fn ∈ scope.functions, ∃ item ∈ original, Frontend.FunctionMeaning scope.functionTypes item fn) ∧
     (∀ names item table,
       Frontend.tableWithEmpty scope.values scope.types names item = .ok table →
       uTabelle scope.values scope.types names item = .ok table ∨

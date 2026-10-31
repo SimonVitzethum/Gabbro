@@ -275,14 +275,22 @@ structure Scopes (original : List SItemTief) where
   functions : List UKonstFn
   aliasConstants : List (String × Int)
   aliasOrigin : aliasConstants = uConstsRech (uKonstFns original) original [] ∨ aliasConstants = values
+  functionsUseValues : Bool
   aliases : declared = original.foldl (aliasStep aliasConstants) []
-  functionOrigin : functions = constantFunctions declared original
+  functionOrigin : functions = constantFunctions
+    (if functionsUseValues then declared ++ values.map (fun c => (c.1, (c.2, c.2))) else declared) original
   scalarValues : typedConstants declared functions original [] = some values
+
+/-- The canonical environment used to elaborate compile-time function signatures. Existing
+    scopes use declared aliases; dependent signatures additionally use certified scalar bounds. -/
+def Scopes.functionTypes {items : List SItemTief} (scope : Scopes items) : List (String × (Int × Int)) :=
+  if scope.functionsUseValues then scope.declared ++ scope.values.map (fun c => (c.1, (c.2, c.2)))
+    else scope.declared
 
 /-- Every function supplied to canonical scalar or nested-array evaluation retains its original
     body, pure/nonlogical clauses and exact canonical source signature. -/
 theorem Scopes.functionMeaning {items : List SItemTief} (scope : Scopes items) :
-    ∀ fn ∈ scope.functions, ∃ item ∈ items, FunctionMeaning scope.declared item fn := by
+    ∀ fn ∈ scope.functions, ∃ item ∈ items, FunctionMeaning scope.functionTypes item fn := by
   rw [scope.functionOrigin]
   exact constantFunctions_sound _ _
 
@@ -296,7 +304,7 @@ def scopes (items target : List SItemTief)
     (h : EnvironmentFacts items target) : Scopes items := by
   let p := prepare items
   refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns, p.initial,
-    Or.inl rfl, h.2.2, ?_, ?_⟩
+    Or.inl rfl, false, h.2.2, ?_, ?_⟩
   · exact constantFunctions_aliases p.initial p.env [] items
   · have hc := h.1
     change typedConstants p.env p.fns p.expanded [] = _ at hc
@@ -319,8 +327,8 @@ structure DerivedScopes (items : List SItemTief) where
 def evaluatedScopes (items : List SItemTief) (values : List (String × Int))
     (h : typedConstants (prepare items).env (prepare items).fns items [] = some values) : Scopes items :=
   ⟨values, (prepare items).env, (prepare items).fns, (prepare items).initial,
-    Or.inl rfl, by simpa only [prepare, List.nil_append] using
-      aliases_collected (prepare items).initial [] items,
+    Or.inl rfl, false,
+    (by simpa only [prepare, List.nil_append] using (aliases_collected (prepare items).initial [] items)),
     constantFunctions_aliases (prepare items).initial (prepare items).env [] items, h⟩
 
 /-- The actual consumer needs the certified original scalar fold, not a second encoding through
