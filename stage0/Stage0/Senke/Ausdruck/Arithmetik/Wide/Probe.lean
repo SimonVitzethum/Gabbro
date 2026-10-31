@@ -10,6 +10,8 @@ import Stage0.Senke.BildLese
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
 
 namespace Gabbro.Stage0.Senke.WideProbe
 open Runner.IR Runner.Mem
@@ -221,5 +223,60 @@ theorem wideMul_zeuge [Kern] :
     rw [e] at prod; exact prod
   · have e : integerEncoding 2 18446744073709551615 = [18446744073709551615, 0] := by decide +kernel
     rw [e] at keep; exact keep
+
+/-! ## Bitwise and negation -/
+
+abbrev andCode : List II := wideBitC 8 2 8
+abbrev negCode : List II := wideNegC 2 8
+
+theorem andCode_length : andCode.length = 2 := by decide
+theorem negCode_length : negCode.length = 20 := by decide
+
+/-- `(2^64 + 255) & (2^64 + 15)`: both limbs take part. -/
+def andMem : Runner.Mem := probeMem andCode [255, 1, 15, 1]
+/-- `-(2^64 + 1)`. -/
+def negMem : Runner.Mem := probeMem negCode [1, 1, 0, 0]
+
+theorem andMem_x : WordsAt andMem 4096 8 (integerEncoding 2 ((18446744073709551871 : Nat) : Int)) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem andMem_y : WordsAt andMem 4096 (8 + 2) (integerEncoding 2 ((18446744073709551631 : Nat) : Int)) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem negMem_x : WordsAt negMem 4096 8 (integerEncoding 2 18446744073709551617) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem wideAnd_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ andMem ⟨2048 + BitVec.ofNat 64 (16 * 2), 4096⟩ m' ∧
+      Agree 4096 8 24 andMem m' ∧ WordsAt m' 4096 8 [15, 1] := by
+  have far : CodeFar 2048 andCode.length 4096 24 := by rw [andCode_length]; unfold CodeFar; decide
+  obtain ⟨m', run, agree, res, _⟩ := wideAnd_run (m := andMem) (pc := 2048) (fp := 4096) (K := 24) (k := 2) (a := 8)
+    (probe_frame _ _) (by decide) (by decide) (probe_code andCode _ (by decide) (by decide)) far
+    18446744073709551871 18446744073709551631 andMem_x andMem_y
+  rw [andCode_length] at run
+  refine ⟨m', run, agree, ?_⟩
+  have e : integerEncoding 2 ((18446744073709551871 &&& 18446744073709551631 : Nat) : Int) = [15, 1] := by
+    decide +kernel
+  rw [e] at res; exact res
+
+theorem wideNeg_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ negMem ⟨2048 + BitVec.ofNat 64 (16 * 20), 4096⟩ m' ∧
+      Agree 4096 8 24 negMem m' ∧
+      WordsAt m' 4096 8 [18446744073709551615, 18446744073709551614] := by
+  have far : CodeFar 2048 negCode.length 4096 24 := by rw [negCode_length]; unfold CodeFar; decide
+  obtain ⟨m', run, agree, res⟩ := wideNeg_run (m := negMem) (pc := 2048) (fp := 4096) (K := 24) (k := 2) (a := 8)
+    (probe_frame _ _) (by decide) (by decide) (probe_code negCode _ (by decide) (by decide)) far
+    18446744073709551617 negMem_x
+  rw [negCode_length] at run
+  refine ⟨m', run, agree, ?_⟩
+  have e : integerEncoding 2 (-18446744073709551617) =
+      [18446744073709551615, 18446744073709551614] := by decide +kernel
+  rw [e] at res; exact res
 
 end Gabbro.Stage0.Senke.WideProbe
