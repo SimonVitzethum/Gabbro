@@ -42,6 +42,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
     split at hlf
     · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
       obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, cs, hcs, hCf, htf⟩ := hlf
+      simp only [frei] at htf
       have hFB3 : FB = 4 := rfl
       have hcode := (hP f).1
       have hfar := (hP f).2
@@ -66,6 +67,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
     · next hcond =>
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
       obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, cs, hcs, hCf, htf⟩ := hlf
+      simp only [frei] at htf
       have hFB3 : FB = 4 := rfl
       have hmul : (k + 1 + 1) * L = (k + 1) * L + L := Nat.succ_mul _ _
       have hroom := hF.room
@@ -77,8 +79,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
       rw [← hCf] at hlenf
       simp only [List.length_append, relocateC_length] at hlenf
       have hcode : CodeAt m (BitVec.ofNat 64 (A f))
-          (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((D.params f).length + 2) (D.params f).length ++ cb))))) := by simpa [List.append_assoc] using hcode0
-      have hfar : CodeFar (BitVec.ofNat 64 (A f)) (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((D.params f).length + 2) (D.params f).length ++ cb))))).length fp K := by
+          (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) (D.params f).length ++ cb))))) := by simpa [List.append_assoc] using hcode0
+      have hfar : CodeFar (BitVec.ofNat 64 (A f)) (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) (D.params f).length ++ cb))))).length fp K := by
         simpa [List.append_assoc, Nat.add_assoc] using hfar0
       have hgl : ∀ a c, (guardC a c s).length = 5 := fun _ _ => rfl
       -- the depth guard passes
@@ -142,9 +144,9 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
         have hfB := codeFar_tail hf3
         have hcB := (codeAt_right hc3).agree aS hfB
         obtain ⟨mR, sR, aR, hER⟩ := relocate_env hFS hK
-          (by simpa only [Nat.zero_add] using (show frei (D.params f) ((D.params f).length + 2) ≤ K by omega)) hES (codeAt_left hcB)
-          (by simpa only [relocateC_length] using (codeFar_left (n := (relocateC FB ((D.params f).length + 2) (D.params f).length).length) (k := cb.length) (by simpa only [List.length_append] using hfB)))
-        have aRW := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + ((D.params f).length + 2)) ≤ K by simpa only [Nat.zero_add] using (show frei (D.params f) ((D.params f).length + 2) ≤ K by omega))
+          (by simpa only [Nat.zero_add] using (show frei (D.params f) ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega)) hES (codeAt_left hcB)
+          (by simpa only [relocateC_length] using (codeFar_left (n := (relocateC FB ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) (D.params f).length).length) (k := cb.length) (by simpa only [List.length_append] using hfB)))
+        have aRW := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))) ≤ K by simpa only [Nat.zero_add] using (show frei (D.params f) ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega))
         have hFR := hFS.agree aRW
         have aEntry : Agree fp 3 K m mR := aPre.trans (aRW.mono (by unfold FB; omega))
         have hOriginal : EnvAt Y mR fp ρ := envAt_agree hES aRW hFS (by unfold frei FB; omega) (by omega)
@@ -163,7 +165,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
           ⟨by rw [agree_rd_low aEntry hroom (by decide) (by omega)]; exact h0,
            by rw [agree_rd_low aEntry hroom (by decide) (by omega)]; exact h1,
            hOriginal, by omega, hSnapR⟩
-        have hpb : PreS Y mR _ fp K (frei (D.params f) ((D.params f).length + 2)) cb ρ ((D.params f).length + 2) :=
+        have hpb : PreS Y mR _ fp K (frei (D.params f) ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))) cb ρ ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) :=
           ⟨Nat.le_refl _, hK, hFR, hcR, hfR, by simpa only [Nat.zero_add] using hER, trivial, wstab_true _ _⟩
         have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (pr := []) (P.rumpf f) cb tb hb
           (by omega) (by omega) hW mR _ σR ρ hpb (by unfold frei s; omega) hu hk hWaR' (fun _ h => nomatch h)

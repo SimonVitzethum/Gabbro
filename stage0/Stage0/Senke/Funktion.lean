@@ -6,7 +6,8 @@
   depth (G's `fuel`), slot 3 is the entry snapshot, and the parameters follow. Its code:
   * depth 0: `exit_group(105)` (`abstieg`); then `requires` into slot `FB + np`, false: `exit_group(101)`;
   * after `requires` succeeds, capture the postcondition's entry cell in header slot 3;
-  * descending moves copy parameters above the original parameters and the two return words;
+  * descending moves copy parameters above the original parameters, the two return words and
+    the counter pairs computed from the maximum source nesting depth;
   * the body (`lowEnd`) uses that shifted environment; the original parameters remain available to `ensures`;
   * every `ret e`: `e`, into slot `lo = FB + np`, then `ensures` over the result and the parameters into the
     slot above, false: `exit_group(102)`; else the result into slot 2 and `ret`.
@@ -14,6 +15,7 @@
   result returns whatever word slot `FB + np` holds; nobody reads it.
 -/
 import Stage0.Senke.Anweisung
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 import Stage0.Senke.Stopp
 import Stage0.Senke.Ausdruck.Old.Capture
 
@@ -29,8 +31,9 @@ def lowFun (passes : Nat) (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D
   if (D.invs.filter (schuldet f)).isEmpty then do
     let req ← lowE L (P.requires f) (FB + np)
     let ens ← lowEns L (P.ensures f) (FB + np + 1)
-    -- Preserve the incoming ABI and both return words below the lexical environment.
-    let reserved := np + 2
+    -- Preserve the incoming ABI and both return words, then reserve one pair per
+    -- simultaneously active forever before relocating the lexical environment.
+    let reserved := np + 2 + 2 * counterDepthE (P.rumpf f)
     let body ← lowEnd (reserved := reserved) passes A L (FB + np) ens [] (0, 0) (P.rumpf f)
     let snap ← snapC L (oldCells (P.ensures f))
     pure (guardC 2 105 (FB + np) ++ req.1 ++ guardC (FB + np) 101 (FB + np) ++ snap ++ (relocateC FB reserved np ++ body.1),
