@@ -9,6 +9,7 @@
 import Stage0.Senke.BildLese
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
 
 namespace Gabbro.Stage0.Senke.WideProbe
 open Runner.IR Runner.Mem
@@ -182,5 +183,43 @@ theorem wideEq_same_zeuge [Kern] :
     18446744073709551623 18446744073709551623 eqMemSame_x eqMemSame_y (by decide) (by decide)
   rw [eqCode_length] at run
   exact ⟨m', run, agree, by rw [flag]; decide⟩
+
+/-! ## The 64 x 64 -> 128 bit product -/
+
+abbrev mulCode : List II := wideMulC 2 8
+
+theorem mulCode_length : mulCode.length = 99 := by decide
+
+theorem probe_frame32 (code : List II) (words : List Nat) : FrameOK (probeMem code words) 4096 32 :=
+  ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+
+/-- `(2^64 - 1) * (2^64 - 1) = 2^128 - 2^65 + 1`: operands `[2^64-1, 0]` twice. -/
+def mulMem : Runner.Mem := probeMem mulCode [18446744073709551615, 0, 18446744073709551615, 0]
+
+theorem mulMem_x : WordsAt mulMem 4096 8 (integerEncoding 2 18446744073709551615) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem mulMem_y : WordsAt mulMem 4096 (8 + 2) (integerEncoding 2 18446744073709551615) := by
+  intro i hi
+  have : i < 2 := hi
+  rcases (by omega : i = 0 ∨ i = 1) with rfl | rfl <;> (clear this; revert hi; decide +kernel)
+
+theorem wideMul_zeuge [Kern] :
+    ∃ m', Star ⟨2048, 4096⟩ mulMem ⟨2048 + BitVec.ofNat 64 (16 * 99), 4096⟩ m' ∧
+      Agree 4096 8 32 mulMem m' ∧ WordsAt m' 4096 8 [1, 18446744073709551614] ∧
+      WordsAt m' 4096 10 [18446744073709551615, 0] := by
+  have far : CodeFar 2048 mulCode.length 4096 32 := by rw [mulCode_length]; unfold CodeFar; decide
+  obtain ⟨m', run, agree, prod, keep⟩ := wideMul_run (m := mulMem) (pc := 2048) (fp := 4096) (K := 32) (k := 2) (a := 8)
+    (probe_frame32 _ _) (by decide) (by decide) (probe_code mulCode _ (by decide) (by decide)) far
+    18446744073709551615 18446744073709551615 mulMem_x mulMem_y
+  rw [mulCode_length] at run
+  refine ⟨m', run, agree, ?_, ?_⟩
+  · have e : integerEncoding 2 (18446744073709551615 * 18446744073709551615) =
+        [1, 18446744073709551614] := by decide +kernel
+    rw [e] at prod; exact prod
+  · have e : integerEncoding 2 18446744073709551615 = [18446744073709551615, 0] := by decide +kernel
+    rw [e] at keep; exact keep
 
 end Gabbro.Stage0.Senke.WideProbe
