@@ -154,7 +154,19 @@ theorem hook_outcomes_zeuge :
 /-- All joint fixtures use the complete image producer and the actual source hook. -/
 theorem hook_images_zeuge :
     (List.range 3).all (fun budget => (List.range 9).all (fun mode => (image budget mode).isOk)) = true := by
-  decide +kernel
+  apply List.all_eq_true.mpr
+  intro budget hb
+  have bound : budget < 3 := by simpa using hb
+  have cases : budget = 0 ∨ budget = 1 ∨ budget = 2 := by omega
+  rcases cases with rfl | rfl | rfl
+  all_goals
+    apply List.all_eq_true.mpr
+    intro mode hm
+    have bound : mode < 9 := by simpa using hm
+    have cases : mode = 0 ∨ mode = 1 ∨ mode = 2 ∨ mode = 3 ∨ mode = 4 ∨
+        mode = 5 ∨ mode = 6 ∨ mode = 7 ∨ mode = 8 := by omega
+    rcases cases with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    all_goals decide +kernel
 
 /-- Joint successful witnesses expose actual callee effects. Mode 8 performs
     two outer passes with two inner passes each; mode 7 initially satisfies its
