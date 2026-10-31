@@ -9,6 +9,7 @@ import Stage0.Senke.Ausdruck.Wenn
 import Stage0.Senke.Ausdruck.Fnptr
 import Stage0.Senke.Ausdruck.Eng
 import Stage0.Senke.Ausdruck.Tag
+import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 import Stage0.Senke.Ausdruck.Aggregat.Array
 import Stage0.Senke.Ausdruck.Aggregat.StringOps
 import Stage0.Senke.Ausdruck.Option
@@ -103,7 +104,13 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       obtain ⟨w, hw, he⟩ := hp.env τ x
       have := vslot_lt (reserved := reserved) x
       have := hp.ctx
-      exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
+      obtain ⟨m', run, agree, result⟩ := copyWords_ok [w] (by simp; omega)
+        (by simp; omega) hp (by
+          intro i hi
+          have : i = 0 := by simpa using hi
+          subst i
+          exact hw)
+      exact ⟨m', run, agree, w, result 0 (by simp), he⟩
     · cases h
   | _, _, .add a b, d, c, top, h, hK, m, pc, ρ, hp => by
     obtain ⟨ca, ta, cb, tb, ha, hb, rfl, rfl⟩ := bin_some h
