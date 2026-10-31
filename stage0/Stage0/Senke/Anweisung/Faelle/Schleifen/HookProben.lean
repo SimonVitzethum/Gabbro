@@ -297,6 +297,46 @@ theorem countedCall_zeuge [Runner.IR.Kern] :
     ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
     (by decide +kernel) (by decide +kernel)
 
+/-- Accepted source lowering, recursive cost certificate, ABI preservation and
+    the real return are instantiated jointly on the executable callee image. -/
+theorem returning_zeuge [Runner.IR.Kern] :
+    ∃ m', Counted 2 ⟨32, 1088⟩ countedCallEntered ⟨16, 1024⟩ m' ∧
+      Agree 1088 4 16 countedCallEntered m' ∧
+      ∃ w, m'.rd64 (slot 1088 4) = some w ∧ w = BitVec.ofInt 64 7 := by
+  have pre : PreS FnptrProben.callLayout countedCallEntered 32 1088 16 4
+      [ci 1 4 7 0] (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      ?_, ?_, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    · intro k hk
+      have : k = 0 := by simpa using hk
+      subst k
+      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
+      exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+    · unfold CodeFar; decide +kernel
+  exact ExprCost.returning (L := FnptrProben.callLayout) (reserved := 0)
+    (Γ := []) (Λ := []) (e := .lit 7) (top := 5) .literal rfl
+    (by decide) (by decide) (by decide) pre
+    (by
+      intro k hk
+      have : k = 0 := by simpa using hk
+      subst k
+      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
+      exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩)
+    (by unfold CodeFar; decide +kernel) (by decide +kernel) (by decide +kernel)
+
+/-- Full real call whose callee evidence comes from accepted source lowering,
+    including return-code and ABI preservation, rather than an assumed body run. -/
+theorem source_counted_call_zeuge [Runner.IR.Kern] :
+    ∃ m', Counted 3 ⟨0, 1024⟩ countedCallMem ⟨16, 1024⟩ m' ∧
+      ∃ w, m'.rd64 (slot 1088 4) = some w ∧ w = BitVec.ofInt 64 7 := by
+  obtain ⟨m', body, _, value⟩ := returning_zeuge
+  have enter : Counted 1 ⟨0, 1024⟩ countedCallMem ⟨32, 1088⟩ countedCallEntered := by
+    have code : InsAt countedCallMem 0 20 4 8 0 :=
+      ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+    exact .next (run_step code (by decide)
+      (run_call code (by decide +kernel) (m1 := countedCallSavedPC) rfl rfl)) (.refl _ _)
+  exact ⟨m', enter.trans body, value⟩
+
 /-- A concrete positive-budget header executes one real instruction. This is
     a joint witness for counting/erasure/composition, not a loop cost bound. -/
 theorem counted_header_zeuge [Runner.IR.Kern] :

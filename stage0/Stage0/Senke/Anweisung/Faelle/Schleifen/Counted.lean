@@ -358,6 +358,42 @@ theorem countedCall {t u : T} {m m1 m2 m3 : Runner.Mem}
     .next (run_step returnCode (by decide) (run_ret returnPC returnFP)) (.refl _ _)
   simpa [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using (enter.trans callee).trans leave
 
+/-- A returning expression callee derives its execution count recursively from
+    the source certificate. Agreement proves preservation of both ABI cells
+    and the return instruction; no post-body ABI or execution premise is used.
+    This is an instruction count, not a conversion from declared G costs. -/
+theorem ExprCost.returning {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {e : Expr D Γ Λ τ} {d n top K : Nat} {P : Runner.W → Prop}
+    (certificate : ExprCost L reserved e d n P)
+    {code : List II} {m : Runner.Mem} {pc fp resume caller : Runner.W}
+    {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (lower : lowE L (reserved := reserved) e d = some (code, top))
+    (fits : top ≤ K) (abi : 2 ≤ d) (room : d ≤ K)
+    (pre : Pre L m pc fp K d code ρ W reserved)
+    (ret : CodeAt m (pc + BitVec.ofNat 64 (16 * code.length)) [ci 21 0 0 0])
+    (far : CodeFar (pc + BitVec.ofNat 64 (16 * code.length)) 1 fp K)
+    (savedPC : m.rd64 fp = some resume)
+    (savedFP : m.rd64 (fp + 8) = some caller) :
+    ∃ m', Counted (n + 1) ⟨pc, fp⟩ m ⟨resume, caller⟩ m' ∧
+      Agree fp d K m m' ∧
+      ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some w ∧ P w := by
+  obtain ⟨m', run, agree, value⟩ := certificate.sound lower fits pre
+  have ret' := (ret.agree agree far) 0 (by simp)
+  simp only [List.getElem_cons_zero, ci, Nat.mul_zero, BitVec.add_zero] at ret'
+  have rpc : m'.rd64 fp = some resume := by
+    have h := agree_rd_low (i := 0) agree pre.frame.room (by omega) room
+    simp only [slot, BitVec.zero_mul, BitVec.add_zero] at h
+    exact h.trans savedPC
+  have rfp : m'.rd64 (fp + 8) = some caller := by
+    have h := agree_rd_low (i := 1) agree pre.frame.room (by omega) room
+    have h' : m'.rd64 (fp + 8) = m.rd64 (fp + 8) := by simpa [slot] using h
+    exact h'.trans savedFP
+  refine ⟨m', ?_, agree, value⟩
+  have leave : Counted 1 ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m'
+      ⟨resume, caller⟩ m' :=
+    .next (run_step ret' (by decide) (run_ret rpc rfp)) (.refl _ _)
+  exact run.trans leave
+
 /-- Compose any finite family of actual execution segments. Segment bounds
     must include the invariant, body/callees, header, backedge and exits as
     applicable; no code-length assumption is made for a recursive segment. -/
