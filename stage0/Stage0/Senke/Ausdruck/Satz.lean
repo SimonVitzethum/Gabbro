@@ -75,7 +75,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     strWeit_ok q s (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strGet s i, d, c, top, h, hK, m, pc, ρ, hp =>
     strGet_ok s i (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay i d ca ta ha hta m pc ρ hp) h hK hp
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay i d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay i _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strEq s t, d, c, top, h, hK, m, pc, ρ, hp =>
     strCompare_ok false s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp) h hK hp

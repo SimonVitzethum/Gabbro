@@ -382,9 +382,17 @@ def arrGetL (τ : Ty) (n d : Nat) (a b : Option (List II × Nat)) : Option (List
     let ca ← a
     let cb ← b
     let ptr := d + valueWords (.arr τ n)
-    pure (ca.1 ++ cb.1 ++ selectFrameSpan (valueWords τ) d ptr (ptr + 1),
+    pure (ca.1 ++ cb.1 ++ selectFrameSpan (valueWords τ) d d ptr (ptr + 1),
       max (max ca.2 cb.2) (ptr + 2))
   else none
+
+/-- Byte `i` of a string of capacity `n > 1`: the string occupies `n + 1` words at `d`, the index
+    word follows it; the byte is the word `d + 1 + i` (zero beyond the length), copied to `d`. -/
+def strGetLongL (n d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) := do
+  let cs ← s
+  let ci ← i
+  let ptr := d + n + 1
+  pure (cs.1 ++ ci.1 ++ selectFrameSpan 1 (d + 1) d ptr (ptr + 1), max (max cs.2 ci.2) (ptr + 2))
 
 mutual
 /-- The code computing
@@ -476,13 +484,21 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, @Expr.strCat _ _ _ n m s t, d =>
     if n + m ≤ 1 then (if n = 0 then lowE L (reserved := reserved) t d else lowE L (reserved := reserved) s d) else none
   | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
-    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d) else none
+    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d)
+    else if 2 ≤ n ∧ 0 ≤ lo ∧ hi < n then
+      strGetLongL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 1))
+    else none
   | _, _, @Expr.strEq _ _ _ n m s t, d =>
     if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
   | _, _, @Expr.strLt _ _ _ n m s t, d =>
     if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
   | _, _, @Expr.strWeit _ _ _ n m s, d =>
-    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L (reserved := reserved) s d) else none
+    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L (reserved := reserved) s d)
+    else if 2 ≤ n ∧ n ≤ m then
+      (lowE L (reserved := reserved) s d).map fun a =>
+        (a.1 ++ (constWords (List.replicate (m - n) 0) (d + n + 1)).1,
+          max a.2 (max (constWords (List.replicate (m - n) 0) (d + n + 1)).2 (d + m + 1)))
+    else none
   | _, _, .none n, d => some (constWords (encodeWords L (.opt n) none) d)
   | _, _, @Expr.some _ _ _ n e, d =>
     if n ≤ 2 ^ 63 then lowE L (reserved := reserved) e d else do

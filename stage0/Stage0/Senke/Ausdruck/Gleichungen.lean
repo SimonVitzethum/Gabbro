@@ -310,7 +310,10 @@ theorem lowE_literal_boundaries_zeuge :
 
 @[lowE_eqs] theorem lowE_strGet (s : Expr D Γ Λ (.str n)) (i : Expr D Γ Λ (.int lo hi)) :
     lowE L (reserved := reserved) (.strGet s i) d =
-    (if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d) else none) := rfl
+    (if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d)
+    else if 2 ≤ n ∧ 0 ≤ lo ∧ hi < n then
+      strGetLongL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 1))
+    else none) := rfl
 
 @[lowE_eqs] theorem lowE_strEq (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
     lowE L (reserved := reserved) (.strEq s t) d =
@@ -322,7 +325,12 @@ theorem lowE_literal_boundaries_zeuge :
 
 @[lowE_eqs] theorem lowE_strWeit (m : Nat) (s : Expr D Γ Λ (.str n)) :
     lowE L (reserved := reserved) (.strWeit m s) d =
-    (if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L (reserved := reserved) s d) else none) := rfl
+    (if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L (reserved := reserved) s d)
+    else if 2 ≤ n ∧ n ≤ m then
+      (lowE L (reserved := reserved) s d).map fun a =>
+        (a.1 ++ (constWords (List.replicate (m - n) 0) (d + n + 1)).1,
+          max a.2 (max (constWords (List.replicate (m - n) 0) (d + n + 1)).2 (d + m + 1)))
+    else none) := rfl
 
 @[lowE_eqs] theorem lowE_wenn (c : Expr D Γ Λ .bool) (a b : Expr D Γ Λ τ) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.wenn c a b) d =

@@ -41,15 +41,16 @@ def loadPointerSpan : Nat → Nat → Nat → Nat → Nat → List II
   | zero => rfl
   | succ n ih => simp [loadPointerSpan, ih]; omega
 
-/-- Select a complete frame element using the scalar index in `ptr`. The
-    pointer and one scratch slot follow the source aggregate's complete span. -/
-def selectFrameSpan (width dst ptr tmp : Nat) : List II :=
+/-- Select a complete frame element (elements start at slot `base`, `width` words each) using the
+    scalar index in `ptr` and copy it to `dst`, which does not lie above the element.
+    The pointer and one scratch slot follow the source aggregate's complete span. -/
+def selectFrameSpan (width base dst ptr tmp : Nat) : List II :=
   [⟨1, tmp, 8 * width, 0⟩, ⟨5, ptr, ptr, tmp⟩,
-   ⟨17, tmp, dst, 0⟩, ⟨3, ptr, tmp, ptr⟩] ++
+   ⟨17, tmp, base, 0⟩, ⟨3, ptr, tmp, ptr⟩] ++
     loadPointerSpan width dst ptr tmp 0
 
-@[simp] theorem selectFrameSpan_length (width dst ptr tmp : Nat) :
-    (selectFrameSpan width dst ptr tmp).length = 4 + 3 * width := by
+@[simp] theorem selectFrameSpan_length (width base dst ptr tmp : Nat) :
+    (selectFrameSpan width base dst ptr tmp).length = 4 + 3 * width := by
   simp [selectFrameSpan]; omega
 
 end Gabbro.Stage0.Senke

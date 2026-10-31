@@ -93,10 +93,10 @@ theorem arrGet_ok {n : Nat} (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.i
         rw [sourceWidth]
         omega
       have hp' : Pre L m pc fp K d
-          (ca ++ (cb ++ selectFrameSpan (valueWords τ) d ptr (ptr + 1))) ρ W reserved := by
+          (ca ++ (cb ++ selectFrameSpan (valueWords τ) d d ptr (ptr + 1))) ρ W reserved := by
         simpa only [ptr, List.append_assoc] using hp
       obtain ⟨m1, run1, changed1, array⟩ := ih ca ta ha (by omega) m pc hp'.left
-      have next : Pre L m1 _ fp K ptr (cb ++ selectFrameSpan (valueWords τ) d ptr (ptr + 1)) ρ W reserved :=
+      have next : Pre L m1 _ fp K ptr (cb ++ selectFrameSpan (valueWords τ) d d ptr (ptr + 1)) ρ W reserved :=
         hp'.next changed1 (by simp only [ptr]; omega) (by omega)
       obtain ⟨m2, run2, changed2, index⟩ := ihi cb tb hb (by omega) m1 _ next.left
       have source := array.agree changed2 (hp.frame.agree changed1) (by first | omega | (dsimp only [ptr]; omega)) (by omega)
@@ -109,7 +109,7 @@ theorem arrGet_ok {n : Nat} (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.i
         simpa only [j, Zahl.fin, BitVec.ofNat_eq_ofNat, ← BitVec.ofInt_natCast,
           Int.toNat_of_nonneg nonnegative] using read
       have tail := next.next changed2 (Nat.le_refl _) (by omega)
-      obtain ⟨m3, run3, changed3, result⟩ := selectFrameSpan_ok sourceSpan (by omega)
+      obtain ⟨m3, run3, changed3, result⟩ := selectFrameSpan_ok sourceSpan (Nat.le_add_right _ _) (by omega)
         (by first | omega | (dsimp only [ptr]; omega)) available.2 indexWord selected tail
       refine ⟨m3, ?_, changed1.trans ((changed2.mono (by first | omega | (dsimp only [ptr]; omega))).trans changed3), result⟩
       simpa only [ptr, List.length_append, pc_add, List.append_assoc, Nat.add_assoc] using
