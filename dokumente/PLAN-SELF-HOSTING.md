@@ -220,6 +220,22 @@ division needs a proved quotient/remainder algorithm with sufficient precision f
 rounding. Both additionally need special cases, normal/subnormal packing, range checks and block simulation.
 No arithmetic operation is accepted on the strength of the rounding fragment alone.
 
+The shared add/sub dispatcher is proved equivalent to G, including NaN priority, subtraction's
+right-operand sign change and both-zero signs. Actual integer IR now also implements the sign change,
+field extraction and connected signed significand decoding (fraction, exponent-dependent hidden bit,
+and sign arithmetic). The coefficient decoder agrees with `wertExakt` for finite operands; its generic
+`WordCode` proof preserves frame/footprint agreement. A producer of length `n` and relative temporary
+ceiling `t` yields exactly `3*n+88` instructions and ceiling `max(d+t+3,d+6)`. It rereads a pure producer
+three times. This coefficient proof currently uses `WordCode`'s default reserved prefix; it does not
+establish the requested arbitrary-reserved full arithmetic simulation. Joint witnesses check canonical
+values, actual production, simulation and sizes together. Direct coefficient/probe/root/`Nachpruefung`
+checks against cached model objects, standard-axiom audits and layout passed (2026-10-31). Actual runner:
+122 emitted images, zero failures (114 previous plus eight coefficient boundary cases). Complete finite
+alignment, signed summation, cancellation, rounding, packing/overflow, arbitrary-reserved simulation
+and range-107/block integration remain open; add/sub remain refused. The computed `floatOf` hook is
+unchanged.
+
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access
