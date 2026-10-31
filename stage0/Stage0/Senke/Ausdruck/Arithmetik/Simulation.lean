@@ -548,6 +548,108 @@ theorem floatNormalizeLoopL_transfer_entry
 
 #print axioms floatNormalizeLoopL_transfer_entry
 
+set_option maxHeartbeats 800000 in
+/-- Execute the small-branch denominator shift from the actual seed and
+    distance words, preserving the complete head and its six state slots. -/
+theorem floatNormalizeLoopL_small_denominator
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+7 < K) (small : distance ≤ 61)
+    (loaded : m.rd64 (slot fp (BitVec.ofNat 64 (base+6))) = some 1) :
+    ∃ m', Star ⟨pc+368, fp⟩ m ⟨pc+384, fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel count distance q r ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+7))) =
+        some (BitVec.ofInt 64 ((2 : Int)^distance)) := by
+  have h := head.pre
+  have shape : 23 < code.length ∧
+      code[23]? = some (ci 11 (base+7) (base+6) (base+2)) := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    norm_num [bin2]
+  have entry : code[23] = ci 11 (base+7) (base+6) (base+2) := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2
+  have ins := h.code 23 shape.1
+  rw [entry] at ins
+  simp only [ci] at ins
+  let value := BitVec.ofInt 64 ((2 : Int)^distance)
+  let next := write m (slot fp (BitVec.ofNat 64 (base+7))) 8 value.toNat
+  have ag : Agree fp (base+7) K m next := agree_write h.frame.room (by omega) room value.toNat
+  have sx6 : sx (II.f ((base : Int)+6)) = BitVec.ofNat 64 (base+6) := by
+    exact_mod_cast (sx_nat (d := base+6) (by have := h.small; omega))
+  have sx2 : sx (II.f ((base : Int)+2)) = BitVec.ofNat 64 (base+2) := by
+    exact_mod_cast (sx_nat (d := base+2) (by have := h.small; omega))
+  have sx7 : sx (II.f ((base : Int)+7)) = BitVec.ofNat 64 (base+7) := by
+    exact_mod_cast (sx_nat (d := base+7) (by have := h.small; omega))
+  have result : (1 : Runner.W) <<< ((BitVec.ofNat 64 distance).toNat % 64) = value := by
+    have shift : (BitVec.ofNat 64 distance).toNat % 64 = distance := by
+      simp only [BitVec.toNat_ofNat]
+      omega
+    rw [shift]
+    change (1 : Runner.W) <<< distance = BitVec.ofInt 64 ((2 : Int)^distance)
+    rw [show (2 : Int)^distance = ((2^distance : Nat) : Int) by simp, BitVec.ofInt_natCast]
+    apply BitVec.eq_of_toNat_eq
+    simp [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq]
+  have comparison : Run (step ⟨pc+368, fp⟩) m ⟨pc+384, fp⟩ next := by
+    have wr : m.wr64 (slot fp (sx (II.f ((base : Int)+7)))) value = some next := by
+      rw [sx7]; exact wr64_some (h.frame.wr (base+7) room)
+    have run := run_step (t := ⟨pc+368, fp⟩) ins (by decide)
+      (run_bin (g := fun a b => some (a <<< (b.toNat % 64))) ins
+        (by rw [sx6]; exact loaded) (by rw [sx2]; exact head.readDistance)
+        (congrArg some result) wr)
+    simpa [nxt, BitVec.add_assoc] using run
+  have codeNext := h.code.agree ag h.far
+  have preNext : Pre L next pc fp K base code ρ W reserved :=
+    ⟨h.ctx, h.small, h.frame.agree ag, codeNext, h.far,
+      envAt_agree h.env ag h.frame (by have := h.ctx; omega) (by omega),
+      h.wstab m next h.welt (ag.mono (by omega)), h.wstab⟩
+  refine ⟨next, Star.one comparison, ag.mono (by omega), ?_, ?_⟩
+  · have reads (i : Nat) (hi : i < base+7) := agree_rd_low ag h.frame.room hi (by omega)
+    exact { head with pre := preNext
+                      readQ := by rw [reads base (by omega)]; exact head.readQ
+                      readR := by rw [reads (base+1) (by omega)]; exact head.readR
+                      readDistance := by rw [reads (base+2) (by omega)]; exact head.readDistance
+                      readTarget := by rw [reads (base+3) (by omega)]; exact head.readTarget
+                      readFuel := by rw [reads (base+4) (by omega)]; exact head.readFuel
+                      readCount := by rw [reads (base+5) (by omega)]; exact head.readCount }
+
+  · change (write m (slot fp (BitVec.ofNat 64 (base+7))) 8 value.toNat).rd64 _ = some value
+    simp only [Runner.Mem.rd64, write_rd, h.frame.rd (base+7) room, ↓reduceIte,
+      le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+
+#print axioms floatNormalizeLoopL_small_denominator
+
+/-- Continue the proved dispatcher through the real small-branch seed and
+    denominator instructions; no execution prefix is restarted. -/
+theorem floatNormalizeLoopL_small_dispatch
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+7 < K) (small : distance ≤ 61) :
+    ∃ m', Star ⟨pc+48, fp⟩ m ⟨pc+384, fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel count distance q r ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+7))) =
+        some (BitVec.ofInt 64 ((2 : Int)^distance)) := by
+  obtain ⟨m1, dispatch, ag1, head1⟩ := floatNormalizeLoopL_active_dispatch hc head (by omega)
+  have dispatch' : Star ⟨pc+48, fp⟩ m ⟨pc+352, fp⟩ m1 := by
+    simpa [show ¬ 61 < distance by omega] using dispatch
+  obtain ⟨m2, seed, ag2, head2, loaded⟩ :=
+    floatNormalizeLoopL_transfer_entry hc head1 (by omega) false
+  obtain ⟨m3, shift, ag3, head3, den⟩ :=
+    floatNormalizeLoopL_small_denominator hc head2 room small (by simpa using loaded)
+  have seed' : Star ⟨pc+352, fp⟩ m1 ⟨pc+368, fp⟩ m2 := by simpa using seed
+  exact ⟨m3, dispatch'.trans (seed'.trans shift),
+    ag1.trans (ag2.trans ag3), head3, den⟩
+
+#print axioms floatNormalizeLoopL_small_dispatch
+
 /-- Central induction, with the complete active iteration still explicit.
     The target exit is discharged by actual emitted execution above.
     The iteration premise is not an implementation of the missing proof.

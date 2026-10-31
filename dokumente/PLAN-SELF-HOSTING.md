@@ -789,16 +789,23 @@ The continuation now starts at that exact `pc+48` boundary: threshold load,
 signed distance comparison and actual conditional branch execute to `pc+96`
 when `61 < distance`, or `pc+352` otherwise. `active_dispatch` composes these
 steps and retains the complete head and footprint agreement. It does not
-restart entry or assume an active iteration. The pending proof state is now
-the large-path entry (quotient doubling, distance decrement, optional carry)
-or small-path entry (denominator construction and both adaptive expressions),
-followed by state copies, counter increment, fuel decrement, head restoration
-and the already proved final backedge. The central induction still explicitly
+restart entry or assume an active iteration. Both actual transfer-entry loads
+are now proved by `transfer_entry`: the large path reaches `pc+112` with factor
+two and the small path reaches `pc+368` with seed one. `small_denominator`
+executes the real shift to `pc+384`, proving the exact denominator word
+`BitVec.ofInt 64 (2^distance)` for every distance at most 61. `small_dispatch`
+connects the retained `pc+48` boundary through that shift. These steps preserve
+the full head and all six state reads. The pending execution starts at `pc+112`
+for the large path (quotient doubling, distance decrement, optional carry) and
+at `pc+384` for the small path (both adaptive expressions). State copies,
+counter increment, fuel decrement, head restoration with changed canonical
+state, and composition with the proved backedge remain open. The central induction still explicitly
 requires that missing execution. Direct checks of `Simulation` and `Proben`
 pass on the existing dependency oleans; the new continuation proofs use only
 `propext`, `Classical.choice`, and `Quot.sound`. Regeneration and execution of
 291 actual Runner images reports zero failures; layout and whitespace checks
-pass. Logs are retained in `.scratch-compose/active-dispatch-final.log`.
+pass. Earlier logs are retained in `.scratch-compose/active-dispatch-final.log`;
+transfer continuation validation is in `.scratch-compose/transfer-final-fixed.log`.
 The resource lemmas derive the
 total-budget ceiling from an initial zero count and the existing fuel bound;
 conservation then bounds the next count and decremented fuel and preserves their
