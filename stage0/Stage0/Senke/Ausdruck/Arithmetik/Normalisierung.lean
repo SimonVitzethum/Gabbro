@@ -280,4 +280,60 @@ theorem floatSumSignL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
 #print axioms floatSumSign_exact
 #print axioms floatSumSignL_canonical
 
+omit [Kern] in
+/-- Identify the actual retained-sum sign expression with the canonical rounded
+    exact result, including cancellation and an arbitrarily distant exact tail. -/
+theorem floatNormalizedSignField_canonical (F : Format) (z r den e : Int)
+    (hz : -2^63 ≤ z ∧ z < 2^63) (hd : 0 < den)
+    (hr : 0 ≤ r ∧ r < den) :
+    Runner.IR.bool ((BitVec.ofInt 64 z).slt 0) *
+        BitVec.ofNat 64 (2^(F.ebits+F.fracBits)) =
+      BitVec.ofNat 64 (if (rundeExakt F ⟨z*den+r,e⟩).sign then
+        2^(F.ebits+F.fracBits) else 0) := by
+  have cmp := slt_in hz (y := 0) (by decide)
+  change (BitVec.ofInt 64 z).slt 0 = decide (z < 0) at cmp
+  rw [cmp, floatRoundedExact_sign]
+  simp only [floatSumSign_exact z r den hd hr]
+  by_cases h : z < 0 <;> simp [h, Runner.IR.bool]
+
+omit [Kern] in
+/-- The executed exponent subtraction is the biased field at the completed
+    transfer count. The normal-range condition prevents natural truncation;
+    no premise equates a machine result to the requested field. -/
+theorem floatNormalizedExponentField_canonical (F : Format) (initial : Int)
+    (count : Nat) (normal : F.emin ≤ initial - count) :
+    BitVec.ofInt 64 (initial-F.emin+1) - BitVec.ofNat 64 count =
+      BitVec.ofNat 64 (initial-(count : Int)-F.emin+1).toNat := by
+  have nonneg : 0 ≤ initial-(count : Int)-F.emin+1 := by omega
+  rw [← BitVec.ofInt_natCast, BitVec.sub_eq_add_neg,
+    ← BitVec.ofInt_neg, ← BitVec.ofInt_add]
+  have rearrange : initial-F.emin+1 + -(count : Int) =
+      initial-(count : Int)-F.emin+1 := by omega
+  rw [rearrange]
+  simpa only [BitVec.ofInt_natCast] using
+    (congrArg (BitVec.ofInt 64) (Int.toNat_of_nonneg nonneg)).symm
+
+omit [Kern] in
+/-- Both IEEE formats jointly exercise a negative nonzero exact tail and an
+    exponent decreased by three normalization transfers. -/
+theorem floatNormalizedCanonicalFields_zeuge :
+    ∀ F ∈ [f32, f64],
+      (Runner.IR.bool ((BitVec.ofInt 64 (-1)).slt 0) *
+          BitVec.ofNat 64 (2^(F.ebits+F.fracBits)) =
+        BitVec.ofNat 64 (if (rundeExakt F ⟨-13,-4⟩).sign then
+          2^(F.ebits+F.fracBits) else 0)) ∧
+      (BitVec.ofInt 64 (4-F.emin+1) - BitVec.ofNat 64 3 =
+        BitVec.ofNat 64 (4-(3 : Int)-F.emin+1).toNat) := by
+  intro F member
+  constructor
+  · simpa using floatNormalizedSignField_canonical F (-1) 3 16 (-4)
+      (by norm_num) (by norm_num) (by norm_num)
+  · apply floatNormalizedExponentField_canonical
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;> decide +kernel
+
+#print axioms floatNormalizedSignField_canonical
+#print axioms floatNormalizedExponentField_canonical
+#print axioms floatNormalizedCanonicalFields_zeuge
+
 end Gabbro.Stage0.Senke
