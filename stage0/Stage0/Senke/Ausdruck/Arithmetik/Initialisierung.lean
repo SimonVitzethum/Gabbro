@@ -266,10 +266,11 @@ theorem floatExactAddNormalize_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem →
 #print axioms floatExactAddInit_ok
 #print axioms floatStateSlotsL_ok_zeuge
 #print axioms floatStateSlotsL_ok
+
 /-- Execute the quotient output from the actual normalization slot. The
     source load is derived from memory; no movable fixed-slot producer or
     assumed output word is used. The original head and continuation may have
-    different code addresses and reserved prefixes. -/
+    different code addresses. The shared reserved prefix is arbitrary. -/
 theorem FloatNormalizeHead.write_quotient
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc fp next : Runner.W}
