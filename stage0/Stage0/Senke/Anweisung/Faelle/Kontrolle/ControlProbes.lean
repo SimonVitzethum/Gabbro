@@ -92,6 +92,18 @@ theorem blockAxiomElse_case_zeuge :
     (blockImageOf (gateBlock 99 (by decide) (by decide))).isOk = true := by
   decide +kernel
 
+/-- Both terminating and ordinary blocks accept signed-word boundaries that
+    cannot be encoded in one instruction immediate. The continuation is nonempty. -/
+def wideNarrowEnd : Endblock D (vertragVon D entry) false [] [] :=
+  .narrow (.lit 7) (-2^63) (2^63-1) (retN 41 (by decide) (by decide))
+    (retN 7 (by decide) (by decide))
+
+theorem wideNarrow_case_zeuge :
+    (imageOf wideNarrowEnd).isOk = true ∧
+    (blockImageOf (.narrow (.lit 7) (-4294967296) 4294967296
+      (retN 41 (by decide) (by decide)) .nil)).isOk = true := by
+  decide +kernel
+
 /-- The value never fits an unrepresentable source interval or bound. -/
 theorem narrow_refused_zeuge :
     lowEnd 1 (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0) (narrowEnd (2^63)) = none := by
