@@ -1,0 +1,5 @@
+// A canonical table may have a zero-sized field domain at an exact large slot count.
+module empty_table {
+table empty count 4294967296 { slot {} }
+impl fn main() -> u8 effects { pure } { return 42; }
+}

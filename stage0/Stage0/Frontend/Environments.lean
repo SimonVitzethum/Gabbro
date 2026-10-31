@@ -273,8 +273,9 @@ structure Scopes (original : List SItemTief) where
   values : List (String × Int)
   declared : List (String × (Int × Int))
   functions : List UKonstFn
-  aliases : declared = original.foldl
-    (aliasStep (uConstsRech (uKonstFns original) original [])) []
+  aliasConstants : List (String × Int)
+  aliasOrigin : aliasConstants = uConstsRech (uKonstFns original) original [] ∨ aliasConstants = values
+  aliases : declared = original.foldl (aliasStep aliasConstants) []
   functionOrigin : functions = constantFunctions declared original
   scalarValues : typedConstants declared functions original [] = some values
 
@@ -294,8 +295,8 @@ def Scopes.types {original : List SItemTief} (scope : Scopes original) : List (S
 def scopes (items target : List SItemTief)
     (h : EnvironmentFacts items target) : Scopes items := by
   let p := prepare items
-  refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns,
-    h.2.2, ?_, ?_⟩
+  refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns, p.initial,
+    Or.inl rfl, h.2.2, ?_, ?_⟩
   · exact constantFunctions_aliases p.initial p.env [] items
   · have hc := h.1
     change typedConstants p.env p.fns p.expanded [] = _ at hc
@@ -306,7 +307,7 @@ def scopes (items target : List SItemTief)
 
 /-- Final scalar values must leave all resolved alias ranges unchanged. -/
 def ScopeStable {items : List SItemTief} (scope : Scopes items) : Prop :=
-  uAliase scope.values (prepare items).expanded = scope.declared
+  uAliase scope.values (aliases scope.aliasConstants [] items) = scope.declared
 
 /-- The canonical original-declaration fold and alias stability are kept together. -/
 structure DerivedScopes (items : List SItemTief) where
@@ -317,8 +318,8 @@ structure DerivedScopes (items : List SItemTief) where
     There is no executable source interpreter or alternative expression evaluation here. -/
 def evaluatedScopes (items : List SItemTief) (values : List (String × Int))
     (h : typedConstants (prepare items).env (prepare items).fns items [] = some values) : Scopes items :=
-  ⟨values, (prepare items).env, (prepare items).fns,
-    by simpa only [prepare, List.nil_append] using
+  ⟨values, (prepare items).env, (prepare items).fns, (prepare items).initial,
+    Or.inl rfl, by simpa only [prepare, List.nil_append] using
       aliases_collected (prepare items).initial [] items,
     constantFunctions_aliases (prepare items).initial (prepare items).env [] items, h⟩
 

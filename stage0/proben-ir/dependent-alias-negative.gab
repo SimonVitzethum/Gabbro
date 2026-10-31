@@ -1,0 +1,10 @@
+// A negative intermediate must survive before a positive dependent defines a source type range.
+module dependent_alias_negative {
+type Signed = i8;
+const fn negative() -> Signed effects { pure } { return 0 - 1; }
+const NEGATIVE : Signed = negative();
+const LIMIT : Signed = NEGATIVE + 43;
+type Bound = u8 in 0 .. LIMIT;
+const ANSWER : Bound = LIMIT;
+impl fn main() -> Bound effects { pure } { return ANSWER; }
+}

@@ -1,0 +1,5 @@
+// A final 42 cannot conceal a canonical intermediate range overflow in an unused array.
+module unused_array_overflow {
+const VALUES : [u8; 1] = [(255 + 1) - 214];
+impl fn main() -> u8 effects { pure } { return 0; }
+}

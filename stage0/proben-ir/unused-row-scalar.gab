@@ -1,0 +1,5 @@
+// A row initializer cannot disappear just because its malformed scalar declaration is unused.
+module unused_row_scalar {
+const VALUE : u8 = [42];
+impl fn main() -> u8 effects { pure } { return 0; }
+}
