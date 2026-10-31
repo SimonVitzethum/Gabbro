@@ -1,4 +1,4 @@
-// Expected lowering refusal (exit 1): G's fuel is absent from the IR lowering interface.
+// Protected-counter forever regression: expected ASM exit 7.
 module ir_forever {
 assume tick "The environment ends the service." falsifier probe_tick;
 impl fn main() -> u64 in 0 .. 100 effects { pure } {

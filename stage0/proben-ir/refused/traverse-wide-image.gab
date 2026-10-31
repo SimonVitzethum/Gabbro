@@ -1,0 +1,10 @@
+// A stored column exceeds the target image bound even though its count materializes.
+module ir_probe {
+table t count 4294967296 { slot { a : u32 in 0 .. 255, } }
+impl fn main() -> u64 in 0 .. 100 effects { reads t.slots } {
+    traverse i over slots of t by unvisited touches reads t.slots {
+        leave i;
+    }
+    return 17;
+}
+}
