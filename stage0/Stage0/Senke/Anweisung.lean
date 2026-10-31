@@ -157,17 +157,9 @@ def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
       some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
     else none
 
-/-- Signed interval test with full word constants. The fourth temporary word
-    belongs to the high-bound materializer; the source value remains in `d`. -/
-def narrowTest (d : Nat) (lo hi : Int) : List II :=
-  (konstWL 4 (BitVec.ofInt 64 lo).toNat (d + 1)).1 ++
-    ([ci 13 (d + 1) d (d + 1)] ++
-    ((konstWL 4 (BitVec.ofInt 64 hi).toNat (d + 2)).1 ++
-    [ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]))
-
 /-- An outside flag selects the terminating error arm; the value stays in `d`. -/
 def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
-  ce ++ (narrowTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+  ce ++ ((engTest 13 d lo hi).1 ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
     [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
 
 /-- Compare a reason's entire word, preserving its slot for subsequent arms. -/

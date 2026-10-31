@@ -15,7 +15,20 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 @[lowE_eqs] theorem lowE_lit (n : Int) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.lit n) d =
     (if lit32 n then some ([ci 1 d n 0], d + 1)
-     else if scalarFits n n then some (konstWL 4 (BitVec.ofInt 64 n).toNat d) else none) := rfl
+     else if scalarFits n n then some (konstWL 4 (BitVec.ofInt 64 n).toNat d) else none)  := by
+  change (if scalarFits n n then some (wordConstant d n) else none) = _
+  by_cases small : lit32 n = true
+  · have bounds : -2 ^ 31 ≤ n ∧ n < 2 ^ 31 := by
+      simpa only [lit32, Bool.and_eq_true, decide_eq_true_eq] using small
+    have fits : scalarFits n n = true := by
+      unfold scalarFits
+      apply Bool.or_eq_true_iff.mpr
+      left
+      simp only [inW, Bool.and_eq_true, decide_eq_true_eq]
+      omega
+    simp only [wordConstant, small, fits, ↓reduceIte]
+  · simp only [wordConstant, small, ↓reduceIte]
+    split <;> rfl
 
 /-- Every representable signed64 literal is accepted, for any environment and layout. -/
 theorem lowE_signed64 (n : Int) (hn : inW n n = true) :
@@ -174,23 +187,20 @@ theorem lowE_signed64_boundaries_zeuge :
     else none) := rfl
 
 @[lowE_eqs] theorem lowE_lt (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.lt a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 13 d ca cb)
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.lt a b) d =
+      scalarCompareL false d l1 h1 l2 h2
+        (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1)) := rfl
 
 @[lowE_eqs] theorem lowE_le (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.le a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
-      pure (bin2 10 d (bin2 13 d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.le a b) d = (do
+      let c ← scalarCompareL false d l2 h2 l1 h1
+        (lowE L (reserved := reserved) b d) (lowE L (reserved := reserved) a (d + 1))
+      pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))) := rfl
 
 @[lowE_eqs] theorem lowE_eq (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.eq a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.eq a b) d =
+      scalarCompareL true d l1 h1 l2 h2
+        (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1)) := rfl
 
 @[lowE_eqs] theorem lowE_fllt (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.fllt a b) d =
