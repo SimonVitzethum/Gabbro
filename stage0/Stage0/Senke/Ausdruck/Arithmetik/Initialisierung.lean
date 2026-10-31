@@ -2818,7 +2818,9 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
             out2.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
             out2.rd64 (slot fp (BitVec.ofNat 64 (dst+6))) = some ey ∧
             1 ≤ ex.toNat ∧ ex.toNat < F.bexpMax ∧
-            1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56) ∧
+            1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56 ∧ jam.toNat < 2^56 ∧
+            -2^57 < (if sx == sy then q+jam else q-jam).toInt ∧
+            (if sx == sy then q+jam else q-jam).toInt < 2^57) ∧
         ∃ signedTail,
           continuation = [ci 2 (dst+8) (dst+16) 0,
             ci 14 (dst+9) (dst+3) (dst+4), ci 19 (dst+9) 48 0,
@@ -2958,21 +2960,47 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     have b2 := bounds 2 (by omega)
     have b3 := bounds 3 (by omega)
     simp only [Nat.reduceLT, ↓reduceIte] at b0 b1 b2 b3
-    have orderedBounds (i : Nat) (hi : i = dst+5 ∨ i = dst+6 ∨ i = dst+7) :
+    have orderedBounds (i : Nat) (hi : i = dst+5 ∨ i = dst+6 ∨ i = dst+7 ∨ i = dst+8) :
         if i < dst+7 then 1 ≤ (vs i).toNat ∧ (vs i).toNat < F.bexpMax
         else (vs i).toNat < 2^56 := by
-      have rd := (keep i (by rcases hi with rfl | rfl | rfl <;> omega)).trans
-        (sorted i (by rcases hi with rfl | rfl | rfl <;> omega))
-      have eq := Option.some.inj ((vreads i (by rcases hi with rfl | rfl | rfl <;> omega)).symm.trans rd)
+      have rd := (keep i (by rcases hi with rfl | rfl | rfl | rfl <;> omega)).trans
+        (sorted i (by rcases hi with rfl | rfl | rfl | rfl <;> omega))
+      have eq := Option.some.inj ((vreads i (by rcases hi with rfl | rfl | rfl | rfl <;> omega)).symm.trans rd)
       rw [eq]
-      rcases hi with rfl | rfl | rfl <;>
+      rcases hi with rfl | rfl | rfl | rfl <;>
         simp [h5,h6,h7,h8] <;> split <;> assumption
     have bx := orderedBounds (dst+5) (by omega)
     have byy := orderedBounds (dst+6) (by omega)
     have bq := orderedBounds (dst+7) (by omega)
+    have br := orderedBounds (dst+8) (by omega)
     simp only [show dst+5 < dst+7 by omega, show dst+6 < dst+7 by omega,
-      Nat.lt_irrefl, ↓reduceIte] at bx byy bq
-    refine ⟨vs (dst+5),vs (dst+6),?_,?_,bx.1,bx.2,byy.1,byy.2,bq⟩
+      show ¬dst+8 < dst+7 by omega, Nat.lt_irrefl, ↓reduceIte] at bx byy bq br
+    have req : vs (dst+8) = r := Option.some.inj
+      ((vreads _ (by omega)).symm.trans ((keep _ (by omega)).trans rr))
+    have jeq : vs (dst+16) = floatShiftJamWord r (ex-ey) :=
+      Option.some.inj ((vreads _ (by omega)).symm.trans jammed)
+    have bj : (vs (dst+16)).toNat < 2^56 := by
+      rw [jeq, floatShiftJamWord, BitVec.toNat_or]
+      apply Nat.or_lt_two_pow
+      · rw [BitVec.toNat_ushiftRight]
+        exact lt_of_le_of_lt (Nat.shiftRight_le _ _) (req ▸ br)
+      · unfold Runner.IR.bool
+        split <;> decide
+    have iq : (vs (dst+7)).toInt = ((vs (dst+7)).toNat : Int) :=
+      BitVec.toInt_eq_toNat_of_lt (by omega)
+    have ij : (vs (dst+16)).toInt = ((vs (dst+16)).toNat : Int) :=
+      BitVec.toInt_eq_toNat_of_lt (by omega)
+    have resultBounds :
+        -2^57 < (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)).toInt ∧
+        (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)).toInt < 2^57 := by
+      split
+      · rw [BitVec.toInt_add, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
+        omega
+      · rw [BitVec.toInt_sub, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
+        omega
+    refine ⟨vs (dst+5),vs (dst+6),?_,?_,bx.1,bx.2,byy.1,byy.2,bq,bj,resultBounds⟩
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
         (vreads _ (by omega))
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
@@ -3069,7 +3097,9 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
             out2.rd64 (slot fp (BitVec.ofNat 64 (16+5))) = some ex ∧
             out2.rd64 (slot fp (BitVec.ofNat 64 (16+6))) = some ey ∧
             1 ≤ ex.toNat ∧ ex.toNat < F.bexpMax ∧
-            1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56) ∧
+            1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56 ∧ jam.toNat < 2^56 ∧
+            -2^57 < (if sx == sy then q+jam else q-jam).toInt ∧
+            (if sx == sy then q+jam else q-jam).toInt < 2^57) ∧
         ∃ signedTail,
           continuation = [ci 2 (16+8) (16+16) 0,
             ci 14 (16+9) (16+3) (16+4), ci 19 (16+9) 48 0,
