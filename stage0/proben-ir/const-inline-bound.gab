@@ -1,0 +1,9 @@
+// A computed scalar supplies an inline exclusive range and then an alias bound.
+module inline_bound {
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+const BOUND : u8 in 0 ..< LIMIT + 1 = LIMIT;
+type Result = u8 in 0 .. BOUND;
+const ANSWER : Result = BOUND;
+impl fn main() -> Result effects { pure } { return ANSWER; }
+}

@@ -1,0 +1,7 @@
+// A high-bit divisor must remain positive in the unsigned remainder operation.
+module ir_probe {
+impl fn main() -> u64 in 0 .. 255 effects { pure } {
+    let remainder = 18446744073709551615 % 9223372036854775809;
+    return 255 & remainder;
+}
+}

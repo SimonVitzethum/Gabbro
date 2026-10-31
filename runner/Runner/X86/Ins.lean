@@ -34,9 +34,9 @@ inductive Alu
   | add | or | and | sub | xor | cmp | test
   deriving DecidableEq, Repr
 
-/-- Conditions: `z`/`nz` read ZF, `s` reads SF, `l` reads SF and OF. -/
+/-- Conditions: `z`/`nz` read ZF, `s` reads SF, `l` reads SF and OF, `b` reads CF. -/
 inductive Cond
-  | z | nz | s | l
+  | z | nz | s | l | b
   deriving DecidableEq, Repr
 
 inductive Ins
@@ -53,6 +53,7 @@ inductive Ins
   | imul (d s : Reg)                     -- d := d * s
   | cqo
   | idiv (s : Reg)
+  | udiv (s : Reg)                      -- unsigned rdx:rax / s
   | shl (d : Reg)                        -- by cl
   | shr (d : Reg)                        -- by cl
   | set (c : Cond) (d : Reg)             -- setcc on the low byte of d

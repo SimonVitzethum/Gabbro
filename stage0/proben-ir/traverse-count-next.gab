@@ -1,0 +1,13 @@
+// Next reaches the following header; leave runs its invariant exit.
+module ir_probe {
+static mut done : bool = false;
+table t count 3 { slot { a : u32 in 0 .. 255, } }
+impl fn main() -> u64 in 0 .. 100 effects { reads t.slots, reads done, writes done } {
+    traverse i over slots of t by unvisited touches reads t.slots, reads done, writes done {
+        if done { leave i; }
+        done = true;
+        next i;
+    }
+    return 17;
+}
+}

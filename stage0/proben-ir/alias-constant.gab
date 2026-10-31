@@ -1,0 +1,10 @@
+// Fold constants with declared aliases through the canonical checked evaluator.
+module constant_probe {
+type Small = u8 in 0 .. 100;
+type Count = Small;
+const FIRST : Count = 40 + 1;
+const ANSWER : Count = FIRST + 1;
+impl fn main() -> Count effects { pure } {
+    return ANSWER;
+}
+}

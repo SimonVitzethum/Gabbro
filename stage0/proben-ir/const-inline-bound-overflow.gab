@@ -1,0 +1,7 @@
+// The original inline range checks every intermediate, including in an unused scalar.
+module inline_bound_overflow {
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+const BAD : u8 in 0 .. LIMIT = LIMIT + 1 - 1;
+impl fn main() -> Base effects { pure } { return 42; }
+}

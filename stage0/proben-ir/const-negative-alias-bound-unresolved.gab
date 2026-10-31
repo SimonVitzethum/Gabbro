@@ -1,0 +1,9 @@
+// An out-of-range negative const result cannot supply a dependent alias bound.
+module const_negative_bound_unresolved {
+type Small = i8 in -10 .. 100;
+const fn negative() -> Small effects { pure } { return 0 - 11; }
+const NEGATIVE : Small = negative();
+type Bound = i8 in NEGATIVE .. 100;
+const ANSWER : Bound = 42;
+impl fn main() -> Bound effects { pure } { return ANSWER; }
+}

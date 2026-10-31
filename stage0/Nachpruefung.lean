@@ -5,10 +5,31 @@ import Stage0.Senke.Ausdruck.Gleit.Exponent
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
 import Stage0
+
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+import Stage0.Bindung.Proben
+
+-- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
+#print axioms Gabbro.Stage0.irBild_correct
+#print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge
+#print axioms Gabbro.Stage0.SourceWitness.entry_ir_simulation_zeuge
+#print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_call_bound_zeuge
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_custom_negative_bound_zeuge
+#print axioms Gabbro.Stage0.Frontend.typedItem_sound
+#print axioms Gabbro.Stage0.Frontend.typedItem_sound_zeuge
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_inline_range_zeuge
+#print axioms Gabbro.Stage0.ArrayWitness.array_constant_typed_zeuge
+#print axioms Gabbro.Stage0.ArrayWitness.arrayMeaning_collected_zeuge
+#print axioms Gabbro.Stage0.ArrayWitness.source_image_joint_zeuge
+#print axioms Gabbro.Stage0.ArrayWitness.entry_ir_simulation_zeuge
+#print axioms Gabbro.Stage0.validateTargetFor_supported
+#print axioms Gabbro.Stage0.BindingProbes.literal_metal_refused_zeuge
+#print axioms Gabbro.Stage0.BindingProbes.gate_free_metal_refused_zeuge
+#print axioms Gabbro.Stage0.BindingProbes.unselected_metal_preserved_zeuge
 
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
@@ -349,3 +370,6 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_outcomes_zeuge
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge
+#print axioms Gabbro.Stage0.Senke.retFreiGrundArms_istZ
+#print axioms Gabbro.Stage0.Senke.retFreiB_istZ
+#print axioms Gabbro.Stage0.Senke.locks_reason_zeuge

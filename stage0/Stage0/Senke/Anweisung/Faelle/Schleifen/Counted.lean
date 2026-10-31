@@ -45,25 +45,22 @@ theorem const_step_counted {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : 
       (Runner.Mem.write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) :=
   .next (const_instruction hc hF hj hK hk) (.refl _ _)
 
-/-- Quantitative base case derived from the actual accepted `lowE` result,
-    rather than an assumed child bound or evaluation of a particular program.
-    This does not cover compound expressions, calls, or loop bodies. -/
+/-- The single-instruction literal case. Larger accepted literals use
+    `konstWL_counted_ok` and the literal branch of `ExprCost.sound`. -/
 theorem lowE_lit_counted {D : Gabbro.Grammatik.Deklaration} {L : Lay D}
     {Γ : Gabbro.Grammatik.Ctx} {Λ : List (Gabbro.Grammatik.Res D)}
     {reserved d top K : Nat} {n : Int} {code : List II}
     {m : Runner.Mem} {pc fp : Runner.W}
+    (literal : lit32 n = true)
     (lower : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ)
       (.lit n) d = some (code, top))
     (codeAt : CodeAt m pc code) (frame : FrameOK m fp K)
     (fits : top ≤ K) (small : K < 2 ^ 31) :
     Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
       (Runner.Mem.write m (slot fp (BitVec.ofNat 64 d)) 8 (BitVec.ofInt 64 n).toNat) := by
-  rw [lowE_lit] at lower
-  split at lower
-  next accepted =>
-    cases lower
-    exact const_step_counted codeAt frame (by omega) small accepted
-  next refused => contradiction
+  rw [lowE_lit, if_pos literal] at lower
+  cases lower
+  exact const_step_counted codeAt frame (by omega) small literal
 
 
 open Gabbro.Grammatik Runner.Mem
@@ -195,6 +192,48 @@ theorem bin_counted_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o na nb : Nat}
   exact s3
 
 
+/-- Constant materialization retains exact instruction counts and the writable-frame invariant. -/
+theorem const_counted_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {n : Int}
+    (literal : lit32 n = true) (inside : d < K)
+    (pre : Pre L m pc fp K d [ci 1 d n 0] ρ W reserved) :
+    CountedOk 1 m pc fp K d [ci 1 d n 0] (· = BitVec.ofInt 64 n) := by
+  obtain ⟨hw, rd, agree⟩ := wr_slot pre.frame inside (BitVec.ofInt 64 n)
+  exact ⟨_, const_step_counted pre.code pre.frame inside pre.small literal,
+    agree, _, rd, rfl⟩
+
+/-- The existing base-65536 template executes exactly four instructions per digit. -/
+theorem konstWL_counted_ok {fp : Runner.W} {K d : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} (k n : Nat)
+    (bound : n < 65536 ^ k) (room : d + 2 ≤ K)
+    {m : Runner.Mem} {pc : Runner.W}
+    (pre : Pre L m pc fp K d (konstWL k n d).1 ρ W reserved) :
+    CountedOk (4 * k + 1) m pc fp K d (konstWL k n d).1 (· = BitVec.ofNat 64 n) := by
+  induction k generalizing n m pc with
+  | zero =>
+    have : n = 0 := by simpa using bound
+    subst n
+    exact const_counted_ok (by decide) (by omega) pre
+  | succ k ih =>
+    have quotient : n / 65536 < 65536 ^ k := by rw [Nat.pow_succ] at bound; omega
+    have digit : lit32 (n % 65536 : Nat) = true := lit32_nat (by omega)
+    rw [show 4 * (k + 1) + 1 = (4 * k + 1 + 1 + 1) + 1 + 1 by omega]
+    apply bin_counted_keep (na := 4 * k + 3) (nb := 1) (o := 3)
+      (Pa := fun w => w = BitVec.ofNat 64 (n / 65536) * BitVec.ofInt 64 65536)
+      (Pb := fun w => w = BitVec.ofInt 64 (n % 65536 : Nat))
+      (g := fun a b => some (a + b)) ?_ ?_ ?_ rfl (by decide) (by omega) pre
+    · apply bin_counted_keep (na := 4 * k + 1) (nb := 1) (o := 5) (ih _ quotient pre.left.left.left.left)
+        (fun _ _ _ hp => const_counted_ok (by decide) (by omega) hp)
+        (fun a b ha hb => ⟨_, rfl, by rw [ha, hb]⟩) rfl (by decide) (by omega) pre.left.left
+    · intro m pc _ hp
+      exact const_counted_ok digit (by omega) hp
+    · intro a b ha hb
+      refine ⟨_, rfl, ?_⟩
+      rw [ha, hb, BitVec.ofInt_natCast,
+        show BitVec.ofInt 64 65536 = BitVec.ofNat 64 65536 from rfl,
+        ← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+      exact congrArg (BitVec.ofNat 64) (by omega)
+
 /-- Constructor-level cost composition for actual `bin2` lowering. Child
     hypotheses are reusable at every memory/PC, as in `lowE_ok`; no whole
     expression execution or whole expression cost is assumed. -/
@@ -233,7 +272,7 @@ theorem bin2_counted {Γ : Ctx} {Λ : List (Res D)} {τa τb : Ty}
 inductive ExprCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (reserved : Nat) :
     {τ : Ty} → Expr D Γ Λ τ → Nat → Nat → (Runner.W → Prop) → Type
   | literal {n : Int} {d : Nat} :
-      ExprCost L reserved (.lit n) d 1 (· = BitVec.ofInt 64 n)
+      ExprCost L reserved (.lit n) d (if lit32 n then 1 else 17) (· = BitVec.ofInt 64 n)
   | truth {d : Nat} : ExprCost L reserved .tru d 1 (· = 1)
   | falsity {d : Nat} : ExprCost L reserved .fls d 1 (· = 0)
   | binary {τ τa τb : Ty} {e : Expr D Γ Λ τ}
@@ -277,10 +316,14 @@ theorem ExprCost.sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     split at lower
     next accepted =>
       cases lower
-      obtain ⟨hw, rd, agree⟩ := wr_slot pre.frame (d := d') (by omega) (BitVec.ofInt 64 n')
-      exact ⟨_, const_step_counted pre.code pre.frame (by omega) pre.small accepted,
-        agree, _, rd, rfl⟩
-    next refused => contradiction
+      simpa only [accepted, ite_true] using const_counted_ok accepted (by omega) pre
+    next large =>
+      split at lower
+      · cases lower
+        have room : d' + 2 ≤ K := by simp only [konstWL, bin2] at fits; omega
+        have run := konstWL_counted_ok 4 (BitVec.ofInt 64 n').toNat (BitVec.isLt _) room pre
+        simpa only [if_neg large, BitVec.ofNat_toNat, BitVec.setWidth_eq, konstWL, bin2] using run
+      · contradiction
   | @truth d =>
     rw [lowE_tru] at lower
     cases lower

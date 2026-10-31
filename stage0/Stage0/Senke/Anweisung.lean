@@ -108,6 +108,13 @@ def retTop (q : Nat) : Nat := q + 1 + 8
     instructions sees them `16 n` further. -/
 def exPlus (ex : Int × Int) (n : Nat) : Int × Int := (ex.1 + 16 * n, ex.2 + 16 * n)
 
+/-- Keep small counts as one instruction; materialize larger counts as full words. -/
+def travCountC (d : Nat) (n : Int) : List II :=
+  if lit32 n then [ci 1 d n 0] else (konstWL 4 (BitVec.ofInt 64 n).toNat d).1
+
+/-- Instruction count used by every traversal target, independent of frame placement. -/
+def travCountSize (n : Int) : Nat := if lit32 n then 1 else 17
+
 /-- The code of `traverse` (`PLAN-SELF-HOSTING.md` §2.1.4), the counter `k` in slot `s` (the index's own slot, which
     the body may not write), the invariant's code `ci'` into slot `s + 1`, the body's code `cb`:
 
@@ -116,15 +123,14 @@ def exPlus (ex : Int × Int) (n : Nat) : Int × Int := (ex.1 + 16 * n, ex.2 + 16
     invariant, false: the stop, true: the end; the stop; the end. -/
 def travCode (s : Nat) (n : Int) (ci' cb : List II) : List II :=
   [ci 1 s 0 0] ++ (ci' ++
-    ([ci 19 ((s + 1 : Nat) : Int) (16 * (10 + ci'.length + cb.length)) 0, ci 2 ((s + 1 : Nat) : Int) s 0,
-      ci 1 (((s + 1 : Nat) : Int) + 1) n 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1),
-      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0] ++ (cb ++
-    ([ci 1 (s + 1) 1 0, ci 3 s s (s + 1), ci 18 (-(16 * (7 + ci'.length + cb.length))) 0 0] ++ (ci' ++
+    (([ci 19 ((s + 1 : Nat) : Int) (16 * (9 + travCountSize n + ci'.length + cb.length)) 0, ci 2 ((s + 1 : Nat) : Int) s 0] ++ travCountC (s + 2) n ++ [
+      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) ((s + 2 : Nat) : Int),
+      ci 19 ((s + 1 : Nat) : Int) (16 * (9 + ci'.length + cb.length)) 0]) ++ (cb ++
+    ([ci 1 (s + 1) 1 0, ci 3 s s (s + 1), ci 18 (-(16 * (6 + travCountSize n + ci'.length + cb.length))) 0 0] ++ (ci' ++
     ([ci 19 ((s + 1 : Nat) : Int) 32 0, ci 18 64 0 0] ++ stopC 104 (s + 1)))))))
 
 def travC (s : Nat) (n : Int) (ci' cb : List II × Nat) : Option (List II × Nat) :=
-  if 16 * (10 + ci'.1.length + cb.1.length) < 2 ^ 31 then
+  if 16 * (9 + travCountSize n + ci'.1.length + cb.1.length) < 2 ^ 31 then
     some (travCode s n ci'.1 cb.1, max ci'.2 (max cb.2 (s + 9)))
   else none
 
@@ -151,9 +157,17 @@ def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
       some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
     else none
 
+/-- Signed interval test with full word constants. The fourth temporary word
+    belongs to the high-bound materializer; the source value remains in `d`. -/
+def narrowTest (d : Nat) (lo hi : Int) : List II :=
+  (konstWL 4 (BitVec.ofInt 64 lo).toNat (d + 1)).1 ++
+    ([ci 13 (d + 1) d (d + 1)] ++
+    ((konstWL 4 (BitVec.ofInt 64 hi).toNat (d + 2)).1 ++
+    [ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]))
+
 /-- An outside flag selects the terminating error arm; the value stays in `d`. -/
 def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
-  ce ++ (engTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+  ce ++ (narrowTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
     [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
 
 /-- Compare a reason's entire word, preserving its slot for subsequent arms. -/
@@ -254,7 +268,7 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
         max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
   | _, Γ, _, _, .traverse t inv body, reserved =>
-    if lit32 (D.count t) then do
+    if inW (D.count t) (D.count t) then do
       let ci' ← lowE (reserved := reserved) L inv ((frei Γ reserved) + 1)
       let cb ← lowB (reserved := reserved) passes A L lo ens ((frei Γ reserved) :: pr) (48, 0) body
       travC ((frei Γ reserved)) (D.count t) ci' cb
@@ -331,11 +345,11 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
     let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
     pure (cc.1 ++ [ci 2 ((frei Γ reserved)) ((frei Γ reserved) + 2) 0] ++ cr.1, max cc.2 cr.2)
   | _, Γ, _, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
-    if inW lo' hi' && lit32 low && lit32 high then do
+    if inW lo' hi' && inW low low && inW high high then do
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
       let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
       let cx ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 3) (max cx.2 cr.2)))
+      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
     else none
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
@@ -444,11 +458,11 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List 
     let ct ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex ce.1.length) t
     pure (cc.1 ++ [ci 19 ((frei Γ reserved)) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
   | _, Γ, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
-    if inW lo' hi' && lit32 low && lit32 high then do
+    if inW lo' hi' && inW low low && inW high high then do
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
       let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
       let cx ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 3) (max cx.2 cr.2)))
+      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
     else none
   | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
