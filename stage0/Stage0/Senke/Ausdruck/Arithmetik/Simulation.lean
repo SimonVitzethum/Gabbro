@@ -1221,7 +1221,9 @@ theorem floatNormalizeLoopL_large_carry_compare
       Agree fp (base+6) K m m' ∧
       Pre L m' pc fp K base code ρ W reserved ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (base+6))) =
-        some (Runner.IR.bool (decide (r < (2 : Int)^distance))) := by
+        some (Runner.IR.bool (decide (r < (2 : Int)^distance))) ∧
+      (∀ i, i < K → i ≠ base+6 →
+        m'.rd64 (slot fp (BitVec.ofNat 64 i)) = m.rd64 (slot fp (BitVec.ofNat 64 i))) := by
   have shape : 15 < code.length ∧
       code[15]? = some (ci 13 (base+6) (base+1) (base+7)) := by
     unfold floatNormalizeLoopL at hc
@@ -1261,11 +1263,21 @@ theorem floatNormalizeLoopL_large_carry_compare
     ⟨h.ctx, h.small, h.frame.agree ag, codeNext, h.far,
       envAt_agree h.env ag h.frame (by have := h.ctx; omega) (by omega),
       h.wstab m next h.welt (ag.mono (by omega)), h.wstab⟩
-  refine ⟨next, Star.one comparison, ag, preNext, ?_⟩
-  change (write m (slot fp (BitVec.ofNat 64 (base+6))) 8 value.toNat).rd64 _ = some value
-  simp only [Runner.Mem.rd64, write_rd, h.frame.rd (base+6) room, ↓reduceIte,
-      le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+  refine ⟨next, Star.one comparison, ag, preNext, ?_, ?_⟩
+  · change (write m (slot fp (BitVec.ofNat 64 (base+6))) 8 value.toNat).rd64 _ = some value
+    simp only [Runner.Mem.rd64, write_rd, h.frame.rd (base+6) room, ↓reduceIte,
+        le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
+
+  · intro i hi ne
+    change (write m (slot fp (BitVec.ofNat 64 (base+6))) 8 value.toNat).rd64 _ = _
+    apply rd64_write_far
+    have a := slot_toNat (fp := fp) (i := i) h.frame.room hi
+    have b := slot_toNat (fp := fp) (i := base+6) h.frame.room room
+    unfold Far
+    simp only [a, b]
+    have hr := h.frame.room
+    omega
 
 #print axioms floatNormalizeLoopL_large_carry_compare
 
@@ -1288,7 +1300,9 @@ theorem floatNormalizeLoopL_large_carry_tested
       m'.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some (BitVec.ofNat 64 count) ∧
       (0 ≤ 2*q ∧ 2*q < 2^61) ∧
       (distance-1 < 63 → m'.rd64 (slot fp (BitVec.ofNat 64 (base+6))) =
-        some (Runner.IR.bool (decide (r < (2 : Int)^(distance-1))))) := by
+        some (Runner.IR.bool (decide (r < (2 : Int)^(distance-1))))) ∧
+      (distance-1 < 63 → m'.rd64 (slot fp (BitVec.ofNat 64 (base+7))) =
+        some (BitVec.ofInt 64 ((2 : Int)^(distance-1)))) := by
   obtain ⟨m1, run1, ag1, pre1, rq, rr, rd, rt, rf, rc, bounds⟩ :=
     floatNormalizeLoopL_large_carry_dispatch hc head (by omega) large active
   by_cases guarded : distance-1 < 63
@@ -1299,13 +1313,13 @@ theorem floatNormalizeLoopL_large_carry_tested
       floatNormalizeLoopL_large_carry_denominator hc pre2 rd2 room guarded seed
     have rr3 : m3.rd64 (slot fp (BitVec.ofNat 64 (base+1))) = some (BitVec.ofInt 64 r) := by
       rw [agree_rd_low (ag2.trans ag3) pre1.frame.room (by omega) (by omega)]; exact rr
-    obtain ⟨m4, run4, ag4, pre4, tested⟩ :=
+    obtain ⟨m4, run4, ag4, pre4, tested, kept⟩ :=
       floatNormalizeLoopL_large_carry_compare hc pre3 ⟨head.remainder.1, head.remainder.2.1⟩
         guarded rr3 (by omega) den
     have ag := ag2.trans (ag3.trans ag4)
     have reads (i : Nat) (hi : i < base+6) :=
       agree_rd_low ag pre1.frame.room hi (show base+6 ≤ K by omega)
-    refine ⟨m4, ?_, ag1.trans (ag.mono (by omega)), pre4, ?_, ?_, ?_, ?_, ?_, ?_, bounds, fun _ => tested⟩
+    refine ⟨m4, ?_, ag1.trans (ag.mono (by omega)), pre4, ?_, ?_, ?_, ?_, ?_, ?_, bounds, (fun _ => tested), (fun _ => ?_)⟩
     · have connectedPrefix : Star ⟨pc+48, fp⟩ m ⟨pc+208, fp⟩ m1 := by
         simpa only [guarded, ↓reduceIte] using run1
       simpa only [guarded, ↓reduceIte] using
@@ -1316,7 +1330,8 @@ theorem floatNormalizeLoopL_large_carry_tested
     · rw [reads (base+3) (by omega)]; exact rt
     · rw [reads (base+4) (by omega)]; exact rf
     · rw [reads (base+5) (by omega)]; exact rc
-  · exact ⟨m1, by simpa [guarded] using run1, ag1, pre1, rq, rr, rd, rt, rf, rc, bounds, fun h => (guarded h).elim⟩
+    · rw [kept (base+7) room (by omega)]; exact den
+  · exact ⟨m1, by simpa [guarded] using run1, ag1, pre1, rq, rr, rd, rt, rf, rc, bounds, (fun h => (guarded h).elim), (fun h => (guarded h).elim)⟩
 
 #print axioms floatNormalizeLoopL_large_carry_tested
 
@@ -1594,6 +1609,54 @@ theorem floatNormalizeLoopL_large_skip_small
   simpa only [ci, offset, BitVec.add_assoc, sum] using run
 
 #print axioms floatNormalizeLoopL_large_skip_small
+
+/-- Actual execution of both large paths from the established prefix through
+    carry arithmetic and the emitted jump to the shared tail. -/
+theorem floatNormalizeLoopL_large_to_tail
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+8 < K) (large : 61 < distance) (active : q < target) :
+    let carry : Runner.W := if distance-1 < 63 then
+      1 - Runner.IR.bool (decide (r < (2 : Int)^(distance-1))) else 0
+    ∃ m', Star ⟨pc+48, fp⟩ m
+        ⟨pc + BitVec.ofNat 64 (16*(code.length-4)), fp⟩ m' ∧
+      Agree fp base K m m' ∧ Pre L m' pc fp K base code ρ W reserved ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 base)) = some (BitVec.ofInt 64 (2*q) + carry) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+1))) =
+        some (BitVec.ofInt 64 r - BitVec.ofInt 64 ((2 : Int)^(distance-1))*carry) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+2))) = some (BitVec.ofNat 64 (distance-1)) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofInt 64 target) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 fuel) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some (BitVec.ofNat 64 count) := by
+  dsimp only
+  obtain ⟨m1, run1, ag1, pre1, rq, rr, rd, rt, rf, rc, bounds, tested, den⟩ :=
+    floatNormalizeLoopL_large_carry_tested hc head (by omega) large active
+  by_cases guarded : distance-1 < 63
+  · obtain ⟨m2, run2, ag2, pre2, rq2, rr2, kept⟩ :=
+      floatNormalizeLoopL_large_carry_arithmetic hc pre1 room _ _ _ _ rq rr
+        (den guarded) (tested guarded)
+    have connectedPrefix : Star ⟨pc+48, fp⟩ m ⟨pc+256, fp⟩ m1 := by
+      simpa only [guarded, ↓reduceIte] using run1
+    refine ⟨m2, connectedPrefix.trans (run2.trans (Star.one
+      (floatNormalizeLoopL_large_skip_small hc pre2.code))), ag1.trans ag2, pre2,
+      ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · simpa only [guarded, ↓reduceIte] using rq2
+    · simpa only [guarded, ↓reduceIte] using rr2
+    · rw [kept (base+2) (by omega) (by omega) (by omega) (by omega) (by omega)]; exact rd
+    · rw [kept (base+3) (by omega) (by omega) (by omega) (by omega) (by omega)]; exact rt
+    · rw [kept (base+4) (by omega) (by omega) (by omega) (by omega) (by omega)]; exact rf
+    · rw [kept (base+5) (by omega) (by omega) (by omega) (by omega) (by omega)]; exact rc
+  · have connectedPrefix : Star ⟨pc+48, fp⟩ m ⟨pc+336, fp⟩ m1 := by
+      simpa only [guarded, ↓reduceIte] using run1
+    refine ⟨m1, connectedPrefix.trans (Star.one
+      (floatNormalizeLoopL_large_skip_small hc pre1.code)), ag1, pre1,
+      ?_, ?_, rd, rt, rf, rc⟩
+    · simpa [guarded] using rq
+    · simpa [guarded] using rr
+
+#print axioms floatNormalizeLoopL_large_to_tail
 
 /-- Central induction, with the complete active iteration still explicit.
     The target exit is discharged by actual emitted execution above.
