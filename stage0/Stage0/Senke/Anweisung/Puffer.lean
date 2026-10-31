@@ -54,7 +54,7 @@ theorem pack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K acc u adr j : Nat} {Γ :
   have hp' : Pre L m pc fp K u (([ci 1 u adr 0] ++ [ci 15 u u 0]) ++
       ([ci 1 ((u : Int) + 1) (8 * j) 0, ci 11 u u ((u : Int) + 1)] ++ [ci 3 acc acc u])) ρ W reserved := hp
   have hX : Ok m pc fp K u ([ci 1 u adr 0] ++ [ci 15 u u 0]) (· = w) :=
-    ok_seq hp'.left (const_ok hp'.left.left (lit_ok (by omega) (by omega)) (by omega))
+    ok_seq hp'.left (const_ok hp'.left.left (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega) (by omega))
       (fun m' w' hp'' hr he => by
         rw [he, BitVec.ofInt_natCast] at hr
         exact ld_ok hp'' (by omega) hr (hw m' hp''.welt)) (by omega)
@@ -63,7 +63,7 @@ theorem pack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K acc u adr j : Nat} {Γ :
   have hq := hp3.left
   obtain ⟨m1, s1, a1, v, hv, rfl⟩ := ok_seq hq hX (Pb := (· = w <<< (8 * j)))
     (fun m' w' hp'' hr he => (binK_ok (o := 11) (g := fun a b => some (a <<< (b.toNat % 64)))
-      (r := w' <<< (8 * j)) hp'' hr (lit_ok (by omega) (by omega)) rfl (by decide)
+      (r := w' <<< (8 * j)) hp'' hr (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega) rfl (by decide)
       (by simp only [shl_amt hj]) (by omega)).mono fun x hx => by rw [hx, he]) (by omega)
   have hn := hp3.next a1 (Nat.le_refl _) (by omega)
   simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil] at s1 hn
@@ -181,14 +181,14 @@ theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {Ks B u adr k : Nat} {Γ 
   have hA := ok_seq hp3.left.left (mov_ok hp3.left.left.left (by omega) (by omega) hbw)
     (Pb := (· = bw >>> (8 * (k % 8))))
     (fun m' w' hp'' hr he => (binK_ok (o := 12) (g := fun a b => some (a >>> (b.toNat % 64)))
-      (r := w' >>> (8 * (k % 8))) hp'' hr (lit_ok (by omega) (by omega)) rfl (by decide)
+      (r := w' >>> (8 * (k % 8))) hp'' hr (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega) rfl (by decide)
       (by simp only [shr_amt]) (by omega)).mono fun x hx => by rw [hx, he]) (by omega)
   obtain ⟨m1, s1, a1, v, hv, rfl⟩ := ok_seq hp3.left hA (Pb := (· = (bw >>> (8 * (k % 8))) &&& 255))
     (fun m' w' hp'' hr he => (binK_ok (o := 8) (g := fun a b => some (a &&& b))
       (r := w' &&& 255) hp'' hr (by decide) rfl (by decide) rfl (by omega)).mono fun x hx => by rw [hx, he])
     (by omega)
   have hn := hp3.next a1 (Nat.le_refl _) (by omega)
-  have s2 := const_step (k := (adr : Int)) hn.left.code hn.frame (by omega) hsmall (lit_ok (by omega) (by omega))
+  have s2 := const_step (k := (adr : Int)) hn.left.code hn.frame (by omega) hsmall (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega)
   let m2 := write m1 (slot fp (BitVec.ofNat 64 (u + 1))) 8 (BitVec.ofInt 64 (adr : Int)).toNat
   have a2 : Agree fp u Ks m1 m2 := agree_write hroom (by omega) (by omega) _
   have hc3 : CodeAt m2 (pc + BitVec.ofNat 64 (16 * 5) + 16) [ci 16 ((u + 1 : Nat) : Int) u 0] := by

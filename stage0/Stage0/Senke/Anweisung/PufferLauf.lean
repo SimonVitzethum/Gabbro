@@ -44,7 +44,7 @@ theorem argsW_ptr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs
     rcases he 0 (by simp) with e | ⟨n, rw, e⟩
     · rw [← e]; exact h.1
     · simp only [List.length_cons, Nat.lt_add_one_iff, List.getElem?_cons_zero, Option.some.injEq] at e
-      subst e; trivial
+      subst e; simp only [isPtr, if_true]
 
 /-- A word whose bytes and readability are kept reads the same. -/
 theorem ptrParam_spec {τs : List Ty} {j n : Nat} {rw : Bool} (h : ptrParam τs = some (j, n, rw)) :
