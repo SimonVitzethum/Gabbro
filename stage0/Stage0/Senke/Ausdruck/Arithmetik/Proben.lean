@@ -1,9 +1,30 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Adaptiv
+import Stage0.Senke.Ausdruck.Arithmetik.Schleife
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
 open Gabbro.Grammatik Runner.IR Gleitkomma
+
+/-- Actual backward-branch loop images; output slots are checked independently.
+    The 1074 case takes 1127 transfers before recovering 53 quotient bits. -/
+def normalizationLoopImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("four", 0, 13, 4, 8, 20, 13, 0, 4),
+   ("distance62", 0, 1, 62, 8, 70, 8, 0, 65),
+   ("distance65", 0, 13, 65, 8, 80, 13, 0, 65),
+   ("distance1074", 0, 1, 1074, 2^53, 1127, 2^53, 0, 1127),
+   ("floor1074", 0, 13, 1074, 0, 1127, 0, 13, 0),
+   ("early1074", 1, 13, 1074, 8, 1127, 8, 13, 3),
+   ("fuel1074", 0, 13, 1074, 8, 1000, 0, 13, 1000)].flatMap
+    fun (name, q, r, k, target, fuel, qo, ro, count) =>
+      [(0, qo), (1, ro), (5, count)].map fun (field, expected) =>
+        let fragment := do
+          let loop ← floatNormalizeLoopL 16
+          let init := (konstWL 4 q 16).1 ++ (konstWL 4 r 17).1 ++
+            (konstWL 4 k 18).1 ++ (konstWL 4 target 19).1 ++
+            (konstWL 4 fuel 20).1 ++ [ci 1 21 0 0]
+          pure (init ++ loop.1 ++ [ci 2 8 (16+field) 0], loop.2)
+        ("normalize-loop-" ++ name ++ "-" ++ toString field,
+          FloatArithmeticProbe.wordImage fragment expected, 7)
 
 /-- Actual exact-tail adaptive normalization; check each output independently. -/
 def adaptiveImages : List (String × Except String (List Runner.B) × Nat) :=
