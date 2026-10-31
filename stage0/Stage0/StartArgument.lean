@@ -275,4 +275,53 @@ theorem fromItems_identity {u : UProg} {items : List SItemTief}
       (f := fun (it : SItemTief) => (match it with | .concT group => group | _ => [] :
         List (List String × List SExpr))))
 
+private def canonicalName (u : UProg) (member : List String × List SExpr) : Except String String :=
+  match member.1.getLast? with
+  | some name => uStartMit u.tabs u.fns name member.2
+  | none => .error "empty path in concurrent"
+
+private theorem uSeq_append (xs ys : List (Except String α)) :
+    uSeq (xs ++ ys) = (do let a ← uSeq xs; let b ← uSeq ys; pure (a ++ b)) := by
+  induction xs with
+  | nil =>
+    simp only [List.nil_append, uSeq]
+    cases hy : uSeq ys <;> rfl
+  | cons head rest ih =>
+    cases head with
+    | error e => rfl
+    | ok a =>
+      simp only [List.cons_append, uSeq]
+      rw [ih]
+      cases hx : uSeq rest <;> cases hy : uSeq ys <;> rfl
+
+/-- Flattening the source concurrent groups retains the exact canonical root-name extraction,
+    including failure order; source reconstruction does not introduce a new start acceptance rule. -/
+private theorem canonicalNames_flat (u : UProg) (items : List SItemTief) :
+    uSeq ((sourceIdentities items).map (canonicalName u)) = uNebenWurzeln u.tabs u.fns items := by
+  induction items with
+  | nil => rfl
+  | cons item rest ih =>
+    cases item <;> simp only [sourceIdentities, List.map_cons, List.flatten_cons,
+      List.nil_append, List.map_append, uNebenWurzeln] at *
+    all_goals try exact ih
+    case concT group =>
+      rw [uSeq_append, ih]
+      rfl
+
+private theorem recoveredNames (u : UProg) {items : List SItemTief} (starts : List (SourceStart u items)) :
+    uSeq ((starts.map (fun start => (start.path, start.sourceArgs))).map (canonicalName u)) =
+      .ok (starts.map (·.name)) := by
+  induction starts with
+  | nil => rfl
+  | cons head rest ih =>
+    simp only [List.map_cons, canonicalName, head.pathName, head.resolved.canonical, uSeq, ih]
+
+/-- The reconstructed typed starts correspond exactly to the existing canonical roots,
+    with the same order and multiplicity. Names-only deduplication is not justified by this bridge. -/
+theorem fromItems_names {u : UProg} {items : List SItemTief} {starts : List (SourceStart u items)}
+    (run : fromItems u items = .ok starts) :
+    uNebenWurzeln u.tabs u.fns items = .ok (starts.map (·.name)) := by
+  rw [← canonicalNames_flat u items, ← fromItems_identity run]
+  exact recoveredNames u starts
+
 end Gabbro.Stage0.StartArgument

@@ -63,6 +63,19 @@ theorem fromGroup_identity_zeuge :
   | error e => rw [hr] at accepted; cases accepted
   | ok starts => exact ⟨starts, rfl, fromGroup_identity _ hr⟩
 
+theorem fromItems_names_zeuge :
+    ∃ starts, fromItems witnessUnit [.concT witnessGroup] = .ok starts ∧
+      uNebenWurzeln witnessUnit.tabs witnessUnit.fns [.concT witnessGroup] = .ok (starts.map (·.name)) ∧
+      starts.map (·.name) = ["worker", "worker"] := by
+  obtain ⟨starts, run, _⟩ := fromItems_identity_zeuge
+  have names := fromItems_names run
+  refine ⟨starts, run, names, ?_⟩
+  change Except.ok ["worker", "worker"] = Except.ok (starts.map (·.name)) at names
+  exact (Except.ok.inj names).symm
+
+#print axioms fromItems_names
+#print axioms fromItems_names_zeuge
+
 theorem expression_pure_zeuge (before world before' world' : World (declOf witnessUnit)) :
     eval before (expression witnessUnit (.int (-9) 12) (.un "-" (.lit 7)) (by rfl)) world .nil =
       eval before' (expression witnessUnit (.int (-9) 12) (.un "-" (.lit 7)) (by rfl)) world' .nil :=
