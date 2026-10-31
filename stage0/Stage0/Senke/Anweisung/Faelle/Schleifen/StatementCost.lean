@@ -2,6 +2,7 @@
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
 import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
 import Stage0.Senke.Ausdruck.Old.Proben
+import Stage0.Senke.Funktion
 import Stage0.Senke.Anweisung.Hilfe
 import Stage0.Senke.Ausdruck.FnptrAufrufProben
 
@@ -1439,7 +1440,7 @@ theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
   exact ⟨m2, (first.trans (by simpa [m1, m2] using second)).trans last⟩
 
 /-- Recursive terminal certificates. Counts are S0IR instructions, independent
-    of source passes and G steps. The base executes a reason return; prefixes
+    of source passes and G steps. The bases execute normal and reason returns; prefixes
     recursively derive costs from expressions and the changed environment. -/
 inductive EndCost (L : Lay D) (reserved : Nat) (V : Vertrag D) (l : Bool) (Δ : Ctx) (snapshot : W) (ens : List II × Nat) (lo : Nat) :
     {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ →
@@ -1662,5 +1663,180 @@ theorem endCost_sound_zeuge :
   exact cert.sound lower (by decide) call_win (by decide) (by decide) (by decide)
     (by intro j hj; cases hj) pre hw .nil (fun _ x => nomatch x) rfl (by decide +kernel) (by decide +kernel) (by decide +kernel)
 end NormalEndCostProbe
+
+/-- Successful full function execution derives its instruction count from
+    recursive source certificates and the emitted entry phases. -/
+theorem lowFun_counted {P : Programm D} {A : D.Fn → Nat} {L : Lay D} {f : D.Fn}
+    {passes top Ks K nq nb declared : Nat} {code : List II}
+    {σ : World D} {ρ : Env D (D.params f)} {m : Mem} {pc fp rp cfp depth : W}
+    (lower : lowFun passes P A L f = some (code, top)) (fits : top ≤ Ks)
+    (inside : WIn L fp Ks K)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+      ∀ snapshot, EndCost L ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        (P.rumpf f) σ ρ nb)
+    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
+      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+    (pre : PreS L m pc fp K (FB + (D.params f).length) code ρ)
+    (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
+    (savedFP : m.rd64 (fp + 8) = some cfp)
+    (depthRead : m.rd64 (slot fp 2) = some depth) (positive : depth ≠ 0) :
+    ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' := by
+  have hks := inside.ks
+  simp only [lowFun] at lower
+  split at lower
+  next accepted =>
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
+    obtain ⟨⟨cq, tq⟩, hq, ens, hens, ⟨cb, tb⟩, hb, cs, hcs, hc, ht⟩ := lower
+    subst code
+    let s := FB + (D.params f).length
+    let reserved := (D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)
+    have bounds := fits
+    rw [← ht] at bounds
+    simp only [frei] at bounds
+    have hp : PreS L m pc fp K s
+        (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++
+          (relocateC FB reserved (D.params f).length ++ cb))))) ρ := by
+      simpa [s, reserved, List.append_assoc] using pre
+    have first := guard_pass_counted hp.left.code (by decide) depthRead positive
+    have hp1 := hp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+    have phases : PreS L m (pc + BitVec.ofNat 64 (16 * (guardC 2 105 s).length)) fp K s ((cq ++ guardC s 101 s) ++
+        (cs ++ (relocateC FB reserved (D.params f).length ++ cb))) ρ := by
+      simpa [List.append_assoc] using hp1
+    have hpq := phases.left
+    obtain ⟨m1, rq, a1, env1, _⟩ := requirement.guard hq (by omega) hpq
+    have hf1 := hp.frame.agree a1
+    have rest := phases.next a1 (Nat.le_refl _) (by omega)
+    have world1 := weltAt_stab inside.lay (by have := inside.top; omega) m m1 world (a1.mono (Nat.zero_le _))
+    obtain ⟨mS, rs, aS, snap, keep⟩ := snapC_counted hcs hf1 pre.small (by omega)
+      rest.left.code rest.left.far world1 inside.lay (by have := inside.top; omega)
+    have hfS := hf1.agree aS
+    have envS : EnvAt L mS fp ρ := by
+      intro τ x
+      obtain ⟨w, hw, enc⟩ := env1 τ x
+      exact ⟨w, (keep (vslot x) (by have := vslot_lt (reserved := 0) x; unfold frei at this; omega)
+        (by unfold vslot FB; omega)).trans hw, enc⟩
+    have farS := codeFar_tail rest.far
+    have rem : PreS L mS _ fp K s (relocateC FB reserved (D.params f).length ++ cb) ρ :=
+      ⟨rest.ctx, pre.small, hfS, (codeAt_right rest.code).agree aS farS,
+        farS, envS, trivial, wstab_true _ _⟩
+    obtain ⟨mR, rr, aR, moved⟩ := relocate_env_counted hfS pre.small
+      (by unfold frei reserved; omega)
+      envS rem.left.code (by simpa [relocateC_length] using rem.left.far)
+    have ar := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + reserved) ≤ K by unfold frei reserved; omega)
+    have original := envAt_agree envS ar hfS (by unfold frei FB; omega) (by omega)
+    have hpB := rem.next (ar.mono (by simp only [s, FB]; omega)) (Nat.le_refl _) (by omega)
+    have bodyPre : PreS L mR _ fp K (frei (D.params f) reserved) cb ρ reserved :=
+      ⟨Nat.le_refl _, pre.small, hfS.agree ar, hpB.code, hpB.far,
+        by simpa using moved, trivial, wstab_true _ _⟩
+    have all : Agree fp 3 K m mR := (a1.mono (by simp only [s, FB]; omega)).trans (aS.trans (ar.mono (by unfold FB; omega)))
+    have worldR := weltAt_stab inside.lay (by have := inside.top; omega) m mR world (all.mono (by decide))
+    have rpc : mR.rd64 fp = some rp := by
+      have h := agree_rd_low (i := 0) all pre.frame.room (by decide) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp : mR.rd64 (fp + 8) = some cfp := by
+      have h := agree_rd_low (i := 1) all pre.frame.room (by decide) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    obtain ⟨m', rb⟩ := (body ens hens (rdW mR fp 3)).sound hb (by omega) inside
+      (by simp only [frei]; omega) (by simp only [FB]; omega) (by omega)
+      (fun _ h => nomatch h) bodyPre worldR ρ original rfl
+      (rd64_rdW (hfS.agree ar) (by omega)) rpc rfp
+    simp only [relocateC_length] at rb
+    refine ⟨_, m', declaration cs hcs, ?_⟩
+    simpa [s, pc_add, relocateC_length, List.length_append, Nat.add_assoc] using
+      first.trans (rq.trans (rs.trans (rr.trans rb)))
+  next refused => simp at lower
+namespace FullFunProbe
+open FnptrProben
+-- Keep the fixture's carriers, with an exact literal result signature.
+def fixtureDecl : Deklaration := { FnptrProben.D with
+  sigNr := fun _ => { FnptrProben.D.sigNr 0 with erg := some (.int 37 37), params := [.int 37 37] }
+  passt_ok := fun _ _ _ => SigPasst.refl _ _ }
+instance (n : Nat) : OfNat fixtureDecl.Fn n := inferInstanceAs (OfNat (Fin 3) n)
+def program : Programm fixtureDecl where
+  invariante i := nomatch i
+  requires _ := .tru
+  ensures _ := .tru
+  rumpf _ := .ret (.val (.lit 37)) List.Perm.nil
+
+def layout : Lay fixtureDecl where
+  fa := addresses
+  col t := nomatch t
+  ga _ := 8192
+  lo := 8192
+  hi := 8200
+  tor a := nomatch a
+  byte t := nomatch t
+  sb := 4096
+  st := 2048
+def world : World fixtureDecl where
+  slots t := nomatch t
+  globs _ := ⟨0, rfl⟩
+  spur := []
+def image : List II := ((lowFun 2 program addresses layout 0).getD ([], 0)).1
+def memory : Mem :=
+  let base : Mem := {
+    b := fun a => ((image.flatMap encII)[a.toNat]?).getD 0
+    rd := fun _ => true
+    wr := fun _ => true }
+  write (write (write (write (write base 4096 8 2048) 4104 8 16384) 4112 8 1) 8192 8 64) 4128 8 37
+
+/-- The full lowered function has a nonzero result and distinct caller header. -/
+theorem lowFun_counted_zeuge :
+    ∃ n m', n ≤ 12 ∧ Counted n ⟨0, 4096⟩ memory ⟨2048, 16384⟩ m' := by
+  have lower : lowFun 2 program addresses layout 0 = some (image, 14) := by decide +kernel
+  have code : CodeAt memory 0 image := by
+    have h : ∀ k : Fin image.length,
+        memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f image[k.val].a) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f image[k.val].b) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f image[k.val].c) := by
+      apply allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  have pre : PreS layout memory 0 4096 256 5 image (Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil) :=
+    ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      code, by unfold CodeFar; decide +kernel, (by intro τ x; cases x with
+        | here => exact ⟨37, by decide +kernel, rfl⟩
+        | there x => nomatch x), trivial, wstab_true _ _⟩
+  have inside : WIn layout 4096 128 256 := by
+    refine ⟨⟨(fun t => nomatch t), fun _ => ⟨by change 8192 ≤ 8192; decide, by change 8192 + 8 ≤ 8200; decide⟩, by decide⟩, ?_, by decide, by decide, by decide⟩
+    constructor
+    · intro c c' hc hc' h
+      cases c with
+      | elem t => nomatch t
+      | glob g =>
+        cases c' with
+        | elem t => nomatch t
+        | glob g' => cases g; cases g'; rfl
+    · intro c hc
+      cases c with
+      | elem t => nomatch t
+      | glob _ => rfl
+  have hw : WeltAt memory layout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  apply lowFun_counted (nq := 1) (nb := 6) (σ := world) (depth := 1)
+    (ρ := Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil) lower (by decide) inside .truth
+  · intro ens hens snapshot
+    have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+    subst ens
+    exact .normal (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
+      (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
+  · intro cs hcs
+    have eq : cs = [] := Option.some.inj hcs.symm
+    subst cs
+    decide
+  · exact pre
+  · exact hw
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide
+end FullFunProbe
+
 
 end Gabbro.Stage0.Senke

@@ -262,8 +262,14 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   normal returns derive their count from the result expression and actual
   `lowEns` certificate, including result and status ABI writes. A loaded
   nine-instruction witness combines binding, assignment and normal return.
-  Full `lowFun` entry/relocation composition, recursive branching and calls,
-  `BlockCost.call`, and nested-forever instantiation remain OPEN.
+  `lowFun_counted` now composes the full successful emitted function from the
+  depth guard, recursively certified requires plus its guard, actual snapshot,
+  parameter relocation and `EndCost.sound` body (including actual ensures and
+  return ABI). The sum is checked against the declared instruction bound;
+  neither whole-body execution nor whole-body cost is assumed. Its loaded
+  twelve-instruction witness relocates one parameter before normal return.
+  Recursive branching and calls, `BlockCost.call`, and nested-forever
+  instantiation remain OPEN.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
