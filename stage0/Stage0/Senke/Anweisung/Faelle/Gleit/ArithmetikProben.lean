@@ -5,6 +5,8 @@ import Stage0.Senke.Ausdruck.Gleit.RundCode
 import Stage0.Senke.Ausdruck.Gleit.Betrag
 import Stage0.Senke.Ausdruck.Gleit.Schieben
 import Stage0.Senke.Ausdruck.Gleit.Skalieren
+import Stage0.Senke.Ausdruck.Gleit.SlotContext
+import Stage0.Senke.Ausdruck.Gleit.Bereich
 
 namespace Gabbro.Stage0.Senke.FloatArithmeticProbe
 open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR
@@ -91,6 +93,55 @@ def computedImage (f : Gleitkomma.Format) (z : Int) (expected : Nat) :
 def computedImages : List (String × Except String (List Runner.B) × Nat) :=
   computedSamples.zipIdx |>.map fun ((f, z, expected), i) =>
     (s!"computed-float-{i}", computedImage f z expected, 7)
+
+/-- Real expression children exercise ordinary lowering, including its reservation. -/
+def expressionImage : Except String (List Runner.B) :=
+  wordImage (computedFloatOfE (layU u (fun _ => some gateBinding) 0) Gleitkomma.f64
+    (Expr.add (Γ := []) (Λ := []) (.lit 19) (.lit 18)) 8 4)
+    4630404104378646528
+
+/-- Execute range rejection and the actual Stop107 exit sequence. The conversion
+    producer is emitted by the ordinary expression candidate at every requested slot. -/
+def rangeImage (z : Int) (lo hi : Int × Int) : Except String (List Runner.B) := do
+  let cc ← match canonicalFloatRangeL 8 lo hi
+      (fun d => computedFloatOfE (layU u (fun _ => some gateBinding) 0) Gleitkomma.f64
+        (Expr.add (Γ := []) (Λ := [])
+          (.mul (.lit (z / 1073741824)) (.lit 1073741824))
+          (.lit (z % 1073741824))) d 4) with
+    | some c => Except.ok c
+    | none => Except.error "computed range fragment refused"
+  let code := wennC 8 cc.1 (stopC 107 0) (stopC 7 0)
+  pure (Runner.Prog.irImage ((code.map fun i => .op i.o i.a i.b i.c) ++
+    [.lab 99, .zeros 1024]) 99)
+
+def rangeImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("computed-expression-add", expressionImage, 7),
+   ("computed-range-inside", rangeImage 37 (0, 1) (100, 1), 7),
+   ("computed-range-lower", rangeImage 0 (0, 1) (100, 1), 7),
+   ("computed-range-upper", rangeImage 100 (0, 1) (100, 1), 7),
+   ("computed-range-below", rangeImage (-1) (0, 1) (100, 1), 107),
+   ("computed-range-above", rangeImage 101 (0, 1) (100, 1), 107),
+   ("computed-range-reversed", rangeImage 1 (2, 1) (0, 1), 107),
+   ("computed-range-nan-lower", rangeImage 0 (0, 0) (1, 1), 107),
+   ("computed-range-nan-upper", rangeImage 0 (0, 1) (0, 0), 107),
+   ("computed-range-infinite", rangeImage (-37) (-(2^1024), 1) (2^1024, 1), 7),
+   ("computed-range-positive-infinity", rangeImage 37 (2^1024, 1) (2^1024, 1), 107),
+   ("computed-range-negative-infinity", rangeImage (-37) (-(2^1024), 1) (-(2^1024), 1), 107),
+   ("computed-range-round-in", rangeImage (2^53 + 1) (0, 1) (2^53, 1), 7),
+   ("computed-range-round-out", rangeImage (2^53 + 3) (0, 1) (2^53 + 2, 1), 107)]
+
+/-- The expected range exits agree with the source decision after rounding.
+    Emission and processor execution are measured separately. -/
+theorem computed_range_decisions_zeuge :
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 37) = false ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 0) = false ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 100) = false ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt (-1)) = true ∧
+    floatRangeReject (0, 1) (100, 1) (gleitAusInt 101) = true ∧
+    floatRangeReject (0, 1) (0, 0) (gleitAusInt 0) = true ∧
+    floatRangeReject (2^1024, 1) (2^1024, 1) (gleitAusInt 37) = true ∧
+    floatRangeReject (-(2^1024), 1) (-(2^1024), 1) (gleitAusInt (-37)) = true := by
+  decide +kernel
 
 def images : List (String × Except String (List Runner.B) × Nat) :=
   [("scale-zero", scaleImage 0 0 0, 7),

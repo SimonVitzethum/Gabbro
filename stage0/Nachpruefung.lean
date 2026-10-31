@@ -247,3 +247,7 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_accept
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computedSamples_bits
+
+#print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computed_range_decisions_zeuge
+#print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan_ok

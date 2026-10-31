@@ -21,6 +21,21 @@ theorem floatRangeL_room {d top : Nat} {lo hi : Int × Int} {e : Nat → Option 
   simp only [Prod.mk.injEq, bin2] at hc
   omega
 
+/-- The unordered-bound path is a real emitted rejection, at any reservation.
+    Its footprint and frame budget are those of the ordinary constant rule. -/
+theorem canonicalFloatRangeL_nan_ok {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K d top reserved : Nat} {c : List II} {lo hi : Int × Int}
+    {producer : Nat → Option (List II × Nat)}
+    (hn : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan)
+    (hc : canonicalFloatRangeL d lo hi producer = some (c, top))
+    (ht : top ≤ K) (hp : Pre L m pc fp K d c ρ W reserved) :
+    Ok m pc fp K d c (· = Runner.IR.bool true) := by
+  rw [canonicalFloatRangeL_nan d lo hi producer hn] at hc
+  cases hc
+  exact const_ok hp (by decide) (by omega)
+
 /-- Evaluate a pure expression and compare its key to both constant endpoint keys. -/
 theorem floatRangeL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} {W : Runner.Mem → Prop} (σ₀ σ : World D) {l1 h1 lo hi : Int × Int}
