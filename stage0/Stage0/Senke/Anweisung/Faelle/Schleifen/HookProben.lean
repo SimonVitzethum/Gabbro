@@ -182,6 +182,54 @@ theorem lowE_lit_counted_zeuge [Runner.IR.Kern] :
     (reserved := 0) (d := 4) (top := 5) (K := 256) (n := 8192)
     (by decide +kernel) code FnptrProben.call_frame (by decide) (by decide)
 
+/-- Two binary nodes share the same recursive certificate and the actual
+    accepted lowering. This exercises child composition beyond a literal. -/
+theorem exprCost_zeuge :
+    let e : Expr FnptrProben.D [] [] (.int 27 27) :=
+      .add (.add (.lit 7) (.lit 9)) (.lit 11)
+    (∃ P, Nonempty (ExprCost FnptrProben.callLayout 0 e 4 5 P)) ∧
+    lowE FnptrProben.callLayout e 4 = some
+      ([ci 1 4 7 0, ci 1 5 9 0, ci 3 4 4 5, ci 1 5 11 0, ci 3 4 4 5], 6) := by
+  constructor
+  · exact ⟨_, ⟨ExprCost.add (ExprCost.add .literal .literal) .literal⟩⟩
+  · rfl
+
+def compositeCode : List II :=
+  [ci 1 4 7 0, ci 1 5 9 0, ci 3 4 4 5, ci 1 5 11 0, ci 3 4 4 5]
+
+def compositeMem : Runner.Mem := {
+  b := fun a => ((compositeCode.flatMap encII)[a.toNat - 2048]?).getD 0
+  rd := fun _ => true
+  wr := fun _ => true }
+
+/-- All preconditions hold jointly on an actual emitted two-node expression;
+    exact execution is obtained from certificate soundness, not evaluation. -/
+theorem exprCost_execution_zeuge [Runner.IR.Kern] :
+    ∃ m', Counted 5 ⟨2048, 4096⟩ compositeMem ⟨2128, 4096⟩ m' ∧
+      Agree 4096 4 256 compositeMem m' ∧
+      ∃ w, m'.rd64 (slot 4096 4) = some w ∧
+        (∃ wa wb, (∃ x y, x = BitVec.ofInt 64 7 ∧ y = BitVec.ofInt 64 9 ∧ wa = x + y) ∧
+          wb = BitVec.ofInt 64 11 ∧ w = wa + wb) := by
+  have code : CodeAt compositeMem 2048 compositeCode := by
+    have all : (List.finRange compositeCode.length).all (fun k => decide
+      (compositeMem.rd8 (2048 + BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 compositeCode[k.val].o) ∧
+       compositeMem.rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f compositeCode[k.val].a) ∧
+       compositeMem.rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f compositeCode[k.val].b) ∧
+       compositeMem.rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f compositeCode[k.val].c))) = true := by
+      decide +kernel
+    intro k hk
+    have h := of_decide_eq_true (List.all_eq_true.mp all ⟨k, hk⟩ (by simp))
+    exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  have pre : PreS FnptrProben.callLayout compositeMem 2048 4096 256 4 compositeCode
+      (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      code, ?_, ?_, trivial, wstab_true _ _⟩
+    · unfold CodeFar; decide +kernel
+    · intro _ x; nomatch x
+  exact (ExprCost.add (ExprCost.add .literal .literal) .literal).sound
+    (L := FnptrProben.callLayout) (Γ := []) (Λ := []) (reserved := 0) (top := 6)
+    (e := .add (.add (.lit 7) (.lit 9)) (.lit 11)) (by rfl) (by decide) pre
+
 /-- A concrete positive-budget header executes one real instruction. This is
     a joint witness for counting/erasure/composition, not a loop cost bound. -/
 theorem counted_header_zeuge [Runner.IR.Kern] :
