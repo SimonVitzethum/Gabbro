@@ -1,0 +1,6 @@
+// A selected unsupported ABI is refused even when main calls no gate.
+module target_metal {
+impl fn main() -> u64 in 0 .. 100 effects { pure } { return 42; }
+target bare abi metal arch x86_64 { }
+target bare;
+}

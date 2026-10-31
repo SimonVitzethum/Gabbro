@@ -1,0 +1,6 @@
+// A final in-range result cannot hide an intermediate outside the original declared range.
+module custom_negative_overflow {
+type Small = i8 in -10 .. 100;
+const WRONG : Small = (100 + 1) - 59;
+impl fn main() -> Small effects { pure } { return WRONG; }
+}

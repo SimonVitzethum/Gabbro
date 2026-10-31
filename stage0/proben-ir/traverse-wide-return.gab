@@ -1,0 +1,10 @@
+// No stored columns: a large logical traversal fits a small image and exits early.
+module ir_probe {
+table t count 4294967296 { slot { } }
+impl fn main() -> u64 in 0 .. 100 effects { reads t.slots } {
+    traverse i over slots of t by unvisited touches reads t.slots {
+        return 23;
+    }
+    return 17;
+}
+}
