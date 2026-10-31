@@ -837,11 +837,21 @@ theorem floatNormalizeLoopL_reaches_target_zeuge [Kern] {D : Deklaration} (L : L
         m' fuel' count' distance' q' r' ∧
       8 ≤ q' ∧ count' ≤ 68 ∧
       (13 * 2^(count'+distance') : Int) / 2^(distance'+4) = q' ∧
-      (13 * 2^(count'+distance') : Int) % 2^(distance'+4) = r' * 2^4 := by
+      (13 * 2^(count'+distance') : Int) % 2^(distance'+4) = r' * 2^4 ∧
+      ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+        let nd := Gleitkomma.normQD F.p ((F.p : Int)-1-count')
+          (13 * 2^distance') (8 * 2^(distance'+4))
+        nd.1 / nd.2 = (q'/8).toNat ∧
+        nd.1 % nd.2 = (q'%8).toNat * 2^(distance'+4) + r'.toNat * 2^4 ∧
+        nd.2 = 8 * 2^(distance'+4) := by
   have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
       ((floatNormalizeLoopL 16).getD ([], 0)).2) := by decide +kernel
-  exact floatNormalizeLoopL_reaches_target hc (by decide +kernel)
-    (normalizationLoopHead_zeuge L) 3 (by decide) (by decide) (by decide)
+  obtain ⟨m, f, c, d, q, r, run, agree, head, reached, bound, quotient, tail⟩ :=
+    floatNormalizeLoopL_reaches_target hc (by decide +kernel)
+      (normalizationLoopHead_zeuge L) 3 (by decide) (by decide) (by decide)
+  refine ⟨m, f, c, d, q, r, run, agree, head, reached, bound, quotient, tail, ?_⟩
+  intro F _
+  simpa using head.normQD_output F.p
 
 #print axioms floatNormalizeLoopL_reaches_target_zeuge
 

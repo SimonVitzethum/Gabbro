@@ -2716,5 +2716,61 @@ theorem floatNormalizeLoopL_finite_magnitude
 #print axioms FloatNormalizeHead.zero_words
 #print axioms floatNormalizeLoopL_finite_magnitude
 
+/-- Canonical scaling of the guard-scaled magnitude reconstructed by the
+    executed loop: the represented rational is origin / (8 * 2^originDistance).
+    The common distance factor retains that exact rational value; the
+    three guard bits belong in its denominator. No canonical quotient or
+    remainder is assumed. This is the arithmetic bridge, before choosing the
+    source exponent and its normal/subnormal output branch. -/
+theorem FloatNormalizeHead.normQD_output
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r) (p : Nat) :
+    let nd := Gleitkomma.normQD p ((p : Int)-1-count)
+      (origin.toNat * 2^distance) (8 * 2^(distance+originDistance))
+    nd.1 / nd.2 = (q/8).toNat ∧
+    nd.1 % nd.2 = (q%8).toNat * 2^(distance+originDistance) +
+      r.toNat * 2^originDistance ∧
+    nd.2 = 8 * 2^(distance+originDistance) := by
+  have pd : (0 : Int) < 2^distance := Int.pow_pos (by decide)
+  have po : (0 : Int) < 2^originDistance := Int.pow_pos (by decide)
+  have pc : (0 : Int) < 2^(count+distance) := Int.pow_pos (by decide)
+  have reconstruction := head.reconstruction
+  have nonnegative : 0 ≤ origin := by
+    have h := mul_nonneg
+      (add_nonneg (mul_nonneg head.quotient.1 (le_of_lt pd)) head.remainder.1)
+      (le_of_lt po)
+    rw [reconstruction] at h
+    nlinarith
+  have shift : (p : Int)-1-((p : Int)-1-count) = count := by omega
+  simp only [Gleitkomma.normQD, shift, Nat.cast_nonneg, ↓reduceIte,
+    Int.toNat_natCast]
+  have numerator : (origin.toNat * 2^distance) * 2^count =
+      (origin * 2^(count+distance)).toNat := by
+    apply Int.ofNat_inj.mp
+    rw [Int.toNat_of_nonneg (mul_nonneg nonnegative (le_of_lt pc))]
+    push_cast
+    rw [Int.toNat_of_nonneg nonnegative, pow_add]
+    ring
+  rw [numerator]
+  have fields := head.output_fields
+  have den : (0 : Int) < 8 * 2^(distance+originDistance) := by positivity
+  constructor
+  · apply Int.ofNat_inj.mp
+    push_cast
+    rw [Int.toNat_of_nonneg (Int.ediv_nonneg head.quotient.1 (by decide))]
+    simpa only [Int.natCast_ediv, Int.toNat_of_nonneg
+      (mul_nonneg nonnegative (le_of_lt pc))] using fields.1
+  constructor
+  · apply Int.ofNat_inj.mp
+    push_cast
+    rw [Int.toNat_of_nonneg (Int.emod_nonneg q (by decide)),
+      Int.toNat_of_nonneg head.remainder.1]
+    simpa only [Int.natCast_emod, Int.toNat_of_nonneg
+      (mul_nonneg nonnegative (le_of_lt pc))] using fields.2.1
+  · trivial
+
+#print axioms FloatNormalizeHead.normQD_output
+
 end
 end Gabbro.Stage0.Senke

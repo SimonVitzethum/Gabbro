@@ -248,16 +248,25 @@ theorem floatExactAddNormalize_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem →
       ((floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 = 0 ∧
         q = 0 ∧ r = 0) ∨
        (0 < floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0 ∧
-        (2^53 : Int) ≤ q)) ∧ count ≤ 53 := by
+        (2^53 : Int) ≤ q)) ∧ count ≤ 53 ∧
+      ∀ p : Nat,
+        let nd := Gleitkomma.normQD p ((p : Int)-1-count)
+          ((floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0).toNat *
+            2^distance') (8 * 2^distance')
+        nd.1 / nd.2 = (q/8).toNat ∧
+        nd.1 % nd.2 = (q%8).toNat * 2^distance' + r.toNat ∧
+        nd.2 = 8 * 2^distance' := by
   obtain ⟨m1, initRun, initAgree, head⟩ := floatExactAddInit_head a b k ha hb hk hr
     hlo hhi hd compiled room slots pre
   have nonnegative := head.quotient.1
   obtain ⟨m2, f, c, d, q, r, run, agree, finalHead, result, bound, _, _⟩ :=
     floatNormalizeLoopL_finite_magnitude loopCompiled loopRoom head nonnegative
       53 (by rfl) (by omega)
-  refine ⟨m2, f, c, d, q, r, ?_, initAgree.trans agree, finalHead, result, bound⟩
-  rw [List.length_append, ← pc_add]
-  exact initRun.trans run
+  refine ⟨m2, f, c, d, q, r, ?_, initAgree.trans agree, finalHead, result, bound, ?_⟩
+  · rw [List.length_append, ← pc_add]
+    exact initRun.trans run
+  · intro p
+    simpa using finalHead.normQD_output p
 
 #print axioms floatExactAddNormalize_ok
 
