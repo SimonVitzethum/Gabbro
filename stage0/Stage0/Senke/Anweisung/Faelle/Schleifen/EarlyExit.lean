@@ -600,6 +600,7 @@ theorem nestedForever_next_zeuge [Kern] {D : Deklaration} (L : Lay D)
 end Gabbro.Stage0.Senke.SourceStopProbe
 
 namespace Gabbro.Stage0.Senke.PositiveInvariantStopProbe
+set_option maxRecDepth 10000
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem FnptrProben
 variable [Kern]
 set_option maxHeartbeats 2000000
@@ -682,4 +683,30 @@ theorem forever_positive_invariant_stop_counted_zeuge (P : Programm D) :
     (by decide) (by decide) inside (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by intros; contradiction) (by decide)
     (by decide) pre around hw (by decide +kernel) (by decide +kernel) (by decide)
+
+/-- The same full suffix with a true source invariant executes a nonempty next
+    body and returns to the live header after the actual counter decrement. -/
+theorem forever_full_positive_counted_zeuge (P : Programm D) (σ0 : World D)
+    (ρ0 : Env D (D.params 2)) :
+    ∃ n, n ≤ 5 ∧ CountedReach n callLayout 4096 4 256 []
+      ⟨2048, 4096⟩ (memory true) 2048 world (Env.nil : Env D []) 8 := by
+  obtain ⟨pre, inside, hw, around⟩ := joint true
+  have child : recursiveBlockCost callLayout 8 P 1 addresses (fun _ => []) 2 128
+      (vertragVon D 2) true (LoopJumpCostProbe.body true) world Env.nil
+      (.next rfl world Env.nil) 1 := .jump rfl true
+  have result := recursiveBlockCost.forever_full_positive_counted
+    (σ0 := σ0) (ρ0 := ρ0) (rp := 3000) (cfp := 5000)
+    (P := P) (f := 2) (passes := 1) (A := addresses) (C := fun _ => []) (dv := 2)
+    (reserved := 8) (inv := .tru) (body := LoopJumpCostProbe.body true)
+    (fuel := 1) (ni := 1) (lo := 4) (counter := 8) (one := 9)
+    (ens := ([], 6)) (pr := []) (cc := [ci 1 12 1 0]) (cb := [ci 18 (-64) 0 0])
+    (tc := 13) (tb := 12) ExprCost.truth child rfl (by decide +kernel)
+    (by decide) (by decide) inside (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by intros; contradiction) (by decide)
+    (by decide) pre around hw (by decide +kernel) (by decide +kernel) (by decide)
+
+  have endpoint : (2048 : W) + 16 + 16 + BitVec.ofNat 64 (16 * 1) + 16 +
+      BitVec.ofNat 64 (16 * 1) + BitVec.ofInt 64 (foreverTargets 1 1).2 = 2048 := by
+    decide +kernel
+  simpa only [CountedSim, List.length_singleton, endpoint] using result
 end Gabbro.Stage0.Senke.PositiveInvariantStopProbe
