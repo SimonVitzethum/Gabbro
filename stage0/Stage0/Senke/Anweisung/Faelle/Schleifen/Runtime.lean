@@ -23,6 +23,24 @@ theorem counter_initialize {m : Mem} {pc fp : W} {K counter budget : Nat}
   rw [BitVec.ofInt_natCast]
   exact rd64_write_same (frame.rd counter inside)
 
+/-- The emitted word decrement agrees with canonical natural fuel, without
+    wrapping, for every representable positive budget. -/
+theorem counter_fuel_step (n : Nat) (fits : n + 1 < 2 ^ 64) :
+    BitVec.ofNat 64 (n + 1) ≠ 0 ∧
+      BitVec.ofNat 64 (n + 1) - 1 = BitVec.ofNat 64 n := by
+  constructor
+  · intro h
+    have := congrArg BitVec.toNat h
+    change (n + 1) % 2 ^ 64 = 0 at this
+    rw [Nat.mod_eq_of_lt fits] at this
+    omega
+  · have h := BitVec.ofNat_sub_ofNat_of_le (w := 64) (n + 1) 1 (by decide) (by omega)
+    simpa using h
+
+/-- Zero, one and two are genuine fuel values with distinct nonwrapping steps. -/
+theorem counter_fuel_step_zeuge :
+    BitVec.ofNat 64 1 - 1 = 0 ∧ BitVec.ofNat 64 2 - 1 = 1 := by decide
+
 /-- A lowered body reaches its backedge with the reserved runtime budget intact.
 The equality follows from the body simulation's frame, including reachable calls
 and world writes; no separate preservation hypothesis is admitted. -/
@@ -54,6 +72,40 @@ theorem Reach.counter_backedge {D : Deklaration} {L : Lay D} {Γ : Ctx}
   · cases hprotected with
     | inl below => rw [counter_preserved layout frame below bound]; exact initial
     | inr member => rw [keeps counter member]; exact initial
+
+/-- Reconstruct the complete body-entry interface after an actual backedge.
+    Code and callee availability follow from the simulated world-aware frame;
+    the new environment and world come from execution, not preservation claims.
+    The reservation retains the counter and any immutable control slots in `pr`. -/
+theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {P : Programm D}
+    {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
+    {fp pc back rp cfp : W} {lo K Ks counter reserved : Nat} {pr : List Nat}
+    {m : Mem} {σ' : World D} {ρ ρ' : Env D Γ}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {code : List II}
+    {jump b c : BitVec 32} {value : W}
+    (body : Reach L fp lo K pr ⟨pc, fp⟩ m back σ' ρ' reserved)
+    (layout : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (surround : Umf L A C dv m fp Ks K)
+    (head : Kopf L f m fp K rp cfp ρ0 P σ0)
+    (hprotected : counter < lo ∨ counter ∈ pr) (bound : lo ≤ K)
+    (abi : FB + (D.params f).length ≤ lo)
+    (initial : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value)
+    (edge : InsAt m back 18 jump b c) (far : CodeFar back 1 fp K)
+    (target : back + sx jump = pc) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+      PreS L m' pc fp K (frei Γ reserved) code ρ' reserved ∧
+      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      WeltAt m' L σ' ∧ Keeps fp pr m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value := by
+  obtain ⟨m', run, frame, env, world, keeps, counter⟩ :=
+    body.counter_backedge layout hprotected bound initial edge far
+  refine ⟨m', ?_, frame, ?_, surround.agreeW layout frame (by omega),
+    head.agreeW layout frame abi, world, keeps, counter⟩
+  · simpa only [target] using run
+  · exact ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame frame,
+      codeAt_agreeWIn layout frame pre.code pre.far, pre.far, env,
+      trivial, wstab_true _ _⟩
 
 /-- A zero budget executes the real conditional branch into the progress stop,
 before an invariant or body can execute. -/

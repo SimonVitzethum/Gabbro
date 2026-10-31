@@ -88,6 +88,58 @@ theorem body_simulation [Kern] :
     (2048 + BitVec.ofNat 64 (16 * code.length)) _ Env.nil 4 at h
   exact h
 
+/-- Reuse the emitted block in the memory produced by a previous pass. -/
+theorem body_simulation_at [Kern] {m : Runner.Mem}
+    (hp : PreS callLayout m 2048 4096 256 8 code (Env.nil : Env D []) 4)
+    (hu : Umf callLayout addresses target 2 m 4096 128 256)
+    (hk : Kopf callLayout 2 m 4096 256 0 0 (Env.nil : Env D []) tiny world)
+    (hw : WeltAt m callLayout world) :
+    Reach callLayout 4096 4 256 [4] ⟨2048, 4096⟩ m
+      (2048 + BitVec.ofNat 64 (16 * code.length)) world Env.nil 4 := by
+  have h := lowB_ok (reserved := 4) (O := O) (passes := 1) (P := tiny) (f := 2)
+    (σ0 := world) (ρ0 := Env.nil) (lo := 4) (pr := [4]) (ex := (0, 0))
+    call_spec addresses_bound rfl rfl body code top lowering (by decide +kernel)
+    (by decide +kernel) call_win m 2048 world Env.nil hp (by decide) (by decide)
+    hu hk hw (by intro j hj; simp only [List.mem_singleton] at hj; subst j; decide)
+  exact h
+
+/-- Arbitrarily many executions of the same emitted write/call/backedge image.
+    Every subsequent call uses the frame, code and function-head guarantees
+    reconstructed from the preceding execution. The live sentinel is 77. -/
+theorem write_call_reentry_zeuge [Kern] (n : Nat) :
+    ∃ m', Star ⟨2048, 4096⟩ memory ⟨2048, 4096⟩ m' ∧
+      AgreeW callLayout 4096 4 256 memory m' ∧
+      PreS callLayout m' 2048 4096 256 8 code (Env.nil : Env D []) 4 ∧
+      Umf callLayout addresses target 2 m' 4096 128 256 ∧
+      Kopf callLayout 2 m' 4096 256 0 0 (Env.nil : Env D []) tiny world ∧
+      WeltAt m' callLayout world ∧ Keeps 4096 [4] memory m' ∧
+      m'.rd64 (slot 4096 (BitVec.ofNat 64 4)) = some 77 := by
+  have edge : InsAt memory (2048 + BitVec.ofNat 64 (16 * code.length)) 18
+      (II.f (-(16 * (code.length : Int)))) 0 0 := by decide +kernel
+  have far : CodeFar (2048 + BitVec.ofNat 64 (16 * code.length)) 1 4096 256 := by
+    unfold CodeFar
+    decide +kernel
+  induction n with
+  | zero => exact ⟨memory, Star.refl _ _, AgreeW.refl _ _ _ _ _, pre,
+      surroundings, head, world_at, Keeps.refl _ _ _, by decide +kernel⟩
+  | succ n ih =>
+    obtain ⟨m, run, frame, hp, hu, hk, hw, kept, sentinel⟩ := ih
+    have ec : CodeAt memory (2048 + BitVec.ofNat 64 (16 * code.length))
+        [ci 18 (-(16 * (code.length : Int))) 0 0] := by
+      intro k h
+      have : k = 0 := by simpa using h
+      subst k
+      simpa [ci, II.f] using edge
+    have ec' := codeAt_agreeWIn call_win frame ec far
+    have edge' := ec' 0 (by simp)
+    simp only [List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at edge'
+    obtain ⟨m', step, frame', hp', hu', hk', hw', kept', sentinel'⟩ :=
+      Reach.counter_reentry (body_simulation_at hp hu hk hw) call_win hp hu hk
+        (counter := 4) (Or.inr (by simp)) (by decide) (by decide) sentinel
+        edge' far (by decide +kernel)
+    exact ⟨m', run.trans step, frame.trans frame', hp', hu', hk', hw',
+      kept.trans kept', sentinel'⟩
+
 /-- All premises hold together; the actual write and callee preserve the live reserved sentinel. -/
 theorem write_call_reserved_zeuge [Kern] :
     ∃ m', Star ⟨2048, 4096⟩ memory
