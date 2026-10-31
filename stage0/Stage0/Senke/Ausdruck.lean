@@ -24,6 +24,7 @@ import Grammatik.Kern.Semantik.Semantik
 import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
 import Stage0.Senke.Ausdruck.Aggregat.Wert
+import Stage0.Senke.Ausdruck.Aggregat.Kopie
 
 namespace Gabbro.Stage0.Senke
 
@@ -282,7 +283,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
-  | _, τ, .var x, d => if aggregateFits τ then some ([ci 2 d (vslot x reserved) 0], d + 1) else none
+  | _, τ, .var x, d => if aggregateFits τ then some (copyWords 1 d (vslot x reserved), d + 1) else none
   | _, _, .widen _ _ e, d => lowE L (reserved := reserved) e d
   | _, _, .add a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
   | _, _, .sub a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)

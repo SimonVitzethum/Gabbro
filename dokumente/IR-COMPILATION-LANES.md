@@ -147,3 +147,19 @@ the corresponding value/call/dispatch lanes. New discoveries must be assigned ex
 
 **Execution is authorized.** Follow the seven-round schedule above; preserve all interrupted work and
 never treat it as checked. Final closure is blocked while any in-scope syntax or generic proof is missing.
+
+## IR-03 shared transport checkpoint (2026-10-31)
+
+The actual variable emitter now calls `copyWords width destination source`; its connected `lowE_ok`
+variable branch uses `copyWords_ok`, including the one-word fast path. `WordsAt memory frame base words`
+states consecutive word placement using the runner's existing slot addressing. The generic execution
+contract copies arbitrary word lists from the preserved prefix (`source + width <= destination`) to
+fresh storage (`destination + width <= frame capacity`), proves actual IR execution and every output
+word, and preserves memory outside the destination suffix. It assumes no child execution. This is
+transport only, not a completed multiword ABI: callers must not infer that wide expression emission,
+type widths, argument/result placement or aggregate source coverage has been enabled.
+
+IR-03 remains incomplete. `Enc`, `EnvAt`, `frei`/`vslot`, binding, world storage and function/image
+contracts still require their coordinated multiword conversion. In particular the current array/string
+refusals remain, and no new source-form family is counted complete. IR-02/06/10 must share the transport
+interface above; the type-width and encoding interface is not frozen by this checkpoint.
