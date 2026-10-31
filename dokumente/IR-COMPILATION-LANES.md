@@ -54,7 +54,11 @@ unchanged broad suites in place of closing a connected translation case.
 | 6 | IR-11 foreign calls and ASM bodies | IR-13 formats and generated constructs |
 | 7 | IR-12 profiles and images | IR-14 compiler integration |
 
-Start a round after integrating and checking its prerequisites. Each lane must implement its real compiler
+**Rolling two-agent execution.** Round numbers are an allocation, not synchronization barriers. As soon as
+one agent completes its lane, start the next ready lane on that free slot while the other continues.
+Never wait for the other lane merely because it has the same round number. Keep at most two implementation
+agents active; only genuine interface dependencies may delay a particular successor. Integrate and check
+the prerequisites needed by that successor. Each lane must implement its real compiler
 path and connected generic proof, not merely produce an inventory or isolated helpers. Report unresolved
 dependencies explicitly and continue resolving them; seven rounds are an allocation, not a correctness claim.
 Root serializes shared interfaces and merges. Exactly one Lean check runs globally under the shared lock.
