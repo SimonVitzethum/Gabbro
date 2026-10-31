@@ -1400,6 +1400,89 @@ def finiteAddRemainingValue (F : Gleitkomma.Format) (a b : Runner.W) (i : Nat) :
   else (floatFieldWord w 0 F.fracBits +
     (1 - Runner.IR.bool (e == 0)) * BitVec.ofNat 64 (2^F.fracBits)) * 8
 
+omit [Kern] in
+/-- Bounds transfer through the literal decoder arithmetic without word wrap. -/
+theorem finiteAddRemainingValue_bounds (F : Gleitkomma.Format)
+    (dense : F.dicht) (width : F.ebits + F.fracBits + 1 ≤ 64)
+    (precision : F.fracBits ≤ 52) (exponents : 1 < F.bexpMax)
+    (a b : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a)
+    (hb : Gleitkomma.wf F b)
+    (fa : a.bexp ≠ F.bexpMax) (fb : b.bexp ≠ F.bexpMax)
+    (i : Nat) (hi : i < 4) :
+    let w := finiteAddRemainingValue F
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F b)) i
+    if i < 2 then 1 ≤ w.toNat ∧ w.toNat < F.bexpMax
+    else w.toNat < 2^56 := by
+  have one (x : Gleitkomma.GBits F) (hx : Gleitkomma.wf F x)
+      (fx : x.bexp ≠ F.bexpMax) :
+      let w := BitVec.ofNat 64 (Gleitkomma.zuBits F x)
+      let e := floatFieldWord w F.fracBits F.ebits
+      let f := floatFieldWord w 0 F.fracBits
+      (1 ≤ (e + Runner.IR.bool (e == 0)).toNat ∧
+        (e + Runner.IR.bool (e == 0)).toNat < F.bexpMax) ∧
+      ((f + (1 - Runner.IR.bool (e == 0)) *
+        BitVec.ofNat 64 (2^F.fracBits)) * 8).toNat < 2^56 := by
+    have bounds := floatFiniteAdd_input_bounds F dense width precision exponents x hx fx
+    dsimp only at bounds ⊢
+    let e := floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F x)) F.fracBits F.ebits
+    let f := floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F x)) 0 F.fracBits
+    change 1 ≤ max e.toNat 1 ∧ max e.toNat 1 < F.bexpMax ∧
+      8*(f.toNat + if e.toNat = 0 then 0 else 2^F.fracBits) < 2^(F.fracBits+4) ∧
+      8*(f.toNat + if e.toNat = 0 then 0 else 2^F.fracBits) < 2^56 at bounds
+    have cap : (2 : Nat)^F.fracBits < 2^64 :=
+      lt_of_le_of_lt (Nat.pow_le_pow_right (by decide) precision) (by decide)
+    change (1 ≤ (e + Runner.IR.bool (e == 0)).toNat ∧
+      (e + Runner.IR.bool (e == 0)).toNat < F.bexpMax) ∧
+      ((f + (1 - Runner.IR.bool (e == 0)) * BitVec.ofNat 64 (2^F.fracBits)) * 8).toNat < 2^56
+    by_cases hz : e = 0
+    · simp [hz, Runner.IR.bool, BitVec.toNat_mul] at bounds ⊢
+      omega
+    · have hn : e.toNat ≠ 0 := by
+        intro h
+        exact hz (BitVec.eq_of_toNat_eq h)
+      have ep : 1 ≤ e.toNat := by omega
+      have test : (e == 0#64) = false := by
+        exact beq_eq_false_iff_ne.mpr hz
+      simp only [Runner.IR.bool, BitVec.ofNat_eq_ofNat, test, Bool.false_eq_true, ↓reduceIte,
+        BitVec.add_zero, BitVec.sub_zero, BitVec.one_mul]
+      simp only [hn, ↓reduceIte, Nat.max_eq_left ep] at bounds
+      constructor
+      · exact ⟨ep,bounds.2.1⟩
+      · simp only [BitVec.toNat_mul, BitVec.toNat_add, BitVec.toNat_ofNat]
+        norm_num only [BitVec.toNat_ofNat]
+        rw [show 2^F.fracBits % 18446744073709551616 = 2^F.fracBits from Nat.mod_eq_of_lt cap, Nat.mod_eq_of_lt (by omega),
+          Nat.mod_eq_of_lt (by omega)]
+        omega
+  have aa := one a ha fa
+  have bb := one b hb fb
+  interval_cases i
+  · simpa [finiteAddRemainingValue] using aa.1
+  · simpa [finiteAddRemainingValue] using bb.1
+  · simpa [finiteAddRemainingValue] using aa.2
+  · simpa [finiteAddRemainingValue] using bb.2
+
+omit [Kern] in
+theorem finiteAddRemainingValue_bounds_zeuge :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64], ∀ i < 4,
+      let a : Gleitkomma.GBits F := ⟨true,0,1⟩
+      let b : Gleitkomma.GBits F := ⟨false,F.bexpMax-1,2^F.fracBits-1⟩
+      let w := finiteAddRemainingValue F
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F b)) i
+      if i < 2 then 1 ≤ w.toNat ∧ w.toNat < F.bexpMax
+      else w.toNat < 2^56 := by
+  intro F member i hi
+  apply finiteAddRemainingValue_bounds F
+  all_goals try { simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+                  rcases member with rfl | rfl
+                  all_goals first | exact Gleitkomma.f32_dicht | exact Gleitkomma.f64_dicht | decide +kernel }
+  exact hi
+
+#print axioms finiteAddRemainingValue_bounds_zeuge
+
+#print axioms finiteAddRemainingValue_bounds
+
 /-- All four actual decoder expressions are sound in the reconstructed frame. -/
 theorem finiteAddRemaining_sound {Δ : Ctx} (η : Env D Δ)
     (F : Gleitkomma.Format) (dst : Nat) (a b : Runner.W)
@@ -2726,7 +2809,15 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
             BitVec.ofNat 64 (16*aligned.length)+96,fp⟩ out2 ∧
         Agree fp (dst+1) K m out2 ∧
         out2.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) =
-          some (if sx == sy then q+jam else q-jam) := by
+          some (if sx == sy then q+jam else q-jam) ∧
+        ∃ signedTail,
+          continuation = [ci 2 (dst+8) (dst+16) 0,
+            ci 14 (dst+9) (dst+3) (dst+4), ci 19 (dst+9) 48 0,
+            ci 3 (dst+7) (dst+7) (dst+8), ci 18 32 0 0,
+            ci 4 (dst+7) (dst+7) (dst+8)] ++ signedTail ∧
+          Pre L out2 (pc+BitVec.ofNat 64 (16*executed.length)+256+
+            BitVec.ofNat 64 (16*aligned.length)+96) fp K (dst+7)
+            signedTail ρ W reserved := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
     floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
       fracMask hiddenBound room (by omega) producerA producerB pre
@@ -2823,7 +2914,8 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     ag.trans ((sortAgree.mono (by omega)).trans (alignAgree.mono (by omega))),
     fieldValues,?_,?_,finalPre,signedOut,vs (dst+3),vs (dst+4),vs (dst+7),vs (dst+16),
     vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),
-    wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),signedRead⟩
+    wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),
+    signedRead,signedTail,signedEq,signedRest⟩
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
@@ -2924,7 +3016,15 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
             BitVec.ofNat 64 (16*aligned.length)+96,fp⟩ out2 ∧
         Agree fp (16+1) K m out2 ∧
         out2.rd64 (slot fp (BitVec.ofNat 64 (16+7))) =
-          some (if sx == sy then q+jam else q-jam) := by
+          some (if sx == sy then q+jam else q-jam) ∧
+        ∃ signedTail,
+          continuation = [ci 2 (16+8) (16+16) 0,
+            ci 14 (16+9) (16+3) (16+4), ci 19 (16+9) 48 0,
+            ci 3 (16+7) (16+7) (16+8), ci 18 32 0 0,
+            ci 4 (16+7) (16+7) (16+8)] ++ signedTail ∧
+          Pre L out2 (pc+BitVec.ofNat 64 (16*executed.length)+256+
+            BitVec.ofNat 64 (16*aligned.length)+96) fp K (16+7)
+            signedTail ρ W 13 := by
   apply floatFiniteAddL_read_fields_align F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11

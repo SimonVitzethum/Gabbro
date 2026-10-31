@@ -828,7 +828,15 @@ conditional ADD/SUB and both branch jumps. Its returned arithmetic slot belongs
 to the very same run from encoded operands, with the original frame agreement;
 the f32/f64 witness satisfies the strengthened conclusion jointly. The generic
 `floatFiniteAddL_signed_execute` interface additionally preserves the actual
-continuation precondition. The arithmetic result is still a machine word: its
+continuation precondition. The central encoded-operand theorem and its joint
+witness now expose that same reached continuation after ADD/SUB, together with
+its literal emitted suffix; no independently supplied intermediate memory is
+needed to continue the run.
+`finiteAddRemainingValue_bounds` transfers canonical finite-input bounds through
+the literal decoder word arithmetic for all four fields, with a joint f32/f64
+minimum-subnormal/maximum-finite witness. These are bounds on exactly the values
+in the central theorem's retained field correspondence. Transferring them through
+the executed SORT reads and signed arithmetic remains open. The arithmetic result is still a machine word: its
 natural/integer magnitude bounds and the signed correction transfer through
 normalization are not yet proved.
 
