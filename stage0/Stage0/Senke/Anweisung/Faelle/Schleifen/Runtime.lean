@@ -7,6 +7,22 @@ open Gabbro.Grammatik Runner Runner.IR
 
 variable [Kern]
 
+/-- Initialize from the semantic fuel argument itself. The representability
+check rejects budgets outside the instruction's signed immediate range. -/
+theorem counter_initialize {m : Mem} {pc fp : W} {K counter budget : Nat}
+    (code : CodeAt m pc (foreverCounterInit counter (budget : Int)))
+    (frame : FrameOK m fp K) (inside : counter < K)
+    (small : K < 2 ^ 31) (fuel : budget < 2 ^ 31) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 budget) := by
+  have literal : lit32 (budget : Int) = true := by
+    simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
+    omega
+  have run := const_step code frame inside small literal
+  refine ⟨_, run, ?_⟩
+  rw [BitVec.ofInt_natCast]
+  exact rd64_write_same (frame.rd counter inside)
+
 /-- A lowered body reaches its backedge with the reserved runtime budget intact.
 The equality follows from the body simulation's frame, including reachable calls
 and world writes; no separate preservation hypothesis is admitted. -/
