@@ -5,11 +5,15 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable {D : Deklaration}
 
-/-- Only literal indices (including range widening) are fixed at entry. -/
+/-- Closed scalar arithmetic indices are independent of both entry and exit environments. -/
 def entryIndex {Γ : Ctx} {Λ : List (Res D)} :
     {τ : Ty} → Expr D Γ Λ τ → Option Int
   | _, .lit n => some n
   | _, .widen _ _ e => entryIndex e
+  | _, .add a b => return (← entryIndex a) + (← entryIndex b)
+  | _, .sub a b => return (← entryIndex a) - (← entryIndex b)
+  | _, .mul a b => return (← entryIndex a) * (← entryIndex b)
+  | _, .neg a => return -(← entryIndex a)
   | _, _ => none
 
 def Zelle.ty : Zelle D → Ty
@@ -26,7 +30,7 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, .oldS t f i _ => match entryIndex i with
     | some k => [.elem t f k.toNat]
     | none => []
-  | _, .widen _ _ e => oldCells e
+  | _, .widen _ _ e | _, .not e => oldCells e
   | _, .add a b | _, .sub a b | _, .mul a b | _, .eq a b | _, .lt a b
   | _, .and a b | _, .or a b => oldCells a ++ oldCells b
   | _, _ => []
@@ -54,6 +58,9 @@ def lowEns (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} :
       let _ ← entryIndex i
       pure ([ci 2 d 3 0], d + 1)
   | _, .widen _ _ e, d => lowEns L e d
+  | _, .not a, d => do
+      let ca ← lowEns L a d
+      pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
   | _, .add a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 3 d ca cb)
   | _, .sub a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 4 d ca cb)
   | _, .mul a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 5 d ca cb)

@@ -126,4 +126,84 @@ theorem entryIndex_ok_zeuge :
     intValue (eval QuantProbe.initial (QuantProbe.index 1 (by decide)) QuantProbe.initial .nil) = some 1 :=
   ⟨rfl, rfl⟩
 
+/-- Every arithmetic operator participates in a nonzero, in-range old table index. -/
+def computedIndex : Expr QuantProbe.D [] [] (.index 4) :=
+  .widen (by decide) (by decide)
+    (.add (.sub (.mul (.lit 2) (.lit 2)) (.lit 2)) (.neg (.lit 1)))
+
+theorem computed_snapshot_zeuge :
+    entryIndex computedIndex = some 1 ∧
+    intValue (eval QuantProbe.initial computedIndex QuantProbe.initial .nil) = some 1 ∧
+    oldCells (Expr.oldS QuantProbe.tab QuantProbe.field computedIndex QuantProbe.access) =
+      [.elem QuantProbe.tab QuantProbe.field 1] ∧
+    lowEns tableLayout (Expr.oldS QuantProbe.tab QuantProbe.field computedIndex QuantProbe.access) 4 =
+      some (readCode, 5) ∧
+    snapC tableLayout [.elem QuantProbe.tab QuantProbe.field 1] =
+      some [ci 1 3 2056 0, ci 15 3 3 0] :=
+  ⟨rfl, rfl, rfl, rfl, by decide +kernel⟩
+
+/-- A numeric global uses the same real entry/exit memory as the original snapshot fixture. -/
+def NumericD : Deklaration := { FnptrProben.D with gtyp := fun _ => .int 0 100 }
+
+def numericLayout : Lay NumericD where
+  col t := nomatch t
+  ga _ := 2048
+  lo := 2048
+  hi := 2056
+  tor _ := none
+  byte _ := none
+
+def numericWorld (n : Int) (lo : 0 ≤ n) (hi : n ≤ 100) : World NumericD where
+  slots t := nomatch t
+  globs _ := ⟨n, lo, hi⟩
+  spur := []
+
+def numericEntry := numericWorld 64 (by decide) (by decide)
+def numericExit := numericWorld 80 (by decide) (by decide)
+def numericNot : Expr NumericD [] [] .bool :=
+  .not (.eq (.oldG () (by intro w hw; cases hw)) (.lit 80))
+def numericCode : List II :=
+  [ci 2 4 3 0, ci 1 5 80 0, ci 14 4 4 5, ci 1 5 1 0, ci 10 4 4 5]
+
+theorem numericWorld_at : WeltAt (memory numericCode) numericLayout numericExit := by
+  refine ⟨(fun t => nomatch t), ?_, fun _ _ _ => rfl⟩
+  intro g
+  cases g
+  refine ⟨80, ?_, rfl⟩
+  change (memory numericCode).rd64 2048 = some 80
+  simp [Runner.Mem.rd64, Runner.Mem.all, Runner.Mem.le, memory]
+
+theorem numericNot_joint_zeuge [Kern] :
+    lowEns numericLayout numericNot 4 = some (numericCode, 6) ∧
+    SnapAt numericLayout (oldCells numericNot) numericEntry (memory numericCode) 1024 ∧
+    eval numericEntry numericNot numericExit .nil = true ∧
+    eval numericExit numericNot numericExit .nil = false ∧
+    Ok (memory numericCode) 0 1024 16 4 numericCode
+      (Enc numericLayout .bool (eval numericEntry numericNot numericExit .nil)) := by
+  have emitted : lowEns numericLayout numericNot 4 = some (numericCode, 6) := by decide +kernel
+  have snapshot : SnapAt numericLayout (oldCells numericNot) numericEntry (memory numericCode) 1024 := by
+    intro c hc
+    simp only [numericNot, oldCells, List.append_nil, List.mem_singleton] at hc
+    subst c
+    exact ⟨64, by decide +kernel, rfl⟩
+  have code : CodeAt (memory numericCode) 0 numericCode := by
+    intro k hk
+    have : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 := by
+      change k < 5 at hk
+      omega
+    rcases this with rfl | rfl | rfl | rfl | rfl <;> constructor <;> decide +kernel +revert
+  have pre : PreS numericLayout (memory numericCode) 0 1024 16 4 numericCode (Env.nil : Env NumericD []) := by
+    refine ⟨by decide, by decide, frame _, code, ?_, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    unfold CodeFar
+    decide +kernel
+  have layoutIn : LayIn numericLayout := by
+    refine ⟨(fun t => nomatch t), ?_, by decide⟩
+    intro g
+    cases g
+    decide +kernel
+  refine ⟨emitted, snapshot, rfl, rfl, ?_⟩
+  exact lowEns_ok numericEntry numericExit (fun _ h => h) numericNot 4 numericCode 6 emitted
+    (by decide) (memory numericCode) 0 .nil
+    (PreS.welt pre (Nat.le_refl _) numericWorld_at layoutIn (by decide)) snapshot
+
 end Gabbro.Stage0.Senke.OldProbe

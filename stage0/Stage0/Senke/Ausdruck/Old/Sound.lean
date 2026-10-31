@@ -36,6 +36,22 @@ theorem lowEns_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem 
     subst h
     simpa only [eval, heval, Zelle.ty, Zelle.val, Int.toNat_of_nonneg hk0] using he
   | _, _, .widen _ _ e, d, c, top, h, hK, m, pc, ρ, hp, hs => lowEns_ok σ0 σ hWL e d c top h hK m pc ρ hp hs
+  | _, _, .not a, d, c, top, h, hK, m, pc, ρ, hp, hs => by
+    simp only [lowEns, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, ha, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    obtain ⟨rfl, rfl⟩ := he
+    have := lowEns_top a d ca ta ha
+    refine bin_ok_keep (cb := [ci 1 (d + 1) 1 0])
+      (lowEns_ok σ0 σ hWL a d ca ta ha (by omega) m pc ρ hp.left.left hs)
+      (fun m pc _ hp => const_ok hp (by decide) (by omega))
+      (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
+    intro wa wb pa pb
+    refine ⟨_, rfl, ?_⟩
+    simp only [Enc, eval] at pa ⊢
+    rw [pa, pb]
+    simp only [wahr?]
+    exact not_word _
   | _, _, .add a b, d, c, top, h, hK, m, pc, ρ, hp, hs => by
     simp only [lowEns] at h
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -188,7 +204,6 @@ theorem lowEns_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem 
   | _, _, e@(.le ..), d, c, top, h, hK, m, pc, ρ, hp, _
   | _, _, e@(.fllt ..), d, c, top, h, hK, m, pc, ρ, hp, _
   | _, _, e@(.flle ..), d, c, top, h, hK, m, pc, ρ, hp, _
-  | _, _, e@(.not ..), d, c, top, h, hK, m, pc, ρ, hp, _
   | _, _, e@(.none ..), d, c, top, h, hK, m, pc, ρ, hp, _
   | _, _, e@(.some ..), d, c, top, h, hK, m, pc, ρ, hp, _
   | _, _, e@(.istSome ..), d, c, top, h, hK, m, pc, ρ, hp, _

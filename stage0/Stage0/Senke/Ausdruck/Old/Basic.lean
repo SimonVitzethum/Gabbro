@@ -18,6 +18,31 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, .widen _ _ e, _, h => by
     simp only [entryIndex] at h
     exact entryIndex_ok σ0 σ ρ e h
+  | _, .add a b, _, h => by
+    obtain ⟨x, hx, y, hy, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ ∃ y, entryIndex b = some y ∧ x + y = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    have hb := entryIndex_ok σ0 σ ρ b hy
+    simp only [intValue] at ha hb
+    simp only [intValue, eval, Zahl.add]
+    rw [Option.some.inj ha, Option.some.inj hb]
+  | _, .sub a b, _, h => by
+    obtain ⟨x, hx, y, hy, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ ∃ y, entryIndex b = some y ∧ x - y = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    have hb := entryIndex_ok σ0 σ ρ b hy
+    simp only [intValue] at ha hb
+    simp only [intValue, eval, Zahl.sub]
+    rw [Option.some.inj ha, Option.some.inj hb]
+  | _, .mul a b, _, h => by
+    obtain ⟨x, hx, y, hy, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ ∃ y, entryIndex b = some y ∧ x * y = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    have hb := entryIndex_ok σ0 σ ρ b hy
+    simp only [intValue] at ha hb
+    simp only [intValue, eval, Zahl.mul]
+    rw [Option.some.inj ha, Option.some.inj hb]
+  | _, .neg a, _, h => by
+    obtain ⟨x, hx, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ -x = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    simpa [intValue, eval, Zahl.neg] using congrArg (fun x : Int => some (-x)) (Option.some.inj ha)
   | _, e@(.tru ..), _, h
   | _, e@(.fls ..), _, h
   | _, e@(.var ..), _, h
@@ -28,10 +53,6 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, e@(.fnref ..), _, h
   | _, e@(.oldG ..), _, h
   | _, e@(.oldS ..), _, h
-  | _, e@(.add ..), _, h
-  | _, e@(.sub ..), _, h
-  | _, e@(.neg ..), _, h
-  | _, e@(.mul ..), _, h
   | _, e@(.div ..), _, h
   | _, e@(.rem ..), _, h
   | _, e@(.sdiv ..), _, h
@@ -98,6 +119,11 @@ theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
     obtain ⟨_, _, _, _⟩ := h
     omega
   | _, .widen _ _ e, d, c, top, h => lowEns_top e d c top h
+  | _, .not a, d, c, top, h => by
+    simp only [lowEns, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, _, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    omega
   | _, .add a b, d, c, top, h => by
     simp only [lowEns] at h
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -176,7 +202,6 @@ theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
   | _, e@(.le ..), d, c, top, h
   | _, e@(.fllt ..), d, c, top, h
   | _, e@(.flle ..), d, c, top, h
-  | _, e@(.not ..), d, c, top, h
   | _, e@(.none ..), d, c, top, h
   | _, e@(.some ..), d, c, top, h
   | _, e@(.istSome ..), d, c, top, h
