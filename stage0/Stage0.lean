@@ -70,3 +70,4 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Probe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Probe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Probe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.EngProbe
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.ExtendProbe
