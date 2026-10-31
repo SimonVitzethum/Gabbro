@@ -207,7 +207,10 @@ now uses `computedFloatOfE` through the actual `lowB` hook for signed-64-bit sou
 The canonical range producer, Stop 107 and binding continuation are connected to
 `blockFloatOfComputed_case` and the mutual statement/block/end-block soundness proof.
 The existing literal path continues to support arbitrary `Int` constants. Unsupported computed
-intervals remain refused. The conversion and range simulations retain arbitrary reserved prefixes. `floatShiftJamL` aligns an unsigned word with
+intervals remain refused. The conversion and range simulations retain arbitrary reserved prefixes.
+Validation (2026-10-31): all 78 affected Stage-0 modules and the root checked directly against existing
+model oleans; `Nachpruefung`, standard axioms and layout passed. The actual runner passed 98 emitted
+images, including seven computed block-hook cases covering value equality and exact Stop 107 exits. `floatShiftJamL` aligns an unsigned word with
 generic IR simulation: discarded bits become a sticky low bit, exactly the nonzero remainder modulo
 the alignment power. Counts at least 64 saturate, including counts with the sign bit set, despite the
 IR's masked shifts. `add/sub` still need the full guard/sticky alignment argument against G, cancellation,
