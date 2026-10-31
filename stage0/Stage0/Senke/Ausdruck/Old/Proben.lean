@@ -89,11 +89,11 @@ theorem lowEns_ok_zeuge [Kern] :
 
 /-- Capture starts from a different header word and obtains the current world's global. -/
 theorem snapC_ok_zeuge [Kern] :
-    snapC layout [.glob ()] = some captureCode ∧
+    snapC layout [.glob (), .glob ()] = some captureCode ∧
     ∃ m', Star ⟨0, 1024⟩ (memory captureCode) ⟨32, 1024⟩ m' ∧
-      SnapAt layout [.glob ()] exitWorld m' 1024 := by
+      SnapAt layout [.glob (), .glob ()] exitWorld m' 1024 := by
   refine ⟨by decide +kernel, ?_⟩
-  obtain ⟨m', hs, _, hp, _⟩ := snapC_ok (L := layout) (cs := [.glob ()]) (c := captureCode)
+  obtain ⟨m', hs, _, hp, _⟩ := snapC_ok (L := layout) (cs := [.glob (), .glob ()]) (c := captureCode)
     (m := memory captureCode) (pc := 0) (fp := 1024) (K := 16) (σ := exitWorld)
     (by decide +kernel) (frame _) (by decide) (by decide) capture_at (by unfold CodeFar; decide +kernel)
     (world captureCode) lay (by decide)
@@ -116,7 +116,12 @@ theorem oldS_parameter_refused_zeuge :
     lowEns tableLayout (Expr.oldS (Γ := [.index 4]) QuantProbe.tab QuantProbe.field
       (.var .here) QuantProbe.access) 5 = none := rfl
 
-theorem multiple_occurrences_refused_zeuge : snapC layout [.glob (), .glob ()] = none := rfl
+theorem repeated_occurrences_zeuge :
+    snapC layout [.glob (), .glob ()] = some captureCode := by decide +kernel
+
+theorem distinct_occurrences_refused_zeuge :
+    snapC tableLayout [.elem QuantProbe.tab QuantProbe.field 0,
+      .elem QuantProbe.tab QuantProbe.field 1] = none := by decide +kernel
 
 theorem lowEns_top_zeuge : lowEns layout expr 4 = some (readCode, 5) ∧ 4 < 5 :=
   ⟨rfl, by decide⟩

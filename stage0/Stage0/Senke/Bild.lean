@@ -98,8 +98,8 @@ def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String)
   match lowFun passes P A Y g with
   | some ct => .ok ct
   | none => .error ("ir: the function " ++ name g ++
-      if (oldCells (P.ensures g)).length > 1 then
-        " needs multiple old occurrences; the IR entry header currently holds one snapshot word"
+      if (snapC Y (oldCells (P.ensures g))).isNone then
+        " needs distinct or unsupported entry cells; the IR entry header holds one shared snapshot word"
       else if (lowEns Y (P.ensures g) (FB + (D.params g).length + 1)).isNone then
         " has an unsupported postcondition; old table indices must be closed scalar arithmetic (possibly widened)"
       else " uses a form outside the IR fragment")

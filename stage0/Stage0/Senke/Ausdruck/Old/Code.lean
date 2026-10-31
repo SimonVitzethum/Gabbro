@@ -35,8 +35,8 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, .and a b | _, .or a b => oldCells a ++ oldCells b
   | _, _ => []
 
-/-- All captured occurrences currently share the one reserved header word.
-    The entry compiler refuses more than one occurrence before emitting any image. -/
+/-- Captured occurrences share the reserved header word only when their checked
+    world addresses agree. Distinct entry cells require a larger snapshot area. -/
 def SnapAt (L : Lay D) (cs : List (Zelle D)) (σ : World D) (m : Runner.Mem) (fp : Runner.W) : Prop :=
   ∀ c ∈ cs, ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 3)) = some w ∧ Enc L c.ty (c.val σ) w
 
@@ -46,8 +46,11 @@ instance (L : Lay D) (c : Zelle D) : Decidable (c.da L) := by
 /-- Snapshot code writes only the reserved header word. -/
 def snapC (L : Lay D) : List (Zelle D) → Option (List II)
   | [] => some []
-  | [c] => if decide (c.da L) && lit32 (c.adr L) then some [ci 1 3 (c.adr L) 0, ci 15 3 3 0] else none
-  | _ => none
+  | c :: cs =>
+      if (decide (c.da L) && lit32 (c.adr L)) &&
+          cs.all (fun x => decide (x.da L) && decide (x.adr L = c.adr L)) then
+        some [ci 1 3 (c.adr L) 0, ci 15 3 3 0]
+      else none
 
 /-- Postcondition lowering uses the same arithmetic instructions as ordinary expressions.
     Ordinary expression lowering continues to refuse entry reads outside this context. -/
