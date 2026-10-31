@@ -85,12 +85,6 @@ theorem constant_correct (env : List (String × (Int × Int))) (fns : List UKons
 def constants (env : List (String × (Int × Int))) (fns : List UKonstFn) :=
   rewrite (constant env fns) (fun values item => uConstsRech fns [item] values)
 
-/-- Names and visibility have already been resolved by pre108. -/
-def normalizeAliases (items : List SItemTief) : List SItemTief :=
-  let values := uConstsRech (uKonstFns items) items []
-  let expanded := aliases values [] items
-  constants (uAliase values expanded) (uKonstFns expanded) [] expanded
-
 theorem aliasBody_correct_zeuge :
     aliasBody [("Small", (-4, 9))] "Small" =
       .ok (.range (.atom "Small") (bound (-4)) (bound 9) false) ∧

@@ -1,0 +1,12 @@
+// Compile-time calls use the exact canonical ranges of aliased signatures.
+module function_probe {
+type Small = u8 in 0 .. 100;
+type Count = Small;
+const fn identity(x : Count) -> Count effects { pure } costs <= 4 ops {
+    return x;
+}
+const ANSWER : Count = identity(42);
+impl fn main() -> Count effects { pure } {
+    return ANSWER;
+}
+}

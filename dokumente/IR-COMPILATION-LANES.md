@@ -175,9 +175,9 @@ contract, with full global IR-14 composition still open.
 Measured: direct Lean checks of `Frontend/Aliases.lean` and the modified `IRBild.lean`, using only existing
 grammar/runner/compiler artifacts and locally compiled changed modules; global flock and 5G/7G memory
 scope; no grammar build. All new theorems and `gabbro_ziel` audited with exactly the three standard
-axioms; an intermediate-overflow source still refuses. Actual textual `alias-chain.gab` and `alias-constant.gab` compiled through
-`irBild` and the existing assembly runner returned 42 in both cases. The layout check passed (1386 Lean
-files); `git diff --check` passed. These two regressions measure behaviors, not two complete syntax families.
+axioms; an intermediate-overflow source still refuses. Actual textual `alias-chain.gab`, `alias-constant.gab` and `alias-const-function.gab` compiled through
+`irBild` and the existing assembly runner returned 42 in all three cases. The layout check passed (1386 Lean
+files); `git diff --check` passed. These regressions measure behaviors, not complete syntax families.
 
 ### Exhaustive surface ownership and remaining adapters
 
@@ -198,8 +198,11 @@ files); `git diff --check` passed. These two regressions measure behaviors, not 
   unsupported capability rights, general products/records and remaining raw/entry/type wrappers are not
   closed by this checkpoint. Field/value transport remains IR-03/06, without a second frontend ABI.
 - `constT`: new nonnegative scalar folding covers alias and explicit range types. Existing builtin-word
-  folding and integer/nested-array constant paths remain. Negative scalar materialization, alias-typed
-  const-function parameter/results, generalized const-function bodies, noninteger constants and dependency
+  folding and integer/nested-array constant paths remain. `Functions.lean` now extracts alias/range-typed
+  single-return const-function signatures through canonical `uFeldTyp`, with `fieldType_sound`,
+  `constantFunction_sound` and `constantFunctions_sound` proving exact type denotation and source origin.
+  The whole normalization certificate includes those function-origin facts, and the actual constant
+  evaluator uses those candidates. `alias-const-function.gab` compiles through IR to ASM exit 42. Negative scalar materialization, generalized const-function bodies, noninteger constants and dependency
   cycles/ordering require further implementation or a precise canonical prerequisite. Canonical evaluator
   fuel remains 64; no completeness claim hides that bound. Intermediate overflow still refuses evaluation.
 - `specT`: existing `uSpecEin`, `sErsetze` and `uSpecKlauseln` inline specification predicates and refinements.

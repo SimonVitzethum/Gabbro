@@ -1,7 +1,14 @@
-import Stage0.Frontend.Aliases
+import Stage0.Frontend.Functions
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+
+/-- Names and visibility have already been resolved by the canonical preprocessing. -/
+def normalizeAliases (items : List SItemTief) : List SItemTief :=
+  let values := uConstsRech (uKonstFns items) items []
+  let expanded := aliases values [] items
+  let env := uAliase values expanded
+  constants env (constantFunctions env expanded) [] expanded
 
 /-- Every changed alias declaration preserves its metadata and its canonical type denotation
     in the declaration environment; all other declarations are identical. -/
@@ -96,12 +103,16 @@ def Normalization (source target : List SItemTief) : Prop :=
   let values := uConstsRech (uKonstFns source) source []
   ∃ expanded,
     Rewrite AliasEquivalent (fun env item => env ++ uAliase values [item]) [] source expanded ∧
-    Rewrite (ConstantEquivalent (uAliase values expanded) (uKonstFns expanded))
-      (fun values item => uConstsRech (uKonstFns expanded) [item] values) [] expanded target
+    (∀ fn ∈ constantFunctions (uAliase values expanded) expanded,
+      ∃ item ∈ expanded, FunctionMeaning (uAliase values expanded) item fn) ∧
+    Rewrite (ConstantEquivalent (uAliase values expanded)
+      (constantFunctions (uAliase values expanded) expanded))
+      (fun collected item => uConstsRech (constantFunctions (uAliase values expanded) expanded) [item] collected)
+      [] expanded target
 
 theorem normalizeAliases_sound (items : List SItemTief) :
     Normalization items (normalizeAliases items) := by
-  refine ⟨_, rewrite_sound _ _ _ aliasItem_sound [] items, ?_⟩
+  refine ⟨_, rewrite_sound _ _ _ aliasItem_sound [] items, constantFunctions_sound _ _, ?_⟩
   exact rewrite_sound _ _ _ (constant_sound _ _) [] _
 
 /-- The actual compiler consumes this proof-carrying result. Proofs erase during execution. -/
