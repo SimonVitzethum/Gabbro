@@ -252,7 +252,7 @@ def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat
 
 /-- Pack the payload word in `d`: subtract its lower bound, multiply by 256, add the tag. -/
 def packSum (d : Nat) (lo : Int) (tag : Nat) (ce : List II × Nat) : List II × Nat :=
-  bin2 3 d (bin2 5 d (bin2 4 d ce ([ci 1 (d + 1) lo 0], d + 2))
+  bin2 3 d (bin2 5 d (bin2 4 d ce (wordConstant (d + 1) lo))
     ([ci 1 (d + 1) 256 0], d + 2)) ([ci 1 (d + 1) tag 0], d + 2)
 
 /-- Read a little-endian byte span, one aligned world word per byte. The index code is
@@ -412,10 +412,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
 def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option (Int × Int)} (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
   match c, e, d with
   | _, .empty, d => some ([ci 1 d tag 0], d + 1)
-  | some (lo, _), .num e, d => if lit32 lo then do
+  | some (lo, _), .num e, d => do
       let ce ← lowE L (reserved := reserved) e d
       pure (packSum d lo tag ce)
-    else none
 end
 
 /-! ## Values in words -/

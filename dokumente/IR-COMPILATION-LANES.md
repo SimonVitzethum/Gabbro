@@ -800,9 +800,11 @@ remaining constant/type/signature forms, discovery completeness and canonical pr
 
 The canonical frontend is `uOptEin`/`lowOpt`, `uBool`/`lowEns`,
 `UebersetzeSum`, `lowSeqL`/`lowArmsT`/`lowGArmsL`, and `uWhys`;
-Stage0's scoped frontend retains those consumers. All nine owned forms have
-model and frontend paths; none is wholly missing. Status below describes the
-actual baseline emitter, not complete family coverage.
+Stage0's scoped frontend retains those consumers. The canonical typed forms are
+table-index options and sums with zero or one bounded-integer payload; other
+payload shapes refuse in the frontend. All nine owned forms have model and
+frontend paths; none is wholly missing. Status below describes the actual
+baseline emitter, not complete family coverage.
 
 | Form | Baseline status and exact remaining boundary | Connected proof |
 |---|---|---|
@@ -814,13 +816,42 @@ actual baseline emitter, not complete family coverage.
 | Stmt `onOption` | Compiled for bound <=2^63 and compilable arms; sentinel test preserves the Some index binding. Larger bounds refused. | `onOption_ok` in `Anweisung/Satz.lowS_ok` |
 | Stmt `onTag` | Compiled for the same packed sum limits, signed32 payload lower bounds in all arms and compilable bodies. Other cases refused. | `onTag_ok`/`lowTags_ok` through `lowS_ok` |
 | Stmt `onWhy` | Already compiled for count <2^31 and compilable reason arms; no payload binding. Larger counts refused. | `onWhy_ok`/`lowGrund_ok` through `lowS_ok` |
-| TopLevel `whyT` | Compiled by canonical `uWhys` for exhaustive declarations; non-exhaustive reasons explicitly refused by the frontend. Binding code separately retains external reason codes. | canonical source provenance in `canonical_source_program`/`Emitted.correct`, then `irBild_correct` |
+| TopLevel `whyT` | Compiled by canonical `uWhys` for exhaustive declarations; non-exhaustive reasons explicitly refused by the frontend. Binding code separately retains external reason codes. | canonical source provenance in `compile_source_program`/`Emitted.correct`, then `irBild_correct` |
 
 `lowB` and `lowEnd` call `lowE` for binders and `lowS` for nested
 statements; the mutual `lowS_ok`/`lowB_ok`/`lowEnd_ok` dispatcher connects
 these forms to function/image correctness. Fallible-call reason bindings use
 the existing slot-2 result-or-reason channel and status at FB+parameter-count+1.
+The canonical direct `let x = f()` adapter also refuses sum-valued results
+with `call without a value`, although canonical sum expressions/results exist.
+Sum arguments likewise refuse with `argument without G form`. These call
+adapters remain IR-10 prerequisites, not new constructor cases.
 Multiword payloads, shared widths/ABI and broader frontend/model prerequisites
 remain open with their owning lanes. This bounded task selects only the
 signed32-lower-bound refusal of the one-word `case` constructor; dispatch
 limits and the ABI are unchanged.
+
+
+The selected `Expr.case` extension is now connected: `packSum` reuses
+`wordConstant` for the payload lower bound, and `lowN` no longer requires that
+bound to fit signed32. The existing small-immediate path, packed encoding,
+`sumFits` guards and child-emission requirements remain. The extra materializer
+scratch word is included in the returned high-water mark. `packSum_ok`, the
+mutual `lowN_ok`/`lowE_ok`, the statement/block/end-block dispatcher and
+`irBild_correct` compile on that same implementation. The real-memory
+`AggregateProbe.Case.simulation_zeuge` jointly supplies all expression premises,
+proves the exact word 10753 (tag 1, offset 42), and checks top=7 at destination 4.
+
+Measured in the private `.scratch-ir05` overlay, each Lean invocation under the
+capped slot-2 lock: 131 affected modules through IRBild/Haupt plus Aggregate/Proben
+pass. Three new textual constructor probes (positive, negative and unsigned64
+lower bounds) and five existing option/tag/reason probes execute with their
+expected ASM exit codes. The new probes execute runtime-payload construction;
+the exact packed result is checked by the formal witness. The same three new
+sources were explicitly refused by the baseline emitter. Two additional textual
+probes still refuse a payload interval of width 2^56 and large-bound tag decoding.
+All 13 audited statements use only propext, Classical.choice and Quot.sound;
+`gabbro_ziel` retains exactly those three. Layout passes for all 1471 Lean files;
+all six changed Lean modules remain below 500 lines. Grammar artifacts were reused.
+This completes one constructor restriction only: large-bound `onTag`, wider sums,
+options/reasons beyond the listed domains and multiword ABI integration remain open.

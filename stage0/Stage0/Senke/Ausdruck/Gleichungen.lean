@@ -246,10 +246,9 @@ theorem lowE_signed64_boundaries_zeuge :
     lowN L (reserved := reserved) (Γ := Γ) (Λ := Λ) tag .empty d = some ([ci 1 d tag 0], d + 1) := rfl
 
 @[lowE_eqs] theorem lowN_num (tag : Nat) (e : Expr D Γ Λ (.int lo hi)) :
-    lowN L (reserved := reserved) tag (.num e) d = (if lit32 lo then do
+    lowN L (reserved := reserved) tag (.num e) d = (do
       let ce ← lowE L (reserved := reserved) e d
-      pure (packSum d lo tag ce)
-    else none) := rfl
+      pure (packSum d lo tag ce)) := rfl
 
 @[lowE_eqs] theorem lowE_why (n : Nat) (r : Fin n) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.why n r) d =
