@@ -1,5 +1,6 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
 import Stage0.Senke.Ausdruck.Arithmetik.Simulation
+import Stage0.Senke.BildLese
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
@@ -456,4 +457,65 @@ theorem floatFieldL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
       decide +kernel
 
 #print axioms floatNegL_joint_zeuge
+
+/-- A nonzero exact tail requiring several actual SMALL iterations. -/
+def normalizationWitnessCode : List II :=
+  ((floatNormalizeLoopL 16).getD ([], 0)).1
+
+def normalizationWitnessMemory : Runner.Mem where
+  b a := if a.toNat < 4294967296 then
+      ((normalizationWitnessCode.flatMap encII)[a.toNat]?).getD 0
+    else if a.toNat = 4294967296+8*17 then 13
+    else if a.toNat = 4294967296+8*18 then 4
+    else if a.toNat = 4294967296+8*19 then 8
+    else if a.toNat = 4294967296+8*20 then 20 else 0
+  rd _ := true
+  wr _ := true
+
+theorem normalizationLoopHead_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+      0 4294967296 64 16 7 normalizationWitnessCode 13 4 20 8
+      normalizationWitnessMemory 20 0 4 0 13 := by
+  have pre : Pre L normalizationWitnessMemory 0 4294967296 64 16
+      normalizationWitnessCode (Env.nil : Env D []) (fun _ => True) 7 := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      ?_, ?_, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    · apply codeAt_bytes normalizationWitnessCode 0 (by decide +kernel)
+      intro i hi
+      refine ⟨rfl, rfl, ?_⟩
+      have bound : (normalizationWitnessCode.flatMap encII).length < 4294967296 := by
+        decide +kernel
+      simp only [normalizationWitnessMemory, Nat.zero_add, BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt (show i < 2^64 by omega),
+        if_pos (show i < 4294967296 by omega),
+        List.getElem?_eq_getElem hi, Option.getD_some]
+    · change 0 + 16 * normalizationWitnessCode.length < 2^64 ∧
+        4294967296 + 8 * 64 ≤ 2^64 ∧
+        0 + 16 * normalizationWitnessCode.length ≤ 4294967296
+      decide +kernel
+
+  exact ⟨pre, by decide, by decide, by decide, by decide,
+    by decide, by decide, by decide,
+    by decide +kernel, by decide +kernel, by decide +kernel,
+    by decide +kernel, by decide +kernel, by decide +kernel,
+    by decide, by norm_num⟩
+
+/-- The real whole-loop theorem applies with jointly satisfied premises,
+    a nonzero remainder, multiple transfers and a nonzero reserved prefix. -/
+theorem floatNormalizeLoopL_complete_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    ∃ m' fuel' count' distance' q' r',
+      Star ⟨0, 4294967296⟩ normalizationWitnessMemory
+        ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
+      Agree 4294967296 16 64 normalizationWitnessMemory m' ∧
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 13 4 20 8
+        m' fuel' count' distance' q' r' ∧
+      (fuel' = 0 ∨ 8 ≤ q') ∧ 0 ≤ count' ∧ count' ≤ 20 := by
+  have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode, ((floatNormalizeLoopL 16).getD ([], 0)).2) := by
+    decide +kernel
+  simpa using floatNormalizeLoopL_complete hc (by decide +kernel)
+    (normalizationLoopHead_zeuge L)
+
+#print axioms normalizationLoopHead_zeuge
+#print axioms floatNormalizeLoopL_complete_zeuge
 end Gabbro.Stage0.Senke.AddSubProbe
