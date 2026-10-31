@@ -254,3 +254,4 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatKeyL_ok
 #print axioms Gabbro.Stage0.Senke.floatRangeL_raw_ok
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok
+#print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok_zeuge

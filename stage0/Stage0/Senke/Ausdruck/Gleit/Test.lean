@@ -133,4 +133,30 @@ theorem canonicalFloatRangeL_ok {fp : Runner.W} {K d top reserved : Nat}
     simpa only [eq] using floatRangeL_raw_ok x producer
       (endlich_nicht_nan hf) ih hl hh code ht hp
 
+/-- A nondegenerate ordered interval jointly witnesses producer emission,
+    simulation, frame budget and arbitrary reserved prefixes. -/
+theorem canonicalFloatRangeL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ)
+    (W : Runner.Mem → Prop) (reserved : Nat) :
+    ∃ c top,
+      canonicalFloatRangeL 8 (0, 1) (100, 1)
+        (fun j => some (konstWL 4 4630404104378646528 j)) = some (c, top) ∧
+      ∀ fp K m pc, top ≤ K → Pre L m pc fp K 8 c ρ W reserved →
+        Ok m pc fp K 8 c (· = Runner.IR.bool false) := by
+  let producer := fun j => some (konstWL 4 4630404104378646528 j)
+  let candidate := (canonicalFloatRangeL 8 (0, 1) (100, 1) producer).getD ([], 0)
+  have hc : canonicalFloatRangeL 8 (0, 1) (100, 1) producer = some candidate := by
+    decide +kernel
+  refine ⟨candidate.1, candidate.2, hc, ?_⟩
+  intro fp K m pc ht hp
+  have run := canonicalFloatRangeL_ok (gleitAusInt 37) (by decide +kernel)
+    (by decide +kernel) producer (c := candidate.1) (top := candidate.2)
+    (reserved := reserved) ?_ hc ht hp
+  · simpa only [show floatRangeReject (0, 1) (100, 1) (gleitAusInt 37) = false
+        by decide +kernel] using run
+  · intro j code top he htop m pc pre
+    cases he
+    exact (konstWL_ok 4 4630404104378646528 (by decide)
+      (by simp only [konstWL, bin2] at htop; omega) pre).mono
+      (fun w hw => ⟨by decide +kernel, hw⟩)
+
 end Gabbro.Stage0.Senke
