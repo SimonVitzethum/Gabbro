@@ -360,3 +360,6 @@ import Stage0.Bindung.Proben
 
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_outcomes_zeuge
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge
+#print axioms Gabbro.Stage0.Senke.retFreiGrundArms_istZ
+#print axioms Gabbro.Stage0.Senke.retFreiB_istZ
+#print axioms Gabbro.Stage0.Senke.locks_reason_zeuge

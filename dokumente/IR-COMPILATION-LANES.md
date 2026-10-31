@@ -494,3 +494,61 @@ Measured direct IRBild and SourceWitness checks green under slot 1 / 4G soft / 5
 Axiom audits for Emitted.correct, irBild_correct and both joint/entry witnesses report exactly
 propext, Classical.choice and Quot.sound. No additional language form or totality claim follows
 from this fixture; remaining userspace form adapters and named canonical prerequisites stay open.
+
+### IR-09 concurrency inventory and lock-body extension
+
+The canonical frontend already collects `atomT` into atomic globals and exact
+payload lists, lowers atomic reads, publish and exchange into G, and checks
+concurrent declarations. The actual Stage-0 emitter already implements scalar
+publish (store), awaits (load), exchange (CAS loop) and exclusive recursive locks
+(take/body/release, including leave/next release stubs). Their generic proof path
+is `lowS_ok`/`lowB_ok`/`lowEnd_ok`, `locks_ok`, `awaits_ok`, and the image theorem
+consumed by `irBild_correct`. These are existing cases, not new IR-09 coverage.
+All inherited `WeltAt`, `SyncOK`, `SichtOK`, gate and runner-kernel premises remain.
+This inventory does not identify the sequential image simulation with a complete
+GX interleaving/weak-memory compiler theorem.
+
+The lock-body admission gate now recursively accepts `onWhy`, `floatLit` and
+`floatOf` when their continuations are return-free. `retFreiGrundArms_istZ` and
+the extended mutual `retFreiS_istZ`/`retFreiB_istZ` prove that every admitted
+body still excludes both ordinary and reason returns. The existing actual
+`lowS` lock branch consumes this gate, and its existing generic `locks_ok`
+composition supplies release on normal completion, leave and next. Float range
+failures remain logic stops. No ABI representation or atomic algorithm changes.
+
+Exact remaining prerequisites/restrictions:
+
+- Canonical `uRestFehler` refuses `rcuT` with `item without G form`.
+  Syntax.lean describes observes as a lock, but the canonical elaborator has no
+  RCU declaration/reclamation adapter. Reusing that lock alone would not establish
+  reader lifetime or reclamation correctness; no RCU declaration is erased.
+- `uAnwReihe` refuses shared lock holding with `shared lock without G form`;
+  `uSperre` only accepts its represented declaration shape and masks (`irqs`).
+  These source/model boundaries are not bypassed by Stage-0.
+- Actual returns inside locks remain refused: the existing lock epilogue handles
+  normal/leave/next outcomes, not function returns. General retry/forever and
+  fallible-call combinations still need their own return-free control argument.
+- Atomic/global payload representation remains subject to the existing scalar
+  memory/emitter domain. Full aggregate ABI and memory migration belongs to
+  IR-03/06; no low-word aggregate representation is introduced here.
+- Root argument/multiplicity/frame work stays with IR-12; this lane does not
+  duplicate its pending integration or claim an additional root theorem.
+
+This is an independent connected lock-body extension, not closure of IR-09.
+
+The canonical source reader does not yet construct float binders (also recorded
+by the existing `FloatProbe` fixtures); the float gate extension is G-to-IR
+coverage only until IR-04 connects those source forms. The new textual case is
+reason dispatch under a lock, including loop early exits and subsequent lock
+reacquisition. Float binders must not be counted as newly accepted source forms.
+
+Measured for this extension: direct slot-4 checks of Code, OhneRet, the dependent
+statement/block/endblock and image proof chain, current Frontend/Compiler/Bindung,
+IRBild and Sperre.Proben passed in the private artifact overlay. Six textual
+source-to-IR-to-ASM cases matched: lock-reason-dispatch, why-dispatch, why-jumps,
+atomic-payload-lock (42 each), sperre and atomar (208 each). The RCU declaration
+probe refused explicitly with `item without G form`. Axiom audits of
+retFreiGrundArms_istZ, retFreiB_istZ, locks_reason_zeuge, locks_ok, lowS_ok and
+irBild_correct contain only standard axioms (the admission/emission witness
+needs only propext and Quot.sound). No grammar build or guardian ran. Scratch
+and full logs remain local in scratch/ir09; no aggregate consumer ABI was changed.

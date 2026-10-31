@@ -60,3 +60,4 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
 import Stage0.Senke.Anweisung.Faelle.Schleifen.HookProben
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
 import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost
+import Stage0.Senke.Sperre.Proben
