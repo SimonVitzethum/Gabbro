@@ -1,0 +1,11 @@
+// Wide-bound error exits retain the enclosing traversal target.
+module ir_probe {
+table t count 2 { slot { a : u32 in 0 .. 255, } }
+impl fn main() -> u64 in 0 .. 100 effects { reads t.slots } {
+    traverse i over slots of t by unvisited touches reads t.slots {
+        let x = 7;
+        narrow x to -4294967297 .. -4294967296 else { next i; }
+    }
+    return 17;
+}
+}

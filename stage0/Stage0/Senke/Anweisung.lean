@@ -151,9 +151,17 @@ def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
       some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
     else none
 
+/-- Signed interval test with full word constants. The fourth temporary word
+    belongs to the high-bound materializer; the source value remains in `d`. -/
+def narrowTest (d : Nat) (lo hi : Int) : List II :=
+  (konstWL 4 (BitVec.ofInt 64 lo).toNat (d + 1)).1 ++
+    ([ci 13 (d + 1) d (d + 1)] ++
+    ((konstWL 4 (BitVec.ofInt 64 hi).toNat (d + 2)).1 ++
+    [ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]))
+
 /-- An outside flag selects the terminating error arm; the value stays in `d`. -/
 def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
-  ce ++ (engTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+  ce ++ (narrowTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
     [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
 
 /-- Compare a reason's entire word, preserving its slot for subsequent arms. -/
@@ -331,11 +339,11 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
     let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
     pure (cc.1 ++ [ci 2 ((frei Γ reserved)) ((frei Γ reserved) + 2) 0] ++ cr.1, max cc.2 cr.2)
   | _, Γ, _, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
-    if inW lo' hi' && lit32 low && lit32 high then do
+    if inW lo' hi' && inW low low && inW high high then do
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
       let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
       let cx ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 3) (max cx.2 cr.2)))
+      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
     else none
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
@@ -444,11 +452,11 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List 
     let ct ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex ce.1.length) t
     pure (cc.1 ++ [ci 19 ((frei Γ reserved)) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
   | _, Γ, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
-    if inW lo' hi' && lit32 low && lit32 high then do
+    if inW lo' hi' && inW low low && inW high high then do
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
       let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
       let cx ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 3) (max cx.2 cr.2)))
+      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
     else none
   | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
