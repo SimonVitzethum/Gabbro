@@ -1,5 +1,6 @@
 /- Nonempty control-flow fixtures, including check forms unavailable in the source reader. -/
 import Stage0.Senke.Welt.Anordnung
+import Grammatik.Parser.Cover.Differenz
 
 namespace Gabbro.Stage0.Senke.ControlProbe
 set_option maxRecDepth 100000
@@ -151,6 +152,17 @@ def program : Programm D where
 theorem fieldless_table_layout_zeuge :
     D.count table = 4294967296 ∧ tabSz u table = 0 ∧ IsEmpty (D.Feld table) := by
   exact ⟨rfl, (fieldless_table_layout u table rfl).2⟩
+
+local instance : DecidableEq D.Fn :=
+  inferInstanceAs (DecidableEq (Fin u.fns.length))
+
+/-- The canonical checker accepts this exact large-count, fieldless program.
+    Source export can preserve it without introducing a replacement source rule. -/
+theorem traverse_wide_checker_zeuge :
+    Gabbro.Grammatik.Zielsatz.AkzeptiertX program
+      (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie u)
+      [entry] [] [Sum.inl table] [] = true := by
+  decide +kernel
 
 /-- A real image witness for the generic wide traversal case. This does not
     claim the missing empty-table source exporter has been implemented. -/
