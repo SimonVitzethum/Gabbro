@@ -226,6 +226,8 @@ inductive ExprCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (reserved : Nat) :
     {τ : Ty} → Expr D Γ Λ τ → Nat → Nat → (Runner.W → Prop) → Type
   | literal {n : Int} {d : Nat} :
       ExprCost L reserved (.lit n) d 1 (· = BitVec.ofInt 64 n)
+  | truth {d : Nat} : ExprCost L reserved .tru d 1 (· = 1)
+  | falsity {d : Nat} : ExprCost L reserved .fls d 1 (· = 0)
   | binary {τ τa τb : Ty} {e : Expr D Γ Λ τ}
       {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {d o na nb : Nat}
       {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
@@ -271,6 +273,18 @@ theorem ExprCost.sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       exact ⟨_, const_step_counted pre.code pre.frame (by omega) pre.small accepted,
         agree, _, rd, rfl⟩
     next refused => contradiction
+  | @truth d =>
+    rw [lowE_tru] at lower
+    cases lower
+    obtain ⟨hw, rd, agree⟩ := wr_slot pre.frame (d := d) (by omega) (1 : Runner.W)
+    exact ⟨_, const_step_counted pre.code pre.frame (by omega) pre.small (by decide),
+      agree, _, rd, rfl⟩
+  | @falsity d =>
+    rw [lowE_fls] at lower
+    cases lower
+    obtain ⟨hw, rd, agree⟩ := wr_slot pre.frame (d := d) (by omega) (0 : Runner.W)
+    exact ⟨_, const_step_counted pre.code pre.frame (by omega) pre.small (by decide),
+      agree, _, rd, rfl⟩
   | binary equation left right values opcode byte ihA ihB =>
     rw [equation] at lower
     exact bin2_counted lower fits

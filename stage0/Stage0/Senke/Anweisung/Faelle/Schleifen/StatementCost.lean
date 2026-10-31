@@ -169,6 +169,59 @@ theorem guard_pass_counted {m : Mem} {pc fp : W} {a c s : Nat} {v : W}
   have result := first.trans rest
   simpa [guardC, stopC, sysC, addr_norm] using result
 
+/-- Execute a recursively certified true source condition and its real guard.
+    This is the successful requires phase; its bound comes from the expression
+    certificate and two control instructions, not from code length. -/
+theorem ExprCost.guard {Γ : Ctx} {Λ : List (Res D)}
+    {e : Expr D Γ Λ .bool} {d n top K failure : Nat} {cq : List II}
+    {m : Mem} {pc fp : W} {ρ : Env D Γ} {W : Mem → Prop}
+    (certificate : ExprCost L reserved e d n (· = 1))
+    (lower : lowE L (reserved := reserved) e d = some (cq, top))
+    (fits : top ≤ K)
+    (pre : Pre L m pc fp K d (cq ++ guardC d failure d) ρ W reserved) :
+    ∃ m', Counted (n + 2) ⟨pc, fp⟩ m
+        ⟨pc + BitVec.ofNat 64 (16 * (cq ++ guardC d failure d).length), fp⟩ m' ∧
+      Agree fp d K m m' ∧ EnvAt L m' fp ρ reserved ∧ W m' := by
+  have room := lowE_top e d cq top lower
+  obtain ⟨m', run, agree, w, read, value⟩ := certificate.sound lower fits pre.left
+  have tail := pre.next agree (Nat.le_refl _) (by omega)
+  subst w
+  have guard := guard_pass_counted tail.code (by have := pre.small; omega) read (by decide)
+  refine ⟨m', ?_, agree, tail.env, tail.welt⟩
+  simpa only [List.length_append, pc_add] using run.trans guard
+
+namespace RequiresCostProbe
+
+def code : List II := [ci 1 4 1 0] ++ guardC 4 101 4
+
+def memory : Mem := {
+  b := fun a => ((code.flatMap encII)[a.toNat]?).getD 0
+  rd := fun _ => true
+  wr := fun _ => true }
+
+/-- A loaded true requires expression executes one constant and two guard
+    instructions, preserving the empty lexical environment and world predicate. -/
+theorem requires_counted_zeuge {D : Deklaration} (L : Lay D) :
+    ∃ m', Counted 3 ⟨0, 4096⟩ memory ⟨96, 4096⟩ m' ∧
+      Agree 4096 4 32 memory m' ∧
+      EnvAt L m' 4096 (Env.nil : Env D []) 0 ∧ True := by
+  have loaded : CodeAt memory 0 code := by
+    have h : ∀ k : Fin code.length,
+        memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 code[k.val].o) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f code[k.val].a) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f code[k.val].b) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f code[k.val].c) := by
+      apply FnptrProben.allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  have pre : PreS L memory 0 4096 32 4 code (Env.nil : Env D []) 0 :=
+    ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      loaded, by unfold CodeFar; decide, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  exact ExprCost.guard (e := Expr.tru (Λ := [])) (.truth) rfl (by decide) pre
+
+end RequiresCostProbe
+
 /-- Actual Runner execution, exact destination frame, and all relocated words.
     No disjointness premise between the source and destination ranges is needed. -/
 theorem relocate_counted {m : Mem} {pc fp : W} {K base shift n : Nat}
