@@ -330,6 +330,16 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   world and protected slots. `ActualStopProbe.stopC_counted_outcome_zeuge`
   witnesses an executed logic stop. These bridges do not yet add stop cases to
   `RecursiveEndCost`, a nested-forever constructor, or the whole-source bound.
+  `recursiveBlockCost.sourceStop` now certifies an actual source `forever` at
+  zero source passes, including an arbitrary unreachable body and continuation.
+  Its soundness recovers the real `lowS`/`foreverC` image and executes both
+  reserved initializations, the zero header branch and both stop constants:
+  exactly five S0IR instructions, with the named `.fortschritt assumption`
+  request still pending. The image-size premise bounds the emitted branch;
+  no whole-loop execution is a certificate premise. This block constructor
+  does not yet propagate stops through recursive callee bodies: `RecursiveEndCost`
+  stop cases, positive budget induction, nested loops and the structural
+  whole-source bound remain OPEN.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,

@@ -3334,6 +3334,118 @@ theorem loopJumpBlock_counted (next : Bool)
   rw [target] at result
   exact result
 
+/-- Reserved initialization retains the source state without requiring a return
+    header: a hardware stop does not return to that header. -/
+theorem reserved_literal_source_entry
+    {Γ : Ctx} {fp pc : W} {K Ks reserved cell : Nat}
+    {σ : World D} {ρ : Env D Γ} {m : Mem} {code : List II} {value : Int}
+    (layout : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved) ([ci 1 cell value 0] ++ code) ρ reserved)
+    (world : WeltAt m L σ)
+    (lowerCell : FB ≤ cell) (allocated : cell < FB + reserved) (bound : frei Γ reserved ≤ K)
+    (literal : lit32 value = true) :
+    ∃ m', Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧
+      PreS L m' (pc + 16) fp K (frei Γ reserved) code ρ reserved ∧
+      WeltAt m' L σ ∧ Agree fp cell K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 cell)) = some (BitVec.ofInt 64 value) := by
+  have inside : cell < K := by unfold frei at bound; omega
+  have run := const_step_counted (codeAt_left pre.code) pre.frame inside pre.small literal
+  obtain ⟨write, stored, frame⟩ := wr_slot pre.frame inside (BitVec.ofInt 64 value)
+  have env := (reserved_write_preserves (L := L) (j := cell - FB)
+    (BitVec.ofInt 64 value).toNat pre.frame.room bound (by omega) pre.env).1
+  have eq : FB + (cell - FB) = cell := by
+    have := layout.lo
+    omega
+  rw [eq] at env
+  have far := codeFar_right (n := 1) (k := code.length)
+    (by simpa [Nat.add_comm] using pre.far)
+  refine ⟨_, run, ?_, ?_, frame, stored⟩
+  · exact ⟨pre.ctx, pre.small, pre.frame.agree frame,
+      (codeAt_right pre.code).agree frame far, far, env, trivial, wstab_true _ _⟩
+  · exact weltAt_stab layout.lay layout.top m _ world (frame.mono (Nat.zero_le _))
+
+/-- The progress exit executes its real zero test and two stop constants.
+    The syscall remains pending: neither hardware completion nor latency is
+    inferred. All joint source-state facts refer to that same final memory. -/
+theorem counter_budget_stop_counted
+    {Γ : Ctx} {m : Mem} {pc fp : W} {K Ks lo scratch : Nat}
+    {pr : List Nat} {σ : World D} {ρ : Env D Γ}
+    {d jump : BitVec 32}
+    (test : InsAt m pc 19 d jump 0)
+    (zero : m.rd64 (slot fp (sx d)) = some 0)
+    (pre : PreS L m (pc + sx jump) fp K (frei Γ reserved)
+      (stopC 111 scratch) ρ reserved)
+    (inside : WIn L fp Ks K) (world : WeltAt m L σ)
+    (low : lo ≤ scratch) (locals : frei Γ reserved ≤ scratch)
+    (room : scratch + 8 ≤ K) (hprotected : ∀ j ∈ pr, j < scratch) :
+    ∃ t m' q, Counted 3 ⟨pc, fp⟩ m t m' ∧ StopAt t m' q ∧
+      q.nr = 231 ∧ q.a1 = 111 ∧ AgreeW L fp lo K m m' ∧
+      EnvAt L m' fp ρ reserved ∧ WeltAt m' L σ ∧ Keeps fp pr m m' := by
+  obtain ⟨t, m', q, run, stop, nr, arg, agree⟩ :=
+    sys_counted_frame pre.code pre.far pre.frame room pre.small (by decide) (by decide)
+  have aw : AgreeW L fp lo K m m' := agreeW_of (agree.mono low)
+  have first : Counted 1 ⟨pc, fp⟩ m ⟨pc + sx jump, fp⟩ m :=
+    .next (counter_zero test zero) (.refl _ _)
+  refine ⟨t, m', q, first.trans run,
+    stop, nr, arg, aw, ?_, ?_, ?_⟩
+  · exact envAt_agree pre.env agree pre.frame locals (by omega)
+  · exact weltAt_stab inside.lay inside.top m m' world
+      (agree.mono (Nat.zero_le _))
+  · exact keeps_of_agreeW inside (agreeW_of agree) hprotected (by omega)
+
+
+/-- The complete emitted zero-budget loop executes five S0IR instructions.
+    Neither the invariant nor the body is run or assumed to terminate. -/
+theorem forever_zero_source_counted
+    {Γ : Ctx} {fp pc : W} {K Ks counter one scratch : Nat}
+    {σ : World D} {ρ : Env D Γ} {m : Mem} {cc cb : List II}
+    (inside : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (foreverCode counter one scratch 0 cc cb) ρ reserved)
+    (world : WeltAt m L σ)
+    (counterLow : FB ≤ counter) (counterOne : counter < one)
+    (oneAllocated : one < FB + reserved)
+    (locals : frei Γ reserved ≤ K) (room : scratch + 8 ≤ K)
+    (jumpFits : 16 * (cc.length + cb.length + 8) < 2 ^ 31) :
+    CountedStops 5 ⟨pc, fp⟩ m 111 := by
+  obtain ⟨m1, run1, pre1, world1, agree1, read1⟩ :=
+    reserved_literal_source_entry inside pre world counterLow (by omega) locals (by decide)
+  obtain ⟨m2, run2, pre2, world2, agree2, read2⟩ :=
+    reserved_literal_source_entry inside pre1 world1 (by omega) oneAllocated locals (by decide)
+  have zero : m2.rd64 (slot fp (BitVec.ofNat 64 counter)) = some 0 := by
+    rw [agree_rd_low agree2 pre1.frame.room counterOne (by unfold frei at locals; omega)]
+    exact read1
+  have ins := pre2.code 0 (by simp [foreverCounter])
+  simp only [foreverCounter, ci, List.getElem_cons_zero, List.cons_append,
+    List.getElem_append_left, Nat.mul_zero, BitVec.add_zero] at ins
+  have counterSmall : counter < 2 ^ 31 := by have := pre.small; unfold frei at locals; omega
+  have branch := counter_zero (t := ⟨pc + 16 + 16, fp⟩) ins (by rw [sx_nat counterSmall]; exact zero)
+  have header : PreS L m2 (pc + 16 + 16) fp K (frei Γ reserved)
+      ((foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
+        cc ++ [ci 19 scratch (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 scratch ++
+        [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0]) ++
+        stopC 111 scratch) ρ reserved := by
+    simpa [foreverCounter, List.append_assoc, List.append] using pre2
+  have tail := header.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+  have address : (pc + 16 + 16) + sx (II.f (16 * (cc.length + cb.length + 8) : Int)) =
+      (pc + 16 + 16) + BitVec.ofNat 64 (16 *
+        (foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
+        cc ++ [ci 19 scratch (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 scratch ++
+        [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0]).length) := by
+    have castEq : (16 * ((cc.length : Int) + cb.length + 8)) =
+        ((16 * (cc.length + cb.length + 8) : Nat) : Int) := by omega
+    rw [castEq, sx_nat jumpFits]
+    simp [foreverCounter, stopC, sysC, List.length_append, Nat.add_assoc]
+  obtain ⟨u, a, q, stopRun, stop, nr, arg⟩ :=
+    sys_counted tail.code tail.far tail.frame room pre.small (by decide) (by decide)
+  rw [← address] at stopRun
+  refine ⟨u, a, q, ?_, stop, nr, arg⟩
+  exact (run1.trans run2).trans ((Counted.next branch (Counted.refl _ _)).trans stopRun)
+
+
+
 /-- Recursive source call certificates. Every node stores source-derived callee
     costs and a recursive continuation, never an assumed execution of the whole block. -/
 inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
@@ -3401,6 +3513,18 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
         (.cons (if next then .next h else .leave h) rest) σ ρ
         (if next then .next h σ ρ else .leave h σ ρ) 1
 
+  | sourceStop {Γ Λ Ξ} {assumption : D.Annahme}
+      {inv : Expr D Γ Λ .bool} {body : Block D V true Γ Λ Λ}
+      {rest : Block D V l Γ Λ Ξ} {σ : World D} {ρ : Env D Γ}
+      (zero : passes = 0)
+      (imageFits : ∀ lo ens pr ex code top,
+        lowS (l := l) (reserved := reserved) passes A L lo ens pr ex
+          (.forever assumption inv body) = some (code, top) →
+        16 * code.length < 2 ^ 31) :
+      recursiveBlockCost L reserved P passes A C dv Ks V l
+        (.cons (.forever assumption inv body) rest) σ ρ
+        (.hardware (.fortschritt assumption)) 5
+
 /-- Induction composes each full call and its child certificate at the identical
     counted endpoint, retaining world, environment, frame and protected cells. -/
 theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
@@ -3422,6 +3546,27 @@ theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
       (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2) outcome reserved := by
   induction certificate generalizing lo top code m pc ex with
   | source cert => exact ⟨_, Nat.le_refl _, cert.sound lower fits inside low hprotected pre world⟩
+  | @sourceStop Γ Λ Ξ assumption inv body rest σ ρ zero imageFits =>
+    subst passes
+    simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨cr, tr⟩, lowerTail, ⟨cs, ts⟩, lowerStmt, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    have imageBound := imageFits _ _ _ _ _ _ lowerStmt
+    dsimp only [lowS] at lowerStmt
+    split at lowerStmt
+    next allowed =>
+      obtain ⟨cc, hcc, emitted⟩ := Option.bind_eq_some_iff.mp lowerStmt
+      obtain ⟨cb, tb, hcb, rfl, htc, htb, hcounter, hone, hscratch⟩ := foreverC_actual emitted
+      have hks := inside.ks
+      have pairStep : (counterPair reserved (counterDepthB body)).2 =
+          (counterPair reserved (counterDepthB body)).1 + 1 := rfl
+      have run := forever_zero_source_counted inside pre.left world
+        (by have := allowed.1; unfold FB at *; omega) (by omega)
+        allowed.2.1 (by have := pre.ctx; omega) (by omega) (by
+          simp only [foreverCode_length] at imageBound
+          omega)
+      exact ⟨5, Nat.le_refl _, run⟩
+    next refused => simp at lowerStmt
   | jump h next =>
     cases h
     refine ⟨1, Nat.le_refl _, ?_⟩
@@ -3520,36 +3665,6 @@ theorem recursiveBlockCost.sound_normal {P : Programm D} {passes : Nat}
       (pc + BitVec.ofNat 64 (16 * code.length)) σ' ρ' reserved := by
   exact certificate.sound (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp)
     lower fits inside abi low hprotected pre surroundings world
-
-/-- The progress exit executes its real zero test and two stop constants.
-    The syscall remains pending: neither hardware completion nor latency is
-    inferred. All joint source-state facts refer to that same final memory. -/
-theorem counter_budget_stop_counted
-    {Γ : Ctx} {m : Mem} {pc fp : W} {K Ks lo scratch : Nat}
-    {pr : List Nat} {σ : World D} {ρ : Env D Γ}
-    {d jump : BitVec 32}
-    (test : InsAt m pc 19 d jump 0)
-    (zero : m.rd64 (slot fp (sx d)) = some 0)
-    (pre : PreS L m (pc + sx jump) fp K (frei Γ reserved)
-      (stopC 111 scratch) ρ reserved)
-    (inside : WIn L fp Ks K) (world : WeltAt m L σ)
-    (low : lo ≤ scratch) (locals : frei Γ reserved ≤ scratch)
-    (room : scratch + 8 ≤ K) (hprotected : ∀ j ∈ pr, j < scratch) :
-    ∃ t m' q, Counted 3 ⟨pc, fp⟩ m t m' ∧ StopAt t m' q ∧
-      q.nr = 231 ∧ q.a1 = 111 ∧ AgreeW L fp lo K m m' ∧
-      EnvAt L m' fp ρ reserved ∧ WeltAt m' L σ ∧ Keeps fp pr m m' := by
-  obtain ⟨t, m', q, run, stop, nr, arg, agree⟩ :=
-    sys_counted_frame pre.code pre.far pre.frame room pre.small (by decide) (by decide)
-  have aw : AgreeW L fp lo K m m' := agreeW_of (agree.mono low)
-  have first : Counted 1 ⟨pc, fp⟩ m ⟨pc + sx jump, fp⟩ m :=
-    .next (counter_zero test zero) (.refl _ _)
-  refine ⟨t, m', q, first.trans run,
-    stop, nr, arg, aw, ?_, ?_, ?_⟩
-  · exact envAt_agree pre.env agree pre.frame locals (by omega)
-  · exact weltAt_stab inside.lay inside.top m m' world
-      (agree.mono (Nat.zero_le _))
-  · exact keeps_of_agreeW inside (agreeW_of agree) hprotected (by omega)
-
 
 /-- The actual positive forever pass, with a source invariant certificate and
     a recursive body certificate. The body may execute full recursive calls.
