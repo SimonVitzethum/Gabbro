@@ -1,9 +1,9 @@
 # Gabbro-to-IR compilation lanes
 
-**PAUSED FOR REBOOT.** Do not start or resume implementation, delegated turns or builds until the owner
-explicitly resumes this task. The following are fourteen work packages, not fourteen authorized simultaneous
-agents. The last staffing instruction remains two Sol 6.1 implementation agents. Root owns form-coverage
-measurement, integration and reviews; implementation agents implement.
+**RESUMED (2026-10-31).** The owner authorized seven rounds with exactly two parallel Sol 6.1
+implementation agents, each owning one lane, followed by one final integration/proof agent. Root coordinates
+interfaces, performs direct review and measures form coverage. Do not advance a round by declaring an
+incomplete lane complete.
 
 **Scope.** Compile all existing Gabbro except device-register reads/writes/fallible reads and register
 transitions to S0IR, with generic formal correctness for every actual lowering. Stage 0 only compiles; the
@@ -41,6 +41,29 @@ implementation lanes below only after an explicit resume. Reuse existing compile
 unchanged broad suites in place of closing a connected translation case.
 
 ## Work packages
+
+## Authorized seven-round schedule
+
+| Round | Agent A | Agent B |
+|---|---|---|
+| 1 | IR-01 frontend and type coverage | IR-03 shared value representation and ABI |
+| 2 | IR-02 integers and Booleans | IR-04 floating point |
+| 3 | IR-05 options, sums and dispatch | IR-06 memory and references |
+| 4 | IR-07 regions and ownership | IR-10 functions and contracts |
+| 5 | IR-08 control and source budgets | IR-09 concurrency and RCU |
+| 6 | IR-11 foreign calls and ASM bodies | IR-13 formats and generated constructs |
+| 7 | IR-12 profiles and images | IR-14 compiler integration |
+
+Start a round after integrating and checking its prerequisites. Each lane must implement its real compiler
+path and connected generic proof, not merely produce an inventory or isolated helpers. Report unresolved
+dependencies explicitly and continue resolving them; seven rounds are an allocation, not a correctness claim.
+Root serializes shared interfaces and merges. Exactly one Lean check runs globally under the shared lock.
+
+After round seven, one final implementation agent composes the proofs and proves structural coverage of
+all canonical source syntax except the explicitly excluded register forms. Prove both semantic correctness
+of emitted IR and completeness for supported well-formed non-register syntax within explicit target/resource
+limits; correctness conditional on successful emission alone does not prove coverage. Root reviews the
+result directly. No claim of full coverage is allowed while any syntax family or nested variant is missing.
 
 A lane owns a family through its actual source frontend, model/desugaring obligations, IR generation and
 connected correctness theorem. Another lane may provide a representation or primitive, but ownership does
@@ -122,5 +145,5 @@ the corresponding value/call/dispatch lanes. New discoveries must be assigned ex
    while any in-scope family or nested variant remains missing/restricted. Reviews are performed directly
    by Root, not delegated as implementation or substituted by a new guardian.
 
-**Pause gate is active.** These packages are documented for the next explicitly resumed session. No build,
-agent or automatic continuation is authorized by this plan while the reboot pause remains active.
+**Execution is authorized.** Follow the seven-round schedule above; preserve all interrupted work and
+never treat it as checked. Final closure is blocked while any in-scope syntax or generic proof is missing.

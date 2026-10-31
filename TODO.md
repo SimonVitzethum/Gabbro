@@ -9,11 +9,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 ## Right now
 
-- **Gabbro-to-IR is paused for reboot (2026-10-31).** Resume only on explicit instruction. All non-register
+- **Gabbro-to-IR resumed (2026-10-31).** Execute seven two-agent rounds, then a final integration/proof agent. All non-register
   compilation and its formal lowering proofs are partitioned into IR-01..IR-14 in
   [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md), with dependencies, exhaustive primary form ownership and shared
   completion gates. Preserve the two worker worktrees and their uncommitted changes; no legacy Lean source
-  runtime, grammar rebuild, new side project or automatic continuation.
+  runtime, grammar rebuild, new side project outside the authorized rounds.
 
 
 - **Phase A step 4 (the combined `Spec.lean` diff "M8": arena plus payload) is PAUSED** (Simon, 2026-10-19). Nothing is merged or pushed.
