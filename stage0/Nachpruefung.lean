@@ -253,3 +253,9 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.reservation_variable_offset
 #print axioms Gabbro.Stage0.Senke.nested_reservation_offsets
 #print axioms Gabbro.Stage0.Senke.reservation_parameter_offset_zeuge
+
+#print axioms Gabbro.Stage0.Senke.relocate_run
+#print axioms Gabbro.Stage0.Senke.relocate_env
+#print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_env_zeuge
+#print axioms Gabbro.Stage0.Senke.RelocateProbe.emitted_moves_zeuge
+#print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_run_zeuge

@@ -82,3 +82,4 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
 import Stage0.Senke.Anweisung.Faelle.Schleifen.EarlyExit
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
+import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
