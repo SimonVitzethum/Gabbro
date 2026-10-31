@@ -1,6 +1,6 @@
 import Runner.Prog.Asm
 
-/-! # The runner: loader, dispatch, the 24 handlers (`PLAN-SELF-HOSTING.md` §2.1.5)
+/-! # The runner: loader, dispatch, the 27 handlers (`PLAN-SELF-HOSTING.md` §2.1.5)
 
 Registers while the IR runs: `r12` = the IR `pc`, `r13` = the IR `fp`, `r14` = the dispatch table. Nothing else
 lives across instructions, and the runner never uses the stack.
@@ -93,6 +93,11 @@ def handler : Nat → List Ins
            .movi .rdx 0, .movi .r10 0, .movi .r8 0, .movi .r9 0, .syscall,
            .alu .test .rax .rax, .jcc .z (BitVec.ofNat 32 (lenOf spawnParent))] ++ spawnParent ++
            [.mov .r12 .rbx, .mov .r13 .rbp] ++ dispatch
+  | 27 => binH [.alu .cmp .rax .rdx, .set .b .rax, .zx8 .rax .rax]
+  | 25 => [fld .rax 2, sld .rax .rax, fld .rsi 3, sld .rsi .rsi,
+           .movi .rdx 0, .udiv .rsi, fld .rcx 1, sst .rcx .rax] ++ nextI
+  | 26 => [fld .rax 2, sld .rax .rax, fld .rsi 3, sld .rsi .rsi,
+           .movi .rdx 0, .udiv .rsi, fld .rcx 1, sst .rcx .rdx] ++ nextI
   | _ => [.ud2]
 
 /-- Label numbers: 0 the loader, `k` the handler of opcode `k`, 100 `ud2`, 101 the table. -/
@@ -127,7 +132,7 @@ def loaderI (tb : Nat) : List Ins :=
 /-- The program with the table at `tb`; the layout does not depend on `tb`. -/
 def itemsWith (tb : Nat) : List Item :=
   [.lab LOADER] ++ (loaderI tb).map .i ++
-  ((List.range 24).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
+  ((List.range 27).map (· + 1)).flatMap (fun k => .lab k :: (handler k).map .i) ++
   [.lab BAD, .i .ud2]
 
 def codeLen : Nat := ((itemsWith 0).map Item.len).sum
@@ -145,6 +150,6 @@ def tab : List (Nat × Nat) := (TABLE, tblOff) :: labels (itemsWith 0) CODE
 def prog : List (Nat × Ins) := place tab BASE items CODE
 
 /-- The table entry of opcode `k`: the address of its handler. -/
-def target (k : Nat) : Nat := BASE + find tab (if 1 ≤ k ∧ k ≤ 24 then k else BAD)
+def target (k : Nat) : Nat := BASE + find tab (if 1 ≤ k ∧ k ≤ 27 then k else BAD)
 
 end Runner.Prog

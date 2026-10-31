@@ -181,7 +181,14 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       simp only [bin2, Prod.mk.injEq] at he
       omega
     · cases h
-  | _, _, .lit n, d, c, top, h | _, _, .why .., d, c, top, h
+  | _, _, .lit n, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq, konstWL, bin2] at h; omega
+      · cases h
+  | _, _, .why .., d, c, top, h
   | _, _, .fnref .., d, c, top, h | _, _, .var _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

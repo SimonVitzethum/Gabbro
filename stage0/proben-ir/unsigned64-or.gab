@@ -1,0 +1,6 @@
+// OR must retain a high bit contributed by its second operand.
+module ir_probe {
+impl fn main() -> u64 effects { pure } {
+    return (1 | 9223372036854775808) >> 63;
+}
+}

@@ -74,6 +74,46 @@ theorem h7_ok {L : Lay} {y : X} (h : HPre L 7 y) : Match L (IR.op 7 ⟨y.r12, y.
       · trivial
       · corr_tail)
 
+/-- A word dividend divided by a nonzero word has a word quotient. -/
+theorem unsigned_quotient_fits (a b : Runner.W) : a.toNat / b.toNat < 2 ^ 64 :=
+  Nat.lt_of_le_of_lt (Nat.div_le_self _ _) a.isLt
+
+theorem unsigned_quotient_no_overflow (a b : Runner.W) : ¬ 2 ^ 64 ≤ a.toNat / b.toNat :=
+  Nat.not_le.mpr (unsigned_quotient_fits a b)
+
+/-- Zero-extending a word dividend cannot overflow the unsigned quotient. -/
+theorem udiv128_zero (a b : Runner.W) :
+    udiv128 0#64 a b = if b.toNat = 0 then none else
+      some (BitVec.ofNat 64 (a.toNat / b.toNat), BitVec.ofNat 64 (a.toNat % b.toNat)) := by
+  simp only [udiv128, BitVec.toNat_zero, BitVec.toNat_ofNat, Nat.zero_mod, Nat.zero_mul, Nat.zero_add]
+  split
+  · rfl
+  · rw [ite_eq_right (unsigned_quotient_no_overflow a b)]
+
+def udivBody (r : Reg) : List Ins :=
+  [fld .rax 2, sld .rax .rax, fld .rsi 3, sld .rsi .rsi,
+   .movi .rdx 0, .udiv .rsi, fld .rcx 1, sst .rcx r, .alui .add .r12 16]
+
+theorem h25_ok {L : Lay} {y : X} (h : HPre L 25 y) : Match L (IR.op 25 ⟨y.r12, y.r13⟩) y :=
+  straight_go h.tb (udivBody .rax) y _ (by decide) h.code (by
+    simp [IR.op, IR.bin, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt, runL, exec, fld, sld, sst, mb, ms,
+      ea, X.get, X.set, X.nof, rd64, rd32, wr64, udivBody, IR.udiv,
+      udiv128_zero]
+    repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
+    split
+    · trivial
+    · corr_tail)
+
+theorem h26_ok {L : Lay} {y : X} (h : HPre L 26 y) : Match L (IR.op 26 ⟨y.r12, y.r13⟩) y :=
+  straight_go h.tb (udivBody .rdx) y _ (by decide) h.code (by
+    simp [IR.op, IR.bin, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt, runL, exec, fld, sld, sst, mb, ms,
+      ea, X.get, X.set, X.nof, rd64, rd32, wr64, udivBody, IR.urem,
+      udiv128_zero]
+    repeat (first | (apply corr_ask; intro _) | (apply corr_opt; intro _))
+    split
+    · trivial
+    · corr_tail)
+
 theorem h8_ok {L : Lay} {y : X} (h : HPre L 8 y) : Match L (IR.op 8 ⟨y.r12, y.r13⟩) y :=
   straight_go h.tb (binBody [.alu .and .rax .rdx]) y _ (by decide) h.code (by
     try simp only [binBody, divBody, shiftBody, List.cons_append, List.nil_append]
@@ -103,6 +143,12 @@ theorem h13_ok {L : Lay} {y : X} (h : HPre L 13 y) : Match L (IR.op 13 ⟨y.r12,
   straight_go h.tb (binBody [.alu .cmp .rax .rdx, .set .l .rax, .zx8 .rax .rax]) y _ (by decide) h.code (by
     simp [IR.op, IR.bin, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt, runL, exec, fld, sld, sst, mb, ms,
       ea, X.get, X.set, aluStep, aluOp, X.nof, X.cmpf, rd64, rd32, rd8, wr64, cas, binBody, divBody, shiftBody, Cond.eval, slt_flags, IR.bool, zx_bool]
+    corr_tail)
+
+theorem h27_ok {L : Lay} {y : X} (h : HPre L 27 y) : Match L (IR.op 27 ⟨y.r12, y.r13⟩) y :=
+  straight_go h.tb (binBody [.alu .cmp .rax .rdx, .set .b .rax, .zx8 .rax .rax]) y _ (by decide) h.code (by
+    simp [IR.op, IR.bin, IR.ret1, IR.f1, IR.f2, IR.f3, IR.ld, IR.slot, IR.nxt, runL, exec, fld, sld, sst, mb, ms,
+      ea, X.get, X.set, aluStep, aluOp, X.nof, X.cmpf, rd64, rd32, rd8, wr64, cas, binBody, divBody, shiftBody, Cond.eval, IR.bool, zx_bool]
     corr_tail)
 
 theorem h14_ok {L : Lay} {y : X} (h : HPre L 14 y) : Match L (IR.op 14 ⟨y.r12, y.r13⟩) y :=

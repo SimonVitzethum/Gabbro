@@ -14,7 +14,54 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_lit (n : Int) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.lit n) d =
-    (if lit32 n then some ([ci 1 d n 0], d + 1) else none) := rfl
+    (if lit32 n then some ([ci 1 d n 0], d + 1)
+     else if scalarFits n n then some (konstWL 4 (BitVec.ofInt 64 n).toNat d) else none) := rfl
+
+/-- Every representable signed64 literal is accepted, for any environment and layout. -/
+theorem lowE_signed64 (n : Int) (hn : inW n n = true) :
+    ∃ c top, lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit n) d = some (c, top) := by
+  rw [lowE_lit]
+  split
+  · exact ⟨_, _, rfl⟩
+  · simp only [scalarFits, hn, Bool.true_or, ↓reduceIte]
+    exact ⟨_, _, rfl⟩
+
+/-- Every unsigned64 literal uses the actual scalar materializer. -/
+theorem lowE_unsigned64 (n : Int) (hn : inU n n = true) :
+    ∃ c top, lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit n) d = some (c, top) := by
+  rw [lowE_lit]
+  split
+  · exact ⟨_, _, rfl⟩
+  · simp only [scalarFits, hn, Bool.or_true, ↓reduceIte]
+    exact ⟨_, _, rfl⟩
+
+theorem lowE_unsigned64_zeuge :
+    (∃ c top, lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ)
+      (.lit 18446744073709551615) d = some (c, top)) ∧
+    (∃ c top, lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ)
+      (.lit 9223372036854775808) d = some (c, top)) :=
+  ⟨lowE_unsigned64 L d _ (by decide), lowE_unsigned64 L d _ (by decide)⟩
+
+/-- Joint boundary witnesses use the same compiler equation as the generic soundness theorem. -/
+theorem lowE_signed64_zeuge :
+    (∃ c top, lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit (-9223372036854775808)) d = some (c, top)) ∧
+    (∃ c top, lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit 9223372036854775807) d = some (c, top)) ∧
+    (∃ c top, lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit (-4294967297)) d = some (c, top)) :=
+  ⟨lowE_signed64 L d _ (by decide), lowE_signed64 L d _ (by decide), lowE_signed64 L d _ (by decide)⟩
+
+/-- The new source fixtures cross the former immediate guard; truly wider literals still refuse. -/
+theorem lowE_signed64_boundaries_zeuge :
+    lit32 (-9223372036854775808) = false ∧ lit32 9223372036854775807 = false ∧
+    lit32 (-4294967297) = false ∧
+    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit 18446744073709551616) d = none ∧
+    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit (-9223372036854775809)) d = none := by
+  constructor
+  · decide
+  constructor
+  · decide
+  constructor
+  · decide
+  constructor <;> rw [lowE_lit] <;> rfl
 
 @[lowE_eqs] theorem lowE_tru :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.tru) d =
@@ -79,11 +126,11 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_div (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.div h0 h1' a b) d =
-    (if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 6 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 25 d ca cb) else none) := rfl
 
 @[lowE_eqs] theorem lowE_rem (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.rem h0 h1' a b) d =
-    (if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 7 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 26 d ca cb) else none) := rfl
 
 @[lowE_eqs] theorem lowE_sdiv (hb : 1 ≤ l2 ∨ h2 ≤ -1) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.sdiv hb a b) d =
@@ -104,17 +151,17 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_band (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.band h0 h0' a b) d =
-    (if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none) := rfl
 
 @[lowE_eqs] theorem lowE_bor (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
       (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.bor w h0 h0' hw1 hw2 a b) d =
-    (if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb) else none) := rfl
 
 @[lowE_eqs] theorem lowE_bxor (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
       (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.bxor w h0 h0' hw1 hw2 a b) d =
-    (if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb) else none) := rfl
 
 @[lowE_eqs] theorem lowE_shl (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.shl w hw1 hw2 h0 h0' a b) d =
@@ -122,7 +169,7 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_shr (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.shr w hw1 hw2 h0 h0' a b) d =
-    (if inWE a && inWE b && lt64 b then do
+    (if inUE a && inUE b && lt64 b then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 12 d ca cb)
     else none) := rfl
 

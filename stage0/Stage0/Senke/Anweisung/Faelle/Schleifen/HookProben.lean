@@ -178,7 +178,7 @@ theorem lowE_lit_counted_zeuge [Runner.IR.Kern] :
     subst k
     simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
     exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
-  exact lowE_lit_counted (L := FnptrProben.callLayout) (Γ := []) (Λ := [])
+  exact lowE_lit_counted (literal := by decide) (L := FnptrProben.callLayout) (Γ := []) (Λ := [])
     (reserved := 0) (d := 4) (top := 5) (K := 256) (n := 8192)
     (by decide +kernel) code FnptrProben.call_frame (by decide) (by decide)
 

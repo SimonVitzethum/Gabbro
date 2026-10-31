@@ -1,0 +1,7 @@
+// A logical right shift must preserve the unsigned top bit.
+module ir_probe {
+impl fn main() -> u64 effects { pure } {
+    let value = 18446744073709551615 >> 63;
+    return value;
+}
+}

@@ -1,0 +1,6 @@
+// AND retains the unsigned top bit in both operands.
+module ir_probe {
+impl fn main() -> u64 effects { pure } {
+    return (18446744073709551615 & 9223372036854775808) >> 63;
+}
+}
