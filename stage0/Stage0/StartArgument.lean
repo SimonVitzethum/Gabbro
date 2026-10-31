@@ -53,6 +53,21 @@ theorem expression_literal_zeuge (u : UProg) (world : World (declOf u)) :
     (eval world (expression u (.int 0 12) (.lit 7) (by simp [uStartArg])) world .nil).n = 7 :=
   expression_literal u 0 12 7 (by simp [uStartArg]) world world
 
+/-- Canonical accepted start arguments are closed values: choosing a world cannot
+    change the environment eventually encoded into a relocated root frame. -/
+theorem expression_pure (u : UProg) (ty : Ty) (arg : SExpr)
+    (accepted : uStartArg u.tabs ty arg = true)
+    (before world before' world' : World (declOf u)) :
+    eval before (expression u ty arg accepted) world .nil =
+      eval before' (expression u ty arg accepted) world' .nil := by
+  cases ty <;> cases arg <;> simp only [uStartArg] at accepted
+  all_goals try contradiction
+  all_goals try rfl
+  case int.un lo hi op a =>
+    cases a <;> try simp only at accepted
+    all_goals try contradiction
+    all_goals split at accepted <;> simp_all <;> rfl
+
 /-- Argument environments are evaluated by the existing canonical `evalArgs`, including
     its order, and can be supplied directly to `Einheit.starts` and `RufStartG`. -/
 def arguments (u : UProg) : (types : List Ty) → (args : List SExpr) →
@@ -64,6 +79,27 @@ def arguments (u : UProg) : (types : List Ty) → (args : List SExpr) →
       (arguments u types args ⟨by simpa using checked.1, by exact (Bool.and_eq_true_iff.mp checked.2).2⟩)
   | [], _ :: _, checked => by simp at checked
   | _ :: _, [], checked => by simp at checked
+
+/-- Every complete start environment has the same canonical value in every world. -/
+theorem arguments_pure (u : UProg) (types : List Ty) (args : List SExpr)
+    (checked : types.length = args.length ∧
+      (types.zip args).all (fun p => uStartArg u.tabs p.1 p.2) = true)
+    (before world before' world' : World (declOf u)) :
+    evalArgs before (arguments u types args checked) world .nil =
+      evalArgs before' (arguments u types args checked) world' .nil := by
+  induction types generalizing args with
+  | nil =>
+    cases args with
+    | nil => rfl
+    | cons arg args => have impossible : 0 = args.length + 1 := checked.1; omega
+  | cons ty types ih =>
+    cases args with
+    | nil => simp at checked
+    | cons arg args =>
+      simp only [arguments, evalArgs]
+      congr 1
+      · exact expression_pure u ty arg _ before world before' world'
+      · exact ih args _
 
 /-- A start retains its original arguments and name resolution, together with the existing
     canonical source acceptance check and an argument term at the actual function signature. -/
@@ -238,5 +274,54 @@ theorem fromItems_identity {u : UProg} {items : List SItemTief}
     exact congrArg List.flatten (List.attach_map_val (l := items)
       (f := fun (it : SItemTief) => (match it with | .concT group => group | _ => [] :
         List (List String × List SExpr))))
+
+private def canonicalName (u : UProg) (member : List String × List SExpr) : Except String String :=
+  match member.1.getLast? with
+  | some name => uStartMit u.tabs u.fns name member.2
+  | none => .error "empty path in concurrent"
+
+private theorem uSeq_append (xs ys : List (Except String α)) :
+    uSeq (xs ++ ys) = (do let a ← uSeq xs; let b ← uSeq ys; pure (a ++ b)) := by
+  induction xs with
+  | nil =>
+    simp only [List.nil_append, uSeq]
+    cases hy : uSeq ys <;> rfl
+  | cons head rest ih =>
+    cases head with
+    | error e => rfl
+    | ok a =>
+      simp only [List.cons_append, uSeq]
+      rw [ih]
+      cases hx : uSeq rest <;> cases hy : uSeq ys <;> rfl
+
+/-- Flattening the source concurrent groups retains the exact canonical root-name extraction,
+    including failure order; source reconstruction does not introduce a new start acceptance rule. -/
+private theorem canonicalNames_flat (u : UProg) (items : List SItemTief) :
+    uSeq ((sourceIdentities items).map (canonicalName u)) = uNebenWurzeln u.tabs u.fns items := by
+  induction items with
+  | nil => rfl
+  | cons item rest ih =>
+    cases item <;> simp only [sourceIdentities, List.map_cons, List.flatten_cons,
+      List.nil_append, List.map_append, uNebenWurzeln] at *
+    all_goals try exact ih
+    case concT group =>
+      rw [uSeq_append, ih]
+      rfl
+
+private theorem recoveredNames (u : UProg) {items : List SItemTief} (starts : List (SourceStart u items)) :
+    uSeq ((starts.map (fun start => (start.path, start.sourceArgs))).map (canonicalName u)) =
+      .ok (starts.map (·.name)) := by
+  induction starts with
+  | nil => rfl
+  | cons head rest ih =>
+    simp only [List.map_cons, canonicalName, head.pathName, head.resolved.canonical, uSeq, ih]
+
+/-- The reconstructed typed starts correspond exactly to the existing canonical roots,
+    with the same order and multiplicity. Names-only deduplication is not justified by this bridge. -/
+theorem fromItems_names {u : UProg} {items : List SItemTief} {starts : List (SourceStart u items)}
+    (run : fromItems u items = .ok starts) :
+    uNebenWurzeln u.tabs u.fns items = .ok (starts.map (·.name)) := by
+  rw [← canonicalNames_flat u items, ← fromItems_identity run]
+  exact recoveredNames u starts
 
 end Gabbro.Stage0.StartArgument
