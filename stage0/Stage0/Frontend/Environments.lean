@@ -96,10 +96,11 @@ theorem constant_aliases (external : List (String × Int))
     (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (values : List (String × Int)) (item : SItemTief) :
     uAliase external [constant env fns values item] = uAliase external [item] := by
-  rcases constant_sound env fns values item with h | ⟨name, ty, expr, lo, hi, v, hs, ht, _⟩
+  rcases constant_sound env fns values item with h | h
   · rw [← h]
-  · rw [ht, hs]
-    rfl
+  · rcases h with ⟨name, ty, expr, lo, hi, v, hs, ht, _⟩ |
+        ⟨name, ty, expr, outTy, outExpr, lo, hi, v, hs, ht, _⟩
+    all_goals rw [ht, hs]; rfl
 
 /-- The actual canonical alias collector after scalar folding sees exactly the original type
     declarations at the final constant environment, including dependent range bounds. -/
@@ -124,7 +125,8 @@ def constantStep (env : List (String × (Int × Int))) (fns : List UKonstFn)
     match uFeldTyp env ty with
     | .ok (lo, hi) =>
       match uKonstWert lo hi fns values 64 expr with
-      | some v => if 0 ≤ v then values ++ [(name, v)] else uConstsRech fns [item] values
+      | some v => if 0 ≤ v then values ++ [(name, v)]
+          else uConstsRech fns [negative env fns values name ty expr lo hi v] values
       | none => uConstsRech fns [item] values
     | .error _ => uConstsRech fns [item] values
   | _ => uConstsRech fns [item] values

@@ -67,11 +67,19 @@ theorem aliasItem_sound (env : List (String × (Int × Int))) (item : SItemTief)
     evaluator in its original range and declaration-order environment. -/
 def ConstantEquivalent (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (values : List (String × Int)) (source target : SItemTief) : Prop :=
-  source = target ∨ ∃ name ty expr lo hi v,
+  source = target ∨ (∃ name ty expr lo hi v,
     source = .constT name ty (.one expr) ∧
     target = .constT name ty (.one (.lit v.toNat)) ∧
     uFeldTyp env ty = .ok (lo, hi) ∧
-    uKonstWert lo hi fns values 64 expr = some v ∧ 0 ≤ v
+    uKonstWert lo hi fns values 64 expr = some v ∧ 0 ≤ v) ∨
+  (∃ name ty expr outTy outExpr lo hi v,
+    source = .constT name ty (.one expr) ∧
+    target = .constT name outTy (.one outExpr) ∧
+    uFeldTyp env ty = .ok (lo, hi) ∧
+    uFeldTyp env outTy = .ok (lo, hi) ∧
+    uKonstWert lo hi fns values 64 expr = some v ∧
+    uKonstWert lo hi fns values 64 outExpr = some v ∧
+    uConstsRech fns [.constT name outTy (.one outExpr)] values = values ++ [(name, v)])
 
 theorem constant_sound (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (values : List (String × Int)) (item : SItemTief) :
@@ -89,9 +97,12 @@ theorem constant_sound (env : List (String × (Int × Int))) (fns : List UKonstF
         | none => exact Or.inl (by simp [constant, ht, he])
         | some v =>
           by_cases hv : 0 ≤ v
-          · exact Or.inr ⟨name, ty, expr, lo, hi, v, rfl,
-              by simp [constant, ht, he, hv], ht, he, hv⟩
-          · exact Or.inl (by simp [constant, ht, he, hv])
+          · exact Or.inr (Or.inl ⟨name, ty, expr, lo, hi, v, rfl,
+              by simp [constant, ht, he, hv], ht, he, hv⟩)
+          · rcases negative_sound env fns values name ty expr lo hi v with hn | ⟨outTy, outExpr, hn, ho, hv', hc⟩
+            · exact Or.inl (by simp [constant, ht, he, hv, hn])
+            · exact Or.inr (Or.inr ⟨name, ty, expr, outTy, outExpr, lo, hi, v, rfl,
+                by simp [constant, ht, he, hv, hn], ht, ho, he, hv', hc⟩)
 
 /-- A compositional derivation of the rewrite, including every intermediate declaration state. -/
 inductive Rewrite (meaning : σ → SItemTief → SItemTief → Prop)

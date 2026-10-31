@@ -280,3 +280,25 @@ The persistent `negative-dependency` probe exposes a negative intermediate from 
 function followed by a positive dependent. It now refuses explicitly on the environment mismatch;
 no later positive binding can conceal the missing negative. Negative materialization and dependency
 support remain implementation work. No source interpreter or grammar modification was introduced.
+
+### IR-01 negative scalar materialization
+
+The former `negative-dependency.error` is now a positive `.code` regression: the negative intermediate
+and positive dependent both survive exact canonical collection and ASM exits 42. `negative-alias-min`
+also reaches ASM exit 42 with an exact signed minimum and successive negative alias-typed constants.
+
+The actual scalar adapter represents a negative integer as builtin `min` plus a nonnegative offset.
+It selects a builtin with the **same canonical range**, checks the output type against that range,
+checks evaluation in that range, and checks the full ordered canonical collector extension. Alias
+spelling can change internally to the equivalent builtin; source alias declarations and their ranges
+are retained. `negative_expression_correct` proves all intermediate range checks and the arithmetic;
+`negative_materializes` proves coverage for a selected signed builtin range; `negative_sound` connects
+materialized value, exact canonical type and actual collector. `ConstantEquivalent` includes these
+facts and the complete normalization proof consumes them. No signed-minimum negation, widened source
+range, new source interpreter or ABI change is used. Custom negative ranges with no exact builtin
+representative still refuse through the checked environment boundary; no total constant coverage claim.
+
+Measured five textual positive source-to-IR-to-ASM cases (all exit 42), three contract refusals and the
+overflow refusal; twenty-five frontend/goal statement audits use only standard axioms. The accepted-subset
+environment validation remains in place. Whole-source/program semantic composition is still separate
+work; these new arithmetic and collector theorems do not silently close that obligation.
