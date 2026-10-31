@@ -4366,4 +4366,150 @@ theorem floatFiniteAddL_left_condition_zeuge {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_left_condition_zeuge
 
+/-- The literal RIGHT comparison keeps the positive result and exponent in the
+    same memory as its branch flag. No adaptive-loop code is substituted. -/
+theorem floatFiniteAddL_right_condition_scalar {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved : Nat} {q ex threshold : Runner.W} (tail : List II)
+    (room : dst+10 < K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
+    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
+    (rt : m.rd64 (slot fp (BitVec.ofNat 64 (dst+10))) = some threshold)
+    (pre : Pre L m pc fp K (dst+9)
+      ([ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+        ci 4 (dst+9) (dst+10) (dst+9)] ++ tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+48,fp⟩ out ∧
+      Agree fp (dst+9) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+        some (1-Runner.IR.bool (q.slt threshold)) ∧
+      Pre L out (pc+48) fp K (dst+9) tail ρ W reserved := by
+  have p0 : Pre L m pc fp K (dst+9)
+      ([ci 13 (dst+9) (dst+7) (dst+10)] ++
+        ([ci 1 (dst+10) 1 0] ++ ([ci 4 (dst+9) (dst+10) (dst+9)] ++ tail))) ρ W reserved := pre
+  obtain ⟨m1,s1,a1,w1,r1,rfl⟩ := eng_bin_ok (d := dst+9) (a := dst+7) (b := dst+10)
+    {p0.left with ctx := by have := p0.ctx; omega} (by omega) (by omega) (by omega)
+    rq rt (g := fun x y => some (Runner.IR.bool (x.slt y))) rfl (by decide) rfl
+  have p1 := p0.next a1 (Nat.le_refl _) (by omega)
+  obtain ⟨m2,s2,a2,w2,r2,rfl⟩ := const_ok (d := dst+10)
+    {p1.left with ctx := by have := p1.ctx; omega} (by decide) (by omega)
+  have p2 := p1.next (a2.mono (by omega : dst+9 ≤ dst+10)) (Nat.le_refl _) (by omega)
+  have r12 := slotRead_agree p1.frame a2 (by omega) (by omega) r1
+  obtain ⟨m3,s3,a3,w3,r3,rfl⟩ := eng_bin_ok (d := dst+9) (a := dst+10) (b := dst+9)
+    {p2.left with ctx := by have := p2.ctx; omega} (by omega) (by omega) (by omega)
+    r2 r12 (g := fun x y => some (x-y)) rfl (by decide) rfl
+  have agree := a1.trans ((a2.mono (by omega : dst+9 ≤ dst+10)).trans a3)
+  refine ⟨m3,?_,agree,slotRead_agree p0.frame agree (by omega) (by omega) rq,
+    slotRead_agree p0.frame agree (by omega) (by omega) re,?_,?_⟩
+  · simpa [BitVec.add_assoc] using s1.trans (s2.trans s3)
+  · simpa using r3
+  · simpa [BitVec.add_assoc] using p2.next a3 (Nat.le_refl _) (by omega)
+
+/-- Execute the actual RIGHT threshold materialization and comparison. -/
+theorem floatFiniteAddL_right_condition {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved : Nat} {q ex : Runner.W} (F : Gleitkomma.Format)
+    (tail : List II) (thresholdRange : 2^(F.fracBits+4) < 65536^4)
+    (room : dst+12 ≤ K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
+    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
+    (pre : Pre L m pc fp K (dst+9)
+      ((konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
+        [ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+          ci 4 (dst+9) (dst+10) (dst+9)] ++ tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m
+        ⟨pc+BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48,fp⟩ out ∧
+      Agree fp (dst+9) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+        some (1-Runner.IR.bool (q.slt (BitVec.ofNat 64 (2^(F.fracBits+4))))) ∧
+      Pre L out
+        (pc+BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)
+        fp K (dst+9) tail ρ W reserved := by
+  have hp : Pre L m pc fp K (dst+9)
+      ((konstWL 4 (2^(F.fracBits+4)) (dst+10)).1 ++
+        ([ci 13 (dst+9) (dst+7) (dst+10), ci 1 (dst+10) 1 0,
+          ci 4 (dst+9) (dst+10) (dst+9)] ++ tail)) ρ W reserved := by
+    simpa only [List.append_assoc] using pre
+  obtain ⟨m1,run,agree,w,rd,rfl⟩ := konstWL_ok 4 (2^(F.fracBits+4)) thresholdRange
+    (by omega) {hp.left with ctx := by have := hp.ctx; omega}
+  have rest := hp.next (agree.mono (by omega : dst+9 ≤ dst+10)) (Nat.le_refl _) (by omega)
+  obtain ⟨out,run2,agree2,rq2,re2,flag,done⟩ := floatFiniteAddL_right_condition_scalar tail
+    (by omega) (slotRead_agree hp.frame agree (by omega) (by omega) rq)
+    (slotRead_agree hp.frame agree (by omega) (by omega) re) rd rest
+  exact ⟨out,run.trans run2,(agree.mono (by omega)).trans agree2,rq2,re2,flag,done⟩
+
+#print axioms floatFiniteAddL_right_condition
+
+/-- Execute the SHIFTJAM call emitted in the taken RIGHT arm, using its literal
+    constant distance producer rather than the old magnitude pipeline. -/
+theorem floatFiniteAddL_right_shift {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst top reserved : Nat} {code tail : List II} {q : Runner.W}
+    (lower : FB ≤ dst+7) (room : top ≤ K) (slots : dst+17 ≤ K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
+    (compiled : floatShiftJamL (dst+16)
+      (fun j => some ([ci 2 j (dst+7) 0],j+1))
+      (fun j => some ([ci 1 j 1 0],j+1)) = some (code,top))
+    (pre : Pre L m pc fp K (dst+16) (code++tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*code.length),fp⟩ out ∧
+      Agree fp (dst+16) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+16))) =
+        some (floatShiftJamWord q 1) ∧
+      Pre L out (pc+BitVec.ofNat 64 (16*code.length)) fp K (dst+17) tail ρ W reserved := by
+  let producer := fun j => floatShiftJamL j
+    (fun j => some ([ci 2 j (dst+7) 0],j+1))
+    (fun j => some ([ci 1 j 1 0],j+1))
+  have batch : floatStateSlotsL (dst+16) [producer] = some (code,max top (dst+17)) := by
+    simp [floatStateSlotsL, producer, compiled, Nat.add_assoc]
+  obtain ⟨out,run,agree,reads,rest⟩ := retainedWordCodes_ok (L := L)
+    [producer] (fun _ => floatShiftJamWord q 1) (by
+      intro Δ η loads i hi
+      have iz : i = 0 := by have : i < 1 := hi; omega
+      subst i
+      change WordCode (L := L) η (fun _ => True) producer (floatShiftJamWord q 1)
+      have source : WordCode (L := L) η (fun _ => True)
+          (fun j => some ([ci 2 j (dst+7) 0],j+1)) q :=
+        loads (dst+7) q lower (by omega) rq
+      intro fp K d c top hc ht mm pp hp
+      exact floatShiftJamL_ok source (WordCode.const 1 (by decide)) hc ht mm pp hp)
+    batch (by omega) (by omega) (by simpa using slots) pre
+  exact ⟨out,run,agree,slotRead_agree pre.frame agree (by omega) (by omega) rq,
+    by simpa using reads 0 (by simp),rest⟩
+
+#print axioms floatFiniteAddL_right_shift
+
+/-- Both formats and both RIGHT outcomes jointly satisfy the concrete arithmetic
+    side of the test; the execution premises are shared with the generic run. -/
+theorem floatFiniteAddL_right_condition_zeuge {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    (F : Gleitkomma.Format) (format : F = Gleitkomma.f32 ∨ F = Gleitkomma.f64)
+    (large : Bool) (tail : List II)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 23)) =
+      some (if large then BitVec.ofNat 64 (2^56) else 13))
+    (re : m.rd64 (slot fp (BitVec.ofNat 64 21)) = some 4)
+    (pre : Pre L m pc fp 40 25
+      ((konstWL 4 (2^(F.fracBits+4)) 26).1 ++
+        [ci 13 25 23 26, ci 1 26 1 0, ci 4 25 26 25] ++ tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m
+      ⟨pc+BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) 26).1.length)+48,fp⟩ out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 23)) =
+        some (if large then BitVec.ofNat 64 (2^56) else 13) ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 21)) = some 4 ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 25)) = some (if large then 1 else 0) := by
+  have bound : 2^(F.fracBits+4) < 65536^4 := by
+    rcases format with rfl | rfl <;> decide
+  obtain ⟨out,run,_,rq',re',flag,_⟩ := floatFiniteAddL_right_condition
+    (dst := 16) F tail bound (by omega) rq re pre
+  refine ⟨out,run,rq',re',?_⟩
+  have eq : (1-Runner.IR.bool ((if large then BitVec.ofNat 64 (2^56) else 13).slt
+      (BitVec.ofNat 64 (2^(F.fracBits+4))))) = (if large then 1 else 0) := by
+    rcases format with rfl | rfl <;> cases large <;> decide
+  simpa only [eq] using flag
+
+#print axioms floatFiniteAddL_right_condition_zeuge
+
 end Gabbro.Stage0.Senke
