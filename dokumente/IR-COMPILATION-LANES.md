@@ -232,3 +232,31 @@ are allowed only when proved against existing canonical semantics; genuinely mis
 remain blocked by the explicit no-grammar-rebuild instruction. Separate authorization and canonical-model
 validation are needed for that change. IR-01 is therefore explicitly incomplete; the remaining independent
 frontend/proof work above also stays open rather than being transferred silently to another lane.
+
+### IR-01 contract mitigation and remaining semantic proof boundary
+
+Root review correctly distinguishes the `Normalization` rewrite trace from source/program denotational
+preservation. `source_sound` projects provenance and that local trace; it does **not** prove original
+source acceptance, equality to the originally refusing `elabU`, environment-extension preservation or
+source-to-image execution. Exact alias/constant environment collection and the semantic program bridge
+are still open, independently of translator/record model blockers.
+
+Upstream finding: `Parser/Elab/Uebersetze.lean:uKonstFns` matches `klauseln := _`; `UKonstFn` stores only
+name, parameter/result ranges and returned expression. `uKonstWert` evaluates that body without logical
+contracts or effects. `Kern/Syntax/Konstanten.lean` likewise has no const-function contract evaluator.
+Retaining clauses in `FunctionMeaning` was therefore insufficient as a contract preservation claim.
+
+Mitigation on the actual path: `Functions.evaluationClauses` (in namespace `Stage0.Frontend`) accepts
+only pure-effect and cost clauses. Extracted candidates prove that predicate. More importantly,
+`Frontend.source` checks **original** constant initializers and nested rows before invoking any baseline
+`uConstsRech` or normalization. `Guard.safeConstantName` checks the transitive static const-call hull;
+`safeConstantName_sound` derives `SafeHull`, and `source_constant_hull` attaches that derivation to calls
+in original scalar initializers. Unsupported logical clauses/effects/bodies refuse explicitly, so falling
+back to baseline extraction cannot bypass the check. Original runtime declarations remain present.
+This is a safety mitigation and incomplete coverage, not contract-aware const evaluation.
+
+Three textual refusal probes cover alias signatures, builtin signatures (the baseline fallback case)
+and a transitive wrapper. Their expected diagnostic is recorded in `.error` files; the existing Lean
+guardian's Stage-0 probe loop recognizes compiler-refusal fixtures. The guardian itself was not run,
+because it would rebuild the grammar. Direct IO compilations measured all three refusals; the three
+positive source-to-IR-to-ASM probes still return 42. The Python guardian change passes `py_compile`.

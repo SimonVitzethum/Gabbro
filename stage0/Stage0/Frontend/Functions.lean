@@ -19,11 +19,20 @@ theorem fieldType_sound (env : List (String × (Int × Int))) (ty : STyp) (lo hi
       cases hp
       simp [uTyp, hl, hu]
 
+/-- The current canonical const evaluator has no contract/effect interpreter. Only pure effects
+    and declared costs may accompany a newly extracted body; logical contracts need a proved call rule. -/
+def evaluationClauses (clauses : List SKlausel) : Bool :=
+  clauses.all fun
+    | .effs effects => effects.all fun | .pure => true | _ => false
+    | .cost _ => true
+    | _ => false
+
 /-- Extract exact parameter/result ranges for the existing single-return const-function model.
     Source bodies and signatures remain unchanged for runtime compilation. -/
 def constantFunction (env : List (String × (Int × Int))) : SItemTief → Option UKonstFn
-  | .fnT { art := "const", name, params, res := some result, fehler := none, klauseln := _ }
+  | .fnT { art := "const", name, params, res := some result, fehler := none, klauseln := clauses }
       (.block [] (some (.ret (some body)))) => do
+    if !evaluationClauses clauses then none else do
     let range ← (uFeldTyp env result).toOption
     let args ← params.mapM fun (name, ty) =>
       ((uFeldTyp env ty).toOption).map fun r => (name, r)
@@ -35,6 +44,7 @@ def FunctionMeaning (env : List (String × (Int × Int))) (item : SItemTief) (fn
   ∃ params result clauses,
     item = .fnT ⟨"const", fn.name, params, some result, none, clauses⟩
       (.block [] (some (.ret (some fn.rumpf)))) ∧
+    evaluationClauses clauses = true ∧
     (uFeldTyp env result).toOption = some fn.erg ∧
     params.mapM (fun (name, ty) => ((uFeldTyp env ty).toOption).map fun r => (name, r)) = some fn.params
 
@@ -44,15 +54,18 @@ theorem constantFunction_sound (env : List (String × (Int × Int))) (item : SIt
   unfold constantFunction at h
   split at h
   · rename_i name params result clauses body
-    cases hr : (uFeldTyp env result).toOption with
-    | none => simp [hr] at h
-    | some range =>
-      cases hp : params.mapM (fun (name, ty) => ((uFeldTyp env ty).toOption).map fun r => (name, r)) with
-      | none => simp [hr, hp] at h
-      | some args =>
-        simp [hr, hp] at h
-        subst fn
-        exact ⟨params, result, clauses, rfl, hr, hp⟩
+    by_cases hs : evaluationClauses clauses = true
+    · simp only [hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
+      cases hr : (uFeldTyp env result).toOption with
+      | none => simp [hr] at h
+      | some range =>
+        cases hp : params.mapM (fun (name, ty) => ((uFeldTyp env ty).toOption).map fun r => (name, r)) with
+        | none => simp [hr, hp] at h
+        | some args =>
+          simp [hr, hp] at h
+          subst fn
+          exact ⟨params, result, clauses, rfl, hs, hr, hp⟩
+    · simp [hs] at h
   · contradiction
 
 def constantFunctions (env : List (String × (Int × Int))) (items : List SItemTief) : List UKonstFn :=
