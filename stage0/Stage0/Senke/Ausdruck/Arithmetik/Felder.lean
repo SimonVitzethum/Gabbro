@@ -17,21 +17,35 @@ theorem floatFieldWord_model (w : Runner.W) (offset width : Nat)
     Nat.shiftRight_eq_div_pow]
 
 /-- The packed input decodes through the existing canonical inverse. -/
-theorem floatFieldWord_canonical (a : GFloat) (ha : Gleitkomma.wf Gleitkomma.f64 a) :
-    let w := BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 a)
-    (floatFieldWord w 0 52).toNat = a.frac ∧
-    (floatFieldWord w 52 11).toNat = a.bexp := by
-  have inv := Gleitkomma.ausBits_zuBits _ Gleitkomma.f64_dicht a ha
-  have bound := Gleitkomma.zuBits_lt _ Gleitkomma.f64_dicht a ha
-  have hw : Gleitkomma.f64.ebits + Gleitkomma.f64.fracBits + 1 = 64 := by decide
-  rw [hw] at bound
-  have hf := congrArg (fun x : GFloat => x.frac) inv
-  have he := congrArg (fun x : GFloat => x.bexp) inv
-  change Gleitkomma.zuBits Gleitkomma.f64 a % 2^52 = a.frac at hf
-  change Gleitkomma.zuBits Gleitkomma.f64 a / 2^52 % 2^11 = a.bexp at he
+theorem floatFieldWord_canonical (F : Gleitkomma.Format)
+    (hd : F.dicht) (hw : F.ebits + F.fracBits + 1 ≤ 64)
+    (a : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a) :
+    let w := BitVec.ofNat 64 (Gleitkomma.zuBits F a)
+    (floatFieldWord w 0 F.fracBits).toNat = a.frac ∧
+    (floatFieldWord w F.fracBits F.ebits).toNat = a.bexp := by
+  have inv := Gleitkomma.ausBits_zuBits F hd a ha
+  have bound := Gleitkomma.zuBits_lt F hd a ha
+  have powBound : 2^(F.ebits + F.fracBits + 1) ≤ (2^64 : Nat) :=
+    Nat.pow_le_pow_right (by decide) hw
+  have bound64 : Gleitkomma.zuBits F a < 2^64 := by omega
+  have fracBound : 2^F.fracBits - 1 < (2^64 : Nat) := by
+    have h := Nat.pow_le_pow_right (by decide : 1 ≤ 2)
+      (show F.fracBits ≤ 64 by omega)
+    have hp : 0 < (2^F.fracBits : Nat) := Nat.pow_pos (by decide)
+    omega
+  have expBound : 2^F.ebits - 1 < (2^64 : Nat) := by
+    have h := Nat.pow_le_pow_right (by decide : 1 ≤ 2)
+      (show F.ebits ≤ 64 by omega)
+    have hp : 0 < (2^F.ebits : Nat) := Nat.pow_pos (by decide)
+    omega
+  have hf := congrArg (fun x : Gleitkomma.GBits F => x.frac) inv
+  have he := congrArg (fun x : Gleitkomma.GBits F => x.bexp) inv
+  change Gleitkomma.zuBits F a % 2^F.fracBits = a.frac at hf
+  change Gleitkomma.zuBits F a / 2^F.fracBits % 2^F.ebits = a.bexp at he
   dsimp only
-  rw [floatFieldWord_model _ 0 52 (by decide), floatFieldWord_model _ 52 11 (by decide)]
-  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound, Nat.pow_zero, Nat.div_one]
+  rw [floatFieldWord_model _ 0 F.fracBits fracBound,
+    floatFieldWord_model _ F.fracBits F.ebits expBound]
+  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound64, Nat.pow_zero, Nat.div_one]
   exact ⟨hf, he⟩
 
 /-- Offset is an immediate and must fit the runner's shift-count convention.
@@ -91,6 +105,58 @@ theorem floatFieldL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   simp only [floatFieldL, ho, ↓reduceIte] at h
   exact result h hK m pc hp
 
+/-- Executed input decoding for every well-formed packed operand in a dense
+    format fitting a runner word. Both fields retain the producer's frame. -/
+theorem floatFieldL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (F : Gleitkomma.Format) (hd : F.dicht)
+    (hw : F.ebits + F.fracBits + 1 ≤ 64)
+    (a : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a)
+    {e : Nat → Option (List II × Nat)}
+    (he : WordCode (L := L) ρ W e (BitVec.ofNat 64 (Gleitkomma.zuBits F a))) :
+    WordCode (L := L) ρ W (fun d => floatFieldL 0 F.fracBits d e)
+      (BitVec.ofNat 64 a.frac) ∧
+    WordCode (L := L) ρ W (fun d => floatFieldL F.fracBits F.ebits d e)
+      (BitVec.ofNat 64 a.bexp) := by
+  obtain ⟨hf, hx⟩ := floatFieldWord_canonical F hd hw a ha
+  have fm : 2^F.fracBits - 1 < (2^64 : Nat) := by
+    have h := Nat.pow_le_pow_right (by decide : 1 ≤ 2)
+      (show F.fracBits ≤ 64 by omega)
+    have hp : 0 < (2^F.fracBits : Nat) := Nat.pow_pos (by decide)
+    omega
+  have em : 2^F.ebits - 1 < (2^64 : Nat) := by
+    have h := Nat.pow_le_pow_right (by decide : 1 ≤ 2)
+      (show F.ebits ≤ 64 by omega)
+    have hp : 0 < (2^F.ebits : Nat) := Nat.pow_pos (by decide)
+    omega
+  have ff : WordCode (L := L) ρ W (fun d => floatFieldL 0 F.fracBits d e)
+      (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F a)) 0 F.fracBits) :=
+    floatFieldL_ok 0 F.fracBits (by decide) fm he
+  have fe : WordCode (L := L) ρ W (fun d => floatFieldL F.fracBits F.ebits d e)
+      (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F a)) F.fracBits F.ebits) :=
+    floatFieldL_ok F.fracBits F.ebits (by omega) em he
+  have hf' := congrArg (BitVec.ofNat 64) hf
+  have hx' := congrArg (BitVec.ofNat 64) hx
+  simp only [BitVec.ofNat_toNat, BitVec.setWidth_eq] at hf' hx'
+  rw [hf'] at ff
+  rw [hx'] at fe
+  exact ⟨ff, fe⟩
+
+omit [Kern] in
+/-- Both supported formats jointly exercise zero, least subnormal, least
+    normal and greatest finite inputs through the common decoder. -/
+theorem floatFieldWord_formats_zeuge :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+      F.dicht ∧ F.ebits + F.fracBits + 1 ≤ 64 ∧
+      ∀ a ∈ ([⟨true, 0, 0⟩, ⟨false, 0, 1⟩, ⟨false, 1, 0⟩,
+        ⟨true, F.bexpMax - 1, 2^F.fracBits - 1⟩] : List (Gleitkomma.GBits F)),
+        Gleitkomma.wf F a ∧
+        (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F a)) 0 F.fracBits).toNat = a.frac ∧
+        (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F a)) F.fracBits F.ebits).toNat = a.bexp := by
+  simp only [List.mem_cons, List.mem_singleton, forall_eq_or_imp, forall_eq, Gleitkomma.Format.dicht]
+  decide +kernel
+
+#print axioms floatFieldWord_formats_zeuge
+#print axioms floatFieldL_canonical
 #print axioms floatFieldWord_canonical
 #print axioms floatFieldL_ok
 end Gabbro.Stage0.Senke

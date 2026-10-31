@@ -37,7 +37,9 @@ theorem floatCoefficientWord_canonical (a : GFloat)
     floatCoefficientWord (BitVec.ofNat 64 (Gleitkomma.zuBits _ a)) =
       BitVec.ofInt 64 (floatCoefficient a) := by
   let w := BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 a)
-  obtain ⟨hf, he⟩ := floatFieldWord_canonical a ha
+  obtain ⟨hf, he⟩ := floatFieldWord_canonical Gleitkomma.f64 Gleitkomma.f64_dicht (by decide) a ha
+  change (floatFieldWord _ 0 52).toNat = a.frac at hf
+  change (floatFieldWord _ 52 11).toNat = a.bexp at he
   have hs : (floatFieldWord w 63 1).toNat = if a.sign then 1 else 0 := by
     have inv := congrArg (fun x : GFloat => x.sign)
       (Gleitkomma.ausBits_zuBits _ Gleitkomma.f64_dicht a ha)
