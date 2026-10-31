@@ -50,7 +50,7 @@ theorem branch {c a b : Nat → Option (List II × Nat)} {nc na nb wc wa wb : Na
   obtain ⟨ca, ta, ea, la, ba, oa⟩ := ha d
   obtain ⟨cb, tb, eb, lb, bb, ob⟩ := hb d
   refine ⟨wennC d cc ca cb, max tc (max ta tb),
-    by simp [wennL, ec, ea, eb, la, lb, bound], ?_, ?_, ?_⟩
+    by simp [wennL, ec, ea, eb, la, lb, bound]; omega, ?_, ?_, ?_⟩
   · simp [wennC, lc, la, lb]; omega
   · omega
   · simp [wennC, List.all_append, oc, oa, ob, ci]

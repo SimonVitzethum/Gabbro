@@ -1,39 +1,4 @@
-import Stage0.Laufzeit
-import Stage0.Zeuge
-import Stage0.Schritt.Grund
-import Stage0.Schritt.Dann
-import Stage0.Schritt.Abbruch
-import Stage0.Schritt.Rest
-import Stage0.Schritt.Blatt
-import Stage0.Schritt.Ruf
-import Stage0.Schritt.Rueck
-import Stage0.Schritt.Geraet
-import Stage0.Schritt.Zug
-import Stage0.Lauf.Fertig
-import Stage0.Lauf.Boot
-import Stage0.Tor.Roh
-import Stage0.Tor.Bindung
-import Stage0.Tor.Orakel
-import Stage0.Tor.Frage
-import Stage0.Tor.Ausfuehren
-import Stage0.Tor.LaufIO
-import Stage0.Schnell.Kompakt
-import Stage0.Schnell.BlattPaar
-import Stage0.Schnell.Normal
-import Stage0.Schnell.Werkzeug
-import Stage0.Schnell.Sim.SA
-import Stage0.Schnell.Sim.SB
-import Stage0.Schnell.Sim.SC
-import Stage0.Schnell.Sim.SD
-import Stage0.Schnell.Sim.SE
-import Stage0.Schnell.Sim.SF
-import Stage0.Schnell.Sim.SG
-import Stage0.Schnell.Sim.SH
-import Stage0.Schnell.Sim
-import Stage0.Schnell.Orakel
-import Stage0.Schnell.Stand
-import Stage0.Schnell.Lauf
-import Stage0.Lauf.Memo
+import Stage0.IRBild
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Hilfe
 import Stage0.Senke.Ausdruck.Sim
@@ -81,3 +46,15 @@ import Stage0.Senke.Ausdruck.Gleit.SlotProbes
 
 import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
 import Stage0.Senke.Ausdruck.Arithmetik.Proben
+import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCall
+
+import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
+import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+import Stage0.Senke.Anweisung.Faelle.Schleifen.EarlyExit
+
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
+import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
+
+import Stage0.Senke.Anweisung.Faelle.Schleifen.HookProben
+import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
+import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost

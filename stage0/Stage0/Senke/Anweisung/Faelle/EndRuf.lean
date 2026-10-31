@@ -17,11 +17,11 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {g : D.Fn} {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {proof0 : _} {proof1 : _} {rest : Endblock D (vertragVon D f) l (τ :: Γ) (nach D g Λ)} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCall g args he proof0 proof1 rest) := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCall g args he proof0 proof1 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨cr, tr⟩, hr, hc⟩ := h
@@ -29,7 +29,7 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
   have hFB3 : FB = 4 := rfl
-  have hct : frei Γ + FB + (D.params g).length + 1 ≤ callTop g (frei Γ) ta := by simp only [callTop]; omega
+  have hct : frei Γ reserved + FB + (D.params g).length + 1 ≤ callTop g (frei Γ reserved) ta := by simp only [callTop]; omega
   have hc := callC_ok hS (hA g) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
   simp only [execEnd]
   generalize R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
@@ -38,23 +38,23 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
     obtain ⟨m1, s1, a1, ⟨w, hw, hew⟩, hw1⟩ := hc
     have hks := hW.ks
     have hp1 := hp.left.nextW hW a1 (by have := hp.ctx; omega) (Nat.le_refl _) (by omega)
-    have s2 := mov_to hp1.code hp1.frame (j := frei Γ) (s := frei Γ + 2) (by omega) (by omega) hp.small hw
+    have s2 := mov_to hp1.code hp1.frame (j := frei Γ reserved) (s := frei Γ reserved + 2) (by omega) (by omega) hp.small hw
     rw [← pc_add1] at s2
-    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ))) 8 w.toNat
-    have a2s : Agree fp (frei Γ) Ks m1 m2 := agree_write (frameOK_sub hp1.frame hks).room (Nat.le_refl _) (by omega) _
-    have a2 : Agree fp (frei Γ) K m1 m2 := Agree.widen a2s hks
+    let m2 := write m1 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 w.toNat
+    have a2s : Agree fp (frei Γ reserved) Ks m1 m2 := agree_write (frameOK_sub hp1.frame hks).room (Nat.le_refl _) (by omega) _
+    have a2 : Agree fp (frei Γ reserved) K m1 m2 := Agree.widen a2s hks
     have hw2 : WeltAt m2 L σ' :=
       weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hw1 (a2s.mono (Nat.zero_le _))
-    have hq := hp.nextW hW (a1.trans (agreeW_of a2)) (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega)
+    have hq := hp.nextW hW (a1.trans (agreeW_of a2)) (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega)
       (by omega)
-    have hp2 : PreS L m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+    have hp2 : PreS L m2 _ fp K (frei Γ reserved + 1) cr (Env.cons (ergWert he v) ρ) reserved :=
       ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
        envAt_cons hq.env (rd_same hp1.frame (by omega) w) (encErg_wert he hew.1), trivial, wstab_true _ _⟩
     have ih := ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m2 _ σ' _ hp2
       (by simp only [frei, List.length_cons] at hlo ⊢; omega)
       (hu.agreeW hW (a1.trans (agreeW_of a2)) (by omega)) (hk.agreeW hW (a1.trans (agreeW_of a2)) (by omega)) hw2
       (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
-    rw [pc_add1 pc (callC A g (frei Γ) ca ++ [ci 2 (frei Γ) (frei Γ + 2) 0]) cr]
+    rw [pc_add1 pc (callC A g (frei Γ reserved) ca ++ [ci 2 (frei Γ reserved) (frei Γ reserved + 2) 0]) cr]
     exact Ret.prefix (by omega) (s1.trans s2) ((a1.trans (agreeW_of a2)).mono (by omega))
       (keeps_of_agreeW hW (a1.trans (agreeW_of a2)) hpr (by have := hW.ks; omega)) (Ret.schrumpf ih)
   | logik e => exact hc
@@ -66,11 +66,11 @@ theorem endAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = some τ} {proof0 : _} {proof1 : _} {proof2 : _} {proof3 : _} {rest : Endblock D (vertragVon D f) l (τ :: Γ) Λ} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindAxiom a args he proof0 proof1 proof2 proof3 rest) := by
+    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
+    EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindAxiom a args he proof0 proof1 proof2 proof3 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   simp only [lowEnd, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨cr, tr⟩, hr, hc⟩ := h
@@ -83,8 +83,8 @@ theorem endAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
   rcases torBind_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he ht hck (by omega) (by omega) hW hp hWa with
     ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨hAA, hst⟩
   · rw [hAA]
-    have hq := hp.nextW hW a12 (d' := frei Γ + 1) (by have := hp.ctx; omega) (by omega) (by omega)
-    have hp2 : PreS L m2 _ fp K (frei Γ + 1) cr (Env.cons (ergWert he v) ρ) :=
+    have hq := hp.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
+    have hp2 : PreS L m2 _ fp K (frei Γ reserved + 1) cr (Env.cons (ergWert he v) ρ) reserved :=
       ⟨by simp only [frei, List.length_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
        envAt_cons hq.env hw2 hen, trivial, wstab_true _ _⟩
     have ih := ihRest (ex := ex) cr tr hr (by omega)

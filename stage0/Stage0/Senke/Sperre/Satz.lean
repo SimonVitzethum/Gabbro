@@ -86,30 +86,30 @@ theorem tgt_nat {p : W} {a b n : Nat} (h : a + 16 * n = b) :
   simpa using this
 
 /-- **`locks Lk { body }`**: what G answers for the statement, the code does. -/
-theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+theorem locks_ok {reserved : Nat} {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {L : Lay D} {P : Programm D} {f : D.Fn} {fp : W} {K Ks lo : Nat}
     {rp cfp : W} {σ0 : World D} {ρ0 : Env D (D.params f)} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {Lk : D.Lock}
     {body : Block D (vertragVon D f) l Γ (.held Lk :: Λ) (.held Lk :: Λ)} {cb : List II}
     (hrf : retFreiB body = true) (hex1 : lit32 (16 + ex.1 + 16 * 30) = true) (hex2 : lit32 (16 + ex.2) = true)
-    (hs18 : frei Γ + 18 ≤ Ks) (hW : WIn L fp Ks K) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
-    (hpr : ∀ j ∈ pr, j < frei Γ) {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
-    (hbody : ∀ m' σ', PreS L m' (pc + BitVec.ofNat 64 (16 * 48)) fp K (frei Γ) cb ρ → Umf L A C dv m' fp (Ks - 1) K →
+    (hs18 : frei Γ reserved + 18 ≤ Ks) (hW : WIn L fp Ks K) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved)
+    (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
+    (hbody : ∀ m' σ', PreS L m' (pc + BitVec.ofNat 64 (16 * 48)) fp K (frei Γ reserved) cb ρ reserved → Umf L A C dv m' fp (Ks - 1) K →
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 48), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * 48) + BitVec.ofNat 64 (16 * cb.length))
         (pc + BitVec.ofNat 64 (16 * 48) + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 (16 * 30))
         (pc + BitVec.ofNat 64 (16 * 48) + BitVec.ofNat 64 (16 * cb.length) + BitVec.ofInt 64 (16 * 60))
-        (execBlock O passes R body σ' ρ))
-    (hp : PreS L m pc fp K (frei Γ) (locksCode L (L.lk Lk) (frei Γ) cb ex.1 ex.2) ρ)
+        (execBlock O passes R body σ' ρ) reserved)
+    (hp : PreS L m pc fp K (frei Γ reserved) (locksCode L (L.lk Lk) (frei Γ reserved) cb ex.1 ex.2) ρ reserved)
     (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
-      (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ) cb ex.1 ex.2).length))
-      (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ) cb ex.1 ex.2).length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ) cb ex.1 ex.2).length) + BitVec.ofInt 64 ex.2)
-      ((execBlock O passes R body (σ.nimmt Lk) ρ).mapWelt (·.gibt Lk)) := by
+      (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ reserved) cb ex.1 ex.2).length))
+      (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ reserved) cb ex.1 ex.2).length) + BitVec.ofInt 64 ex.1)
+      (pc + BitVec.ofNat 64 (16 * (locksCode L (L.lk Lk) (frei Γ reserved) cb ex.1 ex.2).length) + BitVec.ofInt 64 ex.2)
+      ((execBlock O passes R body (σ.nimmt Lk) ρ).mapWelt (·.gibt Lk)) reserved := by
   generalize ha : L.lk Lk = a at hp
-  generalize hsd : frei Γ = s at hp hs18 hlo2 hpr hbody
+  generalize hsd : frei Γ reserved = s at hp hs18 hlo2 hpr hbody
   have hy := hu.sync
   have hme := hy.me
   have hla := hy.lay Lk
@@ -139,7 +139,7 @@ theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → E
   obtain ⟨m1, f1, c1, s1, hL1, hc1, hc1a, hc1b⟩ := nimm_paar E0 hL0 (p := 0) At0 hme hst (by omega) (by omega)
   have s1' : Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 48), fp⟩ m1 := star_cast s1 (by simp) rfl
   -- the body's start
-  have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * 48)) fp K s cb ρ :=
+  have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * 48)) fp K s cb ρ reserved :=
     ⟨by omega, hp.small, ⟨hp.frame.lt, fun i hi => by rw [hL1.ag.rd]; exact hp.frame.rd i hi,
       fun i hi => by rw [hL1.ag.wr]; exact hp.frame.wr i hi⟩,
      At.codeAt (hL1.ag.codeAt hfa ha31 hp.code hcf) Atb, At.codeFar hcf (by rw [hlen]; omega),
@@ -185,8 +185,8 @@ theorem locks_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → E
     · have hxs : ¬ inSlots fp s (s + 18) x := fun ⟨h1, h2⟩ => hx ⟨by omega, by omega⟩
       rw [hL3.ag.b x hxs hxl, a2.b x hx hxw, hL1.ag.b x hxs hxl]
   -- what holds after the give
-  have after : ∀ m2 m3 (σ' : World D) (ρ' : Env D Γ), AgreeK fp s a m2 m3 → EnvAt L m2 fp ρ' → WeltAt m2 L σ' → Keeps fp pr m1 m2 →
-      EnvAt L m3 fp ρ' ∧ WeltAt m3 L (σ'.gibt Lk) ∧ Keeps fp pr m m3 := fun m2 m3 σ' ρ' k3 en hw kp =>
+  have after : ∀ m2 m3 (σ' : World D) (ρ' : Env D Γ), AgreeK fp s a m2 m3 → EnvAt L m2 fp ρ' reserved → WeltAt m2 L σ' → Keeps fp pr m1 m2 →
+      EnvAt L m3 fp ρ' reserved ∧ WeltAt m3 L (σ'.gibt Lk) ∧ Keeps fp pr m m3 := fun m2 m3 σ' ρ' k3 en hw kp =>
     ⟨k3.envAt en (Nat.le_of_eq hsd) hfa ha31, k3.weltAt hw hW.lay hfl (by omega),
      fun j hj => by
       have := hpr j hj

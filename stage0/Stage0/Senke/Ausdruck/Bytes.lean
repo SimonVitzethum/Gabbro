@@ -8,7 +8,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 set_option maxRecDepth 2048
-variable [Kern] {D : Deklaration}
+variable [Kern] {D : Deklaration} {reserved : Nat}
 
 theorem wert_transport_eq_cast {τ τ' : Ty} (h : τ = τ') (v : Wert D τ) :
     (h ▸ v : Wert D τ') = cast (congrArg (Wert D) h) v := by
@@ -18,12 +18,12 @@ theorem readBytesL_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (i : Expr D Γ Λ (.int a b)) {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .int 0 255)
     {σ₀ σ : World D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} {ρ : Env D Γ}
     (hWL : ∀ m, W m → WeltAt m L σ) (hlo : 0 ≤ a)
-    (ih : ∀ d c top, lowE L i d = some (c, top) → top ≤ K → ∀ m pc,
-      Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ))) :
+    (ih : ∀ d c top, lowE L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
+      Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ))) :
     (n j d : Nat) → (c : List II) → (top : Nat) →
     b + j + n ≤ D.count t → j + n ≤ 8 →
-    readBytesL L t f (lowE L i) j n d = some (c, top) → top ≤ K →
-    ∀ m pc, Pre L m pc fp K d c ρ W →
+    readBytesL L t f (lowE L i (reserved := reserved)) j n d = some (c, top) → top ≤ K →
+    ∀ m pc, Pre L m pc fp K d c ρ W reserved →
     Ok m pc fp K d c (fun w => w = BitVec.ofInt 64
       (bytesZuZahl (σ.bytesAb t f hf n ((eval σ₀ i σ ρ).n + j))))
   | 0, j, d, c, top, _, _, h, hK, m, pc, hp => by
@@ -39,7 +39,7 @@ theorem readBytesL_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     simp only [bin2] at hhTop
     let ix : Expr D Γ Λ (.index (D.count t)) :=
       .widen (by omega) (by omega) (.add i (.lit (j : Int)))
-    have hhead : ∀ m pc, Pre L m pc fp K d head ρ W →
+    have hhead : ∀ m pc, Pre L m pc fp K d head ρ W reserved →
         Ok m pc fp K d head (fun w => w = BitVec.ofInt 64
           (hf ▸ σ.slots t ((eval σ₀ i σ ρ).n + j) f : Wert D (.int 0 255)).n) := by
       intro m pc hp

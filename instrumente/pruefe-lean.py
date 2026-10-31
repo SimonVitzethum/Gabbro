@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guardian 1 of 4 -- the Lean model (`grammatik/`), the stage-0 runtime (`stage0/`) and the runner (`runner/`).
+"""Guardian 1 of 4 -- the Lean model (`grammatik/`), the stage-0 compiler (`stage0/`) and the runner (`runner/`).
 
     ./instrumente/pruefe-lean.py [--ohne-bau]
 
@@ -16,8 +16,8 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      unit and `gabbro_ziel` instantiated on it are checked for every certified program.
   7. Stage 0 (`stage0/`, PLAN-SELF-HOSTING.md §2): `lake build` of the package (library and the executable
      `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
-     executable on `NAME.ein` (written after `NAME.warte` seconds when that file exists, so a thread blocked in
-     `read(2)` must leave the others running) and must print exactly `NAME.aus` with exit code 0.
+     compiler to IR, then through the assembly runner on `NAME.ein` (written after `NAME.warte` seconds when
+     that file exists); the runner must print exactly `NAME.aus` with exit code 0.
      `stage0/Nachpruefung.lean`: the lowering's theorems (`bild_ok_u`, `lowS_ok`, ...) depend on exactly the three
      standard axioms. Every probe `stage0/proben-ir/NAME.gab` is lowered by `stage0 --ir` to an `S0IR` image, which
      the runner binary (written by `lake exe runner`) runs; its exit code must be `NAME.code`.
@@ -157,25 +157,6 @@ def stufe_stage0():
     exe = S0 / ".lake/build/bin/stage0"
     proben = sorted((S0 / "proben").glob("*.gab"))
     falsch = []
-    for gab in proben:
-        ein = gab.with_suffix(".ein").read_bytes()
-        warte = gab.with_suffix(".warte")
-        p = subprocess.Popen([str(exe), str(gab)], cwd=S0, env=ENV, stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        try:
-            if warte.exists():
-                try:
-                    p.wait(timeout=float(warte.read_text()))
-                except subprocess.TimeoutExpired:
-                    pass
-            aus, err = p.communicate(ein, timeout=600)
-        except subprocess.TimeoutExpired:
-            p.kill()
-            aus, err = p.communicate()
-        if p.returncode != 0 or aus != gab.with_suffix(".aus").read_bytes():
-            falsch.append(f"{gab.name} (rc {p.returncode}: {(aus + err)[:200]!r})")
-    print(f"  7 proben:  {'ok' if proben and not falsch else 'ROT'} ({len(proben) - len(falsch)} of {len(proben)})")
-    for f in falsch: print("     ", f)
     rc, out = lauf(["lake", "env", "lean", "Nachpruefung.lean"], S0, 1800)
     zeilen = re.findall(r"'([^']+)' depends on axioms: \[([^\]]*)\]", out)
     schlecht = [n for n, a in zeilen if not {x.strip() for x in a.split(",") if x.strip()} <= STANDARD]
@@ -193,6 +174,29 @@ def stufe_stage0():
         irfalsch.append(f"runner binary not written: {out.strip()[-200:]}")
     else:
         runner.chmod(0o755)
+        for gab in proben:
+            img = kratz / ("io-" + gab.stem + ".img")
+            q = subprocess.run([str(exe), "--ir", str(gab), str(img)], cwd=S0, env=ENV,
+                               capture_output=True, timeout=600)
+            if q.returncode != 0:
+                falsch.append(f"{gab.name}: compilation failed: {(q.stdout + q.stderr)[:200]!r}")
+                continue
+            ein = gab.with_suffix(".ein").read_bytes()
+            warte = gab.with_suffix(".warte")
+            p = subprocess.Popen([str(runner), str(img)], cwd=kratz, env=ENV,
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                if warte.exists():
+                    try:
+                        p.wait(timeout=float(warte.read_text()))
+                    except subprocess.TimeoutExpired:
+                        pass
+                aus, err = p.communicate(ein, timeout=600)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                aus, err = p.communicate()
+            if p.returncode != 0 or aus != gab.with_suffix(".aus").read_bytes():
+                falsch.append(f"{gab.name} (rc {p.returncode}: {(aus + err)[:200]!r})")
         for gab in irproben:
             img = kratz / (gab.stem + ".img")
             q = subprocess.run([str(exe), "--ir", str(gab), str(img)], cwd=S0, env=ENV, capture_output=True, timeout=600)
@@ -203,6 +207,8 @@ def stufe_stage0():
             soll = int(gab.with_suffix(".code").read_text())
             if r.returncode != soll:
                 irfalsch.append(f"{gab.name}: exit {r.returncode}, expected {soll}")
+    print(f"  7 proben:  {'ok' if proben and not falsch else 'ROT'} ({len(proben) - len(falsch)} of {len(proben)})")
+    for f in falsch: print("     ", f)
     print(f"  7 ir:      {'ok' if irproben and not irfalsch else 'ROT'} ({len(irproben) - len(irfalsch)} of {len(irproben)})")
     for f in irfalsch: print("     ", f)
     return bool(proben) and not falsch and ok_ax and bool(irproben) and not irfalsch

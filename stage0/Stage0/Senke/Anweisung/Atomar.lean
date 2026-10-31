@@ -191,18 +191,18 @@ variable {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.
   {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 /-- **`exchange`**: what G answers for the block, the code does. -/
-theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn cr : List II} {tn : Nat}
-    (hn : lowE L neu (frei Γ + 1) = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ + 4 ≤ Ks)
+theorem exch_head {reserved : Nat} {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn cr : List II} {tn : Nat}
+    (hn : lowE L neu (frei Γ reserved + 1) reserved = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ reserved + 4 ≤ Ks)
     (hW : WIn L fp Ks K) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS L m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hWa : WeltAt m L σ) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length), fp⟩ m' ∧
-      AgreeW L fp (frei Γ) K m m' ∧
-      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr
-        (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) ∧
+    (hp : PreS L m pc fp K (frei Γ reserved) (exC (frei Γ reserved) (L.ga g) cn ++ cr) ρ reserved) (hWa : WeltAt m L σ) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length), fp⟩ m' ∧
+      AgreeW L fp (frei Γ reserved) K m m' ∧
+      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length)) fp K (frei Γ reserved + 1) cr
+        (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) reserved ∧
       WeltAt m' L ((σ.lese Λ (.inr g :: neu.orte)).schreibGlob g Λ (eval (σ.lese Λ (.inr g :: neu.orte)) neu
         (σ.lese Λ (.inr g :: neu.orte)) (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ))) := by
-  generalize hsd : frei Γ = s at hn hs4 hp ⊢
-  have hfr : frei (D.gtyp g :: Γ) = s + 1 := by simp only [frei, List.length_cons] at hsd ⊢; omega
+  generalize hsd : frei Γ reserved = s at hn hs4 hp ⊢
+  have hfr : frei (D.gtyp g :: Γ) reserved = s + 1 := by simp only [frei, List.length_cons] at hsd ⊢; omega
   have hks := hW.ks
   have hK := hp.small
   have hl := hW.lay
@@ -226,7 +226,7 @@ theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn
   have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * 2)) fp K (s + 1) (cn ++ ([ci 1 ((s + 2 : Nat) : Int) (L.ga g) 0,
       ci 22 ((s + 3 : Nat) : Int) ((s + 2 : Nat) : Int) s, ci 14 ((s + 3 : Nat) : Int) ((s + 3 : Nat) : Int) s,
       ci 19 ((s + 3 : Nat) : Int) (-(16 * ((cn.length + 5 : Nat) : Int))) 0] ++ cr))
-      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) :=
+      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) reserved :=
     ⟨Nat.le_of_eq hfr, hK, hq.frame, hq.code, hq.far, envAt_cons hq.env (by rw [hsd]; exact r1) he0, trivial,
      wstab_true _ _⟩
   have hpw := PreS.welt hp1.left hks (weltAt_stab hl (by have := hW.top; omega) m m1 hσ (a1.mono (Nat.zero_le _)))
@@ -254,34 +254,34 @@ theorem exch_head {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {cn
     simp only [List.length_cons, List.length_nil]
     rw [pc_jump, pc_jump, hlen]; congr 2; omega
   have hp3 : PreS L m3 (pc + BitVec.ofNat 64 (16 * (exC s (L.ga g) cn).length)) fp K (s + 1) cr
-      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) := by
+      (Env.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ) reserved := by
     rw [← e3]
     exact ⟨Nat.le_of_eq hfr, hq3.small, hq3.frame, hq3.code, hq3.far, envAt_cons hq3.env (by rw [hsd]; exact r3) he0,
       trivial, wstab_true _ _⟩
   exact ⟨m3, s1.trans (s2.trans (star_cast s3 rfl (by rw [← e3]; rfl))), A, hp3, hW3⟩
 
-theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
+theorem exch_ok {reserved : Nat} {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
     {hw : (vertragVon D f).gschreibt g = true} {hL : gdarf D g Λ}
     {rest : Block D (vertragVon D f) l (D.gtyp g :: Γ) Λ Λ'} {cn cr : List II} {tn : Nat}
-    (hn : lowE L neu (frei Γ + 1) = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ + 4 ≤ Ks)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
-    (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
+    (hn : lowE (reserved := reserved) L neu (frei Γ reserved + 1) = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ reserved + 4 ≤ Ks)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved)
+    (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
-      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length)) fp K (frei Γ + 1) cr ρ' →
+      PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length)) fp K (frei Γ reserved + 1) cr ρ' reserved →
       Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
-      Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length), fp⟩ m'
-        (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length))
-        (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
+      Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length), fp⟩ m'
+        (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length))
+        (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
           BitVec.ofInt 64 ex.1)
-        (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
+        (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length) + BitVec.ofNat 64 (16 * cr.length) +
           BitVec.ofInt 64 ex.2)
-        (execBlock O passes R rest σ' ρ'))
-    (hp : PreS L m pc fp K (frei Γ) (exC (frei Γ) (L.ga g) cn ++ cr) ρ) (hu : Umf L A C dv m fp Ks K)
+        (execBlock O passes R rest σ' ρ') reserved)
+    (hp : PreS L m pc fp K (frei Γ reserved) (exC (frei Γ reserved) (L.ga g) cn ++ cr) ρ reserved) (hu : Umf L A C dv m fp Ks K)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
-    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length))
-      (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * (exC (frei Γ) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.2)
-      (execBlock O passes R (.exchange g neu hw hL rest) σ ρ) := by
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length))
+      (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.1)
+      (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn ++ cr).length) + BitVec.ofInt 64 ex.2)
+      (execBlock O passes R (.exchange g neu hw hL rest) σ ρ) reserved := by
   obtain ⟨m3, s3, A, hp3, hW3⟩ := exch_head (Λ := Λ) hn htn hs4 hW hp hWa
   have ih := hrest m3 _ _ hp3 (hu.agreeW hW (A.mono hlo2) hlo) (hk.agreeW hW (A.mono hlo2) (by omega)) hW3
   simp only [execBlock]
@@ -289,12 +289,12 @@ theorem exch_ok {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)}
   exact Sim.prefix hlo s3 (A.mono hlo2) (keeps_of_agreeW hW A hpr (by have := hW.ks; omega)) (Sim.schrumpf ih)
 
 /-- The load of `awaits`: the global's word into the new variable's slot. -/
-theorem awaits_head {g : D.Glob} {cr : List II} (hl : lit32 (L.ga g) = true) (hs1 : frei Γ + 1 ≤ Ks)
+theorem awaits_head {reserved : Nat} {g : D.Glob} {cr : List II} (hl : lit32 (L.ga g) = true) (hs1 : frei Γ reserved + 1 ≤ Ks)
     (hW : WIn L fp Ks K) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
-    (hp : PreS L m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
+    (hp : PreS L m pc fp K (frei Γ reserved) ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr) ρ reserved)
     (hWa : WeltAt m L σ) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m' ∧ AgreeW L fp (frei Γ) K m m' ∧
-      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr (Env.cons (σ.globs g) ρ) ∧ WeltAt m' L σ := by
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m' ∧ AgreeW L fp (frei Γ reserved) K m m' ∧
+      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ reserved + 1) cr (Env.cons (σ.globs g) ρ) reserved ∧ WeltAt m' L σ := by
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, w, hw, hen⟩ := glob_ok (σ := σ) hl hpw (fun _ h => h) (by omega)
@@ -304,28 +304,28 @@ theorem awaits_head {g : D.Glob} {cr : List II} (hl : lit32 (L.ga g) = true) (hs
     envAt_cons hq.env hw hen, trivial, wstab_true _ _⟩, hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))⟩
 
 /-- **`awaits`**: the publication is visible (`SichtOK`); the global's word is the new variable. -/
-theorem awaits_ok [SichtOK O] {g : D.Glob} {pl : List D.Glob} {hpl : pl = D.nutzlast g} {hL : gdarf D g Λ}
+theorem awaits_ok {reserved : Nat} [SichtOK O] {g : D.Glob} {pl : List D.Glob} {hpl : pl = D.nutzlast g} {hL : gdarf D g Λ}
     {hat : D.atomar g = true} {rest : Block D (vertragVon D f) l (D.gtyp g :: Γ) Λ Λ'} {cr : List II}
-    (hl : lit32 (L.ga g) = true) (hs1 : frei Γ + 1 ≤ Ks)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ)
-    (hpr : ∀ j ∈ pr, j < frei Γ) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
+    (hl : lit32 (L.ga g) = true) (hs1 : frei Γ reserved + 1 ≤ Ks)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved)
+    (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
-      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ + 1) cr ρ' →
+      PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei Γ reserved + 1) cr ρ' reserved →
       Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m'
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length))
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.1)
         (pc + BitVec.ofNat 64 (16 * 2) + BitVec.ofNat 64 (16 * cr.length) + BitVec.ofInt 64 ex.2)
-        (execBlock O passes R rest σ' ρ'))
-    (hp : PreS L m pc fp K (frei Γ) ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr) ρ)
+        (execBlock O passes R rest σ' ρ') reserved)
+    (hp : PreS L m pc fp K (frei Γ reserved) ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr) ρ reserved)
     (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
-      (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr).length))
-      (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr).length) +
+      (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr).length))
+      (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr).length) +
         BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr).length) +
+      (pc + BitVec.ofNat 64 (16 * ([ci 1 (frei Γ reserved) (L.ga g) 0, ci 15 (frei Γ reserved) (frei Γ reserved) 0] ++ cr).length) +
         BitVec.ofInt 64 ex.2)
-      (execBlock O passes R (.awaits g pl hpl hL hat rest) σ ρ) := by
+      (execBlock O passes R (.awaits g pl hpl hL hat rest) σ ρ) reserved := by
   simp only [execBlock, SichtOK.sicht, ↓reduceIte]
   obtain ⟨m1, s1, A, hp1, hW1⟩ := awaits_head hl hs1 hW hp hWa
   have ih := hrest m1 ((σ.fragt (.inr (.inr g))).lese Λ [.inr g]) _ hp1

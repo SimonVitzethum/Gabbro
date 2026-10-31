@@ -40,8 +40,8 @@ structure Pre (L : Lay D) (m : Runner.Mem) (pc fp : Runner.W) (K d : Nat) (cd : 
   wstab : WStab W fp K
 
 /-- A statement's precondition: nothing outside the frame is assumed in it (the world comes separately). -/
-abbrev PreS (L : Lay D) (m : Runner.Mem) (pc fp : Runner.W) (K d : Nat) (cd : List II) {Γ : Ctx} (ρ : Env D Γ) : Prop :=
-  Pre L m pc fp K d cd ρ (fun _ => True)
+abbrev PreS (L : Lay D) (m : Runner.Mem) (pc fp : Runner.W) (K d : Nat) (cd : List II) {Γ : Ctx} (ρ : Env D Γ) (reserved : Nat := 0) : Prop :=
+  Pre L m pc fp K d cd ρ (fun _ => True) reserved
 
 def Ok (m : Runner.Mem) (pc fp : Runner.W) (K d : Nat) (code : List II) (P : Runner.W → Prop) : Prop :=
   ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧ Agree fp d K m m' ∧

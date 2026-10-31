@@ -4,7 +4,7 @@ import Stage0.Senke.Ausdruck.Top
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem konstWL_top (k n d : Nat) : d < (konstWL k n d).2 ∧ (konstWL k n d).2 ≤ d + 2 := by
   induction k generalizing n with

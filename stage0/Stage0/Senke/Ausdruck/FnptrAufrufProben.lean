@@ -144,7 +144,7 @@ theorem lowInd_ok_zeuge [Kern] :
       (∃ w, m'.rd64 (slot 4096 6) = some w ∧ Enc callLayout (.int 0 100) (⟨21, by decide, by decide⟩ : Zahl 0 100) w) ∧
       WeltAt m' callLayout world := by
   refine ⟨call_spec, rfl, call_pre.left, call_umf, call_win, call_world, ?_⟩
-  have h := lowInd_ok call_spec (A := addresses)
+  have h := lowInd_ok (reserved := 0) call_spec (A := addresses)
     addresses_bound
     pointer .nil world world (c := indirect) (top := 9) (by rfl) (by decide)
     call_pre.left call_umf call_win call_world

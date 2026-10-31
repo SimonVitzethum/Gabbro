@@ -7,6 +7,41 @@ were organised) is in `git log`, not here.
 
 ---
 
+## Current implementation scope: all Gabbro to IR
+
+The active implementation task is **only to compile every existing Gabbro language form except register
+operations into Stage-0 IR and build the connected translation pipeline**. Device-register reads, writes,
+fallible reads and register transitions are explicitly outside this task; do not implement them or count
+them as unfinished work for this scope. Work is prioritized by completed, connected source-to-IR cases,
+not by the number of helper lemmas, commits or added lines. Cover the whole language rather than repeatedly
+expanding infrastructure for a small subset.
+
+- **The assembly IR runner is the execution backend.** Reuse it; change it only for a concrete missing or
+  incorrect capability needed by source-to-IR compilation. Do not start an adjacent runner or hardware project.
+- **The former Gabbro runtime implemented in Lean is retired and must be removed.** Do not develop, extend,
+  optimize or retain it as a fallback/reference execution path. Stage 0 compiles; the assembly runner executes.
+  The canonical language model, IR semantics and lowering correctness proofs remain required; they are not
+  the retired executable source interpreter.
+- First inventory every existing language form across the Lean model, source front end, IR emitter and
+  connected correctness theorem; distinguish missing model support from missing translation or proof.
+- **Every Gabbro-to-IR lowering must be formally verified.** Implement it in the actual compiler path,
+  connect its generic correctness proof through the whole translation pipeline, and compile that pipeline.
+  Tests, per-program witnesses, isolated emitters and detached proof fragments do not replace the generic
+  lowering theorem and do not make a language case complete.
+- Do not start separate generic instruction-cost, timing, hardware or proof-infrastructure projects.
+  Proof changes are limited to what is necessary to connect the actual source-to-IR implementation while
+  preserving existing guarantees. Do not weaken checks or semantics to enable a case.
+- Test emitted IR with the assembly runner when needed. Never add another Gabbro interpreter or restore the
+  retired Lean execution path.
+- **Never rebuild `grammatik/` for this task.** Reuse its existing compiled artifacts. Run affected Stage-0
+  compilation checks directly; do not invoke a build or guardian that would rebuild the grammar.
+- **Only one Lean build or direct Lean check may run at a time globally, across all worktrees.** All workers
+  use the same lock: `/home/simon/.cache/gabbro-stage0-build.lock`.
+
+This scope governs the current implementation work; the broader roadmap below is not authorization to
+start adjacent projects. Report which language cases actually compile, which remain refused, and what was
+measured.
+
 ## 1. The goal
 
 > **A Gabbro user proves only their own logic plus named hardware assumptions.** Memory safety, race freedom,

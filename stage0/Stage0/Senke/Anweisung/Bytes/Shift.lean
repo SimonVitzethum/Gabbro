@@ -9,6 +9,7 @@ import Stage0.Senke.Anweisung
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
+variable {reserved : Nat}
 variable [Kern] {D : Deklaration}
 
 /-- State-field lowering preserves G's successful write and its failed-prestate stop. -/
@@ -21,13 +22,13 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hn : a ≤ nach ∧ nach ≤ b) (he : D.erlaubt t field von nach = true)
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (h : lowS passes A L lo ens pr ex (Stmt.shift (l := l) t field ht i von nach hn he hw hl) = some (c, top))
-    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ) c ρ)
-    (hlo : lo ≤ frei Γ) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
+    (h : lowS (reserved := reserved) passes A L lo ens pr ex (Stmt.shift (l := l) t field ht i von nach hn he hw hl) = some (c, top))
+    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
+    (hlo : lo ≤ frei Γ reserved) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (Stmt.shift (l := l) t field ht i von nach hn he hw hl) σ ρ) := by
+      (execStmt O passes R (Stmt.shift (l := l) t field ht i von nach hn he hw hl) σ ρ) reserved := by
   simp only [lowS] at h
   split at h
   · next hfit =>
@@ -38,7 +39,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     obtain ⟨rfl, rfl⟩ := h
     have hks := hW.ks
     have htop := slotA_top ha
-    have htopr : frei Γ + 2 ≤ tr := by
+    have htopr : frei Γ reserved + 2 ≤ tr := by
       simp only [slotC, ht, aggregateFits, ↓reduceIte, Option.map_eq_some_iff] at hr
       obtain ⟨⟨cc, tc⟩, hc, hh⟩ := hr
       have := slotA_top hc
@@ -49,18 +50,18 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     let old : Wert D (.int a b) := ht ▸ σE.slots t (eval σE i σE ρ).n field
     have heq : Enc L (D.typ t field) (σE.slots t (eval σE i σE ρ).n field) =
         (fun w => w = BitVec.ofInt 64 old.n) := by funext w; exact propext (enc_int_cast ht _ w)
-    let test := cr ++ [ci 1 (frei Γ + 1) von 0] ++ [ci 14 (frei Γ) (frei Γ) (frei Γ + 1)]
-    let tail := [ci 1 (frei Γ) nach 0] ++ ca ++ [stC (frei Γ)]
-    have hp' : PreS L m pc fp K (frei Γ) (test ++ (guardC (frei Γ) 106 (frei Γ) ++ tail)) ρ := hp
+    let test := cr ++ [ci 1 (frei Γ reserved + 1) von 0] ++ [ci 14 (frei Γ reserved) (frei Γ reserved) (frei Γ reserved + 1)]
+    let tail := [ci 1 (frei Γ reserved) nach 0] ++ ca ++ [stC (frei Γ reserved)]
+    have hp' : PreS L m pc fp K (frei Γ reserved) (test ++ (guardC (frei Γ reserved) 106 (frei Γ reserved) ++ tail)) ρ reserved := hp
     have hpw := PreS.welt hp'.left hks hWE hW.lay (by have := hW.lo; omega)
-    have hread : ∀ m pc, Pre L m pc fp Ks (frei Γ) cr ρ (fun m => WeltAt m L σE) →
-        Ok m pc fp Ks (frei Γ) cr (fun w => w = BitVec.ofInt 64 old.n) := by
+    have hread : ∀ m pc, Pre L m pc fp Ks (frei Γ reserved) cr ρ (fun m => WeltAt m L σE) reserved →
+        Ok m pc fp Ks (frei Γ reserved) cr (fun w => w = BitVec.ofInt 64 old.n) := by
       intro m pc hp
       rw [← heq]
       exact slotC_ok hr (by omega)
         (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ ci' ti hi
           (by have := slotC_top hr; simp only at this; omega) m pc ρ hp) (fun _ h => h) hp
-    have htest : Ok m pc fp Ks (frei Γ) test (fun w => w = Runner.IR.bool (decide (old.n = von))) := by
+    have htest : Ok m pc fp Ks (frei Γ reserved) test (fun w => w = Runner.IR.bool (decide (old.n = von))) := by
       refine bin_ok hread (fun m pc hp => const_ok hp hfit.1.2 (by omega))
         (g := fun x y => some (Runner.IR.bool (x == y))) ?_ rfl (by decide) (by omega) hpw
       intro wa wb pa pb
@@ -73,11 +74,11 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     have hWE1 := hpw.wstab m m1 hWE (a1s.mono (Nat.zero_le _))
     simp only [execStmt]
     change Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m _ _ _
-      (if old.n = von then Ausgang.ok _ ρ else .logik .vorzustand)
+      (if old.n = von then Ausgang.ok _ ρ else .logik .vorzustand) reserved
     by_cases hv : old.n = von
     · rw [if_pos hv]
       have sg := guard_pass hp1.left.code (by have := hp.small; omega) hw1 (by simp [hv, Runner.IR.bool])
-      have hp2 := hp1.next (a := guardC (frei Γ) 106 (frei Γ)) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+      have hp2 := hp1.next (a := guardC (frei Γ reserved) 106 (frei Γ reserved)) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
       have hn0 := (eval σE i σE ρ).lo_le
       have hkc : ((eval σE i σE ρ).n.toNat : Int) < D.count t := by have := (eval σE i σE ρ).le_hi; omega
       have hkn : ((eval σE i σE ρ).n.toNat : Int) = (eval σE i σE ρ).n := Int.toNat_of_nonneg hn0
@@ -90,7 +91,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
           have hh := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hnw
           rw [hkn] at hh
           exact hh)
-      have aa : AgreeW L fp (frei Γ) K m m2 := (agreeW_of a1).trans a2
+      have aa : AgreeW L fp (frei Γ reserved) K m m2 := (agreeW_of a1).trans a2
       refine ⟨m2, s1.trans (sg.trans ?_), aa.mono hlo, en, hw2, keeps_of_agreeW hW aa hpr (by omega)⟩
       simpa only [test, List.length_append, pc_add, Nat.add_assoc] using s2
     · rw [if_neg hv]

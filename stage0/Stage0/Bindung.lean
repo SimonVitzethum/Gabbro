@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Tor/Bindung.lean
+  File:      stage0/Stage0/Bindung.lean
   Subject:   The binding of a `syscall` gate to the running machine, read from the program itself (SYNTAX.md 12.1,
              12.3): the system-call number, which parameter goes to which argument register, and the `errors` map
              (`-errno` to a case of the gate's reason; the errno of a case is its declared number, or the one written

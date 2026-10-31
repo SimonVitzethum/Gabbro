@@ -27,12 +27,14 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 
+variable {reserved : Nat}
+
 mutual
 theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
     (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
-    lowE L e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
-    Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L τ (eval σ₀ e σ ρ))
+    lowE L (reserved := reserved) e d = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
+    Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L τ (eval σ₀ e σ ρ))
   | _, _, .refEq a b, d, c, top, h, hK, m, pc, ρ, hp =>
     refEq_ok a b (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL a d ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL b (d + 1) ca ta ha hta m pc ρ hp) h hK hp
@@ -89,7 +91,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     · simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨w, hw, he⟩ := hp.env τ x
-      have := vslot_lt (reserved := 0) x
+      have := vslot_lt (reserved := reserved) x
       have := hp.ctx
       exact (mov_ok hp (by omega) (by omega) hw).mono fun w' hw' => by subst hw'; exact he
     · cases h
@@ -462,10 +464,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         simpa only [Int.natCast_zero, Int.add_zero] using hw)
     · cases h
   | _, _, .forallSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
-    quantL_ok true (D.count t) (lowE L body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
+    quantL_ok true (D.count t) (lowE L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp => lowE_ok σ₀ σ hWL body (d + 3) cb tb hb htb m pc (.cons k ρ) hp) hp
   | _, _, .existsSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
-    quantL_ok false (D.count t) (lowE L body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
+    quantL_ok false (D.count t) (lowE L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp => lowE_ok σ₀ σ hWL body (d + 3) cb tb hb htb m pc (.cons k ρ) hp) hp
   | _, _, .reaches t f hf a b _, d, c, top, h, hK, m, pc, ρ, hp =>
     reachesL_ok hf hWL (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) h hK
@@ -477,8 +479,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option (Int × Int)} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
-    (c : List II) → (top : Nat) → lowN L tag nutz d = some (c, top) → top ≤ K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W →
+    (c : List II) → (top : Nat) → lowN L (reserved := reserved) tag nutz d = some (c, top) → top ≤ K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff a (evalNutz σ₀ nutz σ ρ)))
   | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h

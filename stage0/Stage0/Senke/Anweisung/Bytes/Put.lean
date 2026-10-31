@@ -6,6 +6,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 set_option maxRecDepth 2048
+variable {reserved : Nat}
 variable [Kern] {D : Deklaration}
 
 theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
@@ -17,13 +18,13 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     (hlo : 0 ≤ a) (hhi : b + n ≤ D.count t) (e : Expr D Γ Λ (.int 0 (256 ^ n - 1)))
     (hw : (vertragVon D f).schreibt t = true) (hl : darf D t Λ)
     {c : List II} {top : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (h : lowS passes A L lo ens pr ex (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) = some (c, top))
-    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ) c ρ)
-    (hlow : lo ≤ frei Γ) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ) :
+    (h : lowS (reserved := reserved) passes A L lo ens pr ex (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) = some (c, top))
+    (hK : top ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
+    (hlow : lo ≤ frei Γ reserved) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved) :
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
-      (execStmt O passes R (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) σ ρ) := by
+      (execStmt O passes R (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) σ ρ) reserved := by
   simp only [lowS] at h
   split at h
   · next hn =>
@@ -38,27 +39,27 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     let σE := σ.lese Λ (i.orte ++ e.orte)
     let z := eval σE e σE ρ
     let k := eval σE i σE ρ
-    have hq : PreS L m pc fp K (frei Γ) (ce ++ (ci' ++ cb)) ρ := by simpa only [List.append_assoc] using hp
+    have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ (ci' ++ cb)) ρ reserved := by simpa only [List.append_assoc] using hp
     have hpe := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
     obtain ⟨m1, s1, a1s, we, re, ene⟩ := lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hpe
     have a1 := Agree.widen a1s hks
     have hw1 : WeltAt m1 L σE := hpe.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have hp1 := hq.next a1 (Nat.le_refl _) (by omega)
-    have hpi := PreS.welt (hp1.left.up (d' := frei Γ + 1) (by omega)) hks hw1 hW.lay (by have := hW.lo; omega)
+    have hpi := PreS.welt (hp1.left.up (d' := frei Γ reserved + 1) (by omega)) hks hw1 hW.lay (by have := hW.lo; omega)
     obtain ⟨m2, s2, a2s, wi, ri, eni⟩ := lowE_ok σE σE (fun _ h => h) i _ ci' ti hi (by omega) m1 _ ρ hpi
     have a2 := Agree.widen a2s hks
     have hw2 : WeltAt m2 L σE := hpi.wstab m1 m2 hw1 (a2s.mono (Nat.zero_le _))
-    have enz1 : EnvAt L m1 fp (Env.cons z ρ) :=
+    have enz1 : EnvAt L m1 fp (Env.cons z ρ) reserved :=
       envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) re ene
-    have enz2 : EnvAt L m2 fp (Env.cons z ρ) := envAt_agree enz1 a2 hp1.frame
+    have enz2 : EnvAt L m2 fp (Env.cons z ρ) reserved := envAt_agree enz1 a2 hp1.frame
       (by simp only [frei, List.length_cons]; omega) (by omega)
-    have enk : EnvAt L m2 fp (Env.cons k (Env.cons z ρ)) := by
-      have hr : m2.rd64 (slot fp (BitVec.ofNat 64 (frei ((.int 0 (256 ^ n - 1)) :: Γ)))) = some wi := by
+    have enk : EnvAt L m2 fp (Env.cons k (Env.cons z ρ)) reserved := by
+      have hr : m2.rd64 (slot fp (BitVec.ofNat 64 (frei ((.int 0 (256 ^ n - 1)) :: Γ) reserved))) = some wi := by
         simpa only [frei, List.length_cons, Nat.add_succ] using ri
       exact envAt_cons enz2 hr eni
     have hp2 := hp1.next (a := ci') (a2.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
     have hpb : PreS L m2 (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * ci'.length)) fp K
-        (frei Γ + 2) cb (Env.cons k (Env.cons z ρ)) :=
+        (frei Γ reserved + 2) cb (Env.cons k (Env.cons z ρ)) reserved :=
       ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp2.frame, hp2.code, hp2.far, enk,
         trivial, wstab_true _ _⟩
     have hpow : (256 : Int) ^ n ≤ (256 : Int) ^ 8 := by
@@ -67,7 +68,7 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       simpa only [Int.natCast_pow, show ((256 : Nat) : Int) = 256 by rfl] using hh'
     have hz : z.n < 2 ^ 64 := by have := z.le_hi; omega
     obtain ⟨m3, s3, a3, en3, hw3⟩ := putBytesL_ok hf hlo hW z k ρ hz n 0 _ (by omega) cb tb hb (by omega) m2 _ σE hpb hw2
-    have aa : AgreeW L fp (frei Γ) K m m3 :=
+    have aa : AgreeW L fp (frei Γ reserved) K m m3 :=
       (agreeW_of (a1.trans (a2.mono (Nat.le_succ _)))).trans (a3.mono (by omega))
     simp only [execStmt, Sim]
     refine ⟨m3, s1.trans (s2.trans ?_), aa.mono hlow, envAt_tail (envAt_tail en3), ?_,

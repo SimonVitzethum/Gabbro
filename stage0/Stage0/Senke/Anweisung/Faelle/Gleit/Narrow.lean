@@ -12,14 +12,14 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int}
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {low high low' high' : Int × Int} {e : Expr D Γ Λ (.fl low high)}
     {err : Endblock D (vertragVon D f) l Γ Λ}
     {rest : Block D (vertragVon D f) l (.fl low' high' :: Γ) Λ Λ'} :
-    (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
-    (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
-    BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.floatNarrow e low' high' err rest) := by
+    (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex err) →
+    (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
+    BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.floatNarrow e low' high' err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowB] at h
   split at h
@@ -34,7 +34,7 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
     simp only [execBlock]
     let σr := σ.lese Λ e.orte
-    have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ) (cc := cc) (ct := cx) (ce := ce ++ cr)
+    have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved) (cc := cc) (ct := cx) (ce := ce ++ cr)
       (b := floatOutside low' high' (eval σr e σr ρ).x)
       (ot := match gleitPasst low' high' (eval σr e σr ρ).x with
         | some v => (execBlock O passes R rest σr (Env.cons v ρ)).schrumpf

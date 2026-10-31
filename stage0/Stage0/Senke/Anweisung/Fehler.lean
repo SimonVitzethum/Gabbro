@@ -34,8 +34,8 @@ theorem eq_lit {w : Runner.W} {e : Int} (he : lit32 e = true) : (w == BitVec.ofI
     simp [this, h]
 
 /-- One errno test. -/
-theorem fehlC1_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {e : Int} {i : Nat} {J : Int} {Γ : Ctx}
-    {ρ : Env D Γ} {w : Runner.W} (hp : PreS L m pc fp K (s + 1) (fehlC1 s e i J) ρ) (he : lit32 e = true)
+theorem fehlC1_ok {reserved : Nat} {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {e : Int} {i : Nat} {J : Int} {Γ : Ctx}
+    {ρ : Env D Γ} {w : Runner.W} (hp : PreS L m pc fp K (s + 1) (fehlC1 s e i J) ρ reserved) (he : lit32 e = true)
     (hi : i < 2 ^ 31) (hJ : lit32 (16 + J) = true) (hs : s + 3 ≤ K)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     (w.toInt = e → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofInt 64 (96 + J), fp⟩ m' ∧ Agree fp s K m m' ∧
@@ -44,7 +44,7 @@ theorem fehlC1_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {e : Int} {i :
   have hsmall := hp.small
   have hp' : PreS L m pc fp K (s + 1) (([ci 2 ((s + 1 : Nat) : Int) s 0] ++ [ci 1 (((s + 1 : Nat) : Int) + 1) e 0,
       ci 14 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1)]) ++
-      ([ci 19 ((s + 1 : Nat) : Int) 48 0] ++ ([ci 1 s i 0] ++ [ci 18 (16 + J) 0 0]))) ρ := hp
+      ([ci 19 ((s + 1 : Nat) : Int) 48 0] ++ ([ci 1 s i 0] ++ [ci 18 (16 + J) 0 0]))) ρ reserved := hp
   obtain ⟨m1, s1, a1, v, hv, rfl⟩ := ok_seq hp'.left (mov_ok hp'.left.left (by omega) (by omega) hw)
     (Pb := (· = Runner.IR.bool (w == BitVec.ofInt 64 e)))
     (fun m' w' hp'' hr he' => (binK_ok (r := Runner.IR.bool (w' == BitVec.ofInt 64 e)) hp'' hr he rfl (by decide)
@@ -74,9 +74,9 @@ theorem fehlC1_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {e : Int} {i :
 
 /-- **The errno tests**: the first listed errno equal to the word puts its case into slot `s` and jumps to `J` bytes
     past the tests; none equal, on after them with slot `s` kept. -/
-theorem fehlC_ok {fp : Runner.W} {K s n : Nat} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W} :
+theorem fehlC_ok {reserved : Nat} {fp : Runner.W} {K s n : Nat} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W} :
     (l : List (Int × Nat)) → (J : Int) → (m : Runner.Mem) → (pc : Runner.W) →
-    PreS L m pc fp K (s + 1) (fehlC s l J) ρ → fehlGut n l = true → 0 ≤ J → 16 + 16 * (6 * l.length) + J < 2 ^ 31 →
+    PreS L m pc fp K (s + 1) (fehlC s l J) ρ reserved → fehlGut n l = true → 0 ≤ J → 16 + 16 * (6 * l.length) + J < 2 ^ 31 →
     s + 3 ≤ K → m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w →
     match l.find? (fun x => x.1 == w.toInt) with
     | some x => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofInt 64 (16 * (6 * l.length) + J), fp⟩ m' ∧ Agree fp s K m m' ∧
@@ -87,7 +87,7 @@ theorem fehlC_ok {fp : Runner.W} {K s n : Nat} {Γ : Ctx} {ρ : Env D Γ} {w : R
     simp only [fehlGut, List.all_cons, Bool.and_eq_true, decide_eq_true_eq] at hl
     obtain ⟨⟨⟨⟨he1, he2⟩, _⟩, hi⟩, hr⟩ := hl
     simp only [List.length_cons] at hJ
-    have hp' : PreS L m pc fp K (s + 1) (fehlC1 s e i (16 * (6 * r.length) + J) ++ fehlC s r J) ρ := hp
+    have hp' : PreS L m pc fp K (s + 1) (fehlC1 s e i (16 * (6 * r.length) + J) ++ fehlC s r J) ρ reserved := hp
     obtain ⟨hhit, hmiss⟩ := fehlC1_ok hp'.left (lit_ok (by omega) (by omega)) hi (lit_ok (by omega) (by omega)) hs hw
     simp only [List.find?_cons]
     by_cases h : w.toInt = e

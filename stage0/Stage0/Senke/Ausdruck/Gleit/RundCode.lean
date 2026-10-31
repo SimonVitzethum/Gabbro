@@ -5,7 +5,7 @@ import Stage0.Senke.Ausdruck.Gleit.Komposition
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- Round a quotient and remainder, using only add/sub/and/or/slt/eq.
     Inputs can be reread, and must therefore be pure. All scratch slots are
@@ -45,24 +45,24 @@ theorem floatRoundL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {q r den : Nat → Option (List II × Nat)} (qn rn dn : Nat)
     (hr : rn < dn) (hd : dn < 2 ^ 63)
     (hq : ∀ {fp K d c top}, q d = some (c, top) → top ≤ K → ∀ m pc,
-      Pre L m pc fp K d c ρ W → Ok m pc fp K d c (· = BitVec.ofNat 64 qn))
+      Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (· = BitVec.ofNat 64 qn))
     (hrc : ∀ {fp K d c top}, r d = some (c, top) → top ≤ K → ∀ m pc,
-      Pre L m pc fp K d c ρ W → Ok m pc fp K d c (· = BitVec.ofNat 64 rn))
+      Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (· = BitVec.ofNat 64 rn))
     (hdc : ∀ {fp K d c top}, den d = some (c, top) → top ≤ K → ∀ m pc,
-      Pre L m pc fp K d c ρ W → Ok m pc fp K d c (· = BitVec.ofNat 64 dn))
+      Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (· = BitVec.ofNat 64 dn))
     {fp : Runner.W} {K d top : Nat} {c : List II}
     (h : floatRoundL d q r den = some (c, top)) (hK : top ≤ K)
-    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
+    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (· = BitVec.ofNat 64 (Gleitkomma.rundeInt qn rn dn)) := by
-  have gap : WordCode (L := L) ρ W _ _ := WordCode.bin hdc hrc (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
-  have above : WordCode (L := L) ρ W _ _ := WordCode.bin gap hrc (g := fun a b => some (Runner.IR.bool (a.slt b)))
+  have gap : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin hdc hrc (g := fun a b => some (a - b)) rfl rfl (by decide : 4 < 256)
+  have above : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin gap hrc (g := fun a b => some (Runner.IR.bool (a.slt b)))
     rfl rfl (by decide : 13 < 256)
-  have tie : WordCode (L := L) ρ W _ _ := WordCode.bin hrc gap (g := fun a b => some (Runner.IR.bool (a == b)))
+  have tie : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin hrc gap (g := fun a b => some (Runner.IR.bool (a == b)))
     rfl rfl (by decide : 14 < 256)
-  have odd : WordCode (L := L) ρ W _ _ := WordCode.bin hq (WordCode.const 1 (by decide)) (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
-  have both : WordCode (L := L) ρ W _ _ := WordCode.bin tie odd (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
-  have bump : WordCode (L := L) ρ W _ _ := WordCode.bin above both (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
-  have result : WordCode (L := L) ρ W _ _ := WordCode.bin hq bump (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
+  have odd : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin hq (WordCode.const 1 (by decide)) (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
+  have both : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin tie odd (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
+  have bump : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin above both (g := fun a b => some (a ||| b)) rfl rfl (by decide : 9 < 256)
+  have result : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin hq bump (g := fun a b => some (a + b)) rfl rfl (by decide : 3 < 256)
   have res := result (fp := fp) (K := K) (d := d) (c := c) (top := top)
     (by simpa [floatRoundL, wordK, Nat.add_assoc, Int.add_assoc] using h) hK m pc
     (by simpa [floatRoundL, wordK, Nat.add_assoc, Int.add_assoc] using hp)

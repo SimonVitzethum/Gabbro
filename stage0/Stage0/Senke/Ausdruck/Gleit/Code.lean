@@ -4,7 +4,7 @@ import Stage0.Senke.Ausdruck.Gleit.Schluessel
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- A template consumes the two ordinary expression proofs; it adds no semantic assumption. -/
 theorem floatKeyL_ok {fp : Runner.W} {K d ta tb top : Nat} {Γ : Ctx} {ρ : Env D Γ}

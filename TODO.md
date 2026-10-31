@@ -128,16 +128,15 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **End-block forms (2026-10-26).** `Endblock.narrow`/`exchange`/`ite` (THEOREM-MAP 102): the generator does not draw
   them (size `unendlich`); arena ownership (`chkE`) and the cost mirror (`spiegelE`) refuse them; the Rust exporter
   does not construct them.
-- **Stage 0 runtime (2026-10-26, THEOREM-MAP 105).** Runs on the thread machine with raw system calls on OS threads;
-  the fast machine and the array memory are built. Decided 2026-10-28 (`PLAN-SELF-HOSTING.md` §2): Lean stage 0 only
-  translates Gabbro into the IR `S0IR` (§2.1); a formally verified x86-64 machine-code runner runs it (§2.2), its
+- **Stage 0 compilation (2026-10-31, THEOREM-MAP 105).** The former Lean source runtime is removed; no work is
+  done on that execution path. Lean stage 0 only translates Gabbro into the IR `S0IR` (§2.1); a formally verified x86-64 machine-code runner runs it (§2.2), its
   instruction model written anew and tested against the CPU; 64-bit words everywhere; multithreading required. Target: `gkomp` compiles its own ≈ 500 000 lines on the runner in
   under one hour. Built (2026-10-28, `runner/`): `S0IR` (24 opcodes, `spawn` on real OS threads, every system call),
   the x86-64 subset with its CPU tests and x86-TSO litmus tests (stage 8 of the Lean guardian), the runner's bytes,
   `runner_entry_tso`/`runner_entry_sc` from the process's first instruction (the loader proved) for any number of
   threads, with the witness on the real file. Open: `ir_sim` (S0IR against the thread machine) and the lowering; the provider freshness of the open region in the model; the front end and the subset gate
   over the whole language; the Rust exporter `lean_g.rs` writes `aschreibt := false` for every gate and refuses a
-  gate's `writes` (the model and the Lean front end accept it). The Lean run path is deleted once the runner runs `gkomp`.
+  gate's `writes` (the model and the Lean front end accept it). The active task is complete Gabbro-to-IR compilation; the assembly runner may be corrected when necessary.
 - **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
   `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
   fields. Open, model work first where marked (M):

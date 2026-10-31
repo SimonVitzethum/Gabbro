@@ -19,7 +19,7 @@ import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
 import Stage0.Senke.Sperre.Code
 import Stage0.Senke.Anweisung.Bytes.Code
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 
 namespace Gabbro.Stage0.Senke
 
@@ -41,11 +41,11 @@ def floatLiteralL (d : Nat) (q low high : Int × Int)
 /-- The arguments of a call into the callee's parameter slots from `p` (the callee frame's first variable slot);
     the head goes highest. The last argument is computed first, so a later one's scratch slots lie above every
     argument already in place. -/
-def lowA (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → Option (List II × Nat)
-  | _, _, .nil, p => some ([], p)
-  | _, _ :: τs, .cons e rest, p => do
-    let cr ← lowA L rest p
-    let ce ← lowE L e (p + τs.length)
+def lowA (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, _, .nil, p, _ => some ([], p)
+  | _, _ :: τs, .cons e rest, p, reserved => do
+    let cr ← lowA L rest p reserved
+    let ce ← lowE L e (p + τs.length) reserved
     pure (cr.1 ++ ce.1, max cr.2 ce.2)
 
 /-- The shared call tail: depth one less, a constant target or the pointer saved at `F` before arguments
@@ -71,16 +71,16 @@ def indC (n F : Nat) (cp ca : List II) : List II := cp ++ (ca ++ callTailN (D.si
 def indTop (n F tp ta : Nat) : Nat := max tp (max ta (F + FB + (D.sigNr n).params.length + 1))
 
 def lowInd (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
-    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) : Option (List II × Nat) := do
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) (reserved : Nat := 0) : Option (List II × Nat) := do
   if (D.sigNr n).gruende = 0 then do
-    let cp ← lowE L p (frei Γ)
-    let ca ← lowA L args (frei Γ + FB)
-    pure (indC (D := D) n (frei Γ) cp.1 ca.1, indTop (D := D) n (frei Γ) cp.2 ca.2)
+    let cp ← lowE (reserved := reserved) L p ((frei Γ reserved))
+    let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
+    pure (indC (D := D) n ((frei Γ reserved)) cp.1 ca.1, indTop (D := D) n ((frei Γ reserved)) cp.2 ca.2)
   else none
 
-def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → Option (List II × Nat)
-  | _, .empty, d => some ([], d + 1)
-  | _, .val e, d => lowE L e d
+def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, .empty, d, reserved => some ([], d + 1)
+  | _, .val e, d, reserved => lowE (reserved := reserved) L e d
 
 /-- A call binds either word into the same slot. Zero status takes the reason arm;
     normal fallthrough skips that arm after the success continuation. -/
@@ -167,317 +167,322 @@ def floatNarrowC (d : Nat) (cc cx ce cr : List II) : List II :=
 
 mutual
 def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
-    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → Option (List II × Nat)
-  | _, Γ, _, _, .assignVar x e =>
-    if lo ≤ vslot x ∧ vslot x ∉ pr then do
-      let ce ← lowE L e (frei Γ)
-      pure (ce.1 ++ [ci 2 (vslot x) (frei Γ) 0], ce.2)
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D V l Γ Λ Λ' → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, Γ, _, _, .assignVar x e, reserved =>
+    if lo ≤ (vslot x reserved) ∧ (vslot x reserved) ∉ pr then do
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      pure (ce.1 ++ [ci 2 ((vslot x reserved)) ((frei Γ reserved)) 0], ce.2)
     else none
-  | _, Γ, _, _, .ite c t e => do
-    let cc ← lowE L c (frei Γ)
-    let ce ← lowB passes A L lo ens pr ex e
-    let ct ← lowB passes A L lo ens pr (exPlus ex (ce.1.length + 1)) t
-    pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 2)) 0] ++ ct.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
+  | _, Γ, _, _, .ite c t e, reserved => do
+    let cc ← lowE (reserved := reserved) L c ((frei Γ reserved))
+    let ce ← lowB (reserved := reserved) passes A L lo ens pr ex e
+    let ct ← lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (ce.1.length + 1)) t
+    pure (cc.1 ++ [ci 19 ((frei Γ reserved)) (16 * (ct.1.length + 2)) 0] ++ ct.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
       max cc.2 (max ct.2 ce.2))
-  | _, Γ, _, _, .onOption (n := n) o p a =>
+  | _, Γ, _, _, .onOption (n := n) o p a, reserved =>
     if decide (n ≤ 2 ^ 63) then do
-      let co ← lowE L o (frei Γ)
-      let ca ← lowB passes A L lo ens pr ex a
-      let cp ← lowB passes A L lo ens pr (exPlus ex (ca.1.length + 1)) p
-      pure (co.1 ++ [ci 1 (frei Γ + 1) (-1) 0, ci 10 (frei Γ + 1) (frei Γ) (frei Γ + 1)] ++
-        [ci 19 (frei Γ + 1) (16 * (cp.1.length + 2)) 0] ++ cp.1 ++
+      let co ← lowE (reserved := reserved) L o ((frei Γ reserved))
+      let ca ← lowB (reserved := reserved) passes A L lo ens pr ex a
+      let cp ← lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (ca.1.length + 1)) p
+      pure (co.1 ++ [ci 1 ((frei Γ reserved) + 1) (-1) 0, ci 10 ((frei Γ reserved) + 1) ((frei Γ reserved)) ((frei Γ reserved) + 1)] ++
+        [ci 19 ((frei Γ reserved) + 1) (16 * (cp.1.length + 2)) 0] ++ cp.1 ++
         [ci 18 (16 * (ca.1.length + 1)) 0 0] ++ ca.1,
-        max co.2 (max (frei Γ + 2) (max cp.2 ca.2)))
+        max co.2 (max ((frei Γ reserved) + 2) (max cp.2 ca.2)))
     else none
-  | _, _, _, _, .callInd p args _ _ => lowInd L p args
-  | _, Γ, _, _, .onTag (cs := cs) v arms =>
+  | _, _, _, _, .callInd p args _ _, reserved => lowInd (reserved := reserved) L p args
+  | _, Γ, _, _, .onTag (cs := cs) v arms, reserved =>
     if sumFits cs then do
-      let cv ← lowE L v (frei Γ)
-      let ca ← lowTags passes A L lo ens pr ex arms 0
+      let cv ← lowE (reserved := reserved) L v ((frei Γ reserved))
+      let ca ← lowTags (reserved := reserved) passes A L lo ens pr ex arms 0
       pure (cv.1 ++ ca.1, max cv.2 ca.2)
     else none
-  | _, Γ, _, _, .onWhy (n := n) r arms =>
+  | _, Γ, _, _, .onWhy (n := n) r arms, reserved =>
     if n < 2 ^ 31 then do
-      let cv ← lowE L r (frei Γ)
-      let ca ← lowGrund passes A L lo ens pr ex arms 0
+      let cv ← lowE (reserved := reserved) L r ((frei Γ reserved))
+      let ca ← lowGrund (reserved := reserved) passes A L lo ens pr ex arms 0
       pure (cv.1 ++ ca.1, max cv.2 ca.2)
     else none
-  | _, Γ, _, _, .call f args _ _ => do
-    let ca ← lowA L args (frei Γ + FB)
-    pure (callC A f (frei Γ) ca.1, callTop f (frei Γ) ca.2)
-  | _, Γ, _, _, .retWhy r _ =>
-    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max (frei Γ) (retTop lo)) else none
-  | _, Γ, _, _, .ret e _ => do
-    let ce ← lowErg L e (frei Γ)
-    pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
-  | _, Γ, _, _, .assignGlob g e _ _ =>
+  | _, Γ, _, _, .call f args _ _, reserved => do
+    let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
+    pure (callC A f ((frei Γ reserved)) ca.1, callTop f ((frei Γ reserved)) ca.2)
+  | _, Γ, _, _, .retWhy r _, reserved =>
+    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max ((frei Γ reserved)) (retTop lo)) else none
+  | _, Γ, _, _, .ret e _, reserved => do
+    let ce ← lowErg (reserved := reserved) L e ((frei Γ reserved))
+    pure (ce.1 ++ retC lo ((frei Γ reserved)) ens.1, max ce.2 (max ens.2 (retTop lo)))
+  | _, Γ, _, _, .assignGlob g e _ _, reserved =>
     if lit32 (L.ga g) then do
-      let ce ← lowE L e (frei Γ)
-      pure (ce.1 ++ [ci 1 ((frei Γ + 1 : Nat) : Int) (L.ga g) 0] ++ [stC (frei Γ)], max ce.2 (frei Γ + 2))
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      pure (ce.1 ++ [ci 1 (((frei Γ reserved) + 1 : Nat) : Int) (L.ga g) 0] ++ [stC ((frei Γ reserved))], max ce.2 ((frei Γ reserved) + 2))
     else none
-  | _, Γ, _, _, .publish g e _ _ _ _ =>
+  | _, Γ, _, _, .publish g e _ _ _ _, reserved =>
     if lit32 (L.ga g) then do
-      let ce ← lowE L e (frei Γ)
-      pure (ce.1 ++ [ci 1 ((frei Γ + 1 : Nat) : Int) (L.ga g) 0] ++ [stC (frei Γ)], max ce.2 (frei Γ + 2))
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      pure (ce.1 ++ [ci 1 (((frei Γ reserved) + 1 : Nat) : Int) (L.ga g) 0] ++ [stC ((frei Γ reserved))], max ce.2 ((frei Γ reserved) + 2))
     else none
-  | _, Γ, _, _, .assignSlot t f i e _ _ => do
-    let ce ← lowE L e (frei Γ)
-    let ci' ← lowE L i (frei Γ + 1)
-    let ca ← slotA L t f (frei Γ + 1) ci'
-    pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
-  | _, Γ, _, _, .assignThru _ t _ f i e _ _ => do
-    let ce ← lowE L e (frei Γ)
-    let ci' ← lowE L i (frei Γ + 1)
-    let ca ← slotA L t f (frei Γ + 1) ci'
-    pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
-  | _, Γ, Λ, _, .putBytes t f _ n i hlo hhi e _ _ =>
+  | _, Γ, _, _, .assignSlot t f i e _ _, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
+    let ca ← slotA L t f ((frei Γ reserved) + 1) ci'
+    pure (ce.1 ++ ca.1 ++ [stC ((frei Γ reserved))], max ce.2 ca.2)
+  | _, Γ, _, _, .assignThru _ t _ f i e _ _, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
+    let ca ← slotA L t f ((frei Γ reserved) + 1) ci'
+    pure (ce.1 ++ ca.1 ++ [stC ((frei Γ reserved))], max ce.2 ca.2)
+  | _, Γ, Λ, _, .putBytes t f _ n i hlo hhi e _ _, reserved =>
     if n ≤ 8 then do
-      let ce ← lowE L e (frei Γ)
-      let ci' ← lowE L i (frei Γ + 1)
-      let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f _ _ (256 ^ n - 1) hlo n 0 (by simpa using hhi)
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
+      let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f _ _ (256 ^ n - 1) hlo reserved n 0 (by simpa using hhi)
       pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
     else none
-  | _, Γ, _, _, .assignSlotRef r t _ _ f e _ _ => do
-    let ce ← lowE L e (frei Γ)
-    let cr ← lowE L r (frei Γ + 1)
-    let ca ← slotA L t f (frei Γ + 1) cr
-    pure (ce.1 ++ ca.1 ++ [stC (frei Γ)], max ce.2 ca.2)
-  | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _ =>
+  | _, Γ, _, _, .assignSlotRef r t _ _ f e _ _, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let cr ← lowE (reserved := reserved) L r ((frei Γ reserved) + 1)
+    let ca ← slotA L t f ((frei Γ reserved) + 1) cr
+    pure (ce.1 ++ ca.1 ++ [stC ((frei Γ reserved))], max ce.2 ca.2)
+  | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _, reserved =>
     if inW a b && lit32 von && lit32 nach then do
-      let ci' ← lowE L i (frei Γ)
-      let cr ← slotC L t f (frei Γ) ci'
-      let cj ← lowE L i (frei Γ + 1)
-      let ca ← slotA L t f (frei Γ + 1) cj
-      let test := bin2 14 (frei Γ) cr ([ci 1 (frei Γ + 1) von 0], frei Γ + 2)
-      pure (test.1 ++ (guardC (frei Γ) 106 (frei Γ) ++
-        ([ci 1 (frei Γ) nach 0] ++ ca.1 ++ [stC (frei Γ)])),
-        max test.2 (max ca.2 (frei Γ + 8)))
+      let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved))
+      let cr ← slotC L t f ((frei Γ reserved)) ci'
+      let cj ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
+      let ca ← slotA L t f ((frei Γ reserved) + 1) cj
+      let test := bin2 14 ((frei Γ reserved)) cr ([ci 1 ((frei Γ reserved) + 1) von 0], (frei Γ reserved) + 2)
+      pure (test.1 ++ (guardC ((frei Γ reserved)) 106 ((frei Γ reserved)) ++
+        ([ci 1 ((frei Γ reserved)) nach 0] ++ ca.1 ++ [stC ((frei Γ reserved))])),
+        max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
-  | _, Γ, _, _, .traverse t inv body =>
+  | _, Γ, _, _, .traverse t inv body, reserved =>
     if lit32 (D.count t) then do
-      let ci' ← lowE L inv (frei Γ + 1)
-      let cb ← lowB passes A L lo ens (frei Γ :: pr) (48, 0) body
-      travC (frei Γ) (D.count t) ci' cb
+      let ci' ← lowE (reserved := reserved) L inv ((frei Γ reserved) + 1)
+      let cb ← lowB (reserved := reserved) passes A L lo ens ((frei Γ reserved) :: pr) (48, 0) body
+      travC ((frei Γ reserved)) (D.count t) ci' cb
     else none
-  | _, Γ, _, _, .retry n bis body overflow => do
-    let cc ← lowE L bis (frei Γ)
-    let cu ← lowB passes A L lo ens pr ex overflow
-    retryC (frei Γ) cc cu (fun targets => lowB passes A L lo ens pr targets body) n
-  -- The simulation quantifies over every fuel, but lowering receives none. A finite stop or an
-  -- infinite backedge cannot implement both fuel zero (progress stop 111) and positive fuel.
-  | _, _, _, _, .forever .. => none
-  | _, _, _, _, .breaking _ body => lowB passes A L lo ens pr ex body
-  | _, Γ, _, _, .advances .. => some ([], frei Γ)
-  | _, Γ, _, _, .retires .. => some ([], frei Γ)
-  | _, Γ, _, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
-  | _, Γ, _, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
-  | _, Γ, _, _, .axiomCall a args _ _ _ _ _ => torC0 L a args (frei Γ)
-  | _, Γ, _, _, .locks Lk _ body =>
+  | _, Γ, _, _, .retry n bis body overflow, reserved => do
+    let cc ← lowE (reserved := reserved) L bis ((frei Γ reserved))
+    let cu ← lowB (reserved := reserved) passes A L lo ens pr ex overflow
+    retryC ((frei Γ reserved)) cc cu (fun targets => lowB (reserved := reserved) passes A L lo ens pr targets body) n
+  | _, Γ, _, _, .forever _ inv body, reserved =>
+    let pair := counterPair reserved (counterDepthB body)
+    if lo ≤ pair.1 ∧ pair.2 < FB + reserved ∧ pair.1 ∉ pr ∧ pair.2 ∉ pr then do
+      let cc ← lowE (reserved := reserved) L inv (frei Γ reserved)
+      foreverC pair.1 pair.2 (frei Γ reserved) passes cc
+        (fun targets => lowB (reserved := reserved) passes A L lo ens
+          (pair.1 :: pair.2 :: pr) targets body)
+    else none
+  | _, _, _, _, .breaking _ body, reserved => lowB (reserved := reserved) passes A L lo ens pr ex body
+  | _, Γ, _, _, .advances .., reserved => some ([], (frei Γ reserved))
+  | _, Γ, _, _, .retires .., reserved => some ([], (frei Γ reserved))
+  | _, Γ, _, _, .leave _, reserved => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], (frei Γ reserved)) else none
+  | _, Γ, _, _, .next _, reserved => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], (frei Γ reserved)) else none
+  | _, Γ, _, _, .axiomCall a args _ _ _ _ _, reserved => torC0 (reserved := reserved) L a args ((frei Γ reserved))
+  | _, Γ, _, _, .locks Lk _ body, reserved =>
     if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
-      let cb ← lowB passes A L lo ens pr (16 * 30, 16 * 60) body
-      pure (locksCode L (L.lk Lk) (frei Γ) cb.1 ex.1 ex.2, max (cb.2 + 1) (frei Γ + 18))
+      let cb ← lowB (reserved := reserved) passes A L lo ens pr (16 * 30, 16 * 60) body
+      pure (locksCode L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
     else none
-  | _, _, _, _, _ => none
+  | _, _, _, _, _, reserved => none
 
 def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
-    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → Option (List II × Nat)
-  | _, Γ, _, _, .nil => some ([], frei Γ)
-  | _, _, _, _, .cons s rest => do
-    let cr ← lowB passes A L lo ens pr ex rest
-    let cs ← lowS passes A L lo ens pr (exPlus ex cr.1.length) s
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, Γ, _, _, .nil, reserved => some ([], (frei Γ reserved))
+  | _, _, _, _, .cons s rest, reserved => do
+    let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+    let cs ← lowS (reserved := reserved) passes A L lo ens pr (exPlus ex cr.1.length) s
     pure (cs.1 ++ cr.1, max cs.2 cr.2)
-  | _, Γ, _, _, .bind e rest => do
-    let ce ← lowE L e (frei Γ)
-    let cr ← lowB passes A L lo ens pr ex rest
+  | _, Γ, _, _, .bind e rest, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
-  | _, Γ, _, _, .bindCallElse f args _ _ _ err rest => do
-    let ca ← lowA L args (frei Γ + FB)
-    let ce ← lowEnd passes A L lo ens pr ex err
-    let cr ← lowB passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
-    pure (elseC (frei Γ + FB + (D.params f).length + 1) (frei Γ) (callC A f (frei Γ) ca.1) cr.1 ce.1,
-      elseTop f (frei Γ) ca.2 cr.2 ce.2)
-  | _, Γ, _, _, .floatNarrow e low high err rest =>
+  | _, Γ, _, _, .bindCallElse f args _ _ _ err rest, reserved => do
+    let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
+    let ce ← lowEnd (reserved := reserved) passes A L lo ens pr ex err
+    let cr ← lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC ((frei Γ reserved) + FB + (D.params f).length + 1) ((frei Γ reserved)) (callC A f ((frei Γ reserved)) ca.1) cr.1 ce.1,
+      elseTop f ((frei Γ reserved)) ca.2 cr.2 ce.2)
+  | _, Γ, _, _, .floatNarrow e low high err rest, reserved =>
     if decide (Gleitkomma.klasse Gleitkomma.f64 (bruch low) ≠ .nan) &&
         decide (Gleitkomma.klasse Gleitkomma.f64 (bruch high) ≠ .nan) then do
-      let cc ← floatRangeL (frei Γ) low high (lowE L e)
-      let ce ← lowE L e (frei Γ)
-      let cr ← lowB passes A L lo ens pr ex rest
-      let cx ← lowEnd passes A L lo ens pr (exPlus ex (ce.1.length + cr.1.length + 1)) err
-      pure (floatNarrowC (frei Γ) cc.1 cx.1 ce.1 cr.1, max cc.2 (max ce.2 (max cr.2 cx.2)))
-    else lowEnd passes A L lo ens pr ex err
-  | _, Γ, _, _, .floatLit q low high rest =>
-    floatLiteralL (frei Γ) q low high (fun _ => lowB passes A L lo ens pr ex rest)
-  | _, Γ, _, _, .floatOf e low high rest =>
+      let cc ← floatRangeL ((frei Γ reserved)) low high (lowE (reserved := reserved) L e)
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+      let cx ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (ce.1.length + cr.1.length + 1)) err
+      pure (floatNarrowC ((frei Γ reserved)) cc.1 cx.1 ce.1 cr.1, max cc.2 (max ce.2 (max cr.2 cx.2)))
+    else lowEnd (reserved := reserved) passes A L lo ens pr ex err
+  | _, Γ, _, _, .floatLit q low high rest, reserved =>
+    floatLiteralL ((frei Γ reserved)) q low high (fun _ => lowB (reserved := reserved) passes A L lo ens pr ex rest)
+  | _, Γ, _, _, .floatOf e low high rest, reserved =>
     match e with
-    | .lit n => floatLiteralL (frei Γ) (n, 1) low high (fun _ => lowB passes A L lo ens pr ex rest)
+    | .lit n => floatLiteralL ((frei Γ reserved)) (n, 1) low high (fun _ => lowB (reserved := reserved) passes A L lo ens pr ex rest)
     | _ => do
-      let cc ← canonicalFloatRangeL (frei Γ) low high
-        (fun d => computedFloatOfE L Gleitkomma.f64 e d)
-      let ce ← computedFloatOfE L Gleitkomma.f64 e (frei Γ)
-      let cr ← lowB passes A L lo ens pr ex rest
-      pure (floatNarrowC (frei Γ) cc.1 (stopC 107 (frei Γ)) ce.1 cr.1,
-        max cc.2 (max (frei Γ + 8) (max ce.2 cr.2)))
-  | _, Γ, _, _, .bindCall f args _ _ _ rest => do
-    let ca ← lowA L args (frei Γ + FB)
-    let cr ← lowB passes A L lo ens pr ex rest
-    pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
-  | _, Γ, _, _, .bindCallInd p args _ _ _ rest => do
-    let cc ← lowInd L p args
-    let cr ← lowB passes A L lo ens pr ex rest
-    pure (cc.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max cc.2 cr.2)
-  | _, Γ, _, _, .narrow (lo := lo') (hi := hi') e low high err rest =>
+      let cc ← canonicalFloatRangeL (frei Γ reserved) low high
+        (fun d => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e d)
+      let ce ← computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e (frei Γ reserved)
+      let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+      pure (floatNarrowC (frei Γ reserved) cc.1 (stopC 107 (frei Γ reserved)) ce.1 cr.1,
+        max cc.2 (max (frei Γ reserved + 8) (max ce.2 cr.2)))
+  | _, Γ, _, _, .bindCall f args _ _ _ rest, reserved => do
+    let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
+    let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+    pure (callC A f ((frei Γ reserved)) ca.1 ++ [ci 2 ((frei Γ reserved)) ((frei Γ reserved) + 2) 0] ++ cr.1, max (callTop f ((frei Γ reserved)) ca.2) cr.2)
+  | _, Γ, _, _, .bindCallInd p args _ _ _ rest, reserved => do
+    let cc ← lowInd (reserved := reserved) L p args
+    let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+    pure (cc.1 ++ [ci 2 ((frei Γ reserved)) ((frei Γ reserved) + 2) 0] ++ cr.1, max cc.2 cr.2)
+  | _, Γ, _, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
     if inW lo' hi' && lit32 low && lit32 high then do
-      let ce ← lowE L e (frei Γ)
-      let cr ← lowB passes A L lo ens pr ex rest
-      let cx ← lowEnd passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC (frei Γ) low high ce.1 cx.1 cr.1, max ce.2 (max (frei Γ + 3) (max cx.2 cr.2)))
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+      let cx ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
+      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 3) (max cx.2 cr.2)))
     else none
-  | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest => do
-    let ct ← torC0 L a args (frei Γ)
-    let ck ← chkC (D.aerg a) (frei Γ)
-    let cr ← lowB passes A L lo ens pr ex rest
-    pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
-  | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest =>
+  | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
+    let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
+    let ck ← chkC (D.aerg a) ((frei Γ reserved))
+    let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+    pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
+  | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, some (.int lo' hi') =>
       if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a then do
-        let ct ← torC L a args (frei Γ)
-        let ck ← chkC (some (.int lo' hi')) (frei Γ)
-        let ce ← lowEnd passes A L lo ens pr ex err
-        let cr ← lowB passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
+        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ce ← lowEnd (reserved := reserved) passes A L lo ens pr ex err
+        let cr ← lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
         if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
-          pure (ct.1 ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ ck ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
-            max ct.2 (max (frei Γ + 10) (max cr.2 ce.2)))
+          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ ck ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
+            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
         else none
       else none
     | _, _ => none
-  | _, Γ, _, _, .check c err rest => do
-    let cc ← lowE L c (frei Γ)
-    let ce ← lowEnd passes A L lo ens pr ex err
-    let cr ← lowB passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
-    pure (cc.1 ++ [ci 19 (frei Γ) (16 * (cr.1.length + 2)) 0] ++ cr.1 ++
+  | _, Γ, _, _, .check c err rest, reserved => do
+    let cc ← lowE (reserved := reserved) L c ((frei Γ reserved))
+    let ce ← lowEnd (reserved := reserved) passes A L lo ens pr ex err
+    let cr ← lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (cc.1 ++ [ci 19 ((frei Γ reserved)) (16 * (cr.1.length + 2)) 0] ++ cr.1 ++
       [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1, max cc.2 (max cr.2 ce.2))
-  | _, Γ, _, _, .awaits g _ _ _ _ rest =>
+  | _, Γ, _, _, .awaits g _ _ _ _ rest, reserved =>
     if lit32 (L.ga g) then do
-      let cr ← lowB passes A L lo ens pr ex rest
-      pure ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr.1, max (frei Γ + 1) cr.2)
+      let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
+      pure ([ci 1 ((frei Γ reserved)) (L.ga g) 0, ci 15 ((frei Γ reserved)) ((frei Γ reserved)) 0] ++ cr.1, max ((frei Γ reserved) + 1) cr.2)
     else none
-  | _, Γ, _, _, .exchange g neu _ _ rest =>
+  | _, Γ, _, _, .exchange g neu _ _ rest, reserved =>
     if lit32 (L.ga g) then do
-      let cn ← lowE L neu (frei Γ + 1)
-      let cr ← lowB passes A L lo ens pr ex rest
+      let cn ← lowE (reserved := reserved) L neu ((frei Γ reserved) + 1)
+      let cr ← lowB (reserved := reserved) passes A L lo ens pr ex rest
       if 16 * (cn.1.length + 5) < 2 ^ 31 then
-        pure (exC (frei Γ) (L.ga g) cn.1 ++ cr.1, max (max cn.2 (frei Γ + 4)) cr.2)
+        pure (exC ((frei Γ reserved)) (L.ga g) cn.1 ++ cr.1, max (max cn.2 ((frei Γ reserved) + 4)) cr.2)
       else none
     else none
   -- IEEE arithmetic needs its software algorithms and proofs.
-  | _, _, _, _, .float .. => none
-  | _, _, _, _, _ => none
+  | _, _, _, _, .float .., reserved => none
+  | _, _, _, _, _, reserved => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
     are measured from the end of the entire dispatch. The empty case is unreachable. -/
 def lowTags (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
-    Arms D V l Γ Λ Λ' cs → Nat → Option (List II × Nat)
-  | _, Γ, _, _, _, .nil, _ => some ([], frei Γ + 3)
-  | _, Γ, _, _, c :: _, .cons b rest, k => if k < 256 then do
-      let cr ← lowTags passes A L lo ens pr ex rest (k + 1)
-      let cp ← tagPayloadC (frei Γ) c
-      let cb ← lowB passes A L lo ens pr (exPlus ex (cr.1.length + 1)) b
-      pure (tagTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * (cp.length + cb.1.length + 2)) 0] ++
+    Arms D V l Γ Λ Λ' cs → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, Γ, _, _, _, .nil, _, reserved => some ([], (frei Γ reserved) + 3)
+  | _, Γ, _, _, c :: _, .cons b rest, k, reserved => if k < 256 then do
+      let cr ← lowTags (reserved := reserved) passes A L lo ens pr ex rest (k + 1)
+      let cp ← tagPayloadC ((frei Γ reserved)) c
+      let cb ← lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) b
+      pure (tagTestC ((frei Γ reserved)) k ++ [ci 19 ((frei Γ reserved) + 1) (16 * (cp.length + cb.1.length + 2)) 0] ++
         cp ++ cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
-        max (frei Γ + 3) (max cb.2 cr.2))
+        max ((frei Γ reserved) + 3) (max cb.2 cr.2))
     else none
 
 /-- Reason dispatch uses full word comparisons in declaration order. -/
 def lowGrund (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
-    GrundArms D V l Γ Λ Λ' n → Nat → Option (List II × Nat)
-  | _, Γ, _, _, _, .nil, _ => some ([], frei Γ + 3)
-  | _, Γ, _, _, _, .cons b rest, k => if k < 2 ^ 31 then do
-      let cr ← lowGrund passes A L lo ens pr ex rest (k + 1)
-      let cb ← lowB passes A L lo ens pr (exPlus ex (cr.1.length + 1)) b
-      pure (whyTestC (frei Γ) k ++ [ci 19 (frei Γ + 1) (16 * (cb.1.length + 2)) 0] ++
+    GrundArms D V l Γ Λ Λ' n → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, Γ, _, _, _, .nil, _, reserved => some ([], (frei Γ reserved) + 3)
+  | _, Γ, _, _, _, .cons b rest, k, reserved => if k < 2 ^ 31 then do
+      let cr ← lowGrund (reserved := reserved) passes A L lo ens pr ex rest (k + 1)
+      let cb ← lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) b
+      pure (whyTestC ((frei Γ reserved)) k ++ [ci 19 ((frei Γ reserved) + 1) (16 * (cb.1.length + 2)) 0] ++
         cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
-        max (frei Γ + 3) (max cb.2 cr.2))
+        max ((frei Γ reserved) + 3) (max cb.2 cr.2))
     else none
 
 def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
-    {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → Option (List II × Nat)
-  | _, Γ, _, .leave _ => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], frei Γ) else none
-  | _, Γ, _, .next _ => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], frei Γ) else none
-  | _, Γ, _, .retWhy r _ =>
-    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max (frei Γ) (retTop lo)) else none
-  | _, Γ, _, .ret e _ => do
-    let ce ← lowErg L e (frei Γ)
-    pure (ce.1 ++ retC lo (frei Γ) ens.1, max ce.2 (max ens.2 (retTop lo)))
-  | _, _, _, .cons s rest => do
-    let cr ← lowEnd passes A L lo ens pr ex rest
-    let cs ← lowS passes A L lo ens pr (exPlus ex cr.1.length) s
+    {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, Γ, _, .leave _, reserved => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], (frei Γ reserved)) else none
+  | _, Γ, _, .next _, reserved => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], (frei Γ reserved)) else none
+  | _, Γ, _, .retWhy r _, reserved =>
+    if r.val < 2 ^ 31 then some (retWhyC lo r.val, max ((frei Γ reserved)) (retTop lo)) else none
+  | _, Γ, _, .ret e _, reserved => do
+    let ce ← lowErg (reserved := reserved) L e ((frei Γ reserved))
+    pure (ce.1 ++ retC lo ((frei Γ reserved)) ens.1, max ce.2 (max ens.2 (retTop lo)))
+  | _, _, _, .cons s rest, reserved => do
+    let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
+    let cs ← lowS (reserved := reserved) passes A L lo ens pr (exPlus ex cr.1.length) s
     pure (cs.1 ++ cr.1, max cs.2 cr.2)
-  | _, Γ, _, .bind e rest => do
-    let ce ← lowE L e (frei Γ)
-    let cr ← lowEnd passes A L lo ens pr ex rest
+  | _, Γ, _, .bind e rest, reserved => do
+    let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+    let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
     pure (ce.1 ++ cr.1, max ce.2 cr.2)
-  | _, Γ, _, .bindCallElse f args _ _ _ err rest => do
-    let ca ← lowA L args (frei Γ + FB)
-    let ce ← lowEnd passes A L lo ens pr ex err
-    let cr ← lowEnd passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
-    pure (elseC (frei Γ + FB + (D.params f).length + 1) (frei Γ) (callC A f (frei Γ) ca.1) cr.1 ce.1,
-      elseTop f (frei Γ) ca.2 cr.2 ce.2)
-  | _, Γ, _, .bindCall f args _ _ _ rest => do
-    let ca ← lowA L args (frei Γ + FB)
-    let cr ← lowEnd passes A L lo ens pr ex rest
-    pure (callC A f (frei Γ) ca.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max (callTop f (frei Γ) ca.2) cr.2)
-  | _, Γ, _, .bindCallInd p args _ _ _ rest => do
-    let cc ← lowInd L p args
-    let cr ← lowEnd passes A L lo ens pr ex rest
-    pure (cc.1 ++ [ci 2 (frei Γ) (frei Γ + 2) 0] ++ cr.1, max cc.2 cr.2)
-  | _, Γ, _, .ite c t e => do
-    let cc ← lowE L c (frei Γ)
-    let ce ← lowEnd passes A L lo ens pr ex e
-    let ct ← lowEnd passes A L lo ens pr (exPlus ex ce.1.length) t
-    pure (cc.1 ++ [ci 19 (frei Γ) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
-  | _, Γ, _, .narrow (lo := lo') (hi := hi') e low high err rest =>
+  | _, Γ, _, .bindCallElse f args _ _ _ err rest, reserved => do
+    let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
+    let ce ← lowEnd (reserved := reserved) passes A L lo ens pr ex err
+    let cr ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC ((frei Γ reserved) + FB + (D.params f).length + 1) ((frei Γ reserved)) (callC A f ((frei Γ reserved)) ca.1) cr.1 ce.1,
+      elseTop f ((frei Γ reserved)) ca.2 cr.2 ce.2)
+  | _, Γ, _, .bindCall f args _ _ _ rest, reserved => do
+    let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
+    let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
+    pure (callC A f ((frei Γ reserved)) ca.1 ++ [ci 2 ((frei Γ reserved)) ((frei Γ reserved) + 2) 0] ++ cr.1, max (callTop f ((frei Γ reserved)) ca.2) cr.2)
+  | _, Γ, _, .bindCallInd p args _ _ _ rest, reserved => do
+    let cc ← lowInd (reserved := reserved) L p args
+    let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
+    pure (cc.1 ++ [ci 2 ((frei Γ reserved)) ((frei Γ reserved) + 2) 0] ++ cr.1, max cc.2 cr.2)
+  | _, Γ, _, .ite c t e, reserved => do
+    let cc ← lowE (reserved := reserved) L c ((frei Γ reserved))
+    let ce ← lowEnd (reserved := reserved) passes A L lo ens pr ex e
+    let ct ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex ce.1.length) t
+    pure (cc.1 ++ [ci 19 ((frei Γ reserved)) (16 * (ct.1.length + 1)) 0] ++ ct.1 ++ ce.1, max cc.2 (max ct.2 ce.2))
+  | _, Γ, _, .narrow (lo := lo') (hi := hi') e low high err rest, reserved =>
     if inW lo' hi' && lit32 low && lit32 high then do
-      let ce ← lowE L e (frei Γ)
-      let cr ← lowEnd passes A L lo ens pr ex rest
-      let cx ← lowEnd passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
-      pure (narrowC (frei Γ) low high ce.1 cx.1 cr.1, max ce.2 (max (frei Γ + 3) (max cx.2 cr.2)))
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
+      let cx ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex (cr.1.length + 1)) err
+      pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 3) (max cx.2 cr.2)))
     else none
-  | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest => do
-    let ct ← torC0 L a args (frei Γ)
-    let ck ← chkC (D.aerg a) (frei Γ)
-    let cr ← lowEnd passes A L lo ens pr ex rest
-    pure (ct.1 ++ ck ++ cr.1, max ct.2 (max (frei Γ + 10) cr.2))
-  | _, Γ, _, .awaits g _ _ _ _ rest =>
+  | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
+    let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
+    let ck ← chkC (D.aerg a) ((frei Γ reserved))
+    let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
+    pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
+  | _, Γ, _, .awaits g _ _ _ _ rest, reserved =>
     if lit32 (L.ga g) then do
-      let cr ← lowEnd passes A L lo ens pr ex rest
-      pure ([ci 1 (frei Γ) (L.ga g) 0, ci 15 (frei Γ) (frei Γ) 0] ++ cr.1, max (frei Γ + 1) cr.2)
+      let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
+      pure ([ci 1 ((frei Γ reserved)) (L.ga g) 0, ci 15 ((frei Γ reserved)) ((frei Γ reserved)) 0] ++ cr.1, max ((frei Γ reserved) + 1) cr.2)
     else none
-  | _, Γ, _, .exchange g neu _ _ rest =>
+  | _, Γ, _, .exchange g neu _ _ rest, reserved =>
     if lit32 (L.ga g) then do
-      let cn ← lowE L neu (frei Γ + 1)
-      let cr ← lowEnd passes A L lo ens pr ex rest
+      let cn ← lowE (reserved := reserved) L neu ((frei Γ reserved) + 1)
+      let cr ← lowEnd (reserved := reserved) passes A L lo ens pr ex rest
       if 16 * (cn.1.length + 5) < 2 ^ 31 then
-        pure (exC (frei Γ) (L.ga g) cn.1 ++ cr.1, max (max cn.2 (frei Γ + 4)) cr.2)
+        pure (exC ((frei Γ reserved)) (L.ga g) cn.1 ++ cr.1, max (max cn.2 ((frei Γ reserved) + 4)) cr.2)
       else none
     else none
-  | _, Γ, _, .bindAxiomElse a args _ _ _ _ _ _ err rest =>
+  | _, Γ, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, some (.int lo' hi') =>
       if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a then do
-        let ct ← torC L a args (frei Γ)
-        let ck ← chkC (some (.int lo' hi')) (frei Γ)
-        let ce ← lowEnd passes A L lo ens pr ex err
-        let cr ← lowEnd passes A L lo ens pr (exPlus ex ce.1.length) rest
+        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
+        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ce ← lowEnd (reserved := reserved) passes A L lo ens pr ex err
+        let cr ← lowEnd (reserved := reserved) passes A L lo ens pr (exPlus ex ce.1.length) rest
         if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.1.length) < 2 ^ 31 then
-          pure (ct.1 ++ fehlC (frei Γ) b.fehler ((16 * (ck.length + cr.1.length) : Nat) : Int) ++ ck ++ cr.1 ++ ce.1,
-            max ct.2 (max (frei Γ + 10) (max cr.2 ce.2)))
+          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + cr.1.length) : Nat) : Int) ++ ck ++ cr.1 ++ ce.1,
+            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
         else none
       else none
     | _, _ => none
-  | _, _, _, _ => none
+  | _, _, _, _, reserved => none
 
 end
 

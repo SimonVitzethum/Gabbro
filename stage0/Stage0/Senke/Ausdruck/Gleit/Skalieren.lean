@@ -286,8 +286,10 @@ theorem floatPackCarry_nat (q u : Nat) (hu : 2*u < 2^64)
   · subst q
     simp [Runner.IR.bool, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow,
       Nat.mod_eq_of_lt hu, Nat.mul_div_cancel_left]
+    omega
   · simp [h, Runner.IR.bool, BitVec.toNat_ushiftRight,
       Nat.mod_eq_of_lt hq64]
+    omega
 
 /-- The packing expression uses the natural renormalized significand. -/
 theorem floatPackCarry_word (q u : Nat) (hu : 2*u < 2^64)

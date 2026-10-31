@@ -14,7 +14,7 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
-variable {D : Deklaration} {L : Lay D}
+variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-! ## The indices -/
 
@@ -175,9 +175,9 @@ end
 /-! ## The head of the loop -/
 
 /-- A statement's precondition from its parts. -/
-theorem mkPreS {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
-    (hctx : frei Γ ≤ d) (hK : K < 2 ^ 31) (hF : FrameOK m fp K) (hc : CodeAt m pc c) (hf : CodeFar pc c.length fp K)
-    (he : EnvAt L m fp ρ) : PreS L m pc fp K d c ρ :=
+theorem mkPreS {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ} {reserved : Nat}
+    (hctx : frei Γ reserved ≤ d) (hK : K < 2 ^ 31) (hF : FrameOK m fp K) (hc : CodeAt m pc c) (hf : CodeFar pc c.length fp K)
+    (he : EnvAt L m fp ρ reserved) : PreS L m pc fp K d c ρ reserved :=
   ⟨hctx, hK, hF, hc, hf, he, trivial, wstab_true _ _⟩
 
 theorem slt_k {k : Nat} {n : Int} (hk : k < 2 ^ 31) (hn : lit32 n = true) :
@@ -190,14 +190,14 @@ theorem slt_k {k : Nat} {n : Int} (hk : k < 2 ^ 31) (hn : lit32 n = true) :
     below `s + 1` and the code. -/
 theorem trav_head {L : Lay D} {fp pc : Runner.W} {K Ks : Nat} {Γ : Ctx} {Λ : List (Res D)} {inv : Expr D Γ Λ .bool}
     {ci' : List II × Nat} {cb : List II} {n : Int} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
-    (hci : lowE L inv (frei Γ + 1) = some ci') (htop : ci'.2 ≤ Ks) (hW : WIn L fp Ks K)
-    (hp : PreS L m pc fp K (frei Γ) (travCode (frei Γ) n ci'.1 cb) ρ) (hWa : WeltAt m L σ) :
+    (hci : lowE (reserved := reserved) L inv (frei Γ reserved + 1) = some ci') (htop : ci'.2 ≤ Ks) (hW : WIn L fp Ks K)
+    (hp : PreS L m pc fp K (frei Γ reserved) (travCode (frei Γ reserved) n ci'.1 cb) ρ reserved) (hWa : WeltAt m L σ) :
     ∃ m1 w, Star ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (1 + ci'.1.length)), fp⟩ m1 ∧
-      Agree fp (frei Γ + 1) Ks m m1 ∧ m1.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 1))) = some w ∧
+      Agree fp (frei Γ reserved + 1) Ks m m1 ∧ m1.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 1))) = some w ∧
       w = (if wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = true then 1 else 0) ∧ WeltAt m1 L σ := by
   have hks := hW.ks
-  have hlen := travCode_len (s := frei Γ) (n := n) (ci' := ci'.1) (cb := cb)
-  have hq : PreS L m (pc + BitVec.ofNat 64 (16 * 1)) fp K (frei Γ + 1) ci'.1 ρ :=
+  have hlen := travCode_len (s := frei Γ reserved) (n := n) (ci' := ci'.1) (cb := cb)
+  have hq : PreS L m (pc + BitVec.ofNat 64 (16 * 1)) fp K (frei Γ reserved + 1) ci'.1 ρ reserved :=
     mkPreS (by omega) hp.small hp.frame (trav_inv hp.code) (codeFar_at hp.far (by omega)) hp.env
   have hpw := PreS.welt hq hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ inv.orte) (σ.lese Λ inv.orte) (fun _ h => h) inv _ ci'.1
@@ -209,18 +209,18 @@ theorem trav_head {L : Lay D} {fp pc : Runner.W} {K Ks : Nat} {Γ : Ctx} {Λ : L
 /-- `k < count` into slot `s + 1`. -/
 theorem trav_cmp_ok {L : Lay D} {fp pc : Runner.W} {K Ks k : Nat} {Γ : Ctx} {ci' cb : List II} {n : Int}
     {m : Runner.Mem} {σ : World D} {ρ : Env D Γ} (hn : lit32 n = true)
-    (hp : PreS L m pc fp K (frei Γ) (travCode (frei Γ) n ci' cb) ρ) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
-    (hks : frei Γ + 9 ≤ Ks) (hk0 : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ))) = some (BitVec.ofNat 64 k))
+    (hp : PreS L m pc fp K (frei Γ reserved) (travCode (frei Γ reserved) n ci' cb) ρ reserved) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
+    (hks : frei Γ reserved + 9 ≤ Ks) (hk0 : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 k))
     (hk : k < 2 ^ 31) :
     ∃ m2, Star ⟨pc + BitVec.ofNat 64 (16 * (2 + ci'.length)), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (5 + ci'.length)), fp⟩ m2 ∧
-      Agree fp (frei Γ + 1) Ks m m2 ∧
-      m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ + 1))) = some (Runner.IR.bool (decide ((k : Int) < n))) ∧
+      Agree fp (frei Γ reserved + 1) Ks m m2 ∧
+      m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 1))) = some (Runner.IR.bool (decide ((k : Int) < n))) ∧
       WeltAt m2 L σ := by
-  have hlen := travCode_len (s := frei Γ) (n := n) (ci' := ci') (cb := cb)
+  have hlen := travCode_len (s := frei Γ reserved) (n := n) (ci' := ci') (cb := cb)
   have hksK := hW.ks
-  have hq : PreS L m (pc + BitVec.ofNat 64 (16 * (2 + ci'.length))) fp K (frei Γ + 1)
-      ([ci 2 ((frei Γ + 1 : Nat) : Int) (frei Γ) 0] ++ [ci 1 (((frei Γ + 1 : Nat) : Int) + 1) n 0,
-        ci 13 ((frei Γ + 1 : Nat) : Int) ((frei Γ + 1 : Nat) : Int) (((frei Γ + 1 : Nat) : Int) + 1)]) ρ :=
+  have hq : PreS L m (pc + BitVec.ofNat 64 (16 * (2 + ci'.length))) fp K (frei Γ reserved + 1)
+      ([ci 2 ((frei Γ reserved + 1 : Nat) : Int) (frei Γ reserved) 0] ++ [ci 1 (((frei Γ reserved + 1 : Nat) : Int) + 1) n 0,
+        ci 13 ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 1 : Nat) : Int) (((frei Γ reserved + 1 : Nat) : Int) + 1)]) ρ reserved :=
     mkPreS (by omega) hp.small hp.frame (trav_cmp hp.code) (codeFar_at hp.far (by simp; omega)) hp.env
   have hpw := PreS.welt hq hksK hWa hW.lay (by have := hW.lo; omega)
   have := hpw.small
@@ -229,8 +229,8 @@ theorem trav_cmp_ok {L : Lay D} {fp pc : Runner.W} {K Ks k : Nat} {Γ : Ctx} {ci
     (fun m' w' hp' hr he => (binK_ok (r := Runner.IR.bool (w'.slt (BitVec.ofInt 64 n))) hp' hr hn rfl (by decide)
       rfl (by omega)).mono fun x hx => by rw [hx, he]) (by omega)
   refine ⟨m2, ?_, a2, by rw [hw, hwe, slt_k hk hn], hpw.wstab m m2 hWa (a2.mono (Nat.zero_le _))⟩
-  have e : pc + BitVec.ofNat 64 (16 * (2 + ci'.length)) + BitVec.ofNat 64 (16 * ([ci 2 ((frei Γ + 1 : Nat) : Int) (frei Γ) 0] ++ [ci 1 (((frei Γ + 1 : Nat) : Int) + 1) n 0,
-        ci 13 ((frei Γ + 1 : Nat) : Int) ((frei Γ + 1 : Nat) : Int) (((frei Γ + 1 : Nat) : Int) + 1)]).length) =
+  have e : pc + BitVec.ofNat 64 (16 * (2 + ci'.length)) + BitVec.ofNat 64 (16 * ([ci 2 ((frei Γ reserved + 1 : Nat) : Int) (frei Γ reserved) 0] ++ [ci 1 (((frei Γ reserved + 1 : Nat) : Int) + 1) n 0,
+        ci 13 ((frei Γ reserved + 1 : Nat) : Int) ((frei Γ reserved + 1 : Nat) : Int) (((frei Γ reserved + 1 : Nat) : Int) + 1)]).length) =
       pc + BitVec.ofNat 64 (16 * (5 + ci'.length)) := by
     rw [addr_norm]; simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil]
     congr 2; omega

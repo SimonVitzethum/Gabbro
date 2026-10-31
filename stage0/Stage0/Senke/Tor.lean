@@ -24,12 +24,12 @@ def isPtr : Ty → Bool
 
 /-- The arguments of a gate, the first into slot `d`, each next one a slot higher. A later argument's scratch slots
     lie above every argument already in place. A pointer has no code here: its slot gets the buffer's address. -/
-def lowR (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → Option (List II × Nat)
-  | _, _, .nil, d => some ([], d)
-  | _, τ :: _, .cons e rest, d =>
-    if isPtr τ then lowR L rest (d + 1) else do
-      let ce ← lowE L e d
-      let cr ← lowR L rest (d + 1)
+def lowR (L : Lay D) {Λ : List (Res D)} : {Γ : Ctx} → {τs : List Ty} → Args D Γ Λ τs → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, _, .nil, d, reserved => some ([], d)
+  | _, τ :: _, .cons e rest, d, reserved =>
+    if isPtr τ then lowR (reserved := reserved) L rest (d + 1) else do
+      let ce ← lowE L e d reserved
+      let cr ← lowR (reserved := reserved) L rest (d + 1)
       pure (ce.1 ++ cr.1, max ce.2 cr.2)
 
 /-- Zero into the `k` slots from `d`. -/
@@ -97,14 +97,14 @@ def unpackK (L : Lay D) (t : D.Tab) (f : D.Feld t) (B u : Nat) : Nat → List II
 /-- The words of a buffer of `c` elements. -/
 def pufW (c : Nat) : Nat := (c + 7) / 8
 
-def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (s : Nat) :
+def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (s : Nat) (reserved : Nat := 0) :
     Option (List II × Nat) :=
   match L.tor a with
   | some b =>
     if torGut b (D.aparams a).length = true ∧ (D.aparams a).all wortTy = true then
       match ptrParam (D.aparams a) with
       | none => do
-        let ca ← lowR L args (s + 1)
+        let ca ← lowR (reserved := reserved) L args (s + 1)
         pure (torCode b.nr s (D.aparams a).length ca.1, max ca.2 (s + 7))
       | some (j, nt, rw) =>
         match D.tabNr nt with
@@ -113,7 +113,7 @@ def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ
           | some f =>
             if D.typ t f = .int 0 255 ∧ ((D.aparams a).filter isPtr).length = 1 ∧ 0 ≤ D.count t ∧
                 D.count t < 2 ^ 20 ∧ L.count t = D.count t then do
-              let ca ← lowR L args (s + 1)
+              let ca ← lowR (reserved := reserved) L args (s + 1)
               let c := (D.count t).toNat
               let B := max ca.2 (s + 7)
               pure (torCode b.nr s (D.aparams a).length
@@ -127,9 +127,9 @@ def torC (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ
   | none => none
 
 /-- The call of a gate without a reason channel: its raw answer is the kernel's word. -/
-def torC0 (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (s : Nat) :
+def torC0 (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (s : Nat) (reserved : Nat := 0) :
     Option (List II × Nat) :=
-  if D.agruende a = 0 then torC L a args s else none
+  if D.agruende a = 0 then torC (reserved := reserved) L a args s else none
 
 /-- `d := slot s` with `d = s + 1`, then `d := d < k` (the constant into `d + 1`). -/
 def sltC (s : Nat) (k : Int) : List II :=

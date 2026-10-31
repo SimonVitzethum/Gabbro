@@ -121,12 +121,13 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.retry_case
 #print axioms Gabbro.Stage0.Senke.forever_zero
 #print axioms Gabbro.Stage0.Senke.forever_one_false
-#print axioms Gabbro.Stage0.Senke.forever_refused
+#print axioms Gabbro.Stage0.Senke.forever_initialize_entry
+#print axioms Gabbro.Stage0.Senke.forever_counter_loop
 #print axioms Gabbro.Stage0.Senke.RetryProbe.retry_case_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.retry_overflow_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.forever_fuel_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.forever_body_zeuge
-#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_unreserved_zeuge
 #print axioms Gabbro.Stage0.Senke.boolC_ok
 #print axioms Gabbro.Stage0.Senke.einpassen_bool
 #print axioms Gabbro.Stage0.Senke.einpassen_never
@@ -324,3 +325,27 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatAddSubnormalOutputL_ok
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatAddOutput_joint_zeuge
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.outputImages_zeuge
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.answer_sound
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.execute_sound
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_exit_zeuge
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.exact_cost_zeuge
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_runner_zeuge
+
+-- Canonical prefix reservation: lexical placement, writes and nested offsets.
+#print axioms Gabbro.Stage0.Senke.reserved_write_preserves
+#print axioms Gabbro.Stage0.Senke.reservation_variable_offset
+#print axioms Gabbro.Stage0.Senke.nested_reservation_offsets
+#print axioms Gabbro.Stage0.Senke.reservation_parameter_offset_zeuge
+
+#print axioms Gabbro.Stage0.Senke.relocate_run
+#print axioms Gabbro.Stage0.Senke.relocate_env
+#print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_env_zeuge
+#print axioms Gabbro.Stage0.Senke.RelocateProbe.emitted_moves_zeuge
+#print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_run_zeuge
+
+-- Actual counter header reconstructs the source-pass interface in its output memory.
+#print axioms Gabbro.Stage0.Senke.counter_header
+#print axioms Gabbro.Stage0.Senke.CounterCallProbe.counter_header_zeuge
+
+#print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_outcomes_zeuge
+#print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge

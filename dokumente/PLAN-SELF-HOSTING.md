@@ -63,26 +63,14 @@ freedom, contracts), proved terminating, deterministic and correct with GabbroV.
 * **Stage 1 is the goal of §1.** `gkomp` run by the runner compiles its own source; the compiled `gkomp` compiles itself
   again (fixpoint), and the diverse double compilation compares the runner's run with the native binary.
 
-**State of stage 0 (2026-10-26, `stage0/Stage0/`).** Today `stage0` still RUNS programs; that path is the reference
-until the runner runs `gkomp`, then it is deleted (no legacy) except what the proofs of §2.1 reuse (`Schnell/`, the
-replay theorem). `stage0` is a Lean executable (`cd stage0 && lake build`;
-`stage0 [--schritte N] [--passes N] PROGRAM.gab`). It runs the stages of `uebersetzeAllg`, refuses what `AkzeptiertX`
-refuses (`akzeptiertU`), refuses device registers and the open region (its provider is not yet fresh in the model),
-and accepts a foreign body only as a `syscall` gate bound on this machine (`Tor/Bindung.lean`). The run is on the thread
-machine `RufMaschineG`: `Schritt/` computes one step of a thread together with its rule (`Zug`, all 84 rules of
-`RufSchrittG`), `Lauf/` starts `main` on thread 0 and the program's roots (`entry`, `concurrent`, `start { .. }`) on
-threads 1, 2, .. (`anfaengeVon`, `startG`). `Tor/LaufIO.lean` runs it in two phases: every machine thread on an OS
-thread of its own, each step under one futex world lock, every question answered by the raw system call outside the
-lock (`c/syscall.c`, the booked wall); then the schedule is replayed under the log of the observed answers.
-`nachspiel_ist_lauf`: every output is read from a machine reachable by `RufSchrittG` from the start machine under the
-oracle that answers with the observed results, in which thread 0 has ended. A program without gates gets its input
-in `io.ein`/`ein_len` and leaves its output in `io.aus`/`aus_len` (`boot`, kernel-evaluable; witness `Zeuge.lean`).
-The probes `stage0/proben/` run in stage 7 of the Lean guardian. Built since: the fast machine (`Schnell/`, a normal
-form proved to simulate the thread machine), an array memory written in place, the program tabulated once
-(`Lauf/Memo`). Open: (a) `S0IR` and the lowering (§2.1); (b) the runner (§2.2); (c) the provider freshness repair of
-the open region in the model; (d) the front end and the subset gate over the whole language; (e) the Rust exporter
-`lean_g.rs` still writes `aschreibt := false` for every gate and refuses a gate's `writes`, which the Lean front end
-and the model accept.
+**Current scope (2026-10-31).** Stage 0 only compiles accepted Gabbro source into S0IR images:
+`stage0 --ir PROGRAM.gab IMAGE`. The former Lean source runtime, fast interpreter, replay execution,
+system-call trampoline and their generators are removed. They are not a fallback or a development target.
+The assembly runner executes the images and may be corrected for concrete missing execution capabilities.
+The active work is complete Gabbro-to-IR coverage; independent cost, timing or hardware projects are outside
+this task. The grammar's existing compiled artifacts are reused, with one Lean check globally at a time.
+Canonical language/IR semantics and lowering proofs remain; removing the old executable runtime does not
+remove these specifications or weaken acceptance.
 
 ### 2.1 The stage-0 IR `S0IR` — design (2026-10-28)
 
@@ -141,7 +129,7 @@ outcomes of G for some budget and stay exact.
   pattern — float arithmetic is SOFT-FLOAT, lowered to integer IR code proved against the kernel IEEE model, so the
   runner has no float instruction and the runner needs no FPU assumption.
 * **Ghost, not in `S0IR`:** the trace `spur`, the call log, entry worlds `s0`, the run log, marks (`advances`,
-  `retires`), `breaking`. The simulation relation reconstructs them, as the compact trace of `Schnell/` does.
+  `retires`), `breaking`. The simulation relation reconstructs them from the canonical source semantics.
 
 #### 2.1.3 The instructions (24 opcodes)
 
@@ -363,6 +351,136 @@ the global build lock and 5G/7G/Swap0 scope with existing grammar oleans only.
 * **Budgets:** the remaining call depth is a hidden parameter: the caller passes `depth - 1`, the callee's entry tests
   it and at 0 stops in `abstieg f` exactly where `rufAt 0` does. The runner gives the first frame the run's depth and
   reserves stacks so that this depth of the largest frame fits: stack exhaustion cannot happen.
+* **Cost proof status:** `ZeitAb` bounds G-machine own steps using `kostenTief`;
+  `passes` bounds semantic loop attempts. Neither counts emitted S0IR instructions.
+  `Schleifen/Counted.lean` counts canonical `Runner.IR.step` executions exactly,
+  erases to `Star`, and composes segment counts, including callees and nested loops.
+  `Schleifen/CountedLoop.lean` connects instruction counting to the real counter
+  test, decrement and backedge, with a local counted body contract. Its inhabited
+  `whole_loop_zeuge` instance uses the emitted `foreverCode` with a true invariant
+  and empty body: arbitrary representable remaining fuel costs at most `6 * fuel + 1`
+  instructions from the live header to the budget-stop entry. Initialization and
+  the terminal stop are outside this bound. No unrolling or CPU latency claim is
+  involved. General declaration-derived callee bounds, hardware assumptions and
+  propagation through all accepted statement families remain OPEN.
+  `CalleeCostCertificate.call` now connects the checked expression-body
+  instruction declaration to the actual call opcode, entry-memory ABI writes,
+  source-derived execution and return. Its bound is `declared f + 1`, retaining
+  the callee frame agreement and encoded result; a loaded nonempty witness
+  jointly satisfies these premises under canonical `Runner.IR.Kern`. This is
+  not yet the full `callC` argument/depth/status protocol or a `BlockCost` call
+  constructor. Source-certificate-derived nested/whole-forever bounds remain OPEN.
+  `Schleifen/StatementCost.lean` derives normal assignment-block costs recursively
+  from accepted `lowS`/`lowB` results and expression certificates, including lexical
+  binding, environment updates, world preservation and protected slots. Its loaded
+  nonempty body witness discharges all simulation premises jointly. The terminal
+  `lowEnd .cons` composition also retains counts through a returning/stopping child.
+  Global stores now compose value-expression cost, the actual address constant and
+  the actual store opcode; the recursive tail receives the updated world. A loaded
+  three-instruction witness changes a global function pointer. Other world-store
+  forms, calls, branch outcomes and nested loops still require recursive cost rules.
+  `EndCost.sound` now integrates normal returns into the recursive terminal
+  certificate, alongside reason returns, assignment and binding. Original
+  parameter environments and the saved snapshot survive recursive prefixes;
+  normal returns derive their count from the result expression and actual
+  `lowEns` certificate, including result and status ABI writes. A loaded
+  nine-instruction witness combines binding, assignment and normal return.
+  `lowFun_counted` now composes the full successful emitted function from the
+  depth guard, recursively certified requires plus its guard, actual snapshot,
+  parameter relocation and `EndCost.sound` body (including actual ensures and
+  return ABI). The sum is checked against the declared instruction bound;
+  neither whole-body execution nor whole-body cost is assumed. Its loaded
+  twelve-instruction witness relocates one parameter before normal return.
+  `ArgsCost.fullCall` composes actual argument certificates and the four
+  call-entry instructions with that full function contract. Its loaded
+  seventeen-instruction witness executes a real argument, callee parameter
+  relocation and normal return. Both generic contracts apply to the recursive
+  certificate fragment, not all accepted source forms.
+  `normalRet_counted` now retains the exact same counted endpoint for the
+  encoded result, successful status slot, frame agreement from ABI slot 2,
+  writable frame and preservation of every initially represented world under
+  the existing layout separation. `retC_counted` carries its frame agreement
+  through ensures and the actual return tail; the source result prefix composes
+  that agreement. No determinism premise is needed: `Kern.ans` remains an
+  arbitrary relation, and both properties follow from one constructed execution.
+  The loaded normal-return witnesses now check result/status and agreement on
+  that same returned memory. `EndCost.Post` now computes the result/status
+  obligation from the recursive source certificate. `EndCost.sound` carries
+  that obligation, writable frame, saved caller PC/frame and represented world
+  through assignment and binding on its single counted execution. Reason
+  returns retain their zero status at that endpoint too. The loaded recursive
+  nine-instruction witness jointly checks result, status, frame, caller header
+  and world. `lowFun_counted` and `ArgsCost.fullCall` retain the same source
+  certificate postcondition through the full function and actual call entry,
+  together with frame/world agreement, the callee frame, caller header and
+  world. The call contract also retains the writable caller frame; its
+  agreement permits changes only above the caller's free slot or in the world.
+  No independent
+  semantic endpoint or complete execution premise is introduced.
+  Still OPEN: `EndCost` branching and call constructors; propagation of the
+  encoded return value/status and frame/world agreement for the same returned
+  memory into `BlockCost.call`; source-certificate-derived nested-forever
+  instantiation. The bounded returning execution alone does not discharge those
+  continuation premises.
+  `RecursiveEndCost.sound` now proves execution of the actual recursive terminal
+  certificate by induction on its source tree: `call` and `bindCall` descend into
+  `P.rumpf`, with decreasing call depth and the same returned-value index.
+  Guard/requires, snapshot and parameter relocation are counted before applying
+  the genuine child induction hypothesis; the continuation uses the identical
+  returned memory. Assignment, binding and branch prefixes transport the frame,
+  world, entry parameters, saved caller header and `Umf`.
+  `RecursiveTerminalProbe.sound_zeuge` jointly instantiates these premises with
+  argument/result 37, distinct caller addresses and a bound of 23 S0IR steps.
+  `recursiveBlockCost.call` and `.bindCall` now require these actual recursive
+  callee certificates instead of `EndCost` premises. `ArgsCost.fullRecursiveCall`
+  executes the entry phases and smaller-depth source body at one counted
+  endpoint; `recursiveBlockCost.sound` threads its world, frame and result
+  memory into the continuation. The bind constructor reads the common result
+  index from that memory and counts the move into the caller's new local.
+  The loaded call/bind witnesses jointly instantiate the revised constructors
+  with call-free recursive-certificate leaves; they do not witness a callee
+  containing another call or a nested loop. A nested-forever cost constructor,
+  the central whole-source bound/P1 and a joint nested call/loop witness remain
+  OPEN.
+  `CountedSimOutcome` describes observations at one actual counted endpoint
+  for every canonical outcome. `CountedSimOutcome.sound` consumes that endpoint
+  and its execution; `CountedSim.outcome` recovers it from counted child
+  simulations. Returns use the saved caller frame, without assuming the final
+  frame equals the initial callee frame. `stopC_counted_outcome` executes the
+  two constants and retains the actual pending request for logic and hardware
+  stops. `counter_budget_stop_outcome` connects the actual zero-counter branch
+  to the named hardware progress outcome, preserving joint frame, environment,
+  world and protected slots. `ActualStopProbe.stopC_counted_outcome_zeuge`
+  witnesses an executed logic stop. These bridges do not yet add stop cases to
+  `RecursiveEndCost`, a nested-forever constructor, or the whole-source bound.
+  `recursiveBlockCost.sourceStop` now certifies an actual source `forever` at
+  zero source passes, including an arbitrary unreachable body and continuation.
+  Its soundness recovers the real `lowS`/`foreverC` image and executes both
+  reserved initializations, the zero header branch and both stop constants:
+  exactly five S0IR instructions, with the named `.fortschritt assumption`
+  request still pending. The image-size premise bounds the emitted branch;
+  no whole-loop execution is a certificate premise.
+  `SourceStopProbe.sourceStop_zeuge` jointly instantiates its premises on a
+  fixed source loop with an unreachable `leave` body, for arbitrary layouts,
+  programs and the named progress assumption. This block constructor
+  does not yet propagate stops through recursive callee bodies: `RecursiveEndCost`
+  stop cases, positive budget induction, nested loops and the structural
+  whole-source bound remain OPEN.
+  `NestedForever.sound` now executes the entire emitted suffix from recursive
+  source-child certificates: normal passes execute both actual jumps, next
+  passes reuse their actual header endpoint, and invariant failures retain the
+  pending canonical stop. `NestedForever.initialized_sound` includes both
+  reserved-word initializations and proves the actual counted bound
+  `5 + fuel * (5 + tree.childCharge)`, preserving canonical outcomes, world,
+  frame and outer protected slots. This does not close P1: positive nested
+  loops still need integration into the recursive source certificate family,
+  and the joint CALL/LOOP witness with repeated source-state effects is OPEN.
+  These instruction counts use the existing canonical `Kern` semantics; source
+  passes and G steps remain separate units, with no hardware-latency conversion.
+  The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
+  body/callee, header, backedge and exit bounds must be connected to the lowering
+  simulation and then related to the source budget. `forever_runtime` alone proves
+  uncounted simulation. A finite count or a fixture's result is not that bound.
 * **Stops:** a G stop (`logik …`, `hardware …`) is `sys exit_group(code)`, the code naming the constructor and its
   argument. What was observed up to then is a prefix of a run of the thread machine, which is a run.
 * **Locks:** a lock word in memory. `locks L` = a `cas` 0→1 loop with `sys futex(WAIT)` on contention, the body, and on
@@ -411,7 +529,7 @@ the 24 handlers and `spawn`'s thread entry are all the machine code there is.
   oracle questions as G: the `sys` answers).
 * `ir_lower_ok`: lowering is total on accepted programs, or refuses by name; `ir_typed`: the typing invariant;
   `ir_decode`: decoding the image gives the lowered program; `ir_sim`: one `S0IR` step is zero or more fast-machine
-  steps (`Schnell/`), related states agree on memory, held locks and answers; `ir_budget`; `ir_erase`; `ir_softfloat`:
+  steps of the canonical source model, related states agree on memory, held locks and answers; `ir_budget`; `ir_erase`; `ir_softfloat`:
   each soft-float routine computes the kernel IEEE model; `ir_parallel`: a parallel run equals an interleaving of the
   thread machine (from `RennfreiBis` and the lock discipline).
 * **The lowering's output is checked, not trusted.** Stage 0 runs as compiled Lean (Lean compiler, runtime, the
@@ -548,8 +666,8 @@ For the runner:
 
 **Order.** `S0IR` (syntax, semantics, image) and `ir_sim` first; beside it the x86-64 subset written anew with its
 differential tests on the CPU and the instruction layer; then the runner with `runner_ok`, first on one thread as a
-step; then threads, `ir_parallel`, x86-TSO and `runner_tso` -- the target. The Lean-run stage 0 stays the reference until the runner runs the probes and `gkomp`, then its run
-path is deleted.
+step; then threads, `ir_parallel`, x86-TSO and `runner_tso` -- the target. The former executable Lean source
+runtime is removed. Only source-to-IR compilation and the assembly execution path remain.
 
 ## 3. What is proved, for each tool
 

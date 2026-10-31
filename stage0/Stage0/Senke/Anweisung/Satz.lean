@@ -21,6 +21,8 @@ import Stage0.Senke.Anweisung.Faelle.Schreiben
 import Stage0.Senke.Anweisung.Faelle.Speicher
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Emission
 import Stage0.Senke.Anweisung.Faelle.Bloecke
 import Stage0.Senke.Anweisung.Faelle.BlockRuf
 import Stage0.Senke.Anweisung.Faelle.Ende
@@ -38,6 +40,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 
 set_option linter.unusedSectionVars false
+set_option maxHeartbeats 2000000
 
 variable [Kern]
 
@@ -49,14 +52,14 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int} :
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowS passes A L lo (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    lowS (reserved := reserved) passes A L lo (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
+    FB ≤ lo → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execStmt O passes R s σ ρ)
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execStmt O passes R s σ ρ) reserved
   | _, Γ, Λ, _, .assignVar x e, c, top, h, hK, arg4, hW, m, pc, σ, ρ, hp, arg11, hlo2, arg13, arg14, hWa, hpr => by
     exact assignVar_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (x := x) (e := e)
       c top h hK arg4 hW m pc σ ρ hp arg11 hlo2 arg13 arg14 hWa hpr
@@ -197,7 +200,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       obtain ⟨⟨cb, tb⟩, hcb, hc⟩ := h
       simp only [Prod.mk.injEq] at hc
       obtain ⟨rfl, rfl⟩ := hc
-      have hlen := locksCode_len L (L.lk Lk) (frei Γ) cb ex.1 ex.2
+      have hlen := locksCode_len L (L.lk Lk) (frei Γ reserved) cb ex.1 ex.2
       have hks := hW.ks
       simp only [execStmt]
       exact locks_ok hrf hex1 hex2 (by omega) hW hlo0 hlo2 hpr
@@ -210,7 +213,130 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens body)
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens overflow)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
-  | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .forever a inv body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hw, hpr => by
+    dsimp only [lowS] at h
+    split at h
+    · rename_i allowed
+      obtain ⟨cc, hcc, emitted⟩ := Option.bind_eq_some_iff.mp h
+      obtain ⟨cb, tb, hcb, rfl, htc, htb, hcounter, hone, hscratch⟩ := foreverC_actual emitted
+      have bodyRuns : ∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo
+          rp cfp σ0 ρ0 cens tens pr ex body reserved := fun {pr ex} =>
+        lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens body
+      have fuel := foreverC_budget emitted
+      have pairStep : (counterPair reserved (counterDepthB body)).2 =
+          (counterPair reserved (counterDepthB body)).1 + 1 := rfl
+      have room : frei Γ reserved + 8 ≤ K := by have := hW.ks; omega
+      obtain ⟨m1, initRun, initFrame, entry, surrounds, snapshot, world, keeps, count, unit⟩ :=
+        forever_initialize_entry (lo := lo) (pr := pr) hW hp hu hk hw
+          (by omega) allowed.1 (by omega) (by omega) allowed.2.1
+          (by omega) (by omega) fuel.1 (by
+            intro j hj
+            have member := hpr j hj
+            exact ⟨by omega, fun eq => allowed.2.2.1 (eq ▸ hj),
+              fun eq => allowed.2.2.2 (eq ▸ hj)⟩)
+      let control := foreverCounter (counterPair reserved (counterDepthB body)).1
+        (counterPair reserved (counterDepthB body)).2 (16 * (cc.1.length + cb.length + 8)) ++
+        (cc.1 ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
+          [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))
+      have controlLength : control.length = cc.1.length + cb.length + 7 := by
+        simp [control, foreverCounter, stopC, sysC]
+        omega
+      have emittedCode : CodeAt m1 (pc + 32)
+          (control ++ ([ci 18 (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)) 0 0] ++
+            stopC 111 (frei Γ reserved))) := by
+        simpa [control, foreverCounter, List.append_assoc] using entry.code
+      have emittedFar : CodeFar (pc + 32) (control.length + 4) fp K := by
+        simpa [control, foreverCounter, stopC, sysC, Nat.add_assoc] using entry.far
+      have backCode := codeAt_right emittedCode
+      have backFar := codeFar_left (n := 1) (k := 3)
+        (codeFar_right (n := control.length) (k := 4) emittedFar)
+      have budgetCode := codeAt_right backCode
+      have budgetFar := codeFar_right (n := 1) (k := 3)
+        (codeFar_right (n := control.length) (k := 4) emittedFar)
+      have reservationBound : FB + reserved ≤ frei Γ reserved := by unfold frei; omega
+      have imageBound : 16 * (cc.1.length + cb.length + 13) < 2 ^ 31 := by
+        simpa only [foreverCode_length] using hs
+      have stopSX : sx (BitVec.ofInt 32 ((16 * (cc.1.length + cb.length + 8) : Nat) : Int)) =
+          BitVec.ofNat 64 (16 * (cc.1.length + cb.length + 8)) := sx_nat (d := 16 * (cc.1.length + cb.length + 8)) (by omega)
+      have stopAddress : pc + 32 + sx (BitVec.ofInt 32 ((16 * (cc.1.length + cb.length + 8) : Nat) : Int)) =
+          pc + 32 + BitVec.ofNat 64 (16 * control.length) + BitVec.ofNat 64 16 := by
+        rw [stopSX, addr_norm, controlLength]
+        congr 2 <;> omega
+      have castBack : (16 * (cc.1.length + cb.length + 7 : Nat) : Int) =
+          ((16 * (cc.1.length + cb.length + 7) : Nat) : Int) := by omega
+      have nextAddress : pc + 32 + BitVec.ofNat 64 (16 * control.length) +
+          BitVec.ofInt 64 (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)) = pc + 32 := by
+        rw [controlLength, castBack, BitVec.ofInt_neg, BitVec.ofInt_natCast,
+          BitVec.add_neg_eq_sub, BitVec.add_sub_cancel]
+      have jumpLiteral : lit32 (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)) = true := by
+        simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
+        omega
+      apply Sim.prefix hlo initRun.forget initFrame keeps
+      simp only [execStmt]
+      apply forever_counter_loop (O := O) (cb := cb) (tb := tb)
+        (stop := (16 * (cc.1.length + cb.length + 8) : Nat))
+        (back := pc + 32 + BitVec.ofNat 64 (16 * control.length))
+        (jump := II.f (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)))
+        (b := 0) (c := 0)
+        (counter := (counterPair reserved (counterDepthB body)).1)
+        (one := (counterPair reserved (counterDepthB body)).2)
+        (ex := (64, -(16 * (cc.1.length + cb.length + 7 : Nat) : Int)))
+        hS hA hlo0 hens inv body hcc
+      case hcb => simpa only [forever_runtime_targets] using hcb
+      case hW => exact hW
+      case hlo => exact hlo
+      case hlo2 => exact hlo2
+      case backFar => exact backFar
+      case stopRoom => exact room
+      case surround => exact surrounds
+      case head => exact snapshot
+      case world => exact world
+      case read => exact count
+      case readOne => exact unit
+      case backAt =>
+        change (pc + 32) + BitVec.ofNat 64 32 + _ = _
+        rw [addr_norm]
+        apply congrArg (fun n : Nat => (pc + 32) + BitVec.ofNat 64 n)
+        rw [controlLength]
+        simp only [stopC, sysC, List.length_append, List.length_cons, List.length_nil]
+        omega
+      case leaveAt =>
+        change pc + 32 + BitVec.ofNat 64 (16 * control.length) + BitVec.ofNat 64 64 = _
+        rw [addr_norm]
+        change pc + BitVec.ofNat 64 32 + _ = _
+        rw [addr_norm, controlLength, foreverCode_length]
+        exact congrArg (fun n : Nat => pc + BitVec.ofNat 64 n) (by omega)
+      case nextAt => exact nextAddress
+      case jumpAt => rw [sx_lit jumpLiteral]; exact nextAddress
+      case low => exact allowed.1
+      case allocated => omega
+      case oneBound => omega
+      case distinct => omega
+      case hprotected =>
+        intro j hj
+        exact ⟨by have := hpr j hj; omega, fun eq => allowed.2.2.1 (eq ▸ hj)⟩
+      case stopFar => rw [stopAddress]; exact budgetFar
+      case fits => exact fuel.2
+      case pre =>
+        exact ⟨entry.ctx, entry.small, entry.frame, codeAt_left emittedCode,
+          codeFar_left (n := control.length) (k := 4) emittedFar,
+          entry.env, trivial, wstab_true _ _⟩
+      case edge => simpa [ci, II.f] using backCode 0 (by simp)
+      case stopCode => rw [stopAddress]; exact budgetCode
+      case htc => omega
+      case htb => omega
+      case room => omega
+      case hs => omega
+      case hpr =>
+        intro j hj
+        simp only [List.mem_cons] at hj
+        rcases hj with rfl | rfl | hj
+        · unfold frei; omega
+        · unfold frei; omega
+        · exact hpr j hj
+      case bodyRuns => exact bodyRuns
+    · simp at h
+
   | _, Γ, Λ, _, .axiomCall a args hn proof0 proof1 proof2 proof3, c, top, h, hK, arg4, hW, m, pc, σ, ρ, hp, arg11, hlo2, arg13, arg14, hWa, hpr => by
     exact axiomCall_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (a := a) (args := args) (hn := hn) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3)
       c top h hK arg4 hW m pc σ ρ hp arg11 hlo2 arg13 arg14 hWa hpr
@@ -228,14 +354,14 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int} :
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowB passes A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
-    FB ≤ lo → lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    lowB (reserved := reserved) passes A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
+    FB ≤ lo → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ)
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ) reserved
   | _, Γ, _, _, .nil, c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa, hpr => by
     simp only [lowB, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -297,7 +423,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       split at h
       · simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        have hlen := exC_len (frei Γ) (L.ga g) cn
+        have hlen := exC_len (frei Γ reserved) (L.ga g) cn
         simp only [List.length_append, hlen] at hs
         exact exch_ok hn (by omega) (by omega) hW hlo hlo0 hlo2 hpr (fun m' σ' ρ' hp' hu' hk' hw' =>
           lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens rest cr tr hr (by omega)
@@ -335,13 +461,13 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} {ex : Int × Int} :
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → (b : Endblock D (vertragVon D f) l Γ Λ) → (c : List II) →
-    (top : Nat) → lowEnd passes A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ) c ρ →
-    lo ≤ frei Γ → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ) →
+    (top : Nat) → lowEnd (reserved := reserved) passes A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
+    lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
-      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R b σ ρ)
+      (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R b σ ρ) reserved
   | _, Γ, Λ, .ret e proof0, c, top, h, hK, arg4, hW, m, pc, σ, ρ, hp, hlo, arg12, hk, hWa, hpr => by
     exact endRet_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (e := e) (proof0 := proof0)
       c top h hK arg4 hW m pc σ ρ hp hlo arg12 hk hWa hpr
@@ -413,10 +539,10 @@ theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
+    {reserved : Nat} {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
     (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs) →
-    ArmsAll (fun b => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K (cens, tens) pr b) arms
+    ArmsAll (fun b => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K (cens, tens) pr b reserved) arms
   | _, _, _, _, _, .nil => trivial
   | _, _, _, _, _, .cons b rest =>
     ⟨(fun ex cb tb hc ht hs m pc σ ρ hp hlo2 hu hk hw hpr =>
@@ -429,10 +555,10 @@ theorem lowGrund_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
-    {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
+    {reserved : Nat} {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
     (arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n) →
-    GrundAll (fun b => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K (cens, tens) pr b) arms
+    GrundAll (fun b => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K (cens, tens) pr b reserved) arms
   | _, _, _, _, _, .nil => trivial
   | _, _, _, _, _, .cons b rest =>
     ⟨(fun ex cb tb hc ht hs m pc σ ρ hp hlo2 hu hk hw hpr =>

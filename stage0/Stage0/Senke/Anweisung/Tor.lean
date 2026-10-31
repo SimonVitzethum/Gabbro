@@ -243,11 +243,11 @@ theorem zero_ok {fp : Runner.W} {K : Nat} (hK : K < 2 ^ 31) : (k d : Nat) → (m
     · have := hz i (by omega); rwa [show d + 1 + i = d + (i + 1) by omega] at this
 
 /-- The arguments of a gate into the slots from `d`, in order; nothing below `d` changed. -/
-theorem lowR_ok {Λ : List (Res D)} {L : Lay D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+theorem lowR_ok {reserved : Nat} {Λ : List (Res D)} {L : Lay D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
     (hWL : ∀ m, W m → WeltAt m L σ) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (d : Nat) → (c : List II) → (top : Nat) →
-    lowR L args d = some (c, top) → top ≤ K → d + τs.length ≤ K →
-    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W →
+    lowR L args d reserved = some (c, top) → top ≤ K → d + τs.length ≤ K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp d K m m' ∧
       ArgsW L (fun j => rdW m' fp (d + j)) (evalArgs σ₀ args σ ρ)
   | _, _, .nil, d, c, top, h, _, _, m, pc, ρ, _ => by

@@ -3,7 +3,9 @@
   Subject:   `stage0 --ir PROGRAM.gab IMAGE`: the program checked by the goal theorem's checker Bool, lowered to G
              (`lowerAllg`), every function lowered to `S0IR` (`Senke/`), laid out as an image the runner loads.
 -/
-import Stage0.Tor.LaufIO
+import Stage0.Bindung
+import Grammatik.Parser.Elab.UebersetzePipeline
+import Grammatik.GabbroV.GvStartPflicht
 import Stage0.Senke.Bild
 import Stage0.Senke.Welt.Anordnung
 import Stage0.Senke.Ausdruck.Old.Source

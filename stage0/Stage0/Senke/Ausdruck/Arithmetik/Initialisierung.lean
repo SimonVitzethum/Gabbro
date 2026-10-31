@@ -3017,6 +3017,46 @@ theorem floatFiniteAddL_right_condition {Γ : Ctx} {ρ : Env D Γ}
 #print axioms floatFiniteAddL_right_condition
 
 
+/-- Execute the SHIFTJAM call emitted in the taken RIGHT arm, using its literal
+    constant distance producer rather than the old magnitude pipeline. -/
+theorem floatFiniteAddL_right_shift {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst top reserved : Nat} {code tail : List II} {q : Runner.W}
+    (lower : FB ≤ dst+7) (room : top ≤ K) (slots : dst+17 ≤ K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
+    (compiled : floatShiftJamL (dst+16)
+      (fun j => some ([ci 2 j (dst+7) 0],j+1))
+      (fun j => some ([ci 1 j 1 0],j+1)) = some (code,top))
+    (pre : Pre L m pc fp K (dst+16) (code++tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*code.length),fp⟩ out ∧
+      Agree fp (dst+16) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+16))) =
+        some (floatShiftJamWord q 1) ∧
+      Pre L out (pc+BitVec.ofNat 64 (16*code.length)) fp K (dst+17) tail ρ W reserved := by
+  let producer := fun j => floatShiftJamL j
+    (fun j => some ([ci 2 j (dst+7) 0],j+1))
+    (fun j => some ([ci 1 j 1 0],j+1))
+  have batch : floatStateSlotsL (dst+16) [producer] = some (code,max top (dst+17)) := by
+    simp [floatStateSlotsL, producer, compiled, Nat.add_assoc]
+  obtain ⟨out,run,agree,reads,rest⟩ := retainedWordCodes_ok (L := L)
+    [producer] (fun _ => floatShiftJamWord q 1) (by
+      intro Δ η loads i hi
+      have iz : i = 0 := by have : i < 1 := hi; omega
+      subst i
+      change WordCode (L := L) η (fun _ => True) producer (floatShiftJamWord q 1)
+      have source : WordCode (L := L) η (fun _ => True)
+          (fun j => some ([ci 2 j (dst+7) 0],j+1)) q :=
+        loads (dst+7) q lower (by omega) rq
+      intro fp K d c top hc ht mm pp hp
+      exact floatShiftJamL_ok source (WordCode.const 1 (by decide)) hc ht mm pp hp)
+    batch (by omega) (by omega) (by simpa using slots) pre
+  exact ⟨out,run,agree,slotRead_agree pre.frame agree (by omega) (by omega) rq,
+    by simpa using reads 0 (by simp),rest⟩
+
+#print axioms floatFiniteAddL_right_shift
+
+
 /-- Execute the actual RIGHT BRZ without changing the compared memory. -/
 theorem floatFiniteAddL_right_branch {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
@@ -3244,7 +3284,12 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
                         BitVec.ofNat 64 (16*aligned.length)+192+
                         BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)
                       fp K (dst+9) rightTail ρ W reserved ∧
-                    ∃ yes leftTail,
+                    ∃ yes leftTail shiftCode shiftTop,
+                      floatShiftJamL (dst+16)
+                        (fun j => some ([ci 2 j (dst+7) 0],j+1))
+                        (fun j => some ([ci 1 j 1 0],j+1)) = some (shiftCode,shiftTop) ∧
+                      yes = shiftCode ++ [ci 2 (dst+7) (dst+16) 0,
+                        ci 3 (dst+5) (dst+5) (dst+10)] ∧
                       rightTail = [ci 19 (dst+9) (16*(yes.length+2)) 0] ++
                         yes ++ [ci 18 16 0 0] ++ leftTail ∧
                       Star ⟨pc,fp⟩ m
@@ -3261,7 +3306,23 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
                         fp K (dst+9)
                         (if ((if sx == sy then q+jam else q-jam).slt
                         (BitVec.ofNat 64 (2^(F.fracBits+4)))) then leftTail else yes ++ [ci 18 16 0 0] ++ leftTail)
-                        ρ W reserved) := by
+                        ρ W reserved ∧
+                      ((if sx == sy then q+jam else q-jam).slt (BitVec.ofNat 64 (2^(F.fracBits+4))) = false →
+                        ∃ shifted,
+                          Star ⟨pc,fp⟩ m
+                            ⟨(pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)+16+BitVec.ofNat 64 (16*shiftCode.length),fp⟩ shifted ∧
+                          Agree fp (dst+16) K rightOut shifted ∧
+                          shifted.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some (if sx == sy then q+jam else q-jam) ∧
+                          shifted.rd64 (slot fp (BitVec.ofNat 64 (dst+16))) =
+                            some (floatShiftJamWord (if sx == sy then q+jam else q-jam) 1) ∧
+                          Pre L shifted ((pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)+16+BitVec.ofNat 64 (16*shiftCode.length))
+                            fp K (dst+17)
+                            ([ci 2 (dst+7) (dst+16) 0, ci 3 (dst+5) (dst+5) (dst+10)] ++
+                              [ci 18 16 0 0] ++ leftTail) ρ W reserved)) := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
     floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
       fracMask hiddenBound room (by omega) producerA producerB pre
@@ -3748,7 +3809,25 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
       rw [shape] at branchPre
       obtain ⟨dispatch,dispatchPre⟩ := floatFiniteAddL_right_branch yes leftTail
         _ (by omega) range flag branchPre
-      exact ⟨yes,leftTail,shape,(branchRun.trans rightRun).trans dispatch,dispatchPre⟩
+      refine ⟨yes,leftTail,shift.1,shift.2,hs,rfl,shape,
+        (branchRun.trans rightRun).trans dispatch,dispatchPre,?_⟩
+      intro notSmall
+      rw [notSmall] at dispatch dispatchPre
+      simp only [Bool.false_eq_true, ↓reduceIte] at dispatch dispatchPre
+      have shiftPre : Pre L rightOut
+          (pc+BitVec.ofNat 64 (16*executed.length)+256+
+            BitVec.ofNat 64 (16*aligned.1.length)+192+
+            BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48+16)
+          fp K (dst+9)
+        (shift.1 ++ ([ci 2 (dst+7) (dst+16) 0, ci 3 (dst+5) (dst+5) (dst+10)] ++
+          [ci 18 16 0 0] ++ leftTail)) ρ W reserved := by
+        simpa only [yes,List.append_assoc,BitVec.ofNat_eq_ofNat] using dispatchPre
+      have shiftRoom : shift.2 ≤ K := by have := result.2; omega
+      obtain ⟨shifted,shiftRun,shiftAgree,shiftQ,shiftValue,shiftDone⟩ :=
+        floatFiniteAddL_right_shift (by omega) shiftRoom (by omega) rq hs
+          {shiftPre with ctx := Nat.le_trans shiftPre.ctx (by omega : dst+9 ≤ dst+16)}
+      exact ⟨shifted,((branchRun.trans rightRun).trans dispatch).trans shiftRun,
+        shiftAgree,shiftQ,shiftValue,shiftDone⟩
 
 #print axioms floatFiniteAddL_read_fields_align
 
@@ -3929,7 +4008,12 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
                         BitVec.ofNat 64 (16*aligned.length)+192+
                         BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48)
                       fp K (16+9) rightTail ρ W 13 ∧
-                    ∃ yes leftTail,
+                    ∃ yes leftTail shiftCode shiftTop,
+                      floatShiftJamL (16+16)
+                        (fun j => some ([ci 2 j (16+7) 0],j+1))
+                        (fun j => some ([ci 1 j 1 0],j+1)) = some (shiftCode,shiftTop) ∧
+                      yes = shiftCode ++ [ci 2 (16+7) (16+16) 0,
+                        ci 3 (16+5) (16+5) (16+10)] ∧
                       rightTail = [ci 19 (16+9) (16*(yes.length+2)) 0] ++
                         yes ++ [ci 18 16 0 0] ++ leftTail ∧
                       Star ⟨pc,fp⟩ m
@@ -3946,7 +4030,23 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
                         fp K (16+9)
                         (if ((if sx == sy then q+jam else q-jam).slt
                         (BitVec.ofNat 64 (2^(F.fracBits+4)))) then leftTail else yes ++ [ci 18 16 0 0] ++ leftTail)
-                        ρ W 13) := by
+                        ρ W 13 ∧
+                      ((if sx == sy then q+jam else q-jam).slt (BitVec.ofNat 64 (2^(F.fracBits+4))) = false →
+                        ∃ shifted,
+                          Star ⟨pc,fp⟩ m
+                            ⟨(pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48)+16+BitVec.ofNat 64 (16*shiftCode.length),fp⟩ shifted ∧
+                          Agree fp (16+16) K rightOut shifted ∧
+                          shifted.rd64 (slot fp (BitVec.ofNat 64 (16+7))) = some (if sx == sy then q+jam else q-jam) ∧
+                          shifted.rd64 (slot fp (BitVec.ofNat 64 (16+16))) =
+                            some (floatShiftJamWord (if sx == sy then q+jam else q-jam) 1) ∧
+                          Pre L shifted ((pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48)+16+BitVec.ofNat 64 (16*shiftCode.length))
+                            fp K (16+17)
+                            ([ci 2 (16+7) (16+16) 0, ci 3 (16+5) (16+5) (16+10)] ++
+                              [ci 18 16 0 0] ++ leftTail) ρ W 13)) := by
   apply floatFiniteAddL_read_fields_align F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11
@@ -4638,45 +4738,6 @@ theorem floatFiniteAddL_left_condition_zeuge {Γ : Ctx} {ρ : Env D Γ}
     finiteLeftInvariant_zeuge.1⟩
 
 #print axioms floatFiniteAddL_left_condition_zeuge
-
-/-- Execute the SHIFTJAM call emitted in the taken RIGHT arm, using its literal
-    constant distance producer rather than the old magnitude pipeline. -/
-theorem floatFiniteAddL_right_shift {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
-    {K dst top reserved : Nat} {code tail : List II} {q : Runner.W}
-    (lower : FB ≤ dst+7) (room : top ≤ K) (slots : dst+17 ≤ K)
-    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q)
-    (compiled : floatShiftJamL (dst+16)
-      (fun j => some ([ci 2 j (dst+7) 0],j+1))
-      (fun j => some ([ci 1 j 1 0],j+1)) = some (code,top))
-    (pre : Pre L m pc fp K (dst+16) (code++tail) ρ W reserved) :
-    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*code.length),fp⟩ out ∧
-      Agree fp (dst+16) K m out ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some q ∧
-      out.rd64 (slot fp (BitVec.ofNat 64 (dst+16))) =
-        some (floatShiftJamWord q 1) ∧
-      Pre L out (pc+BitVec.ofNat 64 (16*code.length)) fp K (dst+17) tail ρ W reserved := by
-  let producer := fun j => floatShiftJamL j
-    (fun j => some ([ci 2 j (dst+7) 0],j+1))
-    (fun j => some ([ci 1 j 1 0],j+1))
-  have batch : floatStateSlotsL (dst+16) [producer] = some (code,max top (dst+17)) := by
-    simp [floatStateSlotsL, producer, compiled, Nat.add_assoc]
-  obtain ⟨out,run,agree,reads,rest⟩ := retainedWordCodes_ok (L := L)
-    [producer] (fun _ => floatShiftJamWord q 1) (by
-      intro Δ η loads i hi
-      have iz : i = 0 := by have : i < 1 := hi; omega
-      subst i
-      change WordCode (L := L) η (fun _ => True) producer (floatShiftJamWord q 1)
-      have source : WordCode (L := L) η (fun _ => True)
-          (fun j => some ([ci 2 j (dst+7) 0],j+1)) q :=
-        loads (dst+7) q lower (by omega) rq
-      intro fp K d c top hc ht mm pp hp
-      exact floatShiftJamL_ok source (WordCode.const 1 (by decide)) hc ht mm pp hp)
-    batch (by omega) (by omega) (by simpa using slots) pre
-  exact ⟨out,run,agree,slotRead_agree pre.frame agree (by omega) (by omega) rq,
-    by simpa using reads 0 (by simp),rest⟩
-
-#print axioms floatFiniteAddL_right_shift
 
 /-- Both formats and both RIGHT outcomes jointly satisfy the concrete arithmetic
     side of the test; the execution premises are shared with the generic run. -/

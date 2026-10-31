@@ -3,7 +3,7 @@ import Stage0.Senke.Ausdruck.Gleit.Bereich
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
-variable [Kern] {D : Deklaration} {L : Lay D}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem floatConstL_ok {fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} (x : GFloat) (hw : Gleitkomma.wf Gleitkomma.f64 x)
@@ -90,14 +90,14 @@ theorem floatRangeL_raw_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx}
 theorem floatRangeL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {Λ : List (Res D)}
     {ρ : Env D Γ} {W : Runner.Mem → Prop} (σ₀ σ : World D) {l1 h1 lo hi : Int × Int}
     (e : Expr D Γ Λ (.fl l1 h1)) {c : List II}
-    (ih : ∀ d c top, lowE L e d = some (c, top) → top ≤ K →
-      ∀ m pc, Pre L m pc fp K d c ρ W → Ok m pc fp K d c (Enc L (.fl l1 h1) (eval σ₀ e σ ρ)))
+    (ih : ∀ d c top, lowE L e (reserved := reserved) d = some (c, top) → top ≤ K →
+      ∀ m pc, Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.fl l1 h1) (eval σ₀ e σ ρ)))
     (hl : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) ≠ .nan)
     (hh : Gleitkomma.klasse Gleitkomma.f64 (bruch hi) ≠ .nan)
-    (h : floatRangeL d lo hi (lowE L e) = some (c, top)) (hK : top ≤ K)
-    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W) :
+    (h : floatRangeL d lo hi (lowE L e (reserved := reserved)) = some (c, top)) (hK : top ≤ K)
+    {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (· = Runner.IR.bool (floatOutside lo hi (eval σ₀ e σ ρ).x)) := by
-  exact floatRangeL_raw_ok (eval σ₀ e σ ρ).x (lowE L e)
+  exact floatRangeL_raw_ok (eval σ₀ e σ ρ).x (lowE L e (reserved := reserved))
     (endlich_nicht_nan (eval σ₀ e σ ρ).endlich) ih hl hh h hK hp
 
 /-- The canonical range template consumes any proved finite binary64 producer.

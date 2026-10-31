@@ -76,11 +76,11 @@ theorem AgreeK.rd_low {fp : W} {s a i : Nat} {m m' : Mem} (h : AgreeK fp s a m m
   · have := fp.isLt
     simp only [BitVec.toNat_add, BitVec.toNat_ofNat, hs] at h1; omega
 
-theorem AgreeK.envAt {fp : W} {s a : Nat} {m m' : Mem} {Γ : Ctx} {ρ : Env D Γ} (h : AgreeK fp s a m m')
-    (he : EnvAt L m fp ρ) (hs : frei Γ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31) :
-    EnvAt L m' fp ρ := fun τ x => by
+theorem AgreeK.envAt {reserved : Nat} {fp : W} {s a : Nat} {m m' : Mem} {Γ : Ctx} {ρ : Env D Γ} (h : AgreeK fp s a m m')
+    (he : EnvAt L m fp ρ reserved) (hs : frei Γ reserved ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31) :
+    EnvAt L m' fp ρ reserved := fun τ x => by
   obtain ⟨w, hw, hen⟩ := he τ x
-  have := vslot_lt (reserved := 0) x
+  have := vslot_lt (reserved := reserved) x
   exact ⟨w, by rw [h.rd_low (by omega) hf ha]; exact hw, hen⟩
 
 theorem AgreeK.codeAt {fp : W} {s a : Nat} {m m' : Mem} (h : AgreeK fp s a m m') (hf : fp.toNat + 8 * (s + 18) ≤ a)
@@ -88,9 +88,9 @@ theorem AgreeK.codeAt {fp : W} {s a : Nat} {m m' : Mem} (h : AgreeK fp s a m m')
     CodeAt m' pc is :=
   hc.agree (h.big hf ha) (by obtain ⟨h1, h2, h3⟩ := hcf; have := fp.isLt; exact ⟨h1, by omega, h3⟩)
 
-theorem AgreeK.preS {m m1 : Mem} {pc fp : W} {K d s a : Nat} {xs ys : List II} {Γ : Ctx} {ρ : Env D Γ}
-    (h : PreS L m pc fp K d (xs ++ ys) ρ) (ha : AgreeK fp s a m m1) (hs : frei Γ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a)
-    (ha31 : a + 24 < 2 ^ 31) : PreS L m1 (pc + BitVec.ofNat 64 (16 * xs.length)) fp K d ys ρ :=
+theorem AgreeK.preS {reserved : Nat} {m m1 : Mem} {pc fp : W} {K d s a : Nat} {xs ys : List II} {Γ : Ctx} {ρ : Env D Γ}
+    (h : PreS L m pc fp K d (xs ++ ys) ρ reserved) (ha : AgreeK fp s a m m1) (hs : frei Γ reserved ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a)
+    (ha31 : a + 24 < 2 ^ 31) : PreS L m1 (pc + BitVec.ofNat 64 (16 * xs.length)) fp K d ys ρ reserved :=
   have hcf := codeFar_right (n := xs.length) (k := ys.length) (by simpa using h.far)
   ⟨h.ctx, h.small, ⟨h.frame.lt, fun i hi => by rw [ha.rd]; exact h.frame.rd i hi,
     fun i hi => by rw [ha.wr]; exact h.frame.wr i hi⟩, ha.codeAt hf ha31 (codeAt_right h.code) hcf, hcf,
