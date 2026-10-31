@@ -801,8 +801,13 @@ word bound under the active target, and preserves every other frame-slot read
 and the full `Pre` contract. `large_dispatch` connects the retained `pc+48`
 boundary to `pc+128` with the updated quotient and all five other state reads.
 This boundary does not assert the old head after changing the quotient.
-The pending execution starts at `pc+128`
-for the large path (distance decrement, optional carry) and
+`large_distance` executes the actual seed load and subtraction at `pc+128`,
+writing exactly `distance-1` and retaining every frame read other than distance
+and scratch. It requires the current `Pre`, rather than the obsolete head.
+`large_distance_dispatch` connects `pc+48` through `pc+160`, retaining the doubled
+quotient, exact remainder, target, fuel and count alongside the new distance.
+The pending execution starts at `pc+160`
+for the large path (threshold test, optional carry) and
 at `pc+384` for the small path (both adaptive expressions). State copies,
 counter increment, fuel decrement, head restoration with changed canonical
 state, and composition with the proved backedge remain open. The central induction still explicitly
@@ -813,6 +818,7 @@ pass on the existing dependency oleans; the new continuation proofs use only
 pass. Earlier logs are retained in `.scratch-compose/active-dispatch-final.log`;
 transfer continuation validation is in `.scratch-compose/transfer-final-fixed.log`.
 Connected quotient-update validation is in `.scratch-compose/large-double-final.log`.
+Connected distance-update validation is in `.scratch-compose/large-distance-final.log`.
 The resource lemmas derive the
 total-budget ceiling from an initial zero count and the existing fuel bound;
 conservation then bounds the next count and decremented fuel and preserves their
