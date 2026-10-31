@@ -308,9 +308,17 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   world, entry parameters, saved caller header and `Umf`.
   `RecursiveTerminalProbe.sound_zeuge` jointly instantiates these premises with
   argument/result 37, distinct caller addresses and a bound of 23 S0IR steps.
-  This does not yet replace the `EndCost` premises in `recursiveBlockCost`:
-  its call/bindCall integration, a nested-forever cost constructor and the
-  whole-source bound remain OPEN.
+  `recursiveBlockCost.call` and `.bindCall` now require these actual recursive
+  callee certificates instead of `EndCost` premises. `ArgsCost.fullRecursiveCall`
+  executes the entry phases and smaller-depth source body at one counted
+  endpoint; `recursiveBlockCost.sound` threads its world, frame and result
+  memory into the continuation. The bind constructor reads the common result
+  index from that memory and counts the move into the caller's new local.
+  The loaded call/bind witnesses jointly instantiate the revised constructors
+  with call-free recursive-certificate leaves; they do not witness a callee
+  containing another call or a nested loop. A nested-forever cost constructor,
+  the central whole-source bound/P1 and a joint nested call/loop witness remain
+  OPEN.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
