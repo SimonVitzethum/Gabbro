@@ -30,7 +30,7 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
-import Stage0.Senke.Tore.Proben
+import Stage0.Senke.Anweisung.Faelle.Tore.Proben
 
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 import Stage0.Senke.Ausdruck.Aggregat.Proben
