@@ -39,7 +39,9 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
   let u := compiled.unit
   let P := compiled.program
   let main := compiled.main
-  let tore ← toreVonFor options.arch options.target (uMembers (pre108 items))
+  let members := uMembers (pre108 items)
+  validateTargetFor options.arch options.target members
+  let tore ← toreVonFor options.arch options.target members
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩
   let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)

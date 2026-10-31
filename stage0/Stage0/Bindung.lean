@@ -61,10 +61,10 @@ theorem uniqueBinding_ok (v arch : String) (bs : List SBind) (b : SBind) :
     | nil => simp [uniqueBinding]
     | cons c rest => simp [uniqueBinding]
 
-/-- Select exactly one binding in the explicitly selected execution profile. With no command-line
-    selection, use the source's active `target NAME;`. Never select a target by declaration order. -/
-def viaBindungFor (arch : String) (target : Option String) (items : List SItemTief)
-    (v : String) : Except String SBind := do
+/-- Resolve one target and its declared ABI from the same canonically flattened source used by gates.
+    With no target declarations the runner's default profile applies. -/
+def selectedTargetFor (arch : String) (target : Option String) (items : List SItemTief) :
+    Except String (Option (String × String)) := do
   let active := items.filterMap fun
     | .goalT n none => some n
     | _ => none
@@ -73,13 +73,62 @@ def viaBindungFor (arch : String) (target : Option String) (items : List SItemTi
     | none, [] => pure none
     | none, [n] => pure (some n)
     | none, _ => throw "multiple active targets"
+  let available := items.filterMap fun it => match it with
+    | .goalT n (some (abi, a, _)) =>
+      if a == arch && (selected.isNone || selected == some n) then some (n, abi) else none
+    | _ => none
+  match available with
+  | [profile] => pure (some profile)
+  | [] => match selected with
+    | none => pure none
+    | some n => throw s!"target {n}: no declaration for {arch}"
+  | _ => throw s!"ambiguous target for {arch}"
+
+/-- The current image's syscall, exit and clone envelope implements Linux only. -/
+def validateTargetFor (arch : String) (target : Option String) (items : List SItemTief) :
+    Except String Unit := do
+  match ← selectedTargetFor arch target items with
+  | none => pure ()
+  | some (name, abi) =>
+    if abi == "linux" then pure ()
+    else throw s!"target {name}: ABI {abi} is not supported by the Linux runner"
+
+/-- Successful validation uses either the default envelope or an explicitly Linux target. -/
+theorem validateTargetFor_supported (arch : String) (target : Option String)
+    (items : List SItemTief) (h : validateTargetFor arch target items = .ok ()) :
+    selectedTargetFor arch target items = .ok none ∨
+    ∃ name, selectedTargetFor arch target items = .ok (some (name, "linux")) := by
+  cases hs : selectedTargetFor arch target items with
+  | error e =>
+    simp only [validateTargetFor, hs] at h
+    change Except.error e = Except.ok () at h
+    contradiction
+  | ok selected =>
+    cases selected with
+    | none => exact Or.inl rfl
+    | some pair =>
+      rcases pair with ⟨name, abi⟩
+      by_cases ha : abi = "linux"
+      · subst abi; exact Or.inr ⟨name, rfl⟩
+      · simp only [validateTargetFor, hs] at h
+        change (if abi == "linux" then Except.ok () else
+          Except.error s!"target {name}: ABI {abi} is not supported by the Linux runner") = .ok () at h
+        simp [ha] at h
+
+/-- Select a gate in the unique execution target, preserving all binding fields. -/
+def viaBindungFor (arch : String) (target : Option String) (items : List SItemTief)
+    (v : String) : Except String SBind := do
+  let selected ← selectedTargetFor arch target items
   let bindings := items.flatMap fun it => match it with
-    | .goalT n (some (_, a, bs)) =>
-      if a == arch && (selected.isNone || selected == some n) then
-        bs.filterMap (fun (w, b, _) => if w == v then some b else none)
+    | .goalT n (some (abi, a, bs)) =>
+      if a == arch && (selected.isNone || selected.map (·.1) == some n) then
+        bs.filterMap (fun (w, b, _) => if w == v then some (abi, b) else none)
       else []
     | _ => []
-  uniqueBinding v arch bindings
+  let binding ← uniqueBinding v arch (bindings.map (·.2))
+  if !(bindings.all fun candidate => candidate.1 == "linux") then
+    throw s!"gate variable {v}: selected binding ABI is not supported by the Linux runner"
+  pure binding
 
 /-- Construct the executable gate from the complete selected source binding. -/
 def torAusBindung (arch : String) (items : List SItemTief) (sc : SSyscall)
@@ -118,7 +167,9 @@ def torAusBindung (arch : String) (items : List SItemTief) (sc : SSyscall)
 def torVonFor (arch : String) (target : Option String) (items : List SItemTief) (sc : SSyscall) : Except String Tor := do
   if (argRegs arch).length != 6 then throw s!"unsupported gate architecture {arch}"
   let b ← match sc.way with
-    | .lit _ a b _ => if a == arch then pure b else throw s!"gate {sc.name} has no binding for {arch}"
+    | .lit abi a b _ =>
+      if abi != "linux" then throw s!"gate {sc.name}: ABI {abi} is not supported by the Linux runner"
+      else if a == arch then pure b else throw s!"gate {sc.name} has no binding for {arch}"
     | .via v => viaBindungFor arch target items v
   torAusBindung arch items sc b
 
