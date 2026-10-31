@@ -1,6 +1,6 @@
 /- Executable checks of actual lowered early exits, with exact Runner step counts. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
 
 namespace Gabbro.Stage0.Senke.EarlyExitProbe
 open Gabbro.Grammatik Runner Runner.Mem Runner.IR CounterCallProbe FnptrProben
@@ -128,5 +128,61 @@ theorem actual_runner_zeuge [Kern] (kind : Fin 3) :
     simp only [he, Bool.and_eq_true, beq_iff_eq] at hc
     exact ⟨t, m, execute_sound (cost kind) he, hc.1.1.1.1,
       hc.1.1.1.2, hc.1.1.2, hc.1.2, hc.2⟩
+
+local instance (m : Mem) (pc : W) (o : Nat) (a b c : BitVec 32) :
+    Decidable (InsAt m pc o a b c) :=
+  if h : m.rd8 pc = some (BitVec.ofNat 8 o) ∧ m.rd32 (pc + 4) = some a ∧
+      m.rd32 (pc + 8) = some b ∧ m.rd32 (pc + 12) = some c then
+    .isTrue ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
+
+/-- Actual source loop used to jointly exercise the terminal-pass premises.
+    The generic theorem is instantiated on the accepted image, not a substitute
+    empty loop. Its body leaves on the first pass. -/
+def leaveLoop : Stmt D (vertragVon D 2) false [] [] [] :=
+  .forever () .tru (.cons (.leave rfl) .nil)
+
+def leaveImage : List II := foreverCode 4 5 6 1 [ci 1 6 1 0] [ci 18 144 0 0]
+
+theorem leave_lowering_zeuge :
+    lowS (reserved := 2) 1 addresses callLayout 4 ([], 6) [] (0, 0)
+      leaveLoop = some (leaveImage, 14) := by decide +kernel
+
+def leaveMemory : Mem := {
+  b := fun a => if a.toNat < 16 * leaveImage.length then
+    ((leaveImage.flatMap encII)[a.toNat]?).getD 0
+    else if a = slot 1024 4 ∨ a = slot 1024 5 then 1 else 0
+  rd := fun _ => true
+  wr := fun _ => true }
+
+def leaveDecremented := write leaveMemory (slot 1024 4) 8 0
+def leaveResult := write leaveDecremented (slot 1024 6) 8 1
+
+/-- All quantified premises of the early-exit induction hold together on
+    a loaded, nonempty accepted source body. The five instructions are the
+    counter test, decrement, invariant, branch, and leave. -/
+theorem counted_counter_loop_exits_zeuge [Kern] :
+    ∃ u b nb, nb ≤ 7 ∧ Counted nb ⟨32, 1024⟩ leaveMemory u b ∧
+      u = ⟨240, 1024⟩ := by
+  let I : Nat → Mem → Prop := fun n m => n = 1 ∧ m = leaveMemory
+  have result := counted_counter_loop_exits I (fun u _ => u = ⟨240, 1024⟩)
+    32 1024 176 4 5 160 3
+    (by rintro n m ⟨rfl, rfl⟩; decide +kernel)
+    (by rintro n m ⟨rfl, rfl⟩; decide +kernel)
+    (by rintro n m ⟨h, rfl⟩; decide +kernel)
+    (by rintro n m ⟨rfl, rfl⟩; decide +kernel)
+    (by
+      rintro n m ⟨hn, rfl⟩ fits
+      have hn0 : n = 0 := by omega
+      subst n
+      refine ⟨leaveDecremented, leaveResult, 3, ?_, by decide, Or.inr (Or.inr ?_)⟩
+      · rfl
+      · exact ⟨⟨240, 1024⟩, execute_counted 3 (by rfl), rfl⟩)
+    (by decide) (by decide : 1 < 2 ^ 64) (by exact ⟨rfl, rfl⟩)
+  obtain ⟨u, b, nb, bound, run, done⟩ := result
+  refine ⟨u, b, nb, bound, run, ?_⟩
+  rcases done with ⟨_, impossible, _⟩ | done
+  · contradiction
+  · exact done
 
 end Gabbro.Stage0.Senke.EarlyExitProbe
