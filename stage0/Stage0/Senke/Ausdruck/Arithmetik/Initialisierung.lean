@@ -1238,4 +1238,88 @@ theorem floatFiniteAddL_read_sign_fields_zeuge {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_read_sign_fields_zeuge
 
+/-- Execute a whole batch from retained frame reads in one reconstructed context.
+    Every producer uses the same concrete input frame; later temporary writes are
+    handled by the existing sequential slot theorem. -/
+theorem retainedWordCodes_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K base top reserved : Nat}
+    {code tail : List II}
+    (ps : List (Nat → Option (List II × Nat))) (values : Nat → Runner.W)
+    (sound : ∀ {Δ : Ctx} (η : Env D Δ),
+      (∀ input w, FB ≤ input → input < base →
+        m.rd64 (slot fp (BitVec.ofNat 64 input)) = some w →
+        WordCode (L := L) η (fun _ => True)
+          (fun j => some ([ci 2 j input 0],j+1)) w) →
+      ∀ i, (hi : i < ps.length) →
+        WordCode (L := L) η (fun _ => True) ps[i] (values i))
+    (compiled : floatStateSlotsL base ps = some (code,top))
+    (room : top ≤ K) (lower : FB ≤ base) (slots : base+ps.length ≤ K)
+    (pre : Pre L m pc fp K base (code++tail) ρ W reserved) :
+    ∃ m', Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*code.length),fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      (∀ i, i < ps.length →
+        m'.rd64 (slot fp (BitVec.ofNat 64 (base+i))) = some (values i)) ∧
+      Pre L m' (pc+BitVec.ofNat 64 (16*code.length)) fp K (base+ps.length) tail ρ W reserved := by
+  obtain ⟨η, env⟩ := frameWordEnv (L := L) (n := base-FB) pre.frame (by omega)
+  have loads : ∀ input w, FB ≤ input → input < base →
+      m.rd64 (slot fp (BitVec.ofNat 64 input)) = some w →
+      WordCode (L := L) η (fun _ => True)
+        (fun j => some ([ci 2 j input 0],j+1)) w := by
+    intro input w lo hi read
+    let x := frameWordVar (base-FB) (input-FB) (by omega)
+    have hx : vslot x = input := by
+      dsimp only [x]
+      rw [frameWordVar_slot]
+      omega
+    obtain ⟨v, rv, ev⟩ := env _ x
+    rw [hx, read] at rv
+    cases rv
+    change w = BitVec.ofInt 64 (η.get x).n at ev
+    intro fp' K' d c t hc ht mm pp hp
+    have hc' : (fun (j : Nat) => some ([ci 2 j (FB+(input-FB)) 0],j+1)) d =
+        some (c,t) := by
+      have eq : (FB : Int) + ((input : Int) - FB) = input := by omega
+      simpa only [eq] using hc
+    have run := frameWordLoad (L := L) (base-FB) (input-FB) (by omega) η
+      (by simpa only [Nat.cast_add, Nat.cast_sub lo] using hc') ht mm pp hp
+    simpa only [x, ← ev] using run
+  have hp : Pre L m pc fp K base code η (fun _ => True) :=
+    ⟨by simp [frei, frameWordCtx]; omega, pre.left.small, pre.frame,
+      pre.left.code, pre.left.far, env, trivial, wstab_true _ _⟩
+  obtain ⟨m',run,agree,reads⟩ := floatStateSlotsL_ok ps values compiled room slots
+    (fun i hi c t hc ht mm pp hp => sound η loads i hi hc ht mm pp hp) m pc hp
+  exact ⟨m',run,agree,reads,pre.next agree (by omega) (by omega)⟩
+
+#print axioms retainedWordCodes_ok
+
+/-- Four consecutive retained reads jointly witness the batch rule, with
+    distinct operands, an arbitrary continuation and reserved prefix thirteen. -/
+theorem retainedWordCodes_ok_zeuge {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {tail : List II}
+    (room : 25 ≤ K)
+    (readA : m.rd64 (slot fp 17) = some 7)
+    (readB : m.rd64 (slot fp 18) = some 11)
+    (pre : Pre L m pc fp K 21
+      ([ci 2 21 17 0,ci 2 22 18 0,ci 2 23 17 0,ci 2 24 18 0]++tail) ρ W 13) :
+    ∃ m', Star ⟨pc,fp⟩ m ⟨pc+64,fp⟩ m' ∧ Agree fp 21 K m m' ∧
+      (∀ i, i < 4 → m'.rd64 (slot fp (BitVec.ofNat 64 (21+i))) =
+        some (if i % 2 = 0 then 7 else 11)) ∧
+      Pre L m' (pc+64) fp K 25 tail ρ W 13 := by
+  let load := fun (input j : Nat) => some ([ci 2 j input 0],j+1)
+  let ps := [load 17,load 18,load 17,load 18]
+  let values := fun (i : Nat) => (if i % 2 = 0 then 7 else 11 : Runner.W)
+  have compiled : floatStateSlotsL 21 ps =
+      some ([ci 2 21 17 0,ci 2 22 18 0,ci 2 23 17 0,ci 2 24 18 0],25) := rfl
+  have result := retainedWordCodes_ok (L := L) ps values (by
+    intro Δ η loads i hi
+    have bound : i < 4 := hi
+    interval_cases i <;> norm_num [ps,values] <;>
+      intro fp K d c top hc ht mm pp hp <;>
+      first | exact loads 17 7 (by decide) (by decide) readA hc ht mm pp hp
+            | exact loads 18 11 (by decide) (by decide) readB hc ht mm pp hp)
+    compiled room (by decide) room pre
+  simpa [ps,values] using result
+
+#print axioms retainedWordCodes_ok_zeuge
+
 end Gabbro.Stage0.Senke
