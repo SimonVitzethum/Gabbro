@@ -2860,6 +2860,9 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
               Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
                 BitVec.ofNat 64 (16*aligned.length)+128) fp K (dst+7)
                 normalization ρ W reserved ∧
+              Agree fp (dst+9) K out2 tested ∧
+              tested.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) =
+                some (if sx == sy then q+jam else q-jam) ∧
               ∃ branchTail,
                 Star ⟨pc,fp⟩ m
                   ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
@@ -3060,7 +3063,7 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),
     wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),
     signedRead,?_,signedTail,signedEq,signedRest,normalization,normalizationEq,
-    tested,?_,?_,testRead,?_,branchDone⟩
+    tested,?_,?_,testRead,?_,?_,?_,branchDone⟩
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
@@ -3185,6 +3188,8 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
   · exact wholeAgree.trans ((signedAgree.trans
       ((zeroAgree.mono (by omega)).trans (testAgree.mono (by omega)))).mono (by omega))
   · simpa [BitVec.add_assoc] using testedPre
+  · exact (zeroAgree.mono (by omega : dst+9 ≤ dst+10)).trans testAgree
+  · exact slotRead_agree cmpPre.frame testAgree (by omega) (by omega) qr
 
 #print axioms floatFiniteAddL_read_fields_align
 
@@ -3318,6 +3323,9 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
               Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
                 BitVec.ofNat 64 (16*aligned.length)+128) fp K (16+7)
                 normalization ρ W 13 ∧
+              Agree fp (16+9) K out2 tested ∧
+              tested.rd64 (slot fp (BitVec.ofNat 64 (16+7))) =
+                some (if sx == sy then q+jam else q-jam) ∧
               ∃ branchTail,
                 Star ⟨pc,fp⟩ m
                   ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
