@@ -220,4 +220,26 @@ theorem elaborateScopes_custom_negative_bound_zeuge :
   · exact Gabbro.Grammatik.except_ok_get _
   all_goals decide +kernel
 
+/-- Earlier computed scalars resolve inline scalar ranges and then dependent aliases.
+    The final original fold retains all values and the exact exclusive upper bound. -/
+theorem elaborateScopes_inline_range_zeuge :
+    let inlineType := STyp.range (.atom "u8") (.lit 0)
+      (.bin "+" (.variable "LIMIT") (.lit 1)) true
+    let items := [SItemTief.typeT [] "Base" [] [] (some (.atom "u8")),
+      .constT "LIMIT" (.atom "Base") (.one (.bin "+" (.lit 40) (.lit 2))),
+      .constT "BOUND" inlineType (.one (.variable "LIMIT")),
+      .typeT [] "Result" [] [] (some (.range (.atom "u8") (.lit 0) (.variable "BOUND") false)),
+      .constT "ANSWER" (.atom "Result") (.one (.variable "BOUND"))]
+    nextCandidates items [] = [("LIMIT", 42), ("BOUND", 42)] ∧
+    ∃ result, elaborateScopes items = .ok result ∧
+      result.scope.values = [("LIMIT", 42), ("BOUND", 42), ("ANSWER", 42)] ∧
+      result.scope.declared = [("Base", (0, 255)), ("Result", (0, 42))] ∧
+      result.scope.functionsUseValues = true ∧
+      (uFeldTyp result.scope.declared inlineType).toOption.isNone = true ∧
+      uTyp (result.scope.declared ++ [("LIMIT", (42, 42))]) [] inlineType = .ok (.int 0 42) := by
+  dsimp only
+  refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact Gabbro.Grammatik.except_ok_get _
+  all_goals first | rfl | decide +kernel
+
 end Gabbro.Stage0.Frontend

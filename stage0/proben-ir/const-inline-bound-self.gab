@@ -1,0 +1,5 @@
+// A literal initializer cannot supply its own inline type bound.
+module inline_bound_self {
+const BAD : u8 in 0 .. BAD = 42;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

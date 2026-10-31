@@ -164,14 +164,46 @@ theorem constants_collected (env : List (String × (Int × Int))) (fns : List UK
     rw [constants_append, ih, constantStep_correct]
     rfl
 
-/-- One scalar declaration is evaluated at its exact canonical source type. -/
+/-- One scalar declaration is evaluated at its exact canonical source type. Earlier scalar
+    values supply singleton bounds, in the same lookup order as the canonical runtime type scope. -/
 def typedItem (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (values : List (String × Int)) : SItemTief → Option (List (String × Int))
   | .constT name ty (.one expr) => do
-    let range ← (uFeldTyp env ty).toOption
+    let range ← (uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty).toOption
     let value ← uKonstWert range.1 range.2 fns values 64 expr
     pure (values ++ [(name, value)])
   | _ => some values
+
+/-- Every successful scalar step checks the original type through canonical elaboration and
+    every expression intermediate through the existing exact-range evaluator. -/
+theorem typedItem_sound (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (values result : List (String × Int)) (name : String) (ty : STyp) (expr : SExpr)
+    (h : typedItem env fns values (.constT name ty (.one expr)) = some result) :
+    ∃ lo hi value,
+      uTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) [] ty = .ok (.int lo hi) ∧
+      uKonstWert lo hi fns values 64 expr = some value ∧ result = values ++ [(name, value)] := by
+  unfold typedItem at h
+  cases ht : uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty with
+  | error e => simp [ht, Except.toOption] at h
+  | ok range =>
+    rcases range with ⟨lo, hi⟩
+    cases hv : uKonstWert lo hi fns values 64 expr with
+    | none => simp [ht, Except.toOption, hv] at h
+    | some value =>
+      simp [ht, Except.toOption, hv] at h
+      exact ⟨lo, hi, value, fieldType_sound _ _ _ _ ht, hv, h.symm⟩
+
+/-- A dependent exclusive range is checked with the previous binding, without widening it. -/
+theorem typedItem_sound_zeuge :
+    ∃ lo hi value,
+      uTyp [("LIMIT", (42, 42))] []
+        (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true) =
+          .ok (.int lo hi) ∧
+      uKonstWert lo hi [] [("LIMIT", 42)] 64 (.variable "LIMIT") = some value ∧
+      [("LIMIT", 42), ("ANSWER", 42)] = [("LIMIT", 42)] ++ [("ANSWER", value)] :=
+  typedItem_sound [] [] [("LIMIT", 42)] [("LIMIT", 42), ("ANSWER", 42)] "ANSWER"
+    (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true)
+    (.variable "LIMIT") (by decide +kernel)
 
 /-- Complete ordered scalar scope: negatives and shadowed bindings are not filtered. -/
 def typedConstants (env : List (String × (Int × Int))) (fns : List UKonstFn)
