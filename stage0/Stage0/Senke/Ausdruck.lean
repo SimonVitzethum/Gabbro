@@ -24,6 +24,8 @@ import Grammatik.Kern.Semantik.Semantik
 import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
 import Stage0.Senke.Ausdruck.Aggregat.Wert
+import Stage0.Senke.Ausdruck.Aggregat.Kopie
+import Stage0.Senke.Ausdruck.Aggregat.Encoding
 
 namespace Gabbro.Stage0.Senke
 
@@ -198,21 +200,6 @@ def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat
     (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
   else none
 
-/-- A sum fits one word: eight tag bits and a 56-bit unsigned payload offset. -/
-def sumFits (cs : List (Option (Int × Int))) : Bool :=
-  decide (cs.length ≤ 256) && cs.all (fun c => match c with
-    | none => true
-    | some (lo, hi) => decide (hi - lo < 2 ^ 56))
-
-/-- The payload's distance from the lower bound; a bare arm has offset zero. -/
-def sumOff : (c : Option (Int × Int)) → Nutzlast c → Nat
-  | none, _ => 0
-  | some (lo, _), v => (v.n - lo).toNat
-
-/-- The representation shared by frames, tables and globals. -/
-def sumN {cs : List (Option (Int × Int))} (v : Wert D (.sum cs)) : Nat :=
-  v.1.val + 256 * sumOff (cs.get v.1) v.2
-
 /-- Pack the payload word in `d`: subtract its lower bound, multiply by 256, add the tag. -/
 def packSum (d : Nat) (lo : Int) (tag : Nat) (ce : List II × Nat) : List II × Nat :=
   bin2 3 d (bin2 5 d (bin2 4 d ce ([ci 1 (d + 1) lo 0], d + 2))
@@ -282,7 +269,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
-  | _, τ, .var x, d => if aggregateFits τ then some ([ci 2 d (vslot x reserved) 0], d + 1) else none
+  | _, τ, .var x, d => if aggregateFits τ then some (copyWords 1 d (vslot x reserved), d + 1) else none
   | _, _, .widen _ _ e, d => lowE L (reserved := reserved) e d
   | _, _, .add a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
   | _, _, .sub a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)
@@ -385,11 +372,6 @@ def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option (Int
 end
 
 /-! ## Values in words -/
-
-/-- The number of an option: `-1` for absent, the index otherwise. -/
-def optN {n : Int} : Option (Zahl 0 (n - 1)) → Int
-  | Option.none => -1
-  | Option.some k => k.n
 
 /-- `w` is the word of the value `v` of type `τ`. -/
 def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
