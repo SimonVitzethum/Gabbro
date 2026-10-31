@@ -20,6 +20,7 @@ def normalizationLoopImages : List (String × Except String (List Runner.B) × N
    ("boundary62", 0, 2^61, 62, 8, 1, 1, 0, 1),
    ("boundary63", 0, 2^62, 63, 8, 1, 1, 0, 1),
    ("tail63", 0, 2^61, 63, 8, 2, 1, 0, 2),
+   ("numerator-entry", 0, 13, 4, 8, 68, 13, 0, 4),
    ("four", 0, 13, 4, 8, 20, 13, 0, 4),
    ("distance62", 0, 1, 62, 8, 70, 8, 0, 65),
    ("distance65", 0, 13, 65, 8, 80, 13, 0, 65),
@@ -41,7 +42,7 @@ def normalizationLoopImages : List (String × Except String (List Runner.B) × N
 
 /-- All boundary fixtures use the production loop and encode successfully;
     actual execution is measured separately by the runner regression. -/
-theorem normalizationLoopImages_zeuge : normalizationLoopImages.length = 90 ∧
+theorem normalizationLoopImages_zeuge : normalizationLoopImages.length = 95 ∧
     normalizationLoopImages.all (fun x => x.2.1.isOk) = true := by
   decide +kernel
 
@@ -478,14 +479,14 @@ def normalizationWitnessMemory : Runner.Mem where
     else if a.toNat = 4294967296+8*17 then 13
     else if a.toNat = 4294967296+8*18 then 4
     else if a.toNat = 4294967296+8*19 then 8
-    else if a.toNat = 4294967296+8*20 then 20 else 0
+    else if a.toNat = 4294967296+8*20 then 68 else 0
   rd _ := true
   wr _ := true
 
 theorem normalizationLoopHead_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
-      0 4294967296 64 16 7 normalizationWitnessCode 13 4 20 8
-      normalizationWitnessMemory 20 0 4 0 13 := by
+      0 4294967296 64 16 7 normalizationWitnessCode 13 4 68 8
+      normalizationWitnessMemory 68 0 4 0 13 := by
   have pre : Pre L normalizationWitnessMemory 0 4294967296 64 16
       normalizationWitnessCode (Env.nil : Env D []) (fun _ => True) 7 := by
     refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
@@ -504,30 +505,31 @@ theorem normalizationLoopHead_zeuge [Kern] {D : Deklaration} (L : Lay D) :
         0 + 16 * normalizationWitnessCode.length ≤ 4294967296
       decide +kernel
 
-  exact ⟨pre, by decide, by decide, by decide, by decide,
-    by decide, by decide, by decide,
-    by decide +kernel, by decide +kernel, by decide +kernel,
-    by decide +kernel, by decide +kernel, by decide +kernel,
-    by decide, by norm_num⟩
+  exact FloatNormalizeHead.of_numerator 13 4 (by decide) (by decide)
+    (by decide) pre (by decide) (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
 
 /-- Canonical outputs and actual whole-loop execution hold jointly on a
     nonzero tail, a nonzero reserved prefix and several normalization steps. -/
-theorem floatNormalizeLoopL_complete_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+theorem floatNormalizeLoopL_from_numerator_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     ∃ m' fuel' count' distance' q' r',
       Star ⟨0, 4294967296⟩ normalizationWitnessMemory
         ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
       Agree 4294967296 16 64 normalizationWitnessMemory m' ∧
       FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
-        0 4294967296 64 16 7 normalizationWitnessCode 13 4 20 8
+        0 4294967296 64 16 7 normalizationWitnessCode 13 4 68 8
         m' fuel' count' distance' q' r' ∧
-      (fuel' = 0 ∨ 8 ≤ q') ∧ count' ≤ 20 ∧
+      (fuel' = 0 ∨ 8 ≤ q') ∧ count' ≤ 68 ∧
       (13 * 2^(count'+distance') : Int) / 2^(distance'+4) = q' ∧
       (13 * 2^(count'+distance') : Int) % 2^(distance'+4) = r' * 2^4 := by
   have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
       ((floatNormalizeLoopL 16).getD ([], 0)).2) := by decide +kernel
-  simpa using floatNormalizeLoopL_complete hc (by decide +kernel)
-    (normalizationLoopHead_zeuge L)
+  have h := normalizationLoopHead_zeuge L
+  exact floatNormalizeLoopL_from_numerator hc (by decide +kernel) 13 4
+    (by decide) (by decide) (by decide) h.pre h.room
+    h.readQ h.readR h.readDistance h.readTarget h.readFuel h.readCount
 
 #print axioms normalizationLoopHead_zeuge
-#print axioms floatNormalizeLoopL_complete_zeuge
+#print axioms floatNormalizeLoopL_from_numerator_zeuge
+
 end Gabbro.Stage0.Senke.AddSubProbe

@@ -797,6 +797,18 @@ assuming intermediate slot values. Its joint witness cancels opposite signs to
 one smallest-subnormal unit. Three Runner images exercise this connected prefix.
 This does not yet initialize the normalization loop or execute its continuation.
 
+The whole-loop theorem now also has a numerator-entry interface
+(`floatNormalizeLoopL_from_numerator`). For `0 ≤ n < 2^61`, it derives the
+initial quotient/remainder bounds and reconstruction from Euclidean division,
+with fuel `d+64`, zero initial count and `d+64 < 2^63`. Only actual entry reads
+and the generic frame/fetch contract remain as memory premises; the caller no
+longer supplies a normalization invariant. The shared concrete witness uses
+this interface with numerator 13, distance 4 and a nonzero reserved prefix.
+This is a bounded-numerator entry theorem, not yet an encoded-operand bridge:
+the operand fragment still has to execute the initialization writes. The fuel
+word ceiling is proved; reaching the target before fuel exhaustion is not yet
+proved. The executed round/pack continuation remains open.
+
 Remaining finite-adder gaps: derive every initial head bound and state read from
 the actual format/operand alignment and magnitude producers; compose the actual
 loop exit with guard/sticky selection and IEEE round/pack (normal, top-exponent

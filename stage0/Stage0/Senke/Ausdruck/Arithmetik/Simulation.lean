@@ -2493,6 +2493,66 @@ theorem floatNormalizeLoopL_complete
   · rw [pow_add]
     exact Int.mul_lt_mul_of_pos_right finalHead.remainder.2.2 positive
 
+
+/-- Construct the actual loop invariant from a nonnegative word-sized numerator.
+    The six reads describe the entry memory; no reconstruction, canonical-tail
+    or internal loop-correctness premise is required. The budget reserves one
+    transfer per denominator bit and 64 further transfers. -/
+theorem FloatNormalizeHead.of_numerator
+    {m : Runner.Mem} (n : Int) (d : Nat)
+    (hn : 0 ≤ n ∧ n < 2^61) (hd : d + 64 < 2^63)
+    (ht : 0 ≤ target ∧ target ≤ 2^60)
+    (pre : Pre L m pc fp K base code ρ W reserved) (slots : base+5 < K)
+    (readQ : m.rd64 (slot fp (BitVec.ofNat 64 base)) = some (BitVec.ofInt 64 (n / 2^d)))
+    (readR : m.rd64 (slot fp (BitVec.ofNat 64 (base+1))) = some (BitVec.ofInt 64 (n % 2^d)))
+    (readD : m.rd64 (slot fp (BitVec.ofNat 64 (base+2))) = some (BitVec.ofNat 64 d))
+    (readT : m.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofInt 64 target))
+    (readF : m.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 (d+64)))
+    (readC : m.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some 0) :
+    FloatNormalizeHead L ρ W pc fp K base reserved code n d (d+64) target
+      m (d+64) 0 d (n / 2^d) (n % 2^d) := by
+  have pos : (0 : Int) < 2^d := Int.pow_pos (by decide)
+  have qpos := Int.ediv_nonneg hn.1 (by omega : (0 : Int) ≤ 2^d)
+  have qle := Int.ediv_le_self (2^d) hn.1
+  have rpos := Int.emod_nonneg n (by omega : (2 : Int)^d ≠ 0)
+  have rlt := Int.emod_lt_of_pos n pos
+  have split := Int.ediv_mul_add_emod n ((2 : Int)^d)
+  have prod := Int.mul_nonneg qpos (by omega : (0 : Int) ≤ 2^d)
+  refine ⟨pre, slots, hd, by decide, by omega, ⟨qpos, by omega⟩,
+    ⟨rpos, by omega, rlt⟩, ht, readQ, readR, readD, readT, readF, readC,
+    by omega, ?_⟩
+  simp only [Nat.zero_add]
+  rw [split]
+
+/-- Execute the whole emitted loop from canonical entry reads derived from a
+    numerator, rather than accepting an internal invariant as an assumption. -/
+theorem floatNormalizeLoopL_from_numerator
+    (hc : floatNormalizeLoopL base = some (code, top)) (room : top ≤ K)
+    {m : Runner.Mem} (n : Int) (d : Nat)
+    (hn : 0 ≤ n ∧ n < 2^61) (hd : d + 64 < 2^63)
+    (ht : 0 ≤ target ∧ target ≤ 2^60)
+    (pre : Pre L m pc fp K base code ρ W reserved) (slots : base+5 < K)
+    (readQ : m.rd64 (slot fp (BitVec.ofNat 64 base)) = some (BitVec.ofInt 64 (n / 2^d)))
+    (readR : m.rd64 (slot fp (BitVec.ofNat 64 (base+1))) = some (BitVec.ofInt 64 (n % 2^d)))
+    (readD : m.rd64 (slot fp (BitVec.ofNat 64 (base+2))) = some (BitVec.ofNat 64 d))
+    (readT : m.rd64 (slot fp (BitVec.ofNat 64 (base+3))) = some (BitVec.ofInt 64 target))
+    (readF : m.rd64 (slot fp (BitVec.ofNat 64 (base+4))) = some (BitVec.ofNat 64 (d+64)))
+    (readC : m.rd64 (slot fp (BitVec.ofNat 64 (base+5))) = some 0) :
+    ∃ m' fuel' count' distance' q' r',
+      Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16*code.length), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code n d (d+64) target
+        m' fuel' count' distance' q' r' ∧
+      (fuel' = 0 ∨ target ≤ q') ∧ count' ≤ d+64 ∧
+      (n * 2^(count'+distance')) / (2^(distance'+d) : Int) = q' ∧
+      (n * 2^(count'+distance')) % (2^(distance'+d) : Int) = r' * 2^d := by
+  exact floatNormalizeLoopL_complete hc room
+    (FloatNormalizeHead.of_numerator n d hn hd ht pre slots
+      readQ readR readD readT readF readC)
+
+#print axioms FloatNormalizeHead.of_numerator
+#print axioms floatNormalizeLoopL_from_numerator
+
 #print axioms floatNormalizeLoopL_complete
 
 end
