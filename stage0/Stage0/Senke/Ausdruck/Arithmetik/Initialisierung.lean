@@ -643,4 +643,70 @@ theorem FloatNormalizeHead.round_source_ok
 
 #print axioms FloatNormalizeHead.round_source_ok
 
+/-- Shared finite add candidate. Operands are decoded at runtime; alignment
+    retains guard/round/sticky bits before signed cancellation. No validator
+    hook is enabled until the complete source-to-bytes theorem is available. -/
+def floatFiniteAddL (F : Gleitkomma.Format) (dst : Nat)
+    (a b : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
+  let load := fun (s j : Nat) => some ([ci 2 j s 0], j+1)
+  let branch := fun (c : Nat) (yes no : List II) =>
+    [ci 19 c (16*(yes.length+2)) 0] ++ yes ++
+      [ci 18 (16*(no.length+1)) 0 0] ++ no
+  let x := dst+1; let y := dst+2
+  let sx := dst+3; let sy := dst+4
+  let ex := dst+5; let ey := dst+6
+  let q := dst+7; let r := dst+8
+  let t := dst+9; let u := dst+10; let v := dst+11
+  let field := fun start width j p => floatFieldL start width j p
+  let exponent := fun p j => wordL 3 j (field F.fracBits F.ebits j p)
+    (wordK 14 (j+1) (field F.fracBits F.ebits (j+1) p) 0)
+  let magnitude := fun p j => wordK 5 j
+    (wordL 3 j (field 0 F.fracBits j p)
+      (wordL 5 (j+1)
+        (wordL 4 (j+1) (some ([ci 1 (j+1) 1 0],j+2))
+          (wordK 14 (j+2) (field F.fracBits F.ebits (j+2) p) 0))
+        (some (konstWL 4 (2^F.fracBits) (j+2))))) 8
+  let inputs ← floatStateSlotsL x [a,b,
+    fun j => field (F.fracBits+F.ebits) 1 j (load x),
+    fun j => field (F.fracBits+F.ebits) 1 j (load y),
+    exponent (load x), exponent (load y), magnitude (load x), magnitude (load y)]
+  let swap := [ci 2 t sx 0, ci 2 sx sy 0, ci 2 sy t 0,
+    ci 2 t ex 0, ci 2 ex ey 0, ci 2 ey t 0,
+    ci 2 t q 0, ci 2 q r 0, ci 2 r t 0]
+  let sort := [ci 13 t ex ey, ci 14 u ex ey, ci 13 v q r,
+    ci 5 u u v, ci 9 t t u] ++ branch t swap []
+  let aligned ← floatShiftJamL (dst+16) (load r)
+    (fun j => wordL 4 j (load ex j) (load ey (j+1)))
+  let signed := [ci 2 r (dst+16) 0, ci 14 t sx sy] ++
+    branch t [ci 3 q q r] [ci 4 q q r]
+  let shift ← floatShiftJamL (dst+16) (load q)
+    (fun j => some ([ci 1 j 1 0],j+1))
+  let right := (konstWL 4 (2^(F.fracBits+4)) u).1 ++
+    [ci 13 t q u, ci 1 u 1 0, ci 4 t u t] ++
+    branch t (shift.1 ++ [ci 2 q (dst+16) 0, ci 3 ex ex u]) []
+  let condition := (konstWL 4 (2^(F.fracBits+3)) u).1 ++
+    [ci 13 t q u, ci 1 u 1 0, ci 13 v u ex, ci 5 t t v,
+     ci 1 u 0 0, ci 14 v q u, ci 1 u 1 0, ci 4 v u v, ci 5 t t v]
+  let body := [ci 1 u 2 0, ci 5 q q u, ci 1 u 1 0, ci 4 ex ex u]
+  let left := condition ++ [ci 19 t (16*(body.length+2)) 0] ++ body ++
+    [ci 18 (-(16*(condition.length+body.length+1) : Int)) 0 0]
+  let rounded ← floatGuardRoundL (dst+16)
+    (fun j => wordK 6 j (load q j) 8)
+    (fun j => wordK 8 j (load q j) 7)
+    (fun j => some ([ci 1 j 0 0],j+1))
+  let carry := (konstWL 4 (2^(F.fracBits+1)) u).1 ++ [ci 14 t q u] ++
+    branch t [ci 1 u 1 0, ci 12 q q u, ci 3 ex ex u] []
+  let pack := (konstWL 4 (2^F.fracBits) u).1 ++ [ci 13 t q u] ++
+    branch t [ci 1 ex 0 0] [ci 4 q q u] ++
+    (konstWL 4 F.bexpMax u).1 ++ [ci 13 t ex u] ++
+    branch t [] [ci 2 ex u 0, ci 1 q 0 0] ++
+    (konstWL 4 (2^F.fracBits) u).1 ++ [ci 5 ex ex u, ci 3 q q ex]
+  let sign := (konstWL 4 (2^(F.fracBits+F.ebits)) u).1 ++
+    [ci 5 sx sx u, ci 3 dst sx q]
+  let zero := [ci 5 sx sx sy, ci 1 q 0 0]
+  let finish := [ci 1 u 0 0, ci 14 t q u] ++ branch t zero
+    (right ++ left ++ rounded.1 ++ [ci 2 q (dst+16) 0] ++ carry ++ pack)
+  pure (inputs.1 ++ sort ++ aligned.1 ++ signed ++ finish ++ sign,
+    max inputs.2 (max aligned.2 (max shift.2 rounded.2)))
+
 end Gabbro.Stage0.Senke

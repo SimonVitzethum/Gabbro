@@ -987,26 +987,16 @@ theorem floatExactAddNormalize_ok_zeuge [Kern] {D : Deklaration} (L : Lay D)
 
 #print axioms floatExactAddNormalize_ok_zeuge
 
-/-- Whole emitted regression with a guard-precision target and matching
-    exponent offset. This is a witness, not a generic source bridge. -/
+/-- Whole finite pipeline. Alignment is computed from the encoded operands;
+    the fixture distance is retained only as audit metadata. -/
 def exactCompositionBoundaryFragment (a b k : Nat) : Option (List II × Nat) := do
+  let _ := k
   let lit := fun n j => some (konstWL 4 n j)
-  let retained ← floatStateSlotsL 8
-    [fun j => floatAlignSumL j (fun n => floatCoefficientL n (lit a))
-        (fun n => floatCoefficientL n (lit b)) (lit k),
-     fun j => wordK 3 j (floatScaleIndexL f64 j (lit a)) 3]
-  let init ← floatStateSlotsL 16
-    (floatExactAddInitProducers (lit a) (lit b) (lit k))
-  let loop ← floatNormalizeLoopL 16
-  let fields ← floatStateSlotsL 40 (floatNormalizedFieldsL 16 8 9 63)
-  let load := fun (s j : Nat) => some ([ci 2 j s 0], j+1)
-  let packed ← floatAddNormalOutputL 48
-    (load 40) (load 41) (load 42) (load 43) (load 44) (2^52)
-  pure (retained.1 ++ init.1 ++ loop.1 ++ fields.1 ++ packed.1 ++ [ci 2 8 48 0],
-    max retained.2 (max (max init.2 loop.2) (max fields.2 packed.2)))
+  let result ← floatFiniteAddL f64 8 (lit a) (lit b)
+  pure result
 
-/-- Canonical expected bits for the complete executed normal-result branch.
-    Both retained fields are decoded from the input words by emitted code. -/
+/-- Canonical expected bits for the complete finite pipeline, including all
+    eight boundary counterexamples from the original failing audit. -/
 def exactCompositionCases : List (String × Nat × Nat × Nat × Nat) :=
   [("one-plus-zero", 0x3ff0000000000000, 0, 0, 0x3ff0000000000000),
    ("one-plus-negative-zero", 0x3ff0000000000000, 0x8000000000000000, 0, 0x3ff0000000000000),
@@ -1016,7 +1006,15 @@ def exactCompositionCases : List (String × Nat × Nat × Nat × Nat) :=
    ("partial-cancellation", 0x3ff8000000000000, 0xbff0000000000000, 0, 0x3fe0000000000000),
    ("minimum-normal-identity", 0x0010000000000000, 0, 0, 0x0010000000000000),
    ("maximum-finite-identity", 0x7fefffffffffffff, 0, 0, 0x7fefffffffffffff),
-   ("aligned-gap", 0x3fe0000000000000, 0x3ff0000000000000, 1, 0x3ff8000000000000)]
+   ("aligned-gap", 0x3fe0000000000000, 0x3ff0000000000000, 1, 0x3ff8000000000000),
+   ("zero",0,0,0,0),
+   ("negative-zero",0x8000000000000000,0x8000000000000000,0,0x8000000000000000),
+   ("cancellation",0x3ff0000000000000,0xbff0000000000000,0,0),
+   ("minimum-subnormal",1,0,0,1),
+   ("subnormal-to-normal",0xfffffffffffff,1,0,0x10000000000000),
+   ("normal-to-subnormal",0x10000000000000,0x800fffffffffffff,0,1),
+   ("halfway-even",0x3ca0000000000000,0x3ff0000000000000,53,0x3ff0000000000000),
+   ("overflow",0x7fefffffffffffff,0x7fefffffffffffff,0,0x7ff0000000000000)]
 
 def exactCompositionBoundaryImages : List (String × Except String (List Runner.B) × Nat) :=
   exactCompositionCases.map fun (name,a,b,k,expected) =>
@@ -1029,7 +1027,7 @@ theorem exactCompositionBoundary_zeuge :
     wf f64 (⟨false,1023,0⟩ : GFloat) ∧
     wf f64 (⟨false,0,0⟩ : GFloat) ∧
     zuBits f64 (add f64 ⟨false,1023,0⟩ ⟨false,0,0⟩) = 0x3ff0000000000000 ∧
-    exactCompositionCases.length = 9 ∧
+    exactCompositionCases.length = 17 ∧
     exactCompositionBoundaryImages.all (fun x => x.2.1.isOk) = true := by
   decide +kernel
 
@@ -1046,6 +1044,33 @@ theorem exactCompositionCanonical_zeuge :
   decide +kernel
 
 #print axioms exactCompositionCanonical_zeuge
+
+/-- The same runtime emitter, with binary32 decoding and packing parameters. -/
+def finite32Cases : List (String × Nat × Nat × Nat) :=
+  [("zero",0,0,0), ("negative-zero",0x80000000,0x80000000,0x80000000),
+   ("cancellation",0x3f800000,0xbf800000,0), ("minimum-subnormal",1,0,1),
+   ("subnormal-to-normal",0x7fffff,1,0x800000),
+   ("normal-to-subnormal",0x800000,0x807fffff,1),
+   ("halfway-even",0x33800000,0x3f800000,0x3f800000),
+   ("overflow",0x7f7fffff,0x7f7fffff,0x7f800000)]
+
+def finite32Images : List (String × Except String (List Runner.B) × Nat) :=
+  finite32Cases.map fun (name,a,b,expected) =>
+    ("finite32-" ++ name, FloatArithmeticProbe.wordImage
+      (floatFiniteAddL f32 8 (fun j => some (konstWL 4 a j))
+        (fun j => some (konstWL 4 b j))) expected, 7)
+
+set_option maxRecDepth 8192 in
+set_option maxHeartbeats 4000000 in
+theorem finite32Canonical_zeuge :
+    finite32Cases.all (fun (_,a,b,expected) =>
+      let x : GBits f32 := ⟨a / 2^31 == 1, a / 2^23 % 256, a % 2^23⟩
+      let y : GBits f32 := ⟨b / 2^31 == 1, b / 2^23 % 256, b % 2^23⟩
+      decide (wf f32 x ∧ wf f32 y) && (zuBits f32 (add f32 x y) == expected)) = true ∧
+    finite32Images.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms finite32Canonical_zeuge
 
 /-- The source-scale bridge has a nonzero executed-loop witness, including
     the same fetch, frame and exact-tail premises as the generic theorem. -/
