@@ -25,6 +25,47 @@ theorem counter_initialize {m : Mem} {pc fp : W} {K counter budget : Nat}
   rw [BitVec.ofInt_natCast]
   exact rd64_write_same (frame.rd counter inside)
 
+/-- Execute a literal in the reserved prefix and retain the complete body-entry
+interface. Unlike initialization by a bare `Star`, this transports the lexical
+locals, callee availability, entry snapshot, world and enclosing sentinels. -/
+theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
+    {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
+    {fp pc rp cfp : W} {K Ks lo reserved cell : Nat} {pr : List Nat}
+    {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
+    {m : Mem} {code : List II} {value : Int}
+    (layout : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved) ([ci 1 cell value 0] ++ code) ρ reserved)
+    (surround : Umf L A C dv m fp Ks K)
+    (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
+    (abi : FB + (D.params f).length ≤ lo) (low : lo ≤ cell)
+    (allocated : cell < FB + reserved) (bound : frei Γ reserved ≤ K)
+    (literal : lit32 value = true)
+    (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ cell) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+      PreS L m' (pc + 16) fp K (frei Γ reserved) code ρ reserved ∧
+      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      WeltAt m' L σ ∧ Keeps fp pr m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 cell)) = some (BitVec.ofInt 64 value) := by
+  have inside : cell < K := by unfold frei at bound; omega
+  have run := const_step (codeAt_left pre.code) pre.frame inside pre.small literal
+  obtain ⟨write, stored, frame⟩ := wr_slot pre.frame inside (BitVec.ofInt 64 value)
+  have allFrame := frame.mono low
+  have env := (reserved_write_preserves (L := L) (j := cell - FB)
+    (BitVec.ofInt 64 value).toNat pre.frame.room bound (by omega) pre.env).1
+  have eq : FB + (cell - FB) = cell := by omega
+  rw [eq] at env
+  have far := codeFar_right (n := 1) (k := code.length)
+    (by simpa [Nat.add_comm] using pre.far)
+  refine ⟨_, run, agreeW_of allFrame, ?_,
+    surround.agreeW layout (agreeW_of allFrame) (by omega),
+    head.agree allFrame pre.frame abi, ?_, ?_, stored⟩
+  · exact ⟨pre.ctx, pre.small, pre.frame.agree frame,
+      (codeAt_right pre.code).agree allFrame far, far, env, trivial, wstab_true _ _⟩
+  · exact weltAt_stab layout.lay layout.top m _ world (allFrame.mono (Nat.zero_le _))
+  · intro j hj
+    exact Mem.rd64_write_far (slot_far pre.frame.room inside (hprotected j hj).1
+      (Ne.symm (hprotected j hj).2))
+
 /-- The emitted word decrement agrees with canonical natural fuel, without
     wrapping, for every representable positive budget. -/
 theorem counter_fuel_step (n : Nat) (fits : n + 1 < 2 ^ 64) :
