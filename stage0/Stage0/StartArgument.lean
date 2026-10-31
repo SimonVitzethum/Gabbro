@@ -116,24 +116,127 @@ structure SourceStart (u : UProg) (items : List SItemTief) where
   pathName : path.getLast? = some name
   resolved : Resolved u name sourceArgs
 
+/-- One source declaration is recovered without changing its member order. -/
+def fromGroup (u : UProg) (items : List SItemTief)
+    (group : List (List String × List SExpr)) (declared : SItemTief.concT group ∈ items) :
+    Except String (List (SourceStart u items)) :=
+  group.attach.mapM fun entry => do
+    let path := entry.val.1
+    let sourceArgs := entry.val.2
+    match hp : path.getLast? with
+    | none => throw "ir: concurrent start has an empty source path"
+    | some name =>
+      let resolved ← resolve u name sourceArgs
+      pure ⟨group, declared, path, sourceArgs, entry.property, name, hp, resolved⟩
+
+/-- A declaration contributes exactly its explicit concurrent starts. -/
+def fromDeclaration (u : UProg) (items : List SItemTief)
+    (item : { it // it ∈ items }) : Except String (List (SourceStart u items)) :=
+  match hi : item.val with
+  | .concT group => fromGroup u items group (by rw [← hi]; exact item.property)
+  | _ => .ok []
+
 /-- Recover every explicit concurrent start from the original resolved source declarations.
     This is an argument adapter only; hardware entries and dynamically created starts have
     their own contracts and are not silently included as empty argument lists. -/
 def fromItems (u : UProg) (items : List SItemTief) :
     Except String (List (SourceStart u items)) := do
-  let groups : List (List (SourceStart u items)) ← items.attach.mapM fun item => do
-    match hi : item.val with
-    | .concT group =>
-      group.attach.mapM fun entry => do
-        let path := entry.val.1
-        let sourceArgs := entry.val.2
-        match hp : path.getLast? with
-        | none => throw "ir: concurrent start has an empty source path"
-        | some name =>
-          let resolved ← resolve u name sourceArgs
-          pure ⟨group, (by rw [← hi]; exact item.property), path, sourceArgs,
-            entry.property, name, hp, resolved⟩
-    | _ => pure []
+  let groups ← items.attach.mapM (fromDeclaration u items)
   pure groups.flatten
+
+/-- Successful monadic reconstruction preserves an observed identity at every list position. -/
+private theorem mapM_projection {α β γ ε : Type} (f : α → Except ε β)
+    (left : α → γ) (right : β → γ)
+    (point : ∀ a b, f a = .ok b → right b = left a)
+    (xs : List α) (ys : List β) (run : xs.mapM f = .ok ys) :
+    ys.map right = xs.map left := by
+  induction xs generalizing ys with
+  | nil =>
+    change Except.ok [] = Except.ok ys at run
+    cases run
+    rfl
+  | cons a rest ih =>
+    rw [List.mapM_cons] at run
+    cases ha : f a with
+    | error e =>
+      rw [ha] at run
+      change Except.error e = Except.ok ys at run
+      cases run
+    | ok b =>
+      rw [ha] at run
+      cases hr : rest.mapM f with
+      | error e =>
+        rw [hr] at run
+        change Except.error e = Except.ok ys at run
+        cases run
+      | ok bs =>
+        rw [hr] at run
+        change Except.ok (b :: bs) = Except.ok ys at run
+        cases run
+        simp only [List.map_cons, point a b ha, ih bs hr]
+
+/-- Exact source path/argument identity, including order and multiplicity, of a recovered group. -/
+theorem fromGroup_identity {u : UProg} {items : List SItemTief}
+    {group : List (List String × List SExpr)} (declared : SItemTief.concT group ∈ items)
+    {starts : List (SourceStart u items)} (run : fromGroup u items group declared = .ok starts) :
+    starts.map (fun start => (start.path, start.sourceArgs)) = group := by
+  unfold fromGroup at run
+  have result := mapM_projection _ (fun entry => entry.val)
+    (fun start : SourceStart u items => (start.path, start.sourceArgs)) ?_ group.attach starts run
+  · simpa only [List.attach_map_subtype_val] using result
+  · intro entry start success
+    dsimp only at success
+    split at success
+    · change Except.error _ = Except.ok start at success
+      cases success
+    · next name hp =>
+      cases hr : resolve u name entry.val.2 with
+      | error e =>
+        rw [hr] at success
+        change Except.error e = Except.ok start at success
+        cases success
+      | ok resolved =>
+        rw [hr] at success
+        change Except.ok _ = Except.ok start at success
+        cases success
+        rfl
+
+/-- The source identity sequence before elaboration: no deduplication by function name. -/
+def sourceIdentities (items : List SItemTief) : List (List String × List SExpr) :=
+  (items.map (fun | .concT group => group | _ => [])).flatten
+
+/-- Every original concurrent source member occurs once in the recovered sequence, in order,
+    with its exact argument tuple. Equal function names cannot collapse distinct starts. -/
+theorem fromItems_identity {u : UProg} {items : List SItemTief}
+    {starts : List (SourceStart u items)} (run : fromItems u items = .ok starts) :
+    starts.map (fun start => (start.path, start.sourceArgs)) = sourceIdentities items := by
+  have point : ∀ item bs, fromDeclaration u items item = .ok bs →
+      bs.map (fun start => (start.path, start.sourceArgs)) =
+        (match item.val with | .concT group => group | _ => []) := by
+    intro item bs success
+    unfold fromDeclaration at success
+    rcases item with ⟨it, hm⟩
+    cases it <;> dsimp only at success ⊢
+    all_goals try (change Except.ok [] = Except.ok bs at success; cases success; rfl)
+    case concT group => exact fromGroup_identity _ success
+  unfold fromItems at run
+  cases hg : items.attach.mapM (fromDeclaration u items) with
+  | error e =>
+    rw [hg] at run
+    change Except.error e = Except.ok starts at run
+    cases run
+  | ok groups =>
+    rw [hg] at run
+    change Except.ok groups.flatten = Except.ok starts at run
+    cases run
+    rw [List.map_flatten]
+    have result := mapM_projection (fromDeclaration u items)
+      (fun item => match item.val with | .concT group => group | _ => [])
+      (fun bs => bs.map (fun start => (start.path, start.sourceArgs))) point items.attach groups hg
+    rw [result]
+    unfold sourceIdentities
+    exact congrArg List.flatten (List.attach_map_val (l := items)
+      (f := fun (it : SItemTief) => (match it with | .concT group => group | _ => [] :
+        List (List String × List SExpr))))
 
 end Gabbro.Stage0.StartArgument
