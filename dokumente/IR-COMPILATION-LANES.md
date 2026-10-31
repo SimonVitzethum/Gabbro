@@ -537,3 +537,39 @@ were deferred during root's requested merge-check priority, then resumed after e
 No grammar build, Bindung change, pre-emit ABI-guard edit, Senke/ABI edit or broad unchanged suite
 rerun. Discovery completeness for all dependency graphs is not proved; nonmaterializable custom
 negative bounds and further constant/signature forms may still refuse. IR-01 remains incomplete.
+
+### IR-01 canonical typing of every original constant array
+
+The frozen uKonstArrays collector silently filters failed folds; logical-contract call guards
+already blocked known unsafe functions, but unused unknown calls or wrong-dimensional literals
+could otherwise disappear. Actual Compiler now calls `ArrayConstants.checkArrays` after the exact
+canonical unit is elaborated and before lowerAllg. Each original array must have its exact uTyp,
+a value from the existing uKonstZeile evaluator with the certified function/value scopes, and a
+closed typed Expr from existing Allg.lowLit in the ACTUAL unit's declaration universe. This checks
+every dimension and element range; malformed non-array row initializers explicitly refuse.
+No replacement evaluator, fake declaration universe or inferred function contract is introduced.
+
+Compiled retains all original ArrayMeaning facts, and CanonicalSourceProgram/source->image
+correctness includes them. `arrayMeaning_collected` proves each such original array is present
+in the canonical collector with its exact typed literal, closing the filterMap omission boundary.
+SafeHull still checks original nested calls before any scalar/array evaluation. This strengthens
+source validity; it is not logical-contract-aware const evaluation or full aggregate transport.
+
+A combined large dependent-source/array witness exceeded the mandated kernel memory cap. The
+limit was not raised. The existing rich negative/dependent-alias/fieldless SourceWitness stays
+green; ArrayWitness separately compiles a real nondegenerate nested array source, proves exact
+parsed array shape, typed value and collector membership, and constructs the same jointly
+inhabited initial contracts through reusable InitialState.ofFieldless. Its actual entry IR
+simulation is proved. Proofs avoid full source-AST equality reduction and unsupported AST BEq
+soundness assumptions by using Option.get membership and a kernel-checked exact shape.
+
+Measured: unknown unused array call, wrong length, intermediate overflow, scalar row initializer
+all refuse with exact diagnostics; nested alias-typed const-function array access executes as
+ASM42; contracted nested array still refuses. ArrayConstants/Compiler/IRBild/SourceWitness/
+ArrayWitness direct checks pass within 4G/5G scopes. Nine generic/whole-source/witness audits
+report only propext, Classical.choice, Quot.sound; layout check passes all1399 Lean files.
+No unchanged broad suite or grammar build was run. Two Lean checks globally now control work:
+IR01 stays slot1, all own harnesses route each check/run/audit through the same capped slot1
+launcher with unset ELAN_TOOLCHAIN and isolated outputs. Other workers' slots remain root-owned.
+No Bindung/pre-emit ABI guard or Senke code was edited. IR-01 remains incomplete on the listed
+remaining constant/type/signature forms, discovery completeness and canonical prerequisites.

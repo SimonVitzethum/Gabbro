@@ -142,6 +142,20 @@ theorem world_loaded : Senke.WeltAt memory output.image.Y world :=
   fieldlessWorldLoaded output.compiled.unit fieldless carrier_shape.2.1 output.image.Y _
 
 
+/-- Reuse the same concrete initial-state construction for another actual emitted pure image. -/
+def InitialState.ofFieldless [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options}
+    (image : Emitted src K options)
+    (fields : ∀ t : Fin image.compiled.unit.tabs.length, fieldCount image.compiled.unit t = 0)
+    (globals : image.compiled.unit.globs.length = 0) (foreign : image.compiled.unit.axs.length = 0)
+    (registers : image.compiled.unit.regs.length = 0)
+    (params : (declOf image.compiled.unit).params image.compiled.main = [])
+    (bound : Runner.Prog.IMG + image.image.bytes.length < 2 ^ 64) : InitialState image :=
+  ⟨emptyOracle image.compiled.unit foreign registers, loadedMemory image.image.bytes,
+    fieldlessWorld image.compiled.unit fields globals,
+    emptyArguments (declOf image.compiled.unit) _ params,
+    loadedBytes _ bound, fieldlessWorldLoaded _ fields globals _ _,
+    emptyGates _ foreign registers _, emptyView _ foreign registers⟩
+
 attribute [irreducible] output
 
 /-- A concrete accepted source/image with jointly inhabited initial contracts and entry arguments. -/
