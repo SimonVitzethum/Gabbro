@@ -18,7 +18,7 @@ structure Source (text : String) (options : Profil.Options := {}) where
   visibility : Oeffentlich.huelleZu items = true
   compileTime : compileTimeSafe (uMembers (pre108 items)) = true
   normalized : Normalization (uMembers (pre108 items)) members
-  environments : EnvironmentFacts (uMembers (pre108 items)) members
+  derived : DerivedScopes (uMembers (pre108 items))
 
 /-- The actual whole-source frontend, producing a proof of provenance and normalization. -/
 def source (text : String) (options : Profil.Options := {}) : Except String (Source text options) :=
@@ -34,10 +34,10 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
         if hv : Oeffentlich.huelleZu items then
           if hc : compileTimeSafe (uMembers (pre108 items)) then
             let result := normalize (uMembers (pre108 items))
-            if he : EnvironmentCompatible (uMembers (pre108 items)) result.val then
-              .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property,
-                normalize_environments _ he⟩
-            else .error "compile-time constant or alias environment cannot be preserved by canonical elaboration"
+            match deriveScopes (uMembers (pre108 items)) with
+            | .error e => .error e
+            | .ok derived =>
+              .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property, derived⟩
           else .error "compile-time call requires unsupported function contracts, effects or body"
         else .error "public interface is not closed"
 
@@ -49,8 +49,8 @@ theorem source_sound (text : String) {options : Profil.Options} (result : Source
     Oeffentlich.huelleZu result.items = true ∧
     compileTimeSafe (uMembers (pre108 result.items)) = true ∧
     Normalization (uMembers (pre108 result.items)) result.members ∧
-    EnvironmentFacts (uMembers (pre108 result.items)) result.members :=
-  ⟨result.lexed, result.parsed, result.visibility, result.compileTime, result.normalized, result.environments⟩
+    ScopeStable result.derived.scope :=
+  ⟨result.lexed, result.parsed, result.visibility, result.compileTime, result.normalized, result.derived.stable⟩
 
 /-- A successful frontend uses exactly canonical name resolution and width normalization;
     visibility failures cannot be hidden by flattening the item list. -/
@@ -81,6 +81,6 @@ theorem source_constant_leaf_hull (text : String) {options : Profil.Options} (re
 /-- Runtime elaboration receives source-derived scopes whose scalar/function origin is proved
     over the original declarations, after eliminating alias normalization from those facts. -/
 def Source.scopes {text : String} {options : Profil.Options} (result : Source text options) : Scopes (uMembers (pre108 result.items)) :=
-  Gabbro.Stage0.Frontend.scopes _ _ result.environments
+  result.derived.scope
 
 end Gabbro.Stage0.Frontend

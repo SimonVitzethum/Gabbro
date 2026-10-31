@@ -57,6 +57,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     scope.declared = original.foldl
       (Frontend.aliasStep (uConstsRech (uKonstFns original) original [])) [] ∧
     scope.functions = Frontend.constantFunctions scope.declared original ∧
+    Frontend.ScopeStable scope ∧
     Frontend.typedConstants scope.declared scope.functions original [] = some scope.values ∧
     Frontend.compileTimeSafe original = true ∧
     Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types = .ok result.unit ∧
@@ -66,7 +67,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
-  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin,
+  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted⟩
 

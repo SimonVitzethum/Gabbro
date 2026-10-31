@@ -120,4 +120,18 @@ theorem elabU_scopes (items : List SItemTief) :
           (fun c => (c.1, (c.2, c.2)))) := by
   rfl
 
+/-- The actual canonical consumer sees identical complete scopes on every input admitted by
+    the former collector comparison, including all error branches of runtime elaboration. -/
+theorem elabWithScopes_collector_redundant (original runtime : List SItemTief)
+    (h : EnvironmentCompatible original (normalizeAliases original))
+    (result : DerivedScopes original) (hr : deriveScopes original = .ok result) :
+    elabWithScopes runtime result.scope.values result.scope.types =
+      elabWithScopes runtime
+        (scopes original (normalizeAliases original) (normalize_environments original h)).values
+        (scopes original (normalizeAliases original) (normalize_environments original h)).types := by
+  obtain ⟨old, he, hs⟩ := deriveScopes_of_compatible original h
+  have same : result = old := Except.ok.inj (hr.symm.trans he)
+  subst result
+  rw [hs]
+
 end Gabbro.Stage0.Frontend

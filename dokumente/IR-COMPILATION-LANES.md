@@ -414,3 +414,38 @@ contains a logical-contract function called inside two array dimensions and meas
 compile-time-contract refusal from actual `irBild`, rather than a parser failure. This is mitigation
 for the known canonical const-function clause-erasure boundary, not a contract-aware evaluator
 or total support for logical-contract compile-time functions. No unchanged broad suite rerun.
+
+### IR-01 direct canonical scalar scopes and custom negative ranges
+
+The current scoped canonical elaborator consumes original declarations and explicit certified
+scopes, so the former normalized builtin-only collector encoding is no longer its scalar consumer.
+`deriveScopes_of_compatible` proves every old successful complete collector comparison yields
+exactly the same entire Scopes record through the direct path.
+`elabWithScopes_collector_redundant` specializes that equality to the actual canonical consumer
+for arbitrary runtime declaration lists, including every error branch. This justifies removing
+that obsolete representation restriction without changing any formerly accepted endpoint.
+
+`deriveScopes` now calls the existing strict `typedConstants` fold over original declarations.
+Each step uses exactly canonical `uFeldTyp` and `uKonstWert`, preserving the original range for
+every expression intermediate and retaining the entire ordered value environment.
+`typedConstants_append` proves source-list composition passes the complete intermediate scope.
+`DerivedScopes` retains both original declaration/type/function provenance and `ScopeStable`: the
+full final value environment must leave resolved alias ranges unchanged. `Source` stores this
+result, `Compiler` supplies it to the unchanged canonical phase body, and CanonicalSourceProgram
+now explicitly includes final alias stability. Original SafeHull checks still precede evaluation.
+The legacy comparison definitions remain only as the conservative-extension theorem's precise
+reference, not a fallback evaluator or a second actual compiler path.
+
+`deriveScopes_custom_negative_zeuge` proves a custom -10..100 range retains NEGATIVE=-1 then
+ANSWER=42, although the former complete collector check refused it. The persistent actual
+`custom-negative-dependency` source compiles to an image and the existing ASM runner returns 42.
+`custom-negative-overflow` computes a final apparent 42 through intermediate 101 and is explicitly
+refused at the original canonical range. The nested array contract regression still refuses with
+its exact guard diagnostic. Direct Environments/Source/Elaboration/Compiler/IRBild/SourceWitness
+checks are green; eight relevant generic/whole-source/witness axiom audits report only the standard
+three axioms. No grammar rebuild, widened arithmetic, ABI change or new interpreter.
+
+Remaining limits include alias ranges requiring constants unavailable to the initial canonical
+alias preparation, unsupported const-function bodies/logical contracts, non-scalar constant
+adapters and the remaining form inventory. Translator/ordinary-record canonical prerequisites
+remain separate. IR-01 is incomplete; this step removes one real custom-range restriction.

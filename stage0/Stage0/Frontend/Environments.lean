@@ -178,6 +178,15 @@ def typedConstants (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (items : List SItemTief) (values : List (String × Int)) : Option (List (String × Int)) :=
   items.foldlM (typedItem env fns) values
 
+/-- Canonical scalar evaluation composes in source order with the entire intermediate scope;
+    neither negative bindings nor shadowed names can be filtered at a declaration boundary. -/
+theorem typedConstants_append (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (first rest : List SItemTief) (values : List (String × Int)) :
+    typedConstants env fns (first ++ rest) values =
+      (typedConstants env fns first values).bind (typedConstants env fns rest) := by
+  exact List.foldlM_append
+
+
 theorem typedItem_aliasItem (values : List (String × Int))
     (typeEnv aliasEnv : List (String × (Int × Int))) (fns : List UKonstFn) (item : SItemTief) :
     typedItem typeEnv fns values (aliasItem aliasEnv item) = typedItem typeEnv fns values item := by
@@ -287,5 +296,71 @@ def scopes (items target : List SItemTief)
       typedConstants_aliases p.initial [] p.env [] p.fns items
     rw [ha] at hc
     exact hc
+
+/-- Final scalar values must leave all resolved alias ranges unchanged. -/
+def ScopeStable {items : List SItemTief} (scope : Scopes items) : Prop :=
+  uAliase scope.values (prepare items).expanded = scope.declared
+
+/-- The canonical original-declaration fold and alias stability are kept together. -/
+structure DerivedScopes (items : List SItemTief) where
+  scope : Scopes items
+  stable : ScopeStable scope
+
+/-- Construct scopes from the existing canonical evaluator at each original declared range.
+    There is no executable source interpreter or alternative expression evaluation here. -/
+def evaluatedScopes (items : List SItemTief) (values : List (String × Int))
+    (h : typedConstants (prepare items).env (prepare items).fns items [] = some values) : Scopes items :=
+  ⟨values, (prepare items).env, (prepare items).fns,
+    by simpa only [prepare, List.nil_append] using
+      aliases_collected (prepare items).initial [] items,
+    constantFunctions_aliases (prepare items).initial (prepare items).env [] items, h⟩
+
+/-- The actual consumer needs the certified original scalar fold, not a second encoding through
+    the legacy collector's builtin-only constant declarations. Preserve full alias stability. -/
+def deriveScopes (items : List SItemTief) : Except String (DerivedScopes items) :=
+  match h : typedConstants (prepare items).env (prepare items).fns items [] with
+  | none => .error "compile-time scalar cannot be evaluated at its canonical declared range"
+  | some values =>
+    if hs : uAliase values (prepare items).expanded = (prepare items).env then
+      .ok ⟨evaluatedScopes items values h, hs⟩
+    else .error "compile-time alias range environment is not stable"
+
+/-- Every old successful exact-collector comparison yields the same complete ordered scopes
+    through the direct path. Thus removing that representation check changes no old endpoint. -/
+theorem deriveScopes_of_compatible (items : List SItemTief)
+    (h : EnvironmentCompatible items (normalizeAliases items)) :
+    ∃ result, deriveScopes items = .ok result ∧
+      result.scope = scopes items (normalizeAliases items) (normalize_environments items h) := by
+  let old := scopes items (normalizeAliases items) (normalize_environments items h)
+  have hv : typedConstants (prepare items).env (prepare items).fns items [] = some old.values :=
+    old.scalarValues
+  have hs : uAliase old.values (prepare items).expanded = (prepare items).env := h.2
+  have he : deriveScopes items = .ok ⟨evaluatedScopes items old.values hv, hs⟩ := by
+    unfold deriveScopes
+    split
+    · rename_i hx
+      rw [hx] at hv
+      contradiction
+    · rename_i values hx
+      have eqValues : values = old.values := Option.some.inj (hx.symm.trans hv)
+      subst values
+      simp only [hs, ↓reduceDIte]
+  refine ⟨_, he, ?_⟩
+  rfl
+
+/-- A custom range with no exact builtin retains its negative intermediate and dependent value. -/
+theorem deriveScopes_custom_negative_zeuge :
+    let items := [SItemTief.typeT [] "Small" [] []
+        (some (.range (.atom "i8") (bound (-10)) (.lit 100) false)),
+      .constT "NEGATIVE" (.atom "Small") (.one (.bin "-" (.lit 0) (.lit 1))),
+      .constT "ANSWER" (.atom "Small") (.one (.bin "+" (.variable "NEGATIVE") (.lit 43)))]
+    ∃ result, deriveScopes items = .ok result ∧
+      result.scope.values = [("NEGATIVE", -1), ("ANSWER", 42)] ∧
+      result.scope.declared = [("Small", (-10, 100))] ∧
+      ¬ EnvironmentCompatible items (normalizeAliases items) := by
+  dsimp only
+  refine ⟨(deriveScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_⟩
+  · exact Gabbro.Grammatik.except_ok_get _
+  all_goals decide +kernel
 
 end Gabbro.Stage0.Frontend
