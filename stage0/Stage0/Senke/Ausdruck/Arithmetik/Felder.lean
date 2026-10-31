@@ -346,6 +346,56 @@ theorem floatSameSignL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → 
   cases subtract <;> simp only [floatAddOperand, Bool.false_eq_true, ↓reduceIte, Gleitkomma.neg]
     <;> cases a.sign <;> cases b.sign <;> rfl
 
+/-- The zero dispatcher preserves -0 exactly when both effective signs are
+    negative. This fragment is used separately from finite cancellation. -/
+def floatZeroSignL (F : Gleitkomma.Format) (subtract : Bool) (d : Nat)
+    (a b : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
+  wordL 5 d (floatFieldL (F.ebits+F.fracBits) 1 d a)
+    (if subtract then wordL 4 (d+1) (some ([ci 1 (d+1) 1 0], d+2))
+      (floatFieldL (F.ebits+F.fracBits) 1 (d+2) b)
+    else floatFieldL (F.ebits+F.fracBits) 1 (d+1) b)
+
+theorem floatZeroSignL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (F : Gleitkomma.Format) (hd : F.dicht) (hw : F.ebits + F.fracBits + 1 ≤ 64)
+    (subtract sa sb : Bool) (hz : F.bexpMax ≠ 0)
+    (ha : Gleitkomma.wf F ⟨sa,0,0⟩) (hb : Gleitkomma.wf F ⟨sb,0,0⟩)
+    {ea eb : Nat → Option (List II × Nat)}
+    (hea : WordCode (L := L) ρ W ea (BitVec.ofNat 64 (Gleitkomma.zuBits F ⟨sa,0,0⟩)))
+    (heb : WordCode (L := L) ρ W eb (BitVec.ofNat 64 (Gleitkomma.zuBits F ⟨sb,0,0⟩))) :
+    WordCode (L := L) ρ W (fun d => floatZeroSignL F subtract d ea eb)
+      (Runner.IR.bool (if subtract then
+        Gleitkomma.sub F ⟨sa,0,0⟩ ⟨sb,0,0⟩ else
+        Gleitkomma.add F ⟨sa,0,0⟩ ⟨sb,0,0⟩).sign) := by
+  have a : WordCode (L := L) ρ W _ _ := floatSignL_canonical F hd hw ⟨sa,0,0⟩ ha hea
+  have b : WordCode (L := L) ρ W _ _ := floatSignL_canonical F hd hw ⟨sb,0,0⟩ hb heb
+  have effective : WordCode (L := L) ρ W
+      (fun d => if subtract then wordL 4 d (some ([ci 1 d 1 0], d+1))
+        (floatFieldL (F.ebits+F.fracBits) 1 (d+1) eb)
+        else floatFieldL (F.ebits+F.fracBits) 1 d eb)
+      (Runner.IR.bool (if subtract then !sb else sb)) := by
+    cases subtract
+    · exact b
+    · have result : WordCode (L := L) ρ W _ _ := WordCode.bin
+        (WordCode.const 1 (by decide)) b (g := fun a b => some (a-b))
+        rfl rfl (by decide : 4 < 256)
+      intro fp K d c t hc ht m pc hp
+      apply (result hc ht m pc hp).mono
+      intro w h
+      rw [h]
+      cases sb <;> simp [Runner.IR.bool]
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin a effective
+    (g := fun a b => some (a*b)) rfl rfl (by decide : 5 < 256)
+  intro fp K d c t hc ht m pc hp
+  apply (result hc ht m pc hp).mono
+  intro w h
+  rw [h]
+  have hz' : (0 : Nat) ≠ F.bexpMax := Ne.symm hz
+  cases subtract <;> cases sa <;> cases sb <;>
+    simp [Gleitkomma.sub, Gleitkomma.add, Gleitkomma.neg, Gleitkomma.klasse,
+      hz', Runner.IR.bool]
+
+#print axioms floatZeroSignL_canonical
+
 #print axioms floatSignL_canonical
 #print axioms floatSameSignL_canonical
 

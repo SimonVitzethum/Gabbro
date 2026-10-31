@@ -205,4 +205,79 @@ theorem floatSumMagnitude_reconstruct_zeuge :
 #print axioms floatSumMagnitudeL_ok
 #print axioms floatNegativeSumMagnitudeL_ok
 #print axioms floatSumMagnitude_reconstruct_zeuge
+omit [Kern] in
+/-- Canonical rounding retains the exact numerator sign, including underflow
+    and overflow. Exact cancellation has a nonnegative numerator and yields +0. -/
+theorem floatRoundedExact_sign (F : Format) (v : Exakt) :
+    (rundeExakt F v).sign = decide (v.zaehler < 0) := by
+  have core (s : Bool) (n d : Nat) (E : Int) :
+      (rundeBruchKern F s n d E).sign = s := by
+    unfold rundeBruchKern
+    split <;> try rfl
+    split <;> try rfl
+    split
+    · split <;> try rfl
+      split <;> rfl
+    · split <;> rfl
+  have rational (z : Int) (d : Nat) (hd : d ≠ 0) :
+      (rundeBruch F ⟨z,d⟩).sign = decide (z < 0) := by
+    simp only [rundeBruch, rundeBruchBei, hd, ↓reduceIte]
+    split
+    · rfl
+    · exact core _ _ _ _
+  unfold rundeExakt exaktBruch
+  split
+  · rw [rational _ 1 (by decide)]
+    have hp : (0 : Int) < (2 ^ v.zweierExp.toNat : Nat) := by exact_mod_cast Nat.pow_pos (by decide : 0 < 2)
+    simp only [Int.mul_neg_iff]
+    simp_all <;> omega
+  · exact rational _ _ (Nat.ne_of_gt (Nat.pow_pos (by decide : 0 < 2)))
+
+omit [Kern] in
+/-- Cancellation is canonical positive zero at every scale, including scales
+    far outside either IEEE format's exponent range. -/
+theorem floatRoundedExact_cancel (F : Format) (e : Int) :
+    rundeExakt F ⟨0,e⟩ = ⟨false,0,0⟩ := by
+  have hn (n : Nat) : 2^n ≠ 0 := Nat.ne_of_gt (Nat.pow_pos (by decide : 0 < 2))
+  unfold rundeExakt exaktBruch
+  split <;> simp [rundeBruch, rundeBruchBei, hn]
+
+#print axioms floatRoundedExact_cancel
+
+omit [Kern] in
+/-- The Euclidean quotient comparison is the exact result sign even when the
+    quotient is zero or minus one and only the tail carries the magnitude. -/
+theorem floatSumSign_exact (z r den : Int) (hd : 0 < den)
+    (hr : 0 ≤ r ∧ r < den) :
+    (z * den + r < 0) ↔ z < 0 := by
+  constructor
+  · intro h
+    by_contra hn
+    have := Int.mul_nonneg (show 0 ≤ z by omega) (show 0 ≤ den by omega)
+    omega
+  · intro h
+    have := Int.mul_le_mul_of_nonneg_right (show z ≤ -1 by omega) (show 0 ≤ den by omega)
+    omega
+
+/-- Execute the result-sign comparison and connect it to the canonical IEEE
+    result. No result-sign premise is supplied. The exact-tail bounds suffice
+    for all denominators; cancellation returns false, independently of format. -/
+theorem floatSumSignL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {sum : Nat → Option (List II × Nat)} (F : Format) (z r den e : Int)
+    (hz : -2^63 ≤ z ∧ z < 2^63) (hd : 0 < den) (hr : 0 ≤ r ∧ r < den)
+    (hs : WordCode (L := L) ρ W sum (BitVec.ofInt 64 z)) :
+    WordCode (L := L) ρ W (fun j => wordK 13 j (sum j) 0)
+      (Runner.IR.bool (rundeExakt F ⟨z * den + r, e⟩).sign) := by
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin hs (WordCode.const 0 (by decide))
+    (g := fun a b => some (Runner.IR.bool (a.slt b))) rfl rfl (by decide : 13 < 256)
+  intro fp K dst code top hc hK m pc hp
+  apply (result hc hK m pc hp).mono
+  intro w hw
+  rw [hw, slt_in hz (by decide), floatRoundedExact_sign]
+  simp only [floatSumSign_exact z r den hd hr]
+
+#print axioms floatRoundedExact_sign
+#print axioms floatSumSign_exact
+#print axioms floatSumSignL_canonical
+
 end Gabbro.Stage0.Senke

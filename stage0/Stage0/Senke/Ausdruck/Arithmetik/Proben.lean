@@ -280,6 +280,72 @@ theorem sameSignImages_zeuge : sameSignImages.length = 48 ∧
 
 #print axioms sameSignImages_zeuge
 
+/-- Execute the quotient sign at cancellation, tail-only and signed word edges;
+    the expected bit comes from canonical IEEE rounding, for both formats. -/
+def resultSignImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("f32", f32), ("f64", f64)].flatMap fun (name,F) =>
+    ([("cancel", 0, 0, 1, 0), ("positive-tail", 0, 1, 2^1074, 0),
+      ("negative-tail", -1, 2^1074-13, 2^1074, 0),
+      ("negative-underflow", -1, 0, 1, -2000),
+      ("negative-overflow", -1, 0, 1, 2000),
+      ("negative-word-edge", -2^63, 0, 1, 0),
+      ("positive-word-edge", 2^63-1, 0, 1, 0)] :
+      List (String × Int × Int × Int × Int)).map fun (tag,z,r,den,e) =>
+        ("result-sign-" ++ name ++ "-" ++ tag,
+          FloatArithmeticProbe.wordImage
+            (wordK 13 8 (some (konstWL 4 (z % 2^64).toNat 8)) 0)
+            (if (rundeExakt F ⟨z*den+r,e⟩).sign then 1 else 0), 7)
+
+theorem resultSignImages_zeuge : resultSignImages.length = 14 ∧
+    resultSignImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms resultSignImages_zeuge
+
+/-- All signed-zero source pairs use the executed zero dispatcher. -/
+def zeroSignImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("f32", f32), ("f64", f64)].flatMap fun (name,F) =>
+    [false,true].flatMap fun subtract => [false,true].flatMap fun sa =>
+      [false,true].map fun sb =>
+        let a : GBits F := ⟨sa,0,0⟩
+        let b : GBits F := ⟨sb,0,0⟩
+        let lit := fun v d => some (konstWL 4 (zuBits F v) d)
+        ("zero-sign-" ++ name ++ "-" ++ toString subtract ++ "-" ++
+          toString sa ++ "-" ++ toString sb,
+          FloatArithmeticProbe.wordImage (floatZeroSignL F subtract 8 (lit a) (lit b))
+            (if (if subtract then sub F a b else add F a b).sign then 1 else 0), 7)
+
+theorem zeroSignImages_zeuge : zeroSignImages.length = 16 ∧
+    zeroSignImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+theorem floatSumSignL_canonical_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun j => wordK 13 j (some (konstWL 4 (2^64-1) j)) 0)
+      (Runner.IR.bool (rundeExakt f64 ⟨-1 * (2^1074) + (2^1074-13),0⟩).sign) := by
+  exact floatSumSignL_canonical (L := L) (ρ := (Env.nil : Env D []))
+    (W := fun _ => True) (sum := fun j => some (konstWL 4 (2^64-1) j)) f64 (-1) (2^1074-13) (2^1074) 0
+    (by decide) (by decide +kernel) (by decide +kernel)
+    (by
+      intro fp K dst code top hc ht m pc hp
+      have h : BitVec.ofNat 64 (2^64-1) = BitVec.ofInt 64 (-1) := by decide +kernel
+      exact (WordCode.konst (2^64-1) (by decide +kernel) hc ht m pc hp).mono
+        (fun w hw => hw.trans h))
+
+theorem floatZeroSignL_canonical_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun d => floatZeroSignL f64 true d
+        (fun j => some (konstWL 4 (2^63) j))
+        (fun j => some (konstWL 4 0 j))) (Runner.IR.bool true) := by
+  exact floatZeroSignL_canonical f64 (by unfold Format.dicht; decide) (by decide) true true false
+    (by decide) (by decide) (by decide)
+    (WordCode.konst _ (by decide)) (WordCode.konst _ (by decide))
+
+#print axioms floatZeroSignL_canonical_zeuge
+
+#print axioms zeroSignImages_zeuge
+#print axioms floatSumSignL_canonical_zeuge
+
 /-- Production coefficient decoding at the normal/subnormal and sign edges. -/
 def coefficientImages : List (String × Except String (List Runner.B) × Nat) :=
   [("coefficient-positive-zero", 0, 0),
