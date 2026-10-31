@@ -848,6 +848,19 @@ without signed overflow from those reached significand/jam bounds. Its
 nonnegativity, exact magnitude and signed correction transfer through
 normalization are not yet proved.
 
+The connected execution also retains the pre-ADD/SUB source significand read
+and reconstructs its exact numerator from the reached result word plus the
+signed jam correction. Its Euclidean quotient and full remainder instantiate
+`floatSumMagnitude_reconstruct` (borrow and remainder complement),
+`floatSumSign_exact`, and exact cancellation. This is an arithmetic consequence
+of the same executed reads, not execution of a magnitude routine: the actual
+`floatFiniteAddL` candidate goes directly from ADD/SUB to zero dispatch and its
+own right/left normalization. It does not call `floatSumMagnitudeL`, the exact
+normalization loop, or the five-field/slot RoundPack pipeline. Connecting those
+isolated routines requires an explicit lowering/composition change or a proof
+of this candidate's own continuation. The arithmetic reconstruction alone does
+not establish that continuation or canonical output bits.
+
 Concrete composition goals at this boundary are:
 1. The joint decoded field correspondence and executed SORT permutation now
    transport both significand bounds, the exponent bounds and the jam bound

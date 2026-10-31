@@ -2722,6 +2722,7 @@ theorem floatFiniteAddL_signed_execute {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_signed_execute
 
+set_option maxHeartbeats 1200000 in
 /-- Execute decoding, SORT, alignment and signed ADD/SUB from encoded operands.
     The exact correction and arithmetic result belong to one connected run. -/
 theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
@@ -2820,7 +2821,24 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
             1 ≤ ex.toNat ∧ ex.toNat < F.bexpMax ∧
             1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56 ∧ jam.toNat < 2^56 ∧
             -2^57 < (if sx == sy then q+jam else q-jam).toInt ∧
-            (if sx == sy then q+jam else q-jam).toInt < 2^57) ∧
+            (if sx == sy then q+jam else q-jam).toInt < 2^57 ∧
+            ∃ source : Runner.W,
+              out.rd64 (slot fp (BitVec.ofNat 64 (dst+8))) = some source ∧
+              let den : Int := (2^(ex-ey).toNat : Nat)
+              let numerator : Int := if sx == sy then
+                (q.toNat : Int)*den + source.toNat else
+                (q.toNat : Int)*den - source.toNat
+              let correction : Int := if sx == sy then
+                (source.toNat : Int) - (jam.toNat : Int)*den else
+                (jam.toNat : Int)*den - source.toNat
+              numerator = (if sx == sy then q+jam else q-jam).toInt*den + correction ∧
+              (numerator.natAbs : Int) =
+                floatSumMagnitude (numerator/den) (numerator%den)*den +
+                  (if numerator/den < 0 then
+                    if numerator%den = 0 then 0 else den - numerator%den
+                   else numerator%den) ∧
+              ((numerator < 0) ↔ numerator/den < 0) ∧
+              (numerator = 0 ↔ numerator/den = 0 ∧ numerator%den = 0)) ∧
         ∃ signedTail,
           continuation = [ci 2 (dst+8) (dst+16) 0,
             ci 14 (dst+9) (dst+3) (dst+4), ci 19 (dst+9) 48 0,
@@ -3000,11 +3018,51 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
         omega
       · rw [BitVec.toInt_sub, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
         omega
-    refine ⟨vs (dst+5),vs (dst+6),?_,?_,bx.1,bx.2,byy.1,byy.2,bq,bj,resultBounds⟩
+    have exactResult :
+        (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)).toInt =
+        (if vs (dst+3) == vs (dst+4) then
+          ((vs (dst+7)).toNat : Int)+(vs (dst+16)).toNat else
+          ((vs (dst+7)).toNat : Int)-(vs (dst+16)).toNat) := by
+      split
+      · rw [BitVec.toInt_add, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
+      · rw [BitVec.toInt_sub, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
+    refine ⟨vs (dst+5),vs (dst+6),?_,?_,bx.1,bx.2,byy.1,byy.2,bq,bj,
+      resultBounds.1,resultBounds.2, r, (keep _ (by omega)).trans rr, ?_⟩
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
         (vreads _ (by omega))
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
         (vreads _ (by omega))
+    · dsimp only
+      let den : Int := (2^(vs (dst+5)-vs (dst+6)).toNat : Nat)
+      let n : Int := if vs (dst+3) == vs (dst+4) then
+        ((vs (dst+7)).toNat : Int)*den + r.toNat else
+        ((vs (dst+7)).toNat : Int)*den - r.toNat
+      have hd : 0 < den := by
+        dsimp only [den]
+        exact_mod_cast (Nat.pow_pos (n := (vs (dst+5)-vs (dst+6)).toNat)
+          (by decide : 0 < 2))
+      have remBounds : 0 ≤ n%den ∧ n%den < den :=
+        ⟨Int.emod_nonneg _ (ne_of_gt hd), Int.emod_lt_of_pos _ hd⟩
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · rw [exactResult]
+        split <;> ring
+      · have h := floatSumMagnitude_reconstruct (n/den) (n%den) den hd remBounds
+        have eq : n/den*den+n%den = n := by
+          simpa [Int.mul_comm] using Int.mul_ediv_add_emod n den
+        simpa only [eq] using h
+      · have h := floatSumSign_exact (n/den) (n%den) den hd remBounds
+        have eq : n/den*den+n%den = n := by
+          simpa [Int.mul_comm] using Int.mul_ediv_add_emod n den
+        simpa only [eq] using h
+      · constructor
+        · intro h
+          simp only [h, Int.zero_ediv, Int.zero_emod, and_self]
+        · rintro ⟨hq, hr⟩
+          have h := Int.mul_ediv_add_emod n den
+          rw [hq, hr] at h
+          change n = 0
+          simpa only [Int.mul_zero, Int.zero_add] using h.symm
 
 #print axioms floatFiniteAddL_read_fields_align
 
@@ -3099,7 +3157,24 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
             1 ≤ ex.toNat ∧ ex.toNat < F.bexpMax ∧
             1 ≤ ey.toNat ∧ ey.toNat < F.bexpMax ∧ q.toNat < 2^56 ∧ jam.toNat < 2^56 ∧
             -2^57 < (if sx == sy then q+jam else q-jam).toInt ∧
-            (if sx == sy then q+jam else q-jam).toInt < 2^57) ∧
+            (if sx == sy then q+jam else q-jam).toInt < 2^57 ∧
+            ∃ source : Runner.W,
+              out.rd64 (slot fp (BitVec.ofNat 64 (16+8))) = some source ∧
+              let den : Int := (2^(ex-ey).toNat : Nat)
+              let numerator : Int := if sx == sy then
+                (q.toNat : Int)*den + source.toNat else
+                (q.toNat : Int)*den - source.toNat
+              let correction : Int := if sx == sy then
+                (source.toNat : Int) - (jam.toNat : Int)*den else
+                (jam.toNat : Int)*den - source.toNat
+              numerator = (if sx == sy then q+jam else q-jam).toInt*den + correction ∧
+              (numerator.natAbs : Int) =
+                floatSumMagnitude (numerator/den) (numerator%den)*den +
+                  (if numerator/den < 0 then
+                    if numerator%den = 0 then 0 else den - numerator%den
+                   else numerator%den) ∧
+              ((numerator < 0) ↔ numerator/den < 0) ∧
+              (numerator = 0 ↔ numerator/den = 0 ∧ numerator%den = 0)) ∧
         ∃ signedTail,
           continuation = [ci 2 (16+8) (16+16) 0,
             ci 14 (16+9) (16+3) (16+4), ci 19 (16+9) 48 0,
