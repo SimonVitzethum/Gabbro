@@ -470,3 +470,35 @@ The contracted nested-array call still refuses explicitly. Changed Environments,
 Compiler, IRBild and concrete SourceWitness checks are green; six relevant generic/witness audits
 use the standard three axioms. This remains a conservative scoped elaboration extension, not an
 equality claim between new supplied scopes and the incomplete old scopes for newly supported syntax.
+
+### IR-01 empty fixed-count tables in the existing canonical model
+
+`Frontend.Tables.tableWithEmpty` adds precisely fixed-count declarations with an explicitly empty
+slot field list. It preserves source name, exact `uAnzahl` count, shared flag and tree metadata;
+negative newly admitted counts refuse. All invariant-part eligibility checks remain, and original
+items remain for canonical `uInvs`, shared-guard checks, remaining elaboration and the full checker.
+Nonempty/open/other declarations continue through unchanged `uTabelle`. `tableWithEmpty_sound`
+proves every successful export is either exactly canonical or has `EmptyTableMeaning`, including
+complete original declaration provenance, canonical count evaluation and empty columns.
+`emptyTable_model` proves the existing declOf count is unchanged, fieldCount=0, the field type is
+empty and the table is closed. No field, occupancy mark, provider or storage semantics is invented.
+
+`elabWithScopes` takes an optional table-lowering function defaulting exactly to frozen `uTabelle`;
+its all-old-input `elabU_scopes` equality is still rfl. Actual Compiler supplies tableWithEmpty and
+CanonicalSourceProgram includes its generic source-provenance contract as well as the identical
+actual canonical elaboration/program endpoint. This remains a compiler elaboration extension
+over existing canonical table semantics, not a claim old uTabelle accepted empty fields.
+
+Actual `empty-table` source retains count 2^32 and compiles to ASM exit42. A negative-count source
+measures the explicit adapter refusal. SourceWitness now includes a real count-2^32 empty table:
+`table_count`/`fieldless` prove its exact count and empty field domain; a generic fieldless-world
+constructor provides its concrete World without allocating nonexistent field cells. The accepted
+source/image, initial memory/arguments/gate/view contracts and actual IR simulation remain jointly
+witnessed. This does not test executing a 2^32-iteration traversal. IR-08 owns the separately green
+wide traversal and fieldless_table_layout theorem; fieldCount=0 from this model bridge is its exact
+interface. No image, word, layout or resource bound was weakened.
+
+Tables, Elaboration, Compiler, IRBild and updated SourceWitness direct checks passed under slot1
+4G/5G scope. Eight generic/whole-source/witness audits retain only the standard three axioms.
+No grammar build or Senke file was changed. Wider source traversal integration is a separate
+combined-snapshot validation with IR-08; IR-01 coverage remains incomplete.
