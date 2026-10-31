@@ -698,6 +698,19 @@ inductive BlockCost (L : Lay D) (reserved : Nat) (V : Vertrag D) (l : Bool) :
       (tail : BlockCost L reserved V l rest σ (.cons v ρ) σ' ρ' nr) :
       BlockCost L reserved V l (.bind e rest) σ ρ σ' ρ'.tail (ne + nr)
 
+  | branch {Γ Λ Λmid Λ'} {c : Expr D Γ Λ .bool}
+      {t e : Block D V l Γ Λ Λmid} {rest : Block D V l Γ Λmid Λ'}
+      {σ σ1 σ' : World D} {ρ ρ1 ρ' : Env D Γ} {choice : Bool} {nc nb nr : Nat}
+      (condition : ExprCost L reserved c (frei Γ reserved) nc (· = if choice then 1 else 0))
+      (jumps : ∀ passes A lo ens pr ex ct tt ce te,
+        lowB (reserved := reserved) passes A L lo ens pr ex e = some (ce, te) →
+        lowB (reserved := reserved) passes A L lo ens pr (exPlus ex (ce.length + 1)) t = some (ct, tt) →
+        16 * (ct.length + 2) < 2 ^ 31 ∧ 16 * (ce.length + 1) < 2 ^ 31)
+      (child : BlockCost L reserved V l (if choice then t else e) σ ρ σ1 ρ1 nb)
+      (tail : BlockCost L reserved V l rest σ1 ρ1 σ' ρ' nr) :
+      BlockCost L reserved V l (.cons (.ite c t e) rest) σ ρ σ' ρ'
+        ((nc + 1 + nb + if choice then 1 else 0) + nr)
+
 /-- Every count is derived from an accepted source lowering. The only
     additional obligations are the existing frame/layout/world conditions. -/
 theorem BlockCost.sound {V : Vertrag D} {l : Bool} {Γ : Ctx}
@@ -769,6 +782,73 @@ theorem BlockCost.sound {V : Vertrag D} {l : Bool} {Γ : Ctx}
           simp only [frei, List.length_cons] at h ⊢; omega)
     obtain ⟨m', run, agree, env, world', keep⟩ := result
     exact ⟨m', run, agree, envAt_tail env, world', keep⟩
+
+  | @branch Γ Λ Λmid Λ' c t e rest σ σ1 σ' ρ ρ1 ρ' choice nc nb nr condition jumps child tail ih it =>
+    have hks := inside.ks
+    have normalize (x : Nat) : 16 + (16 + x) = 32 + x := by omega
+    have decoded := lower
+    simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at decoded
+    obtain ⟨⟨cr0, tr0⟩, hr0, ⟨cs0, ts0⟩, hs0, out⟩ := decoded
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    apply countedBlockCons_case lower inside pre
+    · intro cr tr cs ts hr hs hp
+      rw [hr0] at hr; cases hr
+      rw [hs0] at hs; cases hs
+      simp only [lowS, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hs0
+      obtain ⟨⟨cc, tc⟩, hc, ⟨ce, te⟩, he, ⟨ct, tt⟩, ht, out⟩ := hs0
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+      have room := lowE_top _ _ _ _ hc
+      have hq : PreS L m pc fp K (frei Γ reserved)
+          (cc ++ ([ci 19 (frei Γ reserved) (16 * (ct.length + 2)) 0] ++
+            (ct ++ ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))) ρ reserved := by
+        simpa [List.append_assoc] using hp
+      have hpw := PreS.welt hq.left inside.ks world inside.lay (by have := inside.lo; omega)
+      obtain ⟨m1, run1, a1s, w, read, value⟩ := condition.sound hc (by omega) hpw
+      have a1 := Agree.widen a1s inside.ks
+      have h1 := hq.next a1 (Nat.le_refl _) (by omega)
+      have h2 := h1.next (a := [ci 19 (frei Γ reserved) (16 * (ct.length + 2)) 0])
+        (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+      have ins := h1.code 0 (by simp)
+      simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at ins
+      have hd : sx (II.f (frei Γ reserved : Int)) = BitVec.ofNat 64 (frei Γ reserved) := sx_nat (by have := pre.small; omega)
+      have world1 := hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))
+      have sizes := jumps _ _ _ _ _ _ _ _ _ _ he ht
+      cases choice with
+      | false =>
+        simp only [Bool.false_eq_true, ↓reduceIte] at value child ih ⊢
+        subst w
+        have step := run_step (t := ⟨_, fp⟩) ins (by decide) (run_brz_zero ins (by rw [hd]; exact read))
+        have offset : sx (II.f (16 * ((ct.length : Int) + 2))) = BitVec.ofNat 64 (16 * (ct.length + 2)) := by
+          simpa using sx_nat (d := 16 * (ct.length + 2)) sizes.1
+        rw [offset] at step
+        have h3 := h2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+        have h4 := h3.next (a := [ci 18 (16 * (ce.length + 1)) 0 0]) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+        obtain ⟨m2, run2, agree, env, hw, keep⟩ := ih he (by omega) low hprotected h4 world1
+        refine ⟨m2, ?_, (agreeW_of (a1.mono low)).trans agree, env, hw, ?_⟩
+        · simpa [List.length_append, List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using run1.trans ((Counted.next step (Counted.refl _ _)).trans (by simpa [List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm, normalize] using run2))
+        · exact (keeps_of_agreeW inside (agreeW_of a1) hprotected (by have := inside.ks; omega)).trans keep
+      | true =>
+        simp only [Bool.true_eq, ↓reduceIte] at value child ih ⊢
+        subst w
+        have sb := counted_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
+          (by simp only [ci]; exact run_brz_ne ins (by rw [hd]; exact read) (by decide))
+        obtain ⟨m2, run2, agree, env, hw, keep⟩ := ih ht (by omega) low hprotected h2.left world1
+        have h3 : PreS L m2 _ fp K (frei Γ reserved) ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce) ρ1 reserved :=
+          ⟨h2.ctx, h2.small, frameOK_agreeW h2.frame agree,
+            codeAt_agreeWIn inside agree (codeAt_right h2.code) (codeFar_right (by simpa only [List.length_append] using h2.far)),
+            codeFar_right (by simpa only [List.length_append] using h2.far), env, trivial, wstab_true _ _⟩
+        have ji := h3.code 0 (by simp)
+        simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at ji
+        have step := run_step (t := ⟨_, fp⟩) ji (by decide) (run_jmp ji)
+        have offset : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
+          simpa using sx_nat (d := 16 * (ce.length + 1)) sizes.2
+        rw [offset] at step
+        refine ⟨m2, ?_, (agreeW_of (a1.mono low)).trans agree, env, hw, ?_⟩
+        · simpa [List.length_append, List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm, normalize] using run1.trans (sb.trans (run2.trans (Counted.next step (Counted.refl _ _))))
+        · exact (keeps_of_agreeW inside (agreeW_of a1) hprotected (by have := inside.ks; omega)).trans keep
+    · intro cr tr hr m' pc' hp hw
+      rw [hr0] at hr; cases hr
+      exact it hr0 (by omega) low hprotected hp hw
 
 /-- Actual `lowEnd .cons` threads a normal statement outcome into a terminal
     continuation. The continuation can return to its caller or stop in a
@@ -908,6 +988,79 @@ theorem block_sound_zeuge :
     (vertragVon FnptrProben.D 2) world
   exact cert.sound lower (by decide) call_win (by decide)
     (by intro j hj; cases hj) pre hw
+
+namespace Branch
+open FnptrProben
+
+def source (choice : Bool) : Block FnptrProben.D (vertragVon FnptrProben.D 2) false [] [] [] :=
+  .cons (.ite (if choice then .tru else .fls)
+    (body (vertragVon FnptrProben.D 2)) (body (vertragVon FnptrProben.D 2))) (body (vertragVon FnptrProben.D 2))
+
+def image (choice : Bool) : List II :=
+  [ci 1 4 (if choice then 1 else 0) 0, ci 19 4 80 0] ++
+    BlockCostProbe.image ++ [ci 18 64 0 0] ++ BlockCostProbe.image ++ BlockCostProbe.image
+
+def memory (choice : Bool) : Mem := { callMem with
+  b := fun a => if a.toNat < 192 then
+    (((image choice).flatMap encII)[a.toNat]?).getD 0 else callMem.b a }
+
+set_option maxHeartbeats 2000000 in
+/-- Both directions run a nonempty child and then the recursive continuation. -/
+theorem sound_zeuge (choice : Bool) :
+    CountedReach (8 + if choice then 1 else 0) callLayout 4096 4 256 []
+      ⟨0, 4096⟩ (memory choice) 192 world (Env.nil : Env FnptrProben.D []) 0 := by
+  have lower : lowB 2 addresses callLayout 4 ([], 6) [] (0, 0) (source choice) =
+      some (image choice, 6) := by cases choice <;> decide +kernel
+  have code : CodeAt (memory choice) 0 (image choice) := by
+    have h : ∀ k : Fin (image choice).length,
+        (memory choice).rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 (image choice)[k.val].o) ∧
+        (memory choice).rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f (image choice)[k.val].a) ∧
+        (memory choice).rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f (image choice)[k.val].b) ∧
+        (memory choice).rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f (image choice)[k.val].c) := by
+      cases choice <;> apply allFin <;> decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  have pre : PreS callLayout (memory choice) 0 4096 256 4 (image choice) (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩, code, ?_, ?_, trivial, wstab_true _ _⟩
+    · cases choice <;> unfold CodeFar <;> decide +kernel
+    · intro _ x; nomatch x
+  have hw : WeltAt (memory choice) callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    cases choice <;> decide +kernel
+  obtain ⟨leaf⟩ := block_certificate_zeuge (L := callLayout) (reserved := 0)
+    (vertragVon FnptrProben.D 2) world
+  have cert : BlockCost callLayout 0 (vertragVon FnptrProben.D 2) false
+      (source choice) world .nil world .nil (8 + if choice then 1 else 0) := by
+    have cost : (8 + if choice then 1 else 0) = ((1 + 1 + 3 + if choice then 1 else 0) + 3) := by omega
+    rw [cost]
+    apply BlockCost.branch (nc := 1) (nb := 3) (nr := 3)
+    · cases choice
+      · exact .falsity
+      · exact .truth
+    · intro passes A lo ens pr ex ct tt ce te he ht
+      have equation (ex : Int × Int) :
+          lowB passes A callLayout lo ens pr ex (body (vertragVon FnptrProben.D 2)) =
+          (do let rest ← (do
+                let piece ← (if lo ≤ 4 ∧ 4 ∉ pr then
+                  some ([ci 1 5 2 0, ci 2 4 5 0], 6) else none)
+                pure (piece.1 ++ [], max piece.2 5))
+              pure ([ci 1 4 2 0] ++ rest.1, max 5 rest.2)) := rfl
+      rw [equation] at he ht
+      by_cases allowed : lo ≤ 4 ∧ 4 ∉ pr
+      · simp only [if_pos allowed, bind, Option.bind_some, pure, Option.some.injEq, Prod.mk.injEq] at he ht
+        obtain ⟨rfl, _⟩ := he
+        obtain ⟨rfl, _⟩ := ht
+        decide
+      · simp only [if_neg allowed, bind, Option.bind_none, reduceCtorEq] at he
+    · cases choice <;> exact leaf
+    · exact leaf
+  have result := cert.sound lower (by decide) call_win (by decide)
+    (by intro j hj; cases hj) pre hw
+  simpa [image, BlockCostProbe.image] using result
+
+end Branch
 
 open FnptrProben in
 /-- The certificate executes jointly with a loaded image and frame. Argument
