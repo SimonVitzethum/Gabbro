@@ -548,4 +548,99 @@ theorem FloatNormalizeHead.normQD_source_bounds
 
 #print axioms FloatNormalizeHead.normQD_source_bounds
 
+/-- Canonical rounding of the source-scaled rational is exactly the emitted
+    guard/sticky decision for every reached head. This includes both tie
+    parities and arbitrarily large denominator distances, uniformly in p. -/
+theorem FloatNormalizeHead.normQ_source_guard
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K base reserved : Nat} {code : List II}
+    {origin target q r : Int} {originDistance budget fuel count distance : Nat}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r) (p scale : Nat) :
+    Gleitkomma.normQ p ((p : Int)-1-count-scale)
+      (origin.toNat * 2^distance) (8 * 2^(distance+originDistance+scale)) =
+      Gleitkomma.rundeInt (q/8).toNat
+        (2 * (q%8).toNat + if r = 0 then 0 else 1) 16 := by
+  have fields := head.normQD_source_output p scale
+  have ranges := head.output_ranges
+  let den : Nat := 2^(distance+originDistance) * 2^scale
+  let rest : Nat := r.toNat * 2^originDistance * 2^scale
+  have hd : 0 < den := by dsimp [den]; positivity
+  have tail : r.toNat * 2^originDistance < (2 : Nat)^(distance+originDistance) := by
+    apply Int.ofNat_lt.mp
+    push_cast
+    rw [Int.toNat_of_nonneg head.remainder.1]
+    exact ranges.2.2.2.2.2
+  have hr : rest < den := Nat.mul_lt_mul_of_pos_right tail (by positivity)
+  have hg : (q%8).toNat < 8 := by
+    have := ranges.2.2.1
+    have := ranges.2.2.2.1
+    omega
+  have hz : rest = 0 ↔ r = 0 := by
+    simp only [rest, Nat.mul_eq_zero, pow_ne_zero _ (by decide : (2 : Nat) ≠ 0),
+      or_false]
+    have := head.remainder.1
+    omega
+  unfold Gleitkomma.normQ
+  rw [fields.1, fields.2.1, fields.2.2]
+  have remEq : ((q%8).toNat * 2^(distance+originDistance) +
+      r.toNat * 2^originDistance) * 2^scale = (q%8).toNat * den + rest := by
+    dsimp [den, rest]; ring
+  have denEq : (8 * 2^(distance+originDistance)) * 2^scale = 8 * den := by
+    dsimp [den]; ring
+  rw [remEq, denEq, floatGuardSticky_round _ _ _ _ hd hr hg]
+  simp only [hz]
+
+#print axioms FloatNormalizeHead.normQ_source_guard
+
+/-- The emitted rounding fragment implements the canonical source-scaled
+    normQ for every reached head. Field producers still carry their ordinary
+    execution contracts; format-specific packing and operand entry are separate. -/
+theorem FloatNormalizeHead.round_source_ok
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K base reserved : Nat} {code : List II}
+    {origin target q r : Int} {originDistance budget fuel count distance : Nat}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r) (p scale : Nat)
+    {quotient guard sticky : Nat → Option (List II × Nat)}
+    (hq : WordCode (L := L) ρ W quotient (BitVec.ofNat 64 (q/8).toNat))
+    (hg : WordCode (L := L) ρ W guard (BitVec.ofNat 64 (q%8).toNat))
+    (hs : WordCode (L := L) ρ W sticky
+      (BitVec.ofNat 64 (if r = 0 then 0 else 1))) :
+    WordCode (L := L) ρ W (fun j => floatGuardRoundL j quotient guard sticky)
+      (BitVec.ofNat 64 (Gleitkomma.normQ p ((p : Int)-1-count-scale)
+        (origin.toNat * 2^distance) (8 * 2^(distance+originDistance+scale)))) := by
+  have hd : 0 < (2 : Nat)^distance := by positivity
+  have hr : r.toNat < (2 : Nat)^distance := by
+    have := head.remainder
+    apply Int.ofNat_lt.mp
+    push_cast
+    rw [Int.toNat_of_nonneg this.1]
+    exact this.2.2
+  have hgBound : (q%8).toNat < 8 := by
+    have lo := Int.emod_nonneg q (by decide : (8 : Int) ≠ 0)
+    have hi := Int.emod_lt_of_pos q (by decide : (0 : Int) < 8)
+    omega
+  have hz : r.toNat = 0 ↔ r = 0 := by
+    have := head.remainder.1
+    omega
+  have hs' : WordCode (L := L) ρ W sticky
+      (BitVec.ofNat 64 (if r.toNat = 0 then 0 else 1)) := by
+    intro fp' K' j c t hc ht mm pp hp
+    simpa only [hz] using hs hc ht mm pp hp
+  have rounded : WordCode (L := L) ρ W
+      (fun j => floatGuardRoundL j quotient guard sticky)
+      (BitVec.ofNat 64 (Gleitkomma.rundeInt (q/8).toNat
+        ((q%8).toNat * 2^distance + r.toNat) (8 * 2^distance))) := by
+    intro fp' K' j c t hc ht mm pp hp
+    exact floatGuardRoundL_ok (q/8).toNat (q%8).toNat r.toNat
+      (2^distance) hd hr hgBound hq hg hs' hc ht mm pp hp
+  rw [floatGuardSticky_round _ _ _ _ hd hr hgBound] at rounded
+  simp only [hz] at rounded
+  rw [head.normQ_source_guard p scale]
+  intro fp' K' j c t hc ht mm pp hp
+  exact rounded hc ht mm pp hp
+
+#print axioms FloatNormalizeHead.round_source_ok
+
 end Gabbro.Stage0.Senke

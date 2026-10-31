@@ -1073,4 +1073,25 @@ theorem normalizationSourceScale_zeuge [Kern] {D : Deklaration} (L : Lay D) :
 
 #print axioms normalizationSourceScale_zeuge
 
+/-- Both format precisions share the canonical rounding bridge on the same
+    nonzero executed loop, rather than independent arithmetic-only fixtures. -/
+theorem normalizationSourceRound_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    ∃ m' fuel count distance q r,
+      Star ⟨0, 4294967296⟩ normalizationWitnessMemory
+        ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 13 4 68 8
+        m' fuel count distance q r ∧ 8 ≤ q ∧
+      (∀ p scale : Nat,
+        normQ p ((p : Int)-1-count-scale) (13 * 2^distance)
+          (8 * 2^(distance+4+scale)) =
+        rundeInt (q/8).toNat (2 * (q%8).toNat + if r = 0 then 0 else 1) 16) := by
+  obtain ⟨m', f, c, d, q, r, run, _, head, reached⟩ :=
+    floatNormalizeLoopL_finite_magnitude_zeuge L
+  refine ⟨m', f, c, d, q, r, run, head, reached, ?_⟩
+  intro p scale
+  exact head.normQ_source_guard p scale
+
+#print axioms normalizationSourceRound_zeuge
+
 end Gabbro.Stage0.Senke.AddSubProbe
