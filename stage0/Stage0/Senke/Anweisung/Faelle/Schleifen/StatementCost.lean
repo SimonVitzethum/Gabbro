@@ -1774,6 +1774,66 @@ theorem EndCost.result_status {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     exact ih post
   | branch condition jumpFits child ih => exact ih post
 
+/-- Removing a bound local retains every canonical exit, including pending stops. -/
+theorem CountedSim.shrink {P : Programm D} {f : D.Fn} {σ0 : World D}
+    {ρ0 : Env D (D.params f)} {rp cfp fp : W} {l : Bool} {Γ : Ctx} {τ : Ty}
+    {n lo K : Nat} {pr : List Nat} {t : T} {m : Mem} {e eL eN : W}
+    {outcome : Ausgang (vertragVon D f) l (τ :: Γ)}
+    (h : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN outcome reserved) :
+    CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN outcome.schrumpf reserved := by
+  cases outcome with
+  | ok σ ρ | next _ σ ρ | leave _ σ ρ =>
+    obtain ⟨m', run, agree, env, world, keep⟩ := h
+    exact ⟨m', run, agree, envAt_tail env, world, keep⟩
+  | zurueck _ _ | why _ _ | logik _ | hardware _ => exact h
+
+/-- Convert observations at one actual caller endpoint to the canonical simulation.
+    The semantic ensures obligation is explicit; an instruction-level true flag
+    alone does not establish the source postcondition. -/
+theorem EndCost.post_countedSim
+    {P : Programm D} {f : D.Fn} {l Γ Λ Δ snapshot ens lo b σ ρ budget}
+    (certificate : EndCost L reserved (vertragVon D f) l Δ snapshot ens lo
+      (Γ := Γ) (Λ := Λ) b σ ρ budget)
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {k K : Nat}
+    {fp rp cfp e eL eN : W} {pr : List Nat} {t : T} {m m' : Mem}
+    (run : Counted k t m ⟨rp, cfp⟩ m')
+    (agree : AgreeW L fp 2 K m m')
+    (world : WeltAt m' L σ)
+    (post : certificate.Post fp m')
+    (base : lo = FB + (D.params f).length)
+    (ensures : ∀ σ' v, certificate.outcome = .zurueck σ' v →
+      wahr? (eval σ0 (P.ensures f)
+        (σ'.lese (vertragVon D f).ende (P.ensures f).orte)
+        (ergEnv (D.erg f) v ρ0)) ≠ false) :
+    CountedSim k L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN
+      certificate.outcome reserved := by
+  induction certificate with
+  | reason =>
+    exact ⟨m', run, agree, post.2, by simpa [ReturnFlag, base] using post.1, world⟩
+  | @normal Γ Λ τ e σ ρ v ne nq Ξ q typed proof value cost lower =>
+    simp only [CountedSim, EndCost.outcome, CountedRetZ]
+    rw [if_neg (ensures _ _ rfl)]
+    obtain ⟨w, read, enc, flag⟩ := post
+    refine ⟨m', run, agree, ⟨w, read, ?_, ?_⟩, world⟩
+    · change EncErg L (vertragVon D f).erg (typed.symm ▸ v) w
+      have cast : ∀ {rt : Option Ty} (h : rt = some τ),
+          EncErg L rt (h.symm ▸ v) w := by
+        intro rt h
+        cases h
+        exact enc
+      exact cast typed
+    · simpa [ReturnFlag, base] using flag
+  | assign value tail ih => exact ih world post ensures
+  | bind value tail ih =>
+    have child := ih world post (by
+      intro σ' v eq
+      apply ensures σ' v
+      change tail.outcome.schrumpf = _
+      rw [eq]
+      rfl)
+    exact CountedSim.shrink child
+  | branch condition jumpFits child ih => exact ih world post ensures
+
 /-- Structural induction discharges recursive terminal executions. No complete
     body execution or complete body cost is a premise. ABI reads are preserved
     across each prefix by the existing frame agreement theorems. -/
@@ -1943,6 +2003,38 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
         simpa [List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using run2
       exact ⟨m2, by simpa only [Nat.add_assoc] using run, post,
         (agreeW_of (a1.mono (by omega))).trans agree, frame, rpc, rfp, hw⟩
+
+/-- Actual source-derived terminal costs imply the canonical return simulation.
+    This theorem covers the terminal forms admitted by EndCost; pending stops
+    require their own source-derived certificates, not a caller-return premise. -/
+theorem EndCost.terminalCountedSim {P : Programm D} {f : D.Fn} {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {b : Endblock D (vertragVon D f) l Γ Λ} {σ : World D} {ρ : Env D Γ} {n : Nat}
+    (certificate : EndCost L reserved (vertragVon D f) l Δ snapshot ens lo b σ ρ n)
+    {passes K Ks top : Nat} {A : D.Fn → Nat}
+    {pr : List Nat} {ex : Int × Int} {code : List II}
+    {m : Mem} {pc fp rp cfp : W}
+    (lower : lowEnd (reserved := reserved) passes A L lo ens pr ex b = some (code, top))
+    (fits : top ≤ Ks) (inside : WIn L fp Ks K)
+    (low : lo ≤ frei Γ reserved) (abi : 3 < lo) (lowBound : lo ≤ K)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (world : WeltAt m L σ)
+    (parameters : Env D Δ) (parameterEnv : EnvAt L m fp parameters)
+    (base : lo = frei Δ)
+    (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
+    (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp)
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {e eL eN : W}
+    (abiBase : lo = FB + (D.params f).length)
+    (ensures : ∀ σ' v, certificate.outcome = .zurueck σ' v →
+      wahr? (eval σ0 (P.ensures f)
+        (σ'.lese (vertragVon D f).ende (P.ensures f).orte)
+        (ergEnv (D.erg f) v ρ0)) ≠ false) :
+    CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m e eL eN
+      certificate.outcome reserved := by
+  obtain ⟨m', run, post, agree, frame, rpc, rfp, hw⟩ :=
+    certificate.sound lower fits inside low abi lowBound hprotected pre world
+      parameters parameterEnv base entry savedPC savedFP
+  exact certificate.post_countedSim run agree hw post abiBase ensures
 
 namespace EndCostProbe
 open FnptrProben
@@ -2221,9 +2313,14 @@ def memory : Mem :=
   write (write (write (write (write base 4096 8 2048) 4104 8 16384) 4112 8 1) 8192 8 64) 4128 8 37
 
 /-- The full lowered function has a nonzero result and distinct caller header. -/
-theorem lowFun_counted_zeuge :
+theorem terminalCountedSim_zeuge :
     ∃ n m', n ≤ 12 ∧ Counted n ⟨0, 4096⟩ memory ⟨2048, 16384⟩ m' ∧
-      FrameOK m' 4096 256 ∧ WeltAt m' layout world := by
+      FrameOK m' 4096 256 ∧ WeltAt m' layout world ∧
+      CountedSim n layout program 0 world
+        (Env.cons (τ := .int 37 37) ⟨37, by decide, by decide⟩ Env.nil)
+        2048 16384 4096 5 256 [] ⟨0, 4096⟩ memory 0 0 0
+        (Ausgang.zurueck (l := false) (Γ := [.int 37 37]) world
+          (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))) 3 := by
   have lower : lowFun 2 program addresses layout 0 = some (image, 14) := by decide +kernel
   have code : CodeAt memory 0 image := by
     have h : ∀ k : Fin image.length,
@@ -2283,8 +2380,27 @@ theorem lowFun_counted_zeuge :
       decide +kernel)
     (by
       decide)
-  obtain ⟨n, mout, bound, run, post, _agree, frame, rpc, rfp, hw⟩ := joint
-  exact ⟨n, mout, bound, run, frame, hw⟩
+  obtain ⟨n, mout, bound, run, post, agree, frame, rpc, rfp, hw⟩ := joint
+  obtain ⟨ens, hens, snapshot, post⟩ := post
+  have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+  subst ens
+  let cert : EndCost layout 3 (vertragVon fixtureDecl 0) false [.int 37 37]
+      snapshot ([ci 1 6 1 0], 7) 5 (program.rumpf 0) world
+      (Env.cons (τ := .int 37 37) ⟨37, by decide, by decide⟩ Env.nil) 6 :=
+    .normal (τ := .int 37 37) (v := ⟨37, by decide, by decide⟩)
+      (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
+  have sim := cert.post_countedSim (P := program) (f := 0)
+    (σ0 := world) (ρ0 := Env.cons (τ := .int 37 37) ⟨37, by decide, by decide⟩ Env.nil)
+    (pr := []) (e := 0) (eL := 0) (eN := 0) run agree hw
+    (by exact post) rfl (by intros; change true ≠ false; decide)
+  exact ⟨n, mout, bound, run, frame, hw, sim⟩
+
+/-- The original execution projection is derived from the joint ABI witness. -/
+theorem lowFun_counted_zeuge :
+    ∃ n m', n ≤ 12 ∧ Counted n ⟨0, 4096⟩ memory ⟨2048, 16384⟩ m' ∧
+      FrameOK m' 4096 256 ∧ WeltAt m' layout world := by
+  obtain ⟨n, m', bound, run, frame, world, sim⟩ := terminalCountedSim_zeuge
+  exact ⟨n, m', bound, run, frame, world⟩
 end FullFunProbe
 
 
@@ -3159,19 +3275,6 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
     (agreeW_of entryAgree).trans
       ((agreeW_sub pre.frame.lt (by omega) calleeAgree).mono (by omega))
   exact ⟨nCall, m2, boundCall, entryRun.trans callRun, agree, hw, resultRead⟩
-
-/-- Removing a bound local retains every canonical exit, including pending stops. -/
-theorem CountedSim.shrink {P : Programm D} {f : D.Fn} {σ0 : World D}
-    {ρ0 : Env D (D.params f)} {rp cfp fp : W} {l : Bool} {Γ : Ctx} {τ : Ty}
-    {n lo K : Nat} {pr : List Nat} {t : T} {m : Mem} {e eL eN : W}
-    {outcome : Ausgang (vertragVon D f) l (τ :: Γ)}
-    (h : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN outcome reserved) :
-    CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN outcome.schrumpf reserved := by
-  cases outcome with
-  | ok σ ρ | next _ σ ρ | leave _ σ ρ =>
-    obtain ⟨m', run, agree, env, world, keep⟩ := h
-    exact ⟨m', run, agree, envAt_tail env, world, keep⟩
-  | zurueck _ _ | why _ _ | logik _ | hardware _ => exact h
 
 /-- Accepted next/leave lowering executes one jump, preserving the same
     source world, environment and protected cells at its actual exit ABI. -/
