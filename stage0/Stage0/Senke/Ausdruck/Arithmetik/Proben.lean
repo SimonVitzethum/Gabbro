@@ -554,4 +554,76 @@ theorem floatNormalizeLoopL_reaches_target_zeuge [Kern] {D : Deklaration} (L : L
 #print axioms normalizationLoopHead_zeuge
 #print axioms floatNormalizeLoopL_from_numerator_zeuge
 
+/-- Cancellation exercises the same actual loop and reserved frame as the
+    nonzero fixture; only the exact-tail input word is changed to zero. -/
+theorem floatNormalizeLoopL_finite_magnitude_zero_zeuge [Kern]
+    {D : Deklaration} (L : Lay D) :
+    ∃ m m' fuel count distance,
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 0 4 68 8
+        m 68 0 4 0 0 ∧
+      Star ⟨0, 4294967296⟩ m
+        ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
+      Agree 4294967296 16 64 m m' ∧
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 0 4 68 8
+        m' fuel count distance 0 0 := by
+  have h := normalizationLoopHead_zeuge L
+  let m := Runner.Mem.write normalizationWitnessMemory
+    (Runner.IR.slot 4294967296 (BitVec.ofNat 64 17)) 8 0
+  have ag : Agree 4294967296 17 64 normalizationWitnessMemory m :=
+    agree_write h.pre.frame.room (by decide) (by decide) 0
+  have pre : Pre L m 0 4294967296 64 16 normalizationWitnessCode
+      (Env.nil : Env D []) (fun _ => True) 7 :=
+    ⟨h.pre.ctx, h.pre.small, h.pre.frame.agree ag,
+      h.pre.code.agree ag h.pre.far, h.pre.far,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  have kept (i : Nat) (hi : i < 64) (hne : 17 ≠ i) :
+      m.rd64 (Runner.IR.slot 4294967296 (BitVec.ofNat 64 i)) =
+        normalizationWitnessMemory.rd64 (Runner.IR.slot 4294967296 (BitVec.ofNat 64 i)) :=
+    rd_other h.pre.frame.room (by decide) hi hne 0
+  have head : FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+      0 4294967296 64 16 7 normalizationWitnessCode 0 4 68 8
+      m 68 0 4 0 0 := by
+    apply FloatNormalizeHead.of_numerator 0 4 68 (by decide) (by decide)
+      (by decide) (by decide) pre (by decide)
+    · rw [kept 16 (by decide) (by decide)]; exact h.readQ
+    · exact rd_same h.pre.frame (by decide) 0
+    · rw [kept 18 (by decide) (by decide)]; exact h.readDistance
+    · rw [kept 19 (by decide) (by decide)]; exact h.readTarget
+    · rw [kept 20 (by decide) (by decide)]; exact h.readFuel
+    · rw [kept 21 (by decide) (by decide)]; exact h.readCount
+  have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
+      ((floatNormalizeLoopL 16).getD ([], 0)).2) := by decide +kernel
+  obtain ⟨last, f, c, d, q, r, run, agree, finalHead, cases, _⟩ :=
+    floatNormalizeLoopL_finite_magnitude hc (by decide +kernel) head
+      (by decide) 3 (by decide) (by decide)
+  have zeros := finalHead.zero_words
+  obtain ⟨rfl, rfl⟩ := zeros
+  exact ⟨m, last, f, c, d, head, run, agree, finalHead⟩
+
+#print axioms floatNormalizeLoopL_finite_magnitude_zero_zeuge
+
+/-- The same total theorem also has a nonzero exact-tail execution witness. -/
+theorem floatNormalizeLoopL_finite_magnitude_zeuge [Kern]
+    {D : Deklaration} (L : Lay D) :
+    ∃ m' fuel count distance q r,
+      Star ⟨0, 4294967296⟩ normalizationWitnessMemory
+        ⟨BitVec.ofNat 64 (16*normalizationWitnessCode.length), 4294967296⟩ m' ∧
+      Agree 4294967296 16 64 normalizationWitnessMemory m' ∧
+      FloatNormalizeHead L (Env.nil : Env D []) (fun _ => True)
+        0 4294967296 64 16 7 normalizationWitnessCode 13 4 68 8
+        m' fuel count distance q r ∧ 8 ≤ q := by
+  have hc : floatNormalizeLoopL 16 = some (normalizationWitnessCode,
+      ((floatNormalizeLoopL 16).getD ([], 0)).2) := by decide +kernel
+  obtain ⟨last, f, c, d, q, r, run, agree, finalHead, cases, _⟩ :=
+    floatNormalizeLoopL_finite_magnitude hc (by decide +kernel)
+      (normalizationLoopHead_zeuge L) (by decide) 3 (by decide) (by decide)
+  refine ⟨last, f, c, d, q, r, run, agree, finalHead, ?_⟩
+  rcases cases with zero | positive
+  · omega
+  · exact positive.2
+
+#print axioms floatNormalizeLoopL_finite_magnitude_zeuge
+
 end Gabbro.Stage0.Senke.AddSubProbe

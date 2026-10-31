@@ -2619,5 +2619,61 @@ theorem floatNormalizeLoopL_reaches_target
 
 #print axioms floatNormalizeLoopL_complete
 
+/-- Zero is a genuine canonical loop input. Exact reconstruction forces both
+    output words to remain zero at every reachable head, even when the target
+    is positive and the loop consumes its entire fuel. -/
+theorem FloatNormalizeHead.zero_words
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code 0
+      originDistance budget target m fuel count distance q r) :
+    q = 0 ∧ r = 0 := by
+  have po : (0 : Int) < 2^originDistance := Int.pow_pos (by decide)
+  have pd : (0 : Int) < 2^distance := Int.pow_pos (by decide)
+  have reconstruction := head.reconstruction
+  simp only [Int.zero_mul] at reconstruction
+  have hq := head.quotient.1
+  have hr := head.remainder.1
+  have product := mul_nonneg hq (le_of_lt pd)
+  have sum : q * 2^distance + r = 0 := by nlinarith
+  constructor <;> nlinarith
+
+/-- A sufficient precision budget gives a total finite-magnitude conclusion:
+    either exact cancellation returns two zero words, or the positive
+    magnitude reaches the target. No positive-input assumption hides zero. -/
+theorem floatNormalizeLoopL_finite_magnitude
+    (hc : floatNormalizeLoopL base = some (code, top)) (room : top ≤ K)
+    {m : Runner.Mem} {fuel distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel 0 distance q r)
+    (nonnegative : 0 ≤ origin)
+    (precision : Nat) (targetFits : target ≤ 2^precision)
+    (sufficient : originDistance + precision ≤ budget) :
+    ∃ m' fuel' count' distance' q' r',
+      Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16*code.length), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel' count' distance' q' r' ∧
+      ((origin = 0 ∧ q' = 0 ∧ r' = 0) ∨ (0 < origin ∧ target ≤ q')) ∧
+      count' ≤ budget ∧
+      (origin * 2^(count'+distance')) / (2^(distance'+originDistance) : Int) = q' ∧
+      (origin * 2^(count'+distance')) % (2^(distance'+originDistance) : Int) =
+        r' * 2^originDistance := by
+  obtain ⟨m', f, c, d, a, b, run, agree, finalHead, stop, bound, exactQ, exactR⟩ :=
+    floatNormalizeLoopL_complete hc room head
+  refine ⟨m', f, c, d, a, b, run, agree, finalHead, ?_, bound, exactQ, exactR⟩
+  by_cases zero : origin = 0
+  · subst origin
+    exact Or.inl ⟨rfl, finalHead.zero_words⟩
+  · have positive : 0 < origin := by omega
+    refine Or.inr ⟨positive, ?_⟩
+    by_contra active
+    have small := finalHead.active_count_bound precision targetFits positive (by omega)
+    have exhausted : f = 0 := stop.resolve_right (by omega)
+    have := finalHead.conservedBudget
+    omega
+
+#print axioms FloatNormalizeHead.zero_words
+#print axioms floatNormalizeLoopL_finite_magnitude
+
 end
 end Gabbro.Stage0.Senke
