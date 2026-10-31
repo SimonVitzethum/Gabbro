@@ -1401,6 +1401,104 @@ def finiteAddRemainingValue (F : Gleitkomma.Format) (a b : Runner.W) (i : Nat) :
     (1 - Runner.IR.bool (e == 0)) * BitVec.ofNat 64 (2^F.fracBits)) * 8
 
 omit [Kern] in
+/-- Exact canonical decoder values retain the exponent/significand correlation
+    needed by unequal-exponent subtraction after the actual SORT. -/
+theorem finiteAddRemainingValue_canonical (F : Gleitkomma.Format)
+    (dense : F.dicht) (width : F.ebits + F.fracBits + 1 ≤ 64)
+    (precision : F.fracBits ≤ 52) (exponents : 1 < F.bexpMax)
+    (a b : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a)
+    (hb : Gleitkomma.wf F b)
+    (fa : a.bexp ≠ F.bexpMax) (fb : b.bexp ≠ F.bexpMax)
+    (i : Nat) (hi : i < 4) :
+    let x := if i % 2 = 0 then a else b
+    (finiteAddRemainingValue F
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F b)) i).toNat =
+      if i < 2 then max x.bexp 1
+      else 8 * (x.frac + if x.bexp = 0 then 0 else 2^F.fracBits) := by
+  have one (x : Gleitkomma.GBits F) (hx : Gleitkomma.wf F x)
+      (fx : x.bexp ≠ F.bexpMax) :
+      let w := BitVec.ofNat 64 (Gleitkomma.zuBits F x)
+      let e := floatFieldWord w F.fracBits F.ebits
+      let f := floatFieldWord w 0 F.fracBits
+      (e + Runner.IR.bool (e == 0)).toNat = max x.bexp 1 ∧
+      ((f + (1 - Runner.IR.bool (e == 0)) *
+        BitVec.ofNat 64 (2^F.fracBits)) * 8).toNat =
+        8 * (x.frac + if x.bexp = 0 then 0 else 2^F.fracBits) := by
+    obtain ⟨fraction, exponent⟩ := floatFieldWord_canonical F dense width x hx
+    have bounds := floatFiniteAdd_input_bounds F dense width precision exponents x hx fx
+    dsimp only at bounds ⊢
+    rw [fraction, exponent] at bounds
+    have cap : (2 : Nat)^F.fracBits < 2^64 :=
+      lt_of_le_of_lt (Nat.pow_le_pow_right (by decide) precision) (by decide)
+    have ecap : x.bexp < 2^64 := by
+      have := (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F x))
+        F.fracBits F.ebits).isLt
+      rw [exponent] at this
+      exact this
+    have fcap : x.frac < 2^64 := lt_trans hx.2 cap
+    have ez : (floatFieldWord (BitVec.ofNat 64 (Gleitkomma.zuBits F x))
+        F.fracBits F.ebits == 0#64) = decide (x.bexp = 0) := by
+      apply Bool.eq_iff_iff.mpr
+      simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
+        exponent, BitVec.toNat_zero]
+    simp only [BitVec.ofNat_eq_ofNat]
+    rw [ez]
+    norm_num only at cap ecap fcap
+    by_cases hz : x.bexp = 0 <;>
+      simp only [hz, ↓reduceIte] at bounds <;>
+      simp only [hz, decide_true, decide_false, Runner.IR.bool, ↓reduceIte,
+        Bool.false_eq_true, BitVec.ofNat_eq_ofNat, BitVec.sub_self,
+        BitVec.sub_zero, BitVec.zero_mul, BitVec.one_mul, BitVec.add_zero,
+        BitVec.toNat_mul, BitVec.toNat_add, BitVec.toNat_ofNat,
+        fraction, exponent] <;>
+      norm_num only [BitVec.toNat_ofNat] <;>
+      (try simp only [Nat.mod_eq_of_lt cap]) <;> omega
+  have aa := one a ha fa
+  have bb := one b hb fb
+  interval_cases i <;> simp_all [finiteAddRemainingValue]
+
+#print axioms finiteAddRemainingValue_canonical
+
+omit [Kern] in
+/-- Unequal exponents and nonzero fractions jointly witness the decoder
+    correlation in both supported precisions, including a subnormal operand. -/
+theorem finiteAddRemainingValue_canonical_zeuge :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+      let a : Gleitkomma.GBits F := ⟨false,2,1⟩
+      let b : Gleitkomma.GBits F := ⟨true,0,2^F.fracBits-1⟩
+      Gleitkomma.wf F a ∧ Gleitkomma.wf F b ∧
+      a.bexp ≠ F.bexpMax ∧ b.bexp ≠ F.bexpMax ∧
+      ∀ i, i < 4 →
+        let x := if i % 2 = 0 then a else b
+        (finiteAddRemainingValue F
+          (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+          (BitVec.ofNat 64 (Gleitkomma.zuBits F b)) i).toNat =
+            if i < 2 then max x.bexp 1
+            else 8*(x.frac + if x.bexp = 0 then 0 else 2^F.fracBits) := by
+  intro F member
+  have format : F = Gleitkomma.f32 ∨ F = Gleitkomma.f64 := by simpa using member
+  have dense : F.dicht := by
+    rcases format with rfl | rfl
+    · exact Gleitkomma.f32_dicht
+    · exact Gleitkomma.f64_dicht
+  have width : F.ebits + F.fracBits + 1 ≤ 64 := by
+    rcases format with rfl | rfl <;> decide +kernel
+  have precision : F.fracBits ≤ 52 := by rcases format with rfl | rfl <;> decide +kernel
+  have exponents : 1 < F.bexpMax := by rcases format with rfl | rfl <;> decide +kernel
+  have ha : Gleitkomma.wf F ⟨false,2,1⟩ := by
+    rcases format with rfl | rfl <;> decide +kernel
+  have hb : Gleitkomma.wf F ⟨true,0,2^F.fracBits-1⟩ := by
+    rcases format with rfl | rfl <;> decide +kernel
+  have fa : 2 ≠ F.bexpMax := by rcases format with rfl | rfl <;> decide +kernel
+  have fb : 0 ≠ F.bexpMax := by omega
+  exact ⟨ha,hb,fa,fb,fun i hi =>
+    finiteAddRemainingValue_canonical F dense width precision exponents
+      ⟨false,2,1⟩ ⟨true,0,2^F.fracBits-1⟩ ha hb fa fb i hi⟩
+
+#print axioms finiteAddRemainingValue_canonical_zeuge
+
+omit [Kern] in
 /-- Bounds transfer through the literal decoder arithmetic without word wrap. -/
 theorem finiteAddRemainingValue_bounds (F : Gleitkomma.Format)
     (dense : F.dicht) (width : F.ebits + F.fracBits + 1 ≤ 64)
@@ -1482,6 +1580,125 @@ theorem finiteAddRemainingValue_bounds_zeuge :
 #print axioms finiteAddRemainingValue_bounds_zeuge
 
 #print axioms finiteAddRemainingValue_bounds
+
+omit [Kern] in
+/-- A strictly larger decoded exponent supplies a normal significand. Even
+    half of the smaller significand plus a sticky increment is strictly smaller.
+    This is derived from encoded operands, including subnormal smaller inputs. -/
+theorem finiteAddRemainingValue_unequal (F : Gleitkomma.Format)
+    (dense : F.dicht) (width : F.ebits + F.fracBits + 1 ≤ 64)
+    (precision : F.fracBits ≤ 52) (exponents : 1 < F.bexpMax)
+    (a b : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a)
+    (hb : Gleitkomma.wf F b)
+    (fa : a.bexp ≠ F.bexpMax) (fb : b.bexp ≠ F.bexpMax) :
+    let v := finiteAddRemainingValue F
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F b))
+    (v 1).toNat < (v 0).toNat → (v 3).toNat / 2 + 1 < (v 2).toNat := by
+  dsimp only
+  have eqs := finiteAddRemainingValue_canonical F dense width precision exponents
+    a b ha hb fa fb
+  have e0 := eqs 0 (by decide)
+  have e1 := eqs 1 (by decide)
+  have m0 := eqs 2 (by decide)
+  have m1 := eqs 3 (by decide)
+  norm_num only [Nat.reduceMod, Nat.reduceLT, Nat.reduceEqDiff, ↓reduceIte] at e0 e1 m0 m1
+  rw [e0,e1,m0,m1]
+  intro order
+  have normal : a.bexp ≠ 0 := by omega
+  have af := ha.2
+  have bf := hb.2
+  simp only [normal, ↓reduceIte]
+  split <;> omega
+
+#print axioms finiteAddRemainingValue_unequal
+
+omit [Kern] in
+/-- Saturating alignment by a positive distance is bounded by half the input
+    plus one sticky increment, with no premise about the discarded remainder. -/
+theorem floatShiftJamWord_half_bound (a k : Runner.W) (positive : 0 < k.toNat) :
+    (floatShiftJamWord a k).toNat ≤ a.toNat / 2 + 1 := by
+  unfold floatShiftJamWord
+  rw [BitVec.toNat_or, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+  let b := (Runner.IR.bool (!(a == ((a >>> k.toNat) <<< k.toNat)))).toNat
+  change (a.toNat / 2^k.toNat ||| b) ≤ a.toNat / 2 + 1
+  have bit : b ≤ 1 := by
+    dsimp only [b]
+    unfold Runner.IR.bool
+    split <;> decide
+  have halves : (a.toNat / 2^k.toNat ||| b) / 2 = (a.toNat / 2^k.toNat) / 2 := by
+    rw [Nat.or_div_two, show b / 2 = 0 by omega, Nat.or_zero]
+  have rem := Nat.mod_lt (a.toNat / 2^k.toNat ||| b) (by decide : 0 < 2)
+  have division := Nat.mod_add_div (a.toNat / 2^k.toNat ||| b) 2
+  have denominator : 2 ≤ 2^k.toNat := by
+    have := Nat.pow_le_pow_right (by decide : 1 ≤ 2) positive
+    simpa using this
+  have quotient := Nat.div_le_div_left (a := a.toNat) denominator (by decide)
+  omega
+
+#print axioms floatShiftJamWord_half_bound
+omit [Kern] in
+/-- Actual decoded word subtraction at unequal exponents is positive after
+    saturating SHIFTJAM; no NONZERO or result-invariant premise is needed. -/
+theorem finiteAddRemainingValue_unequal_positive (F : Gleitkomma.Format)
+    (dense : F.dicht) (width : F.ebits + F.fracBits + 1 ≤ 64)
+    (precision : F.fracBits ≤ 52) (exponents : 1 < F.bexpMax)
+    (a b : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a)
+    (hb : Gleitkomma.wf F b)
+    (fa : a.bexp ≠ F.bexpMax) (fb : b.bexp ≠ F.bexpMax) :
+    let v := finiteAddRemainingValue F
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits F b))
+    (v 1).toNat < (v 0).toNat →
+      0 < (v 2 - floatShiftJamWord (v 3) (v 0-v 1)).toInt := by
+  dsimp only
+  let v := finiteAddRemainingValue F
+    (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+    (BitVec.ofNat 64 (Gleitkomma.zuBits F b))
+  change (v 1).toNat < (v 0).toNat →
+    0 < (v 2 - floatShiftJamWord (v 3) (v 0-v 1)).toInt
+  intro order
+  have delta : 0 < (v 0-v 1).toNat := by
+    rw [BitVec.toNat_sub_of_le (by simpa only [BitVec.le_def] using Nat.le_of_lt order)]
+    omega
+  have half := floatShiftJamWord_half_bound (v 3) (v 0-v 1) delta
+  have gap := finiteAddRemainingValue_unequal F dense width precision exponents
+    a b ha hb fa fb order
+  change (v 3).toNat / 2 + 1 < (v 2).toNat at gap
+  have bound := finiteAddRemainingValue_bounds F dense width precision exponents
+    a b ha hb fa fb 2 (by decide)
+  change (v 2).toNat < 2^56 at bound
+  have qint : (v 2).toInt = ((v 2).toNat : Int) :=
+    BitVec.toInt_eq_toNat_of_lt (by omega)
+  have jint : (floatShiftJamWord (v 3) (v 0-v 1)).toInt =
+      ((floatShiftJamWord (v 3) (v 0-v 1)).toNat : Int) :=
+    BitVec.toInt_eq_toNat_of_lt (by omega)
+  rw [BitVec.toInt_sub, qint, jint, Int.bmod_eq_of_le (by omega) (by omega)]
+  omega
+
+#print axioms finiteAddRemainingValue_unequal_positive
+
+omit [Kern] in
+/-- Both precisions jointly realize strict SORT order, opposite signs, a
+    subnormal smaller input, nonzero discarded bits, and positive subtraction. -/
+theorem finiteAddRemainingValue_unequal_positive_zeuge :
+    ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64],
+      let a : Gleitkomma.GBits F := ⟨false,5,1⟩
+      let b : Gleitkomma.GBits F := ⟨true,0,2^F.fracBits-1⟩
+      let v := finiteAddRemainingValue F
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F a))
+        (BitVec.ofNat 64 (Gleitkomma.zuBits F b))
+      Gleitkomma.wf F a ∧ Gleitkomma.wf F b ∧
+      a.bexp ≠ F.bexpMax ∧ b.bexp ≠ F.bexpMax ∧
+      (v 1).toNat < (v 0).toNat ∧
+      (v 3).toNat % 2^(v 0-v 1).toNat ≠ 0 ∧
+      0 < (v 2 - floatShiftJamWord (v 3) (v 0-v 1)).toInt := by
+  intro F member
+  have format : F = Gleitkomma.f32 ∨ F = Gleitkomma.f64 := by simpa using member
+  rcases format with rfl | rfl <;> decide +kernel
+
+#print axioms finiteAddRemainingValue_unequal_positive_zeuge
+
 
 /-- All four actual decoder expressions are sound in the reconstructed frame. -/
 theorem finiteAddRemaining_sound {Δ : Ctx} (η : Env D Δ)
