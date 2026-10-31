@@ -213,6 +213,26 @@ def fieldImages : List (String × Except String (List Runner.B) × Nat) :=
       (name, FloatArithmeticProbe.wordImage
         (floatFieldL offset width 8 (fun d => some (konstWL 4 input d))) expected, 7))
 
+/-- Scale extraction executes at both format boundaries, independently of
+    the operand sign and including each end of the finite exponent range. -/
+def scaleIndexImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("f32", f32), ("f64", f64)].flatMap fun (name, F) =>
+    [("zero", 0, 0), ("subnormal", 0, 1),
+     ("largest-subnormal", 0, 2^F.fracBits-1),
+     ("normal", 1, 0), ("largest-finite", F.bexpMax-1, 2^F.fracBits-1)].flatMap
+      fun (tag, exp, frac) => [false, true].map fun sign =>
+        let a : GBits F := ⟨sign, exp, frac⟩
+        ("scale-" ++ name ++ "-" ++ tag ++ "-" ++ toString sign,
+          FloatArithmeticProbe.wordImage
+            (floatScaleIndexL F 8 (fun d => some (konstWL 4 (zuBits F a) d)))
+            (max exp 1), 7)
+
+theorem scaleIndexImages_zeuge : scaleIndexImages.length = 20 ∧
+    scaleIndexImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms scaleIndexImages_zeuge
+
 /-- Production coefficient decoding at the normal/subnormal and sign edges. -/
 def coefficientImages : List (String × Except String (List Runner.B) × Nat) :=
   [("coefficient-positive-zero", 0, 0),

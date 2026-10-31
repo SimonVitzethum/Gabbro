@@ -141,6 +141,61 @@ theorem floatFieldL_canonical {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
   rw [hx'] at fe
   exact ⟨ff, fe⟩
 
+/-- Alignment uses exponent one for both subnormals and zero. This is an
+    internal scale index, not a change to the canonical exact value of zero. -/
+def floatScaleIndexL (F : Gleitkomma.Format) (d : Nat)
+    (e : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
+  wordL 3 d (floatFieldL F.fracBits F.ebits d e)
+    (wordL 14 (d+1) (floatFieldL F.fracBits F.ebits (d+1) e)
+      (some ([ci 1 (d+2) 0 0], d+3)))
+
+/-- The emitted scale index is derived entirely from the packed operand.
+    This holds for all well-formed words, hence every finite f32/f64 input,
+    without requiring a caller-supplied exponent or excluding large gaps. -/
+theorem floatScaleIndexL_canonical {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (F : Gleitkomma.Format) (hd : F.dicht)
+    (hw : F.ebits + F.fracBits + 1 ≤ 64)
+    (a : Gleitkomma.GBits F) (ha : Gleitkomma.wf F a)
+    {e : Nat → Option (List II × Nat)}
+    (he : WordCode (L := L) ρ W e (BitVec.ofNat 64 (Gleitkomma.zuBits F a))) :
+    WordCode (L := L) ρ W (fun d => floatScaleIndexL F d e)
+      (BitVec.ofNat 64 (max a.bexp 1)) := by
+  have fe : WordCode (L := L) ρ W (fun d => floatFieldL F.fracBits F.ebits d e)
+      (BitVec.ofNat 64 a.bexp) := (floatFieldL_canonical F hd hw a ha he).2
+  have c0 : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
+  have zero : WordCode (L := L) ρ W _ _ := WordCode.bin fe c0
+    (g := fun a b => some (Runner.IR.bool (a == b)))
+    rfl rfl (by decide : 14 < 256)
+  have sum : WordCode (L := L) ρ W _ _ := WordCode.bin fe zero (g := fun a b => some (a + b))
+    rfl rfl (by decide : 3 < 256)
+  have bound : a.bexp < 2^64 := by
+    have h := ha.1
+    have p := Nat.pow_le_pow_right (by decide : 1 ≤ 2)
+      (show F.ebits ≤ 64 by omega)
+    have dense := hd
+    unfold Gleitkomma.Format.dicht at dense
+    omega
+  have ez : (BitVec.ofNat 64 a.bexp == 0) = decide (a.bexp = 0) := by
+    apply Bool.eq_iff_iff.mpr
+    simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound]
+    simp
+  have result : BitVec.ofNat 64 a.bexp +
+      Runner.IR.bool (BitVec.ofNat 64 a.bexp == 0) =
+      BitVec.ofNat 64 (max a.bexp 1) := by
+    rw [ez]
+    by_cases hz : a.bexp = 0
+    · simp [hz, Runner.IR.bool]
+    · have hpos : 1 ≤ a.bexp := by omega
+      simp [hz, Runner.IR.bool, Nat.max_eq_left hpos]
+  intro fp K d c top h hK m pc hp
+  have out : Ok m pc fp K d c (fun x => x = BitVec.ofNat 64 a.bexp +
+      Runner.IR.bool (BitVec.ofNat 64 a.bexp == 0)) := sum h hK m pc hp
+  rw [result] at out
+  exact out
+
+#print axioms floatScaleIndexL_canonical
+
 omit [Kern] in
 /-- Both supported formats jointly exercise zero, least subnormal, least
     normal and greatest finite inputs through the common decoder. -/
