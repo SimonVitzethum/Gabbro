@@ -598,3 +598,88 @@ theorem nestedForever_next_zeuge [Kern] {D : Deklaration} (L : Lay D)
       (.next ExprCost.truth (.jump rfl true) .zero)
   exact ⟨tree, rfl, tree.structural_bound⟩
 end Gabbro.Stage0.Senke.SourceStopProbe
+
+namespace Gabbro.Stage0.Senke.PositiveInvariantStopProbe
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem FnptrProben
+variable [Kern]
+set_option maxHeartbeats 2000000
+local instance (m : Mem) (pc : W) (o : Nat) (a b c : BitVec 32) :
+    Decidable (InsAt m pc o a b c) :=
+  if h : m.rd8 pc = some (BitVec.ofNat 8 o) ∧ m.rd32 (pc + 4) = some a ∧
+      m.rd32 (pc + 8) = some b ∧ m.rd32 (pc + 12) = some c then
+    .isTrue ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
+def image (positive : Bool) : List II :=
+  foreverCounter 8 9 160 ++ [ci 1 12 (if positive then 1 else 0) 0,
+    ci 19 12 48 0, ci 18 (-64) 0 0, ci 18 64 0 0] ++
+    stopC 104 12 ++ [ci 18 (-144) 0 0] ++ stopC 111 12
+def memory (positive : Bool) : Mem :=
+  let base := write (write callMem (slot 4096 8) 8 2) (slot 4096 9) 8 1
+  { base with b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2256 then
+      (((image positive).flatMap encII)[a.toNat - 2048]?).getD 0 else base.b a }
+theorem joint (positive : Bool) :
+    PreS callLayout (memory positive) 2048 4096 256 12 (image positive)
+      (Env.nil : Env D []) 8 ∧
+    WIn callLayout 4096 128 256 ∧
+    WeltAt (memory positive) callLayout world ∧
+    Umf callLayout addresses (fun _ => []) 2 (memory positive) 4096 128 256 := by
+  have frame : FrameOK (memory positive) 4096 256 :=
+    ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+  have code : CodeAt (memory positive) 2048 (image positive) := by
+    have h : ∀ k : Fin (image positive).length,
+        InsAt (memory positive) (2048 + BitVec.ofNat 64 (16 * k.val))
+          (image positive)[k.val].o (II.f (image positive)[k.val].a)
+          (II.f (image positive)[k.val].b) (II.f (image positive)[k.val].c) := by
+      cases positive <;> apply allFin <;> decide +kernel
+    exact fun k hk => h ⟨k, hk⟩
+  have pre : PreS callLayout (memory positive) 2048 4096 256 12 (image positive)
+      (Env.nil : Env D []) 8 :=
+    ⟨by decide, by decide, frame, code, by cases positive <;> unfold CodeFar image stopC sysC <;> decide +kernel,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  have inside : WIn callLayout 4096 128 256 := by
+    refine ⟨⟨(fun t => nomatch t), fun _ => ⟨by change 8192 ≤ 8192; decide, by change 8192 + 8 ≤ 8200; decide⟩, by decide⟩,
+      ?_, by decide, by decide, by decide⟩
+    constructor
+    · intro c c' hc hc' h
+      cases c with
+      | elem t => nomatch t
+      | glob g => cases c' with
+        | elem t => nomatch t
+        | glob g' => cases g; cases g'; rfl
+    · intro c hc
+      cases c with
+      | elem t => nomatch t
+      | glob _ => rfl
+  have hw : WeltAt (memory positive) callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    cases positive <;> decide +kernel
+  have sync : SyncOK (memory positive) callLayout 4096 128 :=
+    ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+      (fun l => nomatch l), by decide, (fun l => nomatch l),
+      (fun l => nomatch l), (fun l => nomatch l)⟩
+  refine ⟨pre, inside, hw, ?_⟩
+  refine ⟨?_, ?_, by decide, sync, by decide⟩
+  · intro f
+    have far : ∀ f : Fin 3, CodeFar (BitVec.ofNat 64 (addresses f)) 0 4096 256 := by
+      unfold CodeFar
+      apply allFin
+      decide +kernel
+    exact ⟨fun k hk => by simp at hk, far f⟩
+  · cases positive <;> decide +kernel
+
+/-- Positive fuel, false source invariant and a nonempty accepted body coexist
+    on the actual full suffix; execution reaches the pending failure syscall. -/
+theorem forever_positive_invariant_stop_counted_zeuge (P : Programm D) :
+    CountedStops 6 ⟨2048, 4096⟩ (memory false) 104 := by
+  obtain ⟨pre, inside, hw, around⟩ := joint false
+  exact forever_positive_invariant_stop_counted
+    (P := P) (f := 2) (passes := 1) (A := addresses) (C := fun _ => []) (dv := 2)
+    (reserved := 8) (inv := .fls) (body := LoopJumpCostProbe.body true)
+    (fuel := 1) (ni := 1) (lo := 4) (counter := 8) (one := 9)
+    (ens := ([], 6)) (pr := []) (cc := [ci 1 12 0 0]) (cb := [ci 18 (-64) 0 0])
+    (tc := 13) (tb := 12) ExprCost.falsity rfl (by decide +kernel)
+    (by decide) (by decide) inside (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by intros; contradiction) (by decide)
+    (by decide) pre around hw (by decide +kernel) (by decide +kernel) (by decide)
+end Gabbro.Stage0.Senke.PositiveInvariantStopProbe
