@@ -109,7 +109,7 @@ theorem shrBit_word (X r j : Nat) (hr : r < 64) (rw' o w : Runner.W) (hrw : rw'.
   have h3 : w.toNat % 64 = 63 - r := by omega
   rw [h1, h2, h3]
   simp only [BitVec.toNat_or, BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight, Nat.testBit_or,
-    Nat.testBit_mod_two_pow, Nat.testBit_shiftLeft, Nat.testBit_shiftRight, lmb_testBit,
+    Nat.testBit_mod_two_pow, Nat.testBit_shiftLeft, lmb_testBit,
     Nat.shiftRight_eq_div_pow, Nat.testBit_div_two_pow]
   have e1 : r + i + 64 * j = i + 64 * j + r := by omega
   have e1' : i + r + 64 * j = i + 64 * j + r := by omega
@@ -117,14 +117,14 @@ theorem shrBit_word (X r j : Nat) (hr : r < 64) (rw' o w : Runner.W) (hrw : rw'.
   · by_cases h5 : r + i < 64
     · have h5' : i + r < 64 := by omega
       have h6 : ¬ (1 ≤ i - (63 - r)) := by omega
-      simp [h4, h5, h5', h6, e1, e1']
+      simp [h4, h5', h6, e1']
     · have h5' : ¬ (i + r < 64) := by omega
       have e2 : i - (63 - r) - 1 + 64 * (j + 1) = i + 64 * j + r := by omega
       have h6 : i ≥ 63 - r := by omega
       have h7 : i - (63 - r) < 64 := by omega
       have h8 : 1 ≤ i - (63 - r) := by omega
       have h9 : i - (63 - r) - 1 < 64 := by omega
-      simp [h4, h5, h5', h6, h7, h8, h9, e2]
+      simp [h4, h5', h6, h7, h8, h9, e2]
   · have h5' : ¬ (i + r < 64) := by omega
     simp [h4, h5']
 

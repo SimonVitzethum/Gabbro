@@ -45,7 +45,7 @@ theorem mask_word (q idx : Nat) (hq : q < 2 ^ 64) (hidx : idx < 64) :
       rw [h] at hb
       have := of_decide_eq_true hb.symm
       omega
-    · simp only [h, Bool.false_eq_true, ↓reduceIte, BitVec.toNat_ofNat]
+    · simp only [h, Bool.false_eq_true, ↓reduceIte]
       simp only [Bool.not_eq_true] at h
       rw [h] at hb
       have := of_decide_eq_false hb.symm

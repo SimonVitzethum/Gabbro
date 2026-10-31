@@ -55,7 +55,7 @@ theorem selP_run (src M T a j : Nat) (h1 : T ≠ a + j) (h3 : T ≠ M) (s : Nat 
         (s (a + j) ^^^ ((s (a + j) ^^^ s src) &&& s M)) := by
     funext i
     simp only [selP, aluRun_cons, aluRun_nil, aluStep_xor, aluStep_and, slotUpd]
-    by_cases hi1 : i = a + j <;> by_cases hi2 : i = T <;> simp [hi1, hi2, h1, h1.symm, h3, Ne.symm h3]
+    by_cases hi1 : i = a + j <;> by_cases hi2 : i = T <;> simp [hi1, hi2, h1, h1.symm, Ne.symm h3]
   rw [e]
   refine ⟨?_, fun i hi1 hi2 => ?_⟩
   · simp [slotUpd]
@@ -87,8 +87,7 @@ theorem bitP_run (oM oX : Nat) (fM fX : Runner.W → Runner.W → Runner.W)
     funext i
     simp only [bitP, aluRun_cons, aluRun_nil, aluStep_cn hM hM1 hM2, aluStep_cn hX hX1 hX2, aluStep_or, slotUpd]
     by_cases hi1 : i = a + j <;> by_cases hi2 : i = T <;> by_cases hi3 : i = T2 <;>
-      simp [hi1, hi2, hi3, hT, hT.symm, hT2, hT2.symm, hTT, hTT.symm, hs1, hs2, hr1, hr2, ho1, ho2, hw1, hw2,
-        Ne.symm hs1, Ne.symm hs2, Ne.symm hr1, Ne.symm hr2, Ne.symm ho1, Ne.symm ho2, Ne.symm hw1, Ne.symm hw2]
+      simp [hi1, hi2, hi3, hT, hT2, hTT, Ne.symm hs1, Ne.symm ho1, Ne.symm hw1, Ne.symm hw2]
   rw [e]
   refine ⟨?_, fun i hi1 hi2 hi3 => ?_⟩
   · simp [slotUpd]

@@ -147,7 +147,7 @@ theorem dvStep_value (k a c y xv rv : Nat) (hk : 1 ≤ k) (hc : c = a + 4 * k + 
       omega
     · have hg0 : g = 0 := by rw [hg]; simp [hy']
       have h0 : ¬ (0 : Int) ≤ ((rv * 2 + b : Nat) : Int) - (y : Int) := fun h => hy' (hge.mp h)
-      simp [h0, hg0]
+      simp [hg0]
       omega
   obtain ⟨z1, z2⟩ := shl1C_limbs a k (a + 4 * k + 10 + 1) (a + 4 * k + 10 + 2) (a + 4 * k + 10 + 4)
     (a + 4 * k + 10 + 6) (a + 4 * k + 10 + 7) (by omega) xv g hg2 s6

@@ -70,7 +70,7 @@ theorem shl1P_run (p O W TB TA TB2 j : Nat) (hT1 : TA ≠ p + j) (hT2 : TB2 ≠ 
       simp only [shl1P, ite_true, aluRun_cons, aluRun_nil, aluStep_shl, aluStep_or, slotUpd]
       have hT1' : TA ≠ p := by simpa using hT1
       by_cases h1 : i = p <;> by_cases h2 : i = TA <;>
-        simp [h1, h2, hT1', Ne.symm hT1', htb, Ne.symm htb]
+        simp [h1, h2, hT1', Ne.symm htb]
     rw [e]
     refine ⟨?_, fun i h1 h2 h3 => ?_⟩
     · simp [slotUpd, shl1F]
