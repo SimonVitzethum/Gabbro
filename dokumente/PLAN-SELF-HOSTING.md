@@ -245,8 +245,12 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   binding, environment updates, world preservation and protected slots. Its loaded
   nonempty body witness discharges all simulation premises jointly. The terminal
   `lowEnd .cons` composition also retains counts through a returning/stopping child.
-  These are partial constructors, not a general statement-body certificate: world
-  stores, calls, branch outcomes and nested loops still require recursive cost rules.
+  Global stores now compose value-expression cost, the actual address constant and
+  the actual store opcode; the recursive tail receives the updated world. A loaded
+  three-instruction witness changes a global function pointer. Other world-store
+  forms, calls, branch outcomes and nested loops still require recursive cost rules.
+  These instruction counts use the existing canonical `Kern` semantics; source
+  passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
   body/callee, header, backedge and exit bounds must be connected to the lowering
   simulation and then related to the source budget. `forever_runtime` alone proves
