@@ -33,4 +33,50 @@ def floatNormalizeLoopL (base : Nat) : Option (List II × Nat) := do
   pure (head ++ large ++ [ci 18 (16 * (1 + small.length)) 0 0] ++ small ++ tail,
     max cq.2 cr.2)
 
+/-- The large-distance instructions double the quotient and decrement the
+    denominator distance without touching the remainder. Reconstruction is
+    exact, but canonicality requires a bound at the *new* distance. -/
+theorem floatNormalizeLoop_large_reconstruct (q r : Int) (k : Nat) :
+    (2*q) * 2^k + r = q * 2^(k+1) + r := by
+  rw [pow_succ]
+  ring
+
+/-- This is the precise preservation obligation for the emitted large branch.
+    Canonicality at the old distance alone does not imply this condition. -/
+theorem floatNormalizeLoop_large_canonical (r : Int) (k : Nat) :
+    (0 ≤ r ∧ r < 2^k) ↔ (0 ≤ r ∧ r < 2^(k+1) ∧ r < 2^k) := by
+  have hp : (0 : Int) < 2^k := Int.pow_pos (by decide)
+  rw [pow_succ]
+  constructor <;> intro h
+  · exact ⟨h.1, by omega, h.2⟩
+  · exact ⟨h.1, h.2.2⟩
+
+/-- A bounded exact tail suffices uniformly for every large distance, with
+    no materialization of a denominator in a machine word. -/
+theorem floatNormalizeLoop_large_tail_bound (r : Int) (k : Nat)
+    (hr : 0 ≤ r ∧ r < 2^61) (hk : 61 ≤ k) :
+    0 ≤ r ∧ r < 2^k := by
+  have hp : (2 : Int)^61 ≤ 2^k := by
+    exact_mod_cast (Nat.pow_le_pow_right (by decide : 1 ≤ 2) hk)
+  exact ⟨hr.1, lt_of_lt_of_le hr.2 hp⟩
+
+/-- Signed quotient doubling cannot overflow while the loop is active under
+    its documented target ceiling. The counter requires its own initial bound. -/
+theorem floatNormalizeLoop_large_word_bounds (q target : Int)
+    (hq : 0 ≤ q) (ha : q < target) (ht : target ≤ 2^60) :
+    0 ≤ 2*q ∧ 2*q < 2^61 := by omega
+
+/-- The old-distance remainder bound and signed word bound do not suffice:
+    the actual k=62 branch can leave a noncanonical remainder at k=61. -/
+theorem floatNormalizeLoop_large_boundary_zeuge :
+    (0 : Int) ≤ 2^61 ∧ (2 : Int)^61 < 2^62 ∧
+    (2 : Int)^61 < 2^63 ∧ ¬ ((2 : Int)^61 < 2^61) := by
+  decide +kernel
+
+#print axioms floatNormalizeLoop_large_reconstruct
+#print axioms floatNormalizeLoop_large_canonical
+#print axioms floatNormalizeLoop_large_tail_bound
+#print axioms floatNormalizeLoop_large_word_bounds
+#print axioms floatNormalizeLoop_large_boundary_zeuge
+
 end Gabbro.Stage0.Senke
