@@ -248,6 +248,61 @@ theorem Sim.counter_dispatch {D : Deklaration} {L : Lay D} {P : Programm D}
   | leave h σ' ρ' => exact body
   | zurueck | why | logik | hardware => exact body
 
+/-- The actual positive header reconstructs the ordinary source-pass interface.
+    Counter storage is above the saved ABI parameters and below relocated locals.
+    Outer counters and sentinels are retained by disjoint writes, even when they
+    lie above this counter. The fuel equality is natural, without word wrapping. -/
+theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
+    {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
+    {fp pc rp cfp : W} {K Ks lo reserved counter one n : Nat} {pr : List Nat}
+    {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
+    {m : Mem} {code : List II} {stop : Int}
+    (layout : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (foreverCounter counter one stop ++ code) ρ reserved)
+    (surround : Umf L A C dv m fp Ks K)
+    (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
+    (abi : FB + (D.params f).length ≤ lo) (low : lo ≤ counter)
+    (allocated : counter < FB + reserved) (bound : frei Γ reserved ≤ K)
+    (unit : one < K)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 (n + 1)))
+    (readOne : m.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1)
+    (fits : n + 1 < 2 ^ 64)
+    (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ counter) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 32, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+      PreS L m' (pc + 32) fp K (frei Γ reserved) code ρ reserved ∧
+      Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
+      WeltAt m' L σ ∧ Keeps fp pr m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 n) := by
+  have inside : counter < K := by unfold frei at bound; omega
+  have sc := sx_nat (d := counter) (by have := pre.small; omega)
+  have so := sx_nat (d := one) (by have := pre.small; omega)
+  have test := pre.code 0 (by simp [foreverCounter])
+  have dec := pre.code 1 (by simp [foreverCounter])
+  simp [foreverCounter, ci] at test dec
+  obtain ⟨positive, subtract⟩ := counter_fuel_step n fits
+  obtain ⟨write, stored, frame⟩ := wr_slot pre.frame inside (BitVec.ofNat 64 n)
+  have run1 := Star.one (counter_positive (t := ⟨pc, fp⟩) test
+    (by simpa only [ci, sc] using read) positive)
+  have run2 := Star.one (counter_decrement (t := ⟨pc + 16, fp⟩) dec
+    (by simpa only [ci, sc] using read) (by simpa only [ci, so] using readOne)
+    (by simpa only [ci, sc, subtract] using write))
+  have allFrame := frame.mono low
+  have env := (reserved_write_preserves (L := L) (j := counter - FB) (BitVec.ofNat 64 n).toNat
+    pre.frame.room bound (by omega) pre.env).1
+  have eq : FB + (counter - FB) = counter := by omega
+  rw [eq] at env
+  have far := codeFar_right (n := 2) (k := code.length) (by simpa [foreverCounter, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using pre.far)
+  refine ⟨_, ?_, agreeW_of allFrame, ?_, surround.agreeW layout (agreeW_of allFrame) (by omega),
+    head.agree allFrame pre.frame abi, ?_, ?_, stored⟩
+  · simpa [nxt, Nat.reduceMul, show (16 : W) + 16 = 32 by decide, BitVec.add_assoc] using run1.trans run2
+  · exact ⟨pre.ctx, pre.small, pre.frame.agree frame,
+      (codeAt_right pre.code).agree allFrame far, far, env, trivial, wstab_true _ _⟩
+  · exact weltAt_stab layout.lay layout.top m _ world (allFrame.mono (Nat.zero_le _))
+  · intro j hj
+    exact Mem.rd64_write_far (slot_far pre.frame.room inside (hprotected j hj).1
+      (Ne.symm (hprotected j hj).2))
+
 /-- Execute the actual source invariant and then the generically lowered body.
     The read event, callee frame, return ABI and protected slots are inherited
     from `lowE_ok`, `choice_ok` and `lowB_ok`; no body simulation is assumed.

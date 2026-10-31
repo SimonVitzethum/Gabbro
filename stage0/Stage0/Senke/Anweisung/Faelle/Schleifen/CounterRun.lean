@@ -84,6 +84,41 @@ theorem positive_counter_zeuge [Kern] (n : Fin 2) :
   · rw [kept 4 (by simp)]
     exact sentinel_values ⟨n.val, by omega⟩
 
+/-- The generic header hands its actual memory directly to the generic body
+    proof, jointly executing the world write and callee with sentinel 77. -/
+theorem counter_header_zeuge [Kern] (n : Fin 2) :
+    Reach callLayout 4096 4 256 [4, 5] ⟨2016, 4096⟩
+      (loaded ⟨n.val + 1, by omega⟩)
+      (2048 + BitVec.ofNat 64 (16 * code.length)) world Env.nil 4 := by
+  let b : Fin 3 := ⟨n.val + 1, by omega⟩
+  let headerCode := foreverCounter 6 5 (16 * (code.length + 3 : Nat))
+  have hc : CodeAt (loaded b) 2016 (headerCode ++ code) := by
+    have h : ∀ b : Fin 3, ∀ k : Fin (headerCode ++ code).length,
+        InsAt (loaded b) (2016 + BitVec.ofNat 64 (16 * k.val))
+          (headerCode ++ code)[k.val].o (II.f (headerCode ++ code)[k.val].a)
+          (II.f (headerCode ++ code)[k.val].b) (II.f (headerCode ++ code)[k.val].c) := by
+      apply allFin
+      decide +kernel
+    exact fun k hk => h b ⟨k, hk⟩
+  have hp : PreS callLayout (loaded b) 2016 4096 256 8
+      (headerCode ++ code) (Env.nil : Env D []) 4 :=
+    ⟨by decide, by decide, loaded_frame b, hc,
+      (by unfold CodeFar; decide +kernel), (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  obtain ⟨_, _, count, unit⟩ := counter_facts n
+  obtain ⟨m', run, frame', pre', surround', head', world', keeps, _⟩ :=
+    counter_header (lo := 4) (reserved := 4) (Γ := []) (ρ := Env.nil)
+      (code := code) (stop := 16 * (code.length + 3 : Nat)) (pc := 2016)
+      (pr := [4, 5]) call_win hp
+      (loaded_surroundings b) (loaded_head b) (loaded_world b)
+      (by decide) (by decide) (by decide) (by decide) (by decide)
+      count unit (by have := n.isLt; omega)
+      (by intro j hj; simp only [List.mem_cons, List.not_mem_nil, or_false] at hj
+          rcases hj with rfl | rfl <;> decide)
+  have bodyRun := body_simulation_at pre' surround' head' world'
+  obtain ⟨m'', rest, frame'', env, world'', kept⟩ := bodyRun
+  exact ⟨m'', run.trans rest, frame'.trans frame'', env, world'',
+    keeps.trans (fun j hj => kept j (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hj ⊢; rcases hj with h | h; exact Or.inl h; exact Or.inr (Or.inl h)))⟩
+
 /-- The generic outcome dispatcher is jointly inhabited by the actual lowered
     store/call block, actual backward jump and nonzero reserved counter. -/
 theorem counter_dispatch_zeuge [Kern] (b : Fin 3) :
