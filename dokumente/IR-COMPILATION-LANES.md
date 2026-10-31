@@ -1,9 +1,9 @@
 # Gabbro-to-IR compilation lanes
 
-**PAUSED by the owner (2026-10-31).** Stop all six implementation agents and checks; resume only
-on explicit instruction. Preserve every worktree, dirty source tree, paired snapshot and scratch.
-Last checked/pushed master is `94547b852`; unintegrated worker progress remains in its own trees.
-The standing limit after resumption is two global Lean checks with the allocation below.
+**RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
+Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree
+`t3-e67bc9a3` and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. All other lanes stay paused
+with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
 
 ## Checked frontend follow-up (2026-10-31)
 

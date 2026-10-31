@@ -9,10 +9,10 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
-**PAUSED by the owner (2026-10-31).** All implementation agents and Lean checks are stopped.
-Do not resume agents, implementation or builds until explicitly instructed. Preserve all worktrees,
-uncommitted changes, immutable source/artifact packages and scratch. Last checked and pushed
-integration: `94547b852`. The earlier resumed allocation below applies only after explicit resumption.
+**RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
+Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree
+`t3-e67bc9a3` and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. All other lanes stay paused
+with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
 
 **Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
 checks globally, each with MemoryMax=5G, MemoryHigh=4G and MemorySwapMax=0. This supersedes all older
