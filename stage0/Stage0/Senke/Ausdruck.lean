@@ -6,7 +6,7 @@
   slots (`vslot`, `FB`), so a `bind` adds the slot `frei Γ` and keeps the others. An integer is its 64-bit two's complement, a Boolean 0 or 1
   (`Enc`). `lowE L e d` computes `e` into slot `d`, using the slots above `d` as scratch; it answers the code and the
   first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
-  compares, or a literal outside 32 bits is refused (`none`); wide integers and the other forms follow.
+  compares, or a literal outside signed/unsigned 64 bits is refused (`none`); wide integers and the other forms follow.
 
   A float occupies its IEEE-754 binary64 bit pattern. Its encoding also requires well-formed exponent and
   fraction fields; finiteness and the declared range are already properties of G's value type.
@@ -65,6 +65,12 @@ theorem vslot_here_reserved (Γ : Ctx) (τ : Ty) (reserved : Nat) :
 
 /-- A range of integers that 64 bits hold. -/
 def inW (lo hi : Int) : Bool := decide (-2 ^ 63 ≤ lo) && decide (hi < 2 ^ 63)
+
+/-- An unsigned scalar occupies one word; mixed signed/unsigned intervals are not admitted. -/
+def inU (lo hi : Int) : Bool := decide (0 ≤ lo) && decide (hi < 2 ^ 64)
+
+/-- Exact scalar interval in either signed or unsigned interpretation. -/
+def scalarFits (lo hi : Int) : Bool := inW lo hi || inU lo hi
 
 def lit32 (n : Int) : Bool := decide (-2 ^ 31 ≤ n) && decide (n < 2 ^ 31)
 
@@ -170,6 +176,8 @@ def floatRangeL (d : Nat) (lo hi : Int × Int) (e : Nat → Option (List II × N
 
 /-- The range of an integer expression lies in 64 bits. -/
 def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
+def inUE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inU lo hi
+
 
 /-- A shift count below 64. -/
 def lt64 {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := decide (hi < 64)
@@ -279,7 +287,8 @@ mutual
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ τ) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
   match Γ, τ, e, d with
-  | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else none
+  | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1)
+    else if scalarFits n n then some (konstWL 4 (BitVec.ofInt 64 n).toNat d) else none
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
   | _, τ, .var x, d => if aggregateFits τ then some ([ci 2 d (vslot x reserved) 0], d + 1) else none
@@ -319,15 +328,15 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 7 d ca cb)
     else none
   | _, _, .band _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none
+    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none
   | _, _, .bor _ _ _ _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb) else none
+    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb) else none
   | _, _, .bxor _ _ _ _ _ a b, d =>
-    if inWE a && inWE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb) else none
+    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb) else none
   | _, _, .shl _ _ _ _ _ a b, d =>
     if inWE b && lt64 b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb) else none
   | _, _, .shr _ _ _ _ _ a b, d =>
-    if inWE a && inWE b && lt64 b then do
+    if inUE a && inUE b && lt64 b then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 12 d ca cb)
     else none
   | _, _, .arrNil, d => some ([ci 1 d 0 0], d + 1)
