@@ -86,16 +86,16 @@ theorem counted_ins {m m' : Runner.Mem} {pc fp : Runner.W} {i : II}
     Counted 1 ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [i].length), fp⟩ m' :=
   .next (run_step (t := ⟨pc, fp⟩) (by simpa using hc 0 (by simp)) ho hr) (.refl _ _)
 
-theorem sys_counted {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : CodeAt m pc (sysC nr c s))
+theorem sys_counted_frame {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : CodeAt m pc (sysC nr c s))
     (hf : CodeFar pc 3 fp K) (hF : FrameOK m fp K) (hs : s + 8 ≤ K) (hK : K < 2 ^ 31) (hcode : c < 2 ^ 31)
     (hnr : nr < 2 ^ 31) :
-    ∃ t' m' q, Counted 2 ⟨pc, fp⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 nr ∧ q.a1 = BitVec.ofNat 64 c := by
+    ∃ t' m' q, Counted 2 ⟨pc, fp⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 nr ∧ q.a1 = BitVec.ofNat 64 c ∧ Agree fp s K m m' := by
   have hroom := hF.room
   -- the two constants
   have s1 := const_step_counted (k := (nr : Int)) (codeAt_left (a := [ci 1 s nr 0]) hc) hF (by omega) hK
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
   let m1 := write m (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 (nr : Int)).toNat
-  have a1 : Agree fp 0 K m m1 := agree_write hroom (Nat.zero_le _) (by omega) _
+  have a1 : Agree fp s K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
   have hc1 : CodeAt m1 (pc + 16) [ci 1 ((s + 1 : Nat) : Int) c 0, ci 23 ((s + 7 : Nat) : Int) s 0] := by
     have := (codeAt_right (a := [ci 1 s nr 0]) hc).agree a1 (codeFar_right (n := 1) (k := 2) hf)
     simpa using this
@@ -103,7 +103,7 @@ theorem sys_counted {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : C
   have s2 := const_step_counted (j := s + 1) (k := c) (codeAt_left (a := [ci 1 ((s + 1 : Nat) : Int) c 0]) hc1) hF1 (by omega) hK
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
   let m2 := write m1 (slot fp (BitVec.ofNat 64 (s + 1))) 8 (BitVec.ofInt 64 c).toNat
-  have a2 : Agree fp 0 K m1 m2 := agree_write hroom (Nat.zero_le _) (by omega) _
+  have a2 : Agree fp s K m1 m2 := agree_write hroom (by omega) (by omega) _
   have hc2 : CodeAt m2 (pc + 16 + 16) [ci 23 ((s + 7 : Nat) : Int) s 0] := by
     have := (codeAt_right (a := [ci 1 ((s + 1 : Nat) : Int) c 0]) hc1).agree a2 (by
       have := codeFar_right (n := 2) (k := 1) hf
@@ -131,7 +131,7 @@ theorem sys_counted {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : C
   obtain ⟨v6, r6⟩ := rd 6 (by decide)
   refine ⟨_, m2, ⟨BitVec.ofInt 64 (nr : Int), BitVec.ofInt 64 c, v2, v3, v4, v5, v6⟩, s1.trans s2,
     runTo_sys (t := ⟨pc + 16 + 16, fp⟩) hi (by rw [hsx]; exact r0) ?_ ?_ ?_ ?_ ?_ ?_,
-    by rw [BitVec.ofInt_natCast], ?_⟩
+    by rw [BitVec.ofInt_natCast], ?_, a1.trans a2⟩
   · rw [hsx, show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]; exact r1
   · rw [hsx, show (16 : Runner.W) = BitVec.ofNat 64 (8 * 2) by rfl, slot_plus]; exact r2
   · rw [hsx, show (24 : Runner.W) = BitVec.ofNat 64 (8 * 3) by rfl, slot_plus]; exact r3
@@ -141,6 +141,14 @@ theorem sys_counted {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : C
   · apply BitVec.eq_of_toNat_eq
     simp only [BitVec.toNat_ofInt, BitVec.toNat_ofNat]
     omega
+
+theorem sys_counted {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : CodeAt m pc (sysC nr c s))
+    (hf : CodeFar pc 3 fp K) (hF : FrameOK m fp K) (hs : s + 8 ≤ K) (hK : K < 2 ^ 31) (hcode : c < 2 ^ 31)
+    (hnr : nr < 2 ^ 31) :
+    ∃ t' m' q, Counted 2 ⟨pc, fp⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 nr ∧ q.a1 = BitVec.ofNat 64 c := by
+  obtain ⟨t, m', q, run, stop, nr, arg, _⟩ :=
+    sys_counted_frame hc hf hF hs hK hcode hnr
+  exact ⟨t, m', q, run, stop, nr, arg⟩
 
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
@@ -304,6 +312,24 @@ theorem CountedReach.forget {n Γ fp lo K pr t m e σ ρ reserved}
     Reach L fp lo K pr t m e σ ρ reserved := by
   obtain ⟨m', run, rest⟩ := h
   exact ⟨m', run.forget, rest⟩
+
+/-- Both source loop jumps retain one joint state and execute exactly one
+    instruction. The signed displacement is justified by accepted lowering. -/
+theorem jmp_counted_reach {Γ : Ctx} {m : Mem} {pc fp : W}
+    {lo K reserved : Nat} {pr : List Nat} {x : Int}
+    {σ : World D} {ρ : Env D Γ}
+    (code : CodeAt m pc [ci 18 (16 + x) 0 0])
+    (fits : lit32 (16 + x) = true)
+    (env : EnvAt L m fp ρ reserved) (world : WeltAt m L σ) :
+    CountedReach 1 L fp lo K pr ⟨pc, fp⟩ m
+      (pc + 16 + BitVec.ofInt 64 x) σ ρ reserved := by
+  have ins := code 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ins
+  have run := Counted.next (run_step (t := ⟨pc, fp⟩) ins (by decide)
+    (run_jmp (t := ⟨pc, fp⟩) ins)) (Counted.refl _ _)
+  refine ⟨m, ?_, AgreeW.refl _ _ _ _ _, env, world, Keeps.refl _ _ _⟩
+  simpa only [sx_lit fits, BitVec.ofInt_add, BitVec.add_assoc,
+    show BitVec.ofInt 64 16 = (16 : W) from rfl] using run
 
 /-- Empty blocks execute no instructions and preserve the entire state. -/
 theorem countedBlockNil_case {Γ : Ctx} {fp pc : Runner.W} {lo K : Nat}
