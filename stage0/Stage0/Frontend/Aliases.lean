@@ -44,8 +44,62 @@ def aliases (consts : List (String × Int)) :
       | _ => item
     item' :: aliases consts (env ++ uAliase consts [item']) rest
 
+/-- Fold scalar constants at their declared canonical range. A nonnegative result can be
+    represented by the frozen elaborator's literal constructor without changing its declared type.
+    Negative results retain the existing path until a signed literal adapter is available. -/
+def constant (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (values : List (String × Int)) (item : SItemTief) : SItemTief :=
+  match item with
+  | .constT name ty (.one expr) =>
+    match uFeldTyp env ty with
+    | .ok (lo, hi) =>
+      match uKonstWert lo hi fns values 64 expr with
+      | some v => if 0 ≤ v then .constT name ty (.one (.lit v.toNat)) else item
+      | none => item
+    | .error _ => item
+  | _ => item
+
+/-- Successful folding preserves both the declared type and the exact result of the canonical
+    compile-time evaluator; the frozen constant collector receives that same integer. -/
+theorem constant_correct (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (values : List (String × Int)) (name : String) (ty : STyp) (expr : SExpr)
+    (lo hi v : Int) (ht : uFeldTyp env ty = .ok (lo, hi))
+    (he : uKonstWert lo hi fns values 64 expr = some v) (hv : 0 ≤ v) :
+    constant env fns values (.constT name ty (.one expr)) =
+      .constT name ty (.one (.lit v.toNat)) ∧
+    uConstsRech fns [.constT name ty (.one (.lit v.toNat))] values =
+      values ++ [(name, v)] := by
+  constructor
+  · simp [constant, ht, he, hv]
+  · simp [uConstsRech, Int.toNat_of_nonneg hv]
+
+/-- Constants are evaluated in declaration order; function bodies use the existing canonical
+    const-function evaluator. Failed evaluation retains the original refusal behavior. -/
+def constants (env : List (String × (Int × Int))) (fns : List UKonstFn) :
+    List (String × Int) → List SItemTief → List SItemTief
+  | _, [] => []
+  | values, item :: rest =>
+    let item' := constant env fns values item
+    item' :: constants env fns (uConstsRech fns [item'] values) rest
+
 /-- Names and visibility have already been resolved by pre108. -/
 def normalizeAliases (items : List SItemTief) : List SItemTief :=
-  aliases (uConstsRech (uKonstFns items) items []) [] items
+  let values := uConstsRech (uKonstFns items) items []
+  let expanded := aliases values [] items
+  constants (uAliase values expanded) (uKonstFns expanded) [] expanded
+
+theorem aliasBody_correct_zeuge :
+    aliasBody [("Small", (-4, 9))] "Small" =
+      .ok (.range (.atom "Small") (bound (-4)) (bound 9) false) ∧
+    uTyp [("Small", (-4, 9))] []
+      (.range (.atom "Small") (bound (-4)) (bound 9) false) = .ok (.int (-4) 9) :=
+  aliasBody_correct _ _ _ _ _ (by rfl)
+
+theorem constant_correct_zeuge :
+    constant [("Small", (0, 100))] [] []
+      (.constT "N" (.atom "Small") (.one (.bin "+" (.lit 40) (.lit 2)))) =
+      .constT "N" (.atom "Small") (.one (.lit 42)) ∧
+    uConstsRech [] [.constT "N" (.atom "Small") (.one (.lit 42))] [] = [("N", 42)] :=
+  constant_correct _ _ _ _ _ _ 0 100 42 (by rfl) (by rfl) (by decide)
 
 end Gabbro.Stage0.Frontend
