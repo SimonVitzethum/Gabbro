@@ -3503,6 +3503,54 @@ theorem forever_zero_source_counted
 
 
 
+
+/-- Zero-counter base at reentry, without executing the initial literals again. -/
+theorem forever_zero_header_counted
+    {Γ : Ctx} {fp pc : W} {K Ks counter one scratch : Nat}
+    {σ : World D} {ρ : Env D Γ} {m : Mem} {cc cb : List II}
+    (inside : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      ((foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
+        cc ++ [ci 19 scratch (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 scratch ++
+        [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0]) ++
+        stopC 111 scratch) ρ reserved)
+    (world : WeltAt m L σ)
+    (locals : frei Γ reserved ≤ K) (room : scratch + 8 ≤ K)
+    (jumpFits : 16 * (cc.length + cb.length + 8) < 2 ^ 31)
+    (zero : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some 0)
+    (counterBound : counter < frei Γ reserved) :
+    CountedStops 3 ⟨pc, fp⟩ m 111 := by
+  have ins := pre.code 0 (by simp [foreverCounter])
+  simp only [foreverCounter, ci, List.getElem_cons_zero, List.cons_append,
+    List.getElem_append_left, Nat.mul_zero, BitVec.add_zero] at ins
+  have counterSmall : counter < 2 ^ 31 := by have := pre.small; omega
+  have branch := counter_zero (t := ⟨pc, fp⟩) ins (by rw [sx_nat counterSmall]; exact zero)
+  have header : PreS L m pc fp K (frei Γ reserved)
+      ((foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
+        cc ++ [ci 19 scratch (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 scratch ++
+        [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0]) ++
+        stopC 111 scratch) ρ reserved := by
+    simpa [foreverCounter, List.append_assoc, List.append] using pre
+  have tail := header.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+  have address : pc + sx (II.f (16 * (cc.length + cb.length + 8) : Int)) =
+      pc + BitVec.ofNat 64 (16 *
+        (foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
+        cc ++ [ci 19 scratch (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 scratch ++
+        [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0]).length) := by
+    have castEq : (16 * ((cc.length : Int) + cb.length + 8)) =
+        ((16 * (cc.length + cb.length + 8) : Nat) : Int) := by omega
+    rw [castEq, sx_nat jumpFits]
+    simp [foreverCounter, stopC, sysC, List.length_append, Nat.add_assoc]
+  obtain ⟨u, a, q, stopRun, stop, nr, arg⟩ :=
+    sys_counted tail.code tail.far tail.frame room pre.small (by decide) (by decide)
+  rw [← address] at stopRun
+  refine ⟨u, a, q, ?_, stop, nr, arg⟩
+  exact (Counted.next branch (Counted.refl _ _)).trans stopRun
+
+
 /-- Recursive source call certificates. Every node stores source-derived callee
     costs and a recursive continuation, never an assumed execution of the whole block. -/
 inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
@@ -4841,5 +4889,96 @@ theorem recursiveBlockCost.counter_dispatch {P : Programm D} {passes : Nat}
   refine ⟨n, hn, ?_⟩
   cases outcome <;> exact routed
 
+
+/-- A decreasing runtime-budget tree. `passes` remains the lowering parameter;
+    it is deliberately independent of the remaining counter `fuel`. Children
+    are recursive SOURCE certificates, including their recursive call children.
+    Costs exclude the two initial literals, which are paid once at entry.
+    This tree is not yet a whole-image execution certificate. -/
+inductive NestedForever (L : Lay D) (reserved : Nat) (P : Programm D)
+    (passes : Nat) (A : D.Fn → Nat) (C : D.Fn → List II) (dv : W) (Ks : Nat)
+    (V : Vertrag D) {Γ : Ctx} {Λ : List (Res D)}
+    (assumption : D.Annahme) (inv : Expr D Γ Λ .bool)
+    (body : Block D V true Γ Λ Λ) :
+    Nat → World D → Env D Γ → Ausgang V true Γ → Nat → Type
+  | zero {σ ρ} : NestedForever L reserved P passes A C dv Ks V assumption inv body
+      0 σ ρ (.hardware (.fortschritt assumption)) 3
+  | normal {fuel σ ρ σ' ρ' outcome ni nb nr}
+      (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+      (child : recursiveBlockCost L reserved P passes A C dv Ks V true
+        body σ ρ (.ok σ' ρ') nb)
+      (tail : NestedForever L reserved P passes A C dv Ks V assumption inv body
+        fuel σ' ρ' outcome nr) :
+      NestedForever L reserved P passes A C dv Ks V assumption inv body
+        (fuel + 1) σ ρ outcome (5 + ni + nb + nr)
+  | next {fuel σ ρ σ' ρ' outcome ni nb nr}
+      (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+      (child : recursiveBlockCost L reserved P passes A C dv Ks V true
+        body σ ρ (.next rfl σ' ρ') nb)
+      (tail : NestedForever L reserved P passes A C dv Ks V assumption inv body
+        fuel σ' ρ' outcome nr) :
+      NestedForever L reserved P passes A C dv Ks V assumption inv body
+        (fuel + 1) σ ρ outcome (3 + ni + nb + nr)
+  | leave {fuel σ ρ σ' ρ' ni nb}
+      (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+      (child : recursiveBlockCost L reserved P passes A C dv Ks V true
+        body σ ρ (.leave rfl σ' ρ') nb) :
+      NestedForever L reserved P passes A C dv Ks V assumption inv body
+        (fuel + 1) σ ρ (.ok σ' ρ') (3 + ni + nb)
+  | early {fuel σ ρ outcome ni nb}
+      (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+      (child : recursiveBlockCost L reserved P passes A C dv Ks V true body σ ρ outcome nb)
+      (terminal : match outcome with
+        | .ok .. | .next .. | .leave .. => False
+        | _ => True) :
+      NestedForever L reserved P passes A C dv Ks V assumption inv body
+        (fuel + 1) σ ρ outcome (3 + ni + nb)
+  | invariantStop {fuel σ ρ ni}
+      (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 0)) :
+      NestedForever L reserved P passes A C dv Ks V assumption inv body
+        (fuel + 1) σ ρ (.logik .schleife) (5 + ni)
+
+/-- Largest source-child charge in this particular tree, never a supplied
+    whole-body execution bound. -/
+def NestedForever.childCharge {P : Programm D} {passes A C dv Ks V Γ Λ}
+    {assumption : D.Annahme} {inv : Expr D Γ Λ .bool} {body : Block D V true Γ Λ Λ}
+    {fuel σ ρ outcome n}
+    (tree : NestedForever L reserved P passes A C dv Ks V assumption inv body
+      fuel σ ρ outcome n) : Nat :=
+  match tree with
+  | .zero => 0
+  | .normal (ni := ni) (nb := nb) _ _ tail => max (ni + nb) tail.childCharge
+  | .next (ni := ni) (nb := nb) _ _ tail => max (ni + nb) tail.childCharge
+  | .leave (ni := ni) (nb := nb) _ _ => ni + nb
+  | .early (ni := ni) (nb := nb) _ _ _ => ni + nb
+  | .invariantStop (ni := ni) _ => ni
+
+/-- Structural arithmetic bound for the proposed whole-image certificate.
+    This proves the decreasing-budget recursion, not its missing IR simulation.
+    No G-step or lowering-pass count is identified with an instruction count. -/
+theorem NestedForever.structural_bound {P : Programm D} {passes A C dv Ks V Γ Λ}
+    {assumption : D.Annahme} {inv : Expr D Γ Λ .bool} {body : Block D V true Γ Λ Λ}
+    {fuel σ ρ outcome n}
+    (tree : NestedForever L reserved P passes A C dv Ks V assumption inv body
+      fuel σ ρ outcome n) :
+    2 + n ≤ 5 + fuel * (5 + tree.childCharge) := by
+  induction tree with
+  | zero => simp [childCharge]
+  | @normal fuel σ ρ σ' ρ' outcome ni nb nr invariant child tail ih
+  | @next fuel σ ρ σ' ρ' outcome ni nb nr invariant child tail ih =>
+    simp only [childCharge]
+    have a := Nat.le_max_left (ni + nb) tail.childCharge
+    have b := Nat.le_max_right (ni + nb) tail.childCharge
+    have mul := Nat.mul_le_mul_left fuel (Nat.add_le_add_left b 5)
+    rw [Nat.succ_mul]
+    omega
+  | leave invariant child | early invariant child terminal =>
+    simp only [childCharge]
+    rw [Nat.succ_mul]
+    omega
+  | invariantStop invariant =>
+    simp only [childCharge]
+    rw [Nat.succ_mul]
+    omega
 
 end Gabbro.Stage0.Senke
