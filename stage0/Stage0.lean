@@ -78,3 +78,4 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
 import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCall
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
+import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
