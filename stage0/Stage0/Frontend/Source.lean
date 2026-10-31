@@ -1,4 +1,4 @@
-import Stage0.Frontend.Correctness
+import Stage0.Frontend.Environments
 import Stage0.Frontend.Guard
 
 namespace Gabbro.Stage0.Frontend
@@ -16,6 +16,7 @@ structure Source (text : String) where
   visibility : Oeffentlich.huelleZu items = true
   compileTime : compileTimeSafe (uMembers (pre108 items)) = true
   normalized : Normalization (uMembers (pre108 items)) members
+  environments : EnvironmentFacts (uMembers (pre108 items)) members
 
 /-- The actual whole-source frontend, producing a proof of provenance and normalization. -/
 def source (text : String) : Except String (Source text) :=
@@ -28,7 +29,10 @@ def source (text : String) : Except String (Source text) :=
       if hv : Oeffentlich.huelleZu items then
         if hc : compileTimeSafe (uMembers (pre108 items)) then
           let result := normalize (uMembers (pre108 items))
-          .ok ⟨tokens, items, result.val, hl, hp, hv, hc, result.property⟩
+          if he : EnvironmentCompatible (uMembers (pre108 items)) result.val then
+            .ok ⟨tokens, items, result.val, hl, hp, hv, hc, result.property,
+              normalize_environments _ he⟩
+          else .error "compile-time constant or alias environment cannot be preserved by canonical elaboration"
         else .error "compile-time call requires unsupported function contracts, effects or body"
       else .error "public interface is not closed"
 
@@ -39,8 +43,9 @@ theorem source_sound (text : String) (result : Source text) :
     lex text = .ok result.tokens ∧ parseTopTief result.tokens = .ok result.items ∧
     Oeffentlich.huelleZu result.items = true ∧
     compileTimeSafe (uMembers (pre108 result.items)) = true ∧
-    Normalization (uMembers (pre108 result.items)) result.members :=
-  ⟨result.lexed, result.parsed, result.visibility, result.compileTime, result.normalized⟩
+    Normalization (uMembers (pre108 result.items)) result.members ∧
+    EnvironmentFacts (uMembers (pre108 result.items)) result.members :=
+  ⟨result.lexed, result.parsed, result.visibility, result.compileTime, result.normalized, result.environments⟩
 
 /-- A successful frontend uses exactly canonical name resolution and width normalization;
     visibility failures cannot be hidden by flattening the item list. -/

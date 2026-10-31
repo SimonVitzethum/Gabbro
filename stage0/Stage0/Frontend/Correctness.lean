@@ -3,12 +3,23 @@ import Stage0.Frontend.Functions
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
+/-- Shared source-derived environments for the two frontend normalization phases. -/
+structure Prepared where
+  initial : List (String × Int)
+  expanded : List SItemTief
+  env : List (String × (Int × Int))
+  fns : List UKonstFn
+
+def prepare (items : List SItemTief) : Prepared :=
+  let initial := uConstsRech (uKonstFns items) items []
+  let expanded := aliases initial [] items
+  let env := uAliase initial expanded
+  ⟨initial, expanded, env, constantFunctions env expanded⟩
+
 /-- Names and visibility have already been resolved by the canonical preprocessing. -/
 def normalizeAliases (items : List SItemTief) : List SItemTief :=
-  let values := uConstsRech (uKonstFns items) items []
-  let expanded := aliases values [] items
-  let env := uAliase values expanded
-  constants env (constantFunctions env expanded) [] expanded
+  let p := prepare items
+  constants p.env p.fns [] p.expanded
 
 /-- Every changed alias declaration preserves its metadata and its canonical type denotation
     in the declaration environment; all other declarations are identical. -/

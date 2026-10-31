@@ -260,3 +260,23 @@ and a transitive wrapper. Their expected diagnostic is recorded in `.error` file
 guardian's Stage-0 probe loop recognizes compiler-refusal fixtures. The guardian itself was not run,
 because it would rebuild the grammar. Direct IO compilations measured all three refusals; the three
 positive source-to-IR-to-ASM probes still return 42. The Python guardian change passes `py_compile`.
+
+### IR-01 exact ordered environments (interim accepted-subset check)
+
+`Environments.lean` proves `constants_append`, `aliases_append`, `aliasItem_collected`,
+`aliases_collected`, `constant_aliases`, `constants_aliases`, `constantStep_correct` and
+`constants_collected`. These retain declaration order and exact bindings/ranges. `typedConstants`
+uses canonical `uFeldTyp` and `uKonstWert` in declaration order and retains **all** scalar bindings,
+including negatives and duplicate/shadowed names. It does not filter to positive outputs.
+
+Before downstream `elabU`, actual `Frontend.source` now checks that the full ordered environment
+collected by canonical `uConstsRech (uKonstFns normalized)` is exactly the successful typed fold.
+It also checks stability of the complete alias range environment under those final constants.
+`normalize_environments` combines those checked equalities with generic alias collection preservation;
+successful `Source` contains `EnvironmentFacts`. This is conditional preservation for the accepted
+subset, not total support or a whole-source-to-program execution theorem.
+
+The persistent `negative-dependency` probe exposes a negative intermediate from an alias-result const
+function followed by a positive dependent. It now refuses explicitly on the environment mismatch;
+no later positive binding can conceal the missing negative. Negative materialization and dependency
+support remain implementation work. No source interpreter or grammar modification was introduced.
