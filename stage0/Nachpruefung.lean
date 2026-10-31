@@ -259,3 +259,7 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_env_zeuge
 #print axioms Gabbro.Stage0.Senke.RelocateProbe.emitted_moves_zeuge
 #print axioms Gabbro.Stage0.Senke.RelocateProbe.relocate_run_zeuge
+
+-- Actual counter header reconstructs the source-pass interface in its output memory.
+#print axioms Gabbro.Stage0.Senke.counter_header
+#print axioms Gabbro.Stage0.Senke.CounterCallProbe.counter_header_zeuge
