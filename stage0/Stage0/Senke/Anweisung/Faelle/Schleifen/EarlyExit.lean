@@ -383,3 +383,54 @@ theorem sourceStop_zeuge [Kern] (L : Lay D) (P : Programm D) (A : D.Fn → Nat)
     simp [foreverCode_length]
   · simp at lower
 end Gabbro.Stage0.Senke.SourceStopProbe
+
+namespace Gabbro.Stage0.Senke.PositiveHeaderProbe
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem FnptrProben
+variable [Kern]
+set_option maxRecDepth 10000
+set_option maxHeartbeats 2000000
+local instance (m : Mem) (pc : W) (o : Nat) (a b c : BitVec 32) :
+    Decidable (InsAt m pc o a b c) :=
+  if h : m.rd8 pc = some (BitVec.ofNat 8 o) ∧ m.rd32 (pc + 4) = some a ∧
+      m.rd32 (pc + 8) = some b ∧ m.rd32 (pc + 12) = some c then
+    .isTrue ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
+def image : List II := foreverCounter 6 7 128
+
+def memory : Mem :=
+  let base := write (write callMem (slot 4096 6) 8 2) (slot 4096 7) 8 1
+  { base with b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2080 then
+      ((image.flatMap encII)[a.toNat - 2048]?).getD 0 else base.b a }
+
+/-- All header premises hold jointly on a real nonzero counter image. -/
+theorem counter_positive_source_counted_zeuge :
+    ∃ m', Counted 2 ⟨2048, 4096⟩ memory ⟨2080, 4096⟩ m' ∧
+      PreS callLayout m' 2080 4096 256 8 [] (Env.nil : Env D []) 4 ∧
+      WeltAt m' callLayout world ∧ Agree 4096 6 256 memory m' ∧
+      m'.rd64 (slot 4096 6) = some 1 ∧
+      m'.rd64 (slot 4096 7) = some 1 := by
+  have frame : FrameOK memory 4096 256 :=
+    ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+  have code : CodeAt memory 2048 image := by
+    have h : ∀ k : Fin image.length,
+        InsAt memory (2048 + BitVec.ofNat 64 (16 * k.val))
+          image[k.val].o (II.f image[k.val].a) (II.f image[k.val].b) (II.f image[k.val].c) := by
+      apply allFin
+      decide +kernel
+    exact fun k hk => h ⟨k, hk⟩
+  have pre : PreS callLayout memory 2048 4096 256 8
+      (foreverCounter 6 7 128 ++ []) (Env.nil : Env D []) 4 :=
+    ⟨by decide, by decide, frame, by simpa [image] using code,
+      by unfold CodeFar foreverCounter; decide +kernel,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  have hw : WeltAt memory callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  exact counter_positive_source_counted (L := callLayout) (fuel := 2)
+    (Γ := []) (reserved := 4) (counter := 6) (one := 7)
+    (pc := 2048) (fp := 4096) (code := []) (jump := 128)
+    (ForeverPassCostProbe.joint true).2.1 pre hw
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide +kernel) (by decide +kernel) (by decide)
+end Gabbro.Stage0.Senke.PositiveHeaderProbe

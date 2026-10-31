@@ -3364,6 +3364,63 @@ theorem reserved_literal_source_entry
       (codeAt_right pre.code).agree frame far, far, env, trivial, wstab_true _ _⟩
   · exact weltAt_stab layout.lay layout.top m _ world (frame.mono (Nat.zero_le _))
 
+/-- A positive header consumes two S0IR instructions and decrements the
+    counter once. The child starts in the same world and lexical environment, with the
+    decremented counter and immutable one jointly available in its memory. -/
+theorem counter_positive_source_counted
+    {Γ : Ctx} {fp pc : W} {K Ks reserved counter one : Nat}
+    {σ : World D} {ρ : Env D Γ} {m : Mem} {code : List II}
+    {jump : Int} {fuel : W}
+    (layout : WIn L fp Ks K)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (foreverCounter counter one jump ++ code) ρ reserved)
+    (world : WeltAt m L σ)
+    (lowerCell : FB ≤ counter) (ordered : counter < one)
+    (allocated : one < FB + reserved) (bound : frei Γ reserved ≤ K)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some fuel)
+    (readOne : m.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1)
+    (positive : fuel ≠ 0) :
+    ∃ m', Counted 2 ⟨pc, fp⟩ m ⟨pc + 16 + 16, fp⟩ m' ∧
+      PreS L m' (pc + 16 + 16) fp K (frei Γ reserved) code ρ reserved ∧
+      WeltAt m' L σ ∧ Agree fp counter K m m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (fuel - 1) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1 := by
+  have cellBound : counter < K := by unfold frei at bound; omega
+  have oneBound : one < K := by unfold frei at bound; omega
+  have counterSmall : counter < 2 ^ 31 := by have := pre.small; omega
+  have oneSmall : one < 2 ^ 31 := by have := pre.small; omega
+  have first := pre.code 0 (by simp [foreverCounter])
+  simp only [foreverCounter, List.cons_append, List.getElem_cons_zero,
+    ci, Nat.mul_zero, BitVec.add_zero] at first
+  have test := counter_positive (t := ⟨pc, fp⟩) first
+    (by rw [sx_nat counterSmall]; exact read) positive
+  have rest : PreS L m (pc + 16) fp K (frei Γ reserved)
+      ([ci 4 counter counter one] ++ code) ρ reserved := by
+    have h := pre.next (a := [ci 19 counter jump 0])
+      (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+    simpa [foreverCounter] using h
+  obtain ⟨write, stored, agree⟩ := wr_slot rest.frame cellBound (fuel - 1)
+  have ins : InsAt m (pc + 16) 4 (II.f (counter : Int))
+      (II.f (counter : Int)) (II.f (one : Int)) := by
+    simpa [ci] using rest.code 0 (by simp)
+  have decrement := counter_decrement (t := ⟨pc + 16, fp⟩) ins
+    (by rw [sx_nat counterSmall]; exact read)
+    (by rw [sx_nat oneSmall]; exact readOne)
+    (by rw [sx_nat counterSmall]; exact write)
+  have env := (reserved_write_preserves (L := L) (j := counter - FB)
+    (fuel - 1).toNat pre.frame.room bound (by omega) pre.env).1
+  have cellEq : FB + (counter - FB) = counter := by omega
+  rw [cellEq] at env
+  have far := codeFar_right (n := 1) (k := code.length)
+    (by simpa [Nat.add_comm] using rest.far)
+  refine ⟨_, (Counted.next test (.refl _ _)).trans
+    (Counted.next decrement (.refl _ _)), ?_, ?_, agree, stored, ?_⟩
+  · exact ⟨pre.ctx, pre.small, pre.frame.agree agree,
+      (codeAt_right rest.code).agree agree far, far, env, trivial, wstab_true _ _⟩
+  · exact weltAt_stab layout.lay layout.top m _ world (agree.mono (Nat.zero_le _))
+  · rw [Mem.rd64_write_far (slot_far pre.frame.room cellBound oneBound (by omega))]
+    exact readOne
+
 /-- The progress exit executes its real zero test and two stop constants.
     The syscall remains pending: neither hardware completion nor latency is
     inferred. All joint source-state facts refer to that same final memory. -/
