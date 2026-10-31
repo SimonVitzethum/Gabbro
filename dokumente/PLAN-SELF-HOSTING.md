@@ -901,3 +901,15 @@ the reached normalization word represents the original exact numerator: the
 actual right/left continuation, including its jam correction and the final
 carry/packing path, still needs execution and canonical IEEE correspondence.
 The isolated five-field pipeline is still not composed with the candidate.
+
+
+The actual left-normalization body's four instructions now have a joint Runner
+execution proof, `floatFiniteAddL_left_body`: multiply the retained quotient by
+two and decrement the retained exponent, preserving both output reads, the frame
+and the arbitrary reserved-prefix continuation. Its arithmetic companion proves
+signed-word bounds and propagates the exact signed correction by doubling it.
+A nonzero execution witness uses quotient 13, exponent 4 and correction -3 at
+denominator 16. This is a body-step proof only: extraction and execution of the
+actual condition/backedge from the reached ADD/SUB state, the right shift/jam,
+and the connected carry/pack-to-IEEE theorem remain open. No validation hook,
+resource/cost claim, Range107 acceptance or computed `Block.floatOf` changes.
