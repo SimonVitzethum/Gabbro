@@ -3017,6 +3017,48 @@ theorem floatFiniteAddL_right_condition {Γ : Ctx} {ρ : Env D Γ}
 #print axioms floatFiniteAddL_right_condition
 
 
+/-- Execute the actual RIGHT BRZ without changing the compared memory. -/
+theorem floatFiniteAddL_right_branch {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved : Nat} (yes tail : List II) (test : Bool)
+    (room : dst+9 < K) (range : 16*(yes.length+2) < 2^31)
+    (flag : m.rd64 (slot fp (BitVec.ofNat 64 (dst+9))) =
+      some (1-Runner.IR.bool test))
+    (pre : Pre L m pc fp K (dst+9)
+      ([ci 19 (dst+9) (16*(yes.length+2)) 0] ++ yes ++ [ci 18 16 0 0] ++ tail)
+      ρ W reserved) :
+    Star ⟨pc,fp⟩ m
+      ⟨pc+BitVec.ofNat 64 (if test then 16*(yes.length+2) else 16),fp⟩ m ∧
+    Pre L m (pc+BitVec.ofNat 64 (if test then 16*(yes.length+2) else 16))
+      fp K (dst+9) (if test then tail else yes ++ [ci 18 16 0 0] ++ tail) ρ W reserved := by
+  have ins : Runner.IR.InsAt m pc 19 (II.f ((dst+9 : Nat) : Int))
+      (II.f ((16*(yes.length+2) : Nat) : Int)) (II.f 0) := by
+    simpa [ci] using pre.code 0 (by simp)
+  have rd : m.rd64 (slot fp (sx (II.f ((dst+9 : Nat) : Int)))) =
+      some (1-Runner.IR.bool test) := by
+    rw [sx_nat (by have := pre.small; omega)]
+    exact flag
+  cases test with
+  | false =>
+    have step := run_step (t := ⟨pc,fp⟩) ins (by decide)
+      (run_brz_ne (t := ⟨pc,fp⟩) (v := 1) ins (by simpa [Runner.IR.bool] using rd) (by decide))
+    have short : Pre L m pc fp K (dst+9)
+        ([ci 19 (dst+9) (16*(yes.length+2)) 0] ++
+          (yes ++ [ci 18 16 0 0] ++ tail)) ρ W reserved := by
+      simpa only [List.append_assoc] using pre
+    exact ⟨by simpa [nxt] using Star.one step,
+      by simpa using short.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)⟩
+  | true =>
+    have step := run_step (t := ⟨pc,fp⟩) ins (by decide)
+      (run_brz_zero (t := ⟨pc,fp⟩) ins (by simpa [Runner.IR.bool] using rd))
+    rw [sx_nat range] at step
+    have long : Pre L m pc fp K (dst+9)
+        (([ci 19 (dst+9) (16*(yes.length+2)) 0] ++ yes ++ [ci 18 16 0 0]) ++ tail)
+        ρ W reserved := by simpa only [List.append_assoc] using pre
+    exact ⟨by simpa using Star.one step,
+      by simpa [List.length_append, Nat.add_assoc] using
+        long.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)⟩
+
 set_option maxHeartbeats 6000000 in
 /-- Execute decoding, SORT, alignment and signed ADD/SUB from encoded operands.
     The exact correction and arithmetic result belong to one connected run. -/
@@ -3201,7 +3243,25 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
                       (pc+BitVec.ofNat 64 (16*executed.length)+256+
                         BitVec.ofNat 64 (16*aligned.length)+192+
                         BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)
-                      fp K (dst+9) rightTail ρ W reserved) := by
+                      fp K (dst+9) rightTail ρ W reserved ∧
+                    ∃ yes leftTail,
+                      rightTail = [ci 19 (dst+9) (16*(yes.length+2)) 0] ++
+                        yes ++ [ci 18 16 0 0] ++ leftTail ∧
+                      Star ⟨pc,fp⟩ m
+                        ⟨(pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)+
+                          BitVec.ofNat 64 (if ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4)))) then 16*(yes.length+2) else 16),fp⟩ rightOut ∧
+                      Pre L rightOut ((pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (dst+10)).1.length)+48)+
+                          BitVec.ofNat 64 (if ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4)))) then 16*(yes.length+2) else 16))
+                        fp K (dst+9)
+                        (if ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4)))) then leftTail else yes ++ [ci 18 16 0 0] ++ leftTail)
+                        ρ W reserved) := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
     floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
       fracMask hiddenBound room (by omega) producerA producerB pre
@@ -3670,7 +3730,25 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     · exact (wholeAgree.trans ((signedAgree.trans
         ((zeroAgree.mono (by omega)).trans (testAgree.mono (by omega)))).mono (by omega))).trans
         (rightAgree.mono (by omega))
-    · exact done
+    · refine ⟨done, ?_⟩
+      let yes := shift.1 ++ [ci 2 (dst+7) (dst+16) 0, ci 3 (dst+5) (dst+5) (dst+10)]
+      have shape : ∃ leftTail, rightTail =
+          [ci 19 (dst+9) (16*(yes.length+2)) 0] ++ yes ++ [ci 18 16 0 0] ++ leftTail := by
+        have eq := hfull.symm.trans result.1.symm
+        rw [hie,tailEq,signedEq,normalizationEq,branchEq,rightShape] at eq
+        simp [List.append_assoc] at eq
+        exact ⟨_, by simpa [yes, List.append_assoc, Nat.add_assoc] using eq.2⟩
+      obtain ⟨leftTail,shape⟩ := shape
+      have range : 16*(yes.length+2) < 2^31 := by
+        have shiftEq := hs
+        simp [floatShiftJamL, floatShiftQuotL, wordL, wordK] at shiftEq
+        obtain ⟨rfl,rfl⟩ := shiftEq
+        simp [yes, bin2]
+      have branchPre := done
+      rw [shape] at branchPre
+      obtain ⟨dispatch,dispatchPre⟩ := floatFiniteAddL_right_branch yes leftTail
+        _ (by omega) range flag branchPre
+      exact ⟨yes,leftTail,shape,(branchRun.trans rightRun).trans dispatch,dispatchPre⟩
 
 #print axioms floatFiniteAddL_read_fields_align
 
@@ -3850,7 +3928,25 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
                       (pc+BitVec.ofNat 64 (16*executed.length)+256+
                         BitVec.ofNat 64 (16*aligned.length)+192+
                         BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48)
-                      fp K (16+9) rightTail ρ W 13) := by
+                      fp K (16+9) rightTail ρ W 13 ∧
+                    ∃ yes leftTail,
+                      rightTail = [ci 19 (16+9) (16*(yes.length+2)) 0] ++
+                        yes ++ [ci 18 16 0 0] ++ leftTail ∧
+                      Star ⟨pc,fp⟩ m
+                        ⟨(pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48)+
+                          BitVec.ofNat 64 (if ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4)))) then 16*(yes.length+2) else 16),fp⟩ rightOut ∧
+                      Pre L rightOut ((pc+BitVec.ofNat 64 (16*executed.length)+256+
+                        BitVec.ofNat 64 (16*aligned.length)+192+
+                        BitVec.ofNat 64 (16*(konstWL 4 (2^(F.fracBits+4)) (16+10)).1.length)+48)+
+                          BitVec.ofNat 64 (if ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4)))) then 16*(yes.length+2) else 16))
+                        fp K (16+9)
+                        (if ((if sx == sy then q+jam else q-jam).slt
+                        (BitVec.ofNat 64 (2^(F.fracBits+4)))) then leftTail else yes ++ [ci 18 16 0 0] ++ leftTail)
+                        ρ W 13) := by
   apply floatFiniteAddL_read_fields_align F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11
