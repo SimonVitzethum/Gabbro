@@ -1,5 +1,5 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Simulation
+import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung
 import Stage0.Senke.BildLese
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
