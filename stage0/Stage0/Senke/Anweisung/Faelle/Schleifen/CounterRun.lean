@@ -323,8 +323,8 @@ theorem source_exhaustion (n : Nat) (σ : World D) :
     exact ih σ'
 
 /-- The canonical source outcome is realized by the counted actual image.
-    The whole-loop lowS branch still refuses; this witnesses its runtime
-    obligation without claiming that the pipeline already accepts forever. -/
+    This separate counter image retains its direct Runner witness alongside
+    the now accepted generic whole-loop lowering. -/
 theorem source_counted_zeuge [Kern] (b : Fin 3) :
     Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [4, 5, 6]
       ⟨2016, 4096⟩ (loaded b) 0 0 0

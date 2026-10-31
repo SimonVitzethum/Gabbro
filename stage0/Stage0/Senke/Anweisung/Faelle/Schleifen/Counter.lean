@@ -1,6 +1,5 @@
-/- A protected runtime counter uses an explicitly reserved frame slot, never slot 3
-(the entry snapshot). The body and callees must stay below this reservation before
-this fragment can replace the current refusal of forever. -/
+/- Counter and immutable decrement word occupy the reserved frame prefix.
+   Lexical locals and callee frames start above that prefix. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
 import Stage0.Senke.Rueckkehr
 

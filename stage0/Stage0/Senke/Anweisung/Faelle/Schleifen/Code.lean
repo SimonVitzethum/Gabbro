@@ -1,4 +1,5 @@
-/- Bounded retry uses finite control flow: no hidden counter can collide with a body or callee frame.
+/- Shared retry, reserved-counter and constant-size forever code.
+   Bounded retry uses finite control flow: no hidden counter can collide with a body or callee frame.
    Each check precedes its attempt; the final check precedes the overflow block. Code size is linear in
    the bound. Leave skips all remaining attempts; next and fallthrough reach the following check. -/
 import Stage0.Senke.Ausdruck

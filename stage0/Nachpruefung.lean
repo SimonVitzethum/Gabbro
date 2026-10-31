@@ -121,12 +121,13 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.retry_case
 #print axioms Gabbro.Stage0.Senke.forever_zero
 #print axioms Gabbro.Stage0.Senke.forever_one_false
-#print axioms Gabbro.Stage0.Senke.forever_refused
+#print axioms Gabbro.Stage0.Senke.forever_initialize_entry
+#print axioms Gabbro.Stage0.Senke.forever_counter_loop
 #print axioms Gabbro.Stage0.Senke.RetryProbe.retry_case_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.retry_overflow_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.forever_fuel_zeuge
 #print axioms Gabbro.Stage0.Senke.LoopProbe.forever_body_zeuge
-#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_refused_zeuge
+#print axioms Gabbro.Stage0.Senke.LoopProbe.forever_unreserved_zeuge
 #print axioms Gabbro.Stage0.Senke.boolC_ok
 #print axioms Gabbro.Stage0.Senke.einpassen_bool
 #print axioms Gabbro.Stage0.Senke.einpassen_never
@@ -263,3 +264,6 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 -- Actual counter header reconstructs the source-pass interface in its output memory.
 #print axioms Gabbro.Stage0.Senke.counter_header
 #print axioms Gabbro.Stage0.Senke.CounterCallProbe.counter_header_zeuge
+
+#print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_outcomes_zeuge
+#print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge

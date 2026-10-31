@@ -75,8 +75,8 @@ theorem forever_body_zeuge :
       initialF (Env.nil : Env DF []) with | .ok _ _ => true | _ => false) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
-/-- Even an immediately leaving forever must be refused: fuel zero never enters its body. -/
-theorem forever_refused_zeuge :
+/-- A caller without a reserved counter frame is refused even for immediate leave. -/
+theorem forever_unreserved_zeuge :
     lowS 1 (fun _ => 0) (layU uf (fun _ => none) 0) 3 ([], 0) [] (0, 0)
       (Stmt.forever (V := vertragVon DF main) (l := false) (Λ := []) progress .tru (.cons (.leave rfl) .nil) :
         Stmt DF (vertragVon DF main) false [] [] []) = none := rfl

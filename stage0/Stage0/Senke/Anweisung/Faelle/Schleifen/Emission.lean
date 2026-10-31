@@ -1,5 +1,4 @@
-/- Concrete constant-size forever control. Kept off the lowering hook until the
-   complete statement simulation transports initialization and both exit edges. -/
+/- Emission proofs recover the actual body and targets used by forever lowering. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
 
 namespace Gabbro.Stage0.Senke
