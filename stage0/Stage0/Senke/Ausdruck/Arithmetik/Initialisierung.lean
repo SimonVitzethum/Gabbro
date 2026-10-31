@@ -515,4 +515,37 @@ theorem floatGuardTarget_hiddenBit_zeuge :
 #print axioms floatGuardTarget_hiddenBit
 #print axioms floatGuardTarget_hiddenBit_zeuge
 
+/-- Every reached head supplies bounded canonical output fields, for any
+    precision and source scale. No output-field bounds are caller premises.
+    This word bound does not assert the tighter format normalization bound. -/
+theorem FloatNormalizeHead.normQD_source_bounds
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {m : Runner.Mem} {pc fp : Runner.W} {K base reserved : Nat} {code : List II}
+    {origin target q r : Int} {originDistance budget fuel count distance : Nat}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r) (p scale : Nat) :
+    let nd := Gleitkomma.normQD p ((p : Int)-1-count-scale)
+      (origin.toNat * 2^distance) (8 * 2^(distance+originDistance+scale))
+    0 < nd.2 ∧ nd.1 / nd.2 < 2^58 ∧ nd.1 % nd.2 < nd.2 ∧
+      (q%8).toNat < 8 := by
+  dsimp only
+  have fields := head.normQD_source_output p scale
+  have positive : 0 < (8 * 2^(distance+originDistance) : Nat) * 2^scale := by
+    positivity
+  have denominator := fields.2.2
+  have denPositive : 0 < (Gleitkomma.normQD p ((p : Int)-1-count-scale)
+      (origin.toNat * 2^distance) (8 * 2^(distance+originDistance+scale))).2 := by
+    rw [denominator]
+    exact positive
+  refine ⟨denPositive, ?_, Nat.mod_lt _ denPositive, ?_⟩
+  · rw [fields.1]
+    have := head.quotient
+    have : q / 8 < (2^58 : Int) := by omega
+    omega
+  · have lo := Int.emod_nonneg q (by decide : (8 : Int) ≠ 0)
+    have hi := Int.emod_lt_of_pos q (by decide : (0 : Int) < 8)
+    omega
+
+#print axioms FloatNormalizeHead.normQD_source_bounds
+
 end Gabbro.Stage0.Senke
