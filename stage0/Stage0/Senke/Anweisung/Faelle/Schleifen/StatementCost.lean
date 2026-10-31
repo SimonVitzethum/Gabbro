@@ -147,6 +147,222 @@ theorem mov_to_counted {m : Mem} {pc fp : W} {K j s : Nat} {w : W}
   rw [sx_nat (by omega)]
   exact run_wr64 (wr64_some (hF.wr j hj))
 
+/-- The four actual call-tail instructions establish the callee ABI, parameter
+    frame and decremented depth together. No callee execution is assumed. -/
+theorem callTail_counted {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II}
+    {dv : Runner.W} {m : Mem} {pc fp : W} {K Ks F : Nat} {f : D.Fn}
+    {σ : World D} {ρa : Env D (D.params f)}
+    (hc : CodeAt m pc (callTail A f F indirect)) (hcf : CodeFar pc 4 fp K)
+    (hF : FrameOK m fp K) (hK : K < 2 ^ 31)
+    (hFB : FB ≤ F) (hT : F + FB + (D.params f).length + 1 ≤ Ks)
+    (hA : A f < 2 ^ 31) (hP : PCode m A C fp K)
+    (hdv : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (dv + 1))
+    (hE : EnvAt L m (slot fp (BitVec.ofNat 64 F)) ρa)
+    (hW : WIn L fp Ks K) (hWa : WeltAt m L σ) (hy : SyncOK m L fp Ks)
+    (htarget : indirect = true → m.rd64 (slot fp (BitVec.ofNat 64 F)) =
+      some (BitVec.ofNat 64 (A f)) := by simp) :
+    ∃ m', Counted 4 ⟨pc, fp⟩ m
+        ⟨BitVec.ofNat 64 (A f), slot fp (BitVec.ofNat 64 F)⟩ m' ∧
+      Agree fp F K m m' ∧
+      FrameOK m' (slot fp (BitVec.ofNat 64 F)) (K - F) ∧
+      PCode m' A C (slot fp (BitVec.ofNat 64 F)) (K - F) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 F)) = some (pc + 64) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 F) + 8) = some fp ∧
+      m'.rd64 (slot (slot fp (BitVec.ofNat 64 F)) (BitVec.ofNat 64 2)) = some dv ∧
+      EnvAt L m' (slot fp (BitVec.ofNat 64 F)) ρa ∧ WeltAt m' L σ ∧
+      SyncOK m' L (slot fp (BitVec.ofNat 64 F)) (Ks - F) := by
+  have hroom := hF.room
+  have hlt := hF.lt
+  have hFB3 : FB = 4 := rfl
+  have hks := hW.ks
+  have hroomS : fp.toNat + 8 * Ks ≤ 2 ^ 64 := by omega
+  -- the four instructions, read where they lie
+  have far : ∀ k, k < 4 → (pc + BitVec.ofNat 64 (16 * k)).toNat + 16 ≤ 2 ^ 64 ∧
+      ((pc + BitVec.ofNat 64 (16 * k)).toNat + 16 ≤ fp.toNat ∨
+        fp.toNat + 8 * K ≤ (pc + BitVec.ofNat 64 (16 * k)).toNat) := by
+    intro k hk
+    obtain ⟨h1, h2, h3⟩ := hcf
+    have := pc.isLt
+    have hx : (pc + BitVec.ofNat 64 (16 * k)).toNat = pc.toNat + 16 * k := by
+      simp only [BitVec.toNat_add, BitVec.toNat_ofNat]; omega
+    rw [hx]; omega
+  have i0 := hc 0 (by simp [callTail, callTailN])
+  have i1 := hc 1 (by simp [callTail, callTailN])
+  have i2 := hc 2 (by simp [callTail, callTailN])
+  have i3 := hc 3 (by simp [callTail, callTailN])
+  simp only [callTail, callTailN, ci, List.getElem_cons_zero, List.getElem_cons_succ] at i0 i1 i2 i3
+  -- the writes
+  let T := F + FB + (D.params f).length
+  have hsT : sx (II.f (T : Int)) = BitVec.ofNat 64 T := sx_nat (by omega)
+  have hs2 : sx (II.f ((F + 2 : Nat) : Int)) = BitVec.ofNat 64 (F + 2) := sx_nat (by omega)
+  have hsF : sx (II.f (F : Int)) = BitVec.ofNat 64 F := sx_nat (by omega)
+  let m1 := write m (slot fp (BitVec.ofNat 64 T)) 8 (BitVec.ofInt 64 1).toNat
+  have a1s : Agree fp F Ks m m1 := agree_write hroomS (by omega) (by omega) _
+  have a1 : Agree fp F K m m1 := Agree.widen a1s hks
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (F + 2))) 8 dv.toNat
+  have a2s : Agree fp F Ks m1 m2 := agree_write hroomS (by omega) (by omega) _
+  have a2 : Agree fp F K m1 m2 := Agree.widen a2s hks
+  let m3 := write m2 (slot fp (BitVec.ofNat 64 T)) 8 (BitVec.ofInt 64 (A f)).toNat
+  have a3s : Agree fp F Ks m2 m3 := agree_write hroomS (by omega) (by omega) _
+  have a3 : Agree fp F K m2 m3 := Agree.widen a3s hks
+  let m4 := write m3 (slot fp (BitVec.ofNat 64 F)) 8 (pc + BitVec.ofNat 64 (16 * 3) + 16).toNat
+  have a4s : Agree fp F Ks m3 m4 := agree_write hroomS (by omega) (by omega) _
+  have a4 : Agree fp F K m3 m4 := Agree.widen a4s hks
+  let m5 := write m4 (slot fp (BitVec.ofNat 64 (F + 1))) 8 fp.toNat
+  have a5s : Agree fp F Ks m4 m5 := agree_write hroomS (by omega) (by omega) _
+  have a5 : Agree fp F K m4 m5 := Agree.widen a5s hks
+  have hF1 := hF.agree a1
+  have hF2 := hF1.agree a2
+  have hF3 := hF2.agree a3
+  have hF4 := hF3.agree a4
+  have a15 : Agree fp F K m m5 := a1.trans (a2.trans (a3.trans (a4.trans a5)))
+  have hF5 := hF4.agree a5
+  -- the instructions in the memories they run in
+  have j1 := i1.agree a1 (far 1 (by decide))
+  have j2 := i2.agree (a1.trans a2) (far 2 (by decide))
+  have j3 := i3.agree (a1.trans (a2.trans a3)) (far 3 (by decide))
+  have e16 : ∀ k : Nat, pc + BitVec.ofNat 64 (16 * k) + 16 = pc + BitVec.ofNat 64 (16 * (k + 1)) := fun k => by
+    rw [BitVec.add_assoc, Nat.mul_add, BitVec.ofNat_add (16 * k)]; rfl
+  -- 1: const T 1
+  have s1 : Counted 1 ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m1 := by
+    have := const_step_counted (j := T) (k := 1) (codeAt_left (a := [ci 1 ((T : Nat) : Int) 1 0]) hc) hF (by omega) hK
+      (by decide)
+    simpa [m1] using this
+  -- 2: sub (F+2) 2 T
+  have s2 : Counted 1 ⟨pc + BitVec.ofNat 64 (16 * 1), fp⟩ m1 ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 := by
+    refine Counted.next ?_ (.refl _ _)
+    have r := run_step (t := ⟨_, fp⟩) j1 (by decide) (run_bin (t := ⟨_, fp⟩) j1 (m1 := m2) (va := dv + 1)
+      (vb := BitVec.ofInt 64 1) (g := fun a b => some (a - b)) ?_ ?_
+      (by show some (dv + 1 - BitVec.ofInt 64 1) = some dv
+          rw [show BitVec.ofInt 64 1 = 1 by decide, BitVec.add_sub_cancel]) ?_)
+    · simp only [nxt] at r; rw [e16] at r; exact r
+    · rw [sx_lit (by decide), show BitVec.ofInt 64 2 = BitVec.ofNat 64 2 by decide]
+      simp only [m1]; rw [rd_other hroom (by omega) (by omega) (by omega)]; exact hdv
+    · rw [hsT]; exact rd_same hF (by omega) _
+    · rw [hs2]; exact wr64_some (hF1.wr _ (by omega))
+  -- 3: const T (A f)
+  have s3 : Counted 1 ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩ m2 ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m3 := by
+    cases indirect with
+    | false =>
+      simp only [Bool.false_eq_true, ↓reduceIte] at j2
+      refine Counted.next ?_ (.refl _ _)
+      have r : Run (op 1 ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩) m2 (nxt ⟨pc + BitVec.ofNat 64 (16 * 2), fp⟩) m3 := by
+        simp only [op]
+        refine f2_run (t := ⟨_, fp⟩) j2 ?_
+        simp only [ret1]
+        refine f1_run (t := ⟨_, fp⟩) j2 ?_
+        rw [hsT, sx_lit (n := ((A f : Nat) : Int)) (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)]
+        exact run_wr64 (wr64_some (hF2.wr _ (by omega)))
+      have r2 := run_step (t := ⟨_, fp⟩) j2 (by decide) r
+      simp only [nxt] at r2; rw [e16] at r2; exact r2
+    | true =>
+      simp only [↓reduceIte] at j2
+      have hread : m2.rd64 (slot fp (BitVec.ofNat 64 F)) = some (BitVec.ofInt 64 (A f)) := by
+        simp only [m2, m1]
+        rw [rd_other hroom (by omega) (by omega) (by omega), rd_other hroom (by omega) (by omega) (by omega)]
+        simpa only [BitVec.ofInt_natCast] using htarget rfl
+      have hc2 : CodeAt m2 (pc + BitVec.ofNat 64 (16 * 2)) [ci 2 T F 0] := by
+        intro k hk
+        have : k = 0 := by simp only [List.length_singleton] at hk; omega
+        subst k
+        simpa only [ci, T, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] using j2
+      have st := mov_to_counted hc2 hF2 (j := T) (s := F) (by omega) (by omega) hK hread
+      simpa only [List.length_singleton, show BitVec.ofNat 64 (16 * 1) = (16 : Runner.W) by decide, e16] using st
+  -- 4: call T F
+  have s4 : Counted 1 ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m3 ⟨BitVec.ofNat 64 (A f), slot fp (BitVec.ofNat 64 F)⟩ m5 := by
+    refine Counted.next ?_ (.refl _ _)
+    have := run_call (t := ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩) (m1 := m4) (m2 := m5) j3
+      (tg := BitVec.ofInt 64 (A f)) (by rw [hsT]; exact rd_same hF2 (by omega) _)
+      (by rw [hsF]; exact wr64_some (hF3.wr _ (by omega)))
+      (by rw [hsF, show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]
+          exact wr64_some (hF4.wr _ (by omega)))
+    rw [hsF, show BitVec.ofInt 64 (A f : Int) = BitVec.ofNat 64 (A f) by simp] at this
+    exact run_step (t := ⟨_, fp⟩) j3 (by decide) this
+  -- the callee's frame
+  have hFF : F ≤ K := by omega
+  have g0 : m5.rd64 (slot (slot fp (BitVec.ofNat 64 F)) (BitVec.ofNat 64 0)) =
+      some (pc + BitVec.ofNat 64 (16 * 3) + 16) := by
+    rw [slot_slot, Nat.add_zero]
+    simp only [m5]; rw [rd_other hroom (by omega) (by omega) (by omega)]
+    exact rd_same hF3 (by omega) _
+  have g1 : m5.rd64 (slot (slot fp (BitVec.ofNat 64 F)) (BitVec.ofNat 64 1)) = some fp := by
+    rw [slot_slot]; exact rd_same hF4 (by omega) _
+  have g2 : m5.rd64 (slot (slot fp (BitVec.ofNat 64 F)) (BitVec.ofNat 64 2)) = some dv := by
+    rw [slot_slot]
+    simp only [m5, m4, m3]
+    rw [rd_other hroom (by omega) (by omega) (by omega), rd_other hroom (by omega) (by omega) (by omega),
+      rd_other hroom (by omega) (by omega) (by omega)]
+    exact rd_same hF1 (by omega) _
+  have gE : EnvAt L m5 (slot fp (BitVec.ofNat 64 F)) ρa := by
+    intro τ x
+    obtain ⟨w, hw, he⟩ := hE τ x
+    refine ⟨w, ?_, he⟩
+    have h1 := vslot_lt (reserved := 0) x
+    have h2 : FB ≤ vslot x := by unfold vslot; omega
+    simp only [frei] at h1
+    rw [slot_slot] at hw ⊢
+    simp only [m5, m4, m3, m2, m1]
+    rw [rd_other hroom (by omega) (by omega) (by omega), rd_other hroom (by omega) (by omega) (by omega),
+      rd_other hroom (by omega) (by omega) (by omega), rd_other hroom (by omega) (by omega) (by omega),
+      rd_other hroom (by omega) (by omega) (by omega)]
+    exact hw
+  have hW5 : WeltAt m5 L σ := weltAt_stab hW.lay (by have := hW.lo; omega) m m5 hWa
+    ((a1s.trans (a2s.trans (a3s.trans (a4s.trans a5s)))).mono (Nat.zero_le _))
+  refine ⟨m5, s1.trans (s2.trans (s3.trans s4)), a15, frame_sub hF5 hFF,
+    pcode_sub (pcode_agree hP a15) hF5.lt hFF, ?_, ?_, g2, gE, hW5, ?_⟩
+  · simpa [slot, BitVec.add_assoc] using g0
+  · simpa [slot, BitVec.add_assoc] using g1
+  · exact (hy.agree a15 (by have := hW.top; have := hW.ord; omega)).call (by omega)
+
+/-- Actual recursive argument evaluation followed by the complete four-opcode
+    call entry. This exposes the callee frame for a source-derived contract;
+    it does not assume a bound on the whole call. -/
+theorem ArgsCost.callEntry {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na : Nat}
+    (certificate : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W}
+    {ca : List II} {ta K Ks : Nat} {m : Mem} {pc fp : Runner.W}
+    (lower : lowA L args (frei Γ reserved + FB) reserved = some (ca, ta))
+    (fits : callTop f (frei Γ reserved) ta ≤ Ks)
+    (address : A f < 2 ^ 31)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (callC A f (frei Γ reserved) ca) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K)
+    (inside : WIn L fp Ks K) (world : WeltAt m L σ) :
+    ∃ m', Counted (na + 4) ⟨pc, fp⟩ m
+        ⟨BitVec.ofNat 64 (A f), slot fp (BitVec.ofNat 64 (frei Γ reserved))⟩ m' ∧
+      Agree fp (frei Γ reserved) K m m' ∧
+      FrameOK m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved) ∧
+      PCode m' A C (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) =
+        some (pc + BitVec.ofNat 64 (16 * (ca.length + 4))) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved)) + 8) = some fp ∧
+      m'.rd64 (slot (slot fp (BitVec.ofNat 64 (frei Γ reserved)))
+        (BitVec.ofNat 64 2)) = some dv ∧
+      EnvAt L m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (evalArgs σ₀ args σ ρ) ∧
+      WeltAt m' L σ ∧
+      SyncOK m' L (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (Ks - frei Γ reserved) := by
+  have hFB : FB ≤ frei Γ reserved := by simp only [frei]; omega
+  have hks := inside.ks
+  have bounds := fits
+  simp only [callTop] at bounds
+  have pre' : PreS L m pc fp K (frei Γ reserved + FB)
+      (ca ++ callTail A f (frei Γ reserved)) ρ reserved := pre.up (by omega)
+  have argPre := PreS.welt pre'.left hks world inside.lay (by have := inside.lo; omega)
+  obtain ⟨m1, argsRun, argsAgree, params⟩ := certificate.sound lower
+    (by omega) (by omega) argPre
+  have widened := Agree.widen argsAgree hks
+  have world1 := argPre.wstab m m1 world (argsAgree.mono (Nat.zero_le _))
+  have tailPre := pre'.next widened (Nat.le_refl _) (by omega)
+  have around := surroundings.agree widened pre.frame (by omega)
+  obtain ⟨m2, tailRun, tailAgree, frame, code, rpc, rfp, depth, env, world2, sync⟩ :=
+    callTail_counted (indirect := false) tailPre.code (by simpa [callTail, callTailN] using tailPre.far)
+      tailPre.frame pre.small hFB (by omega) address around.code around.depth params inside world1 around.sync
+  refine ⟨m2, argsRun.trans tailRun, (widened.mono (by omega)).trans tailAgree,
+    frame, code, ?_, rfp, depth, env, world2, sync⟩
+  simpa only [Nat.mul_add, BitVec.ofNat_add, BitVec.add_assoc,
+    show BitVec.ofNat 64 (16 * 4) = (64 : Runner.W) from rfl] using rpc
+
 /-- Assignment cost comes from its expression tree and the actual move.
     The result retains the changed source environment and unchanged world. -/
 theorem countedAssignVar_case
@@ -478,6 +694,63 @@ theorem args_sound_zeuge :
     cases g
     decide +kernel
   · exact fun m m' h a => weltAt_stab call_win.lay (by decide) m m' h (a.mono (Nat.zero_le _))
+
+open FnptrProben in
+def entryImage : List II := callC addresses 0 4 []
+
+open FnptrProben in
+def entryMemory : Mem := { callMem with
+  b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2112 then
+    ((entryImage.flatMap encII)[a.toNat - 2048]?).getD 0 else callMem.b a }
+
+open FnptrProben in
+/-- Loaded actual direct-call entry jointly inhabits all frame, code, world,
+    depth and hardware premises; this witness does not claim callee return. -/
+theorem call_entry_zeuge :
+    ∃ m', Counted 4 ⟨2048, 4096⟩ entryMemory ⟨64, 4128⟩ m' ∧
+      Agree 4096 4 256 entryMemory m' ∧
+      m'.rd64 4128 = some 2112 ∧ m'.rd64 4136 = some 4096 ∧
+      m'.rd64 4144 = some 2 ∧ WeltAt m' callLayout world := by
+  have code : CodeAt entryMemory 2048 entryImage := by
+    have h : ∀ k : Fin entryImage.length,
+        entryMemory.rd8 (2048 + BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 entryImage[k.val].o) ∧
+        entryMemory.rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f entryImage[k.val].a) ∧
+        entryMemory.rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f entryImage[k.val].b) ∧
+        entryMemory.rd32 (2048 + BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f entryImage[k.val].c) := by
+      apply allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨o, a, b, c⟩
+  have functions : PCode entryMemory addresses target 4096 256 := by
+    intro f
+    refine ⟨?_, (targets_code f).2⟩
+    have h : ∀ f : Fin 3, ∀ k : Fin (target f).length,
+        entryMemory.rd8 (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 (target f)[k.val].o) ∧
+        entryMemory.rd32 (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f (target f)[k.val].a) ∧
+        entryMemory.rd32 (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f (target f)[k.val].b) ∧
+        entryMemory.rd32 (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f (target f)[k.val].c) := by
+      apply allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h f ⟨k, hk⟩
+    exact ⟨o, a, b, c⟩
+  have pre : PreS callLayout entryMemory 2048 4096 256 4 entryImage (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      code, ?_, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    unfold CodeFar; decide +kernel
+  have worldAt : WeltAt entryMemory callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g; decide +kernel
+  have sync : SyncOK entryMemory callLayout 4096 128 :=
+    ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+      (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
+  have around : Umf callLayout addresses target 2 entryMemory 4096 128 256 :=
+    ⟨functions, by decide +kernel, by decide, sync, by decide⟩
+  have cert : ArgsCost callLayout 0 4 (show Args FnptrProben.D [] [] (FnptrProben.D.params 0) from .nil)
+      world world .nil 0 := .nil
+  obtain ⟨m', run, agree, _, _, rpc, rfp, depth, _, world', _⟩ :=
+    ArgsCost.callEntry (reserved := 0) (Γ := []) (f := (0 : Fin 3))
+      (args := .nil) (ca := []) (ta := 8) cert (by rfl) (by decide) (by decide) pre around call_win worldAt
+  exact ⟨m', run, agree, rpc, rfp, depth, world'⟩
 
 open FnptrProben in
 def storeImage : List II := [ci 1 4 576 0, ci 1 5 8192 0, stC 4]
