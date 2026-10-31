@@ -64,6 +64,43 @@ def alignmentImages : List (String × Except String (List Runner.B) × Nat) :=
           (fun d => floatCoefficientL d (fun j => some (konstWL 4 hi j)))
           (fun d => some (konstWL 4 k d))) expected, 7))
 
+/-- Connected sum boundary images retain cancellation tails independently. -/
+def negativeSumImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("negative-sum-cancel", 7, 14, 1, 0),
+   ("negative-sum-positive-tail", 7, 13, 1, 0),
+   ("negative-sum-negative-tail", 6, 13, 1, 2^64-1),
+   ("negative-sum-zero", 0, 0, 1074, 0),
+   ("negative-sum-63", 1, 13, 63, 0),
+   ("negative-sum-64", 1, 13, 64, 0),
+   ("negative-sum-65", 1, 13, 65, 0),
+   ("negative-sum-1074", 1, 13, 1074, 0),
+   ("negative-sum-maxcount", 1, 13, 2^64-1, 0),
+   ("negative-sum-lower", 2^64-2^61, 2^61, 0, 2^64-2^62)].map
+    (fun (name, hi, a, k, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatNegativeSumL 8 (fun d => some (konstWL 4 hi d))
+          (fun d => some (konstWL 4 a d))
+          (fun d => some (konstWL 4 k d))) expected, 7))
+
+theorem negativeSumImages_zeuge : negativeSumImages.length = 10 ∧
+    negativeSumImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+/-- One emitted sum simultaneously satisfies producer premises, exact signed
+    interpretation and reconstruction of a positive cancellation tail. -/
+theorem floatNegativeSumL_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun d => floatNegativeSumL d (fun j => some (konstWL 4 7 j))
+        (fun j => some (konstWL 4 13 j)) (fun j => some (konstWL 4 1 j)))
+      (BitVec.ofInt 64 (7 + (-(13 : Int)) / 2)) ∧
+    (-(2^61 : Int) ≤ 7 ∧ (7 : Int) ≤ 2^61) ∧
+    (13 : Nat) ≤ 2^61 ∧
+    (BitVec.ofInt 64 (7 + (-(13 : Int)) / 2)).toInt = 0 ∧
+    7 * (2 : Int) - 13 = 0 * 2 + (-(13 : Int)) % 2 := by
+  refine ⟨?_, by decide, by decide, by decide, by decide⟩
+  exact floatNegativeSumL_ok (WordCode.konst 7 (by decide))
+    (WordCode.konst 13 (by decide)) (WordCode.konst 1 (by decide))
+
 /-- Actual signed alignment at large exponent distances, using saturating
     shifts and an independently preserved tail. Counts never wrap at 64. -/
 def negativeShiftImages : List (String × Except String (List Runner.B) × Nat) :=

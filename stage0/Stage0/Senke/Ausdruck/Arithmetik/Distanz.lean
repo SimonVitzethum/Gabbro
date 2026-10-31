@@ -74,12 +74,11 @@ theorem floatNegativeShiftL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
   · exact floatShiftTailL_ok ha hk
 
 omit [Kern] in
-/-- A finite coefficient's negative aligned quotient fits the signed word.
-    The discarded tail's borrow cannot make its magnitude exceed the original
-    magnitude, even at the minimum signed-word boundary. -/
-theorem floatNegativeAlign_range (n den : Nat) (hd : 0 < den) (hn : n ≤ 2^63) :
-    -(2^63) ≤ (-(n : Int)) / (den : Int) ∧
-      (-(n : Int)) / (den : Int) < 2^63 := by
+/-- Euclidean negative alignment stays between the original coefficient and
+    zero, including the borrow for every nonzero remainder. -/
+theorem floatNegativeAlign_bounds (n den : Nat) (hd : 0 < den) :
+    -(n : Int) ≤ (-(n : Int)) / (den : Int) ∧
+      (-(n : Int)) / (den : Int) ≤ 0 := by
   rw [floatNegativeAlign_div n den hd]
   have hq := Nat.div_le_self n den
   have hq0 : (0 : Int) ≤ (n / den : Nat) := Int.natCast_nonneg _
@@ -99,6 +98,15 @@ theorem floatNegativeAlign_range (n den : Nat) (hd : 0 < den) (hn : n ≤ 2^63) 
     omega
 
 omit [Kern] in
+/-- A finite coefficient's negative aligned quotient fits the signed word,
+    even at the minimum signed-word boundary. -/
+theorem floatNegativeAlign_range (n den : Nat) (hd : 0 < den) (hn : n ≤ 2^63) :
+    -(2^63) ≤ (-(n : Int)) / (den : Int) ∧
+      (-(n : Int)) / (den : Int) < 2^63 := by
+  have hb := floatNegativeAlign_bounds n den hd
+  omega
+
+omit [Kern] in
 /-- Recover the exact signed quotient from its emitted word representation;
     no exponent-distance restriction or positive-only approximation is used. -/
 theorem floatNegativeShift_toInt (a k : Runner.W) (ha : a.toNat ≤ 2^63) :
@@ -116,6 +124,55 @@ theorem floatNegativeShift_toInt_zeuge :
     (BitVec.ofInt 64 ((-(13 : Int)) / (2^1074 : Nat))).toInt = -1 ∧
     (BitVec.ofInt 64 ((0 : Int) / (2^1074 : Nat))).toInt = 0 := by
   decide +kernel
+
+/-- Add the unshifted signed coefficient to the borrowed negative quotient.
+    The discarded remainder stays separate through cancellation. -/
+def floatNegativeSumL (d : Nat) (hi magnitude distance : Nat → Option (List II × Nat)) :
+    Option (List II × Nat) :=
+  wordL 3 d (hi d) (floatNegativeShiftL (d + 1) magnitude distance)
+
+/-- Connected emitted addition for all word-sized distances and arbitrary
+    operand producers, inheriting their frame and footprint discipline. -/
+theorem floatNegativeSumL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {hi magnitude distance : Nat → Option (List II × Nat)} {h : Int} {a k : Runner.W}
+    (hh : WordCode (L := L) ρ W hi (BitVec.ofInt 64 h))
+    (ha : WordCode (L := L) ρ W magnitude a)
+    (hk : WordCode (L := L) ρ W distance k) :
+    WordCode (L := L) ρ W (fun d => floatNegativeSumL d hi magnitude distance)
+      (BitVec.ofInt 64 (h + (-(a.toNat : Int)) / (2^k.toNat : Nat))) := by
+  have result : WordCode (L := L) ρ W _ _ := WordCode.bin hh
+    (floatNegativeShiftL_ok ha hk) (g := fun a b => some (a + b))
+      rfl rfl (by decide : 3 < 256)
+  intro fp K d c top hc hK m pc hp
+  exact (result hc hK m pc hp).mono fun w hw =>
+    hw.trans (BitVec.ofInt_add _ _).symm
+
+omit [Kern] in
+/-- Guard-extended finite coefficients fit without a sum-range premise.
+    The bounds leave room for both signs and for the negative tail borrow. -/
+theorem floatNegativeSum_toInt (h : Int) (a k : Runner.W)
+    (hh : -(2^61) ≤ h ∧ h ≤ 2^61) (ha : a.toNat ≤ 2^61) :
+    (BitVec.ofInt 64 (h + (-(a.toNat : Int)) / (2^k.toNat : Nat))).toInt =
+      h + (-(a.toNat : Int)) / (2^k.toNat : Nat) := by
+  have hb := floatNegativeAlign_bounds a.toNat (2^k.toNat)
+    (Nat.pow_pos (by decide))
+  apply toInt_ofInt_in <;> omega
+
+omit [Kern] in
+/-- Exact cancellation reconstruction from the emitted signed sum and the
+    original Euclidean remainder, including a zero quotient with nonzero tail. -/
+theorem floatNegativeSum_reconstruct (h : Int) (a k : Runner.W)
+    (hh : -(2^61) ≤ h ∧ h ≤ 2^61) (ha : a.toNat ≤ 2^61) :
+    h * (2^k.toNat : Nat) - (a.toNat : Int) =
+      (BitVec.ofInt 64 (h + (-(a.toNat : Int)) / (2^k.toNat : Nat))).toInt *
+        (2^k.toNat : Nat) + (-(a.toNat : Int)) % (2^k.toNat : Nat) := by
+  rw [floatNegativeSum_toInt h a k hh ha]
+  exact floatSignedAlign_reconstruct h (-(a.toNat : Int)) (2^k.toNat)
+
+#print axioms floatNegativeAlign_bounds
+#print axioms floatNegativeSumL_ok
+#print axioms floatNegativeSum_toInt
+#print axioms floatNegativeSum_reconstruct
 
 #print axioms floatNegativeAlign_range
 #print axioms floatNegativeShift_toInt

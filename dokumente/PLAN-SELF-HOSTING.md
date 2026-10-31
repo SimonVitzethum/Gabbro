@@ -307,6 +307,24 @@ the last actual-runner measurement remains 150 images, zero failures. The comple
 finite sum-to-packed-IEEE and arbitrary-reserved/range-107 obligations remain open.
 
 
+The emitted negative-alignment fragment now composes with an arbitrary signed
+high-coefficient producer in `floatNegativeSumL`. Its generic `WordCode` theorem
+covers every word-sized distance and preserves the existing frame/footprint
+contract. The shared arbitrary-denominator bounds theorem also supplies the old
+signed-quotient range bridge, avoiding duplicate borrow arguments. For coefficients
+bounded by `2^61` (ample room for guard-extended binary64 coefficients), the sum
+recovers its exact signed integer without a separate sum-range assumption.
+`floatNegativeSum_reconstruct` then recovers the exact pre-alignment integer from
+that sum and the original Euclidean remainder. In particular, a zero sum word
+with a positive remainder is not exact cancellation. This fragment does not yet
+emit the complete remainder-to-magnitude normalization and final packing path;
+its `WordCode` contract does not establish the requested whole-operation cost or
+arbitrary-reserved simulation. Full add/sub and range 107 remain refused, and
+computed `floatOf` is unchanged. Direct distance/probe/root/`Nachpruefung`
+checks, standard-axiom audit and layout passed; actual runner: 160 images,
+zero failures (2026-10-31). No grammar rebuild was run.
+
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access
