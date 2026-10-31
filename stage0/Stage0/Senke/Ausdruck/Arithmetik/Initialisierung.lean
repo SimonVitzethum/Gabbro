@@ -2846,7 +2846,10 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
             ci 4 (dst+7) (dst+7) (dst+8)] ++ signedTail ∧
           Pre L out2 (pc+BitVec.ofNat 64 (16*executed.length)+256+
             BitVec.ofNat 64 (16*aligned.length)+96) fp K (dst+7)
-            signedTail ρ W reserved := by
+            signedTail ρ W reserved ∧
+          ∃ normalization,
+            signedTail = [ci 1 (dst+10) 0 0,
+              ci 14 (dst+9) (dst+7) (dst+10)] ++ normalization := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
     floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
       fracMask hiddenBound room (by omega) producerA producerB pre
@@ -2925,6 +2928,12 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     simp [List.append_assoc] at eq
     exact ⟨_,eq⟩
   obtain ⟨signedTail,signedEq⟩ := signedShape
+  have normalizationShape : ∃ normalization, signedTail =
+      [ci 1 (dst+10) 0 0, ci 14 (dst+9) (dst+7) (dst+10)] ++ normalization := by
+    have eq := hfull.symm.trans result.1.symm
+    rw [hie,tailEq,signedEq] at eq
+    simp [List.append_assoc] at eq
+    exact ⟨_,eq⟩
   let vs : Nat → Runner.W := fun i => (final.rd64 (slot fp (BitVec.ofNat 64 i))).getD 0
   have vreads : ∀ i, i < K → final.rd64 (slot fp (BitVec.ofNat 64 i)) = some (vs i) := by
     intro i hi
@@ -2944,7 +2953,7 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     fieldValues,?_,?_,finalPre,signedOut,vs (dst+3),vs (dst+4),vs (dst+7),vs (dst+16),
     vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),
     wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),
-    signedRead,?_,signedTail,signedEq,signedRest⟩
+    signedRead,?_,signedTail,signedEq,signedRest,normalizationShape⟩
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
@@ -3182,7 +3191,10 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
             ci 4 (16+7) (16+7) (16+8)] ++ signedTail ∧
           Pre L out2 (pc+BitVec.ofNat 64 (16*executed.length)+256+
             BitVec.ofNat 64 (16*aligned.length)+96) fp K (16+7)
-            signedTail ρ W 13 := by
+            signedTail ρ W 13 ∧
+          ∃ normalization,
+            signedTail = [ci 1 (16+10) 0 0,
+              ci 14 (16+9) (16+7) (16+10)] ++ normalization := by
   apply floatFiniteAddL_read_fields_align F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11
