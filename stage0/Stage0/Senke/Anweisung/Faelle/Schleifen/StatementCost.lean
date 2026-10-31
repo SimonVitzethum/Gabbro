@@ -4895,7 +4895,7 @@ theorem recursiveBlockCost.counter_dispatch {P : Programm D} {passes : Nat}
     it is deliberately independent of the remaining counter `fuel`. Children
     are recursive SOURCE certificates, including their recursive call children.
     Costs exclude the two initial literals, which are paid once at entry.
-    This tree is not yet a whole-image execution certificate. -/
+    The soundness theorem below executes the corresponding whole emitted suffix. -/
 inductive NestedForever (L : Lay D) (reserved : Nat) (P : Programm D)
     (passes : Nat) (A : D.Fn → Nat) (C : D.Fn → List II) (dv : W) (Ks : Nat)
     (V : Vertrag D) {Γ : Ctx} {Λ : List (Res D)}
@@ -4954,8 +4954,8 @@ def NestedForever.childCharge {P : Programm D} {passes A C dv Ks V Γ Λ}
   | .early (ni := ni) (nb := nb) _ _ _ => ni + nb
   | .invariantStop (ni := ni) _ => ni
 
-/-- Structural arithmetic bound for the proposed whole-image certificate.
-    This proves the decreasing-budget recursion, not its missing IR simulation.
+/-- Structural bound for the decreasing-budget source tree. The initialized
+    soundness theorem below applies it to actual counted IR execution.
     No G-step or lowering-pass count is identified with an instruction count. -/
 theorem NestedForever.structural_bound {P : Programm D} {passes A C dv Ks V Γ Λ}
     {assumption : D.Annahme} {inv : Expr D Γ Λ .bool} {body : Block D V true Γ Λ Λ}
@@ -5118,4 +5118,314 @@ theorem recursiveBlockCost.forever_full_positive_counted
       (keeps_of_agreeW inside (agreeW_of frame) hprotected
         (by have h := locals; unfold frei at h; omega)) stripped⟩
 
+section NestedSound
+set_option maxRecDepth 10000
+/-- Execute the complete emitted suffix from source children and a decreasing
+    runtime counter, including both jumps on every normal backedge. -/
+theorem NestedForever.sound
+    {P : Programm D} {passes A C dv Ks} {f : D.Fn} {Γ Λ}
+    {assumption : D.Annahme} {inv : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ}
+    {fuel σ ρ outcome n}
+    (tree : NestedForever L reserved P passes A C dv Ks (vertragVon D f)
+      assumption inv body fuel σ ρ outcome n)
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp pc : W}
+    {lo K counter one tc tb : Nat} {ens : List II × Nat}
+    {pr : List Nat} {cc cb : List II} {m : Mem}
+    (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (lowerBody : lowB (reserved := reserved) passes A L lo ens (counter :: one :: pr)
+      (foreverTargets cc.length cb.length) body = some (cb, tb))
+    (fitsInv : tc ≤ Ks) (fitsBody : tb ≤ Ks)
+    (inside : WIn L fp Ks K) (abi : FB ≤ lo) (low : lo ≤ counter)
+    (counterLow : FB ≤ counter) (ordered : counter < one)
+    (allocated : one < FB + reserved) (locals : frei Γ reserved ≤ K)
+    (hprotected : ∀ j ∈ pr, j < counter) (room : (frei Γ reserved) + 8 ≤ K)
+    (jumpFits : 16 * (cc.length + cb.length + 8) < 2 ^ 31)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      ((foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
+        cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved) ++
+        [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0]) ++
+        stopC 111 (frei Γ reserved)) ρ reserved)
+    (around : Umf L A C dv m fp Ks K) (world : WeltAt m L σ)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 fuel))
+    (readOne : m.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1)
+    (fuelFits : fuel < 2 ^ 64) :
+    ∃ k, k ≤ n ∧ CountedSim k L P f σ0 ρ0 rp cfp fp lo K pr
+      ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 11)))
+      (pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 11))) pc outcome reserved := by
+  induction tree generalizing m pc with
+  | zero =>
+    exact ⟨3, by omega, forever_zero_header_counted inside pre world locals room jumpFits
+      (by simpa using read) (by unfold frei; omega)⟩
+  | @normal fuel σ ρ σ' ρ' outcome ni nb nr invariant child tail ih =>
+    obtain ⟨mh, headerRun, headerPre, headerWorld, frame, counterRead, unitRead⟩ :=
+      counter_positive_source_counted inside pre world counterLow ordered allocated locals
+        read readOne (by bv_omega)
+    have sourcePre : PreS L mh (pc + 16 + 16) fp K (frei Γ reserved)
+        (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+          (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))))) ρ reserved := by
+      have grouped : PreS L mh (pc + 16 + 16) fp K (frei Γ reserved)
+          ((cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+            (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))))) ++
+            ([ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0] ++
+              stopC 111 (frei Γ reserved))) ρ reserved := by
+        simpa only [List.append_eq, List.nil_append, List.append_assoc] using headerPre
+      exact grouped.left
+    have lowF : lo ≤ frei Γ reserved := by unfold frei; omega
+    have own : ∀ j ∈ counter :: one :: pr, j < frei Γ reserved := by
+      intro j hj
+      simp only [List.mem_cons] at hj
+      rcases hj with rfl | rfl | hj <;> unfold frei
+      · omega
+      · omega
+      · have := hprotected j hj; omega
+    obtain ⟨nb', bodyBound, bodyRun⟩ := child.positive_source_counted (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp) invariant lowerInv
+      (ex := (64, -(16 * (cc.length + cb.length + 3 : Nat) : Int) - 64))
+      (by simpa [exPlus, foreverTargets] using lowerBody)
+      fitsInv inside abi lowF own sourcePre
+      (Umf.agreeW inside around (agreeW_of frame) (by omega)) headerWorld fitsBody
+      (e := (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 + BitVec.ofNat 64 (16 * cb.length))
+      (eL := (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 + BitVec.ofNat 64 (16 * cb.length) + 128)
+      (eN := pc) rfl (by simp [exPlus]) (by
+        simp only [exPlus, Prod.snd]
+        have delta : -(16 * (cc.length + cb.length + 3 : Nat) : Int) - 64 + 16 * (4 : Nat) =
+            -(16 * (cc.length + cb.length + 3 : Nat) : Int) := by omega
+        rw [delta]
+        have endEq : (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 +
+            BitVec.ofNat 64 (16 * cb.length) =
+            pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 3)) := by
+          change pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1) +
+            BitVec.ofNat 64 (16 * cc.length) + BitVec.ofNat 64 (16 * 1) +
+            BitVec.ofNat 64 (16 * cb.length) = _
+          simp only [pc_add]
+          congr 2
+          omega
+        rw [endEq, BitVec.ofInt_neg, BitVec.ofInt_mul, BitVec.ofInt_natCast]
+        change pc = pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 3)) +
+          -(BitVec.ofNat 64 16 * BitVec.ofNat 64 (cc.length + cb.length + 3))
+        rw [← BitVec.ofNat_mul, BitVec.add_neg_eq_sub, BitVec.add_sub_cancel])
+    obtain ⟨m', bodyRun, bodyFrame, bodyEnv, bodyWorld, bodyKeep⟩ := bodyRun
+    have code := codeAt_agreeWIn inside bodyFrame headerPre.code headerPre.far
+    have suffix : CodeAt m' ((pc + 16 + 16) + BitVec.ofNat 64
+        (16 * (cc.length + 1 + cb.length)))
+        ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved) ++
+          [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0] ++
+          stopC 111 (frei Γ reserved)) := by
+      have grouped : CodeAt m' (pc + 16 + 16)
+          ((cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb) ++
+          ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved) ++
+          [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0] ++
+          stopC 111 (frei Γ reserved))) := by
+        simpa only [List.append_eq, List.nil_append, List.append_assoc] using code
+      simpa only [List.length_append, List.length_singleton] using codeAt_right grouped
+    have endEq : (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 +
+        BitVec.ofNat 64 (16 * cb.length) =
+        (pc + 16 + 16) + BitVec.ofNat 64 (16 * (cc.length + 1 + cb.length)) := by
+      change _ + _ + BitVec.ofNat 64 (16 * 1) + _ = _
+      simp only [pc_add]
+    rw [endEq] at bodyRun
+    have ji := suffix 0 (by simp)
+    simp only [List.cons_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci] at ji
+    have jump := run_step (t := ⟨_, fp⟩) ji (by decide) (run_jmp ji)
+    rw [show sx (II.f 64) = (64 : W) by decide] at jump
+    have backCode := codeAt_right (a := [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)) suffix
+    have backPC : ((pc + 16 + 16) + BitVec.ofNat 64 (16 * (cc.length + 1 + cb.length))) +
+        BitVec.ofNat 64 (16 * ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)).length) =
+        pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 7)) := by
+      change pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1) +
+        BitVec.ofNat 64 (16 * (cc.length + 1 + cb.length)) + BitVec.ofNat 64 (16 * 4) = _
+      simp only [pc_add]
+      congr 2 <;> omega
+    rw [backPC] at backCode
+    have bj := backCode 0 (by simp)
+    simp only [List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci] at bj
+    have backRun := run_step (t := ⟨_, fp⟩) bj (by decide) (run_jmp bj)
+    rw [sx_lit (by unfold lit32; simp; omega)] at backRun
+    have backTarget : pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 7)) +
+        BitVec.ofInt 64 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) = pc := by
+      rw [BitVec.ofInt_neg, BitVec.ofInt_mul, BitVec.ofInt_natCast]
+      change pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 7)) +
+        -(BitVec.ofNat 64 16 * BitVec.ofNat 64 (cc.length + cb.length + 7)) = pc
+      rw [← BitVec.ofNat_mul, BitVec.add_neg_eq_sub, BitVec.add_sub_cancel]
+    rw [backTarget] at backRun
+    have jumpTarget : (pc + 16 + 16) + BitVec.ofNat 64 (16 * (cc.length + 1 + cb.length)) + 64 =
+        pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 7)) := by
+      change pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1) + _ +
+        BitVec.ofNat 64 (16 * 4) = _
+      simp only [pc_add]
+      congr 2 <;> omega
+    rw [jumpTarget] at jump
+    have jumps : Counted 2
+        ⟨(pc + 16 + 16) + BitVec.ofNat 64 (16 * (cc.length + 1 + cb.length)), fp⟩ m'
+        ⟨pc, fp⟩ m' := .next jump (.next backRun (.refl _ _))
+    have routed : Counted (nb' + 2) ⟨pc + 16 + 16, fp⟩ mh ⟨pc, fp⟩ m' :=
+      bodyRun.trans jumps
+    have allFrame := (agreeW_of (frame.mono low)).trans bodyFrame
+    have ownWords := bodyKeep counter (by simp)
+    rw [counterRead] at ownWords
+    have fuelRead : m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 fuel) := by
+      have decEq : (BitVec.ofNat 64 (fuel + 1) : W) - 1 = BitVec.ofNat 64 fuel := by
+        rw [BitVec.ofNat_add]
+        exact BitVec.add_sub_cancel _ _
+      exact ownWords.trans (congrArg some decEq)
+    have oneRead := (bodyKeep one (by simp)).trans unitRead
+    have ownOuter : Keeps fp pr mh m' := fun j hj => bodyKeep j (by simp [hj])
+    have headerOuter := keeps_of_agreeW inside (agreeW_of frame) hprotected (by have h := locals; unfold frei at h; omega)
+    have nextPre : PreS L m' pc fp K (frei Γ reserved) _ ρ' reserved :=
+      ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame allFrame,
+        codeAt_agreeWIn inside allFrame pre.code pre.far, pre.far, bodyEnv, trivial, wstab_true _ _⟩
+    obtain ⟨nr', tailBound, tailRun⟩ := ih nextPre (Umf.agreeW inside around allFrame abi)
+      bodyWorld fuelRead oneRead (by omega)
+    exact ⟨2 + (nb' + 2) + nr', by omega,
+      CountedSim.prefix abi (headerRun.trans routed) allFrame
+        (headerOuter.trans ownOuter) tailRun⟩
+  | @next fuel σ ρ σ' ρ' outcome ni nb nr invariant child tail ih =>
+    obtain ⟨mh, headerRun, headerPre, headerWorld, frame, counterRead, unitRead⟩ :=
+      counter_positive_source_counted inside pre world counterLow ordered allocated locals
+        read readOne (by bv_omega)
+    have sourcePre : PreS L mh (pc + 16 + 16) fp K (frei Γ reserved)
+        (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+          (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))))) ρ reserved := by
+      have grouped : PreS L mh (pc + 16 + 16) fp K (frei Γ reserved)
+          ((cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+            (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))))) ++
+            ([ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0] ++
+              stopC 111 (frei Γ reserved))) ρ reserved := by
+        simpa only [List.append_eq, List.nil_append, List.append_assoc] using headerPre
+      exact grouped.left
+    have lowF : lo ≤ frei Γ reserved := by unfold frei; omega
+    have own : ∀ j ∈ counter :: one :: pr, j < frei Γ reserved := by
+      intro j hj
+      simp only [List.mem_cons] at hj
+      rcases hj with rfl | rfl | hj <;> unfold frei
+      · omega
+      · omega
+      · have := hprotected j hj; omega
+    obtain ⟨nb', bodyBound, bodyRun⟩ := child.positive_source_counted (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp) invariant lowerInv
+      (ex := (64, -(16 * (cc.length + cb.length + 3 : Nat) : Int) - 64))
+      (by simpa [exPlus, foreverTargets] using lowerBody)
+      fitsInv inside abi lowF own sourcePre
+      (Umf.agreeW inside around (agreeW_of frame) (by omega)) headerWorld fitsBody
+      (e := (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 + BitVec.ofNat 64 (16 * cb.length))
+      (eL := (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 + BitVec.ofNat 64 (16 * cb.length) + 128)
+      (eN := pc) rfl (by simp [exPlus]) (by
+        simp only [exPlus, Prod.snd]
+        have delta : -(16 * (cc.length + cb.length + 3 : Nat) : Int) - 64 + 16 * (4 : Nat) =
+            -(16 * (cc.length + cb.length + 3 : Nat) : Int) := by omega
+        rw [delta]
+        have endEq : (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 +
+            BitVec.ofNat 64 (16 * cb.length) =
+            pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 3)) := by
+          change pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1) +
+            BitVec.ofNat 64 (16 * cc.length) + BitVec.ofNat 64 (16 * 1) +
+            BitVec.ofNat 64 (16 * cb.length) = _
+          simp only [pc_add]
+          congr 2
+          omega
+        rw [endEq, BitVec.ofInt_neg, BitVec.ofInt_mul, BitVec.ofInt_natCast]
+        change pc = pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 3)) +
+          -(BitVec.ofNat 64 16 * BitVec.ofNat 64 (cc.length + cb.length + 3))
+        rw [← BitVec.ofNat_mul, BitVec.add_neg_eq_sub, BitVec.add_sub_cancel])
+    obtain ⟨m', bodyRun, bodyFrame, bodyEnv, bodyWorld, bodyKeep⟩ := bodyRun
+    have allFrame := (agreeW_of (frame.mono low)).trans bodyFrame
+    have ownWords := bodyKeep counter (by simp)
+    rw [counterRead] at ownWords
+    have fuelRead : m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 fuel) := by
+      have decEq : (BitVec.ofNat 64 (fuel + 1) : W) - 1 = BitVec.ofNat 64 fuel := by
+        rw [BitVec.ofNat_add]
+        exact BitVec.add_sub_cancel _ _
+      exact ownWords.trans (congrArg some decEq)
+    have oneRead := (bodyKeep one (by simp)).trans unitRead
+    have ownOuter : Keeps fp pr mh m' := fun j hj => bodyKeep j (by simp [hj])
+    have headerOuter := keeps_of_agreeW inside (agreeW_of frame) hprotected (by have h := locals; unfold frei at h; omega)
+    have nextPre : PreS L m' pc fp K (frei Γ reserved) _ ρ' reserved :=
+      ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame allFrame,
+        codeAt_agreeWIn inside allFrame pre.code pre.far, pre.far, bodyEnv, trivial, wstab_true _ _⟩
+    obtain ⟨nr', tailBound, tailRun⟩ := ih nextPre (Umf.agreeW inside around allFrame abi)
+      bodyWorld fuelRead oneRead (by omega)
+    exact ⟨2 + nb' + nr', by omega,
+      CountedSim.prefix abi (headerRun.trans bodyRun) allFrame
+        (headerOuter.trans ownOuter) tailRun⟩
+  | leave invariant child =>
+    obtain ⟨k, bound, run⟩ := recursiveBlockCost.forever_full_positive_counted
+      (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp)
+      invariant child lowerInv lowerBody fitsInv fitsBody inside abi low counterLow ordered
+      allocated locals hprotected room jumpFits pre around world read readOne fuelFits
+    refine ⟨k, bound, ?_⟩
+    change CountedReach k L fp lo K pr ⟨pc, fp⟩ m _ _ _ reserved at run ⊢
+    have endpoint : (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 +
+        BitVec.ofNat 64 (16 * cb.length) + 128 =
+        pc + BitVec.ofNat 64 (16 * (cc.length + cb.length + 11)) := by
+      change pc + BitVec.ofNat 64 (16 * 1) + BitVec.ofNat 64 (16 * 1) +
+        BitVec.ofNat 64 (16 * cc.length) + BitVec.ofNat 64 (16 * 1) +
+        BitVec.ofNat 64 (16 * cb.length) + BitVec.ofNat 64 (16 * 8) = _
+      simp only [pc_add]
+      congr 2 <;> omega
+    simpa only [endpoint] using run
+  | @early fuel σ ρ outcome ni nb invariant child terminal =>
+    obtain ⟨k, bound, run⟩ := recursiveBlockCost.forever_full_positive_counted
+      (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp)
+      invariant child lowerInv lowerBody fitsInv fitsBody inside abi low counterLow ordered
+      allocated locals hprotected room jumpFits pre around world read readOne fuelFits
+    refine ⟨k, bound, ?_⟩
+    cases outcome <;> simp_all [CountedSim]
+  | invariantStop invariant =>
+    refine ⟨_, Nat.le_refl _, ?_⟩
+    exact forever_positive_invariant_stop_counted (P := P) invariant lowerInv lowerBody fitsInv fitsBody
+      inside abi low counterLow ordered allocated locals hprotected room jumpFits pre around
+      world read readOne fuelFits
+/-- Initialize both reserved words once and bound the complete emitted loop.
+    The maximum child charge is computed from the source-certificate tree. -/
+theorem NestedForever.initialized_sound
+    {P : Programm D} {passes A C dv Ks} {f : D.Fn} {Γ Λ}
+    {assumption : D.Annahme} {inv : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ}
+    {fuel σ ρ outcome n}
+    (tree : NestedForever L reserved P passes A C dv Ks (vertragVon D f)
+      assumption inv body fuel σ ρ outcome n)
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp pc : W}
+    {lo K counter one tc tb : Nat} {ens : List II × Nat}
+    {pr : List Nat} {cc cb : List II} {m : Mem}
+    (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (lowerBody : lowB (reserved := reserved) passes A L lo ens (counter :: one :: pr)
+      (foreverTargets cc.length cb.length) body = some (cb, tb))
+    (fitsInv : tc ≤ Ks) (fitsBody : tb ≤ Ks)
+    (inside : WIn L fp Ks K) (abi : FB ≤ lo) (low : lo ≤ counter)
+    (counterLow : FB ≤ counter) (ordered : counter < one)
+    (allocated : one < FB + reserved) (locals : frei Γ reserved ≤ K)
+    (hprotected : ∀ j ∈ pr, j < counter) (room : (frei Γ reserved) + 8 ≤ K)
+    (jumpFits : 16 * (cc.length + cb.length + 8) < 2 ^ 31)
+    (literal : lit32 (fuel : Int) = true)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      ([ci 1 counter (fuel : Int) 0] ++ [ci 1 one 1 0] ++ ((foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
+        cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved) ++
+        [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0]) ++
+        stopC 111 (frei Γ reserved))) ρ reserved)
+    (around : Umf L A C dv m fp Ks K) (world : WeltAt m L σ)
+    (fuelFits : fuel < 2 ^ 64) :
+    ∃ k, k ≤ 5 + fuel * (5 + tree.childCharge) ∧ CountedSim k L P f σ0 ρ0 rp cfp fp lo K pr
+      ⟨pc, fp⟩ m (pc + 16 + 16 + BitVec.ofNat 64 (16 * (cc.length + cb.length + 11)))
+      (pc + 16 + 16 + BitVec.ofNat 64 (16 * (cc.length + cb.length + 11))) (pc + 16 + 16) outcome reserved := by
+  obtain ⟨m1, run1, pre1, world1, agree1, read1⟩ :=
+    reserved_literal_source_entry inside pre world counterLow (by omega) locals literal
+  obtain ⟨m2, run2, pre2, world2, agree2, read2⟩ :=
+    reserved_literal_source_entry inside pre1 world1 (by omega) allocated locals (by decide)
+  have counterRead : m2.rd64 (slot fp (BitVec.ofNat 64 counter)) =
+      some (BitVec.ofNat 64 fuel) := by
+    rw [agree_rd_low agree2 pre1.frame.room ordered (by unfold frei at locals; omega)]
+    simpa only [BitVec.ofInt_natCast] using read1
+  have agree := agree1.trans (agree2.mono (Nat.le_of_lt ordered))
+  obtain ⟨k, bound, run⟩ := tree.sound lowerInv lowerBody fitsInv fitsBody
+    inside abi low counterLow ordered allocated locals hprotected room jumpFits pre2
+    (Umf.agreeW inside around (agreeW_of agree) (by omega)) world2 counterRead read2 fuelFits
+  refine ⟨2 + k, Nat.le_trans (by omega) tree.structural_bound, ?_⟩
+  exact CountedSim.prefix abi (run1.trans run2)
+    (agreeW_of (agree.mono low))
+    (keeps_of_agreeW inside (agreeW_of agree) hprotected (by
+      have := locals; unfold frei at *; omega)) run
+
+
+end NestedSound
 end Gabbro.Stage0.Senke

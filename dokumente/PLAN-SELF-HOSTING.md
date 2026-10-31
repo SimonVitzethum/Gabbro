@@ -343,6 +343,15 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   does not yet propagate stops through recursive callee bodies: `RecursiveEndCost`
   stop cases, positive budget induction, nested loops and the structural
   whole-source bound remain OPEN.
+  `NestedForever.sound` now executes the entire emitted suffix from recursive
+  source-child certificates: normal passes execute both actual jumps, next
+  passes reuse their actual header endpoint, and invariant failures retain the
+  pending canonical stop. `NestedForever.initialized_sound` includes both
+  reserved-word initializations and proves the actual counted bound
+  `5 + fuel * (5 + tree.childCharge)`, preserving canonical outcomes, world,
+  frame and outer protected slots. This does not close P1: positive nested
+  loops still need integration into the recursive source certificate family,
+  and the joint CALL/LOOP witness with repeated source-state effects is OPEN.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
