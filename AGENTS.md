@@ -10,8 +10,8 @@ were organised) is in `git log`, not here.
 ## Current implementation scope: all Gabbro to IR
 
 **RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
-Sonnet 5.5 implementation agents, no others: IR-06 (memory, Lean slot 1) in its preserved worktree
-`t3-e67bc9a3` and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. All other lanes stay paused
+Sonnet 5.5 implementation agents, no others: one rolling lane on Lean slot 1 (IR-06 memory, handed back; now IR-02 integers
+in `t3-db31d27d`) and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. All other lanes stay paused
 with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
 
 **Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
