@@ -577,3 +577,24 @@ theorem source_counter_dispatch_zeuge (P : Programm D) (σ0 : World D)
     (by unfold CodeFar; decide +kernel) (by decide)
 
 end Gabbro.Stage0.Senke.InitializedPassProbe
+
+namespace Gabbro.Stage0.Senke.SourceStopProbe
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem
+/-- Two nonempty next bodies and the zero-budget terminal share one source tree
+    and one accepted body lowering. This is not a nested CALL/LOOP witness. -/
+theorem nestedForever_next_zeuge [Kern] {D : Deklaration} (L : Lay D)
+    (P : Programm D) (A : D.Fn → Nat) (C : D.Fn → List II)
+    (V : Vertrag D) (assumption : D.Annahme) (σ : World D) :
+    ∃ tree : NestedForever L 2 P 2 A C 0 32 V assumption
+        (Expr.tru (Γ := []) (Λ := [])) (.cons (.next rfl) .nil)
+        2 σ Env.nil (.hardware (.fortschritt assumption)) 13,
+      lowB (reserved := 2) 2 A L 4 ([], 6) [4, 5] (64, -48)
+        (Block.cons (V := V) (Γ := []) (Λ := []) (.next rfl) .nil) = some ([ci 18 (-32) 0 0], 6) ∧
+      2 + 13 ≤ 5 + 2 * (5 + tree.childCharge) := by
+  let tree : NestedForever L 2 P 2 A C 0 32 V assumption
+      (Expr.tru (Γ := []) (Λ := [])) (.cons (.next rfl) .nil)
+      2 σ Env.nil (.hardware (.fortschritt assumption)) 13 :=
+    .next ExprCost.truth (.jump rfl true)
+      (.next ExprCost.truth (.jump rfl true) .zero)
+  exact ⟨tree, rfl, tree.structural_bound⟩
+end Gabbro.Stage0.Senke.SourceStopProbe
