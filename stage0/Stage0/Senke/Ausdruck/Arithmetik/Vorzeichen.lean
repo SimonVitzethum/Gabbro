@@ -33,6 +33,15 @@ theorem floatNegWord_model (a : GFloat) :
 def floatNegL (d : Nat) (e : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
   wordL 3 d (e d) (some (konstWL 4 (2^63) (d + 1)))
 
+/-- Exact static cost and temporary ceiling of operand preparation: eighteen
+    instructions beyond the producer, and at most three slots from its base. -/
+theorem floatNegL_shape (d : Nat) (e : Nat → Option (List II × Nat))
+    (code : List II) (top : Nat) (he : e d = some (code, top)) :
+    ∃ output, floatNegL d e = some (output, max top (d + 3)) ∧
+      output.length = code.length + 18 := by
+  simp [floatNegL, wordL, he, konstWL, bin2, Nat.max_assoc,
+    Nat.max_eq_left (show d + 2 ≤ d + 3 by omega)]
+
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- Generic emitted-code simulation includes the temporary frame agreement in
