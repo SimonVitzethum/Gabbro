@@ -49,12 +49,19 @@ theorem CountedSegments.exact {ns t u m a} (h : CountedSegments ns t m u a) :
   | nil => exact .refl _ _
   | cons h _ ih => exact h.trans ih
 
-/-- A uniform per-pass bound composes multiplicatively, with separately
-    counted initialization and exit segments. This is an instruction bound
-    only when the supplied segments are proved for the emitted execution. -/
-theorem counted_segments_bound {ns t u m a} (h : CountedSegments ns t m u a)
-    {initial exit pass passes : Nat} (hb : ns.sum ≤ initial + passes * pass + exit) :
-    ∃ n, n ≤ initial + passes * pass + exit ∧ Counted n t m u a :=
-  ⟨ns.sum, hb, h.exact⟩
+/-- Bound actual segments from a uniform bound on each segment. Nested
+    execution and calls are already included in each segment's exact count. -/
+theorem CountedSegments.bound {ns t u m a} (h : CountedSegments ns t m u a)
+    {limit : Nat} (hb : ∀ n ∈ ns, n ≤ limit) :
+    ∃ n, n ≤ ns.length * limit ∧ Counted n t m u a := by
+  refine ⟨ns.sum, ?_, h.exact⟩
+  clear h
+  induction ns with
+  | nil => simp
+  | cons n ns ih =>
+    have hn := hb n (by simp)
+    have ht := ih (fun k hk => hb k (by simp [hk]))
+    simp only [List.sum_cons, List.length_cons, Nat.add_mul, Nat.one_mul]
+    omega
 
 end Gabbro.Stage0.Senke
