@@ -3222,6 +3222,94 @@ theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
       envAt_tail er, wr, (keeps_of_agreeW inside joinedAgree hprotected (by omega)).trans kr⟩
     simpa only [pc_add1] using combined
 
+/-- Accepted next/leave lowering executes one jump, preserving the same
+    source world, environment and protected cells at its actual exit ABI. -/
+theorem loopJump_counted (next : Bool)
+    {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+    {passes lo K top : Nat} {A : D.Fn → Nat} {ens : List II × Nat}
+    {pr : List Nat} {ex : Int × Int} {code : List II}
+    {m : Mem} {pc fp : W} {σ : World D} {ρ : Env D Γ}
+    (lower : lowS (reserved := reserved) passes A L lo ens pr ex
+      (show Stmt D V true Γ Λ Λ from
+        if next then .next rfl else .leave rfl) = some (code, top))
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (world : WeltAt m L σ) :
+    CountedReach 1 L fp lo K pr ⟨pc, fp⟩ m
+      (pc + 16 + BitVec.ofInt 64 (if next then ex.2 else ex.1)) σ ρ reserved := by
+  cases next <;> simp only [Bool.false_eq_true, ↓reduceIte, lowS] at lower ⊢
+  all_goals
+    split at lower
+    · next fits =>
+      obtain ⟨rfl, rfl⟩ := Option.some.inj lower
+      exact jmp_counted_reach pre.code fits pre.env world
+    · cases lower
+
+
+/-- A jump at the head exits across the entire actual lowered block. -/
+theorem loopJumpBlock_counted (next : Bool)
+    {V : Vertrag D} {Γ : Ctx} {Λ Ξ : List (Res D)}
+    {rest : Block D V true Γ Λ Ξ}
+    {passes lo K top : Nat} {A : D.Fn → Nat} {ens : List II × Nat}
+    {pr : List Nat} {ex : Int × Int} {code : List II}
+    {m : Mem} {pc fp : W} {σ : World D} {ρ : Env D Γ}
+    (lower : lowB (reserved := reserved) passes A L lo ens pr ex
+      (.cons (if next then .next rfl else .leave rfl) rest) = some (code, top))
+    (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
+    (world : WeltAt m L σ) :
+    CountedReach 1 L fp lo K pr ⟨pc, fp⟩ m
+      (pc + BitVec.ofNat 64 (16 * code.length) +
+        BitVec.ofInt 64 (if next then ex.2 else ex.1)) σ ρ reserved := by
+  simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+  obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, hc⟩ := lower
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+  have result := loopJump_counted next hs pre.left world
+  have shape : cs.length = 1 := by
+    cases next <;> simp only [Bool.false_eq_true, ↓reduceIte, lowS] at hs
+    all_goals
+      split at hs
+      · obtain ⟨rfl, rfl⟩ := Option.some.inj hs; rfl
+      · cases hs
+  have target : pc + 16 + BitVec.ofInt 64
+      (if next then (exPlus ex cr.length).2 else (exPlus ex cr.length).1) =
+      pc + BitVec.ofNat 64 (16 * (cs ++ cr).length) +
+        BitVec.ofInt 64 (if next then ex.2 else ex.1) := by
+    cases next <;> simp only [Bool.false_eq_true, ↓reduceIte, exPlus, List.length_append, shape]
+    all_goals
+      change pc + BitVec.ofNat 64 (16 * 1) + _ = _
+      exact tgt_eq (by omega)
+  rw [target] at result
+  exact result
+
+/-- The progress exit executes its real zero test and two stop constants.
+    The syscall remains pending: neither hardware completion nor latency is
+    inferred. All joint source-state facts refer to that same final memory. -/
+theorem counter_budget_stop_counted
+    {Γ : Ctx} {m : Mem} {pc fp : W} {K Ks lo scratch : Nat}
+    {pr : List Nat} {σ : World D} {ρ : Env D Γ}
+    {d jump : BitVec 32}
+    (test : InsAt m pc 19 d jump 0)
+    (zero : m.rd64 (slot fp (sx d)) = some 0)
+    (pre : PreS L m (pc + sx jump) fp K (frei Γ reserved)
+      (stopC 111 scratch) ρ reserved)
+    (inside : WIn L fp Ks K) (world : WeltAt m L σ)
+    (low : lo ≤ scratch) (locals : frei Γ reserved ≤ scratch)
+    (room : scratch + 8 ≤ K) (hprotected : ∀ j ∈ pr, j < scratch) :
+    ∃ t m' q, Counted 3 ⟨pc, fp⟩ m t m' ∧ StopAt t m' q ∧
+      q.nr = 231 ∧ q.a1 = 111 ∧ AgreeW L fp lo K m m' ∧
+      EnvAt L m' fp ρ reserved ∧ WeltAt m' L σ ∧ Keeps fp pr m m' := by
+  obtain ⟨t, m', q, run, stop, nr, arg, agree⟩ :=
+    sys_counted_frame pre.code pre.far pre.frame room pre.small (by decide) (by decide)
+  have aw : AgreeW L fp lo K m m' := agreeW_of (agree.mono low)
+  have first : Counted 1 ⟨pc, fp⟩ m ⟨pc + sx jump, fp⟩ m :=
+    .next (counter_zero test zero) (.refl _ _)
+  refine ⟨t, m', q, first.trans run,
+    stop, nr, arg, aw, ?_, ?_, ?_⟩
+  · exact envAt_agree pre.env agree pre.frame locals (by omega)
+  · exact weltAt_stab inside.lay inside.top m m' world
+      (agree.mono (Nat.zero_le _))
+  · exact keeps_of_agreeW inside (agreeW_of agree) hprotected (by omega)
+
+
 /-- The actual positive forever pass, with a source invariant certificate and
     a recursive body certificate. The body may execute full recursive calls.
     This establishes the normal/backedge endpoint only; early source outcomes

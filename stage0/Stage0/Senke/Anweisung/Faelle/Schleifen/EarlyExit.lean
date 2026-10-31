@@ -103,9 +103,10 @@ theorem exact_cost_zeuge :
         | none => false)) = true := by
   refine ⟨?_, ?_, ?_, ?_⟩ <;> decide +kernel
 
-/-- The executable probes carry ordinary Runner reachability proofs. -/
+/-- The accepted next/leave/return images carry exact 1/1/6 instruction
+    counts and all observed ABI and sentinel facts at the same endpoint. -/
 theorem actual_runner_zeuge [Kern] (kind : Fin 3) :
-    ∃ t m, Star ⟨2048, 4096⟩ (memory kind) t m ∧
+    ∃ t m, Counted (cost kind) ⟨2048, 4096⟩ (memory kind) t m ∧
       t.pc = (if kind.val = 0 then 2016 else if kind.val = 1 then 2192 else 3000) ∧
       t.fp = (if kind.val < 2 then 4096 else 5000) ∧
       m.rd64 (slot 4096 2) = some (if kind.val < 2 then 0 else 43) ∧
@@ -126,7 +127,7 @@ theorem actual_runner_zeuge [Kern] (kind : Fin 3) :
   | some p =>
     obtain ⟨t, m⟩ := p
     simp only [he, Bool.and_eq_true, beq_iff_eq] at hc
-    exact ⟨t, m, execute_sound (cost kind) he, hc.1.1.1.1,
+    exact ⟨t, m, execute_counted (cost kind) he, hc.1.1.1.1,
       hc.1.1.1.2, hc.1.1.2, hc.1.2, hc.2⟩
 
 local instance (m : Mem) (pc : W) (o : Nat) (a b c : BitVec 32) :
