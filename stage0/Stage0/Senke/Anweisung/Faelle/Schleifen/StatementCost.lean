@@ -4830,6 +4830,7 @@ theorem CountedSim.counter_reentry
       ∃ k m', k ≤ n + 1 ∧ Counted k t m ⟨header, fp⟩ m' ∧
         PreS L m' header fp K (frei Γ reserved) code ρ' reserved ∧
         Umf L A C dv m' fp Ks K ∧ WeltAt m' L σ ∧
+        AgreeW L fp lo K m m' ∧ Keeps fp pr m m' ∧
         ∀ j, j < lo ∨ j ∈ pr →
           m'.rd64 (slot fp (BitVec.ofNat 64 j)) =
             m.rd64 (slot fp (BitVec.ofNat 64 j))
@@ -4842,14 +4843,14 @@ theorem CountedSim.counter_reentry
       ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame frame,
         codeAt_agreeWIn layout frame pre.code pre.far, pre.far, env,
         trivial, wstab_true _ _⟩,
-      surround.agreeW layout frame abi, world, words⟩
+      surround.agreeW layout frame abi, world, frame, kept, words⟩
   | next h σ ρ' =>
     obtain ⟨k, m', hk, run, frame, env, world, kept, words⟩ := routed
     exact ⟨k, m', hk, run,
       ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame frame,
         codeAt_agreeWIn layout frame pre.code pre.far, pre.far, env,
         trivial, wstab_true _ _⟩,
-      surround.agreeW layout frame abi, world, words⟩
+      surround.agreeW layout frame abi, world, frame, kept, words⟩
   | leave h σ ρ' => exact routed
   | zurueck | why | logik | hardware => exact routed
 
