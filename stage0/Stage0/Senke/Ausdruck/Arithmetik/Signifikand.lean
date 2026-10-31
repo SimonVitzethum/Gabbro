@@ -27,9 +27,9 @@ def floatCoefficientL (d : Nat) (e : Nat → Option (List II × Nat)) :
     (wordL 3 (d + 1) (floatFieldL 0 52 (d + 1) e) (hidden (d + 2)))
 
 /-- Canonical integer coefficient, with no hidden bit for subnormals. -/
-def floatCoefficient (a : GFloat) : Int :=
+def floatCoefficient {F : Gleitkomma.Format} (a : Gleitkomma.GBits F) : Int :=
   (if a.sign then -1 else 1) *
-    ((a.frac : Int) + if a.bexp = 0 then 0 else (2^52 : Int))
+    ((a.frac : Int) + if a.bexp = 0 then 0 else ((2^(F.p-1) : Nat) : Int))
 
 /-- The connected word arithmetic agrees with the canonical decoded fields. -/
 theorem floatCoefficientWord_canonical (a : GFloat)
@@ -69,9 +69,50 @@ theorem floatCoefficientWord_canonical (a : GFloat)
   unfold floatCoefficientWord
   rw [wf, we, ws, ez]
   cases hsign : a.sign <;> by_cases hz : a.bexp = 0 <;>
-    simp [floatCoefficient, hsign, hz, Runner.IR.bool, BitVec.ofInt_neg, BitVec.ofInt_mul, BitVec.ofInt_add,
+    simp [floatCoefficient, Gleitkomma.f64, hsign, hz, Runner.IR.bool, BitVec.ofInt_neg, BitVec.ofInt_mul, BitVec.ofInt_add,
       BitVec.ofInt_natCast] <;>
       change (-1 : Runner.W) * _ = -_ <;> rw [BitVec.neg_mul] <;> exact congrArg Neg.neg (BitVec.one_mul _)
+
+/-- Format-generic source scale. The alignment index is shared by normal
+    and subnormal operands; canonical zero alone retains exponent zero. -/
+def floatSourceScale {F : Gleitkomma.Format} (a : Gleitkomma.GBits F) : Int :=
+  if a.bexp = 0 ∧ a.frac = 0 then 0
+  else (max a.bexp 1 : Nat) - (F.bias : Int) - ((F.p : Int)-1)
+
+/-- Decode both IEEE formats with the same coefficient and scale mechanism. -/
+theorem floatCoefficient_source_scale (F : Gleitkomma.Format)
+    (a : Gleitkomma.GBits F) (finite : a.bexp ≠ F.bexpMax) :
+    Gleitkomma.wertExakt F a = some ⟨floatCoefficient a, floatSourceScale a⟩ := by
+  by_cases hz : a.bexp = 0
+  · by_cases hf : a.frac = 0 <;>
+      simp [Gleitkomma.wertExakt, Gleitkomma.klasse, floatCoefficient,
+        floatSourceScale, hz, hf, finite, Gleitkomma.Format.emin,
+        Gleitkomma.Format.bias] <;> congr 2 <;> omega
+  · have hi : 1 ≤ a.bexp := by omega
+    simp [Gleitkomma.wertExakt, Gleitkomma.klasse, floatCoefficient,
+      floatSourceScale, hz, finite, Nat.max_eq_left hi, Int.add_comm]
+
+/-- Bounds derived from finite encoded inputs, including canonical zero.
+    The precision condition includes binary32 and binary64 and ensures that
+    exponent zero lies within the same interval as nonzero operands. -/
+theorem floatCoefficient_source_bounds (F : Gleitkomma.Format)
+    (exponents : 1 ≤ F.emax) (positive : 1 ≤ F.p)
+    (precision : F.p ≤ F.emax+1)
+    (a : Gleitkomma.GBits F)
+    (valid : Gleitkomma.wf F a) (finite : a.bexp ≠ F.bexpMax) :
+    F.emin - ((F.p : Int)-1) ≤ floatSourceScale a ∧
+      floatSourceScale a ≤ (F.emax : Int) - ((F.p : Int)-1) := by
+  have bound := valid.1
+  unfold Gleitkomma.Format.bexpMax at bound finite
+  unfold floatSourceScale Gleitkomma.Format.emin Gleitkomma.Format.bias
+  split
+  · omega
+  · have low : 1 ≤ max a.bexp 1 := Nat.le_max_right _ _
+    have high : max a.bexp 1 ≤ 2*F.emax := by omega
+    omega
+
+#print axioms floatCoefficient_source_scale
+#print axioms floatCoefficient_source_bounds
 
 /-- The source dyadic exponent is computed from the encoded operand. Signed
     zero keeps the canonical exponent zero; subnormals use the minimum scale.
@@ -80,14 +121,13 @@ theorem floatCoefficient_exact_scale (a : GFloat) (h : a.bexp ≠ 2047) :
     Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a,
       if a.bexp = 0 then (if a.frac = 0 then 0 else -1074)
       else (a.bexp : Int) - 1023 - 52⟩ := by
+  have decoded := floatCoefficient_source_scale Gleitkomma.f64 a h
   by_cases hz : a.bexp = 0
   · by_cases hf : a.frac = 0 <;>
-      simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
-        Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
-        floatCoefficient, hz, hf]
-  · simp [Gleitkomma.wertExakt, Gleitkomma.klasse, Gleitkomma.f64,
-      Gleitkomma.Format.bexpMax, Gleitkomma.Format.bias, Gleitkomma.Format.emin,
-      floatCoefficient, hz, h, Int.add_comm]
+      simpa [floatSourceScale, Gleitkomma.f64, Gleitkomma.Format.bias, hz, hf] using decoded
+  · have hi : 1 ≤ a.bexp := by omega
+    simpa [floatSourceScale, Gleitkomma.f64, Gleitkomma.Format.bias, hz,
+      Nat.max_eq_left hi] using decoded
 
 /-- Bounds on the actual source scale follow from the encoded finite input,
     including zero. The upper endpoint is 2046 - 1023 - 52; the lower
