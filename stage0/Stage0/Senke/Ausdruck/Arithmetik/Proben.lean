@@ -1,9 +1,27 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Normalisierung
+import Stage0.Senke.Ausdruck.Arithmetik.Adaptiv
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
 open Gabbro.Grammatik Runner.IR Gleitkomma
+
+/-- Actual exact-tail adaptive normalization; check each output independently. -/
+def adaptiveImages : List (String × Except String (List Runner.B) × Nat) :=
+  let lit := fun n j => some (konstWL 4 n j)
+  [("tiny", 0, 13, 16, 8, 1, 10),
+   ("carry", 1, 10, 16, 8, 3, 4),
+   ("below", 3, 4, 16, 8, 6, 8),
+   ("tie", 6, 8, 16, 8, 13, 0),
+   ("floor", 0, 13, 16, 0, 0, 13),
+   ("stop", 8, 3, 16, 8, 8, 3),
+   ("exact", 7, 0, 16, 8, 14, 0),
+   ("wide", 2^61, 2^61-2, 2^61-1, 2^61+1, 2^62+1, 2^61-3)].flatMap
+    (fun (name, q, r, den, target, qout, rout) =>
+      [false, true].map fun out =>
+        ("adaptive-" ++ name ++ (if out then "-rest" else "-magnitude"),
+          FloatArithmeticProbe.wordImage
+            (floatNormalizeStepL out 8 (lit q) (lit r) (lit den) (lit target))
+            (if out then rout else qout), 7))
 
 /-- Actual alignment-to-magnitude images, including borrow after cancellation. -/
 def sumMagnitudeImages : List (String × Except String (List Runner.B) × Nat) :=
