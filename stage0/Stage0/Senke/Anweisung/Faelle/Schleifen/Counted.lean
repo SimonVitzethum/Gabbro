@@ -2,6 +2,7 @@
    another instruction; kernel execution time is not measured by this relation.
    Source loop fuel and `ZeitAb` (G own steps) are distinct units. -/
 import Stage0.Senke.Anweisung.Simulation
+import Stage0.Senke.Ausdruck.Gleichungen
 
 namespace Gabbro.Stage0.Senke
 open Runner Runner.IR
@@ -34,6 +35,35 @@ theorem counted_iff_star {t u m a} : (∃ n, Counted n t m u a) ↔ Star t m u a
     induction h with
     | refl => exact ⟨0, .refl _ _⟩
     | next h _ ih => obtain ⟨n, hn⟩ := ih; exact ⟨n + 1, .next h hn⟩
+
+/-- The real constant instruction has unit S0IR cost; the writable frame and
+    immediate checks are exactly those of the existing lowering helper. -/
+theorem const_step_counted {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : Int}
+    (hc : CodeAt m pc [ci 1 j k 0]) (hF : FrameOK m fp K) (hj : j < K)
+    (hK : K < 2 ^ 31) (hk : lit32 k = true) :
+    Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
+      (Runner.Mem.write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) :=
+  .next (const_instruction hc hF hj hK hk) (.refl _ _)
+
+/-- Quantitative base case derived from the actual accepted `lowE` result,
+    rather than an assumed child bound or evaluation of a particular program.
+    This does not cover compound expressions, calls, or loop bodies. -/
+theorem lowE_lit_counted {D : Gabbro.Grammatik.Deklaration} {L : Lay D}
+    {Γ : Gabbro.Grammatik.Ctx} {Λ : List (Gabbro.Grammatik.Res D)}
+    {reserved d top K : Nat} {n : Int} {code : List II}
+    {m : Runner.Mem} {pc fp : Runner.W}
+    (lower : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ)
+      (.lit n) d = some (code, top))
+    (codeAt : CodeAt m pc code) (frame : FrameOK m fp K)
+    (fits : top ≤ K) (small : K < 2 ^ 31) :
+    Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
+      (Runner.Mem.write m (slot fp (BitVec.ofNat 64 d)) 8 (BitVec.ofInt 64 n).toNat) := by
+  rw [lowE_lit] at lower
+  split at lower
+  next accepted =>
+    cases lower
+    exact const_step_counted codeAt frame (by omega) small accepted
+  next refused => contradiction
 
 /-- Compose any finite family of actual execution segments. Segment bounds
     must include the invariant, body/callees, header, backedge and exits as

@@ -51,18 +51,23 @@ theorem Stops.prefix {t t' : T} {m m' : Runner.Mem} {c : Nat} (h : Star t m t' m
   obtain ⟨u, mu, q, hu, hq, h1, h2⟩ := hs
   exact ⟨u, mu, q, h.trans hu, hq, h1, h2⟩
 
-theorem const_step {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : Int}
+theorem const_instruction {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : Int}
     (hc : CodeAt m pc [ci 1 j k 0]) (hF : FrameOK m fp K) (hj : j < K) (hK : K < 2 ^ 31) (hk : lit32 k = true) :
-    Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) := by
+    Run (step ⟨pc, fp⟩) m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) := by
   have hi := hc 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  refine Star.one (run_step (t := ⟨pc, fp⟩) hi (by decide) ?_)
+  refine run_step (t := ⟨pc, fp⟩) hi (by decide) ?_
   simp only [op]
   refine f2_run (t := ⟨pc, fp⟩) hi ?_
   simp only [ret1]
   refine f1_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_lit hk, sx_nat (by omega)]
   exact run_wr64 (wr64_some (hF.wr j hj))
+
+theorem const_step {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : Int}
+    (hc : CodeAt m pc [ci 1 j k 0]) (hF : FrameOK m fp K) (hj : j < K) (hK : K < 2 ^ 31) (hk : lit32 k = true) :
+    Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ (write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) :=
+  Star.one (const_instruction hc hF hj hK hk)
 
 theorem slot_plus (fp : Runner.W) (s i : Nat) :
     slot fp (BitVec.ofNat 64 s) + BitVec.ofNat 64 (8 * i) = slot fp (BitVec.ofNat 64 (s + i)) := by

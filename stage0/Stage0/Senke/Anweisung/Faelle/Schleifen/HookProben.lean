@@ -167,6 +167,21 @@ theorem hook_effects_zeuge :
     (image 2 8).isOk = true := by
   decide +kernel
 
+/-- The generic literal theorem on the existing indirect-call image: the
+    first real instruction materializes address 8192 in caller slot four. -/
+theorem lowE_lit_counted_zeuge [Runner.IR.Kern] :
+    Counted 1 ⟨2048, 4096⟩ FnptrProben.callMem ⟨2064, 4096⟩
+      (Runner.Mem.write FnptrProben.callMem (Runner.IR.slot 4096 4) 8 8192) := by
+  have code : CodeAt FnptrProben.callMem 2048 [ci 1 4 8192 0] := by
+    intro k hk
+    have zero : k = 0 := by simpa using hk
+    subst k
+    simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
+    exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+  exact lowE_lit_counted (L := FnptrProben.callLayout) (Γ := []) (Λ := [])
+    (reserved := 0) (d := 4) (top := 5) (K := 256) (n := 8192)
+    (by decide +kernel) code FnptrProben.call_frame (by decide) (by decide)
+
 /-- A concrete positive-budget header executes one real instruction. This is
     a joint witness for counting/erasure/composition, not a loop cost bound. -/
 theorem counted_header_zeuge [Runner.IR.Kern] :
