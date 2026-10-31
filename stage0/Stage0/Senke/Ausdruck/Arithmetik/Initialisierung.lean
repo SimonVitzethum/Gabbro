@@ -2390,4 +2390,77 @@ theorem floatFiniteAddL_read_fields_sort_zeuge {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_read_fields_sort_zeuge
 
+/-- Execute the actual alignment producer from retained ordered-state reads.
+    Reification ties repeated loads to memory while scratch writes remain above
+    every operand. The returned continuation keeps the original environment and
+    arbitrary reserved prefix; no fixed-read WordCode is assumed. -/
+theorem floatFiniteAddL_align_execute {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst top reserved : Nat} {code tail : List II} {ex ey r : Runner.W}
+    (lower : FB ≤ dst+5) (room : top ≤ K) (slots : dst+17 ≤ K)
+    (rx : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some ex)
+    (ry : m.rd64 (slot fp (BitVec.ofNat 64 (dst+6))) = some ey)
+    (rr : m.rd64 (slot fp (BitVec.ofNat 64 (dst+8))) = some r)
+    (compiled : floatShiftJamL (dst+16)
+      (fun j => some ([ci 2 j (dst+8) 0],j+1))
+      (fun j => wordL 4 j (some ([ci 2 j (dst+5) 0],j+1))
+        (some ([ci 2 (j+1) (dst+6) 0],j+2))) = some (code,top))
+    (pre : Pre L m pc fp K (dst+16) (code++tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*code.length),fp⟩ out ∧
+      Agree fp (dst+16) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+16))) =
+        some (floatShiftJamWord r (ex-ey)) ∧
+      Pre L out (pc+BitVec.ofNat 64 (16*code.length)) fp K (dst+17) tail ρ W reserved := by
+  let producer := fun j => floatShiftJamL j
+    (fun j => some ([ci 2 j (dst+8) 0],j+1))
+    (fun j => wordL 4 j (some ([ci 2 j (dst+5) 0],j+1))
+      (some ([ci 2 (j+1) (dst+6) 0],j+2)))
+  have batch : floatStateSlotsL (dst+16) [producer] = some (code,max top (dst+17)) := by
+    simp [floatStateSlotsL, producer, compiled, Nat.add_assoc]
+  obtain ⟨out,run,agree,reads,rest⟩ := retainedWordCodes_ok (L := L)
+    [producer] (fun _ => floatShiftJamWord r (ex-ey)) (by
+      intro Δ η loads i hi
+      have iz : i = 0 := by have : i < 1 := hi; omega
+      subst i
+      change WordCode (L := L) η (fun _ => True) producer (floatShiftJamWord r (ex-ey))
+      have a : WordCode (L := L) η (fun _ => True)
+          (fun j => some ([ci 2 j (dst+8) 0],j+1)) r := loads (dst+8) r (by omega) (by omega) rr
+      have x : WordCode (L := L) η (fun _ => True)
+          (fun j => some ([ci 2 j (dst+5) 0],j+1)) ex := loads (dst+5) ex lower (by omega) rx
+      have y : WordCode (L := L) η (fun _ => True)
+          (fun j => some ([ci 2 j (dst+6) 0],j+1)) ey := loads (dst+6) ey (by omega) (by omega) ry
+      have diff : WordCode (L := L) η (fun _ => True)
+          (fun j => wordL 4 j (some ([ci 2 j (dst+5) 0],j+1))
+            (some ([ci 2 (j+1) (dst+6) 0],j+2))) (ex-ey) :=
+        WordCode.bin x y (g := fun x y => some (x-y)) rfl rfl (by decide : 4 < 256)
+      intro fp K d c top hc ht mm pp hp
+      exact floatShiftJamL_ok a diff hc ht mm pp hp)
+    batch (by omega) (by omega) (by simpa using slots) pre
+  exact ⟨out,run,agree,by simpa using reads 0 (by simp),rest⟩
+
+#print axioms floatFiniteAddL_align_execute
+
+theorem floatFiniteAddL_align_execute_zeuge {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K top : Nat} {code tail : List II}
+    (room : top ≤ K) (slots : 16+17 ≤ K)
+    (rx : m.rd64 (slot fp (BitVec.ofNat 64 (16+5))) = some 5)
+    (ry : m.rd64 (slot fp (BitVec.ofNat 64 (16+6))) = some 2)
+    (rr : m.rd64 (slot fp (BitVec.ofNat 64 (16+8))) = some 97)
+    (compiled : floatShiftJamL (16+16)
+      (fun j => some ([ci 2 j (16+8) 0],j+1))
+      (fun j => wordL 4 j (some ([ci 2 j (16+5) 0],j+1))
+        (some ([ci 2 (j+1) (16+6) 0],j+2))) = some (code,top))
+    (pre : Pre L m pc fp K (16+16) (code++tail) ρ W 13) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+BitVec.ofNat 64 (16*code.length),fp⟩ out ∧
+      Agree fp (16+16) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (16+16))) =
+        some (13) ∧
+      Pre L out (pc+BitVec.ofNat 64 (16*code.length)) fp K (16+17) tail ρ W 13 := by
+  have run := floatFiniteAddL_align_execute (L := L) (dst := 16)
+    (ex := 5) (ey := 2) (r := 97) (by decide) room slots rx ry rr compiled pre
+  simpa only [show floatShiftJamWord 97 (5-2) = 13 from by decide +kernel] using run
+
+#print axioms floatFiniteAddL_align_execute_zeuge
+
 end Gabbro.Stage0.Senke
