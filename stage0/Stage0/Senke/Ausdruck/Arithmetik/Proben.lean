@@ -987,4 +987,41 @@ theorem floatExactAddNormalize_ok_zeuge [Kern] {D : Deklaration} (L : Lay D)
 
 #print axioms floatExactAddNormalize_ok_zeuge
 
+/-- Regression for the proposed direct composition, not a supported lowering.
+    The exact initialization has no guard-bit scaling. Feeding its normalized
+    quotient into the normal packer therefore violates the hidden-bit bound.
+    Keep the entire emitted chain measurable until the source bridge is fixed. -/
+def exactCompositionBoundaryFragment : Option (List II × Nat) := do
+  let lit := fun n j => some (konstWL 4 n j)
+  let init ← floatStateSlotsL 16
+    (floatExactAddInitProducers (lit 0x3ff0000000000000) (lit 0) (lit 0))
+  let loop ← floatNormalizeLoopL 16
+  let fields ← floatStateSlotsL 40 (floatNormalizedFieldsL 16 8 9 63)
+  let load := fun (s j : Nat) => some ([ci 2 j s 0], j+1)
+  let packed ← floatAddNormalOutputL 48
+    (load 40) (load 41) (load 42) (load 43) (load 44) (2^52)
+  pure ((konstWL 4 (2^52) 8).1 ++ [ci 1 9 1023 0] ++
+    init.1 ++ loop.1 ++ fields.1 ++ packed.1 ++ [ci 2 8 48 0],
+    max (max init.2 loop.2) (max fields.2 packed.2))
+
+/-- The measured result of the naive whole-fragment connection is 0.3125,
+    whereas the canonical finite source addition is 1.0. This is a refusal
+    boundary, never a correctness premise for the production block hook. -/
+def exactCompositionBoundaryImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("exact-composition-missing-guards",
+    FloatArithmeticProbe.wordImage exactCompositionBoundaryFragment
+      0x3fd4000000000000, 7)]
+
+set_option maxRecDepth 8192 in
+set_option maxHeartbeats 2000000 in
+theorem exactCompositionBoundary_zeuge :
+    wf f64 (⟨false,1023,0⟩ : GFloat) ∧
+    wf f64 (⟨false,0,0⟩ : GFloat) ∧
+    zuBits f64 (add f64 ⟨false,1023,0⟩ ⟨false,0,0⟩) = 0x3ff0000000000000 ∧
+    (0x3fd4000000000000 : Nat) ≠ 0x3ff0000000000000 ∧
+    exactCompositionBoundaryImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+#print axioms exactCompositionBoundary_zeuge
+
 end Gabbro.Stage0.Senke.AddSubProbe
