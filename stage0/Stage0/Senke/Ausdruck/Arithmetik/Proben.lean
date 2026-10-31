@@ -79,7 +79,17 @@ def sumMagnitudeImages : List (String × Except String (List Runner.B) × Nat) :
       (name, FloatArithmeticProbe.wordImage
         (floatSumMagnitudeL 8
           (fun j => floatNegativeSumL j (lit h) (lit a) (lit k))
-          (lit sticky)) expected, 7))
+          (lit sticky)) expected, 7)) ++
+  [("operand-magnitude-subnormal-cancel", 0x800fffffffffffff, 0x0010000000000000, 0, 1),
+   ("operand-magnitude-negative", 0xbff0000000000009, 0x3ff0000000000000, 0, 9),
+   ("operand-magnitude-shift", 0x0000000000000001, 0x0000000000000003, 2, 13)].map
+    (fun (name, a, b, k, expected) =>
+      (name, FloatArithmeticProbe.wordImage
+        (floatSumMagnitudeL 8
+          (fun j => floatAlignSumL j
+            (fun n => floatCoefficientL n (lit a))
+            (fun n => floatCoefficientL n (lit b)) (lit k))
+          (lit 0)) expected, 7))
 
 /-- Actual output fragments, including the top-exponent carry and the
     subnormal/normal boundary. Expected words are independent IEEE fields. -/

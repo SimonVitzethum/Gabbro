@@ -71,6 +71,67 @@ theorem floatSumMagnitudeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
       rw [← BitVec.ofInt_natCast, Int.natAbs_of_nonneg (by omega)] at hw
       simpa [floatSumMagnitude, hn, Int.sub_eq_add_neg] using hw
 
+/-- Actual encoded operands feed coefficient decoding, exact alignment and
+    magnitude extraction without an assumed intermediate sum. This finite
+    fragment covers exact word-sized alignment, including cancellation. -/
+theorem floatCoefficientAlignMagnitudeL_ok {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop}
+    {lo hi distance : Nat → Option (List II × Nat)}
+    (a b : GFloat) (k : Nat)
+    (ha : wf f64 a) (hb : wf f64 b) (hk : k < 64)
+    (hr : -(2^63) ≤ floatCoefficient a + floatCoefficient b * (2^k : Nat) ∧
+      floatCoefficient a + floatCoefficient b * (2^k : Nat) < 2^63)
+    (hlo : WordCode (L := L) ρ W lo (BitVec.ofNat 64 (zuBits f64 a)))
+    (hhi : WordCode (L := L) ρ W hi (BitVec.ofNat 64 (zuBits f64 b)))
+    (hd : WordCode (L := L) ρ W distance (BitVec.ofNat 64 k)) :
+    WordCode (L := L) ρ W
+      (fun dst => floatSumMagnitudeL dst
+        (fun j => floatAlignSumL j
+          (fun n => floatCoefficientL n lo)
+          (fun n => floatCoefficientL n hi) distance)
+        (fun j => some ([ci 1 j 0 0], j+1)))
+      (BitVec.ofInt 64
+        (floatSumMagnitude (floatCoefficient a + floatCoefficient b * (2^k : Nat)) 0)) := by
+  have sum : WordCode (L := L) ρ W
+      (fun j => floatAlignSumL j (fun n => floatCoefficientL n lo)
+        (fun n => floatCoefficientL n hi) distance)
+      (floatAlignSumWord (floatCoefficientWord (BitVec.ofNat 64 (zuBits f64 a)))
+        (floatCoefficientWord (BitVec.ofNat 64 (zuBits f64 b))) (BitVec.ofNat 64 k)) :=
+    floatCoefficientAlignSumL_ok hlo hhi hd
+  rw [floatCoefficientWord_canonical a ha, floatCoefficientWord_canonical b hb,
+    floatAlignSumWord_model _ _ _ hk] at sum
+  have zero : WordCode (L := L) ρ W
+      (fun j => some ([ci 1 j 0 0], j+1)) (BitVec.ofInt 64 0) := by
+    intro fp K dst code top hc hK m pc hp
+    exact WordCode.const 0 (by decide) hc hK m pc hp
+  intro fp K dst code top hc hK m pc hp
+  exact floatSumMagnitudeL_ok _ 0 hr sum zero hc hK m pc hp
+
+/-- Opposite signs cancel to one smallest-subnormal unit through the
+    same encoded-operand fragment; all generic premises hold jointly. -/
+theorem floatCoefficientAlignMagnitudeL_ok_zeuge {D : Deklaration} (L : Lay D) :
+    let a : GFloat := ⟨true, 0, 2^52-1⟩
+    let b : GFloat := ⟨false, 1, 0⟩
+    let lit := fun n j => some (konstWL 4 n j)
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun dst => floatSumMagnitudeL dst
+        (fun j => floatAlignSumL j
+          (fun n => floatCoefficientL n (lit (zuBits f64 a)))
+          (fun n => floatCoefficientL n (lit (zuBits f64 b))) (lit 0))
+        (fun j => some ([ci 1 j 0 0], j+1))) (BitVec.ofInt 64 1) := by
+  dsimp only
+  intro fp K dst code top hc hK m pc hp
+  exact floatCoefficientAlignMagnitudeL_ok (L := L)
+    (ρ := (Env.nil : Env D [])) (W := fun _ => True)
+    (⟨true, 0, 2^52-1⟩ : GFloat) (⟨false, 1, 0⟩ : GFloat) 0
+    (by decide) (by decide) (by decide) (by decide +kernel)
+    (WordCode.konst _ (by decide)) (WordCode.konst _ (by decide))
+    (WordCode.konst 0 (by decide)) hc hK m pc hp
+
+#print axioms floatCoefficientAlignMagnitudeL_ok_zeuge
+
+#print axioms floatCoefficientAlignMagnitudeL_ok
+
 /-- Alignment, signed addition and magnitude extraction are one computation;
     no hypothesis supplies the sum's value or a magnitude routine's result. -/
 theorem floatNegativeSumMagnitudeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}

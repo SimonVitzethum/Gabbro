@@ -789,6 +789,14 @@ instantiates this strengthened whole-loop theorem with a nonzero reserved
 prefix. This is the canonical arithmetic boundary for the rounding connection;
 it does not yet execute that continuation.
 
+The exact word-sized operand prefix now composes encoded f64 inputs through
+`floatCoefficientL`, `floatAlignSumL` and `floatSumMagnitudeL` in one WordCode
+proof (`floatCoefficientAlignMagnitudeL_ok`). The theorem requires distance
+below 64 and a signed-word sum bound; it derives the actual magnitude without
+assuming intermediate slot values. Its joint witness cancels opposite signs to
+one smallest-subnormal unit. Three Runner images exercise this connected prefix.
+This does not yet initialize the normalization loop or execute its continuation.
+
 Remaining finite-adder gaps: derive every initial head bound and state read from
 the actual format/operand alignment and magnitude producers; compose the actual
 loop exit with guard/sticky selection and IEEE round/pack (normal, top-exponent
