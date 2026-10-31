@@ -50,4 +50,48 @@ theorem floatPasst_x {lo hi : Int × Int} {x : GFloat} {v : Gleit lo hi}
   split at h <;> cases h
   rfl
 
+/-- Canonical signed-key decision, including unordered endpoints. This is the
+    source range check: rounding has already happened before this decision. -/
+def floatRangeReject (lo hi : Int × Int) (x : GFloat) : Bool :=
+  if Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan then true
+  else decide (floatKey x < floatKey (bruch lo)) ||
+    decide (floatKey (bruch hi) < floatKey x)
+
+/-- Exact rejection criterion for the source's range failure (Stop 107),
+    including infinite, reversed and NaN bounds. -/
+theorem floatRangeReject_none {lo hi : Int × Int} {x : GFloat}
+    (hw : Gleitkomma.wf Gleitkomma.f64 x) (hf : gleitEndlich x = true) :
+    gleitPasst lo hi x = none ↔ floatRangeReject lo hi x = true := by
+  by_cases hn : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan
+  · rw [floatPasst_nan_bound x hn]
+    simp [floatRangeReject, hn]
+  · have hl : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) ≠ .nan :=
+      fun h => hn (Or.inl h)
+    have hh : Gleitkomma.klasse Gleitkomma.f64 (bruch hi) ≠ .nan :=
+      fun h => hn (Or.inr h)
+    rw [floatOutside_none hl hh hf]
+    unfold floatRangeReject floatOutside
+    rw [if_neg hn, float_lt_key_not_nan (a := x) (b := bruch lo) hw (Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _)
+      (endlich_nicht_nan hf) hl,
+      float_lt_key_not_nan (a := bruch hi) (b := x) (Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _) hw
+        hh (endlich_nicht_nan hf)]
+
+/-- Acceptance provides the actual dependent source value, rather than just a flag. -/
+theorem floatRangeReject_accept {lo hi : Int × Int} {x : GFloat}
+    (hw : Gleitkomma.wf Gleitkomma.f64 x) (hf : gleitEndlich x = true) :
+    floatRangeReject lo hi x = false ↔ ∃ v, gleitPasst lo hi x = some v := by
+  have h := floatRangeReject_none (lo := lo) (hi := hi) hw hf
+  cases hp : gleitPasst lo hi x with
+  | none => simp_all
+  | some v =>
+    have hn : floatRangeReject lo hi x ≠ true := by
+      intro ht
+      have := h.mpr ht
+      simp [hp] at this
+    cases hr : floatRangeReject lo hi x <;> simp_all
+
+#print axioms floatRangeReject_none
+#print axioms floatRangeReject_accept
 end Gabbro.Stage0.Senke
