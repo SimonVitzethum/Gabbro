@@ -1,5 +1,6 @@
 /- Source-bound instruction costs for actual statement lowering. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
 import Stage0.Senke.Anweisung.Hilfe
 import Stage0.Senke.Ausdruck.FnptrAufrufProben
 
@@ -146,6 +147,118 @@ theorem mov_to_counted {m : Mem} {pc fp : W} {K j s : Nat} {w : W}
   refine f1_run (t := ⟨pc, fp⟩) hi ?_
   rw [sx_nat (by omega)]
   exact run_wr64 (wr64_some (hF.wr j hj))
+
+/-- A successful emitted guard executes the conditional branch and the jump
+    across the failure block. Its five encoded instructions cost two steps. -/
+theorem guard_pass_counted {m : Mem} {pc fp : W} {a c s : Nat} {v : W}
+    (hc : CodeAt m pc (guardC a c s)) (ha : a < 2 ^ 31)
+    (hv : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some v) (hne : v ≠ 0) :
+    Counted 2 ⟨pc, fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16 * (guardC a c s).length), fp⟩ m := by
+  have hd : sx (II.f (a : Int)) = BitVec.ofNat 64 a := sx_nat (by omega)
+  have rb := run_brz_ne (t := ⟨pc, fp⟩) (guard_brz hc) (by rw [hd]; exact hv) hne
+  have first := counted_ins (fp := fp) (m' := m)
+    (codeAt_left (a := [ci 19 a 32 0]) hc) (by simp [ci]) (by simp only [ci]; exact rb)
+  have hj := (codeAt_right (a := [ci 19 a 32 0]) hc) 0 (by simp [guardC])
+  simp only [guardC, ci, List.cons_append, List.getElem_cons_zero,
+    Nat.mul_zero, BitVec.add_zero] at hj
+  have jump := run_step (t := ⟨_, fp⟩) hj (by decide) (run_jmp (t := ⟨_, fp⟩) hj)
+  have hl : sx (II.f 64) = BitVec.ofNat 64 64 := sx_nat (d := 64) (by omega)
+  rw [hl] at jump
+  have rest := Counted.next jump (Counted.refl _ _)
+  have result := first.trans rest
+  simpa [guardC, stopC, sysC, addr_norm] using result
+
+/-- Actual Runner execution, exact destination frame, and all relocated words.
+    No disjointness premise between the source and destination ranges is needed. -/
+theorem relocate_counted {m : Mem} {pc fp : W} {K base shift n : Nat}
+    (frame : FrameOK m fp K) (small : K < 2 ^ 31)
+    (bound : base + shift + n ≤ K)
+    (code : CodeAt m pc (relocateC base shift n))
+    (far : CodeFar pc n fp K) :
+    ∃ m', Counted n ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * n), fp⟩ m' ∧
+      Agree fp (base + shift) (base + shift + n) m m' ∧
+      ∀ i, i < n → m'.rd64 (slot fp (BitVec.ofNat 64 (base + shift + i))) =
+        m.rd64 (slot fp (BitVec.ofNat 64 (base + i))) := by
+  induction n generalizing m pc with
+  | zero =>
+    exact ⟨m, by simpa using (Counted.refl ⟨pc, fp⟩ m), .refl _ _ _ _, by omega⟩
+  | succ n ih =>
+    let dst := base + shift + n
+    let src := base + n
+    let v := BitVec.ofNat 64 (le m (slot fp (BitVec.ofNat 64 src)) 8)
+    have read : m.rd64 (slot fp (BitVec.ofNat 64 src)) = some v := by
+      simp only [Mem.rd64, frame.rd src (by dsimp [src]; omega), ↓reduceIte]
+      rfl
+    let m1 := write m (slot fp (BitVec.ofNat 64 dst)) 8 v.toNat
+    have writeFrame : Agree fp dst K m m1 := agree_write frame.room (by omega) (by dsimp [dst]; omega) _
+    have step := mov_to_counted (codeAt_left code) frame (show dst < K by dsimp [dst]; omega)
+      (show src < K by dsimp [src]; omega) small read
+    have tailCode : CodeAt m1 (pc + 16) (relocateC base shift n) := by
+      exact (codeAt_right code).agree writeFrame (by simpa [relocateC_length, Nat.add_comm] using (codeFar_right (n := 1) (k := n) (by simpa [Nat.add_comm] using far)))
+    obtain ⟨m2, rest, tailFrame, moved⟩ := ih (frame.agree writeFrame) (by omega)
+      tailCode (by simpa [relocateC_length, Nat.add_comm] using (codeFar_right (n := 1) (k := n) (by simpa [Nat.add_comm] using far)))
+    refine ⟨m2, ?_, ?_, ?_⟩
+    · have run := step.trans rest
+      have eq : pc + 16 + BitVec.ofNat 64 (16 * n) = pc + BitVec.ofNat 64 (16 * (n + 1)) := by
+        simpa [Nat.add_comm] using (pc_add pc 1 n)
+      rw [eq] at run
+      simpa [Nat.add_comm] using run
+    · have first : Agree fp (base + shift) (base + shift + (n + 1)) m m1 :=
+        agree_write (by have := frame.room; omega) (by dsimp [dst]; omega) (by dsimp [dst]; omega) _
+      exact first.trans ⟨tailFrame.rd, tailFrame.wr, fun x hx => tailFrame.b x (by
+        unfold inSlots at *; omega)⟩
+    · intro i hi
+      by_cases top : i = n
+      · subst i
+        rw [agree_rd_high tailFrame frame.room (by omega) (by omega)]
+        rw [read]
+        exact rd64_write_same (frame.rd dst (by dsimp [dst]; omega))
+      · rw [moved i (by omega)]
+        rw [Mem.rd64_write_far (slot_far frame.room (show dst < K by dsimp [dst]; omega)
+          (show base + i < K by omega) (by dsimp [dst]; omega))]
+
+/-- Relocate the complete lexical environment, parameters and locals together. -/
+theorem relocate_env_counted {D : Deklaration} {L : Lay D} {Γ : Ctx}
+    {ρ : Env D Γ} {m : Mem} {pc fp : W} {K reserved extra : Nat}
+    (frame : FrameOK m fp K) (small : K < 2 ^ 31)
+    (bound : frei Γ (reserved + extra) ≤ K)
+    (env : EnvAt L m fp ρ reserved)
+    (code : CodeAt m pc (relocateC (FB + reserved) extra Γ.length))
+    (far : CodeFar pc Γ.length fp K) :
+    ∃ m', Counted Γ.length ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * Γ.length), fp⟩ m' ∧
+      Agree fp (FB + reserved + extra) (frei Γ (reserved + extra)) m m' ∧
+      EnvAt L m' fp ρ (reserved + extra) := by
+  obtain ⟨m', run, writes, moved⟩ := relocate_counted frame small
+    (show FB + reserved + extra + Γ.length ≤ K by unfold frei at bound; omega) code far
+  refine ⟨m', run, ?_, ?_⟩
+  · simpa [frei, Nat.add_assoc] using writes
+  · intro τ x
+    obtain ⟨w, read, enc⟩ := env τ x
+    have ix := idx_lt x
+    have h := moved (Γ.length - 1 - Var.idx x) (by omega)
+    refine ⟨w, ?_, enc⟩
+    simpa [vslot, Nat.add_assoc] using h.trans read
+
+namespace RelocateProbe
+
+/-- The exact count holds on the existing loaded, overlapping six-word fixture. -/
+theorem relocate_counted_zeuge :
+    ∃ m', Counted 6 ⟨0, 4096⟩ memory ⟨96, 4096⟩ m' ∧
+      Agree 4096 8 14 memory m' ∧
+      ∀ i, i < 6 → m'.rd64 (slot 4096 (BitVec.ofNat 64 (8 + i))) =
+        memory.rd64 (slot 4096 (BitVec.ofNat 64 (4 + i))) := by
+  exact relocate_counted frame (by decide) (by decide) code_at
+    (by unfold CodeFar; decide)
+
+/-- Parameters and locals retain their values with the same exact count. -/
+theorem relocate_env_counted_zeuge {D : Deklaration} (L : Lay D) :
+    ∃ m', Counted 6 ⟨0, 4096⟩ memory ⟨96, 4096⟩ m' ∧
+      Agree 4096 8 14 memory m' ∧ EnvAt L m' 4096 env 4 := by
+  exact relocate_env_counted frame (by decide) (by decide) (env_at L) code_at
+    (by unfold CodeFar; decide)
+
+end RelocateProbe
 
 /-- The successful suffix emitted by `retC` takes exactly three S0IR
     instructions: check the ensures flag, copy the result to ABI slot 2,
