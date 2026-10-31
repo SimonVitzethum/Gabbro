@@ -1660,17 +1660,48 @@ def EndCost.Post {Δ snapshot ens lo V l Γ Λ b σ ρ n}
   | .bind _ tail => tail.Post fp m
   | .branch _ _ child => child.Post fp m
 
-/-- The result is computed from the terminal source certificate, including
-    prefixes and the selected branch. Reason returns carry no normal value. -/
+/-- Preserve the complete source exit, including the reason identity. -/
+def EndCost.outcome {Δ snapshot ens lo V l Γ Λ b σ ρ n}
+    (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
+    Ausgang V l Γ :=
+  match certificate with
+  | .reason (r := r) => .why σ r
+  | .normal (v := v) typed _ _ _ _ => .zurueck σ (typed.symm ▸ v)
+  | .assign _ tail => tail.outcome
+  | .bind _ tail => tail.outcome.schrumpf
+  | .branch _ _ child => child.outcome
+
+/-- Erase only the return type index, retaining its typed value. -/
+def terminalValue : (type : Option Ty) → ErgVal D type → Option ((τ : Ty) × Wert D τ)
+  | none, _ => none
+  | some τ, v => some ⟨τ, v⟩
+
+@[simp] theorem terminalValue_cast {type : Option Ty} {τ : Ty}
+    (h : type = some τ) (v : Wert D τ) :
+    terminalValue type (h.symm ▸ v) = some ⟨τ, v⟩ := by
+  cases h
+  rfl
+
+/-- The optional payload is an observation of the canonical outcome. -/
+def terminalResult {V : Vertrag D} {l Γ} (outcome : Ausgang V l Γ) :
+    Option ((τ : Ty) × Wert D τ) :=
+  match outcome with
+  | .zurueck _ v => terminalValue V.erg v
+  | _ => none
+
+@[simp] theorem terminalResult_shrink {V : Vertrag D} {l Γ τ}
+    (outcome : Ausgang V l (τ :: Γ)) :
+    terminalResult outcome.schrumpf = terminalResult outcome := by
+  cases outcome <;> rfl
+
+/-- The old payload observation is derived from the complete canonical exit. -/
 def EndCost.result {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
-    Option ((τ : Ty) × Wert D τ) :=
-  match certificate with
-  | .reason => none
-  | .normal (τ := τ) (v := v) _ _ _ _ _ => some ⟨τ, v⟩
-  | .assign _ tail => tail.result
-  | .bind _ tail => tail.result
-  | .branch _ _ child => child.result
+    Option ((τ : Ty) × Wert D τ) := terminalResult certificate.outcome
+
+@[simp] theorem EndCost.outcome_result {Δ snapshot ens lo V l Γ Λ b σ ρ n}
+    (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
+    terminalResult certificate.outcome = certificate.result := rfl
 
 /-- A computed normal result is read at the very same endpoint as the cost proof. -/
 theorem EndCost.result_read {Δ snapshot ens lo V l Γ Λ b σ ρ n}
@@ -1680,12 +1711,14 @@ theorem EndCost.result_read {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ Enc L τ v w := by
   induction certificate with
   | reason => cases result
-  | normal =>
-    simp only [EndCost.result, Option.some.injEq] at result
+  | normal typed =>
+    cases V
+    cases typed
+    simp only [EndCost.result, EndCost.outcome, terminalResult, terminalValue, Option.some.injEq] at result
     cases result
     exact ⟨post.choose, post.choose_spec.1, post.choose_spec.2.1⟩
   | assign value tail ih => exact ih result post
-  | bind value tail ih => exact ih result post
+  | bind value tail ih => exact ih (by simpa only [EndCost.result, EndCost.outcome, terminalResult_shrink] using result) post
   | branch condition jumpFits child ih => exact ih result post
 
 /-- Normal and reason status belongs to the same endpoint as the result read. -/
@@ -1696,9 +1729,15 @@ theorem EndCost.result_status {Δ snapshot ens lo V l Γ Λ b σ ρ n}
       some (if certificate.result.isSome then 1 else 0) := by
   induction certificate with
   | reason => exact post
-  | normal => exact post.choose_spec.2.2
+  | normal typed =>
+    cases V
+    cases typed
+    exact post.choose_spec.2.2
   | assign value tail ih => exact ih post
-  | bind value tail ih => exact ih post
+  | bind value tail ih =>
+    change m.rd64 _ = some (if (terminalResult tail.outcome.schrumpf).isSome then (1 : W) else 0)
+    rw [terminalResult_shrink]
+    exact ih post
   | branch condition jumpFits child ih => exact ih post
 
 /-- Structural induction discharges recursive terminal executions. No complete
@@ -2420,12 +2459,12 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
     (depth Ks reserved : Nat) → (V : Vertrag D) → (l : Bool) →
     (Δ : Ctx) → (snapshot : W) → (ens : List II × Nat) → (lo : Nat) →
     {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ →
-      World D → Env D Γ → Option ((τ : Ty) × Wert D τ) → Nat → Type
+      World D → Env D Γ → Ausgang V l Γ → Nat → Type
   | source {depth Ks reserved V l Δ snapshot ens lo Γ Λ b σ ρ n}
       (source : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
-      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo b σ ρ source.result n
+      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo b σ ρ source.outcome n
   | call {depth Ks reserved V l Δ snapshot ens lo} {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
-    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat} {returned : Ausgang (vertragVon D f) false (D.params f)}
     (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
     {top : Nat}
     (lowerFun : lowFun passes P A L f = some (C f, top))
@@ -2440,14 +2479,14 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
       2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
     {rest : Endblock D V l Γ (nach D f Λ)}
-    {nr : Nat} {output : Option ((τ : Ty) × Wert D τ)}
+    {nr : Nat} {output : Ausgang V l Γ}
     {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
     (tail : RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo rest σ ρ output nr) :
     RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo
       (.cons (.call f args hp hr) rest) σ ρ output (na + 4 + declared + nr)
 
   | bindCall {depth Ks reserved V l Δ snapshot ens lo} {Γ : Ctx} {τ : Ty} {v : Wert D τ} {Λ : List (Res D)} {f : D.Fn}
-    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat} {returned : Ausgang (vertragVon D f) false (D.params f)}
     (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
     {top : Nat}
     (lowerFun : lowFun passes P A L f = some (C f, top))
@@ -2461,29 +2500,29 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
       2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
-    (result : returned = some ⟨τ, v⟩)
+    (result : terminalResult returned = some ⟨τ, v⟩)
     {he : D.erg f = some τ}
     {rest : Endblock D V l (τ :: Γ) (nach D f Λ)}
-    {nr : Nat} {output : Option ((τ : Ty) × Wert D τ)}
+    {nr : Nat} {output : Ausgang V l (τ :: Γ)}
     {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
     (tail : RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo rest σ (.cons v ρ) output nr) :
     RecursiveEndCost L P passes A C (depth + 1) Ks reserved V l Δ snapshot ens lo
-      (.bindCall f args he hp hr rest) σ ρ output (na + 4 + declared + 1 + nr)
+      (.bindCall f args he hp hr rest) σ ρ output.schrumpf (na + 4 + declared + 1 + nr)
 
 
-  | assign {depth Ks reserved V l Δ snapshot ens lo output} {Γ Λ τ} {x : Var Γ τ} {e : Expr D Γ Λ τ}
+  | assign {depth Ks reserved V l Δ snapshot ens lo} {Γ Λ τ} {output : Ausgang V l Γ} {x : Var Γ τ} {e : Expr D Γ Λ τ}
       {rest : Endblock D V l Γ Λ} {σ : World D} {ρ : Env D Γ}
       {v : Wert D τ} {ne nr : Nat}
       (value : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
       (tail : RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo rest σ (ρ.set x v) output nr) :
       RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo (.cons (.assignVar x e) rest) σ ρ output (ne + 1 + nr)
-  | bind {depth Ks reserved V l Δ snapshot ens lo output} {Γ Λ τ} {e : Expr D Γ Λ τ} {rest : Endblock D V l (τ :: Γ) Λ}
+  | bind {depth Ks reserved V l Δ snapshot ens lo} {Γ Λ τ} {output : Ausgang V l (τ :: Γ)} {e : Expr D Γ Λ τ} {rest : Endblock D V l (τ :: Γ) Λ}
       {σ : World D} {ρ : Env D Γ} {v : Wert D τ} {ne nr : Nat}
       (value : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
       (tail : RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo rest σ (.cons v ρ) output nr) :
-      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo (.bind e rest) σ ρ output (ne + nr)
+      RecursiveEndCost L P passes A C depth Ks reserved V l Δ snapshot ens lo (.bind e rest) σ ρ output.schrumpf (ne + nr)
 
-  | branch {depth Ks reserved V l Δ snapshot ens lo output} {Γ Λ} {c : Expr D Γ Λ .bool} {t e : Endblock D V l Γ Λ}
+  | branch {depth Ks reserved V l Δ snapshot ens lo} {Γ Λ} {output : Ausgang V l Γ} {c : Expr D Γ Λ .bool} {t e : Endblock D V l Γ Λ}
       {σ : World D} {ρ : Env D Γ} {choice : Bool} {nc nb : Nat}
       (condition : ExprCost L reserved c (frei Γ reserved) nc
         (· = if choice then 1 else 0))
@@ -2516,16 +2555,16 @@ theorem RecursiveEndCost.sound
     (depthBound : depth + 1 < 2 ^ 64) :
     ∃ n m', n ≤ budget ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
       AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
-      (∀ τ v, output = some ⟨τ, v⟩ →
+      (∀ τ v, terminalResult output = some ⟨τ, v⟩ →
         ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) =
-        some (if output.isSome then 1 else 0) := by
+        some (if (terminalResult output).isSome then 1 else 0) := by
   induction certificate generalizing K top code m pc fp rp cfp pr ex with
   | source cert =>
     obtain ⟨m', run, post, agree, frame, rpc, rfp, hw⟩ :=
       cert.sound lower fits inside low abi lowBound hprotected pre world
         parameters parameterEnv base entry savedPC savedFP
-    exact ⟨_, m', Nat.le_refl _, run, agree, frame, hw, (fun τ v result => cert.result_read result post), cert.result_status post⟩
+    exact ⟨_, m', Nat.le_refl _, run, agree, frame, hw, (fun τ v result => cert.result_read (by simpa using result) post), cert.result_status post⟩
   | @call depth Ks reserved V l Δ snapshot ens lo Γ Λ f args σ₀ σ ρ na nq nb declared returned
       arguments topF lowerFun fitsFun address requirement body declaration rest nr output hp hr tail body_ih tail_ih =>
     let childKs := Ks - frei Γ reserved
@@ -2539,7 +2578,7 @@ theorem RecursiveEndCost.sound
         (childUmf : Umf L A C (BitVec.ofNat 64 depth) m fp childKs K) :
         ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
           AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
-          (∀ τ v, returned = some ⟨τ, v⟩ →
+          (∀ τ v, terminalResult returned = some ⟨τ, v⟩ →
             ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) := by
       have depthRead := childUmf.depth
       have positive : (BitVec.ofNat 64 depth : W) + 1 ≠ 0 := by
@@ -2658,12 +2697,12 @@ theorem RecursiveEndCost.sound
         (by rw [agreeW_rdW inside agree (i := 3) (by omega) (by omega)]; exact entry)
         rpc2 rfp2 (Umf.agreeW inside surroundings agree (by unfold frei FB; omega)) depthBound
     refine ⟨na + 4 + nCall + nRest, m3, by omega, ?_,
-      (agree.mono (by omega)).trans finalAgree, frame, hw, resultRead, status⟩
+      (agree.mono (by omega)).trans finalAgree, frame, hw, (by simpa using resultRead), (by simpa using status)⟩
     rw [← len] at rpc
     have joined := entryRun.trans callRun
     rw [← len] at joined
     exact joined.trans restRun
-  | @assign depth Ks reserved V l Δ snapshot ens lo output Γ Λ τ x e rest σ ρ v ne nr value tail ih =>
+  | @assign depth Ks reserved V l Δ snapshot ens lo Γ Λ τ output x e rest σ ρ v ne nr value tail ih =>
     simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
@@ -2688,8 +2727,8 @@ theorem RecursiveEndCost.sound
       parameters (envAt_agreeWIn inside parameterEnv agree1 (by omega) lowBound) base
       (by rw [agreeW_rdW inside agree1 (i := 3) (by omega) lowBound]; exact entry) rpc rfp
       (Umf.agreeW inside surroundings agree1 (by unfold FB; omega)) depthBound
-    exact ⟨_, m2, by omega, run1.trans run2, (agree1.mono (by omega)).trans finalAgree, frame, hw, result2, status⟩
-  | @bind depth Ks reserved V l Δ snapshot ens lo output Γ Λ τ e rest σ ρ v ne nr value tail ih =>
+    exact ⟨_, m2, by omega, run1.trans run2, (agree1.mono (by omega)).trans finalAgree, frame, hw, (by simpa using result2), (by simpa using status)⟩
+  | @bind depth Ks reserved V l Δ snapshot ens lo Γ Λ τ output e rest σ ρ v ne nr value tail ih =>
     simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
@@ -2719,9 +2758,9 @@ theorem RecursiveEndCost.sound
       parameters (envAt_agree parameterEnv a1 pre.frame (by omega) (by omega)) base
       (by rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry) rpc rfp
       (surroundings.agree a1 pre.frame (by unfold frei FB; omega)) depthBound
-    exact ⟨_, m2, by omega, run1.trans run2, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, hw, result2, status⟩
+    exact ⟨_, m2, by omega, run1.trans run2, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, hw, (by simpa using result2), (by simpa using status)⟩
 
-  | @branch depth Ks reserved V l Δ snapshot ens lo output Γ Λ c t e σ ρ choice nc nb condition jumpFits child ih =>
+  | @branch depth Ks reserved V l Δ snapshot ens lo Γ Λ output c t e σ ρ choice nc nb condition jumpFits child ih =>
     simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cc, tc⟩, hc, ⟨ce, te⟩, he, ⟨ct, tt⟩, ht, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
@@ -2763,7 +2802,7 @@ theorem RecursiveEndCost.sound
         refine run1.trans (sb.trans ?_)
         simpa [List.length_singleton, pc_add, addr_norm] using run2
       exact ⟨nc + (1 + n2), m2, by omega, by simpa only [Nat.add_assoc] using run,
-        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2, status⟩
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, (by simpa using result2), (by simpa using status)⟩
     | false =>
       simp only [Bool.false_eq_true, ↓reduceIte] at value child ih
       subst w
@@ -2783,7 +2822,7 @@ theorem RecursiveEndCost.sound
         refine run1.trans (sb.trans ?_)
         simpa [List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using run2
       exact ⟨nc + (1 + n2), m2, by omega, by simpa only [Nat.add_assoc] using run,
-        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, result2, status⟩
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, hw, (by simpa using result2), (by simpa using status)⟩
 
   | @bindCall depth Ks reserved V l Δ snapshot ens lo Γ τ v Λ f args σ₀ σ ρ na nq nb declared returned
       arguments topF lowerFun fitsFun address requirement body declaration result he rest nr output hp hr tail body_ih tail_ih =>
@@ -2798,7 +2837,7 @@ theorem RecursiveEndCost.sound
         (childUmf : Umf L A C (BitVec.ofNat 64 depth) m fp childKs K) :
         ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
           AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
-          (∀ τ v, returned = some ⟨τ, v⟩ →
+          (∀ τ v, terminalResult returned = some ⟨τ, v⟩ →
             ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) := by
       have depthRead := childUmf.depth
       have positive : (BitVec.ofNat 64 depth : W) + 1 ≠ 0 := by
@@ -2936,7 +2975,7 @@ theorem RecursiveEndCost.sound
         (by rw [agreeW_rdW inside joinedAgree (i := 3) (by omega) (by omega)]; exact entry)
         rpc2 rfp2 (Umf.agreeW inside surroundings joinedAgree (by unfold frei FB; omega)) depthBound
     refine ⟨na + 4 + nCall + 1 + nRest, m3, by omega, ?_,
-      (joinedAgree.mono (by omega)).trans finalAgree, frame, hw, resultRead, status⟩
+      (joinedAgree.mono (by omega)).trans finalAgree, frame, hw, (by simpa using resultRead), (by simpa using status)⟩
     rw [← len] at rpc
     have joined := entryRun.trans callRun
     rw [← len] at joined
@@ -2946,7 +2985,7 @@ theorem RecursiveEndCost.sound
 
 /-- Execute the actual recursive source callee and retain its common return endpoint. -/
 theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
-    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Ausgang (vertragVon D f) false (D.params f)}
     (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
     {top : Nat}
@@ -2971,7 +3010,7 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
     ∃ n m', n ≤ declared ∧ Counted (na + 4 + n) ⟨pc, fp⟩ m
       ⟨pc + BitVec.ofNat 64 (16 * (ca.length + 4)), fp⟩ m' ∧
       AgreeW L fp (frei Γ reserved) K m m' ∧ WeltAt m' L σ ∧
-      (∀ τ v, returned = some ⟨τ, v⟩ → ∃ w,
+      (∀ τ v, terminalResult returned = some ⟨τ, v⟩ → ∃ w,
         m'.rd64 (slot (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 2) = some w ∧ Enc L τ v w) := by
   let childKs := Ks - frei Γ reserved
   have calleeRun {m : Mem} {pc fp rp cfp : W} {K : Nat}
@@ -2984,7 +3023,7 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
       (childUmf : Umf L A C (BitVec.ofNat 64 depth) m fp childKs K) :
       ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
         AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
-        (∀ τ v, returned = some ⟨τ, v⟩ →
+        (∀ τ v, terminalResult returned = some ⟨τ, v⟩ →
           ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) := by
     have depthRead := childUmf.depth
     have positive : (BitVec.ofNat 64 depth : W) + 1 ≠ 0 := by
@@ -3167,7 +3206,7 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
       (source : BlockCost L reserved V l b σ ρ σ' ρ' n) :
       recursiveBlockCost L reserved P passes A C dv Ks V l b σ ρ (.ok σ' ρ') n
   | call {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
-    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Ausgang (vertragVon D f) false (D.params f)}
     (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
     {top : Nat}
     (lowerFun : lowFun passes P A L f = some (C f, top))
@@ -3191,7 +3230,7 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
       (.cons (.call f args hp hr) rest) σ ρ outcome (na + 4 + declared + nr)
 
   | bindCall {Γ : Ctx} {τ : Ty} {v : Wert D τ} {Λ : List (Res D)} {f : D.Fn}
-    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Option ((τ : Ty) × Wert D τ)}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared depth : Nat} {returned : Ausgang (vertragVon D f) false (D.params f)}
     (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
     {top : Nat}
     (lowerFun : lowFun passes P A L f = some (C f, top))
@@ -3206,7 +3245,7 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
       2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
-    (result : returned = some ⟨τ, v⟩)
+    (result : terminalResult returned = some ⟨τ, v⟩)
     {he : D.erg f = some τ}
     {Λ' : List (Res D)}
     {rest : Block D V l (τ :: Γ) (nach D f Λ) Λ'} {outcome : Ausgang V l (τ :: Γ)}
@@ -3698,7 +3737,7 @@ theorem call_continuation_zeuge : ∃ n, n ≤ 17 ∧
     (σ₀ := world) (σ := world) (ρ := Env.nil) (na := 1) (nq := 1) (nb := 6) (declared := 12)
     (A := addresses) (C := target)
     (Ks := 128) (top := 14) (dv := 1) (depth := 0)
-    (returned := some ⟨.int 37 37, (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))⟩) (V := vertragVon fixtureDecl 0) (l := false)
+    (returned := .zurueck world (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))) (V := vertragVon fixtureDecl 0) (l := false)
     (rest := Block.nil) (nr := 0)
     (hp := {
       hw := fun t => nomatch t
@@ -3819,7 +3858,7 @@ theorem bind_continuation_zeuge : ∃ n, n ≤ 18 ∧
     (σ₀ := world) (σ := world) (ρ := Env.nil) (na := 1) (nq := 1) (nb := 6) (declared := 12)
     (A := addresses) (C := target)
     (Ks := 128) (top := 14) (dv := 1) (depth := 0)
-    (returned := some ⟨.int 37 37, (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))⟩) (V := vertragVon fixtureDecl 0) (l := false)
+    (returned := .zurueck world (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))) (V := vertragVon fixtureDecl 0) (l := false)
     (rest := Block.nil) (nr := 0)
     (outcome := .ok world (Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil))
     (hp := {
@@ -3870,12 +3909,12 @@ def terminalCall : Endblock fixtureDecl (vertragVon fixtureDecl 0) false [] [] :
 theorem recursiveEndCost_zeuge : Nonempty
     (RecursiveEndCost layout program 2 addresses FullCallProbe.target 2 128 0
       (vertragVon fixtureDecl 0) false [] 64 ([ci 1 5 1 0], 6) 4
-      terminalCall world Env.nil (some ⟨.int 37 37, ⟨37, by decide, by decide⟩⟩) 23) := by
+      terminalCall world Env.nil (.zurueck world (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))) 23) := by
   unfold terminalCall
   refine ⟨RecursiveEndCost.call
     (L := layout) (P := program) (passes := 2) (A := addresses) (C := FullCallProbe.target)
     (depth := 1) (Ks := 128) (reserved := 0) (top := 14) (nq := 1) (nb := 6) (declared := 12) (na := 1) (nr := 6) (σ₀ := world)
-    (returned := some ⟨.int 37 37, ⟨37, by decide, by decide⟩⟩) (f := 0)
+    (returned := .zurueck world (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37))) (f := 0)
     (Γ := []) (Λ := []) (.cons (ne := 1) (nr := 0) .nil .literal) (by decide +kernel) (by decide) (by decide) .truth ?_ ?_ ?_⟩
   · intro ens hens snapshot
     have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
