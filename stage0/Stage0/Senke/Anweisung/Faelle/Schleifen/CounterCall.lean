@@ -7,11 +7,11 @@ open Gabbro.Grammatik Runner.IR Runner.Mem FnptrProben
 set_option maxRecDepth 2000
 
 /-- A real world store followed by an actual call, sharing a reserved caller frame. -/
-def body : Block D (vertragVon D 2) false [] [] [] :=
+def body (l : Bool) : Block D (vertragVon D 2) l [] [] [] :=
   .cons (.assignGlob () pointer rfl (by intro w h; cases h))
     (.cons (.call 0 .nil (fit 2) rfl) .nil)
 
-def lowered := lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) body
+def lowered := lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) (body false)
 def code : List II := (lowered.getD ([], 0)).1
 def top : Nat := (lowered.getD ([], 0)).2
 
@@ -23,7 +23,7 @@ def memory : Runner.Mem := { callMem with
   b := fun a => if 2016 ≤ a.toNat ∧ a.toNat < 2016 + 16 * image.length then
       ((image.flatMap encII)[a.toNat - 2016]?).getD 0 else if a.toNat = 4128 then 77 else if a.toNat = 4136 then 1 else callMem.b a }
 
-theorem lowering : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) body = some (code, top) := by
+theorem lowering : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) (body false) = some (code, top) := by
   decide +kernel
 
 local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
@@ -83,7 +83,7 @@ theorem body_simulation [Kern] :
       (2048 + BitVec.ofNat 64 (16 * code.length)) world Env.nil 4 := by
   have h := lowB_ok (reserved := 4) (O := O) (passes := 1) (P := tiny) (f := 2)
     (σ0 := world) (ρ0 := Env.nil) (lo := 4) (pr := [4, 5, 6]) (ex := (0, 0))
-    call_spec addresses_bound rfl rfl body code top lowering (by decide +kernel)
+    call_spec addresses_bound rfl rfl (body false) code top lowering (by decide +kernel)
     (by decide +kernel) call_win memory 2048 world Env.nil pre (by decide) (by decide)
     surroundings head world_at (by intro j hj; simp only [List.mem_cons, List.not_mem_nil, or_false] at hj; rcases hj with rfl | rfl | rfl <;> decide)
   change Reach callLayout 4096 4 256 [4, 5, 6] ⟨2048, 4096⟩ memory
@@ -100,7 +100,7 @@ theorem body_simulation_at [Kern] {m : Runner.Mem}
       (2048 + BitVec.ofNat 64 (16 * code.length)) world Env.nil 4 := by
   have h := lowB_ok (reserved := 4) (O := O) (passes := 1) (P := tiny) (f := 2)
     (σ0 := world) (ρ0 := Env.nil) (lo := 4) (pr := [4, 5, 6]) (ex := (0, 0))
-    call_spec addresses_bound rfl rfl body code top lowering (by decide +kernel)
+    call_spec addresses_bound rfl rfl (body false) code top lowering (by decide +kernel)
     (by decide +kernel) call_win m 2048 world Env.nil hp (by decide) (by decide)
     hu hk hw (by intro j hj; simp only [List.mem_cons, List.not_mem_nil, or_false] at hj; rcases hj with rfl | rfl | rfl <;> decide)
   exact h

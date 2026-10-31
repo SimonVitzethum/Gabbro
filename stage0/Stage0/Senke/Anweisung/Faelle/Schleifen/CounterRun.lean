@@ -251,4 +251,36 @@ theorem counted_exhaustion_zeuge [Kern] (b : Fin 3) :
     (by have := b.isLt; omega) (loaded b) (loaded_header b)
   exact ⟨Stops.prefix run stop, m', run, final⟩
 
+/-- The actual source body falls through. Its semantic access trace is
+    retained in the resulting world, rather than reset between iterations. -/
+theorem source_body (σ : World D) :
+    ∃ σ', execBlock O 1 (rufAt tiny O 1 2) (body true)
+      σ (Env.nil : Env D []) = .ok σ' Env.nil := by
+  exact ⟨_, rfl⟩
+
+/-- Canonical repetition of the actual source body exhausts its natural fuel. -/
+theorem source_exhaustion (n : Nat) (σ : World D) :
+    foreverLauf (l := false) (() : D.Annahme)
+      (fun σ ρ => execBlock O 1 (rufAt tiny O 1 2) (body true) σ ρ)
+      (fun σ _ => (σ, true)) n σ (Env.nil : Env D []) =
+      .hardware (.fortschritt ()) := by
+  induction n generalizing σ with
+  | zero => rfl
+  | succ n ih =>
+    obtain ⟨σ', hb⟩ := source_body σ
+    simp only [foreverLauf, Bool.true_eq_false, ite_false, hb]
+    exact ih σ'
+
+/-- The canonical source outcome is realized by the counted actual image.
+    The whole-loop lowS branch still refuses; this witnesses its runtime
+    obligation without claiming that the pipeline already accepts forever. -/
+theorem source_counted_zeuge [Kern] (b : Fin 3) :
+    Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [4, 5, 6]
+      ⟨2016, 4096⟩ (loaded b) 0 0 0
+      (foreverLauf (l := false) (() : D.Annahme)
+        (fun σ ρ => execBlock O 1 (rufAt tiny O 1 2) (body true) σ ρ)
+        (fun σ _ => (σ, true)) b.val world (Env.nil : Env D [])) 4 := by
+  rw [source_exhaustion]
+  exact (counted_exhaustion_zeuge b).1
+
 end Gabbro.Stage0.Senke.CounterCallProbe
