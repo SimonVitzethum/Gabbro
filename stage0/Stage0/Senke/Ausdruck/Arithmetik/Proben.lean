@@ -1,5 +1,5 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Schleife
+import Stage0.Senke.Ausdruck.Arithmetik.Simulation
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe

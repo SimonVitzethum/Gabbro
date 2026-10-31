@@ -766,3 +766,19 @@ All decided:
 
 First step (Simon, 2026-10-25): complete GabbroV so that full logic proofs of Gabbro programs are possible -- it is what
 §3.4 and §4 rest on.
+
+
+The normalization Runner simulation now has a single explicit head invariant
+(`Arithmetik/Simulation.lean`): actual code/frame/environment precondition,
+six state-slot reads, signed-word bounds, canonical remainder, exact scaled
+reconstruction, and conserved completed/remaining budget. The budget induction
+is proved **conditional on** actual target-exit and full-iteration simulations.
+It composes Runner traces and footprint agreement and returns the invariant,
+canonical output, a stopped/exhausted condition and transfer-count bounds.
+The actual emitted final instruction is separately proved to jump back to the
+head with memory unchanged. This does not prove the full loop: the active body
+(including both branches, writes and counter tail) must still re-establish the
+head invariant, and the target exit must still be executed. Exact instruction
+cost, IEEE round/pack, arbitrary-reserved full finite add/sub and range 107 remain
+open. The hook remains disabled; computed `floatOf` is unchanged. No grammar
+semantics or goal theorem was changed.
