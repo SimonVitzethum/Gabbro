@@ -2722,7 +2722,7 @@ theorem floatFiniteAddL_signed_execute {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_signed_execute
 
-set_option maxHeartbeats 1200000 in
+set_option maxHeartbeats 2400000 in
 /-- Execute decoding, SORT, alignment and signed ADD/SUB from encoded operands.
     The exact correction and arithmetic result belong to one connected run. -/
 theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
@@ -2859,7 +2859,18 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
                 some (Runner.IR.bool ((if sx == sy then q+jam else q-jam) == 0)) ∧
               Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
                 BitVec.ofNat 64 (16*aligned.length)+128) fp K (dst+7)
-                normalization ρ W reserved := by
+                normalization ρ W reserved ∧
+              ∃ branchTail,
+                Star ⟨pc,fp⟩ m
+                  ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
+                    BitVec.ofNat 64 (16*aligned.length)+128+
+                    (if ((if sx == sy then q+jam else q-jam) == 0) then 16 else 64),fp⟩ tested ∧
+                Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
+                  BitVec.ofNat 64 (16*aligned.length)+128+
+                  (if ((if sx == sy then q+jam else q-jam) == 0) then 16 else 64))
+                  fp K (dst+7) branchTail ρ W reserved ∧
+                branchTail = normalization.drop
+                  (if ((if sx == sy then q+jam else q-jam) == 0) then 1 else 4) := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
     floatFiniteAddL_read_fields F dst a b wa wb compiled width lower frac mask
       fracMask hiddenBound room (by omega) producerA producerB pre
@@ -2980,6 +2991,68 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
   subst testWord
   have testedPre := cmpPre.next (testAgree.mono (by omega : dst+7 ≤ dst+9))
     (Nat.le_refl _) (by omega)
+  have branchShape : ∃ jump rest, normalization =
+      [ci 19 (dst+9) 64 0, ci 5 (dst+3) (dst+3) (dst+4),
+        ci 1 (dst+7) 0 0, jump] ++ rest := by
+    have eq := hfull.symm.trans result.1.symm
+    rw [hie,tailEq,signedEq,normalizationEq] at eq
+    simp [List.append_assoc] at eq
+    exact ⟨_,_,eq⟩
+  obtain ⟨endJump,normalRest,branchEq⟩ := branchShape
+  have bp := testedPre
+  rw [branchEq] at bp
+  have branchIns : Runner.IR.InsAt tested
+      (pc+BitVec.ofNat 64 (16*executed.length)+256+
+        BitVec.ofNat 64 (16*aligned.1.length)+96+16+16)
+      19 (II.f ((dst+9 : Nat) : Int)) (II.f 64) (II.f 0) := by
+    simpa [ci] using bp.code 0 (by simp)
+  have branchRead : tested.rd64 (slot fp (sx (II.f ((dst+9 : Nat) : Int)))) =
+      some (Runner.IR.bool ((if vs (dst+3) == vs (dst+4) then
+        vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)) == 0)) := by
+    rw [sx_nat (by have := bp.small; omega)]
+    exact testRead
+  have branchDone : ∃ branchTail,
+      Star ⟨pc,fp⟩ m
+        ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
+          BitVec.ofNat 64 (16*aligned.1.length)+128+
+          (if ((if vs (dst+3) == vs (dst+4) then vs (dst+7)+vs (dst+16)
+            else vs (dst+7)-vs (dst+16)) == 0) then 16 else 64),fp⟩ tested ∧
+      Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
+        BitVec.ofNat 64 (16*aligned.1.length)+128+
+        (if ((if vs (dst+3) == vs (dst+4) then vs (dst+7)+vs (dst+16)
+          else vs (dst+7)-vs (dst+16)) == 0) then 16 else 64))
+        fp K (dst+7) branchTail ρ W reserved ∧
+      branchTail = normalization.drop
+        (if ((if vs (dst+3) == vs (dst+4) then vs (dst+7)+vs (dst+16)
+          else vs (dst+7)-vs (dst+16)) == 0) then 1 else 4) := by
+    cases hz : ((if vs (dst+3) == vs (dst+4) then vs (dst+7)+vs (dst+16)
+      else vs (dst+7)-vs (dst+16)) == 0) with
+    | false =>
+      rw [hz] at branchRead
+      have step := run_step (t := ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+BitVec.ofNat 64 (16*aligned.1.length)+96+16+16,fp⟩) branchIns (by decide) (run_brz_zero (t := ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+BitVec.ofNat 64 (16*aligned.1.length)+96+16+16,fp⟩) branchIns branchRead)
+      have off : sx (II.f 64) = (64 : Runner.W) := by
+        rw [sx_lit (by decide : lit32 64 = true)]; rfl
+      rw [off] at step
+      have rest := bp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+      refine ⟨normalRest,?_,?_,?_⟩
+      · simpa [hz, BitVec.add_assoc] using
+          (wholeRun.trans (signedRun.trans (zeroRun.trans testRun))).trans (Star.one step)
+      · simpa [hz, BitVec.add_assoc] using rest
+      · simp [branchEq, hz]
+    | true =>
+      rw [hz] at branchRead
+      have step := run_step (t := ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+BitVec.ofNat 64 (16*aligned.1.length)+96+16+16,fp⟩) branchIns (by decide)
+        (run_brz_ne (t := ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+BitVec.ofNat 64 (16*aligned.1.length)+96+16+16,fp⟩) (v := 1) branchIns branchRead (by decide))
+      have short : Pre L tested _ fp K (dst+7)
+          ([ci 19 (dst+9) 64 0] ++
+            ([ci 5 (dst+3) (dst+3) (dst+4), ci 1 (dst+7) 0 0,endJump] ++ normalRest))
+          ρ W reserved := bp
+      have rest := short.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+      refine ⟨[ci 5 (dst+3) (dst+3) (dst+4), ci 1 (dst+7) 0 0,endJump] ++ normalRest,?_,?_,?_⟩
+      · simpa [hz, nxt, BitVec.add_assoc] using
+          (wholeRun.trans (signedRun.trans (zeroRun.trans testRun))).trans (Star.one step)
+      · simpa [hz, BitVec.add_assoc] using rest
+      · simp [branchEq, hz]
   refine ⟨executed,tail,aligned.1,continuation,aligned.2,values,final,hfull,
     tailEq,ha,run.trans (sortRun.trans alignRun),
     ag.trans ((sortAgree.mono (by omega)).trans (alignAgree.mono (by omega))),
@@ -2987,7 +3060,7 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),vreads _ (by omega),
     wholeRun.trans signedRun,wholeAgree.trans (signedAgree.mono (by omega)),
     signedRead,?_,signedTail,signedEq,signedRest,normalization,normalizationEq,
-    tested,?_,?_,testRead,?_⟩
+    tested,?_,?_,testRead,?_,branchDone⟩
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
@@ -3244,7 +3317,18 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
                 some (Runner.IR.bool ((if sx == sy then q+jam else q-jam) == 0)) ∧
               Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
                 BitVec.ofNat 64 (16*aligned.length)+128) fp K (16+7)
-                normalization ρ W 13 := by
+                normalization ρ W 13 ∧
+              ∃ branchTail,
+                Star ⟨pc,fp⟩ m
+                  ⟨pc+BitVec.ofNat 64 (16*executed.length)+256+
+                    BitVec.ofNat 64 (16*aligned.length)+128+
+                    (if ((if sx == sy then q+jam else q-jam) == 0) then 16 else 64),fp⟩ tested ∧
+                Pre L tested (pc+BitVec.ofNat 64 (16*executed.length)+256+
+                  BitVec.ofNat 64 (16*aligned.length)+128+
+                  (if ((if sx == sy then q+jam else q-jam) == 0) then 16 else 64))
+                  fp K (16+7) branchTail ρ W 13 ∧
+                branchTail = normalization.drop
+                  (if ((if sx == sy then q+jam else q-jam) == 0) then 1 else 4) := by
   apply floatFiniteAddL_read_fields_align F 16
     (fun j => some ([ci 1 j 7 0],j+1))
     (fun j => some ([ci 1 j 11 0],j+1)) 7 11
