@@ -124,4 +124,3 @@ the corresponding value/call/dispatch lanes. New discoveries must be assigned ex
 
 **Pause gate is active.** These packages are documented for the next explicitly resumed session. No build,
 agent or automatic continuation is authorized by this plan while the reboot pause remains active.
-
