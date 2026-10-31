@@ -782,9 +782,16 @@ canonical output, a stopped/exhausted condition and transfer-count bounds.
 The actual emitted final instruction is separately proved to jump back to the
 head with memory unchanged. This does not prove the full loop: the active body
 (including both branches, writes and counter tail) must still re-establish the
-head invariant. Its resource proof must also derive a total-budget bound: the
-separate signed-word bounds on count and fuel alone do not ensure that count+1
-remains below 2^63. Exact instruction
+head invariant. The active prefix is now executed through the actual budget
+branch, signed target comparison and nonzero branch to `pc+48`, preserving the
+complete head (including all six reads, fetch, permissions, environment and world).
+This is only the prefix, not an active iteration. The resource lemmas derive the
+total-budget ceiling from an initial zero count and the existing fuel bound;
+conservation then bounds the next count and decremented fuel and preserves their
+sum. A generic head with separate count/fuel bounds still does not imply the
+total ceiling; the eventual full-loop theorem must carry the initially derived
+ceiling through induction. No universal body assumption has been substituted for
+the missing execution. Exact instruction
 cost, IEEE round/pack, arbitrary-reserved full finite add/sub and range 107 remain
 open. The hook remains disabled; computed `floatOf` is unchanged. No grammar
 semantics or goal theorem was changed.
