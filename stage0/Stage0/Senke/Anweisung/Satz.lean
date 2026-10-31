@@ -22,6 +22,7 @@ import Stage0.Senke.Anweisung.Faelle.Speicher
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Emission
 import Stage0.Senke.Anweisung.Faelle.Bloecke
 import Stage0.Senke.Anweisung.Faelle.BlockRuf
 import Stage0.Senke.Anweisung.Faelle.Ende
@@ -212,7 +213,130 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens body)
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens overflow)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
-  | _, _, _, _, .forever .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS] at h
+  | _, Γ, Λ, _, .forever a inv body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hw, hpr => by
+    dsimp only [lowS] at h
+    split at h
+    · rename_i allowed
+      obtain ⟨cc, hcc, emitted⟩ := Option.bind_eq_some_iff.mp h
+      obtain ⟨cb, tb, hcb, rfl, htc, htb, hcounter, hone, hscratch⟩ := foreverC_actual emitted
+      have bodyRuns : ∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo
+          rp cfp σ0 ρ0 cens tens pr ex body reserved := fun {pr ex} =>
+        lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens body
+      have fuel := foreverC_budget emitted
+      have pairStep : (counterPair reserved (counterDepthB body)).2 =
+          (counterPair reserved (counterDepthB body)).1 + 1 := rfl
+      have room : frei Γ reserved + 8 ≤ K := by have := hW.ks; omega
+      obtain ⟨m1, initRun, initFrame, entry, surrounds, snapshot, world, keeps, count, unit⟩ :=
+        forever_initialize_entry (lo := lo) (pr := pr) hW hp hu hk hw
+          (by omega) allowed.1 (by omega) (by omega) allowed.2.1
+          (by omega) (by omega) fuel.1 (by
+            intro j hj
+            have member := hpr j hj
+            exact ⟨by omega, fun eq => allowed.2.2.1 (eq ▸ hj),
+              fun eq => allowed.2.2.2 (eq ▸ hj)⟩)
+      let control := foreverCounter (counterPair reserved (counterDepthB body)).1
+        (counterPair reserved (counterDepthB body)).2 (16 * (cc.1.length + cb.length + 8)) ++
+        (cc.1 ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
+          [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))
+      have controlLength : control.length = cc.1.length + cb.length + 7 := by
+        simp [control, foreverCounter, stopC, sysC]
+        omega
+      have emittedCode : CodeAt m1 (pc + 32)
+          (control ++ ([ci 18 (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)) 0 0] ++
+            stopC 111 (frei Γ reserved))) := by
+        simpa [control, foreverCounter, List.append_assoc] using entry.code
+      have emittedFar : CodeFar (pc + 32) (control.length + 4) fp K := by
+        simpa [control, foreverCounter, stopC, sysC, Nat.add_assoc] using entry.far
+      have backCode := codeAt_right emittedCode
+      have backFar := codeFar_left (n := 1) (k := 3)
+        (codeFar_right (n := control.length) (k := 4) emittedFar)
+      have budgetCode := codeAt_right backCode
+      have budgetFar := codeFar_right (n := 1) (k := 3)
+        (codeFar_right (n := control.length) (k := 4) emittedFar)
+      have reservationBound : FB + reserved ≤ frei Γ reserved := by unfold frei; omega
+      have imageBound : 16 * (cc.1.length + cb.length + 13) < 2 ^ 31 := by
+        simpa only [foreverCode_length] using hs
+      have stopSX : sx (BitVec.ofInt 32 ((16 * (cc.1.length + cb.length + 8) : Nat) : Int)) =
+          BitVec.ofNat 64 (16 * (cc.1.length + cb.length + 8)) := sx_nat (d := 16 * (cc.1.length + cb.length + 8)) (by omega)
+      have stopAddress : pc + 32 + sx (BitVec.ofInt 32 ((16 * (cc.1.length + cb.length + 8) : Nat) : Int)) =
+          pc + 32 + BitVec.ofNat 64 (16 * control.length) + BitVec.ofNat 64 16 := by
+        rw [stopSX, addr_norm, controlLength]
+        congr 2 <;> omega
+      have castBack : (16 * (cc.1.length + cb.length + 7 : Nat) : Int) =
+          ((16 * (cc.1.length + cb.length + 7) : Nat) : Int) := by omega
+      have nextAddress : pc + 32 + BitVec.ofNat 64 (16 * control.length) +
+          BitVec.ofInt 64 (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)) = pc + 32 := by
+        rw [controlLength, castBack, BitVec.ofInt_neg, BitVec.ofInt_natCast,
+          BitVec.add_neg_eq_sub, BitVec.add_sub_cancel]
+      have jumpLiteral : lit32 (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)) = true := by
+        simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
+        omega
+      apply Sim.prefix hlo initRun initFrame keeps
+      simp only [execStmt]
+      apply forever_counter_loop (O := O) (cb := cb) (tb := tb)
+        (stop := (16 * (cc.1.length + cb.length + 8) : Nat))
+        (back := pc + 32 + BitVec.ofNat 64 (16 * control.length))
+        (jump := II.f (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)))
+        (b := 0) (c := 0)
+        (counter := (counterPair reserved (counterDepthB body)).1)
+        (one := (counterPair reserved (counterDepthB body)).2)
+        (ex := (64, -(16 * (cc.1.length + cb.length + 7 : Nat) : Int)))
+        hS hA hlo0 hens inv body hcc
+      case hcb => simpa only [forever_runtime_targets] using hcb
+      case hW => exact hW
+      case hlo => exact hlo
+      case hlo2 => exact hlo2
+      case backFar => exact backFar
+      case stopRoom => exact room
+      case surround => exact surrounds
+      case head => exact snapshot
+      case world => exact world
+      case read => exact count
+      case readOne => exact unit
+      case backAt =>
+        change (pc + 32) + BitVec.ofNat 64 32 + _ = _
+        rw [addr_norm]
+        apply congrArg (fun n : Nat => (pc + 32) + BitVec.ofNat 64 n)
+        rw [controlLength]
+        simp only [stopC, sysC, List.length_append, List.length_cons, List.length_nil]
+        omega
+      case leaveAt =>
+        change pc + 32 + BitVec.ofNat 64 (16 * control.length) + BitVec.ofNat 64 64 = _
+        rw [addr_norm]
+        change pc + BitVec.ofNat 64 32 + _ = _
+        rw [addr_norm, controlLength, foreverCode_length]
+        exact congrArg (fun n : Nat => pc + BitVec.ofNat 64 n) (by omega)
+      case nextAt => exact nextAddress
+      case jumpAt => rw [sx_lit jumpLiteral]; exact nextAddress
+      case low => exact allowed.1
+      case allocated => omega
+      case oneBound => omega
+      case distinct => omega
+      case hprotected =>
+        intro j hj
+        exact ⟨by have := hpr j hj; omega, fun eq => allowed.2.2.1 (eq ▸ hj)⟩
+      case stopFar => rw [stopAddress]; exact budgetFar
+      case fits => exact fuel.2
+      case pre =>
+        exact ⟨entry.ctx, entry.small, entry.frame, codeAt_left emittedCode,
+          codeFar_left (n := control.length) (k := 4) emittedFar,
+          entry.env, trivial, wstab_true _ _⟩
+      case edge => simpa [ci, II.f] using backCode 0 (by simp)
+      case stopCode => rw [stopAddress]; exact budgetCode
+      case htc => omega
+      case htb => omega
+      case room => omega
+      case hs => omega
+      case hpr =>
+        intro j hj
+        simp only [List.mem_cons] at hj
+        rcases hj with rfl | rfl | hj
+        · unfold frei; omega
+        · unfold frei; omega
+        · exact hpr j hj
+      case bodyRuns => exact bodyRuns
+    · simp at h
+
   | _, Γ, Λ, _, .axiomCall a args hn proof0 proof1 proof2 proof3, c, top, h, hK, arg4, hW, m, pc, σ, ρ, hp, arg11, hlo2, arg13, arg14, hWa, hpr => by
     exact axiomCall_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (a := a) (args := args) (hn := hn) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3)
       c top h hK arg4 hW m pc σ ρ hp arg11 hlo2 arg13 arg14 hWa hpr

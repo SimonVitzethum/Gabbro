@@ -125,10 +125,4 @@ theorem forever_one_false {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bo
     (σ : World D) (ρ : Env D Γ) :
     execStmt O 1 R (show Stmt D V l Γ Λ Λ from .forever a .fls body) σ ρ = .logik .schleife := rfl
 
-/-- Refuse until the lowering and its call interface receive the same fuel as G. -/
-theorem forever_refused {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
-    (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int)
-    (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ) :
-    lowS passes A L lo ens pr ex (show Stmt D V l Γ Λ Λ from .forever a inv body) = none := rfl
-
 end Gabbro.Stage0.Senke

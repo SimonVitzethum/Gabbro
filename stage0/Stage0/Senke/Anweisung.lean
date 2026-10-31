@@ -17,7 +17,7 @@ import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
 import Stage0.Senke.Sperre.Code
 import Stage0.Senke.Anweisung.Bytes.Code
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 
 namespace Gabbro.Stage0.Senke
 
@@ -261,10 +261,14 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
     let cc ← lowE (reserved := reserved) L bis ((frei Γ reserved))
     let cu ← lowB (reserved := reserved) passes A L lo ens pr ex overflow
     retryC ((frei Γ reserved)) cc cu (fun targets => lowB (reserved := reserved) passes A L lo ens pr targets body) n
-  -- `passes` already reaches this lowering. Enabling this case still requires the actual
-  -- header/pass/backedge composition, recursive counter reservation and its frame bound.
-  -- Nested loops initialize from `passes`, not the enclosing loop's decreasing remainder.
-  | _, _, _, _, .forever .., reserved => none
+  | _, Γ, _, _, .forever _ inv body, reserved =>
+    let pair := counterPair reserved (counterDepthB body)
+    if lo ≤ pair.1 ∧ pair.2 < FB + reserved ∧ pair.1 ∉ pr ∧ pair.2 ∉ pr then do
+      let cc ← lowE (reserved := reserved) L inv (frei Γ reserved)
+      foreverC pair.1 pair.2 (frei Γ reserved) passes cc
+        (fun targets => lowB (reserved := reserved) passes A L lo ens
+          (pair.1 :: pair.2 :: pr) targets body)
+    else none
   | _, _, _, _, .breaking _ body, reserved => lowB (reserved := reserved) passes A L lo ens pr ex body
   | _, Γ, _, _, .advances .., reserved => some ([], (frei Γ reserved))
   | _, Γ, _, _, .retires .., reserved => some ([], (frei Γ reserved))
