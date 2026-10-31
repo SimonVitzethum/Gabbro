@@ -226,4 +226,15 @@ theorem loopJumpBlock_counted_zeuge (next : Bool) :
   refine ⟨lower, ?_⟩
   have result := loopJumpBlock_counted next lower pre hw
   cases next <;> exact result
+/-- The accepted source jumps inhabit the canonical outcome index jointly with
+    their exact cost, world, environment and enclosing protected counters. -/
+theorem countedSim_loopJump_zeuge (P : Programm D) (σ0 : World D)
+    (ρ0 : Env D (D.params 2)) (next : Bool) :
+    CountedSim 1 callLayout P 2 σ0 ρ0 3000 5000 4096 4 256 [6, 7]
+      ⟨2048, 4096⟩ (memory next) 2064 2192 2016
+      (if next then .next rfl world (Env.nil : Env D [])
+       else .leave rfl world (Env.nil : Env D [])) 8 := by
+  have h := (loopJumpBlock_counted_zeuge next).2
+  cases next <;> exact h
+
 end Gabbro.Stage0.Senke.LoopJumpCostProbe
