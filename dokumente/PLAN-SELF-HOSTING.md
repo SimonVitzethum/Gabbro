@@ -325,6 +325,29 @@ checks, standard-axiom audit and layout passed; actual runner: 160 images,
 zero failures (2026-10-31). No grammar rebuild was run.
 
 
+The post-cancellation output now has emitted normal and subnormal continuations
+(`Arithmetik/Output.lean`). The normal continuation composes the existing
+arbitrary-denominator guard/sticky nearest-even rounder with carry normalization
+and field packing. Its generic theorem reaches `rundeBruchKern` under explicit
+`normQD` quotient/remainder decomposition and normal exponent bounds. A separate
+binary64 top-exponent theorem proves the emitted carry to infinity's canonical
+fields. Subnormal output adds the rounded field directly to the sign; its generic
+canonical theorem includes zero and the carry to minimum normal. Joint simulation
+witnesses cover a halfway normal, negative overflow and a halfway subnormal zero.
+
+This is an output-stage step, not a completed finite adder: selection of the final
+magnitude/exponent and production of these quotient/guard/tail inputs from the
+existing exact sum/remainder reconstruction are still missing. In particular the
+normal theorem's scaled denominator must have the explicit form `8 * den`; left
+normalization is not inferred. The top-exponent theorem proves rounded fields,
+not a full exact-sum-to-`rundeExakt` bridge. Arbitrary-reserved whole-fragment
+simulation, complete temporary and cost bounds and range 107 remain open and
+refused. `computedBlock.floatOf` is unchanged. Direct output/probe/root/
+`Nachpruefung` checks, standard axioms and layout passed; actual runner: 178
+images, zero failures (18 new output boundary images, 2026-10-31). Checks used
+the global build lock and 5G/7G/Swap0 scope with existing grammar oleans only.
+
+
 * **Expressions:** every G operation becomes the instructions above in G's evaluation order; `neg` is `sub 0`, `not`
   is `xor 1`, `le` is `lt` swapped and negated, `ne` is `eq` and `xor 1`; unsigned compare by flipping the sign bit;
   wide ranges by limb sequences (carry = unsigned `sum < a`, 64×64→128 by 32-bit halves); a slot access

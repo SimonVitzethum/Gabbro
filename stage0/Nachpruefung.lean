@@ -316,3 +316,11 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.AddSubProbe.floatNegativeSumL_joint_zeuge
 
 #print axioms Gabbro.Stage0.Senke.floatNegativeAlign_bounds
+
+#print axioms Gabbro.Stage0.Senke.floatAddNormalOutputL_ok
+#print axioms Gabbro.Stage0.Senke.floatPackCarry_top_f64
+#print axioms Gabbro.Stage0.Senke.floatAddNormalOutputL_top_f64
+#print axioms Gabbro.Stage0.Senke.floatAddSubnormal_fields
+#print axioms Gabbro.Stage0.Senke.floatAddSubnormalOutputL_ok
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.floatAddOutput_joint_zeuge
+#print axioms Gabbro.Stage0.Senke.AddSubProbe.outputImages_zeuge

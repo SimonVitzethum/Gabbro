@@ -1,9 +1,74 @@
 /- Emitted runner images for the shared arithmetic operand preparation. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Distanz
+import Stage0.Senke.Ausdruck.Arithmetik.Output
 import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 namespace Gabbro.Stage0.Senke.AddSubProbe
 open Gabbro.Grammatik Runner.IR Gleitkomma
+
+/-- Actual output fragments, including the top-exponent carry and the
+    subnormal/normal boundary. Expected words are independent IEEE fields. -/
+def outputImages : List (String × Except String (List Runner.B) × Nat) :=
+  let lit := fun n j => some (konstWL 4 n j)
+  let normal :=
+    [("output-normal-exact", 0, 1023, 2^52, 0, 0, 0x3ff0000000000000),
+     ("output-normal-even", 0, 1023, 2^52, 4, 0, 0x3ff0000000000000),
+     ("output-normal-odd", 0, 1023, 2^52+1, 4, 0, 0x3ff0000000000002),
+     ("output-normal-tail", 0, 1023, 2^52, 4, 1, 0x3ff0000000000001),
+     ("output-normal-carry", 0, 1023, 2^53-1, 4, 0, 0x4000000000000000),
+     ("output-normal-negative", 2^63, 1023, 2^52, 5, 0, 0xbff0000000000001),
+     ("output-max-finite", 0, 2046, 2^53-1, 3, 1, 0x7fefffffffffffff),
+     ("output-overflow", 0, 2046, 2^53-1, 4, 0, 0x7ff0000000000000),
+     ("output-overflow-negative", 2^63, 2046, 2^53-1, 4, 1, 0xfff0000000000000)].map
+      (fun (name, s, e, q, g, t, expected) =>
+        (name, FloatArithmeticProbe.wordImage
+          (floatAddNormalOutputL 8 (lit s) (lit e) (lit q) (lit g) (lit t) (2^52)) expected, 7))
+  let tiny :=
+    [("output-positive-zero", 0, 0, 0, 0, 0),
+     ("output-negative-zero", 2^63, 0, 0, 0, 2^63),
+     ("output-zero-even-tie", 0, 0, 4, 0, 0),
+     ("output-zero-tiny-tail", 0, 0, 4, 1, 1),
+     ("output-subnormal-even", 0, 2, 4, 0, 2),
+     ("output-subnormal-odd", 0, 1, 4, 0, 2),
+     ("output-max-subnormal", 0, 2^52-1, 3, 1, 2^52-1),
+     ("output-min-normal", 0, 2^52-1, 4, 0, 2^52),
+     ("output-negative-min-normal", 2^63, 2^52-1, 4, 1, 2^63+2^52)].map
+      (fun (name, s, q, g, t, expected) =>
+        (name, FloatArithmeticProbe.wordImage
+          (floatAddSubnormalOutputL 8 (lit s) (lit q) (lit g) (lit t)) expected, 7))
+  normal ++ tiny
+
+theorem outputImages_zeuge : outputImages.length = 18 ∧
+    outputImages.all (fun x => x.2.1.isOk) = true := by
+  decide +kernel
+
+/-- Non-degenerate joint fixtures for emitted rounding and packing, including
+    a halfway normal, an overflow carry and a halfway subnormal rounding to zero. -/
+theorem floatAddOutput_joint_zeuge [Kern] {D : Deklaration} (L : Lay D) :
+    let lit := fun n j => some (konstWL 4 n j)
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun dst => floatAddNormalOutputL dst (lit 0) (lit 1078)
+        (lit (2^52)) (lit 4) (lit 0) (2^52))
+      (BitVec.ofNat 64 (zuBits f64 (rundeBruchKern f64 false (2^55+4) 1 55))) ∧
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun dst => floatAddNormalOutputL dst (lit (2^63)) (lit 2046)
+        (lit (2^53-1)) (lit 4) (lit 0) (2^52))
+      (BitVec.ofNat 64 0xfff0000000000000) ∧
+    WordCode (L := L) (Env.nil : Env D []) (fun _ => True)
+      (fun dst => floatAddSubnormalOutputL dst (lit 0) (lit 0) (lit 4) (lit 0))
+      (BitVec.ofNat 64 (zuBits f64 (rundeBruchKern f64 false 1 (2^1075) (-1075)))) := by
+  dsimp only
+  refine ⟨?_, ?_, ?_⟩
+  · apply floatAddNormalOutputL_ok f64 false (2^55+4) 1 (2^52) 4 0 1 55
+    all_goals first | exact WordCode.konst _ (by decide +kernel) | decide +kernel
+  · intro fp K dst code top hc hK m pc hp
+    exact floatAddNormalOutputL_top_f64 (L := L) (ρ := (Env.nil : Env D []))
+      (W := fun _ => True) true (2^53-1) 4 0 1
+      (WordCode.konst _ (by decide)) (WordCode.konst _ (by decide))
+      (WordCode.konst _ (by decide)) (WordCode.konst _ (by decide))
+      (WordCode.konst _ (by decide)) (by decide) (by decide) (by decide) (by decide +kernel)
+      hc hK m pc hp
+  · apply floatAddSubnormalOutputL_ok f64 false 1 (2^1075) 0 4 0 (2^1072) (-1075)
+    all_goals first | exact WordCode.konst _ (by decide +kernel) | decide +kernel
 
 /-- These images call the production fragment; they do not implement an
     alternate negation or special-case particular source programs. -/
