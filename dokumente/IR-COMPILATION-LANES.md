@@ -1,5 +1,12 @@
 # Gabbro-to-IR compilation lanes
 
+**Parameterized-start activation blocker:** The current fixed `exitSlot = 2*FB+2 = 10` used by
+`spawnC`/`startC` overlaps a three-word parameter span at slots 8, 9, 10 in root frame `F = FB`.
+Keep the empty-parameter guard. Before activating IR-12 startup, place scratch beyond the shared
+parameter/result/status region (using the finalized `receiveTop signature FB` convention or its proved
+equivalent), update bounds/footprints and prove initialization survives spawn/call. IR-12 owns that
+future activation after the coherent full ABI is published; no second startup ABI is authorized.
+
 **Rolling allocation update:** IR-12 handed back green source/start-byte/profile/CLI checkpoints through
 `e4815ed3f`; actual parameterized image startup remains blocked on IR-03's full ABI. Its slot now runs
 IR-09 userspace concurrency/RCU. IR-12 is not counted complete and resumes for actual image integration
