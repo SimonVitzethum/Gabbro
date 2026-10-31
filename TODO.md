@@ -11,7 +11,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 
 - **Gabbro-to-IR is paused for reboot (2026-10-31).** Resume only on explicit instruction. All non-register
   compilation and its formal lowering proofs are partitioned into IR-01..IR-14 in
-  `dokumente/PLAN-SELF-HOSTING.md` §2.1.9, with dependencies, exhaustive primary form ownership and shared
+  [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md), with dependencies, exhaustive primary form ownership and shared
   completion gates. Preserve the two worker worktrees and their uncommitted changes; no legacy Lean source
   runtime, grammar rebuild, new side project or automatic continuation.
 

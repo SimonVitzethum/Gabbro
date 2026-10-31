@@ -11,7 +11,7 @@ were organised) is in `git log`, not here.
 
 **PAUSED FOR REBOOT (2026-10-31).** Do not resume implementation, agents or builds until the owner explicitly
 resumes. Preserve the existing worktrees, uncommitted changes and scratch. The checkpoint and fourteen
-complete work packages are in `dokumente/PLAN-SELF-HOSTING.md` §2.1.9. Fourteen lanes do not authorize fourteen
+complete work packages are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md). Fourteen lanes do not authorize fourteen
 simultaneous agents; the last staffing limit is two Sol 6.1 implementation agents. Root owns form-based
 coverage measurement and reviews; agents implement.
 
