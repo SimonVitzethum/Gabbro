@@ -475,7 +475,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
     (bodyRuns : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp
       σ0 ρ0 cens tens (counter :: one :: pr) (exPlus ex 4) body reserved)
 
-    {pc back exit : W} {stop : Int} {jump b c : BitVec 32}
+    {pc back exit outerLeave outerNext : W} {stop : Int} {jump b c : BitVec 32}
     (backAt : pc + 32 + BitVec.ofNat 64
       (16 * (cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
         [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)).length) = back)
@@ -501,7 +501,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
     (readOne : m.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1)
     (edge : InsAt m back 18 jump b c)
     (stopCode : CodeAt m (pc + sx (BitVec.ofInt 32 stop)) (stopC 111 (frei Γ reserved))) :
-    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit exit pc
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
       (foreverLauf (l := l) a (execBlock O passes R body)
         (fun σ ρ => (σ.lese Λ inv.orte,
           wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) budget σ ρ) reserved := by
@@ -539,7 +539,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
           EnvAt L m' fp ρ' reserved ∧ WeltAt m' L σ' ∧
           Keeps fp (counter :: one :: pr) m1 m' ∧
           m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 n)) →
-        Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit exit pc
+        Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m exit outerLeave outerNext
           (foreverLauf (l := l) a (execBlock O passes R body)
             (fun σ ρ => (σ.lese Λ inv.orte,
               wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) n σ' ρ') reserved := by
