@@ -64,6 +64,19 @@ theorem counted_counter_loop
 namespace CountedLoopProbe
 open Runner.Mem
 
+open Gabbro.Grammatik in
+/-- The table can be checked structurally, including a nontrivial expression
+    tree. Literals have zero `kostenExpr` cost yet execute one instruction;
+    no identification of these two units is possible. -/
+theorem callee_certificate_zeuge :
+    Nonempty (CalleeCostCertificate FnptrProben.callLayout (fun _ => 6) 2 0
+      (Γ := []) (Λ := [])
+      (.add (.add (.lit 2) (.lit 3)) (.lit 4)) 4
+      (fun r => ∃ a b, (∃ x y, x = BitVec.ofInt 64 2 ∧ y = BitVec.ofInt 64 3 ∧ a = x + y) ∧
+        b = BitVec.ofInt 64 4 ∧ r = a + b)) := by
+  exact ⟨⟨5, ExprCost.add (ExprCost.add .literal .literal) .literal, by decide⟩⟩
+
+
 /-- The control image emitted for a true invariant and an empty body. Its
     budget immediate is fixed; the theorem below starts at the live header
     and covers every representable remaining runtime budget without unrolling. -/
@@ -169,6 +182,30 @@ theorem whole_loop_zeuge (n : Nat) (fits : n < 2 ^ 64) :
     ∃ b nb, nb ≤ n * 6 + 1 ∧
       Counted nb ⟨32, 1024⟩ (loaded n) ⟨176, 1024⟩ b ∧ Entry 0 b :=
   counted_counter_loop_zeuge fits (entry_zeuge n)
+
+/-- The entire executed loop through the actual exit request, including both
+    stop constants. `StopAt` is a request, not a completed kernel instruction;
+    no termination or latency of the environment is assumed. -/
+theorem whole_stop_zeuge {n : Nat} {m : Mem}
+    (fits : n < 2 ^ 64) (entry : Entry n m) :
+    ∃ t b q nb, nb ≤ n * 6 + 3 ∧
+      Counted nb ⟨32, 1024⟩ m t b ∧ StopAt t b q ∧
+      q.nr = 231 ∧ q.a1 = 111 := by
+  obtain ⟨a, na, bound, loop, final⟩ := counted_counter_loop_zeuge fits entry
+  have code : CodeAt a 176 (stopC 111 6) := by
+    intro k hk
+    have hk' : 11 + k < image.length := by
+      change k < 3 at hk
+      change 11 + k < 14
+      omega
+    have h := final.1 (11 + k) hk'
+    have cases : k = 0 ∨ k = 1 ∨ k = 2 := by change k < 3 at hk; omega
+    rcases cases with rfl | rfl | rfl <;> simpa [image, foreverCode,
+      foreverCounterInit, foreverCounter, stopC, sysC] using h
+  obtain ⟨t, b, q, stop, atStop, nr, arg⟩ := sys_counted code
+    (by unfold CodeFar; decide +kernel) final.2.1
+    (by decide) (by decide) (by decide) (by decide)
+  exact ⟨t, b, q, na + 2, by omega, loop.trans stop, atStop, nr, arg⟩
 
 end CountedLoopProbe
 

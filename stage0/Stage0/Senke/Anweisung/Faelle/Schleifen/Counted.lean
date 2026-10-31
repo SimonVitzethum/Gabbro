@@ -86,6 +86,62 @@ theorem counted_ins {m m' : Runner.Mem} {pc fp : Runner.W} {i : II}
     Counted 1 ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * [i].length), fp⟩ m' :=
   .next (run_step (t := ⟨pc, fp⟩) (by simpa using hc 0 (by simp)) ho hr) (.refl _ _)
 
+theorem sys_counted {m : Runner.Mem} {pc fp : Runner.W} {K nr c s : Nat} (hc : CodeAt m pc (sysC nr c s))
+    (hf : CodeFar pc 3 fp K) (hF : FrameOK m fp K) (hs : s + 8 ≤ K) (hK : K < 2 ^ 31) (hcode : c < 2 ^ 31)
+    (hnr : nr < 2 ^ 31) :
+    ∃ t' m' q, Counted 2 ⟨pc, fp⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 nr ∧ q.a1 = BitVec.ofNat 64 c := by
+  have hroom := hF.room
+  -- the two constants
+  have s1 := const_step_counted (k := (nr : Int)) (codeAt_left (a := [ci 1 s nr 0]) hc) hF (by omega) hK
+    (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
+  let m1 := write m (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 (nr : Int)).toNat
+  have a1 : Agree fp 0 K m m1 := agree_write hroom (Nat.zero_le _) (by omega) _
+  have hc1 : CodeAt m1 (pc + 16) [ci 1 ((s + 1 : Nat) : Int) c 0, ci 23 ((s + 7 : Nat) : Int) s 0] := by
+    have := (codeAt_right (a := [ci 1 s nr 0]) hc).agree a1 (codeFar_right (n := 1) (k := 2) hf)
+    simpa using this
+  have hF1 := hF.agree a1
+  have s2 := const_step_counted (j := s + 1) (k := c) (codeAt_left (a := [ci 1 ((s + 1 : Nat) : Int) c 0]) hc1) hF1 (by omega) hK
+    (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (s + 1))) 8 (BitVec.ofInt 64 c).toNat
+  have a2 : Agree fp 0 K m1 m2 := agree_write hroom (Nat.zero_le _) (by omega) _
+  have hc2 : CodeAt m2 (pc + 16 + 16) [ci 23 ((s + 7 : Nat) : Int) s 0] := by
+    have := (codeAt_right (a := [ci 1 ((s + 1 : Nat) : Int) c 0]) hc1).agree a2 (by
+      have := codeFar_right (n := 2) (k := 1) hf
+      simp only [List.length_singleton, Nat.mul_one]
+      rw [BitVec.add_assoc, show (16 : Runner.W) + BitVec.ofNat 64 16 = BitVec.ofNat 64 (16 * 2) by decide]
+      exact this)
+    simpa using this
+  have hF2 := hF1.agree a2
+  -- the request
+  have hi := hc2 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  have hsx : sx (II.f (s : Int)) = BitVec.ofNat 64 s := sx_nat (by omega)
+  have r0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (nr : Int)) := by
+    simp only [m2]
+    rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]
+    exact rd64_wr64 (wr64_some (hF.wr s (by omega))) (hF.rd s (by omega))
+  have r1 : m2.rd64 (slot fp (BitVec.ofNat 64 (s + 1))) = some (BitVec.ofInt 64 c) :=
+    rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))
+  have rd : ∀ i, i < 7 → ∃ v, m2.rd64 (slot fp (BitVec.ofNat 64 (s + i))) = some v := fun i hi =>
+    ⟨_, by simp only [Runner.Mem.rd64, hF2.rd (s + i) (by omega), ↓reduceIte]; rfl⟩
+  obtain ⟨v2, r2⟩ := rd 2 (by decide)
+  obtain ⟨v3, r3⟩ := rd 3 (by decide)
+  obtain ⟨v4, r4⟩ := rd 4 (by decide)
+  obtain ⟨v5, r5⟩ := rd 5 (by decide)
+  obtain ⟨v6, r6⟩ := rd 6 (by decide)
+  refine ⟨_, m2, ⟨BitVec.ofInt 64 (nr : Int), BitVec.ofInt 64 c, v2, v3, v4, v5, v6⟩, s1.trans s2,
+    runTo_sys (t := ⟨pc + 16 + 16, fp⟩) hi (by rw [hsx]; exact r0) ?_ ?_ ?_ ?_ ?_ ?_,
+    by rw [BitVec.ofInt_natCast], ?_⟩
+  · rw [hsx, show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]; exact r1
+  · rw [hsx, show (16 : Runner.W) = BitVec.ofNat 64 (8 * 2) by rfl, slot_plus]; exact r2
+  · rw [hsx, show (24 : Runner.W) = BitVec.ofNat 64 (8 * 3) by rfl, slot_plus]; exact r3
+  · rw [hsx, show (32 : Runner.W) = BitVec.ofNat 64 (8 * 4) by rfl, slot_plus]; exact r4
+  · rw [hsx, show (40 : Runner.W) = BitVec.ofNat 64 (8 * 5) by rfl, slot_plus]; exact r5
+  · rw [hsx, show (48 : Runner.W) = BitVec.ofNat 64 (8 * 6) by rfl, slot_plus]; exact r6
+  · apply BitVec.eq_of_toNat_eq
+    simp only [BitVec.toNat_ofInt, BitVec.toNat_ofNat]
+    omega
+
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 /-- The same child-IH architecture as `bin_ok_keep`, retaining the exact
@@ -393,6 +449,37 @@ theorem ExprCost.returning {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       ⟨resume, caller⟩ m' :=
     .next (run_step ret' (by decide) (run_ret rpc rfp)) (.refl _ _)
   exact run.trans leave
+
+/-- A checked declaration table in S0IR instruction units for returning
+    expression bodies. The exact body cost is derived by `ExprCost`, not
+    assumed as an execution premise. The table includes the return opcode;
+    the caller's call opcode remains an additional instruction. This is
+    independent of `kostenPasst`, whose table counts G own steps. -/
+structure CalleeCostCertificate (L : Lay D) (declared : D.Fn → Nat)
+    (f : D.Fn) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (reserved : Nat) (e : Expr D Γ Λ τ) (d : Nat)
+    (P : Runner.W → Prop) where
+  instructions : Nat
+  body : ExprCost L reserved e d instructions P
+  within : instructions + 1 ≤ declared f
+
+theorem CalleeCostCertificate.returning {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {e : Expr D Γ Λ τ} {d top K : Nat} {declared : D.Fn → Nat} {f : D.Fn} {P : Runner.W → Prop}
+    (certificate : CalleeCostCertificate L declared f reserved e d P)
+    {code : List II} {m : Runner.Mem} {pc fp resume caller : Runner.W}
+    {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (lower : lowE L (reserved := reserved) e d = some (code, top))
+    (fits : top ≤ K) (abi : 2 ≤ d) (room : d ≤ K)
+    (pre : Pre L m pc fp K d code ρ W reserved)
+    (ret : CodeAt m (pc + BitVec.ofNat 64 (16 * code.length)) [ci 21 0 0 0])
+    (far : CodeFar (pc + BitVec.ofNat 64 (16 * code.length)) 1 fp K)
+    (savedPC : m.rd64 fp = some resume)
+    (savedFP : m.rd64 (fp + 8) = some caller) :
+    ∃ n m', n ≤ declared f ∧ Counted n ⟨pc, fp⟩ m ⟨resume, caller⟩ m' ∧
+      Agree fp d K m m' ∧
+      ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some w ∧ P w := by
+  obtain ⟨m', run, rest⟩ := certificate.body.returning lower fits abi room pre ret far savedPC savedFP
+  exact ⟨certificate.instructions + 1, m', certificate.within, run, rest⟩
 
 /-- Compose any finite family of actual execution segments. Segment bounds
     must include the invariant, body/callees, header, backedge and exits as
