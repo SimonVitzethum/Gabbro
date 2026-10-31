@@ -230,6 +230,73 @@ theorem exprCost_execution_zeuge [Runner.IR.Kern] :
     (L := FnptrProben.callLayout) (Γ := []) (Λ := []) (reserved := 0) (top := 6)
     (e := .add (.add (.lit 7) (.lit 9)) (.lit 11)) (by rfl) (by decide) pre
 
+/-- An actual accepted lexical block gets its count from the expression
+    certificate and the empty continuation, with all frame/world premises
+    jointly satisfied on the existing executable call image. -/
+theorem countedBlockBind_case_zeuge [Runner.IR.Kern] :
+    CountedReach 1 FnptrProben.callLayout 4096 4 256 [] ⟨2048, 4096⟩
+      FnptrProben.callMem 2064 FnptrProben.world
+      (Env.cons (D := FnptrProben.D) (τ := .int 8192 8192)
+        ⟨8192, by decide, by decide⟩ Env.nil) 0 := by
+  have pre : PreS FnptrProben.callLayout FnptrProben.callMem 2048 4096 256 4
+      [ci 1 4 8192 0] (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, FnptrProben.call_frame, ?_, ?_, ?_, trivial, wstab_true _ _⟩
+    · intro k hk
+      have : k = 0 := by simpa using hk
+      subst k
+      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
+      exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+    · unfold CodeFar; decide +kernel
+    · intro _ x; nomatch x
+  exact countedBlockBind_case (V := vertragVon FnptrProben.D 2)
+    (l := false) (Λ := []) (Λ' := []) (e := .lit 8192) (rest := .nil)
+    (passes := 1) (A := FnptrProben.addresses) (ens := ([], 4))
+    (ex := (0, 0)) (top := 5) (Ks := 128) (nr := 0)
+    (lo := 4) (pr := []) (reserved := 0) (Γ := []) (ρ := Env.nil)
+    (v := ⟨8192, by decide, by decide⟩) .literal rfl (by decide)
+    FnptrProben.call_win (by decide) (by simp) pre FnptrProben.call_world
+    (fun cr tr lower m pc hp hw => by
+      simp only [lowB, Option.some.injEq, Prod.mk.injEq] at lower
+      obtain ⟨rfl, rfl⟩ := lower
+      simpa using countedBlockNil_case (lo := 4) (pr := []) hp.env hw)
+
+/-- A real caller, a one-instruction callee and a real return. -/
+def countedCallCode : List II :=
+  [ci 20 4 8 0, ci 1 0 0 0, ci 1 4 7 0, ci 21 0 0 0]
+
+def countedCallMem : Runner.Mem := {
+  b := fun a => if a = 1056 then 32 else
+    ((countedCallCode.flatMap encII)[a.toNat]?).getD 0
+  rd := fun _ => true
+  wr := fun _ => true }
+
+def countedCallSavedPC := Runner.Mem.write countedCallMem 1088 8 16
+def countedCallEntered := Runner.Mem.write countedCallSavedPC 1096 8 1024
+def countedCallReturned := Runner.Mem.write countedCallEntered 1120 8 7
+
+/-- The generic call rule includes the callee's actual constant instruction.
+    All code, target, save and return-memory premises hold jointly. -/
+theorem countedCall_zeuge [Runner.IR.Kern] :
+    Counted 3 ⟨0, 1024⟩ countedCallMem ⟨16, 1024⟩ countedCallReturned := by
+  have body : Counted 1 ⟨32, 1088⟩ countedCallEntered
+      ⟨48, 1088⟩ countedCallReturned := by
+    apply const_step_counted (K := 16) (j := 4) (k := 7)
+    · intro k hk
+      have : k = 0 := by simpa using hk
+      subst k
+      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
+      exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+    · exact ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+    · decide
+    · decide
+    · decide
+  exact countedCall (a := 4) (k := 8) (c := 0) (ra := 0) (rb := 0) (rc := 0)
+    (m1 := countedCallSavedPC) (m2 := countedCallEntered) (u := ⟨48, 1088⟩)
+    ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+    (by decide +kernel) rfl rfl body
+    ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+    (by decide +kernel) (by decide +kernel)
+
 /-- A concrete positive-budget header executes one real instruction. This is
     a joint witness for counting/erasure/composition, not a loop cost bound. -/
 theorem counted_header_zeuge [Runner.IR.Kern] :
