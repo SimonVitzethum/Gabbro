@@ -252,7 +252,8 @@ only pure-effect and cost clauses. Extracted candidates prove that predicate. Mo
 `uConstsRech` or normalization. `Guard.safeConstantName` checks the transitive static const-call hull;
 `safeConstantName_sound` derives `SafeHull`, and `source_constant_hull` attaches that derivation to calls
 in original scalar initializers. Unsupported logical clauses/effects/bodies refuse explicitly, so falling
-back to baseline extraction cannot bypass the check. Original runtime declarations remain present.
+back to baseline extraction cannot bypass the check. Original source declarations remain present. Canonical `elabU` explicitly excludes const functions
+from runtime `fnItems`; their clauses cannot be justified by assuming a later runtime body check.
 This is a safety mitigation and incomplete coverage, not contract-aware const evaluation.
 
 Three textual refusal probes cover alias signatures, builtin signatures (the baseline fallback case)
@@ -302,3 +303,30 @@ Measured five textual positive source-to-IR-to-ASM cases (all exit 42), three co
 overflow refusal; twenty-five frontend/goal statement audits use only standard axioms. The accepted-subset
 environment validation remains in place. Whole-source/program semantic composition is still separate
 work; these new arithmetic and collector theorems do not silently close that obligation.
+
+### IR-01 original-source canonical program bridge
+
+`Frontend/Elaboration.lean:elabWithScopes` factors only the existing canonical elaborator phase body.
+`elabU_scopes` is proved by `rfl` for **every** old input, using exactly the old wrapper-derived scopes,
+including errors and every existing gate. The small frozen-body textual duplication is necessary under
+the no-grammar-rebuild rule; any divergence from the imported canonical definition breaks kernel equality.
+It introduces no evaluator, execution semantics or new interpretation of a statement.
+
+`typedConstants_aliases` and `constantFunctions_aliases` remove alias normalization from scalar/function
+origin facts. `Scopes` then certifies the original declaration-order alias fold, original const-function
+candidates and exact typed scalar fold over the **original** source declarations. `Source.scopes` derives
+that record from the checked environment facts; complete ordered bindings and canonical ranges remain.
+`compileTimeSafe`/`SafeHull` still guard original compile-time calls before any baseline evaluation.
+
+The actual source pipeline is now `Compiler.compile` -> `elabWithScopes` over original runtime declarations
+(with the existing old(global) adapter), certified scopes -> canonical `lowerAllg` -> existing snapshot
+restoration -> full `AkzeptiertX`. `irBild` consumes exactly that `Compiled.unit` and `Compiled.program`.
+`compile_source_program` connects original declaration-derived scopes, unchanged canonical phase body,
+and the identical actual `UProg`, `declOf` and `lowerAllg` endpoint. This is a conservative elaboration
+extension, **not** the false equation `elabU(original) = elabU(normalized)` under incomplete old scopes.
+The Source-to-image runner theorem still needs attachment to this endpoint; total form support remains open.
+
+Measured the changed chain directly under the global Lean lock/memory scope, thirty statement audits
+using only standard axioms, five new positive ASM results 42 and six existing call/old-global/old-slot/loop
+regressions at their expected exit codes, alongside the three contract refusals and overflow refusal.
+No grammar rebuild, additional runner, ABI change or weakened checker was used.

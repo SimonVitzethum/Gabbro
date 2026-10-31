@@ -63,4 +63,9 @@ theorem source_constant_hull (text : String) (result : Source text)
   have h := compileTimeSafe_constants result.compileTime hm
   exact safeConstantName_sound _ _ _ _ ((List.all_eq_true.mp h) callee hc)
 
+/-- Runtime elaboration receives source-derived scopes whose scalar/function origin is proved
+    over the original declarations, after eliminating alias normalization from those facts. -/
+def Source.scopes {text : String} (result : Source text) : Scopes (uMembers (pre108 result.items)) :=
+  Gabbro.Stage0.Frontend.scopes _ _ result.environments
+
 end Gabbro.Stage0.Frontend

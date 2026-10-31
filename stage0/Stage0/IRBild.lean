@@ -4,12 +4,11 @@
              (`lowerAllg`), every function lowered to `S0IR` (`Senke/`), laid out as an image the runner loads.
 -/
 import Stage0.Bindung
-import Stage0.Frontend.Source
+import Stage0.Compiler
 import Grammatik.Parser.Elab.UebersetzePipeline
 import Grammatik.GabbroV.GvStartPflicht
 import Stage0.Senke.Bild
 import Stage0.Senke.Welt.Anordnung
-import Stage0.Senke.Ausdruck.Old.Source
 
 namespace Gabbro.Stage0
 
@@ -24,14 +23,11 @@ def irStapel : Nat := 2 ^ 19
 def irDurchlaeufe : Nat := 2 ^ 20
 
 def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) := do
-  let front ← Frontend.source src
-  let items := front.items
-  let members := front.members
-  let u ← elabU (members.map OldSource.normalizeItem)
-  let main ← fnIdx u.fns "main"
-  let (P, _) ← lowerAllg u
-  let P ← OldSource.restore members u P
-  if (← OldSource.accepts u P) = false then throw "refused by the checker (AkzeptiertX)"
+  let compiled ← compile src
+  let items := compiled.source.items
+  let u := compiled.unit
+  let P := compiled.program
+  let main := compiled.main
   let tore ← toreVon (uMembers (pre108 items))
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩

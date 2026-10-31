@@ -164,16 +164,66 @@ theorem constants_collected (env : List (String × (Int × Int))) (fns : List UK
     rw [constants_append, ih, constantStep_correct]
     rfl
 
-/-- Total declaration-order collection succeeds only when each scalar initializer is evaluated
-    in its declared canonical range. Negative and duplicate bindings are retained without filtering. -/
-def typedConstants (env : List (String × (Int × Int))) (fns : List UKonstFn) :
-    List SItemTief → List (String × Int) → Option (List (String × Int))
-  | [], values => some values
-  | .constT name ty (.one expr) :: rest, values => do
+/-- One scalar declaration is evaluated at its exact canonical source type. -/
+def typedItem (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (values : List (String × Int)) : SItemTief → Option (List (String × Int))
+  | .constT name ty (.one expr) => do
     let range ← (uFeldTyp env ty).toOption
     let value ← uKonstWert range.1 range.2 fns values 64 expr
-    typedConstants env fns rest (values ++ [(name, value)])
-  | _ :: rest, values => typedConstants env fns rest values
+    pure (values ++ [(name, value)])
+  | _ => some values
+
+/-- Complete ordered scalar scope: negatives and shadowed bindings are not filtered. -/
+def typedConstants (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (items : List SItemTief) (values : List (String × Int)) : Option (List (String × Int)) :=
+  items.foldlM (typedItem env fns) values
+
+theorem typedItem_aliasItem (values : List (String × Int))
+    (typeEnv aliasEnv : List (String × (Int × Int))) (fns : List UKonstFn) (item : SItemTief) :
+    typedItem typeEnv fns values (aliasItem aliasEnv item) = typedItem typeEnv fns values item := by
+  rcases aliasItem_sound aliasEnv item with h | ⟨flags, name, order, original, body, hs, ht, _⟩
+  · rw [← h]
+  · rw [ht, hs]
+    rfl
+
+/-- The source typed constant scope is derived from original declarations, not rewritten ones. -/
+theorem typedConstants_aliases (initial values : List (String × Int))
+    (typeEnv aliasEnv : List (String × (Int × Int))) (fns : List UKonstFn) (items : List SItemTief) :
+    typedConstants typeEnv fns (aliases initial aliasEnv items) values =
+      typedConstants typeEnv fns items values := by
+  induction items generalizing aliasEnv values with
+  | nil => rfl
+  | cons item rest ih =>
+    change (typedItem typeEnv fns values (aliasItem aliasEnv item)).bind
+      (fun next => typedConstants typeEnv fns
+        (aliases initial (aliasEnv ++ uAliase initial [aliasItem aliasEnv item]) rest) next) =
+      (typedItem typeEnv fns values item).bind (fun next => typedConstants typeEnv fns rest next)
+    rw [typedItem_aliasItem]
+    congr 1
+    funext next
+    exact ih _ _
+
+theorem constantFunction_aliasItem (typeEnv aliasEnv : List (String × (Int × Int)))
+    (item : SItemTief) : constantFunction typeEnv (aliasItem aliasEnv item) = constantFunction typeEnv item := by
+  rcases aliasItem_sound aliasEnv item with h | ⟨flags, name, order, original, body, hs, ht, _⟩
+  · rw [← h]
+  · rw [ht, hs]
+    rfl
+
+/-- Compile-time candidates come from the original source function declarations with unchanged
+    bodies and checked canonical signatures; alias normalization cannot create a function. -/
+theorem constantFunctions_aliases (initial : List (String × Int))
+    (typeEnv aliasEnv : List (String × (Int × Int))) (items : List SItemTief) :
+    constantFunctions typeEnv (aliases initial aliasEnv items) = constantFunctions typeEnv items := by
+  induction items generalizing aliasEnv with
+  | nil => rfl
+  | cons item rest ih =>
+    simp only [aliases, rewrite, constantFunctions, List.filterMap_cons]
+    rw [constantFunction_aliasItem]
+    have hr := ih (aliasEnv ++ uAliase initial [aliasItem aliasEnv item])
+    cases hf : constantFunction typeEnv item with
+    | none => simpa only [hf, constantFunctions, aliases] using hr
+    | some fn => simpa only [hf, constantFunctions, aliases] using congrArg (List.cons fn) hr
 
 /-- Full ordered canonical environments must agree with the typed source declaration fold.
     Also require stability of alias ranges when newly folded constants become visible. -/
@@ -207,5 +257,35 @@ theorem normalize_environments (items : List SItemTief)
     exact ha
   · simpa only [prepare, List.nil_append] using
       aliases_collected (prepare items).initial [] items
+
+/-- Canonical source scopes derived before runtime elaboration. The scalar environment keeps
+    every binding in declaration order, and function candidates retain their original source. -/
+structure Scopes (original : List SItemTief) where
+  values : List (String × Int)
+  declared : List (String × (Int × Int))
+  functions : List UKonstFn
+  aliases : declared = original.foldl
+    (aliasStep (uConstsRech (uKonstFns original) original [])) []
+  functionOrigin : functions = constantFunctions declared original
+  scalarValues : typedConstants declared functions original [] = some values
+
+/-- The exact full name/type scope the canonical phase body consumes. -/
+def Scopes.types {original : List SItemTief} (scope : Scopes original) : List (String × (Int × Int)) :=
+  scope.declared ++ scope.values.map (fun c => (c.1, (c.2, c.2)))
+
+/-- Full source scope derivation: the local rewrites are eliminated from scalar/function origin
+    facts, and the resulting environments are tied to the original declaration list. -/
+def scopes (items target : List SItemTief)
+    (h : EnvironmentFacts items target) : Scopes items := by
+  let p := prepare items
+  refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns,
+    h.2.2, ?_, ?_⟩
+  · exact constantFunctions_aliases p.initial p.env [] items
+  · have hc := h.1
+    change typedConstants p.env p.fns p.expanded [] = _ at hc
+    have ha : typedConstants p.env p.fns p.expanded [] = typedConstants p.env p.fns items [] :=
+      typedConstants_aliases p.initial [] p.env [] p.fns items
+    rw [ha] at hc
+    exact hc
 
 end Gabbro.Stage0.Frontend

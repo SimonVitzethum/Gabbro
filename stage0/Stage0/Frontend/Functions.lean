@@ -28,7 +28,8 @@ def evaluationClauses (clauses : List SKlausel) : Bool :=
     | _ => false
 
 /-- Extract exact parameter/result ranges for the existing single-return const-function model.
-    Source bodies and signatures remain unchanged for runtime compilation. -/
+    Source bodies and signatures remain unchanged in the declaration list. The canonical elaborator
+    omits const functions from runtime function bodies; their evaluation therefore needs this proof. -/
 def constantFunction (env : List (String × (Int × Int))) : SItemTief → Option UKonstFn
   | .fnT { art := "const", name, params, res := some result, fehler := none, klauseln := clauses }
       (.block [] (some (.ret (some body)))) => do
