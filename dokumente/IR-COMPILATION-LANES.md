@@ -1,5 +1,10 @@
 # Gabbro-to-IR compilation lanes
 
+**Rolling allocation update:** IR-12 handed back green source/start-byte/profile/CLI checkpoints through
+`e4815ed3f`; actual parameterized image startup remains blocked on IR-03's full ABI. Its slot now runs
+IR-09 userspace concurrency/RCU. IR-12 is not counted complete and resumes for actual image integration
+when the shared dependency is ready. The six-agent cap remains in force.
+
 **Rolling allocation:** IR-11 checkpoint `195d5d284` is green for explicit binding selection and gate
 construction; full buffers/results remain blocked on IR-03. Its worker slot now runs IR-08 control-flow
 implementation. This is a dependency handoff, not IR-11 completion. Resume IR-11 integration after the
@@ -8,7 +13,7 @@ shared foundation is green, without exceeding six active implementation agents.
 **Latest Lean scheduling rule:** Up to four global concurrent Lean checks, each capped at 5 GiB
 (MemoryHigh=4G, MemoryMax=5G, MemorySwapMax=0), supersede the earlier single-check rules below.
 Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..4. IR-01/08 share slot 1,
-IR-02 uses slot 2, IR-03 uses slot 3, IR-04/12 share slot 4. Release per module/check, preserve artifact
+IR-02 uses slot 2, IR-03 uses slot 3, IR-04/09 share slot 4. Release per module/check, preserve artifact
 isolation and one check per worktree. No grammar rebuild. IR-03 foundation publication has priority
 within its slot because consumers depend on it.
 
