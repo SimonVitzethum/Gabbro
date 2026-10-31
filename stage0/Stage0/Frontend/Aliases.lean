@@ -30,19 +30,26 @@ theorem aliasBody_correct (env : List (String × (Int × Int))) (tabs : List UTa
     rfl
   · simp [uTyp, bound_correct]
 
-/-- Expand alias chains in declaration order before the frozen elaborator collects aliases.
-    Non-alias declarations and unresolved names retain their original canonical handling. -/
-def aliases (consts : List (String × Int)) :
-    List (String × (Int × Int)) → List SItemTief → List SItemTief
+/-- One alias declaration, expanded using the canonical type denotation of its target. -/
+def aliasItem (env : List (String × (Int × Int))) (item : SItemTief) : SItemTief :=
+  match item with
+  | .typeT flags name [] order (some (.atom target)) =>
+    match aliasBody env target with
+    | .ok body => .typeT flags name [] order (some body)
+    | .error _ => item
+  | _ => item
+
+/-- A shared declaration-order rewrite; the state advances using the emitted declaration. -/
+def rewrite (step : σ → SItemTief → SItemTief) (advance : σ → SItemTief → σ) :
+    σ → List SItemTief → List SItemTief
   | _, [] => []
-  | env, item :: rest =>
-    let item' := match item with
-      | .typeT flags name [] order (some (.atom target)) =>
-        match aliasBody env target with
-        | .ok body => .typeT flags name [] order (some body)
-        | .error _ => item
-      | _ => item
-    item' :: aliases consts (env ++ uAliase consts [item']) rest
+  | state, item :: rest =>
+    let item' := step state item
+    item' :: rewrite step advance (advance state item') rest
+
+/-- Expand alias chains without selecting an ABI representation. -/
+def aliases (consts : List (String × Int)) :=
+  rewrite aliasItem (fun env item => env ++ uAliase consts [item])
 
 /-- Fold scalar constants at their declared canonical range. A nonnegative result can be
     represented by the frozen elaborator's literal constructor without changing its declared type.
@@ -75,12 +82,8 @@ theorem constant_correct (env : List (String × (Int × Int))) (fns : List UKons
 
 /-- Constants are evaluated in declaration order; function bodies use the existing canonical
     const-function evaluator. Failed evaluation retains the original refusal behavior. -/
-def constants (env : List (String × (Int × Int))) (fns : List UKonstFn) :
-    List (String × Int) → List SItemTief → List SItemTief
-  | _, [] => []
-  | values, item :: rest =>
-    let item' := constant env fns values item
-    item' :: constants env fns (uConstsRech fns [item'] values) rest
+def constants (env : List (String × (Int × Int))) (fns : List UKonstFn) :=
+  rewrite (constant env fns) (fun values item => uConstsRech fns [item] values)
 
 /-- Names and visibility have already been resolved by pre108. -/
 def normalizeAliases (items : List SItemTief) : List SItemTief :=

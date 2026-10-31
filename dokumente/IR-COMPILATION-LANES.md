@@ -147,3 +147,85 @@ the corresponding value/call/dispatch lanes. New discoveries must be assigned ex
 
 **Execution is authorized.** Follow the seven-round schedule above; preserve all interrupted work and
 never treat it as checked. Final closure is blocked while any in-scope syntax or generic proof is missing.
+
+## IR-01 frontend checkpoint (2026-10-31, round 1; incomplete)
+
+Implementation commits `85025ce08` and `e6147444e` add `Stage0.Frontend.Aliases`, called by
+`irBild` after `pre108` name/visibility resolution and before `elabU`/`lowerAllg`/`OldSource.restore`/
+`AkzeptiertX`/`Senke.bild`. No Senke representation or ABI definitions changed. The adapter expands
+integer alias chains in declaration order into existing canonical range syntax. It also folds scalar
+constants of alias or explicit range type to nonnegative literal results using the existing
+`uFeldTyp` and `uKonstWert` (including existing checked const-function calls). It preserves the declared
+constant type. Failed evaluation and negative results retain the prior canonical elaborator path.
+
+Generic local attachment: `bound_correct` proves canonical bound denotation, `aliasBody_correct` proves
+that generated ranges elaborate with `uTyp` to the exact looked-up canonical integer type, and
+`constant_correct` connects the canonical evaluator result to the integer actually collected by
+`uConstsRech`. `aliasBody_correct_zeuge` and `constant_correct_zeuge` jointly instantiate the premises.
+`Correctness.lean` now composes those per-declaration facts: `aliasItem_sound` and `constant_sound`
+feed `rewrite_sound`, and `normalizeAliases_sound` derives `Normalization` for the entire input list,
+including every intermediate declaration environment. `Source.lean` produces a proof-carrying `Source`
+with canonical lexer/parser provenance, checked public-interface closure and that complete normalization
+derivation. `irBild` consumes `Source.members` directly. `source_sound` and `source_names` establish the
+whole-source frontend provenance and exact existing canonical name/visibility preprocessing. The list
+proof has a nondegenerate alias-chain/constant witness. These statements do not prove exhaustive frontend
+coverage or a new whole-source-to-image execution theorem; image execution remains the existing Senke
+contract, with full global IR-14 composition still open.
+
+Measured: direct Lean checks of `Frontend/Aliases.lean` and the modified `IRBild.lean`, using only existing
+grammar/runner/compiler artifacts and locally compiled changed modules; global flock and 5G/7G memory
+scope; no grammar build. All new theorems and `gabbro_ziel` audited with exactly the three standard
+axioms; an intermediate-overflow source still refuses. Actual textual `alias-chain.gab` and `alias-constant.gab` compiled through
+`irBild` and the existing assembly runner returned 42 in both cases. The layout check passed (1386 Lean
+files); `git diff --check` passed. These two regressions measure behaviors, not two complete syntax families.
+
+### Exhaustive surface ownership and remaining adapters
+
+- `modT`, `useT`, `pubT`: existing `pre108` checks `Oeffentlich.huelleZu`, then `Aufloesung.loese`
+  resolves names/imports and opens wrappers. Existing theorems include `huelle_geschlossen`,
+  `pub_sichtbar`, `ref_aufgeloest` and `schluessel_injektiv`. The actual source frontend now retains checked visibility and canonical preprocessing provenance;
+  whole-image name/contract correspondence remains an integration obligation. Cross-unit imports remain coordinated with IR-12.
+- `typeT`: canonical `uAliase` collects integer ranges and builtin integer aliases. The new adapter adds
+  chains over these ranges. Generic/type parameters, ordering clauses and noninteger alias bodies remain
+  open; no claim that silently ignored declaration metadata has semantics. `uSumTabs` separately handles
+  tagged raw types. Ordinary record/product declarations have no `Ty` constructor or source-to-model
+  adapter; do not encode them as an unrelated array or silently discard fields. IR-03 owns encoding after
+  a canonical representation and its field/type semantics are available.
+- Every nested `STyp` remains owned: `atom`, `path`, `ptr`, `index`, `range`, `array`, `wrap`, `embed`,
+  `raw`, `str`, `entry`. Existing `uTyp` supports integer atoms/ranges, normal-space table capabilities,
+  nonoptional indices, arrays and bounded strings; parameter/field elaborators add context-specific
+  float/bool/sum/reason/function-reference forms. Paths rely on prior name resolution. Named spaces,
+  unsupported capability rights, general products/records and remaining raw/entry/type wrappers are not
+  closed by this checkpoint. Field/value transport remains IR-03/06, without a second frontend ABI.
+- `constT`: new nonnegative scalar folding covers alias and explicit range types. Existing builtin-word
+  folding and integer/nested-array constant paths remain. Negative scalar materialization, alias-typed
+  const-function parameter/results, generalized const-function bodies, noninteger constants and dependency
+  cycles/ordering require further implementation or a precise canonical prerequisite. Canonical evaluator
+  fuel remains 64; no completeness claim hides that bound. Intermediate overflow still refuses evaluation.
+- `specT`: existing `uSpecEin`, `sErsetze` and `uSpecKlauseln` inline specification predicates and refinements.
+  Generic capture-avoiding substitution, nested binder interactions and whole-pipeline attachment remain
+  open; mere collection of the spec declaration is not completion.
+- Every nested `SExpr` remains owned within these families: `lit`, `float`, `tru`, `fls`, `variable`,
+  `field`, `index`, `arrow`, `un`, `bin`, `call`, `fnref`, `built`, `old`, `res`, `why`, `ext` (all eight
+  `XKind` variants: `all`, `any`, `count`, `mem`, `reach`, `imp`, `text`, `call`). The frozen compile-time
+  evaluator only implements literals, variables, builtin min/max fields, selected integer binary operations
+  and single-return const calls. It does not establish full compile-time coverage of this list.
+- Every nested `SAnw` remains owned for const/translator bodies: `bind`, `bindElse`, `bindLib`, `set`,
+  `shift`, `call`, `lcall`, `cond`, `elsif`, `cases`, `arm`, `each`, `retry`, `loop`, `waive`, `trim`,
+  `locks`, `watch`, `leave`, `next`, `emit`, `await`, `swap`, `step`, `ret`, `alloc`, `reset`, `grow`,
+  `free`, `child`, `start`, `other`, `block`, `allocVon`, plus nested `SEnde`. Existing const-function
+  evaluation accepts only a single trailing expression return; parser success for other bodies is not support.
+
+### Named canonical prerequisite: translators and library regions
+
+`SItemTief.transT` exists in the parser, but `uRestFehler` refuses it with `item without G form`.
+`Aufloesung.item` does not resolve its signature/body; `UProg` has no translator/library-region component.
+`bindLib`/`lcall` have no actual adapter in this path. An ordinary record/product `Ty` is absent as well.
+The required canonical work is a typed translator input/result model, region literal/layout semantics,
+checked translator termination/cost/effects, library-call payload binding and desugaring correctness into G,
+including name/type and checker rules. No source interpreter, declaration erasure, default acceptance or
+invented hardware assumption is authorized as a substitute. Owner decision: compiler-side Stage0 adapters
+are allowed only when proved against existing canonical semantics; genuinely missing canonical semantics
+remain blocked by the explicit no-grammar-rebuild instruction. Separate authorization and canonical-model
+validation are needed for that change. IR-01 is therefore explicitly incomplete; the remaining independent
+frontend/proof work above also stays open rather than being transferred silently to another lane.
