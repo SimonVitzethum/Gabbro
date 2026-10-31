@@ -1,6 +1,7 @@
 /- Runtime loop edges consume the actual block simulation and its world-aware frame. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
 import Stage0.Senke.Anweisung.Simulation
+import Stage0.Senke.Anweisung.Satz
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR
@@ -246,5 +247,60 @@ theorem Sim.counter_dispatch {D : Deklaration} {L : Lay D} {P : Programm D}
     · rw [keeps counter member]; exact initial
   | leave h σ' ρ' => exact body
   | zurueck | why | logik | hardware => exact body
+
+/-- Execute the actual source invariant and then the generically lowered body.
+    The read event, callee frame, return ABI and protected slots are inherited
+    from `lowE_ok`, `choice_ok` and `lowB_ok`; no body simulation is assumed.
+    This is one positive pass, not yet the counter/header integration. -/
+theorem forever_source_pass {D : Deklaration} {L : Lay D}
+    {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
+    {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {cap : Nat}
+    (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
+    {P : Programm D} {f : D.Fn} {fp rp cfp : W} {K Ks lo : Nat}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
+    (hlo0 : lo = FB + (D.params f).length)
+    (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    {reserved : Nat} {pr : List Nat} {ex : Int × Int} {Γ : Ctx} {Λ : List (Res D)}
+    (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)
+    {cc cb : List II} {tc tb : Nat}
+    (hcc : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (hcb : lowB (reserved := reserved) passes A L lo (cens, tens) pr (exPlus ex 4) body = some (cb, tb))
+    (htc : tc ≤ Ks) (htb : tb + cap ≤ Ks) (room : frei Γ reserved + 8 ≤ Ks)
+    (hs : 16 * (cc.length + 1 + cb.length + 1 + 3) < 2 ^ 31)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
+    (hpr : ∀ j ∈ pr, j < frei Γ reserved)
+    {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
+    (hp : PreS L m pc fp K (frei Γ reserved)
+      (cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
+        [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)) ρ reserved)
+    (hu : Umf L A C dv m fp Ks K) (hk : Kopf L f m fp K rp cfp ρ0 P σ0)
+    (hw : WeltAt m L σ) :
+    let code := cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
+      [ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
+      (pc + BitVec.ofNat 64 (16 * code.length))
+      (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.1)
+      (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2)
+      (if wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) then
+        execBlock O passes R body (σ.lese Λ inv.orte) ρ else .logik .schleife) reserved := by
+  have hks := hW.ks
+  have htop := lowE_top inv (frei Γ reserved) cc tc hcc
+  apply choice_ok (d := frei Γ reserved) (ct := cb) (ce := stopC 104 (frei Γ reserved))
+    (Nat.le_refl _) (by omega) (by simpa [stopC, sysC] using hs) hW hlo hlo0 hlo2 hpr
+  · intro hpc
+    have hpw := PreS.welt hpc hks hw hW.lay (by have := hW.lo; omega)
+    obtain ⟨m1, st, a1, w, hr, hen⟩ := lowE_ok (σ.lese Λ inv.orte) (σ.lese Λ inv.orte)
+      (fun _ h => h) inv (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw
+    exact ⟨m1, st, Agree.widen a1 hks, w, hr, hen⟩
+  · intro _ m' pc' hp' _ hu' hk' hw'
+    exact lowB_ok hS hA hlo0 hens body cb tb hcb htb (by omega) hW
+      m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr
+  · intro _ m' pc' hp' _ _ _ _
+    exact stop_ok hp'.code hp'.far hp'.frame (by omega) hp'.small (by simp [logikCode])
+  · exact hp
+  · exact hu
+  · exact hk
+  · exact hw
 
 end Gabbro.Stage0.Senke
