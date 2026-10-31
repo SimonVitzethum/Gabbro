@@ -481,6 +481,39 @@ theorem CalleeCostCertificate.returning {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
   obtain ⟨m', run, rest⟩ := certificate.body.returning lower fits abi room pre ret far savedPC savedFP
   exact ⟨certificate.instructions + 1, m', certificate.within, run, rest⟩
 
+/-- Declaration-bound execution through the actual call ABI. The entry writes
+    are checked before the source-derived callee certificate is applied to the
+    resulting memory. The bound includes call and return, in S0IR instructions;
+    `Kern` remains the explicit canonical hardware interface. -/
+theorem CalleeCostCertificate.call {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {e : Expr D Γ Λ τ} {d top K : Nat} {declared : D.Fn → Nat} {f : D.Fn}
+    {P : Runner.W → Prop}
+    (certificate : CalleeCostCertificate L declared f reserved e d P)
+    {code : List II} {m m1 m2 : Runner.Mem} {t : T}
+    {a k c : BitVec 32} {target : Runner.W}
+    {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (callCode : InsAt m t.pc 20 a k c)
+    (targetRead : m.rd64 (slot t.fp (sx a)) = some target)
+    (savePC : m.wr64 (slot t.fp (sx k)) (t.pc + 16) = some m1)
+    (saveFP : m1.wr64 (slot t.fp (sx k) + 8) t.fp = some m2)
+    (lower : lowE L (reserved := reserved) e d = some (code, top))
+    (fits : top ≤ K) (abi : 2 ≤ d) (room : d ≤ K)
+    (pre : Pre L m2 target (slot t.fp (sx k)) K d code ρ W reserved)
+    (ret : CodeAt m2 (target + BitVec.ofNat 64 (16 * code.length)) [ci 21 0 0 0])
+    (far : CodeFar (target + BitVec.ofNat 64 (16 * code.length)) 1
+      (slot t.fp (sx k)) K)
+    (savedPC : m2.rd64 (slot t.fp (sx k)) = some (t.pc + 16))
+    (savedFP : m2.rd64 (slot t.fp (sx k) + 8) = some t.fp) :
+    ∃ n m', n ≤ declared f + 1 ∧ Counted n t m ⟨t.pc + 16, t.fp⟩ m' ∧
+      Agree (slot t.fp (sx k)) d K m2 m' ∧
+      ∃ w, m'.rd64 (slot (slot t.fp (sx k)) (BitVec.ofNat 64 d)) = some w ∧ P w := by
+  obtain ⟨n, m', bound, run, rest⟩ := certificate.returning lower fits abi room
+    pre ret far savedPC savedFP
+  have enter : Counted 1 t m ⟨target, slot t.fp (sx k)⟩ m2 :=
+    .next (run_step callCode (by decide)
+      (run_call callCode targetRead savePC saveFP)) (.refl _ _)
+  exact ⟨1 + n, m', by omega, enter.trans run, rest⟩
+
 /-- Compose any finite family of actual execution segments. Segment bounds
     must include the invariant, body/callees, header, backedge and exits as
     applicable; no code-length assumption is made for a recursive segment. -/

@@ -297,13 +297,7 @@ theorem countedCall_zeuge [Runner.IR.Kern] :
     ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
     (by decide +kernel) (by decide +kernel)
 
-/-- Accepted source lowering, recursive cost certificate, ABI preservation and
-    the real return are instantiated jointly on the executable callee image. -/
-theorem returning_zeuge [Runner.IR.Kern] :
-    ∃ m', Counted 2 ⟨32, 1088⟩ countedCallEntered ⟨16, 1024⟩ m' ∧
-      Agree 1088 4 16 countedCallEntered m' ∧
-      ∃ w, m'.rd64 (slot 1088 4) = some w ∧ w = BitVec.ofInt 64 7 := by
-  have pre : PreS FnptrProben.callLayout countedCallEntered 32 1088 16 4
+theorem returning_pre_zeuge [Runner.IR.Kern] : PreS FnptrProben.callLayout countedCallEntered 32 1088 16 4
       [ci 1 4 7 0] (Env.nil : Env FnptrProben.D []) := by
     refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
       ?_, ?_, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
@@ -313,6 +307,14 @@ theorem returning_zeuge [Runner.IR.Kern] :
       simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
       exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
     · unfold CodeFar; decide +kernel
+
+/-- Accepted source lowering, recursive cost certificate, ABI preservation and
+    the real return are instantiated jointly on the executable callee image. -/
+theorem returning_zeuge [Runner.IR.Kern] :
+    ∃ m', Counted 2 ⟨32, 1088⟩ countedCallEntered ⟨16, 1024⟩ m' ∧
+      Agree 1088 4 16 countedCallEntered m' ∧
+      ∃ w, m'.rd64 (slot 1088 4) = some w ∧ w = BitVec.ofInt 64 7 := by
+  have pre := returning_pre_zeuge
   exact ExprCost.returning (L := FnptrProben.callLayout) (reserved := 0)
     (Γ := []) (Λ := []) (e := .lit 7) (top := 5) .literal rfl
     (by decide) (by decide) (by decide) pre
@@ -336,6 +338,28 @@ theorem source_counted_call_zeuge [Runner.IR.Kern] :
     exact .next (run_step code (by decide)
       (run_call code (by decide +kernel) (m1 := countedCallSavedPC) rfl rfl)) (.refl _ _)
   exact ⟨m', enter.trans body, value⟩
+
+/-- Declaration, source certificate and the actual call ABI hold jointly. -/
+theorem declared_call_zeuge [Runner.IR.Kern] :
+    ∃ n m', n ≤ 3 ∧ Counted n ⟨0, 1024⟩ countedCallMem ⟨16, 1024⟩ m' ∧
+      Agree 1088 4 16 countedCallEntered m' ∧
+      ∃ w, m'.rd64 (slot 1088 4) = some w ∧ w = BitVec.ofInt 64 7 := by
+  have certificate : CalleeCostCertificate FnptrProben.callLayout (fun _ => 2) 2
+      0 (show Expr FnptrProben.D [] [] (.int 7 7) from .lit 7) 4
+      (fun w => w = BitVec.ofInt 64 7) := ⟨1, .literal, by decide⟩
+  exact certificate.call (t := ⟨0, 1024⟩) (a := 4) (k := 8) (c := 0)
+    (m1 := countedCallSavedPC) (m2 := countedCallEntered) (target := 32)
+    (top := 5) (K := 16)
+    ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
+    (by decide +kernel) rfl rfl rfl (by decide) (by decide) (by decide)
+    returning_pre_zeuge
+    (by
+      intro k hk
+      have : k = 0 := by simpa using hk
+      subst k
+      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
+      exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩)
+    (by unfold CodeFar; decide +kernel) (by decide +kernel) (by decide +kernel)
 
 /-- A concrete positive-budget header executes one real instruction. This is
     a joint witness for counting/erasure/composition, not a loop cost bound. -/

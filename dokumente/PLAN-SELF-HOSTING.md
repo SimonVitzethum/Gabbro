@@ -240,6 +240,13 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   the terminal stop are outside this bound. No unrolling or CPU latency claim is
   involved. General declaration-derived callee bounds, hardware assumptions and
   propagation through all accepted statement families remain OPEN.
+  `CalleeCostCertificate.call` now connects the checked expression-body
+  instruction declaration to the actual call opcode, entry-memory ABI writes,
+  source-derived execution and return. Its bound is `declared f + 1`, retaining
+  the callee frame agreement and encoded result; a loaded nonempty witness
+  jointly satisfies these premises under canonical `Runner.IR.Kern`. This is
+  not yet the full `callC` argument/depth/status protocol or a `BlockCost` call
+  constructor. Source-certificate-derived nested/whole-forever bounds remain OPEN.
   `Schleifen/StatementCost.lean` derives normal assignment-block costs recursively
   from accepted `lowS`/`lowB` results and expression certificates, including lexical
   binding, environment updates, world preservation and protected slots. Its loaded
