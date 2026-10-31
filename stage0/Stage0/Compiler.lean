@@ -15,7 +15,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   program : Programm (declOf unit)
   elaborated : Frontend.elabWithScopes
     ((uMembers (pre108 source.items)).map OldSource.normalizeItem)
-    source.scopes.values source.scopes.types = .ok unit
+    source.scopes.values source.scopes.types source.scopes.functions = .ok unit
   entry : fnIdx unit.fns "main" = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (uMembers (pre108 source.items)) unit raw = .ok program
@@ -26,7 +26,7 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
   let source ← Frontend.source text options
   let members := uMembers (pre108 source.items)
   match he : Frontend.elabWithScopes (members.map OldSource.normalizeItem)
-      source.scopes.values source.scopes.types with
+      source.scopes.values source.scopes.types source.scopes.functions with
   | .error e => throw e
   | .ok unit =>
     match hm : fnIdx unit.fns "main" with
@@ -57,16 +57,18 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     scope.declared = original.foldl
       (Frontend.aliasStep (uConstsRech (uKonstFns original) original [])) [] ∧
     scope.functions = Frontend.constantFunctions scope.declared original ∧
+    (∀ fn ∈ scope.functions, ∃ item ∈ original, Frontend.FunctionMeaning scope.declared item fn) ∧
+    Frontend.ScopeStable scope ∧
     Frontend.typedConstants scope.declared scope.functions original [] = some scope.values ∧
     Frontend.compileTimeSafe original = true ∧
-    Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types = .ok result.unit ∧
+    Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types scope.functions = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore original result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
-  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin,
+  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted⟩
 
