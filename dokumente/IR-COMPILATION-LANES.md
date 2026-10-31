@@ -163,3 +163,55 @@ IR-03 remains incomplete. `Enc`, `EnvAt`, `frei`/`vslot`, binding, world storage
 contracts still require their coordinated multiword conversion. In particular the current array/string
 refusals remain, and no new source-form family is counted complete. IR-02/06/10 must share the transport
 interface above; the type-width and encoding interface is not frozen by this checkpoint.
+
+### IR-03 in-progress canonical interface
+
+The controlling compiler scope is existing userspace Gabbro. Source ASM bodies,
+boot/privileged syntax and device-register forms are excluded; ordinary safe
+regions/references, syscalls, profiles and entries remain in scope.
+
+The shared implementation is `Ausdruck/Aggregat/{Layout,Encoding,Kopie}.lean`.
+Consumers use `valueWords` for a type, `contextWords` for parameters/contexts,
+`variableOffset` for a variable, and `encodeWords`/`ValueAt` for its complete span.
+Integer limbs are little endian two's complement; arrays concatenate complete
+element spans and zero-length arrays retain one zero marker. Strings of capacity
+at most one retain the proved packed representation; larger strings contain a
+length word and a byte-word sequence padded to the declared capacity. `ValueValid`
+recursively retains reference and IEEE obligations. A low-word projection is only
+an internal view: it cannot establish `ValueAt` for a multiword result.
+
+The ABI reserves `returnWords result reasons`, the maximum of the normal result
+and reason widths, after the original parameter span. Status/ensures follows that
+entire area; relocated parameters and counters follow status. Headers 0/1 retain
+return PC/caller frame, 2 carries entry depth then a return cache tied by
+`ReturnMirror` to the canonical result area, and 3 retains the entry snapshot.
+`ResultAt`, `ValueOk` and `ResultOk` carry complete results. IR-02/06/10 must use
+these definitions rather than introducing another multiword path.
+
+This migration is not yet integration green: expression mutual induction and all
+call/return, snapshot, world-memory and image consumers must compile together
+before the interface is accepted or new source forms are counted. Ordinary
+records remain a named canonical-model prerequisite: `STyp.raw` has no canonical
+record/product `Ty` and no ordinary-record `UProg` adapter. Existing array/string
+types do not justify inventing record erasure or replacement source semantics.
+
+The independently publishable foundation keeps the pre-migration emitter and
+generic compiler contracts intact while importing these shared definitions into
+the actual expression compiler. `copyWords_ok` is derived from `copyWords_run`,
+whose footprint is exactly the destination span and whose forward-copy condition
+is `destination <= source` or `source + width <= destination`. `copyValue_run`
+transports complete `ValueAt`; `copyResult_run` also transports the empty result's
+zero marker. `ValueProbe.copyValue_run_zeuge` supplies real code, frame, source
+words and all execution premises for a three-word copy. `encodeEnv` orders complete
+parameter encodings exactly like `contextWords`; its length theorem is shared by
+start and call consumers. This foundation does not activate the dirty full ABI
+migration or count any additional userspace source form as complete.
+
+This dependency snapshot was checked independently of the preserved dirty ABI
+migration: 134 affected Senke modules, `IRBild`, the Stage-0 root and the explicit
+axiom audit passed. The eight existing textual source -> IR -> ASM regressions
+`arr-empty`, `arr-singleton`, `str-empty`, `str-byte`, `calls`, `old-global`, `loop`
+and `eng` matched their expected exit codes (19.574 seconds together). The copy
+and connected compiler theorems use only the standard axioms. Checks used IR-03's
+dedicated slot 3 with MemoryHigh=4G, MemoryMax=5G and no swap; grammar artifacts
+were reused. This validates the dependency commit, not the unfinished migration.
