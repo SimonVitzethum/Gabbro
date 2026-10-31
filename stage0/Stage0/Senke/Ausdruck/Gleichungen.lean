@@ -174,23 +174,22 @@ theorem lowE_signed64_boundaries_zeuge :
     else none) := rfl
 
 @[lowE_eqs] theorem lowE_lt (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.lt a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 13 d ca cb)
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.lt a b) d = (do
+      let o ← scalarOrder l1 h1 l2 h2
+      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1)
+      pure (bin2 o d ca cb)) := rfl
 
 @[lowE_eqs] theorem lowE_le (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.le a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
+    lowE L (reserved := reserved) (Expr.le a b) d = (do
+      let o ← scalarOrder l2 h2 l1 h1
       let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
-      pure (bin2 10 d (bin2 13 d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
-    else none) := rfl
+      pure (bin2 10 d (bin2 o d cb ca) ([ci 1 (d + 1) 1 0], d + 2))) := rfl
 
 @[lowE_eqs] theorem lowE_eq (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.eq a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.eq a b) d = (do
+      let _ ← scalarOrder l1 h1 l2 h2
+      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1)
+      pure (bin2 14 d ca cb)) := rfl
 
 @[lowE_eqs] theorem lowE_fllt (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.fllt a b) d =

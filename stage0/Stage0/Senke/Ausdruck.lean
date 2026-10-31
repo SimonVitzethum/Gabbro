@@ -74,6 +74,11 @@ def inU (lo hi : Int) : Bool := decide (0 ≤ lo) && decide (hi < 2 ^ 64)
 /-- Exact scalar interval in either signed or unsigned interpretation. -/
 def scalarFits (lo hi : Int) : Bool := inW lo hi || inU lo hi
 
+/-- Select the interpretation in which both complete scalar intervals fit. -/
+def scalarOrder (l1 h1 l2 h2 : Int) : Option Nat :=
+  if inW l1 h1 && inW l2 h2 then some 13
+  else if inU l1 h1 && inU l2 h2 then some 27 else none
+
 def lit32 (n : Int) : Bool := decide (-2 ^ 31 ≤ n) && decide (n < 2 ^ 31)
 
 def ci (o : Nat) (a b c : Int) : II := ⟨o, a, b, c⟩
@@ -285,19 +290,16 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, .mul a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 5 d ca cb)
   | _, _, .neg a, d => do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
   | _, _, .not a, d => do let ca ← lowE L (reserved := reserved) a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
-  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d =>
-    if inW l1 h1 && inW l2 h2 then do
-      let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
-      pure (bin2 10 d (bin2 13 d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
-    else none
-  | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d =>
-    if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 13 d ca cb)
-    else none
-  | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d =>
-    if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
-    else none
+  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d => do
+    let o ← scalarOrder l2 h2 l1 h1
+    let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
+    pure (bin2 10 d (bin2 o d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
+  | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d => do
+    let o ← scalarOrder l1 h1 l2 h2
+    let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 o d ca cb)
+  | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d => do
+    let _ ← scalarOrder l1 h1 l2 h2
+    let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
   | _, _, .fllt a b, d => floatExprL false d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, .flle a b, d => floatExprL true d (lowE L (reserved := reserved) b) (lowE L (reserved := reserved) a)
   | _, _, .and a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb)

@@ -145,7 +145,11 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
   | _, _, .add a b, d, c, top, h | _, _, .sub a b, d, c, top, h | _, _, .mul a b, d, c, top, h
   | _, _, .and a b, d, c, top, h | _, _, .or a b, d, c, top, h =>
     bin_top (fun c t h => lowE_top a d c t h) h
-  | _, _, .lt a b, d, c, top, h | _, _, .eq a b, d, c, top, h | _, _, .div _ _ a b, d, c, top, h
+  | _, _, .lt a b, d, c, top, h | _, _, .eq a b, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    obtain ⟨o, _, h⟩ := Option.bind_eq_some_iff.mp h
+    exact bin_top (fun c t h => lowE_top a d c t h) h
+  | _, _, .div _ _ a b, d, c, top, h
   | _, _, .rem _ _ a b, d, c, top, h | _, _, .sdiv _ a b, d, c, top, h | _, _, .srem _ a b, d, c, top, h
   | _, _, .band _ _ a b, d, c, top, h | _, _, .bor _ _ _ _ _ a b, d, c, top, h
   | _, _, .bxor _ _ _ _ _ a b, d, c, top, h | _, _, .shl _ _ _ _ _ a b, d, c, top, h
@@ -175,12 +179,11 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     · cases h
   | _, _, .le a b, d, c, top, h => by
     simp only [lowE_eqs] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨cb, tb⟩, _, ⟨ca, ta⟩, _, he⟩ := h
-      simp only [bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
+    obtain ⟨o, _, h⟩ := Option.bind_eq_some_iff.mp h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨cb, tb⟩, _, ⟨ca, ta⟩, _, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    omega
   | _, _, .lit n, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
