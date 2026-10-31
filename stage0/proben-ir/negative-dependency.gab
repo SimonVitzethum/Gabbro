@@ -1,0 +1,8 @@
+// A negative intermediate binding must survive before its positive dependent can compile.
+module negative_dependency {
+type Signed = i8;
+const fn negative() -> Signed effects { pure } { return 0 - 1; }
+const NEGATIVE : i8 = negative();
+const ANSWER : i8 = NEGATIVE + 43;
+impl fn main() -> i8 effects { pure } { return ANSWER; }
+}
