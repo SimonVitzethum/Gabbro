@@ -4169,3 +4169,200 @@ theorem sound_zeuge : ∃ n m', n ≤ 23 ∧
       (by decide +kernel) (by decide +kernel) (by decide +kernel) around (by decide)
   exact ⟨n, m', bound, run, agree, frame, hw, status.1, result _ _ rfl⟩
 end Gabbro.Stage0.Senke.RecursiveTerminalProbe
+
+
+namespace Gabbro.Stage0.Senke
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem
+variable [Kern] {D : Deklaration}
+
+/-- Observations of one actual counted endpoint. Return endpoints use the
+    caller frame; pending requests retain their actual thread and memory.
+    This predicate contains no execution or whole-source cost assumption. -/
+def CountedSimOutcome (L : Lay D) (P : Programm D) (f : D.Fn)
+    (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp fp : W)
+    (lo K : Nat) (pr : List Nat) (m : Mem) (e eL eN : W)
+    {l : Bool} {Γ : Ctx} (o : Ausgang (vertragVon D f) l Γ)
+    (u : T) (a : Mem) (reserved : Nat := 0) : Prop :=
+  let pending := fun c => ∃ q, StopAt u a q ∧ q.nr = 231 ∧ q.a1 = BitVec.ofNat 64 c
+  let reach := fun endpoint σ ρ => u = ⟨endpoint, fp⟩ ∧ AgreeW L fp lo K m a ∧
+    EnvAt L a fp ρ reserved ∧ WeltAt a L σ ∧ Keeps fp pr m a
+  match o with
+  | .ok σ ρ => reach e σ ρ
+  | .leave _ σ ρ => reach eL σ ρ
+  | .next _ σ ρ => reach eN σ ρ
+  | .logik c => pending (logikCode c)
+  | .hardware h => pending (hwCode h)
+  | .why σ r => u = ⟨rp, cfp⟩ ∧ AgreeW L fp 2 K m a ∧
+      a.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 r.val) ∧
+      ReturnFlag a fp (D.params f).length false ∧ WeltAt a L σ
+  | .zurueck σ v =>
+      if wahr? (eval σ0 (P.ensures f) (σ.lese (vertragVon D f).ende (P.ensures f).orte)
+          (ergEnv (D.erg f) v ρ0)) = false then pending 102
+      else u = ⟨rp, cfp⟩ ∧ AgreeW L fp 2 K m a ∧
+        (∃ w, a.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧
+          EncErg L (D.erg f) v w ∧ ReturnFlag a fp (D.params f).length true) ∧ WeltAt a L σ
+
+/-- All outcome kinds consume observations of the very same counted endpoint.
+    In particular no callee-frame equality is imposed on a return. -/
+theorem CountedSimOutcome.sound {L : Lay D} {P : Programm D} {f : D.Fn}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp : W}
+    {lo K reserved n : Nat} {pr : List Nat} {m a : Mem} {t u : T} {e eL eN : W}
+    {l : Bool} {Γ : Ctx} {o : Ausgang (vertragVon D f) l Γ}
+    (run : Counted n t m u a)
+    (post : CountedSimOutcome L P f σ0 ρ0 rp cfp fp lo K pr m e eL eN o u a reserved) :
+    CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o reserved := by
+  cases o with
+  | ok σ ρ | leave h σ ρ | next h σ ρ =>
+    obtain ⟨rfl, rest⟩ := post
+    exact ⟨a, run, rest⟩
+  | logik c | hardware c =>
+    obtain ⟨q, stop, nr, arg⟩ := post
+    exact ⟨u, a, q, run, stop, nr, arg⟩
+  | why σ r =>
+    obtain ⟨rfl, rest⟩ := post
+    exact ⟨a, run, rest⟩
+  | zurueck σ v =>
+    simp only [CountedSimOutcome] at post
+    change CountedRetZ n L P f σ0 ρ0 fp K rp cfp t m σ v
+    unfold CountedRetZ
+    split at post
+    · rename_i bad
+      rw [if_pos bad]
+      obtain ⟨q, stop, nr, arg⟩ := post
+      exact ⟨u, a, q, run, stop, nr, arg⟩
+    · rename_i good
+      rw [if_neg good]
+      obtain ⟨rfl, rest⟩ := post
+      exact ⟨a, run, rest⟩
+
+/-- The real stop instructions produce the shared endpoint observations for
+    either source stop kind, including progress hardware stops. -/
+theorem stopC_counted_outcome {L : Lay D} {P : Programm D} {f : D.Fn}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp pc : W}
+    {lo K reserved scratch c : Nat} {pr : List Nat} {m : Mem} {e eL eN : W}
+    {l : Bool} {Γ : Ctx} {o : Ausgang (vertragVon D f) l Γ}
+    (kind : (∃ reason, o = .logik reason ∧ c = logikCode reason) ∨
+      (∃ reason, o = .hardware reason ∧ c = hwCode reason))
+    (code : CodeAt m pc (stopC c scratch)) (far : CodeFar pc 3 fp K)
+    (frame : FrameOK m fp K) (room : scratch + 8 ≤ K)
+    (small : K < 2 ^ 31) (fits : c < 2 ^ 31) :
+    ∃ u a, Counted 2 ⟨pc, fp⟩ m u a ∧
+      CountedSimOutcome L P f σ0 ρ0 rp cfp fp lo K pr m e eL eN o u a reserved := by
+  obtain ⟨u, a, q, run, stop, nr, arg, _⟩ :=
+    sys_counted_frame code far frame room small fits (by decide)
+  refine ⟨u, a, run, ?_⟩
+  rcases kind with ⟨reason, rfl, rfl⟩ | ⟨reason, rfl, rfl⟩
+  · exact ⟨q, stop, nr, arg⟩
+  · exact ⟨q, stop, nr, arg⟩
+end Gabbro.Stage0.Senke
+
+
+namespace Gabbro.Stage0.Senke
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
+
+/-- Actual budget exhaustion, with the source assumption named, is a hardware
+    progress outcome at the same pending-request endpoint. -/
+theorem counter_budget_stop_outcome
+    {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)}
+    {rp cfp : W} {assumption : D.Annahme}
+    {Γ : Ctx} {m : Mem} {pc fp : W} {K Ks lo scratch : Nat}
+    {pr : List Nat} {σ : World D} {ρ : Env D Γ} {e eL eN : W}
+    {d jump : BitVec 32}
+    (test : InsAt m pc 19 d jump 0)
+    (zero : m.rd64 (slot fp (sx d)) = some 0)
+    (pre : PreS L m (pc + sx jump) fp K (frei Γ reserved)
+      (stopC 111 scratch) ρ reserved)
+    (inside : WIn L fp Ks K) (world : WeltAt m L σ)
+    (low : lo ≤ scratch) (locals : frei Γ reserved ≤ scratch)
+    (room : scratch + 8 ≤ K) (hprotected : ∀ j ∈ pr, j < scratch) :
+    ∃ u a, Counted 3 ⟨pc, fp⟩ m u a ∧
+      CountedSimOutcome L P f σ0 ρ0 rp cfp fp lo K pr m e eL eN
+        (.hardware (.fortschritt assumption) : Ausgang (vertragVon D f) false Γ) u a reserved ∧
+      AgreeW L fp lo K m a ∧ EnvAt L a fp ρ reserved ∧ WeltAt a L σ ∧ Keeps fp pr m a := by
+  obtain ⟨u, a, q, run, stop, nr, arg, rest⟩ :=
+    counter_budget_stop_counted test zero pre inside world low locals room hprotected
+  exact ⟨u, a, run, ⟨q, stop, nr, arg⟩, rest⟩
+
+namespace ActualStopProbe
+open FullFunProbe
+set_option maxRecDepth 10000
+
+def image : List II := stopC 104 4
+def memory : Mem := {
+  b := fun a => ((image.flatMap encII)[a.toNat]?).getD 0
+  rd := fun _ => true
+  wr := fun _ => true }
+
+/-- A genuine executed logic stop, with the pending request and canonical
+    child simulation jointly witnessed, rather than assumed as a premise. -/
+theorem stopC_counted_outcome_zeuge :
+    ∃ u a, Counted 2 ⟨0, 4096⟩ memory u a ∧
+      CountedSimOutcome layout program 0 world
+        (Env.cons (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil)
+        2048 16384 4096 4 32 [] memory 0 0 0
+        (.logik .schleife : Ausgang (vertragVon fixtureDecl 0) false []) u a ∧
+      CountedSim 2 layout program 0 world
+        (Env.cons (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil)
+        2048 16384 4096 4 32 [] ⟨0, 4096⟩ memory 0 0 0
+        (.logik .schleife : Ausgang (vertragVon fixtureDecl 0) false []) := by
+  have code : CodeAt memory 0 image := by
+    have h : ∀ k : Fin image.length,
+        memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f image[k.val].a) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f image[k.val].b) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f image[k.val].c) := by
+      apply FnptrProben.allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  obtain ⟨u, a, run, post⟩ := stopC_counted_outcome
+    (L := layout) (P := program) (f := 0) (σ0 := world)
+    (ρ0 := Env.cons (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil)
+    (rp := 2048) (cfp := 16384) (fp := 4096) (pc := 0) (scratch := 4)
+    (lo := 4) (reserved := 0) (pr := [])
+    (e := 0) (eL := 0) (eN := 0)
+    (o := (.logik .schleife : Ausgang (vertragVon fixtureDecl 0) false []))
+    (Or.inl ⟨.schleife, rfl, rfl⟩) code
+    (K := 32) (by unfold CodeFar; decide +kernel)
+    ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩ (by decide) (by decide) (by decide)
+  exact ⟨u, a, run, post, CountedSimOutcome.sound run post⟩
+end ActualStopProbe
+end Gabbro.Stage0.Senke
+
+
+namespace Gabbro.Stage0.Senke
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem
+variable [Kern] {D : Deklaration}
+
+/-- Recover a joint endpoint from any canonical child outcome. This direction
+    makes the endpoint API reusable for existing recursively counted children. -/
+theorem CountedSim.outcome {L : Lay D} {P : Programm D} {f : D.Fn}
+    {σ0 : World D} {ρ0 : Env D (D.params f)} {rp cfp fp : W}
+    {lo K reserved n : Nat} {pr : List Nat} {m : Mem} {t : T} {e eL eN : W}
+    {l : Bool} {Γ : Ctx} {o : Ausgang (vertragVon D f) l Γ}
+    (sim : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o reserved) :
+    ∃ u a, Counted n t m u a ∧
+      CountedSimOutcome L P f σ0 ρ0 rp cfp fp lo K pr m e eL eN o u a reserved := by
+  cases o with
+  | ok σ ρ | leave h σ ρ | next h σ ρ =>
+    obtain ⟨a, run, rest⟩ := sim
+    exact ⟨_, a, run, rfl, rest⟩
+  | logik c | hardware c =>
+    obtain ⟨u, a, q, run, stop, nr, arg⟩ := sim
+    exact ⟨u, a, run, q, stop, nr, arg⟩
+  | why σ r =>
+    obtain ⟨a, run, rest⟩ := sim
+    exact ⟨_, a, run, rfl, rest⟩
+  | zurueck σ v =>
+    change CountedRetZ n L P f σ0 ρ0 fp K rp cfp t m σ v at sim
+    unfold CountedRetZ at sim
+    simp only [CountedSimOutcome]
+    split at sim
+    · rename_i bad
+      obtain ⟨u, a, q, run, stop, nr, arg⟩ := sim
+      exact ⟨u, a, run, by rw [if_pos bad]; exact ⟨q, stop, nr, arg⟩⟩
+    · rename_i good
+      obtain ⟨a, run, rest⟩ := sim
+      exact ⟨_, a, run, by rw [if_neg good]; exact ⟨rfl, rest⟩⟩
+end Gabbro.Stage0.Senke

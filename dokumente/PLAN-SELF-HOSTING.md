@@ -319,6 +319,17 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   containing another call or a nested loop. A nested-forever cost constructor,
   the central whole-source bound/P1 and a joint nested call/loop witness remain
   OPEN.
+  `CountedSimOutcome` describes observations at one actual counted endpoint
+  for every canonical outcome. `CountedSimOutcome.sound` consumes that endpoint
+  and its execution; `CountedSim.outcome` recovers it from counted child
+  simulations. Returns use the saved caller frame, without assuming the final
+  frame equals the initial callee frame. `stopC_counted_outcome` executes the
+  two constants and retains the actual pending request for logic and hardware
+  stops. `counter_budget_stop_outcome` connects the actual zero-counter branch
+  to the named hardware progress outcome, preserving joint frame, environment,
+  world and protected slots. `ActualStopProbe.stopC_counted_outcome_zeuge`
+  witnesses an executed logic stop. These bridges do not yet add stop cases to
+  `RecursiveEndCost`, a nested-forever constructor, or the whole-source bound.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
