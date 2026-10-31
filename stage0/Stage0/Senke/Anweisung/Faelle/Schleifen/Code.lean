@@ -6,6 +6,17 @@ import Stage0.Senke.Ausdruck
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
+/-- Move a contiguous live range upward, including overlapping ranges. -/
+def relocateC (base shift : Nat) : Nat → List II
+  | 0 => []
+  | n + 1 => [ci 2 (base + shift + n) (base + n) 0] ++ relocateC base shift n
+
+@[simp] theorem relocateC_length (base shift n : Nat) :
+    (relocateC base shift n).length = n := by
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [relocateC, ih]
+
 /-- A true condition skips the remaining code; false enters it. -/
 def retryTest (s : Nat) (cc rest : List II) : List II :=
   cc ++ [ci 19 s 32 0] ++ [ci 18 (16 * (rest.length + 1)) 0 0] ++ rest

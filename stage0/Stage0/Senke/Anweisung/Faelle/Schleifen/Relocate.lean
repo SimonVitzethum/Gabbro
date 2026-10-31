@@ -5,17 +5,6 @@ import Stage0.Senke.Anweisung.PufferTor
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem
 
-/-- Move a contiguous live range upward, including overlapping ranges. -/
-def relocateC (base shift : Nat) : Nat → List II
-  | 0 => []
-  | n + 1 => [ci 2 (base + shift + n) (base + n) 0] ++ relocateC base shift n
-
-@[simp] theorem relocateC_length (base shift n : Nat) :
-    (relocateC base shift n).length = n := by
-  induction n with
-  | zero => rfl
-  | succ n ih => simp [relocateC, ih]
-
 /-- Actual Runner execution, exact destination frame, and all relocated words.
     No disjointness premise between the source and destination ranges is needed. -/
 theorem relocate_run [Kern] {m : Mem} {pc fp : W} {K base shift n : Nat}
