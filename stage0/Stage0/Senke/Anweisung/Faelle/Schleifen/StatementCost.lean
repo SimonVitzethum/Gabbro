@@ -1483,6 +1483,17 @@ inductive EndCost (L : Lay D) (reserved : Nat) (V : Vertrag D) (l : Bool) (Δ : 
       (tail : EndCost L reserved V l Δ snapshot ens lo rest σ (.cons v ρ) nr) :
       EndCost L reserved V l Δ snapshot ens lo (.bind e rest) σ ρ (ne + nr)
 
+  | branch {Γ Λ} {c : Expr D Γ Λ .bool} {t e : Endblock D V l Γ Λ}
+      {σ : World D} {ρ : Env D Γ} {choice : Bool} {nc nb : Nat}
+      (condition : ExprCost L reserved c (frei Γ reserved) nc
+        (· = if choice then 1 else 0))
+      (jumpFits : ∀ passes A pr ex ct tt,
+        lowEnd (reserved := reserved) passes A L lo ens pr ex t = some (ct, tt) →
+        16 * (ct.length + 1) < 2 ^ 31)
+      (child : EndCost L reserved V l Δ snapshot ens lo
+        (if choice then t else e) σ ρ nb) :
+      EndCost L reserved V l Δ snapshot ens lo (.ite c t e) σ ρ (nc + 1 + nb)
+
 /-- The source certificate determines the returned value and status at the counted endpoint. -/
 def EndCost.Post {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n)
@@ -1494,6 +1505,7 @@ def EndCost.Post {Δ snapshot ens lo V l Γ Λ b σ ρ n}
         m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1
   | .assign _ tail => tail.Post fp m
   | .bind _ tail => tail.Post fp m
+  | .branch _ _ child => child.Post fp m
 
 /-- Structural induction discharges recursive terminal executions. No complete
     body execution or complete body cost is a premise. ABI reads are preserved
@@ -1604,6 +1616,67 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
       (by rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry) rpc rfp
     exact ⟨m2, run1.trans run2, post, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, rpc, rfp, hw⟩
 
+  | @branch Γ Λ c t e σ ρ choice nc nb condition jumpFits child ih =>
+    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    obtain ⟨⟨cc, tc⟩, hc, ⟨ce, te⟩, he, ⟨ct, tt⟩, ht, out⟩ := lower
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
+    have room := lowE_top _ _ _ _ hc
+    have hq : PreS L m pc fp K (frei Γ reserved)
+        (cc ++ ([ci 19 (frei Γ reserved) (16 * (ct.length + 1)) 0] ++ (ct ++ ce))) ρ reserved := by
+      simpa [List.append_assoc] using pre
+    have hpw := PreS.welt hq.left inside.ks world inside.lay (by have := inside.lo; omega)
+    obtain ⟨m1, run1, a1s, w, read, value⟩ := condition.sound hc (by omega) hpw
+    have a1 := Agree.widen a1s inside.ks
+    have h1 := hq.next a1 (Nat.le_refl _) (by omega)
+    have h2 := h1.next (a := [ci 19 (frei Γ reserved) (16 * (ct.length + 1)) 0])
+      (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+    have ins := h1.code 0 (by simp)
+    simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at ins
+    have hd : sx (II.f (frei Γ reserved : Int)) = BitVec.ofNat 64 (frei Γ reserved) :=
+      sx_nat (by have := pre.small; omega)
+    have world1 := hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))
+    have params1 := envAt_agree parameterEnv a1 pre.frame (by omega) (by omega)
+    have entry1 : m1.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot := by
+      rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry
+    have rpc : m1.rd64 fp = some rp := by
+      have h := agree_rd_low (i := 0) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedPC)
+    have rfp : m1.rd64 (fp + 8) = some cfp := by
+      have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
+      simpa [slot] using h.trans (by simpa [slot] using savedFP)
+    cases choice with
+    | true =>
+      simp only [Bool.true_eq, ↓reduceIte] at value child ih
+      subst w
+      have sb := counted_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
+        (by simp only [ci]; exact run_brz_ne ins (by rw [hd]; exact read) (by decide))
+      obtain ⟨m2, run2, post, agree, frame, rpc, rfp, hw⟩ :=
+        ih ht (by omega) low hprotected h2.left world1 params1 entry1 rpc rfp
+      have run : Counted (nc + (1 + nb)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m2 := by
+        refine run1.trans (sb.trans ?_)
+        simpa [List.length_singleton, pc_add, addr_norm] using run2
+      exact ⟨m2, by simpa only [Nat.add_assoc] using run, post,
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, rpc, rfp, hw⟩
+    | false =>
+      simp only [Bool.false_eq_true, ↓reduceIte] at value child ih
+      subst w
+      have step := run_step (t := ⟨_, fp⟩) ins (by decide)
+        (run_brz_zero ins (by rw [hd]; exact read))
+      have offset : sx (II.f (16 * ((ct.length : Int) + 1))) =
+          BitVec.ofNat 64 (16 * (ct.length + 1)) := by
+        have h := sx_nat (d := 16 * (ct.length + 1)) (jumpFits _ _ _ _ _ _ ht)
+        simpa using h
+      rw [offset] at step
+      have sb := Counted.next step (Counted.refl _ _)
+      have h4 := h2.next (a := ct) (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+      obtain ⟨m2, run2, post, agree, frame, rpc, rfp, hw⟩ :=
+        ih he (by omega) low hprotected h4 world1 params1 entry1 rpc rfp
+      have run : Counted (nc + (1 + nb)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m2 := by
+        refine run1.trans (sb.trans ?_)
+        simpa [List.length_singleton, pc_add, addr_norm, Nat.mul_add, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using run2
+      exact ⟨m2, by simpa only [Nat.add_assoc] using run, post,
+        (agreeW_of (a1.mono (by omega))).trans agree, frame, rpc, rfp, hw⟩
+
 namespace EndCostProbe
 open FnptrProben
 
@@ -1648,6 +1721,60 @@ theorem endCost_sound_zeuge :
     .bind (v := v) .literal (.assign (v := v) .literal .reason)
   obtain ⟨mout, run, _⟩ := cert.sound (rp := 2048) (cfp := 8192) lower (by decide) call_win (by decide) (by decide) (by decide)
     (by intro j hj; cases hj) pre hw .nil (fun _ x => nomatch x) rfl (by decide +kernel) (by decide +kernel) (by decide +kernel)
+  exact ⟨mout, run⟩
+
+def branchChild : Endblock FnptrProben.D contract false [] [] :=
+  .bind (.lit 2) (.retWhy ⟨0, by decide⟩ (by decide))
+def branchChildImage : List II := [ci 1 4 2 0] ++ retWhyC 4 0
+def branchBody (choice : Bool) : Endblock FnptrProben.D contract false [] [] :=
+  .ite (if choice then .tru else .fls) branchChild branchChild
+def branchImage (choice : Bool) : List II :=
+  [ci 1 4 (if choice then 1 else 0) 0, ci 19 4 80 0] ++ branchChildImage ++ branchChildImage
+def branchMemory (choice : Bool) : Mem :=
+  { memory with b := fun a => if a.toNat < 160 then
+      (((branchImage choice).flatMap encII)[a.toNat]?).getD 0 else memory.b a }
+
+set_option maxHeartbeats 4000000 in
+/-- Both actual branch directions compose with a nonempty lexical binding child. -/
+theorem branch_sound_zeuge (choice : Bool) :
+    ∃ m', Counted 6 ⟨0, 4096⟩ (branchMemory choice) ⟨2048, 8192⟩ m' := by
+  have lower : lowEnd 2 addresses callLayout 4 ([], 6) [] (0, 0) (branchBody choice) =
+      some (branchImage choice, 13) := by cases choice <;> decide +kernel
+  have code : CodeAt (branchMemory choice) 0 (branchImage choice) := by
+    have h : ∀ k : Fin (branchImage choice).length,
+        (branchMemory choice).rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 (branchImage choice)[k.val].o) ∧
+        (branchMemory choice).rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f (branchImage choice)[k.val].a) ∧
+        (branchMemory choice).rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f (branchImage choice)[k.val].b) ∧
+        (branchMemory choice).rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f (branchImage choice)[k.val].c) := by
+      cases choice <;> apply allFin <;> decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  have pre : PreS callLayout (branchMemory choice) 0 4096 256 4 (branchImage choice) (Env.nil : Env FnptrProben.D []) := by
+    refine ⟨by decide, by decide, ?_, code, ?_, ?_, trivial, wstab_true _ _⟩
+    · exact ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+    · unfold CodeFar; cases choice <;> decide +kernel
+    · intro _ x; nomatch x
+  have hw : WeltAt (branchMemory choice) callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    cases choice <;> decide +kernel
+  let v : Wert FnptrProben.D (.int 2 2) := ⟨2, by decide, by decide⟩
+  have leaf : EndCost callLayout 0 contract false [] 64 ([], 6) 4 branchChild world .nil 4 :=
+    .bind (v := v) .literal .reason
+  have cert : EndCost callLayout 0 contract false [] 64 ([], 6) 4
+      (branchBody choice) world .nil 6 := by
+    apply EndCost.branch (choice := choice) (nc := 1) (nb := 4)
+    · cases choice
+      · exact .falsity
+      · exact .truth
+    · intro passes A pr ex ct tt lower
+      change some (branchChildImage, 13) = some (ct, tt) at lower
+      cases lower
+      decide
+    · cases choice <;> exact leaf
+  obtain ⟨mout, run, _⟩ := cert.sound (rp := 2048) (cfp := 8192) lower (by decide) call_win (by decide) (by decide) (by decide)
+    (by intro j hj; cases hj) pre hw .nil (fun _ x => nomatch x) rfl (by cases choice <;> decide +kernel) (by cases choice <;> decide +kernel) (by cases choice <;> decide +kernel)
   exact ⟨mout, run⟩
 end EndCostProbe
 
