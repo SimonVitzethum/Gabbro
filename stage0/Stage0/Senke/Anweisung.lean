@@ -13,6 +13,8 @@
   `leave` and `next`; the latter two retain the enclosing loop targets.
 -/
 import Stage0.Senke.Ausdruck
+import Stage0.Senke.Ausdruck.Gleit.SlotContext
+import Stage0.Senke.Ausdruck.Gleit.Bereich
 import Stage0.Senke.Stopp
 import Stage0.Senke.Tor
 import Stage0.Senke.Sperre.Code
@@ -308,7 +310,13 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
   | _, Γ, _, _, .floatOf e low high rest =>
     match e with
     | .lit n => floatLiteralL (frei Γ) (n, 1) low high (fun _ => lowB passes A L lo ens pr ex rest)
-    | _ => none
+    | _ => do
+      let cc ← canonicalFloatRangeL (frei Γ) low high
+        (fun d => computedFloatOfE L Gleitkomma.f64 e d)
+      let ce ← computedFloatOfE L Gleitkomma.f64 e (frei Γ)
+      let cr ← lowB passes A L lo ens pr ex rest
+      pure (floatNarrowC (frei Γ) cc.1 (stopC 107 (frei Γ)) ce.1 cr.1,
+        max cc.2 (max (frei Γ + 8) (max ce.2 cr.2)))
   | _, Γ, _, _, .bindCall f args _ _ _ rest => do
     let ca ← lowA L args (frei Γ + FB)
     let cr ← lowB passes A L lo ens pr ex rest
