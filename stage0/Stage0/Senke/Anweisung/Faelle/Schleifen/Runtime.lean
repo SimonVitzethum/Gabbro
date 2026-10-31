@@ -1,7 +1,8 @@
 /- Runtime loop edges consume the actual block simulation and its world-aware frame. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
 import Stage0.Senke.Anweisung.Simulation
-import Stage0.Senke.Anweisung.Satz
+import Stage0.Senke.Anweisung.Verzweigung
+import Stage0.Senke.Anweisung.Faelle.Kontext
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR
@@ -305,7 +306,7 @@ theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
 
 /-- Execute the actual source invariant and then the generically lowered body.
     The read event, callee frame, return ABI and protected slots are inherited
-    from `lowE_ok`, `choice_ok` and `lowB_ok`; no body simulation is assumed.
+    from `lowE_ok`, `choice_ok` and the explicit child induction contract.
     This is one positive pass, not yet the counter/header integration. -/
 theorem forever_source_pass {D : Deklaration} {L : Lay D}
     {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
@@ -325,6 +326,8 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
     (hs : 16 * (cc.length + 1 + cb.length + 1 + 3) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
+    (bodyRuns : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp
+      σ0 ρ0 cens tens pr (exPlus ex 4) body reserved)
     {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS L m pc fp K (frei Γ reserved)
       (cc ++ [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++ cb ++
@@ -349,7 +352,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
       (fun _ h => h) inv (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw
     exact ⟨m1, st, Agree.widen a1 hks, w, hr, hen⟩
   · intro _ m' pc' hp' _ hu' hk' hw'
-    exact lowB_ok hS hA hlo0 hens body cb tb hcb htb (by omega) hW
+    exact bodyRuns cb tb hcb htb (by omega) hW
       m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr
   · intro _ m' pc' hp' _ _ _ _
     exact stop_ok hp'.code hp'.far hp'.frame (by omega) hp'.small (by simp [logikCode])
@@ -379,6 +382,8 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
     (hs : 16 * (cc.length + 1 + cb.length + 1 + 3) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ counter :: one :: pr, j < frei Γ reserved)
+    (bodyRuns : BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp
+      σ0 ρ0 cens tens (counter :: one :: pr) (exPlus ex 4) body reserved)
 
     {pc back exit : W} {stop : Int} {jump b c : BitVec 32}
     (backAt : pc + 32 + BitVec.ofNat 64
@@ -428,7 +433,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
           · subst j; exact ⟨oneBound, distinct⟩
           · exact hprotected j h)
     have pass := forever_source_pass (O := O) hS hA hlo0 hens inv body hcc hcb htc htb room hs
-      hW hlo hlo2 hpr hp hu hk hw
+      hW hlo hlo2 hpr bodyRuns hp hu hk hw
     simp only [] at pass
     rw [backAt, leaveAt, nextAt] at pass
     have edge1 : InsAt m1 back 18 jump b c := by

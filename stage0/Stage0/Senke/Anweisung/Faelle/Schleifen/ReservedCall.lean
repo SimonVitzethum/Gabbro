@@ -300,6 +300,10 @@ theorem forever_source_pass_zeuge [Kern] :
     (by decide) (by decide +kernel) (by decide) (by decide +kernel)
     call_win (by decide) (by decide)
     (by intro j hj; simp only [List.mem_singleton] at hj; subst j; decide)
+    (by
+      intro cb tb hcb htb hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
+      exact lowB_ok call_spec addresses_bound rfl rfl body cb tb hcb htb hs
+        hW m pc σ ρ hp hlo hlo2 hu hk hw hpr)
     pre surroundings head world_at
   obtain ⟨m', run, _, _, world', keeps⟩ := h
   exact ⟨m', run, world', (keeps 4 (by simp)).trans (by decide +kernel)⟩
