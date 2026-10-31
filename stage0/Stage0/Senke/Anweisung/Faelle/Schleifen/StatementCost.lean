@@ -3966,6 +3966,174 @@ theorem forever_positive_counted
       (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _))))
 
 
+/-- Execute the invariant and recursive source body at their shared endpoint. -/
+theorem recursiveBlockCost.positive_source_counted
+    {P : Programm D} {f : D.Fn} {passes : Nat}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
+    {Γ : Ctx} {Λ : List (Res D)} {inv : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ}
+    {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
+    {rp cfp : W} {ni nb : Nat}
+    {outcome : Ausgang (vertragVon D f) true Γ}
+    (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+    {lo K tc tb : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {cc cb : List II} {m : Mem} {pc fp e eL eN : W}
+    (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (lowerBody : lowB (reserved := reserved) passes A L lo ens pr
+      (exPlus ex 4) body = some (cb, tb))
+    (fitsInv : tc ≤ Ks) (inside : WIn L fp Ks K)
+    (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+        (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved))))) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ)
+    (child : recursiveBlockCost L reserved P passes A C dv Ks (vertragVon D f) true
+      body σ ρ outcome nb)
+    (fitsBody : tb ≤ Ks)
+    (endEq : e = pc + BitVec.ofNat 64 (16 * cc.length) + 16 +
+      BitVec.ofNat 64 (16 * cb.length))
+    (leaveEq : eL = e + BitVec.ofInt 64 (exPlus ex 4).1)
+    (nextEq : eN = e + BitVec.ofInt 64 (exPlus ex 4).2) :
+    ∃ n, n ≤ ni + 1 + nb ∧ CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr
+      ⟨pc, fp⟩ m e eL eN outcome reserved := by
+  have hks := inside.ks
+  have room := lowE_top _ _ _ _ lowerInv
+  have hpw := PreS.welt pre.left inside.ks world inside.lay
+    (by have := inside.lo; omega)
+  obtain ⟨m1, run1, a1s, w, read, value⟩ := invariant.sound lowerInv (by omega) hpw
+  subst w
+  have a1 := Agree.widen a1s inside.ks
+  have h1 := pre.next a1 (Nat.le_refl _) (by omega)
+  have h2 := h1.next (a := [ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0])
+    (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
+  have ins := h1.code 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, List.cons_append, Nat.mul_zero, BitVec.add_zero] at ins
+  have hd : sx (II.f (frei Γ reserved : Int)) = BitVec.ofNat 64 (frei Γ reserved) :=
+    sx_nat (by have := pre.small; omega)
+  have branch := counted_ins (fp := fp) (m' := m1) (codeAt_left h1.code) (by simp [ci])
+    (by simp only [ci]; exact run_brz_ne ins (by rw [hd]; exact read) (by decide))
+  have bodyPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * cc.length) + 16)
+      fp K (frei Γ reserved) cb ρ reserved := by simpa using h2.left
+  have aw : AgreeW L fp lo K m m1 := agreeW_of (a1.mono low)
+  obtain ⟨n, bound, run⟩ := child.sound (σ0 := σ0) (ρ0 := ρ0) (rp := rp) (cfp := cfp)
+    lowerBody fitsBody inside abi low hprotected bodyPre
+    (Umf.agreeW inside surroundings (agreeW_of a1) (by simp [frei]; omega))
+    (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _)))
+  rw [← endEq, ← leaveEq, ← nextEq] at run
+  exact ⟨ni + 1 + n, by omega, CountedSim.prefix abi
+    (by simpa using run1.trans branch) aw
+    (keeps_of_agreeW inside (agreeW_of a1) hprotected (by omega)) run⟩
+
+
+/-- The actual two-instruction positive header feeds a recursive source body. -/
+theorem recursiveBlockCost.positive_header_source_counted
+    {P : Programm D} {f : D.Fn} {passes : Nat}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
+    {Γ : Ctx} {Λ : List (Res D)} {inv : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ}
+    {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
+    {rp cfp : W} {ni nb : Nat}
+    {outcome : Ausgang (vertragVon D f) true Γ}
+    (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+    {lo K tc tb : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {counter one : Nat} {jump : Int} {fuel : W}
+    {cc cb : List II} {m : Mem} {pc fp e eL eN : W}
+    (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (lowerBody : lowB (reserved := reserved) passes A L lo ens pr
+      (exPlus ex 4) body = some (cb, tb))
+    (fitsInv : tc ≤ Ks) (inside : WIn L fp Ks K)
+    (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      (foreverCounter counter one jump ++ (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+        (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)))))) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ)
+    (counterLow : FB ≤ counter) (ordered : counter < one)
+    (allocated : one < FB + reserved) (locals : frei Γ reserved ≤ K)
+    (protectLow : lo ≤ counter) (protect : ∀ j ∈ pr, j < counter)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some fuel)
+    (readOne : m.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1)
+    (positive : fuel ≠ 0)
+    (child : recursiveBlockCost L reserved P passes A C dv Ks (vertragVon D f) true
+      body σ ρ outcome nb)
+    (fitsBody : tb ≤ Ks)
+    (endEq : e = (pc + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 +
+      BitVec.ofNat 64 (16 * cb.length))
+    (leaveEq : eL = e + BitVec.ofInt 64 (exPlus ex 4).1)
+    (nextEq : eN = e + BitVec.ofInt 64 (exPlus ex 4).2) :
+    ∃ n, n ≤ 2 + ni + 1 + nb ∧ CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr
+      ⟨pc, fp⟩ m e eL eN outcome reserved := by
+  obtain ⟨mh, header, ph, wh, ah, rh, oh⟩ :=
+    counter_positive_source_counted inside pre world counterLow ordered allocated locals
+      read readOne positive
+  obtain ⟨n, bound, run⟩ := child.positive_source_counted invariant lowerInv lowerBody
+    fitsInv inside abi low hprotected ph
+    (Umf.agreeW inside surroundings (agreeW_of ah) (by omega)) wh
+    fitsBody endEq leaveEq nextEq
+  exact ⟨2 + n, by omega, CountedSim.prefix abi header
+    (agreeW_of (ah.mono protectLow))
+    (keeps_of_agreeW inside (agreeW_of ah) protect (by
+      have := lowE_top _ _ _ _ lowerInv; unfold frei at *; omega)) run⟩
+
+
+/-- Initialize both reserved words before the positive source pass. -/
+theorem recursiveBlockCost.initialized_positive_source_counted
+    {P : Programm D} {f : D.Fn} {passes : Nat}
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W} {Ks : Nat}
+    {Γ : Ctx} {Λ : List (Res D)} {inv : Expr D Γ Λ .bool}
+    {body : Block D (vertragVon D f) true Γ Λ Λ}
+    {σ σ0 : World D} {ρ : Env D Γ} {ρ0 : Env D (D.params f)}
+    {rp cfp : W} {ni nb : Nat}
+    {outcome : Ausgang (vertragVon D f) true Γ}
+    (invariant : ExprCost L reserved inv (frei Γ reserved) ni (· = 1))
+    {lo K tc tb : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
+    {counter one : Nat} {jump : Int} {value : Int}
+    {cc cb : List II} {m : Mem} {pc fp e eL eN : W}
+    (lowerInv : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
+    (lowerBody : lowB (reserved := reserved) passes A L lo ens pr
+      (exPlus ex 4) body = some (cb, tb))
+    (fitsInv : tc ≤ Ks) (inside : WIn L fp Ks K)
+    (abi : FB ≤ lo) (low : lo ≤ frei Γ reserved)
+    (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
+    (pre : PreS L m pc fp K (frei Γ reserved)
+      ([ci 1 counter value 0] ++ [ci 1 one 1 0] ++ foreverCounter counter one jump ++ (cc ++ ([ci 19 (frei Γ reserved) (16 * (cb.length + 2)) 0] ++
+        (cb ++ ([ci 18 64 0 0] ++ stopC 104 (frei Γ reserved)))))) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K) (world : WeltAt m L σ)
+    (counterLow : FB ≤ counter) (ordered : counter < one)
+    (allocated : one < FB + reserved) (locals : frei Γ reserved ≤ K)
+    (protectLow : lo ≤ counter) (protect : ∀ j ∈ pr, j < counter)
+    (literal : lit32 value = true) (positive : (BitVec.ofInt 64 value : W) ≠ 0)
+    (child : recursiveBlockCost L reserved P passes A C dv Ks (vertragVon D f) true
+      body σ ρ outcome nb)
+    (fitsBody : tb ≤ Ks)
+    (endEq : e = (pc + 16 + 16 + 16 + 16) + BitVec.ofNat 64 (16 * cc.length) + 16 +
+      BitVec.ofNat 64 (16 * cb.length))
+    (leaveEq : eL = e + BitVec.ofInt 64 (exPlus ex 4).1)
+    (nextEq : eN = e + BitVec.ofInt 64 (exPlus ex 4).2) :
+    ∃ n, n ≤ 4 + ni + 1 + nb ∧ CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr
+      ⟨pc, fp⟩ m e eL eN outcome reserved := by
+  obtain ⟨m1, run1, pre1, world1, agree1, read1⟩ :=
+    reserved_literal_source_entry inside pre world counterLow (by omega) locals literal
+  obtain ⟨m2, run2, pre2, world2, agree2, read2⟩ :=
+    reserved_literal_source_entry inside pre1 world1 (by omega) allocated locals (by decide)
+  have counterRead : m2.rd64 (slot fp (BitVec.ofNat 64 counter)) =
+      some (BitVec.ofInt 64 value) := by
+    rw [agree_rd_low agree2 pre1.frame.room ordered (by unfold frei at locals; omega)]
+    exact read1
+  have agree := agree1.trans (agree2.mono (Nat.le_of_lt ordered))
+  obtain ⟨n, bound, run⟩ := child.positive_header_source_counted invariant lowerInv lowerBody
+    fitsInv inside abi low hprotected pre2
+    (Umf.agreeW inside surroundings (agreeW_of agree) (by omega)) world2
+    counterLow ordered allocated locals protectLow protect counterRead read2 positive
+    fitsBody endEq leaveEq nextEq
+  refine ⟨2 + n, by omega, ?_⟩
+  exact CountedSim.prefix abi (run1.trans run2)
+    (agreeW_of (agree.mono protectLow))
+    (keeps_of_agreeW inside (agreeW_of agree) protect (by
+      have := lowE_top _ _ _ _ lowerInv; unfold frei at *; omega)) run
+
+
 namespace FullCallProbe
 open FnptrProben
 open FullFunProbe (fixtureDecl program layout world)
