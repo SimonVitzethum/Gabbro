@@ -1,6 +1,7 @@
 /- Executable checks of actual lowered early exits, with exact Runner step counts. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
+import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost
 
 namespace Gabbro.Stage0.Senke.EarlyExitProbe
 open Gabbro.Grammatik Runner Runner.Mem Runner.IR CounterCallProbe FnptrProben
@@ -187,3 +188,42 @@ theorem counted_counter_loop_exits_zeuge [Kern] :
   · exact done
 
 end Gabbro.Stage0.Senke.EarlyExitProbe
+
+namespace Gabbro.Stage0.Senke.LoopJumpCostProbe
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem FnptrProben
+set_option maxHeartbeats 2000000
+variable [Kern]
+def body (next : Bool) : Block D (vertragVon D 2) true [] [] [] :=
+  .cons (if next then .next rfl else .leave rfl) .nil
+def image (next : Bool) : List II := [ci 18 (if next then -32 else 144) 0 0]
+def memory (next : Bool) : Mem :=
+  { callMem with b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2064 then
+      (((image next).flatMap encII)[a.toNat - 2048]?).getD 0 else callMem.b a }
+theorem loopJumpBlock_counted_zeuge (next : Bool) :
+    lowB (reserved := 8) 1 addresses callLayout 4 ([], 6) [6, 7]
+      (128, -48) (body next) = some (image next, 12) ∧
+    CountedReach 1 callLayout 4096 4 256 [6, 7] ⟨2048, 4096⟩ (memory next)
+      (if next then 2016 else 2192) world (Env.nil : Env D []) 8 := by
+  have lower : lowB (reserved := 8) 1 addresses callLayout 4 ([], 6) [6, 7]
+      (128, -48) (body next) = some (image next, 12) := by
+    cases next <;> decide +kernel
+  have pre : PreS callLayout (memory next) 2048 4096 256 12
+      (image next) (Env.nil : Env D []) 8 := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      ?_, ?_, (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+    · intro k hk
+      have : k = 0 := by simpa [image] using hk
+      subst k
+      cases next <;> simp only [image, Bool.false_eq_true, ↓reduceIte,
+        List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero, ci]
+      all_goals exact ⟨by decide +kernel, by decide +kernel,
+        by decide +kernel, by decide +kernel⟩
+    · cases next <;> unfold CodeFar image <;> decide +kernel
+  have hw : WeltAt (memory next) callLayout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    cases next <;> decide +kernel
+  refine ⟨lower, ?_⟩
+  have result := loopJumpBlock_counted next lower pre hw
+  cases next <;> exact result
+end Gabbro.Stage0.Senke.LoopJumpCostProbe
