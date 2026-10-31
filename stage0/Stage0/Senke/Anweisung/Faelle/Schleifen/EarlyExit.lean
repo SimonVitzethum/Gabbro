@@ -1,5 +1,6 @@
 /- Executable checks of actual lowered early exits, with exact Runner step counts. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
 
 namespace Gabbro.Stage0.Senke.EarlyExitProbe
 open Gabbro.Grammatik Runner Runner.Mem Runner.IR CounterCallProbe FnptrProben
@@ -35,8 +36,8 @@ def execute : Nat → T → Mem → Option (T × Mem)
     let (t', m') ← answer (step t) m
     execute n t' m'
 
-theorem execute_sound [Kern] (n : Nat) {t t' : T} {m m' : Mem}
-    (h : execute n t m = some (t', m')) : Star t m t' m' := by
+theorem execute_counted [Kern] (n : Nat) {t t' : T} {m m' : Mem}
+    (h : execute n t m = some (t', m')) : Counted n t m t' m' := by
   induction n generalizing t m with
   | zero => cases h; exact .refl _ _
   | succ n ih =>
@@ -46,6 +47,11 @@ theorem execute_sound [Kern] (n : Nat) {t t' : T} {m m' : Mem}
     | some p =>
       obtain ⟨s, m1⟩ := p
       exact .next (answer_sound hm) (ih (by simpa [hm] using h))
+
+/-- Erase the independently checked instruction count for qualitative simulation. -/
+theorem execute_sound [Kern] (n : Nat) {t t' : T} {m m' : Mem}
+    (h : execute n t m = some (t', m')) : Star t m t' m' :=
+  (execute_counted n h).forget
 
 /-- Return uses a scratch/result area above the sentinel and reserved counter. -/
 def exitBody (kind : Fin 3) : Block D (vertragVon D 2) true [] [] [] :=
