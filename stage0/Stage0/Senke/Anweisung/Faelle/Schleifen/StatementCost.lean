@@ -1140,4 +1140,100 @@ theorem snapC_counted_zeuge :
   exact ⟨m', hs, hp, keep⟩
 end OldProbe
 
+/-- Recursive costs for the actual postcondition compiler. The immutable
+    snapshot word is an input value, not an assumed execution or cost. -/
+inductive EnsCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (snapshot : W) :
+    {τ : Ty} → Expr D Γ Λ τ → Nat → Nat → (W → Prop) → Type
+  | ordinary {τ} {e : Expr D Γ Λ τ} {d n P}
+      (equation : lowEns L e d = lowE L e d)
+      (body : ExprCost L 0 e d n P) : EnsCost L snapshot e d n P
+  | captured {τ} {e : Expr D Γ Λ τ} {d}
+      (equation : lowEns L e d = some ([ci 2 d 3 0], d + 1)) :
+      EnsCost L snapshot e d 1 (· = snapshot)
+  | binary {τ τa τb} {e : Expr D Γ Λ τ}
+      {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {d o na nb Pa Pb P}
+      {g : W → W → Option W}
+      (equation : lowEns L e d = (do
+        let ca ← lowEns L a d
+        let cb ← lowEns L b (d + 1)
+        pure (bin2 o d ca cb)))
+      (left : EnsCost L snapshot a d na Pa)
+      (right : EnsCost L snapshot b (d + 1) nb Pb)
+      (values : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r)
+      (opcode : op o = bin g) (byte : o < 256) :
+      EnsCost L snapshot e d (na + nb + 1) P
+
+/-- Addition exposes the real compiler equation and its machine opcode. -/
+def EnsCost.add {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int}
+    {a : Expr D Γ Λ (.int l1 h1)} {b : Expr D Γ Λ (.int l2 h2)}
+    {snapshot : W} {d na nb : Nat} {Pa Pb : W → Prop}
+    (left : EnsCost L snapshot a d na Pa)
+    (right : EnsCost L snapshot b (d + 1) nb Pb) :
+    EnsCost L snapshot (.add a b) d (na + nb + 1)
+      (fun r => ∃ wa wb, Pa wa ∧ Pb wb ∧ r = wa + wb) :=
+  .binary rfl left right
+    (fun wa wb ha hb => ⟨wa + wb, rfl, wa, wb, ha, hb, rfl⟩) rfl (by decide)
+
+/-- A nested source tree exercises both recursive children. -/
+theorem ensCost_recursive_zeuge {D : Deklaration} (L : Lay D) (snapshot : W) :
+    Nonempty (EnsCost L (Γ := []) (Λ := []) snapshot
+      (.add (.add (.lit 2) (.lit 3)) (.lit 4)) 4 5
+      (fun r => ∃ wa wb,
+        (∃ x y, x = BitVec.ofInt 64 2 ∧ y = BitVec.ofInt 64 3 ∧ wa = x + y) ∧
+        wb = BitVec.ofInt 64 4 ∧ r = wa + wb)) :=
+  ⟨EnsCost.add (EnsCost.add (.ordinary rfl .literal) (.ordinary rfl .literal))
+    (.ordinary rfl .literal)⟩
+
+/-- Count emitted postcondition instructions recursively while preserving the
+    frame. In particular the second child reads the original header snapshot. -/
+theorem EnsCost.sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {e : Expr D Γ Λ τ} {d n : Nat} {P : W → Prop} {snapshot : W}
+    (certificate : EnsCost L snapshot e d n P)
+    {code : List II} {top K : Nat} {m : Mem} {pc fp : W}
+    {ρ : Env D Γ} {World : Mem → Prop}
+    (lower : lowEns L e d = some (code, top)) (fits : top ≤ K)
+    (pre : Pre L m pc fp K d code ρ World)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot) :
+    CountedOk n m pc fp K d code P := by
+  induction certificate generalizing code top K m pc with
+  | ordinary equation body => exact body.sound (equation ▸ lower) fits pre
+  | @captured τ e d equation =>
+    rw [equation] at lower
+    cases lower
+    have ctx := pre.ctx
+    have base : FB = 4 := rfl
+    simp only [frei] at ctx
+    obtain ⟨hw, rd, agree⟩ := wr_slot pre.frame (d := d) (by omega) snapshot
+    exact ⟨_, mov_to_counted (s := 3) (j := d) pre.code pre.frame (by omega) (by omega) pre.small read,
+      agree, _, rd, rfl⟩
+  | binary equation left right values opcode byte ihA ihB =>
+    rw [equation] at lower
+    simp only [bind, Option.bind_eq_some_iff] at lower
+    obtain ⟨⟨ca, ta⟩, ha, ⟨⟨cb, tb⟩, hb, out⟩⟩ := lower
+    cases out
+    have fitA : ta ≤ K := Nat.le_trans (Nat.le_max_left _ _) fits
+    have fitB : tb ≤ K := Nat.le_trans (Nat.le_max_right _ _) fits
+    have room := lowEns_top _ _ cb tb hb
+    have ctx := pre.ctx
+    have base : FB = 4 := rfl
+    simp only [frei] at ctx
+    have hp := pre
+    change Pre L m pc fp K _ (ca ++ cb ++ [ci _ _ _ _]) ρ World at hp
+    apply bin_counted_keep (ihA ha fitA hp.left.left read) _ values opcode byte (by omega) hp
+    intro m' pc' agree next
+    apply ihB hb fitB next
+    rw [agree_rd_low agree pre.frame.room (by omega) (by omega)]
+    exact read
+
+namespace OldProbe
+/-- The certificate executes a real captured entry value, distinct from the
+    current global cell, through the existing postcondition compiler. -/
+theorem ensCost_sound_zeuge :
+    CountedOk 1 (memory readCode) 0 1024 16 4 readCode
+      (· = BitVec.ofNat 64 64) := by
+  apply EnsCost.sound (L := layout) (e := expr)
+    (EnsCost.captured rfl) (top := 5) rfl (by decide) read_pre
+  decide +kernel
+end OldProbe
+
 end Gabbro.Stage0.Senke
