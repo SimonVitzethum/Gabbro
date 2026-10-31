@@ -46,9 +46,12 @@ def compile (text : String) : Except String (Compiled text) := do
 /-- Original-source scalar and function semantics, canonical alias lookup order, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
     they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
-theorem compile_source_program (text : String) (result : Compiled text) :
+def CanonicalSourceProgram {text : String} (result : Compiled text) : Prop :=
     let original := uMembers (pre108 result.source.items)
     let scope := result.source.scopes
+    lex text = .ok result.source.tokens ∧
+    parseTopTief result.source.tokens = .ok result.source.items ∧
+    Oeffentlich.huelleZu result.source.items = true ∧
     scope.declared = original.foldl
       (Frontend.aliasStep (uConstsRech (uKonstFns original) original [])) [] ∧
     scope.functions = Frontend.constantFunctions scope.declared original ∧
@@ -57,8 +60,11 @@ theorem compile_source_program (text : String) (result : Compiled text) :
     Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore original result.unit raw = .ok result.program) ∧
-    OldSource.accepts result.unit result.program = .ok true := by
-  exact ⟨result.source.scopes.aliases, result.source.scopes.functionOrigin,
+    OldSource.accepts result.unit result.program = .ok true
+
+theorem compile_source_program (text : String) (result : Compiled text) :
+    CanonicalSourceProgram result := by
+  exact ⟨result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliases, result.source.scopes.functionOrigin,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted⟩
 

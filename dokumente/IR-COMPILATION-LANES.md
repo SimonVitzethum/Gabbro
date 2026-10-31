@@ -330,3 +330,24 @@ Measured the changed chain directly under the global Lean lock/memory scope, thi
 using only standard axioms, five new positive ASM results 42 and six existing call/old-global/old-slot/loop
 regressions at their expected exit codes, alongside the three contract refusals and overflow refusal.
 No grammar rebuild, additional runner, ABI change or weakened checker was used.
+
+### IR-01 actual source-to-image theorem attachment
+
+`irBild` now projects bytes from the single `emit` path. `Emitted` stores the actual `Compiled` source
+program and successful `Senke.bild` equation. `irBild_emitted` recovers that same image from any successful
+CLI byte result. `CanonicalSourceProgram` records canonical lex/parse/public provenance, original
+source-derived scopes, the unchanged canonical phase composition, actual `lowerAllg`/snapshot endpoint
+and full checker acceptance.
+
+`Emitted.correct` composes that original-source program contract with the existing generic
+`Senke.bild_ok_u` theorem for the identical program. `irBild_correct` attaches it to the actual returned
+bytes. It retains exactly the inherited runner kernel/clone, gate/view and initial-memory contracts;
+there is no added whole-run premise or execution interpreter. Successful source compilation therefore
+has a connected canonical source-program-to-IR execution statement. This does not establish total syntax
+coverage, source initial-world/image initialization beyond the inherited memory contract, or missing
+canonical source forms. A concrete joint formal fixture for the new entire source/image contract remains
+an explicit witness obligation; existing local fixtures and IO regressions do not replace it.
+
+Direct checks of the connected chain and thirty-three statement audits passed with standard axioms.
+The actual source-to-IR-to-ASM regressions continue to match expected results; no guardian or grammar
+build was run. IR-01 remains incomplete on the listed forms/model prerequisites and witness/coverage work.
