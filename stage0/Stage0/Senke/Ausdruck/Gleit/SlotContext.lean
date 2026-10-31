@@ -6,12 +6,12 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
-private abbrev wordTy : Ty := .int (-2^63) (2^63 - 1)
-private def wordCtx (n : Nat) : Ctx := List.replicate n wordTy
+abbrev frameWordTy : Ty := .int (-2^63) (2^63 - 1)
+def frameWordCtx (n : Nat) : Ctx := List.replicate n frameWordTy
 
-private theorem frameEnv {m : Runner.Mem} {fp : Runner.W} {K n : Nat}
+theorem frameWordEnv {m : Runner.Mem} {fp : Runner.W} {K n : Nat}
     (frame : FrameOK m fp K) (hn : FB + n ≤ K) :
-    ∃ ρ : Env D (wordCtx n), EnvAt L m fp ρ := by
+    ∃ ρ : Env D (frameWordCtx n), EnvAt L m fp ρ := by
   induction n with
   | zero => exact ⟨Env.nil, fun _ x => nomatch x⟩
   | succ n ih =>
@@ -25,25 +25,63 @@ private theorem frameEnv {m : Runner.Mem} {fp : Runner.W} {K n : Nat}
         by simpa using BitVec.toInt_le (x := w)⟩
     refine ⟨Env.cons v ρ, ?_⟩
     apply envAt_cons hρ
-    · simpa [frei, wordCtx] using hw
+    · simpa [frei, frameWordCtx] using hw
     · exact (BitVec.ofInt_toInt).symm
+
+/-- The variable representing a concrete frame slot in a reified word context. -/
+def frameWordVar : (n i : Nat) → i < n → Var (frameWordCtx n) frameWordTy
+  | 0, _, h => False.elim (by omega)
+  | n+1, i, h => if e : i = n then by
+      subst i
+      exact .here
+    else .there (frameWordVar n i (by omega))
+
+theorem frameWordVar_slot (n i : Nat) (h : i < n) :
+    vslot (frameWordVar n i h) = FB + i := by
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    by_cases e : i = n
+    · subst i
+      simp [frameWordVar, vslot_here, frei, frameWordCtx]
+    · simp only [frameWordVar, e, ↓reduceDIte, ↓reduceIte]
+      change vslot (Var.there (frameWordVar n i (by omega)) :
+        Var (frameWordTy :: frameWordCtx n) frameWordTy) = FB + i
+      rw [vslot_there]
+      exact ih (by omega)
+
+/-- A reified slot has a universal load proof, while its value is obtained from
+    the concrete environment, never postulated as a floating-point producer. -/
+theorem frameWordLoad (n i : Nat) (h : i < n) (ρ : Env D (frameWordCtx n)) :
+    WordCode (L := L) ρ (fun _ => True)
+      (fun j => some ([ci 2 j (FB+i) 0], j+1))
+      (BitVec.ofInt 64 (ρ.get (frameWordVar n i h)).n) := by
+  intro fp K j c top hc ht m pc hp
+  cases hc
+  obtain ⟨w, hr, he⟩ := hp.env _ (frameWordVar n i h)
+  rw [frameWordVar_slot] at hr
+  change w = BitVec.ofInt 64 (ρ.get (frameWordVar n i h)).n at he
+  subst w
+  have bound := hp.ctx
+  simp [frei, frameWordCtx] at bound
+  exact mov_ok hp (by omega) (by omega) hr
 
 /-- A slot load is universally sound only when its input is represented in the
     proof context. This context is built from actual memory reads below. -/
 private theorem contextLoad (input : Nat) (hi : FB ≤ input)
-    (z : Zahl (-2^63) (2^63 - 1)) (ρ : Env D (wordCtx (input - FB))) :
-    WordCode (L := L) (Env.cons (τ := wordTy) z ρ) (fun _ => True)
+    (z : Zahl (-2^63) (2^63 - 1)) (ρ : Env D (frameWordCtx (input - FB))) :
+    WordCode (L := L) (Env.cons (τ := frameWordTy) z ρ) (fun _ => True)
       (fun j => some ([ci 2 j input 0], j + 1)) (BitVec.ofInt 64 z.n) := by
   intro fp K j c top hc ht m pc hp
   cases hc
   obtain ⟨w, hr, he⟩ := hp.env _ Var.here
-  have eqslot : vslot (Var.here : Var (wordTy :: wordCtx (input - FB)) wordTy) = input := by
-    simp [vslot_here, frei, wordCtx]; omega
+  have eqslot : vslot (Var.here : Var (frameWordTy :: frameWordCtx (input - FB)) frameWordTy) = input := by
+    simp [vslot_here, frei, frameWordCtx]; omega
   rw [eqslot] at hr
   change w = BitVec.ofInt 64 z.n at he
   subst w
   have bound := hp.ctx
-  simp [frei, wordCtx] at bound
+  simp [frei, frameWordCtx] at bound
   exact mov_ok hp (by omega) (by omega) hr
 
 /-- Execute the complete explicit-slot continuation from the actual input read.
@@ -61,17 +99,17 @@ theorem floatOfIntContinuationL_ok (F : Gleitkomma.Format)
   obtain ⟨assembly, ha, he⟩ := floatOfIntContinuationL_parts F input hc
   have ceiling := floatOfIntAssemblyL_ceiling ha
   have hi : FB ≤ input := by have := hp.ctx; unfold frei at this; omega
-  obtain ⟨ρbase, env⟩ := frameEnv (L := L) (n := input - FB) hp.frame (by omega)
+  obtain ⟨ρbase, env⟩ := frameWordEnv (L := L) (n := input - FB) hp.frame (by omega)
   let v : Zahl (-2^63) (2^63 - 1) := ⟨z, hz.1, by omega⟩
-  have env' : EnvAt L m fp (Env.cons (τ := wordTy) v ρbase) := by
+  have env' : EnvAt L m fp (Env.cons (τ := frameWordTy) v ρbase) := by
     apply envAt_cons env
-    · simpa [frei, wordCtx, show FB + (input - FB) = input by omega] using hr
+    · simpa [frei, frameWordCtx, show FB + (input - FB) = input by omega] using hr
     · rfl
   rw [he] at hp
-  have pre : Pre L m pc fp K (input + 1) assembly (Env.cons (τ := wordTy) v ρbase) (fun _ => True) :=
-    ⟨by simp [frei, wordCtx]; omega, hp.small, hp.frame, hp.left.code,
+  have pre : Pre L m pc fp K (input + 1) assembly (Env.cons (τ := frameWordTy) v ρbase) (fun _ => True) :=
+    ⟨by simp [frei, frameWordCtx]; omega, hp.small, hp.frame, hp.left.code,
       hp.left.far, env', trivial, wstab_true _ _⟩
-  have run : WordCode (L := L) (Env.cons (τ := wordTy) v ρbase) (fun _ => True)
+  have run : WordCode (L := L) (Env.cons (τ := frameWordTy) v ρbase) (fun _ => True)
       (fun d => floatOfIntAssemblyL F.p F.bias (2^(F.ebits + F.fracBits)) d
         (fun j => some ([ci 2 j input 0], j + 1)))
       (BitVec.ofNat 64 (Gleitkomma.zuBits F (Gleitkomma.ofInt F z))) :=

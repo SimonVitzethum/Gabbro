@@ -1,5 +1,6 @@
 /- Emitted post-cancellation nearest-even rounding and field packing. -/
 import Stage0.Senke.Ausdruck.Arithmetik.Distanz
+import Stage0.Senke.Ausdruck.Gleit.SlotContext
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem Gleitkomma
@@ -48,6 +49,78 @@ theorem floatAddNormalOutputL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → 
   intro fp K dst code top hc hK m pc hpre
   exact floatPackCarryL_rundeBruchKern F sign n d E hs he rounded
     hp hf hlo hhi hu hm hex hb hc hK m pc hpre
+
+/-- Execute normal rounding and packing from five actual retained frame reads.
+    All loads, their alias bounds and their temporary frame are derived here.
+    The caller's reserved prefix is arbitrary. -/
+theorem floatAddNormalOutputL_slots {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (F : Format) (sign : Bool) (n d qn gn rest den : Nat) (E : Int)
+    (hd : 0 < den) (hr : rest < den) (hguard : gn < 8)
+    (hquot : (normQD F.p E n d).1 / (normQD F.p E n d).2 = qn)
+    (hrem : (normQD F.p E n d).1 % (normQD F.p E n d).2 = gn * den + rest)
+    (hden : (normQD F.p E n d).2 = 8 * den)
+    (hp : 1 ≤ F.p) (hf : F.fracBits = F.p - 1)
+    (hlo : F.emin ≤ E) (hhi : E < (F.emax : Int))
+    (hu : 2 * 2^F.fracBits < 2^64) (hm : F.bexpMax ≤ 2^64)
+    (hex : 0 < (E - F.emin + 1).toNat ∧
+      (E - F.emin + 1).toNat + 1 < F.bexpMax)
+    (hb : 2^F.fracBits ≤ normQ F.p E n d ∧
+      normQ F.p E n d ≤ 2 * 2^F.fracBits)
+    {m : Runner.Mem} {pc fp : Runner.W} {K base dst top reserved : Nat}
+    {code : List II}
+    (inputs : FB ≤ base) (retained : base+5 ≤ dst) (room : top ≤ K)
+    (compiled : floatAddNormalOutputL dst
+      (fun j => some ([ci 2 j base 0], j+1))
+      (fun j => some ([ci 2 j (base+1) 0], j+1))
+      (fun j => some ([ci 2 j (base+2) 0], j+1))
+      (fun j => some ([ci 2 j (base+3) 0], j+1))
+      (fun j => some ([ci 2 j (base+4) 0], j+1)) (2^F.fracBits) = some (code,top))
+    (pre : Pre L m pc fp K dst code ρ W reserved)
+    (dstRoom : dst ≤ K)
+    (reads : ∀ (i : Nat), (hi : i < 5) → m.rd64 (slot fp (BitVec.ofNat 64 (base+i))) =
+      some (([BitVec.ofNat 64 (if sign then 2^(F.ebits+F.fracBits) else 0),
+        BitVec.ofNat 64 (E-F.emin+1).toNat, BitVec.ofNat 64 qn,
+        BitVec.ofNat 64 gn, BitVec.ofNat 64 (if rest = 0 then 0 else 1)] : List Runner.W)[i]'(by simpa only [List.length_cons, List.length_nil] using hi))) :
+    Ok m pc fp K dst code
+      (· = BitVec.ofNat 64 (zuBits F (rundeBruchKern F sign n d E))) := by
+  obtain ⟨env, envAt⟩ := frameWordEnv (L := L) (n := dst-FB) pre.frame (by omega)
+  have hp' : Pre L m pc fp K dst code env (fun _ => True) :=
+    ⟨by simp [frei, frameWordCtx]; omega, pre.small, pre.frame, pre.code,
+      pre.far, envAt, trivial, wstab_true _ _⟩
+  have loads : ∀ (i : Nat), (hi : i < 5) → WordCode (L := L) env (fun _ => True)
+      (fun j => some ([ci 2 j (base+i) 0], j+1))
+      (([BitVec.ofNat 64 (if sign then 2^(F.ebits+F.fracBits) else 0),
+        BitVec.ofNat 64 (E-F.emin+1).toNat, BitVec.ofNat 64 qn,
+        BitVec.ofNat 64 gn, BitVec.ofNat 64 (if rest = 0 then 0 else 1)] : List Runner.W)[i]'(by simpa only [List.length_cons, List.length_nil] using hi)) := by
+    intro i hi
+    have idx : base+i-FB < dst-FB := by omega
+    have slotEq : FB + (base+i-FB) = base+i := by omega
+    obtain ⟨w, hr, he⟩ := envAt _ (frameWordVar (dst-FB) (base+i-FB) idx)
+    rw [frameWordVar_slot, slotEq, reads i hi] at hr
+    cases hr
+    change _ = BitVec.ofInt 64 (env.get (frameWordVar (dst-FB) (base+i-FB) idx)).n at he
+    rw [he]
+    have slotEqInt : (FB : Int) + ((base+i-FB : Nat) : Int) = (base : Int) + i := by omega
+    intro fp' K' j c t hc ht mm pp hpre
+    apply frameWordLoad (L := L) (dst-FB) (base+i-FB) idx env
+      (by simpa only [slotEqInt] using hc) ht mm pp hpre
+  exact floatAddNormalOutputL_ok F sign n d qn gn rest den E
+    (by
+      intro fp' K' j c t hc ht mm pp hpre
+      exact loads 0 (by omega) hc ht mm pp hpre) (by
+      intro fp' K' j c t hc ht mm pp hpre
+      exact loads 1 (by omega) hc ht mm pp hpre)
+    (by
+      intro fp' K' j c t hc ht mm pp hpre
+      exact loads 2 (by omega) hc ht mm pp hpre) (by
+      intro fp' K' j c t hc ht mm pp hpre
+      exact loads 3 (by omega) hc ht mm pp hpre)
+    (by
+      intro fp' K' j c t hc ht mm pp hpre
+      exact loads 4 (by omega) hc ht mm pp hpre) hd hr hguard hquot hrem hden hp hf hlo hhi hu hm hex hb
+    compiled room m pc hp'
+
+#print axioms floatAddNormalOutputL_slots
 
 /-- At the largest finite exponent, carry produces infinity. The emitted
     exponent addition and zero fraction already give its canonical encoding. -/
