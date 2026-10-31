@@ -41,7 +41,10 @@ theorem handler_ok {L : Lay} (k : Nat) {y : X} (h : HPre L k y) : Match L (IR.op
   | 22 => exact h22_ok h
   | 23 => exact h23_ok h
   | 24 => exact h24_ok h
-  | k + 25 => exact bad_ok h rfl
+  | 25 => exact h25_ok h
+  | 26 => exact h26_ok h
+  | 27 => exact h27_ok h
+  | k + 28 => exact bad_ok h rfl
 
 theorem step_ok {L : Lay} (hI : CInv L) {t : IR.T} {x : X} (hD : Disp L t x) : Match L (IR.step t) x := by
   have h1 := step_code hD.code

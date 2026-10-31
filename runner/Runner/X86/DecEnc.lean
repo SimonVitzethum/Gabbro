@@ -35,7 +35,7 @@ macro "dec_enc" : tactic => `(tactic| (
   simp (disch := omega) only [ite_eq_left, ite_eq_right, ↓reduceIte, Option.getD_some, Option.map_some,
     byte_toNat, le32_val, Option.some.injEq, Prod.mk.injEq,
     Ins.ld.injEq, Ins.st.injEq, Ins.mov.injEq, Ins.movi.injEq, Ins.ldsx.injEq, Ins.ldzx.injEq, Ins.zx8.injEq,
-    Ins.lea.injEq, Ins.alu.injEq, Ins.alui.injEq, Ins.imul.injEq, Ins.idiv.injEq, Ins.shl.injEq, Ins.shr.injEq,
+    Ins.lea.injEq, Ins.alu.injEq, Ins.alui.injEq, Ins.imul.injEq, Ins.idiv.injEq, Ins.udiv.injEq, Ins.shl.injEq, Ins.shr.injEq,
     Ins.set.injEq, Ins.jmp.injEq, Ins.jcc.injEq, Ins.jmpm.injEq, Ins.cmpxchg.injEq, Addr.mk.injEq] <;>
   and_intros <;> first | exact Reg.ofNum_eq (by omega) | omega | trivial | rfl))
 
@@ -62,7 +62,7 @@ theorem decode_enc (i : Ins) (h : i.ok = true) (rest : List B) :
     have := Reg.num_lt d
     have := Reg.num_lt s
     dec_enc
-  | movi d v | idiv d | shl d | shr d =>
+  | movi d v | idiv d | udiv d | shl d | shr d =>
     have := Reg.num_lt d
     dec_enc
   | alu o d s =>

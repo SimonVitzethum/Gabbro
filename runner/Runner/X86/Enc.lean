@@ -37,7 +37,7 @@ def Alu.ext : Alu → Nat
   | .add => 0 | .or => 1 | .and => 4 | .sub => 5 | .xor => 6 | .cmp => 7 | .test => 8
 
 def Cond.cc : Cond → Nat
-  | .z => 4 | .nz => 5 | .s => 8 | .l => 12
+  | .z => 4 | .nz => 5 | .s => 8 | .l => 12 | .b => 2
 
 def enc : Ins → List B
   | .ld d m => memEnc 1 [byte 0x8B] d.num m
@@ -53,6 +53,7 @@ def enc : Ins → List B
   | .imul d s => regEnc 1 [byte 0x0F, byte 0xAF] d.num s.num
   | .cqo => [byte 0x48, byte 0x99]
   | .idiv s => regEnc 1 [byte 0xF7] 7 s.num
+  | .udiv s => regEnc 1 [byte 0xF7] 6 s.num
   | .shl d => regEnc 1 [byte 0xD3] 4 d.num
   | .shr d => regEnc 1 [byte 0xD3] 5 d.num
   | .set c d => regEnc 0 [byte 0x0F, byte (0x90 + c.cc)] 0 d.num

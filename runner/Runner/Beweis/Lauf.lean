@@ -129,6 +129,11 @@ theorem exec_rip {i : Ins} (hf : Fall i = true) (n : Nat) (x : X) :
     apply leaves_opt
     intro _
     simp only [Leaves, X.nof]
+  | udiv =>
+    simp only [exec, opt]
+    split
+    · trivial
+    · simp only [Leaves, set_rip, X.nof]
   | idiv =>
     simp only [exec]
     split

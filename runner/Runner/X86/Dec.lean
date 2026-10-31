@@ -24,7 +24,7 @@ def Alu.ofExt (n : Nat) : Option Alu :=
   else if n = 5 then some .sub else if n = 6 then some .xor else if n = 7 then some .cmp else none
 
 def Cond.ofCc : Nat → Option Cond
-  | 4 => some .z | 5 => some .nz | 8 => some .s | 12 => some .l | _ => none
+  | 4 => some .z | 5 => some .nz | 8 => some .s | 12 => some .l | 2 => some .b | _ => none
 
 /-- The operand of the ModRM byte at `p` under REX bits `r x b`: a register (`mod=11`, length 1) or a SIB memory
     operand (`mod=10 rm=100`, length 6); `g` is the reg field with REX.R. -/
@@ -59,7 +59,8 @@ def decW (l : List B) (o r x b : Nat) : Option (Ins × Nat) :=
     | 0x89 => some (.mov (Reg.ofNum rm) (Reg.ofNum g), n)
     | 0xC7 => if g % 8 = 0 then some (.movi (Reg.ofNum rm) (imm32 l n), n + 4) else none
     | 0x81 => (Alu.ofExt (g % 8)).map fun a => (.alui a (Reg.ofNum rm) (imm32 l n), n + 4)
-    | 0xF7 => if g % 8 = 7 then some (.idiv (Reg.ofNum rm), n) else none
+    | 0xF7 => if g % 8 = 7 then some (.idiv (Reg.ofNum rm), n)
+      else if g % 8 = 6 then some (.udiv (Reg.ofNum rm), n) else none
     | 0xD3 =>
       if g % 8 = 4 then some (.shl (Reg.ofNum rm), n)
       else if g % 8 = 5 then some (.shr (Reg.ofNum rm), n) else none

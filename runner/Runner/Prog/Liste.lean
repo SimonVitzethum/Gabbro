@@ -33,7 +33,7 @@ def _root_.Runner.X86.Alu.name : Alu → String
   | .add => "add" | .or => "or" | .and => "and" | .sub => "sub" | .xor => "xor" | .cmp => "cmp" | .test => "test"
 
 def _root_.Runner.X86.Cond.name : Cond → String
-  | .z => "e" | .nz => "ne" | .s => "s" | .l => "l"
+  | .z => "e" | .nz => "ne" | .s => "s" | .l => "l" | .b => "b"
 
 /-- One instruction at address `a` (jump targets as absolute addresses). -/
 def _root_.Runner.X86.Ins.show (a : Nat) : Ins → String
@@ -50,6 +50,7 @@ def _root_.Runner.X86.Ins.show (a : Nat) : Ins → String
   | .imul d s => s!"imul {d.name}, {s.name}"
   | .cqo => "cqo"
   | .idiv s => s!"idiv {s.name}"
+  | .udiv s => s!"div {s.name}"
   | .shl d => s!"shl {d.name}, cl"
   | .shr d => s!"shr {d.name}, cl"
   | .set c d => s!"set{c.name} {d.low}"
@@ -62,15 +63,16 @@ def _root_.Runner.X86.Ins.show (a : Nat) : Ins → String
 
 def opName : Nat → String
   | 1 => "const d k" | 2 => "mov d a" | 3 => "add d a b" | 4 => "sub d a b" | 5 => "mul d a b"
-  | 6 => "div d a b" | 7 => "rem d a b" | 8 => "and d a b" | 9 => "or d a b" | 10 => "xor d a b"
+  | 6 => "sdiv d a b" | 7 => "srem d a b" | 8 => "and d a b" | 9 => "or d a b" | 10 => "xor d a b"
   | 11 => "shl d a b" | 12 => "shr d a b" | 13 => "lt d a b" | 14 => "eq d a b" | 15 => "ld d a (d := M[a])"
   | 16 => "st a b (M[a] := b)" | 17 => "lea d a" | 18 => "jmp L" | 19 => "brz a L" | 20 => "call a k"
-  | 21 => "ret" | 22 => "cas d a e" | 23 => "sys d a" | 24 => "spawn d a (clone, a new OS thread)" | _ => ""
+  | 21 => "ret" | 22 => "cas d a e" | 23 => "sys d a" | 24 => "spawn d a (clone, a new OS thread)"
+  | 25 => "udiv d a b" | 26 => "urem d a b" | 27 => "ult d a b" | _ => ""
 
 /-- The labels of the listing: loader, handlers by opcode, `ud2`, table. -/
 def labelName (l : Nat) : Option String :=
   if l = LOADER then some "loader" else if l = BAD then some "bad" else if l = TABLE then some "table"
-  else if 1 ≤ l ∧ l ≤ 24 then some s!"op{l}:  ; {opName l}" else none
+  else if 1 ≤ l ∧ l ≤ 27 then some s!"op{l}:  ; {opName l}" else none
 
 def listing : String := Id.run do
   let mut s := "; the S0IR runner, x86-64, Intel syntax; written by `lake exe runner` from Runner/Prog/Code.lean\n"

@@ -11,7 +11,7 @@ A flag is `none` where the manual leaves it undefined or where the model does no
 `none` is `unk` (the model says nothing), so whatever the model does describe holds on every processor.
 
 * A memory access the memory refuses is a page fault: `fault` (the process dies, it has no handler).
-* `idiv` with a zero divisor or a quotient outside 64 bits is `#DE`: `fault`. `ud2` is `#UD`: `fault`.
+* `idiv`/`div` with a zero divisor or a quotient outside their signed/unsigned 64-bit range is `#DE`: `fault`. `ud2` is `#UD`: `fault`.
 * `syscall` hands the request to the kernel; after the answer `rax` holds the result, `rcx` the return address,
   `r11` what the kernel left there, and every other register is kept (the Linux system-call convention, a named
   assumption). The flags are not tracked across the call. -/
@@ -78,6 +78,7 @@ def ea (x : X) (m : Addr) : W :=
   | some i => x.get m.base + x.get i * BitVec.ofNat 64 (2 ^ m.sc) + sx32 m.disp
 
 def Cond.eval (x : X) : Cond → Option Bool
+  | .b => x.cf
   | .z => x.zf
   | .nz => x.zf.map (!·)
   | .s => x.sf
@@ -96,6 +97,15 @@ def aluStep (x : X) (o : Alu) (d : Reg) (b : W) : X :=
   | .cmp => x.cmpf a b
   | .test => { x with cf := some false, of := some false, zf := some (a &&& b == 0), sf := some (a &&& b).msb }
   | o => (x.set d (aluOp o a b)).nof
+
+/-- Unsigned 128-bit dividend division, including architectural #DE conditions. -/
+def udiv128 (hi lo divisor : W) : Option (W × W) :=
+  let dd := hi.toNat * 2 ^ 64 + lo.toNat
+  let dv := divisor.toNat
+  if dv = 0 then none else
+  let q := dd / dv
+  if 2 ^ 64 ≤ q then none else
+  some (BitVec.ofNat 64 q, BitVec.ofNat 64 (dd % dv))
 
 /-- One instruction of length `n` at `x.rip`. -/
 def exec (i : Ins) (n : Nat) (x : X) : Res X :=
@@ -121,6 +131,9 @@ def exec (i : Ins) (n : Nat) (x : X) : Res X :=
     let q := dd.tdiv dv
     if q < -2 ^ 63 ∨ 2 ^ 63 ≤ q then .fault else
     .next ((y.set .rax (BitVec.ofInt 64 q)).set .rdx (BitVec.ofInt 64 (dd.tmod dv))).nof
+  | .udiv s =>
+    opt (udiv128 x.rdx x.rax (x.get s)) fun qr =>
+      .next ((y.set .rax qr.1).set .rdx qr.2).nof
   | .shl d => .next (y.set d (x.get d <<< (x.rcx.toNat % 64))).nof
   | .shr d => .next (y.set d (x.get d >>> (x.rcx.toNat % 64))).nof
   | .set c d =>
