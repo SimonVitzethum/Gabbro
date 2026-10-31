@@ -982,7 +982,7 @@ theorem floatExactAddNormalize_ok_zeuge [Kern] {D : Deklaration} (L : Lay D)
       (WordCode.konst 0 (by decide)) hc (by decide +kernel) (by decide)
       hl (by decide +kernel) pre
   refine ⟨m', q, run, ?_⟩
-  norm_num [floatCoefficient, floatSumMagnitude] at result
+  norm_num [floatCoefficient, f64, floatSumMagnitude] at result
   exact result
 
 #print axioms floatExactAddNormalize_ok_zeuge
