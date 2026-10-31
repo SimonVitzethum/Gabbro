@@ -90,7 +90,9 @@ theorem floatCoefficient_exact_scale (a : GFloat) (h : a.bexp ≠ 2047) :
       floatCoefficient, hz, h, Int.add_comm]
 
 /-- Bounds on the actual source scale follow from the encoded finite input,
-    including zero. They are not assumptions on a normalization temporary. -/
+    including zero. The upper endpoint is 2046 - 1023 - 52; the lower
+    endpoint is shared by subnormals and the least normal exponent. These
+    bounds do not yet identify a normalization temporary with the source scale. -/
 theorem floatCoefficient_exact_bounds (a : GFloat)
     (ha : Gleitkomma.wf Gleitkomma.f64 a) (h : a.bexp ≠ 2047) :
     ∃ e, Gleitkomma.wertExakt Gleitkomma.f64 a = some ⟨floatCoefficient a, e⟩ ∧
