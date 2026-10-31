@@ -58,6 +58,24 @@ def floatRangeReject (lo hi : Int × Int) (x : GFloat) : Bool :=
   else decide (floatKey x < floatKey (bruch lo)) ||
     decide (floatKey (bruch hi) < floatKey x)
 
+/-- Emit the canonical outside flag. Unordered bounds reject without evaluating
+    the producer; all ordered bounds reuse the ordinary signed-key range code. -/
+def canonicalFloatRangeL (d : Nat) (lo hi : Int × Int)
+    (producer : Nat → Option (List Runner.IR.II × Nat)) :
+    Option (List Runner.IR.II × Nat) :=
+  if Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan then
+    some ([ci 1 d 1 0], d + 1)
+  else floatRangeL d lo hi producer
+
+/-- NaN bounds reject even when the child has no lowering. -/
+theorem canonicalFloatRangeL_nan (d : Nat) (lo hi : Int × Int)
+    (producer : Nat → Option (List Runner.IR.II × Nat))
+    (hn : Gleitkomma.klasse Gleitkomma.f64 (bruch lo) = .nan ∨
+      Gleitkomma.klasse Gleitkomma.f64 (bruch hi) = .nan) :
+    canonicalFloatRangeL d lo hi producer = some ([ci 1 d 1 0], d + 1) := by
+  simp [canonicalFloatRangeL, hn]
+
 /-- Exact rejection criterion for the source's range failure (Stop 107),
     including infinite, reversed and NaN bounds. -/
 theorem floatRangeReject_none {lo hi : Int × Int} {x : GFloat}
