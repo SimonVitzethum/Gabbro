@@ -242,3 +242,8 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.floatExponentL_canonical_zeuge
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero_zeuge
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.answer_sound
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.execute_sound
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_exit_zeuge
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.exact_cost_zeuge
+#print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_runner_zeuge
