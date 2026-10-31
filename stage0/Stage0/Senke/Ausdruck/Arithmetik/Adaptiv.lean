@@ -49,6 +49,112 @@ def floatNormalizeStepL (remainder : Bool) (dst : Nat)
       (wordL 5 (dst+1) (bit (dst+1)) (den (dst+2)))
   else wordL 3 dst (wordL 5 dst (q dst) (factor (dst+1))) (bit (dst+1))
 
+/-- Complete exact normalization with an explicit finite shift budget. The
+    third component counts transfers, so exponent adjustment is exact even
+    when normalization stops early. A zero target represents the format floor. -/
+def floatNormalize (fuel : Nat) (q r den target : Int) : Int × Int × Nat :=
+  match fuel with
+  | 0 => (q, r, 0)
+  | n+1 =>
+    if q < target then
+      let step := floatNormalizeStep q r den target
+      let next := floatNormalize n step.1 step.2 den target
+      (next.1, next.2.1, next.2.2+1)
+    else (q, r, 0)
+
+/-- Whole-iteration invariant: exact reconstruction, canonical remainder,
+    finite resource count, and either a normalized quotient or exhausted fuel.
+    The denominator has no machine-word restriction. -/
+theorem floatNormalize_invariant (fuel : Nat) (q r den target : Int)
+    (hq : 0 ≤ q) (hd : 0 < den) (hr : 0 ≤ r ∧ r < den) :
+    let out := floatNormalize fuel q r den target
+    0 ≤ out.1 ∧ 0 ≤ out.2.1 ∧ out.2.1 < den ∧
+      out.1 * den + out.2.1 = (q * den + r) * 2^out.2.2 ∧
+      out.2.2 ≤ fuel ∧ (target ≤ out.1 ∨ out.2.2 = fuel) := by
+  induction fuel generalizing q r with
+  | zero => simp [floatNormalize, hq, hr]
+  | succ n ih =>
+    by_cases h : q < target
+    · have hb := floatNormalizeStep_bounds q r den target hq hd hr
+      have hi := ih _ _ hb.1 ⟨hb.2.1, hb.2.2⟩
+      have he := floatNormalizeStep_exact q r den target
+      simp only [floatNormalizeActive, h, ↓reduceIte] at he
+      dsimp only at hi
+      simp only [floatNormalize, h, ↓reduceIte]
+      refine ⟨hi.1, hi.2.1, hi.2.2.1, ?_, by omega, ?_⟩
+      · rw [hi.2.2.2.1, he, pow_succ]
+        ring
+      · rcases hi.2.2.2.2.2 with ht | hn
+        · exact Or.inl ht
+        · exact Or.inr (by omega)
+    · simp [floatNormalize, h, hq, hr, show target ≤ q by omega]
+
+/-- A positive exact numerator reaches the target within the supplied bound.
+    This also covers q=0 and arbitrarily large exact denominators. -/
+theorem floatNormalize_complete (fuel : Nat) (q r den target : Int)
+    (hq : 0 ≤ q) (hd : 0 < den) (hr : 0 ≤ r ∧ r < den)
+    (hn : 0 < q * den + r) (hb : target * den ≤ 2^fuel) :
+    target ≤ (floatNormalize fuel q r den target).1 := by
+  have hi := floatNormalize_invariant fuel q r den target hq hd hr
+  dsimp only at hi
+  rcases hi.2.2.2.2.2 with ht | hs
+  · exact ht
+  · have he := hi.2.2.2.1
+    rw [hs] at he
+    have hp : (0 : Int) < 2^fuel := Int.pow_pos (by decide)
+    have hm : (2 : Int)^fuel ≤ (q * den + r) * 2^fuel := by
+      have hh := Int.mul_le_mul_of_nonneg_right (show 1 ≤ q*den+r by omega) (show 0 ≤ (2 : Int)^fuel by omega)
+      simpa using hh
+    have hl := hi.2.2.1
+    by_contra h
+    have hq' : (floatNormalize fuel q r den target).1 ≤ target-1 := by omega
+    have hu := Int.mul_le_mul_of_nonneg_right hq' (show 0 ≤ den by omega)
+    rw [Int.sub_mul, Int.one_mul] at hu
+    omega
+
+/-- The required fuel is derived from precision and denominator distance,
+    rather than an arbitrary fixed unrolling count. -/
+theorem floatNormalize_format_bound (precision distance : Nat) (q r den target : Int)
+    (hq : 0 ≤ q) (hd : 0 < den) (hr : 0 ≤ r ∧ r < den)
+    (hn : 0 < q * den + r)
+    (ht : 0 ≤ target ∧ target ≤ 2^precision) (hden : den ≤ 2^distance) :
+    target ≤ (floatNormalize (precision+distance) q r den target).1 := by
+  apply floatNormalize_complete _ _ _ _ _ hq hd hr hn
+  rw [pow_add]
+  exact Int.mul_le_mul ht.2 hden (by omega) (le_of_lt (Int.pow_pos (by decide)))
+
+/-- The actual iterated values are the unique Euclidean quotient and remainder
+    of the scaled numerator. This is the canonical interface for rounding;
+    no rounded or sticky surrogate appears in the reconstruction. -/
+theorem floatNormalize_canonical (fuel : Nat) (q r den target : Int)
+    (hq : 0 ≤ q) (hd : 0 < den) (hr : 0 ≤ r ∧ r < den) :
+    let out := floatNormalize fuel q r den target
+    let numerator := (q * den + r) * 2^out.2.2
+    numerator / den = out.1 ∧ numerator % den = out.2.1 := by
+  have hi := floatNormalize_invariant fuel q r den target hq hd hr
+  dsimp only at hi ⊢
+  rw [← hi.2.2.2.1]
+  constructor
+  · rw [Int.mul_add_ediv_right _ _ (by omega), Int.ediv_eq_zero_of_lt hi.2.1 hi.2.2.1]
+    omega
+  · simp [Int.add_emod, Int.emod_eq_of_lt hi.2.1 hi.2.2.1]
+
+/-- Joint whole-iteration witnesses: early stopping with exponent adjustment,
+    an exact subnormal floor, and completion across a binary64-sized distance. -/
+theorem floatNormalize_zeuge :
+    floatNormalize 20 0 13 16 8 = (13,0,4) ∧
+    floatNormalize 20 0 13 16 0 = (0,13,0) ∧
+    2^53 ≤ (floatNormalize (53+1074) 0 1 (2^1074) (2^53)).1 := by
+  refine ⟨by decide +kernel, by decide +kernel, ?_⟩
+  apply floatNormalize_format_bound 53 1074 <;> decide +kernel
+
+#print axioms floatNormalize_canonical
+#print axioms floatNormalize_zeuge
+
+#print axioms floatNormalize_invariant
+#print axioms floatNormalize_complete
+#print axioms floatNormalize_format_bound
+
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- The emitted adaptive step works under arbitrary word-code frames and
