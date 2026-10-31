@@ -887,3 +887,17 @@ Block constructor proofs. Separate output-stage proofs already exist, but they
 are not a complete finite-adder execution theorem. Add/sub remain refused and
 the computed `floatOf` hook is unchanged. No grammar semantics or goal theorem
 was changed.
+
+
+The actual finite candidate's literal rounding expression now has a retained-read
+execution theorem, `floatFiniteAddL_round_retained`. It derives both signed
+division by eight and the low-three-bit guard from one nonnegative signed-word
+read and executes the existing `floatGuardRoundL` with its actual constant-zero
+tail producer. Its result is `rundeInt (q / 8) (q % 8) 8`; frame, footprint and
+arbitrary reserved-prefix premises use the existing retained-context mechanism.
+A joint execution witness covers an odd halfway significand (44 rounds to 6).
+This adds no emitted code or alternate rounding algorithm. It does not show that
+the reached normalization word represents the original exact numerator: the
+actual right/left continuation, including its jam correction and the final
+carry/packing path, still needs execution and canonical IEEE correspondence.
+The isolated five-field pipeline is still not composed with the candidate.

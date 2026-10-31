@@ -3211,4 +3211,93 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_read_fields_align_zeuge
 
+/-- Execute the rounding expression used literally by the finite candidate.
+    This rounds the retained normalized word, not an independently supplied
+    quotient/guard/tail triple. Relating that word to the original exact
+    numerator remains the normalization continuation's obligation. -/
+theorem floatFiniteAddL_round_retained {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst input top reserved : Nat} {code : List II} (q : Int)
+    (range : 0 ≤ q ∧ q < 2^63)
+    (compiled : floatGuardRoundL dst
+      (fun j => wordK 6 j (some ([ci 2 j input 0],j+1)) 8)
+      (fun j => wordK 8 j (some ([ci 2 j input 0],j+1)) 7)
+      (fun j => some ([ci 1 j 0 0],j+1)) = some (code,top))
+    (room : top ≤ K) (dstRoom : dst ≤ K)
+    (lower : FB ≤ input) (retained : input < dst)
+    (read : m.rd64 (slot fp (BitVec.ofNat 64 input)) = some (BitVec.ofInt 64 q))
+    (pre : Pre L m pc fp K dst code ρ W reserved) :
+    Ok m pc fp K dst code
+      (· = BitVec.ofNat 64 (Gleitkomma.rundeInt (q/8).toNat (q%8).toNat 8)) := by
+  apply retainedWordCode_ok (BitVec.ofInt 64 q) _
+    (fun load j => floatGuardRoundL j
+      (fun k => wordK 6 k (load k) 8)
+      (fun k => wordK 8 k (load k) 7)
+      (fun k => some ([ci 1 k 0 0],k+1))) ?_ compiled room dstRoom lower retained read pre
+  intro Δ η load
+  have div := sdiv_w (a := q) (b := 8)
+    (by omega) (by omega) (by norm_num) (by norm_num) (by norm_num)
+  rw [Gabbro.Grammatik.Int.tdiv_eq_ediv_nonneg range.1] at div
+  have quotient : WordCode (L := L) η (fun _ => True)
+      (fun j => wordK 6 j (some ([ci 2 j input 0],j+1)) 8)
+      (BitVec.ofNat 64 (q/8).toNat) := by
+    have h : WordCode (L := L) η (fun _ => True) _ (BitVec.ofInt 64 (q/8)) := WordCode.bin load (WordCode.const 8 (by decide)) div
+      (rfl : op 6 = bin sdiv) (by decide : 6 < 256)
+    have eq : BitVec.ofInt 64 (q/8) = BitVec.ofNat 64 (q/8).toNat := by
+      rw [← BitVec.ofInt_natCast, Int.toNat_of_nonneg (Int.ediv_nonneg range.1 (by decide))]
+    rw [eq] at h
+    intro fp K j c t hc ht mm pp hp
+    exact h (by simpa [wordK, Nat.add_assoc] using hc) ht mm pp
+      (by simpa [wordK, Nat.add_assoc] using hp)
+  have guard : WordCode (L := L) η (fun _ => True)
+      (fun j => wordK 8 j (some ([ci 2 j input 0],j+1)) 7)
+      (BitVec.ofNat 64 (q%8).toNat) := by
+    have h : WordCode (L := L) η (fun _ => True) _ (BitVec.ofInt 64 q &&& 7) := WordCode.bin load (WordCode.const 7 (by decide))
+      (g := fun a b => some (a &&& b)) rfl rfl (by decide : 8 < 256)
+    have eq : BitVec.ofInt 64 q &&& 7 = BitVec.ofNat 64 (q%8).toNat := by
+      apply BitVec.eq_of_toNat_eq
+      rw [show (7 : Runner.W) = BitVec.ofNat 64 (2^3-1) from rfl,
+        BitVec.toNat_and, BitVec.toNat_ofNat]
+      simp only [show (2^3-1) % 2^64 = 7 from rfl]
+      rw [show 7 = 2^3-1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+      rw [BitVec.toNat_ofInt, Int.emod_eq_of_lt range.1 (by omega)]
+      rw [BitVec.toNat_ofNat, Int.toNat_emod range.1 (by decide)]
+      exact (Nat.mod_eq_of_lt (by omega)).symm
+    rw [eq] at h
+    intro fp K j c t hc ht mm pp hp
+    exact h (by simpa [wordK, Nat.add_assoc] using hc) ht mm pp
+      (by simpa [wordK, Nat.add_assoc] using hp)
+  have rounded : WordCode (L := L) η (fun _ => True) _
+      (BitVec.ofNat 64 (Gleitkomma.rundeInt (q/8).toNat ((q%8).toNat * 1 + 0) (8*1))) := floatGuardRoundL_ok (q/8).toNat (q%8).toNat 0 1
+    (by decide) (by decide) (by omega) quotient guard
+    (WordCode.const 0 (by decide))
+  intro fp K j c t hc ht mm pp hp
+  simpa using rounded hc ht mm pp hp
+
+#print axioms floatFiniteAddL_round_retained
+
+/-- An odd halfway significand is incremented by the actual retained-load
+    expression, with all execution premises shared in one frame. -/
+theorem floatFiniteAddL_round_retained_zeuge {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K reserved : Nat}
+    (read : m.rd64 (slot fp 23) = some 44)
+    (room : 40 ≤ K)
+    (pre : Pre L m pc fp K 32
+      ((floatGuardRoundL 32
+        (fun j => wordK 6 j (some ([ci 2 j 23 0],j+1)) 8)
+        (fun j => wordK 8 j (some ([ci 2 j 23 0],j+1)) 7)
+        (fun j => some ([ci 1 j 0 0],j+1))).getD ([],0)).1 ρ W reserved) :
+    Ok m pc fp K 32
+      ((floatGuardRoundL 32
+        (fun j => wordK 6 j (some ([ci 2 j 23 0],j+1)) 8)
+        (fun j => wordK 8 j (some ([ci 2 j 23 0],j+1)) 7)
+        (fun j => some ([ci 1 j 0 0],j+1))).getD ([],0)).1
+      (· = 6) := by
+  exact floatFiniteAddL_round_retained 44 (by decide) rfl
+    (by change 38 ≤ K; omega)
+    (by omega) (by decide) (by decide) read pre
+
+#print axioms floatFiniteAddL_round_retained_zeuge
+
 end Gabbro.Stage0.Senke
