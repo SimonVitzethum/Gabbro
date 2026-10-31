@@ -9,10 +9,10 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
-**RESUMED (2026-10-31).** The owner authorized seven rounds of two parallel implementation agents,
+**RESUMED (2026-10-31).** The owner authorized up to six parallel Sol 6.1 implementation agents,
 followed by one final integration/proof agent. Preserve existing worktrees, uncommitted changes and scratch. The checkpoint and fourteen
 complete work packages are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md). Fourteen lanes do not authorize fourteen
-simultaneous agents; the last staffing limit is two Sol 6.1 implementation agents. Root owns form-based
+simultaneous agents; the current staffing limit is six Sol 6.1 implementation agents. Root owns form-based
 coverage measurement and reviews; agents implement.
 
 

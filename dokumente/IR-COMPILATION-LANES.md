@@ -1,6 +1,6 @@
 # Gabbro-to-IR compilation lanes
 
-**RESUMED (2026-10-31).** The owner authorized seven rounds with exactly two parallel Sol 6.1
+**RESUMED (2026-10-31).** The owner authorized up to six parallel Sol 6.1
 implementation agents, each owning one lane, followed by one final integration/proof agent. Root coordinates
 interfaces, performs direct review and measures form coverage. Do not advance a round by declaring an
 incomplete lane complete.
@@ -44,6 +44,12 @@ unchanged broad suites in place of closing a connected translation case.
 
 ## Authorized seven-round schedule
 
+**Staffing update:** The owner increased concurrency to six implementation agents. The original round
+table remains the lane allocation; it no longer limits execution to two slots. IR-01 and IR-03 continue;
+IR-02, IR-04, IR-11 and IR-12 start on four additional slots. Shared ABI changes from IR-03 must be
+coordinated before consumers integrate; independent emitter/frontend work proceeds meanwhile. All Lean
+checks remain globally serialized. The single final integration/proof agent still follows lane completion.
+
 | Round | Agent A | Agent B |
 |---|---|---|
 | 1 | IR-01 frontend and type coverage | IR-03 shared value representation and ABI |
@@ -54,9 +60,9 @@ unchanged broad suites in place of closing a connected translation case.
 | 6 | IR-11 foreign calls and ASM bodies | IR-13 formats and generated constructs |
 | 7 | IR-12 profiles and images | IR-14 compiler integration |
 
-**Rolling two-agent execution.** Round numbers are an allocation, not synchronization barriers. As soon as
+**Rolling six-agent execution.** Round numbers are an allocation, not synchronization barriers. As soon as
 one agent completes its lane, start the next ready lane on that free slot while the other continues.
-Never wait for the other lane merely because it has the same round number. Keep at most two implementation
+Never wait for the other lane merely because it has the same round number. Keep at most six implementation
 agents active; only genuine interface dependencies may delay a particular successor. Integrate and check
 the prerequisites needed by that successor. Each lane must implement its real compiler
 path and connected generic proof, not merely produce an inventory or isolated helpers. Report unresolved
@@ -97,7 +103,7 @@ IR-02 work on stable interfaces; retain IR-04's existing continuation. Then clos
 IR-05/06/08/10. Arena/synchronization interfaces are agreed before their mutually dependent final integration
 (IR-07/09); this is an interface milestone, not permission for cyclic module imports. Foreign/profile work
 IR-11/12 and macro declarations IR-13 consume those primitives. IR-14 closes every interface against actual
-source lowering. These waves do not raise the two-agent or one-global-Lean-check limits.
+source lowering. These waves do not raise the six-agent or one-global-Lean-check limits.
 
 **Shared-file rule.** `Ausdruck.lean`, `Anweisung.lean`, the mutual `Satz.lean`, representation/ABI definitions,
 `Stage0.lean`, `Nachpruefung.lean` and `IRBild.lean` are integration surfaces. One writer owns a given surface
