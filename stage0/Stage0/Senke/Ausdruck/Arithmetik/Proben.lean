@@ -132,10 +132,17 @@ def outputImages : List (String × Except String (List Runner.B) × Nat) :=
      ("output-normal-negative", 2^63, 1023, 2^52, 5, 0, 0xbff0000000000001),
      ("output-max-finite", 0, 2046, 2^53-1, 3, 1, 0x7fefffffffffffff),
      ("output-overflow", 0, 2046, 2^53-1, 4, 0, 0x7ff0000000000000),
-     ("output-overflow-negative", 2^63, 2046, 2^53-1, 4, 1, 0xfff0000000000000)].map
+     ("output-overflow-negative", 2^63, 2046, 2^53-1, 4, 1, 0xfff0000000000000)].flatMap
       (fun (name, s, e, q, g, t, expected) =>
-        (name, FloatArithmeticProbe.wordImage
-          (floatAddNormalOutputL 8 (lit s) (lit e) (lit q) (lit g) (lit t) (2^52)) expected, 7))
+        let retained := do
+          let init ← floatStateSlotsL 8 [lit s, lit e, lit q, lit g, lit t]
+          let load := fun (i j : Nat) => some ([ci 2 j i 0], j+1)
+          let out ← floatAddNormalOutputL 13 (load 8) (load 9) (load 10)
+            (load 11) (load 12) (2^52)
+          pure (init.1 ++ out.1 ++ [ci 2 8 13 0], max init.2 out.2)
+        [(name, FloatArithmeticProbe.wordImage
+          (floatAddNormalOutputL 8 (lit s) (lit e) (lit q) (lit g) (lit t) (2^52)) expected, 7),
+         (name ++ "-retained-slots", FloatArithmeticProbe.wordImage retained expected, 7)])
   let tiny :=
     [("output-positive-zero", 0, 0, 0, 0, 0),
      ("output-negative-zero", 2^63, 0, 0, 0, 2^63),
@@ -151,7 +158,7 @@ def outputImages : List (String × Except String (List Runner.B) × Nat) :=
           (floatAddSubnormalOutputL 8 (lit s) (lit q) (lit g) (lit t)) expected, 7))
   normal ++ tiny
 
-theorem outputImages_zeuge : outputImages.length = 18 ∧
+theorem outputImages_zeuge : outputImages.length = 27 ∧
     outputImages.all (fun x => x.2.1.isOk) = true := by
   decide +kernel
 
