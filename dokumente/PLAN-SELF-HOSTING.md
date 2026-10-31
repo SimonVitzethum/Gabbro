@@ -232,7 +232,15 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   `passes` bounds semantic loop attempts. Neither counts emitted S0IR instructions.
   `Schleifen/Counted.lean` counts canonical `Runner.IR.step` executions exactly,
   erases to `Star`, and composes segment counts, including callees and nested loops.
-  The generic instruction bound for actual `foreverCode` is still OPEN: invariant,
+  `Schleifen/CountedLoop.lean` connects instruction counting to the real counter
+  test, decrement and backedge, with a local counted body contract. Its inhabited
+  `whole_loop_zeuge` instance uses the emitted `foreverCode` with a true invariant
+  and empty body: arbitrary representable remaining fuel costs at most `6 * fuel + 1`
+  instructions from the live header to the budget-stop entry. Initialization and
+  the terminal stop are outside this bound. No unrolling or CPU latency claim is
+  involved. General declaration-derived callee bounds, hardware assumptions and
+  propagation through all accepted statement families remain OPEN.
+  The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
   body/callee, header, backedge and exit bounds must be connected to the lowering
   simulation and then related to the source budget. `forever_runtime` alone proves
   uncounted simulation. A finite count or a fixture's result is not that bound.
