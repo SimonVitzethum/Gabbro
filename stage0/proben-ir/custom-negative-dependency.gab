@@ -1,0 +1,7 @@
+// Original canonical ranges and ordered negative bindings reach actual runtime elaboration.
+module custom_negative_dependency {
+type Small = i8 in -10 .. 100;
+const NEGATIVE : Small = 0 - 1;
+const ANSWER : Small = NEGATIVE + 43;
+impl fn main() -> Small effects { pure } { return ANSWER; }
+}

@@ -1,0 +1,8 @@
+// Preserve the signed minimum and each negative dependency through canonical exact-range syntax.
+module negative_alias_min {
+type Signed = i8;
+const MINIMUM : Signed = 0 - 127 - 1;
+const NEGATIVE : Signed = MINIMUM + 127;
+const ANSWER : Signed = NEGATIVE + 43;
+impl fn main() -> Signed effects { pure } { return ANSWER; }
+}

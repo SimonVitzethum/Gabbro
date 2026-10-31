@@ -5,6 +5,8 @@ import Stage0.Senke.Ausdruck.Arithmetik.Interval
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
+set_option maxHeartbeats 1000000
+
 variable [Kern] {D : Deklaration}
 
 /-- Evaluate once, preserve the value, and dispatch on the outside flag. -/
@@ -16,8 +18,8 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {ce cx cr : List II} {te : Nat} {σ : World D} {ρ : Env D Γ}
     {out : Ausgang (vertragVon D f) l Γ}
     (he : lowE L (reserved := reserved) e (frei Γ reserved) = some (ce, te)) (hte : te ≤ Ks)
-    (hw : inW low high = true) (hl : lit32 low' = true) (hh : lit32 high' = true)
-    (hd : frei Γ reserved + 3 ≤ Ks)
+    (hw : inW low high = true) (hl : inW low' low' = true) (hh : inW high' high' = true)
+    (hd : frei Γ reserved + 4 ≤ Ks)
     (hs : 16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
@@ -51,9 +53,9 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have hw1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
   have hx := inW_spec hw (eval σ e σ ρ).lo_le (eval σ e σ ρ).le_hi
   have hlW : -2^63 ≤ low' ∧ low' < 2^63 := by
-    simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at hl; omega
+    simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at hl; omega
   have hhW : -2^63 ≤ high' ∧ high' < 2^63 := by
-    simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at hh; omega
+    simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at hh; omega
   have hsim : Sim L P f σ0 ρ0 rp cfp fp lo K pr
       ⟨pc + BitVec.ofNat 64 (16 * ce.length), fp⟩ m1
       (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 *
@@ -76,7 +78,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     · intro hpc
       obtain ⟨m2, s2, a2, w2, r2, hen2⟩ := eng_test_ok
         { hpc with ctx := by have := hp.ctx; omega }
-        (by simp only [engTest, wordConstant, hl, hh, ↓reduceIte]; omega) rfl (by decide) r1
+        (by have := (engTest_top 13 (frei Γ reserved) low' high').2; omega) rfl (by decide) r1
       refine ⟨m2, s2, a2, w2, r2, ?_⟩
       simp only [Enc] at hen
       subst w

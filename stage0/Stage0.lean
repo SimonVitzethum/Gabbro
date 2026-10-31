@@ -1,4 +1,6 @@
 import Stage0.IRBild
+import Stage0.SourceWitness
+import Stage0.ArrayWitness
 import Stage0.Senke.Ausdruck
 import Stage0.Senke.Hilfe
 import Stage0.Senke.Ausdruck.Sim

@@ -1,0 +1,7 @@
+// An unrelated unsupported target must not affect the selected Linux image.
+module target_unused_metal {
+impl fn main() -> u64 in 0 .. 100 effects { pure } { return 42; }
+target bare abi metal arch x86_64 { }
+target host abi linux arch x86_64 { }
+target host;
+}

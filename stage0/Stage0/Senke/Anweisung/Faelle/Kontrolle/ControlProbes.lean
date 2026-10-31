@@ -92,9 +92,71 @@ theorem blockAxiomElse_case_zeuge :
     (blockImageOf (gateBlock 99 (by decide) (by decide))).isOk = true := by
   decide +kernel
 
+/-- Both terminating and ordinary blocks accept signed-word boundaries that
+    cannot be encoded in one instruction immediate. The continuation is nonempty. -/
+def wideNarrowEnd : Endblock D (vertragVon D entry) false [] [] :=
+  .narrow (.lit 7) (-2^63) (2^63-1) (retN 41 (by decide) (by decide))
+    (retN 7 (by decide) (by decide))
+
+theorem wideNarrow_case_zeuge :
+    (imageOf wideNarrowEnd).isOk = true ∧
+    (blockImageOf (.narrow (.lit 7) (-4294967296) 4294967296
+      (retN 41 (by decide) (by decide)) .nil)).isOk = true := by
+  decide +kernel
+
 /-- The value never fits an unrepresentable source interval or bound. -/
 theorem narrow_refused_zeuge :
     lowEnd 1 (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0) (narrowEnd (2^63)) = none := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.ControlProbe
+
+namespace Gabbro.Stage0.Senke
+
+/-- Both materialization branches occur on jointly representable word counts. -/
+theorem travCountC_zeuge :
+    travCountSize 10 = 1 ∧ travCountSize 4294967296 = 17 ∧
+    (travCountC 6 10).length = 1 ∧
+    (travCountC 6 4294967296).length = 17 := by
+  decide +kernel
+
+end Gabbro.Stage0.Senke
+
+namespace Gabbro.Stage0.Senke.WideTraverseProbe
+open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
+  Gabbro.Grammatik.Parser.UebersetzeAllg Runner.IR
+
+/-- The canonical model permits a fieldless table; source export currently refuses it. -/
+def u : UProg := { ControlProbe.u with
+  tabs := [{name := "logical", count := 4294967296, cols := []}] }
+abbrev D := declOf u
+abbrev entry : D.Fn := ⟨0, by decide⟩
+abbrev table : D.Tab := ⟨0, by decide⟩
+
+def body : Endblock D (vertragVon D entry) false [] [] :=
+  .cons (.traverse table .tru (.cons (.leave rfl) .nil))
+    (.ret (.val (.widen (by decide) (by decide) (.lit 17))) (.refl []))
+
+def program : Programm D where
+  invariante _ := .tru
+  requires _ := .tru
+  ensures _ := .tru
+  rumpf f := by
+    obtain ⟨f, hf⟩ := f
+    have hz : f = 0 := by change f < 1 at hf; omega
+    subst f
+    exact body
+
+/-- Zero storage does not replace the declared traversal count with zero. -/
+theorem fieldless_table_layout_zeuge :
+    D.count table = 4294967296 ∧ tabSz u table = 0 ∧ IsEmpty (D.Feld table) := by
+  exact ⟨rfl, (fieldless_table_layout u table rfl).2⟩
+
+/-- A real image witness for the generic wide traversal case. This does not
+    claim the missing empty-table source exporter has been implemented. -/
+theorem traverse_wide_image_zeuge :
+    (bild 1 program (layU u (fun _ => none)) [entry] Fin.val
+      (fun _ => "main") entry [] 1024).isOk = true := by
+  decide +kernel
+
+end Gabbro.Stage0.Senke.WideTraverseProbe
