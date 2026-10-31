@@ -202,8 +202,12 @@ arbitrary unsigned quotient, with a modular word result. This is not yet a compl
 `floatMagnitudeL` now extracts the unsigned magnitude with generic IR simulation, including `-2^63`.
 Pure input-code composition is shared with rounding. `floatRoundShiftL` rounds an unsigned magnitude after
 a right shift of 0–62 bits, with generic IR simulation against `rundeInt` and G's normal-path `normQ`.
-It retains the full remainder and allows a carry out of the significand. Dynamic `floatOf` still needs
-exponent discovery, left scaling, packing and block simulation. `floatShiftJamL` aligns an unsigned word with
+It retains the full remainder and allows a carry out of the significand. Computed binary64 `floatOf`
+now uses `computedFloatOfE` through the actual `lowB` hook for signed-64-bit source intervals.
+The canonical range producer, Stop 107 and binding continuation are connected to
+`blockFloatOfComputed_case` and the mutual statement/block/end-block soundness proof.
+The existing literal path continues to support arbitrary `Int` constants. Unsupported computed
+intervals remain refused. The conversion and range simulations retain arbitrary reserved prefixes. `floatShiftJamL` aligns an unsigned word with
 generic IR simulation: discarded bits become a sticky low bit, exactly the nonzero remainder modulo
 the alignment power. Counts at least 64 saturate, including counts with the sign bit set, despite the
 IR's masked shifts. `add/sub` still need the full guard/sticky alignment argument against G, cancellation,

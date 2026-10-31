@@ -1,5 +1,5 @@
 /- Arithmetic foundations: executable rounding and literal-conversion images.
-   General conversion and float arithmetic remain outside the accepted fragment. -/
+   Computed binary64 conversion is connected to the block hook; float arithmetic remains refused. -/
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 import Stage0.Senke.Ausdruck.Gleit.RundCode
 import Stage0.Senke.Ausdruck.Gleit.Betrag
@@ -21,6 +21,25 @@ def conversion (n : Int) (expected lo hi : Int × Int) : Body :=
         (.flle (.var .here) (.var (.there .here))))
       (returnBlock 7 (by decide) (by decide))
       (returnBlock 41 (by decide) (by decide))) .nil))
+
+/-- Exercise conversion through the user-facing Block hook with a bound child. -/
+def hookConversion (n : Int) (expected lo hi : Int × Int) : Body :=
+  .bind (.add (.lit n) (.lit 0))
+    (.floatOf (.var .here) lo hi (.floatLit expected lo hi
+      (.cons (.ite
+        (.and (.flle (.var (.there .here)) (.var .here))
+          (.flle (.var .here) (.var (.there .here))))
+        (returnBlock 7 (by decide) (by decide))
+        (returnBlock 41 (by decide) (by decide))) .nil)))
+
+def hookImages : List (String × Except String (List Runner.B) × Nat) :=
+  [("hook-float-positive", blockImageOf (hookConversion 37 (37, 1) (0, 1) (100, 1)), 7),
+   ("hook-float-negative", blockImageOf (hookConversion (-37) (-37, 1) (-100, 1) (0, 1)), 7),
+   ("hook-float-zero", blockImageOf (hookConversion 0 (0, 1) (0, 1) (0, 1)), 7),
+   ("hook-float-lower", blockImageOf (hookConversion 37 (37, 1) (38, 1) (100, 1)), 107),
+   ("hook-float-upper", blockImageOf (hookConversion 37 (37, 1) (0, 1) (36, 1)), 107),
+   ("hook-float-nan", blockImageOf (hookConversion 37 (37, 1) (0, 0) (100, 1)), 107),
+   ("hook-float-reversed", blockImageOf (hookConversion 37 (37, 1) (100, 1) (0, 1)), 107)]
 
 /-- Test the actual shared fragment, including its scratch-slot placement.
     Equality to the expected word returns 7; a mismatch returns 41. -/
@@ -84,7 +103,7 @@ theorem computedSamples_bits : computedSamples.all (fun (f, z, bits) =>
   decide +kernel
 
 /-- Execute the emitted conversion, including a real integer-producing child.
-    This bypasses the still-refused block hook only for testing the proved fragment. -/
+    These format-specific fragment probes complement the binary64 block-hook probes. -/
 def computedImage (f : Gleitkomma.Format) (z : Int) (expected : Nat) :
     Except String (List Runner.B) :=
   wordImage (computedFloatOfL f 8
