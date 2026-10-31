@@ -147,6 +147,11 @@ def konstWL : Nat → Nat → Nat → List II × Nat
       ([ci 1 (d + 1) 65536 0], d + 2))
       ([ci 1 (d + 1) (n % 65536) 0], d + 2)
 
+/-- One scalar word, retaining the single-instruction path for small constants. -/
+def wordConstant (d : Nat) (n : Int) : List II × Nat :=
+  if lit32 n then ([ci 1 d n 0], d + 1)
+  else konstWL 4 (BitVec.ofInt 64 n).toNat d
+
 /-- Signed magnitude key: strip the sign, multiply by `1 - 2 * sign`.
     The two supplied operand codes evaluate the same pure expression at `d` and `d+3`. -/
 def floatKeyL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
@@ -279,8 +284,7 @@ mutual
 /-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ τ) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
   match Γ, τ, e, d with
-  | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1)
-    else if scalarFits n n then some (konstWL 4 (BitVec.ofInt 64 n).toNat d) else none
+  | _, _, .lit n, d => if scalarFits n n then some (wordConstant d n) else none
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
   | _, τ, .var x, d => if aggregateFits τ then some (copyWords 1 d (vslot x reserved), d + 1) else none

@@ -15,7 +15,20 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 @[lowE_eqs] theorem lowE_lit (n : Int) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.lit n) d =
     (if lit32 n then some ([ci 1 d n 0], d + 1)
-     else if scalarFits n n then some (konstWL 4 (BitVec.ofInt 64 n).toNat d) else none) := rfl
+     else if scalarFits n n then some (konstWL 4 (BitVec.ofInt 64 n).toNat d) else none)  := by
+  change (if scalarFits n n then some (wordConstant d n) else none) = _
+  by_cases small : lit32 n = true
+  · have bounds : -2 ^ 31 ≤ n ∧ n < 2 ^ 31 := by
+      simpa only [lit32, Bool.and_eq_true, decide_eq_true_eq] using small
+    have fits : scalarFits n n = true := by
+      unfold scalarFits
+      apply Bool.or_eq_true_iff.mpr
+      left
+      simp only [inW, Bool.and_eq_true, decide_eq_true_eq]
+      omega
+    simp only [wordConstant, small, fits, ↓reduceIte]
+  · simp only [wordConstant, small, ↓reduceIte]
+    split <;> rfl
 
 /-- Every representable signed64 literal is accepted, for any environment and layout. -/
 theorem lowE_signed64 (n : Int) (hn : inW n n = true) :
