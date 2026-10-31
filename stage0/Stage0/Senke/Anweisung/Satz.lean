@@ -271,7 +271,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       have jumpLiteral : lit32 (-(16 * (cc.1.length + cb.length + 7 : Nat) : Int)) = true := by
         simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
         omega
-      apply Sim.prefix hlo initRun initFrame keeps
+      apply Sim.prefix hlo initRun.forget initFrame keeps
       simp only [execStmt]
       apply forever_counter_loop (O := O) (cb := cb) (tb := tb)
         (stop := (16 * (cc.1.length + cb.length + 8) : Nat))

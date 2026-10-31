@@ -73,7 +73,7 @@ theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny w
 /-- Initialization in front of the real source-derived store/call body preserves
     both enclosing sentinels and reconstructs its full entry contract. -/
 theorem reserved_literal_entry_zeuge [Kern] :
-    ∃ m', Runner.IR.Star ⟨2032, 4096⟩ memory ⟨2048, 4096⟩ m' ∧
+    ∃ m', Counted 1 ⟨2032, 4096⟩ memory ⟨2048, 4096⟩ m' ∧
       AgreeW callLayout 4096 4 256 memory m' ∧
       PreS callLayout m' 2048 4096 256 8 code (Env.nil : Env D []) 4 ∧
       Umf callLayout addresses target 2 m' 4096 128 256 ∧
@@ -105,7 +105,7 @@ theorem reserved_literal_entry_zeuge [Kern] :
 /-- Both initializations precede the same real store/call body, with two
     protected sentinels and a nonzero reservation. -/
 theorem forever_initialize_entry_zeuge [Kern] :
-    ∃ m', Star ⟨2016, 4096⟩ memory ⟨2048, 4096⟩ m' ∧
+    ∃ m', Counted 2 ⟨2016, 4096⟩ memory ⟨2048, 4096⟩ m' ∧
       AgreeW callLayout 4096 4 256 memory m' ∧
       PreS callLayout m' 2048 4096 256 8 code (Env.nil : Env D []) 4 ∧
       Umf callLayout addresses target 2 m' 4096 128 256 ∧

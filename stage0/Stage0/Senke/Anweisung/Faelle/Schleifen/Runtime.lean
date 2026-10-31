@@ -1,5 +1,6 @@
 /- Runtime loop edges consume the actual block simulation and its world-aware frame. -/
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
 import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Anweisung.Verzweigung
 import Stage0.Senke.Anweisung.Faelle.Kontext
@@ -15,18 +16,18 @@ theorem counter_initialize {m : Mem} {pc fp : W} {K counter budget : Nat}
     (code : CodeAt m pc (foreverCounterInit counter (budget : Int)))
     (frame : FrameOK m fp K) (inside : counter < K)
     (small : K < 2 ^ 31) (fuel : budget < 2 ^ 31) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧
+    ∃ m', Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 budget) := by
   have literal : lit32 (budget : Int) = true := by
     simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
     omega
-  have run := const_step code frame inside small literal
+  have run := const_step_counted code frame inside small literal
   refine ⟨_, run, ?_⟩
   rw [BitVec.ofInt_natCast]
   exact rd64_write_same (frame.rd counter inside)
 
 /-- Execute a literal in the reserved prefix and retain the complete body-entry
-interface. Unlike initialization by a bare `Star`, this transports the lexical
+interface with exactly one completed S0IR instruction. This transports the lexical
 locals, callee availability, entry snapshot, world and enclosing sentinels. -/
 theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     {f : D.Fn} {Γ : Ctx} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
@@ -41,13 +42,13 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     (allocated : cell < FB + reserved) (bound : frei Γ reserved ≤ K)
     (literal : lit32 value = true)
     (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ cell) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+    ∃ m', Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' (pc + 16) fp K (frei Γ reserved) code ρ reserved ∧
       Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 cell)) = some (BitVec.ofInt 64 value) := by
   have inside : cell < K := by unfold frei at bound; omega
-  have run := const_step (codeAt_left pre.code) pre.frame inside pre.small literal
+  have run := const_step_counted (codeAt_left pre.code) pre.frame inside pre.small literal
   obtain ⟨write, stored, frame⟩ := wr_slot pre.frame inside (BitVec.ofInt 64 value)
   have allFrame := frame.mono low
   have env := (reserved_write_preserves (L := L) (j := cell - FB)
@@ -66,7 +67,7 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     exact Mem.rd64_write_far (slot_far pre.frame.room inside (hprotected j hj).1
       (Ne.symm (hprotected j hj).2))
 
-/-- Both emitted initialization instructions preserve the complete source entry.
+/-- Exactly two emitted initialization instructions preserve the complete source entry.
     The second write protects the freshly initialized counter as well as the
     enclosing sentinels; neither value is supplied as a runtime assumption. -/
 theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
@@ -85,7 +86,7 @@ theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     (distinct : counter ≠ one) (bound : frei Γ reserved ≤ K)
     (fuel : budget < 2 ^ 31)
     (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ counter ∧ j ≠ one) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + 32, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
+    ∃ m', Counted 2 ⟨pc, fp⟩ m ⟨pc + 32, fp⟩ m' ∧ AgreeW L fp lo K m m' ∧
       PreS L m' (pc + 32) fp K (frei Γ reserved) code ρ reserved ∧
       Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
