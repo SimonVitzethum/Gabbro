@@ -256,6 +256,14 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   the actual store opcode; the recursive tail receives the updated world. A loaded
   three-instruction witness changes a global function pointer. Other world-store
   forms, calls, branch outcomes and nested loops still require recursive cost rules.
+  `EndCost.sound` now integrates normal returns into the recursive terminal
+  certificate, alongside reason returns, assignment and binding. Original
+  parameter environments and the saved snapshot survive recursive prefixes;
+  normal returns derive their count from the result expression and actual
+  `lowEns` certificate, including result and status ABI writes. A loaded
+  nine-instruction witness combines binding, assignment and normal return.
+  Full `lowFun` entry/relocation composition, recursive branching and calls,
+  `BlockCost.call`, and nested-forever instantiation remain OPEN.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,
