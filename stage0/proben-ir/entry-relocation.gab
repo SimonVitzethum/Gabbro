@@ -1,0 +1,24 @@
+// Function-entry relocation keeps parameters for ensures and six live locals across a call.
+module ir_entry_relocation {
+impl fn identity(x : u32 in 0 .. 100) -> u32 in 0 .. 100
+    effects { pure } ensures result == x
+{
+    return x;
+}
+impl fn combine(x : u32 in 0 .. 100, y : u32 in 0 .. 100) -> u32 in 0 .. 1000
+    effects { pure } ensures result == x + y + 47
+{
+    let a = x;
+    let b = y;
+    let c = 1;
+    let d = 2;
+    let sentinel = 40;
+    let extra = 4;
+    let called = identity(0);
+    return a + b + c + d + sentinel + extra + called;
+}
+impl fn main() -> u32 in 0 .. 1000 effects { pure } {
+    let answer = combine(10, 20);
+    return answer;
+}
+}
