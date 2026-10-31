@@ -49,6 +49,49 @@ def scaleImage (a k expected : Nat) : Except String (List Runner.B) :=
   wordImage (floatRoundShiftL 8 (fun d => some (konstWL 4 a d))
     (fun d => some (konstWL 4 k d))) expected
 
+/-- Expected words are explicit IEEE encodings, independently obtained by rounding
+    the integer significand to 24/53 bits with ties to even, then packing sign,
+    biased exponent and fraction. The kernel also checks agreement with ofInt. -/
+def computedSamples : List (Gleitkomma.Format × Int × Nat) :=
+  [
+    (Gleitkomma.f32, 0, 0),
+    (Gleitkomma.f32, 37, 1108606976),
+    (Gleitkomma.f32, -37, 3256090624),
+    (Gleitkomma.f32, -9223372036854775808, 3741319168),
+    (Gleitkomma.f32, 9223372036854775807, 1593835520),
+    (Gleitkomma.f32, 16777217, 1266679808),
+    (Gleitkomma.f32, 33554431, 1275068416),
+    (Gleitkomma.f32, 8388608, 1258291200),
+    (Gleitkomma.f32, 9007199254740993, 1509949440),
+    (Gleitkomma.f32, 18014398509481983, 1518338048),
+    (Gleitkomma.f32, 4503599627370496, 1501560832),
+    (Gleitkomma.f64, 0, 0),
+    (Gleitkomma.f64, 37, 4630404104378646528),
+    (Gleitkomma.f64, -37, 13853776141233422336),
+    (Gleitkomma.f64, -9223372036854775808, 14114281232179134464),
+    (Gleitkomma.f64, 9223372036854775807, 4890909195324358656),
+    (Gleitkomma.f64, 16777217, 4715268810125344768),
+    (Gleitkomma.f64, 33554431, 4719772409215844352),
+    (Gleitkomma.f64, 8388608, 4710765210229538816),
+    (Gleitkomma.f64, 9007199254740993, 4845873199050653696),
+    (Gleitkomma.f64, 18014398509481983, 4850376798678024192),
+    (Gleitkomma.f64, 4503599627370496, 4841369599423283200)]
+
+theorem computedSamples_bits : computedSamples.all (fun (f, z, bits) =>
+    decide (Gleitkomma.zuBits f (Gleitkomma.ofInt f z) = bits)) = true := by
+  decide +kernel
+
+/-- Execute the emitted conversion, including a real integer-producing child.
+    This bypasses the still-refused block hook only for testing the proved fragment. -/
+def computedImage (f : Gleitkomma.Format) (z : Int) (expected : Nat) :
+    Except String (List Runner.B) :=
+  wordImage (computedFloatOfL f 8
+    (fun d => some (konstWL 4 (BitVec.ofInt 64 z).toNat d))) expected
+
+def computedImages : List (String × Except String (List Runner.B) × Nat) :=
+  computedSamples.zipIdx |>.map fun ((f, z, expected), i) =>
+    (s!"computed-float-{i}", computedImage f z expected, 7)
+
 def images : List (String × Except String (List Runner.B) × Nat) :=
   [("scale-zero", scaleImage 0 0 0, 7),
    ("scale-full-word", scaleImage (2^64 - 1) 0 (2^64 - 1), 7),
