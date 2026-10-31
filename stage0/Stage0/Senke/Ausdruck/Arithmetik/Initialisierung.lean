@@ -3042,6 +3042,14 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
             ((sx = sy ∨ ex = ey) →
               (if sx == sy then q+jam else q-jam) ≠ 0 →
               0 < (if sx == sy then q+jam else q-jam).toInt) ∧
+            (∀ (x y : Gleitkomma.GBits F), F.dicht →
+              F.ebits + F.fracBits + 1 ≤ 64 → F.fracBits ≤ 52 → 1 < F.bexpMax →
+              Gleitkomma.wf F x → Gleitkomma.wf F y →
+              x.bexp ≠ F.bexpMax → y.bexp ≠ F.bexpMax →
+              wa = BitVec.ofNat 64 (Gleitkomma.zuBits F x) →
+              wb = BitVec.ofNat 64 (Gleitkomma.zuBits F y) →
+              (if sx == sy then q+jam else q-jam) ≠ 0 →
+              0 < (if sx == sy then q+jam else q-jam).toInt) ∧
             ∃ source : Runner.W,
               out.rd64 (slot fp (BitVec.ofNat 64 (dst+8))) = some source ∧
               let den : Int := (2^(ex-ey).toNat : Nat)
@@ -3366,8 +3374,8 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
       split
       · rw [BitVec.toInt_add, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
       · rw [BitVec.toInt_sub, iq, ij, Int.bmod_eq_of_le (by omega) (by omega)]
-    -- Positivity is derived from the executed words, including cancellation at
-    -- equal exponents. Unequal-exponent subtraction still needs normal bounds.
+    -- Equal signs and equal exponents use only the retained word bounds.
+    -- Canonical decoded inputs below also discharge unequal-exponent subtraction.
     have positiveResult : (vs (dst+3) = vs (dst+4) ∨ vs (dst+5) = vs (dst+6)) →
         (if vs (dst+3) == vs (dst+4) then
           vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)) ≠ 0 →
@@ -3398,8 +3406,74 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
         rw [jr] at nz ⊢
         by_cases hs : vs (dst+3) = vs (dst+4) <;>
           simp [hs] at nz ⊢ <;> omega
+    have canonicalPositive : ∀ (x y : Gleitkomma.GBits F), F.dicht →
+        F.ebits + F.fracBits + 1 ≤ 64 → F.fracBits ≤ 52 → 1 < F.bexpMax →
+        Gleitkomma.wf F x → Gleitkomma.wf F y →
+        x.bexp ≠ F.bexpMax → y.bexp ≠ F.bexpMax →
+        wa = BitVec.ofNat 64 (Gleitkomma.zuBits F x) →
+        wb = BitVec.ofNat 64 (Gleitkomma.zuBits F y) →
+        (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)) ≠ 0 →
+        0 < (if vs (dst+3) == vs (dst+4) then
+          vs (dst+7)+vs (dst+16) else vs (dst+7)-vs (dst+16)).toInt := by
+      intro x y dense wide precision expmax hx hy fx fy ax ay nz
+      by_cases same : vs (dst+3) = vs (dst+4)
+      · exact positiveResult (Or.inl same) nz
+      by_cases equal : vs (dst+5) = vs (dst+6)
+      · exact positiveResult (Or.inr equal) nz
+      have eqx : vs (dst+5) = ex := Option.some.inj
+        ((vreads _ (by omega)).symm.trans ((keep _ (by omega)).trans rx))
+      have eqy : vs (dst+6) = ey := Option.some.inj
+        ((vreads _ (by omega)).symm.trans ((keep _ (by omega)).trans ry))
+      have eqq : vs (dst+7) = q := Option.some.inj
+        ((vreads _ (by omega)).symm.trans ((keep _ (by omega)).trans rq))
+      have expcap : F.bexpMax < 2^63 := by
+        have cap := Nat.pow_le_pow_right (by decide : 1 ≤ (2 : Nat))
+          (show F.ebits ≤ 63 by omega)
+        have hd := dense
+        unfold Gleitkomma.Format.dicht at hd
+        omega
+      have order : (vs (dst+6)).toNat < (vs (dst+5)).toNat := by
+        have ix : ex.toInt = (ex.toNat : Int) :=
+          BitVec.toInt_eq_toNat_of_lt (by rw [← eqx]; omega)
+        have iy : ey.toInt = (ey.toNat : Int) :=
+          BitVec.toInt_eq_toNat_of_lt (by rw [← eqy]; omega)
+        have ne : (vs (dst+5)).toNat ≠ (vs (dst+6)).toNat := by
+          intro h
+          exact equal (BitVec.eq_of_toNat_eq h)
+        have dom := dominance.1
+        rw [ix,iy,← eqx,← eqy] at dom
+        omega
+      have selected (i : Nat) (hi : i = dst+5 ∨ i = dst+6 ∨ i = dst+7 ∨ i = dst+8) :=
+        Option.some.inj ((vreads i (by rcases hi with rfl | rfl | rfl | rfl <;> omega)).symm.trans
+          ((keep i (by rcases hi with rfl | rfl | rfl | rfl <;> omega)).trans
+            (sorted i (by rcases hi with rfl | rfl | rfl | rfl <;> omega))))
+      have s5 := selected (dst+5) (by omega)
+      have s6 := selected (dst+6) (by omega)
+      have s7 := selected (dst+7) (by omega)
+      have s8 := selected (dst+8) (by omega)
+      have jamEq : vs (dst+16) =
+          floatShiftJamWord (vs (dst+8)) (vs (dst+5)-vs (dst+6)) := by
+        rw [jeq,req,eqx,eqy]
+      simp only [same, beq_iff_eq, ↓reduceIte]
+      rw [jamEq]
+      by_cases swap : ((values (dst+5)).slt (values (dst+6)) ||
+        ((values (dst+5) == values (dst+6)) && (values (dst+7)).slt (values (dst+8)))) = true
+      · simp only [swap, ↓reduceIte] at s5 s6 s7 s8
+        simp [h5,h6,h7,h8] at s5 s6 s7 s8
+        rw [s5,s6] at order
+        rw [s5,s6,s7,s8]
+        simpa [finiteAddRemainingValue,ax,ay] using
+          (finiteAddRemainingValue_unequal_positive F dense wide precision expmax
+            y x hy hx fy fx (by simpa [finiteAddRemainingValue,ax,ay] using order))
+      · simp only [swap, ↓reduceIte] at s5 s6 s7 s8
+        simp [h5,h6,h7,h8] at s5 s6 s7 s8
+        rw [s5,s6] at order
+        rw [s5,s6,s7,s8]
+        simpa [ax,ay] using (finiteAddRemainingValue_unequal_positive F dense wide precision expmax
+          x y hx hy fx fy (by simpa [ax,ay] using order))
     refine ⟨vs (dst+5),vs (dst+6),?_,?_,bx.1,bx.2,byy.1,byy.2,bq,bj,
-      resultBounds.1,resultBounds.2,positiveResult, r, (keep _ (by omega)).trans rr, ?_⟩
+      resultBounds.1,resultBounds.2,positiveResult,canonicalPositive, r, (keep _ (by omega)).trans rr, ?_⟩
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
         (vreads _ (by omega))
     · exact slotRead_agree finalPre.frame signedAgree (by omega) (by omega)
@@ -3538,6 +3612,14 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
             -2^57 < (if sx == sy then q+jam else q-jam).toInt ∧
             (if sx == sy then q+jam else q-jam).toInt < 2^57 ∧
             ((sx = sy ∨ ex = ey) →
+              (if sx == sy then q+jam else q-jam) ≠ 0 →
+              0 < (if sx == sy then q+jam else q-jam).toInt) ∧
+            (∀ (x y : Gleitkomma.GBits F), F.dicht →
+              F.ebits + F.fracBits + 1 ≤ 64 → F.fracBits ≤ 52 → 1 < F.bexpMax →
+              Gleitkomma.wf F x → Gleitkomma.wf F y →
+              x.bexp ≠ F.bexpMax → y.bexp ≠ F.bexpMax →
+              7 = BitVec.ofNat 64 (Gleitkomma.zuBits F x) →
+              11 = BitVec.ofNat 64 (Gleitkomma.zuBits F y) →
               (if sx == sy then q+jam else q-jam) ≠ 0 →
               0 < (if sx == sy then q+jam else q-jam).toInt) ∧
             ∃ source : Runner.W,
