@@ -1,0 +1,7 @@
+// The canonical nested constant evaluator receives original alias-typed function signatures.
+module alias_const_array {
+type Small = u8;
+const fn identity(x : Small) -> Small effects { pure } { return x; }
+const VALUES : [Small; 1] = [identity(42)];
+impl fn main() -> Small effects { pure } { return VALUES[0]; }
+}

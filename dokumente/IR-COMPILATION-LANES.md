@@ -449,3 +449,24 @@ Remaining limits include alias ranges requiring constants unavailable to the ini
 alias preparation, unsupported const-function bodies/logical contracts, non-scalar constant
 adapters and the remaining form inventory. Translator/ordinary-record canonical prerequisites
 remain separate. IR-01 is incomplete; this step removes one real custom-range restriction.
+
+### IR-01 certified functions in canonical constant arrays
+
+`elabWithScopes` now accepts an optional function scope, defaulting to the exact frozen
+`uKonstFns (uOhneSenken (uMembers items))` expression. Its all-old-input `elabU_scopes` equality
+remains `rfl`, including errors and gates. Actual Compiler explicitly supplies the original
+source-derived Scopes.functions to the existing canonical `uKonstArrays` call. This removes the
+second builtin-only signature extraction that prevented alias-typed const calls in array leaves.
+No array evaluator or storage semantics is added. `Scopes.functionMeaning` derives every supplied
+function's original body, safe clauses and exact canonical signature ranges; the whole-source
+CanonicalSourceProgram theorem explicitly retains that generic fact and the identical actual
+function list passed to canonical elaboration. Source SafeHull still guards nested rows first.
+
+`canonical_array_functions_zeuge` proves the canonical array result with a source-derived alias
+signature, and the failure of the former builtin-only extraction on the same leaf. Actual
+`alias-const-array` source compiles through irBild to an ASM result 42. This measured case has one
+element, fitting existing lowering; wider aggregate transport remains IR-03's responsibility.
+The contracted nested-array call still refuses explicitly. Changed Environments, Elaboration,
+Compiler, IRBild and concrete SourceWitness checks are green; six relevant generic/witness audits
+use the standard three axioms. This remains a conservative scoped elaboration extension, not an
+equality claim between new supplied scopes and the incomplete old scopes for newly supported syntax.

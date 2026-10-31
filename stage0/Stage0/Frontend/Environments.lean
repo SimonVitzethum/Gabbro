@@ -278,6 +278,13 @@ structure Scopes (original : List SItemTief) where
   functionOrigin : functions = constantFunctions declared original
   scalarValues : typedConstants declared functions original [] = some values
 
+/-- Every function supplied to canonical scalar or nested-array evaluation retains its original
+    body, pure/nonlogical clauses and exact canonical source signature. -/
+theorem Scopes.functionMeaning {items : List SItemTief} (scope : Scopes items) :
+    ∀ fn ∈ scope.functions, ∃ item ∈ items, FunctionMeaning scope.declared item fn := by
+  rw [scope.functionOrigin]
+  exact constantFunctions_sound _ _
+
 /-- The exact full name/type scope the canonical phase body consumes. -/
 def Scopes.types {original : List SItemTief} (scope : Scopes original) : List (String × (Int × Int)) :=
   scope.declared ++ scope.values.map (fun c => (c.1, (c.2, c.2)))

@@ -7,7 +7,8 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
     scopes. Every check and canonical elaborator is retained. elabU_scopes below makes drift a
     kernel error; factoring here is necessary while the grammar package cannot be rebuilt. -/
 def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
-    (alias : List (String × (Int × Int))) : Except String UProg :=
+    (alias : List (String × (Int × Int)))
+    (functions : List UKonstFn := uKonstFns (uOhneSenken (uMembers items))) : Except String UProg :=
   let ms0 := uMembers items
   match uRestFehler ms0 with
   | .error e => .error e
@@ -87,7 +88,7 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
   match uSeq (fnItems.map (fun (s, b) =>
       elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
-        (uKonstArrays alias (uKonstFns ms) consts ms))) with
+        (uKonstArrays alias functions consts ms))) with
   | .error e => .error e
   | .ok fns =>
   match uWurzeln tabs fns ms with
@@ -125,13 +126,26 @@ theorem elabU_scopes (items : List SItemTief) :
 theorem elabWithScopes_collector_redundant (original runtime : List SItemTief)
     (h : EnvironmentCompatible original (normalizeAliases original))
     (result : DerivedScopes original) (hr : deriveScopes original = .ok result) :
-    elabWithScopes runtime result.scope.values result.scope.types =
+    elabWithScopes runtime result.scope.values result.scope.types result.scope.functions =
       elabWithScopes runtime
         (scopes original (normalizeAliases original) (normalize_environments original h)).values
-        (scopes original (normalizeAliases original) (normalize_environments original h)).types := by
+        (scopes original (normalizeAliases original) (normalize_environments original h)).types
+        (scopes original (normalizeAliases original) (normalize_environments original h)).functions := by
   obtain ⟨old, he, hs⟩ := deriveScopes_of_compatible original h
   have same : result = old := Except.ok.inj (hr.symm.trans he)
   subst result
   rw [hs]
+
+/-- The canonical array evaluator accepts the source-derived alias signature; the old builtin-only
+    extractor cannot evaluate this same leaf. No array semantics is duplicated by the adapter. -/
+theorem canonical_array_functions_zeuge :
+    let items := [SItemTief.fnT
+        ⟨"const", "identity", [("x", .atom "Small")], some (.atom "Small"), none, []⟩
+        (.block [] (some (.ret (some (.variable "x"))))),
+      .constT "VALUES" (.array (.atom "Small") (.lit 1)) (.rows [.one (.call "identity" [.lit 42])])]
+    uKonstArrays [("Small", (0, 100))] (constantFunctions [("Small", (0, 100))] items) [] items =
+      [("VALUES", .typed (.arr (.int 0 100) 1) (.arrCons (.lit 42) .arrNil))] ∧
+    uKonstArrays [("Small", (0, 100))] (uKonstFns items) [] items = [] := by
+  decide +kernel
 
 end Gabbro.Stage0.Frontend
