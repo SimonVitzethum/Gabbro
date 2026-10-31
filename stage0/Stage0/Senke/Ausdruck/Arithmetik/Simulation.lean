@@ -480,6 +480,74 @@ theorem floatNormalizeLoopL_active_dispatch
 
 #print axioms floatNormalizeLoopL_active_dispatch
 
+set_option maxHeartbeats 800000 in
+/-- Execute the first real instruction of either transfer branch. The large
+    path loads the doubling factor; the small path loads the denominator seed.
+    Both continuations preserve the complete head before changing state. -/
+theorem floatNormalizeLoopL_transfer_entry
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}
+    (head : FloatNormalizeHead L ρ W pc fp K base reserved code origin
+      originDistance budget target m fuel count distance q r)
+    (room : base+6 < K) (large : Bool) :
+    ∃ m', Star ⟨pc+(if large then 96 else 352), fp⟩ m ⟨pc+(if large then 112 else 368), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      FloatNormalizeHead L ρ W pc fp K base reserved code origin
+        originDistance budget target m' fuel count distance q r ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (base+6))) = some (if large then 2 else 1) := by
+  have h := head.pre
+  let index : Nat := if large then 6 else 22
+  let value : Int := if large then 2 else 1
+  have shape : index < code.length ∧ code[index]? = some (ci 1 (base+6) value 0) := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    cases large <;> norm_num [index, value, bin2]
+  have entry : code[index] = ci 1 (base+6) value 0 := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2
+  have ins := h.code index shape.1
+  rw [entry] at ins
+  have singleton : CodeAt m (pc+(if large then 96 else 352)) [ci 1 (base+6) value 0] := by
+    intro i hi
+    have iz : i = 0 := by simpa using hi
+    subst i
+    cases large <;> simpa [ci, index] using ins
+  let next := write m (slot fp (BitVec.ofNat 64 (base+6))) 8 (BitVec.ofInt 64 value).toNat
+  have ag : Agree fp (base+6) K m next := agree_write h.frame.room (by omega) room (BitVec.ofInt 64 value).toNat
+  have run : Star ⟨pc+(if large then 96 else 352), fp⟩ m ⟨pc+(if large then 112 else 368), fp⟩ next := by
+    have hi := singleton 0 (by simp)
+    simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+    have run : Run (step ⟨pc+(if large then 96 else 352), fp⟩) m ⟨pc+(if large then 96 else 352)+16, fp⟩ next := by
+      refine run_step hi (by decide) ?_
+      simp only [op]
+      refine f2_run (t := ⟨pc+(if large then 96 else 352), fp⟩) hi ?_
+      simp only [ret1]
+      refine f1_run (t := ⟨pc+(if large then 96 else 352), fp⟩) hi ?_
+      have sx6 : sx (II.f ((base : Int)+6)) = BitVec.ofNat 64 (base+6) := by
+        exact_mod_cast (sx_nat (d := base+6) (by have := h.small; omega))
+      rw [sx_lit (by cases large <;> decide : lit32 value = true), sx6]
+      exact run_wr64 (wr64_some (h.frame.wr (base+6) room))
+    exact Star.one (by cases large <;> simpa [BitVec.add_assoc] using run)
+  have preNext : Pre L next pc fp K base code ρ W reserved :=
+    ⟨h.ctx, h.small, h.frame.agree ag, h.code.agree ag h.far, h.far,
+      envAt_agree h.env ag h.frame (by have := h.ctx; omega) (by omega),
+      h.wstab m next h.welt (ag.mono (by omega)), h.wstab⟩
+  refine ⟨next, run, ag.mono (by omega), ?_, ?_⟩
+  · have reads (i : Nat) (hi : i < base+6) := agree_rd_low ag h.frame.room hi (by omega)
+    exact { head with pre := preNext
+                      readQ := by rw [reads base (by omega)]; exact head.readQ
+                      readR := by rw [reads (base+1) (by omega)]; exact head.readR
+                      readDistance := by rw [reads (base+2) (by omega)]; exact head.readDistance
+                      readTarget := by rw [reads (base+3) (by omega)]; exact head.readTarget
+                      readFuel := by rw [reads (base+4) (by omega)]; exact head.readFuel
+                      readCount := by rw [reads (base+5) (by omega)]; exact head.readCount }
+  · change (write m (slot fp (BitVec.ofNat 64 (base+6))) 8 (BitVec.ofInt 64 value).toNat).rd64 _ = _
+    simp only [Runner.Mem.rd64, write_rd, h.frame.rd (base+6) room, ↓reduceIte,
+      le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+    cases large <;> rfl
+
+#print axioms floatNormalizeLoopL_transfer_entry
+
 /-- Central induction, with the complete active iteration still explicit.
     The target exit is discharged by actual emitted execution above.
     The iteration premise is not an implementation of the missing proof.
