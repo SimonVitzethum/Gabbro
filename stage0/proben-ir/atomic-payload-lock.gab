@@ -1,0 +1,15 @@
+// The exact declared payload survives publish and acquire under its ordinary guard.
+module ir_atomic_payload_lock {
+static mut payload : u32 in 0 .. 42 = 0;
+atomic flag : bool publishes { payload };
+lock L protects { payload } rank 0 held <= 100 ops;
+impl fn main() -> u32 in 0 .. 42
+    effects { reads payload, writes payload, reads flag, writes flag, locks L }
+{
+    let mut answer : u32 in 0 .. 42 = 0;
+    locks L { payload = 42; flag = true publishes { payload }; }
+    let ready = flag awaits { payload };
+    locks L { answer = payload; }
+    return answer;
+}
+}

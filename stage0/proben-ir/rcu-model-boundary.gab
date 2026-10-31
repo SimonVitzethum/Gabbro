@@ -1,0 +1,6 @@
+// A parsed RCU declaration must refuse until its canonical elaboration exists.
+module ir_rcu_model_boundary {
+table data count 1 { slot { value : u32, } }
+rcu R protects { data };
+impl fn main() -> u32 { return 0; }
+}
