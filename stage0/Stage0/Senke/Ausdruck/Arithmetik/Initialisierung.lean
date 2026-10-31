@@ -3574,4 +3574,81 @@ theorem floatFiniteAddL_left_body_zeuge {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_left_body_zeuge
 
+/-- Exact reconstruction at the actual left-loop head. The signed jam
+    correction scales with the emitted doubling; the exponent records that scale. -/
+structure FiniteLeftInvariant (numerator den correction initialExponent : Int)
+    (steps : Nat) (q ex : Int) : Prop where
+  positive : 0 < q
+  bounded : q < 2^57
+  exponent : 1 ≤ ex
+  exponentBound : ex < 2^63
+  scale : ex + steps = initialExponent
+  exactValue : numerator * 2^steps = q*den + correction * 2^steps
+
+/-- Preservation uses the actual body arithmetic, including its correction.
+    The left condition supplies the tighter bound before doubling. -/
+theorem FiniteLeftInvariant.step
+    {n d c e q ex : Int} {steps : Nat}
+    (inv : FiniteLeftInvariant n d c e steps q ex)
+    (guard : q < 2^56) (running : 1 < ex) :
+    FiniteLeftInvariant n d c e (steps+1) (2*q) (ex-1) ∧
+      (ex-1).toNat < ex.toNat := by
+  constructor
+  · refine ⟨by have := inv.positive; omega, by omega, by omega,
+      by have := inv.exponentBound; omega, ?_, ?_⟩
+    · push_cast
+      have := inv.scale
+      omega
+    · rw [pow_succ]
+      have h := congrArg (fun x : Int => x*2) inv.exactValue
+      nlinarith
+  · omega
+
+/-- One reached Runner state carries execution, frame, both updated reads,
+    exact reconstruction and the decreasing loop measure together. This is
+    the literal left body, without asserting execution of its back edge. -/
+theorem floatFiniteAddL_left_body_invariant {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} {m : Runner.Mem} {pc fp : Runner.W}
+    {K dst reserved steps : Nat} {n d c e q ex : Int} (tail : List II)
+    (inv : FiniteLeftInvariant n d c e steps q ex)
+    (guard : q < 2^56) (running : 1 < ex)
+    (room : dst+10 < K)
+    (rq : m.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some (BitVec.ofInt 64 q))
+    (re : m.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some (BitVec.ofInt 64 ex))
+    (pre : Pre L m pc fp K (dst+5)
+      ([ci 1 (dst+10) 2 0, ci 5 (dst+7) (dst+7) (dst+10),
+        ci 1 (dst+10) 1 0, ci 4 (dst+5) (dst+5) (dst+10)] ++ tail) ρ W reserved) :
+    ∃ out, Star ⟨pc,fp⟩ m ⟨pc+64,fp⟩ out ∧
+      Agree fp (dst+5) K m out ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+7))) = some (BitVec.ofInt 64 (2*q)) ∧
+      out.rd64 (slot fp (BitVec.ofNat 64 (dst+5))) = some (BitVec.ofInt 64 (ex-1)) ∧
+      Pre L out (pc+64) fp K (dst+5) tail ρ W reserved ∧
+      FiniteLeftInvariant n d c e (steps+1) (2*q) (ex-1) ∧
+      (ex-1).toNat < ex.toNat := by
+  obtain ⟨out,run,agree,readQ,readE,next⟩ :=
+    floatFiniteAddL_left_body tail room rq re pre
+  have arithmetic := floatFiniteAddL_left_body_exact q ex d 0 (q*d)
+    (by have := inv.positive; omega) guard running inv.exponentBound (by ring)
+  have eqQ : BitVec.ofInt 64 q * 2 = BitVec.ofInt 64 (2*q) := by
+    rw [← arithmetic.1, BitVec.ofInt_toInt]
+  have eqE : BitVec.ofInt 64 ex - 1 = BitVec.ofInt 64 (ex-1) := by
+    rw [← arithmetic.2.1, BitVec.ofInt_toInt]
+  rw [eqQ] at readQ
+  rw [eqE] at readE
+  exact ⟨out,run,agree,readQ,readE,next,inv.step guard running⟩
+
+/-- A negative jam correction and a nonzero mantissa satisfy all invariant
+    fields jointly, and remain so after an actual body's arithmetic. -/
+theorem finiteLeftInvariant_zeuge :
+    FiniteLeftInvariant 205 16 (-3) 4 0 13 4 ∧
+    FiniteLeftInvariant 205 16 (-3) 4 1 26 3 ∧
+    (3 : Int).toNat < (4 : Int).toNat := by
+  have initial : FiniteLeftInvariant 205 16 (-3) 4 0 13 4 := by
+    constructor <;> norm_num
+  exact ⟨initial, initial.step (by norm_num) (by norm_num)⟩
+
+#print axioms FiniteLeftInvariant.step
+#print axioms floatFiniteAddL_left_body_invariant
+#print axioms finiteLeftInvariant_zeuge
+
 end Gabbro.Stage0.Senke
