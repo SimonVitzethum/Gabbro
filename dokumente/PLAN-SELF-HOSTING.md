@@ -818,6 +818,28 @@ boundaries include precision 24 at distance 149, precision 53 at distance 1074,
 and precision 60 at distance zero. The executed round/pack continuation remains
 open.
 
+The central `floatFiniteAddL_read_fields_align` execution theorem now carries
+an exact signed alignment equation from the reached exponent, significand,
+sign and jam slot reads. Its correction is the discarded remainder minus the
+sticky increment times the denominator, multiplied by the reached smaller
+operand's sign. The same f32/f64 execution witness checks the stronger result.
+This does not execute the subsequent signed add/sub instructions.
+
+Concrete composition goals at this boundary are:
+1. Transfer `floatFiniteAdd_ordered_input_bounds` through the joint decoded
+   field correspondence and the executed SORT permutation; establish that the
+   word exponent difference equals the bounded natural exponent difference.
+2. Execute the signed add/sub and zero dispatch from the retained sign and jam
+   reads, deriving the magnitude and the signed fractional correction together.
+   Preserve that correction through cancellation; a jammed integer difference
+   alone is not the exact source numerator.
+3. Construct the normalization head from those actual writes, carry its exact
+   reconstruction through the actual loop exit, then execute guard/sticky and
+   RoundPack to canonical IEEE bits, including zero and subnormal boundaries.
+4. Only for that whole execution, discharge resources, arbitrary reserved
+   prefixes, budget/cost and Range107/Block integration. The cost API is being
+   handled separately; the computed `floatOf` hook remains unchanged.
+
 Remaining finite-adder gaps: derive every initial head bound and state read from
 the actual format/operand alignment and magnitude producers; compose the actual
 loop exit with guard/sticky selection and IEEE round/pack (normal, top-exponent

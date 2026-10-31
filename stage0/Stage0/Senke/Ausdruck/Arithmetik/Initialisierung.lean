@@ -2518,6 +2518,10 @@ theorem floatFiniteAddL_align_execute_zeuge {Γ : Ctx} {ρ : Env D Γ}
 
 #print axioms floatFiniteAddL_align_execute_zeuge
 
+/-- Execute decoding, SORT and alignment in the actual compiled candidate.
+    The retained sorted reads determine both signs and the exact signed
+    remainder correction; no internally correct alignment state is assumed.
+    The continuation starts before signed add/sub and normalization. -/
 theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} (F : Gleitkomma.Format) (dst : Nat)
     (a b : Nat → Option (List II × Nat)) (wa wb : Runner.W)
@@ -2578,7 +2582,19 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
         out.rd64 (slot fp (BitVec.ofNat 64 (dst+8))) = some r ∧
         ey.toInt ≤ ex.toInt ∧ (ey = ex → r.toInt ≤ q.toInt) ∧
         out.rd64 (slot fp (BitVec.ofNat 64 (dst+16))) =
-          some (floatShiftJamWord r (ex-ey))) ∧
+          some (floatShiftJamWord r (ex-ey)) ∧
+        ∃ sx sy jam : Runner.W,
+          out.rd64 (slot fp (BitVec.ofNat 64 (dst+3))) = some sx ∧
+          out.rd64 (slot fp (BitVec.ofNat 64 (dst+4))) = some sy ∧
+          out.rd64 (slot fp (BitVec.ofNat 64 (dst+16))) = some jam ∧
+          let signX : Int := if sx = 0 then 1 else -1
+          let signY : Int := if sy = 0 then 1 else -1
+          let denominator : Int := (2^(ex-ey).toNat : Nat)
+          let quotient : Int := (r.toNat / 2^(ex-ey).toNat : Nat)
+          let remainder : Int := (r.toNat % 2^(ex-ey).toNat : Nat)
+          (signX*(q.toNat : Int) + signY*(jam.toNat : Int))*denominator +
+            signY*(remainder - ((jam.toNat : Int)-quotient)*denominator) =
+            signX*(q.toNat : Int)*denominator + signY*(r.toNat : Int)) ∧
       Pre L out (pc+BitVec.ofNat 64 (16*executed.length)+256+BitVec.ofNat 64 (16*aligned.length))
         fp K (dst+17) continuation ρ W reserved := by
   obtain ⟨executed,fieldTail,before,hcode,run,ag,ra,rb,rsx,rsy,fields,rest,it,hi⟩ :=
@@ -2657,9 +2673,20 @@ theorem floatFiniteAddL_read_fields_align {Γ : Ctx} {ρ : Env D Γ}
   · intro i hi
     rw [keep i hi]
     exact sorted i hi
-  · exact ⟨ex,ey,q,r,(keep _ (by omega)).trans rx,(keep _ (by omega)).trans ry,
+  · refine ⟨ex,ey,q,r,(keep _ (by omega)).trans rx,(keep _ (by omega)).trans ry,
       (keep _ (by omega)).trans rq,(keep _ (by omega)).trans rr,
-      dominance.1,dominance.2,jammed⟩
+      dominance.1,dominance.2,jammed,?_⟩
+    let sx := (final.rd64 (slot fp (BitVec.ofNat 64 (dst+3)))).getD 0
+    let sy := (final.rd64 (slot fp (BitVec.ofNat 64 (dst+4)))).getD 0
+    have signRead (i : Nat) (hi : i < K) :
+        final.rd64 (slot fp (BitVec.ofNat 64 i)) =
+          some ((final.rd64 (slot fp (BitVec.ofNat 64 i))).getD 0) := by
+      have hr := finalPre.frame.rd i hi
+      simp only [Runner.Mem.rd64, hr, ↓reduceIte, Option.getD_some]
+    refine ⟨sx,sy,floatShiftJamWord r (ex-ey),signRead _ (by omega),
+      signRead _ (by omega),jammed,?_⟩
+    exact floatShiftJamWord_signed_exact r (ex-ey) (q.toNat : Int)
+      (if sx = 0 then 1 else -1) (if sy = 0 then 1 else -1)
 
 #print axioms floatFiniteAddL_read_fields_align
 
@@ -2718,7 +2745,19 @@ theorem floatFiniteAddL_read_fields_align_zeuge {Γ : Ctx} {ρ : Env D Γ}
         out.rd64 (slot fp (BitVec.ofNat 64 (16+8))) = some r ∧
         ey.toInt ≤ ex.toInt ∧ (ey = ex → r.toInt ≤ q.toInt) ∧
         out.rd64 (slot fp (BitVec.ofNat 64 (16+16))) =
-          some (floatShiftJamWord r (ex-ey))) ∧
+          some (floatShiftJamWord r (ex-ey)) ∧
+        ∃ sx sy jam : Runner.W,
+          out.rd64 (slot fp (BitVec.ofNat 64 (16+3))) = some sx ∧
+          out.rd64 (slot fp (BitVec.ofNat 64 (16+4))) = some sy ∧
+          out.rd64 (slot fp (BitVec.ofNat 64 (16+16))) = some jam ∧
+          let signX : Int := if sx = 0 then 1 else -1
+          let signY : Int := if sy = 0 then 1 else -1
+          let denominator : Int := (2^(ex-ey).toNat : Nat)
+          let quotient : Int := (r.toNat / 2^(ex-ey).toNat : Nat)
+          let remainder : Int := (r.toNat % 2^(ex-ey).toNat : Nat)
+          (signX*(q.toNat : Int) + signY*(jam.toNat : Int))*denominator +
+            signY*(remainder - ((jam.toNat : Int)-quotient)*denominator) =
+            signX*(q.toNat : Int)*denominator + signY*(r.toNat : Int)) ∧
       Pre L out (pc+BitVec.ofNat 64 (16*executed.length)+256+BitVec.ofNat 64 (16*aligned.length))
         fp K (16+17) continuation ρ W 13 := by
   apply floatFiniteAddL_read_fields_align F 16
