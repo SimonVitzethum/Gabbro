@@ -313,6 +313,123 @@ theorem CountedReach.forget {n Γ fp lo K pr t m e σ ρ reserved}
   obtain ⟨m', run, rest⟩ := h
   exact ⟨m', run.forget, rest⟩
 
+/-- A counted pending hardware request; no hardware completion is asserted. -/
+def CountedStops (n : Nat) (t : T) (m : Mem) (c : Nat) : Prop :=
+  ∃ t' m' q, Counted n t m t' m' ∧ StopAt t' m' q ∧
+    q.nr = 231 ∧ q.a1 = BitVec.ofNat 64 c
+
+theorem CountedStops.forget {n t m c} (h : CountedStops n t m c) : Stops t m c := by
+  obtain ⟨t', m', q, run, rest⟩ := h
+  exact ⟨t', m', q, run.forget, rest⟩
+
+/-- Return costs use the caller endpoint and the canonical return ABI. -/
+def CountedRetZ (n : Nat) (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
+    (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
+  if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
+  then CountedStops n t m 102
+  else ∃ m', Counted n t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
+    (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' fp (D.params f).length true) ∧ WeltAt m' L σ'
+
+def CountedRetWhy (n : Nat) (L : Lay D) (f : D.Fn) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
+    (t : T) (m : Runner.Mem) (σ : World D) (r : Fin (D.gruende f)) : Prop :=
+  ∃ m', Counted n t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
+    m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 r.val) ∧
+    ReturnFlag m' fp (D.params f).length false ∧ WeltAt m' L σ
+
+def CountedSim (n : Nat) (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp : Runner.W)
+    {l : Bool} {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (pr : List Nat) (t : T) (m : Runner.Mem) (e eL eN : Runner.W) (o : Ausgang (vertragVon D f) l Γ) (reserved : Nat := 0) : Prop :=
+  match o with
+  | .ok σ' ρ' => CountedReach n L fp lo K pr t m e σ' ρ' reserved
+  | .leave _ σ' ρ' => CountedReach n L fp lo K pr t m eL σ' ρ' reserved
+  | .next _ σ' ρ' => CountedReach n L fp lo K pr t m eN σ' ρ' reserved
+  | .zurueck σ' v => CountedRetZ n L P f σ0 ρ0 fp K rp cfp t m σ' v
+  | .logik c => CountedStops n t m (logikCode c)
+  | .hardware h => CountedStops n t m (hwCode h)
+  | .why σ' r => CountedRetWhy n L f fp K rp cfp t m σ' r
+theorem CountedRetZ.forget {n P f σ0 ρ0 fp K rp cfp t m σ v}
+    (h : CountedRetZ n L P f σ0 ρ0 fp K rp cfp t m σ v) :
+    RetZ L P f σ0 ρ0 fp K rp cfp t m σ v := by
+  unfold CountedRetZ at h
+  unfold RetZ
+  split at h
+  · rename_i hp
+    rw [if_pos hp]
+    exact h.forget
+  · rename_i hp
+    rw [if_neg hp]
+    obtain ⟨m', run, rest⟩ := h
+    exact ⟨m', run.forget, rest⟩
+
+theorem CountedRetWhy.forget {n f fp K rp cfp t m σ r}
+    (h : CountedRetWhy n L f fp K rp cfp t m σ r) :
+    RetWhy L f fp K rp cfp t m σ r := by
+  obtain ⟨m', run, rest⟩ := h
+  exact ⟨m', run.forget, rest⟩
+
+/-- Erasure preserves precisely the existing simulation outcome index. -/
+theorem CountedSim.forget {n P f σ0 ρ0 rp cfp l Γ fp lo K pr t m e eL eN reserved}
+    {o : Ausgang (vertragVon D f) l Γ}
+    (h : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o reserved) :
+    Sim L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o reserved := by
+  cases o with
+  | ok σ ρ => exact CountedReach.forget h
+  | leave _ σ ρ => exact CountedReach.forget h
+  | next _ σ ρ => exact CountedReach.forget h
+  | zurueck σ v => exact CountedRetZ.forget h
+  | why σ r => exact CountedRetWhy.forget h
+  | logik c => exact CountedStops.forget h
+  | hardware c => exact CountedStops.forget h
+
+/-- Prefix composition keeps the counted endpoint and all observations joint. -/
+theorem CountedReach.prefix {n k Γ fp lo K pr t0 t m0 m e σ ρ reserved}
+    (run : Counted k t0 m0 t m) (agree : AgreeW L fp lo K m0 m)
+    (keep : Keeps fp pr m0 m)
+    (h : CountedReach n L (Γ := Γ) fp lo K pr t m e σ ρ reserved) :
+    CountedReach (k + n) L fp lo K pr t0 m0 e σ ρ reserved := by
+  obtain ⟨m', tail, frame, env, world, kept⟩ := h
+  exact ⟨m', run.trans tail, agree.trans frame, env, world, keep.trans kept⟩
+
+theorem CountedStops.prefix {n k t0 t m0 m c}
+    (run : Counted k t0 m0 t m) (h : CountedStops n t m c) :
+    CountedStops (k + n) t0 m0 c := by
+  obtain ⟨t', m', q, tail, rest⟩ := h
+  exact ⟨t', m', q, run.trans tail, rest⟩
+
+theorem CountedRetZ.prefix {n k : Nat} {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W}
+    {K : Nat} {rp cfp : Runner.W} {t0 t : T} {m0 m : Runner.Mem} {σ' : World D} {v : ErgVal D (D.erg f)}
+    (h : Counted k t0 m0 t m) (ha : AgreeW L fp 2 K m0 m) (hs : CountedRetZ n L P f σ0 ρ0 fp K rp cfp t m σ' v) :
+    CountedRetZ (k + n) L P f σ0 ρ0 fp K rp cfp t0 m0 σ' v := by
+  simp only [CountedRetZ] at hs ⊢
+  split
+  · next hf => rw [if_pos hf] at hs; exact CountedStops.prefix h hs
+  · next hf =>
+    rw [if_neg hf] at hs
+    obtain ⟨m', s, a, hw, hw'⟩ := hs
+    exact ⟨m', h.trans s, ha.trans a, hw, hw'⟩
+
+theorem CountedRetWhy.prefix {n k : Nat} {f : D.Fn} {fp : Runner.W} {K : Nat} {rp cfp : Runner.W}
+    {t0 t : T} {m0 m : Runner.Mem} {σ : World D} {r : Fin (D.gruende f)}
+    (h : Counted k t0 m0 t m) (ha : AgreeW L fp 2 K m0 m) (hs : CountedRetWhy n L f fp K rp cfp t m σ r) :
+    CountedRetWhy (k + n) L f fp K rp cfp t0 m0 σ r := by
+  obtain ⟨m', s, a, hw, flag, hw'⟩ := hs
+  exact ⟨m', h.trans s, ha.trans a, hw, flag, hw'⟩
+
+theorem CountedSim.prefix {n k : Nat} {P : Programm D} {f : D.Fn} {σ0 : World D}
+    {ρ0 : Env D (D.params f)} {rp cfp fp : W} {l : Bool} {Γ : Ctx}
+    {lo K reserved : Nat} {pr : List Nat} {o : Ausgang (vertragVon D f) l Γ} {t0 t : T} {m0 m : Runner.Mem} {e eL eN : Runner.W}
+    (hl : FB ≤ lo) (h : Counted k t0 m0 t m) (ha : AgreeW L fp lo K m0 m) (hk : Keeps fp pr m0 m)
+    (hs : CountedSim n L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o reserved) : CountedSim (k + n) L P f σ0 ρ0 rp cfp fp lo K pr t0 m0 e eL eN o reserved := by
+  cases o with
+  | ok σ ρ => exact CountedReach.prefix h ha hk hs
+  | leave _ σ ρ => exact CountedReach.prefix h ha hk hs
+  | next _ σ ρ => exact CountedReach.prefix h ha hk hs
+  | zurueck σ' v =>
+    have hFB3 : FB = 4 := rfl
+    exact CountedRetZ.prefix h (ha.mono (by omega)) hs
+  | logik c => exact CountedStops.prefix h hs
+  | hardware c => exact CountedStops.prefix h hs
+  | why σ' r => exact CountedRetWhy.prefix h (ha.mono (by have : FB = 4 := rfl; omega)) hs
+
 /-- Both source loop jumps retain one joint state and execute exactly one
     instruction. The signed displacement is justified by accepted lowering. -/
 theorem jmp_counted_reach {Γ : Ctx} {m : Mem} {pc fp : W}
