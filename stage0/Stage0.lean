@@ -67,3 +67,4 @@ import Stage0.Senke.Ausdruck.Arithmetik.MixedProbe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Probe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Probe
+import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Probe
