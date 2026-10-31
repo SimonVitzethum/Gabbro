@@ -268,8 +268,16 @@ No arithmetic operation is accepted on the strength of the rounding fragment alo
   return ABI). The sum is checked against the declared instruction bound;
   neither whole-body execution nor whole-body cost is assumed. Its loaded
   twelve-instruction witness relocates one parameter before normal return.
-  Recursive branching and calls, `BlockCost.call`, and nested-forever
-  instantiation remain OPEN.
+  `ArgsCost.fullCall` composes actual argument certificates and the four
+  call-entry instructions with that full function contract. Its loaded
+  seventeen-instruction witness executes a real argument, callee parameter
+  relocation and normal return. Both generic contracts apply to the recursive
+  certificate fragment, not all accepted source forms.
+  Still OPEN: `EndCost` branching and call constructors; propagation of the
+  encoded return value/status and frame/world agreement for the same returned
+  memory into `BlockCost.call`; source-certificate-derived nested-forever
+  instantiation. The bounded returning execution alone does not discharge those
+  continuation premises.
   These instruction counts use the existing canonical `Kern` semantics; source
   passes and G steps remain separate units, with no hardware-latency conversion.
   The generic instruction bound for arbitrary actual `foreverCode` is still OPEN: invariant,

@@ -1839,4 +1839,143 @@ theorem lowFun_counted_zeuge :
 end FullFunProbe
 
 
+/-- Actual call arguments and entry compose with the complete source-certified
+    callee. The declared bound concerns S0IR instructions only. -/
+theorem ArgsCost.fullCall {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
+    {P : Programm D} {passes : Nat}
+    {args : Args D Γ Λ (D.params f)} {σ₀ σ : World D} {ρ : Env D Γ} {na nq nb declared : Nat}
+    (arguments : ArgsCost L reserved (frei Γ reserved) args σ₀ σ ρ na)
+    {A : D.Fn → Nat} {C : D.Fn → List II} {dv : W}
+    {ca : List II} {ta top K Ks : Nat} {m : Mem} {pc fp : W}
+    (lowerArgs : lowA L args (frei Γ reserved + FB) reserved = some (ca, ta))
+    (fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks)
+    (lowerFun : lowFun passes P A L f = some (C f, top))
+    (fitsFun : top ≤ Ks - frei Γ reserved)
+    (address : A f < 2 ^ 31) (positive : dv ≠ 0)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+      ∀ snapshot, EndCost L ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        (P.rumpf f) σ (evalArgs σ₀ args σ ρ) nb)
+    (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
+      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+    (pre : PreS L m pc fp K (frei Γ reserved) (callC A f (frei Γ reserved) ca) ρ reserved)
+    (surroundings : Umf L A C dv m fp Ks K)
+    (inside : WIn L fp Ks K) (world : WeltAt m L σ) :
+    ∃ n m', n ≤ na + 4 + declared ∧ Counted n ⟨pc, fp⟩ m
+      ⟨pc + BitVec.ofNat 64 (16 * (ca.length + 4)), fp⟩ m' := by
+  have hks := inside.ks
+  have bounds := fitsArgs
+  simp only [callTop] at bounds
+  have hF : frei Γ reserved ≤ Ks := by omega
+  obtain ⟨m1, entry, _, frame, code, rpc, rfp, depth, env, hw, _⟩ :=
+    arguments.callEntry lowerArgs fitsArgs address pre surroundings inside world
+  have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
+      (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
+      (FB + (D.params f).length) (C f) (evalArgs σ₀ args σ ρ) :=
+    ⟨by simpa [frei] using Nat.le_refl (FB + (D.params f).length),
+      by have := pre.small; omega, frame, (code f).1, (code f).2,
+      env, trivial, wstab_true _ _⟩
+  obtain ⟨n, m2, bound, run⟩ := lowFun_counted lowerFun fitsFun
+    (inside.sub hF pre.frame.lt) requirement body declaration calleePre hw rpc rfp depth positive
+  exact ⟨na + 4 + n, m2, by omega, entry.trans run⟩
+namespace FullCallProbe
+open FnptrProben
+open FullFunProbe (fixtureDecl program layout world)
+local instance (m : Mem) (pc : W) (o : Nat) (a b c : BitVec 32) :
+    Decidable (InsAt m pc o a b c) :=
+  if h : m.rd8 pc = some (BitVec.ofNat 8 o) ∧ m.rd32 (pc + 4) = some a ∧
+      m.rd32 (pc + 8) = some b ∧ m.rd32 (pc + 12) = some c then
+    .isTrue ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
+  else .isFalse (fun h' => h ⟨h'.op, h'.f1, h'.f2, h'.f3⟩)
+
+def args : Args fixtureDecl [] [] (fixtureDecl.params 0) := .cons (.lit 37) .nil
+def target (f : fixtureDecl.Fn) : List II := ((lowFun 2 program addresses layout f).getD ([], 0)).1
+def caller : List II := callC (D := fixtureDecl) addresses (0 : fixtureDecl.Fn) 4 [ci 1 8 37 0]
+def memory : Mem :=
+  let segments := [(64, (target 0).flatMap encII), (576, (target 1).flatMap encII),
+    (1088, (target 2).flatMap encII), (2048, caller.flatMap encII)]
+  let base : Mem := {
+    b := fun a => match segments.find? (fun s => s.1 ≤ a.toNat && a.toNat < s.1 + s.2.length) with
+      | some s => (s.2[a.toNat - s.1]?).getD 0
+      | none => 0
+    rd := fun _ => true
+    wr := fun _ => true }
+  write (write base 8192 8 64) 4112 8 2
+
+theorem fullCall_zeuge : ∃ n m', n ≤ 17 ∧
+    Counted n ⟨2048, 4096⟩ memory ⟨2128, 4096⟩ m' := by
+  have targets : PCode memory addresses target 4096 256 := by
+    have h : ∀ f : Fin 3, ∀ k : Fin (target f).length,
+        InsAt memory (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val))
+          (target f)[k.val].o (II.f (target f)[k.val].a)
+          (II.f (target f)[k.val].b) (II.f (target f)[k.val].c) := by
+      apply allFin
+      decide +kernel
+    intro f
+    refine ⟨fun k hk => h f ⟨k, hk⟩, ?_⟩
+    have far : ∀ f : Fin 3, CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256 := by
+      unfold CodeFar
+      apply allFin
+      decide +kernel
+    exact far f
+  have ccode : CodeAt memory 2048 caller := by
+    have h : ∀ k : Fin caller.length,
+        InsAt memory (2048 + BitVec.ofNat 64 (16 * k.val))
+          caller[k.val].o (II.f caller[k.val].a) (II.f caller[k.val].b) (II.f caller[k.val].c) := by
+      apply allFin
+      decide +kernel
+    exact fun k hk => h ⟨k, hk⟩
+  have frame : FrameOK memory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+  have pre : PreS layout memory 2048 4096 256 4 caller (Env.nil : Env fixtureDecl []) :=
+    ⟨by decide, by decide, frame, ccode, by unfold CodeFar; decide +kernel,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  have inside : WIn layout 4096 128 256 := by
+    refine ⟨⟨(fun t => nomatch t), fun _ => ⟨by change 8192 ≤ 8192; decide, by change 8192 + 8 ≤ 8200; decide⟩, by decide⟩,
+      ?_, by decide, by decide, by decide⟩
+    constructor
+    · intro c c' hc hc' h
+      cases c with
+      | elem t => nomatch t
+      | glob g =>
+        cases c' with
+        | elem t => nomatch t
+        | glob g' => cases g; cases g'; rfl
+    · intro c hc
+      cases c with
+      | elem t => nomatch t
+      | glob _ => rfl
+  have hw : WeltAt memory layout world := by
+    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    cases g
+    decide +kernel
+  have sync : SyncOK memory layout 4096 128 :=
+    ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+      (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
+  have around : Umf layout addresses target 1 memory 4096 128 256 :=
+    ⟨targets, by decide +kernel, by decide, sync, by decide⟩
+  have cert : ArgsCost layout 0 4 args world world (Env.nil : Env fixtureDecl []) 1 :=
+    .cons (ne := 1) (nr := 0) .nil .literal
+  apply ArgsCost.fullCall (L := layout) (reserved := 0) (Γ := []) (Λ := [])
+    (f := (0 : fixtureDecl.Fn)) (P := program) (passes := 2) (args := args)
+    (σ₀ := world) (σ := world) (ρ := Env.nil) (na := 1) (nq := 1) (nb := 6) (declared := 12)
+    (A := addresses) (C := target) (m := memory) (pc := 2048) (fp := 4096)
+    (K := 256) (Ks := 128) (ca := [ci 1 8 37 0]) (ta := 9) (top := 14) (dv := 1) cert rfl (by decide) (by decide +kernel) (by decide)
+    (by decide) (by decide) .truth
+  · intro ens hens snapshot
+    have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+    subst ens
+    exact .normal (τ := .int 37 37) (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
+      (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
+  · intro cs hcs
+    have eq : cs = [] := Option.some.inj hcs.symm
+    subst cs
+    decide
+  · exact pre
+  · exact around
+  · exact inside
+  · exact hw
+end FullCallProbe
+
+
 end Gabbro.Stage0.Senke
