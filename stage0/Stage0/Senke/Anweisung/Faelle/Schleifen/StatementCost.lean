@@ -1660,6 +1660,34 @@ def EndCost.Post {Δ snapshot ens lo V l Γ Λ b σ ρ n}
   | .bind _ tail => tail.Post fp m
   | .branch _ _ child => child.Post fp m
 
+/-- The result is computed from the terminal source certificate, including
+    prefixes and the selected branch. Reason returns carry no normal value. -/
+def EndCost.result {Δ snapshot ens lo V l Γ Λ b σ ρ n}
+    (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
+    Option ((τ : Ty) × Wert D τ) :=
+  match certificate with
+  | .reason => none
+  | .normal (τ := τ) (v := v) _ _ _ _ _ => some ⟨τ, v⟩
+  | .assign _ tail => tail.result
+  | .bind _ tail => tail.result
+  | .branch _ _ child => child.result
+
+/-- A computed normal result is read at the very same endpoint as the cost proof. -/
+theorem EndCost.result_read {Δ snapshot ens lo V l Γ Λ b σ ρ n}
+    (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n)
+    {τ : Ty} {v : Wert D τ} (result : certificate.result = some ⟨τ, v⟩)
+    {fp : W} {m : Mem} (post : certificate.Post fp m) :
+    ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ Enc L τ v w := by
+  induction certificate with
+  | reason => cases result
+  | normal =>
+    simp only [EndCost.result, Option.some.injEq] at result
+    cases result
+    exact ⟨post.choose, post.choose_spec.1, post.choose_spec.2.1⟩
+  | assign value tail ih => exact ih result post
+  | bind value tail ih => exact ih result post
+  | branch condition jumpFits child ih => exact ih result post
+
 /-- Structural induction discharges recursive terminal executions. No complete
     body execution or complete body cost is a premise. ABI reads are preserved
     across each prefix by the existing frame agreement theorems. -/
