@@ -5,36 +5,6 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
-/-- Body exits relative to the end of the body. Leave skips both stops and the
-    backedge; next jumps directly to the counter header. -/
-def foreverTargets (invariant body : Nat) : Int × Int :=
-  (128, -(16 * (invariant + body + 3 : Nat) : Int))
-
-/-- The header starts after the two initialization instructions. False invariants
-    stop with 104; exhausted fuel stops with 111 before evaluating the invariant. -/
-def foreverCode (counter one scratch budget : Nat) (cc cb : List II) : List II :=
-  foreverCounterInit counter budget ++ [ci 1 one 1 0] ++
-    foreverCounter counter one (16 * (cc.length + cb.length + 8)) ++
-    cc ++ [ci 19 scratch (16 * (cb.length + 2)) 0] ++ cb ++
-    [ci 18 64 0 0] ++ stopC 104 scratch ++
-    [ci 18 (-(16 * (cc.length + cb.length + 7 : Nat) : Int)) 0 0] ++
-    stopC 111 scratch
-
-/-- Signed instruction immediates bound the semantic budget more tightly than
-    the runtime counter word. Check before invoking the body candidate producer.
-    The first candidate measures length only; the second uses actual targets.
-    Refuse if its length changes, rather than trusting a relocation assumption. -/
-def foreverC (counter one scratch budget : Nat) (inv : List II × Nat)
-    (body : Int × Int → Option (List II × Nat)) : Option (List II × Nat) := do
-  if budget < 2 ^ 31 then
-    let probe ← body (0, 0)
-    let actual ← body (foreverTargets inv.1.length probe.1.length)
-    if actual.1.length = probe.1.length then
-      pure (foreverCode counter one scratch budget inv.1 actual.1,
-        max inv.2 (max actual.2 (max (counter + 1) (max (one + 1) (scratch + 8)))))
-    else none
-  else none
-
 @[simp] theorem foreverCode_length (counter one scratch budget : Nat) (cc cb : List II) :
     (foreverCode counter one scratch budget cc cb).length = cc.length + cb.length + 13 := by
   simp [foreverCode, foreverCounterInit, foreverCounter, stopC, sysC]
@@ -86,6 +56,13 @@ theorem forever_offsets (i b : Nat) :
     (foreverTargets i b).1 = 64 + 16 * 4 := by
   simp [foreverTargets]
   omega
+
+/-- The runtime contract measures exits from the backedge, whereas the
+    candidate producer measures them from the body end, four instructions earlier. -/
+theorem forever_runtime_targets (i b : Nat) :
+    exPlus (64, -(16 * (i + b + 7 : Nat) : Int)) 4 = foreverTargets i b := by
+  simp only [exPlus, foreverTargets, Prod.mk.injEq]
+  constructor <;> push_cast <;> omega
 
 /-- Budget changes instruction data only, including the zero-fuel case. -/
 theorem foreverC_zeuge :

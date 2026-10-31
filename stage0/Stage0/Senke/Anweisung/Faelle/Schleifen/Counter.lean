@@ -7,15 +7,6 @@ import Stage0.Senke.Rueckkehr
 namespace Gabbro.Stage0.Senke
 open Runner Runner.IR
 
-/-- Constant-size control, independent of the runtime budget. The zero branch
-enters the caller-supplied budget stop; a positive budget is decremented using
-an immutable slot containing one. -/
-def foreverCounter (counter one : Nat) (stop : Int) : List II :=
-  [ci 19 counter stop 0, ci 4 counter counter one]
-
-def foreverCounterInit (counter : Nat) (budget : Int) : List II :=
-  [ci 1 counter budget 0]
-
 section
 variable [Kern]
 
