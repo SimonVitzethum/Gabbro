@@ -247,3 +247,9 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 #print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_exit_zeuge
 #print axioms Gabbro.Stage0.Senke.EarlyExitProbe.exact_cost_zeuge
 #print axioms Gabbro.Stage0.Senke.EarlyExitProbe.actual_runner_zeuge
+
+-- Canonical prefix reservation: lexical placement, writes and nested offsets.
+#print axioms Gabbro.Stage0.Senke.reserved_write_preserves
+#print axioms Gabbro.Stage0.Senke.reservation_variable_offset
+#print axioms Gabbro.Stage0.Senke.nested_reservation_offsets
+#print axioms Gabbro.Stage0.Senke.reservation_parameter_offset_zeuge
