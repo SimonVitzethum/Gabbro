@@ -1,5 +1,12 @@
 # Gabbro-to-IR compilation lanes
 
+**Latest Lean scheduling rule:** Up to four global concurrent Lean checks, each capped at 5 GiB
+(MemoryHigh=4G, MemoryMax=5G, MemorySwapMax=0), supersede the earlier single-check rules below.
+Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..4. IR-01/11 share slot 1,
+IR-02 uses slot 2, IR-03 uses slot 3, IR-04/12 share slot 4. Release per module/check, preserve artifact
+isolation and one check per worktree. No grammar rebuild. IR-03 foundation publication has priority
+within its slot because consumers depend on it.
+
 **Latest scope update (2026-10-31).** This compiler assignment covers existing userspace Gabbro. Embedded
 source ASM, boot code, proposed privileged instructions and raw memory-address syntax are outside it,
 alongside device-register forms. The existing assembly IR runner stays in use. IR-11 continues userspace
