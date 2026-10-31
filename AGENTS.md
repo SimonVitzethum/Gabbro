@@ -9,11 +9,11 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
-**Lean concurrency update (2026-10-31).** The owner now permits up to FOUR simultaneous Lean builds/direct
+**Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
 checks globally, each with MemoryMax=5G, MemoryHigh=4G and MemorySwapMax=0. This supersedes all older
 one-global-Lean-check rules below and in lane instructions. One process per slot is protected by
-`/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N=1..4). Assign IR-01/IR-06 to slot 1, IR-02 to slot 2,
-IR-03 to slot 3, IR-04/IR-10 to slot 4. Release the slot after each module/check so other assigned workers
+`/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N=1..2). Assign IR-01/IR-06 to slot 1;
+IR-02/IR-03/IR-04/IR-10 share slot 2. Slots 3 and 4 are retired. Release the slot after each module/check so other assigned workers
 can proceed. Never run two checks in one worktree or mutate artifacts read by another check; use isolated
 artifact overlays. Do not interrupt another worker's running proof. Grammar rebuilds remain forbidden.
 
@@ -59,8 +59,8 @@ expanding infrastructure for a small subset.
   retired Lean execution path.
 - **Never rebuild `grammatik/` for this task.** Reuse its existing compiled artifacts. Run affected Stage-0
   compilation checks directly; do not invoke a build or guardian that would rebuild the grammar.
-- **Only one Lean build or direct Lean check may run at a time globally, across all worktrees.** All workers
-  use the same lock: `/home/simon/.cache/gabbro-stage0-build.lock`.
+- **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
+  slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 
 This scope governs the current implementation work; the broader roadmap below is not authorization to
 start adjacent projects. Report which language cases actually compile, which remain refused, and what was

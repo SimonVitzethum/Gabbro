@@ -36,10 +36,11 @@ construction; full buffers/results remain blocked on IR-03. Its worker slot now 
 implementation. This is a dependency handoff, not IR-11 completion. Resume IR-11 integration after the
 shared foundation is green, without exceeding six active implementation agents.
 
-**Latest Lean scheduling rule:** Up to four global concurrent Lean checks, each capped at 5 GiB
+**Latest Lean scheduling rule:** Up to two global concurrent Lean checks, each capped at 5 GiB
 (MemoryHigh=4G, MemoryMax=5G, MemorySwapMax=0), supersede the earlier single-check rules below.
-Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..4. IR-01/06 share slot 1,
-IR-02 uses slot 2, IR-03 uses slot 3, IR-04/10 share slot 4. Release per module/check, preserve artifact
+Slot locks: `/home/simon/.cache/gabbro-stage0-build.slot-N.lock`, N=1..2. IR-01/06 share slot 1;
+IR-02/03/04/10 share slot 2. Retire slots 3 and 4. This includes audits, witnesses and `lean --run`.
+Release per module/check, preserve artifact
 isolation and one check per worktree. No grammar rebuild. IR-03 foundation publication has priority
 within its slot because consumers depend on it.
 
