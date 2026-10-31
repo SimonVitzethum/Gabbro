@@ -12,7 +12,7 @@ were organised) is in `git log`, not here.
 **Lean concurrency update (2026-10-31).** The owner now permits up to FOUR simultaneous Lean builds/direct
 checks globally, each with MemoryMax=5G, MemoryHigh=4G and MemorySwapMax=0. This supersedes all older
 one-global-Lean-check rules below and in lane instructions. One process per slot is protected by
-`/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N=1..4). Assign IR-01/IR-11 to slot 1, IR-02 to slot 2,
+`/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N=1..4). Assign IR-01/IR-08 to slot 1, IR-02 to slot 2,
 IR-03 to slot 3, IR-04/IR-12 to slot 4. Release the slot after each module/check so other assigned workers
 can proceed. Never run two checks in one worktree or mutate artifacts read by another check; use isolated
 artifact overlays. Do not interrupt another worker's running proof. Grammar rebuilds remain forbidden.
