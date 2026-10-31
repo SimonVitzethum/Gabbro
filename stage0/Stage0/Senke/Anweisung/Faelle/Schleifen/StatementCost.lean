@@ -2858,3 +2858,47 @@ theorem bind_continuation_zeuge : ∃ n, n ≤ 18 ∧
 end BindCallProbe
 
 end Gabbro.Stage0.Senke
+
+namespace Gabbro.Stage0.Senke.RecursiveTerminalProbe
+open Gabbro.Grammatik Runner Runner.IR Runner.Mem FnptrProben
+open FullFunProbe (fixtureDecl program layout world)
+variable [Kern]
+def terminalCall : Endblock fixtureDecl (vertragVon fixtureDecl 0) false [] [] :=
+  .cons (.call 0 FullCallProbe.args
+    { hw := fun t => nomatch t
+      hg := fun _ h => h
+      hk := ⟨[], List.Perm.nil, List.Sublist.refl []⟩
+      hh := fun l => nomatch l } rfl)
+    (.ret (.val (.lit 37)) List.Perm.nil)
+theorem recursiveEndCost_zeuge : Nonempty
+    (RecursiveEndCost layout program 2 addresses FullCallProbe.target 2 128 0
+      (vertragVon fixtureDecl 0) false [] 64 ([ci 1 5 1 0], 6) 4
+      terminalCall world Env.nil (some ⟨.int 37 37, ⟨37, by decide, by decide⟩⟩) 23) := by
+  unfold terminalCall
+  refine ⟨RecursiveEndCost.call
+    (L := layout) (P := program) (passes := 2) (A := addresses) (C := FullCallProbe.target)
+    (depth := 1) (Ks := 128) (reserved := 0) (top := 14) (nq := 1) (nb := 6) (declared := 12) (na := 1) (nr := 6) (σ₀ := world)
+    (returned := some ⟨.int 37 37, ⟨37, by decide, by decide⟩⟩) (f := 0)
+    (Γ := []) (Λ := []) (.cons (ne := 1) (nr := 0) .nil .literal) (by decide +kernel) (by decide) (by decide) .truth ?_ ?_ ?_⟩
+  · intro ens hens snapshot
+    have eq : ens = ([ci 1 6 1 0], 7) := Option.some.inj hens.symm
+    subst ens
+    let cert : EndCost layout 3 (vertragVon fixtureDecl 0) false [.int 37 37]
+        snapshot ([ci 1 6 1 0], 7) 5 (program.rumpf 0) world
+        (evalArgs world FullCallProbe.args world Env.nil) 6 :=
+      .normal (τ := .int 37 37)
+        (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
+        (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
+    exact RecursiveEndCost.source cert
+  · intro cs hcs
+    have eq : cs = [] := Option.some.inj hcs.symm
+    subst cs
+    decide
+  · let cert : EndCost layout 0 (vertragVon fixtureDecl 0) false []
+        64 ([ci 1 5 1 0], 6) 4
+        (.ret (.val (.lit 37)) List.Perm.nil) world Env.nil 6 :=
+      .normal (τ := .int 37 37)
+        (v := (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)))
+        (q := Expr.tru (Λ := [])) rfl List.Perm.nil .literal (.ordinary rfl .truth) rfl
+    exact RecursiveEndCost.source cert
+end Gabbro.Stage0.Senke.RecursiveTerminalProbe
