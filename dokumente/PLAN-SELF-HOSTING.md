@@ -823,14 +823,22 @@ an exact signed alignment equation from the reached exponent, significand,
 sign and jam slot reads. Its correction is the discarded remainder minus the
 sticky increment times the denominator, multiplied by the reached smaller
 operand's sign. The same f32/f64 execution witness checks the stronger result.
-This does not execute the subsequent signed add/sub instructions.
+The same theorem now also executes the subsequent jam copy, sign comparison,
+conditional ADD/SUB and both branch jumps. Its returned arithmetic slot belongs
+to the very same run from encoded operands, with the original frame agreement;
+the f32/f64 witness satisfies the strengthened conclusion jointly. The generic
+`floatFiniteAddL_signed_execute` interface additionally preserves the actual
+continuation precondition. The arithmetic result is still a machine word: its
+natural/integer magnitude bounds and the signed correction transfer through
+normalization are not yet proved.
 
 Concrete composition goals at this boundary are:
 1. Transfer `floatFiniteAdd_ordered_input_bounds` through the joint decoded
    field correspondence and the executed SORT permutation; establish that the
    word exponent difference equals the bounded natural exponent difference.
-2. Execute the signed add/sub and zero dispatch from the retained sign and jam
-   reads, deriving the magnitude and the signed fractional correction together.
+2. Signed ADD/SUB now executes from the retained sign and jam reads. Derive its
+   bounded magnitude and signed fractional correction together, then execute
+   zero dispatch.
    Preserve that correction through cancellation; a jammed integer difference
    alone is not the exact source numerator.
 3. Construct the normalization head from those actual writes, carry its exact
