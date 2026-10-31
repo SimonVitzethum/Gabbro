@@ -31,7 +31,7 @@ def irBild (src : String) (K : Nat := irStapel) : Except String (List Runner.B) 
   let (P, _) ← lowerAllg u
   let P ← OldSource.restore members u P
   if (← OldSource.accepts u P) = false then throw "refused by the checker (AkzeptiertX)"
-  let tore ← toreVon (uMembers (pre108 items))
+  let tore ← toreVonFor "x86_64" none (uMembers (pre108 items))
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
     (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩
   let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)
