@@ -1236,6 +1236,176 @@ theorem ensCost_sound_zeuge :
   decide +kernel
 end OldProbe
 
+/-- Normal return costs come from the actual postcondition certificate and
+    four ABI instructions. The input result is copied before ensures runs;
+    snapshot and caller header reads are preserved by frame agreement. -/
+theorem retC_counted {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {e : Expr D (τ :: Γ) Λ .bool} {v : Wert D τ} {snapshot w : W} {n lo r top K : Nat}
+    {ens : List II} {m : Mem} {pc fp rp cfp : W} {ρ : Env D Γ}
+    (certificate : EnsCost L snapshot e (lo + 1) n (· = 1))
+    (lower : lowEns L e (lo + 1) = some (ens, top)) (fits : top ≤ K)
+    (pre : PreS L m pc fp K lo (retC lo r ens) ρ)
+    (abi : 3 < lo) (room : lo + 1 < K) (resultSlot : r < K)
+    (resultBase : lo = frei Γ) (encoded : Enc L τ v w)
+    (value : m.rd64 (slot fp (BitVec.ofNat 64 r)) = some w)
+    (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
+    (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
+    ∃ m', Counted (1 + n + 3) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 := by
+  have hp : PreS L m pc fp K lo
+      ([ci 2 lo r 0] ++ (ens ++
+        ([ci 19 ((lo + 1 : Nat) : Int) 48 0, ci 2 2 lo 0, ci 21 0 0 0] ++ stopC 102 (lo + 1)))) ρ := by
+    simpa [retC, List.append_assoc] using pre
+  have first := mov_to_counted hp.left.code hp.frame (j := lo) (s := r)
+    (by omega) resultSlot hp.small value
+  let m1 := write m (slot fp (BitVec.ofNat 64 lo)) 8 w.toNat
+  have a1 : Agree fp lo K m m1 := agree_write hp.frame.room (by omega) (by omega) _
+  have next := hp.next a1 (Nat.le_refl _) (by omega)
+  have postPre : PreS L m1 (pc + 16) fp K (lo + 1) ens (.cons v ρ) := by
+    refine ⟨?_, next.small, next.frame, next.left.code, next.left.far,
+      ?_, trivial, wstab_true _ _⟩
+    · simp only [frei, List.length_cons]; simp only [frei] at resultBase; omega
+    · apply envAt_cons next.env
+      · rw [← resultBase]; exact rd_same hp.frame (by omega) w
+      · exact encoded
+  have snap : m1.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot := by
+    rw [agree_rd_low a1 hp.frame.room abi (by omega)]; exact entry
+  obtain ⟨m2, post, a2, flag, flagRead, flagValue⟩ :=
+    certificate.sound lower fits postPre snap
+  subst flag
+  have tailPre := next.next (a2.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
+  have resultRead : m2.rd64 (slot fp (BitVec.ofNat 64 lo)) = some w := by
+    rw [agree_rd_low a2 hp.frame.room (by omega) (by omega)]
+    exact rd_same hp.frame (by omega) w
+  have all := a1.trans (a2.mono (Nat.le_succ _))
+  have rpc : m2.rd64 fp = some rp := by
+    have h := agree_rd_low (i := 0) all hp.frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedPC)
+  have rfp : m2.rd64 (fp + 8) = some cfp := by
+    have h := agree_rd_low (i := 1) all hp.frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedFP)
+  obtain ⟨m3, last, _, result, normal⟩ := returnTail_counted
+    tailPre.left.code tailPre.left.far tailPre.frame tailPre.small
+    (by omega) room flagRead resultRead rpc rfp
+  exact ⟨m3, (first.trans post).trans last, result, normal⟩
+
+/-- A source result certificate and an actual ensures certificate compose
+    through the emitted normal-return code. Parameter and lexical environments
+    are separate: relocated locals cannot replace the original ensures inputs. -/
+theorem normalRet_counted {Γ Δ : Ctx} {Λ Ξ : List (Res D)} {τ : Ty}
+    {e : Expr D Γ Λ τ} {q : Expr D (τ :: Δ) Ξ .bool} {v : Wert D τ}
+    {snapshot : W} {ne nq d lo te tq K : Nat} {ce cq : List II}
+    {m : Mem} {pc fp rp cfp : W} {ρ : Env D Γ} {parameters : Env D Δ}
+    (result : ExprCost L reserved e d ne (Enc L τ v))
+    (ensures : EnsCost L snapshot q (lo + 1) nq (· = 1))
+    (lowerResult : lowE L (reserved := reserved) e d = some (ce, te))
+    (lowerEnsures : lowEns L q (lo + 1) = some (cq, tq))
+    (fitResult : te ≤ K) (fitEnsures : tq ≤ K)
+    (pre : PreS L m pc fp K d (ce ++ retC lo d cq) ρ reserved)
+    (parameterEnv : EnvAt L m fp parameters)
+    (base : lo = frei Δ) (separate : lo ≤ d)
+    (abi : 3 < lo) (room : lo + 1 < K)
+    (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
+    (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
+    ∃ m' w', Counted (ne + (1 + nq + 3)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w' ∧
+      Enc L τ v w' ∧ m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 := by
+  have resultRoom := lowE_top _ _ _ _ lowerResult
+  obtain ⟨m1, run, agree, w, read, encoded⟩ := result.sound lowerResult fitResult pre.left
+  have next := pre.next agree (Nat.le_refl _) (by omega)
+  have retPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K lo
+      (retC lo d cq) parameters :=
+    ⟨by omega, next.small, next.frame, next.code, next.far,
+      envAt_agree parameterEnv agree pre.frame (by omega) (by omega),
+      trivial, wstab_true _ _⟩
+  have snap : m1.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot := by
+    rw [agree_rd_low agree pre.frame.room (by omega) (by omega)]; exact entry
+  have rpc : m1.rd64 fp = some rp := by
+    have h := agree_rd_low (i := 0) agree pre.frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedPC)
+  have rfp : m1.rd64 (fp + 8) = some cfp := by
+    have h := agree_rd_low (i := 1) agree pre.frame.room (by omega) (by omega)
+    simpa [slot] using h.trans (by simpa [slot] using savedFP)
+  obtain ⟨m2, tail, value, flag⟩ := retC_counted ensures lowerEnsures fitEnsures
+    retPre abi room (by omega) base encoded read snap rpc rfp
+  exact ⟨m2, w, run.trans tail, value, encoded, flag⟩
+
+namespace NormalReturnProbe
+open FnptrProben
+
+def image : List II := retC 4 6 [ci 1 5 1 0]
+def memory : Mem :=
+  let base : Mem := {
+    b := fun a => ((image.flatMap encII)[a.toNat]?).getD 0
+    rd := fun _ => true
+    wr := fun _ => true }
+  write (write (write (write base 4096 8 2048) 4104 8 8192) 4120 8 64) 4144 8 37
+
+/-- Actual ensures lowering, result move and ABI return hold jointly, with
+    nonzero result, saved snapshot and distinct caller PC and frame. -/
+theorem retC_counted_zeuge :
+    ∃ m', Counted 5 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' ∧
+      m'.rd64 4112 = some 37 ∧ m'.rd64 4136 = some 1 := by
+  have code : CodeAt memory 0 image := by
+    have h : ∀ k : Fin image.length,
+        memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f image[k.val].a) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f image[k.val].b) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f image[k.val].c) := by
+      apply allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  have pre : PreS callLayout memory 0 4096 16 4 image (Env.nil : Env FnptrProben.D []) :=
+    ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      code, by unfold CodeFar; decide +kernel,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  exact retC_counted (e := Expr.tru (Λ := [])) (snapshot := 64)
+    (.ordinary rfl .truth) rfl (by decide) pre (by decide) (by decide)
+    (by decide) rfl (show Enc callLayout (.int 37 37) ⟨37, by decide, by decide⟩ 37 from rfl) (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
+end NormalReturnProbe
+
+namespace SourceReturnProbe
+open FnptrProben
+
+def image : List II := [ci 1 6 37 0] ++ retC 4 6 [ci 1 5 1 0]
+def memory : Mem :=
+  let base : Mem := {
+    b := fun a => ((image.flatMap encII)[a.toNat]?).getD 0
+    rd := fun _ => true
+    wr := fun _ => true }
+  write (write (write (write base 4096 8 2048) 4104 8 8192) 4120 8 64) 4144 8 37
+
+/-- Actual ensures lowering, result move and ABI return hold jointly, with
+    nonzero result, saved snapshot and distinct caller PC and frame. -/
+theorem normalRet_counted_zeuge :
+    ∃ m' w, Counted 6 ⟨0, 4096⟩ memory ⟨2048, 8192⟩ m' ∧
+      m'.rd64 4112 = some w ∧
+      Enc callLayout (.int 37 37) ⟨37, by decide, by decide⟩ w ∧ m'.rd64 4136 = some 1 := by
+  have code : CodeAt memory 0 image := by
+    have h : ∀ k : Fin image.length,
+        memory.rd8 (BitVec.ofNat 64 (16 * k.val)) = some (BitVec.ofNat 8 image[k.val].o) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 4) = some (II.f image[k.val].a) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 8) = some (II.f image[k.val].b) ∧
+        memory.rd32 (BitVec.ofNat 64 (16 * k.val) + 12) = some (II.f image[k.val].c) := by
+      apply allFin; decide +kernel
+    intro k hk
+    obtain ⟨o, a, b, c⟩ := h ⟨k, hk⟩
+    exact ⟨by simpa using o, by simpa using a, by simpa using b, by simpa using c⟩
+  have pre : PreS callLayout memory 0 4096 16 6 image (Env.nil : Env FnptrProben.D []) :=
+    ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      code, by unfold CodeFar; decide +kernel,
+      (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+  exact normalRet_counted (Δ := []) (reserved := 0) (parameters := Env.nil)
+    (e := Expr.lit (Λ := []) 37)
+    (q := Expr.tru (Λ := [])) (snapshot := 64)
+    (.literal) (.ordinary rfl .truth) rfl rfl (by decide) (by decide)
+    pre (fun _ x => nomatch x) rfl (by decide) (by decide) (by decide)
+    (by decide +kernel) (by decide +kernel) (by decide +kernel)
+end SourceReturnProbe
+
 /-- Execute the actual reason-return ABI, including both writes and `ret`. -/
 theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
     (code : CodeAt m pc (retWhyC lo r)) (far : CodeFar pc 3 fp K)
