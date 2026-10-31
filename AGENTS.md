@@ -9,6 +9,15 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
+**Scope update (2026-10-31): userspace compilation.** Implement and formally verify all existing Gabbro
+needed by userspace programs. Source ASM bodies, boot code, privileged instructions and the proposed raw
+memory-address syntax are outside this compiler assignment, alongside device-register forms. The assembly
+IR runner remains the execution backend. Six implementation agents continue; a temporary seventh agent
+only plans these excluded low-level language features in Markdown. That plan may propose future canonical
+grammar changes, but authorizes no grammar rebuild or implementation now. ASM/boot behavior is user logic
+with explicit proof obligations, never silently a hardware assumption. Existing safe region/reference
+userspace memory remains in scope; raw-address access must not weaken those guarantees.
+
 **RESUMED (2026-10-31).** The owner authorized up to six parallel Sol 6.1 implementation agents,
 followed by one final integration/proof agent. Preserve existing worktrees, uncommitted changes and scratch. The checkpoint and fourteen
 complete work packages are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md). Fourteen lanes do not authorize fourteen
