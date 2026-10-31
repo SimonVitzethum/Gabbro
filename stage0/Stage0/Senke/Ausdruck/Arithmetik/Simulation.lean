@@ -1563,6 +1563,38 @@ theorem floatNormalizeLoopL_large_carry_arithmetic
 
 #print axioms floatNormalizeLoopL_large_carry_arithmetic
 
+/-- Both large paths skip the SMALL code using the emitted jump. -/
+theorem floatNormalizeLoopL_large_skip_small
+    (hc : floatNormalizeLoopL base = some (code, top))
+    {m : Runner.Mem} (fetch : CodeAt m pc code) :
+    Run (step ⟨pc+336, fp⟩) m
+      ⟨pc + BitVec.ofNat 64 (16*(code.length-4)), fp⟩ m := by
+  have shape : 21 < code.length ∧ 25 ≤ code.length ∧
+      code[21]? = some (ci 18 (16*((code.length-25 : Nat) : Int)) 0 0) ∧
+      lit32 (16*((code.length-25 : Nat) : Int)) = true := by
+    unfold floatNormalizeLoopL at hc
+    simp [floatNormalizeStepL, wordL] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    norm_num [bin2, lit32]
+  have entry : code[21] = ci 18 (16*((code.length-25 : Nat) : Int)) 0 0 := by
+    simpa only [List.getElem?_eq_getElem shape.1, Option.some.injEq] using shape.2.2.1
+  have ins := fetch 21 shape.1
+  rw [entry] at ins
+  have run := run_step (t := ⟨pc+336, fp⟩) ins (by simp [ci]) (run_jmp ins)
+  have offset : sx (II.f (16*((code.length-25 : Nat) : Int))) =
+      BitVec.ofNat 64 (16*(code.length-25)) := by
+    rw [sx_lit shape.2.2.2]
+    rw [show 16*((code.length-25 : Nat) : Int) = ((16*(code.length-25) : Nat) : Int) by omega,
+      BitVec.ofInt_natCast]
+  have total : 336 + 16*(code.length-25) = 16*(code.length-4) := by omega
+  have sum : (336 : Runner.W) + BitVec.ofNat 64 (16*(code.length-25)) =
+      BitVec.ofNat 64 (16*(code.length-4)) := by
+    change BitVec.ofNat 64 336 + _ = _
+    rw [← BitVec.ofNat_add, total]
+  simpa only [ci, offset, BitVec.add_assoc, sum] using run
+
+#print axioms floatNormalizeLoopL_large_skip_small
+
 /-- Central induction, with the complete active iteration still explicit.
     The target exit is discharged by actual emitted execution above.
     The iteration premise is not an implementation of the missing proof.
