@@ -4,7 +4,7 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
 
 namespace Gabbro.Stage0.Senke.CounterCallProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem FnptrProben
-set_option maxRecDepth 100000
+set_option maxRecDepth 2000
 
 /-- A real world store followed by an actual call, sharing a reserved caller frame. -/
 def body : Block D (vertragVon D 2) false [] [] [] :=
@@ -117,5 +117,71 @@ theorem body_controls_zeuge [Kern] :
   refine ⟨m', run, kept, ?_, ?_⟩
   · rw [kept 4 (by simp)]; decide +kernel
   · rw [kept 5 (by simp)]; decide +kernel
+
+/-- The same constant-size image with each of the three small semantic budgets. -/
+def loaded (budget : Fin 3) : Runner.Mem :=
+  write memory (slot 4096 (BitVec.ofNat 64 6)) 8 budget.val
+
+theorem loaded_code (budget : Fin 3) : CodeAt (loaded budget) 2048 code := by
+  have h : ∀ b : Fin 3, ∀ k : Fin code.length,
+      InsAt (loaded b) (2048 + BitVec.ofNat 64 (16 * k.val))
+        code[k.val].o (II.f code[k.val].a) (II.f code[k.val].b) (II.f code[k.val].c) := by
+    apply allFin
+    decide +kernel
+  exact fun k hk => h budget ⟨k, hk⟩
+
+theorem loaded_frame (budget : Fin 3) : FrameOK (loaded budget) 4096 256 :=
+  ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
+
+theorem loaded_pre [Kern] (budget : Fin 3) :
+    PreS callLayout (loaded budget) 2048 4096 256 8 code (Env.nil : Env D []) 4 :=
+  ⟨pre.ctx, pre.small, loaded_frame budget, loaded_code budget, pre.far,
+    (fun _ x => nomatch x), trivial, wstab_true _ _⟩
+
+theorem loaded_world (budget : Fin 3) : WeltAt (loaded budget) callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+  cases g
+  have h : ∀ b : Fin 3, (loaded b).rd64 8192 = some 64 := by
+    apply allFin
+    decide +kernel
+  exact h budget
+
+theorem loaded_functions (budget : Fin 3) :
+    PCode (loaded budget) addresses target 4096 256 := by
+  have h : ∀ b : Fin 3, (List.finRange 3).all (fun f =>
+      (List.finRange (target f).length).all (fun k => decide
+        (InsAt (loaded b) (BitVec.ofNat 64 (addresses f) + BitVec.ofNat 64 (16 * k.val))
+        (target f)[k.val].o (II.f (target f)[k.val].a)
+        (II.f (target f)[k.val].b) (II.f (target f)[k.val].c)))) = true := by
+    apply allFin
+    decide +kernel
+  change ∀ f : Fin 3, CodeAt (loaded budget) (BitVec.ofNat 64 (addresses f)) (target f) ∧
+    CodeFar (BitVec.ofNat 64 (addresses f)) (target f).length 4096 256
+  refine fun f => ⟨fun k hk => ?_, (targets_code f).2⟩
+  exact of_decide_eq_true (List.all_eq_true.mp
+    (List.all_eq_true.mp (h budget) f (by simp)) ⟨k, hk⟩ (by simp))
+
+theorem loaded_surroundings [Kern] (budget : Fin 3) :
+    Umf callLayout addresses target 2 (loaded budget) 4096 128 256 := by
+  refine ⟨loaded_functions budget, ?_, by decide, ?_, by decide⟩
+  · have h : ∀ b : Fin 3, (loaded b).rd64 (slot 4096 2) = some 3 := by
+      apply allFin
+      decide +kernel
+    exact h budget
+  · exact ⟨by decide, by decide, by decide, by decide, by decide, by decide,
+      (fun l => nomatch l), by decide, (fun l => nomatch l),
+      (fun l => nomatch l), (fun l => nomatch l)⟩
+
+theorem loaded_head (budget : Fin 3) :
+    Kopf callLayout 2 (loaded budget) 4096 256 0 0 (Env.nil : Env D []) tiny world := by
+  refine ⟨?_, ?_, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
+  · have h : ∀ b : Fin 3, (loaded b).rd64 (slot 4096 0) = some 0 := by
+      apply allFin
+      decide +kernel
+    exact h budget
+  · have h : ∀ b : Fin 3, (loaded b).rd64 (slot 4096 1) = some 0 := by
+      apply allFin
+      decide +kernel
+    exact h budget
 
 end Gabbro.Stage0.Senke.CounterCallProbe
