@@ -1,5 +1,24 @@
 # Gabbro-to-IR compilation lanes
 
+## Checked integration checkpoint (2026-10-31)
+
+Root merged the coherent published IR-01 source/profile bridge through `587dfb27d`, IR-02 integer/runner
+lowering through `1f3d586f1`, IR-08 narrowing/traversal through `4c126f4db` and IR-12 source/start-byte
+proofs through `e4815ed3f`. Preserve the selected-ABI guard from `63addf850`. Full-ABI dirty work and
+later follow-up commits are excluded from this checkpoint; no lane is declared complete.
+
+Combined validation checked 184 distinct Stage0 modules (including missing cache dependencies), root and
+central axiom audit. All 37 selected textual compiler/ASM regressions passed their expected execution or
+precise refusal results, including the retained image-size bound. Layout is green. The frozen cached
+`gabbro_ziel` theorem has exactly `propext`, `Classical.choice`, `Quot.sound`; no grammar rebuild occurred.
+Split the unchanged all-27-image kernel witness into finite cases to check it within the 5-GiB limit.
+CLI regression execution used `lean --run` and the assembly runner, not a claimed native CLI rebuild.
+This is a checked incremental userspace compiler integration, not total language/ISA/platform verification.
+
+Root validation logs are retained in `.scratch-integration/merged/`. Source files stayed fixed throughout
+the successful combined checks; artifact-gap and interrupted aggregate-fixture logs are preserved too.
+Slot-1 integration priority is released; IR-01 and IR-08 may resume their deferred module checks.
+
 **Parameterized-start activation blocker:** The current fixed `exitSlot = 2*FB+2 = 10` used by
 `spawnC`/`startC` overlaps a three-word parameter span at slots 8, 9, 10 in root frame `F = FB`.
 Keep the empty-parameter guard. Before activating IR-12 startup, place scratch beyond the shared
