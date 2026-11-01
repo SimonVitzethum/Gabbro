@@ -12,7 +12,7 @@ open Runner.IR
 def strExpandHead (d t : Nat) : List II :=
   [⟨1, t + 2, 0, 0⟩, ⟨27, t, t + 2, d⟩, ⟨1, t + 1, 256, 0⟩, ⟨4, t + 1, d, t + 1⟩, ⟨5, t + 1, t + 1, t⟩]
 
-@[simp] theorem strExpandHead_length (d t : Nat) : (strExpandHead d t).length = 5 := rfl
+@[simp] theorem strExpandHead_length (d t : Nat) : (strExpandHead d t).length = 5 := by rfl
 
 /-- `strWeit m` of a string of capacity at most one to a long capacity `m >= 2`: the scratch words are copied into
     the first two words of the span and the remaining `m - 1` words are zero. `z` materializes those zeros

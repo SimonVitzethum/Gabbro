@@ -243,13 +243,13 @@ def Shape.caseOk (cases : List (String × Option (Option (Int × Int)))) (t : St
 @[simp] theorem Shape.payloadOk_range_iff (lo hi : Int) (p : Option Int) :
     Shape.payloadOk (some (some (lo, hi))) p = true ↔ ∃ n, p = some n ∧ lo ≤ n ∧ n ≤ hi := by
   cases p <;> simp only [payloadOk, Bool.false_eq_true, reduceCtorEq, false_and, exists_const, Bool.decide_and, Bool.and_eq_true, decide_eq_true_eq, Option.some.injEq, exists_eq_left']
-@[simp] theorem Shape.payloadOk_none_none : Shape.payloadOk none none = true := rfl
-@[simp] theorem Shape.payloadOk_none_some (n : Int) : Shape.payloadOk none (some n) = false := rfl
-@[simp] theorem Shape.payloadOk_some_none_none : Shape.payloadOk (some none) none = false := rfl
-@[simp] theorem Shape.payloadOk_some_none_some (n : Int) : Shape.payloadOk (some none) (some n) = true := rfl
-@[simp] theorem Shape.payloadOk_range_none (lo hi : Int) : Shape.payloadOk (some (some (lo, hi))) none = false := rfl
+@[simp] theorem Shape.payloadOk_none_none : Shape.payloadOk none none = true := by rfl
+@[simp] theorem Shape.payloadOk_none_some (n : Int) : Shape.payloadOk none (some n) = false := by rfl
+@[simp] theorem Shape.payloadOk_some_none_none : Shape.payloadOk (some none) none = false := by rfl
+@[simp] theorem Shape.payloadOk_some_none_some (n : Int) : Shape.payloadOk (some none) (some n) = true := by rfl
+@[simp] theorem Shape.payloadOk_range_none (lo hi : Int) : Shape.payloadOk (some (some (lo, hi))) none = false := by rfl
 @[simp] theorem Shape.payloadOk_range_some (lo hi n : Int) :
-    Shape.payloadOk (some (some (lo, hi))) (some n) = decide (lo ≤ n ∧ n ≤ hi) := rfl
+    Shape.payloadOk (some (some (lo, hi))) (some n) = decide (lo ≤ n ∧ n ≤ hi) := by rfl
 
 def Value.hasShape : Value → Shape → Bool
   | .int _, .int => true
@@ -264,37 +264,37 @@ def Value.hasShape : Value → Shape → Bool
     the equations the simp set uses instead of unfolding the definition, so that a
     `hasShape v sh = true` about an unknown `v` keeps the form `gabbro_open` turns into a
     witness. -/
-@[simp] theorem Value.hasShape_int_int (n : Int) : Value.hasShape (.int n) .int = true := rfl
-@[simp] theorem Value.hasShape_int_bool (n : Int) : Value.hasShape (.int n) .bool = false := rfl
-@[simp] theorem Value.hasShape_int_opt (n : Int) : Value.hasShape (.int n) .opt = false := rfl
-@[simp] theorem Value.hasShape_int_sum (cs : List (String × Option (Option (Int × Int)))) (n : Int) : Value.hasShape (.int n) (.sum cs) = false := rfl
-@[simp] theorem Value.hasShape_int_intIn (n lo hi : Int) : Value.hasShape (.int n) (.intIn lo hi) = decide (lo ≤ n ∧ n ≤ hi) := rfl
-@[simp] theorem Value.hasShape_bool_intIn (t : Bool) (lo hi : Int) : Value.hasShape (.bool t) (.intIn lo hi) = false := rfl
-@[simp] theorem Value.hasShape_absent_intIn (lo hi : Int) : Value.hasShape (.absent) (.intIn lo hi) = false := rfl
-@[simp] theorem Value.hasShape_present_intIn (n lo hi : Int) : Value.hasShape (.present n) (.intIn lo hi) = false := rfl
-@[simp] theorem Value.hasShape_reason_intIn (r : String) (lo hi : Int) : Value.hasShape (.reason r) (.intIn lo hi) = false := rfl
-@[simp] theorem Value.hasShape_tagged_intIn (t : String) (p : Option Int) (lo hi : Int) : Value.hasShape (.tagged t p) (.intIn lo hi) = false := rfl
-@[simp] theorem Value.hasShape_bool_int (t : Bool) : Value.hasShape (.bool t) .int = false := rfl
-@[simp] theorem Value.hasShape_bool_bool (t : Bool) : Value.hasShape (.bool t) .bool = true := rfl
-@[simp] theorem Value.hasShape_bool_opt (t : Bool) : Value.hasShape (.bool t) .opt = false := rfl
-@[simp] theorem Value.hasShape_bool_sum (cs : List (String × Option (Option (Int × Int)))) (t : Bool) : Value.hasShape (.bool t) (.sum cs) = false := rfl
-@[simp] theorem Value.hasShape_absent_int : Value.hasShape (.absent) .int = false := rfl
-@[simp] theorem Value.hasShape_absent_bool : Value.hasShape (.absent) .bool = false := rfl
-@[simp] theorem Value.hasShape_absent_opt : Value.hasShape (.absent) .opt = true := rfl
-@[simp] theorem Value.hasShape_absent_sum (cs : List (String × Option (Option (Int × Int)))) : Value.hasShape (.absent) (.sum cs) = false := rfl
-@[simp] theorem Value.hasShape_present_int (n : Int) : Value.hasShape (.present n) .int = false := rfl
-@[simp] theorem Value.hasShape_present_bool (n : Int) : Value.hasShape (.present n) .bool = false := rfl
-@[simp] theorem Value.hasShape_present_opt (n : Int) : Value.hasShape (.present n) .opt = true := rfl
-@[simp] theorem Value.hasShape_present_sum (cs : List (String × Option (Option (Int × Int)))) (n : Int) : Value.hasShape (.present n) (.sum cs) = false := rfl
-@[simp] theorem Value.hasShape_reason_int (r : String) : Value.hasShape (.reason r) .int = false := rfl
-@[simp] theorem Value.hasShape_reason_bool (r : String) : Value.hasShape (.reason r) .bool = false := rfl
-@[simp] theorem Value.hasShape_reason_opt (r : String) : Value.hasShape (.reason r) .opt = false := rfl
-@[simp] theorem Value.hasShape_reason_sum (cs : List (String × Option (Option (Int × Int)))) (r : String) : Value.hasShape (.reason r) (.sum cs) = false := rfl
-@[simp] theorem Value.hasShape_tagged_int (t : String) (p : Option Int) : Value.hasShape (.tagged t p) .int = false := rfl
+@[simp] theorem Value.hasShape_int_int (n : Int) : Value.hasShape (.int n) .int = true := by rfl
+@[simp] theorem Value.hasShape_int_bool (n : Int) : Value.hasShape (.int n) .bool = false := by rfl
+@[simp] theorem Value.hasShape_int_opt (n : Int) : Value.hasShape (.int n) .opt = false := by rfl
+@[simp] theorem Value.hasShape_int_sum (cs : List (String × Option (Option (Int × Int)))) (n : Int) : Value.hasShape (.int n) (.sum cs) = false := by rfl
+@[simp] theorem Value.hasShape_int_intIn (n lo hi : Int) : Value.hasShape (.int n) (.intIn lo hi) = decide (lo ≤ n ∧ n ≤ hi) := by rfl
+@[simp] theorem Value.hasShape_bool_intIn (t : Bool) (lo hi : Int) : Value.hasShape (.bool t) (.intIn lo hi) = false := by rfl
+@[simp] theorem Value.hasShape_absent_intIn (lo hi : Int) : Value.hasShape (.absent) (.intIn lo hi) = false := by rfl
+@[simp] theorem Value.hasShape_present_intIn (n lo hi : Int) : Value.hasShape (.present n) (.intIn lo hi) = false := by rfl
+@[simp] theorem Value.hasShape_reason_intIn (r : String) (lo hi : Int) : Value.hasShape (.reason r) (.intIn lo hi) = false := by rfl
+@[simp] theorem Value.hasShape_tagged_intIn (t : String) (p : Option Int) (lo hi : Int) : Value.hasShape (.tagged t p) (.intIn lo hi) = false := by rfl
+@[simp] theorem Value.hasShape_bool_int (t : Bool) : Value.hasShape (.bool t) .int = false := by rfl
+@[simp] theorem Value.hasShape_bool_bool (t : Bool) : Value.hasShape (.bool t) .bool = true := by rfl
+@[simp] theorem Value.hasShape_bool_opt (t : Bool) : Value.hasShape (.bool t) .opt = false := by rfl
+@[simp] theorem Value.hasShape_bool_sum (cs : List (String × Option (Option (Int × Int)))) (t : Bool) : Value.hasShape (.bool t) (.sum cs) = false := by rfl
+@[simp] theorem Value.hasShape_absent_int : Value.hasShape (.absent) .int = false := by rfl
+@[simp] theorem Value.hasShape_absent_bool : Value.hasShape (.absent) .bool = false := by rfl
+@[simp] theorem Value.hasShape_absent_opt : Value.hasShape (.absent) .opt = true := by rfl
+@[simp] theorem Value.hasShape_absent_sum (cs : List (String × Option (Option (Int × Int)))) : Value.hasShape (.absent) (.sum cs) = false := by rfl
+@[simp] theorem Value.hasShape_present_int (n : Int) : Value.hasShape (.present n) .int = false := by rfl
+@[simp] theorem Value.hasShape_present_bool (n : Int) : Value.hasShape (.present n) .bool = false := by rfl
+@[simp] theorem Value.hasShape_present_opt (n : Int) : Value.hasShape (.present n) .opt = true := by rfl
+@[simp] theorem Value.hasShape_present_sum (cs : List (String × Option (Option (Int × Int)))) (n : Int) : Value.hasShape (.present n) (.sum cs) = false := by rfl
+@[simp] theorem Value.hasShape_reason_int (r : String) : Value.hasShape (.reason r) .int = false := by rfl
+@[simp] theorem Value.hasShape_reason_bool (r : String) : Value.hasShape (.reason r) .bool = false := by rfl
+@[simp] theorem Value.hasShape_reason_opt (r : String) : Value.hasShape (.reason r) .opt = false := by rfl
+@[simp] theorem Value.hasShape_reason_sum (cs : List (String × Option (Option (Int × Int)))) (r : String) : Value.hasShape (.reason r) (.sum cs) = false := by rfl
+@[simp] theorem Value.hasShape_tagged_int (t : String) (p : Option Int) : Value.hasShape (.tagged t p) .int = false := by rfl
 @[simp] theorem Value.hasShape_tagged_sum (t : String) (p : Option Int) (cs : List (String × Option (Option (Int × Int)))) :
-    Value.hasShape (.tagged t p) (.sum cs) = Shape.caseOk cs t p := rfl
-@[simp] theorem Value.hasShape_tagged_bool (t : String) (p : Option Int) : Value.hasShape (.tagged t p) .bool = false := rfl
-@[simp] theorem Value.hasShape_tagged_opt (t : String) (p : Option Int) : Value.hasShape (.tagged t p) .opt = false := rfl
+    Value.hasShape (.tagged t p) (.sum cs) = Shape.caseOk cs t p := by rfl
+@[simp] theorem Value.hasShape_tagged_bool (t : String) (p : Option Int) : Value.hasShape (.tagged t p) .bool = false := by rfl
+@[simp] theorem Value.hasShape_tagged_opt (t : String) (p : Option Int) : Value.hasShape (.tagged t p) .opt = false := by rfl
 
 /-! **A shape, as a witness.** `v.hasShape .int = true` says WHAT `v` is; these turn that
     into the equation a proof rewrites with. -/
@@ -316,7 +316,7 @@ theorem Value.hasShape_sum_true (v : Value) (cs : List (String × Option (Option
 @[simp] theorem Shape.caseOk_cons (c : String × Option (Option (Int × Int))) (cs : List (String × Option (Option (Int × Int)))) (t : String) (p : Option Int) :
     Shape.caseOk (c :: cs) t p = ((c.1 == t && Shape.payloadOk c.2 p) || Shape.caseOk cs t p) := by
   simp only [caseOk, List.any_cons]
-@[simp] theorem Shape.caseOk_nil (t : String) (p : Option Int) : Shape.caseOk [] t p = false := rfl
+@[simp] theorem Shape.caseOk_nil (t : String) (p : Option Int) : Shape.caseOk [] t p = false := by rfl
 @[simp] theorem isSome_true_iff (o : Option Int) : o.isSome = true ↔ ∃ n, o = some n := by
   cases o <;> simp only [Option.isSome_none, Bool.false_eq_true, reduceCtorEq, exists_const, Option.isSome_some, Option.some.injEq, exists_eq']
 @[simp] theorem isSome_false_iff (o : Option Int) : o.isSome = false ↔ o = none := by
@@ -537,8 +537,8 @@ def orBool : Option Value → Option Value → Option Value
   | some (.bool x), some (.bool y) => some (.bool (x || y))
   | _, _ => none
 
-@[simp] theorem andBool_some (x y : Bool) : andBool (some (.bool x)) (some (.bool y)) = some (.bool (x && y)) := rfl
-@[simp] theorem orBool_some (x y : Bool) : orBool (some (.bool x)) (some (.bool y)) = some (.bool (x || y)) := rfl
+@[simp] theorem andBool_some (x y : Bool) : andBool (some (.bool x)) (some (.bool y)) = some (.bool (x && y)) := by rfl
+@[simp] theorem orBool_some (x y : Bool) : orBool (some (.bool x)) (some (.bool y)) = some (.bool (x || y)) := by rfl
 @[simp] theorem andBool_none_left (y : Option Value) : andBool none y = none := by cases y <;> rfl
 @[simp] theorem andBool_none_right (x : Option Value) : andBool x none = none := by
   cases x with

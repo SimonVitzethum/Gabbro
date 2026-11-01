@@ -21,7 +21,7 @@ variable {D : Deklaration} {L : Lay D}
 
 theorem axiomAntwortSonst_eq (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     axiomAntwortSonst O a σ ρ = ((O.wirkt a (σ.fragt (.inl a)) ρ).1,
-      sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ.fragt (.inl a)) ρ).2) := rfl
+      sonstPasst O.zeiger (D.aerg a) (D.agruende a) (O.wirkt a (σ.fragt (.inl a)) ρ).2) := by rfl
 
 theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax}
     {args : Args D Γ Λ (D.aparams a)} {τ : Ty} (he : D.aerg a = some τ) {lo' hi' : Int}

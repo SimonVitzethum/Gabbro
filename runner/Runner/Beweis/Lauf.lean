@@ -68,11 +68,11 @@ def _root_.Runner.Res.bind {σ : Type} : Res σ → (σ → Res σ) → Res σ
   | .unk, _ => .unk
   | .ask o k, f => .ask o fun a => (k a).bind f
 
-@[simp] theorem bind_next {σ : Type} (s : σ) (f : σ → Res σ) : (Res.next s).bind f = f s := rfl
-@[simp] theorem bind_fault {σ : Type} (f : σ → Res σ) : (Res.fault).bind f = .fault := rfl
-@[simp] theorem bind_unk {σ : Type} (f : σ → Res σ) : (Res.unk).bind f = .unk := rfl
+@[simp] theorem bind_next {σ : Type} (s : σ) (f : σ → Res σ) : (Res.next s).bind f = f s := by rfl
+@[simp] theorem bind_fault {σ : Type} (f : σ → Res σ) : (Res.fault).bind f = .fault := by rfl
+@[simp] theorem bind_unk {σ : Type} (f : σ → Res σ) : (Res.unk).bind f = .unk := by rfl
 @[simp] theorem bind_ask {σ : Type} (o : Op) (k : Ans → Res σ) (f : σ → Res σ) :
-    (Res.ask o k).bind f = .ask o fun a => (k a).bind f := rfl
+    (Res.ask o k).bind f = .ask o fun a => (k a).bind f := by rfl
 @[simp] theorem bind_opt {σ α : Type} (o : Option α) (g : α → Res σ) (f : σ → Res σ) :
     (opt o g).bind f = opt o (fun a => (g a).bind f) := by
   cases o <;> rfl

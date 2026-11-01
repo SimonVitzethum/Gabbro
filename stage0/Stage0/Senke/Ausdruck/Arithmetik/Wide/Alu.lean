@@ -74,9 +74,9 @@ def aluRun : List II → (Nat → Runner.W) → (Nat → Runner.W)
   | [], s => s
   | i :: is, s => aluRun is (aluStep i s)
 
-@[simp] theorem aluRun_nil (s : Nat → Runner.W) : aluRun [] s = s := rfl
+@[simp] theorem aluRun_nil (s : Nat → Runner.W) : aluRun [] s = s := by rfl
 @[simp] theorem aluRun_cons (i : II) (is : List II) (s : Nat → Runner.W) :
-    aluRun (i :: is) s = aluRun is (aluStep i s) := rfl
+    aluRun (i :: is) s = aluRun is (aluStep i s) := by rfl
 
 theorem aluRun_append (a b : List II) (s : Nat → Runner.W) :
     aluRun (a ++ b) s = aluRun b (aluRun a s) := by

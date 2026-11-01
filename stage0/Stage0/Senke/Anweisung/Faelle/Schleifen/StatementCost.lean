@@ -1752,7 +1752,7 @@ def EndCost.result {Δ snapshot ens lo V l Γ Λ b σ ρ n}
 
 @[simp] theorem EndCost.outcome_result {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n) :
-    terminalResult certificate.outcome = certificate.result := rfl
+    terminalResult certificate.outcome = certificate.result := by rfl
 
 /-- A computed normal result is read at the very same endpoint as the cost proof. -/
 theorem EndCost.result_read {Δ snapshot ens lo V l Γ Λ b σ ρ n}

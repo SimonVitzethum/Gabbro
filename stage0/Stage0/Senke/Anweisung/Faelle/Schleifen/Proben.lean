@@ -82,6 +82,6 @@ theorem forever_body_zeuge :
 theorem forever_unreserved_zeuge :
     lowS 1 (fun _ => 0) (layU uf (fun _ => none) 0) (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [] (0, 0)
       (Stmt.forever (V := vertragVon DF main) (l := false) (Λ := []) progress .tru (.cons (.leave rfl) .nil) :
-        Stmt DF (vertragVon DF main) false [] [] []) = none := rfl
+        Stmt DF (vertragVon DF main) false [] [] []) = none := by rfl
 
 end Gabbro.Stage0.Senke.LoopProbe

@@ -9,7 +9,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-- Declaration classification only; every initializer remains attached to its original type. -/
-private def arrayInput : SItemTief → Except String (Option (String × STyp × SKonstWert))
+def arrayInput : SItemTief → Except String (Option (String × STyp × SKonstWert))
   | .constT name (.array element count) payload => .ok (some (name, .array element count, payload))
   | .constT name _ (.rows _) => .error ("constant " ++ name ++ ": row initializer requires an array type")
   | _ => .ok none

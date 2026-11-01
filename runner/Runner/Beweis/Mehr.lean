@@ -230,7 +230,7 @@ theorem invK_ende {L : Lay} {r : Res IR.T} {rx : Res X} {e : Ende} (h : MatchK L
 
 /-! ## The theorem -/
 
-theorem lbl_rd (i : Nat) (a : W) (b : Ans) : lbl i (.rd 8 a) b = [] := rfl
+theorem lbl_rd (i : Nat) (a : W) (b : Ans) : lbl i (.rd 8 a) b = [] := by rfl
 
 theorem runner_mt {L : Lay} {M : MemSys} (hF : Fixed M L) (hI : CInv L) :
     ∀ (n : Nat) {cI : Cfg M (Res IR.T)} {cX : Cfg M X} {l : List Ev} {e : Ende},

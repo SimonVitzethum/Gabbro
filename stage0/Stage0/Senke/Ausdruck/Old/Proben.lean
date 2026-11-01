@@ -115,11 +115,11 @@ def tableLayout : Lay QuantProbe.D where
 def slotExpr : Expr QuantProbe.D [] [] (.opt 4) :=
   .oldS QuantProbe.tab QuantProbe.field (QuantProbe.index 1 (by decide)) QuantProbe.access
 
-theorem oldS_literal_zeuge : lowEns tableLayout frameLayout slotExpr 5 = some (readCode, 6) := rfl
+theorem oldS_literal_zeuge : lowEns tableLayout frameLayout slotExpr 5 = some (readCode, 6) := by rfl
 
 theorem oldS_parameter_refused_zeuge :
     lowEns tableLayout frameLayout (Expr.oldS (Γ := [.index 4]) QuantProbe.tab QuantProbe.field
-      (.var .here) QuantProbe.access) 6 = none := rfl
+      (.var .here) QuantProbe.access) 6 = none := by rfl
 
 theorem multiple_occurrences_zeuge :
     EntrySnapshots.capture layout [.glob (), .glob ()] 4 =

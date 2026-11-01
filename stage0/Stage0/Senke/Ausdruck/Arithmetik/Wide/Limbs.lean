@@ -20,8 +20,8 @@ def dval (x : Nat → Nat) : Nat → Nat
   | 0 => 0
   | i + 1 => dval x i + x i * 2 ^ (64 * i)
 
-@[simp] theorem dval_zero (x : Nat → Nat) : dval x 0 = 0 := rfl
-theorem dval_succ (x : Nat → Nat) (i : Nat) : dval x (i + 1) = dval x i + x i * 2 ^ (64 * i) := rfl
+@[simp] theorem dval_zero (x : Nat → Nat) : dval x 0 = 0 := by rfl
+theorem dval_succ (x : Nat → Nat) (i : Nat) : dval x (i + 1) = dval x i + x i * 2 ^ (64 * i) := by rfl
 
 theorem dval_congr {x y : Nat → Nat} {k : Nat} (h : ∀ j, j < k → x j = y j) : dval x k = dval y k := by
   induction k with
@@ -51,9 +51,9 @@ def carryAt (x y : Nat → Nat) (c0 : Nat) : Nat → Nat
 /-- The digit `i` of `x + y + c0`. -/
 def sumDig (x y : Nat → Nat) (c0 i : Nat) : Nat := (x i + y i + carryAt x y c0 i) % 2 ^ 64
 
-@[simp] theorem carryAt_zero (x y : Nat → Nat) (c0 : Nat) : carryAt x y c0 0 = c0 := rfl
+@[simp] theorem carryAt_zero (x y : Nat → Nat) (c0 : Nat) : carryAt x y c0 0 = c0 := by rfl
 theorem carryAt_succ (x y : Nat → Nat) (c0 i : Nat) :
-    carryAt x y c0 (i + 1) = (x i + y i + carryAt x y c0 i) / 2 ^ 64 := rfl
+    carryAt x y c0 (i + 1) = (x i + y i + carryAt x y c0 i) / 2 ^ 64 := by rfl
 
 /-- The produced digits and the outgoing carry account for the whole sum. -/
 theorem sum_identity (x y : Nat → Nat) (c0 : Nat) (i : Nat) :

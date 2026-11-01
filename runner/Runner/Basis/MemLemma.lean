@@ -41,8 +41,8 @@ theorem all_of {p : W → Bool} {a : W} : ∀ {n : Nat}, (∀ j, j < n → p (a 
     simp only [all, Bool.and_eq_true]
     exact ⟨all_of fun j hj => h j (Nat.lt_succ_of_lt hj), h n (Nat.lt_succ_self n)⟩
 
-@[simp] theorem write_rd (m : Mem) (a : W) (n v : Nat) : (write m a n v).rd = m.rd := rfl
-@[simp] theorem write_wr (m : Mem) (a : W) (n v : Nat) : (write m a n v).wr = m.wr := rfl
+@[simp] theorem write_rd (m : Mem) (a : W) (n v : Nat) : (write m a n v).rd = m.rd := by rfl
+@[simp] theorem write_wr (m : Mem) (a : W) (n v : Nat) : (write m a n v).wr = m.wr := by rfl
 
 /-- The byte ranges `[a, a+n)` and `[b, b+k)` are apart, without wrap-around. -/
 def Far (a : W) (n : Nat) (b : W) (k : Nat) : Prop :=

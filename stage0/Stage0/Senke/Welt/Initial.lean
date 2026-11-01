@@ -76,7 +76,7 @@ theorem initialWorld_memory (u : UProg) (valid : GabbroV.sp0OkB u = true) :
 
 theorem initialWorld_column (u : UProg) (valid : GabbroV.sp0OkB u = true)
     (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) (k : Int) :
-    (initialWorld u valid).slots t k f = (initialWorld u valid).slots t 0 f := rfl
+    (initialWorld u valid).slots t k f = (initialWorld u valid).slots t 0 f := by rfl
 
 /-- Bytes of a value use the existing runner word serializer and unique encoder. -/
 def initialValueBytes {D : Deklaration} (L : Lay D) (τ : Ty) (v : Wert D τ) : List Runner.B :=

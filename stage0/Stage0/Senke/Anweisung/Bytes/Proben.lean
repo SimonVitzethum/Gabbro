@@ -104,7 +104,7 @@ theorem byte_roundtrip8_zeuge :
 theorem getBytes_wide_refused_zeuge :
     lowE (layU u (fun _ => none) 65536)
       (.getBytes (Γ := []) (Λ := []) tab field rfl 9 (.lit 2) (by decide) (by decide)
-        (by intro w hw; change w ∈ [] at hw; cases hw)) 3 = none := rfl
+        (by intro w hw; change w ∈ [] at hw; cases hw)) 3 = none := by rfl
 
 /-- Capturing the operands matters when the destination overlaps their source bytes. -/
 def overlapBody : Endblock D (vertragVon D entry) false [] [] :=

@@ -35,7 +35,7 @@ private def binding : SBind :=
     [("EBADF", some (.lit 9), "BadFd")]⟩
 
 /-- A selected binding retains nonempty registers, clobbers and error channels jointly. -/
-theorem uniqueBinding_ok_zeuge : uniqueBinding "sys_gate" "x86_64" [binding] = .ok binding := rfl
+theorem uniqueBinding_ok_zeuge : uniqueBinding "sys_gate" "x86_64" [binding] = .ok binding := by rfl
 
 private def errorBinding : SBind :=
   ⟨.lit 1, [], [.reg "rax"], [], ["rcx", "r11"],
@@ -49,21 +49,21 @@ set_option maxRecDepth 2000 in
 theorem literal_metal_refused_zeuge :
     torVonFor "x86_64" none []
       { errorCall with way := .lit "metal" "x86_64" errorBinding (.core []) } =
-      .error "gate probe: ABI metal is not supported by the Linux runner" := rfl
+      .error "gate probe: ABI metal is not supported by the Linux runner" := by rfl
 
 set_option maxRecDepth 2000 in
 /-- Validation applies before emission even if no gate requests a binding. -/
 theorem gate_free_metal_refused_zeuge :
     validateTargetFor "x86_64" (some "bare")
       [.goalT "bare" (some ("metal", "x86_64", []))] =
-      .error "target bare: ABI metal is not supported by the Linux runner" := rfl
+      .error "target bare: ABI metal is not supported by the Linux runner" := by rfl
 
 set_option maxRecDepth 2000 in
 /-- Unselected targets cannot make a supported selected profile fail validation. -/
 theorem unselected_metal_preserved_zeuge :
     validateTargetFor "x86_64" (some "host")
       [.goalT "bare" (some ("metal", "x86_64", [])),
-       .goalT "host" (some ("linux", "x86_64", []))] = .ok () := rfl
+       .goalT "host" (some ("linux", "x86_64", []))] = .ok () := by rfl
 
 private def errorItems : List SItemTief :=
   [.goalT "selected" (some ("linux", "x86_64", [("sys_gate", errorBinding, .core [])])),
@@ -77,7 +77,7 @@ theorem torVonFor_via_zeuge :
 
 /-- Duplicate numeric entries retain source order, as the canonical first-entry decoder requires. -/
 example : (torVonFor "x86_64" (some "selected") errorItems errorCall).toOption.map Tor.fehler =
-    some [(-9, 0), (-9, 1)] := rfl
+    some [(-9, 0), (-9, 1)] := by rfl
 
 #print axioms uniqueBinding_ok
 #print axioms torVonFor_via

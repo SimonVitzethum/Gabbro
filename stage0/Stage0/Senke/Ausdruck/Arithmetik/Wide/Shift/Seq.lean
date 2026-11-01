@@ -16,9 +16,9 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-@[simp] theorem seqC_nil (P : Nat → List II) : seqC P [] = [] := rfl
+@[simp] theorem seqC_nil (P : Nat → List II) : seqC P [] = [] := by rfl
 @[simp] theorem seqC_cons (P : Nat → List II) (j : Nat) (l : List Nat) :
-    seqC P (j :: l) = P j ++ seqC P l := rfl
+    seqC P (j :: l) = P j ++ seqC P l := by rfl
 
 theorem seqC_length (P : Nat → List II) (n : Nat) (hP : ∀ j, (P j).length = n) :
     ∀ l : List Nat, (seqC P l).length = n * l.length

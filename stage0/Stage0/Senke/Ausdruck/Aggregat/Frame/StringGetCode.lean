@@ -15,7 +15,7 @@ def strGetClamp (n p : Nat) : List II :=
   let h := g + 1
   [⟨1, f, n, 0⟩, ⟨27, f, p, f⟩, ⟨1, g, n, 0⟩, ⟨4, g, p, g⟩, ⟨5, g, g, f⟩, ⟨1, h, n, 0⟩, ⟨3, h, g, h⟩]
 
-@[simp] theorem strGetClamp_length (n p : Nat) : (strGetClamp n p).length = 7 := rfl
+@[simp] theorem strGetClamp_length (n p : Nat) : (strGetClamp n p).length = 7 := by rfl
 
 /-- Byte `i` of a string of capacity `n >= 2`, `0` outside `[0, n)`. The string occupies `n + 1` words at `d`;
     a zero sentinel word follows it, then the index word `p`. The unsigned test `i < n` (negative indices are

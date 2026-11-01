@@ -70,9 +70,9 @@ def contextWords : List Ty → Nat
   | [] => 0
   | τ :: Γ => contextWords Γ + valueWords τ
 
-@[simp] theorem contextWords_nil : contextWords [] = 0 := rfl
+@[simp] theorem contextWords_nil : contextWords [] = 0 := by rfl
 @[simp] theorem contextWords_cons (τ : Ty) (Γ : Ctx) :
-    contextWords (τ :: Γ) = contextWords Γ + valueWords τ := rfl
+    contextWords (τ :: Γ) = contextWords Γ + valueWords τ := by rfl
 
 theorem valueWords_pos (τ : Ty) : 0 < valueWords τ := by
   cases τ <;> simp only [valueWords, integerWords] <;> (try split) <;> omega
@@ -178,10 +178,10 @@ theorem integerWords_range {lo hi z : Int} (lower : lo ≤ z) (upper : z ≤ hi)
     omega
 
 @[simp] theorem resultWords_vertragVon (D : Deklaration) (f : D.Fn) :
-    resultWords (vertragVon D f).erg = resultWords (D.erg f) := rfl
+    resultWords (vertragVon D f).erg = resultWords (D.erg f) := by rfl
 
 @[simp] theorem returnWords_vertragVon (D : Deklaration) (f : D.Fn) :
     returnWords (vertragVon D f).erg (vertragVon D f).gruende =
-      returnWords (D.erg f) (D.gruende f) := rfl
+      returnWords (D.erg f) (D.gruende f) := by rfl
 
 end Gabbro.Stage0.Senke

@@ -124,12 +124,12 @@ def add (a b : Iv) : Iv := ⟨a.lo + b.lo, a.hi + b.hi⟩
 def neg (a : Iv) : Iv := ⟨-a.hi, -a.lo⟩
 def sub (a b : Iv) : Iv := ⟨a.lo - b.hi, a.hi - b.lo⟩
 
-@[simp] theorem add_lo (a b : Iv) : (add a b).lo = a.lo + b.lo := rfl
-@[simp] theorem add_hi (a b : Iv) : (add a b).hi = a.hi + b.hi := rfl
-@[simp] theorem neg_lo (a : Iv) : (neg a).lo = -a.hi := rfl
-@[simp] theorem neg_hi (a : Iv) : (neg a).hi = -a.lo := rfl
-@[simp] theorem sub_lo (a b : Iv) : (sub a b).lo = a.lo - b.hi := rfl
-@[simp] theorem sub_hi (a b : Iv) : (sub a b).hi = a.hi - b.lo := rfl
+@[simp] theorem add_lo (a b : Iv) : (add a b).lo = a.lo + b.lo := by rfl
+@[simp] theorem add_hi (a b : Iv) : (add a b).hi = a.hi + b.hi := by rfl
+@[simp] theorem neg_lo (a : Iv) : (neg a).lo = -a.hi := by rfl
+@[simp] theorem neg_hi (a : Iv) : (neg a).hi = -a.lo := by rfl
+@[simp] theorem sub_lo (a b : Iv) : (sub a b).lo = a.lo - b.hi := by rfl
+@[simp] theorem sub_hi (a b : Iv) : (sub a b).hi = a.hi - b.lo := by rfl
 
 /-- Das Produkt ueber die VIER ECKEN. Das ist die uebliche Intervallarithmetik und
     zugleich die Form, die `grammatik/Beweise/Intervall_Aussen.thy` fuer die Summe schon fuehrt --
@@ -145,14 +145,14 @@ def mul (a b : Iv) : Iv :=
 /-- Der Schnitt -- das ist, was V1/V2/V3 mit einem Fakt tun. -/
 def schnitt (a b : Iv) : Iv := ⟨imax a.lo b.lo, imin a.hi b.hi⟩
 
-@[simp] theorem schnitt_lo (a b : Iv) : (schnitt a b).lo = imax a.lo b.lo := rfl
-@[simp] theorem schnitt_hi (a b : Iv) : (schnitt a b).hi = imin a.hi b.hi := rfl
+@[simp] theorem schnitt_lo (a b : Iv) : (schnitt a b).lo = imax a.lo b.lo := by rfl
+@[simp] theorem schnitt_hi (a b : Iv) : (schnitt a b).hi = imin a.hi b.hi := by rfl
 
 /-- Die Huelle -- das ist, was am Zusammenlauf zweier Zweige geschieht. -/
 def huelle (a b : Iv) : Iv := ⟨imin a.lo b.lo, imax a.hi b.hi⟩
 
-@[simp] theorem huelle_lo (a b : Iv) : (huelle a b).lo = imin a.lo b.lo := rfl
-@[simp] theorem huelle_hi (a b : Iv) : (huelle a b).hi = imax a.hi b.hi := rfl
+@[simp] theorem huelle_lo (a b : Iv) : (huelle a b).lo = imin a.lo b.lo := by rfl
+@[simp] theorem huelle_hi (a b : Iv) : (huelle a b).hi = imax a.hi b.hi := by rfl
 
 section Korrektheit
 variable {a b : Iv} {x y : Int}

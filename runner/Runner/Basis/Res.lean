@@ -53,8 +53,8 @@ inductive Res (σ : Type) where
   | none => .fault
   | some a => f a
 
-@[simp] theorem opt_none {σ α : Type} (f : α → Res σ) : opt none f = .fault := rfl
-@[simp] theorem opt_some {σ α : Type} (a : α) (f : α → Res σ) : opt (some a) f = f a := rfl
+@[simp] theorem opt_none {σ α : Type} (f : α → Res σ) : opt none f = .fault := by rfl
+@[simp] theorem opt_some {σ α : Type} (a : α) (f : α → Res σ) : opt (some a) f = f a := by rfl
 
 /-! The requests both machines use, with the same conversion of the answer on both sides. -/
 

@@ -55,7 +55,7 @@ private theorem noIndex {n : Nat} (h : n = 0) (i : Fin n) : False := by
   have := i.isLt
   omega
 
-private def emptyOracle (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length = 0) :
+def emptyOracle (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length = 0) :
     Orakel (declOf u) where
   wirkt a := (noIndex ha a).elim
   regLies r := (noIndex hr r).elim
@@ -69,7 +69,7 @@ theorem fieldless : ∀ t : Fin output.compiled.unit.tabs.length,
 
 theorem table_count : output.compiled.unit.tabs.map (·.count) = [2 ^ 32] := by decide +kernel
 
-private def fieldlessWorld (u : UProg) (ht : ∀ t : Fin u.tabs.length, fieldCount u t = 0)
+def fieldlessWorld (u : UProg) (ht : ∀ t : Fin u.tabs.length, fieldCount u t = 0)
     (hg : u.globs.length = 0) : World (declOf u) where
   slots t _ f := (noIndex (ht t) f).elim
   globs g := (noIndex hg g).elim
@@ -92,7 +92,7 @@ private theorem emptyView (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.lengt
 
 local instance view : Senke.SichtOK oracle := emptyView _ carrier_shape.2.2.1 carrier_shape.2.2.2
 
-private def loadedMemory (bytes : List Runner.B) : Runner.Mem where
+def loadedMemory (bytes : List Runner.B) : Runner.Mem where
   b a := (bytes[a.toNat - Runner.Prog.IMG]?).getD 0
   rd _ := true
   wr _ := true

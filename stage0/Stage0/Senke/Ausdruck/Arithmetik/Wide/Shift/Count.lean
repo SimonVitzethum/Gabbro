@@ -13,7 +13,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Bit
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-@[simp] theorem shPre_length (k a : Nat) : (shPre k a).length = 7 := rfl
+@[simp] theorem shPre_length (k a : Nat) : (shPre k a).length = 7 := by rfl
 
 theorem count_q (n : Nat) (hn : n < 2 ^ 64) :
     BitVec.ofNat 64 n >>> 6 = BitVec.ofNat 64 (n / 64) := by
