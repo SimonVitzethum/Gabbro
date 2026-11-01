@@ -1,0 +1,27 @@
+// C05 probe: two globals under TWO locks with declared rank order, taken
+// outermost-first (rank 1, then rank 2 -- the `beispiele/17` shape with globals
+// instead of tables). Both guards are held across both stores, the group is
+// restored at return.
+module c05_global_two_locks {
+static mut cnt : u32 in 0 .. 100 = 25;
+static mut total : u32 in 0 .. 100 = 75;
+lock A protects { cnt } rank 1;
+lock B protects { total } rank 2;
+group Paar over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+}
+impl fn main() -> u32 in 0 .. 200
+    maintains summe_bleibt
+    effects { writes cnt, writes total, locks A, locks B }
+{
+    let a = 25;
+    let b = 75;
+    locks A {
+        locks B {
+            cnt = a;
+            total = b;
+        }
+    }
+    return a + b;
+}
+}

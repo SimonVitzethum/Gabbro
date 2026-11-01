@@ -1,0 +1,34 @@
+// C05 probe: a MIXED group -- one table plus one global under two locks.
+// The invariant quantifies over the table and reads the global: every cell
+// stays below the global bound. The writer takes both guards, moves the bound
+// and the cell together (cell 20 <= bound 100), and returns their sum.
+module c05_mixed_table_global {
+table T count 4 { slot { v : u32 in 0 .. 100, } }
+static mut grenze : u32 in 0 .. 100 = 100;
+lock A protects { T } rank 1;
+lock B protects { grenze } rank 2;
+group Paar over { T, grenze } {
+    invariant alle_drunter cost O(n) runs online :
+        forall i in slots of T : T.slots[i].v <= grenze;
+}
+impl fn setze(s : u32 in 0 .. 100, g : u32 in 0 .. 100) -> u32 in 0 .. 200
+    requires s <= g
+    maintains alle_drunter
+    effects { writes T.slots, writes grenze, locks A, locks B }
+{
+    locks A {
+        locks B {
+            grenze = g;
+            T.slots[0].v = s;
+        }
+    }
+    return s + g;
+}
+impl fn main() -> u32 in 0 .. 200
+    maintains alle_drunter
+    effects { writes T.slots, writes grenze, locks A, locks B }
+{
+    let s = setze(20, 100);
+    return s;
+}
+}

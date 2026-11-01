@@ -1,0 +1,21 @@
+// C05 refusal probe: the global twin of `beispiele/gift/1232`. The writer
+// touches both carriers of the group under the right lock but names no duty --
+// the `maintains` line is silently dropped. Every writer of a group carrier
+// owes the invariant (N496).
+module c05_dropped_maintains {
+static mut cnt : u32 in 0 .. 100 = 30;
+static mut total : u32 in 0 .. 100 = 70;
+lock K protects { cnt, total } rank 0;
+group Summe over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs offline : cnt + total == 100;
+}
+impl fn schreibe_ohne_pflicht()
+    effects { writes cnt, writes total, locks K }
+{
+    locks K {
+        cnt = 10;
+        total = 90;
+    }
+}
+impl fn main() -> u8 { return 0; }
+}

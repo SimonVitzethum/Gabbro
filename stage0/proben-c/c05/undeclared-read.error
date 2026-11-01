@@ -1,0 +1,1 @@
+group invariant `summe_bleibt` reads `fremd`, which is not a declared carrier of `group Summe`

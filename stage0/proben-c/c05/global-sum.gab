@@ -1,0 +1,30 @@
+// C05 probe: a group invariant over two globals holds at return.
+//
+// `cnt + total == 100` is already true in the initial memory (30 + 70) and the
+// writer restores it before returning. Post-C05 the return epilogue evaluates
+// the owed predicate (stop 103) and the run yields the sum.
+module c05_global_sum {
+static mut cnt : u32 in 0 .. 100 = 30;
+static mut total : u32 in 0 .. 100 = 70;
+lock K protects { cnt, total } rank 0;
+group Summe over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+}
+impl fn setze(a : u32 in 0 .. 100, b : u32 in 0 .. 100) -> u32 in 0 .. 200
+    maintains summe_bleibt
+    effects { writes cnt, writes total, locks K }
+{
+    locks K {
+        cnt = a;
+        total = b;
+    }
+    return a + b;
+}
+impl fn main() -> u32 in 0 .. 200
+    maintains summe_bleibt
+    effects { writes cnt, writes total, locks K }
+{
+    let s = setze(30, 70);
+    return s;
+}
+}

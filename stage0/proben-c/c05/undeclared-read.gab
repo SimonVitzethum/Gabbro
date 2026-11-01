@@ -1,0 +1,13 @@
+// C05 refusal probe: the invariant reads `fremd`, a guarded global that is NOT
+// a declared carrier of the group. The predicate must read exactly its declared
+// set -- an undeclared read under the same lock is refused.
+module c05_undeclared_read {
+static mut cnt : u32 in 0 .. 100 = 30;
+static mut total : u32 in 0 .. 100 = 70;
+static mut fremd : u32 in 0 .. 100 = 0;
+lock K protects { cnt, total, fremd } rank 0;
+group Summe over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs offline : cnt + total + fremd == 100;
+}
+impl fn main() -> u8 { return 0; }
+}

@@ -1,0 +1,24 @@
+// C05 probe: the global twin of `beispiele/gift/1481`. The writer stores 30
+// and 71 (sum 101, in range but not the invariant) and returns. This program
+// is ACCEPTED post-C05 -- no checker rule refuses a false-at-return group
+// invariant (N511 is lock-section-only) -- and the shared return epilogue
+// evaluates the owed predicate `cnt + total == 100` after the ensures: the
+// run stops with the owed-predicate code 103 (30 + 71 = 101 is not 100).
+module c05_broken_at_return {
+static mut cnt : u32 in 0 .. 100 = 30;
+static mut total : u32 in 0 .. 100 = 70;
+lock K protects { cnt, total } rank 0;
+group Summe over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+}
+impl fn main() -> u32 in 0 .. 200
+    maintains summe_bleibt
+    effects { writes cnt, writes total, locks K }
+{
+    locks K {
+        cnt = 30;
+        total = 71;
+    }
+    return 100;
+}
+}
