@@ -17,6 +17,9 @@
 module
 public import Grammatik.Gen.Druck.Druck
 public import Grammatik.Gen.Abdeckung.Waehlen
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 
@@ -222,14 +225,14 @@ def offenProbe : Spez where
   axs := [{ erg := some (.ref 0) }]
 
 /-- A reference into the open `T0` is `index into T0`. -/
-theorem offenProbe_typ : offenProbe.druckTy (.ref 0) = .ok "index into T0" := rfl
+theorem offenProbe_typ : offenProbe.druckTy (.ref 0) = .ok "index into T0" := by rfl
 
 /-- The provider is known by its table: its call prints as `alloc T0`. -/
-theorem offenProbe_anbieter : offenProbe.namen.anbieterVon ⟨0, by decide⟩ = some "T0" := rfl
+theorem offenProbe_anbieter : offenProbe.namen.anbieterVon ⟨0, by decide⟩ = some "T0" := by rfl
 
 set_option maxRecDepth 20000 in
 /-- The provider item itself. -/
 theorem offenProbe_ax : offenProbe.druckAx ⟨0, by decide⟩ =
-    .ok "extern fn ax0() -> index into T0 effects { pure } costs <= 1000 ops;\n" := rfl
+    .ok "extern fn ax0() -> index into T0 effects { pure } costs <= 1000 ops;\n" := by rfl
 
 end Gabbro.Grammatik.Gen

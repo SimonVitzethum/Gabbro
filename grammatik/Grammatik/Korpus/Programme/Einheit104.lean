@@ -40,10 +40,10 @@ def P4 : Programm D4 := ((lowerAllg uExp104).toOption.get low_some).1
 
 def fs4 : List D4.Fn := ((lowerAllg uExp104).toOption.get low_some).2
 
-theorem parse4 : parseTopTief tt104 = .ok items104 := rfl
+theorem parse4 : parseTopTief tt104 = .ok items104 := by rfl
 
 /-- The lane-162 preprocessing leaves 104's elaboration unchanged. -/
-theorem elab4 : elabU (pre108 items104) = .ok uExp104 := rfl
+theorem elab4 : elabU (pre108 items104) = .ok uExp104 := by rfl
 
 theorem low4 : lowerAllg uExp104 = .ok (P4, fs4) := except_ok_get low_some
 
@@ -74,7 +74,7 @@ theorem fn_zwei (f : D4.Fn) : f = ein4 ∨ f = lies4 := by
   · exact Or.inl (Fin.ext e)
   · exact Or.inr (Fin.ext e)
 
-theorem ht4 : D4.tabNr 0 = some t4 := rfl
+theorem ht4 : D4.tabNr 0 = some t4 := by rfl
 
 abbrev L4 : List (Res D4) := [Res.held (D := D4) m4]
 
@@ -115,10 +115,10 @@ def ensLies4 : Expr D4 (ErgCtx (D4.params lies4) (D4.erg lies4)) (vertragVon D4 
   .eq (.var .here) (Expr.thru (.var (.there .here)) t4 ht4 f4 (.var (.there (.there .here))) darf4)
 
 /-- The lowered bodies and contracts ARE these terms (kernel-checked). -/
-theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := rfl
-theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := rfl
-theorem ens_ein4 : P4.ensures ein4 = ensEin4 := rfl
-theorem ens_lies4 : P4.ensures lies4 = ensLies4 := rfl
+theorem rumpf_ein4 : P4.rumpf ein4 = bodyEin4 := by rfl
+theorem rumpf_lies4 : P4.rumpf lies4 = bodyLies4 := by rfl
+theorem ens_ein4 : P4.ensures ein4 = ensEin4 := by rfl
+theorem ens_lies4 : P4.ensures lies4 = ensLies4 := by rfl
 theorem req4 (f : D4.Fn) : P4.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
 
 /-! ## 3. The enumerations of the declaration's members -/

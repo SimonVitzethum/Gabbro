@@ -39,9 +39,9 @@ def P8 : Programm D8 := ((lowerAllg uExp108).toOption.get low_some).1
 
 def fs8 : List D8.Fn := ((lowerAllg uExp108).toOption.get low_some).2
 
-theorem parse8 : parseTopTief toks108 = .ok items108 := rfl
+theorem parse8 : parseTopTief toks108 = .ok items108 := by rfl
 
-theorem elab8 : elabU (pre108 items108) = .ok uExp108 := rfl
+theorem elab8 : elabU (pre108 items108) = .ok uExp108 := by rfl
 
 theorem low8 : lowerAllg uExp108 = .ok (P8, fs8) := except_ok_get low_some
 
@@ -83,8 +83,8 @@ def bodyC8 : Endblock D8 (vertragVon D8 c8) false (D8.params c8) [] :=
   .ret (.val (Expr.widen (lo' := 0) (hi' := 4294967295) (by decide) (by decide)
     (Expr.slot t8 f8 (.widen (by decide) (by decide) (.lit 1)) darf8))) (List.Perm.refl _)
 
-theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := rfl
-theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := rfl
+theorem rumpf_a8 : P8.rumpf a8 = bodyA8 := by rfl
+theorem rumpf_c8 : P8.rumpf c8 = bodyC8 := by rfl
 theorem ens8 (f : D8.Fn) : P8.ensures f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
 theorem req8 (f : D8.Fn) : P8.requires f = .tru := by rcases fn_zwei f with e | e <;> subst e <;> rfl
 

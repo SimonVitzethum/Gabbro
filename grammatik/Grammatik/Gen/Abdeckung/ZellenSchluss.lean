@@ -72,7 +72,7 @@ def schlechtBeweis (x : Zelle) : NGrund → String
 
 /-- How the explicit list `Nw` covers a test `st` whose needed cells are `x` (and `p` if given), for the table of the
     witness lists. -/
-private def decktT (st : String) (x : Zelle) (p : Option Zelle) : String :=
+def decktT (st : String) (x : Zelle) (p : Option Zelle) : String :=
   let teil := match p with
     | none => s!"(fun w hw => by\n        obtain rfl := (by decide : ∀ w ∈ {st}.bnoetig, w = {x.lean}) w hw\n        exact h)"
     | some q => s!"(fun w hw => by\n        rcases (by decide : ∀ w ∈ {st}.bnoetig, w = {x.lean} ∨ w = {q.lean}) w hw with rfl | rfl <;> assumption)"
