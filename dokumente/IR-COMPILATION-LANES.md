@@ -1195,3 +1195,198 @@ Validation is static: refusal coordinates, constructor shapes, emitter matches
 and named theorem call sites were read at the stated commit; document counts
 and `git diff --check` were checked before commit. **Zero new source cases were
 compiled or proved by this planning task.**
+
+### Model extension design: C13, C17, C05, C04 (2026-11-01)
+
+Design baseline: `f40b2537b`; static source inspection only, no Lean edits or builds.
+Implement in the order below, with one owner of `grammatik/`. Names marked **new**
+are proposed definitions, not claims about existing declarations. Paths below are
+relative to `grammatik/Grammatik/`, except explicit `stage0/` paths. These designs
+do not close catalogue cells: completion requires the generic source preservation
+theorem, accepted exported unit, connected IR proof and compiled pipeline.
+
+**Shared decisions.** Keep arithmetic in typed expressions, recursion measures in
+the existing measure interface, invariants over the existing sum of carriers, and
+transition clauses in ordinary function contracts. Compared with expanding every
+builtin into a large expression tree, a closed typed builtin family preserves
+width and gives the emitter one dispatch point. Compared with another transition
+machine, checked expansion into ordinary functions reuses contracts, resources,
+frames and call logs. Never introduce an executable source interpreter.
+
+Every new constructor is appended at the **end** of its inductive, including the
+mutual `Expr` family and exporter intermediates; keep existing constructor numbers.
+For all four packages, carry renaming, footprints, ghost checks and declaration
+embeddings through `Kern/Syntax/Zucker`, `Kern/Syntax/Extraktion`,
+`Nebenlaeufigkeit/Sperren/MitRuhe*` and `Zielsatz/Einbettung/Syntax`. Extend the
+GabbroV bridge in `GabbroV/GvBruecke` where its represented fragment changes.
+No acceptance component may default to true on a new form.
+
+| Priority | Kernel/model delta | Spec impact | Effort, engineering days |
+|---|---|---|---|
+| C13 | Closed typed integer builtins; bounded count fold; checked layout sugar | Conservative expression extension; extend cost definitions, no new assumption | 8–14 |
+| C17 | Bind source measure to existing `Mass`/`MassPflicht`; no new execution rule | Existing termination premises instantiated, not removed | 2–4; optional generic cut +1–2 |
+| C05 | Replace invariant `List Tab` with `List (Tab ⊕ Glob)` throughout; implement the currently refused IR return checks | **Yes:** restoration/closedness/observation also cover global carriers | 8–13 |
+| C04 | Checked expansion of named transition contracts and dynamic endpoint expressions | Source meaning made explicit; existing goal applied to generated functions | 5–9 |
+
+Ranges include generic proofs, non-degenerate witnesses and connected Stage-0
+work; they are not measured build times. Critical path: C13 expression inductions,
+C05 invariant replay and idle-root/link embeddings, then C04 source semantics
+review. Optional generic syntax beyond the cut below is not included.
+
+**C13 — arithmetic, bit builtins, layout and count.**
+
+| Layer | Implementable change |
+|---|---|
+| Typed kernel definitions | In `Kern/Syntax/Syntax`, add **new** `IntBuiltin : List Ty → Ty → Type`, a closed family, and append **new** `Expr.intBuiltin (op : IntBuiltin ts τ) (args : Args D Γ Λ ts) : Expr D Γ Λ τ`. Constructors: `addW/subW/mulW`, `shlW`, `addS`, `clz/ctz/log2Floor/popcount`, `rotl/rotr`, `bswap16/32/64`. Width is `W = w + 1`, never inferred from the current interval. Binary wrapping operands/result are `.int 0 (2^W-1)`; shift/rotate amounts are `.int 0 w`. Saturating operands/result share `.int lo hi`. `clz/ctz/log2Floor` take `.int 1 (2^W-1)` and return `.int 0 w`; `popcount` takes the full unsigned range and returns `.int 0 W`. Byte swaps have exactly their named widths. There is no arbitrary function-valued primitive. |
+| G value semantics | Add **new** `evalIntBuiltin`, interpreted only by `Zahl.addW/subW/mulW/shlW/addS` from `Kern/Semantik/Ueberlauf`, and `Zahl.clz/ctz/log2_floor/popcount/rotl/rotr/bswap16/32/64` from `Kern/Syntax/Bits/T2`. In `Semantik/Semantik/T1`, `eval (.intBuiltin op args)` applies it to `evalArgs`; its `orte` is exactly `args.orte`. Import the existing value modules, without a syntax/semantics import cycle. No new `execStmt` rule. Literal operands are widened only with proved inclusion in the declared operand range. |
+| Count definition | Append **new** `Expr.count (n : Nat) (body : Expr D (Ty.index (n : Int) :: Γ) Λ .bool) : Expr D Γ Λ (.int 0 n)`. In T1, evaluate the predicate for every index in `alleIndizes (n : Int)` in the same world/environment, count true results, and package the bound `count ≤ n`; `orte = body.orte`. This is one bounded fold for every admitted finite domain. Slots use `(D.count t).toNat` with checked index conversion; array elements use `Expr.arrGet`; descendants/ancestors/chain require the existing checked `reaches` filter and exact domain membership. Metadata enumeration alone reads no cell; predicate/domain reads retain all guards and footprints. |
+| Layout sugar | Add **new** checked source layout derivation in `Kern/Syntax/Profil`, with size/field-offset facts tied to the selected representation and a theorem consumed by the emitter's `Lay` correspondence. `sizeof` lowers to `Expr.lit` only after type/place resolution and that derivation; preserve any source-required index evaluation in enclosing binders. It is the source object's declared byte size, not `8 * count` from the runner's column representation (`stage0/Stage0/Senke/Welt/Lay`). Numeric `aligned(x,N)` is the predicate `x mod N = 0`, with positive checked constant alignment; use `Expr.rem` for nonnegative x and signed-remainder sugar for signed x. Preserve operand reads/effects. A capability alignment query needs a layout/address correspondence; `Ty.ptr` evaluates to unit and cannot be treated as an integer. |
+| Admission/export | Catalogue coordinates `Parser/Elab/Uebersetze.lean:1663/1490/1604/1563`, complement :1422/1423. Extend `uRechne`, `uWertBlatt`, `uSeiteBlatt`, `uSichert` and the `USide`/`UEns` representations, then `UebersetzeAllg.lowWertE`/`lowEns`. Carry declared storage width through fields, locals and aliases, not just `UCtx.bits` on parameters. Read `.ext .count` using the domain encoding in `Parser/Expr/Ausdruck.parseQuant`; prove binder renaming and domain cardinality. Unknown width, zero-excluding bit operands, shift limits, alignment and bounds are checked before constructing G. `Akzeptiert`/`AkzeptiertX` retain `frag`, `fuss`, `renn`, `stufen`, `antworten` etc.; extend their structural traversals so builtin/count reads reach the existing footprint and atomic-contract rules. |
+| IR and connected proof | Extend `stage0/Stage0/Senke/Ausdruck.lowE`, `Ausdruck/Top.lowE_top`, `Ausdruck/Satz.lowE_ok`, aggregate/wide value lowering and `Old/` contract lowering together. Reuse `Arithmetik/Wide/Run.wideAdd_run/wideSub_run`, `MulRun.wideMul_run`, `Bits.wideAnd_run/wideOr_run/wideXor_run`, shift and compare kernels. Mask to **W** bits after arithmetic, including partial top limbs; saturate by an exact sum in a sufficient temporary width before signed/unsigned comparison and clamp. Existing limb kernels alone do not prove builtin semantics. Bit counts/scans/rotates/swaps need composition proofs against the named `Zahl` functions; no CPU zero-case convention. Extend `Ausdruck/Quant` with a counted fold using the existing binder/reservation machinery. Prove its accumulator/index bounds and emitted instruction budget. Thread these cases through `lowEnd_ok`, `Rekursion.lowFun_spec`, `Compiler.compile_source_program` and `IRBild.irBild_correct`. |
+
+Re-establish `Extraktion.eval_liest_nur_orte` (T3), hence
+`Zielsatz/ZielOrt/Grundlage/ZielOrtSem.eval_gleichAuf`, by induction on arguments
+and bounded indices. The new cases are pure and total; existing statement frame
+and race proofs then apply. Extend `Logik/Fortschritt/KostenG/T1.kostenExpr`:
+builtin-specific bounded work plus argument costs, and count enumeration plus
+`n * kostenExpr body`; prove the corresponding potential bounds before reusing
+`frame_schritte_beschraenkt`/`ZeitAb`. This is a conservative extension of the
+expressions interpreted by `Spec.lean`, with explicit new cost accounting, not a
+new hardware assumption or a claim of physical instruction timing. Recheck
+`Zielsatz/Kern/Beweis.ziel_aus`, `Atomar/BeweisAtomar.gabbro_ziel` and SC transfer.
+
+Witnesses: every builtin family at two storage widths, including a partial limb
+and a multiword carry; unsigned wrap-underflow, shift 0/W-1, low/high saturation
+including signed ranges, bit scans at 1/top bit, popcount at 0/all bits, rotate
+inverse and byte-swap involution. Count: empty/nonempty, mixed truth values,
+nested binder and guarded/global reads. Layout: padded/packed objects and an
+indexed place; aligned and misaligned numbers. Negative fixtures: unknown width,
+zero scan, amount W, missing lock, wrong size/layout, unmodelled domain, shared
+atomic in a contract, and ghost use. Calls inside operands depend on the checked
+call-binding expansion (A31), never on erasing the call. Open/infinite domains,
+unsized layouts and capability alignment without correspondence remain refused.
+
+**C17 — source `decreases`, bounded to the existing recursion model.**
+
+The kernel needs **no new constructor or eval/execStmt case**. Existing
+`Logik/Terminierung/Mass.Mass` is a per-function list of nonnegative integer
+expressions over entry parameters with `e.orte = []`; `Mass.wert`, `lexLt`,
+`zykS`, `massTor` and `MassPflicht` already bind a smaller cycle-call measure to
+`Logik.abstieg`. `Semantik/Semantik/T2.rufAt` instead counts recursion depth:
+fuel zero yields `abstieg`, and positive fuel checks requires/body/ensures and
+owed invariants. **Do not identify a numeric measure with this depth fuel.**
+
+| Layer | Implementable change |
+|---|---|
+| Export and admission | Replace the blanket `.drops` refusal at `Uebersetze.lean:1951` only after collecting the clause in `UFn` and lowering it at the exact entry parameter/resource context. Add **new** `lowerMeasures`, producing `Mass (declOf u)` with the footprint/nonnegativity proofs, plus a source-expression denotation theorem. One source expression becomes a singleton tuple; support tuples only if their surface form is represented. Preserve absence as `[]`, reject duplicate/ambiguous clauses. Constants may normalize, but never replace a source measure with a guessed parameter. |
+| Obligations/checker | Export the actual measure with the unit/certificate and in **new** measure provenance fields of `stage0/Stage0/Compiler.Compiled`/`CanonicalSourceProgram`. Decide equal tuple lengths along `zykS` using complete function enumeration. Generate the existing `MassPflicht` as a user obligation for every function/cycle and every required `passes`; do not infer its truth from structural checking or add it as an assumption about hardware. `Akzeptiert(X)` remains the structural safety checker; the termination certificate additionally supplies the duty to `GabbroZielTerminierung`. |
+| Existing proof chain | Instantiate `Zielsatz/Atomar/BeweisTerminierung.gabbro_ziel_terminierung` with that exact measure, retaining `MassRuhe.massPflicht_mitRuhe` and cycle-length transfer. `gabbro_ziel` and its ordinary safety premises do not change. Prove source-to-measure equality and substitution through idle-root embedding; no new well-founded recursion engine. |
+| Stage 0 | Carry proof metadata through `Frontend.elabWithScopes`, `lowerAllg`, old-state restoration and `compile_source_program`; execution remains `Rekursion.lowFun_spec` over `rufAt n`, including depth guard/stop 105. `IRBild.irBild_correct` does not thereby prove unbounded recursion or a sufficient stack/fuel. Any later execution theorem relating termination to a chosen depth bound must supply that bound explicitly. |
+
+Witnesses: a recursive countdown, mutual recursion with equal tuple lengths,
+an acyclic function (`massPflicht_ohne_zyklus`), and a non-tail cycle whose
+measure actually falls. Negative fixtures: unchanged/increasing argument,
+negative-valued measure, differing cycle tuple lengths, a hidden global/old
+read, and unsupported calls in the measure. Each generic export theorem gets a
+`_zeuge` satisfying structural admission and the actual measure duty jointly.
+No change to `Spec.lean` meaning: its existing (b') premise remains explicit.
+Memory-reading measures such as `region.words` are outside this small cut unless
+the declared argument is already a by-value aggregate and its projection is
+proved world-independent; do not silently widen `Mass`'s empty-footprint rule.
+
+Optional **checked generic instantiation**, only if bounded to 1–2 days:
+`Parser/Item/ElementTief.SItemTief.typeT` stores argument types and order words,
+while `Parser/Expr/Typ.STyp` has no general type-application constructor and
+`uAliase:833` currently ignores these lists in selected aliases. First reject
+nonempty lists at unsupported uses instead of erasing them. Admit only explicit,
+fully resolved, finite substitutions into existing monomorphic `Ty`, with a
+generic capture-free substitution/denotation theorem over parameters, contracts,
+bodies and measures; preserve opaque identity and linear resources. No runtime
+generic type, inferred default argument or unrepresented application syntax.
+If actual applications need a new parser/type rule, retain that refusal and
+schedule the full C17 generic package separately. Non-mark order semantics and
+general compile-time control/contracts are excluded from this cut;
+`Frontend.compileTimeSafe` (`Source.lean:41`) remains mandatory.
+
+**C05 — one invariant-carrier interface for tables and globals.**
+
+| Layer | Implementable change |
+|---|---|
+| Kernel declarations | In `Kern/Syntax/Syntax.Deklaration`, **replace** `traeger : Inv → List Tab` by `Inv → List (Tab ⊕ Glob)`. Lift all existing table fixtures with `.inl`; no parallel global-invariant registry. Generalize `invarianten_gehalten`: if any carrier is written by signature n (sum elimination to `.schreibt`/`.gschreibt`), every lock in every carrier's `.braucht`/`.gbraucht` occurs in that signature's `.haelt`. Use sum elimination directly inside the structure to avoid depending on later `TraegerSchreibt`. |
+| G semantics | Generalize `invSicht` to fold mapped guards of both cases, and `Semantik/Semantik/T1.schuldet` to sum elimination over `D.schreibt f`/`D.gschreibt f`; prove equality to `(D.traeger i).any (TraegerSchreibt f)` only in the later interference layer (that definition is in `InterferenzAllgemein/T1`, so importing it into T1 would cycle). The existing `rufAt` invariant-read/check phase now also selects global writers; do not add another return phase. G's `assignGlob`/`World.schreibGlob` and `eval .glob` already implement accesses. No new `Expr`, `Stmt` or event. Both normal-return restoration and error-return `InvGutGrund` remain required. |
+| Export/checker | Fix `Uebersetze.lean:4338`: `uInv` resolves each carrier to a unique table/global, collects all guard locks, and checks predicate reads against that exact declared set. Generalize `uU003` to `f.puts` **and** `f.gputs`; in `UebersetzeAllg` update `invTraeger`, `invOkB`, `traegerD`, `invGehalten`, `declOf` and `UebersetzeAllg3.lowerInvAt`/`lowerInvs` together. Prove successful export preserves the entire declared carrier list; failure of U003 must not turn it into `[]` via the current fallback of `traegerD`. Preserve unknown/ambiguous-name refusal. |
+| Footprints/admission | Generalize `Logik/Vertraege/VertragsFuss`, `invOrteP` and `Nebenlaeufigkeit/Rennfreiheit/Interferenz.inv_schreiber_sperren`/`schuldet_hat_schreibtraeger`; every global writer owes the group. Re-establish `fussWB`/`fussWXB` soundness and `akzeptiert_iff`/`akzeptiertSpecX_of`. `AtomarAkzeptiert.vertragsFreiB` must see global group reads via `invOrteP`, so an unguarded shared atomic in an invariant stays refused (N484); atomic race exemption never implies invariant stability. |
+| Goal proof repair | In `Zielsatz/Kern/Spec`, replace `InvTraeger`'s table-only existential by membership in the carrier sum and generalize `InvSichtG`'s held-guard premise to both guard functions. In `Eigenschaften/Invarianten.invRuhe_erreichbar`, the global `GleichAuf` branch currently closes by impossible `.inl` equality: replace it with `schuldet = false → gschreibt = false` and `schritt_traeger (.inr g)`. Generalize `invSicht_aus` using the sum form of U003. Propagate through `invRuheG_aus`, `invSichtG_aus`, `ZielOrt/Rahmen/ZielOrtInvGrund`, `ZielOrtInv`, `ZielOrtMehrfaden`, `Kern/Beweis.ziel_aus`, `Atomar/AtomarInvarianten` and `Atomar/BeweisAtomar.gabbro_ziel`. Restore idle-root and linking carrier mappings, including `Einbettung` and `Projekte/Verbund`; old table-only cases must specialize to the former results. |
+| Stage 0 | **Current additional wall:** `Senke/Funktion.lowFun:31` refuses every function with a nonempty owed-invariant set. Export the generalized predicate/set, then replace that gate with a shared return epilogue: evaluate ensures first (stop 102), then owed predicates in declaration order (first failure stop 103), preserving result/return flag and snapshot slots. Extend `Senke/Rueckkehr.RetZ0`/`RetZ`, return emission, `lowEnd_ok` and `Rekursion.lowFun_spec` to match `rufAt` exactly. Reuse global expression/store kernels, not nonexistent invariant-return support. A reason return in `rufAt` propagates directly: preserve `RetWhy` behavior and transfer the separate user duty `InvGutGrundA`; do not invent a reason-return runtime check. Preserve shared-memory/global layout agreement and old-value restoration. No runtime global-invariant side service. |
+
+**Spec meaning changes:** group restoration, `InvZu`, `InvRuheG`, `InvSichtG` and
+the derived thread/spawn/link claims now quantify over declared global carriers
+as well as tables. Update the header's carrier description and the implementation
+commit accordingly. Preserve the qualifications: invariant initially true for
+closedness/observation claims, only declared predicate carriers, no claim inside
+a running writer, and no shared-atomic contract. Do not strengthen start premises
+to hide a missing preservation argument.
+
+Witnesses: global-only group, mixed table/global group under two locks, writer
+touching only the global, temporarily broken group restored on normal and reason
+returns, idle-root transfer and a guarded observation in a two-thread run.
+Counterexamples/refusals: omit either lock, read an undeclared global under the
+same lock, omit restoration on the reason path, false initial invariant, and
+unguarded shared atomic. Show old table-only acceptance and conclusions survive.
+
+**C04 — transition contracts and dynamic stages, without a second machine.**
+
+`Parser/Item/ElementTief.STrans` already carries `tname`, triples of **expressions**
+(`schritte`), `voraus` and `wirkung`. `uZustand:4311` discards no clause: it refuses
+them; `uStufenNamen:4306` admits only symbolic stage names. Current body
+`uZustandVon`/`lowShiftL` reaches `Stmt.shift`, whose constant endpoints carry
+`D.erlaubt`, range, effect and guard proofs; `execStmt` checks the current value
+and reports `Logik.vorzustand` on mismatch. Retain that existing rule intact.
+
+| Layer | Implementable change |
+|---|---|
+| Canonical kernel expansion | Add **new** `TransitionWrite D Γ Λ` in `Kern/Syntax/Zucker`, with `slot` (table/field, bounded index, same-typed from/to expressions, `darf`) and `glob` (global, same-typed from/to expressions, `gdarf`) cases; all stage values are integers. Add **new** `TransitionExpansion` relating a list of these writes, a typed clause predicate and an ordinary `Programm` function fragment (signature, requires, ensures, endblock). Its fields assert exact requires conjunction, declared write permissions, snapshot/store expansion and postcondition/frame; prove its semantic soundness in `Kern/Semantik/Semantik` after `World`/`eval` exist. Store ordered typed places and endpoint expressions with their range/guard witnesses; functions use the same `Fn`, `Signatur`, `RufPasst`, contracts and resources as every other function. No new execution constructor or `D.erlaubt := true` escape. A generic expansion theorem relates every successful call to the declaration's full pre-state/post-state relation and frame, not just an example transition. |
+| Exact execution meaning | Proposed userspace rule: `requires` is caller logic, conjoined with all source-state equalities; evaluate place indices and all endpoint expressions in the entry world, bind snapshots once, then perform declared stores in written order. Carry snapshots needed by ensures as explicit private generated parameters, with caller bind/argument provenance and a precondition equating them to the entry expressions; never reference body locals from ensures. Requires-only transitions perform no stores. Ensures relates each distinct target to its snapshotted target value; reject duplicate/possibly aliasing targets unless equal-result agreement is proved. This supplies explicit semantics for nonconstant stages and multi-place transitions; it is **not** an atomic multi-place transaction. Keep all required locks across the operation. Symbolic labels keep existing first-occurrence numbering; constant numeric stages use A11's checked normalization. Never coerce an arbitrary name/expression to stage 0. |
+| Relation to existing shift | For finite constant edges, generate `Stmt.shift` and prove expansion agrees with its `D.erlaubt`/`vorzustand` rule under the generated requires. For dynamic endpoints, use checked `assignSlot`/`assignGlob` in the private generated function: its requires/ensures and the generic expansion theorem enforce the **named declaration's expression relation**. Admission must establish that the generated body is this expansion and that ordinary callers cannot bypass its requires; merely adding a graph pair or exporting an unrestricted store is insufficient. `D.erlaubt` remains the exact constant-edge projection used by `Stmt.shift`, not a replacement for dynamic clause semantics. |
+| Effects and resources | `wirkung` declares permissions, not invented actions. Build the exact ordinary signature: every actual target write is included; `pure` conflicts with a store; reads retain footprints; declared lock/mark flow is checked with the existing signature and return-resource rules. Do not acquire a lock, consume a mark or call a service merely because an effect lists it. If the source operation has no corresponding action to discharge its linear flow, refuse it. Requires/ensures over shared atomics remain disallowed. |
+| Source/export | At `Uebersetze.lean:4306/4311`, preserve `STrans` identity, predicates, expression endpoints and effects through `UZustand` and generated `UFn`; never flatten distinct clauses into the same unordered pair list. Resolve places/guards in the declaration's real scope, reject unbound captures, and reuse `uBool`, `uWertBody`, `uEffekte` and `UebersetzeAllg{,2,3}` checked function lowering. Extend the source expansion theorem and `Stage0.Frontend.elabWithScopes` to account for every generated function, caller and preserved clause; retain `uRegiert`'s unique-governing-state check. For a clause-bearing or dynamic declaration, `uZustandVon`/`lowShiftL` must route every source use through that generated call (or refuse it), never leave a raw `Stmt.shift` that bypasses the clause. All use sites must name or unambiguously resolve the declaration; equal endpoint pairs with different preconditions are not interchangeable. |
+| Machine/checker/proofs | No new `eval`/`execStmt` cases: expansion uses existing reads, binders, checks at `rufAt`, stores/calls and returns. `Akzeptiert(X)` checks generated functions and complete call graphs just like explicit ones (`frag`, `fuss`, `stufen`, `renn`, resource and answer-site obligations). Source correctness additionally proves the expansion relation, endpoint range and exact effects. Existing `KoerperGutSA` supplies caller duties, frames and return restoration; re-establish the generated unit's `NutzerPflichtA`, then use `ziel_aus`/`zielX_aus` and `gabbro_ziel` unchanged. Do not turn requires into an oracle promise. |
+| Stage 0 | Use `lowFun`, existing `Anweisung` shift/store/bind/call lowering, `lowEnd_ok` and `lowFun_spec`; C13 supplies richer endpoint arithmetic. Prove snapshot temporaries survive emission, all generated functions are emitted/reachable and `compile_source_program`/`irBild_correct` carry the transition expansion theorem. Specify failure codes explicitly: existing primitive shift retains 106; the generated function rejects its clause/state-equality requires at 101. Constant equivalence is under the legal-entry premise, not equality of these illegal-entry diagnostics. Preserve guard lifetimes, code/stack bounds and call-log/cost contributions of the generated calls; do not erase a call as proof-only metadata. |
+
+**Spec impact:** no new hardware assumption or goal premise. This makes previously
+unrepresented source clauses/dynamic endpoints mean the checked generated program;
+the proposal's snapshot/order rule must be recorded as a source-meaning decision
+in the implementation commit and reviewed before implementation. Existing constant
+`Stmt.shift` behavior stays covered by an equivalence theorem. No implication that
+group invariants hold between individual stores; C05 restores them at the already
+claimed boundaries. Device/register transitions, privileged behavior and ASM remain
+outside this package. Provider/service effects without their C08 rule, unbound
+expression names, unresolved state identity, unchecked ranges and unjustified
+alias/resource flows remain named refusals.
+
+Witnesses: guarded transition with false/true requires, a requires-only transition,
+two ordered writes preserving a mixed group, endpoint/index values read from the
+entry world (including a later endpoint reading an earlier target), and equivalence
+with a constant `Stmt.shift`. Negative fixtures: omitted effect/lock, wrong current
+state, endpoint out of range, two declarations sharing endpoints but differing in
+requires, duplicate aliases, resource imbalance, and shared-atomic precondition.
+
+**Rebuild/acceptance handoff (implementation only; none run here).**
+
+| Package | Modules whose changes force a rebuild, plus transitive imports |
+|---|---|
+| C13 | `Kern/Syntax/Syntax`, `Zucker`, `Profil`; `Semantik/Semantik/T1`; `Syntax/Extraktion/T3` and syntax traversals; `Logik/Fortschritt/KostenG`; `Parser/Elab/Uebersetze*`; `Zielsatz` locality/replay, embeddings and witnesses; Stage-0 expression, quantifier, old-state and value proofs |
+| C17 | `Parser/Elab/Uebersetze*`, measure export/witness modules and Stage-0 frontend/compiler metadata; reuse `Logik/Terminierung/{Mass,Klasse,Entscheidung}`, `Zielsatz/Atomar/{MassRuhe,BeweisTerminierung}` without changing their duties; generic normalization only if admitted |
+| C05 | `Kern/Syntax/Syntax`, `Semantik/Semantik/T1`, `Syntax/Satz/T4`; all declaration fixtures and carrier clients; `Interferenz*`, `VertragsFuss`, `Zielsatz/Kern/Spec`, invariant/replay/atomic/idle-root/link modules; exporter and Stage-0 `Funktion`, `Rueckkehr`, return emission, invariant-return and recursion proof clients |
+| C04 | `Kern/Syntax/Zucker` and expansion witnesses; `Parser/Elab/Uebersetze*`, source normalization/provenance, generated-function lowering and certificates; rebuild existing goal/IR clients of the expansion without altering G's primitive shift |
+
+The grammatik owner batches edits/builds; grammar builds use measured available
+memory minus 2 GiB under the prescribed scope and count against the two global
+Lean slots. Stage-0 checks retain 5 GiB slot limits. After each implementation
+batch: full grammar build, layout check, Lean guardian and witnesses; print
+`gabbro_ziel` axioms and require exactly `propext`, `Classical.choice`, `Quot.sound`.
+Run affected Stage-0 pipeline proofs and assembly-runner fixtures, plus the required
+remaining guardians before integration/push. No erased contracts, added axioms,
+weakened footprint/resource checks or detached helper proof can close a package.
+This document changes no acceptance result: **zero new source cases compiled or
+proved; no builds run.**
