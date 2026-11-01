@@ -1,0 +1,27 @@
+// C08 probe (negative): a fallible foreign call used as a pure value.
+// The failure continuation is missing, so the reason case has nowhere to go.
+// Must be refused.
+module c08_failure_as_pure {
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+assume linux_write_pure
+    "The Linux x86_64 `write` writes the buffer's first len bytes and answers how many."
+    falsifier sonde_write_pure;
+syscall schreibe(fd : u64, buf : u64, len : u64) -> u64 in 0 .. 4096 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write_pure falsifier sonde_write_pure;
+impl fn main() -> u64 in 0 .. 5000
+    effects { pure }
+{
+    let n = schreibe(1, 0, 0);
+    return n;
+}
+}

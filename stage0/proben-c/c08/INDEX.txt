@@ -1,0 +1,22 @@
+# C08 acceptance probes: foreign / axiom / syscall / extern item contracts.
+# One line per probe: name, expected outcome (result number or refusal text), purpose.
+# Format mirrors stage0/proben-ir/: NAME.gab plus NAME.code (must compile and run,
+# expected `main` result) or NAME.error (must be refused, one line).
+extern-requires-ok | 40 | extern `requires` decided by the caller literal, `ensures` yields the answer.
+axiom-ensures-ok | 7 | named-hardware axiom with `ensures`; caller branches on the ensured range.
+fallible-bool-ok | 7 | fallible foreign Bool handled with let-else on all continuations.
+syscall-requires-ok | 42 | real gate with `requires`/`ensures`; zero-length write answers 0, main returns n + 42.
+fallible-void-ok | 7 | fallible void foreign call; failure handled, success falls through.
+extern-requires-missing | caller does not establish requires x <= 100 at doppel(200) | caller passes 200 against `requires x <= 100`.
+binding-ensures-unproved | software binding without proved implementation for hole | caller relies on `ensures` of a software binding with no implementation proof.
+decoder-range-violated | foreign answer used outside its declared range at return x | foreign answer returned where a narrower range is owed, without narrowing.
+failure-as-pure | fallible foreign call without else at schreibe(1, 0, 0) | fallible foreign result bound without an else continuation.
+axiom-as-software | axiom oeffne_pfad names software behavior, not a named hardware assumption | `axiom` with falsifier used for OS behavior instead of named hardware.
+resource-effect-unproved | foreign call writes kiste.slots outside the caller's effects | foreign write effect outside the caller's declared frame.
+# UNSURE: `ensures` on `axiom` (axiom-ensures-ok) is new C08 syntax; SYNTAX.md EBNF lists only `requires` (G2).
+# UNSURE: statement-level `f() else (e) {...}` on a void call (fallible-void-ok); no corpus precedent.
+# UNSURE: value-call syntax for axioms (`lies_stand()`, `oeffne_pfad(0, 0)`); no axiom call site exists in beispiele/.
+# UNSURE: requires/ensures clause position in abi-form syscall (syscall-requires-ok, failure-as-pure); taken from `syscontract` (requires, ensures before effects).
+# UNSURE: all six .error wordings are proposed; no C08 diagnostic text exists yet to copy.
+# UNSURE: spelling that marks a foreign item software-origin for binding-ensures-unproved (AxOrigin per design doc has no source syntax yet); probe uses current syntax plus a C08 READING comment.
+# UNSURE: positive .code values assume a conforming oracle/proved binding; extern/axiom have no runner binding today (only syscall gates execute, cf. gateelse/puffer probes).

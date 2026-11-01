@@ -1,0 +1,1 @@
+foreign call writes kiste.slots outside the caller's effects

@@ -1,0 +1,24 @@
+// C08 probe (negative): the caller relies on the binding's ensures, but the
+// software binding behind `hole` carries no implementation proof.
+// C08 READING: `hole` is a software-origin item; without its proved
+// implementation/binding (frame, decoding, postcondition under pre) the unit
+// must be refused even though the text parses. The AxOrigin spelling that
+// marks software vs hardware origin is still open (see INDEX.txt).
+module c08_binding_ensures_unproved {
+extern fn hole() -> u32
+    ensures result <= 100
+    effects { pure }
+    costs <= 1 ops;
+impl fn nutze() -> u32 in 0 .. 100
+    effects { pure }
+    costs <= 4 ops
+{
+    let x = hole();
+    return x;
+}
+impl fn main() -> u32 in 0 .. 100
+    effects { pure }
+{
+    return nutze();
+}
+}

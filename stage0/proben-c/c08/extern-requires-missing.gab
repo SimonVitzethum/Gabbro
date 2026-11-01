@@ -1,0 +1,15 @@
+// C08 probe (negative twin of extern-requires-ok): the caller passes 200,
+// which does not establish the declared requires x <= 100. Must be refused.
+module c08_extern_requires_missing {
+extern fn doppel(x : u32) -> u32
+    requires x <= 100
+    ensures result == x + x
+    effects { pure }
+    costs <= 1 ops;
+impl fn main() -> u32 in 0 .. 1000
+    effects { pure }
+{
+    let a = doppel(200);
+    return a;
+}
+}
