@@ -2,6 +2,9 @@ module
 public import Grammatik.Parser.Elab.ExportQuantifiers
 public import Grammatik.Parser.Elab.ExportComparisons
 public import Grammatik.Parser.Elab.ExportArrays
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportWitnesses2

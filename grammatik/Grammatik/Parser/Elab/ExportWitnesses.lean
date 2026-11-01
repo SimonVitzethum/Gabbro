@@ -1,5 +1,8 @@
 module
 public import Grammatik.Parser.Elab.UebersetzePipeline
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportWitnesses

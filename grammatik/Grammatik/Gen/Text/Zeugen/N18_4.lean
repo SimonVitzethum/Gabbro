@@ -6,6 +6,9 @@
 module
 public import Grammatik.Gen.Text.Pruefung
 public import Grammatik.Gen.Zeugen.N.N18_4
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 

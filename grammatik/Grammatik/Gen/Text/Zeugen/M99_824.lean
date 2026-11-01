@@ -7,6 +7,9 @@ module
 public import Grammatik.Gen.Text.Pruefung
 public import Grammatik.Gen.Zeugen.M.M99_824
 public import Grammatik.Gen.Zeugen.M.M99_825
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 
