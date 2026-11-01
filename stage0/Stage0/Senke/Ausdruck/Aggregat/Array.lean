@@ -2,7 +2,7 @@
 import Stage0.Senke.Ausdruck.Lesen
 import Stage0.Senke.Ausdruck.Aggregat.Scalar
 import Stage0.Senke.Ausdruck.Quant.Selection
-import Stage0.Senke.Ausdruck.Aggregat.FrameStore
+import Stage0.Senke.Ausdruck.Aggregat.Frame.Store
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

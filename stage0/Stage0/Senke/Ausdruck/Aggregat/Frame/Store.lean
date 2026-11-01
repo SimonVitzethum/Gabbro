@@ -1,5 +1,5 @@
 /- Subject: Execution of the runtime-pointer store loop into a frame array with an exact footprint. -/
-import Stage0.Senke.Ausdruck.Aggregat.FrameCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
 import Stage0.Senke.Ausdruck.Quant.Memory
 import Stage0.Senke.Welt.Spans.SpanWrite
 import Stage0.Senke.Welt.Schreib

@@ -21,6 +21,7 @@ import Stage0.Senke.Welt.WeltAt
 import Stage0.Senke.Welt.Spans.CellStore
 import Stage0.Senke.Welt.Spans.Read
 import Stage0.Senke.Ausdruck.Referenz.CellIndex
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
 
 namespace Gabbro.Stage0.Senke
 
@@ -81,8 +82,9 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay i d ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay i _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strEq s t, d, c, top, h, hK, m, pc, ρ, hp =>
-    strCompare_ok false s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
-      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp) h hK hp
+    strEq_ok s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay t _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strLt s t, d, c, top, h, hK, m, pc, ρ, hp =>
     strCompare_ok true s t (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay t (d + 1) ca ta ha hta m pc ρ hp) h hK hp

@@ -375,3 +375,10 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.weltAt_slotWord
 #print axioms Gabbro.Stage0.Senke.weltAt_globWord
 #print axioms Gabbro.Stage0.Senke.weltAt_slot
+#print axioms Gabbro.Stage0.Senke.storeFrameSpan_ok
+#print axioms Gabbro.Stage0.Senke.storeFramePointerSpan_run
+#print axioms Gabbro.Stage0.Senke.wordsAt_arrSet
+#print axioms Gabbro.Stage0.Senke.strEqLong_ok
+#print axioms Gabbro.Stage0.Senke.strEq_ok
+#print axioms Gabbro.Stage0.Senke.xorOrSpan_ok
+#print axioms Gabbro.Stage0.Senke.strEq_words_iff

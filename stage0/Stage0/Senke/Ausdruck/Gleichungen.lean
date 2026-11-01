@@ -320,7 +320,8 @@ theorem lowE_literal_boundaries_zeuge :
 
 @[lowE_eqs] theorem lowE_strEq (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
     lowE L (reserved := reserved) (.strEq s t) d =
-    (if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none) := rfl
+    (if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1))
+    else strEqLongL n m d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + (n + 1)))) := rfl
 
 @[lowE_eqs] theorem lowE_strLt (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
     lowE L (reserved := reserved) (.strLt s t) d =

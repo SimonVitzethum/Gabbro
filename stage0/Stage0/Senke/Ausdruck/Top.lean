@@ -183,7 +183,16 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       cases out
       have := lowE_top s d cs ts hs
       omega
-  | _, _, .strEq _ _, d, c, top, h
+  | _, _, .strEq s t, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact wordL_top h
+    · simp only [strEqLongL] at h
+      split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨cs, ts⟩, hs, ⟨ct, tt⟩, ht, _, rfl⟩ := h
+        omega
+      · cases h
   | _, _, .strLt _ _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

@@ -775,3 +775,56 @@ prerequisite); `StatementCost.lean` and `EarlyExit.lean` (IR-08's counted statem
 migrated to the new copy/return/store ABI and are excluded from the `Stage0` root import list until
 counted versions of the span copy, store and return transports exist; `Nachpruefung.lean` lost
 its five `EarlyExitProbe` lines with them.
+
+## IR-03 arrays and strings over the full value span (2026-11-01)
+
+Continued from the full ABI integration above. Each step was rebuilt on the whole `Stage0` root, audited
+with `stage0/Nachpruefung.lean` (only `propext`/`Classical.choice`/`Quot.sound`, no `sorry`) and checked
+with the layout tool and the textual source -> IR -> assembly programs of `stage0/proben-ir`.
+
+Forms that now compile with a connected generic theorem (`lowE_ok` case, `lowE_top`, equation lemma):
+
+- `strGet` of a string of capacity `n >= 2` with an index range inside `[0, n)`: the byte word
+  `d + 1 + i` of the complete span through `selectFrameSpan` (`strGet_ok`, `strBytes_word`).
+- `strWeit m` widening (`n >= 2`, `n <= m`): the zero padding words are appended with `constWords`
+  (`strWeit_ok`: the widened encoding is the old encoding followed by the zero words).
+- `arrSet` of an array with more than one element (`arrSetL`, `arrSet_ok`): array, element and index are
+  evaluated in consecutive spans; `storeFrameSpan` computes the element's frame address and stores the complete
+  element span (`Frame/Store.lean`: `storeFramePointerSpan_run` has the exact footprint scratch word plus
+  target span, `storeFrameSpan_ok`, `elementEncoding_get`, `wordsAt_arrSet`). No surface syntax reaches
+  `arrSet` yet (the front end has no array-element update), so the textual regression cannot exercise it; the
+  model probe `Aggregat/Proben` accepts it.
+- `strEq` of two strings of capacity `>= 2` (`strEqLongL`, `strEqLong_ok`, `strEq_ok`): the length word and
+  the first `min n m` byte words are XOR-ORed branch-free (`xorOrSpan`, `xorOrSpan_ok`); the accumulator
+  is zero exactly when `strEqW` holds (`strEq_words_iff`, `foldl_or_xor_zero`). Textual program `str-eq-long`.
+
+Measured at the final state of this step: the 235-module `Stage0` closure (root and `Stage0.Haupt`) is
+rebuilt and fresh, `Nachpruefung.lean` audits 326 theorems on `propext`/`Classical.choice`/`Quot.sound` only
+(including `strEq_ok`, `strEqLong_ok`, `storeFrameSpan_ok`, `storeFramePointerSpan_run`, `wordsAt_arrSet`,
+`xorOrSpan_ok`, `strEq_words_iff`), the layout check passes, and 123 textual programs of `stage0/proben-ir`
+compile to IR and execute (or are refused with the expected text) identically on the assembly runner
+regenerated from `runner/`.
+
+Already compiling before this step and unchanged: literals, variables, `arrCons`, `arrGet` (any length and
+nesting), `strLen`, copies of every aggregate, the world read/write path of IR-06.
+
+Interface that IR-02 (wide integer kernels) and IR-10 (calls, `var_value_ok`, `constWords`) build on:
+
+- Width: `valueWords τ`, `integerWords lo hi` (little-endian two's-complement limbs), `contextWords`,
+  `returnWords result reasons`, `variableOffset`. Encoding: `encodeWords L τ v` (`integerEncoding` for
+  integers, `elementEncoding` for arrays, length word plus padded byte words for strings of capacity above one).
+- Relations: `ValueAt L m fp base τ v := ValueValid L τ v ∧ WordsAt m fp base (encodeWords L τ v)`,
+  `ValueOk` (execution, `Agree fp d K m m'`, `ValueAt` at `d`), `ResultAt`/`ResultOk`, `ReturnMirror`.
+  A wide kernel establishes `ValueOk` for its result type with all scratch at slots `>= d`; no low-word view
+  may stand for a multiword result (`ValueAt.word` only exists for `WordCompatible` types).
+- Materialization and transport: `constWords words d` with `constWords_ok` (execution, `Agree fp d K`,
+  `WordsAt m' fp d words`), `copyWords`/`copyValue_run`/`copyResult_run` (exact destination footprint),
+  `var_value_ok x lower fits pre : ValueOk .. (ρ.get x)` (`Aggregat/KopieSatz.lean`), and the dynamic-pointer
+  transports `loadPointerSpan_run`, `storePointerSpan_run` (world) and `storeFramePointerSpan_run` (frame).
+
+Open (exact): `strCat` (a runtime-offset byte copy needs a loop or a dynamic-offset frame store of the second
+operand), `strLt` on long strings (lexicographic scan with a final length comparison), `strEq` between a string
+of capacity at most one and a long string, `strWeit` narrowing of long strings (`take`), `strGet` of a long
+string with an index range wider than `[0, n)` (needs an in-range test before the dynamic selection), ordinary
+records (canonical-model prerequisite), IR-08's `StatementCost`/`EarlyExit` migration to the new
+copy/return/store ABI, and `getBytes`/`putBytes`/`shift` at the eight-byte limit (IR-02/IR-06).

@@ -25,7 +25,8 @@ import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
 import Stage0.Senke.Welt.Spans.CellCode
 import Stage0.Senke.Ausdruck.Aggregat.Wert
-import Stage0.Senke.Ausdruck.Aggregat.FrameCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
+import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
 import Stage0.Senke.Ausdruck.Aggregat.Kopie
 import Stage0.Senke.Ausdruck.Aggregat.Layout
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
@@ -506,7 +507,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       strGetLongL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 1))
     else none
   | _, _, @Expr.strEq _ _ _ n m s t, d =>
-    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
+    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1))
+    else strEqLongL n m d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + (n + 1)))
   | _, _, @Expr.strLt _ _ _ n m s t, d =>
     if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
   | _, _, @Expr.strWeit _ _ _ n m s, d =>
