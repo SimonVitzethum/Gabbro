@@ -97,46 +97,63 @@ theorem invGrundLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
       ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
         ev = RufEreignisF.why g rho r s0 s1 → InvAmRueck P g s1 := by
   cases hs with
-  | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg
-      rho hrho s0 hs0 rg hrg hn =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.why.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg
-      exact popS_grund hO hRL hQ hS hsp hIG hF hhead r
-        (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
-        (fun O' R U σ => semH_rueckGrund S O' U passes R r hperm σ ρ)
-    · exact Or.inl hev
-  | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
-      g hfg rho hrho s0 hs0 rg hrg hn =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.why.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg
-      exact popS_grund hO hRL hQ hS hsp hIG hF hhead r
-        (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
-        (fun O' R U σ => semH_rueckConsGrund S O' U passes R r hperm restk σ ρ)
-    · exact Or.inl hev
-  | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
-      hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.why.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg
-      exact popS_grund hO hRL hQ hS hsp hIG hF hhead r
-        (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
-        (fun O' R U σ => semH_dannRetGrund S O' U passes R r hperm restk kk σ ρ)
-    · exact Or.inl hev
-  | _ => ohneGrund
+  | g1 hs =>
+    cases hs with
+    | _ => ohneGrund
+  | g2 hs =>
+    cases hs with
+    | _ => ohneGrund
+  | g3 hs =>
+    cases hs with
+    | _ => ohneGrund
+  | g4 hs =>
+    cases hs with
+    | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg
+        rho hrho s0 hs0 rg hrg hn =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' r' s0' s1' h => ?_
+        simp only [RufEreignisF.why.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg
+        exact popS_grund hO hRL hQ hS hsp hIG hF hhead r
+          (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
+          (fun O' R U σ => semH_rueckGrund S O' U passes R r hperm σ ρ)
+      · exact Or.inl hev
+    | _ => ohneGrund
+  | g5 hs =>
+    cases hs with
+    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
+        g hfg rho hrho s0 hs0 rg hrg hn =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' r' s0' s1' h => ?_
+        simp only [RufEreignisF.why.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg
+        exact popS_grund hO hRL hQ hS hsp hIG hF hhead r
+          (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
+          (fun O' R U σ => semH_rueckConsGrund S O' U passes R r hperm restk σ ρ)
+      · exact Or.inl hev
+    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
+        hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' r' s0' s1' h => ?_
+        simp only [RufEreignisF.why.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg
+        exact popS_grund hO hRL hQ hS hsp hIG hF hhead r
+          (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
+          (fun O' R U σ => semH_dannRetGrund S O' U passes R r hperm restk kk σ ρ)
+      · exact Or.inl hev
+    | _ => ohneGrund
+  | g6 hs =>
+    cases hs with
+    | _ => ohneGrund
 
 end Schritte
 

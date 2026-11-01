@@ -37,214 +37,246 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
           rufeR Z' ZS' EW' (M'.faeden f).kopf.rest.2.2.2.2 = true) ∧
         potRest c' pa (M'.faeden f).kopf.rest.2.2.2.2 ≤ potRest c' pa caller.rest.2.2.2.2) := by
   cases hs with
-  | blatt l Γ Λ Λ' s rest ρ hleaf hhead =>
-    kopfA
-    · simp_all
-    · have := kostenStmt_pos c pa s; omega
-  | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead =>
-    kopfA
-    · simp_all
-    · have := kostenStmt_pos c pa s; omega
-  | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
-    kopfA
-    · simp_all
-    · rw [entfZ_wahr hent]; omega
-  | endeForm l Γ Λ e ρ hl hent hhead =>
-    kopfA
-    · cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
-      all_goals simp_all [rufeB_alsBlock, rufeR]
-    · cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
-      all_goals (simp only [potRest, kostenBlock_alsBlock, kostenEnd, kostenSonst]; omega)
-  | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
-    kopfA
-    · have h := rufeB_armWahlG Z ZS EW arms (eval σ₁ v σ₁ ρ) hok.1.1
-      rw [hw] at h
-      have h2 : rufeB Z ZS EW b = true := h
-      simp_all
-    · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
-      rw [hw] at h
-      have h2 : kostenBlock c pa b ≤ kostenArms c pa arms := h
-      omega
-  | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw =>
-    kopfA
-    · have h := rufeB_armWahlG Z ZS EW arms (eval σ₁ v σ₁ ρ) hok.1.1
-      rw [hw] at h
-      have h2 : rufeB Z ZS EW b = true := h
-      simp_all
-    · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
-      rw [hw] at h
-      have h2 : kostenBlock c pa b ≤ kostenArms c pa arms := h
-      omega
-  | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw =>
-    kopfA
-    · have h := rufeB_grundWahlG Z ZS EW arms (eval σ₁ r σ₁ ρ) hok.1.1
-      rw [hw] at h
-      simp_all
-    · have h := kostenBlock_grundWahlG c pa arms (eval σ₁ r σ₁ ρ)
-      rw [hw] at h
-      omega
-  | dannTrav l Γ Λ Λ'' t inv body rest k ρ hhead =>
-    kopfA
-    · simp_all
-    · have h : @List.length (Wert D (.index (D.count t))) (alleIndizes (D.count t)) *
-          (kostenBlock c pa body + kostenExpr inv + 2) ≤
-          (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2) :=
-        Nat.mul_le_mul_right _ (alleIndizes_length (D.count t))
-      omega
-  | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .ende rest⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok ⊢
-      dsimp only at hok ⊢
-      simp only [potRest, kostenEnd, kostenStmt, rufeR, rufeE, rufeS, Bool.and_eq_true] at hok ⊢
-      exact ⟨hok.2, Or.inl ⟨hok.1, by omega⟩⟩
-  | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .dann rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok ⊢
-      dsimp only at hok ⊢
-      simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS,
-        Bool.and_eq_true] at hok ⊢
-      exact ⟨⟨hok.1.2, hok.2⟩, Or.inl ⟨hok.1.1, by omega⟩⟩
-  | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok ⊢
-      dsimp only at hok ⊢
-      simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
-      exact ⟨⟨hok.1.2, hok.2⟩, Or.inl ⟨hok.1.1, by omega⟩⟩
-  | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok ⊢
-      dsimp only at hok ⊢
-      simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
-      exact ⟨⟨⟨hok.1.1.2, hok.1.2⟩, hok.2⟩, Or.inl ⟨hok.1.1.1, by omega⟩⟩
-  | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .dann rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok ⊢
-      dsimp only at hok ⊢
-      simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS, Bool.and_eq_true] at hok ⊢
-      exact ⟨⟨hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1, hg, by omega⟩⟩
-  | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok ⊢
-      dsimp only at hok ⊢
-      simp only [potRest, kostenEnd, kostenStmt, rufeR, rufeE, rufeS, Bool.and_eq_true] at hok ⊢
-      exact ⟨hok.2, Or.inr ⟨n, hok.1, hg, by omega⟩⟩
-  | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    · rw [hhead] at hok ⊢
-      dsimp only at hok ⊢
-      simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
-      exact ⟨⟨hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1, hg, by omega⟩⟩
-  | rueck caller rst hpop =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]
-    exact ⟨id, Nat.le_refl _⟩
-  | rueckCons caller rst hpop =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]
-    exact ⟨id, Nat.le_refl _⟩
-  | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]
-    exact ⟨id, Nat.le_refl _⟩
-  | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
-      simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
-  | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
-      hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
-      simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
-  | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
-      simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
-  | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rw [hcaller]; dsimp only
-    simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
-    exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
-  | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rw [hcaller]; dsimp only
-    simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
-    exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
-  | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
-      fun c' Z' ZS' EW' => ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rw [hcaller]; dsimp only
-    simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
-    exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
-  | peelDannLeave l Γ Λ rest b k ρ hleave hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; have := kostenBlock_pos c pa b; omega
-  | peelDannNext l Γ Λ rest b k ρ hnext hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; have := kostenBlock_pos c pa b; omega
-  | peelSchrumpfLeave l Γ Λ τ rest k ρ hleave hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; omega
-  | peelSchrumpfNext l Γ Λ τ rest k ρ hnext hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; omega
-  | peelFreiLeave l Γ Λ L rest k ρ hleave hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; omega
-  | peelFreiNext l Γ Λ L rest k ρ hnext hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; omega
-  | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; omega
-  | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa rest; omega
-  | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
-    kopfA
-    · simp_all
-    · have := kostenBlock_pos c pa ueber
-      have hm : max 1 (kostenBlock c pa ueber) = kostenBlock c pa ueber := Nat.max_eq_right this
-      omega
-  | _ =>
-    kopfA
-    · cases EW <;> simp_all
-    · omega
+  | g1 hs =>
+    cases hs with
+    | blatt l Γ Λ Λ' s rest ρ hleaf hhead =>
+      kopfA
+      · simp_all
+      · have := kostenStmt_pos c pa s; omega
+    | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead =>
+      kopfA
+      · simp_all
+      · have := kostenStmt_pos c pa s; omega
+    | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
+      kopfA
+      · simp_all
+      · rw [entfZ_wahr hent]; omega
+    | endeForm l Γ Λ e ρ hl hent hhead =>
+      kopfA
+      · cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
+        all_goals simp_all [rufeB_alsBlock, rufeR]
+      · cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
+        all_goals (simp only [potRest, kostenBlock_alsBlock, kostenEnd, kostenSonst]; omega)
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
+      kopfA
+      · have h := rufeB_armWahlG Z ZS EW arms (eval σ₁ v σ₁ ρ) hok.1.1
+        rw [hw] at h
+        have h2 : rufeB Z ZS EW b = true := h
+        simp_all
+      · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
+        rw [hw] at h
+        have h2 : kostenBlock c pa b ≤ kostenArms c pa arms := h
+        omega
+    | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw =>
+      kopfA
+      · have h := rufeB_armWahlG Z ZS EW arms (eval σ₁ v σ₁ ρ) hok.1.1
+        rw [hw] at h
+        have h2 : rufeB Z ZS EW b = true := h
+        simp_all
+      · have h := kostenBlock_armWahlG c pa arms (eval σ₁ v σ₁ ρ)
+        rw [hw] at h
+        have h2 : kostenBlock c pa b ≤ kostenArms c pa arms := h
+        omega
+    | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw =>
+      kopfA
+      · have h := rufeB_grundWahlG Z ZS EW arms (eval σ₁ r σ₁ ρ) hok.1.1
+        rw [hw] at h
+        simp_all
+      · have h := kostenBlock_grundWahlG c pa arms (eval σ₁ r σ₁ ρ)
+        rw [hw] at h
+        omega
+    | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .ende rest⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      · rw [hhead] at hok ⊢
+        dsimp only at hok ⊢
+        simp only [potRest, kostenEnd, kostenStmt, rufeR, rufeE, rufeS, Bool.and_eq_true] at hok ⊢
+        exact ⟨hok.2, Or.inl ⟨hok.1, by omega⟩⟩
+    | rueck caller rst hpop =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]
+      exact ⟨id, Nat.le_refl _⟩
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
+  | g2 hs =>
+    cases hs with
+    | dannTrav l Γ Λ Λ'' t inv body rest k ρ hhead =>
+      kopfA
+      · simp_all
+      · have h : @List.length (Wert D (.index (D.count t))) (alleIndizes (D.count t)) *
+            (kostenBlock c pa body + kostenExpr inv + 2) ≤
+            (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2) :=
+          Nat.mul_le_mul_right _ (alleIndizes_length (D.count t))
+        omega
+    | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .dann rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      · rw [hhead] at hok ⊢
+        dsimp only at hok ⊢
+        simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS,
+          Bool.and_eq_true] at hok ⊢
+        exact ⟨⟨hok.1.2, hok.2⟩, Or.inl ⟨hok.1.1, by omega⟩⟩
+    | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa ueber
+        have hm : max 1 (kostenBlock c pa ueber) = kostenBlock c pa ueber := Nat.max_eq_right this
+        omega
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
+  | g3 hs =>
+    cases hs with
+    | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      · rw [hhead] at hok ⊢
+        dsimp only at hok ⊢
+        simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
+        exact ⟨⟨hok.1.2, hok.2⟩, Or.inl ⟨hok.1.1, by omega⟩⟩
+    | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      · rw [hhead] at hok ⊢
+        dsimp only at hok ⊢
+        simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
+        exact ⟨⟨⟨hok.1.1.2, hok.1.2⟩, hok.2⟩, Or.inl ⟨hok.1.1.1, by omega⟩⟩
+    | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .dann rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      · rw [hhead] at hok ⊢
+        dsimp only at hok ⊢
+        simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS, Bool.and_eq_true] at hok ⊢
+        exact ⟨⟨hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1, hg, by omega⟩⟩
+    | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      · rw [hhead] at hok ⊢
+        dsimp only at hok ⊢
+        simp only [potRest, kostenEnd, kostenStmt, rufeR, rufeE, rufeS, Bool.and_eq_true] at hok ⊢
+        exact ⟨hok.2, Or.inr ⟨n, hok.1, hg, by omega⟩⟩
+    | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      · rw [hhead] at hok ⊢
+        dsimp only at hok ⊢
+        simp only [potRest, kostenBlock, rufeR, rufeB, Bool.and_eq_true] at hok ⊢
+        exact ⟨⟨hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1, hg, by omega⟩⟩
+    | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
+        simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
+  | g4 hs =>
+    cases hs with
+    | rueckCons caller rst hpop =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]
+      exact ⟨id, Nat.le_refl _⟩
+    | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]
+      exact ⟨id, Nat.le_refl _⟩
+    | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
+        hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
+        simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
+    | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
+        simp only [potRest, rufeR, Bool.and_eq_true] <;> exact ⟨fun h => by simp_all, by omega⟩
+    | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rw [hcaller]; dsimp only
+      simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
+      exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
+    | peelDannLeave l Γ Λ rest b k ρ hleave hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; have := kostenBlock_pos c pa b; omega
+    | peelDannNext l Γ Λ rest b k ρ hnext hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; have := kostenBlock_pos c pa b; omega
+    | peelSchrumpfLeave l Γ Λ τ rest k ρ hleave hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; omega
+    | peelSchrumpfNext l Γ Λ τ rest k ρ hnext hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; omega
+    | peelFreiLeave l Γ Λ L rest k ρ hleave hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; omega
+    | peelFreiNext l Γ Λ L rest k ρ hnext hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; omega
+    | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; omega
+    | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
+      kopfA
+      · simp_all
+      · have := kostenBlock_pos c pa rest; omega
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
+  | g5 hs =>
+    cases hs with
+    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rw [hcaller]; dsimp only
+      simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
+      exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
+    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
+        fun c' Z' ZS' EW' => ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rw [hcaller]; dsimp only
+      simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
+      exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
+  | g6 hs =>
+    cases hs with
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
 /-! ## 6. Counting one thread's steps -/
 
 /- `RufErreichbarG` lives in `Prop`, so no function can count the steps of

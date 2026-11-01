@@ -37,7 +37,7 @@ theorem RufLaufG.einzeln {P : Programm D} {O : Orakel D} {passes : Nat} {f : Fad
 theorem rufSchrittG_fremd {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}
     {M M' : RufMaschineG D} (h : RufSchrittG P O passes M f M') (g : Faden) (hg : g ≠ f) :
     M'.faeden g = M.faeden g := by
-  cases h <;> exact rufUpdateG_noteq _ _ _ hg _
+  (rcases h with h | h | h | h | h | h <;> cases h) <;> exact rufUpdateG_noteq _ _ _ hg _
 
 /-- A run of thread `f` leaves every other thread untouched. -/
 theorem rufLaufG_fremd {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}

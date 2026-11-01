@@ -72,19 +72,81 @@ theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     (hF : FertigG M f) : False := by
   obtain ⟨hst, hr⟩ := hF
   cases hs with
-  | endeForm l Γ Λ e ρ hl hent hhead =>
-    rw [hhead] at hr
-    cases e <;> simp_all [GRest.anRueck, Endblock.istRueck, EndEntfaltbar]
-  | _ =>
-    first
-    | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
-    | (rw [‹(M.faeden f).kopf.rest = _›] at hr
-       simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
-       first
-       | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
-       | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
-       | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
-          exact Bool.noConfusion hr))
+  | g1 hs =>
+    cases hs with
+    | endeForm l Γ Λ e ρ hl hent hhead =>
+      rw [hhead] at hr
+      cases e <;> simp_all [GRest.anRueck, Endblock.istRueck, EndEntfaltbar]
+    | _ =>
+      first
+      | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
+      | (rw [‹(M.faeden f).kopf.rest = _›] at hr
+         simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
+         first
+         | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
+         | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
+         | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
+            exact Bool.noConfusion hr))
+  | g2 hs =>
+    cases hs with
+    | _ =>
+      first
+      | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
+      | (rw [‹(M.faeden f).kopf.rest = _›] at hr
+         simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
+         first
+         | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
+         | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
+         | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
+            exact Bool.noConfusion hr))
+  | g3 hs =>
+    cases hs with
+    | _ =>
+      first
+      | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
+      | (rw [‹(M.faeden f).kopf.rest = _›] at hr
+         simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
+         first
+         | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
+         | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
+         | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
+            exact Bool.noConfusion hr))
+  | g4 hs =>
+    cases hs with
+    | _ =>
+      first
+      | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
+      | (rw [‹(M.faeden f).kopf.rest = _›] at hr
+         simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
+         first
+         | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
+         | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
+         | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
+            exact Bool.noConfusion hr))
+  | g5 hs =>
+    cases hs with
+    | _ =>
+      first
+      | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
+      | (rw [‹(M.faeden f).kopf.rest = _›] at hr
+         simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
+         first
+         | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
+         | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
+         | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
+            exact Bool.noConfusion hr))
+  | g6 hs =>
+    cases hs with
+    | _ =>
+      first
+      | (have hp := ‹(M.faeden f).stapel = _ :: _›; rw [hst] at hp; exact absurd hp (by simp only [List.nil_eq, reduceCtorEq, not_false_eq_true]))
+      | (rw [‹(M.faeden f).kopf.rest = _›] at hr
+         simp only [GRest.anRueck, Block.istRueck, Endblock.istRueck] at hr
+         first
+         | (simp only [Stmt.istRueck, Bool.false_eq_true] at hr; done)
+         | exact stmt_rueck_nicht_ok _ hr _ _ _ _ ‹_›
+         | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
+            exact Bool.noConfusion hr))
 
 /-- A finished thread stays finished: other threads leave it alone, and it does not step. -/
 theorem fertig_bleibt {P : Programm D} {O : Orakel D} {passes : Nat}

@@ -159,44 +159,81 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
           ⟨l, .why n :: Γ, Λ, Env.cons (τ := .why n) (Fin.cast hn r) ρc,
             .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩ := by
   cases hs with
-  | rueckGrund r0 hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g' hfg rho'
-      hrho s0' hs0 rg hrg hn =>
-    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
-    obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
-    subst hg
-    subst hfg
-    subst hrg
-    refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
-      hn, hpop, hcaller, rfl, ?_⟩
-    cases hr
-    rfl
-  | rueckConsGrund r0 hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
-      hfg rho' hrho s0' hs0 rg hrg hn =>
-    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
-    obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
-    subst hg
-    subst hfg
-    subst hrg
-    refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
-      hn, hpop, hcaller, rfl, ?_⟩
-    cases hr
-    rfl
-  | dannRetGrund r0 hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
-      hfg rho' hrho s0' hs0 rg hrg hn =>
-    simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
-    obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
-    subst hg
-    subst hfg
-    subst hrg
-    refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
-      hn, hpop, hcaller, rfl, ?_⟩
-    cases hr
-    rfl
-  | _ =>
-    simp only [rufUpdateG_self] at hlog
-    first
-      | exact absurd hlog.symm (List.cons_ne_self _ _)
-      | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
+  | g1 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self] at hlog
+      first
+        | exact absurd hlog.symm (List.cons_ne_self _ _)
+        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
+  | g2 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self] at hlog
+      first
+        | exact absurd hlog.symm (List.cons_ne_self _ _)
+        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
+  | g3 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self] at hlog
+      first
+        | exact absurd hlog.symm (List.cons_ne_self _ _)
+        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
+  | g4 hs =>
+    cases hs with
+    | rueckGrund r0 hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g' hfg rho'
+        hrho s0' hs0 rg hrg hn =>
+      simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
+      obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
+      subst hg
+      subst hfg
+      subst hrg
+      refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
+        hn, hpop, hcaller, rfl, ?_⟩
+      cases hr
+      rfl
+    | _ =>
+      simp only [rufUpdateG_self] at hlog
+      first
+        | exact absurd hlog.symm (List.cons_ne_self _ _)
+        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
+  | g5 hs =>
+    cases hs with
+    | rueckConsGrund r0 hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
+        hfg rho' hrho s0' hs0 rg hrg hn =>
+      simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
+      obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
+      subst hg
+      subst hfg
+      subst hrg
+      refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
+        hn, hpop, hcaller, rfl, ?_⟩
+      cases hr
+      rfl
+    | dannRetGrund r0 hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
+        hfg rho' hrho s0' hs0 rg hrg hn =>
+      simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
+      obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
+      subst hg
+      subst hfg
+      subst hrg
+      refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
+        hn, hpop, hcaller, rfl, ?_⟩
+      cases hr
+      rfl
+    | _ =>
+      simp only [rufUpdateG_self] at hlog
+      first
+        | exact absurd hlog.symm (List.cons_ne_self _ _)
+        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
+  | g6 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self] at hlog
+      first
+        | exact absurd hlog.symm (List.cons_ne_self _ _)
+        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
 
 /-! ## 4. The old theorem is a special case -/
 

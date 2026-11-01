@@ -203,174 +203,191 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
       hkt.2⟩
   cases hs with
   -- pops into a caller that does not wait
-  | rueck caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    exact ⟨hc.1, hc.2, hr, hkt⟩
-  | rueckCons caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    exact ⟨hc.1, hc.2, hr, hkt⟩
-  | dannRet _ _ _ _ _ _ _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    exact ⟨hc.1, hc.2, hr, hkt⟩
-  -- binding pops
-  | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    refine ⟨?_, rfl, hr, hkt⟩
-    have hc1 := hc.1
-    clear hr hkt hpopS h
-    rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc1 <;>
-      (revert hc1
-       simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
-         Bool.or_eq_true, Bool.not_eq_true']
-       intro hc1
-       simp_all)
-  | dannRetBind _ _ _ _ _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    refine ⟨?_, rfl, hr, hkt⟩
-    have hc1 := hc.1
-    clear hr hkt hpopS h
-    rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc1 <;>
-      (revert hc1
-       simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
-         Bool.or_eq_true, Bool.not_eq_true']
-       intro hc1
-       simp_all)
-  | rueckConsBind _ _ _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    refine ⟨?_, rfl, hr, hkt⟩
-    have hc1 := hc.1
-    clear hr hkt hpopS h
-    rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc1 <;>
-      (revert hc1
-       simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
-         Bool.or_eq_true, Bool.not_eq_true']
-       intro hc1
-       simp_all)
-  -- reason pops
-  | rueckGrund _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    refine ⟨?_, rfl, hr, hkt⟩
-    have hc1 := hc.1
-    rw [hcaller] at hc1
-    clear hr hkt hpopS h
-    revert hc1
-    simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
-      Bool.or_eq_true, Bool.not_eq_true', Endblock.alsBlock_terminal, Bool.or_true, and_true]
-    intro hc1
-    simp_all
-  | rueckConsGrund _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    refine ⟨?_, rfl, hr, hkt⟩
-    have hc1 := hc.1
-    rw [hcaller] at hc1
-    clear hr hkt hpopS h
-    revert hc1
-    simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
-      Bool.or_eq_true, Bool.not_eq_true', Endblock.alsBlock_terminal, Bool.or_true, and_true]
-    intro hc1
-    simp_all
-  | dannRetGrund _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
-    simp only [rufUpdateG_self]
-    refine ⟨?_, rfl, hr, hkt⟩
-    have hc1 := hc.1
-    rw [hcaller] at hc1
-    clear hr hkt hpopS h
-    revert hc1
-    simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
-      Bool.or_eq_true, Bool.not_eq_true', Endblock.alsBlock_terminal, Bool.or_true, and_true]
-    intro hc1
-    simp_all
-  -- pushes
-  | ruf l Γ Λ g args hp hr rest ρ hhead =>
-    obtain ⟨hk, _, hst, hkt⟩ := h
-    rw [hhead] at hk
-    simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, hr⟩, hkt⟩⟩
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · exact ⟨hk, rfl⟩
-    · exact hst c hc
-  | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead =>
-    obtain ⟨hk, _, hst, hkt⟩ := h
-    rw [hhead] at hk
-    simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, hr⟩, hkt⟩⟩
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · refine ⟨?_, rfl⟩
+  | g1 hs =>
+    cases hs with
+    | rueck caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      exact ⟨hc.1, hc.2, hr, hkt⟩
+    | ruf l Γ Λ g args hp hr rest ρ hhead =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, hr⟩, hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨hk, rfl⟩
+      · exact hst c hc
+    | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep =>
+      have ha := Stmt.istAbschluss_ok O passes keinRuf s _ _ _ _ hstep
+      simp only [rufUpdateG_self]
+      obtain ⟨hk, hb, hst, hkt⟩ := h
+      rw [hhead] at hk hb
+      refine ⟨?_, rfl, hst, hkt⟩
       revert hk
-      simp only [GRest.fOk, Block.terminal, Stmt.istAbschluss, Bool.false_or, Bool.and_eq_true, Bool.or_eq_true,
-  Bool.not_eq_eq_eq_not, Bool.not_true, imp_self]
-    · exact hst c hc
-  | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg =>
-    obtain ⟨hk, _, hst, hkt⟩ := h
-    rw [hhead] at hk
-    simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, (D.passt_sig hg).gruende.trans hr⟩, hkt⟩⟩
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · refine ⟨?_, rfl⟩
-      revert hk
-      simp only [GRest.fOk, Block.terminal, Stmt.istAbschluss, Bool.false_or, Bool.and_eq_true, Bool.or_eq_true,
-  Bool.not_eq_eq_eq_not, Bool.not_true, imp_self]
-    · exact hst c hc
-  | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg =>
-    obtain ⟨hk, _, hst, hkt⟩ := h
-    rw [hhead] at hk
-    simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, (D.passt_sig hg).gruende.trans hr⟩, hkt⟩⟩
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · exact ⟨hk, rfl⟩
-    · exact hst c hc
-  | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead =>
-    obtain ⟨hk, _, hst, hkt⟩ := h
-    rw [hhead] at hk
-    simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inr (Or.inl ⟨_, _, _, _, _, rest, k, ρ, rfl, he, hr⟩), hkt⟩⟩
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · exact ⟨hk, rfl⟩
-    · exact hst c hc
-  | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg =>
-    obtain ⟨hk, _, hst, hkt⟩ := h
-    rw [hhead] at hk
-    simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_, ⟨Or.inr (Or.inl ⟨_, _, _, _, _, rest, k, ρ, rfl,
-      ergSig hg he, (D.passt_sig hg).gruende.trans hr⟩), hkt⟩⟩
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · exact ⟨hk, rfl⟩
-    · exact hst c hc
-  | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead =>
-    obtain ⟨hk, _, hst, hkt⟩ := h
-    rw [hhead] at hk
-    simp only [rufUpdateG_self]
-    refine ⟨rfl, rfl, ?_,
-      ⟨Or.inr (Or.inr ⟨_, _, _, _, _, _, err, rest, k, ρ, rfl, he, rfl⟩), hkt⟩⟩
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · exact ⟨hk, rfl⟩
-    · exact hst c hc
-  -- a leaf in a block: it ended normally, so it was no return
-  | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep =>
-    have ha := Stmt.istAbschluss_ok O passes keinRuf s _ _ _ _ hstep
-    simp only [rufUpdateG_self]
-    obtain ⟨hk, hb, hst, hkt⟩ := h
-    rw [hhead] at hk hb
-    refine ⟨?_, rfl, hst, hkt⟩
-    revert hk
-    simp only [GRest.fOk, Block.terminal, ha, Bool.false_or, imp_self]
-  | _ => kopfLokal
+      simp only [GRest.fOk, Block.terminal, ha, Bool.false_or, imp_self]
+    | _ => kopfLokal
+  | g2 hs =>
+    cases hs with
+    | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, hr⟩, hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · refine ⟨?_, rfl⟩
+        revert hk
+        simp only [GRest.fOk, Block.terminal, Stmt.istAbschluss, Bool.false_or, Bool.and_eq_true, Bool.or_eq_true,
+    Bool.not_eq_eq_eq_not, Bool.not_true, imp_self]
+      · exact hst c hc
+    | _ => kopfLokal
+  | g3 hs =>
+    cases hs with
+    | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      refine ⟨?_, rfl, hr, hkt⟩
+      have hc1 := hc.1
+      clear hr hkt hpopS h
+      rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc1 <;>
+        (revert hc1
+         simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
+           Bool.or_eq_true, Bool.not_eq_true']
+         intro hc1
+         simp_all)
+    | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, (D.passt_sig hg).gruende.trans hr⟩, hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · refine ⟨?_, rfl⟩
+        revert hk
+        simp only [GRest.fOk, Block.terminal, Stmt.istAbschluss, Bool.false_or, Bool.and_eq_true, Bool.or_eq_true,
+    Bool.not_eq_eq_eq_not, Bool.not_true, imp_self]
+      · exact hst c hc
+    | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_, ⟨Or.inl ⟨rfl, (D.passt_sig hg).gruende.trans hr⟩, hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨hk, rfl⟩
+      · exact hst c hc
+    | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_, ⟨Or.inr (Or.inl ⟨_, _, _, _, _, rest, k, ρ, rfl, he, hr⟩), hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨hk, rfl⟩
+      · exact hst c hc
+    | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_, ⟨Or.inr (Or.inl ⟨_, _, _, _, _, rest, k, ρ, rfl,
+        ergSig hg he, (D.passt_sig hg).gruende.trans hr⟩), hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨hk, rfl⟩
+      · exact hst c hc
+    | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_,
+        ⟨Or.inr (Or.inr ⟨_, _, _, _, _, _, err, rest, k, ρ, rfl, he, rfl⟩), hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨hk, rfl⟩
+      · exact hst c hc
+    -- a leaf in a block: it ended normally, so it was no return
+    | _ => kopfLokal
+  | g4 hs =>
+    cases hs with
+    | rueckCons caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      exact ⟨hc.1, hc.2, hr, hkt⟩
+    | dannRet _ _ _ _ _ _ _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ _ _ _ hnw =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      exact ⟨hc.1, hc.2, hr, hkt⟩
+    -- binding pops
+    | dannRetBind _ _ _ _ _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      refine ⟨?_, rfl, hr, hkt⟩
+      have hc1 := hc.1
+      clear hr hkt hpopS h
+      rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc1 <;>
+        (revert hc1
+         simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
+           Bool.or_eq_true, Bool.not_eq_true']
+         intro hc1
+         simp_all)
+    | rueckConsBind _ _ _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      refine ⟨?_, rfl, hr, hkt⟩
+      have hc1 := hc.1
+      clear hr hkt hpopS h
+      rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;> rw [hcaller] at hc1 <;>
+        (revert hc1
+         simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
+           Bool.or_eq_true, Bool.not_eq_true']
+         intro hc1
+         simp_all)
+    -- reason pops
+    | rueckGrund _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      refine ⟨?_, rfl, hr, hkt⟩
+      have hc1 := hc.1
+      rw [hcaller] at hc1
+      clear hr hkt hpopS h
+      revert hc1
+      simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
+        Bool.or_eq_true, Bool.not_eq_true', Endblock.alsBlock_terminal, Bool.or_true, and_true]
+      intro hc1
+      simp_all
+    | _ => kopfLokal
+  | g5 hs =>
+    cases hs with
+    | rueckConsGrund _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      refine ⟨?_, rfl, hr, hkt⟩
+      have hc1 := hc.1
+      rw [hcaller] at hc1
+      clear hr hkt hpopS h
+      revert hc1
+      simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
+        Bool.or_eq_true, Bool.not_eq_true', Endblock.alsBlock_terminal, Bool.or_true, and_true]
+      intro hc1
+      simp_all
+    | dannRetGrund _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
+      simp only [rufUpdateG_self]
+      refine ⟨?_, rfl, hr, hkt⟩
+      have hc1 := hc.1
+      rw [hcaller] at hc1
+      clear hr hkt hpopS h
+      revert hc1
+      simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Bool.and_eq_true,
+        Bool.or_eq_true, Bool.not_eq_true', Endblock.alsBlock_terminal, Bool.or_true, and_true]
+      intro hc1
+      simp_all
+    -- pushes
+    | _ => kopfLokal
+  | g6 hs =>
+    cases hs with
+    | _ => kopfLokal
 
 /-- Every rule keeps `FortInvG` at every thread. -/
 theorem fortInvG_schritt_alle {M M' : RufMaschineG D} {f : Faden}

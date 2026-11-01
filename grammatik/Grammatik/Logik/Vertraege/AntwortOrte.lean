@@ -241,139 +241,166 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       (M.faeden f).stapel = caller :: rst ∧ (M'.faeden f).stapel = rst ∧
       (caller.rest.2.2.2.2.aR C → (M'.faeden f).kopf.rest.2.2.2.2.aR C)) := by
   cases hs with
-  | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
-    kopfAnt
-    have h := ants_armWahlG C arms (eval σ₁ v σ₁ ρ) (by simp_all)
-    rw [hw] at h
-    have h2 : b.ants.all C = true := h
-    simp_all
-  | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw =>
-    kopfAnt
-    have h := ants_armWahlG C arms (eval σ₁ v σ₁ ρ) (by simp_all)
-    rw [hw] at h
-    have h2 : b.ants.all C = true := h
-    simp_all
-  | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw =>
-    kopfAnt
-    have h := ants_grundWahlG C arms (eval σ₁ r σ₁ ρ) (by simp_all)
-    rw [hw] at h
-    simp_all
-  | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .ende rest⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self],
-      by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    rw [hhead] at hok
-    dsimp only at hok ⊢
-    simp only [GRest.aR, Endblock.ants, Stmt.ants, List.all_append, List.all_nil,
-      Bool.true_and] at hok ⊢
-    exact hok
-  | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .dann rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self],
-      by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    rw [hhead] at hok
-    dsimp only at hok ⊢
-    simp only [GRest.aR, Block.ants, Stmt.ants, List.all_append, List.all_nil,
-      Bool.true_and] at hok ⊢
-    exact hok
-  | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self],
-      by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    rw [hhead] at hok
-    dsimp only at hok ⊢
-    simp only [GRest.aR, Block.ants] at hok ⊢
-    exact hok
-  | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self],
-      by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    rw [hhead] at hok
-    dsimp only at hok ⊢
-    simp only [GRest.aR, Block.ants, List.all_append, Bool.and_eq_true] at hok ⊢
-    exact ⟨hok.1.1, hok.1.2, hok.2⟩
-  | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .dann rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self],
-      by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    rw [hhead] at hok
-    dsimp only at hok ⊢
-    simp only [GRest.aR, Block.ants, Stmt.ants, List.all_append, List.all_nil,
-      Bool.true_and] at hok ⊢
-    exact hok
-  | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self],
-      by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    rw [hhead] at hok
-    dsimp only at hok ⊢
-    simp only [GRest.aR, Endblock.ants, Stmt.ants, List.all_append, List.all_nil,
-      Bool.true_and] at hok ⊢
-    exact hok
-  | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
-    refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-      ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩, rho, s0,
-      by dsimp only; rw [rufUpdateG_self],
-      by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
-    rw [hhead] at hok
-    dsimp only at hok ⊢
-    simp only [GRest.aR, Block.ants] at hok ⊢
-    exact hok
-  | rueck caller rst hpop =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]
-    exact id
-  | rueckCons caller rst hpop =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]
-    exact id
-  | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]
-    exact id
-  | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
-      simp only [GRest.aR] <;> exact fun h => by simp_all
-  | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
-      hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
-      simp only [GRest.aR] <;> exact fun h => by simp_all
-  | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
-      simp only [GRest.aR] <;> exact fun h => by simp_all
-  | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rw [hcaller]; dsimp only
-    simp only [GRest.aR, ants_alsBlock]
-    exact fun h => ⟨h.1, h.2.2⟩
-  | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rw [hcaller]; dsimp only
-    simp only [GRest.aR, ants_alsBlock]
-    exact fun h => ⟨h.1, h.2.2⟩
-  | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
-    refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
-    dsimp only; rw [rufUpdateG_self]; dsimp only
-    rw [hcaller]; dsimp only
-    simp only [GRest.aR, ants_alsBlock]
-    exact fun h => ⟨h.1, h.2.2⟩
-  | _ =>
-    kopfAnt
-    all_goals simp_all
+  | g1 hs =>
+    cases hs with
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
+      kopfAnt
+      have h := ants_armWahlG C arms (eval σ₁ v σ₁ ρ) (by simp_all)
+      rw [hw] at h
+      have h2 : b.ants.all C = true := h
+      simp_all
+    | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw =>
+      kopfAnt
+      have h := ants_armWahlG C arms (eval σ₁ v σ₁ ρ) (by simp_all)
+      rw [hw] at h
+      have h2 : b.ants.all C = true := h
+      simp_all
+    | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw =>
+      kopfAnt
+      have h := ants_grundWahlG C arms (eval σ₁ r σ₁ ρ) (by simp_all)
+      rw [hw] at h
+      simp_all
+    | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .ende rest⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Endblock.ants, Stmt.ants, List.all_append, List.all_nil,
+        Bool.true_and] at hok ⊢
+      exact hok
+    | rueck caller rst hpop =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]
+      exact id
+    | _ =>
+      kopfAnt
+      all_goals simp_all
+  | g2 hs =>
+    cases hs with
+    | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .dann rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Block.ants, Stmt.ants, List.all_append, List.all_nil,
+        Bool.true_and] at hok ⊢
+      exact hok
+    | _ =>
+      kopfAnt
+      all_goals simp_all
+  | g3 hs =>
+    cases hs with
+    | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .wartet rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Block.ants] at hok ⊢
+      exact hok
+    | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nach D g Λ, ρ, .wartetSonst (D.gruende g) err rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Block.ants, List.all_append, Bool.and_eq_true] at hok ⊢
+      exact ⟨hok.1.1, hok.1.2, hok.2⟩
+    | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .dann rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Block.ants, Stmt.ants, List.all_append, List.all_nil,
+        Bool.true_and] at hok ⊢
+      exact hok
+    | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .ende rest⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Endblock.ants, Stmt.ants, List.all_append, List.all_nil,
+        Bool.true_and] at hok ⊢
+      exact hok
+    | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartet rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Block.ants] at hok ⊢
+      exact hok
+    | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
+        simp only [GRest.aR] <;> exact fun h => by simp_all
+    | _ =>
+      kopfAnt
+      all_goals simp_all
+  | g4 hs =>
+    cases hs with
+    | rueckCons caller rst hpop =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]
+      exact id
+    | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]
+      exact id
+    | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
+        hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
+        simp only [GRest.aR] <;> exact fun h => by simp_all
+    | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rcases hcaller with hc | ⟨n, err, hc⟩ <;> rw [hc] <;> dsimp only <;>
+        simp only [GRest.aR] <;> exact fun h => by simp_all
+    | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rw [hcaller]; dsimp only
+      simp only [GRest.aR, ants_alsBlock]
+      exact fun h => ⟨h.1, h.2.2⟩
+    | _ =>
+      kopfAnt
+      all_goals simp_all
+  | g5 hs =>
+    cases hs with
+    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rw [hcaller]; dsimp only
+      simp only [GRest.aR, ants_alsBlock]
+      exact fun h => ⟨h.1, h.2.2⟩
+    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+      refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
+      dsimp only; rw [rufUpdateG_self]; dsimp only
+      rw [hcaller]; dsimp only
+      simp only [GRest.aR, ants_alsBlock]
+      exact fun h => ⟨h.1, h.2.2⟩
+    | _ =>
+      kopfAnt
+      all_goals simp_all
+  | g6 hs =>
+    cases hs with
+    | _ =>
+      kopfAnt
+      all_goals simp_all
 
 /-! ## 4. The frame invariant -/
 

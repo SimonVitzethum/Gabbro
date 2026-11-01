@@ -124,7 +124,7 @@ theorem nested_else_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ
     (hbody : lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) fuel Λ top tail = .ok (body, remaining)) :
     lowEndL (l := l) u caller Γ fn (fuel + 1) Λ top (.bindElse y callee args reason :: source) =
       .ok (nestedElse u caller Γ Λ k τ he hr err body, remaining) := by
-  simp only [lowEndL, hg, bind, Except.bind, hk, hr, ↓reduceDIte, withErg, herr]
+  simp only [lowEndL_succ, lowEndStep, lowStufe_ende, hg, bind, Except.bind, hk, hr, ↓reduceDIte, withErg, herr]
   split
   · rename_i hn
     rw [he] at hn
@@ -142,7 +142,7 @@ theorem nested_else_gate {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ 
     (h : lowEndL (l := l) u caller Γ fn (n + 1) Λ top
       (.bindElse y callee args reason :: source) = .ok output) : u.exportGate = .ok () := by
   cases hg : u.exportGate with
-  | error e => simp only [lowEndL, hg, bind, Except.bind] at h; contradiction
+  | error e => simp only [lowEndL_succ, lowEndStep, hg, bind, Except.bind] at h; contradiction
   | ok v => cases v; rfl
 
 /-- Canonical call semantics retained by the exported nested continuation. Both paths use

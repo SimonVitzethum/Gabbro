@@ -18,251 +18,278 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
   obtain ⟨hk, hst, hlog⟩ := h
   generalize hw : Armiert Φ (M.faeden f).log = w at hk
   cases hs with
-  | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
-    dsimp only; rw [rufUpdateG_self]
-    refine ⟨?_, hst, hlog⟩
-    dsimp only; rw [hw]
-    rw [hhead] at hk
-    simp only [GRest.fR, fE, Bool.and_eq_true] at hk ⊢
-    rw [fNach_blatt Φ w s hleaf] at hk
-    exact hk.2
-  | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
-    dsimp only; rw [rufUpdateG_self]
-    refine ⟨?_, hst, hlog⟩
-    dsimp only; rw [hw]
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, Bool.and_eq_true] at hk ⊢
-    rw [fNach_blatt Φ w s hleaf] at hk
-    exact ⟨hk.1.2, hk.2⟩
-  | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
-    dsimp only; rw [rufUpdateG_self]
-    rw [hhead] at hk
-    simp only [GRest.fR, fE, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
-      Bool.not_eq_true'] at hk
-    refine ⟨hΦ.1 g, ⟨hk.2, hst⟩, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
-  | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
-    dsimp only; rw [rufUpdateG_self]
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
-      Bool.not_eq_true'] at hk
-    refine ⟨hΦ.1 g, ⟨⟨hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
-  | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
-    dsimp only; rw [rufUpdateG_self]
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨hΦ.1 g, ⟨⟨hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
-  | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho =>
-    dsimp only; rw [rufUpdateG_self]
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨hΦ.1 g, ⟨⟨hk.1.1.2, hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1.1.1 (by simpa [Pflichtig] using hp)
-  | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
-    dsimp only; rw [rufUpdateG_self]
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
-      Bool.not_eq_true'] at hk
-    refine ⟨hΦ.1 g, ⟨⟨fB_von_false Φ _ rest _ hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
-  | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
-    dsimp only; rw [rufUpdateG_self]
-    rw [hhead] at hk
-    simp only [GRest.fR, fE, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
-      Bool.not_eq_true'] at hk
-    refine ⟨hΦ.1 g, ⟨fE_mono Φ _ rest false _ (fun h => absurd h Bool.false_ne_true) hk.2, hst⟩,
-      fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
-  | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
-    dsimp only; rw [rufUpdateG_self]
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨hΦ.1 g, ⟨⟨fB_von_false Φ _ rest _ hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
-  | rueck caller rst hpop Γ Λ e hperm ρ hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hh] at hk
-    simp only [GRest.fR, fE, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨hc, hr, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk (by simpa [Pflichtig] using hp)
-  | rueckCons caller rst hpop Γ Λ e hperm rest ρ hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu
-      hneu hnw =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hh] at hk
-    simp only [GRest.fR, fE, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨hc, hr, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
-  | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v
-      hv neu hneu hnw =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨hc, hr, fun _ hp => ?_, hlog⟩
-    rw [hw]
-    exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
-  | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hh g hfg rho hrho
-      s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hh] at hk
-    simp only [GRest.fR, fE, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
-    · rcases hcaller with hcc | ⟨n, err, hcc⟩ <;> rw [hcc] at hc <;>
-        simp only [GRest.fR, Armiert] at hc ⊢
-      · exact hc
-      · exact ⟨hc.2.1, hc.2.2⟩
-    · rw [hw]
-      exact armiert_aus hk (by simpa [Pflichtig] using hp)
-  | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
-      hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
-    · rcases hcaller with hcc | ⟨n, err, hcc⟩ <;> rw [hcc] at hc <;>
-        simp only [GRest.fR, Armiert] at hc ⊢
-      · exact hc
-      · exact ⟨hc.2.1, hc.2.2⟩
-    · rw [hw]
-      exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
-  | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller
-      hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hhead] at hk
-    simp only [GRest.fR, fE, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
-    · rcases hcaller with hcc | ⟨n, err, hcc⟩ <;> rw [hcc] at hc <;>
-        simp only [GRest.fR, Armiert] at hc ⊢
-      · exact hc
-      · exact ⟨hc.2.1, hc.2.2⟩
-    · rw [hw]
+  | g1 hs =>
+    cases hs with
+    | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
+      dsimp only; rw [rufUpdateG_self]
+      refine ⟨?_, hst, hlog⟩
+      dsimp only; rw [hw]
+      rw [hhead] at hk
+      simp only [GRest.fR, fE, Bool.and_eq_true] at hk ⊢
+      rw [fNach_blatt Φ w s hleaf] at hk
+      exact hk.2
+    | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
+      dsimp only; rw [rufUpdateG_self]
+      refine ⟨?_, hst, hlog⟩
+      dsimp only; rw [hw]
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, Bool.and_eq_true] at hk ⊢
+      rw [fNach_blatt Φ w s hleaf] at hk
+      exact ⟨hk.1.2, hk.2⟩
+    | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hk
+      simp only [GRest.fR, fE, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
+        Bool.not_eq_true'] at hk
+      refine ⟨hΦ.1 g, ⟨hk.2, hst⟩, fun _ hp => ?_, hlog⟩
+      rw [hw]
       exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
-  | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho
-      hrho s0 hs0 rg hrg hn =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hcaller] at hc
-    rw [hhead] at hk
-    simp only [GRest.fR, fE, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    simp only [GRest.fR] at hc
-    refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
-    · simp only [GRest.fR, Armiert, fB_alsBlock]
-      exact ⟨hc.1, hc.2.2⟩
-    · rw [hw]
+    | rueck caller rst hpop Γ Λ e hperm ρ hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hh] at hk
+      simp only [GRest.fR, fE, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨hc, hr, fun _ hp => ?_, hlog⟩
+      rw [hw]
       exact armiert_aus hk (by simpa [Pflichtig] using hp)
-  | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
-      g hfg rho hrho s0 hs0 rg hrg hn =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hcaller] at hc
-    rw [hhead] at hk
-    simp only [GRest.fR, fE, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    simp only [GRest.fR] at hc
-    refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
-    · simp only [GRest.fR, Armiert, fB_alsBlock]
-      exact ⟨hc.1, hc.2.2⟩
-    · rw [hw]
-      exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
-  | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
-      hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
-    subst hfg
-    dsimp only; rw [rufUpdateG_self]
-    rw [hpop] at hst
-    obtain ⟨hc, hr⟩ := hst
-    rw [hcaller] at hc
-    rw [hhead] at hk
-    simp only [GRest.fR, fB, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
-    simp only [GRest.fR] at hc
-    refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
-    · simp only [GRest.fR, Armiert, fB_alsBlock]
-      exact ⟨hc.1, hc.2.2⟩
-    · rw [hw]
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hwahl =>
+      kopfF
+      have h := fB_armWahlG Φ _ arms (eval σ₁ v σ₁ ρ) hk.1.1
+      rw [hwahl] at h
+      exact ⟨fB_von_false Φ _ b w h, hk.1.2, hk.2⟩
+    | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hwahl =>
+      kopfF
+      have h := fB_armWahlG Φ _ arms (eval σ₁ v σ₁ ρ) hk.1.1
+      rw [hwahl] at h
+      exact ⟨fB_von_false Φ _ b w h, hk.1.2, hk.2⟩
+    | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hwahl =>
+      kopfF
+      have h := fB_grundWahlG Φ _ arms (eval σ₁ r σ₁ ρ) hk.1.1
+      rw [hwahl] at h
+      exact ⟨fB_von_false Φ _ b w h, hk.1.2, hk.2⟩
+    | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
+      dsimp only; rw [rufUpdateG_self]
+      refine ⟨?_, hst, hlog⟩
+      dsimp only; rw [hw]
+      rw [hhead] at hk
+      simp only [GRest.fR, fE, fB, Bool.and_eq_true] at hk ⊢
+      rw [fNach_entf Φ w s hent] at hk
+      exact ⟨⟨hk.1, trivial⟩, hk.2⟩
+    | endeForm l Γ Λ e ρ hl hent hhead =>
+      dsimp only; rw [rufUpdateG_self]
+      refine ⟨?_, hst, hlog⟩
+      dsimp only; rw [hw]
+      rw [hhead] at hk
+      simp only [GRest.fR, fB_alsBlock] at hk ⊢
+      exact ⟨hk, trivial⟩
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
+  | g2 hs =>
+    cases hs with
+    | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
+        Bool.not_eq_true'] at hk
+      refine ⟨hΦ.1 g, ⟨⟨hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
+      rw [hw]
       exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
-  | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hwahl =>
-    kopfF
-    have h := fB_armWahlG Φ _ arms (eval σ₁ v σ₁ ρ) hk.1.1
-    rw [hwahl] at h
-    exact ⟨fB_von_false Φ _ b w h, hk.1.2, hk.2⟩
-  | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hwahl =>
-    kopfF
-    have h := fB_armWahlG Φ _ arms (eval σ₁ v σ₁ ρ) hk.1.1
-    rw [hwahl] at h
-    exact ⟨fB_von_false Φ _ b w h, hk.1.2, hk.2⟩
-  | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hwahl =>
-    kopfF
-    have h := fB_grundWahlG Φ _ arms (eval σ₁ r σ₁ ρ) hk.1.1
-    rw [hwahl] at h
-    exact ⟨fB_von_false Φ _ b w h, hk.1.2, hk.2⟩
-  | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
-    dsimp only; rw [rufUpdateG_self]
-    refine ⟨?_, hst, hlog⟩
-    dsimp only; rw [hw]
-    rw [hhead] at hk
-    simp only [GRest.fR, fE, fB, Bool.and_eq_true] at hk ⊢
-    rw [fNach_entf Φ w s hent] at hk
-    exact ⟨⟨hk.1, trivial⟩, hk.2⟩
-  | endeForm l Γ Λ e ρ hl hent hhead =>
-    dsimp only; rw [rufUpdateG_self]
-    refine ⟨?_, hst, hlog⟩
-    dsimp only; rw [hw]
-    rw [hhead] at hk
-    simp only [GRest.fR, fB_alsBlock] at hk ⊢
-    exact ⟨hk, trivial⟩
-  | dannNarrowElse =>
-    kopfF
-    exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
-  | dannPruefFalsch =>
-    kopfF
-    exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
-  | dannRegLiesElseFalsch =>
-    kopfF
-    exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
-  | dannGleitNarrowElse =>
-    kopfF
-    exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
-  | dannBindAxiomElseGrund =>
-    kopfF
-    first
-      | exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
-      | exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1
-  | endeBindAxiomElseGrund =>
-    kopfF
-    exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1
-  | _ =>
-    kopfF
-    all_goals (simp_all [fB_von_false, fR_von_false]; done)
+    | dannNarrowElse =>
+      kopfF
+      exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
+    | dannPruefFalsch =>
+      kopfF
+      exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
+  | g3 hs =>
+    cases hs with
+    | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨hΦ.1 g, ⟨⟨hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
+      rw [hw]
+      exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
+    | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho =>
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨hΦ.1 g, ⟨⟨hk.1.1.2, hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
+      rw [hw]
+      exact armiert_aus hk.1.1.1 (by simpa [Pflichtig] using hp)
+    | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
+        Bool.not_eq_true'] at hk
+      refine ⟨hΦ.1 g, ⟨⟨fB_von_false Φ _ rest _ hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
+      rw [hw]
+      exact armiert_aus hk.1.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
+    | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho =>
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hk
+      simp only [GRest.fR, fE, fS, fNach, Bool.and_eq_true, Bool.or_eq_true,
+        Bool.not_eq_true'] at hk
+      refine ⟨hΦ.1 g, ⟨fE_mono Φ _ rest false _ (fun h => absurd h Bool.false_ne_true) hk.2, hst⟩,
+        fun _ hp => ?_, hlog⟩
+      rw [hw]
+      exact armiert_aus hk.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
+    | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨hΦ.1 g, ⟨⟨fB_von_false Φ _ rest _ hk.1.2, hk.2⟩, hst⟩, fun _ hp => ?_, hlog⟩
+      rw [hw]
+      exact armiert_aus hk.1.1 (hΦ.2 g _ (by simpa [Pflichtig] using hp) hg)
+    | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hh g hfg rho hrho
+        s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hh] at hk
+      simp only [GRest.fR, fE, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
+      · rcases hcaller with hcc | ⟨n, err, hcc⟩ <;> rw [hcc] at hc <;>
+          simp only [GRest.fR, Armiert] at hc ⊢
+        · exact hc
+        · exact ⟨hc.2.1, hc.2.2⟩
+      · rw [hw]
+        exact armiert_aus hk (by simpa [Pflichtig] using hp)
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
+  | g4 hs =>
+    cases hs with
+    | rueckCons caller rst hpop Γ Λ e hperm rest ρ hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu
+        hneu hnw =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hh] at hk
+      simp only [GRest.fR, fE, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨hc, hr, fun _ hp => ?_, hlog⟩
+      rw [hw]
+      exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
+    | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v
+        hv neu hneu hnw =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨hc, hr, fun _ hp => ?_, hlog⟩
+      rw [hw]
+      exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
+    | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
+        hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
+      · rcases hcaller with hcc | ⟨n, err, hcc⟩ <;> rw [hcc] at hc <;>
+          simp only [GRest.fR, Armiert] at hc ⊢
+        · exact hc
+        · exact ⟨hc.2.1, hc.2.2⟩
+      · rw [hw]
+        exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
+    | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller
+        hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hhead] at hk
+      simp only [GRest.fR, fE, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
+      · rcases hcaller with hcc | ⟨n, err, hcc⟩ <;> rw [hcc] at hc <;>
+          simp only [GRest.fR, Armiert] at hc ⊢
+        · exact hc
+        · exact ⟨hc.2.1, hc.2.2⟩
+      · rw [hw]
+        exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
+    | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho
+        hrho s0 hs0 rg hrg hn =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hcaller] at hc
+      rw [hhead] at hk
+      simp only [GRest.fR, fE, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      simp only [GRest.fR] at hc
+      refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
+      · simp only [GRest.fR, Armiert, fB_alsBlock]
+        exact ⟨hc.1, hc.2.2⟩
+      · rw [hw]
+        exact armiert_aus hk (by simpa [Pflichtig] using hp)
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
+  | g5 hs =>
+    cases hs with
+    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
+        g hfg rho hrho s0 hs0 rg hrg hn =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hcaller] at hc
+      rw [hhead] at hk
+      simp only [GRest.fR, fE, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      simp only [GRest.fR] at hc
+      refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
+      · simp only [GRest.fR, Armiert, fB_alsBlock]
+        exact ⟨hc.1, hc.2.2⟩
+      · rw [hw]
+        exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
+    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
+        hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+      subst hfg
+      dsimp only; rw [rufUpdateG_self]
+      rw [hpop] at hst
+      obtain ⟨hc, hr⟩ := hst
+      rw [hcaller] at hc
+      rw [hhead] at hk
+      simp only [GRest.fR, fB, fS, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at hk
+      simp only [GRest.fR] at hc
+      refine ⟨?_, hr, fun _ hp => ?_, hlog⟩
+      · simp only [GRest.fR, Armiert, fB_alsBlock]
+        exact ⟨hc.1, hc.2.2⟩
+      · rw [hw]
+        exact armiert_aus hk.1.1 (by simpa [Pflichtig] using hp)
+    | dannRegLiesElseFalsch =>
+      kopfF
+      exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
+    | dannGleitNarrowElse =>
+      kopfF
+      exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
+    | dannBindAxiomElseGrund =>
+      kopfF
+      first
+        | exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
+        | exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
+  | g6 hs =>
+    cases hs with
+    | endeBindAxiomElseGrund =>
+      kopfF
+      exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
 
 end Schritt
 

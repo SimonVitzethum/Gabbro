@@ -8,6 +8,87 @@ public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll.Teil2
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+
+/-! ## 3. The trace invariant over every reachable machine -/
+
+/-- **The trace invariant**: every thread trace is consistent and every
+    access event on it is good. -/
+def SpurInv (M : RufMaschineG D) : Prop :=
+  ∀ t : Faden, Konsistent (M.faeden t).spur ∧
+    ∀ e ∈ (M.faeden t).spur, e.istZugriff = true → e.gut
+
+theorem nimmtAlle_inv : ∀ (Ls : List D.Lock) (s : List (Ereignis D)), Konsistent s →
+    Konsistent (nimmtAlle Ls s) ∧ ∀ e ∈ nimmtAlle Ls s, e ∈ s ∨ e.istZugriff = false
+  | [], s, hk => ⟨hk, fun e he => Or.inl he⟩
+  | L :: Ls, s, hk => by
+      obtain ⟨hk', hm⟩ := nimmtAlle_inv Ls (Ereignis.nimmt L (offen s) :: s)
+        (konsistent_cons rfl hk)
+      refine ⟨hk', fun e he => ?_⟩
+      rcases hm e he with he | he
+      · rcases List.mem_cons.mp he with rfl | he
+        · exact Or.inr rfl
+        · exact Or.inl he
+      · exact Or.inr he
+
+theorem start_spur (P : Programm D) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (t : Faden) :
+    ((RufStartG P sp init).faeden t).spur = startSpur (init t).1 := by
+  show (match init t with
+    | ⟨g, rho⟩ => (⟨[], ⟨g, rho, sp.welt [], ⟨false, D.params g,
+        Signatur.anfang D (D.signatur g), rho, .ende (P.rumpf g)⟩⟩, startSpur g,
+        [RufEreignisF.eintritt g rho (sp.welt [])]⟩ : RufFadenG D)).spur = startSpur (init t).1
+  cases init t
+  rfl
+
+theorem spurInv_start (P : Programm D) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) : SpurInv (RufStartG P sp init) := by
+  intro t
+  rw [start_spur]
+  obtain ⟨hk, hm⟩ := nimmtAlle_inv (D.haelt (init t).1) [] konsistent_nil
+  refine ⟨hk, fun e he hz => ?_⟩
+  rcases hm e he with he | he
+  · exact absurd he List.not_mem_nil
+  · rw [he] at hz; cases hz
+
+theorem spurInv_schritt {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
+    (hI : SpurInv M) : SpurInv M' := by
+  intro t
+  by_cases ht : t = f
+  · subst ht
+    obtain ⟨hk, hg⟩ := hI t
+    rcases schritt_delta hO hs with ⟨X, e, hX, hK, _, _⟩ | ⟨⟨X, e, hX, hK⟩, _⟩
+    · refine ⟨hK hk, fun ev hev hz => ?_⟩
+      rw [e] at hev
+      rcases List.mem_append.mp hev with hev | hev
+      · rcases hX ev hev hz with h | h
+        · exact hg ev h hz
+        · exact h
+      · exact hg ev hev hz
+    · refine ⟨hK hk, fun ev hev hz => ?_⟩
+      rw [e] at hev
+      rcases List.mem_append.mp hev with hev | hev
+      · rw [hX ev hev] at hz; cases hz
+      · exact hg ev hev hz
+  · rw [rufSchrittG_fremd hs t ht]
+    exact hI t
+
+theorem spurInv_erreichbar {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
+    (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) {M : RufMaschineG D}
+    (hr : RufErreichbarG P O passes (RufStartG P sp init) M) : SpurInv M := by
+  induction hr with
+  | start => exact spurInv_start P sp init
+  | schritt M M' u _ hs ih => exact spurInv_schritt hO hs ih
+
+/-! ## 4. Accesses and the events of one step -/
+
+/-- The events one step of `f` prepended to `f`'s trace (newest first). -/
+def ereignisse (M M' : RufMaschineG D) (f : Faden) : List (Ereignis D) :=
+  (M'.faeden f).spur.take ((M'.faeden f).spur.length - (M.faeden f).spur.length)
+
+theorem zugriffe_ereignisse (M M' : RufMaschineG D) (f : Faden) :
+    zugriffe M M' f = (ereignisse M M' f).filterMap zugriffVon := by rfl
+
 theorem ereignisse_eq {M M' : RufMaschineG D} {f : Faden} {X : List (Ereignis D)}
     (e : (M'.faeden f).spur = X ++ (M.faeden f).spur) : ereignisse M M' f = X := by
   unfold ereignisse

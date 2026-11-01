@@ -87,7 +87,7 @@ theorem ende_leave_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   intro hs
   have hk : istEndeLeave (M.faeden f).kopf.rest = true := by rw [hR]; rfl
   clear hR
-  cases hs <;> simp_all [istEndeLeave]
+  rcases hs with hs | hs | hs | hs | hs | hs <;> cases hs <;> simp_all [istEndeLeave]
 
 /-- The pre-repair state: the frame reduced to the bare `leave`. -/
 def svAltM : RufMaschineG adD :=

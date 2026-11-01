@@ -107,90 +107,107 @@ theorem invLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (
       ∀ (g : D.Fn) (rho : Env D (D.params g)) (v : ErgVal D (D.erg g)) (s0 s1 : World D),
         ev = RufEreignisF.rueck g rho v s0 s1 → InvAmRueck P g s1 := by
   cases hs with
-  | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' v' s0' s1' h => ?_
-      simp only [RufEreignisF.rueck.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg hs1
-      exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
-        (erg_stabilX (hFS _) e (kopfSA_okS hF hhead).2)
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_rueck S O' U A passes R e hperm σ ρ)
-    · exact Or.inl hev
-  | rueckCons caller rst hpop Γ Λ e hperm rest ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu
-      hneu hnw =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' v' s0' s1' h => ?_
-      simp only [RufEreignisF.rueck.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg hs1
-      exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
-        (erg_stabilX (hFS _) e (okS_ende_cons (kopfSA_okS hF hhead)).2.1)
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_rueckCons S O' U A passes R e hperm rest σ ρ)
-    · exact Or.inl hev
-  | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv
-      neu hneu hnw =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' v' s0' s1' h => ?_
-      simp only [RufEreignisF.rueck.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg hs1
-      exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
-        (erg_stabilX (hFS _) e (okS_dann_cons (kopfSA_okS hF hhead)).2.1)
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_dannRet S O' U A passes R e hperm rest k σ ρ)
-    · exact Or.inl hev
-  | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hhead g hfg rho hrho
-      s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' v' s0' s1' h => ?_
-      simp only [RufEreignisF.rueck.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg hs1
-      exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
-        (erg_stabilX (hFS _) e (kopfSA_okS hF hhead).2)
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_rueck S O' U A passes R e hperm σ ρ)
-    · exact Or.inl hev
-  | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
-      hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' v' s0' s1' h => ?_
-      simp only [RufEreignisF.rueck.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg hs1
-      exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
-        (erg_stabilX (hFS _) e (okS_dann_cons (kopfSA_okS hF hhead)).2.1)
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_dannRet S O' U A passes R e hperm restk kk σ ρ)
-    · exact Or.inl hev
-  | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller
-      hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' v' s0' s1' h => ?_
-      simp only [RufEreignisF.rueck.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg hs1
-      exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
-        (erg_stabilX (hFS _) e (okS_ende_cons (kopfSA_okS hF hhead)).2.1)
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_rueckCons S O' U A passes R e hperm restk σ ρ)
-    · exact Or.inl hev
-  | _ => ohneRueckA
+  | g1 hs =>
+    cases hs with
+    | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' v' s0' s1' h => ?_
+        simp only [RufEreignisF.rueck.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg hs1
+        exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
+          (erg_stabilX (hFS _) e (kopfSA_okS hF hhead).2)
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_rueck S O' U A passes R e hperm σ ρ)
+      · exact Or.inl hev
+    | _ => ohneRueckA
+  | g2 hs =>
+    cases hs with
+    | _ => ohneRueckA
+  | g3 hs =>
+    cases hs with
+    | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hhead g hfg rho hrho
+        s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' v' s0' s1' h => ?_
+        simp only [RufEreignisF.rueck.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg hs1
+        exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
+          (erg_stabilX (hFS _) e (kopfSA_okS hF hhead).2)
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_rueck S O' U A passes R e hperm σ ρ)
+      · exact Or.inl hev
+    | _ => ohneRueckA
+  | g4 hs =>
+    cases hs with
+    | rueckCons caller rst hpop Γ Λ e hperm rest ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu
+        hneu hnw =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' v' s0' s1' h => ?_
+        simp only [RufEreignisF.rueck.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg hs1
+        exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
+          (erg_stabilX (hFS _) e (okS_ende_cons (kopfSA_okS hF hhead)).2.1)
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_rueckCons S O' U A passes R e hperm rest σ ρ)
+      · exact Or.inl hev
+    | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv
+        neu hneu hnw =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' v' s0' s1' h => ?_
+        simp only [RufEreignisF.rueck.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg hs1
+        exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
+          (erg_stabilX (hFS _) e (okS_dann_cons (kopfSA_okS hF hhead)).2.1)
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_dannRet S O' U A passes R e hperm rest k σ ρ)
+      · exact Or.inl hev
+    | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
+        hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' v' s0' s1' h => ?_
+        simp only [RufEreignisF.rueck.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg hs1
+        exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
+          (erg_stabilX (hFS _) e (okS_dann_cons (kopfSA_okS hF hhead)).2.1)
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_dannRet S O' U A passes R e hperm restk kk σ ρ)
+      · exact Or.inl hev
+    | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller
+        hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' v' s0' s1' h => ?_
+        simp only [RufEreignisF.rueck.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg hs1
+        exact popSA_inv hO hRL hQ hS hsp hI hF hhead e
+          (erg_stabilX (hFS _) e (okS_ende_cons (kopfSA_okS hF hhead)).2.1)
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_rueckCons S O' U A passes R e hperm restk σ ρ)
+      · exact Or.inl hev
+    | _ => ohneRueckA
+  | g5 hs =>
+    cases hs with
+    | _ => ohneRueckA
+  | g6 hs =>
+    cases hs with
+    | _ => ohneRueckA
 
 /-- **The reason-return leg for invariants** (as `popS_grund`). -/
 theorem popSA_grund (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)
@@ -249,46 +266,63 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
       ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
         ev = RufEreignisF.why g rho r s0 s1 → InvAmRueck P g s1 := by
   cases hs with
-  | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg
-      rho hrho s0 hs0 rg hrg hn =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.why.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg
-      exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_rueckGrund S O' U A passes R r hperm σ ρ)
-    · exact Or.inl hev
-  | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
-      g hfg rho hrho s0 hs0 rg hrg hn =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.why.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg
-      exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_rueckConsGrund S O' U A passes R r hperm restk σ ρ)
-    · exact Or.inl hev
-  | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
-      hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
-    intro ev hev
-    simp only [rufUpdateG_self] at hev
-    rcases List.mem_cons.mp hev with rfl | hev
-    · refine Or.inr fun g' rho' r' s0' s1' h => ?_
-      simp only [RufEreignisF.why.injEq] at h
-      obtain ⟨rfl, -, -, -, rfl⟩ := h
-      subst hfg
-      exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
-        (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
-        (fun O' R U A σ => semHA_dannRetGrund S O' U A passes R r hperm restk kk σ ρ)
-    · exact Or.inl hev
-  | _ => ohneGrundA
+  | g1 hs =>
+    cases hs with
+    | _ => ohneGrundA
+  | g2 hs =>
+    cases hs with
+    | _ => ohneGrundA
+  | g3 hs =>
+    cases hs with
+    | _ => ohneGrundA
+  | g4 hs =>
+    cases hs with
+    | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg
+        rho hrho s0 hs0 rg hrg hn =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' r' s0' s1' h => ?_
+        simp only [RufEreignisF.why.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg
+        exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_rueckGrund S O' U A passes R r hperm σ ρ)
+      · exact Or.inl hev
+    | _ => ohneGrundA
+  | g5 hs =>
+    cases hs with
+    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
+        g hfg rho hrho s0 hs0 rg hrg hn =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' r' s0' s1' h => ?_
+        simp only [RufEreignisF.why.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg
+        exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_rueckConsGrund S O' U A passes R r hperm restk σ ρ)
+      · exact Or.inl hev
+    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
+        hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+      intro ev hev
+      simp only [rufUpdateG_self] at hev
+      rcases List.mem_cons.mp hev with rfl | hev
+      · refine Or.inr fun g' rho' r' s0' s1' h => ?_
+        simp only [RufEreignisF.why.injEq] at h
+        obtain ⟨rfl, -, -, -, rfl⟩ := h
+        subst hfg
+        exact popSA_grund hO hRL hQ hS hsp hIG hF hhead r
+          (fun i hi hs => inv_stabilX (hFS _) hTV hperm hi hs)
+          (fun O' R U A σ => semHA_dannRetGrund S O' U A passes R r hperm restk kk σ ρ)
+      · exact Or.inl hev
+    | _ => ohneGrundA
+  | g6 hs =>
+    cases hs with
+    | _ => ohneGrundA
 
 /-- **A replayed head at a `return` meets `ensures` and its owed invariants** (as `kopfS_ret`). -/
 theorem kopfSA_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)

@@ -1,0 +1,247 @@
+module
+
+public import Grammatik.Parser.Expr.Typ
+public import Grammatik.Parser.Stmt.Anweisung.Kopf
+
+@[expose] public section
+
+namespace Gabbro.Grammatik.Parser
+set_option maxRecDepth 100000
+
+def parseWeiter (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (l, rest) => match fordereZeichen ";" rest with
+      | .ok rest' => .ok (.next l, rest')
+      | .error e => .error e
+
+/-- `@lib#fn(args) { region }` in statement position (`parse.rs`
+    `library_call`): names, argument count, region skipped balanced. -/
+def parseLibRuf (f : Nat) (toks : List Token) :
+    Except String ((String × String × Nat) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "@" :: rest => match nimmName rest with
+      | .ok (l, rest') => match fordereZeichen "#" rest' with
+        | .ok rest'' => match nimmName rest'' with
+          | .ok (g, rest3) => match fordereZeichen "(" rest3 with
+            | .ok rest4 => match parseArgs f rest4 with
+              | .ok (args, rest5) => match fordereZeichen "{" rest5 with
+                | .ok rest6 => match nimmBereich rest6 1 with
+                  | .ok rest7 => .ok ((l, g, args.length), rest7)
+                  | .error e => .error e
+                | .error e => .error e
+              | .error e => .error e
+            | .error e => .error e
+          | .error e => .error e
+        | .error e => .error e
+      | .error e => .error e
+    | _ => .error "@ without library"
+
+def parseLibStmt (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseLibRuf f toks with
+    | .ok ((l, g, n), rest) => match fordereZeichen ";" rest with
+      | .ok rest' => .ok (.lcall l g n, rest')
+      | .error e => .error e
+    | .error e => .error e
+
+def parseVerlasse (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (l, rest) => match fordereZeichen ";" rest with
+      | .ok rest' => .ok (.leave l, rest')
+      | .error e => .error e
+
+def parseRueck (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen ";" :: rest => .ok (.ret none, rest)
+    | _ => match parseOr f toks with
+      | .error e => .error e
+      | .ok (x, rest) => match fordereZeichen ";" rest with
+        | .ok rest' => .ok (.ret (some x), rest')
+        | .error e => .error e
+
+/-- The root paths of a `start { … }`, up to and including the `}`. -/
+def parseStartRoots (f : Nat) (toks : List Token) :
+    Except String (List String × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (n, r1) ← nimmName toks
+    let (segs, r2) := sammleSegmente r1 [n]
+    let p := "::".intercalate segs
+    match r2 with
+    | .zeichen "," :: .zeichen "}" :: r => pure ([p], r)
+    | .zeichen "," :: r3 => do
+      let (ps, r) ← parseStartRoots f r3
+      pure (p :: ps, r)
+    | _ => do
+      let r ← fordereZeichen "}" r2
+      pure ([p], r)
+
+/-- `start { f, g } ;` (lane 253; `start` is no keyword), behind the `start {`. A trailing comma is
+    allowed, as in `parse.rs` `startform`. -/
+def parseStart (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (ps, r1) ← parseStartRoots f toks
+    let r ← fordereZeichen ";" r1
+    pure (.start ps, r)
+
+def parseLetLib (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
+    (toks : List Token) : Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let ((l, g, _), rest) ← parseLibRuf f toks
+    let rest' ← fordereZeichen ";" rest
+    pure (.bindLib m name ty l g, rest')
+
+def parseSchreitet (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (a, rest) => match fordereZeichen "->" rest with
+      | .error e => .error e
+      | .ok rest' => match nimmName rest' with
+        | .error e => .error e
+        | .ok (b, rest'') => match fordereZeichen ";" rest'' with
+          | .ok rest3 => .ok (.step a b, rest3)
+          | .error e => .error e
+
+def nimmIdentList (f : Nat) (toks : List Token) :
+    Except String (List String × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmName toks with
+    | .error e => .error e
+    | .ok (n, rest) => match rest with
+      | .zeichen "," :: rest' => match nimmIdentList f rest' with
+        | .error e => .error e
+        | .ok (ns, r) => .ok (n :: ns, r)
+      | _ => .ok ([n], rest)
+
+/-- `free A[i] ;` (TODO 1-B, SYNTAX.md 9.1), behind the `free`: the place is read as a place. -/
+def parseFree (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (p, r1) ← parseOrt f toks
+    let r ← fordereZeichen ";" r1
+    pure (.free p, r)
+
+/-- `reset A [at i count n] ;` (SYNTAX.md 9.1, the range form of M-ALLTAG C), behind the `reset`. -/
+def parseReset (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => do
+    let (a, rest) ← nimmName toks
+    let (rg, r1) ← (match rest with
+      | .wort "at" :: r => do
+        let (i, r2) ← parseOr f r
+        let r3 ← nimmWort "count" r2
+        let (n, r4) ← parseOr f r3
+        pure (some (i, n), r4)
+      | _ => pure (none, rest))
+    let r ← fordereZeichen ";" r1
+    pure (.reset a rg, r)
+
+def parseUebergang (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseOrt f toks with
+    | .error e => .error e
+    | .ok (z, rest) => match fordereZeichen ":" rest with
+      | .error e => .error e
+      | .ok rest' => match nimmName rest' with
+        | .error e => .error e
+        | .ok (von, rest'') => match fordereZeichen "->" rest'' with
+          | .error e => .error e
+          | .ok rest3 => match nimmName rest3 with
+            | .error e => .error e
+            | .ok (nach, rest4) => match fordereZeichen ";" rest4 with
+              | .ok rest5 => .ok (.shift z von nach, rest5)
+              | .error e => .error e
+
+/-- After the head word: a call through a path or a place, or an
+    assignment (`parse.rs` `zuweisung_oder_ruf`). -/
+def parseKopfStmt (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseKopf f toks with
+    | .error e => .error e
+    | .ok (e, rest) => match e with
+      | .call c args => match fordereZeichen ";" rest with
+        | .ok rest' => .ok (.call c args, rest')
+        | .error e => .error e
+      | .ext .call _ (callee :: args) => match fordereZeichen ";" rest with
+        | .ok rest' => .ok (.call (druck callee) args, rest')
+        | .error e => .error e
+      | _ => match rest with
+        | .zeichen "(" :: _ => match parseArgs f rest.tail with
+          | .ok (args, rest') => match fordereZeichen ";" rest' with
+            | .ok rest'' => .ok (.call (druck e) args, rest'')
+            | .error e => .error e
+          | .error e => .error e
+        | .zeichen op :: _ =>
+          if strEq op "=" || strEq op "+=" || strEq op "-=" ||
+             strEq op "&=" || strEq op "|=" then
+            match parseOr f rest.tail with
+            | .error e => .error e
+            | .ok (w, rest') => match rest' with
+              | .wort s :: _ =>
+                if strEq s "publishes" then
+                  if strEq op "=" then match rest'.tail with
+                    | .wort p :: rest'' =>
+                      if strEq p "nothing" then match fordereZeichen ";" rest'' with
+                        | .ok rest3 => .ok (.emit e w "nothing", rest3)
+                        | .error e => .error e
+                      else .error "publishes without payload"
+                    | .zeichen "{" :: rest'' => match nimmBisZeichen "}" rest'' 0 with
+                      | .ok (pl, rest3) => match fordereZeichen "}" rest3 with
+                        | .ok rest4 => match fordereZeichen ";" rest4 with
+                          | .ok rest5 => .ok (.emit e w pl, rest5)
+                          | .error e => .error e
+                        | .error e => .error e
+                      | .error e => .error e
+                    | _ => .error "publishes without payload"
+                  else .error "a publication sits on `=`, not on a compound assignment"
+                else match fordereZeichen ";" rest' with
+                  | .ok rest'' => .ok (.set e op w, rest'')
+                  | .error e => .error e
+              | _ => match fordereZeichen ";" rest' with
+                | .ok rest'' => .ok (.set e op w, rest'')
+                | .error e => .error e
+          else .error "assignment or call expected"
+        | _ => .error "assignment or call expected"
+
+def parsePlatzStmt (f : Nat) (toks : List Token) :
+    Except String (SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .wort w :: _ =>
+      if strEq w "transition" then parseUebergang f toks.tail
+      else parseKopfStmt f toks
+    | _ => parseKopfStmt f toks

@@ -99,7 +99,7 @@ theorem array_traversal_lower {loop : Bool} (u : UProg) (caller : Fin u.fns.leng
         .ok (body, .blkEnd :: remaining)) :
     lowStructL (l := loop) u caller Γ fn (fuel + 1) Λ top (.arrayLoopBeg binder source invariant) rest =
       .ok (.traverse carrier.table condition body, remaining) := by
-  simp only [lowStructL, gate, value, iterator, outer, inside, bind, Except.bind, pure, Except.pure]
+  simp only [lowStructL_succ, lowStructStep, lowStufe_seq, gate, value, iterator, outer, inside, bind, Except.bind, pure, Except.pure]
 
 /-- Traversal is the existing G finite-index loop. Invariant checks, leave/next/return,
     call logs and resource effects are carried by the existing traverseLauf semantics. -/
