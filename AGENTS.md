@@ -24,6 +24,9 @@ were organised) is in `git log`, not here.
   tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only
   the own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
 - **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
+- **Nothing in `/tmp` (owner, 2026-11-01).** `/tmp` is RAM: no agent writes there (scratch goes to `.scratch-*`
+  inside its own worktree, `TMPDIR` points there), and everything in `/tmp` together stays under 100 MB; root
+  removes leftovers no process holds open.
 
 **Lean module system (owner, 2026-11-01, fixed rule).** All Lean in the repository (`grammatik/`,
 `stage0/`, `runner/`, `programmlogik/`, `passlogik/` and every other Lean package) is migrated completely to
