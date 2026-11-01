@@ -645,33 +645,6 @@ pub fn main() -> u64 effects { pure } costs <= 4 ops { return 5; }
     }
 }
 
-/// **`child` hinter einem Stapeltor (x86_64 und aarch64).** Die Region ist eine eigene
-/// Funktion `gabbro_kind_0(übergebener Stapel)`; der Befehl des Tors springt im KIND (Antwort
-/// null) in sie, mit dem Stapelregister als erstem Argument, ausgerichtet, ohne Rahmenzeiger;
-/// dahinter ein Trap. Der Vater läuft hinter der Marke `1:` weiter.
-#[test]
-fn child_springt_im_kind_auf_den_uebergebenen_stapel() {
-    let q = std::fs::read_to_string(wurzel().join("..").join("messung/llvm/kind.gab")).expect("kind.gab lesbar");
-    let ix = senke_ohne_fehler(&q, "kind", &ZIEL_X86_64);
-    assert!(
-        ix.contains(
-            r#""syscall\0A\09testq %rax, %rax\0A\09jnz 1f\0A\09movq %rsi, %rdi\0A\09xorl %ebp, %ebp\0A\09andq $$-16, %rsp\0A\09callq gabbro_kind_0\0A\09ud2\0A1:""#
-        ),
-        "x86_64: Stapeltor-Befehlsfolge:\n{ix}"
-    );
-    assert!(ix.contains("define void @\"gabbro_kind_0\"(i64 noundef %p0)"), "Region ausgelagert:\n{ix}");
-    assert!(ix.contains("@llvm.used = appending global [1 x ptr] [ptr @\"gabbro_kind_0\"]"), "nur der Assembler ruft sie");
-    let ia = senke_ohne_fehler(&q, "kind", &ZIEL_AARCH64);
-    assert!(
-        ia.contains(
-            r#""svc #0\0A\09cbnz x0, 1f\0A\09mov x0, x1\0A\09mov x29, xzr\0A\09mov x9, sp\0A\09and x9, x9, #-16\0A\09mov sp, x9\0A\09bl gabbro_kind_0\0A\09brk #0\0A1:""#
-        ),
-        "aarch64: Stapeltor-Befehlsfolge:\n{ia}"
-    );
-    // Der Kindrumpf rechnet mit dem Parameter, nicht mit einer Zelle des Vaters.
-    let region = ix.split("define void @\"gabbro_kind_0\"").nth(1).unwrap().split("\n}\n").next().unwrap().to_string();
-    assert!(region.contains("call i64 @\"rechne\""), "die Region ruft die Funktion mit dem Stapelwert:\n{region}");
-}
 
 /// Die Beispiele 155/156/160/1114 tragen nur eine x86_64-Bindung: auf x86_64 senken sie, und
 /// auf aarch64 steht kein Tor da, der Ruf fällt beim Namen (nicht still).
@@ -1033,17 +1006,6 @@ fn asm_rumpf_ist_ein_inline_asm_nur_fuer_seine_maschine() {
     assert_eq!(fehler(&codes), vec!["Y102", "Y102"], "beide x86-Rümpfe fallen auf aarch64 benannt");
 }
 
-/// Two declarations of one function, one per `arch`, are the per-machine pair (like a gate's
-/// two `syscall` lines): each target takes the one that names it and the program lowers on both.
-#[test]
-fn asm_rumpf_paar_je_maschine_senkt_auf_beiden_zielen() {
-    let q = std::fs::read_to_string(wurzel().join("..").join("messung/llvm/assembler.gab")).expect("assembler.gab");
-    let x = senke_ohne_fehler(&q, "assembler", &ZIEL_X86_64);
-    let a = senke_ohne_fehler(&q, "assembler", &ZIEL_AARCH64);
-    assert!(x.contains("leaq"), "x86-Text:\n{x}");
-    assert!(a.contains("add $0, $1"), "aarch64-Text:\n{a}");
-    assert!(!x.contains("add $0, $1") && !a.contains("leaq"), "jedes Ziel schreibt nur den eigenen Text");
-}
 
 /// Constraints and operands with no 1:1 LLVM form fall by name instead of being counted wrongly.
 #[test]

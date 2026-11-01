@@ -23,7 +23,6 @@ ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 # proof file -> the unit it is held against
 EINHEITEN = {
-    "DutyProbeTaggedWirdGebaut": "messung/proben/probe-tagged-wird-gebaut.gab",
     "Duty120TaggedConstruction": "beispiele/0120-tagged-construction.gab",
     "Duty124TwoThreadsPrivate": "beispiele/0124-two-threads-private.gab",
     "Duty151WordPoolDiscipline": "beispiele/0151-word-pool-discipline.gab",

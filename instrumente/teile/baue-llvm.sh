@@ -44,7 +44,7 @@ fi
 
 dateien=("$@")
 if [ "${#dateien[@]}" -eq 0 ]; then
-    dateien=("$W/messung/llvm/summe.gab")
+    echo "usage: baue-llvm.sh FILE.gab..." >&2; exit 2
 fi
 
 fehler=0

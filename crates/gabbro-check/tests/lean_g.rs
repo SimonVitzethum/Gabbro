@@ -44,7 +44,7 @@ fn export_file(name: &str) -> String {
 fn export_104_succeeds() {
     let text = export_file("0104-referenz.gab");
     for teil in [
-        "namespace G104_referenz",
+        "namespace G0104_referenz",
         "inductive GTab where",
         "| Konto",
         "inductive GLock where",
@@ -66,7 +66,7 @@ fn export_104_succeeds() {
 fn export_108_succeeds() {
     let text = export_file("0108-disjoint-start-locks.gab");
     for teil in [
-        "namespace G108_disjoint_start_locks",
+        "namespace G0108_disjoint_start_locks",
         "| T",
         "def gSig_read_a",
         "def gSig_read_c",
@@ -637,7 +637,7 @@ fn export_lock_invariant_family() {
 fn export_118_succeeds() {
     let text = export_file("0118-sperrinvariante-erhaltung.gab");
     for teil in [
-        "namespace G118_sperrinvariante_erhaltung",
+        "namespace G0118_sperrinvariante_erhaltung",
         "def gS : SperrInv gD where",
         "by decide",
     ] {
@@ -754,7 +754,7 @@ fn accepts_locks_block() {
 fn export_119_succeeds() {
     let text = export_file("0119-sperrinvariante-bloecke.gab");
     for teil in [
-        "namespace G119_sperrinvariante_bloecke",
+        "namespace G0119_sperrinvariante_bloecke",
         "(.locks",
         "example : programmImFragmentG gP gFs = true := by decide",
     ] {
@@ -1869,7 +1869,7 @@ fn deadline_drops_as_environment_promise() {
 fn export_59_succeeds() {
     let text = export_file("0059-eintritt-nimmt-maskierte-sperre.gab");
     for teil in [
-        "namespace G59_eintritt_nimmt_maskierte_sperre",
+        "namespace G0059_eintritt_nimmt_maskierte_sperre",
         "maskiert := fun | .TAKT => true | .RING => false",
         "starts := [⟨g_takt_verteiler, .nil⟩, ⟨g_ruf_verteiler, .nil⟩]",
         "example : programmImFragmentG gP gFs = true := by decide",

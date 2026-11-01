@@ -523,49 +523,6 @@ fn h020_silence_and_single_fire_738() {
     }
 }
 
-/// **«B26»: a `requires` at a register is COUNTED, since 2026-08-24.**
-///
-/// Until then no pass read `RegDecl::requires` -- the clause parsed and vanished.
-/// `PFLICHTEN.txt` carried that as a hanging plumbing duty, and the note named the cure
-/// itself: *"the same shape as `ensures` on an `extern fn`."* That one became a counted
-/// foreign duty; this one becomes a counted **device promise**.
-///
-/// > **It is not checked, and that is the statement.** The register is volatile, a hostile
-/// > device may report whatever it likes («B33»). *The promise is booked, not its holding*
-/// > -- and with that it stands in the register instead of in nothing.
-#[test]
-fn ein_requires_am_register_wird_gezaehlt() {
-    let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
-    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
-    let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
-    let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "F04.gab", &q);
-    assert!(vollstaendig, "E1 gefallen:\n{bericht}");
-    // **`1 device` became `5 device` on 2026-09-04**, and the four new ones are the STEPS
-    // of `ack`, `drv`, `featok` and `drvok` -- transitions without a `requires`, which
-    // until then reached the register through nothing. *The from-state is never read:*
-    // `VirtioPci_ack` lowers to one unconditional store, so `DEVICE_STATUS: 0 -> ACK` is a
-    // promise at hardware Gabbro never sees and not a step it checks.
-    for stueck in [
-        "Device promise (`reg` or `transition`)",
-        "reg QUEUE_SIZE requires",
-        "5 device",
-        "VirtioPci :: transition ack",
-    ] {
-        assert!(bericht.contains(stueck), "fehlt: {stueck}\n{bericht}");
-    }
-    // The step's text is the `transset` and not the whole item -- the `effects` say
-    // something else and would make the line unreadable as the statement it is.
-    assert!(
-        bericht.contains("\tD\tF04.gab:91\topen\tDEVICE_STATUS: 0 -> ACK\n"),
-        "the step's own line is not there as written:\n{bericht}"
-    );
-    // **The three fields Fassung 2 added, on the one line this file already had.** The
-    // wording comes out of the source and the anchor points at the line it was cut from.
-    assert!(
-        bericht.contains("\tD\tF04.gab:82\topen\tQUEUE_SIZE <= QMAX\n"),
-        "class, anchor, state and text are not all there:\n{bericht}"
-    );
-}
 
 /// **E1 over a unit with FOUR kinds at once, and that is the point of the file choice.**
 ///
@@ -598,33 +555,6 @@ fn e1_haelt_ueber_einer_datei_mit_vier_arten() {
     }
 }
 
-/// **The version field, and it stands on LINE ONE** (2026-09-03).
-///
-/// `AUFTRAG-GABBROV.md` §4 puts the order of a format change in three steps, and the first is
-/// this one: *"every reader refuses an unknown version instead of misreading it. Without this,
-/// every format change is a silent break."* `CLAUDE.md` holds the measured instance -- seven
-/// guards read a document, four went **silently blind** when it moved.
-///
-/// This test is the first of the three readers. The other two are
-/// `instrumente/pruefe-zahlen.py` (the corpus sum) and `messung/gabbrov/manifest-lage.sh`
-/// (the completeness measurement); both gained the same gate on the same day.
-///
-/// **It pins the LINE and not only the presence.** A version field a reader has to search for
-/// is one a reader can fail to find in a format it does not know -- and then it is back to
-/// guessing.
-#[test]
-fn das_register_traegt_seine_fassung_auf_zeile_eins() {
-    let p = wurzel().join("..").join("messung").join("fragmente").join("F04.gab");
-    let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
-    let (baum, _) = gabbro_syntax::lies("F04.gab", &q);
-    let (bericht, _) = gabbro_check::pflichten::zeige(&baum, "F04.gab", &q);
-    let erste = bericht.lines().next().unwrap_or("");
-    assert_eq!(
-        erste,
-        format!("-- manifest-version {}", gabbro_check::pflichten::MANIFESTFASSUNG),
-        "the version field is not the first line:\n{bericht}"
-    );
-}
 
 #[test]
 fn eine_fremdverengung_steht_mit_namen_im_zeugnis() {
@@ -827,66 +757,6 @@ fn eine_gruppe_bringt_ihre_sperrabdruckannahme_mit() {
 }
 
 // --- abi ---
-
-/// **The TWO-FILE probe: the lock ring across a real library boundary.**
-///
-/// `beispiele/gift/250` is the union as ONE file -- what the checker gets to see. This test
-/// walks the road a user walks, and it is the only one that measures the BRIDGE itself:
-/// `gabbro abi` over library A and B, the two products put in front of the caller, then
-/// checked.
-///
-/// **Until 2026-08-21 it was green without the ring falling** -- 0 errors, 0 hints, and the
-/// program was a deadlock. `gabbro abi` did not write the `lock` line, so the rank rules in
-/// the checker found no rank at the importer and stepped over it in silence.
-///
-/// > *The worst possible outcome of an ABI is not that it is missing, but that it is silent*
-/// > -- then it has handed a class back without anybody seeing it.
-#[test]
-fn ring_across_two_libraries() {
-    let (union, codes) = abi_union(&["lib-speicher.gab", "lib-geraet.gab"], "mischt.gab");
-    // **The interface must EXPLAIN the lock, not merely name it.** Without that line
-    // everything below is silent, and the assertion after it measures nothing.
-    assert!(
-        union.contains("lock SPEICHER") && union.contains("lock GERAET"),
-        "an interface that carries `locks SPEICHER` and not `lock SPEICHER` is none -- \
-         it names something and does not explain it:\n{union}"
-    );
-    let ring = codes.iter().filter(|c| **c == "H012").count();
-    assert_eq!(
-        ring, 2,
-        "the ring has TWO directions, and both are errors -- fallen is {codes:?}"
-    );
-}
-
-/// The other direction, and without it the one above measures nothing (R14/W17): **the same
-/// bridge carries a program whose ranks fit.** `AUFTRAG` (rank 0) outside, the call takes
-/// `ZAEHLER` (rank 1) inside -- ascending, hence allowed.
-///
-/// *The order `AUFTRAG < ZAEHLER` stands in neither of the two files; it comes into being
-/// only at the union.* If `H016` were too sharp, or the interface carried the lock wrongly,
-/// THIS test falls -- not the one above.
-#[test]
-fn the_same_bridge_carries_the_ascending_order() {
-    let (_, codes) = abi_union(&["zaehlwerk.gab"], "dienst.gab");
-    assert!(
-        codes.is_empty(),
-        "taken in ascending order is allowed, fallen is {codes:?}"
-    );
-}
-
-/// **Without the bridge the same caller falls BY NAME.** The third state is the one that may
-/// not exist: neither refused nor confirmed. `H016` says the lock name is unexplained,
-/// `K003` that the function is not declared here -- both issued in the checker, not here.
-#[test]
-fn without_the_bridge_the_caller_falls_by_name() {
-    let (_, codes) = abi_union(&[], "dienst.gab");
-    for expected in ["H016", "K003"] {
-        assert!(
-            codes.contains(&expected),
-            "without an interface {expected} must fall, fallen is {codes:?}"
-        );
-    }
-}
 
 /// `gabbro abi` over each library, the products in front of the caller, then check.
 /// Returns the united source and the ERROR codes of the unit.

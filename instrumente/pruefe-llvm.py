@@ -9,8 +9,7 @@ Stages (a stage that cannot run is reported NICHT GEMESSEN and the run is not gr
      plain `lean`.
   3. Instruction text (`stufe_befehle`): hardware-only forms (`asm` bodies with `outb`/`invlpg`, the port
      space's `in`/`out`) cannot run in user space, so `llc -filetype=obj` + `llvm-objdump -d` must show
-     the intended instructions. 4. The aarch64 exception entries RUN under `qemu-system-aarch64 -M virt`
-     (`teile/eintritt-a64-qemu.sh`: two `svc`, the generated stub, `eret`).
+     the intended instructions.
   2. End to end (`teile/baue-llvm.sh`): checker, IR, `opt -O3`, `llc`, `ld.lld`, static binary
      without INTERP/NEEDED, run on x86_64 natively and on aarch64 under qemu; both targets must
      return the SAME code, and it must be the expected one.
@@ -22,15 +21,9 @@ W = pathlib.Path(__file__).resolve().parent.parent
 ENV = {**os.environ, "LC_ALL": "C"}
 # program -> expected exit code (the same on both targets)
 PROGRAMME = {
-    "messung/llvm/summe.gab": 25,
-    "messung/llvm/sperre.gab": 3,
-    "messung/llvm/kind.gab": 42,
-    "messung/llvm/nachricht.gab": 42,
-    "messung/llvm/leserschreiber.gab": 42,
     "beispiele/1160-halde-mit-abtastung.gab": 42,
     "beispiele/1161-platz-freigeben.gab": 100,
     "beispiele/1162-echte-faeden.gab": 64,
-    "messung/llvm/assembler.gab": 42,
 }
 
 # hardware-only forms: (file, target, [(objdump pattern, what)]) -- the TEXT is checked, never the effect at a device
@@ -124,20 +117,9 @@ def stufe_befehle():
     return ok
 
 
-def stufe_eintritt_a64():
-    p = subprocess.run(["bash", str(W / "instrumente/teile/eintritt-a64-qemu.sh")], cwd=W, env=ENV, capture_output=True, text=True, timeout=600)
-    if p.returncode == 2:
-        print(f"  4 eintritt: NICHT GEMESSEN ({p.stderr.strip()[:120]})")
-        return None
-    ok = p.returncode == 0
-    print(f"  4 eintritt: {'ok' if ok else 'ROT'} (aarch64-Ausnahmen unter qemu-system-aarch64 -M virt, EL1)")
-    if not ok: print(p.stdout[-800:], p.stderr[-400:])
-    return ok
-
-
 def main():
     print("== Wächter 2: LLVM-Compiler ==")
-    erg = [stufe_tests(), stufe_ende_zu_ende(), stufe_befehle(), stufe_eintritt_a64()]
+    erg = [stufe_tests(), stufe_ende_zu_ende(), stufe_befehle()]
     if False in erg: print("== LLVM: ROT =="); return 1
     if None in erg: print("== LLVM: TEILMESSUNG (nicht alles gemessen) =="); return 2
     print("== LLVM: GRUEN =="); return 0

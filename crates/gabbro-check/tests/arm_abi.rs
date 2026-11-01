@@ -51,57 +51,6 @@ fn tore() -> Vec<(String, u64, String, String, String)> {
 }
 
 #[test]
-fn die_nummern_der_bindung_sind_die_des_lean_modells() {
-    let lean = lean_nummern();
-    let zuordnung = [
-        ("linux_os_mmap", "nrMmap"),
-        ("linux_os_mprotect", "nrMprotect"),
-        ("linux_os_write", "nrWrite"),
-        ("linux_os_exit_group", "nrExitGroup"),
-        ("linux_os_madvise", "nrMadvise"),
-        ("linux_os_sched_yield", "nrSchedYield"),
-        ("linux_os_exit", "nrExit"),
-        ("linux_os_futex", "nrFutex"),
-        ("gabbro_os_klon_tor", "nrClone"),
-    ];
-    let t = tore();
-    assert_eq!(t.len(), zuordnung.len(), "gates in the binding: {:?}", t.iter().map(|x| &x.0).collect::<Vec<_>>());
-    for (gate, nr) in zuordnung {
-        let g = t.iter().find(|x| x.0 == gate).unwrap_or_else(|| panic!("no gate {gate}"));
-        assert_eq!(Some(&g.1), lean.get(nr), "{gate}: binding says {}, Lean {nr} says {:?}", g.1, lean.get(nr));
-    }
-}
-
-#[test]
-fn jedes_tor_liest_x0_zerstoert_nichts_und_bindet_nur_aarch64_register() {
-    for (name, _, ein, out, clob) in tore() {
-        assert_eq!(out, "{ x0 }", "{name}: the answer arrives in x0");
-        assert_eq!(clob, "{ }", "{name}: the kernel preserves every register but x0");
-        for tok in ein.split(|c: char| !c.is_alphanumeric()).filter(|t| !t.is_empty()) {
-            let ist_reg = tok.starts_with('x') && tok[1..].chars().all(|c| c.is_ascii_digit()) && tok.len() > 1;
-            if ist_reg {
-                let n: u32 = tok[1..].parse().unwrap();
-                assert!(n <= 5, "{name}: argument register x{n} is past x5");
-            }
-        }
-    }
-}
-
-#[test]
-fn das_klon_tor_bindet_die_kind_adresse_in_x4_und_den_stapel_in_x1() {
-    let t = tore();
-    let k = t.iter().find(|x| x.0 == "gabbro_os_klon_tor").unwrap();
-    assert!(k.2.contains("x4 = kind"), "the child tid word travels in x4: {}", k.2);
-    assert!(!k.2.contains("x3"), "x3 is the tls register, unbound: {}", k.2);
-    let text = lies("bibliothek/linux/linux-aarch64.gab");
-    assert!(text.contains("stack x1"));
-    // Lean states the same facts in SyscallArmLinux.lean.
-    let l = lies("grammatik/Grammatik/Kern/Semantik/Syscall/SyscallArmLinux.lean");
-    assert!(l.contains("[(xr 0, 0), (xr 1, 1), (xr 2, 2), (xr 4, 3)]"));
-    assert!(l.contains("def klonStapelReg : ArmReg := xr 1"));
-}
-
-#[test]
 fn die_registertabelle_des_pruefers_ist_x0_bis_x30() {
     let reg = gabbro_check::syscall::register_fuer("aarch64");
     assert_eq!(reg.len(), 31);

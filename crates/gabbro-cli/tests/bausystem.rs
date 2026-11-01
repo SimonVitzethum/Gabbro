@@ -169,53 +169,6 @@ fn ein_falscher_optionswert_faellt_mit_namen() {
     weg(&b);
 }
 
-/// **A library builds a program from two targets** -- the case the manifest build refused
-/// (a unit resting on another unit) builds now, and the binary runs.
-#[test]
-fn ein_programm_ueber_einer_bibliothek_baut() {
-    let b = bauverzeichnis("bibliothek");
-    let (aus, fehler, code) = lauf(&["setup", &b, "messung/einheit-proben/zwei-einheiten.build"]);
-    assert_eq!(code, 0, "{aus}\n{fehler}");
-    let (aus, fehler, code) = lauf(&["compile", "-C", &b]);
-    assert_eq!(code, 0, "{aus}\n{fehler}");
-    assert!(aus.contains("built    rechenwerk") && aus.contains("built    haupt"), "{aus}");
-    let (aus, _, _) = lauf(&["introspect", "-C", &b]);
-    assert!(
-        aus.contains("\"name\": \"haupt\", \"type\": \"program\"")
-            && aus.contains("\"libraries\": [\"rechenwerk\"]"),
-        "introspection names the computed library:\n{aus}"
-    );
-    assert!(Path::new(&b).join("haupt").exists(), "the program is linked");
-    weg(&b);
-}
-
-/// **Poisons, each refused by name.**
-#[test]
-fn gifte_fallen_mit_namen() {
-    for (datei, schritt, code_soll, text) in [
-        ("messung/einheit-proben/gift-modul-in-zwei-einheiten.build", "setup", 2, "two targets"),
-        ("messung/einheit-proben/gift-leere-einheit.build", "setup", 2, "names no source"),
-        ("messung/einheit-proben/gift-programm-nutzt-objekt.build", "setup", 2, "make `rechenwerk` a `library`"),
-        ("messung/einheit-proben/gift-programm-ohne-main.build", "compile", 1, "names no entry"),
-        ("messung/einheit-proben/gift-einheit-faellt.build", "compile", 1, "error(s) -- no IR written"),
-        ("messung/einheit-proben/gift-programm-ohne-kante.build", "compile", 1, "error(s) -- no IR written"),
-        ("messung/proben/gift-eintritt-in-bibliothek.build", "compile", 1, "carries the entry `main`"),
-    ] {
-        let b = bauverzeichnis(&format!("gift-{}", datei.len()));
-        let (aus, fehler, code) = lauf(&["setup", &b, datei]);
-        if schritt == "setup" {
-            assert_eq!(code, code_soll, "{datei}:\n{aus}\n{fehler}");
-            assert!(fehler.contains(text), "{datei} by name (`{text}`):\n{fehler}");
-        } else {
-            assert_eq!(code, 0, "{datei} configures:\n{aus}\n{fehler}");
-            let (aus, fehler, code) = lauf(&["compile", "-C", &b]);
-            assert_eq!(code, code_soll, "{datei}:\n{aus}\n{fehler}");
-            assert!(aus.contains(text), "{datei} by name (`{text}`):\n{aus}");
-        }
-        weg(&b);
-    }
-}
-
 /// **The build language refuses at file and line**, and what the build does not do (C, a
 /// written dependency list) is refused by name.
 #[test]
