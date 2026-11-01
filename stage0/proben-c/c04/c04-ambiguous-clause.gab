@@ -1,0 +1,13 @@
+// Two declarations sharing one endpoint pair must not silently pick a clause.
+module ir_probe {
+table T count 2 { slot { s : u32 in 0 .. 2, flag : bool, } }
+state S1 { transition begin { s : Idle -> Busy } requires T.slots[1].flag effects { writes T.slots } }
+state S2 { transition open { s : Idle -> Busy } requires T.slots[0].flag effects { writes T.slots } }
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+{
+    T.slots[1].flag = true;
+    transition T.slots[1].s : Idle -> Busy;
+    return T.slots[1].s;
+}
+}

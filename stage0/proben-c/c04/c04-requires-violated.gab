@@ -1,0 +1,11 @@
+// C04: a transition call whose requires is false stops with the clause code 101.
+module ir_probe {
+table T count 2 { slot { s : u32 in 0 .. 2, flag : bool, } }
+state S { transition begin { s : Idle -> Busy } requires T.slots[1].flag effects { writes T.slots } }
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+{
+    transition T.slots[1].s : Idle -> Busy;
+    return T.slots[1].s;
+}
+}

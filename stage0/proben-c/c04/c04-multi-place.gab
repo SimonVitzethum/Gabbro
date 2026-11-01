@@ -1,0 +1,12 @@
+// C04 baseline: one declaration with two constant steps moves two fields.
+module ir_probe {
+table T count 2 { slot { s : u32 in 0 .. 2, t : u32 in 0 .. 2, } }
+state S { transition cycle { s : Idle -> Busy, t : Idle -> Busy } }
+impl fn main() -> u32 in 0 .. 10
+    effects { reads T.slots, writes T.slots }
+{
+    transition T.slots[1].s : Idle -> Busy;
+    transition T.slots[1].t : Idle -> Busy;
+    return T.slots[1].s + T.slots[1].t;
+}
+}
