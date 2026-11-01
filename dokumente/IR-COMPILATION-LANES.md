@@ -58,10 +58,9 @@ Measured on master `f8af1160f` + IR-12: the Stage0 root closure (286 modules reb
 theorems on the standard axioms only, `gabbro_ziel` and its siblings on exactly `propext`/`Classical.choice`/`Quot.sound`
 (grammar not rebuilt); layout check clean (`BildSatz` 481 lines). All 218 textual programs of `stage0/proben-ir` pass on
 the assembly runner or refuse with the expected text (new: `main-pointer-params` 43, `main-int-parameter`). The old
-probes in `stage0/proben`: `hello`, `echo`, `threads` now compile and print exactly their `.aus` with exit 0;
-`upper` compiles and exits 0 but prints nothing instead of `ABC`: it has no gate, its stdin/stdout path was the retired
-Lean driver's `io.ein`/`io.aus` convention, which no longer exists in the image path. It needs an owner decision
-(a verified profile I/O convention with its own named assumption, or a gate-based `upper`); none was invented here.
+probes in `stage0/proben`: `hello`, `echo`, `threads` compile and print exactly their `.aus` with exit 0; `upper` was
+rewritten on the raw `read`/`write` gates (like `echo`; it no longer relies on the retired Lean driver's `io.ein`/`io.aus`
+convention) and now prints `ABC` for `abc` with exit 0, so all four probes pass on the assembly runner.
 The full Lean guardian was not run: it would rebuild `grammatik/` in this worktree (no warm `.lake`).
 
 **Rolling allocation update:** IR-12 handed back green source/start-byte/profile/CLI checkpoints through
