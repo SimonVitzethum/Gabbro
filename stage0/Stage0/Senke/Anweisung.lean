@@ -150,12 +150,11 @@ def tagTestC (s k : Nat) : List II :=
   [ci 2 (s + 1) s 0, ci 1 (s + 2) 255 0, ci 8 (s + 1) (s + 1) (s + 2),
    ci 1 (s + 2) k 0, ci 14 (s + 1) (s + 1) (s + 2)]
 
-/-- Decode a payload in its binding slot. Its lower bound must currently fit a literal. -/
+/-- Decode a payload in its binding slot, materialising the lower bound in two scratch words. -/
 def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
   | none => some []
-  | some (lo, _) => if lit32 lo then
-      some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
-    else none
+  | some (lo, _) => some ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++
+      (wordConstant (s + 1) lo).1 ++ [ci 3 s s (s + 1)])
 
 /-- An outside flag selects the terminating error arm; the value stays in `d`. -/
 def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
