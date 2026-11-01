@@ -4,7 +4,6 @@ import Stage0.Senke.Sperre.Nimm
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem
-variable [Kern]
 set_option linter.unusedSectionVars false
 
 /-- The thread-independent lock-word invariant at stable boundaries. Foreign
@@ -14,6 +13,7 @@ def LockInv (o c w : W) : Prop :=
   ((o = 0 ∧ c = 0) ∨ (o ≠ 0 ∧ 1 ≤ c.toNat ∧ c.toNat < 2 ^ 62)) ∧ w.toNat < 2 ^ 62
 
 section
+variable [Kern]
 variable {m0 m : Mem} {pc fp : W} {s a : Nat} {code : List II} {f : Nat → W} {o c w : W}
 
 /-- A write to the waiter word preserves the other two words and the frame. -/
@@ -80,7 +80,7 @@ theorem add_waiters (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w)
   have hc4 : code[p + 4]? = some (ci 22 ((s + 9 : Nat) : Int) ((s + 5 : Nat) : Int) ((s + 6 : Nat) : Int)) := by
     simpa only [show s + 5 + 4 = s + 9 by omega, show s + 5 + 1 = s + 6 by omega]
       using hc.get (j := 4) rfl
-  obtain ⟨m5, s5, h5⟩ := ls_cas_waiters E h4 hc4 (by simp only [upd, ite_eq_left, ite_eq_right, show (5 : Nat) ≠ 7 by decide,
+  obtain ⟨m5, s5, h5⟩ := ls_cas_waiters E h4 hc4 (by simp only [upd, ite_eq_left, show (5 : Nat) ≠ 7 by decide,
       show (5 : Nat) ≠ 8 by decide, show (5 : Nat) ≠ 6 by decide]; exact BitVec.ofInt_natCast _ _) (by simp [upd])
   obtain ⟨m6, s6, h6⟩ := ls_bin E h5 (hc.get (j := 5) rfl) (d := 9) (e := 9) (g' := 6) rfl (by decide)
     (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (r := 1)
