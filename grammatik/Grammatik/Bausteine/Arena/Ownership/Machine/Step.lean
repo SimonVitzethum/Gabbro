@@ -1,96 +1,14 @@
 module
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Return
+public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil16
 @[expose] public section
 
-
-/-! **Every step of machine G keeps ownership.** One case per step rule:
-the running activation's state moves by the step lemmas of this folder,
-a call pushes (`ownInv_push`), a return pops (`ownInv_pop`); the one
-assumption is the rely `pendWord` for the other threads. -/
-
 namespace Gabbro.Grammatik.ArenaOwnership.Machine
-
 open Source Body
-
 variable {D : Deklaration}
-
 section Helpers
-
 variable {A : FreiForm D} {I : Interfaces A} {fr : Frame} {s : State} {σ : World D} {f : D.Fn}
-
-/-- A running activation outside every allocator form realises its context. -/
-theorem head_run {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ} {r : GRest D (vertragVon D f) l Γ Λ}
-    (h : Head A I fr s σ f ⟨l, Γ, Λ, ρ, r⟩) (hp : pendWord A r = none) :
-    ∃ k c g, k.references.length ≤ Γ.length ∧ FrameOk c g s fr ρ ∧ OR A I (I f).output k c r := by
-  cases h with
-  | run _ _ hk hf hr => exact ⟨_, _, _, hk, hf, hr⟩
-  | list => simp only [pendWord, true_or, ↓reduceIte, reduceCtorEq] at hp
-  | counter => simp only [pendWord, or_true, ↓reduceIte, reduceCtorEq] at hp
-  | store => simp only [pendWord, ↓reduceIte, reduceCtorEq] at hp
-  | release => simp only [pendWord, true_or, ↓reduceIte, reduceCtorEq] at hp
-
-theorem meta_lese (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) {σ₁ : World D}
-    (h : σ₁ = σ.lese Λ os) {A : FreiForm D} : MetaSame A σ σ₁ := by
-  rw [h]; exact MetaSame.reads A σ Λ os
-
-/-- **A leaf step of the running activation**, whatever its state. -/
-theorem head_leaf {O : Orakel D} {passes : Nat} (hO : GutO O) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)}
-    {ρ : Env D Γ} {st : Stmt D (vertragVon D f) l Γ Λ Λ'} {rest : Block D (vertragVon D f) l Γ Λ' Λ''}
-    {k : GRest D (vertragVon D f) l Γ Λ''} (h : Head A I fr s σ f ⟨l, Γ, Λ, ρ, .dann (.cons st rest) k⟩)
-    (ha : s.agrees A σ) (ho : A.FreiOk σ) (hleaf : st.istBlatt = true) {σ' : World D} {ρ' : Env D Γ}
-    (hstep : execStmt O passes keinRuf st σ ρ = .ok σ' ρ') :
-    Next A I fr s σ σ' f ⟨l, Γ, Λ', ρ', .dann rest k⟩ :=
-  match h, hstep with
-  | .run _ _ hk hf hr, hstep => run_leaf hO hk hf ha ho hr hleaf hstep
-  | .list x ρ0 e2 hw hL _ _ he2 hx hlt hk hf hr, hstep => list_step x ρ0 e2 hw hL he2 hx hlt hk hf hr ha ho hstep
-  | .counter x ρ0 e2 hw hL _ _ he2 hx _ hk hf hr, hstep => counter_step x ρ0 e2 hw hL he2 hx hk hf hr ha ho hstep
-  | .store x ρ0 t f' i ev hws hLs hn e2 hw hL b r he2 hx hlt hk hf hr, hstep =>
-    store_step x ρ0 t f' i ev hws hLs hn e2 hw hL b r he2 hx hlt hk hf hr ha ho hstep
-  | .release ρ0 e2 hw hL b r p o hh he2 hp ho' hg hlink hk hf hr, hstep =>
-    release_step ρ0 e2 hw hL b r p o hh he2 hp ho' hg hlink hk hf hr ha ho hstep
-
-theorem dropContextB_refs (c : Context) (owner : Bool) : (dropContextB c owner).references = c.references := by
-  cases owner <;> simp only [dropContextB, Bool.false_eq_true, ↓reduceIte, Context.drop, Context.bindFresh, ne_eq, List.cons_ne_self, not_false_eq_true, List.dropLast_append_of_ne_nil, List.dropLast_singleton, List.append_nil]
-
-/-- The caller of the running activation, suspended on it. -/
-theorem caller_susp {t : Faden} {g : D.Fn} {caller : RufRahmenG D} {rst : List (RufRahmenG D)}
-    {stack : List (RufRahmenG D)} (h : StackOk A I s t g stack) (hpop : stack = caller :: rst) :
-    Susp A I ⟨t, rst.length⟩ s g caller.f caller.rest := by
-  subst hpop; exact h.1
-
-/-- The callee of an indirect call at its entry. -/
-theorem callee_ind {c : Context} {gh : Ghost} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ} {n : Nat}
-    {J : Modes (D.sigNr n).params} {args : Args D Γ Λ (D.sigNr n).params} {g : D.Fn} (hg : D.passt g n = true)
-    (hJ : modeList (I g).parameters = modeList J) {depth : Nat → Nat} {t a : Nat}
-    (hd : s.Disciplined depth) (hdepth : depth t = a) (hR : Realizes c gh A ⟨t, a⟩ s σ ρ)
-    (hp : planFits c (modeList J) (originList c args) = true) (σa σb : World D) :
-    FrameOk (Flow.parameterContext (I g).parameters) (calleeGhost gh (modeList J) (originList c args) s.next)
-      (s.handoff ⟨t, a + 1⟩ (movedHandles gh (modeList J) (originList c args))
-        (lentHandles gh (modeList J) (originList c args))) ⟨t, a + 1⟩ (umsig hg (evalArgs σa args σb ρ)) := by
-  have h := Push.callee_frame J args rfl rfl hd hdepth hR hp σa σb
-  have hpc := parameterContext_eq (I g).parameters J hJ
-  rw [hpc]
-  exact ⟨h.1, References.transport (D.passt_sig hg).params.symm (umsig_heq hg _).symm h.2.1, h.2.2.1, h.2.2.2⟩
-
-/-- **After a plain call**, whatever the shape of the caller's state. -/
-theorem resume_plainX {depth : Nat → Nat} {t a : Nat} (hd : s.Disciplined depth) (hdepth : depth t = a + 1)
-    {g f : D.Fn} {x : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D (vertragVon D f) l Γ Λ}
-    (hs : Susp A I ⟨t, a⟩ s g f x) (hw : x.2.2.2.2.wartend = false) (v : ErgVal D (D.erg g))
-    (hres : (I g).output.result A ⟨t, a + 1⟩ s v) :
-    Head A I ⟨t, a⟩ (s.pop ⟨t, a + 1⟩ ⟨t, a⟩) σ f x := by
-  obtain ⟨l, Γ, Λ, ρ, r⟩ := x
-  exact resume_plain hd hdepth hs hw v hres
-
-/-- The checked return value of the running activation. -/
-theorem ret_result {Γ : Ctx} {Λ : List (Res D)} {c : Context} {gh : Ghost} {ρ : Env D Γ}
-    {e : ErgExpr D Γ Λ (vertragVon D f).erg} (hf : FrameOk c gh s fr ρ)
-    (hcheck : (I f).output.check A c e = true) (σ0 σ1 : World D) :
-    (I f).output.result A fr s (evalErg σ0 e σ1 ρ) :=
-  Flow.Output.check_sound A c gh fr s (I f).output e σ0 σ1 ρ hf.1 hf.2.1 hf.2.2.1 hf.2.2.2 hcheck
-
 end Helpers
-
-/-! ## The step -/
 
 /-- **Every step of machine G keeps ownership on the machine**, given the rely for other threads. -/
 theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Orakel D} {passes : Nat}
@@ -117,21 +35,9 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
     exact ownInv_local hag hfo hd hth hW (by rw [hmem]; exact welt_meta A σ') hr hM' hn
   cases hstep with
   | blatt l Γ Λ Λ' st rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
-    rw [hhead] at hH
-    obtain ⟨k, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_leaf_ende hO hk hf ha ho hr hleaf hstep) rfl rfl hrely
+    exact ownInv_step_blatt (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (st := st) (rest := rest) (ρ := ρ) (hleaf := hleaf) (hhead := hhead) (hΛ := hΛ) (σ' := σ') (ρ' := ρ') (neu := neu) (hstep := hstep) (hneu := hneu) (hkein := hkein) (hrely := hrely)
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨c2, hs, hcont⟩ := hor.stmtEnde
-    obtain ⟨_, hplan, rfl⟩ := os_top hs
-    subst hrho
-    have hR : Realizes c gh A ⟨u, (M.faeden u).stapel.length⟩ s (M.speicher.welt []) ρ :=
-      ⟨hag, hfo, hf.1, hf.2.1, hf.2.2.1⟩
-    rw [dropContext_isOwner] at hcont
-    exact ownInv_push hc hag hfo hd hth hf hplan hk
-      (Push.callee_frame (I g).parameters args rfl rfl hd rfl hR hplan s0 s0)
-      (.plain _ (cont_real hcont (by rw [dropContextB_refs]; exact hf.length))) rfl rfl
+    exact ownInv_step_ruf (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (g := g) (args := args) (hp := hp) (hr := hr) (rest := rest) (ρ := ρ) (hhead := hhead) (hΛ := hΛ) (s0 := s0) (hs0 := hs0) (rho := rho) (hrho := hrho) (neu := neu) (hneu := hneu) (hrely := hrely)
   | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
     rw [hhead] at hH
     obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
@@ -149,220 +55,87 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
         rw [show (M.faeden u).stapel.length = rst.length + 1 from hdu] at hres
         exact ownInv_pop hag hfo hd hth hpop (by subst hs1; rfl) rfl rfl (resume_plainX hd hdu hsusp hnw _ hres)
   | endeEntf l Γ Λ Λ' st rest ρ hent hhead =>
-    rw [hhead] at hH
-    obtain ⟨k, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_entf hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_endeEntf (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (st := st) (rest := rest) (ρ := ρ) (hent := hent) (hhead := hhead) (hrely := hrely)
   | endeForm l Γ Λ e ρ hl hent hhead =>
     rw [hhead] at hH
     obtain ⟨k, c, g, hk, hf, hr⟩ := head_run hH rfl
     exact fin (run_endeForm hk hf ha ho hr) rfl rfl hrely
   | dannBlatt l Γ Λ Λ' Λ'' st rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
-    rw [hhead] at hH
-    exact fin (head_leaf hO hH ha ho hleaf hstep) rfl rfl hrely
+    exact ownInv_step_dannBlatt (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (st := st) (rest := rest) (k := k) (ρ := ρ) (hleaf := hleaf) (hhead := hhead) (hΛ := hΛ) (σ' := σ') (ρ' := ρ') (neu := neu) (hstep := hstep) (hneu := hneu) (hkein := hkein) (hrely := hrely)
   | dannLeer l Γ Λ k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_leer hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_dannLeer (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | dannIteWahr l Γ Λ Λ' Λ'' cnd t e rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_ite hk hf ha ho hr (meta_lese _ _ _ hs₁) true) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannIteWahr (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cnd := cnd) (t := t) (e := e) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannIteFalsch l Γ Λ Λ' Λ'' cnd t e rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_ite hk hf ha ho hr (meta_lese _ _ _ hs₁) false) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannIteFalsch (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cnd := cnd) (t := t) (e := e) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannOnOptionSome l Γ Λ Λ' Λ'' n o p a rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_onOptionSome hk hf ha ho hr (meta_lese _ _ _ hs₁) v) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannOnOptionSome (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (n := n) (o := o) (p := p) (a := a) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannOnOptionNone l Γ Λ Λ' Λ'' n o p a rest k ρ hhead σ₁ hs₁ hv neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_onOptionNone hk hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannOnOptionNone (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (n := n) (o := o) (p := p) (a := a) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_onTagSome hk hf ha ho hr (meta_lese _ _ _ hs₁) _ hw) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannOnTagSome (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cs := cs) (v := v) (arms := arms) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (lo := lo) (hi := hi) (b := b) (nutz := nutz) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_onTagNone hk hf ha ho hr (meta_lese _ _ _ hs₁) _ hw) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannOnTagNone (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cs := cs) (v := v) (arms := arms) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (b := b) (nutz := nutz) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hw
-    exact fin (run_onWhy hk hf ha ho hr (meta_lese _ _ _ hs₁) _) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannOnGrund (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (n := n) (r := r) (arms := arms) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (b := b) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | endeBind l Γ Λ τ e rest ρ hhead σ₁ hs₁ neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_bindEnde hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_endeBind (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (e := e) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | endeBindAxiom l Γ Λ τ a args he hw hg hd' hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_bindAxiomEnde hO hk hf ha ho hr hax _) rfl rfl hrely
+    exact ownInv_step_endeBindAxiom (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannBind l Γ Λ Λ' Λ'' τ e rest k ρ hhead σ₁ hs₁ neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_bind hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_dannBind (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (τ := τ) (e := e) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannNarrowOk l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_narrow hk hf ha ho hr h) rfl rfl hrely
+    exact ownInv_step_dannNarrowOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') (e := e) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (h := h) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannNarrowElse l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_narrowElse hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_dannNarrowElse (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') (e := e) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (h := h) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannPruefWahr l Γ Λ Λ' Λ'' cnd sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_check hk hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannPruefWahr (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cnd := cnd) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannPruefFalsch l Γ Λ Λ' Λ'' cnd sonst rest k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_checkSonst hk hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannPruefFalsch (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cnd := cnd) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannBreaking l Γ Λ Λ' Λ'' i body rest k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_breaking hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_dannBreaking (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (i := i) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | dannLocks l Γ Λ Λ'' L hrk body rest k ρ hhead hself hrang hfrei =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_locks hk hf ha ho hr (MetaSame.refl A _)) rfl rfl hrely
+    exact ownInv_step_dannLocks (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ'' := Λ'') (L := L) (hrk := hrk) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hself := hself) (hrang := hrang) (hfrei := hfrei) (hrely := hrely)
   | freiGib l Γ Λ L k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_frei hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_freiGib (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (L := L) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | schrumpfVergiss l Γ Λ τ k v ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_schrumpf hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_schrumpfVergiss (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (k := k) (v := v) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | dannTrav l Γ Λ Λ'' t inv body rest k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_traverse hk hf ha ho hr _) rfl rfl hrely
+    exact ownInv_step_dannTrav (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ'' := Λ'') (t := t) (inv := inv) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | travNext l Γ Λ t inv body i is k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_travNext hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_travNext (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (inv := inv) (body := body) (i := i) (is := is) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | travFort l Γ Λ t inv body is k i ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_travFort hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_travFort (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (inv := inv) (body := body) (is := is) (k := k) (i := i) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | travDone l Γ Λ t inv body k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_travDone hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_travDone (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (inv := inv) (body := body) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannRetry l Γ Λ Λ' Λ'' n bis body ueber rest k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_retry hk hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_dannRetry (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (n := n) (bis := bis) (body := body) (ueber := ueber) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | wiederUeber l Γ Λ bis body ueber k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_wiederUeber hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_wiederUeber (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (bis := bis) (body := body) (ueber := ueber) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | wiederWeiter l Γ Λ n bis body ueber k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_wiederWeiter hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_wiederWeiter (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (n := n) (bis := bis) (body := body) (ueber := ueber) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | wiederSchritt l Γ Λ n bis body ueber k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_wiederSchritt hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_wiederSchritt (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (n := n) (bis := bis) (body := body) (ueber := ueber) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | wiederFort l Γ Λ n bis body ueber k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_wiederFort hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_wiederFort (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (n := n) (bis := bis) (body := body) (ueber := ueber) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | dannForever l Γ Λ Λ' Λ'' a inv body rest k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_forever hk hf ha ho hr _) rfl rfl hrely
+    exact ownInv_step_dannForever (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (a := a) (inv := inv) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | ewigWeiter l Γ Λ a n inv body k ρ hhead σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_ewigWeiter hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_ewigWeiter (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (a := a) (n := n) (inv := inv) (body := body) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | ewigFort l Γ Λ a n inv body k ρ hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_ewigFort hf ha ho hr) rfl rfl hrely
+    exact ownInv_step_ewigFort (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (a := a) (n := n) (inv := inv) (body := body) (k := k) (ρ := ρ) (hhead := hhead) (hrely := hrely)
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨c2, hs, hcont⟩ := hor.stmt trivial
-    obtain ⟨_, hplan, rfl⟩ := os_top hs
-    subst hrho
-    have hR : Realizes c gh A ⟨u, (M.faeden u).stapel.length⟩ s (M.speicher.welt []) ρ :=
-      ⟨hag, hfo, hf.1, hf.2.1, hf.2.2.1⟩
-    rw [dropContext_isOwner] at hcont
-    exact ownInv_push hc hag hfo hd hth hf hplan hk
-      (Push.callee_frame (I g).parameters args rfl rfl hd rfl hR hplan s0 s0)
-      (.plain _ (cont_real hcont (by rw [dropContextB_refs]; exact hf.length))) rfl rfl
+    exact ownInv_step_rufDann (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (g := g) (args := args) (hp := hp) (hr := hr) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hΛ := hΛ) (s0 := s0) (hs0 := hs0) (rho := rho) (hrho := hrho) (neu := neu) (hneu := hneu) (hrely := hrely)
   | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨c2, hs, hcont⟩ := hor.stmt trivial
-    obtain ⟨J, owner, hJ, _, _, hplan, rfl⟩ := os_top hs
-    subst hrho
-    have hR : Realizes c gh A ⟨u, (M.faeden u).stapel.length⟩ s (M.speicher.welt []) ρ :=
-      ⟨hag, hfo, hf.1, hf.2.1, hf.2.2.1⟩
-    obtain ⟨hJm, hJo⟩ := hJ g hg
-    rw [← hJo] at hcont
-    exact ownInv_push hc hag hfo hd hth hf hplan hk (callee_ind hg hJm hd rfl hR hplan s0 s0)
-      (.plain _ (cont_real hcont (by rw [dropContextB_refs]; exact hf.length))) rfl rfl
+    exact ownInv_step_dannCallInd (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (n := n) (p := p) (args := args) (hp := hp) (hr := hr) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hΛ := hΛ) (s0 := s0) (hs0 := hs0) (g := g) (hg := hg) (hv := hv) (rho := rho) (hrho := hrho) (neu := neu) (hneu := hneu) (hrely := hrely)
   | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨c2, hs, hcont⟩ := hor.stmtEnde
-    obtain ⟨J, owner, hJ, _, _, hplan, rfl⟩ := os_top hs
-    subst hrho
-    have hR : Realizes c gh A ⟨u, (M.faeden u).stapel.length⟩ s (M.speicher.welt []) ρ :=
-      ⟨hag, hfo, hf.1, hf.2.1, hf.2.2.1⟩
-    obtain ⟨hJm, hJo⟩ := hJ g hg
-    rw [← hJo] at hcont
-    exact ownInv_push hc hag hfo hd hth hf hplan hk (callee_ind hg hJm hd rfl hR hplan s0 s0)
-      (.plain _ (cont_real hcont (by rw [dropContextB_refs]; exact hf.length))) rfl rfl
+    exact ownInv_step_rufCallInd (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (n := n) (p := p) (args := args) (hp := hp) (hr := hr) (rest := rest) (ρ := ρ) (hhead := hhead) (hΛ := hΛ) (s0 := s0) (hs0 := hs0) (g := g) (hg := hg) (hv := hv) (rho := rho) (hrho := hrho) (neu := neu) (hneu := hneu) (hrely := hrely)
   | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨cout, hb, hcont⟩ := hor.dann_inv
-    obtain ⟨_, hplan, c1, hrest, hdw⟩ := ob_top hb
-    subst hrho
-    have hR : Realizes c gh A ⟨u, (M.faeden u).stapel.length⟩ s (M.speicher.welt []) ρ :=
-      ⟨hag, hfo, hf.1, hf.2.1, hf.2.2.1⟩
-    have hor' := OR.binder hrest hdw hk hcont
-    rw [resultContext_isOwner] at hor'
-    exact ownInv_push hc hag hfo hd hth hf hplan hk
-      (Push.callee_frame (I g).parameters args rfl rfl hd rfl hR hplan s0 s0) (.wartet _ _ hor') rfl rfl
+    exact ownInv_step_dannBindCall (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (τ := τ) (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hΛ := hΛ) (s0 := s0) (hs0 := hs0) (rho := rho) (hrho := hrho) (neu := neu) (hneu := hneu) (hrely := hrely)
   | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨cout, hb, hcont⟩ := hor.dann_inv
-    obtain ⟨J, owner, hJ, _, _, hplan, c1, hrest, hdw⟩ := ob_top hb
-    subst hrho
-    have hR : Realizes c gh A ⟨u, (M.faeden u).stapel.length⟩ s (M.speicher.welt []) ρ :=
-      ⟨hag, hfo, hf.1, hf.2.1, hf.2.2.1⟩
-    obtain ⟨hJm, hJo⟩ := hJ g hg
-    have hor' := OR.binder hrest hdw hk hcont
-    rw [← hJo] at hor'
-    exact ownInv_push hc hag hfo hd hth hf hplan hk (callee_ind hg hJm hd rfl hR hplan s0 s0)
-      (.wartet _ _ hor') rfl rfl
+    exact ownInv_step_dannBindCallInd (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (τ := τ) (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hΛ := hΛ) (s0 := s0) (hs0 := hs0) (g := g) (hg := hg) (hv := hv) (rho := rho) (hrho := hrho) (neu := neu) (hneu := hneu) (hrely := hrely)
   | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨cout, hb, hcont⟩ := hor.dann_inv
-    obtain ⟨_, hplan, herr, c1, hrest, hdw⟩ := ob_top hb
-    subst hrho
-    have hR : Realizes c gh A ⟨u, (M.faeden u).stapel.length⟩ s (M.speicher.welt []) ρ :=
-      ⟨hag, hfo, hf.1, hf.2.1, hf.2.2.1⟩
-    have hor' := OR.binder hrest hdw hk hcont
-    rw [resultContext_isOwner] at hor'
-    exact ownInv_push hc hag hfo hd hth hf hplan hk
-      (Push.callee_frame (I g).parameters args rfl rfl hd rfl hR hplan s0 s0)
-      (.wartetSonst _ _ _ _ hor' (OR.sonst herr (.schrumpf _ hk hcont.exits))) rfl rfl
+    exact ownInv_step_dannBindCallElse (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (τ := τ) (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hΛ := hΛ) (s0 := s0) (hs0 := hs0) (rho := rho) (hrho := hrho) (neu := neu) (hneu := hneu) (hrely := hrely)
   | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1
       v hv he neu hneu =>
     rw [hhead] at hH
@@ -465,29 +238,11 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
     obtain ⟨hx, hX⟩ := exit_next hr
     exact fin (run_peel hk hf ha ho (.next hnext hx) (ox_top hX)) rfl rfl hrely
   | peelAbbruchLeave Γ Λ Λ1 Λk rest k ρ hleave hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    obtain ⟨hx, hX⟩ := exit_leave hr
-    exact fin (run_peel hk hf ha ho (.leave hleave hx) (ox_top hX)) rfl rfl hrely
+    exact ownInv_step_peelAbbruchLeave (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (Γ := Γ) (Λ := Λ) (Λ1 := Λ1) (Λk := Λk) (rest := rest) (k := k) (ρ := ρ) (hleave := hleave) (hhead := hhead) (hrely := hrely)
   | peelAbbruchNext Γ Λ Λ1 Λk rest k ρ hnext hhead =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    obtain ⟨hx, hX⟩ := exit_next hr
-    exact fin (run_peel hk hf ha ho (.next hnext hx) (ox_top hX)) rfl rfl hrely
+    exact ownInv_step_peelAbbruchNext (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (Γ := Γ) (Λ := Λ) (Λ1 := Λ1) (Λk := Λk) (rest := rest) (k := k) (ρ := ρ) (hnext := hnext) (hhead := hhead) (hrely := hrely)
   | dannRet l Γ Λ Λ'' e hperm rest k ρ hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu hnw =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨c2, hs, _⟩ := hor.stmt trivial
-    have hcheck := os_top hs
-    have hdu : depthOf M u = rst.length + 1 := by
-      show (M.faeden u).stapel.length = _
-      rw [hpop]; rfl
-    have hsusp := caller_susp (hth u).2 hpop
-    subst hfg
-    subst hv
-    have hres := ret_result hf hcheck s1 s1
-    rw [show (M.faeden u).stapel.length = rst.length + 1 from hdu] at hres
-    exact ownInv_pop hag hfo hd hth hpop (by subst hs1; rfl) rfl rfl (resume_plainX hd hdu hsusp hnw _ hres)
+    exact ownInv_step_dannRet (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ'' := Λ'') (e := e) (hperm := hperm) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (caller := caller) (rst := rst) (hpop := hpop) (hΛ := hΛ) (s1 := s1) (hs1 := hs1) (g := g) (hfg := hfg) (rho := rho) (hrho := hrho) (s0 := s0) (hs0 := hs0) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hnw := hnw) (hrely := hrely)
   | rueckCons caller rst hpop Γ Λ e hperm rest ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
     rw [hhead] at hH
     obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
@@ -504,46 +259,10 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
     exact ownInv_pop hag hfo hd hth hpop (by subst hs1; rfl) rfl rfl (resume_plainX hd hdu hsusp hnw _ hres)
   | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller hΛ s1 hs1
       g hfg rho hrho s0 hs0 v hv he neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨c2, hs, _⟩ := hor.stmt trivial
-    have hcheck := os_top hs
-    have hdu : depthOf M u = rst.length + 1 := by
-      show (M.faeden u).stapel.length = _
-      rw [hpop]; rfl
-    have hsusp := caller_susp (hth u).2 hpop
-    subst hfg
-    subst hv
-    have hres := ret_result hf hcheck s1 s1
-    rw [show (M.faeden u).stapel.length = rst.length + 1 from hdu] at hres
-    rcases hcaller with hc' | ⟨n, err, hc'⟩
-    · rw [hc'] at hsusp
-      exact ownInv_pop hag hfo hd hth hpop (by subst hs1; rfl) rfl rfl
-        (resume_bind hd hdu hsusp (Or.inl rfl) _ he hres)
-    · rw [hc'] at hsusp
-      exact ownInv_pop hag hfo hd hth hpop (by subst hs1; rfl) rfl rfl
-        (resume_bind hd hdu hsusp (Or.inr ⟨n, err, rfl⟩) _ he hres)
+    exact ownInv_step_dannRetBind (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (lk := lk) (Γk := Γk) (Λk := Λk) (Λk'' := Λk'') (e := e) (hperm := hperm) (restk := restk) (kk := kk) (ρ := ρ) (hhead := hhead) (caller := caller) (rst := rst) (hpop := hpop) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (restb := restb) (k := k) (ρc := ρc) (hcaller := hcaller) (hΛ := hΛ) (s1 := s1) (hs1 := hs1) (g := g) (hfg := hfg) (rho := rho) (hrho := hrho) (s0 := s0) (hs0 := hs0) (v := v) (hv := hv) (he := he) (neu := neu) (hneu := hneu) (hrely := hrely)
   | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller hΛ s1 hs1
       g hfg rho hrho s0 hs0 v hv he neu hneu =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
-    obtain ⟨c2, hs, _⟩ := hor.stmtEnde
-    have hcheck := os_top hs
-    have hdu : depthOf M u = rst.length + 1 := by
-      show (M.faeden u).stapel.length = _
-      rw [hpop]; rfl
-    have hsusp := caller_susp (hth u).2 hpop
-    subst hfg
-    subst hv
-    have hres := ret_result hf hcheck s1 s1
-    rw [show (M.faeden u).stapel.length = rst.length + 1 from hdu] at hres
-    rcases hcaller with hc' | ⟨n, err, hc'⟩
-    · rw [hc'] at hsusp
-      exact ownInv_pop hag hfo hd hth hpop (by subst hs1; rfl) rfl rfl
-        (resume_bind hd hdu hsusp (Or.inl rfl) _ he hres)
-    · rw [hc'] at hsusp
-      exact ownInv_pop hag hfo hd hth hpop (by subst hs1; rfl) rfl rfl
-        (resume_bind hd hdu hsusp (Or.inr ⟨n, err, rfl⟩) _ he hres)
+    exact ownInv_step_rueckConsBind (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (lk := lk) (Γk := Γk) (Λk := Λk) (e := e) (hperm := hperm) (restk := restk) (ρ := ρ) (hhead := hhead) (caller := caller) (rst := rst) (hpop := hpop) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (restb := restb) (k := k) (ρc := ρc) (hcaller := hcaller) (hΛ := hΛ) (s1 := s1) (hs1 := hs1) (g := g) (hfg := hfg) (rho := rho) (hrho := hrho) (s0 := s0) (hs0 := hs0) (v := v) (hv := hv) (he := he) (neu := neu) (hneu := hneu) (hrely := hrely)
   | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0
       rg hrg hn =>
     rw [hhead] at hH
@@ -589,72 +308,35 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
     rw [show (M.faeden u).stapel.length = rst.length + 1 from hdu] at hcl
     exact ownInv_pop hag hfo hd hth hpop rfl rfl rfl (resume_why hd hdu hsusp hcl _)
   | dannRegLies l Γ Λ Λ' r hk' rest k ρ hhead v hv hz hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_regRead hk hf ha ho hr v) rfl rfl hrely
+    exact ownInv_step_dannRegLies (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk' := hk') (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (hz := hz) (hΛ := hΛ) (hrely := hrely)
   | dannRegLiesElseWahr l Γ Λ Λ' r hk' zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_regReadElse hk hf ha ho hr (meta_lese _ _ _ hs₁) v) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannRegLiesElseWahr (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk' := hk') (zusage := zusage) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannRegLiesElseFalsch l Γ Λ Λ' r hk' zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_regReadSonst hk hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannRegLiesElseFalsch (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk' := hk') (zusage := zusage) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannAwaits l Γ Λ Λ' gl payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_awaits hk hf ha ho hr (meta_lese _ _ _ hs₁) _) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannAwaits (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (gl := gl) (payload := payload) (hp := hp) (hL := hL) (hat := hat) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hvis := hvis) (σ₁ := σ₁) (hs₁ := hs₁) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannExchange l Γ Λ Λ' gl neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₂
-    exact fin (run_exchange hk hf ha ho hr σ₁ (meta_lese _ _ _ hs₁) _ _) rfl rfl hrely
+    exact ownInv_step_dannExchange (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (gl := gl) (neuE := neuE) (hw := hw) (hL := hL) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (hs₂ := hs₂) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannGleit l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_float hk hf ha ho hr (meta_lese _ _ _ hs₁) v) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannGleit (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannGleitLit l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_floatLit hk hf ha ho hr v) rfl rfl hrely
+    exact ownInv_step_dannGleitLit (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (q := q) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (hrely := hrely)
   | dannGleitVon l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_floatOf hk hf ha ho hr (meta_lese _ _ _ hs₁) v) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannGleitVon (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannGleitNarrowOk l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_floatNarrow hk hf ha ho hr (meta_lese _ _ _ hs₁) v) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannGleitNarrowOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    exact fin (run_floatNarrowSonst hk hf ha ho hr (meta_lese _ _ _ hs₁)) (by subst hs₁; rfl) rfl hrely
+    exact ownInv_step_dannGleitNarrowElse (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd' hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_bindAxiom hO hk hf ha ho hr hax _) rfl rfl hrely
+    exact ownInv_step_dannBindAxiom (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr0 hw hg hd' hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_bindAxiomElse hO hk hf ha ho hr hax _) rfl rfl hrely
+    exact ownInv_step_dannBindAxiomElseOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr0 hw hg hd' hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin (run_bindAxiomGrund hO hk hf ha ho hr hax r) rfl rfl hrely
+    exact ownInv_step_dannBindAxiomElseGrund (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | endeBindAxiomElseOk l Γ Λ τ a args he hr0 hw hg hd' hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin ((run_bindAxiomElseEnde hO hk hf ha ho hr hax).1 _) rfl rfl hrely
+    exact ownInv_step_endeBindAxiomElseOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | endeBindAxiomElseGrund l Γ Λ τ a args he hr0 hw hg hd' hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-    rw [hhead] at hH
-    obtain ⟨k0, c, g, hk, hf, hr⟩ := head_run hH rfl
-    subst hs₁
-    exact fin ((run_bindAxiomElseEnde hO hk hf ha ho hr hax).2 r) rfl rfl hrely
-
+    exact ownInv_step_endeBindAxiomElseGrund (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
 #print axioms ownInv_step
 
 end Gabbro.Grammatik.ArenaOwnership.Machine

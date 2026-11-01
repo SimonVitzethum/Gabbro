@@ -9,6 +9,7 @@
 -/
 module
 public import Grammatik.Nichtinterferenz.Schritt
+public import Grammatik.Nichtinterferenz.SchrittK_vonFaelle.Teil1
 @[expose] public section
 
 
@@ -55,11 +56,7 @@ theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
     kSchrittK P O passes (M.faeden f).kern M.speicher = some ((M'.faeden f).kern, M'.speicher) := by
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hk =>
-      kstart
-      simp only [kr, kEnde, kEndeCons, GEntfaltbar_blatt s hleaf, hleaf]
-      simp only [RufMaschineG.weltVon] at hstep
-      simp only [hstep, kAusEnde, kLokal, RufFadenG.kern, RufRahmenG.kern]
-      rfl
+    exact schrittK_von_blatt (D := D) (P := P) (O := O) (passes := passes) (M := M) (f := f) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (s := s) (rest := rest) (ρ := ρ) (hleaf := hleaf) (hhead := hhead) (hΛ := hΛ) (σ' := σ') (ρ' := ρ') (neu := neu) (hstep := hstep) (hneu := hneu) (hk := hk)
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
       kstart
       subst hs0 hrho
