@@ -1,0 +1,5 @@
+// Canonical typed literal elaboration must check dimensions even for unused constants.
+module unused_array_length {
+const VALUES : [u8; 2] = [42];
+impl fn main() -> u8 effects { pure } { return 0; }
+}

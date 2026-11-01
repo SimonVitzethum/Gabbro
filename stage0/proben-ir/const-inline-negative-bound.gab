@@ -1,0 +1,8 @@
+// Each inline range sees the exact earlier custom-range negative scalar values.
+module inline_negative_bound {
+type Small = i8 in -10 .. 100;
+const NEGATIVE : Small = 0 - 1;
+const LOWER : i8 in NEGATIVE .. 100 = NEGATIVE;
+const ANSWER : i8 in LOWER .. 100 = LOWER + 43;
+impl fn main() -> Small effects { pure } { return ANSWER; }
+}

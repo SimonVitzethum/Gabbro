@@ -9,11 +9,18 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
-**Lean concurrency update (2026-10-31).** The owner now permits up to FOUR simultaneous Lean builds/direct
+**RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
+Sonnet 5.5 implementation agents, no others: one rolling lane on Lean slot 1 (IR-06 memory, handed back; then IR-02 wide-integer kernels
+in `t3-db31d27d`, handed back; now IR-04 floats in `t3-c3ebf14f`) and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. Additionally (owner, same day) two GPT Sol 6.1
+agents for small bounded tasks: IR-01 const-signature bounds in `t3-d342a8ed` (slot 1, shared) and IR-02
+`wideExtend`/mixed-sign multiword compare in `t3-db31d27d` (slot 2, shared; IR-03 has priority). All other lanes stay paused
+with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
+
+**Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
 checks globally, each with MemoryMax=5G, MemoryHigh=4G and MemorySwapMax=0. This supersedes all older
 one-global-Lean-check rules below and in lane instructions. One process per slot is protected by
-`/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N=1..4). Assign IR-01/IR-08 to slot 1, IR-02 to slot 2,
-IR-03 to slot 3, IR-04/IR-09 to slot 4. Release the slot after each module/check so other assigned workers
+`/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N=1..2). Assign IR-01/IR-06 to slot 1;
+IR-02/IR-03/IR-04/IR-10 share slot 2. Slots 3 and 4 are retired. Release the slot after each module/check so other assigned workers
 can proceed. Never run two checks in one worktree or mutate artifacts read by another check; use isolated
 artifact overlays. Do not interrupt another worker's running proof. Grammar rebuilds remain forbidden.
 
@@ -59,8 +66,8 @@ expanding infrastructure for a small subset.
   retired Lean execution path.
 - **Never rebuild `grammatik/` for this task.** Reuse its existing compiled artifacts. Run affected Stage-0
   compilation checks directly; do not invoke a build or guardian that would rebuild the grammar.
-- **Only one Lean build or direct Lean check may run at a time globally, across all worktrees.** All workers
-  use the same lock: `/home/simon/.cache/gabbro-stage0-build.lock`.
+- **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
+  slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 
 This scope governs the current implementation work; the broader roadmap below is not authorization to
 start adjacent projects. Report which language cases actually compile, which remain refused, and what was

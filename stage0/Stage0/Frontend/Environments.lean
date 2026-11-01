@@ -164,14 +164,46 @@ theorem constants_collected (env : List (String × (Int × Int))) (fns : List UK
     rw [constants_append, ih, constantStep_correct]
     rfl
 
-/-- One scalar declaration is evaluated at its exact canonical source type. -/
+/-- One scalar declaration is evaluated at its exact canonical source type. Earlier scalar
+    values supply singleton bounds, in the same lookup order as the canonical runtime type scope. -/
 def typedItem (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (values : List (String × Int)) : SItemTief → Option (List (String × Int))
   | .constT name ty (.one expr) => do
-    let range ← (uFeldTyp env ty).toOption
+    let range ← (uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty).toOption
     let value ← uKonstWert range.1 range.2 fns values 64 expr
     pure (values ++ [(name, value)])
   | _ => some values
+
+/-- Every successful scalar step checks the original type through canonical elaboration and
+    every expression intermediate through the existing exact-range evaluator. -/
+theorem typedItem_sound (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (values result : List (String × Int)) (name : String) (ty : STyp) (expr : SExpr)
+    (h : typedItem env fns values (.constT name ty (.one expr)) = some result) :
+    ∃ lo hi value,
+      uTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) [] ty = .ok (.int lo hi) ∧
+      uKonstWert lo hi fns values 64 expr = some value ∧ result = values ++ [(name, value)] := by
+  unfold typedItem at h
+  cases ht : uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty with
+  | error e => simp [ht, Except.toOption] at h
+  | ok range =>
+    rcases range with ⟨lo, hi⟩
+    cases hv : uKonstWert lo hi fns values 64 expr with
+    | none => simp [ht, Except.toOption, hv] at h
+    | some value =>
+      simp [ht, Except.toOption, hv] at h
+      exact ⟨lo, hi, value, fieldType_sound _ _ _ _ ht, hv, h.symm⟩
+
+/-- A dependent exclusive range is checked with the previous binding, without widening it. -/
+theorem typedItem_sound_zeuge :
+    ∃ lo hi value,
+      uTyp [("LIMIT", (42, 42))] []
+        (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true) =
+          .ok (.int lo hi) ∧
+      uKonstWert lo hi [] [("LIMIT", 42)] 64 (.variable "LIMIT") = some value ∧
+      [("LIMIT", 42), ("ANSWER", 42)] = [("LIMIT", 42)] ++ [("ANSWER", value)] :=
+  typedItem_sound [] [] [("LIMIT", 42)] [("LIMIT", 42), ("ANSWER", 42)] "ANSWER"
+    (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true)
+    (.variable "LIMIT") (by decide +kernel)
 
 /-- Complete ordered scalar scope: negatives and shadowed bindings are not filtered. -/
 def typedConstants (env : List (String × (Int × Int))) (fns : List UKonstFn)
@@ -273,15 +305,24 @@ structure Scopes (original : List SItemTief) where
   values : List (String × Int)
   declared : List (String × (Int × Int))
   functions : List UKonstFn
-  aliases : declared = original.foldl
-    (aliasStep (uConstsRech (uKonstFns original) original [])) []
-  functionOrigin : functions = constantFunctions declared original
+  aliasConstants : List (String × Int)
+  aliasOrigin : aliasConstants = uConstsRech (uKonstFns original) original [] ∨ aliasConstants = values
+  functionsUseValues : Bool
+  aliases : declared = original.foldl (aliasStep aliasConstants) []
+  functionOrigin : functions = constantFunctions
+    (if functionsUseValues then declared ++ values.map (fun c => (c.1, (c.2, c.2))) else declared) original
   scalarValues : typedConstants declared functions original [] = some values
+
+/-- The canonical environment used to elaborate compile-time function signatures. Existing
+    scopes use declared aliases; dependent signatures additionally use certified scalar bounds. -/
+def Scopes.functionTypes {items : List SItemTief} (scope : Scopes items) : List (String × (Int × Int)) :=
+  if scope.functionsUseValues then scope.declared ++ scope.values.map (fun c => (c.1, (c.2, c.2)))
+    else scope.declared
 
 /-- Every function supplied to canonical scalar or nested-array evaluation retains its original
     body, pure/nonlogical clauses and exact canonical source signature. -/
 theorem Scopes.functionMeaning {items : List SItemTief} (scope : Scopes items) :
-    ∀ fn ∈ scope.functions, ∃ item ∈ items, FunctionMeaning scope.declared item fn := by
+    ∀ fn ∈ scope.functions, ∃ item ∈ items, FunctionMeaning scope.functionTypes item fn := by
   rw [scope.functionOrigin]
   exact constantFunctions_sound _ _
 
@@ -294,8 +335,8 @@ def Scopes.types {original : List SItemTief} (scope : Scopes original) : List (S
 def scopes (items target : List SItemTief)
     (h : EnvironmentFacts items target) : Scopes items := by
   let p := prepare items
-  refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns,
-    h.2.2, ?_, ?_⟩
+  refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns, p.initial,
+    Or.inl rfl, false, h.2.2, ?_, ?_⟩
   · exact constantFunctions_aliases p.initial p.env [] items
   · have hc := h.1
     change typedConstants p.env p.fns p.expanded [] = _ at hc
@@ -306,7 +347,7 @@ def scopes (items target : List SItemTief)
 
 /-- Final scalar values must leave all resolved alias ranges unchanged. -/
 def ScopeStable {items : List SItemTief} (scope : Scopes items) : Prop :=
-  uAliase scope.values (prepare items).expanded = scope.declared
+  uAliase scope.values (aliases scope.aliasConstants [] items) = scope.declared
 
 /-- The canonical original-declaration fold and alias stability are kept together. -/
 structure DerivedScopes (items : List SItemTief) where
@@ -317,9 +358,9 @@ structure DerivedScopes (items : List SItemTief) where
     There is no executable source interpreter or alternative expression evaluation here. -/
 def evaluatedScopes (items : List SItemTief) (values : List (String × Int))
     (h : typedConstants (prepare items).env (prepare items).fns items [] = some values) : Scopes items :=
-  ⟨values, (prepare items).env, (prepare items).fns,
-    by simpa only [prepare, List.nil_append] using
-      aliases_collected (prepare items).initial [] items,
+  ⟨values, (prepare items).env, (prepare items).fns, (prepare items).initial,
+    Or.inl rfl, false,
+    (by simpa only [prepare, List.nil_append] using (aliases_collected (prepare items).initial [] items)),
     constantFunctions_aliases (prepare items).initial (prepare items).env [] items, h⟩
 
 /-- The actual consumer needs the certified original scalar fold, not a second encoding through

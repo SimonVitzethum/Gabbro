@@ -1,0 +1,9 @@
+// A custom-range negative const call supplies a later alias bound.
+module custom_negative_bound {
+type Small = i8 in -10 .. 100;
+const fn negative() -> Small effects { pure } { return 0 - 1; }
+const NEGATIVE : Small = negative();
+type Bound = i8 in NEGATIVE .. 100;
+const ANSWER : Bound = 42;
+impl fn main() -> Bound effects { pure } { return ANSWER; }
+}

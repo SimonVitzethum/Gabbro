@@ -1,0 +1,6 @@
+// Empty storage does not authorize a negative source slot count.
+module empty_table_negative_count {
+const COUNT : i8 = 0 - 1;
+table empty count COUNT { slot {} }
+impl fn main() -> u8 effects { pure } { return 42; }
+}

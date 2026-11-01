@@ -1,0 +1,8 @@
+// Candidate discovery cannot hide an overflowing initializer in the original exact range.
+module dependent_alias_overflow {
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+type Bound = u8 in 0 .. LIMIT;
+const ANSWER : Bound = (LIMIT + 1) - 1;
+impl fn main() -> Bound effects { pure } { return ANSWER; }
+}
