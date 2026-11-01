@@ -827,9 +827,9 @@ with `call without a value`, although canonical sum expressions/results exist.
 Sum arguments likewise refuse with `argument without G form`. These call
 adapters remain IR-10 prerequisites, not new constructor cases.
 Multiword payloads, shared widths/ABI and broader frontend/model prerequisites
-remain open with their owning lanes. This bounded task selects only the
-signed32-lower-bound refusal of the one-word `case` constructor; dispatch
-limits and the ABI are unchanged.
+remain open with their owning lanes. The first bounded step selected the
+signed32-lower-bound refusal of the one-word `case` constructor; the decoder
+follow-up below closes the matching dispatch restriction. The ABI is unchanged.
 
 
 The selected `Expr.case` extension is now connected: `packSum` reuses
@@ -848,10 +848,30 @@ pass. Three new textual constructor probes (positive, negative and unsigned64
 lower bounds) and five existing option/tag/reason probes execute with their
 expected ASM exit codes. The new probes execute runtime-payload construction;
 the exact packed result is checked by the formal witness. The same three new
-sources were explicitly refused by the baseline emitter. Two additional textual
-probes still refuse a payload interval of width 2^56 and large-bound tag decoding.
+sources were explicitly refused by the baseline emitter. At that checkpoint, two
+additional textual probes refused width 2^56 and large-bound tag decoding.
 All 13 audited statements use only propext, Classical.choice and Quot.sound;
 `gabbro_ziel` retains exactly those three. Layout passes for all 1471 Lean files;
 all six changed Lean modules remain below 500 lines. Grammar artifacts were reused.
-This completes one constructor restriction only: large-bound `onTag`, wider sums,
+That constructor-only checkpoint left large-bound `onTag` open. Wider sums,
 options/reasons beyond the listed domains and multiword ABI integration remain open.
+
+
+The decoder mirror step now removes the signed32 payload-lower-bound refusal
+from `tagPayloadC` using `wordConstant`. Its small-immediate path, packed
+encoding, `sumFits` and width-2^56 refusal are unchanged. The existing three-word
+dispatch scratch bound covers the materializer. `tagPayload_ok`/`tagArm_ok`,
+`lowTags_ok`/`onTag_ok`, mutual `lowS_ok`/`lowB_ok`/`lowEnd_ok` and
+`irBild_correct` compile on the actual emitter. The real-memory
+`TagDecodeProbe.simulation_zeuge` constructs word 10753 and decodes 2^32 + 42;
+`dispatcher_zeuge` admits positive, negative and unsigned64 lower bounds.
+All 246 private direct module checks through Haupt, Stage0 and Nachpruefung pass.
+Twelve textual source-to-IR-to-ASM executions pass, including both runtime
+payload endpoints, skipped large-bound arms, and the promoted former decoder
+refusal (`case-offset-dispatch`). The width-2^56 probe still refuses. All 14
+focused axiom audits, including `gabbro_ziel`, report exactly propext,
+Classical.choice and Quot.sound. Layout passes for 1472 Lean files; the five
+changed Lean modules stay below 500 lines. Checks use the private worktree
+overlay and capped slot-2 lock; grammar artifacts are reused. This closes one decoder
+restriction, without extending the remaining packed-width, option/reason or ABI
+domains above.
