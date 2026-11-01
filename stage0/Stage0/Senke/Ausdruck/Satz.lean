@@ -487,14 +487,12 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     exact (const_ok hp (lit32_nat (by omega)) (by omega)).mono (fun w hw => by
       simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw)
   | _, _, .num e, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hl =>
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
-      exact packSum_ok hl htag (by simp only [packSum, bin2] at hK; omega)
-        (fun m pc hp => lowE_ok σ₀ σ hWL e d ce te he (by simp only [packSum, bin2] at hK; omega) m pc ρ hp) hp
-    · cases h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ce, te⟩, he, hc⟩ := h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+    exact packSum_ok (by simp only [packSum, bin2] at hK; omega) htag
+      (by simp only [packSum, bin2] at hK; omega)
+      (fun m pc hp => lowE_ok σ₀ σ hWL e d ce te he
+        (by simp only [packSum, bin2] at hK; omega) m pc ρ hp) hp
 end
 end Gabbro.Stage0.Senke

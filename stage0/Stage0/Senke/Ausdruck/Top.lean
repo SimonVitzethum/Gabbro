@@ -36,13 +36,10 @@ theorem lowN_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
   | _, .empty, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, .num e, d, c, top, h => by
-    simp only [lowE_eqs] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ce, te⟩, _, he⟩ := h
-      simp only [packSum, bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ce, te⟩, _, he⟩ := h
+    simp only [packSum, bin2, Prod.mk.injEq] at he
+    omega
 
 theorem readBytesL_top (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
     (n j d : Nat) → (c : List II) → (top : Nat) →
