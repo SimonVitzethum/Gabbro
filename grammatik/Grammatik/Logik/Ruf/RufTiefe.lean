@@ -35,7 +35,7 @@
   has no premise here.
 -/
 module
-public import Grammatik.Logik.Vertraege.HandlerKongruenz
+public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil2
 @[expose] public section
 
 

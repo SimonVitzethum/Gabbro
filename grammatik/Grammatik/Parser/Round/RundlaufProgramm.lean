@@ -24,7 +24,7 @@
   `parseTopTief` of `lex (renderText (druckItems its))` is `.ok its`.
 -/
 module
-public import Grammatik.Parser.Round.RundlaufGeraet
+public import Grammatik.Parser.Round.RundlaufGeraet.Teil2
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic

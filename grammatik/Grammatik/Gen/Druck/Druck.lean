@@ -17,7 +17,7 @@
   `ax<i>`, local variables `v<k>` (`k` the depth at which they are bound). Every operator is parenthesised.
 -/
 module
-public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Parser.Cover.Mitglieder
 @[expose] public section
 

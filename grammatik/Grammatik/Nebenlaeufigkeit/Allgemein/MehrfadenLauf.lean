@@ -14,7 +14,7 @@
     thread 0 holds, and the deadlock theorem there.
 -/
 module
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 @[expose] public section
 
 namespace Gabbro.Grammatik

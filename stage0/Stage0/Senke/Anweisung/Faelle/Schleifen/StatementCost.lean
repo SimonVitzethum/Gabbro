@@ -1,6 +1,6 @@
 /- Source-bound instruction costs for actual statement lowering. -/
 module
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted.Teil3
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
 public import Stage0.Senke.Ausdruck.Old.Proben
 public import Stage0.Senke.Funktion

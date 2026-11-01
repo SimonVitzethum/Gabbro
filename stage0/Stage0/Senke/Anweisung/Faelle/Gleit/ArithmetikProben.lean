@@ -5,7 +5,7 @@ public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Ausdruck.Gleit.RundCode
 public import Stage0.Senke.Ausdruck.Gleit.Betrag
 public import Stage0.Senke.Ausdruck.Gleit.Schieben
-public import Stage0.Senke.Ausdruck.Gleit.Skalieren
+public import Stage0.Senke.Ausdruck.Gleit.Skalieren.Teil6
 public import Stage0.Senke.Ausdruck.Gleit.SlotContext
 public import Stage0.Senke.Ausdruck.Gleit.Bereich
 @[expose] public section

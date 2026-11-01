@@ -13,9 +13,9 @@
 -/
 module
 public import Lean
-public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Kern.Syntax.Syntax.Teil2
 meta import Lean
-meta import Grammatik.Kern.Syntax.Syntax
+meta import Grammatik.Kern.Syntax.Syntax.Teil2
 @[expose] public section
 
 

@@ -24,7 +24,7 @@ public import Stage0.Senke.Anweisung.Faelle.Schreiben
 public import Stage0.Senke.Anweisung.Faelle.Speicher
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime.Teil2
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Emission
 public import Stage0.Senke.Anweisung.Faelle.Bloecke
 public import Stage0.Senke.Anweisung.Faelle.BlockRuf

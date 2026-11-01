@@ -17,7 +17,7 @@
   print it.
 -/
 module
-public import Grammatik.Parser.Round.RundlaufTyp
+public import Grammatik.Parser.Round.RundlaufTyp.Teil2
 public import Grammatik.Parser.Print.Item
 @[expose] public section
 

@@ -35,7 +35,7 @@ public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Logik.WP.HA.Pflicht
-public import Grammatik.Kern.Syntax.Koernung
+public import Grammatik.Kern.Syntax.Koernung.Teil2
 @[expose] public section
 
 

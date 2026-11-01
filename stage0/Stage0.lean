@@ -52,7 +52,7 @@ public import Stage0.Senke.Ausdruck.Gleit.SlotComposition
 public import Stage0.Senke.Ausdruck.Gleit.SlotProbes
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
-public import Stage0.Senke.Ausdruck.Arithmetik.Proben
+public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil3
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCall
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall

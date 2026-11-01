@@ -1,5 +1,5 @@
 module
-public import Grammatik.Code.Conc.RwLockRel
+public import Grammatik.Code.Conc.RwLockRel.Teil2
 public import Grammatik.Code.Conc.LockWitness
 @[expose] public section
 

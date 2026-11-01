@@ -16,7 +16,7 @@
 -/
 module
 public import Grammatik.Speichermodell.Darstellung
-public import Grammatik.Kern.Syntax.Typen
+public import Grammatik.Kern.Syntax.Typen.Teil2
 @[expose] public section
 
 

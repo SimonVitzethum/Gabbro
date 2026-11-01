@@ -16,7 +16,7 @@
   built by one rule from subterms of size at most `n`, which the induction hypothesis puts into `gen n`.
 -/
 module
-public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Kern.Syntax.Syntax.Teil2
 @[expose] public section
 
 

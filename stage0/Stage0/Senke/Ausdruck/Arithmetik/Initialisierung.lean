@@ -1,6 +1,6 @@
 /- Executed slot initialization, retaining each earlier result across temporaries. -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Simulation
+public import Stage0.Senke.Ausdruck.Arithmetik.Simulation.Teil7
 public import Stage0.Senke.Ausdruck.Gleit.SlotContext
 @[expose] public section
 

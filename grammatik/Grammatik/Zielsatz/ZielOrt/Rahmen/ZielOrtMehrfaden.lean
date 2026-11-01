@@ -36,7 +36,7 @@
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
-public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal
+public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil2
 @[expose] public section
 
 

@@ -13,7 +13,7 @@
   (`Print/Proben`, the census columns `rt=` and `ri=`).
 -/
 module
-public import Grammatik.Parser.Round.Rundlauf4
+public import Grammatik.Parser.Round.Rundlauf4.Teil2
 public import Grammatik.Parser.Print.Stmt
 @[expose] public section
 

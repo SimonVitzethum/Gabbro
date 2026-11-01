@@ -5,7 +5,7 @@
 module
 public import Grammatik.Korpus.Programme.GenOblig104
 public import Grammatik.Logik.WP.HA.Pflicht
-public import Grammatik.Kern.Syntax.Koernung
+public import Grammatik.Kern.Syntax.Koernung.Teil2
 @[expose] public section
 
 

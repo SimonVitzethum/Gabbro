@@ -1,7 +1,7 @@
 module
 public import Grammatik.Logik.WP.Ruf
-public import Grammatik.Kern.Syntax.Koernung
-public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt
+public import Grammatik.Kern.Syntax.Koernung.Teil2
+public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt.Teil3
 @[expose] public section
 
 

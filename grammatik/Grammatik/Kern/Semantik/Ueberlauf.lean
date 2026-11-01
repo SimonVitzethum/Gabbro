@@ -2,7 +2,7 @@
    (PLAN-BITS section 4, model half). -/
 
 module
-public import Grammatik.Kern.Syntax.Typen
+public import Grammatik.Kern.Syntax.Typen.Teil2
 @[expose] public section
 
 

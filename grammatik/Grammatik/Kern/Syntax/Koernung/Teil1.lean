@@ -1,0 +1,446 @@
+module
+
+public import Grammatik.Kern.Semantik.Semantik
+
+@[expose] public section
+
+
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+
+/-! ## 1. The premise: one event covers at most one cell -/
+
+/-- How many cells one trace event covers: a slot or global access
+    touches exactly one cell; taking or giving a lock, or an answer from outside, touches none. -/
+def eventWidth : Ereignis D → Nat
+  | .zugriff .. => 1
+  | .gzugriff .. => 1
+  | .nimmt .. => 0
+  | .gibt .. => 0
+  | .fremd .. => 0
+
+/-- **Each event executes indivisibly on the machine.** An event covers
+    at most one cell, so there is no interior boundary at which an
+    interruption could observe half of it. Lock events cover none. -/
+def EreignisAtomar (e : Ereignis D) : Prop := eventWidth e ≤ 1
+
+/-- The premise holds of every event: it is satisfiable, not vacuous. -/
+theorem ereignisAtomar_gilt (e : Ereignis D) : EreignisAtomar e := by
+  cases e
+  · exact Nat.le_refl _
+  · exact Nat.le_refl _
+  · exact Nat.zero_le _
+  · exact Nat.zero_le _
+  · exact Nat.zero_le _
+
+/-! ## 2. Interruption, as lists of bytes -/
+
+/-- Interrupting a transfer after `m` bytes: the first `m` bytes are
+    new, the rest is still old. -/
+def interrupted (old new : List Byte) (m : Nat) : List Byte :=
+  new.take m ++ old.drop m
+
+/-- Torn: a mix that is neither the old nor the new bytes. -/
+def torn (old new seen : List Byte) : Prop :=
+  seen ≠ old ∧ seen ≠ new
+
+/-- A transfer of width at most one cannot tear: every split shows the
+    old or the new bytes. The split `m = 0` shows old; any `m >= 1`
+    takes all of `new` and drops all of `old`. -/
+theorem width_le_one_no_tear (old new : List Byte)
+    (hlen : old.length = new.length) (hbound : new.length ≤ 1) (m : Nat) :
+    interrupted old new m = old ∨ interrupted old new m = new := by
+  unfold interrupted
+  by_cases hm : m = 0
+  · subst hm
+    left
+    rw [List.take_zero, List.drop_zero, List.nil_append]
+  · right
+    have ht : new.take m = new := List.take_of_length_le (by omega)
+    have hd : old.drop m = [] := List.drop_of_length_le (by omega)
+    rw [ht, hd, List.append_nil]
+
+/-! ## 3. No tearing -- under the premise -/
+
+/-- **No tearing across interruption, under `EreignisAtomar`.** A
+    transfer whose width fits one atomic event shows, at any split,
+    the old or the new bytes -- never a mix. -/
+theorem atomar_no_tear (e : Ereignis D) (h : EreignisAtomar e)
+    (old new : List Byte) (hold : old.length = eventWidth e)
+    (hnew : new.length = eventWidth e) (m : Nat) :
+    interrupted old new m = old ∨ interrupted old new m = new := by
+  have hle : eventWidth e ≤ 1 := h
+  have hb : new.length ≤ 1 := by omega
+  exact width_le_one_no_tear old new (hold.trans hnew.symm) hb m
+
+/-! ## 4. The negative write case: n bytes are n events -/
+
+/-- A single slot write records exactly one event on the trace
+    (`World.schreibSlot` is a value plus a singleton `merke`). -/
+theorem writeSlot_trace_singleton (σ : World D) (t : D.Tab) (Λ : List (Res D))
+    (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
+    (σ.schreibSlot t Λ k f v).spur =
+      (Ereignis.zugriff t true Λ σ.haelt) :: σ.spur := by rfl
+
+/-- A byte transfer over `bs` leaves exactly `bs.length` events on the
+    trace: one per byte (`World.schreibBytes`, by recursion). -/
+theorem schreibBytes_event_count (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) (k : Int) (bs : List Byte) :
+    (σ.schreibBytes t f hf Λ k bs).spur.length = σ.spur.length + bs.length := by
+  induction bs generalizing σ k with
+  | nil => simp only [World.schreibBytes, List.length_nil, Nat.add_zero]
+  | cons b bs ih =>
+    simp only [World.schreibBytes]
+    rw [ih, writeSlot_trace_singleton]
+    simp only [List.length_cons]
+    omega
+
+/-- **The negative write case.** For 2 <= n the n-byte transfer is NOT
+    one atomic event: its trace contribution is n events, not one.
+    Either it runs as n single-byte events, or the atomicity premise
+    fails for the transfer as a whole. -/
+theorem schreibBytes_not_single (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) (k : Int) (bs : List Byte)
+    (h : 2 ≤ bs.length) :
+    (σ.schreibBytes t f hf Λ k bs).spur.length ≠ σ.spur.length + 1 := by
+  rw [schreibBytes_event_count]
+  omega
+
+/-! ## 5. The negative read case: one event over n cells -/
+
+/-- A `leseBytes` records ONE event (`Expr.orte`: the carrier plus the
+    index places; with a closed index that is exactly `[.inl t]`) while
+    `eval` folds over n cells (`World.bytesAb`, `bytesAb_length`). -/
+theorem leseBytes_single_event (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (n : Nat) (lo hi : Int)
+    (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo)
+    (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) (hi0 : i.orte = []) :
+    (Expr.getBytes t f hf n i hlo hhi hL).orte = [.inl t] := by
+  simp only [Expr.orte, hi0]
+
+/-- **The negative read case.** For 2 <= n the single event of a
+    `leseBytes` cannot be the indivisible unit of the whole read: one
+    event against n cells. -/
+theorem leseBytes_not_atomic (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (n : Nat) (lo hi : Int)
+    (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo)
+    (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) (hi0 : i.orte = [])
+    (h : 2 ≤ n) :
+    (Expr.getBytes t f hf n i hlo hhi hL).orte.length ≠ n := by
+  have ho := leseBytes_single_event t f hf n lo hi i hlo hhi hL hi0
+  rw [ho]
+  simp only [List.length_cons, List.length_nil]
+  omega
+
+/-! ## 6. The witnessed mix -/
+
+/-- **The witnessed tear.** Interrupting a 2-byte transfer after one
+    byte shows the new first byte with the old second: neither the old
+    pair nor the new one. -/
+theorem two_byte_tear :
+    torn [⟨0, by omega, by omega⟩, ⟨0, by omega, by omega⟩]
+         [⟨1, by omega, by omega⟩, ⟨1, by omega, by omega⟩]
+         [⟨1, by omega, by omega⟩, ⟨0, by omega, by omega⟩] := by
+  refine ⟨?_, ?_⟩ <;>
+    intro h <;>
+    exact absurd (congrArg (List.map Zahl.n) h) (by decide)
+
+/-- And the witness IS an interruption after one byte. -/
+theorem two_byte_tear_is_interruption :
+    interrupted [⟨0, by omega, by omega⟩, ⟨0, by omega, by omega⟩]
+      [⟨1, by omega, by omega⟩, ⟨1, by omega, by omega⟩] 1 =
+      [⟨1, by omega, by omega⟩, ⟨0, by omega, by omega⟩] := by rfl
+
+/-! ## 7. World-level readback: an interrupted transfer shows old-or-new per byte -/
+
+/-- Cast a byte back into the slot type and out again: the roundtrip is the identity.
+    Every byte written by `schreibBytes` passes through this cast on write and the
+    inverse cast on read (`World.bytesAb`), so the head of a readback is the byte. -/
+theorem castBytes_cancel (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (b : Byte) :
+    cast (congrArg (Wert D) hf) (cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255))) = b := by
+  have e1 : cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255)) ≍ (b : Wert D (.int 0 255)) :=
+    cast_heq _ _
+  have e2 : cast (congrArg (Wert D) hf) (cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255)))
+      ≍ cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255)) :=
+    cast_heq _ _
+  exact eq_of_heq (HEq.trans e2 e1)
+
+
+/-- A `schreibSlot` moves `slots` exactly like a `storeSlot`: the trace entry
+    (`World.merke`) records the write without moving the value. The bridge is
+    `rfl` -- `merke` only touches `spur` -- and `simp` never sees through it. -/
+theorem schreibSlot_slots_same (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f)) : (σ.schreibSlot t Λ k f v).slots t k f = v := by
+  have hss : (σ.schreibSlot t Λ k f v).slots t k f
+    = (σ.storeSlot t k f v).slots t k f := rfl
+  rw [hss]
+  simp only [World.storeSlot, ↓reduceDIte, ↓reduceIte]
+
+/-- Same, at any other key: the value there is untouched. -/
+theorem schreibSlot_slots_other (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k k₀ : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f)) (h : k₀ ≠ k) :
+    (σ.schreibSlot t Λ k f v).slots t k₀ f = σ.slots t k₀ f := by
+  have hss : (σ.schreibSlot t Λ k f v).slots t k₀ f
+    = (σ.storeSlot t k f v).slots t k₀ f := rfl
+  rw [hss]
+  simp only [World.storeSlot, ↓reduceDIte, h, ↓reduceIte]
+
+
+/-- Recording trace entries (`World.merke`) does not move `slots`, hence never
+    moves a byte readback: induction on the read length, the head by `rfl`. -/
+theorem merke_bytesAb (σ : World D) (es : List (Ereignis D)) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) :
+    ∀ (n : Nat) (k : Int), (σ.merke es).bytesAb t f hf n k = σ.bytesAb t f hf n k := by
+  intro n
+  induction n with
+  | zero => intro k; rfl
+  | succ n ih =>
+    intro k
+    have hhead : (σ.merke es).slots t k f = σ.slots t k f := rfl
+    have htail := ih (k + 1)
+    simp only [World.bytesAb, hhead, htail]
+
+/-- A `storeSlot` away from the read window leaves the readback unchanged:
+    writing at `k₀` while reading `n` bytes from `k` with `k₀ < k ∨ k + n ≤ k₀`. -/
+theorem storeSlot_bytesAb_other (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (v : Wert D (D.typ t f)) :
+    ∀ (n : Nat) (k k₀ : Int), k₀ < k ∨ k + n ≤ k₀ →
+      (σ.storeSlot t k₀ f v).bytesAb t f hf n k = σ.bytesAb t f hf n k := by
+  intro n
+  induction n with
+  | zero => intro k k₀ _; rfl
+  | succ n ih =>
+    intro k k₀ h
+    have hne : k ≠ k₀ := by omega
+    have hhead : (σ.storeSlot t k₀ f v).slots t k f = σ.slots t k f := by
+      simp only [World.storeSlot, ↓reduceDIte, hne, ↓reduceIte]
+    have htail := ih (k + 1) k₀ (by omega : k₀ < k + 1 ∨ (k + 1) + n ≤ k₀)
+    simp only [World.bytesAb, hhead, htail]
+
+/-- Later bytes of a transfer leave an earlier slot alone: `schreibBytes` from `k`
+    never touches `k₀ < k`. A `schreibSlot` is a `storeSlot` plus a trace entry
+    (`World.merke`), and the trace entry does not move `slots`. -/
+theorem schreibBytes_slots_other (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) :
+    ∀ (σ : World D) (cs : List Byte) (k k₀ : Int), k₀ < k →
+      (σ.schreibBytes t f hf Λ k cs).slots t k₀ f = σ.slots t k₀ f := by
+  intro σ cs k
+  induction cs generalizing σ k with
+  | nil => intro k₀ _; rfl
+  | cons c cs ih =>
+    intro k₀ h
+    have hslot : (σ.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)))).slots t k₀ f
+        = σ.slots t k₀ f :=
+      schreibSlot_slots_other σ t Λ k k₀ f _ (by omega : k₀ ≠ k)
+    calc ((σ.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)))).schreibBytes t f hf Λ (k + 1) cs).slots t k₀ f
+        = (σ.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)))).slots t k₀ f :=
+          ih _ _ _ (by omega : k₀ < k + 1)
+      _ = σ.slots t k₀ f := hslot
+
+/-- **Old-or-new per byte, as a `Prop`.** The bridge between the byte-list
+    interruption model (`interrupted`) and `World` reads (`World.bytesAb`):
+    `seen` has the shape of `old` and `new`, and every byte position holds
+    the old or the new byte. -/
+def oldOrNewPerByte (old new seen : List Byte) : Prop :=
+  seen.length = old.length ∧ old.length = new.length ∧
+    ∀ i : Nat, i < seen.length → (seen[i]? = old[i]? ∨ seen[i]? = new[i]?)
+
+/-- An interruption keeps the length. -/
+theorem interrupted_length_eq (old new : List Byte) (hlen : old.length = new.length) (m : Nat) :
+    (interrupted old new m).length = old.length := by
+  unfold interrupted
+  rw [List.length_append, List.length_take, List.length_drop]
+  omega
+
+/-- Interrupting before the first byte shows old. -/
+theorem interrupted_zero_eq (old new : List Byte) :
+    interrupted old new 0 = old := by
+  unfold interrupted
+  rw [List.take_zero, List.drop_zero, List.nil_append]
+
+/-- Interrupting past the last byte shows new. -/
+theorem interrupted_full_eq (old new : List Byte) (hlen : old.length = new.length) (m : Nat)
+    (hm : new.length ≤ m) : interrupted old new m = new := by
+  unfold interrupted
+  have ht : new.take m = new := List.take_of_length_le hm
+  have hd : old.drop m = [] := List.drop_of_length_le (by omega)
+  rw [ht, hd, List.append_nil]
+
+/-- Every interruption reads back old-or-new per byte. -/
+theorem interrupted_perByte (old new : List Byte) (hlen : old.length = new.length) (m : Nat) :
+    oldOrNewPerByte old new (interrupted old new m) := by
+  refine ⟨interrupted_length_eq old new hlen m, hlen, ?_⟩
+  intro i hi
+  rw [interrupted_length_eq old new hlen m] at hi
+  unfold interrupted
+  rw [List.getElem?_append]
+  by_cases h : i < (new.take m).length
+  · have him : i < m := by rw [List.length_take] at h; omega
+    have htake : (new.take m)[i]? = new[i]? := by
+      rw [List.getElem?_take, if_pos him]
+    rw [if_pos h, htake]
+    exact Or.inr rfl
+  · have hdrop : (old.drop m)[i - (new.take m).length]? = old[i]? := by
+      rw [List.getElem?_drop]
+      have e1 : (new.take m).length = min m new.length := List.length_take
+      have e3 : m + (i - (new.take m).length) = i := by omega
+      rw [e3]
+    rw [if_neg h, hdrop]
+    exact Or.inl rfl
+
+/-- **World-level readback of an interrupted transfer.** Write the first `m` bytes
+    of `new` over a world whose `n` bytes from `k` are `old`, then read the `n`
+    bytes back: the result is exactly `interrupted old new m`. The head byte just
+    written survives because later bytes go to strictly larger keys
+    (`schreibBytes_slots_other`) and the cast roundtrips (`castBytes_cancel`);
+    the tail is the induction hypothesis, since the head write leaves the rest of
+    the window alone (`storeSlot_bytesAb_other`). -/
+theorem schreibBytes_prefix_readback (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D))
+    (n : Nat) :
+    ∀ (m : Nat) (k : Int) (σ' : World D) (old new : List Byte),
+      old = σ'.bytesAb t f hf n k → new.length = n →
+      ((σ'.schreibBytes t f hf Λ k (new.take m)).bytesAb t f hf n k)
+        = interrupted old new m := by
+  induction n with
+  | zero =>
+    intro m k σ' old new hold hnew
+    have hn : new = [] := List.length_eq_zero_iff.mp hnew
+    have ho : old = [] := by rw [hold]; rfl
+    subst hn; subst ho
+    simp only [World.bytesAb, interrupted, List.take_nil, List.drop_nil, List.append_nil]
+  | succ n ih =>
+    intro m k σ' old new hold hnew
+    have hold0 : old = σ'.bytesAb t f hf (n + 1) k := hold
+    have hlen_old : old.length = n + 1 := by rw [hold, World.bytesAb_length]
+    have hne_old : old ≠ [] := by intro h; subst h; simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at hlen_old
+    have hne_new : new ≠ [] := by intro h; subst h; simp only [List.length_nil, Nat.right_eq_add, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false] at hnew
+    obtain ⟨b₀, old_tl, hold_eq⟩ := List.exists_cons_of_ne_nil hne_old
+    obtain ⟨c, new_tl, hnew_eq⟩ := List.exists_cons_of_ne_nil hne_new
+    simp only [World.bytesAb] at hold
+    rw [hold_eq] at hold
+    obtain ⟨hhead_old, htail_old⟩ := List.cons_eq_cons.mp hold
+    have hnew_len : new_tl.length = n := by rw [hnew_eq] at hnew; simpa using hnew
+    cases m with
+    | zero =>
+      rw [List.take_zero]
+      show σ'.bytesAb t f hf (n + 1) k = interrupted old new Nat.zero
+      rw [← hold0, interrupted_zero_eq]
+    | succ m' =>
+      have htake : new.take (m' + 1) = c :: new_tl.take m' := by
+        rw [hnew_eq, List.take_succ_cons]
+      have hrhs : interrupted old new (m' + 1)
+          = c :: interrupted old_tl new_tl m' := by
+        rw [hold_eq, hnew_eq]; rfl
+      have hhead : ((σ'.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)))).schreibBytes t f hf Λ (k + 1) (new_tl.take m')).slots t k f
+          = cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)) := by
+        have h3 := schreibBytes_slots_other t f hf Λ
+          (σ'.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255))))
+          (new_tl.take m') (k + 1) k (by omega : k < k + 1)
+        rw [h3]
+        exact schreibSlot_slots_same _ _ _ _ _ _
+      have hheadB : (cast (congrArg (Wert D) hf) (((σ'.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)))).schreibBytes t f hf Λ (k + 1) (new_tl.take m')).slots t k f) : Wert D (.int 0 255))
+          = (c : Wert D (.int 0 255)) := by
+        rw [hhead]; exact castBytes_cancel t f hf c
+      have hpres : (σ'.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)))).bytesAb t f hf n (k + 1)
+          = σ'.bytesAb t f hf n (k + 1) :=
+        (merke_bytesAb (σ'.storeSlot t k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255))))
+          [Ereignis.zugriff t true Λ σ'.haelt] t f hf n (k + 1)).trans
+          (storeSlot_bytesAb_other σ' t f hf
+            (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255))) n (k + 1) k
+            (Or.inl (by omega : k < k + 1)))
+      have htail_old' : old_tl = (σ'.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255)))).bytesAb t f hf n (k + 1) := by
+        rw [hpres]; exact htail_old
+      have htail_eq := ih m' (k + 1)
+        (σ'.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (c : Wert D (.int 0 255))))
+        old_tl new_tl htail_old' hnew_len
+      rw [htake]
+      simp only [World.schreibBytes, World.bytesAb]
+      rw [hrhs, hheadB, htail_eq]
+
+/-- **The world-level readback lemma.** An interrupted multi-byte transfer reads
+    back old-or-new per byte from the world model. -/
+theorem prefix_readback_perByte (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D))
+    (n m : Nat) (k : Int) (old new : List Byte)
+    (hold : old = σ.bytesAb t f hf n k)
+    (hnew : new.length = n) :
+    oldOrNewPerByte old new
+      ((σ.schreibBytes t f hf Λ k (new.take m)).bytesAb t f hf n k) := by
+  rw [schreibBytes_prefix_readback t f hf Λ n m k σ old new hold hnew]
+  have hlen : old.length = new.length := by rw [hold, World.bytesAb_length]; omega
+  exact interrupted_perByte old new hlen m
+
+/-- Boundary: interrupting before the first byte reads back old. -/
+theorem prefix_readback_zero (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D))
+    (n : Nat) (k : Int) (old new : List Byte)
+    (hold : old = σ.bytesAb t f hf n k)
+    (hnew : new.length = n) :
+    ((σ.schreibBytes t f hf Λ k (new.take 0)).bytesAb t f hf n k) = old := by
+  rw [schreibBytes_prefix_readback t f hf Λ n 0 k σ old new hold hnew,
+    interrupted_zero_eq]
+
+/-- Boundary: interrupting past the last byte reads back new. -/
+theorem prefix_readback_full (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (Λ : List (Res D))
+    (n m : Nat) (k : Int) (old new : List Byte)
+    (hold : old = σ.bytesAb t f hf n k)
+    (hnew : new.length = n) (hm : n ≤ m) :
+    ((σ.schreibBytes t f hf Λ k (new.take m)).bytesAb t f hf n k) = new := by
+  rw [schreibBytes_prefix_readback t f hf Λ n m k σ old new hold hnew]
+  have hlen : old.length = new.length := by rw [hold, World.bytesAb_length]; omega
+  exact interrupted_full_eq old new hlen m (by omega)
+
+/-! ## 8. Tearing freedom over the measured inventory (discharges C2) -/
+
+/-- The lane-47 inventory as data: the eight measured emitted-C forms plus
+    the unmeasured volatile row (`messung/TEARING-INVENTAR.md`). The
+    assembler behind each row is NOT restated here -- it stands in the
+    inventory's evidence block and is copied into the executable witness
+    (`crates/gabbro-check/src/tearing.rs`, `LANE47_ASM`). What is proved
+    here is the CONSEQUENCE the lane-70 ruling (`messung/TEARING-RULING.md`)
+    draws from it. Every row is shared-carrier traffic by construction of
+    the inventory: shared table slots, a `static mut` global, per-core
+    accumulates cells, atomics with declared ordering, foreign lock calls,
+    device registers. -/
+inductive InvForm : Type
+  | slotPlain | globalPlain | slotCompound | guardedCompound
+  | cas | relAcq | mergeAdd | lockOps | volatileReg
+
+/-- The guarantee that redeems a refusal, in the ruling's words. The atomic
+    form is the standing upgrade path, not a third guarantee: the `cas` row
+    shows what it costs, which is why the two disciplines below are worth
+    keeping where they already hold. -/
+inductive Guarantee : Type
+  | exclusiveAccess | singleWriterPerCell
+
+/-- The lane-70 verdict per form: refused rows carry the guarantee that
+    redeems them; admitted and open rows carry none. Admitted rows name
+    their atomicity price (alignment, total store order, declared ordering,
+    foreign body) only in the ruling prose -- a machine assumption, cited,
+    not re-stated as a proposition. -/
+def InvForm.verdict : InvForm → Option Guarantee
+  | .slotCompound | .guardedCompound => some .exclusiveAccess
+  | .mergeAdd => some .singleWriterPerCell
+  | _ => none
+
+/-- The five admitted rows: a single machine memory access at both levels. -/
+def InvForm.admitted : InvForm → Prop
+  | .slotPlain | .globalPlain | .cas | .relAcq | .lockOps => True
+  | _ => False
+
+/-- Measured machine accesses per form, worst level: admitted rows do one;
+    refused rows do two or more (the `-O0` triple counts here as two -- the
+    exact count never enters a proof, only the `≤ 1` / `≥ 2` split does);
+    the volatile row is unmeasured and reads `0`, which no width argument
+    ever consumes. -/
+def InvForm.width : InvForm → Nat
+  | .slotPlain | .globalPlain | .cas | .relAcq | .lockOps => 1
+  | .slotCompound | .guardedCompound | .mergeAdd => 2
+  | .volatileReg => 0
+
+end Gabbro.Grammatik

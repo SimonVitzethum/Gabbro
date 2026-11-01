@@ -1,0 +1,334 @@
+module
+
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T2.Teil1
+
+@[expose] public section
+
+namespace Gabbro.Grammatik
+variable {D : Deklaration}
+section Ohne
+variable {V : Vertrag D}
+variable (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes : Nat)
+  (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+
+mutual
+
+theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    (s : Stmt D V l Γ Λ Λ') → s.ohneLocks = true → ∀ (σ : World D) (ρ : Env D Γ),
+      execStmtH S O U passes R s σ ρ = execStmt O passes R s σ ρ
+  | .ite c t e, h, σ, ρ => by
+      simp only [Stmt.ohneLocks, Bool.and_eq_true] at h
+      simp only [execStmtH, execStmt, Block.execH_ohne t h.1, Block.execH_ohne e h.2] <;> rfl
+  | .onOption o p a, h, σ, ρ => by
+      simp only [Stmt.ohneLocks, Bool.and_eq_true] at h
+      simp only [execStmtH, execStmt, Block.execH_ohne p h.1, Block.execH_ohne a h.2] <;> rfl
+  | .onTag v arms, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      exact Arms.execH_ohne arms h _ _ _
+  | .onWhy r arms, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      exact GrundArms.execH_ohne arms h _ _ _
+  | .locks .., h, _, _ => by simp only [Stmt.ohneLocks, Bool.false_eq_true] at h
+  | .breaking i body, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt, Block.execH_ohne body h]
+  | .traverse t inv body, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
+        (fun σ ρ => execBlock O passes R body σ ρ) from
+          funext fun σ => funext fun ρ => Block.execH_ohne body h σ ρ]
+  | .retry n bis body ueber, h, σ, ρ => by
+      simp only [Stmt.ohneLocks, Bool.and_eq_true] at h
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
+          (fun σ ρ => execBlock O passes R body σ ρ) from
+            funext fun σ => funext fun ρ => Block.execH_ohne body h.1 σ ρ,
+        show (fun σ ρ => execBlockH S O U passes R ueber σ ρ) =
+          (fun σ ρ => execBlock O passes R ueber σ ρ) from
+            funext fun σ => funext fun ρ => Block.execH_ohne ueber h.2 σ ρ]
+  | .forever a inv body, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
+        (fun σ ρ => execBlock O passes R body σ ρ) from
+          funext fun σ => funext fun ρ => Block.execH_ohne body h σ ρ]
+  | .assignSlot .., _, _, _ => rfl
+  | .assignThru .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
+  | .assignGlob .., _, _, _ => rfl
+  | .putBytes .., _, _, _ => rfl
+  | .assignVar .., _, _, _ => rfl
+  | .shift .., _, _, _ => rfl
+  | .call .., _, _, _ => rfl
+  | .callInd .., _, _, _ => rfl
+  | .axiomCall .., _, _, _ => rfl
+  | .regWrite .., _, _, _ => rfl
+  | .transition .., _, _, _ => rfl
+  | .publish .., _, _, _ => rfl
+  | .advances .., _, _, _ => rfl
+  | .retires .., _, _, _ => rfl
+  | .ret .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
+  | .leave .., _, _, _ => rfl
+  | .next .., _, _, _ => rfl
+
+theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    (b : Block D V l Γ Λ Λ') → b.ohneLocks = true → ∀ (σ : World D) (ρ : Env D Γ),
+      execBlockH S O U passes R b σ ρ = execBlock O passes R b σ ρ
+  | .nil, _, _, _ => rfl
+  | .cons s rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Stmt.execH_ohne s h.1, Block.execH_ohne rest h.2] <;> rfl
+  | .bind e rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h]
+  | .bindCall f args he hp hr rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindCallInd p args he hp hr rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindCallElse f args he hp hr err rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
+  | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
+  | .regRead r hk rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .regReadElse r hk zusage sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .awaits g payload hp hL hat rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .exchange g neu hw hL rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h]
+  | .narrow e lo' hi' sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .check c sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .float op a b lo hi rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .floatLit q lo hi rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .floatOf e lo hi rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .floatNarrow e lo hi sonst rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+
+theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    (b : Endblock D V l Γ Λ) → b.ohneLocks = true → ∀ (σ : World D) (ρ : Env D Γ),
+      execEndH S O U passes R b σ ρ = execEnd O passes R b σ ρ
+  | .ret .., _, _, _ => rfl
+  | .retWhy .., _, _, _ => rfl
+  | .leave .., _, _, _ => rfl
+  | .next .., _, _, _ => rfl
+  | .cons s rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Stmt.execH_ohne s h.1, Endblock.execH_ohne rest h.2] <;> rfl
+  | .bind e rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h]
+  | .bindCall f args he hp hr rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .bindCallElse f args he hp hr err rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
+  | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
+  | .regRead r hk rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .regReadElse r hk zusage sonst rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .awaits g payload hp hL hat rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .bindCallInd p args he hp hr rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .narrow e lo' hi' sonst rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
+        rfl
+  | .exchange g neu hw hL rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h]
+  | .ite c t e, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne t h.1, Endblock.execH_ohne e h.2] <;> rfl
+
+theorem Arms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option (Int × Int))} :
+    (a : Arms D V l Γ Λ Λ' cs) → a.ohneLocks = true →
+      ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
+      execArmsH S O U passes R a v σ ρ = execArms O passes R a v σ ρ
+  | .nil, _, ⟨⟨k, hk⟩, _⟩, _, _ => (Nat.not_lt_zero k hk).elim
+  | .cons b _, h, ⟨⟨0, _⟩, nutz⟩, σ, ρ => by
+      simp only [Arms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execArmsH, execArms, Block.execH_ohne b h.1]
+  | .cons _ rest, h, ⟨⟨i + 1, hi⟩, nutz⟩, σ, ρ => by
+      simp only [Arms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execArmsH, execArms]
+      exact Arms.execH_ohne rest h.2 _ σ ρ
+
+theorem GrundArms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} :
+    (a : GrundArms D V l Γ Λ Λ' n) → a.ohneLocks = true → ∀ (r : Fin n) (σ : World D) (ρ : Env D Γ),
+      execGrundH S O U passes R a r σ ρ = execGrund O passes R a r σ ρ
+  | .nil, _, ⟨k, hk⟩, _, _ => (Nat.not_lt_zero k hk).elim
+  | .cons b _, h, ⟨0, _⟩, σ, ρ => by
+      simp only [GrundArms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execGrundH, execGrund, Block.execH_ohne b h.1]
+  | .cons _ rest, h, ⟨i + 1, hi⟩, σ, ρ => by
+      simp only [GrundArms.ohneLocks, Bool.and_eq_true] at h
+      simp only [execGrundH, execGrund]
+      exact GrundArms.execH_ohne rest h.2 _ σ ρ
+
+end
+
+end Ohne
+/-- **A leaf means the same in both semantics** (a leaf contains no `locks`). -/
+theorem execStmtH_blatt (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hb : s.istBlatt = true)
+    (σ : World D) (ρ : Env D Γ) :
+    execStmtH S O U passes R s σ ρ = execStmt O passes R s σ ρ := by
+  cases s <;> first | rfl | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb)
+
+/-! ## 2a. Frame results WITH the reason channel
+
+  `ZErg` (`ZielOrtSem.lean`) knows a return, a `logik` outcome and
+  "anything else": a REASON exit (`retGrund`) of the frame's own function
+  was `sonst`, so the replay said nothing about the world at a reason
+  return. `ZErgG` adds `grund σ r` (2026-09-14, for the invariants owed at
+  reason returns, `ZielOrtInvGrund.lean`); the lock-invariant replay
+  (`semH`, `KopfS`) predicts in `ZErgG`, the older replays keep `ZErg`. -/
+
+/-- What a frame's residue still produces: a return, a reason exit, a logic
+    failure, or anything else. -/
+inductive ZErgG (V : Vertrag D) where
+  | zurueck (σ : World D) (v : ErgVal D V.erg)
+  | why (σ : World D) (r : Fin V.gruende)
+  | logik (e : Logik D)
+  | sonst
+
+namespace ZErgG
+
+variable {V : Vertrag D}
+
+/-- Frame results that agree up to the trace. -/
+def gleich : ZErgG V → ZErgG V → Prop
+  | .zurueck σ v, .zurueck σ' v' => SG σ σ' ∧ v = v'
+  | .why σ r, .why σ' r' => SG σ σ' ∧ r = r'
+  | .logik e, .logik e' => e = e'
+  | .sonst, .sonst => True
+  | _, _ => False
+
+theorem gleich_refl (r : ZErgG V) : r.gleich r := by
+  cases r <;> simp only [gleich, SG, and_self]
+
+theorem gleich_symm {r r' : ZErgG V} (h : r.gleich r') : r'.gleich r := by
+  cases r <;> cases r' <;> simp_all [gleich, SG]
+
+theorem gleich_trans {r r' r'' : ZErgG V} (h1 : r.gleich r') (h2 : r'.gleich r'') :
+    r.gleich r'' := by
+  cases r <;> cases r' <;> cases r'' <;> simp_all [gleich, SG]
+
+theorem gleich_of_eq {r r' : ZErgG V} (h : r = r') : r.gleich r' := by
+  subst h; exact gleich_refl _
+
+/-- `a.folgt b`: the result `a` is predicted by `b` -- `b` predicts nothing
+    (`sonst`), or `a` agrees with `b` up to the trace. -/
+def folgt (a b : ZErgG V) : Prop := b = .sonst ∨ a.gleich b
+
+theorem folgt_refl (a : ZErgG V) : a.folgt a := Or.inr (gleich_refl a)
+
+theorem folgt_of_gleich {a b : ZErgG V} (h : a.gleich b) : a.folgt b := Or.inr h
+
+theorem folgt_of_eq {a b : ZErgG V} (h : a = b) : a.folgt b := by subst h; exact folgt_refl a
+
+theorem folgt_sonst (a : ZErgG V) : a.folgt .sonst := Or.inl rfl
+
+theorem gleich_sonst_links {b : ZErgG V} (h : gleich .sonst b) : b = .sonst := by
+  cases b <;> simp_all [gleich]
+
+theorem folgt_trans {a b c : ZErgG V} (h1 : a.folgt b) (h2 : b.folgt c) : a.folgt c := by
+  rcases h2 with h2 | h2
+  · exact Or.inl h2
+  · rcases h1 with h1 | h1
+    · subst h1
+      exact Or.inl (gleich_sonst_links h2)
+    · exact Or.inr (gleich_trans h1 h2)
+
+theorem folgt_zurueck {a : ZErgG V} {σ : World D} {v : ErgVal D V.erg}
+    (h : a.folgt (.zurueck σ v)) : a.gleich (.zurueck σ v) := by
+  rcases h with h | h
+  · cases h
+  · exact h
+
+theorem folgt_grund {a : ZErgG V} {σ : World D} {r : Fin V.gruende}
+    (h : a.folgt (.why σ r)) : a.gleich (.why σ r) := by
+  rcases h with h | h
+  · cases h
+  · exact h
+
+theorem folgt_logik {a : ZErgG V} {e : Logik D} (h : a.folgt (.logik e)) :
+    a.gleich (.logik e) := by
+  rcases h with h | h
+  · cases h
+  · exact h
+
+end ZErgG
+/-- The frame result of an end outcome, reasons kept. -/
+def zErgG {V : Vertrag D} {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → ZErgG V
+  | .zurueck σ v => .zurueck σ v
+  | .why σ r => .why σ r
+  | .logik e => .logik e
+  | _ => .sonst
+
+theorem zErgG_schrumpf {V : Vertrag D} {l : Bool} {Γ : Ctx} {τ : Ty}
+    (o : EndAusgang V l (τ :: Γ)) : zErgG o.schrumpf = zErgG o := by
+  cases o <;> rfl
+
+theorem zErgG_gleich_logik {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgang V l Γ}
+    {e : Logik D} (h : (zErgG o).gleich (.logik e)) : o = .logik e := by
+  cases o <;> simp_all [zErgG, ZErgG.gleich]
+
+theorem zErgG_gleich_zurueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {o : EndAusgang V l Γ}
+    {σ : World D} {v : ErgVal D V.erg} (h : (zErgG o).gleich (.zurueck σ v)) :
+    ∃ σ', o = .zurueck σ' v ∧ SG σ' σ := by
+  cases o with
+  | zurueck σ' v' =>
+      obtain ⟨hs, hv⟩ := h
+      subst hv
+      exact ⟨σ', rfl, hs⟩
+  | _ => simp only [ZErgG.gleich, zErgG] at h
+
+
+end Gabbro.Grammatik

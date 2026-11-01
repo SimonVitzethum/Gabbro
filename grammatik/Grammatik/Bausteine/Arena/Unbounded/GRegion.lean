@@ -1,6 +1,6 @@
 module
 public import Grammatik.Speichermodell.Adressen.Layout
-public import Grammatik.Kern.Syntax.Koernung
+public import Grammatik.Kern.Syntax.Koernung.Teil2
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 @[expose] public section

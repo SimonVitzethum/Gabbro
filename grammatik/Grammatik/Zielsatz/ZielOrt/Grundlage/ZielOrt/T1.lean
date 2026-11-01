@@ -52,7 +52,7 @@ public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
 public import Grammatik.Logik.Ruf.Hoare.HoareRuf
 public import Grammatik.Korpus.Referenz.ReferenzB
-public import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre
+public import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre.Teil2
 @[expose] public section
 
 

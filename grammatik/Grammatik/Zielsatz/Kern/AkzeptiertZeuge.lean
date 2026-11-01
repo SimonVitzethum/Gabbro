@@ -24,7 +24,7 @@
 module
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 public import Grammatik.Korpus.Programme.Export104
 @[expose] public section
 

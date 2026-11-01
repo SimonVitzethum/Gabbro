@@ -16,7 +16,7 @@
   main build. Scaling probes live in scratch files, not here.
 -/
 module
-public import Grammatik.Kern.Syntax.Typen
+public import Grammatik.Kern.Syntax.Typen.Teil2
 @[expose] public section
 
 

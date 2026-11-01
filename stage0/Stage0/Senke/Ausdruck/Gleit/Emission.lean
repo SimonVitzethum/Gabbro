@@ -1,6 +1,6 @@
 /- Compositional emission bounds without expanding encoded instruction bytes. -/
 module
-public import Stage0.Senke.Ausdruck.Gleit.Skalieren
+public import Stage0.Senke.Ausdruck.Gleit.Skalieren.Teil6
 @[expose] public section
 
 

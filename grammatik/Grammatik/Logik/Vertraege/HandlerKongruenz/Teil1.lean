@@ -1,0 +1,260 @@
+module
+
+public import Grammatik.Kern.Semantik.Semantik
+
+@[expose] public section
+
+
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-! ## 1. The error mark -- the one thing the three outcome types share -/
+
+/-- **An error outcome's tag.** `Ausgang`, `EndAusgang` and `RufAusgang` each
+    have exactly two error constructors and they carry the same two payloads
+    (`Semantik.lean`: "es gibt keinen dritten"). A mark is that payload
+    without the outcome type around it, so that one relation can speak about
+    all three. -/
+inductive Fehlermarke (D : Deklaration) where
+  | logik (e : Logik D)
+  | hardware (e : Hardware D)
+
+/-- The mark as a call outcome. -/
+def Fehlermarke.zuRuf {f : D.Fn} : Fehlermarke D → RufAusgang f
+  | .logik e => .logik e
+  | .hardware e => .hardware e
+
+section Marke
+
+variable {V : Vertrag D}
+
+/-- The mark as a statement outcome. -/
+def Fehlermarke.zuAusgang {l : Bool} {Γ : Ctx} : Fehlermarke D → Ausgang V l Γ
+  | .logik e => .logik e
+  | .hardware e => .hardware e
+
+/-- The mark as a terminal-block outcome. -/
+def Fehlermarke.zuEnd {l : Bool} {Γ : Ctx} : Fehlermarke D → EndAusgang V l Γ
+  | .logik e => .logik e
+  | .hardware e => .hardware e
+
+@[simp] theorem Fehlermarke.schrumpf_zuAusgang {l : Bool} {Γ : Ctx} {τ : Ty}
+    (m : Fehlermarke D) : (m.zuAusgang : Ausgang V l (τ :: Γ)).schrumpf = m.zuAusgang := by
+  cases m <;> rfl
+
+@[simp] theorem Fehlermarke.schrumpfArm_zuAusgang {l : Bool} {Γ : Ctx}
+    (c : Option (Int × Int)) (m : Fehlermarke D) :
+    Ausgang.schrumpfArm (V := V) (l := l) (Γ := Γ) c m.zuAusgang = m.zuAusgang := by
+  cases c with
+  | none => rfl
+  | some p => cases m <;> rfl
+
+@[simp] theorem Fehlermarke.mapWelt_zuAusgang {l : Bool} {Γ : Ctx}
+    (f : World D → World D) (m : Fehlermarke D) :
+    (m.zuAusgang : Ausgang V l Γ).mapWelt f = m.zuAusgang := by
+  cases m <;> rfl
+
+@[simp] theorem Fehlermarke.schrumpf_zuEnd {l : Bool} {Γ : Ctx} {τ : Ty}
+    (m : Fehlermarke D) : (m.zuEnd : EndAusgang V l (τ :: Γ)).schrumpf = m.zuEnd := by
+  cases m <;> rfl
+
+@[simp] theorem Fehlermarke.zuAusgang_zuEnd {l : Bool} {Γ : Ctx} (m : Fehlermarke D) :
+    (m.zuEnd : EndAusgang V l Γ).zuAusgang = m.zuAusgang := by
+  cases m <;> rfl
+
+end Marke
+
+/-! ## 2. The relation on outcomes, and the handler premise -/
+
+section Rel
+
+variable {V : Vertrag D}
+
+/-- **Two call outcomes under `Er`**: equal, or both errors with related
+    marks. -/
+def RufUnter (Er : Fehlermarke D → Prop) {f : D.Fn}
+    (a₁ a₂ : RufAusgang f) : Prop :=
+  a₁ = a₂ ∨ ∃ m : Fehlermarke D, a₁ = m.zuRuf ∧ Er m
+
+/-- **Two statement outcomes under `Er`**. -/
+def AusgangUnter (Er : Fehlermarke D → Prop) {l : Bool} {Γ : Ctx}
+    (o₁ o₂ : Ausgang V l Γ) : Prop :=
+  o₁ = o₂ ∨ ∃ m : Fehlermarke D, o₁ = m.zuAusgang ∧ Er m
+
+/-- **Two terminal-block outcomes under `Er`**. -/
+def EndUnter (Er : Fehlermarke D → Prop) {l : Bool} {Γ : Ctx}
+    (o₁ o₂ : EndAusgang V l Γ) : Prop :=
+  o₁ = o₂ ∨ ∃ m : Fehlermarke D, o₁ = m.zuEnd ∧ Er m
+
+variable {Er : Fehlermarke D → Prop} {l : Bool} {Γ : Ctx}
+
+theorem AusgangUnter.refl (o : Ausgang V l Γ) : AusgangUnter Er o o := Or.inl rfl
+theorem EndUnter.refl (o : EndAusgang V l Γ) : EndUnter Er o o := Or.inl rfl
+
+theorem AusgangUnter.schrumpf {τ : Ty} {o₁ o₂ : Ausgang V l (τ :: Γ)}
+    (h : AusgangUnter Er o₁ o₂) : AusgangUnter Er o₁.schrumpf o₂.schrumpf := by
+  rcases h with h | ⟨m, h1, hE⟩
+  · exact Or.inl (congrArg Ausgang.schrumpf h)
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.schrumpf_zuAusgang], hE⟩
+
+theorem AusgangUnter.schrumpfArm {c : Option (Int × Int)} {o₁ o₂ : Ausgang V l (ArmCtx Γ c)}
+    (h : AusgangUnter Er o₁ o₂) :
+    AusgangUnter Er (Ausgang.schrumpfArm c o₁) (Ausgang.schrumpfArm c o₂) := by
+  rcases h with h | ⟨m, h1, hE⟩
+  · exact Or.inl (congrArg _ h)
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.schrumpfArm_zuAusgang], hE⟩
+
+theorem AusgangUnter.mapWelt {f : World D → World D} {o₁ o₂ : Ausgang V l Γ}
+    (h : AusgangUnter Er o₁ o₂) :
+    AusgangUnter Er (o₁.mapWelt f) (o₂.mapWelt f) := by
+  rcases h with h | ⟨m, h1, hE⟩
+  · exact Or.inl (congrArg _ h)
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.mapWelt_zuAusgang], hE⟩
+
+theorem EndUnter.schrumpf {τ : Ty} {o₁ o₂ : EndAusgang V l (τ :: Γ)}
+    (h : EndUnter Er o₁ o₂) : EndUnter Er o₁.schrumpf o₂.schrumpf := by
+  rcases h with h | ⟨m, h1, hE⟩
+  · exact Or.inl (congrArg EndAusgang.schrumpf h)
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.schrumpf_zuEnd], hE⟩
+
+theorem EndUnter.zuAusgang {o₁ o₂ : EndAusgang V l Γ} (h : EndUnter Er o₁ o₂) :
+    AusgangUnter Er o₁.zuAusgang o₂.zuAusgang := by
+  rcases h with h | ⟨m, h1, hE⟩
+  · exact Or.inl (congrArg EndAusgang.zuAusgang h)
+  · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.zuAusgang_zuEnd], hE⟩
+
+theorem AusgangUnter.ite {c : Prop} [Decidable c] {a₁ a₂ b₁ b₂ : Ausgang V l Γ}
+    (ha : AusgangUnter Er a₁ a₂) (hb : AusgangUnter Er b₁ b₂) :
+    AusgangUnter Er (if c then a₁ else b₁) (if c then a₂ else b₂) := by
+  by_cases h : c
+  · rw [if_pos h, if_pos h]; exact ha
+  · rw [if_neg h, if_neg h]; exact hb
+
+theorem EndUnter.ite {c : Prop} [Decidable c] {a₁ a₂ b₁ b₂ : EndAusgang V l Γ}
+    (ha : EndUnter Er a₁ a₂) (hb : EndUnter Er b₁ b₂) :
+    EndUnter Er (if c then a₁ else b₁) (if c then a₂ else b₂) := by
+  by_cases h : c
+  · rw [if_pos h, if_pos h]; exact ha
+  · rw [if_neg h, if_neg h]; exact hb
+
+theorem EndUnter.dite {c : Prop} [Decidable c] {a₁ a₂ : c → EndAusgang V l Γ}
+    {b₁ b₂ : ¬c → EndAusgang V l Γ} (ha : ∀ h, EndUnter Er (a₁ h) (a₂ h))
+    (hb : ∀ h, EndUnter Er (b₁ h) (b₂ h)) :
+    EndUnter Er (dite c a₁ b₁) (dite c a₂ b₂) := by
+  by_cases h : c
+  · rw [dif_pos h, dif_pos h]; exact ha h
+  · rw [dif_neg h, dif_neg h]; exact hb h
+
+theorem AusgangUnter.dite {c : Prop} [Decidable c] {a₁ a₂ : c → Ausgang V l Γ}
+    {b₁ b₂ : ¬c → Ausgang V l Γ} (ha : ∀ h, AusgangUnter Er (a₁ h) (a₂ h))
+    (hb : ∀ h, AusgangUnter Er (b₁ h) (b₂ h)) :
+    AusgangUnter Er (dite c a₁ b₁) (dite c a₂ b₂) := by
+  by_cases h : c
+  · rw [dif_pos h, dif_pos h]; exact ha h
+  · rw [dif_neg h, dif_neg h]; exact hb h
+
+end Rel
+
+/-- **THE HANDLER PREMISE**: at every key the two handlers agree, or both
+    answer an error and the two marks stand in `Er`. -/
+def HandlerUnter (Er : Fehlermarke D → Prop)
+    (R₁ R₂ : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
+  ∀ (g : D.Fn) (σ : World D) (ρ : Env D (D.params g)), RufUnter Er (R₁ g σ ρ) (R₂ g σ ρ)
+
+/-! ## 3. The three loop combinators -/
+
+section Schleifen
+
+variable {V : Vertrag D} {Er : Fehlermarke D → Prop}
+
+theorem traverseLauf_kongruent {l : Bool} {Γ : Ctx} {τ : Ty}
+    (s₁ s₂ : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (hs : ∀ σ ρ, AusgangUnter Er (s₁ σ ρ) (s₂ σ ρ)) :
+    ∀ (ks : List (Wert D τ)) (σ : World D) (ρ : Env D Γ),
+      AusgangUnter Er (traverseLauf (l := l) s₁ inv ks σ ρ)
+        (traverseLauf (l := l) s₂ inv ks σ ρ)
+  | [], σ, ρ => Or.inl rfl
+  | k :: ks, σ, ρ => by
+      simp only [traverseLauf]
+      by_cases hc : (inv σ ρ).2 = false
+      · rw [if_pos hc, if_pos hc]; exact Or.inl rfl
+      · rw [if_neg hc, if_neg hc]
+        rcases hs (inv σ ρ).1 (.cons k ρ) with h | ⟨m, h1, hE⟩
+        · rw [h]
+          cases hx : s₂ (inv σ ρ).1 (Env.cons k ρ) with
+          | ok σ' ρ' => exact traverseLauf_kongruent s₁ s₂ inv hs ks σ' ρ'.tail
+          | next hl σ' ρ' => exact traverseLauf_kongruent s₁ s₂ inv hs ks σ' ρ'.tail
+          | leave hl σ' ρ' => exact Or.inl rfl
+          | zurueck σ' v => exact Or.inl rfl
+          | why σ' r => exact Or.inl rfl
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
+        · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
+
+theorem retryLauf_kongruent {l : Bool} {Γ : Ctx}
+    (s₁ s₂ : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool)
+    (u₁ u₂ : World D → Env D Γ → Ausgang V l Γ)
+    (hs : ∀ σ ρ, AusgangUnter Er (s₁ σ ρ) (s₂ σ ρ))
+    (hu : ∀ σ ρ, AusgangUnter Er (u₁ σ ρ) (u₂ σ ρ)) :
+    ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
+      AusgangUnter Er (retryLauf s₁ bis u₁ n σ ρ) (retryLauf s₂ bis u₂ n σ ρ)
+  | 0, σ, ρ => by
+      simp only [retryLauf]
+      exact AusgangUnter.ite (Or.inl rfl) (hu (bis σ ρ).1 ρ)
+  | n + 1, σ, ρ => by
+      simp only [retryLauf]
+      by_cases hc : (bis σ ρ).2 = true
+      · rw [if_pos hc, if_pos hc]; exact Or.inl rfl
+      · rw [if_neg hc, if_neg hc]
+        rcases hs (bis σ ρ).1 ρ with h | ⟨m, h1, hE⟩
+        · rw [h]
+          cases hx : s₂ (bis σ ρ).1 ρ with
+          | ok σ' ρ' => exact retryLauf_kongruent s₁ s₂ bis u₁ u₂ hs hu n σ' ρ'
+          | next hl σ' ρ' => exact retryLauf_kongruent s₁ s₂ bis u₁ u₂ hs hu n σ' ρ'
+          | leave hl σ' ρ' => exact Or.inl rfl
+          | zurueck σ' v => exact Or.inl rfl
+          | why σ' r => exact Or.inl rfl
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
+        · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
+
+theorem foreverLauf_kongruent {l : Bool} {Γ : Ctx} (a : D.Annahme)
+    (s₁ s₂ : World D → Env D Γ → Ausgang V true Γ)
+    (inv : World D → Env D Γ → World D × Bool)
+    (hs : ∀ σ ρ, AusgangUnter Er (s₁ σ ρ) (s₂ σ ρ)) :
+    ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
+      AusgangUnter Er (foreverLauf (l := l) a s₁ inv n σ ρ) (foreverLauf (l := l) a s₂ inv n σ ρ)
+  | 0, σ, ρ => Or.inl rfl
+  | n + 1, σ, ρ => by
+      simp only [foreverLauf]
+      by_cases hc : (inv σ ρ).2 = false
+      · rw [if_pos hc, if_pos hc]; exact Or.inl rfl
+      · rw [if_neg hc, if_neg hc]
+        rcases hs (inv σ ρ).1 ρ with h | ⟨m, h1, hE⟩
+        · rw [h]
+          cases hx : s₂ (inv σ ρ).1 ρ with
+          | ok σ' ρ' => exact foreverLauf_kongruent a s₁ s₂ inv hs n σ' ρ'
+          | next hl σ' ρ' => exact foreverLauf_kongruent a s₁ s₂ inv hs n σ' ρ'
+          | leave hl σ' ρ' => exact Or.inl rfl
+          | zurueck σ' v => exact Or.inl rfl
+          | why σ' r => exact Or.inl rfl
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
+        · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
+
+end Schleifen
+
+/-! ## 4. THE CONGRUENCE -/
+
+section Kongruenz
+
+variable {V : Vertrag D} (O : Orakel D) (passes : Nat)
+  (R₁ R₂ : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+  {Er : Fehlermarke D → Prop}
+
+end Kongruenz
+end Gabbro.Grammatik

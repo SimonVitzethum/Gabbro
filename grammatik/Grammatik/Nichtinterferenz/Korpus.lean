@@ -28,7 +28,7 @@ public import Grammatik.Nichtinterferenz.Zeuge
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Korpus.Programme.Export108
 public import Grammatik.Nebenlaeufigkeit.Sperren.ExportSperre
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 @[expose] public section
 
 

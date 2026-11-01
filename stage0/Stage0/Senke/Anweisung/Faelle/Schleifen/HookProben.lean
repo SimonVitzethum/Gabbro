@@ -1,7 +1,7 @@
 /- Joint source fixtures for the actual forever lowering, including ABI and nested counters. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted.Teil3
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
 @[expose] public section
 

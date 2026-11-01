@@ -1,0 +1,448 @@
+module
+
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+public import Grammatik.Korpus.Referenz.ReferenzB
+
+@[expose] public section
+
+
+
+namespace Gabbro.Grammatik
+
+variable {D : Deklaration}
+
+/-- **Stability without invariant form.** What holds at the chain head and
+    survives every own step and every foreign step holds at every chain
+    world -- by induction on the chain index (`hKette` counts one step per
+    transition, so every successor position yields its writer and its
+    predecessor). One direction only: stability never needs the backward
+    leg. -/
+theorem stabil_ohne_form (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (Q : Faden → World D → Prop)
+    (hKopf : ∀ f ∈ J.faeden, ∀ σ₀, J.welten[0]? = some σ₀ → Q f σ₀)
+    (hEigen : ∀ f ∈ J.faeden, ∀ (k : Nat) (vor nach : World D),
+        J.schrittFaden[k]? = some f → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        Q f vor → Q f nach)
+    (hStabil : ∀ f ∈ J.faeden, ∀ (k : Nat) (g : Faden) (vor nach : World D), g ∈ J.faeden → g ≠ f →
+        J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        Q f vor → Q f nach) :
+    ∀ f ∈ J.faeden, ∀ (k : Nat) (σ : World D), J.welten[k]? = some σ → Q f σ := by
+  intro f hf k
+  induction k with
+  | zero => exact hKopf f hf
+  | succ k ih =>
+    intro σ hσ
+    have hK := J.hKette
+    have hlen : k + 1 < J.welten.length := lt_of_belegt J.welten (k + 1) σ hσ
+    have hsk : k < J.schrittFaden.length := by omega
+    have hwk : k < J.welten.length := by omega
+    obtain ⟨g, hg⟩ := kette_welt_belegt J.schrittFaden k hsk
+    obtain ⟨vor, hvor⟩ := kette_welt_belegt J.welten k hwk
+    have hgm : g ∈ J.faeden := (J.hSchritt k g vor σ hg hvor hσ).1
+    by_cases heq : g = f
+    · have hg' : J.schrittFaden[k]? = some f := heq ▸ hg
+      exact hEigen f hf k vor σ hg' hvor hσ (ih vor hvor)
+    · exact hStabil f hf k g vor σ hgm heq hg hvor hσ (ih vor hvor)
+
+#print axioms Gabbro.Grammatik.stabil_ohne_form
+
+/-- **The corollary that connects `hStabil` to the checker.** The foreign-step
+    premise of `stabil_ohne_form` follows from a static GUARANTEE plus a
+    per-step RELY at chain grain:
+
+    * dependence (`hDep`): `Q f` is fixed by its slot read-set `Sf f` (tables)
+      and its global frame `Gf f` -- slot-level frame locality;
+    * guarantee (`hWacheT` / `hWacheG`): every foreign write to a carrier
+      `Q f` reads happens only while holding a guard lock that `f` holds
+      throughout (`Bewacht` names the watch list, `D.haelt` both declared
+      holdings -- static, checker-dischargeable);
+    * rely (`hRelyT` / `hRelyG`): a guarded foreign write leaves `Q f`'s own
+      slots alone in this step -- memory-level slot agreement,
+      checker-comparable per run, no assertion reasoning.
+
+    Proof: per slot, either the writer never touches the table (then the
+    chain frame `hSchritt` already agrees) or the guard fires and the rely
+    agrees; globals the same. The assembled agreement feeds `hDep`. -/
+theorem stabil_aus_bewachung (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (Q : Faden → World D → Prop)
+    (Sf : Faden → (t : D.Tab) → Int → D.Feld t → Prop)
+    (Gf : Faden → D.Glob → Bool)
+    (hDep : ∀ f ∈ J.faeden, ∀ σ σ' : World D,
+      (∀ (t : D.Tab) (k : Int) (fld : D.Feld t),
+        Sf f t k fld → σ'.slots t k fld = σ.slots t k fld) →
+      (∀ x : D.Glob, Gf f x = true → σ'.globs x = σ.globs x) →
+      (Q f σ ↔ Q f σ'))
+    (hWacheT : ∀ (f g : Faden), f ∈ J.faeden → g ∈ J.faeden → g ≠ f →
+      ∀ (t : D.Tab) (k : Int) (fld : D.Feld t),
+        Sf f t k fld → D.schreibt (J.code g) t = true →
+        ∃ L : D.Lock, Bewacht (D := D) (.inl t) L ∧ L ∈ D.haelt (J.code f) ∧
+          L ∈ D.haelt (J.code g))
+    (hWacheG : ∀ (f g : Faden), f ∈ J.faeden → g ∈ J.faeden → g ≠ f →
+      ∀ x : D.Glob, Gf f x = true → D.gschreibt (J.code g) x = true →
+        ∃ L : D.Lock, Bewacht (D := D) (.inr x) L ∧ L ∈ D.haelt (J.code f) ∧
+          L ∈ D.haelt (J.code g))
+    (hRelyT : ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → g ≠ f →
+        J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        ∀ (t : D.Tab) (k' : Int) (fld : D.Feld t),
+          Sf f t k' fld → D.schreibt (J.code g) t = true →
+          ∀ (L : D.Lock), Bewacht (D := D) (.inl t) L → L ∈ D.haelt (J.code f) →
+            L ∈ D.haelt (J.code g) → nach.slots t k' fld = vor.slots t k' fld)
+    (hRelyG : ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
+      g ∈ J.faeden → g ≠ f →
+        J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+        ∀ x : D.Glob, Gf f x = true → D.gschreibt (J.code g) x = true →
+          ∀ (L : D.Lock), Bewacht (D := D) (.inr x) L → L ∈ D.haelt (J.code f) →
+            L ∈ D.haelt (J.code g) → nach.globs x = vor.globs x) :
+    ∀ f ∈ J.faeden, ∀ (k : Nat) (g : Faden) (vor nach : World D), g ∈ J.faeden → g ≠ f →
+      J.schrittFaden[k]? = some g → J.welten[k]? = some vor → J.welten[k + 1]? = some nach →
+      Q f vor → Q f nach := by
+  intro f hf k g vor nach hgm hne hkg hkv hkn hQvor
+  have hR := (J.hSchritt k g vor nach hkg hkv hkn).2
+  have hSlot : ∀ (t : D.Tab) (k' : Int) (fld : D.Feld t),
+      Sf f t k' fld → nach.slots t k' fld = vor.slots t k' fld := by
+    intro t k' fld hSf
+    cases heq : D.schreibt (J.code g) t with
+    | false => exact hR.1 t heq k' fld
+    | true =>
+      obtain ⟨L, hL, hLf, hLg⟩ := hWacheT f g hf hgm hne t k' fld hSf heq
+      exact hRelyT f hf k g vor nach hgm hne hkg hkv hkn t k' fld hSf heq L hL hLf hLg
+  have hGlob : ∀ x : D.Glob, Gf f x = true → nach.globs x = vor.globs x := by
+    intro x hx
+    cases heq : D.gschreibt (J.code g) x with
+    | false => exact hR.2 x heq
+    | true =>
+      obtain ⟨L, hL, hLf, hLg⟩ := hWacheG f g hf hgm hne x hx heq
+      exact hRelyG f hf k g vor nach hgm hne hkg hkv hkn x hx heq L hL hLf hLg
+  exact (hDep f hf vor nach hSlot hGlob).mp hQvor
+
+#print axioms Gabbro.Grammatik.stabil_aus_bewachung
+
+/-- **The checker-shape link.** Slot-level dependence plus footprint coverage
+    give table-level `HaengtAb` -- the shape the `InterferenceFree`
+    machinery consumes downstream. Frame agreement on the tables covers
+    every read slot, so the slot dependence fires. -/
+theorem haengtAb_aus_slotDep (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
+    (Q : Faden → World D → Prop)
+    (Sf : Faden → (t : D.Tab) → Int → D.Feld t → Prop)
+    (Wf : Faden → D.Tab → Bool) (Gf : Faden → D.Glob → Bool)
+    (hDep : ∀ f ∈ J.faeden, ∀ σ σ' : World D,
+      (∀ (t : D.Tab) (k : Int) (fld : D.Feld t),
+        Sf f t k fld → σ'.slots t k fld = σ.slots t k fld) →
+      (∀ x : D.Glob, Gf f x = true → σ'.globs x = σ.globs x) →
+      (Q f σ ↔ Q f σ'))
+    (hCover : ∀ f ∈ J.faeden, ∀ (t : D.Tab) (k : Int) (fld : D.Feld t),
+      Sf f t k fld → Wf f t = true) :
+    ∀ f ∈ J.faeden, HaengtAb (Wf f) (Gf f) (Q f) := by
+  intro f hf σ σ' hAgree
+  obtain ⟨hT, hG⟩ := hAgree
+  exact hDep f hf σ σ'
+    (fun t k fld hSf => hT t (hCover f hf t k fld hSf) k fld)
+    (fun x hx => hG x hx)
+
+#print axioms Gabbro.Grammatik.haengtAb_aus_slotDep
+
+/-! ## Witness on the reference fixture.
+
+  Two threads over `refD` (one shared table `konto`, one lock): thread 0
+  runs `lies` (reads), thread 1 runs `einzahlen` (writes). The chain has one
+  step, by thread 1, writing only slot 5. `Q` (`slot 0 = slot 1`, "my slot
+  equals my local counter") reads slots 0 and 1 -- it is not a whole-table
+  invariant (a write to slot 0 or 1 breaks it while the table as a whole
+  keeps changing), yet it survives this chain because the foreign write
+  goes elsewhere, under the guard both threads hold. -/
+
+/-- The counter value `0` at the witness type. -/
+def zbV0 : Wert refD (.int 0 100) := ⟨0, by decide, by decide⟩
+
+/-- The written value `7` at the witness type. -/
+def zbV7 : Wert refD (.int 0 100) := ⟨7, by decide, by decide⟩
+
+/-- Head world: every slot reads `0`, empty trace. -/
+def zbW0 : World refD :=
+  { slots := fun _ _ _ => zbV0
+    globs := fun g => nomatch g
+    spur := [] }
+
+/-- End world: slot 5 reads `7` (the foreign write), slots 0 and 1 still
+    `0`, with the write event on the trace. -/
+def zbW1 : World refD :=
+  { slots := fun _ k _ => if k = 5 then zbV7 else zbV0
+    globs := fun g => nomatch g
+    spur := [Ereignis.zugriff () true [Res.held (D := refD) ()] [()]] }
+
+/-- Entry world: every slot reads `0`, the guard taken. -/
+def zbWE : World refD :=
+  { slots := fun _ _ _ => zbV0
+    globs := fun g => nomatch g
+    spur := [Ereignis.nimmt (D := refD) () []] }
+
+/-- Both threads declared side by side. -/
+def zbNb : Nebeneinander := fun _ _ => True
+
+/-- Thread 0 reads (`lies`), every other thread writes (`einzahlen`). -/
+def zbCode : Faden → refD.Fn
+  | 0 => refLies
+  | _ => refEin
+
+/-- Every thread enters with the guard taken. -/
+def zbEintritt : Faden → World refD := fun _ => zbWE
+
+/-- "My slot equals my local counter": slot 0 against slot 1. Reads only
+    slots 0 and 1 of the shared table -- not a whole-table invariant. -/
+def zbQ : Faden → World refD → Prop :=
+  fun _ σ => σ.slots () 0 () = σ.slots () 1 ()
+
+/-- The slot read-set: slots 0 and 1 of `konto`. -/
+def zbSf : Faden → (t : refD.Tab) → Int → refD.Feld t → Prop :=
+  fun _ t k _ => t = () ∧ (k = 0 ∨ k = 1)
+
+/-- No globals exist on `refD`. -/
+def zbGf : Faden → refD.Glob → Bool := fun _ g => nomatch g
+
+/-- The entry world holds exactly the guard. -/
+theorem zbWE_haelt : HeldGenau [Res.held (D := refD) ()] zbWE.haelt := by
+  intro L
+  cases L
+  constructor
+  · intro _; exact List.mem_singleton.mpr rfl
+  · intro _; exact List.mem_singleton.mpr rfl
+
+/-- The witness step stays in the writer's frame: `einzahlen` may write
+    the whole table, so every successor pair agrees outside `false`. -/
+theorem zbSchritt_rahmen :
+    Rahmen (refD.schreibt (zbCode 1)) (refD.gschreibt (zbCode 1)) zbW0 zbW1 := by
+  constructor
+  · intro t ht _ _
+    cases t
+    have htrue : refD.schreibt (zbCode 1) () = true := rfl
+    rw [htrue] at ht
+    simp only [Bool.true_eq_false] at ht
+  · intro g
+    exact nomatch g
+
+/-- The witness chain: two threads, one step by the writer, empty run. -/
+def zbJ : GemeinsamerLauf (D := refD) zbNb where
+  faeden := [0, 1]
+  code := zbCode
+  eintritt := zbEintritt
+  welten := [zbW0, zbW1]
+  schrittFaden := [1]
+  l := ([] : Lauf refD)
+  hKette := rfl
+  hSchritt := by
+    intro k f' vor nach hk hv hn
+    cases k with
+    | zero =>
+      simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, Nat.reduceAdd, Nat.zero_lt_succ, List.getElem_cons_succ] at hk hv hn
+      subst hk
+      subst hv
+      subst hn
+      exact ⟨by simp only [List.mem_cons, Nat.succ_ne_self, List.not_mem_nil, or_false, or_true], zbSchritt_rahmen⟩
+    | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
+  hPaar := by
+    intro f' hf' g hg' hne
+    simp only [List.mem_cons, List.not_mem_nil,
+      or_false] at hf' hg'
+    rcases hf' with rfl | rfl <;> rcases hg' with rfl | rfl
+    · exact absurd rfl hne
+    · exact True.intro
+    · exact True.intro
+    · exact absurd rfl hne
+  hGesittet := by
+    refine ⟨?_, ?_, ?_, ?_, ?_⟩
+    · intro f j
+      have hsp : Lauf.spur ([] : Lauf refD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
+      rw [hsp]
+      exact konsistent_nil
+    · intro f j e he
+      have hsp : Lauf.spur ([] : Lauf refD) f j = [] := by simp only [Lauf.spur, List.take_nil, List.filterMap_nil, List.reverse_nil]
+      rw [hsp] at he
+      simp only [List.not_mem_nil] at he
+    · intro j f L h hi g hne
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
+    · intro i j f g m s s' ei ej hi hj hm hm'
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
+    · intro i j f g o ei ej hi hj ht1 ht2 hu
+      simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
+  hBeschraenkt := by
+    intro i j f g ei ej hi hj hne
+    simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true, getElem?_neg, reduceCtorEq] at hi
+  hEintritt := by
+    intro f hf
+    simp only [List.mem_cons, List.not_mem_nil,
+      or_false] at hf
+    rcases hf with rfl | rfl
+    · show EintrittPasst refLies zbWE
+      show HeldGenau (Signatur.anfang refD (refD.signatur refLies)) zbWE.haelt
+      rw [refLies_start]
+      exact zbWE_haelt
+    · show EintrittPasst refEin zbWE
+      show HeldGenau (Signatur.anfang refD (refD.signatur refEin)) zbWE.haelt
+      rw [refEin_start]
+      exact zbWE_haelt
+  hSchuld := by
+    intro f hf i _
+    exact nomatch i
+  hInvSicht := by
+    intro f hf i _
+    exact nomatch i
+
+/-- Projections of the witness chain, by computation. -/
+theorem zbJ_welten : zbJ.welten = [zbW0, zbW1] := by rfl
+
+/-- Projections of the witness chain, by computation. -/
+theorem zbJ_schritt : zbJ.schrittFaden = [1] := by rfl
+
+/-- Projections of the witness chain, by computation. -/
+theorem zbJ_faeden : zbJ.faeden = [0, 1] := by rfl
+
+/-- `Q` holds at the head world: both read slots are `0`. -/
+theorem zbQ_W0 (f : Faden) : zbQ f zbW0 := by rfl
+
+/-- `Q` holds at the end world: slots 0 and 1 are untouched by the
+    slot-5 write. -/
+theorem zbQ_W1 (f : Faden) : zbQ f zbW1 := by
+  show (if (0 : Int) = 5 then zbV7 else zbV0) =
+    (if (1 : Int) = 5 then zbV7 else zbV0)
+  rw [if_neg (by decide), if_neg (by decide)]
+
+/-- Head validity on the witness chain. -/
+theorem zbKopf : ∀ f ∈ zbJ.faeden, ∀ σ₀, zbJ.welten[0]? = some σ₀ → zbQ f σ₀ := by
+  intro f hf σ₀ h
+  rw [zbJ_welten] at h
+  simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.reduceAdd, Nat.zero_lt_succ, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq] at h
+  subst h
+  rw [zbJ_faeden] at hf
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
+  rcases hf with rfl | rfl
+  · exact zbQ_W0 0
+  · exact zbQ_W0 1
+
+/-- Own-step preservation on the witness chain: the only step is thread 1's
+    slot-5 write, which leaves `Q`'s slots alone. (`hQvor` is carried for
+    shape; the step preserves `Q` by computation.) -/
+theorem zbEigen : ∀ f ∈ zbJ.faeden, ∀ (k : Nat) (vor nach : World refD),
+    zbJ.schrittFaden[k]? = some f → zbJ.welten[k]? = some vor →
+      zbJ.welten[k + 1]? = some nach → zbQ f vor → zbQ f nach := by
+  intro f hf k vor nach hk hv hn hQvor
+  rw [zbJ_schritt] at hk
+  rw [zbJ_welten] at hv hn
+  rw [zbJ_faeden] at hf
+  cases k with
+  | zero =>
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
+    rcases hf with rfl | rfl
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, Nat.succ_ne_self] at hk
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Nat.reduceAdd, Nat.zero_lt_succ, Option.some.injEq, List.getElem_cons_succ] at hk hv hn
+      subst hv
+      subst hn
+      exact zbQ_W1 1
+  | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
+
+/-- Foreign-step preservation on the witness chain: the only foreign step
+    (thread 1, seen from thread 0) is the slot-5 write. (`hQvor` is carried
+    for shape; preservation is by computation.) -/
+theorem zbStabil : ∀ f ∈ zbJ.faeden, ∀ (k : Nat) (g : Faden) (vor nach : World refD),
+    g ∈ zbJ.faeden → g ≠ f → zbJ.schrittFaden[k]? = some g →
+      zbJ.welten[k]? = some vor → zbJ.welten[k + 1]? = some nach →
+      zbQ f vor → zbQ f nach := by
+  intro f hf k g vor nach hgm hne hk hv hn hQvor
+  rw [zbJ_schritt] at hk
+  rw [zbJ_welten] at hv hn
+  rw [zbJ_faeden] at hgm hf
+  cases k with
+  | zero =>
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hgm hf
+    rcases hgm with rfl | rfl
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Option.some.injEq, Nat.succ_ne_self] at hk
+    · simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_add_one, getElem?_pos,
+  List.getElem_cons_zero, Nat.reduceAdd, Nat.zero_lt_succ, Option.some.injEq, List.getElem_cons_succ] at hk hv hn
+      subst hv
+      subst hn
+      rcases hf with rfl | rfl
+      · exact zbQ_W1 0
+      · exact absurd rfl hne
+  | succ k => simp only [List.length_cons, List.length_nil, Nat.zero_add, Nat.lt_one_iff, Nat.add_eq_zero_iff,
+  Nat.succ_ne_self, and_false, not_false_eq_true, getElem?_neg, reduceCtorEq] at hk
+
+/-- Every witness thread holds exactly the guard, by computation. -/
+theorem zbHaelt (f : Faden) (hf : f ∈ zbJ.faeden) :
+    refD.haelt (zbCode f) = [()] := by
+  rw [zbJ_faeden] at hf
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hf
+  rcases hf with rfl | rfl <;> rfl
+
+/-- The writer writes the table; the reader writes nothing. -/
+theorem zbSchreibtEin : refD.schreibt (zbCode 1) () = true := by rfl
+
+/-- The writer writes the table; the reader writes nothing. -/
+theorem zbSchreibtLies : refD.schreibt (zbCode 0) () = false := by rfl
+
+/-- Slot-level dependence of `Q`: slots 0 and 1 fix both sides. (The
+    global agreement is carried for shape; `refD` has no globals.) -/
+theorem zbDep : ∀ f ∈ zbJ.faeden, ∀ σ σ' : World refD,
+    (∀ (t : refD.Tab) (k : Int) (fld : refD.Feld t),
+      zbSf f t k fld → σ'.slots t k fld = σ.slots t k fld) →
+    (∀ x : refD.Glob, zbGf f x = true → σ'.globs x = σ.globs x) →
+    (zbQ f σ ↔ zbQ f σ') := by
+  intro f _ σ σ' hs hGlob
+  constructor
+  · intro h
+    show σ'.slots () 0 () = σ'.slots () 1 ()
+    rw [hs () 0 () ⟨rfl, Or.inl rfl⟩, hs () 1 () ⟨rfl, Or.inr rfl⟩]
+    exact h
+  · intro h
+    show σ.slots () 0 () = σ.slots () 1 ()
+    rw [← hs () 0 () ⟨rfl, Or.inl rfl⟩, ← hs () 1 () ⟨rfl, Or.inr rfl⟩]
+    exact h
+
+/-- The table footprint: the whole shared table. -/
+def zbWf : Faden → refD.Tab → Bool := fun _ _ => true
+
+/-- Every read slot lies in the footprint table. -/
+theorem zbCover : ∀ f ∈ zbJ.faeden, ∀ (t : refD.Tab) (k : Int) (fld : refD.Feld t),
+    zbSf f t k fld → zbWf f t = true := by
+  intro f _ t k fld _
+  rfl
+
+/-- Static guarantee on the witness chain: the only writer of `Q`'s
+    table is thread 1, writing under the guard both threads hold. (The
+    disequality and the slot index are carried for shape.) -/
+theorem zbWacheT : ∀ (f g : Faden), f ∈ zbJ.faeden → g ∈ zbJ.faeden → g ≠ f →
+    ∀ (t : refD.Tab) (k : Int) (fld : refD.Feld t),
+      zbSf f t k fld → refD.schreibt (zbCode g) t = true →
+      ∃ L : refD.Lock, Bewacht (D := refD) (.inl t) L ∧ L ∈ refD.haelt (zbCode f) ∧
+        L ∈ refD.haelt (zbCode g) := by
+  intro f g hf hg hne t k fld hSf hwrite
+  rw [zbJ_faeden] at hg
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hg
+  rcases hg with rfl | rfl
+  · cases t
+    rw [zbSchreibtLies] at hwrite
+    simp only [Bool.false_eq_true] at hwrite
+  · obtain ⟨rfl, _⟩ := hSf
+    refine ⟨(), List.Mem.head _, ?_, ?_⟩
+    · rw [zbHaelt f hf]
+      exact List.mem_singleton.mpr rfl
+    · have hg1 : (1 : Faden) ∈ zbJ.faeden := by simp only [zbJ_faeden, List.mem_cons, Nat.succ_ne_self, List.not_mem_nil, or_false, or_true]
+      rw [zbHaelt 1 hg1]
+      exact List.mem_singleton.mpr rfl
+
+/-- No globals exist, so the global guard holds vacuously. (Premises
+    carried for shape.) -/
+theorem zbWacheG : ∀ (f g : Faden), f ∈ zbJ.faeden → g ∈ zbJ.faeden → g ≠ f →
+    ∀ x : refD.Glob, zbGf f x = true → refD.gschreibt (zbCode g) x = true →
+      ∃ L : refD.Lock, Bewacht (D := refD) (.inr x) L ∧ L ∈ refD.haelt (zbCode f) ∧
+        L ∈ refD.haelt (zbCode g) := by
+  intro f hf g hg hne x hx hwrite
+  exact nomatch x
+
+end Gabbro.Grammatik

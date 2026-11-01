@@ -41,7 +41,7 @@ module
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Proben.ProbeD
 public import Grammatik.Proben.InvZeuge
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 @[expose] public section
 
 

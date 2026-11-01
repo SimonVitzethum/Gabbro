@@ -8,7 +8,7 @@
 -/
 module
 public import Grammatik.Logik.Vertraege.VertragsFuss
-public import Grammatik.Kern.Syntax.Profil
+public import Grammatik.Kern.Syntax.Profil.Teil2
 @[expose] public section
 
 

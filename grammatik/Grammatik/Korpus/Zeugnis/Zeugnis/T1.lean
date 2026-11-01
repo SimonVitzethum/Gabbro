@@ -86,7 +86,7 @@
     name every axiom the soundness proofs rest on.
 -/
 module
-public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Kern.Syntax.Syntax.Teil2
 @[expose] public section
 
 

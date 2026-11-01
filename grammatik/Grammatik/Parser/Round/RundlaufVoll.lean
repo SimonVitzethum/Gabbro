@@ -18,8 +18,8 @@
   them, outside the theorem).
 -/
 module
-public import Grammatik.Parser.Round.Rundlauf4
-public import Grammatik.Parser.Round.RundlaufLex
+public import Grammatik.Parser.Round.Rundlauf4.Teil2
+public import Grammatik.Parser.Round.RundlaufLex.Teil2
 @[expose] public section
 
 

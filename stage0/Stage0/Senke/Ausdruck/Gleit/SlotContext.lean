@@ -1,6 +1,6 @@
 /- Reify readable frame slots as a proof-only integer environment. -/
 module
-public import Stage0.Senke.Ausdruck.Gleit.Skalieren
+public import Stage0.Senke.Ausdruck.Gleit.Skalieren.Teil6
 public import Stage0.Senke.Ausdruck.Quant.Frame
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
