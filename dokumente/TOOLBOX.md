@@ -33,6 +33,12 @@ theorem, or a stage in one of the four. The old counters (mark ratchets, documen
 the mutation run, the C-emitter stages) are retired (the C emitter itself was removed on 2026-10-17, tag `archiv/c-emitter-2026-10-17`); their figures in other documents are dated
 results, not guarded values.
 
+**The Lean guardian under the RAM rules.** `pruefe-lean.py --stufe 7,8` runs single stages; `--seriell` (the
+default under 24 GiB available) builds `stage0/` and `runner/` with one `lean -j1 -DElab.async=false -M4608` at a time on
+a shared slot lock, module by module in Lake's order (`teile/lean-seriell.py` is Lake's `lean`: Lake 5.0.0 has no job
+limit), and holds both slots for the grammar stages; every process runs in a no-swap scope and waits for 8 GiB. A step
+killed for lack of memory or without its memory/lock in time is "not measured" (exit `2`), as is a `--stufe` subset.
+
 **Heavy runs — one at a time, with `free -g` beside them:** `cargo build`, `cargo test --no-fail-fast`,
 `lake build`, the acceptance run. Never two in one tree (`cargo test` rebuilds the model with `lake` and
 replaces the `.olean` files running `lean` processes read). An agent gets its own working directory.
