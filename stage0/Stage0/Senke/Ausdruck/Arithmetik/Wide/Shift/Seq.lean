@@ -13,10 +13,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def seqC (P : Nat → List II) : List Nat → List II
-  | [] => []
-  | j :: l => P j ++ seqC P l
-
 @[simp] theorem seqC_nil (P : Nat → List II) : seqC P [] = [] := rfl
 @[simp] theorem seqC_cons (P : Nat → List II) (j : Nat) (l : List Nat) :
     seqC P (j :: l) = P j ++ seqC P l := rfl

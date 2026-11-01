@@ -1,0 +1,32 @@
+// Wide signed operands that are not constants: algebraic identities and the order, per call.
+module ir_probe {
+impl fn ident(a : i64 in -1267650600228229401496703205376 .. 1267650600228229401496703205376, b : i64 in -1267650600228229401496703205376 .. 1267650600228229401496703205376) -> u32 in 0 .. 255 effects { pure } {
+    let s = a + b;
+    let d = a - b;
+    let n = -a;
+    if s + d == a + a {
+        if a * b == b * a {
+            if n + a == 0 {
+                let lt = a < b;
+                let le = a <= b;
+                let eq = a == b;
+                if lt { if le { if eq { return 0; } return 3; } return 0; }
+                if le { if eq { return 6; } return 0; }
+                return 0;
+            }
+        }
+    }
+    return 100;
+}
+impl fn main() -> u32 in 0 .. 2100 effects { pure } {
+    let t0 = ident(0, 0);
+    let t1 = ident(1, 2);
+    let t2 = ident(-1, 2);
+    let t3 = ident(1267650600228229401496703205376, -1267650600228229401496703205376);
+    let t4 = ident(-1267650600228229401496703205376, 1267650600228229401496703205376);
+    let t5 = ident(12345678901234567890123, -98765432109876543210);
+    let t6 = ident(1267650600228229401496703205376, 1267650600228229401496703205376);
+    let t7 = ident(-5, -5);
+    return t0 + t1 + t2 + t3 + t4 + t5 + t6 + t7;
+}
+}

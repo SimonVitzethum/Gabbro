@@ -28,8 +28,6 @@ theorem dval_smul (c : Nat) (y : Nat → Nat) : ∀ m, dval (fun j => c * y j) m
 theorem mod_bridge (A A' Z B c : Nat) (h : A' + B * c = A + Z) (hlt : A' < B) : A' = (A + Z) % B := by
   rw [← h, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hlt]
 
-def mulRowC (n X Y R c t : Nat) : List II := ci 1 (c : Nat) 0 0 :: mulRow n X Y R c t
-
 /-- One row: digits and the carry satisfy the multiply-accumulate identity. -/
 theorem mulRowC_value (n X Y R c t : Nat) (s : Nat → Runner.W)
     (h1 : X < Y) (h2 : Y + n ≤ R) (h3 : R + n ≤ c) (h4 : c < t) :
@@ -111,12 +109,6 @@ theorem row_nat (k i n : Nat) (hk : i + n = k) (dR dR' xg yy : Nat → Nat) (xi 
       (X0 * (Y1 + Bn * Y2) + Bi * (xi * Y1)) + (Bi * Bn) * (xi * Y2) := by ring
   rw [this, Nat.add_mul_mod_self_left]
 
-/-- Rows `i .. k-1`: row `i` has `k - i` digits. -/
-def mulRows (k a : Nat) : Nat → Nat → List II
-  | 0, _ => []
-  | m + 1, i => mulRowC (m + 1) (a + i) (a + k) (a + 2 * k + i) (a + 3 * k) (a + 3 * k + 1) ++
-      mulRows k a m (i + 1)
-
 /-- The accumulator digits. -/
 def accD (s : Nat → Runner.W) (k a : Nat) : Nat → Nat := fun u => (s (a + 2 * k + u)).toNat
 /-- The multiplicand digits. -/
@@ -174,10 +166,6 @@ theorem mulRows_value (k a : Nat) : ∀ (m i : Nat) (s : Nat → Runner.W), m + 
 
 /-! ## Zeroing, copying and the whole product -/
 
-def zeroSlotsC : Nat → Nat → List II
-  | 0, _ => []
-  | n + 1, r => ci 1 (r : Nat) 0 0 :: zeroSlotsC n (r + 1)
-
 theorem zeroSlots_value : ∀ (n r : Nat) (s : Nat → Runner.W),
     (∀ j, j < n → aluRun (zeroSlotsC n r) s (r + j) = 0) ∧
     (∀ j, (j < r ∨ r + n ≤ j) → aluRun (zeroSlotsC n r) s j = s j)
@@ -232,9 +220,6 @@ theorem mul_mod_toNat (x y M : Int) (hM : 0 < M) :
   have : ((((x % M).toNat * (y % M).toNat) % M.toNat : Nat) : Int) = (((x * y) % M).toNat : Nat) := by
     rw [Int.natCast_mod, Int.natCast_mul, hMt, hxt, hyt, hst, ← Int.mul_emod]
   exact_mod_cast this
-
-def wideMulC (k a : Nat) : List II :=
-  zeroSlotsC k (a + 2 * k) ++ mulRows k a k 0 ++ copyWords k a (a + 2 * k)
 
 theorem wideMul_value (k a : Nat) (s : Nat → Runner.W) (x y : Int)
     (hx : ∀ j, j < k → s (a + j) = lmb x j) (hy : ∀ j, j < k → s (a + k + j) = lmb y j) :

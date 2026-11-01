@@ -39,12 +39,30 @@ Root validation logs are retained in `.scratch-integration/merged/`. Source file
 the successful combined checks; artifact-gap and interrupted aggregate-fixture logs are preserved too.
 Slot-1 integration priority is released; IR-01 and IR-08 may resume their deferred module checks.
 
-**Parameterized-start activation blocker:** The current fixed `exitSlot = 2*FB+2 = 10` used by
-`spawnC`/`startC` overlaps a three-word parameter span at slots 8, 9, 10 in root frame `F = FB`.
-Keep the empty-parameter guard. Before activating IR-12 startup, place scratch beyond the shared
-parameter/result/status region (using the finalized `receiveTop signature FB` convention or its proved
-equivalent), update bounds/footprints and prove initialization survives spawn/call. IR-12 owns that
-future activation after the coherent full ABI is published; no second startup ABI is authorized.
+**Parameterized-start activation (IR-12, 2026-11-01): done for `main`.** `exitSlot` is gone. A start's scratch
+(the spawns in `main`'s frame, the exit code of every thread) is `startScratch f = receiveTop (D.signatur f) FB`, above
+the callee header, the complete parameter span, the shared result area and the status word. `bild` takes `main`'s
+environment `ρ`; its words (`encodeEnv`, the call ABI's own encoding) are the image's bytes in the first frame at slots
+`FB + FB ..` (`Bild.args`, `Bild.bytes`: header, code, first frame via `startFrameBytes`, then zeros). `spawnC_ok` /
+`spawn1_ok` leave every slot below the scratch unchanged, `start_ok` takes the words and `ValueValid` of the environment
+and derives `EnvAt` after the depth write (`startEnvWords_depth`); `bild_kern` derives them from the loaded bytes
+(`startEnvBytes_words`) and preserves them across the spawns (`wordsAt_frame_agree`). `bild_ok`/`bild_ok_u`/
+`irBild_correct` quantify over no environment any more: `Emitted.args` is `main`'s fixed environment, the pointer to
+the table each parameter's type names (`mainEnv`, G's value `()`, encoded as the zero word); any other `main` parameter
+is refused (`ir: main takes a parameter that is not a table pointer: no start-argument form`). Roots stay
+parameterless (`ir: a root takes parameters`, guard kept: concurrent start arguments need the `SourceStart` list instead
+of the deduplicated name list). No second startup ABI.
+
+Measured on master `f8af1160f` + IR-12: the Stage0 root closure (286 modules rebuilt on IR-03's warm library incl. `Stage0`,
+`Nachpruefung`, `Stage0.Haupt`, `StartArgumentProben`, `StartImageProben`, `ProfilProben`) is green; `Nachpruefung` 397
+theorems on the standard axioms only, `gabbro_ziel` and its siblings on exactly `propext`/`Classical.choice`/`Quot.sound`
+(grammar not rebuilt); layout check clean (`BildSatz` 481 lines). All 218 textual programs of `stage0/proben-ir` pass on
+the assembly runner or refuse with the expected text (new: `main-pointer-params` 43, `main-int-parameter`). The old
+probes in `stage0/proben`: `hello`, `echo`, `threads` now compile and print exactly their `.aus` with exit 0;
+`upper` compiles and exits 0 but prints nothing instead of `ABC`: it has no gate, its stdin/stdout path was the retired
+Lean driver's `io.ein`/`io.aus` convention, which no longer exists in the image path. It needs an owner decision
+(a verified profile I/O convention with its own named assumption, or a gate-based `upper`); none was invented here.
+The full Lean guardian was not run: it would rebuild `grammatik/` in this worktree (no warm `.lake`).
 
 **Rolling allocation update:** IR-12 handed back green source/start-byte/profile/CLI checkpoints through
 `e4815ed3f`; actual parameterized image startup remains blocked on IR-03's full ABI. Its slot now runs
@@ -2898,7 +2916,7 @@ Branch `t3/central-value-abi`: master `ae716338a` merged (`cd8cf4d5d`) and curre
 (`c6ce18d84`, fast-forwardable: `master` is an ancestor). After both merges the whole Stage0 closure rebuilds, all 207
 textual regressions in `stage0/proben-ir` pass, `Nachpruefung` and `gabbro_ziel` stay on the three standard axioms,
 the layout check is clean and no file under 500 lines on master reaches 500. The four old probes in `stage0/proben`
-(`echo`, `hello`, `threads`, `upper`) still refuse with "main takes parameters" (known IR-12 limit). Earlier:
+(`echo`, `hello`, `threads`, `upper`) refused with "main takes parameters" at that point (activated by IR-12, see above). Earlier:
 master `6444b5cc3` merged (`05cfd542b`), then `strGet` over any scalar index range,
 `strWeit` narrowing, `strWeit` of short to long strings and `strEq` between short and long strings (commits above).
 
@@ -3031,3 +3049,83 @@ two real assembly-runner OS threads. It complements the short `sperre` probe:
 tracing the long probe exercises successful sleeping WAIT returns and WAKE-one,
 while the short probe also exercises mismatch returns. This runtime evidence
 is separate from the sequential component proofs and does not close `ir_parallel`.
+
+## IR-02 wide integer operators in `lowE` (2026-11-01)
+
+The verified wide kernels (`Arithmetik/Wide/*`) are now emitted by the actual expression lowering for integer
+types of any width, with the generic theorem connected through `lowE_ok`, `lowE_top` and the equations. The
+existing one-word emitters remain the fast path under their original guards; every case they refused is now
+assembled from the shared operand placement instead of `none`.
+
+- **Code below the proofs.** The 52 kernel code definitions moved unchanged into
+  `Aggregat/WideInt/KernelCode.lean` (imports only `Hilfen`), because the proof modules import `Quant.Frame` and
+  hence `Ausdruck.lean`. `Literal/Word` and `Literal/Eng` import the lemmas they use instead of a probe module,
+  which removed the import path `Literal/Word -> Signed/Probe -> Divide/Probe -> BildLese -> ... -> Satz`.
+- **Placement (`WideInt/Place.lean`).** First operand lowered at `d` and extended in place to the common width `k`
+  (`wideExtendC`: sign extension exactly when the operand interval has a negative lower bound, zero extension
+  otherwise), second operand lowered at `d + k` and extended, then the kernel at `d`; the result is the first
+  `integerWords` limbs of the modular result. Widths: `arithWords` (operands and result), `signedArithWords`
+  (`signedWords`: one sign limb more for nonnegative intervals), `compareWords` (`max signedWords + 1`, so the
+  difference fits), `shiftWords` (also `h2 / 64 + 1`, so the count is below `64 k`; the count keeps its own limbs),
+  `engWords`.
+- **Generic proofs.** `Operands.wideBinary_ok` / `wideUnary_ok` prove the placement once against a kernel contract
+  on actual memory with the exact footprint `Agree fp d K`; `Ring` (add, sub, mul, neg, and, or, xor), `Divide`
+  (div, rem, sdiv, srem; the remainder is copied down by `withCopy_run`), `Compare` (lt, le by the swapped order and
+  an `xor 1` instruction, eq), `Shift` (shl, shr with `shiftStages_bounds`) and `Eng` supply the contracts from
+  the kernels' execution theorems. `lowE_ok` dispatches to them; `IntegerOps` now takes the operands as `ValueOk`
+  hypotheses quantified over the destination slot.
+- **sdiv/srem minimum / -1.** The model's result interval is `+-betragMax`, which holds the one out-of-range
+  quotient; the kernel's modular limbs at the common width are its canonical encoding and the result type has
+  the extra limb. No refusal is needed (`wide-sdiv-min`: `-2^127 / -1 = 2^127`).
+- **Removed refusals:** `inUE`/`inWE`/`nichtMin` for div, rem, sdiv, srem, band, bor, bxor, shr; the one-word
+  result and count guard of shl (now only the fast path); `scalarFits` for lt, le, eq and eng.
+- **Counted layer.** `ExprCost.add` (IR-08's counted statement layer) covers only the one-word case and now says
+  so with a `narrow` premise instead of `cases` on the wide branch; no counted wide cost exists.
+
+Textual source -> IR -> assembly programs (`stage0/proben-ir/wide-*`): ring on constants, squares through a
+64-bit parameter, unsigned and signed division of constants, order and negation, bit operators and shifts, plus
+runtime-operand programs `wide-vars` (identities and order of 101-bit signed parameters), `wide-sdiv` (quotient and
+remainder identity, exact quotient), `wide-sdiv-min` and `wide-bitvars` (bit identities, shifts by runtime counts,
+division). `eng` has no textual form over a wide input (only the `update` body of an atomic exchange produces
+it), so its acceptance witness is `WideInt/Proben.lowE_wide_eng_zeuge`.
+
+Open (exact): the statement `narrow x to lo .. hi` of a value wider than 64 bits is still refused
+(`uses a form outside the IR fragment`; its lowering is the scalar interval test, not `Expr.eng`); counted
+(`StatementCost`/`EarlyExit`) wide costs.
+
+### IR-09 catch-up through IR-03, IR-02 and IR-12 (2026-11-01)
+
+The lane first merged `1652a7d0c` as `63dc7af56`, then caught master through
+`19947e92b`. The complete-value ABI is retained: lock frame preservation uses
+`ValueAt` and parameter/context word counts, with no scalar ABI restored.
+The nonzero-reservation byte witness was ported to complete value spans and
+cell-span disjointness and connected to the existing byte probes/audit.
+
+The current connected closure has 324 Stage0 and 32 Runner modules. All were
+checked in the private overlay; 283 affected Stage0 modules were rechecked for
+the later master updates, including `Stage0`, `Stage0.Haupt` and
+`Nachpruefung`. Four additional Runner modules (generator dependencies, main
+and audit) pass. The audits report 413 Stage0 and 14 Runner assertions with no
+foreign axioms; cached `gabbro_ziel` has exactly `propext`, `Classical.choice`,
+`Quot.sound`. Grammar sources/artifacts were not rebuilt or changed.
+
+All 219 standard textual IR probes pass: 174 emitted images execute with the
+expected exit and 45 refusals have the expected text. The old I/O probes
+`hello`, `echo`, `threads` now pass after the inherited IR-12 activation.
+`upper` compiles and exits zero with empty output instead of `ABC`, matching
+the master limitation documented above: its retired driver's implicit I/O
+convention has no image binding. No new convention is assumed here.
+The actual two-thread `lock-wait-wake` image exits 128; its trace has eight
+successful sleeping WAIT returns and ten WAKE-one calls (eight return one,
+two return zero). This evidence does not establish `ir_parallel`.
+
+The forbidden-proof scan passes for 1448 Lean files and layout for 1547;
+no master Lean file below 500 lines crosses that limit. Every Lean invocation
+uses slot 1, the prescribed 4G/5G/no-swap scope, an unset `ELAN_TOOLCHAIN` and
+`-j1 -DElab.async=false -M4608`. No full guardian or push is claimed.
+An additional all-files check exposed old ABI type errors in the unimported
+5498-line `Schleifen/StatementCost.lean` (including the `retWhyC` arity), then
+ended with a Lean memory exception at the fixed cap. That separate cost module
+is unchanged and outside the connected closure; it is not claimed green.
+IR-09's concurrent coverage boundary remains the inventory's open
+`ir_parallel`, ordering/interference, shared-lock and RCU work.

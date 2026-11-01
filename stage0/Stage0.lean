@@ -23,6 +23,7 @@ import Stage0.Senke.Bild
 import Stage0.Senke.BildLese
 import Stage0.Senke.BildSatz
 import Stage0.Senke.Welt.Anordnung
+import Stage0.Senke.Welt.MainEnv
 import Stage0.Senke.Ausdruck.FnptrProben
 import Stage0.Senke.Ausdruck.FnptrAufrufProben
 import Stage0.Senke.Ausdruck.Quant.Proben
@@ -37,6 +38,7 @@ import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 import Stage0.Senke.Ausdruck.Aggregat.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.TagProben
 import Stage0.Senke.Ausdruck.Aggregat.ValueProbe
+import Stage0.Senke.Ausdruck.Aggregat.WideInt.Proben
 
 import Stage0.Senke.Ausdruck.Referenz.Proben
 import Stage0.Senke.Anweisung.Faelle.Gleit.Proben

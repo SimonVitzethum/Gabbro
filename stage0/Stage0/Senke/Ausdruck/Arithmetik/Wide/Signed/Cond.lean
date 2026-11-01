@@ -24,9 +24,6 @@ theorem aluRun_high {K d : Nat} {code : List II} (h : ∀ i ∈ code, AluIns K d
     apply slotUpd_other
     cases hA <;> (simp only [ci, Int.toNat_natCast]; omega)
 
-def condNegC (k p c F MS TA Z : Nat) : List II :=
-  copyWords k c p ++ wideNegC k c ++ [cn 4 MS Z F] ++ selSeq p c MS TA k
-
 theorem mask_of_flag (f : Nat) (hf : f < 2) :
     (0 : Runner.W) - BitVec.ofNat 64 f = if f = 1 then BitVec.allOnes 64 else 0 := by
   rcases (by omega : f = 0 ∨ f = 1) with rfl | rfl <;> decide

@@ -12,13 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Limb
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def stgPre (k a idx : Nat) : List II :=
-  [ci 1 (a + k + 9 : Nat) idx 0, cn 12 (a + k + 7) (a + k + 1) (a + k + 9),
-   cn 8 (a + k + 7) (a + k + 7) (a + k + 4), cn 4 (a + k + 6) (a + k + 5) (a + k + 7)]
-
-def stgC (k a idx : Nat) (src : Nat → Nat) (l : List Nat) : List II :=
-  stgPre k a idx ++ seqC (fun j => selP (src j) (a + k + 6) (a + k + 7) a j) l
-
 theorem stgC_length (k a idx : Nat) (src : Nat → Nat) (l : List Nat) :
     (stgC k a idx src l).length = 4 + 3 * l.length := by
   simp only [stgC, List.length_append, stgPre, List.length_cons, List.length_nil,

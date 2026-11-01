@@ -36,6 +36,7 @@ import Stage0.Senke.Ausdruck.Aggregat.Layout
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
 import Stage0.Senke.Welt.Rahmen
 import Stage0.Senke.Ausdruck.Aggregat.Hilfen
+import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
 import Stage0.Senke.Ausdruck.Quant.TransportCode
 
 namespace Gabbro.Stage0.Senke
@@ -57,62 +58,76 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, .widen (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') _ _ e, d =>
     resizeIntegerL lo hi lo' hi' d (lowE L (reserved := reserved) e d)
   | _, _, @Expr.add _ _ _ l1 h1 l2 h2 a b, d =>
-    if valueWords (.int (l1 + l2) (h1 + h2)) = 1 then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
-    else none
+    if valueWords (.int (l1 + l2) (h1 + h2)) = 1 then
+      do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
+    else wideAddL l1 h1 l2 h2 (l1 + l2) (h1 + h2) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, @Expr.sub _ _ _ l1 h1 l2 h2 a b, d =>
-    if valueWords (.int (l1 - h2) (h1 - l2)) = 1 then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)
-    else none
+    if valueWords (.int (l1 - h2) (h1 - l2)) = 1 then
+      do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)
+    else wideSubL l1 h1 l2 h2 (l1 - h2) (h1 - l2) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, @Expr.mul _ _ _ l1 h1 l2 h2 a b, d =>
     if valueWords (.int (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
       (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2)))) = 1 then
       do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 5 d ca cb)
-    else none
+    else wideMulL l1 h1 l2 h2 (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
+      (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2))) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, @Expr.neg _ _ _ lo hi a, d =>
     if valueWords (.int (-hi) (-lo)) = 1 then do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
-    else none
+    else wideNegL lo hi (-hi) (-lo) d (lowE L (reserved := reserved) a)
   | _, _, .not a, d => do let ca ← lowE L (reserved := reserved) a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
-  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d => do
-    let c ← scalarCompareL false d l2 h2 l1 h1
-      (lowE L (reserved := reserved) b d) (lowE L (reserved := reserved) a (d + 1))
-    pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))
+  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d =>
+    if scalarFits l1 h1 && scalarFits l2 h2 then do
+      let c ← scalarCompareL false d l2 h2 l1 h1
+        (lowE L (reserved := reserved) b d) (lowE L (reserved := reserved) a (d + 1))
+      pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))
+    else wideLeL l1 h1 l2 h2 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d =>
-    scalarCompareL false d l1 h1 l2 h2
-      (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+    if scalarFits l1 h1 && scalarFits l2 h2 then
+      scalarCompareL false d l1 h1 l2 h2 (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+    else wideLtL l1 h1 l2 h2 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d =>
-    scalarCompareL true d l1 h1 l2 h2
-      (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+    if scalarFits l1 h1 && scalarFits l2 h2 then
+      scalarCompareL true d l1 h1 l2 h2 (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+    else wideEqL l1 h1 l2 h2 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, .fllt a b, d => floatExprL false d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, .flle a b, d => floatExprL true d (lowE L (reserved := reserved) b) (lowE L (reserved := reserved) a)
   | _, _, .and a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb)
   | _, _, .or a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb)
-  | _, _, .div _ _ a b, d =>
-    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 25 d ca cb) else none
-  | _, _, .rem _ _ a b, d =>
-    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 26 d ca cb) else none
-  | _, _, .sdiv _ a b, d =>
+  | _, _, .div (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ a b, d =>
+    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 25 d ca cb)
+    else wideDivL l1 h1 l2 h2 0 h1 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .rem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ a b, d =>
+    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 26 d ca cb)
+    else wideRemL l1 h1 l2 h2 0 (h2 - 1) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .sdiv (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ a b, d =>
     if inWE a && inWE b && nichtMin a then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 6 d ca cb)
-    else none
-  | _, _, .srem _ a b, d =>
+    else wideSdivL l1 h1 l2 h2 (-(betragMax l1 h1)) (betragMax l1 h1) d
+      (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .srem (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ a b, d =>
     if inWE a && inWE b && nichtMin a then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 7 d ca cb)
-    else none
-  | _, _, .band _ _ a b, d =>
-    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none
-  | _, _, .bor w _ _ _ _ a b, d =>
+    else wideSremL l1 h1 l2 h2 (-(betragMax l2 h2 - 1)) (betragMax l2 h2 - 1) d
+      (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .band (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ a b, d =>
+    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb)
+    else wideBitL 8 l1 h1 l2 h2 0 h1 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .bor (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) w _ _ _ _ a b, d =>
     if inUE a && inUE b then resizeIntegerL 0 (2 ^ 64 - 1) 0 (2 ^ w - 1) d
-      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb)) else none
-  | _, _, .bxor w _ _ _ _ a b, d =>
+      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb))
+    else wideBitL 9 l1 h1 l2 h2 0 (2 ^ w - 1) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .bxor (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) w _ _ _ _ a b, d =>
     if inUE a && inUE b then resizeIntegerL 0 (2 ^ 64 - 1) 0 (2 ^ w - 1) d
-      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb)) else none
-  | _, _, .shl (h1 := h1) (h2 := h2) _ _ _ _ _ a b, d =>
-    if valueWords (.int 0 (h1 * 2 ^ h2.toNat)) = 1 then
-      if inWE b && lt64 b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb) else none
-    else none
-  | _, _, .shr _ _ _ _ _ a b, d =>
+      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb))
+    else wideBitL 10 l1 h1 l2 h2 0 (2 ^ w - 1) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .shl (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ _ _ _ a b, d =>
+    if decide (valueWords (.int 0 (h1 * 2 ^ h2.toNat)) = 1) && inWE b && lt64 b then
+      do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb)
+    else wideShlL l1 h1 l2 h2 0 (h1 * 2 ^ h2.toNat) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .shr (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) _ _ _ _ _ a b, d =>
     if inUE a && inUE b && lt64 b then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 12 d ca cb)
-    else none
+    else wideShrL l1 h1 l2 h2 0 h1 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, .arrNil, d => some ([ci 1 d 0 0], d + 1)
   | _, _, @Expr.arrCons _ _ _ τ n a rest, d =>
     if n = 0 then lowE L (reserved := reserved) a d else do
@@ -173,7 +188,10 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     let ci' ← lowE L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci'
   | _, _, .thru _ t _ f i _, d => do
     let ci' ← lowE L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci'
-  | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) b d)
+  | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d =>
+    if scalarFits lo hi && scalarFits lo' hi' then
+      engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) b d)
+    else wideEngL lo hi lo' hi' d (lowE L (reserved := reserved) e) (lowE L (reserved := reserved) b)
   | _, _, .getBytes t f _ n i _ _ _, d =>
     if n ≤ 8 then readBytesL L t f (lowE L (reserved := reserved) i) 0 n d else none
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))

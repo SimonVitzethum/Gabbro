@@ -12,25 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.AddChain
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-/-- Low product and high word (into `t` and `t+11`), scratch `t .. t+15`. -/
-def mulHiC (X Y t : Nat) : List II :=
-  [cn 5 t X Y, ci 1 (t + 1 : Nat) 32 0, ci 1 (t + 2 : Nat) 1 0,
-   cn 11 (t + 3) (t + 2) (t + 1), cn 4 (t + 3) (t + 3) (t + 2),
-   cn 12 (t + 4) X (t + 1), cn 8 (t + 5) X (t + 3), cn 12 (t + 6) Y (t + 1), cn 8 (t + 7) Y (t + 3),
-   cn 5 (t + 8) (t + 5) (t + 7), cn 5 (t + 9) (t + 4) (t + 7),
-   cn 5 (t + 10) (t + 5) (t + 6), cn 5 (t + 11) (t + 4) (t + 6),
-   cn 12 (t + 12) (t + 8) (t + 1), cn 8 (t + 13) (t + 9) (t + 3), cn 3 (t + 12) (t + 12) (t + 13),
-   cn 8 (t + 13) (t + 10) (t + 3), cn 3 (t + 12) (t + 12) (t + 13),
-   cn 12 (t + 13) (t + 12) (t + 1), cn 12 (t + 14) (t + 9) (t + 1), cn 12 (t + 15) (t + 10) (t + 1),
-   cn 3 (t + 11) (t + 11) (t + 14), cn 3 (t + 11) (t + 11) (t + 15), cn 3 (t + 11) (t + 11) (t + 13)]
-
-/-- Add the product (low word in `t`, high word in `t+11`) and the carry into the digit. -/
-def mulAccC (R c t : Nat) : List II :=
-  [cn 3 (t + 1) R t, cn 27 (t + 2) (t + 1) t, cn 3 (t + 3) (t + 1) c, cn 27 (t + 4) (t + 3) (t + 1),
-   cn 2 R (t + 3) 0, cn 3 c (t + 11) (t + 2), cn 3 c c (t + 4)]
-
-def mulLimbC (X Y R c t : Nat) : List II := mulHiC X Y t ++ mulAccC R c t
-
 theorem mulHiC_length (X Y t : Nat) : (mulHiC X Y t).length = 24 := rfl
 theorem mulAccC_length (R c t : Nat) : (mulAccC R c t).length = 7 := rfl
 theorem mulLimbC_length (X Y R c t : Nat) : (mulLimbC X Y R c t).length = 31 := rfl

@@ -11,10 +11,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-def bitChain (o : Nat) : Nat → Nat → Nat → List II
-  | 0, _, _ => []
-  | n + 1, A, B => cn o A A B :: bitChain o n (A + 1) (B + 1)
-
 @[simp] theorem bitChain_length (o n A B : Nat) : (bitChain o n A B).length = n := by
   induction n generalizing A B with
   | zero => rfl
@@ -79,8 +75,6 @@ theorem lmb_xor (x y j : Nat) : lmb ((x ^^^ y : Nat) : Int) j = lmb (x : Int) j 
   by_cases hi : i < 64 <;> simp [hi]
 
 /-! ## Execution -/
-
-def wideBitC (o k a : Nat) : List II := bitChain o k a (a + k)
 
 theorem bitChain_aluIns {K d : Nat} (o : Nat) (f : Runner.W → Runner.W → Runner.W) (hf : aluFn o = some f) :
     ∀ (n A B : Nat), d ≤ A → A + n ≤ K → B + n ≤ K → ∀ i ∈ bitChain o n A B, AluIns K d i

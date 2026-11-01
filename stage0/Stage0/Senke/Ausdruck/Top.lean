@@ -278,8 +278,11 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
   | _, _, .refEq a b, d, c, top, h => wordL_top h
   | _, _, .and a b, d, c, top, h | _, _, .or a b, d, c, top, h =>
     bin_top (fun c t h => lowE_top a d c t h) h
-  | _, _, .lt a b, d, c, top, h | _, _, .eq a b, d, c, top, h =>
-    scalarCompareL_top (fun c t h => lowE_top a d c t h) h
+  | _, _, .lt a b, d, c, top, h | _, _, .eq a b, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact scalarCompareL_top (fun c t h => lowE_top a d c t h) h
+    · exact wideBinaryL_top h
   | _, _, .div _ _ a b, d, c, top, h
   | _, _, .add a b, d, c, top, h | _, _, .sub a b, d, c, top, h | _, _, .mul a b, d, c, top, h
   | _, _, .rem _ _ a b, d, c, top, h | _, _, .sdiv _ a b, d, c, top, h | _, _, .srem _ a b, d, c, top, h
@@ -288,19 +291,17 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     simp only [lowE_eqs] at h
     split at h
     · exact bin_top (fun c t h => lowE_top a d c t h) h
-    · cases h
+    · exact wideBinaryL_top h
   | _, _, .bor _ _ _ _ _ a b, d, c, top, h | _, _, .bxor _ _ _ _ _ a b, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · exact resizeIntegerL_top h (fun cc tt hc => bin_top (fun c t h => lowE_top a d c t h) hc)
-    · cases h
+    · exact wideBinaryL_top h
   | _, _, .shl _ _ _ _ _ a b, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
-    · split at h
-      · exact bin_top (fun c t h => lowE_top a d c t h) h
-      · cases h
-    · cases h
+    · exact bin_top (fun c t h => lowE_top a d c t h) h
+    · exact wideBinaryL_top h
   | _, _, .fllt a b, d, c, top, h | _, _, .flle a b, d, c, top, h => floatExprL_top h
   | _, _, .neg a, d, c, top, h => by
     simp only [lowE_eqs] at h
@@ -309,7 +310,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       obtain ⟨⟨ca, ta⟩, _, he⟩ := h
       simp only [bin2, Prod.mk.injEq] at he
       omega
-    · cases h
+    · exact wideUnaryL_top h
   | _, _, .not a, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, _, he⟩ := h
@@ -324,10 +325,13 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       omega
     · cases h
   | _, _, .le a b, d, c, top, h => by
-    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨cc, tc⟩, _, h⟩ := h
-    simp only [bin2, Prod.mk.injEq] at h
-    omega
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cc, tc⟩, _, h⟩ := h
+      simp only [bin2, Prod.mk.injEq] at h
+      omega
+    · exact wideBinaryL_top h
   | _, _, .lit n, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -374,14 +378,17 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       omega
     · cases h
   | _, _, .eng e lo' hi' b, d, c, top, h => by
-    simp only [lowE_eqs, engL, bind, Option.bind_eq_some_iff] at h
-    obtain ⟨⟨ce, te⟩, he, ⟨cb, tb⟩, _, ⟨ct, tt⟩, _, h⟩ := h
+    simp only [lowE_eqs] at h
     split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      have := lowE_top e d ce te he
-      omega
-    · cases h
+    · simp only [engL, bind, Option.bind_eq_some_iff] at h
+      obtain ⟨⟨ce, te⟩, he, ⟨cb, tb⟩, _, ⟨ct, tt⟩, _, h⟩ := h
+      split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have := lowE_top e d ce te he
+        omega
+      · cases h
+    · exact wideEngL_top h
   | _, _, .getBytes t f _ n i _ _ _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

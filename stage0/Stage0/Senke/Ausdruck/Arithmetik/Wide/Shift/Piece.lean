@@ -38,9 +38,6 @@ theorem aluStep_shr (a b c : Nat) (s : Nat → Runner.W) :
 
 /-! ## Selection under a mask -/
 
-def selP (src M T a j : Nat) : List II :=
-  [cn 10 T (a + j) src, cn 8 T T M, cn 10 (a + j) (a + j) T]
-
 @[simp] theorem selP_length (src M T a j : Nat) : (selP src M T a j).length = 3 := rfl
 
 def selF (src : Nat → Nat) (M a : Nat) (j : Nat) (s : Nat → Runner.W) : Runner.W :=
@@ -62,9 +59,6 @@ theorem selP_run (src M T a j : Nat) (h1 : T ≠ a + j) (h3 : T ≠ M) (s : Nat 
   · simp [slotUpd, hi1, hi2]
 
 /-! ## Bit shift with carry from a neighbour -/
-
-def bitP (oM oX src Rr O W T T2 a j : Nat) : List II :=
-  [cn oM T (a + j) Rr, cn oX T2 src O, cn oX T2 T2 W, cn 9 (a + j) T T2]
 
 @[simp] theorem bitP_length (oM oX src Rr O W T T2 a j : Nat) : (bitP oM oX src Rr O W T T2 a j).length = 4 := rfl
 

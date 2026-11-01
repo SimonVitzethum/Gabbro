@@ -14,6 +14,8 @@ import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
 import Stage0.Senke.Ausdruck.Aggregat.Array
 import Stage0.Senke.Ausdruck.Aggregat.IntegerOps
+import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
+import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
 import Stage0.Senke.Ausdruck.Aggregat.StringOps
 import Stage0.Senke.Ausdruck.Option
 import Stage0.Senke.Ausdruck.Bytes
@@ -132,7 +134,9 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (g := fun x y => some (x + y)) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← BitVec.ofInt_add]; rfl⟩
-    · cases h
+    · exact wideAdd_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b)
+        (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .sub a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
@@ -145,7 +149,9 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (g := fun x y => some (x - y)) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← ofInt_sub']; rfl⟩
-    · cases h
+    · exact wideSub_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b)
+        (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .mul a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h
@@ -158,7 +164,9 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (g := fun x y => some (x * y)) ?_ rfl (by decide) (by omega) hp
       intro wa wb pa pb
       exact ⟨_, rfl, by simp only [Enc] at pa pb ⊢; rw [pa, pb, ← BitVec.ofInt_mul]; rfl⟩
-    · cases h
+    · exact wideMul_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b)
+        (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .fllt a b, d, c, top, h, hK, m, pc, ρ, hp =>
     (floatExprE_ok σ₀ σ false a b
       (fun d c top h hK m pc hp => (lowE_ok σ₀ σ hWL hLay a d c top h hK m pc ρ hp).word trivial)
@@ -211,7 +219,8 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       simp only [Enc] at pb ⊢
       rw [pa, pb]
       simp [eval, Zahl.neg, BitVec.ofInt_neg]
-    · cases h
+    · exact wideNeg_ok (eval σ₀ a σ ρ) (fa := lowE L (reserved := reserved) a)
+        (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .not a, d, c, top, h, hK, m, pc, ρ, hp => by
     refine Ok.value ?_ rfl
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -229,91 +238,106 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [wahr?]
     exact not_word _
   | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    refine Ok.value ?_ rfl
-    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨cc, tc⟩, hc, he⟩ := h
-    simp only [bin2, Prod.mk.injEq] at he
-    obtain ⟨rfl, rfl⟩ := he
-    refine bin_ok (cb := [ci 1 (d + 1) 1 0])
-      (Pa := fun w => w = Runner.IR.bool (decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n)))
-      (fun m pc hp => scalarCompareL_ok false
-        (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
-        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
-        (fun cb tb hb => lowE_top a (d + 1) cb tb hb)
-        (fun ca ta ha fits m pc pre => (lowE_ok σ₀ σ hWL hLay b d ca ta ha fits m pc ρ pre).word trivial)
-        (fun cb tb hb fits m pc pre => (lowE_ok σ₀ σ hWL hLay a (d + 1) cb tb hb fits m pc ρ pre).word trivial)
-        hc (by omega) hp)
-      (fun m pc hp => const_ok hp (by decide) (by omega))
-      (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
-    intro wa wb pa pb
-    refine ⟨_, rfl, ?_⟩
-    simp only [Enc, eval] at ⊢
-    rw [pa, pb, bool_word]
-    by_cases hl : (eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n
-    · have hn : ¬ (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
-      simp [hl, hn, wahr?]
-    · have hn : (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
-      simp [hl, hn, wahr?]
+    simp only [lowE_eqs] at h
+    split at h
+    · refine Ok.value ?_ rfl
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨cc, tc⟩, hc, he⟩ := h
+      simp only [bin2, Prod.mk.injEq] at he
+      obtain ⟨rfl, rfl⟩ := he
+      refine bin_ok (cb := [ci 1 (d + 1) 1 0])
+        (Pa := fun w => w = Runner.IR.bool (decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n)))
+        (fun m pc hp => scalarCompareL_ok false
+          (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+          (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
+          (fun cb tb hb => lowE_top a (d + 1) cb tb hb)
+          (fun ca ta ha fits m pc pre => (lowE_ok σ₀ σ hWL hLay b d ca ta ha fits m pc ρ pre).word trivial)
+          (fun cb tb hb fits m pc pre => (lowE_ok σ₀ σ hWL hLay a (d + 1) cb tb hb fits m pc ρ pre).word trivial)
+          hc (by omega) hp)
+        (fun m pc hp => const_ok hp (by decide) (by omega))
+        (g := fun x y => some (x ^^^ y)) ?_ rfl (by decide) (by omega) hp
+      intro wa wb pa pb
+      refine ⟨_, rfl, ?_⟩
+      simp only [Enc, eval] at ⊢
+      rw [pa, pb, bool_word]
+      by_cases hl : (eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n
+      · have hn : ¬ (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
+        simp [hl, hn, wahr?]
+      · have hn : (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n := by omega
+        simp [hl, hn, wahr?]
+    · exact wideLe_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b)
+        (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a _ ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    refine Ok.value ?_ rfl
-    have run := scalarCompareL_ok false
-      (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
-      (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
-      (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
-      (fun ca ta ha fits m pc pre => (lowE_ok σ₀ σ hWL hLay a d ca ta ha fits m pc ρ pre).word trivial)
-      (fun cb tb hb fits m pc pre => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb fits m pc ρ pre).word trivial)
-      h hK hp
-    exact run.mono (fun w value => by
-      by_cases comparison : (eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n <;>
-        simpa [Enc, eval, bool_word, wahr?, comparison] using value)
+    simp only [lowE_eqs] at h
+    split at h
+    · refine Ok.value ?_ rfl
+      have run := scalarCompareL_ok false
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
+        (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+        (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
+        (fun ca ta ha fits m pc pre => (lowE_ok σ₀ σ hWL hLay a d ca ta ha fits m pc ρ pre).word trivial)
+        (fun cb tb hb fits m pc pre => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb fits m pc ρ pre).word trivial)
+        h hK hp
+      exact run.mono (fun w value => by
+        by_cases comparison : (eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n <;>
+          simpa [Enc, eval, bool_word, wahr?, comparison] using value)
+    · exact wideLt_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b)
+        (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
   | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    refine Ok.value ?_ rfl
-    have run := scalarCompareL_ok true
-      (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
-      (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
-      (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
-      (fun ca ta ha fits m pc pre => (lowE_ok σ₀ σ hWL hLay a d ca ta ha fits m pc ρ pre).word trivial)
-      (fun cb tb hb fits m pc pre => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb fits m pc ρ pre).word trivial)
-      h hK hp
-    exact run.mono (fun w value => by
-      by_cases comparison : (eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n <;>
-        simpa [Enc, eval, bool_word, wahr?, comparison] using value)
+    simp only [lowE_eqs] at h
+    split at h
+    · refine Ok.value ?_ rfl
+      have run := scalarCompareL_ok true
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi
+        (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+        (fun cb tb hb => lowE_top b (d + 1) cb tb hb)
+        (fun ca ta ha fits m pc pre => (lowE_ok σ₀ σ hWL hLay a d ca ta ha fits m pc ρ pre).word trivial)
+        (fun cb tb hb fits m pc pre => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb fits m pc ρ pre).word trivial)
+        h hK hp
+      exact run.mono (fun w value => by
+        by_cases comparison : (eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n <;>
+          simpa [Enc, eval, bool_word, wahr?, comparison] using value)
+    · exact wideEq_ok (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b)
+        (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b _ cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .div h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp =>
     div_ok h0 h1' a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .rem h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp =>
     rem_ok h0 h1' a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .sdiv hb a b, d, c, top, h, hK, m, pc, ρ, hp =>
     sdiv_ok hb a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .srem hb a b, d, c, top, h, hK, m, pc, ρ, hp =>
     srem_ok hb a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .band h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
     band_ok h0 h0' a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .bor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp =>
     bor_ok w h0 h0' hw1 hw2 a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .bxor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp =>
     bxor_ok w h0 h0' hw1 hw2 a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .shl w hw1 hw2 h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
     shl_ok w hw1 hw2 h0 h0' a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .shr w hw1 hw2 h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
     shr_ok w hw1 hw2 h0 h0' a b
-      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+      (fun d' ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d' ca ta ha hta m pc ρ hp)
+      (fun d' cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d' cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .none n, d, c, top, h, hK, m, pc, ρ, hp =>
     constValue_ok (L := L) (τ := .opt n) none trivial h hK hp
   | _, _, .ptrOf .., d, c, top, h, hK, m, pc, ρ, hp => by
@@ -373,10 +397,18 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         exact Executes.mono (lowE_ok σ₀ σ hWL hLay b d cb tb hb (by omega) m pc ρ hp) fun m' hw => by
           simpa only [eval, hcond, Bool.false_eq_true, ↓reduceIte] using hw
     · cases h
-  | _, _, .eng e lo' hi' b, d, c, top, h, hK, m, pc, ρ, hp =>
-    (eng_ok h hK
-      (fun ce te he hte m pc hp => (lowE_ok σ₀ σ hWL hLay e d ce te he hte m pc ρ hp).word trivial)
-      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp).word trivial) hp).value (eng_width h)
+  | _, _, .eng e lo' hi' b, d, c, top, h, hK, m, pc, ρ, hp => by
+    simp only [lowE_eqs] at h
+    split at h
+    · exact (eng_ok h hK
+        (fun ce te he hte m pc hp => (lowE_ok σ₀ σ hWL hLay e d ce te he hte m pc ρ hp).word trivial)
+        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp).word trivial) hp).value
+        (eng_width h)
+    · exact wideEng_ok (eval σ₀ e σ ρ) (eval σ₀ b σ ρ) (eval σ₀ (.eng e lo' hi' b) σ ρ)
+        (fun hin => by simp [eval, hin] <;> rfl) (fun hin => by simp [eval, hin] <;> rfl)
+        (fe := lowE L (reserved := reserved) e) (fb := lowE L (reserved := reserved) b)
+        (fun ce te he hte m pc hp => lowE_ok σ₀ σ hWL hLay e d ce te he hte m pc ρ hp)
+        (fun cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
   | _, _, .getBytes t f hf n i hlo hhi _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     split at h

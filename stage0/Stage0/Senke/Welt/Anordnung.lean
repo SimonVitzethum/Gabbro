@@ -9,10 +9,11 @@ variable [Kern]
     world. -/
 theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (declOf u)} {passes : Nat}
     {fs : List (declOf u).Fn} {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String} {main : (declOf u).Fn}
-    {roots : List (declOf u).Fn} {Ks : Nat} {b : Bild (declOf u)}
-    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU u tor) fs pos name main roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
+    {roots : List (declOf u).Fn} {Ks : Nat} {b : Bild (declOf u)} {ρ : Env (declOf u) ((declOf u).params main)}
+    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU u tor) fs pos name main ρ roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (σ : World (declOf u))
-    (ρ : Env (declOf u) ((declOf u).params main)) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
+    (hval : ∀ τ (x : Var ((declOf u).params main) τ), ValueValid b.Y τ (ρ.get x))
+    (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
     match rufAt P O b.passes b.depth main σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m t' m' ∧ StopAt t' m' q ∧
         q.nr = 231 ∧ ExitErg b.Y ((declOf u).erg main) v q.a1
@@ -20,15 +21,15 @@ theorem bild_ok_u [CloneOK] {u : UProg} {P : Programm (declOf u)} {O : Orakel (d
     | .hardware h => Stops ⟨BitVec.ofNat 64 codeBase, BitVec.ofNat 64 b.fp0⟩ m (hwCode h)
     | _ => False := by
   have h := bild_ok (O := O) (passes := passes) hb hfs (fun x h => layU_in u tor x h) (fun x => layU_dis u tor x)
-    (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm σ ρ hWa hT hV
+    (fun x => by simp only [layU]; omega) (fun x => layU_sync u tor x) hm σ hval hWa hT hV
   generalize rufAt P O b.passes b.depth main σ ρ = o at h ⊢
   cases o <;> exact h
 
 /-- **The thread of root `j`** of an elaborated program, on its own stack. -/
 theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (declOf u)} {passes : Nat}
     {fs : List (declOf u).Fn} {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String} {main : (declOf u).Fn}
-    {roots : List (declOf u).Fn} {Ks : Nat} {b : Bild (declOf u)}
-    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU u tor) fs pos name main roots Ks = .ok b)
+    {roots : List (declOf u).Fn} {Ks : Nat} {b : Bild (declOf u)} {ρm : Env (declOf u) ((declOf u).params main)}
+    {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU u tor) fs pos name main ρm roots Ks = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat)
     (hj : j < roots.length) (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params roots[j]))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :

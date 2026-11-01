@@ -12,10 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Stage
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def stagesC (k a : Nat) (src : Nat → Nat → Nat) (l : List Nat) : Nat → List II
-  | 0 => []
-  | S + 1 => stagesC k a src l S ++ stgC k a S (src (2 ^ S)) l
-
 theorem stagesC_length (k a : Nat) (src : Nat → Nat → Nat) (l : List Nat) (S : Nat) :
     (stagesC k a src l S).length = S * (4 + 3 * l.length) := by
   induction S with

@@ -12,12 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Add
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-/-- Read the sign bit of the top limb into slot `a`. -/
-def signTail (n a : Nat) : List II :=
-  [ci 1 (a + 2 * (n + 1) : Nat) 63 0, cn 12 a (a + n) (a + 2 * (n + 1))]
-
-def wideLtC (n a : Nat) : List II := wideAddC (n + 1) a (-1) 1 ++ signTail n a
-
 /-- Subtraction leaves the canonical limbs of `x - y`. -/
 theorem wideSub_value (k a : Nat) (s : Nat → Runner.W) (x y : Int)
     (hx : ∀ j, j < k → s (a + j) = lmb x j) (hy : ∀ j, j < k → s (a + k + j) = lmb y j) :
@@ -78,16 +72,6 @@ theorem wideLt_value (n a : Nat) (s : Nat → Runner.W) (x y : Int)
   omega
 
 /-! ## Equality -/
-
-/-- OR the limbs `j .. j+n-1` into limb zero. -/
-def orChain : Nat → Nat → Nat → List II
-  | 0, _, _ => []
-  | n + 1, a, j => cn 9 a a (a + j) :: orChain n a (j + 1)
-
-def eqTail (n a : Nat) : List II :=
-  [ci 1 (a + 2 * (n + 1) : Nat) 0 0, cn 14 a a (a + 2 * (n + 1))]
-
-def wideEqC (n a : Nat) : List II := wideAddC (n + 1) a (-1) 1 ++ orChain n a 1 ++ eqTail n a
 
 theorem orChain_value (a : Nat) : ∀ (n j : Nat) (s : Nat → Runner.W), 1 ≤ j →
     (aluRun (orChain n a j) s a = 0 ↔ s a = 0 ∧ ∀ i, j ≤ i → i < j + n → s (a + i) = 0) ∧

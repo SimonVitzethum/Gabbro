@@ -13,15 +13,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Parts
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def dvStep (k a c : Nat) : List II :=
-  [cn 12 (c + 4) (a + (k - 1)) (c + 3)] ++
-  shl1C (a + k) (k + 1) (c + 1) (c + 2) (c + 4) (c + 6) (c + 7) ++
-  copyWords (k + 1) (a + 2 * k + 1) (a + k) ++
-  wideAddC (k + 1) (a + 2 * k + 1) (-1) 1 ++
-  flagC c (a + 2 * k + 1 + k) ++
-  selSeq (a + k) (a + 2 * k + 1) (c + 5) (c + 6) (k + 1) ++
-  shl1C a k (c + 1) (c + 2) (c + 4) (c + 6) (c + 7)
-
 /-- The state a step starts from and leaves behind: the two registers, the divisor, the constants. -/
 def DvRep (k a c y : Nat) (s : Nat → Runner.W) (xv rv : Nat) : Prop :=
   (∀ j, j < k → s (a + j) = lmb (xv : Int) j) ∧

@@ -1,0 +1,23 @@
+// IR-12 regression: `main` takes three table pointers (a three-word parameter span in the first frame) and a root is
+// spawned before the call; the image carries the parameter words and the spawns write above them. Exit code 43.
+module ir_probe {
+table ta count 2 { slot { v : u32 in 0 .. 255, } }
+table tb count 2 { slot { v : u32 in 0 .. 255, } }
+table tc count 2 { slot { v : u32 in 0 .. 255, } }
+impl fn worker()
+    effects { pure }
+{ }
+impl fn main(a : ptr<normal, rw> ta, b : ptr<normal, rw> tb, c : ptr<normal, rw> tc) -> u32 in 0 .. 255
+    effects { writes a.slots, writes b.slots, reads c.slots, writes c.slots }
+{
+    start { worker };
+    a.slots[0].v = 10;
+    b.slots[1].v = 20;
+    c.slots[0].v = 13;
+    let x = a.slots[0].v;
+    let y = b.slots[1].v;
+    let z = c.slots[0].v;
+    if x == 10 && y == 20 && z == 13 { return 43; }
+    return 0;
+}
+}
