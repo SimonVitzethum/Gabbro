@@ -12,6 +12,18 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 import Stage0.Bindung.Proben
 
+-- Forward scalar dependencies, exact final meanings and certified declaration schedules.
+#print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle
+#print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle_zeuge
+#print axioms Gabbro.Stage0.Frontend.orderConstants_cycle_zeuge
+#print axioms Gabbro.Stage0.Frontend.checkConstantMeaning_sound
+#print axioms Gabbro.Stage0.Frontend.checkConstantMeaning_sound_zeuge
+#print axioms Gabbro.Stage0.Frontend.checkConstantMeaning_refused_zeuge
+#print axioms Gabbro.Stage0.Frontend.resolveCandidate_final
+#print axioms Gabbro.Stage0.Frontend.discoverScopes_final
+#print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_dependencies
+#print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_forward_zeuge
+
 -- Certified alias scheduling and dependency-cycle refusal in the actual frontend.
 #print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound
 #print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound_zeuge
