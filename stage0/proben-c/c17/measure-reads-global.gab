@@ -1,0 +1,13 @@
+// C17 negative probe: the measure reads a global cell, so it is not
+// world-independent. A non-footprint-free measure must be refused.
+module c17_global {
+static mut a : u32 = 0;
+impl fn f(n : u32) -> u32 effects { writes a } costs <= 64 ops decreases a {
+    a = n;
+    if n == 0 { return 0; }
+    return f(n - 1);
+}
+impl fn main() -> u32 effects { pure } {
+    return 0;
+}
+}

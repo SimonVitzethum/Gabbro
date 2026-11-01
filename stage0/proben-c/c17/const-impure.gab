@@ -1,0 +1,12 @@
+// C17 negative probe: a `const fn` with a non-pure effect used in a const
+// initializer. Compile-time calls admit only pure single-return bodies.
+module c17_impure {
+static mut a : u32 = 0;
+const fn grab(n : u32) -> u32 effects { writes a } costs <= 4 ops {
+    return n;
+}
+const ANSWER : u32 = grab(21);
+impl fn main() -> u32 effects { pure } {
+    return ANSWER;
+}
+}

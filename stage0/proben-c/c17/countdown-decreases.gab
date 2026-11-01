@@ -1,0 +1,17 @@
+// C17 probe: a recursive function bound to its termination duty by `decreases n`.
+// Every recursive call passes `n - 1`, so the measure falls. countdown(5) = 7:
+// the base answers 7 and every level returns it directly, so no arithmetic ever
+// leaves its static range (M1 holds every `+`/`*` against the declared ranges).
+module c17_countdown {
+impl fn countdown(n : u32 in 0 .. 10) -> u32 in 0 .. 10
+    effects { pure }
+    costs <= 64 ops
+    decreases n
+{
+    if n == 0 { return 7; }
+    return countdown(n - 1);
+}
+impl fn main() -> u32 effects { pure } {
+    return countdown(5);
+}
+}

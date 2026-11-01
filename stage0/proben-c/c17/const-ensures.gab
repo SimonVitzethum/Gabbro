@@ -1,0 +1,11 @@
+// C17 probe: a `const fn` carrying an `ensures` contract, folded at
+// translation time into a const initializer. doppelt(21) = 42.
+module c17_const_ensures {
+const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 ensures result == n + n effects { pure } costs <= 4 ops {
+    return n + n;
+}
+const ANSWER : u32 = doppelt(21);
+impl fn main() -> u32 effects { pure } {
+    return ANSWER;
+}
+}

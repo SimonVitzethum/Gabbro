@@ -1,0 +1,25 @@
+// C17 probe: mutual recursion where every cycle member carries the same measure.
+// Parity over a shared countdown: gerade(9) = 1, ungerade(8) = 1, alternating down
+// to ungerade(0) = 1. Direct returns only, so every `+`/`-` stays inside its static
+// range (M1 holds arithmetic against the declared ranges, not against the run).
+module c17_mutual {
+impl fn gerade(n : u32 in 0 .. 10) -> u32 in 0 .. 1
+    effects { pure }
+    costs <= 64 ops
+    decreases n
+{
+    if n == 0 { return 0; }
+    return ungerade(n - 1);
+}
+impl fn ungerade(n : u32 in 0 .. 10) -> u32 in 0 .. 1
+    effects { pure }
+    costs <= 64 ops
+    decreases n
+{
+    if n == 0 { return 1; }
+    return gerade(n - 1);
+}
+impl fn main() -> u32 effects { pure } {
+    return gerade(9);
+}
+}

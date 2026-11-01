@@ -1,0 +1,11 @@
+// C17 negative probe: `decreases k` names no parameter of the function.
+// An unbound measure must be refused, never silently ignored.
+module c17_unknown {
+impl fn f(n : u32) -> u32 effects { pure } costs <= 64 ops decreases k {
+    if n == 0 { return 0; }
+    return f(n - 1);
+}
+impl fn main() -> u32 effects { pure } {
+    return f(3);
+}
+}

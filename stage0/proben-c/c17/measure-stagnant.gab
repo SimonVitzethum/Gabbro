@@ -1,0 +1,11 @@
+// C17 negative probe: `decreases n`, but the recursive call passes `n`
+// unchanged, so the measure never falls. Must be refused, not emitted.
+module c17_stagnant {
+impl fn f(n : u32) -> u32 effects { pure } costs <= 64 ops decreases n {
+    if n == 0 { return 0; }
+    return f(n);
+}
+impl fn main() -> u32 effects { pure } {
+    return f(3);
+}
+}
