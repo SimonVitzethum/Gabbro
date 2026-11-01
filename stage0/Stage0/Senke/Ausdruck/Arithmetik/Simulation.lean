@@ -2098,9 +2098,8 @@ private theorem normalizeFrameEnv {m : Runner.Mem} {fp : Runner.W} {K n : Nat}
       exact ⟨_, rfl⟩
     let z : Zahl (-2^63) (2^63-1) :=
       ⟨w.toInt, by simpa using BitVec.le_toInt w, by simpa using BitVec.toInt_le (x := w)⟩
-    refine ⟨Env.cons z ρ, envAt_cons (w := w) env ?_ ?_⟩
-    · simpa [frei] using read
-    · exact BitVec.ofInt_toInt.symm
+    refine ⟨Env.cons z ρ, envAt_cons env ?_⟩
+    exact ValueAt.of_enc (by decide) (by simpa [frei] using read) BitVec.ofInt_toInt.symm
 
 private theorem normalizeFrameVar (n i : Nat) (hi : i < n) :
     ∃ x : Var (List.replicate n normalizeWordTy) normalizeWordTy, vslot x = FB+i := by
@@ -2118,12 +2117,13 @@ private theorem normalizeContextLoad {Δ : Ctx} (η : Env D Δ)
       (fun j => some ([ci 2 j i 0], j+1)) (BitVec.ofInt 64 (η.get x).n) := by
   intro fp K j c t hc ht m pc hp
   cases hc
-  obtain ⟨w, hr, he⟩ := hp.env _ x
+  obtain ⟨w, hr, he⟩ := ValueAt.word normalizeWordTy _ trivial (hp.env _ x)
   rw [hx] at hr
   change w = BitVec.ofInt 64 (η.get x).n at he
   subst w
   have bound : i < j := by
-    have := idx_lt x
+    have := variableOffset_bound x
+    have hw : valueWords normalizeWordTy = 1 := by decide
     have := hp.ctx
     simp only [vslot, frei] at hx this
     omega
@@ -2165,7 +2165,7 @@ theorem floatNormalizeStepL_slots
         (fun j => some ([ci 2 j i 0], j+1)) (BitVec.ofInt 64 v) := by
     obtain ⟨x, hx⟩ := normalizeFrameVar (base+8-FB) (i-FB) (by omega)
     have hx' : vslot x = i := by omega
-    obtain ⟨w, read', enc⟩ := env _ x
+    obtain ⟨w, read', enc⟩ := ValueAt.word normalizeWordTy _ trivial (env _ x)
     rw [hx', read] at read'
     cases read'
     change BitVec.ofInt 64 v = BitVec.ofInt 64 (η.get x).n at enc

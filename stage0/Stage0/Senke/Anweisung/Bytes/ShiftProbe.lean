@@ -80,16 +80,41 @@ def memory : Runner.Mem where
   rd _ := true
   wr _ := true
 
+theorem cell_width : valueWords (D.typ tab field) = 1 := by decide +kernel
+
 theorem layout_in : LayIn layout := by
   refine ⟨fun t f k hk => ?_, (fun g => Fin.elim0 g), by decide⟩
   have ht : t = tab := Subsingleton.elim _ _
   subst t
+  have hf : f = field := Subsingleton.elim _ _
+  subst f
   change (k : Int) < 2 at hk
-  change 8192 ≤ 8192 + 8 * k ∧ 8192 + 8 * k + 8 ≤ 8208
+  simp only [Lay.elem, layout, cell_width]
   omega
 
 theorem layout_dis : LayDis layout := by
-  constructor
+  have one : ∀ (t : D.Tab) (f : D.Feld t), valueWords (D.typ t f) = 1 := by
+    intro t f
+    have ht : t = tab := Subsingleton.elim _ _
+    subst t
+    have hf : f = field := Subsingleton.elim _ _
+    subst f
+    exact cell_width
+  refine ⟨?_, ?_, ?_⟩
+  · intro c c' hc hc' hne
+    cases c with
+    | glob g => exact Fin.elim0 g
+    | elem t f k =>
+      cases c' with
+      | glob g => exact Fin.elim0 g
+      | elem t' f' k' =>
+        have ht : t = t' := Subsingleton.elim _ _
+        subst t'
+        have hf : f = f' := Subsingleton.elim _ _
+        subst f'
+        have hk : k ≠ k' := fun h => hne (by subst h; rfl)
+        simp only [Zelle.adr, Zelle.bytes, Lay.elem, layout, one]
+        omega
   · intro c c' hc hc' he
     cases c with
     | glob g => exact Fin.elim0 g
@@ -101,14 +126,16 @@ theorem layout_dis : LayDis layout := by
         subst t'
         have hf : f = f' := Subsingleton.elim _ _
         subst f'
-        change 8192 + 8 * k = 8192 + 8 * k' at he
-        have : k = k' := by omega
+        simp only [Zelle.adr, Lay.elem, layout, one] at he
+        have hk : k = k' := by omega
         subst k'
         rfl
   · intro c hc
     cases c with
     | glob g => exact Fin.elim0 g
-    | elem t f k => change (8192 + 8 * k) % 8 = 8192 % 8; omega
+    | elem t f k =>
+      simp only [Zelle.adr, Lay.elem, layout, one]
+      omega
 
 theorem pre [Kern] : PreS layout memory 0 4096 64 4 code (Env.nil : Env D []) := by
   refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
@@ -125,7 +152,7 @@ theorem pre [Kern] : PreS layout memory 0 4096 64 4 code (Env.nil : Env D []) :=
   · unfold CodeFar; decide +kernel
   · intro _ x; nomatch x
 
-theorem world_at : WeltAt memory layout world := by
+theorem world_at [Kern] : WeltAt memory layout world := by
   refine ⟨fun t f k hk => ?_, (fun g => Fin.elim0 g), fun _ _ _ => rfl⟩
   have ht : t = tab := Subsingleton.elim _ _
   subst t
@@ -134,8 +161,8 @@ theorem world_at : WeltAt memory layout world := by
   change (k : Int) < 2 at hk
   have hcases : k = 0 ∨ k = 1 := by omega
   rcases hcases with rfl | rfl
-  · exact ⟨0, by decide +kernel, rfl⟩
-  · exact ⟨BitVec.ofInt 64 old, by decide +kernel, rfl⟩
+  · exact ValueAt.ofCellWord (w := 0) cell_width (by decide +kernel) rfl
+  · exact ValueAt.ofCellWord (w := BitVec.ofInt 64 old) cell_width (by decide +kernel) rfl
 
 /-- All shift premises hold jointly. The old state is checked, a large target is
     stored in cell one, and both cell zero and the live frame sentinel survive. -/
@@ -163,8 +190,11 @@ theorem simulation_zeuge [Kern] (O : Orakel D)
     ((world.lese [] [.inl tab]).schreibSlot tab [] 1 field
       (⟨target, by decide, by decide⟩ : Zahl 0 target)) .nil at run
   obtain ⟨m', steps, _, _, represented, kept⟩ := run
-  obtain ⟨w1, read1, enc1⟩ := represented.1 tab field 1 (by decide)
-  obtain ⟨w0, read0, enc0⟩ := represented.1 tab field 0 (by decide)
+  obtain ⟨w1, read1, enc1⟩ := ValueAt.word (D.typ tab field) _ (wordCompatB_sound _ (by decide +kernel))
+    (represented.1 tab field 1 (by decide))
+  obtain ⟨w0, read0, enc0⟩ := ValueAt.word (D.typ tab field) _ (wordCompatB_sound _ (by decide +kernel))
+    (represented.1 tab field 0 (by decide))
+  rw [slot_zero] at read1 read0
   have value1 : w1 = BitVec.ofInt 64 target := by
     change w1 = BitVec.ofInt 64 target at enc1
     exact enc1
@@ -172,8 +202,8 @@ theorem simulation_zeuge [Kern] (O : Orakel D)
     change w0 = 0 at enc0
     exact enc0
   refine ⟨by decide, by decide, emitted, by decide +kernel, pre, m', steps, ?_, ?_, ?_⟩
-  · simpa [value1, layout, Lay.elem] using read1
-  · simpa [value0, layout, Lay.elem] using read0
+  · simpa [value1, layout, Lay.elem, cell_width] using read1
+  · simpa [value0, layout, Lay.elem, cell_width] using read0
   · exact (kept 3 (by simp)).trans (by decide +kernel)
 
 end Gabbro.Stage0.Senke.ShiftProbe

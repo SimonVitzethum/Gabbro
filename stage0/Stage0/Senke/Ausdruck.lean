@@ -23,308 +23,53 @@ import Lean.Meta.Tactic.Simp.RegisterCommand
 import Grammatik.Kern.Semantik.Semantik
 import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
+import Stage0.Senke.Welt.Spans.CellCode
 import Stage0.Senke.Ausdruck.Aggregat.Wert
+import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
+import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
 import Stage0.Senke.Ausdruck.Aggregat.Kopie
+import Stage0.Senke.Ausdruck.Aggregat.Layout
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
+import Stage0.Senke.Welt.Rahmen
+import Stage0.Senke.Ausdruck.Aggregat.Hilfen
+import Stage0.Senke.Ausdruck.Quant.TransportCode
 
 namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR
 
-/-- Constructor equations for expression lowering; kept separate from generated recursive equations. -/
-register_simp_attr lowE_eqs
-
 variable {D : Deklaration} {L : Lay D}
 
-/-- The position of a variable, counted from the head of the context. -/
-def Var.idx : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
-  | _, _, .here => 0
-  | _, _, .there x => Var.idx x + 1
-
-/-- The first slots of every frame: 0 the return `pc` and 1 the caller's `fp` (both written by `call`), 2 the
-    remaining call depth (G's `fuel`; a call with depth 0 stops with `abstieg`),
-    and 3 is reserved for an entry snapshot. The variables follow. -/
-def FB : Nat := 4
-
-/-- The first free slot of a frame whose variables are `Γ`. -/
-def frei (Γ : Ctx) (reserved : Nat := 0) : Nat := FB + reserved + Γ.length
-
-/-- The frame slot of a variable: counted from the bottom of the context, after the frame's first slots. -/
-def vslot {Γ : Ctx} {τ : Ty} (x : Var Γ τ) (reserved : Nat := 0) : Nat :=
-  FB + reserved + (Γ.length - 1 - Var.idx x)
-
-/-- Reserve a prefix after the ABI header consistently for bindings and scratch. -/
-theorem frei_reserved (Γ : Ctx) (reserved : Nat) :
-    FB + reserved ≤ frei Γ reserved := by simp [frei]
-
-theorem vslot_reserved {Γ : Ctx} {τ : Ty} (x : Var Γ τ) (reserved : Nat) :
-    FB + reserved ≤ vslot x reserved := by simp [vslot]
-
-/-- Extending the context allocates exactly its first free unreserved word. -/
-theorem vslot_here_reserved (Γ : Ctx) (τ : Ty) (reserved : Nat) :
-    vslot (Var.here : Var (τ :: Γ) τ) reserved = frei Γ reserved := by
-  simp [vslot, frei, Var.idx]
-
-/-- A range of integers that 64 bits hold. -/
-def inW (lo hi : Int) : Bool := decide (-2 ^ 63 ≤ lo) && decide (hi < 2 ^ 63)
-
-/-- An unsigned scalar occupies one word; mixed signed/unsigned intervals are not admitted. -/
-def inU (lo hi : Int) : Bool := decide (0 ≤ lo) && decide (hi < 2 ^ 64)
-
-/-- Exact scalar interval in either signed or unsigned interpretation. -/
-def scalarFits (lo hi : Int) : Bool := inW lo hi || inU lo hi
-
-/-- Select the interpretation in which both complete scalar intervals fit. -/
-def scalarOrder (l1 h1 l2 h2 : Int) : Option Nat :=
-  if inW l1 h1 && inW l2 h2 then some 13
-  else if inU l1 h1 && inU l2 h2 then some 27 else none
-
-def lit32 (n : Int) : Bool := decide (-2 ^ 31 ≤ n) && decide (n < 2 ^ 31)
-
-def ci (o : Nat) (a b c : Int) : II := ⟨o, a, b, c⟩
-
-/-- `if c then a else b` as a value into slot `d`: the condition, `brz` over the `then` code and its jump. -/
-def wennC (d : Nat) (cc ca cb : List II) : List II :=
-  cc ++ [ci 19 d ((16 * (ca.length + 2) : Nat) : Int) 0] ++ ca ++ [ci 18 ((16 * (cb.length + 1) : Nat) : Int) 0 0] ++ cb
-
-/-- The code of `if c then a else b` from the codes of its parts. -/
-def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Nat) := do
-  let cc ← cc
-  let ca ← ca
-  let cb ← cb
-  if 16 * (ca.1.length + cb.1.length + 2) < 2 ^ 31 then
-    some (wennC d cc.1 ca.1 cb.1, max cc.2 (max ca.2 cb.2))
-  else none
-
-/-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
-def bin2 (o : Nat) (d : Nat) (ca : List II × Nat) (cb : List II × Nat) : List II × Nat :=
-  (ca.1 ++ cb.1 ++ [ci o d d (d + 1)], max ca.2 cb.2)
-
-/-- A word operation whose operands have already been lowered; reserve its two operand slots explicitly. -/
-def wordL (o d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← a
-  let b ← b
-  pure ((bin2 o d a b).1, max (max a.2 b.2) (d + 2))
-
-/-- A word operation against a small constant. -/
-def wordK (o d : Nat) (a : Option (List II × Nat)) (k : Int) : Option (List II × Nat) :=
-  wordL o d a (some ([ci 1 (d + 1) k 0], d + 2))
-
-/-- A short string's byte at zero, or zero at every other signed index. -/
-def strGetL (d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) :=
-  wennL d (wordK 14 d i 0) (wordK 8 d s 255) (some ([ci 1 d 0 0], d + 1))
-
-/-- The raw magnitude field, without the sign bit. -/
-def floatMag (a : GFloat) : Nat := a.bexp * 4503599627370496 + a.frac
-
-/-- The mathematical ordering key; both signed zeros have key zero. -/
-def floatKey (a : GFloat) : Int := if a.sign then -(floatMag a : Int) else floatMag a
-
-/-- Build an arbitrary word from base-65536 digits, using only signed immediate fields. -/
-def konstWL : Nat → Nat → Nat → List II × Nat
-  | 0, _, d => ([ci 1 d 0 0], d + 1)
-  | k + 1, n, d =>
-    bin2 3 d (bin2 5 d (konstWL k (n / 65536) d)
-      ([ci 1 (d + 1) 65536 0], d + 2))
-      ([ci 1 (d + 1) (n % 65536) 0], d + 2)
-
-/-- One scalar word, retaining the single-instruction path for small constants. -/
-def wordConstant (d : Nat) (n : Int) : List II × Nat :=
-  if lit32 n then ([ci 1 d n 0], d + 1)
-  else konstWL 4 (BitVec.ofInt 64 n).toNat d
-
-/-- Compare previously evaluated scalar operands, guarding the signed operand
-    before its raw word is compared with an unsigned operand. -/
-def mixedCmpC (leftSigned equal : Bool) (d : Nat) : List II :=
-  [ci 1 (d + 2) 0 0,
-   ci 13 (d + 2) ((if leftSigned then d else d + 1) : Nat) (d + 2),
-   ci (if equal then 14 else 27) (d + 3) d (d + 1)] ++
-  if leftSigned && !equal then [ci 9 d (d + 2) (d + 3)]
-  else [ci 1 (d + 4) 1 0, ci 10 (d + 4) (d + 2) (d + 4), ci 8 d (d + 3) (d + 4)]
-
-/-- Compare each complete scalar domain, with a sign guard when no common raw
-    interpretation exists. Both operand programs are evaluated exactly once. -/
-def scalarCompareL (equal : Bool) (d : Nat) (l1 h1 l2 h2 : Int)
-    (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← a
-  let b ← b
-  match scalarOrder l1 h1 l2 h2 with
-  | some o => pure (bin2 (if equal then 14 else o) d a b)
-  | none =>
-    if scalarFits l1 h1 && scalarFits l2 h2 then
-      pure (a.1 ++ b.1 ++ mixedCmpC (inW l1 h1) equal d, max (max a.2 b.2) (d + 5))
-    else none
-
-/-- One raw interval predicate. Its flag is in `d+1`; the input in `d` is preserved. -/
-def engTest (o d : Nat) (lo hi : Int) : List II × Nat :=
-  ((wordConstant (d + 1) lo).1 ++ [ci o (d + 1) d (d + 1)] ++
-    (wordConstant (d + 2) hi).1 ++
-    [ci o (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)],
-   max (wordConstant (d + 1) lo).2 (wordConstant (d + 2) hi).2)
-
-/-- Normalize a scalar interval test in the input's interpretation. Disjoint
-    intervals produce a true outside flag after the input has been evaluated. -/
-def intervalTestL (d : Nat) (lo hi lo' hi' : Int) : Option (List II × Nat) :=
-  if scalarFits lo hi && scalarFits lo' hi' then
-    if hi < lo' ∨ hi' < lo then some ([ci 1 (d + 1) 1 0], d + 2)
-    else do
-      let o ← scalarOrder lo hi lo hi
-      pure (engTest o d (max lo lo') (min hi hi'))
-  else none
-
-/-- Evaluate the input once, test it, and evaluate the fallback only outside. -/
-def engC (d : Nat) (ce ct cb : List II) : List II :=
-  ce ++ ct ++ [ci 19 (d + 1) ((16 * (cb.length + 1) : Nat) : Int) 0] ++ cb
-
-def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Option (List II × Nat) := do
-  let ce ← ce
-  let cb ← cb
-  let ct ← intervalTestL d lo hi lo' hi'
-  if 16 * (cb.1.length + 1) < 2 ^ 31 then
-    some (engC d ce.1 ct.1 cb.1, max ce.2 (max ct.2 cb.2))
-  else none
-
-/-- Signed magnitude key: strip the sign, multiply by `1 - 2 * sign`.
-    The two supplied operand codes evaluate the same pure expression at `d` and `d+3`. -/
-def floatKeyL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← a
-  let b ← b
-  pure (bin2 5 d
-    (bin2 12 d (bin2 11 d a ([ci 1 (d+1) 1 0], d+2)) ([ci 1 (d+1) 1 0], d+2))
-    (bin2 4 (d+1) ([ci 1 (d+1) 1 0], d+2)
-      (bin2 5 (d+2) ([ci 1 (d+2) 2 0], d+3)
-        (bin2 13 (d+3) b ([ci 1 (d+4) 0 0], d+5)))))
-
-/-- Compare two signed keys; non-strict order negates the reverse strict order. -/
-def floatCmpL (le : Bool) (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← a
-  let b ← b
-  let c := bin2 13 d a b
-  pure (if le then bin2 10 d c ([ci 1 (d+1) 1 0], d+2) else c)
-
-/-- Apply the same key transformation to both pure operands. -/
-def floatExprL (le : Bool) (d : Nat) (a b : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
-  floatCmpL le d (floatKeyL d (a d) (a (d+3)))
-    (floatKeyL (d+1) (b (d+1)) (b (d+4)))
-
-/-- A constant ordering key, including its sign in two's complement. -/
-def floatConstL (x : GFloat) (d : Nat) : List II × Nat :=
-  konstWL 4 (BitVec.ofInt 64 (floatKey x)).toNat d
-
-/-- Outside the inclusive interval: `x < lo || hi < x`. -/
-def floatRangeL (d : Nat) (lo hi : Int × Int) (e : Nat → Option (List II × Nat)) : Option (List II × Nat) := do
-  let a ← floatKeyL d (e d) (e (d+3))
-  let b ← floatKeyL (d+2) (e (d+2)) (e (d+5))
-  pure (bin2 9 d (bin2 13 d a (floatConstL (bruch lo) (d+1)))
-    (bin2 13 (d+1) (floatConstL (bruch hi) (d+1)) b))
-
-/-- The range of an integer expression lies in 64 bits. -/
-def inWE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inW lo hi
-def inUE {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := inU lo hi
-
-
-/-- A shift count below 64. -/
-def lt64 {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := decide (hi < 64)
-
-/-- The least value of an integer expression lies above `-2^63`. -/
-def nichtMin {Λ : List (Res D)} {Γ : Ctx} {lo hi : Int} (_ : Expr D Γ Λ (.int lo hi)) : Bool := decide (-2 ^ 63 < lo)
-
-/-- The address of an element of column `f` of table `t`, its index computed by `ci'` into slot `d`:
-    `col + 8 · i` into slot `d`. -/
-def slotA (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
-  if lit32 (L.col t f) then
-    some (ci'.1 ++ [ci 1 (d + 1) 8 0, ci 5 d d (d + 1), ci 1 (d + 1) (L.col t f) 0, ci 3 d d (d + 1)],
-      max ci'.2 (d + 2))
-  else none
-
-/-- The aggregate representations admitted by frames and reads, recursively through singleton arrays.
-    Empty arrays need no representation for their element type. Other scalar fragments keep their own checks. -/
-def aggregateFits : Ty → Bool
-  | .arr τ n => if n = 0 then true else decide (n = 1) && aggregateFits τ
-  | .str n => decide (n ≤ 1)
-  | _ => true
-
-/-- An element of column `f` of table `t`: its address (`slotA`), the word there. -/
-def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat) : Option (List II × Nat) :=
-  if aggregateFits (D.typ t f) then
-    (slotA L t f d ci').map fun a => (a.1 ++ [ci 15 d d 0], a.2)
-  else none
-
-/-- Pack the payload word in `d`: subtract its lower bound, multiply by 256, add the tag. -/
-def packSum (d : Nat) (lo : Int) (tag : Nat) (ce : List II × Nat) : List II × Nat :=
-  bin2 3 d (bin2 5 d (bin2 4 d ce (wordConstant (d + 1) lo))
-    ([ci 1 (d + 1) 256 0], d + 2)) ([ci 1 (d + 1) tag 0], d + 2)
-
-/-- Read a little-endian byte span, one aligned world word per byte. The index code is
-    repeated without changing the world. `j` is the byte offset into the span. -/
-def readBytesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
-    Nat → Nat → Nat → Option (List II × Nat)
-  | _, 0, d => some ([ci 1 d 0 0], d + 1)
-  | j, n + 1, d => do
-    let ci' ← idx d
-    let head ← slotC L t f d (bin2 3 d ci' ([ci 1 (d + 1) j 0], d + 2))
-    let tail ← readBytesL L t f idx (j + 1) n (d + 1)
-    pure (bin2 3 d head (bin2 5 (d + 1) tail ([ci 1 (d + 2) 256 0], d + 3)))
-
-/-- Borrow the binder's canonical slot, retaining its previous word above the result. -/
-def quantBindC (s d : Nat) (k : Int) (cb : List II) : List II :=
-  [ci 2 (d + 1) s 0, ci 1 s k 0] ++ cb ++ [ci 2 s (d + 1) 0, ci 2 d (d + 2) 0]
-
-/-- Finite Boolean fold. Every iteration reuses the same scratch slots. -/
-def quantC (all : Bool) (s d : Nat) (cb : List II) : Nat → Nat → List II
-  | _, 0 => [ci 1 d (if all then 1 else 0) 0]
-  | j, n + 1 => quantC all s d cb (j + 1) n ++ quantBindC s (d + 1) j cb ++
-      [ci (if all then 8 else 9) d d (d + 1)]
-
-/-- The code-size bound is checked before materialising the finite fold. -/
-def quantL (all : Bool) (s d : Nat) (count : Int) (body : Option (List II × Nat)) : Option (List II × Nat) :=
-  if count.toNat = 0 then some ([ci 1 d (if all then 1 else 0) 0], d + 1)
-  else do
-    let cb ← body
-    if count.toNat < 2 ^ 31 ∧ 1 + count.toNat * (cb.1.length + 5) < 2 ^ 31 then
-      some (quantC all s d cb.1 0 count.toNat, max cb.2 (d + 4))
-    else none
-
-/-- Equality of two recomputable words, with room for both operands. -/
-def reachEqL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let ca ← a
-  let cb ← b
-  pure ((bin2 14 d ca cb).1, max ca.2 (max cb.2 (d + 2)))
-
-/-- Follow an optional-index column. Failed links are tested before the next access.
-    Recomputing pure operands avoids keeping a live index across condition code. -/
-def reachL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) :
-    Nat → Option (List II × Nat) → Option (List II × Nat) → Option (List II × Nat)
-  | 0, a, b => reachEqL d a b
-  | n + 1, a, b =>
-    let next := a.bind (slotC L t f d)
-    wennL d (reachEqL d a b) (some ([ci 1 d 1 0], d + 1))
-      (wennL d (reachEqL d next (some ([ci 1 (d + 1) (-1) 0], d + 2)))
-        (some ([ci 1 d 0 0], d + 1)) (reachL L t f d n next b))
-
-/-- Check a conservative bound before constructing the bounded chain code. -/
-def reachesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat)
-    (a b : Option (List II × Nat)) : Option (List II × Nat) := do
-  let ca ← a
-  let cb ← b
-  let n := (D.count t).toNat
-  if n < 2 ^ 31 ∧ 16 * (n + 1) * (ca.1.length + cb.1.length + 20 + 6 * (n + 1)) < 2 ^ 31 then
-    reachL L t f d n (some ca) (some cb)
-  else none
-
 mutual
-/-- The code computing `e` into slot `d`, and the first slot from which on nothing is touched. -/
+/-- The code computing
+ `e` into slot `d`, and the first slot from which on nothing is touched. -/
 def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ τ) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
   match Γ, τ, e, d with
-  | _, _, .lit n, d => if scalarFits n n then some (wordConstant d n) else none
+  | _, _, .lit n, d => if lit32 n then some ([ci 1 d n 0], d + 1) else
+      some (constWords (encodeWords L (.int n n) ⟨n, by omega, by omega⟩) d)
   | _, _, .tru, d => some ([ci 1 d 1 0], d + 1)
   | _, _, .fls, d => some ([ci 1 d 0 0], d + 1)
-  | _, τ, .var x, d => if aggregateFits τ then some (copyWords 1 d (vslot x reserved), d + 1) else none
-  | _, _, .widen _ _ e, d => lowE L (reserved := reserved) e d
-  | _, _, .add a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
-  | _, _, .sub a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)
-  | _, _, .mul a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 5 d ca cb)
-  | _, _, .neg a, d => do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
+  | _, τ, .var x, d => some (copyWords (valueWords τ) d (vslot x reserved), d + valueWords τ)
+  | _, _, .widen (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') _ _ e, d =>
+    resizeIntegerL lo hi lo' hi' d (lowE L (reserved := reserved) e d)
+  | _, _, @Expr.add _ _ _ l1 h1 l2 h2 a b, d =>
+    if valueWords (.int (l1 + l2) (h1 + h2)) = 1 then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
+    else none
+  | _, _, @Expr.sub _ _ _ l1 h1 l2 h2 a b, d =>
+    if valueWords (.int (l1 - h2) (h1 - l2)) = 1 then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)
+    else none
+  | _, _, @Expr.mul _ _ _ l1 h1 l2 h2 a b, d =>
+    if valueWords (.int (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
+      (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2)))) = 1 then
+      do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 5 d ca cb)
+    else none
+  | _, _, @Expr.neg _ _ _ lo hi a, d =>
+    if valueWords (.int (-hi) (-lo)) = 1 then do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
+    else none
   | _, _, .not a, d => do let ca ← lowE L (reserved := reserved) a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
   | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d => do
     let c ← scalarCompareL false d l2 h2 l1 h1
@@ -354,48 +99,80 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     else none
   | _, _, .band _ _ a b, d =>
     if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none
-  | _, _, .bor _ _ _ _ _ a b, d =>
-    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb) else none
-  | _, _, .bxor _ _ _ _ _ a b, d =>
-    if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb) else none
-  | _, _, .shl _ _ _ _ _ a b, d =>
-    if inWE b && lt64 b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb) else none
+  | _, _, .bor w _ _ _ _ a b, d =>
+    if inUE a && inUE b then resizeIntegerL 0 (2 ^ 64 - 1) 0 (2 ^ w - 1) d
+      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb)) else none
+  | _, _, .bxor w _ _ _ _ a b, d =>
+    if inUE a && inUE b then resizeIntegerL 0 (2 ^ 64 - 1) 0 (2 ^ w - 1) d
+      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb)) else none
+  | _, _, .shl (h1 := h1) (h2 := h2) _ _ _ _ _ a b, d =>
+    if valueWords (.int 0 (h1 * 2 ^ h2.toNat)) = 1 then
+      if inWE b && lt64 b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb) else none
+    else none
   | _, _, .shr _ _ _ _ _ a b, d =>
     if inUE a && inUE b && lt64 b then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 12 d ca cb)
     else none
   | _, _, .arrNil, d => some ([ci 1 d 0 0], d + 1)
-  | _, _, @Expr.arrCons _ _ _ _ n a _, d => if n = 0 then lowE L (reserved := reserved) a d else none
-  | _, _, @Expr.arrGet _ _ _ _ n a _, d => if n = 1 then lowE L (reserved := reserved) a d else none
-  | _, _, @Expr.arrSet _ _ _ _ n _ _ v, d => if n = 1 then lowE L (reserved := reserved) v d else none
-  | _, _, @Expr.strLit _ n _ _ bs _, d =>
-    if n ≤ 1 then some ([ci 1 d (strN bs) 0], d + 1) else none
+  | _, _, @Expr.arrCons _ _ _ τ n a rest, d =>
+    if n = 0 then lowE L (reserved := reserved) a d else do
+      let head ← lowE L (reserved := reserved) a d
+      let tail ← lowE L (reserved := reserved) rest (d + valueWords τ)
+      pure (head.1 ++ tail.1, max (max head.2 tail.2) (d + valueWords (.arr τ (n + 1))))
+  | _, _, @Expr.arrGet _ _ _ τ n a i, d => if n = 1 then lowE L (reserved := reserved) a d else
+    arrGetL τ n d (lowE L (reserved := reserved) a d)
+      (lowE L (reserved := reserved) i (d + valueWords (.arr τ n)))
+  | _, _, @Expr.arrSet _ _ _ τ n a i v, d => if n = 1 then lowE L (reserved := reserved) v d else
+    arrSetL τ n d (lowE L (reserved := reserved) a d)
+      (lowE L (reserved := reserved) v (d + valueWords (.arr τ n)))
+      (lowE L (reserved := reserved) i (d + valueWords (.arr τ n) + valueWords τ))
+  | _, _, @Expr.strLit _ n _ _ bs hb, d =>
+    some (constWords (encodeWords L (.str n) ⟨bs, hb⟩) d)
   | _, _, @Expr.strLen _ _ _ n s, d =>
-    if n ≤ 1 then wordK 12 d (lowE L (reserved := reserved) s d) 8 else none
+    if n ≤ 1 then wordK 12 d (lowE L (reserved := reserved) s d) 8 else
+      (lowE L (reserved := reserved) s d).map fun p => (p.1, max p.2 (d + valueWords (.str n)))
   | _, _, @Expr.strCat _ _ _ n m s t, d =>
     if n + m ≤ 1 then (if n = 0 then lowE L (reserved := reserved) t d else lowE L (reserved := reserved) s d) else none
   | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
-    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d) else none
+    if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d)
+    else if scalarFits lo hi = true then
+      strGetWideL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 2))
+    else none
   | _, _, @Expr.strEq _ _ _ n m s t, d =>
-    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
+    if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1))
+    else if n ≤ 1 ∨ m ≤ 1 then
+      strEqMixedL n m d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + valueWords (.str n)))
+    else strEqLongL n m d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + (n + 1)))
   | _, _, @Expr.strLt _ _ _ n m s t, d =>
     if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
   | _, _, @Expr.strWeit _ _ _ n m s, d =>
-    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L (reserved := reserved) s d) else none
-  | _, _, .none _, d => some ([ci 1 d (-1) 0], d + 1)
-  | _, _, .some e, d => lowE L (reserved := reserved) e d
+    if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE L (reserved := reserved) s d)
+    else if 2 ≤ n ∧ n ≤ m then
+      (lowE L (reserved := reserved) s d).map fun a =>
+        (a.1 ++ (constWords (List.replicate (m - n) 0) (d + n + 1)).1,
+          max a.2 (max (constWords (List.replicate (m - n) 0) (d + n + 1)).2 (d + m + 1)))
+    else if n ≤ 1 then
+      strExpandL n m d (lowE L (reserved := reserved) s d) (constWords (List.replicate (m - 1) 0) (d + 2))
+    else strTakeL n m d (lowE L (reserved := reserved) s d)
+  | _, _, .none n, d => some (constWords (encodeWords L (.opt n) none) d)
+  | _, _, @Expr.some _ _ _ n e, d =>
+    if n ≤ 2 ^ 63 then lowE L (reserved := reserved) e d else do
+      let child ← lowE L (reserved := reserved) e (d + 1)
+      pure ([ci 1 d 1 0] ++ child.1, max child.2 (d + valueWords (.opt n)))
   | _, _, @Expr.istSome _ _ _ n e, d =>
     if decide (n ≤ 2 ^ 63) then do
       let ce ← lowE L (reserved := reserved) e d
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
     else none
   | _, _, .case cs i nutz, d => if sumFits cs then lowN L (reserved := reserved) i.val nutz d else none
-  | _, _, .why n r, d => if decide (n < 2 ^ 31) then some ([ci 1 d (r.val : Int) 0], d + 1) else none
+  | _, _, .why n r, d => some (constWords (encodeWords L (.why n) r) d)
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
-  | _, _, .glob g _, d => if lit32 (L.ga g) && aggregateFits (D.gtyp g) then some ([ci 1 d (L.ga g) 0, ci 15 d d 0], d + 1) else none
-  | _, _, .slot t f i _, d => do let ci' ← lowE L (reserved := reserved) i d; slotC L t f d ci'
-  | _, _, .thru _ t _ f i _, d => do let ci' ← lowE L (reserved := reserved) i d; slotC L t f d ci'
+  | _, _, .glob g _, d => globalValueC L g d
+  | _, _, .slot t f i _, d => do
+    let ci' ← lowE L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci'
+  | _, _, .thru _ t _ f i _, d => do
+    let ci' ← lowE L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci'
   | _, _, @Expr.eng _ _ _ lo hi e lo' hi' b, d => engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) b d)
   | _, _, .getBytes t f _ n i _ _ _, d =>
     if n ≤ 8 then readBytesL L t f (lowE L (reserved := reserved) i) 0 n d else none
@@ -403,7 +180,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
   | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
   | _, _, .refEq a b, d => wordL 14 d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
-  | _, _, .slotRef r t _ _ f _, d => do let cr ← lowE L (reserved := reserved) r d; slotC L t f d cr
+  | _, _, .slotRef r t _ _ f _, d => do
+    let cr ← lowE L (reserved := reserved) r (d + valueWords (D.typ t f)); slotValueC L t f d cr
   | _, _, .wenn c a b, d => wennL d (lowE L (reserved := reserved) c d) (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b d)
   | _, _, _, _ => none
 
@@ -436,11 +214,11 @@ def Enc (L : Lay D) : (τ : Ty) → Wert D τ → Runner.W → Prop
   | .str n, v, w => n ≤ 1 ∧ w = BitVec.ofNat 64 (strN v.1)
   | .fl _ _, v, w => Gleitkomma.wf Gleitkomma.f64 v.x ∧
       w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)
-  | .ptr _ _, _, _ => True
+  | .ptr _ _, _, w => w = 0
   | _, _, _ => False
 
 /-- The variables of `ρ` are in their slots of the frame at `fp`. -/
 def EnvAt (L : Lay D) (m : Runner.Mem) (fp : Runner.W) {Γ : Ctx} (ρ : Env D Γ) (reserved : Nat := 0) : Prop :=
-  ∀ (τ : Ty) (x : Var Γ τ), ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 (vslot x reserved))) = some w ∧ Enc L τ (ρ.get x) w
+  ∀ (τ : Ty) (x : Var Γ τ), ValueAt L m fp (vslot x reserved) τ (ρ.get x)
 
 end Gabbro.Stage0.Senke

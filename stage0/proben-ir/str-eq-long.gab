@@ -1,0 +1,19 @@
+// Equality of strings with more than one byte compares the length word and every byte word,
+// also between different capacities.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 300 effects { pure } {
+    let s : string max 3 = "abc";
+    let t : string max 3 = s;
+    let u : string max 5 = "abd";
+    let v : string max 4 = "abc";
+    if s == t {
+        if s == v {
+            if s == u {
+                return 1;
+            }
+            return 42;
+        }
+    }
+    return 2;
+}
+}

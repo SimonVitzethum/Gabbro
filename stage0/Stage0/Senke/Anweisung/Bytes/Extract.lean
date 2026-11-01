@@ -46,7 +46,7 @@ theorem bytePartC_ok {Γ : Ctx} {a b H : Int} {z : Zahl 0 H} {k : Zahl a b} {ρ 
     simpa [bytePartC, Int.add_assoc] using hp
   have hh := bin_ok (P := fun w => w = BitVec.ofInt 64 (dropBytes j z.n % 256)) (Pa := fun w => w = BitVec.ofInt 64 z.n >>> (8 * j))
     (fun m pc hp => bin_ok (Pa := fun w => w = BitVec.ofInt 64 z.n) (fun m pc hp => by
-      obtain ⟨v, hr, hv⟩ := hp.env (.int 0 H) (.there .here)
+      obtain ⟨v, hr, hv⟩ := ValueAt.word (.int 0 H) z trivial (hp.env (.int 0 H) (.there .here))
       have hrd : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofInt 64 z.n) := by
         simp only [vslot_there, vslot_here] at hr
         exact hv ▸ hr

@@ -47,17 +47,17 @@ theorem wenn_taken_entry {m : Runner.Mem} {pc fp : Runner.W}
   exact pc_add16 pc cc.length
 
 theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List II} {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} {P : Runner.W → Prop} {bc : Bool}
+    {W : Runner.Mem → Prop} {P : Runner.Mem → Prop} {bc : Bool}
     (hp : Pre L m pc fp K d (wennC d cc ca cb) ρ W reserved) (hlen : 16 * (ca.length + cb.length + 2) < 2 ^ 31) (hd : d < K)
-    (hc : ∀ m pc, Pre L m pc fp K d cc ρ W reserved → Ok m pc fp K d cc (fun w => w = if bc then 1 else 0))
-    (ha : bc = true → ∀ m pc, Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca P)
-    (hb : bc = false → ∀ m pc, Pre L m pc fp K d cb ρ W reserved → Ok m pc fp K d cb P) :
-    Ok m pc fp K d (wennC d cc ca cb) P := by
+    (hc : Pre L m pc fp K d cc ρ W reserved → Ok m pc fp K d cc (fun w => w = if bc then 1 else 0))
+    (ha : bc = true → ∀ m pc, Pre L m pc fp K d ca ρ W reserved → Executes m pc fp K d ca P)
+    (hb : bc = false → ∀ m pc, Pre L m pc fp K d cb ρ W reserved → Executes m pc fp K d cb P) :
+    Executes m pc fp K d (wennC d cc ca cb) P := by
   have hK := hp.small
   have h' : Pre L m pc fp K d (cc ++ ([ci 19 d ((16 * (ca.length + 2) : Nat) : Int) 0] ++ (ca ++
       ([ci 18 ((16 * (cb.length + 1) : Nat) : Int) 0 0] ++ cb)))) ρ W reserved := by
     simpa [wennC, List.append_assoc] using hp
-  obtain ⟨m1, s1, a1, w, r, hw⟩ := hc m pc h'.left
+  obtain ⟨m1, s1, a1, w, r, hw⟩ := hc h'.left
   have h1 := h'.next a1 (Nat.le_refl _) (by omega)
   have hi := h1.code 0 (by simp)
   simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
@@ -70,12 +70,12 @@ theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List
     subst hw
     have sb := Star.one (run_step (t := ⟨_, fp⟩) hi (by decide) (run_brz_ne hi r (by decide)))
     have h2 := h1.next (Agree.refl fp d K m1) (Nat.le_refl _) (by omega)
-    obtain ⟨m2, s2, a2, w2, r2, p2⟩ := ha rfl _ _ h2.left
+    obtain ⟨m2, s2, a2, post⟩ := ha rfl _ _ h2.left
     have h3 := h2.next a2 (Nat.le_refl _) (by omega)
     have hj := h3.code 0 (by simp)
     simp only [ci, List.cons_append, List.nil_append, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
     have sj := Star.one (run_step (t := ⟨_, fp⟩) hj (by decide) (run_jmp hj))
-    refine ⟨m2, s1.trans (star_cast sb rfl ?_ |>.trans (s2.trans (star_cast sj rfl ?_))), a1.trans a2, w2, r2, p2⟩
+    refine ⟨m2, s1.trans (star_cast sb rfl ?_ |>.trans (s2.trans (star_cast sj rfl ?_))), a1.trans a2, post⟩
     · simp only [nxt, T.mk.injEq, and_true]
       rw [show (16 : Runner.W) = BitVec.ofNat 64 (16 * [ci 19 d ((16 * (ca.length + 2) : Nat) : Int) 0].length) from rfl]
     · simp only [T.mk.injEq, and_true]
@@ -89,8 +89,8 @@ theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List
         (([ci 19 d ((16 * (ca.length + 2) : Nat) : Int) 0] ++ ca ++ [ci 18 ((16 * (cb.length + 1) : Nat) : Int) 0 0])
           ++ cb) ρ W reserved := by simpa [List.append_assoc] using h1
     have h2 := h1'.next (Agree.refl fp d K m1) (Nat.le_refl _) (by omega)
-    obtain ⟨m2, s2, a2, w2, r2, p2⟩ := hb rfl _ _ h2
-    refine ⟨m2, s1.trans ((star_cast sb rfl ?_).trans (star_cast s2 rfl ?_)), a1.trans a2, w2, r2, p2⟩
+    obtain ⟨m2, s2, a2, post⟩ := hb rfl _ _ h2
+    refine ⟨m2, s1.trans ((star_cast sb rfl ?_).trans (star_cast s2 rfl ?_)), a1.trans a2, post⟩
     · simp only [T.mk.injEq, and_true]
       rw [sx_nat (by omega), pc_add, pc_add]
       congr 2 <;> simp <;> omega
@@ -101,20 +101,20 @@ theorem wenn_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {cc ca cb : List
 /-- Conditional lowering with the component code and slot bounds still packaged as options. -/
 theorem wennL_ok {fp : Runner.W} {K d top : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {m : Runner.Mem} {pc : Runner.W} {cc ca cb : Option (List II × Nat)} {c : List II}
-    {bc : Bool} {P : Runner.W → Prop}
+    {bc : Bool} {P : Runner.Mem → Prop}
     (h : wennL d cc ca cb = some (c, top)) (hK : top ≤ K) (hd : d < K)
     (hc : ∀ c t, cc = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved →
       Ok m pc fp K d c (fun w => w = if bc then 1 else 0))
-    (ha : bc = true → ∀ c t, ca = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c P)
-    (hb : bc = false → ∀ c t, cb = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c P)
-    (hp : Pre L m pc fp K d c ρ W reserved) : Ok m pc fp K d c P := by
+    (ha : bc = true → ∀ c t, ca = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved → Executes m pc fp K d c P)
+    (hb : bc = false → ∀ c t, cb = some (c, t) → t ≤ K → ∀ m pc, Pre L m pc fp K d c ρ W reserved → Executes m pc fp K d c P)
+    (hp : Pre L m pc fp K d c ρ W reserved) : Executes m pc fp K d c P := by
   simp only [wennL, bind, Option.bind_eq_some_iff] at h
   obtain ⟨⟨cc', tc⟩, hcc, ⟨ca', ta⟩, hca, ⟨cb', tb⟩, hcb, h⟩ := h
   split at h
   · next hlen =>
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    exact wenn_ok hp hlen hd (hc _ _ hcc (by omega))
+    exact wenn_ok hp hlen hd (hc _ _ hcc (by omega) m pc)
       (fun he => ha he _ _ hca (by omega)) (fun he => hb he _ _ hcb (by omega))
   · cases h
 

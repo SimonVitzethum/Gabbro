@@ -4,30 +4,11 @@
              (`codeAt_bytes`) and the frame their zeros give room for (`frameOK_bytes`).
 -/
 import Stage0.Senke.Bild
+import Stage0.Senke.Welt.InitialBytes
 
 namespace Gabbro.Stage0.Senke
 
 open Gabbro.Grammatik Runner.IR Runner.Mem
-
-/-- The bytes `bs` lie from address `p` on, readable and writable. -/
-def BytesAt (m : Runner.Mem) (p : Nat) (bs : List Runner.B) : Prop :=
-  ∀ i (h : i < bs.length), m.rd (BitVec.ofNat 64 (p + i)) = true ∧ m.wr (BitVec.ofNat 64 (p + i)) = true ∧
-    m.b (BitVec.ofNat 64 (p + i)) = bs[i]
-
-theorem BytesAt.left {m : Runner.Mem} {p : Nat} {xs ys : List Runner.B} (h : BytesAt m p (xs ++ ys)) :
-    BytesAt m p xs := fun i hi => by
-  have := h i (by simp; omega)
-  rwa [List.getElem_append_left hi] at this
-
-theorem BytesAt.right {m : Runner.Mem} {p : Nat} {xs ys : List Runner.B} (h : BytesAt m p (xs ++ ys)) :
-    BytesAt m (p + xs.length) ys := fun i hi => by
-  have := h (xs.length + i) (by simp; omega)
-  rw [List.getElem_append_right (by omega)] at this
-  simp only [Nat.add_sub_cancel_left] at this
-  rwa [Nat.add_assoc]
-
-theorem ofNat_add64 (p k : Nat) : BitVec.ofNat 64 p + BitVec.ofNat 64 k = BitVec.ofNat 64 (p + k) :=
-  (BitVec.ofNat_add p k).symm
 
 theorem rd8_bytes {m : Runner.Mem} {p : Nat} {v : Runner.B} {bs : List Runner.B} (h : BytesAt m p (v :: bs)) :
     m.rd8 (BitVec.ofNat 64 p) = some v := by
@@ -106,30 +87,6 @@ theorem frameOK_bytes {m : Runner.Mem} {p K : Nat} {bs : List Runner.B} (h : Byt
   refine ⟨by simp only [BitVec.toNat_ofNat]; omega, fun i hi => all_of fun j hj => ?_, fun i hi => all_of fun j hj => ?_⟩
   · rw [hs i j hi hj]; exact (h _ (by omega)).1
   · rw [hs i j hi hj]; exact (h _ (by omega)).2.1
-
-/-- The header word: the first frame's address. -/
-theorem rd64_leN {m : Runner.Mem} {p v : Nat} {bs : List Runner.B} (h : BytesAt m p (Runner.Prog.leN 8 v ++ bs))
-    (hv : v < 2 ^ 64) : m.rd64 (BitVec.ofNat 64 p) = some (BitVec.ofNat 64 v) := by
-  have g : ∀ i, i < 8 → m.rd (BitVec.ofNat 64 (p + i)) = true ∧
-      m.b (BitVec.ofNat 64 (p + i)) = Runner.X86.byte (v / 256 ^ i) := fun i hi => by
-    obtain ⟨hr, _, hb⟩ := h i (by simp [Runner.Prog.leN]; omega)
-    refine ⟨hr, ?_⟩
-    rw [hb, List.getElem_append_left (by simp [Runner.Prog.leN]; omega)]
-    simp [Runner.Prog.leN]
-  obtain ⟨r0, b0⟩ := g 0 (by omega)
-  obtain ⟨r1, b1⟩ := g 1 (by omega)
-  obtain ⟨r2, b2⟩ := g 2 (by omega)
-  obtain ⟨r3, b3⟩ := g 3 (by omega)
-  obtain ⟨r4, b4⟩ := g 4 (by omega)
-  obtain ⟨r5, b5⟩ := g 5 (by omega)
-  obtain ⟨r6, b6⟩ := g 6 (by omega)
-  obtain ⟨r7, b7⟩ := g 7 (by omega)
-  simp only [Nat.add_zero] at r0 b0
-  simp only [Runner.Mem.rd64, Runner.Mem.all, Runner.Mem.le, ofNat_add64, Nat.add_zero, r0, r1, r2, r3, r4, r5, r6,
-    r7, Bool.and_self, ↓reduceIte, b0, b1, b2, b3, b4, b5, b6, b7, Option.some.injEq]
-  apply BitVec.eq_of_toNat_eq
-  simp only [Runner.X86.byte, BitVec.toNat_ofNat]
-  omega
 
 variable {D : Deklaration} {passes : Nat}
 

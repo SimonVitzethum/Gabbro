@@ -38,7 +38,7 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     (pre : PreS L m pc fp K (frei Γ reserved) ([ci 1 cell value 0] ++ code) ρ reserved)
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
-    (abi : FB + (D.params f).length ≤ lo) (low : lo ≤ cell)
+    (abi : FB + (contextWords (D.params f)) ≤ lo) (low : lo ≤ cell)
     (allocated : cell < FB + reserved) (bound : frei Γ reserved ≤ K)
     (literal : lit32 value = true)
     (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ cell) :
@@ -80,7 +80,7 @@ theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
       (foreverCounterInit counter budget ++ [ci 1 one 1 0] ++ code) ρ reserved)
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
-    (abi : FB + (D.params f).length ≤ lo)
+    (abi : FB + (contextWords (D.params f)) ≤ lo)
     (lowCounter : lo ≤ counter) (lowOne : lo ≤ one)
     (allocatedCounter : counter < FB + reserved) (allocatedOne : one < FB + reserved)
     (distinct : counter ≠ one) (bound : frei Γ reserved ≤ K)
@@ -182,7 +182,7 @@ theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {P : Programm D}
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0)
     (hprotected : counter < lo ∨ counter ∈ pr) (bound : lo ≤ K)
-    (abi : FB + (D.params f).length ≤ lo)
+    (abi : FB + (contextWords (D.params f)) ≤ lo)
     (initial : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value)
     (edge : InsAt m back 18 jump b c) (far : CodeFar back 1 fp K)
     (target : back + sx jump = pc) :
@@ -354,7 +354,7 @@ theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
       (foreverCounter counter one stop ++ code) ρ reserved)
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
-    (abi : FB + (D.params f).length ≤ lo) (low : lo ≤ counter)
+    (abi : FB + (contextWords (D.params f)) ≤ lo) (low : lo ≤ counter)
     (allocated : counter < FB + reserved) (bound : frei Γ reserved ≤ K)
     (unit : one < K)
     (read : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 (n + 1)))
@@ -406,8 +406,8 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
     {P : Programm D} {f : D.Fn} {fp rp cfp : W} {K Ks lo : Nat}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length)
-    (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f)))
+    (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} {Γ : Ctx} {Λ : List (Res D)}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)
     {cc cb : List II} {tc tb : Nat}
@@ -440,7 +440,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
   · intro hpc
     have hpw := PreS.welt hpc hks hw hW.lay (by have := hW.lo; omega)
     obtain ⟨m1, st, a1, w, hr, hen⟩ := lowE_ok (σ.lese Λ inv.orte) (σ.lese Λ inv.orte)
-      (fun _ h => h) inv (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw
+      (fun _ h => h) hW.lay inv (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word trivial
     exact ⟨m1, st, Agree.widen a1 hks, w, hr, hen⟩
   · intro _ m' pc' hp' _ hu' hk' hw'
     exact bodyRuns cb tb hcb htb (by omega) hW
@@ -461,8 +461,8 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
     {P : Programm D} {f : D.Fn} {fp rp cfp : W} {K Ks lo : Nat}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length)
-    (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f)))
+    (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {counter one : Nat}
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} {Γ : Ctx} {Λ : List (Res D)}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)

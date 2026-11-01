@@ -1,10 +1,6 @@
-/-
-  File:      stage0/Stage0/Senke/Welt/Schreib.lean
-  Subject:   Writing a cell of the world: the word at its address is writable and lies in the frame's slots from `lo`
-             on (`frame_wr_at`, `agree_write_at`); after the write the memory holds the world with that one cell
-             changed (`weltAt_glob`, `weltAt_slot`), because no two cells share a word (`LayDis`).
--/
-import Stage0.Senke.Welt.WeltAt
+/- Full-span source world updates and disjoint-cell preservation. The actual
+   store loop is connected to these updates through StoreWorld. -/
+import Stage0.Senke.Welt.Spans.SpanWrite
 
 namespace Gabbro.Stage0.Senke
 
@@ -98,34 +94,46 @@ theorem rd64_write_same {m : Runner.Mem} {a w : Runner.W} (hr : all m.rd a 8 = t
     (write m a 8 w.toNat).rd64 a = some w := by
   simp only [rd64, write_rd, hr, ↓reduceIte, le_write_same, BitVec.ofNat_toNat, BitVec.setWidth_eq]
 
-/-- Writing the word of `v` at the global `g`. -/
-theorem weltAt_glob {m : Runner.Mem} {L : Lay D} {σ : World D} {g : D.Glob} {v : Wert D (D.gtyp g)} {w : Runner.W}
-    (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L) (he : Enc L (D.gtyp g) v w) :
-    WeltAt (write m (BitVec.ofNat 64 (L.ga g)) 8 w.toNat) L (σ.storeGlob g v) := by
+/-- A complete disjoint value keeps all words and recursive validity. -/
+theorem valueAt_writeSpan_far {m : Runner.Mem} {address a : Nat} {τ : Ty} {v : Wert D τ}
+    (ws : List Runner.W) (bound : address + 8 * ws.length ≤ 2 ^ 64)
+    (readBound : a + 8 * valueWords τ ≤ 2 ^ 64)
+    (sep : a + 8 * valueWords τ ≤ address ∨ address + 8 * ws.length ≤ a)
+    (input : ValueAt L m (BitVec.ofNat 64 a) 0 τ v) :
+    ValueAt L (writeSpan m address ws) (BitVec.ofNat 64 a) 0 τ v := by
+  refine ⟨input.1, fun i hi => ?_⟩
+  have index : i < valueWords τ := by simpa only [encodeWords_length] using hi
+  simp only [Nat.zero_add, absolute_slot]
+  rw [writeSpan_far ws bound (by omega) (by omega)]
+  simpa only [Nat.zero_add, absolute_slot] using input.2 i hi
+
+/-- Writing every encoded word of a global, preserving all other complete cells. -/
+theorem weltAt_glob {m : Runner.Mem} {L : Lay D} {σ : World D} {g : D.Glob}
+    {v : Wert D (D.gtyp g)} (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L)
+    (valid : ValueValid L (D.gtyp g) v) :
+    WeltAt (writeSpan m (L.ga g) (encodeWords L (D.gtyp g) v)) L (σ.storeGlob g v) := by
   obtain ⟨hs, hg, hwr⟩ := hW
-  have hgin := hl.2.1 g
-  refine ⟨fun t f k hk => ?_, fun g' => ?_, hwr.keep rfl⟩
-  · obtain ⟨w', hw', he'⟩ := hs t f k hk
-    have := hl.1 t f k hk
-    refine ⟨w', ?_, he'⟩
-    have hf := cell_far (c := .glob g) (c' := .elem t f k) hl hd trivial hk (by simpa [Zelle.adr] using hgin.2)
-      (by simpa [Zelle.adr] using this.2) (by simp)
-    simp only [Zelle.adr] at hf
-    rw [rd64_write_far hf]
-    exact hw'
-  · by_cases hgg : g' = g
-    · subst hgg
-      obtain ⟨w0, hw0, _⟩ := hg g'
-      refine ⟨w, ?_, by simpa [World.storeGlob] using he⟩
-      exact rd64_write_same (rd64_some_all hw0)
-    · obtain ⟨w', hw', he'⟩ := hg g'
-      have := hl.2.1 g'
-      refine ⟨w', ?_, by simpa [World.storeGlob, hgg] using he'⟩
-      have hf := cell_far (c := .glob g) (c' := .glob g') hl hd trivial trivial
-        (by simpa [Zelle.adr] using hgin.2) (by simpa [Zelle.adr] using this.2) (by simp [Ne.symm hgg])
-      simp only [Zelle.adr] at hf
-      rw [rd64_write_far hf]
-      exact hw'
+  have gin := hl.2.1 g
+  have top := hl.2.2
+  have spanBound : L.ga g + 8 * (encodeWords L (D.gtyp g) v).length ≤ 2 ^ 64 := by
+    rw [encodeWords_length]; omega
+  refine ⟨fun t f k hk => ?_, fun g' => ?_, hwr.keep (writeSpan_wr _ _ _)⟩
+  · have hin := hl.1 t f k hk
+    have sep := hd.spans (.glob g) (.elem t f k) trivial hk (by simp)
+    exact valueAt_writeSpan_far _ spanBound (by omega)
+      (by simpa [Zelle.adr, Zelle.bytes, encodeWords_length, or_comm] using sep) (hs t f k hk)
+  · by_cases eq : g' = g
+    · subst g'
+      have old := hg g
+      have stored := writeValue_same (L := L) (m := m) (address := L.ga g)
+        (by omega) (fun i hi => rd64_some_all (by
+          simpa only [Nat.zero_add, absolute_slot] using old.2 i (by simpa only [encodeWords_length] using hi))) valid
+      simpa [World.storeGlob, StorageAt] using stored
+    · have hin := hl.2.1 g'
+      have sep := hd.spans (.glob g) (.glob g') trivial trivial (by simp [Ne.symm eq])
+      have kept := valueAt_writeSpan_far _ spanBound (by omega)
+        (by simpa [Zelle.adr, Zelle.bytes, encodeWords_length, or_comm] using sep) (hg g')
+      simpa [World.storeGlob, eq] using kept
 
 /-- The other elements keep their values under `storeSlot`. -/
 theorem storeSlot_other {σ : World D} {t t' : D.Tab} {f : D.Feld t} {f' : D.Feld t'} {kn k' : Nat}
@@ -146,34 +154,34 @@ theorem storeSlot_other {σ : World D} {t t' : D.Tab} {f : D.Feld t} {f' : D.Fel
     · rfl
   · rfl
 
-/-- Writing the word of `v` at element `kn` of column `f` of table `t`. -/
+/-- Writing the complete value at a typed table cell. -/
 theorem weltAt_slot {m : Runner.Mem} {L : Lay D} {σ : World D} {t : D.Tab} {f : D.Feld t} {kn : Nat}
-    {v : Wert D (D.typ t f)} {w : Runner.W} (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L)
-    (hk : (kn : Int) < L.count t) (he : Enc L (D.typ t f) v w) :
-    WeltAt (write m (BitVec.ofNat 64 (L.elem t f kn)) 8 w.toNat) L (σ.storeSlot t kn f v) := by
+    {v : Wert D (D.typ t f)} (hW : WeltAt m L σ) (hl : LayIn L) (hd : LayDis L)
+    (hk : (kn : Int) < L.count t) (valid : ValueValid L (D.typ t f) v) :
+    WeltAt (writeSpan m (L.elem t f kn) (encodeWords L (D.typ t f) v)) L (σ.storeSlot t kn f v) := by
   obtain ⟨hs, hg, hwr⟩ := hW
   have hin := hl.1 t f kn hk
-  refine ⟨fun t' f' k' hk' => ?_, fun g => ?_, hwr.keep rfl⟩
-  · by_cases hc : (Zelle.elem t' f' k' : Zelle D) = .elem t f kn
-    · cases hc
-      obtain ⟨w0, hw0, _⟩ := hs t f kn hk
-      exact ⟨w, rd64_write_same (rd64_some_all hw0), by simpa [World.storeSlot] using he⟩
-    · obtain ⟨w', hw', he'⟩ := hs t' f' k' hk'
-      have := hl.1 t' f' k' hk'
-      refine ⟨w', ?_, by rw [storeSlot_other hc]; exact he'⟩
-      have hf := cell_far (c := .elem t f kn) (c' := .elem t' f' k') hl hd hk hk'
-        (by simpa [Zelle.adr] using hin.2) (by simpa [Zelle.adr] using this.2) (Ne.symm hc)
-      simp only [Zelle.adr] at hf
-      rw [rd64_write_far hf]
-      exact hw'
-  · obtain ⟨w', hw', he'⟩ := hg g
-    have := hl.2.1 g
-    refine ⟨w', ?_, he'⟩
-    have hf := cell_far (c := .elem t f kn) (c' := .glob g) hl hd hk trivial
-      (by simpa [Zelle.adr] using hin.2) (by simpa [Zelle.adr] using this.2) (by simp)
-    simp only [Zelle.adr] at hf
-    rw [rd64_write_far hf]
-    exact hw'
+  have top := hl.2.2
+  have spanBound : L.elem t f kn + 8 * (encodeWords L (D.typ t f) v).length ≤ 2 ^ 64 := by
+    rw [encodeWords_length]; omega
+  refine ⟨fun t' f' k' hk' => ?_, fun g => ?_, hwr.keep (writeSpan_wr _ _ _)⟩
+  · by_cases eq : (Zelle.elem t' f' k' : Zelle D) = .elem t f kn
+    · cases eq
+      have old := hs t f kn hk
+      have stored := writeValue_same (L := L) (m := m) (address := L.elem t f kn)
+        (by omega) (fun i hi => rd64_some_all (by
+          simpa only [Nat.zero_add, absolute_slot] using old.2 i (by simpa only [encodeWords_length] using hi))) valid
+      simpa [World.storeSlot, StorageAt] using stored
+    · have hin' := hl.1 t' f' k' hk'
+      have sep := hd.spans (.elem t f kn) (.elem t' f' k') hk hk' (Ne.symm eq)
+      have kept := valueAt_writeSpan_far _ spanBound (by omega)
+        (by simpa [Zelle.adr, Zelle.bytes, encodeWords_length, or_comm] using sep) (hs t' f' k' hk')
+      rw [storeSlot_other eq]
+      exact kept
+  · have gin := hl.2.1 g
+    have sep := hd.spans (.elem t f kn) (.glob g) hk trivial (by simp)
+    exact valueAt_writeSpan_far _ spanBound (by omega)
+      (by simpa [Zelle.adr, Zelle.bytes, encodeWords_length, or_comm] using sep) (hg g)
 
 /-- A word whose bytes are kept reads the same. -/
 theorem rd64_keep {m m' : Runner.Mem} {a : Runner.W} (hrd : m'.rd = m.rd)

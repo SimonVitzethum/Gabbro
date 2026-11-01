@@ -15,7 +15,7 @@ theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
@@ -45,15 +45,15 @@ theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
       rw [dif_pos hin]
       exact Sim.schrumpf (ihRest (ex := ex) cr tr hr (by omega) (by
         simp only [narrowC, List.length_append, List.length_singleton] at hs; omega) hW
-        m' pc' _ _ hp' hlo (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
-        hu' hk' hw' (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega))
+        m' pc' _ _ hp' hlo (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega)
+        hu' hk' hw' (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega))
   · cases h
 
 theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
@@ -63,7 +63,7 @@ theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.narrow e low' high' err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
-  simp only [lowEnd] at h
+  simp only [lowEnd, resultWords_vertragVon] at h
   split at h
   · next hfit =>
     simp only [Bool.and_eq_true] at hfit
@@ -84,8 +84,8 @@ theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
       rw [dif_pos hin]
       exact Ret.toSim (Ret.schrumpf (ihRest (ex := ex) cr tr hr (by omega) (by
         simp only [narrowC, List.length_append, List.length_singleton] at hs; omega) hW
-        m' pc' _ _ hp' (by simp only [frei, List.length_cons] at hlo2 ⊢; omega)
-        hu' hk' hw' (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)))
+        m' pc' _ _ hp' (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega)
+        hu' hk' hw' (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)))
   · cases h
 
 end Gabbro.Stage0.Senke

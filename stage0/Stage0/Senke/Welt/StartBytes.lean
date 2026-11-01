@@ -13,27 +13,6 @@ theorem startFrameBytes_frame {slots base p : Nat} {words : List Runner.W} {byte
     FrameOK m (BitVec.ofNat 64 p) slots :=
   frameOK_bytes loaded (by rw [startFrameBytes_length made]) room
 
-/-- Every serialized word reads back exactly, including all high bits and trailing words. -/
-theorem startWordBytes_read {m : Runner.Mem} (words : List Runner.W) (p : Nat)
-    (loaded : BytesAt m p (startWordBytes words)) :
-    ∀ i (hi : i < words.length),
-      m.rd64 (BitVec.ofNat 64 (p + 8 * i)) = some words[i] := by
-  induction words generalizing p with
-  | nil => intro i hi; simp at hi
-  | cons word rest ih =>
-    intro i hi
-    have bytes : BytesAt m p (Runner.Prog.leN 8 word.toNat ++ startWordBytes rest) := loaded
-    cases i with
-    | zero =>
-      simpa only [Nat.mul_zero, Nat.add_zero, List.getElem_cons_zero, BitVec.ofNat_toNat, BitVec.setWidth_eq] using
-        rd64_leN bytes word.isLt
-    | succ i =>
-      have tail := bytes.right
-      simp only [Runner.Prog.leN, List.length_map, List.length_range] at tail
-      have result := ih (p + 8) tail i (by simpa using hi)
-      simpa only [List.getElem_cons_succ, Nat.mul_succ, Nat.add_assoc,
-        Nat.add_left_comm, Nat.add_comm] using result
-
 /-- Actual initialized frame bytes establish every parameter word under the same final image
     address. The word list will be supplied by `encodeWords` after relocation, not host pointers. -/
 theorem startFrameBytes_read {slots base p : Nat} {words : List Runner.W} {bytes : List Runner.B}

@@ -19,7 +19,7 @@ variable {P : Programm D} {f : D.Fn} {fp : Runner.W}
 
 theorem retryTest_ok (hcc : lowE (reserved := reserved) L bis (frei Γ reserved) = some (cc, tc)) (ht : tc ≤ Ks)
     (hs : 16 * (cc.length + 2 + rest.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f)))
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {oe : Ausgang (vertragVon D f) l Γ}
     (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) rest ρ reserved →
@@ -46,7 +46,7 @@ theorem retryTest_ok (hcc : lowE (reserved := reserved) L bis (frei Γ reserved)
     have hks := hW.ks
     have hpw := PreS.welt hpc hks hWa hW.lay (by have := hW.lo; omega)
     obtain ⟨m1, st, a1, w, hw, hen⟩ := lowE_ok (σ.lese Λ bis.orte) (σ.lese Λ bis.orte)
-      (fun _ h => h) bis (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw
+      (fun _ h => h) hW.lay bis (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word trivial
     exact ⟨m1, st, Agree.widen a1 hks, w, hw, hen⟩
   · intro _ m' pc' hp' _ _ _ hw'
     exact ⟨m', by simpa using Star.refl ⟨pc', fp⟩ m', AgreeW.refl _ _ _ _ _, hp'.env, hw', Keeps.refl _ _ _⟩

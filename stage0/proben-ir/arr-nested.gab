@@ -1,0 +1,9 @@
+// Nested arrays keep every row: a copied 2 x 3 constant and two indexed reads.
+module ir_probe {
+const GRID : [[u8; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
+impl fn main() -> u32 in 0 .. 1000 effects { pure } {
+    let g : [[u8; 3]; 2] = GRID;
+    let h : [[u8; 3]; 2] = g;
+    return h[0][2] + h[1][1] + h[1][2];
+}
+}

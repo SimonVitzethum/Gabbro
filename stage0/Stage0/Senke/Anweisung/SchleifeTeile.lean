@@ -232,8 +232,8 @@ theorem trav_head {L : Lay D} {fp pc : Runner.W} {K Ks : Nat} {Γ : Ctx} {Λ : L
   have hq : PreS L m (pc + BitVec.ofNat 64 (16 * 1)) fp K (frei Γ reserved + 1) ci'.1 ρ reserved :=
     mkPreS (by omega) hp.small hp.frame (trav_inv hp.code) (codeFar_at hp.far (by omega)) hp.env
   have hpw := PreS.welt hq hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ inv.orte) (σ.lese Λ inv.orte) (fun _ h => h) inv _ ci'.1
-    ci'.2 hci htop m _ ρ hpw
+  obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ inv.orte) (σ.lese Λ inv.orte) (fun _ h => h) hW.lay inv _ ci'.1
+    ci'.2 hci htop m _ ρ hpw |>.word trivial
   refine ⟨m1, w, ?_, a1s, hw, hen, hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))⟩
   rw [addr_norm] at s1
   simpa [Nat.mul_add] using s1

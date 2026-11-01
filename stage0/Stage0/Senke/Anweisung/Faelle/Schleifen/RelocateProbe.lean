@@ -35,20 +35,20 @@ theorem code_at : CodeAt memory 0 code := by
 theorem frame : FrameOK memory 4096 32 :=
   ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
-theorem env_at {D : Deklaration} (L : Lay D) : EnvAt L memory 4096 env 0 := by
+theorem env_at [Kern] {D : Deklaration} (L : Lay D) : EnvAt L memory 4096 env 0 := by
   intro τ x
   cases x with
-  | here => exact ⟨0, by decide +kernel, rfl⟩
+  | here => exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl
   | there x => cases x with
-    | here => exact ⟨1, by decide +kernel, rfl⟩
+    | here => exact ValueAt.of_enc (w := 1) (by decide) (by decide +kernel) rfl
     | there x => cases x with
-      | here => exact ⟨0, by decide +kernel, rfl⟩
+      | here => exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl
       | there x => cases x with
-        | here => exact ⟨1, by decide +kernel, rfl⟩
+        | here => exact ValueAt.of_enc (w := 1) (by decide) (by decide +kernel) rfl
         | there x => cases x with
-          | here => exact ⟨0, by decide +kernel, rfl⟩
+          | here => exact ValueAt.of_enc (w := 0) (by decide) (by decide +kernel) rfl
           | there x => cases x with
-            | here => exact ⟨1, by decide +kernel, rfl⟩
+            | here => exact ValueAt.of_enc (w := 1) (by decide) (by decide +kernel) rfl
             | there x => nomatch x
 
 /-- All six variables survive the actual overlapping Runner moves. The untouched

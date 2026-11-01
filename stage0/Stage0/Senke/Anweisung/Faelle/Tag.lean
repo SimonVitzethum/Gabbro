@@ -121,7 +121,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
     (hb : BR b) (hcb : lowB (reserved := reserved) passes A L lo ens pr ex b = some (cb, tb)) (htb : tb + cap ≤ Ks)
     (hcp : tagPayloadC (frei Γ reserved) c = some cp) (hs : 16 * (cp.length + cb.length) < 2 ^ 31)
     (hK : frei Γ reserved + 3 ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
-    (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} {w : Runner.W}
     (v : Nutzlast c) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff c v))
@@ -138,33 +138,37 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
     exact hb ex cb tb hcb htb (by simpa using hs) m pc σ ρ hp hlo2 hu hk hWa hpr
   | some p =>
     rcases p with ⟨a, z⟩
-    simp only [tagPayloadC, Option.some.injEq] at hcp
-    subst cp
-    have hks := hW.ks
-    have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, st, a1s, w1, r1, e1⟩ := tagPayload_ok (by omega) hpw hw hoff
-    have a1 := Agree.widen a1s hks
-    have hq := hp.next a1 (Nat.le_refl _) (by omega)
-    have hfr : frei (ArmCtx Γ (some (a, z))) reserved = frei Γ reserved + 1 := by simp [frei, ArmCtx, Nat.add_assoc]
-    have hp1 : PreS (reserved := reserved) L m1 _ fp K (frei (ArmCtx Γ (some (a, z))) reserved) cb (armEnv v ρ) :=
-      ⟨by simp [frei, ArmCtx], hq.small, hq.frame, hq.code, hq.far, envAt_cons hq.env r1 e1,
-       trivial, wstab_true _ _⟩
-    have ih := hb ex cb tb hcb htb (by omega) m1 _ σ _ hp1
-      (by rw [hfr]; omega)
-      (hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo)
-      (hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega))
-      (hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _)))
-      (fun j hj => by have := hpr j hj; rw [hfr]; omega)
-    rw [pc_add1]
-    exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
-      (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.schrumpf ih)
-
+    simp only [tagPayloadC] at hcp
+    split at hcp
+    · next ha =>
+      simp only [decide_eq_true_eq] at ha
+      simp only [Option.some.injEq] at hcp
+      subst cp
+      have hks := hW.ks
+      have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
+      obtain ⟨m1, st, a1s, w1, r1, e1⟩ := tagPayload_ok (by omega) hpw hw hoff
+      have a1 := Agree.widen a1s hks
+      have hq := hp.next a1 (Nat.le_refl _) (by omega)
+      have hfr : frei (ArmCtx Γ (some (a, z))) reserved = frei Γ reserved + valueWords (.int a z) := by simp [frei, ArmCtx, Nat.add_assoc]
+      have hp1 : PreS (reserved := reserved) L m1 _ fp K (frei (ArmCtx Γ (some (a, z))) reserved) cb (armEnv v ρ) :=
+        ⟨by simp [frei, ArmCtx], hq.small, hq.frame, hq.code, hq.far, envAt_cons hq.env (ValueAt.of_enc ha r1 e1),
+         trivial, wstab_true _ _⟩
+      have ih := hb ex cb tb hcb htb (by omega) m1 _ σ _ hp1
+        (by rw [hfr]; omega)
+        (hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo)
+        (hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega))
+        (hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _)))
+        (fun j hj => by have := hpr j hj; rw [hfr]; omega)
+      rw [pc_add1]
+      exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
+        (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.schrumpf ih)
+    · cases hcp
 theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs)
     (hblocks : ArmsAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
     (hc : lowTags (reserved := reserved) passes A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
     (hs : 16 * cd.length < 2 ^ 31) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
-    (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} {w : Runner.W}
     (v : Wert D (.sum cs)) (hi : k + v.1.val < 256)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
@@ -232,10 +236,11 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
     {v : Expr D Γ Λ (.sum cs)} {arms : Arms D (vertragVon D f) l Γ Λ Λ' cs}
     {cv ca : List II} {tv ta : Nat} {ex : Int × Int}
     (hblocks : ArmsAll (fun b => BR b) arms)
+    (packed : sumFits cs = true)
     (hcv : lowE (reserved := reserved) L v (frei Γ reserved) = some (cv, tv))
     (hca : lowTags (reserved := reserved) passes A L lo ens pr ex arms 0 = some (ca, ta))
     (htv : tv ≤ Ks) (hta : ta + cap ≤ Ks) (hs : 16 * (cv.length + ca.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f)))
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
@@ -248,7 +253,7 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, st, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ v.orte) (σ.lese Λ v.orte)
-    (fun _ h => h) v _ cv tv hcv htv m pc ρ hpw
+    (fun _ h => h) hW.lay v _ cv tv hcv htv m pc ρ hpw |>.word packed
   have a1 := Agree.widen a1s hks
   have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
   have hfit : cs.length ≤ 256 := by

@@ -1,0 +1,9 @@
+// A runtime index selects a complete element span from a three-element frame array.
+module ir_probe {
+const VALUES : [u8; 3] = [10, 20, 30];
+impl fn main() -> u32 in 0 .. 1000 effects { pure } {
+    let a : [u8; 3] = VALUES;
+    let i : u32 in 0 .. 2 = 2;
+    return a[i];
+}
+}

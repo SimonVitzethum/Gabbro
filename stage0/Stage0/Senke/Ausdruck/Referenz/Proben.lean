@@ -53,11 +53,22 @@ def memory (code : List II) : Runner.Mem where
 theorem layout_in : LayIn layout := by
   refine ⟨fun t f k hk => ?_, (fun g => nomatch g), by decide⟩
   change (k : Int) < 0 + 2 at hk
-  change 8192 ≤ 8192 + 8 * k ∧ 8192 + 8 * k + 8 ≤ 8208
+  change 8192 ≤ 8192 + 8 * 1 * k ∧ 8192 + 8 * 1 * k + 8 * 1 ≤ 8208
   omega
 
 theorem layout_dis : LayDis layout := by
-  constructor
+  refine ⟨?_, ?_, ?_⟩
+  · intro c c' hc hc' hne
+    cases c with
+    | glob g => nomatch g
+    | elem t f k =>
+      cases c' with
+      | glob g => nomatch g
+      | elem t' f' k' =>
+        cases t; cases t'; cases f; cases f'
+        have : k ≠ k' := fun e => hne (by subst e; rfl)
+        change 8192 + 8 * 1 * k + 8 * 1 ≤ 8192 + 8 * 1 * k' ∨ 8192 + 8 * 1 * k' + 8 * 1 ≤ 8192 + 8 * 1 * k
+        omega
   · intro c c' hc hc' he
     cases c with
     | glob g => nomatch g
@@ -66,14 +77,14 @@ theorem layout_dis : LayDis layout := by
       | glob g => nomatch g
       | elem t' f' k' =>
         cases t; cases t'; cases f; cases f'
-        change 8192 + 8 * k = 8192 + 8 * k' at he
+        change 8192 + 8 * 1 * k = 8192 + 8 * 1 * k' at he
         have : k = k' := by omega
         subst k'
         rfl
   · intro c hc
     cases c with
     | glob g => nomatch g
-    | elem t f k => change (8192 + 8 * k) % 8 = 8192 % 8; omega
+    | elem t f k => change (8192 + 8 * 1 * k) % 8 = 8192 % 8; omega
 
 theorem region_zeuge : D.count () = 0 ∧ layout.count () = 2 ∧ LayIn layout ∧ LayDis layout :=
   ⟨rfl, rfl, layout_in, layout_dis⟩
@@ -127,14 +138,14 @@ theorem env_memory (code : List II) (hc : (code.flatMap encII).length ≤ 4096) 
   intro τ x
   cases x with
   | here =>
-    refine ⟨0, ?_, encoded_zeuge.1⟩
+    refine ValueAt.of_enc (w := 0) (by decide) ?_ encoded_zeuge.1
     change (memory code).rd64 (BitVec.ofNat 64 4136) = some 0
     rw [memory_data code hc (by decide) (by decide)]
     decide +kernel
   | there x =>
     cases x with
     | here =>
-      refine ⟨1, ?_, encoded_zeuge.2.1⟩
+      refine ValueAt.of_enc (w := 1) (by decide) ?_ encoded_zeuge.2.1
       change (memory code).rd64 (BitVec.ofNat 64 4128) = some 1
       rw [memory_data code hc (by decide) (by decide)]
       decide +kernel
@@ -143,14 +154,15 @@ theorem env_memory (code : List II) (hc : (code.flatMap encII).length ≤ 4096) 
 theorem world_memory (code : List II) (hc : (code.flatMap encII).length ≤ 4096) :
     WeltAt (memory code) layout world := by
   refine ⟨fun t f k hk => ?_, (fun g => nomatch g), fun _ _ _ => rfl⟩
+  cases t; cases f
   change (k : Int) < 2 at hk
   have : k = 0 ∨ k = 1 := by omega
   rcases this with rfl | rfl
-  · refine ⟨11, ?_, rfl⟩
+  · refine ValueAt.ofCellWord (w := 11) (by decide) ?_ rfl
     change (memory code).rd64 (BitVec.ofNat 64 8192) = some 11
     rw [memory_data code hc (by decide) (by decide)]
     decide +kernel
-  · refine ⟨22, ?_, rfl⟩
+  · refine ValueAt.ofCellWord (w := 22) (by decide) ?_ rfl
     change (memory code).rd64 (BitVec.ofNat 64 8200) = some 22
     rw [memory_data code hc (by decide) (by decide)]
     decide +kernel
@@ -176,9 +188,8 @@ theorem read_simulation_zeuge :
   have hc : (readCode.flatMap encII).length ≤ 4096 := by decide +kernel
   have hp := PreS.welt (pre readCode hc (by decide +kernel)) (Nat.le_refl _) (world_memory readCode hc) layout_in (by decide)
   refine ⟨lowering_zeuge.1, hp, ?_⟩
-  have h := lowE_ok world world (fun _ h => h) checks 6 readCode readTop lowering_zeuge.1
-    (by decide +kernel) (memory readCode) 0 env hp
-  exact h
+  exact (lowE_ok world world (fun _ h => h) layout_in checks 6 readCode readTop lowering_zeuge.1
+    (by decide +kernel) (memory readCode) 0 env hp).word trivial
 
 def value : Expr D Γ [] (.int 0 255) := .widen (by decide) (by decide) (.lit 73)
 def valueCode : List II := [ci 1 6 73 0]
@@ -198,25 +209,22 @@ theorem write_simulation_zeuge :
   have hw := world_memory writeCode hc
   have hW : WIn layout 4096 64 64 :=
     ⟨layout_in, layout_dis, by decide, by decide, by decide⟩
-  have hcode : writeCode = valueCode ++ addressCode ++ [stC 6] := by decide +kernel
+  have hcode : writeCode = valueCode ++ addressCode ++ storePointerSpan 1 6 7 8 0 := by decide +kernel
   refine ⟨lowering_zeuge.2.1, hp, ?_⟩
-  have hp' : PreS layout (memory writeCode) 0 4096 64 6
-      (valueCode ++ addressCode ++ [stC 6]) env := by rw [← hcode]; exact hp
-  obtain ⟨m', hs, ha, he, hw'⟩ := store_ok (σ := world) (σ' := after) hp' hW hw (by decide)
-    (fun m pc hp => lowE_ok world world (fun _ h => h) value 6 valueCode 7
+  have made : slotStoreC layout () () 6 (valueCode, 7) ([ci 2 7 4 0], 8) = some (writeCode, writeTop) := by
+    decide +kernel
+  obtain ⟨m', hs, ha, hw'⟩ := slotStoreC_ok (σ := world) (kn := 1) made (by decide +kernel) (by decide)
+    layout_in layout_dis (by decide) (PreS.welt hp (Nat.le_refl _) hw layout_in (by decide))
+    (fun m pc hp => lowE_ok world world (fun _ h => h) layout_in value 6 valueCode 7
       (by decide +kernel) (by decide) m pc env hp)
-    (fun m pc hp => (slotRefA_ok (t := ()) (n := 0) rfl
-      (cr := ([ci 2 7 4 0], 8)) (top := 9) (by decide +kernel) (by decide)
-      (fun m pc hp => lowE_ok world world (fun _ h => h) second 7 [ci 2 7 4 0] 8
-        (by decide +kernel) (by decide) m pc env hp) hp).mono (fun _ h => h.1))
-    (by decide) (fun m w hm henc => weltAt_slot hm layout_in layout_dis (by decide) henc)
-  refine ⟨m', ?_, ha, he, hw', ?_, ?_⟩
-  · simpa only [← hcode] using hs
-  · obtain ⟨w, hr, he⟩ := hw'.1 () () 0 (by decide)
+    (fun m pc hp => ((lowE_ok world world (fun _ h => h) layout_in second 7 [ci 2 7 4 0] 8
+      (by decide +kernel) (by decide) m pc env hp).word trivial).mono fun w hw => hw.1)
+  refine ⟨m', hs, ha, envAt_agreeW hp.env ha (by decide) (by decide) (by decide) (by decide), hw', ?_, ?_⟩
+  · obtain ⟨w, hr, he⟩ := ValueAt.cellWord (by show WordCompatible (.int 0 255); trivial) (hw'.1 () () 0 (by decide))
     have he' : w = 11 := he
     rw [he', show BitVec.ofNat 64 (layout.elem () () 0) = (8192 : Runner.W) by decide] at hr
     exact hr
-  · obtain ⟨w, hr, he⟩ := hw'.1 () () 1 (by decide)
+  · obtain ⟨w, hr, he⟩ := ValueAt.cellWord (by show WordCompatible (.int 0 255); trivial) (hw'.1 () () 1 (by decide))
     have he' : w = 73 := he
     rw [he', show BitVec.ofNat 64 (layout.elem () () 1) = (8200 : Runner.W) by decide] at hr
     exact hr

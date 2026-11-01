@@ -16,7 +16,7 @@ theorem choice_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {cc ct ce : List II} {b : Bool} {ot oe : Ausgang (vertragVon D f) l Γ}
     (hd : frei Γ reserved ≤ d) (hdk : d < K)
     (hs : 16 * (cc.length + 1 + ct.length + 1 + ce.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length) (hlo2 : lo ≤ frei Γ reserved)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hcond : PreS L m pc fp K (frei Γ reserved) cc ρ reserved →
       Ok m pc fp K d cc (fun w => w = if b then 1 else 0))

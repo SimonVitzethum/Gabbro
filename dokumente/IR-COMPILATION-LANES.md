@@ -271,9 +271,8 @@ return PC/caller frame, 2 carries entry depth then a return cache tied by
 `ResultAt`, `ValueOk` and `ResultOk` carry complete results. IR-02/06/10 must use
 these definitions rather than introducing another multiword path.
 
-This migration is not yet integration green: expression mutual induction and all
-call/return, snapshot, world-memory and image consumers must compile together
-before the interface is accepted or new source forms are counted. Ordinary
+The migration is integration green on top of master and IR-06's complete-span world
+(2026-10-31, see "IR-03 full value ABI integration" at the end of this file). Ordinary
 records remain a named canonical-model prerequisite: `STyp.raw` has no canonical
 record/product `Ty` and no ordinary-record `UProg` adapter. Existing array/string
 types do not justify inventing record erasure or replacement source semantics.
@@ -795,6 +794,97 @@ IR01 stays slot1, all own harnesses route each check/run/audit through the same 
 launcher with unset ELAN_TOOLCHAIN and isolated outputs. Other workers' slots remain root-owned.
 No Bindung/pre-emit ABI guard or Senke code was edited. IR-01 remains incomplete on the listed
 remaining constant/type/signature forms, discovery completeness and canonical prerequisites.
+
+## IR-03 full value ABI integration (2026-10-31)
+
+The full multiword ABI (`valueWords`/`contextWords`/`variableOffset`/`encodeWords`/`ValueAt`, the
+`returnWords` area with `ReturnMirror`, `ResultAt`/`ValueOk`/`ResultOk`) is integrated with master
+(`d9fbb37bc`) and IR-06's complete-span world storage (`349b2cc9c`: `WeltAt` is `ValueAt` per cell,
+`globalValueC`/`globalStoreC`, `slotValueC`/`slotStoreC` with `_ok` theorems). `Stage0.Haupt` and every
+module of the `Stage0` root build, except two (below). Consumer changes made in this step:
+
+- `lowE`: `glob`, `slot`, `thru`, `slotRef` read through IR-06's complete-span emitters
+  (`globalValueC`, `slotValueC`); `lowE_ok` takes `hLay : LayIn L`, which the span read proofs need.
+  `assignGlob`, `assignSlot`, `assignThru`, `assignSlotRef` use `globalStoreC`/`slotStoreC`; the
+  reference's cell membership is read from the validity of the evaluated reference value.
+- Word-sized world consumers keep an explicit guard instead of a silent scalar cast:
+  `aggregateFits` now also requires `wordCompatB` (canonical single-word view). Consumers: table
+  reads inside `reaches`/quantifiers, byte fields, `publish`, atomic `awaits`/`exchange` (a wider
+  atomic has no hardware primitive and is refused), gate result bindings (`bindAxiomElse` also
+  requires a one-word reason value), gate buffers (byte field of one-word cells).
+- `weltAt_slotWord`/`weltAt_globWord` derive the one-word store from IR-06's `weltAt_slot`/`weltAt_glob`.
+- Exit status: `ExitErg` replaces `EncErg` in the start/image statements: the low word of the
+  canonical result, and for word-compatible results also the full scalar relation (`resultAt_exit`).
+- Literals of every range materialize through `constWords` (no `scalarFits` refusal any more).
+- `arrGet` of any length selects the complete element through `selectFrameSpan` (`selectFrameSpan_ok`).
+
+Measured: all 227 modules of the `Stage0` closure (root without the two modules below) check;
+`stage0/Nachpruefung.lean` reports 307+ theorems on only `propext`/`Classical.choice`/`Quot.sound`
+(including the new span, store, selection and exit theorems); layout check passes; 116 textual
+source -> IR -> assembly programs of `stage0/proben-ir` (compile and execution results or refusal
+text) match, run with a runner regenerated from `runner/` sources (the old root build lacks `udiv`).
+New textual programs `arr-triple`, `arr-runtime-index`, `arr-nested` (3-element and 2 x 3 arrays,
+constant and runtime indices) and `str-long` (capacity-3 string, copy, `lenof`) execute correctly.
+
+Open (exact): `arrSet` for more than one element; `strCat`, `strGet`, `strEq`, `strLt`, `strWeit` on
+strings of capacity above one (refused by their guards); ordinary records (canonical-model
+prerequisite); `StatementCost.lean` and `EarlyExit.lean` (IR-08's counted statement layer) are NOT
+migrated to the new copy/return/store ABI and are excluded from the `Stage0` root import list until
+counted versions of the span copy, store and return transports exist; `Nachpruefung.lean` lost
+its five `EarlyExitProbe` lines with them.
+
+## IR-03 arrays and strings over the full value span (2026-11-01)
+
+Continued from the full ABI integration above. Each step was rebuilt on the whole `Stage0` root, audited
+with `stage0/Nachpruefung.lean` (only `propext`/`Classical.choice`/`Quot.sound`, no `sorry`) and checked
+with the layout tool and the textual source -> IR -> assembly programs of `stage0/proben-ir`.
+
+Forms that now compile with a connected generic theorem (`lowE_ok` case, `lowE_top`, equation lemma):
+
+- `strGet` of a string of capacity `n >= 2` with an index range inside `[0, n)`: the byte word
+  `d + 1 + i` of the complete span through `selectFrameSpan` (`strGet_ok`, `strBytes_word`).
+- `strWeit m` widening (`n >= 2`, `n <= m`): the zero padding words are appended with `constWords`
+  (`strWeit_ok`: the widened encoding is the old encoding followed by the zero words).
+- `arrSet` of an array with more than one element (`arrSetL`, `arrSet_ok`): array, element and index are
+  evaluated in consecutive spans; `storeFrameSpan` computes the element's frame address and stores the complete
+  element span (`Frame/Store.lean`: `storeFramePointerSpan_run` has the exact footprint scratch word plus
+  target span, `storeFrameSpan_ok`, `elementEncoding_get`, `wordsAt_arrSet`). No surface syntax reaches
+  `arrSet` yet (the front end has no array-element update), so the textual regression cannot exercise it; the
+  model probe `Aggregat/Proben` accepts it.
+- `strEq` of two strings of capacity `>= 2` (`strEqLongL`, `strEqLong_ok`, `strEq_ok`): the length word and
+  the first `min n m` byte words are XOR-ORed branch-free (`xorOrSpan`, `xorOrSpan_ok`); the accumulator
+  is zero exactly when `strEqW` holds (`strEq_words_iff`, `foldl_or_xor_zero`). Textual program `str-eq-long`.
+
+Measured at the final state of this step: the 235-module `Stage0` closure (root and `Stage0.Haupt`) is
+rebuilt and fresh, `Nachpruefung.lean` audits 326 theorems on `propext`/`Classical.choice`/`Quot.sound` only
+(including `strEq_ok`, `strEqLong_ok`, `storeFrameSpan_ok`, `storeFramePointerSpan_run`, `wordsAt_arrSet`,
+`xorOrSpan_ok`, `strEq_words_iff`), the layout check passes, and 123 textual programs of `stage0/proben-ir`
+compile to IR and execute (or are refused with the expected text) identically on the assembly runner
+regenerated from `runner/`.
+
+Already compiling before this step and unchanged: literals, variables, `arrCons`, `arrGet` (any length and
+nesting), `strLen`, copies of every aggregate, the world read/write path of IR-06.
+
+Interface that IR-02 (wide integer kernels) and IR-10 (calls, `var_value_ok`, `constWords`) build on:
+
+- Width: `valueWords τ`, `integerWords lo hi` (little-endian two's-complement limbs), `contextWords`,
+  `returnWords result reasons`, `variableOffset`. Encoding: `encodeWords L τ v` (`integerEncoding` for
+  integers, `elementEncoding` for arrays, length word plus padded byte words for strings of capacity above one).
+- Relations: `ValueAt L m fp base τ v := ValueValid L τ v ∧ WordsAt m fp base (encodeWords L τ v)`,
+  `ValueOk` (execution, `Agree fp d K m m'`, `ValueAt` at `d`), `ResultAt`/`ResultOk`, `ReturnMirror`.
+  A wide kernel establishes `ValueOk` for its result type with all scratch at slots `>= d`; no low-word view
+  may stand for a multiword result (`ValueAt.word` only exists for `WordCompatible` types).
+- Materialization and transport: `constWords words d` with `constWords_ok` (execution, `Agree fp d K`,
+  `WordsAt m' fp d words`), `copyWords`/`copyValue_run`/`copyResult_run` (exact destination footprint),
+  `var_value_ok x lower fits pre : ValueOk .. (ρ.get x)` (`Aggregat/KopieSatz.lean`), and the dynamic-pointer
+  transports `loadPointerSpan_run`, `storePointerSpan_run` (world) and `storeFramePointerSpan_run` (frame).
+
+Open (exact): `strCat` (a runtime-offset byte copy needs a loop or a dynamic-offset frame store of the second
+operand), `strLt` on long strings (lexicographic scan with a final length comparison), `strEq` between a string
+of capacity at most one and a long string, `strWeit` narrowing of long strings (`take`), `strGet` of a long
+string with an index range wider than `[0, n)` (needs an in-range test before the dynamic selection), ordinary
+records (canonical-model prerequisite), IR-08's `StatementCost`/`EarlyExit` migration to the new
+copy/return/store ABI, and `getBytes`/`putBytes`/`shift` at the eight-byte limit (IR-02/IR-06).
 
 ### IR-05 bounded inventory (base c84ef50cc, 2026-11-01)
 
@@ -2731,6 +2821,103 @@ admission/meaning and must be recorded by the owner before enabling those rules.
 
 Validation: source/name/path inspection and `git diff --check` only. **Zero new
 language cases compiled or proved; no Lean file edited and no build run.**
+
+## IR-03 merge of master `6444b5cc3` (2026-11-01)
+
+Master (IR-01 const bounds, IR-02 wide kernels and mixed64 compare, IR-05 `wordConstant` tag bounds, IR-07
+signed64 `shift`, IR-08 traversal, IR-09 locks/atomics) is merged into the full-ABI branch. Master's scalar
+helpers (`wordConstant`, `scalarCompareL`, `engTest`/`intervalTestL`, `tagPayloadC` with word constants) are
+kept; they run on the complete ABI: `lowE_ok` is `ValueOk` (the scalar relations are taken through
+`ValueAt.word`), literals stay on `constWords`, `tagPayloadC` additionally requires a one-word payload
+(`valueWords (.int lo hi) = 1`), `eng_width` is derived from `scalarFits`. Master's probes `ShiftProbe`,
+`IntervalProbe`, `MixedProbe`, `TagProben` and `Aggregat/Proben` are migrated to `LayIn`/`LayDis`/`WeltAt` over
+`ValueAt`. `StatementCost`/`EarlyExit` stay out of the root until the counted copy/return/store transports exist.
+
+Measured: 294-module `Stage0` + `Stage0.Haupt` closure rebuilt; `Nachpruefung.lean` 336 theorems on
+`propext`/`Classical.choice`/`Quot.sound` only (6 axiom-free), no `sorry`; layout check passes; all 168 textual
+programs of `stage0/proben-ir` compile and execute (or are refused with the expected text) with 0 mismatches.
+`grammatik/` untouched. Merge commit: `05cfd542b`.
+
+## IR-03 `strGet` over any scalar index range (2026-11-01)
+
+`strGet` of a string of capacity `n >= 2` now accepts every one-word index range (`scalarFits lo hi`, signed or
+unsigned), not only `[0, n)`. `strGetWideL` (`Frame/StringGetCode.lean`) places a zero sentinel word after the
+string span, evaluates the index behind it and clamps it branch-free to `n + (i <u n) * (i - n)`
+(`strGetClamp`); the selection `selectFrameSpan` copies the byte word (padding or sentinel word is zero), so an
+index below zero or at least `n` yields the model's zero byte, exactly `strGetW`. Generic theorems
+(`Frame/StringGetOk.lean`): `ult_clamp`, `clamp_word`, `strGetClamp_ok`, `strClamped_byte`, `strGetWide_ok`,
+`strGet_ok` (moved there from `StringOps`, `strGetLongL` deleted). Textual program `str-get-wide` (indices
+inside, negative, equal to and beyond the capacity; signed and unsigned index types).
+
+Measured: closure rebuilt (231 modules), `Nachpruefung.lean` 340 theorems on the standard axioms only (6
+axiom-free), layout check passes, 169/169 textual programs.
+
+## IR-03 narrowing `strWeit` of long strings (2026-11-01)
+
+`strWeit q` of a string of capacity `n >= 2` to a smaller maximum `q < n` (`strTakeL`, `Frame/StringTakeCode.lean`):
+`q >= 2` keeps the byte words in place and rewrites only the length word to `min len q` branch-free
+(`strTakeLenL`); `q = 1` packs `0` or `256 + first byte` (`strTakePackL`); `q = 0` writes the empty word. Generic
+theorems (`Frame/StringTakeOk.lean`): `strTake_encode` (the narrowed encoding is the new length word followed
+by the byte words `1 .. q`), `take_len_word`, `bin_exact_ok` (a binary instruction with the exact footprint
+`Agree fp d (d + 1)`), `strTakeLen_ok`, `strTakePack_ok`, `strTake_ok`, and `strWeit_ok` (moved there from
+`String.lean`, now covering widening and narrowing of long strings). The surface language never narrows
+(`string longer than the maximum` is refused by the elaborator), so no textual program reaches this lowering;
+the model witnesses `Aggregat/Proben` (`narrow_semantics_zeuge`, `narrow_lowered_zeuge`) check the semantics
+and that the lowering accepts narrowing to 2, 1 and 0 (and the wide-index `strGet`).
+
+Measured: closure rebuilt (294 modules reachable from `Stage0`, `Stage0.Haupt`), `Nachpruefung.lean` 346 theorems
+on the standard axioms only (6 axiom-free), layout check passes, 169/169 textual programs.
+
+## IR-03 packed-to-long widening and `strEq` between short and long strings (2026-11-01)
+
+Two forms, verified together in one rebuild (the surface `==` of a short and a long string first widens the short
+operand, so the equality could only be exercised after the widening compiled):
+
+- `strWeit m` of a string of capacity at most one to a long capacity `m >= 2` (`strExpandL`,
+  `Frame/StringExpandCode.lean`): the scratch head computes the length word `[w <> 0]` and the first byte
+  `(w - 256) * [w <> 0]`, `copyWords 2` places them (exact footprint), `constWords` writes the `m - 1` zero words.
+  `expand_words` (the widened encoding), `strExpand_ok`; `strWeit_ok` moved to `StringExpandOk.lean` and now covers
+  widening of short and long strings and narrowing.
+- `strEq` of a string of capacity at most one and a long string, in either operand order (`strEqMixedL`,
+  `Frame/StringEqMixedCode.lean`): the long string's length word and first byte are packed (`0` or `256 + byte`) and
+  compared with the packed word, AND-ed with `len < 2`, branch-free. `pack_word`, `mixedEq_word` (the word
+  identity by cases on both byte lists), `strEqMixedC_ok`, `strEqMixed_ok` (`strEqW_comm` for the swapped order);
+  `strEq_ok` dispatches short, mixed and long. `span_len_read`/`span_byte_read` give the length and first byte word
+  of a long span (used by narrowing, packing and the mixed comparison).
+
+Textual programs `str-widen-short` (length, byte and zero words of widened `""`/`"A"`) and `str-eq-mixed` (both
+operand orders, equal and unequal, empty and one-byte strings against longer ones). Model witnesses in
+`Aggregat/Proben`; the former refusal witness for `strWeit 2` of a one-byte string is now an acceptance witness.
+
+Measured: closure rebuilt (223 modules after the edits), `Nachpruefung.lean` 353 theorems on the standard axioms only
+(6 axiom-free), layout check passes, 171/171 textual programs.
+
+## IR-03 handback state (2026-11-01)
+
+Branch `t3/central-value-abi`: master `ae716338a` merged (`cd8cf4d5d`) and current master `2d54e78f2` merged
+(`c6ce18d84`, fast-forwardable: `master` is an ancestor). After both merges the whole Stage0 closure rebuilds, all 207
+textual regressions in `stage0/proben-ir` pass, `Nachpruefung` and `gabbro_ziel` stay on the three standard axioms,
+the layout check is clean and no file under 500 lines on master reaches 500. The four old probes in `stage0/proben`
+(`echo`, `hello`, `threads`, `upper`) still refuse with "main takes parameters" (known IR-12 limit). Earlier:
+master `6444b5cc3` merged (`05cfd542b`), then `strGet` over any scalar index range,
+`strWeit` narrowing, `strWeit` of short to long strings and `strEq` between short and long strings (commits above).
+
+Open (exact):
+
+- `strLt` on long strings (and between short and long): the planned form is an unrolled backward fold over
+  the padded key sequence `x_k = [k < len] * (1 + byte_k)` with `res := (x_k <u y_k) | ((x_k == y_k) & res)`; its
+  correctness needs `bytesLt as bs = lexLt (keys as) (keys bs)` and a descending induction over the scan code. Refused
+  by its guard until then.
+- `strCat` of strings whose combined capacity exceeds one: needs the dynamic-offset word store of the second
+  operand (`storeFrameSpan` per word, preceded by zero-filling the extension) and the sum of the length words.
+  Refused by its guard.
+- IR-08 `StatementCost.lean` (5498 lines) and `EarlyExit.lean` (807 lines) are still outside the `Stage0` root: they
+  depend on scalar-only copy, return and store transports and are not migrated to the complete value ABI.
+- Ordinary records (canonical-model prerequisite); `getBytes`/`putBytes`/`shift` at the eight-byte limit (IR-02/IR-06).
+- Not reachable from the surface language, hence witnessed on the model only: `arrSet` of arrays of more than one
+  element and `strWeit` narrowing (the elaborator refuses a string longer than the maximum).
+- The 500-line rule: `Ausdruck.lean` (about 620 lines), `Satz.lean` and `Anweisung.lean` exceed it as they did before
+  this lane; they are the `lowE`/`lowS` mutual definitions and have not been split.
 
 ### IR-09 bounded inventory (base ae716338a, 2026-11-01)
 

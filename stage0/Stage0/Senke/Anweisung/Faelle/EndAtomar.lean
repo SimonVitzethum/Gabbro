@@ -16,16 +16,17 @@ theorem endAwaits_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {g : D.Glob} {proof0 : List D.Glob} {proof1 : _} {proof2 : _} {proof3 : _} {rest : Endblock D (vertragVon D f) l (D.gtyp g :: Γ) Λ} :
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .awaits g proof0 proof1 proof2 proof3 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd] at h
+  simp only [lowEnd, resultWords_vertragVon] at h
   split at h
   · next hl =>
+    simp only [Bool.and_eq_true] at hl
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cr, tr⟩, hr, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
@@ -33,12 +34,12 @@ theorem endAwaits_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     simp only [List.length_append] at hs
     have hFB3 : FB = 4 := rfl
     have hks := hW.ks
-    obtain ⟨m1, s1, A, hp1, hW1⟩ := awaits_head hl (by omega) hW hp hWa
+    obtain ⟨m1, s1, A, hp1, hW1⟩ := awaits_head hl.2 hl.1 (by omega) hW hp hWa
     simp only [execEnd, SichtOK.sicht, ↓reduceIte]
     have ih := ihRest (ex := ex) cr tr hr (by omega)
       (by omega) hW m1 _ ((σ.fragt (.inr (.inr g))).lese Λ [.inr g]) _ hp1
-      (by simp only [frei, List.length_cons] at hlo ⊢; omega) (hu.agreeW hW (A.mono hlo) (by omega))
-      (hk.agreeW hW (A.mono hlo) (by omega)) hW1 (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      (by simp only [frei, contextWords_cons, aggregateFits_width hl.2] at hlo ⊢; omega) (hu.agreeW hW (A.mono hlo) (by omega))
+      (hk.agreeW hW (A.mono hlo) (by omega)) hW1 (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, aggregateFits_width hl.2] at this ⊢; omega)
     rw [pc_add1]
     exact Ret.prefix (by omega) s1 (A.mono hlo) (keeps_of_agreeW hW A hpr (by omega)) (Ret.schrumpf ih)
   · cases h
@@ -47,16 +48,18 @@ theorem endExchange_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {proof0 : _} {proof1 : _} {rest : Endblock D (vertragVon D f) l (D.gtyp g :: Γ) Λ} :
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .exchange g neu proof0 proof1 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd] at h
+  simp only [lowEnd, resultWords_vertragVon] at h
   split at h
-  · simp only [bind, Option.bind_eq_some_iff, pure] at h
+  · next hl =>
+    simp only [Bool.and_eq_true] at hl
+    simp only [bind, Option.bind_eq_some_iff, pure] at h
     obtain ⟨⟨cn, tn⟩, hn, ⟨cr, tr⟩, hr, h⟩ := h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -65,12 +68,12 @@ theorem endExchange_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
       simp only [List.length_append, hlen] at hs
       have hFB3 : FB = 4 := rfl
       have hks := hW.ks
-      obtain ⟨m3, s3, A, hp3, hW3⟩ := exch_head (Λ := Λ) hn (by omega) (by omega) hW hp hWa
+      obtain ⟨m3, s3, A, hp3, hW3⟩ := exch_head (Λ := Λ) hl.2 hn (by omega) (by omega) hW hp hWa
       simp only [execEnd]
       have ih := ihRest (ex := ex) cr tr hr (by omega)
         (by omega) hW m3 _ _ _ hp3
-        (by simp only [frei, List.length_cons] at hlo ⊢; omega) (hu.agreeW hW (A.mono hlo) (by omega))
-        (hk.agreeW hW (A.mono hlo) (by omega)) hW3 (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+        (by simp only [frei, contextWords_cons, aggregateFits_width hl.2] at hlo ⊢; omega) (hu.agreeW hW (A.mono hlo) (by omega))
+        (hk.agreeW hW (A.mono hlo) (by omega)) hW3 (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, aggregateFits_width hl.2] at this ⊢; omega)
       rw [pc_add1]
       exact Ret.prefix (by omega) s3 (A.mono hlo) (keeps_of_agreeW hW A hpr (by omega)) (Ret.schrumpf ih)
     · cases h

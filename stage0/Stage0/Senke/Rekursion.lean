@@ -50,8 +50,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
       simp only [rufAt]
       refine guard_stop (codeAt_left (codeAt_left (codeAt_left (codeAt_left hcode)))) ?_ hF (by omega) (by omega) hK
         (by simp [logikCode]) h2
-      have := codeFar_left (n := (guardC 2 105 (FB + (D.params f).length)).length)
-        (k := cq.length + (guardC (FB + (D.params f).length) 101 (FB + (D.params f).length)).length + cs.length + ((D.params f).length + cb.length))
+      have := codeFar_left (n := (guardC 2 105 (FB + (contextWords (D.params f)))).length)
+        (k := cq.length + (guardC (FB + (contextWords (D.params f))) 101 (FB + (contextWords (D.params f)))).length + cs.length + ((contextWords (D.params f)) + cb.length))
         (by simpa [Nat.add_assoc, relocateC_length] using hfar)
       simpa [guardC, stopC, sysC] using this
     · simp at hlf
@@ -71,7 +71,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
       have hFB3 : FB = 4 := rfl
       have hmul : (k + 1 + 1) * L = (k + 1) * L + L := Nat.succ_mul _ _
       have hroom := hF.room
-      let s := FB + (D.params f).length
+      let s := FB + (contextWords (D.params f))
       have hcode0 := (hP f).1
       have hfar0 := (hP f).2
       rw [← hCf] at hcode0 hfar0
@@ -79,8 +79,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
       rw [← hCf] at hlenf
       simp only [List.length_append, relocateC_length] at hlenf
       have hcode : CodeAt m (BitVec.ofNat 64 (A f))
-          (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) (D.params f).length ++ cb))))) := by simpa [List.append_assoc] using hcode0
-      have hfar : CodeFar (BitVec.ofNat 64 (A f)) (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) (D.params f).length ++ cb))))).length fp K := by
+          (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) (contextWords (D.params f)) ++ cb))))) := by simpa [List.append_assoc] using hcode0
+      have hfar : CodeFar (BitVec.ofNat 64 (A f)) (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) (contextWords (D.params f)) ++ cb))))).length fp K := by
         simpa [List.append_assoc, Nat.add_assoc] using hfar0
       have hgl : ∀ a c, (guardC a c s).length = 5 := fun _ _ => rfl
       -- the depth guard passes
@@ -100,8 +100,8 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
       have hpq : PreS Y m _ fp K s cq ρ :=
         ⟨Nat.le_refl _, hK, hF, codeAt_left hc1, codeFar_left (by rw [← List.length_append]; exact hf1), hE, trivial, wstab_true _ _⟩
       have hpw := PreS.welt hpq hks hWaR hW.lay (by have := hW.lo; omega)
-      obtain ⟨m1, s1, a1s, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := Ks) σR σR (fun _ h => h) (P.requires f) s cq tq hq (by omega) m _
-        ρ hpw
+      obtain ⟨m1, s1, a1s, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := Ks) σR σR (fun _ h => h) hW.lay (P.requires f) s cq tq hq (by omega) m _
+        ρ hpw |>.word trivial
       have a1 := Agree.widen a1s hks
       have hWa1 : WeltAt m1 Y σR := hpw.wstab m m1 hWaR (a1s.mono (Nat.zero_le _))
       have hF1 := hF.agree a1
@@ -117,7 +117,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
           · exact hbe
         rw [hb0] at hb1
         exact Stops.prefix (sg.trans s1) (guard_stop (codeAt_left hc2)
-          (by have := codeFar_left (n := 5) (k := cs.length + ((D.params f).length + cb.length)) (by simpa only [List.length_append, relocateC_length, hgl] using hf2)
+          (by have := codeFar_left (n := 5) (k := cs.length + ((contextWords (D.params f)) + cb.length)) (by simpa only [List.length_append, relocateC_length, hgl] using hf2)
               simpa [hgl] using this) hF1 (by omega) (by omega) hK (by simp [logikCode]) hb1)
       · rw [if_neg hreq]
         have hbt : b = 1 := by
@@ -135,18 +135,22 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
         have aPre : Agree fp 3 K m mS := (a1.mono (by unfold s FB; omega)).trans aS
         have hES : EnvAt Y mS fp ρ := by
           intro τ x
-          obtain ⟨w, hw, he⟩ := (envAt_agree hE a1 hF (Nat.le_refl _) (by omega)) τ x
-          have hx := vslot_lt (reserved := 0) x
-          exact ⟨w, by rw [hKeep (vslot x) (by unfold frei at hx; omega)
-            (by unfold vslot FB; omega)]; exact hw, he⟩
+          obtain ⟨valid, words⟩ := (envAt_agree hE a1 hF (Nat.le_refl _) (by omega)) τ x
+          have bound := variableOffset_bound x
+          refine ⟨valid, ?_⟩
+          intro i hi
+          have width := encodeWords_length Y τ (ρ.get x)
+          rw [hKeep (vslot x + i) (by unfold vslot; omega)
+            (by unfold vslot FB; omega)]
+          exact words i hi
         have hWaS : WeltAt mS Y σR := weltAt_stab hW.lay (by have := hW.top; omega)
           m1 mS hWa1 (aS.mono (Nat.zero_le _))
         have hfB := codeFar_tail hf3
         have hcB := (codeAt_right hc3).agree aS hfB
         obtain ⟨mR, sR, aR, hER⟩ := relocate_env hFS hK
-          (by simpa only [Nat.zero_add] using (show frei (D.params f) ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega)) hES (codeAt_left hcB)
-          (by simpa only [relocateC_length] using (codeFar_left (n := (relocateC FB ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) (D.params f).length).length) (k := cb.length) (by simpa only [List.length_append] using hfB)))
-        have aRW := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))) ≤ K by simpa only [Nat.zero_add] using (show frei (D.params f) ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega))
+          (by simpa only [Nat.zero_add] using (show frei (D.params f) ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega)) hES (codeAt_left hcB)
+          (by simpa only [relocateC_length] using (codeFar_left (n := (relocateC FB ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) (contextWords (D.params f))).length) (k := cb.length) (by simpa only [List.length_append] using hfB)))
+        have aRW := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))) ≤ K by simpa only [Nat.zero_add] using (show frei (D.params f) ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega))
         have hFR := hFS.agree aRW
         have aEntry : Agree fp 3 K m mR := aPre.trans (aRW.mono (by unfold FB; omega))
         have hOriginal : EnvAt Y mR fp ρ := envAt_agree hES aRW hFS (by unfold frei FB; omega) (by omega)
@@ -165,7 +169,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
           ⟨by rw [agree_rd_low aEntry hroom (by decide) (by omega)]; exact h0,
            by rw [agree_rd_low aEntry hroom (by decide) (by omega)]; exact h1,
            hOriginal, by omega, hSnapR⟩
-        have hpb : PreS Y mR _ fp K (frei (D.params f) ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))) cb ρ ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)) :=
+        have hpb : PreS Y mR _ fp K (frei (D.params f) ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))) cb ρ ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) :=
           ⟨Nat.le_refl _, hK, hFR, hcR, hfR, by simpa only [Nat.zero_add] using hER, trivial, wstab_true _ _⟩
         have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (pr := []) (P.rumpf f) cb tb hb
           (by omega) (by omega) hW mR _ σR ρ hpb (by unfold frei s; omega) hu hk hWaR' (fun _ h => nomatch h)

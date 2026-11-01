@@ -31,7 +31,8 @@ theorem quantC_ok {fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Ru
         Ok m pc fp K (d + 1) (quantBindC (frei Γ reserved) (d + 1) j cb) (fun w => w = if p x then 1 else 0) := by
       intro m pc hp
       have hp'' : Pre L m pc fp K (d + 1) (quantBindC (frei Γ reserved) (d + 1) x.n cb) ρ W reserved := by rw [hx]; exact hp
-      have hh := quantBind_ok (n := count) (k := x) (by rw [hx]; exact lit32_nat (by omega))
+      have hh := quantBind_ok (n := count) (k := x)
+        (integerWords_word (by omega) (by omega)) (by rw [hx]; exact lit32_nat (by omega))
         (by omega) (by omega) hp'' (by simpa [Nat.add_assoc] using ih x)
       rw [← hx]
       exact hh

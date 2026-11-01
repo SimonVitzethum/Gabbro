@@ -54,7 +54,7 @@ theorem pack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K acc u adr j : Nat} {Γ :
   have hp' : Pre L m pc fp K u (([ci 1 u adr 0] ++ [ci 15 u u 0]) ++
       ([ci 1 ((u : Int) + 1) (8 * j) 0, ci 11 u u ((u : Int) + 1)] ++ [ci 3 acc acc u])) ρ W reserved := hp
   have hX : Ok m pc fp K u ([ci 1 u adr 0] ++ [ci 15 u u 0]) (· = w) :=
-    ok_seq hp'.left (const_ok hp'.left.left (lit_ok (by omega) (by omega)) (by omega))
+    ok_seq hp'.left (const_ok hp'.left.left (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega) (by omega))
       (fun m' w' hp'' hr he => by
         rw [he, BitVec.ofInt_natCast] at hr
         exact ld_ok hp'' (by omega) hr (hw m' hp''.welt)) (by omega)
@@ -63,7 +63,7 @@ theorem pack1_ok {m : Runner.Mem} {pc fp : Runner.W} {K acc u adr j : Nat} {Γ :
   have hq := hp3.left
   obtain ⟨m1, s1, a1, v, hv, rfl⟩ := ok_seq hq hX (Pb := (· = w <<< (8 * j)))
     (fun m' w' hp'' hr he => (binK_ok (o := 11) (g := fun a b => some (a <<< (b.toNat % 64)))
-      (r := w' <<< (8 * j)) hp'' hr (lit_ok (by omega) (by omega)) rfl (by decide)
+      (r := w' <<< (8 * j)) hp'' hr (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega) rfl (by decide)
       (by simp only [shl_amt hj]) (by omega)).mono fun x hx => by rw [hx, he]) (by omega)
   have hn := hp3.next a1 (Nat.le_refl _) (by omega)
   simp only [List.length_append, List.length_singleton, List.length_cons, List.length_nil] at s1 hn
@@ -181,14 +181,14 @@ theorem unpack1_ok {m : Runner.Mem} {pc fp : Runner.W} {Ks B u adr k : Nat} {Γ 
   have hA := ok_seq hp3.left.left (mov_ok hp3.left.left.left (by omega) (by omega) hbw)
     (Pb := (· = bw >>> (8 * (k % 8))))
     (fun m' w' hp'' hr he => (binK_ok (o := 12) (g := fun a b => some (a >>> (b.toNat % 64)))
-      (r := w' >>> (8 * (k % 8))) hp'' hr (lit_ok (by omega) (by omega)) rfl (by decide)
+      (r := w' >>> (8 * (k % 8))) hp'' hr (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega) rfl (by decide)
       (by simp only [shr_amt]) (by omega)).mono fun x hx => by rw [hx, he]) (by omega)
   obtain ⟨m1, s1, a1, v, hv, rfl⟩ := ok_seq hp3.left hA (Pb := (· = (bw >>> (8 * (k % 8))) &&& 255))
     (fun m' w' hp'' hr he => (binK_ok (o := 8) (g := fun a b => some (a &&& b))
       (r := w' &&& 255) hp'' hr (by decide) rfl (by decide) rfl (by omega)).mono fun x hx => by rw [hx, he])
     (by omega)
   have hn := hp3.next a1 (Nat.le_refl _) (by omega)
-  have s2 := const_step (k := (adr : Int)) hn.left.code hn.frame (by omega) hsmall (lit_ok (by omega) (by omega))
+  have s2 := const_step (k := (adr : Int)) hn.left.code hn.frame (by omega) hsmall (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; constructor <;> omega)
   let m2 := write m1 (slot fp (BitVec.ofNat 64 (u + 1))) 8 (BitVec.ofInt 64 (adr : Int)).toNat
   have a2 : Agree fp u Ks m1 m2 := agree_write hroom (by omega) (by omega) _
   have hc3 : CodeAt m2 (pc + BitVec.ofNat 64 (16 * 5) + 16) [ci 16 ((u + 1 : Nat) : Int) u 0] := by
@@ -228,8 +228,8 @@ theorem unpackK_len (L : Lay D) (t : D.Tab) (f : D.Feld t) (B u : Nat) :
 /-- **The elements `k < K'` back from the buffer at slot `B`**: each cell holds `byteOf` the buffer; every other word
     of the world above the frame keeps its contents, and so does the frame below `u`. -/
 theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runner.W} {Ks : Nat} {Γ : Ctx}
-    {ρ : Env D Γ} (hl : LayIn L) (hd : LayDis L) (hu : u + 2 ≤ Ks) (hwlo : fp.toNat + 8 * Ks ≤ L.lo)
-    (hord : L.lo ≤ L.hi) :
+    {ρ : Env D Γ} (hw1 : valueWords (D.typ t f) = 1) (hl : LayIn L) (hd : LayDis L) (hu : u + 2 ≤ Ks)
+    (hwlo : fp.toNat + 8 * Ks ≤ L.lo) (hord : L.lo ≤ L.hi) :
     (K' : Nat) → (K' : Int) ≤ D.count t → (∀ k, k < K' → B + k / 8 < u) → (m : Runner.Mem) → (pc : Runner.W) →
     PreS L m pc fp Ks u (unpackK L t f B u K') ρ reserved → WeltWr m L →
     (∀ k : Nat, (k : Int) < D.count t → Runner.Mem.all m.rd (BitVec.ofNat 64 (L.elem t f k)) 8 = true) →
@@ -245,7 +245,7 @@ theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runn
     have hsmall := hp.small
     have hl3 := hl.2.2
     have hp' : PreS L m pc fp Ks u (unpackK L t f B u K' ++ unpack1 B u (L.elem t f K') K') ρ reserved := hp
-    obtain ⟨m1, s1, a1, hc1, ho1⟩ := unpackK_ok hl hd hu hwlo hord K' (by omega)
+    obtain ⟨m1, s1, a1, hc1, ho1⟩ := unpackK_ok hw1 hl hd hu hwlo hord K' (by omega)
       (fun k hk => hB k (by omega)) m pc hp'.left hwr hrdc
     have hfr := codeFar_right (by simpa using hp'.far)
     have hp1 : PreS L m1 (pc + BitVec.ofNat 64 (16 * (unpackK L t f B u K').length)) fp Ks u
@@ -254,7 +254,8 @@ theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runn
         fun i hi => by rw [a1.wr]; exact hp.frame.wr i hi⟩,
        codeAt_agreeW a1 hwlo hl3 hord (codeAt_right hp'.code) hfr, hfr,
        envAt_agreeW hp.env a1 hwlo hroom hp.ctx (by omega), trivial, wstab_true _ _⟩
-    have hcell := hl.1 t f K' (L.bounded (by omega))
+    have hcell : L.lo ≤ L.elem t f K' ∧ L.elem t f K' + 8 ≤ L.hi := by
+      have h := hl.1 t f K' (L.bounded (by omega)); rw [hw1] at h; omega
     have hbw : m1.rd64 (slot fp (BitVec.ofNat 64 (B + K' / 8))) =
         some ((m.rd64 (slot fp (BitVec.ofNat 64 B) + BitVec.ofNat 64 (8 * (K' / 8)))).getD 0) := by
       rw [agreeW_rd_low a1 hwlo hroom (hB K' (by omega)) (by omega), slot_succ]
@@ -268,7 +269,8 @@ theorem unpackK_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} {B u : Nat} {fp : Runn
       congr 2
     · by_cases hkK : k = K'
       · subst hkK; rw [hc2]; rfl
-      · obtain ⟨hck1, hck2⟩ := hl.1 t f k (L.bounded (by omega))
+      · obtain ⟨hck1, hck2⟩ : L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 ≤ L.hi := by
+          have h := hl.1 t f k (L.bounded (by omega)); rw [hw1] at h; omega
         obtain ⟨hcl1, hcl2⟩ := hcell
         have hfar := cell_far (c := .elem t f k) (c' := .elem t f K') hl hd (by simp only [Zelle.da]; apply L.bounded; omega)
           (by simp only [Zelle.da]; apply L.bounded; omega) (by simpa [Zelle.adr] using hck2) (by simpa [Zelle.adr] using hcl2)

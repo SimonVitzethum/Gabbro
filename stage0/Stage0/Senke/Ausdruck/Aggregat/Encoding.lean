@@ -55,6 +55,75 @@ def integerEncoding : Nat → Int → List Runner.W
   | zero => rfl
   | succ n ih => simp [integerEncoding, ih]
 
+theorem integerEncoding_zero (n : Nat) : integerEncoding n 0 = List.replicate n 0 := by
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [integerEncoding, ih, List.replicate_succ]
+
+theorem integerEncoding_negative_one (n : Nat) :
+    integerEncoding n (-1) = List.replicate n (BitVec.ofInt 64 (-1)) := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    have quotient : (-1 : Int) / 2 ^ 64 = -1 :=
+      Int.ediv_eq_neg_one_of_neg_of_le (by decide) (by decide)
+    simpa only [integerEncoding, quotient, List.replicate_succ] using congrArg (List.cons (BitVec.ofInt 64 (-1))) ih
+
+/-- Splitting a canonical integer is Euclidean division, independent of its
+    source type. Width changes reuse this identity instead of a second encoding. -/
+theorem integerEncoding_append (n k : Nat) (z : Int) :
+    integerEncoding (n + k) z = integerEncoding n z ++ integerEncoding k (z / 2 ^ (64 * n)) := by
+  induction n generalizing z with
+  | zero => simp [integerEncoding]
+  | succ n ih =>
+    simp only [Nat.succ_add, integerEncoding, ih, List.cons_append]
+    have denominator : (2 : Int) ^ 64 * 2 ^ (64 * n) = 2 ^ (64 * (n + 1)) := by
+      rw [show 64 * (n + 1) = 64 + 64 * n by omega, Int.pow_add]
+    rw [Int.ediv_ediv_of_nonneg (by decide : (0 : Int) ≤ 2 ^ 64), denominator]
+
+/-- Extra limbs are the sign extension of a value already fitting the source
+    span. No new value interpretation is introduced at a widening boundary. -/
+theorem integerEncoding_extend {n : Nat} (k : Nat) (z : Int)
+    (lower : -(2 ^ (64 * n)) ≤ z) (upper : z < 2 ^ (64 * n)) :
+    integerEncoding (n + k) z = integerEncoding n z ++
+      List.replicate k (if z < 0 then BitVec.ofInt 64 (-1) else 0) := by
+  rw [integerEncoding_append]
+  by_cases negative : z < 0
+  · rw [if_pos negative, Int.ediv_eq_neg_one_of_neg_of_le negative (by omega), integerEncoding_negative_one]
+  · rw [if_neg negative, Int.ediv_eq_zero_of_lt (by omega) upper, integerEncoding_zero]
+
+theorem integerEncoding_take {n k : Nat} (z : Int) (bound : k ≤ n) :
+    (integerEncoding n z).take k = integerEncoding k z := by
+  induction k generalizing n z with
+  | zero => simp [integerEncoding]
+  | succ k ih =>
+    cases n with
+    | zero => omega
+    | succ n =>
+      simp only [integerEncoding, List.take_succ_cons]
+      rw [ih _ (by omega)]
+
+theorem integerEncoding_last {n : Nat} (positive : 0 < n) (z : Int) :
+    integerEncoding n z = integerEncoding (n - 1) z ++
+      [BitVec.ofInt 64 (z / 2 ^ (64 * (n - 1)))] := by
+  have split := integerEncoding_append (n - 1) 1 z
+  rw [show n - 1 + 1 = n by omega] at split
+  simpa only [integerEncoding, List.append_nil] using split
+
+theorem integerEncoding_top_signed {n : Nat} (positive : 0 < n) (z : Int)
+    (lower : -(2 ^ (64 * n - 1)) ≤ z) (upper : z < 2 ^ (64 * n - 1)) :
+    -(2 ^ 63) ≤ z / 2 ^ (64 * (n - 1)) ∧
+      z / 2 ^ (64 * (n - 1)) < 2 ^ 63 ∧
+      (z / 2 ^ (64 * (n - 1)) < 0 ↔ z < 0) := by
+  have denominator : (0 : Int) < 2 ^ (64 * (n - 1)) := Int.pow_pos (by decide)
+  have capacity : (2 : Int) ^ (64 * n - 1) = 2 ^ 63 * 2 ^ (64 * (n - 1)) := by
+    rw [← Int.pow_add, show 63 + 64 * (n - 1) = 64 * n - 1 by omega]
+  rw [capacity] at lower upper
+  refine ⟨(Int.le_ediv_iff_mul_le denominator).mpr ?_,
+    (Int.ediv_lt_iff_lt_mul denominator).mpr upper, ?_⟩
+  · simpa only [Int.neg_mul] using lower
+  · rw [Int.ediv_lt_iff_lt_mul denominator, Int.zero_mul]
+
 /-- Flatten elements in increasing index order. No pointer or allocation is introduced. -/
 def elementEncoding : (n : Nat) → (Fin n → List Runner.W) → List Runner.W
   | 0, _ => []
@@ -65,6 +134,23 @@ theorem elementEncoding_length (n width : Nat) (f : Fin n → List Runner.W)
   induction n with
   | zero => simp [elementEncoding]
   | succ n ih => simp only [elementEncoding, List.length_append, hf, ih _ (fun i => hf i.succ), Nat.succ_mul]; omega
+
+/-- Selecting an array element keeps its entire contiguous representation. -/
+theorem elementEncoding_wordsAt {m : Runner.Mem} {fp : Runner.W} {base n width : Nat}
+    (f : Fin n → List Runner.W) (lengths : ∀ i, (f i).length = width)
+    (input : WordsAt m fp base (elementEncoding n f)) (j : Fin n) :
+    WordsAt m fp (base + j.val * width) (f j) := by
+  induction n generalizing base with
+  | zero => exact Fin.elim0 j
+  | succ n ih =>
+    have parts := (wordsAt_append _ _).mp input
+    cases j using Fin.cases with
+    | zero => simpa using parts.1
+    | succ j =>
+      have tail := ih (base := base + width) (fun i => f i.succ)
+        (fun i => lengths i.succ) (by simpa only [lengths] using parts.2) j
+      simpa only [Fin.val_succ, Nat.add_mul, Nat.one_mul, Nat.add_assoc,
+        Nat.add_left_comm, Nat.add_comm] using tail
 
 /-- The unique canonical word sequence of a model value. Reference validity, floating
     well-formedness and world permissions remain separate proof obligations. -/
@@ -149,6 +235,17 @@ def ValueValid (L : Lay D) : (τ : Ty) → Wert D τ → Prop
 def ValueAt (L : Lay D) (m : Runner.Mem) (fp : Runner.W) (base : Nat)
     (τ : Ty) (v : Wert D τ) : Prop :=
   ValueValid L τ v ∧ WordsAt m fp base (encodeWords L τ v)
+
+/-- Array indexing projects full validity and all words, including nested elements. -/
+theorem ValueAt.array_element {L : Lay D} {m : Runner.Mem} {fp : Runner.W}
+    {base n : Nat} {τ : Ty} {v : Wert D (.arr τ n)}
+    (input : ValueAt L m fp base (.arr τ n) v) (j : Fin n) :
+    ValueAt L m fp (base + j.val * valueWords τ) τ (v j) := by
+  refine ⟨input.1 j, ?_⟩
+  have nonempty : n ≠ 0 := by have := j.isLt; omega
+  have words : WordsAt m fp base (elementEncoding n (fun i => encodeWords L τ (v i))) := by
+    simpa only [encodeWords, if_neg nonempty] using input.2
+  exact elementEncoding_wordsAt _ (fun i => encodeWords_length L τ (v i)) words j
 
 theorem encodeWords_arrCons {τ : Ty} {n : Nat} (a : Wert D τ) (rest : Wert D (.arr τ n)) :
     encodeWords L (.arr τ (n + 1)) (arrConsW a rest) =

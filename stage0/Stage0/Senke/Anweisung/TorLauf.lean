@@ -60,13 +60,17 @@ theorem torC_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : Li
             [ci 1 s b.nr 0, ci 23 s s 0]) ρ reserved := hp
         have hq : PreS L m pc fp K (s + 1) ca ρ reserved := (hp0.up (d' := s + 1) (by omega)).left.left
         have hpw := PreS.welt hq hks hWa hW.lay (by omega)
-        obtain ⟨m1, s1, a1, hA⟩ := lowR_ok σ σ (fun _ h => h) args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
+        obtain ⟨m1, s1, a1, hA⟩ := lowR_ok σ σ (fun _ h => h) hW.lay args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
         have hF1 := hFs.agree a1
+        have hfz : CodeFar (pc + BitVec.ofNat 64 (16 * ca.length))
+            (6 - (D.aparams a).length) fp Ks :=
+          codeFar_right (n := ca.length) (k := 6 - (D.aparams a).length)
+            (codeFar_left (k := 2) hfar)
         -- zeros into the unused registers
         have hcz : CodeAt m1 (pc + BitVec.ofNat 64 (16 * ca.length))
             (zeroC (s + 1 + (D.aparams a).length) (6 - (D.aparams a).length)) :=
-          (codeAt_right hp0.left.code).agree a1 (by rw [zeroC_len]; exact codeFar_at hfar (by omega))
-        obtain ⟨m2, s2, a2, hz⟩ := zero_ok (K := Ks) (by omega) _ _ m1 _ hcz (codeFar_at hfar (by omega)) hF1 (by omega)
+          (codeAt_right hp0.left.code).agree a1 (by rw [zeroC_len]; exact hfz)
+        obtain ⟨m2, s2, a2, hz⟩ := zero_ok (K := Ks) (by omega) _ _ m1 _ hcz (by simpa only [zeroC_len] using hfz) hF1 (by omega)
         have hF2 := hF1.agree a2
         -- the number into slot `s`
         have hc34 : CodeAt m (pc + BitVec.ofNat 64 (16 * (ca.length + (6 - (D.aparams a).length))))
@@ -75,7 +79,7 @@ theorem torC_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : Li
             (b := [ci 1 s b.nr 0] ++ [ci 23 s s 0]) hp0.code
           rwa [List.length_append, zeroC_len] at h1
         have hf34 : CodeFar (pc + BitVec.ofNat 64 (16 * (ca.length + (6 - (D.aparams a).length)))) 2 fp Ks :=
-          codeFar_at hfar (by omega)
+          codeFar_right (n := ca.length + (6 - (D.aparams a).length)) (k := 2) hfar
         have hc3 : CodeAt m2 (pc + BitVec.ofNat 64 (16 * (ca.length + (6 - (D.aparams a).length)))) [ci 1 s b.nr 0] :=
           (codeAt_left hc34).agree (a1.trans (a2.mono (by omega))) (codeFar_left (k := 1) hf34)
         have s3 := const_step (k := (b.nr : Int)) hc3 hF2 (by omega) (by omega) hnr
@@ -238,10 +242,10 @@ theorem torBind_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ :
     (ht : torC0 L a args (frei Γ reserved) reserved = some (ct, tt)) (hck : chkC (D.aerg a) (frei Γ reserved) = some ck)
     (htt : tt ≤ Ks) (htk : frei Γ reserved + 10 ≤ Ks) (hW : WIn L fp Ks K) (hp : PreS L m pc fp K (frei Γ reserved) (ct ++ ck ++ cr) ρ reserved)
     (hWa : WeltAt m L σ) :
-    (∃ v m2 w, axiomAntwort O a σ (evalArgs σ args σ ρ) =
+    (∃ v m2, axiomAntwort O a σ (evalArgs σ args σ ρ) =
         ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, some v) ∧
       Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (ct ++ ck).length), fp⟩ m2 ∧ AgreeW L fp (frei Γ reserved) K m m2 ∧
-      m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w ∧ Enc L τ (ergWert he v) w ∧
+      ValueAt L m2 fp (frei Γ reserved) τ (ergWert he v) ∧
       WeltAt m2 L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1) ∨
     (axiomAntwort O a σ (evalArgs σ args σ ρ) = ((O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1, none) ∧
       Stops ⟨pc, fp⟩ m 110) := by
@@ -249,6 +253,7 @@ theorem torBind_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ :
   have h7 := torC_top ht
   have hck' := hck
   rw [he] at hck'
+  have width := chkC_width hck'
   cases τ with
   | int lo hi =>
     have hp' : PreS L m pc fp K (frei Γ reserved) (ct ++ (ck ++ cr)) ρ reserved := (List.append_assoc ct ck cr) ▸ hp
@@ -264,10 +269,10 @@ theorem torBind_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ :
     · obtain ⟨v, hv, hen⟩ := g1 hr
       obtain ⟨m2, s2, a2⟩ := hin hr
       have hroom := (frameOK_sub hp.frame hks).room
-      refine .inl ⟨v, m2, w, by rw [hv], ?_, a1.trans (agreeW_of (Agree.widen (a2.mono (Nat.le_succ _)) hks)), ?_,
-        hen, ?_⟩
+      refine .inl ⟨v, m2, by rw [hv], ?_, a1.trans (agreeW_of (Agree.widen (a2.mono (Nat.le_succ _)) hks)), ?_, ?_⟩
       · exact s1.trans (by rw [List.length_append, ← pc_add]; exact s2)
-      · rw [agree_rd_low a2 hroom (by omega) (by omega)]; exact hw1
+      · refine ValueAt.of_enc width ?_ hen
+        rw [agree_rd_low a2 hroom (by omega) (by omega)]; exact hw1
       · exact weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hW1 (a2.mono (Nat.zero_le _))
     · exact .inr ⟨by rw [g2 hr], Stops.prefix s1 (hout hr)⟩
   | bool =>
@@ -281,10 +286,11 @@ theorem torBind_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ :
        codeFar_sub2 hn.left.far hks, hn.env, trivial, wstab_true _ _⟩
     obtain ⟨m2, s2, a2, w2, hw2, he2⟩ := boolC_ok hpk (by omega) hw1
     obtain ⟨v, hv, hev⟩ := einpassen_bool (z := O.zeiger) he w.toInt
-    refine .inl ⟨v, m2, w2, ?_, ?_, a1.trans (agreeW_of (Agree.widen a2 hks)), hw2, ?_, ?_⟩
+    refine .inl ⟨v, m2, ?_, ?_, a1.trans (agreeW_of (Agree.widen a2 hks)), ?_, ?_⟩
     · rw [axiomAntwort_eq, hroh, hv]
     · exact s1.trans (by rw [List.length_append, ← pc_add]; exact s2)
-    · simpa only [hev] using he2
+    · apply ValueAt.of_enc width hw2
+      simpa only [hev] using he2
     · exact weltAt_stab hW.lay (by have := hW.lo; omega) m1 m2 hW1 (a2.mono (Nat.zero_le _))
   | never =>
     have hp' : PreS L m pc fp K (frei Γ reserved) (ct ++ (ck ++ cr)) ρ reserved := (List.append_assoc ct ck cr) ▸ hp

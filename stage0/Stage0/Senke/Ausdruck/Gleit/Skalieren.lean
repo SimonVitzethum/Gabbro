@@ -783,7 +783,7 @@ theorem floatOfIntScaleL_left {Γ : Ctx} {ρ : Env D Γ}
       have r := floatOfIntAssemblyL_compare_canonical z hz hn hi p (by omega) h t m pc pre
       simpa [Runner.IR.bool, hlt] using r)
     (fun _ _ _ h t m pc pre => by
-      simpa only [mag] using hl h t m pc pre)
+      simpa only [Ok, Executes, mag] using hl h t m pc pre)
     (by intro h; cases h) hpre
 
 /-- The actual right scale executes subtraction, nearest-even rounding and jumps. -/
@@ -827,7 +827,7 @@ theorem floatOfIntScaleL_right {Γ : Ctx} {ρ : Env D Γ}
     (fun _ _ h t m pc pre => floatOfIntAssemblyL_right_compare z hz hn hi p (by omega) hr h t m pc pre)
     (by intro h; cases h)
     (fun _ _ _ h t m pc pre => by
-      simpa only [(floatOfIntAssembly_magnitude_bound z hz).1] using round h t m pc pre) pre
+      simpa only [Ok, Executes, (floatOfIntAssembly_magnitude_bound z hz).1] using round h t m pc pre) pre
 
 /-- Actual sign instructions derive their contribution from the signed input. -/
 theorem floatOfIntSignL_ok {Γ : Ctx} {ρ : Env D Γ}

@@ -4,6 +4,7 @@
 -/
 import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Anweisung.Schreiben
+import Stage0.Senke.Welt.WordCell
 import Stage0.Senke.Anweisung
 import Stage0.Senke.Ausdruck.Gleit.Wort
 
@@ -40,12 +41,20 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     obtain ⟨rfl, rfl⟩ := h
     have hks := hW.ks
     have htop := slotA_top ha
+    have cellWidth : valueWords (D.typ t field) = 1 := by
+      rw [ht]
+      have bounds := hfit.1
+      simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at bounds
+      exact integerWords_word bounds.1 bounds.2
     have htopr : frei Γ reserved + 2 ≤ tr := by
-      simp only [slotC, ht, aggregateFits, ↓reduceIte, Option.map_eq_some_iff] at hr
-      obtain ⟨⟨cc, tc⟩, hc, hh⟩ := hr
-      have := slotA_top hc
-      simp only [Option.some.injEq, Prod.mk.injEq] at hh
-      omega
+      simp only [slotC] at hr
+      split at hr
+      · simp only [Option.map_eq_some_iff] at hr
+        obtain ⟨⟨cc, tc⟩, hc, hh⟩ := hr
+        have := slotA_top hc
+        simp only [Prod.mk.injEq] at hh
+        omega
+      · cases hr
     let σE := σ.lese Λ (.inl t :: i.orte)
     have hWE : WeltAt m L σE := hWa
     let old : Wert D (.int a b) := ht ▸ σE.slots t (eval σE i σE ρ).n field
@@ -60,8 +69,8 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       intro m pc hp
       rw [← heq]
       exact slotC_ok hr (by omega)
-        (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ ci' ti hi
-          (by have := slotC_top hr; simp only at this; omega) m pc ρ hp) (fun _ h => h) hp
+        (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay i _ ci' ti hi
+          (by have := slotC_top hr; simp only at this; omega) m pc ρ hp |>.word trivial) (fun _ h => h) hp
     have htest : Ok m pc fp Ks (frei Γ reserved) test (fun w => w = Runner.IR.bool (decide (old.n = von))) := by
       refine bin_ok hread (fun m pc hp => wordConstant_ok (by omega) hp)
         (g := fun x y => some (Runner.IR.bool (x == y))) ?_ rfl (by decide) (by omega) hpw
@@ -87,11 +96,11 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
         (fun m pc hp => (wordConstant_ok
           (by have := (wordConstant_top (frei Γ reserved) nach).2; omega) hp).mono
           (fun w hw => (enc_int_back ht ⟨nach, hn.1, hn.2⟩ w).mpr hw))
-        (fun m pc hp => slotA_ok ha (by omega)
-          (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp) hp)
-        (hW.lay.1 t field _ (L.bounded hkc)) (fun m w hm hw => by
+        (fun m pc hp => slotA_ok cellWidth ha (by omega)
+          (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp |>.word trivial) hp)
+        (by have h := hW.lay.1 t field _ (L.bounded hkc); rw [cellWidth] at h; omega) (fun m w hm hw => by
           have hnw : Enc L (D.typ t field) ((ht ▸ (⟨nach, hn.1, hn.2⟩ : Zahl a b) : Wert D (D.typ t field))) w := hw
-          have hh := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hnw
+          have hh := weltAt_slotWord cellWidth hm hW.lay hW.dis (L.bounded hkc) hnw
           rw [hkn] at hh
           exact hh)
       have aa : AgreeW L fp (frei Γ reserved) K m m2 := (agreeW_of a1).trans a2
