@@ -77,6 +77,10 @@ expanding infrastructure for a small subset.
   `dokumente/IR-COMPILATION-LANES.md`. Every extension keeps `gabbro_ziel` on the standard axioms, never
   weakens a guarantee, describes any change of meaning of `Spec.lean` in its commit, and is followed by the
   Lean guardian. Only one agent at a time changes `grammatik/`.
+  **Grammar build memory (owner, 2026-11-01):** a `grammatik/` build may use all currently available memory
+  minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
+  `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
+  allows. Stage-0 checks keep their 5G slots.
 - **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
   slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 
