@@ -113,7 +113,7 @@ def program : Programm D where
 
 def image : Except String (List Runner.B) := do
   let b ← bild 1 program (layU u (fun _ => none)) [⟨0, by decide⟩] Fin.val
-    (fun _ => "main") ⟨0, by decide⟩ [] 1024
+    (fun _ => "main") ⟨0, by decide⟩ .nil [] 1024
   pure b.bytes
 
 theorem image_zeuge : image.isOk = true := by decide +kernel

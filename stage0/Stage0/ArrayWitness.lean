@@ -69,7 +69,7 @@ local instance clone : Senke.CloneOK where
   ans _ := ⟨1, 0, by decide, trivial⟩
 
 def initial : SourceWitness.InitialState output :=
-  SourceWitness.InitialState.ofFieldless output fieldless carriers.1 carriers.2.1 carriers.2.2 params_empty image_bound
+  SourceWitness.InitialState.ofFieldless output fieldless carriers.1 carriers.2.1 carriers.2.2 image_bound
 
 attribute [irreducible] initial
 
@@ -80,6 +80,6 @@ theorem source_image_joint_zeuge : emit text 64 = .ok output ∧ exactShape = tr
   ⟨accepted_image, array_shape, array_constant_typed_zeuge, ⟨initial⟩⟩
 
 theorem entry_ir_simulation_zeuge :
-    output.Simulates initial.oracle initial.memory initial.world initial.arguments := initial.simulates
+    output.Simulates initial.oracle initial.memory initial.world := initial.simulates
 
 end Gabbro.Stage0.ArrayWitness

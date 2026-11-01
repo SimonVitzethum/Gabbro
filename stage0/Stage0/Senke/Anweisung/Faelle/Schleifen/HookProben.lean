@@ -111,7 +111,7 @@ def program (mode : Nat) : Programm D where
 
 def image (budget mode : Nat) : Except String (List Runner.B) := do
   let b ← bild budget (program mode) (layU u (fun _ => none))
-    [mainFn, worker, callee] Fin.val (fun f => if f.val = 0 then "main" else if f.val = 1 then "worker" else "callee") mainFn [] 512
+    [mainFn, worker, callee] Fin.val (fun f => if f.val = 0 then "main" else if f.val = 1 then "worker" else "callee") mainFn .nil [] 512
   pure b.bytes
 
 def expected (budget mode : Nat) : Int :=
