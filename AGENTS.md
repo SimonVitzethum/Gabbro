@@ -39,6 +39,8 @@ were organised) is in `git log`, not here.
   A full `grammatik/` build: only ONE globally (both slot locks), scope `-p AllowedCPUs=0-11 -p CPUQuota=1200%
   -p MemoryMax=<min(MemAvailable-6G, 14G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0`. A single-module check:
   one slot lock, `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0`.
+  A Stage-0/runner `lake build` (owner, 2026-11-01, raised after OOM kills at 10G): both slot locks,
+  `LEAN_NUM_THREADS=2`, `-p MemoryMax=<min(MemAvailable-4G, 16G)> -p MemoryHigh=<1G below>`.
   Nothing heavy starts when the load average is above 16 or less than 8 GiB are available; wait instead.
 - **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
 - **Nothing in `/tmp` (owner, 2026-11-01).** `/tmp` is RAM: no agent writes there (scratch goes to `.scratch-*`
