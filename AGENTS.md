@@ -267,6 +267,9 @@ not the Rust checker, and no bridge to any binary is built. The
 - **Floats are in scope** (IEEE kernel model). Probabilistic statements are out of scope.
 
 **Lean layout**
+- **Every Lean file has fewer than 500 lines** (owner, 2026-11-01): also every OLD file — the 235 files above
+  the limit (largest `Uebersetze.lean`, 6455 lines) are split into cohesive modules, pure moves without changing
+  a statement or a name. Large files also cost most of the build memory.
 - Every folder holds at most **20 entries**, and every Lean file lives in a sensible folder. The placement rules
   are `instrumente/teile/lean-layout-rules.py`; `python3 instrumente/teile/lean-layout.py --check` runs inside
   the Lean guardian, `--apply` moves new modules into place and rewrites imports.
