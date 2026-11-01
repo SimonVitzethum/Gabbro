@@ -1,0 +1,15 @@
+// C08 probe (negative): an `axiom` that names OS behavior (opening a path),
+// not a hardware operation. OS behavior is user logic and needs a proved
+// software binding; a falsifier cannot turn it into a named hardware assumption.
+// Must be refused.
+module c08_axiom_as_software {
+axiom oeffne_pfad(pfad : u64, modus : u64) -> u64
+    effects { pure }
+    falsifier sonde_os_offen;
+impl fn main() -> u64
+    effects { pure }
+{
+    let fd = oeffne_pfad(0, 0);
+    return fd;
+}
+}

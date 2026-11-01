@@ -1,0 +1,23 @@
+// C08 probe: a fallible foreign Bool result handled with else.
+// All three continuations (failure, true, false) agree on 7, so the expected
+// result holds under every oracle answer inside the declared decoder.
+module c08_fallible_bool_ok {
+reason AbfrageFehler {
+    Leer = 1 "no reading available"
+    exhaustive
+}
+extern fn bereit() -> bool or AbfrageFehler
+    effects { pure }
+    costs <= 1 ops;
+impl fn main() -> u32 in 0 .. 100
+    effects { pure }
+{
+    let b = bereit() else (e) {
+        return 7;
+    }
+    if b {
+        return 7;
+    }
+    return 7;
+}
+}

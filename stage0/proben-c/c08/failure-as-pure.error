@@ -1,0 +1,1 @@
+`schreibe` can fail with `IoError`, and this call does not stand in a `let … else`

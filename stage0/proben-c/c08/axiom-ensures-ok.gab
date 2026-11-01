@@ -1,0 +1,21 @@
+// C08 probe: a named-hardware axiom whose ensures the caller may use.
+// Under a conforming oracle the answer is in range, so main takes the first branch.
+// NOTE: `ensures` on `axiom` is new C08 syntax (SYNTAX.md lists `requires` only, G2).
+module c08_axiom_ensures_ok {
+table uhr count 1 {
+    slot { stand : u64, }
+}
+axiom lies_stand() -> u64 in 0 .. 1000
+    ensures result <= 1000
+    effects { reads uhr }
+    falsifier sonde_stand;
+impl fn main() -> u64 in 0 .. 1000
+    effects { reads uhr }
+{
+    let s = lies_stand();
+    if s <= 1000 {
+        return 7;
+    }
+    return 8;
+}
+}

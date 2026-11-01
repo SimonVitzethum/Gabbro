@@ -1,0 +1,17 @@
+// C08 probe (negative): the foreign item declares a resource effect the caller
+// does not hold. `fuelle` writes kiste.slots, but main's frame is pure.
+// Must be refused.
+module c08_resource_effect_unproved {
+table kiste count 2 {
+    slot { wert : u64, }
+}
+extern fn fuelle()
+    effects { writes kiste.slots }
+    costs <= 8 ops;
+impl fn main() -> u32 in 0 .. 100
+    effects { pure }
+{
+    fuelle();
+    return 7;
+}
+}

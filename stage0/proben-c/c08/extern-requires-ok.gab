@@ -1,0 +1,18 @@
+// C08 probe: an extern item with a caller-side requires and an ensures the caller may use.
+// The literal 20 decides the requires at the call; the answer 40 follows from the ensures.
+// The declared result carries `0 .. 200` on purpose: the ensures RHS is not a
+// literal, so M1 cannot narrow the call type from it, and the full `u32` would
+// not fit main's `0 .. 1000` at the return (M101).
+module c08_extern_requires_ok {
+extern fn doppel(x : u32) -> u32 in 0 .. 200
+    requires x <= 100
+    ensures result == x + x
+    effects { pure }
+    costs <= 1 ops;
+impl fn main() -> u32 in 0 .. 1000
+    effects { pure }
+{
+    let a = doppel(20);
+    return a;
+}
+}

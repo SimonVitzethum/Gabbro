@@ -1,0 +1,20 @@
+// C08 probe: a fallible void foreign call; failure is handled, success falls through.
+// Both continuations agree on 7, so the expected result holds under every oracle answer.
+// NOTE: statement-level `f() else (e) { ... }` on a void call is new C08 syntax.
+module c08_fallible_void_ok {
+reason SpuelFehler {
+    Leer = 1 "nothing to flush"
+    exhaustive
+}
+extern fn spuelen() or SpuelFehler
+    effects { pure }
+    costs <= 1 ops;
+impl fn main() -> u32 in 0 .. 100
+    effects { pure }
+{
+    spuelen() else (e) {
+        return 7;
+    }
+    return 7;
+}
+}

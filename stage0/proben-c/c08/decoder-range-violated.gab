@@ -1,0 +1,14 @@
+// C08 probe (negative): the foreign answer is used outside its declared decoder.
+// `hole` promises only u32 in 0 .. 100, but main returns it where u32 in 0 .. 5
+// is owed, with no narrowing. Must be refused.
+module c08_decoder_range_violated {
+extern fn hole() -> u32 in 0 .. 100
+    effects { pure }
+    costs <= 1 ops;
+impl fn main() -> u32 in 0 .. 5
+    effects { pure }
+{
+    let x = hole();
+    return x;
+}
+}
