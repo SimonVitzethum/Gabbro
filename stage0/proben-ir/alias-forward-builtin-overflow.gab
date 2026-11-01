@@ -1,0 +1,7 @@
+// Alias discovery respects a later user definition that shadows a builtin type name.
+module alias_forward_builtin_overflow {
+type Result = u8;
+type u8 = u16 in 0 .. 100;
+const ANSWER : Result = 100 + 1;
+impl fn main() -> Result effects { pure } { return ANSWER; }
+}

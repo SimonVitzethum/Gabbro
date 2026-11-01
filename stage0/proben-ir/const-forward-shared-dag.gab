@@ -1,0 +1,46 @@
+// Shared dependency diamonds are memoized; every canonical intermediate remains checked.
+module const_forward_shared_dag {
+const C41 : u8 = C40 + C39 - 42;
+const C40 : u8 = C39 + C38 - 42;
+const C39 : u8 = C38 + C37 - 42;
+const C38 : u8 = C37 + C36 - 42;
+const C37 : u8 = C36 + C35 - 42;
+const C36 : u8 = C35 + C34 - 42;
+const C35 : u8 = C34 + C33 - 42;
+const C34 : u8 = C33 + C32 - 42;
+const C33 : u8 = C32 + C31 - 42;
+const C32 : u8 = C31 + C30 - 42;
+const C31 : u8 = C30 + C29 - 42;
+const C30 : u8 = C29 + C28 - 42;
+const C29 : u8 = C28 + C27 - 42;
+const C28 : u8 = C27 + C26 - 42;
+const C27 : u8 = C26 + C25 - 42;
+const C26 : u8 = C25 + C24 - 42;
+const C25 : u8 = C24 + C23 - 42;
+const C24 : u8 = C23 + C22 - 42;
+const C23 : u8 = C22 + C21 - 42;
+const C22 : u8 = C21 + C20 - 42;
+const C21 : u8 = C20 + C19 - 42;
+const C20 : u8 = C19 + C18 - 42;
+const C19 : u8 = C18 + C17 - 42;
+const C18 : u8 = C17 + C16 - 42;
+const C17 : u8 = C16 + C15 - 42;
+const C16 : u8 = C15 + C14 - 42;
+const C15 : u8 = C14 + C13 - 42;
+const C14 : u8 = C13 + C12 - 42;
+const C13 : u8 = C12 + C11 - 42;
+const C12 : u8 = C11 + C10 - 42;
+const C11 : u8 = C10 + C9 - 42;
+const C10 : u8 = C9 + C8 - 42;
+const C9 : u8 = C8 + C7 - 42;
+const C8 : u8 = C7 + C6 - 42;
+const C7 : u8 = C6 + C5 - 42;
+const C6 : u8 = C5 + C4 - 42;
+const C5 : u8 = C4 + C3 - 42;
+const C4 : u8 = C3 + C2 - 42;
+const C3 : u8 = C2 + C1 - 42;
+const C2 : u8 = C1 + C0 - 42;
+const C1 : u8 = 42;
+const C0 : u8 = 42;
+impl fn main() -> u8 effects { pure } { return C41; }
+}

@@ -1,0 +1,9 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_array_count {
+const VALUES : [u8; COUNT] = [ANSWER];
+const ANSWER : u8 = LATER;
+const COUNT : u8 = SIZE;
+const LATER : u8 = 42;
+const SIZE : u8 = 1;
+impl fn main() -> u8 effects { pure } { return VALUES[0]; }
+}

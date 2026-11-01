@@ -1,0 +1,6 @@
+// Reordering may not choose a different meaning for duplicate type names.
+module alias_forward_duplicate {
+type Result = u8;
+type Result = u16;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

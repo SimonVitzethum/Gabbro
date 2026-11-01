@@ -1,0 +1,8 @@
+// A forward alias preserves the signed custom range and negative scalar dependencies.
+module alias_forward_negative {
+type Result = Small;
+type Small = i8 in -10 .. 100;
+const NEGATIVE : Result = 0 - 1;
+const ANSWER : Result = NEGATIVE + 43;
+impl fn main() -> Result effects { pure } { return ANSWER; }
+}

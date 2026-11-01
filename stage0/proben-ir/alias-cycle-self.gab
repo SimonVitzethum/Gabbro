@@ -1,0 +1,5 @@
+// A direct alias cycle is refused before runtime elaboration.
+module alias_cycle_self {
+type A = A;
+impl fn main() -> u8 effects { pure } { return 42; }
+}
