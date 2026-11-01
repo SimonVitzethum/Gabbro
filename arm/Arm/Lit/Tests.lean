@@ -170,16 +170,16 @@ def runAll (cons : Exec → Bool) : List (Bool × Bool) :=
 def consNoParts (x : Exec) : Bool := consistent noParts x
 
 -- Sanity: every test's forbidden and allowed outcomes differ.
-example : allTests.all testSane = true := rfl
+example : allTests.all testSane = true := by rfl
 
 -- Enumeration sizes: MP has 4 candidates, SB and LB 4 each, CoRR 18.
-example : (candidates testMP.prog).length = 4 := rfl
+example : (candidates testMP.prog).length = 4 := by rfl
 
-example : (candidates testSB.prog).length = 4 := rfl
+example : (candidates testSB.prog).length = 4 := by rfl
 
-example : (candidates testLB.prog).length = 4 := rfl
+example : (candidates testLB.prog).length = 4 := by rfl
 
-example : (candidates testCoRR.prog).length = 18 := rfl
+example : (candidates testCoRR.prog).length = 18 := by rfl
 
 #print axioms testSane
 

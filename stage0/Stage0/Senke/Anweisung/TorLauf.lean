@@ -205,7 +205,7 @@ theorem torC_top {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {a : D.Ax} {args : A
 
 theorem axiomAntwort_eq (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
     axiomAntwort O a σ ρ = ((O.wirkt a (σ.fragt (.inl a)) ρ).1,
-      einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ.fragt (.inl a)) ρ).2) := rfl
+      einpassenErg O.zeiger (D.aerg a) (O.wirkt a (σ.fragt (.inl a)) ρ).2) := by rfl
 
 /-- A gate without an answer: every raw word decodes. -/
 theorem einpassenErg_none {z : Int → Option D.Fn} {e : Option Ty} (he : e = none) (r : Int) :

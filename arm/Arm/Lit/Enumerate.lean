@@ -32,7 +32,7 @@ def prefixPairs : List Nat → Rel
   | [] => []
   | i :: rest => (rest.map fun j => (i, j)) ++ prefixPairs rest
 
-theorem prefixPairs_nil : prefixPairs [] = [] := rfl
+theorem prefixPairs_nil : prefixPairs [] = [] := by rfl
 
 /-- Every list with `x` inserted at one more position. -/
 def inserts (x : α) : List α → List (List α)
@@ -49,14 +49,14 @@ def choices : List (List α) → List (List α)
   | [] => [[]]
   | xs :: xss => (choices xss).flatMap fun rest => xs.map fun x => x :: rest
 
-theorem perms_nil : perms ([] : List Nat) = [[]] := rfl
+theorem perms_nil : perms ([] : List Nat) = [[]] := by rfl
 
-theorem choices_nil : choices ([] : List (List Nat)) = [[]] := rfl
+theorem choices_nil : choices ([] : List (List Nat)) = [[]] := by rfl
 
 -- Non-degenerate witnesses: the combinators do not collapse on two elements.
-example : perms [1, 2] = [[1, 2], [2, 1]] := rfl
+example : perms [1, 2] = [[1, 2], [2, 1]] := by rfl
 
-example : choices [[1, 2], [3]] = [[1, 3], [2, 3]] := rfl
+example : choices [[1, 2], [3]] = [[1, 3], [2, 3]] := by rfl
 
 #print axioms prefixPairs_nil
 #print axioms perms_nil
@@ -255,9 +255,9 @@ theorem upd_lookup (m : List (Nat × Nat)) (k v : Nat) :
     lookup (upd m k v) k = some v := by simp only [upd, lookup, BEq.rfl, ↓reduceIte]
 
 -- Witness: `upd_lookup` is non-degenerate (overwrite and unrelated keys).
-example : lookup (upd [(1, 2)] 0 9) 0 = some 9 := rfl
+example : lookup (upd [(1, 2)] 0 9) 0 = some 9 := by rfl
 
-example : lookup (upd [(1, 2)] 1 9) 0 = none := rfl
+example : lookup (upd [(1, 2)] 1 9) 0 = none := by rfl
 
 /-- The `n`-th element of a list. -/
 def nth : List α → Nat → Option α
@@ -412,17 +412,17 @@ def checkOutcome (cons : Exec → Bool) (p : LitProg) (o : Outcome) : Verdict :=
   if (candidates p).any fun x => cons x && outcomeHolds p e x o then .allowed else .forbidden
 
 -- The empty program has exactly one (empty) candidate.
-example : (candidates { cores := [], init := [], final := [] }).length = 1 := rfl
+example : (candidates { cores := [], init := [], final := [] }).length = 1 := by rfl
 
 -- A single store: no reads, one candidate, writes are init then the store.
 def singleStore : LitProg :=
   { cores := [[.st 0 1 .plain]], init := [], final := [] }
 
-example : (elabProg singleStore).reads = [] := rfl
+example : (elabProg singleStore).reads = [] := by rfl
 
-example : (elabProg singleStore).writes = [0, 1] := rfl
+example : (elabProg singleStore).writes = [0, 1] := by rfl
 
-example : (candidates singleStore).length = 1 := rfl
+example : (candidates singleStore).length = 1 := by rfl
 
 #print axioms upd_lookup
 

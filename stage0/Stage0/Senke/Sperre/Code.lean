@@ -75,9 +75,9 @@ def gibC (L : Lay D) (a s : Nat) : List II :=
     ci 19 ((s + 2 : Nat) : Int) (16 * 9) 0] ++
   futexC a 129 0 (s + 10) (some 1)
 
-theorem meC_len (L : Lay D) (t : Nat) : (meC L t).length = 7 := rfl
-theorem nimmC_len (L : Lay D) (a s : Nat) : (nimmC L a s).length = 7 + 4 + 6 + 5 + 7 + 8 + 7 + 1 + 3 := rfl
-theorem gibC_len (L : Lay D) (a s : Nat) : (gibC L a s).length = 7 + 7 + 4 + 3 + 8 := rfl
+theorem meC_len (L : Lay D) (t : Nat) : (meC L t).length = 7 := by rfl
+theorem nimmC_len (L : Lay D) (a s : Nat) : (nimmC L a s).length = 7 + 4 + 6 + 5 + 7 + 8 + 7 + 1 + 3 := by rfl
+theorem gibC_len (L : Lay D) (a s : Nat) : (gibC L a s).length = 7 + 7 + 4 + 3 + 8 := by rfl
 
 variable {V : Vertrag D}
 

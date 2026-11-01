@@ -14,7 +14,7 @@ def strEqMixedC (p0 l0 d t : Nat) : List II :=
   [⟨1, t, 0, 0⟩, ⟨27, t + 1, t, l0⟩, ⟨1, t + 2, 256, 0⟩, ⟨3, t + 2, t + 2, l0 + 1⟩, ⟨5, t + 2, t + 1, t + 2⟩,
    ⟨14, t + 2, t + 2, p0⟩, ⟨1, t + 3, 2, 0⟩, ⟨27, t + 3, l0, t + 3⟩, ⟨8, d, t + 2, t + 3⟩]
 
-@[simp] theorem strEqMixedC_length (p0 l0 d t : Nat) : (strEqMixedC p0 l0 d t).length = 9 := rfl
+@[simp] theorem strEqMixedC_length (p0 l0 d t : Nat) : (strEqMixedC p0 l0 d t).length = 9 := by rfl
 
 /-- Equality of strings where exactly one has capacity at most one. `s` occupies its complete span at `d`, `t`
     follows; the Boolean replaces the first word of `s`. -/

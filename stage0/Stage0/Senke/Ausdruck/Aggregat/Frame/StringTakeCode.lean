@@ -27,7 +27,7 @@ def strTakeL (n m d : Nat) (s : Option (List II × Nat)) : Option (List II × Na
     else pure (cs.1 ++ [⟨1, d, 0, 0⟩], max cs.2 (t + 1))
   else none
 
-@[simp] theorem strTakeLenL_length (m d t : Nat) : (strTakeLenL m d t).length = 5 := rfl
-@[simp] theorem strTakePackL_length (d t : Nat) : (strTakePackL d t).length = 5 := rfl
+@[simp] theorem strTakeLenL_length (m d t : Nat) : (strTakeLenL m d t).length = 5 := by rfl
+@[simp] theorem strTakePackL_length (d t : Nat) : (strTakePackL d t).length = 5 := by rfl
 
 end Gabbro.Stage0.Senke

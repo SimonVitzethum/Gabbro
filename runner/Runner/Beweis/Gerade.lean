@@ -12,7 +12,7 @@ on both sides, a case split on the answer (refused: both fault), and at the end 
 namespace Runner.Beweis
 open Runner.X86 Runner.Prog
 
-@[simp] theorem ir_sx (v : BitVec 32) : IR.sx v = sx32 v := rfl
+@[simp] theorem ir_sx (v : BitVec 32) : IR.sx v = sx32 v := by rfl
 @[simp] theorem sx32_zero : sx32 0#32 = 0#64 := by decide
 @[simp] theorem sx32_4 : sx32 4#32 = 4#64 := by decide
 @[simp] theorem sx32_8 : sx32 8#32 = 8#64 := by decide

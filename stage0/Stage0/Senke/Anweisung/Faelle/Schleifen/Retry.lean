@@ -120,13 +120,13 @@ theorem forever_zero {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
     (a : D.Annahme) (inv : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
     (O : Orakel D) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     (σ : World D) (ρ : Env D Γ) :
-    execStmt O 0 R (show Stmt D V l Γ Λ Λ from .forever a inv body) σ ρ = .hardware (.fortschritt a) := rfl
+    execStmt O 0 R (show Stmt D V l Γ Λ Λ from .forever a inv body) σ ρ = .hardware (.fortschritt a) := by rfl
 
 /-- One pass checks a false invariant, whereas zero passes answers the progress assumption. -/
 theorem forever_one_false {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
     (a : D.Annahme) (body : Block D V true Γ Λ Λ)
     (O : Orakel D) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     (σ : World D) (ρ : Env D Γ) :
-    execStmt O 1 R (show Stmt D V l Γ Λ Λ from .forever a .fls body) σ ρ = .logik .schleife := rfl
+    execStmt O 1 R (show Stmt D V l Γ Λ Λ from .forever a .fls body) σ ρ = .logik .schleife := by rfl
 
 end Gabbro.Stage0.Senke

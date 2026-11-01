@@ -346,6 +346,6 @@ theorem programm_endet_unter_massen {S : Type u}
 
 #print axioms Passlogik.Terminierung.programm_endet_unter_massen
 /-- Und `forever` steht ausserhalb -- als Entscheidung, nicht als Luecke. -/
-theorem forever_traegt_kein_mass : endet .forever = false := rfl
+theorem forever_traegt_kein_mass : endet .forever = false := by rfl
 
 end Passlogik.Terminierung

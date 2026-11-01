@@ -15,7 +15,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-theorem addLimbC_length (A B m c t : Nat) : (addLimbC A B m c t).length = 7 := rfl
+theorem addLimbC_length (A B m c t : Nat) : (addLimbC A B m c t).length = 7 := by rfl
 
 @[simp] theorem addChain_length (n a b m c t : Nat) : (addChain n a b m c t).length = 7 * n := by
   induction n generalizing a b with

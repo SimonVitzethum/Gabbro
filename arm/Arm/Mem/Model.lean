@@ -17,7 +17,7 @@ namespace Arm
 /-- The assembled model: `consistent` is exactly the conjunction of the
     three axioms. (`consistent` itself is defined once in `Axiomatic.lean`.) -/
 theorem model_asm (parts : OrderingParts) (x : Exec) :
-    consistent parts x = (internal x && external parts x && atomic x) := rfl
+    consistent parts x = (internal x && external parts x && atomic x) := by rfl
 
 /-- Message passing, classic outcome: the reader sees the flag and the data. -/
 def mpAllowed : Exec :=

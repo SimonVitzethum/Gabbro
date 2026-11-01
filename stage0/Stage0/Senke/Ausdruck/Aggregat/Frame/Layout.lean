@@ -42,7 +42,7 @@ def bodyParams (layout : FrameLayout) : Nat := FB + layout.bodyReserved
 
 /-- The full snapshot prefix ends before the preserved ensures environment. -/
 theorem snapshots_end (layout : FrameLayout) :
-    layout.snapshotBase + layout.snapshotWords = layout.ensParams := rfl
+    layout.snapshotBase + layout.snapshotWords = layout.ensParams := by rfl
 
 /-- Both return channels retain their canonical offsets under local snapshot reservation. -/
 theorem internal_offsets (layout : FrameLayout) :

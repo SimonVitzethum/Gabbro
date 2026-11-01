@@ -74,7 +74,7 @@ theorem counter_expression_collision [Kern] {D : Gabbro.Grammatik.Deklaration}
     (L : Lay D) {Γ : Gabbro.Grammatik.Ctx}
     {Λ : List (Gabbro.Grammatik.Res D)} :
     lowE L (show Gabbro.Grammatik.Expr D Γ Λ .bool from .tru) (frei Γ) =
-      some ([ci 1 (frei Γ) 1 0], frei Γ + 1) := rfl
+      some ([ci 1 (frei Γ) 1 0], frei Γ + 1) := by rfl
 
 /-- Updating an allocated prefix cell preserves every lexical variable (including
 parameters), the ABI header, and every other reservation cell. The memory update

@@ -15,9 +15,9 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.AddChain
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-theorem mulHiC_length (X Y t : Nat) : (mulHiC X Y t).length = 24 := rfl
-theorem mulAccC_length (R c t : Nat) : (mulAccC R c t).length = 7 := rfl
-theorem mulLimbC_length (X Y R c t : Nat) : (mulLimbC X Y R c t).length = 31 := rfl
+theorem mulHiC_length (X Y t : Nat) : (mulHiC X Y t).length = 24 := by rfl
+theorem mulAccC_length (R c t : Nat) : (mulAccC R c t).length = 7 := by rfl
+theorem mulLimbC_length (X Y R c t : Nat) : (mulLimbC X Y R c t).length = 31 := by rfl
 
 theorem ofInt_shift32 : (BitVec.ofInt 64 32).toNat % 64 = 32 := by simp
 theorem one_shl_sub : (BitVec.ofInt 64 1) <<< 32 - BitVec.ofInt 64 1 = m32 := by

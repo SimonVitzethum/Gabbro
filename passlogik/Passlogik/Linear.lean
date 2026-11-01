@@ -280,6 +280,6 @@ def leaves_verbraucht_nicht (_namen : List V) : Anw V := .leer
 -- Datei nicht. Das Passregister nennt dazu die einzige gebaute Pruefung: nur PARAMETER
 -- zaehlen als Bindung, ein `let`-gebundener linearer Wert in `leaves` wird gemeldet.
 theorem leaves_ist_kein_verbrauch (namen : List V) (y : V) :
-    zaehlt (leaves_verbraucht_nicht namen) y = 0 := rfl
+    zaehlt (leaves_verbraucht_nicht namen) y = 0 := by rfl
 
 end Passlogik.Linear

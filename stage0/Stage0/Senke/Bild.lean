@@ -47,7 +47,7 @@ def codeBase : Nat := Runner.Prog.IMG + 16
 def startScratch (f : D.Fn) : Nat := receiveTop (D.signatur f) FB
 
 theorem startScratch_eq (f : D.Fn) : startScratch f =
-    FB + FB + contextWords (D.params f) + returnWords (D.erg f) (D.gruende f) + 1 := rfl
+    FB + FB + contextWords (D.params f) + returnWords (D.erg f) (D.gruende f) + 1 := by rfl
 
 attribute [irreducible] startScratch
 
@@ -62,7 +62,7 @@ def startC (A : D.Fn → Nat) (f : D.Fn) (n e : Nat) (keep : Bool) : List II :=
 
 def startLen : Nat := 8
 
-theorem startC_len (A : D.Fn → Nat) (f : D.Fn) (n e : Nat) (keep : Bool) : (startC A f n e keep).length = startLen := rfl
+theorem startC_len (A : D.Fn → Nat) (f : D.Fn) (n e : Nat) (keep : Bool) : (startC A f n e keep).length = startLen := by rfl
 
 /-- `main`'s first code: for every root, its start code's address and its frame's address into the scratch slots `s`,
     `s + 1` (`s` is `main`'s `startScratch`), then `spawn` (the thread id into `s + 2`). -/

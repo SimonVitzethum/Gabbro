@@ -170,12 +170,12 @@ variable {V : Vertrag D} {O : Orakel D} {passes : Nat}
 theorem execBlock_ind_eq (rest : Block D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ) Λ') (σ : World D) (ρ : Env D Γ) :
     execBlock O passes R (.bindCallInd p args he hf hr rest) σ ρ =
       indAntwort R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
-        (fun σ' v => (execBlock O passes R rest σ' (.cons v ρ)).schrumpf) .logik .hardware := rfl
+        (fun σ' v => (execBlock O passes R rest σ' (.cons v ρ)).schrumpf) .logik .hardware := by rfl
 
 theorem execEnd_ind_eq (rest : Endblock D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ)) (σ : World D) (ρ : Env D Γ) :
     execEnd O passes R (.bindCallInd p args he hf hr rest) σ ρ =
       indAntwort R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
-        (fun σ' v => (execEnd O passes R rest σ' (.cons v ρ)).schrumpf) .logik .hardware := rfl
+        (fun σ' v => (execEnd O passes R rest σ' (.cons v ρ)).schrumpf) .logik .hardware := by rfl
 
 end
 
