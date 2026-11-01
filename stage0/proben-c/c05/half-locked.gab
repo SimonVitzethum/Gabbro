@@ -1,0 +1,23 @@
+// C05 refusal probe: the global twin of `beispiele/gift/63`. Two globals under
+// two ordered locks; the writer takes only `A` and stores BOTH carriers. The
+// intermediate state is visible to any thread holding `B` -- the full lock
+// imprint is owed (U003).
+module c05_half_locked {
+static mut cnt : u32 in 0 .. 100 = 30;
+static mut total : u32 in 0 .. 100 = 70;
+lock A protects { cnt } rank 1;
+lock B protects { total } rank 2;
+group Paar over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+}
+impl fn nimm_halb()
+    maintains summe_bleibt
+    effects { writes cnt, writes total, locks A }
+{
+    locks A {
+        cnt = 10;
+        total = 90;
+    }
+}
+impl fn main() -> u8 { return 0; }
+}

@@ -1,0 +1,24 @@
+// C05 probe: the invariant is broken between two stores and restored before
+// return -- the global twin of `beispiele/1168`. The section first moves `cnt`
+// to 40 (sum 130, invariant down inside the section, invisible outside),
+// then moves `total` to 60 (sum 100 again). The return sees the restored group.
+module c05_global_restored {
+static mut cnt : u32 in 0 .. 100 = 10;
+static mut total : u32 in 0 .. 100 = 90;
+lock K protects { cnt, total } rank 0;
+group Summe over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+}
+impl fn main() -> u32 in 0 .. 200
+    maintains summe_bleibt
+    effects { writes cnt, writes total, locks K }
+{
+    let a = 40;
+    let b = 60;
+    locks K {
+        cnt = a;
+        total = b;
+    }
+    return a + b;
+}
+}

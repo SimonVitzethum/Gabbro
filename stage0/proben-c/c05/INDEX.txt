@@ -1,0 +1,24 @@
+# C05 acceptance probes: group invariants whose carrier is a GLOBAL.
+# Format per probe: <name> | <expected outcome> | <purpose>.
+# Positive probes (must compile and run): <name>.gab + <name>.code (main result).
+# Negative probes (must be refused): <name>.gab + <name>.error (one-line refusal text).
+global-sum | result 100 | group over two globals under one lock holds at return.
+global-restored | result 100 | invariant broken between two stores, restored before return.
+global-two-locks | result 100 | two globals under two rank-ordered locks, both held across the writes.
+mixed-table-global | result 120 | mixed table/global group: quantified table predicate reading a global bound.
+broken-at-return | refusal: group invariant summe_bleibt is false at return | writer returns with the global sum at 101.
+write-without-lock | refusal: `schreibe_ohne_sperre` writes 2 carriers of `group Summe` but does not hold K | both globals written with no guard held.
+dropped-maintains | refusal: function `schreibe_ohne_pflicht` writes a carrier of group invariant `summe_bleibt` without naming it in `maintains` | writer of a group carrier names no duty (N496).
+unknown-carrier | refusal: `group Summe` names `K`, which is not a carrier | group names a lock instead of a carrier (U001).
+half-locked | refusal: `nimm_halb` writes 2 carriers of `group Paar` but does not hold B | both globals written while holding only one of two locks (U003).
+undeclared-read | refusal: group invariant `summe_bleibt` reads `fremd`, which is not a declared carrier of `group Summe` | invariant reads a guarded global outside its declared carrier set.
+# UNSURE: exact refusal WORDING of all six .error lines -- the U001/U003 formats mirror
+# crates/gabbro-check/src/gruppe.rs verbatim, but post-C05 texts may differ; the N496,
+# broken-at-return and undeclared-read texts are best readings with no existing template.
+# UNSURE: `runs online` on group invariants -- existing group examples use `runs offline`;
+# online is chosen because C05 claims restoration at returns, paralleling online table
+# invariants in beispiele/47 and beispiele/53.
+# UNSURE: whether `main` must repeat transitive callee effects/locks and carry `maintains`;
+# included both per the N496 sentence (callers writing through callees owe the duty).
+# UNSURE: bare-global reads in predicates (`cnt + total == 100`) -- inferred from `old(g)`
+# and body reads; no existing group invariant reads a global.

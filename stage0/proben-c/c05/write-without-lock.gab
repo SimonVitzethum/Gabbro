@@ -1,0 +1,19 @@
+// C05 refusal probe: both group globals are written while NO guard is held --
+// neither `locks K` in the effects nor a `locks` block. A group writer owes the
+// full lock imprint (U003); holding nothing is the degenerate case.
+module c05_write_without_lock {
+static mut cnt : u32 in 0 .. 100 = 30;
+static mut total : u32 in 0 .. 100 = 70;
+lock K protects { cnt, total } rank 0;
+group Summe over { cnt, total } {
+    invariant summe_bleibt cost O(1) runs online : cnt + total == 100;
+}
+impl fn schreibe_ohne_sperre()
+    maintains summe_bleibt
+    effects { writes cnt, writes total }
+{
+    cnt = 10;
+    total = 90;
+}
+impl fn main() -> u8 { return 0; }
+}
