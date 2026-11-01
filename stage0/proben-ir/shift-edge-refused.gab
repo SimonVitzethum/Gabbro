@@ -1,0 +1,14 @@
+// Stage names alone cannot authorize an undeclared transition edge.
+module ir_probe {
+table T count 2 { slot { s : u32 in 0 .. 2, } }
+state S {
+    transition begin { s : Idle -> Busy }
+    transition finish { s : Busy -> Done }
+}
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+{
+    transition T.slots[1].s : Idle -> Done;
+    return T.slots[1].s;
+}
+}

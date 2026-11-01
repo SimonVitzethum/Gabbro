@@ -886,11 +886,11 @@ transition is included. A typed emitter alone is not textual form coverage.
 
 | Owned form | Baseline status and exact boundary | Connected proof / prerequisite |
 |---|---|---|
-| Stmt `shift` | Compiled for signed-word field intervals, signed32 old/new stage numbers, compilable index and address. Other representable target constants are refused solely by the emitter. Frontend `uZustandVon`/`lowShiftL` checks declared transition, destination range, write effects and guards. | `shift_ok` in `lowS_ok`, then `lowB_ok`/`lowEnd_ok`, function/image correctness. Selected bounded extension: remove only the signed32 destination-constant refusal using the existing word materializer. |
-| Stmt `breaking` | Typed emitter compiles its body and the mutual proof recurses into it. Textual `breaking` (`SAnw.waive`) has no `uAnwReihe` export case: refused as `statement without G form: waive`. | Existing model rule and `lowS_ok` branch; missing canonical frontend export, not missing IR emitter. Invariant restoration at returns must remain mandatory. |
-| Stmt `advances` | Typed emitter emits no instructions, matching `execStmt`'s unchanged runtime world. Source statement (`SAnw.step`) is refused as `statement without G form: step`; function `moves` clause as `clause without G form`. | Existing model rule and `lowS_ok`; missing mark/signature export (`declOf` has `Marke := Empty`, no owner marks), not missing emitter. |
+| Stmt `shift` | Compiled for signed-word field intervals, signed32 old/new stage numbers, compilable index and address. Other representable old/new constants are refused solely by the emitter. Frontend `uZustandVon`/`lowShiftL` checks declared transition, destination range, write effects and guards. | `shift_ok` in `lowS_ok`, then `lowB_ok`/`lowEnd_ok`, function/image correctness. Selected bounded extension: materialize both signed-word state constants with the existing word materializer. |
+| Stmt `breaking` | Typed emitter compiles its body and the mutual proof recurses into it. Textual `breaking` (`SAnw.waive`) has no `uAnwReihe` export case: refused as `stmt without G form: waive`. | Existing model rule and `lowS_ok` branch; missing canonical frontend export, not missing IR emitter. Invariant restoration at returns must remain mandatory. |
+| Stmt `advances` | Typed emitter emits no instructions, matching `execStmt`'s unchanged runtime world. Source statement (`SAnw.step`) is refused as `stmt without G form: step`; function `moves` clause as `clause without G form`. | Existing model rule and `lowS_ok`; missing mark/signature export (`declOf` has `Marke := Empty`, no owner marks), not missing emitter. |
 | Stmt `retires` | Typed emitter likewise emits no instructions with a connected `lowS_ok` branch. Source `quits` clause is refused as `clause without G form`. | Existing model consumes a held mark and names its assumption. Missing canonical mark/signature export, not missing emitter. |
-| TopLevel `arenaT` | Fixed positive capacity, scalar element, no placement: exported to table plus `#used` static. Block-position `alloc A(v) else { ... }` expands through `Block.arenaAlloc`; `reset A` is a counter store. Dynamic ceiling/placement refuse as `arena with a dynamic ceiling without G form` / `arena placement without G form`. Top-level/else-position alloc refuse explicitly in `lowEndL`/`lowEndeL`; alloc without else, grow/free and extended reset are not exported. | Existing `ArenaZucker` and lowerings of bind/narrow/stores connect block allocation; no separate allocator emitter is needed. Dynamic/ownership arena models exist in `Bausteine/Arena`, but their canonical source-to-G bridge and lifetime/availability obligations are missing. Wider element storage additionally needs IR-03. |
+| TopLevel `arenaT` | Fixed positive capacity, scalar element, no placement: exported to table plus `#used` static. Block-position `alloc A(v) else { ... }` expands through `Block.arenaAlloc`; `reset A` is a counter store. Dynamic ceiling/placement refuse as `arena with a dynamic ceiling without G form` / `arena placement without G form`. Top-level/else-position alloc refuse explicitly in `lowBodyF`/`lowEndL`; alloc without else, grow/free and extended reset are not exported. | Existing `ArenaZucker` and lowerings of bind/narrow/stores connect block allocation; no separate allocator emitter is needed. Dynamic/ownership arena models exist in `Bausteine/Arena`, but their canonical source-to-G bridge and lifetime/availability obligations are missing. Wider element storage additionally needs IR-03. |
 | TopLevel `stateT` | Compiled by `uZustand`: named stages become ordinals in first-written order; allowed pairs feed `D.erlaubt`. State-transition requires/effects clauses refuse as `state transition clause without G form`; non-name stages as `state stage without G form`. | Source provenance (`compile_source_program`), checked `lowShiftL`, then `shift_ok`. Clause-bearing transition semantics need a canonical model/export rule; this lane adds none. |
 | TopLevel `groupT` | Compiled by `uInvs`/`uInv` for ordinary table carriers and predicates accepted by `uBool`/`lowBool`; locks checked by `uU003` and canonical invariant checking. Arena/global carriers refuse as `invariant carrier without G form`. Runtime compilation still depends on predicate emission. | Canonical `Programm.invariante`, checker, source provenance and function/image proofs; richer carriers need canonical export/checking support, not an isolated group emitter. |
 
@@ -905,3 +905,39 @@ answer cannot close it. No existing guarantee may be replaced with an unchecked
 address. Multiword transport remains IR-03-owned. None of the seven owned typed
 families is absent from the model; the textual/export restrictions above remain
 open even where typed soundness is connected.
+
+The canonical arena sugar does not carry reservation `lo` (`ArenaZucker` documents
+that boundary). `uInv` exports the name, carriers and predicate, not the source
+cost/online/proof metadata. These source-to-model boundaries are not counted as
+completed by the existing primitive emitters.
+
+The bounded `Stmt.shift` step now materializes both state constants with
+`wordConstant`, retaining its immediate fast path. The field interval and old
+state must fit signed64; the destination still carries its original field-range
+proof. Unsigned intervals above signed64, unrepresentable states, missing index
+or address emission and the other inventory boundaries remain refused. No ABI,
+canonical model, ownership rule, provider contract or source syntax changed.
+The existing eight-word scratch allowance covers both materializers. `shift_ok`
+uses signed-word injectivity for the old-state comparison and the shared
+materialization theorem for the write; the mutual dispatcher, `lowFun_spec`,
+`Emitted.correct` and `irBild_correct` remain connected to the actual emitter.
+
+`ShiftProbe.simulation_zeuge` jointly supplies the real code/frame/table-memory
+premises: cell one initially holds 2^32 + 41, becomes 2^32 + 42, cell zero stays
+zero and protected frame slot three stays 77. Both state constants fail signed32.
+Textual stages remain dense named ordinals; the large-constant path is exercised
+by this typed memory witness, not by claiming a practical text declaration with
+billions of stage names. Four textual source-to-IR-to-ASM executions pass (two
+new, two existing), including the state sequence on a signed64-sized field and
+failed-prestate stop 106. Two new textual refusal probes retain missing write
+permission and undeclared-edge errors.
+
+Measured in the private `.scratch-ir07` overlay: 153 Stage0 modules pass direct
+checks, including the statement/block/end-block dispatcher and IRBild/Haupt.
+All nine focused axiom audits, including the memory witness and `gabbro_ziel`,
+report exactly propext, Classical.choice and Quot.sound. Layout passes for all
+1473 tracked Lean files; all five changed Lean files remain below 500 lines.
+Every Lean invocation used the capped slot-2 lock, with ELAN_TOOLCHAIN removed;
+grammar artifacts were reused. No full guardian or grammar rebuild was run.
+This closes the one-word signed-state constant restriction, not the remaining
+source-export, provider, ownership or multiword boundaries in the inventory.
