@@ -10,12 +10,13 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
     Reuse canonical typed evaluation directly: custom-range negatives need no source materialization.
     Failed declarations are skipped only here; final validation checks every original scalar. -/
 def nextCandidates (items : List SItemTief) (values : List (String × Int))
-    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
+    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩)
+    (scalars : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
     List (String × Int) :=
   let expanded := aliases values [] order.val
   let env := uAliase values expanded
   let fns := constantFunctions (env ++ values.map (fun c => (c.1, (c.2, c.2)))) expanded
-  items.foldl (fun collected item => (typedItem env fns collected item).getD collected) []
+  scalars.val.foldl (fun collected item => (typedItem env fns collected item).getD collected) []
 
 /-- A new candidate cannot hide unresolved integer alias declarations, including unused cycles. -/
 def aliasesResolved (env : List (String × (Int × Int))) (items : List SItemTief) : Bool :=
@@ -27,23 +28,24 @@ def aliasesResolved (env : List (String × (Int × Int))) (items : List SItemTie
 /-- Validate a discovery candidate by re-evaluating every original scalar at its exact original
     type and then comparing the complete alias fold against those final, ordered values. -/
 def resolveCandidate (items : List SItemTief) (candidate : List (String × Int))
-    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
+    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩)
+    (scalars : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
     Except String (DerivedScopes items) :=
   let expanded := aliases candidate [] order.val
   let env := uAliase candidate expanded
   let tentativeFns := constantFunctions (env ++ candidate.map (fun c => (c.1, (c.2, c.2)))) items
   if !aliasesResolved env items then .error "compile-time aliases contain unresolved dependencies or cycles"
-  else match typedConstants env tentativeFns items [] with
+  else match typedConstants env tentativeFns scalars.val [] with
   | none => .error "compile-time scalar cannot be evaluated at its canonical declared range"
   | some preliminary =>
     let fns := constantFunctions (env ++ preliminary.map (fun c => (c.1, (c.2, c.2)))) items
-    match h : typedConstants env fns items [] with
+    match h : typedConstants env fns scalars.val [] with
     | none => .error "compile-time scalar cannot be evaluated at its canonical declared range"
     | some values =>
       if hs : values = preliminary then
         if ha : env = order.val.foldl (aliasStep values) [] then
           let scope : Scopes items := ⟨values, env, fns, values, Or.inr rfl, true, order.val, order.property, ha,
-            by simp only [↓reduceIte, hs]; rfl, h⟩
+            by simp only [↓reduceIte, hs]; rfl, scalars.val, scalars.property, h⟩
           .ok ⟨scope, by
             change uAliase values (aliases values [] order.val) = env
             simpa only [List.nil_append] using (aliases_collected values [] order.val).trans ha.symm⟩
@@ -53,8 +55,8 @@ def resolveCandidate (items : List SItemTief) (candidate : List (String × Int))
 /-- A successful discovery result has the exact full alias environment derived from the final
     original scalar fold, not the potentially incomplete candidate values. -/
 theorem resolveCandidate_final (items : List SItemTief) (candidate : List (String × Int))
-    (result : DerivedScopes items) (order : { ordered : List SItemTief // ordered.Perm items })
-    (h : resolveCandidate items candidate order = .ok result) :
+    (result : DerivedScopes items) (order scalars : { ordered : List SItemTief // ordered.Perm items })
+    (h : resolveCandidate items candidate order scalars = .ok result) :
     result.scope.aliasConstants = result.scope.values ∧
       result.scope.declared = result.scope.aliasOrder.foldl (aliasStep result.scope.values) [] ∧
       result.scope.functionsUseValues = true := by
@@ -79,22 +81,23 @@ theorem resolveCandidate_final (items : List SItemTief) (candidate : List (Strin
 /-- Bounded discovery is not acceptance: only resolveCandidate's canonical full-fold certificate
     may return a scope. Unresolved or cyclic candidates terminate with a precise refusal. -/
 def discoverScopes (items : List SItemTief) (fuel : Nat) (candidate : List (String × Int))
-    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
+    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩)
+    (scalars : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
     Except String (DerivedScopes items) :=
   match fuel, candidate with
   | 0, _ => .error "compile-time dependencies remain unresolved"
   | fuel + 1, candidate =>
-    match resolveCandidate items candidate order with
+    match resolveCandidate items candidate order scalars with
     | .ok result => .ok result
     | .error reason =>
-      let next := nextCandidates items candidate order
+      let next := nextCandidates items candidate order scalars
       if next = candidate then .error reason
-      else discoverScopes items fuel next order
+      else discoverScopes items fuel next order scalars
 
 theorem discoverScopes_final (items : List SItemTief) (fuel : Nat)
     (candidate : List (String × Int)) (result : DerivedScopes items)
-    (order : { ordered : List SItemTief // ordered.Perm items })
-    (h : discoverScopes items fuel candidate order = .ok result) :
+    (order scalars : { ordered : List SItemTief // ordered.Perm items })
+    (h : discoverScopes items fuel candidate order scalars = .ok result) :
     result.scope.aliasConstants = result.scope.values ∧
       result.scope.declared = result.scope.aliasOrder.foldl (aliasStep result.scope.values) [] ∧
       result.scope.functionsUseValues = true := by
@@ -106,7 +109,7 @@ theorem discoverScopes_final (items : List SItemTief) (fuel : Nat)
     · rename_i found hf
       have he := Except.ok.inj h
       subst result
-      exact resolveCandidate_final _ _ _ _ hf
+      exact resolveCandidate_final _ _ _ _ _ hf
     · try dsimp only at h
       split at h
       · contradiction

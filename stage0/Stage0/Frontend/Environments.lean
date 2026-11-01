@@ -299,9 +299,10 @@ theorem normalize_environments (items : List SItemTief)
   · simpa only [prepare, List.nil_append] using
       aliases_collected (prepare items).initial [] items
 
-/-- Canonical source scopes derived before runtime elaboration. Only the alias collection
-    schedule may be permuted; scalar bindings keep original order, and functions keep their
-    original bodies and signatures. Both schedules collect through the same canonical alias step. -/
+/-- Canonical source scopes derived before runtime elaboration. Alias and scalar collection
+    schedules retain certified declaration permutations, and functions keep their
+    original bodies and signatures. Alias ranges use aliasStep; scalar values use typedConstants
+    at every original declared range. -/
 structure Scopes (original : List SItemTief) where
   values : List (String × Int)
   declared : List (String × (Int × Int))
@@ -314,7 +315,9 @@ structure Scopes (original : List SItemTief) where
   aliases : declared = aliasOrder.foldl (aliasStep aliasConstants) []
   functionOrigin : functions = constantFunctions
     (if functionsUseValues then declared ++ values.map (fun c => (c.1, (c.2, c.2))) else declared) original
-  scalarValues : typedConstants declared functions original [] = some values
+  scalarOrder : List SItemTief
+  scalarPermutation : scalarOrder.Perm original
+  scalarValues : typedConstants declared functions scalarOrder [] = some values
 
 /-- The canonical environment used to elaborate compile-time function signatures. Existing
     scopes use declared aliases; dependent signatures additionally use certified scalar bounds. -/
@@ -339,7 +342,7 @@ def scopes (items target : List SItemTief)
     (h : EnvironmentFacts items target) : Scopes items := by
   let p := prepare items
   refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns, p.initial,
-    Or.inl rfl, false, items, .refl _, h.2.2, ?_, ?_⟩
+    Or.inl rfl, false, items, .refl _, h.2.2, ?_, items, .refl _, ?_⟩
   · exact constantFunctions_aliases p.initial p.env [] items
   · have hc := h.1
     change typedConstants p.env p.fns p.expanded [] = _ at hc
@@ -364,7 +367,7 @@ def evaluatedScopes (items : List SItemTief) (values : List (String × Int))
   ⟨values, (prepare items).env, (prepare items).fns, (prepare items).initial,
     Or.inl rfl, false, items, .refl _,
     (by simpa only [prepare, List.nil_append] using (aliases_collected (prepare items).initial [] items)),
-    constantFunctions_aliases (prepare items).initial (prepare items).env [] items, h⟩
+    constantFunctions_aliases (prepare items).initial (prepare items).env [] items, items, .refl _, h⟩
 
 /-- The actual consumer needs the certified original scalar fold, not a second encoding through
     the legacy collector's builtin-only constant declarations. Preserve full alias stability. -/

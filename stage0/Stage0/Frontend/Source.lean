@@ -1,4 +1,4 @@
-import Stage0.Frontend.DependentScopes
+import Stage0.Frontend.ConstantScopes
 import Stage0.Frontend.AliasMeaning
 import Stage0.Frontend.Guard
 import Stage0.Profil
@@ -21,8 +21,12 @@ structure Source (text : String) (options : Profil.Options := {}) where
   normalized : Normalization (uMembers (pre108 items)) members
   aliasDependencies : AliasAcyclic (uMembers (pre108 items)) ∧
     (aliasNames (uMembers (pre108 items))).Nodup
+  constantDependencies : ConstantAcyclic (uMembers (pre108 items)) ∧
+    (constantNames (uMembers (pre108 items))).Nodup
   derived : DerivedScopes (uMembers (pre108 items))
   aliasMeanings : ∀ item ∈ uMembers (pre108 items), AliasMeaning derived.scope.types item
+  constantMeanings : ∀ item ∈ uMembers (pre108 items),
+    ConstantMeaning derived.scope.types derived.scope.functions derived.scope.values item
 
 /-- The actual whole-source frontend, producing a proof of provenance and normalization. -/
 def source (text : String) (options : Profil.Options := {}) : Except String (Source text options) :=
@@ -36,15 +40,21 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
       | .error e => .error e
       | .ok prepared =>
         if hv : Oeffentlich.huelleZu items then
-          if hc : compileTimeSafe (uMembers (pre108 items)) then
+          if hc : compileTimeSafe (uMembers (pre108 items)) then do
+            let order ← orderAliases (uMembers (pre108 items))
             let result := normalize (uMembers (pre108 items))
-            match hd : elaborateScopes (uMembers (pre108 items)) with
+            match hd : elaborateConstantScopes (uMembers (pre108 items)) with
             | .error e => .error e
             | .ok derived =>
               if ha : (uMembers (pre108 items)).all (checkAliasMeaning derived.scope.types) then
-                .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property,
-                  elaborateScopes_dependencies _ derived hd, derived, fun item hm =>
-                    checkAliasMeaning_sound _ _ (List.all_eq_true.mp ha item hm)⟩
+                if hs : (uMembers (pre108 items)).all
+                    (checkConstantMeaning derived.scope.types derived.scope.functions derived.scope.values) then
+                  .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property,
+                    ⟨order.acyclic, order.unique⟩, elaborateConstantScopes_dependencies _ derived hd,
+                    derived, fun item hm =>
+                      checkAliasMeaning_sound _ _ (List.all_eq_true.mp ha item hm), fun item hm =>
+                      checkConstantMeaning_sound _ _ _ _ (List.all_eq_true.mp hs item hm)⟩
+                else .error "compile-time constant does not match its canonical source value"
               else .error "compile-time alias does not match its canonical source type"
           else .error "compile-time call requires unsupported function contracts, effects or body"
         else .error "public interface is not closed"
