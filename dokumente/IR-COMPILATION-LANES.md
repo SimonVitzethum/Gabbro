@@ -875,3 +875,33 @@ changed Lean modules stay below 500 lines. Checks use the private worktree
 overlay and capped slot-2 lock; grammar artifacts are reused. This closes one decoder
 restriction, without extending the remaining packed-width, option/reason or ABI
 domains above.
+
+### IR-07 bounded inventory (base a6970b425, 2026-11-01)
+
+Read against canonical `Kern/Syntax/Syntax`, `Kern/Semantik`,
+`Bausteine/Arena` and `Parser/Elab/Uebersetze{,Allg,Allg2,Allg3}`;
+Stage0 uses `Frontend.elabWithScopes`, `Compiler.compile`, `lowE`/`lowS`/
+`lowB`/`lowEnd` and the mutual `Anweisung/Satz` dispatcher. No device-register
+transition is included. A typed emitter alone is not textual form coverage.
+
+| Owned form | Baseline status and exact boundary | Connected proof / prerequisite |
+|---|---|---|
+| Stmt `shift` | Compiled for signed-word field intervals, signed32 old/new stage numbers, compilable index and address. Other representable target constants are refused solely by the emitter. Frontend `uZustandVon`/`lowShiftL` checks declared transition, destination range, write effects and guards. | `shift_ok` in `lowS_ok`, then `lowB_ok`/`lowEnd_ok`, function/image correctness. Selected bounded extension: remove only the signed32 destination-constant refusal using the existing word materializer. |
+| Stmt `breaking` | Typed emitter compiles its body and the mutual proof recurses into it. Textual `breaking` (`SAnw.waive`) has no `uAnwReihe` export case: refused as `statement without G form: waive`. | Existing model rule and `lowS_ok` branch; missing canonical frontend export, not missing IR emitter. Invariant restoration at returns must remain mandatory. |
+| Stmt `advances` | Typed emitter emits no instructions, matching `execStmt`'s unchanged runtime world. Source statement (`SAnw.step`) is refused as `statement without G form: step`; function `moves` clause as `clause without G form`. | Existing model rule and `lowS_ok`; missing mark/signature export (`declOf` has `Marke := Empty`, no owner marks), not missing emitter. |
+| Stmt `retires` | Typed emitter likewise emits no instructions with a connected `lowS_ok` branch. Source `quits` clause is refused as `clause without G form`. | Existing model consumes a held mark and names its assumption. Missing canonical mark/signature export, not missing emitter. |
+| TopLevel `arenaT` | Fixed positive capacity, scalar element, no placement: exported to table plus `#used` static. Block-position `alloc A(v) else { ... }` expands through `Block.arenaAlloc`; `reset A` is a counter store. Dynamic ceiling/placement refuse as `arena with a dynamic ceiling without G form` / `arena placement without G form`. Top-level/else-position alloc refuse explicitly in `lowEndL`/`lowEndeL`; alloc without else, grow/free and extended reset are not exported. | Existing `ArenaZucker` and lowerings of bind/narrow/stores connect block allocation; no separate allocator emitter is needed. Dynamic/ownership arena models exist in `Bausteine/Arena`, but their canonical source-to-G bridge and lifetime/availability obligations are missing. Wider element storage additionally needs IR-03. |
+| TopLevel `stateT` | Compiled by `uZustand`: named stages become ordinals in first-written order; allowed pairs feed `D.erlaubt`. State-transition requires/effects clauses refuse as `state transition clause without G form`; non-name stages as `state stage without G form`. | Source provenance (`compile_source_program`), checked `lowShiftL`, then `shift_ok`. Clause-bearing transition semantics need a canonical model/export rule; this lane adds none. |
+| TopLevel `groupT` | Compiled by `uInvs`/`uInv` for ordinary table carriers and predicates accepted by `uBool`/`lowBool`; locks checked by `uU003` and canonical invariant checking. Arena/global carriers refuse as `invariant carrier without G form`. Runtime compilation still depends on predicate emission. | Canonical `Programm.invariante`, checker, source provenance and function/image proofs; richer carriers need canonical export/checking support, not an isolated group emitter. |
+
+Additional parent-lane obligations: `table ... backed ...` and `owner ...` refuse
+as `table without G form` in `uTabelle`; the canonical ownership model exists,
+but `declOf` exports neither owner marks nor their resource contracts. Open
+`table T from provider` exports a numeric-field region and `alloc T` becomes a
+provider call; actual fresh/disjoint provider memory, layout extension and
+lifetime contracts remain a missing provider-contract integration (IR-06 memory
+primitives already accept supplied region cells). A plain numerical provider
+answer cannot close it. No existing guarantee may be replaced with an unchecked
+address. Multiword transport remains IR-03-owned. None of the seven owned typed
+families is absent from the model; the textual/export restrictions above remain
+open even where typed soundness is connected.
