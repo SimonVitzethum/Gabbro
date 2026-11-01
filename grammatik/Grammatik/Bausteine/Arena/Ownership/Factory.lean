@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Bodies
+module
+public import Grammatik.Bausteine.Arena.Ownership.Bodies
+@[expose] public section
+
 
 /-! An owned allocation returned by an actual G function. Both allocator
 paths are covered and every request has an explicit failure continuation.

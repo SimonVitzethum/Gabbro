@@ -4,7 +4,10 @@
              `then` code and a jump over the `else` code. Whichever branch the condition's word selects ends in slot
              `d` (`wenn_ok`).
 -/
-import Stage0.Senke.Ausdruck.Top
+module
+public import Stage0.Senke.Ausdruck.Top
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

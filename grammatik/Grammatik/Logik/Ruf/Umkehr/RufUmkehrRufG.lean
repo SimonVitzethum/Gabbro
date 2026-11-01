@@ -23,9 +23,12 @@
   i.e. at least the nesting depth of the calls; nothing else bounds the run.
 -/
 
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T1
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T2
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T3
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T4
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T5
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T6
+module
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T1
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T2
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T3
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T4
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T5
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T6
+@[expose] public section
+

@@ -17,7 +17,10 @@
   is committed storage" (`stand ≤ komSt`) is not part of the lock invariant: it is a statement about the `dynAlloc` form
   and `grow` (here), not about every recognized body.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreMaschine
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreMaschine
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

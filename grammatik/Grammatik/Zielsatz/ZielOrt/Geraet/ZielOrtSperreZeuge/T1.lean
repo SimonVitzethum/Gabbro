@@ -27,8 +27,11 @@
   4. Corpus 104 through the new theorem (`ziel_ort_sperre_ref104`), and
      probe A refuted for the new obligation (`paP_nicht_sperre`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

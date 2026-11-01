@@ -47,8 +47,11 @@
     (H2) `forever` bekommt seine Durchgaenge von aussen (`fuel`); sind sie verbraucht, ist
          der Ausgang `fortschritt a` -- die Annahme, die der Schreiber am `progress` nannte.
 -/
-import Grammatik.Kern.Syntax.Syntax
-import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+module
+public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

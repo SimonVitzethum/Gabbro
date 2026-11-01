@@ -4,7 +4,10 @@
              a statement list and a block (see `RundlaufAnw` for the statement of the class and the head
              facts).
 -/
-import Grammatik.Parser.Round.RundlaufAnw
+module
+public import Grammatik.Parser.Round.RundlaufAnw
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

@@ -13,6 +13,9 @@
   in `ziel_ort_sperre`, and only body reads may see the rely.
 -/
 
-import Grammatik.Speichermodell.Atomar.AtomarReplay.T1
-import Grammatik.Speichermodell.Atomar.AtomarReplay.T2
-import Grammatik.Speichermodell.Atomar.AtomarReplay.T3
+module
+public import Grammatik.Speichermodell.Atomar.AtomarReplay.T1
+public import Grammatik.Speichermodell.Atomar.AtomarReplay.T2
+public import Grammatik.Speichermodell.Atomar.AtomarReplay.T3
+@[expose] public section
+

@@ -1,8 +1,11 @@
 /- Canonical value words, shared by frames, world storage and call boundaries. -/
-import Stage0.Senke.Welt.Lay
-import Stage0.Senke.Ausdruck.Aggregat.Layout
-import Stage0.Senke.Ausdruck.Aggregat.Wert
-import Stage0.Senke.Ausdruck.Aggregat.Kopie
+module
+public import Stage0.Senke.Welt.Lay
+public import Stage0.Senke.Ausdruck.Aggregat.Layout
+public import Stage0.Senke.Ausdruck.Aggregat.Wert
+public import Stage0.Senke.Ausdruck.Aggregat.Kopie
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

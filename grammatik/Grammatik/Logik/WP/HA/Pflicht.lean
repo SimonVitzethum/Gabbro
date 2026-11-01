@@ -1,5 +1,8 @@
-import Grammatik.Logik.WP.HA.Kern
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Logik.WP.HA.Kern
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: the user's obligation as weakest preconditions

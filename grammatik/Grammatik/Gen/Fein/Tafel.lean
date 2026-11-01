@@ -4,7 +4,10 @@
              theorems, and an assignment of a witness to every cell of the universe that the kernel checks in one
              pass (`feinTafel_aus`); and the witnessed fine cells of the tests of N (`nFein_aus`).
 -/
-import Grammatik.Gen.Fein.Neutral
+module
+public import Grammatik.Gen.Fein.Neutral
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

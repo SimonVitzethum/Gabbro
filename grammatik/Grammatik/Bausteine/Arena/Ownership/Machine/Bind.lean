@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Unfold
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Unfold
+@[expose] public section
+
 
 /-! **The binding steps of the running activation**: `let`, a register read,
 `awaits`, `exchange`, the float forms and the foreign calls bind a value in

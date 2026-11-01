@@ -17,7 +17,10 @@
   Excluded (recorded in the CUTS at the end): `count x in D : p` (it reads as an expression at the
   primary level), `e in D`, `a reaches b via f`, the domains `fields of` and `chain (x, y) in`.
 -/
-import Grammatik.Parser.Round.RundlaufPred
+module
+public import Grammatik.Parser.Round.RundlaufPred
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

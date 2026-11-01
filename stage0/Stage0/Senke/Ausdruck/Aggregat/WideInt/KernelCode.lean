@@ -8,7 +8,10 @@
   their limb arithmetic in `Arithmetik/Wide/*`; the definitions are here so that the expression lowering
   (`lowE`) can emit them without importing any of those proofs.
 -/
-import Stage0.Senke.Ausdruck.Aggregat.Hilfen
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

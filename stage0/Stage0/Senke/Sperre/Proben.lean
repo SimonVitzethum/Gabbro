@@ -1,7 +1,10 @@
-import Stage0.Senke.Anweisung.Satz
-import Stage0.Senke.Sperre.ContendedProbe
-import Stage0.Senke.Sperre.WaitProbe
-import Stage0.Senke.Sperre.Interference
+module
+public import Stage0.Senke.Anweisung.Satz
+public import Stage0.Senke.Sperre.ContendedProbe
+public import Stage0.Senke.Sperre.WaitProbe
+public import Stage0.Senke.Sperre.Interference
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

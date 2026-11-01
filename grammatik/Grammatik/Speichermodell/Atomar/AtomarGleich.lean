@@ -8,7 +8,10 @@
   The proofs follow `execHA_frei` (AtomarSem.lean) read for read: where that one rewrites a read
   outside `T` into a read without havoc, this one rewrites it into the other environment's read.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarRec
+module
+public import Grammatik.Speichermodell.Atomar.AtomarRec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

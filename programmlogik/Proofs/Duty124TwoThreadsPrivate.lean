@@ -1,4 +1,7 @@
-import Duty.Duty124TwoThreadsPrivate
+module
+public import Duty.Duty124TwoThreadsPrivate
+@[expose] public section
+
 set_option autoImplicit false
 set_option maxHeartbeats 11300000
 open Gabbro.Body GabbroDuty.Duty124TwoThreadsPrivate

@@ -3,10 +3,13 @@
   Subject:   Reading the world: a global (`glob_ok`) and an element of a column (`slotC_ok`) are loaded from their
              address in the layout (`Lay`), where the world in memory (`WeltAt`) holds their word.
 -/
-import Stage0.Senke.Ausdruck.Top
-import Stage0.Senke.Ausdruck.Quant.OkSeq
-import Stage0.Senke.Welt.WeltAt
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Quant.OkSeq
+public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

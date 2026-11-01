@@ -1,9 +1,12 @@
 /- Runtime loop edges consume the actual block simulation and its world-aware frame. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
-import Stage0.Senke.Anweisung.Simulation
-import Stage0.Senke.Anweisung.Verzweigung
-import Stage0.Senke.Anweisung.Faelle.Kontext
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+public import Stage0.Senke.Anweisung.Simulation
+public import Stage0.Senke.Anweisung.Verzweigung
+public import Stage0.Senke.Anweisung.Faelle.Kontext
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR

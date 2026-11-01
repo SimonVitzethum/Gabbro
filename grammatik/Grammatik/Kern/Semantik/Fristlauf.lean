@@ -88,7 +88,11 @@
 
   No `mathlib`, no `sorry`, no `axiom`.
 -/
-import Grammatik.Kern.Syntax.Satz
+module
+public import Grammatik.Kern.Syntax.Satz
+meta import Grammatik.Kern.Syntax.Satz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

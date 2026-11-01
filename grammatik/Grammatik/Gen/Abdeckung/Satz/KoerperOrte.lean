@@ -9,7 +9,10 @@
 
              (`Extraktion.endblockOrte` is NOT this: it leaves out the table a `shift` moves, which the footprint reads.)
 -/
-import Grammatik.Gen.Abdeckung.Zellen
+module
+public import Grammatik.Gen.Abdeckung.Zellen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

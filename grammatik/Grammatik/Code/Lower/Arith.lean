@@ -20,6 +20,10 @@
   `sle_ofInt`, `eq_ofInt`; and division `udiv_ofInt`, `urem_ofInt`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Code.Ar
 
 /-- Every integer of `lo .. hi` is representable in `w` bits. -/

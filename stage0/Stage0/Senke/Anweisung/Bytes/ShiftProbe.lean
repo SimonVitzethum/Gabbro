@@ -1,7 +1,10 @@
 /- A large one-word destination transition runs on real code, frame and table memory. -/
-import Stage0.Senke.Anweisung.Bytes.Shift
-import Grammatik.Parser.Elab.UebersetzeAllg
-import Stage0.Senke.BildLese
+module
+public import Stage0.Senke.Anweisung.Bytes.Shift
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Stage0.Senke.BildLese
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ShiftProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

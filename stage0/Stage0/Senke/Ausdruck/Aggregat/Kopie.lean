@@ -1,5 +1,8 @@
 /- Shared contiguous frame-word transport. Width is explicit and never inferred from a value. -/
-import Runner.IR.Rahmen
+module
+public import Runner.IR.Rahmen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

@@ -6,9 +6,12 @@
              began, so the whole is a statement's change (`AgreeW`); the body has no `ret` (`retFreiB_istZ`), and a
              stop in it stops the whole.
 -/
-import Stage0.Senke.Sperre.Paar
-import Stage0.Senke.Sperre.OhneRet
-import Stage0.Senke.Anweisung.Simulation
+module
+public import Stage0.Senke.Sperre.Paar
+public import Stage0.Senke.Sperre.OhneRet
+public import Stage0.Senke.Anweisung.Simulation
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

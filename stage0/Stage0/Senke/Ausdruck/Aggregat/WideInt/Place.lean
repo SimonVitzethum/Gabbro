@@ -9,7 +9,10 @@
   otherwise the limbs are zero-extended, whatever bit the top limb carries. Signed kernels read their operands
   in the signed range of `k` limbs, so a nonnegative interval needs one more limb (`signedWords`).
 -/
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.KernelCode
+module
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.KernelCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

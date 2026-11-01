@@ -31,7 +31,10 @@
   of `ZielOrtVollSem.lean` §5 and `ZielOrtGeraetSem.lean` §6 for the new
   semantics, plus the acquire and release lemmas).
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

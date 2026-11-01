@@ -1,4 +1,7 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Allocation
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Allocation
+@[expose] public section
+
 
 /-! The allocator a growing program uses: a freed cell first, a fresh one while the arena has room, and the
 declared failure block when it has none. It is ordinary G code -- an `ite` on the free-list head choosing between

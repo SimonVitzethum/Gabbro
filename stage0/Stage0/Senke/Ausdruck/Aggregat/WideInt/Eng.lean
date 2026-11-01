@@ -7,8 +7,11 @@
   `d + k + 3`. A flag of zero branches over the fallback: the narrowed value is the first limbs already in
   place. A flag of one falls into the fallback, evaluated into `d`.
 -/
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Eng
+module
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Eng
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

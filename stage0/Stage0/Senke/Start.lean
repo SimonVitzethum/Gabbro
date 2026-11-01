@@ -6,8 +6,11 @@
              image's bytes); the start's scratch lies above them (`startScratch`), so they survive the spawns and
              reach the call as `EnvAt`.
 -/
-import Stage0.Senke.BildLese
-import Stage0.Senke.Welt.StartEnv
+module
+public import Stage0.Senke.BildLese
+public import Stage0.Senke.Welt.StartEnv
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

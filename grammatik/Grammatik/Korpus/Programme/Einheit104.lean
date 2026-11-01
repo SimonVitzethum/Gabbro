@@ -12,10 +12,13 @@
   `archiv/c-emitter-2026-10-17`. The unit, its bodies and its user logic are source-level
   facts and stay.)
 -/
-import Grammatik.Parser.Elab.UebersetzePipeline
-import Grammatik.Zielsatz.Kern.Beweis
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Logik.Ruf.RufLogik
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Logik.Ruf.RufLogik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Einheit104
 

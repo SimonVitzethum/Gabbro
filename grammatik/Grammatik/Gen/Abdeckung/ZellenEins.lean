@@ -14,7 +14,10 @@
              (masked), `S cell file` (printed single-fault), `Q file class`, `K stem cells ok|reason`, `R reason n`,
              `F form n`. Exit code 1 on a transcription error.
 -/
-import Grammatik.Gen.Abdeckung.ZellenBefund
+module
+public import Grammatik.Gen.Abdeckung.ZellenBefund
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

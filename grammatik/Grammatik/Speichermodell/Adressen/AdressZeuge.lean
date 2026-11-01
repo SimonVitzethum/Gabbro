@@ -9,8 +9,11 @@
     (`ab_aussen`): the named assumption `ImBereichO` of the leg is not idle (`oB_nicht`), and a good oracle meets it
     (`oG_gut`).
 -/
-import Grammatik.Speichermodell.Adressen.Layout
-import Grammatik.Kern.Syntax.Satz
+module
+public import Grammatik.Speichermodell.Adressen.Layout
+public import Grammatik.Kern.Syntax.Satz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.AdressZeuge
 

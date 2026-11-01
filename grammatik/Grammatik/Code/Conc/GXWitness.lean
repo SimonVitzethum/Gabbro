@@ -1,5 +1,8 @@
-import Grammatik.Code.Conc.GXStep
-import Grammatik.Code.Conc.SharedWitness
+module
+public import Grammatik.Code.Conc.GXStep
+public import Grammatik.Code.Conc.SharedWitness
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/GXWitness.lean

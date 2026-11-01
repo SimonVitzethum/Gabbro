@@ -2,13 +2,16 @@
   The cheap check: the goal theorem alone.
   Run:  lake build Grammatik.Zielsatz.BeweisAtomar && lake env lean NachpruefungZiel.lean
 -/
-import Grammatik.Zielsatz.Kern.Beweis
-import Grammatik.Zielsatz.Kern.Proben
-import Grammatik.Zielsatz.Kern.ProbenW1
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Zielsatz.Atomar.BeweisTerminierung
-import Grammatik.Zielsatz.Atomar.TerminierungZeuge
-import Grammatik.Zielsatz.Atomar.BeweisWarten
+module
+public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Kern.Proben
+public import Grammatik.Zielsatz.Kern.ProbenW1
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Atomar.BeweisTerminierung
+public import Grammatik.Zielsatz.Atomar.TerminierungZeuge
+public import Grammatik.Zielsatz.Atomar.BeweisWarten
+@[expose] public section
+
 
 open Gabbro.Grammatik
 

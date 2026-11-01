@@ -1,5 +1,8 @@
 /- Part 2 of 3 of `FremdRuf` (split by instrumente/teile/lean-teilen.py; the umbrella `FremdRuf.lean` imports all parts). -/
-import Grammatik.Logik.Ruf.FremdRuf.T1
+module
+public import Grammatik.Logik.Ruf.FremdRuf.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,6 +1,9 @@
 /- Complete return values stay internal until the ordinary ensures guard succeeds. -/
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
-import Stage0.Senke.Stopp
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
+public import Stage0.Senke.Stopp
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

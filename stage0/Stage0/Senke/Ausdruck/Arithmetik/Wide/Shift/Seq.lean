@@ -8,7 +8,10 @@
   the sequence wrote, every limb ends with its own piece formula applied to the ORIGINAL valuation;
   this is the one argument behind descending (shift left) and ascending (shift right) chains.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

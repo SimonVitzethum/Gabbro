@@ -1,11 +1,14 @@
 /- Axiom audit of the conditional-termination and unbounded-stack results.
    This file checks the existing goal theorem as well; it makes no universality claim. -/
-import Grammatik.Berechenbarkeit.RunsUntilWitnesses
-import Grammatik.Berechenbarkeit.RecursionBoundary
-import Grammatik.Berechenbarkeit.AdmissionBoundary
-import Grammatik.Berechenbarkeit.TerminationCompatibility
-import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
-import Grammatik.Berechenbarkeit.Storage.CallReturn
+module
+public import Grammatik.Berechenbarkeit.RunsUntilWitnesses
+public import Grammatik.Berechenbarkeit.RecursionBoundary
+public import Grammatik.Berechenbarkeit.AdmissionBoundary
+public import Grammatik.Berechenbarkeit.TerminationCompatibility
+public import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
+public import Grammatik.Berechenbarkeit.Storage.CallReturn
+@[expose] public section
+
 
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 #print axioms Gabbro.Grammatik.Terminierung.ExitTrace.run

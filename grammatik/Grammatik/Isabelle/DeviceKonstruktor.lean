@@ -16,6 +16,10 @@
     a named synonym would hide the variables from omega.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.DeviceKonstruktor
 
 /-- A register: offset and width (bytes, from the register width).

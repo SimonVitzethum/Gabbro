@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Multi
-import Grammatik.Berechenbarkeit.Brainfuck.Machine
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Multi
+public import Grammatik.Berechenbarkeit.Brainfuck.Machine
+@[expose] public section
+
 
 /-! Brainfuck on G, part 1: the head byte. The Brainfuck head lives in a G local of type `int 0 255`; `+` and `-`
 are one assignment each, `(h + 1) % 256` and `(h + 255) % 256` through the model's own `add` and `rem` (the range

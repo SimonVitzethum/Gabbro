@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Return
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Return
+@[expose] public section
+
 
 /-! **Every step of machine G keeps ownership.** One case per step rule:
 the running activation's state moves by the step lemmas of this folder,

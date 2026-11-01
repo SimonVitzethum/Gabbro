@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Projekte.Komposition
+module
+public import Grammatik.Zielsatz.Projekte.Komposition
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Projekte/Ohne.lean

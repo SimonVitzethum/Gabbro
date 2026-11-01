@@ -11,7 +11,10 @@
   It introduces no syntax or machine rule. The body may still fail; a proof that the
   condition eventually becomes true, or a decreasing rank, is a separate obligation.
 -/
-import Grammatik.Logik.Terminierung.Ausgang
+module
+public import Grammatik.Logik.Terminierung.Ausgang
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Terminierung
 

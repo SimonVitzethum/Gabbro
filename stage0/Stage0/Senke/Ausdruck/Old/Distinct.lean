@@ -1,7 +1,10 @@
 /- Joint full-span capture witness: distinct cells, nonzero data and preserved frame storage. -/
-import Stage0.Senke.Ausdruck.Old.Spans
-import Grammatik.Parser.Elab.UebersetzeAllg
-import Runner.Prog.IRAsm
+module
+public import Stage0.Senke.Ausdruck.Old.Spans
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Runner.Prog.IRAsm
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.DistinctSnapshotProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

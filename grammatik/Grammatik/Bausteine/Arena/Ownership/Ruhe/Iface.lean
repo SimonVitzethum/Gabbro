@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Ruhe.Checks
+module
+public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Checks
+@[expose] public section
+
 
 /-! **Interfaces across the idle root.** A function `f` of `D` is `some f` of
 `D.mitRuhe` with its parameter types shifted; its interface keeps its modes

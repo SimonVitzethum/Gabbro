@@ -1,10 +1,13 @@
 /- Subject: Execution of the runtime-pointer store loop into a frame array with an exact footprint. -/
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
-import Stage0.Senke.Ausdruck.Quant.Memory
-import Stage0.Senke.Welt.Spans.SpanWrite
-import Stage0.Senke.Welt.Schreib
-import Stage0.Senke.Ausdruck.Eng
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
+public import Stage0.Senke.Ausdruck.Quant.Memory
+public import Stage0.Senke.Welt.Spans.SpanWrite
+public import Stage0.Senke.Welt.Schreib
+public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

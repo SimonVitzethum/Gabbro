@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Match.Arms
-import Grammatik.Code.Refine.Match.Why
+module
+public import Grammatik.Code.Refine.Match.Arms
+public import Grammatik.Code.Refine.Match.Why
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/Tag.lean

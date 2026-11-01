@@ -9,8 +9,11 @@
   keeps the slots of `t`; take/release steps keep memory by construction.
 -/
 
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T1
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T2
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T3
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T4
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T5
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T1
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T2
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T3
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T4
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T5
+@[expose] public section
+

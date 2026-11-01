@@ -15,8 +15,11 @@
   run -- is a run at every budget above the number of its passes. A stop on budget is never final: from the
   shifted machine one budget higher the stopped loop takes its next pass (`ewig_budget_unecht`).
 -/
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG
-import Grammatik.Speichermodell.Maschine.GXMaschine
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+public import Grammatik.Speichermodell.Maschine.GXMaschine
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

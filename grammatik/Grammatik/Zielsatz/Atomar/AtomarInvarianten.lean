@@ -20,8 +20,11 @@
   * `SperrWechselGX`, `SperrSichtGX` -- the lock-move legs with GX steps in place of G steps,
     and their proofs `sperrWechsel_ausX`, `sperrSicht_ausX`.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarZiel
-import Grammatik.Zielsatz.Eigenschaften.Invarianten
+module
+public import Grammatik.Speichermodell.Atomar.AtomarZiel
+public import Grammatik.Zielsatz.Eigenschaften.Invarianten
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

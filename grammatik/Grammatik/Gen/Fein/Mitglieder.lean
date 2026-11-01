@@ -4,8 +4,11 @@
              parameter, a register of every type class. They are built from one representative type per class
              (`vertreter`, one per constructor of `Ty`), not written per cell.
 -/
-import Grammatik.Gen.Abdeckung.Waehlen
-import Grammatik.Gen.Fein.Zellen
+module
+public import Grammatik.Gen.Abdeckung.Waehlen
+public import Grammatik.Gen.Fein.Zellen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

@@ -30,6 +30,9 @@
     are in the caller's footprint).
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T2
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T3
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T2
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T3
+@[expose] public section
+

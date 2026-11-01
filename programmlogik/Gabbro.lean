@@ -20,7 +20,10 @@
     nothing else. `Sicherheit/Ausdruck.lean` carries the expression half, `Sicherheit/Anweisung.lean`
     the statement half; the head file names what is assumed and what was found |
 -/
-import Gabbro.Body
-import Gabbro.Coverage
-import Gabbro.Sicherheit
-import Gabbro.KompositionBeweis
+module
+public import Gabbro.Body
+public import Gabbro.Coverage
+public import Gabbro.Sicherheit
+public import Gabbro.KompositionBeweis
+@[expose] public section
+

@@ -1,5 +1,8 @@
 /- Subject: Byte access to a string of capacity at least two with an arbitrary scalar index, below all proofs. -/
-import Stage0.Senke.Ausdruck.Quant.TransportCode
+module
+public import Stage0.Senke.Ausdruck.Quant.TransportCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

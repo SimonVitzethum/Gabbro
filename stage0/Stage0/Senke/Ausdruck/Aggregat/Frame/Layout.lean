@@ -1,5 +1,8 @@
 /- Function-local frame placement; the external call/result ABI remains canonical. -/
-import Stage0.Senke.Ausdruck
+module
+public import Stage0.Senke.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

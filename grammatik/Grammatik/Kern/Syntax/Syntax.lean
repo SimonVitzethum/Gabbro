@@ -67,7 +67,10 @@
     dokumente/SYNTAX.md (die neue Fassung, 2026-09-09) -- jede Produktion nennt ihren
     Konstruktor hier; LANGUAGE.md:788 "Linear means linear, not affine".
 -/
-import Grammatik.Kern.Syntax.Typen
+module
+public import Grammatik.Kern.Syntax.Typen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

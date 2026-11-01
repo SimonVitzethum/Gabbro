@@ -1,6 +1,9 @@
 /- Explicit configuration for the existing Stage0 runner image. This is a checked adapter,
    not semantics for boot, entrust or hardware profiles. -/
-import Grammatik.Parser.Item.ElementTief
+module
+public import Grammatik.Parser.Item.ElementTief
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Profil
 open Gabbro.Grammatik.Parser

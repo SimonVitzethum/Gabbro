@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Forms
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Forms
+@[expose] public section
+
 
 /-! **Soundness of the general ownership body judgment.** For every
 derivation, every world and environment in which the invariant holds, the

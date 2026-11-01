@@ -3,10 +3,13 @@
   Subject:   GENERATED witness (`gen-zelle`, `LeanZeuge.lean`): member 16, the cells below lie in the generator's
              space. Checked by the kernel; do not edit.
 -/
-import Grammatik.Gen.Abdeckung.Satz.Raum
-import Grammatik.Gen.Erzeuger.Entscheidung
-import Grammatik.Korpus.Zeugnis.Zeugnis.T1
-import Grammatik.Gen.Zeugen.Erreicht
+module
+public import Grammatik.Gen.Abdeckung.Satz.Raum
+public import Grammatik.Gen.Erzeuger.Entscheidung
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
+public import Grammatik.Gen.Zeugen.Erreicht
+@[expose] public section
+
 
 set_option linter.unusedTactic false
 set_option linter.unreachableTactic false

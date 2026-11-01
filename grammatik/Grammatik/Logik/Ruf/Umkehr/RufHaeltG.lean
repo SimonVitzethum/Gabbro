@@ -28,6 +28,9 @@
   leaves and `bindAxiom`).
 -/
 
-import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
-import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T2
-import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T3
+module
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T2
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T3
+@[expose] public section
+

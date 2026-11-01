@@ -13,7 +13,10 @@
   * `forever_umgebung`: a `forever` loop whose body holds no exit (the loops of class `umgebung`) ends only at a
     logic or hardware stop: never normally, never by returning.
 -/
-import Grammatik.Logik.Terminierung.Klasse
+module
+public import Grammatik.Logik.Terminierung.Klasse
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,7 +1,10 @@
 /- Complete snapshots and preserved parameters form one typed frame environment.
    Expression kernels can therefore reuse their ordinary environment contracts. -/
-import Stage0.Senke.Ausdruck.Old.Spans
-import Stage0.Senke.Ausdruck.Quant.Frame
+module
+public import Stage0.Senke.Ausdruck.Old.Spans
+public import Stage0.Senke.Ausdruck.Quant.Frame
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -6,5 +6,9 @@
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
 
+module
+
+@[expose] public section
+
 /-- Gap #12: the quote delimiter is U+0022. -/
 example : '"'.toNat = 34 := rfl

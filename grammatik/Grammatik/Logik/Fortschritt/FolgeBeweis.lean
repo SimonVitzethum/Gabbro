@@ -22,7 +22,10 @@
   demanded armed if it is ordered, and resumes the caller at exactly the bit its suspended
   residue was checked at.
 -/
-import Grammatik.Logik.Fortschritt.Folge
+module
+public import Grammatik.Logik.Fortschritt.Folge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

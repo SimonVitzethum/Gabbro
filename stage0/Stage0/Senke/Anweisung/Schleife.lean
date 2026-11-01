@@ -8,7 +8,10 @@
   at the leave part (the invariant once more, then the end or the stop). The proof runs by induction over the
   indices left (`List.range'`).
 -/
-import Stage0.Senke.Anweisung.SchleifeTeile
+module
+public import Stage0.Senke.Anweisung.SchleifeTeile
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

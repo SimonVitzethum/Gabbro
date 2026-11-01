@@ -1,7 +1,10 @@
 /- Canonical full-span transport code, below expression emission and proofs. -/
-import Stage0.Senke.Welt.Lay
-import Runner.IR.Rahmen
-import Stage0.Senke.Ausdruck.Quant.TransportCode
+module
+public import Stage0.Senke.Welt.Lay
+public import Runner.IR.Rahmen
+public import Stage0.Senke.Ausdruck.Quant.TransportCode
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration}

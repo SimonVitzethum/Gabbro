@@ -1,4 +1,7 @@
-import Runner.IR.Seq
+module
+public import Runner.IR.Seq
+@[expose] public section
+
 
 /-! Named OS behavior for the runner's existing futex requests. This is a
 binding premise, never a hardware assumption or a Lean kernel postulate.

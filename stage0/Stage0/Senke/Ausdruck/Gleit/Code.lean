@@ -1,5 +1,8 @@
 /- Correct integer-only code templates for binary64 ordering. -/
-import Stage0.Senke.Ausdruck.Gleit.Schluessel
+module
+public import Stage0.Senke.Ausdruck.Gleit.Schluessel
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

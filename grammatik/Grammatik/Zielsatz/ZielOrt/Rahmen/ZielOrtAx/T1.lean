@@ -12,7 +12,10 @@
   two hypotheses threaded to where the obligation is applied or an axiom
   answer is recorded.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,5 +1,8 @@
-import Mathlib.Data.List.Nodup
-import Grammatik.Parser.Namen.Namensraum
+module
+public import Mathlib.Data.List.Nodup
+public import Grammatik.Parser.Namen.Namensraum
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Parser/Namen/NamensraumZeuge.lean

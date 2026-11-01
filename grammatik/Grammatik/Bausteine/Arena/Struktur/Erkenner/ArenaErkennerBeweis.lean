@@ -12,7 +12,10 @@
   `ArenaErkFallSchleife.lean` (loops), which apply the executed-form theorems with the side conditions discharged by the
   abstract state.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallSchleife
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallSchleife
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

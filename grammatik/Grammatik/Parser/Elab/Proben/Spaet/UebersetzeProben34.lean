@@ -5,7 +5,10 @@
              the field a `transition T.slots[i].f : A -> B;` statement is applied to is the governed field
              (`D.erlaubt`), and the statement is `Stmt.shift` with the stage numbers.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben34
 

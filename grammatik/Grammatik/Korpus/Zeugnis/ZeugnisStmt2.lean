@@ -11,7 +11,10 @@
   gleitVon, gleitNarrow. `axiomCall`/`bindAxiom`/`transition` stay listed
   (see CUTS): no rule-13 witness exists on the reference fixture.
 -/
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

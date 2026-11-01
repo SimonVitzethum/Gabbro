@@ -1,5 +1,8 @@
 /- Integer exponent selection from nonzero shifted prefixes. -/
-import Stage0.Senke.Ausdruck.Gleit.Komposition
+module
+public import Stage0.Senke.Ausdruck.Gleit.Komposition
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

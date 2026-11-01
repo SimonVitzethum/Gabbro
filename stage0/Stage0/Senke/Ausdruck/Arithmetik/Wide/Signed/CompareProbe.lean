@@ -6,8 +6,11 @@
   unsigned 2^128-2^100-1. Equality must be false despite identical bits; order needs the extra limb.
   The equality fixture compares 2^100+1 in both domains, checking true eq and inclusive le.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareRun
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.MixedWideProbe
 open Runner.IR Runner.Mem Gabbro.Stage0.Senke.WideProbe

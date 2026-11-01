@@ -22,7 +22,10 @@
   See `messung/ARM-NATIV-ABI.md` for what is still missing (memory: `argc/argv` loads, the
   kernel's clone semantics, the decoder).
 -/
-import Grammatik.Kern.Semantik.Syscall.SyscallArmLinux
+module
+public import Grammatik.Kern.Semantik.Syscall.SyscallArmLinux
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

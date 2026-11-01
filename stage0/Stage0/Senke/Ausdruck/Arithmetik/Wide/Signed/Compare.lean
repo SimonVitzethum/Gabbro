@@ -6,7 +6,10 @@
   r = a+2k; the existing comparison then cannot overflow. le compares y < x and complements
   its Boolean word. The result replaces slot a; all other source limbs survive.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.ComparePrep
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.ComparePrep
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

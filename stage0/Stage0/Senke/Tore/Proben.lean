@@ -1,8 +1,11 @@
 /- Gate decoding witnesses, with inhabited boolean and never call sites. -/
-import Stage0.Senke.Welt.MainEnv
-import Stage0.Senke.Welt.Anordnung
-import Stage0.Senke.Anweisung.TorLauf
-import Grammatik.Parser.Elab.UebersetzeAllg3
+module
+public import Stage0.Senke.Welt.MainEnv
+public import Stage0.Senke.Welt.Anordnung
+public import Stage0.Senke.Anweisung.TorLauf
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.GateProbe
 

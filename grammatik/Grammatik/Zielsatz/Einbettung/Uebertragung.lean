@@ -1,5 +1,8 @@
-import Grammatik.Zielsatz.Einbettung.Pflicht
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Zielsatz.Einbettung.Pflicht
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Uebertragung.lean

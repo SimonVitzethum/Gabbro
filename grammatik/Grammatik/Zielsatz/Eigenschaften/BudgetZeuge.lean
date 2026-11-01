@@ -9,8 +9,11 @@
   machine is reached as well (`bz_erreicht1`, from `rufErreichbarG_plus`), and thread `0` takes its next
   pass there (`bz_weiter`, the step `ewigWeiter`).
 -/
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Kern.Syntax.Satz
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Kern.Syntax.Satz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz.BudgetZeuge
 

@@ -7,7 +7,10 @@
   functions are in the existing terminating class. This is a storage primitive,
   not yet an unbounded command-serving stack worker or a universality theorem.
 -/
-import Grammatik.Logik.Terminierung.KlasseZeuge
+module
+public import Grammatik.Logik.Terminierung.KlasseZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn
 

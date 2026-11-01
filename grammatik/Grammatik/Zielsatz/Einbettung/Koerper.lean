@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Simulation
+module
+public import Grammatik.Zielsatz.Einbettung.Simulation
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Koerper.lean

@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Calls.Closure
+module
+public import Grammatik.Code.Refine.Calls.Closure
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Witness.lean

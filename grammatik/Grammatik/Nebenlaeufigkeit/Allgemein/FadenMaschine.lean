@@ -41,7 +41,10 @@
   its body run on the memory of that moment -- G reads shared memory at each step -- but its
   frame remembers the start world, exactly as a declared start that is scheduled late does.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

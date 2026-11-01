@@ -11,8 +11,11 @@
   paste is the correspondence: `gS_orte_K` exhibits the `orte` list as
   exactly the `protects` set, by `rfl`.
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

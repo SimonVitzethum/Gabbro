@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Unbounded.Linked
-import Mathlib.Computability.TuringMachine.Computable
+module
+public import Grammatik.Bausteine.Arena.Unbounded.Linked
+public import Mathlib.Computability.TuringMachine.Computable
+@[expose] public section
+
 
 /-! Executable region-reference storage for Mathlib TM2. Each stack has a
 distinct region brand and uses the same linked-cell allocator. The interpreter

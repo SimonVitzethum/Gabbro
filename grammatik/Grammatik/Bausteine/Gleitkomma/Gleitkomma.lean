@@ -18,6 +18,9 @@
   is "exact result, then round" -- the IEEE definition.
 -/
 
-import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1
-import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2
-import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T3
+module
+public import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1
+public import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2
+public import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T3
+@[expose] public section
+

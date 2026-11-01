@@ -1,5 +1,8 @@
 /- Part 2 of 3 of `ZielOrtGanz` (split by instrumente/teile/lean-teilen.py; the umbrella `ZielOrtGanz.lean` imports all parts). -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T1
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

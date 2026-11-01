@@ -1,6 +1,9 @@
-import Grammatik.Hardware.Anbieter.Region
-import Grammatik.Bausteine.Schablonen.SchablonenArena
-import Grammatik.Bausteine.Arena.ArenaDyn
+module
+public import Grammatik.Hardware.Anbieter.Region
+public import Grammatik.Bausteine.Schablonen.SchablonenArena
+public import Grammatik.Bausteine.Arena.ArenaDyn
+@[expose] public section
+
 
 /-
   File:      Grammatik/Hardware/Anbieter/Arena.lean

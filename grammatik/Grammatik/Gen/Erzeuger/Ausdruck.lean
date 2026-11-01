@@ -8,7 +8,10 @@
              Every proof argument of a rule (`darf`, `gdarf`, the range premises of a division, a shift, a
              widening) is DECIDED (`Sz.wenn`), so a generated term carries the rule's own premise as a proof.
 -/
-import Grammatik.Gen.Erzeuger.Groesse
+module
+public import Grammatik.Gen.Erzeuger.Groesse
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

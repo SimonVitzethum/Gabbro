@@ -2,4 +2,7 @@
 -- The coordinator's merge gate probes `import Grammatik.Zielsatz.BeweisAtomar` and `#print axioms
 -- Gabbro.Grammatik.Zielsatz.gabbro_ziel`; this one-line re-export keeps that probe valid. Pinned in
 -- instrumente/lean-layout-rules.py (PINNED): the layout tool never moves it. Do not add content.
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+@[expose] public section
+

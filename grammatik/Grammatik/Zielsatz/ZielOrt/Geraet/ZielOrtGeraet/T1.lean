@@ -10,7 +10,10 @@
   hardware class, the widened fragment and footprint, and the frame
   semantics of the device forms in `ZielOrtGeraetSem.lean`.
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

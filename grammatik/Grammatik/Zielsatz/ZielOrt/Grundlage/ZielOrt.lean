@@ -48,6 +48,9 @@
   The theorem `ziel_ort` itself is in `ZielOrtBeweis.lean`.
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T1
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T2
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T3
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T1
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T2
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T3
+@[expose] public section
+

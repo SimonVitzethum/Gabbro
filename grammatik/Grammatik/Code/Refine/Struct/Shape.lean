@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Struct.Mono
+module
+public import Grammatik.Code.Refine.Struct.Mono
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Shape.lean

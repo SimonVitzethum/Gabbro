@@ -1,7 +1,10 @@
-import Grammatik.Code.Refine.StmtOk
-import Grammatik.Code.Refine.Struct.Labels
-import Grammatik.Code.Refine.Calls.CallDef
-import Grammatik.Code.Lower.Func
+module
+public import Grammatik.Code.Refine.StmtOk
+public import Grammatik.Code.Refine.Struct.Labels
+public import Grammatik.Code.Refine.Calls.CallDef
+public import Grammatik.Code.Lower.Func
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Func.lean

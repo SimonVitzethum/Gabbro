@@ -107,9 +107,12 @@
     `kostenPasst P passes decl fs` (the DECLARED costs; `decl` is not part
     of `Programm D`, and the check depends on `passes`).
 -/
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
-import Grammatik.Logik.Vertraege.EinpassenVoll
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
+public import Grammatik.Logik.Vertraege.EinpassenVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

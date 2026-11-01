@@ -4,8 +4,11 @@
              variables, the abstract state weakens, loses a binder, gains one, and changes the status of one variable
              (or of all members of one structure) soundly; the outcomes and the `else` branches that store nothing.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkenner
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkenner
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

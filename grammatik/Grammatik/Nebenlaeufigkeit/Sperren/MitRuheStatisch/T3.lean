@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `MitRuheStatisch` (split by instrumente/teile/lean-teilen.py; the umbrella `MitRuheStatisch.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T2
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

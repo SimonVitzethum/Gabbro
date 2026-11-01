@@ -18,7 +18,10 @@
   with binders ["y", "x"] to 1. The model below is the resolution step;
   the carrier link is the `Var`/`Expr.var` constructor it feeds.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace P21.Gap01Ident
 

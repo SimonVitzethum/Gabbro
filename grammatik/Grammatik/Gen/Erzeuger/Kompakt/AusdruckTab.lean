@@ -7,7 +7,10 @@
              carriers read, not larger, in the bucket of its own size; and the tables of two bounds agree on the
              buckets both have (`tab_genEK_le`).
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.Ausdruck
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

@@ -1,8 +1,11 @@
 /- Subject: Reusing the ordinary expression and store proofs for captured byte spans. -/
-import Stage0.Senke.Anweisung.Bytes.Extract
-import Stage0.Senke.Anweisung.Schreiben
-import Stage0.Senke.Welt.WordCell
-import Stage0.Senke.Anweisung.Simulation
+module
+public import Stage0.Senke.Anweisung.Bytes.Extract
+public import Stage0.Senke.Anweisung.Schreiben
+public import Stage0.Senke.Welt.WordCell
+public import Stage0.Senke.Anweisung.Simulation
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

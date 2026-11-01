@@ -4,7 +4,10 @@
              `then` code and a jump over the `else` code; G's branch is the code's (`ite_ok`). The branches' own
              simulations come in as hypotheses (the induction of `lowS_ok`).
 -/
-import Stage0.Senke.Anweisung.Verzweigung
+module
+public import Stage0.Senke.Anweisung.Verzweigung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

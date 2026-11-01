@@ -1,6 +1,9 @@
 /- Shared nearest-even rounding for software floating-point routines.
    Comparing the remainder with its complement avoids doubling a word. -/
-import Stage0.Senke.Ausdruck.Aggregat.Wort
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

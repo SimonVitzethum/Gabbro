@@ -26,7 +26,10 @@
   rewrites a return under a lock into this outer-local form -- a gap of the
   exporter, not of G.
 -/
-import Grammatik.Zielsatz.Kern.Proben
+module
+public import Grammatik.Zielsatz.Kern.Proben
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

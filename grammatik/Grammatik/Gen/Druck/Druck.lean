@@ -16,8 +16,11 @@
   Names: tables `T<i>`, their fields `f<j>`, statics and atomics `g<i>`, locks `L<i>`, functions `fn<i>`, foreign bodies
   `ax<i>`, local variables `v<k>` (`k` the depth at which they are bound). Every operator is parenthesised.
 -/
-import Grammatik.Kern.Syntax.Syntax
-import Grammatik.Parser.Cover.Mitglieder
+module
+public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Parser.Cover.Mitglieder
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Druck
 

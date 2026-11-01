@@ -16,7 +16,10 @@
   recursion (the task's blessed fallback: no `List.countP` API names
   needed). No Arm instruction facts (rule 7 N/A, recorded in CUTS).
 -/
-import Init
+module
+public import Init
+@[expose] public section
+
 
 namespace Grammatik.Speichermodell.Zaehlen
 

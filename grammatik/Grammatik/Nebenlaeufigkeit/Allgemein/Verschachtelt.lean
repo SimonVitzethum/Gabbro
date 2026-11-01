@@ -32,7 +32,10 @@
   (The correspondence to C's row-major `T a[M][N]` addressing, `ev_idx_nested`, was deleted
   with the C emitter; tag `archiv/c-emitter-2026-10-17`.)
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Match.Scope
-import Grammatik.Code.Refine.Struct.Labels
+module
+public import Grammatik.Code.Refine.Match.Scope
+public import Grammatik.Code.Refine.Struct.Labels
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/Why.lean

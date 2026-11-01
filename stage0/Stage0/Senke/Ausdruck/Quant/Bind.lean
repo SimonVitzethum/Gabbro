@@ -1,6 +1,9 @@
 /- Frame-slot borrowing for expression binders, including nested quantifiers. -/
-import Stage0.Senke.Ausdruck.Quant.Frame
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Ausdruck.Quant.Frame
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

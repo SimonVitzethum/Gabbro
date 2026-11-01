@@ -1,5 +1,8 @@
-import Bruecke.Quelle
-import Grammatik.Parser.Lex.Lexer
+module
+public import Bruecke.Quelle
+public import Grammatik.Parser.Lex.Lexer
+@[expose] public section
+
 
 /-!
 # P6: the template a person starts from, WRITTEN BY LEAN from the source text

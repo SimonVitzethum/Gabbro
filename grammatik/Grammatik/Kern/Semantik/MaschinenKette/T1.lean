@@ -41,8 +41,11 @@
   events for writing steps; globals and multi-carrier conflicts (as before).
 -/
 
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Extraktion
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Extraktion
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -32,7 +32,10 @@
   The invariant `RahmenStapel` records both facts for every suspended frame
   of every thread; `rufG_rahmen` proves it on every reachable machine.
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

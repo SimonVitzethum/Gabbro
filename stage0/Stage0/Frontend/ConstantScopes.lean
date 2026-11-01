@@ -1,6 +1,9 @@
-import Stage0.Frontend.DependentScopes
-import Stage0.Frontend.ConstantOrder
-import Stage0.Frontend.ConstantMeaning
+module
+public import Stage0.Frontend.DependentScopes
+public import Stage0.Frontend.ConstantOrder
+public import Stage0.Frontend.ConstantMeaning
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

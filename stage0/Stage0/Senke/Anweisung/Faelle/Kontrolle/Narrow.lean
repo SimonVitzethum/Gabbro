@@ -1,6 +1,9 @@
 /- One signed interval test for block and end-block narrowing. -/
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
-import Stage0.Senke.Ausdruck.Arithmetik.Interval
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
+public import Stage0.Senke.Ausdruck.Arithmetik.Interval
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

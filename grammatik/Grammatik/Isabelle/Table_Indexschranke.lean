@@ -23,6 +23,10 @@
   carrying half to the real expression semantics.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.TableIndexschranke
 
 variable {α : Type}

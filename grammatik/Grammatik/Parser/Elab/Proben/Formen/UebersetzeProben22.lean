@@ -5,7 +5,10 @@
              is a variable of type `opt n`, `None`/`Some(i)` are `Expr.none`/`Expr.some`, and the arms of a
              `match` are blocks (`Some(k)` binds `k` as an index into the table, both arms must be given).
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben22
 

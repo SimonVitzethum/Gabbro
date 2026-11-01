@@ -33,13 +33,16 @@
 --
 -- fn schreibe (holds; writes)
 -- gate 0: write (3 parameters; answers 0..1024, or one of 2 reasons)
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Zielsatz.Kern.Beweis
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Logik.WP.HA.Pflicht
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Logik.WP.HA.Pflicht
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

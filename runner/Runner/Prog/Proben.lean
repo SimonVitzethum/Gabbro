@@ -1,4 +1,7 @@
-import Runner.Prog.IRAsm
+module
+public import Runner.Prog.IRAsm
+@[expose] public section
+
 
 /-! # Probe images for the runner on the processor
 

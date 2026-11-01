@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Borrow
-import Grammatik.Logik.Vertraege.ObjektRahmen.T1
+module
+public import Grammatik.Bausteine.Arena.Ownership.Borrow
+public import Grammatik.Logik.Vertraege.ObjektRahmen.T1
+@[expose] public section
+
 
 /-! Source provenance uses the existing bottom-based variable positions.
 Copies share an origin. Consuming an origin invalidates every copy at once;

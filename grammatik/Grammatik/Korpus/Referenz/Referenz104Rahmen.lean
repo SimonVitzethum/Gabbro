@@ -15,8 +15,11 @@
   So `KoerperGutR` is STRICTLY weaker than `KoerperGutV` on this program
   (`r4_rahmen_echt_schwaecher`).
 -/
-import Grammatik.Korpus.Referenz.Referenz104
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+module
+public import Grammatik.Korpus.Referenz.Referenz104
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -11,6 +11,9 @@
   print format is designed in the docstrings below for the transfer phase.
 -/
 
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T1
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T2
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T3
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T1
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T2
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T3
+@[expose] public section
+

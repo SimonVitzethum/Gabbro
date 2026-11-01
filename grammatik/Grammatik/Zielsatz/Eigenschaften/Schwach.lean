@@ -22,7 +22,10 @@
   refused by `fuss` unless the carrier is guarded -- but it is not a claim about spawn/join
   as release/acquire.
 -/
-import Grammatik.Zielsatz.Kern.Beweis
+module
+public import Grammatik.Zielsatz.Kern.Beweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

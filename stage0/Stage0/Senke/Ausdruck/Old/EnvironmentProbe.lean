@@ -1,6 +1,9 @@
 /- Joint witness: complete old array/counter snapshots and a preserved two-word parameter. -/
-import Stage0.Senke.Ausdruck.Old.Environment
-import Stage0.Senke.Ausdruck.Old.Distinct
+module
+public import Stage0.Senke.Ausdruck.Old.Environment
+public import Stage0.Senke.Ausdruck.Old.Distinct
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.CompleteSnapshotEnvProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

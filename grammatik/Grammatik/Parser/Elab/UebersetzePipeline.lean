@@ -10,7 +10,10 @@
   correspondence chain; that chain was deleted with the C emitter -- tag
   `archiv/c-emitter-2026-10-17` -- and the generic pipeline moved here unchanged.)
 -/
-import Grammatik.Parser.Elab.UebersetzeAllg3
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

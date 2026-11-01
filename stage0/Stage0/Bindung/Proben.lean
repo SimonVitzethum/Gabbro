@@ -1,5 +1,9 @@
 /- Binding selection regressions use the actual textual source parser. -/
-import Stage0.Bindung
+module
+public import Stage0.Bindung
+meta import Stage0.Bindung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.BindingProbes
 open Gabbro.Grammatik.Parser

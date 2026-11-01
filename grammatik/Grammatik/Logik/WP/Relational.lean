@@ -1,4 +1,7 @@
-import Grammatik.Logik.WP.Regeln3
+module
+public import Grammatik.Logik.WP.Regeln3
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: relational logic (two runs)

@@ -22,10 +22,13 @@
   the unfiltered tables `genTZ`), `vertreter` (`packenZiel` over the tables of representatives `genTK`). Members:
   Q = m the family `mitglieder`, Q = f the fine members `feinMitglieder`. Every method packs 8 bodies per program.
 -/
-import Grammatik.Gen.Fein.Suche
-import Grammatik.Gen.Fein.Druck
-import Grammatik.Gen.Fein.Mitglieder
-import Std.Data.HashSet
+module
+public import Grammatik.Gen.Fein.Suche
+public import Grammatik.Gen.Fein.Druck
+public import Grammatik.Gen.Fein.Mitglieder
+public import Std.Data.HashSet
+@[expose] public section
+
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Fein
 

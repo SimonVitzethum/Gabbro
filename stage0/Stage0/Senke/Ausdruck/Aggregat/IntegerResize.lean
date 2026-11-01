@@ -1,8 +1,11 @@
 /- Integer interval changes preserve the common limb encoding and extend its sign. -/
-import Stage0.Senke.Ausdruck.Aggregat.Materialize
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
-import Stage0.Senke.Ausdruck.Eng
-import Stage0.Senke.Ausdruck.Wenn
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Materialize
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Wenn
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

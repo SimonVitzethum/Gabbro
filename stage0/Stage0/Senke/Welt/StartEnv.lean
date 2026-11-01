@@ -1,8 +1,11 @@
 /- Canonical source start arguments become static parameter bytes through the shared encoder.
    This does not activate parameterized image startup or replace its full ABI proof. -/
-import Stage0.StartArgument
-import Stage0.Senke.Welt.StartBytes
-import Stage0.Senke.Ausdruck.Aggregat.Encoding
+module
+public import Stage0.StartArgument
+public import Stage0.Senke.Welt.StartBytes
+public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

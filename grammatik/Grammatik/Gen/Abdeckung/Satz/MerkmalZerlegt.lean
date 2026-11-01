@@ -3,7 +3,10 @@
   Subject:   a lock-only and a call-only feature set decompose into one probe per lock and per callee
              (part of step 1, `ZellenSatz.lean`).
 -/
-import Grammatik.Gen.Abdeckung.Satz.MerkmalUnd
+module
+public import Grammatik.Gen.Abdeckung.Satz.MerkmalUnd
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

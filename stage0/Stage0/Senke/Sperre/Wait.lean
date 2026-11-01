@@ -1,8 +1,11 @@
 /- Sequential-thread simulation of the actual contended WAIT path. The explicit
    response and resume invariant describe the environment at a blocking boundary;
    they imply neither fairness nor the missing concurrent `ir_parallel` theorem. -/
-import Stage0.Senke.Sperre.Contended
-import Stage0.Senke.Sperre.Futex
+module
+public import Stage0.Senke.Sperre.Contended
+public import Stage0.Senke.Sperre.Futex
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

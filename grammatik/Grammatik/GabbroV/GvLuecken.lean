@@ -9,15 +9,18 @@
   statable from `grammatik/` (no `bruecke/` import: it requires `grammatik`
   by path, so that direction would be a dependency cycle).
 -/
-import Grammatik.GabbroV.GvStartPflicht
-import Grammatik.Parser.Elab.Uebersetze
-import Grammatik.Parser.Elab.UebersetzeAllg
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Logik.Vertraege.AxiomVertrag
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
-import Grammatik.Korpus.Programme.Einheit104
+module
+public import Grammatik.GabbroV.GvStartPflicht
+public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
+public import Grammatik.Korpus.Programme.Einheit104
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV.GvLuecken
 

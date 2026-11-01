@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Gleitkomma.Gleitkomma
+module
+public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Types.lean

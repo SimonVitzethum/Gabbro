@@ -1,7 +1,10 @@
 /- Compute simultaneous counter demand from the complete source syntax. Sequential and
    alternative branches reuse slots; only a nested forever increases the live depth.
    Each level reserves a counter and an immutable decrement word below lexical locals. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

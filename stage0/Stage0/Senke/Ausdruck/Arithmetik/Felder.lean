@@ -1,5 +1,8 @@
 /- Shared integer-only extraction of IEEE fields for arithmetic dispatch. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

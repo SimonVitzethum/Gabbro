@@ -3,8 +3,11 @@
   Subject:   Bytes in memory as code and frames: an image's bytes at their address are the instructions they encode
              (`codeAt_bytes`) and the frame their zeros give room for (`frameOK_bytes`).
 -/
-import Stage0.Senke.Bild
-import Stage0.Senke.Welt.InitialBytes
+module
+public import Stage0.Senke.Bild
+public import Stage0.Senke.Welt.InitialBytes
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

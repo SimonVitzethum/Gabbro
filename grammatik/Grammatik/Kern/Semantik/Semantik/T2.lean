@@ -1,5 +1,8 @@
 /- Part 2 of 2 of `Semantik` (split by instrumente/teile/lean-teilen.py; the umbrella `Semantik.lean` imports all parts). -/
-import Grammatik.Kern.Semantik.Semantik.T1
+module
+public import Grammatik.Kern.Semantik.Semantik.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Flow.Interface
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Flow.Interface
+@[expose] public section
+
 
 /-! The invariant of the general ownership body judgment, at a statement
 boundary of one activation. `Holds A fr s0 c σ ρ` says: some ghost ledger

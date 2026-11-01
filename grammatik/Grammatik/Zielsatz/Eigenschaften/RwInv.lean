@@ -19,7 +19,10 @@
   * `schreiber_erst_frei` -- a thread that holds `L` and is not a reader holds it alone, so the
     invariant may be broken only inside a section no other thread is in.
 -/
-import Grammatik.Zielsatz.Eigenschaften.RwOrdnung
+module
+public import Grammatik.Zielsatz.Eigenschaften.RwOrdnung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

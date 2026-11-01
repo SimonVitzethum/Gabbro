@@ -7,7 +7,10 @@
   and `Zahl.rem` require a divisor range of `1 ≤ l2`, so the divisor is nonzero by type: there is no
   runtime stop path to define, `0 < y` is the typed range (the kernel is stated under it).
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Code
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

@@ -1,4 +1,7 @@
-import Grammatik.Parser.Elab.UebersetzeAllg3
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Parser/Namen/AufloesungProben.lean

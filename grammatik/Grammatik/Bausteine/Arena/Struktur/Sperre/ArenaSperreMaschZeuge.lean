@@ -7,8 +7,11 @@
              body is covered (`EndR`) and recognized (`ErkE`). The conclusion is non-degenerate: the machine pops the
              frame, its shared memory meets the arena invariant, and the head of the list is slot `1`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreZeuge
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbdeckung
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreZeuge
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbdeckung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

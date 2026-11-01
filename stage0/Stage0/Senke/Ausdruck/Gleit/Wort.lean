@@ -1,5 +1,8 @@
 /- Binary64 words and arbitrary-word constants in the integer-only IR. -/
-import Stage0.Senke.Ausdruck.Top
+module
+public import Stage0.Senke.Ausdruck.Top
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -12,7 +12,10 @@
   (`besucht`). Standalone: nothing in the existing semantics is
   changed. No Arm instruction facts (rule 7 N/A, recorded in CUTS).
 -/
-import Init
+module
+public import Init
+@[expose] public section
+
 
 namespace Grammatik.Speichermodell.Fenster
 

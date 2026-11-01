@@ -7,7 +7,10 @@
   `(L_j << r) | ((L_(j-1) >> 1) >> (63 - r))` resp. `(L_j >> r) | ((L_(j+1) << 1) << (63 - r))`.
   The double shift keeps the word operations total at `r = 0`, where a shift by 64 would wrap.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Piece
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Piece
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

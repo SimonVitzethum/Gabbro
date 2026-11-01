@@ -14,7 +14,10 @@
   digit-sequence valuation; the hex and binary arms are GAP-07 and p22's
   even gap respectively and agree on the value by the same rule.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace P21.Gap05Int
 

@@ -69,16 +69,19 @@
   `frischSpur`, an event's `neutral` trace piece). `e0` is gone from every
   theorem of the chain.
 -/
-import Grammatik.Zielsatz.Faeden.RuheNutzer
-import Grammatik.Zielsatz.Faeden.Ruhe
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
-import Grammatik.Logik.Fortschritt.Fortschritt
-import Grammatik.Zielsatz.Eigenschaften.Masken
-import Grammatik.Speichermodell.Maschine.DRF
-import Grammatik.Zielsatz.Faeden.Faeden
-import Grammatik.Zielsatz.Eigenschaften.Invarianten
-import Grammatik.Logik.Fortschritt.FolgeBeweis
+module
+public import Grammatik.Zielsatz.Faeden.RuheNutzer
+public import Grammatik.Zielsatz.Faeden.Ruhe
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
+public import Grammatik.Logik.Fortschritt.Fortschritt
+public import Grammatik.Zielsatz.Eigenschaften.Masken
+public import Grammatik.Speichermodell.Maschine.DRF
+public import Grammatik.Zielsatz.Faeden.Faeden
+public import Grammatik.Zielsatz.Eigenschaften.Invarianten
+public import Grammatik.Logik.Fortschritt.FolgeBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

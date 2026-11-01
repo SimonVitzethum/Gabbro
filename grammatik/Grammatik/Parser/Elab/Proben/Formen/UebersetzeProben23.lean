@@ -6,7 +6,10 @@
              `start { f, g };` leaves no G term: its roots travel as `UProg.gestartet` (`Einheit.gestartet`),
              judged by the checker Bool as pool routines; a start under a held lock has no representation.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben23
 

@@ -1,5 +1,8 @@
 /- Subject: Code storing a complete value span into an array that lives in the frame, below all proofs. -/
-import Stage0.Senke.Welt.Spans.CellCode
+module
+public import Stage0.Senke.Welt.Spans.CellCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

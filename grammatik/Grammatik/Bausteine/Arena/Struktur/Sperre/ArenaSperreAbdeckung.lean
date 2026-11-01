@@ -11,7 +11,10 @@
   `l = false` and a loop body has `l = true` -- so the theorem asks for `schleifenfrei`, a predicate that looks through the
   statement forms of the fragment and refuses a loop.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreBruecke
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreBruecke
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

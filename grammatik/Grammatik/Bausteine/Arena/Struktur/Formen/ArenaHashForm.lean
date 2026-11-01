@@ -13,8 +13,11 @@
   `HashOk A L H σ := HashOkF count (L.wert σ) (H.wert σ) (count bt) (A.Lebt σ)`; `hash_push_zug`, `hash_pop_zug` and
   `hash_unlink_zug` keep it on the executed forms, for every continuation.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
-import Grammatik.Bausteine.Arena.Struktur.ArenaHash
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
+public import Grammatik.Bausteine.Arena.Struktur.ArenaHash
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

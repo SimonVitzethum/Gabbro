@@ -15,7 +15,10 @@
   `orakelAus O HA` has `O`'s register and visibility answers by
   construction, and is register-local when `O` is (`regLokal_orakelAus`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

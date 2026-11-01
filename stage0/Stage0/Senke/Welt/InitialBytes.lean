@@ -1,7 +1,10 @@
 /- Shared loaded-byte primitives, below initial-data and image execution proofs. -/
-import Runner.Prog.IRAsm
-import Runner.IR.Rahmen
-import Stage0.Senke.Welt.StartLayout
+module
+public import Runner.Prog.IRAsm
+public import Runner.IR.Rahmen
+public import Stage0.Senke.Welt.StartLayout
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 /-- The bytes `bs` lie from address `p` on, readable and writable. -/

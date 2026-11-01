@@ -6,7 +6,10 @@
   `1` and `62`), limb zero takes the carry word. This is the register step of restoring division,
   for the remainder register and for the dividend/quotient register alike.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shr
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

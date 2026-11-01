@@ -2,7 +2,10 @@
   File:      stage0/Stage0/Senke/Anweisung/Verzweigung.lean
   Subject:   A conditional IR branch with a separately proved condition and branch simulations.
 -/
-import Stage0.Senke.Anweisung.Simulation
+module
+public import Stage0.Senke.Anweisung.Simulation
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

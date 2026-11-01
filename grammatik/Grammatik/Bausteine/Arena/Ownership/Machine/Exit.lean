@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Bind
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Bind
+@[expose] public section
+
 
 /-! **`leave` and `next`.** An exit at the head of the residue peels outward
 through blocks, shrinks, release markers and `else` continuations until it

@@ -40,7 +40,10 @@
   and it is discharged HERE, syntactically, for every program whose bodies
   carry no oracle form (the check `hardwareFrei`).
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

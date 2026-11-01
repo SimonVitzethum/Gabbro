@@ -16,6 +16,10 @@
   below is the split step, including the optional trailing comma.
 -/
 
+module
+
+@[expose] public section
+
 namespace P21.Gap17IdentList
 
 /-- ASCII-space trim (local: `String.trim` changed type in this toolchain). -/

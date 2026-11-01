@@ -15,7 +15,10 @@
   is refused, never interpreted -- on both sides.
 -/
 
-import Grammatik.Parser.Lex.Lexer
+module
+public import Grammatik.Parser.Lex.Lexer
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

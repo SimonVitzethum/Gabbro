@@ -1,6 +1,9 @@
-import Grammatik.Code.Conc.Thread
-import Grammatik.Code.Conc.Shared
-import Grammatik.Code.Refine.StmtOk
+module
+public import Grammatik.Code.Conc.Thread
+public import Grammatik.Code.Conc.Shared
+public import Grammatik.Code.Refine.StmtOk
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/GXStep.lean

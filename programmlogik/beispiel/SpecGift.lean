@@ -1,4 +1,7 @@
-import GabbroProgram
+module
+public import GabbroProgram
+@[expose] public section
+
 set_option autoImplicit false
 open Gabbro.Body GabbroProgram
 

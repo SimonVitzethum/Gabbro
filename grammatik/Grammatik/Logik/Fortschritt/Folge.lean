@@ -36,7 +36,10 @@
   through a signature in `ind`) and a return of an `ende` function demand `w`. The residue
   predicate `GRest.fR` carries the same check over the continuation layers of machine G.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

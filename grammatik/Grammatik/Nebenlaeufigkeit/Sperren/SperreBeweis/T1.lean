@@ -22,7 +22,10 @@
     world, hence (the protected carriers are stable while the lock is held)
     at the machine world (`kopfS_frei_inv`).
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,6 +1,9 @@
 /- Shared contracts for complete return publication and preserved entry-frame data. -/
-import Stage0.Senke.Rueckkehr.Call
-import Stage0.Senke.Ausdruck.Old.Sound
+module
+public import Stage0.Senke.Rueckkehr.Call
+public import Stage0.Senke.Ausdruck.Old.Sound
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

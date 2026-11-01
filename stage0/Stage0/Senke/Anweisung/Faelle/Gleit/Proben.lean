@@ -1,6 +1,9 @@
 /- Full G fixtures for float forms not yet constructed by the source reader. -/
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
-import Stage0.Senke.Ausdruck.Gleit.Schluessel
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+public import Stage0.Senke.Ausdruck.Gleit.Schluessel
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke.FloatProbe
 open Gabbro.Grammatik ControlProbe Runner.IR
 set_option maxRecDepth 100000

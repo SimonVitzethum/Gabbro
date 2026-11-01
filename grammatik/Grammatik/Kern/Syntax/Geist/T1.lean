@@ -6,9 +6,12 @@
   valid) and absent for the emitter. Rule G001: executable code reads no
   ghost. Ghost tables may appear only in contracts (`requires`/`ensures`).
 -/
-import Grammatik.Kern.Syntax.Extraktion
-import Grammatik.Kern.Syntax.Satz
-import Grammatik.Kern.Semantik.Maschine
+module
+public import Grammatik.Kern.Syntax.Extraktion
+public import Grammatik.Kern.Syntax.Satz
+public import Grammatik.Kern.Semantik.Maschine
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Geist
 

@@ -7,10 +7,13 @@
   is stated on actual memory with its exact footprint (`Agree fp d K`); each operator supplies it from its
   execution theorem in `Arithmetik/Wide`. Nothing here depends on which operator runs.
 -/
-import Stage0.Senke.Ausdruck.Sim
-import Stage0.Senke.Welt.Spans.Cell
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Fits
+module
+public import Stage0.Senke.Ausdruck.Sim
+public import Stage0.Senke.Welt.Spans.Cell
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Fits
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

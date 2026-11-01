@@ -23,7 +23,10 @@
   induction 3, transset 2).
 -/
 
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

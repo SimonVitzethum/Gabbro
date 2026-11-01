@@ -1,6 +1,9 @@
 /- Execution of the runtime-pointer store loop with an exact scratch/world footprint. -/
-import Stage0.Senke.Welt.Spans.CellCode
-import Stage0.Senke.Welt.Spans.SpanStore
+module
+public import Stage0.Senke.Welt.Spans.CellCode
+public import Stage0.Senke.Welt.Spans.SpanStore
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}

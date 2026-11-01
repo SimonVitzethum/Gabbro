@@ -16,8 +16,11 @@
   * `n1_gx_nicht_g` -- the same step, as a sentence about the machines: GX strictly contains G on
     an accepted program.
 -/
-import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
+module
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.AtomarXZeuge
 

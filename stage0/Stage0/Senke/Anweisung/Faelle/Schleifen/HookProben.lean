@@ -1,7 +1,10 @@
 /- Joint source fixtures for the actual forever lowering, including ABI and nested counters. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
-import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ForeverHookProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

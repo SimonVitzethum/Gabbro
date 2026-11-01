@@ -11,10 +11,13 @@
   is the original statement, with witnesses on the reference fixture
   (`refD`, no axioms) and on the one-axiom unguarded declaration (`AxGegen`).
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Satz
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Satz
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

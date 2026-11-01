@@ -1,7 +1,10 @@
 /- A compositional proof of the integer-only nearest-even software fragment.
    Inputs are pure code generators; their existing expression proofs are reused. -/
-import Stage0.Senke.Ausdruck.Gleit.Runden
-import Stage0.Senke.Ausdruck.Gleit.Komposition
+module
+public import Stage0.Senke.Ausdruck.Gleit.Runden
+public import Stage0.Senke.Ausdruck.Gleit.Komposition
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

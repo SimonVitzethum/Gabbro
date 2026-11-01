@@ -8,7 +8,10 @@
   `ZielOrtVollBeweis.lean`; the frame semantics of every residue in
   `ZielOrtVollSem.lean`.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

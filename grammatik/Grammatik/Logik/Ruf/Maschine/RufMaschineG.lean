@@ -21,10 +21,13 @@
   (`rufG_nie_wartend`).
 -/
 
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T2
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T3
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T4
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T5
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T6
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T7
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T2
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T3
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T4
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T5
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T6
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T7
+@[expose] public section
+

@@ -15,5 +15,8 @@
   machine lock invariant back (`kopfS_frei_inv`).
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.T1
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.T2
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.T2
+@[expose] public section
+

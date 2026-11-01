@@ -7,7 +7,10 @@
   quotient), the constant 63 (`e+2`), the mask (`e+3`), a temporary (`e+4`) and zero (`e+5`),
   `e = a+4k+18`. The negation scratch of the magnitudes lives at `a+2k`, inside the division's.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Sdiv
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Sdiv
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Allocation
-import Grammatik.Bausteine.Arena.Ownership.Witness
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Allocation
+public import Grammatik.Bausteine.Arena.Ownership.Witness
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaOwnership.Source.Witness
 

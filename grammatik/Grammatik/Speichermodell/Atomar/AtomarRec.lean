@@ -24,9 +24,12 @@
   agreement the invariant keeps is unchanged: the sequential world may hold a stale value at a
   shared atomic between two reads, and no computation ever uses it.
 -/
-import Grammatik.Speichermodell.Maschine.SperreSemA
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
-import Grammatik.Speichermodell.Maschine.MaschineW
+module
+public import Grammatik.Speichermodell.Maschine.SperreSemA
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+public import Grammatik.Speichermodell.Maschine.MaschineW
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

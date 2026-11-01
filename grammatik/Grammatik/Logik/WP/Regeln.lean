@@ -1,4 +1,7 @@
-import Grammatik.Logik.WP.Ruf
+module
+public import Grammatik.Logik.WP.Ruf
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: structural rules per construct

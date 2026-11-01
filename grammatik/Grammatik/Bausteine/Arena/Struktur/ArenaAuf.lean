@@ -13,7 +13,10 @@
   Consequence (used by the recognizer): a slot that was not linked stays not linked through pop and unlink and through
   a push of ANOTHER slot; a member stays a member through push.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaKette
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaKette
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaKette
 

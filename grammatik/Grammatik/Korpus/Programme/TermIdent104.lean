@@ -17,8 +17,11 @@
   CHECK
     ./lean-probe grammatik/Grammatik/TermIdent104.lean
 -/
-import Grammatik.Korpus.Zeugnis.ZeugnisIdent
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisIdent
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

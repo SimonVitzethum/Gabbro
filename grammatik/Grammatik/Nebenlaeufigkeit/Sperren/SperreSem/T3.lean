@@ -1,5 +1,8 @@
 /- Part 3 of 4 of `SperreSem` (split by instrumente/teile/lean-teilen.py; the umbrella `SperreSem.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T2
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

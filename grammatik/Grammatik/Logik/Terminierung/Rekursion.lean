@@ -26,10 +26,13 @@
   The budget `passes` makes every `forever` finite in the model; T5 separates the programs whose termination does
   not lean on it.
 -/
-import Grammatik.Zielsatz.Atomar.AtomarInvarianten
-import Grammatik.Logik.Fortschritt.KostenG
-import Grammatik.Logik.Terminierung.Mass
-import Grammatik.Logik.Terminierung.LaufGX
+module
+public import Grammatik.Zielsatz.Atomar.AtomarInvarianten
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Logik.Terminierung.Mass
+public import Grammatik.Logik.Terminierung.LaufGX
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,4 +1,7 @@
-import Runner.X86.Step
+module
+public import Runner.X86.Step
+@[expose] public section
+
 
 /-! # `BitVec` facts the handler proofs use: flags of `cmp`, the low byte after `setcc`, `cqo` -/
 

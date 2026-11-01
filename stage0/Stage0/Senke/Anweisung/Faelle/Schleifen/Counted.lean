@@ -1,8 +1,11 @@
 /- Exact S0IR instruction counts. A memory request within an instruction is not
    another instruction; kernel execution time is not measured by this relation.
    Source loop fuel and `ZeitAb` (G own steps) are distinct units. -/
-import Stage0.Senke.Anweisung.Simulation
-import Stage0.Senke.Ausdruck.Gleichungen
+module
+public import Stage0.Senke.Anweisung.Simulation
+public import Stage0.Senke.Ausdruck.Gleichungen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner Runner.IR

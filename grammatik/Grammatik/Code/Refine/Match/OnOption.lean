@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Match.Scope
+module
+public import Grammatik.Code.Refine.Match.Scope
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/OnOption.lean

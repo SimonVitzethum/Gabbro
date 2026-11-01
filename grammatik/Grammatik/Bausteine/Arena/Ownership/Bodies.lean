@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Effects
+module
+public import Grammatik.Bausteine.Arena.Ownership.Effects
+@[expose] public section
+
 
 /-! Generic source certificates for ownership operations. These are actual G
 end blocks, not assumed foreign functions. The theorems quantify over every

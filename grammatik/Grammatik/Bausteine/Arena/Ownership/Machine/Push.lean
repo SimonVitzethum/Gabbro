@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Pop
-import Grammatik.Bausteine.Arena.Ownership.Body.Call
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Pop
+public import Grammatik.Bausteine.Arena.Ownership.Body.Call
+@[expose] public section
+
 
 /-! **The ledger at a call.** The running activation `fr` of thread `t` at
 depth `a` calls; the callee runs at depth `a + 1`, an activation the

@@ -12,7 +12,10 @@
   disjointness survive a push is that the slot is on NO bucket (`N586`: a pushed slot is owned). Without it the chains
   overlap (`hash_defekt_bricht`: a slot pushed into a second bucket while it heads another).
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaAuf
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaAuf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaKette
 

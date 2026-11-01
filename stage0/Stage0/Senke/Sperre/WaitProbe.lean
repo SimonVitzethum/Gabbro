@@ -1,8 +1,11 @@
 /- Real encoded-memory witnesses. The test kernel explicitly models a foreign
    holder releasing while WAIT is pending; it is not a fairness assumption. -/
-import Stage0.Senke.Sperre.Retry
-import Stage0.Senke.Sperre.Wake
-import Stage0.Senke.Sperre.ContendedProbe
+module
+public import Stage0.Senke.Sperre.Retry
+public import Stage0.Senke.Sperre.Wake
+public import Stage0.Senke.Sperre.ContendedProbe
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.WaitProbe
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

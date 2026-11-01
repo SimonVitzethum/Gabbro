@@ -10,8 +10,11 @@
   `Cover/Census` runs the round trip over every leaf item of the corpus (`ri=`); the expression leaves ride
   `druckToks`, whose `gut` shapes have the round-trip theorem.
 -/
-import Grammatik.Parser.Print.Stmt
-import Grammatik.Parser.Item.ElementTief
+module
+public import Grammatik.Parser.Print.Stmt
+public import Grammatik.Parser.Item.ElementTief
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

@@ -1,4 +1,7 @@
-import Grammatik.Code.Lower.Stmt
+module
+public import Grammatik.Code.Lower.Stmt
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/Lower.lean

@@ -4,7 +4,10 @@
              FROZEN vocabulary shared by the memory-model agents (06-10): do not rename or
              remove anything; extend only through your own files.
 -/
-import Arm.Basic
+module
+public import Arm.Basic
+@[expose] public section
+
 
 namespace Arm
 

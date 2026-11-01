@@ -63,9 +63,12 @@
   No `sorry`, no `axiom`, no `native_decide`; machine G and Spec.lean are
   unchanged.
 -/
-import Grammatik.Logik.Fortschritt.Fortschritt
-import Grammatik.Logik.Fortschritt.PlanLauf
-import Grammatik.Logik.Fortschritt.Warten
+module
+public import Grammatik.Logik.Fortschritt.Fortschritt
+public import Grammatik.Logik.Fortschritt.PlanLauf
+public import Grammatik.Logik.Fortschritt.Warten
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

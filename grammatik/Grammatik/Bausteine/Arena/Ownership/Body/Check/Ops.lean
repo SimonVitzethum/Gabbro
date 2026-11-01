@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Context
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Context
+@[expose] public section
+
 
 /-! Context operations of the executable check: the loop head (names
 assigned in the body forget their origin), the exit test, the signature

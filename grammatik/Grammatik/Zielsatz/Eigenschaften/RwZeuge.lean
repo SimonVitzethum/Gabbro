@@ -24,9 +24,12 @@
     premise of `Stmt.locks`: `hr` is unprovable in a section that holds the lock. The typed syntax
     has no term for the violation, which is why the defect is the premise itself.
 -/
-import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
-import Grammatik.Zielsatz.Eigenschaften.RwRang
-import Grammatik.Zielsatz.Eigenschaften.RwInv
+module
+public import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
+public import Grammatik.Zielsatz.Eigenschaften.RwRang
+public import Grammatik.Zielsatz.Eigenschaften.RwInv
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz.RwFix
 

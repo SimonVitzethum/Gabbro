@@ -1,10 +1,13 @@
-import Grammatik.Bausteine.Arena.Ownership.FactoryWitness
-import Grammatik.Bausteine.Arena.Ownership.Source.Witness
-import Grammatik.Bausteine.Arena.Ownership.Source.ForwardWitness
-import Grammatik.Bausteine.Arena.Ownership.Body.Goal
-import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
-import Grammatik.Bausteine.Arena.Ownership.Ruhe.Witness
-import Grammatik.Bausteine.Arena.Ownership.Body.RefWitness
+module
+public import Grammatik.Bausteine.Arena.Ownership.FactoryWitness
+public import Grammatik.Bausteine.Arena.Ownership.Source.Witness
+public import Grammatik.Bausteine.Arena.Ownership.Source.ForwardWitness
+public import Grammatik.Bausteine.Arena.Ownership.Body.Goal
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Witness
+public import Grammatik.Bausteine.Arena.Ownership.Body.RefWitness
+@[expose] public section
+
 
 /-! Kernel-checked public audit of the ownership extension. The general body
 judgment and its soundness are in `Body/`, ownership on every reachable

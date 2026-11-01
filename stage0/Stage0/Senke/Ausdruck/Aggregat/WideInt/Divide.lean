@@ -10,11 +10,14 @@
   model's result interval already holds it (`betragMax`), and the kernel's modular limbs are its canonical
   encoding at that width.
 -/
-import Stage0.Senke.Welt.WeltAt
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Run
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Final
+module
+public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Run
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Final
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

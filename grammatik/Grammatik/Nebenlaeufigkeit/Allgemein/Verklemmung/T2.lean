@@ -1,5 +1,8 @@
 /- Part 2 of 3 of `Verklemmung` (split by instrumente/teile/lean-teilen.py; the umbrella `Verklemmung.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T1
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

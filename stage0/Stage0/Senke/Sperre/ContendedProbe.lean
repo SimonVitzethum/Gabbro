@@ -1,9 +1,12 @@
 /- A real-memory witness for the contended lock prefix. The foreign holder,
    recursion depth and existing waiters are all nonzero, outside `SyncOK`. -/
-import Stage0.Senke.Sperre.Contended
-import Stage0.Senke.Sperre.Paar
-import Stage0.Senke.BildLese
-import Grammatik.Parser.Elab.UebersetzeAllg
+module
+public import Stage0.Senke.Sperre.Contended
+public import Stage0.Senke.Sperre.Paar
+public import Stage0.Senke.BildLese
+public import Grammatik.Parser.Elab.UebersetzeAllg
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ContendedProbe
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

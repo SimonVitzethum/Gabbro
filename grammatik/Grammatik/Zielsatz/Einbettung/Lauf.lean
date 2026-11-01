@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Handler
+module
+public import Grammatik.Zielsatz.Einbettung.Handler
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Lauf.lean

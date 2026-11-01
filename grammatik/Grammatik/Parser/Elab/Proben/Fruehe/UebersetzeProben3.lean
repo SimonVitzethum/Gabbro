@@ -4,7 +4,10 @@
              `UebersetzeProben2` so that each file stays small. Kernel probes of one file share one memory budget (measured 2026-09-30:
              the first file alone passed 7 GB).
 -/
-import Grammatik.Parser.Elab.UebersetzePipeline
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben3
 

@@ -29,13 +29,16 @@
   handler that the machine realises is the bare body run.
 -/
 
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T1
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T2
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T3
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T4
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T5
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T6
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T7
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T9
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T10
+module
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T1
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T2
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T3
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T4
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T5
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T6
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T7
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T9
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T10
+@[expose] public section
+

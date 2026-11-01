@@ -9,7 +9,10 @@
   They are plain specifications, so every field the model reads is filled by `Spez.deklaration` and the four proof
   fields hold by construction (`Spez.lean`); no member is refused.
 -/
-import Grammatik.Gen.Familie.Familie
+module
+public import Grammatik.Gen.Familie.Familie
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

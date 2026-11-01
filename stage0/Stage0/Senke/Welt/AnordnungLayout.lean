@@ -1,8 +1,11 @@
 /- Canonical global prefix spans and typed table-column spans. Geometry is
    independent of image execution, preserving fieldless declared counts exactly. -/
-import Grammatik.Parser.Elab.UebersetzeAllg
-import Stage0.Senke.Welt.WeltAt
-import Mathlib.Basic.IsEmpty.Defs
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Stage0.Senke.Welt.WeltAt
+public import Mathlib.Basic.IsEmpty.Defs
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -7,8 +7,11 @@
   proved against numbers and never against single bits. `integerEncoding k v` is exactly the digit
   sequence of `v mod 2^(64k)`.
 -/
-import Mathlib.Tactic.Linarith
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Alu
+module
+public import Mathlib.Tactic.Linarith
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Alu
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

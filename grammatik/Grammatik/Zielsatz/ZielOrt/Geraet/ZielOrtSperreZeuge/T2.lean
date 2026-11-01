@@ -1,5 +1,8 @@
 /- Part 2 of 2 of `ZielOrtSperreZeuge` (split by instrumente/teile/lean-teilen.py; the umbrella `ZielOrtSperreZeuge.lean` imports all parts). -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

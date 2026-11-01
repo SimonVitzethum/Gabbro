@@ -1,4 +1,7 @@
-import Grammatik.Code.Model.Step
+module
+public import Grammatik.Code.Model.Step
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Facts.lean

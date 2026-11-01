@@ -14,7 +14,10 @@
   proves the meaning: on such blocks `execBlock` is independent of the
   call-meaning parameter `R`.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

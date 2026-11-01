@@ -25,7 +25,10 @@
   measured as the CLOSER, not as the oracle. `#print axioms` after each proof
   records exactly what it rests on.
 -/
-import Std.Tactic.BVDecide
+module
+public import Std.Tactic.BVDecide
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.BitVecProben
 

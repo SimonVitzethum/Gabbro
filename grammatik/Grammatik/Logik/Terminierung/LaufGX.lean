@@ -3,8 +3,11 @@
   Subject:   INFINITE RUNS OF MACHINE GX AND OF THE THREAD MACHINE OVER GX, DEFINITIONS (2026-10-22): the runs the termination statement speaks about
              (Zielsatz/Kern/Spec.lean, `GabbroZielTerminierung`; the theorems in Rekursion.lean and Entscheidung.lean).
 -/
-import Grammatik.Speichermodell.Atomar.AtomarLauf
-import Grammatik.Speichermodell.Maschine.GXMaschine
+module
+public import Grammatik.Speichermodell.Atomar.AtomarLauf
+public import Grammatik.Speichermodell.Maschine.GXMaschine
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

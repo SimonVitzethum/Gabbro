@@ -1,5 +1,8 @@
-import Grammatik.Parser.Elab.Uebersetze
-import Grammatik.Parser.Namen.Namensraum
+module
+public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Namen.Namensraum
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Parser/Namen/Aufloesung.lean

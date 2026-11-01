@@ -6,7 +6,10 @@
              oracle `O`. Every proof argument of a rule is DECIDED (`Sz.wenn`), so a generated statement carries
              the rule's own premise as a proof.
 -/
-import Grammatik.Gen.Erzeuger.Hilfen
+module
+public import Grammatik.Gen.Erzeuger.Hilfen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

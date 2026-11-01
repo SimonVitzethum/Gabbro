@@ -1,6 +1,9 @@
 /- Compositional execution of contiguous value copies on the actual IR machine. -/
-import Stage0.Senke.Ausdruck.Sim
-import Stage0.Senke.Ausdruck.Quant.Frame
+module
+public import Stage0.Senke.Ausdruck.Sim
+public import Stage0.Senke.Ausdruck.Quant.Frame
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

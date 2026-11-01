@@ -6,7 +6,10 @@
              it was not, and a lock held across a function that reaches a LOWER lock only through such a
              call was admitted.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben27
 

@@ -1,5 +1,8 @@
 /- Subject: Narrowing a string of capacity at least two to a smaller maximum, below all proofs. -/
-import Runner.IR.Rahmen
+module
+public import Runner.IR.Rahmen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

@@ -17,7 +17,10 @@
     * the counter model passes the 32 trees and is wrong on a tower (`kein_endlicher_test_zeuge`).
     * the cover theorem on the cells of the 32 trees (`deckung_zeuge`).
 -/
-import Grammatik.Adaequanz.Ueberdeckung
+module
+public import Grammatik.Adaequanz.Ueberdeckung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz.Zeugen
 

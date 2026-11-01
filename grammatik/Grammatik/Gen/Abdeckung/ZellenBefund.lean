@@ -10,10 +10,13 @@
              `Schlechtes c` program, `c` the cell's component, in which it is the only bad cell. `zellenStimmen` (the
              transcription of the cells against `komp`) runs on every program emitted.
 -/
-import Std.Data.HashMap
-import Grammatik.Gen.Abdeckung.Waehlen
-import Grammatik.Gen.Druck.Einheit
-import Grammatik.Gen.Druck.LeanZeuge
+module
+public import Std.Data.HashMap
+public import Grammatik.Gen.Abdeckung.Waehlen
+public import Grammatik.Gen.Druck.Einheit
+public import Grammatik.Gen.Druck.LeanZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

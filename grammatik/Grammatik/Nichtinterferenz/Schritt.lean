@@ -19,7 +19,10 @@
   the rules (`schrittK_von` is one direction), which is all both uses
   need.
 -/
-import Grammatik.Nichtinterferenz.Grundlagen
+module
+public import Grammatik.Nichtinterferenz.Grundlagen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

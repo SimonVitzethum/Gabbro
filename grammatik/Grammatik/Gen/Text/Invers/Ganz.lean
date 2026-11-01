@@ -5,7 +5,10 @@
              `requires`, `ensures`, body) gives on a printed function exactly `uOfFn`, the plain data computed
              from the model's signature, contract and body.
 -/
-import Grammatik.Gen.Text.Invers.Funktion
+module
+public import Grammatik.Gen.Text.Invers.Funktion
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

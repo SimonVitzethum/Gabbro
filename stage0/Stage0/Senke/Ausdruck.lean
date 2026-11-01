@@ -19,25 +19,28 @@
   or one use zero for empty and 256 + byte otherwise. Larger aggregates are refused at constructors and reads,
   including variables, globals and table cells. No allocation, layout or call-ABI change is needed.
 -/
-import Lean.Meta.Tactic.Simp.RegisterCommand
-import Grammatik.Kern.Semantik.Semantik
-import Runner.IR.Rahmen
-import Stage0.Senke.Welt.Lay
-import Stage0.Senke.Welt.Spans.CellCode
-import Stage0.Senke.Ausdruck.Aggregat.Wert
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
-import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
-import Stage0.Senke.Ausdruck.Aggregat.Kopie
-import Stage0.Senke.Ausdruck.Aggregat.Layout
-import Stage0.Senke.Ausdruck.Aggregat.Encoding
-import Stage0.Senke.Welt.Rahmen
-import Stage0.Senke.Ausdruck.Aggregat.Hilfen
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
-import Stage0.Senke.Ausdruck.Quant.TransportCode
+module
+public import Lean.Meta.Tactic.Simp.RegisterCommand
+public import Grammatik.Kern.Semantik.Semantik
+public import Runner.IR.Rahmen
+public import Stage0.Senke.Welt.Lay
+public import Stage0.Senke.Welt.Spans.CellCode
+public import Stage0.Senke.Ausdruck.Aggregat.Wert
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
+public import Stage0.Senke.Ausdruck.Aggregat.Kopie
+public import Stage0.Senke.Ausdruck.Aggregat.Layout
+public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Welt.Rahmen
+public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
+public import Stage0.Senke.Ausdruck.Quant.TransportCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

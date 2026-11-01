@@ -18,7 +18,10 @@
   the arena family; the content is in `Dekl.sperr` (the invariant IS `Dekl.Ok`) and in `abschnitt_erk`/`abschnitt_rufe`
   (a recognized section restores it).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbschnitt
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbschnitt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

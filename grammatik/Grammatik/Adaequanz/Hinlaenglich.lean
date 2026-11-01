@@ -22,7 +22,10 @@
   with at most `m` states; the spec is separated by `W` and reachable by `acc`; the lists `ks`/`qs` are
   complete.
 -/
-import Grammatik.Adaequanz.Schichten
+module
+public import Grammatik.Adaequanz.Schichten
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

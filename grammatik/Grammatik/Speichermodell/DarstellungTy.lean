@@ -14,8 +14,11 @@
   named. Nothing here is an Arm instruction fact; Sail citations do
   not apply (rule 7 N/A, recorded in CUTS).
 -/
-import Grammatik.Speichermodell.Darstellung
-import Grammatik.Kern.Syntax.Typen
+module
+public import Grammatik.Speichermodell.Darstellung
+public import Grammatik.Kern.Syntax.Typen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

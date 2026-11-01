@@ -1,5 +1,8 @@
-import Runner.X86.Step
-import Runner.Prog.Elf
+module
+public import Runner.X86.Step
+public import Runner.Prog.Elf
+@[expose] public section
+
 
 /-! # Differential tests of the x86-64 model on the processor (`PLAN-SELF-HOSTING.md` §2.2, point 2)
 

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Framing
+module
+public import Grammatik.Bausteine.Arena.Ownership.Framing
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaOwnership
 

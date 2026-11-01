@@ -10,7 +10,10 @@
    give it. Lemma (a) below is the walk bound every `traverse` domain
    needs; lemma (b) is pop-preserves-acyclicity for free lists.
 -/
-import Grammatik.GabbroV.GvTreeParent
+module
+public import Grammatik.GabbroV.GvTreeParent
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV
 

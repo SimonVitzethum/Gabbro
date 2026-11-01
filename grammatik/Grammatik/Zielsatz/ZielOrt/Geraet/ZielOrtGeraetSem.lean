@@ -33,7 +33,10 @@
   the footprint, hence on the device carriers, hence the sequential answer
   of a local oracle is the machine's answer.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

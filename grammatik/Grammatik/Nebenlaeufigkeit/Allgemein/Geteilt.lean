@@ -63,6 +63,10 @@
   mirror note above). Zero `sorry`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Geteilt
 
 /-! ## 1. The declaration: entries, edges, footprints, flags, pairs -/

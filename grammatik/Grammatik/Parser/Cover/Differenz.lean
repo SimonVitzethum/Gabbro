@@ -17,9 +17,12 @@
   compares it with the Rust checker AND with the exporter route, so the pure-Lean path validates the
   exporter and the checker from source, and the coverage of the generated space it decides is measured.
 -/
-import Grammatik.GabbroV.GvZensus
-import Grammatik.Parser.Elab.UebersetzeAllg3
-import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+module
+public import Grammatik.GabbroV.GvZensus
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.Cover.Differenz
 

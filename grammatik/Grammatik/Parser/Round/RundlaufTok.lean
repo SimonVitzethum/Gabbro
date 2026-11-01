@@ -26,7 +26,10 @@
   - `rundlauf_text_gut : gut e → (∀ t ∈ druckToks e, TokGut t) →
      parseTopAusText (renderText (druckToks e)) = .ok e` (with L1, from source text).
 -/
-import Grammatik.Parser.Round.RundlaufVoll
+module
+public import Grammatik.Parser.Round.RundlaufVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

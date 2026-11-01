@@ -1,5 +1,8 @@
 /- Part 8 of 9 of `Extraktion` (split by instrumente/teile/lean-teilen.py; the umbrella `Extraktion.lean` imports all parts). -/
-import Grammatik.Kern.Syntax.Extraktion.T7
+module
+public import Grammatik.Kern.Syntax.Extraktion.T7
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Extraktion
 

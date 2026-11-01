@@ -3,7 +3,10 @@
   Subject:   The IR's word operations against G's integer operations: division and remainder (`sdiv`, `srem` of
              `Runner.IR`), the bitwise operations and the shifts, on words that hold their value exactly.
 -/
-import Stage0.Senke.Ausdruck
+module
+public import Stage0.Senke.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

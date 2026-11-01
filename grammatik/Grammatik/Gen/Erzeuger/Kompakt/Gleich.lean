@@ -7,8 +7,11 @@
              larger; likewise `GlB`, `GlN`, `GlArms`, `GlGArms`, and for argument lists and results the carriers read.
              An end block that stands for a body has the body's summary (`schluessel_of_glN`).
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.AusdruckTab
-import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.AusdruckTab
+public import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

@@ -32,7 +32,10 @@
 
   Witnesses: Zielsatz/VerbundZeuge.lean.
 -/
-import Grammatik.Zielsatz.Kern.Beweis
+module
+public import Grammatik.Zielsatz.Kern.Beweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

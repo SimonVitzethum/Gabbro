@@ -17,8 +17,11 @@
   its preservation along `RufSchrittF` is proved, lifting return fidelity
   (`rufF_treu`) to every reachable machine by induction.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Logik.Vertraege.VertragOrtB
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Logik.Vertraege.VertragOrtB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

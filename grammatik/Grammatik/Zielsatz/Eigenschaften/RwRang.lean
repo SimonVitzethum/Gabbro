@@ -21,8 +21,11 @@
     every other holder of `L` a reader, has a layer step (a shared acquisition). Machine G alone
     would hold it back (`RufFreiG` fails when another reader holds `L`); the layer admits it.
 -/
-import Grammatik.Zielsatz.Eigenschaften.RwSchritt
-import Grammatik.Zielsatz.Kern.Beweis
+module
+public import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+public import Grammatik.Zielsatz.Kern.Beweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

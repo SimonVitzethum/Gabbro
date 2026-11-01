@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Match.Opt
+module
+public import Grammatik.Code.Refine.Match.Opt
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/Case.lean

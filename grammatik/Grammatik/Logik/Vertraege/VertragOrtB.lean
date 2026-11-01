@@ -52,8 +52,11 @@
   are either the entry world (reads only) or the `execEnd` outcome world,
   which CAN change memory. No trace event carries a value.
 -/
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

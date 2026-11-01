@@ -9,7 +9,10 @@
   `akzeptiert_iff`. All ten components are proved here (`urteil_0` .. `urteil_9`), and `akzeptiertX_zellen` puts them together; the
   feature-set tools are in `MerkmalUnd`, `MerkmalZerlegt` and `MerkmalGOk`.
 -/
-import Grammatik.Gen.Abdeckung.Satz.MerkmalGOk
+module
+public import Grammatik.Gen.Abdeckung.Satz.MerkmalGOk
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

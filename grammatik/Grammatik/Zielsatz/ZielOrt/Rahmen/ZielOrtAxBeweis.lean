@@ -17,7 +17,10 @@
   applied or an axiom answer is recorded. The records, `FortV`,
   `fortV_mono`, `logOk_grund` and the leaf lemmas are reused.
 -/
-import Grammatik.Logik.Vertraege.AxiomVertrag
+module
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

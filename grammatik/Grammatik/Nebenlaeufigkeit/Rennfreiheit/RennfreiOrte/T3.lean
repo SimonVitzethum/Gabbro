@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `RennfreiOrte` (split by instrumente/teile/lean-teilen.py; the umbrella `RennfreiOrte.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T2
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

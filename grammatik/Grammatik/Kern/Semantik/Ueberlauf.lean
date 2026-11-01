@@ -1,7 +1,10 @@
 /- Overflow forms: wrapping on exact `uN` ranges, saturating on every range
    (PLAN-BITS section 4, model half). -/
 
-import Grammatik.Kern.Syntax.Typen
+module
+public import Grammatik.Kern.Syntax.Typen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

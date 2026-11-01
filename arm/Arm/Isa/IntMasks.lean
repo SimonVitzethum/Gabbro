@@ -5,7 +5,10 @@
              (UNDEFINED) encoding, never a silent default.
   Sail:      sail-arm/arm-v9.4-a/src/v8_base.sail:30895.
 -/
-import Arm.Isa.IntCore
+module
+public import Arm.Isa.IntCore
+@[expose] public section
+
 
 namespace Arm.Int
 

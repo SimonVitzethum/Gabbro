@@ -1,5 +1,8 @@
-import Grammatik.Logik.WP.Regeln3
-import Grammatik.Speichermodell.Atomar.AtomarSem
+module
+public import Grammatik.Logik.WP.Regeln3
+public import Grammatik.Speichermodell.Atomar.AtomarSem
+@[expose] public section
+
 
 /-!
 # GabbroV over the semantics of the user's obligation

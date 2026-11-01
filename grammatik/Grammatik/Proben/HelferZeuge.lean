@@ -27,7 +27,10 @@
   returns of `helfer` meet `result == x`, BY THE THEOREM, and at the first
   one thread 0 held `L` (`helfer_zeuge`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

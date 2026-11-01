@@ -3,7 +3,10 @@
   Subject:   The thread's number (`meC`) and the two fast paths of taking a lock (`nimmC`): the owner word is 0 --
              `cas` makes it mine, the count 1; the owner is me -- the count + 1. Neither path reads the waiters.
 -/
-import Stage0.Senke.Sperre.Schritt
+module
+public import Stage0.Senke.Sperre.Schritt
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

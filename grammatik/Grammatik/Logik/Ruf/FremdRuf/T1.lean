@@ -25,10 +25,13 @@
   cost and effect below is a field of program data, and the witness
   uses illustration labels only.
 -/
-import Grammatik.Kern.Syntax.Satz
-import Grammatik.Logik.Vertraege.AxiomVertrag
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Kern.Syntax.Satz
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

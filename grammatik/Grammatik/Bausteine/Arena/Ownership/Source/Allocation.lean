@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Bindings
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Bindings
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaOwnership.Source
 

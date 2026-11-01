@@ -6,7 +6,10 @@
   shared word materializer into slot `a+j`; ascending order lets limb `j`'s second scratch slot be the
   not yet written limb `j+1`. The last limb leaves one scratch slot above the literal.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Word
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Word
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

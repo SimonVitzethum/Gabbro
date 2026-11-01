@@ -1,8 +1,11 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Nimm
-import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammAkzeptiert
-import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
-import Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses
-import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Nimm
+public import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammAkzeptiert
+public import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
+public import Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses
+public import Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
+@[expose] public section
+
 
 /-! Axiom audit of the Brainfuck-on-G modules. -/
 

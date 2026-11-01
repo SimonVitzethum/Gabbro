@@ -16,7 +16,10 @@
     * `doppelGlied`      -- the root, a tree member, is linked into the list: each structure is still well formed, but
                             the slot is in both -- the arena invariant (`Dekl.Ok`) has the disjointness of the two.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

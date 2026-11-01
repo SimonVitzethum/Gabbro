@@ -16,7 +16,10 @@
   away, no lexer change was needed), and one theorem chaining all
   stages for 104.
 -/
-import Grammatik.Parser.Elab.Uebersetze
+module
+public import Grammatik.Parser.Elab.Uebersetze
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 

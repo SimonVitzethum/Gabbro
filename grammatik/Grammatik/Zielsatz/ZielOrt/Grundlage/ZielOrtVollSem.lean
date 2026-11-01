@@ -36,7 +36,10 @@
     residues in it that read inside a footprint.
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T1
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T2
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T3
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T4
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T1
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T2
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T3
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem.T4
+@[expose] public section
+

@@ -57,7 +57,10 @@
   `Deklaration` and every leg of `Ziel` that quantifies a carrier.  That is a different
   model, not a rule; the header of `Zielsatz/Spec.lean` would have to be rewritten for it.
 -/
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Sperrstreifen
 

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Checker
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Checker
+@[expose] public section
+
 
 /-! Facts about the check's outcome combinators and Bool tests, used by the
 soundness proof of the check. -/

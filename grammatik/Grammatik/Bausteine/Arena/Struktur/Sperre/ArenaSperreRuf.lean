@@ -10,7 +10,10 @@
   (`execEndH = execEnd` on recognized bodies) this is the form in which `InvGutS` reads the recognizer: the arena part
   of the owed invariant at a return, `erkE_invGutS`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbschnitt
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbschnitt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

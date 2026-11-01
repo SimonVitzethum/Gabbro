@@ -1,4 +1,7 @@
-import Runner.Beweis.Satz
+module
+public import Runner.Beweis.Satz
+@[expose] public section
+
 
 /-! # The loader: from the ELF entry to the first dispatch
 

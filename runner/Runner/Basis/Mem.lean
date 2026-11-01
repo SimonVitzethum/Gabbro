@@ -1,3 +1,7 @@
+module
+
+@[expose] public section
+
 /-! # The flat byte memory shared by `S0IR` and the x86-64 model
 
 Both machines read and write the SAME memory through the SAME functions: a byte map with a read and a write

@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
-import Grammatik.Kern.Syntax.Zucker
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
+public import Grammatik.Kern.Syntax.Zucker
+@[expose] public section
+
 
 /-! Witness of the ownership rule for references (PLAN-DYNAMIC 14). The declaration has two tables: the
 four-slot arena `true` the ledger tracks (`A`, with its free list) and the OPEN region `false` with its provider

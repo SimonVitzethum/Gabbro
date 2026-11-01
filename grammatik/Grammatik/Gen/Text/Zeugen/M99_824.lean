@@ -3,9 +3,12 @@
   Subject:   The witness `M99_824` (and its sibling `M99_825`, here because the folder is full) at the text level: its printed text reads back as a program with its cells and its
              verdict. Decided by the kernel (the text is never lexed: `ausText_druckB`).
 -/
-import Grammatik.Gen.Text.Pruefung
-import Grammatik.Gen.Zeugen.M.M99_824
-import Grammatik.Gen.Zeugen.M.M99_825
+module
+public import Grammatik.Gen.Text.Pruefung
+public import Grammatik.Gen.Zeugen.M.M99_824
+public import Grammatik.Gen.Zeugen.M.M99_825
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.M99_824
 

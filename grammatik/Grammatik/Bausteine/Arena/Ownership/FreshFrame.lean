@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Progress
+module
+public import Grammatik.Bausteine.Arena.Ownership.Progress
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaOwnership
 

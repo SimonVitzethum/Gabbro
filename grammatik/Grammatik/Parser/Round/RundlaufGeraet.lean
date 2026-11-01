@@ -18,7 +18,10 @@
   clause from the last to the first (`regRest_*` step lemmas), the record growing by one field per
   clause.
 -/
-import Grammatik.Parser.Round.RundlaufItem
+module
+public import Grammatik.Parser.Round.RundlaufItem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

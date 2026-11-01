@@ -2,33 +2,36 @@
   File:      stage0/Stage0/Senke/Ausdruck/Satz.lean
   Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
 -/
-import Stage0.Senke.Ausdruck.Referenz.Lesen
-import Stage0.Senke.Ausdruck.Gleit.Fall
-import Stage0.Senke.Ausdruck.Lesen
-import Stage0.Senke.Ausdruck.Wenn
-import Stage0.Senke.Ausdruck.Fnptr
-import Stage0.Senke.Ausdruck.Eng
-import Stage0.Senke.Ausdruck.Arithmetik.Mixed
-import Stage0.Senke.Ausdruck.Tag
-import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
-import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
-import Stage0.Senke.Ausdruck.Aggregat.Array
-import Stage0.Senke.Ausdruck.Aggregat.IntegerOps
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
-import Stage0.Senke.Ausdruck.Aggregat.StringOps
-import Stage0.Senke.Ausdruck.Option
-import Stage0.Senke.Ausdruck.Bytes
-import Stage0.Senke.Ausdruck.Quant.Satz
-import Stage0.Senke.Ausdruck.Quant.Reach
-import Stage0.Senke.Welt.WeltAt
-import Stage0.Senke.Welt.Spans.CellStore
-import Stage0.Senke.Welt.Spans.Read
-import Stage0.Senke.Ausdruck.Referenz.CellIndex
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
+module
+public import Stage0.Senke.Ausdruck.Referenz.Lesen
+public import Stage0.Senke.Ausdruck.Gleit.Fall
+public import Stage0.Senke.Ausdruck.Lesen
+public import Stage0.Senke.Ausdruck.Wenn
+public import Stage0.Senke.Ausdruck.Fnptr
+public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
+public import Stage0.Senke.Ausdruck.Tag
+public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
+public import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
+public import Stage0.Senke.Ausdruck.Aggregat.Array
+public import Stage0.Senke.Ausdruck.Aggregat.IntegerOps
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
+public import Stage0.Senke.Ausdruck.Aggregat.StringOps
+public import Stage0.Senke.Ausdruck.Option
+public import Stage0.Senke.Ausdruck.Bytes
+public import Stage0.Senke.Ausdruck.Quant.Satz
+public import Stage0.Senke.Ausdruck.Quant.Reach
+public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Welt.Spans.CellStore
+public import Stage0.Senke.Welt.Spans.Read
+public import Stage0.Senke.Ausdruck.Referenz.CellIndex
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

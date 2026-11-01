@@ -1,5 +1,8 @@
-import Stage0.Frontend.AliasOrder
-import Stage0.Frontend.Guard
+module
+public import Stage0.Frontend.AliasOrder
+public import Stage0.Frontend.Guard
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

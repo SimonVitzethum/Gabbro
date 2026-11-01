@@ -8,8 +8,11 @@
              concrete tests live in `Arm/Lit/Tests.lean` (from knowledge, herd7
              litmus names, not measured copies).
 -/
-import Arm.Basic
-import Arm.Mem.Event
+module
+public import Arm.Basic
+public import Arm.Mem.Event
+@[expose] public section
+
 
 namespace Arm.Lit
 

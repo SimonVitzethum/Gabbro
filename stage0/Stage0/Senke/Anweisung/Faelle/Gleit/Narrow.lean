@@ -1,7 +1,10 @@
 /- Float range narrowing with a terminating fallback, using the shared binding continuation. -/
-import Stage0.Senke.Anweisung.Faelle.Binden
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
-import Stage0.Senke.Ausdruck.Gleit.Test
+module
+public import Stage0.Senke.Anweisung.Faelle.Binden
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
+public import Stage0.Senke.Ausdruck.Gleit.Test
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false

@@ -6,9 +6,12 @@
              with the plain read `let x = g;` of the non-atomic static 3 in place of static 1; it carries the
              three cells `M99_824` lost.)
 -/
-import Grammatik.Gen.Abdeckung.Satz.Raum
-import Grammatik.Gen.Erzeuger.Entscheidung
-import Grammatik.Korpus.Zeugnis.Zeugnis.T1
+module
+public import Grammatik.Gen.Abdeckung.Satz.Raum
+public import Grammatik.Gen.Erzeuger.Entscheidung
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
+@[expose] public section
+
 
 set_option linter.unusedTactic false
 set_option linter.unreachableTactic false

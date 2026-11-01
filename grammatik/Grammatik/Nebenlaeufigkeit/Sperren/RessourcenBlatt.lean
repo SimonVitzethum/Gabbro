@@ -9,8 +9,11 @@
   event whose guards (`darf`, `Ereignis.gut`) require `Held L`, and
   `HeldGenau` ties the static resource list to the thread's open locks.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Extraktion
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Extraktion
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

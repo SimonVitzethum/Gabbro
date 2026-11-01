@@ -10,7 +10,10 @@
    Skeleton: `TreeState` plus the bounded quantifiers. The decision
    (counter-states, local closing clause) lands in later steps.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV
 

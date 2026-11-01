@@ -1,4 +1,8 @@
 
+module
+
+@[expose] public section
+
 /-!
   File:      Grammatik/Parser/Namen/Namensraum.lean
   Subject:   **Name spaces of linked projects** (BUILD-SYSTEM 7.6): how a path written in one project

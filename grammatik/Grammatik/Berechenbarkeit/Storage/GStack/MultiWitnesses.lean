@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Multi
-import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Multi
+public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+@[expose] public section
+
 
 /-! Witnesses of `push_multi` and `pop_multi` over a concrete declaration with TWO stacks in one arena: `MD` is the
 arena declaration of `InvDynZeuge.FD` with a fifth word, so word 3 heads stack 0 and word 4 heads stack 1. In the

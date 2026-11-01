@@ -8,7 +8,10 @@
   the `#check` output below is the evidence.
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 open Gabbro.Grammatik
 

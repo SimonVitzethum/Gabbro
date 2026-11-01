@@ -7,10 +7,13 @@
    original parameters. Normal returns check ensures before publishing the complete
    result and status; reasons publish their canonical span without running ensures.
    Owed invariant checks remain refused until their return lowering is connected. -/
-import Stage0.Senke.Anweisung
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
-import Stage0.Senke.Stopp
-import Stage0.Senke.Ausdruck.Old.Sound
+module
+public import Stage0.Senke.Anweisung
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
+public import Stage0.Senke.Stopp
+public import Stage0.Senke.Ausdruck.Old.Sound
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

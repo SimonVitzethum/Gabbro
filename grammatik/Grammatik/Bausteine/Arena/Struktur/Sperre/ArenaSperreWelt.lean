@@ -9,8 +9,11 @@
   the memory (`Tab`, `Feld`, `typ`, `Glob`, `gtyp`, `Fn`, `sig`) are the same terms, so a world of the old declaration is a
   world of the new one by re-packing its three fields (`uebertr`), and every number of `w0` carries over by `rfl`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreInv
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreInv
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

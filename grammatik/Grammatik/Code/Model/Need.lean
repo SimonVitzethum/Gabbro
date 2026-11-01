@@ -1,5 +1,8 @@
-import Grammatik.Code.Model.Facts
-import Grammatik.Code.Model.Weak
+module
+public import Grammatik.Code.Model.Facts
+public import Grammatik.Code.Model.Weak
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Need.lean

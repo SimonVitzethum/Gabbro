@@ -22,7 +22,10 @@
   (that every step writing `g` is its `exchange`); for a given program that is a finite
   inversion over the rules of G, as `g_schritt_0` does for one step (report §6).
 -/
-import Grammatik.Speichermodell.Maschine.RMW
+module
+public import Grammatik.Speichermodell.Maschine.RMW
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

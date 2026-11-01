@@ -18,7 +18,10 @@
     * `fremdHang`   -- the root hung below itself (a slot the body does not own),
     * `frischFrei`  -- a slot released and then hung (use after release).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+@[expose] public section
+
 
 -- v4.35: this linter exceeds its heartbeat budget on the long executed-block proofs below.
 set_option linter.constructorNameAsVariable false

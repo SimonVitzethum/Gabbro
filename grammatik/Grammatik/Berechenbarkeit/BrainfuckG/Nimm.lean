@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Kopf
-import Grammatik.Berechenbarkeit.Storage.GStack.Drain
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Kopf
+public import Grammatik.Berechenbarkeit.Storage.GStack.Drain
+@[expose] public section
+
 
 /-! Brainfuck on G, part 2: taking a byte off a stack into the head. Brainfuck's `>`, `<` and `,` read the top of
 one stack, or `0` when the stack is empty (the tape is zero beyond its ends, EOF reads as zero). `nimm` is that

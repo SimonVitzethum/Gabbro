@@ -90,8 +90,11 @@
   (`extern`, `asm`, `entrust`), der Erzeuger und das C. Das sind keine Luecken DIESES Satzes;
   es sind die Grenzen der Semantik, ueber der er steht -- `PLAN-SICHERHEIT.md` fuehrt sie.
 -/
-import Gabbro.Sicherheit.Ausdruck
-import Gabbro.Sicherheit.Anweisung
+module
+public import Gabbro.Sicherheit.Ausdruck
+public import Gabbro.Sicherheit.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Sicherheit
 

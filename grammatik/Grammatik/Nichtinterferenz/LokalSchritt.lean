@@ -13,7 +13,10 @@
   derivations. Device register reads use register locality (`RegLokal`):
   the device carriers of a register the head reads lie in `S`.
 -/
-import Grammatik.Nichtinterferenz.Lokal
+module
+public import Grammatik.Nichtinterferenz.Lokal
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -7,11 +7,14 @@
              the mapping is FROM KNOWLEDGE, not a measured copy of herd sources.
              Location ids: x = 0, y = 1. Initial memory is 0 everywhere.
 -/
-import Arm.Basic
-import Arm.Mem.Event
-import Arm.Lit.Prog
-import Arm.Lit.Enumerate
-import Arm.Mem.Axiomatic
+module
+public import Arm.Basic
+public import Arm.Mem.Event
+public import Arm.Lit.Prog
+public import Arm.Lit.Enumerate
+public import Arm.Mem.Axiomatic
+@[expose] public section
+
 
 namespace Arm.Lit
 

@@ -6,8 +6,11 @@
              body of the bound can carry is therefore carried by a kept body, and the tables stay small; the exhaustive
              tables grow with every new constructor. Untrusted: the driver measures, it proves nothing.
 -/
-import Grammatik.Gen.Fein.Suche
-import Grammatik.Gen.Abdeckung.Messung
+module
+public import Grammatik.Gen.Fein.Suche
+public import Grammatik.Gen.Abdeckung.Messung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

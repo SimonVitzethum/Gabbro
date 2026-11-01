@@ -30,7 +30,10 @@
   ist die Logikstelle `decreases`). *Sie sind die Hardware und die Logik -- genau die zwei,
   die bleiben sollen.* `SYNTAX.md` §16 zaehlt auf, was daraus folgt und was nicht.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

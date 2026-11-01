@@ -1,6 +1,9 @@
 /- Joint actual-IR witness for downward overlapping transport of three canonical words. -/
-import Stage0.Senke.Ausdruck.Quant.Memory
-import Runner.Prog.IRAsm
+module
+public import Stage0.Senke.Ausdruck.Quant.Memory
+public import Runner.Prog.IRAsm
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke.PointerProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem
 abbrev shape : Ty := .arr (.int 0 255) 3

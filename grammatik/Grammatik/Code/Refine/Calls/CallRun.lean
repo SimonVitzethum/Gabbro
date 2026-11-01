@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Calls.CallDef
+module
+public import Grammatik.Code.Refine.Calls.CallDef
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/CallRun.lean

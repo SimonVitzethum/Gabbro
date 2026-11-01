@@ -6,7 +6,10 @@
   word in slot `X`, with one carry slot `c`. `mulChain_run` expresses the digits and the carry by the
   same `sumDig`/`carryAt` chain as addition, with the multiplicand digits scaled by `x`.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulBlock
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulBlock
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

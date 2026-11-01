@@ -31,8 +31,11 @@
       `zaehlA` reads it with no lock (a payload read without any synchronisation) -- refused
       by `AkzeptiertA`, at its footprint component: the exemption is for atomics only.
 -/
-import Grammatik.Speichermodell.Atomar.Atomar
-import Grammatik.Speichermodell.Maschine.Zeuge
+module
+public import Grammatik.Speichermodell.Atomar.Atomar
+public import Grammatik.Speichermodell.Maschine.Zeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

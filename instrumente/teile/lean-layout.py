@@ -6,7 +6,8 @@ maximal 20 dateien + ordner pro ordner, und das ist pflicht auch rueckwirkend".
 
 Modes
   --check   exit 1 if any folder that holds Lean files (or leads to them inside a Lean project) has more
-            than MAXIMUM entries, counting every tracked file and sub-folder. The guardian and the merge gate.
+            than MAXIMUM entries, counting every tracked file and sub-folder, or if a tracked Lean file is not a
+            `module` (migrate with `lean-module.py --apply`). The guardian and the merge gate.
   --plan    show where every Lean module would go under RULES and which folders stay too full.
   --apply   git mv the modules to their place, rewrite `import` lines, and rewrite old module / file path
             references in tracked text files. Idempotent; also places NEW modules a lane added in the flat
@@ -16,6 +17,7 @@ A module is placed by the FIRST rule of its folder whose regex matches the modul
 matches stays where it is; if that folder is then too full, --check fails and names the folder: add a rule.
 The old->new module map is kept in lean-layout-map.json so branches that still import an old name are rewritten.
 """
+import importlib.util
 import json
 import os
 import re
@@ -151,18 +153,35 @@ def final_files(files, moves):
     return [moves.get(f, f) for f in files]
 
 
+def not_modules(files):
+    """Tracked Lean files that do not start with `module` (owner rule 2026-11-01: every Lean file is a module;
+    Lake's own `lakefile.lean` is configuration, not a module)."""
+    spec = importlib.util.spec_from_file_location('lean_module', ROOT / 'instrumente' / 'teile' / 'lean-module.py')
+    lm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lm)
+    return [f for f in lean_files(files) if Path(f).name not in lm.NOT_MODULES
+            and (ROOT / f).is_file() and not lm.is_module((ROOT / f).read_text(encoding='utf-8'))]
+
+
 def cmd_check():
     files = tracked()
     bad = overfull(files)
     unplaced = planned(files)
+    plain = not_modules(files)
+    for f in plain[:20]:
+        print(f'NOT A MODULE: {f}')
+    if plain:
+        print(f'NOT A MODULE: {len(plain)} Lean file(s) lack `module`; run: '
+              f'python3 instrumente/teile/lean-module.py --apply <file>')
     for n, k in bad:
         print(f'TOO FULL: {k or "."}: {n} entries (maximum {MAXIMUM})')
     if unplaced:
         print(f'NOT PLACED: {len(unplaced)} Lean file(s) sit where a rule says they belong elsewhere; '
               f'run: python3 instrumente/teile/lean-layout.py --apply   (first: {next(iter(unplaced))})')
-    if bad or unplaced:
+    if bad or unplaced or plain:
         return 1
-    print(f'lean-layout: every folder holds at most {MAXIMUM} entries; all {len(lean_files(files))} Lean files placed.')
+    print(f'lean-layout: every folder holds at most {MAXIMUM} entries; all {len(lean_files(files))} Lean files placed '
+          f'and every one is a module.')
     return 0
 
 

@@ -13,8 +13,11 @@
   and recognized only when loop-free (`EndR` has no guard inside a loop body); a recognized loop body is a statement about
   `execEnd` only (`erkE_koerper`), and its machine correspondence is named open in 8a.3.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbschnitt
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbschnitt
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

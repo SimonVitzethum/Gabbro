@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Arguments
-import Grammatik.Bausteine.Arena.Ownership.Boundary
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Arguments
+public import Grammatik.Bausteine.Arena.Ownership.Boundary
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaOwnership.Source
 

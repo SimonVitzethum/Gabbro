@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.Storage.BrainfuckHeap
-import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
+module
+public import Grammatik.Berechenbarkeit.Storage.BrainfuckHeap
+public import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.HeapWitnesses
 

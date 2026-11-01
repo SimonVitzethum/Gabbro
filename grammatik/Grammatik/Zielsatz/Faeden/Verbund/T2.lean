@@ -1,5 +1,8 @@
 /- Part 2 of 3 of `Verbund` (split by instrumente/teile/lean-teilen.py; the umbrella `Verbund.lean` imports all parts). -/
-import Grammatik.Zielsatz.Faeden.Verbund.T1
+module
+public import Grammatik.Zielsatz.Faeden.Verbund.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

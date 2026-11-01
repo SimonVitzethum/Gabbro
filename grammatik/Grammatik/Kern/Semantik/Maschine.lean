@@ -74,12 +74,15 @@
   continuation objects) and the run-to-`Bau` wiring for `Geteilt.lean`.
 -/
 
-import Grammatik.Kern.Semantik.Maschine.T1
-import Grammatik.Kern.Semantik.Maschine.T2
-import Grammatik.Kern.Semantik.Maschine.T3
-import Grammatik.Kern.Semantik.Maschine.T4
-import Grammatik.Kern.Semantik.Maschine.T5
-import Grammatik.Kern.Semantik.Maschine.T6
-import Grammatik.Kern.Semantik.Maschine.T7
-import Grammatik.Kern.Semantik.Maschine.T8
-import Grammatik.Kern.Semantik.Maschine.T9
+module
+public import Grammatik.Kern.Semantik.Maschine.T1
+public import Grammatik.Kern.Semantik.Maschine.T2
+public import Grammatik.Kern.Semantik.Maschine.T3
+public import Grammatik.Kern.Semantik.Maschine.T4
+public import Grammatik.Kern.Semantik.Maschine.T5
+public import Grammatik.Kern.Semantik.Maschine.T6
+public import Grammatik.Kern.Semantik.Maschine.T7
+public import Grammatik.Kern.Semantik.Maschine.T8
+public import Grammatik.Kern.Semantik.Maschine.T9
+@[expose] public section
+

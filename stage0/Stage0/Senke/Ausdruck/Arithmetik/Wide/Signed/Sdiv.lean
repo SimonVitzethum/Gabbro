@@ -9,7 +9,10 @@
   every pair of operands in the signed `k`-limb range, so the quotient of the minimum by `-1`
   appears with the minimum's encoding; the typing excludes a result that does not fit.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Cond
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Cond
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

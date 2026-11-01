@@ -7,7 +7,10 @@
   marked conditional. A universal stack implementation must discharge this obstruction
   rather than changing the classifier to accept it.
 -/
-import Grammatik.Berechenbarkeit.RecursionBoundary
+module
+public import Grammatik.Berechenbarkeit.RecursionBoundary
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.AdmissionBoundary
 

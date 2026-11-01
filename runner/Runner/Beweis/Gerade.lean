@@ -1,5 +1,8 @@
-import Runner.Beweis.Sim
-import Runner.Beweis.BV
+module
+public import Runner.Beweis.Sim
+public import Runner.Beweis.BV
+@[expose] public section
+
 
 /-! # Matching the two request trees of a straight handler
 

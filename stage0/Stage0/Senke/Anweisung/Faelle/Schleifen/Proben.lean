@@ -1,7 +1,10 @@
 /- Runtime images for overflow blocks the source reader cannot construct, and forever fuel witnesses. -/
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.LoopProbe
 open Gabbro.Grammatik Runner.IR

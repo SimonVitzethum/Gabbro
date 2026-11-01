@@ -5,37 +5,40 @@
              `lo`; where G ends in a logic outcome, the code stops with its `exit_group` code. G answers nothing
              outside the outcomes described by `Sim`, including two-way function returns.
 -/
-import Stage0.Senke.Anweisung.Schreiben
-import Stage0.Senke.Welt.Spans.CellStore
-import Stage0.Senke.Welt.WordCell
-import Stage0.Senke.Sperre.Satz
-import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
-import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.Wahl
-import Stage0.Senke.Anweisung.Option
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.Why
-import Stage0.Senke.Anweisung.Faelle.CallElse
-import Stage0.Senke.Anweisung.Faelle.Fnptr
-import Stage0.Senke.Anweisung.Bytes.Shift
-import Stage0.Senke.Anweisung.Bytes.Put
+module
+public import Stage0.Senke.Anweisung.Schreiben
+public import Stage0.Senke.Welt.Spans.CellStore
+public import Stage0.Senke.Welt.WordCell
+public import Stage0.Senke.Sperre.Satz
+public import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
+public import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Wahl
+public import Stage0.Senke.Anweisung.Option
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Why
+public import Stage0.Senke.Anweisung.Faelle.CallElse
+public import Stage0.Senke.Anweisung.Faelle.Fnptr
+public import Stage0.Senke.Anweisung.Bytes.Shift
+public import Stage0.Senke.Anweisung.Bytes.Put
 
-import Stage0.Senke.Anweisung.Faelle.Schreiben
-import Stage0.Senke.Anweisung.Faelle.Speicher
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Emission
-import Stage0.Senke.Anweisung.Faelle.Bloecke
-import Stage0.Senke.Anweisung.Faelle.BlockRuf
-import Stage0.Senke.Anweisung.Faelle.Ende
-import Stage0.Senke.Anweisung.Faelle.EndRuf
-import Stage0.Senke.Anweisung.Faelle.EndWahl
-import Stage0.Senke.Anweisung.Faelle.EndFehler
-import Stage0.Senke.Anweisung.Faelle.EndAtomar
+public import Stage0.Senke.Anweisung.Faelle.Schreiben
+public import Stage0.Senke.Anweisung.Faelle.Speicher
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Emission
+public import Stage0.Senke.Anweisung.Faelle.Bloecke
+public import Stage0.Senke.Anweisung.Faelle.BlockRuf
+public import Stage0.Senke.Anweisung.Faelle.Ende
+public import Stage0.Senke.Anweisung.Faelle.EndRuf
+public import Stage0.Senke.Anweisung.Faelle.EndWahl
+public import Stage0.Senke.Anweisung.Faelle.EndFehler
+public import Stage0.Senke.Anweisung.Faelle.EndAtomar
 
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.NarrowCases
-import Stage0.Senke.Anweisung.Faelle.BlockFehler
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.NarrowCases
+public import Stage0.Senke.Anweisung.Faelle.BlockFehler
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

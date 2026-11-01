@@ -1,5 +1,8 @@
-import Bruecke.Quelle
-import Duty.Duty73SugarWidths
+module
+public import Bruecke.Quelle
+public import Duty.Duty73SugarWidths
+@[expose] public section
+
 
 /-! BRIDGE-GENERIC beispiele/73-sugar-widths.gab nutzer
 

@@ -96,9 +96,12 @@
   for nested constructs (C6); `exec_sicher` consumes both. The person's own logic is
   never discharged here: it is the `¬ LogikB` / duty premises, in the open, per unit.
 -/
-import Gabbro.Body
-import Gabbro.Coverage
-import Gabbro.Sicherheit.Anweisung
+module
+public import Gabbro.Body
+public import Gabbro.Coverage
+public import Gabbro.Sicherheit.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Komposition
 

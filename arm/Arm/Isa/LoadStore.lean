@@ -4,7 +4,10 @@
              instructions, from decoded fields to `Eff Unit`.
              Agent 15 writes the decoder; this file is the `execute` side.
 -/
-import Arm.Isa.Addr
+module
+public import Arm.Isa.Addr
+@[expose] public section
+
 
 namespace Arm
 

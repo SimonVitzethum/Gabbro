@@ -1,8 +1,11 @@
 /-
   Subject: Full word reason dispatch and its simulation of G's execGrund.
 -/
-import Stage0.Senke.Anweisung.Faelle.Tag
-import Stage0.Senke.Anweisung.Faelle.Kontext
+module
+public import Stage0.Senke.Anweisung.Faelle.Tag
+public import Stage0.Senke.Anweisung.Faelle.Kontext
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

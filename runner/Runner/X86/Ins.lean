@@ -1,4 +1,7 @@
-import Runner.Basis.Res
+module
+public import Runner.Basis.Res
+@[expose] public section
+
 
 /-! # The x86-64 instructions the runner uses (`PLAN-SELF-HOSTING.md` §2.2)
 

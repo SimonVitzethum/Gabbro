@@ -7,9 +7,12 @@
              ZielOrtInvGrund.lean and ZielOrtStart.lean over `KopfSA`. Opus lane O25b,
              2026-09-26. Standalone.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarW
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Speichermodell.Atomar.AtomarW
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

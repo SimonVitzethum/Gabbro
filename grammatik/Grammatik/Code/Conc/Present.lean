@@ -1,5 +1,8 @@
-import Grammatik.Code.Lower.Rep
-import Grammatik.Speichermodell.Atomar.AtomarLauf
+module
+public import Grammatik.Code.Lower.Rep
+public import Grammatik.Speichermodell.Atomar.AtomarLauf
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/Present.lean

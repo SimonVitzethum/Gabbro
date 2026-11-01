@@ -1,5 +1,8 @@
-import Grammatik.Logik.WP.Kern
-import Grammatik.Logik.Vertraege.HandlerKongruenz
+module
+public import Grammatik.Logik.WP.Kern
+public import Grammatik.Logik.Vertraege.HandlerKongruenz
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: calls and recursion

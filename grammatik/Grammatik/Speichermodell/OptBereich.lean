@@ -15,7 +15,10 @@
   plus the free-sentinel case `optBits_gleich_wenn_luft`). No Arm
   instruction facts (rule 7 N/A, recorded in CUTS).
 -/
-import Grammatik.Speichermodell.Darstellung
+module
+public import Grammatik.Speichermodell.Darstellung
+@[expose] public section
+
 
 namespace Grammatik.Speichermodell.OptBereich
 

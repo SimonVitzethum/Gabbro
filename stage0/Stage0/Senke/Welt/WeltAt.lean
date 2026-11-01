@@ -1,6 +1,9 @@
 /- Complete canonical world values at typed physical addresses. Full-span bounds
    and separation protect every limb; frame changes preserve recursive validity. -/
-import Stage0.Senke.Ausdruck.Sim
+module
+public import Stage0.Senke.Ausdruck.Sim
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

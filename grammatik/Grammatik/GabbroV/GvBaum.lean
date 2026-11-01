@@ -15,10 +15,13 @@
    failure). Witness: a real leaf deletion on a concrete 3-node tree;
    planted failure: deleting a non-leaf is not covered.
 -/
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.GabbroV.GvTreeParent
-import Grammatik.GabbroV.GvStore
-import Grammatik.GabbroV.GvVerkettung
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.GabbroV.GvTreeParent
+public import Grammatik.GabbroV.GvStore
+public import Grammatik.GabbroV.GvVerkettung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV
 

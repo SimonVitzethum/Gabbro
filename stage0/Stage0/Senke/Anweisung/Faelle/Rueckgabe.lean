@@ -1,5 +1,8 @@
 /- End-block simulation and its structural operations. -/
-import Stage0.Senke.Anweisung.Simulation
+module
+public import Stage0.Senke.Anweisung.Simulation
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

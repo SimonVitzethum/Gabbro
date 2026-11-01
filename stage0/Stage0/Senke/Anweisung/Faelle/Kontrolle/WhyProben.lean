@@ -1,8 +1,11 @@
 /-
   Subject: Joint witnesses of normal and reason call premises, including false ensures on reason paths.
 -/
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
-import Stage0.Senke.Anweisung.Faelle.CallElse
+module
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Anweisung.Faelle.CallElse
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.WhyProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -21,9 +21,12 @@
     KostenG.lean over GX segments: a thread's step count depends on its own frames only, which a
     GX step moves exactly as its inner G step does.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
-import Grammatik.Logik.Fortschritt.KostenG
-import Grammatik.Speichermodell.Atomar.AtomarLauf
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Speichermodell.Atomar.AtomarLauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

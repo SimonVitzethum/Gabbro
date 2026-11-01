@@ -38,10 +38,13 @@
   with the concrete checker `akzeptiert_pruefer`: every leg of `Ziel` at a machine of
   `mP.mitRuhe` with changed memory.
 -/
-import Grammatik.Zielsatz.Kern.SpecProben
-import Grammatik.Zielsatz.Faeden.RuheZeuge
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
-import Grammatik.Zielsatz.Kern.Beweis
+module
+public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Faeden.RuheZeuge
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
+public import Grammatik.Zielsatz.Kern.Beweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

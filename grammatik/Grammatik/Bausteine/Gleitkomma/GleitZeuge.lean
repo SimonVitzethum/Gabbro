@@ -25,7 +25,10 @@
   * `laufDurchNull`: `1 / 0` is infinite, not finite, and falls into the
     range check's failure branch (`logik bereich`) -- floats stay FINITE.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

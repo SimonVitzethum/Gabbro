@@ -1,7 +1,10 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
-import Stage0.Senke.Anweisung.Faelle.Kontext
-import Stage0.Senke.Anweisung.FehlerLauf
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontext
+public import Stage0.Senke.Anweisung.FehlerLauf
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

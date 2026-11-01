@@ -1,5 +1,8 @@
 /- Complete canonical value results for scalar integer expression lowering. -/
-import Stage0.Senke.Ausdruck.Satz
+module
+public import Stage0.Senke.Ausdruck.Satz
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

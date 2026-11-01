@@ -20,7 +20,10 @@
       some valid program exists; the canonical set has (number of realizable cells). Single-fault refusals are
       exactly the tests the bad cells need, and valid programs may share all good cells.
 -/
-import Grammatik.Adaequanz.Ueberdeckung
+module
+public import Grammatik.Adaequanz.Ueberdeckung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

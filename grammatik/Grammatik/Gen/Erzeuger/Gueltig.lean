@@ -29,8 +29,11 @@
   (C) `valid (h.programm) → bounds → h.programm ∈ genGueltig .. (groesseHaut h)`, the same for `NurAn`, and the
       union over the size bound (`gueltig_alle`, `bad_alle`).
 -/
-import Grammatik.Gen.Erzeuger.Programm
-import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+module
+public import Grammatik.Gen.Erzeuger.Programm
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

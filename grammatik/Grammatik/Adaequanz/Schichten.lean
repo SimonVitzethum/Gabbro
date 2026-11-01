@@ -16,7 +16,10 @@
   `|W| * (n + sum_k n ^ ar k)`: the access trees and the cells, each in each distinguishing context. The lists
   may repeat a tree, so the SET is at most this long.
 -/
-import Grammatik.Adaequanz.Baum
+module
+public import Grammatik.Adaequanz.Baum
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

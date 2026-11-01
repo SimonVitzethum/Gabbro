@@ -11,7 +11,10 @@
   `Parser/Lexer.lean`). The decided round trip `print_parse` lives
   in `Parser/Ausdruck.lean`.
 -/
-import Grammatik.Parser.Expr.Ausdruck
+module
+public import Grammatik.Parser.Expr.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

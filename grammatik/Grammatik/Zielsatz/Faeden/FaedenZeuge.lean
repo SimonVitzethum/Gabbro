@@ -25,9 +25,12 @@
     that holds a lock a joining starter; instantiated on probe B's run where thread 0 holds the
     lock (`start_unter_sperre_zeuge`).
 -/
-import Grammatik.Zielsatz.Faeden.FaedenVor
-import Grammatik.Zielsatz.Faeden.PoolZeuge
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
+module
+public import Grammatik.Zielsatz.Faeden.FaedenVor
+public import Grammatik.Zielsatz.Faeden.PoolZeuge
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

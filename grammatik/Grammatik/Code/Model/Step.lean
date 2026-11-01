@@ -1,4 +1,7 @@
-import Grammatik.Code.Model.Semantics
+module
+public import Grammatik.Code.Model.Semantics
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Step.lean

@@ -1,6 +1,9 @@
 /- Relate the kernel's exact binary64 comparison to signed magnitude ordering. -/
-import Stage0.Senke.Ausdruck.Gleit.Wort
-import Grammatik.Logik.Vertraege.EinpassenVoll
+module
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+public import Grammatik.Logik.Vertraege.EinpassenVoll
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gabbro.Grammatik.Gleitkomma

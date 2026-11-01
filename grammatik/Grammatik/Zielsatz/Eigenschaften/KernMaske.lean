@@ -41,7 +41,10 @@
   (Code/Conc/KernMaske.lean); handler re-entry and handler-on-handler preemption (a handler runs
   once, and no other thread of its core steps meanwhile, exactly as in `KernPlan`).
 -/
-import Grammatik.Zielsatz.Eigenschaften.Masken
+module
+public import Grammatik.Zielsatz.Eigenschaften.Masken
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

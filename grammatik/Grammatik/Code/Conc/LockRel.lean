@@ -1,4 +1,7 @@
-import Grammatik.Code.Conc.Lock
+module
+public import Grammatik.Code.Conc.Lock
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/LockRel.lean

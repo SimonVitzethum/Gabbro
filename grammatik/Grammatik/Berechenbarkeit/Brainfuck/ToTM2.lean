@@ -6,8 +6,11 @@
   local state is one byte; labels have the program's finite size. This is an intermediate
   compilation theorem, not yet the missing implementation of these stacks in Gabbro.
 -/
-import Grammatik.Berechenbarkeit.Brainfuck.Machine
-import Mathlib.Computability.TuringMachine.Computable
+module
+public import Grammatik.Berechenbarkeit.Brainfuck.Machine
+public import Mathlib.Computability.TuringMachine.Computable
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Brainfuck
 

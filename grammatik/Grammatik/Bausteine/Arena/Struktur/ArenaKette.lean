@@ -20,7 +20,10 @@
   The refusal is modelled by `push_doppelt_bricht`: pushing the head again makes a self loop, so no
   chain exists.
 -/
-import Mathlib.Data.List.Perm.Basic
+module
+public import Mathlib.Data.List.Perm.Basic
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaKette
 

@@ -1,5 +1,8 @@
 /- Part 6 of 10 of `RufAdaequatRufG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufAdaequatRufG.lean` imports all parts). -/
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T5
+module
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T5
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

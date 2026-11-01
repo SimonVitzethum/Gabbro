@@ -8,7 +8,10 @@
              model (agent 07) is a predicate on. Consistency itself is NOT
              defined here.
 -/
-import Arm.Mem.Trace
+module
+public import Arm.Mem.Trace
+@[expose] public section
+
 
 namespace Arm
 

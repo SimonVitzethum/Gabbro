@@ -4,8 +4,11 @@
              (`e_gueltig`) and that it has the fine cells listed (`e_hatF`), both decided by the kernel. The text is
              untrusted; the kernel checks it.
 -/
-import Grammatik.Gen.Druck.LeanZeuge
-import Grammatik.Gen.Fein.Zellen
+module
+public import Grammatik.Gen.Druck.LeanZeuge
+public import Grammatik.Gen.Fein.Zellen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

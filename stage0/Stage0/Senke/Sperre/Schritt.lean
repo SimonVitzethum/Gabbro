@@ -4,10 +4,13 @@
              hold `f`, the lock's three words at `a` hold owner, count and waiters, and apart from both the memory
              is the one the code started in (`AgreeK`). Each lemma runs instruction `i` of the code `code` at `pc`.
 -/
-import Stage0.Senke.Sperre.Code
-import Stage0.Senke.Umgebung
-import Stage0.Senke.Hilfe
-import Stage0.Senke.Welt.Schreib
+module
+public import Stage0.Senke.Sperre.Code
+public import Stage0.Senke.Umgebung
+public import Stage0.Senke.Hilfe
+public import Stage0.Senke.Welt.Schreib
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

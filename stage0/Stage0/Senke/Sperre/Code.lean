@@ -6,8 +6,11 @@
              count - 1; at 0 `cas owner me -> 0` and `futex_wake` when there are waiters. `meC` computes the thread's
              number from its frame: `(fp - sb) / st + 1`.
 -/
-import Stage0.Senke.Ausdruck
-import Stage0.Senke.Stopp
+module
+public import Stage0.Senke.Ausdruck
+public import Stage0.Senke.Stopp
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -1,6 +1,9 @@
 /- Signed magnitude extraction without signed overflow, including -2^63. -/
-import Stage0.Senke.Ausdruck.Gleit.Komposition
-import Stage0.Senke.Ausdruck.Eng
+module
+public import Stage0.Senke.Ausdruck.Gleit.Komposition
+public import Stage0.Senke.Ausdruck.Eng
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

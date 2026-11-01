@@ -1,6 +1,9 @@
-import Grammatik.Code.Refine.Loops.Traverse
-import Grammatik.Code.Refine.Calls.CallDef
-import Grammatik.Code.Refine.Match.Opt
+module
+public import Grammatik.Code.Refine.Loops.Traverse
+public import Grammatik.Code.Refine.Calls.CallDef
+public import Grammatik.Code.Refine.Match.Opt
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/Scope.lean

@@ -1,4 +1,7 @@
-import Runner.Basis.Res
+module
+public import Runner.Basis.Res
+@[expose] public section
+
 
 /-! # `S0IR`: the instructions and their small-step semantics (`PLAN-SELF-HOSTING.md` §2.1.3)
 

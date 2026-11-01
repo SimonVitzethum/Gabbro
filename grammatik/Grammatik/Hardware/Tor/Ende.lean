@@ -29,6 +29,10 @@
   No `sorry`, no `native_decide`, no new axiom.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Tor
 
 /-! ## 1. Process exit -/

@@ -1,6 +1,9 @@
 /- Frame facts for expression binders. -/
-import Stage0.Senke.Ausdruck.Lesen
-import Stage0.Senke.Ausdruck.Quant.Literal
+module
+public import Stage0.Senke.Ausdruck.Lesen
+public import Stage0.Senke.Ausdruck.Quant.Literal
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

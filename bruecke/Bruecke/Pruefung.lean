@@ -1,4 +1,7 @@
-import Bruecke.Simulation
+module
+public import Bruecke.Simulation
+@[expose] public section
+
 
 /-!
 # S3, part 7: the per-unit conditions as Bool checks, with their soundness

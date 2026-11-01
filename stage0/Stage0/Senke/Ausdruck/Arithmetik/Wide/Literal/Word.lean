@@ -6,9 +6,12 @@
   `BitVec.ofInt 64 n` in slot `d` and touches only slots `d` and `d+1`. Here that effect is stated on the
   straight-line executor, which is where the multiword kernels compose it.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Alu
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Piece
-import Stage0.Senke.Ausdruck.Gleit.Wort
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Alu
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Piece
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

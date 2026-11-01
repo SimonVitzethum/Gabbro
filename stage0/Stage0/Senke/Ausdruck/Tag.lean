@@ -2,7 +2,10 @@
   File:      stage0/Stage0/Senke/Ausdruck/Tag.lean
   Subject:   An injective word representation for tagged values: tag + 256 * payload offset.
 -/
-import Stage0.Senke.Ausdruck.Gleit.Wort
+module
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

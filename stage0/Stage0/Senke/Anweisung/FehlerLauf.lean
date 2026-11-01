@@ -4,7 +4,10 @@
              answers each meet the code: a value runs on to the rest, a reason jumps to the `else` block with the case
              in slot `frei Γ`, no answer stops with 110.
 -/
-import Stage0.Senke.Anweisung.Fehler
+module
+public import Stage0.Senke.Anweisung.Fehler
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

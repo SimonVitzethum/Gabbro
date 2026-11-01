@@ -10,9 +10,12 @@
   * `rufRel_massTor` -- the measure gates of `D` and `D.mitRuhe` answer alike; with the label of a descent read back
     (`rufZ`, `LogikTreu`), a descent of the lifted body is a descent of the body.
 -/
-import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
-import Grammatik.Logik.Terminierung.Entscheidung
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+module
+public import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
+public import Grammatik.Logik.Terminierung.Entscheidung
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

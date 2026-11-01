@@ -1,6 +1,9 @@
 /- Bounded optional-index chains against G's kette. -/
-import Stage0.Senke.Ausdruck.Wenn
-import Stage0.Senke.Ausdruck.Lesen
+module
+public import Stage0.Senke.Ausdruck.Wenn
+public import Stage0.Senke.Ausdruck.Lesen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

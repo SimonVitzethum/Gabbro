@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.CallStep
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.CallStep
+@[expose] public section
+
 
 /-! Calls through a function pointer. The target is chosen at run time among
 the functions whose signature fits the pointer's signature number. Such a

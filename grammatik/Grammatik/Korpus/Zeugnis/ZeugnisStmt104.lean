@@ -12,7 +12,10 @@
   probe bodies. The `beispiele/104-referenz.gab` bodies themselves are
   REFUSED by the printer -- section 3 records the exact output.
 -/
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt2
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

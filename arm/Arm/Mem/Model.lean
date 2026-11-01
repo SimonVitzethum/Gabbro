@@ -7,7 +7,10 @@
              `aarch64.cat` from knowledge, not a measured copy). Initial
              writes sit on core 9 (a pseudo-core distinct from the actors).
 -/
-import Arm.Mem.Axiomatic
+module
+public import Arm.Mem.Axiomatic
+@[expose] public section
+
 
 namespace Arm
 

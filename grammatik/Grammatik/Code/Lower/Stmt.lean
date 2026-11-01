@@ -1,5 +1,8 @@
-import Grammatik.Code.Lower.Expr
-import Grammatik.Code.Lower.Fail
+module
+public import Grammatik.Code.Lower.Expr
+public import Grammatik.Code.Lower.Fail
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Lower/Stmt.lean

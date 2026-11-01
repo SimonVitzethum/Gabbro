@@ -26,7 +26,10 @@
   following the file conventions (no `sorry`/`admit`/`axiom`/
   `native_decide`/`unsafe`; every premise used).
 -/
-import Grammatik.Parser.Round.Rundlauf
+module
+public import Grammatik.Parser.Round.Rundlauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

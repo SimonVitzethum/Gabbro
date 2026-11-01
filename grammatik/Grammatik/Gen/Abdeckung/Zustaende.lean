@@ -6,7 +6,10 @@
              proof arguments), so the register members they carry are covered by an enumeration of their own and the
              coverage report names them as such.
 -/
-import Grammatik.Bausteine.Arena.ArenaDyn
+module
+public import Grammatik.Bausteine.Arena.ArenaDyn
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

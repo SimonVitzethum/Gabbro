@@ -6,8 +6,11 @@
   `2^20` (`CodeFar`). Operands in slots 8 .. 11: the dividend `2^127 + 2^100 + 12345` and the divisor
   `2^65 + 3`; the quotient is one limb, the remainder crosses the limb boundary.
 -/
-import Stage0.Senke.BildLese
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Run
+module
+public import Stage0.Senke.BildLese
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Run
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.DivideProbe
 open Runner.IR Runner.Mem

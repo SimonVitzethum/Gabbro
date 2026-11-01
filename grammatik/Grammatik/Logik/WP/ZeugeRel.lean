@@ -1,5 +1,8 @@
-import Grammatik.Logik.WP.Relational
-import Grammatik.Logik.WP.Zeuge
+module
+public import Grammatik.Logik.WP.Relational
+public import Grammatik.Logik.WP.Zeuge
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: a relational witness

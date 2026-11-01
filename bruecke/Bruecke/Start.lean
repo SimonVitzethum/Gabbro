@@ -1,5 +1,8 @@
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Parser.Elab.UebersetzeAllg2
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Parser.Elab.UebersetzeAllg2
+@[expose] public section
+
 
 /-!
 # S4 (start part): `StartPflicht` for a unit whose starts owe nothing

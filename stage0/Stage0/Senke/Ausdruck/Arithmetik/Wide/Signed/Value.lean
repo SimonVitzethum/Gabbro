@@ -2,7 +2,10 @@
   File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Signed/Value.lean
   Subject:   `wideSdivC` computes `Int.tdiv` and `Int.tmod` on canonical limbs.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Run
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Run
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

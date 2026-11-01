@@ -33,8 +33,11 @@
     of a waiting thread ranks strictly below the lock its holder waits for,
     and ranks are bounded on finitely many locks.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

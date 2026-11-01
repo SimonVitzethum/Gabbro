@@ -11,7 +11,10 @@
   is an expressiveness boundary, not a proof of Turing completeness: a complete simulation
   still has to implement communicating push/pop stacks and transfer observable results.
 -/
-import Grammatik.Logik.Terminierung.KlasseZeuge
+module
+public import Grammatik.Logik.Terminierung.KlasseZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.RecursionBoundary
 

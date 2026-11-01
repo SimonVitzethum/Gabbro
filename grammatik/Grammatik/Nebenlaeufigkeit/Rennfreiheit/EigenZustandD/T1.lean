@@ -8,10 +8,13 @@
   rule of `PCSchritt`); a leaf whose recorded events carry no `Sum.inl t`
   keeps the slots of `t`; take/release steps keep memory by construction.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Satz
-import Grammatik.Proben.BlattGegenbeispiel
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Satz
+public import Grammatik.Proben.BlattGegenbeispiel
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.EZD
 

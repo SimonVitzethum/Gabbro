@@ -1,5 +1,8 @@
 /- Shared scalar interval predicates for expression and statement lowering. -/
-import Stage0.Senke.Ausdruck.Gleit.Wort
+module
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

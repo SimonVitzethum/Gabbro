@@ -5,7 +5,10 @@
   Every limb becomes `fM limb r | fX (fX neighbour 1) (63 - r)` of the ORIGINAL limbs; the order of
   the sequence guarantees that the neighbour has not been rewritten when it is read.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Stages
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Stages
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

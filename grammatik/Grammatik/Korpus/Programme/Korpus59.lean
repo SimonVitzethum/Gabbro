@@ -24,7 +24,10 @@
   effects. No lock invariant is declared in the source, so the family is
   trivially true (owed nowhere).
 -/
-import Grammatik.Zielsatz.Kern.Proben
+module
+public import Grammatik.Zielsatz.Kern.Proben
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

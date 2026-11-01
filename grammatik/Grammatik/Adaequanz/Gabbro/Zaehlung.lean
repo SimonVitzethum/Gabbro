@@ -25,7 +25,10 @@
   refused); per invariant its predicate; per function the handler flag. A presentation state per root child is
   its synthesized value or `refused`, so the root cells are the product (`wurzelZellen`).
 -/
-import Grammatik.Gen.Familie.Familie
+module
+public import Grammatik.Gen.Familie.Familie
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz.GabbroZahl
 

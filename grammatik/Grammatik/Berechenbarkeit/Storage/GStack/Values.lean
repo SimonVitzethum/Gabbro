@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Unbounded.Realization
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
+module
+public import Grammatik.Bausteine.Arena.Unbounded.Realization
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
+@[expose] public section
+
 
 /-! Payload-sensitive stack representation in the EXISTING G world. This
 connects the heap backend's observable stack values to the executed linked-list

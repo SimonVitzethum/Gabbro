@@ -27,8 +27,11 @@
   premise "no `locks` block" through the correspondence certificate; here it is decided on the
   parsed bodies. Tag `archiv/c-emitter-2026-10-17` holds the chain.)
 -/
-import Grammatik.Korpus.Programme.Einheit104
-import Grammatik.Korpus.Programme.Einheit108
+module
+public import Grammatik.Korpus.Programme.Einheit104
+public import Grammatik.Korpus.Programme.Einheit108
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Einheit104
 

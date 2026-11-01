@@ -31,8 +31,11 @@
   die bleiben sollen.* `SYNTAX.md` §16 zaehlt auf, was daraus folgt und was nicht.
 -/
 
-import Grammatik.Kern.Syntax.Satz.T1
-import Grammatik.Kern.Syntax.Satz.T2
-import Grammatik.Kern.Syntax.Satz.T3
-import Grammatik.Kern.Syntax.Satz.T4
-import Grammatik.Kern.Syntax.Satz.T5
+module
+public import Grammatik.Kern.Syntax.Satz.T1
+public import Grammatik.Kern.Syntax.Satz.T2
+public import Grammatik.Kern.Syntax.Satz.T3
+public import Grammatik.Kern.Syntax.Satz.T4
+public import Grammatik.Kern.Syntax.Satz.T5
+@[expose] public section
+

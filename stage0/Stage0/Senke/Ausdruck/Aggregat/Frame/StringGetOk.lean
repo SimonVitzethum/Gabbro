@@ -1,7 +1,10 @@
 /- Subject: Generic correctness of byte access to a string of capacity at least two with any scalar index. -/
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
-import Stage0.Senke.Ausdruck.Aggregat.StringOps
-import Stage0.Senke.Ausdruck.Eng
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
+public import Stage0.Senke.Ausdruck.Aggregat.StringOps
+public import Stage0.Senke.Ausdruck.Eng
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

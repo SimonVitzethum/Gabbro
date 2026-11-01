@@ -3,8 +3,11 @@
   Subject:   The witness `M169_350` at the text level: its printed text reads back as a program with its cells and its
              verdict. Decided by the kernel (the text is never lexed: `ausText_druckB`).
 -/
-import Grammatik.Gen.Text.Pruefung
-import Grammatik.Gen.Zeugen.M.M169_350
+module
+public import Grammatik.Gen.Text.Pruefung
+public import Grammatik.Gen.Zeugen.M.M169_350
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text.Zeugen.M169_350
 

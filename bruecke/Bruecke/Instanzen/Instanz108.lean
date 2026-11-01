@@ -1,10 +1,13 @@
-import Bruecke.Pflichten
-import Bruecke.Pruefung
-import Grammatik.Korpus.Programme.Einheit108
-import Bruecke.Start
-import Bruecke.Atomar
-import Bruecke.Quelle
-import Duty.Duty108DisjointStartLocks
+module
+public import Bruecke.Pflichten
+public import Bruecke.Pruefung
+public import Grammatik.Korpus.Programme.Einheit108
+public import Bruecke.Start
+public import Bruecke.Atomar
+public import Bruecke.Quelle
+public import Duty.Duty108DisjointStartLocks
+@[expose] public section
+
 
 /-! BRIDGE-INSTANCE beispiele/108-disjoint-start-locks.gab Bruecke.Instanz108
 

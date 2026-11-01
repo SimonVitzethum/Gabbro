@@ -1,5 +1,8 @@
 /- Complete storage writes and exact byte footprints for canonical value spans. -/
-import Stage0.Senke.Welt.Spans.Span
+module
+public import Stage0.Senke.Welt.Spans.Span
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -35,7 +35,11 @@
     NOT        -- no `Prop` over one or two states expresses it, and no extension of `Value`
                   would change that. The reason stands at the row.
 -/
-import Gabbro.Body
+module
+public import Gabbro.Body
+meta import Gabbro.Body
+@[expose] public section
+
 
 set_option autoImplicit false
 

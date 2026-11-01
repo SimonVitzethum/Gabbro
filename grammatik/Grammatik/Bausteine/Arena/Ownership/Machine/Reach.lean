@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Rely
-import Grammatik.Speichermodell.Atomar.AtomarLauf
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Rely
+public import Grammatik.Speichermodell.Atomar.AtomarLauf
+@[expose] public section
+
 
 /-! **Ownership on every reachable machine: G, GA and GX.** On machine G the
 invariant holds at the start and every step keeps it. Machines GA and GX

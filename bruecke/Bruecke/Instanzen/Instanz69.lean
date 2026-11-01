@@ -1,5 +1,8 @@
-import Bruecke.Quelle
-import Duty.Duty69IntegerConversion
+module
+public import Bruecke.Quelle
+public import Duty.Duty69IntegerConversion
+@[expose] public section
+
 
 /-! BRIDGE-GENERIC beispiele/69-integer-conversion.gab nutzer
 

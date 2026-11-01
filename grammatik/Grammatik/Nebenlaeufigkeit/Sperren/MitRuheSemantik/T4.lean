@@ -1,5 +1,8 @@
 /- Part 4 of 4 of `MitRuheSemantik` (split by instrumente/teile/lean-teilen.py; the umbrella `MitRuheSemantik.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T3
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

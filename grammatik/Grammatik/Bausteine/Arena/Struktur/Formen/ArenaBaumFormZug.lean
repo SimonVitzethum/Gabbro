@@ -8,7 +8,10 @@
   continuation) and the invariant on them (`baum_*_zug`), with the frame (`LinkRahmen`) and the membership facts the
   list/tree combination needs (a slot that leaves the tree was in it, the new members are among the old ones).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormG
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

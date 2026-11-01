@@ -1,6 +1,9 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Head
-import Grammatik.Bausteine.Arena.Ownership.Body.Forms
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Ops
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Head
+public import Grammatik.Bausteine.Arena.Ownership.Body.Forms
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Ops
+@[expose] public section
+
 
 /-! **The ledger when the running activation returns.** The returning
 activation `cf` hands what it owns (at most its owning result) to its caller

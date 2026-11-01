@@ -1,4 +1,7 @@
-import Runner.Beweis.Gerade
+module
+public import Runner.Beweis.Gerade
+@[expose] public section
+
 set_option linter.unusedSimpArgs false
 
 /-! # The straight handlers make the requests of their IR instruction

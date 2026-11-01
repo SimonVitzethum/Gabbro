@@ -12,7 +12,10 @@
              Both are by exact size and complete: a program of bounded pieces is in the stream of its size
              (`hautS_vollst`, `progS_vollst`).
 -/
-import Grammatik.Gen.Erzeuger.Knoten
+module
+public import Grammatik.Gen.Erzeuger.Knoten
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

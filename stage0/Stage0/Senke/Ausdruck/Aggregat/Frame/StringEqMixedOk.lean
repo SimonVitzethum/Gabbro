@@ -1,6 +1,9 @@
 /- Subject: Generic correctness of equality between a packed string and a long string. -/
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

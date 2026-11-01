@@ -1,7 +1,10 @@
 /- Subject: Generic correctness of the equality of two strings of capacity at least two. -/
-import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareOk
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEq
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedOk
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEq
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedOk
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `ReferenzB` (split by instrumente/teile/lean-teilen.py; the umbrella `ReferenzB.lean` imports all parts). -/
-import Grammatik.Korpus.Referenz.ReferenzB.T2
+module
+public import Grammatik.Korpus.Referenz.ReferenzB.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

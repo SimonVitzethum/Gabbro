@@ -6,8 +6,11 @@
   slots 8 and 9, the runtime count in slot 10. The counts 4 and 68 take the sub-limb path across the
   limb boundary and the whole-limb stage plus the sub-limb path, for both directions.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shr
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ShiftProbe
 open Runner.IR Runner.Mem Gabbro.Stage0.Senke.WideProbe

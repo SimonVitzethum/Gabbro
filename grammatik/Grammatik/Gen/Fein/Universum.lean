@@ -9,7 +9,10 @@
   cell of every program is allowed, so a wrong row cannot hide a cell: it stops that proof. `Gen/Fein/Pruefung.lean` reads
   the table off the model again at every build and stops the build when they differ.
 -/
-import Grammatik.Gen.Fein.Zellen
+module
+public import Grammatik.Gen.Fein.Zellen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Post
-import Grammatik.Code.Refine.Struct.Shape
+module
+public import Grammatik.Code.Refine.Post
+public import Grammatik.Code.Refine.Struct.Shape
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Stmt.lean

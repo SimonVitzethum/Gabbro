@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Unbounded.Realization
-import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+module
+public import Grammatik.Bausteine.Arena.Unbounded.Realization
+public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaStorage.Witnesses
 

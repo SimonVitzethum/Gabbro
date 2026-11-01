@@ -1,5 +1,8 @@
 /- Part 5 of 5 of `KostenG` (split by instrumente/teile/lean-teilen.py; the umbrella `KostenG.lean` imports all parts). -/
-import Grammatik.Logik.Fortschritt.KostenG.T4
+module
+public import Grammatik.Logik.Fortschritt.KostenG.T4
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

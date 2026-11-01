@@ -30,9 +30,12 @@
   writes `tafel`; thread 0 reads `R` again (`0`) and returns `0 == 0`. Both
   memory changes lie between the two reads.
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

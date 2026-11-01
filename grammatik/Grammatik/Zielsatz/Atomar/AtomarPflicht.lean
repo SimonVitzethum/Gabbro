@@ -28,9 +28,12 @@
     (`logikPflichtA_iff_akzeptiert`): moving (b) to `LogikPflichtA` drops no program and adds no
     duty where there was none.
 -/
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Speichermodell.Atomar.AtomarRec
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

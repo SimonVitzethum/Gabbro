@@ -35,7 +35,11 @@
     * **Whether a non-vacuous obligation is PROVABLE.** `V1.lean` says the same of itself:
       every row is a definition, not a theorem.
 -/
-import Gabbro.Body
+module
+public import Gabbro.Body
+meta import Gabbro.Body
+@[expose] public section
+
 
 set_option autoImplicit false
 

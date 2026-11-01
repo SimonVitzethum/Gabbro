@@ -3,11 +3,14 @@
   Subject:   The slot an expression's code stops at (`lowE_top`), and the shape of a binary operation's code
              (`bin_some`, `binE_ok`): its two operands, then one instruction.
 -/
-import Stage0.Senke.Ausdruck.Gleit.Grenze
-import Stage0.Senke.Ausdruck.Gleichungen
-import Stage0.Senke.Ausdruck.Sim
-import Stage0.Senke.Ausdruck.Wort
-import Stage0.Senke.Welt.Spans.CellCode
+module
+public import Stage0.Senke.Ausdruck.Gleit.Grenze
+public import Stage0.Senke.Ausdruck.Gleichungen
+public import Stage0.Senke.Ausdruck.Sim
+public import Stage0.Senke.Ausdruck.Wort
+public import Stage0.Senke.Welt.Spans.CellCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

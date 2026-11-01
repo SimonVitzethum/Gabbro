@@ -1,4 +1,7 @@
-import Runner.Prog.Elf
+module
+public import Runner.Prog.Elf
+@[expose] public section
+
 
 /-! # An assembler for `S0IR` images (for probes; the real images come from the stage-0 lowering)
 

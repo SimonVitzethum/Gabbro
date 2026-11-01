@@ -5,11 +5,14 @@
              still there, so the `cas` takes and the loop does not go round (`ex_tail`). The global then holds G's
              new value, the variable G's old one (`exch_ok`).
 -/
-import Stage0.Senke.Anweisung.Simulation
-import Stage0.Senke.Welt.WordCell
-import Stage0.Senke.Anweisung.Puffer
-import Stage0.Senke.Sperre.Nimm
-import Stage0.Senke.Anweisung
+module
+public import Stage0.Senke.Anweisung.Simulation
+public import Stage0.Senke.Welt.WordCell
+public import Stage0.Senke.Anweisung.Puffer
+public import Stage0.Senke.Sperre.Nimm
+public import Stage0.Senke.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -16,7 +16,10 @@
   the range of the result computed like `Expr.add`/`sub`/`mul` carry it; the built-in widths
   `uN`/`iN`; an omitted `effects` (derived by the checker) read as the empty set.
 -/
-import Grammatik.Parser.Elab.UebersetzePipeline
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben
 

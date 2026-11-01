@@ -1,4 +1,7 @@
-import Runner.Prog.Asm
+module
+public import Runner.Prog.Asm
+@[expose] public section
+
 
 /-! # The runner: loader, dispatch, the 27 handlers (`PLAN-SELF-HOSTING.md` §2.1.5)
 

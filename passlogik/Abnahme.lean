@@ -16,7 +16,10 @@
   ALLE Saetze, nicht nur die Hauptsaetze -- die Hauptsaetze tragen ihr `#print axioms`
   ausserdem an Ort und Stelle, direkt unter dem Beweis.
 -/
-import Passlogik
+module
+public import Passlogik
+@[expose] public section
+
 
 
 /-! ## Bereich -- 46 Saetze -/

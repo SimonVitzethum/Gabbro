@@ -22,9 +22,12 @@
     thread wait for ever: no overtaking (FIFO), no lost wake-up (the head of the queue at a free lock can always
     step, by progress), no unfair scheduler (fairness).
 -/
-import Grammatik.Logik.Fortschritt.Lebendigkeit
-import Grammatik.Logik.Fortschritt.PlanLauf
-import Grammatik.Zielsatz.Eigenschaften.Masken
+module
+public import Grammatik.Logik.Fortschritt.Lebendigkeit
+public import Grammatik.Logik.Fortschritt.PlanLauf
+public import Grammatik.Zielsatz.Eigenschaften.Masken
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

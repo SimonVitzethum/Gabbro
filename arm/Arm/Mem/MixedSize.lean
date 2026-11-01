@@ -13,7 +13,10 @@
              (Gabbro's `tearing.rs` is about emitted-C sequences, a different
              level, and is not needed here.)
 -/
-import Arm.Mem.Event
+module
+public import Arm.Mem.Event
+@[expose] public section
+
 
 namespace Arm
 

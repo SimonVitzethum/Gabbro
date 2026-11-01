@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Block
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Block
+@[expose] public section
+
 
 /-! **The allocator forms, one machine step at a time.** Machine G runs the
 executed form of `alloc` as a narrowing bind followed by two leaf stores,

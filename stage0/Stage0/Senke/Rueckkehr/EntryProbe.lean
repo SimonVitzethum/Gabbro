@@ -1,6 +1,9 @@
 /- Joint entry protocol witness: two distinct two-word old values and two-word parameters. -/
-import Stage0.Senke.Rueckkehr.Entry
-import Stage0.Senke.Ausdruck.Old.Distinct
+module
+public import Stage0.Senke.Rueckkehr.Entry
+public import Stage0.Senke.Ausdruck.Old.Distinct
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.EntryProtocolProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

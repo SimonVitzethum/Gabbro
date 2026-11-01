@@ -94,9 +94,12 @@
   No `mathlib`, no `sorry`, no `axiom`.
 -/
 
-import Grammatik.Kern.Syntax.Syntax
-import Grammatik.Kern.Syntax.Ziel
-import Grammatik.Korpus.Zeugnis.Zeugnis
+module
+public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Kern.Syntax.Ziel
+public import Grammatik.Korpus.Zeugnis.Zeugnis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

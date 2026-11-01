@@ -28,5 +28,8 @@
      probe A refuted for the new obligation (`paP_nicht_sperre`).
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T2
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T2
+@[expose] public section
+

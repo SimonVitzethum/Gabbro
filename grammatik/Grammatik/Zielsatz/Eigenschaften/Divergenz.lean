@@ -35,9 +35,12 @@
   No `sorry`, no `axiom`, no `native_decide`, no `unsafe`. No premise whose
   type is `Prop` itself. Every premise is used by its proof.
 -/
-import Grammatik.Zielsatz.Eigenschaften.NeverAsm
-import Grammatik.Logik.Ruf.Maschine.RufMaschineF
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+module
+public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

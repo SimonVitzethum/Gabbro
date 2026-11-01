@@ -5,7 +5,10 @@
              (with fuel above the term's size) builds exactly the plain statements `uOf*` computes from the model
              term, and `uEnde` the trailing return; the fragment keeps the held resources (`Λ' = Λ`).
 -/
-import Grammatik.Gen.Text.Invers.Geraet
+module
+public import Grammatik.Gen.Text.Invers.Geraet
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

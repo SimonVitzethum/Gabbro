@@ -28,8 +28,11 @@
     reach a finished start frame whose `ensures` is `false`
     (`fwP_ende_verletzt`: `¬ StartEndeG`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

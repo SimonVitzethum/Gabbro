@@ -22,8 +22,11 @@
     footprint because the machine kept that footprint outside the callee's
     writes during the call (`rufG_rahmen`, passed to `popR_kopf` as `hRah`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem
-import Grammatik.Logik.Vertraege.AxiomVertrag
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

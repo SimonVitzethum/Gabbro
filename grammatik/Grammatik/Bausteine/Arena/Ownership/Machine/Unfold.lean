@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Alloc
-import Grammatik.Bausteine.Arena.Ownership.Machine.BlockInv
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Alloc
+public import Grammatik.Bausteine.Arena.Ownership.Machine.BlockInv
+@[expose] public section
+
 
 /-! **The unfold steps of the running activation.** A compound statement at
 the head of the residue unfolds into the residue: a branch in front of the

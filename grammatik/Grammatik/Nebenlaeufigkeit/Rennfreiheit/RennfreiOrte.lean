@@ -33,6 +33,9 @@
   for every carrier that is not atomic and not a publish payload.
 -/
 
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T1
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T2
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T3
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T1
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T2
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T3
+@[expose] public section
+

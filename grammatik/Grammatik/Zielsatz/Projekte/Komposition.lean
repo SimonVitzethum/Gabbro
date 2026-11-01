@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Projekte/Komposition.lean

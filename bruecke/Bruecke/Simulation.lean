@@ -1,4 +1,7 @@
-import Bruecke.Realisierung
+module
+public import Bruecke.Realisierung
+@[expose] public section
+
 
 /-!
 # S3: THE SIMULATION THEOREM -- GabbroV's duties give the goal theorem's body obligation

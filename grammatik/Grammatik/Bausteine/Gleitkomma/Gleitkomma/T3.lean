@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `Gleitkomma` (split by instrumente/teile/lean-teilen.py; the umbrella `Gleitkomma.lean` imports all parts). -/
-import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2
+module
+public import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gleitkomma
 

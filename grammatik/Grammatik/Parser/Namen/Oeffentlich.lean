@@ -1,4 +1,7 @@
-import Grammatik.Parser.Namen.Aufloesung
+module
+public import Grammatik.Parser.Namen.Aufloesung
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Parser/Namen/Oeffentlich.lean

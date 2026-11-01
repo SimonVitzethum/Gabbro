@@ -2,6 +2,7 @@
 """Lean module system migration and check (owner rule, 2026-11-01: every Lean source file is a `module`).
 
     lean-module.py --check [PATH...]     list the tracked Lean files that are not modules; exit 1 when there is one
+    lean-module.py --meta-imports [PATH...]  add `meta import X` for every import of a module that has `#eval`/`run_cmd`
     lean-module.py --apply [PATH...]     migrate the given files / folders in place (default: every tracked Lean file)
         --private-imports                keep `import` instead of turning it into `public import`
         --no-expose                      open `public section` without `@[expose]`
@@ -87,6 +88,25 @@ def migrate(t, public=True, expose=True):
     return t[:first] + "module\n" + body + "\n" + attr + "\n" + (tail if tail.startswith("\n") else "\n" + tail)
 
 
+SECTION = re.compile(r"^(@\[expose\] )?public section[ \t]*$", re.M)
+EVAL = re.compile(r"^[ \t]*(#eval|run_cmd|run_elab|run_meta)\b", re.M)
+
+
+def add_meta_imports(t):
+    """A module that evaluates code of an imported module at compile time (`#eval`, `run_cmd`, ...) needs that module
+    as a `meta import` too ("`f` is not accessible here; consider adding `public meta import`"). The lines go in front
+    of the `public section` line. Returns the new text, or None when nothing is to be done."""
+    m = SECTION.search(t)
+    if m is None or not is_module(t) or not EVAL.search(t):
+        return None
+    head = t[:m.start()]
+    have = set(re.findall(r"^meta import[ \t]+(\S+)", head, re.M))
+    names = [n for n in re.findall(r"^(?:public )?import[ \t]+(\S+)", head, re.M) if n not in have]
+    if not names:
+        return None
+    return head + "".join(f"meta import {n}\n" for n in names) + t[m.start():]
+
+
 def tracked_lean():
     names = subprocess.check_output(["git", "ls-files", "*.lean"], cwd=ROOT, text=True).split("\n")
     return [ROOT / n for n in names if n and Path(n).name not in NOT_MODULES]
@@ -108,7 +128,7 @@ def expand(paths):
 
 
 def main(argv):
-    mode = "--check" if "--check" in argv else "--apply" if "--apply" in argv else None
+    mode = next((m for m in ("--check", "--apply", "--meta-imports") if m in argv), None)
     paths = [a for a in argv if not a.startswith("--")]
     if mode is None:
         print(__doc__)
@@ -117,6 +137,12 @@ def main(argv):
     schlecht, n = [], 0
     for f in files:
         t = f.read_text(encoding="utf-8")
+        if mode == "--meta-imports":
+            r = add_meta_imports(t) if is_module(t) else None
+            if r is not None:
+                f.write_text(r, encoding="utf-8")
+                n += 1
+            continue
         if is_module(t):
             continue
         if mode == "--check":
@@ -127,6 +153,9 @@ def main(argv):
             continue
         f.write_text(r, encoding="utf-8")
         n += 1
+    if mode == "--meta-imports":
+        print(f"lean-module: added meta imports to {n} of {len(files)} files")
+        return 0
     if mode == "--check":
         for f in schlecht[:20]:
             print(f"not a module: {f.relative_to(ROOT)}")

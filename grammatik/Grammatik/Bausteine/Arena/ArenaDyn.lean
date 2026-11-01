@@ -15,8 +15,11 @@
   here. The virtual region is the arena block's `Fin M` index set, the
   committed prefix the `Fin c` usable part.
 -/
-import Grammatik.Korpus.Referenz.ReferenzB
-import Grammatik.Bausteine.Arena.ArenaZucker
+module
+public import Grammatik.Korpus.Referenz.ReferenzB
+public import Grammatik.Bausteine.Arena.ArenaZucker
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaDyn
 

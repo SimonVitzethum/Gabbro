@@ -29,9 +29,12 @@
     accepted; there is no link declaration for the pair (`¬ Verbindbar`, at `ensures`) -- the
     Rust `N502`.
 -/
-import Grammatik.Zielsatz.Faeden.Verbund
-import Grammatik.Zielsatz.Faeden.PoolZeuge
-import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
+module
+public import Grammatik.Zielsatz.Faeden.Verbund
+public import Grammatik.Zielsatz.Faeden.PoolZeuge
+public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik

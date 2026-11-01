@@ -1,4 +1,7 @@
-import Stage0.Profil
+module
+public import Stage0.Profil
+@[expose] public section
+
 namespace Gabbro.Stage0.Profil
 open Gabbro.Grammatik.Parser
 example : (parseOptions ["--target", "metal", "--arch", "x86_64"] {}).toOption.map (·.target) =

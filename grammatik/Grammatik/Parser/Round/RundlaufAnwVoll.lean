@@ -26,7 +26,10 @@
   (`a::f(x)`, `p->f(x)`: the printer prints the text of the callee), `let ... else` with `mut`
   (the form has no `mut`), raw texts with braces, `;`, or stop words inside.
 -/
-import Grammatik.Parser.Round.RundlaufQuant
+module
+public import Grammatik.Parser.Round.RundlaufQuant
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

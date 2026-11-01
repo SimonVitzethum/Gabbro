@@ -21,6 +21,10 @@
     (`bl` pushes nothing, it writes `x30`), against x86's `rsp + 8`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik
 
 namespace Arm

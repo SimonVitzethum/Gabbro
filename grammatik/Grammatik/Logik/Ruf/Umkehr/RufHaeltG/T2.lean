@@ -1,5 +1,8 @@
 /- Part 2 of 3 of `RufHaeltG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufHaeltG.lean` imports all parts). -/
-import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
+module
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

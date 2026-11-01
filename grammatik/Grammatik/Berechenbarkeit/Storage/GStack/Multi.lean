@@ -1,4 +1,7 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Push
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Push
+@[expose] public section
+
 
 /-! Several G stacks in ONE arena: one head per stack, one shared link field, pairwise disjoint chains of live
 cells. This is the storage a TM2 machine with several stacks needs (`Turing.TM2`, one stack per index). The theorems

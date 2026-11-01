@@ -240,22 +240,25 @@
   SperreMaschine, Verklemmung, RennfreiVoll, KostenG, …), and the import closure includes witness files. To do:
   every definition this file reads out of its proof file.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-import Grammatik.Logik.Fortschritt.KostenG
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
-import Grammatik.Logik.Vertraege.AntwortOrte
-import Grammatik.Speichermodell.Maschine.MaschineW
-import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
-import Grammatik.Speichermodell.Maschine.GXMaschine
-import Grammatik.Logik.Fortschritt.Folge
-import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
-import Grammatik.Logik.Fortschritt.PlanLauf
-import Grammatik.Logik.Fortschritt.Warten
-import Grammatik.Speichermodell.Adressen.Layout
-import Grammatik.Logik.Terminierung.LaufGX
-import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
-import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
+public import Grammatik.Logik.Vertraege.AntwortOrte
+public import Grammatik.Speichermodell.Maschine.MaschineW
+public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
+public import Grammatik.Speichermodell.Maschine.GXMaschine
+public import Grammatik.Logik.Fortschritt.Folge
+public import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
+public import Grammatik.Logik.Fortschritt.PlanLauf
+public import Grammatik.Logik.Fortschritt.Warten
+public import Grammatik.Speichermodell.Adressen.Layout
+public import Grammatik.Logik.Terminierung.LaufGX
+public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

@@ -1,10 +1,13 @@
 /- Source-bound instruction costs for actual statement lowering. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
-import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
-import Stage0.Senke.Ausdruck.Old.Proben
-import Stage0.Senke.Funktion
-import Stage0.Senke.Anweisung.Hilfe
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
+public import Stage0.Senke.Ausdruck.Old.Proben
+public import Stage0.Senke.Funktion
+public import Stage0.Senke.Anweisung.Hilfe
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

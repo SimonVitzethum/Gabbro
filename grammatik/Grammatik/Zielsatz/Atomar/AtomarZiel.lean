@@ -20,9 +20,12 @@
   WHAT IS NOT HERE: the thread machine (`ZielF`: spawn and join legs over GX), the linked
   statement (`GabbroZielVerbund`), and the Rust checker's alignment with `AkzeptiertX`.
 -/
-import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
-import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
-import Grammatik.Zielsatz.Kern.Beweis
+module
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+public import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
+public import Grammatik.Zielsatz.Kern.Beweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

@@ -13,8 +13,11 @@
   the callee's entry world on the caller's footprint outside the callee's
   declared writes; `popR_kopf` records the call answer with that frame.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Loops.Traverse
+module
+public import Grammatik.Code.Refine.Loops.Traverse
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Retry.lean

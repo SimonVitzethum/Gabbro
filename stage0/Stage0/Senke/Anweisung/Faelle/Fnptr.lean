@@ -1,5 +1,8 @@
 /- Indirect-call binder cases; both continuations reuse the shared call-prefix proof. -/
-import Stage0.Senke.Anweisung.Faelle.Kontext
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontext
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

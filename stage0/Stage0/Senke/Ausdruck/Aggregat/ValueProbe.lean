@@ -1,7 +1,10 @@
 /- A nondegenerate three-word variable fixture with every execution premise supplied. -/
-import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
-import Stage0.Senke.Ausdruck.Aggregat.Materialize
-import Runner.Prog.IRAsm
+module
+public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
+public import Stage0.Senke.Ausdruck.Aggregat.Materialize
+public import Runner.Prog.IRAsm
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ValueProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

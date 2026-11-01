@@ -1,4 +1,7 @@
-import Bruecke.Ausdruck
+module
+public import Bruecke.Ausdruck
+@[expose] public section
+
 
 /-!
 # S3, part 3: the statements -- a lowered G statement and its Body statement take related

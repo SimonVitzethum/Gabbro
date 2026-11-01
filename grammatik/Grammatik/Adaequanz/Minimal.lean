@@ -19,7 +19,10 @@
   `m = n + 1` the constructed set is optimal up to the factor `|W| * N 2 / Σ_k n ^ ar k`; for `m = n` no
   implementation with a fresh state is in the class and these mutants say nothing (stated in CHECKER.md).
 -/
-import Grammatik.Adaequanz.Hinlaenglich
+module
+public import Grammatik.Adaequanz.Hinlaenglich
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

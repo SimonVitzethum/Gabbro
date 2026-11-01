@@ -1,5 +1,8 @@
 /- Part 2 of 5 of `MaschinenKette` (split by instrumente/teile/lean-teilen.py; the umbrella `MaschinenKette.lean` imports all parts). -/
-import Grammatik.Kern.Semantik.MaschinenKette.T1
+module
+public import Grammatik.Kern.Semantik.MaschinenKette.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

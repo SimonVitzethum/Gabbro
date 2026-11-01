@@ -10,6 +10,9 @@
   case.
 -/
 
-import Grammatik.Kern.Syntax.Bits.T1
-import Grammatik.Kern.Syntax.Bits.T2
-import Grammatik.Kern.Syntax.Bits.T3
+module
+public import Grammatik.Kern.Syntax.Bits.T1
+public import Grammatik.Kern.Syntax.Bits.T2
+public import Grammatik.Kern.Syntax.Bits.T3
+@[expose] public section
+

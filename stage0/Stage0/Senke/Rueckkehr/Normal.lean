@@ -1,5 +1,8 @@
 /- Evaluate the complete result, check ensures, then publish through the shared ABI. -/
-import Stage0.Senke.Rueckkehr.Publish
+module
+public import Stage0.Senke.Rueckkehr.Publish
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

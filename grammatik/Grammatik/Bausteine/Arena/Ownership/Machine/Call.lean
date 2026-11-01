@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Local
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Local
+@[expose] public section
+
 
 /-! **A call keeps ownership on the machine.** The running activation of
 thread `u` at depth `a` hands its arguments to the callee at depth `a + 1`

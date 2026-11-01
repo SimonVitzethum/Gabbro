@@ -1,10 +1,13 @@
 /- Serialize the canonical declared initial memory with the shared value encoding.
    This is compile-time image data, not a source execution interpreter. -/
-import Grammatik.GabbroV.GvStartPflicht
-import Stage0.Senke.Welt.AnordnungLayout
-import Stage0.Senke.Welt.StartLayout
-import Stage0.Senke.Welt.InitialBytes
-import Stage0.Senke.Ausdruck.Aggregat.Encoding
+module
+public import Grammatik.GabbroV.GvStartPflicht
+public import Stage0.Senke.Welt.AnordnungLayout
+public import Stage0.Senke.Welt.StartLayout
+public import Stage0.Senke.Welt.InitialBytes
+public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg

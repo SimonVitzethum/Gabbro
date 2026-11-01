@@ -1,7 +1,10 @@
-import Stage0.Frontend.ConstantScopes
-import Stage0.Frontend.AliasMeaning
-import Stage0.Frontend.Guard
-import Stage0.Profil
+module
+public import Stage0.Frontend.ConstantScopes
+public import Stage0.Frontend.AliasMeaning
+public import Stage0.Frontend.Guard
+public import Stage0.Profil
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

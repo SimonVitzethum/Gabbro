@@ -1,5 +1,8 @@
 /- Overlap-safe emitted frame relocation: copy the highest source word first. -/
-import Stage0.Senke.Rueckkehr
+module
+public import Stage0.Senke.Rueckkehr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

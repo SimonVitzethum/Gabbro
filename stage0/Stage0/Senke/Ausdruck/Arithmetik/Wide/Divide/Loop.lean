@@ -6,7 +6,10 @@
   its zero limb, clears the remainder register and installs the constants. The loop never branches:
   the flag selects the difference by a mask, so the code is straight-line.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Iter
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Iter
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

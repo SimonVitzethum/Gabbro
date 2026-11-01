@@ -9,8 +9,11 @@
              With that, every conjunctive checker agreeing with the model on M and N agrees with the model's
              `AkzeptiertX` on every program of the model (`einsatz_hinreichend`).
 -/
-import Grammatik.Gen.Abdeckung.Satz.ZellenUnmoeglich
-import Grammatik.Adaequanz.Vollstaendig
+module
+public import Grammatik.Gen.Abdeckung.Satz.ZellenUnmoeglich
+public import Grammatik.Adaequanz.Vollstaendig
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

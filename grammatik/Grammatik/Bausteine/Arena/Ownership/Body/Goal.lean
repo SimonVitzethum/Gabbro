@@ -1,6 +1,9 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
-import Grammatik.Bausteine.Arena.Ownership.Body.Witness
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
+public import Grammatik.Bausteine.Arena.Ownership.Body.Witness
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 /-! **The ownership leg beside the goal statement.** The checker reads, beside
 the unit, its arenas with their ownership interfaces and decides

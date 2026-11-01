@@ -4,7 +4,10 @@
              `druckToks`). One witness per form, each with a negative twin: a tampered token list does not
              read back as the same tree, and a kind without a printer answers `none`.
 -/
-import Grammatik.Parser.Print.Item
+module
+public import Grammatik.Parser.Print.Item
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

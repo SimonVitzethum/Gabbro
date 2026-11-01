@@ -8,8 +8,11 @@
              representative in the bucket of its own size. The tables of two bounds agree on the buckets both have
              (`genTK_getD_le`).
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.Block
-import Grammatik.Gen.Erzeuger.Knoten
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.Block
+public import Grammatik.Gen.Erzeuger.Knoten
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

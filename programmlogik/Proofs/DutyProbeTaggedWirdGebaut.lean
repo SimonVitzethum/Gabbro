@@ -1,4 +1,7 @@
-import Duty.DutyProbeTaggedWirdGebaut
+module
+public import Duty.DutyProbeTaggedWirdGebaut
+@[expose] public section
+
 set_option autoImplicit false
 set_option maxHeartbeats 11300000
 open Gabbro.Body GabbroDuty.DutyProbeTaggedWirdGebaut

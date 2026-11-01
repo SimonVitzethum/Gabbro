@@ -14,7 +14,10 @@
   `kw.rs` `res` column order, with the theorems that tie each existing
   refusal to it.
 -/
-import Grammatik.Parser.Expr.Ausdruck
+module
+public import Grammatik.Parser.Expr.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

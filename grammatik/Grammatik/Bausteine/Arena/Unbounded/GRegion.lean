@@ -1,7 +1,10 @@
-import Grammatik.Speichermodell.Adressen.Layout
-import Grammatik.Kern.Syntax.Koernung
-import Grammatik.Kern.Syntax.Zucker
-import Grammatik.Zielsatz.Kern.Akzeptiert
+module
+public import Grammatik.Speichermodell.Adressen.Layout
+public import Grammatik.Kern.Syntax.Koernung
+public import Grammatik.Kern.Syntax.Zucker
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+@[expose] public section
+
 
 /-! The open region in G, executed (PLAN-DYNAMIC 14). One open table `T` (`table T from neu`, one byte field) and its
 provider item `neu : -> index into T` -- the program's memory provider, whose answer is the ONLY way a

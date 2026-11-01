@@ -1,4 +1,7 @@
-import Duty.Duty151WordPoolDiscipline
+module
+public import Duty.Duty151WordPoolDiscipline
+@[expose] public section
+
 set_option autoImplicit false
 open Gabbro.Body GabbroDuty.Duty151WordPoolDiscipline
 

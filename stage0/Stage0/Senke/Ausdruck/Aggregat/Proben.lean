@@ -1,5 +1,8 @@
 /- Subject: Inhabited aggregate fixtures, limits and a concrete IR simulation with all premises supplied. -/
-import Stage0.Senke.Welt.Anordnung
+module
+public import Stage0.Senke.Welt.Anordnung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.AggregateProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

@@ -34,7 +34,10 @@
   so `kP`'s contracts are the source's without exception. The paragraph above
   is kept as the record of the finding.
 -/
-import Grammatik.Zielsatz.Kern.Proben
+module
+public import Grammatik.Zielsatz.Kern.Proben
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

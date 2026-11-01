@@ -1,9 +1,12 @@
 /- Whole-loop induction for the emitted normalization block. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Schleife
-import Stage0.Senke.Ausdruck.Quant.Frame
-import Stage0.Senke.Anweisung.SchleifeTeile
-import Mathlib.Tactic.IntervalCases
-import Mathlib.Tactic.Linarith
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Schleife
+public import Stage0.Senke.Ausdruck.Quant.Frame
+public import Stage0.Senke.Anweisung.SchleifeTeile
+public import Mathlib.Tactic.IntervalCases
+public import Mathlib.Tactic.Linarith
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

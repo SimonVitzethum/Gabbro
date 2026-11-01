@@ -3,8 +3,11 @@
   Subject:   The test of a gate's answer against its declared range (`chkC`): inside, the code runs to its end and
              changes no slot below `s + 1`; outside, the stop 110 (G's hardware outcome at the gate).
 -/
-import Stage0.Senke.Anweisung.Tor
-import Stage0.Senke.Ausdruck.Arithmetik.Interval
+module
+public import Stage0.Senke.Anweisung.Tor
+public import Stage0.Senke.Ausdruck.Arithmetik.Interval
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -7,10 +7,13 @@
   (`neuFilter`). So the tables stay small, and every fine cell the clauses can reach under the size bound is still in
   some kept term of its context. The tables are the ones of `Gen/Erzeuger/Knoten.lean` with that filter.
 -/
-import Grammatik.Gen.Fein.Universum
-import Grammatik.Gen.Abdeckung.Waehlen
-import Std.Data.HashSet
-import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
+module
+public import Grammatik.Gen.Fein.Universum
+public import Grammatik.Gen.Abdeckung.Waehlen
+public import Std.Data.HashSet
+public import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

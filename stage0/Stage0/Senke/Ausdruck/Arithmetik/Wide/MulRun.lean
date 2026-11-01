@@ -7,8 +7,11 @@
   the first operand's limbs, i.e. the product modulo `2^(64k)`, exactly the canonical result when the
   declared product range fits `k` limbs. Only frame slots from `a` on change; `a + 3k + 17 <= K`.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRows
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRows
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

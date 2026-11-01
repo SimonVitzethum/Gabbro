@@ -85,7 +85,10 @@
     and `#print axioms zeugnis_sound` / `#print axioms block_sound` at the end
     name every axiom the soundness proofs rest on.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

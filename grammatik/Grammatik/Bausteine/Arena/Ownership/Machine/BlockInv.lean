@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Block
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Block
+@[expose] public section
+
 
 /-! **What a judged block says about its first form**, whatever weakening
 of its end context the derivation went through. One clause per block

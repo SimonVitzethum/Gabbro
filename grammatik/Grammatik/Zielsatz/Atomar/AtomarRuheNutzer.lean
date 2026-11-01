@@ -4,9 +4,12 @@
              (the idle root added): `logikPflichtA_mitRuhe`, the twin of `logikPflicht_mitRuhe`
              (RuheNutzer.lean). Opus lane O25b, 2026-09-26. Standalone.
 -/
-import Grammatik.Zielsatz.Faeden.RuheNutzer
-import Grammatik.Speichermodell.Atomar.AtomarRuhe
-import Grammatik.Zielsatz.Atomar.AtomarPflicht
+module
+public import Grammatik.Zielsatz.Faeden.RuheNutzer
+public import Grammatik.Speichermodell.Atomar.AtomarRuhe
+public import Grammatik.Zielsatz.Atomar.AtomarPflicht
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

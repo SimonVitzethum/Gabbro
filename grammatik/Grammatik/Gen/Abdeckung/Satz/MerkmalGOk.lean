@@ -2,7 +2,10 @@
   File:      Grammatik/Gen/Abdeckung/Satz/MerkmalGOk.lean
   Subject:   the fragment test `gOk` is an `mE` over the indirect calls (part of step 1, `ZellenSatz.lean`).
 -/
-import Grammatik.Gen.Abdeckung.Satz.MerkmalZerlegt
+module
+public import Grammatik.Gen.Abdeckung.Satz.MerkmalZerlegt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

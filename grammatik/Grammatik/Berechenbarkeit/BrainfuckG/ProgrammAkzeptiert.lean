@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
-import Grammatik.Zielsatz.Kern.Akzeptiert
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.ProgrammWitnesses
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+@[expose] public section
+
 
 /-! The G program of the Brainfuck program `.` as a whole G function -- bind the counter and the head, run the loop,
 return -- and the core checker's verdict on it: accepted, in the conditional class. -/

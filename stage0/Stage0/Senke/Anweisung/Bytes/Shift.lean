@@ -2,11 +2,14 @@
   Subject: State transitions check the old cell before writing the new value.
   A failed prestate check reaches exit_group(106), exactly G's `vorzustand`.
 -/
-import Stage0.Senke.Anweisung.Simulation
-import Stage0.Senke.Anweisung.Schreiben
-import Stage0.Senke.Welt.WordCell
-import Stage0.Senke.Anweisung
-import Stage0.Senke.Ausdruck.Gleit.Wort
+module
+public import Stage0.Senke.Anweisung.Simulation
+public import Stage0.Senke.Anweisung.Schreiben
+public import Stage0.Senke.Welt.WordCell
+public import Stage0.Senke.Anweisung
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

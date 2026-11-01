@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.World
+module
+public import Grammatik.Bausteine.Arena.Ownership.World
+@[expose] public section
+
 
 /-! Ownership specifications at the real `rufAt` boundary. Argument and result
 values occur in the specification: this is not the carrier-level `own` mark.

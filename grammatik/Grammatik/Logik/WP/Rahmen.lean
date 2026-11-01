@@ -1,5 +1,8 @@
-import Grammatik.Logik.WP.Kern
-import Grammatik.Logik.Vertraege.RahmenTreu
+module
+public import Grammatik.Logik.WP.Kern
+public import Grammatik.Logik.Vertraege.RahmenTreu
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: the frame rule

@@ -1,4 +1,7 @@
-import Runner.Basis.Mem
+module
+public import Runner.Basis.Mem
+@[expose] public section
+
 
 /-! # The byte memory: what a write changes and what it keeps
 

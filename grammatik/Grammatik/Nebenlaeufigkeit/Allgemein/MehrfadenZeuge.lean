@@ -28,8 +28,11 @@
   `ziel_ort_mehrfaden_ende` holds (`mP_zertifiziert`), and of the deadlock
   theorem (`mP_verklemmungsfrei`). The runs are in `MehrfadenLauf.lean`.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

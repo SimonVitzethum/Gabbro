@@ -1,4 +1,7 @@
-import Runner.Prog.Code
+module
+public import Runner.Prog.Code
+@[expose] public section
+
 
 /-! # The runner's file: ELF header, program headers, code, table
 

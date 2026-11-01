@@ -1,4 +1,7 @@
-import Runner.Beweis.Handler.Sprung
+module
+public import Runner.Beweis.Handler.Sprung
+@[expose] public section
+
 
 /-! # One IR instruction: dispatch, then the handler of the opcode byte
 

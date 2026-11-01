@@ -1,9 +1,12 @@
 /- Jointly inhabited entry/exit snapshot fixtures and explicit fragment refusals. -/
-import Stage0.Senke.Ausdruck.Old.Sound
-import Stage0.Senke.Ausdruck.Old.Distinct
-import Stage0.Senke.Ausdruck.Old.EnvironmentProbe
-import Stage0.Senke.Ausdruck.FnptrProben
-import Stage0.Senke.Ausdruck.Quant.Proben
+module
+public import Stage0.Senke.Ausdruck.Old.Sound
+public import Stage0.Senke.Ausdruck.Old.Distinct
+public import Stage0.Senke.Ausdruck.Old.EnvironmentProbe
+public import Stage0.Senke.Ausdruck.FnptrProben
+public import Stage0.Senke.Ausdruck.Quant.Proben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.OldProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

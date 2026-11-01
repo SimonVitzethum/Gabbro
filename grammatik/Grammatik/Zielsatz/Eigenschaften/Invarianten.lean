@@ -38,7 +38,10 @@
   world, which carries the memory the step leaves -- or the thread FINISHES at the writer's
   own return, and `StartEndeG` gives it there (`fertig_retKopf`).
 -/
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

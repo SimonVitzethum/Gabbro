@@ -20,8 +20,11 @@
   CHECK
     ./lean-probe grammatik/Grammatik/ZeugnisIdent.lean
 -/
-import Grammatik.Korpus.Zeugnis.Zeugnis
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Korpus.Zeugnis.Zeugnis
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

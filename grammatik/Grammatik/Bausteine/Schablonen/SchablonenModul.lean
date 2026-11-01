@@ -50,6 +50,10 @@
   its premises jointly.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik
 
 namespace ModulLaufzeit

@@ -37,7 +37,10 @@
   `koerperGutS_alle`, `invGutS_alle`). This is how every earlier witness
   carries over to the quantified goal theorem at no cost.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

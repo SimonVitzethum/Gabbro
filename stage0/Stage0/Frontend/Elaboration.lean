@@ -1,5 +1,8 @@
-import Stage0.Frontend.Source
-import Stage0.Frontend.Tables
+module
+public import Stage0.Frontend.Source
+public import Stage0.Frontend.Tables
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

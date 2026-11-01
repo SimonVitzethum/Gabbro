@@ -1,4 +1,7 @@
-import Runner.Basis.Mem
+module
+public import Runner.Basis.Mem
+@[expose] public section
+
 
 /-! # One step as a tree of requests to the memory and the kernel
 

@@ -24,6 +24,10 @@
     same force (a generator starting `min` at `0` breaks it).
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.AccumulatesMonoid
 
 /-- The shared structure of the closed `merge` vocabulary: associative,

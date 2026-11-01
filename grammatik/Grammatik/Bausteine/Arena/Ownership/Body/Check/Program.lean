@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Sound
-import Grammatik.Bausteine.Arena.Ownership.Body.Program
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Sound
+public import Grammatik.Bausteine.Arena.Ownership.Body.Program
+@[expose] public section
+
 
 /-! **The executable check of a whole program**: every body of the
 enumeration passes the check from its parameter context. A passing program

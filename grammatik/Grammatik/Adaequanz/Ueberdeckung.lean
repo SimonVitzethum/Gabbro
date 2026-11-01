@@ -19,7 +19,10 @@
   The flag mutants of `Minimal.lean` are such tables for the tree automata (`Enthaelt` as the containment), so
   for `m ≥ 2 n` Theorem 2b is the cover condition of this file.
 -/
-import Grammatik.Adaequanz.Gegenmodell
+module
+public import Grammatik.Adaequanz.Gegenmodell
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

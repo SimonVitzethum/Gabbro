@@ -10,8 +10,11 @@
              cover to DIR (`<stem>.gab`), `index.tsv` and `manifest.tsv`, and deletes the unchosen candidates (DIR/kand).
              A cell text that names no cell of `zellAlle` stops the run (exit 1): the records belong to another model.
 -/
-import Grammatik.Gen.Abdeckung.ZellenBefund
-import Grammatik.Gen.Abdeckung.ZellenSchluss
+module
+public import Grammatik.Gen.Abdeckung.ZellenBefund
+public import Grammatik.Gen.Abdeckung.ZellenSchluss
+@[expose] public section
+
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 

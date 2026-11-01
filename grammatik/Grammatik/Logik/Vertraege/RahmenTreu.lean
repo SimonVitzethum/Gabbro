@@ -42,7 +42,10 @@
   frame of its `effects` and leaves the held locks alone (`TreuO`, the first
   two conjuncts of `GutO`). That is H1 and it is named, not hidden.
 -/
-import Grammatik.Kern.Syntax.Satz
+module
+public import Grammatik.Kern.Syntax.Satz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

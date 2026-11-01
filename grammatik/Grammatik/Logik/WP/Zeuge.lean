@@ -1,6 +1,9 @@
-import Grammatik.Logik.WP.Ruf
-import Grammatik.Kern.Syntax.Koernung
-import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt
+module
+public import Grammatik.Logik.WP.Ruf
+public import Grammatik.Kern.Syntax.Koernung
+public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: witnesses

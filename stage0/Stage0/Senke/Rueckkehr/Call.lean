@@ -2,8 +2,11 @@
   File:      stage0/Stage0/Senke/Aufruf.lean
   Subject:   The call site: the depth one less, a constant or saved-slot target, `call` -- then the callee's `FunSpec`.
 -/
-import Stage0.Senke.Spez
-import Stage0.Senke.Anweisung.Hilfe
+module
+public import Stage0.Senke.Spez
+public import Stage0.Senke.Anweisung.Hilfe
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

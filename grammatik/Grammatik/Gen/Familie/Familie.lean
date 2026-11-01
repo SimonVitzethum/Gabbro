@@ -12,8 +12,11 @@
              asked for. The generator's theorems are ∀-quantified over a declaration with its enumerations, so they
              hold for every member (`fam_gueltig_vollst`, `fam_bad_vollst`).
 -/
-import Grammatik.Gen.Familie.Spez
-import Grammatik.Gen.Erzeuger.Gueltig
+module
+public import Grammatik.Gen.Familie.Spez
+public import Grammatik.Gen.Erzeuger.Gueltig
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 
@@ -110,9 +113,9 @@ def Spez.wurzeln (z : Spez) : List z.deklaration.Fn :=
 
 /-! ## The members -/
 
-private def u8 : Ty := .int 0 255
-private def b1 : Ty := .int 0 1
-private def i3 : Ty := .int 0 3
+def u8 : Ty := .int 0 255
+def b1 : Ty := .int 0 1
+def i3 : Ty := .int 0 3
 
 /-- 0 -- the least declaration: one table (count 2, one field `0 .. 3`), one static, one function that writes both. -/
 def z0 : Spez where

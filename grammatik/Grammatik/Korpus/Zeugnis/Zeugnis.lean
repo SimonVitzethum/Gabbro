@@ -86,7 +86,10 @@
     name every axiom the soundness proofs rest on.
 -/
 
-import Grammatik.Korpus.Zeugnis.Zeugnis.T1
-import Grammatik.Korpus.Zeugnis.Zeugnis.T2
-import Grammatik.Korpus.Zeugnis.Zeugnis.T3
-import Grammatik.Korpus.Zeugnis.Zeugnis.T4
+module
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T2
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T3
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T4
+@[expose] public section
+

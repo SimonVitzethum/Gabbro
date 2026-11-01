@@ -27,14 +27,17 @@
 -- table 0: A (count 2), x : 0..100
 -- lock 0: K (rank 0) guards A
 -- fn auffuellen (holds; writes A)
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Zielsatz.Kern.Beweis
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Logik.WP.HA.Pflicht
-import Grammatik.Kern.Syntax.Koernung
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Logik.WP.HA.Pflicht
+public import Grammatik.Kern.Syntax.Koernung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

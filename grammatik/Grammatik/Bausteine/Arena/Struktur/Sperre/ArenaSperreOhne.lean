@@ -11,8 +11,11 @@
   therefore theorems about `execBlockH` / `execEndH` as well (`erk_erhaeltH`, `erkE_koerperH`): that is the form in
   which `InvGutSA` reads them.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkEnde
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreTraeger
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkEnde
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreTraeger
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

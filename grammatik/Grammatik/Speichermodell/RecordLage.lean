@@ -12,6 +12,10 @@
   no Arm instruction facts (rule 7 N/A, recorded in CUTS).
 -/
 
+module
+
+@[expose] public section
+
 namespace Grammatik.Speichermodell.RecordLage
 
 /-- One record field: its size and its alignment, both in bytes. -/

@@ -35,7 +35,10 @@
     decided over the complete member list, `kandB`); and `GRest.okV`,
     residues in it that read inside a footprint.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtSem
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

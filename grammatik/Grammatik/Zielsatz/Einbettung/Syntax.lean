@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Ressourcen
+module
+public import Grammatik.Zielsatz.Einbettung.Ressourcen
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Syntax.lean

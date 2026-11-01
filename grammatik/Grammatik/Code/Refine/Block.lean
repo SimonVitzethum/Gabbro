@@ -1,6 +1,9 @@
-import Grammatik.Code.Lower.Stmt
-import Grammatik.Code.Refine.Expr
-import Grammatik.Code.Refine.Frame
+module
+public import Grammatik.Code.Lower.Stmt
+public import Grammatik.Code.Refine.Expr
+public import Grammatik.Code.Refine.Frame
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Block.lean

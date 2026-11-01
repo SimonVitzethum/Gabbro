@@ -1,12 +1,15 @@
 /- Arithmetic foundations: executable rounding and literal-conversion images.
    Computed binary64 conversion is connected to the block hook; float arithmetic remains refused. -/
-import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
-import Stage0.Senke.Ausdruck.Gleit.RundCode
-import Stage0.Senke.Ausdruck.Gleit.Betrag
-import Stage0.Senke.Ausdruck.Gleit.Schieben
-import Stage0.Senke.Ausdruck.Gleit.Skalieren
-import Stage0.Senke.Ausdruck.Gleit.SlotContext
-import Stage0.Senke.Ausdruck.Gleit.Bereich
+module
+public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
+public import Stage0.Senke.Ausdruck.Gleit.RundCode
+public import Stage0.Senke.Ausdruck.Gleit.Betrag
+public import Stage0.Senke.Ausdruck.Gleit.Schieben
+public import Stage0.Senke.Ausdruck.Gleit.Skalieren
+public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+public import Stage0.Senke.Ausdruck.Gleit.Bereich
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.FloatArithmeticProbe
 open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR

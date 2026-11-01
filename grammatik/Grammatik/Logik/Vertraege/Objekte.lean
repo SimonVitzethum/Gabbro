@@ -43,7 +43,10 @@
       separation for every map whose objects lie in the carriers the types name.
     The frame at the model's call is `ObjektRahmen.lean`, the roots `ObjektWurzel.lean`.
 -/
-import Grammatik.Logik.Vertraege.Getrennt
+module
+public import Grammatik.Logik.Vertraege.Getrennt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

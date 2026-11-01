@@ -18,10 +18,13 @@
     reaches, at which every leg of `Ziel` holds -- by `gabbro_ziel_schwach`, the goal over
     the weak machine, not by `gabbro_ziel`.
 -/
-import Lean
-import Grammatik.Nichtinterferenz.Zeuge
-import Grammatik.Zielsatz.Faeden.PoolZeuge
-import Grammatik.Zielsatz.Eigenschaften.Schwach
+module
+public import Lean
+public import Grammatik.Nichtinterferenz.Zeuge
+public import Grammatik.Zielsatz.Faeden.PoolZeuge
+public import Grammatik.Zielsatz.Eigenschaften.Schwach
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

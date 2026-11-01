@@ -1,4 +1,7 @@
-import Grammatik.Code.Model.Need
+module
+public import Grammatik.Code.Model.Need
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Gate/Gate.lean

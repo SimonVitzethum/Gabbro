@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Bits.Ops
-import Grammatik.Code.Refine.Struct.Mono
+module
+public import Grammatik.Code.Refine.Bits.Ops
+public import Grammatik.Code.Refine.Struct.Mono
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Bits/OpRest.lean

@@ -153,5 +153,8 @@
   Kein `mathlib`, kein `sorry`, kein `axiom`, kein Import aus `programmlogik/`.
 -/
 
-import Grammatik.Kern.Syntax.Fehler.T1
-import Grammatik.Kern.Syntax.Fehler.T2
+module
+public import Grammatik.Kern.Syntax.Fehler.T1
+public import Grammatik.Kern.Syntax.Fehler.T2
+@[expose] public section
+

@@ -18,6 +18,10 @@
     `∀ w, ... → ...`. Same mathematical content.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.RestrictAlleinzugriff
 
 /-- A root: the name a access runs through (a parameter name or a global

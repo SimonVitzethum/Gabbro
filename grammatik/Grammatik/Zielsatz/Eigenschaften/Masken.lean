@@ -43,8 +43,11 @@
   nothing to be related to by translation validation; the leg constrains the handler's FIRST
   entry (in G a handler thread runs once: no re-entry, no handler-on-handler preemption).
 -/
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

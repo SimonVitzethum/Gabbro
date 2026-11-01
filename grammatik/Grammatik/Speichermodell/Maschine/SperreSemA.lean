@@ -5,7 +5,10 @@
              copy of SperreSem.lean §3/§4 with every sequential read through `leseA`.
              Opus lane O25b, 2026-09-26. Standalone.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarSem
+module
+public import Grammatik.Speichermodell.Atomar.AtomarSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

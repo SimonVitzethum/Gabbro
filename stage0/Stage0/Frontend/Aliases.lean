@@ -1,4 +1,7 @@
-import Grammatik.Parser.Elab.UebersetzePipeline
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

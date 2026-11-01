@@ -20,9 +20,12 @@
   resumed only by a binding pop: no reachable head waits
   (`rufG_nie_wartend`).
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Logik.Vertraege.VertragOrtB
-import Grammatik.Logik.Ruf.Maschine.RufMaschineF
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

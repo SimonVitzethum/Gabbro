@@ -42,7 +42,10 @@
     checker uses it to refuse every answer site at an empty type except an axiom `-> never`
     (`antwortenB`, Zielsatz/Akzeptiert.lean).
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

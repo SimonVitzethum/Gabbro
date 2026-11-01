@@ -7,8 +7,11 @@
              representative's size). From these, argument lists, results and arms have representatives in their
              streams (`argsS_rep`, `ergS_rep`, `armsS_rep`, `grundArmsS_rep`).
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.Gleich
-import Grammatik.Gen.Erzeuger.Hilfen
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.Gleich
+public import Grammatik.Gen.Erzeuger.Hilfen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

@@ -139,6 +139,10 @@
 
 /- Nur Formen, keine Saetze: `Prop`-wertige Aussagen stehen in dieser Bahn als `def`,
    weil `theorem` der spaeteren Phase gehoert. -/
+module
+
+@[expose] public section
+
 set_option linter.defProp false
 
 namespace Gabbro.Grammatik

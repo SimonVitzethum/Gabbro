@@ -32,8 +32,11 @@
     routine that reads and writes one unguarded carrier, declared twice, is refused there
     (the routine-level test before F10 accepted it).
 -/
-import Grammatik.Zielsatz.Kern.Proben
-import Grammatik.Zielsatz.Faeden.PoolSym
+module
+public import Grammatik.Zielsatz.Kern.Proben
+public import Grammatik.Zielsatz.Faeden.PoolSym
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

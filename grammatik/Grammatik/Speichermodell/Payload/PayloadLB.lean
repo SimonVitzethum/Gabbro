@@ -1,4 +1,7 @@
-import Grammatik.Speichermodell.Payload.PayloadLitmus
+module
+public import Grammatik.Speichermodell.Payload.PayloadLitmus
+@[expose] public section
+
 
 /-
   File:      Grammatik/Speichermodell/Payload/PayloadLB.lean

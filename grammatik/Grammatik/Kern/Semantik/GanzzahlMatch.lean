@@ -19,8 +19,11 @@
   to the C `switch` the emitter wrote (`swFaelle`, `sw_erschoepfend_trifft`); that part was
   deleted with the C emitter, tag `archiv/c-emitter-2026-10-17`.)
 -/
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

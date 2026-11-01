@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.Storage.TM2Run
-import Grammatik.Bausteine.Arena.Unbounded.Observe
+module
+public import Grammatik.Berechenbarkeit.Storage.TM2Run
+public import Grammatik.Bausteine.Arena.Unbounded.Observe
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap
 

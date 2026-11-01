@@ -5,7 +5,10 @@
              the terms. The cases are GENERATED from the constructor list of the model; each is closed by the lemmas
              below (the type class of an expression child, the loop context of a statement child).
 -/
-import Grammatik.Gen.Fein.Universum
+module
+public import Grammatik.Gen.Fein.Universum
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

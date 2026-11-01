@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Koerper
+module
+public import Grammatik.Zielsatz.Einbettung.Koerper
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Pflicht.lean

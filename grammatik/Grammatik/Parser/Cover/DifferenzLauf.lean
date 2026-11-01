@@ -7,7 +7,10 @@
   prints `NAME<TAB>VERDICT` for every `*.gab` of `<dir>`; with `--komponenten` the ten components of
   `AkzeptiertX` as digits instead (see `Differenz.komponenten`).
 -/
-import Grammatik.Parser.Cover.Differenz
+module
+public import Grammatik.Parser.Cover.Differenz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.Cover.Differenz
 

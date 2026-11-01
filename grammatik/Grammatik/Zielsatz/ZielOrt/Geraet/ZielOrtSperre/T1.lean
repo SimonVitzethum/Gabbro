@@ -14,7 +14,10 @@
   `fadenS_peelFrei`) use the second clause of the obligation, and give the
   machine lock invariant back (`kopfS_frei_inv`).
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreMaschine
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreMaschine
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

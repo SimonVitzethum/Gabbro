@@ -12,7 +12,10 @@
     * `push_defekt`   -- the planted defect: slot `1`, already the head of bucket `0`, is pushed into bucket `1` too: the
                          chains overlap and the model rejects the world.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashZug
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashZug
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

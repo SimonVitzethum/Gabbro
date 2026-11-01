@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Env
+module
+public import Grammatik.Code.Refine.Env
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Frame.lean

@@ -34,8 +34,11 @@
   in `ZielOrtVoll.lean`, its witness `ziel_ort_voll_zeuge` in
   `ZielOrtVollZeuge.lean`.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollSem
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

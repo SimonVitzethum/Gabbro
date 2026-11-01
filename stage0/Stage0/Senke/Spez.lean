@@ -4,10 +4,13 @@
    the complete shared normal/reason area, independently of private snapshots.
    Normal and reason returns preserve caller header words 0/1 and carry the resulting
    world. Logic and hardware outcomes retain their named stops. -/
-import Stage0.Senke.Funktion
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
-import Stage0.Senke.Welt.WeltAt
-import Stage0.Senke.Sperre.Sync
+module
+public import Stage0.Senke.Funktion
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Sperre.Sync
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

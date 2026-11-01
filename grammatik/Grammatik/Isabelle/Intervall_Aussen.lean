@@ -28,6 +28,10 @@
   has no counterpart in `Semantik.lean`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.IntervallAussen
 
 set_option linter.unusedSectionVars false

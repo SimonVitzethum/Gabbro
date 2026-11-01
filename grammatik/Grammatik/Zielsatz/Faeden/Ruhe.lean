@@ -22,8 +22,11 @@
     only if declared); `laufzeit_ohne_starts` (no declared start: the root
     on every thread).
 -/
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+module
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

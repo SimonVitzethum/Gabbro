@@ -1,5 +1,8 @@
 /- Emission proofs recover the actual body and targets used by forever lowering. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

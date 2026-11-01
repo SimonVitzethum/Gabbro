@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Bits.OpRest
+module
+public import Grammatik.Code.Refine.Bits.OpRest
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Bits/Forms.lean

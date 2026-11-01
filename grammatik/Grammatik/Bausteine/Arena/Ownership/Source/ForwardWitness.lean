@@ -1,7 +1,10 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Admission
-import Grammatik.Bausteine.Arena.Ownership.Source.Results
-import Grammatik.Bausteine.Arena.Ownership.Witness
-import Grammatik.Bausteine.Arena.Ownership.Source.ArgumentFlow
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Admission
+public import Grammatik.Bausteine.Arena.Ownership.Source.Results
+public import Grammatik.Bausteine.Arena.Ownership.Witness
+public import Grammatik.Bausteine.Arena.Ownership.Source.ArgumentFlow
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaOwnership.Source.ForwardWitness
 

@@ -8,7 +8,10 @@
   what the item check refuses (`uRestFehler_faellt`): an item of a kind the
   elaborator has no G form for refuses the whole unit.
 -/
-import Grammatik.Parser.Elab.Uebersetze
+module
+public import Grammatik.Parser.Elab.Uebersetze
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV.GvParserFragment
 

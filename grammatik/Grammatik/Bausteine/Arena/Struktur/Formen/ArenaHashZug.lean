@@ -9,7 +9,10 @@
     `hash_pop_zug`    -- the head of bucket `b` is taken off: the binder holds it, live and on no bucket afterwards;
     `hash_unlink_zug` -- the successor of a member of bucket `b0` is cut out; no bucket head moves.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashForm
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashForm
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

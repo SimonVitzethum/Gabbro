@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Kopf
-import Grammatik.Berechenbarkeit.Storage.GStack.TakeOrBump
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Kopf
+public import Grammatik.Berechenbarkeit.Storage.GStack.TakeOrBump
+@[expose] public section
+
 
 /-! Brainfuck on G, part 3: putting the head byte onto a stack. Brainfuck's `>`, `<` and `.` push the head onto one
 stack (the tape behind the head, or the output). `lege` is that block in G: a cell from the free list or a fresh

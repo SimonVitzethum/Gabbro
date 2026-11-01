@@ -7,8 +7,11 @@
   difference must lie in the signed range of the limbs (`<`) resp. below `2^(64 (n+1))` in absolute
   value (`=`); operands extended by one limb always do.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Compare
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Compare
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

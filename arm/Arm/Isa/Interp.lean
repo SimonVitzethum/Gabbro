@@ -6,12 +6,15 @@
   Sail:      sail-arm/arm-v9.4-a/src/interface.sail (register/memory accessors),
              sail-arm/arm-v9.4-a/src/mem.sail:85 (`_Mem_read` byte transport).
 -/
-import Arm.Isa.Monad
-import Arm.Isa.IntCore
-import Arm.Isa.Integer
-import Arm.Isa.IntBit
-import Arm.Isa.IntMul
-import Arm.Isa.IntCond
+module
+public import Arm.Isa.Monad
+public import Arm.Isa.IntCore
+public import Arm.Isa.Integer
+public import Arm.Isa.IntBit
+public import Arm.Isa.IntMul
+public import Arm.Isa.IntCond
+@[expose] public section
+
 
 namespace Arm
 

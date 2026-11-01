@@ -21,7 +21,10 @@
   NAMES (two roots for `R014`), and the model still makes them one carrier -- roots are
   finer than carriers (obstruction 1).
 -/
-import Grammatik.Logik.Vertraege.Getrennt
+module
+public import Grammatik.Logik.Vertraege.Getrennt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

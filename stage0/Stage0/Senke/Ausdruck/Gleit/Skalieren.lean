@@ -1,8 +1,11 @@
 /- Quotient/remainder scaling followed by G's nearest-even rounding. -/
-import Stage0.Senke.Ausdruck.Gleit.RundCode
-import Stage0.Senke.Ausdruck.Gleit.Schieben
-import Stage0.Senke.Ausdruck.Gleit.Exponent
-import Stage0.Senke.Ausdruck.Gleit.Betrag
+module
+public import Stage0.Senke.Ausdruck.Gleit.RundCode
+public import Stage0.Senke.Ausdruck.Gleit.Schieben
+public import Stage0.Senke.Ausdruck.Gleit.Exponent
+public import Stage0.Senke.Ausdruck.Gleit.Betrag
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

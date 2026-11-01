@@ -1,5 +1,8 @@
 /- Reason publication uses the same complete canonical return span. -/
-import Stage0.Senke.Rueckkehr.Context
+module
+public import Stage0.Senke.Rueckkehr.Context
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

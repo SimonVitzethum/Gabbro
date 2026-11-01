@@ -7,7 +7,10 @@
   textual form over a wide input (only the `update` body of an atomic exchange produces it), so its witness is
   here; it also fixes the code shape: input, extension, narrowing test, branch, fallback.
 -/
-import Stage0.Senke.Ausdruck.Satz
+module
+public import Stage0.Senke.Ausdruck.Satz
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

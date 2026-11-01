@@ -1,5 +1,8 @@
-import Grammatik.Parser.Elab.UebersetzePipeline
-import Std.Data.HashMap
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Std.Data.HashMap
+@[expose] public section
+
 open Gabbro.Grammatik
 
 def main (args : List String) : IO UInt32 := do

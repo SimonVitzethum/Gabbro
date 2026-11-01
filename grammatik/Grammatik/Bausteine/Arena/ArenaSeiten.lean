@@ -4,8 +4,11 @@
   must preserve the logical LIFO list, including for one-byte elements.
   This proves the storage rule, not the operating system or Rust producer.
 -/
-import Grammatik.Bausteine.Arena.ArenaDyn
-import Grammatik.Bausteine.Schablonen.SchablonenArena
+module
+public import Grammatik.Bausteine.Arena.ArenaDyn
+public import Grammatik.Bausteine.Schablonen.SchablonenArena
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaDyn
 

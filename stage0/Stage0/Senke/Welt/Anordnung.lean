@@ -1,6 +1,9 @@
 /- Source image correctness composed with the canonical full-span world layout. -/
-import Stage0.Senke.Welt.AnordnungLayout
-import Stage0.Senke.BildSatz
+module
+public import Stage0.Senke.Welt.AnordnungLayout
+public import Stage0.Senke.BildSatz
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze Gabbro.Grammatik.Parser.UebersetzeAllg Runner.IR
 variable [Kern]

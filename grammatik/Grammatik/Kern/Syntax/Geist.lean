@@ -7,5 +7,8 @@
   ghost. Ghost tables may appear only in contracts (`requires`/`ensures`).
 -/
 
-import Grammatik.Kern.Syntax.Geist.T1
-import Grammatik.Kern.Syntax.Geist.T2
+module
+public import Grammatik.Kern.Syntax.Geist.T1
+public import Grammatik.Kern.Syntax.Geist.T2
+@[expose] public section
+

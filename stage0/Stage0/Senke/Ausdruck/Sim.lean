@@ -7,7 +7,10 @@
   slots from `d` on, and leaves in slot `d` a word with the property `P`. `lowE_ok`: for every expression the
   lowering accepts, `Ok` with `P` = the word of `eval σ₀ e σ ρ`.
 -/
-import Stage0.Senke.Hilfe
+module
+public import Stage0.Senke.Hilfe
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

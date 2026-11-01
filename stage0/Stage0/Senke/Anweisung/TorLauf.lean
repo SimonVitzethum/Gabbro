@@ -5,8 +5,11 @@
              memory then holds the oracle's world, slot `s` the kernel's word, which is the oracle's raw answer; no slot
              below `s` changed.
 -/
-import Stage0.Senke.Anweisung.Pruefung
-import Stage0.Senke.Anweisung.PufferTor
+module
+public import Stage0.Senke.Anweisung.Pruefung
+public import Stage0.Senke.Anweisung.PufferTor
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -15,8 +15,11 @@
              list is exact). A new constructor of the model therefore stops the build in `Mitglieder.lean` (the match is
              total) and, once named there, shows up here as a gap until a program contains it or it is listed.
 -/
-import Grammatik.Gen.Abdeckung.Messung
-import Grammatik.Gen.Abdeckung.Zustaende
+module
+public import Grammatik.Gen.Abdeckung.Messung
+public import Grammatik.Gen.Abdeckung.Zustaende
+@[expose] public section
+
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen
 

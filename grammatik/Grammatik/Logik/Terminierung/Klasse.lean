@@ -20,7 +20,10 @@
   `endet` -- `endet_satz` (Entscheidung.lean); `umgebung` and `bedingt` -- the exit condition of their loops
   (`forever_umgebung`, `forever_bedingt`, Ausgang.lean).
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

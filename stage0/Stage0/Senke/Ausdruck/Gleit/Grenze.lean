@@ -1,5 +1,8 @@
 /- Scratch bounds of the float templates, independent of expression induction. -/
-import Stage0.Senke.Ausdruck
+module
+public import Stage0.Senke.Ausdruck
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 

@@ -8,7 +8,10 @@
   `Zahl.sdiv` / `Zahl.srem` exclude a zero divisor by type (`1 ≤ l2 ∨ h2 ≤ -1`). Slots from `a` to
   `a+4k+25` are the kernel's.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Value
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Value
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

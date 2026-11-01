@@ -23,6 +23,9 @@
     at the machine world (`kopfS_frei_inv`).
 -/
 
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T1
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T2
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T3
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T2
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T3
+@[expose] public section
+

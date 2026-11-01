@@ -15,8 +15,11 @@
     ordered through the lock (`¬ GeordnetRw`). By `rennfrei_rw` that is only possible if the discipline
     fails: `¬ LeserLos`. The theorem states it, derived from `rennfrei_rw`, not assumed.
 -/
-import Grammatik.Proben.InvZeuge
-import Grammatik.Zielsatz.Eigenschaften.RwInv
+module
+public import Grammatik.Proben.InvZeuge
+public import Grammatik.Zielsatz.Eigenschaften.RwInv
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz.RwFix2
 

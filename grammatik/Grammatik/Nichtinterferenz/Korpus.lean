@@ -23,11 +23,14 @@
   apart; a declassification point or a shared-domain helper can
   (`dokumente/NICHTINTERFERENZ.md`, §9).
 -/
-import Grammatik.Nichtinterferenz.Zeuge
-import Grammatik.Korpus.Programme.Export104
-import Grammatik.Korpus.Programme.Export108
-import Grammatik.Nebenlaeufigkeit.Sperren.ExportSperre
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+module
+public import Grammatik.Nichtinterferenz.Zeuge
+public import Grammatik.Korpus.Programme.Export104
+public import Grammatik.Korpus.Programme.Export108
+public import Grammatik.Nebenlaeufigkeit.Sperren.ExportSperre
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

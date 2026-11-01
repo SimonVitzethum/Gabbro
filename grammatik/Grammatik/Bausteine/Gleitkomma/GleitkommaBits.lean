@@ -7,7 +7,10 @@
   Kept apart from `Gleitkomma.lean` so the model file (imported by
   `Typen.lean`, hence by everything) does not change for the C side.
 -/
-import Grammatik.Bausteine.Gleitkomma.Gleitkomma
+module
+public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gleitkomma
 

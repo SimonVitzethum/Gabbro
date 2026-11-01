@@ -16,7 +16,10 @@
   two, so `rounded` is owed. The model below is the exactness test on the
   reduced pair; the carrier link is `Block.gleitLit`.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace P21.Gap09Float
 

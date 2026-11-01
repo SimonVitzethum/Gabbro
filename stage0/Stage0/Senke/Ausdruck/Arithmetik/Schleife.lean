@@ -1,5 +1,8 @@
 /- Actual bounded dyadic normalization in integer runner instructions. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Adaptiv
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Adaptiv
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

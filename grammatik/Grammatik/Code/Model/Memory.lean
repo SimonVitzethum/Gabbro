@@ -1,4 +1,7 @@
-import Grammatik.Code.Model.Cells
+module
+public import Grammatik.Code.Model.Cells
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Memory.lean

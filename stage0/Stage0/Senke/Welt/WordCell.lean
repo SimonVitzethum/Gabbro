@@ -1,6 +1,9 @@
 /- A word stored into a one-word cell: the single-word view of the complete cell store. -/
-import Stage0.Senke.Welt.Schreib
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Welt.Schreib
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

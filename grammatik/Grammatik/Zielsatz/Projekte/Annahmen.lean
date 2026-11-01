@@ -1,4 +1,7 @@
-import Mathlib.Data.List.Nodup
+module
+public import Mathlib.Data.List.Nodup
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Projekte/Annahmen.lean

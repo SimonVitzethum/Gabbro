@@ -5,6 +5,10 @@
              (`entdoppelt_vollst`): an item of bucket `j` that is not dropped has a representative with the same key in a
              bucket `≤ j`. The generator's body tables (`Spez.tabellenD`) are this function on the full tables.
 -/
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Gen
 
 variable {α κ : Type} [DecidableEq κ] (key : α → κ) (aus : α → Bool)

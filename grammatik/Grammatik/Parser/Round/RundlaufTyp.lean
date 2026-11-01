@@ -25,8 +25,11 @@
   Names print as `nameTok`, the token the lexer reads (`u32`, `bool`, `dma` are table words); the
   reader takes both. A path type's head is no type-head word (`typKopf`), as an atom.
 -/
-import Grammatik.Parser.Round.RundlaufTok
-import Grammatik.Parser.Round.RundlaufAnw3
+module
+public import Grammatik.Parser.Round.RundlaufTok
+public import Grammatik.Parser.Round.RundlaufAnw3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

@@ -2,9 +2,12 @@
   File:      stage0/Stage0/Senke/Anweisung/Faelle/Tag.lean
   Subject:   Tagged dispatch, payload binding and the simulation of G's execArms.
 -/
-import Stage0.Senke.Anweisung.Verzweigung
-import Stage0.Senke.Ausdruck.Tag
-import Stage0.Senke.Anweisung
+module
+public import Stage0.Senke.Anweisung.Verzweigung
+public import Stage0.Senke.Ausdruck.Tag
+public import Stage0.Senke.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

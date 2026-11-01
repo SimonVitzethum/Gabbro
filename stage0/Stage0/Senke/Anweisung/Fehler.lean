@@ -5,8 +5,11 @@
              the raw answer (`sonst_dec`): a listed errno is its reason, a word in the value's range the value, anything
              else no answer.
 -/
-import Stage0.Senke.Anweisung.TorLauf
-import Stage0.Senke.Anweisung.SchleifeTeile
+module
+public import Stage0.Senke.Anweisung.TorLauf
+public import Stage0.Senke.Anweisung.SchleifeTeile
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

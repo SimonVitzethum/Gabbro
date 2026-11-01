@@ -13,7 +13,10 @@
   `forever` never falls off (only a `leave` could end it), so every state is promised of its outcome; `traverse` falls off in
   `k0`; `retry` falls off in `k0` or leaves through the overflow block, which is recognized from `k0`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallBaum
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallBaum
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

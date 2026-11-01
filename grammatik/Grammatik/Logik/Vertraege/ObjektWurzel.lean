@@ -52,8 +52,11 @@
   while naming ONE object. Measured on the binary of 2026-10-17: a re-view through a
   function pointer (`let w = v.s(k); aendern(k, w);`) passes with 0 errors.
 -/
-import Grammatik.Logik.Vertraege.ObjektRahmen
-import Grammatik.Bausteine.Arena.ArenaDyn
+module
+public import Grammatik.Logik.Vertraege.ObjektRahmen
+public import Grammatik.Bausteine.Arena.ArenaDyn
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

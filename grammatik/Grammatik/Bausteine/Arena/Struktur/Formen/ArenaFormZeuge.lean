@@ -11,9 +11,12 @@
       at the left of `2`.
     * `grow_zeuge`    -- a commit by `1` on a world whose committed word is below the ceiling keeps list and free list.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

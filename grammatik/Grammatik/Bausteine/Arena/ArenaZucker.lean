@@ -50,8 +50,11 @@
 
   Core direction: imports `Zucker` (for `Expr.weaken`) and `Arena` (for the bridge).
 -/
-import Grammatik.Kern.Syntax.Zucker
-import Grammatik.Bausteine.Arena.Arena
+module
+public import Grammatik.Kern.Syntax.Zucker
+public import Grammatik.Bausteine.Arena.Arena
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

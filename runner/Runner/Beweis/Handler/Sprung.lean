@@ -1,4 +1,7 @@
-import Runner.Beweis.Handler.Gerade
+module
+public import Runner.Beweis.Handler.Gerade
+@[expose] public section
+
 
 /-! # The handlers that branch inside: `brz` and `spawn`
 

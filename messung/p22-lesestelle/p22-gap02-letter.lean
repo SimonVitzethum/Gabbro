@@ -6,6 +6,10 @@
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
 
+module
+
+@[expose] public section
+
 /-- Gap #02: the `letter` class. -/
 def p22Letter (c : Char) : Bool :=
   ('a' ≤ c && c ≤ 'z') || ('A' ≤ c && c ≤ 'Z') ||

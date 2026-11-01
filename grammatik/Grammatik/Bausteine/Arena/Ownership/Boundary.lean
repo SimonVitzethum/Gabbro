@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Bodies
+module
+public import Grammatik.Bausteine.Arena.Ownership.Bodies
+@[expose] public section
+
 
 /-! Argument-dependent ownership transfer at actual G calls. The runtime
 argument is the existing index value; the owning grant is ghost state. -/

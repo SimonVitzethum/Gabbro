@@ -3,9 +3,12 @@
   Subject:   The frame of a function in `S0IR`: the first slots (`FB`), the variable slots of a context (`vslot`,
              `frei`) and their disjointness. Split out of `Ausdruck.lean` unchanged.
 -/
-import Grammatik.Kern.Semantik.Semantik
-import Runner.IR.Rahmen
-import Stage0.Senke.Ausdruck.Aggregat.Layout
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Runner.IR.Rahmen
+public import Stage0.Senke.Ausdruck.Aggregat.Layout
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

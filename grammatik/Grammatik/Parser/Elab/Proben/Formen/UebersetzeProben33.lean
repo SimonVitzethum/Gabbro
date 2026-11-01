@@ -9,7 +9,10 @@
              `RufPasst` against the pointer type decided (`rufPasstB`). A contract on a pointer type (a `requires`,
              `Held(..)` included, or an `ensures`) is refused (the model has none, TODO O43). An indirect call is an edge of the floor relation.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben33
 

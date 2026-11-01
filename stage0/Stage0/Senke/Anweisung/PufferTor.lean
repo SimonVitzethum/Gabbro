@@ -5,7 +5,10 @@
              writable buffer -- the bytes back into the field. Afterwards the memory holds the oracle's world and slot
              `s` the kernel's word.
 -/
-import Stage0.Senke.Anweisung.PufferLauf
+module
+public import Stage0.Senke.Anweisung.PufferLauf
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

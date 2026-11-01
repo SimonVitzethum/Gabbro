@@ -16,6 +16,10 @@
   comment-body cut at the first newline.
 -/
 
+module
+
+@[expose] public section
+
 namespace P21.Gap13Newline
 
 /-- Comment body: everything before the first newline (which is consumed, not kept). -/

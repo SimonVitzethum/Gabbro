@@ -21,7 +21,10 @@
   transfers to P.mitRuhe.
 -/
 
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T1
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T2
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T3
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T4
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T2
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T3
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik.T4
+@[expose] public section
+

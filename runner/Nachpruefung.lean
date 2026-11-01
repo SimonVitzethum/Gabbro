@@ -1,4 +1,7 @@
-import Runner
+module
+public import Runner
+@[expose] public section
+
 
 /-! The axioms of the runner's theorems, read by the Lean guardian (stage 8): each must depend on exactly
 `propext`, `Classical.choice`, `Quot.sound`. -/

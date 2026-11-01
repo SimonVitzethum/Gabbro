@@ -14,7 +14,10 @@
   Corpus sites stand at each probe; probes with no corpus line say
   so (`{ }` bodies stand for the corpus block at the cited site).
 -/
-import Grammatik.Parser.Stmt.Anweisung
+module
+public import Grammatik.Parser.Stmt.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

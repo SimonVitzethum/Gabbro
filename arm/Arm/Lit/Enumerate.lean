@@ -7,9 +7,12 @@
              parameter `cons : Exec -> Bool`. Sizes are fixed to 8 bytes per access
              and exclusives are absent (`excl := false`); recorded in CUTS.
 -/
-import Arm.Basic
-import Arm.Mem.Event
-import Arm.Lit.Prog
+module
+public import Arm.Basic
+public import Arm.Mem.Event
+public import Arm.Lit.Prog
+@[expose] public section
+
 
 namespace Arm.Lit
 

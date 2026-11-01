@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Schritt
-import Grammatik.Berechenbarkeit.RunsUntil
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Schritt
+public import Grammatik.Berechenbarkeit.RunsUntil
+@[expose] public section
+
 
 /-! Brainfuck on G, part 5: the whole program. `programm` is one G statement, uniform in the Brainfuck program:
 `runs until pc = n { if pc = 0 { block of instruction 0 } else if pc = 1 { ... } ... }`, the loop of

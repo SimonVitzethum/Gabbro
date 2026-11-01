@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Handoff
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Handoff
+@[expose] public section
+
 
 /-! The source side of argument handoff. A call's plan lists, per parameter
 at its bottom position, the interface's passing mode and the caller origin

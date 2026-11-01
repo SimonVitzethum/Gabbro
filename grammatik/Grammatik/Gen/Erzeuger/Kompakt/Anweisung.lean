@@ -5,8 +5,11 @@
              clause stream (`stmtS_rep`): the same constructor over the parts' representatives, standing for it
              (`GlS`). One case per constructor; a constructor without a case stops the build.
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.Teile
-import Grammatik.Gen.Erzeuger.AnweisungVollst
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.Teile
+public import Grammatik.Gen.Erzeuger.AnweisungVollst
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

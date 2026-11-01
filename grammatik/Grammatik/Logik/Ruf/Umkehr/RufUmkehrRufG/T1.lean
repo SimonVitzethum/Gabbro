@@ -22,7 +22,10 @@
   depth `n` is any depth at which the body is covered (`TiefK P A n`),
   i.e. at least the nesting depth of the calls; nothing else bounds the run.
 -/
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
+module
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

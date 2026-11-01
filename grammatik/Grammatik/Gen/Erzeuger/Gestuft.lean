@@ -16,7 +16,10 @@
   other number infinite: the reduction "constants folded to the boundary values of the declaration". A theorem about a size bound below `unendlich` therefore speaks only of
   programs whose numbers the scheme names; this is stated, not hidden.
 -/
-import Grammatik.Gen.Erzeuger.Grund
+module
+public import Grammatik.Gen.Erzeuger.Grund
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

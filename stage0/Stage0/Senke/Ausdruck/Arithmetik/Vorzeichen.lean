@@ -1,7 +1,10 @@
 /- The shared add/sub operand preparation uses modular integer addition.
    Adding the high bit toggles it without inspecting the floating value. -/
-import Stage0.Senke.Ausdruck.Arithmetik.AddSub
-import Stage0.Senke.Ausdruck.Gleit.Komposition
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.AddSub
+public import Stage0.Senke.Ausdruck.Gleit.Komposition
+@[expose] public section
+
 
 set_option maxRecDepth 4096
 

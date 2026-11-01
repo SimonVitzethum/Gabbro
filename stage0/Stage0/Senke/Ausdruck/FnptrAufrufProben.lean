@@ -1,7 +1,10 @@
 /-
   Subject: Joint, successful witnesses of the indirect-call simulation premises.
 -/
-import Stage0.Senke.Ausdruck.FnptrProben
+module
+public import Stage0.Senke.Ausdruck.FnptrProben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.FnptrProben
 open Gabbro.Grammatik Runner.IR Runner.Mem

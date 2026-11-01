@@ -15,10 +15,13 @@
     `durchgang_schritte`) and they may stop at the budget; whether a `leave` guard, a `return` inside the loop or a
     base path is ever taken is the program's question (undecidable in general).
 -/
-import Grammatik.Logik.Terminierung.Rekursion
-import Grammatik.Gen.Abdeckung.Satz.MerkmalZerlegt
-import Grammatik.Zielsatz.Faeden.Verbund.T1
-import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
+module
+public import Grammatik.Logik.Terminierung.Rekursion
+public import Grammatik.Gen.Abdeckung.Satz.MerkmalZerlegt
+public import Grammatik.Zielsatz.Faeden.Verbund.T1
+public import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

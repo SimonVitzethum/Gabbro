@@ -27,12 +27,15 @@
 -- fn read_c (holds; writes)
 -- start 0: read_a
 -- start 1: read_c
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Zielsatz.Kern.Beweis
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

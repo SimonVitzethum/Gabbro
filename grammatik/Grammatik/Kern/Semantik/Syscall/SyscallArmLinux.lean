@@ -18,7 +18,10 @@
   NOT here (see `messung/ARM-KOMPATIBILITAET-C.md`): wiring `SysAbiArm` into `Ax`/machine G,
   which holds the x86 `SysAbi`.
 -/
-import Grammatik.Kern.Semantik.Syscall.SyscallArm
+module
+public import Grammatik.Kern.Semantik.Syscall.SyscallArm
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

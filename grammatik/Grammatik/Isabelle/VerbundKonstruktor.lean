@@ -16,6 +16,10 @@
   - `distinct` becomes the explicit `keineDopplung` (same definition).
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.VerbundKonstruktor
 
 /-- A field name. (Isabelle: `type_synonym feld = string`.) -/

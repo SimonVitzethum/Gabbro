@@ -1,7 +1,10 @@
 /- Instruction bounds for the actual counter control flow. -/
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+module
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner Runner.IR

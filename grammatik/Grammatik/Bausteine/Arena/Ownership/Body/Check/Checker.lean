@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Ops
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Ops
+@[expose] public section
+
 
 /-! **The executable admission check** of the ownership body judgment. One
 structural pass over a body computes the context after every statement:

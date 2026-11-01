@@ -29,7 +29,10 @@
   of the value pop: `popS_grund` (twin of `popS_inv`), `invGrundLog_schritt`
   (twin of `invLog_schritt`), `ziel_ort_sperre_invGrund`.
 -/
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

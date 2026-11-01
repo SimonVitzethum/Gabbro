@@ -25,9 +25,12 @@
     (`ohneHardware_zeuge`: `haupt`'s body has the check, calls `zaehle`, and
     the handler premise is what carries the call).
 -/
-import Grammatik.Logik.Ruf.Ohne.RufOhneHardware
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Logik.Ruf.Ohne.RufOhneHardware
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

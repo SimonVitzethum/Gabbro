@@ -2,8 +2,11 @@
    Bounded retry uses finite control flow: no hidden counter can collide with a body or callee frame.
    Each check precedes its attempt; the final check precedes the overflow block. Code size is linear in
    the bound. Leave skips all remaining attempts; next and fallthrough reach the following check. -/
-import Stage0.Senke.Ausdruck
-import Stage0.Senke.Stopp
+module
+public import Stage0.Senke.Ausdruck
+public import Stage0.Senke.Stopp
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

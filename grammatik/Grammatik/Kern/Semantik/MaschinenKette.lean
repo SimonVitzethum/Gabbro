@@ -42,8 +42,11 @@
 -/
 
 
-import Grammatik.Kern.Semantik.MaschinenKette.T1
-import Grammatik.Kern.Semantik.MaschinenKette.T2
-import Grammatik.Kern.Semantik.MaschinenKette.T3
-import Grammatik.Kern.Semantik.MaschinenKette.T4
-import Grammatik.Kern.Semantik.MaschinenKette.T5
+module
+public import Grammatik.Kern.Semantik.MaschinenKette.T1
+public import Grammatik.Kern.Semantik.MaschinenKette.T2
+public import Grammatik.Kern.Semantik.MaschinenKette.T3
+public import Grammatik.Kern.Semantik.MaschinenKette.T4
+public import Grammatik.Kern.Semantik.MaschinenKette.T5
+@[expose] public section
+

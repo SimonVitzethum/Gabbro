@@ -5,7 +5,10 @@
              (`-errno` to a case of the gate's reason; the errno of a case is its declared number, or the one written
              at the binding). Binding selection uses the execution architecture and the explicitly selected source target.
 -/
-import Grammatik.Parser.Item.ElementTief
+module
+public import Grammatik.Parser.Item.ElementTief
+@[expose] public section
+
 
 namespace Gabbro.Stage0
 

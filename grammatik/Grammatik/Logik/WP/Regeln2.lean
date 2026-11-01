@@ -1,4 +1,7 @@
-import Grammatik.Logik.WP.Regeln
+module
+public import Grammatik.Logik.WP.Regeln
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: the remaining composite constructs

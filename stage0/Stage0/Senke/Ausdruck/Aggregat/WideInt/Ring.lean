@@ -7,11 +7,14 @@
   assembled code, and returns the result's complete canonical limbs. The kernel works modulo `2^(64 k)` at the
   common width `k`; the result type's own limbs are the first ones (`valueAt_int_of_wide`).
 -/
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
+module
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -1,5 +1,8 @@
-import Bruecke.Kodierung
-import Bruecke.Pflichten
+module
+public import Bruecke.Kodierung
+public import Bruecke.Pflichten
+@[expose] public section
+
 
 /-!
 # S3, part 2: the expressions -- a lowered G term and its Body term have the same value

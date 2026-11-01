@@ -50,6 +50,10 @@
                           location, a thread never reads the first.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Speichermodell
 
 /-! ## 1. The primitives -/

@@ -2,8 +2,11 @@
   File:      stage0/Stage0/Senke/Umgebung.lean
   Subject:   The environment in the frame: setting a variable, binding a new one, leaving its scope.
 -/
-import Stage0.Senke.Ausdruck.Satz
-import Stage0.Senke.Ausdruck.Quant.Frame
+module
+public import Stage0.Senke.Ausdruck.Satz
+public import Stage0.Senke.Ausdruck.Quant.Frame
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

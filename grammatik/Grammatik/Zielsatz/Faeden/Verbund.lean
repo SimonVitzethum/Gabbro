@@ -33,6 +33,9 @@
   Witnesses: Zielsatz/VerbundZeuge.lean.
 -/
 
-import Grammatik.Zielsatz.Faeden.Verbund.T1
-import Grammatik.Zielsatz.Faeden.Verbund.T2
-import Grammatik.Zielsatz.Faeden.Verbund.T3
+module
+public import Grammatik.Zielsatz.Faeden.Verbund.T1
+public import Grammatik.Zielsatz.Faeden.Verbund.T2
+public import Grammatik.Zielsatz.Faeden.Verbund.T3
+@[expose] public section
+

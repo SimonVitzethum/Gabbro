@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Admission
-import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Admission
+public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+@[expose] public section
+
 
 /-! Joint witnesses over the existing four-slot arena fixture. The source
 destructor takes an actual index parameter and is executed by `rufAt` through

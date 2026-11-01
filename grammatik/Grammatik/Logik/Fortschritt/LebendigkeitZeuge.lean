@@ -22,8 +22,11 @@
   standing at `locks` at step 5, takes the lock at step 15 < 5 + 32
   (`wartezeit_zeuge`), and the theorem itself says so (`lSchranke`).
 -/
-import Grammatik.Logik.Fortschritt.Lebendigkeit
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+module
+public import Grammatik.Logik.Fortschritt.Lebendigkeit
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

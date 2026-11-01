@@ -1,5 +1,8 @@
-import Grammatik.Code.Model.Facts
-import Grammatik.Speichermodell.Maschine.Sicht
+module
+public import Grammatik.Code.Model.Facts
+public import Grammatik.Speichermodell.Maschine.Sicht
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Weak.lean

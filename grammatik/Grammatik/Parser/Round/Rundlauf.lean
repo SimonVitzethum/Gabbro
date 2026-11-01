@@ -20,9 +20,12 @@
   /= 1 argument, `u64::max`-style `Grund` with an integer head,
   suffixes on non-place bases). Each is booked in CUTS.
 -/
-import Grammatik.Parser.Expr.Ausdruck
-import Grammatik.Parser.Stmt.Anweisung
-import Grammatik.Parser.Lex.WortStellung
+module
+public import Grammatik.Parser.Expr.Ausdruck
+public import Grammatik.Parser.Stmt.Anweisung
+public import Grammatik.Parser.Lex.WortStellung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

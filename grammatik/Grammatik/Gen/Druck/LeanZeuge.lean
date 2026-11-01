@@ -5,8 +5,11 @@
              program, `RaumSchlecht` for its one bad cell), proved by `raumGutIn_aus`/`raumSchlechtIn_aus` with every
              concrete side condition decided by the kernel. The file is untrusted text; the kernel checks it.
 -/
-import Grammatik.Gen.Druck.LeanTerm
-import Grammatik.Gen.Abdeckung.Waehlen
+module
+public import Grammatik.Gen.Druck.LeanTerm
+public import Grammatik.Gen.Abdeckung.Waehlen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

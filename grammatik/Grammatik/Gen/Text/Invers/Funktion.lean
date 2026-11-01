@@ -5,7 +5,10 @@
              printed function are the plain data computed from the model -- given the elaborated item lists
              (`LInv`, against the accessors of the declaration).
 -/
-import Grammatik.Gen.Text.Invers.Rumpf
+module
+public import Grammatik.Gen.Text.Invers.Rumpf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

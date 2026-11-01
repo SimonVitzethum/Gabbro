@@ -110,7 +110,10 @@
      der sequenziellen Ausfuehrung abgeleitet -- eigene Schritte erhalten `Q`,
      statt es erst herzustellen.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

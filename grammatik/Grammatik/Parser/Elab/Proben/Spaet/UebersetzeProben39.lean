@@ -5,7 +5,10 @@
              parameter and refuses it over a number. The probes run the parser on tokens and the reader on the trees
              (a whole-unit elaboration does not fit the 4 GiB build limit).
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben39
 

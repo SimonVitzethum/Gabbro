@@ -6,6 +6,10 @@
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
 
+module
+
+@[expose] public section
+
 /-- Gap #04: the `hexdigit` class over the `digit` class. -/
 def p22Digit (c : Char) : Bool :=
   '0' ≤ c && c ≤ '9'

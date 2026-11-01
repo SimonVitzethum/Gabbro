@@ -7,7 +7,10 @@
   around the head, extended with zero on demand, with no fixed capacity. Output is stored
   in reverse order; `output` presents the externally visible order. EOF supplies zero.
 -/
-import Mathlib.Computability.TuringMachine.StackTuringMachine
+module
+public import Mathlib.Computability.TuringMachine.StackTuringMachine
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Brainfuck
 

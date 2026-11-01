@@ -18,6 +18,10 @@
   model below is the filter; each pair is (name, gated?).
 -/
 
+module
+
+@[expose] public section
+
 namespace P21.Gap19BuildGate
 
 /-- Item-list filter: a gated item survives iff the testbuild flag is set. -/

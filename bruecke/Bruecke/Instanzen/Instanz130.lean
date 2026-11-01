@@ -1,5 +1,8 @@
-import Bruecke.Quelle
-import Duty.Duty130DerivedContractPure
+module
+public import Bruecke.Quelle
+public import Duty.Duty130DerivedContractPure
+@[expose] public section
+
 
 /-! BRIDGE-GENERIC beispiele/130-derived-contract-pure.gab nutzer
 

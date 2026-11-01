@@ -1,5 +1,8 @@
 /- Composition from an actual child execution and slot read. -/
-import Stage0.Senke.Ausdruck.Gleit.Skalieren
+module
+public import Stage0.Senke.Ausdruck.Gleit.Skalieren
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

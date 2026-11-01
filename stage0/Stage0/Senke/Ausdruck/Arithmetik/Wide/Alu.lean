@@ -7,8 +7,11 @@
   `alu_run` proves that the actual IR execution reaches exactly that valuation, writes only slots
   from `d` on, and leaves the code untouched. Limb arithmetic is then argued on `aluRun` alone.
 -/
-import Stage0.Senke.Ausdruck.Quant.Frame
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.KernelCode
+module
+public import Stage0.Senke.Ausdruck.Quant.Frame
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.KernelCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

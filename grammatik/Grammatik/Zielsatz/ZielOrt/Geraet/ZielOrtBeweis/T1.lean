@@ -29,7 +29,10 @@
     sequential world, hence in the machine's (the callee's contract carriers
     are in the caller's footprint).
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtSem
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

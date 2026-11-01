@@ -13,11 +13,14 @@
   * `akzeptiertSpec_verbindeX`, `gabbro_ziel_verbundX`, `verbund_aus_X` -- the same for linked
     units.
 -/
-import Grammatik.Zielsatz.Atomar.AtomarZiel
-import Grammatik.Speichermodell.Maschine.GXMaschine
-import Grammatik.Zielsatz.Faeden.Verbund
-import Grammatik.Logik.Fortschritt.Hungerfrei
-import Grammatik.Bausteine.Arena.Ownership.Ruhe.Start
+module
+public import Grammatik.Zielsatz.Atomar.AtomarZiel
+public import Grammatik.Speichermodell.Maschine.GXMaschine
+public import Grammatik.Zielsatz.Faeden.Verbund
+public import Grammatik.Logik.Fortschritt.Hungerfrei
+public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Start
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

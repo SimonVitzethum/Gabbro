@@ -1,7 +1,10 @@
 /-
   Subject: Indirect calls and their continuations, sharing the direct call's frame proof.
 -/
-import Stage0.Senke.Anweisung.Simulation
+module
+public import Stage0.Senke.Anweisung.Simulation
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

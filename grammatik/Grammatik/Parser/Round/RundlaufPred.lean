@@ -16,8 +16,11 @@
   the path, and the printers that re-lex a path (`module`, `concurrent`, `start`, call heads)
   print it.
 -/
-import Grammatik.Parser.Round.RundlaufTyp
-import Grammatik.Parser.Print.Item
+module
+public import Grammatik.Parser.Round.RundlaufTyp
+public import Grammatik.Parser.Print.Item
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

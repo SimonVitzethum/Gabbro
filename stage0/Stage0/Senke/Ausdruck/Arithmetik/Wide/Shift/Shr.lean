@@ -7,7 +7,10 @@
   below `2^(64 k)`: `x / 2^n`. Limb stages run in ascending limb order, so a limb is read before it
   is overwritten; a source beyond the top limb is the zero slot, which is what the limb is.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shl
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shl
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

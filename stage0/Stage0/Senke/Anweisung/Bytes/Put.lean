@@ -1,6 +1,9 @@
 /- Subject: Capture both operands, then write the byte span against machine G. -/
-import Stage0.Senke.Anweisung.Bytes.Write
-import Stage0.Senke.Anweisung.Simulation
+module
+public import Stage0.Senke.Anweisung.Bytes.Write
+public import Stage0.Senke.Anweisung.Simulation
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

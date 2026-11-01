@@ -28,7 +28,10 @@
   their places (trace events); the machine checks no contract, so the
   handler that the machine realises is the bare body run.
 -/
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
+module
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

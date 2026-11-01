@@ -31,6 +31,10 @@
   the gifts, not a proof.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik
 
 /-- A bounded string with declared maximum `max`: the data plus the

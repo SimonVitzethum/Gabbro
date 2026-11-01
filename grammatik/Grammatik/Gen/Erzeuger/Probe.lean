@@ -13,7 +13,10 @@
   * a concrete valid skeleton is accepted by the checker's Bool (decided) and generated at its size; the same program
     with one root declared twice is refused by exactly component 6 (decided) and generated under that label.
 -/
-import Grammatik.Gen.Erzeuger.Gueltig
+module
+public import Grammatik.Gen.Erzeuger.Gueltig
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

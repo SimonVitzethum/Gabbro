@@ -24,9 +24,12 @@
   `RufMaschineD.lean` (ensures result = param + 1) with a handler
   that runs the body.
 -/
-import Grammatik.Logik.Ruf.Hoare.HoareRegeln
-import Grammatik.Logik.Vertraege.VertragOrtB
-import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+module
+public import Grammatik.Logik.Ruf.Hoare.HoareRegeln
+public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

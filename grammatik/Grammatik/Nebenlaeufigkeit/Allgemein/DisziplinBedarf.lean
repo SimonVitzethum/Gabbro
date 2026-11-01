@@ -13,9 +13,12 @@
   runs through the existing per-carrier chain lemma
   (`hinv_kette_aus_disziplin`), exactly as the old proof did.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

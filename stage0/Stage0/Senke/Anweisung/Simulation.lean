@@ -5,7 +5,10 @@
              protected slots kept), `zurueck` returns (`RetZ`), `why` returns (`RetWhy`), `logik` stops. The targets of a part of the code
              against the whole (`tgt_eq`), and `jmp` to a target (`jmp_reach`).
 -/
-import Stage0.Senke.Rueckkehr
+module
+public import Stage0.Senke.Rueckkehr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

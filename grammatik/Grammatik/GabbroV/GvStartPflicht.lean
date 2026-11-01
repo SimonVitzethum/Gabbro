@@ -18,17 +18,20 @@
   definitions of `Zielsatz/`, `Semantik` and `Parser/` unchanged; no new
   interpreter, no import from `programmlogik/`.
 -/
-import Grammatik.Parser.Elab.Uebersetze
-import Grammatik.Parser.Elab.UebersetzeAllg
-import Grammatik.Parser.Elab.UebersetzeAllg3
-import Grammatik.Kern.Syntax.Typen
-import Grammatik.Kern.Syntax.Syntax
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Logik.Vertraege.VertragOrtB
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
+module
+public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Kern.Syntax.Typen
+public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV
 

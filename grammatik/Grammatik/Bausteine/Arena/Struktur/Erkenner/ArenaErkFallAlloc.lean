@@ -6,7 +6,10 @@
              abstract state: a fresh slot is in neither structure, a released slot was in neither, a commit and a payload
              store move no word either structure reads.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerLemmas
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerLemmas
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -23,6 +23,10 @@
   in `Semantik.lean`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.TableInduktion
 
 set_option linter.unusedVariables false

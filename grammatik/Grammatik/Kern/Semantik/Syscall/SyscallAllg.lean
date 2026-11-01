@@ -21,8 +21,11 @@
   `CloneAbiG` states the generic clone shape (the x86-specific `CloneAbi` and its embedding
   `cloneAbi_good_iff` lived in `CloneHandoff.lean`, deleted 2026-10-18 with the C backend).
 -/
-import Grammatik.Kern.Semantik.Syscall.SyscallPaarung
-import Grammatik.Kern.Semantik.Syscall.SyscallArmLinux
+module
+public import Grammatik.Kern.Semantik.Syscall.SyscallPaarung
+public import Grammatik.Kern.Semantik.Syscall.SyscallArmLinux
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

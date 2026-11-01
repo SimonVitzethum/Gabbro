@@ -5,8 +5,11 @@
              the model's Bool (`gs_akzeptiertX`) unchanged. This is what lets the generator keep one body per summary
              (`Spez.tabellenD`) without losing a cell.
 -/
-import Grammatik.Gen.Abdeckung.Satz.Schluessel
-import Grammatik.Gen.Abdeckung.Satz.ZellenUnmoeglich
+module
+public import Grammatik.Gen.Abdeckung.Satz.Schluessel
+public import Grammatik.Gen.Abdeckung.Satz.ZellenUnmoeglich
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

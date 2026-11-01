@@ -1,6 +1,9 @@
 /- Actual waiter-counter CAS loop: sequential successful iteration, with explicit
    bounds for interpreting the modular word arithmetic as a natural counter. -/
-import Stage0.Senke.Sperre.Nimm
+module
+public import Stage0.Senke.Sperre.Nimm
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

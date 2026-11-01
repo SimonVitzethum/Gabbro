@@ -6,7 +6,10 @@
              most `n` is in the bucket of its size. The proof cases on the term; a constructor without a clause
              stops the build, so new syntax shows up as a gap by itself.
 -/
-import Grammatik.Gen.Erzeuger.Ausdruck
+module
+public import Grammatik.Gen.Erzeuger.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

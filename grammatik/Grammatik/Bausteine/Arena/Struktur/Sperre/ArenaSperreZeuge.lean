@@ -18,7 +18,10 @@
       no derivation exists).
     * the same stray world is no environment move: no member of `HavocOk` hands it to an acquirer (`stray_kein_havoc`).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreWelt
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreWelt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

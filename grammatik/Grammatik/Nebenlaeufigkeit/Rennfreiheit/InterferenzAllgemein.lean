@@ -111,8 +111,11 @@
      statt es erst herzustellen.
 -/
 
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T1
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T2
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T4
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T5
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T1
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T2
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T4
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T5
+@[expose] public section
+

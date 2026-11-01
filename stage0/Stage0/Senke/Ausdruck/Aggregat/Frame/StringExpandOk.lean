@@ -1,8 +1,11 @@
 /- Subject: Generic correctness of widening a packed string to a long string span. -/
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedOk
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
-import Stage0.Senke.Welt.Spans.Cell
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedOk
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
+public import Stage0.Senke.Welt.Spans.Cell
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

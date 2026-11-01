@@ -5,13 +5,16 @@
              `Spez.erzeugeF`, which emits a program only as a `Gutes` (the Lean model's Bool accepts it) or a `Schlechtes c`
              (exactly component `c` refuses it), each carrying the proof as a field. Used by `ZellenBefund.lean`.
 -/
-import Grammatik.Gen.Abdeckung.Messung
-import Grammatik.Gen.Abdeckung.Zellen
-import Grammatik.Gen.Familie.ZellFamilie
-import Grammatik.Gen.Erzeuger.Strom
-import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
-import Grammatik.Gen.Erzeuger.Entdoppelt
-import Grammatik.Gen.Erzeuger.Kompakt.Merken
+module
+public import Grammatik.Gen.Abdeckung.Messung
+public import Grammatik.Gen.Abdeckung.Zellen
+public import Grammatik.Gen.Familie.ZellFamilie
+public import Grammatik.Gen.Erzeuger.Strom
+public import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
+public import Grammatik.Gen.Erzeuger.Entdoppelt
+public import Grammatik.Gen.Erzeuger.Kompakt.Merken
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

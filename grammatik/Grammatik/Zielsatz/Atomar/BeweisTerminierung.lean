@@ -4,9 +4,12 @@
              the premises of `endet_satz` (Logik/Terminierung/Entscheidung.lean), as they give the replay in
              `zielX_aus`.
 -/
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Logik.Terminierung.Entscheidung
-import Grammatik.Zielsatz.Atomar.MassRuhe
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Logik.Terminierung.Entscheidung
+public import Grammatik.Zielsatz.Atomar.MassRuhe
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

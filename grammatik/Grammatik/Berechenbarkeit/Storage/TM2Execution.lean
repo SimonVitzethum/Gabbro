@@ -1,4 +1,7 @@
-import Grammatik.Berechenbarkeit.Storage.TM2Heap
+module
+public import Grammatik.Berechenbarkeit.Storage.TM2Heap
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap
 

@@ -15,9 +15,12 @@
   does not touch is `Gl`: an allocator run (`A.Fremd`), a payload store, a recorded read, and -- through the frame of an
   executed form (`LinkRahmen`) and `getrennt` -- every move of the OTHER structure.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormZug
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormZug
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaWachs
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,5 +1,8 @@
 /- Part 2 of 7 of `RufMaschineG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufMaschineG.lean` imports all parts). -/
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -26,7 +26,10 @@
     accesses by different threads, at least one a write, NOT ordered by a
     release/acquire of a guard) with `keine_datenrasse_g`.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiG
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

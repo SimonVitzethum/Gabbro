@@ -32,7 +32,10 @@
   `offen07`: G forms for entry/boot/walk (language extension), not a model
   repair.
 -/
-import Grammatik.Zielsatz.Kern.Proben
+module
+public import Grammatik.Zielsatz.Kern.Proben
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

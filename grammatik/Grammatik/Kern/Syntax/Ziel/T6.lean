@@ -1,5 +1,8 @@
 /- Part 6 of 6 of `Ziel` (split by instrumente/teile/lean-teilen.py; the umbrella `Ziel.lean` imports all parts). -/
-import Grammatik.Kern.Syntax.Ziel.T5
+module
+public import Grammatik.Kern.Syntax.Ziel.T5
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

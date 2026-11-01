@@ -10,7 +10,10 @@
   Arm ARM:   B2.3 atomic-ordered-before (`aob` below); exclusives-clearing rule (a store by
              another observer to the monitored granule clears the reservation).
 -/
-import Arm.Mem.Event
+module
+public import Arm.Mem.Event
+@[expose] public section
+
 
 namespace Arm
 

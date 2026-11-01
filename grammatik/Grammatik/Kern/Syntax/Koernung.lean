@@ -75,7 +75,10 @@
   - C3: no machine beyond counting is modelled; the premise is
     width-based (`eventWidth <= 1`), the machine step itself stays a word.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -7,7 +7,10 @@
 
              The names are the register's: `Expr.add`, `Stmt.locks`, `Ty.int`, `Deklaration.rang`, `RufPasst.hh`.
 -/
-import Grammatik.Gen.Erzeuger.Programm
+module
+public import Grammatik.Gen.Erzeuger.Programm
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

@@ -17,6 +17,10 @@
   values to the source.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Konstanten
 
 /-- Certificate predicate (encoding N): the defining equation `f`

@@ -14,8 +14,11 @@
      and on a reached run `pruefe`'s `requires` holds at its logged entry,
      BY THE THEOREM, over the value `setze` wrote.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

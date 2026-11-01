@@ -7,7 +7,10 @@
   from the step's memory footprint (`TraegerGleich`), which is what the
   one-step rely `schritt_traeger` makes provable without a 70-case analysis.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

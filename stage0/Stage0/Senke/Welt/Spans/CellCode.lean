@@ -1,6 +1,9 @@
 /- Canonical typed cell addressing and runtime-pointer span stores, below all proofs.
    Every cell occupies its complete value span; the stride is the span, never one word. -/
-import Stage0.Senke.Welt.Spans.SpanCode
+module
+public import Stage0.Senke.Welt.Spans.SpanCode
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration}

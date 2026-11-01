@@ -9,7 +9,10 @@
   statement, because `schliesseBlock` would read that last statement as the ender
   (`schliesse_ende_noetig` shows the planted defect).
 -/
-import Grammatik.Parser.Round.RundlaufAnw2
+module
+public import Grammatik.Parser.Round.RundlaufAnw2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

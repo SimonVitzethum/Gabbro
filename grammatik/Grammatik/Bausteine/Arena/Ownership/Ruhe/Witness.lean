@@ -1,6 +1,9 @@
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Bausteine.Arena.Ownership.Body.Witness
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Bausteine.Arena.Ownership.Body.Witness
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
+@[expose] public section
+
 
 /-! **A witness of the ownership leg of `GabbroZiel`.** One function on the
 four-slot arena `FA` allocates from the counter, stores a payload, releases

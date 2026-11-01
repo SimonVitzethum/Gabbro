@@ -1,6 +1,9 @@
 /- Execution of the complete store loop with an exact scratch/world footprint. -/
-import Stage0.Senke.Welt.Spans.SpanEffect
-import Stage0.Senke.Welt.Schreib
+module
+public import Stage0.Senke.Welt.Spans.SpanEffect
+public import Stage0.Senke.Welt.Schreib
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}

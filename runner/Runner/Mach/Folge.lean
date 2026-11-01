@@ -1,4 +1,7 @@
-import Runner.Beweis.Mehr
+module
+public import Runner.Beweis.Mehr
+@[expose] public section
+
 
 /-! # The sequentially consistent memory model, with the kernel
 

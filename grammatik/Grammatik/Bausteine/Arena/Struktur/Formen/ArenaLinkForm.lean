@@ -16,9 +16,12 @@
   `execBlock (form … rest) σ ρ = execBlock rest σ' ρ'` (`schrumpf` drops the binder of a `narrow`), together with the
   frame facts (link field, head, and the allocator's three views: head of the free list, free links, counter).
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaListe
-import Grammatik.Bausteine.Arena.Struktur.ArenaAuf
-import Grammatik.Bausteine.Arena.Struktur.ArenaRahmen
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaListe
+public import Grammatik.Bausteine.Arena.Struktur.ArenaAuf
+public import Grammatik.Bausteine.Arena.Struktur.ArenaRahmen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

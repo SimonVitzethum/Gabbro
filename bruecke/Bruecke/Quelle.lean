@@ -1,7 +1,10 @@
-import Grammatik.Parser.Elab.UebersetzePipeline
-import Bruecke.Pruefung
-import Bruecke.Start
-import Bruecke.Atomar
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Bruecke.Pruefung
+public import Bruecke.Start
+public import Bruecke.Atomar
+@[expose] public section
+
 
 /-!
 # P6: the duties of a SOURCE TEXT, computed in Lean -- and one generic theorem over every source

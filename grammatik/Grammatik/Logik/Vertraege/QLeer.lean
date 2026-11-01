@@ -24,9 +24,12 @@
   EVERY return value, including the wrong ones. That is the degeneration, not
   a bug in the body. The Q-predicates never look at the body at all.
 -/
-import Grammatik.Kern.Syntax.Extraktion
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+module
+public import Grammatik.Kern.Syntax.Extraktion
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

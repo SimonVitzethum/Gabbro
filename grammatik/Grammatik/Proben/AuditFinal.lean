@@ -9,10 +9,13 @@
               every negative verdict there is backed by a proved lemma here
               or by a precise description pointing at the exact shape.
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiG
-import Grammatik.Logik.Fortschritt.KostenGZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiG
+public import Grammatik.Logik.Fortschritt.KostenGZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

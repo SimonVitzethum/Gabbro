@@ -1,6 +1,9 @@
-import Grammatik.Parser.Elab.UebersetzePipeline
-import Grammatik.Parser.Elab.UebersetzeAllg
-import Mathlib.Basic.IsEmpty.Defs
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Mathlib.Basic.IsEmpty.Defs
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

@@ -1,5 +1,8 @@
-import Runner.Prog.Elf
-import Runner.Mach.TSO
+module
+public import Runner.Prog.Elf
+public import Runner.Mach.TSO
+@[expose] public section
+
 
 /-! # The runner's file: its code is `C`, it places every handler, and loaded it holds the table
 

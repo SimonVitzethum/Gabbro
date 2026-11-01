@@ -26,8 +26,11 @@
   counter") is not a whole-table invariant and the other thread writes only
   slot 5, a different slot of the same shared table.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

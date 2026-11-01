@@ -1,6 +1,9 @@
-import Grammatik.Bausteine.Arena.Unbounded.Execution
-import Grammatik.Bausteine.Arena.Ownership.World
-import Grammatik.Logik.Terminierung.Klasse
+module
+public import Grammatik.Bausteine.Arena.Unbounded.Execution
+public import Grammatik.Bausteine.Arena.Ownership.World
+public import Grammatik.Logik.Terminierung.Klasse
+@[expose] public section
+
 
 /-!
 The fallible-allocation boundary in actual G terms. The provider result is an

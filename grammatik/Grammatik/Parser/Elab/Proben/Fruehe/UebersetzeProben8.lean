@@ -3,7 +3,10 @@
   Subject:   Track P: `if` and `return` inside blocks (`UStmt.wennAuf`/`sonst`/`zu`, `UStmt.ret`,
              `Stmt.ite`, `Stmt.ret`), from source text. Table-free sources (kernel memory).
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben8
 

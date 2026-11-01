@@ -1,6 +1,9 @@
 /- Joint byte-loading and source-environment witnesses; these do not activate image startup. -/
-import Stage0.StartArgumentProben
-import Stage0.Senke.Welt.StartEnv
+module
+public import Stage0.StartArgumentProben
+public import Stage0.Senke.Welt.StartEnv
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.StartImageProbe
 open Gabbro.Grammatik Runner.IR Gabbro.Stage0.StartArgument

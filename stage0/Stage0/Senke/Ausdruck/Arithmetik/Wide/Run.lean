@@ -7,7 +7,10 @@
   replaced by `x + y` resp. `x - y` modulo `2^(64k)`, exactly the canonical `integerEncoding k`;
   the second operand survives; only frame slots from `a` on change.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Add
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Add
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

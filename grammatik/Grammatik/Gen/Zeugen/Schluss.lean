@@ -5,30 +5,33 @@
              the source right. Do not edit.
              (Edited 2026-10-21: the witness `M99_825` joined `M99_824`, see there.)
 -/
-import Grammatik.Gen.Zeugen.Erreicht
-import Grammatik.Gen.Zeugen.M.M99_824
-import Grammatik.Gen.Zeugen.M.M99_825
-import Grammatik.Gen.Zeugen.M.M47_549
-import Grammatik.Gen.Zeugen.M.M169_350
-import Grammatik.Gen.Zeugen.M.M16_13
-import Grammatik.Gen.Zeugen.M.M49_50
-import Grammatik.Gen.Zeugen.M.M103_803
-import Grammatik.Gen.Zeugen.M.M103_131
-import Grammatik.Gen.Zeugen.N.N16_5
-import Grammatik.Gen.Zeugen.N.N18_0
-import Grammatik.Gen.Zeugen.N.N18_4
-import Grammatik.Gen.Zeugen.N.N19_0
-import Grammatik.Gen.Zeugen.N.N19_2
-import Grammatik.Gen.Zeugen.N.N19_5
-import Grammatik.Gen.Zeugen.N.N19_7
-import Grammatik.Gen.Zeugen.N.N20_1
-import Grammatik.Gen.Zeugen.N.N23_4
-import Grammatik.Gen.Zeugen.N.N24_0
-import Grammatik.Gen.Zeugen.N.N3_0
-import Grammatik.Gen.Zeugen.N.N47_20
-import Grammatik.Gen.Zeugen.N.N47_45
-import Grammatik.Gen.Abdeckung.Satz.Neutral
-import Grammatik.Gen.Abdeckung.Satz.Unmoeglich
+module
+public import Grammatik.Gen.Zeugen.Erreicht
+public import Grammatik.Gen.Zeugen.M.M99_824
+public import Grammatik.Gen.Zeugen.M.M99_825
+public import Grammatik.Gen.Zeugen.M.M47_549
+public import Grammatik.Gen.Zeugen.M.M169_350
+public import Grammatik.Gen.Zeugen.M.M16_13
+public import Grammatik.Gen.Zeugen.M.M49_50
+public import Grammatik.Gen.Zeugen.M.M103_803
+public import Grammatik.Gen.Zeugen.M.M103_131
+public import Grammatik.Gen.Zeugen.N.N16_5
+public import Grammatik.Gen.Zeugen.N.N18_0
+public import Grammatik.Gen.Zeugen.N.N18_4
+public import Grammatik.Gen.Zeugen.N.N19_0
+public import Grammatik.Gen.Zeugen.N.N19_2
+public import Grammatik.Gen.Zeugen.N.N19_5
+public import Grammatik.Gen.Zeugen.N.N19_7
+public import Grammatik.Gen.Zeugen.N.N20_1
+public import Grammatik.Gen.Zeugen.N.N23_4
+public import Grammatik.Gen.Zeugen.N.N24_0
+public import Grammatik.Gen.Zeugen.N.N3_0
+public import Grammatik.Gen.Zeugen.N.N47_20
+public import Grammatik.Gen.Zeugen.N.N47_45
+public import Grammatik.Gen.Abdeckung.Satz.Neutral
+public import Grammatik.Gen.Abdeckung.Satz.Unmoeglich
+@[expose] public section
+
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 0

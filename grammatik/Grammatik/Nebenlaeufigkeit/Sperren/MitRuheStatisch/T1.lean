@@ -5,8 +5,11 @@
              reads, the fragment test, the feature test `mE` -- gives on the
              translated body what it gave on the body.
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

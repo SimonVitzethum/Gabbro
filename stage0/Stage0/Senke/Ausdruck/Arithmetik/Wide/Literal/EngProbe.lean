@@ -6,8 +6,11 @@
   code at 2048 and frame at `2^20`, operand in slots 8 and 9. `-2^100 - 1` is one below the lower bound
   (the borrow crosses the limb boundary): flag 1. `2^100` is the upper bound itself: flag 0.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Probe
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Eng
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Probe
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Eng
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.EngProbe
 open Runner.IR Runner.Mem Gabbro.Stage0.Senke.DivideProbe

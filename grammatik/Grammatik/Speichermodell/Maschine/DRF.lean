@@ -36,9 +36,12 @@
   Sicht.lean) and that the C compiler implements C11 atomics and `pthread_mutex` as specified
   -- both named in the header of `Spec.lean`.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
-import Grammatik.Speichermodell.Maschine.MaschineW
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
+public import Grammatik.Speichermodell.Maschine.MaschineW
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

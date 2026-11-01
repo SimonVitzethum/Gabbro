@@ -47,8 +47,11 @@
   admits every SC behaviour: always write above everything and read the newest). The other
   direction for accepted programs is the DRF theorem, `Speichermodell/DRF.lean`.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-import Grammatik.Speichermodell.Maschine.Sicht
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Speichermodell.Maschine.Sicht
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

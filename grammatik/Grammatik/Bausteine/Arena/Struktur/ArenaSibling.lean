@@ -16,7 +16,10 @@
   The planted defects show the extra store is needed: a new sibling with another parent breaks the demand
   (`sib_ohne_vater_bricht`).
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaBaum
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaum
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaKette
 

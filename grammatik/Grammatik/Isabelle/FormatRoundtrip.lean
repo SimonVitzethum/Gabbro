@@ -22,6 +22,10 @@
     equations.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.FormatRoundtrip
 
 /-- A byte. (Isabelle: `type_synonym byte = nat`.) -/

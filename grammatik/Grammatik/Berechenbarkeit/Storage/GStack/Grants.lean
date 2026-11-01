@@ -1,4 +1,7 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Push
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Push
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.GStack
 

@@ -1,9 +1,12 @@
 /- Complete table-cell reads and writes through a physical address computed from the
    index word and the full cell span. Both use the shared runtime-pointer transport and
    the canonical `ValueAt` relation; no scalar projection of a cell occurs. -/
-import Stage0.Senke.Welt.Spans.StorePointer
-import Stage0.Senke.Welt.Spans.Read
-import Stage0.Senke.Ausdruck.Quant.OkSeq
+module
+public import Stage0.Senke.Welt.Spans.StorePointer
+public import Stage0.Senke.Welt.Spans.Read
+public import Stage0.Senke.Ausdruck.Quant.OkSeq
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false

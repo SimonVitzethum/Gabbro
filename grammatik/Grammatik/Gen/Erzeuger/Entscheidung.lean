@@ -5,8 +5,11 @@
              proof argument with these instances (`if h : P then ... else []`), so a generated term carries a
              real proof, never an assumption.
 -/
-import Grammatik.Gen.Erzeuger.Grund
-import Batteries.Data.List.Perm
+module
+public import Grammatik.Gen.Erzeuger.Grund
+public import Batteries.Data.List.Perm
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

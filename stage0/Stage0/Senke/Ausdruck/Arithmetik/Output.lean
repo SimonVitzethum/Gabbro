@@ -1,6 +1,9 @@
 /- Emitted post-cancellation nearest-even rounding and field packing. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Distanz
-import Stage0.Senke.Ausdruck.Gleit.SlotContext
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Distanz
+public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem Gleitkomma

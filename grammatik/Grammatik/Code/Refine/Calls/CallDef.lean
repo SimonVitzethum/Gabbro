@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Stmt
-import Grammatik.Code.Lower.Func
+module
+public import Grammatik.Code.Refine.Stmt
+public import Grammatik.Code.Lower.Func
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/CallDef.lean

@@ -1,7 +1,10 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Push
-import Grammatik.Bausteine.Arena.Ownership.Machine.Exit
-import Grammatik.Bausteine.Arena.Ownership.Body.Program
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Push
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Exit
+public import Grammatik.Bausteine.Arena.Ownership.Body.Program
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+@[expose] public section
+
 
 /-! **Ownership on the whole machine.** One ledger agrees with the shared
 memory and keeps its discipline against the stack depth of every thread.

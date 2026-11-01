@@ -1,6 +1,9 @@
 /- A real world store and call preserve a live sentinel in a nonzero reserved frame. -/
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+module
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.CounterCallProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem FnptrProben

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Unbounded.Runs
+module
+public import Grammatik.Bausteine.Arena.Unbounded.Runs
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaStorage
 

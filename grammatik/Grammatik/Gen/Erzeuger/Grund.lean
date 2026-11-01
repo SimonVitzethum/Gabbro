@@ -15,7 +15,10 @@
   drawn from. Completeness is then a single induction on `n` per family: a term of size at most `n + 1` is
   built by one rule from subterms of size at most `n`, which the induction hypothesis puts into `gen n`.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

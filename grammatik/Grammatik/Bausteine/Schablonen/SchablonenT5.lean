@@ -24,6 +24,9 @@
 -/
 
 
-import Grammatik.Bausteine.Schablonen.SchablonenT5.T1
-import Grammatik.Bausteine.Schablonen.SchablonenT5.T2
-import Grammatik.Bausteine.Schablonen.SchablonenT5.T3
+module
+public import Grammatik.Bausteine.Schablonen.SchablonenT5.T1
+public import Grammatik.Bausteine.Schablonen.SchablonenT5.T2
+public import Grammatik.Bausteine.Schablonen.SchablonenT5.T3
+@[expose] public section
+

@@ -5,7 +5,10 @@
              return, `locks`, publish, release) and thread 1 (10 steps:
              `locks`, call, `if`, `awaits`, return).
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsZeuge
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

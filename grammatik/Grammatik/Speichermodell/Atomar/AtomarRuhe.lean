@@ -5,8 +5,11 @@
              translated like the lock move (`hA`). The copy of MitRuheSperre.lean §4/§5 over
              `execStmtHA`. Opus lane O25b, 2026-09-26. Standalone.
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
-import Grammatik.Speichermodell.Maschine.SperreSemA
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
+public import Grammatik.Speichermodell.Maschine.SperreSemA
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

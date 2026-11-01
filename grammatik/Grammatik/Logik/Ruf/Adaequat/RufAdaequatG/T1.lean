@@ -29,8 +29,11 @@
   (`trav_falsch_steht`, `trav_einig`, `ruf_fortsetzung`). Bodies WITH calls:
   `RufAdaequatRufG.lean`.
 -/
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG
-import Grammatik.Logik.Ruf.Hoare.HoareRegeln
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+public import Grammatik.Logik.Ruf.Hoare.HoareRegeln
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

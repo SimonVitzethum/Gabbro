@@ -1,5 +1,8 @@
-import Grammatik.Code.Conc.MaskNeed
-import Grammatik.Zielsatz.Eigenschaften.KernMaske
+module
+public import Grammatik.Code.Conc.MaskNeed
+public import Grammatik.Zielsatz.Eigenschaften.KernMaske
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/MaskRel.lean

@@ -9,12 +9,15 @@
   operand, zero, 63, the extension word, the flag, the first comparison's frame at `r1 = a+k+4`, the
   second at `r2 = r1 + 2(k+1) + 7`.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Wide
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Code
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Cond
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Wide
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Code
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Cond
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

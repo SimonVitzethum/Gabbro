@@ -11,8 +11,11 @@
   proved: `Print/Proben` decides one witness per statement form and `Cover/Census` runs the round trip over
   every function body of the corpus (`rt=ok/total`).
 -/
-import Grammatik.Parser.Round.Rundlauf
-import Grammatik.Parser.Stmt.Anweisung
+module
+public import Grammatik.Parser.Round.Rundlauf
+public import Grammatik.Parser.Stmt.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

@@ -9,7 +9,10 @@
              continuations, so syntactic (register-flow) dependencies in the
              sense of the Arm ASL are invisible to any function of events.
 -/
-import Arm.Mem.Exec
+module
+public import Arm.Mem.Exec
+@[expose] public section
+
 
 namespace Arm
 

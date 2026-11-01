@@ -19,8 +19,11 @@
   statement names `Q` only on `P`; the flagships on `P.mitRuhe` are
   instantiated with this family.
 -/
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

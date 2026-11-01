@@ -1,5 +1,8 @@
-import Runner.Beweis.Bild
-import Runner.Prog.Proben
+module
+public import Runner.Beweis.Bild
+public import Runner.Prog.Proben
+@[expose] public section
+
 
 /-! # The runner's theorems, and their witness on the real file
 

@@ -1,4 +1,7 @@
-import Grammatik.Speichermodell.Atomar.Atomar
+module
+public import Grammatik.Speichermodell.Atomar.Atomar
+@[expose] public section
+
 
 /-
   File:      Grammatik/Speichermodell/Payload/PayloadHb.lean

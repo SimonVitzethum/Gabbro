@@ -4,7 +4,10 @@
              whose pointer word changed (`argsW_ptr`), a word whose bytes are kept (`rd64_keep`), and where the
              pointer parameter is (`ptrParam_spec`).
 -/
-import Stage0.Senke.Anweisung.Puffer
+module
+public import Stage0.Senke.Anweisung.Puffer
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

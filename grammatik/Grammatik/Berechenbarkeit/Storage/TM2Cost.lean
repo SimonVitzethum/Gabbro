@@ -1,4 +1,7 @@
-import Grammatik.Berechenbarkeit.Storage.TM2Run
+module
+public import Grammatik.Berechenbarkeit.Storage.TM2Run
+@[expose] public section
+
 
 /-! Conditional operation bounds for the linked-store interpreter. Units count
 abstract heap primitives and control operations, not CPU cycles, allocator

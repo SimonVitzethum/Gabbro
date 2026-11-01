@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Ruhe.Iface
+module
+public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Iface
+@[expose] public section
+
 
 /-! **The ownership judgment across the idle root.** Every derivation of the
 body judgment over `P` is a derivation over the translated syntax of

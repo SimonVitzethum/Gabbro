@@ -8,7 +8,10 @@
   (`D.invarianten_gehalten`) is table-only, so the mirror routes via
   the touch rule (`WaechterGehalten`) instead of `J.hSchuld`.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

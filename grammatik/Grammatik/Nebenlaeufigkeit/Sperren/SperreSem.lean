@@ -32,7 +32,10 @@
   semantics, plus the acquire and release lemmas).
 -/
 
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T1
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T2
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T3
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T4
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T2
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T3
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T4
+@[expose] public section
+

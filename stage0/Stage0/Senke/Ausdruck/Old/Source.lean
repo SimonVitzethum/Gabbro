@@ -1,7 +1,10 @@
 /- Bridge numeric source old(global) to the existing G constructor without changing the shared parser.
    The ordinary elaborator resolves every name and type; source/side pairs are checked structurally.
    The caller checks the restored program with the full AkzeptiertX, never the temporary program. -/
-import Grammatik.Parser.Cover.Differenz
+module
+public import Grammatik.Parser.Cover.Differenz
+@[expose] public section
+
 
 namespace Gabbro.Stage0.OldSource
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

@@ -1,7 +1,10 @@
 /- The actual request-building instructions and syscall of `futexC`.
    Memory interference is an explicit client premise, never supplied by FutexOK. -/
-import Stage0.Senke.Sperre.Waiter
-import Runner.IR.Futex
+module
+public import Stage0.Senke.Sperre.Waiter
+public import Runner.IR.Futex
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

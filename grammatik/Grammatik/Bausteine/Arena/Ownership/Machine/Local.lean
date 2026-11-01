@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Inv
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Inv
+@[expose] public section
+
 
 /-! **A step inside one activation keeps ownership on the whole machine.**
 The stepping thread's running activation moves to its next state over a

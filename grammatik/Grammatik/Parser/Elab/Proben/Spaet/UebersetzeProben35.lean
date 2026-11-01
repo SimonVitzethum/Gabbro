@@ -9,7 +9,10 @@
                predicate as the invariant (`Expr.forallSlots`); the quantified table is read under its guards like
                in a `requires`.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben35
 

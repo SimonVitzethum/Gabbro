@@ -12,8 +12,11 @@
   items `ausText` IS `ausItems` -- proved by the syntax round trip (`lex_render`, `parseTopTief_druck`), so a kernel
   check of a printed program never runs the lexer.
 -/
-import Grammatik.Gen.Text.Delab
-import Grammatik.Parser.Elab.UebersetzePipeline
+module
+public import Grammatik.Gen.Text.Delab
+public import Grammatik.Parser.Elab.UebersetzePipeline
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

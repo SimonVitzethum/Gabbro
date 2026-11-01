@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Factory
+module
+public import Grammatik.Bausteine.Arena.Ownership.Factory
+@[expose] public section
+
 
 /-! Ownership of a result is instantiated from the actual returned value,
 not from its numeric type or from a promise of an unexecuted allocation. -/

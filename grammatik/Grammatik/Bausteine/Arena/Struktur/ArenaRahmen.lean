@@ -8,8 +8,11 @@
   The executed forms (`ArenaLinkForm.lean`, `ArenaBaumForm.lean`, `ArenaBaumFormG.lean`) each carry the frame of the stores
   they make as one more conjunct (`push`: field `lnk`, head; `leaf in`: the two child fields; ...).
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaLebt
-import Grammatik.Bausteine.Arena.Struktur.ArenaListe
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaLebt
+public import Grammatik.Bausteine.Arena.Struktur.ArenaListe
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

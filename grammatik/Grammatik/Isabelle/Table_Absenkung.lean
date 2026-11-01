@@ -26,6 +26,10 @@
   (`Grammatik.SchablonenT5Sem`, section 1).
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.TableAbsenkung
 
 /-- The index type of `table T count N`: `{i. i < N}`. -/

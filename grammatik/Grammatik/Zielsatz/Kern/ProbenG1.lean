@@ -25,9 +25,12 @@
   And the contrast (`g1_never_leer`): an axiom returning `never` has an empty answer class --
   its call is the named stop `HaltArt.nieZurueck`, not a hardware stop.
 -/
-import Grammatik.Zielsatz.Kern.SpecProben
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Logik.Vertraege.EinpassenVoll
+module
+public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Logik.Vertraege.EinpassenVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

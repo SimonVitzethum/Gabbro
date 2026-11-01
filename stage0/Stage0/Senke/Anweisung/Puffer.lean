@@ -4,7 +4,10 @@
              `packI_ok`: word `i` is `packV` of the cells' words) and unpacking it into the cells after the call
              (`unpackK_ok`: cell `k` gets `byteOf` the buffer).
 -/
-import Stage0.Senke.Anweisung.Tor
+module
+public import Stage0.Senke.Anweisung.Tor
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -1,5 +1,8 @@
-import Grammatik.Zielsatz.Projekte.Zeuge
-import Grammatik.Speichermodell.Atomar.AtomarGleich
+module
+public import Grammatik.Zielsatz.Projekte.Zeuge
+public import Grammatik.Speichermodell.Atomar.AtomarGleich
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Projekte/Verbund.lean

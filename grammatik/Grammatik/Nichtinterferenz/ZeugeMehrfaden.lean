@@ -20,8 +20,11 @@
   theorem is sound for it because it compares only runs that follow the
   schedule; the checker proposal `I005` would refuse the shared lock.
 -/
-import Grammatik.Nichtinterferenz.Fluss
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+module
+public import Grammatik.Nichtinterferenz.Fluss
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

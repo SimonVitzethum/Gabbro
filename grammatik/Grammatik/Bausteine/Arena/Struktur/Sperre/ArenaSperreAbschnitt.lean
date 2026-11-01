@@ -22,7 +22,10 @@
   The state at section entry is the knowledge-free state `Abs.leer`: an index a thread kept across the acquire says
   nothing (the cross-thread form of `N586`), and the state after the release is `Abs.leer` as well.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreOhne
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreOhne
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

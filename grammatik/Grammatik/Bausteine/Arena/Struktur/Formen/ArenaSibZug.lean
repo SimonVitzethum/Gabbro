@@ -12,7 +12,10 @@
                                                         subtree is a member any more, and every one of them is live (so each can
                                                         be released afterwards: `baum_frei`).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibForm
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibForm
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

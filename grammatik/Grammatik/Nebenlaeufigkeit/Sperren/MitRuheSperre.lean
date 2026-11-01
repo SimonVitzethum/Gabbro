@@ -22,7 +22,10 @@
   `D.mitRuhe` is the translation of one of `D` (`worldR_worldZ`,
   `envR_envZ`, `zurueck_mitRuhe`).
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

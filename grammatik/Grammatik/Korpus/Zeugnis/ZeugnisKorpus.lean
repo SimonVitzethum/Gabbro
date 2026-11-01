@@ -21,9 +21,12 @@
   CHECK
     ./lean-probe grammatik/Grammatik/ZeugnisKorpus.lean
 -/
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt2
-import Grammatik.Korpus.Referenz.ReferenzB
-import Grammatik.Korpus.Programme.Export108
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt2
+public import Grammatik.Korpus.Referenz.ReferenzB
+public import Grammatik.Korpus.Programme.Export108
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

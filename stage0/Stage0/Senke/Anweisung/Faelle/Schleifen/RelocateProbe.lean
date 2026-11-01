@@ -1,6 +1,9 @@
 /- A concrete overlapping move with six live variables and two nested counter pairs. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.RelocateProbe
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

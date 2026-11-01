@@ -5,7 +5,10 @@
              read from the cache (`tafelE`). Every cached table is the table of `genEK` (`fuelleE_ok`), so a bucket read
              from the cache is the canonical one (`bucketE_eq`).
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.Tabelle
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.Tabelle
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

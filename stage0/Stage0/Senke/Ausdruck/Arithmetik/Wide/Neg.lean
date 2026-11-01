@@ -6,7 +6,10 @@
   subtraction chain computes `0 - x` in place. Two's complement makes this exact modulo
   `2^(64k)`; the result type of `neg` always fits the limbs of its range.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

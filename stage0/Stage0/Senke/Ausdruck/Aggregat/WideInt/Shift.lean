@@ -7,9 +7,12 @@
   operand's declared width (`hw2`), the kernels have no stop path: `x << n` is exact modulo `2^(64 k)`, and the
   result type holds the true product.
 -/
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Divide
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shl
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shr
+module
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Divide
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shl
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

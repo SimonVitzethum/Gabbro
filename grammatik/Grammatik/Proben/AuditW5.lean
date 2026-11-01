@@ -6,8 +6,11 @@
   table lives in MUSE-REPORT-122.md; this file carries only the proved
   counter-lemmas backing the "no" rows.
 -/
-import Grammatik.Logik.Vertraege.VertragsFuss
-import Grammatik.Kern.Syntax.Profil
+module
+public import Grammatik.Logik.Vertraege.VertragsFuss
+public import Grammatik.Kern.Syntax.Profil
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

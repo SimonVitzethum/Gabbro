@@ -1,7 +1,10 @@
 /- Subject: One-byte strings: zero is empty; 256 + byte is nonempty, including a zero byte.
    The explicit length bit makes length, byte access and lexicographic comparison word operations. -/
-import Grammatik.Kern.Semantik.Semantik
-import Runner.IR.Rahmen
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Runner.IR.Rahmen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

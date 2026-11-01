@@ -1,4 +1,7 @@
-import Runner.X86.Enc
+module
+public import Runner.X86.Enc
+@[expose] public section
+
 
 /-! # A two-pass assembler with labels
 

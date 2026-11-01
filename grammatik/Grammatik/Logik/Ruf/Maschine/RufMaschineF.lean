@@ -18,6 +18,9 @@
   (`rufF_treu`) to every reachable machine by induction.
 -/
 
-import Grammatik.Logik.Ruf.Maschine.RufMaschineF.T1
-import Grammatik.Logik.Ruf.Maschine.RufMaschineF.T2
-import Grammatik.Logik.Ruf.Maschine.RufMaschineF.T3
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF.T1
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF.T2
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineF.T3
+@[expose] public section
+

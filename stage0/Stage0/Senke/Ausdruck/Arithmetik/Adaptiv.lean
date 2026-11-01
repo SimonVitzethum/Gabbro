@@ -1,5 +1,8 @@
 /- Adaptive exact-rational left normalization before guard/sticky compression. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Normalisierung
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Normalisierung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem Gleitkomma

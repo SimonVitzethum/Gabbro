@@ -7,12 +7,15 @@
   difference. `<=` is `¬ (y < x)` with the operands lowered in the swapped order; the flag is flipped by an
   actual `xor 1` instruction.
 -/
-import Stage0.Senke.Welt.WeltAt
-import Stage0.Senke.Ausdruck.Wort
-import Stage0.Senke.Ausdruck.Arithmetik.Interval
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
+module
+public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Ausdruck.Wort
+public import Stage0.Senke.Ausdruck.Arithmetik.Interval
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

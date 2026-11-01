@@ -15,6 +15,10 @@
   (GAP-13 `newline`). The model below is the content-class test.
 -/
 
+module
+
+@[expose] public section
+
 namespace P21.Gap11Char
 
 /-- The content class: any character except quote and newline. -/

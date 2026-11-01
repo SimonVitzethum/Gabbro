@@ -17,7 +17,10 @@
   not the two segments. The model below is the lookup step over the declared
   qualified names.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace P21.Gap15Path
 

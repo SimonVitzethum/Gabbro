@@ -1,4 +1,7 @@
-import Runner.Prog.Elf
+module
+public import Runner.Prog.Elf
+@[expose] public section
+
 
 /-! # The runner as an assembler listing (Intel syntax), for reading
 

@@ -21,10 +21,13 @@
     table that NOTHING reads (`ak3_zwei_schreiber_ohne_lesen`) -- accepted
     by the old Bool (`akzeptiertAlt`), refused by the race component.
 -/
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
-import Grammatik.Korpus.Programme.Export104
+module
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+public import Grammatik.Korpus.Programme.Export104
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

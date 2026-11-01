@@ -1,7 +1,10 @@
 /- Counter and immutable decrement word occupy the reserved frame prefix.
    Lexical locals and callee frames start above that prefix. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
-import Stage0.Senke.Rueckkehr
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+public import Stage0.Senke.Rueckkehr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner Runner.IR

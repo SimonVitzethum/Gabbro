@@ -1,5 +1,8 @@
-import Grammatik.Code.Model.Types
-import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+module
+public import Grammatik.Code.Model.Types
+public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Cells.lean

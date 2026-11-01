@@ -8,9 +8,12 @@
              `atomicReadAcc`, `AtomicAnn`, ...), which this file reuses
              without redefining. This file is the `execute` side.
 -/
-import Arm.Isa.Addr
-import Arm.Isa.LoadStore
-import Arm.Mem.Atomics
+module
+public import Arm.Isa.Addr
+public import Arm.Isa.LoadStore
+public import Arm.Mem.Atomics
+@[expose] public section
+
 
 namespace Arm
 

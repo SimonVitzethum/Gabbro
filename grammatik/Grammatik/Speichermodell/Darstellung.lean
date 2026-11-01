@@ -22,6 +22,10 @@
   No `sorry`, no `axiom`, no `native_decide`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Grammatik.Speichermodell.Darstellung
 
 /-- Number of values of the range `lo .. hi` (`0` when empty). -/

@@ -19,6 +19,10 @@
    fetch forbidden), so (b) is built from the task text and `126` alone.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.GabbroV
 
 /-- A call chain as data: length, per-call precondition map, per-call

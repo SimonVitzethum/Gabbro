@@ -19,8 +19,11 @@
   `wurzelLeer_wahr`) and what the unguarded kernel of the root move leaves (`wurzelSetze_ausfuehren`); the invariant
   theorems on the executed forms are in `ArenaBaumFormZug.lean`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
-import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWurzel
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumForm
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWurzel
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

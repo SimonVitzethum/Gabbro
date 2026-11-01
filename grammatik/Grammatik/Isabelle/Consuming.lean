@@ -25,6 +25,10 @@
     since Lean core has no relation library.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.Consuming
 
 /-- An index. (Mirrors `Table_Induktion.thy`: `type_synonym idx = nat`.) -/

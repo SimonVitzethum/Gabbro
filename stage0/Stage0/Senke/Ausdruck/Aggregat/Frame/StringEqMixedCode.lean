@@ -1,5 +1,8 @@
 /- Subject: Equality between a packed string (capacity at most one) and a long string, below all proofs. -/
-import Runner.IR.Rahmen
+module
+public import Runner.IR.Rahmen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

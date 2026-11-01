@@ -32,8 +32,11 @@
   `rennfrei_alle` combines both halves into the full race-freedom statement
   for every carrier that is not atomic and not a publish payload.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

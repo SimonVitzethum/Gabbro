@@ -12,7 +12,10 @@
     * `grow_liste`, `grow_baum` -- the executed `grow` keeps `FreiOk`, every liveness, `ListOk` resp. `BaumOk`, and
       continues in the commit world with the new committed word bound (`dynGrow_commit`'s equation).
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumWelt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

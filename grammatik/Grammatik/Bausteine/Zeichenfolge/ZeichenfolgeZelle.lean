@@ -22,8 +22,11 @@
                            larger than a layout with a fixed four-byte length word (`4 + max`).
 -/
 
-import Grammatik.Bausteine.Zeichenfolge.ZeichenfolgeGebunden
-import Grammatik.Speichermodell.Darstellung
+module
+public import Grammatik.Bausteine.Zeichenfolge.ZeichenfolgeGebunden
+public import Grammatik.Speichermodell.Darstellung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

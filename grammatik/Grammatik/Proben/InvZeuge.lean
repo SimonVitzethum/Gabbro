@@ -26,8 +26,11 @@
     machine reachable in three steps. A refutation, where `ziel_ort_sperre`
     certified.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

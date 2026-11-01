@@ -48,5 +48,8 @@
          der Ausgang `fortschritt a` -- die Annahme, die der Schreiber am `progress` nannte.
 -/
 
-import Grammatik.Kern.Semantik.Semantik.T1
-import Grammatik.Kern.Semantik.Semantik.T2
+module
+public import Grammatik.Kern.Semantik.Semantik.T1
+public import Grammatik.Kern.Semantik.Semantik.T2
+@[expose] public section
+

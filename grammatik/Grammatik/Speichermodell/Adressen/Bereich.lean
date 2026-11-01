@@ -14,7 +14,10 @@
   * `rufSchrittG_aussen`, `rufSchrittGX_aussen` -- every step of machine G and GX;
   * `rufErreichbarGX_aussen` -- every reached machine agrees with its start outside the extents.
 -/
-import Grammatik.Speichermodell.Maschine.GXMaschine
+module
+public import Grammatik.Speichermodell.Maschine.GXMaschine
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

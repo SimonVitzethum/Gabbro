@@ -2,7 +2,10 @@
   File:      Grammatik/Gen/Erzeuger/BlockVollst.lean
   Subject:   COMPLETENESS of the block and end-block clauses, one step each (see `AnweisungVollst.lean`).
 -/
-import Grammatik.Gen.Erzeuger.AnweisungVollst
+module
+public import Grammatik.Gen.Erzeuger.AnweisungVollst
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

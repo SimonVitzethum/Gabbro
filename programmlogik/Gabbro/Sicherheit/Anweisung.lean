@@ -60,7 +60,10 @@
          nicht zurueckkehren laesst (`Body.lean`), und der Erzeuger, der `divergiert`
          aus `Typ::Nie` setzt (`lean.rs`).
 -/
-import Gabbro.Sicherheit.Ausdruck
+module
+public import Gabbro.Sicherheit.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Sicherheit
 

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Call
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Call
+@[expose] public section
+
 
 /-! A call against the actual call handler `R`. The only fact about `R` is
 `Respects` for the interface contracts, which `rufAt_ownership` derives

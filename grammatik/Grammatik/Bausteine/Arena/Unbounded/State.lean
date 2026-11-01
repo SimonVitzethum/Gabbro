@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.State
+module
+public import Grammatik.Bausteine.Arena.Ownership.State
+@[expose] public section
+
 
 /-!
 Opt-in storage without a declaration-time element ceiling. `extent` bounds the
@@ -26,7 +29,8 @@ def Capacity.permits : Capacity → Nat → Bool
 structure Ref (region : Type) where
   private mk ::
   handle : Handle
-  deriving DecidableEq, Repr
+
+@[no_expose] deriving instance DecidableEq, Repr for Ref
 
 /-- Payload type and region identity cannot be changed by an access operation. -/
 structure Heap (region : Type) (α : Type) where
@@ -62,7 +66,7 @@ def Heap.install (H : Heap region α) (rights : ArenaOwnership.State) (value : �
 
 /-- `available` is the fallible provider's answer, not a hardware assumption.
 The same refusal path applies to a fresh slot and a reused slot. -/
-def Heap.allocate (H : Heap region α) (capacity : Capacity) (available : Bool)
+@[no_expose] def Heap.allocate (H : Heap region α) (capacity : Capacity) (available : Bool)
     (frame : Frame) (value : α) : Option (Heap region α × Ref region) := do
   if available && capacity.permits H.nextExtent then do
     let (rights, handle) ← H.rights.allocate frame (H.candidate : Int)
@@ -92,7 +96,7 @@ def Heap.release (H : Heap region α) (frame : Frame) (reference : Ref region) :
     rights := rights
     free := reference.handle.slot.toNat :: H.free }
 
-def Heap.move (H : Heap region α) (source target : Frame) (reference : Ref region) :
+@[no_expose] def Heap.move (H : Heap region α) (source target : Frame) (reference : Ref region) :
     Option (Heap region α × Ref region) := do
   let (rights, handle) ← H.rights.move source target reference.handle
   some ({ H with rights := rights }, ⟨handle⟩)

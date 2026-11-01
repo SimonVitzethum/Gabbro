@@ -1,6 +1,9 @@
 /- The failed-acquisition prefix of the actual lock emitter, before waiter
    bookkeeping or a syscall. No futex behavior is assumed by this theorem. -/
-import Stage0.Senke.Sperre.Nimm
+module
+public import Stage0.Senke.Sperre.Nimm
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

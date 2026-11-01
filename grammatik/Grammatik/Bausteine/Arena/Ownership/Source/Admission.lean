@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Forward
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Forward
+@[expose] public section
+
 
 /-! Source certificates for the ownership function forms. Constructors refer
 to actual G bodies and executable expression checks. No constructor accepts

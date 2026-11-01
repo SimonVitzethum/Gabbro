@@ -16,8 +16,11 @@
   declaration data, proved to agree. The remaining differences are listed
   in the CUTS block, each with its cause.
 -/
-import Grammatik.Korpus.Referenz.Referenz104
-import Grammatik.Korpus.Referenz.Referenz104Rahmen
+module
+public import Grammatik.Korpus.Referenz.Referenz104
+public import Grammatik.Korpus.Referenz.Referenz104Rahmen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

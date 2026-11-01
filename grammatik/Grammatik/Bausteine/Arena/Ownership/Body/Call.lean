@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Plan
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Plan
+@[expose] public section
+
 
 /-! The whole call, on the ledger. From the caller's invariant and a fitting
 plan: the callee's interface precondition holds at the handoff ledger of a

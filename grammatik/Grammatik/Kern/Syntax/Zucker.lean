@@ -17,7 +17,10 @@
 
   Nichts hier hat eine eigene Bedeutung: `eval`/`exec` sehen nur den Kern.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

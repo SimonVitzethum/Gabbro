@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Return
+module
+public import Grammatik.Bausteine.Arena.Ownership.Return
+@[expose] public section
+
 
 /-! A call-scoped loan is different from a consuming argument: it restores
 the lender's original grant and never gives the callee a release permission. -/

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Unbounded.Frame
+module
+public import Grammatik.Bausteine.Arena.Unbounded.Frame
+@[expose] public section
+
 
 /-! Linked storage for finite-control machines. Control holds one optional region
 reference, not a natural-number encoding of an entire unbounded stack. Each cell

@@ -7,8 +7,11 @@
   signed range of `k` limbs, which `signedWords` guarantees. A kernel's `k`-limb output holds the result's
   canonical limbs in its first `integerWords` words.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

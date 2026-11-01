@@ -12,7 +12,10 @@
   (`SegU`: the bottom frame keeps index `i0`), so the potential at both boundaries is read with ONE table:
   `potRest (.ewig _ (n + 1) …) = potRest (.ewig _ n …) + one pass`.
 -/
-import Grammatik.Logik.Fortschritt.KostenG
+module
+public import Grammatik.Logik.Fortschritt.KostenG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -12,8 +12,11 @@
   would be a claim about a moment nobody can name. So every contract carrier stays STABLE, as
   in `ziel_ort_sperre`, and only body reads may see the rely.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarRec
-import Grammatik.Logik.Terminierung.Mass
+module
+public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Logik.Terminierung.Mass
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -39,7 +39,10 @@
   old B-steps over abstract legs). That is the exact remaining
   blocker for full `gut`, stated at the end of this file.
 -/
-import Grammatik.Parser.Round.Rundlauf2
+module
+public import Grammatik.Parser.Round.Rundlauf2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Call
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Call
+@[expose] public section
+
 
 /-! **A return keeps ownership on the machine.** The running activation
 returns a value (or a reason) to its suspended caller. Its checked result

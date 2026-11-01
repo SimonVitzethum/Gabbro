@@ -5,8 +5,11 @@
              function body through a branch (`ErkE.ite`), the body ends in `return`. Run on the real world `wk` it returns in a world
              that meets the arena invariant, with the slot hung into the tree.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkEnde
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkEnde
+@[expose] public section
+
 
 -- v4.35: this linter exceeds its heartbeat budget on the long executed-block proofs below.
 set_option linter.constructorNameAsVariable false

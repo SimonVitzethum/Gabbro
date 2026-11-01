@@ -36,8 +36,11 @@
   assumption (2) of the reading in Zielsatz/Spec.lean: the lowering of the orders and of the
   RMW form).
 -/
-import Lean
-import Grammatik.Speichermodell.Atomar.Atomar
+module
+public import Lean
+public import Grammatik.Speichermodell.Atomar.Atomar
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

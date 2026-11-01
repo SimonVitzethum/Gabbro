@@ -14,7 +14,10 @@
    planted failure: a contract-violating run is not covered. The full
    `TreeState` projection (needs a `benutzt` bool cell) stays open.
 -/
-import Grammatik.GabbroV.GvStore
+module
+public import Grammatik.GabbroV.GvStore
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV
 

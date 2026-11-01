@@ -4,7 +4,10 @@
              the entry dispatch roots (`Starts.roots`), the handlers entered by hardware (`Starts.hands`) and the
              threads of `start { .. };` (`Starts.gestartet`), as functions of the declaration.
 -/
-import Grammatik.Parser.Elab.UebersetzePipeline
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben31
 

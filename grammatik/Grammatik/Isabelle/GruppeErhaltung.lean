@@ -21,6 +21,10 @@
     conclusion.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.GruppeErhaltung
 
 /-! ## Part (a) -- the rank order -/

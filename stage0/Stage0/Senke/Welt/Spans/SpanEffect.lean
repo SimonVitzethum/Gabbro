@@ -1,6 +1,9 @@
 /- The shared exact span footprint specialized to world writes. -/
-import Stage0.Senke.Ausdruck.Aggregat.Footprint
-import Stage0.Senke.Welt.WeltAt
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Footprint
+public import Stage0.Senke.Welt.WeltAt
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 theorem SpanEffect.agreeW {D : Deklaration} {L : Lay D}

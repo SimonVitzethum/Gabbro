@@ -1,5 +1,8 @@
 /- Entry snapshots reuse the common complete value spans and checked storage transport. -/
-import Stage0.Senke.Welt.Spans.Span
+module
+public import Stage0.Senke.Welt.Spans.Span
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

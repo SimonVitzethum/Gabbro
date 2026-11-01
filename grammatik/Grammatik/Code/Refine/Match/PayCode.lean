@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Expr
-import Grammatik.Code.Refine.Struct.Mono
+module
+public import Grammatik.Code.Refine.Expr
+public import Grammatik.Code.Refine.Struct.Mono
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/PayCode.lean

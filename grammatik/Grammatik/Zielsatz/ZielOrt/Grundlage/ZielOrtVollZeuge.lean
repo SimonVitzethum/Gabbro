@@ -22,7 +22,10 @@
   not about a clever contract. The oracle `vO` sets the slot to `true` and
   records its write (`GutO`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

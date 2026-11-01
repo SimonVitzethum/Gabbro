@@ -3,7 +3,10 @@
   Subject:   GENERATED (`gen-zellen-sammeln`): the good cells the M witnesses cover; N keeps only programs whose
              good cells outside it are needed cells of a test (`bnoetig`). Do not edit.
 -/
-import Grammatik.Gen.Abdeckung.Satz.Raum
+module
+public import Grammatik.Gen.Abdeckung.Satz.Raum
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Zeugen
 

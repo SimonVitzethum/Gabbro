@@ -19,7 +19,10 @@
   so. The end-to-end probe is `tEnd` (beispiele/112, the smallest
   whole file with a table, a lock and contracted functions).
 -/
-import Grammatik.Parser.Item.ElementTiefProben5
+module
+public import Grammatik.Parser.Item.ElementTiefProben5
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

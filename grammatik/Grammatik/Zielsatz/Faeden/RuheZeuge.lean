@@ -14,10 +14,13 @@
     threads 0 and 1 and the root everywhere else (`mP_mitRuhe_start`, by
     `startZulaessig_mitRuhe`), and the Bool on `mP.mitRuhe`.
 -/
-import Grammatik.Zielsatz.Faeden.Ruhe
-import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
+module
+public import Grammatik.Zielsatz.Faeden.Ruhe
+public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

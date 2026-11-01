@@ -1,6 +1,9 @@
 /- Typed world storage: each cell occupies its complete canonical value span.
    Logical pointer values remain distinct from checked physical layout addresses. -/
-import Stage0.Senke.Ausdruck.Aggregat.Layout
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Layout
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

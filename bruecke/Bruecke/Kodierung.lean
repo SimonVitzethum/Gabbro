@@ -1,8 +1,11 @@
-import Grammatik.Parser.Elab.UebersetzeAllg2
-import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt
-import Grammatik.Kern.Syntax.Satz
-import Gabbro.Body
-import Bruecke.Pflichten
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg2
+public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt
+public import Grammatik.Kern.Syntax.Satz
+public import Gabbro.Body
+public import Bruecke.Pflichten
+@[expose] public section
+
 
 /-!
 # S3, part 1: how a state of machine G reads as a state of `Gabbro.Body`

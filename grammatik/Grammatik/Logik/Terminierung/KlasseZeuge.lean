@@ -10,9 +10,12 @@
   * `forever { } return;` -- `umgebung`; `forever { leave; } return;` and `forever { return; }` -- `bedingt`.
   And `ewigFrei` (the premise of `endet_satz`'s budget half) holds exactly for the `forever`-free ones.
 -/
-import Grammatik.Logik.Terminierung.Entscheidung
-import Grammatik.Logik.Terminierung.Ausgang
-import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
+module
+public import Grammatik.Logik.Terminierung.Entscheidung
+public import Grammatik.Logik.Terminierung.Ausgang
+public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Terminierung.KlasseZeuge
 

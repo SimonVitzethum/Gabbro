@@ -9,7 +9,10 @@
                bound from a call; a case of another reason: refused.
              * `-3` is the literal `-3` (`USide.lit (-3)`), `-(3)` the negation of `3` (`USide.neg`): one tree each.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben36
 

@@ -1,5 +1,8 @@
 /- Publish a checked complete result through the canonical call ABI. -/
-import Stage0.Senke.Rueckkehr.Context
+module
+public import Stage0.Senke.Rueckkehr.Context
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

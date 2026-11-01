@@ -5,7 +5,10 @@
              has needs no valid test; a bad cell that always comes with another bad cell needs no single-fault test of its
              own, as long as the other one has one. Each of these is a theorem over EVERY program, not a measurement.
 -/
-import Grammatik.Gen.Abdeckung.Satz.ZellenSatz
+module
+public import Grammatik.Gen.Abdeckung.Satz.ZellenSatz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

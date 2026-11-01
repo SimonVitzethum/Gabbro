@@ -29,7 +29,12 @@
   fuel steps and continues on the rest. List induction (`scan_render`) and the fuel count
   (`render_laenge`) give `lex_render`.
 -/
-import Grammatik.Parser.Lex.Lexer
+module
+public import Grammatik.Parser.Lex.Lexer
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

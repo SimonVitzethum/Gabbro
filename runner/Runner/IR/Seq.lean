@@ -1,5 +1,8 @@
-import Runner.IR.Step
-import Runner.Basis.MemLemma
+module
+public import Runner.IR.Step
+public import Runner.Basis.MemLemma
+@[expose] public section
+
 
 /-! # One `S0IR` thread on one memory, and the steps of single instructions
 

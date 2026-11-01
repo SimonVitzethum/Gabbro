@@ -1,5 +1,8 @@
-import Grammatik.Parser.Elab.Uebersetze
-import Gabbro.Body
+module
+public import Grammatik.Parser.Elab.Uebersetze
+public import Gabbro.Body
+@[expose] public section
+
 
 /-!
 # S1 + S2: the duty statements and the body datum, COMPUTED IN LEAN from the parser's `UProg`

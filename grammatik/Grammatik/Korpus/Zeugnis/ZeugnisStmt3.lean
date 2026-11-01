@@ -13,8 +13,11 @@
   Witnesses build on the `ReferenzAR` fixture (`arD`/`arP`/`arO`/`arSp0`
   and the reached memory-writing run `arMB`).
 -/
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt
-import Grammatik.Korpus.Referenz.ReferenzAR
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt
+public import Grammatik.Korpus.Referenz.ReferenzAR
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

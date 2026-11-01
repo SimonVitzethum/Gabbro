@@ -7,7 +7,10 @@
              (agent 15) since `Ra` never reaches the execute clause.
   Sail:      sail-arm/arm-v9.4-a/src/instrs64.sail (`execute` clauses).
 -/
-import Arm.Isa.IntCore
+module
+public import Arm.Isa.IntCore
+@[expose] public section
+
 
 namespace Arm.Int
 

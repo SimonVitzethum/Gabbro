@@ -1,5 +1,8 @@
 /- One binding continuation for expression values and precomputed literals. -/
-import Stage0.Senke.Anweisung.Faelle.Kontext
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontext
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false

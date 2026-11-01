@@ -22,7 +22,10 @@
     no signature lock, no reasons (`N458`'s model half) and pool safety (`N462`/`N457`'s model
     half), because the root stands twice in `ws`.
 -/
-import Grammatik.Zielsatz.Kern.Beweis
+module
+public import Grammatik.Zielsatz.Kern.Beweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

@@ -1,7 +1,10 @@
 /- Joint nondegenerate witness: all load premises and recursive validity together. -/
-import Stage0.Senke.Welt.Spans.SpanStore
-import Grammatik.Bausteine.Arena.Unbounded.GRegion
-import Runner.Prog.IRAsm
+module
+public import Stage0.Senke.Welt.Spans.SpanStore
+public import Grammatik.Bausteine.Arena.Unbounded.GRegion
+public import Runner.Prog.IRAsm
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.SpanProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

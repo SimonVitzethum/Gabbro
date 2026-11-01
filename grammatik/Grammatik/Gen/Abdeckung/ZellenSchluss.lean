@@ -6,7 +6,10 @@
              assumption left. A cell without a reason is returned as OPEN, and then no closing file is written. The
              text is untrusted: the kernel checks the file.
 -/
-import Grammatik.Gen.Druck.LeanZeuge
+module
+public import Grammatik.Gen.Druck.LeanZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

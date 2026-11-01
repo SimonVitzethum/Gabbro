@@ -15,7 +15,10 @@
   `K.Ok` holds (a recognized body never produces `leave` or `next`). This is the form of the premise the statement needs:
   every function that writes a word of a declared structure has `ErkE K Abs.leer (P.rumpf f)`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerBeweis
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -34,7 +34,10 @@
      B-visible carrier, and after three steps B sees `tabB[0] = 1` in one
      run and `0` in the other.
 -/
-import Grammatik.Nichtinterferenz.Fluss
+module
+public import Grammatik.Nichtinterferenz.Fluss
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

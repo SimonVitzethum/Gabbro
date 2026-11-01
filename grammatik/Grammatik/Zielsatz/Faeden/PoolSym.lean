@@ -18,8 +18,11 @@
   (`akzeptiert_nodup_gleich`, `akzeptiertSpecVor_neu`, `pruefer_vor_neu`,
   `laufzeit_vor_neu`).
 -/
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -65,16 +65,19 @@
          either -- a model range may then refuse where the checker stays
          silent, and that direction is booked, not built).
 -/
-import Gabbro.Body
+module
+public import Gabbro.Body
 -- Umbrella import on purpose: the range proofs below use order, `tdiv`/`tmod`,
 -- bitwise and `norm_cast` lemmas spread over a dozen Mathlib modules, and a wrong
 -- guess at the module split costs a build cycle each. Oleans are cache-fetched,
 -- so this costs load time, not build time. Narrowed later if measured slow.
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.Positivity
-import Mathlib.Order.Lattice
+public import Mathlib.Tactic.Ring
+public import Mathlib.Tactic.Linarith
+public import Mathlib.Tactic.NormNum
+public import Mathlib.Tactic.Positivity
+public import Mathlib.Order.Lattice
+@[expose] public section
+
 
 namespace Gabbro.Sicherheit
 

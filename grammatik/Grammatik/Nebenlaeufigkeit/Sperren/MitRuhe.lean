@@ -41,7 +41,10 @@
   state that it does not: every checker fact of `P` holds of `P.mitRuhe` at
   `some f`, and every function behaves in `P.mitRuhe` as in `P`.
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

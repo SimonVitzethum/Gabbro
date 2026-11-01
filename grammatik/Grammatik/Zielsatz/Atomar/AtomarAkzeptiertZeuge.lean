@@ -24,11 +24,14 @@
     ensures `konfig == 3` -- is refused by `AkzeptiertX` (component `fussWXB`), while
     `AkzeptiertA` (Speichermodell/AtomarZeuge.lean, no contract condition) accepts it.
 -/
-import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
-import Grammatik.Zielsatz.Atomar.AtomarZiel
-import Grammatik.Speichermodell.Atomar.AtomarZeuge
-import Grammatik.Speichermodell.Maschine.Zeuge
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+module
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+public import Grammatik.Zielsatz.Atomar.AtomarZiel
+public import Grammatik.Speichermodell.Atomar.AtomarZeuge
+public import Grammatik.Speichermodell.Maschine.Zeuge
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.AtomarXZeuge
 

@@ -24,6 +24,10 @@
   `Syntax.lean` to tie to.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.TableZaehlung
 
 set_option linter.unusedVariables false

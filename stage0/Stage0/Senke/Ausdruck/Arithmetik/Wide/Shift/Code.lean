@@ -5,7 +5,10 @@
   Every destination lies in `a ..< K`, every operand inside the frame, and every constant is a
   32-bit literal.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Count
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Count
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

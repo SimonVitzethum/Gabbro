@@ -1,6 +1,9 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.View
-import Grammatik.Bausteine.Arena.Ownership.Machine.Residue
-import Grammatik.Bausteine.Arena.Ownership.Body.Shapes
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.View
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Residue
+public import Grammatik.Bausteine.Arena.Ownership.Body.Shapes
+@[expose] public section
+
 
 /-! **The running activation of a thread.** Between two steps of machine G
 the running activation is in one of five states. Ordinarily it realises a

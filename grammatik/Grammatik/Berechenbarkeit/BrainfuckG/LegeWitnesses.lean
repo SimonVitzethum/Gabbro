@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Lege
-import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Lege
+public import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
+@[expose] public section
+
 
 /-! Witnesses of `lege_ok` and `lege_voll` over the two-stack declaration of `MultiWitnesses`: in `w1` (counter 2 of 4,
 free list empty) pushing the head byte `7` on stack 0 gives stack 0 = `[7, 0]` and leaves stack 1 = `[0]`; in `w2`

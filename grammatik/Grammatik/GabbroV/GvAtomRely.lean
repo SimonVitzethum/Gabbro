@@ -27,13 +27,16 @@
   WHAT STAYS OPEN (see CUTS): duties for atomic-bearing units constructed
   from `Pflichten src`, the per-access TSO refinement, payload hand-off.
 -/
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Speichermodell.Atomar.AtomarSem
-import Grammatik.Speichermodell.Atomar.AtomarRec
-import Grammatik.Zielsatz.Atomar.AtomarPflicht
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
-import Grammatik.Korpus.Referenz.Pflicht104
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Speichermodell.Atomar.AtomarSem
+public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Zielsatz.Atomar.AtomarPflicht
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
+public import Grammatik.Korpus.Referenz.Pflicht104
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV.GvAtomRely
 

@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Calls.Func
+module
+public import Grammatik.Code.Refine.Calls.Func
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Closure.lean

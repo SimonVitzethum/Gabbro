@@ -6,6 +6,9 @@
              translated body what it gave on the body.
 -/
 
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T1
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T2
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T3
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T2
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch.T3
+@[expose] public section
+

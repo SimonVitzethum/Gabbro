@@ -4,7 +4,10 @@
              (`entry` roots). A second file because the kernel probes of one file share one memory
              budget (measured 2026-09-30: the first file alone passes 7 GB with these twelve added).
 -/
-import Grammatik.Parser.Elab.UebersetzePipeline
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben2
 

@@ -1,6 +1,9 @@
 /- Executed slot initialization, retaining each earlier result across temporaries. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Simulation
-import Stage0.Senke.Ausdruck.Gleit.SlotContext
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Simulation
+public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

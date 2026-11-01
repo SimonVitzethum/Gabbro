@@ -1,5 +1,8 @@
-import Bruecke.Simulation
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
+module
+public import Bruecke.Simulation
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+@[expose] public section
+
 
 /-!
 # S4 (atomic rely): `NutzerPflichtA` for a unit the parser elaborates

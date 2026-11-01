@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.Context
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.Context
+@[expose] public section
+
 
 /-! Executable expression admission over the existing G syntax. The source
 walk collects obligations once; abstract checking and concrete read safety

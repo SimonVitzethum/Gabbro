@@ -7,7 +7,10 @@
   limbs of the difference being zero, provided `|x - y| < 2^(64 (n+1))`. The result is a Boolean word
   in the first operand's slot `a`.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Add
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Add
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

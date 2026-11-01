@@ -1,8 +1,11 @@
 /- Connected complete table-cell read and write: expression child, address producer, runtime
    transport and the canonical source-world update compose under the original generic
    expression precondition. -/
-import Stage0.Senke.Welt.Spans.Cell
-import Stage0.Senke.Welt.Spans.StoreWorld
+module
+public import Stage0.Senke.Welt.Spans.Cell
+public import Stage0.Senke.Welt.Spans.StoreWorld
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false

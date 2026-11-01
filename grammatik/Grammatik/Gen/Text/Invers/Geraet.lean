@@ -4,8 +4,11 @@
              (`uRegOrt`), the register write and read, `g = e publishes { .. }` and `let x = g awaits { .. }` with
              exactly the declared payload.
 -/
-import Grammatik.Gen.Text.Invers.Ruf
-import Grammatik.Gen.Text.Invers.Nutzlast
+module
+public import Grammatik.Gen.Text.Invers.Ruf
+public import Grammatik.Gen.Text.Invers.Nutzlast
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

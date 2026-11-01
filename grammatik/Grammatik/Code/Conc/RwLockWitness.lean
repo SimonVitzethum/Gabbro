@@ -1,5 +1,8 @@
-import Grammatik.Code.Conc.RwLockRel
-import Grammatik.Code.Conc.LockWitness
+module
+public import Grammatik.Code.Conc.RwLockRel
+public import Grammatik.Code.Conc.LockWitness
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/RwLockWitness.lean

@@ -7,7 +7,10 @@
   `bitP` combines the shifted limb with the bits carried over from a neighbouring limb.
   Both write exactly the limb slot and their temporaries.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Seq
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Seq
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

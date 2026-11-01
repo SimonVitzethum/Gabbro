@@ -4,23 +4,26 @@
              operations, comparisons, float words, slot and array access, quantifiers. Split out of `Ausdruck.lean`
              unchanged.
 -/
-import Lean.Meta.Tactic.Simp.RegisterCommand
-import Grammatik.Kern.Semantik.Semantik
-import Runner.IR.Rahmen
-import Stage0.Senke.Welt.Lay
-import Stage0.Senke.Welt.Rahmen
-import Stage0.Senke.Welt.Spans.CellCode
-import Stage0.Senke.Ausdruck.Aggregat.Wert
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
-import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
-import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
-import Stage0.Senke.Ausdruck.Aggregat.Kopie
-import Stage0.Senke.Ausdruck.Aggregat.Layout
-import Stage0.Senke.Ausdruck.Aggregat.Encoding
-import Stage0.Senke.Ausdruck.Quant.TransportCode
+module
+public import Lean.Meta.Tactic.Simp.RegisterCommand
+public import Grammatik.Kern.Semantik.Semantik
+public import Runner.IR.Rahmen
+public import Stage0.Senke.Welt.Lay
+public import Stage0.Senke.Welt.Rahmen
+public import Stage0.Senke.Welt.Spans.CellCode
+public import Stage0.Senke.Ausdruck.Aggregat.Wert
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
+public import Stage0.Senke.Ausdruck.Aggregat.Kopie
+public import Stage0.Senke.Ausdruck.Aggregat.Layout
+public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Quant.TransportCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

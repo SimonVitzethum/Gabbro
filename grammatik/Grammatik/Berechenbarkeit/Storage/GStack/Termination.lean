@@ -1,4 +1,7 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Push
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Push
+@[expose] public section
+
 
 /-! The concrete stack prefixes introduce no loop or recursive call. Existing
 termination analysis still sees every supplied continuation and failure branch.

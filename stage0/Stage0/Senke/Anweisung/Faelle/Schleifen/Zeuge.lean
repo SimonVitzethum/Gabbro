@@ -1,5 +1,8 @@
 /- A jointly inhabited statement simulation: a real frame, function code, world and two condition checks. -/
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
+module
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.RetryProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem FnptrProben

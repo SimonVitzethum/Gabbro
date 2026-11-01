@@ -1,5 +1,8 @@
 /- Expression narrowing through the common exact scalar interval predicate. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Interval
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Interval
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

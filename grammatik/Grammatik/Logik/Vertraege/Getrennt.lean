@@ -56,7 +56,10 @@
        name one table (`leihe_wurzel`). Two different tables are disjoint by
        construction, which is sound only because no cross-type view is exported.
 -/
-import Grammatik.Logik.Vertraege.RahmenTreu
+module
+public import Grammatik.Logik.Vertraege.RahmenTreu
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

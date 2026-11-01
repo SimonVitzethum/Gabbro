@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Unbounded.Linked
-import Mathlib.Data.List.Nodup
+module
+public import Grammatik.Bausteine.Arena.Unbounded.Linked
+public import Mathlib.Data.List.Nodup
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaStorage.Linked
 

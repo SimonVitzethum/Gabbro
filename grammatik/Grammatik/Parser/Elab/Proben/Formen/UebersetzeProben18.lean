@@ -5,7 +5,10 @@
              `Endblock.narrow`. Also `let x = A exchange update(v) { e } …` (`Block.exchange`/`Endblock.exchange`) and
              a terminal `if`/`else` whose arms both end (`Endblock.ite`): the end-block forms of THEOREM-MAP 102.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben18
 

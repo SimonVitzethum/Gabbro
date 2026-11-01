@@ -11,5 +11,8 @@
   depends on how `M` was reached: the replay invariant `FadenSA` is the whole premise.
 -/
 
-import Grammatik.Speichermodell.Atomar.AtomarAkteur.T1
-import Grammatik.Speichermodell.Atomar.AtomarAkteur.T2
+module
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur.T1
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur.T2
+@[expose] public section
+

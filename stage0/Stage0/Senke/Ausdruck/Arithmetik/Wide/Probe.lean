@@ -6,12 +6,15 @@
   operands in slots 8 .. 11. `wideAdd_zeuge` carries `2^64 - 1 + 1` across the limb boundary;
   `wideSub_zeuge` borrows across it for `0 - 1`.
 -/
-import Stage0.Senke.BildLese
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
+module
+public import Stage0.Senke.BildLese
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.WideProbe
 open Runner.IR Runner.Mem

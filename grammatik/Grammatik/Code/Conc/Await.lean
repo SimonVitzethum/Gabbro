@@ -1,4 +1,7 @@
-import Grammatik.Code.Conc.Publish
+module
+public import Grammatik.Code.Conc.Publish
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/Await.lean

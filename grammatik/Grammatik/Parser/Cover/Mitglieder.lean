@@ -8,7 +8,10 @@
              (`MitgliederLauf.lean`) prints the union over a directory of sources, so the members the pure-Lean
              elaboration reaches can be read next to those the exporter route reaches (`gen-differenz.py`).
 -/
-import Grammatik.Parser.Elab.UebersetzeAllg3
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.Cover.Mitglieder
 

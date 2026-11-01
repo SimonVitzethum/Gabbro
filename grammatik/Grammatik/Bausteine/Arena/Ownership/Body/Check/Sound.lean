@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Lemmas
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Lemmas
+@[expose] public section
+
 
 /-! **Soundness of the executable admission check.** Whatever the check
 returns for a statement, block, end block or case arms is backed by a

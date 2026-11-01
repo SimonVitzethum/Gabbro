@@ -2,8 +2,11 @@
   File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Literal/ExtendProbe.lean
   Subject:   Actual-memory witnesses extending two limbs to four, with negative and high unsigned inputs.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ExtendProbe
 open Runner.IR Runner.Mem Gabbro.Stage0.Senke.WideProbe

@@ -6,7 +6,10 @@
              at the `Eff` boundary (`BitVec.ofNat` / `BitVec.toNat`).
   Sail:      sail-arm/arm-v9.4-a/src/builtins.sail (UInt/SInt/ZeroExtend view).
 -/
-import Arm.Isa.Monad
+module
+public import Arm.Isa.Monad
+@[expose] public section
+
 
 namespace Arm.Int
 

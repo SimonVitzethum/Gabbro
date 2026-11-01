@@ -3,7 +3,10 @@
   Subject:   A statement or block without `ret` (`retFreiS`, `retFreiB`) never ends in G's `zurueck`: the body of a
              `locks` leaves only by its end, `leave`, `next` or a stop, and every one of these passes the give.
 -/
-import Stage0.Senke.Sperre.Code
+module
+public import Stage0.Senke.Sperre.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

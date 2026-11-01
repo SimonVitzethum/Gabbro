@@ -18,12 +18,15 @@
   memories (in `HavocA T` by `mischT`); `FlagPersonenPflicht` is the
   person's duty over pinned runs; `flagKoerper_relyDuty` is the transfer.
 -/
-import Grammatik.Zielsatz.Atomar.AtomarPflicht
-import Grammatik.Speichermodell.Atomar.AtomarSem
-import Grammatik.Speichermodell.Atomar.AtomarRec
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt
-import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
-import Grammatik.GabbroV.GvAtomRely
+module
+public import Grammatik.Zielsatz.Atomar.AtomarPflicht
+public import Grammatik.Speichermodell.Atomar.AtomarSem
+public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt
+public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
+public import Grammatik.GabbroV.GvAtomRely
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GvAtomKoerper
 

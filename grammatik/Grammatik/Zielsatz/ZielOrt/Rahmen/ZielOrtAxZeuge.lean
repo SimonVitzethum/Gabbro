@@ -11,7 +11,10 @@
   is NOT a `KoerperGutV` contract (`inc_ensures_nicht_V`), so this program
   is outside `ziel_ort_voll`'s obligation and inside `ziel_ort_voll_ax`'s.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

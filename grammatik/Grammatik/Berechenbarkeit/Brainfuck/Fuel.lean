@@ -7,7 +7,10 @@
   The exact same bound works for the proved one-step BF-to-TM2 translation. Its later
   transfer to Gabbro needs the actual target's administrative/scheduler overhead proof.
 -/
-import Grammatik.Berechenbarkeit.Brainfuck.ToTM2
+module
+public import Grammatik.Berechenbarkeit.Brainfuck.ToTM2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Brainfuck
 

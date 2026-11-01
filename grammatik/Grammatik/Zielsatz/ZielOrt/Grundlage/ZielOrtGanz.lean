@@ -39,6 +39,9 @@
   passes, so the C's not checking it is harmless there.
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T1
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T3
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T1
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T3
+@[expose] public section
+

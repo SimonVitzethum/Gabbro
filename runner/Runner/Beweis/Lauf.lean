@@ -1,5 +1,8 @@
-import Runner.X86.DecEnc
-import Runner.X86.Step
+module
+public import Runner.X86.DecEnc
+public import Runner.X86.Step
+@[expose] public section
+
 
 /-! # Straight-line code of the x86-64 model, on request trees
 

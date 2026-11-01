@@ -5,7 +5,10 @@
              `NutzlastExpr.num e` (the case has a payload range) or `NutzlastExpr.empty`; the specification `cs`
              is the list of payload ranges of the declaration (`USum.spec`).
 -/
-import Grammatik.Parser.Elab.UebersetzeAllg2
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 

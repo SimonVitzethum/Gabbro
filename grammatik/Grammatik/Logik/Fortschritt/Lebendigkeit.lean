@@ -64,6 +64,9 @@
   unchanged.
 -/
 
-import Grammatik.Logik.Fortschritt.Lebendigkeit.T1
-import Grammatik.Logik.Fortschritt.Lebendigkeit.T2
-import Grammatik.Logik.Fortschritt.Lebendigkeit.T3
+module
+public import Grammatik.Logik.Fortschritt.Lebendigkeit.T1
+public import Grammatik.Logik.Fortschritt.Lebendigkeit.T2
+public import Grammatik.Logik.Fortschritt.Lebendigkeit.T3
+@[expose] public section
+

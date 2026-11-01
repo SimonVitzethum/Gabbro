@@ -13,6 +13,10 @@
   `Marken.lean`: mirrors read nothing; checker wiring goes to the report).
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Arena
 
 /-- Capacity bounds: reservation `lo`, hard bound `hi`. -/
@@ -38,7 +42,7 @@ structure Marke (g : Nat) where
   private mk :: (dummy : Unit)
 
 /-- The initial arena of generation 0 with its mark. -/
-def start (k : Kap) : Arena k 0 × Marke 0 :=
+@[no_expose] def start (k : Kap) : Arena k 0 × Marke 0 :=
   (⟨0, Nat.zero_le _⟩, Marke.mk ())
 
 /-- Allocation: succeeds with the next index exactly while `used < hi`. -/
@@ -50,7 +54,7 @@ def alloc {k : Kap} {g : Nat} (a : Arena k g) :
 
 /-- Reset: consumes the mark of generation `g`, returns the empty arena of
     generation `g + 1` with its fresh mark. -/
-def reset {k : Kap} {g : Nat} (a : Arena k g) (m : Marke g) :
+@[no_expose] def reset {k : Kap} {g : Nat} (a : Arena k g) (m : Marke g) :
     Arena k (g + 1) × Marke (g + 1) :=
   (⟨0, Nat.zero_le _⟩, Marke.mk ())
 
@@ -207,7 +211,7 @@ theorem alloc_innerhalb_reserve_zeuge :
 
 /-- Reset empties the arena. -/
 theorem reset_used {k : Kap} {g : Nat} (a : Arena k g) (m : Marke g) :
-    (reset a m).1.used = 0 := rfl
+    (reset a m).1.used = 0 := by rfl
 
 /-- Reset consumes the mark: the fresh mark of generation `g + 1` equals any
     mark of that generation -- marks carry no identity beyond their type

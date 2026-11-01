@@ -6,7 +6,10 @@
   the k-limb destination. Signed extension uses the sign of the original top limb and ext_word;
   unsigned extension writes zero, including when the original top bit is set.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Eng
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Eng
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

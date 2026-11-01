@@ -42,8 +42,11 @@
   a low choice), enabledness (both runs must follow the schedule; that one
   run cannot -- a thread blocked on a lock -- is outside), declassification.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

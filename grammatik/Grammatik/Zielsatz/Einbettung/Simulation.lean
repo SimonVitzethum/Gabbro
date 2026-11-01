@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Werkzeug
+module
+public import Grammatik.Zielsatz.Einbettung.Werkzeug
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Simulation.lean

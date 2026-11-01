@@ -28,7 +28,10 @@
   2026-10-18 with the C backend: tag `archiv/c-emitter-2026-10-17`.)
 -/
 
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

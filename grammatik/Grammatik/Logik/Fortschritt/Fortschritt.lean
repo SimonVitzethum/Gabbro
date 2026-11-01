@@ -50,6 +50,9 @@
   `logik` checks.
 -/
 
-import Grammatik.Logik.Fortschritt.Fortschritt.T1
-import Grammatik.Logik.Fortschritt.Fortschritt.T2
-import Grammatik.Logik.Fortschritt.Fortschritt.T3
+module
+public import Grammatik.Logik.Fortschritt.Fortschritt.T1
+public import Grammatik.Logik.Fortschritt.Fortschritt.T2
+public import Grammatik.Logik.Fortschritt.Fortschritt.T3
+@[expose] public section
+

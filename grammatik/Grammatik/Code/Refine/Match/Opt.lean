@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Frag
+module
+public import Grammatik.Code.Refine.Frag
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/Opt.lean

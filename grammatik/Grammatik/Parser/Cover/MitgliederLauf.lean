@@ -9,7 +9,10 @@
   the members of the term types `Expr`/`Stmt`/`Block`/`Endblock`/`Arms`/`Args`/`Ty`/...). Prints how many sources
   lowered, the members reached with their source counts, and the register members not reached.
 -/
-import Grammatik.Parser.Cover.Mitglieder
+module
+public import Grammatik.Parser.Cover.Mitglieder
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.Cover.Mitglieder
 

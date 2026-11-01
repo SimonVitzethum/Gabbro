@@ -14,5 +14,8 @@
   declared writes; `popR_kopf` records the call answer with that frame.
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.T1
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.T2
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.T1
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.T2
+@[expose] public section
+

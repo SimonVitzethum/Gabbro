@@ -1,6 +1,9 @@
 /- Connected finite operand decoding using only integer S0 instructions.
    The hidden bit is absent at exponent zero, including signed zero. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Felder
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Felder
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

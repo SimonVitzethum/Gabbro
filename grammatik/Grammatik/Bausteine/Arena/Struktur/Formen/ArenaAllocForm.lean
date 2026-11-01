@@ -13,7 +13,10 @@
     * `nimmAlloc_voll`                -- `freiNimm` on an empty free list takes its `else`;
     * `freiVar_ausfuehren`            -- `free` of a live slot: the slot dies, every other live slot stays live.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaFremd
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaFremd
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

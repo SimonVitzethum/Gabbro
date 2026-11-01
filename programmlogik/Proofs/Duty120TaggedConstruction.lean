@@ -1,4 +1,7 @@
-import Duty.Duty120TaggedConstruction
+module
+public import Duty.Duty120TaggedConstruction
+@[expose] public section
+
 set_option autoImplicit false
 open Gabbro.Body GabbroDuty.Duty120TaggedConstruction
 

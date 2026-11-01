@@ -1,6 +1,9 @@
 /- Exact post-cancellation magnitude extraction from a signed quotient and tail. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Output
-import Mathlib.Tactic.Ring
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Output
+public import Mathlib.Tactic.Ring
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem Gleitkomma

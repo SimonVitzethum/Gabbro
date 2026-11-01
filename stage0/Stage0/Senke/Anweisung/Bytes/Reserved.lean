@@ -1,7 +1,10 @@
 /- A nonzero reservation, captured operands and a live sentinel satisfy the byte-write premises together. -/
-import Stage0.Senke.Anweisung.Bytes.Put
-import Runner.Prog.IRAsm
-import Grammatik.Parser.Elab.UebersetzeAllg
+module
+public import Stage0.Senke.Anweisung.Bytes.Put
+public import Runner.Prog.IRAsm
+public import Grammatik.Parser.Elab.UebersetzeAllg
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ReservedByteProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -27,7 +27,10 @@
   Only `GutO` is assumed (the oracle keeps the held locks, for `axiomCall`
   leaves and `bindAxiom`).
 -/
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

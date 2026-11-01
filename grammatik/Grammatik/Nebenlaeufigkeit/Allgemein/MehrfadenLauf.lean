@@ -13,7 +13,10 @@
     a `locks` head; a reached machine where thread 1 WAITS for the lock
     thread 0 holds, and the deadlock theorem there.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+@[expose] public section
+
 namespace Gabbro.Grammatik
 
 theorem mhgL {s : List (Ereignis mD)} (h : offen s = [()]) : HeldGenau mL (offen s) := by

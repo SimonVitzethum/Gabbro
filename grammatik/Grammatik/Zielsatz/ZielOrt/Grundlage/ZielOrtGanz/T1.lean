@@ -38,7 +38,10 @@
   they wrote turns each check into a theorem: on G's runs the check always
   passes, so the C's not checking it is harmless there.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

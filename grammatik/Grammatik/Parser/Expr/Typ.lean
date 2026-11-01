@@ -4,7 +4,10 @@
              `ElementTief.lean`; statements carry types now (`let x : T = e;`), so the type reader
              comes before the statement reader.
 -/
-import Grammatik.Parser.Expr.Tokens
+module
+public import Grammatik.Parser.Expr.Tokens
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

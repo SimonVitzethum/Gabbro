@@ -7,8 +7,11 @@
              accepts the result, decided by the kernel. The twins are refused: `alloc` of a table without a provider,
              and the write without `writes T.slots`.
 -/
-import Grammatik.Parser.Elab.UebersetzePipeline
-import Grammatik.Zielsatz.Kern.Akzeptiert
+module
+public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben40
 

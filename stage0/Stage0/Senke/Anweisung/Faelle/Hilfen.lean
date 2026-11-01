@@ -3,15 +3,18 @@
   Subject:   The helper definitions of the statement lowering (`Anweisung.lean`): float literal, call tails,
              return/else/traverse/tag/narrow code pieces. Split out of `Anweisung.lean` unchanged.
 -/
-import Stage0.Senke.Ausdruck
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Return
-import Stage0.Senke.Ausdruck.Gleit.SlotContext
-import Stage0.Senke.Ausdruck.Gleit.Bereich
-import Stage0.Senke.Stopp
-import Stage0.Senke.Tor
-import Stage0.Senke.Sperre.Code
-import Stage0.Senke.Anweisung.Bytes.Code
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
+module
+public import Stage0.Senke.Ausdruck
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Return
+public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+public import Stage0.Senke.Ausdruck.Gleit.Bereich
+public import Stage0.Senke.Stopp
+public import Stage0.Senke.Tor
+public import Stage0.Senke.Sperre.Code
+public import Stage0.Senke.Anweisung.Bytes.Code
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

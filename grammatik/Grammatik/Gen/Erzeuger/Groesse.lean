@@ -7,7 +7,10 @@
              finite and the generator takes all of them; what the typing determines (the ranges a sum or a
              product computes, the held resources after a call, a callee's parameter types) counts nothing.
 -/
-import Grammatik.Gen.Erzeuger.Gestuft
+module
+public import Grammatik.Gen.Erzeuger.Gestuft
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

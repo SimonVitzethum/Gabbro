@@ -32,7 +32,10 @@
   `A` and writing `B` on paths that never mix them). That refinement needs
   a program-counter label per thread and is outside this proof.
 -/
-import Grammatik.Nichtinterferenz.Invariante
+module
+public import Grammatik.Nichtinterferenz.Invariante
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

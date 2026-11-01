@@ -1,5 +1,8 @@
 /- Range checks reuse strict comparisons; NaN endpoints always select the fallback. -/
-import Stage0.Senke.Ausdruck.Gleit.Fall
+module
+public import Stage0.Senke.Ausdruck.Gleit.Fall
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 

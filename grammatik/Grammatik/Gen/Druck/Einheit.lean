@@ -14,8 +14,11 @@
   handler flag, a parameter of a type other than an integer range or a truth value) makes the whole unit unprintable and
   says which feature it was. The unit is then skipped, never printed wrongly.
 -/
-import Grammatik.Gen.Druck.Druck
-import Grammatik.Gen.Abdeckung.Waehlen
+module
+public import Grammatik.Gen.Druck.Druck
+public import Grammatik.Gen.Abdeckung.Waehlen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

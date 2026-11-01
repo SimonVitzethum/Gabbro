@@ -28,8 +28,11 @@
   reached run the logged reason return meets the invariant BY THE THEOREM
   (`igGut_zeuge`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
-import Grammatik.Proben.InvZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
+public import Grammatik.Proben.InvZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

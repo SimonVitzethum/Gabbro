@@ -1,5 +1,8 @@
 /- Part 5 of 5 of `InterferenzAllgemein` (split by instrumente/teile/lean-teilen.py; the umbrella `InterferenzAllgemein.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T4
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T4
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

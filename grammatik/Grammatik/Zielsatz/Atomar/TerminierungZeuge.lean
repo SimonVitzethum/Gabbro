@@ -6,8 +6,11 @@
              the duty (no function lies on a cycle), the hardware and runtime premises hold -- on a run of the thread
              machine whose first step changes the memory; both starts are of class `endet`.
 -/
-import Grammatik.Zielsatz.Atomar.BeweisTerminierung
-import Grammatik.Zielsatz.Kern.Proben
+module
+public import Grammatik.Zielsatz.Atomar.BeweisTerminierung
+public import Grammatik.Zielsatz.Kern.Proben
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

@@ -6,7 +6,10 @@
              elaborator's name lookups (`uParamNrAux`, `uTabNrAux`, `find?`) over a list of printed names find the
              position of the number.
 -/
-import Grammatik.Gen.Text.Delab
+module
+public import Grammatik.Gen.Text.Delab
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

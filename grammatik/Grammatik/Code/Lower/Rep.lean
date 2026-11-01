@@ -1,8 +1,11 @@
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.Code.Model.Facts
-import Grammatik.Code.Model.Layout
-import Grammatik.Code.Lower.Arith
-import Grammatik.Code.Lower.Sum
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Code.Model.Facts
+public import Grammatik.Code.Model.Layout
+public import Grammatik.Code.Lower.Arith
+public import Grammatik.Code.Lower.Sum
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Lower/Rep.lean

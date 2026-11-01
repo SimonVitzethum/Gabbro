@@ -4,7 +4,10 @@
              `awaits { .. }` as raw text (`uNutzNamen`, split at blanks and commas); on the delaborator's text of a
              list of statics it gives exactly their names.
 -/
-import Grammatik.Gen.Text.Invers.Namen
+module
+public import Grammatik.Gen.Text.Invers.Namen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

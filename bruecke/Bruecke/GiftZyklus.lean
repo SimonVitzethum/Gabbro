@@ -1,6 +1,9 @@
-import Bruecke.Simulation
-import Bruecke.Pruefung
-import Grammatik.Parser.Elab.UebersetzePipeline
+module
+public import Bruecke.Simulation
+public import Bruecke.Pruefung
+public import Grammatik.Parser.Elab.UebersetzePipeline
+@[expose] public section
+
 
 /-!
 # Finding F2, measured: without a rank of the call graph the bridge would be FALSE

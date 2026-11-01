@@ -14,7 +14,10 @@
   pass continues visits every member. The visited set is a ghost log, not
   a second semantics: it applies the SAME `schritt` to the SAME states.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV.GvTraversal
 

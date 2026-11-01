@@ -7,7 +7,10 @@
              writer of a carrier holds every lock guarding a carrier (`U003`, `invarianten_gehalten`); the
              elaborator refuses a unit where it does not.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben32
 

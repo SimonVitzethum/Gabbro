@@ -1,4 +1,7 @@
-import Stage0.SourceWitness
+module
+public import Stage0.SourceWitness
+@[expose] public section
+
 
 namespace Gabbro.Stage0.ArrayWitness
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

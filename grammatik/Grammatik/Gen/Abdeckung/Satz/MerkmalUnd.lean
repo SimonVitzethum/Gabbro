@@ -3,7 +3,10 @@
   Subject:   `mE` is a conjunction over the sites of a body: two feature sets, the trivial one, finite lists
              (part of step 1, `ZellenSatz.lean`).
 -/
-import Grammatik.Gen.Abdeckung.Zellen
+module
+public import Grammatik.Gen.Abdeckung.Zellen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

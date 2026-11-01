@@ -6,9 +6,12 @@
   subtraction's top limb, the mask `0 - flag`; the selection keeps the remainder register or takes
   the difference limb by limb under the mask.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Shl1
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Compare
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Shl1
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Compare
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

@@ -8,7 +8,10 @@
   `InBaum.wurzel` says a non-empty tree has its root among its members; it is what distinguishes the slot a root cut
   releases from every slot a body holds that is not in the tree.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaBaum
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaum
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaKette
 

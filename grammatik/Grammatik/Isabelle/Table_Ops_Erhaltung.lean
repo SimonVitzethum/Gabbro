@@ -24,6 +24,10 @@
   proved -- the same boundary as in the theory).
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.TableOps
 
 set_option linter.unusedVariables false

@@ -1,7 +1,10 @@
 /- Joint scalar-register and internal-pointer-marker witnesses for foreign argument lowering. -/
-import Stage0.Senke.Anweisung.TorLauf
-import Runner.Prog.IRAsm
-import Grammatik.Parser.Elab.UebersetzeAllg
+module
+public import Stage0.Senke.Anweisung.TorLauf
+public import Runner.Prog.IRAsm
+public import Grammatik.Parser.Elab.UebersetzeAllg
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ForeignScalarProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Struct.Mono
-import Grammatik.Code.Refine.Block
+module
+public import Grammatik.Code.Refine.Struct.Mono
+public import Grammatik.Code.Refine.Block
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Post.lean

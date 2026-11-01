@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Stmt
+module
+public import Grammatik.Code.Refine.Stmt
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Loop.lean

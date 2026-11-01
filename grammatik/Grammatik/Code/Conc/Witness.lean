@@ -1,4 +1,7 @@
-import Grammatik.Code.Conc.Await
+module
+public import Grammatik.Code.Conc.Await
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/Witness.lean

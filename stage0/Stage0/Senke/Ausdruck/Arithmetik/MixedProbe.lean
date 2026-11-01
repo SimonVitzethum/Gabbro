@@ -1,6 +1,9 @@
 /- Joint high-bit source/compiler/frame witness for mixed scalar ordering. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Scalar
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Scalar
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.MixedProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

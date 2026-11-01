@@ -9,8 +9,11 @@
   (`torGut`), without a reason channel, its parameters words; integer and boolean answers, or never.
   A returning never gate stops with 110; a terminating system call never reaches that fallback.
 -/
-import Stage0.Senke.Ausdruck
-import Stage0.Senke.Stopp
+module
+public import Stage0.Senke.Ausdruck
+public import Stage0.Senke.Stopp
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

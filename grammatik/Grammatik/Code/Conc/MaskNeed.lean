@@ -1,4 +1,7 @@
-import Grammatik.Code.Conc.Mask
+module
+public import Grammatik.Code.Conc.Mask
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/MaskNeed.lean

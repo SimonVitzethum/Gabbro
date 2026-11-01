@@ -39,7 +39,10 @@
   replay (`ZielOrt*`, `Sperre*`, some 30 000 lines) to carry it. This file gives the replay
   its MEMORY premise -- what a GA step presents -- and nothing more.
 -/
-import Grammatik.Speichermodell.Maschine.DRF
+module
+public import Grammatik.Speichermodell.Maschine.DRF
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

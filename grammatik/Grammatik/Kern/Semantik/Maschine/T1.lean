@@ -73,8 +73,11 @@
   `Block` continuations (`ite` arms, call stacks, loop resumption as explicit
   continuation objects) and the run-to-`Bau` wiring for `Geteilt.lean`.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

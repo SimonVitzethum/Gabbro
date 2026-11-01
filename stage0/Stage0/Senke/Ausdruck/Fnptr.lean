@@ -1,7 +1,10 @@
 /-
   Subject: Function references are the code addresses carried by the layout.
 -/
-import Stage0.Senke.Ausdruck.Top
+module
+public import Stage0.Senke.Ausdruck.Top
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

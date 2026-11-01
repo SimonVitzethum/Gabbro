@@ -98,7 +98,10 @@
          `falte(s : u32)` does not.
 -/
 
-import Lean
+module
+public import Lean
+@[expose] public section
+
 
 namespace Gabbro.Body
 

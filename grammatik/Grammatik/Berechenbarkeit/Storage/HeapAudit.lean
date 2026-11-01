@@ -1,6 +1,9 @@
-import Grammatik.Berechenbarkeit.Storage.HeapWitnesses
-import Grammatik.Berechenbarkeit.Storage.BrainfuckBounds
-import Grammatik.Bausteine.Arena.Unbounded.Audit
+module
+public import Grammatik.Berechenbarkeit.Storage.HeapWitnesses
+public import Grammatik.Berechenbarkeit.Storage.BrainfuckBounds
+public import Grammatik.Bausteine.Arena.Unbounded.Audit
+@[expose] public section
+
 
 /-! Axiom audit of the linked TM2/BF backend and its conditional operation bounds. -/
 

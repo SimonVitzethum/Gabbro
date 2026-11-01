@@ -1,5 +1,8 @@
-import Runner.Beweis.Schritt
-import Runner.Mach.Maschine
+module
+public import Runner.Beweis.Schritt
+public import Runner.Mach.Maschine
+@[expose] public section
+
 
 /-! # `runner_mt`: every run of the runner's threads is a run of the IR's threads
 

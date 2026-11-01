@@ -7,8 +7,11 @@
   limb boundary); the second is the minimum by `-1`, where the quotient `2^127` appears with the
   minimum's encoding (the result type of the model excludes this overflow).
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Probe
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Final
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Probe
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Final
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.SignedProbe
 open Runner.IR Runner.Mem Gabbro.Stage0.Senke.DivideProbe

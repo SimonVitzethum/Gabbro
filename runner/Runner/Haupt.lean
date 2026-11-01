@@ -1,7 +1,10 @@
-import Runner.Prog.Elf
-import Runner.Prog.Proben
-import Runner.Prog.Liste
-import Runner.Test.Diff
+module
+public import Runner.Prog.Elf
+public import Runner.Prog.Proben
+public import Runner.Prog.Liste
+public import Runner.Test.Diff
+@[expose] public section
+
 
 /-! # `runner DIR`: writes the runner binary, its listing and the probe images
 

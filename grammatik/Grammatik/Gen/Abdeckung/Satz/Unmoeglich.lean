@@ -5,7 +5,10 @@
              and a good cell no valid program has (`ug_…`, `e.gueltig = true → ¬ e.Hat x`). The generated closing
              file (`Gen/Zeugen/Schluss.lean`) names one of these for every cell without a witness.
 -/
-import Grammatik.Gen.Abdeckung.Satz.Quelle
+module
+public import Grammatik.Gen.Abdeckung.Satz.Quelle
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

@@ -1,6 +1,9 @@
 /- Saturating signed alignment with an exact Euclidean quotient and tail. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Ausrichtung
-import Stage0.Senke.Ausdruck.Gleit.Skalieren
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Ausrichtung
+public import Stage0.Senke.Ausdruck.Gleit.Skalieren
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

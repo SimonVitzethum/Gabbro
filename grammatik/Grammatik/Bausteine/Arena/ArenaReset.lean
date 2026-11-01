@@ -15,7 +15,10 @@
   staleness refusal is the checker's (`N211`, whose reach is stated in CUTS).
   What the RUN does is this store, and that is what is proved.
 -/
-import Grammatik.Bausteine.Arena.ArenaZucker
+module
+public import Grammatik.Bausteine.Arena.ArenaZucker
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

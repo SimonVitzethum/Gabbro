@@ -1,5 +1,8 @@
 /- Bounds for complete snapshot-aware postcondition expression code. -/
-import Stage0.Senke.Ausdruck.Old.Code
+module
+public import Stage0.Senke.Ausdruck.Old.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

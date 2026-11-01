@@ -5,7 +5,10 @@
              fold `S` walks exactly the list `A k`, in its order; it is proved for every combinator, so the
              completeness theorems over `Sz` (`hautT_vollst`, ...) hold for the streams unchanged.
 -/
-import Grammatik.Gen.Erzeuger.Programm
+module
+public import Grammatik.Gen.Erzeuger.Programm
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

@@ -12,15 +12,18 @@
   number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`,
   `leave` and `next`; the latter two retain the enclosing loop targets.
 -/
-import Stage0.Senke.Ausdruck
-import Stage0.Senke.Ausdruck.Gleit.SlotContext
-import Stage0.Senke.Ausdruck.Gleit.Bereich
-import Stage0.Senke.Stopp
-import Stage0.Senke.Tor
-import Stage0.Senke.Sperre.Code
-import Stage0.Senke.Anweisung.Bytes.Code
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
-import Stage0.Senke.Anweisung.Faelle.Hilfen
+module
+public import Stage0.Senke.Ausdruck
+public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+public import Stage0.Senke.Ausdruck.Gleit.Bereich
+public import Stage0.Senke.Stopp
+public import Stage0.Senke.Tor
+public import Stage0.Senke.Sperre.Code
+public import Stage0.Senke.Anweisung.Bytes.Code
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
+public import Stage0.Senke.Anweisung.Faelle.Hilfen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

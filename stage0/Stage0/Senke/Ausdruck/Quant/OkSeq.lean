@@ -3,7 +3,10 @@
   Subject:   Sequencing and constant-operand lemmas for `Ok`, independent of the world: the two halves of a code
              run one after the other, and a binary instruction against a literal.
 -/
-import Stage0.Senke.Ausdruck.Top
+module
+public import Stage0.Senke.Ausdruck.Top
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -2,10 +2,13 @@
   Subject: Nonempty byte-span witnesses. The source reader does not yet construct
   getBytes/putBytes, so these G fixtures also supply images for the real runner.
 -/
-import Stage0.Senke.Welt.Anordnung
-import Stage0.Senke.Anweisung.Bytes.Put
-import Stage0.Senke.Anweisung.Bytes.ShiftProbe
-import Stage0.Senke.Anweisung.Bytes.Reserved
+module
+public import Stage0.Senke.Welt.Anordnung
+public import Stage0.Senke.Anweisung.Bytes.Put
+public import Stage0.Senke.Anweisung.Bytes.ShiftProbe
+public import Stage0.Senke.Anweisung.Bytes.Reserved
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ByteProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

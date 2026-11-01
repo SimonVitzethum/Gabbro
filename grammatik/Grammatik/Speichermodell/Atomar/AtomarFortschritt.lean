@@ -17,11 +17,14 @@
     `KoerperGutSA` excludes.
   * `fortschrittG_GX` -- `FortschrittG` at every machine GX reaches.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarLauf
-import Grammatik.Speichermodell.Atomar.AtomarZeuge
-import Grammatik.Logik.Fortschritt.Fortschritt
-import Grammatik.Logik.Vertraege.AntwortOrte
-import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
+module
+public import Grammatik.Speichermodell.Atomar.AtomarLauf
+public import Grammatik.Speichermodell.Atomar.AtomarZeuge
+public import Grammatik.Logik.Fortschritt.Fortschritt
+public import Grammatik.Logik.Vertraege.AntwortOrte
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

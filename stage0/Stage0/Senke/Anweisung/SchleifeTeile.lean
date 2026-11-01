@@ -3,9 +3,12 @@
   Subject:   The pieces of `traverse`'s proof: the indices from `k` on (`idxAb`), single jumps (`brz_go`, `brz_stay`,
              `jmp_go`), where each part of `travCode` lies (`trav_*`), and the loop's head (`trav_head`, `trav_cmp_ok`).
 -/
-import Stage0.Senke.Anweisung.Simulation
-import Stage0.Senke.Ausdruck.Quant.Indices
-import Stage0.Senke.Ausdruck.Gleit.Wort
+module
+public import Stage0.Senke.Anweisung.Simulation
+public import Stage0.Senke.Ausdruck.Quant.Indices
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -18,11 +18,14 @@
   The run over a context depends on the plugged tree only through its state (`lauf_ein`): the one fact
   every argument below uses.
 -/
-import Mathlib.Data.Fintype.Pi
-import Mathlib.Data.Fintype.Sigma
-import Mathlib.Data.Fintype.Option
-import Mathlib.Data.Fintype.Prod
-import Mathlib.Algebra.BigOperators.Fin
+module
+public import Mathlib.Data.Fintype.Pi
+public import Mathlib.Data.Fintype.Sigma
+public import Mathlib.Data.Fintype.Option
+public import Mathlib.Data.Fintype.Prod
+public import Mathlib.Algebra.BigOperators.Fin
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

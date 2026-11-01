@@ -7,7 +7,10 @@
              `genTK` (`orakelM_eq`), whatever the cache holds, so a table built over it is the table of `genTK`
              (`tafelM_eq`). The cache only saves work; a context it lacks is built where it is asked.
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.MerkenAusdruck
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.MerkenAusdruck
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

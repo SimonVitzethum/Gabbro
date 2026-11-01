@@ -152,7 +152,10 @@
 
   Kein `mathlib`, kein `sorry`, kein `axiom`, kein Import aus `programmlogik/`.
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

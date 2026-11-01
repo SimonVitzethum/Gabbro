@@ -1,4 +1,7 @@
-import Runner.X86.Enc
+module
+public import Runner.X86.Enc
+@[expose] public section
+
 
 /-! # Decoding: bytes to the instruction forms of the subset
 

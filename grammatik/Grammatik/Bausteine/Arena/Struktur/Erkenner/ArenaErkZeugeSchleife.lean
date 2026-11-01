@@ -17,7 +17,10 @@
   The runs are evaluated by the kernel (`decide +kernel`); the invariant of the world a run ends in is the recognizer's
   promise (`erk_koerper`).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkennerZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

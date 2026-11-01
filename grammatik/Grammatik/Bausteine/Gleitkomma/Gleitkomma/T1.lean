@@ -18,6 +18,10 @@
   is "exact result, then round" -- the IEEE definition.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Gleitkomma
 
 /-- An IEEE-754 binary interchange format: `p` significand bits (hidden one

@@ -1,16 +1,19 @@
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Stage0.Senke.Ausdruck.Gleit.Exponent
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Stage0.Senke.Ausdruck.Gleit.Exponent
 /-
   File:      stage0/Nachpruefung.lean
   Subject:   The axioms of the lowering's theorems (`Stage0/Senke/`), read by stage 7 of the Lean guardian: each must
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
-import Stage0
-import Stage0.Senke.Ausdruck.Tag
-import Stage0.Senke.Ausdruck.Quant.Proben
-import Stage0.Senke.Anweisung.Bytes.Proben
-import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
-import Stage0.Bindung.Proben
+public import Stage0
+public import Stage0.Senke.Ausdruck.Tag
+public import Stage0.Senke.Ausdruck.Quant.Proben
+public import Stage0.Senke.Anweisung.Bytes.Proben
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+public import Stage0.Bindung.Proben
+@[expose] public section
+
 -- Forward scalar dependencies, exact final meanings and certified declaration schedules.
 #print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle
 #print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle_zeuge

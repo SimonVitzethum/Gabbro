@@ -1,5 +1,8 @@
 /- Part 2 of 5 of `EigenZustandD` (split by instrumente/teile/lean-teilen.py; the umbrella `EigenZustandD.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T1
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.EZD
 

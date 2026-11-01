@@ -1,6 +1,9 @@
 /- Simulation of finite retry expansion, including both loop exits and an enclosing loop's overflow exits. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Test
-import Stage0.Senke.Anweisung.SchleifeTeile
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Test
+public import Stage0.Senke.Anweisung.SchleifeTeile
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

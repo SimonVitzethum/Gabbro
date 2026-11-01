@@ -10,8 +10,11 @@
     - sail/lib/concurrency_interface/read_write_v1.sail
       (AS_rel_or_acq = LDAR/STLR, AS_acq_rcpc = LDAPR)
 -/
-import Arm.Mem.Event
-import Arm.Mem.Exec
+module
+public import Arm.Mem.Event
+public import Arm.Mem.Exec
+@[expose] public section
+
 
 namespace Arm
 

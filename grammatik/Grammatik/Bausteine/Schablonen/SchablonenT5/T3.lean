@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `SchablonenT5` (split by instrumente/teile/lean-teilen.py; the umbrella `SchablonenT5.lean` imports all parts). -/
-import Grammatik.Bausteine.Schablonen.SchablonenT5.T2
+module
+public import Grammatik.Bausteine.Schablonen.SchablonenT5.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

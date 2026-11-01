@@ -11,7 +11,10 @@
   side (a lock that guards a table is one of the table's required locks, `D.braucht`; every lock held in `Λ`
   is in `ctx.held`), the result kind of the contract `V`, and the reasons.
 -/
-import Grammatik.Gen.Text.Invers.Ausdruck
+module
+public import Grammatik.Gen.Text.Invers.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

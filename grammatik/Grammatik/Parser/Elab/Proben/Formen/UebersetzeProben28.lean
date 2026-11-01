@@ -8,7 +8,10 @@
              `d.R = v;` is `Stmt.regWrite`. Both reads are `Block` forms only: `Endblock` has no register read,
              so a read at the top level of a body is refused by name (a model gap, reported).
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben28
 

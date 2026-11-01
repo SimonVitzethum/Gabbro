@@ -1,7 +1,10 @@
 /- Subject: Runtime length, byte access and comparisons on short string words. -/
-import Stage0.Senke.Ausdruck.Aggregat.String
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
-import Stage0.Senke.Ausdruck.Quant.Selection
+module
+public import Stage0.Senke.Ausdruck.Aggregat.String
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+public import Stage0.Senke.Ausdruck.Quant.Selection
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

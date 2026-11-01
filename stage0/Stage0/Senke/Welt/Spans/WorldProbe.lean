@@ -1,6 +1,9 @@
 /- Joint inhabited full-world fixture with two genuine three-word table cells. -/
-import Stage0.Senke.Welt.Spans.StoreWorld
-import Stage0.Senke.Welt.Spans.SpanProbe
+module
+public import Stage0.Senke.Welt.Spans.StoreWorld
+public import Stage0.Senke.Welt.Spans.SpanProbe
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke.WorldProbe
 set_option maxHeartbeats 1000000
 open Gabbro.Grammatik Runner.IR Runner.Mem

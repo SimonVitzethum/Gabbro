@@ -18,7 +18,10 @@
   same `Ty.ptr` shape, different barrier owed by the declaration fact. The
   model below is the barrier choice over the six sides.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace P21.Gap21Space
 

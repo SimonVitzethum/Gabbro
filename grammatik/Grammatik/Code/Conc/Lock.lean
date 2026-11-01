@@ -1,4 +1,7 @@
-import Grammatik.Code.Conc.GXStep
+module
+public import Grammatik.Code.Conc.GXStep
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/Lock.lean

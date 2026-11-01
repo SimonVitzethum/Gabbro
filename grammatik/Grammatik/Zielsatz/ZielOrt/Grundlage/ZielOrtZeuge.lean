@@ -29,7 +29,10 @@
   to leave `konto` alone, so a contract-respecting handler may answer with
   `konto[0] = 0`; `einzahlen` here writes last.)
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

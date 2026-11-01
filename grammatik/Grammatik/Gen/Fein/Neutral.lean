@@ -14,8 +14,11 @@
   Both rest on the coarse table (`Tafel`) and the fine table (`FeinTafel`): every allowed fine cell (`uF`, which
   holds every fine cell of every program, `feinZellen_uF`) has a valid witness or occurs in no valid program.
 -/
-import Grammatik.Gen.Fein.Satz
-import Grammatik.Gen.Abdeckung.Satz.Neutral
+module
+public import Grammatik.Gen.Fein.Satz
+public import Grammatik.Gen.Abdeckung.Satz.Neutral
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

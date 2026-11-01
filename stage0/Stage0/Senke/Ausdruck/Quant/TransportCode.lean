@@ -1,5 +1,8 @@
 /- Shared raw IR span builders; independent of world, environments and codecs. -/
-import Runner.IR.Rahmen
+module
+public import Runner.IR.Rahmen
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 /-- Read a complete span at a checked physical address into fresh frame slots.

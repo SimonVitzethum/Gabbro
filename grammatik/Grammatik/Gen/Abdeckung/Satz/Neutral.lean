@@ -13,7 +13,10 @@
 
   Both rest on the cell table (`tafel_erzeugt`): one fact per cell, a witness in the space or a theorem.
 -/
-import Grammatik.Gen.Abdeckung.Satz.ErzeugtVoll
+module
+public import Grammatik.Gen.Abdeckung.Satz.ErzeugtVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

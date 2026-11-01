@@ -42,6 +42,10 @@
          `CONJECTURED` und liegt im Erzeuger.
 -/
 
+module
+
+@[expose] public section
+
 namespace Passlogik.Linear
 
 variable {V : Type u} [DecidableEq V]

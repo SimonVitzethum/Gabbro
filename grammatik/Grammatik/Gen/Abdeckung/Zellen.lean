@@ -43,7 +43,10 @@
                                                                                        ¬a ∨ b ∨ c
     9,0  (w, f, L)   masks       (w over ALL functions) [w a handler, reach w f, f takes L, L masks interrupts]   ¬a ∨ ¬b ∨ ¬c ∨ d
 -/
-import Grammatik.Gen.Erzeuger.Gueltig
+module
+public import Grammatik.Gen.Erzeuger.Gueltig
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

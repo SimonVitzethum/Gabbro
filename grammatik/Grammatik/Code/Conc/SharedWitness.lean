@@ -1,5 +1,8 @@
-import Grammatik.Code.Conc.Shared
-import Grammatik.Code.Conc.Witness
+module
+public import Grammatik.Code.Conc.Shared
+public import Grammatik.Code.Conc.Witness
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/SharedWitness.lean

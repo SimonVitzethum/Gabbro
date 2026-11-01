@@ -6,8 +6,11 @@
              lock its FIFO order (`fifoSperre_aus`); fairness window, hold time, no stop inside a section and the
              contenders are the statement's named premises.
 -/
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Logik.Fortschritt.Lebendigkeit
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Logik.Fortschritt.Lebendigkeit
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

@@ -1,5 +1,8 @@
 /- Subject: Widening a packed string (capacity at most one) to a long string span, below all proofs. -/
-import Stage0.Senke.Ausdruck.Aggregat.Kopie
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Kopie
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

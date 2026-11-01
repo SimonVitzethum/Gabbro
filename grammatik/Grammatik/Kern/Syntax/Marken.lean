@@ -79,6 +79,10 @@
   (siehe Spiegel oben). Kein `sorry`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Marken
 
 /-! ## 1. Die Marken und ihre Erklaerung -/

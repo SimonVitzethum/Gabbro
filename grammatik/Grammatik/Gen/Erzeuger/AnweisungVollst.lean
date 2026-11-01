@@ -4,7 +4,10 @@
              the sizes below `k` are all in their streams, then so is every statement of size `k`
              (`stmtS_vollst`). The proof cases on the statement; a constructor without a clause stops the build.
 -/
-import Grammatik.Gen.Erzeuger.Block
+module
+public import Grammatik.Gen.Erzeuger.Block
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

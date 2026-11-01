@@ -27,8 +27,11 @@
     finished; the invariant is CLOSED there and `privA[0] == privA[1]` holds, BY THE LEG
     `invRuhe`, at the memory of that entry and at the entry world of `setze`'s frame.
 -/
-import Grammatik.Zielsatz.Eigenschaften.Invarianten
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+module
+public import Grammatik.Zielsatz.Eigenschaften.Invarianten
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

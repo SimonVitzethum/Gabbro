@@ -30,17 +30,20 @@
   signature (no lock exists in this declaration); the checker's `renn` leg
   is what admits the shared read.
 -/
-import Grammatik.Korpus.Programme.GenOblig108
-import Grammatik.Kern.Semantik.Durchgaenge
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+module
+public import Grammatik.Korpus.Programme.GenOblig108
+public import Grammatik.Kern.Semantik.Durchgaenge
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

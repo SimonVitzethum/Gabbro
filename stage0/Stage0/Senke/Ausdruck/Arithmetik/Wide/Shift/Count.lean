@@ -5,7 +5,10 @@
   From the count `n` in slot `a+k` the prelude computes `q = n / 64` (slot `+1`), `r = n % 64`
   (`+2`), `63 - r` (`+3`) and installs the constants one (`+4`) and zero (`+5`).
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Bit
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Bit
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

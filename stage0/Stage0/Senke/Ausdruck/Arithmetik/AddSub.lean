@@ -1,7 +1,10 @@
 /- Shared add/sub decomposition for the integer software-float lowering.
    This module proves the specification boundary only. Block.float remains
    refused until the emitted finite path and its resource bounds are proved. -/
-import Stage0.Senke.Ausdruck.Gleit.Runden
+module
+public import Stage0.Senke.Ausdruck.Gleit.Runden
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

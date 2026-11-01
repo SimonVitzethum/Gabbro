@@ -8,8 +8,11 @@
              contract variant of size `≤ nc`, puts each of its cells into `RaumGut` (`raumGut_aus`); a single-fault
              program with one bad cell puts that cell into `RaumSchlecht` (`raumSchlecht_aus`). Nothing is evaluated.
 -/
-import Grammatik.Gen.Abdeckung.Satz.ErzeugtVoll
-import Grammatik.Gen.Abdeckung.Satz.SchluesselZellen
+module
+public import Grammatik.Gen.Abdeckung.Satz.ErzeugtVoll
+public import Grammatik.Gen.Abdeckung.Satz.SchluesselZellen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

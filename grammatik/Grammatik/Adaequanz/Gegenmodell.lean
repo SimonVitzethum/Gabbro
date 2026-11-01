@@ -15,7 +15,10 @@
 
   Both need a signature with infinitely many trees: a constructor of arity 0 and one of arity at least 1.
 -/
-import Grammatik.Adaequanz.Minimal
+module
+public import Grammatik.Adaequanz.Minimal
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

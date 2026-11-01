@@ -5,7 +5,10 @@
              premises of a run -- the FIFO lock, bounded fairness, the hold time, the contenders. The theorems are in
              Lebendigkeit.lean; the statement `GabbroZielWarten` in Zielsatz/Kern/Spec.lean.
 -/
-import Grammatik.Logik.Fortschritt.PlanLauf
+module
+public import Grammatik.Logik.Fortschritt.PlanLauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

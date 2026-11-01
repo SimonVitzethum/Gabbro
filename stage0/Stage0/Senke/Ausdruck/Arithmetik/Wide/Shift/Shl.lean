@@ -9,7 +9,10 @@
   `a+k`, scratch above (`K ≥ a+k+10`). Limb stages run in descending limb order, so a limb is read
   before it is overwritten.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Code
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

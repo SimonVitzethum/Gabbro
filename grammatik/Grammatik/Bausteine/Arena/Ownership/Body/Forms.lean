@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Steps
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Steps
+@[expose] public section
+
 
 /-! The executed allocator forms inside the body judgment, recognised on the
 actual statements: allocation from the free list or the counter binds a new

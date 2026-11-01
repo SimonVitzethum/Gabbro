@@ -69,13 +69,16 @@
    die Rechnung dem Pruefer schuldet, steht als Form daneben, nicht als Satz.
 -/
 
-import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Syntax
-import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Extraktion
 

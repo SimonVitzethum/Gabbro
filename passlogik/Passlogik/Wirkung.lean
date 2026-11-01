@@ -44,6 +44,10 @@
          hier eine gegebene Relation. §7 zeigt, was daran haengt.
 -/
 
+module
+
+@[expose] public section
+
 namespace Passlogik.Wirkung
 
 /-! ## 1. Mengen ohne `mathlib`

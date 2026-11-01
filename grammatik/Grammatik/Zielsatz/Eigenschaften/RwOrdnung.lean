@@ -28,7 +28,10 @@
   (a stream of readers can delay a writer forever: the progress leg is machine G's, which names no
   fairness either).
 -/
-import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+module
+public import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

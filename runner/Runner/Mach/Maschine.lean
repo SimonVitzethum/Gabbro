@@ -1,4 +1,7 @@
-import Runner.Basis.Res
+module
+public import Runner.Basis.Res
+@[expose] public section
+
 
 /-! # A process of threads over a memory model, with the fixed Linux thread calls
 

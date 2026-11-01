@@ -5,7 +5,10 @@
   Sources stay below r. The first extended operand occupies r .. r+k, the second r+k+1 .. r+2k+1.
   Extension temporaries may overlap the not yet copied second operand; no live limb is overwritten.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

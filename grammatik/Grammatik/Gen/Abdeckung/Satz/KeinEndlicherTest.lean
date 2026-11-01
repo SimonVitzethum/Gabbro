@@ -11,7 +11,10 @@
   every `k` (`lang_groesse`), with every field of `Einsatz` proved (the source lock family, the derived floor, no
   foreign body).
 -/
-import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
+module
+public import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

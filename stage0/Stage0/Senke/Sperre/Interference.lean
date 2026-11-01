@@ -2,8 +2,11 @@
    A foreign lock operation may change its entire scratch area and lock;
    disjoint observer frames retain complete values, including every ABI word.
    The guarantee is an explicit footprint premise, not a scheduler assumption. -/
-import Stage0.Senke.Sperre.Lauf
-import Stage0.Senke.Ausdruck.Aggregat.ValueProbe
+module
+public import Stage0.Senke.Sperre.Lauf
+public import Stage0.Senke.Ausdruck.Aggregat.ValueProbe
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

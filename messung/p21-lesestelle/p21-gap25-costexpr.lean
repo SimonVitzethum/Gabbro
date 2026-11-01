@@ -17,7 +17,10 @@
   `n = 200`: the checker sees bound 200, the class tag `O`. The model below
   is the split: bound expression for the checker, wrapper for the record.
 -/
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace P21.Gap25CostExpr
 

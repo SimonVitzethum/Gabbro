@@ -2,9 +2,12 @@
   WITNESS (Logik/WP/HA): the user obligation of the certificate of `beispiele/104` (the reference unit), whose
   certificate the tree keeps as `Korpus/Programme/GenOblig104.lean`, proved in GabbroV.
 -/
-import Grammatik.Korpus.Programme.GenOblig104
-import Grammatik.Logik.WP.HA.Pflicht
-import Grammatik.Kern.Syntax.Koernung
+module
+public import Grammatik.Korpus.Programme.GenOblig104
+public import Grammatik.Logik.WP.HA.Pflicht
+public import Grammatik.Kern.Syntax.Koernung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

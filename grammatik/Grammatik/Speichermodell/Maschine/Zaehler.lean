@@ -28,7 +28,10 @@
   writes the same atomic -- a change of the machine `Spec.lean` imports, so a reviewed
   Spec diff, not made here (`messung/OPUS-O25-ATOMICS.md` §6).
 -/
-import Grammatik.Speichermodell.Maschine.Sicht
+module
+public import Grammatik.Speichermodell.Maschine.Sicht
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Speichermodell
 

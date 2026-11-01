@@ -1,6 +1,9 @@
 /- The index (or reference) child of a complete cell read runs before the address is known;
    its own precondition is a prefix of the whole read's. -/
-import Stage0.Senke.Welt.Spans.CellStore
+module
+public import Stage0.Senke.Welt.Spans.CellStore
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

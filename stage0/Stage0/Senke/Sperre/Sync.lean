@@ -7,8 +7,11 @@
              room for `Ks` more takes. A statement keeps the words (`SyncOK.agreeW`); a callee's frame inherits it
              (`SyncOK.call`).
 -/
-import Stage0.Senke.Sperre.Gib
-import Stage0.Senke.Welt.WeltAt
+module
+public import Stage0.Senke.Sperre.Gib
+public import Stage0.Senke.Welt.WeltAt
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

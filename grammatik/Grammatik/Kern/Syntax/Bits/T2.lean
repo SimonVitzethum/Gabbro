@@ -1,5 +1,8 @@
 /- Part 2 of 3 of `Bits` (split by instrumente/teile/lean-teilen.py; the umbrella `Bits.lean` imports all parts). -/
-import Grammatik.Kern.Syntax.Bits.T1
+module
+public import Grammatik.Kern.Syntax.Bits.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

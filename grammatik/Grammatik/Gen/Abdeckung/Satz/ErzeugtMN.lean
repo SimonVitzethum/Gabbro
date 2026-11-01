@@ -14,8 +14,11 @@
                        program of the model (`erzeugt_hinreichend`), from one fact per cell: it occurs in the space
                        (`RaumGut`/`RaumSchlecht`) or no program can need it (`ZellenUnmoeglich.lean`).
 -/
-import Grammatik.Gen.Abdeckung.Satz.ErzeugtListe
-import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+module
+public import Grammatik.Gen.Abdeckung.Satz.ErzeugtListe
+public import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

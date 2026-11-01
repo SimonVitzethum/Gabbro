@@ -1,5 +1,8 @@
 /- Subject: Branch-free comparison of two frame word spans, below all proofs. -/
-import Runner.IR.Rahmen
+module
+public import Runner.IR.Rahmen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

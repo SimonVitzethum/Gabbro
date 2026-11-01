@@ -1,5 +1,8 @@
-import Grammatik.Code.Conc.Lower
-import Grammatik.Code.Refine.StmtOk
+module
+public import Grammatik.Code.Conc.Lower
+public import Grammatik.Code.Refine.StmtOk
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/Publish.lean

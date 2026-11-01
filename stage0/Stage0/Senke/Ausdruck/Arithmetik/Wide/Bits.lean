@@ -6,7 +6,10 @@
   The limbs of `x op y` are the word operations on the limbs of `x` and `y`, so the chain needs no
   carry and no scratch: `A_j := A_j op B_j` for every limb.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

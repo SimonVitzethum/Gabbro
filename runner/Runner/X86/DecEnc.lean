@@ -1,4 +1,7 @@
-import Runner.X86.Dec
+module
+public import Runner.X86.Dec
+@[expose] public section
+
 
 /-! # The instruction layer: decoding an encoded instruction gives it back
 

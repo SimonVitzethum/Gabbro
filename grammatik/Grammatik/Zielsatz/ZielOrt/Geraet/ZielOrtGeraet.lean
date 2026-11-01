@@ -11,5 +11,8 @@
   semantics of the device forms in `ZielOrtGeraetSem.lean`.
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.T1
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.T2
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.T2
+@[expose] public section
+

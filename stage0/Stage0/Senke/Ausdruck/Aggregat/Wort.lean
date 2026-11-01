@@ -1,5 +1,8 @@
 /- Subject: One shared composition rule for operations on lowered word values. -/
-import Stage0.Senke.Ausdruck.Wenn
+module
+public import Stage0.Senke.Ausdruck.Wenn
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

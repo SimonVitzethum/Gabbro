@@ -1,4 +1,7 @@
-import Runner.X86.Dec
+module
+public import Runner.X86.Dec
+@[expose] public section
+
 
 /-! # The x86-64 machine for the subset: state and one step
 

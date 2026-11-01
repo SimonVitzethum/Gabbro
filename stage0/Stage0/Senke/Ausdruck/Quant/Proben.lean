@@ -1,6 +1,9 @@
 /- Nonempty witnesses for quantified expressions and bounded optional-index chains. -/
-import Stage0.Senke.Bild
-import Stage0.Senke.Welt.Anordnung
+module
+public import Stage0.Senke.Bild
+public import Stage0.Senke.Welt.Anordnung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.QuantProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

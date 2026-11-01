@@ -1,4 +1,7 @@
-import Bruecke.Lauf
+module
+public import Bruecke.Lauf
+@[expose] public section
+
 
 /-!
 # S3, part 6: a Body environment that keeps every contract -- where the call graph is ordered

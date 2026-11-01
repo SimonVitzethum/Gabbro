@@ -23,7 +23,10 @@
   the head is the named stop `nieZurueck` (`w1v_kopf`): there the call really does not
   return (`_Noreturn`), and the continuation is unreachable in the C as in G.
 -/
-import Grammatik.Zielsatz.Kern.ProbenG1
+module
+public import Grammatik.Zielsatz.Kern.ProbenG1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

@@ -18,7 +18,10 @@
   invariant at the acquire (`abschnitt_start`) for a shared arena, and the start memory plus `invRuhe` for a per-thread one.
   It is stated as a premise on purpose and listed among the open items of 8a.3.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreRuf
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreRuf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

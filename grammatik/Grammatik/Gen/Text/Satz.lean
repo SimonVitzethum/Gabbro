@@ -8,26 +8,29 @@
   program with the witness's cells and verdict (`Zeugen/<w>.lean`). Only cells and verdicts need to agree: a
   cell-neutral checker cannot tell two programs with the same cells apart, so no equality of declarations is needed.
 -/
-import Grammatik.Gen.Text.Zeugen.M103_131
-import Grammatik.Gen.Text.Zeugen.M103_803
-import Grammatik.Gen.Text.Zeugen.M16_13
-import Grammatik.Gen.Text.Zeugen.M169_350
-import Grammatik.Gen.Text.Zeugen.M47_549
-import Grammatik.Gen.Text.Zeugen.M49_50
-import Grammatik.Gen.Text.Zeugen.M99_824
-import Grammatik.Gen.Text.Zeugen.N16_5
-import Grammatik.Gen.Text.Zeugen.N18_0
-import Grammatik.Gen.Text.Zeugen.N18_4
-import Grammatik.Gen.Text.Zeugen.N19_0
-import Grammatik.Gen.Text.Zeugen.N19_2
-import Grammatik.Gen.Text.Zeugen.N19_5
-import Grammatik.Gen.Text.Zeugen.N19_7
-import Grammatik.Gen.Text.Zeugen.N20_1
-import Grammatik.Gen.Text.Zeugen.N23_4
-import Grammatik.Gen.Text.Zeugen.N24_0
-import Grammatik.Gen.Text.Zeugen.N3_0
-import Grammatik.Gen.Text.Zeugen.N47_20
-import Grammatik.Gen.Text.Zeugen.N47_45
+module
+public import Grammatik.Gen.Text.Zeugen.M103_131
+public import Grammatik.Gen.Text.Zeugen.M103_803
+public import Grammatik.Gen.Text.Zeugen.M16_13
+public import Grammatik.Gen.Text.Zeugen.M169_350
+public import Grammatik.Gen.Text.Zeugen.M47_549
+public import Grammatik.Gen.Text.Zeugen.M49_50
+public import Grammatik.Gen.Text.Zeugen.M99_824
+public import Grammatik.Gen.Text.Zeugen.N16_5
+public import Grammatik.Gen.Text.Zeugen.N18_0
+public import Grammatik.Gen.Text.Zeugen.N18_4
+public import Grammatik.Gen.Text.Zeugen.N19_0
+public import Grammatik.Gen.Text.Zeugen.N19_2
+public import Grammatik.Gen.Text.Zeugen.N19_5
+public import Grammatik.Gen.Text.Zeugen.N19_7
+public import Grammatik.Gen.Text.Zeugen.N20_1
+public import Grammatik.Gen.Text.Zeugen.N23_4
+public import Grammatik.Gen.Text.Zeugen.N24_0
+public import Grammatik.Gen.Text.Zeugen.N3_0
+public import Grammatik.Gen.Text.Zeugen.N47_20
+public import Grammatik.Gen.Text.Zeugen.N47_45
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

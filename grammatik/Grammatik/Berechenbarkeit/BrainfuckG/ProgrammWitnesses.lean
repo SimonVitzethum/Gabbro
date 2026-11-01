@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Programm
-import Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Programm
+public import Grammatik.Berechenbarkeit.BrainfuckG.SchrittWitnesses
+@[expose] public section
+
 
 /-! Witnesses of `programm_vollstaendig`, `programm_korrekt` and `programm_haelt` over the four-stack declaration of
 `SchrittWitnesses`: the one-instruction program `.` started on empty input in the empty arena `w0`. Two passes of the G

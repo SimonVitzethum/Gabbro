@@ -1,9 +1,12 @@
 /-
   Subject: A shared call-result binding and status branch for blocks and end blocks.
 -/
-import Stage0.Senke.Anweisung.Faelle.Kontext
-import Stage0.Senke.Anweisung.SchleifeTeile
-import Stage0.Senke.Anweisung.Fnptr
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontext
+public import Stage0.Senke.Anweisung.SchleifeTeile
+public import Stage0.Senke.Anweisung.Fnptr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

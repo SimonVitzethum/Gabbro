@@ -26,6 +26,9 @@
   uses illustration labels only.
 -/
 
-import Grammatik.Logik.Ruf.FremdRuf.T1
-import Grammatik.Logik.Ruf.FremdRuf.T2
-import Grammatik.Logik.Ruf.FremdRuf.T3
+module
+public import Grammatik.Logik.Ruf.FremdRuf.T1
+public import Grammatik.Logik.Ruf.FremdRuf.T2
+public import Grammatik.Logik.Ruf.FremdRuf.T3
+@[expose] public section
+

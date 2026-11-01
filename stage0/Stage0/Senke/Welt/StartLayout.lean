@@ -1,6 +1,9 @@
 /- Pure stack-image construction, independent of compiler/image execution proofs.
    Bild can consume these constructors without importing BildLese or creating a cycle. -/
-import Runner.Prog.IRAsm
+module
+public import Runner.Prog.IRAsm
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

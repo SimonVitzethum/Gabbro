@@ -1,7 +1,10 @@
 /- Nonempty control-flow fixtures, including check forms unavailable in the source reader. -/
-import Stage0.Senke.Welt.Anordnung
-import Stage0.IRBild
-import Grammatik.Parser.Cover.Differenz
+module
+public import Stage0.Senke.Welt.Anordnung
+public import Stage0.IRBild
+public import Grammatik.Parser.Cover.Differenz
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ControlProbe
 set_option maxRecDepth 100000

@@ -20,7 +20,10 @@
   translation of one on the D side); with it the user obligation on P
   transfers to P.mitRuhe.
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

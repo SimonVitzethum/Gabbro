@@ -40,6 +40,10 @@
          kann man lockern, von der weichen nie"* (K11.1). Modelliert ist die strenge.
 -/
 
+module
+
+@[expose] public section
+
 namespace Passlogik.Phasen
 
 /-! ## 1. Die Ordnung und der Schritt -/

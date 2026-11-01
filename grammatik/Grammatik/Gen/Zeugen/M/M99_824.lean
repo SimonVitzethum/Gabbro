@@ -7,9 +7,12 @@
              sibling witness `M99_825` -- the bounds of member 99 leave no room for both plain reads in one
              body -- together with the three cells only it shows.)
 -/
-import Grammatik.Gen.Abdeckung.Satz.Raum
-import Grammatik.Gen.Erzeuger.Entscheidung
-import Grammatik.Korpus.Zeugnis.Zeugnis.T1
+module
+public import Grammatik.Gen.Abdeckung.Satz.Raum
+public import Grammatik.Gen.Erzeuger.Entscheidung
+public import Grammatik.Korpus.Zeugnis.Zeugnis.T1
+@[expose] public section
+
 
 set_option linter.unusedTactic false
 set_option linter.unreachableTactic false

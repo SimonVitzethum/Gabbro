@@ -1,4 +1,7 @@
-import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.CounterCallProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem FnptrProben

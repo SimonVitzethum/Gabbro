@@ -11,7 +11,10 @@
   `ArenaListe.lean` and `ArenaBaumWelt.lean` live in OTHER fields, so they survive every allocator move
   untouched.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaFrei
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaFrei
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

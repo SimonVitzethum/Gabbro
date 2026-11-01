@@ -19,6 +19,10 @@
     Same membership facts.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Isabelle.OptionSonderwert
 
 /-- An index. (Isabelle: `type_synonym idx = nat`.) -/

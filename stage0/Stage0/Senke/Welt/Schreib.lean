@@ -1,6 +1,9 @@
 /- Full-span source world updates and disjoint-cell preservation. The actual
    store loop is connected to these updates through StoreWorld. -/
-import Stage0.Senke.Welt.Spans.SpanWrite
+module
+public import Stage0.Senke.Welt.Spans.SpanWrite
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

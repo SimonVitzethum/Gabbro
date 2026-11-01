@@ -12,6 +12,10 @@
   `tests/uebersetzung.rs` holds the two against each other.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Uebersetzung
 
 /-- Payload certificate predicate (encoding N of the certificate

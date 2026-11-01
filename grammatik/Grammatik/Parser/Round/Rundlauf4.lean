@@ -28,7 +28,10 @@
   `gutPrim e = gutEmb e || primNeu e`; `parse_druck_prim` is the
   level-6 goal. Statements are NOT entered here.
 -/
-import Grammatik.Parser.Round.Rundlauf3
+module
+public import Grammatik.Parser.Round.Rundlauf3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

@@ -1,4 +1,7 @@
-import Grammatik.Code.Lower.Expr
+module
+public import Grammatik.Code.Lower.Expr
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Frag.lean

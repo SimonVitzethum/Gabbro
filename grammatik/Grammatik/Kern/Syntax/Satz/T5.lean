@@ -1,5 +1,8 @@
 /- Part 5 of 5 of `Satz` (split by instrumente/teile/lean-teilen.py; the umbrella `Satz.lean` imports all parts). -/
-import Grammatik.Kern.Syntax.Satz.T4
+module
+public import Grammatik.Kern.Syntax.Satz.T4
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

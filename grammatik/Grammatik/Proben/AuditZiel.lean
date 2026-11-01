@@ -18,7 +18,10 @@
    * G models both lock-taking (`locks`, probe D) and signature-held
      functions (probe C); the witness run interleaves two threads (probe E).
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

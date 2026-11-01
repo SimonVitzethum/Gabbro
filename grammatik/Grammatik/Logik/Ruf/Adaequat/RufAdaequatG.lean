@@ -30,15 +30,18 @@
   `RufAdaequatRufG.lean`.
 -/
 
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T1
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T3
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T4
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T5
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T6
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T7
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T8
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T9
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T11
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
+module
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T1
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T3
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T4
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T5
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T6
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T7
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T8
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T9
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T11
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
+@[expose] public section
+

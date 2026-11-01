@@ -5,7 +5,10 @@
              A check may refuse a printable form (it is narrower than the class); it never admits an unprintable one.
              The kernel evaluates a check on a concrete item list, so a printed program's `ItemGut` is one `decide`.
 -/
-import Grammatik.Gen.Text.AusText
+module
+public import Grammatik.Gen.Text.AusText
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

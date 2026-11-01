@@ -6,8 +6,11 @@
   products exactly as the emitted code does; `mulStepW` is one multiply-accumulate limb step
   `r + x*y + c` with its carry word. Both are proved against natural-number division.
 -/
-import Mathlib.Tactic.Ring
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
+module
+public import Mathlib.Tactic.Ring
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

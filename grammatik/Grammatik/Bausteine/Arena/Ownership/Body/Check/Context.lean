@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Judgment
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Judgment
+@[expose] public section
+
 
 /-! Decidable context relations for the executable admission check. On
 bounded contexts the Bool tests decide `Weaker` and `ExitsTo`; joins of two

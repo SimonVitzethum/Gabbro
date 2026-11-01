@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Leaf
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Leaf
+@[expose] public section
+
 
 /-! Residue bookkeeping for the unfold steps: a binder block in front of a
 `schrumpf`, a weakened end context, and an end block run in block position

@@ -11,7 +11,10 @@
   the actual `v` is false. A corollary: `rufAt` never answers
   `.logik (.nachbedingung f)` iff the ensures check holds.
 -/
-import Grammatik.Logik.Vertraege.VertragOrtB
+module
+public import Grammatik.Logik.Vertraege.VertragOrtB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

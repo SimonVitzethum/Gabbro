@@ -11,9 +11,12 @@
   the leaf argument to `axiomCall` (oracle frame + `hd` + `HeldGenau`)
   and runs the induction over `PCReach`.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

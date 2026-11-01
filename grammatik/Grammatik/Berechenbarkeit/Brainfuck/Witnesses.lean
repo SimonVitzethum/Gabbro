@@ -6,7 +6,10 @@
   They exercise real tape writes, both pointer directions, nested loops, input/EOF,
   output, wraparound, an insufficient bound, and output followed by divergence.
 -/
-import Grammatik.Berechenbarkeit.Brainfuck.Fuel
+module
+public import Grammatik.Berechenbarkeit.Brainfuck.Fuel
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Brainfuck.Witnesses
 

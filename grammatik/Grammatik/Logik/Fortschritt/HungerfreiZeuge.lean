@@ -9,8 +9,11 @@
   takes it at step 15. The run is a `FifoLauf` (`hz_lauf`) and fair (window 4, hence weakly), and `hungerfrei` gives
   for thread 1, waiting at step 5, that it takes the lock or someone holds it for ever (`hz_hungerfrei`).
 -/
-import Grammatik.Logik.Fortschritt.Hungerfrei
-import Grammatik.Logik.Fortschritt.LebendigkeitZeuge
+module
+public import Grammatik.Logik.Fortschritt.Hungerfrei
+public import Grammatik.Logik.Fortschritt.LebendigkeitZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

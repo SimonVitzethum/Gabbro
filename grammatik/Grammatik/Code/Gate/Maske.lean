@@ -1,5 +1,8 @@
-import Grammatik.Code.Gate.Gate
-import Grammatik.Code.Conc.Mask
+module
+public import Grammatik.Code.Gate.Gate
+public import Grammatik.Code.Conc.Mask
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Gate/Maske.lean

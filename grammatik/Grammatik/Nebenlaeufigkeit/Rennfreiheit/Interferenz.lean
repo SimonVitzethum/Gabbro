@@ -62,8 +62,11 @@
   (S6) `Q` spricht nur ueber die Welt, nicht ueber Belegungen (`Env`): lokale Bindungen
        teilt kein Faden, also steht nichts ueber sie im Satz.
 -/
-import Grammatik.Kern.Syntax.Satz
-import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+module
+public import Grammatik.Kern.Syntax.Satz
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

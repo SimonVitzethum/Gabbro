@@ -1,5 +1,8 @@
 /- The inclusive float range test, using the same integer keys as comparisons. -/
-import Stage0.Senke.Ausdruck.Gleit.Bereich
+module
+public import Stage0.Senke.Ausdruck.Gleit.Bereich
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false

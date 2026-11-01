@@ -30,8 +30,11 @@
   not C; whoever reads the assembler's result declares a result type, whoever never
   returns writes no `out`.
 -/
-import Grammatik.Zielsatz.Kern.ProbenW1
-import Grammatik.Logik.Vertraege.EinpassenVoll
+module
+public import Grammatik.Zielsatz.Kern.ProbenW1
+public import Grammatik.Logik.Vertraege.EinpassenVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

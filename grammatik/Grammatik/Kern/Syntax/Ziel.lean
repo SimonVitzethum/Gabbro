@@ -50,9 +50,12 @@
   der Sonde (`sonden/sonde_tick.c`, Probenwaehrung, kein Beweis).
 -/
 
-import Grammatik.Kern.Syntax.Ziel.T1
-import Grammatik.Kern.Syntax.Ziel.T2
-import Grammatik.Kern.Syntax.Ziel.T3
-import Grammatik.Kern.Syntax.Ziel.T4
-import Grammatik.Kern.Syntax.Ziel.T5
-import Grammatik.Kern.Syntax.Ziel.T6
+module
+public import Grammatik.Kern.Syntax.Ziel.T1
+public import Grammatik.Kern.Syntax.Ziel.T2
+public import Grammatik.Kern.Syntax.Ziel.T3
+public import Grammatik.Kern.Syntax.Ziel.T4
+public import Grammatik.Kern.Syntax.Ziel.T5
+public import Grammatik.Kern.Syntax.Ziel.T6
+@[expose] public section
+

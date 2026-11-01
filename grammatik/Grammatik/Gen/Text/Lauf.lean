@@ -7,9 +7,12 @@
 
                gen-text A B K NC [NB]   (NB caps the body bound of the members)
 -/
-import Grammatik.Gen.Text.Pruefung
-import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
-import Std.Data.HashMap
+module
+public import Grammatik.Gen.Text.Pruefung
+public import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
+public import Std.Data.HashMap
+@[expose] public section
+
 
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Gen.Text Gabbro.Grammatik.Parser
 

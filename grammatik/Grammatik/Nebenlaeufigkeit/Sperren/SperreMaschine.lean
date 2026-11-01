@@ -10,7 +10,10 @@
              release re-establishes it (which the replay derives from the
              user obligation, `ZielOrtSperre.lean`).
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

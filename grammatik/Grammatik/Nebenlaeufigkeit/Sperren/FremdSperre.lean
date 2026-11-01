@@ -8,7 +8,10 @@
   (`axiomCall_haelt_waechter`), and a call writing a guarded carrier is
   not derivable with an empty trace (`axiomCall_ohne_sperre_nicht_ableitbar`).
 -/
-import Grammatik.Kern.Syntax.Satz
+module
+public import Grammatik.Kern.Syntax.Satz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

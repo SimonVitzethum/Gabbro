@@ -13,5 +13,8 @@
   answer is recorded.
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.T1
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.T2
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.T1
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.T2
+@[expose] public section
+

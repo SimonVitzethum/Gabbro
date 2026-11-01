@@ -1,6 +1,9 @@
-import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
-import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
-import Grammatik.Zielsatz.Atomar.AtomarZiel
+module
+public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+public import Grammatik.Zielsatz.Atomar.AtomarZiel
+@[expose] public section
+
 
 /-! **What the ownership leg of `GabbroZiel` needs, from the goal's premises.**
 The thread facts the rely needs (`ThreadFacts`) come from the checker's facts

@@ -5,7 +5,10 @@
              `let` is a variable of type `sum cs`, a result may be a tagged value, and `match m { .. }` is
              `Stmt.onTag` with one arm per case in declaration order (the payload bound in the arm).
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben25
 

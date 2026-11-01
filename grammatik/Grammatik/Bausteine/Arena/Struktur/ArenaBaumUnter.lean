@@ -11,7 +11,10 @@
 
   Right-hand mirrors by the mirror image of the tree.
 -/
-import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaSibling
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.ArenaKette
 

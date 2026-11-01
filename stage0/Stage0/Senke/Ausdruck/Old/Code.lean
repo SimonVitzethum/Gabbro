@@ -1,7 +1,10 @@
 /- Complete entry snapshots below the immutable postcondition parameter environment. -/
-import Stage0.Senke.Ausdruck.Satz
-import Stage0.Senke.Ausdruck.Old.Environment
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
+module
+public import Stage0.Senke.Ausdruck.Satz
+public import Stage0.Senke.Ausdruck.Old.Environment
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

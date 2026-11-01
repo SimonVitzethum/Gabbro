@@ -11,8 +11,13 @@
   (`pruefeTabelle`): a new constructor, a new child or a new premise in the model stops the build here until
   the table and `CHECKER.md` §16.6 are updated (the register moves with the model, as `Gen/Abdeckung/Mitglieder`).
 -/
-import Lean
-import Grammatik.Kern.Syntax.Syntax
+module
+public import Lean
+public import Grammatik.Kern.Syntax.Syntax
+meta import Lean
+meta import Grammatik.Kern.Syntax.Syntax
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz.GabbroSig
 

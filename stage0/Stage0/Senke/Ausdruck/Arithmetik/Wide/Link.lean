@@ -6,9 +6,12 @@
   `v mod 2^(64k)` (`dval_lmb`), and digit sequences of equal value are equal (`dval_inj`), so a
   carry chain that produces the right value produces exactly the canonical limbs.
 -/
-import Mathlib.Tactic.Linarith
-import Stage0.Senke.Ausdruck.Aggregat.Encoding
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
+module
+public import Mathlib.Tactic.Linarith
+public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -10,8 +10,11 @@
   The Rust printer (`certemit.rs`) covers expressions only; the statement
   print format is designed in the docstrings below for the transfer phase.
 -/
-import Grammatik.Korpus.Zeugnis.Zeugnis
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Korpus.Zeugnis.Zeugnis
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

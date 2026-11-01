@@ -7,7 +7,10 @@
   `+7`/`+8` temporaries, `+9` stage constant. The stage computes `mask := 0 - ((q >> idx) & 1)` and
   selects, limb by limb in an order that never reads a written limb, the source slot or the limb itself.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Limb
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Limb
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

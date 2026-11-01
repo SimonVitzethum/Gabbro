@@ -1,4 +1,7 @@
-import Grammatik.Code.Lower.Rep
+module
+public import Grammatik.Code.Lower.Rep
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Lower/Fail.lean

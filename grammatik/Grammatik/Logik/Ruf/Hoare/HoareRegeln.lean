@@ -15,7 +15,10 @@
   call-meaning parameter `R`.
 -/
 
-import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T1
-import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T2
-import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T3
-import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T4
+module
+public import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T1
+public import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T2
+public import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T3
+public import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T4
+@[expose] public section
+

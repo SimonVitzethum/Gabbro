@@ -5,8 +5,11 @@
              word read back as before has its bytes back (`bytes_of_rd64`), so a lock taken and given again leaves the
              memory as a statement may (`AgreeW`).
 -/
-import Stage0.Senke.Sperre.Sync
-import Stage0.Senke.Rueckkehr
+module
+public import Stage0.Senke.Sperre.Sync
+public import Stage0.Senke.Rueckkehr
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

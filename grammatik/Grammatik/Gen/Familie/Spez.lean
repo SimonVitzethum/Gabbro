@@ -13,7 +13,10 @@
   * `invarianten_gehalten` -- a function that writes a carrier of an invariant holds the locks of every carrier of
     that invariant (they are added to its held locks), the model's `U003` as an explanation.
 -/
-import Grammatik.Gen.Erzeuger.Gestuft
+module
+public import Grammatik.Gen.Erzeuger.Gestuft
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

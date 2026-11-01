@@ -1,7 +1,10 @@
 /- Postconditions reuse the ordinary full-value expression kernels.
    The combined environment keeps all captured entry values available in every recursive premise. -/
-import Stage0.Senke.Ausdruck.Old.Basic
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
+module
+public import Stage0.Senke.Ausdruck.Old.Basic
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

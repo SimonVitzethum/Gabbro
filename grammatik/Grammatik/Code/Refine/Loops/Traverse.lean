@@ -1,4 +1,7 @@
-import Grammatik.Code.Refine.Loops.Loop
+module
+public import Grammatik.Code.Refine.Loops.Loop
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Traverse.lean

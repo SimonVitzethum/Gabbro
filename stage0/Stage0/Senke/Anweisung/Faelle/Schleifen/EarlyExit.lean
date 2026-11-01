@@ -1,7 +1,10 @@
 /- Executable checks of actual lowered early exits, with exact Runner step counts. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
-import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
-import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.EarlyExitProbe
 open Gabbro.Grammatik Runner Runner.Mem Runner.IR CounterCallProbe FnptrProben

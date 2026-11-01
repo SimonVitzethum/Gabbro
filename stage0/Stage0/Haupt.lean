@@ -1,5 +1,8 @@
 /- Compile checked Gabbro source to an S0IR image. Execution belongs to the assembly runner. -/
-import Stage0.IRBild
+module
+public import Stage0.IRBild
+@[expose] public section
+
 
 namespace Gabbro.Stage0
 

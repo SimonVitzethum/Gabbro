@@ -7,9 +7,12 @@
              Every constructor of every term family has its clause (the clauses follow the explicit arguments of the
              constructors of `Kern/Syntax/Syntax.lean`, read off the model).
 -/
-import Grammatik.Gen.Familie.Spez
-import Grammatik.Kern.Syntax.Syntax
-import Grammatik.Parser.Cover.Mitglieder
+module
+public import Grammatik.Gen.Familie.Spez
+public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Parser.Cover.Mitglieder
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.LeanTerm
 

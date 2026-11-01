@@ -1,6 +1,9 @@
 /- Reconstruct start arguments already accepted by the canonical frontend as canonical
    closed expressions. No source evaluator or alternative execution semantics is introduced. -/
-import Grammatik.Parser.Elab.UebersetzeAllg
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg
+@[expose] public section
+
 
 namespace Gabbro.Stage0.StartArgument
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

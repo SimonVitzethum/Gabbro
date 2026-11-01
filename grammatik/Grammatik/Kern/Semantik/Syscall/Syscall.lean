@@ -16,7 +16,10 @@
 
   Ghost carriers and the kernel-pairing theorem are later lanes (S3, S4).
 -/
-import Grammatik.Kern.Syntax.Typen
+module
+public import Grammatik.Kern.Syntax.Typen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

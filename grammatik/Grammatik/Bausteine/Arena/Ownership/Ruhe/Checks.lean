@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
+@[expose] public section
+
 
 /-! **The ownership checks across the idle root.** The goal statement runs the
 program `P.mitRuhe`: the same syntax with the idle root added, types shifted

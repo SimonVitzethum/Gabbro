@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Head
-import Grammatik.Bausteine.Arena.Ownership.Body.Sound
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Head
+public import Grammatik.Bausteine.Arena.Ownership.Body.Sound
+@[expose] public section
+
 
 /-! **A leaf step of the running activation.** Machine G executes a leaf
 statement at the head of the running residue in one step, through the same

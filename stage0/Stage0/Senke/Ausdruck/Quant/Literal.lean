@@ -1,5 +1,8 @@
 /- The common immediate-write primitive depends only on frame and IR semantics. -/
-import Stage0.Senke.Ausdruck.Sim
+module
+public import Stage0.Senke.Ausdruck.Sim
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 /-- An immediate assignment, with the resulting memory explicit. -/

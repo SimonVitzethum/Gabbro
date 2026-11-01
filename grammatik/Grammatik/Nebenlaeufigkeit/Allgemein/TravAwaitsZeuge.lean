@@ -32,8 +32,11 @@
   calls `warte`, which unfolds its `if`, fires `awaits` (reading `flag`),
   and returns.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

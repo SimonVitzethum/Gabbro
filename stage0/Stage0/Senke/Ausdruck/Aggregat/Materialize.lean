@@ -1,6 +1,9 @@
 /- Complete constant values use the same canonical words as copies and the ABI. -/
-import Stage0.Senke.Ausdruck.Gleit.Wort
-import Stage0.Senke.Ausdruck.Quant.Frame
+module
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+public import Stage0.Senke.Ausdruck.Quant.Frame
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

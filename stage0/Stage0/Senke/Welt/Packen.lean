@@ -4,7 +4,10 @@
              back as the code unpacks it (`byteOf`). `byteOf_packV`: with every element below 256, unpacking a packed
              word gives the element back -- the words are the elements' bytes, little-endian.
 -/
-import Runner.Basis.MemLemma
+module
+public import Runner.Basis.MemLemma
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

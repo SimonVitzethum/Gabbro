@@ -1,9 +1,12 @@
-import Grammatik.Bausteine.Arena.Ownership.Machine.Step
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T2
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T3
-import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T3
-import Grammatik.Speichermodell.Atomar.Atomar
+module
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Step
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T2
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T3
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T3
+public import Grammatik.Speichermodell.Atomar.Atomar
+@[expose] public section
+
 
 /-! **The rely, from the machine's own discipline.** A thread inside an
 allocator form is about to write the free-list head or the counter. Its

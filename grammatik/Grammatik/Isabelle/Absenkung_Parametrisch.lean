@@ -29,7 +29,10 @@
   `Semantik.lean` -- that absence is the point of the parametrisation.
 -/
 
-import Grammatik.Isabelle.Table_Ops_Erhaltung
+module
+public import Grammatik.Isabelle.Table_Ops_Erhaltung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.AbsenkungParam
 

@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `ZeugnisStmt` (split by instrumente/teile/lean-teilen.py; the umbrella `ZeugnisStmt.lean` imports all parts). -/
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T2
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

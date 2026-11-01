@@ -4,7 +4,10 @@
              realizing the large recursive equation theorem when the expression fragment grows. To extend
              the lowering, update the equation of that constructor and use `lowE_eqs` in proofs.
 -/
-import Stage0.Senke.Ausdruck
+module
+public import Stage0.Senke.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

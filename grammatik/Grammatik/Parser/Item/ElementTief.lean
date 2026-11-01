@@ -7,7 +7,10 @@
   with fuel-indexed readers (`parseItemTief`, `parseTopTief`).
   Probes live in `Parser/Item/ElementTiefProben1..7.lean`.
 -/
-import Grammatik.Parser.Stmt.Anweisung
+module
+public import Grammatik.Parser.Stmt.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

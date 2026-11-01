@@ -14,7 +14,10 @@
   no cell outside `p` that the tests leave free. The theorem is over an arbitrary program type, cell type and
   occurrence relation.
 -/
-import Grammatik.Adaequanz.Muster
+module
+public import Grammatik.Adaequanz.Muster
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Adaequanz
 

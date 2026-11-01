@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Judgment
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Judgment
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T1
+@[expose] public section
+
 
 /-! **The ownership judgment of a running residue.** The call machine G keeps
 what is left of an activation as a `GRest`: blocks in front of a

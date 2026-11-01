@@ -3,8 +3,11 @@
   Subject:   `onOption`: keep the option word as the Some branch's index, test its XOR with the None sentinel
              in a scratch slot, and shrink the bound environment on exit. Branch simulations are hypotheses.
 -/
-import Stage0.Senke.Anweisung.Simulation
-import Stage0.Senke.Anweisung.Puffer
+module
+public import Stage0.Senke.Anweisung.Simulation
+public import Stage0.Senke.Anweisung.Puffer
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

@@ -23,9 +23,12 @@
       `false` writes `true`; `QEnsures` is false before and true after, so the
       `Post` iff fails. Hence the full `hBlattAll` conjunction fails.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Satz
-import Grammatik.Kern.Syntax.Extraktion
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Satz
+public import Grammatik.Kern.Syntax.Extraktion
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.BG
 

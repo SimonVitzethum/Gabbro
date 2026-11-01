@@ -47,6 +47,10 @@
          genau in dieser Luecke. **Hier ist sie eine Annahme, keine Behauptung.**
 -/
 
+module
+
+@[expose] public section
+
 namespace Passlogik.Kosten
 
 /-! ## 1. Die Sprache -/

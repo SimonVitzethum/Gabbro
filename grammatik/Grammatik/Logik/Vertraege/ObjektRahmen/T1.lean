@@ -39,7 +39,10 @@
       SAME object it was handed; `objGetrennt_nicht_bei_einem` (`Objekte.lean`) then says
       the re-view and its source are not separated.
 -/
-import Grammatik.Logik.Vertraege.Objekte
+module
+public import Grammatik.Logik.Vertraege.Objekte
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

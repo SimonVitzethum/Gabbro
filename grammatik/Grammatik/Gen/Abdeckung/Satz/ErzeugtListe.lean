@@ -5,7 +5,10 @@
              `erzeugeAus` emits every valid program as a `Gutes` and every refused program as
              an `Abgelehntes` (`erzeugeAus_gut`, `erzeugeAus_abgelehnt`). Nothing here runs the generator.
 -/
-import Grammatik.Gen.Abdeckung.Waehlen
+module
+public import Grammatik.Gen.Abdeckung.Waehlen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

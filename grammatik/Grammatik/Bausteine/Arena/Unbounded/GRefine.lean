@@ -1,6 +1,9 @@
-import Grammatik.Bausteine.Arena.Unbounded.GRegion
-import Grammatik.Bausteine.Arena.Unbounded.Lifetime
-import Grammatik.Bausteine.Arena.Unbounded.Safety
+module
+public import Grammatik.Bausteine.Arena.Unbounded.GRegion
+public import Grammatik.Bausteine.Arena.Unbounded.Lifetime
+public import Grammatik.Bausteine.Arena.Unbounded.Safety
+@[expose] public section
+
 
 /-! The open region of G refines the storage component `ArenaStorage.Heap` at `Capacity.unbounded`
 (PLAN-DYNAMIC 14). The abstraction `RegionRepr t f H σ` says: every live payload of the abstract heap is the value

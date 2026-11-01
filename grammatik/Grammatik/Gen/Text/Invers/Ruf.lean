@@ -5,7 +5,10 @@
              required locks, the reason channel, the result); a printed call -- direct, through `let p = &f;`,
              bound by `let x = f(..)`, or with `else (e) { .. }` -- is read back to the plain data `uOf*` computes.
 -/
-import Grammatik.Gen.Text.Invers.Anweisung
+module
+public import Grammatik.Gen.Text.Invers.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

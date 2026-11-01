@@ -1,5 +1,8 @@
 /- Complete global reads for integration into the shared expression emitter. -/
-import Stage0.Senke.Welt.Spans.Span
+module
+public import Stage0.Senke.Welt.Spans.Span
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration}

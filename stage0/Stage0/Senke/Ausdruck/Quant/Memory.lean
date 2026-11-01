@@ -1,8 +1,11 @@
 /- Generic physical pointer span transport on the actual IR machine. -/
-import Stage0.Senke.Ausdruck.Sim
-import Stage0.Senke.Ausdruck.Quant.Literal
-import Stage0.Senke.Ausdruck.Quant.TransportCode
-import Stage0.Senke.Ausdruck.Aggregat.Footprint
+module
+public import Stage0.Senke.Ausdruck.Sim
+public import Stage0.Senke.Ausdruck.Quant.Literal
+public import Stage0.Senke.Ausdruck.Quant.TransportCode
+public import Stage0.Senke.Ausdruck.Aggregat.Footprint
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 /-- A real indirect-load instruction, with no source-environment assumptions. -/

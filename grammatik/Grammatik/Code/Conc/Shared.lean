@@ -1,5 +1,8 @@
-import Grammatik.Code.Conc.Await
-import Grammatik.Code.Conc.Present
+module
+public import Grammatik.Code.Conc.Await
+public import Grammatik.Code.Conc.Present
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/Shared.lean

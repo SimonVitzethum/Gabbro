@@ -9,8 +9,11 @@
   contract syntax, and the four `aus_B` theorems recover the exact
   `Ziel.lean` shapes from a positive check.
 -/
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

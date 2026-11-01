@@ -14,7 +14,10 @@
   * with Bereich.lean (`rufErreichbarGX_aussen`): every cell a run changes lies, with all its bytes, inside the
     region of its carrier -- no write leaves its carrier (the leg `speicherAdressen` of the goal).
 -/
-import Grammatik.Speichermodell.Adressen.Bereich
+module
+public import Grammatik.Speichermodell.Adressen.Bereich
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,4 +1,7 @@
-import Grammatik.Code.Model.Types
+module
+public import Grammatik.Code.Model.Types
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Layout.lean

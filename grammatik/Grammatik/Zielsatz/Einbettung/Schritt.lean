@@ -1,5 +1,8 @@
-import Grammatik.Zielsatz.Einbettung.Auswertung
-import Grammatik.Speichermodell.Atomar.AtomarRec
+module
+public import Grammatik.Zielsatz.Einbettung.Auswertung
+public import Grammatik.Speichermodell.Atomar.AtomarRec
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Schritt.lean

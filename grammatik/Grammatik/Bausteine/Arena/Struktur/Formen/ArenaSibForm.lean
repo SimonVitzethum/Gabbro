@@ -13,8 +13,11 @@
   existing `Block.blattAus` WITHOUT the leaf hypotheses (`baum_unterbaum_aus_*_zug`): the remaining tree is well formed and
   sibling-consistent, and no slot of the cut subtree is a member any more, so each can be released (`baum_frei`).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormZug
-import Grammatik.Bausteine.Arena.Struktur.ArenaBaumUnter
+module
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaBaumFormZug
+public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumUnter
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

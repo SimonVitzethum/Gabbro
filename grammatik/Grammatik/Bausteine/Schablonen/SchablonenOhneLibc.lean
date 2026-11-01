@@ -34,8 +34,11 @@
   instantiating ALL its premises jointly.
 -/
 
-import Grammatik.Bausteine.Schablonen.ZeugeTorModell
-import Grammatik.Kern.Semantik.Syscall.Syscall
+module
+public import Grammatik.Bausteine.Schablonen.ZeugeTorModell
+public import Grammatik.Kern.Semantik.Syscall.Syscall
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

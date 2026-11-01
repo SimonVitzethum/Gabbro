@@ -6,8 +6,11 @@
   value `-(2^100 + 12345)` needs the four-digit path for both limbs and its high limb is all ones in
   the top bits, so both the digit materialization and the limb split are exercised.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Wide
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Wide
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.LiteralProbe
 open Runner.IR Runner.Mem Gabbro.Stage0.Senke.WideProbe

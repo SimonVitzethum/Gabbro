@@ -60,8 +60,11 @@
   is the callee analogue of `RahmenO`: handlers that also respect the
   callee's declared writes.
 -/
-import Grammatik.Logik.Fortschritt.KostenGZeuge
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+module
+public import Grammatik.Logik.Fortschritt.KostenGZeuge
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

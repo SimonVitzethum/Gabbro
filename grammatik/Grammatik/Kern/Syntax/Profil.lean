@@ -14,7 +14,10 @@
   `bindung_fuegt_nichts_hinzu`, `widerspruch_abgelehnt`, plus a joint witness
   (`profil_modell_zeuge`, `bindung_fuegt_nichts_hinzu_zeuge`).
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

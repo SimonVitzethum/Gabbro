@@ -3,7 +3,10 @@
   Subject:   Address computation for AArch64 loads and stores: alignment test
              and wrapping signed-offset addition. Sequential model.
 -/
-import Arm.Isa.Monad
+module
+public import Arm.Isa.Monad
+@[expose] public section
+
 
 namespace Arm
 

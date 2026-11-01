@@ -1,5 +1,8 @@
 /- Part 2 of 4 of `HoareRegeln` (split by instrumente/teile/lean-teilen.py; the umbrella `HoareRegeln.lean` imports all parts). -/
-import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T1
+module
+public import Grammatik.Logik.Ruf.Hoare.HoareRegeln.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,4 +1,7 @@
-import Grammatik.Logik.WP.HA.Pflicht
+module
+public import Grammatik.Logik.WP.HA.Pflicht
+@[expose] public section
+
 
 /-!
 # The certificate: every logic duty of a program, each by name

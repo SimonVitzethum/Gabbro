@@ -37,10 +37,13 @@
     table under a lock with invariant `konto[0] == konto[1]`, the runtime's root elsewhere);
   * probes B/C (`zEB`, `zEC`, family `zS`, declared start `haupt`).
 -/
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Proben.ProbeD
-import Grammatik.Proben.InvZeuge
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Proben.ProbeD
+public import Grammatik.Proben.InvZeuge
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

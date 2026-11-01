@@ -10,8 +10,11 @@
              declared starts. Refusals that one change makes (a start added, a handler flag set, a lock family that
              protects a carrier its lock does not guard) are derived from valid programs (`mutanten`).
 -/
-import Std.Data.HashMap
-import Grammatik.Gen.Abdeckung.Erklaerung
+module
+public import Std.Data.HashMap
+public import Grammatik.Gen.Abdeckung.Erklaerung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

@@ -7,8 +7,11 @@
   memory holding `integerEncoding k (x + y)` resp. `integerEncoding k (x - y)` in the first operand's
   limbs, changing only frame slots from `a` on.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Link
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.AddChain
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Link
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.AddChain
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

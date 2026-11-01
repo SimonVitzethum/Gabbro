@@ -37,6 +37,10 @@
   No `sorry`, no `native_decide`, no new axiom.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik.Anbieter
 
 /-- A half-open address range `[von, bis)`. -/

@@ -13,7 +13,10 @@
   GENERATED from the constructor list of the model (the children named as the model names them, families numbered as
   in `Adaequanz/Gabbro/Signatur.lean`); a new constructor makes its matches non-exhaustive and stops the build.
 -/
-import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+module
+public import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

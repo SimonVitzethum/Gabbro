@@ -1,4 +1,7 @@
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Lower/Sum.lean

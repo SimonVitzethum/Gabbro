@@ -20,8 +20,11 @@
   is false on its start machine (`grP_verletzt`) -- no premises whatever
   could make the flagship certify it.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -15,8 +15,11 @@
     hardware stop -- so it can step, BY THE THEOREM;
   * every idle thread is finished.
 -/
-import Grammatik.Logik.Fortschritt.Fortschritt
-import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+module
+public import Grammatik.Logik.Fortschritt.Fortschritt
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

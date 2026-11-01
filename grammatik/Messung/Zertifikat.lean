@@ -15,7 +15,10 @@
   Standalone file: NOT imported by `Grammatik.lean`, so it never slows the
   main build. Scaling probes live in scratch files, not here.
 -/
-import Grammatik.Kern.Syntax.Typen
+module
+public import Grammatik.Kern.Syntax.Typen
+@[expose] public section
+
 
 namespace Gabbro.Messung.Zertifikat
 

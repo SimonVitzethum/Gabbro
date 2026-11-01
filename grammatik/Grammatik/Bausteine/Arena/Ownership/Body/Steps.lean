@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Judgment
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Judgment
+@[expose] public section
+
 
 /-! The steps the soundness proof of the body judgment is assembled from:
 outcomes through scope exits and world maps, assignment, returns, the three

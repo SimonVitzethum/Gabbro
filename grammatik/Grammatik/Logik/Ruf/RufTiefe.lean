@@ -34,7 +34,10 @@
   where the shallower one ran out. A symmetric congruence ("both are errors")
   has no premise here.
 -/
-import Grammatik.Logik.Vertraege.HandlerKongruenz
+module
+public import Grammatik.Logik.Vertraege.HandlerKongruenz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

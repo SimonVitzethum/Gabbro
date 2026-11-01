@@ -7,6 +7,10 @@
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
 
+module
+
+@[expose] public section
+
 /-- Gap #10: adjacent quoted parts of one string concatenate. -/
 def p22StringParts (parts : List String) : String :=
   String.join parts

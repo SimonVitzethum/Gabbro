@@ -2,8 +2,11 @@
   File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Divide/Code.lean
   Subject:   The division code is admitted by the straight-line executor.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Loop
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Code
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Loop
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

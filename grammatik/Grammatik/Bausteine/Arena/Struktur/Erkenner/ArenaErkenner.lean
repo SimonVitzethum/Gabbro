@@ -30,8 +30,11 @@
   `erk_erhaelt` (`ArenaErkennerBeweis.lean`): if `Erk K a b a'`, `K.Ok σ` and `StrukturPasst K a σ ρ`, then EVERY outcome of running
   `b` has `K.Ok`, a block that falls off also has `StrukturPasst K a'`, and `leave`/`next` never happen.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaDekl
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaDekl
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaLinkForm
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -7,8 +7,11 @@
   Row `i` adds `x_i * Y * B^i` into the accumulator digits `i ..`; every row drops the carry out of
   digit `k-1`. The accumulator then holds `X * Y mod 2^(64k)`.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulChain
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Compare
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulChain
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Compare
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

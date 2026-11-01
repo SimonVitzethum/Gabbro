@@ -8,7 +8,10 @@
   carry word, mask and two temporaries). A step takes the top bit `b` of `X`, forms `R' = 2R + b`,
   subtracts the divisor, and keeps the difference iff `R' >= y`; `X` shifts left taking the flag in.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Parts
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Parts
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

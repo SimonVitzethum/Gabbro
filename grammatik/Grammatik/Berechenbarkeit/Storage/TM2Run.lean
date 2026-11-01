@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.Storage.TM2Initialize
-import Grammatik.Berechenbarkeit.Brainfuck.Fuel
+module
+public import Grammatik.Berechenbarkeit.Storage.TM2Initialize
+public import Grammatik.Berechenbarkeit.Brainfuck.Fuel
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.TM2Heap
 

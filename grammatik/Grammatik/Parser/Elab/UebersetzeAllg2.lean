@@ -16,8 +16,11 @@
   with `G104_referenz.gD`), the real-text lexer pin for 104, and one
   theorem chaining all stages for 104.
 -/
-import Grammatik.Parser.Elab.UebersetzeAllg
-import Grammatik.Korpus.Programme.Export108
+module
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Grammatik.Korpus.Programme.Export108
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 

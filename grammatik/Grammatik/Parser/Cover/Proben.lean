@@ -6,7 +6,10 @@
              a string is too heavy for the kernel), and each form has a NEGATIVE twin (a malformed spelling
              that must be refused). Edit the generator, not this file.
 -/
-import Grammatik.GabbroV.GvZensus
+module
+public import Grammatik.GabbroV.GvZensus
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.CoverProben
 

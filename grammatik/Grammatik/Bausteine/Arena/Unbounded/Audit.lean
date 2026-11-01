@@ -1,7 +1,10 @@
-import Grammatik.Bausteine.Arena.Unbounded.GRegion
-import Grammatik.Bausteine.Arena.Unbounded.GRefine
-import Grammatik.Bausteine.Arena.Unbounded.Witnesses
-import Grammatik.Zielsatz.BeweisAtomar
+module
+public import Grammatik.Bausteine.Arena.Unbounded.GRegion
+public import Grammatik.Bausteine.Arena.Unbounded.GRefine
+public import Grammatik.Bausteine.Arena.Unbounded.Witnesses
+public import Grammatik.Zielsatz.BeweisAtomar
+@[expose] public section
+
 
 /-! Kernel axiom audit for the unbounded storage component and its G realisations. -/
 

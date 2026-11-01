@@ -9,5 +9,8 @@
   `ZielOrtVollSem.lean`.
 -/
 
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T1
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T2
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T1
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T2
+@[expose] public section
+

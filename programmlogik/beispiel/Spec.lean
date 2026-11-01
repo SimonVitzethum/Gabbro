@@ -3,7 +3,10 @@
     Sie sagt, was ueber dem Programm gelten soll -- in Lean, mit Leans Mitteln.
     Das Programm selbst steht in `GabbroProgram`, erzeugt aus zwei `.gab`-Dateien.
 -/
-import GabbroProgram
+module
+public import GabbroProgram
+@[expose] public section
+
 set_option autoImplicit false
 open Gabbro.Body GabbroProgram
 

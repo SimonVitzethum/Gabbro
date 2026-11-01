@@ -1,6 +1,9 @@
 /- Expression induction is used only for the float operands. -/
-import Stage0.Senke.Ausdruck.Gleit.NichtNaN
-import Stage0.Senke.Ausdruck.Gleit.Code
+module
+public import Stage0.Senke.Ausdruck.Gleit.NichtNaN
+public import Stage0.Senke.Ausdruck.Gleit.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

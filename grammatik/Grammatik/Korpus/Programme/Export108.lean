@@ -29,9 +29,12 @@
   below says which block of which generator's output this is, and
   `pruefe-exportlean.py` holds the block against it.
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

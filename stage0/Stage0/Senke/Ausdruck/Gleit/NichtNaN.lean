@@ -1,5 +1,8 @@
 /- Constant interval endpoints may be infinite; NaN is unordered. -/
-import Stage0.Senke.Ausdruck.Gleit.Schluessel
+module
+public import Stage0.Senke.Ausdruck.Gleit.Schluessel
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gabbro.Grammatik.Gleitkomma
 

@@ -10,7 +10,10 @@
              `Event.lean` vocabulary WITHOUT editing it: own event wrapper
              over the shared `Rel`.
 -/
-import Arm.Mem.Event
+module
+public import Arm.Mem.Event
+@[expose] public section
+
 
 namespace Arm
 

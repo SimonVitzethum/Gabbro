@@ -7,7 +7,10 @@
              The list is untouched (the frame of the executed form and `Dekl.getrennt`), and the two structures stay
              disjoint (the slot that joins the tree was in neither, the slot that leaves it is no list member either).
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallListe
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallListe
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

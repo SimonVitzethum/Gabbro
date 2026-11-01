@@ -7,7 +7,10 @@
              a source whose `lexDoku` holds doc tokens and whose `lex` does
              not, so the statement is not vacuous).
 -/
-import Grammatik.Parser.Lex.Lexer
+module
+public import Grammatik.Parser.Lex.Lexer
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

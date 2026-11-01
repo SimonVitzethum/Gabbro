@@ -47,11 +47,14 @@
 
   The theorem `ziel_ort` itself is in `ZielOrtBeweis.lean`.
 -/
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
-import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
-import Grammatik.Logik.Ruf.Hoare.HoareRuf
-import Grammatik.Korpus.Referenz.ReferenzB
-import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre
+module
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
+public import Grammatik.Logik.Ruf.Hoare.HoareRuf
+public import Grammatik.Korpus.Referenz.ReferenzB
+public import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

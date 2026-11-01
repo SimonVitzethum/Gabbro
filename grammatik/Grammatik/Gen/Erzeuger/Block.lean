@@ -5,7 +5,10 @@
              a `let` lives in a context of its own, drawn from the oracle with the budget the first part leaves
              (`Sz.bindR`, `Sz.bindS`: built once per size of the first part and key, shared by every first part).
 -/
-import Grammatik.Gen.Erzeuger.Anweisung
+module
+public import Grammatik.Gen.Erzeuger.Anweisung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

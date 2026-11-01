@@ -2,7 +2,10 @@
   File:      stage0/Stage0/Senke/Ausdruck/Arithmetik/Wide/Signed/CompareRun.lean
   Subject:   Mixed signedness multiword comparisons execute on actual code and memory.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Compare
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Compare
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem

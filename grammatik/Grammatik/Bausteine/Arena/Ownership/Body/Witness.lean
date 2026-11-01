@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Program
-import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Program
+public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+@[expose] public section
+
 
 /-! Witness for the general body judgment over the four-slot arena fixture.
 `make` (`true`) allocates from the counter and returns the owning index, or

@@ -1,6 +1,9 @@
 /- Last release with waiters: actual branch, WAKE entry and conditional return.
    These are sequential-thread facts, not a concurrent source refinement. -/
-import Stage0.Senke.Sperre.Gib
+module
+public import Stage0.Senke.Sperre.Gib
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

@@ -1,5 +1,9 @@
-import Grammatik.Kern.Semantik.Syscall.Syscall
-import Grammatik.Code.Model.Types
+module
+public import Grammatik.Kern.Semantik.Syscall.Syscall
+public import Grammatik.Code.Model.Types
+import all Init.Data.Repr
+@[expose] public section
+
 
 /-
   File:      Grammatik/Hardware/Tor/Abi.lean

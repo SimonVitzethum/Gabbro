@@ -32,7 +32,10 @@
   Memory safety does not depend on the invariant (every access is bounds-checked by the index type);
   what it carries is the LOGICAL correctness of reuse: no slot is handed out twice while live.
 -/
-import Grammatik.Bausteine.Arena.ArenaDyn
+module
+public import Grammatik.Bausteine.Arena.ArenaDyn
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

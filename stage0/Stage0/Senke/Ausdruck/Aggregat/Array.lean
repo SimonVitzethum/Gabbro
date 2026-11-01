@@ -1,8 +1,11 @@
 /- Array values occupy consecutive canonical element spans, including nested shapes. -/
-import Stage0.Senke.Ausdruck.Lesen
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
-import Stage0.Senke.Ausdruck.Quant.Selection
-import Stage0.Senke.Ausdruck.Aggregat.Frame.Store
+module
+public import Stage0.Senke.Ausdruck.Lesen
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+public import Stage0.Senke.Ausdruck.Quant.Selection
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Store
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

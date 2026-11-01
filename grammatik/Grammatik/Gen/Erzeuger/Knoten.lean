@@ -7,7 +7,10 @@
              the tables of fuel one less (`Orakel`), so the fuel bounds the nesting and the recursion terminates
              structurally.
 -/
-import Grammatik.Gen.Erzeuger.BlockVollst
+module
+public import Grammatik.Gen.Erzeuger.BlockVollst
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

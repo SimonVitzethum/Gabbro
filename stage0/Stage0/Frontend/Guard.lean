@@ -1,4 +1,7 @@
-import Stage0.Frontend.Functions
+module
+public import Stage0.Frontend.Functions
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

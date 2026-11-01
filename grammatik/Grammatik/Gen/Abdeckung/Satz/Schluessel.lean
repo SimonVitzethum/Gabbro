@@ -5,8 +5,11 @@
              cells read: lock takes, indirect calls, calls, reachability, the fragment test, answers, registers and the
              footprint. `SchluesselZellen.lean` puts them together into the cells.
 -/
-import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
-import Grammatik.Gen.Abdeckung.Satz.MerkmalUnd
+module
+public import Grammatik.Gen.Abdeckung.Satz.KoerperOrte
+public import Grammatik.Gen.Abdeckung.Satz.MerkmalUnd
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

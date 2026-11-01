@@ -1,6 +1,9 @@
 /- The acquisition retry at instruction 17, after contended WAIT. These facts
    cover finite sequential-thread executions; eventual release is a premise. -/
-import Stage0.Senke.Sperre.Wait
+module
+public import Stage0.Senke.Sperre.Wait
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem

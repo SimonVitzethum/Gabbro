@@ -16,7 +16,10 @@
   Run it:  cd grammatik && lake build && lake env lean Nachpruefung.lean
   (`lake build` first: this file imports the library, and `lake env lean` does not build it.)
 -/
-import Grammatik
+module
+public import Grammatik
+@[expose] public section
+
 
 open Gabbro.Grammatik
 

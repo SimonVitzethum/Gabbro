@@ -5,8 +5,11 @@
              is read; NZCV is always written by the compares.
   Sail:      sail-arm/arm-v9.4-a/src/instrs64.sail (`execute` clauses).
 -/
-import Arm.Isa.IntCore
-import Arm.Isa.Integer
+module
+public import Arm.Isa.IntCore
+public import Arm.Isa.Integer
+@[expose] public section
+
 
 namespace Arm.Int
 

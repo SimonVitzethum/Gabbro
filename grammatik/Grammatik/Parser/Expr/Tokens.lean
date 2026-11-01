@@ -5,7 +5,10 @@
              on options and word lists. They stood in `Anweisung.lean`; the type reader
              (`Typ.lean`) needs them before the statement reader exists.
 -/
-import Grammatik.Parser.Expr.Ausdruck
+module
+public import Grammatik.Parser.Expr.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

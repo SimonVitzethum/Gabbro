@@ -73,6 +73,10 @@
   Core-only Lean, no mathlib, zero `sorry`.
 -/
 
+module
+
+@[expose] public section
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The loop with fuel -/

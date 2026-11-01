@@ -1,4 +1,7 @@
-import Runner.Mach.Folge
+module
+public import Runner.Mach.Folge
+@[expose] public section
+
 
 /-! # x86-TSO: one memory and a store buffer per thread (Sewell, Owens et al., CACM 2010)
 

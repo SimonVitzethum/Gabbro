@@ -6,7 +6,10 @@
   flag word into a full mask and selects the copy limb by limb. The signed division reduces to the
   unsigned one on magnitudes with this block on both sides.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Run
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Run
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

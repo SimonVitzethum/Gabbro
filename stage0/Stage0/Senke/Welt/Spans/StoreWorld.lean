@@ -1,5 +1,8 @@
 /- The actual full-span store loop updates the canonical source world relation. -/
-import Stage0.Senke.Welt.Spans.SpanStore
+module
+public import Stage0.Senke.Welt.Spans.SpanStore
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable {D : Deklaration} {L : Lay D}

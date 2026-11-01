@@ -1,10 +1,13 @@
-import Bruecke.Pflichten
-import Bruecke.Pruefung
-import Grammatik.Korpus.Programme.Einheit104
-import Bruecke.Start
-import Bruecke.Atomar
-import Bruecke.Quelle
-import Duty.Duty104Referenz
+module
+public import Bruecke.Pflichten
+public import Bruecke.Pruefung
+public import Grammatik.Korpus.Programme.Einheit104
+public import Bruecke.Start
+public import Bruecke.Atomar
+public import Bruecke.Quelle
+public import Duty.Duty104Referenz
+@[expose] public section
+
 
 /-! BRIDGE-INSTANCE beispiele/104-referenz.gab Bruecke.Instanz104
 

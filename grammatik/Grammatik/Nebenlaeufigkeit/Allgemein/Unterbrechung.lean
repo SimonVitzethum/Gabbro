@@ -56,7 +56,10 @@
         covers them without a handler case); what makes a handler body `Brav` is
         `exec_gut` (`Satz.lean`), unchanged and unrepeated here.
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

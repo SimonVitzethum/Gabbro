@@ -9,7 +9,10 @@
   `log2`, so the C lowering never reaches the undefined `__builtin_clz(0)`
   case.
 -/
-import Grammatik.Kern.Syntax.Typen
+module
+public import Grammatik.Kern.Syntax.Typen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

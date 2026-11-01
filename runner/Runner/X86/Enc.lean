@@ -1,4 +1,7 @@
-import Runner.X86.Ins
+module
+public import Runner.X86.Ins
+@[expose] public section
+
 
 /-! # Encoding: the bytes of each instruction form
 

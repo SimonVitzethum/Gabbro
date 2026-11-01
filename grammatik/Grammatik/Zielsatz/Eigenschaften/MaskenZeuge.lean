@@ -28,7 +28,10 @@
     `RING` masks nothing) and stands at `locks RING` -- `KernHaltE` is FALSE. So the leg is no
     theorem about every program: what carries it is (a).
 -/
-import Grammatik.Korpus.Programme.Korpus59
+module
+public import Grammatik.Korpus.Programme.Korpus59
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

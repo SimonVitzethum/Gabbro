@@ -10,7 +10,10 @@
   the residue, single-sided; the function a push enters is in the thread's
   call graph by the thread invariant `merkInvG_erreichbar`.
 -/
-import Grammatik.Nichtinterferenz.LokalSchritt
+module
+public import Grammatik.Nichtinterferenz.LokalSchritt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

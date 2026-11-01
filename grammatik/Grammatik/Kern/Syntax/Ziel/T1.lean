@@ -49,15 +49,18 @@
   die Frist ist hier nur benannt (`fristAlsAnnahme`) -- gemessen wird sie von
   der Sonde (`sonden/sonde_tick.c`, Probenwaehrung, kein Beweis).
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
-import Grammatik.Kern.Syntax.Zucker
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
-import Grammatik.Logik.Vertraege.Komposition
-import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt
-import Grammatik.Kern.Semantik.Fristlauf
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Semantik.MaschinenKette
-import Grammatik.Kern.Syntax.Extraktion
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+public import Grammatik.Kern.Syntax.Zucker
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+public import Grammatik.Logik.Vertraege.Komposition
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt
+public import Grammatik.Kern.Semantik.Fristlauf
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Semantik.MaschinenKette
+public import Grammatik.Kern.Syntax.Extraktion
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

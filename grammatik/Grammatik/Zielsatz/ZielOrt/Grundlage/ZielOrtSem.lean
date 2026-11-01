@@ -24,7 +24,10 @@
   3. `GRest.okZ`: the residues `ziel_ort` follows (in the fragment `kOk`,
      reading only inside a given footprint).
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,7 +1,10 @@
 /- Subject: Literal, concatenation and truncation of short string values. -/
-import Stage0.Senke.Ausdruck.Aggregat.Wort
-import Stage0.Senke.Ausdruck.Aggregat.Materialize
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Wort
+public import Stage0.Senke.Ausdruck.Aggregat.Materialize
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

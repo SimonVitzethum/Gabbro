@@ -5,7 +5,10 @@
              (`raumSchlecht_nGen`), and the cell table `Tafel` with Theorem 5 over every program of the source
              (`tafel_erzeugt`, `erzeugt_hinreichend`) from one fact per cell.
 -/
-import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
+module
+public import Grammatik.Gen.Abdeckung.Satz.ErzeugtMN
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

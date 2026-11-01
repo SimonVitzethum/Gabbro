@@ -26,9 +26,12 @@
   the legs `InvRuheG`, `InvSichtG`, `SperrWechselG`, `SperrSichtG` and `KernHaltG` and the thread
   machine `ZielF` are not re-proved over GX.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarInv
-import Grammatik.Speichermodell.Atomar.AtomarZeuge
-import Grammatik.Speichermodell.Atomar.AtomarFortschritt
+module
+public import Grammatik.Speichermodell.Atomar.AtomarInv
+public import Grammatik.Speichermodell.Atomar.AtomarZeuge
+public import Grammatik.Speichermodell.Atomar.AtomarFortschritt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

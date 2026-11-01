@@ -34,6 +34,9 @@
     and ranks are bounded on finitely many locks.
 -/
 
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T1
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T2
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T3
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T1
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T2
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T3
+@[expose] public section
+

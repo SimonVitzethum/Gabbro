@@ -14,8 +14,11 @@
    (other slot, same field). Fixture: `kettenD` (3 slots, edge + int
    fields) with `_zeuge` and a planted failure.
 -/
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.GabbroV.GvKetten
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.GabbroV.GvKetten
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV
 

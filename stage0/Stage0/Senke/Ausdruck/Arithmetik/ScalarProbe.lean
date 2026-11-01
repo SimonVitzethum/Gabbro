@@ -1,6 +1,9 @@
 /- Joint actual-memory witness for the complete scalar result contract. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Scalar
-import Stage0.Senke.Ausdruck.FnptrAufrufProben
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Scalar
+public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

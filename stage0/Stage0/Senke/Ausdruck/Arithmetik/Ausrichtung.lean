@@ -1,9 +1,12 @@
 /- Exact signed alignment and addition before the shared canonical rounding.
    This fragment requires an exact word-sized sum. Wide exponent differences
    still need a precision-preserving continuation before add/sub can be enabled. -/
-import Stage0.Senke.Ausdruck.Arithmetik.Signifikand
-import Stage0.Senke.Ausdruck.Arithmetik.AddSub
-import Stage0.Senke.Ausdruck.Gleit.RundCode
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Signifikand
+public import Stage0.Senke.Ausdruck.Arithmetik.AddSub
+public import Stage0.Senke.Ausdruck.Gleit.RundCode
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem Gleitkomma

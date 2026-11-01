@@ -6,10 +6,13 @@
              (`genEK_rep`). The proof replaces the parts of an expression by their representatives (`ersetzeE`, one
              case per constructor) and finds the result in the clause stream (`exprS_vollst`).
 -/
-import Grammatik.Gen.Erzeuger.AusdruckVollst
-import Grammatik.Gen.Erzeuger.Entdoppelt
-import Grammatik.Kern.Semantik.Semantik.T1
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T1
+module
+public import Grammatik.Gen.Erzeuger.AusdruckVollst
+public import Grammatik.Gen.Erzeuger.Entdoppelt
+public import Grammatik.Kern.Semantik.Semantik.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

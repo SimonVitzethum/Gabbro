@@ -7,7 +7,10 @@
              `ensures` of a function with a value) a quantifier is refused by name: the binder would stand
              before the result variable, which the side reader does not shift.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben30
 

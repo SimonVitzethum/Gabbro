@@ -1,4 +1,7 @@
-import Runner.IR.Seq
+module
+public import Runner.IR.Seq
+@[expose] public section
+
 
 /-! # Frames and code in the memory of one IR thread
 

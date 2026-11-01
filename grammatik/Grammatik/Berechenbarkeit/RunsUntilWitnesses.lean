@@ -7,9 +7,12 @@
   next read. Negative probes keep unsatisfied guards and budget exhaustion distinct
   from successful termination. No oracle performs any computation for these programs.
 -/
-import Grammatik.Berechenbarkeit.RunsUntil
-import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Berechenbarkeit.RunsUntil
+public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.RunsUntilWitnesses
 

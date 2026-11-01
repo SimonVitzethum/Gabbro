@@ -22,7 +22,10 @@
   * `fortschrittF_aus` -- every stop is named: `FortschrittG` for a thread that joins nothing,
     the `join` step or a join wait for a starter, dormancy for a slot.
 -/
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

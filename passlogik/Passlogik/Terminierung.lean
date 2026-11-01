@@ -38,6 +38,10 @@
          die Zeugenmenge schrumpft.
 -/
 
+module
+
+@[expose] public section
+
 namespace Passlogik.Terminierung
 
 /-! ## 1. Der Kernsatz: kein unendlicher Abstieg

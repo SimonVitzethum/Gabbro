@@ -118,7 +118,10 @@
    introduced: `#print axioms` at the end names all standard axioms the
    new theorems rest on.
 -/
-import Grammatik.Kern.Syntax.Ziel
+module
+public import Grammatik.Kern.Syntax.Ziel
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

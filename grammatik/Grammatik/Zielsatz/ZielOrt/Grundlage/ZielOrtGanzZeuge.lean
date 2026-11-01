@@ -27,10 +27,13 @@
     (`paP_nicht_ganz`), and so does the new conclusion on a reachable machine
     (`paP_halt`): the stuck state is now a refutation, not a certificate.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
-import Grammatik.Korpus.Referenz.Referenz104Rahmen
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+public import Grammatik.Korpus.Referenz.Referenz104Rahmen
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

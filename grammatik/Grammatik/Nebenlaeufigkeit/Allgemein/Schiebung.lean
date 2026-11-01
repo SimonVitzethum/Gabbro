@@ -32,8 +32,11 @@
       shift `3 << 2` under `w = 32` (non-degenerate: evaluates to 12
       through `Zahl.shl`).
 -/
-import Grammatik.Kern.Syntax.Syntax
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Syntax.Syntax
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

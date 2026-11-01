@@ -7,8 +7,11 @@
   supplied by that compiler, a total computable normal-halting decider is impossible.
   Decidable syntax classification and checking supplied termination proofs remain compatible.
 -/
-import Mathlib.Computability.Halting
-import Mathlib.Computability.Reduce
+module
+public import Mathlib.Computability.Halting
+public import Mathlib.Computability.Reduce
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.TerminationCompatibility
 

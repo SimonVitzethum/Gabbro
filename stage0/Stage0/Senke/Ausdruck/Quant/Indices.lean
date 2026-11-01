@@ -1,5 +1,8 @@
 /- Shared finite table-index enumeration for expression and statement loops. -/
-import Stage0.Senke.Ausdruck
+module
+public import Stage0.Senke.Ausdruck
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 /-- The indices from `k` on, `n` of them. -/

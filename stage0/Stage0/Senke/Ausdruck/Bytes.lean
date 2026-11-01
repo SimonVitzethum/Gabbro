@@ -2,7 +2,10 @@
   Subject: Little-endian byte spans against G's `bytesAb` and `bytesZuZahl`.
   Each byte is read from its own world word; arithmetic packs the result into one IR word.
 -/
-import Stage0.Senke.Ausdruck.Lesen
+module
+public import Stage0.Senke.Ausdruck.Lesen
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

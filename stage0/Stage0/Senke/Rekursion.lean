@@ -1,6 +1,9 @@
 /- Every emitted function keeps the complete-value call protocol, by source call-depth induction. -/
-import Stage0.Senke.Anweisung.Satz
-import Stage0.Senke.Rueckkehr.Entry
+module
+public import Stage0.Senke.Anweisung.Satz
+public import Stage0.Senke.Rueckkehr.Entry
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

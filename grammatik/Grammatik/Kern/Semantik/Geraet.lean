@@ -101,7 +101,10 @@
           das Ketten-Gegenstueck ueber `GGesittet` und die Bruecke `HB` -> `GHB`
           ueber `cpuAnteil` bleiben Schnitt (C4 fuellt das Praedikat, nicht den Satz).
 -/
-import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+module
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

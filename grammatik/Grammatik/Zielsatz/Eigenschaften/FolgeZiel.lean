@@ -12,8 +12,11 @@
   machine every thread's call log is ordered by `Φ` -- the entries and returns of the user's
   functions, as `some f`.
 -/
-import Grammatik.Zielsatz.Kern.Beweis
-import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+module
+public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

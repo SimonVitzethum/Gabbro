@@ -14,8 +14,11 @@
     * `sperr_lokal`     -- the invariant reads only the protected carriers (`SperrInvLokal`).
     * `sperr_ok`        -- `SperrInvOk` / `AkzeptiertSpec.sperrOrte`, from the declaration's `protects`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaDekl
-import Grammatik.Zielsatz.Kern.Spec
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaDekl
+public import Grammatik.Zielsatz.Kern.Spec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

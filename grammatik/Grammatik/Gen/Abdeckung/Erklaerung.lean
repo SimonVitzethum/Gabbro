@@ -8,8 +8,11 @@
              instance of them (the filter of `eigner_nie_erzeugt` removes something, the guard of `geteilt_bewacht`
              is needed, `invarianten_gehalten` adds a lock).
 -/
-import Grammatik.Gen.Familie.Familie
-import Grammatik.Gen.Abdeckung.Mitglieder
+module
+public import Grammatik.Gen.Familie.Familie
+public import Grammatik.Gen.Abdeckung.Mitglieder
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

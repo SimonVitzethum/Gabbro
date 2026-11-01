@@ -5,8 +5,11 @@
              matchers on an optional type, the generators of argument lists, result expressions and match arms,
              each with its completeness lemma.
 -/
-import Grammatik.Gen.Erzeuger.AusdruckVollst
-import Grammatik.Gen.Erzeuger.Entscheidung
+module
+public import Grammatik.Gen.Erzeuger.AusdruckVollst
+public import Grammatik.Gen.Erzeuger.Entscheidung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 
@@ -53,7 +56,7 @@ theorem tySchranken_eq {τ : Ty} {p : Int × Int} (h : tySchranken τ = some p) 
   rfl
 
 /-- `τ = .int lo hi` read off a type that is not a variable (a field type, a register type). -/
-def mitTypInt {R : Type} (τ : Ty) (f : ∀ {lo hi : Int}, τ = .int lo hi → Sz R) : Sz R := fun k =>
+@[no_expose] def mitTypInt {R : Type} (τ : Ty) (f : ∀ {lo hi : Int}, τ = .int lo hi → Sz R) : Sz R := fun k =>
   (tySchranken τ).toList.attach.flatMap fun p => f (tySchranken_eq (by simpa using p.2)) k
 
 theorem mem_mitTypInt {R : Type} {τ : Ty} {f : ∀ {lo hi : Int}, τ = .int lo hi → Sz R} {lo hi : Int} {x : R}

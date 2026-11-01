@@ -28,7 +28,10 @@
   * `KoerperGutS`: the obligation of `ziel_ort_ganz` over the semantics with
     acquire moves and release checks, for every move in `HavocOk S`.
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,5 +1,8 @@
-import Grammatik.Code.Model.Syntax
-import Grammatik.Code.Model.Memory
+module
+public import Grammatik.Code.Model.Syntax
+public import Grammatik.Code.Model.Memory
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Model/Semantics.lean

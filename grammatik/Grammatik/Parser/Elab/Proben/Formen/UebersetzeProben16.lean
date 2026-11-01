@@ -5,7 +5,10 @@
              the DECLARED range) with `x = w;` (`Stmt.assignVar`) and the compound forms `x &= w;` (sugar for
              `x = x & w;`), also at a static. A plain `let` is not assignable, and a `let mut` needs a type.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben16
 

@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `Lebendigkeit` (split by instrumente/teile/lean-teilen.py; the umbrella `Lebendigkeit.lean` imports all parts). -/
-import Grammatik.Logik.Fortschritt.Lebendigkeit.T2
+module
+public import Grammatik.Logik.Fortschritt.Lebendigkeit.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

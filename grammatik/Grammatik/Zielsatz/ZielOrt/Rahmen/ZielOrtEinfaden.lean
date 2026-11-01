@@ -18,7 +18,10 @@
   carrier is local (`LokOk` for `lok := fun _ => true`). The footprint
   check disappears from the theorem.
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

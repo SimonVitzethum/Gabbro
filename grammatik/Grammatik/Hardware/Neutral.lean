@@ -1,5 +1,8 @@
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
-import Grammatik.Hardware.Anbieter.Region
+module
+public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Hardware.Anbieter.Region
+@[expose] public section
+
 
 /-
   File:      Grammatik/Hardware/Neutral.lean

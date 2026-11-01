@@ -1,5 +1,8 @@
 /- Part 2 of 2 of `Fehler` (split by instrumente/teile/lean-teilen.py; the umbrella `Fehler.lean` imports all parts). -/
-import Grammatik.Kern.Syntax.Fehler.T1
+module
+public import Grammatik.Kern.Syntax.Fehler.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

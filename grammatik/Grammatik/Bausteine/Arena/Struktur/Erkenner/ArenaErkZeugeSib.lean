@@ -15,8 +15,11 @@
                           rejects the world (`sib_ohne_vater_bricht`);
     * `freiOhneSchnitt_defekt` -- planted defect: the child of the root is released while it is still linked in the tree.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibZug
+module
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibZug
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

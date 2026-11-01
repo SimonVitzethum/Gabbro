@@ -70,12 +70,15 @@
 -/
 
 
-import Grammatik.Kern.Syntax.Extraktion.T1
-import Grammatik.Kern.Syntax.Extraktion.T2
-import Grammatik.Kern.Syntax.Extraktion.T3
-import Grammatik.Kern.Syntax.Extraktion.T4
-import Grammatik.Kern.Syntax.Extraktion.T5
-import Grammatik.Kern.Syntax.Extraktion.T6
-import Grammatik.Kern.Syntax.Extraktion.T7
-import Grammatik.Kern.Syntax.Extraktion.T8
-import Grammatik.Kern.Syntax.Extraktion.T9
+module
+public import Grammatik.Kern.Syntax.Extraktion.T1
+public import Grammatik.Kern.Syntax.Extraktion.T2
+public import Grammatik.Kern.Syntax.Extraktion.T3
+public import Grammatik.Kern.Syntax.Extraktion.T4
+public import Grammatik.Kern.Syntax.Extraktion.T5
+public import Grammatik.Kern.Syntax.Extraktion.T6
+public import Grammatik.Kern.Syntax.Extraktion.T7
+public import Grammatik.Kern.Syntax.Extraktion.T8
+public import Grammatik.Kern.Syntax.Extraktion.T9
+@[expose] public section
+

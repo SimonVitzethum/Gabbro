@@ -17,8 +17,11 @@
   `ext` form except a call through a suffixed place (predicates and strings -- `druckExtToks` prints
   them, outside the theorem).
 -/
-import Grammatik.Parser.Round.Rundlauf4
-import Grammatik.Parser.Round.RundlaufLex
+module
+public import Grammatik.Parser.Round.Rundlauf4
+public import Grammatik.Parser.Round.RundlaufLex
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

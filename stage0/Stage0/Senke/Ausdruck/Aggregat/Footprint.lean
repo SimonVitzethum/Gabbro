@@ -1,5 +1,8 @@
 /- Exact union of the explicit store temporary and the typed world span. -/
-import Runner.IR.Rahmen
+module
+public import Runner.IR.Rahmen
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 

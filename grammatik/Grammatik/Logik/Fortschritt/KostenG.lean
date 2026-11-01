@@ -37,8 +37,11 @@
 -/
 
 
-import Grammatik.Logik.Fortschritt.KostenG.T1
-import Grammatik.Logik.Fortschritt.KostenG.T2
-import Grammatik.Logik.Fortschritt.KostenG.T3
-import Grammatik.Logik.Fortschritt.KostenG.T4
-import Grammatik.Logik.Fortschritt.KostenG.T5
+module
+public import Grammatik.Logik.Fortschritt.KostenG.T1
+public import Grammatik.Logik.Fortschritt.KostenG.T2
+public import Grammatik.Logik.Fortschritt.KostenG.T3
+public import Grammatik.Logik.Fortschritt.KostenG.T4
+public import Grammatik.Logik.Fortschritt.KostenG.T5
+@[expose] public section
+

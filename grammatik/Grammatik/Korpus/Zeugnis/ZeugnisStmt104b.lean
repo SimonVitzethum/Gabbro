@@ -15,8 +15,11 @@
   of `beispiele/104-referenz.gab` (proofs filled beside the printed `?hp`),
   each accepted by `decide` and pushed through `zeugnisStmt104b_sound`.
 -/
-import Grammatik.Korpus.Zeugnis.ZeugnisStmt2
-import Grammatik.Korpus.Programme.Export104
+module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt2
+public import Grammatik.Korpus.Programme.Export104
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

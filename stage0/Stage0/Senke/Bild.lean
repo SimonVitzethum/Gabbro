@@ -26,9 +26,12 @@
   lies above that span, the shared result area and the status word (`startScratch`, the `receiveTop` of the root's
   signature), so neither the spawns nor the call write a parameter word.
 -/
-import Stage0.Senke.Rekursion
-import Stage0.Senke.Welt.StartLayout
-import Runner.Prog.IRAsm
+module
+public import Stage0.Senke.Rekursion
+public import Stage0.Senke.Welt.StartLayout
+public import Runner.Prog.IRAsm
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

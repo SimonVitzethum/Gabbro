@@ -16,6 +16,10 @@
   the erasure: the body function ignores the scheme list.
 -/
 
+module
+
+@[expose] public section
+
 namespace P21.Gap23InductList
 
 /-- Erasure: the elaborated body does not depend on the named schemes. -/

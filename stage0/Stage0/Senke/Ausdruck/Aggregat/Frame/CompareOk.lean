@@ -1,7 +1,10 @@
 /- Subject: Execution of the branch-free span comparison: the accumulated word folds every XOR pair. -/
-import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
-import Stage0.Senke.Ausdruck.Eng
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
+public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -1,5 +1,8 @@
-import Grammatik.Bausteine.Arena.Ownership.State
-import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
+module
+public import Grammatik.Bausteine.Arena.Ownership.State
+public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaAllocForm
+@[expose] public section
+
 
 /-! Exact liveness changes of the existing executed allocator forms, and their
 refinement by the ownership ledger. These theorems refer to G's actual world,

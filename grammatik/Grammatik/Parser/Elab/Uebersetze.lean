@@ -32,8 +32,11 @@
   and the fragment/footprint checks on the Lean-parsed program
   (`u104fragment`, `u104fuss`).
 -/
-import Grammatik.Korpus.Programme.Export104
-import Grammatik.Parser.Item.ElementTief
+module
+public import Grammatik.Korpus.Programme.Export104
+public import Grammatik.Parser.Item.ElementTief
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 

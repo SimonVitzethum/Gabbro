@@ -49,8 +49,11 @@
   thread of every reachable machine, as `fadenS_prueft` does for the
   `logik` checks.
 -/
-import Grammatik.Zielsatz.Kern.Spec
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
+module
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

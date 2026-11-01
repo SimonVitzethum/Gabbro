@@ -1,5 +1,8 @@
 /- Part 6 of 9 of `Maschine` (split by instrumente/teile/lean-teilen.py; the umbrella `Maschine.lean` imports all parts). -/
-import Grammatik.Kern.Semantik.Maschine.T5
+module
+public import Grammatik.Kern.Semantik.Maschine.T5
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

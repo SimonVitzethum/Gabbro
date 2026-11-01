@@ -6,7 +6,10 @@
   the slots `s .. s+6`; the other arguments are whatever the slots hold (`exit_group` reads only its first).
   `stop_ok`: the IR thread runs the two constants and stands at the request `exit_group(c)`.
 -/
-import Stage0.Senke.Umgebung
+module
+public import Stage0.Senke.Umgebung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

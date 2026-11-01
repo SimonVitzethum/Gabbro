@@ -34,8 +34,11 @@
   (W3, und dass kein Faden eine Sperre zweimal nimmt -- `gut` am `nimmt`). Ist der Waechter
   eine Marke, sind es derselbe Faden (W4) -- kein zweiter Zugreifer.
 -/
-import Grammatik.Kern.Syntax.Satz
-import Grammatik.Kern.Syntax.Marken
+module
+public import Grammatik.Kern.Syntax.Satz
+public import Grammatik.Kern.Syntax.Marken
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

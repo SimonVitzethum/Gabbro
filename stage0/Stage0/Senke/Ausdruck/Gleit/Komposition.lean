@@ -1,6 +1,9 @@
 /- Compositional semantics for pure word-code generators used by software floats. -/
-import Stage0.Senke.Ausdruck.Gleit.Wort
-import Stage0.Senke.Ausdruck.Aggregat.Wort
+module
+public import Stage0.Senke.Ausdruck.Gleit.Wort
+public import Stage0.Senke.Ausdruck.Aggregat.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

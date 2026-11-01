@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Schleifen
+module
+public import Grammatik.Zielsatz.Einbettung.Schleifen
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Werkzeug.lean

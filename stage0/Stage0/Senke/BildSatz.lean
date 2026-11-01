@@ -7,7 +7,10 @@
              `main`'s environment is the image's own bytes (its words in the first frame, `startFrameBytes`); the
              spawns write only above them, so the call receives it as `EnvAt`.
 -/
-import Stage0.Senke.Start
+module
+public import Stage0.Senke.Start
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

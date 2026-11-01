@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `AtomarReplay` (split by instrumente/teile/lean-teilen.py; the umbrella `AtomarReplay.lean` imports all parts). -/
-import Grammatik.Speichermodell.Atomar.AtomarReplay.T2
+module
+public import Grammatik.Speichermodell.Atomar.AtomarReplay.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

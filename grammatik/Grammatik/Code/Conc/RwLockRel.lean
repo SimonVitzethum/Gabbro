@@ -1,5 +1,8 @@
-import Grammatik.Code.Conc.RwLock
-import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+module
+public import Grammatik.Code.Conc.RwLock
+public import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Conc/RwLockRel.lean

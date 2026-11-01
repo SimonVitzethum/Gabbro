@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Schritt
+module
+public import Grammatik.Zielsatz.Einbettung.Schritt
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Handler.lean

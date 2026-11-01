@@ -1,5 +1,8 @@
 /- Part 3 of 3 of `SperreBeweis` (split by instrumente/teile/lean-teilen.py; the umbrella `SperreBeweis.lean` imports all parts). -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T2
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T2
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

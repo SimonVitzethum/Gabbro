@@ -1,6 +1,9 @@
 /- Correctness of finite universal and existential Boolean folds. -/
-import Stage0.Senke.Ausdruck.Quant.Bind
-import Stage0.Senke.Ausdruck.Quant.Indices
+module
+public import Stage0.Senke.Ausdruck.Quant.Bind
+public import Stage0.Senke.Ausdruck.Quant.Indices
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

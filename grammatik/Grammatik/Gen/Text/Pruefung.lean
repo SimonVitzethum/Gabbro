@@ -3,7 +3,10 @@
   Subject:   THE TEXT OF A GENERATOR PROGRAM and the decided check that its read-back program has given cells and a
              given verdict (`textCheck`), with the soundness theorem the witness files apply (`textCheck_sound`).
 -/
-import Grammatik.Gen.Text.Gut
+module
+public import Grammatik.Gen.Text.Gut
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

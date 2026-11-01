@@ -1,4 +1,7 @@
-import Grammatik.Berechenbarkeit.Storage.TM2Observe
+module
+public import Grammatik.Berechenbarkeit.Storage.TM2Observe
+@[expose] public section
+
 
 /-! Brainfuck.Byte-Brainfuck on executable linked region storage. The existing BF→TM2
 compiler is reused, including its finite source labels and byte-valued control.

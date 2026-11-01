@@ -1,5 +1,8 @@
 /- Signed integer keys for binary64 words; both zero encodings map to zero. -/
-import Stage0.Senke.Ausdruck.Gleit.Ordnung
+module
+public import Stage0.Senke.Ausdruck.Gleit.Ordnung
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gabbro.Grammatik.Gleitkomma Runner.IR

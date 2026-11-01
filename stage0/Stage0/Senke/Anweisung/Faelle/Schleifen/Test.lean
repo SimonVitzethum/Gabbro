@@ -1,7 +1,10 @@
 /- A retry check preserves the read event and either finishes or enters the remaining attempts. -/
-import Stage0.Senke.Anweisung.Faelle.Kontext
-import Stage0.Senke.Anweisung.Verzweigung
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+module
+public import Stage0.Senke.Anweisung.Faelle.Kontext
+public import Stage0.Senke.Anweisung.Verzweigung
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

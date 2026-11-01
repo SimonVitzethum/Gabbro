@@ -6,7 +6,10 @@
              ARM text is not on this machine; clause citations are from the
              agent's knowledge of the published model, not a measured copy.
 -/
-import Arm.Mem.Event
+module
+public import Arm.Mem.Event
+@[expose] public section
+
 
 namespace Arm
 

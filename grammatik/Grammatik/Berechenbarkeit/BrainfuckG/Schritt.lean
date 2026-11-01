@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Nimm
-import Grammatik.Berechenbarkeit.BrainfuckG.Lege
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Nimm
+public import Grammatik.Berechenbarkeit.BrainfuckG.Lege
+@[expose] public section
+
 
 /-! Brainfuck on G, part 4: one source step as one G block. A Brainfuck state lives in G as two locals -- the head
 byte on top, the program counter below it -- and four stacks in one arena: the tape left of the head, the tape

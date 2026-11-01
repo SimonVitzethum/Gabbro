@@ -12,8 +12,11 @@
                                the surface forbids it (`n >= 1`, `R-grow-const`). It does not touch the arena invariant
                                (`grow_atomar` holds for every `n`), but it would break a commit bound `stand <= komSt`.
 -/
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreZeuge
-import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreWachs
+module
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreZeuge
+public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreWachs
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -31,7 +31,10 @@
       `R014`-clean (`zeuge_r014_frisch`), the four named hypotheses hold for it, and
       `r014_ruf_rahmen` gives the frame for every run (`zeuge_r014_ruf_rahmen`).
 -/
-import Grammatik.Logik.Vertraege.ObjektWurzel
+module
+public import Grammatik.Logik.Vertraege.ObjektWurzel
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Projekte.Ziel
+module
+public import Grammatik.Zielsatz.Projekte.Ziel
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Projekte/Zeuge.lean

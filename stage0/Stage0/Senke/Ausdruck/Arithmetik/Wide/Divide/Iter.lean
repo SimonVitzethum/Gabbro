@@ -5,7 +5,10 @@
   After `i` steps the remainder register holds `P_i mod y` and the dividend register
   `(x * 2^i + P_i / y) mod 2^N`, where `P_i = x / 2^(N-i)` are the top `i` bits of `x`.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Step
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Step
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

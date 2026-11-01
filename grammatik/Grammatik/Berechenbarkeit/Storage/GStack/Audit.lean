@@ -1,8 +1,11 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses
-import Grammatik.Berechenbarkeit.Storage.GStack.Multi
-import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
-import Grammatik.Berechenbarkeit.Storage.GStack.TakeOrBump
-import Grammatik.Berechenbarkeit.Storage.HeapAudit
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses
+public import Grammatik.Berechenbarkeit.Storage.GStack.Multi
+public import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
+public import Grammatik.Berechenbarkeit.Storage.GStack.TakeOrBump
+public import Grammatik.Berechenbarkeit.Storage.HeapAudit
+@[expose] public section
+
 
 /-! Axiom audit of the actual, capacity-bounded G stack bridge.
 The imported heap audit retains the separate unbounded component boundary. -/

@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Drain
-import Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Drain
+public import Grammatik.Berechenbarkeit.Storage.GStack.GrantWitnesses
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.DrainWitnesses
 

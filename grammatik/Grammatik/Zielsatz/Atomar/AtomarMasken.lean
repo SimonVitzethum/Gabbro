@@ -8,8 +8,11 @@
   `kernHaltG_gilt` does: the argument reads only the threads' own states, which a GA step moves
   exactly as its inner G step does.
 -/
-import Grammatik.Zielsatz.Eigenschaften.Masken
-import Grammatik.Speichermodell.Atomar.Atomar
+module
+public import Grammatik.Zielsatz.Eigenschaften.Masken
+public import Grammatik.Speichermodell.Atomar.Atomar
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

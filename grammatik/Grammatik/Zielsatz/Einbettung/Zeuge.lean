@@ -1,4 +1,7 @@
-import Grammatik.Zielsatz.Einbettung.Uebertragung
+module
+public import Grammatik.Zielsatz.Einbettung.Uebertragung
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Zeuge.lean

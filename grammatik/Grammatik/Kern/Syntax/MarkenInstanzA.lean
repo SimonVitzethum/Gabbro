@@ -19,8 +19,11 @@
   texts coincide. This file mirrors the `PCMarkSep` discharge chain at the
   instance level: projection, separation, invariant, discharge, example.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Extraktion
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Extraktion
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

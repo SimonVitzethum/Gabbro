@@ -10,7 +10,10 @@
              shape, with equal environments and values, equal traces and
              memories that agree on `T`.
 -/
-import Grammatik.Nichtinterferenz.SchrittTreu
+module
+public import Grammatik.Nichtinterferenz.SchrittTreu
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

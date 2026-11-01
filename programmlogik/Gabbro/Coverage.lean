@@ -40,7 +40,10 @@
   registers over one thing, one of them read by a guard. The guard is
   `instrumente/pruefe-deckung.py`, and what it does NOT check is written in its own header.
 -/
-import Gabbro.Body
+module
+public import Gabbro.Body
+@[expose] public section
+
 
 namespace Gabbro.Coverage
 

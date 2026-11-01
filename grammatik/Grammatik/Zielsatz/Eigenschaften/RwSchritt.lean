@@ -41,10 +41,13 @@
   NOT CLAIMED: the mode is not in the statement forms (the layer parameter stands in for it); no
   Rust, no `SYNTAX.md`; `Spec.lean`/`gabbro_ziel` are untouched.
 -/
-import Grammatik.Zielsatz.Eigenschaften.KernMaske
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T2
-import Grammatik.Logik.Fortschritt.Lebendigkeit.T1
+module
+public import Grammatik.Zielsatz.Eigenschaften.KernMaske
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T2
+public import Grammatik.Logik.Fortschritt.Lebendigkeit.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

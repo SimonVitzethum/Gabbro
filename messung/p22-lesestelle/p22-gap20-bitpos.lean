@@ -8,7 +8,10 @@
   below is the evidence (no position syntax in the signature).
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
-import Grammatik.Kern.Syntax.Zucker
+module
+public import Grammatik.Kern.Syntax.Zucker
+@[expose] public section
+
 
 open Gabbro.Grammatik
 

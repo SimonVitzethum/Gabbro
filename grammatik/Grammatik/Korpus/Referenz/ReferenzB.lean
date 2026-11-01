@@ -16,6 +16,9 @@
   and the two reached runs below.
 -/
 
-import Grammatik.Korpus.Referenz.ReferenzB.T1
-import Grammatik.Korpus.Referenz.ReferenzB.T2
-import Grammatik.Korpus.Referenz.ReferenzB.T3
+module
+public import Grammatik.Korpus.Referenz.ReferenzB.T1
+public import Grammatik.Korpus.Referenz.ReferenzB.T2
+public import Grammatik.Korpus.Referenz.ReferenzB.T3
+@[expose] public section
+

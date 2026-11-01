@@ -1,11 +1,14 @@
 /- Complete typed storage spans use the canonical value encoding. Physical addresses
    are supplied by the checked layout, never decoded from logical pointer values. -/
-import Stage0.Senke.Ausdruck.Aggregat.Encoding
-import Stage0.Senke.Welt.Spans.SpanCode
-import Stage0.Senke.Ausdruck.Aggregat.Footprint
-import Stage0.Senke.Ausdruck.Quant.Memory
-import Stage0.Senke.Ausdruck.Quant.Literal
-import Stage0.Senke.Welt.WeltAt
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Welt.Spans.SpanCode
+public import Stage0.Senke.Ausdruck.Aggregat.Footprint
+public import Stage0.Senke.Ausdruck.Quant.Memory
+public import Stage0.Senke.Ausdruck.Quant.Literal
+public import Stage0.Senke.Welt.WeltAt
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

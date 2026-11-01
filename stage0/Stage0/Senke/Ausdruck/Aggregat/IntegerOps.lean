@@ -3,12 +3,15 @@
   Subject:   The integer division, remainder, bitwise and shift cases of `lowE_ok`, one theorem each: the two
              operands' lowerings (as induction hypotheses) give the operation's word. Split out of `Satz.lean`.
 -/
-import Stage0.Senke.Ausdruck.Top
-import Stage0.Senke.Ausdruck.Wort
-import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Shift
-import Stage0.Senke.Ausdruck.Aggregat.WideInt.Ring
+module
+public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Wort
+public import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Shift
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Ring
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

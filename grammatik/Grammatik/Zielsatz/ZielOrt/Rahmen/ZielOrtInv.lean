@@ -29,7 +29,10 @@
   `ret`. The replay's sequential return world then agrees with the machine's
   on them (`popS_inv`, the invariant twin of `popS_ens`).
 -/
-import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+module
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

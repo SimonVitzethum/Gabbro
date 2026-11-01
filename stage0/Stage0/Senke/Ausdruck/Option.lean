@@ -1,6 +1,9 @@
 /- Subject: The option-presence test, kept outside the main expression recursion. -/
-import Stage0.Senke.Ausdruck.Lesen
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Ausdruck.Lesen
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {reserved : Nat}

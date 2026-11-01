@@ -3,8 +3,11 @@
   Subject:   REPRESENTATIVES of the blocks and end blocks (`blockS_rep`, `endS_rep`), as `Kompakt/Anweisung.lean` for the
              statements: the same constructor over the parts' representatives, standing for it.
 -/
-import Grammatik.Gen.Erzeuger.Kompakt.Anweisung
-import Grammatik.Gen.Erzeuger.BlockVollst
+module
+public import Grammatik.Gen.Erzeuger.Kompakt.Anweisung
+public import Grammatik.Gen.Erzeuger.BlockVollst
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

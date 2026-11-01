@@ -1,7 +1,10 @@
 /- Image stack initialization from the shared value encoder's words. This module only
    serializes words; it defines no alternative value encoding or startup execution path. -/
-import Stage0.Senke.Welt.StartLayout
-import Stage0.Senke.BildLese
+module
+public import Stage0.Senke.Welt.StartLayout
+public import Stage0.Senke.BildLese
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

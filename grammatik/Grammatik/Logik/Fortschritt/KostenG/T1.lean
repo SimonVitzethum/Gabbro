@@ -36,9 +36,12 @@
   No `mathlib`, no `sorry`, no `axiom`.
 -/
 
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
-import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
+public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

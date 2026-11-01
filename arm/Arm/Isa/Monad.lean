@@ -7,7 +7,10 @@
   Sail:      sail-arm/arm-v9.4-a/src/interface.sail and mem.sail (memory accessors),
              sail/lib/concurrency_interface (the events a multicore model consumes).
 -/
-import Arm.Basic
+module
+public import Arm.Basic
+@[expose] public section
+
 
 namespace Arm
 

@@ -13,9 +13,12 @@
     and leaves; 9 own steps of the start frame against its bound.
 -/
 
-import Grammatik.Logik.Fortschritt.KostenG
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
-import Grammatik.Logik.Vertraege.AxiomVertrag
+module
+public import Grammatik.Logik.Fortschritt.KostenG
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+public import Grammatik.Logik.Vertraege.AxiomVertrag
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

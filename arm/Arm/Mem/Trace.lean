@@ -10,8 +10,11 @@
              the `Barrier` union of
              sail-arm/arm-v9.4-a/src/interface.sail lines 166-189.
 -/
-import Arm.Mem.Event
-import Arm.Isa.Monad
+module
+public import Arm.Mem.Event
+public import Arm.Isa.Monad
+@[expose] public section
+
 
 namespace Arm
 

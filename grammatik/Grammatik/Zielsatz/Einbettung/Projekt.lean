@@ -1,5 +1,8 @@
-import Grammatik.Zielsatz.Einbettung.Zeuge
-import Grammatik.Zielsatz.Projekte.Komposition
+module
+public import Grammatik.Zielsatz.Einbettung.Zeuge
+public import Grammatik.Zielsatz.Projekte.Komposition
+@[expose] public section
+
 
 /-!
   File:      Grammatik/Zielsatz/Einbettung/Projekt.lean

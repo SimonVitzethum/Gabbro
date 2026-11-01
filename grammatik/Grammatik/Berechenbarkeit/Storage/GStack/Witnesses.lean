@@ -1,6 +1,9 @@
-import Grammatik.Berechenbarkeit.Storage.GStack.Termination
-import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
-import Grammatik.Zielsatz.Kern.Akzeptiert
+module
+public import Grammatik.Berechenbarkeit.Storage.GStack.Termination
+public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.Witnesses
 

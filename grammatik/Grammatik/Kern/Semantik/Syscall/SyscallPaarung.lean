@@ -13,8 +13,11 @@
    conditional recording) plus the decoded contract -- the syscall needs
    no named assumption.
 -/
-import Grammatik.Kern.Semantik.Syscall.Syscall
-import Grammatik.Kern.Syntax.Satz
+module
+public import Grammatik.Kern.Semantik.Syscall.Syscall
+public import Grammatik.Kern.Syntax.Satz
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

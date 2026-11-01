@@ -11,8 +11,11 @@
    stores to edge maps (per-table projection), the `chain`-domain
    bridge, fuel completeness past slot count.
 -/
-import Grammatik.Kern.Semantik.Semantik
-import Grammatik.GabbroV.GvVerkettung
+module
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.GabbroV.GvVerkettung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.GabbroV
 

@@ -1,6 +1,9 @@
-import Grammatik.Bausteine.Arena.Ownership.Source.ArgumentFlow
-import Grammatik.Bausteine.Arena.Ownership.Source.Accounting
-import Grammatik.Bausteine.Arena.Ownership.FreshFrame
+module
+public import Grammatik.Bausteine.Arena.Ownership.Source.ArgumentFlow
+public import Grammatik.Bausteine.Arena.Ownership.Source.Accounting
+public import Grammatik.Bausteine.Arena.Ownership.FreshFrame
+@[expose] public section
+
 
 /-! General ownership interfaces. They describe parameter modes and the
 result's ownership, independently of any particular implementation shape.

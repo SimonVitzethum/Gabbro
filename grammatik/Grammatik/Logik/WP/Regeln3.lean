@@ -1,4 +1,7 @@
-import Grammatik.Logik.WP.Regeln2
+module
+public import Grammatik.Logik.WP.Regeln2
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: fallible calls, tagged matches, indirect calls

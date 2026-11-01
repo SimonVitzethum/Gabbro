@@ -19,8 +19,11 @@
   record sees; (2) a G step from there -- `akteurSA` for `u`, the rely for every other thread;
   (3) the successor's memory -- again a change at shared atomics only.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarAkteur
-import Grammatik.Speichermodell.Atomar.Atomar
+module
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur
+public import Grammatik.Speichermodell.Atomar.Atomar
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

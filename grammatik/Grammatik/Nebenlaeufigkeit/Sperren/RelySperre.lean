@@ -13,10 +13,13 @@
   `L`-guarded global unchanged (`blatt_erhaelt_globs`, proved here as the
   global mirror). Take/release steps keep memory by construction.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Nebenlaeufigkeit.Sperren.Ressourceninvariante
-import Grammatik.Korpus.Referenz.ReferenzB
-import Grammatik.Nebenlaeufigkeit.Allgemein.WacheGlobal
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ressourceninvariante
+public import Grammatik.Korpus.Referenz.ReferenzB
+public import Grammatik.Nebenlaeufigkeit.Allgemein.WacheGlobal
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

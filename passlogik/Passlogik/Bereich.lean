@@ -44,6 +44,10 @@
          `device`-Registerstelle instabil ist, liest der Pass aus der Deklaration ab.
 -/
 
+module
+
+@[expose] public section
+
 namespace Passlogik.Bereich
 
 /-! ## 0. Zwei Hilfsfunktionen, damit die Datei ohne `mathlib` steht -/

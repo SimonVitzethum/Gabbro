@@ -1,7 +1,10 @@
 /- Typed frame selection uses the common physical pointer transport. -/
-import Stage0.Senke.Ausdruck.Quant.Memory
-import Stage0.Senke.Ausdruck.Eng
-import Stage0.Senke.Ausdruck.Aggregat.Scalar
+module
+public import Stage0.Senke.Ausdruck.Quant.Memory
+public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Aggregat.Scalar
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

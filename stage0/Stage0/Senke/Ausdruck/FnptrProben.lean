@@ -1,7 +1,10 @@
 /-
   Subject: Non-degenerate function-pointer fixtures, including a global unavailable in the surface front end.
 -/
-import Stage0.Senke.BildLese
+module
+public import Stage0.Senke.BildLese
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.FnptrProben
 open Gabbro.Grammatik Runner.IR

@@ -1,4 +1,7 @@
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 /-!
 # GabbroV over machine G: the weakest-precondition calculus

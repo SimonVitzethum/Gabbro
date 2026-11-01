@@ -1,5 +1,8 @@
 /- Canonical word widths for copied values and all frame/parameter offsets. -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

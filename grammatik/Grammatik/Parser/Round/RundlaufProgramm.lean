@@ -23,7 +23,10 @@
   `rundlauf_programm` -- for printable items whose print is lexically clean,
   `parseTopTief` of `lex (renderText (druckItems its))` is `.ok its`.
 -/
-import Grammatik.Parser.Round.RundlaufGeraet
+module
+public import Grammatik.Parser.Round.RundlaufGeraet
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser
 

@@ -41,10 +41,13 @@
   unconditional in that hypothesis. See `messung/muse/OPUS-BERICHT-RAHMEN.md`
   and `-KONGRUENZ.md`.
 -/
-import Grammatik.Logik.Vertraege.RahmenTreu
-import Grammatik.Logik.Ruf.RufTiefe
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+module
+public import Grammatik.Logik.Vertraege.RahmenTreu
+public import Grammatik.Logik.Ruf.RufTiefe
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

@@ -40,6 +40,9 @@
       the re-view and its source are not separated.
 -/
 
-import Grammatik.Logik.Vertraege.ObjektRahmen.T1
-import Grammatik.Logik.Vertraege.ObjektRahmen.T2
-import Grammatik.Logik.Vertraege.ObjektRahmen.T3
+module
+public import Grammatik.Logik.Vertraege.ObjektRahmen.T1
+public import Grammatik.Logik.Vertraege.ObjektRahmen.T2
+public import Grammatik.Logik.Vertraege.ObjektRahmen.T3
+@[expose] public section
+

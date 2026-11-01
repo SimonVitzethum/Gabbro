@@ -5,7 +5,10 @@
              room for one take less; the give, from there, puts back exactly the owner and count it found
              (`nimm_paar`, `gib_paar`).
 -/
-import Stage0.Senke.Sperre.Lauf
+module
+public import Stage0.Senke.Sperre.Lauf
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

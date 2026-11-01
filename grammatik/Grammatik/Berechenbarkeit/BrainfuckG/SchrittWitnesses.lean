@@ -1,5 +1,8 @@
-import Grammatik.Berechenbarkeit.BrainfuckG.Schritt
-import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
+module
+public import Grammatik.Berechenbarkeit.BrainfuckG.Schritt
+public import Grammatik.Berechenbarkeit.Storage.GStack.MultiWitnesses
+@[expose] public section
+
 
 /-! Witnesses of `befehl_schritt` and `befehl_voll` over a concrete declaration with the four Brainfuck stacks in
 one arena of four cells: `BD` is `MultiWitnesses.MD` with seven words, so words 3 to 6 head the left tape, the

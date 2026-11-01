@@ -30,7 +30,10 @@
   (the side condition of delimited release). See
   `dokumente/NICHTINTERFERENZ.md`, §8.
 -/
-import Grammatik.Nichtinterferenz.Zeuge
+module
+public import Grammatik.Nichtinterferenz.Zeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

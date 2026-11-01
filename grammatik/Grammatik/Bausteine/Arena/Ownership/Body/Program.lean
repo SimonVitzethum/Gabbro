@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Sound
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Sound
+@[expose] public section
+
 
 /-! **Checked programs.** A program is checked against an interface table
 when every function body derives in the body judgment from its parameter

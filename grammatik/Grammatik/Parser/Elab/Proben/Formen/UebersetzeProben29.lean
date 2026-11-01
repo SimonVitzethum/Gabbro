@@ -8,7 +8,10 @@
              (statics only); `A = v publishes { p, q };` (`Stmt.publish`) and `let x = A awaits { p, q };`
              (`Block.awaits`, a `Block` form only) must name exactly the declared payload.
 -/
-import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+module
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Parser.UebersetzeProben29
 

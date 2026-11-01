@@ -1,6 +1,9 @@
 /- Subject: Large-lower-bound tag decoding on actual code bytes and frame memory. -/
-import Stage0.Senke.Anweisung.Faelle.Tag
-import Stage0.Senke.Ausdruck.Aggregat.Proben
+module
+public import Stage0.Senke.Anweisung.Faelle.Tag
+public import Stage0.Senke.Ausdruck.Aggregat.Proben
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.TagDecodeProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

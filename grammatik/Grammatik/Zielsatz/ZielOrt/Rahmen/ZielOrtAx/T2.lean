@@ -1,5 +1,8 @@
 /- Part 2 of 2 of `ZielOrtAx` (split by instrumente/teile/lean-teilen.py; the umbrella `ZielOrtAx.lean` imports all parts). -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.T1
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.T1
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

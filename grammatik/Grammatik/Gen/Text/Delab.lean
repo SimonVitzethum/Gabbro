@@ -20,9 +20,12 @@
   Partial: a form without a spelling is an error naming it; the delaborator prints every form it accepts as
   itself, never a substitute (`awaits` needs an atomic static in the model, as in the language).
 -/
-import Grammatik.Gen.Zeugen.Schluss
-import Grammatik.Parser.Round.RundlaufProgramm
-import Grammatik.Parser.Cover.Mitglieder
+module
+public import Grammatik.Gen.Zeugen.Schluss
+public import Grammatik.Parser.Round.RundlaufProgramm
+public import Grammatik.Parser.Cover.Mitglieder
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

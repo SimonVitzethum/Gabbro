@@ -32,7 +32,10 @@
   whose reads is in `T`, `execStmtHA` IS `execStmtH` for every havoc in the class; in
   particular for `T` empty or the identity havoc (`execEndHA_id`).
 -/
-import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+module
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

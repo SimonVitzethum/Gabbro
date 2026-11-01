@@ -23,10 +23,13 @@
     from the closure (`w_abg_wahr`) and the discipline (`w_masken_wahr`), the schedule derived
     from the guards, not assumed.
 -/
-import Grammatik.Zielsatz.Eigenschaften.KernMaske
-import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
-import Grammatik.Zielsatz.Kern.Akzeptiert
-import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
+module
+public import Grammatik.Zielsatz.Eigenschaften.KernMaske
+public import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
+@[expose] public section
+
 namespace Gabbro.Grammatik.Zielsatz.KernMaskeFix
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 

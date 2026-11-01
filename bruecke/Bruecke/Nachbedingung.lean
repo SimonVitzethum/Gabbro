@@ -1,5 +1,8 @@
-import Bruecke.Anweisung
-import Bruecke.Start
+module
+public import Bruecke.Anweisung
+public import Bruecke.Start
+@[expose] public section
+
 
 /-!
 # S3, part 4: what the lowering says about the program, and a function's promise

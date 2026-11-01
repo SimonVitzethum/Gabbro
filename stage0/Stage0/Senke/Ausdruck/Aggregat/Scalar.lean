@@ -1,5 +1,8 @@
 /- The single-word fast path is a specialization of the complete value encoding. -/
-import Stage0.Senke.Ausdruck.Sim
+module
+public import Stage0.Senke.Ausdruck.Sim
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

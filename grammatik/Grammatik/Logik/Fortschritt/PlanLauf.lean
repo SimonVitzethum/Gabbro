@@ -11,8 +11,11 @@
     (`ordnung`). That is the ticket lock of Code/Conc/Lock.lean (`fetch_add` on `next`, spin on `serving`).
   * `Fair` -- weak fairness: a thread that can step at every scheduler step from some point on takes a step.
 -/
-import Grammatik.Logik.Ruf.Maschine.RufMaschineG
-import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+module
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

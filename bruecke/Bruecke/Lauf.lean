@@ -1,4 +1,7 @@
-import Bruecke.Nachbedingung
+module
+public import Bruecke.Nachbedingung
+@[expose] public section
+
 
 /-!
 # S3, part 5: the run -- a body of the parser's fragment, on G and on `Gabbro.Body`

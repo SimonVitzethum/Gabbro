@@ -7,7 +7,10 @@
   `m`) with `phi (m + c)` read from the limbs of `phi m` through `src c`. After `S` stages the limbs
   are those of `phi (q mod 2^S)`; for `q < 2^S` the limb count is realised exactly.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Stage
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Stage
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

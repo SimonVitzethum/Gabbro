@@ -7,7 +7,10 @@
   Witness: `miniNb`, one declared pair set, with a checked membership.
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
-import Grammatik.Kern.Syntax.Extraktion
+module
+public import Grammatik.Kern.Syntax.Extraktion
+@[expose] public section
+
 
 open Gabbro.Grammatik
 

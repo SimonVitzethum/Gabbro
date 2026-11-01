@@ -43,9 +43,12 @@
   functions declare no reasons (§2a: `StartOhneGrund`, `KeinStartGrundG`),
   so `StartEndeG` covers every completion of a start function.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
-import Grammatik.Kern.Semantik.Durchgaenge
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+public import Grammatik.Kern.Semantik.Durchgaenge
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

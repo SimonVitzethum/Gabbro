@@ -10,8 +10,11 @@
   Sail:      sail-arm/arm-v9.4-a/src/instrs64.sail (`execute` clauses),
              sail-arm/arm-v9.4-a/src/v8_base.sail (shared pseudocode).
 -/
-import Arm.Isa.IntCore
-import Arm.Isa.IntMasks
+module
+public import Arm.Isa.IntCore
+public import Arm.Isa.IntMasks
+@[expose] public section
+
 
 namespace Arm.Int
 

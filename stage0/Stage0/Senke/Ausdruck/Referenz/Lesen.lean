@@ -1,8 +1,11 @@
 /- Subject: Open-table references are checked cell indices in separately supplied regions.
    No word is converted to a pointer: slotA derives addresses from the layout's column base.
    Enc ties the index to its declared open table and represented cells, without bounding G. -/
-import Stage0.Senke.Ausdruck.Lesen
-import Stage0.Senke.Ausdruck.Aggregat.Wort
+module
+public import Stage0.Senke.Ausdruck.Lesen
+public import Stage0.Senke.Ausdruck.Aggregat.Wort
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

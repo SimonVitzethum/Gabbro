@@ -7,7 +7,10 @@
   Every limb computes `A := A + (B xor mask) + carry`. Mask 0 and carry 0 add; mask all ones and
   carry 1 subtract (`x + ~y + 1`), both modulo `2^(64k)`.
 -/
-import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
+module
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Runner.IR

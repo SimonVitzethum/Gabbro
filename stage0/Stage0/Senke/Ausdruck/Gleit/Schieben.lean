@@ -1,6 +1,9 @@
 /- Saturating right shift with sticky information for significand alignment. -/
-import Stage0.Senke.Ausdruck.Gleit.Komposition
-import Mathlib.Tactic.Ring
+module
+public import Stage0.Senke.Ausdruck.Gleit.Komposition
+public import Mathlib.Tactic.Ring
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

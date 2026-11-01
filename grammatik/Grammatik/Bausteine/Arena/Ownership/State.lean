@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Struktur.ArenaLebt
+module
+public import Grammatik.Bausteine.Arena.Struktur.ArenaLebt
+@[expose] public section
+
 
 /-!
 Ghost ownership of allocations in the existing arena world. A storage slot can be

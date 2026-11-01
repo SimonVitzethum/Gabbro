@@ -17,8 +17,11 @@
     ends in `abstieg`. The checker only checks THAT every recursion cycle that is not a tail-call cycle carries a
     measure (`Klasse.lean`); that the measure falls is the user's logic, as `ensures` is.
 -/
-import Grammatik.Logik.Terminierung.Klasse
-import Grammatik.Speichermodell.Atomar.AtomarRec
+module
+public import Grammatik.Logik.Terminierung.Klasse
+public import Grammatik.Speichermodell.Atomar.AtomarRec
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

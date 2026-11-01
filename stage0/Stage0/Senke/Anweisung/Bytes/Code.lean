@@ -1,5 +1,8 @@
 /- Subject: Byte writes capture the value and index before changing the world. -/
-import Stage0.Senke.Ausdruck
+module
+public import Stage0.Senke.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR

@@ -1,7 +1,10 @@
 /- Concrete slot-bound conversion fixtures and child composition. -/
-import Stage0.Senke.BildLese
-import Stage0.Senke.Ausdruck.Gleit.Emission
-import Stage0.Senke.Ausdruck.Gleit.SlotContext
+module
+public import Stage0.Senke.BildLese
+public import Stage0.Senke.Ausdruck.Gleit.Emission
+public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

@@ -16,7 +16,10 @@
   index outside the table, an index variable of another table, a `bool` result inside an `ensures` (the
   elaborator reads `result` only as a number), and every form the delaborator does not print.
 -/
-import Grammatik.Gen.Text.Invers.Namen
+module
+public import Grammatik.Gen.Text.Invers.Namen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Text
 

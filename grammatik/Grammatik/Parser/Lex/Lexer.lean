@@ -7,6 +7,11 @@
   stub `lex`. The full scanner lands in the next step.
 -/
 
+module
+
+import all Init.Data.Repr
+@[expose] public section
+
 namespace Gabbro.Grammatik.Parser
 
 /-- A surface token. Keywords carry their spelling (`wort "module"`);

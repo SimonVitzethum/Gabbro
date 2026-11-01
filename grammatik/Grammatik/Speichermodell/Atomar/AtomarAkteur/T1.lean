@@ -10,7 +10,10 @@
   the shared atomics is what the weak memory presented (machine GA, Atomar.lean). Nothing here
   depends on how `M` was reached: the replay invariant `FadenSA` is the whole premise.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarReplay
+module
+public import Grammatik.Speichermodell.Atomar.AtomarReplay
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

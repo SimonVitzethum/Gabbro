@@ -1,6 +1,9 @@
 /- The start environment of `main`: every parameter is the one pointer to the table its type names (G's value `()`,
    encoded as the zero word). A parameter of another type has no start-argument form in the source and is refused. -/
-import Stage0.Senke.Ausdruck.Aggregat.Encoding
+module
+public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

@@ -14,8 +14,13 @@
   The hash is `Expr.hash` of the definition bodies (structural, independent of binder names); it can also move with a
   change of the Lean toolchain, in which case the pin is updated the same way.
 -/
-import Lean
-import Grammatik.Gen.Abdeckung.Zellen
+module
+public import Lean
+public import Grammatik.Gen.Abdeckung.Zellen
+meta import Lean
+meta import Grammatik.Gen.Abdeckung.Zellen
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.ZellenPruefung
 
@@ -62,18 +67,18 @@ def huelleHash (env : Environment) (start : Name) : UInt64 :=
 
 /-- The pinned hashes (label, hash). Update them as described in the header after reading the component again. -/
 def erwartet : List (String × UInt64) :=
-  [("0 fragment", 16076247631569816639),
-   ("1 closedness", 14437300862753738475),
-   ("2 footprint", 2767977741513963976),
-   ("3 lock ranks", 873409580537044381),
+  [("0 fragment", 11514548546651582732),
+   ("1 closedness", 3601390303670231260),
+   ("2 footprint", 1196291269720123943),
+   ("3 lock ranks", 14126071299982961538),
    ("4 lock sites", 10233556393123137737),
    ("5 roots", 17739234837013753632),
-   ("6 single pool", 15692977862377011820),
-   ("7 race freedom", 210137902929036511),
-   ("8 answers", 5914419352988512184),
-   ("9 masks", 112253912779353348),
-   ("komp", 8055307521360805468),
-   ("AkzeptiertX", 17177594793728375066)]
+   ("6 single pool", 14541363968094309171),
+   ("7 race freedom", 5875463811446301000),
+   ("8 answers", 4064949328991724195),
+   ("9 masks", 15820580103830642383),
+   ("komp", 1257054801379534739),
+   ("AkzeptiertX", 11041379899201812585)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do

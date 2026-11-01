@@ -48,7 +48,10 @@
   frame fact about `rufAt` (`RespektiertRahmen`) is a different statement and
   is NOT proved here (see `RufLogik.lean` and the report).
 -/
-import Grammatik.Kern.Semantik.Semantik
+module
+public import Grammatik.Kern.Semantik.Semantik
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

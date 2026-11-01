@@ -1,5 +1,8 @@
-import Grammatik.Code.Refine.Match.PayCode
-import Grammatik.Code.Refine.Match.Scope
+module
+public import Grammatik.Code.Refine.Match.PayCode
+public import Grammatik.Code.Refine.Match.Scope
+@[expose] public section
+
 
 /-
   File:      Grammatik/Code/Refine/Match/Arms.lean

@@ -14,9 +14,12 @@
   coverage side-condition `hcov : forall h, h notin fs -> prog h = []`.
   On the witness it is proved from the program definition, not assumed.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Kern.Syntax.Extraktion
-import Grammatik.Korpus.Referenz.ReferenzB
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Extraktion
+public import Grammatik.Korpus.Referenz.ReferenzB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

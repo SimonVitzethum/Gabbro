@@ -7,7 +7,10 @@
   dropped, the value premises (`hw`, `hv`, `hstep`, …) decide the branch of
   the function, and both sides are the same term.
 -/
-import Grammatik.Nichtinterferenz.Schritt
+module
+public import Grammatik.Nichtinterferenz.Schritt
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

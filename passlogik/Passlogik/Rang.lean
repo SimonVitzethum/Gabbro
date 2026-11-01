@@ -40,6 +40,10 @@
          ausserhalb (§5b in `messung/H006.md`). §6 macht das als Satz sichtbar.
 -/
 
+module
+
+@[expose] public section
+
 namespace Passlogik.Rang
 
 variable {T L : Type u}

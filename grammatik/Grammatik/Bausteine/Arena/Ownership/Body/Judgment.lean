@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Shapes
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Shapes
+@[expose] public section
+
 
 /-! **The general ownership body judgment** over G's actual syntax.
 

@@ -2,7 +2,10 @@
   File:      stage0/Stage0/Senke/Hilfe.lean
   Subject:   Tools for `ir_sim`: code split in parts, field values, writing a frame slot, one instruction as a step.
 -/
-import Stage0.Senke.Ausdruck
+module
+public import Stage0.Senke.Ausdruck
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 

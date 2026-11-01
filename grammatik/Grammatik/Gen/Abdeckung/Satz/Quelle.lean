@@ -5,7 +5,10 @@
              foreign body (`einsatz_8_ax`); and a cell no program of the model has, no program of the source has
              (`nie_hat`).
 -/
-import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+module
+public import Grammatik.Gen.Abdeckung.Satz.ZellenVoll
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen
 

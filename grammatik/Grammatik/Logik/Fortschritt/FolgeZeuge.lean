@@ -26,8 +26,11 @@
     (`eP2_folge50_falsch`), and on a reached run the order FAILS while "both happened" holds
     (`folge50_gegen`): the premise of the leg is needed, and `flush ∧ reply` is weaker.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
-import Grammatik.Logik.Fortschritt.FolgeBeweis
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
+public import Grammatik.Logik.Fortschritt.FolgeBeweis
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

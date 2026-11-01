@@ -7,6 +7,10 @@
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
 
+module
+
+@[expose] public section
+
 /-- Gap #14: a line comment starts at `//`. -/
 def p22CommentStart (s : String) : Bool :=
   match s.toList with

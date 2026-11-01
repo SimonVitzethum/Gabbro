@@ -1,7 +1,10 @@
 /- Subject: Extract bytes with unsigned shifts, including the top bit of a full word. -/
-import Stage0.Senke.Anweisung.Bytes.Code
-import Stage0.Senke.Ausdruck.Lesen
-import Stage0.Senke.Umgebung
+module
+public import Stage0.Senke.Anweisung.Bytes.Code
+public import Stage0.Senke.Ausdruck.Lesen
+public import Stage0.Senke.Umgebung
+@[expose] public section
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 

@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Holds
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Holds
+@[expose] public section
+
 
 /-! **The ledger seen from one activation of the running machine.** One
 ledger serves every thread. A cell belongs to the thread of its owner; its

@@ -34,8 +34,11 @@
     runs a function of `K t`; a thread-local carrier is therefore not
     written.
 -/
-import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
-import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal
+module
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

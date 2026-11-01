@@ -1,5 +1,8 @@
 /- Subject: Equality of long strings is equality of the first `min n m + 1` words of their encodings. -/
-import Stage0.Senke.Ausdruck.Aggregat.StringOps
+module
+public import Stage0.Senke.Ausdruck.Aggregat.StringOps
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik

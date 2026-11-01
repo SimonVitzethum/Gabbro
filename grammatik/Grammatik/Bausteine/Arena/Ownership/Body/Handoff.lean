@@ -1,4 +1,7 @@
-import Grammatik.Bausteine.Arena.Ownership.Body.Holds
+module
+public import Grammatik.Bausteine.Arena.Ownership.Body.Holds
+@[expose] public section
+
 
 /-! The ledger side of a call. At the call the caller hands its owning
 arguments to the fresh callee activation (each moved allocation gets a new

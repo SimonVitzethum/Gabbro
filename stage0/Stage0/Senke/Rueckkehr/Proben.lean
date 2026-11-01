@@ -1,6 +1,9 @@
 /- Joint witness for publishing a complete result across the snapshot prefix. -/
-import Stage0.Senke.Rueckkehr.Publish
-import Stage0.Senke.Ausdruck.Old.Distinct
+module
+public import Stage0.Senke.Rueckkehr.Publish
+public import Stage0.Senke.Ausdruck.Old.Distinct
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke.ReturnProtocolProbe
 open Gabbro.Grammatik Runner.IR Runner.Mem

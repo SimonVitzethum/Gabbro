@@ -1,6 +1,9 @@
 /- The checked function-entry frame protocol: preserve parameters, capture complete
    entry values, then establish the writable lexical parameter environment. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
+module
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
+@[expose] public section
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

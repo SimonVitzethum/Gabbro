@@ -30,8 +30,11 @@
   needs `Q` to read only the axiom's declared carriers of the post world
   (`AxEnsLokal`), the class the replay can transfer.
 -/
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
-import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+module
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

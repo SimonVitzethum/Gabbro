@@ -27,11 +27,14 @@
     and the four invariant legs of Opus agent D (Zielsatz/AtomarInvarianten.lean).
   * `rennfrei_atomar_spec` -- race freedom on every run of W, for every non-atomic carrier.
 -/
-import Grammatik.Speichermodell.Atomar.AtomarZiel
-import Grammatik.Zielsatz.Atomar.AtomarInvarianten
-import Grammatik.Zielsatz.Atomar.AtomarMasken
-import Grammatik.Zielsatz.Atomar.AtomarPflicht
-import Grammatik.Zielsatz.Kern.Akzeptiert
+module
+public import Grammatik.Speichermodell.Atomar.AtomarZiel
+public import Grammatik.Zielsatz.Atomar.AtomarInvarianten
+public import Grammatik.Zielsatz.Atomar.AtomarMasken
+public import Grammatik.Zielsatz.Atomar.AtomarPflicht
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Zielsatz
 

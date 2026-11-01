@@ -68,8 +68,11 @@
   the genuine types (`GemeinsamerLauf`, `TraegerInv`, `Programm`).
 -/
 
-import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
-import Grammatik.Kern.Syntax.Extraktion
+module
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+public import Grammatik.Kern.Syntax.Extraktion
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

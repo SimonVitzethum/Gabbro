@@ -41,8 +41,11 @@
     up to the residue (function, rho, s0) before it can be preserved.
   - The CUTS note "`blatt` never advances the residue" is stale: it does.
 -/
-import Grammatik.Kern.Semantik.Maschine
-import Grammatik.Logik.Vertraege.VertragOrtB
+module
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Logik.Vertraege.VertragOrtB
+@[expose] public section
+
 
 namespace Gabbro.Grammatik
 

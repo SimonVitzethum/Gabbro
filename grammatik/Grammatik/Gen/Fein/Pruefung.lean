@@ -5,8 +5,13 @@
              whether it is a foreign body, and per child its family, the type class an expression child must have and
              the loop context of a statement child. A changed constructor stops the build here until `kTab` follows.
 -/
-import Lean
-import Grammatik.Gen.Fein.Universum
+module
+public import Lean
+public import Grammatik.Gen.Fein.Universum
+meta import Lean
+meta import Grammatik.Gen.Fein.Universum
+@[expose] public section
+
 
 namespace Gabbro.Grammatik.Gen.Fein
 

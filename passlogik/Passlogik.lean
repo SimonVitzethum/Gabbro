@@ -20,10 +20,13 @@
   | `Linear.lean`      | M2 -- genau einmal je Pfad                      |
   | `Phasen.lean`      | `O001`-`O006` -- `advances` laeuft vorwaerts    |
 -/
-import Passlogik.Bereich
-import Passlogik.Wirkung
-import Passlogik.Kosten
-import Passlogik.Rang
-import Passlogik.Terminierung
-import Passlogik.Linear
-import Passlogik.Phasen
+module
+public import Passlogik.Bereich
+public import Passlogik.Wirkung
+public import Passlogik.Kosten
+public import Passlogik.Rang
+public import Passlogik.Terminierung
+public import Passlogik.Linear
+public import Passlogik.Phasen
+@[expose] public section
+
