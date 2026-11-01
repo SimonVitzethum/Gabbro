@@ -67,6 +67,10 @@ expanding infrastructure for a small subset.
   retired Lean execution path.
 - **Never rebuild `grammatik/` for this task.** Reuse its existing compiled artifacts. Run affected Stage-0
   compilation checks directly; do not invoke a build or guardian that would rebuild the grammar.
+  **Exception (owner, 2026-11-01):** pure source-to-G exports in `grammatik/Grammatik/Parser/Elab/*` for
+  forms whose canonical model rule already exists may be added, batched into ONE change by ONE agent with
+  one grammar rebuild (inside the two-slot limit), `gabbro_ziel` still on the standard axioms and the Lean
+  guardian afterwards. Missing model rules remain an owner decision.
 - **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
   slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 
