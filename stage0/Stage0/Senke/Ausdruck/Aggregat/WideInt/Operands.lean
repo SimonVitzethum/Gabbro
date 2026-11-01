@@ -8,6 +8,7 @@
   execution theorem in `Arithmetik/Wide`. Nothing here depends on which operator runs.
 -/
 import Stage0.Senke.Ausdruck.Sim
+import Stage0.Senke.Welt.Spans.Cell
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Extend
 import Stage0.Senke.Ausdruck.Aggregat.WideInt.Fits
 

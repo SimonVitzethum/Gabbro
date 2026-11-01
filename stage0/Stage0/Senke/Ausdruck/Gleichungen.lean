@@ -106,46 +106,51 @@ theorem lowE_literal_boundaries_zeuge :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.add a b) d =
     (if valueWords (.int (l1 + l2) (h1 + h2)) = 1 then
       do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 3 d ca cb)
-    else none) := rfl
+    else wideAddL l1 h1 l2 h2 (l1 + l2) (h1 + h2) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_sub (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.sub a b) d =
     (if valueWords (.int (l1 - h2) (h1 - l2)) = 1 then
       do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 4 d ca cb)
-    else none) := rfl
+    else wideSubL l1 h1 l2 h2 (l1 - h2) (h1 - l2) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_neg (a : Expr D Γ Λ (.int lo hi)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.neg a) d =
     (if valueWords (.int (-hi) (-lo)) = 1 then
       do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
-    else none) := rfl
+    else wideNegL lo hi (-hi) (-lo) d (lowE L (reserved := reserved) a)) := rfl
 
 @[lowE_eqs] theorem lowE_mul (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.mul a b) d =
     (if valueWords (.int (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
       (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2)))) = 1 then
       do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 5 d ca cb)
-    else none) := rfl
+    else wideMulL l1 h1 l2 h2 (imin (imin (l1*l2) (l1*h2)) (imin (h1*l2) (h1*h2)))
+      (imax (imax (l1*l2) (l1*h2)) (imax (h1*l2) (h1*h2))) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_div (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.div h0 h1' a b) d =
-    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 25 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 25 d ca cb)
+    else wideDivL l1 h1 l2 h2 0 h1 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_rem (h0 : 0 ≤ l1) (h1' : 1 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.rem h0 h1' a b) d =
-    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 26 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 26 d ca cb)
+    else wideRemL l1 h1 l2 h2 0 (h2 - 1) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_sdiv (hb : 1 ≤ l2 ∨ h2 ≤ -1) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.sdiv hb a b) d =
     (if inWE a && inWE b && nichtMin a then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 6 d ca cb)
-    else none) := rfl
+    else wideSdivL l1 h1 l2 h2 (-(betragMax l1 h1)) (betragMax l1 h1) d
+      (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_srem (hb : 1 ≤ l2 ∨ h2 ≤ -1) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.srem hb a b) d =
     (if inWE a && inWE b && nichtMin a then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 7 d ca cb)
-    else none) := rfl
+    else wideSremL l1 h1 l2 h2 (-(betragMax l2 h2 - 1)) (betragMax l2 h2 - 1) d
+      (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_getBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
       (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) :
@@ -154,47 +159,54 @@ theorem lowE_literal_boundaries_zeuge :
 
 @[lowE_eqs] theorem lowE_band (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.band h0 h0' a b) d =
-    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb) else none) := rfl
+    (if inUE a && inUE b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb)
+    else wideBitL 8 l1 h1 l2 h2 0 h1 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_bor (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
       (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.bor w h0 h0' hw1 hw2 a b) d =
     (if inUE a && inUE b then resizeIntegerL 0 (2 ^ 64 - 1) 0 (2 ^ w - 1) d
-      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb)) else none) := rfl
+      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb))
+    else wideBitL 9 l1 h1 l2 h2 0 (2 ^ w - 1) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_bxor (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
       (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.bxor w h0 h0' hw1 hw2 a b) d =
     (if inUE a && inUE b then resizeIntegerL 0 (2 ^ 64 - 1) 0 (2 ^ w - 1) d
-      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb)) else none) := rfl
+      (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 10 d ca cb))
+    else wideBitL 10 l1 h1 l2 h2 0 (2 ^ w - 1) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_shl (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.shl w hw1 hw2 h0 h0' a b) d =
-    (if valueWords (.int 0 (h1 * 2 ^ h2.toNat)) = 1 then
-      if inWE b && lt64 b then do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb) else none
-    else none) := rfl
+    (if decide (valueWords (.int 0 (h1 * 2 ^ h2.toNat)) = 1) && inWE b && lt64 b then
+      do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 11 d ca cb)
+    else wideShlL l1 h1 l2 h2 0 (h1 * 2 ^ h2.toNat) d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_shr (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.shr w hw1 hw2 h0 h0' a b) d =
     (if inUE a && inUE b && lt64 b then do
       let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 12 d ca cb)
-    else none) := rfl
+    else wideShrL l1 h1 l2 h2 0 h1 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_lt (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Expr.lt a b) d =
-      scalarCompareL false d l1 h1 l2 h2
-        (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1)) := rfl
+    (if scalarFits l1 h1 && scalarFits l2 h2 then
+      scalarCompareL false d l1 h1 l2 h2 (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+    else wideLtL l1 h1 l2 h2 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_le (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Expr.le a b) d = (do
+    lowE L (reserved := reserved) (Expr.le a b) d =
+    (if scalarFits l1 h1 && scalarFits l2 h2 then do
       let c ← scalarCompareL false d l2 h2 l1 h1
         (lowE L (reserved := reserved) b d) (lowE L (reserved := reserved) a (d + 1))
-      pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))) := rfl
+      pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))
+    else wideLeL l1 h1 l2 h2 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_eq (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE L (reserved := reserved) (Expr.eq a b) d =
-      scalarCompareL true d l1 h1 l2 h2
-        (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1)) := rfl
+    (if scalarFits l1 h1 && scalarFits l2 h2 then
+      scalarCompareL true d l1 h1 l2 h2 (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
+    else wideEqL l1 h1 l2 h2 d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)) := rfl
 
 @[lowE_eqs] theorem lowE_fllt (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.fllt a b) d =
@@ -342,6 +354,8 @@ theorem lowE_literal_boundaries_zeuge :
 
 @[lowE_eqs] theorem lowE_eng (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int) (sonst : Expr D Γ Λ (.int lo' hi')) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.eng e lo' hi' sonst) d =
-    engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) sonst d) := rfl
+    (if scalarFits lo hi && scalarFits lo' hi' then
+      engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) sonst d)
+    else wideEngL lo hi lo' hi' d (lowE L (reserved := reserved) e) (lowE L (reserved := reserved) sonst)) := rfl
 
 end Gabbro.Stage0.Senke
