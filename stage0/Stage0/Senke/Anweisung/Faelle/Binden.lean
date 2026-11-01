@@ -10,7 +10,7 @@ theorem bindValue_ok {P : Programm D} {f : D.Fn} {fp : Runner.W}
     {K Ks lo : Nat} {reserved : Nat} {rp cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)}
     {pr : List Nat} {ex : Int × Int} {l : Bool} {Γ : Ctx} {τ : Ty} {ρ : Env D Γ}
     {σ : World D} {v : Wert D τ} {ce cr : List II} {out : Ausgang (vertragVon D f) l (τ :: Γ)}
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (hd : frei Γ reserved < Ks)
     (hcode : ∀ m pc, Pre L m pc fp Ks (frei Γ reserved) ce ρ (fun m => WeltAt m L σ) reserved →
       ValueOk L m pc fp Ks (frei Γ reserved) ce τ v)

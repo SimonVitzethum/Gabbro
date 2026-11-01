@@ -92,7 +92,7 @@ theorem locks_ok {reserved : Nat} {O : Orakel D} {passes : Nat} {R : (f : D.Fn) 
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {Lk : D.Lock}
     {body : Block D (vertragVon D f) l Γ (.held Lk :: Λ) (.held Lk :: Λ)} {cb : List II}
     (hrf : retFreiB body = true) (hex1 : lit32 (16 + ex.1 + 16 * 30) = true) (hex2 : lit32 (16 + ex.2) = true)
-    (hs18 : frei Γ reserved + 18 ≤ Ks) (hW : WIn L fp Ks K) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved)
+    (hs18 : frei Γ reserved + 18 ≤ Ks) (hW : WIn L fp Ks K) (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Mem} {pc : W} {σ : World D} {ρ : Env D Γ}
     (hbody : ∀ m' σ', PreS L m' (pc + BitVec.ofNat 64 (16 * 48)) fp K (frei Γ reserved) cb ρ reserved → Umf L A C dv m' fp (Ks - 1) K →
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ' →
@@ -120,6 +120,7 @@ theorem locks_ok {reserved : Nat} {O : Orakel D} {passes : Nat} {R : (f : D.Fn) 
   have hks := hW.ks
   have hK31 := hp.small
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   have hfa : fp.toNat + 8 * (s + 18) ≤ a := by omega
   have hfh : fp.toNat + 8 * (s + 18) ≤ L.hi := by omega
   have hfl : fp.toNat + 8 * (s + 18) ≤ L.lo := by omega

@@ -178,7 +178,7 @@ theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {τ : Ty} {callee : D.Fn} {args : Args D Γ Λ (D.params callee)} {he : D.erg callee = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende callee) :: Γ) (nach D callee Λ)} {rest : Block D (vertragVon D f) l (τ :: Γ) (nach D callee Λ) Λ'} :
@@ -186,12 +186,13 @@ theorem blockCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
     BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindCallElse callee args he proof0 proof1 err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [elseTop] at hK
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega
   have hprE : ∀ j ∈ pr, j < frei (.why (D.gruende callee) :: Γ) reserved := by
@@ -229,7 +230,7 @@ theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {g : D.Fn} {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {proof0 : _} {proof1 : _} {err : Endblock D (vertragVon D f) l (.why (D.gruende g) :: Γ) (nach D g Λ)} {rest : Endblock D (vertragVon D f) l (τ :: Γ) (nach D g Λ)} :
@@ -237,12 +238,13 @@ theorem endCallElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     (∀ {pr ex}, EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
     EndCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCallElse g args he proof0 proof1 err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
-  simp only [lowEnd, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hcr, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [elseTop] at hK
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   have hlo : FB ≤ lo := by omega
   have hpr' : ∀ j ∈ pr, j < frei (τ :: Γ) reserved := by
     intro j hj; have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega

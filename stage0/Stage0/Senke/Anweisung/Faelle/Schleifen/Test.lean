@@ -19,7 +19,7 @@ variable {P : Programm D} {f : D.Fn} {fp : Runner.W}
 
 theorem retryTest_ok (hcc : lowE (reserved := reserved) L bis (frei Γ reserved) = some (cc, tc)) (ht : tc ≤ Ks)
     (hs : 16 * (cc.length + 2 + rest.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f)))
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {oe : Ausgang (vertragVon D f) l Γ}
     (helse : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) rest ρ reserved →

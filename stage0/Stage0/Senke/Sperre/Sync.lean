@@ -3,7 +3,7 @@
   Subject:   `SyncOK m L fp Ks`, what a thread's code may rely on about the locks (`PLAN-SELF-HOSTING.md` §2.1.6):
              the frame at `fp` lies in the thread's stack (`meW L fp` is the thread's number + 1, also for every
              frame above it within `Ks` slots); every lock's three words lie above the world, apart from each
-             other, writable; nobody waits, and a lock is free (owner 0, count 0) or mine with a count that leaves
+             other, writable; the specified waiter counts (zero by default), and a lock is free (owner 0, count 0) or mine with a count that leaves
              room for `Ks` more takes. A statement keeps the words (`SyncOK.agreeW`); a callee's frame inherits it
              (`SyncOK.call`).
 -/
@@ -18,13 +18,28 @@ set_option linter.unusedSectionVars false
 
 variable {D : Deklaration}
 
-/-- The words of the lock `Lk`: owner `o`, count `c`, nobody waiting; free, or mine with room for `Ks` takes. -/
-def LockOK (m : Mem) (L : Lay D) (fp : W) (Ks : Nat) (Lk : D.Lock) : Prop :=
+/-- The words of the lock `Lk`: owner `o`, count `c`, specified waiters (zero by default); free, or mine with room for `Ks` takes. -/
+def LockOK (m : Mem) (L : Lay D) (fp : W) (Ks : Nat) (Lk : D.Lock) (waiters : W := 0) : Prop :=
   ∃ o c, m.rd64 (BitVec.ofNat 64 (L.lk Lk)) = some o ∧ m.rd64 (BitVec.ofNat 64 (L.lk Lk + 8)) = some c ∧
-    m.rd64 (BitVec.ofNat 64 (L.lk Lk + 16)) = some 0 ∧
+    m.rd64 (BitVec.ofNat 64 (L.lk Lk + 16)) = some waiters ∧
     ((o = 0 ∧ c = 0) ∨ (o = meW L fp ∧ 1 ≤ c.toNat ∧ c.toNat + Ks < 2 ^ 62))
 
-structure SyncOK (m : Mem) (L : Lay D) (fp : W) (Ks : Nat) : Prop where
+
+/-- The existing free/mine invariant implies the thread-independent stable
+    invariant with the same waiter count. Existing callers still specify zero. -/
+theorem LockOK.invariant [Kern] {m : Mem} {L : Lay D} {fp : W} {Ks : Nat} {lk : D.Lock} {w : W}
+    (h : LockOK m L fp Ks lk w) (hme : MeOK L fp) (hw : w.toNat < 2 ^ 62) :
+    ∃ o c, m.rd64 (BitVec.ofNat 64 (L.lk lk)) = some o ∧
+      m.rd64 (BitVec.ofNat 64 (L.lk lk + 8)) = some c ∧
+      m.rd64 (BitVec.ofNat 64 (L.lk lk + 16)) = some w ∧ LockInv o c w := by
+  obtain ⟨o, c, ho, hc, hwait, hs⟩ := h
+  refine ⟨o, c, ho, hc, hwait, ?_, hw⟩
+  rcases hs with free | ⟨rfl, positive, room⟩
+  · exact Or.inl free
+  · exact Or.inr ⟨meW_ne hme, positive, by omega⟩
+
+structure SyncOK (m : Mem) (L : Lay D) (fp : W) (Ks : Nat)
+    (waiters : D.Lock → W := fun _ => 0) : Prop where
   sb31 : L.sb < 2 ^ 31
   st : 0 < L.st
   st31 : L.st < 2 ^ 31
@@ -35,9 +50,9 @@ structure SyncOK (m : Mem) (L : Lay D) (fp : W) (Ks : Nat) : Prop where
   sye : L.sye < 2 ^ 31
   dis : ∀ Lk Lk', Lk ≠ Lk' → L.lk Lk + 24 ≤ L.lk Lk' ∨ L.lk Lk' + 24 ≤ L.lk Lk
   wr : ∀ Lk k, k ≤ 2 → all m.wr (BitVec.ofNat 64 (L.lk Lk + 8 * k)) 8 = true
-  zust : ∀ Lk, LockOK m L fp Ks Lk
+  zust : ∀ Lk, LockOK m L fp Ks Lk (waiters Lk)
 
-theorem SyncOK.me {m : Mem} {L : Lay D} {fp : W} {Ks : Nat} (h : SyncOK m L fp Ks) : MeOK L fp :=
+theorem SyncOK.me {m : Mem} {L : Lay D} {fp : W} {Ks : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters) : MeOK L fp :=
   ⟨h.lo, h.sb31, h.st, h.st31, by have := h.room; omega⟩
 
 theorem lk_byte {y j : Nat} (hy : y + 8 < 2 ^ 31) (hj : j < 8) :
@@ -45,9 +60,9 @@ theorem lk_byte {y j : Nat} (hy : y + 8 < 2 ^ 31) (hj : j < 8) :
   simp only [BitVec.toNat_add, BitVec.toNat_ofNat]; omega
 
 /-- The lock words kept where the bytes from `L.hi` to `L.sye` are. -/
-theorem SyncOK.keep {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} (h : SyncOK m L fp Ks) (hrd : m'.rd = m.rd)
+theorem SyncOK.keep {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters) (hrd : m'.rd = m.rd)
     (hwr : m'.wr = m.wr) (hb : ∀ x : W, L.hi ≤ x.toNat → x.toNat < L.sye → m'.b x = m.b x) :
-    SyncOK m' L fp Ks := by
+    SyncOK m' L fp Ks waiters := by
   refine ⟨h.sb31, h.st, h.st31, h.lo, h.room, h.band, h.lay, h.sye, h.dis, fun Lk k hk => by
     rw [hwr]; exact h.wr Lk k hk, fun Lk => ?_⟩
   obtain ⟨o, c, ho, hc, hw, hs⟩ := h.zust Lk
@@ -60,16 +75,16 @@ theorem SyncOK.keep {m m' : Mem} {L : Lay D} {fp : W} {Ks : Nat} (h : SyncOK m L
     by rw [keep _ (by omega) (Nat.le_refl _)]; exact hw, hs⟩
 
 /-- A statement's change keeps the lock words. -/
-theorem SyncOK.agreeW {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} (h : SyncOK m L fp Ks)
-    (ha : AgreeW L fp lo K m m') (hK : fp.toNat + 8 * K ≤ L.hi) : SyncOK m' L fp Ks :=
+theorem SyncOK.agreeW {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters)
+    (ha : AgreeW L fp lo K m m') (hK : fp.toNat + 8 * K ≤ L.hi) : SyncOK m' L fp Ks waiters :=
   h.keep ha.rd ha.wr fun x h1 _ => ha.b x (fun ⟨_, h3⟩ => by omega) (fun ⟨_, h3⟩ => by omega)
 
-theorem SyncOK.agree {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} (h : SyncOK m L fp Ks)
-    (ha : Agree fp lo K m m') (hK : fp.toNat + 8 * K ≤ L.hi) : SyncOK m' L fp Ks :=
+theorem SyncOK.agree {m m' : Mem} {L : Lay D} {fp : W} {Ks lo K : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters)
+    (ha : Agree fp lo K m m') (hK : fp.toNat + 8 * K ≤ L.hi) : SyncOK m' L fp Ks waiters :=
   h.keep ha.rd ha.wr fun x h1 _ => ha.b x (fun ⟨_, h3⟩ => by omega)
 
-theorem SyncOK.mono {m : Mem} {L : Lay D} {fp : W} {Ks Ks' : Nat} (h : SyncOK m L fp Ks) (hs : Ks' ≤ Ks) :
-    SyncOK m L fp Ks' := by
+theorem SyncOK.mono {m : Mem} {L : Lay D} {fp : W} {Ks Ks' : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters) (hs : Ks' ≤ Ks) :
+    SyncOK m L fp Ks' waiters := by
   refine ⟨h.sb31, h.st, h.st31, h.lo, by have := h.room; omega, by have := h.band; omega, h.lay, h.sye, h.dis,
     h.wr, fun Lk => ?_⟩
   obtain ⟨o, c, ho, hc, hw, hs'⟩ := h.zust Lk
@@ -89,8 +104,8 @@ theorem meW_call {L : Lay D} {fp : W} {Ks F : Nat} (h : fp.toNat + 8 * Ks ≤ L.
   · omega
   · rw [Nat.add_mul, Nat.one_mul]; omega
 
-theorem SyncOK.call {m : Mem} {L : Lay D} {fp : W} {Ks F : Nat} (h : SyncOK m L fp Ks) (hF : F < Ks) :
-    SyncOK m L (slot fp (BitVec.ofNat 64 F)) (Ks - F) := by
+theorem SyncOK.call {m : Mem} {L : Lay D} {fp : W} {Ks F : Nat} {waiters : D.Lock → W} (h : SyncOK m L fp Ks waiters) (hF : F < Ks) :
+    SyncOK m L (slot fp (BitVec.ofNat 64 F)) (Ks - F) waiters := by
   have hr := h.room
   have hs := slot_toNat (fp := fp) (K := Ks) (i := F) (by omega) hF
   have hq := meW_call h.band h.lo h.st hF hr

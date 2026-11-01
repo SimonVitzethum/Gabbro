@@ -68,7 +68,7 @@ def program : Programm D where
     subst f
     exact .cons statement (.ret .empty (.refl []))
 
-def lowered := lowS 1 (fun _ => 0) layout 4 ([], 0) [3] (0, 0) statement
+def lowered := lowS 1 (fun _ => 0) layout (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [3] (0, 0) statement
 def code : List II := (lowered.getD ([], 0)).1
 def top : Nat := (lowered.getD ([], 0)).2
 
@@ -176,7 +176,7 @@ theorem simulation_zeuge [Kern] (O : Orakel D)
   have emitted : lowered = some (code, top) := by decide +kernel
   have inside : WIn layout 4096 64 64 :=
     ⟨layout_in, layout_dis, by decide, by decide, by decide⟩
-  have run := shift_ok (P := program) (O := O) (R := R) (σ0 := world) (ρ0 := .nil)
+  have run := shift_ok (lo := 4) (P := program) (O := O) (R := R) (σ0 := world) (ρ0 := .nil)
     (rp := 0) (cfp := 0) (f := entry) (t := tab) (field := field)
     rfl index old target (by decide) (by decide) (by decide)
     (by intro w hw; change w ∈ [] at hw; cases hw)

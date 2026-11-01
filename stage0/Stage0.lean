@@ -16,7 +16,7 @@ import Stage0.Senke.Stopp
 import Stage0.Senke.Anweisung.Hilfe
 import Stage0.Senke.Funktion
 import Stage0.Senke.Spez
-import Stage0.Senke.Aufruf
+import Stage0.Senke.Rueckkehr.Call
 import Stage0.Senke.Rueckkehr
 import Stage0.Senke.Rekursion
 import Stage0.Senke.Bild
@@ -78,3 +78,5 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.ExtendProbe
 import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareProbe
 
 import Stage0.Frontend.ExportCorrectness
+import Stage0.Senke.Rueckkehr.Proben
+import Stage0.Senke.Rueckkehr.EntryProbe

@@ -62,13 +62,13 @@ theorem simulation_zeuge [Kern] :
   exact run
 
 /-- The actual statement dispatcher accepts all three one-word lower-bound domains. -/
-theorem dispatcher_zeuge (A : D.Fn → Nat) (lo : Nat) (ens : List II × Nat)
+theorem dispatcher_zeuge (A : D.Fn → Nat) (frame : FrameLayout) (ens : List II × Nat)
     (pr : List Nat) (ex : Int × Int) :
     ∀ lower ∈ ([2 ^ 32, -(2 ^ 32) - 100, 2 ^ 64 - 101] : List Int),
       let cs := [none, some (lower, lower + 100)]
       let arms : Arms D (vertragVon D (⟨0, by decide⟩ : D.Fn)) false [.sum cs] [] [] cs :=
         .cons .nil (.cons .nil .nil)
-      ∃ c top, lowS 0 A layout lo ens pr ex (.onTag (.var .here) arms) = some (c, top) := by
+      ∃ c top, lowS 0 A layout frame ens pr ex (.onTag (.var .here) arms) = some (c, top) := by
   intro lower hm
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
   rcases hm with rfl | rfl | rfl <;> exact ⟨_, _, rfl⟩

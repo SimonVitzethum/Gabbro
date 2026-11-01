@@ -108,7 +108,7 @@ theorem wideNarrow_case_zeuge :
 
 /-- The value never fits an unrepresentable source interval or bound. -/
 theorem narrow_refused_zeuge :
-    lowEnd 1 (fun _ => 0) (layU u (fun _ => none) 0) 3 ([], 0) [] (0, 0) (narrowEnd (2^63)) = none := by
+    lowEnd 1 (fun _ => 0) (layU u (fun _ => none) 0) (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [] (0, 0) (narrowEnd (2^63)) = none := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.ControlProbe

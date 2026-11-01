@@ -77,7 +77,7 @@ theorem forever_body_zeuge :
 
 /-- A caller without a reserved counter frame is refused even for immediate leave. -/
 theorem forever_unreserved_zeuge :
-    lowS 1 (fun _ => 0) (layU uf (fun _ => none) 0) 3 ([], 0) [] (0, 0)
+    lowS 1 (fun _ => 0) (layU uf (fun _ => none) 0) (⟨[], none, 0, 0, 0⟩ : FrameLayout) ([], 0) [] (0, 0)
       (Stmt.forever (V := vertragVon DF main) (l := false) (Λ := []) progress .tru (.cons (.leave rfl) .nil) :
         Stmt DF (vertragVon DF main) false [] [] []) = none := rfl
 

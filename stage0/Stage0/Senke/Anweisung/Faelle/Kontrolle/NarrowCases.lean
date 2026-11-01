@@ -15,7 +15,7 @@ theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
@@ -25,7 +25,7 @@ theorem blockNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.narrow e low' high' err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB] at h
+  simp only [lowB, ← hlo0] at h
   split at h
   · next hfit =>
     simp only [Bool.and_eq_true] at hfit
@@ -53,7 +53,7 @@ theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {low high low' high' : Int} {e : Expr D Γ Λ (.int low high)}
@@ -63,7 +63,8 @@ theorem endNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.narrow e low' high' err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo2 hu hk hWa hpr
-  simp only [lowEnd, resultWords_vertragVon] at h
+  have protectedPrefix := functionFrame_prefix P f
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h
   split at h
   · next hfit =>
     simp only [Bool.and_eq_true] at hfit

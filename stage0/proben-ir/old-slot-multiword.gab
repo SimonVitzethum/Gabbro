@@ -1,0 +1,17 @@
+// Two complete table-entry snapshots have equal low limbs and different high limbs.
+module ir_probe {
+table t count 2 { slot { a : u64 in 0 .. 340282366920938463463374607431768211455, } }
+impl fn change() effects { reads t.slots, writes t.slots }
+    ensures old(t.slots[1].a) == 18446744073709551623
+        && old(t.slots[0].a) == 36893488147419103239
+        && !(old(t.slots[1].a) == old(t.slots[0].a))
+        && t.slots[1].a == old(t.slots[1].a) + 12
+{ t.slots[1].a = 18446744073709551635; }
+impl fn main() -> u32 in 0 .. 255 effects { reads t.slots, writes t.slots } {
+    t.slots[0].a = 36893488147419103239;
+    t.slots[1].a = 18446744073709551623;
+    change();
+    if t.slots[1].a == 18446744073709551635 { return 42; }
+    return 0;
+}
+}

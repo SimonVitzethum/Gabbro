@@ -1,24 +1,12 @@
-/-
-  File:      stage0/Stage0/Senke/Rekursion.lean
-  Subject:   Every lowered function keeps its `FunSpec` against G's call semantics `rufAt n`, by induction over
-             the depth `n`.
-
-  The code of `f` (`lowFun`): the depth guard (slot 2 zero: `exit_group(105)`, G's `abstieg`), `requires` with
-  its guard (`exit_group(101)`), the body (`lowEnd_ok`, whose calls go to depth `n - 1`). The stack each call
-  needs is at most `L` slots (the largest `top` of all functions), so a call at depth `n` needs `(n + 1) * L`.
--/
+/- Every emitted function keeps the complete-value call protocol, by source call-depth induction. -/
 import Stage0.Senke.Anweisung.Satz
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
+import Stage0.Senke.Rueckkehr.Entry
 
 namespace Gabbro.Stage0.Senke
-
 open Gabbro.Grammatik Runner.IR Runner.Mem
-
+variable [Kern] {D : Deklaration}
+set_option maxHeartbeats 2000000
 set_option linter.unusedSectionVars false
-
-variable [Kern]
-
-variable {D : Deklaration}
 
 theorem ofNat_succ (k : Nat) : BitVec.ofNat 64 (k + 1) = BitVec.ofNat 64 k + 1 := by
   apply BitVec.eq_of_toNat_eq
@@ -26,9 +14,11 @@ theorem ofNat_succ (k : Nat) : BitVec.ofNat 64 (k + 1) = BitVec.ofNat 64 k + 1 :
   simp only [BitVec.toNat_add, BitVec.toNat_ofNat, h1]
   omega
 
-theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {L : Nat}
-    (hLA : Y.fa = A) (hC : ∀ g, ∃ top, lowFun passes P A Y g = some (C g, top) ∧ top ≤ L) (hA : ∀ g, A g < 2 ^ 31)
-    (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) :
+theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
+    {passes : Nat} {A : D.Fn → Nat} {C : D.Fn → List II} {L : Nat}
+    (hLA : Y.fa = A)
+    (hC : ∀ g, ∃ top, lowFun passes P A Y g = some (C g, top) ∧ top ≤ L)
+    (hA : ∀ g, A g < 2 ^ 31) (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) :
     ∀ n, n < 2 ^ 64 → FunSpec Y A C (rufAt P O passes n) (BitVec.ofNat 64 n) ((n + 1) * L) := by
   intro n
   induction n with
@@ -36,171 +26,212 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O] {pas
     intro _
     refine ⟨hLA, ?_⟩
     intro f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa _
-    have hks := hW.ks
-    obtain ⟨top, hlf, htop⟩ := hC f
-    simp only [lowFun] at hlf
-    split at hlf
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
-      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, cs, hcs, hCf, htf⟩ := hlf
-      simp only [frei] at htf
-      have hFB3 : FB = 4 := rfl
-      have hcode := (hP f).1
-      have hfar := (hP f).2
-      rw [← hCf] at hcode hfar
+    obtain ⟨top, lower, bound⟩ := hC f
+    simp only [lowFun] at lower
+    split at lower
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
+      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, snap, hsnap, codes, tops⟩ := lower
+      let layout := functionFrame P f
+      change max (retTop layout)
+        (max tq (max (frei (D.params f) layout.bodyReserved) tb)) = top at tops
+      let entry := relocateC FB layout.ensReserved layout.parameterWords ++
+        (snap ++ relocateC layout.ensParams (layout.bodyReserved - layout.ensReserved) layout.parameterWords)
+      have loaded : CodeAt m (BitVec.ofNat 64 (A f))
+          (guardC 2 105 layout.canonicalResult ++ (cq ++
+            (guardC layout.canonicalResult 101 layout.canonicalResult ++ (entry ++ cb)))) := by
+        have := (hP f).1
+        rw [← codes] at this
+        simpa only [entry, layout, List.append_assoc] using this
+      have far : CodeFar (BitVec.ofNat 64 (A f))
+          (guardC 2 105 layout.canonicalResult ++ (cq ++
+            (guardC layout.canonicalResult 101 layout.canonicalResult ++ (entry ++ cb)))).length fp K := by
+        have := (hP f).2
+        rw [← codes] at this
+        simpa only [entry, layout, List.append_assoc] using this
+      have sizes : retTop layout ≤ L := by
+        have := tops
+        have := bound
+        omega
+      have guardFits : layout.canonicalResult + 8 ≤ K := by
+        have := layout.internal_offsets
+        have status : layout.internalStatus = layout.internalResult + layout.returnSpan := rfl
+        have := hW.ks
+        simp only [retTop] at sizes
+        simp only [Nat.zero_add, Nat.one_mul] at hc
+        omega
       simp only [rufAt]
-      refine guard_stop (codeAt_left (codeAt_left (codeAt_left (codeAt_left hcode)))) ?_ hF (by omega) (by omega) hK
-        (by simp [logikCode]) h2
-      have := codeFar_left (n := (guardC 2 105 (FB + (contextWords (D.params f)))).length)
-        (k := cq.length + (guardC (FB + (contextWords (D.params f))) 101 (FB + (contextWords (D.params f)))).length + cs.length + ((contextWords (D.params f)) + cb.length))
-        (by simpa [Nat.add_assoc, relocateC_length] using hfar)
-      simpa [guardC, stopC, sysC] using this
-    · simp at hlf
+      apply guard_stop (codeAt_left loaded)
+        (codeFar_left
+          (n := (guardC 2 105 layout.canonicalResult).length)
+          (k := (cq ++ (guardC layout.canonicalResult 101 layout.canonicalResult ++ (entry ++ cb))).length)
+          (by simpa only [List.length_append] using far)) hF
+        (by omega) guardFits hK (by simp [logikCode]) h2
+    · simp at lower
   | succ k ih =>
     intro hn
     refine ⟨hLA, ?_⟩
     intro f m fp K Ks rp cfp σ ρ hc hW hK hF hP h0 h1 h2 hE hWa hy
     have hks := hW.ks
-    have ih := ih (by omega)
-    obtain ⟨top, hlf, htop⟩ := hC f
-    simp only [lowFun] at hlf
-    split at hlf
-    · next hcond =>
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hlf
-      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, cs, hcs, hCf, htf⟩ := hlf
-      simp only [frei] at htf
-      have hFB3 : FB = 4 := rfl
-      have hmul : (k + 1 + 1) * L = (k + 1) * L + L := Nat.succ_mul _ _
-      have hroom := hF.room
-      let s := FB + (contextWords (D.params f))
-      have hcode0 := (hP f).1
-      have hfar0 := (hP f).2
-      rw [← hCf] at hcode0 hfar0
-      have hlenf := hlen f
-      rw [← hCf] at hlenf
-      simp only [List.length_append, relocateC_length] at hlenf
-      have hcode : CodeAt m (BitVec.ofNat 64 (A f))
-          (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) (contextWords (D.params f)) ++ cb))))) := by simpa [List.append_assoc] using hcode0
-      have hfar : CodeFar (BitVec.ofNat 64 (A f)) (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++ (relocateC FB ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) (contextWords (D.params f)) ++ cb))))).length fp K := by
-        simpa [List.append_assoc, Nat.add_assoc] using hfar0
-      have hgl : ∀ a c, (guardC a c s).length = 5 := fun _ _ => rfl
-      -- the depth guard passes
-      have hne : BitVec.ofNat 64 (k + 1) ≠ 0 := by
-        intro h
-        have := congrArg BitVec.toNat h
-        have h0' : (0 : BitVec 64).toNat = 0 := rfl
-        simp only [BitVec.toNat_ofNat, h0'] at this
+    have smaller := ih (by omega)
+    obtain ⟨top, lower, bound⟩ := hC f
+    simp only [lowFun] at lower
+    split at lower
+    · next invariantGate =>
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
+      obtain ⟨⟨cq, tq⟩, hq, ⟨cens, tens⟩, hens, ⟨cb, tb⟩, hb, snap, hsnap, codes, tops⟩ := lower
+      let layout := functionFrame P f
+      change max (retTop layout)
+        (max tq (max (frei (D.params f) layout.bodyReserved) tb)) = top at tops
+      let q := layout.canonicalResult
+      let entry := relocateC FB layout.ensReserved layout.parameterWords ++
+        (snap ++ relocateC layout.ensParams (layout.bodyReserved - layout.ensReserved) layout.parameterWords)
+      have ownBound : max (retTop layout)
+          (max tq (max (frei (D.params f) layout.bodyReserved) tb)) ≤ L := by
+        have := tops
         omega
-      have sg := guard_pass (codeAt_left hcode) (by omega) h2 hne
-      -- `requires` into slot `s`
-      have hf1 := codeFar_tail hfar
-      have hc1 := codeAt_right hcode
+      have capacity : (k + 1) * L + L ≤ Ks := by simpa only [Nat.succ_mul] using hc
+      have offsets := layout.internal_offsets
+      have status : layout.internalStatus = layout.internalResult + layout.returnSpan := rfl
+      have guardFits : q + 8 ≤ Ks := by simp only [retTop] at ownBound; omega
+      have loaded : CodeAt m (BitVec.ofNat 64 (A f))
+          (guardC 2 105 q ++ (cq ++ (guardC q 101 q ++ (entry ++ cb)))) := by
+        have := (hP f).1
+        rw [← codes] at this
+        simpa only [entry, layout, q, List.append_assoc] using this
+      have far : CodeFar (BitVec.ofNat 64 (A f))
+          (guardC 2 105 q ++ (cq ++ (guardC q 101 q ++ (entry ++ cb)))).length fp K := by
+        have := (hP f).2
+        rw [← codes] at this
+        simpa only [entry, layout, q, List.append_assoc] using this
+      have lengthBound : 16 * (entry ++ cb).length < 2 ^ 31 := by
+        have := hlen f
+        rw [← codes] at this
+        simp only [entry, layout, q, List.length_append] at this ⊢
+        omega
+      have nonzero : BitVec.ofNat 64 (k + 1) ≠ 0 := by
+        intro equal
+        have := congrArg BitVec.toNat equal
+        have zero : (0 : BitVec 64).toNat = 0 := rfl
+        simp only [BitVec.toNat_ofNat, zero] at this
+        omega
+      have depthRun := guard_pass (codeAt_left loaded) (by omega) h2 nonzero
+      have far1 := codeFar_tail far
+      have code1 := codeAt_right loaded
       simp only [rufAt]
-      have hWaR : WeltAt m Y (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) := hWa
-      generalize σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte = σR at hWaR ⊢
-      have hpq : PreS Y m _ fp K s cq ρ :=
-        ⟨Nat.le_refl _, hK, hF, codeAt_left hc1, codeFar_left (by rw [← List.length_append]; exact hf1), hE, trivial, wstab_true _ _⟩
-      have hpw := PreS.welt hpq hks hWaR hW.lay (by have := hW.lo; omega)
-      obtain ⟨m1, s1, a1s, b, hb1, hbe⟩ := lowE_ok (fp := fp) (K := Ks) σR σR (fun _ h => h) hW.lay (P.requires f) s cq tq hq (by omega) m _
-        ρ hpw |>.word trivial
-      have a1 := Agree.widen a1s hks
-      have hWa1 : WeltAt m1 Y σR := hpw.wstab m m1 hWaR (a1s.mono (Nat.zero_le _))
-      have hF1 := hF.agree a1
-      have hf2 := codeFar_tail hf1
-      have hc2 := (codeAt_right hc1).agree a1 hf2
-      simp only [Enc] at hbe
-      by_cases hreq : wahr? (eval σR (P.requires f) σR ρ) = false
-      · rw [if_pos hreq]
-        -- `requires` fails
-        have hb0 : b = 0 := by
-          split at hbe
-          · next ht => exact (Bool.false_ne_true (hreq.symm.trans ht)).elim
-          · exact hbe
-        rw [hb0] at hb1
-        exact Stops.prefix (sg.trans s1) (guard_stop (codeAt_left hc2)
-          (by have := codeFar_left (n := 5) (k := cs.length + ((contextWords (D.params f)) + cb.length)) (by simpa only [List.length_append, relocateC_length, hgl] using hf2)
-              simpa [hgl] using this) hF1 (by omega) (by omega) hK (by simp [logikCode]) hb1)
-      · rw [if_neg hreq]
-        have hbt : b = 1 := by
-          split at hbe
-          · exact hbe
-          · next hn => simp only [Bool.not_eq_true] at hn; exact absurd hn hreq
-        have sg2 := guard_pass (codeAt_left hc2) (by omega) hb1 (by rw [hbt]; decide)
-        have hf3 := codeFar_tail hf2
-        have hc3 := codeAt_right hc2
-        -- Capture entry cells after requires, before the first body step.
-        obtain ⟨mS, sS, aS, hSnap, hKeep⟩ := snapC_ok hcs hF1 hK (by omega)
-          (codeAt_left hc3) (codeFar_left (by rw [← List.length_append]; exact hf3)) hWa1 hW.lay
-          (by have := hW.top; omega)
-        have hFS := hF1.agree aS
-        have aPre : Agree fp 3 K m mS := (a1.mono (by unfold s FB; omega)).trans aS
-        have hES : EnvAt Y mS fp ρ := by
-          intro τ x
-          obtain ⟨valid, words⟩ := (envAt_agree hE a1 hF (Nat.le_refl _) (by omega)) τ x
-          have bound := variableOffset_bound x
-          refine ⟨valid, ?_⟩
-          intro i hi
-          have width := encodeWords_length Y τ (ρ.get x)
-          rw [hKeep (vslot x + i) (by unfold vslot; omega)
-            (by unfold vslot FB; omega)]
-          exact words i hi
-        have hWaS : WeltAt mS Y σR := weltAt_stab hW.lay (by have := hW.top; omega)
-          m1 mS hWa1 (aS.mono (Nat.zero_le _))
-        have hfB := codeFar_tail hf3
-        have hcB := (codeAt_right hc3).agree aS hfB
-        obtain ⟨mR, sR, aR, hER⟩ := relocate_env hFS hK
-          (by simpa only [Nat.zero_add] using (show frei (D.params f) ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega)) hES (codeAt_left hcB)
-          (by simpa only [relocateC_length] using (codeFar_left (n := (relocateC FB ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) (contextWords (D.params f))).length) (k := cb.length) (by simpa only [List.length_append] using hfB)))
-        have aRW := Gabbro.Stage0.Senke.Agree.widen aR (show frei (D.params f) (0 + ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))) ≤ K by simpa only [Nat.zero_add] using (show frei (D.params f) ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) ≤ K by unfold frei; omega))
-        have hFR := hFS.agree aRW
-        have aEntry : Agree fp 3 K m mR := aPre.trans (aRW.mono (by unfold FB; omega))
-        have hOriginal : EnvAt Y mR fp ρ := envAt_agree hES aRW hFS (by unfold frei FB; omega) (by omega)
-        have hSnapR := hSnap.agree hFS aRW (by unfold FB; omega) (by omega)
-        have hWaR' : WeltAt mR Y σR := weltAt_stab hW.lay (by have := hW.top; omega)
-          mS mR hWaS (aRW.mono (Nat.zero_le _))
-        have hfR := codeFar_tail hfB
-        have hcR := (codeAt_right hcB).agree aRW hfR
-        simp only [relocateC_length] at hcR hfR
-        -- The body, its calls at depth `k`.
-        have hu : Umf Y A C (BitVec.ofNat 64 k) mR fp Ks K :=
-          ⟨pcode_agree hP aEntry, by
-            rw [agree_rd_low aEntry hroom (by decide) (by omega), h2, ofNat_succ], by omega,
-            hy.agree aEntry (by have := hW.top; have := hW.ord; omega), by have := hW.top; have := hW.ord; omega⟩
-        have hk : Kopf Y f mR fp K rp cfp ρ P σR :=
-          ⟨by rw [agree_rd_low aEntry hroom (by decide) (by omega)]; exact h0,
-           by rw [agree_rd_low aEntry hroom (by decide) (by omega)]; exact h1,
-           hOriginal, by omega, hSnapR⟩
-        have hpb : PreS Y mR _ fp K (frei (D.params f) ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))) cb ρ ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)) :=
-          ⟨Nat.le_refl _, hK, hFR, hcR, hfR, by simpa only [Nat.zero_add] using hER, trivial, wstab_true _ _⟩
-        have hret := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) ih hA (lo := s) rfl hens (pr := []) (P.rumpf f) cb tb hb
-          (by omega) (by omega) hW mR _ σR ρ hpb (by unfold frei s; omega) hu hk hWaR' (fun _ h => nomatch h)
-        have spre := sg.trans (s1.trans (sg2.trans (sS.trans sR)))
-        have apre : Agree fp 2 K m mR := aEntry.mono (by decide)
-        generalize execEnd O passes (rufAt P O passes k) (P.rumpf f) σR ρ = o at hret ⊢
-        cases o with
+      have requiresWorld : WeltAt m Y
+          (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) := hWa
+      generalize σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte = σR at requiresWorld ⊢
+      have reqPre : PreS Y m _ fp K q cq ρ :=
+        ⟨Nat.le_refl _, hK, hF, codeAt_left code1,
+          codeFar_left (n := cq.length)
+            (k := (guardC q 101 q ++ (entry ++ cb)).length)
+            (by simpa only [List.length_append] using far1), hE, trivial, wstab_true _ _⟩
+      have reqWorldPre := PreS.welt reqPre hks requiresWorld hW.lay hW.lo
+      obtain ⟨m1, reqRun, reqChanged, b, reqRead, reqValue⟩ :=
+        lowE_ok (fp := fp) (K := Ks) σR σR (fun _ h => h) hW.lay (P.requires f)
+          q cq tq hq (by omega) m _ ρ reqWorldPre |>.word trivial
+      have first := Agree.widen reqChanged hks
+      have frame1 := hF.agree first
+      have world1 := reqWorldPre.wstab m m1 requiresWorld (reqChanged.mono (Nat.zero_le _))
+      have far2 := codeFar_tail far1
+      have code2 := (codeAt_right code1).agree first far2
+      simp only [Enc] at reqValue
+      by_cases failure : wahr? (eval σR (P.requires f) σR ρ) = false
+      · rw [if_pos failure]
+        have zero : b = 0 := by
+          split at reqValue
+          · next h => exact (Bool.false_ne_true (failure.symm.trans h)).elim
+          · exact reqValue
+        have stopped := guard_stop (codeAt_left code2)
+          (codeFar_left (n := (guardC q 101 q).length) (k := (entry ++ cb).length)
+            (by simpa only [List.length_append] using far2))
+          frame1 (by omega) (by omega) hK (by simp [logikCode])
+          (by simpa only [zero] using reqRead)
+        exact Stops.prefix (depthRun.trans reqRun) stopped
+      · rw [if_neg failure]
+        have one : b = 1 := by
+          split at reqValue
+          · exact reqValue
+          · next h => simp only [Bool.not_eq_true] at h; exact absurd h failure
+        have requiresRun := guard_pass (codeAt_left code2) (by omega) reqRead (by rw [one]; decide)
+        have far3 := codeFar_tail far2
+        have code3 := codeAt_right code2
+        have params1 := envAt_agree hE first hF (Nat.le_refl _) (by omega)
+        have entryFits : frei (D.params f) layout.bodyReserved ≤ K := by omega
+        have internalFits : layout.internalResult ≤ K := by
+          have body := layout.protected_prefix
+          have bodyBound : layout.bodyParams + layout.parameterWords ≤ K := entryFits
+          have statusBound : layout.internalResult ≤ layout.internalStatus := by
+            simp only [FrameLayout.internalStatus]; omega
+          omega
+        have bodyFrontier : layout.internalResult ≤ frei (D.params f) layout.bodyReserved := by
+          have body := layout.protected_prefix
+          have bodySpace : layout.bodyParams ≤ frei (D.params f) layout.bodyReserved := by
+            change layout.bodyParams ≤ layout.bodyParams + layout.parameterWords
+            omega
+          have statusBound : layout.internalResult ≤ layout.internalStatus := by
+            simp only [FrameLayout.internalStatus]; omega
+          omega
+        obtain ⟨mR, entryRun, entryChanged, original, lexical, saved, worldR⟩ :=
+          entryFrame_run P f hsnap frame1 hK entryFits
+            (codeAt_left code3) (codeFar_left (n := entry.length) (k := cb.length)
+              (by simpa only [List.length_append] using far3))
+            params1 world1 hW.lay hW.top
+        have low : FB ≤ q := by simp only [q, FrameLayout.canonicalResult]; omega
+        have allChanged : Agree fp FB K m mR := (first.mono low).trans entryChanged
+        have frameR := hF.agree allChanged
+        have farR := codeFar_tail (a := entry) far3
+        have codeR := (codeAt_right code3).agree entryChanged farR
+        have entryLength : entry.length = 2 * contextWords (D.params f) + snap.length := by
+          simp only [entry, List.length_append, relocateC_length, FrameLayout.parameterWords, layout, functionFrame]
+          omega
+        rw [entryLength] at codeR farR
+        have surroundings : Umf Y A C (BitVec.ofNat 64 k) mR fp Ks K :=
+          ⟨pcode_agree hP allChanged, by
+            rw [agree_rd_low allChanged hF.room (by decide) (by omega), h2, ofNat_succ], by omega,
+            hy.agree allChanged (by have := hW.top; have := hW.ord; omega),
+            by have := hW.top; have := hW.ord; omega⟩
+        have header : Kopf Y f mR fp K rp cfp ρ P σR := by
+          refine ⟨?_, ?_, original, internalFits, saved⟩
+          · rw [agree_rd_low allChanged hF.room (by decide) (by omega)]; exact h0
+          · rw [agree_rd_low allChanged hF.room (by decide) (by omega)]; exact h1
+        have bodyPre : PreS Y mR _ fp K (frei (D.params f) layout.bodyReserved)
+            cb ρ layout.bodyReserved :=
+          ⟨Nat.le_refl _, hK, frameR, codeR, farR, lexical, trivial, wstab_true _ _⟩
+        have result := lowEnd_ok (O := O) (passes := passes) (σ0 := σR) smaller hA
+          (lo := layout.internalResult) rfl hens (pr := []) (P.rumpf f) cb tb hb
+          (by omega) (by simp only [List.length_append] at lengthBound; omega) hW
+          mR _ σR ρ bodyPre
+          bodyFrontier
+          surroundings header worldR (fun _ h => nomatch h)
+        have entryPrefix := depthRun.trans (reqRun.trans (requiresRun.trans entryRun))
+        generalize execEnd O passes (rufAt P O passes k) (P.rumpf f) σR ρ = outcome at result ⊢
+        cases outcome with
         | zurueck σ' v =>
-          simp only [Ret, RetZ] at hret
-          split at hret
-          · next hens' =>
-            simp only [hens', if_true]
-            exact Stops.prefix spre hret
-          · next hens' =>
-            simp only [hens', if_false]
-            have hfil : D.invs.filter (schuldet f) = [] := by
-              simp only [List.isEmpty_iff] at hcond; exact hcond
-            have hsch : ∀ i ∈ D.invs, schuldet f i = false := by
+          simp only [Ret, RetZ] at result
+          split at result
+          · next h => simp only [h, if_true]; exact Stops.prefix entryPrefix result
+          · next h =>
+            simp only [h, if_false]
+            have empty : D.invs.filter (schuldet f) = [] := by
+              simpa only [List.isEmpty_iff] using invariantGate
+            have unowed : ∀ i ∈ D.invs, schuldet f i = false := by
               intro i hi
-              have := List.filter_eq_nil_iff.mp hfil i hi
+              have := List.filter_eq_nil_iff.mp empty i hi
               simpa using this
-            have hno : ∀ q : D.Inv → Bool, D.invs.find? (fun i => schuldet f i && q i) = none := fun q =>
-              List.find?_eq_none.mpr fun i hi => by simp [hsch i hi]
-            simp only [hfil, List.foldl_nil, hno]
-            obtain ⟨m', s', a', hw, hw'⟩ := hret
-            exact ⟨m', spre.trans s', (agreeW_of apre).trans a', hw, hw'⟩
-        | logik e => exact Stops.prefix spre hret
-        | why σ' r => exact RetWhy.prefix spre (agreeW_of apre) hret
+            have absent : ∀ test : D.Inv → Bool,
+                D.invs.find? (fun i => schuldet f i && test i) = none :=
+              fun test => List.find?_eq_none.mpr fun i hi => by simp [unowed i hi]
+            simp only [empty, List.foldl_nil, absent]
+            obtain ⟨m', steps, changed, value, world⟩ := result
+            exact ⟨m', entryPrefix.trans steps,
+              (agreeW_of (allChanged.mono (by decide))).trans changed, value, world⟩
+        | logik error => exact Stops.prefix entryPrefix result
+        | why σ' reason =>
+          exact RetWhy.prefix entryPrefix (agreeW_of (allChanged.mono (by decide))) result
         | leave h _ _ => exact absurd h Bool.false_ne_true
         | next h _ _ => exact absurd h Bool.false_ne_true
-        | hardware e => exact Stops.prefix spre hret
-    · simp at hlf
+        | hardware error => exact Stops.prefix entryPrefix result
+    · simp at lower
 
 end Gabbro.Stage0.Senke
