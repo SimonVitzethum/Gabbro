@@ -93,18 +93,26 @@ theorem ConstantAcyclic.no_cycle {items : List SItemTief} (h : ConstantAcyclic i
   exact Nat.lt_irrefl _ (decreases cycle)
 
 /-- Search candidates carry no trust: the edge rank check below is independent of this DFS.
-    Unknown value/function names refuse at their exact spelling; builtin types are graph leaves. -/
-def constantDepth (items : List SItemTief) : Nat → List DependencyName → DependencyName → Except String Nat
-  | 0, _, _ => .error "compile-time constant dependency depth exhausted"
-  | fuel + 1, active, name =>
+    Completed nodes are memoized so shared dependency diamonds are visited once. Active names
+    still diagnose cycles before lookup; missing values/functions retain their exact spelling. -/
+def constantDepth (items : List SItemTief) : Nat → List DependencyName →
+    List (DependencyName × Nat) → DependencyName →
+    Except String (Nat × List (DependencyName × Nat))
+  | 0, _, _, _ => .error "compile-time constant dependency depth exhausted"
+  | fuel + 1, active, resolved, name =>
     if active.any (sameDependency name) then .error ("compile-time dependency cycle at " ++ name.label)
-    else match (dependencyDeclarations items).find? (fun entry => sameDependency entry.1 name) with
-    | none => match name with
-      | .type _ => .ok 0
-      | _ => .error ("unresolved compile-time dependency: " ++ name.label)
-    | some entry => do
-      let depths ← entry.2.mapM (constantDepth items fuel (name :: active))
-      pure (depths.foldl max 0 + 1)
+    else match resolved.find? (fun entry => sameDependency entry.1 name) with
+    | some entry => .ok (entry.2, resolved)
+    | none => match (dependencyDeclarations items).find? (fun entry => sameDependency entry.1 name) with
+      | none => match name with
+        | .type _ => .ok (0, resolved)
+        | _ => .error ("unresolved compile-time dependency: " ++ name.label)
+      | some entry => do
+        let (depth, next) ← entry.2.foldlM (fun (depth, known) dependency => do
+          let (value, known) ← constantDepth items fuel (name :: active) known dependency
+          pure (max depth value, known)) (0, resolved)
+        let value := depth + 1
+        pure (value, (name, value) :: next)
 
 structure ConstantOrder (items : List SItemTief) where
   ordered : List SItemTief
@@ -116,9 +124,9 @@ structure ConstantOrder (items : List SItemTief) where
 def orderConstants (items : List SItemTief) : Except String (ConstantOrder items) :=
   if hn : (constantNames items).Nodup then do
     let nodes := (dependencyDeclarations items).map (·.1)
-    let depths ← nodes.mapM fun name => do
-      let depth ← constantDepth items (nodes.length + 2) [] name
-      pure (name, depth)
+    let depths ← nodes.foldlM (fun known name => do
+      let (_, next) ← constantDepth items (nodes.length + 2) [] known name
+      pure next) []
     let rank := fun name => ((depths.find? (fun entry => sameDependency entry.1 name)).map (·.2)).getD 0
     if h : (constantEdges items).all (fun edge => rank edge.2 < rank edge.1) then
       let priority := fun item => match item with

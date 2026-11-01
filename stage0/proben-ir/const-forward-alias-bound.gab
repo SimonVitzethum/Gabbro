@@ -1,0 +1,9 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_alias_bound {
+type Result = Bound;
+type Bound = u8 in 0 .. LIMIT;
+const ANSWER : Result = LIMIT;
+const LIMIT : u8 = BASE + 2;
+const BASE : u8 = 40;
+impl fn main() -> Result effects { pure } { return ANSWER; }
+}

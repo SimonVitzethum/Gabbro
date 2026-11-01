@@ -1,0 +1,5 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_self {
+const A : u8 = A;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

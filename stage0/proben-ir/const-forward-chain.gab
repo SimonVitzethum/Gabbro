@@ -1,0 +1,7 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_chain {
+const ANSWER : u8 = MIDDLE + 2;
+const MIDDLE : u8 = BASE + 10;
+const BASE : u8 = 30;
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

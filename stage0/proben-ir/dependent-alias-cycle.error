@@ -1,1 +1,1 @@
-compile-time aliases contain unresolved dependencies or cycles
+compile-time dependency cycle at type Bound
