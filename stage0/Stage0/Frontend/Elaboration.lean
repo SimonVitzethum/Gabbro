@@ -18,6 +18,9 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
   match uRestFehler ms0 with
   | .error e => .error e
   | .ok _ =>
+  match ExportMetadata.checkConstants ms0 with
+  | .error error => .error error
+  | .ok () =>
   let ms := uOhneSenken ms0
   match uGlobs consts typeEnv ms with
   | .error e => .error e
@@ -30,12 +33,12 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
   match uArenen consts typeEnv ms with
   | .error e => .error e
   | .ok (arTabs, arGlobs) =>
-  let tabs := uIdxTabs (tabs0 ++ arTabs)
+  let tabs := uIdxTabs (tabs0 ++ arTabs ++ uArrayCarriers typeEnv ms0)
   match uOptGlobs tabs (globs0 ++ arGlobs) with
   | .error e => .error e
   | .ok globs =>
   match uSeq ((ms.filter (fun
-      | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre globs tabs)) with
+      | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (fun item => uSperre globs tabs item consts)) with
   | .error e => .error e
   | .ok locks0 =>
   match uSperrInvs consts typeEnv globs tabs ms locks0 with
@@ -113,7 +116,8 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
         axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                         gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
         annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
-        zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger }
+        zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
+        exportGate := ExportMetadata.check ms0 }
     .ok (uMitBoden u)
 
 /-- Conservative equality for every original input, including all error branches. No visibility,

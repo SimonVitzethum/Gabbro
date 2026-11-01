@@ -1,0 +1,6 @@
+table T count 2 { slot { next : option index into Self, } }
+lock L protects { T } rank 1;
+impl fn query(a : index into T, b : index into T) -> bool effects { reads T.slots, locks L }
+ requires a reaches b via next
+ { return true; }
+impl fn main() -> u8 { return 42; }

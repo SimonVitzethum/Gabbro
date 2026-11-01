@@ -5,6 +5,7 @@
              Split from `UebersetzeAllg2` (which keeps the single statements and calls); same namespace.
 -/
 module
+public import Grammatik.Parser.Elab.ExportControl
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
 public import Grammatik.Parser.Namen.Oeffentlich
@@ -298,6 +299,13 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .arrayLoopBeg bnd array inv :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.arrayLoopBeg bnd array inv) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
     | .error e => .error e
@@ -412,7 +420,7 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               k.hgd b, r))
   | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowSeqL (l := l) u caller Γ fn n Λ pe rest
   | _, _, _ + 1, _, _, .bindAxElse .. :: _ =>
-    .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
+    .error "lower: a foreign let else in a continuing block has no G export"
   | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.matchTagBeg sidx m bs) rest with
     | .error e => .error e
@@ -640,6 +648,16 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .ok (eb, .blkEnd :: rest2) => .ok (Stmt.ite cv tb eb, rest2)
         | .ok (_, _) => .error "lower: an if is not closed"
       | .ok (_, _) => .error "lower: an if has no else part"
+  | Γ, fn, n + 1, Λ, pe, .arrayLoopBeg binder source invariant, rest => do
+    u.exportGate
+    let array ← lowArrayValue u Γ Λ fn none source
+    let carrier ← arrayCarrier u array.count
+    let iv ← lowEns u Γ Λ fn none invariant
+    match lowSeqL (l := true) u caller (Ty.index ((declOf u).count carrier.table) :: Γ)
+        (fn.mitTy binder (.index ((declOf u).count carrier.table))) n Λ pe rest with
+    | .error error => .error error
+    | .ok (body, .blkEnd :: remaining) => .ok (Stmt.traverse carrier.table iv body, remaining)
+    | .ok (_, _) => .error "lower: an array traverse is not closed"
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv, rest =>
     match tabIdx u.tabs tab with
     | .error e => .error e
@@ -968,8 +986,23 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               (fn.mitWhy e 0 ((declOf u).agruende k.ax)) n Λ pe [] with
           | _ => .error "lower: a let else in an else branch has no G form here"
       else .error "lower: let else of a foreign call without a reason channel"
-  | _, _, _ + 1, _, _, .bindElse .. :: _ =>
-    .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, Λ, pe, .bindElse y c args e :: rest => do
+    u.exportGate
+    match lowRufKopf u caller Γ fn Λ c args with
+    | .error err => .error err
+    | .ok k =>
+      if hr : 0 < (declOf u).gruende k.callee then
+        withErg u k.callee fun τ hE =>
+          match lowEndL (l := l) u caller (Ty.why ((declOf u).gruende k.callee) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).gruende k.callee)) n Λ pe rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: tail) =>
+            match lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) n Λ pe tail with
+            | .error err => .error err
+            | .ok (body, remaining) =>
+              .ok (nestedElse u caller Γ Λ k τ hE hr errb body, remaining)
+          | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: let else of a call without a reason channel"
   | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.matchTagBeg sidx m bs) rest with
     | .error err => .error err
@@ -1032,6 +1065,13 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
         | .error e => .error e
         | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .arrayLoopBeg bnd array inv :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.arrayLoopBeg bnd array inv) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
     | .error e => .error e
@@ -1369,6 +1409,13 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     | _, _ => .error "fn with a result falls off"
   | Γ, fn, n + 1, (.ifEnde c) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.ifBeg c) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, (.arrayLoopBeg b array i) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.arrayLoopBeg b array i) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowBodyF u caller Γ fn n rest' r with
@@ -2118,7 +2165,7 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
 
-def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"] }
+def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"], exportGate := ExportMetadata.check (uMembers (pre108 items108)) }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide

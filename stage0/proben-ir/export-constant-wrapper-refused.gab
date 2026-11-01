@@ -1,0 +1,4 @@
+module ir_constant_wrapper_metadata {
+const ANSWER : u32 wrapping = 42;
+impl fn main() -> u32 in 0 .. 42 effects { pure } ensures true => result == 42 { return 42; }
+}

@@ -17,6 +17,7 @@
   stages for 104.
 -/
 module
+public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
 @[expose] public section
 
@@ -1164,13 +1165,40 @@ def lowBoolTab (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
             exact Expr.slot (D := declOf u) t fh.idx i hL)
         else .error "access without held guard"
 
+/-- The result kind retains its declaration identity, particularly options/tags/reasons. -/
+def resultKind (fn : UFn) : Ty → Except String UParamArt
+  | .int .. => .ok .int
+  | .bool => .ok .bool
+  | .opt n =>
+    match fn.resOpt with
+    | some (num, count) => if n == count then .ok (.opt num) else .error "result option count mismatch"
+    | none => .error "result option identity missing"
+  | .sum cases =>
+    match fn.resSum with
+    | some (num, spec) => if cases == spec then .ok (.sum num) else .error "result tag cases mismatch"
+    | none => .error "result tag identity missing"
+  | .why n =>
+    match fn.resWhy with
+    | some (num, count) => if n == count then .ok (.why num) else .error "result reason count mismatch"
+    | none => .error "result reason identity missing"
+  | .ptr num writable => .ok (.ptr num writable)
+  | .fnptr num => .ok (.fnptr num)
+  | .ref num => .ok (.ref num)
+  | _ => .error "quantifier beside a result of this type without G form"
+
+/-- Only the newly represented result kinds require the original-source duty gate. -/
+def resultContextGate (u : UProg) : Option Ty → Except String Unit
+  | none | some (.int ..) | some .bool => .ok ()
+  | _ => u.exportGate
+
 /-- The result of an `ensures` as a parameter `#erg` in front of the others (a name no source can write): inside a
     quantifier the binder rides in front of the result, so the result is found by its name, not at position 0. -/
-def ergAlsParam (fn : UFn) : Option Ty → Except String UFn
+def ergAlsParam (u : UProg) (fn : UFn) : Option Ty → Except String UFn
   | none => .ok fn
-  | some (.int a b) => .ok { fn with params := ("#erg", .int a b) :: fn.params, kinds := .int :: fn.kinds }
-  | some .bool => .ok { fn with params := ("#erg", .bool) :: fn.params, kinds := .bool :: fn.kinds }
-  | some _ => .error "quantifier beside a result of this type without G form"
+  | some ty => do
+    let kind ← resultKind fn ty
+    resultContextGate u (some ty)
+    pure {fn with params := ("#erg", ty) :: fn.params, kinds := kind :: fn.kinds}
 
 /-! ### Aggregate values (`Ty.arr`, `Ty.str`, 2026-10-25)
 
@@ -1287,6 +1315,14 @@ def lowParamWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
       some (match lowVar Γ (sh + j) τ with
         | .error e => .error e
         | .ok v => .ok ⟨τ, Expr.var v⟩)
+    | some (.ref region), some (_, .ref declared) =>
+      some (do
+        u.exportGate
+        if same : region = declared then
+          match lowVar Γ (sh + j) (.ref region) with
+          | .error error => .error error
+          | .ok reference => .ok ⟨.ref region, Expr.var reference⟩
+        else .error "source export: reference origin disagrees with its declared region")
     | _, _ => none
 
 /-- An aggregate static (a number static goes to the integer lowering). -/
@@ -1486,7 +1522,8 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     String → USide → USide → Except String (Expr (declOf u) Γ Λ .bool)
   | op, a, b =>
     match lowWertE u Γ Λ fn er a, lowWertE u Γ Λ fn er b with
-    | .ok ⟨.str _, x⟩, .ok ⟨.str _, y⟩ =>
+    | .ok ⟨.str _, x⟩, .ok ⟨.str _, y⟩ => do
+      u.exportGate
       match op with
       | "==" => .ok (Expr.strEq x y)
       | "!=" => .ok (Expr.not (Expr.strEq x y))
@@ -1495,6 +1532,14 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       | ">" => .ok (Expr.strLt y x)
       | ">=" => .ok (Expr.or (Expr.strLt y x) (Expr.strEq x y))
       | _ => .error "operator without G form"
+    | .ok ⟨.ref region, x⟩, .ok ⟨.ref other, y⟩ => do
+      u.exportGate
+      if same : other = region then
+        match op with
+        | "==" => .ok (Expr.refEq x (same ▸ y))
+        | "!=" => .ok (Expr.not (Expr.refEq x (same ▸ y)))
+        | _ => .error "source export: reference ordering has no canonical G form"
+      else .error "source export: reference equality requires the same region"
     | _, _ =>
     match lowSideEns u Γ Λ fn er a with
     | .error e => .error e
@@ -1604,10 +1649,135 @@ def lowOpt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : 
         else .error "option of a foreign table"
       else .error "access without held guard"
 
+/-- Reify an ordinary held-lock fact only after checking the current resource list. -/
+def lowHeld (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (name : String) :
+    Except String (Expr (declOf u) Γ Λ .bool) := do
+  u.exportGate
+  match lockIdx u.locks name with
+  | .error e => .error e
+  | .ok lock =>
+    if Res.held lock ∈ Λ then .ok Expr.tru
+    else .error "Held predicate without possession"
+
+/-- A self edge retains its declaration, field identity and exact optional index type. -/
+structure SelfEdge (u : UProg) (table : Fin u.tabs.length) (name : String) where
+  field : (declOf u).Feld table
+  self : (declOf u).typ table field = .opt ((declOf u).count table)
+  original : OptHit u table
+  lookup : fieldHitO u table name = .ok original
+  found : field = original.idx
+  identity : original.tnum = table.val
+
+/-- Equal slot counts never substitute for the identity of the edge's target table. -/
+def selfEdge (u : UProg) (table : Fin u.tabs.length) (name : String) : Except String (SelfEdge u table name) :=
+  match lookup : fieldHitO u table name with
+  | .error error => .error error
+  | .ok edge =>
+    if same : edge.tnum = table.val then
+      have tableSame : (⟨edge.tnum, edge.hlt⟩ : Fin u.tabs.length) = table := Fin.ext same
+      have countSame : edge.n = (declOf u).count table := by
+        rw [← edge.hcnt, tableSame]
+      .ok ⟨edge.idx, edge.hopt.trans (congrArg Ty.opt countSame), edge, lookup, rfl, same⟩
+    else .error "source export: reach edge points to another table"
+
+/-- Source relations are built with the canonical typed index and guard checks. -/
+def lowReach (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : Nat)
+    (name field : String) (a b : UIdx) : Except String (Expr (declOf u) Γ Λ .bool) := do
+  u.exportGate
+  let table ← tabIdx u.tabs name
+  let edge ← selfEdge u table field
+  let start ← lowIdx u Γ Λ fn sh table a
+  let stop ← lowIdx u Γ Λ fn sh table b
+  if guard : (∀ resource ∈ (declOf u).braucht table, Res.von (declOf u) resource ∈ Λ) then
+    pure (.reaches table edge.field edge.self start stop guard)
+  else .error "access without held guard"
+
+/-- A membership operand is an integer value, not a proof that it is already in range.
+    The second origin check also protects generic UProg callers from foreign nominal indices. -/
+def lowMemberValue (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (shift : Nat)
+    (table : Fin u.tabs.length) : UIdx → Except String (LowSide u Γ Λ)
+  | .lit value => .ok {range := (value, value), term := .lit value}
+  | .param name => do
+    let position ← paramPos fn.params name
+    match fn.kinds[position]? with
+    | some .int => lowParamSide u Γ Λ fn shift name
+    | some (.index origin) =>
+        if origin == table.val then lowParamSide u Γ Λ fn shift name
+        else .error "source export: index belongs to another table"
+    | _ => .error "source export: membership value is not an integer index"
+
+/-- Membership enumerates exactly G's finite slot domain, retaining its guard even for
+    a statically out-of-range operand. No narrowing or integer-to-reference cast occurs. -/
+def lowMember (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : Nat)
+    (name : String) (index : UIdx) : Except String (Expr (declOf u) Γ Λ .bool) := do
+  u.exportGate
+  let table ← tabIdx u.tabs name
+  let value ← lowMemberValue u Γ Λ fn sh table index
+  if guard : (∀ resource ∈ (declOf u).braucht table, Res.von (declOf u) resource ∈ Λ) then
+    pure (Expr.existsSlots table (Expr.eq (.var .here) value.term.weaken) guard)
+  else .error "access without held guard"
+
+/-- The checked fixed array domain retains its real element type and length. Only lexical
+    arrays are admitted: a stateful domain must first be captured by an explicit binding. -/
+structure ArrayValue (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
+  element : Ty
+  count : Nat
+  value : Expr (declOf u) Γ Λ (.arr element count)
+  lexical : value.orte.isEmpty = true
+
+def lowArrayValue (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty)
+    (source : USide) : Except String (ArrayValue u Γ Λ) := do
+  match ← lowWertE u Γ Λ fn er source with
+  | ⟨.arr element count, term⟩ =>
+      if lexical : term.orte.isEmpty = true then .ok ⟨element, count, term, lexical⟩
+      else .error "source export: array domain requires an immutable value binding"
+  | _ => .error "source export: elems domain is not an array"
+
+structure ArrayCarrier (u : UProg) (count : Nat) where
+  table : Fin u.tabs.length
+  same : (declOf u).count table = (count : Int)
+
+def arrayCarrier (u : UProg) (count : Nat) : Except String (ArrayCarrier u count) := do
+  let table ← tabIdx u.tabs (uArrayCarrierName count)
+  if same : (declOf u).count table = (count : Int) then .ok ⟨table, same⟩
+  else .error "source export: array iterator count disagrees with its value"
+
+
 /-- One `ensures` predicate. -/
 def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option Ty) :
     UEns → Except String (Expr (declOf u) Γ Λ .bool)
+  | .arrayElements universal source binder body => do
+      u.exportGate
+      let array ← lowArrayValue u Γ Λ fn er source
+      let carrier ← arrayCarrier u array.count
+      let fnR ← ergAlsParam u fn er
+      if guard : (∀ resource ∈ (declOf u).braucht carrier.table, Res.von (declOf u) resource ∈ Λ) then
+        let predicate ← lowEns u (Ty.index ((declOf u).count carrier.table) :: Γ) Λ
+          (fnR.mitTy binder (.index ((declOf u).count carrier.table))) none body
+        pure (if universal then Expr.forallSlots carrier.table predicate guard else Expr.existsSlots carrier.table predicate guard)
+      else .error "access without held guard"
+  | .reach table field a b => lowReach u Γ Λ fn (if er.isSome then 1 else 0) table field a b
+  | .member table index => lowMember u Γ Λ fn (if er.isSome then 1 else 0) table index
+  | .filtered all name binder field reverse source body => do
+      u.exportGate
+      let table ← tabIdx u.tabs name
+      let edge ← selfEdge u table field
+      let seed ← lowIdx u Γ Λ fn (if er.isSome then 1 else 0) table source
+      let fnR ← ergAlsParam u fn er
+      if guard : (∀ resource ∈ (declOf u).braucht table, Res.von (declOf u) resource ∈ Λ) then
+        let predicate ← lowEns u (.index ((declOf u).count table) :: Γ) Λ
+          (fnR.mitIndex binder table.val ((declOf u).count table)) none body
+        let filter : Expr (declOf u) (Ty.index ((declOf u).count table) :: Γ) Λ .bool :=
+          if reverse then Expr.reaches table edge.field edge.self (.var .here) seed.weaken guard
+          else Expr.reaches table edge.field edge.self seed.weaken (.var .here) guard
+        pure (if all then Expr.forallSlots table (Expr.impl filter predicate) guard
+          else Expr.existsSlots table (Expr.and filter predicate) guard)
+      else .error "access without held guard"
+  | .held name => lowHeld u Γ Λ name
+  | .imp a b => do
+      u.exportGate
+      pure (Expr.or (Expr.not (← lowEns u Γ Λ fn er a)) (← lowEns u Γ Λ fn er b))
   | .cmp op a b => lowCmp u Γ Λ fn er op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -1660,7 +1830,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .alle tn x body =>
-    match tabIdx u.tabs tn, ergAlsParam fn er with
+    match tabIdx u.tabs tn, ergAlsParam u fn er with
     | .error e, _ => .error e
     | _, .error e => .error e
     | .ok t, .ok fnR =>
@@ -1670,7 +1840,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         | .ok b => .ok (Expr.forallSlots (D := declOf u) t b hL)
       else .error "access without held guard"
   | .einige tn x body =>
-    match tabIdx u.tabs tn, ergAlsParam fn er with
+    match tabIdx u.tabs tn, ergAlsParam u fn er with
     | .error e, _ => .error e
     | _, .error e => .error e
     | .ok t, .ok fnR =>

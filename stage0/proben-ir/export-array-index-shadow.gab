@@ -1,0 +1,10 @@
+const DATA : [u8; 2] = [40, 42];
+const j : u8 = 99;
+impl fn main() -> u8
+ requires forall j in elems of DATA : j < 2
+ requires exists k in elems of DATA : DATA[k] == 42
+ requires 1 in elems of DATA
+ requires !(2 in elems of DATA)
+ requires j == 99
+ ensures forall j in elems of DATA : DATA[j] <= result
+ { return 42; }

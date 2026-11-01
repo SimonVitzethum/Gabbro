@@ -350,7 +350,12 @@ theorem reihe_each (f : Nat) (ctx ctxS : UCtx) (bnd : String) (s : SExpr) (inv :
     (h2 : uAnwReihe tabs koepfe f ctx rest = .ok (xs, cE)) :
     uAnwReihe tabs koepfe (f + 1) ctx (.each bnd none "slots" s "unvisited" "" inv (.block ss none) :: rest) =
       .ok ([.loopBeg bnd tab iv] ++ body ++ [.blkEnd] ++ xs, cE) := by
-  rw [uAnwReihe] <;> first | (simp only [hk, h1, uEndeStmt, h2, List.cons_append, List.nil_append, List.append_nil, List.append_assoc]) | (intros; simp_all)
+  have header : uLoopExport ctx bnd none "slots" s "unvisited" "" inv =
+      .ok (.loopBeg bnd tab iv, ctxS, none) := by
+    simp only [uLoopExport, BEq.rfl, ↓reduceIte, hk]
+    rfl
+  rw [uAnwReihe] <;> first | (simp only [header, h1, uEndeStmt, h2, uFilteredBody, List.cons_append, List.nil_append, List.append_nil, List.append_assoc]) | (intros; simp_all)
+
 
 end Reihe
 

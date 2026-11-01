@@ -1,0 +1,7 @@
+table T count 1 { slot { value : u8, } }
+lock L protects { T } rank 1;
+const EMPTY : [u8; 0] = [];
+impl fn check(data : [u8; 0]) -> u8 effects { locks L }
+ requires forall j in elems of data : Held(L)
+ { return 42; }
+impl fn main() -> u8 { return 42; }

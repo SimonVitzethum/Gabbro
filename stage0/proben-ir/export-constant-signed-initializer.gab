@@ -1,0 +1,7 @@
+module ir_constant_signed_initializer {
+static VALUE : i8 = i8.min + 1;
+impl fn main() -> u8 effects { reads VALUE } {
+    if VALUE == -127 { return 42; }
+    return 1;
+}
+}

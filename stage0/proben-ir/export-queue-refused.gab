@@ -1,0 +1,4 @@
+table T count 1 { slot { value : u8, } }
+impl fn main() -> u8 effects { reads T.slots }
+ requires forall node in queue T : node == 0
+ { return 42; }

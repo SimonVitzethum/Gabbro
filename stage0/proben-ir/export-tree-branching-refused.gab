@@ -1,0 +1,5 @@
+table T count 3 { tree { child first, sibling next } slot { first : option index into Self, next : option index into Self, } }
+impl fn query(root : index into T) -> bool effects { reads T.slots }
+ requires forall node in descendants of root : node < 3
+ { return true; }
+impl fn main() -> u8 { return 42; }

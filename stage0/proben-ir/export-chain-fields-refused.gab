@@ -1,0 +1,5 @@
+table T count 3 { slot { next : option index into Self, child : option index into Self, } }
+impl fn query(a : index into T) -> bool effects { reads T.slots }
+ requires a in chain(next, child) in T.slots[a]
+ { return true; }
+impl fn main() -> u8 { return 42; }

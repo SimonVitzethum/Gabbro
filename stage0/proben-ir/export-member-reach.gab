@@ -1,0 +1,19 @@
+module ir_member_reach {
+table T count 3 { tree { child next } slot { next : option index into Self, } }
+impl fn query(a : index into T, b : index into T) -> u8
+ effects { reads T.slots }
+ requires a in slots of T
+ requires b in descendants of a
+ requires a in ancestors of b
+ requires a reaches b via next
+ requires !(b reaches a via next)
+ ensures result == 42
+ { return 42; }
+impl fn main() -> u8 effects { reads T.slots, writes T.slots } {
+ T.slots[0].next = Some(1);
+ T.slots[1].next = Some(2);
+ T.slots[2].next = None;
+ let answer = query(0, 2);
+ return answer;
+}
+}

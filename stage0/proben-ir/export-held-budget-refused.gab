@@ -1,0 +1,12 @@
+module ir_held {
+table T count 1 { slot { value : u32 in 0 .. 42, } }
+lock L protects { T } rank 1 held <= 10000 ops;
+impl fn read() -> u32 in 0 .. 42 effects { reads T.slots } requires Held(L)
+    ensures Held(L) => result == 42
+{ let possessed : bool = Held(L); return T.slots[0].value; }
+impl fn main() -> u32 in 0 .. 42 effects { reads T.slots, writes T.slots, locks L } {
+    let mut answer : u32 in 0 .. 42 = 0;
+    locks L { T.slots[0].value = 42; let value = read(); answer = value; }
+    return answer;
+}
+}

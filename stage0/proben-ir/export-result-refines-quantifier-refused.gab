@@ -1,0 +1,6 @@
+module ir_generated_quantifier {
+table T count 2 { slot { ready : bool, } }
+spec fn ready() -> bool effects { pure } = forall i in slots of T : !T.slots[i].ready;
+impl fn main() -> option index into T effects { reads T.slots } refines ready
+{ return Some(1); }
+}

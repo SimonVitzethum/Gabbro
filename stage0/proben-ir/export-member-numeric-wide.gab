@@ -1,0 +1,8 @@
+table T count 3 { slot { value : u8, } }
+impl fn query(value : u64 in 0 .. 2535301200456458802993406410751) -> u8 effects { reads T.slots }
+ requires value in slots of T
+ ensures result == 42
+ { return 42; }
+impl fn main() -> u8 effects { reads T.slots }
+ requires !(1267650600228229401496703205376 in slots of T)
+ { let answer = query(2); return answer; }

@@ -1,0 +1,8 @@
+module ir_constant_headers {
+const N : u8 = 1;
+const RANK : u8 = 2;
+table T count (N + 1) * 2 { slot { value : u8, } }
+lock L protects { T } rank RANK + 1;
+const ANSWER : u8 = (20 + 1) * 2;
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

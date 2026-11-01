@@ -1,0 +1,12 @@
+module ir_implication_binder {
+table T count 2 { slot { ready : bool, } }
+impl fn ready() -> bool effects { reads T.slots }
+    ensures forall i in slots of T : result => T.slots[i].ready
+{ return true; }
+impl fn main() -> u32 in 0 .. 42 effects { reads T.slots, writes T.slots } {
+    T.slots[0].ready = true;
+    T.slots[1].ready = false;
+    let value = ready();
+    return 42;
+}
+}

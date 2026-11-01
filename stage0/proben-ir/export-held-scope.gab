@@ -1,0 +1,1 @@
+module ir_held_refused { table T count 1 { slot { value : u8, } } lock L protects { T } rank 1; impl fn main() -> u32 in 0 .. 42 effects { locks L } { locks L { } let held : bool = Held(L); return 42; } }

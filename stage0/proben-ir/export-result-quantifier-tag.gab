@@ -1,0 +1,7 @@
+module ir_result_quantifier {
+table T count 2 { slot { ready : bool, } }
+tagged type Tag = { Empty, Ready };
+impl fn main() -> Tag effects { reads T.slots }
+    ensures forall i in slots of T : !T.slots[i].ready
+{ return Ready; }
+}

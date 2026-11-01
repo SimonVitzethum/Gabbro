@@ -1,0 +1,8 @@
+module ir_implication {
+impl fn choose(ready : bool) -> u32 in 0 .. 42 effects { pure }
+    requires ready => true
+    ensures ready => result == 42
+    ensures !ready => result == 0
+{ if ready { return 42; } return 0; }
+impl fn main() -> u32 in 0 .. 42 effects { pure } { let zero = choose(false); let answer = choose(true); return answer; }
+}

@@ -3,8 +3,8 @@
   Subject:   Track P: the failure channel. `reason R { C = 1 "text" exhaustive }` is `Ty.why n` (`n` the number of
              cases); a function `-> T or R` has `Signatur.gruende = n` and ends a failing path with `return R::C;`
              (`Stmt.retWhy`/`Endblock.retWhy`); a caller binds the value or handles the reason with
-             `let y = f(..) else (e) { .. }` (`Block.bindCallElse`, a nested block only: `Endblock` lacks the
-             former, recorded as a model gap) and `match e { C => { .. } }` (`Stmt.onWhy`, one arm per case).
+             `let y = f(..) else (e) { .. }` (`Block.bindCallElse`/`Endblock.bindCallElse`, including
+             nested error continuations) and `match e { C => { .. } }` (`Stmt.onWhy`, one arm per case).
              A bare call of such a function has no form (`Stmt.call` needs `gruende = 0`).
 -/
 module

@@ -1,0 +1,10 @@
+const DATA : [u8; 3] = [9, 42, 8];
+impl fn main() -> u8 {
+ let data : [u8; 3] = DATA;
+ let mut answer : u8 = 0;
+ traverse j over elems of data by unvisited invariant answer <= 42 {
+   if j == 0 { next j; }
+   if data[j] == 42 { answer = 42; leave j; }
+ }
+ return answer;
+}

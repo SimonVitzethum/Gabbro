@@ -1,0 +1,3 @@
+table T count 1 { slot { value : u8, } }
+lock L protects { T } rank 1 + 1 held <= 10 ops;
+impl fn main() -> u8 { return 42; }

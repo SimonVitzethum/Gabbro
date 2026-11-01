@@ -1,0 +1,7 @@
+const EMPTY : [u8; 0] = [];
+impl fn main() -> u8
+ requires forall j in elems of EMPTY : j < 0
+ requires !(exists j in elems of EMPTY : j == 0)
+ requires !(0 in elems of EMPTY)
+ ensures result == 42
+ { return 42; }

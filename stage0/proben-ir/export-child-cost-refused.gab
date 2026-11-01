@@ -1,0 +1,8 @@
+module ir_nested_metadata {
+table T count 1 { slot { ready : bool, } }
+lock L protects { T } rank 1;
+impl fn main() -> u32 in 0 .. 42 effects { locks L } costs <= 0 ops {
+    child { locks L { let held : bool = Held(L); } }
+    return 42;
+}
+}

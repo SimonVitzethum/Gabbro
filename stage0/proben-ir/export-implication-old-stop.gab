@@ -1,0 +1,9 @@
+module ir_implication_old {
+static mut value : u32 in 0 .. 42 = 0;
+impl fn change() effects { reads value, writes value }
+    ensures old(value) == 7 => value == 41
+{ value = 42; }
+impl fn main() -> u32 in 0 .. 42 effects { reads value, writes value } {
+    value = 7; change(); return value;
+}
+}

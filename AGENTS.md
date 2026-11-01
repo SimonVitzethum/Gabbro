@@ -9,12 +9,20 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
-**ALL AGENTS ON THE C PACKAGES (owner, 2026-11-01).** All four agents (two Claude Sonnet 5.5, two GPT Sol
-6.1) work on the C packages and on the Lean module-system migration below; every other lane (IR-04 floats in
-`t3-c3ebf14f`, IR-02 `narrow`, the remaining A/B packages and IR lanes) is paused with its worktree, dirty
-changes and scratch preserved, and resumes only when C is done. Per round, new constructors/types of `Expr`,
-`Stmt`, `Ty` and the declaration fields are added first in ONE central commit (appended at the END of their
-inductive), then the agents work in parallel on disjoint files; checks are rare and batched.
+**TEAM AND BUILD RULES (owner, 2026-11-01, supersede every older staffing rule below).**
+- **Two Claude Sonnet 5.5 leads**, both T3 Code agents. Each lead controls, through T3 `delegate_task`, exactly
+  ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor sub-agents. All agents are T3 Code agents.
+  The leads work on the C packages and the Lean module-system migration; every other lane (IR-04 floats,
+  IR-02 `narrow`, the remaining A/B packages and IR lanes) is paused with its worktree and resumes after C.
+- **Only the leads build.** Each lead runs its own builds and may do heavy work itself; sub-agents and their
+  sub-agents never build or check Lean, and their worktrees carry no `.lake` (no Mathlib, no build cache).
+  A lead checks its sub-agents' work in its own tree.
+- **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`,
+  `lean` and the shell. The four guardians stay root's tools.
+- **One Mathlib for all trees**: the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
+  tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only
+  the own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
+- **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
 
 **Lean module system (owner, 2026-11-01, fixed rule).** All Lean in the repository (`grammatik/`,
 `stage0/`, `runner/`, `programmlogik/`, `passlogik/` and every other Lean package) is migrated completely to
@@ -107,7 +115,8 @@ expanding infrastructure for a small subset.
   `lean`, `lake`, `cargo`, the runner and regression loops, guardians, Python measurement scripts — runs
   inside `systemd-run --user --scope -p MemorySwapMax=0` with a MemoryMax/MemoryHigh. No exceptions.
 - **RAM discipline (owner, 2026-11-01):** inside a Stage-0 slot exactly ONE `lean` process runs, with
-  `-j1 -DElab.async=false -M4608`, checked module by module in dependency order. Never run a parallel
+  `-j4 -DElab.async=true -M4608` (owner, 2026-11-01: asynchronous elaboration is the standard; the threads of
+  one process share its imports), checked module by module in dependency order. Never run a parallel
   `lake build` of `stage0/` (it spawns one `lean -M16384` per module and thrashes inside the 5G scope). Check
   `free -g` before every heavy step; with less than 8 GiB available, wait. Agents keep the slot lock only for
   one module and must not end their run while a build they started still runs.

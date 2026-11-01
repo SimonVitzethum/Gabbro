@@ -11,7 +11,7 @@
   `archiv/c-emitter-2026-10-17` -- and the generic pipeline moved here unchanged.)
 -/
 module
-public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Parser.Elab.ExportPreservation
 @[expose] public section
 
 
