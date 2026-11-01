@@ -1,7 +1,13 @@
 // C17 probe: `decreases` on an acyclic function is vacuous but must still be
-// accepted, not refused and not silently dropped. succ(6) = 7.
+// accepted, not refused and not silently dropped. succ(6) = 7. The result range
+// carries headroom on purpose: M1 refuses a `+` that leaves the static range, so
+// `n + 1` needs `0 .. 101` above `n : u32 in 0 .. 100`.
 module c17_acyclic {
-impl fn succ(n : u32) -> u32 effects { pure } costs <= 8 ops decreases n {
+impl fn succ(n : u32 in 0 .. 100) -> u32 in 0 .. 101
+    effects { pure }
+    costs <= 8 ops
+    decreases n
+{
     return n + 1;
 }
 impl fn main() -> u32 effects { pure } {

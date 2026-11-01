@@ -1,1 +1,1 @@
-decreases measure must not read a global cell
+the `decreases` of `f` names no parameter of it

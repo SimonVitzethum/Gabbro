@@ -1,1 +1,1 @@
-recursion measure does not decrease at the recursive call
+the recursive call to `f` does not visibly LOWER any size of the `decreases` of `f`

@@ -1,7 +1,9 @@
 // C17 negative probe: a self-recursive function with no `decreases` measure.
 // No measure on the cycle means no termination duty: must be refused.
+// costs <= 128 ops leaves the body (self-call counts the declared 64) below the
+// promise, so only the measure rules fire: K008 with H022 beside it, no K001.
 module c17_missing {
-impl fn f(n : u32) -> u32 effects { pure } costs <= 64 ops {
+impl fn f(n : u32) -> u32 effects { pure } costs <= 128 ops {
     if n == 0 { return 0; }
     return f(n - 1);
 }
