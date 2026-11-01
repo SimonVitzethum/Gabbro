@@ -81,10 +81,10 @@ theorem naechst_nonneg (A : FreiForm D) (σ : World D) (k : Int) : 0 ≤ A.naech
   (Wert.umTyp A.hnxt (σ.slots A.tab k A.nxt)).lo_le
 
 @[simp] theorem kopfSt_lese (A : FreiForm D) (σ : World D) (Λ : List (Res D))
-    (o : List (D.Tab ⊕ D.Glob)) : A.kopfSt (σ.lese Λ o) = A.kopfSt σ := rfl
+    (o : List (D.Tab ⊕ D.Glob)) : A.kopfSt (σ.lese Λ o) = A.kopfSt σ := by rfl
 
 @[simp] theorem naechst_lese (A : FreiForm D) (σ : World D) (Λ : List (Res D))
-    (o : List (D.Tab ⊕ D.Glob)) (k : Int) : A.naechst (σ.lese Λ o) k = A.naechst σ k := rfl
+    (o : List (D.Tab ⊕ D.Glob)) (k : Int) : A.naechst (σ.lese Λ o) k = A.naechst σ k := by rfl
 
 /-! ## 2. The chain -/
 
@@ -189,7 +189,7 @@ theorem nxtWert_n (A : FreiForm D) (x : Int) (h0 : 0 ≤ x) (h1 : x ≤ D.count 
 
 @[simp] theorem kopfSt_schreibSlot (A : FreiForm D) (σ : World D) (Λ : List (Res D))
     (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
-    A.kopfSt (σ.schreibSlot t Λ k f v) = A.kopfSt σ := rfl
+    A.kopfSt (σ.schreibSlot t Λ k f v) = A.kopfSt σ := by rfl
 
 @[simp] theorem stand_schreibGlob_kopf (A : FreiForm D) (σ : World D) (Λ : List (Res D))
     (v : Wert D (D.gtyp A.kopf)) :
@@ -301,7 +301,7 @@ theorem naechst_schreibSlot_feld (A : FreiForm D) (σ : World D) (Λ : List (Res
 
 /-- A store into the payload field does not move the head. -/
 @[simp] theorem kopfSt_schreibSlot_feld (A : FreiForm D) (σ : World D) (Λ : List (Res D)) (i : Int)
-    (v : Wert D (D.typ A.tab A.feld)) : A.kopfSt (σ.schreibSlot A.tab Λ i A.feld v) = A.kopfSt σ := rfl
+    (v : Wert D (D.typ A.tab A.feld)) : A.kopfSt (σ.schreibSlot A.tab Λ i A.feld v) = A.kopfSt σ := by rfl
 
 /-- **Taking the head off hands out a slot that is no longer on the list.** From the facts the executed form gives
     (the head becomes the old head's link, links and counter as before): the list stays well formed, and the slot

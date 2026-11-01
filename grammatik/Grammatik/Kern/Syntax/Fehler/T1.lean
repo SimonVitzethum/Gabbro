@@ -217,13 +217,13 @@ def fehlerFallErgebnis {τ : Ty} (f : FehlerFall) : ErgebnisF D τ :=
     raw-datum falsifier faults where no grammar term can (`indexFalleErgebnis`). -/
 theorem indexFalleErgebnis_fehler (F : IndexFalle D) :
     (indexFalleErgebnis F : ErgebnisF D τ) = .fehler .index :=
-  rfl
+  by rfl
 
 /-- A named fault datum reaches its own fault -- by definition
     (`fehlerFallErgebnis`). -/
 theorem fehlerFallErgebnis_fehler (f : FehlerFall) :
     (fehlerFallErgebnis f : ErgebnisF D τ) = .fehler f.klasse :=
-  rfl
+  by rfl
 
 /-- The index falsifier never counts as ok: raw data faults, it does not agree. -/
 theorem evalF_ok_nicht_indexFalle (F : IndexFalle D) :
@@ -273,23 +273,23 @@ def ErgebnisF.map {τ' : Ty} (f : Wert D τ → Wert D τ') : ErgebnisF D τ →
 theorem ErgebnisF.bind_fehler {τ' : Ty} (k : Fehlerklasse)
     (f : Wert D τ → ErgebnisF D τ') :
     (.fehler k : ErgebnisF D τ).bind f = .fehler k :=
-  rfl
+  by rfl
 
 /-- Ein Wert laeuft in die Fortsetzung. -/
 theorem ErgebnisF.bind_wert {τ' : Ty} (v : Wert D τ)
     (f : Wert D τ → ErgebnisF D τ') :
     (.val v : ErgebnisF D τ).bind f = f v :=
-  rfl
+  by rfl
 
 /-- Ein fehlerhafter Eingang fehlert die Abbildung. -/
 theorem ErgebnisF.map_fehler {τ' : Ty} (f : Wert D τ → Wert D τ') (k : Fehlerklasse) :
     (.fehler k : ErgebnisF D τ).map f = .fehler k :=
-  rfl
+  by rfl
 
 /-- Ein Wert wird abgebildet. -/
 theorem ErgebnisF.map_wert {τ' : Ty} (f : Wert D τ → Wert D τ') (v : Wert D τ) :
     (.val v : ErgebnisF D τ).map f = .val (f v) :=
-  rfl
+  by rfl
 
 /-! ## 3. Die `evalAll`-Gestalt: ein fehlerhaftes Argument fehlert die Liste -/
 
@@ -369,25 +369,25 @@ def AusF.folge : AusF V l Γ → (World D → Env D Γ → AusF V l Γ) → AusF
 theorem AusF.folge_fehler (k : Fehlerklasse)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.fehler k : AusF V l Γ).folge nach = .fehler k :=
-  rfl
+  by rfl
 
 /-- `ok` uebergibt Welt und Sichtbereich an die Fortsetzung. -/
 theorem AusF.folge_ok (σ : World D) (ρ : Env D Γ)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.ok σ ρ) : AusF V l Γ).folge nach = nach σ ρ :=
-  rfl
+  by rfl
 
 /-- Die Logik des Schreibers bleibt stehen. -/
 theorem AusF.folge_logik (e : Logik D)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.logik e) : AusF V l Γ).folge nach = .widen (.logik e) :=
-  rfl
+  by rfl
 
 /-- Eine widerlegte Maschinenannahme bleibt stehen. -/
 theorem AusF.folge_hardware (e : Hardware D)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.hardware e) : AusF V l Γ).folge nach = .widen (.hardware e) :=
-  rfl
+  by rfl
 
 /-- Die Blockfolge ueber Welt-Schritten: ein fehlerhafter Schritt beendet die Folge;
     sonst traegt die Welt weiter. -/
@@ -481,22 +481,22 @@ def endZustandF : AusF V l Γ → Option (World D)
 /-- Ein benannter Fehler hat keinen Nachzustand. -/
 theorem endZustandF_fehler (k : Fehlerklasse) :
     endZustandF (AusF.fehler k : AusF V l Γ) = none :=
-  rfl
+  by rfl
 
 /-- Die widerlegte Schreiberlogik hat keinen Nachzustand. -/
 theorem endZustandF_logik (e : Logik D) :
     endZustandF (AusF.widen (.logik e) : AusF V l Γ) = none :=
-  rfl
+  by rfl
 
 /-- Die widerlegte Maschinenannahme hat keinen Nachzustand. -/
 theorem endZustandF_hardware (e : Hardware D) :
     endZustandF (AusF.widen (.hardware e) : AusF V l Γ) = none :=
-  rfl
+  by rfl
 
 /-- `ok` traegt seine Welt weiter. -/
 theorem endZustandF_ok (σ : World D) (ρ : Env D Γ) :
     endZustandF (AusF.widen (.ok σ ρ) : AusF V l Γ) = some σ :=
-  rfl
+  by rfl
 
 /-! ## 7. Die Sicherheitsform: gestoert heisst eigene Logik oder benannter Fehler -/
 
@@ -564,12 +564,12 @@ def AusF.zuAusgang : AusF V l Γ → Option (Ausgang V l Γ)
 /-- There and back: the embedding loses nothing. -/
 theorem AusF.zuAusgang_vonAusgang (o : Ausgang V l Γ) :
     (AusF.vonAusgang o).zuAusgang = some o :=
-  rfl
+  by rfl
 
 /-- A named fault has no `Ausgang` to project to. -/
 theorem AusF.zuAusgang_fehler (k : Fehlerklasse) :
     (AusF.fehler k : AusF V l Γ).zuAusgang = none :=
-  rfl
+  by rfl
 
 /-- The sequencing agreement, end to end: `folge` over an embedded `Ausgang`
     calls the continuation exactly where `execBlock` continues (`ok`), and
@@ -592,28 +592,28 @@ theorem AusF.folge_zurueck (σ : World D) (v : ErgVal D V.erg)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.zurueck σ v) : AusF V l Γ).folge nach =
       .widen (.zurueck σ v) :=
-  rfl
+  by rfl
 
 /-- A raised ground does not continue. -/
 theorem AusF.folge_grund (σ : World D) (r : Fin V.gruende)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.why σ r) : AusF V l Γ).folge nach =
       .widen (.why σ r) :=
-  rfl
+  by rfl
 
 /-- A consumed `leave` does not continue. -/
 theorem AusF.folge_leave (h : l = true) (σ : World D) (ρ : Env D Γ)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.leave h σ ρ) : AusF V l Γ).folge nach =
       .widen (.leave h σ ρ) :=
-  rfl
+  by rfl
 
 /-- A consumed `next` does not continue. -/
 theorem AusF.folge_next (h : l = true) (σ : World D) (ρ : Env D Γ)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.next h σ ρ) : AusF V l Γ).folge nach =
       .widen (.next h σ ρ) :=
-  rfl
+  by rfl
 
 /-! ## 9. Stuck-or-fault implies own logic or named fault -/
 

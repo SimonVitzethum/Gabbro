@@ -46,7 +46,7 @@ theorem refused_push_zeuge (O : Orakel FD) (passes : Nat)
     (R : ∀ f : FD.Fn, World FD → Env FD (FD.params f) → RufAusgang f) :
     execBlock O passes R
       (Block.tryPush (.not .tru) failure fresh LL LG rfl fdarf rfl (fgdarf _) .nil)
-      initialWorld initialEnv = .zurueck initialWorld () := rfl
+      initialWorld initialEnv = .zurueck initialWorld () := by rfl
 
 /-- An empty stack takes the ordinary failure branch before any payload read
 or release. No successful pop is invented for the empty representation. -/
@@ -55,7 +55,7 @@ theorem empty_pop_zeuge (O : Orakel FD) (passes : Nat)
     execBlock O passes R
       (Block.popAndRelease LL LG rfl (fgdarf _) rfl fdarf rfl (fgdarf _) failure .nil)
       initialWorld initialEnv =
-        .zurueck (initialWorld.lese [] [Sum.inr LG.g]) () := rfl
+        .zurueck (initialWorld.lese [] [Sum.inr LG.g]) () := by rfl
 
 theorem reused_contents : Represents LL LG w0 [zero, zero] := by
   refine ⟨[2, 0], listeKette_w0, by decide, ?_, rfl⟩

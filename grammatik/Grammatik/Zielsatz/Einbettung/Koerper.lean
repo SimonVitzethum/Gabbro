@@ -20,11 +20,11 @@ namespace Einbettung
 
 variable (E : Einbettung D D')
 
-theorem ortE_inl (t : D.Tab) : (Sum.inl (E.tab t) : D'.Tab ⊕ D'.Glob) = E.ortE (.inl t) := rfl
-theorem ortE_inr (g : D.Glob) : (Sum.inr (E.glob g) : D'.Tab ⊕ D'.Glob) = E.ortE (.inr g) := rfl
+theorem ortE_inl (t : D.Tab) : (Sum.inl (E.tab t) : D'.Tab ⊕ D'.Glob) = E.ortE (.inl t) := by rfl
+theorem ortE_inr (g : D.Glob) : (Sum.inr (E.glob g) : D'.Tab ⊕ D'.Glob) = E.ortE (.inr g) := by rfl
 
 theorem aparamsUm_falt (a : D.Ax) (ρ : Env D (D.aparams a)) :
-    castE (E.aparams a).symm (E.envE ρ) = E.aparamsUm a ρ := rfl
+    castE (E.aparams a).symm (E.envE ρ) = E.aparamsUm a ρ := by rfl
 
 variable (hZ : E.Rueck) (hS : E.SigTreu) (pad : List (Ereignis D)) (S : SperrInv D)
   (T : D.Tab ⊕ D.Glob → Prop) (S' : SperrInv D') (T' : D'.Tab ⊕ D'.Glob → Prop) (O' : Orakel D')
@@ -77,14 +77,14 @@ theorem frei_alle {σ₁ : World D} {σ₁' : World D'}
       eval σ₁' (exE E e) σ₁' ρ' = E.valE τ (eval σ₁ e σ₁ ρ) :=
   fun _ _ e hτ => E.frei_eq hZ (hev e ρ ρ' hρ) hτ
 
-theorem zf_int {a b : Int} : (Ty.int a b).zeigerfrei = true := rfl
-theorem zf_index {c : Int} : (Ty.index c).zeigerfrei = true := rfl
-theorem zf_bool : Ty.bool.zeigerfrei = true := rfl
-theorem zf_opt {n : Int} : (Ty.opt n).zeigerfrei = true := rfl
-theorem zf_sum {cs : List (Option (Int × Int))} : (Ty.sum cs).zeigerfrei = true := rfl
-theorem zf_why {n : Nat} : (Ty.why n).zeigerfrei = true := rfl
-theorem zf_fl {lo hi : Int × Int} : (Ty.fl lo hi).zeigerfrei = true := rfl
-theorem zf_ref {n : Nat} : (Ty.ref n).zeigerfrei = true := rfl
+theorem zf_int {a b : Int} : (Ty.int a b).zeigerfrei = true := by rfl
+theorem zf_index {c : Int} : (Ty.index c).zeigerfrei = true := by rfl
+theorem zf_bool : Ty.bool.zeigerfrei = true := by rfl
+theorem zf_opt {n : Int} : (Ty.opt n).zeigerfrei = true := by rfl
+theorem zf_sum {cs : List (Option (Int × Int))} : (Ty.sum cs).zeigerfrei = true := by rfl
+theorem zf_why {n : Nat} : (Ty.why n).zeigerfrei = true := by rfl
+theorem zf_fl {lo hi : Int × Int} : (Ty.fl lo hi).zeigerfrei = true := by rfl
+theorem zf_ref {n : Nat} : (Ty.ref n).zeigerfrei = true := by rfl
 
 /-- A value written through a type equation, beside its source. -/
 theorem vrel_um {τ T' : Ty} (e : T' = E.tyE τ) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}
@@ -105,7 +105,7 @@ theorem envR_eq_frei : ∀ {Γ : Ctx}, (∀ τ ∈ Γ, τ.zeigerfrei = true) →
 theorem castW_index_n {D₀ : Deklaration} {c c' : Int} (h : Ty.index c = Ty.index c')
     (v : Wert D₀ (Ty.index c)) : (castW h v).n = v.n := castW_n h v
 
-theorem valE_index_n {c : Int} (v : Wert D (Ty.index c)) : (E.valE (Ty.index c) v).n = v.n := rfl
+theorem valE_index_n {c : Int} (v : Wert D (Ty.index c)) : (E.valE (Ty.index c) v).n = v.n := by rfl
 
 theorem umsig_heq {D₀ : Deklaration} {f : D₀.Fn} {n : Nat} (hf : D₀.passt f n = true)
     (ρ : Env D₀ (D₀.sigNr n).params) : HEq (umsig hf ρ) ρ := by
@@ -147,21 +147,21 @@ theorem zahl_cast_wert {T T' : Ty} {lo hi : Int} (hτ : T = .int lo hi) (hτ' : 
 theorem logikRel_kein {e : Logik D} {e' : Logik D'} (h : ∀ g', e' ≠ .vorbedingung g') :
     LogikRel e e' := fun g' he => absurd he (h g')
 
-theorem wahr_valE (v : Wert D .bool) : wahr? (D := D') (E.valE .bool v) = wahr? v := rfl
+theorem wahr_valE (v : Wert D .bool) : wahr? (D := D') (E.valE .bool v) = wahr? v := by rfl
 
-theorem zelle_valE {n : Nat} (v : Wert D (.ref n)) : (E.valE (.ref n) v).zelle = v.zelle := rfl
+theorem zelle_valE {n : Nat} (v : Wert D (.ref n)) : (E.valE (.ref n) v).zelle = v.zelle := by rfl
 
-@[simp] theorem valE_ref {n : Nat} (v : Wert D (.ref n)) : E.valE (.ref n) v = v := rfl
+@[simp] theorem valE_ref {n : Nat} (v : Wert D (.ref n)) : E.valE (.ref n) v = v := by rfl
 
 theorem orakelΦ_regLies (Φ : Phi D D') (r : D.Reg) (σ : World D) :
-    (E.orakelΦ hZ pad Φ O').regLies r σ = O'.regLies (E.reg r) (Φ.haupt σ) := rfl
+    (E.orakelΦ hZ pad Φ O').regLies r σ = O'.regLies (E.reg r) (Φ.haupt σ) := by rfl
 
 theorem orakelΦ_sichtbar (Φ : Phi D D') (g : D.Glob) (σ : World D) (h : (D.gtyp g).zeigerfrei = true) :
     (E.orakelΦ hZ pad Φ O').sichtbar g σ = O'.sichtbar (E.glob g) (Φ.haupt σ) := by
   simp only [orakelΦ, h, if_true]
 
 theorem orakelΦ_zeiger (Φ : Phi D D') :
-    (E.orakelΦ hZ pad Φ O').zeiger = fun _ => Option.none := rfl
+    (E.orakelΦ hZ pad Φ O').zeiger = fun _ => Option.none := by rfl
 
 /-- A block whose image is transported along its scope. -/
 theorem koerperSim_block_um {V : Vertrag D} {l : Bool} {Δ : Ctx} {Δ₁ Δ₂ : Ctx}

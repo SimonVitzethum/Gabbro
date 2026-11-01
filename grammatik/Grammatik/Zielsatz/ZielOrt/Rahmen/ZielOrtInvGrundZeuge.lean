@@ -491,7 +491,7 @@ theorem igPschlecht_nicht_invGutGrund :
 theorem igM0_faden0 (setze : Endblock igD (vertragVon igD igSetze) false [] igL) :
     (RufStartG (igP setze) igSp igInit).faeden 0 =
     ⟨[], ⟨igHaupt, .nil, igSp.welt [], ⟨false, [], igL, .nil, .ende igRumpfHaupt⟩⟩,
-      startSpur igHaupt, [RufEreignisF.eintritt igHaupt .nil (igSp.welt [])]⟩ := rfl
+      startSpur igHaupt, [RufEreignisF.eintritt igHaupt .nil (igSp.welt [])]⟩ := by rfl
 
 theorem igHeld {s : List (Ereignis igD)} (h : offen s = [()]) : HeldIn igL (offen s) :=
   fun L _ => by cases L; rw [h]; exact List.mem_singleton.mpr rfl

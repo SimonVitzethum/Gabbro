@@ -156,7 +156,7 @@ theorem atomar_no_tear (e : Ereignis D) (h : EreignisAtomar e)
 theorem writeSlot_trace_singleton (σ : World D) (t : D.Tab) (Λ : List (Res D))
     (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
     (σ.schreibSlot t Λ k f v).spur =
-      (Ereignis.zugriff t true Λ σ.haelt) :: σ.spur := rfl
+      (Ereignis.zugriff t true Λ σ.haelt) :: σ.spur := by rfl
 
 /-- A byte transfer over `bs` leaves exactly `bs.length` events on the
     trace: one per byte (`World.schreibBytes`, by recursion). -/
@@ -225,7 +225,7 @@ theorem two_byte_tear :
 theorem two_byte_tear_is_interruption :
     interrupted [⟨0, by omega, by omega⟩, ⟨0, by omega, by omega⟩]
       [⟨1, by omega, by omega⟩, ⟨1, by omega, by omega⟩] 1 =
-      [⟨1, by omega, by omega⟩, ⟨0, by omega, by omega⟩] := rfl
+      [⟨1, by omega, by omega⟩, ⟨0, by omega, by omega⟩] := by rfl
 
 /-! ## 7. World-level readback: an interrupted transfer shows old-or-new per byte -/
 

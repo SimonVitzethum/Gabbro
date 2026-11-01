@@ -716,10 +716,10 @@ instance aliasKeptDec (o : AliasObligation) : Decidable (aliasKept o) :=
   inferInstanceAs (Decidable (o.arithSites = []))
 
 /-- Discharge: the empty site list keeps the obligation, by `rfl`. -/
-theorem alias_leer : aliasKept { arithSites := [] } := rfl
+theorem alias_leer : aliasKept { arithSites := [] } := by rfl
 
 /-- The census stands as data: 491 named sites (`PROOF.md` C1, §2 row 2). -/
-theorem census_steht : ptrArithCensus = 491 := rfl
+theorem census_steht : ptrArithCensus = 491 := by rfl
 
 /-- Accept: no address-arithmetic site in this image. -/
 example : aliasKept ⟨[]⟩ := by decide

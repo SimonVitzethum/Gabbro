@@ -545,7 +545,7 @@ theorem startZulaessig_ruhe (sp : Speicher D.mitRuhe) (hS : ∀ L, S.inv L (spei
     StartZulaessig P.mitRuhe S.mitRuhe (fsRuhe fs) ws' sp (ruheInit D) where
   wurzel _ := Or.inr (ruhig_mitRuhe P)
   einmal _ _ _ _ := Or.inl (ruhig_mitRuhe P)
-  req _ := rfl
+  req _ := by rfl
   sperren := hS
 
 end Start
@@ -562,7 +562,7 @@ section Laufzeit
     this needed distinct declared starts. -/
 theorem laufzeit_initRuhe (E : Einheit D) :
     Laufzeit E (speicherR E.sp0) (initRuhe E.starts) where
-  lader := rfl
+  lader := by rfl
   start t := by
     unfold initRuhe
     rcases h : E.starts[t]? with _ | ⟨w, ρ⟩
@@ -621,7 +621,7 @@ theorem laufzeit_ohne_starts {E : Einheit D} (h0 : E.starts = []) (h1 : E.gestar
 /-- The runtime's root on every thread from the declared memory is always a
     start A4 admits: the conclusion's run class is never empty. -/
 theorem laufzeit_ruhe (E : Einheit D) : Laufzeit E (speicherR E.sp0) (ruheInit D) where
-  lader := rfl
+  lader := by rfl
   start _ := Or.inl rfl
   einmal _ _ _ _ := Or.inl rfl
 

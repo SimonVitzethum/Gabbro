@@ -217,19 +217,19 @@ def bibD : Deklaration where
 def bibW : bibD.Fn := ()
 
 /-- The writer takes one `.int 0 10` parameter. -/
-theorem bibW_params : bibD.params bibW = [.int 0 10] := rfl
+theorem bibW_params : bibD.params bibW = [.int 0 10] := by rfl
 
 /-- The writer returns nothing. -/
-theorem bibW_erg : bibD.erg bibW = none := rfl
+theorem bibW_erg : bibD.erg bibW = none := by rfl
 
 /-- The writer writes the table. -/
-theorem bibW_schreibt : (vertragVon bibD bibW).schreibt () = true := rfl
+theorem bibW_schreibt : (vertragVon bibD bibW).schreibt () = true := by rfl
 
 /-- The axiom takes the ordinary parameter with the payload appended. -/
-theorem bibAx_params : bibD.aparams () = [.int 0 10, .int 0 100] := rfl
+theorem bibAx_params : bibD.aparams () = [.int 0 10, .int 0 100] := by rfl
 
 /-- The axiom returns nothing. -/
-theorem bibAx_erg : bibD.aerg () = none := rfl
+theorem bibAx_erg : bibD.aerg () = none := by rfl
 
 /-! ## 4. Call arguments, the library record, and the program -/
 
@@ -253,7 +253,7 @@ def bibHundert : Expr bibD [.int 0 10] [Res.held (D := bibD) ()] (.int 0 100) :=
 
 /-- The writer holds the lock: start equals end. -/
 theorem bibW_start : Signatur.anfang bibD (bibD.signatur bibW) =
-    [Res.held (D := bibD) ()] := rfl
+    [Res.held (D := bibD) ()] := by rfl
 
 /-- Same access right at the writer end holdings. -/
 theorem bibDarfW : darf bibD () (vertragVon bibD bibW).ende := by
@@ -466,7 +466,7 @@ theorem bibReachBF : RufErreichbarF bibP bibO 0 bibM0F bibM2F :=
   RufErreichbarF.schritt _ _ 0 bibReachAF bibSchrittBF
 
 /-- `bibM0F` IS the start machine. -/
-theorem bibM0F_start : bibM0F = RufStartF bibP bibSp0 bibInit := rfl
+theorem bibM0F_start : bibM0F = RufStartF bibP bibSp0 bibInit := by rfl
 
 /-- The witness run: lock, then the writing leaf -- reached from the
     start state. -/

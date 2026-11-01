@@ -124,7 +124,7 @@ theorem execBlockHA_cons_laufA {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ �
 theorem semHA_dann {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ) :
     semHA S O U A passes R (.dann b k) σ ρ =
-      weiterHA S O U A passes R k (execBlockHA S O U A passes R b σ ρ) := rfl
+      weiterHA S O U A passes R k (execBlockHA S O U A passes R b σ ρ) := by rfl
 
 theorem semHA_dann_cons {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
@@ -382,7 +382,7 @@ theorem semHA_endeEntf {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
   rw [laufAHA_nil]
 
 theorem semHA_dannLeer {Λ : List (Res D)} (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
-    semHA S O U A passes R (.dann .nil k) σ ρ = semHA S O U A passes R k σ ρ := rfl
+    semHA S O U A passes R (.dann .nil k) σ ρ = semHA S O U A passes R k σ ρ := by rfl
 
 theorem semHA_ite {Λ Λ' Λ'' : List (Res D)} (c : Expr D Γ Λ .bool)
     (t e : Block D V l Γ Λ Λ') (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'')
@@ -488,7 +488,7 @@ theorem semHA_frei_falsch {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ �
 
 theorem semHA_schrumpf {Λ : List (Res D)} {τ : Ty} (k : GRest D V l Γ Λ) (σ : World D)
     (v : Wert D τ) (ρ : Env D Γ) :
-    semHA S O U A passes R (.schrumpf k) σ (.cons v ρ) = semHA S O U A passes R k σ ρ := rfl
+    semHA S O U A passes R (.schrumpf k) σ (.cons v ρ) = semHA S O U A passes R k σ ρ := by rfl
 
 theorem semHA_endeBind {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (rest : Endblock D V l (τ :: Γ) Λ) (σ : World D) (ρ : Env D Γ) :
@@ -504,7 +504,7 @@ theorem semHA_dannBind {Λ Λ' : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (rest : Block D V l (τ :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
     semHA S O U A passes R (.dann (.bind e rest) k) σ ρ =
       semHA S O U A passes R (.dann rest (.schrumpf k)) (leseA A σ Λ e.orte)
-        (.cons (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ) ρ) := rfl
+        (.cons (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ) ρ) := by rfl
 
 theorem semHA_narrowOk {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     (lo' hi' : Int) (sonst : Endblock D V l Γ Λ) (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
@@ -561,7 +561,7 @@ theorem semHA_exchange {Λ Λ' : List (Res D)} (g : D.Glob)
         ((leseA A σ Λ (.inr g :: neuE.orte)).schreibGlob g Λ
           (eval (leseA A σ Λ (.inr g :: neuE.orte)) neuE (leseA A σ Λ (.inr g :: neuE.orte))
             (.cons ((leseA A σ Λ (.inr g :: neuE.orte)).globs g) ρ)))
-        (.cons ((leseA A σ Λ (.inr g :: neuE.orte)).globs g) ρ) := rfl
+        (.cons ((leseA A σ Λ (.inr g :: neuE.orte)).globs g) ρ) := by rfl
 
 theorem semHA_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (op : GleitOp)
     (a : Expr D Γ Λ (.fl l₁ h₁)) (b : Expr D Γ Λ (.fl l₂ h₂)) (lo hi : Int × Int)
@@ -649,7 +649,7 @@ theorem semHA_travFort {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool
     (is : List (Wert D (.index (D.count t)))) (k : GRest D V l Γ Λ)
     (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ) :
     semHA S O U A passes R (.travRest t inv body is k) σ (.cons i ρ) =
-      semHA S O U A passes R (.trav t inv body is k) σ ρ := rfl
+      semHA S O U A passes R (.trav t inv body is k) σ ρ := by rfl
 
 theorem semHA_travDone {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool)
     (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
@@ -728,7 +728,7 @@ theorem semHA_wiederFort {Λ : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .bool
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)
     (σ : World D) (ρ : Env D Γ) :
     semHA S O U A passes R (.wiederRest n bis body ueber k) σ ρ =
-      semHA S O U A passes R (.wieder n bis body ueber k) σ ρ := rfl
+      semHA S O U A passes R (.wieder n bis body ueber k) σ ρ := by rfl
 
 theorem semHA_dannForever {Λ Λ'' : List (Res D)} (a : D.Annahme) (inv : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'')
@@ -753,7 +753,7 @@ theorem semHA_ewigWeiter {Λ : List (Res D)} (a : D.Annahme) (n : Nat) (inv : Ex
 theorem semHA_ewigFort {Λ : List (Res D)} (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
     semHA S O U A passes R (.ewigRest a n inv body k) σ ρ =
-      semHA S O U A passes R (.ewig a n inv body k) σ ρ := rfl
+      semHA S O U A passes R (.ewig a n inv body k) σ ρ := by rfl
 
 /-! ### The exits `leave` and `next` -/
 

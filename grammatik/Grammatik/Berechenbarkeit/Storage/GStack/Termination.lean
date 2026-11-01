@@ -16,14 +16,14 @@ theorem linkPush_termination (L : LinkFeld A) (G : LinkKopf A) (x : Var Γ (Ty.i
     (hwH : V.gschreibt G.g = true) (hLH : gdarf D G.g Λ)
     (rest : Gabbro.Grammatik.Block D V l Γ Λ Λ') (level forever : Bool) :
     befB level forever (Gabbro.Grammatik.Block.linkPush L G x hwT hLT hwH hLH rest) =
-      befB level forever rest := rfl
+      befB level forever rest := by rfl
 
 theorem free_termination (A : FreiForm D) (x : Var Γ (Ty.index (D.count A.tab)))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
     (hwF : V.gschreibt A.kopf = true) (hLF : gdarf D A.kopf Λ)
     (rest : Gabbro.Grammatik.Block D V l Γ Λ Λ') (level forever : Bool) :
     befB level forever (Gabbro.Grammatik.Block.freiVar A x hwT hLT hwF hLF rest) =
-      befB level forever rest := rfl
+      befB level forever rest := by rfl
 
 theorem fresh_termination (A : FreiForm D) (value : Expr D Γ Λ (D.typ A.tab A.feld))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -31,7 +31,7 @@ theorem fresh_termination (A : FreiForm D) (value : Expr D Γ Λ (D.typ A.tab A.
     (failure : Endblock D V l Γ Λ)
     (rest : Gabbro.Grammatik.Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') (level forever : Bool) :
     befB level forever (Gabbro.Grammatik.Block.arenaAlloc A.toArenaForm value hwT hLT hwU hLU failure rest) =
-      befE level forever failure ++ befB level forever rest := rfl
+      befE level forever failure ++ befB level forever rest := by rfl
 
 theorem reuse_termination (A : FreiForm D) (value : Expr D Γ Λ (D.typ A.tab A.feld))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -39,7 +39,7 @@ theorem reuse_termination (A : FreiForm D) (value : Expr D Γ Λ (D.typ A.tab A.
     (failure : Endblock D V l Γ Λ)
     (rest : Gabbro.Grammatik.Block D V l (Ty.index (D.count A.tab) :: Γ) Λ Λ') (level forever : Bool) :
     befB level forever (Gabbro.Grammatik.Block.freiNimm A value hwT hLT hwF hLF failure rest) =
-      befE level forever failure ++ befB level forever rest := rfl
+      befE level forever failure ++ befB level forever rest := by rfl
 
 theorem popAndRelease_termination (L : LinkFeld A) (G : LinkKopf A)
     (hwH : V.gschreibt G.g = true) (hLH : gdarf D G.g Λ)
@@ -49,6 +49,6 @@ theorem popAndRelease_termination (L : LinkFeld A) (G : LinkKopf A)
     (rest : Gabbro.Grammatik.Block D V l (D.typ A.tab A.feld :: Ty.index (D.count A.tab) :: Γ) Λ Λ')
     (level forever : Bool) :
     befB level forever (Block.popAndRelease L G hwH hLH hwT hLT hwF hLF empty rest) =
-      befE level forever empty ++ befB level forever rest := rfl
+      befE level forever empty ++ befB level forever rest := by rfl
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.GStack

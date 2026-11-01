@@ -103,22 +103,22 @@ theorem schleifeF_als_folge (f : World D → World D) (n : Nat) (σ : World D) :
 /-- A returned answer carries its world. -/
 theorem endZustandF_zurueck (σ : World D) (v : ErgVal D V.erg) :
     endZustandF (AusF.widen (.zurueck σ v) : AusF V l Γ) = some σ :=
-  rfl
+  by rfl
 
 /-- A raised ground carries its world. -/
 theorem endZustandF_grund (σ : World D) (r : Fin V.gruende) :
     endZustandF (AusF.widen (.why σ r) : AusF V l Γ) = some σ :=
-  rfl
+  by rfl
 
 /-- A consumed `leave` carries its world. -/
 theorem endZustandF_leave (h : l = true) (σ : World D) (ρ : Env D Γ) :
     endZustandF (AusF.widen (.leave h σ ρ) : AusF V l Γ) = some σ :=
-  rfl
+  by rfl
 
 /-- A consumed `next` carries its world. -/
 theorem endZustandF_next (h : l = true) (σ : World D) (ρ : Env D Γ) :
     endZustandF (AusF.widen (.next h σ ρ) : AusF V l Γ) = some σ :=
-  rfl
+  by rfl
 
 /-! ## 11. Fault threading through the `execBlock`/`traverseLauf` shapes -/
 
@@ -132,7 +132,7 @@ def blockF : List (World D → Env D Γ → AusF V l Γ) → World D → Env D �
 /-- The empty block answers `ok` -- the `execBlock.nil` shape. -/
 theorem blockF_nil (σ : World D) (ρ : Env D Γ) :
     blockF ([] : List (World D → Env D Γ → AusF V l Γ)) σ ρ = .widen (.ok σ ρ) :=
-  rfl
+  by rfl
 
 /-- A faulted head faults the block -- the rest does not run. -/
 theorem blockF_cons_fehler (s : World D → Env D Γ → AusF V l Γ)

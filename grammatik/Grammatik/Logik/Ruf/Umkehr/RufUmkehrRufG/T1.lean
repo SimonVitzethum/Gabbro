@@ -366,7 +366,7 @@ theorem execBlock_narrowK (O : Orakel D) (passes : Nat)
     (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ') (σ : World D) (ρ : Env D Γ) :
     execBlock O passes R (.narrow e lo' hi' sonst rest) σ ρ =
       narrowWeiterK O passes R rest sonst ρ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)
-        (σ.lese Λ e.orte) := rfl
+        (σ.lese Λ e.orte) := by rfl
 
 
 end Gabbro.Grammatik

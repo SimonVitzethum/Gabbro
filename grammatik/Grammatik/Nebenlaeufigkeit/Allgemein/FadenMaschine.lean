@@ -142,7 +142,7 @@ theorem fadenErreichbar_von_G {P : Programm D} {O : Orakel D} {passes : Nat}
 /-- The all-live start IS `FadenStart` with every thread live. -/
 theorem fadenStart_alleLebend (P : Programm D) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) :
-    FadenStart P sp init (fun _ => true) = FadenMaschine.alleLebend (RufStartG P sp init) := rfl
+    FadenStart P sp init (fun _ => true) = FadenMaschine.alleLebend (RufStartG P sp init) := by rfl
 
 /-! ## 3. The invariant -/
 
@@ -172,7 +172,7 @@ theorem fadenInv_start (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D
     (lebt0 : Faden → Bool) :
     FadenInv P O passes (RufStartG P sp init) (FadenStart P sp init lebt0) where
   lauf := RufErreichbarG.start
-  schlaeft _ _ := rfl
+  schlaeft _ _ := by rfl
   joinFrei _ h := absurd rfl h
   joinLebt _ h := absurd rfl h
   kindLebt _ _ h := absurd h List.not_mem_nil

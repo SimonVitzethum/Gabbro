@@ -31,12 +31,12 @@ variable {D D' : Deklaration}
 theorem castE_castE {D₀ : Deklaration} {Γ₁ Γ₂ Γ₃ : Ctx} (h : Γ₁ = Γ₂) (h' : Γ₂ = Γ₃) (ρ : Env D₀ Γ₁) :
     castE h' (castE h ρ) = castE (h.trans h') ρ := by subst h; subst h'; rfl
 
-theorem castE_self {D₀ : Deklaration} {Γ : Ctx} (h : Γ = Γ) (ρ : Env D₀ Γ) : castE h ρ = ρ := rfl
+theorem castE_self {D₀ : Deklaration} {Γ : Ctx} (h : Γ = Γ) (ρ : Env D₀ Γ) : castE h ρ = ρ := by rfl
 
 theorem castV_castV {D₀ : Deklaration} {e₁ e₂ e₃ : Option Ty} (h : e₁ = e₂) (h' : e₂ = e₃)
     (v : ErgVal D₀ e₁) : castV h' (castV h v) = castV (h.trans h') v := by subst h; subst h'; rfl
 
-theorem castV_self {D₀ : Deklaration} {e : Option Ty} (h : e = e) (v : ErgVal D₀ e) : castV h v = v := rfl
+theorem castV_self {D₀ : Deklaration} {e : Option Ty} (h : e = e) (v : ErgVal D₀ e) : castV h v = v := by rfl
 
 theorem eval_umΛ {D₀ : Deklaration} {Γ : Ctx} {Λ Λ' : List (Res D₀)} {τ : Ty} (h : Λ = Λ')
     (e : Expr D₀ Γ Λ τ) (σ₀ σ : World D₀) (ρ : Env D₀ Γ) :

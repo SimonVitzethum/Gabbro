@@ -19,9 +19,9 @@ variable {D : Deklaration} [Aufz D] [Zahlen]
 
 set_option linter.unusedSectionVars false
 
-@[simp] theorem mitRumpf_rumpf (P : Programm D) (r : ∀ f, Rumpf D f) (f : D.Fn) : (P.mitRumpf r).rumpf f = r f := rfl
+@[simp] theorem mitRumpf_rumpf (P : Programm D) (r : ∀ f, Rumpf D f) (f : D.Fn) : (P.mitRumpf r).rumpf f = r f := by rfl
 @[simp] theorem mitRumpf_unterbricht (P : Programm D) (r : ∀ f, Rumpf D f) :
-    (P.mitRumpf r).unterbricht = P.unterbricht := rfl
+    (P.mitRumpf r).unterbricht = P.unterbricht := by rfl
 
 theorem all_mem_gleich {α : Type} {l₁ l₂ : List α} (p : α → Bool) (h : ∀ x, x ∈ l₁ ↔ x ∈ l₂) :
     l₁.all p = l₂.all p := by
@@ -65,11 +65,11 @@ theorem gs_schreibGetrenntZellen (c : D.Tab ⊕ D.Glob) :
     schreibGetrenntZellen (P.mitRumpf r) fs ws c = schreibGetrenntZellen P fs ws c := by
   simp only [schreibGetrenntZellen, gs_reachB P r h, gs_istIn_fuss P r h]
 
-theorem gs_geteiltVB (c : D.Tab ⊕ D.Glob) : geteiltVB (P.mitRumpf r) fs c = geteiltVB P fs c := rfl
+theorem gs_geteiltVB (c : D.Tab ⊕ D.Glob) : geteiltVB (P.mitRumpf r) fs c = geteiltVB P fs c := by rfl
 
-theorem gs_geteiltZelle (c : D.Tab ⊕ D.Glob) : geteiltZelle (P.mitRumpf r) fs c = geteiltZelle P fs c := rfl
+theorem gs_geteiltZelle (c : D.Tab ⊕ D.Glob) : geteiltZelle (P.mitRumpf r) fs c = geteiltZelle P fs c := by rfl
 
-theorem gs_vertragsOrte (g : D.Fn) : vertragsOrte (P.mitRumpf r) g = vertragsOrte P g := rfl
+theorem gs_vertragsOrte (g : D.Fn) : vertragsOrte (P.mitRumpf r) g = vertragsOrte P g := by rfl
 
 /-- **The cells of each component are the same** (as sets: component 2 walks the footprint and the register list,
     whose order may differ). -/

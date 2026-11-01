@@ -53,7 +53,7 @@ variable {D : Deklaration}
 /-- No raw word answers `never`, under any image: the empty answer class
     (`AntwortLeer`), stated for the one type the checker admits it at. -/
 theorem einpassenErg_nie (z : Int → Option D.Fn) (n : Int) :
-    einpassenErg z (some Ty.never) n = none := rfl
+    einpassenErg z (some Ty.never) n = none := by rfl
 
 variable (O : Orakel D) (passes : Nat)
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -169,7 +169,7 @@ theorem start_nolibc (rsp : Nat) (hrsp : 16 ≤ rsp) (mainKehrtZurueck : Bool)
     would run into `ud2` (the build's own trap, never a fall-through into
     whatever bytes follow). -/
 theorem start_nolibc_ud2_wenn_main_zurueckkehrt (rsp : Nat) :
-    (startLauf rsp true).ud2 = true := rfl
+    (startLauf rsp true).ud2 = true := by rfl
 
 /-- **Witness for `start_nolibc`**: ALL premises jointly on a concrete stack
     pointer the kernel may hand (`0x7ffc_1234_5678`, 8-aligned only). -/
@@ -241,7 +241,7 @@ theorem start_nolibc_haken (rsp : Nat) (hrsp : 16 ≤ rsp) (anfang ende : Bool)
 
 /-- The end premise is not decoration: a `main` that returns with no end bound runs into `ud2`. -/
 theorem start_nolibc_ohne_ende (rsp v : Nat) :
-    (startLaufH rsp false false (some v) false).ud2 = true := rfl
+    (startLaufH rsp false false (some v) false).ud2 = true := by rfl
 
 /-- **Witness** (all premises jointly): the stack pointer of `start_nolibc_zeuge`, both hooks, a
     `main` answering 42 -- the end receives 42 and `ud2` does not run. -/

@@ -427,7 +427,7 @@ theorem gut_fragt {W G} (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : Gut W G
   gut_merke σ [.fremd q] (fun e he => by simp only [List.mem_singleton] at he; subst he; exact True.intro)
     (fun e he => by simp only [List.mem_singleton] at he; subst he; exact True.intro)
 
-theorem fragt_haelt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : (σ.fragt q).haelt = σ.haelt := rfl
+theorem fragt_haelt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : (σ.fragt q).haelt = σ.haelt := by rfl
 
 theorem gut_lese {W G} (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob))
     (ho : ∀ o ∈ orte, OrtDarf Λ o) (hh : HeldIn Λ σ.haelt) : Gut W G σ (σ.lese Λ orte) := by

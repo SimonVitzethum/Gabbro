@@ -149,9 +149,9 @@ def w1 : World MD where
     else zc 1
   spur := []
 
-theorem stand_w1 : MA.stand w1 = 2 := rfl
-theorem kopf_w1 : MA.kopfSt w1 = 4 := rfl
-theorem link_w1 (j : Int) : ML.wert w1 j = 4 := rfl
+theorem stand_w1 : MA.stand w1 = 2 := by rfl
+theorem kopf_w1 : MA.kopfSt w1 = 4 := by rfl
+theorem link_w1 (j : Int) : ML.wert w1 j = 4 := by rfl
 
 theorem aufListe_w1 (i : Int) : ¬ MA.AufListe w1 i := by
   rintro ⟨L, hL, hm⟩

@@ -37,7 +37,7 @@ theorem outWF_moves : outWF.slots () 0 () =
 
 /-- `Anfang` of the witness signature is empty: no locks, no marks. -/
 theorem anfangF_leer :
-    Signatur.anfang rufDF (rufDF.signatur rufIncF) = [] := rfl
+    Signatur.anfang rufDF (rufDF.signatur rufIncF) = [] := by rfl
 
 /-- Held-exactly at the empty trace: no locks exist. -/
 theorem heldLeerF (spur : List (Ereignis rufDF)) :
@@ -73,7 +73,7 @@ def M1F : RufMaschineF rufDF :=
 
 /-- The callee entry world is the caller thread world: the arguments read
     nothing (`var.hier` has no Orte). -/
-theorem argsOrteF : rufArgsF.orte = [] := rfl
+theorem argsOrteF : rufArgsF.orte = [] := by rfl
 
 /-- Step 1 fires the `ruf` rule: head matches (caller body is the call),
     locks vacuous, entry world is the thread world (no arg reads),
@@ -119,15 +119,15 @@ def eF : ErgExpr rufDF (rufDF.params rufIncF)
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.int 0 6))))
 
-theorem restF_eq : restF = Endblock.ret eF (by decide) := rfl
+theorem restF_eq : restF = Endblock.ret eF (by decide) := by rfl
 
-theorem eF_orte : ErgExpr.orte eF = [] := rfl
+theorem eF_orte : ErgExpr.orte eF = [] := by rfl
 
 /-- The return value: the parameter 2 widened to `.int 0 6`. -/
 def vF : ErgVal rufDF (rufDF.erg rufIncF) :=
   (rufDF_erg rufIncF).symm ▸ (⟨2, by decide, by decide⟩ : ErgVal rufDF (some (.int 0 6)))
 
-theorem vF_wert : vF = evalErg (M1F.weltVon 0) eF (M1F.weltVon 0) rufRhoF := rfl
+theorem vF_wert : vF = evalErg (M1F.weltVon 0) eF (M1F.weltVon 0) rufRhoF := by rfl
 
 /-- The machine after the `blatt` step: the callee residue advanced to
     `restF`, the stored callee environment unchanged (the leaf does not
@@ -149,10 +149,10 @@ theorem M1F_kopf :
     (M1F.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .cons leafSF restF⟩ := rfl
+     .cons leafSF restF⟩ := by rfl
 
 /-- The thread world is unchanged by the call (no new events). -/
-theorem M1F_welt : M1F.weltVon 0 = spF.welt [] := rfl
+theorem M1F_welt : M1F.weltVon 0 = spF.welt [] := by rfl
 
 /-- Step 2 fires the `blatt` rule on the callee frame: the leaf runs under
     the STORED `rufRhoF` (no free binder) and stores the resulting `rufRhoF`
@@ -233,7 +233,7 @@ theorem reach3F : RufErreichbarF rufPF rufOF 0 M0F M3F := by
   exact RufErreichbarF.schritt _ _ 0 reach2F schritt3F
 
 /-- Reachability from `RufStartF`: `M0F` IS the start machine. -/
-theorem M0F_start : M0F = RufStartF rufPF spF initF := rfl
+theorem M0F_start : M0F = RufStartF rufPF spF initF := by rfl
 
 /-- The witness run reaches `M3F` from the start state. -/
 theorem reach3F_start :
@@ -246,7 +246,7 @@ theorem reach3F_start :
 theorem M3F_log : (M3F.faeden 0).log =
     [RufEreignisF.rueck rufIncF rufRhoF vF (M0F.weltVon 0) (M2F.weltVon 0),
      RufEreignisF.eintritt rufIncF rufRhoF (M0F.weltVon 0),
-     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := rfl
+     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := by rfl
 
 /-- **Witness for `rufF_treu`.** The premises of `rufF_treu` are instantiated
     JOINTLY with concrete values: the program `rufPF`, the oracle `rufOF`,

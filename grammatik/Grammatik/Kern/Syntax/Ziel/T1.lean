@@ -107,7 +107,7 @@ def absenkung : Absenkung := ⟨17, by decide⟩
     lemmas below discharge the obligation register for the modeled fragment:
     the witness keeps the bound, and anything under the witness keeps it too.
     Rust `absenkung.rs` stays unwired and is not read here. -/
-theorem absenkung_wert : absenkung.proPrimitiv = 17 := rfl
+theorem absenkung_wert : absenkung.proPrimitiv = 17 := by rfl
 
 /-- The witness discharges the bound the structure demands. -/
 theorem absenkung_haelt_schranke : absenkung.proPrimitiv ≤ 18 :=
@@ -141,7 +141,7 @@ theorem ziel_total (P : Programm D) (O : Orakel D) (passes fuel : Nat)
     (Dass `exec` eine Definition ist, IST der Beweis.) -/
 theorem ziel_deterministisch (P : Programm D) (O : Orakel D) (passes fuel : Nat)
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) :
-    exec P O passes fuel V b σ ρ = exec P O passes fuel V b σ ρ := rfl
+    exec P O passes fuel V b σ ρ = exec P O passes fuel V b σ ρ := by rfl
 
 /-- Der Rahmen: ein Rumpf schreibt nur, was sein Vertrag nennt. -/
 theorem ziel_rahmen (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)

@@ -40,10 +40,10 @@ variable {A : FreiForm D}
 def wert (H : BucketKopf A) (σ : World D) (b : Int) : Int := (Wert.umTyp H.hty (σ.slots H.bt b H.hf)).n
 
 @[simp] theorem wert_lese (H : BucketKopf A) (σ : World D) (Λ : List (Res D)) (o : List (D.Tab ⊕ D.Glob)) (b : Int) :
-    H.wert (σ.lese Λ o) b = H.wert σ b := rfl
+    H.wert (σ.lese Λ o) b = H.wert σ b := by rfl
 
 @[simp] theorem wert_schreibGlob (H : BucketKopf A) (σ : World D) (g : D.Glob) (Λ : List (Res D))
-    (v : Wert D (D.gtyp g)) (b : Int) : H.wert (σ.schreibGlob g Λ v) b = H.wert σ b := rfl
+    (v : Wert D (D.gtyp g)) (b : Int) : H.wert (σ.schreibGlob g Λ v) b = H.wert σ b := by rfl
 
 /-- A store into the ARENA table leaves every bucket head. -/
 theorem wert_schreibSlot_arena (H : BucketKopf A) (σ : World D) (Λ : List (Res D)) (k : Int) (f : D.Feld A.tab)

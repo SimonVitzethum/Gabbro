@@ -147,9 +147,9 @@ def hdW : Int → Int := fun b => if b = 0 then 1 else 4
 /-- Slot `3` on the free list; the chain `1` in bucket `0`; slots `0` and `2` live, on no bucket. -/
 def wh : World FD3 := wd3 4 3 nxN lnW hdW
 
-theorem stand_wh : FA3.stand wh = 4 := rfl
-theorem kopf_wh : FA3.kopfSt wh = 3 := rfl
-theorem naechst_wh (j : Int) : FA3.naechst wh j = 4 := rfl
+theorem stand_wh : FA3.stand wh = 4 := by rfl
+theorem kopf_wh : FA3.kopfSt wh = 3 := by rfl
+theorem naechst_wh (j : Int) : FA3.naechst wh j = 4 := by rfl
 theorem ll_wh (j : Int) : LL3.wert wh j = 4 := by show max 0 (min 4 (lnW j)) = 4; unfold lnW; decide
 theorem hd_wh (b : Int) : HB3.wert wh b = hdW b := by
   show max 0 (min 4 (hdW b)) = hdW b
@@ -257,8 +257,8 @@ theorem nicht_auf_2 : ∀ b', 0 ≤ b' → b' < FD3.count HB3.bt →
 /-- The environment: bucket `0`, slot `2`. -/
 def rP02 : Env FD3 GP := rhoP 0 2 (by decide) (by decide) (by decide) (by decide)
 
-theorem rP02_b : (rP02.get (.here : Var GP _)).n = 0 := rfl
-theorem rP02_x : (rP02.get (.there .here : Var GP _)).n = 2 := rfl
+theorem rP02_b : (rP02.get (.here : Var GP _)).n = 0 := by rfl
+theorem rP02_x : (rP02.get (.there .here : Var GP _)).n = 2 := by rfl
 
 /-- **`hash_push_zug` on a real world, run:** slot `2` becomes the head of bucket `0`, linked to the old head `1`; the hash
     invariant holds afterwards. -/
@@ -285,7 +285,7 @@ def popK : Block FD3 FV3 false GB [] [] :=
 /-- The environment: bucket `0`. -/
 def rB0 : Env FD3 GB := .cons (⟨0, by decide, by decide⟩ : Wert FD3 (Ty.index (FD3.count HB3.bt))) .nil
 
-theorem rB0_b : (rB0.get (.here : Var GB _)).n = 0 := rfl
+theorem rB0_b : (rB0.get (.here : Var GB _)).n = 0 := by rfl
 
 /-- **`hash_pop_zug` on a real world, run:** bucket `0` loses its head `1`; the binder holds it; it is live and on no bucket. -/
 theorem pop_zeuge :

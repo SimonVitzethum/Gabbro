@@ -182,7 +182,7 @@ theorem fwP_nicht (Q : AxEns zD) (S : SperrInv zD)
 
 theorem fvStart0 (w : Bool) : (RufStartG (fvP w) zSp zInit).faeden 0 = ⟨[], ⟨zHaupt, .nil, zSp.welt [],
     ⟨false, [], [], .nil, .ende (fvRumpfHaupt w)⟩⟩, [],
-    [RufEreignisF.eintritt zHaupt .nil (zSp.welt [])]⟩ := rfl
+    [RufEreignisF.eintritt zHaupt .nil (zSp.welt [])]⟩ := by rfl
 
 /-- **Probe D: the conclusion is refuted at budget `1`.** Two steps of
     thread 0 (`endeEntf`, `dannForever`) reach a machine whose head stands

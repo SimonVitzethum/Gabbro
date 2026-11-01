@@ -64,7 +64,7 @@ theorem icmp_tk (a b : Nat) : Val.icmp .eq Conf.wbits (tk a) (tk b) =
     some (Val.bool (decide (BitVec.ofNat Conf.wbits a = BitVec.ofNat Conf.wbits b))) := by
   simp only [Val.icmp, tk, ↓reduceDIte, IPred.ap]
 
-theorem tk_ty (n : Nat) : (tk n).ty = lw := rfl
+theorem tk_ty (n : Nat) : (tk n).ty = lw := by rfl
 
 /-- `fetch_add(next, 1)` returns the old ticket and stores the next. -/
 theorem stepI_take {m m' : Mem} {rs : Regs} {d : Reg} {b : Nat} {n : Nat} {o : Order}

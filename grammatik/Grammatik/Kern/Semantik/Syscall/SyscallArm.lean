@@ -260,7 +260,7 @@ theorem start_nolibc_arm (sp : Nat) (hsp : 16 ≤ sp) (mainKehrtZurueck : Bool)
   simp only [startLaufArm, ausrichtenArm]
   refine ⟨?_, ?_, ?_, hnie⟩ <;> omega
 
-theorem start_nolibc_arm_ud2 (sp : Nat) : (startLaufArm sp true).ud2 = true := rfl
+theorem start_nolibc_arm_ud2 (sp : Nat) : (startLaufArm sp true).ud2 = true := by rfl
 
 /-- Witness: the same 8-aligned-only pointer as `start_nolibc_zeuge` (`0x7ffc12345678`). -/
 theorem start_nolibc_arm_zeuge :
@@ -302,7 +302,7 @@ theorem kind_region_arm (v : Nat) (hv : 16 ≤ v) (regionKehrtZurueck : Bool)
     (kindRufArm (kindNachSvc v) regionKehrtZurueck).ud2 = false := by
   refine ⟨rfl, ?_, ?_, ?_, hnie⟩ <;> simp only [kindRufArm, kindNachSvc, ausrichtenArm] <;> omega
 
-theorem kind_region_arm_rueckkehr (v : Nat) : (kindRufArm (kindNachSvc v) true).ud2 = true := rfl
+theorem kind_region_arm_rueckkehr (v : Nat) : (kindRufArm (kindNachSvc v) true).ud2 = true := by rfl
 
 /-- Witness: the 64 KiB stack of `kind_region_zeuge`, plus an 8-aligned-only top. -/
 theorem kind_region_arm_zeuge :

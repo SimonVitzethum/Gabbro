@@ -19,15 +19,15 @@ def empty : Heap Region Bool := .empty
 def first : Heap Region Bool × Ref Region :=
   (empty.allocate .unbounded true owner true).get (by decide)
 
-theorem first_allocation : empty.allocate .unbounded true owner true = some first := rfl
+theorem first_allocation : empty.allocate .unbounded true owner true = some first := by rfl
 
 def released : Heap Region Bool := (first.1.release owner first.2).get (by decide)
-theorem release_first : first.1.release owner first.2 = some released := rfl
+theorem release_first : first.1.release owner first.2 = some released := by rfl
 
 def reused : Heap Region Bool × Ref Region :=
   (released.allocate .unbounded true owner false).get (by decide)
 
-theorem reuse_allocation : released.allocate .unbounded true owner false = some reused := rfl
+theorem reuse_allocation : released.allocate .unbounded true owner false = some reused := by rfl
 
 theorem read_write_zeuge :
     first.1.read owner first.2 = some true ∧
@@ -95,7 +95,7 @@ theorem mixed_execution_zeuge : Reachable .unbounded reused.1 ∧ reused.1.Valid
 
 theorem finite_batch_oom_zeuge :
     allocateList .unbounded (fun _ => false) owner 0 empty [] [true, false] =
-      .outOfMemory empty [] := rfl
+      .outOfMemory empty [] := by rfl
 
 /-! Actual G: a non-empty stored byte, starting from an empty four-slot arena. -/
 

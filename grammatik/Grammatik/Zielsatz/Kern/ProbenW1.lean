@@ -63,7 +63,7 @@ def w1P : Programm w1D where
 
 def w1S : SperrInv w1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
-theorem w1_ants : (w1P.rumpf ()).ants = [.inl ()] := rfl
+theorem w1_ants : (w1P.rumpf ()).ants = [.inl ()] := by rfl
 
 /-- **No lock family, function list or start list makes the probe meet `AkzeptiertSpec`**:
     its one answer site is an axiom at an empty type that is not `never`. -/
@@ -171,7 +171,7 @@ theorem w1v_bool : Akzeptiert w1vP w1vS [()] [] [] [()] = true := by decide
 
 /-- And its head is the named stop `nieZurueck` at every oracle, budget and world. -/
 theorem w1v_kopf (O : Orakel w1vD) (passes : Nat) (σ : World w1vD) :
-    KopfHalt O passes σ (.nil : Env w1vD []) .nieZurueck w1vKopf := rfl
+    KopfHalt O passes σ (.nil : Env w1vD []) .nieZurueck w1vKopf := by rfl
 
 /-- `nieZurueck` holds at NO other head: not at the round-6 probe's `hol()` (W1). -/
 theorem w1_kein_nie (O : Orakel w1D) (passes : Nat) (σ : World w1D) :

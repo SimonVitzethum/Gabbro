@@ -237,7 +237,7 @@ theorem paP_halt : ∃ M : RufMaschineG zD, RufErreichbarG paP zO 0 (RufStartG p
 /-- The loop invariant: `konto[0] <= 100` -- it reads the shared table. -/
 def lInv {Γ : Ctx} : Expr zD Γ zL .bool := .le (.slot () () zIdx zDarf) zHundert
 
-theorem lInv_orte {Γ : Ctx} : (lInv (Γ := Γ)).orte = [.inl ()] := rfl
+theorem lInv_orte {Γ : Ctx} : (lInv (Γ := Γ)).orte = [.inl ()] := by rfl
 
 theorem lInv_wahr {Γ : Ctx} (σ₀ σ : World zD) (ρ : Env zD Γ) : wahr? (eval σ₀ lInv σ ρ) = true := by
   show decide ((σ.slots () 0 ()).n ≤ 100) = true

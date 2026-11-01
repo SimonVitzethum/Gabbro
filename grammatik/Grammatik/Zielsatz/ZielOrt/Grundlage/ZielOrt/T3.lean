@@ -157,9 +157,9 @@ def gegZ0 : RufFadenG refD :=
      .ende (gegP.rumpf refEin)⟩⟩, startSpur refEin,
      [RufEreignisF.eintritt refEin refRho7 (refSp0.welt [])]⟩
 
-theorem gegM0_faden (t : Faden) : (RufStartG gegP refSp0 gegInit).faeden t = gegZ0 := rfl
+theorem gegM0_faden (t : Faden) : (RufStartG gegP refSp0 gegInit).faeden t = gegZ0 := by rfl
 
-theorem offen_gegZ0 : offen gegZ0.spur = [()] := rfl
+theorem offen_gegZ0 : offen gegZ0.spur = [()] := by rfl
 
 /-- The rest of `einzahlen` after its call. -/
 def gegRestEin : Endblock refD (vertragVon refD refEin) false [.int 0 10]
@@ -368,7 +368,7 @@ def refZ0 : RufFadenG refD :=
      .ende (refP.rumpf refEin)⟩⟩, startSpur refEin,
      [RufEreignisF.eintritt refEin refRho7 (refSp0.welt [])]⟩
 
-theorem refM0G_faden (t : Faden) : (RufStartG refP refSp0 gegInit).faeden t = refZ0 := rfl
+theorem refM0G_faden (t : Faden) : (RufStartG refP refSp0 gegInit).faeden t = refZ0 := by rfl
 
 /-- Both reference `requires` are `true`. -/
 theorem refP_req (g : refD.Fn) (s : World refD) (rho : Env refD (refD.params g)) :

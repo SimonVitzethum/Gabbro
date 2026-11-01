@@ -12,7 +12,7 @@ namespace Gabbro.Grammatik.Berechenbarkeit.BrainfuckG.LegeWitnesses
 
 open ArenaKette InvDynZeuge Storage.GStack Storage.GStack.MultiWitnesses
 
-theorem hp : MD.typ MA.tab MA.feld = ByteTy := rfl
+theorem hp : MD.typ MA.tab MA.feld = ByteTy := by rfl
 
 /-- The head local holds `7`. -/
 def ρ7 : Env MD [ByteTy] := .cons ⟨7, by decide, by decide⟩ .nil

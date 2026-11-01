@@ -89,7 +89,7 @@ def rumpf : Endblock rD rV false [] [] :=
 /-- `alloc T` is the provider's call: `let r = neu();`. -/
 theorem rumpf_ist_anbieterruf :
     rumpf = .bindAxiom () .nil rfl (fun _ h => nomatch h) (fun g => g.elim) (fun _ h => nomatch h)
-      (fun g => g.elim) weiter := rfl
+      (fun g => g.elim) weiter := by rfl
 
 /-- The reference `alloc T` answers points into `T`, an open table. -/
 theorem alloc_in_T : rD.tabNr 0 = some () ∧ rD.offen () = true := Block.alloc_tabelle (a := ()) rfl rfl

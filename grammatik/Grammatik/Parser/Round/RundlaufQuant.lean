@@ -630,7 +630,7 @@ theorem bein_expr (e : SExpr) (hg : gut e = true) : PredBein e := by
   obtain ⟨x, rfl⟩ := hbang ht
   exact nichtKopf_un x
 
-theorem nichtKopf_ext (k : XKind) (ns : List String) (xs : List SExpr) : nichtKopf (.ext k ns xs) = false := rfl
+theorem nichtKopf_ext (k : XKind) (ns : List String) (xs : List SExpr) : nichtKopf (.ext k ns xs) = false := by rfl
 
 theorem bein_quant (k : XKind) (hk : k = .all ∨ k = .any) (x dk : String) (ns : List String) (ops : List SExpr)
     (hd : DomGut dk ns ops) (body : SExpr) (hb : PredBein body) :

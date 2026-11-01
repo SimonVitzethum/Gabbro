@@ -62,22 +62,22 @@ def FadenMaschine.plus (j : Nat) (K : FadenMaschine D) : FadenMaschine D :=
   ⟨K.m.plus j, K.lebt, K.wartet, K.rang, K.uhr⟩
 
 @[simp] theorem RufMaschineG.plus_speicher (j : Nat) (M : RufMaschineG D) :
-    (M.plus j).speicher = M.speicher := rfl
-@[simp] theorem RufMaschineG.plus_lauf (j : Nat) (M : RufMaschineG D) : (M.plus j).lauf = M.lauf := rfl
-@[simp] theorem RufMaschineG.plus_start (j : Nat) (M : RufMaschineG D) : (M.plus j).start = M.start := rfl
+    (M.plus j).speicher = M.speicher := by rfl
+@[simp] theorem RufMaschineG.plus_lauf (j : Nat) (M : RufMaschineG D) : (M.plus j).lauf = M.lauf := by rfl
+@[simp] theorem RufMaschineG.plus_start (j : Nat) (M : RufMaschineG D) : (M.plus j).start = M.start := by rfl
 @[simp] theorem RufMaschineG.plus_faeden (j : Nat) (M : RufMaschineG D) (t : Faden) :
-    (M.plus j).faeden t = (M.faeden t).plus j := rfl
-@[simp] theorem RufFadenG.plus_spur (j : Nat) (z : RufFadenG D) : (z.plus j).spur = z.spur := rfl
-@[simp] theorem RufFadenG.plus_log (j : Nat) (z : RufFadenG D) : (z.plus j).log = z.log := rfl
+    (M.plus j).faeden t = (M.faeden t).plus j := by rfl
+@[simp] theorem RufFadenG.plus_spur (j : Nat) (z : RufFadenG D) : (z.plus j).spur = z.spur := by rfl
+@[simp] theorem RufFadenG.plus_log (j : Nat) (z : RufFadenG D) : (z.plus j).log = z.log := by rfl
 @[simp] theorem RufFadenG.plus_stapel (j : Nat) (z : RufFadenG D) :
-    (z.plus j).stapel = z.stapel.map (RufRahmenG.plus j) := rfl
-@[simp] theorem RufFadenG.plus_kopf (j : Nat) (z : RufFadenG D) : (z.plus j).kopf = z.kopf.plus j := rfl
-@[simp] theorem RufRahmenG.plus_f (j : Nat) (r : RufRahmenG D) : (r.plus j).f = r.f := rfl
-@[simp] theorem RufRahmenG.plus_rho (j : Nat) (r : RufRahmenG D) : (r.plus j).rho = r.rho := rfl
-@[simp] theorem RufRahmenG.plus_s0 (j : Nat) (r : RufRahmenG D) : (r.plus j).s0 = r.s0 := rfl
+    (z.plus j).stapel = z.stapel.map (RufRahmenG.plus j) := by rfl
+@[simp] theorem RufFadenG.plus_kopf (j : Nat) (z : RufFadenG D) : (z.plus j).kopf = z.kopf.plus j := by rfl
+@[simp] theorem RufRahmenG.plus_f (j : Nat) (r : RufRahmenG D) : (r.plus j).f = r.f := by rfl
+@[simp] theorem RufRahmenG.plus_rho (j : Nat) (r : RufRahmenG D) : (r.plus j).rho = r.rho := by rfl
+@[simp] theorem RufRahmenG.plus_s0 (j : Nat) (r : RufRahmenG D) : (r.plus j).s0 = r.s0 := by rfl
 
 theorem RufMaschineG.plus_weltVon (j : Nat) (M : RufMaschineG D) (t : Faden) :
-    (M.plus j).weltVon t = M.weltVon t := rfl
+    (M.plus j).weltVon t = M.weltVon t := by rfl
 
 /-- A residue with its context, shifted, read through its own equation. -/
 theorem sigmaRest_plus (j : Nat) {V : Vertrag D}
@@ -434,7 +434,7 @@ theorem rufErreichbarG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) 
 /-! ## 4. Over GX and on the thread machine -/
 
 theorem mitSpeicher_plus (j : Nat) (M : RufMaschineG D) (σ : Speicher D) :
-    mitSpeicher (M.plus j) σ = (mitSpeicher M σ).plus j := rfl
+    mitSpeicher (M.plus j) σ = (mitSpeicher M σ).plus j := by rfl
 
 theorem schreibG_plus (j : Nat) (M M' : RufMaschineG D) (u : Faden) (c : D.Tab ⊕ D.Glob) :
     SchreibG (M.plus j) (M'.plus j) u c ↔ SchreibG M M' u c := Iff.rfl

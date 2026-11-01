@@ -97,7 +97,7 @@ def mischU (S : SperrInv D) (L : D.Lock) (σ : World D) (s : Speicher D) : World
    fun g => if istIn (S.orte L) (.inr g) = true then s.globs g else σ.globs g, σ.spur⟩
 
 theorem mischU_spur (S : SperrInv D) (L : D.Lock) (σ : World D) (s : Speicher D) :
-    (mischU S L σ s).spur = σ.spur := rfl
+    (mischU S L σ s).spur = σ.spur := by rfl
 
 theorem mischU_aussen (S : SperrInv D) (L : D.Lock) (σ : World D) (s : Speicher D)
     (c : D.Tab ⊕ D.Glob) (hc : c ∉ S.orte L) :

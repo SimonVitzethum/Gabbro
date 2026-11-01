@@ -28,7 +28,7 @@ variable {D : Deklaration}
 /-- Reads (`World.lese`) only extend the trace: globals are untouched. -/
 theorem lese_globs_gleich (σ : World D) (Λ : List (Res D))
     (orte : List (D.Tab ⊕ D.Glob)) (x : D.Glob) :
-    (σ.lese Λ orte).globs x = σ.globs x := rfl
+    (σ.lese Λ orte).globs x = σ.globs x := by rfl
 
 /-- A store to another global leaves this global untouched. -/
 theorem storeGlob_fremd_global (σ : World D) {x g : D.Glob} (h : x ≠ g)
@@ -39,11 +39,11 @@ theorem storeGlob_fremd_global (σ : World D) {x g : D.Glob} (h : x ≠ g)
 /-- A slot write leaves every global untouched. -/
 theorem schreibSlot_globs_gleich (σ : World D) (u : D.Tab) (Λ : List (Res D))
     (k : Int) (f : D.Feld u) (v : Wert D (D.typ u f)) (x : D.Glob) :
-    (σ.schreibSlot u Λ k f v).globs x = σ.globs x := rfl
+    (σ.schreibSlot u Λ k f v).globs x = σ.globs x := by rfl
 
 /-- Recording events (`World.merke`) leaves globals untouched. -/
 theorem merke_globs_gleich (σ : World D) (es : List (Ereignis D)) (x : D.Glob) :
-    (σ.merke es).globs x = σ.globs x := rfl
+    (σ.merke es).globs x = σ.globs x := by rfl
 
 /-- Byte writes leave every global untouched, by induction over the byte
     list. Used: `k`, `bs` drive the induction; every other premise fixes
@@ -838,10 +838,10 @@ theorem gHaelt1 : (() : gD.Lock) ∈ offen (gM2.spuren 1) := by
   exact List.mem_singleton.mpr rfl
 
 /-- The write moved the global: it reads `5` now. -/
-theorem gW1w_glob5 : (gM2.speicher.globs ()).n = 5 := rfl
+theorem gW1w_glob5 : (gM2.speicher.globs ()).n = 5 := by rfl
 
 /-- The start global reads `0`. -/
-theorem gSp0_glob0 : (gSp0.globs ()).n = 0 := rfl
+theorem gSp0_glob0 : (gSp0.globs ()).n = 0 := by rfl
 
 /-- Memory really moved: the global went from `0` to `5`. -/
 theorem gMoved : gM2.speicher.globs () ≠ gSp0.globs () := by

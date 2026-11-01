@@ -140,7 +140,7 @@ def GSchritt.sperren : GSchritt (D := D) → List D.Lock
     lock list to fill. -/
 theorem geraet_ohne_sperre (t : D.Tab) :
     (GSchritt.dma (D := D) t).sperren = [] :=
-  rfl
+  by rfl
 
 /-! ## 2. Guard-respect: the device fires only inside a handed-over window -/
 

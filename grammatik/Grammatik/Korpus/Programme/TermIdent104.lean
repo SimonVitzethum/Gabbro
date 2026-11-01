@@ -31,27 +31,27 @@ namespace Gabbro.Grammatik
     `CertExpr::Lit` via `konst_zertifikate` (`emit.rs:2909`), printing
     `(.lit 2)`. The Lean side prints the checked literal identically. -/
 example : printInt (D := refD) (Γ := []) (Λ := []) (Expr.lit 2)
-    = some (CertExpr.lit (D := refD) 2) := rfl
+    = some (CertExpr.lit (D := refD) 2) := by rfl
 
 /-- Differential witness 2: Rust `Add(lit 2, lit 3)` prints
     `(.add (.lit 2) (.lit 3))` (`certemit.rs` unit test
     `add_prints_and_sums_bounds`); the Lean side prints the same. -/
 example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.add (Expr.lit 2) (Expr.lit 3))
-    = some (CertExpr.add (D := refD) (.lit 2) (.lit 3)) := rfl
+    = some (CertExpr.add (D := refD) (.lit 2) (.lit 3)) := by rfl
 
 /-- Differential witness 3: Rust `Div(lit 7, lit 2)` prints
     `(.div (.lit 7) (.lit 2))` (`div_prints_and_claims_zero_to_hi`); the
     Lean side prints the same (side proofs by `decide`, recomputed). -/
 example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.div (by decide) (by decide) (Expr.lit 7) (Expr.lit 2))
-    = some (CertExpr.div (D := refD) (.lit 7) (.lit 2)) := rfl
+    = some (CertExpr.div (D := refD) (.lit 7) (.lit 2)) := by rfl
 
 /-- Differential witness 4: Rust `Band(lit 6, lit 3)` prints
     `(.band (.lit 6) (.lit 3))` (`band_prints_and_claims`). -/
 example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.band (by decide) (by decide) (Expr.lit 6) (Expr.lit 3))
-    = some (CertExpr.band (D := refD) (.lit 6) (.lit 3)) := rfl
+    = some (CertExpr.band (D := refD) (.lit 6) (.lit 3)) := by rfl
 
 /-- Differential witness 5: Rust `Bor(3, lit 6, lit 3)` prints
     `(.bor 3 (.lit 6) (.lit 3))` (`bor_prints_with_width_and_claims_full_width`). -/
@@ -59,7 +59,7 @@ example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.bor (w := 3) (l1 := 6) (h1 := 6) (l2 := 3) (h2 := 3)
       (by decide) (by decide) (by decide) (by decide)
       (Expr.lit 6) (Expr.lit 3))
-    = some (CertExpr.bor (D := refD) 3 (.lit 6) (.lit 3)) := rfl
+    = some (CertExpr.bor (D := refD) 3 (.lit 6) (.lit 3)) := by rfl
 
 /-- Differential witness 6: Rust `Bxor(3, lit 6, lit 3)` prints
     `(.bxor 3 (.lit 6) (.lit 3))` (`bxor_prints_with_width_and_claims_full_width`). -/
@@ -67,7 +67,7 @@ example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.bxor (w := 3) (l1 := 6) (h1 := 6) (l2 := 3) (h2 := 3)
       (by decide) (by decide) (by decide) (by decide)
       (Expr.lit 6) (Expr.lit 3))
-    = some (CertExpr.bxor (D := refD) 3 (.lit 6) (.lit 3)) := rfl
+    = some (CertExpr.bxor (D := refD) 3 (.lit 6) (.lit 3)) := by rfl
 
 /-- Differential witness 7 (MATCH since lane 159: the Rust side prints the
     width -- `Shl(3, lit 3, lit 2)` prints `(.shl 3 (.lit 3) (.lit 2))`
@@ -77,7 +77,7 @@ example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.shl (w := 3) (l1 := 3) (h1 := 3) (l2 := 2) (h2 := 2)
       (by decide) (by decide) (by decide) (by decide)
       (Expr.lit 3) (Expr.lit 2))
-    = some (CertExpr.shl (D := refD) 3 (.lit 3) (.lit 2)) := rfl
+    = some (CertExpr.shl (D := refD) 3 (.lit 3) (.lit 2)) := by rfl
 
 /-- Differential witness 8 (MATCH since lane 159, same fix as witness 7):
     Rust `Shr(4, lit 12, lit 2)` prints `(.shr 4 (.lit 12) (.lit 2))`
@@ -87,20 +87,20 @@ example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.shr (w := 4) (l1 := 12) (h1 := 12) (l2 := 2) (h2 := 2)
       (by decide) (by decide) (by decide) (by decide)
       (Expr.lit 12) (Expr.lit 2))
-    = some (CertExpr.shr (D := refD) 4 (.lit 12) (.lit 2)) := rfl
+    = some (CertExpr.shr (D := refD) 4 (.lit 12) (.lit 2)) := by rfl
 
 /-- Differential witness 9: Rust `Wide(0, 7, lit 3)` prints
     `(.wide 0 7 (.lit 3))` (`wide_narrows_within_bounds`). -/
 example : printInt (D := refD) (Γ := []) (Λ := [])
     (Expr.widen (lo' := 0) (hi' := 7) (lo := 3) (hi := 3)
       (by decide) (by decide) (Expr.lit 3))
-    = some (CertExpr.wide (D := refD) 0 7 (.lit 3)) := rfl
+    = some (CertExpr.wide (D := refD) 0 7 (.lit 3)) := by rfl
 
 /-- Differential witness 10: Rust `Var(0)` against context `[(3, 3)]`
     prints `(.var 0)` (`var_reads_the_context`). -/
 example : printInt (D := refD) (Γ := [.int 3 3]) (Λ := [])
     (Expr.var Var.here)
-    = some (CertExpr.var (D := refD) 0) := rfl
+    = some (CertExpr.var (D := refD) 0) := by rfl
 
 /-- Differential witness 11: Rust `Slot(t, f, Wide(0, count - 1, lit))`
     prints `(.slot t f (.wide 0 (count - 1) (.lit …)))`
@@ -110,7 +110,7 @@ example : printInt (D := refD) (Γ := [.int 3 3]) (Λ := [])
     (`Konto`, `stand`): same shape, different spelling of the carrier. -/
 example : printInt (D := refD) (Γ := [.int 0 10]) (Λ := [Res.held (D := refD) ()])
     (Expr.slot () () refIdxEin refDarf)
-    = some (CertExpr.slot (D := refD) () () (.wide 0 1 (.lit 0))) := rfl
+    = some (CertExpr.slot (D := refD) () () (.wide 0 1 (.lit 0))) := by rfl
 
 /-- Differential witness 12: Rust `Glob(g)` prints `(.glob g)`
     (`glob_reads_carrier_and_guard`). The fixture has no globals
@@ -120,7 +120,7 @@ example : printInt (D := refD) (Γ := [.int 0 10]) (Λ := [Res.held (D := refD) 
     of its globals, both used). -/
 example (D : Deklaration) (g : D.Glob) (h : gdarf D g [])
     : printInt (D := D) (Γ := []) (Λ := []) (Expr.glob g h)
-    = some (CertExpr.glob (D := D) g) := rfl
+    = some (CertExpr.glob (D := D) g) := by rfl
 
 /-
   CUTS: what is not proved here.

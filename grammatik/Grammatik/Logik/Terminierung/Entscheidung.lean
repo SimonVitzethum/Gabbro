@@ -119,7 +119,7 @@ theorem rufeE_mE : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
 end
 
 /-- The `forever` gate is idle where the syntax holds no `forever`. -/
-theorem befund_und_ewig (a b : Befund D) : (a ++ b).ewig = (a.ewig || b.ewig) := rfl
+theorem befund_und_ewig (a b : Befund D) : (a ++ b).ewig = (a.ewig || b.ewig) := by rfl
 
 mutual
 

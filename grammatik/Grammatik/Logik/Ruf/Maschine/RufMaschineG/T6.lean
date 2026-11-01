@@ -48,7 +48,7 @@ theorem reach7G_start :
 theorem M7G_log : (M7G.faeden 0).log =
     [RufEreignisF.rueck rufIncF rufRhoF vF (M0G.weltVon 0) s1G,
      RufEreignisF.eintritt rufIncF rufRhoF (M0G.weltVon 0),
-     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := rfl
+     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := by rfl
 
 /-- The final memory carries the written value at slot 0 (via `outWF`). -/
 theorem M7G_slot : M7G.speicher.slots () 0 () =
@@ -112,7 +112,7 @@ def bisH : Expr rufDF (rufDF.params rufCallerF)
     (Signatur.anfang rufDF (rufDF.signatur rufCallerF)) .bool :=
   .fls
 
-theorem bisH_orte : bisH.orte = [] := rfl
+theorem bisH_orte : bisH.orte = [] := by rfl
 
 /-- The abrupt exit at the end of the bound body. -/
 def leaveH : Stmt rufDF (vertragVon rufDF rufCallerF) true
@@ -150,7 +150,7 @@ def retryStmtH : Stmt rufDF (vertragVon rufDF rufCallerF) false
   .retry 1 bisH bodyH .nil
 
 /-- The loop unfolds. -/
-theorem retryH_entf : GEntfaltbar retryStmtH = true := rfl
+theorem retryH_entf : GEntfaltbar retryStmtH = true := by rfl
 
 /-- The driver return: the parameter, like `restF` (contracts coincide by
     computation, so the F term is reused directly). -/
@@ -175,10 +175,10 @@ def hP : Programm rufDF where
     | false => driverBodyH
 
 /-- The driver body is what `hP` runs at `false`. -/
-theorem hP_rumpf_false : hP.rumpf rufCallerF = driverBodyH := rfl
+theorem hP_rumpf_false : hP.rumpf rufCallerF = driverBodyH := by rfl
 
 /-- The writer body is what `hP` runs at `true`. -/
-theorem hP_rumpf_true : hP.rumpf rufIncF = rufRumpfF := rfl
+theorem hP_rumpf_true : hP.rumpf rufIncF = rufRumpfF := by rfl
 
 def M0H : RufMaschineG rufDF := RufStartG hP spF initF
 
@@ -212,7 +212,7 @@ theorem M0H_kopf :
   rw [hM, hrumpf]
 
 /-- Reachability from `RufStartG`: `M0H` IS the start machine. -/
-theorem M0H_start : M0H = RufStartG hP spF initF := rfl
+theorem M0H_start : M0H = RufStartG hP spF initF := by rfl
 
 /-! ## 10. The witness run: unfold, loop, bind-call, leave -/
 
@@ -244,10 +244,10 @@ theorem H1H_kopf :
     (H1H.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufCallerF,
      Signatur.anfang rufDF (rufDF.signatur rufCallerF), rhoCallerF,
-     .dann (.cons retryStmtH .nil) (.ende driverRet)⟩ := rfl
+     .dann (.cons retryStmtH .nil) (.ende driverRet)⟩ := by rfl
 
 /-- The thread world is unchanged by the unfold. -/
-theorem H1H_welt : H1H.weltVon 0 = spF.welt [] := rfl
+theorem H1H_welt : H1H.weltVon 0 = spF.welt [] := by rfl
 
 /-- After `dannRetry`: one try with the overflow arm behind. -/
 def H2H : RufMaschineG rufDF :=
@@ -278,10 +278,10 @@ theorem H2H_kopf :
     (H2H.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufCallerF,
      Signatur.anfang rufDF (rufDF.signatur rufCallerF), rhoCallerF,
-     .wieder 1 bisH bodyH .nil (.dann .nil (.ende driverRet))⟩ := rfl
+     .wieder 1 bisH bodyH .nil (.dann .nil (.ende driverRet))⟩ := by rfl
 
 /-- The thread world is unchanged by installing the loop. -/
-theorem H2H_welt : H2H.weltVon 0 = spF.welt [] := rfl
+theorem H2H_welt : H2H.weltVon 0 = spF.welt [] := by rfl
 
 /-- After the condition check: the body runs under the loop shim. -/
 def H3H : RufMaschineG rufDF :=
@@ -325,10 +325,10 @@ theorem H3H_kopf :
      Signatur.anfang rufDF (rufDF.signatur rufCallerF), rhoCallerF,
      .dann bodyH
        (.wiederRest 0 bisH bodyH .nil
-         (.dann .nil (.ende driverRet)))⟩ := rfl
+         (.dann .nil (.ende driverRet)))⟩ := by rfl
 
 /-- The thread world is unchanged by the check (nothing read). -/
-theorem H3H_welt : H3H.weltVon 0 = spF.welt [] := rfl
+theorem H3H_welt : H3H.weltVon 0 = spF.welt [] := by rfl
 
 /-- After the bind-call: caller suspended with `wartet`, writer installed. -/
 def H4H : RufMaschineG rufDF :=
@@ -393,10 +393,10 @@ theorem H4H_kopf :
     (H4H.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .ende (.cons leafSF restF)⟩ := rfl
+     .ende (.cons leafSF restF)⟩ := by rfl
 
 /-- The writer runs in the entry world (arguments read nothing). -/
-theorem H4H_welt : H4H.weltVon 0 = spF.welt [] := rfl
+theorem H4H_welt : H4H.weltVon 0 = spF.welt [] := by rfl
 
 /-- After the writing leaf: memory moved to `outWF`. -/
 def H5H : RufMaschineG rufDF :=
@@ -449,7 +449,7 @@ theorem H5H_kopf :
     (H5H.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .ende (.ret eF (by decide))⟩ := rfl
+     .ende (.ret eF (by decide))⟩ := by rfl
 
 /-- The suspended caller frame, named for the pop. -/
 def callerH : RufRahmenG rufDF :=

@@ -24,10 +24,10 @@ variable {D : Deklaration}
 /-! ## 1. Goal premises: the `voll` witness contracts are `true`. -/
 
 /-- The `voll` witness reasons about no contract: the requires gate is `true`. -/
-theorem audit_vP_requires_true : vP.requires vHaupt = .tru := rfl
+theorem audit_vP_requires_true : vP.requires vHaupt = .tru := by rfl
 
 /-- The ensures gate is `true` as well: joint satisfiability without frame reasoning. -/
-theorem audit_vP_ensures_true : vP.ensures vHaupt = .tru := rfl
+theorem audit_vP_ensures_true : vP.ensures vHaupt = .tru := by rfl
 
 /-! ## 2. `RegLokal`: satisfiable by a memory-dependent oracle. -/
 
@@ -48,11 +48,11 @@ theorem audit_regwechsel_braucht_traeger (O : Orakel D) (r : D.Reg)
 
 /-- Lock steps record no carrier access: the race notion is blind to them. -/
 theorem audit_zugriff_nimmt : zugriffVon (D := geD) (.nimmt GeLock.lg []) = none :=
-  rfl
+  by rfl
 
 /-- Releases record no carrier access either. -/
 theorem audit_zugriff_gibt : zugriffVon (D := geD) (.gibt GeLock.lg) = none :=
-  rfl
+  by rfl
 
 /-- Reads are not races by definition: if EITHER step leaves `c` alone,
     the pair is no `SchreibRasse`. Both premises are consumed by the case split. -/
@@ -93,7 +93,7 @@ theorem audit_vlauf_schreibt :
   exact ⟨M, hr, hmem⟩
 
 /-- The `geraet` witness contract is non-trivial: `leser` ensures its result. -/
-theorem audit_geP_ensures_leser : geP.ensures geLeser = .var .here := rfl
+theorem audit_geP_ensures_leser : geP.ensures geLeser = .var .here := by rfl
 
 /-- The `geraet` run is genuinely two-threaded: thread 0's reader (two
     register reads with its own write between them) interleaved with

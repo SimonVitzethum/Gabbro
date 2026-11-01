@@ -95,7 +95,7 @@ def cBlks : List Block := (cLow.map Prod.fst).getD []
 
 def cSt : St := (cLow.map Prod.snd).getD ⟨0, 0⟩
 
-theorem cLow_eq : cLow = some (cBlks, cSt) := rfl
+theorem cLow_eq : cLow = some (cBlks, cSt) := by rfl
 
 /-- The module: an entry block (label 0), the lowered blocks, the continuation (label 2, a `ret`). -/
 def cMod : Modl := ⟨[], [⟨"f", [], .void, ⟨0, [], [], .jmp 1⟩ :: cBlks ++ [⟨2, [], [], .ret none⟩]⟩]⟩

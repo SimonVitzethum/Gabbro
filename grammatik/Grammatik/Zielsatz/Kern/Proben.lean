@@ -87,7 +87,7 @@ theorem start_req_widerlegt {D : Deklaration} (E : Einheit D)
   fun h => hf (h.start.req a (List.mem_append_left _ ha))
 
 /-- The float literal of probe F1 is outside its range, by computation. -/
-theorem f1_lit_ausser : gleitPasst (0, 1) (1, 1) (bruch (2, 1)) = none := rfl
+theorem f1_lit_ausser : gleitPasst (0, 1) (1, 1) (bruch (2, 1)) = none := by rfl
 
 /-- Every body of probe F1 ends in `logik bereich`, whatever the oracle and the handler: the
     kernel IEEE model decides it (the stop verdict F1 found labelled "hardware"). -/

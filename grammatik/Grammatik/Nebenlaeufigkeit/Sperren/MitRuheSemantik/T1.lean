@@ -86,7 +86,7 @@ theorem nimmt_worldR (σ : World D) (L : D.Lock) : (worldR σ).nimmt L = worldR 
   rw [haelt_worldR]
   rfl
 
-theorem gibt_worldR (σ : World D) (L : D.Lock) : (worldR σ).gibt L = worldR (σ.gibt L) := rfl
+theorem gibt_worldR (σ : World D) (L : D.Lock) : (worldR σ).gibt L = worldR (σ.gibt L) := by rfl
 
 theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
   cases a; cases b; simp only at h; subst h; rfl
@@ -568,7 +568,7 @@ theorem orakelRu_mitRuhe (O : Orakel D) : OrakelRu O O.mitRuhe :=
 
 /-- A question to the outside translates as itself. -/
 theorem worldR_fragt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) :
-    (worldR σ).fragt q = worldR (σ.fragt q) := rfl
+    (worldR σ).fragt q = worldR (σ.fragt q) := by rfl
 
 theorem axiomAntwort_ruG {O : Orakel D} {O' : Orakel D.mitRuhe} (hO : OrakelRu O O') (a : D.Ax)
     (σ : World D) (ρ : Env D (D.aparams a)) :

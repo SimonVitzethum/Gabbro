@@ -183,7 +183,7 @@ theorem execBlock_narrow (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool
     (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ') (σ : World D) (ρ : Env D Γ) :
     execBlock O passes keinRuf (.narrow e lo' hi' sonst rest) σ ρ =
       narrowWeiter O passes rest sonst ρ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)
-        (σ.lese Λ e.orte) := rfl
+        (σ.lese Λ e.orte) := by rfl
 
 section Spur
 

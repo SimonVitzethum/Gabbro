@@ -424,10 +424,10 @@ def restF : Endblock rufDF (vertragVon rufDF rufIncF) false (rufDF.params rufInc
       Expr rufDF (rufDF.params rufIncF)
         (Signatur.anfang rufDF (rufDF.signatur rufIncF)) (.int 0 6)))) (by decide))
 
-theorem rufRumpfF_eq : rufRumpfF = Endblock.cons leafSF restF := rfl
+theorem rufRumpfF_eq : rufRumpfF = Endblock.cons leafSF restF := by rfl
 
 /-- The leaf is a leaf. -/
-theorem leafSF_blatt : leafSF.istBlatt = true := rfl
+theorem leafSF_blatt : leafSF.istBlatt = true := by rfl
 
 /-- The leaf writes: the outcome is `.ok` with a changed world and the same
     environment. The world changes because `assignSlot` stores the parameter
@@ -458,7 +458,7 @@ def initF : Faden → Σ f : rufDF.Fn, Env rufDF (rufDF.params f) :=
 
 theorem initF_rho : initF 0 =
     (⟨rufCallerF, rhoCallerF⟩ :
-      Σ f : rufDF.Fn, Env rufDF (rufDF.params f)) := rfl
+      Σ f : rufDF.Fn, Env rufDF (rufDF.params f)) := by rfl
 
 def M0F : RufMaschineF rufDF := RufStartF rufPF spF initF
 
@@ -494,7 +494,7 @@ theorem M0F_kopf :
   rw [hM, hrumpf]
 
 /-- The start head function is the caller. -/
-theorem M0F_fun : (M0F.faeden 0).kopf.f = rufCallerF := rfl
+theorem M0F_fun : (M0F.faeden 0).kopf.f = rufCallerF := by rfl
 
 /-- Caller params unfold to the single int (needed to align `rufArgsF`). -/
 theorem callerParamsF : rufDF.params rufCallerF = [.int 0 5] :=

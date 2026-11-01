@@ -37,7 +37,7 @@ theorem implication_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- Implication retains the old/result prohibition in executable bodies. -/
 theorem implication_scope (a b : UEns) :
-    ensAltErg (.imp a b) = (ensAltErg a || ensAltErg b) := rfl
+    ensAltErg (.imp a b) = (ensAltErg a || ensAltErg b) := by rfl
 
 theorem implication_export_zeuge :
     let ctx : UCtx := {
@@ -161,6 +161,6 @@ theorem nested_else_meaning {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : C
        | .ok next value => (execEnd O passes R body next (.cons (ergWert he value) env)).schrumpf
        | .why next reason => (execEnd O passes R err next (.cons reason env)).schrumpf
        | .logik error => .logik error
-       | .hardware error => .hardware error) := rfl
+       | .hardware error => .hardware error) := by rfl
 
 end Gabbro.Grammatik.Parser.ExportPreservation

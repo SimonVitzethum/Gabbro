@@ -67,9 +67,9 @@ def readAlias : Expr D Γ [] (D.typ A.tab A.feld) :=
   .slot A.tab A.feld (.var (.there .here)) tab_right
 
 theorem alias_read_accepted : checkExpression A context readAlias = true := by decide
-theorem consume_name : consume (D := D) context (.var (Λ := []) (.here : Var Γ _)) = some (context.kill 0, 0) := rfl
+theorem consume_name : consume (D := D) context (.var (Λ := []) (.here : Var Γ _)) = some (context.kill 0, 0) := by rfl
 theorem alias_read_refused : checkExpression A (context.kill 0) readAlias = false := by decide
-theorem second_consume_refused : consume (D := D) (context.kill 0) (.var (Λ := []) (.there .here : Var Γ _)) = none := rfl
+theorem second_consume_refused : consume (D := D) (context.kill 0) (.var (Λ := []) (.there .here : Var Γ _)) = none := by rfl
 
 /-- The checker invalidates the other alias after a source free and the
 computed context really describes the world of the executed G block. -/
@@ -101,7 +101,7 @@ theorem reuse_cannot_restore_alias :
 
 theorem borrowed_parameter_cannot_be_consumed :
     consume (D := D) { context with rights := fun i => if i = 0 then some .borrowed else none }
-      (.var (Λ := []) (.here : Var Γ _)) = none := rfl
+      (.var (Λ := []) (.here : Var Γ _)) = none := by rfl
 
 #print axioms checked_release_witness
 #print axioms reuse_cannot_restore_alias

@@ -29,9 +29,9 @@ open InvDynZeuge
 /-- The scenario world with the committed word at `2`, below the ceiling `4`. -/
 def w0K : World FDL := { w0L with globs := fun g => if g = 1 then zc 2 else w0L.globs g }
 
-theorem komSt_w0K : FAL.komSt w0K = 2 := rfl
+theorem komSt_w0K : FAL.komSt w0K = 2 := by rfl
 
-theorem stand_w0K : FAL.stand w0K = 4 := rfl
+theorem stand_w0K : FAL.stand w0K = 4 := by rfl
 
 /-- The arena invariant does not read the committed word, so the scenario still meets it. -/
 theorem ok_w0K : KLL.Ok w0K :=

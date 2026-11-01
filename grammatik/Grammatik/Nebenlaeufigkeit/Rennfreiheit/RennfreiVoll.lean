@@ -555,7 +555,7 @@ def ereignisse (M M' : RufMaschineG D) (f : Faden) : List (Ereignis D) :=
   (M'.faeden f).spur.take ((M'.faeden f).spur.length - (M.faeden f).spur.length)
 
 theorem zugriffe_ereignisse (M M' : RufMaschineG D) (f : Faden) :
-    zugriffe M M' f = (ereignisse M M' f).filterMap zugriffVon := rfl
+    zugriffe M M' f = (ereignisse M M' f).filterMap zugriffVon := by rfl
 
 theorem ereignisse_eq {M M' : RufMaschineG D} {f : Faden} {X : List (Ereignis D)}
     (e : (M'.faeden f).spur = X ++ (M.faeden f).spur) : ereignisse M M' f = X := by

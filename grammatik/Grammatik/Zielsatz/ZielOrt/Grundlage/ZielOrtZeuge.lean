@@ -158,12 +158,12 @@ def zIdx {Γ : Ctx} {Λ : List (Res zD)} : Expr zD Γ Λ (.index (zD.count ())) 
 def zHundert {Γ : Ctx} {Λ : List (Res zD)} : Expr zD Γ Λ (.int 0 100) :=
   .widen (by decide) (by decide) (.lit 100)
 
-theorem zEin_ende : (vertragVon zD zEin).ende = zL := rfl
-theorem zLies_ende : (vertragVon zD zLies).ende = zL := rfl
-theorem zEin_start : Signatur.anfang zD (zD.signatur zEin) = zL := rfl
-theorem zLies_start : Signatur.anfang zD (zD.signatur zLies) = zL := rfl
-theorem zWrap_start : Signatur.anfang zD (zD.signatur zWrap) = zL := rfl
-theorem zHaupt_start : Signatur.anfang zD (zD.signatur zHaupt) = [] := rfl
+theorem zEin_ende : (vertragVon zD zEin).ende = zL := by rfl
+theorem zLies_ende : (vertragVon zD zLies).ende = zL := by rfl
+theorem zEin_start : Signatur.anfang zD (zD.signatur zEin) = zL := by rfl
+theorem zLies_start : Signatur.anfang zD (zD.signatur zLies) = zL := by rfl
+theorem zWrap_start : Signatur.anfang zD (zD.signatur zWrap) = zL := by rfl
+theorem zHaupt_start : Signatur.anfang zD (zD.signatur zHaupt) = [] := by rfl
 
 /-- `einzahlen` ensures the slot did not decrease. -/
 def zEnsEin : Expr zD (ErgCtx (zD.params zEin) (zD.erg zEin)) (vertragVon zD zEin).ende .bool :=
@@ -414,7 +414,7 @@ def zZ0 : RufFadenG zD :=
   ⟨[], ⟨zHaupt, .nil, zSp.welt [], ⟨false, [], [], .nil, .ende zRumpfHaupt⟩⟩, [],
     [RufEreignisF.eintritt zHaupt .nil (zSp.welt [])]⟩
 
-theorem zM0_faden (t : Faden) : (RufStartG zP zSp zInit).faeden t = zZ0 := rfl
+theorem zM0_faden (t : Faden) : (RufStartG zP zSp zInit).faeden t = zZ0 := by rfl
 
 theorem hgL {s : List (Ereignis zD)} (h : offen s = [()]) : HeldGenau zL (offen s) := by
   rw [h]
@@ -429,7 +429,7 @@ theorem hg0 {s : List (Ereignis zD)} (h : offen s = []) :
   exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩
 
 theorem offen_weltVon (M : RufMaschineG zD) (t : Faden) :
-    offen (M.weltVon t).spur = offen (M.faeden t).spur := rfl
+    offen (M.weltVon t).spur = offen (M.faeden t).spur := by rfl
 
 theorem hoff_z {M : RufMaschineG zD} {f : Faden} {stapel : List (RufRahmenG zD)} {fn : zD.Fn}
     {rho : Env zD (zD.params fn)} {s0 : World zD} {log : List (RufEreignisF zD)} {l : Bool}
@@ -455,7 +455,7 @@ theorem execStmt_assignSlot {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : C
     execStmt O passes R (Stmt.assignSlot (l := l) t f i e hw hL) σ ρ =
       .ok ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
         (eval (σ.lese Λ (i.orte ++ e.orte)) i (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
-        (eval (σ.lese Λ (i.orte ++ e.orte)) e (σ.lese Λ (i.orte ++ e.orte)) ρ)) ρ := rfl
+        (eval (σ.lese Λ (i.orte ++ e.orte)) e (σ.lese Λ (i.orte ++ e.orte)) ρ)) ρ := by rfl
 
 /-- The `locks` statement of `haupt`. -/
 def zLocks : Stmt zD (vertragVon zD zHaupt) false [] [] [] :=

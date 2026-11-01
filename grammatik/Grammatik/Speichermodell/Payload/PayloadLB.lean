@@ -61,7 +61,7 @@ theorem ns_hist_other (Z : LZustand LOrt) (t : Nat) {loc loc2 : LOrt} (w : Int) 
   simp only [LZustand.nachSchreib, aufO, h, ↓reduceIte]
 
 theorem ns_reg (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (w : Int) (o : Ordnung) (ts : Nat) :
-    (Z.nachSchreib t loc w o ts).reg = Z.reg := rfl
+    (Z.nachSchreib t loc w o ts).reg = Z.reg := by rfl
 
 theorem nl_pc_self (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (r : Nat) (o : Ordnung)
     (m : Nachricht LOrt Int) : (Z.nachLies t loc r o m).pc t = Z.pc t + 1 := by
@@ -72,7 +72,7 @@ theorem nl_pc_other (Z : LZustand LOrt) {t u : Nat} (loc : LOrt) (r : Nat) (o : 
   simp only [LZustand.nachLies, aufN, h, ↓reduceIte]
 
 theorem nl_hist (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (r : Nat) (o : Ordnung)
-    (m : Nachricht LOrt Int) : (Z.nachLies t loc r o m).hist = Z.hist := rfl
+    (m : Nachricht LOrt Int) : (Z.nachLies t loc r o m).hist = Z.hist := by rfl
 
 theorem nl_reg_self (Z : LZustand LOrt) (t : Nat) (loc : LOrt) (o : Ordnung)
     (m : Nachricht LOrt Int) : (Z.nachLies t loc 0 o m).reg t 0 = m.wert := by

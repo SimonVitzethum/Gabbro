@@ -287,7 +287,7 @@ def RF : ∀ f : DF.Fn, World DF → Env DF (DF.params f) → RufAusgang f :=
 /-- The axiom call reaches the flipped world. -/
 theorem hexecF : (execStmt OF 0 RF
     (Stmt.axiomCall () argsF rfl hwF hgF hdF hgdF :
-      Stmt DF VF false [] ΛF ΛF) σF ρF).welt = some σF' := rfl
+      Stmt DF VF false [] ΛF ΛF) σF ρF).welt = some σF' := by rfl
 
 /-- The reached world differs on the slot: the step changes memory. -/
 theorem hdiffF :
@@ -298,7 +298,7 @@ theorem hdiffF :
 theorem hLmem : Sum.inl () ∈ DF.braucht () := List.Mem.head _
 
 /-- Non-degeneracy: the declaration has a function writing the table. -/
-theorem zeuge_schreibt : DF.schreibt () () = true := rfl
+theorem zeuge_schreibt : DF.schreibt () () = true := by rfl
 
 /- RESTORED (reviewer revision): `axiomCall_haelt_waechter_zeuge` holds again
     -- under the conditional `GutO`, the guarded-write oracle `OF` satisfies

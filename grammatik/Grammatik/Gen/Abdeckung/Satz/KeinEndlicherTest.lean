@@ -66,7 +66,7 @@ def langHaut (k : Nat) : Haut z0.deklaration :=
   ⟨fun f => (show f = f0 from Fin.ext (by have := f.isLt; simp only [z0, List.length_cons, List.length_nil, Nat.reduceAdd, zero_add, Nat.lt_one_iff] at this ⊢; omega)) ▸ lang k [],
    fun _ => false⟩
 
-theorem langHaut_rumpf (k : Nat) : (langHaut k).rumpf f0 = lang k [] := rfl
+theorem langHaut_rumpf (k : Nat) : (langHaut k).rumpf f0 = lang k [] := by rfl
 
 theorem langHaut_boden (k : Nat) : z0.bodenOk (langHaut k).programm = true := by
   simp only [Spez.bodenOk, List.all_eq_true, beq_iff_eq]

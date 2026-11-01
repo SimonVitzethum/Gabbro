@@ -42,7 +42,7 @@ theorem armCtx_length (Γ : Ctx) : ∀ ca : Option (Int × Int), Γ.length ≤ (
   | some (_, _) => Nat.le_succ _
 
 theorem axiomAntwort_fst (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
-    (axiomAntwort O a σ ρ).1 = (O.wirkt a (σ.fragt (.inl a)) ρ).1 := rfl
+    (axiomAntwort O a σ ρ).1 = (O.wirkt a (σ.fragt (.inl a)) ρ).1 := by rfl
 
 end Arms
 

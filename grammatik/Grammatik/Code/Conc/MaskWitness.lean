@@ -85,7 +85,7 @@ def mSp : Speicher mD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun _ =>
 
 def mM0 : RufMaschineG mD := RufStartG mP mSp (fun _ => ⟨(), .nil⟩)
 
-theorem mM0_offen (v : Faden) : offen (mM0.faeden v).spur = [] := rfl
+theorem mM0_offen (v : Faden) : offen (mM0.faeden v).spur = [] := by rfl
 
 def gm0 : mD.Lock → Tkt := fun _ => ⟨0, 0, fun _ => none, false⟩
 
@@ -106,12 +106,12 @@ def mMod : Modl :=
   ⟨[], [⟨"mlock", [], .void, [⟨0, [], [], .jmp 1⟩, maskOn (mbF 0) 3 1 2, lockTake mLay () 1 2 3,
     lockSpin mLay () 1 2 3 4, lockRel mLay () 1 5 4 5, maskOff (mbF 0) 3 6 5 6, ⟨6, [], [], .ret none⟩]⟩]⟩
 
-theorem m_blk1 : mMod.blk 0 1 = some (maskOn (mbF 0) 3 1 2) := rfl
-theorem m_blk2 : mMod.blk 0 2 = some (lockTake mLay () 1 2 3) := rfl
-theorem m_blk3 : mMod.blk 0 3 = some (lockSpin mLay () 1 2 3 4) := rfl
-theorem m_blk4 : mMod.blk 0 4 = some (lockRel mLay () 1 5 4 5) := rfl
-theorem m_blk5 : mMod.blk 0 5 = some (maskOff (mbF 0) 3 6 5 6) := rfl
-theorem m_blk6 : mMod.blk 0 6 = some ⟨6, [], [], .ret none⟩ := rfl
+theorem m_blk1 : mMod.blk 0 1 = some (maskOn (mbF 0) 3 1 2) := by rfl
+theorem m_blk2 : mMod.blk 0 2 = some (lockTake mLay () 1 2 3) := by rfl
+theorem m_blk3 : mMod.blk 0 3 = some (lockSpin mLay () 1 2 3 4) := by rfl
+theorem m_blk4 : mMod.blk 0 4 = some (lockRel mLay () 1 5 4 5) := by rfl
+theorem m_blk5 : mMod.blk 0 5 = some (maskOff (mbF 0) 3 6 5 6) := by rfl
+theorem m_blk6 : mMod.blk 0 6 = some ⟨6, [], [], .ret none⟩ := by rfl
 
 /-- The machine after thread 0 took the lock: its trace gained the `nimmt`. -/
 def mM1 : RufMaschineG mD :=
@@ -147,13 +147,13 @@ def mk0 : MaskeKern mD := fun _ => []
 def mk1 : MaskeKern mD := maskeNach kernM mk0 0 (mM1.faeden 0).spur
 def mk2 : MaskeKern mD := maskeNach kernM mk1 0 (mM2.faeden 0).spur
 
-theorem mM1_spur : (mM1.faeden 0).spur = [Ereignis.nimmt () []] := rfl
+theorem mM1_spur : (mM1.faeden 0).spur = [Ereignis.nimmt () []] := by rfl
 
-theorem mM2_spur : (mM2.faeden 0).spur = [Ereignis.gibt (), Ereignis.nimmt () []] := rfl
+theorem mM2_spur : (mM2.faeden 0).spur = [Ereignis.gibt (), Ereignis.nimmt () []] := by rfl
 
-theorem erase_unit : ([()] : List Unit).erase () = [] := rfl
+theorem erase_unit : ([()] : List Unit).erase () = [] := by rfl
 
-theorem erase_unitM : ([()] : List mD.Lock).erase () = [] := rfl
+theorem erase_unitM : ([()] : List mD.Lock).erase () = [] := by rfl
 
 theorem mk1_zero : mk1 0 = [(0, ())] := by
   simp only [mk1, maskeNach, kernM, ↓reduceIte, ne_eq, decide_not, mk0, List.filter_nil, maskEintr, mM1_spur,

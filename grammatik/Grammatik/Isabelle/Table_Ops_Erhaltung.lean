@@ -412,7 +412,7 @@ theorem eigen_bleibt (z : Nat × Nat) (h : eigen z) : eigen (setze_eins z) := by
   decide
 
 theorem zweiter_traeger_unberuehrt (z : Nat × Nat) :
-    (setze_eins z).2 = z.2 := rfl
+    (setze_eins z).2 = z.2 := by rfl
 
 theorem verbindung_nicht_gedeckt :
     verbindend (0, 0) ∧ ¬ verbindend (setze_eins (0, 0)) := by

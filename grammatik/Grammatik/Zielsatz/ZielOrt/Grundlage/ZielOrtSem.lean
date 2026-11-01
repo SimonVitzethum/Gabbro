@@ -508,11 +508,11 @@ theorem semZ_locks {Λ Λ'' : List (Res D)} (L : D.Lock)
 
 theorem semZ_frei {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ) (σ : World D)
     (ρ : Env D Γ) :
-    semZ O passes R k (σ.gibt L) ρ = semZ O passes R (.frei L k) σ ρ := rfl
+    semZ O passes R k (σ.gibt L) ρ = semZ O passes R (.frei L k) σ ρ := by rfl
 
 theorem semZ_schrumpf {Λ : List (Res D)} {τ : Ty} (k : GRest D V l Γ Λ) (σ : World D)
     (v : Wert D τ) (ρ : Env D Γ) :
-    semZ O passes R k σ ρ = semZ O passes R (.schrumpf k) σ (.cons v ρ) := rfl
+    semZ O passes R k σ ρ = semZ O passes R (.schrumpf k) σ (.cons v ρ) := by rfl
 
 theorem semZ_endeBind {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (rest : Endblock D V l (τ :: Γ) Λ) (σ : World D) (ρ : Env D Γ) :
@@ -657,7 +657,7 @@ theorem semZ_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
 theorem semZ_rueck {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
     (σ : World D) (ρ : Env D Γ) :
     semZ O passes R (.ende (.ret (l := l) e hperm)) σ ρ =
-      .zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := rfl
+      .zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by rfl
 
 theorem semZ_rueckCons {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
     (rest : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :

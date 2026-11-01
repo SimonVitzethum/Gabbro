@@ -54,7 +54,7 @@ theorem zeigeTok_spell (t : Token) (h : TokGut t) : zeigeTok t = String.ofList (
   | doku _ => exact absurd h id
   | ende => exact absurd h id
 
-theorem renderText_nil : renderText [] = "" := rfl
+theorem renderText_nil : renderText [] = "" := by rfl
 
 theorem renderText_cons (t : Token) (ts : List Token) (h : TokGut t) :
     renderText (t :: ts) = zeigeTok t ++ " " ++ renderText ts := by

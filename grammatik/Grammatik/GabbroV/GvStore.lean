@@ -206,7 +206,7 @@ def kettenWelt : World kettenD :=
     spur := [] }
 
 /-- The edge field's type equation, by computation. -/
-theorem hfKante : kettenD.typ () .Kante = .opt (kettenD.count ()) := rfl
+theorem hfKante : kettenD.typ () .Kante = .opt (kettenD.count ()) := by rfl
 
 /-- Witness (non-degenerate): writing the counter at slot 1 leaves the
     edge map at slot 0 untouched -- the generic commutation at work. -/

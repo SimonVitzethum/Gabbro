@@ -74,7 +74,7 @@ theorem leseA_frei {T : D.Tab ⊕ D.Glob → Prop} {A : AUmwelt D} (hA : HavocA 
   world_ext (fun c => (hA X (σ.lese Λ X)).2 c fun ⟨h1, h2⟩ => hX c h1 h2) (hA X _).1
 
 theorem leseA_id (σ : World D) (Λ : List (Res D)) (X : List (D.Tab ⊕ D.Glob)) :
-    leseA idA σ Λ X = σ.lese Λ X := rfl
+    leseA idA σ Λ X = σ.lese Λ X := by rfl
 
 theorem leseA_spur (A : AUmwelt D) {T : D.Tab ⊕ D.Glob → Prop} (hA : HavocA T A) (σ : World D)
     (Λ : List (Res D)) (X : List (D.Tab ⊕ D.Glob)) : (leseA A σ Λ X).spur = (σ.lese Λ X).spur :=

@@ -199,7 +199,7 @@ theorem bedW1_slot : bedW1.slots true 0 () = bedV100 :=
 
 /-- The head world reads `0` at `konto[0]`. -/
 theorem bedW0_slot : bedW0.slots true 0 () =
-    (⟨0, by decide, by decide⟩ : Wert bedD (.int 0 100)) := rfl
+    (⟨0, by decide, by decide⟩ : Wert bedD (.int 0 100)) := by rfl
 
 /-- Memory really changes across the step. -/
 theorem bedMemWechsel : bedW1.slots true 0 () ≠ bedW0.slots true 0 () := by
@@ -210,36 +210,36 @@ theorem bedMemWechsel : bedW1.slots true 0 () ≠ bedW0.slots true 0 () := by
 
 /-- The writer writes `konto`. -/
 theorem bedSchreibt_konto : TraegerSchreibt (D := bedD) true (.inl true) = true :=
-  rfl
+  by rfl
 
 /-- Nobody writes `config`: the writer does not. -/
 theorem bedSchreibt_config_schreiber :
-    TraegerSchreibt (D := bedD) true (.inl false) = false := rfl
+    TraegerSchreibt (D := bedD) true (.inl false) = false := by rfl
 
 /-- Nobody writes `config`: the reader does not write `konto`. -/
 theorem bedSchreibt_konto_leser :
-    TraegerSchreibt (D := bedD) false (.inl true) = false := rfl
+    TraegerSchreibt (D := bedD) false (.inl true) = false := by rfl
 
 /-- Nobody writes `config`: the reader does not write `config`. -/
 theorem bedSchreibt_config_leser :
-    TraegerSchreibt (D := bedD) false (.inl false) = false := rfl
+    TraegerSchreibt (D := bedD) false (.inl false) = false := by rfl
 
 /-- `konto` is guarded by lock `()`. -/
 theorem bedGuard_konto : Bewacht (D := bedD) (.inl true) () :=
   List.mem_singleton.mpr rfl
 
 /-- The head world holds exactly the lock. -/
-theorem bedW0_haelt : bedW0.haelt = [()] := rfl
+theorem bedW0_haelt : bedW0.haelt = [()] := by rfl
 
 /-- The writer starts with exactly the lock in hand. -/
 theorem bedAnfang_schreib :
-    Signatur.anfang bedD (bedD.signatur true) = [Res.held (D := bedD) ()] := rfl
+    Signatur.anfang bedD (bedD.signatur true) = [Res.held (D := bedD) ()] := by rfl
 
 /-- `konto` is watched by the lock. -/
-theorem bedBraucht_konto : bedD.braucht true = [Sum.inl ()] := rfl
+theorem bedBraucht_konto : bedD.braucht true = [Sum.inl ()] := by rfl
 
 /-- `config` has an empty watch list. -/
-theorem bedBraucht_config : bedD.braucht false = [] := rfl
+theorem bedBraucht_config : bedD.braucht false = [] := by rfl
 
 /-- The writer step stays in the writer frame: `config` slots ride
     along, globals are vacuous over `Empty`. -/
@@ -346,9 +346,9 @@ def bedJ : GemeinsamerLauf (D := bedD) bedNb :=
   }
 
 /-- Equation helpers for rewriting in the witness proofs. -/
-theorem bedJ_faeden : bedJ.faeden = [0] := rfl
+theorem bedJ_faeden : bedJ.faeden = [0] := by rfl
 
-theorem bedJ_welten : bedJ.welten = [bedW0, bedW1] := rfl
+theorem bedJ_welten : bedJ.welten = [bedW0, bedW1] := by rfl
 
 /-- Trivially true carrier invariant; its discipline holds because the
     writer holds the lock over the one carrier it writes. -/

@@ -53,7 +53,7 @@ def ML : RufMaschineG FDL :=
 
 theorem ml_welt : (ML.weltVon 0).slots = w0L.slots ∧ (ML.weltVon 0).globs = w0L.globs := ⟨rfl, rfl⟩
 
-theorem schreiberL_schleifenfrei : schreiberL.schleifenfrei = true := rfl
+theorem schreiberL_schleifenfrei : schreiberL.schleifenfrei = true := by rfl
 
 /-- The writer is covered by the machine's fragment, at every depth -- derived from the certificate (`erkE_endR`), no second
     derivation is written. -/

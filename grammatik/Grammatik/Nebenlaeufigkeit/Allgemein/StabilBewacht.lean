@@ -316,16 +316,16 @@ def zbJ : GemeinsamerLauf (D := refD) zbNb where
     exact nomatch i
 
 /-- Projections of the witness chain, by computation. -/
-theorem zbJ_welten : zbJ.welten = [zbW0, zbW1] := rfl
+theorem zbJ_welten : zbJ.welten = [zbW0, zbW1] := by rfl
 
 /-- Projections of the witness chain, by computation. -/
-theorem zbJ_schritt : zbJ.schrittFaden = [1] := rfl
+theorem zbJ_schritt : zbJ.schrittFaden = [1] := by rfl
 
 /-- Projections of the witness chain, by computation. -/
-theorem zbJ_faeden : zbJ.faeden = [0, 1] := rfl
+theorem zbJ_faeden : zbJ.faeden = [0, 1] := by rfl
 
 /-- `Q` holds at the head world: both read slots are `0`. -/
-theorem zbQ_W0 (f : Faden) : zbQ f zbW0 := rfl
+theorem zbQ_W0 (f : Faden) : zbQ f zbW0 := by rfl
 
 /-- `Q` holds at the end world: slots 0 and 1 are untouched by the
     slot-5 write. -/
@@ -406,10 +406,10 @@ theorem zbHaelt (f : Faden) (hf : f ∈ zbJ.faeden) :
   rcases hf with rfl | rfl <;> rfl
 
 /-- The writer writes the table; the reader writes nothing. -/
-theorem zbSchreibtEin : refD.schreibt (zbCode 1) () = true := rfl
+theorem zbSchreibtEin : refD.schreibt (zbCode 1) () = true := by rfl
 
 /-- The writer writes the table; the reader writes nothing. -/
-theorem zbSchreibtLies : refD.schreibt (zbCode 0) () = false := rfl
+theorem zbSchreibtLies : refD.schreibt (zbCode 0) () = false := by rfl
 
 /-- Slot-level dependence of `Q`: slots 0 and 1 fix both sides. (The
     global agreement is carried for shape; `refD` has no globals.) -/
@@ -516,7 +516,7 @@ theorem zbW1_slot5 : zbW1.slots () 5 () = zbV7 := by
   rw [if_pos rfl]
 
 /-- Slot 5 was `0` at the head. -/
-theorem zbW0_slot5 : zbW0.slots () 5 () = zbV0 := rfl
+theorem zbW0_slot5 : zbW0.slots () 5 () = zbV0 := by rfl
 
 /-- Memory really moved: slot 5 reads `7`, the head reads `0`. -/
 theorem zbMemMoved : zbW1.slots () 5 () ≠ zbW0.slots () 5 () := by

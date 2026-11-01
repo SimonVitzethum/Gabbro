@@ -66,7 +66,7 @@ theorem stale_schritt :
 
 /-- The accesses the stale step records: the write of `tabA`, the read of `konfig`. -/
 theorem stale_zugriffe : zugriffe mStale (blattM mStale 0 sA (.ret .empty List.Perm.nil)) 0 =
-    [(.inl NTab.tabA, true), (.inr NGlob.konfig, false)] := rfl
+    [(.inl NTab.tabA, true), (.inr NGlob.konfig, false)] := by rfl
 
 /-- The stale step reads `konfig`. -/
 theorem stale_liest :
@@ -170,7 +170,7 @@ def kopfBlatt {D : Deklaration} {V : Vertrag D} :
 
 /-- Thread 0 (`hauptA`) at `r1M1`: `tabA[0] = konfig; return` at the start of its body. -/
 theorem kopf0 : ((r1M1 sp0).faeden 0).kopf.rest =
-    ⟨false, [], [], .nil, .ende (.cons sA (.ret .empty List.Perm.nil))⟩ := rfl
+    ⟨false, [], [], .nil, .ende (.cons sA (.ret .empty List.Perm.nil))⟩ := by rfl
 
 /-- **Determinism of G at the point `w_nicht_sc` uses**: EVERY G step of thread 0 from
     `r1M1` (after `kern` wrote `konfig := 3`) writes `tabA[0] = 3`. Inversion over all rules

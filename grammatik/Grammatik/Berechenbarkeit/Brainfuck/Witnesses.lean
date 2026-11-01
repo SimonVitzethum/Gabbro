@@ -62,7 +62,7 @@ def spin : State 4 := ⟨3, 1, [], [], [], [0]⟩
 theorem output_before_divergence_zeuge :
     runFor (step diverging) 3 (initial []) = .exhausted spin ∧ spin.output = [0] := by decide
 
-theorem spin_step_zeuge : step diverging spin = some spin := rfl
+theorem spin_step_zeuge : step diverging spin = some spin := by rfl
 
 /-- A genuine self-loop has no finite halting evaluation. -/
 theorem self_loop_not_terminating {S : Type} (advance : S → Option S) (s : S)

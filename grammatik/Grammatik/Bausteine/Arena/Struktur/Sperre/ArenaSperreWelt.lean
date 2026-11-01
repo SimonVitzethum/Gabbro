@@ -124,10 +124,10 @@ def uebertr (σ : World FD) : World FDL := ⟨σ.slots, σ.globs, []⟩
 /-- The scenario world: slot `1` on the free list, list `2 -> 0`. -/
 def w0L : World FDL := uebertr w0
 
-theorem stand_w0L : FAL.stand w0L = 4 := rfl
-theorem kopf_w0L : FAL.kopfSt w0L = 1 := rfl
-theorem naechst_w0L (j : Int) : FAL.naechst w0L j = 4 := rfl
-theorem lg_w0L : LGL.st w0L = 2 := rfl
+theorem stand_w0L : FAL.stand w0L = 4 := by rfl
+theorem kopf_w0L : FAL.kopfSt w0L = 1 := by rfl
+theorem naechst_w0L (j : Int) : FAL.naechst w0L j = 4 := by rfl
+theorem lg_w0L : LGL.st w0L = 2 := by rfl
 theorem ll_w0L (j : Int) : LLL.wert w0L j = ln0 j := ll_w0 j
 
 theorem kette_w0L : FAL.Kette w0L 1 [1] :=

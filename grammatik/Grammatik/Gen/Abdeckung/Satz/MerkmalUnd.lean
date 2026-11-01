@@ -22,10 +22,10 @@ set_option linter.unusedSectionVars false
 def _root_.Gabbro.Grammatik.Merkmal.und (A B : Merkmal D) : Merkmal D :=
   ⟨fun g => A.ruf g && B.ruf g, fun n => A.ind n && B.ind n, fun L => A.sperre L && B.sperre L⟩
 
-@[simp] theorem Merkmal.und_ruf (A B : Merkmal D) (g : D.Fn) : (A.und B).ruf g = (A.ruf g && B.ruf g) := rfl
-@[simp] theorem Merkmal.und_ind (A B : Merkmal D) (n : Nat) : (A.und B).ind n = (A.ind n && B.ind n) := rfl
+@[simp] theorem Merkmal.und_ruf (A B : Merkmal D) (g : D.Fn) : (A.und B).ruf g = (A.ruf g && B.ruf g) := by rfl
+@[simp] theorem Merkmal.und_ind (A B : Merkmal D) (n : Nat) : (A.und B).ind n = (A.ind n && B.ind n) := by rfl
 @[simp] theorem Merkmal.und_sperre (A B : Merkmal D) (L : D.Lock) :
-    (A.und B).sperre L = (A.sperre L && B.sperre L) := rfl
+    (A.und B).sperre L = (A.sperre L && B.sperre L) := by rfl
 
 mutual
 

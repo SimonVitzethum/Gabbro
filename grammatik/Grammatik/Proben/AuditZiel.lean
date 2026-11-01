@@ -118,7 +118,7 @@ theorem audit_cross_thread_return : ∃ M9 M18 : RufMaschineG zD,
 /-- A recorded answer sits one fresh trace event past its key: `e0` is the
     event that keeps the record a function of the key (`funk_append`). -/
 theorem audit_antwortWelt_uses_e0 (e0 : Ereignis zD) (s1 κ : World zD) :
-    (antwortWelt e0 s1 κ).spur = e0 :: κ.spur := rfl
+    (antwortWelt e0 s1 κ).spur = e0 :: κ.spur := by rfl
 
 /-! ## CUTS:
 

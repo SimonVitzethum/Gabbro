@@ -314,9 +314,9 @@ end Stmt
 /-! ## Sprechproben: der Zucker bedeutet, was er soll -/
 
 example (p q : Expr D Γ Λ .bool) (σ₀ σ : World D) (ρ : Env D Γ) :
-    wahr? (eval σ₀ (Expr.impl p q) σ ρ) = (!wahr? (eval σ₀ p σ ρ) || wahr? (eval σ₀ q σ ρ)) := rfl
+    wahr? (eval σ₀ (Expr.impl p q) σ ρ) = (!wahr? (eval σ₀ p σ ρ) || wahr? (eval σ₀ q σ ρ)) := by rfl
 
 example (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) (σ₀ σ : World D) (ρ : Env D Γ) :
-    wahr? (eval σ₀ (Expr.gt a b) σ ρ) = decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n) := rfl
+    wahr? (eval σ₀ (Expr.gt a b) σ ρ) = decide ((eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n) := by rfl
 
 end Gabbro.Grammatik

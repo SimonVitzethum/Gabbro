@@ -187,9 +187,9 @@ def kEins {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 18446744073709
   .widen (by decide) (by decide) (.lit 1)
 
 /-- The call-site typing of every call. -/
-theorem kHaeltZaehle : (kD.signatur kZaehle).haelt = [KLock.takt] := rfl
+theorem kHaeltZaehle : (kD.signatur kZaehle).haelt = [KLock.takt] := by rfl
 
-theorem kHaeltBearbeite : (kD.signatur kBearbeite).haelt = [KLock.ring] := rfl
+theorem kHaeltBearbeite : (kD.signatur kBearbeite).haelt = [KLock.ring] := by rfl
 
 theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
     (hw : ∀ t, (kD.signatur callee).schreibt t = true → (vertragVon kD caller).schreibt t = true)
@@ -321,7 +321,7 @@ theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTak
 
 /-- Every `requires` is `.tru`, at every function, world and environment. -/
 theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
-    ReqAmEintritt kP f W ρ := rfl
+    ReqAmEintritt kP f W ρ := by rfl
 
 theorem kP_koerper_zaehle : KoerperGutS kP 0 (axWahr kD) kSI kZaehle := by
   have hr : kP.rumpf kZaehle = kRumpfZaehle := rfl

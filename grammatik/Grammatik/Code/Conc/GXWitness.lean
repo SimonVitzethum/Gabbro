@@ -38,7 +38,7 @@ def cBlks2 : List Block := (cLow2.map Prod.fst).getD []
 
 def cSt2 : St := (cLow2.map Prod.snd).getD ⟨0, 0⟩
 
-theorem cLow2_eq : cLow2 = some (cBlks2, cSt2) := rfl
+theorem cLow2_eq : cLow2 = some (cBlks2, cSt2) := by rfl
 
 def cMod2 : Modl := ⟨[], [⟨"f", [], .void, ⟨0, [], [], .jmp 1⟩ :: cBlks2 ++ [⟨2, [], [], .ret none⟩]⟩]⟩
 

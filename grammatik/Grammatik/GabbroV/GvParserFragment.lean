@@ -33,7 +33,7 @@ def erstAblehnung : Except String UProg → ErstAblehnung
   | .error e => .fehler e
 
 /-- **The classifier accepts the 104 elaboration.** -/
-theorem erstAblehnung_104 : erstAblehnung (.ok uExp104) = .ok := rfl
+theorem erstAblehnung_104 : erstAblehnung (.ok uExp104) = .ok := by rfl
 
 /-- **Joint witness for `erstAblehnung_104`**: 104 elaborates and has
     two functions -- a non-degenerate fixture, not vacuity. -/

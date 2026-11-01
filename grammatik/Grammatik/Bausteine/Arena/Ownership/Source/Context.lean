@@ -79,7 +79,7 @@ theorem origin_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
   | _ => simp only [origin, expressionOrigin, reduceCtorEq] at hi
 
 @[simp] theorem Context.kill_reference (c : Context) (i : Nat) {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
-    (c.kill i).reference x = c.reference x := rfl
+    (c.kill i).reference x = c.reference x := by rfl
 
 @[simp] theorem Context.kill_at (c : Context) (i : Nat) : (c.kill i).rights i = none := by simp only [kill, ↓reduceIte]
 

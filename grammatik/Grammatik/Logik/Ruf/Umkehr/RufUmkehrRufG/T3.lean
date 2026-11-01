@@ -310,7 +310,7 @@ theorem semK_gleitNarrowElse {Λ Λ' : List (Res D)} {l₁ h₁ : Int × Int}
 theorem semK_rueck {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
     (σ : World D) (ρ : Env D Γ) :
     semK O passes R (.ende (.ret (l := l) e hperm)) σ ρ =
-      .zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := rfl
+      .zurueck (σ.lese Λ e.orte) (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) := by rfl
 
 theorem semK_rueckCons {Λ : List (Res D)} (e : ErgExpr D Γ Λ V.erg) (hperm : Λ.Perm V.ende)
     (rest : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :

@@ -83,7 +83,7 @@ abbrev kRetRR :=
 /-! ## 3. The handler set the program declares -/
 
 /-- Thread 0 (`takt_verteiler`) is a handler of the program. -/
-theorem kM0_handler0 : HandlerVon kP.mitRuhe kM0 0 := rfl
+theorem kM0_handler0 : HandlerVon kP.mitRuhe kM0 0 := by rfl
 
 /-- ... and no other thread is: thread 1 runs the system-call root, every other thread the
     idle root. -/

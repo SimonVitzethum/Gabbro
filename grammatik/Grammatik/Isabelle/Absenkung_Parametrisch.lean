@@ -324,7 +324,7 @@ def aliasbruch : Zielraum (Nat → Nat) Nat Nat where
     rfl
 
 theorem aliasbruch_verletzt_E4 : gort 0 = gort 1 :=
-  rfl
+  by rfl
 
 theorem aliasbruch_bricht_die_absenkung :
     Abbild wlies gort wbelegtort gdeute wdeutebelegt 2

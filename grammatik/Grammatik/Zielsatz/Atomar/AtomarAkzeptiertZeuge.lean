@@ -331,7 +331,7 @@ theorem vertrag_atomar_echt :
 def n1E : Einheit nD :=
   ⟨nP, SchwachZeuge.nS, axWahr nD, [⟨NFn.hauptA, .nil⟩, ⟨NFn.hauptB, .nil⟩, ⟨NFn.kern, .nil⟩], sp0, [], []⟩
 
-theorem n1E_ws : n1E.ws = n1ws := rfl
+theorem n1E_ws : n1E.ws = n1ws := by rfl
 
 /-- (b) with the rely, bodies and start. -/
 theorem n1E_nutzerPflichtA : NutzerPflichtA n1E :=

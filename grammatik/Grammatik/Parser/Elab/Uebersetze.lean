@@ -6320,7 +6320,7 @@ theorem u104elab : beqElabU (elabU items104) (.ok uExp104) = true := by
     (definitional: proof irrelevance covers the proof terms). -/
 theorem u104lower :
     lowerProg uExp104 =
-      .ok (G104_referenz.gP, G104_referenz.gFs) := rfl
+      .ok (G104_referenz.gP, G104_referenz.gFs) := by rfl
 
 /-- Projections of the elaborated program (the left column of
     the data agreement below). -/

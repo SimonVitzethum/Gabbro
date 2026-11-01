@@ -389,10 +389,10 @@ theorem wit64_callref (S : Sees) (passes : Nat) :
 
 /-- The loop is a loop: `wipe` lowers to eight blocks (entry, the four blocks of the counter loop, the
     two blocks of its body, the return). -/
-theorem wit64_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.length) = some 8 := rfl
+theorem wit64_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.length) = some 8 := by rfl
 
 /-- The calling function has the calls, the `narrow` and the `retry`: seventeen blocks. -/
-theorem wit64_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := rfl
+theorem wit64_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := by rfl
 
 /-- `put` lowers its division to an unsigned division, `get` its remainder to an unsigned remainder. -/
 theorem wit64_put_udiv : (lowerFn wLay wP WFn.put "put").map (usesOp .udiv) = some true := by decide +kernel
@@ -462,10 +462,10 @@ theorem wit32_callref (S : Sees) (passes : Nat) :
 
 /-- The loop is a loop: `wipe` lowers to eight blocks (entry, the four blocks of the counter loop, the
     two blocks of its body, the return). -/
-theorem wit32_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.length) = some 8 := rfl
+theorem wit32_wipe_blocks : (lowerFn wLay wP WFn.wipe "wipe").map (·.blks.length) = some 8 := by rfl
 
 /-- The calling function has the calls, the `narrow` and the `retry`: seventeen blocks. -/
-theorem wit32_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := rfl
+theorem wit32_main_blocks : (lowerFn wLay wP WFn.main "main").map (·.blks.length) = some 17 := by rfl
 
 /-- The three matches lower, at the other target too. -/
 theorem wit32_mt_forms : (lowerFn wLay wP WFn.mt "mt").map (fun f =>

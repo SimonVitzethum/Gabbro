@@ -57,13 +57,13 @@ theorem H6H_kopf :
      .cons (ergWert (rufDF_erg rufIncF) vF) rhoCallerF,
      .dann restLeaveH
        (.schrumpf (.wiederRest 0 bisH bodyH .nil
-         (.dann .nil (.ende driverRet))))⟩ := rfl
+         (.dann .nil (.ende driverRet))))⟩ := by rfl
 
 /-- The witness log of thread 0: return, writer entry, driver entry. -/
 theorem H6H_log : (H6H.faeden 0).log =
     [RufEreignisF.rueck rufIncF rufRhoF vF (H3H.weltVon 0) s1H,
      RufEreignisF.eintritt rufIncF rufRhoF (H3H.weltVon 0),
-     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := rfl
+     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := by rfl
 
 /-- After the peel: the exit faces the loop shim at driver context. -/
 def H7H : RufMaschineG rufDF :=
@@ -100,7 +100,7 @@ theorem H7H_kopf :
      rhoCallerF,
      .dann (.cons leaveHd .nil)
        (.wiederRest 0 bisH bodyH .nil
-         (.dann .nil (.ende driverRet)))⟩ := rfl
+         (.dann .nil (.ende driverRet)))⟩ := by rfl
 
 /-- After the loop exit: the overflow arm is skipped, driver continues. -/
 def H8H : RufMaschineG rufDF :=
@@ -151,7 +151,7 @@ theorem H8H_kopf :
     ⟨false, rufDF.params rufCallerF,
      nach rufDF rufIncF (Signatur.anfang rufDF (rufDF.signatur rufCallerF)),
      rhoCallerF,
-     .dann .nil (.ende driverRet)⟩ := rfl
+     .dann .nil (.ende driverRet)⟩ := by rfl
 
 /-- After the drain: the driver return. -/
 def H9H : RufMaschineG rufDF :=
@@ -185,7 +185,7 @@ theorem reach9H_start :
 theorem H9H_log : (H9H.faeden 0).log =
     [RufEreignisF.rueck rufIncF rufRhoF vF (H3H.weltVon 0) s1H,
      RufEreignisF.eintritt rufIncF rufRhoF (H3H.weltVon 0),
-     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := rfl
+     RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] := by rfl
 
 /-- The final memory carries the written value at slot 0 (via `outWF`). -/
 theorem H9H_slot : H9H.speicher.slots () 0 () =

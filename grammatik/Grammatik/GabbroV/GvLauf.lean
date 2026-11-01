@@ -114,7 +114,7 @@ def kettenLauf : Nat → World kettenD
   | _ => kettenWelt.storeSlot () 0 KettenFeld.Zaehler ⟨2, by decide, by decide⟩
 
 /-- The `Zaehler` field equation of the fixture, by computation. -/
-theorem hfZaehler : kettenD.typ () KettenFeld.Zaehler = .int 0 255 := rfl
+theorem hfZaehler : kettenD.typ () KettenFeld.Zaehler = .int 0 255 := by rfl
 
 /-- Step contract of the witness run: each step moves the cell per
     `zahlNach` (shown through `.n`, then lifted by `zahl_ext`). -/

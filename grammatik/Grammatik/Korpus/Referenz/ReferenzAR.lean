@@ -107,22 +107,22 @@ instance arDecReg : DecidableEq arD.Reg := by
   infer_instance
 
 /-- `w` is writable. -/
-theorem arW_schreibbar : (arD.rklasse .w).schreibbar = true := rfl
+theorem arW_schreibbar : (arD.rklasse .w).schreibbar = true := by rfl
 
 /-- `w` mirrors `r`. -/
-theorem arW_spiegel : arD.spiegel .w = some .r := rfl
+theorem arW_spiegel : arD.spiegel .w = some .r := by rfl
 
 /-- `r` is readable. -/
-theorem arR_lesbar : (arD.rklasse .r).lesbar = true := rfl
+theorem arR_lesbar : (arD.rklasse .r).lesbar = true := by rfl
 
 /-- `ruf0` takes no parameters. -/
-theorem arRuf0_params : arD.aparams .ruf0 = [] := rfl
+theorem arRuf0_params : arD.aparams .ruf0 = [] := by rfl
 
 /-- `ruf0` returns nothing. -/
-theorem arRuf0_erg : arD.aerg .ruf0 = none := rfl
+theorem arRuf0_erg : arD.aerg .ruf0 = none := by rfl
 
 /-- `ruf1` returns `.int 0 10`. -/
-theorem arRuf1_erg : arD.aerg .ruf1 = some (.int 0 10) := rfl
+theorem arRuf1_erg : arD.aerg .ruf1 = some (.int 0 10) := by rfl
 
 /-! ## 2. Holdings, frames, the program -/
 
@@ -139,10 +139,10 @@ theorem arDarf : darf arD () arL := by
   exact List.mem_singleton.mpr rfl
 
 /-- `main` holds the lock: start equals the holdings. -/
-theorem arStart : Signatur.anfang arD (arD.signatur ()) = arL := rfl
+theorem arStart : Signatur.anfang arD (arD.signatur ()) = arL := by rfl
 
 /-- End holdings of `main`: the lock. -/
-theorem arEnde : (vertragVon arD ()).ende = arL := rfl
+theorem arEnde : (vertragVon arD ()).ende = arL := by rfl
 
 /-- `main` writes the table (contract level). -/
 theorem arSchreibt (t : arD.Tab) :
@@ -214,7 +214,7 @@ def arP : Programm arD where
   rumpf := fun _ => arStart ▸ arRumpf
 
 /-- `arP.rumpf` of `main` is the axiom-call body. -/
-theorem arP_rumpf : arP.rumpf () = arStart ▸ arRumpf := rfl
+theorem arP_rumpf : arP.rumpf () = arStart ▸ arRumpf := by rfl
 
 /-! ## 3. Oracle, memory, declared axiom ensures -/
 
@@ -239,7 +239,7 @@ def arSp0 : Speicher arD :=
 /-- Start slot value: `0`. -/
 theorem arSp0_slot :
     arSp0.slots () 0 () = (⟨0, by decide, by decide⟩ :
-      Wert arD (arD.typ () ())) := rfl
+      Wert arD (arD.typ () ())) := by rfl
 
 /-- Declared ensures of the axioms (the `AxEns` shape of
     `AxiomVertrag.lean`, stated without the import): `ruf1` answers the
@@ -361,7 +361,7 @@ theorem arReachB : RufErreichbarF arP arO 0 arM0 arMB :=
   RufErreichbarF.schritt _ _ 1 arReachA arSchrittB
 
 /-- `arM0` IS the start machine. -/
-theorem arM0_start : arM0 = RufStartF arP arSp0 arInit := rfl
+theorem arM0_start : arM0 = RufStartF arP arSp0 arInit := by rfl
 
 /-- The witness run: lock, then the memory-writing axiom call. -/
 theorem arB_erreicht :

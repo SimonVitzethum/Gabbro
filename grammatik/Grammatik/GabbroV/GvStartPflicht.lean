@@ -329,7 +329,7 @@ theorem sp0_lueckeB (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t
 
 /-- **A static starts at its initialiser** (`sp0Of_glob`): by definition of the computed memory. -/
 theorem sp0Of_glob (u : UProg) (h : sp0OkB u = true) (g : Fin u.globs.length) :
-    (sp0Of u h).globs g = sp0GlobWert u g (sp0OkB_glob u h g) := rfl
+    (sp0Of u h).globs g = sp0GlobWert u g (sp0OkB_glob u h g) := by rfl
 
 /-! ## Static initialisers -/
 

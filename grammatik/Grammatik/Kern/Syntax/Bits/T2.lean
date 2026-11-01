@@ -135,7 +135,7 @@ theorem horner_step (a b k : Nat) :
   calc a * 256 ^ (k + 1) + b * 256 ^ k
       = a * (256 ^ k * 256) + b * 256 ^ k := by rw [Nat.pow_succ]
     _ = (a * 256 ^ k) * 256 + b * 256 ^ k := by rw [Nat.mul_assoc a]
-    _ = ((a * 256 ^ k) * 256 + b * 256 ^ k) := rfl
+    _ = ((a * 256 ^ k) * 256 + b * 256 ^ k) := by rfl
     _ = ((a * 256) * 256 ^ k + b * 256 ^ k) := by
         have h : (a * 256 ^ k) * 256 = (a * 256) * 256 ^ k := by
           calc (a * 256 ^ k) * 256 = a * (256 ^ k * 256) := by rw [Nat.mul_assoc]

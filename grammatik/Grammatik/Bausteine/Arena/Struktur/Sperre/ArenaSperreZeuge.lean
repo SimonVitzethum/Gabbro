@@ -145,15 +145,15 @@ def val2L : Expr FDL [] HL (FDL.typ FAL.tab LLL.f) :=
   Expr.umTyp (show Ty.int 0 4 = FDL.typ FAL.tab LLL.f from by decide)
     (Expr.widen (by decide) (by decide) (Expr.lit 2))
 
-theorem idx2L_n (σ : World FDL) (ρ : Env FDL []) : (eval σ idx2L σ ρ).n = 2 := rfl
+theorem idx2L_n (σ : World FDL) (ρ : Env FDL []) : (eval σ idx2L σ ρ).n = 2 := by rfl
 
-theorem val2L_n (σ : World FDL) (ρ : Env FDL []) : (Wert.umTyp LLL.hf (eval σ val2L σ ρ)).n = 2 := rfl
+theorem val2L_n (σ : World FDL) (ρ : Env FDL []) : (Wert.umTyp LLL.hf (eval σ val2L σ ρ)).n = 2 := by rfl
 
 /-- The section body of the defect: a link stored on its own -- `lnk[2] = 2`, the head linked to itself. -/
 def schlechtL : Block FDL FVL false [] HL HL :=
   Block.cons (Stmt.assignSlot FAL.tab LLL.f idx2L val2L rfl fdarfL) .nil
 
-theorem schlecht_ohneLocks : schlechtL.ohneLocks = true := rfl
+theorem schlecht_ohneLocks : schlechtL.ohneLocks = true := by rfl
 
 /-- The section of the defect. -/
 def schlechtAbschnitt : Stmt FDL FVL false [] [] [] :=

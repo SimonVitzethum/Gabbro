@@ -29,13 +29,13 @@ variable {D : Deklaration}
   simp only [World.schreibGlob, World.merke, World.storeGlob, dif_neg h]
 
 @[simp] theorem World.globs_schreibSlot (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int)
-    (f : D.Feld t) (v : Wert D (D.typ t f)) : (σ.schreibSlot t Λ k f v).globs = σ.globs := rfl
+    (f : D.Feld t) (v : Wert D (D.typ t f)) : (σ.schreibSlot t Λ k f v).globs = σ.globs := by rfl
 
 @[simp] theorem World.slots_schreibGlob (σ : World D) (g : D.Glob) (Λ : List (Res D))
-    (v : Wert D (D.gtyp g)) : (σ.schreibGlob g Λ v).slots = σ.slots := rfl
+    (v : Wert D (D.gtyp g)) : (σ.schreibGlob g Λ v).slots = σ.slots := by rfl
 
 @[simp] theorem World.slots_lese (σ : World D) (Λ : List (Res D)) (o : List (D.Tab ⊕ D.Glob)) :
-    (σ.lese Λ o).slots = σ.slots := rfl
+    (σ.lese Λ o).slots = σ.slots := by rfl
 
 theorem World.slots_schreibSlot_ne (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int)
     (f : D.Feld t) (v : Wert D (D.typ t f)) (k' : Int) (f' : D.Feld t) (h : f' ≠ f) :

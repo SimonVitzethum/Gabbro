@@ -492,7 +492,7 @@ theorem rufG_adaequat_umkehr (P : Programm D) (O : Orakel D) (passes : Nat)
     | _ => intro hg; exact absurd hg id
 
 /-- The witness body never consults the oracle. -/
-theorem adRumpf_ohneOrakel : adRumpf.ohneOrakel = true := rfl
+theorem adRumpf_ohneOrakel : adRumpf.ohneOrakel = true := by rfl
 
 
 end Gabbro.Grammatik

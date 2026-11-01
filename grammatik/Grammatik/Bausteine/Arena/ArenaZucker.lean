@@ -75,10 +75,10 @@ def Wert.umTyp {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
 def Expr.umTyp {Γ : Ctx} {Λ : List (Res D)} {τ σ : Ty} (h : τ = σ) (e : Expr D Γ Λ τ) :
     Expr D Γ Λ σ := h ▸ e
 
-@[simp] theorem Wert.umTyp_rfl {τ : Ty} (v : Wert D τ) : Wert.umTyp rfl v = v := rfl
+@[simp] theorem Wert.umTyp_rfl {τ : Ty} (v : Wert D τ) : Wert.umTyp rfl v = v := by rfl
 
 @[simp] theorem Expr.umTyp_rfl {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) :
-    Expr.umTyp rfl e = e := rfl
+    Expr.umTyp rfl e = e := by rfl
 
 /-- Down and up again is nothing. -/
 @[simp] theorem Wert.umTyp_hin_her {τ σ : Ty} (h : τ = σ) (v : Wert D σ) :
@@ -98,7 +98,7 @@ def Expr.umTyp {Γ : Ctx} {Λ : List (Res D)} {τ σ : Ty} (h : τ = σ) (e : Ex
 
 /-- Recording a read touches the trace alone -- the globals are the globals. -/
 @[simp] theorem World.globs_lese (σ : World D) (Λ : List (Res D))
-    (o : List (D.Tab ⊕ D.Glob)) : (σ.lese Λ o).globs = σ.globs := rfl
+    (o : List (D.Tab ⊕ D.Glob)) : (σ.lese Λ o).globs = σ.globs := by rfl
 
 /-! ## 1. The shape of an arena in a declaration -/
 
@@ -133,12 +133,12 @@ theorem stand_nonneg (A : ArenaForm D) (σ : World D) : 0 ≤ A.stand σ :=
 
 /-- Recording a read does not move the counter -- `lese` touches the trace alone. -/
 @[simp] theorem stand_lese (A : ArenaForm D) (σ : World D) (Λ : List (Res D))
-    (o : List (D.Tab ⊕ D.Glob)) : A.stand (σ.lese Λ o) = A.stand σ := rfl
+    (o : List (D.Tab ⊕ D.Glob)) : A.stand (σ.lese Λ o) = A.stand σ := by rfl
 
 /-- A slot store does not move the counter. -/
 @[simp] theorem stand_schreibSlot (A : ArenaForm D) (σ : World D) (Λ : List (Res D))
     (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
-    A.stand (σ.schreibSlot t Λ k f v) = A.stand σ := rfl
+    A.stand (σ.schreibSlot t Λ k f v) = A.stand σ := by rfl
 
 /-- A store into the counter puts exactly the written value there. -/
 @[simp] theorem stand_schreibGlob (A : ArenaForm D) (σ : World D) (Λ : List (Res D))
@@ -401,7 +401,7 @@ def Log : ArenaForm ZD where
 
 /-- The witness is not degenerate: four slots, so a full arena and an empty one are two
     different worlds. -/
-theorem Log_vier : ZD.count Log.tab = 4 := rfl
+theorem Log_vier : ZD.count Log.tab = 4 := by rfl
 
 /-- The contract of the witness body: it writes both carriers. -/
 def ZV : Vertrag ZD where
@@ -426,7 +426,7 @@ def welt (c : Int) (h0 : 0 ≤ c) (h4 : c ≤ 4) : World ZD where
   spur := []
 
 theorem welt_stand (c : Int) (h0 : 0 ≤ c) (h4 : c ≤ 4) :
-    Log.stand (welt c h0 h4) = c := rfl
+    Log.stand (welt c h0 h4) = c := by rfl
 
 /-- The empty arena: the counter stands at zero, strictly under the bound. -/
 theorem zeuge_leer_unter :

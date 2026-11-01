@@ -161,7 +161,7 @@ theorem outW_spur_ne (sp : Speicher rufDF) : (outW sp).spur ≠ [] := by
 /-- Slot 0 holds 2 after the write, from any memory. -/
 theorem outW_slot (sp : Speicher rufDF) :
     (outW sp).speicher.slots () 0 () = (⟨2, by decide, by decide⟩ : Wert rufDF (.int 0 5)) :=
-  rfl
+  by rfl
 
 /-! ## 2. `start`: two roots spawned, both step and finish, the join, the starter goes on -/
 
@@ -185,13 +185,13 @@ theorem sj_schritt1 : FadenSchritt rufPF rufOF 0 sjK0 sjK1 :=
 
 theorem sj_f0 : sjK0.m.faeden 0 =
     rufenderFaden [] (spF.welt []) [RufEreignisF.eintritt rufCallerF rhoCallerF (spF.welt [])] :=
-  rfl
+  by rfl
 
 theorem sj_f1 : sjK0.m.faeden 1 =
-    schreiberFaden [] (spF.welt []) [RufEreignisF.eintritt rufIncF rufRhoF (spF.welt [])] := rfl
+    schreiberFaden [] (spF.welt []) [RufEreignisF.eintritt rufIncF rufRhoF (spF.welt [])] := by rfl
 
 theorem sj_f2 : sjK0.m.faeden 2 =
-    schreiberFaden [] (spF.welt []) [RufEreignisF.eintritt rufIncF rufRhoF (spF.welt [])] := rfl
+    schreiberFaden [] (spF.welt []) [RufEreignisF.eintritt rufIncF rufRhoF (spF.welt [])] := by rfl
 
 /-- **THE START-AND-JOIN RUN.** Thread 0 starts the dormant roots 1 and 2 (holding nothing) and
     waits; root 1 writes and finishes, root 2 writes and finishes; only then the join fires;
@@ -360,7 +360,7 @@ theorem start_offen_leer {D : Deklaration} (P : Programm D) (sp : Speicher D)
     `gestartet` (a `start { haupt, … }` of the idle root). `ws = [haupt, haupt]`. -/
 def zStart : Einheit zD := ⟨zPB, zS, axWahr zD, [], zSp, [⟨zHaupt, .nil⟩], []⟩
 
-theorem zStart_ws : zStart.ws = [zHaupt, zHaupt] := rfl
+theorem zStart_ws : zStart.ws = [zHaupt, zHaupt] := by rfl
 
 /-- The concrete checker accepts it (the doubled root is pool-safe). -/
 theorem zStart_akzeptiert :
@@ -385,7 +385,7 @@ theorem zsInit_leer (t : Faden) : zD.mitRuhe.haelt (zsInit t).1 = [] := by
 /-- (d): the runtime places `haupt` (a run-time root, run by any number of threads) on the
     slots and the idle root elsewhere. -/
 theorem zStart_laufzeit : Laufzeit zStart (speicherR zSp) zsInit where
-  lader := rfl
+  lader := by rfl
   start t := by
     unfold zsInit
     split
@@ -478,7 +478,7 @@ theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     (`gestartet`). `ws = [haupt, haupt, haupt]`. -/
 def zKind : Einheit zD := ⟨zPB, zS, axWahr zD, [⟨zHaupt, .nil⟩], zSp, [⟨zHaupt, .nil⟩], []⟩
 
-theorem zKind_ws : zKind.ws = [zHaupt, zHaupt, zHaupt] := rfl
+theorem zKind_ws : zKind.ws = [zHaupt, zHaupt, zHaupt] := by rfl
 
 theorem zKind_akzeptiert :
     akzeptiert_pruefer.akzeptiert zKind zFs [()] [.inl ()] = true :=
@@ -500,7 +500,7 @@ theorem zkInit_leer (t : Faden) : zD.mitRuhe.haelt (zkInit t).1 = [] := by
   unfold zkInit; split <;> rfl
 
 theorem zKind_laufzeit : Laufzeit zKind (speicherR zSp) zkInit where
-  lader := rfl
+  lader := by rfl
   start t := by
     unfold zkInit
     split

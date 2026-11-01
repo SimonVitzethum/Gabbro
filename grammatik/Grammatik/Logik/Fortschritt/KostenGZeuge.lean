@@ -246,7 +246,7 @@ theorem frame_schritte_beschraenkt_zeuge :
 
 instance rufDF_fn_deq : DecidableEq rufDF.Fn := inferInstanceAs (DecidableEq Bool)
 
-theorem hP_start_fn : (initF 0).1 = rufCallerF := rfl
+theorem hP_start_fn : (initF 0).1 = rufCallerF := by rfl
 theorem hP_tief : rufTief hP 2 (initF 0).1 = true := by decide
 theorem hP_kosten : kostenTief hP 0 2 (initF 0).1 = 20 := by decide
 
@@ -288,12 +288,12 @@ theorem frame_schritte_beschraenkt_zeuge_schleife :
     holding jointly. -/
 
 /-- The foreign site counts its declared cost: `inc` at `3` costs `3`. -/
-theorem fremd_zeuge_axInc : fremdBlock (fun _ => 3) 0 axIncBlock = 3 := rfl
+theorem fremd_zeuge_axInc : fremdBlock (fun _ => 3) 0 axIncBlock = 3 := by rfl
 
 /-- The foreign-inclusive block cost splits into §1 plus foreign: `4 + 3`. -/
 theorem fremd_kostenF_zeuge :
     kostenBlockF (fun _ => 3) (fun _ => 0) 0 axIncBlock
-      = kostenBlock (fun _ => 0) 0 axIncBlock + 3 := rfl
+      = kostenBlock (fun _ => 0) 0 axIncBlock + 3 := by rfl
 
 /-- No zero slip on a real foreign site: `inc` declared at `0` still costs. -/
 theorem fremd_kein_null_zeuge :

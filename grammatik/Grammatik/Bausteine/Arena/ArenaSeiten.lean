@@ -32,7 +32,7 @@ theorem discard_live (S : SeitenZustand) (lo hi i : Nat)
   simp only [discard, h, ↓reduceIte]
 
 theorem discard_preserves_reuse (S : SeitenZustand) (lo hi : Nat) :
-    freiAlloc (discard S lo hi).slots = freiAlloc S.slots := rfl
+    freiAlloc (discard S lo hi).slots = freiAlloc S.slots := by rfl
 
 theorem discard_live_zeuge :
     let S : SeitenZustand := ⟨⟨3, [0, 1], by intro i h; simp only [List.mem_cons, List.not_mem_nil, or_false] at h; omega⟩, fun i => i + 7⟩

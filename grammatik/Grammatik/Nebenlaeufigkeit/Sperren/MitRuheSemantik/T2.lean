@@ -236,12 +236,12 @@ theorem foreverLauf_ru (a : D.Annahme)
 end Schleifen
 /-! ## 7. Every statement, block and end block behaves as translated -/
 
-theorem valR_bool (b : Bool) : valR (D := D) .bool b = b := rfl
-theorem valR_int {lo hi : Int} (z : Zahl lo hi) : valR (D := D) (.int lo hi) z = z := rfl
-theorem valR_opt {n : Int} (z : Option (Zahl 0 (n - 1))) : valR (D := D) (.opt n) z = z := rfl
-theorem valR_fl {lo hi : Int × Int} (z : Gleit lo hi) : valR (D := D) (.fl lo hi) z = z := rfl
+theorem valR_bool (b : Bool) : valR (D := D) .bool b = b := by rfl
+theorem valR_int {lo hi : Int} (z : Zahl lo hi) : valR (D := D) (.int lo hi) z = z := by rfl
+theorem valR_opt {n : Int} (z : Option (Zahl 0 (n - 1))) : valR (D := D) (.opt n) z = z := by rfl
+theorem valR_fl {lo hi : Int × Int} (z : Gleit lo hi) : valR (D := D) (.fl lo hi) z = z := by rfl
 theorem valR_fnptr {n : Nat} (f : D.Fn) (h : D.passt f n = true) :
-    valR (D := D) (.fnptr n) ⟨f, h⟩ = ⟨some f, h⟩ := rfl
+    valR (D := D) (.fnptr n) ⟨f, h⟩ = ⟨some f, h⟩ := by rfl
 
 theorem orte2 {Γ : Ctx} {Λ : List (Res D)} {τ₁ τ₂ : Ty} (a : Expr D Γ Λ τ₁) (b : Expr D Γ Λ τ₂) :
     (ruE a).orte ++ (ruE b).orte = a.orte ++ b.orte := kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)

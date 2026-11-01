@@ -116,11 +116,11 @@ def schrittBis (ruft : Fn → List Fn) (fuel : Nat) (e : Fn) : List Fn :=
   | n + 1 => schrittBis ruft n e ++ (schrittBis ruft n e).flatMap ruft
 
 theorem schrittBis_zero (ruft : Fn → List Fn) (e : Fn) :
-    schrittBis ruft 0 e = [e] := rfl
+    schrittBis ruft 0 e = [e] := by rfl
 
 theorem schrittBis_succ (ruft : Fn → List Fn) (e : Fn) (n : Nat) :
     schrittBis ruft (n + 1) e =
-      schrittBis ruft n e ++ (schrittBis ruft n e).flatMap ruft := rfl
+      schrittBis ruft n e ++ (schrittBis ruft n e).flatMap ruft := by rfl
 
 /-- The entry reaches itself, at any fuel. -/
 theorem mem_schrittBis_refl (ruft : Fn → List Fn) (n e : Fn) :
@@ -364,7 +364,7 @@ def miniB : Bau where
 
 /-- The checker decides by computation: a wrong flag would make this `rfl`
     fail at elaboration -- the loud break. -/
-example : pruefeUngeteilt miniB 3 = true := rfl
+example : pruefeUngeteilt miniB 3 = true := by rfl
 
 /-- The theorem applies to the concrete declaration. -/
 example (h1 : ErreichtBau miniB 3 0 7) (h2 : ErreichtBau miniB 3 0 7) :
@@ -445,10 +445,10 @@ def teileFaltFormGlob (istTab : Carrier → Bool) (g : GlobCarrier) : Prop :=
     `Nat`) and stays a stated shape for downstream lanes to assume. -/
 
 /-- Table round-trip: mirroring folds back. -/
-theorem tabRundweg_holds (t : TabCarrier) : tabRundweg t := rfl
+theorem tabRundweg_holds (t : TabCarrier) : tabRundweg t := by rfl
 
 /-- Global round-trip: mirroring folds back. -/
-theorem globRundweg_holds (g : GlobCarrier) : globRundweg g := rfl
+theorem globRundweg_holds (g : GlobCarrier) : globRundweg g := by rfl
 
 /-- Fold after split is the identity, whatever the tag says: both branches
     fold back to `c`. -/
@@ -607,7 +607,7 @@ theorem getrennteWelt_keinQuerschritt (p : WeltSeiteBau)
 example (f : TabCarrier ⊕ GlobCarrier → Carrier)
     (c₁ c₂ : TabCarrier ⊕ GlobCarrier) (_ : f c₁ = f c₂) :
     (fun _ => WSeite.user) c₁ = (fun _ => WSeite.user) c₂ :=
-  rfl
+  by rfl
 
 #print axioms Gabbro.Grammatik.Geteilt.weltRein_keinQueren
 #print axioms Gabbro.Grammatik.Geteilt.getrennteWelt_keinQuerschritt

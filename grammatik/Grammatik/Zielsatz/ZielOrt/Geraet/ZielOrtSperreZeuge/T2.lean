@@ -212,7 +212,7 @@ def sZ0 (ρ : Env sD [.int 0 100]) : RufFadenG sD :=
     [RufEreignisF.eintritt sHaupt ρ (sSp.welt [])]⟩
 
 theorem sM0_faden0 :
-    (RufStartG sP sSp sInit).faeden 0 = sZ0 (sWert 30 (by decide) (by decide)) := rfl
+    (RufStartG sP sSp sInit).faeden 0 = sZ0 (sWert 30 (by decide) (by decide)) := by rfl
 
 theorem sM0_faden (t : Faden) (ht : t ≠ 0) :
     (RufStartG sP sSp sInit).faeden t = sZ0 (sWert 70 (by decide) (by decide)) := by
@@ -224,7 +224,7 @@ theorem sM0_faden (t : Faden) (ht : t ≠ 0) :
   rfl
 
 theorem sOffen_weltVon (M : RufMaschineG sD) (t : Faden) :
-    offen (M.weltVon t).spur = offen (M.faeden t).spur := rfl
+    offen (M.weltVon t).spur = offen (M.faeden t).spur := by rfl
 
 theorem sM0_offen (t : Faden) : offen ((RufStartG sP sSp sInit).faeden t).spur = [] := by
   by_cases ht : t = 0

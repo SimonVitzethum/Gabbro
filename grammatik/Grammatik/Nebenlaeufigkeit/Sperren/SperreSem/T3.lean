@@ -123,7 +123,7 @@ theorem execBlockH_cons_laufA {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ
 theorem semH_dann {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ) :
     semH S O U passes R (.dann b k) σ ρ =
-      weiterH S O U passes R k (execBlockH S O U passes R b σ ρ) := rfl
+      weiterH S O U passes R k (execBlockH S O U passes R b σ ρ) := by rfl
 
 theorem semH_dann_cons {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :

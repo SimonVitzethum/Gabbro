@@ -152,11 +152,11 @@ def fristErgebnis {D : Deklaration} : FristOut D → Option (Hardware D)
 /-- On expiry the outcome answers `fortschritt` with the deadline's
     assumption -- the `fristAlsAnnahme` mapping of `Ziel.lean`. -/
 theorem fristErgebnis_abgelaufen {D : Deklaration} (f : Frist D) :
-    fristErgebnis (.abgelaufen f) = some (.fortschritt f.annahme) := rfl
+    fristErgebnis (.abgelaufen f) = some (.fortschritt f.annahme) := by rfl
 
 /-- Off expiry the outcome answers nothing. -/
 theorem fristErgebnis_ok {D : Deklaration} :
-    fristErgebnis (.ok : FristOut D) = none := rfl
+    fristErgebnis (.ok : FristOut D) = none := by rfl
 
 /-- Exact on the outcome: `some` iff expiry under some deadline, naming exactly
     that deadline's assumption. -/
@@ -189,7 +189,7 @@ theorem fristErgebnis_eq_none_iff {D : Deklaration} (o : FristOut D) :
     strictly between check and use. -/
 theorem fristlauf_some {D : Deklaration} (p : PruefPaar) (f : Frist D) (m : Moment) :
     fristlauf p f (some m) =
-      (if decide (p.pruef < m ∧ m < p.lauf) then .abgelaufen f else .ok) := rfl
+      (if decide (p.pruef < m ∧ m < p.lauf) then .abgelaufen f else .ok) := by rfl
 
 /-- The run expires under the deadline's name exactly when the deadline lies
     strictly between check and use. -/
@@ -244,7 +244,7 @@ theorem fristErgebnis_fristlauf_ok {D : Deklaration} (p : PruefPaar) (f : Frist 
 
 /-- No deadline moment: the run answers nothing. -/
 theorem fristErgebnis_fristlauf_none {D : Deklaration} (p : PruefPaar) (f : Frist D) :
-    fristErgebnis (fristlauf p f none) = none := rfl
+    fristErgebnis (fristlauf p f none) = none := by rfl
 
 /-- No third outcome: every run is `ok` or expiry under some deadline. -/
 theorem fristlauf_erschöpfend {D : Deklaration} (p : PruefPaar) (f : Frist D) (d : Option Moment) :

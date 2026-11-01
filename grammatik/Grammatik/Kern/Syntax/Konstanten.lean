@@ -31,7 +31,7 @@ def konstZert (t : List Nat) (f : Nat → Nat → Bool) : Bool :=
 
 /-- The empty table is trivially certified. -/
 theorem konstZert_nil (f : Nat → Nat → Bool) : konstZert [] f = true :=
-  rfl
+  by rfl
 
 /-- Membership at an offset: `t[j]? = some v` puts `(v, n + j)` into
     `t.zipIdx n`. The offset generalizes the induction; the public lemma

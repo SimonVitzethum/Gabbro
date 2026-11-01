@@ -121,11 +121,11 @@ theorem mStart_offen (t : Faden) : offen ((RufStartG mP mSp mInit).faeden t).spu
 
 theorem mStart0 : (RufStartG mP mSp mInit).faeden 0 = ⟨[], ⟨mHauptA, .nil, mSp.welt [],
     ⟨false, [], [], .nil, .ende mRumpfA⟩⟩, [], [RufEreignisF.eintritt mHauptA .nil (mSp.welt [])]⟩ :=
-  rfl
+  by rfl
 
 theorem mStart1 : (RufStartG mP mSp mInit).faeden 1 = ⟨[], ⟨mHauptB, .nil, mSp.welt [],
     ⟨false, [], [], .nil, .ende mRumpfB⟩⟩, [], [RufEreignisF.eintritt mHauptB .nil (mSp.welt [])]⟩ :=
-  rfl
+  by rfl
 
 theorem mBlattOffen {σ : World mD} {Λ Λ' : List (Res mD)} {os : List (mD.Tab ⊕ mD.Glob)}
     {t : mD.Tab} {k : Int} {f : mD.Feld t} {v : Wert mD (mD.typ t f)} :

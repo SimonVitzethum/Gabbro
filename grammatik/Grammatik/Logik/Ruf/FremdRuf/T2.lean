@@ -30,7 +30,7 @@ theorem fdPCwrite :
       fdWriteSt (fdPC0.weltVon 1) Env.nil).welt =
       some (((fdPC0.weltVon 1).lese ([] : List (Res fdD))
         (fdIdx.orte ++ fdVal5.orte)).schreibSlot () ([] : List (Res fdD))
-        fdK0 () fdV5) := rfl
+        fdK0 () fdV5) := by rfl
 
 /-- Thread 1 holds nothing at the start, as the leaf demands. -/
 theorem fdPC1haelt :

@@ -105,7 +105,7 @@ theorem dynGrow1_gdw_alloc (A : DynArena) :
     theorem's statement. -/
 def arena64volle : DynArena := ⟨64, 8, 64, by decide, by decide, by decide⟩
 
-theorem planted_ueber_M : dynGrow arena64volle 1 = none := rfl
+theorem planted_ueber_M : dynGrow arena64volle 1 = none := by rfl
 
 /-- Unchecked commit: bumps without consulting `M` (the defect), as raw data. -/
 structure DynRoh where
@@ -116,7 +116,7 @@ structure DynRoh where
 def dynGrowFalsch (A : DynArena) (n : Nat) : DynRoh := ⟨A.M, A.hi, A.c + n⟩
 
 /-- The defect is visible: the unchecked bump reaches 65 past `M = 64`. -/
-theorem planted_defekt_sichtbar : (dynGrowFalsch arena64volle 1).c = 65 := rfl
+theorem planted_defekt_sichtbar : (dynGrowFalsch arena64volle 1).c = 65 := by rfl
 
 /-- Grow cost: `1 + n * faultKosten`. The per-slot commit cost is READ from
     the named hardware assumption (Spec premise (c) latency entry), never
@@ -294,12 +294,12 @@ theorem komSt_nonneg (A : DynForm D) (σ : World D) : 0 ≤ A.komSt σ :=
 
 /-- Recording a read does not move the committed word. -/
 @[simp] theorem komSt_lese (A : DynForm D) (σ : World D) (Λ : List (Res D))
-    (o : List (D.Tab ⊕ D.Glob)) : A.komSt (σ.lese Λ o) = A.komSt σ := rfl
+    (o : List (D.Tab ⊕ D.Glob)) : A.komSt (σ.lese Λ o) = A.komSt σ := by rfl
 
 /-- A slot store does not move the committed word. -/
 @[simp] theorem komSt_schreibSlot (A : DynForm D) (σ : World D) (Λ : List (Res D))
     (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
-    A.komSt (σ.schreibSlot t Λ k f v) = A.komSt σ := rfl
+    A.komSt (σ.schreibSlot t Λ k f v) = A.komSt σ := by rfl
 
 /-- A store into the committed word puts exactly the written value there. -/
 @[simp] theorem komSt_schreibGlob (A : DynForm D) (σ : World D) (Λ : List (Res D))
@@ -321,7 +321,7 @@ theorem komSt_nonneg (A : DynForm D) (σ : World D) : 0 ≤ A.komSt σ :=
     else in memory. -/
 @[simp] theorem slots_schreibGlob_komm (A : DynForm D) (σ : World D) (Λ : List (Res D))
     (v : Wert D (D.gtyp A.komm)) :
-    (σ.schreibGlob A.komm Λ v).slots = σ.slots := rfl
+    (σ.schreibGlob A.komm Λ v).slots = σ.slots := by rfl
 
 end DynForm
 
@@ -615,7 +615,7 @@ def Halde : DynForm DD where
     exact Bool.noConfusion (show (true : Bool) = false from h)
 
 /-- The ceiling is four: a committed prefix strictly under it is a state. -/
-theorem Halde_vier : DD.count Halde.tab = 4 := rfl
+theorem Halde_vier : DD.count Halde.tab = 4 := by rfl
 
 /-- The contract of the witness body: it writes the table and both words. -/
 def DV : Vertrag DD where
@@ -640,10 +640,10 @@ def welt (u k : Int) (hu0 : 0 ≤ u) (hu4 : u ≤ 4) (hk0 : 0 ≤ k) (hk4 : k �
   spur := []
 
 theorem welt_stand (u k : Int) (hu0 : 0 ≤ u) (hu4 : u ≤ 4) (hk0 : 0 ≤ k) (hk4 : k ≤ 4) :
-    Halde.stand (welt u k hu0 hu4 hk0 hk4) = u := rfl
+    Halde.stand (welt u k hu0 hu4 hk0 hk4) = u := by rfl
 
 theorem welt_komSt (u k : Int) (hu0 : 0 ≤ u) (hu4 : u ≤ 4) (hk0 : 0 ≤ k) (hk4 : k ≤ 4) :
-    Halde.komSt (welt u k hu0 hu4 hk0 hk4) = k := rfl
+    Halde.komSt (welt u k hu0 hu4 hk0 hk4) = k := by rfl
 
 /-- The world the witness runs in: nothing used, TWO of four slots
     committed. -/
@@ -655,9 +655,9 @@ def halb : World DD := welt 0 2 (by decide) (by decide) (by decide) (by decide)
     refused all the same. -/
 def gespannt : World DD := welt 2 2 (by decide) (by decide) (by decide) (by decide)
 
-theorem halb_stand : Halde.stand halb = 0 := rfl
+theorem halb_stand : Halde.stand halb = 0 := by rfl
 
-theorem halb_komSt : Halde.komSt halb = 2 := rfl
+theorem halb_komSt : Halde.komSt halb = 2 := by rfl
 
 theorem zeuge_raum_ueber_dem_stand : Halde.stand halb < Halde.komSt halb := by decide
 

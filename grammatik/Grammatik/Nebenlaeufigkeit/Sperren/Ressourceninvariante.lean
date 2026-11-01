@@ -465,7 +465,7 @@ theorem refInv81_lokal (s s' : Speicher refD)
     rw [h 0 (), h 1 (), hs]
 
 /-- The witness invariant holds at the start: both slots read `0`. -/
-theorem refInv81_start : refInv81 refSp0 := rfl
+theorem refInv81_start : refInv81 refSp0 := by rfl
 
 /-- The witness release premise: on `refB_prog` no step can move the lock
     from held to free. `take` only gains it (against its own `hself`);

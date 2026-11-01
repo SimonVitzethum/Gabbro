@@ -34,7 +34,7 @@ def castW {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
 theorem castW_castW {τ σ ρ : Ty} (h : τ = σ) (h' : σ = ρ) (v : Wert D τ) :
     castW h' (castW h v) = castW (h.trans h') v := by subst h; subst h'; rfl
 
-theorem castW_self {τ : Ty} (h : τ = τ) (v : Wert D τ) : castW h v = v := rfl
+theorem castW_self {τ : Ty} (h : τ = τ) (v : Wert D τ) : castW h v = v := by rfl
 
 /-- A result value transported along an equation of its type. -/
 def castV {e e' : Option Ty} (h : e = e') (v : ErgVal D e) : ErgVal D e' := h ▸ v

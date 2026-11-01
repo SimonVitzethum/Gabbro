@@ -30,7 +30,7 @@ def idx (n : Int) (h0 : 0 ≤ n) (h1 : n ≤ 3) : Wert FD (Ty.index (FD.count FA
 /-- The environment that binds the index `3`. -/
 def rho3 : Env FD [Ty.index (FD.count FA.tab)] := .cons (idx 3 (by decide) (by decide)) .nil
 
-theorem rho3_n : (rho3.get .here).n = 3 := rfl
+theorem rho3_n : (rho3.get .here).n = 3 := by rfl
 
 /-- Slot `3` is live and not on the list `2 -> 0`. -/
 theorem nicht_auf_3 : ¬ Auf 4 (LL.wert w0) (LG.st w0) 3 := by

@@ -77,7 +77,7 @@ def laufK : Kontext σ → Q → Q
 def semK (K : Kontext σ) (q : Q) : O := A.aus (A.laufK K q)
 
 theorem lauf_knoten (k : σ.K) (ch : Fin (σ.ar k) → Baum σ) :
-    A.lauf (.knoten k ch) = A.δ k (fun i => A.lauf (ch i)) := rfl
+    A.lauf (.knoten k ch) = A.δ k (fun i => A.lauf (ch i)) := by rfl
 
 /-- **The run over a context depends on the plugged tree only through its state.** -/
 theorem lauf_ein (K : Kontext σ) (t : Baum σ) : A.lauf (K.ein t) = A.laufK K (A.lauf t) := by
