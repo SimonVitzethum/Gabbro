@@ -41,6 +41,9 @@
 -/
 module
 public import Grammatik.Parser.Round.Rundlauf2
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 

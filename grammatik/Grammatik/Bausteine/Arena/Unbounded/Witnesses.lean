@@ -1,6 +1,7 @@
 module
 public import Grammatik.Bausteine.Arena.Unbounded.Realization
 public import Grammatik.Bausteine.Arena.Struktur.ArenaDynZeuge
+import all Grammatik.Bausteine.Arena.Unbounded.State
 @[expose] public section
 
 

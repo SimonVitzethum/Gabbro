@@ -1,6 +1,7 @@
 module
 public import Grammatik.Berechenbarkeit.Storage.BrainfuckHeap
 public import Grammatik.Berechenbarkeit.Brainfuck.Witnesses
+import all Grammatik.Bausteine.Arena.Unbounded.State
 @[expose] public section
 
 

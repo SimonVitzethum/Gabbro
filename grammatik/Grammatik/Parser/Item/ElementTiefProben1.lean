@@ -21,6 +21,8 @@
 -/
 module
 public import Grammatik.Parser.Item.ElementTief
+import all Init.Data.Repr
+import all Init.Data.String.Defs
 @[expose] public section
 
 

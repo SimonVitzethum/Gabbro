@@ -24,6 +24,8 @@ module
 public import Grammatik.Parser.Expr.Ausdruck
 public import Grammatik.Parser.Stmt.Anweisung
 public import Grammatik.Parser.Lex.WortStellung
+import all Init.Data.Repr
+import all Init.Data.String.Defs
 @[expose] public section
 
 

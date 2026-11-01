@@ -53,7 +53,7 @@ def NGrund.partner (x : Zelle) (m : Bool) : Option Zelle :=
   | _, _, _ => none
 
 /-- A test `st` covers `x` when its needed cells are `x` (and `p` if given). -/
-private def deckt (st : String) (x : Zelle) (p : Option Zelle) : String :=
+def deckt (st : String) (x : Zelle) (p : Option Zelle) : String :=
   match p with
   | none => s!"⟨{st}.bnoetig, fun w hw => by\n        obtain rfl := (by decide : ∀ w ∈ {st}.bnoetig, w = {x.lean}) w hw\n        exact h, {st}.zellen⟩"
   | some q => s!"⟨{st}.bnoetig, fun w hw => by\n        rcases (by decide : ∀ w ∈ {st}.bnoetig, w = {x.lean} ∨ w = {q.lean}) w hw with rfl | rfl <;> assumption,\n        {st}.zellen⟩"

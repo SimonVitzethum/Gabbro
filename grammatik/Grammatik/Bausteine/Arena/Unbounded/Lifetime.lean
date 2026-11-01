@@ -101,33 +101,27 @@ theorem Heap.release_valid {frame : Frame} {r : Ref region}
 theorem Heap.move_valid {f g : Frame} {r r' : Ref region}
     (hv : H.Valid capacity) (he : H.move f g r = some (H', r')) :
     H'.Valid capacity ∧ H'.rights.owns g r'.handle ∧ (∀ k, H'.read k r = none) := by
-  unfold Heap.move at he
-  cases hr : H.rights.move f g r.handle with
-  | none => simp only [hr, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at he
-  | some pair =>
-    rcases pair with ⟨rights, handle⟩
-    simp only [hr] at he
-    cases he
-    have hp := ArenaOwnership.State.move_valid hv.rights f g r.handle hr
-    refine ⟨hv.withRights rights hp.1 ?_, hp.2.1, ?_⟩
-    · intro i
-      unfold ArenaOwnership.State.move at hr
-      split at hr
-      · rename_i hg
-        have hcell : (H.rights.cells r.handle.slot).isSome = true := by
-          have ho := hg.1
-          unfold ArenaOwnership.State.owns at ho
-          split at ho
-          · contradiction
-          · rename_i c hc; simp only [hc, Option.isSome_some]
-        have hh := congrArg Prod.fst (Option.some.inj hr)
-        dsimp only at hh
-        rw [← hh]
-        by_cases hi : i = r.handle.slot
-        · subst i; simp only [ArenaOwnership.State.put, ↓reduceIte, Option.isSome_some, hcell]
-        · simp only [ArenaOwnership.State.put, hi, ↓reduceIte]
-      · cases hr
-    · intro k; simp only [read, hp.2.2.1 k, ↓reduceIte]
+  obtain ⟨rights, hr, rfl⟩ := Heap.move_parts he
+  have hp := ArenaOwnership.State.move_valid hv.rights f g r.handle hr
+  refine ⟨hv.withRights rights hp.1 ?_, hp.2.1, ?_⟩
+  · intro i
+    unfold ArenaOwnership.State.move at hr
+    split at hr
+    · rename_i hg
+      have hcell : (H.rights.cells r.handle.slot).isSome = true := by
+        have ho := hg.1
+        unfold ArenaOwnership.State.owns at ho
+        split at ho
+        · contradiction
+        · rename_i c hc; simp only [hc, Option.isSome_some]
+      have hh := congrArg Prod.fst (Option.some.inj hr)
+      dsimp only at hh
+      rw [← hh]
+      by_cases hi : i = r.handle.slot
+      · subst i; simp only [ArenaOwnership.State.put, ↓reduceIte, Option.isSome_some, hcell]
+      · simp only [ArenaOwnership.State.put, hi, ↓reduceIte]
+    · cases hr
+  · intro k; simp only [read, hp.2.2.1 k, ↓reduceIte]
 
 theorem Heap.lend_valid {f g : Frame} {r : Ref region}
     (hv : H.Valid capacity) (he : H.lend f g r = some H') :

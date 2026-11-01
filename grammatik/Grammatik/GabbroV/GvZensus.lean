@@ -17,6 +17,9 @@
 -/
 module
 public import Grammatik.Parser.Elab.Uebersetze
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 

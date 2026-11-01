@@ -28,6 +28,9 @@
 module
 public import Grammatik.Parser.Round.RundlaufTok
 public import Grammatik.Parser.Round.RundlaufAnw3
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 
 

@@ -57,7 +57,7 @@ def Spez.namen (z : Spez) : Namen z.deklaration where
     fun t => s!"T{t.val}"
 
 /-- A comma list. -/
-private def kommas (xs : List String) : String := String.intercalate ", " xs
+def kommas (xs : List String) : String := String.intercalate ", " xs
 
 /-- The initial value of a static of type `ty`: zero if the range holds it, else the nearest bound. -/
 def Spez.anfang : Ty → String

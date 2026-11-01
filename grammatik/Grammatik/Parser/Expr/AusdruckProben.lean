@@ -13,6 +13,8 @@
 -/
 module
 public import Grammatik.Parser.Expr.Ausdruck
+import all Init.Data.Repr
+import all Init.Data.String.Defs
 @[expose] public section
 
 

@@ -58,7 +58,7 @@ def itemMetadata : SItemTief → Bool
   | .whyT .. => false
   | _ => true
 
-private def metadataReason : SItemTief → String
+def metadataReason : SItemTief → String
   | .tableT _ provider _ _ _ _ parts =>
     if parts.any (fun | .tInv _ => true | _ => false) then
       "invariant cost/runs/by duties lack a checked source binding"

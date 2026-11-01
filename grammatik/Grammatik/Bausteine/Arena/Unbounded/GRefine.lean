@@ -2,6 +2,7 @@ module
 public import Grammatik.Bausteine.Arena.Unbounded.GRegion
 public import Grammatik.Bausteine.Arena.Unbounded.Lifetime
 public import Grammatik.Bausteine.Arena.Unbounded.Safety
+import all Grammatik.Bausteine.Arena.Unbounded.State
 @[expose] public section
 
 

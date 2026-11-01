@@ -18,9 +18,9 @@ namespace Gabbro.Grammatik.Gen
 
 open Gabbro.Grammatik
 
-private def zu8 : Ty := .int 0 255
-private def zb1 : Ty := .int 0 1
-private def zi3 : Ty := .int 0 3
+def zu8 : Ty := .int 0 255
+def zb1 : Ty := .int 0 1
+def zi3 : Ty := .int 0 3
 
 /-- A -- three functions over a guarded and an unguarded table, an atomic, a plain and a guarded static, a plain lock
     (rank 1) and a masking lock (rank 2): one that writes only unguarded carriers, one meant to take the plain lock, one
