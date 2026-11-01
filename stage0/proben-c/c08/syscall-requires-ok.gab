@@ -1,6 +1,9 @@
 // C08 probe: a real gate with requires/ensures; the literal 0 decides the requires,
 // and the ensures (result <= len, hence 0) puts n + 42 inside main's range.
 // Shape mirrors the stage0 gateelse/puffer probes; write(1, 0, 0) answers 0.
+// main owes `0 .. 5000` on purpose: n has the declared `0 .. 4096`, and the
+// ensures RHS names a parameter, not a literal, so M1 cannot narrow it --
+// `n + 42` reaches 4138, which `0 .. 100` would refuse with M101.
 module c08_syscall_requires_ok {
 reason IoError {
     BadFd       = 9 "the file descriptor is not open"
@@ -21,7 +24,7 @@ syscall schreibe(fd : u64, buf : u64, len : u64) -> u64 in 0 .. 4096 or IoError
     effects { pure }
     costs <= 8 ops
     assume linux_write_n falsifier sonde_write_n;
-impl fn main() -> u64 in 0 .. 100
+impl fn main() -> u64 in 0 .. 5000
     effects { pure }
 {
     let n = schreibe(1, 0, 0) else (e) {

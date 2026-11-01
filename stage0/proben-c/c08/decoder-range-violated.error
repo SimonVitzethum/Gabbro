@@ -1,1 +1,1 @@
-foreign answer used outside its declared range at return x
+the return value requires `u32 in 0 .. 5`, the value has `u32 in 0 .. 100`

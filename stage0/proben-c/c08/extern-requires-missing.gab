@@ -1,7 +1,9 @@
 // C08 probe (negative twin of extern-requires-ok): the caller passes 200,
-// which does not establish the declared requires x <= 100. Must be refused.
+// which does not establish the declared requires x <= 100. Must be refused
+// with the weak-reading M115 sentence. The declared `0 .. 200` keeps the
+// return clean, so M115 fires alone (no M101 beside it).
 module c08_extern_requires_missing {
-extern fn doppel(x : u32) -> u32
+extern fn doppel(x : u32) -> u32 in 0 .. 200
     requires x <= 100
     ensures result == x + x
     effects { pure }

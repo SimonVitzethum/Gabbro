@@ -1,1 +1,1 @@
-foreign call writes kiste.slots outside the caller's effects
+`main` declares `pure` but calls something with `writes kiste.slots`

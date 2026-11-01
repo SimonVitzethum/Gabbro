@@ -2,21 +2,20 @@
 # One line per probe: name, expected outcome (result number or refusal text), purpose.
 # Format mirrors stage0/proben-ir/: NAME.gab plus NAME.code (must compile and run,
 # expected `main` result) or NAME.error (must be refused, one line).
-extern-requires-ok | 40 | extern `requires` decided by the caller literal, `ensures` yields the answer.
-axiom-ensures-ok | 7 | named-hardware axiom with `ensures`; caller branches on the ensured range.
-fallible-bool-ok | 7 | fallible foreign Bool handled with let-else on all continuations.
-syscall-requires-ok | 42 | real gate with `requires`/`ensures`; zero-length write answers 0, main returns n + 42.
-fallible-void-ok | 7 | fallible void foreign call; failure handled, success falls through.
-extern-requires-missing | caller does not establish requires x <= 100 at doppel(200) | caller passes 200 against `requires x <= 100`.
-binding-ensures-unproved | software binding without proved implementation for hole | caller relies on `ensures` of a software binding with no implementation proof.
-decoder-range-violated | foreign answer used outside its declared range at return x | foreign answer returned where a narrower range is owed, without narrowing.
-failure-as-pure | fallible foreign call without else at schreibe(1, 0, 0) | fallible foreign result bound without an else continuation.
-axiom-as-software | axiom oeffne_pfad names software behavior, not a named hardware assumption | `axiom` with falsifier used for OS behavior instead of named hardware.
-resource-effect-unproved | foreign call writes kiste.slots outside the caller's effects | foreign write effect outside the caller's declared frame.
-# UNSURE: `ensures` on `axiom` (axiom-ensures-ok) is new C08 syntax; SYNTAX.md EBNF lists only `requires` (G2).
-# UNSURE: statement-level `f() else (e) {...}` on a void call (fallible-void-ok); no corpus precedent.
-# UNSURE: value-call syntax for axioms (`lies_stand()`, `oeffne_pfad(0, 0)`); no axiom call site exists in beispiele/.
-# UNSURE: requires/ensures clause position in abi-form syscall (syscall-requires-ok, failure-as-pure); taken from `syscontract` (requires, ensures before effects).
-# UNSURE: all six .error wordings are proposed; no C08 diagnostic text exists yet to copy.
-# UNSURE: spelling that marks a foreign item software-origin for binding-ensures-unproved (AxOrigin per design doc has no source syntax yet); probe uses current syntax plus a C08 READING comment.
-# UNSURE: positive .code values assume a conforming oracle/proved binding; extern/axiom have no runner binding today (only syscall gates execute, cf. gateelse/puffer probes).
+# Refusal lines quote the live diagnostic verbatim (substring of the checker/stage0
+# stderr, the way instrumente/pruefe-lean.py stage 7 matches `.error`); PROPOSED marks
+# a refusal or syntax that does not exist yet and that C08 must introduce.
+extern-requires-ok | 40 | extern `requires` decided by the caller literal, `ensures` yields the answer. VERIFIED: clause order requires/ensures/effects/costs is the fixed E4 order (dokumente/SYNTAX.md fndecl; crates/gabbro-syntax/src/parse.rs `fndecl`; the Lean reader takes clauses in source order). The declared result is `u32 in 0 .. 200` on purpose: the ensures RHS is not a literal, so `bereich_aus_ensures` (crates/gabbro-check/src/fremdverengung.rs) stays silent and full `u32` would miss main's `0 .. 1000` (M101). M115 stays silent (20 <= 100). doppel(20) = 40 by hand.
+axiom-ensures-ok | 7 | PROPOSED (C08): named-hardware axiom with `ensures`. VERIFIED `ensures` on `axiom` is new syntax: the EBNF lists only `requires` (dokumente/SYNTAX.md `axiom`, G2), and both readers go `requires*` then straight to `effects` (crates/gabbro-syntax/src/parse.rs `axiom`; grammatik/Grammatik/Parser/Item/ElementTief.lean `parseAxiomTief`). Value-call spelling `let s = lies_stand();` is specified (SYNTAX.md call table) and refused nowhere today. Under a conforming oracle s <= 1000 always holds, so main answers 7.
+fallible-bool-ok | 7 | fallible foreign Bool handled with let-else on all continuations. VERIFIED all current syntax: `-> bool or R` is signature shape (fndecl), `let b = bereit() else (e)` is the only error-propagation form (N028/N029 in crates/gabbro-check/src/namen.rs `fehlerkanal`; `eigene_ausdruecke` in lib.rs keeps the let-else call out of N029). All three continuations answer 7, so the result holds under every oracle answer.
+syscall-requires-ok | 42 | real gate with `requires`/`ensures`; zero-length write answers 0, main returns n + 42. VERIFIED clause order requires/ensures/effects/costs/assume matches `syscontract` (dokumente/SYNTAX.md; crates/gabbro-syntax/src/parse.rs `syscalldecl`), shape mirrors stage0/proben-ir/gateelse.gab. main owes `0 .. 5000` on purpose: the ensures RHS names a parameter, so no narrowing fires and `n + 42` reaches 4138 (M101 at `0 .. 100`). M115 stays silent (0 <= 1024). 0 + 42 = 42 by hand.
+fallible-void-ok | 7 | PROPOSED (C08): statement-level `f() else (e) {...}` on a void fallible call. VERIFIED no current spelling exists: a statement call takes `;` only (crates/gabbro-syntax/src/parse.rs `zuweisung_oder_ruf`; SYNTAX.md `exprstmt`), and the bare call would fire N029 the other way (same `fehlerkanal`). Both continuations answer 7.
+extern-requires-missing | `doppel` requires `x <= 100`, and the argument lies in 200 .. 200 | VERIFIED verbatim weak-reading M115 (crates/gabbro-check/src/m1.rs `requires_pruefen`: only an EXCLUDED range fires). The declared `0 .. 200` keeps the return clean so M115 fires alone.
+binding-ensures-unproved | PROPOSED: software binding without proved implementation for hole | The unit parses and is accepted today (`ensures` on extern is trusted, the F duty in `pflichten.rs`); C08 must refuse it until the AxOrigin software/hardware split (no source spelling yet) plus the implementation proof exist. Clause order follows `fndecl`; origin reading noted in the probe comment.
+decoder-range-violated | the return value requires `u32 in 0 .. 5`, the value has `u32 in 0 .. 100` | VERIFIED verbatim M101 (crates/gabbro-check/src/m1.rs `passt_wert`); `bereich_aus_ensures` narrows only `result <op> <literal>`, and `<= 100` does not reach `0 .. 5`.
+failure-as-pure | `schreibe` can fail with `IoError`, and this call does not stand in a `let … else` | VERIFIED verbatim N029 (same `fehlerkanal`); plain `let` and bare-statement calls of an `or`-callee both fire it.
+axiom-as-software | PROPOSED: axiom oeffne_pfad names software behavior, not a named hardware assumption | VERIFIED the text parses and is accepted today (params/result/effects/falsifier per `axiom` EBNF); no rule reads intent, so nothing fires until C08 names the hardware/software split.
+resource-effect-unproved | `main` declares `pure` but calls something with `writes kiste.slots` | VERIFIED verbatim E008 pure arm (crates/gabbro-check/src/wirkungen.rs `aufrufwirkungen`; table/effects shape mirrors stage0/proben-ir/puffer.gab).
+# Positive .code values for extern/axiom assume a conforming oracle or proved binding;
+# extern/axiom have no runner binding today (only syscall gates execute, cf. the stage0
+# gateelse/puffer probes). The .code is what the program computes once accepted.
