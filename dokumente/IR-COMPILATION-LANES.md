@@ -1061,3 +1061,19 @@ inside, negative, equal to and beyond the capacity; signed and unsigned index ty
 
 Measured: closure rebuilt (231 modules), `Nachpruefung.lean` 340 theorems on the standard axioms only (6
 axiom-free), layout check passes, 169/169 textual programs.
+
+## IR-03 narrowing `strWeit` of long strings (2026-11-01)
+
+`strWeit q` of a string of capacity `n >= 2` to a smaller maximum `q < n` (`strTakeL`, `Frame/StringTakeCode.lean`):
+`q >= 2` keeps the byte words in place and rewrites only the length word to `min len q` branch-free
+(`strTakeLenL`); `q = 1` packs `0` or `256 + first byte` (`strTakePackL`); `q = 0` writes the empty word. Generic
+theorems (`Frame/StringTakeOk.lean`): `strTake_encode` (the narrowed encoding is the new length word followed
+by the byte words `1 .. q`), `take_len_word`, `bin_exact_ok` (a binary instruction with the exact footprint
+`Agree fp d (d + 1)`), `strTakeLen_ok`, `strTakePack_ok`, `strTake_ok`, and `strWeit_ok` (moved there from
+`String.lean`, now covering widening and narrowing of long strings). The surface language never narrows
+(`string longer than the maximum` is refused by the elaborator), so no textual program reaches this lowering;
+the model witnesses `Aggregat/Proben` (`narrow_semantics_zeuge`, `narrow_lowered_zeuge`) check the semantics
+and that the lowering accepts narrowing to 2, 1 and 0 (and the wide-index `strGet`).
+
+Measured: closure rebuilt (294 modules reachable from `Stage0`, `Stage0.Haupt`), `Nachpruefung.lean` 346 theorems
+on the standard axioms only (6 axiom-free), layout check passes, 169/169 textual programs.

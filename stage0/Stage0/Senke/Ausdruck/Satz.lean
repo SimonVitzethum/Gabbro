@@ -24,6 +24,7 @@ import Stage0.Senke.Welt.Spans.Read
 import Stage0.Senke.Ausdruck.Referenz.CellIndex
 import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
 import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
 
 namespace Gabbro.Stage0.Senke
 

@@ -32,47 +32,4 @@ theorem strCat_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.st
         exact ⟨hn, by simpa [eval, strCatW, ht] using hw.2⟩
   · cases h
 
-theorem strWeit_ok {n : Nat} (q : Nat) (s : Expr D Γ Λ (.str n))
-    (ih : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str n) (eval σ₀ s σ ρ))
-    (h : lowE L (reserved := reserved) (.strWeit q s) d = some (c, top)) (hK : top ≤ K)
-    (hp : Pre L m pc fp K d c ρ W reserved) :
-    ValueOk L m pc fp K d c (.str q) (eval σ₀ (.strWeit q s) σ ρ) := by
-  simp only [lowE_eqs] at h
-  split at h
-  · next hn =>
-    refine Ok.value ?_ (by simp only [valueWords, if_pos hn.2])
-    split at h
-    · next hz =>
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      exact (const_ok hp (by decide) (by omega)).mono fun w hw => by
-        exact ⟨hn.2, by simpa [eval, strWeitW, hz, strN] using hw⟩
-    · next hz =>
-      have hlen : (eval σ₀ s σ ρ).1.length ≤ q := by have := (eval σ₀ s σ ρ).2; omega
-      exact ((ih c top h hK m pc hp).word hn.1).mono fun w hw =>
-        ⟨hn.2, by simpa [eval, strWeitW, List.take_of_length_le hlen] using hw.2⟩
-  · split at h
-    · next hl =>
-      simp only [Option.map_eq_some_iff] at h
-      obtain ⟨⟨cs, ts⟩, hs, out⟩ := h
-      simp only [Prod.mk.injEq] at out
-      obtain ⟨rfl, rfl⟩ := out
-      obtain ⟨m1, run1, changed1, value1⟩ := ih cs ts hs (by omega) m pc hp.left
-      have next := hp.next changed1 (by omega : d ≤ d + n + 1) (by omega : d ≤ K)
-      obtain ⟨m2, run2, changed2, tail⟩ := constWords_ok (L := L) (List.replicate (q - n) 0) (by omega) next
-      have hlen : (eval σ₀ s σ ρ).1.length ≤ n := (eval σ₀ s σ ρ).2
-      have encoded : encodeWords L (.str q) (eval σ₀ (.strWeit q s) σ ρ) =
-          encodeWords L (.str n) (eval σ₀ s σ ρ) ++ List.replicate (q - n) 0 := by
-        simp only [encodeWords, eval, strWeitW, if_neg (show ¬ q ≤ 1 by omega),
-          if_neg (show ¬ n ≤ 1 by omega), List.take_of_length_le (show (eval σ₀ s σ ρ).1.length ≤ q by omega)]
-        simp only [List.append_assoc, List.replicate_append_replicate, List.cons.injEq, true_and, List.append_cancel_left_eq]
-        congr 2
-        omega
-      refine ⟨m2, ?_, changed1.trans (changed2.mono (by omega)), trivial, ?_⟩
-      · simpa only [List.length_append, pc_add] using run1.trans run2
-      · have kept := value1.agree changed2 (hp.frame.agree changed1) (by simp only [valueWords, if_neg (show ¬ n ≤ 1 by omega)]; omega) (by omega)
-        rw [encoded, wordsAt_append]
-        refine ⟨kept.2, ?_⟩
-        simpa only [encodeWords_length, valueWords, if_neg (show ¬ n ≤ 1 by omega), Nat.add_assoc] using tail
-    · cases h
 end Gabbro.Stage0.Senke

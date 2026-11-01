@@ -237,7 +237,15 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       · simp only [Option.map_eq_some_iff, Prod.mk.injEq] at h
         obtain ⟨⟨cs, ts⟩, hs, rfl, rfl⟩ := h
         omega
-      · cases h
+      · simp only [strTakeL] at h
+        split at h
+        · simp only [bind, Option.bind_eq_some_iff] at h
+          obtain ⟨⟨cs, ts⟩, hs, h⟩ := h
+          have := lowE_top s d cs ts hs
+          split at h
+          · simp only [pure, Option.some.injEq, Prod.mk.injEq] at h; omega
+          · split at h <;> (simp only [pure, Option.some.injEq, Prod.mk.injEq] at h; omega)
+        · cases h
   | _, _, .widen _ _ e, d, c, top, h =>
     resizeIntegerL_top h (fun cc tt hc => lowE_top e d cc tt hc)
   | _, _, .some e, d, c, top, h => by

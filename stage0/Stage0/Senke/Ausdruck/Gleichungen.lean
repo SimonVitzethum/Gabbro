@@ -330,7 +330,7 @@ theorem lowE_literal_boundaries_zeuge :
       (lowE L (reserved := reserved) s d).map fun a =>
         (a.1 ++ (constWords (List.replicate (m - n) 0) (d + n + 1)).1,
           max a.2 (max (constWords (List.replicate (m - n) 0) (d + n + 1)).2 (d + m + 1)))
-    else none) := rfl
+    else strTakeL n m d (lowE L (reserved := reserved) s d)) := rfl
 
 @[lowE_eqs] theorem lowE_wenn (c : Expr D Γ Λ .bool) (a b : Expr D Γ Λ τ) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.wenn c a b) d =

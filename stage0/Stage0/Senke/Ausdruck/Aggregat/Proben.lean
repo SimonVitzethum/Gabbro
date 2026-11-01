@@ -238,3 +238,31 @@ theorem simulation_zeuge [Kern] :
     expr 4 code top hl (by decide +kernel) memory 0 .nil hp).word (wordCompatB_sound _ (by decide +kernel)) |>.mono (fun _ hn => hn.2.trans he.2.symm)
 
 end Gabbro.Stage0.Senke.AggregateProbe.Case
+
+namespace Gabbro.Stage0.Senke.AggregateProbe.Narrow
+open Gabbro.Grammatik Runner.IR
+
+/-- Strings of capacity three: the surface language never narrows, so the narrowing and wide-index lowerings are
+    exercised on the model directly. -/
+def wide : Expr D [] [] (.str 3) :=
+  .strLit [⟨97, by decide, by decide⟩, ⟨98, by decide, by decide⟩, ⟨99, by decide, by decide⟩] (by simp)
+
+def ab : Expr D [] [] (.str 2) :=
+  .strLit [⟨97, by decide, by decide⟩, ⟨98, by decide, by decide⟩] (by simp)
+
+/-- Narrowing keeps the first bytes and the clamped length; indices outside the string read zero. -/
+theorem narrow_semantics_zeuge :
+    wahr? (eval world (.strEq (.strWeit 2 wide) ab) world .nil) = true ∧
+    wahr? (eval world (.strEq (.strWeit 1 wide) (byte 97 (by decide) (by decide))) world .nil) = true ∧
+    wahr? (eval world (.strEq (.strWeit 0 wide) empty) world .nil) = true ∧
+    wahr? (eval world (.eq (.strGet wide (.lit (-1))) (.lit 0)) world .nil) = true ∧
+    wahr? (eval world (.eq (.strGet wide (.lit 7)) (.lit 0)) world .nil) = true ∧
+    wahr? (eval world (.eq (.strGet wide (.lit 2)) (.lit 99)) world .nil) = true := by decide +kernel
+
+theorem narrow_lowered_zeuge :
+    (lowE layout (.strWeit 2 wide) 4).isSome = true ∧ (lowE layout (.strWeit 1 wide) 4).isSome = true ∧
+    (lowE layout (.strWeit 0 wide) 4).isSome = true ∧
+    (lowE layout (.strGet wide (.lit (-1))) 4).isSome = true ∧
+    (lowE layout (.strGet wide (.lit 7)) 4).isSome = true := by decide +kernel
+
+end Gabbro.Stage0.Senke.AggregateProbe.Narrow

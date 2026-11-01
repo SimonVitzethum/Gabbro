@@ -28,6 +28,7 @@ import Stage0.Senke.Ausdruck.Aggregat.Wert
 import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
 import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
 import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
 import Stage0.Senke.Ausdruck.Aggregat.Kopie
 import Stage0.Senke.Ausdruck.Aggregat.Layout
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
@@ -549,7 +550,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       (lowE L (reserved := reserved) s d).map fun a =>
         (a.1 ++ (constWords (List.replicate (m - n) 0) (d + n + 1)).1,
           max a.2 (max (constWords (List.replicate (m - n) 0) (d + n + 1)).2 (d + m + 1)))
-    else none
+    else strTakeL n m d (lowE L (reserved := reserved) s d)
   | _, _, .none n, d => some (constWords (encodeWords L (.opt n) none) d)
   | _, _, @Expr.some _ _ _ n e, d =>
     if n ≤ 2 ^ 63 then lowE L (reserved := reserved) e d else do
