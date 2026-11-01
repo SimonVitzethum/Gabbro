@@ -1,8 +1,8 @@
 # AGENTS.md — how work on Gabbro is run
 
-This is the operating manual for everyone who works in this repository, human or model. `CLAUDE.md` holds the
-working rules that are loaded into every session; this file states the goal, the standing rules, the procedures
-and the pitfalls. The current work list is `TODO.md`. History (who decided what, when, and how earlier rounds
+This is the operating manual for everyone who works in this repository, human or model (`CLAUDE.md` is a
+symlink to it, so Claude Code loads the same text); it states the goal, the standing rules, the procedures and
+the pitfalls. The current work list is `TODO.md`. History (who decided what, when, and how earlier rounds
 were organised) is in `git log`, not here.
 
 ---
@@ -235,7 +235,7 @@ not the Rust checker, and no bridge to any binary is built. The
 - **Safety is never traded for features.** No change weakens a guarantee — memory safety, race freedom,
   contracts, costs, lock discipline — to make a check go green. A wall that only yields by weakening is recorded
   as a finding.
-- **Simplicity without losing a guarantee** (`dokumente/CHECKER.md`): ceremony count down AND pass register
+- **Simplicity without losing a guarantee**: ceremony count down AND pass register
   constant. Never derive `ensures`, never turn a refusal into a warning.
 - **Where the model has no rule yet, refuse** — never accept by default.
 
@@ -245,16 +245,15 @@ not the Rust checker, and no bridge to any binary is built. The
 - **LLVM is the only backend** (`llvm.rs`, `llvm/`); `gabbro build` drives it (checker, IR, `opt`, `llc`,
   `ld.lld`). A form LLVM cannot lower is refused by name (`Y1xx`). The removed C emitter is in the tag
   `archiv/c-emitter-2026-10-17`.
-- **Target direction: AArch64** (Armv9-A) on the Sail Arm model, with the multicore memory model added in Lean
-  (`ARM-PLAN.md`). The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
+- **Target direction: AArch64** (Armv9-A); the former Lean model of it (`arm/`) was removed on 2026-11-01 and lives
+  in git history. The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
   stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
 - **Target portability**: source semantics, IR, optimisation and validation stay generic; ABI, image and entry
   requirements are described in checked profiles; environment services are Gabbro bindings with user-logic proof
   obligations. No implicit Linux/POSIX/libc/ELF dependency; freestanding has no mandatory host runtime.
 - **Vendor neutrality**: the hardware model holds on all CPUs of an architecture. What a vendor calls undefined or
   model-specific stays FREE (all allowed results, never one observed value).
-- **Optimisations** follow `dokumente/PLAN-TRANSLATION-VALIDATION.md` §8 (including §8.6, the techniques taken
-  over from Goose): a validated optimised image or a refusal, never "optimised but unchecked".
+- **Optimisations**: a validated optimised image or a refusal, never "optimised but unchecked".
 
 **Operating system, memory, data**
 - **The operating system is user logic, never an assumption, and nothing is OS-specific.** A system or kernel
@@ -267,7 +266,7 @@ not the Rust checker, and no bridge to any binary is built. The
 - **Memory from outside comes as a REGION, never from a number.** A `syscall`/`extern` item may answer a region
   (or a reference into one) whose contract says it is fresh and disjoint; no int→ptr or int→fn-ptr conversion.
 - **Dynamic data structures are in scope**: heap regions with a declared ceiling and refuse-on-full (the
-  default), and OPEN regions without a ceiling (`Deklaration.offen`, PLAN-DYNAMIC 14) whose cells come only from
+  default), and OPEN regions without a ceiling (`Deklaration.offen`) whose cells come only from
   the program's provider. **OOM is user logic**: an allocation needs no source OOM path; that the provider has
   memory to give is the program's own obligation. An arena's `else` at its declared ceiling is a capacity bound,
   not OOM.
@@ -286,8 +285,13 @@ not the Rust checker, and no bridge to any binary is built. The
   commit messages, diagnostics, `TODO.md`. The conversation with the project owner is in German.
 - **At most 30 `.md` files** in the repository. Reports, verdicts and interim states belong in git, not in the
   tree.
-- **Commit messages** only through `arbeitsprotokoll/.commitmsg` + `./commit.sh`, which commits STAGED changes
-  only (`git add` first).
+- **Commits** follow Conventional Commits (`type(scope): summary`, types `feat`, `fix`, `refactor`, `perf`,
+  `test`, `docs`, `build`, `ci`, `chore`; scope e.g. `grammatik`, `stage0`, `cli`, `checker`), carry a
+  `Signed-off-by` line (`git commit -s`) and are signed (`-S`) where a signing key is available. Write the
+  message to a file and commit with `git commit -s -F <file>` (no shell quoting of the message). Stage first.
+- **Squash before pushing**: work that belongs together (e.g. a feature and its follow-up fix) becomes ONE commit
+  before it is pushed (`git reset --soft <base>` and recommit, or `git commit --fixup` + autosquash). Pushed
+  history is never rewritten (no force-push), so squash only what is not yet pushed.
 - **Commit every building step.** Work that builds is committed at once.
 - **Caprock** (the OS this language exists for) lies read-only in `../caprock-messbasis`: never commit into it.
 - **Tag milestones** at the push that reaches them.
@@ -368,8 +372,8 @@ Re-measure instead of trusting this table: `grep -rho '\bN[0-9]\{3\}\b' crates/ 
 | The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, `Beweis.lean`, `Akzeptiert.lean`, `Proben*.lean`, `SpecProben.lean`; `Zielsatz/Atomar/BeweisAtomar.lean` |
 | Model | `Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/` (arenas, regions, ownership, floats) |
 | Code model and lowering | `grammatik/Grammatik/Code/` (`Model`, `Lower`, `Refine`, `Conc`, `Gate`) |
-| Test sets M and N | `grammatik/Grammatik/Gen/` (generator, coverage cells, fine cells), runs under `messung/fein/`, driver `instrumente/fein-suche.sh` |
-| Plans | `dokumente/PROOF.md`, `dokumente/PLAN-TRANSLATION-VALIDATION.md`, `dokumente/PLAN-DYNAMIC.md`, `dokumente/CHECKER.md`, `ARM-PLAN.md`, `FLOATING-POINT.md` |
+| Test sets M and N | `grammatik/Grammatik/Gen/` (generator, coverage cells, fine cells) |
+| Plans | `dokumente/IR-COMPILATION-LANES.md`, `dokumente/PLAN-SELF-HOSTING.md`, `dokumente/PLAN-LONG-RANGE.md`, `dokumente/LOW-LEVEL-SYNTAX-PLAN.md` |
 | Theorem map | `dokumente/THEOREM-MAP.md` (new sections at the end) |
 | Known absences | `TODO.md` |
 | Guardians | `instrumente/abnahme.py` and the four `instrumente/pruefe-*.py` (`dokumente/TOOLBOX.md`) |
@@ -431,7 +435,7 @@ class and ISA (Simon, 2026-10-25; was 80 %), ambitious above 110 %.
 Fixed-work score `100 * Ctime / Gabbrotime`, throughput score `100 * Gabbrothroughput / Cthroughput`, per
 workload and class, on full validated direct binaries with matched hardware, ISA, semantics and settings.
 Compile latency includes checking, optimisation, production, validation and Lean kernel checking. Targets are
-OPEN until measured; no universal speed claim. Central record: `dokumente/PLAN-TRANSLATION-VALIDATION.md`.
+OPEN until measured; no universal speed claim. 
 
 ## 12. Working with Lean here
 
