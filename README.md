@@ -144,7 +144,7 @@ premise (b), the user's logic, in Lean from the source for five programs; that d
 | Measurements | [MESSUNGEN](dokumente/MEASUREMENTS.md) · [TOOLBOX](dokumente/TOOLBOX.md) |
 
 > **How this repository is written: AI agents, and where the human stands.** Agents do implementation, checking and coordination; Simon
-> decides what counts as reached, refused or merged. Commits follow Conventional Commits, carry `Signed-off-by` and name the model that wrote them (`Co-Authored-By`). **Nothing counts because an agent
+> decides what counts as reached, refused or merged. Commits name the model that wrote them (`Co-Authored-By`). **Nothing counts because an agent
 > said so:** numbers are re-measured at merge time, and a claim bigger than its proof gets sent back.
 
 > **License: AGPL-3.0** ([LICENSE](LICENSE)). What you write in Gabbro is not a derived work: your program, everything the compiler

@@ -285,10 +285,9 @@ not the Rust checker, and no bridge to any binary is built. The
   commit messages, diagnostics, `TODO.md`. The conversation with the project owner is in German.
 - **At most 30 `.md` files** in the repository. Reports, verdicts and interim states belong in git, not in the
   tree.
-- **Commits** follow Conventional Commits (`type(scope): summary`, types `feat`, `fix`, `refactor`, `perf`,
-  `test`, `docs`, `build`, `ci`, `chore`; scope e.g. `grammatik`, `stage0`, `cli`, `checker`), carry a
-  `Signed-off-by` line (`git commit -s`) and are signed (`-S`) where a signing key is available. Write the
-  message to a file and commit with `git commit -s -F <file>` (no shell quoting of the message). Stage first.
+- **Commits** are plain `git commit` with a Conventional Commits subject (`type(scope): summary`, types `feat`,
+  `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`); no helper script, no extra trailers beyond
+  the model's `Co-Authored-By`. Write the message to a file outside the tree and commit with `git commit -F <file>`.
 - **Squash before pushing**: work that belongs together (e.g. a feature and its follow-up fix) becomes ONE commit
   before it is pushed (`git reset --soft <base>` and recommit, or `git commit --fixup` + autosquash). Pushed
   history is never rewritten (no force-push), so squash only what is not yet pushed.
