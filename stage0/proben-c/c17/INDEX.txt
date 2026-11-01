@@ -1,0 +1,13 @@
+C17 probe index: source `decreases` measure bound to the termination duty,
+generic type/order wrappers, compile-time `const fn` contracts/bodies.
+Outcome is the expected `main` result (positive) or the refusal line (negative).
+fact-decreases: 120 -- recursive factorial with a falling `decreases n` measure.
+mutual-decreases: 10 -- mutual ping/pong recursion, both members carry `decreases n`.
+const-ensures: 42 -- `const fn` with an `ensures` contract folded into a const initializer. UNSURE: no `ensures`-carrying `const fn` call exists in the repo today (only `requires` in stage0/proben-ir/contract-*.gab, which is refused); clause order follows SYNTAX.md.
+wrapper-alias: 42 -- monomorphic wrapper instantiation over an alias chain (C17 baseline). UNSURE: no generic-application syntax (`Name<args>`) was found in SYNTAX.md, LANGUAGE.md, beispiele/ or the parser; this probe covers only the monomorphic shape the generic cut must preserve.
+acyclic-decreases: 7 -- `decreases` on a non-recursive function is vacuous but accepted. UNSURE: whether the current checker accepts `decreases` on an acyclic function (C17 design lists it as a witness, so C17 must).
+measure-stagnant: recursion measure does not decrease at the recursive call -- `decreases n` with the recursive call passing `n` unchanged. UNSURE: exact refusal sentence; shape mirrors beispiele/gift/151-mass-wird-durchgereicht.gab (checker K009).
+measure-missing: recursive function without a decreases measure -- self-call with no measure at all. UNSURE: exact refusal sentence; shape mirrors beispiele/gift/150-rekursion-ohne-mass.gab (checker K008).
+measure-unknown-name: decreases clause names an unknown parameter -- `decreases k` with no parameter `k` must be refused, not ignored. UNSURE: exact refusal sentence.
+measure-reads-global: decreases measure must not read a global cell -- measure over a static cell is not world-independent. UNSURE: exact refusal sentence.
+const-impure: compile-time call requires unsupported function contracts, effects or body -- `const fn` with a `writes` effect used in a const initializer. Sentence borrowed verbatim from stage0/proben-ir/contract-transitive.error.

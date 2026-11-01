@@ -1,0 +1,11 @@
+// C17 negative probe: a self-recursive function with no `decreases` measure.
+// No measure on the cycle means no termination duty: must be refused.
+module c17_missing {
+impl fn f(n : u32) -> u32 effects { pure } costs <= 64 ops {
+    if n == 0 { return 0; }
+    return f(n - 1);
+}
+impl fn main() -> u32 effects { pure } {
+    return f(3);
+}
+}

@@ -1,0 +1,11 @@
+// C17 probe: a recursive function bound to its termination duty by `decreases n`.
+// Every recursive call passes `n - 1`, so the measure falls. fact(5) = 120.
+module c17_fact {
+impl fn fact(n : u32) -> u32 effects { pure } costs <= 64 ops decreases n {
+    if n == 0 { return 1; }
+    return fact(n - 1) * n;
+}
+impl fn main() -> u32 effects { pure } {
+    return fact(5);
+}
+}

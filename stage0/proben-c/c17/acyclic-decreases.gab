@@ -1,0 +1,10 @@
+// C17 probe: `decreases` on an acyclic function is vacuous but must still be
+// accepted, not refused and not silently dropped. succ(6) = 7.
+module c17_acyclic {
+impl fn succ(n : u32) -> u32 effects { pure } costs <= 8 ops decreases n {
+    return n + 1;
+}
+impl fn main() -> u32 effects { pure } {
+    return succ(6);
+}
+}

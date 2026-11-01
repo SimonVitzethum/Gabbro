@@ -1,0 +1,15 @@
+// C17 baseline probe: monomorphic wrapper instantiation over an alias chain.
+// The generic-application cut of C17 must preserve this shape. wrapper(21) = 42.
+module c17_wrapper {
+type Small = u8 in 0 .. 100;
+type Count = Small;
+impl fn double(x : Count) -> u8 effects { pure } costs <= 8 ops {
+    return x + x;
+}
+impl fn wrapper(x : Count) -> u8 effects { pure } costs <= 16 ops {
+    return double(x);
+}
+impl fn main() -> u8 effects { pure } {
+    return wrapper(21);
+}
+}

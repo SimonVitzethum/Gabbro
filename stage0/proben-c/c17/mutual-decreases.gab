@@ -1,0 +1,15 @@
+// C17 probe: mutual recursion where every cycle member carries the same measure.
+// ping(10) descends through pong, adding 1 per level: 10.
+module c17_mutual {
+impl fn ping(n : u32) -> u32 effects { pure } costs <= 64 ops decreases n {
+    if n == 0 { return 0; }
+    return pong(n - 1) + 1;
+}
+impl fn pong(n : u32) -> u32 effects { pure } costs <= 64 ops decreases n {
+    if n == 0 { return 0; }
+    return ping(n - 1) + 1;
+}
+impl fn main() -> u32 effects { pure } {
+    return ping(10);
+}
+}
