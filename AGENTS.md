@@ -9,6 +9,20 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
+**ALL AGENTS ON THE C PACKAGES (owner, 2026-11-01).** All four agents (two Claude Sonnet 5.5, two GPT Sol
+6.1) work on the C packages and on the Lean module-system migration below; every other lane (IR-04 floats in
+`t3-c3ebf14f`, IR-02 `narrow`, the remaining A/B packages and IR lanes) is paused with its worktree, dirty
+changes and scratch preserved, and resumes only when C is done. Per round, new constructors/types of `Expr`,
+`Stmt`, `Ty` and the declaration fields are added first in ONE central commit (appended at the END of their
+inductive), then the agents work in parallel on disjoint files; checks are rare and batched.
+
+**Lean module system (owner, 2026-11-01, fixed rule).** All Lean in the repository (`grammatik/`,
+`stage0/`, `runner/`, `programmlogik/`, `passlogik/` and every other Lean package) is migrated completely to
+the Lean module system (`module`, `public import`/`import`, explicit `public`/`@[expose]` visibility), and
+every new or changed Lean file must be a module that uses it: expose only what dependents must unfold, keep
+proof bodies and helpers private, so a change that does not move an interface does not rebuild dependents.
+A non-module Lean file is a layout finding.
+
 **RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
 Sonnet 5.5 implementation agents, no others: one rolling lane on Lean slot 1 (IR-06 memory, handed back; then IR-02 wide-integer kernels
 in `t3-db31d27d`, handed back; now IR-04 floats in `t3-c3ebf14f`) and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. Additionally (owner, same day) two GPT Sol 6.1
@@ -76,12 +90,15 @@ expanding infrastructure for a small subset.
   of dropping the form; this covers the C packages of the export catalogue in
   `dokumente/IR-COMPILATION-LANES.md`. Every extension keeps `gabbro_ziel` on the standard axioms, never
   weakens a guarantee, describes any change of meaning of `Spec.lean` in its commit, and is followed by the
-  Lean guardian. Only one agent at a time changes `grammatik/`.
+  Lean guardian. Several agents may change `grammatik/` at the same time (owner, 2026-11-01; the former
+  one-agent rule is lifted), each in its own worktree; root merges them one after the other.
   **C packages approved (owner, 2026-11-01):** all 18 C packages may change `grammatik/` and machine G as
   designed in `dokumente/IR-COMPILATION-LANES.md`, with the recommended answer to every owner question in
   those design sections, provided `gabbro_ziel` stays proved on the standard axioms. All C work is done in
   2–3 full `grammatik/` build rounds: round 1 C13, C17, C05, C04, C03; round 2 C01, C06, C07, C08, C09,
   C11, C18; round 3 C10, C02, C12, C14, C15, C16. Between rounds only single changed modules are checked.
+  `axiom`-`ensures` stays a named hardware assumption (`AxVertragO`, owner 2026-11-01); it is not turned
+  into a runtime check.
   **Grammar build memory (owner, 2026-11-01):** a `grammatik/` build may use all currently available memory
   minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
   `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
