@@ -12,7 +12,8 @@ were organised) is in `git log`, not here.
 **TEAM AND BUILD RULES (owner, 2026-11-01, supersede every older staffing rule below).**
 - **Two Claude Sonnet 5.5 leads**, both T3 Code agents (owner, 2026-11-01, latest order). While the Lean
   module-system migration and the splitting of every Lean file below 500 lines run, **Lead B does the migration
-  and the splitting** of the whole repository, and **ALL other agents work on Stage 0**: **Lead A works with
+  and the splitting** of the whole repository (it may use up to one Sol and four Muse for exactly that — never
+  for new `grammatik/` or Stage-0 work; its slots need not all be busy), and **ALL other agents work on Stage 0**: **Lead A works with
   PERMANENTLY five sub-agents** (ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor, only the Go
   access: model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`), started through T3
   `delegate_task`, every slot occupied at all times. Stage-0 work means the Stage-0 side only (`stage0/`, the
