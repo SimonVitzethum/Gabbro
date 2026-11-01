@@ -1906,3 +1906,260 @@ Lean slots; Stage-0 checks retain 5-GiB slot scopes. Require the full grammar
 build, layout check, Lean guardian/standard-axiom audit and connected Stage-0
 proof/runner checks for each accepted batch; remaining guardians at integration.
 This design commit performs none of those builds and claims no new compiled case.
+
+### Model extension design: C09, C10, C11, C18 (2026-11-01)
+
+Design baseline: `7ccd14c9e`; static source inspection only, no Lean edits or
+builds. Paths are relative to `grammatik/Grammatik/` unless prefixed otherwise.
+**New** denotes proposed declarations, not existing Lean names. These packages
+remain open until the generic source/export, G/GX, Stage-0 and image proofs are
+connected and compiled. C08's software/provider boundary and C12's capability
+representation are dependencies, not facilities already supplied by this tree.
+
+**Architecture and non-negotiable boundary.** Extend the actual typed syntax,
+`RufMaschineG` and its GX replay; do not add a parallel execution model. Reuse
+`Res.marke`, the arena ownership ledger and structured continuations. Distinguish
+static resource names in `Λ` from dynamic ownership/reader/generation records in
+the machine: an epoch or handle obtained at run time cannot be a guessed static
+`Nat` in an exported type. Use one identity-parameterized location/escrow mechanism
+for marks, arena handles and observed versions; C09 adds spent-mint metadata,
+not another incompatible notion of lending. Append every new constructor at the **end** of its
+inductive, including resources, events, continuations, proof judgments and
+exporter intermediates. No new admission branch defaults to true.
+
+| Package | Core change | Spec impact | Engineering days |
+|---|---|---|---|
+| C09 | One-shot mint authority and stack-aware owner transfer/loan conservation | **Yes:** initial/minted owner provenance and lifetime become checked goal facts; signatures still cannot produce owners | 12–20 |
+| C10 | Mode-aware shared locks; separate RCU observation, retirement, grace and reclaim resources | **Yes:** canonical concurrency domain grows; mode-aware invariant visibility and RCU lifetime facts, no race exemption | 30–50: RW 9–15, RCU 21–35 |
+| C11 | Consuming loop with current-state selection/decrease; proof-duty narrowing; checked return cleanup | **Yes:** new control/duty cases and costs, same safety/conservation conclusions | 18–30: traversal 8–13, allocation 3–5, cleanup 7–12 |
+| C18 | Checked static-array reset plus a proved page-return binding and live-range ownership | **Yes:** reset/provider lifetime and zero observations covered explicitly; no OS assumption | 14–24 |
+
+Ranges cover generic proofs, witnesses, export and connected IR work in one
+implementation lane: 74–124 engineering days, excluding C03/C08/C12 and their
+shared ABI migration. They are estimates, not measured build times. Critical
+path: resource conservation and return replay, then RW/GX integration, then RCU
+publication/reclamation and provider realization. Share cleanup and lifetime
+interfaces across packages instead of charging for independent implementations.
+
+**C09 — owner mint, linear handoff and scoped borrow/return.**
+
+Present boundary: `Kern/Syntax/Syntax.lean:203` forbids an owner in **every**
+`Signatur.produziert`; `nachSig` erases consumed marks and appends produced ones.
+`Ty`/`Val` in `Kern/Syntax/Typen` have no owner value, and environments can copy
+ordinary values. `Marken.MarkenSchritt` in `Kern/Syntax/Marken` has an `erzeuge` rule that
+explicitly excludes owners. `eigner_nachRuf_aus_anfang` and
+`eigner_aus_leer_nie` in `Kern/Syntax/Typen` express the
+present no-production boundary. Arena handles in `Bausteine/Arena/Ownership`
+are a different resource: `State.lend/endLoan`, `borrow_result`, `factory_checked`
+and `Ruhe.startOwn_arenen` do not mint `D.Marke` owners. Also,
+`Nebenlaeufigkeit/Rennfreiheit/RennfreiVoll` explicitly records that owner-mark
+ordering is not proved on G there; do not cite that theorem as this bridge.
+
+| Layer | Implementable change |
+|---|---|
+| Kern resource interface | Keep `D.eigner_nie_erzeugt` for **ordinary production**, including pointer signatures and foreign effects. Add **new** `OwnerFlow` beside `Signatur`: exact owner inputs, moved normal/reason outputs and call-scoped loans, each referring to an existing `(m,stage)`; no output without a corresponding input. Define **new** `nachOwner` as transfer of those identities, composed with ordinary `nachSig`, never as owner `produziert`. Extend `RufPasst`, `SigPasst`, `Signatur.anfang` and `Vertrag.ende` consistently. Require disjoint move/loan sets, one occurrence per owner identity across stages, bounded stages and equal branch inventories. Preserve the old no-production lemmas with the stronger conclusion “output owner came from input or the distinguished mint transition”. |
+| Source values | Represent named `linear ghost` owner bindings by a checked source binding-to-`Res.marke` map, not a copyable `.int`, `.ptr` or unit-valued `Ty` token. Every source variable move, parameter/result handoff and borrow consumes or suspends exactly that map entry. Return metadata carries the same nominal mark and stage. This provides a source-to-resource preservation theorem even though the ghost value has no IR word. `own` on a pointer also requires the matching owner resource and C12's live capability; the current writable Bool is insufficient. No new copyable `Ty.owner` is needed for this ghost fragment; nonghost/stored owner values remain refused until a resource-indexed representation is proved. |
+| Unique mint | Add **new** `OwnerMintDecl` mapping each owner to exactly one resolved foreign minter and one root/site. Append **new** `Block.ownerMint` and `Endblock.ownerMint`: execute that binding once, add `.marke m s` only on its successful return, then continue under `.marke m s :: Λ` with the ghost-name resource binding (Block continuation ends in `Λ'`, Endblock continuation terminates). Arguments/effects/software proof use C08; the transition is not an arbitrary owner-producing axiom. The machine carries **new** `OwnerState`, with a permanent spent-mint set and a location for each live mark (active frame, suspended transfer/loan escrow, or retired). A mint requires unspent authority, records it spent, and never replenishes it after consume/return/reset. Append the corresponding event and G push/answer rules; the actual foreign invocation and its call log/effects remain present. Erase an external call only with a proved ghost-only implementation/erasure theorem. |
+| Roots and admission | Add **new** `ownerB`/`OwnerAdmission` to `Akzeptiert` and `AkzeptiertSpec(X)`. Check the complete direct/indirect call graph, exactly one syntactic mint site outside all loops, root with no caller/address-taking, one declared occurrence across `E.starts ++ E.gestartet`, and no repeated/spawned execution of that occurrence. `EinzelnPool` is not sufficient: pool-safe roots still cannot mint twice. Extend `Laufzeit.einmal`, `StartZulaessig`, `FadenMaschine` start/child and GX spawn preservation so dormant starts cannot restart the mint. “Once” is at most one execution, not a liveness promise that a branch reaches the call. Initial owners and minted owners have disjoint origins; no unaccounted owner may occur in a start signature. |
+| Calls and borrowing | On move, the caller loses use until the actual callee returns the same identity or consumes it as declared. On loan, move authority into a callee-frame escrow and disable the lender, including suspended callers; the callee may use the guard but cannot consume, mint, escape or re-loan beyond its checked scope. Restore exactly the saved identity/stage on every returning outcome. Exceptions/reasons use the common outcome rule agreed in C07/C08; no rollback that recreates a consumed mark. Start/child cannot capture a loan. Terminal consumption moves to retired and cannot restore mint authority. Model nested loans as a stack of exclusive escrows, with one active accessor globally. |
+| G/GX proof and Spec | Extend `RufMaschineG/T1` frame/machine state, T2 call/mint/pop rules and T3 starts; prove **new** `OwnerInvG` by reachable-step induction, including suspended frames and spawn. Its projection supplies `Marken.einfaedig_aus_verlauf_getragen`, with appended mint/transfer cases and a spent-set invariant; uniqueness at one instant alone does not prove once-ever minting. Extend `Nebenlaeufigkeit/Allgemein/Geteilt`'s `OwnerAnfang.eigner_nie_erzeugt` interface rather than discarding its premise. Derive owner-guard access provenance and non-overlap for `RennfreiBis(GA)`, preserving the existing unshared-carrier separation checks. Thread the ledger unchanged through GX presented-memory changes. Add owner provenance/conservation to `Ziel`, `ZielX` and `ZielFX`; state this strengthening and the root admission in `Spec.lean`, without hardware authority to mint software permissions. |
+| Export and Stage 0 | Coordinates: `Parser/Elab/Uebersetze.lean:822/1005/1172/1758/1806/1925`; `UebersetzeAllg.lean:382–393` currently exports `Marke := Empty` and no owners. Lower one nominal namespace, `owner` guards, real minter/site/root provenance and exact source parameter/result flow. IR-01/07 own this bridge, IR-10 call/return metadata, IR-09/12 starts. Resource-only handoffs emit no bytes after the simulation relates source bindings to the ledger; minter software effects still lower through IR-11. Extend `lowS_ok/lowB_ok/lowEnd_ok`, `Rekursion.lowFun_spec`, `Compiler.compile_source_program` and `IRBild.irBild_correct`; no detached signature witness closes C09. |
+
+Witnesses: one guarded read and write after a root mint; move through two calls;
+normal/reason return of the same owner; nested scoped borrow with restoration;
+owner stage advance and final consumption; dormant root spawned once. Negative
+twins: two mint sites, mint in a loop/callback/contract expression, duplicate
+start/pool/restart, initial-plus-minted duplicate, access by suspended lender,
+loan escape/consume, wrong returned stage, owner in ordinary `allocs`, and forged
+`own` from `rw`. Use existing `beispiele/114`/`115` as source requirements, not
+proofs; `crates/gabbro-check/src/kbedingung.rs` and D265–D268 in `saetze.rs` are
+the current structural contract to port. Software minter behavior belongs to
+user logic under C08, despite the historical “named assumption” documentation.
+
+**C10 — shared reader/writer locks and full RCU.**
+
+Present boundary: `Stmt.locks` and `Res.held` are exclusive; `Stmt.observes` in
+`Kern/Syntax/Zucker.lean:200` is just that lock sugar. The existing
+`Zielsatz/Eigenschaften/RwSchritt.RwAcq/RwSchritt` layer admits a reader by
+executing G with foreign threads hidden (`ohneFremde`). Its `Lese` is an external
+thread/lock predicate; `RwOrdnung.LeserLos` is a run premise. These are useful
+proofs, not source admission or a mode-aware canonical machine. Reuse their
+arguments in G, then remove the replaced independent layer. The old RCU-counter
+references in `crates/gabbro-check/src/schablonen.rs` are not a connected
+`gabbro_ziel` proof.
+
+| Layer | Implementable change |
+|---|---|
+| RW syntax/resources | Add **new** `LockMode` (reader/writer); generalize the existing `Res.held L` to `held L mode`, signature holdings/floors, guard requirements and `Stmt.locks L mode`. This changes existing arguments, not constructor order. A read requires reader-or-writer authority; a store/foreign write requires writer authority. Introduce **new** `darfRead/darfWrite` and global counterparts, replacing the shared `darf/gdarf` calls in expressions versus writes; owner obligations stay conjunctive. No Bool write permission can manufacture a writer resource. Carry mode in acquire/release events, `offen`'s mode-aware projection, `HeldGenau` and call conformance. Invariant predicates may be read with reader authority; functions requiring writer-held cannot be called with reader-held. |
+| Canonical RW machine | Generalize `RufFreiG`/`dannLocks`/`GRest.frei`/`freiGib` to mode compatibility: reader acquire requires no writer, writer acquire requires no reader or writer; record each actual section's mode, not a fixed `Lese t L`. Reject recursive taking and upgrade; retain increasing `D.rang` over **both** modes, signature floor and handler mask rules. Generalize `RwExkl` to the machine-state invariant and derive `LeserLos` from typing, effects and admitted calls. Writer release restores `S.inv`; reader release preserves it. Reader acquire sees it because there is no writer. No wrapper that hides foreign threads remains on the canonical trust path. |
+| RW proofs/Spec | Integrate `RwSchritt.rwExkl_schritt`, `RwOrdnung.rennfrei_rw/rwSicht_schritt`, `RwInv.sperrInvRw_schritt/leser_sieht_inv` and `RwRang.kein_warteZyklus_rw` with the actual G rules. `SperrInvG` gains the stronger reader-only/free case; retain its existing free-lock fact. `InvRuheG`/`InvSichtG`, `SperrWechselG`/`SperrSichtG` and GX analogues must still give unchanged carriers under another holder and invariants at every move. Extend visibility to every reader; replace “holder alone” prose by “writer alone; readers share an invariant-preserving view”. Pairwise reader reads may coexist; every pair with a write remains ordered. Prove the old exclusive specialization and all original invariant facts; do not weaken them to return-only checks. |
+| RCU declaration and resources | Give domains their own **new** declaration identity/metadata (protected carriers, publication roots, reclaim place/service), distinct from `D.Lock`. Replace `Stmt.observes` sugar with a canonical scoped observation constructor. Append **new** `Res.observing d site`, `Res.retired d site` and `Res.reclaimable d site`; static sites bind dynamic records in the frame, not runtime epochs in `Λ`. The **new** machine RCU state records nested observations per thread/frame, fresh observation tickets, publication generations, retired object/range identities and grace cutoffs. Observation permits only reads through the captured, live published generation; never grants write, ownership, writer exclusion or a rank. No observation capability escapes its lexical scope or survives reclaim. |
+| Publication/retirement/grace | Use one **new** lifecycle judgment, carried by actual ordinary publication, unlink and service calls, rather than inventing surface `retire`/`synchronize` keywords. Publication initializes a fresh, exclusively owned version, release-publishes its capability and transfers it to immutable published state; readers enter before acquiring the root. Unlink removes **all** publication paths to the old version before it becomes retired. A grace operation snapshots the outstanding observations that could have seen it; reclaim authority is issued only after each has exited, including suspended/nested sections. Later readers cannot acquire the retired version. Reclaim consumes that authority and calls the proved provider release; double reclaim and reuse before grace are impossible. A zero counter read or a user `assume` is not this proof. Domain metadata alone does not identify which write unlinks an object: export a checked lifecycle derivation from the actual source calls/contracts, or refuse that reclamation site. |
+| Race/invariant boundary | RCU protects lifetime, not arbitrary in-place mutation. `beispiele/31` reads `Konten.zaehler` without the writer lock while another function writes it: that pair cannot be admitted by merely adding `observing`. Published non-atomic carriers remain immutable until grace; updates create another version, and mutable shared payload uses an independently proved atomic interface. Existing lock guards remain obligations: observing cannot bypass `D.braucht` or invalidate `SperrSichtG`. For the first complete cut, use disjoint declared carriers for versions, separate writer metadata locks and a checked version registry. Arbitrary dynamic versions require C12/C08's live region realization and an injective version-to-carrier/extent map. W currently treats a whole table as one location (`Spec.lean` header): do not silently identify different slots with independent W locations or drop table/group invariants. Any finer location extension must retain the aggregate invariant/frame results and be reviewed explicitly; otherwise such same-table updates remain refused. Full lifecycle support is not permission to accept unsafe combinations of existing clauses. |
+| GX/weak memory | Extend `Speichermodell/Atomar/AtomarLauf.RufSchrittGX`, `Maschine/GXMaschine`, `Maschine/MaschineW`, `Maschine/Sicht` and `Maschine/DRF`: RCU ledger state is authoritative, unchanged by arbitrary presentations of shared atomic values. Derive publication visibility from the actual release/acquire reads-from chain, and grace completion from a proved synchronization protocol over that history, not the latest G value or one arbitrary GX counter answer. Retired generations cannot be reintroduced by a stale root read: bind observation validity and retirement to the protocol, with validation/retry where needed. Prove **new** `RcuInvG/RcuInvGX`: every observed capability live, every reclaimed object unreachable by outstanding readers, and published invariant stable for the captured generation. User duties cover all allowed shared-atomic answers as `KoerperGutSA` does today. New synchronization steps require a matching W-protocol refinement witness; ordinary GX shared-atomic reads remain arbitrary. A new memory-order primitive needs its W rule and lowering proof before use; never assume SC. |
+| Rank, waiting and progress | RW wait edges point only to incompatible holders and retain strict rank. A grace wait is not a lock acquire and cannot inherit a fictitious rank. Admit synchronous grace only outside observations and with **no held locks**, no outstanding joins/loans whose completion readers require; keep readers free of grace/join dependency cycles through transitive callee checks. Extend the combined wait graph and `KeinWarteZyklus` proof to grace edges, using the existing lock/start/join order plus these exclusions. Retire under a writer lock, release it, wait, then reacquire in rank order if needed; defer reclaim when source cannot do that. Extend `FortschrittG/FX` to expose an actual waiting dependency, not a new unproved “hardware” stop. No starvation/grace-time bound follows without the existing separate scheduling/termination duties; synchronous grace with an infinite reader may wait, but must not create a cyclic dependency. Check same-core handler dependencies in `Eigenschaften/KernMaske` too. |
+| Export/Stage 0 | Coordinates `Uebersetze.lean:1203/1212/2538/3590/4039`: retain shared declaration/mode, `SItemTief.rcuT`, `SAnw.watch`, reclaim expression and all exits. IR-09 owns shared acquisition/release, atomics and RCU protocol; IR-07 owns lifetime transitions; IR-08/10 share C11 cleanup; IR-06/03 supply captured capability spans; IR-12 supplies starts. `stage0/Stage0/Senke/Sperre/{Code,Lauf,Sync,Satz}` currently proves exclusive `locks_ok`, not shared or RCU. Prove mode-aware assembly protocol and observation/grace/reclaim calls against G/GX/W, including nesting, early return and actual memory effects. Connect through `lowS_ok/lowB_ok/lowEnd_ok` and the function/image chain. Sequential `AgreeW` alone does not establish concurrent synchronization. Reuse the assembly runner; do not create a second runner. |
+
+Witnesses: two simultaneous readers, excluded writer, writer release followed by
+reader visibility, reader calling a reader-held function; two published versions,
+one old reader crossing unlink, a later reader seeing the new version, nested
+observation, grace waiting for the old ticket, then one reclaim/reuse through the
+provider. Include old/new nontrivial payload invariants and a weak-memory trace
+with a stale root/counter answer. Negative twins: shared write via direct call,
+indirect call or foreign effect; upgrade, rank inversion, reader escape, own
+observation reclaim, grace under a lock/reader-dependent join, premature/double
+reclaim, surviving publication alias, unsynchronized mutable payload, and
+`observes` used to bypass an existing lock guard. An RCU declaration without
+reclaim metadata may support observation only; never infer a reclamation rule.
+
+**C11 — consuming traversal, capacity duty and returns across lock scopes.**
+
+| Subpackage | Implementable change |
+|---|---|
+| Consuming Kern/G | Append **new** `Stmt.consumeTraverse`: finite represented domain, current-world membership predicate, declared edge relation/projection, invariant, measure `Expr D Γ Λ (.int 0 bound)` and body `Block D V true (.index (D.count t) :: Γ) Λ Λ`, with the domain predicate/edge tests typed over those represented indices. Define a deterministic current-state selector over `alleIndizes`, selecting a minimal remaining member for the declared well-founded edge relation, with index order as tie-break. Each completed body pass must remove its selected member, introduce no new domain member/edge, preserve the invariant and strictly decrease the measure. The user body's declared `touches … consumes` performs the actual mutation; the traversal must not silently free the object a second time. Recompute selection in the post-body world; a saved initial index sweep is not this semantics. Empty selection terminates only with the selector-completeness theorem. Add matching `GRest` selection/body continuations and `RufSchrittG` cases, carrying the previous measure and finite initial bound. A failed required decrease/invariant is a logical failure, excluded by the user's body duty, never a successful early exit. |
+| Consuming proofs/admission | `Isabelle/Consuming.ordnung_bleibt_unter_entfernen`, `blattheit_braucht_minimale_auswahl`, `leermenge` and `umhaengen_kann_zyklus_erzeugen` explain the obligations, but their `Tabelle` is not G storage. Prove a generic projection from actual `World D` and actual emitted mutations to that relation. Prove each selector result belongs to the current domain, minimality, strict fall and completeness; establish a bounded run by the entry measure and finite selection cost. This is a state-reading loop measure, not C17's `Mass` with empty footprint. Require exclusive owner/writer authority over domain/edge mutations, with stable membership while selecting; no concurrent insertion. `Akzeptiert` checks supported finite projection, guards, declared effects and absence of leave/next targeting this consuming binder; `NutzerPflicht(A)` supplies decrease/removal/invariant obligations on all returning passes. Preserve the Rust S008/N580 restrictions in `schleifen.rs`/`saetze.rs`. Return may propagate after C11 cleanup, but then no post-loop emptiness claim is made. Rehanging needs a separately proved current relation/decrease rule and remains refused in the removal cut. |
+| Consuming export/IR | `uSchleifenKopf:3175` currently refuses consuming; `UStmt` must retain `touches`, measure, relation and selector metadata instead of reusing `traverseBeg` blindly. Extend the domain adapter from A14, `lowS`, `Anweisung/Faelle/Schleifen/Traversal.traverse_case`, `Anweisung/Schleife` and `Code/Refine/Loops/Traverse` with a consuming branch and dynamic re-selection. Reuse index/load/store primitives; prove binder scope, scratch preservation, remaining measure, work bound and every exit. `GabbroV/GvTraversal.trav_schedule_vollstaendig` proves a fixed sweep, so extend its bridge to the current-state selector; it is not already a consuming theorem. IR-07/08 own mutation/control, IR-06 represented edges, IR-09 exclusion. |
+| No-else allocation | Retain `Block.arenaAlloc` in `Bausteine/Arena/ArenaZucker.lean:203` with its explicit ceiling-failure `Endblock`. Add one **new** generic `Block.narrowRequired`/`Endblock.narrowRequired`, the same typed narrowing with a logical failure instead of a source else; derive **new** `arenaAllocRequired` sugar by reusing `arenaRumpf`. Evaluate used/count once, require `used < capacity`, store initialized payload, then bump in the existing order. Failure is a **new** appended capacity case of `Logik`, excluded by `KoerperGutS/SA` and the actual source user's capacity proof. Dynamic committed storage additionally needs availability/commit proof or the explicit provider path; OOM remains user logic. Do not insert `retWhy`, fabricate a value, turn full into hardware failure, or assume a provider never fails. Check branch/call/loop/root allocation counts conservatively, but a Rust count is not the Lean proof. |
+| Allocation export/IR | `Uebersetze.lean:3536` and `UebersetzeAllg3.lean:957/1251` separate no-else admission from A23's missing Endblock sugar. Implement both Block/Endblock required narrowing paths and source capacity obligations; keep supplied else semantics unchanged. Reuse existing `lowB_ok/lowEnd_ok` narrow/store/bind code with an explicit failed-capacity trap matching logical failure, proved unreachable under the user duty. Re-establish `ArenaReset.reset_alloc_laueft_rumpf`, fresh-generation facts and `ArenaOwnership` allocation/state agreement on the shared body. IR-07 owns capacity/liveness, IR-08 control, IR-10 duty propagation. |
+| Resource-aware return | Replace `Stmt.ret/retWhy` and `Endblock.ret/retWhy`'s bare `Λ.Perm V.ende` evidence by **new** `RueckRessourcen`: exact residual `V.ende` plus a list of locally acquired scopes to close. Exact return is its empty-cleanup case; keep one return API. A **new** scope-indexed `cleanupB` and soundness judgment traverse the actual syntax, recording each lexical acquisition/observation and borrowed signature resource. They must verify that the return's list is exactly the crossed scopes in reverse order, not an arbitrary erase of extra resources. Calls inherit held resources but never acquire permission to release the caller's signature locks. Owner moves/loans remain conserved, marks cannot be discarded as cleanup, and returned capabilities cannot borrow a scope that is about to end. Add this check to `AkzeptiertSpec(X)`/`Akzeptiert`, with proofs and export correspondence. |
+| Return G/replay | Evaluate and save the full return value/reason while all required guards still hold. Append a **new** pending-return continuation to `GRest`, retaining the saved result and exact residual resources; unwind each real `frei`/observation scope once, check its owed lock/lifetime invariant, then perform the existing value/reason pop and call-log return. The sequential `execStmt/execEnd` rules propagate the saved result while existing enclosing lock `mapWelt (·.gibt L)` releases it; never also release inside the leaf. Prove sequential/G replay equality with the pending cleanup. Generalize `GRest.anRueck_perm`/`Stmt.istRueck_perm` in `Nebenlaeufigkeit/Allgemein/Verklemmung/T2` to the residual resources **after** cleanup; immediate pop at the inner return is no longer valid. Preserve `SperrWechselG`, `InvAmGrundG`, floors, old-entry snapshots and both success/reason contracts. Leave/next keep their existing `peelFreiLeave/Next` behavior and use the same scoped cleanup relation when generalized. |
+| Return exporter/IR | Remove `UebersetzeAllg3.lean:178/799`'s `return under locks` only when scope evidence is generated. In `stage0/Stage0/Senke/Anweisung.lowS`, `Sperre/OhneRet`, `Sperre/Satz.locks_ok` and `retC`, replace the `retFreiB` gate with proved exit classification and one shared cleanup-target mechanism. Save the whole result span in reserved storage across releases/calls; emit reverse-order releases before the outer contract/return epilogue. Share ordinary/reason/observation exits with IR-08/09/10, respecting IR-03 spans and IR-10 old snapshots. Prove releases on every crossing edge, no release of an unentered scope, no double release, restored masks, preserved saved value and exact final resources. Removing `retFreiB` without this proof is explicitly insufficient. |
+
+Witnesses: empty and multi-node consuming tree/queue with deletion and a falling
+measure, two eligible leaves with deterministic selection, nontrivial projection
+and invariant, early return without an emptiness claim; exact last available
+allocation, repeated allocations after reset, required allocation in an Endblock;
+return/reason through two locks and an observation, preserving a multiword result
+read under the inner guard. Negative twins: no consumes, unchanged measure,
+nonminimal leaf, incomplete selector, insertion/rehang/cyclic relation, consuming
+leave/next, capacity off-by-one or concurrent allocator, lost committed storage,
+caller lock released by callee, skipped invariant restoration, escaped loan and
+cleanup clobbering result/old snapshot. None is a new termination assumption.
+
+**C18 — partial array reset and returning backing pages.**
+
+Present boundary: `SAnw.reset` in `Parser/Stmt/Anweisung.lean:85–86` stores the
+optional `(index,count)`; only whole-arena reset exports at
+`Uebersetze.lean:2518`, otherwise :2538 refuses it. The range source form is for
+a zero-initialized **static array**, not an arena (`crates/gabbro-check/src/arena.rs`
+`reset_platz`; `dokumente/LANGUAGE.md` §13; N569). `ArenaSeiten.discard_live` proves
+an abstract payload-preservation property and `discard_preserves_reuse` keeps the
+free-list metadata; neither realizes a provider or executes this source form.
+
+| Layer | Implementable change |
+|---|---|
+| Kern and range | Add **new** checked `ResetRange` derivation for a resolved writable zero-initialized static array and its C01/B02 representation. Capture `i` then `n` exactly once, preserving any bound source calls (A31); require `0 ≤ i`, `0 ≤ n`, `n ≤ len`, `i ≤ len - n` in mathematical integers before converting to target byte arithmetic. Allow empty ranges at `i = len`. Check multiplication/addition and object/field extent in the selected layout, not runner word size. Prove the post-array is zero at every selected index and unchanged outside it, including padding/metadata that is outside the payload contract. Preserve all read/write guard and footprint obligations; this is not whole-arena counter reset or generation reset. |
+| Reset execution | Use a checked expansion into existing typed array/table stores where the representation supports it, with one generic range-store theorem and no second evaluator. A dynamic range needs checked narrowing and the C11 required-duty interface; invalid ranges are logical failures, not clipped/wrapped ranges. Zero is a typed value: initially admit only types with a proved zero representation and no linear/live capabilities erased by the reset. Integer/Bool/represented aggregate zeros must be proved against IR-03's encoding; zero bytes need not encode a valid fnptr, reference or nonzero range. |
+| Page-return service | Bind the range operation to an explicit **new** `PageReturnContract` under C08's ordinary software-service interface, using a region/subregion capability plus checked extent; no raw numeric address conversion. The program supplies the implementation and its generic correspondence to actual backing storage. Return only fully covered provider-granule-aligned pages; zero any selected boundary fragments by stores and preserve adjacent elements/live pages. Keep provider/free-list metadata outside released payload, as `ArenaSeiten` requires. The contract preserves the reserved static extent, changes backing ownership for the released pages, leaves every outside byte/provider grant unchanged, and guarantees subsequent admitted reads observe typed zero until the next admitted write to that element, including after recommit. Decommit plus demand-zero is one implementation; zeroing followed by release is another only if the binding proves the same observations. No unconditional OS/madvise/mmap assumption and no promised success from an ignored error result. An infallible source statement needs user proof of service completion/availability, otherwise the existing source form cannot export through that service. |
+| Live cells and aliases | Extend the C08/C12 grant ledger and `ArenaOwnership.State`-style location accounting with **new** backing states for static ranges: resident, exclusively pending return, released-with-zero-read contract, resident again. Distinguish permanent logical static-array extent from returned physical backing. The reset needs exclusive authority to mutate the selected range; a page release additionally requires no live owned allocation, borrowed view, outstanding RCU ticket, in-flight service or escaping alias that requires resident old contents anywhere in that entire page. Track aliases through parameters/results, fields, suspended frames, indirect calls and starts; re-use ownership flow, not a new name-only liveness pass. Persistent logical aliases may survive only with the same zero-on-next-read/availability contract and synchronization. Consume pending authority once; never invalidate an outside live cell to obtain page alignment. `ArenaSeiten.EmptyChunk/Live` supplies a reusable abstract lemma after a proved map from actual storage/ledger to those predicates. |
+| G/Akzeptiert/Spec | No new leaf is needed for the store expansion. Page-service calls need C08 resource-changing G rules plus actual trace events, grant transfer and checked `PageReturnContract`; metadata alone has no effect. Add **new** reset/lifetime admission to `AkzeptiertSpec(X)` and its Bool: exact object kind/zero type, representation, complete alias/resource scope, guard/mode and service identity; range/availability/zeroing implications are source user duties. Derive exclusivity and live preservation over G and GX, not merely sequential execution. Strengthen provider/lifetime goal facts for released static ranges and their zero observations; retain `speicherAdressen` through reserved logical extent plus physical grant correspondence, `InvRuheG/InvSichtG` and every contract/frame fact. A backing transfer is not permission to write beyond a region or reinterpret a released grant as fresh while a conflicting lease remains. Record this Spec meaning change with C08; add no hardware assumption. |
+| Export/Stage 0 | Carry both operands and resolved static-array metadata from `SAnw.reset` through appended `UStmt` reset metadata and `UebersetzeAllg3` Block/Endblock paths. IR-01 resolves arrays; IR-06 proves range loads/stores and byte/layout bounds; IR-07 proves backing/alias transitions; IR-11 proves the user service; IR-09 proves exclusion/RCU compatibility; IR-03 supplies zero encodings. Emit the store loop/boundary handling and actual binding call in the order the service contract specifies, with evaluated operands saved across calls. Extend source expansion, `lowS_ok/lowB_ok/lowEnd_ok`, `Lay`/memory correspondence and the function/image proof. A zero loop alone closes neither page return nor provider liveness. |
+
+Witnesses: interior range, first/last element, zero count at end, unaligned range
+with preserved boundary neighbors, one complete returned page, mixed live/free
+pages where only the empty page returns, repeated release/recommit and zero
+readback through a permitted surviving logical alias. Pair a nontrivial payload
+invariant with actual provider memory changes. Negative twins: overflow/outside
+range, negative count, nonzero-initialized object, invalid zero type, arena passed
+as static array, rounded-outward release over live data, borrowed or RCU-observed
+page, forgotten suspended/global alias, raw-address service, unproved service,
+ignored failure and stale resident-content assumption after return.
+
+**Shared proof migration and acceptance.**
+
+1. Extend `Kern/Syntax/{Syntax,Typen,Zucker,Extraktion,Geist,Profil,Satz}` and
+   `Kern/Semantik/Semantik/T1–T2` first; carry new scopes/resources through
+   renaming, footprints, effects, ghost erasure, syntax induction and source
+   provenance. Extend `Logik/Ruf/Maschine/RufMaschineG/T1–T4` (residues, transitions,
+   starts, log/stack fidelity), `Nebenlaeufigkeit/Allgemein/FadenMaschine` and
+   `Speichermodell/Maschine/GXMaschine` without losing dormant-start uniqueness.
+   Migrate `Nebenlaeufigkeit/Sperren/MitRuhe*` and `Zielsatz/Einbettung` for every
+   new declaration/resource/state field; otherwise idle roots/linking can forge
+   authority or forget epochs. Carry GabbroV's represented fragment through
+   `GabbroV/GvBruecke` and the actual source-derived obligations.
+2. Re-establish `Nebenlaeufigkeit/Rennfreiheit/RennfreiVoll` access/frame/order
+   lemmas, `RennfreiG`, `Nebenlaeufigkeit/Sperren/SperreBeweis`, and
+   `Zielsatz/ZielOrt/Geraet/ZielOrtSperre/T1–T2`'s `akteurS`,
+   `zielInvS_schritt` and `ziel_ort_sperre`. Extend `ZielOrt/Rahmen/ZielOrtRahmen`
+   and `Eigenschaften/Invarianten` so cleanup restores invariants **before**
+   publication/release/return, and readers observe the right live/versioned view.
+   Replay all cases in `Speichermodell/Maschine/SperreSemA` and
+   `Speichermodell/Atomar/{AtomarAkteur,AtomarLauf}`; the ledger must survive
+   the presented/current-memory distinction. Recheck
+   `Speichermodell/Adressen/Layout`'s `geaendert_im_bereich` and foreign extent
+   proofs for reset/reclaim, including no-write service transitions.
+3. Reprove rank and combined wait-cycle exclusion in
+   `Nebenlaeufigkeit/Allgemein/Verklemmung/T1–T3`, progress in
+   `Logik/Fortschritt/Fortschritt/T1–T3`, masks in `Zielsatz/Eigenschaften/KernMaske`,
+   and costs/potentials in `Logik/Fortschritt/KostenG/T1–T5`. Account for selector
+   scans, decreasing-pass bound, capacity checks, cleanup, shared synchronization
+   and protocol work; keep `ZeitAb(X)` conditional as today. No new blanket
+   scheduler/termination premise disguises a missing proof.
+4. Extend `Zielsatz/Kern/Akzeptiert`'s checks and `akzeptiert_iff`, and
+   `Zielsatz/Atomar/AtomarAkzeptiert`'s soundness. Preserve `frag`, `fuss`,
+   `stufen`, `renn`, `einzeln`, `antworten`, `masken`, contract atomic-freedom and
+   all source duties. Reprove `Zielsatz/Kern/Beweis.ziel_aus/zielF_aus`, then
+   `Zielsatz/Atomar/BeweisAtomar.zielX_aus/zielFX_aus`, `gabbro_ziel`,
+   `gabbro_ziel_gx`, `gabbro_ziel_sc_aus` and `gabbro_ziel_verbund`. The audit of
+   `gabbro_ziel` remains **exactly** `propext`, `Classical.choice`, `Quot.sound`.
+   Each generic syntax theorem needs a non-degenerate `_zeuge` satisfying all
+   premises jointly, plus corresponding source-export/admission/IR/runner cases.
+5. Document the precise `Spec.lean` diff in each implementation commit: new owner
+   and lifecycle facts; RW reader visibility; grace dependency/progress domain;
+   consuming/capacity/cleanup duties; released-page zero/extent interpretation.
+   Retain every old exclusive specialization, race freedom with a write,
+   deadlock/`KeinWarteZyklus`, `InvRuheG/InvSichtG`,
+   `SperrWechselG/SperrSichtG`, call logs and `speicherAdressen`. A versioned
+   invariant is additional; it cannot replace an existing whole-carrier/group
+   invariant whose restoration the program still owes.
+
+**Owner questions — genuine source-meaning choices, with recommendations.**
+
+- **C09 borrow/return:** should a borrowed owner grant write access and may its
+  stage advance? Recommend an exclusive, call-scoped loan, with the lender
+  suspended, and return of the identical stage; explicit move/return handles a
+  stage-changing handoff. Read-sharing needs its own frozen/read-only authority,
+  not duplication of `.marke`. The existing D266 `consumes`+`allocs` refusal is
+  lifted only for explicit proved transfer/loan, never owner production.
+- **C10 RCU updates and grace binding:** `beispiele/31` and historical documentation
+  suggest plain in-place writer updates plus a named grace assumption. That
+  conflicts with the standing race guarantee and OS-as-user-logic rule.
+  Recommend immutable published versions (or independently atomic payload),
+  explicit proved unlink/grace/reclaim service contracts, and refusal of that
+  example's unsafe overlapping read/write. Keep existing lock guards; do not
+  reinterpret `protects` silently. The first cut uses separate version carriers;
+  arbitrary same-table versioning requires an explicit finer-location design
+  preserving aggregate invariants, beyond merely adding RCU resource states.
+- **C11 consuming selection/mutation:** does the construct itself delete, or does
+  its body discharge `touches … consumes`; and which eligible node is next?
+  Recommend body-owned removal with no second implicit free, current-state
+  minimal selection and stable index tie-break. Empty-domain means the state
+  after the last completed pass; early return makes no emptiness promise.
+  Other deterministic source selection rules need matching minimality proofs.
+- **C11 cleanup semantics:** are normal/reason returns allowed to cross all local
+  lock/observation scopes? Recommend yes, saving the result before reverse-order
+  cleanup, restoring each owed invariant and retaining caller-owned resources.
+  An escaping borrowed result is refused. This is broader admission than the
+  present exact `Λ.Perm V.ende`, not permission to abandon resources.
+- **C18 zero and service failure:** must reset promise typed zero on every later
+  read, and can the page service fail? Recommend the zero-observation contract
+  already described by the source form, preserving static reservation and live
+  neighbors. For its no-else spelling, prove service availability/completion in
+  user logic; do not ignore errors or add an OS assumption. A fallible spelling
+  would require a separate owner-approved source rule. Actual allocation OOM
+  being user logic and a ceiling else being a capacity path are already decided.
+
+**Staging/rebuild impact.** Freeze the resource-flow, cleanup and provider
+interfaces together first. Implement C09 conservation and C11 cleanup/capacity,
+then C10 RW, C11 consuming and C18 checked zeroing, then C10 RCU plus C18's real
+page-service/lifetime bridge. Keep incomplete subcases explicitly refused; do
+not count store-only reset, observations without grace/reclaim, or a signature
+without source resource preservation as a completed package. One agent owns
+`grammatik/`; this document authorizes no extra builder or agent. Each structural
+batch invalidates broad syntax/semantics/embedding proofs and Stage-0 caches:
+build the changed model and all generic proofs before exporting its source
+cases, audit standard axioms and run the Lean guardian. Follow the current
+measured-memory grammar-build exception and the two global slots; Stage-0 direct
+checks use isolated artifacts and release their assigned slot per module. Final
+pipeline compilation and assembly-runner witnesses follow the same source
+fixtures. No build, grammar edit, push or merge was performed for this design.
