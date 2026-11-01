@@ -2913,3 +2913,63 @@ Open (exact):
   element and `strWeit` narrowing (the elaborator refuses a string longer than the maximum).
 - The 500-line rule: `Ausdruck.lean` (about 620 lines), `Satz.lean` and `Anweisung.lean` exceed it as they did before
   this lane; they are the `lowE`/`lowS` mutual definitions and have not been split.
+
+### IR-09 bounded inventory (base ae716338a, 2026-11-01)
+
+Read against canonical `Kern/Syntax`, G/GX and the thread machine,
+`Parser/Elab/Uebersetze{,Allg3}`, and the actual Stage0 `lowS`/`lowB`/`lowEnd`,
+`Sperre/*`, `Anweisung/Atomar`, `BildSatz` and `IRBild` paths. Here **compiled +
+connected theorem** means the existing sequential simulation with its stated
+premises; it never means the missing concurrent GX refinement is proved.
+
+| Owned form/aspect | Status and exact boundary | Connected theorem / prerequisite |
+|---|---|---|
+| Stmt `locks` (exclusive) | Compiled + connected theorem for admitted return-free bodies, including nesting, reason dispatch and loop `leave`/`next` cleanup. `retFreiB = false` or a missing body emitter refuses via `lowFunE`: `uses a form outside the IR fragment`. | `locks_ok`, `retFreiB_istZ`, mutual `lowS_ok`/`lowB_ok`/`lowEnd_ok`, `lowFun_spec`, image theorem and `irBild_correct`. `SyncOK` allows only free/mine locks and zero waiters. |
+| Shared lock acquisition / RCU observation | Refused: `shared lock without G form`; no mode-aware canonical source admission. | Model C10; existing exclusive lock sugar and separate RW lemmas do not establish shared source semantics. Out of this bounded implementation. |
+| Stmt `publish` | Compiled + connected theorem for represented scalar atomic/global values and the exact declared payload; scalar global-store path. | `lowS_ok` publish branch and ordinary world-store proof; image chain preserves existing `SichtOK`/gate premises. Multiword payload/value transport needs IR-03/06; concurrent release/publication preservation needs the missing concurrent proof. |
+| Block `awaits` | Compiled + connected theorem as a scalar acquiring load with the exact declared payload and a compilable continuation. | `awaits_head`/`awaits_ok` in `lowB_ok`; `SichtOK` remains required. Multiword representation: IR-03. Concurrent visibility: missing concurrent proof. |
+| Endblock `awaits` | Compiled + connected theorem with the same scalar/payload domain. | `endAwaits_case` in `lowEnd_ok`, then function/image chain; same IR-03/concurrent prerequisites. |
+| Block `exchange` | Compiled + connected theorem for represented numeric updates and compilable continuations; emitted CAS retry loop. Canonical updates other than supported guarded values refuse as `exchange update body other than guarded values without G form` (or the single-value variant). | `ex_tail`/`exch_head`/`exch_ok` in `lowB_ok`; sequential proof takes the successful CAS path. Failed CAS under interference: missing concurrent proof. Wider representation: IR-03. |
+| Endblock `exchange` | Compiled + connected theorem in the same scalar domain. | `endExchange_case` in `lowEnd_ok`; same representation, frontend-update and interference boundaries. |
+| TopLevel `atomT` / ordinary atomic reads | Compiled + connected theorem for zero-initialized Bool/numeric atomics whose range contains zero, with exact payload declarations. Device-observed atomics refuse as `atomic observed by a device without G form` (excluded device scope). Other represented types remain limited by frontend/IR-03. | Canonical atomic-global export, global load/store proofs, checked source provenance and image chain; G/GX ordering refinement remains missing. |
+| TopLevel `lockT` | Compiled + connected theorem for supported declarations with literal rank and no unsupported declaration clauses; masks other than `irqs` refuse as `lock masks something but irqs: no G form`; other unsupported shapes: `lock without G form: NAME`. Arena protection refuses as `arena under a lock without G form`. | `uSperre`, canonical checker and `LaySync`/`SyncOK` lock-word layout. Concurrent masking/ownership refinement remains missing; no hardware masking claim follows from sequential lock code. |
+| TopLevel `rcuT` / reclamation | Refused: `item without G form`. | Model C10: domain, observation, grace and reclamation semantics/admission/export, then IR-07 lifetime and concurrent IR proof. No missing isolated RCU emitter can close this boundary. |
+| TopLevel `concT`, `start {}` roots / multiple image threads | Compiled + connected **individual-thread** theorems: roots are collected, deduplicated and spawned before main on separate stacks, using real runner OS threads. Parameterized roots refuse as `ir: a root takes parameters`; entry/reason/argument integration belongs to IR-12/03. | `spawnC_ok`, `bild_ok`/`bild_wurzel_ok`, `irBild_correct`, existing `CloneOK`. Missing: simultaneous-thread simulation against GX/thread machine (`ir_parallel`), not a missing spawn emitter. |
+| Contended lock wait / wake | Missing proof: actual `nimmC` already emits failed-CAS, waiter increments, `futexC` WAIT and retry; `gibC` emits WAKE. Existing proofs cover neither foreign ownership nor nonzero waiters. The compiler does not reject these runtime states; its sequential theorem excludes them via `SyncOK`. | `Runner.IR.Kern.ans` is arbitrary; `Runner.Mach` special-cases clone/exit, **not futex**. No existing named assumption specifies futex waiting, wakeup or memory preservation. Do not manufacture one. Selected smallest step: prove the actual failed-acquisition prefix reaches the wait branch with all three lock words unchanged, before any syscall. |
+| Structural/concurrent `ir_parallel` | Missing: no Stage0 theorem relating a multi-thread IR run to existing GX/thread-machine boundaries/interleavings, including atomic retries, lock interference and ordering. | Existing runner SC/TSO simulations relate IR to machine execution; individual `Star`/`AgreeW` results are not this source-concurrency theorem. No full concurrent form is counted complete here. |
+
+This inventory changes no model, source admission, emitter, ABI or named
+assumption. Existing scalar refusals remain explicit; no RCU/shared-lock work,
+IR-03 migration, grammar rebuild or concurrent-completion claim is authorized
+by the selected bounded step.
+
+The bounded implementation adds `Sperre/Contended.nimm_contended` to the
+existing lock proof import chain. For arbitrary real code/frame/lock memory
+satisfying `LE`/`LS`, a nonzero owner different from `meW` makes the actual
+`nimmC` reach instruction 22 (the wait branch). The failed CAS returns the
+foreign owner in scratch slot four; owner, recursion count and waiter count
+remain unchanged, as do scratch slots from five on. The theorem holds for
+every existing `Kern` relation and stops before waiter bookkeeping or a syscall.
+It introduces no futex contract and does not extend `locks_ok`'s `SyncOK` domain.
+
+`ContendedProbe.nimm_contended_zeuge` jointly supplies encoded instruction
+bytes, writable frame/lock memory and all execution premises: this thread is
+1, owner is 2, count is 3 and there are already 5 waiters. Execution reaches
+byte PC 352, retains all three lock words, returns owner 2 in the CAS-result
+slot and preserves the protected frame word 77. This witness is imported by
+the existing `Sperre/Proben` module.
+
+Measured in this worktree's private `.claude/ir09/lib` overlay: 159 Stage0 and
+12 runner dependency modules pass direct checks, including the mutual
+statement/block/endblock dispatcher, `lowFun_spec`, `IRBild` and `Haupt`.
+Seven axiom audits (new theorem and memory witness, `locks_ok`, `lowS_ok`,
+`lowFun_spec`, `irBild_correct`, cached `gabbro_ziel`) report exactly
+`propext`, `Classical.choice`, `Quot.sound`. Six existing textual
+source-to-IR-to-assembly regressions pass: lock-reason-dispatch and
+atomic-payload-lock (42), sperre and atomar (208), start-roots (23), faeden (2).
+The RCU probe still refuses with `item without G form`. Layout passes for all
+1478 Lean files; both new Lean files are below 500 lines. Every Lean invocation
+used the capped slot-2 lock with `ELAN_TOOLCHAIN` removed; grammar artifacts
+were reused, with no grammar build or full guardian. This closes only the
+foreign-owner acquisition prefix: full WAIT/WAKE, interference, ordering and
+`ir_parallel` remain open, and no additional source-form family is claimed.
