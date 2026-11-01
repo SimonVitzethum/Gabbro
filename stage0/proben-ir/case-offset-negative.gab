@@ -1,5 +1,5 @@
 // A runtime payload is constructed with a lower bound below signed32.
-// This exercises construction; the large-bound match decoder remains refused.
+// Decoder behavior is checked separately by the tag-offset probes.
 module case_offset_negative {
 tagged type Message = { Empty, Item(i64 in -4294967396 .. -4294967296) };
 impl fn construct(x : i64 in -4294967396 .. -4294967296) -> u8 effects { pure } {

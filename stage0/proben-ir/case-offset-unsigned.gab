@@ -1,5 +1,5 @@
 // A runtime payload is constructed with a lower bound near the unsigned64 maximum.
-// This exercises construction; the large-bound match decoder remains refused.
+// Decoder behavior is checked separately by the tag-offset probes.
 module case_offset_unsigned {
 tagged type Message = { Empty, Item(u64 in 18446744073709551515 .. 18446744073709551615) };
 impl fn construct(x : u64 in 18446744073709551515 .. 18446744073709551615) -> u8 effects { pure } {
