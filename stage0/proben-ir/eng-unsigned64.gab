@@ -1,0 +1,19 @@
+// Guard narrowing of a high unsigned value preserves its high bit and exact update.
+module ir_probe {
+type Stand = u64;
+atomic ZAEHLER : Stand relaxed;
+impl fn main() -> u64
+    effects { reads ZAEHLER, writes ZAEHLER }
+    costs <= 100000 ops
+{
+    let first = ZAEHLER exchange update(v) {
+        return 9223372036854775808;
+    } publishes nothing;
+    let second = ZAEHLER exchange update(v) {
+        if v < 18446744073709551615 { return v + 1; }
+        return 0;
+    } publishes nothing;
+    let value = ZAEHLER awaits { };
+    return value >> 63;
+}
+}

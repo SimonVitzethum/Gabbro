@@ -1,0 +1,17 @@
+// Overlapping signed/unsigned domains need the guard even for equal positive values.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 42 effects { pure } {
+    let signed : i64 = 7;
+    let unsigned : u64 = 7;
+    if signed == unsigned {
+        if unsigned == signed {
+            if signed < unsigned { return 0; }
+            if unsigned < signed { return 0; }
+            if signed <= unsigned {
+                if unsigned <= signed { return 42; }
+            }
+        }
+    }
+    return 0;
+}
+}

@@ -273,7 +273,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computed_range_decisions_zeuge
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan_ok
-#print axioms Gabbro.Stage0.Senke.floatKeyL_ok
 #print axioms Gabbro.Stage0.Senke.floatRangeL_raw_ok
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok_zeuge
@@ -371,5 +370,4 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_outcomes_zeuge
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge
 #print axioms Gabbro.Stage0.Senke.retFreiGrundArms_istZ
-#print axioms Gabbro.Stage0.Senke.retFreiB_istZ
 #print axioms Gabbro.Stage0.Senke.locks_reason_zeuge
