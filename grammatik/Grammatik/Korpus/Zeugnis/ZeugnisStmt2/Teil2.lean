@@ -7,6 +7,9 @@ public import Grammatik.Korpus.Zeugnis.ZeugnisStmt2.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- Joint second-batch block soundness: `lift` reuses the old layer,
+    `cons2` threads through both statement layers, the five new shapes
+    elaborate inline. Every hypothesis is used. -/
 theorem seq2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) (q : CertSeq2 D V)
     (h : certSeq2Gueltig D V l Γ Λ Λ' q) :

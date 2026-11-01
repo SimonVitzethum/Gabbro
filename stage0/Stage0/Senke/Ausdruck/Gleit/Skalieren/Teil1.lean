@@ -441,5 +441,4 @@ theorem floatPackCarryL_rundeBruchKern {Γ : Ctx} {ρ : Env D Γ}
   exact floatPackCarryL_canonical F sign _ _ hs hecode hqcode hu hm he hq
 
 
-/-- Both signs and formats jointly exercise a halfway integer that carries. -/
 end Gabbro.Stage0.Senke

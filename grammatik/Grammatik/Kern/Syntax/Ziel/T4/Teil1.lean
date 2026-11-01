@@ -432,14 +432,4 @@ theorem kette_mit_zeugen_schritt
 
 #print axioms Gabbro.Grammatik.kette_mit_zeugen_schritt
 
-/-- **The witnessed step over the computed program, non-oracle leaves.**
-    The firing data of a non-oracle leaf builds the covered PC step through
-    `pcSchritt_blatt_progAus_ohne_axiomCall` (read-only reuse, same file --
-    `hleaf`/`hax`/`hkein_nimmt`/`hpc`/`hΛa`/`hcs` feed exactly that lifter and
-    its `PCReach` leg), while the SAME `neu` feeds the witnessed chain
-    extension (`kette_mit_zeugen_schritt`, above) with the frame wiring
-    (`hW`/`hG`), the prefix witness duty (`hwit_old`), and the step witness
-    (`hneu_wit`). The conclusion carries the extended chain, its member, the
-    unconditional table link, the guard, and the covered run. Every premise
-    is load-bearing. -/
 end Gabbro.Grammatik

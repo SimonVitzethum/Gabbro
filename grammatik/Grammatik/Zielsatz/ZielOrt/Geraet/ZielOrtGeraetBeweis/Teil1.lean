@@ -425,7 +425,5 @@ theorem fadenG_ax (e0 : Ereignis D) {z : RufFadenG D} {W : World D} (hF : FadenG
     rw [hr] at h1
     exact ZErg.folgt_trans h1 (hsem O' R σ hQ.2.2 (hA _ _ _ _ (List.mem_append_right _ List.mem_cons_self)))
 
-/-- **A leaf step keeps the replay**: a non-axiom leaf by leaf locality, an
-    axiom call by recording its answer (`fadenG_ax`). -/
 end Schritte2
 end Gabbro.Grammatik

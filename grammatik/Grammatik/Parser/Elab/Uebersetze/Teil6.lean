@@ -451,5 +451,4 @@ def uWrap (ctx : UCtx) (tb f : String) (v : USide) : USide :=
   | some (_, m) => .rem (.add v (.lit m)) (.lit m)
   | none => v
 
-/-- `place = v;` at a slot or a static (the place reader decides which). -/
 end Gabbro.Grammatik.Parser.Uebersetze

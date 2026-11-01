@@ -417,7 +417,4 @@ theorem profil_modell {D : Deklaration} (P : Profil D)
 def zeugeArch : Nat := 1
 def zeugeKontraktionAus : Nat := 0
 
-/-- The witness declaration: no tables needed for the profile layer itself,
-    but rule 13 demands a non-degenerate program for the run half -- so the
-    witness declaration carries one table that some function writes. -/
 end Gabbro.Grammatik

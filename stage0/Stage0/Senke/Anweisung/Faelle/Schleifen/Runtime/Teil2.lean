@@ -13,6 +13,10 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR
 variable [Kern]
 
+/-- Execute the actual source invariant and then the generically lowered body.
+    The read event, callee frame, return ABI and protected slots are inherited
+    from `lowE_ok`, `choice_ok` and the explicit child induction contract.
+    This is one positive pass, not yet the counter/header integration. -/
 theorem forever_source_pass {D : Deklaration} {L : Lay D}
     {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}

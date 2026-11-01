@@ -13,6 +13,7 @@ variable (z) in
 variable (z) in
 variable (z) in
 
+/-- **A whole function read back.** -/
 theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn) {tabs : List UTab}
     {locks : List ULock} {globs : List UGlob} {whys : List UWhy} {regs : List UReg}
     (hL : LInv z gNr tabs locks globs whys regs) (hM : ∀ m : z.deklaration.Marke, False)

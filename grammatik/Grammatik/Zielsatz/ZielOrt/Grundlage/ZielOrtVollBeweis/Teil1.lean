@@ -441,6 +441,5 @@ theorem popV_ens (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f) {G : RufRahm
   exact ens_transfer hE (GleichAuf.refl _ _)
     (GleichAuf.mono (fun _ h => fuss_ens P G.f h) ((gleichAuf_SG hsg).trans hgl))
 
-/-- **The call leg.** -/
 end Schritte
 end Gabbro.Grammatik

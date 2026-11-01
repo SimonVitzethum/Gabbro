@@ -398,6 +398,5 @@ theorem tripel_proj {α β γ : Type} (as : List α) (bs : List β) (cs : List �
         obtain ⟨i1, i2, i3⟩ := ih bs cs h1 h2
         simp_all
 
-/-- **The head read back.** -/
 end Kopf
 end Gabbro.Grammatik.Gen.Text

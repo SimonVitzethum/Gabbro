@@ -443,6 +443,4 @@ theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int 
       rw [h]
 
 end
-/-- **Der Fussabdruck-Schlussstein (R1):** `eval` liest nur `Expr.orte` --
-    die Form ohne Deckungsliste: die Orte des Ausdrucks selbst genuegen. -/
 end Gabbro.Grammatik.Extraktion

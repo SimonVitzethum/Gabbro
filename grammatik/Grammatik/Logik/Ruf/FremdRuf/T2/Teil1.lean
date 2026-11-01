@@ -421,13 +421,4 @@ theorem fdObadFitR : einpassenErg fdObad.zeiger (fdD.aerg fdRead)
     have hpos : (0 : Int) ≤ (0 : Int) ∧ (0 : Int) ≤ (100 : Int) := by decide
     exact absurd hpos hcond
 
-/-- ZEUGE: every premise of `fremdruf_gate_gilt_pre` holds jointly on the
-    fixture with the BAD oracle -- frame, restricted premise, the read gate's
-    declared effects, the caller's obligation at a well-formed read after
-    the open (descriptor `3`), a fitting answer -- and the witness is
-    non-degenerate: the same oracle breaks the full premise
-    (`fdObad_nicht_voll`), the precondition is false at another call
-    (`fdPflicht_verletzt`), and the open gate's own precondition held
-    at the start world (the terminator stood) and fails after it (the
-    marker overwrote it). -/
 end Gabbro.Grammatik

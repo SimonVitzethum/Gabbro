@@ -8,6 +8,9 @@ public import Grammatik.Korpus.Referenz.ReferenzB.T1.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- Step B fires the writing leaf `konto[0] := 100` on thread 1.
+    The outcome and events are named from the `execStmt` equation for
+    `assignSlot`, so the `blatt` constructor closes on `rfl` facts. -/
 def refM2B : RufMaschineD refD :=
   ⟨(((refM1B.weltVon 1).lese [Res.held (D := refD) ()]
       (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]

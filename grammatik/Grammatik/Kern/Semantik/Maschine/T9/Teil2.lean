@@ -8,6 +8,9 @@ public import Grammatik.Kern.Semantik.Maschine.T9.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- **Firing a memory-preserving leaf keeps live memory.** From the firing
+    evidence alone: excluded shapes die at the `speicherfest` test, the nine
+    included shapes compute to a read-only or unchanged world. -/
 theorem speicherfest_speicher
     (O : Orakel D) (passes : Nat)
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))

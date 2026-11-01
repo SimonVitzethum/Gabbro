@@ -444,5 +444,4 @@ def lowZeigerN (u : UProg) (Γ : Ctx) (fn : UFn) (p : String) : Except String (�
       | .ok v => .ok ⟨n, v⟩
     | _ => .error "call through a name that is no function pointer"
 
-/-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type. -/
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

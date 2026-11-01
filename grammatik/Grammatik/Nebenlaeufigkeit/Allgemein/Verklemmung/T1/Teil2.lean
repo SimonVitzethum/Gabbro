@@ -9,6 +9,9 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T1.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- **A head-local step**: a new head of the same function, held locks `o'`
+    each named by the new head or old and carried, or ranking at least
+    every floor of the stack. -/
 theorem rangKette_kopf {o o' : List D.Lock} {F F' : RufRahmenG D} (hf : F'.f = F.f) :
     ∀ {S : List (RufRahmenG D)}, RangKette o (fun _ => False) F S →
     (∀ K ∈ o', Res.held K ∈ F'.rest.2.2.1 ∨

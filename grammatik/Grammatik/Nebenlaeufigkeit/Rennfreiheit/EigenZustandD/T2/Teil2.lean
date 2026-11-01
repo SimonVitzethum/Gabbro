@@ -9,6 +9,7 @@ namespace Gabbro.Grammatik.EZD
 open Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- `advances` keeps every table slot (mark step, memory-free). -/
 theorem advances_slots_fest (O : Orakel D) (passes : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {mm : D.Marke} {a : Nat} {h : Res.marke mm a ∈ Λ} {hs : a + 1 < D.stufen mm}

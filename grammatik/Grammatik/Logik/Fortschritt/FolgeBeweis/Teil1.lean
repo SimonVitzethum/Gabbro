@@ -262,6 +262,5 @@ macro "kopfF" : tactic => `(tactic| (
   simp only [GRest.fR, fE, fB, fS, fNach, fB_alsBlock, Bool.and_eq_true] at hk ⊢))
 
 set_option maxHeartbeats 4000000 in
-/-- **Every rule of G keeps the order invariant.** -/
 end Schritt
 end Gabbro.Grammatik

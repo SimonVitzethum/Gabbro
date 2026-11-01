@@ -428,7 +428,4 @@ theorem stmt2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     recursion, since each helper recurses on a certificate it receives
     as an argument rather than on its own matched subterm. -/
 
-/-- Joint second-batch block soundness: `lift` reuses the old layer,
-    `cons2` threads through both statement layers, the five new shapes
-    elaborate inline. Every hypothesis is used. -/
 end Gabbro.Grammatik

@@ -13,6 +13,7 @@ open Gabbro.Grammatik
 open Gabbro.Grammatik.GabbroV
 variable {D : Deklaration}
 
+/-- The root has a child: deleting it first is a non-leaf deletion. -/
 theorem baumWurzel_hat_kind :
     ((kantenBild baumD baumWelt () .Kind hfKind 0).map Zahl.n) = some 1 := by
   decide

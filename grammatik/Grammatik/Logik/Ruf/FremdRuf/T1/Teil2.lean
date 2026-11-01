@@ -10,6 +10,7 @@ public import Grammatik.Logik.Ruf.FremdRuf.T1.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- The read-back count `0` as an answer. -/
 def fdW0 : ErgVal fdD (fdD.aerg fdRead) := ⟨0, by decide, by decide⟩
 
 /-- The read call environment, carrying descriptor `3`. -/

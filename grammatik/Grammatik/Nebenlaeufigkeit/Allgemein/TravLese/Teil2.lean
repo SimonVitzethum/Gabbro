@@ -391,11 +391,4 @@ theorem taLauf1 (M : RufMaschineG taD) (h1 : M.faeden 1 = taZ1)
 
 /-! ## 4. The whole run by index -/
 
-/-- **The run of `taP`, by index** (29 steps from the start machine): steps
-    0-18 by thread 0, steps 19-28 by thread 1. Step 2 fires `dannTrav`
-    (the head residue goes from the unfolded `traverse` to the loop state),
-    step 3 fires `travNext` (index 0 bound, the body scheduled); steps 4 and
-    8 write `tab[0]` and `tab[1]` (`0 -> 1`); step 16 publishes `flag := 1`
-    (`0 -> 1`); step 24 fires `dannBind` (thread 1 reads `flag`, the
-    bound value is `1`); the returns of `fuelle` and `warte` are logged. -/
 end Gabbro.Grammatik.TravLese

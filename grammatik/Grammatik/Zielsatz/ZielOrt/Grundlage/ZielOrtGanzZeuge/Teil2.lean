@@ -10,6 +10,8 @@ public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- **`ziel_ort_ganz_vertrag_zeuge`** -- the contract half with a non-trivial
+    declared ensures, its premises jointly on `axP`. -/
 theorem ziel_ort_ganz_vertrag_zeuge :
     (∀ f : axD.Fn, KoerperGutRQ axP 0 axQ f) ∧
     ∀ M : RufMaschineG axD, RufErreichbarG axP axO 0 (RufStartG axP axSp axInit) M →

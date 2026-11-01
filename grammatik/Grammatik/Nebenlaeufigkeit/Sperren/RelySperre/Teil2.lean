@@ -11,6 +11,7 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- Step 2 (witness): thread 1 fires the writing leaf at position 1. -/
 theorem wit_leaf :
     PCSchritt refP refO 0 witProg refPC1pre refB_pc1 1 refPC2 refB_pc2 := by
   have hpc : (witProg 1)[refB_pc1 1]? =

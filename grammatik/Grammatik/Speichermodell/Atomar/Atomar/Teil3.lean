@@ -11,6 +11,11 @@ variable {D : Deklaration}
 section Rennen
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- **Race freedom on every GA run from the start, for every non-atomic carrier**: two accesses
+    by different threads, one a write, are ordered through a guard lock. Guarded carriers: the
+    guard is held at both accesses (`zugriff_haeltA` on the presented steps), then
+    `sperre_ordnetGA`. Unguarded non-atomic carriers are write-separated over the call graphs
+    (`hsep`), so no such pair exists. -/
 theorem rennfreiGA {fs : List D.Fn} (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hex : StartExklusiv init) (K : Faden → D.Fn → Bool) (hAbg : ∀ t, AbgK P fs (K t))

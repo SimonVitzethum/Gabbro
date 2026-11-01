@@ -409,6 +409,4 @@ theorem axiom_erw {O : Orakel D} (hO : GutO O) (a : D.Ax) (σ : World D)
   refine ⟨_, hsp, fun e he => ?_⟩
   rcases axiomSpur_mem he with ⟨t, _, _, rfl⟩ | ⟨g, _, _, rfl⟩ <;> rfl
 
-/-- **A leaf that is no return, reason or abrupt exit** ends normally with
-    a trace extended by accesses, or answers hardware, or answers `logik`. -/
 end Gabbro.Grammatik

@@ -9,6 +9,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.Teil3
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
 
+/-- An aggregate static (a number static goes to the integer lowering). -/
 def lowGlobWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String) :
     Option (Except String (LowWert u Γ Λ)) :=
   match globIdx u.globs p with
@@ -426,5 +427,4 @@ def arrayCarrier (u : UProg) (count : Nat) : Except String (ArrayCarrier u count
   else .error "source export: array iterator count disagrees with its value"
 
 
-/-- One `ensures` predicate. -/
 end Gabbro.Grammatik.Parser.UebersetzeAllg

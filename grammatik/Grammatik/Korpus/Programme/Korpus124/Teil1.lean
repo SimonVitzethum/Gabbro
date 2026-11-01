@@ -437,7 +437,5 @@ theorem kB_schreib {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD} {passes : N
         execEndH S O U passes R (.cons kLocksB (.ret .empty List.Perm.nil)) σ2 ρ :=
   ⟨_, rfl⟩
 
-/-- `hauptB`: the caller duty from the lock invariant at the acquire; the
-    release check from `setze`'s `ensures`. -/
 end K124
 end Gabbro.Grammatik

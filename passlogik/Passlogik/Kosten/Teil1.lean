@@ -431,6 +431,4 @@ theorem alte_regel_zaehlt_zu_wenig :
        <= die Summe ihrer `held`)."
 -/
 
-/-- **`K002`.** Der Rumpf eines `locks`-Blocks kostet hoechstens die deklarierte
-    Haltezeit -- und zwar an JEDEM `locks`-Block im Baum. -/
 end Passlogik.Kosten

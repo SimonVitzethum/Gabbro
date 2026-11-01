@@ -444,5 +444,4 @@ abbrev D59D : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-/-- Contract for `zaehle` (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`): writes Takte. -/
 end Gabbro.Grammatik

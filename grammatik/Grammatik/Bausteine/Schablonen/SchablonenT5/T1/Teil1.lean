@@ -440,8 +440,4 @@ def jointMove (σ : Nat → Nat) (p1 p2 v1 v2 : Nat) : Nat → Nat :=
 def jointTrace (σ : Nat → Nat) (p1 p2 v1 v2 : Nat) : List (Nat → Nat) :=
   [σ, jointMove σ p1 p2 v1 v2]
 
-/-- Soundness of `transition.transset`: the named observer sees no
-    change anywhere in the trace. `hObs` names both moved places as
-    outside the footprint; `hw`/`hq` fix the world and the observed
-    place. All four are consumed. -/
 end Gabbro.Grammatik

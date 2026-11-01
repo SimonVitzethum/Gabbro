@@ -422,10 +422,6 @@ theorem dynCommit_monoton (A : DynForm D) (n : Int) (Λ : List (Res D)) (σ : Wo
   rw [nachGrow, DynForm.komSt_schreibGlob, komSt_hin_her A _ h0 h]
   omega
 
-/-- **Below the committed prefix, `alloc` does not take its `else`** -- the
-    model half of the R-commit rule. The body is `ArenaZucker`'s
-    `arenaRumpf`, unchanged: past the test, a dynamic arena IS a static one.
-    The index bound is the OLD used counter, as there. -/
 end Bedeutung
 end Form
 end Gabbro.Grammatik.ArenaDyn

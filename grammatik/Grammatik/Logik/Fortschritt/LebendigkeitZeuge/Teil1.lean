@@ -229,5 +229,4 @@ theorem lAkt_wert (n : Nat) :
         if_neg (show ¬ n ≤ 14 by omega), if_pos h2]⟩
 
 set_option maxHeartbeats 8000000 in
-/-- **The run, tabled.** -/
 end Gabbro.Grammatik

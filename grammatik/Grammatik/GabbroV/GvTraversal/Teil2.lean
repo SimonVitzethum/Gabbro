@@ -9,6 +9,7 @@ namespace Gabbro.Grammatik.GabbroV.GvTraversal
 open Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D} {τ : Ty} {Γ : Ctx} {l : Bool}
 
+/-- The invariant holds at every boundary; the world passes through. -/
 def gvInv : World gvD → Env gvD [] → World gvD × Bool :=
   fun σ _ => (σ, true)
 

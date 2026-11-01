@@ -10,6 +10,7 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.Ressourceninvariante.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- The witness invariant is local: it reads only `konto` slots. -/
 theorem refInv81_lokal (s s' : Speicher refD)
     (h : ∀ k f, s.slots () k f = s'.slots () k f) :
     refInv81 s ↔ refInv81 s' := by

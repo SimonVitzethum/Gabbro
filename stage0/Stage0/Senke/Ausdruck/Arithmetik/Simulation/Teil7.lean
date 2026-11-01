@@ -17,6 +17,12 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {K base top reserved : Nat} {code : List II} {origin target : Int}
     {originDistance budget : Nat}
 
+/-- Central induction, with the complete active iteration still explicit.
+    The target exit is discharged by actual emitted execution above.
+    The iteration premise is not an implementation of the missing proof.
+    In particular a word-arithmetic lemma alone cannot discharge `iteration`:
+    it must supply actual Runner execution and re-establish the entire head.
+    This theorem is not sufficient to enable the lowering hook. -/
 theorem floatNormalizeLoopL_induction
     (hc : floatNormalizeLoopL base = some (code, top))
     (room : base+6 < K)

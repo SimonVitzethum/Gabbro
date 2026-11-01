@@ -10,6 +10,11 @@ variable {D : Deklaration}
 section Delta
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- **The trace delta of one step.** Every step of thread `f` either is an
+    access step (`ZugriffsDelta`: no lock taken, held locks unchanged, new
+    access events good) or a lock step (`SperrDelta`: only lock events, and
+    shared memory unchanged). The lock steps are exactly `dannLocks`,
+    `freiGib` and the two `frei` peels. -/
 theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     (hs : RufSchrittG P O passes M f M') :
     ZugriffsDelta (M.faeden f).spur (M'.faeden f).spur ∨

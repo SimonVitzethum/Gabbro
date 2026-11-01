@@ -442,7 +442,4 @@ theorem gabbro_ziel_leben : GabbroZielLeben := by
       O.mitRuhe hH' passes sp init hZ (R.M n) (gx_aus_g_lauf (hr n))).fortschritt)
     hFair hSp
 
-/-- **The goal on every run of machine GX** (every thread live, nothing spawned): the reading
-    of `GabbroZiel` over plain GX runs, as `gabbro_ziel_g` is the reading of the statement of
-    before over G runs. -/
 end Gabbro.Grammatik.Zielsatz

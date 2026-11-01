@@ -13,6 +13,7 @@ open Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- Join lines. -/
 def zeigeZeilen : List String → String
   | [] => ""
   | [x] => x

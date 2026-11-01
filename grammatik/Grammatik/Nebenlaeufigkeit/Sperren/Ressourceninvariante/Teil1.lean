@@ -453,5 +453,4 @@ theorem refB_prog_kein_rel (f : Faden) (n : Nat) (L' : refD.Lock) :
 theorem refInv81_guard : Sum.inl () ∈ refD.braucht () :=
   List.mem_singleton.mpr rfl
 
-/-- The witness invariant is local: it reads only `konto` slots. -/
 end Gabbro.Grammatik

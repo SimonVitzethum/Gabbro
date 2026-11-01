@@ -8,6 +8,8 @@ public import Grammatik.Kern.Syntax.Extraktion.T3.Teil2
 namespace Gabbro.Grammatik.Extraktion
 variable {D : Deklaration}
 
+/-- **Der Fussabdruck-Schlussstein (R1):** `eval` liest nur `Expr.orte` --
+    die Form ohne Deckungsliste: die Orte des Ausdrucks selbst genuegen. -/
 theorem eval_liest_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (e : Expr D Γ Λ τ)
     (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)

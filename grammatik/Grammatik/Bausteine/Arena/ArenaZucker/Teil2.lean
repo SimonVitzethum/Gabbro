@@ -10,6 +10,8 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 namespace ArenaZeuge
 
+/-- The bump, run: the counter stands at 1, the bound index is 2, and after the store it
+    stands at 3. -/
 theorem zeuge_bump (O : Orakel ZD) (passes : Nat)
     (R : ∀ f : ZD.Fn, World ZD → Env ZD (ZD.params f) → RufAusgang f) :
     ∃ σ' : World ZD,

@@ -14,6 +14,7 @@ namespace Gabbro.Grammatik.GvAtomKoerper
 open Gabbro.Grammatik.Zielsatz NIZeuge AtomarXZeuge
 variable {D : Deklaration}
 
+/-- Any other read (here: the empty one of `.empty`) is untouched. -/
 theorem hBeide_pin0 (s₁ s₂ : Speicher nD) (w : World nD) :
     pinA (GeteiltA hPBeide [NFn.kern, NFn.zaehlB]) [.inr NGlob.konfig]
       [.inr NGlob.konfig, .inl NTab.tabB] s₁ s₂ [] w = w := by

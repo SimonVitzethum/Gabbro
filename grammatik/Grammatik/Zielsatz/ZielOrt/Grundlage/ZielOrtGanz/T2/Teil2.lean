@@ -8,6 +8,21 @@ public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- **The `logik` checks of G pass for thread `t` of `M`.** At each of the
+    five places where a rule of G tests a `logik` condition of the running
+    frame, the test passes at the thread's machine world:
+    * a `traverse` boundary (`travNext`, `travDone`): the invariant holds;
+    * a `forever` boundary with budget left (`ewigWeiter`): the invariant
+      holds;
+    * a `leave` out of a `traverse` body (`dannLeaveTrav`): the invariant
+      holds at the exit;
+    * a leaf at the head of an end block or of a block (`blatt`,
+      `dannBlatt`; the only leaf with a `logik` outcome is a `state`
+      transition): its outcome is no `logik` outcome, so the transition
+      finds its pre-state.
+    `nachbedingung`, `invariante`, `abstieg` and `vorbedingung` are no
+    checks of G at all (G logs entries and returns and has no depth
+    bound). -/
 def PrueftG (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (t : Faden) : Prop :=
     (∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (tb : D.Tab)
         (inv : Expr D Γ Λ .bool)

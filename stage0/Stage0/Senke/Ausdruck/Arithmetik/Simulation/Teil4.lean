@@ -17,6 +17,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {K base top reserved : Nat} {code : List II} {origin target : Int}
     {originDistance budget : Nat}
 
+/-- Materialize the carry threshold only after the actual distance guard. -/
 theorem floatNormalizeLoopL_large_carry_denominator
     (hc : floatNormalizeLoopL base = some (code, top))
     {m : Runner.Mem} {distance : Nat}
@@ -450,6 +451,5 @@ theorem floatNormalizeLoopL_large_carry_arithmetic
 
 #print axioms floatNormalizeLoopL_large_carry_arithmetic
 
-/-- Both large paths skip the SMALL code using the emitted jump. -/
 end
 end Gabbro.Stage0.Senke

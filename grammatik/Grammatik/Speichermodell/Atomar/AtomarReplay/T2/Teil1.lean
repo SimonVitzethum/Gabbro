@@ -408,8 +408,5 @@ theorem popSA_kopf {F : RufRahmenG D}
     exact hwahl R O' U A _ _ hc
 
 
-/-- **A push through a read set `os`** (as `pushS_gen`): the read is recorded; the callee's key
-    world is the sequential world after the read (it agrees with the machine's entry world on
-    the caller's stable carriers and on `os`). -/
 end Schritte
 end Gabbro.Grammatik

@@ -443,5 +443,4 @@ theorem AusF.folge_zurueck (σ : World D) (v : ErgVal D V.erg)
       .widen (.zurueck σ v) :=
   by rfl
 
-/-- A raised ground does not continue. -/
 end Gabbro.Grammatik

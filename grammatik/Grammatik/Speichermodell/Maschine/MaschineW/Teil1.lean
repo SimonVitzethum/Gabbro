@@ -383,7 +383,5 @@ theorem beitrag_le {T : D.Tab ⊕ D.Glob → Nat} {o : Ordnung} {c : D.Tab ⊕ D
   · exact Nat.max_le.mpr ⟨hs x, heins⟩
 
 open Classical in
-/-- **One G step lifts to a W step** that keeps the SC shape; every write sits right above the
-    message read at its carrier (`neu c = ts + 1`: the step is atomic for an RMW, `RMW.lean`). -/
 end Einbettung
 end Gabbro.Grammatik

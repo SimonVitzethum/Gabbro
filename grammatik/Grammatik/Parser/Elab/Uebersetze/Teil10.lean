@@ -13,6 +13,10 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil9
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
+    `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
+    end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
+    Structural in a fuel (one unit per statement and per block). -/
 def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
   | 0, _, _ => .error "nesting without G form"
@@ -445,7 +449,4 @@ def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr →
     | .ext k ns xs => .ext k ns (xs.map (uSpecEin specs n))
     | e => e
 
-/-- The contract clauses with every `spec fn` inlined: `refines g` is `ensures g(params)` (`M131`/`M132`),
-    `maintains` documents (the owed invariants are derived from `effects`), `by induction over` names a scheme
-    and carries no term. Without `spec fn`s the clauses stay as they are. -/
 end Gabbro.Grammatik.Parser.Uebersetze

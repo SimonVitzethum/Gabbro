@@ -10,6 +10,7 @@ variable {D : Deklaration}
 variable {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
 variable {V : Vertrag D} {l : Bool}
 
+/-- A raised ground does not continue. -/
 theorem AusF.folge_grund (σ : World D) (r : Fin V.gruende)
     (nach : World D → Env D Γ → AusF V l Γ) :
     (AusF.widen (.why σ r) : AusF V l Γ).folge nach =

@@ -7,6 +7,9 @@ public import Grammatik.Kern.Syntax.Profil.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- The witness declaration: no tables needed for the profile layer itself,
+    but rule 13 demands a non-degenerate program for the run half -- so the
+    witness declaration carries one table that some function writes. -/
 def zeugeD : Deklaration where
   Tab := Unit
   decTab := inferInstance

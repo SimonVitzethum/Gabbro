@@ -431,7 +431,4 @@ theorem rufRumpfF_eq : rufRumpfF = Endblock.cons leafSF restF := by rfl
 /-- The leaf is a leaf. -/
 theorem leafSF_blatt : leafSF.istBlatt = true := by rfl
 
-/-- The leaf writes: the outcome is `.ok` with a changed world and the same
-    environment. The world changes because `assignSlot` stores the parameter
-    value 2 at slot 0 (was 0); the trace gains the write event. -/
 end Gabbro.Grammatik

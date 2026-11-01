@@ -12,6 +12,7 @@ variable {D : Deklaration}
 section Positiv
 variable (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
+/-- An end block run as a block costs `kostenSonst`. -/
 theorem kostenBlock_alsBlock :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ),
       kostenBlock c pa e.alsBlock.2 = kostenSonst c pa e

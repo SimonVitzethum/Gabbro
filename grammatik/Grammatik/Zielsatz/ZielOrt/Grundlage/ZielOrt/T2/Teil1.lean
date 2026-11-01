@@ -214,13 +214,5 @@ def TraegerGleich (s s' : Speicher D) : D.Tab ⊕ D.Glob → Prop
 theorem traegerGleich_refl (s : Speicher D) (c : D.Tab ⊕ D.Glob) : TraegerGleich s s c := by
   cases c <;> rfl
 
-/-- **The rely, one step.** A step of thread `u` leaves a carrier `c` alone
-    if (a) some lock guarding `c` is not held by `u`, or (b) the signature of
-    `u`'s head function does not permit writing `c`. Every writing step
-    carries its carrier's guards in the static holdings (`darf`/`gdarf` on
-    the write, on `exchange`, on the axiom's declared writes) and the
-    signature permission (`hw`), and every writing step now demands
-    `HeldGenau`, so (a) contradicts a write; the frame of `stmt_gut` and
-    of the oracle (`GutO`) gives (b). -/
 end Sperren
 end Gabbro.Grammatik

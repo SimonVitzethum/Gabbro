@@ -7,6 +7,13 @@ public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- **The run.** Eighteen steps of the repaired G from the start machine of
+    `zP` (every thread in `haupt`, `konto` all zero): thread 1 takes the lock,
+    enters `wrap`, calls `lies` (reads 0) and `einzahlen` (writes 100),
+    returns to `haupt` and releases the lock (twelve steps, the machine `M9`
+    after the ninth: the write done, both calls logged and returned); then
+    thread 0 takes the lock, enters `wrap` and `lies`, reads `konto[0]` --
+    the 100 thread 1 wrote -- and returns it. -/
 theorem zLauf : ∃ M9 M17 M18 : RufMaschineG zD,
     RufErreichbarG zP zO 0 (RufStartG zP zSp zInit) M9 ∧
     RufErreichbarG zP zO 0 M9 M17 ∧ RufErreichbarG zP zO 0 M17 M18 ∧

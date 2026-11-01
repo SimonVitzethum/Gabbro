@@ -17,6 +17,8 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {K base top reserved : Nat} {code : List II} {origin target : Int}
     {originDistance budget : Nat}
 
+/-- Commit the two SMALL results from their actual temporary slots. The
+    distance, target and budget slots survive the emitted copies. -/
 theorem floatNormalizeLoopL_small_copies
     (hc : floatNormalizeLoopL base = some (code, top))
     {m : Runner.Mem} (h : Pre L m pc fp K base code ρ W reserved)
@@ -443,11 +445,5 @@ theorem floatNormalizeLoopL_small_iteration
 
 #print axioms floatNormalizeLoopL_small_iteration
 
-/-- Central induction, with the complete active iteration still explicit.
-    The target exit is discharged by actual emitted execution above.
-    The iteration premise is not an implementation of the missing proof.
-    In particular a word-arithmetic lemma alone cannot discharge `iteration`:
-    it must supply actual Runner execution and re-establish the entire head.
-    This theorem is not sufficient to enable the lowering hook. -/
 end
 end Gabbro.Stage0.Senke

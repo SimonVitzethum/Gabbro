@@ -12,6 +12,8 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
+/-- Joint minimum-integer, tie, carry and shift-zero fixtures discharge every outer-right premise and execute the
+    emitted assembly with the canonical conversion result. -/
 theorem floatOfIntAssemblyL_right_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
     (W : Runner.Mem → Prop) :
     ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64], ∀ z ∈ ([-9223372036854775808, 9007199254740993, 18014398509481983, 4503599627370496] : List Int),

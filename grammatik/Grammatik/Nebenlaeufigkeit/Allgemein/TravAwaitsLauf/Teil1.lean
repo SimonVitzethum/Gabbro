@@ -350,9 +350,4 @@ theorem taRang0 : ∀ M, Res.held M ∈ ([] : List (Res taD)) → taD.rang M < t
 def taKFrei1 : GRest taD (vertragVon taD taHaupt1) false [] taKL :=
   .frei TaLock.k (.dann .nil (.ende taRetH1))
 
-/-- **Thread 1's part of the run.** From any machine where thread 1 is at
-    its start, `flag` is `1`, and no other thread holds `k`: 10 steps of
-    thread 1 -- unfold `locks k` (1), take `k` (2), call `warte` (3), unfold
-    its `if` (4, 5), fire `awaits` reading `flag` (6), close the blocks
-    (7, 8, 9), return to `haupt1`, logged (10). -/
 end Gabbro.Grammatik

@@ -431,6 +431,4 @@ theorem rd_rel_step {lay : Layout D} (hL : LayoutOk lay) {lese : Lese D} {M : Ru
 
 /-! ## 4. The steps: the writer -/
 
-/-- **The writer's take that finds the lock free** (G's `dannLocks`): the word is `0`, so no reader and no writer
-    holds: `RufFreiG`. The thread is not a reader of `L`. Afterwards it holds alone. -/
 end Gabbro.Code.Lower

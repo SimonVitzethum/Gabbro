@@ -437,6 +437,4 @@ theorem lex_ofList (l : List Char) : lex (String.ofList l) = lexL l := by
   unfold lex lexL
   rw [String.toList_ofList, String.length_ofList]
 
-/-- Decidable equality on lexing outcomes (core Lean 4.33 has none for
-    `Except`): both sides agree constructor-wise and inside. -/
 end Gabbro.Grammatik.Parser

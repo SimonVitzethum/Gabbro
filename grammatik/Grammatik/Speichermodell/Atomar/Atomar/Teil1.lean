@@ -329,7 +329,5 @@ theorem frei_schreiberA (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : �
   rw [this] at hgw
   cases hgw
 
-/-- **ONE STEP OF W ON A PROGRAM WITH RACING ATOMICS IS A STEP OF GA, and keeps the
-    invariant.** -/
 end Schritt
 end Gabbro.Grammatik

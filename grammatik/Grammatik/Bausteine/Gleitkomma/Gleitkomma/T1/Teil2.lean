@@ -6,6 +6,10 @@ public import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil1
 
 namespace Gabbro.Grammatik.Gleitkomma
 
+/-- Monotonicity of the significand decision: a larger value (same
+    denominator, quotient-remainder ordered, the upper remainder normalised)
+    never rounds down further. `hr₂` is load-bearing (`5,0` vs `3,25` at
+    `den = 10` breaks it); the lower remainder needs no bound. -/
 theorem rundeInt_monoton (quo₁ rest₁ quo₂ rest₂ den : Nat)
     (hr₂ : rest₂ < den)
     (h : quo₁ * den + rest₁ ≤ quo₂ * den + rest₂) :

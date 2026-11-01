@@ -17,6 +17,9 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {K base top reserved : Nat} {code : List II} {origin target : Int}
     {originDistance budget : Nat}
 
+/-- Continue the mutated large state through the seed load and distance write.
+    Only the distance and scratch seed change; in particular the doubled
+    quotient and all remaining state words survive these actual instructions. -/
 theorem floatNormalizeLoopL_large_distance
     (hc : floatNormalizeLoopL base = some (code, top))
     {m : Runner.Mem} {distance : Nat}
@@ -403,6 +406,5 @@ theorem floatNormalizeLoopL_large_carry_seed
 #print axioms floatNormalizeLoopL_large_carry_seed
 
 set_option maxHeartbeats 800000 in
-/-- Materialize the carry threshold only after the actual distance guard. -/
 end
 end Gabbro.Stage0.Senke

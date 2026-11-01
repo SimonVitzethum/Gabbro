@@ -10,6 +10,8 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.DisziplinBedarf.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- Every writing step holds the guard: the only written carrier is
+    `konto`, whose watch list forces the lock. -/
 theorem bedWatch : ∀ (c : bedD.Tab ⊕ bedD.Glob) (L : bedD.Lock) (k : Nat)
     (g : Faden) (vor nach : World bedD),
     Bewacht (D := bedD) c L → g ∈ bedJ.faeden → bedJ.schrittFaden[k]? = some g →

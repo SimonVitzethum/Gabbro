@@ -11,6 +11,8 @@ section Motor
 variable {ι : Type} (T : ι → D.Fn → Nat) (S : ι → D.Fn → Bool) (nx : ι → D.Fn → ι)
   (P : Programm D) (O : Orakel D) (pa : Nat)
 
+/-- **The engine over a run.** From the entry invariant, along any run on
+    which the frame stays active, the own steps never exceed the budget. -/
 theorem kinv_lauf
     (hS1 : ∀ i g, S i g = true → kostenEnd (T (nx i g)) pa (P.rumpf g) ≤ T i g)
     (hS2 : ∀ i g, S i g = true → rufeE (S (nx i g)) (fun _ => false) true (P.rumpf g) = true)

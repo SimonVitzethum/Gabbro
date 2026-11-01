@@ -13,6 +13,9 @@ namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik Speichermodell
 variable {D : Deklaration}
 
+/-- **The goal on every run of machine GX** (every thread live, nothing spawned): the reading
+    of `GabbroZiel` over plain GX runs, as `gabbro_ziel_g` is the reading of the statement of
+    before over G runs. -/
 theorem gabbro_ziel_gx (C : PrueferX) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
     (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflichtA E)

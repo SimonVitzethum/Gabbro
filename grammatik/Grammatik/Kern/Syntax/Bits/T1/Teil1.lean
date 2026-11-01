@@ -424,5 +424,4 @@ theorem split4 (x : Nat) (hx : x < 256 ^ 4) :
     have h3 := Nat.div_add_mod (x / 256 / 256) 256
     omega
 
-/-- Four-byte nest reads back all bytes. -/
 end Gabbro.Grammatik

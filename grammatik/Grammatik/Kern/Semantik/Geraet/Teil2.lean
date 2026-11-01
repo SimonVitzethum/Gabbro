@@ -8,6 +8,8 @@ public import Grammatik.Kern.Semantik.Geraet.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- Cross-guard chains preserve ordering, endpoints: the first handoff
+    precedes the last take-back, through every link. -/
 theorem ketteM_anfang_vor_ende : ∀ (ch : List (GeraetFensterM gl t)),
     KetteGeordnetM gl t ch → ∀ (a z : GeraetFensterM gl t),
     ch.head? = some a → kettenEndeM ch = some z → GHB gl a.2.k z.2.m := by

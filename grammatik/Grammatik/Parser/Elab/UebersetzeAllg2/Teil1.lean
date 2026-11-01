@@ -420,5 +420,4 @@ def lowAssignDurchOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 
-/-- An option value written at a table into an option field. -/
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

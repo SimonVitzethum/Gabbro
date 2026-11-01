@@ -8,6 +8,11 @@ public import Grammatik.Korpus.Referenz.Referenz104.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- **The run of `104-referenz.gab` on G** (7 steps of thread 0): the driver
+    calls `einzahlen(&Konto, 0, 7)` (1), which writes `Konto[0].stand = 100`
+    through its pointer (2: memory `0 -> 100`), calls `lies(k, 0)` (3), which
+    returns the slot (4, logged); `einzahlen` returns (5, logged); the
+    driver calls `lies(&Konto, 0)` (6), which returns (7, logged). -/
 theorem r4Lauf : ∃ M : RufMaschineG r4D,
     RufErreichbarG r4P r4O 0 (RufStartG r4P r4Sp r4Init) M ∧
     (M.speicher.slots () 0 ()).n = 100 ∧

@@ -447,5 +447,4 @@ theorem every_refusal_has_an_emitter_tag :
     cases r <;> simp only [Reason.tag, ne_eq, String.reduceEq, not_false_eq_true]
   all_goals simp only [classify, reduceCtorEq] at h
 
-/-- **Every assumption carries a name**, and no name is empty. -/
 end Gabbro.Coverage

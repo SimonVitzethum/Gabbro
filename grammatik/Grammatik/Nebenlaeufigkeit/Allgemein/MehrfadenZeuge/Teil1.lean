@@ -432,9 +432,4 @@ theorem mA_lauf {O : Orakel mD} {U : Umwelt mD} (hU : HavocOk mSI U)
   · simp only [freiH] at hrun; cases hrun
   · simp only [freiH] at hrun; cases hrun
 
-/-- `hauptA`: `ensures privA[0] == 7` from the two writes (the lock's move
-    and the callees' frames leave `privA` alone); the caller duty of both
-    calls from the lock invariant at the acquire and from the frames; no
-    `logik` outcome because the release check follows from `setze`'s
-    `ensures`. -/
 end Gabbro.Grammatik

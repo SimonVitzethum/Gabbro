@@ -8,6 +8,9 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineF.T2.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- The leaf writes: the outcome is `.ok` with a changed world and the same
+    environment. The world changes because `assignSlot` stores the parameter
+    value 2 at slot 0 (was 0); the trace gains the write event. -/
 theorem leafSF_mem (σ' : World rufDF) (ρ' : Env rufDF (rufDF.params rufIncF))
     (h : (execStmt (V := vertragVon rufDF rufIncF) rufOF 0 keinRuf leafSF
       rufWeltF rufRhoF) = Ausgang.ok σ' ρ') :

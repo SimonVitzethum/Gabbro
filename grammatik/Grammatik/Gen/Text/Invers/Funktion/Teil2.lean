@@ -10,6 +10,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 section Kopf
 variable (z : Spez)
 
+/-- **The head read back.** -/
 theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (devs : List String) (mitGriff : Bool)
     (consts : List (String × Int)) (als : List (String × (Int × Int))) (sums : List USum)

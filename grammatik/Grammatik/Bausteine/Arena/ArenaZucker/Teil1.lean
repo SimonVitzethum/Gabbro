@@ -430,7 +430,5 @@ theorem zeuge_alloc_voll (O : Orakel ZD) (passes : Nat)
   arenaAlloc_an_schranke O passes R Log sieben rfl zeuge_darf rfl zeuge_gdarf voll rest
     _ .nil (by decide)
 
-/-- The bump, run: the counter stands at 1, the bound index is 2, and after the store it
-    stands at 3. -/
 end ArenaZeuge
 end Gabbro.Grammatik

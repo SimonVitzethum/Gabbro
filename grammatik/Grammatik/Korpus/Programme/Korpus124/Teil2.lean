@@ -8,6 +8,8 @@ public import Grammatik.Korpus.Programme.Korpus124.Teil1
 namespace Gabbro.Grammatik
 namespace K124
 
+/-- `hauptB`: the caller duty from the lock invariant at the acquire; the
+    release check from `setze`'s `ensures`. -/
 theorem kP_koerper_B : KoerperGutS kP 0 (axWahr kD) kSI kHauptB := by
   have hr : kP.rumpf kHauptB = kRumpfB := rfl
   refine ⟨fun O' _ _ _ U hU R hR hOV σ ρ _ => ⟨fun σ' v _ => rfl, fun g hrun => ?_⟩,

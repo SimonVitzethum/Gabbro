@@ -10,6 +10,7 @@ variable [Conf]
 open Gabbro.Grammatik (Deklaration Wert)
 variable {D : Deklaration}
 
+/-- **A comparison**: both operands moved to the width of the joined range, compared. -/
 theorem cmpRest_frag (pu ps : IPred) (P : Int → Int → Prop) [DecidableRel P]
     (hic : ∀ (sg : Bool) (W : Nat) (a b : Int), 0 < W → FitS sg W a → FitS sg W b →
       Val.icmp (if sg then ps else pu) W (Val.ofInt W a) (Val.ofInt W b)

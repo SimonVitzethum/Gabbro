@@ -7,6 +7,8 @@ public import Grammatik.Logik.Vertraege.Komposition.Teil1
 set_option linter.defProp false
 namespace Gabbro.Grammatik
 
+/-- Der Durchgang laeuft gezaehlt: Kennung eingetragen, Index im Bereich
+    `0 ≤ i < 1`, genau ein Durchgang gegen `np = 1` -- und die Regel gilt. -/
 def ein_durchgang_laeuft_gezaehlt :
     SchleifeLaeuftGezaehlt ZweiSchleifen EinDurchgang 0 1 1 := by
   refine ⟨⟨"f", { ruft := [], mass := some 0, schleifen := ["s1", "s2"] },

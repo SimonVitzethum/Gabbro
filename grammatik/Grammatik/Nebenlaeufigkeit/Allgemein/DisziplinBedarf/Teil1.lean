@@ -456,6 +456,4 @@ theorem bedReturn : ∀ (c : bedD.Tab ⊕ bedD.Glob) (L : bedD.Lock) (k : Nat)
   subst hn
   trivial
 
-/-- Every writing step holds the guard: the only written carrier is
-    `konto`, whose watch list forces the lock. -/
 end Gabbro.Grammatik

@@ -429,6 +429,5 @@ theorem floatNormalizeLoopL_distance_compare
 #print axioms floatNormalizeLoopL_distance_compare
 
 set_option maxHeartbeats 800000 in
-/-- Dispatch from the actual distance-test result to the emitted transfer paths. -/
 end
 end Gabbro.Stage0.Senke

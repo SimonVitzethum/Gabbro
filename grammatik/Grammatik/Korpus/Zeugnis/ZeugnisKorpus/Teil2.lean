@@ -9,6 +9,7 @@ public import Grammatik.Korpus.Zeugnis.ZeugnisKorpus.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- Contract for `zaehle` (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`): writes Takte. -/
 def D59V_zaehle : Vertrag D59D :=
   { schreibt := fun | .Takte => true | _ => false, gschreibt := fun _ => false,
     erg := none, gruende := 0, haelt := [], produziert := [] }

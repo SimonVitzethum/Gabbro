@@ -434,6 +434,5 @@ theorem ewigFrei_klasse (hvoll : ∀ g : D.Fn, g ∈ fs) {w : D.Fn} (h : klasse 
   · simp only [Bool.not_true, lokal_endet_ewig P fs mass (klasse_endet_lokal P fs mass h (hvoll g) hr),
   Bool.not_false, Bool.or_true]
 
-/-- **A `forever`-free hull admits the body under the gate without `forever`.** -/
 end Klasse
 end Gabbro.Grammatik

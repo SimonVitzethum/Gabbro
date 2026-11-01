@@ -444,7 +444,4 @@ def druckArgs : List SExpr → String
   | x :: xs => druck x ++ ", " ++ druckArgs xs
 end
 
-/-- A whole expression: the token list must end here. Fuel scales
-    with the input; a huge input may report out-of-fuel instead of
-    parsing (total, but not complete -- see CUTS). -/
 end Gabbro.Grammatik.Parser

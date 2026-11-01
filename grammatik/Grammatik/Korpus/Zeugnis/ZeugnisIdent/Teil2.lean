@@ -8,6 +8,14 @@ public import Grammatik.Korpus.Zeugnis.ZeugnisIdent.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- Term identity, general form: printing a CHECKED term and
+    re-elaborating gives back the SAME term -- proved by induction over
+    every `Expr` constructor. The 17 `CertExpr` shapes round-trip (the
+    some-branch); the 23 shapes with no print state `True` (the none-branch:
+    `durch`, `altGlob`/`altSlot`, `leseBytes`, and every non-`int`
+    constructor). No premise is assumed about the term -- the statement
+    quantifies over the term itself, so there is nothing vacuous to
+    discharge (rules 4/13: the witness is `print_elab_all_zeuge`). -/
 theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
     ∀ (e : Expr D Γ Λ τ),
     match printInt e with
@@ -235,10 +243,4 @@ theorem print_elab {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {lo hi : Int
     | none => True :=
   print_elab_all e
 
-/-- Converse: elaboration implies certificate validity -- an elaborated
-    print is exactly what the range table recomputes. Combined with the
-    existing `zeugnis_sound`, `elabInt c = some e` yields both the
-    `GueltigAbleitung` (here) and the judgment (there). Proved by
-    induction over the certificate; every premise is used (sub-equations
-    feed the IHs, side hypotheses discharge the table guards). -/
 end Gabbro.Grammatik

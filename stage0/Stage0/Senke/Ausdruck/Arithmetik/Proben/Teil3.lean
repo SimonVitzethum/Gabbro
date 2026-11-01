@@ -10,6 +10,8 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil2
 namespace Gabbro.Stage0.Senke.AddSubProbe
 open Gabbro.Grammatik Runner.IR Gleitkomma
 
+/-- Cancellation exercises the same actual loop and reserved frame as the
+    nonzero fixture; only the exact-tail input word is changed to zero. -/
 theorem floatNormalizeLoopL_finite_magnitude_zero_zeuge [Kern]
     {D : Deklaration} (L : Lay D) :
     ∃ m m' fuel count distance,

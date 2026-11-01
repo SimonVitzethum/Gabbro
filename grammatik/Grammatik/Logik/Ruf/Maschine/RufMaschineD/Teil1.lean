@@ -441,6 +441,4 @@ def rufReqD : Expr rufD (rufD.params rufIncD) [] .bool :=
     ((.widen (by decide) (by decide) (.lit 2) :
       Expr rufD (rufD.params rufIncD) [] (.int 0 5)))
 
-/-- `ensures`: the result equals the parameter plus one.
-    Context `[.int 0 5, .int 0 5]`: result at `.here`, parameter at `.there .here`. -/
 end Gabbro.Grammatik

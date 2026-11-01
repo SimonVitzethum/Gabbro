@@ -444,5 +444,4 @@ def divO : Orakel divD where
 def divSp0 : Speicher divD :=
   ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
 
-/-- Start slot value: `0`. -/
 end Gabbro.Grammatik.Zielsatz

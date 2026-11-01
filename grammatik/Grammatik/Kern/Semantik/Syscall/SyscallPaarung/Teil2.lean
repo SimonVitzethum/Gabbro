@@ -8,6 +8,8 @@ public import Grammatik.Kern.Semantik.Syscall.SyscallPaarung.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- The narrow user side: identical contract, but declares NO table
+    written -- the kernel's offset bump is outside `Eu`. -/
 def swUleer : UserSyscall swD (swD.aparams ()) IoFehler where
   nummer := 1
   abi := schreibAbi

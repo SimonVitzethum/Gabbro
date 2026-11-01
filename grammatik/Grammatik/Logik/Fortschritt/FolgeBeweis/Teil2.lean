@@ -10,6 +10,7 @@ variable {D : Deklaration}
 section Schritt
 variable {P : Programm D} {O : Orakel D} {pa : Nat} (Φ : Folge D)
 
+/-- **Every rule of G keeps the order invariant.** -/
 theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Faden}
     (hs : RufSchrittG P O pa M f M') (h : FolgeInvG Φ (M.faeden f)) :
     FolgeInvG Φ (M'.faeden f) := by

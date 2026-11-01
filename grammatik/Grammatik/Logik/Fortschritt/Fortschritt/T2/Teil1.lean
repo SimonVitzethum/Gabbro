@@ -255,10 +255,5 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
             | exact absurd ⟨rfl, rfl⟩ hbl
             | exact fort_schritt (w_endeEntf rfl _ rest ρ rfl hx)
 
-/-- **A `dann` head**: every block form fires, waits for a lock, or stops
-    at its hardware answer; `leave`/`next` find an absorbing continuation
-    (`fOk`). An empty answer type stops the head only at an axiom `-> never`
-    (`nieZurueck`): the head's answer sites are admissible (`hAnt`, from the
-    checker's `antworten` through `kopf_ants`; round-6 finding W1). -/
 end Fort
 end Gabbro.Grammatik

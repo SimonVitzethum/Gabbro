@@ -10,6 +10,7 @@ variable {D : Deklaration}
 section Ausgaenge
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- Peel a `dann` layer off an abrupt exit. -/
 theorem w_peelDann {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {Γ : Ctx} {Λ Λ1 Λ2 : List (Res D)} (w : Bool)
     (r : Block D (vertragVon D z.kopf.f) true Γ Λ Λ1)

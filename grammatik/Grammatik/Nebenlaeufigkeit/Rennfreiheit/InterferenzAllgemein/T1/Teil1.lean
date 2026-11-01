@@ -426,11 +426,4 @@ theorem allgemeinStabil (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
 
 /-! ## 11. Der invariante Hauptsatz: keine geteilte Praemisse mehr -/
 
-/-- **Allgemeine Stabilitaet der Invarianten (N Faeden).** Wo `Q` die Invariante selbst
-    ist, faellt die geteilte Erhaltpraemisse weg: jeder Schritt -- fremd wie eigen --
-    wird vom Kontext getragen (`invErhalt_aus_Kontext`), die Kette faltet wie gehabt
-    (`kette_erhaelt` via `allgemeinStabil`). `hDeck` wird getragen, nicht verbraucht:
-    es beurkundet die Disziplin, unter der der Rest -- beliebiges rahmenlokales `Q`
-    ueber geteilten Traegern -- weiter anzunehmen ist (G3); `atomic`-Globale und
-    `publishes`/`awaits`-Paare bleiben ausserhalb (G4). -/
 end Gabbro.Grammatik

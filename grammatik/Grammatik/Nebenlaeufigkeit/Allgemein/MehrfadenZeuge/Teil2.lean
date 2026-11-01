@@ -8,6 +8,11 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- `hauptA`: `ensures privA[0] == 7` from the two writes (the lock's move
+    and the callees' frames leave `privA` alone); the caller duty of both
+    calls from the lock invariant at the acquire and from the frames; no
+    `logik` outcome because the release check follows from `setze`'s
+    `ensures`. -/
 theorem mP_koerper_A : KoerperGutS mP 0 (axWahr mD) mSI mHauptA := by
   have hr : mP.rumpf mHauptA = mRumpfA := rfl
   refine ⟨fun O' _ _ _ U hU R hR hOV σ ρ _ => ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩,

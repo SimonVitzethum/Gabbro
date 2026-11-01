@@ -7,6 +7,8 @@ public import Passlogik.Kosten.Teil1
 namespace Passlogik.Kosten
 variable {F : Type u}
 
+/-- **`K002`.** Der Rumpf eines `locks`-Blocks kostet hoechstens die deklarierte
+    Haltezeit -- und zwar an JEDEM `locks`-Block im Baum. -/
 def k002_haelt (dekl : F → Nat) : Anw F → Prop
   | .prim _       => True
   | .leer         => True

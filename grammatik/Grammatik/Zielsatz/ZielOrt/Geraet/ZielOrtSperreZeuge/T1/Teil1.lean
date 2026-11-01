@@ -425,5 +425,4 @@ def sSigHaupt : Signatur Unit Empty Unit Empty where
   konsumiert := []
   produziert := []
 
-/-- The declaration of the two-writer witness. -/
 end Gabbro.Grammatik

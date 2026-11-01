@@ -10,6 +10,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil1
 namespace Gabbro.Stage0.Senke.AddSubProbe
 open Gabbro.Grammatik Runner.IR Gleitkomma
 
+/-- Connected sum boundary images retain cancellation tails independently. -/
 def negativeSumImages : List (String × Except String (List Runner.B) × Nat) :=
   [("negative-sum-cancel", 7, 14, 1, 0),
    ("negative-sum-positive-tail", 7, 13, 1, 0),
@@ -430,6 +431,4 @@ theorem floatNormalizeLoopL_reaches_target_zeuge [Kern] {D : Deklaration} (L : L
 #print axioms normalizationLoopHead_zeuge
 #print axioms floatNormalizeLoopL_from_numerator_zeuge
 
-/-- Cancellation exercises the same actual loop and reserved frame as the
-    nonzero fixture; only the exact-tail input word is changed to zero. -/
 end Gabbro.Stage0.Senke.AddSubProbe

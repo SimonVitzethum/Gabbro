@@ -10,6 +10,7 @@ public import Grammatik.Zielsatz.Eigenschaften.Divergenz.Teil1
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 
+/-- Start slot value: `0`. -/
 theorem divSp0_slot :
     divSp0.slots () 0 () = (⟨0, by decide, by decide⟩ :
       Wert divD (divD.typ () ())) := by rfl

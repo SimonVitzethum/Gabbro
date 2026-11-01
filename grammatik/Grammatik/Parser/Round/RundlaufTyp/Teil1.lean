@@ -457,5 +457,4 @@ theorem parseTyp_ident (F : Nat) (a : String) (rest : List Token)
   next _ _ heq => simp only [List.cons.injEq, reduceCtorEq, false_and] at heq
   next _ _ _ x _ _ => exact absurd rfl (x a rest)
 
-/-- The root of a chain read by `parseTyp`, handing its rest to the suffix loop. -/
 end Gabbro.Grammatik.Parser

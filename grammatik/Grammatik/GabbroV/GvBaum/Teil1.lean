@@ -444,5 +444,4 @@ theorem baumBlatt_zeuge :
     baumLauf baumOpfer 2 0 baumAnfang baumErreicht baumBleibt
     baumLauf_schritt baumOpfer_neu 1 (by omega)
 
-/-- The root has a child: deleting it first is a non-leaf deletion. -/
 end Gabbro.Grammatik.GabbroV

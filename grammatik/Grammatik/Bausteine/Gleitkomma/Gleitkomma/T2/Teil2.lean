@@ -7,6 +7,9 @@ public import Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1
 
 namespace Gabbro.Grammatik.Gleitkomma
 
+/-- Division of finite values by a nonzero finite divisor with in-range
+    exact quotient stays finite (and is the rounded exact quotient).
+    `0 / 0` is NaN, so the divisor must be nonzero (`hkb`, `hv`). -/
 theorem div_finite (F : Format) (hF : 1 ≤ F.emax) (a b : GBits F)
     (u v : Exakt) (ha : wertExakt F a = some u) (hb : wertExakt F b = some v)
     (hkb : klasse F b = .normal ∨ klasse F b = .subnormal)

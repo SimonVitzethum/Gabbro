@@ -425,6 +425,5 @@ theorem potRest_pos {Λ : List (Res D)} (r : GRest D V l Γ Λ) : 1 ≤ potRest 
   | wartetSonst n err rest k => simp only [potRest]; omega
   | _ => simp only [potRest]; omega
 
-/-- An end block run as a block costs `kostenSonst`. -/
 end Positiv
 end Gabbro.Grammatik

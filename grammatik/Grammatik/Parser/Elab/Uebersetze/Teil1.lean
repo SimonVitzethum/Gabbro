@@ -442,11 +442,4 @@ structure UInv where
   pred : UEns
   deriving DecidableEq, Repr
 
-/-- One device register (`device D .. { reg R : T @off class K .. }`, `D.Reg`): its device and name, the range
-    of its type (`D.rtyp`, always an integer range: `regdecl` reads an `intty`), its class (`D.rklasse`), the
-    register its writes carry the other bits from (`mirrors R from M` names `M` at `R`, `D.spiegel`), the
-    carriers its answer rests on (`depends { .. }`, `D.rtraeger`: table or static names), and its promise: a
-    `requires p` WITHOUT `else` is the device's promise about every value read (`D.rzusage`, `zusage`); a
-    `requires p else A::B` makes the read fallible instead (`Block.regReadElse`, `pruefung`), and then the
-    device promises nothing. Both predicates name the register itself as their one variable. -/
 end Gabbro.Grammatik.Parser.Uebersetze

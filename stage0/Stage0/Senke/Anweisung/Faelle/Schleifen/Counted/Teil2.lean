@@ -12,6 +12,8 @@ variable [Kern]
 open Gabbro.Grammatik Runner.Mem
 variable {D : Deklaration} {L : Lay D} {reserved : Nat}
 
+/-- A counted expression result carries the same complete typed memory relation
+    as ordinary lowering. Scalar specializations are proved through Enc.single. -/
 def CountedValueOk (n : Nat) (L : Lay D) (m : Mem) (pc fp : W) (K d : Nat)
     (code : List II) (τ : Ty) (v : Wert D τ) : Prop :=
   ∃ m', Counted n ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧

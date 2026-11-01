@@ -437,5 +437,4 @@ theorem fussTreue_aus_bau (P : Programm D) (fns : List D.Fn)
         List.mem_append.mpr (Or.inr (List.mem_map.mpr
           ⟨g, List.mem_filter.mpr ⟨hg, hw⟩, rfl⟩))⟩
 
-/-- Die Paarrechnung ist paartreu: was sie behielt, war deklariert. -/
 end Gabbro.Grammatik.Extraktion

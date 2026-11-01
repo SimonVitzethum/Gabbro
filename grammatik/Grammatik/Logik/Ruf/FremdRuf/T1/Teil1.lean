@@ -446,5 +446,4 @@ def fdWriteSt : Stmt fdD (vertragVon fdD fdArbeit) false [] [] [] :=
 /-- The handed-out descriptor value `3` as an answer. -/
 def fdV3 : ErgVal fdD (fdD.aerg fdOpen) := ⟨3, by decide, by decide⟩
 
-/-- The read-back count `0` as an answer. -/
 end Gabbro.Grammatik

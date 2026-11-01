@@ -10,6 +10,11 @@ public import Grammatik.Zielsatz.Faeden.FaedenZeuge.Teil1
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 
+/-- **THE GOAL ON A `start` RUN.** On the accepted unit `zStart`, the idle root starts two
+    `haupt` threads (dormant before), both step, thread 1 takes the lock; the starter waits
+    for its unfinished roots holding nothing -- and `gabbro_ziel` gives every leg of `ZielF`
+    there: `Ziel` over the two spawned threads (race freedom between them included), and the
+    join legs. -/
 theorem spawn_start_ziel : ∃ K2 K3 K4 : FadenMaschine zD.mitRuhe,
     FadenErreichbar zPB.mitRuhe zO.mitRuhe 0 zsK0 K4 ∧
     zsK0.lebt 1 = false ∧ zsK0.lebt 2 = false ∧ K4.lebt 1 = true ∧ K4.lebt 2 = true ∧

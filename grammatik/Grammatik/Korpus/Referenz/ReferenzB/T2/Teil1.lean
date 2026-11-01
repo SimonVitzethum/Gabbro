@@ -437,8 +437,4 @@ theorem refM3Frest :
         Signatur.anfang refD (refD.signatur refLies),
         Env.nil, refP.rumpf refLies⟩ := by rfl
 
-/-- Step D (F): thread 1 returns from `lies` with value `100`, read from
-    the post-write slot through the read world. Every premise is used:
-    `hpop`/`hfg`/`hrho`/`hs0` select the head frame, `hΛ` the lock state,
-    `hs1`/`hv`/`hneu` feed the constructor. -/
 end Gabbro.Grammatik

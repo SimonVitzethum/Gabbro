@@ -13,6 +13,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil13
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- One `ensures` predicate in `einzahlen`. -/
 def lowerSichertEin (tabs : List UTab) (names : List String)
     (types : List Ty) : UEns → Except String UEnsEin
   | .globB _ | .var _ | .ergB => .error "static without G form in the 104 lowering"

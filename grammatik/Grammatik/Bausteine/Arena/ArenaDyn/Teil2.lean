@@ -15,6 +15,10 @@ variable (O : Orakel D) (passes : Nat)
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 
+/-- **Below the committed prefix, `alloc` does not take its `else`** -- the
+    model half of the R-commit rule. The body is `ArenaZucker`'s
+    `arenaRumpf`, unchanged: past the test, a dynamic arena IS a static one.
+    The index bound is the OLD used counter, as there. -/
 theorem dynAlloc_unter_commit (A : DynForm D)
     (v : Expr D Γ Λ (D.typ A.tab A.feld))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
@@ -448,6 +452,4 @@ def freiAlloc : FreiZustand → Nat × FreiZustand
   | ⟨belegt, i :: rest, hfrei⟩ =>
     (i, ⟨belegt, rest, fun j hj => hfrei j (List.mem_cons_of_mem _ hj)⟩)
 
-/-- `free`: der Slot wandert auf die Liste -- genau einmal (Doppel-Freigabe
-    und Fremd-Slots sind `none`, wie `N586` am Prüfer). -/
 end Gabbro.Grammatik.ArenaDyn

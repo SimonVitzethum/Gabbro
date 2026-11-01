@@ -10,6 +10,11 @@ namespace Gabbro.Grammatik
 open Zielsatz
 variable {D : Deklaration}
 
+/-- **The joint witness for `pool_schreibt_nicht`**: every premise
+    instantiated jointly on the lock-free fixture -- the empty member list
+    (the graph is then definitionally `{einzahlen}`, so no body is ever
+    unfolded), the unguarded, non-atomic, never-written global `frei` as
+    the carrier, thread 0 running `einzahlen` with argument 7. -/
 theorem pool_schreibt_nicht_zeuge :
     ∃ (D : Deklaration) (_ : DecidableEq D.Fn) (P : Programm D) (fs : List D.Fn)
       (w : D.Fn)

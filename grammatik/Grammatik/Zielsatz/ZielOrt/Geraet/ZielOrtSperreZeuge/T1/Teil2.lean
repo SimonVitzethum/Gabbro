@@ -8,6 +8,7 @@ public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T1.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- The declaration of the two-writer witness. -/
 def sD : Deklaration where
   Tab := Unit
   decTab := inferInstance

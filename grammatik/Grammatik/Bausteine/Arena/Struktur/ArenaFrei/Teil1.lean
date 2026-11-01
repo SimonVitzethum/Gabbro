@@ -424,7 +424,5 @@ theorem freiRumpf_erhaelt (A : FreiForm D)
   obtain ⟨σ', he, h1', h2', h3', h4'⟩ := freiRumpf_fakten O passes R (l := l) A hwT hLT hwK hLK σ k ρ
   exact ⟨σ', he, A.frei_erhaelt_von σ σ' k.n k.lo_le h1 hn hok h1' h2' h3' h4'⟩
 
-/-- **Taking a slot off the free list**, read off the executed form: it hands out the old head, the head becomes the
-    head's link, no other link moves and the used counter stays. -/
 end Bedeutung
 end Gabbro.Grammatik

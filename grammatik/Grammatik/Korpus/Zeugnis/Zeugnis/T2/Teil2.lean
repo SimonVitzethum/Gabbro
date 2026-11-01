@@ -7,6 +7,7 @@ public import Grammatik.Korpus.Zeugnis.Zeugnis.T2.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- `6 band 3` printed as `(0, 6)`: both operands nonneg (M137). -/
 example : GueltigAbleitung TestD [] [] (.band (.lit 6) (.lit 3)) 0 6 := by decide
 
 /-- FORGED proof: a negative operand under `band` -- no range at all. -/

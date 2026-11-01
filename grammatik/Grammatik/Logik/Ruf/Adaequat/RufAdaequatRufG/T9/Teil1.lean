@@ -422,7 +422,4 @@ theorem t4M_sauber (fn : t4D.Fn) (b : Endblock t4D (vertragVon t4D fn) false [] 
   subst hr
   rfl
 
-/-- The bind witness up to its waiting state: `endeEntf`, `dannIteWahr`,
-    `dannBindCall` -- the caller frame of `t4B` now WAITS (`wartet`) below
-    the callee frame of `t4G`. -/
 end Gabbro.Grammatik

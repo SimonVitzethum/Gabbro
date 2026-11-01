@@ -445,5 +445,4 @@ def LowSide.rechts {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : Lo
     else .error "bit operation over a negative range"
   else .error "bit operation over a negative range"
 
-/-- `-a`: `Expr.neg`. -/
 end Gabbro.Grammatik.Parser.UebersetzeAllg

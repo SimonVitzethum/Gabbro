@@ -176,25 +176,4 @@ theorem schreibBytes_gleich_samma_traeger (σ₀ : World D) (t : D.Tab)
 /-! ## 4. The leaf lemma: a firing leaf of a thread not holding L
     preserves the slots of the L-guarded carrier -/
 
-/-- A firing leaf step of a thread that does not hold `L` leaves every slot
-    of the `L`-guarded carrier `t` unchanged.
-
-    Proof: case on the leaf statement (only leaf shapes can fire: compound
-    shapes have `istBlatt = false`). For the five shapes that write tables
-    (`assignSlot`, `assignDurch`, `schreibBytes`, `uebergang`), `execStmt`
-    writes through `schreibSlot`/`schreibBytes`, which records a `zugriff`
-    event carrying the statement `Λ` and the pre-step held locks. That event
-    is good (its world is reachable, so `gen_gut_obs` applies through the
-    `Brav` provenance of `blatt_brav`), and `kein_schreibzugriff_ohne_sperre`
-    forces its `schreibt` flag to `false` -- contradiction with the write
-    event, unless the write went to another carrier. All other leaf shapes
-    (`assignGlob`, `publish`, `assignVar`, `ret`, `retGrund`, `leave`,
-    `next`, `regSchreib`, `transition`, `advances`, `retires`,
-    `axiomCall`) never touch table slots: globals go through `storeGlob`,
-    the rest leave the world or only the trace.
-
-    Every premise is used: `hΛ` ties the static `Λ` to the dynamic held
-    locks, `hfrei` excludes `L`, `hGuard` names the guard, `hO` gives the
-    event goodness via `stmt_gut`, `hstep` is the firing, `hneu` is the
-    trace equation consumed by the `Brav` membership. -/
 end Gabbro.Grammatik

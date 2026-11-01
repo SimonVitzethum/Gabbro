@@ -9,6 +9,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
 
+/-- `-a`: `Expr.neg`. -/
 def LowSide.minusEins {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x : LowSide u Γ Λ) :
     LowSide u Γ Λ :=
   { range := (-x.range.2, -x.range.1), term := Expr.neg x.term }
@@ -438,5 +439,4 @@ def lowParamWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
         else .error "source export: reference origin disagrees with its declared region")
     | _, _ => none
 
-/-- An aggregate static (a number static goes to the integer lowering). -/
 end Gabbro.Grammatik.Parser.UebersetzeAllg

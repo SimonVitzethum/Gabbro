@@ -8,6 +8,9 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T9.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- The bind witness up to its waiting state: `endeEntf`, `dannIteWahr`,
+    `dannBindCall` -- the caller frame of `t4B` now WAITS (`wartet`) below
+    the callee frame of `t4G`. -/
 theorem t4B_wartet :
     ∃ M3 : RufMaschineG t4D, RufLaufG t4P t4O 0 0 (t4M t4B t4BRumpf) M3 ∧
       ∃ caller : RufRahmenG t4D, (M3.faeden 0).stapel = [caller, t4Unten] ∧

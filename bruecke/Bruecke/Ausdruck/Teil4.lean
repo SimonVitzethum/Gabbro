@@ -13,6 +13,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg}
 
+/-- **One clause of a promise**: the Prop the duty file states (`clauseProp`) holds exactly when
+    the lowered G predicate is true -- over the entry world `σ₀`, the exit world `σ'` and the
+    `ensures` environment `E` (the answer first, where there is one). -/
 theorem clause_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option (Int × Int)}
     (hA : ArtStimmt fn) (hT : TabEindeutig u) (hN : NamenFrei fn)
     {e : UEns} {x : Gabbro.Body.Expr} {A : Acc} (hx : ensExpr u fn {} e = some (x, A))

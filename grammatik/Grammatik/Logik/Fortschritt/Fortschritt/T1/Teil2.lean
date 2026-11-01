@@ -9,6 +9,8 @@ public import Grammatik.Logik.Fortschritt.Fortschritt.T1.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- **A leaf that is no return, reason or abrupt exit** ends normally with
+    a trace extended by accesses, or answers hardware, or answers `logik`. -/
 theorem blatt_fall {O : Orakel D} (hO : GutO O) (passes : Nat) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hb : s.istBlatt = true)
     (ha : s.istAbschluss = false) (W : World D) (ρ : Env D Γ) (hh : HeldIn Λ (offen W.spur)) :

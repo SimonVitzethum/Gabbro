@@ -10,6 +10,11 @@ variable {D : Deklaration}
 section Fort
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- **A `dann` head**: every block form fires, waits for a lock, or stops
+    at its hardware answer; `leave`/`next` find an absorbing continuation
+    (`fOk`). An empty answer type stops the head only at an axiom `-> never`
+    (`nieZurueck`): the head's answer sites are admissible (`hAnt`, from the
+    checker's `antworten` through `kopf_ants`; round-6 finding W1). -/
 theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) (hP : PrueftG O passes M t)
     (hB : BereichG M t)

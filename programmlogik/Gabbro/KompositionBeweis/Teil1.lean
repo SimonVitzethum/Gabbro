@@ -437,11 +437,4 @@ theorem nachpost_none (S : Signatur) (h : S.ergebnis = none) (r : Option Value) 
   unfold NachPost
   rw [h]
 
-/-- **The answer half of a checked routine, word for word.** `AntwortPasst` (what the
-    checker guarantees at a `return`, over the caller's error channel `P.ruferR`) and
-    `NachPost` (what the contract owes, over the signature's `gruende`) coincide once
-    the routine body is checked under its own signature (`erg = S.ergebnis`,
-    `P.ruferR = S.gruende` -- the emitter wires both from the signature). Each case
-    is `rw [hE] at ha` (constructor arguments) plus definitional match reduction --
-    no unfolding tactic that can silently stop. -/
 end Gabbro.Komposition

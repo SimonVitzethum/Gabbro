@@ -425,5 +425,4 @@ theorem orB_stepM : ∀ (m : Nat) (l r : SExpr) (W : List Token),
   have hstop := opOder_paren W
   simp only [parseOr, parseOrL, hN', hop, hMr, hstop] at ⊢
 
-/-- The `&&` inner trace over a bound (mirror of `andB_step`). -/
 end Gabbro.Grammatik.Parser

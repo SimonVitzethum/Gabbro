@@ -1,6 +1,7 @@
 module
 
 public import Gabbro.Body
+/-- **L47 -- SAYABLE.** A revoked endpoint ends the service. -/
 meta import Gabbro.Body
 public import gabbrov.V1.Teil1
 

@@ -405,8 +405,4 @@ theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
     exact Mem.rd64_write_far (slot_far pre.frame.room inside (hprotected j hj).1
       (Ne.symm (hprotected j hj).2))
 
-/-- Execute the actual source invariant and then the generically lowered body.
-    The read event, callee frame, return ABI and protected slots are inherited
-    from `lowE_ok`, `choice_ok` and the explicit child induction contract.
-    This is one positive pass, not yet the counter/header integration. -/
 end Gabbro.Stage0.Senke

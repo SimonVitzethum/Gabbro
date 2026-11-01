@@ -443,5 +443,4 @@ def merkmaleSrc (toks : List Token) : List String :=
 def zeigeBefund (b : Befund) : String :=
   b.stufe ++ "/" ++ b.art ++ "/" ++ b.name ++ "/" ++ b.meldung
 
-/-- Join lines. -/
 end Gabbro.Grammatik.GabbroV.GvZensus

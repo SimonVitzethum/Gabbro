@@ -10,6 +10,8 @@ variable {D : Deklaration}
 section Schritte2
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- **A leaf step keeps the replay**: a non-axiom leaf by leaf locality, an
+    axiom call by recording its answer (`fadenG_ax`). -/
 theorem fadenG_blatt (e0 : Ereignis D) (hO : GutO O) {z : RufFadenG D} {W : World D}
     (hF : FadenG P O passes z W) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (hr : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)

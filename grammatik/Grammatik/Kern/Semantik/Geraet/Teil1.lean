@@ -427,6 +427,4 @@ theorem ketteM_anfang_vor_schreib : ∀ (ch : List (GeraetFensterM gl t)),
         have ih' := ih ho' y hhead w hmem
         exact GHB.trans _ _ _ (GHB.trans _ _ _ (fenster_ende x.2) (gliedM_kante link)) ih'
 
-/-- Cross-guard chains preserve ordering, endpoints: the first handoff
-    precedes the last take-back, through every link. -/
 end Gabbro.Grammatik

@@ -13,6 +13,8 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil2
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- The constant value of an expression, or `none`: every value stays in `lo .. hi`. Structural in the
+    FUEL (so that the kernel can run it: a well-founded definition here made every probe run away). -/
 def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int)) :
     Nat → SExpr → Option Int
   | 0, _ => none

@@ -460,5 +460,4 @@ theorem wit_take :
   exact PCSchritt.take (GenStart refSp0) (fun _ => 0) 1 ()
     hself hrang hfrei hpc
 
-/-- Step 2 (witness): thread 1 fires the writing leaf at position 1. -/
 end Gabbro.Grammatik

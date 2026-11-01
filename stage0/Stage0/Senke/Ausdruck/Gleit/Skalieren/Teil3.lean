@@ -12,6 +12,8 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
+/-- Connected execution of the actual signed left scaling and packing instructions.
+    The result is stated at word level; canonical field bounds are a separate obligation. -/
 theorem floatOfIntLeftPackL_ok {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {input : Nat → Option (List II × Nat)}
     (z : Int) (hz : -2^63 ≤ z ∧ z < 2^63) (hn : z ≠ 0)
@@ -439,6 +441,4 @@ theorem floatOfIntAssemblyL_left_ofInt_zeuge {Γ : Ctx} (ρ : Env D Γ)
   exact ⟨hF, bounds, nonzero, left, input,
     floatOfIntAssemblyL_left_ofInt F hF z bounds nonzero input left⟩
 
-/-- Joint minimum-integer, tie, carry and shift-zero fixtures discharge every outer-right premise and execute the
-    emitted assembly with the canonical conversion result. -/
 end Gabbro.Stage0.Senke

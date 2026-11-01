@@ -430,6 +430,4 @@ theorem syscall_paarung_zeuge :
 
 /-! ## 6. Rejection: an undeclared kernel write breaks the user frame -/
 
-/-- The narrow user side: identical contract, but declares NO table
-    written -- the kernel's offset bump is outside `Eu`. -/
 end Gabbro.Grammatik

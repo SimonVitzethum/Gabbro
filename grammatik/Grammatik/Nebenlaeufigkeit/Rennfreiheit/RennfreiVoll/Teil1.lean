@@ -89,10 +89,5 @@ section Delta
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
-/-- **The trace delta of one step.** Every step of thread `f` either is an
-    access step (`ZugriffsDelta`: no lock taken, held locks unchanged, new
-    access events good) or a lock step (`SperrDelta`: only lock events, and
-    shared memory unchanged). The lock steps are exactly `dannLocks`,
-    `freiGib` and the two `frei` peels. -/
 end Delta
 end Gabbro.Grammatik

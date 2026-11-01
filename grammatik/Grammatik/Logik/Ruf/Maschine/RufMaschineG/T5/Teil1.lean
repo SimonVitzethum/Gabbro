@@ -441,5 +441,4 @@ def M5G : RufMaschineG rufDF :=
       (M4G.faeden 0).spur, (M4G.faeden 0).log⟩,
    M4G.lauf, M4G.start⟩
 
-/-- Step 5 fires `dannLeer`: the branch block is done. -/
 end Gabbro.Grammatik

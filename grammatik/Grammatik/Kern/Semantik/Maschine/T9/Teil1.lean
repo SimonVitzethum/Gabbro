@@ -400,7 +400,4 @@ def Stmt.speicherfest : Stmt D V l Γ Λ Λ' → Bool
   | .next _ => true
   | _ => false
 
-/-- **Firing a memory-preserving leaf keeps live memory.** From the firing
-    evidence alone: excluded shapes die at the `speicherfest` test, the nine
-    included shapes compute to a read-only or unchanged world. -/
 end Gabbro.Grammatik

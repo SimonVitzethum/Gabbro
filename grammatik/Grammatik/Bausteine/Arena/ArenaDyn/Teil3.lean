@@ -8,6 +8,8 @@ public import Grammatik.Bausteine.Arena.ArenaDyn.Teil2
 
 namespace Gabbro.Grammatik.ArenaDyn
 
+/-- `free`: der Slot wandert auf die Liste -- genau einmal (Doppel-Freigabe
+    und Fremd-Slots sind `none`, wie `N586` am Prüfer). -/
 def freiFree (F : FreiZustand) (i : Nat) : Option FreiZustand :=
   if h : i < F.belegt ∧ i ∉ F.frei then
     some ⟨F.belegt, i :: F.frei, fun j hj => by

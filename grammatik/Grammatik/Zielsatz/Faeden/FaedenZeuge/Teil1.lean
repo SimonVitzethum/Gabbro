@@ -388,9 +388,4 @@ def zsK1 : FadenMaschine zD.mitRuhe :=
 theorem zs_schritt1 : FadenSchritt zPB.mitRuhe zO.mitRuhe 0 zsK0 zsK1 :=
   FadenSchritt.start zsK0 0 [1, 2] rfl rfl (start_offen_leer _ _ _ zsInit_leer 0) (by decide)
 
-/-- **THE GOAL ON A `start` RUN.** On the accepted unit `zStart`, the idle root starts two
-    `haupt` threads (dormant before), both step, thread 1 takes the lock; the starter waits
-    for its unfinished roots holding nothing -- and `gabbro_ziel` gives every leg of `ZielF`
-    there: `Ziel` over the two spawned threads (race freedom between them included), and the
-    join legs. -/
 end Gabbro.Grammatik.Zielsatz

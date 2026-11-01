@@ -440,5 +440,4 @@ theorem transition_slots_fest (O : Orakel D) (passes : Nat)
   subst hstep
   rfl
 
-/-- `advances` keeps every table slot (mark step, memory-free). -/
 end Gabbro.Grammatik.EZD

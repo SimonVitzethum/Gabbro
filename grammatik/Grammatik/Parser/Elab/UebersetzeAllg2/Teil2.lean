@@ -11,6 +11,7 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 
+/-- An option value written at a table into an option field. -/
 def lowAssignTabOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (b fname : String) (ix : UIdx) (v : UOpt) :
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=

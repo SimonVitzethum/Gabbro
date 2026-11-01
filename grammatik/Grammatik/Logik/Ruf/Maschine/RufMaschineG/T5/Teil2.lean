@@ -8,6 +8,7 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T5.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- Step 5 fires `dannLeer`: the branch block is done. -/
 theorem schritt5G : RufSchrittG gP rufOF 0 M4G 0 M5G :=
   RufSchrittG.dannLeer M4G 0 false (rufDF.params rufIncF)
     (Signatur.anfang rufDF (rufDF.signatur rufIncF))

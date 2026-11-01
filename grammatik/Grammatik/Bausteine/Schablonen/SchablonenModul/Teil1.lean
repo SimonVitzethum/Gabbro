@@ -438,8 +438,5 @@ theorem faden_modul_null_zuerst :
     [FEreignis.eins, .startGut, .ende, .lauf].take 3 ≠ [FEreignis.eins, .startGut, .ende, .lauf] :=
   by decide
 
-/-- **Witness** (all premises jointly): the `atomar` probe's roots -- one good start whose root
-    runs five steps, read after everything (the word reads 0 and the whole run is in it) and
-    after four events (the word reads 1); and one failed start, read after the driver's 0. -/
 end ModulLaufzeit
 end Gabbro.Grammatik

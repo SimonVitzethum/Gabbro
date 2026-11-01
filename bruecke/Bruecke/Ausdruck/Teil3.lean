@@ -449,7 +449,4 @@ theorem LRel.ueber {D : Deklaration} {Γ : Ctx} {fn : UFn} {sh : Nat} {ρ : Env 
   rw [hβ p h1 h2]
   exact h p j hj
 
-/-- **One clause of a promise**: the Prop the duty file states (`clauseProp`) holds exactly when
-    the lowered G predicate is true -- over the entry world `σ₀`, the exit world `σ'` and the
-    `ensures` environment `E` (the answer first, where there is one). -/
 end Gabbro.Bruecke

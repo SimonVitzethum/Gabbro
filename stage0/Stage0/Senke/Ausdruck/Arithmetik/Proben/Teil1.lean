@@ -443,5 +443,4 @@ def alignmentImages : List (String × Except String (List Runner.B) × Nat) :=
           (fun d => floatCoefficientL d (fun j => some (konstWL 4 hi j)))
           (fun d => some (konstWL 4 k d))) expected, 7))
 
-/-- Connected sum boundary images retain cancellation tails independently. -/
 end Gabbro.Stage0.Senke.AddSubProbe

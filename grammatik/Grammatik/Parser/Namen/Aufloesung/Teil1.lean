@@ -440,5 +440,4 @@ def tabTeil (k : Kontext) : STabTeil → STabTeil
   | .tInv i => .tInv (inv k i)
   | t => t
 
-/-- A transition, resolved. -/
 end Gabbro.Grammatik.Parser.Aufloesung

@@ -436,8 +436,4 @@ theorem kein_wettlauf_global (l : Lauf D) (hg : Gesittet l) (i j : Nat) (hij : i
         exact absurd (hg.marke_eindeutig i j f g m s s _ _ hi hj (gi.1 _ hwt) (gj.1 _ hwt)) hfg
   · right; exact ha
 
-/-- **Keine Ueberkreuzung der Sperrordnung**, im Lauf: kein Faden nimmt `L2` mit `L1` in der
-    Hand, waehrend ein anderer `L1` mit `L2` in der Hand nimmt -- die Raenge stiegen dann im
-    Kreis. Das ist `keine_verklemmung` (Satz.lean) ueber Laeufen: die Wartekette, die eine
-    Verklemmung braucht, hat keinen Anfang. -/
 end Gabbro.Grammatik

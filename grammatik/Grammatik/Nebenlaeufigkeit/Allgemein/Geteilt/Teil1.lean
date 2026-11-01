@@ -505,5 +505,4 @@ theorem tabInj_all (tabs : List TabCarrier) : tabInjForm tabs := by
   intro t₁ _ t₂ _ h
   exact h
 
-/-- Global codes are injective: the codes ARE the carriers (cut C1). -/
 end Gabbro.Grammatik.Geteilt

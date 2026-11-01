@@ -11,6 +11,13 @@ namespace Gabbro.Komposition
 open Gabbro.Body
 open Gabbro.Sicherheit
 
+/-- **The answer half of a checked routine, word for word.** `AntwortPasst` (what the
+    checker guarantees at a `return`, over the caller's error channel `P.ruferR`) and
+    `NachPost` (what the contract owes, over the signature's `gruende`) coincide once
+    the routine body is checked under its own signature (`erg = S.ergebnis`,
+    `P.ruferR = S.gruende` -- the emitter wires both from the signature). Each case
+    is `rw [hE] at ha` (constructor arguments) plus definitional match reduction --
+    no unfolding tactic that can silently stop. -/
 theorem nachpost_of_antwortpasst (S : Signatur) (erg : Option Shape) (R : List String)
     (herg : erg = S.ergebnis) (hR : R = S.gruende) (v : Option Value)
     (ha : AntwortPasst erg R v) : NachPost S v := by

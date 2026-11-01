@@ -13,6 +13,8 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {ord : D.Glob → Ordnun
   {S : SperrInv D} {fs : List D.Fn} {sp : Speicher D}
   {init : Faden → Σ f : D.Fn, Env D (D.params f)} {K : Faden → D.Fn → Bool}
 
+/-- **ONE STEP OF W ON A PROGRAM WITH RACING ATOMICS IS A STEP OF GA, and keeps the
+    invariant.** -/
 theorem schritt_sichtInvA (hO : GutO O) (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hAbg : ∀ t, AbgK P fs (K t)) (hWurzel : ∀ t, K t (init t).1 = true)
     (hFuss : ∀ f, FussSA P S (lokK P K) f) (hex : StartExklusiv init) {W W' : RufMaschineW D}
@@ -426,10 +428,5 @@ theorem sperre_ordnetGA (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (
   exact ⟨r, a, by omega, by omega, ha2, hfr, hfa, ⟨hQr, hQr1, hgibt⟩,
     ⟨hQa, hQa1', hfrei, hnimmt⟩⟩
 
-/-- **Race freedom on every GA run from the start, for every non-atomic carrier**: two accesses
-    by different threads, one a write, are ordered through a guard lock. Guarded carriers: the
-    guard is held at both accesses (`zugriff_haeltA` on the presented steps), then
-    `sperre_ordnetGA`. Unguarded non-atomic carriers are write-separated over the call graphs
-    (`hsep`), so no such pair exists. -/
 end Rennen
 end Gabbro.Grammatik

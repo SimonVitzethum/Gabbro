@@ -441,6 +441,4 @@ theorem ziel_ort_ganz_ax_zeuge :
     axP_start, axInit_exklusiv, inc_ensures_nicht_V, M, hr, rfl, hslot,
     ⟨rho, v, s0, s1, hv, hlog, (hV.1 0 _ hlog).2 axZaehle rho v s0 s1 rfl⟩, hV.1, hV.2.1⟩
 
-/-- **`ziel_ort_ganz_vertrag_zeuge`** -- the contract half with a non-trivial
-    declared ensures, its premises jointly on `axP`. -/
 end Gabbro.Grammatik

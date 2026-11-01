@@ -438,5 +438,4 @@ theorem bindAll_at : ∀ (P : List (String × Ty)) (vs : List Gabbro.Body.Value)
           rw [bindAll_at P vs _ p k hn.2 (by simpa using hl) hk]
           simp
 
-/-- The callee's LRel in its Body entry state. -/
 end Gabbro.Bruecke

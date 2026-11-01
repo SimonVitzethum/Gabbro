@@ -428,5 +428,4 @@ theorem log2_floor_spez (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     rw [hcast2, h2n] at hlt
     exact hlt
 
-/-- `clz_log2`: `clz x + log2_floor x = w`, as values. -/
 end Gabbro.Grammatik

@@ -11,6 +11,7 @@ open Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Namensraum (Pfad Quelle Platz aufloeseK)
 set_option maxRecDepth 100000
 
+/-- A transition, resolved. -/
 def trans (k : Kontext) (t : STrans) : STrans :=
   { t with
     schritte := t.schritte.map fun (a, b, c) => (aus k a, aus k b, aus k c)

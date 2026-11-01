@@ -440,5 +440,4 @@ theorem val_icmp_eq (sg : Bool) (W : Nat) (a b : Int) (hW : 0 < W) (ha : FitS sg
             rw [if_neg this]; omega) hW a0 (by omega) b0 (by omega)
   simp only [Val.icmp, Val.ofInt, ↓reduceDIte, IPred.ap, ite_self, key]
 
-/-- **A comparison**: both operands moved to the width of the joined range, compared. -/
 end Gabbro.Code.Lower

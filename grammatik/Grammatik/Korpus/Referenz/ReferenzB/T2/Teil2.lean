@@ -7,6 +7,10 @@ public import Grammatik.Korpus.Referenz.ReferenzB.T2.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- Step D (F): thread 1 returns from `lies` with value `100`, read from
+    the post-write slot through the read world. Every premise is used:
+    `hpop`/`hfg`/`hrho`/`hs0` select the head frame, `hΛ` the lock state,
+    `hs1`/`hv`/`hneu` feed the constructor. -/
 theorem refSchrittDF : RufSchrittF refP refO 0 refM3F 1 MB := by
   have hpop : (refM3F.faeden 1).stapel = [refCallerFF] := rfl
   have hhead : (refM3F.faeden 1).kopf.rest =

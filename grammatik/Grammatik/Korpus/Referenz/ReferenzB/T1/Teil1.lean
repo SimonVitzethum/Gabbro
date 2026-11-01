@@ -427,7 +427,4 @@ def refK0 : Int := 0
 /-- The evaluated cap: `100` in range. -/
 def refV100 : Wert refD (.int 0 100) := ⟨100, by decide, by decide⟩
 
-/-- Step B fires the writing leaf `konto[0] := 100` on thread 1.
-    The outcome and events are named from the `execStmt` equation for
-    `assignSlot`, so the `blatt` constructor closes on `rfl` facts. -/
 end Gabbro.Grammatik

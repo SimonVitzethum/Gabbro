@@ -13,6 +13,8 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil7
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- The header of a `retry`: the label, the pass bound, the predicate, the handler. `progress` must name an
+    `assume` item. -/
 def uRetryKopf (ctx : UCtx) (h : String) : Except String (String × Nat × UEns × String) :=
   match uSchleifenKopf2 h with
   | .error e => .error e
@@ -416,6 +418,4 @@ def uSchleifenKopf (ctx : UCtx) (b : String) (o : Option SExpr) (k : String) (s 
                                  types := .index cnt :: ctx.types, bits := 0 :: ctx.bits,
                                  loops := b :: ctx.loops })
 
-/-- A finite filtered traversal keeps its outer seed separate from the body's binder.
-    A raw decreases/touches header has no source-duty binding here and stays refused. -/
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -7,6 +7,7 @@ public import Grammatik.Parser.Round.RundlaufTok.Teil2
 
 namespace Gabbro.Grammatik.Parser
 
+/-- The `&&` inner trace over a bound (mirror of `andB_step`). -/
 theorem andB_stepM : ∀ (m : Nat) (l r : SExpr) (W : List Token),
     (∀ (G : Nat), m + 2 ≤ G →
       parseUnary G (druckToks l ++ ([.zeichen "&&"] ++

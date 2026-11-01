@@ -9,6 +9,8 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineD.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- `ensures`: the result equals the parameter plus one.
+    Context `[.int 0 5, .int 0 5]`: result at `.here`, parameter at `.there .here`. -/
 def rufEnsLitD : Expr rufD [.int 0 6, .int 0 5] [] .bool :=
   .eq (.var .here)
     (.add (.widen (by decide) (by decide) (.var (.there .here)) :

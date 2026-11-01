@@ -13,6 +13,8 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil8
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- A finite filtered traversal keeps its outer seed separate from the body's binder.
+    A raw decreases/touches header has no source-duty binding here and stays refused. -/
 def uLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) (kind : String)
     (subject : SExpr) (mode raw : String) (invariant : Option SExpr) :
     Except String (UStmt × UCtx × Option UEns) :=
@@ -125,8 +127,4 @@ def uEndetS : Nat → SAnw → Bool
        | _ => false)
   | _ + 1, _ => false
 
-/-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
-    `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
-    end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
-    Structural in a fuel (one unit per statement and per block). -/
 end Gabbro.Grammatik.Parser.Uebersetze

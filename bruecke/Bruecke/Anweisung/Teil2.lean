@@ -12,6 +12,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg}
 
+/-- The callee's LRel in its Body entry state. -/
 theorem lrel_bindAll {D : Deklaration} {Γ : Ctx} (fn : UFn) (ρ : Env D Γ)
     (hN : NamenEindeutig fn) (hl : fn.params.length = Γ.length) :
     LRel fn 0 ρ (Gabbro.Body.bindAll (fn.params.map (·.1)) (envVals ρ) (fun _ => .absent)) := by

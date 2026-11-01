@@ -435,9 +435,4 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-- **Table witness: writing steps own a real `zugriff` event plus the U003
-    guard.** Over one table carrier `t₀` with guard `L`, every writing chain
-    step has its witness access in the run (`hwit`, witness duty) and every
-    writer holds the guard (derived via `wache_aus_schuld` from `J.hSchuld`
-    plus coverage `hCov`). -/
 end Gabbro.Grammatik

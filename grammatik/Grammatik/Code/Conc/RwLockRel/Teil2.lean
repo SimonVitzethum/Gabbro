@@ -12,6 +12,8 @@ open Gabbro.Grammatik (Deklaration Faden RufMaschineG RufFreiG offen)
 open Gabbro.Grammatik.Zielsatz (Lese RwExkl)
 variable {D : Deklaration}
 
+/-- **The writer's take that finds the lock free** (G's `dannLocks`): the word is `0`, so no reader and no writer
+    holds: `RufFreiG`. The thread is not a reader of `L`. Afterwards it holds alone. -/
 theorem wr_take_ok_step {lay : Layout D} (hL : LayoutOk lay) {lese : Lese D} {M : RufMaschineG D} {T : TM}
     {gh : D.Lock → Rw} (hrel : RwRel lese lay M T.m gh) (L : D.Lock) {rd rk : Reg} {S : Sees} {Mod : Modl}
     {fn : Nat} {lb kb : Lbl} {bk : Block} (hb : Mod.blk fn lb = some (wrTake lay L rd rk lb kb))

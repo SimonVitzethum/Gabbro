@@ -9,6 +9,8 @@ namespace Gabbro.Grammatik.AbsenkungParam
 open Gabbro.Grammatik.TableOps
 set_option linter.unusedVariables false
 
+/-- The free-slot instance: everything of E1--E6, but no slot reads
+    occupied -- the shape the S-2/S-3 witnesses need. -/
 def gesundFrei : Zielsemantik (Nat → Nat) Nat Nat where
   lies := wlies
   schreib := wschreib

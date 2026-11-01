@@ -467,5 +467,4 @@ theorem zuweis_is (o : String) (h : istZuweis o = true) :
   simp only [istZuweis, Bool.or_eq_true, strEq_eq] at h
   rcases h with (((h | h) | h) | h) | h <;> simp only [h, String.reduceEq, or_self, or_false, or_true]
 
-/-- A place head never opens `start {`. -/
 end Gabbro.Grammatik.Parser

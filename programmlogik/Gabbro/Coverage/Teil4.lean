@@ -8,6 +8,7 @@ public import Gabbro.Coverage.Teil3
 namespace Gabbro.Coverage
 open Gabbro.Body
 
+/-- **Every assumption carries a name**, and no name is empty. -/
 theorem every_assumption_has_a_name :
     ∀ (f : Form) (n : String), classify f = .assumed n → n ≠ "" := by
   intro f n h

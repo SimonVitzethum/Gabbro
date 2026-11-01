@@ -33,6 +33,7 @@ set_option maxHeartbeats 0
 namespace Gabbro.Grammatik.Gen.Zeugen
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Adaequanz
 
+/-- **The table of the witness lists**: M and N are complete. -/
 theorem zeugen_tafel : Tafel Mw Nw where
   gut_m m hm := by
     simp only [Mw, List.mem_cons, List.not_mem_nil, or_false] at hm

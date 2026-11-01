@@ -9,6 +9,7 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
+/-- Every PC-reachable machine is generated: positions project to runs. -/
 theorem pcReach_gen (P : Programm D) (O : Orakel D) (passes : Nat)
     (prog : PCProg D) (M0 M : GenMaschine D) (pc : PCStand)
     (h : PCReach P O passes prog M0 M pc) : GenErreichbar P O passes M0 M := by

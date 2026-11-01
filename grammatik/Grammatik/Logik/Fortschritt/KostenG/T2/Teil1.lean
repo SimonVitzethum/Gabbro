@@ -425,7 +425,5 @@ theorem kinv_schritt
     · rw [hEq]; exact hst
     · rw [hEq]; exact hseg
 
-/-- **The engine over a run.** From the entry invariant, along any run on
-    which the frame stays active, the own steps never exceed the budget. -/
 end Motor
 end Gabbro.Grammatik

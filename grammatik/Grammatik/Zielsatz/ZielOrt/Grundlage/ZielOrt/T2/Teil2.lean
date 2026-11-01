@@ -10,6 +10,14 @@ variable {D : Deklaration}
 section Sperren
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+/-- **The rely, one step.** A step of thread `u` leaves a carrier `c` alone
+    if (a) some lock guarding `c` is not held by `u`, or (b) the signature of
+    `u`'s head function does not permit writing `c`. Every writing step
+    carries its carrier's guards in the static holdings (`darf`/`gdarf` on
+    the write, on `exchange`, on the axiom's declared writes) and the
+    signature permission (`hw`), and every writing step now demands
+    `HeldGenau`, so (a) contradicts a write; the frame of `stmt_gut` and
+    of the oracle (`GutO`) gives (b). -/
 theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M') (c : D.Tab ⊕ D.Glob)
     (hc : (∃ L, Bewacht c L ∧ L ∉ offen (M.faeden u).spur) ∨

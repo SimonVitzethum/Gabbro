@@ -10,6 +10,9 @@ public import Grammatik.Parser.Expr.Ausdruck.Teil2
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
+/-- A whole expression: the token list must end here. Fuel scales
+    with the input; a huge input may report out-of-fuel instead of
+    parsing (total, but not complete -- see CUTS). -/
 def parseTop (toks : List Token) : Except String SExpr :=
   match parseOr (toks.length * 8 + 32) toks with
   | .ok (e, [.ende]) => .ok e

@@ -7,6 +7,7 @@ public import Grammatik.Kern.Syntax.Bits.T2.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- `clz_log2`: `clz x + log2_floor x = w`, as values. -/
 theorem clz_log2 (w : Nat) (x : Zahl 1 ((2 : Int) ^ (w + 1) - 1)) :
     (Zahl.clz w x).n + (Zahl.log2_floor w x).n = (w : Int) := by
   have hb := zahlNat_bounds w x

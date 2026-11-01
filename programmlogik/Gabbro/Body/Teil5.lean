@@ -433,5 +433,3 @@ elab_rules : tactic
 
 
 open Lean Elab Tactic Meta in
-/-- Every `ρ f t` in `e` where `ρ` is a local of type `Env` -- with `t` closed (no loose
-    bound variables), because only a closed state can be handed to a contract. -/

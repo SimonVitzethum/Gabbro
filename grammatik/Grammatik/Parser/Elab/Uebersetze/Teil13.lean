@@ -432,5 +432,4 @@ def lowerVglEin (tabs : List UTab) (names : List String)
         | ">=" => .ok (Expr.le s2.term s1.term)
         | _ => .error "operator without G form"
 
-/-- One `ensures` predicate in `einzahlen`. -/
 end Gabbro.Grammatik.Parser.Uebersetze

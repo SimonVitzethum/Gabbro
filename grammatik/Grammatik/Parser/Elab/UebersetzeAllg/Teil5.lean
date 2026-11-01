@@ -9,6 +9,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.Teil4
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
 
+/-- One `ensures` predicate. -/
 def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option Ty) :
     UEns → Except String (Expr (declOf u) Γ Λ .bool)

@@ -243,12 +243,4 @@ def elabInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
       else none
     | _ => none
 
-/-- Term identity, general form: printing a CHECKED term and
-    re-elaborating gives back the SAME term -- proved by induction over
-    every `Expr` constructor. The 17 `CertExpr` shapes round-trip (the
-    some-branch); the 23 shapes with no print state `True` (the none-branch:
-    `durch`, `altGlob`/`altSlot`, `leseBytes`, and every non-`int`
-    constructor). No premise is assumed about the term -- the statement
-    quantifies over the term itself, so there is nothing vacuous to
-    discharge (rules 4/13: the witness is `print_elab_all_zeuge`). -/
 end Gabbro.Grammatik

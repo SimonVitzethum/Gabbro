@@ -13,6 +13,9 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil10
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- The contract clauses with every `spec fn` inlined: `refines g` is `ensures g(params)` (`M131`/`M132`),
+    `maintains` documents (the owed invariants are derived from `effects`), `by induction over` names a scheme
+    and carries no term. Without `spec fn`s the clauses stay as they are. -/
 def uSpecKlauseln (ctx : UCtx) (params : List String) (ks : List SKlausel) : Except String (List SKlausel) :=
   let ein := uSpecEin ctx.specs 1000
   ks.foldr (fun k acc => match acc with
@@ -444,5 +447,4 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
   | .limit _ :: rest => uAxKlauseln kopf tabs globs rest
   | _ :: _ => .error "foreign fn clause without G form"
 
-/-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 end Gabbro.Grammatik.Parser.Uebersetze

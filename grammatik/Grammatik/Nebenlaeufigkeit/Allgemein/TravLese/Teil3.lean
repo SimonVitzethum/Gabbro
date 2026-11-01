@@ -8,6 +8,13 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.TravLese.Teil2
 
 namespace Gabbro.Grammatik.TravLese
 
+/-- **The run of `taP`, by index** (29 steps from the start machine): steps
+    0-18 by thread 0, steps 19-28 by thread 1. Step 2 fires `dannTrav`
+    (the head residue goes from the unfolded `traverse` to the loop state),
+    step 3 fires `travNext` (index 0 bound, the body scheduled); steps 4 and
+    8 write `tab[0]` and `tab[1]` (`0 -> 1`); step 16 publishes `flag := 1`
+    (`0 -> 1`); step 24 fires `dannBind` (thread 1 reads `flag`, the
+    bound value is `1`); the returns of `fuelle` and `warte` are logged. -/
 theorem taLauf : ∃ (ms : Nat → RufMaschineG taD) (fs : Nat → Faden),
     LaufG taP taO 0 (RufStartG taP taSp taInit) ms fs 29 ∧
     fs 2 = 0 ∧ fs 3 = 0 ∧ fs 16 = 0 ∧ fs 24 = 1 ∧

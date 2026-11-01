@@ -13,6 +13,7 @@ variable {D : Deklaration}
 section Klasse
 variable [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (mass : D.Fn → Bool)
 
+/-- **A `forever`-free hull admits the body under the gate without `forever`.** -/
 theorem ewigFrei_rumpf (hvoll : ∀ g : D.Fn, g ∈ fs) {f : D.Fn} (hf : ewigFrei P fs f = true) :
     rufeE (ewigFrei P fs) (ewigFreiS P fs) false (P.rumpf f) = true := by
   have hew : (befE false false (P.rumpf f)).ewig = false := by

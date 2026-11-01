@@ -12,6 +12,7 @@ public import Grammatik.Parser.Round.RundlaufTyp.Teil1
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
+/-- The root of a chain read by `parseTyp`, handing its rest to the suffix loop. -/
 theorem parseTyp_wurzel (r : STyp) (hr : WurzelGut r) (rest : List Token) (F : Nat)
     (hs : ∀ x, rest ≠ .zeichen "::" :: x) :
     parseTyp (F + 1) (druckTyp r ++ rest) = parseTypNach F r rest := by

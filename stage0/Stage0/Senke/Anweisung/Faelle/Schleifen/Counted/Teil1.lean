@@ -446,6 +446,4 @@ theorem ExprCost.width_or_literal {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
   | falsity => exact .inl rfl
   | binary equation narrow left right values opcode byte => exact .inl (narrow _ _ lower)
 
-/-- A counted expression result carries the same complete typed memory relation
-    as ordinary lowering. Scalar specializations are proved through Enc.single. -/
 end Gabbro.Stage0.Senke

@@ -12,6 +12,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
+/-- Both signs and formats jointly exercise a halfway integer that carries. -/
 theorem floatPackCarryL_rundeBruchKern_zeuge {Γ : Ctx} (ρ : Env D Γ)
     (W : Runner.Mem → Prop) :
     ∀ F ∈ [Gleitkomma.f32, Gleitkomma.f64], ∀ sign : Bool,
@@ -427,6 +428,4 @@ theorem floatOfIntSignL_ok {Γ : Ctx} {ρ : Env D Γ}
   · simpa [BitVec.slt, hz', Runner.IR.bool, hsign] using result
   · simpa [BitVec.slt, hz', Runner.IR.bool, hsign] using result
 
-/-- Connected execution of the actual signed left scaling and packing instructions.
-    The result is stated at word level; canonical field bounds are a separate obligation. -/
 end Gabbro.Stage0.Senke

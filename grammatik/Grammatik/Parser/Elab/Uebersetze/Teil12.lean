@@ -13,6 +13,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil11
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy)
     (name : String) (params : List (String × STyp)) (res : Option STyp) (fehler : Option String) :
     Except String UFnKopf :=

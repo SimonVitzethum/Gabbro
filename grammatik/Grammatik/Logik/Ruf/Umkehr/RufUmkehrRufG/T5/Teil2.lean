@@ -8,6 +8,9 @@ public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG.T5.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- Every run of thread `f` that ends with a stack no longer than `lo`
+    passes through a FIRST such machine: its prefix up to there keeps the
+    stack longer than `lo` in every state that steps. -/
 theorem rufLaufG_erster {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden} (lo : Nat)
     {M M'' : RufMaschineG D} (hl : RufLaufG P O passes f M M'')
     (hpop : (M''.faeden f).stapel.length ≤ lo) :

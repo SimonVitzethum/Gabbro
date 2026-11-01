@@ -436,6 +436,4 @@ def ZweiSchleifen : Gefuege :=
 def EinDurchgang : Durchgang :=
   { kennung := "s1", indizes := [0] }
 
-/-- Der Durchgang laeuft gezaehlt: Kennung eingetragen, Index im Bereich
-    `0 ≤ i < 1`, genau ein Durchgang gegen `np = 1` -- und die Regel gilt. -/
 end Gabbro.Grammatik

@@ -440,5 +440,4 @@ theorem pcSchritt_gen (P : Programm D) (O : Orakel D) (passes : Nat)
   · exact GenSchritt.nimmt M f L hself hrang hfrei
   · exact GenSchritt.gibt M f L hhaelt
 
-/-- Every PC-reachable machine is generated: positions project to runs. -/
 end Gabbro.Grammatik

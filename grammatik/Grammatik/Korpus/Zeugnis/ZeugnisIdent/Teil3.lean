@@ -8,6 +8,12 @@ public import Grammatik.Korpus.Zeugnis.ZeugnisIdent.Teil2
 
 namespace Gabbro.Grammatik
 
+/-- Converse: elaboration implies certificate validity -- an elaborated
+    print is exactly what the range table recomputes. Combined with the
+    existing `zeugnis_sound`, `elabInt c = some e` yields both the
+    `GueltigAbleitung` (here) and the judgment (there). Proved by
+    induction over the certificate; every premise is used (sub-equations
+    feed the IHs, side hypotheses discharge the table guards). -/
 theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
     (c : CertExpr D) {lo hi : Int} {e : Expr D Γ Λ (.int lo hi)}
     (h : elabInt c = some ⟨.int lo hi, e⟩) :

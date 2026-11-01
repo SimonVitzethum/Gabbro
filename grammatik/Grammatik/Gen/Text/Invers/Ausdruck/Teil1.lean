@@ -357,6 +357,4 @@ theorem rechne_bin (ctx : UCtx) (bl : SExpr → Except String USide) (op : Strin
     (op = "*" → uRechne ctx bl (.bin op a b) = .ok (.mul x y)) := by
   refine ⟨?_, ?_, ?_⟩ <;> intro h <;> subst h <;> simp only [uRechne, strEq_eq, decide_true, String.reduceEq, decide_false, Bool.or_false, ↓reduceIte, ha, hb, Bool.or_true, Bool.false_eq_true, Bool.or_self]
 
-/-- **The side**: the arithmetic layer over a leaf reader that answers the printed leaves reads every printed
-    number back. -/
 end Gabbro.Grammatik.Gen.Text

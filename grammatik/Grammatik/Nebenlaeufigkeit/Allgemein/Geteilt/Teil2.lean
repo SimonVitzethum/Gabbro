@@ -6,6 +6,7 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt.Teil1
 
 namespace Gabbro.Grammatik.Geteilt
 
+/-- Global codes are injective: the codes ARE the carriers (cut C1). -/
 theorem globInj_all (globs : List GlobCarrier) : globInjForm globs := by
   intro g₁ _ g₂ _ h
   exact h

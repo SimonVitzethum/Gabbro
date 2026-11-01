@@ -8,6 +8,7 @@ public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil1
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
+/-- A place head never opens `start {`. -/
 theorem platz_nicht_start (z : SExpr) (hz : gutPlatz z = true) (X : List Token)
     (hX : ∀ r', X ≠ .zeichen "{" :: r') (hXo : istOrtsFort X = true) :
     ∃ a r, druckToks z ++ X = nameTok a :: r ∧ (∀ r', r ≠ .zeichen "{" :: r') ∧

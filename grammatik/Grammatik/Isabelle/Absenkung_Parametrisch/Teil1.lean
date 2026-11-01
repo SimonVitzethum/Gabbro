@@ -436,6 +436,4 @@ def gesund : Zielsemantik (Nat → Nat) Nat Nat where
     intro i _
     rfl
 
-/-- The free-slot instance: everything of E1--E6, but no slot reads
-    occupied -- the shape the S-2/S-3 witnesses need. -/
 end Gabbro.Grammatik.AbsenkungParam

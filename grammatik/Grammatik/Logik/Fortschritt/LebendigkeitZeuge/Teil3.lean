@@ -9,6 +9,12 @@ public import Grammatik.Logik.Fortschritt.LebendigkeitZeuge.Teil2
 namespace Gabbro.Grammatik
 set_option linter.unusedVariables false
 
+/-- **The witness run with every premise of `wartezeit_schranke`**: the
+    runtime assumption at `F = 4`, the hold time `h = 6`, `k = 0`, no
+    hardware stop in a critical section, the contenders `[0, 1]`, and
+    `KeinLogikHaltG` at every machine (from `mP_zertifiziert`). And the run
+    is not degenerate: thread 1 stands at `locks` from step 5 to step 15
+    while thread 0 holds the lock at steps 6-11, and takes it at step 15. -/
 theorem lZeuge : ∃ R : PlanLauf mP mO 0,
     R.M 0 = RufStartG mP mSp mInit ∧ R.akt = lAkt ∧
     LaufzeitAnnahme R 4 ∧ Haltezeit R (fun _ => 6) (fun _ => 0) ∧ Zielsatz.HardwareImAbschnitt R ∧

@@ -443,5 +443,4 @@ theorem hBeide_pin2 (s₁ s₂ : Speicher nD) (w : World nD) :
   unfold pinA
   rw [if_neg (by decide), if_pos rfl]
 
-/-- Any other read (here: the empty one of `.empty`) is untouched. -/
 end Gabbro.Grammatik.GvAtomKoerper

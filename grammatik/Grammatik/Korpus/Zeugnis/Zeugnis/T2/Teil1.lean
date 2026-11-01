@@ -443,5 +443,4 @@ example : GueltigAbleitung TestD [] [] (.srem (.lit 7) (.lit 2)) (-1) 1 := by de
 /-- FORGED proof: `7 srem 0` -- same claim as above, but the divisor admits zero. -/
 example : ¬ GueltigAbleitung TestD [] [] (.srem (.lit 7) (.lit 0)) (-1) 1 := by decide
 
-/-- `6 band 3` printed as `(0, 6)`: both operands nonneg (M137). -/
 end Gabbro.Grammatik

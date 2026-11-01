@@ -13,6 +13,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil4
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- One `ensures` predicate (the `tr_ensures` of `lean_g.rs`). -/
 def uSichert (ctx : UCtx) : SExpr → Except String UEns
   | .ext k [x, dk] [subject, body] =>
     if !(k == XKind.all || k == XKind.any) then .error "ensures clause without G form"

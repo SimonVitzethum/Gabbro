@@ -10,6 +10,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 variable (z : Spez)
 variable {z}
 
+/-- **The side**: the arithmetic layer over a leaf reader that answers the printed leaves reads every printed
+    number back. -/
 theorem rechne_ok {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     {kopf : Option Nat} (H : EInvK z ctx Γ Λ art kopf) (bl : SExpr → Except String USide)
     (hB : Blatt (z := z) ctx Γ Λ art kopf bl) (n : Nat) :
@@ -242,5 +244,4 @@ theorem rechne_vgl (ctx : UCtx) (op : String) (a b : SExpr) (x y : USide)
     uSichert ctx (.bin op a b) = .ok (.cmp op x y) := by
   rcases hop with rfl | rfl | rfl <;> simp only [uSichert, uIstVgl, ↓reduceIte, ha, hb]
 
-/-- **A truth value in an `ensures`/`requires`**. -/
 end Gabbro.Grammatik.Gen.Text

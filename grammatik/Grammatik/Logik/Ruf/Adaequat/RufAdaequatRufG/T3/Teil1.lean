@@ -436,6 +436,5 @@ theorem w_abbEwig {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     exact ⟨_, RufSchrittG.dannNextEwig M f l Γ Λ a n inv body k r ρ rfl hhead _ _ []
       rfl rfl (fun _ _ h => absurd h List.not_mem_nil) hΛ, zustandG_neu rfl rfl⟩
 
-/-- Peel a `dann` layer off an abrupt exit. -/
 end Ausgaenge
 end Gabbro.Grammatik

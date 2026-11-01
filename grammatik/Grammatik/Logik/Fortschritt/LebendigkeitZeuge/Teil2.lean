@@ -9,6 +9,7 @@ public import Grammatik.Logik.Fortschritt.LebendigkeitZeuge.Teil1
 namespace Gabbro.Grammatik
 set_option linter.unusedVariables false
 
+/-- **The run, tabled.** -/
 theorem lLauf : ∃ Ms : Nat → RufMaschineG mD,
     Ms 0 = RufStartG mP mSp mInit ∧
     (∀ j u, lAkt j = some u → RufSchrittG mP mO 0 (Ms j) u (Ms (j + 1))) ∧
@@ -377,10 +378,4 @@ end Tafel
 /-! ## 5. The witness -/
 
 set_option maxHeartbeats 4000000 in
-/-- **The witness run with every premise of `wartezeit_schranke`**: the
-    runtime assumption at `F = 4`, the hold time `h = 6`, `k = 0`, no
-    hardware stop in a critical section, the contenders `[0, 1]`, and
-    `KeinLogikHaltG` at every machine (from `mP_zertifiziert`). And the run
-    is not degenerate: thread 1 stands at `locks` from step 5 to step 15
-    while thread 0 holds the lock at steps 6-11, and takes it at step 15. -/
 end Gabbro.Grammatik

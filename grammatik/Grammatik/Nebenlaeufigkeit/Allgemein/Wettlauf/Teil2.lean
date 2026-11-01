@@ -9,6 +9,10 @@ public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- **Keine Ueberkreuzung der Sperrordnung**, im Lauf: kein Faden nimmt `L2` mit `L1` in der
+    Hand, waehrend ein anderer `L1` mit `L2` in der Hand nimmt -- die Raenge stiegen dann im
+    Kreis. Das ist `keine_verklemmung` (Satz.lean) ueber Laeufen: die Wartekette, die eine
+    Verklemmung braucht, hat keinen Anfang. -/
 theorem keine_ueberkreuzung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Faden)
     (L1 L2 : D.Lock) (h h' : List D.Lock)
     (hi : l[i]? = some (Schritt.mk f (.nimmt L2 h))) (hj : l[j]? = some (Schritt.mk g (.nimmt L1 h')))

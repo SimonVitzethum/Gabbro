@@ -440,7 +440,4 @@ theorem RufLaufUeber.trans {P : Programm D} {O : Orakel D} {passes : Nat} {f : F
   | refl => exact h2
   | schritt hh hs _ ih => exact RufLaufUeber.schritt hh hs (ih h2)
 
-/-- Every run of thread `f` that ends with a stack no longer than `lo`
-    passes through a FIRST such machine: its prefix up to there keeps the
-    stack longer than `lo` in every state that steps. -/
 end Gabbro.Grammatik

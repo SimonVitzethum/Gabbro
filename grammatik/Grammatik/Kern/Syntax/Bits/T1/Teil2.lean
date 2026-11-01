@@ -7,6 +7,7 @@ public import Grammatik.Kern.Syntax.Bits.T1.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- Four-byte nest reads back all bytes. -/
 theorem byteOf_nest (b0 b1 b2 b3 : Nat)
     (h0 : b0 < 256) (h1 : b1 < 256) (h2 : b2 < 256) (h3 : b3 < 256) :
     byteOf (((b3 * 256 + b2) * 256 + b1) * 256 + b0) 0 = b0 ∧

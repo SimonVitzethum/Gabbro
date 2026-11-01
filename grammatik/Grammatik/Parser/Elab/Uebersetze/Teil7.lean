@@ -13,6 +13,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil6
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
+/-- `place = v;` at a slot or a static (the place reader decides which). -/
 def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
   match uZugriff ctx ziel with
   | .error e => uGlobSchreib ctx ziel wert e
@@ -446,6 +447,4 @@ def uOpsZahl (ctx : UCtx) : Option (List Token) → Option Nat
   | some [.ident c, .wort _] => (ctx.lits.find? (fun k => strEq k.1 c)).bind fun k => if 0 ≤ k.2 then some k.2.toNat else none
   | _ => none
 
-/-- The header of a `retry`: the label, the pass bound, the predicate, the handler. `progress` must name an
-    `assume` item. -/
 end Gabbro.Grammatik.Parser.Uebersetze

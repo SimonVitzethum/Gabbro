@@ -432,5 +432,4 @@ def uReachExport (ctx : UCtx) (field : String) (a b : SExpr) : Except String UEn
     | .error _ => uIndexOrigin ctx b
   pure (.reach table field (← uExportIndex ctx table number a) (← uExportIndex ctx table number b))
 
-/-- One `ensures` predicate (the `tr_ensures` of `lean_g.rs`). -/
 end Gabbro.Grammatik.Parser.Uebersetze

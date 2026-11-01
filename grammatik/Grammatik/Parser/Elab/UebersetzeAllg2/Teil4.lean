@@ -11,6 +11,7 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 
+/-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type. -/
 def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (p _cname : String) (args : List UArg) :
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=

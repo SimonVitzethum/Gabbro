@@ -24,6 +24,15 @@ namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- **THE STATEMENT OF BEFORE** (verbatim `GabbroZiel` until Opus lane O25c, 2026-09-26): the
+    checker of before, (b) without the rely, `ZielF` over the thread machine over G. It is proved
+    directly (`gabbro_ziel_sc`) and, on every unit without an arena, a COROLLARY of `GabbroZiel`
+    (`gabbro_ziel_sc_aus`), kept as a name because the corpus theorems
+    and the earlier embeddings are stated over it. Since 2026-09-26 over the THREAD MACHINE:
+    every thread-machine run from the runtime's start, with any set `lebt0` of initially live
+    threads -- the others are slots that `start` or `child` spawn at run time. Every G run is
+    such a run (`lebt0` all live, nothing spawned: `fadenErreichbar_von_G`), so the statement of
+    before that is a corollary too (`gabbro_ziel_g`). -/
 def GabbroZielSC : Prop :=
   ∀ (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),

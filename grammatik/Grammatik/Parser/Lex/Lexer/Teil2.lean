@@ -7,6 +7,8 @@ public import Grammatik.Parser.Lex.Lexer.Teil1
 
 namespace Gabbro.Grammatik.Parser
 
+/-- Decidable equality on lexing outcomes (core Lean 4.33 has none for
+    `Except`): both sides agree constructor-wise and inside. -/
 instance : DecidableEq (Except LexFehler (List Token)) :=
   fun
   | .ok x, .ok y =>

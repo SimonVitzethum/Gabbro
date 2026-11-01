@@ -6,6 +6,8 @@ public import Gabbro.Body.Teil5
 @[expose] public section
 
 
+/-- Every `ρ f t` in `e` where `ρ` is a local of type `Env` -- with `t` closed (no loose
+    bound variables), because only a closed state can be handed to a contract. -/
 partial def GabbroMeta.collectCalls (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr × Lean.Expr)) := do
   let acc ← IO.mkRef (#[] : Array (Lean.Expr × Lean.Expr × Lean.Expr))
   let rec go (e : Lean.Expr) : MetaM Unit := do

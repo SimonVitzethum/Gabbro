@@ -10,6 +10,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 variable (z : Spez)
 variable {z}
 
+/-- **A truth value in an `ensures`/`requires`**. -/
 theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     ∀ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt},
     EInvK z ctx Γ Λ art kopf → ErgOk ctx Γ kopf →

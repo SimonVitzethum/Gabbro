@@ -444,5 +444,4 @@ def L45 (s' : State) : Prop :=
 -/
 def L46 : Prop := notSayable
 
-/-- **L47 -- SAYABLE.** A revoked endpoint ends the service. -/
 end GabbroV.V1

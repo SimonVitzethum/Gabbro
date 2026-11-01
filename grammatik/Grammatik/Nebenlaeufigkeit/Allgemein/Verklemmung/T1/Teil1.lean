@@ -439,7 +439,4 @@ theorem rangKette_tail {o o' : List D.Lock} :
         · exact Or.inl h5
         · exact Or.inr ⟨h5 F List.mem_cons_self, fun G hG => h5 G (List.mem_cons_of_mem _ hG)⟩
 
-/-- **A head-local step**: a new head of the same function, held locks `o'`
-    each named by the new head or old and carried, or ranking at least
-    every floor of the stack. -/
 end Gabbro.Grammatik

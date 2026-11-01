@@ -435,7 +435,4 @@ theorem divBruch_nenner (u v : Exakt) : (divBruch u v).nenner
         - (if u.zweierExp ≤ v.zweierExp then u.zweierExp else v.zweierExp)).toNat :=
   by rfl
 
-/-- Division of finite values by a nonzero finite divisor with in-range
-    exact quotient stays finite (and is the rounded exact quotient).
-    `0 / 0` is NaN, so the divisor must be nonzero (`hkb`, `hv`). -/
 end Gabbro.Grammatik.Gleitkomma

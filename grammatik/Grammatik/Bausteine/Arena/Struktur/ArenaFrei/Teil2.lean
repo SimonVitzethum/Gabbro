@@ -13,6 +13,8 @@ variable (O : Orakel D) (passes : Nat)
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 
+/-- **Taking a slot off the free list**, read off the executed form: it hands out the old head, the head becomes the
+    head's link, no other link moves and the used counter stays. -/
 theorem freiNimm_fakten (A : FreiForm D) (v : Expr D Γ Λ (D.typ A.tab A.feld))
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
     (hwK : V.gschreibt A.kopf = true) (hLK : gdarf D A.kopf Λ)

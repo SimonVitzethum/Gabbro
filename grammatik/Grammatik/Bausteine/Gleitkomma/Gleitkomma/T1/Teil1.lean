@@ -331,8 +331,4 @@ theorem rundeInt_tie (quo rest den : Nat)
     have hlt : quo % 2 < 2 := Nat.mod_lt _ (by decide)
     omega
 
-/-- Monotonicity of the significand decision: a larger value (same
-    denominator, quotient-remainder ordered, the upper remainder normalised)
-    never rounds down further. `hr₂` is load-bearing (`5,0` vs `3,25` at
-    `den = 10` breaks it); the lower remainder needs no bound. -/
 end Gabbro.Grammatik.Gleitkomma

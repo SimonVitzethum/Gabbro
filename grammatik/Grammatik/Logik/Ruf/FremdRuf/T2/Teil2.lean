@@ -7,6 +7,15 @@ public import Grammatik.Logik.Ruf.FremdRuf.T2.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- ZEUGE: every premise of `fremdruf_gate_gilt_pre` holds jointly on the
+    fixture with the BAD oracle -- frame, restricted premise, the read gate's
+    declared effects, the caller's obligation at a well-formed read after
+    the open (descriptor `3`), a fitting answer -- and the witness is
+    non-degenerate: the same oracle breaks the full premise
+    (`fdObad_nicht_voll`), the precondition is false at another call
+    (`fdPflicht_verletzt`), and the open gate's own precondition held
+    at the start world (the terminator stood) and fails after it (the
+    marker overwrote it). -/
 theorem fremdruf_gate_gilt_pre_zeuge :
     ∃ (g : GateData fdD) (σ : World fdD) (ρ : Env fdD (fdD.aparams fdRead))
       (v : ErgVal fdD (fdD.aerg fdRead)),

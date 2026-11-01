@@ -7,6 +7,10 @@ public import Grammatik.Bausteine.Schablonen.SchablonenT5.T1.Teil1
 
 namespace Gabbro.Grammatik
 
+/-- Soundness of `transition.transset`: the named observer sees no
+    change anywhere in the trace. `hObs` names both moved places as
+    outside the footprint; `hw`/`hq` fix the world and the observed
+    place. All four are consumed. -/
 theorem joint_move_hidden (σ : Nat → Nat) (p1 p2 v1 v2 : Nat)
     (Obs : List Nat) (hObs : p1 ∉ Obs ∧ p2 ∉ Obs)
     (w : Nat → Nat) (hw : w ∈ jointTrace σ p1 p2 v1 v2)

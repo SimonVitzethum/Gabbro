@@ -432,9 +432,6 @@ theorem gueltig : ∀ (n : Nat) (L : D.Lock), hoeher ls L < n → ∀ (t : Faden
       exact ⟨j, j1, j2, j3⟩
 
 include hO hls hRang hEx hFifo hFair hH hAkt hAnw in
-/-- **THE WAITING BOUND, core form.** A thread standing at `locks L` at
-    scheduler step `n0` takes `L` at a step `j < n0 + wartezeit L` and holds
-    it after that step. -/
 end Beweis
 end Kern
 end Gabbro.Grammatik

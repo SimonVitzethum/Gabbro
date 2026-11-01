@@ -379,5 +379,4 @@ theorem ens_einv (f : z.deklaration.Fn) {ctx : UCtx} {art : Nat → UParamArt}
   | some τ =>
     exact ⟨E.mitErg τ .int, ergOk_mitErg H τ (by simpa [vertragVon, Vertrag.vonSig] using herg)⟩
 
-/-- **A whole function read back.** -/
 end Gabbro.Grammatik.Gen.Text

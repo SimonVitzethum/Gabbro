@@ -8,6 +8,13 @@ public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T1.Te
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- **Allgemeine Stabilitaet der Invarianten (N Faeden).** Wo `Q` die Invariante selbst
+    ist, faellt die geteilte Erhaltpraemisse weg: jeder Schritt -- fremd wie eigen --
+    wird vom Kontext getragen (`invErhalt_aus_Kontext`), die Kette faltet wie gehabt
+    (`kette_erhaelt` via `allgemeinStabil`). `hDeck` wird getragen, nicht verbraucht:
+    es beurkundet die Disziplin, unter der der Rest -- beliebiges rahmenlokales `Q`
+    ueber geteilten Traegern -- weiter anzunehmen ist (G3); `atomic`-Globale und
+    `publishes`/`awaits`-Paare bleiben ausserhalb (G4). -/
 theorem allgemeinStabil_invariant (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     (I : TraegerInv (D := D)) (c : D.Tab ⊕ D.Glob)
     (hInv : InvariantenKontext Nb J I)

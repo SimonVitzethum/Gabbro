@@ -17,6 +17,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {K base top reserved : Nat} {code : List II} {origin target : Int}
     {originDistance budget : Nat}
 
+/-- Both large paths skip the SMALL code using the emitted jump. -/
 theorem floatNormalizeLoopL_large_skip_small
     (hc : floatNormalizeLoopL base = some (code, top))
     {m : Runner.Mem} (fetch : CodeAt m pc code) :
@@ -389,7 +390,5 @@ theorem floatNormalizeLoopL_large_iteration
 #print axioms floatNormalizeLoopL_large_iteration
 
 set_option maxHeartbeats 800000 in
-/-- Commit the two SMALL results from their actual temporary slots. The
-    distance, target and budget slots survive the emitted copies. -/
 end
 end Gabbro.Stage0.Senke

@@ -14,6 +14,7 @@ public import Grammatik.Kern.Syntax.Extraktion.T1.Teil1
 namespace Gabbro.Grammatik.Extraktion
 variable {D : Deklaration}
 
+/-- Die Paarrechnung ist paartreu: was sie behielt, war deklariert. -/
 theorem paarTreue_aus_bau (P : Programm D) (fns : List D.Fn)
     (fnCode : D.Fn → Nat)
     (tabs : List D.Tab) (tabCode : D.Tab → Nat)
