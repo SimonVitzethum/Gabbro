@@ -248,14 +248,14 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
     let ca ← slotA L t f ((frei Γ reserved) + 1) cr
     pure (ce.1 ++ ca.1 ++ [stC ((frei Γ reserved))], max ce.2 ca.2)
   | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _, reserved =>
-    if inW a b && lit32 von && lit32 nach then do
+    if inW a b && inW von von then do
       let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved))
       let cr ← slotC L t f ((frei Γ reserved)) ci'
       let cj ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
       let ca ← slotA L t f ((frei Γ reserved) + 1) cj
-      let test := bin2 14 ((frei Γ reserved)) cr ([ci 1 ((frei Γ reserved) + 1) von 0], (frei Γ reserved) + 2)
+      let test := bin2 14 ((frei Γ reserved)) cr (wordConstant (frei Γ reserved + 1) von)
       pure (test.1 ++ (guardC ((frei Γ reserved)) 106 ((frei Γ reserved)) ++
-        ([ci 1 ((frei Γ reserved)) nach 0] ++ ca.1 ++ [stC ((frei Γ reserved))])),
+        ((wordConstant (frei Γ reserved) nach).1 ++ ca.1 ++ [stC ((frei Γ reserved))])),
         max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
   | _, Γ, _, _, .traverse t inv body, reserved =>

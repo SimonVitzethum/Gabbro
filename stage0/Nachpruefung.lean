@@ -101,6 +101,7 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.packSum_ok
 
 #print axioms Gabbro.Stage0.Senke.shift_ok
+#print axioms Gabbro.Stage0.Senke.ShiftProbe.simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.readBytesL_ok
 #print axioms Gabbro.Stage0.Senke.putBytesL_ok
 #print axioms Gabbro.Stage0.Senke.putBytes_ok

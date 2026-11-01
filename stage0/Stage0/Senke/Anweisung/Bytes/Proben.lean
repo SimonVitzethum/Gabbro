@@ -4,6 +4,7 @@
 -/
 import Stage0.Senke.Welt.Anordnung
 import Stage0.Senke.Anweisung.Bytes.Put
+import Stage0.Senke.Anweisung.Bytes.ShiftProbe
 
 namespace Gabbro.Stage0.Senke.ByteProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze

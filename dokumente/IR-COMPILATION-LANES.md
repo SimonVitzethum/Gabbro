@@ -875,3 +875,123 @@ changed Lean modules stay below 500 lines. Checks use the private worktree
 overlay and capped slot-2 lock; grammar artifacts are reused. This closes one decoder
 restriction, without extending the remaining packed-width, option/reason or ABI
 domains above.
+
+### IR-07 bounded inventory (base a6970b425, 2026-11-01)
+
+Read against canonical `Kern/Syntax/Syntax`, `Kern/Semantik`,
+`Bausteine/Arena` and `Parser/Elab/Uebersetze{,Allg,Allg2,Allg3}`;
+Stage0 uses `Frontend.elabWithScopes`, `Compiler.compile`, `lowE`/`lowS`/
+`lowB`/`lowEnd` and the mutual `Anweisung/Satz` dispatcher. No device-register
+transition is included. A typed emitter alone is not textual form coverage.
+
+| Owned form | Baseline status and exact boundary | Connected proof / prerequisite |
+|---|---|---|
+| Stmt `shift` | Compiled for signed-word field intervals, signed32 old/new stage numbers, compilable index and address. Other representable old/new constants are refused solely by the emitter. Frontend `uZustandVon`/`lowShiftL` checks declared transition, destination range, write effects and guards. | `shift_ok` in `lowS_ok`, then `lowB_ok`/`lowEnd_ok`, function/image correctness. Selected bounded extension: materialize both signed-word state constants with the existing word materializer. |
+| Stmt `breaking` | Typed emitter compiles its body and the mutual proof recurses into it. Textual `breaking` (`SAnw.waive`) has no `uAnwReihe` export case: refused as `stmt without G form: waive`. | Existing model rule and `lowS_ok` branch; missing canonical frontend export, not missing IR emitter. Invariant restoration at returns must remain mandatory. |
+| Stmt `advances` | Typed emitter emits no instructions, matching `execStmt`'s unchanged runtime world. Source statement (`SAnw.step`) is refused as `stmt without G form: step`; function `moves` clause as `clause without G form`. | Existing model rule and `lowS_ok`; missing mark/signature export (`declOf` has `Marke := Empty`, no owner marks), not missing emitter. |
+| Stmt `retires` | Typed emitter likewise emits no instructions with a connected `lowS_ok` branch. Source `quits` clause is refused as `clause without G form`. | Existing model consumes a held mark and names its assumption. Missing canonical mark/signature export, not missing emitter. |
+| TopLevel `arenaT` | Fixed positive capacity, scalar element, no placement: exported to table plus `#used` static. Block-position `alloc A(v) else { ... }` expands through `Block.arenaAlloc`; `reset A` is a counter store. Dynamic ceiling/placement refuse as `arena with a dynamic ceiling without G form` / `arena placement without G form`. Top-level/else-position alloc refuse explicitly in `lowBodyF`/`lowEndL`; alloc without else, grow/free and extended reset are not exported. | Existing `ArenaZucker` and lowerings of bind/narrow/stores connect block allocation; no separate allocator emitter is needed. Dynamic/ownership arena models exist in `Bausteine/Arena`, but their canonical source-to-G bridge and lifetime/availability obligations are missing. Wider element storage additionally needs IR-03. |
+| TopLevel `stateT` | Compiled by `uZustand`: named stages become ordinals in first-written order; allowed pairs feed `D.erlaubt`. State-transition requires/effects clauses refuse as `state transition clause without G form`; non-name stages as `state stage without G form`. | Source provenance (`compile_source_program`), checked `lowShiftL`, then `shift_ok`. Clause-bearing transition semantics need a canonical model/export rule; this lane adds none. |
+| TopLevel `groupT` | Compiled by `uInvs`/`uInv` for ordinary table carriers and predicates accepted by `uBool`/`lowBool`; locks checked by `uU003` and canonical invariant checking. Arena/global carriers refuse as `invariant carrier without G form`. Runtime compilation still depends on predicate emission. | Canonical `Programm.invariante`, checker, source provenance and function/image proofs; richer carriers need canonical export/checking support, not an isolated group emitter. |
+
+Additional parent-lane obligations: `table ... backed ...` and `owner ...` refuse
+as `table without G form` in `uTabelle`; the canonical ownership model exists,
+but `declOf` exports neither owner marks nor their resource contracts. Open
+`table T from provider` exports a numeric-field region and `alloc T` becomes a
+provider call; actual fresh/disjoint provider memory, layout extension and
+lifetime contracts remain a missing provider-contract integration (IR-06 memory
+primitives already accept supplied region cells). A plain numerical provider
+answer cannot close it. No existing guarantee may be replaced with an unchecked
+address. Multiword transport remains IR-03-owned. None of the seven owned typed
+families is absent from the model; the textual/export restrictions above remain
+open even where typed soundness is connected.
+
+The canonical arena sugar does not carry reservation `lo` (`ArenaZucker` documents
+that boundary). `uInv` exports the name, carriers and predicate, not the source
+cost/online/proof metadata. These source-to-model boundaries are not counted as
+completed by the existing primitive emitters.
+
+The bounded `Stmt.shift` step now materializes both state constants with
+`wordConstant`, retaining its immediate fast path. The field interval and old
+state must fit signed64; the destination still carries its original field-range
+proof. Unsigned intervals above signed64, unrepresentable states, missing index
+or address emission and the other inventory boundaries remain refused. No ABI,
+canonical model, ownership rule, provider contract or source syntax changed.
+The existing eight-word scratch allowance covers both materializers. `shift_ok`
+uses signed-word injectivity for the old-state comparison and the shared
+materialization theorem for the write; the mutual dispatcher, `lowFun_spec`,
+`Emitted.correct` and `irBild_correct` remain connected to the actual emitter.
+
+`ShiftProbe.simulation_zeuge` jointly supplies the real code/frame/table-memory
+premises: cell one initially holds 2^32 + 41, becomes 2^32 + 42, cell zero stays
+zero and protected frame slot three stays 77. Both state constants fail signed32.
+Textual stages remain dense named ordinals; the large-constant path is exercised
+by this typed memory witness, not by claiming a practical text declaration with
+billions of stage names. Four textual source-to-IR-to-ASM executions pass (two
+new, two existing), including the state sequence on a signed64-sized field and
+failed-prestate stop 106. Two new textual refusal probes retain missing write
+permission and undeclared-edge errors.
+
+Measured in the private `.scratch-ir07` overlay: 153 Stage0 modules pass direct
+checks, including the statement/block/end-block dispatcher and IRBild/Haupt.
+All nine focused axiom audits, including the memory witness and `gabbro_ziel`,
+report exactly propext, Classical.choice and Quot.sound. Layout passes for all
+1473 tracked Lean files; all five changed Lean files remain below 500 lines.
+Every Lean invocation used the capped slot-2 lock, with ELAN_TOOLCHAIN removed;
+grammar artifacts were reused. No full guardian or grammar rebuild was run.
+This closes the one-word signed-state constant restriction, not the remaining
+source-export, provider, ownership or multiword boundaries in the inventory.
+
+### IR-13 bounded inventory
+
+Baseline `6444b5cc3` (2026-11-01). Ownership is exactly TopLevel
+`formatT`, `checkT`, `accT`, `walkT`. Read against canonical
+`Kern/Syntax/{Syntax,Zucker}`, `Kern/Semantik`,
+`Parser/Item/ElementTief`, `Parser/Elab/Uebersetze{,Allg,Allg2,Allg3,Pipeline}`,
+`Isabelle/{FormatRoundtrip,AccumulatesMonoid}` and
+`Bausteine/Schablonen/SchablonenT5`. Stage0 was traced through
+`Frontend.{Source,Elaboration}`, `Compiler.compile`, `lowE`/`lowS`/`lowB`/
+`lowEnd`, the mutual `Anweisung/Satz` dispatcher and `IRBild`.
+
+| Owned form | Status and exact refusal | Canonical model, connected primitives and missing boundary |
+|---|---|---|
+| `formatT` | **Refused: needs grammatik export.** `uRestFehler` has no `formatT` case and returns `item without G form`, including unused declarations. The parser retains optional version/endian, field types/ranges, positions, `offset_into`, `where` and reserved fields; none reaches an executable format export. | `Syntax` describes a count-one table and field checks; `Expr.getBytes`, `Stmt.putBytes`, `Expr.bitfeld`/`embeds` and `bytesZuZahlBig` provide model components. Actual byte emission is limited to at most eight bytes, with `readBytesL_ok` in `lowE_ok` and `putBytes_ok` in `lowS_ok`; `Block.check` reaches `blockCheck_case`/`lowB_ok`. There is no source-format layout/reader/writer/validation expansion or its generic preservation proof. `FormatRoundtrip.roundtrip` is a byte-list theorem, explicitly not the missing world-memory/emitter bridge. `@version` parsing is not version-reader support. Wider represented values additionally need IR-03. |
+| `checkT` | **Refused: needs grammatik export.** Every `SCheck` payload reaches `uRestFehler`'s `item without G form`; `claim`, `measures`, `gates`, `can_fail`, optional floors and counterprobes are not exported. | The intended model is a generated `Duty` mark with producing/consuming function signatures (`Signatur.produziert`/`konsumiert`, `Res.marke`, `nachSig`, `RufPasst`). However `declOf` fixes `Marke := Empty`, and `mkSig` exports empty produced/consumed lists. The generated checker, measurement/floor obligations and gate signatures need canonical export and a generic expansion proof. The compiled boolean `Block.check` is a different construct and cannot replace the linear duty. |
+| `accT` | **Refused: needs grammatik export.** All five merge operators (`max`, `min`, `add`, `or`, `and`), both ordinary and `per cpu` declarations, receive `item without G form`; no accumulator global or operations are generated. | `Syntax` describes a global plus generated assignment; `Stmt.mergeMax`/`mergeAdd` desugar into ordinary conditionals, reads, arithmetic and stores, whose existing `lowE_ok`/`lowS_ok` branches are connected. `mergeAdd` retains explicit range premises. `AccumulatesMonoid` proves abstract order independence, neutral elements and fold/RMW equality, but explicitly leaves per-core cell layout/initialization and its compiler bridge open. Export of the declaration, all generated operations and the per-core/quiescence contract is missing even for one-word types; plain stores cannot supply it. Larger value transport additionally needs IR-03. |
+| `walkT` | **Refused: needs grammatik export.** Every `SWeg` payload receives `item without G form`: constant levels, node type, down field/predicate, leaf predicate and invariants never reach a canonical walker expansion. | `Stmt.walk2` is exactly two nested `Stmt.traverse` terms. The actual traversal emitter uses `travC` with a representable count, emitted invariant and body; `traverse_case` in `lowS_ok` recurses through `lowB_ok`. This supplies reusable primitives, not the declared walker. `walk_hits_mapping` proves membership in an abstract filtered entry list; it does not prove that source down/leaf predicates generate the correct traversal, mapping witnesses or large-page cases. That source expansion and its generic proof are missing. Record-shaped nodes also retain the canonical record-model/export prerequisite; multiword node values additionally need IR-03. |
+
+All four constructors exist in the canonical deep parser; none is a missing
+parser node, and **zero of these four source families compile with a connected
+lowering theorem**. `uMembers` retains them when opening module/public wrappers;
+`Frontend.source` does not desugar them. The first runtime elaboration step in
+`elabWithScopes` is the unchanged canonical `uRestFehler`, also used by `elabU`.
+`Compiler.compile` propagates its error before `lowerAllg`, the full checker or
+any emitter runs. The existing generic primitive theorems continue through
+`lowFun_spec`, `Emitted.correct` and `irBild_correct` only when the corresponding
+canonical program actually exists; their existence does not close these exports.
+
+No owned form is blocked **only** by a Stage0 emitter/proof. A one-word field,
+merge value or one-level walker still encounters the same earlier export
+refusal. The bounded implementation condition is therefore false. This task
+stops at the inventory: no grammar/model/syntax/ABI change, parallel export,
+handwritten replacement program or detached emitter is introduced. The frozen
+canonical export is the immediate blocker; the model/expansion obligations
+identified above must be checked when that boundary is authorized to change.
+
+Measured in this worktree's private `.scratch-ir13/lib` overlay: ten frontend
+modules passed direct Lean checks, including `Frontend.Source` and
+`Frontend.Elaboration`. A scratch kernel audit checked eight generic equations:
+all four arbitrary constructor payloads are refused both by `uRestFehler` and
+by the actual `elabWithScopes` phase, independently of declaration scopes.
+All 18 textual probes passed lexer/parser, constructor retention, the actual
+`Frontend.source` checks and scoped elaboration's exact `item without G form`
+refusal. They cover format endian/version/field variants, both check tails,
+all five merge operators, per-CPU accumulation, one/four-level walkers and
+module/public wrappers. These measure frontend refusals, not successful IR/ASM
+executions or well-formedness of an unexported generated program. No new form,
+emitter theorem, full compiler rebuild, full guardian or grammar build is
+claimed. Every Lean invocation used slot 1 with ELAN_TOOLCHAIN removed,
+`-j1 -DElab.async=false -M4608`, MemoryHigh=4G/MemoryMax=5G/no swap; frozen grammar
+artifacts were read only. `git diff --check` passed. Scripts, the corrected
+scratch fixture and logs remain in `.scratch-ir13/`; only this inventory is
+committed.
