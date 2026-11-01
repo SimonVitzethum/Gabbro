@@ -14,7 +14,8 @@ theorem locks_reason_zeuge {D : Deklaration} (passes : Nat) (A : D.Fn → Nat)
     let body : Block D (vertragVon D f) false [.why 2] [.held lk] [.held lk] :=
       .cons (.onWhy (.var .here) (.cons .nil (.cons .nil .nil))) .nil
     retFreiB body = true ∧
-      ∃ code top, lowS passes A L 0 ([], 0) [] (0, 0)
+      ∃ code top, lowS passes A L
+        ⟨D.params f, D.erg f, D.gruende f, 0, 0⟩ ([], 0) [] (0, 0)
         (Stmt.locks lk (fun _ h => (List.not_mem_nil h).elim) body) = some (code, top) ∧
         code.length > 0 := by
   refine ⟨rfl, ?_⟩

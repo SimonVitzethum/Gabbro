@@ -1,4 +1,4 @@
-/- The immutable entry word and bounds of postcondition expression code. -/
+/- Bounds for complete snapshot-aware postcondition expression code. -/
 import Stage0.Senke.Ausdruck.Old.Code
 
 namespace Gabbro.Stage0.Senke
@@ -18,6 +18,31 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, .widen _ _ e, _, h => by
     simp only [entryIndex] at h
     exact entryIndex_ok σ0 σ ρ e h
+  | _, .add a b, _, h => by
+    obtain ⟨x, hx, y, hy, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ ∃ y, entryIndex b = some y ∧ x + y = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    have hb := entryIndex_ok σ0 σ ρ b hy
+    simp only [intValue] at ha hb
+    simp only [intValue, eval, Zahl.add]
+    rw [Option.some.inj ha, Option.some.inj hb]
+  | _, .sub a b, _, h => by
+    obtain ⟨x, hx, y, hy, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ ∃ y, entryIndex b = some y ∧ x - y = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    have hb := entryIndex_ok σ0 σ ρ b hy
+    simp only [intValue] at ha hb
+    simp only [intValue, eval, Zahl.sub]
+    rw [Option.some.inj ha, Option.some.inj hb]
+  | _, .mul a b, _, h => by
+    obtain ⟨x, hx, y, hy, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ ∃ y, entryIndex b = some y ∧ x * y = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    have hb := entryIndex_ok σ0 σ ρ b hy
+    simp only [intValue] at ha hb
+    simp only [intValue, eval, Zahl.mul]
+    rw [Option.some.inj ha, Option.some.inj hb]
+  | _, .neg a, _, h => by
+    obtain ⟨x, hx, rfl⟩ := (show ∃ x, entryIndex a = some x ∧ -x = _ by simpa [entryIndex, Option.bind_eq_some_iff] using h)
+    have ha := entryIndex_ok σ0 σ ρ a hx
+    simpa [intValue, eval, Zahl.neg] using congrArg (fun x : Int => some (-x)) (Option.some.inj ha)
   | _, e@(.tru ..), _, h
   | _, e@(.fls ..), _, h
   | _, e@(.var ..), _, h
@@ -28,10 +53,6 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, e@(.fnref ..), _, h
   | _, e@(.oldG ..), _, h
   | _, e@(.oldS ..), _, h
-  | _, e@(.add ..), _, h
-  | _, e@(.sub ..), _, h
-  | _, e@(.neg ..), _, h
-  | _, e@(.mul ..), _, h
   | _, e@(.div ..), _, h
   | _, e@(.rem ..), _, h
   | _, e@(.sdiv ..), _, h
@@ -74,99 +95,53 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, e@(.wenn ..), _, h
   | _, e@(.eng ..), _, h => by subst e; simp only [entryIndex] at h; cases h
 
-theorem SnapAt.agree {cs : List (Zelle D)} {σ0 : World D} {m m' : Runner.Mem}
-    {fp : Runner.W} {K lo : Nat} (h : SnapAt L cs σ0 m fp) (hf : FrameOK m fp K)
-    (ha : Agree fp lo K m m') (hl : 3 < lo) (hk : lo ≤ K) : SnapAt L cs σ0 m' fp := by
-  intro c hc
-  obtain ⟨width, value⟩ := h c hc
-  exact ⟨width, value.agree ha hf (by omega) hk⟩
-
-theorem SnapAt.left {a b : List (Zelle D)} {σ0 : World D} {m : Runner.Mem} {fp : Runner.W}
-    (h : SnapAt L (a ++ b) σ0 m fp) : SnapAt L a σ0 m fp :=
-  fun c hc => h c (List.mem_append_left _ hc)
-
-theorem SnapAt.right {a b : List (Zelle D)} {σ0 : World D} {m : Runner.Mem} {fp : Runner.W}
-    (h : SnapAt L (a ++ b) σ0 m fp) : SnapAt L b σ0 m fp :=
-  fun c hc => h c (List.mem_append_right _ hc)
-
-theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
+theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List (Res D)} :
     {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
-    lowEns L e d = some (c, top) → d < top
-  | _, .oldG .., d, c, top, h => by
-    simp only [lowEns] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
-    · cases h
-  | _, .oldS _ _ i _, d, c, top, h => by
-    simp only [lowEns] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨_, _, _, _⟩ := h
-      omega
-    · cases h
+    lowEnsAt L layout start e d = some (c, top) → d < top
+  | _, .oldG g _, d, c, top, h => by
+    have := valueWords_pos (D.gtyp g)
+    simp only [lowEnsAt, Option.some.injEq, Prod.mk.injEq] at h
+    omega
+  | _, .oldS t f i _, d, c, top, h => by
+    have := valueWords_pos (D.typ t f)
+    simp only [lowEnsAt, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨_, _, _, _⟩ := h
+    omega
   | _, .widen _ _ e, d, c, top, h =>
-    resizeIntegerL_top h (fun cc tt hc => lowEns_top e d cc tt hc)
-  | _, .add a b, d, c, top, h => by
-    simp only [lowEns] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-      have := lowEns_top a d ca ta ha
-      simp only [bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
-  | _, .sub a b, d, c, top, h => by
-    simp only [lowEns] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-      have := lowEns_top a d ca ta ha
-      simp only [bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
-  | _, .mul a b, d, c, top, h => by
-    simp only [lowEns] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-      have := lowEns_top a d ca ta ha
-      simp only [bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
+    resizeIntegerL_top h (fun cc tt hc => lowEnsAt_top layout start e d cc tt hc)
+  | _, .not a, d, c, top, h => by
+    simp only [lowEnsAt, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, _, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    omega
+  | _, .add a b, d, c, top, h =>
+      wideBinaryL_top (by simpa only [lowEnsAt, wideAddL] using h)
+  | _, .sub a b, d, c, top, h =>
+      wideBinaryL_top (by simpa only [lowEnsAt, wideSubL] using h)
+  | _, .mul a b, d, c, top, h =>
+      wideBinaryL_top (by simpa only [lowEnsAt, wideMulL] using h)
+  | _, .neg a, d, c, top, h =>
+      wideUnaryL_top (by simpa only [lowEnsAt, wideNegL] using h)
   | _, .and a b, d, c, top, h => by
-    simp only [lowEns] at h
+    simp only [lowEnsAt] at h
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-    have := lowEns_top a d ca ta ha
+    have := lowEnsAt_top layout start a d ca ta ha
     simp only [bin2, Prod.mk.injEq] at he
     omega
   | _, .or a b, d, c, top, h => by
-    simp only [lowEns] at h
+    simp only [lowEnsAt] at h
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-    have := lowEns_top a d ca ta ha
+    have := lowEnsAt_top layout start a d ca ta ha
     simp only [bin2, Prod.mk.injEq] at he
     omega
-  | _, .eq a b, d, c, top, h => by
-    simp only [lowEns] at h
-    split at h
-    · next hw =>
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-      have := lowEns_top a d ca ta ha
-      simp only [bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
-  | _, .lt a b, d, c, top, h => by
-    simp only [lowEns] at h
-    split at h
-    · next hw =>
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-      have := lowEns_top a d ca ta ha
-      simp only [bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
+  | _, .eq a b, d, c, top, h =>
+      wideBinaryL_top (by simpa only [lowEnsAt, wideEqL] using h)
+  | _, .lt a b, d, c, top, h =>
+      wideBinaryL_top (by simpa only [lowEnsAt, wideLtL] using h)
+  | _, .le a b, d, c, top, h =>
+      wideBinaryL_top (by simpa only [lowEnsAt, wideLeL] using h)
   | _, e@(.lit ..), d, c, top, h
   | _, e@(.tru ..), d, c, top, h
   | _, e@(.fls ..), d, c, top, h
@@ -176,7 +151,6 @@ theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
   | _, e@(.thru ..), d, c, top, h
   | _, e@(.ptrOf ..), d, c, top, h
   | _, e@(.fnref ..), d, c, top, h
-  | _, e@(.neg ..), d, c, top, h
   | _, e@(.div ..), d, c, top, h
   | _, e@(.rem ..), d, c, top, h
   | _, e@(.sdiv ..), d, c, top, h
@@ -187,10 +161,8 @@ theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
   | _, e@(.bxor ..), d, c, top, h
   | _, e@(.shl ..), d, c, top, h
   | _, e@(.shr ..), d, c, top, h
-  | _, e@(.le ..), d, c, top, h
   | _, e@(.fllt ..), d, c, top, h
   | _, e@(.flle ..), d, c, top, h
-  | _, e@(.not ..), d, c, top, h
   | _, e@(.none ..), d, c, top, h
   | _, e@(.some ..), d, c, top, h
   | _, e@(.istSome ..), d, c, top, h
@@ -213,6 +185,12 @@ theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
   | _, e@(.strLt ..), d, c, top, h
   | _, e@(.strWeit ..), d, c, top, h
   | _, e@(.wenn ..), d, c, top, h
-  | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top _ d c top h
+  | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top (reserved := layout.ensReserved) _ d c top h
+
+
+theorem lowEns_top (layout : FrameLayout) {Γ : Ctx} {Λ : List (Res D)}
+    {τ : Ty} (e : Expr D Γ Λ τ) (d : Nat) (code : List II) (top : Nat)
+    (emitted : lowEns L layout e d = some (code, top)) : d < top :=
+  lowEnsAt_top layout layout.snapshotBase e d code top emitted
 
 end Gabbro.Stage0.Senke

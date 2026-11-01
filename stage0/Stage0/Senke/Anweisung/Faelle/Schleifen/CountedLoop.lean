@@ -133,7 +133,7 @@ def image := foreverCode 4 5 6 2 [ci 1 6 1 0] []
 open Gabbro.Grammatik in
 /-- The image is the accepted statement lowering, not a hand-selected loop. -/
 theorem lowering_zeuge :
-    lowS (reserved := 2) 2 FnptrProben.addresses FnptrProben.callLayout 4
+    lowS (reserved := 2) 2 FnptrProben.addresses FnptrProben.callLayout (functionFrame FnptrProben.tiny 2)
       ([], 6) [] (0, 0)
       (show Stmt FnptrProben.D (vertragVon FnptrProben.D 2) false [] [] [] from
         .forever () .tru .nil) = some (image, 14) := by

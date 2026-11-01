@@ -25,7 +25,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
     (hn : n ≤ 2 ^ 63) (hs2 : frei Γ reserved + 2 ≤ Ks)
     (hcc : lowE (reserved := reserved) L o (frei Γ reserved) = some (cc, tc)) (htc : tc ≤ Ks)
     (hs : 16 * (cc.length + 3 + ct.length + 1 + ce.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hthen : ∀ (k : Zahl 0 (n - 1)), eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = some k →
       ∀ m' pc', PreS (reserved := reserved) L m' pc' fp K (frei (.index n :: Γ) reserved) ct (Env.cons (τ := .index n) k ρ) → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →

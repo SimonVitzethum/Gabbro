@@ -1,0 +1,24 @@
+// Runtime-selected callees receive and return complete two-word values.
+module ir_probe {
+impl fn first(x : u64 in 0 .. 340282366920938463463374607431768211455) -> u64 in 0 .. 340282366920938463463374607431768211455
+    effects { pure } costs <= 4 ops
+    ensures result == x
+{ return x; }
+impl fn second(x : u64 in 0 .. 340282366920938463463374607431768211455) -> u64 in 0 .. 340282366920938463463374607431768211455
+    effects { pure } costs <= 4 ops
+{ return 36893488147419103239; }
+impl fn apply(p : fn(u64 in 0 .. 340282366920938463463374607431768211455) -> u64 in 0 .. 340282366920938463463374607431768211455 effects { pure } costs <= 4 ops, x : u64 in 0 .. 340282366920938463463374607431768211455) -> u64 in 0 .. 340282366920938463463374607431768211455
+    effects { pure }
+{ let value = p(x); return value; }
+impl fn select(flag : bool) -> u64 in 0 .. 340282366920938463463374607431768211455 effects { pure } {
+    if flag { let value = apply(&second, 18446744073709551623); return value; }
+    let value = apply(&first, 18446744073709551623);
+    return value;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a = select(false);
+    let b = select(true);
+    if a == 18446744073709551623 { if b == 36893488147419103239 { return 42; } }
+    return 0;
+}
+}

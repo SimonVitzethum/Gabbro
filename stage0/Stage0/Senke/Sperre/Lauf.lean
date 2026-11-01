@@ -107,14 +107,22 @@ theorem AgreeK.preS {reserved : Nat} {m m1 : Mem} {pc fp : W} {K d s a : Nat} {x
    ha.envAt h.env hs hf ha31, trivial, wstab_true _ _⟩
 
 theorem AgreeK.kopf {P : Programm D} {σ0 : World D} {m m1 : Mem} {fp : W} {K s a : Nat} {f : D.Fn} {rp cfp : W} {ρ0 : Env D (D.params f)}
-    (h : Kopf L f m fp K rp cfp ρ0 P σ0) (ha : AgreeK fp s a m m1) (hs : FB + (contextWords (D.params f)) ≤ s)
+    (h : Kopf L f m fp K rp cfp ρ0 P σ0) (ha : AgreeK fp s a m m1) (hs : (functionFrame P f).internalResult ≤ s)
     (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha31 : a + 24 < 2 ^ 31) : Kopf L f m1 fp K rp cfp ρ0 P σ0 := by
   have hFB3 : FB = 4 := rfl
-  refine ⟨by rw [ha.rd_low (by omega) hf ha31]; exact h.r0, by rw [ha.rd_low (by omega) hf ha31]; exact h.r1,
-    ha.envAt h.env (by simp only [frei]; omega) hf ha31, h.big, ?_⟩
-  intro c hc
-  obtain ⟨width, value⟩ := h.entry c hc
-  exact ⟨width, ha.valueAt value (by omega) hf ha31⟩
+  have original := functionFrame_prefix P f
+  have parameterEnd : frei (D.params f) (functionFrame P f).ensReserved =
+      (functionFrame P f).internalResult := rfl
+  have snapshotEnd : FB + EntrySnapshots.words (oldCells (P.ensures f)) ≤
+      (functionFrame P f).internalResult := (functionFrame P f).protected_prefix.1
+  refine ⟨by rw [ha.rd_low (by omega) hf ha31]; exact h.r0,
+    by rw [ha.rd_low (by omega) hf ha31]; exact h.r1,
+    ha.envAt h.env (by rw [parameterEnd]; exact hs) hf ha31, h.big, ?_⟩
+  have saved := (EntrySnapshots.values_at σ0 (oldCells (P.ensures f)) (reserved := 0)).mpr h.entry
+  have kept := ha.envAt saved (by
+    simp only [frei, Nat.add_zero, EntrySnapshots.types_words]
+    omega) hf ha31
+  exact (EntrySnapshots.values_at σ0 (oldCells (P.ensures f)) (reserved := 0)).mp kept
 
 /-- A complete cell whose bytes keep their values keeps every word and its recursive validity. -/
 theorem valueAt_keep {m m' : Mem} {address : Nat} {τ : Ty} {v : Wert D τ}

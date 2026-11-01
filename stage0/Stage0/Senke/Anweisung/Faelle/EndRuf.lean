@@ -16,19 +16,20 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {g : D.Fn} {args : Args D Γ Λ (D.params g)} {he : D.erg g = some τ} {proof0 : _} {proof1 : _} {rest : Endblock D (vertragVon D f) l (τ :: Γ) (nach D g Λ)} :
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindCall g args he proof0 proof1 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ca, ta⟩, hca, ⟨cr, tr⟩, hr, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   have hct : frei Γ reserved + FB + (contextWords (D.params g)) + 1 ≤ callTop g (frei Γ reserved) ta := by simp only [callTop]; omega
   have hc := callC_ok hS (hA g) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
   simp only [execEnd]
@@ -71,20 +72,21 @@ theorem endAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {he : D.aerg a = some τ} {proof0 : _} {proof1 : _} {proof2 : _} {proof3 : _} {rest : Endblock D (vertragVon D f) l (τ :: Γ) Λ} :
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindAxiom a args he proof0 proof1 proof2 proof3 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨cr, tr⟩, hr, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
   have hks := hW.ks
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   simp only [execEnd]
   rcases torBind_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he ht hck (by omega) (by omega) hW hp hWa with
     ⟨v, m2, hAA, s12, a12, value, hW2⟩ | ⟨hAA, hst⟩

@@ -21,7 +21,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     (hw : inW low high = true) (hl : inW low' low' = true) (hh : inW high' high' = true)
     (hd : frei Γ reserved + 4 ≤ Ks)
     (hs : 16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f)))
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W}
     (herr : ¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high') →

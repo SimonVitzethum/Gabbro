@@ -11,7 +11,7 @@ def body : Block D (vertragVon D 2) false [] [] [] :=
   .cons (.assignGlob () pointer rfl (by intro w h; cases h))
     (.cons (.call 0 .nil (fit 2) rfl) .nil)
 
-def lowered := lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4] (0, 0) body
+def lowered := lowB (reserved := 4) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [4] (0, 0) body
 def code : List II := (lowered.getD ([], 0)).1
 def top : Nat := (lowered.getD ([], 0)).2
 
@@ -21,7 +21,7 @@ def memory : Runner.Mem := { callMem with
   b := fun a => if 2016 ≤ a.toNat ∧ a.toNat < 2016 + 16 * image.length then
       ((image.flatMap encII)[a.toNat - 2016]?).getD 0 else if a.toNat = 4128 then 77 else callMem.b a }
 
-theorem lowering : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4] (0, 0) body = some (code, top) := by
+theorem lowering : lowB (reserved := 4) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [4] (0, 0) body = some (code, top) := by
   decide +kernel
 
 local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
@@ -68,7 +68,7 @@ theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 
   ⟨functions_at, by decide +kernel, by decide, sync, by decide⟩
 
 theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world :=
-  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
+  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, trivial⟩
 
 /-- Initialization in front of the real source-derived store/call body preserves
     both enclosing sentinels and reconstructs its full entry contract. -/
@@ -283,7 +283,7 @@ def body : Block D (vertragVon D 2) true [] [] [] :=
   .cons (.assignGlob () pointer rfl (by intro w h; cases h))
     (.cons (.call 0 .nil (fit 2) rfl) .nil)
 
-def lowered := lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4] (0, 0) body
+def lowered := lowB (reserved := 4) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [4] (0, 0) body
 def bodyCode : List II := (lowered.getD ([], 0)).1
 
 def code : List II := [ci 1 8 1 0] ++ [ci 19 8 (16 * (bodyCode.length + 2)) 0] ++ bodyCode ++ [ci 18 64 0 0] ++ stopC 104 8
@@ -295,7 +295,7 @@ def memory : Runner.Mem := { callMem with
   b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2048 + 16 * image.length then
       ((image.flatMap encII)[a.toNat - 2048]?).getD 0 else if a.toNat = 4128 then 77 else callMem.b a }
 
-theorem lowering : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4] (0, 0) body = some (bodyCode, top) := by
+theorem lowering : lowB (reserved := 4) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [4] (0, 0) body = some (bodyCode, top) := by
   decide +kernel
 
 local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
@@ -342,7 +342,7 @@ theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 
   ⟨functions_at, by decide +kernel, by decide, sync, by decide⟩
 
 theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world :=
-  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
+  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, trivial⟩
 
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
@@ -355,7 +355,7 @@ theorem forever_source_pass_zeuge [Kern] :
     ∃ m', Star ⟨2048, 4096⟩ memory
       ⟨2048 + BitVec.ofNat 64 (16 * code.length), 4096⟩ m' ∧
       WeltAt m' callLayout world ∧ m'.rd64 (slot 4096 4) = some 77 := by
-  have hcb : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6)
+  have hcb : lowB (reserved := 4) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6)
       [4] (exPlus (0, 0) 4) body = some (bodyCode, top) := by decide +kernel
   have h := forever_source_pass (reserved := 4) (O := O) (passes := 1)
     (P := tiny) (f := 2) (σ0 := world) (ρ0 := Env.nil) (lo := 4)

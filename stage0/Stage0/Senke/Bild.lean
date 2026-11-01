@@ -113,10 +113,12 @@ def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String)
   match lowFun passes P A Y g with
   | some ct => .ok ct
   | none => .error ("ir: the function " ++ name g ++
-      if (oldCells (P.ensures g)).length > 1 then
-        " needs multiple old occurrences; the IR entry header currently holds one snapshot word"
-      else if (lowEns Y (P.ensures g) (FB + (contextWords (D.params g)) + 1)).isNone then
-        " has an unsupported postcondition; old table indices must be literal constants (possibly widened)"
+      if (lowEns Y (functionFrame P g) (P.ensures g) (functionFrame P g).internalStatus).isNone then
+        " has an unsupported postcondition; old table indices must be closed arithmetic expressions"
+      else if (EntrySnapshots.capture Y (oldCells (P.ensures g)) FB).isNone then
+        " has an entry snapshot outside the checked storage layout"
+      else if !(D.invs.filter (schuldet g)).isEmpty then
+        " owes invariants whose return checks are outside the IR fragment"
       else " uses a form outside the IR fragment")
 
 /-- Every function of `fs`, lowered with the addresses `A`. -/

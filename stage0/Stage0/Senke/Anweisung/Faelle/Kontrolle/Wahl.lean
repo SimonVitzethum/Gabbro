@@ -23,7 +23,7 @@ theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env
     {t e : Block D (vertragVon D f) l Γ Λ Λ'} {cc ct ce : List II} {tc tt te : Nat}
     (hcc : lowE (reserved := reserved) L cnd (frei Γ reserved) = some (cc, tc)) (htc : tc ≤ Ks) (htt : tt ≤ Ks) (hte : te ≤ Ks)
     (hs : 16 * (cc.length + 1 + ct.length + 1 + ce.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hthen : ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) ct ρ reserved → Umf L A C dv m' fp Ks K → Kopf L f m' fp K rp cfp ρ0 P σ0 →
       WeltAt m' L (σ.lese Λ cnd.orte) →

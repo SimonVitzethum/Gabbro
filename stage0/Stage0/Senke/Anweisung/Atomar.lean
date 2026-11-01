@@ -269,7 +269,7 @@ theorem exch_ok {reserved : Nat} {g : D.Glob} (hfit : aggregateFits (D.gtyp g) =
     {hw : (vertragVon D f).gschreibt g = true} {hL : gdarf D g Λ}
     {rest : Block D (vertragVon D f) l (D.gtyp g :: Γ) Λ Λ'} {cn cr : List II} {tn : Nat}
     (hn : lowE (reserved := reserved) L neu (frei Γ reserved + 1) = some (cn, tn)) (htn : tn ≤ Ks) (hs4 : frei Γ reserved + 4 ≤ Ks)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
       PreS L m' (pc + BitVec.ofNat 64 (16 * (exC (frei Γ reserved) (L.ga g) cn).length)) fp K (frei (D.gtyp g :: Γ) reserved) cr ρ' reserved →
@@ -313,7 +313,7 @@ theorem awaits_head {reserved : Nat} {g : D.Glob} {cr : List II} (hfit : aggrega
 theorem awaits_ok {reserved : Nat} [SichtOK O] {g : D.Glob} (hfit : aggregateFits (D.gtyp g) = true) {pl : List D.Glob} {hpl : pl = D.nutzlast g} {hL : gdarf D g Λ}
     {hat : D.atomar g = true} {rest : Block D (vertragVon D f) l (D.gtyp g :: Γ) Λ Λ'} {cr : List II}
     (hl : lit32 (L.ga g) = true) (hs1 : frei Γ reserved + 1 ≤ Ks)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved) {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hrest : ∀ m' σ' (ρ' : Env D (D.gtyp g :: Γ)),
       PreS L m' (pc + BitVec.ofNat 64 (16 * 2)) fp K (frei (D.gtyp g :: Γ) reserved) cr ρ' reserved →

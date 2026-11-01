@@ -4,6 +4,7 @@
              return/else/traverse/tag/narrow code pieces. Split out of `Anweisung.lean` unchanged.
 -/
 import Stage0.Senke.Ausdruck
+import Stage0.Senke.Ausdruck.Aggregat.Frame.Return
 import Stage0.Senke.Ausdruck.Gleit.SlotContext
 import Stage0.Senke.Ausdruck.Gleit.Bereich
 import Stage0.Senke.Stopp
@@ -92,22 +93,6 @@ def elseC (signature : Signatur D.Tab D.Glob D.Lock D.Marke) (s : Nat) (cc cr ce
 
 def elseTop (f : D.Fn) (s ta tr te : Nat) : Nat :=
   max (callTop f s ta) (max (s + FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1) (max tr te))
-
-/-- `ret`: the result from slot `r` into slot `q` (`FB + np`, the slot of `ensures`' result variable), the
-    `ensures` code `ens`, the check, slot 2, back. The successful ensures word
-    in `q + 1` is the normal return flag and is preserved by the return tail. -/
-def retC (q r : Nat) (ens : List II) (result : Option Ty) (reasons : Nat) : List II :=
-  copyWords (resultWords result) q r ++ ens ++
-    [ci 19 (q + returnWords result reasons) 48 0, ci 2 2 q 0, ci 21 0 0 0] ++
-      stopC 102 (q + returnWords result reasons)
-
-/-- A reason bypasses ensures, as in G. Slot 2 carries the ordinal; the ensures
-    result slot carries zero, distinguishing it from every successful normal return. -/
-def retWhyC (q r : Nat) (result : Option Ty) (reasons : Nat) : List II :=
-  (constWords (integerEncoding (valueWords (.why reasons)) r) q).1 ++
-    [ci 2 2 q 0, ci 1 (q + returnWords result reasons) 0 0, ci 21 0 0 0]
-
-def retTop (q : Nat) (result : Option Ty) (reasons : Nat) : Nat := q + returnWords result reasons + 8
 
 /-- The targets of `leave` and `next` as byte offsets from the end of a piece of code; a piece followed by `n`
     instructions sees them `16 n` further. -/

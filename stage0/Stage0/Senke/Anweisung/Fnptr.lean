@@ -189,7 +189,7 @@ theorem indBind_ok {reserved : Nat} {β : Type} {A : D.Fn → Nat} {C : D.Fn →
     (hc : lowInd L p args reserved = some (cc, tc)) (ht : tc + cap ≤ Ks)
     (hreceive : receiveTop (D.sigNr n) (frei Γ reserved) ≤ Ks)
     (hp : PreS L m pc fp K (frei Γ reserved) (cc ++ receiveC (D.sigNr n) (frei Γ reserved) ++ cr) ρ reserved)
-    (hW : WIn L fp Ks K) (hlo0 : lo = FB + (contextWords (D.params f))) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K)
+    (hW : WIn L fp Ks K) (hlo0 : lo = (functionFrame P f).internalResult) (hlo : lo ≤ frei Γ reserved) (hu : Umf L A C dv m fp Ks K)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (k : World D → Wert D τ → β) (err : Logik D → β) (hwerr : Hardware D → β)
     (J : T → Runner.Mem → β → Prop)
@@ -203,6 +203,7 @@ theorem indBind_ok {reserved : Nat} {β : Type} {A : D.Fn → Nat} {C : D.Fn →
     J ⟨pc, fp⟩ m (indAntwort R p args he hr σ ρ k err hwerr) := by
   have hb := lowInd_top hc
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   have hks := hW.ks
   have hi := lowInd_ok hS hA p args σ σ hc ht hp.left.left hu hW hWa
   dsimp only [indAntwort] at hi ⊢

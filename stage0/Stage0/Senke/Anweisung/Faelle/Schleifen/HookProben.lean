@@ -260,7 +260,8 @@ theorem countedBlockBind_case_zeuge [Runner.IR.Kern] :
       exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
     · unfold CodeFar; decide +kernel
     · intro _ x; nomatch x
-  exact countedBlockBind_case (V := vertragVon FnptrProben.D 2)
+  exact countedBlockBind_case (P := FnptrProben.tiny) (f := (2 : FnptrProben.D.Fn))
+    (V := vertragVon FnptrProben.D 2)
     (l := false) (Λ := []) (Λ' := []) (e := .lit 8192) (rest := .nil)
     (passes := 1) (A := FnptrProben.addresses) (ens := ([], 4))
     (ex := (0, 0)) (top := 5) (Ks := 128) (nr := 0)

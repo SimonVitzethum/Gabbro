@@ -1,3 +1,4 @@
+import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Stage0.Senke.Ausdruck.Gleit.Exponent
 /-
   File:      stage0/Nachpruefung.lean
@@ -5,13 +6,11 @@ import Stage0.Senke.Ausdruck.Gleit.Exponent
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
 import Stage0
-
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 import Stage0.Bindung.Proben
-
 -- Forward scalar dependencies, exact final meanings and certified declaration schedules.
 #print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle
 #print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle_zeuge
@@ -23,7 +22,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Frontend.discoverScopes_final
 #print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_dependencies
 #print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_forward_zeuge
-
 -- Certified alias scheduling and dependency-cycle refusal in the actual frontend.
 #print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound
 #print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound_zeuge
@@ -37,7 +35,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_forward_zeuge
 #print axioms Gabbro.Stage0.compile_source_program
-
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge
@@ -56,7 +53,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.BindingProbes.literal_metal_refused_zeuge
 #print axioms Gabbro.Stage0.BindingProbes.gate_free_metal_refused_zeuge
 #print axioms Gabbro.Stage0.BindingProbes.unselected_metal_preserved_zeuge
-
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
 #print axioms Gabbro.Stage0.Senke.lowFun_spec
@@ -116,7 +112,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.awaits_ok
 #print axioms Gabbro.Stage0.Senke.ex_tail
 #print axioms Gabbro.Stage0.Senke.sichtOK_zeuge
-
 #print axioms Gabbro.Stage0.Senke.onOption_ok
 #print axioms Gabbro.Stage0.Senke.fnref_ok
 #print axioms Gabbro.Stage0.Senke.call_ok
@@ -146,7 +141,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.sumFits_zeuge
 #print axioms Gabbro.Stage0.Senke.lowN_ok
 #print axioms Gabbro.Stage0.Senke.packSum_ok
-
 #print axioms Gabbro.Stage0.Senke.shift_ok
 #print axioms Gabbro.Stage0.Senke.ShiftProbe.simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.readBytesL_ok
@@ -162,7 +156,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_overlap_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.putBytes_empty_zeuge
 #print axioms Gabbro.Stage0.Senke.ByteProbe.open_refs_lowered_zeuge
-
 #print axioms Gabbro.Stage0.Senke.blockCheck_case
 #print axioms Gabbro.Stage0.Senke.Ret.toSim
 #print axioms Gabbro.Stage0.Senke.Ret.ofSim
@@ -187,7 +180,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_image_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.quant_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.QuantProbe.reaches_refused_zeuge
-
 #print axioms Gabbro.Stage0.Senke.retryTest_ok
 #print axioms Gabbro.Stage0.Senke.retryC_ok
 #print axioms Gabbro.Stage0.Senke.retry_case
@@ -255,7 +247,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.image_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.read_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.accepted_zeuge
-
 #print axioms Gabbro.Stage0.Senke.enc_ref_cell
 #print axioms Gabbro.Stage0.Senke.slotRefA_ok
 #print axioms Gabbro.Stage0.Senke.slotRefC_ok
@@ -308,27 +299,23 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_arithmetic_images_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_sub_model_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_operations_refused_zeuge
-
 #print axioms Gabbro.Stage0.Senke.lowEns_ok
-#print axioms Gabbro.Stage0.Senke.snapC_ok
+#print axioms Gabbro.Stage0.Senke.EntrySnapshots.capture_world_ok
 #print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.OldProbe.snapC_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.OldProbe.capture_ok_zeuge
 #print axioms Gabbro.Stage0.Senke.counter_init
 #print axioms Gabbro.Stage0.Senke.counter_zero
 #print axioms Gabbro.Stage0.Senke.counter_positive
 #print axioms Gabbro.Stage0.Senke.counter_decrement
 #print axioms Gabbro.Stage0.Senke.counter_protected
 #print axioms Gabbro.Stage0.Senke.counter_decrement_zeuge
-
 #print axioms Gabbro.Stage0.Senke.floatNormQ_left
-
 #print axioms Gabbro.Stage0.Senke.findeExp_integer_nonzero
 #print axioms Gabbro.Stage0.Senke.floatExponentWord_canonical
 #print axioms Gabbro.Stage0.Senke.floatExponentL_canonical
 #print axioms Gabbro.Stage0.Senke.floatExponentL_canonical_zeuge
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero
 #print axioms Gabbro.Stage0.Senke.normalize_integer_zero_zeuge
-
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_none
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_accept
 #print axioms Gabbro.Stage0.Senke.floatRangeReject_zeuge
@@ -483,3 +470,24 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.AgreeK.foreign_word
 #print axioms Gabbro.Stage0.Senke.AgreeK.foreign_frame
 #print axioms Gabbro.Stage0.Senke.foreign_frame_zeuge
+
+
+#print axioms Gabbro.Stage0.Senke.EntrySnapshots.capture_ok
+#print axioms Gabbro.Stage0.Senke.EntrySnapshots.complete_at
+#print axioms Gabbro.Stage0.Senke.EntrySnapshots.values_at
+#print axioms Gabbro.Stage0.Senke.EntrySnapshots.At.agreeW
+#print axioms Gabbro.Stage0.Senke.DistinctSnapshotProbe.capture_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.lowEnsAt_ok
+#print axioms Gabbro.Stage0.Senke.publishResult_run
+#print axioms Gabbro.Stage0.Senke.entryFrame_run
+#print axioms Gabbro.Stage0.Senke.OldProbe.multiple_occurrences_zeuge
+#print axioms Gabbro.Stage0.Senke.OldProbe.distinct_occurrences_zeuge
+
+#print axioms Gabbro.Stage0.Senke.OldProbe.computed_snapshot_zeuge
+
+#print axioms Gabbro.Stage0.Senke.CompleteSnapshotEnvProbe.complete_at_zeuge
+
+#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
+
+#print axioms Gabbro.Stage0.Senke.ReturnProtocolProbe.publishResult_run_zeuge
+#print axioms Gabbro.Stage0.Senke.EntryProtocolProbe.entryFrame_run_zeuge
