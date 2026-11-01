@@ -6,7 +6,7 @@
   #   nix run . -- hilfe   run it
   #   nix develop          a shell with everything the four guardians need: Rust, elan (Lean comes from
   #                        each package's `lean-toolchain`, so Lean and Mathlib stay pinned by the repository,
-  #                        not by Nix), LLVM/lld, qemu-user for the aarch64 runs, Python, git
+  #                        not by Nix), LLVM (opt, llc) and lld, qemu-user for the aarch64 runs, Python, git
   #
   # Lean is deliberately NOT taken from nixpkgs: `grammatik/`, `stage0/` and the other Lake packages pin their
   # exact toolchain and Mathlib revision, and one shared read-only Mathlib store serves every worktree.
@@ -61,7 +61,6 @@
               pkgs.elan
               llvm.llvm
               llvm.lld
-              llvm.clang
               pkgs.qemu-user
               pkgs.python3
               pkgs.git
