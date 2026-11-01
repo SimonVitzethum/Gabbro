@@ -310,8 +310,8 @@ theorem lowE_literal_boundaries_zeuge :
 @[lowE_eqs] theorem lowE_strGet (s : Expr D Γ Λ (.str n)) (i : Expr D Γ Λ (.int lo hi)) :
     lowE L (reserved := reserved) (.strGet s i) d =
     (if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d)
-    else if 2 ≤ n ∧ 0 ≤ lo ∧ hi < n then
-      strGetLongL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 1))
+    else if scalarFits lo hi = true then
+      strGetWideL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 2))
     else none) := rfl
 
 @[lowE_eqs] theorem lowE_strEq (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :

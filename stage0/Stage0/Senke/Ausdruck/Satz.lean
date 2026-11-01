@@ -23,6 +23,7 @@ import Stage0.Senke.Welt.Spans.CellStore
 import Stage0.Senke.Welt.Spans.Read
 import Stage0.Senke.Ausdruck.Referenz.CellIndex
 import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqOk
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetOk
 
 namespace Gabbro.Stage0.Senke
 

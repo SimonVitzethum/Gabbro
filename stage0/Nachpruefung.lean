@@ -186,6 +186,10 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.strLen_ok
 #print axioms Gabbro.Stage0.Senke.strCat_ok
 #print axioms Gabbro.Stage0.Senke.strGet_ok
+#print axioms Gabbro.Stage0.Senke.strGetWide_ok
+#print axioms Gabbro.Stage0.Senke.strGetClamp_ok
+#print axioms Gabbro.Stage0.Senke.clamp_word
+#print axioms Gabbro.Stage0.Senke.strClamped_byte
 #print axioms Gabbro.Stage0.Senke.strCompare_ok
 #print axioms Gabbro.Stage0.Senke.strWeit_ok
 #print axioms Gabbro.Stage0.Senke.AggregateProbe.semantics_zeuge

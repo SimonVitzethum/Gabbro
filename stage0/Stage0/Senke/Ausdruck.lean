@@ -27,6 +27,7 @@ import Stage0.Senke.Welt.Spans.CellCode
 import Stage0.Senke.Ausdruck.Aggregat.Wert
 import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
 import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
 import Stage0.Senke.Ausdruck.Aggregat.Kopie
 import Stage0.Senke.Ausdruck.Aggregat.Layout
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
@@ -443,14 +444,6 @@ def arrSetL (τ : Ty) (n d : Nat) (a v i : Option (List II × Nat)) : Option (Li
       max (max (max ca.2 cv.2) ci.2) (ptr + 2))
   else none
 
-/-- Byte `i` of a string of capacity `n > 1`: the string occupies `n + 1` words at `d`, the index
-    word follows it; the byte is the word `d + 1 + i` (zero beyond the length), copied to `d`. -/
-def strGetLongL (n d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) := do
-  let cs ← s
-  let ci ← i
-  let ptr := d + n + 1
-  pure (cs.1 ++ ci.1 ++ selectFrameSpan 1 (d + 1) d ptr (ptr + 1), max (max cs.2 ci.2) (ptr + 2))
-
 mutual
 /-- The code computing
  `e` into slot `d`, and the first slot from which on nothing is touched. -/
@@ -542,8 +535,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     if n + m ≤ 1 then (if n = 0 then lowE L (reserved := reserved) t d else lowE L (reserved := reserved) s d) else none
   | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
     if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i d)
-    else if 2 ≤ n ∧ 0 ≤ lo ∧ hi < n then
-      strGetLongL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 1))
+    else if scalarFits lo hi = true then
+      strGetWideL n d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) i (d + n + 2))
     else none
   | _, _, @Expr.strEq _ _ _ n m s t, d =>
     if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1))

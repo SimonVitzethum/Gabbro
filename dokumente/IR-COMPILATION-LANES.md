@@ -1047,3 +1047,17 @@ Measured: 294-module `Stage0` + `Stage0.Haupt` closure rebuilt; `Nachpruefung.le
 `propext`/`Classical.choice`/`Quot.sound` only (6 axiom-free), no `sorry`; layout check passes; all 168 textual
 programs of `stage0/proben-ir` compile and execute (or are refused with the expected text) with 0 mismatches.
 `grammatik/` untouched. Merge commit: `05cfd542b`.
+
+## IR-03 `strGet` over any scalar index range (2026-11-01)
+
+`strGet` of a string of capacity `n >= 2` now accepts every one-word index range (`scalarFits lo hi`, signed or
+unsigned), not only `[0, n)`. `strGetWideL` (`Frame/StringGetCode.lean`) places a zero sentinel word after the
+string span, evaluates the index behind it and clamps it branch-free to `n + (i <u n) * (i - n)`
+(`strGetClamp`); the selection `selectFrameSpan` copies the byte word (padding or sentinel word is zero), so an
+index below zero or at least `n` yields the model's zero byte, exactly `strGetW`. Generic theorems
+(`Frame/StringGetOk.lean`): `ult_clamp`, `clamp_word`, `strGetClamp_ok`, `strClamped_byte`, `strGetWide_ok`,
+`strGet_ok` (moved there from `StringOps`, `strGetLongL` deleted). Textual program `str-get-wide` (indices
+inside, negative, equal to and beyond the capacity; signed and unsigned index types).
+
+Measured: closure rebuilt (231 modules), `Nachpruefung.lean` 340 theorems on the standard axioms only (6
+axiom-free), layout check passes, 169/169 textual programs.

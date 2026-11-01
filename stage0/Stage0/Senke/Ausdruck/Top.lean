@@ -213,9 +213,12 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     split at h
     · exact strGetL_top h
     · split at h
-      · simp only [strGetLongL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨_, _, _, _, rfl, rfl⟩ := h
-        omega
+      · simp only [strGetWideL] at h
+        split at h
+        · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨_, _, _, _, rfl, rfl⟩ := h
+          omega
+        · cases h
       · cases h
   | _, _, .strCat s t, d, c, top, h => by
     simp only [lowE_eqs] at h
