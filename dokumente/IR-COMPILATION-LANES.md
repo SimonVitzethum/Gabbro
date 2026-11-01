@@ -2497,3 +2497,237 @@ follows from these person-day ranges.
 Validation of this design is static source/name/path inspection and
 `git diff --check` only. **Zero new language cases compiled or proved; no Lean
 file edited, no build, push or merge.**
+
+### Model extension design: C17 complete (2026-11-01)
+
+Baseline `17f6c1606`; source inspection only. This completes D1's C17 design,
+including the newly identified block-meaning gap, and supersedes its optional
+generic cut and the later table's “still undesigned” remainder. D1's runtime
+`decreases` design remains applicable. **New** below marks proposed declarations,
+not existing Lean names. Paths start at `grammatik/Grammatik/` unless prefixed
+`stage0/`. No implementation, grammar rebuild or additional agent is authorized
+by this document; the designated grammatik owner implements the approved rules.
+
+**Grounded boundary and architectural choice.**
+
+| Current source coordinate | Consequence for the design |
+|---|---|
+| `Parser/Elab/Uebersetze.lean:859/875/893/930` (`UKonstFn`, `uKonstFns`, `uKonstWert`, call case) | `rumpf : SExpr`; only `.block [] (some (.ret (some e)))` is collected. Clauses are discarded. Arguments are evaluated at the caller's interval, then checked against parameter intervals; the body uses only parameter bindings. This is not a semantics for blocks, contracts or constant captures. |
+| Same file :4737/4774/4820 (`elabU`) | Const declarations disappear from runtime functions; array evaluation still calls the expression-only collector. Adding a Stage-0 block evaluator cannot establish a missing canonical meaning. |
+| `stage0/Stage0/Frontend/Functions.lean:25/44/76` (`constantFunction`, `FunctionMeaning`, `constantFunctions_sound`) | The source-origin theorem requires exactly that single-return body and `evaluationClauses`; it proves extraction/signature provenance, not a general block execution theorem. |
+| `stage0/Stage0/Frontend/Guard.lean:23/43/119`, `Source.lean:41/58` | `safeConstantName`/`SafeHull` are structural guards, including cycle revisits and absent names, not termination/name-resolution proofs. Keep the guard until a stronger canonical certificate replaces it on every path, including nested arrays. |
+| `Parser/Item/ElementTief.lean:590/1674/1695/1720`, `Parser/Expr/Typ.lean:25`, `dokumente/SYNTAX.md` §2; `crates/gabbro-syntax/src/ast.rs:256` | `typeT` carries `List STyp` and order words. The Rust `TypDecl.parameter` explicitly includes witness payloads such as `Duty(check)`. `STyp` has no general application or formal-type binder. Do not reinterpret every payload list as generic binders. Linear mark order already has `D.stufen`, `Res.marke` and `Stmt.advances`; it is A02. |
+
+Use **existing typed G blocks plus a checked pure/terminating fragment**, rather
+than grow the Nat-valued `Konstanten.KExpr` into a second statement language.
+`KExpr.eval` has one Nat parameter, truncated Nat subtraction, total Nat division
+and caller-supplied name/function environments; none supplies typed signed
+blocks or contracts. Reuse `Konstanten.konstZert`/`konstZert_mem` only after a
+source-to-G denotation theorem, with an exact Nat encoding where applicable.
+Adding a block field alone or evaluating a Rust AST is insufficient. Kernel
+reduction of canonical G semantics for certificates is allowed; no executable
+source interpreter, fallback runtime or new runner is introduced.
+
+**Canonical blocks, evaluation and source meaning.**
+
+| Layer | Exact proposed change and obligation |
+|---|---|
+| Kern representation | In a new module under `Kern/Syntax/`, define **new** `ConstProgram` containing `D : Deklaration`, `P : Programm D`, complete finite function enumeration and source IDs. Its declaration universe contains only const functions and finite enumeration domains: no globals, axioms, registers, locks, marks or invariants; enumeration tables have no fields and have a checked nonnegative `D.count`. Thus no synthetic mutable storage is needed. `P.requires`, `P.ensures` and `P.rumpf` retain their existing types from `Kern/Syntax/Syntax.lean:812`; contracts have empty resource contexts and `D.gruende f = 0`. Initially permit integer/Bool values; by-value `Ty.arr`/`Ty.str`/`Ty.sum` follow their existing value semantics and literal bridges, products depend on C01. Pointers, references, function pointers and linear/ghost values cannot be const data. |
+| Purity judgment | Define **new** mutually structural `ConstExpr`/`ConstStmt`/`ConstBlock`/`ConstEnd` judgments over the actual typed `Expr`/`Stmt`/`Block`/`Endblock`, plus **new** `ConstAdmissible (c : ConstProgram) : Prop`. Whitelist literals, typed value constructors/projections, variables, proved arithmetic/comparisons and finite pure quantifiers; prove `e.orte = []`. Admit `Block.nil/cons/bind/bindCall`, `Endblock.ret/cons/bind/bindCall/ite`, `Stmt.assignVar/ite/ret/call` and pure tag/option/reason dispatch with corresponding arm judgments. Every direct call must resolve inside the same certified program. Assignment changes only a declared mutable local; binders retain exact context indices and mutability provenance in the source judgment. Empty footprint alone is insufficient: explicitly exclude oracle/hardware/float blocks, capability construction, indirect calls, memory access, resource operations, `retWhy`, `forever`, retry and traversal in the first slice. Every constructor of the judgment has explicit premises; no accepting wildcard. |
+| Elab source representation | Replace `UKonstFn.rumpf : SExpr` by `rumpf : SAnw`, retain original `FnSig`/clauses, and migrate signature ranges into checked typed parameters/result (`List (String × Ty)` and `Ty`); remove the superseded range-only extraction representation. Add **new** `elabConstProgram`, returning a program together with its source derivation and admissibility/termination certificates, or a named error. Factor existing `uAnwReihe`, `uEnde`, `uSichert`, `UebersetzeAllg.lowEns` and `UebersetzeAllg3.lowBodyF`/`lowBody` machinery where suitable; they are not already proofs of this new fragment. Typed bounds and narrowing are checked before G construction, using explicit source semantics for every intermediate, not host arithmetic. |
+| Source derivation | Define **new** `ConstElaborates` in `Parser/Elab/`, indexed by original declarations, final checked scope, source function ID and the resulting G function. Its inductive rules relate actual `SAnw.block/bind/set/cond/cases/ret` nodes, `SEnde.ret`, signatures, predicates and scope extensions to the corresponding G nodes. Include original operator spelling, range checks, source branch/binder order, early returns and resolved calls. This is a structural relation independent of the elaborator's success equation; prove **new** `elabConstProgram_sound` and determinacy up to alpha-renaming/function-ID isomorphism. Define source const-call denotation through this relation and G, not through a supplied mathematical function or a handwritten fixture. Prove literal/operator/substitution rules compositionally, so choosing a constant-return G body cannot satisfy provenance for an unrelated source body. |
+| Evaluation | Define **new** `ConstCallResult` distinguishing value, contract violation, arithmetic/range failure, unresolved dependency and resource exhaustion. **New** `evalConstCall` checks the exact source argument expressions at their own elaborated types, transports them into `Env D (D.params f)`, and reduces existing `rufAt c.P O passes depth f sigma args` (`Kern/Semantik/Semantik/T2.lean:454`). It projects only `.ok` to a value and preserves all failures. A canonical world exists because enumeration fields and globals are empty; prove independence from world/oracle/`passes` for the admitted fragment, rather than assume hardware. Declared costs and evaluation limits are separate: exceeding a compiler work limit refuses compilation, never supplies a value. No saturation, silent wrapping, `toNat` clipping, unknown-name zero or default result. |
+| Generic meaning theorem | Prove **new** `const_call_sound`: for every jointly source-derived, admissible program, typed closed arguments and successful checked evaluation to `v`, every world/oracle/`passes` and every depth at least the certified call-depth bound yield `rufAt ... = .ok sigma v`, with **the same world**. Prove uniqueness, depth stability and error correspondence separately; a failed requires/ensures maps to `.vorbedingung`/`.nachbedingung`, not a successful denotation. The source judgment then yields **new** `const_source_call_sound` for the original source call. Completeness is conditional on well-typed safe arithmetic, true contracts and sufficient evaluation resources, not promised for every syntactically pure function. Transport portable values between const and runtime declaration universes explicitly before `lowLit`; `Wert D` is not generally independent of D. |
+| Loop-free termination | **New** `ConstTermination` first records a checked strict rank for every direct call and a computed maximum nested call depth. Structural descent handles blocks/expressions; rank descent handles calls. Calls in arguments and contract expressions belong to the rank graph too. Prove no `abstieg` at adequate depth. The old literal `64` in `uKonstWert`/Stage-0 normalization is an implementation cap, not a language termination proof. Recursive const SCCs remain refused in this slice; D1's `Mass` binds runtime recursion obligations and does not automatically justify const reduction. |
+
+Proposed judgment interfaces, with the existing implicit `D`, `V`, `Gamma`,
+`l` and `tau` binders: `ConstExpr : Expr D Gamma [] tau → Prop`,
+`ConstStmt : Stmt D V l Gamma [] [] → Prop`,
+`ConstBlock : Block D V l Gamma [] [] → Prop`,
+`ConstEnd : Endblock D V l Gamma [] → Prop`, and
+`ConstTermination : ConstProgram → Nat → Prop` (the Nat is sufficient call
+depth, not a source measure). **New** `ConstScope` stores final closed typed
+constant bindings, aliases, wrapper descriptors and resolved declaration IDs;
+its definition belongs in Kern, without a dependency on Stage-0 `Scopes`.
+`ConstElaborates` has indices `(items : List SItemTief) (scope : ConstScope)
+(item : SItemTief) (c : ConstProgram) (f : c.D.Fn)`. It is proof data, not a
+second representation of an executable block. `ConstCallCertificate` is indexed
+by `c`, `f` and `args : Env c.D (c.D.params f)` and carries
+`value : ErgVal c.D (c.D.erg f)` plus the source/semantic proofs specified below.
+`evalConstCall` accepts those same indices and a compiler work limit; its
+`ConstCallResult` value case contains that certificate. Compute a conservative
+structural work bound and check it against the limit before kernel reduction;
+the bound must include evaluation of predicates and nested calls.
+
+No new `Ty`, `Expr`, `Stmt`, `Block` or G execution constructor is needed for
+this block design. New judgment families live outside the existing mutual
+syntax; any later constructor additions to existing syntax or parser inductives
+must go at the **END**, preserving all existing constructor numbers. Replace
+old representations atomically and migrate all pattern matches and fixtures;
+do not retain two canonical const evaluators with different accepted meanings.
+
+**Second slice: bounded loops.** Extend the same purity judgments with actual
+`Stmt.traverse` over a certified fieldless finite domain, and `Stmt.retry n`
+only when its condition, body and overflow block are themselves certified pure.
+Reuse `alleIndizes`, `traverseLauf` and `retryLauf` through `execStmt`
+(`Kern/Semantik/Semantik/T2.lean:213–226`). The source `SAnw.each` keeps its
+domain/mode/header/invariant; parse those fields with the canonical loop export
+rules before admitting them. No new numeric `for` syntax is implied. By-value
+array traversal uses a checked length/domain correspondence and pure
+`Expr.arrGet`, never table reads. Prove finite cardinality, index order, local
+accumulator context updates, binder scope restoration, early return and targeted
+`leave`/`next` against the same G control outcomes. Loop invariants and retry
+overflow paths remain checked exactly where G checks them; retry exhaustion
+executes its declared overflow block, not a guessed zero. Nested iteration gets
+a structural work bound including each executed body and predicate, and callees
+retain their depth bound (iteration count is not recursive call depth).
+Resource exhaustion has no logical success result. Open domains, consuming
+mutable domains, unbounded loops and recursion without a separate checked
+well-founded const rule remain refused; C11 and runtime `MassPflicht` are not
+silently imported as const totality. A later recursive slice must prove the
+existing measure duties and derive an adequate evaluation depth, not equate
+measure value with `rufAt` fuel.
+
+**Logical const contracts.**
+
+| Layer | Required rule |
+|---|---|
+| Canonical clause lowering | Preserve each `SKlausel.needs/gives` (`ElementTief.lean:74/75`) in source order. Lower conjunctions to `P.requires` over entry parameters and `P.ensures` over `ErgCtx`, binding `result` to the actual result and parameters to entry values, not final mutable locals. The predicate must satisfy `ConstExpr`, have empty footprint and use only typed values and certified closed constants. `Expr` has no ordinary direct-call constructor: a closed predicate helper call may fold only with its `ConstCallCertificate`. A parameter-dependent helper requires a checked expression expansion with a generic result-equivalence **and failure-freedom** theorem over every admitted predicate environment, including its own requires/ensures; finite loop expansion must preserve typed intermediate checks and have an expansion-size limit. Otherwise retain a named refusal for that helper call. Ordinary `bindCall` normalization alone cannot place a block inside `P.requires`. Reject predicate-call cycles, including an ensures that calls its own function. Preserve exact scope, short-circuit behavior and ranges. |
+| Call rule | Evaluate arguments once; check requires before entering the body and ensures after normal return, in exactly `rufAt` order. At each nested const call apply the same rule. False/unevaluable predicates refuse the initializer with function/clause/call-site identity. Never infer an ensures from a requires, body, test or successful type check; omitted clauses mean the existing true predicate only when absent in source. Supported pure `effects` are structural checks, not assumptions about behavior. `costs` must be preserved and its bound duty discharged for the concrete call or by a generic certificate; exceeding it is not the same as the compiler's work limit. |
+| What is proved | A checked call proves its concrete requires and returned ensures, not the contract for every possible argument. An exported universally valid const contract additionally needs a Lean proof over **all** typed arguments satisfying requires, derived from the actual body and termination certificate. An unused declaration still gets full structural/purity/dependency validation; it is not a fabricated universal contract proof. Calls with runtime arguments stay refused until an explicit runtime instance and ordinary contract proof/lowering exist. Compile-time const calls themselves create no runtime call-log or cost entry. |
+| Certificate API | **New** `ConstCallCertificate` records source function/instantiation ID, final environment identity, typed arguments, exact clauses/body derivation, value, termination/work bounds, G evaluation equation and successful predicate checks. Its checker is kernel-computable; prove a generic soundness theorem. Rust may propose values and schedules, but cannot choose clauses or assert ensures. Reuse table certificate membership only after this theorem; every array leaf must have the same checked call rule. |
+
+**Generic type/order wrappers and checked instantiation.**
+
+| Layer | Implementable model and proof design |
+|---|---|
+| Existing wrapper meaning | Add **new** `WrapperDecl` under `Kern/Syntax/`, keyed by resolved declaration identity, containing flags, typed payload list, optional representation and ordered distinct stage names. **New** `WrapperMeaning` relates the original `SItemTief.typeT` to this descriptor and its existing monomorphic representation. Linear/ghost wrappers map to a fresh `D.Marke`, preserving payload identity and `D.stufen`; a type-equal payload does not merge two marks. `order` names give the existing strict forward-stage rule, not a memory order or sorting comparator. Value wrappers retain nominal/opaque constructor-access evidence even when their represented `Ty` is equal. Multi-field values depend on C01's product rule; do not collapse them to one integer. Names such as `Duty(check)` resolve the declared check identity through C16, not an invented type variable. |
+| Formal templates, explicitly new | Full parametric wrappers need a distinct binder/application rule. Proposed **new** `TemplateParam` has `type`, `constant` and `order` binders in a telescope; a constant's type is a `TypeTemplate` scoped over preceding binders. **New** `TypeTemplate` is a finite syntax with bound de Bruijn parameters, closed monomorphic types, bounded arrays, named wrapper application and C01 products when available. **New** `TemplateDecl` retains source ID, parameter kinds, flags, payload/representation templates, order template and source contract/body/measure templates of its associated instances. It contains syntax, never arbitrary Lean functions. **New** `Instantiation` supplies exactly one resolved type/typed closed value/finite distinct stage list per matching binder; dependent constant types are checked after preceding substitutions. Fully resolve actuals; no inferred defaults or unresolved placeholders. These definitions do not reinterpret existing `typeT` payloads. |
+| Parser/export rule | Append **new** `STyp.app (name : List String) (args : List TemplateActual)` to `STyp`, and **new** `SItemTief.templateT` carrying explicit kinded binders and the existing wrapper declaration body. **New** `TemplateActual` distinguishes type/value/order syntax. Proposed surface spelling for owner review: `type W<type T, const N : u32, order S>([T; N]) order S;` and explicit applications `W<u8, 4, { raw, ready }>`; existing `type W(T)` continues to mean payload types. Extend `parseTyp`/`parseTypNach`, `parseTypTief`, equality, printing/round trips, `Aufloesung.loese`, `Oeffentlich.huelleZu`, width normalization and Stage-0 source traversals. This is a proposed canonical grammar extension, not an assertion that existing sources already contain this syntax. If the owner limits C17 to existing syntax, close existing checked wrappers and retain a precise refusal for genuinely parametric applications. |
+| Checked monomorphisation | **New** `instantiateTemplate` substitutes capture-free through every type, bound/count, payload, contract, effect, body, stage reference and D1 measure; lower only the resulting closed declarations. **New** `InstantiationValid` checks kinds/arity, range/width/layout, unique stage labels, valid stage lookup/forward moves, visibility/opacity, fresh instantiated identity and resource use. Descriptor instantiation precedes G checking: `Akzeptiert`/`AkzeptiertX`, footprints, ghost restrictions, all cost and user-logic duties are rechecked for every emitted instance. No blanket “template checked once” bypass. Use a deterministic key `(source ID, normalized typed actuals)`; cache only certificates at that key. A checked finite instance closure accounts for all referenced dependencies, rejects growing/cyclic type expansion, and includes instances reached only by contracts/constants/arrays. Code sharing additionally needs an explicit representation/meaning isomorphism; identical layouts alone cannot merge opaque types, marks or witness identities. |
+| Generic preservation theorem | Define **new** `TemplateMeaning` by structural interpretation under a kind-correct substitution, using existing monomorphic `Ty`/G and `WrapperMeaning`; it is not defined as successful execution of `instantiateTemplate`. Prove substitution identity/composition, alpha invariance, and **new** `instantiateTemplate_sound`: every successful checked instance has exactly that interpreted type/value representation, predicate truth, body outcomes, effects/resources, costs and measure values under all related environments/worlds. For ordered linear wrappers prove injective stage-name encoding and preservation/reflection of allowed forward moves, `nach` resources and unique ownership. Transport generated IDs through declaration embeddings; prove the instantiated source-to-G diagram commutes, then apply existing `gabbro_ziel` to the accepted monomorphic unit. A value equality theorem alone does not preserve contracts or linearity. |
+
+Non-linear `order` currently has no canonical value-operation rule; do not assign
+it numeric order, mutable typestate or erasable decoration by analogy. Recommended
+language decision: order remains a protocol on linear wrappers, including generic
+instances. Until decided, reject non-linear ordered wrappers explicitly (also at
+unused declarations) instead of allowing `uAliase` to discard the words. If the
+owner requests copyable staged values, that needs an explicit value/stage
+constructor and transition semantics with a separate `Spec`/cost review; this
+design does not pretend existing `Res.marke` proves that different feature.
+
+**Stage-0 consumption and connected acceptance.** Replace `FunctionMeaning`'s
+single-expression equality with exact original `FnSig`/`SAnw` provenance,
+`ConstElaborates`, checked wrapper instantiations and the generic const-call
+theorem. `Scopes.functionMeaning` must expose this stronger result. Update
+`constantFunction(s)`, `evaluationClauses`, `safeConstantName`/`SafeHull`,
+`compileTimeSafe` and `Source.compileTime` together: every body, signature,
+predicate and type/count consumer must resolve to the checked canonical call
+hull; absent names and cycle revisits are not certificates of success.
+
+In `DependentScopes.nextCandidates`/`resolveCandidate`/`discoverScopes`, discovery
+remains untrusted. Re-elaborate every original body/contract/instantiation with
+the final alias/constant environment, check all concrete calls again and retain
+the existing signature stability/full scalar-fold/permutation checks. Extend
+`ConstantOrder.dependencyDeclarations` beyond signature/call edges to body free
+constants, local types, clauses, bounds and instance actuals, respecting lexical
+shadowing. Check one mixed dependency graph; reject cycles even in unused
+constants/arrays/aliases. No self-supporting fixed point may certify its own
+signature or contract. Move the canonical dependency/const certificates into
+grammatik for reuse, rather than leave the only semantics in Stage 0.
+
+Thread those facts through `ConstantScopes.scopeMeaning`, `ConstantMeaning`,
+`ArrayConstants.ArrayMeaning`, `Correctness.Normalization`,
+`Elaboration.elabWithScopes`/`elabU_scopes`, `Compiler.Compiled`,
+`CanonicalSourceProgram`/`compile_source_program` and `IRBild.irBild_correct`.
+The source-to-value theorem must connect the exact literal/array initializer
+consumed by `lowerAllg` and existing `lowE_ok`/`lowFun_spec`, including signed,
+multiword and zero-length values; no per-program witness replaces this link.
+Runtime `elabU` may keep removing const functions only after every const use is
+certified; a surviving runtime call is a named refusal. Once integrated, remove
+the superseded expression-only evaluator/collector path, including the nested
+array path. The runner needs no C17 change merely to execute folded literals.
+
+**Goal theorem, Spec and rebuild impact.** This design adds canonical elaboration
+and a pure sublanguage judgment over unchanged G, not a new hardware premise or
+a change to `Ziel`/`NutzerPflicht(A)`. No semantic change to `Spec.lean` is intended;
+compile-time contract checks apply to actual constant calls and do not assert
+universal contracts or runtime termination. Generic instances use the existing
+monomorphic guarantees. The implementation commit must describe the new source
+meaning and explicitly state this absence of a goal-statement change. Recheck
+`Zielsatz/Kern/Beweis.ziel_aus`, `Zielsatz/Atomar/BeweisAtomar.gabbro_ziel`, SC
+transfer, idle-root/link embeddings and D1 measure transport; no new proof case
+in these theorems should arise unless implementation changes shared syntax or
+acceptance fields. Keep exactly `propext`, `Classical.choice`, `Quot.sound`.
+Extend GabbroV's `GvBruecke` source/export provenance where its represented
+fragment changes; do not restore the retired source runtime.
+
+Kern/Elab modules, parser constructors/traversals and every `UKonstFn` consumer
+require a coordinated grammar rebuild by its single owner, followed by affected
+Stage-0 compilation and the Lean guardian/layout/axiom checks. The full template
+parser extension needs the owner's syntax decision and coordination with the
+single authorized rebuild batch; it is not covered by the pure-export exception
+alone. Use the current two-slot/memory policy; no such check was run for this
+document. Avoid an import cycle: descriptors/purity syntax precede semantics,
+semantic soundness imports G, and parser derivations import those modules;
+the kernel never imports the parser or Stage 0.
+
+**Witness and refusal matrix.** Every generic theorem above needs a `_zeuge`
+whose source derivation, purity, termination, clause checks, instantiation and
+actual pipeline premises hold jointly. Include a signed multi-parameter block
+with locals/assignment/nested branches/early return; constant capture and name
+shadowing; a nested call with different caller/callee ranges; a pure function
+with true requires/ensures used by both a dependent signature and nested array;
+an empty/nonempty/nested traversal with an accumulator; bounded retry with both
+success and explicit overflow behavior; and one template instantiated at two
+integer widths/counts and two distinct protocol stage lists, preserving opaque
+and mark identity. Require a connected source-to-IR witness for each admitted
+slice, not just descriptor evaluation.
+
+Negative witnesses: effect hidden in a callee/unselected branch, unknown or
+duplicate function, fallthrough/missing return, illegal local mutation, overflow,
+zero division, bad cast, false/unevaluable requires and ensures, predicate-call
+cycle, unused malformed const declaration, forward dependency cycle through a
+contract/signature/instance, array-only unsafe call, exhausted evaluation work,
+unbounded/open traversal, recursive SCC without totality/depth proof, invalid
+retry overflow, wrong generic kind/arity, unresolved actual, stage-name
+collision/backward move, opaque construction outside visibility, lost/duplicated
+linear payload and non-linear order. Refuse unsupported aggregates/builtins by
+name until C01/C13 supplies their generic meaning. Register each new diagnostic
+sentence and poison probe when implementation introduces its refusal code.
+
+**Staging and effort (engineering person-days, not measured build time).**
+
+| Slice, in implementation order | Estimate | Completion gate |
+|---|---|---|
+| Canonical pure loop-free blocks, source relation, evaluator soundness and Stage-0 literal/array bridge | 6–10 | Generic source-to-value theorem is consumed by the compiled pipeline; old collector retired |
+| Logical contracts and final-scope dependency/certificate integration | 3–5 | Both false-clause refusals and nested/dependent positive cases certified |
+| Bounded traversal/retry and work/termination proofs | 3–5 | Generic finite-loop/control proof and connected witnesses |
+| Existing wrappers plus full explicit type/value/order instantiation and preservation | 6–10 | Owner syntax/order decisions, finite instance closure, resource and body preservation |
+| D1 runtime decreases binding (unchanged estimate) | 2–4 | Existing `MassPflicht`/termination theorem connected |
+
+Full C17: **20–34 person-days**; remainder beyond D1 measures: **18–30**,
+replacing the preliminary 10–20 remainder. Existing-wrapper checking is the
+first generic slice; full parametric syntax is separately gated, not a reason
+to delay block/contract semantics. Do not also charge the old optional 1–2 days.
+With all other D5 package estimates unchanged, the overall full C estimate
+becomes **245–414 person-days** (previously 237–404). Shared C01/C13/ABI work
+remains charged there. Critical path is canonical source relation and final-scope
+certification, then loop/control proofs and the owner-approved template grammar;
+limited Lean slots and the coordinated rebuild affect elapsed time. Commit each
+compiling implementation step; no helper-only stage closes C17.
+
+**Owner questions, with recommendations.** (1) Approve canonical pure G block
+evaluation, concrete compile-time requires/ensures and bounded loops as above;
+keep recursion separately gated. (2) Confirm existing wrapper payload lists are
+not retroactively formal binders, and approve explicit kinded template/application
+syntax if genuine parametric types are desired; otherwise scope the first
+wrapper slice to existing syntax and retain the application refusal. (3) Keep
+`order` restricted to linear protocols, including instantiated wrappers; ask for
+a separate semantic decision before copyable staged values. (4) Treat evaluator
+work caps as explicit compilation resource refusals, independent of source
+`costs`, with no implicit language bound of 64. These decisions change source
+admission/meaning and must be recorded by the owner before enabling those rules.
+
+Validation: source/name/path inspection and `git diff --check` only. **Zero new
+language cases compiled or proved; no Lean file edited and no build run.**
