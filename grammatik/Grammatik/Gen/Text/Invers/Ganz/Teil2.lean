@@ -9,9 +9,6 @@ namespace Gabbro.Grammatik.Gen.Text
 open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 variable (z : Spez)
 variable {z}
-variable (z) in
-variable (z) in
-variable (z) in
 
 /-- **A whole function read back.** -/
 theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn) {tabs : List UTab}

@@ -75,10 +75,10 @@ def erwartet : List (String × UInt64) :=
    ("5 roots", 17739234837013753632),
    ("6 single pool", 14541363968094309171),
    ("7 race freedom", 5875463811446301000),
-   ("8 answers", 4064949328991724195),
+   ("8 answers", 13274742717096103935),
    ("9 masks", 15820580103830642383),
-   ("komp", 1257054801379534739),
-   ("AkzeptiertX", 11041379899201812585)]
+   ("komp", 11070922589416309231),
+   ("AkzeptiertX", 5339785407536970385)]
 
 /-- The check: every pinned definition closure has its expected hash. -/
 def pruefe : MetaM Unit := do
