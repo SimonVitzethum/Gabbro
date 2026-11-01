@@ -1697,3 +1697,212 @@ full grammar build, layout check, Lean guardian/axiom audit and connected
 Stage-0 proofs/runner witnesses after each accepted batch; all remaining
 guardians still gate integration. This design compiles **zero new cases** and
 changes no measured proof/acceptance status; no builds were run.
+
+### Model extension design: C06, C07, C08 (2026-11-01)
+
+Design baseline: `a1dad6c92`; static source inspection only, no Lean edits or
+builds. **New** marks proposed definitions, not existing declarations. Kernel
+paths below are relative to `grammatik/Grammatik/`. This is an implementation
+handoff, not closure of catalogue cells. C03's `ReasonSpec`, `reasonTy`, optional
+channels and `RawAnswer` are design dependencies, not implemented interfaces in
+this checkout. Use that migration, not a second reason encoding.
+
+**Architecture.** Keep `Signatur`/`SigPasst` structural and put typed predicates
+beside `Programm.requires/ensures`, after `Expr` exists: putting expressions in
+`Signatur` would introduce the cycle `Deklaration → Signatur → Expr → Deklaration`.
+Use one **new** `CallContract D S` for pointer and foreign interfaces, with
+`pre : Expr D S.params (Signatur.anfang D S) .bool` and
+`post : Expr D (ErgCtx S.params S.erg) (Vertrag.vonSig D S).ende .bool`.
+Move the existing `ErgCtx` definition before this structure; its meaning stays.
+The contract is a normal-return contract with original arguments and entry-world
+`old`, just as `EnsAmRueck`; reason exits retain owed invariants and resources,
+not an invented normal `result`. Existing concrete function contracts remain
+intact. A shared evaluation/locality helper serves all three contract positions.
+
+Extend the existing sequential body-duty judgments with **new**
+`CallSitePflicht`: a proof judgment on execution prefixes, recording, at each
+indirect/foreign call, the actual operand world, evaluated arguments and its
+interface precondition. Its rules follow the existing `execStmt/execBlock/execEnd`
+and `execEndH` derivations, including both continuations, loops and abrupt exits;
+no second evaluator. Quantify over the same budgets, arbitrary conforming
+handlers, lock havoc and atomic rely as `KoerperGutS/KoerperGutSA`. Prove prefix
+transport to G/GX by the existing recorded-world replay, rather than assuming a
+predicate over reachable machines in the user's premise. This adds caller duty
+without passing `Programm` into the pure expression evaluator or replacing the
+actual callee by an interface stub. Logical implications belong in (b), never an
+unchecked `Bool` or `decide` over arbitrary predicates.
+
+Every new constructor goes at the **end** of its inductive, including `UStmt`,
+`GRest`, `RufSchrittG` and any auxiliary proof judgment. Changing arguments of an
+existing constructor migrates its clients in one batch; no legacy adapters.
+
+| Package | Core change | Spec impact | Engineering days |
+|---|---|---|---|
+| C06 | Typed pointer contracts, interface caller duty and universal target refinement O43 | **Yes:** (b) adds interface duty/refinement; concrete target contracts remain in `VertragAmOrtG` | 7–12 |
+| C07 | Indirect value/void calls with exact reason descriptors and terminating else continuations | **Yes:** admitted runs/duties include indirect reason exits; existing conclusions retained | 6–10 after C03/C06 |
+| C08 | Foreign signatures/contracts, proved software bindings, resource flow, provider realization and fallible void | **Yes:** separate software obligations in (b) from named hardware in (c); strengthen provider bridge | 16–27: contracts/boundary 7–11, resources/void 3–5, provider/IR bridge 6–11 |
+
+Ranges include generic proofs, witnesses, export, GabbroV and connected Stage-0
+work, not measured build times. Total 29–49 days for one implementation lane;
+C03's raw-answer/channel migration, IR-03's full value-span ABI and C12's
+unrepresented region capabilities are counted in their own packages. Critical path: typed contract replay and software/oracle
+boundary, C03 channels, provider correspondence to actual memory. No extra
+backend, source interpreter, OS model or privileged-code implementation is part
+of this design.
+
+**C06 — contracts on function-pointer types.**
+
+| Layer | Implementable change |
+|---|---|
+| Kern and conformance | Add **new** `Programm.ptrVertrag : ∀ n, CallContract D (D.sigNr n)`. Keep `Val (.fnptr n) = {f // D.passt f n = true}`, `Deklaration.passt_ok`, `SigPasst.params/erg/gruende`, effects inclusion, mark equality, lock inclusion/extra-lock floor and `RufPasst.vonPasst` (`Syntax/Syntax`, `Syntax/Satz/T1`). Add **new** `PtrVerfeinert P`: for **every** `f,n` with `D.passt f n = true`, every entry world `s0`, arguments `ρ` and normal return `s1,v`, (1) interface pre implies `ReqAmEintritt P f s0 (umsig hf ρ)`; (2) interface pre and `EnsAmRueck P f s0 s1 (umsig hf ρ) v` imply interface post after transporting `v` by `SigPasst.erg`. This is contravariant requires/covariant ensures, not equality of predicate text. Quantify over actual two-world values, not just the body result in one fixture. No implication from a reason exit to normal ensures. |
+| Target admission | `Parser/Elab/UebersetzeAllg.passtAt:296` currently admits every structural match via `sigPasstB`; it cannot decide O43. Retain structural soundness and add a finite, source-derived candidate-pair table with proof obligations for every positive pair. The table is an untrusted candidate until `PtrVerfeinert` is proved; it cannot acquire authority from an exporter success bit. Address-taking, assignment, parameters/results, stored callbacks and `einpassen`/`O.zeiger` all use the same `D.passt`; every admitted target, including foreign-address thunks, needs its refinement proof. Generate pairs from all potential conversions/binding images, never observed executions or one selected target; missing proof refuses the conversion. Structural typing remains: any function with proved refinement may fit, with no nominal function whitelist. For abstract `D.Fn`, the theorem remains universally quantified; complete finite `fs` enumerations are only the checker/export implementation. |
+| Caller duty and G | `CallSitePflicht` for `Stmt.callInd` and both `bindCallInd` positions requires the type's pre in the operand-entry world. From it, `PtrVerfeinert` and `RufPasst.vonPasst`, derive the existing concrete caller duty of `torRuf`/`KoerperGut`, then the concrete `ReqAmEintritt` at the actual push. `RufMaschineG/T2.dannBindCallInd` and the statement/end variants continue to evaluate `p` once, apply `umsig`, push that function's real body and log its `eintritt`; pops retain its actual `rueck/grund`. Use the concrete normal ensures plus refinement to expose the interface post to the continuation. Keep every selected target's own requires/ensures checks in `rufAt` and its own `VertragAmOrtG` entries; do not replace them with the weaker type post. No new execution constructor is needed for C06. |
+| Akzeptiert and replay | Extend `fussWB`, contract dependency extraction and `AtomarAkzeptiert.vertragsFreiB` to pointer pre/post footprints with their precise signature entry/exit guards. Contract reads may include protected read-only carriers, not only writes; a shared-atomic read cannot be hidden in a pointer predicate. Check candidate table bounds, structural `SigPasst`, ghost use and complete indirect call-graph closure (`AbgK`/`reachB`); refinement implications remain user proof in `LogikPflicht/LogikPflichtA`. Add pre/post locality lemmas with the same old-state discipline as `ReqAmEintritt/EnsAmRueck`, then use them in `ZielOrtAx`, `ZielOrtRahmen`, `ZielOrtSperre` and atomic replay. Structural acceptance of a candidate does not discharge its O43 obligation in (b). |
+| Export coordinates | `Uebersetze.uZeigerVertrag:4599` currently only accepts literal true clauses; `uZeigerSig:4608`, `elabZeigerTyp:4657` currently discard `needs/gives` and set reasons to zero. Preserve and lower all predicates in `UProg.ptrs`, using named/unnamed parameter indices, result context and `lowEns`; build `ptrVertrag` in `UebersetzeAllg3.progOfFn:1540`/`lowerAllg:1595`, including source-to-predicate correspondence and O43 duties. `UebersetzeAllg2.lowCallIndL:1310` and Allg3's :510/:886/:1178 binding paths must carry those duties. `crates/gabbro-check/src/namen.rs::fnptr_traegt_seinen_vertrag`, `m1.rs::fnptr_passt`, `pflichten.rs` and `tests/zeigervertrag.rs` currently enforce N589/N590 and explicitly identify O43: replace only the refusal whose proof now exists; never infer an ensures or turn it into a hint. Held/floor/effect refusals lacking their own connected check remain. |
+| Stage 0 | Reuse `Senke/Anweisung.lowInd`, `indC`, `callInd`/`bindCallInd`, `Anweisung/Fnptr.lowInd_ok`, `indStmt_ok`, `indBind_ok` and `Faelle/Fnptr`. Extend their hypotheses/contract instantiations to arbitrary admitted targets with actual entry snapshots and complete argument/result spans; thread the logical interface pre/post through function/image correctness, retaining each callee's emitted concrete contract code. C06's interface proof adds no separate runtime checker or extra dispatch. IR-10 owns old snapshots; IR-03 owns frame/result spans. A proved scalar `indBind_ok` alone does not close the generic source path. |
+
+A type with no predicate clauses has pre/post `true`; this does **not** permit
+silently calling a target whose pre is stronger. A target's private post may be
+stronger than the type post and remains proved/logged for that target. Two
+same-shape functions with different contracts are an essential witness, not an
+excuse to collapse their contracts by signature number.
+
+**C07 — fallible indirect calls.**
+
+| Layer | Implementable change |
+|---|---|
+| Channel/type | Adopt C03's `Signatur.gruende : Option ReasonSpec`, `reasonTy`, `SigPasst.gruende` equality and generalized outcomes. Preserve descriptor identity/openness and full u128 codes. An open channel with zero known cases is still a channel. Keep `Stmt.callInd` and nonfallible `Block/Endblock.bindCallInd` restricted to `gruende = none`; never discard a reason via the present `keinGrundSig` path. No separate pointer-only error type. |
+| Syntax and resources | Append **new** `Block.bindCallIndElse` and `Endblock.bindCallIndElse`: `p : Expr D Γ Λ (.fnptr n)`, signature arguments, `hp : RufPasst D V (D.sigNr n) Λ`, `hr : (D.sigNr n).gruende = some r`, `err : Endblock D V l (reasonTy (some r) :: Γ) Λc`, and a success continuation under `Λc := nachSig D (D.sigNr n) Λ`. For a success result `e := (D.sigNr n).erg`, its context is `ErgCtx Γ e`; the block continuation ends in `Λ'`, the end-block continuation must terminate. Use arbitrary `e`, not `he : e = some τ`, so void success binds no value. Append **new** `Stmt.callIndElse` with the same arguments/`hp`/`hr`, `err` and result resource `Λc`; success discards only the normal value and continues in Γ. Implement it as checked sugar over `Block.bindCallIndElse` with an empty success tail and scope projection; no duplicate dispatch semantics. Existing `Stmt.callInd` is unchanged except C03's channel premise. |
+| Sequential and G | Extend `execBlock/execEnd` in `Semantik/Semantik/T2` and havoc/rely variants: record `p.orte ++ args.orte`, evaluate once, call `R f` with `umsig hf`; normal value is transported by `SigPasst.erg` into `ergEnv`, reason by `SigPasst.gruende` into the exact `err` binder. Both use `nachSig`; propagate logic/hardware stops unchanged. Generalize `GRest.wartetSonst` (`Logik/Ruf/Maschine/RufMaschineG/T1`) to optional result and C03 descriptor, sharing direct and indirect continuations; migrate direct `bindCallElse` to the same optional-result interface rather than adding a second wait stack. Append push rules for new block/end forms at the end of `RufSchrittG`, patterned on `dannBindCallInd` and `dannBindCallElse`; save selected `f`, entry world/arguments and interface resource equality. Reuse generalized value/reason pop rules, including `retWhy` inside `cons`, without re-evaluating `p`. Statement sugar must retain loop/end continuation and both return paths. |
+| Duty/acceptance | C06's pre and universal refinement apply before either outcome. Normal returns expose type post; errors expose reason identity plus owed invariants and `Λc`, not type normal ensures. Extend `vOk/gOk`, fragment checks, `ants`, footprints, masks, `ueberBoden`, terminal/progress predicates and `AbgK` through **both** continuations and every admitted target. `D.eigner_nie_erzeugt` still prohibits minting an owner merely through `produziert`. Error paths cannot restore consumed marks, invent success-only marks or fall off. Preserve locks on reason exits exactly as on ordinary `bindCallElse`. |
+| Export coordinates | Remove the `uZeigerSig:4617` reason-channel refusal only after descriptor parsing/lowering; preserve `FnSig.fehler` through `elabZeigerTyp`, `UFn/UFnKopf`, `mkSig` and `sigPasstB`. `uAnw1:2534`, `uBindWert:3009` currently require let-else; add appended `UStmt` forms for indirect else, resolving the pointer variable rather than looking up a direct target. Extend `uAnwReihe`, `uEndeKanal`, `lowZeigerN/lowRufKopfN`, `UebersetzeAllg3` block/end/final binding paths. Type-check annotation/result/channel and preserve shadowing, original arguments, error binder and post-call resource scope. No-channel calls keep existing export. |
+| Stage 0 | `Anweisung.lowInd` currently rejects nonzero reasons. Generalize its call assembly independently of outcome dispatch, then use the same checked status/error continuation mechanism as direct `bindCallElse` (`elseC`, `Faelle/CallElse`) for new indirect constructors. Use C03/IR-03's complete return and reason spans with status outside both; void has zero value words and no synthetic source number. Prove new normal/reason versions of `execBlock_ind_eq/execEnd_ind_eq`, `indAntwort/indBind_ok`, and statement-sugar simulation, preserving saved pointer, caller parameters/snapshots, reserved scratch, loop targets and resources. Connect through `lowS_ok/lowB_ok/lowEnd_ok`, function and image theorems, including a runtime-selected target that returns an unknown open reason. |
+
+**C08 — foreign contracts, resources, providers and void.**
+
+| Layer | Implementable change |
+|---|---|
+| Canonical signature/contract | Replace independent foreign shape fields with **new** `Deklaration.asignatur : Ax → Signatur Tab Glob Lock Marke`; keep `aparams/aerg/aschreibt/agschreibt/agruende` as the single canonical projections, not duplicated stored state. Add **new** `Programm.axVertrag : ∀ a, CallContract D (D.asignatur a)`, with exact argument/result/old contexts. Generalize the existing `AxEns`/`AxVertragO` in `Logik/Vertraege/AxiomVertrag`: its current `Q a σ' v` has neither entry world nor arguments and only sees the normal-result decoder. The new contract relation uses pre-world, original arguments, post-world and C03's decoded normal-or-reason outcome; normal post applies only on normal return. Replace the restricted `AxEnsLokal` rule (only write carriers) with explicit guarded pre/post footprints and two-world replay. Migrate `Einheit.Q` to this canonical relation, derived from the exported contract, not independently supplied as an unrelated stronger predicate. |
+| Caller/resource rules | Replace the duplicated `hw/hg/hd/hgd` call premises by `RufPasst D V (D.asignatur a) Λ`; nonfallible `Stmt.axiomCall` requires `aerg = none` **and** `agruende = none`, and exits in `nachSig D (D.asignatur a) Λ`. Add the no-channel premise to ordinary `bindAxiom`. Generalize `Block/Endblock.bindAxiomElse` success to `ErgCtx Γ (D.aerg a)`, error to `reasonTy (D.agruende a) :: Γ`, both under the same `nachSig`; a `none` result has `ErgVal none = Unit` (`Semantik/T1:353`) and adds no local. Generalize `bindAxiom` consistently to optional result to avoid a separate void API. Append **new** `Stmt.axiomCallElse` as scope-erasing sugar over the generalized binder, as for C07. Include foreign signatures in owner-never-produced, floor, held-set, mask and linear-flow checks. Foreign effects must realize consumes/produces/held permissions at both exits; arbitrary `locks` effects need proved acquire/release traces and floor behavior, not a fabricated no-lock frame. Unmodeled masks/publishes/other effects remain refused until their generic trace rule exists. |
+| Premise provenance | Add **new** declaration metadata `AxOrigin`: `software` or `hardware (a : D.Annahme)`. It is not inferred from the word `extern`, `syscall`, `axiom` or an ABI number. Add **new** `ForeignPflicht E O` in `NutzerPflicht/NutzerPflichtA`, hence make that duty explicitly parameterized by the actual oracle/binding realization `O`. For every software item its proved implementation/binding establishes frame, held-lock/trace discipline, result/reason decoding, postcondition under pre, resource transfer and provider facts. The body's own `CallSitePflicht` establishes pre at every call. Sequential logic still quantifies over **all** answers satisfying the declared summaries, not just this O. Narrow `HardwareAnnahmen`'s foreign part to explicitly named hardware-origin items; keep genuine register/weak-memory hardware conditions. Re-establish combined per-call `GutO`/contract facts from the two groups, then feed the existing replay proofs. Conditional contracts are used only at a site whose pre is proved; localize any proof currently demanding unconditional `AxVertragO` accordingly. No normalization to an out-of-range raw answer: void and full-range types have no such sentinel. |
+| Akzeptiert | Add **new** `schnittstellenB` with a proved iff to a corresponding **new** field of `AkzeptiertSpec`/`AkzeptiertSpecX`: all referenced pointer/foreign signatures and origin names resolve, parameter/result/channel descriptors agree with calls, resource lists have valid stages/multiplicities, foreign-produced marks satisfy owner-never-produced, and contract/boundary-clause reads satisfy guard/ghost/atomic restrictions. Enumerate signatures/origins/clauses from the finite unit; do not infer missing contracts from `fs` alone. Fold the component into `Akzeptiert` and `AkzeptiertX`, and extend their soundness proofs. Reuse existing `stufenB`, `fussWB`, `maskenB`, `antwortenB` for their semantic obligations, including both error branches. `PtrVerfeinert`, software implementation proofs and grant-history realization remain in (b), not this Bool. |
+| Existing bridge and required closure | Reuse `Logik/Ruf/FremdRuf/T2.AxPre`, `AufruferPflicht`, `AxVertragOP` and T3's `RufFolgePflicht` to state the pre split, but do not cite `hardware_aus_vertragP` as machine-level closure: its own CUTS require `hraus`, exclude void, and only prove oracle/sequence coincidence. Extend actual `RufSchrittG` axiom/binder rules and their recorded `AxEintrag` replay with precondition-at-call and outcome-sensitive post/resource facts. Generalize `Kern/Semantik/Syscall/SyscallPaarung.KernelEintragG`, `UserSyscallG`, `PaarGut` and `syscall_paarung` to typed/void/open outcomes and resource/extent evidence; tie the proved dispatch/binding implementation to the same `O.wirkt`. An OS implementation proof can discharge this **user** obligation; an unproved OS promise cannot enter (c) under a different name. The current theorem already separates program ABI data from hardware and supplies a reusable pairing shape, not a complete source export. |
+| Provider realization | `D.anbieter_passt` proves only open-table/parameter/result shape. `Unbounded/GRefine.RegionRepr` and `allocate_refines` assume the candidate and installed contents; `GRegion.oK` accepts any K. Neither proves physical freshness. Build **new** `ProviderRealisiert` as the provider clause of `ForeignPflicht`, a relation on successful boundary transitions and a history of live grants: region/table identity, cell or extent, byte base/length/alignment/rights, initialized contents, provenance, and an injective mapping to the actual binding memory. Success introduces a grant absent from all live grants; all bytes are in the returned REGION and disjoint from every live grant and compiler frame/code/snapshot allocation. Failure introduces no grant; any other state/resource effect must satisfy the declared failure frame. Release/reuse needs the existing ownership ledger and no outstanding borrow; no new allocator or `int → ref` source form. Use `Schablonen/SchablonenOhneLibc.RegionVertrag/region_zugriff`, `Unbounded.Heap.Valid/allocate_refines` and the ownership interfaces as lemmas in that transition proof, not detached witnesses. Extend the region contract predicate vocabulary/export to retain freshness/disjointness/length clauses as checked semantic relations to this grant history; never lower them to `true`. |
+| Provider history in G | Add **new** `BoundaryRecord D` (item, original arguments, entry/exit memories, decoded outcome and declared grant/release identity) and an append-only history field at the end of `RufMaschineG`; `RufStartG` starts from **new** `Einheit.grants0`, the source-declared initial inventory; extend `StartPflicht` to prove its provenance, disjoint realization and correspondence to initial capabilities, rather than assuming an empty external world. Each foreign step appends exactly its actual record; other steps preserve the field. A **new** `GrantInventory` is the deterministic fold of those records: success-grant inserts, declared release removes after ownership/borrow checks, reason return grants nothing. Extend `BoundaryClause` with the explicit release case for existing consumes/release declarations; no implicit collection on scope exit. `ProviderTreueG` relates that history to a single global inventory across all threads and to the binding realization, preventing per-thread freshness from admitting cross-thread aliases. This is ghost specification data, erased from emitted code, not a second executable heap. Lift its step preservation through GX, spawn, idle root and linking. Sequential `CallSitePflicht` carries the same inventory through boundary prefixes; its transport proof identifies it with this global history. |
+| Typed boundary clauses | Add **new** `BoundaryClause D S`, a closed typed syntax attached to `CallContract` alongside Boolean pre/post: input extent, output extent, fresh/disjoint output grant and explicit release. Each selector identifies a parameter/result capability and its region/table (for an existing open provider: `aerg = some (.ref n)`, `tabNr n = some t`); bounds are typed nonnegative integer expressions over the original parameter context, with an explicit element/byte unit and checked layout conversion. Its meaning is a Prop over the entry/exit live-grant inventory and the selected capability, with fresh output requiring absence from the entry live set and disjointness from every entry live grant. Pre-clauses must hold at the call; output clauses apply only to success. Store these clauses in `UAx`/pointer metadata and prove exact lowering; add constructors only at the end. They cannot be encoded by `Expr.lit`, a synthesized address or an opaque arbitrary predicate supplied by Rust. For region capabilities whose identity/rights are not representable by current `.ref`/`.ptr` (the latter has unit values), the C12 space/capability model is a prerequisite; retain the full source clause and explicitly refuse that case until it joins, never assert a region length of a unit value. `m1.rs:1672/4490` already transports foreign `ensures n <= lenof(result)` into caller extent facts; bind those facts to these clauses and their user proof instead of treating the checker report as evidence. C06 refinement also preserves applicable input/output boundary clauses, contravariantly/covariantly, so a provider callback cannot drop freshness from its type. |
+| Provider → addresses | Compose provider identity and extent facts with `Adressen/Bereich.ImBereich`, `axiomAntwortSonst_aussen`, `rufErreichbarGX_aussen` and `Adressen/Layout.zelle_im_bereich/zellen_getrennt`. Software foreign writes must **prove** their instance of `ImBereichO`; only true hardware behavior may remain a named premise. Keep the existing conditional address leg as well; do not hide an OS assumption in its antecedent. Logical open-region address spaces already separate different tables, but say nothing about two calls reissuing the same cell, or two physical grants aliasing. The new injective physical realization supplies those missing facts. Connect to IR-06's world memory and actual `WeltAt`; `Ty.ref` type checking or a raw positive address alone never authorizes a grant. Provision of dynamic arena pages must establish this bridge before a committed-counter update claims backing memory. OOM/success availability is the provider's user proof; declared failure is user control flow, and a bounded arena's capacity else remains distinct. |
+| Export coordinates | Preserve clauses/effects in `Uebersetze.uRestFehler:4039` (`axiomT`), `uAxKlauseln:4116`, `uAxKopf:4135` and `elabGateKopf:4184`; remove the :4156 fallible-no-answer refusal only with generalized binder and decoder. Extend `UAx:658`/`UFnKopf`, `UProg`, `declOf`, `progOfFn/lowerAllg` with canonical signature, contracts, origin and proof-obligation identities; do not just export a typed answer. `elabGateKopf` must retain `sc.gate.pre/post/uses`, and the axiom's falsifier identifies hardware only after the origin decision below. Cover all block/end `bindAx/bindAxElse` paths and `axCall`, including no result and old snapshots; extend source preservation and GabbroV duty export. Refuse unresolvable clauses/resources rather than silently dropping them. |
+| IR-11 gates | Keep `Stage0/Bindung.uniqueBinding` and explicit selected target/ABI; extend `Tor`, `TorB`, `rohW`, `torGut/fehlGut` and `Senke/Tor.chkC` to exact result/channel descriptors. Reuse `Anweisung/Tor.TorOK` as a binding/user-logic correspondence to `Kern.ans`; it is not a proof of source contracts, freshness, or the OS. Extend `torC_ok/torC0_ok`, `torBind_ok`, `FehlerLauf.torElse_ok`, buffer frame proofs and `Faelle/BlockFehler/EndFehler` with the actual success/failure memory, grant and resource relation. Void success decodes the ABI's declared status into unit, errors into the reason channel, and never range-checks an invented source integer. ABI success/error sets must be disjoint; preserve unknown open codes under the explicit decoder. Unsupported/unclassified raw answers are refused at binding validation; an unexpected software answer at execution is **new** `Logik.fremdAntwort a` (append in `Semantik/Semantik/T1.Logik`), excluded by `ForeignPflicht` and the existing no-logic-halt conclusion. Only a named hardware-origin decoder violation may retain `.hardware (.annahme a)`. Compose binding correspondence and `ForeignPflicht` through `lowS_ok/lowB_ok/lowEnd_ok`, `lowFun_spec` and the actual `Stage0/Haupt → IRBild` path. Generalized checks must cover multiword/reference answers using IR-03/06, not merely extend scalar `chkC`. |
+
+**Goal proof closure and exact Spec changes.**
+
+1. **`VertragAmOrtG`.** Preserve its concrete `eintritt/rueck` interpretation
+   (`ZielOrt/Grundlage/ZielOrt/T1`) and prove C06 refinement at the selected
+   target, both ways of C07's continuation, and C08 pre/post at actual foreign
+   records. Extend `Logik/Vertraege/AxiomVertrag.VertragA`, `orakelAus_vertrag`,
+   `axWelt_vertrag` to original arguments/entry state and outcome-specific
+   frames. Replay pre/old/current footprints separately under held guards;
+   `LogikPflichtA` must quantify over every unknown open reason and atomic answer.
+   Restore `InvAmOrtG/InvAmGrundG`, lock/idle invariants and no-logic-halt on both
+   exits; a foreign writer owes every affected carrier invariant. Contract
+   locality is not automatically implied by the set of write effects.
+2. **`FolgeG`.** `Logik/Fortschritt/Folge`'s `Φ.ind n` covers every `D.passt f n`;
+   extend `fS/fB/fE`, `GRest.fR` and `FolgeBeweis` to indirect else and both
+   branches, clearing the armed bit after indirect calls as before. Keep concrete
+   `eintritt/rueck/grund` events; normal and reason pops cannot masquerade as each
+   other. Foreign calls remain log-silent in this function-order theorem, as
+   existing axiom calls are; their `AxEintrag`/access trace is separate. Ordering
+   a syscall by name requires its ordinary checked function wrapper (and proof
+   of that wrapper's real gate), not inventing foreign function-log events.
+3. **Memory, resources and progress.** Extend `Syntax/Satz`, `Extraktion`,
+   `Geist`, `Fehler`, `RahmenTreu.rufAt_treu`, G/GX/atomic replay, terminal/halt
+   classification and costs through new forms. Restore `akzeptiert_iff`,
+   `antwortenB_iff`, `vertragsFreiB_ok` and `akzeptiertSpecX_of`; in particular
+   fallible void is inhabited success-or-reason, while `never` has no normal
+   return. Preserve all trace guards, error effects, floors, masking, resource
+   conservation and `speicherAdressen`. Include the new signatures/contracts and
+   origin/grant relations in `MitRuhe*`, `Zielsatz/Einbettung` and linking.
+   Re-establish `ZeitAb` with dispatch/error-arm costs; no separate cost project.
+4. **Spec diff.** C06 adds interface pre/refinement to (b), C07 enlarges the
+   outcome/duty domain consistently with C03. C08 changes the current header's
+   explicit “hardware and foreign code” reading of (c), `HardwareAnnahmen` and
+   `NutzerPflicht(A)`: software frame, contract, resource, extent and provider
+   realization are proved in (b) against the actual binding, only named hardware
+   remains in (c). Carry that O-dependence through `GabbroZiel`, SC, GX and linked
+   statements and `bruecke_nutzer/bruecke_nutzerA`; no unproved software behavior
+   can remain implicit in `GutO`, `AxVertragO`, `TorOK`, loader or layout premises.
+   Add **new** `ProviderTreueG` to the goal for declared providers: each live grant
+   is backed by the proved injective region realization, with ownership transfer
+   compatible with its live-grant history. Prove it by boundary/machine-step
+   induction and compose the physical correspondence in the IR theorem; do not
+   claim `gabbro_ziel` itself describes final bytes. This is a strengthening plus
+   premise-provenance correction, not merely representation. Document this in
+   the Spec header, relevant plan and implementation commit; existing safety,
+   contracts, budgets, order and NOT CLAIMED qualifications are not weakened.
+5. Recompile `Zielsatz/Kern/Beweis.ziel_aus`,
+   `Atomar/BeweisAtomar.gabbro_ziel`, `gabbro_ziel_gx`, `gabbro_ziel_sc_aus`
+   and `gabbro_ziel_verbund` plus their witnesses. Audit **exactly** `propext`,
+   `Classical.choice`, `Quot.sound`; no additional axiom, `sorry` or per-program
+   substitute for a generic theorem. No package is complete before the exported
+   accepted unit, connected source/IR/function/image proofs and pipeline compile.
+
+**Witnesses and remaining refusal boundaries.** Every generic syntax theorem
+gets a non-degenerate `_zeuge` with all premises jointly, then source-export,
+`AkzeptiertX`, IR and assembly-runner witnesses of the same form.
+
+| Package | Positive witnesses | Negative twins / refusal boundaries |
+|---|---|---|
+| C06 | Two runtime-selectable same-shape targets with distinct stronger posts/weaker pres; state-reading type pre and `old` post; callback through parameter/table/result and a proved foreign thunk; nonempty effects/mark flow | Stronger target pre, weaker target post, reversed implication, bad second target, forged image pointer, old/current mixup, hidden shared-atomic contract, unproved Held/floor/effect/refinement pair; preserve N589/N590 until the corresponding full path is proved |
+| C07 | Both indirect value paths in Block/Endblock; statement and void success; dynamically selected error target; open channel with no known cases; unknown >64-bit reason forwarded through nested calls; consumed/produced marks and a held lock on both exits | Missing else, falling-off error block, wrong nominal channel, zero-known-open treated as none, re-evaluated target, stale/error payload span, normal post assumed on error, early return skipping lock release, different branch inventory |
+| C08 | Argument/old/result-dependent extern and named hardware axiom; proved syscall pairing with real buffer write; fallible Bool/reference/void; two fresh grants, preserved first grant, release/reuse with no borrower; provider availability as user proof; no-channel void and never | Missing software proof, hardware label on OS behavior, false pre, return outside declared decoder, malformed open reason/tree, unproved resource effect, owner minted by produces, failure treated as pure, repeated/overlapping/short/misaligned grant, raw int-to-region, read-only grant written, missing backing/availability, ambiguous/unbound gate |
+
+Existing unsupported ABI widths/effects are explicit interim refusals, not a
+reason to shrink the source theorem. ASM bodies, boot/privileged execution,
+raw-address syntax and device-register forms stay outside this assignment.
+
+**Owner questions — source meaning, with recommendations.**
+
+- **C08 hardware classification:** does existing `axiom ... falsifier ...` always
+  mean a hardware-origin operation, or may it declare a software service?
+  Recommend classifying by the declared operation and named hardware assumption,
+  never keyword alone: OS/provider/service contracts require user implementation
+  proof even when spelled `axiom`. Reuse existing assumption references for true
+  hardware; refuse ambiguous origin until resolved. This needs an explicit Spec
+  and language explanation, not automatic renaming of all foreign items.
+- **C07/C08 resource effects on errors:** are declared produces/consumes common
+  to every returning exit, or success-only? Recommend the existing ordinary-call
+  rule: one `nachSig` for normal and reason exits; no resource rollback on error.
+  If the owner intends outcome-specific effects, extend the canonical signature
+  with explicit per-outcome flow and migrate direct calls too before acceptance;
+  do not introduce that meaning only for syscall/pointer calls.
+
+Normal ensures applying only to normal returns, OS behavior as user logic,
+region-only external memory and OOM as user logic are existing rules, not open
+choices. No normal-result postcondition on reasons is proposed.
+
+**Staging and rebuild impact.** One grammatik owner first adds typed interface
+contracts/O43 and caller-duty replay with scalar no-channel witnesses (C06).
+In a separate compiling boundary batch, introduce canonical foreign signatures,
+software/hardware provenance and actual-machine pre/post replay (C08 foundation);
+keep unproved software bindings refused. Join C03's descriptor/raw-answer batch,
+then implement generalized optional-result continuations and indirect else
+(C07 and C08 void/resources). Finally connect provider grant/region realization,
+IR-11 buffers/gates and IR-03/06 full-span storage, followed by all source and
+GabbroV bridges. Commit each building stage; do not activate an exporter branch
+before its generic model and connected lowering proof are ready. Origin and
+error-resource choices above must be resolved before enabling their source cases.
+
+`Programm`/`Deklaration` changes rebuild nearly all grammar clients; new binders
+add cases throughout mutual inductions, machine steps, converse/replay, contracts,
+footprints, locks, costs, ownership, idle-root/link embeddings, witnesses and
+parser/export. Stage 0 must rebuild call/return ABI, snapshots, gate decoders,
+world/init/layout, mutual lowering, function/recursion/image correctness and
+frontend/compiler provenance. Existing narrower adequacy CUTS such as
+`Logik/Ruf/Adaequat/RufAdaequatRufG/T10` are not proofs of the new cases. Extend
+only the generic bridge actually consumed by the pipeline and report remaining
+cuts precisely. The implementation owner uses the authorized grammar memory
+scope (fresh MemAvailable minus 2 GiB, swap zero), within the current two global
+Lean slots; Stage-0 checks retain 5-GiB slot scopes. Require the full grammar
+build, layout check, Lean guardian/standard-axiom audit and connected Stage-0
+proof/runner checks for each accepted batch; remaining guardians at integration.
+This design commit performs none of those builds and claims no new compiled case.
