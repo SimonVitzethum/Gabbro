@@ -55,9 +55,9 @@ local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap 
 theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Nat} (arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n)
     (hblocks : GrundAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
-    (hc : lowGrund (reserved := reserved) passes A L lo ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
+    (hc : lowGrund (reserved := reserved) passes A L (functionFrame P f) ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
     (hs : 16 * cd.length < 2 ^ 31) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
+    (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} 
     (v : Fin n) (hi : k + v.val < 2 ^ 64)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some (BitVec.ofNat 64 (k + v.val)))
@@ -70,7 +70,7 @@ theorem lowGrund_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   cases arms with
   | nil => exact Fin.elim0 v
   | cons b rest =>
-    simp only [lowGrund] at hc
+    simp only [lowGrund, ← hlo0] at hc
     split at hc
     · next hki =>
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
@@ -123,9 +123,9 @@ theorem onWhy_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     {cv ca : List II} {tv ta : Nat} {ex : Int × Int}
     (hn : n < 2 ^ 31) (hblocks : GrundAll (fun b => BR b) arms)
     (hcv : lowE (reserved := reserved) L v (frei Γ reserved) = some (cv, tv))
-    (hca : lowGrund (reserved := reserved) passes A L lo ens pr ex arms 0 = some (ca, ta))
+    (hca : lowGrund (reserved := reserved) passes A L (functionFrame P f) ens pr ex arms 0 = some (ca, ta))
     (htv : tv ≤ Ks) (hta : ta + cap ≤ Ks) (hs : 16 * (cv.length + ca.length) < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f)))
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = (functionFrame P f).internalResult)
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ}
     (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cv ++ ca) ρ) (hu : Umf L A C dv m fp Ks K)
@@ -153,11 +153,11 @@ theorem onWhy_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (keeps_of_agreeW hW a1 hpr (by omega)) ih
 
 /-- Several distinct reasons are accepted in one dispatch, without payload slots. -/
-theorem onWhy_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat)
+theorem onWhy_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (ens : List II × Nat)
     (pr : List Nat) (ex : Int × Int) (f : D.Fn) :
     let arms : GrundArms D (vertragVon D f) false [.why 3] [] [] 3 :=
       .cons .nil (.cons .nil (.cons .nil .nil))
-    ∃ code top, lowS passes A L lo ens pr ex (.onWhy (.var .here) arms) = some (code, top) := by
+    ∃ code top, lowS passes A L layout ens pr ex (.onWhy (.var .here) arms) = some (code, top) := by
   exact ⟨_, _, rfl⟩
 
 end
@@ -166,30 +166,30 @@ theorem retWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {r : Fin (D.gruende f)} {proof0 : _} :
     StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .retWhy r proof0) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ hk hWa hpr
-  simp only [lowS, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [lowS, ← hlo0, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  change max (frei Γ reserved) (retTop lo (D.erg f) (D.gruende f)) + cap ≤ Ks at hK
+  change max (frei Γ reserved) (retTop (functionFrame P f)) + cap ≤ Ks at hK
   exact retWhy_ok r hlo0 (by omega) hp hk hW hWa
 
 theorem endWhy_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {r : Fin (D.gruende f)} {proof0 : _} :
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .retWhy r proof0) reserved := by
   intro c top h hK _ hW m pc σ ρ hp hlo2 _ hk hWa hpr
-  simp only [lowEnd, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [lowEnd, ← hlo0, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  change max (frei Γ reserved) (retTop lo (D.erg f) (D.gruende f)) + cap ≤ Ks at hK
+  change max (frei Γ reserved) (retTop (functionFrame P f)) + cap ≤ Ks at hK
   exact retWhy_ok r hlo0 (by omega) hp hk hW hWa
 
 end Gabbro.Stage0.Senke

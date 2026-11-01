@@ -1,16 +1,9 @@
-/-
-  File:      stage0/Stage0/Senke/Spez.lean
-  Subject:   What a lowered function owes its caller (`FunSpec`), and frames inside frames.
-
-  `PCode m A C fp K`: every function's code `C g` lies at its address `A g`, apart from the stack (the slots
-  `0 .. K-1` of the frame at `fp`, which hold every frame called from there). `FunSpec A C S dv c`: for every
-  function `f`, entered with a frame whose header the `call` wrote, depth `dv` in slot 2 and the arguments in the
-  parameter slots, and a stack of at least `c` slots: where `S f` (the call semantics) answers `ok v`, the IR
-  returns to the caller with the word of `v` in slot 2, having changed nothing but its own frame from slot 2 on;
-  Normal returns additionally keep status 1 in `FB + parameter count + 1`, the successful ensures output.
-  A `why` answer returns its ordinal in slot 2 and status 0, bypassing ensures exactly as G does.
-  Logic and hardware outcomes retain their named stops.
--/
+/- The external complete-value call contract and checked nested frames.
+   Parameters use contextWords; the canonical result starts at FB + parameterWords.
+   Header word 2 mirrors its first word for startup/exit only. The status follows
+   the complete shared normal/reason area, independently of private snapshots.
+   Normal and reason returns preserve caller header words 0/1 and carry the resulting
+   world. Logic and hardware outcomes retain their named stops. -/
 import Stage0.Senke.Funktion
 import Stage0.Senke.Ausdruck.Aggregat.Scalar
 import Stage0.Senke.Welt.WeltAt
@@ -55,7 +48,7 @@ def ExitErg (L : Lay D) : (e : Option Ty) → ErgVal D e → Runner.W → Prop
   | none, _, _ => True
 
 /-- The checked normal return keeps the successful ensures Boolean in its output slot.
-    A reason return writes zero there and its ordinal in slot 2. No parameter slot changes. -/
+    A reason return writes zero there and mirrors its first encoded word in slot 2. -/
 def ReturnFlag (m : Runner.Mem) (fp : Runner.W) (np : Nat) (ok : Bool) (nr : Nat := 1) : Prop :=
   m.rd64 (slot fp (BitVec.ofNat 64 (FB + np + nr))) = some (if ok then 1 else 0)
 

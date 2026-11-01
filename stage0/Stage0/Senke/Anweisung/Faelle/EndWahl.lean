@@ -16,7 +16,7 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {pr : List Nat} {ex : Int × Int} {reserved : Nat}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {cnd : Expr D Γ Λ .bool} {t : Endblock D (vertragVon D f) l Γ Λ} {e : Endblock D (vertragVon D f) l Γ Λ} :
@@ -24,12 +24,13 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex e reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .ite cnd t e) reserved := by
   intro ihT ihE c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨ct, tt⟩, hct, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append, List.length_singleton] at hs
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   have hsm := hp.small
   have htop := lowE_top cnd (frei Γ reserved) cc tc hcc
   have hq : PreS L m pc fp K (frei Γ reserved) (cc ++ ([ci 19 (frei Γ reserved) (16 * (ct.length + 1)) 0] ++ (ct ++ ce))) ρ reserved := by

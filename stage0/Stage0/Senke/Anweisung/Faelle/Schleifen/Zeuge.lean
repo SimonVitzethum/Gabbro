@@ -9,13 +9,13 @@ set_option maxRecDepth 100000
 def statement : Stmt D (vertragVon D 2) false [.bool] [] [] :=
   .retry 2 (.var .here) (.cons (.assignVar .here .tru) (.cons (.next rfl) .nil)) .nil
 
-def code : List II := ((lowS 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) statement).getD ([], 0)).1
+def code : List II := ((lowS 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement).getD ([], 0)).1
 
 def memory : Runner.Mem := { callMem with
   b := fun a => if 2048 ≤ a.toNat ∧ a.toNat < 2048 + 16 * code.length then
       ((code.flatMap encII)[a.toNat - 2048]?).getD 0 else callMem.b a }
 
-theorem lowered : lowS 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) := by
+theorem lowered : lowS 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) := by
   decide +kernel
 
 local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
@@ -64,7 +64,7 @@ theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 
   ⟨functions_at, by decide +kernel, by decide, sync, by decide⟩
 
 theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world :=
-  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
+  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, trivial⟩
 
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
@@ -73,7 +73,7 @@ local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 
 /-- The general retry proof has all premises together, and next reaches a true second check. -/
 theorem retry_case_zeuge [Kern] :
-    lowS 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) ∧
+    lowS 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [] (0, 0) statement = some (code, 6) ∧
     PreS callLayout memory 2048 4096 256 5 code (Env.cons (τ := .bool) false Env.nil) ∧
     WIn callLayout 4096 128 256 ∧ Umf callLayout addresses target 2 memory 4096 128 256 ∧
     Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world ∧ WeltAt memory callLayout world ∧

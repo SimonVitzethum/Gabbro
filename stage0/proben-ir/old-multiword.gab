@@ -1,0 +1,22 @@
+// Distinct complete old values coexist with multiword parameters, results and a nested call.
+module ir_probe {
+static mut g : u64 in 0 .. 340282366920938463463374607431768211455 = 0;
+static mut h : u64 in 0 .. 340282366920938463463374607431768211455 = 0;
+impl fn touch() effects { writes g } { g = 18446744073709551635; }
+impl fn change(x : u64 in 0 .. 340282366920938463463374607431768211455, flag : bool) -> u64 in 0 .. 340282366920938463463374607431768211455
+    effects { reads g, reads h, writes g }
+    ensures result == x && result == old(g) && h == old(h) && !(old(g) == old(h))
+{
+    touch();
+    return x;
+}
+impl fn main() -> u32 in 0 .. 255 effects { reads g, reads h, writes g, writes h } {
+    g = 18446744073709551623;
+    h = 36893488147419103239;
+    let answer = change(g, true);
+    if answer == 18446744073709551623 {
+        if g == 18446744073709551635 { return 42; }
+    }
+    return 0;
+}
+}

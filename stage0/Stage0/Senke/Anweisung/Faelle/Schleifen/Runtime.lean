@@ -38,7 +38,7 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
     (pre : PreS L m pc fp K (frei Γ reserved) ([ci 1 cell value 0] ++ code) ρ reserved)
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
-    (abi : FB + (contextWords (D.params f)) ≤ lo) (low : lo ≤ cell)
+    (abi : (functionFrame P f).internalResult ≤ lo) (low : lo ≤ cell)
     (allocated : cell < FB + reserved) (bound : frei Γ reserved ≤ K)
     (literal : lit32 value = true)
     (hprotected : ∀ j ∈ pr, j < K ∧ j ≠ cell) :
@@ -47,6 +47,7 @@ theorem reserved_literal_entry {D : Deklaration} {L : Lay D} {P : Programm D}
       Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 cell)) = some (BitVec.ofInt 64 value) := by
+  have protectedPrefix := functionFrame_prefix P f
   have inside : cell < K := by unfold frei at bound; omega
   have run := const_step_counted (codeAt_left pre.code) pre.frame inside pre.small literal
   obtain ⟨write, stored, frame⟩ := wr_slot pre.frame inside (BitVec.ofInt 64 value)
@@ -80,7 +81,7 @@ theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
       (foreverCounterInit counter budget ++ [ci 1 one 1 0] ++ code) ρ reserved)
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
-    (abi : FB + (contextWords (D.params f)) ≤ lo)
+    (abi : (functionFrame P f).internalResult ≤ lo)
     (lowCounter : lo ≤ counter) (lowOne : lo ≤ one)
     (allocatedCounter : counter < FB + reserved) (allocatedOne : one < FB + reserved)
     (distinct : counter ≠ one) (bound : frei Γ reserved ≤ K)
@@ -92,6 +93,7 @@ theorem forever_initialize_entry {D : Deklaration} {L : Lay D} {P : Programm D}
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 budget) ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 one)) = some 1 := by
+  have protectedPrefix := functionFrame_prefix P f
   have counterBound : counter < K := by unfold frei at bound; omega
   have literal : lit32 (budget : Int) = true := by
     simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]
@@ -182,7 +184,7 @@ theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {P : Programm D}
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0)
     (hprotected : counter < lo ∨ counter ∈ pr) (bound : lo ≤ K)
-    (abi : FB + (contextWords (D.params f)) ≤ lo)
+    (abi : (functionFrame P f).internalResult ≤ lo)
     (initial : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value)
     (edge : InsAt m back 18 jump b c) (far : CodeFar back 1 fp K)
     (target : back + sx jump = pc) :
@@ -191,6 +193,7 @@ theorem Reach.counter_reentry {D : Deklaration} {L : Lay D} {P : Programm D}
       Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ' ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some value := by
+  have protectedPrefix := functionFrame_prefix P f
   obtain ⟨m', run, frame, env, world, keeps, counter⟩ :=
     body.counter_backedge layout hprotected bound initial edge far
   refine ⟨m', ?_, frame, ?_, surround.agreeW layout frame (by omega),
@@ -354,7 +357,7 @@ theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
       (foreverCounter counter one stop ++ code) ρ reserved)
     (surround : Umf L A C dv m fp Ks K)
     (head : Kopf L f m fp K rp cfp ρ0 P σ0) (world : WeltAt m L σ)
-    (abi : FB + (contextWords (D.params f)) ≤ lo) (low : lo ≤ counter)
+    (abi : (functionFrame P f).internalResult ≤ lo) (low : lo ≤ counter)
     (allocated : counter < FB + reserved) (bound : frei Γ reserved ≤ K)
     (unit : one < K)
     (read : m.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 (n + 1)))
@@ -366,6 +369,7 @@ theorem counter_header {D : Deklaration} {L : Lay D} {P : Programm D}
       Umf L A C dv m' fp Ks K ∧ Kopf L f m' fp K rp cfp ρ0 P σ0 ∧
       WeltAt m' L σ ∧ Keeps fp pr m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 counter)) = some (BitVec.ofNat 64 n) := by
+  have protectedPrefix := functionFrame_prefix P f
   have inside : counter < K := by unfold frei at bound; omega
   have sc := sx_nat (d := counter) (by have := pre.small; omega)
   have so := sx_nat (d := one) (by have := pre.small; omega)
@@ -406,13 +410,13 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
     {P : Programm D} {f : D.Fn} {fp rp cfp : W} {K Ks lo : Nat}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f)))
-    (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult)
+    (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} {Γ : Ctx} {Λ : List (Res D)}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)
     {cc cb : List II} {tc tb : Nat}
     (hcc : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
-    (hcb : lowB (reserved := reserved) passes A L lo (cens, tens) pr (exPlus ex 4) body = some (cb, tb))
+    (hcb : lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr (exPlus ex 4) body = some (cb, tb))
     (htc : tc ≤ Ks) (htb : tb + cap ≤ Ks) (room : frei Γ reserved + 8 ≤ Ks)
     (hs : 16 * (cc.length + 1 + cb.length + 1 + 3) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
@@ -433,6 +437,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
       (pc + BitVec.ofNat 64 (16 * code.length) + BitVec.ofInt 64 ex.2)
       (if wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) then
         execBlock O passes R body (σ.lese Λ inv.orte) ρ else .logik .schleife) reserved := by
+  have protectedPrefix := functionFrame_prefix P f
   have hks := hW.ks
   have htop := lowE_top inv (frei Γ reserved) cc tc hcc
   apply choice_ok (d := frei Γ reserved) (ct := cb) (ce := stopC 104 (frei Γ reserved))
@@ -461,14 +466,14 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
     {P : Programm D} {f : D.Fn} {fp rp cfp : W} {K Ks lo : Nat}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f)))
-    (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult)
+    (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {counter one : Nat}
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} {Γ : Ctx} {Λ : List (Res D)}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)
     {cc cb : List II} {tc tb : Nat}
     (hcc : lowE (reserved := reserved) L inv (frei Γ reserved) = some (cc, tc))
-    (hcb : lowB (reserved := reserved) passes A L lo (cens, tens) (counter :: one :: pr) (exPlus ex 4) body = some (cb, tb))
+    (hcb : lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) (counter :: one :: pr) (exPlus ex 4) body = some (cb, tb))
     (htc : tc ≤ Ks) (htb : tb + cap ≤ Ks) (room : frei Γ reserved + 8 ≤ Ks)
     (hs : 16 * (cc.length + 1 + cb.length + 1 + 3) < 2 ^ 31)
     (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
@@ -506,6 +511,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
       (foreverLauf (l := l) a (execBlock O passes R body)
         (fun σ ρ => (σ.lese Λ inv.orte,
           wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ))) budget σ ρ) reserved := by
+  have protectedPrefix := functionFrame_prefix P f
   have bound : frei Γ reserved ≤ K := by omega
   have inside : counter < K := by unfold frei at bound; omega
   induction budget generalizing m σ ρ with

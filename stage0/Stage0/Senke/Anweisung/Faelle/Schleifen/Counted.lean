@@ -664,18 +664,18 @@ theorem countedBlockCons_case
     {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
     {code : List II} {m : Runner.Mem} {pc fp : Runner.W}
     {ρ ρ1 ρ2 : Env D Γ} {σ1 σ2 : World D}
-    (lower : lowB (reserved := reserved) passes A L lo ens pr ex (.cons s rest) =
+    (lower : lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex (.cons s rest) =
       some (code, top))
     (inside : WIn L fp Ks K)
     (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
     (stmtRuns : ∀ cr tr cs ts,
-      lowB (reserved := reserved) passes A L lo ens pr ex rest = some (cr, tr) →
-      lowS (reserved := reserved) passes A L lo ens pr (exPlus ex cr.length) s = some (cs, ts) →
+      lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex rest = some (cr, tr) →
+      lowS (reserved := reserved) passes A L (functionFrame P f) ens pr (exPlus ex cr.length) s = some (cs, ts) →
       PreS L m pc fp K (frei Γ reserved) cs ρ reserved →
       CountedReach ns L fp lo K pr ⟨pc, fp⟩ m
         (pc + BitVec.ofNat 64 (16 * cs.length)) σ1 ρ1 reserved)
     (restRuns : ∀ cr tr,
-      lowB (reserved := reserved) passes A L lo ens pr ex rest = some (cr, tr) →
+      lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex rest = some (cr, tr) →
       ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) cr ρ1 reserved →
       WeltAt m' L σ1 →
       CountedReach nr L fp lo K pr ⟨pc', fp⟩ m'
@@ -710,14 +710,14 @@ theorem countedBlockBind_case
     {code : List II} {m : Runner.Mem} {pc fp : Runner.W}
     {ρ : Env D Γ} {v : Wert D τ} {ρ2 : Env D (τ :: Γ)} {σ σ2 : World D}
     (certificate : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
-    (lower : lowB (reserved := reserved) passes A L lo ens pr ex (.bind e rest) =
+    (lower : lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex (.bind e rest) =
       some (code, top))
     (fits : top ≤ Ks) (inside : WIn L fp Ks K)
     (low : lo ≤ frei Γ reserved) (hprotected : ∀ j ∈ pr, j < frei Γ reserved)
     (pre : PreS L m pc fp K (frei Γ reserved) code ρ reserved)
     (world : WeltAt m L σ)
     (restRuns : ∀ cr tr,
-      lowB (reserved := reserved) passes A L lo ens pr ex rest = some (cr, tr) →
+      lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex rest = some (cr, tr) →
       ∀ m' pc', PreS L m' pc' fp K (frei (τ :: Γ) reserved) cr (Env.cons v ρ) reserved →
       WeltAt m' L σ →
       CountedReach nr L fp lo K pr ⟨pc', fp⟩ m'

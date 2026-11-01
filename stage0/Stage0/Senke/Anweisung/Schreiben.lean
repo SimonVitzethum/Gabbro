@@ -5,7 +5,7 @@
              `Ks`, so the world stays until the store; the store writes the cell's word, which lies in the world, so
              the frame below stays and the memory holds the new world (`weltAt_glob`, `weltAt_slot`).
 -/
-import Stage0.Senke.Aufruf
+import Stage0.Senke.Rueckkehr.Call
 import Stage0.Senke.Welt.Schreib
 import Stage0.Senke.Ausdruck.Lesen
 

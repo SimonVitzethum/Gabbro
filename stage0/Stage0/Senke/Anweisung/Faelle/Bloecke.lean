@@ -15,7 +15,7 @@ theorem blockCons_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {Λmid : List (Res D)} {s : Stmt D (vertragVon D f) l Γ Λ Λmid} {rest : Block D (vertragVon D f) l Γ Λmid Λ'} :
@@ -23,7 +23,7 @@ theorem blockCons_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .cons s rest) reserved := by
   intro ihS ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs1, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
@@ -55,14 +55,14 @@ theorem blockBind_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {τ : Ty} {e : Expr D Γ Λ τ} {rest : Block D (vertragVon D f) l (τ :: Γ) Λ Λ'} :
     (∀ {pr ex}, BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     BlockCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bind e rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc

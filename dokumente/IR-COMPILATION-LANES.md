@@ -698,7 +698,7 @@ equality claim between new supplied scopes and the incomplete old scopes for new
 
 IR-09 published checked lock reason-arm lowering as `e67b53dc8`. It remains incomplete for RCU,
 shared lock holding, function returns under locks, full GX composition and dependent ABI/root integration.
-Its active slot now implements IR-10 functions/calls/snapshots; it shares Lean slot 4 with IR-04.
+Its active lane now implements IR-10 functions/calls/snapshots on shared Lean slot 2.
 This is a worker handoff, not completion of IR-09. Root integrates the coherent green checkpoint separately.
 
 ## Rolling worker handoff: control checkpoint
@@ -3197,3 +3197,73 @@ for 1548 tracked Lean files with at most 20 entries per folder. Source emission
 is unchanged, so the textual/runner measurements above remain the measured
 compiler behavior, including the inherited `upper` limitation. This completes
 only the first frame component; the full concurrent refinement remains open.
+
+### IR-10 complete-value calls and entry snapshots
+
+Function frames are now computed once from the source signature, the complete
+postcondition snapshot spans and loop-counter depth. The entry prelude first
+relocates original parameters above the snapshot prefix, captures every required
+entry span with the shared world-span loader, then establishes separate lexical
+body parameters. The postcondition reads the preserved original parameters.
+Normal returns keep the full result internal until guard 102 passes, then copy
+the complete result into the canonical caller area, publish the status after
+the shared normal/reason span, and maintain ReturnMirror. Reasons bypass ensures
+as specified by the existing model. IR-12 startScratch stays above the canonical
+parameter/result/status area.
+
+EntrySnapshots.complete_at turns snapshots plus original parameters into an
+ordinary typed EnvAt. lowEnsAt_ok therefore composes the same full-value
+arithmetic/comparison kernels as lowE_ok, without a second scalar ABI or a
+width-one gate. entryFrame_run and publishResult_run execute the actual entry
+and return instructions; their joint witnesses use two distinct two-word old
+values, a two-word parameter, and a three-word published result. Existing
+copyValue_run/copyResult_run, constWords/constWords_ok, contextWords, returnWords,
+ResultAt/ResultOk and ReturnMirror remain the common representation contracts.
+
+Connected source forms are fnref, oldG, literal-indexed oldS, call/callInd,
+ret/retWhy, bindCall/bindCallInd/bindCallElse, multiple old occurrences and
+multiword parameters/results. The proof chain is lowE_ok/lowEnsAt_ok through
+lowS_ok/lowB_ok/lowEnd_ok, lowFun_spec, bild_ok_u and Gabbro.Stage0.irBild_correct.
+
+| IR-10 forms | Connected lowering theorem |
+|---|---|
+| Function declarations and recursion/depth | `lowFun_spec` |
+| `fnref` | `fnref_ok` through `lowE_ok` |
+| `oldG`, literal `oldS`, multiple complete snapshots | `entryIndex_ok`, `entryFrame_run`, `lowEnsAt_ok`, `lowEns_ok` |
+| `call`, `callInd` | `callC_ok` / `lowInd_ok`, `indStmt_ok` |
+| `ret`, `retWhy` | `ret_ok` / `retWhy_ok`, with `publishResult_run` for normal returns |
+| `bindCall`, `bindCallInd`, `bindCallElse` (blocks and end blocks) | `blockCall_case` / `endCall_case`, `indBind_ok`, `callElse_ok` |
+| Multiword arguments/results | Shared `lowA_ok`, `copyResult_run`, `receive_run`, `ResultAt` / `ResultOk` throughout the same chain |
+
+In typed G, closed oldS indices support literals, widening, addition, subtraction,
+multiplication and negation; the computed-index witness is kernel checked. The
+frozen source exporter still refuses arithmetic indices with `index without G form`
+before IR lowering (`old-slot-computed` measures that boundary). These computed
+model cases are not counted as connected source cases. Parameter/result/current-state
+dependent indices also still refuse because capture planning currently requires a
+source-independent cell list. General result/current-state dependencies must select
+the entry cell using the index evaluated at exit; naive entry evaluation is unsound.
+Old-containing expressions outside the supported
+arithmetic/Boolean postcondition fragment also refuse. Functions owing
+invariant-return checks and indirect reason channels keep their explicit
+existing gates; these belong to the separate invariant/interface packages.
+No grammar or model semantics changed.
+
+The already unimported IR-08 StatementCost/EarlyExit modules retain their separately
+open ABI migration; they are outside the measured connected Stage-0 closure.
+
+Measured in the IR-10 worktree: the complete 356-module Stage0/Stage0.Haupt/
+Nachpruefung/Runner.Haupt closure passes direct sequential checks with private
+artifact overlays. All 238 source regressions pass: 188 native IR executions,
+four native I/O executions, and 46 expected compiler refusals. This includes
+multiple distinct snapshots, equal-low/different-high snapshot values, normal
+and failed multiword postconditions, indirect two-word calls/results, and reason
+returns bypassing false ensures. The computed-source-index refusal is reported
+separately from the successfully checked computed-G-index witness.
+
+All 438 axiom audits pass (431 standard-axiom subsets and seven axiom-free
+declarations); gabbro_ziel has exactly propext, Classical.choice and Quot.sound.
+The layout check passes for all 1,559 tracked Lean files; no folder exceeds
+20 entries, and no changed Lean file below 500 lines on master reaches 500.
+Nachpruefung remains at 493 lines. No grammar source or model semantics changed;
+the grammar was not rebuilt.

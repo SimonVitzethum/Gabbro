@@ -33,7 +33,7 @@ theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cnd : Expr D Γ Λ .bool} {err : Endblock D (vertragVon D f) l Γ Λ}
@@ -42,7 +42,7 @@ theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
     BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (.check cnd err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc

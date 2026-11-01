@@ -53,10 +53,10 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowS (reserved := reserved) passes A L lo (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    lowS (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex s = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
     FB ≤ lo → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
@@ -66,7 +66,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     exact assignVar_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (x := x) (e := e)
       c top h hK arg4 hW m pc σ ρ hp arg11 hlo2 arg13 arg14 hWa hpr
   | _, Γ, Λ, _, .ite cnd t e, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, hce, ⟨ct, tt⟩, hct, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
@@ -77,7 +77,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun m' pc' hp' hu' hk' hw' => lowB_ok (O := O) (passes := passes) (σ0 := σ0) (ex := ex) hS hA hlo0 hens e ce te
         hce (by omega) (by omega) hW m' pc' _ ρ hp' hlo hlo2 hu' hk' hw' hpr) hp hu hk hWa
   | _, Γ, Λ, _, .onTag v arms, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon] at h
     split at h
     · next hfit =>
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -94,7 +94,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     exact ret_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (e := e) (proof0 := proof0)
       c top h hK arg4 hW m pc σ ρ hp arg11 hlo2 arg13 hk hWa hpr
   | _, Γ, Λ, _, .assignGlob g e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon, bind, Option.bind_eq_some_iff] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨ce, te⟩, he, hc⟩ := h
     simp only [execStmt, Sim]
     have hks := hW.ks
@@ -108,7 +108,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       envAt_agreeW hp.env a' hW.lo (by have := hp.frame.room; omega) (Nat.le_refl _) (by omega), hw',
       keeps_of_agreeW hW (a'.widen hks) hpr (by omega)⟩
   | _, Γ, Λ, _, .publish g e _ _ _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon] at h
     split at h
     · next hl =>
       simp only [Bool.and_eq_true] at hl
@@ -129,7 +129,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     · cases h
   | _, Γ, Λ, _, .assignSlot t f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr
   | _, Γ, Λ, _, .assignThru _ t _ f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon, bind, Option.bind_eq_some_iff] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨ce, te⟩, he, ⟨ci1, ti⟩, hi, hc⟩ := h
     simp only [execStmt, Sim]
     have hks := hW.ks
@@ -160,13 +160,13 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens body)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .breaking _ body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon] at h
     simp only [execStmt]
     exact lowB_ok (O := O) (passes := passes) (σ0 := σ0) (pr := pr) (ex := ex) hS hA hlo0 hens body c top h hK hs hW
       m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .advances .., c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa, _
   | _, Γ, Λ, _, .retires .., c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa, _ => by
-    simp only [lowS, resultWords_vertragVon, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp only [execStmt, Sim]
     exact ⟨m, by simpa using Star.refl _ m, AgreeW.refl _ _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
@@ -175,7 +175,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .shift t field ht i von nach hn he hw hl, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr =>
     shift_ok ht i von nach hn he hw hl h (by omega) hW hp hlo2 hWa hpr
   | _, Γ, Λ, _, .onOption o p a, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon] at h
     split at h
     · next hn =>
       simp only [decide_eq_true_eq] at hn
@@ -195,7 +195,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
         hp hu hk hWa
     · cases h
   | _, Γ, Λ, _, .onWhy v arms, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon] at h
     split at h
     · next hn =>
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -208,7 +208,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .callInd p args hf hr, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, hu, _, hWa, hpr =>
     indStmt_ok hS hA p args hf hr h hK hW hp hlo2 hu hWa hpr
   | _, Γ, Λ, _, .locks Lk hr body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowS, resultWords_vertragVon] at h
+    simp only [lowS, ← hlo0, resultWords_vertragVon] at h
     split at h
     · next hc =>
       obtain ⟨hrf, hex1, hex2⟩ := hc
@@ -230,7 +230,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens overflow)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hw hpr
   | _, Γ, Λ, _, .forever a inv body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hw, hpr => by
-    dsimp only [lowS, resultWords_vertragVon] at h
+    dsimp only [lowS, ← hlo0, resultWords_vertragVon] at h
     split at h
     · rename_i allowed
       obtain ⟨cc, hcc, emitted⟩ := Option.bind_eq_some_iff.mp h
@@ -244,7 +244,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       have room : frei Γ reserved + 8 ≤ K := by have := hW.ks; omega
       obtain ⟨m1, initRun, initFrame, entry, surrounds, snapshot, world, keeps, count, unit⟩ :=
         forever_initialize_entry (lo := lo) (pr := pr) hW hp hu hk hw
-          (by omega) allowed.1 (by omega) (by omega) allowed.2.1
+          (by omega) (by rw [hlo0]; exact allowed.1) (by omega) (by omega) allowed.2.1
           (by omega) (by omega) fuel.1 (by
             intro j hj
             have member := hpr j hj
@@ -324,7 +324,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
         exact congrArg (fun n : Nat => pc + BitVec.ofNat 64 n) (by omega)
       case nextAt => exact nextAddress
       case jumpAt => rw [sx_lit jumpLiteral]; exact nextAddress
-      case low => exact allowed.1
+      case low => rw [hlo0]; exact allowed.1
       case allocated => omega
       case oneBound => omega
       case distinct => omega
@@ -369,17 +369,17 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D (vertragVon D f) l Γ Λ Λ') → (c : List II) → (top : Nat) →
-    lowB (reserved := reserved) passes A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    lowB (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
     FB ≤ lo → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length))
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execBlock O passes R b σ ρ) reserved
   | _, Γ, _, _, .nil, c, top, h, _, _, _, m, pc, σ, ρ, hp, _, _, _, _, hWa, hpr => by
-    simp only [lowB, Option.some.injEq, Prod.mk.injEq] at h
+    simp only [lowB, ← hlo0, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp only [execBlock, Sim]
     exact ⟨m, by simpa using Star.refl _ m, AgreeW.refl _ _ _ _ _, hp.env, hWa, Keeps.refl _ _ _⟩
@@ -418,7 +418,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, Γ, Λ, _, .awaits g _ _ _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowB] at h
+    simp only [lowB, ← hlo0] at h
     split at h
     · next hl =>
       simp only [Bool.and_eq_true] at hl
@@ -433,7 +433,7 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
           (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, aggregateFits_width hl.2] at this ⊢; omega)) hp hu hk hWa
     · cases h
   | _, Γ, Λ, _, .exchange g neu _ _ rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-    simp only [lowB] at h
+    simp only [lowB, ← hlo0] at h
     split at h
     · next hl =>
       simp only [Bool.and_eq_true] at hl
@@ -479,10 +479,10 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → (b : Endblock D (vertragVon D f) l Γ Λ) → (c : List II) →
-    (top : Nat) → lowEnd (reserved := reserved) passes A L lo (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
+    (top : Nat) → lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex b = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (σ : World D) (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved →
     lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) →
     Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
@@ -557,7 +557,7 @@ theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
     (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs) →
@@ -573,7 +573,7 @@ theorem lowGrund_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →
     (arms : GrundArms D (vertragVon D f) l Γ Λ Λ' n) →

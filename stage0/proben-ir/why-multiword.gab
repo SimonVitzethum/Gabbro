@@ -1,0 +1,25 @@
+// Normal complete values and reason returns share the full area; reasons skip even false ensures.
+module ir_probe {
+reason Fault {
+    Failed = 7 "reason channel"
+    exhaustive
+}
+impl fn normal(ok : bool) -> u64 in 0 .. 340282366920938463463374607431768211455 or Fault
+    effects { pure }
+    ensures result == 18446744073709551623
+{
+    if ok { return 18446744073709551623; }
+    return Fault::Failed;
+}
+impl fn failure() -> u64 in 0 .. 340282366920938463463374607431768211455 or Fault
+    effects { pure }
+    ensures false
+{ return Fault::Failed; }
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let value = normal(true) else (reason) { return 0; }
+    if value == 18446744073709551623 {
+        let ignored = failure() else (reason) { return 42; }
+    }
+    return 0;
+}
+}

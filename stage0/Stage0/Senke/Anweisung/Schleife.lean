@@ -38,7 +38,7 @@ theorem trav_stopped {m : Runner.Mem} {ρ : Env D Γ}
     (by decide)
 
 theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserved := reserved) L inv (frei Γ reserved + 1) = some ci')
-    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (contextWords (D.params f)))
+    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = (functionFrame P f).internalResult)
     (htop : max ci'.2 (max cb.2 (frei Γ reserved + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ) reserved) cb.1 ρ' reserved → Umf L A C dv m' fp Ks K →
@@ -105,6 +105,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
     have hlen := travCode_len (s := frei Γ reserved) (n := D.count t) (ci' := ci'.1) (cb := cb.1)
     have hroom := hp.frame.room
     have hFB3 : FB = 4 := rfl
+    have hFramePrefix := functionFrame_prefix P f
     obtain ⟨m1, w, s1, a1s, hw, hwe, hWa1⟩ := trav_head (cb := cb.1) hci (by omega) hW hp hWa
     have a1 := Agree.widen a1s hks
     have hc1 := hp.code.agree (a1.mono (Nat.le_succ _)) hp.far
@@ -261,7 +262,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
 
 /-- **`traverse`**: the code of `travC` runs G's `traverseLauf` over all indices. -/
 theorem trav_ok (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserved := reserved) L inv (frei Γ reserved + 1) = some ci')
-    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (contextWords (D.params f)))
+    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = (functionFrame P f).internalResult)
     (htop : max ci'.2 (max cb.2 (frei Γ reserved + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ) reserved) cb.1 ρ' reserved → Umf L A C dv m' fp Ks K →
@@ -284,6 +285,7 @@ theorem trav_ok (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserved 
   have hks := hW.ks
   have hroom := hp.frame.room
   have hFB3 : FB = 4 := rfl
+  have hFramePrefix := functionFrame_prefix P f
   have s0 := const_step (j := frei Γ reserved) (k := 0) (codeAt_left (a := [ci 1 (frei Γ reserved) 0 0]) (by simpa [travCode] using hp.code))
     hp.frame (by omega) hp.small (by decide)
   let m0 := write m (slot fp (BitVec.ofNat 64 (frei Γ reserved))) 8 (BitVec.ofInt 64 (0 : Int)).toNat

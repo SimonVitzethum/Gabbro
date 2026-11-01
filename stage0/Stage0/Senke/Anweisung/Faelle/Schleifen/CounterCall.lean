@@ -11,7 +11,7 @@ def body (l : Bool) : Block D (vertragVon D 2) l [] [] [] :=
   .cons (.assignGlob () pointer rfl (by intro w h; cases h))
     (.cons (.call 0 .nil (fit 2) rfl) .nil)
 
-def lowered := lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) (body false)
+def lowered := lowB (reserved := 4) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) (body false)
 def code : List II := (lowered.getD ([], 0)).1
 def top : Nat := (lowered.getD ([], 0)).2
 
@@ -23,7 +23,7 @@ def memory : Runner.Mem := { callMem with
   b := fun a => if 2016 ≤ a.toNat ∧ a.toNat < 2016 + 16 * image.length then
       ((image.flatMap encII)[a.toNat - 2016]?).getD 0 else if a.toNat = 4128 then 77 else if a.toNat = 4136 then 1 else callMem.b a }
 
-theorem lowering : lowB (reserved := 4) 1 addresses callLayout 4 ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) (body false) = some (code, top) := by
+theorem lowering : lowB (reserved := 4) 1 addresses callLayout (functionFrame tiny 2) ([ci 1 5 1 0], 6) [4, 5, 6] (0, 0) (body false) = some (code, top) := by
   decide +kernel
 
 local instance (m : Runner.Mem) (pc : Runner.W) (o : Nat) (a b c : BitVec 32) :
@@ -70,7 +70,7 @@ theorem surroundings [Kern] : Umf callLayout addresses target 2 memory 4096 128 
   ⟨functions_at, by decide +kernel, by decide, sync, by decide⟩
 
 theorem head : Kopf callLayout 2 memory 4096 256 0 0 (Env.nil : Env D []) tiny world :=
-  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
+  ⟨by decide +kernel, by decide +kernel, (fun _ x => nomatch x), by decide, trivial⟩
 
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
@@ -175,7 +175,7 @@ theorem loaded_surroundings [Kern] (budget : Fin 3) :
 
 theorem loaded_head (budget : Fin 3) :
     Kopf callLayout 2 (loaded budget) 4096 256 0 0 (Env.nil : Env D []) tiny world := by
-  refine ⟨?_, ?_, (fun _ x => nomatch x), by decide, fun _ h => nomatch h⟩
+  refine ⟨?_, ?_, (fun _ x => nomatch x), by decide, trivial⟩
   · have h : ∀ b : Fin 3, (loaded b).rd64 (slot 4096 0) = some 0 := by
       apply allFin
       decide +kernel

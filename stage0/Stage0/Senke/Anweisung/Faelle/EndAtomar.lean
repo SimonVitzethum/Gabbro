@@ -16,14 +16,14 @@ theorem endAwaits_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {g : D.Glob} {proof0 : List D.Glob} {proof1 : _} {proof2 : _} {proof3 : _} {rest : Endblock D (vertragVon D f) l (D.gtyp g :: Γ) Λ} :
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .awaits g proof0 proof1 proof2 proof3 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd, resultWords_vertragVon] at h
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h
   split at h
   · next hl =>
     simp only [Bool.and_eq_true] at hl
@@ -33,6 +33,7 @@ theorem endAwaits_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     obtain ⟨rfl, rfl⟩ := hc
     simp only [List.length_append] at hs
     have hFB3 : FB = 4 := rfl
+    have hFramePrefix := functionFrame_prefix P f
     have hks := hW.ks
     obtain ⟨m1, s1, A, hp1, hW1⟩ := awaits_head hl.2 hl.1 (by omega) hW hp hWa
     simp only [execEnd, SichtOK.sicht, ↓reduceIte]
@@ -48,14 +49,14 @@ theorem endExchange_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {g : D.Glob} {neu : Expr D (D.gtyp g :: Γ) Λ (D.gtyp g)} {proof0 : _} {proof1 : _} {rest : Endblock D (vertragVon D f) l (D.gtyp g :: Γ) Λ} :
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .exchange g neu proof0 proof1 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd, resultWords_vertragVon] at h
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h
   split at h
   · next hl =>
     simp only [Bool.and_eq_true] at hl
@@ -67,6 +68,7 @@ theorem endExchange_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {
       have hlen := exC_len (frei Γ reserved) (L.ga g) cn
       simp only [List.length_append, hlen] at hs
       have hFB3 : FB = 4 := rfl
+      have hFramePrefix := functionFrame_prefix P f
       have hks := hW.ks
       obtain ⟨m3, s3, A, hp3, hW3⟩ := exch_head (Λ := Λ) hl.2 hn (by omega) (by omega) hW hp hWa
       simp only [execEnd]
