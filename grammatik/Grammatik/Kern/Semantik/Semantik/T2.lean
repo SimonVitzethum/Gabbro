@@ -157,7 +157,7 @@ def axiomAntwortSonst (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
 /-- The world a fallible axiom leaves is the world the oracle's effect leaves -- the same as
     `axiomAntwort`'s, so every frame lemma about the one is one about the other. -/
 theorem axiomAntwortSonst_fst (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
-    (axiomAntwortSonst O a σ ρ).1 = (axiomAntwort O a σ ρ).1 := rfl
+    (axiomAntwortSonst O a σ ρ).1 = (axiomAntwort O a σ ρ).1 := by rfl
 
 mutual
 

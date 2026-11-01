@@ -32,8 +32,8 @@ def parN : Int → Int := fun _ => 4
 /-- The tree `0 (right 3)`, the list is empty, slot `2` is live and in no structure. -/
 def wk2 : World FD2 := wd2 4 1 4 0 nilF parN nilF rf0
 
-theorem stand_wk2 : FA2.stand wk2 = 4 := rfl
-theorem wz_wk2 : Wz2.st wk2 = 0 := rfl
+theorem stand_wk2 : FA2.stand wk2 = 4 := by rfl
+theorem wz_wk2 : Wz2.st wk2 = 0 := by rfl
 theorem par_wk2 (j : Int) : LL2.wert wk2 j = 4 := by show max 0 (min 4 (parN j)) = 4; unfold parN; decide
 theorem lf_wk2 (j : Int) : Lf2.wert wk2 j = 4 := by show max 0 (min 4 (nilF j)) = 4; unfold nilF; decide
 theorem rf_wk2 (j : Int) : Rf2.wert wk2 j = rf0 j := by
@@ -89,8 +89,8 @@ def rho02 : Env FD2 G2k :=
   .cons (⟨0, by decide, by decide⟩ : Wert FD2 (Ty.index (FD2.count FA2.tab)))
     (.cons (⟨2, by decide, by decide⟩ : Wert FD2 (Ty.index (FD2.count FA2.tab))) .nil)
 
-theorem rho02_p : (rho02.get (.here : Var G2k _)).n = 0 := rfl
-theorem rho02_i : (rho02.get (.there .here : Var G2k _)).n = 2 := rfl
+theorem rho02_p : (rho02.get (.here : Var G2k _)).n = 0 := by rfl
+theorem rho02_i : (rho02.get (.there .here : Var G2k _)).n = 2 := by rfl
 
 theorem nicht_in_2 : ¬ InBaum 4 (Lf2.wert wk2) (Rf2.wert wk2) (Wz2.st wk2) 2 := fun h => by
   rcases inBaum_wk2 2 h with e | e <;> cases e
@@ -121,8 +121,8 @@ def rho32 : Env FD2 G2k :=
   .cons (⟨3, by decide, by decide⟩ : Wert FD2 (Ty.index (FD2.count FA2.tab)))
     (.cons (⟨2, by decide, by decide⟩ : Wert FD2 (Ty.index (FD2.count FA2.tab))) .nil)
 
-theorem rho32_p : (rho32.get (.here : Var G2k _)).n = 3 := rfl
-theorem rho32_i : (rho32.get (.there .here : Var G2k _)).n = 2 := rfl
+theorem rho32_p : (rho32.get (.here : Var G2k _)).n = 3 := by rfl
+theorem rho32_i : (rho32.get (.there .here : Var G2k _)).n = 2 := by rfl
 
 /-- **`sib_haengenBruder_zug` on a real world, run:** slot `2` becomes the next sibling of `3`, with the parent of `3` (the nil
     marker); the tree and the sibling demand hold afterwards. -/
@@ -152,7 +152,7 @@ def parW : Int → Int := fun k => if k = 3 then 0 else if k = 2 then 3 else 4
 /-- The tree `0 (left 3 (left 2))` with the parents `3 -> 0`, `2 -> 3`; slot `1` on the free list. -/
 def wk3 : World FD2 := wd2 4 1 4 0 nilF parW lf3 nilF
 
-theorem wz_wk3 : Wz2.st wk3 = 0 := rfl
+theorem wz_wk3 : Wz2.st wk3 = 0 := by rfl
 theorem lf_wk3 (j : Int) : Lf2.wert wk3 j = lf3 j := by
   show max 0 (min 4 (lf3 j)) = lf3 j
   unfold lf3; split <;> (try split) <;> omega
@@ -211,7 +211,7 @@ theorem sibOk_wk3 : SibOk Lf2 Rf2 LL2 Wz2 wk3 := by
 
 def rhoR0 : Env FD2 G1k := .cons (⟨0, by decide, by decide⟩ : Wert FD2 (Ty.index (FD2.count FA2.tab))) .nil
 
-theorem rhoR0_p : (rhoR0.get (.here : Var G1k _)).n = 0 := rfl
+theorem rhoR0_p : (rhoR0.get (.here : Var G1k _)).n = 0 := by rfl
 
 /-- **`baum_unterbaum_aus_links_zug` on a real world, run (`revoke`):** the subtree `3 (left 2)` is cut off the root `0`. The tree
     that remains is the root, sibling-consistent; slots `3` and `2` are live orphans and in the tree no more. -/

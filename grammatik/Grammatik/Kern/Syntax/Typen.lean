@@ -152,7 +152,7 @@ def Val.zelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (v : Val F passt
 def Val.vonZelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (k : Nat) : Val F passt (.ref n) := k
 
 @[simp] theorem Val.zelle_vonZelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (k : Nat) :
-    (Val.vonZelle (F := F) (passt := passt) (n := n) k).zelle = k := rfl
+    (Val.vonZelle (F := F) (passt := passt) (n := n) k).zelle = k := by rfl
 
 theorem Val.int_bereich {F : Type} {passt : F → Nat → Bool} {lo hi : Int} (v : Val F passt (.int lo hi)) :
     lo ≤ v.n ∧ v.n ≤ hi := ⟨v.lo_le, v.le_hi⟩

@@ -124,7 +124,7 @@ set_option maxRecDepth 100000 in
 theorem invariant_refused_zeuge :
     check [.tableT "T" none (some (.lit 1)) none none false
       [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] =
-      .error "source export: invariant cost/runs/by duties lack a checked source binding" := rfl
+      .error "source export: invariant cost/runs/by duties lack a checked source binding" := by rfl
 
 set_option maxRecDepth 100000 in
 /-- New forms cannot hide in an allocation failure continuation, child or local type annotation. -/

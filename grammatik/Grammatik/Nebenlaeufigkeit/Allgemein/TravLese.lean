@@ -383,7 +383,7 @@ theorem taInit_exklusiv : StartExklusiv (D := taD) taInit := by
 def taI0 : Wert taD (.index (taD.count ())) := ⟨0, by decide, by decide⟩
 def taI1 : Wert taD (.index (taD.count ())) := ⟨1, by decide, by decide⟩
 
-theorem taAlle : alleIndizes (taD.count ()) = [taI0, taI1] := rfl
+theorem taAlle : alleIndizes (taD.count ()) = [taI0, taI1] := by rfl
 
 def taM0 : RufMaschineG taD := RufStartG taP taSp taInit
 
@@ -395,9 +395,9 @@ def taZ1 : RufFadenG taD :=
   ⟨[], ⟨taHaupt1, .nil, taSp.welt [], ⟨false, [], [], .nil, .ende taRumpfHaupt1⟩⟩,
     startSpur taHaupt1, [RufEreignisF.eintritt taHaupt1 .nil (taSp.welt [])]⟩
 
-theorem taM0_faden0 : taM0.faeden 0 = taZ0 := rfl
+theorem taM0_faden0 : taM0.faeden 0 = taZ0 := by rfl
 
-theorem taM0_faden1 : taM0.faeden 1 = taZ1 := rfl
+theorem taM0_faden1 : taM0.faeden 1 = taZ1 := by rfl
 
 /-- Threads other than 0 and 1 hold nothing at the start. -/
 theorem taM0_offen (g : Faden) (h0 : g ≠ 0) (L : TaLock) : L ∉ offen (taM0.faeden g).spur := by

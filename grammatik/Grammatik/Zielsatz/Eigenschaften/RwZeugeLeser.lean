@@ -36,11 +36,11 @@ abbrev M0i : RufMaschineG ivD := RufStartG ivPgut ivSp init2
 
 theorem m0_faden0 : M0i.faeden 0 =
     ⟨[], ⟨ivHaupt, .nil, ivSp.welt [], ⟨false, [], ivL, .nil, .ende ivRumpfHaupt⟩⟩,
-      startSpur ivHaupt, [RufEreignisF.eintritt ivHaupt .nil (ivSp.welt [])]⟩ := rfl
+      startSpur ivHaupt, [RufEreignisF.eintritt ivHaupt .nil (ivSp.welt [])]⟩ := by rfl
 
 theorem m0_faden1 : M0i.faeden 1 =
     ⟨[], ⟨ivHaupt, .nil, ivSp.welt [], ⟨false, [], ivL, .nil, .ende ivRumpfHaupt⟩⟩,
-      startSpur ivHaupt, [RufEreignisF.eintritt ivHaupt .nil (ivSp.welt [])]⟩ := rfl
+      startSpur ivHaupt, [RufEreignisF.eintritt ivHaupt .nil (ivSp.welt [])]⟩ := by rfl
 
 theorem exkl_i : RwExkl lAll M0i := fun _ _ _ _ _ _ => ⟨trivial, trivial⟩
 

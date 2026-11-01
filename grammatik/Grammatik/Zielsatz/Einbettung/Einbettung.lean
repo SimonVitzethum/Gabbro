@@ -197,7 +197,7 @@ def vertragE (V : Vertrag D) : Vertrag D' where
   boden := V.boden
 
 theorem vertragE_vonSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
-    E.vertragE (Vertrag.vonSig D S) = Vertrag.vonSig D' (E.sigE S) := rfl
+    E.vertragE (Vertrag.vonSig D S) = Vertrag.vonSig D' (E.sigE S) := by rfl
 
 theorem resE_von (w : D.Lock ⊕ (D.Marke × Nat)) :
     E.resE (Res.von D w) = Res.von D' (Sum.map E.lock (Prod.map E.marke id) w) := by

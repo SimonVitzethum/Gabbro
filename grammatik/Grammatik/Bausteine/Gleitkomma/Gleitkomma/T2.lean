@@ -431,7 +431,7 @@ theorem divBruch_nenner (u v : Exakt) : (divBruch u v).nenner
     = v.zaehler.natAbs
       * 2 ^ (v.zweierExp
         - (if u.zweierExp ≤ v.zweierExp then u.zweierExp else v.zweierExp)).toNat :=
-  rfl
+  by rfl
 
 /-- Division of finite values by a nonzero finite divisor with in-range
     exact quotient stays finite (and is the rounded exact quotient).

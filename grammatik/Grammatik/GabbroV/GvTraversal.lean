@@ -453,7 +453,7 @@ def gz1 : Zahl 0 2 := ⟨1, by omega, by omega⟩
 def gz2 : Zahl 0 2 := ⟨2, by omega, by omega⟩
 
 /-- The schedule over three slots is the three members. -/
-theorem gvKs_eq : alleIndizes 3 = [gz0, gz1, gz2] := rfl
+theorem gvKs_eq : alleIndizes 3 = [gz0, gz1, gz2] := by rfl
 
 /-- The invariant holds at every boundary; the world passes through. -/
 def gvInv : World gvD → Env gvD [] → World gvD × Bool :=

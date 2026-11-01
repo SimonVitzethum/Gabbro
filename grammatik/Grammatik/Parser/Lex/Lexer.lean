@@ -629,11 +629,11 @@ theorem lex_ohne_doku_beispiel :
 
 /-- The block closer step: `*/` at depth `d + 1` leaves depth `d`. -/
 theorem ueberBlock_schliesst (d : Nat) (cs : List Char) :
-    ueberBlock (d + 1) ('*' :: '/' :: cs) = ueberBlock d cs := rfl
+    ueberBlock (d + 1) ('*' :: '/' :: cs) = ueberBlock d cs := by rfl
 
 /-- The block opener step: `/*` at depth `d + 1` goes to depth `d + 2`. -/
 theorem ueberBlock_oeffnet (d : Nat) (cs : List Char) :
-    ueberBlock (d + 1) ('/' :: '*' :: cs) = ueberBlock (d + 2) cs := rfl
+    ueberBlock (d + 1) ('/' :: '*' :: cs) = ueberBlock (d + 2) cs := by rfl
 
 /-- Depth zero consumes nothing: the comment is over. -/
 theorem ueberBlock_null (cs : List Char) : ueberBlock 0 cs = some cs := by

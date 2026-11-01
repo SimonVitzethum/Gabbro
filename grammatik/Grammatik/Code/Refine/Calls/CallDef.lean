@@ -76,7 +76,7 @@ structure CallRef (lay : Layout D) (M : Modl) (S : Sees)
 def irParamsFrom (n : Nat) (ps : List GTy) : List Param :=
   (ps.zipIdx n).map fun (τ, i) => ⟨regTy τ, i⟩
 
-theorem irParams_eq (ps : List GTy) : irParams ps = irParamsFrom 0 ps := rfl
+theorem irParams_eq (ps : List GTy) : irParams ps = irParamsFrom 0 ps := by rfl
 
 theorem irParamsFrom_len (n : Nat) (ps : List GTy) : (irParamsFrom n ps).length = ps.length := by
   simp only [irParamsFrom, List.length_map, List.length_zipIdx]

@@ -142,7 +142,7 @@ def ivWert {Λ : List (Res ivD)} (k : Int) (h0 : 0 ≤ k) (h1 : k ≤ 10) :
     Expr ivD [] Λ (ivD.typ () ()) :=
   .widen (lo := k) (hi := k) h0 h1 (.lit k)
 
-theorem ivInvSicht : invSicht ivD () = ivL := rfl
+theorem ivInvSicht : invSicht ivD () = ivL := by rfl
 
 /-- `invariant gleich: konto[0] == konto[1]`. -/
 def ivInv : Expr ivD [] (invSicht ivD ()) .bool :=
@@ -426,9 +426,9 @@ theorem ivPschlecht_nicht_invGutS :
 theorem ivM0_faden0 (setze : Endblock ivD (vertragVon ivD ivSetze) false [] ivL) :
     (RufStartG (ivP setze) ivSp ivInit).faeden 0 =
     ⟨[], ⟨ivHaupt, .nil, ivSp.welt [], ⟨false, [], ivL, .nil, .ende ivRumpfHaupt⟩⟩,
-      startSpur ivHaupt, [RufEreignisF.eintritt ivHaupt .nil (ivSp.welt [])]⟩ := rfl
+      startSpur ivHaupt, [RufEreignisF.eintritt ivHaupt .nil (ivSp.welt [])]⟩ := by rfl
 
-theorem ivOffen0 : offen (startSpur (D := ivD) ivHaupt) = [()] := rfl
+theorem ivOffen0 : offen (startSpur (D := ivD) ivHaupt) = [()] := by rfl
 
 theorem ivHeld {s : List (Ereignis ivD)} (h : offen s = [()]) : HeldIn ivL (offen s) :=
   fun L _ => by cases L; rw [h]; exact List.mem_singleton.mpr rfl

@@ -530,7 +530,7 @@ theorem fremd_axiomCall (fa : D.Ax → Nat) (pa : Nat) (V : Vertrag D) {l : Bool
     (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
     (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) :
-    fremdStmt (V := V) fa pa (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) = fa a := rfl
+    fremdStmt (V := V) fa pa (Stmt.axiomCall (V := V) (l := l) a args h hw hg hd hgd) = fa a := by rfl
 
 /-- A foreign bind site counts exactly its declared cost plus its continuation. -/
 theorem fremd_bindAxiom (fa : D.Ax → Nat) (pa : Nat) (V : Vertrag D) {l : Bool}
@@ -542,7 +542,7 @@ theorem fremd_bindAxiom (fa : D.Ax → Nat) (pa : Nat) (V : Vertrag D) {l : Bool
     (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
     (rest : Block D V l (τ :: Γ) Λ Λ') :
     fremdBlock (V := V) fa pa (Block.bindAxiom (V := V) (l := l) a args he hw hg hd hgd rest)
-      = fa a + fremdBlock fa pa rest := rfl
+      = fa a + fremdBlock fa pa rest := by rfl
 
 /-- No zero slip, statement site: a foreign call costs at least one step even
     at declared `0` (the §1 dispatch step). -/

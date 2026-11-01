@@ -212,7 +212,7 @@ theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] 
 /-! ## 3. The blocking facts, proved -/
 
 /-- `lese_schreibe` holds nothing by signature, so its end holdings are `[]`. -/
-theorem kEndeLese : (vertragVon kD kLese).ende = [] := rfl
+theorem kEndeLese : (vertragVon kD kLese).ende = [] := by rfl
 
 /-- **A return INSIDE `locks WACHE` has no G term**: it would need
     `[held WACHE].Perm []` (the `hΛ` of `Stmt.ret` at `Λ = [held WACHE]`
@@ -244,7 +244,7 @@ def offen125 : String :=
 
 /-- Every `requires` is `.tru`, at every function, world and environment. -/
 theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
-    ReqAmEintritt kP f W ρ := rfl
+    ReqAmEintritt kP f W ρ := by rfl
 
 theorem kP_koerper_setzeNull : KoerperGutS kP 0 (axWahr kD) kSI kSetzeNull := by
   have hr : kP.rumpf kSetzeNull = kRumpfSetzeNull := rfl
@@ -273,7 +273,7 @@ theorem execStmtH_locks_blk {S : SperrInv kD} {O : Orakel kD} {U : Umwelt kD}
     (hr : ∀ M, Res.held M ∈ Λ → kD.rang M < kD.rang L)
     (b : Block kD V l Γ (Res.held L :: Λ) (Res.held L :: Λ)) (σ : World kD) (ρ : Env kD Γ) :
     execStmtH S O U passes R (Stmt.locks L hr b) σ ρ =
-      freiH S L (execBlockH S O U passes R b ((U L σ).nimmt L) ρ) := rfl
+      freiH S L (execBlockH S O U passes R b ((U L σ).nimmt L) ρ) := by rfl
 
 theorem kP_koerper_lese : KoerperGutS kP 0 (axWahr kD) kSI kLese := by
   have hr : kP.rumpf kLese = kRumpfLese := rfl

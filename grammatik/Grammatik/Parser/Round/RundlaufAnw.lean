@@ -27,13 +27,13 @@ set_option maxRecDepth 100000
 `nameText` is reduced by these lemmas (and `nameText_nameTok`) instead of being unfolded, so a printed
 name `nameTok s` meets its lemma before an unfolded `match`. -/
 
-@[simp] theorem nameText_ident (s : String) : nameText (.ident s) = some s := rfl
-@[simp] theorem nameText_wort (s : String) : nameText (.wort s) = some s := rfl
-@[simp] theorem nameText_zeichen (s : String) : nameText (.zeichen s) = none := rfl
-@[simp] theorem nameText_num (n : Nat) : nameText (.num n) = none := rfl
-@[simp] theorem nameText_float (s : String) : nameText (.float s) = none := rfl
-@[simp] theorem nameText_text (s : String) : nameText (.text s) = none := rfl
-@[simp] theorem nameText_ende : nameText .ende = none := rfl
+@[simp] theorem nameText_ident (s : String) : nameText (.ident s) = some s := by rfl
+@[simp] theorem nameText_wort (s : String) : nameText (.wort s) = some s := by rfl
+@[simp] theorem nameText_zeichen (s : String) : nameText (.zeichen s) = none := by rfl
+@[simp] theorem nameText_num (n : Nat) : nameText (.num n) = none := by rfl
+@[simp] theorem nameText_float (s : String) : nameText (.float s) = none := by rfl
+@[simp] theorem nameText_text (s : String) : nameText (.text s) = none := by rfl
+@[simp] theorem nameText_ende : nameText .ende = none := by rfl
 
 /-! ## The first token of a printed expression -/
 

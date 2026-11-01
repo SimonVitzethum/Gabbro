@@ -48,7 +48,7 @@ theorem semV_dannBlatt {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
   rfl
 
 theorem semV_dannLeer {Λ : List (Res D)} (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
-    semV O passes R (.dann .nil k) σ ρ = semV O passes R k σ ρ := rfl
+    semV O passes R (.dann .nil k) σ ρ = semV O passes R k σ ρ := by rfl
 
 theorem semV_ite {Λ Λ' Λ'' : List (Res D)} (c : Expr D Γ Λ .bool)
     (t e : Block D V l Γ Λ Λ') (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'')
@@ -133,11 +133,11 @@ theorem semV_locks {Λ Λ'' : List (Res D)} (L : D.Lock)
   rfl
 
 theorem semV_frei {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ) (σ : World D)
-    (ρ : Env D Γ) : semV O passes R (.frei L k) σ ρ = semV O passes R k (σ.gibt L) ρ := rfl
+    (ρ : Env D Γ) : semV O passes R (.frei L k) σ ρ = semV O passes R k (σ.gibt L) ρ := by rfl
 
 theorem semV_schrumpf {Λ : List (Res D)} {τ : Ty} (k : GRest D V l Γ Λ) (σ : World D)
     (v : Wert D τ) (ρ : Env D Γ) :
-    semV O passes R (.schrumpf k) σ (.cons v ρ) = semV O passes R k σ ρ := rfl
+    semV O passes R (.schrumpf k) σ (.cons v ρ) = semV O passes R k σ ρ := by rfl
 
 theorem semV_endeBind {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (rest : Endblock D V l (τ :: Γ) Λ) (σ : World D) (ρ : Env D Γ) :
@@ -152,7 +152,7 @@ theorem semV_dannBind {Λ Λ' : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
     (rest : Block D V l (τ :: Γ) Λ Λ') (k : GRest D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
     semV O passes R (.dann (.bind e rest) k) σ ρ =
       semV O passes R (.dann rest (.schrumpf k)) (σ.lese Λ e.orte)
-        (.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) := rfl
+        (.cons (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) ρ) := by rfl
 
 theorem semV_narrowOk {Λ Λ' : List (Res D)} {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
     (lo' hi' : Int) (sonst : Endblock D V l Γ Λ) (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
@@ -211,7 +211,7 @@ theorem semV_exchange {Λ Λ' : List (Res D)} (g : D.Glob)
         ((σ.lese Λ (.inr g :: neuE.orte)).schreibGlob g Λ
           (eval (σ.lese Λ (.inr g :: neuE.orte)) neuE (σ.lese Λ (.inr g :: neuE.orte))
             (.cons ((σ.lese Λ (.inr g :: neuE.orte)).globs g) ρ)))
-        (.cons ((σ.lese Λ (.inr g :: neuE.orte)).globs g) ρ) := rfl
+        (.cons ((σ.lese Λ (.inr g :: neuE.orte)).globs g) ρ) := by rfl
 
 theorem semV_gleit {Λ Λ' : List (Res D)} {l₁ h₁ l₂ h₂ : Int × Int} (op : GleitOp)
     (a : Expr D Γ Λ (.fl l₁ h₁)) (b : Expr D Γ Λ (.fl l₂ h₂)) (lo hi : Int × Int)
@@ -298,7 +298,7 @@ theorem semV_travFort {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool)
     (is : List (Wert D (.index (D.count t)))) (k : GRest D V l Γ Λ)
     (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ) :
     semV O passes R (.travRest t inv body is k) σ (.cons i ρ) =
-      semV O passes R (.trav t inv body is k) σ ρ := rfl
+      semV O passes R (.trav t inv body is k) σ ρ := by rfl
 
 theorem semV_travDone {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool)
     (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
@@ -375,7 +375,7 @@ theorem semV_wiederFort {Λ : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)
     (σ : World D) (ρ : Env D Γ) :
     semV O passes R (.wiederRest n bis body ueber k) σ ρ =
-      semV O passes R (.wieder n bis body ueber k) σ ρ := rfl
+      semV O passes R (.wieder n bis body ueber k) σ ρ := by rfl
 
 theorem semV_dannForever {Λ Λ'' : List (Res D)} (a : D.Annahme) (inv : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'')
@@ -400,7 +400,7 @@ theorem semV_ewigWeiter {Λ : List (Res D)} (a : D.Annahme) (n : Nat) (inv : Exp
 theorem semV_ewigFort {Λ : List (Res D)} (a : D.Annahme) (n : Nat) (inv : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
     semV O passes R (.ewigRest a n inv body k) σ ρ =
-      semV O passes R (.ewig a n inv body k) σ ρ := rfl
+      semV O passes R (.ewig a n inv body k) σ ρ := by rfl
 
 /-! ### The exits `leave` and `next` -/
 

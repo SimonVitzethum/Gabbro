@@ -477,10 +477,10 @@ theorem rundeInt_monoton (quo₁ rest₁ quo₂ rest₂ den : Nat)
 
 /-! ## Theorems: bit lengths bound their numbers. -/
 
-theorem bitlenAux_null (n : Nat) : bitlenAux n 0 = 0 := rfl
+theorem bitlenAux_null (n : Nat) : bitlenAux n 0 = 0 := by rfl
 
 theorem bitlenAux_succ (n fuel : Nat) :
-    bitlenAux n (fuel + 1) = if n = 0 then 0 else 1 + bitlenAux (n / 2) fuel := rfl
+    bitlenAux n (fuel + 1) = if n = 0 then 0 else 1 + bitlenAux (n / 2) fuel := by rfl
 
 theorem bitlenAux_null_all (fuel : Nat) : bitlenAux 0 fuel = 0 := by
   induction fuel with

@@ -162,7 +162,7 @@ example : ((gD.braucht GTab.B).elem (Sum.inl GLock.K) = true) := by decide
 -- The surface `lock K protects { A, B }` resolves both carriers (table
 -- names, so no field lookup), and the exporter writes them as the `orte`
 -- list. This exhibits the list as written, by `rfl`.
-theorem gS_orte_K : gS.orte GLock.K = [.inl GTab.A, .inl GTab.B] := rfl
+theorem gS_orte_K : gS.orte GLock.K = [.inl GTab.A, .inl GTab.B] := by rfl
 
 /-! ## CUTS: what is not proved
 

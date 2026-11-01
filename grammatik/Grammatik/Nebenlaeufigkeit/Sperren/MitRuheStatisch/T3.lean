@@ -43,7 +43,7 @@ theorem ruftB_mitRuhe_ruhe_ziel (hT : ∀ f, mE (mVoll D) (P.rumpf f) = true) (f
     rw [this]; rfl
   · rfl
 
-theorem ruftB_mitRuhe_ruhe (g : D.mitRuhe.Fn) : ruftB P.mitRuhe none g = false := rfl
+theorem ruftB_mitRuhe_ruhe (g : D.mitRuhe.Fn) : ruftB P.mitRuhe none g = false := by rfl
 
 /-- **Reach from `some w` is reach from `w`** in every round, and never the
     root. -/

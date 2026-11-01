@@ -28,7 +28,7 @@ namespace Pop
 
 variable {s : State} {cf fr : Frame}
 
-theorem cells (j : Int) : (s.pop cf fr).cells j = (s.cells j).map (popCell s.next cf fr) := rfl
+theorem cells (j : Int) : (s.pop cf fr).cells j = (s.cells j).map (popCell s.next cf fr) := by rfl
 
 theorem none_iff (j : Int) : (s.pop cf fr).cells j = none ↔ s.cells j = none := by
   rw [cells]; cases s.cells j <;> simp only [Option.map_none, Option.map_some, reduceCtorEq]

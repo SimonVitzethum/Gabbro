@@ -294,11 +294,11 @@ def matchLeser : Expr refD [] [Res.held (D := refD) ()] (.int 0 100) :=
 
 /-- Before the write the slot reads `0`. -/
 theorem matchLeser_start :
-    (eval (refSp0.welt []) matchLeser (refSp0.welt []) Env.nil).n = 0 := rfl
+    (eval (refSp0.welt []) matchLeser (refSp0.welt []) Env.nil).n = 0 := by rfl
 
 /-- After the reached run's writing step the slot reads `100`. -/
 theorem matchLeser_nach :
-    (eval (MB.weltVon 1) matchLeser (MB.weltVon 1) Env.nil).n = 100 := rfl
+    (eval (MB.weltVon 1) matchLeser (MB.weltVon 1) Env.nil).n = 100 := by rfl
 
 /-- The arms cover `.int 0 100` exactly, checked by computation: any
     dropped arm turns this `decide` red (planted-defect check). -/
@@ -306,14 +306,14 @@ theorem match_erschoepfend : erschoepfend matchM 0 100 :=
   (erschoepfendB_richtig matchM 0 100).mp (by decide)
 
 /-- Dispatch before the write: `0` takes the range arm. -/
-theorem match_wahl_vor : wahl matchArme 0 = some 0 := rfl
+theorem match_wahl_vor : wahl matchArme 0 = some 0 := by rfl
 
 /-- Dispatch after the write: `100` takes the exact arm. -/
-theorem match_wahl_nach : wahl matchArme 100 = some 1 := rfl
+theorem match_wahl_nach : wahl matchArme 100 = some 1 := by rfl
 
 /-- Planted defect (negative): value `1` matches neither `0` nor
     `2 .. 5` -- the gap dispatches to `none`. -/
-theorem match_luecke_zeigt : wahl [.exact 0, .range 2 5 false] 1 = none := rfl
+theorem match_luecke_zeigt : wahl [.exact 0, .range 2 5 false] 1 = none := by rfl
 
 /-- Planted defect (negative): those arms do NOT cover `0 .. 5` --
     the gap is a refusal downstream, never an inserted default. -/

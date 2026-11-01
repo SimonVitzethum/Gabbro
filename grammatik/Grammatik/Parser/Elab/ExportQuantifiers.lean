@@ -125,7 +125,7 @@ theorem tree_quantifier_meaning (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
 
 /-- Expanding a filtered body preserves its statements in order and every explicit exit. -/
 theorem traversal_filter_export (predicate : UEns) (body : List UStmt) :
-    uFilteredBody (some predicate) body = [.ifBeg predicate] ++ body ++ [.ifElse, .blkEnd] := rfl
+    uFilteredBody (some predicate) body = [.ifBeg predicate] ++ body ++ [.ifElse, .blkEnd] := by rfl
 
 /-- The production statement exporter keeps the invariant in the outer scope and keeps
     leave/next/return inside the filtered body, under the same loop resource discipline. -/
@@ -197,12 +197,12 @@ theorem tree_quantifier_export_zeuge :
     uSichert relationContext (.ext .all ["root", "descendants"]
       [.variable "root", .bin "<=" (.variable "root") (.lit 1)]) =
       .ok (.filtered true "T" "root" "next" false (.param "root")
-        (.cmp "<=" (.param "root") (.lit 1))) := rfl
+        (.cmp "<=" (.param "root") (.lit 1))) := by rfl
 
 theorem tree_quantifier_lower_zeuge :
     (lowEns relationUnit [.index 3, .index 3] [] relationFunction none
       (.filtered true "T" "root" "next" false (.param "root")
-        (.cmp "<=" (.param "root") (.lit 1)))).toOption.isSome = true := rfl
+        (.cmp "<=" (.param "root") (.lit 1)))).toOption.isSome = true := by rfl
 
 theorem index_scope_zeuge (entry state : World (declOf relationUnit))
     (root other binder : Zahl 0 2) :

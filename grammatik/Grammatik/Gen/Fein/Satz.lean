@@ -18,7 +18,7 @@ theorem kopf_lt (τ : Ty) : τ.kopf < 12 := by cases τ <;> simp only [Ty.kopf, 
 
 theorem kopfOk_none (τ : Ty) : kopfOk none τ.kopf = true := decide_eq_true (kopf_lt τ)
 
-theorem all_nil {α : Type} {p : α → Bool} : ([] : List α).all p = true := rfl
+theorem all_nil {α : Type} {p : α → Bool} : ([] : List α).all p = true := by rfl
 
 theorem all_cons {α : Type} {p : α → Bool} {x : α} {xs : List α} (h : p x = true) (hs : xs.all p = true) :
     (x :: xs).all p = true := by simp only [List.all_cons, h, Bool.true_and]; exact hs

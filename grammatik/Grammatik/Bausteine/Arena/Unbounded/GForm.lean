@@ -49,7 +49,7 @@ theorem allocationAttempt_available (available : Expr D Γ Λ .bool)
 theorem allocationAttempt_termination (available : Expr D Γ Λ .bool)
     (failure : Endblock D V l Γ Λ) (success : Block D V l Γ Λ Λ') (level forever : Bool) :
     befB level forever (Block.allocationAttempt available failure success) =
-      befE level forever failure ++ befB level forever success := rfl
+      befE level forever failure ++ befB level forever success := by rfl
 
 end Execution
 

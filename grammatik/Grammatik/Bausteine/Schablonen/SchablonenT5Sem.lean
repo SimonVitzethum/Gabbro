@@ -156,7 +156,7 @@ theorem sperrabdruck_form (L : D.Lock)
     (σ : World D) (ρ : Env D Γ) :
     execStmt O passes R (.locks L hr body) σ ρ =
       (execBlock O passes R body (σ.nimmt L) ρ).mapWelt (·.gibt L) :=
-  rfl
+  by rfl
 
 /-! ### The footprint on a real fragment.
 
@@ -341,12 +341,12 @@ with no base, offset or width; registers live behind
 /-- The engine: trace reads preserve every slot. -/
 theorem device_lese_frame_slots (σ : World D) (Λ : List (Res D))
     (orte : List (D.Tab ⊕ D.Glob)) (t : D.Tab) (k : Int) (f : D.Feld t) :
-    (σ.lese Λ orte).slots t k f = σ.slots t k f := rfl
+    (σ.lese Λ orte).slots t k f = σ.slots t k f := by rfl
 
 /-- The engine: trace reads preserve every global. -/
 theorem device_lese_frame_globs (σ : World D) (Λ : List (Res D))
     (orte : List (D.Tab ⊕ D.Glob)) (g : D.Glob) :
-    (σ.lese Λ orte).globs g = σ.globs g := rfl
+    (σ.lese Λ orte).globs g = σ.globs g := by rfl
 
 /-- Witness for the frame engine: reading `konto` on `semW0` moves no
     slot; the reference run is non-degenerate. -/

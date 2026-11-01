@@ -468,7 +468,7 @@ theorem t4BRumpf_K (A : t4D.Lock → Prop) : EndR A (TiefK t4P A 1) t4BRumpf :=
       BlockR.nil)
     (EndR.ret _ _)
 
-theorem t4BRumpf_kOk : t4BRumpf.kOk = true := rfl
+theorem t4BRumpf_kOk : t4BRumpf.kOk = true := by rfl
 
 /-- **Witness for `rufG_adaequat_ruf_umkehr`.** All premises jointly, on the
     bind-caller program at depth 1: the machine `t4M t4B t4BRumpf`, the

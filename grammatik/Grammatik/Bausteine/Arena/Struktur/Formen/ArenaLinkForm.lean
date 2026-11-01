@@ -48,10 +48,10 @@ namespace LinkFeld
 variable {A : FreiForm D}
 
 @[simp] theorem wert_lese (L : LinkFeld A) (σ : World D) (Λ : List (Res D)) (o : List (D.Tab ⊕ D.Glob)) (k : Int) :
-    L.wert (σ.lese Λ o) k = L.wert σ k := rfl
+    L.wert (σ.lese Λ o) k = L.wert σ k := by rfl
 
 @[simp] theorem wert_schreibGlob (L : LinkFeld A) (σ : World D) (g : D.Glob) (Λ : List (Res D))
-    (v : Wert D (D.gtyp g)) (k : Int) : L.wert (σ.schreibGlob g Λ v) k = L.wert σ k := rfl
+    (v : Wert D (D.gtyp g)) (k : Int) : L.wert (σ.schreibGlob g Λ v) k = L.wert σ k := by rfl
 
 /-- A store into the link field at slot `i` puts exactly the written value there ... -/
 theorem wert_schreibSlot_selbst (L : LinkFeld A) (σ : World D) (Λ : List (Res D)) (i : Int)
@@ -77,10 +77,10 @@ namespace LinkKopf
 variable {A : FreiForm D}
 
 @[simp] theorem st_lese (G : LinkKopf A) (σ : World D) (Λ : List (Res D)) (o : List (D.Tab ⊕ D.Glob)) :
-    G.st (σ.lese Λ o) = G.st σ := rfl
+    G.st (σ.lese Λ o) = G.st σ := by rfl
 
 @[simp] theorem st_schreibSlot (G : LinkKopf A) (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int)
-    (f : D.Feld t) (v : Wert D (D.typ t f)) : G.st (σ.schreibSlot t Λ k f v) = G.st σ := rfl
+    (f : D.Feld t) (v : Wert D (D.typ t f)) : G.st (σ.schreibSlot t Λ k f v) = G.st σ := by rfl
 
 theorem st_schreibGlob_selbst (G : LinkKopf A) (σ : World D) (Λ : List (Res D)) (v : Wert D (D.gtyp G.g)) :
     G.st (σ.schreibGlob G.g Λ v) = (Wert.umTyp G.hg v).n := by
@@ -113,10 +113,10 @@ theorem naechst_schreibSlot_ne (σ : World D) (Λ : List (Res D)) (i : Int) (f :
 end FreiForm
 
 @[simp] theorem Env.get_cons_there {τ σ : Ty} {Γ : Ctx} (k : Wert D σ) (ρ : Env D Γ) (p : Var Γ τ) :
-    (Env.cons k ρ).get (Var.there p) = ρ.get p := rfl
+    (Env.cons k ρ).get (Var.there p) = ρ.get p := by rfl
 
 @[simp] theorem Env.get_cons_here {τ : Ty} {Γ : Ctx} (k : Wert D τ) (ρ : Env D Γ) :
-    (Env.cons k ρ).get Var.here = k := rfl
+    (Env.cons k ρ).get Var.here = k := by rfl
 
 /-! ## 2. The three forms -/
 

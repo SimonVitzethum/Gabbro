@@ -33,11 +33,11 @@ def boolEnd : Env bD [.bool] := .cons true .nil
 
 /-- Guard false, one real assignment, guard true: two guard checks, one body pass. -/
 theorem assignment_zeuge (σ : World bD) :
-    execStmt bO 2 keinRuf boolLoop σ boolStart = .ok σ boolEnd := rfl
+    execStmt bO 2 keinRuf boolLoop σ boolStart = .ok σ boolEnd := by rfl
 
 /-- One unit of fuel does NOT suffice, although it performs the assignment. -/
 theorem insufficient_budget_zeuge (σ : World bD) :
-    execStmt bO 1 keinRuf boolLoop σ boolStart = .hardware (.fortschritt ()) := rfl
+    execStmt bO 1 keinRuf boolLoop σ boolStart = .hardware (.fortschritt ()) := by rfl
 
 /-- Normal completion is stable for every larger budget, by the generic theorem. -/
 theorem larger_budget_zeuge (σ : World bD) (p : Nat) :

@@ -134,17 +134,17 @@ def runOps (bound left : Nat) : List Op → BudgetOut
     if op.cost ≤ left then runOps bound (left - op.cost) rest
     else .budget "per_pass.ops" (bound - left + op.cost + totalCost rest) bound
 
-theorem totalCost_nil : totalCost [] = 0 := rfl
+theorem totalCost_nil : totalCost [] = 0 := by rfl
 
 theorem totalCost_cons (op : Op) (rest : List Op) :
-    totalCost (op :: rest) = op.cost + totalCost rest := rfl
+    totalCost (op :: rest) = op.cost + totalCost rest := by rfl
 
-theorem runOps_nil (bound left : Nat) : runOps bound left [] = .ok left := rfl
+theorem runOps_nil (bound left : Nat) : runOps bound left [] = .ok left := by rfl
 
 theorem runOps_cons (bound left : Nat) (op : Op) (rest : List Op) :
     runOps bound left (op :: rest) =
       (if op.cost ≤ left then runOps bound (left - op.cost) rest
-       else .budget "per_pass.ops" (bound - left + op.cost + totalCost rest) bound) := rfl
+       else .budget "per_pass.ops" (bound - left + op.cost + totalCost rest) bound) := by rfl
 
 /-- Steps within bound execute, and the leftover is exact. -/
 theorem runOps_within (bound left : Nat) (ops : List Op)
@@ -244,13 +244,13 @@ def runPasses (b : Budget) : List Pass → BudgetOut
     | .ok _ => runPasses b rest
     | .budget _ _ _ => .budget p.1 (totalCost p.2) b.perPass
 
-theorem runPasses_nil (b : Budget) : runPasses b [] = .ok b.perPass := rfl
+theorem runPasses_nil (b : Budget) : runPasses b [] = .ok b.perPass := by rfl
 
 theorem runPasses_cons (b : Budget) (p : Pass) (rest : List Pass) :
     runPasses b (p :: rest) =
       match runOps b.perPass b.perPass p.2 with
       | .ok _ => runPasses b rest
-      | .budget _ _ _ => .budget p.1 (totalCost p.2) b.perPass := rfl
+      | .budget _ _ _ => .budget p.1 (totalCost p.2) b.perPass := by rfl
 
 /-- Head fits: the run continues with the tail. -/
 theorem runPasses_cons_ok (b : Budget) (p : Pass) (rest : List Pass) (v : Nat)
@@ -480,14 +480,14 @@ theorem bounded_respected_gilt (N : Nat) (paesse : List Pass) :
 def fremdOp (decl : Nat) : Op := ⟨decl + 1⟩
 
 /-- A foreign edge costs exactly its declared cost plus one. -/
-theorem fremdOp_kosten (decl : Nat) : (fremdOp decl).cost = decl + 1 := rfl
+theorem fremdOp_kosten (decl : Nat) : (fremdOp decl).cost = decl + 1 := by rfl
 
 /-- No zero slip: a foreign edge costs at least one op, even declared at `0`. -/
 theorem fremd_kein_null (decl : Nat) : 1 ≤ (fremdOp decl).cost := by
   simp only [fremdOp]; omega
 
 /-- A lone foreign edge totals to its declared cost plus one. -/
-theorem fremd_totalCost (decl : Nat) : totalCost [fremdOp decl] = decl + 1 := rfl
+theorem fremd_totalCost (decl : Nat) : totalCost [fremdOp decl] = decl + 1 := by rfl
 
 /-- A foreign edge within bound executes and reports the exact leftover. -/
 theorem runOps_fremd_within (bound left decl : Nat) (h : decl + 1 ≤ left) :
@@ -511,13 +511,13 @@ theorem budget_erhaltung_fremd (b : Budget) (decl : Nat) (h : decl + 1 ≤ b.per
   runPass_within b [fremdOp decl] (by simp only [fremd_totalCost]; exact h)
 
 /-- Accept: a foreign edge declared at `0` still costs exactly one op. -/
-example : (fremdOp 0).cost = 1 := rfl
+example : (fremdOp 0).cost = 1 := by rfl
 
 /-- Accept: a foreign edge declared at `3` totals to four ops. -/
-example : totalCost [fremdOp 3] = 4 := rfl
+example : totalCost [fremdOp 3] = 4 := by rfl
 
 /-- Accept: that edge fits a bound of five with leftover one. -/
-example : runPass ⟨5⟩ [fremdOp 3] = .ok 1 := rfl
+example : runPass ⟨5⟩ [fremdOp 3] = .ok 1 := by rfl
 
 /-- Reject: it does not fit a bound of three -- the run names the breach. -/
 example : ∃ needed, runOps 3 3 [fremdOp 3] = .budget "per_pass.ops" needed 3 :=
@@ -573,13 +573,13 @@ def seqPasses {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 theorem seqPassesAux_nil {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
     (assign : SeqElem D V l Γ → List Op) (i : Nat) :
-    seqPassesAux assign i [] = [] := rfl
+    seqPassesAux assign i [] = [] := by rfl
 
 theorem seqPassesAux_cons {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
     (assign : SeqElem D V l Γ → List Op) (i : Nat)
     (e : SeqElem D V l Γ) (es : List (SeqElem D V l Γ)) :
     seqPassesAux assign i (e :: es)
-      = (("seq." ++ toString i, assign e) :: seqPassesAux assign (i + 1) es) := rfl
+      = (("seq." ++ toString i, assign e) :: seqPassesAux assign (i + 1) es) := by rfl
 
 /-- Every pass of the translated sequence is one element's declared ops. -/
 theorem seqPassesAux_all_within {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}

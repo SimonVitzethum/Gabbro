@@ -193,7 +193,7 @@ end Schleifen
 
 /-! ## 3. Syntax to semantics: a statement without an exit yields none -/
 
-theorem befund_und_austritt (a b : Befund D) : (a ++ b).austritt = (a.austritt || b.austritt) := rfl
+theorem befund_und_austritt (a b : Befund D) : (a ++ b).austritt = (a.austritt || b.austritt) := by rfl
 
 section Semantik
 

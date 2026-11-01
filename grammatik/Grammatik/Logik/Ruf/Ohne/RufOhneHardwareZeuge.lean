@@ -117,9 +117,9 @@ theorem befund_hardware_bleibt :
 /-- `ruhe`'s body carries no oracle form; `zaehle`'s and `haupt`'s do (the
     axiom sits in `zaehle`, and `haupt` reaches it only through a call --
     the check is SYNTACTIC per body, and `haupt`'s own body is clean). -/
-theorem axHaupt_hardwareFrei : (axP.rumpf axHaupt).hardwareFrei = true := rfl
+theorem axHaupt_hardwareFrei : (axP.rumpf axHaupt).hardwareFrei = true := by rfl
 
-theorem axRuhe_hardwareFrei : (axP.rumpf axRuhe).hardwareFrei = true := rfl
+theorem axRuhe_hardwareFrei : (axP.rumpf axRuhe).hardwareFrei = true := by rfl
 
 /-- **The check is per body, and the handler premise carries the call.**
     `haupt`'s body is clean, and still its run can end in a hardware outcome

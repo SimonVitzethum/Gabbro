@@ -21,7 +21,7 @@ abbrev ByteTy : Ty := .int 0 255
 /-- A Brainfuck byte as a G value. -/
 def kodiere (b : Brainfuck.Byte) : Wert D ByteTy := ⟨b.val, by omega, by omega⟩
 
-theorem kodiere_n (b : Brainfuck.Byte) : (kodiere (D := D) b).n = b.val := rfl
+theorem kodiere_n (b : Brainfuck.Byte) : (kodiere (D := D) b).n = b.val := by rfl
 
 /-- Two numbers of one range are equal when their values are. -/
 theorem zahl_eq {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by

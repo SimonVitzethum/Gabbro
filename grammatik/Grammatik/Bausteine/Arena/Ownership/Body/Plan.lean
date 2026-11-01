@@ -223,7 +223,7 @@ theorem planFits_owned_unique (hp : planFits c ms os = true) {u v : Nat} {q : Pa
     cases this
 
 theorem afterCall_rights {j : Nat} :
-    (c.afterCall ms os).rights j = if consumes ms os j then none else c.rights j := rfl
+    (c.afterCall ms os).rights j = if consumes ms os j then none else c.rights j := by rfl
 
 theorem afterCall_bounded (hb : c.bounded) : (c.afterCall ms os).bounded := by
   refine ⟨?_, hb.2⟩

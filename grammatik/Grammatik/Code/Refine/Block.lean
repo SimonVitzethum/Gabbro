@@ -87,7 +87,7 @@ theorem stepI_store {m m' : Mem} {rs : Regs} {t : Ty} {v p : Opd} {x : Val} {b :
     stepI (.store t v p) m rs = some (m', rs) := by
   simp only [stepI, hv, hp, hs, Option.map_some]
 
-theorem bool_zext : Val.ofInt 1 (0 : Int) = Val.ofInt 1 0 := rfl
+theorem bool_zext : Val.ofInt 1 (0 : Int) = Val.ofInt 1 0 := by rfl
 
 /-- The register image of a value to its memory image. -/
 theorem cvtM_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = true) (o : Opd) (r : Nat)

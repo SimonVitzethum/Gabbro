@@ -368,11 +368,11 @@ def divSchreib : divD.Fn := show divD.Fn from true
 def divLies : divD.Fn := show divD.Fn from false
 
 /-- The axiom IS `-> never`: the accepted `asm` shape. -/
-theorem divAx_never : divD.aerg () = some .never := rfl
+theorem divAx_never : divD.aerg () = some .never := by rfl
 
 /-- End holdings of `schreib`: the lock. -/
 theorem divSchreib_ende :
-    (vertragVon divD divSchreib).ende = [Res.held (D := divD) ()] := rfl
+    (vertragVon divD divSchreib).ende = [Res.held (D := divD) ()] := by rfl
 
 /-- The table access is allowed holding the lock. -/
 theorem divDarf : darf divD () [Res.held (D := divD) ()] := by
@@ -384,7 +384,7 @@ theorem divDarf : darf divD () [Res.held (D := divD) ()] := by
   exact List.mem_singleton.mpr rfl
 
 /-- Parameters of `schreib`, by computation. -/
-theorem divSchreib_params : divD.params divSchreib = [.int 0 10] := rfl
+theorem divSchreib_params : divD.params divSchreib = [.int 0 10] := by rfl
 
 /-- The argument of the witness run: 7 in `.int 0 10`. -/
 def divRho7 : Env divD (divD.params divSchreib) :=
@@ -393,7 +393,7 @@ def divRho7 : Env divD (divD.params divSchreib) :=
 
 /-- `schreib` holds the lock: start equals end. -/
 theorem divSchreib_start : Signatur.anfang divD (divD.signatur divSchreib) =
-    [Res.held (D := divD) ()] := rfl
+    [Res.held (D := divD) ()] := by rfl
 
 /-- Same access right at the `schreib` end holdings. -/
 theorem divDarfSchreib : darf divD () (vertragVon divD divSchreib).ende := by
@@ -435,7 +435,7 @@ def divRumpfW :
 
 /-- `lies` holds the lock: start equals end. -/
 theorem divLies_start : Signatur.anfang divD (divD.signatur divLies) =
-    [Res.held (D := divD) ()] := rfl
+    [Res.held (D := divD) ()] := by rfl
 
 /-- Index `0` in the `lies` body context, at the start holdings. -/
 def divIdxBodyR : Expr divD [] (Signatur.anfang divD (divD.signatur divLies))
@@ -481,7 +481,7 @@ def divSp0 : Speicher divD :=
 /-- Start slot value: `0`. -/
 theorem divSp0_slot :
     divSp0.slots () 0 () = (⟨0, by decide, by decide⟩ :
-      Wert divD (divD.typ () ())) := rfl
+      Wert divD (divD.typ () ())) := by rfl
 
 /-- Thread start: thread 0 runs `lies`, thread 1 runs `schreib 7`. -/
 def divInit : Faden → Σ f : divD.Fn, Env divD (divD.params f)
@@ -612,7 +612,7 @@ theorem divReachBF : RufErreichbarF divP divO 0 divM0F divM2F :=
   RufErreichbarF.schritt _ _ 1 divReachAF divSchrittBF
 
 /-- `divM0F` IS the start machine. -/
-theorem divM0F_start : divM0F = RufStartF divP divSp0 divInit := rfl
+theorem divM0F_start : divM0F = RufStartF divP divSp0 divInit := by rfl
 
 /-- The witness run: lock, then the writing leaf -- reached from start. -/
 theorem divB_erreicht :

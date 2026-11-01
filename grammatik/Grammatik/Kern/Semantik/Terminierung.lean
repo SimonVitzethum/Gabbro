@@ -248,8 +248,8 @@ theorem forever_unbeschraenkt :
 
 /-! ## 5. Execution samples -/
 
-example : laufMitTreibstoff schrittUnbesucht 3 ([1, 2] : List Nat) = some ([] : List Nat) := rfl
-example : laufMitTreibstoff (fun _ => some ()) 5 () = none := rfl
+example : laufMitTreibstoff schrittUnbesucht 3 ([1, 2] : List Nat) = some ([] : List Nat) := by rfl
+example : laufMitTreibstoff (fun _ => some ()) 5 () = none := by rfl
 
 /-! ## 6. Axioms -- derived -/
 

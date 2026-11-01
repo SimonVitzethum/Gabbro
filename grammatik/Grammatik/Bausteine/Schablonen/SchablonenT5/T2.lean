@@ -228,7 +228,7 @@ theorem reset_from_clean (s : Nat × Bool) (h : s.2 = false) :
 
 /-- The M2 side: a held linear value is rejected, not leaked. -/
 theorem reset_rejects_held (v : Nat) : treset (v, true) = none :=
-  rfl
+  by rfl
 
 /-- Witness for `reset_from_clean`: `(7, false)` goes home. -/
 theorem reset_from_clean_zeuge :

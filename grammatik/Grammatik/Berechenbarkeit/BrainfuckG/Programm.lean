@@ -27,7 +27,7 @@ variable {D : Deklaration} {A : FreiForm D} {V : Vertrag D} {Γ0 : Ctx} {Λ : Li
 def pcIst (j : Nat) : Expr D (BCtx n Γ0) Λ .bool := .eq (.var pcV) (.lit j)
 
 theorem pcIst_eval (σ₀ σ : World D) (b : Brainfuck.Byte) (q : Fin (n + 1)) (ρ0 : Env D Γ0) (j : Nat) :
-    eval σ₀ (pcIst (Λ := Λ) j) σ (.cons (kodiere b) (.cons (pcWert q) ρ0)) = decide ((q.val : Int) = j) := rfl
+    eval σ₀ (pcIst (Λ := Λ) j) σ (.cons (kodiere b) (.cons (pcWert q) ρ0)) = decide ((q.val : Int) = j) := by rfl
 
 /-- The successor counter of position `j`. -/
 def nextOf (j : Nat) : Fin (n + 1) := ⟨min (j + 1) n, by omega⟩

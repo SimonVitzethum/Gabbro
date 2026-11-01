@@ -86,7 +86,7 @@ theorem testmenge_laenge (ks : List σ.K) (a : List (Baum σ)) (W : List (Kontex
 
 /-- The spec-states case `m = n` (depth 1): the access trees and every cell, in every context. -/
 theorem anzahl_eins (ks : List σ.K) (n : Nat) :
-    anzahl ks n 1 = n + (ks.map fun k => n ^ σ.ar k).sum := rfl
+    anzahl ks n 1 = n + (ks.map fun k => n ^ σ.ar k).sum := by rfl
 
 /-! ## Membership -/
 

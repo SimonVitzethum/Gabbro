@@ -460,9 +460,9 @@ def geZ1 : RufFadenG geD :=
   ⟨[], ⟨geSchreiber, .nil, geSp.welt [], ⟨false, [], geLt, .nil, .ende geRumpfSchreiber⟩⟩,
     startSpur geSchreiber, [RufEreignisF.eintritt geSchreiber .nil (geSp.welt [])]⟩
 
-theorem geM0_faden0 : (RufStartG geP geSp geInit).faeden 0 = geZ0 := rfl
+theorem geM0_faden0 : (RufStartG geP geSp geInit).faeden 0 = geZ0 := by rfl
 
-theorem geM0_faden1 : (RufStartG geP geSp geInit).faeden 1 = geZ1 := rfl
+theorem geM0_faden1 : (RufStartG geP geSp geInit).faeden 1 = geZ1 := by rfl
 
 theorem geHgLg {s : List (Ereignis geD)} (h : offen s = [GeLock.lg]) :
     HeldGenau geLg (offen s) := by
@@ -483,10 +483,10 @@ theorem geHgLt {s : List (Ereignis geD)} (h : offen s = [GeLock.lt]) :
   · exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
 
 theorem geOffen_weltVon (M : RufMaschineG geD) (t : Faden) :
-    offen (M.weltVon t).spur = offen (M.faeden t).spur := rfl
+    offen (M.weltVon t).spur = offen (M.faeden t).spur := by rfl
 
 theorem geOffen_fragt (M : RufMaschineG geD) (t : Faden) (q : geD.Ax ⊕ geD.Reg ⊕ geD.Glob) :
-    offen ((M.weltVon t).fragt q).spur = offen (M.faeden t).spur := rfl
+    offen ((M.weltVon t).fragt q).spur = offen (M.faeden t).spur := by rfl
 
 theorem geHoff_e {M : RufMaschineG geD} {f : Faden} {z : RufFadenG geD} {x : List geD.Lock}
     (e : M.faeden f = z) (ho : offen (M.faeden f).spur = x) : offen z.spur = x := by

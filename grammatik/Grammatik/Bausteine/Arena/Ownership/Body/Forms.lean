@@ -54,7 +54,7 @@ theorem unten_head {Γ : Ctx} {τ : Ty} (v : Wert D τ) (ρ : Env D Γ) :
     (Env.cons v ρ).unten Γ.length = intVon τ v := by
   simp only [Env.unten, ↓reduceIte]
 
-theorem intVon_int {lo hi : Int} (z : Wert D (.int lo hi)) : intVon (.int lo hi) z = some z.n := rfl
+theorem intVon_int {lo hi : Int} (z : Wert D (.int lo hi)) : intVon (.int lo hi) z = some z.n := by rfl
 
 section Forms
 

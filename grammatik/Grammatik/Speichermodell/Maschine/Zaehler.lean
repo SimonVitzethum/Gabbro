@@ -98,8 +98,8 @@ theorem zInv_start : ZInv ZZustand.start where
     · intro h
       exact ⟨⟨0, 0⟩, List.mem_singleton_self _, (Nat.le_zero.mp h).symm⟩
   wert m hm := by rw [List.mem_singleton.mp hm]; rfl
-  zahl := rfl
-  sonst _ _ := rfl
+  zahl := by rfl
+  sonst _ _ := by rfl
 
 theorem zInv_schritt {Z Z' : ZZustand} (hI : ZInv Z) (hs : ZSchritt Z Z') : ZInv Z' := by
   cases hs with

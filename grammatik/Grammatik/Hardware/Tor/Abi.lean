@@ -111,7 +111,7 @@ theorem belegung_param {a : TorAbi} {r : RegName} {i : Nat} (h : (r, i) ∈ a.ei
 
 /-- **The clause adds no meaning to the assignment**: the trap text is not read. -/
 theorem loese_text_unabh (a : TorAbi) (t : String) :
-    ({ a with falle := { a.falle with text := t } } : TorAbi).belegung = a.belegung := rfl
+    ({ a with falle := { a.falle with text := t } } : TorAbi).belegung = a.belegung := by rfl
 
 /-- A gate with its machine-G meaning `B` (whatever the model reads of a gate: parameters, answer,
     frame, `ensures`) and its machine side. -/
@@ -123,7 +123,7 @@ structure Tor (B : Type) where
 def Tor.mitFalle {B : Type} (t : Tor B) (f : Falle) : Tor B := { t with abi := { t.abi with falle := f } }
 
 /-- **The trap clause changes no meaning.** -/
-theorem Tor.mitFalle_bed {B : Type} (t : Tor B) (f : Falle) : (t.mitFalle f).bed = t.bed := rfl
+theorem Tor.mitFalle_bed {B : Type} (t : Tor B) (f : Falle) : (t.mitFalle f).bed = t.bed := by rfl
 
 /-! ## 2. The existing x86_64 record is an instance -/
 
@@ -187,8 +187,8 @@ instance (z : ZielDaten) : Decidable z.gut :=
 /-- The `Code` parameters of a usable target: nothing about it is fixed to one ISA. -/
 @[reducible] def ZielDaten.conf (z : ZielDaten) (h : z.gut) : Gabbro.Code.Conf := ⟨z.wbits, z.big, h.1⟩
 
-theorem ZielDaten.conf_wbits (z : ZielDaten) (h : z.gut) : (z.conf h).wbits = z.wbits := rfl
-theorem ZielDaten.conf_big (z : ZielDaten) (h : z.gut) : (z.conf h).big = z.big := rfl
+theorem ZielDaten.conf_wbits (z : ZielDaten) (h : z.gut) : (z.conf h).wbits = z.wbits := by rfl
+theorem ZielDaten.conf_big (z : ZielDaten) (h : z.gut) : (z.conf h).big = z.big := by rfl
 
 /-- Every register a gate names is a register of the target. -/
 def TorAbi.passtZu (a : TorAbi) (z : ZielDaten) : Prop :=

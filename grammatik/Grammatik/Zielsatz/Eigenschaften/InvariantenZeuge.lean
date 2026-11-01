@@ -56,7 +56,7 @@ theorem mP_invTraeger : InvTraeger mP () := by
   revert c
   decide
 
-theorem mP_invStart : InvHaelt mP () ((RufStartG mP mSp mInit).speicher.welt []) := rfl
+theorem mP_invStart : InvHaelt mP () ((RufStartG mP mSp mInit).speicher.welt []) := by rfl
 
 /-- Only `hauptA` writes `privA`, so only `hauptA` owes the table invariant. -/
 theorem mSchuldet (f : mD.Fn) (h : f ≠ mHauptA) : schuldet f () = false := by

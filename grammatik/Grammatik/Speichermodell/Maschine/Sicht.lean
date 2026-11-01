@@ -299,7 +299,7 @@ theorem mpInv_start : MPInv (LZustand.start LOrt) where
   xEins m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Nat.le_zero_eq, Nat.succ_ne_self] at h
   yEins m hm h := by simp only [LZustand.start, List.mem_cons, List.not_mem_nil, or_false] at hm; subst hm; simp only [Int.reduceEq] at h
   t0 h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
-  r0 _ := rfl
+  r0 _ := by rfl
   t1 h := by simp only [LZustand.start, Nat.le_zero_eq, Nat.succ_ne_self] at h
   r1 h := by simp only [LZustand.start, Nat.le_zero_eq, reduceCtorEq] at h
 

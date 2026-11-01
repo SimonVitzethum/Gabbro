@@ -119,14 +119,14 @@ def BV : Vertrag BD where
   haelt := []
   produziert := []
 
-theorem hp : BD.typ BA.tab BA.feld = ByteTy := rfl
+theorem hp : BD.typ BA.tab BA.feld = ByteTy := by rfl
 
 theorem rechte : Rechte BA BG BV [] where
-  wT := rfl
+  wT := by rfl
   lT := by intro w hw; cases hw
-  wF := rfl
+  wF := by rfl
   lF := by intro w hw; cases hw
-  wU := rfl
+  wU := by rfl
   lU := by intro w hw; cases hw
   wH := fun _ => rfl
   lH := fun _ => by intro w hw; cases hw

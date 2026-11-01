@@ -135,16 +135,16 @@ def fdRead : fdD.Ax := false
 def fdArbeit : fdD.Fn := ()
 
 /-- The handing-out gate takes no parameters. -/
-theorem fdOpen_params : fdD.aparams fdOpen = [] := rfl
+theorem fdOpen_params : fdD.aparams fdOpen = [] := by rfl
 
 /-- The handing-out gate answers a descriptor in `0 .. 7`. -/
-theorem fdOpen_erg : fdD.aerg fdOpen = some (.int 0 7) := rfl
+theorem fdOpen_erg : fdD.aerg fdOpen = some (.int 0 7) := by rfl
 
 /-- The reading gate takes a descriptor in `0 .. 7`. -/
-theorem fdRead_params : fdD.aparams fdRead = [.int 0 7] := rfl
+theorem fdRead_params : fdD.aparams fdRead = [.int 0 7] := by rfl
 
 /-- The reading gate answers a count in `0 .. 100`. -/
-theorem fdRead_erg : fdD.aerg fdRead = some (.int 0 100) := rfl
+theorem fdRead_erg : fdD.aerg fdRead = some (.int 0 100) := by rfl
 
 /-- Descriptor type flows from answer to parameter: what the first
     gate hands out is what the second gate takes. -/
@@ -153,7 +153,7 @@ theorem fd_fluss_typ : fdD.aparams fdRead = [.int 0 7] ∧
   ⟨rfl, rfl⟩
 
 /-- The function writes the table (non-degeneracy, first half). -/
-theorem fdArbeit_schreibt : fdD.schreibt fdArbeit () = true := rfl
+theorem fdArbeit_schreibt : fdD.schreibt fdArbeit () = true := by rfl
 
 /-! ## 3. Declared ensures and the oracle -/
 
@@ -343,16 +343,16 @@ def fdGateRead : GateData fdD :=
 theorem fdGate_num : fdGateOpen.num ≠ fdGateRead.num := by decide
 
 /-- The open gate declares the frame it runs in. -/
-theorem fdGateOpen_eff : fdGateOpen.eff = fdD.aschreibt fdOpen := rfl
+theorem fdGateOpen_eff : fdGateOpen.eff = fdD.aschreibt fdOpen := by rfl
 
 /-- The open gate declares no global writes. -/
-theorem fdGateOpen_effG : fdGateOpen.effG = fdD.agschreibt fdOpen := rfl
+theorem fdGateOpen_effG : fdGateOpen.effG = fdD.agschreibt fdOpen := by rfl
 
 /-- The read gate declares the frame it runs in. -/
-theorem fdGateRead_eff : fdGateRead.eff = fdD.aschreibt fdRead := rfl
+theorem fdGateRead_eff : fdGateRead.eff = fdD.aschreibt fdRead := by rfl
 
 /-- The read gate declares no global writes. -/
-theorem fdGateRead_effG : fdGateRead.effG = fdD.agschreibt fdRead := rfl
+theorem fdGateRead_effG : fdGateRead.effG = fdD.agschreibt fdRead := by rfl
 
 /-- One gate call: the fitting answer meets the declared ensures and
     the step keeps the gate-declared frame. The dispatch label, the
@@ -407,7 +407,7 @@ theorem fremdruf_offen_lesen (gOpen gRead : GateData fdD)
     is passed. A property of this one oracle, not of every oracle and
     not of the language (a real read gate's answer depends on the fd). -/
 theorem fd_opak (σ : World fdD) (ρ1 ρ2 : Env fdD (fdD.aparams fdRead)) :
-    (fdO.wirkt fdRead σ ρ1).2 = (fdO.wirkt fdRead σ ρ2).2 := rfl
+    (fdO.wirkt fdRead σ ρ1).2 = (fdO.wirkt fdRead σ ρ2).2 := by rfl
 
 /-! ## 6. Start memory, the wrong ensures, the program -/
 

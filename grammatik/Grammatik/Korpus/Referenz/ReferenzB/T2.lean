@@ -79,7 +79,7 @@ theorem refPCwrite :
       refWriteStAt (refPC1pre.weltVon 1) refRho7).welt =
       some (((refPC1pre.weltVon 1).lese [Res.held (D := refD) ()]
         (refIdxEin.orte ++ refHundert.orte)).schreibSlot ()
-        [Res.held (D := refD) ()] refK0 () refV100) := rfl
+        [Res.held (D := refD) ()] refK0 () refV100) := by rfl
 
 /-- Thread 1 holds the lock at the PC start. -/
 theorem refPC1haelt :
@@ -263,7 +263,7 @@ theorem refReachAF : RufErreichbarF refP refO 0 refM0F refM1F :=
   RufErreichbarF.schritt _ _ 1 RufErreichbarF.start refSchrittAF
 
 /-- Thread 1 head still runs `einzahlen` after taking the lock (F). -/
-theorem refM1Fkopf : (refM1F.faeden 1).kopf.f = refEin := rfl
+theorem refM1Fkopf : (refM1F.faeden 1).kopf.f = refEin := by rfl
 
 /-- Thread 1 holds the lock exactly after step A (F). -/
 theorem refM1Fhaelt :
@@ -423,17 +423,17 @@ def refRetLies : ErgExpr refD [] (Signatur.anfang refD (refD.signatur refLies))
   .val (.slot () () refIdxBodyLies refDarfBodyLies)
 
 /-- The return reads the table (one carrier). -/
-theorem refRetLies_orte : ErgExpr.orte refRetLies = [Sum.inl (())] := rfl
+theorem refRetLies_orte : ErgExpr.orte refRetLies = [Sum.inl (())] := by rfl
 
 /-- After step C the head runs `lies` with the empty environment (F). -/
-theorem refM3Frho : (refM3F.faeden 1).kopf.rho = Env.nil := rfl
+theorem refM3Frho : (refM3F.faeden 1).kopf.rho = Env.nil := by rfl
 
 /-- After step C the head residue is the `lies` return (F). -/
 theorem refM3Frest :
     (refM3F.faeden 1).kopf.rest =
       ⟨false, refD.params refLies,
         Signatur.anfang refD (refD.signatur refLies),
-        Env.nil, refP.rumpf refLies⟩ := rfl
+        Env.nil, refP.rumpf refLies⟩ := by rfl
 
 /-- Step D (F): thread 1 returns from `lies` with value `100`, read from
     the post-write slot through the read world. Every premise is used:
@@ -476,7 +476,7 @@ theorem refReachDF : RufErreichbarF refP refO 0 refM0F MB :=
   RufErreichbarF.schritt _ _ 1 refReachCF refSchrittDF
 
 /-- `refM0F` IS the start machine. -/
-theorem refM0F_start : refM0F = RufStartF refP refSp0 initB := rfl
+theorem refM0F_start : refM0F = RufStartF refP refSp0 initB := by rfl
 
 /-- The F witness run: lock, writing leaf, call, return -- reached from
     the start state. -/

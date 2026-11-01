@@ -125,7 +125,7 @@ theorem gGuardInst : Sum.inl () ∈ gD.gbraucht () :=
 
 /-- The function writes the global (the watched write). -/
 theorem gWriteInst : TraegerSchreibt (D := gD) (gCode 0) (.inr ()) = true :=
-  rfl
+  by rfl
 
 /-- Non-degeneracy: some function writes a table. -/
 theorem gTabWrite : ∃ f t, gD.schreibt f t = true :=
@@ -133,7 +133,7 @@ theorem gTabWrite : ∃ f t, gD.schreibt f t = true :=
 
 /-- The signature holdings name exactly the lock. -/
 theorem gAnfang : Signatur.anfang gD (gD.signatur ()) =
-    [Res.held (D := gD) ()] := rfl
+    [Res.held (D := gD) ()] := by rfl
 
 /-- The table slots: `0` everywhere. -/
 def gSlots : ∀ t : gD.Tab, Int → ∀ f : gD.Feld t, Wert gD (gD.typ t f) :=

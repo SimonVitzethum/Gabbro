@@ -302,10 +302,10 @@ def swKbeh (n : Nat) (ab : SysAbi) (σ : World swD)
 /-! ## 4. The pairing premises, instantiated jointly -/
 
 /-- Same number. -/
-theorem swNum : swK.nummer = swU.nummer := rfl
+theorem swNum : swK.nummer = swU.nummer := by rfl
 
 /-- Same register map. -/
-theorem swAbi : swK.abi = swU.abi := rfl
+theorem swAbi : swK.abi = swU.abi := by rfl
 
 /-- `Pu -> Pk`: identical requires-clauses. -/
 theorem swReq : ∀ σ ρ, swU.Pu σ ρ → swK.Pk σ ρ :=

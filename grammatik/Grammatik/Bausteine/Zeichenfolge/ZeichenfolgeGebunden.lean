@@ -54,7 +54,7 @@ def blaenge {max : Nat} (s : BString max) : Nat := s.daten.length
 
 /-- A literal that fits reports its length. -/
 theorem bliteral_laenge (max : Nat) (cs : List Char) (h : cs.length ≤ max) :
-    blaenge (⟨cs, h⟩ : BString max) = cs.length := rfl
+    blaenge (⟨cs, h⟩ : BString max) = cs.length := by rfl
 
 /-- `concat`: the length sum is checked against the target max and
     refused beyond it. The result lives at the TARGET max (which may

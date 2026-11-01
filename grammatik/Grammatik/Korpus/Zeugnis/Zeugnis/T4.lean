@@ -182,10 +182,10 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- The float helpers compute on closed types (no world needed for the
     lookup itself). -/
-example : flVonTyp (.fl (0, 1) (2, 3)) = some ((0, 1), (2, 3)) := rfl
+example : flVonTyp (.fl (0, 1) (2, 3)) = some ((0, 1), (2, 3)) := by rfl
 
 /-- The float context lookup hits at index `0`. -/
-example : ctxFlTyp [.fl (0, 1) (2, 3)] 0 = some ((0, 1), (2, 3)) := rfl
+example : ctxFlTyp [.fl (0, 1) (2, 3)] 0 = some ((0, 1), (2, 3)) := by rfl
 
 /-- `none 5` elaborates to `Expr.none`. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=

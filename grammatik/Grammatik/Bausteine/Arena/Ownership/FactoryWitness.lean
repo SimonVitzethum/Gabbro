@@ -100,7 +100,7 @@ theorem actual_success (O : Orakel D) (passes : Nat) :
   exact ⟨_, _, rfl, rfl, rfl⟩
 
 theorem actual_oom (O : Orakel D) (passes : Nat) :
-    rufAt (P false) O passes 1 () world .nil = .why world (oom ()) := rfl
+    rufAt (P false) O passes 1 () world .nil = .why world (oom ()) := by rfl
 
 /-- Actual allocation in a G callee, owning result handoff, and actual
 release in the caller. No user ownership-preservation assumption is used. -/

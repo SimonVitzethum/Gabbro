@@ -140,7 +140,7 @@ theorem kand_zerlegt (fs : List D.Fn) (Ok : D.Fn → Bool) {V : Vertrag D} {l : 
   · rename_i h; rw [h, mE_top]; rfl
   · rename_i h; simp only [h, Bool.false_or]
 
-theorem indB_eq (P : Programm D) (f g : D.Fn) : indB P f g = !(mE (ohneInd g) (P.rumpf f)) := rfl
+theorem indB_eq (P : Programm D) (f g : D.Fn) : indB P f g = !(mE (ohneInd g) (P.rumpf f)) := by rfl
 
 theorem any_nicht {α : Type} (l : List α) (p : α → Bool) : (l.any fun x => !p x) = !(l.all p) := by
   induction l with

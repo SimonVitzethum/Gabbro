@@ -338,7 +338,7 @@ def EinSnapshot (g : GepruefteKopie) (m₁ m₂ : UserMem) : Prop :=
 /-- The premise is satisfiable, never vacuous: one snapshot agrees with
     itself (cf. `Koernung.lean`: `ereignisAtomar_gilt`). -/
 theorem einSnapshot_refl (g : GepruefteKopie) (m : UserMem) :
-    EinSnapshot g m m := rfl
+    EinSnapshot g m m := by rfl
 
 /-- The run reads the validated address on both positions: what is checked
     is what is copied -- the handle, before any atomicity. -/
@@ -414,7 +414,7 @@ def weltBytes (D : Deklaration) (t : D.Tab) (f : D.Feld t)
 theorem weltBytes_istBytesAb (D : Deklaration) (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (σ : World D) (addr len : Nat) :
     weltBytes D t f hf σ addr len = σ.bytesAb t f hf len (addr : Int) :=
-  rfl
+  by rfl
 
 /-- The write lands where the read looks: a slot written through the write
     path (`World.schreibSlot`, as `execStmt` calls it) reads back the written
@@ -677,7 +677,7 @@ def schrittTraeger : BereichSchritt → Option (UserRegion × Kopie)
 /-- The constructor reads back: what was checked is what the step carries. -/
 theorem schrittTraeger_geprueft (r : UserRegion) (k : Kopie) (h : validiert r k) :
     schrittTraeger (.geprueft r k h) = some (r, k) :=
-  rfl
+  by rfl
 
 /-- The discharge: any carried copy of any step is validated against its
     carried region -- the transition premise, as a theorem over the shape.
@@ -871,7 +871,7 @@ theorem modellKopieAusfuehrt_istExecPfad (D : Deklaration) (t : D.Tab)
     modellKopieAusfuehrt D t f hf Λ g σ
       = σ.schreibBytes t f hf Λ (g.kopie.kernAddr : Int)
           (σ.bytesAb t f hf g.kopie.laenge (g.kopie.userAddr : Int)) :=
-  rfl
+  by rfl
 
 /-- The executable check discharges on every checked step: deciding and
     carrying agree, by construction. -/
@@ -933,7 +933,7 @@ def weltTag (D : Deklaration) (p : WeltSeite D) (c : D.Tab ⊕ D.Glob)
 theorem weltTag_seite (D : Deklaration) (p : WeltSeite D)
     (c : D.Tab ⊕ D.Glob) (addr : Nat) :
     (weltTag D p c addr).seite = p c :=
-  rfl
+  by rfl
 
 /-- A user-carrier key in its region is a user-part world key: the
     partition leg lands where `weltByte` reads (`benutzerTeil`). -/

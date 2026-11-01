@@ -175,11 +175,11 @@ def rf0 : Int → Int := fun k => if k = 0 then 3 else 4
 /-- Slot `1` on the free list; the list is `2`; the tree is `0` with the right child `3`. -/
 def wk : World FD2 := wd2 4 1 2 0 nilF nilF nilF rf0
 
-theorem stand_wk : FA2.stand wk = 4 := rfl
-theorem kopf_wk : FA2.kopfSt wk = 1 := rfl
-theorem naechst_wk (j : Int) : FA2.naechst wk j = 4 := rfl
-theorem lg_wk : LG2.st wk = 2 := rfl
-theorem wz_wk : Wz2.st wk = 0 := rfl
+theorem stand_wk : FA2.stand wk = 4 := by rfl
+theorem kopf_wk : FA2.kopfSt wk = 1 := by rfl
+theorem naechst_wk (j : Int) : FA2.naechst wk j = 4 := by rfl
+theorem lg_wk : LG2.st wk = 2 := by rfl
+theorem wz_wk : Wz2.st wk = 0 := by rfl
 theorem ll_wk (j : Int) : LL2.wert wk j = 4 := by show max 0 (min 4 (nilF j)) = 4; unfold nilF; decide
 theorem lf_wk (j : Int) : Lf2.wert wk j = 4 := by show max 0 (min 4 (nilF j)) = 4; unfold nilF; decide
 theorem rf_wk (j : Int) : Rf2.wert wk j = rf0 j := by

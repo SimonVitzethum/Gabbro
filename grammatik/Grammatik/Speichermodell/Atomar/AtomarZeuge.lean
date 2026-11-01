@@ -403,7 +403,7 @@ theorem n1_start (sp : Speicher nD) :
       · exact absurd (ht.trans hu.symm) htu
       · rw [h, h'] at he; cases he
     · rw [h]; exact ruhe_ruhig
-  req _ := rfl
+  req _ := by rfl
   sperren L := nomatch L
 
 /-- **THE FLAG, COVERED: on configuration 1 every W step is a GA step, and plain tables read

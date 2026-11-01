@@ -157,7 +157,7 @@ def leseEv (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
     | .inr g => Ereignis.gzugriff g false Λ σ.haelt
 
 theorem lese_spur (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :
-    (σ.lese Λ os).spur = leseEv σ Λ os ++ σ.spur := rfl
+    (σ.lese Λ os).spur = leseEv σ Λ os ++ σ.spur := by rfl
 
 /-- An access event (table or global) or a question to the outside -- never a lock event. -/
 def Ereignis.istZugriff : Ereignis D → Bool

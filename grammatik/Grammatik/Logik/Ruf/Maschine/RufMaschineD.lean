@@ -553,7 +553,7 @@ def rufM0D : RufMaschineD rufD :=
 
 /-- The callee signature writes nothing: `hw` side of `RufPasst`. -/
 theorem rufSigSchreibtFalse (t : rufD.Tab) :
-    (rufD.signatur rufIncD).schreibt t = false := rfl
+    (rufD.signatur rufIncD).schreibt t = false := by rfl
 
 /-- The call fits: callee writes nothing, consumes nothing, holds nothing. -/
 theorem rufHpD : RufPasst rufD (vertragVon rufD rufIncD)
@@ -596,7 +596,7 @@ def rufCallerMD : RufMaschineD rufD :=
 
 /-- The entry world of step 1 is the thread world itself: the argument
     reads nothing (`var.hier` has no Orte). -/
-theorem rufArgsOrteLeerD : rufArgsD.orte = [] := rfl
+theorem rufArgsOrteLeerD : rufArgsD.orte = [] := by rfl
 
 /-- The witness oracle: no axioms, no registers, nothing visible. -/
 def rufOD : Orakel rufD where
@@ -653,13 +653,13 @@ def rufRetED : ErgExpr rufD (rufD.params rufIncD)
 theorem rufRumpfRetD : rufPD.rumpf rufIncD =
     Endblock.ret rufRetED
       (by decide : (Signatur.anfang rufD (rufD.signatur rufIncD)).Perm
-        (vertragVon rufD rufIncD).ende) := rfl
+        (vertragVon rufD rufIncD).ende) := by rfl
 
 /-- The return reads nothing. -/
-theorem rufRetOrteLeerD : ErgExpr.orte rufRetED = [] := rfl
+theorem rufRetOrteLeerD : ErgExpr.orte rufRetED = [] := by rfl
 
 /-- The return evaluates to 3 = 2 + 1. -/
-theorem rufRetWertD : evalErg rufWeltD rufRetED rufWeltD rufRhoD = rufVD := rfl
+theorem rufRetWertD : evalErg rufWeltD rufRetED rufWeltD rufRhoD = rufVD := by rfl
 
 /-- The machine after step 1: name it for step 2. -/
 def rufM1D : RufMaschineD rufD :=
@@ -681,7 +681,7 @@ theorem rufReach1D :
   exact RufErreichbarD.schritt _ _ 0 RufErreichbarD.start rufSchritt1D
 
 /-- The thread world after step 1 is the empty world: no reads, no writes. -/
-theorem rufM1WeltD : rufM1D.weltVon 0 = rufWeltD := rfl
+theorem rufM1WeltD : rufM1D.weltVon 0 = rufWeltD := by rfl
 
 /-- The machine after step 2: caller restored, return logged after the entry.
     Step 2 fires the `rueck` rule: the callee residue is `ret` of param+1;

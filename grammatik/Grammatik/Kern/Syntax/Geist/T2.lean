@@ -144,10 +144,10 @@ def GD : Deklaration where
   ggeist := fun e => Empty.elim e
 
 /-- The ordinary table is not ghost. -/
-theorem GD_ordentlich : GD.geist true = false := rfl
+theorem GD_ordentlich : GD.geist true = false := by rfl
 
 /-- The second table is ghost. -/
-theorem GD_geist : GD.geist false = true := rfl
+theorem GD_geist : GD.geist false = true := by rfl
 
 /-- The contract of the only function: no parameters, no result. -/
 def GV : Vertrag GD :=
@@ -177,7 +177,7 @@ def gbody : Block GD GV false [] [] [] :=
 
 /-- The decision accepts the witness body: every footprint member is real.
     Proved by `rfl` -- the checker computes it. -/
-theorem gbody_g001 : g001 (D := GD) gbody = true := rfl
+theorem gbody_g001 : g001 (D := GD) gbody = true := by rfl
 
 /-- Joint witness for `g001_korrekt`: all premises instantiated at the
     non-degenerate program `GD` (one ordinary table the body reads, one

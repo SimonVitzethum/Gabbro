@@ -74,11 +74,11 @@ def wurzelMutant : Automat σ (Option Q) O where
 
 theorem wurzelMutant_δ (k : σ.K) (p : Fin (σ.ar k) → Option Q) :
     (wurzelMutant S z0 kipp).δ k p = if (⟨k, fun i => (p i).getD (S.zwert z0)⟩ : Zelle σ Q) = z0 then none
-      else some (S.δ k fun i => (p i).getD (S.zwert z0)) := rfl
+      else some (S.δ k fun i => (p i).getD (S.zwert z0)) := by rfl
 
-theorem wurzelMutant_aus_none : (wurzelMutant S z0 kipp).aus none = kipp (S.aus (S.zwert z0)) := rfl
+theorem wurzelMutant_aus_none : (wurzelMutant S z0 kipp).aus none = kipp (S.aus (S.zwert z0)) := by rfl
 
-theorem wurzelMutant_aus_some (q : Q) : (wurzelMutant S z0 kipp).aus (some q) = S.aus q := rfl
+theorem wurzelMutant_aus_some (q : Q) : (wurzelMutant S z0 kipp).aus (some q) = S.aus q := by rfl
 
 theorem wurzelMutant_wert (t : Baum σ) : ((wurzelMutant S z0 kipp).lauf t).getD (S.zwert z0) = S.lauf t := by
   induction t with
@@ -179,10 +179,10 @@ def flaggenMutant : Automat σ (Q × Bool) O where
 
 theorem flaggenMutant_δ (k : σ.K) (p : Fin (σ.ar k) → Q × Bool) :
     (flaggenMutant S z0 kipp).δ k p = (S.δ k fun i => (p i).1,
-      decide ((⟨k, fun i => (p i).1⟩ : Zelle σ Q) = z0) || (List.finRange (σ.ar k)).any fun i => (p i).2) := rfl
+      decide ((⟨k, fun i => (p i).1⟩ : Zelle σ Q) = z0) || (List.finRange (σ.ar k)).any fun i => (p i).2) := by rfl
 
 theorem flaggenMutant_aus (x : Q × Bool) :
-    (flaggenMutant S z0 kipp).aus x = if x.2 = true then kipp (S.aus x.1) else S.aus x.1 := rfl
+    (flaggenMutant S z0 kipp).aus x = if x.2 = true then kipp (S.aus x.1) else S.aus x.1 := by rfl
 
 theorem flaggenMutant_fst (t : Baum σ) : ((flaggenMutant S z0 kipp).lauf t).1 = S.lauf t := by
   induction t with

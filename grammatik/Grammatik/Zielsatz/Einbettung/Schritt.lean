@@ -203,7 +203,7 @@ theorem lese_laenge (σ : World D) (Λ : List (Res D)) (X : List (D.Tab ⊕ D.Gl
   simp only [World.lese, World.merke, List.length_append, List.length_map, Nat.add_left_cancel_iff]
 
 theorem lese_speicher (σ : World D) (Λ : List (Res D)) (X : List (D.Tab ⊕ D.Glob)) :
-    (σ.lese Λ X).speicher = σ.speicher := rfl
+    (σ.lese Λ X).speicher = σ.speicher := by rfl
 
 /-- **A read on both sides.** -/
 theorem Inv.lese {M : Keys D D'} {σ : World D} {σ' : World D'} (h : E.Inv hZ M σ σ')
@@ -255,10 +255,10 @@ theorem treu_storeGlob {s : Speicher D} {σ' : World D'} (h : E.Treu hZ s σ') (
     exact h.2 g0
 
 theorem speicher_storeSlot (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
-    (σ.storeSlot t k f v).speicher = ((σ.speicher.welt []).storeSlot t k f v).speicher := rfl
+    (σ.storeSlot t k f v).speicher = ((σ.speicher.welt []).storeSlot t k f v).speicher := by rfl
 
 theorem speicher_storeGlob (σ : World D) (g : D.Glob) (v : Wert D (D.gtyp g)) :
-    (σ.storeGlob g v).speicher = ((σ.speicher.welt []).storeGlob g v).speicher := rfl
+    (σ.storeGlob g v).speicher = ((σ.speicher.welt []).storeGlob g v).speicher := by rfl
 
 /-- **A slot write on both sides.** -/
 theorem Inv.schreibSlot {M : Keys D D'} {σ : World D} {σ' : World D'}

@@ -705,7 +705,7 @@ def rufSchritt (P : Programm D) (O : Orakel D) (passes : Nat)
 /-- **`rufAt` at depth `n+1` IS that step over `rufAt` at depth `n`** -- by
     definition, so `rfl`. -/
 theorem rufAt_succ_eq (P : Programm D) (O : Orakel D) (passes n : Nat) :
-    rufAt P O passes (n + 1) = rufSchritt P O passes (rufAt P O passes n) := rfl
+    rufAt P O passes (n + 1) = rufSchritt P O passes (rufAt P O passes n) := by rfl
 
 /-- **THE CONGRUENCE AT THE CALL LEVEL.** Two handlers that differ only where
     the first answers an error give CALLS that differ only where the first is

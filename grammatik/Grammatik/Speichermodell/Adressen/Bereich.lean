@@ -70,7 +70,7 @@ theorem schreibBytes_aussen (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 
       exact (schreibSlot_aussen σ t Λ k f _ ⟨h0, .inr (by omega)⟩).trans h2
 
 theorem lese_speicher (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob)) :
-    (σ.lese Λ orte).speicher = σ.speicher := rfl
+    (σ.lese Λ orte).speicher = σ.speicher := by rfl
 
 theorem index_imBereich {t : D.Tab} (z : Wert D (.index (D.count t))) : ImBereich D t z.n :=
   ⟨z.lo_le, .inr (by have := z.le_hi; omega)⟩

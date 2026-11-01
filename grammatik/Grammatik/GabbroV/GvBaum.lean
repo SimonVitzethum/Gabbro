@@ -302,9 +302,9 @@ theorem blatt_rufsicher_bedingt (t : D.Tab)
 /-! ## Witness: leaf-first deletion on a three-node tree -/
 
 /-- Field equations of the fixture, by computation. -/
-theorem hfNaechstes : baumD.typ () .Naechstes = .opt (baumD.count ()) := rfl
-theorem hfBelegt : baumD.typ () .Belegt = .bool := rfl
-theorem hfKind : baumD.typ () .Kind = .opt (baumD.count ()) := rfl
+theorem hfNaechstes : baumD.typ () .Naechstes = .opt (baumD.count ()) := by rfl
+theorem hfBelegt : baumD.typ () .Belegt = .bool := by rfl
+theorem hfKind : baumD.typ () .Kind = .opt (baumD.count ()) := by rfl
 
 /-- Three-node tree: sibling chain 0 → 1 → 2, back-pointers, first
     child 0 → 1, all occupied. Nodes 1 and 2 are leaves. -/

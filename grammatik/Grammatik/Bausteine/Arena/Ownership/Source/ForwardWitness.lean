@@ -177,7 +177,7 @@ def duplicateArgs : Args D [Ty.index 4] [] [Ty.index 4, Ty.index 4] :=
   .cons (.var .here) (.cons (.var .here) .nil)
 
 theorem duplicate_owning_arguments_refused :
-    checkArgumentFlow A ⟨context, []⟩ duplicateArgs (.cons (some .owned) (.cons (some .owned) .nil)) = none := rfl
+    checkArgumentFlow A ⟨context, []⟩ duplicateArgs (.cons (some .owned) (.cons (some .owned) .nil)) = none := by rfl
 
 theorem loan_and_owner_same_argument_refused :
     checkArgumentFlow A ⟨context, []⟩ duplicateArgs (.cons (some .borrowed) (.cons (some .owned) .nil)) = none ∧

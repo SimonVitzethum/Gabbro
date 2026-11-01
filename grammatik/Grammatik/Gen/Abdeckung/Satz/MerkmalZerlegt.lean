@@ -106,8 +106,8 @@ theorem rufM_zerlegt (fs : List D.Fn) (hvoll : ∀ g : D.Fn, g ∈ fs) (Z : D.Fn
   · rename_i h; rw [h, mE_top]; rfl
   · rename_i h; simp only [h, Bool.false_or]
 
-theorem nimmtB_eq (P : Programm D) (f : D.Fn) (L : D.Lock) : nimmtB P f L = !(mE (ohneSperre L) (P.rumpf f)) := rfl
+theorem nimmtB_eq (P : Programm D) (f : D.Fn) (L : D.Lock) : nimmtB P f L = !(mE (ohneSperre L) (P.rumpf f)) := by rfl
 
-theorem ruftB_eq (P : Programm D) (f g : D.Fn) : ruftB P f g = !(mE (ohneRuf g) (P.rumpf f)) := rfl
+theorem ruftB_eq (P : Programm D) (f g : D.Fn) : ruftB P f g = !(mE (ohneRuf g) (P.rumpf f)) := by rfl
 
 end Gabbro.Grammatik.Gen

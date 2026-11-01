@@ -239,7 +239,7 @@ theorem offen_lese (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Gl
   lese_haelt σ Λ os
 
 theorem offen_schreibGlob (σ : World D) (g : D.Glob) (Λ : List (Res D)) (v : Wert D (D.gtyp g)) :
-    offen (σ.schreibGlob g Λ v).spur = offen σ.spur := rfl
+    offen (σ.schreibGlob g Λ v).spur = offen σ.spur := by rfl
 
 theorem leave_welt' {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -352,7 +352,7 @@ theorem callee_kette (P : Programm D) (g : D.Fn) (rho : Env D (D.params g)) (s0 
 
 theorem callee_freis (P : Programm D) (g : D.Fn) (rho : Env D (D.params g)) (s0 : World D) :
     (⟨g, rho, s0, ⟨false, D.params g, Signatur.anfang D (D.signatur g), rho, .ende (P.rumpf g)⟩⟩ :
-      RufRahmenG D).freis = [] := rfl
+      RufRahmenG D).freis = [] := by rfl
 
 /-- The callee's holdings are held: its signature locks are among the
     caller's holdings (`RufPasst.hh`, `⊆`). -/

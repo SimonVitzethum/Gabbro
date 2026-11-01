@@ -96,13 +96,13 @@ theorem trampolin_kind (vorher : Regs) (spitze : Nat) (hsp : 24 ≤ spitze)
 /-- The preservation premise is not decoration: a gate that destroyed the two registers would
     send the child to address 0. -/
 theorem trampolin_ohne_bewahrung (vorher : Regs) (spitze : Nat) :
-    (kindPfad (nachSyscall vorher spitze false) false).rufe.map Prod.fst = [0, 0] := rfl
+    (kindPfad (nachSyscall vorher spitze false) false).rufe.map Prod.fst = [0, 0] := by rfl
 
 /-- **The parent path.** The parent's registers after the gate are the kernel's answer; the
     trampoline hands back exactly that word and runs nothing of the child's path. -/
 def elternAntwort (rax : Int) (h : rax ≠ 0) : Int := let _ := h; rax
 
-theorem trampolin_eltern (rax : Int) (h : rax ≠ 0) : elternAntwort rax h = rax := rfl
+theorem trampolin_eltern (rax : Int) (h : rax ≠ 0) : elternAntwort rax h = rax := by rfl
 
 /-! ## 2. `faden.laufzeit` -- the join -/
 
@@ -238,7 +238,7 @@ theorem kind_region (v : Nat) (hv : 16 ≤ v) (regionKehrtZurueck : Bool)
 
 /-- The premise is not decoration: a region that returned would run into `ud2` -- the trap's
     own stop, never a return into the parent's frame. -/
-theorem kind_region_rueckkehr (v : Nat) : (kindRuf (kindNachSyscall v) true).ud2 = true := rfl
+theorem kind_region_rueckkehr (v : Nat) : (kindRuf (kindNachSyscall v) true).ud2 = true := by rfl
 
 /-- **Witness**: a 64 KiB stack whose top is `0x7f0000010000`. -/
 theorem kind_region_zeuge :

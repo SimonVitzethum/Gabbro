@@ -66,23 +66,23 @@ def samen_J0 (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
 
 /-- The seed owes no thread steps: `hempty` by construction. -/
 theorem samen_J0_schritt_leer (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
-    (samen_J0 Nb sp fn0).schrittFaden = [] := rfl
+    (samen_J0 Nb sp fn0).schrittFaden = [] := by rfl
 
 /-- The seed carries the supplied code: `hcode` by construction. -/
 theorem samen_J0_code (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
-    (samen_J0 Nb sp fn0).code = fun _ => fn0 := rfl
+    (samen_J0 Nb sp fn0).code = fun _ => fn0 := by rfl
 
 /-- The seed tracks the start worlds by construction. -/
 theorem samen_J0_welten (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
-    (samen_J0 Nb sp fn0).welten = (GenStart sp).welten := rfl
+    (samen_J0 Nb sp fn0).welten = (GenStart sp).welten := by rfl
 
 /-- The seed tracks the start run by construction. -/
 theorem samen_J0_lauf (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
-    (samen_J0 Nb sp fn0).l = (GenStart sp).lauf := rfl
+    (samen_J0 Nb sp fn0).l = (GenStart sp).lauf := by rfl
 
 /-- The seed has no member threads by construction. -/
 theorem samen_J0_faeden (Nb : Nebeneinander) (sp : Speicher D) (fn0 : D.Fn) :
-    (samen_J0 Nb sp fn0).faeden = [] := rfl
+    (samen_J0 Nb sp fn0).faeden = [] := by rfl
 
 /-- Base-instantiation corollary for `hwit_leer`: the prefix witness duty at
     the seed holds vacuously over any run -- no thread steps are owed, so no

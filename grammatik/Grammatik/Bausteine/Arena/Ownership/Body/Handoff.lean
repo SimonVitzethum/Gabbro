@@ -59,7 +59,7 @@ section Handoff
 variable {s : State} {fr cf : Frame} {moved lent : List Handle}
 
 theorem handoff_cells (j : Int) :
-    (s.handoff cf moved lent).cells j = (s.cells j).map (handoffCell s.next cf moved lent j) := rfl
+    (s.handoff cf moved lent).cells j = (s.cells j).map (handoffCell s.next cf moved lent j) := by rfl
 
 theorem handoff_none (j : Int) : (s.handoff cf moved lent).cells j = none ↔ s.cells j = none := by
   rw [handoff_cells]; simp only [Option.map_eq_none_iff]
@@ -195,7 +195,7 @@ theorem resultAt_iff {result : Option Handle} {j : Int} :
   cases result <;> simp only [resultAt, Option.any_none, Bool.false_eq_true, reduceCtorEq, false_and, exists_false, Option.any_some, decide_eq_true_eq, Option.some.injEq, exists_eq_left']
 
 theorem restore_cells (j : Int) :
-    (s2.restore fr lent result).cells j = (s2.cells j).map (restoreCell s2.next fr lent result j) := rfl
+    (s2.restore fr lent result).cells j = (s2.cells j).map (restoreCell s2.next fr lent result j) := by rfl
 
 /-- Away from the handed slots the caller gets back exactly what it had. -/
 theorem restore_unmoved (hok : HandoffOk s fr cf moved lent)

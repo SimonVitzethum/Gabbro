@@ -40,7 +40,7 @@ def lcP : Programm cD where
 /-- The start machine: two threads (all of them), no lock held. -/
 def lcM0 : RufMaschineG cD := RufStartG lcP wld5.speicher (fun _ => ⟨(), .nil⟩)
 
-theorem lcM0_offen (v : Faden) : offen (lcM0.faeden v).spur = [] := rfl
+theorem lcM0_offen (v : Faden) : offen (lcM0.faeden v).spur = [] := by rfl
 
 /-- The IR function: entry 0, take 1, spin 2, release 3 (the body is empty), return 4. -/
 def lcMod : Modl :=
@@ -95,10 +95,10 @@ theorem lcM3_offen (v : Faden) : offen (lcM3.faeden v).spur =
     if v = 1 then lcL :: offen (lcM2.faeden v).spur else offen (lcM2.faeden v).spur := by
   by_cases h : v = 1 <;> simp only [lcM3, h, ↓reduceIte, offen] <;> rfl
 
-theorem lc_blk1 : lcMod.blk 0 1 = some (lockTake cLay () 1 1 2) := rfl
-theorem lc_blk2 : lcMod.blk 0 2 = some (lockSpin cLay () 1 2 2 3) := rfl
-theorem lc_blk3 : lcMod.blk 0 3 = some (lockRel cLay () 1 3 3 4) := rfl
-theorem lc_blk4 : lcMod.blk 0 4 = some ⟨4, [], [], .ret none⟩ := rfl
+theorem lc_blk1 : lcMod.blk 0 1 = some (lockTake cLay () 1 1 2) := by rfl
+theorem lc_blk2 : lcMod.blk 0 2 = some (lockSpin cLay () 1 2 2 3) := by rfl
+theorem lc_blk3 : lcMod.blk 0 3 = some (lockRel cLay () 1 3 3 4) := by rfl
+theorem lc_blk4 : lcMod.blk 0 4 = some ⟨4, [], [], .ret none⟩ := by rfl
 
 /-- The word interface answers the lock cells (they are no shared global). -/
 theorem lc_sees {m : Mem} {b : Nat} {x : Val} (h : m.load b 0 lw = some x) :

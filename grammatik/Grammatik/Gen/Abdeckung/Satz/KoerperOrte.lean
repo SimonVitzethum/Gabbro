@@ -112,8 +112,8 @@ variable [Aufz D]
 /-- The probe "does not call `g` directly" (the first part of `Rumpf.schluessel`). -/
 def rufNur (g : D.Fn) : Merkmal D := ⟨fun h => !(decide (h = g)), fun _ => true, fun _ => true⟩
 
-@[simp] theorem rufNur_ind (g : D.Fn) (n : Nat) : (rufNur g).ind n = true := rfl
-@[simp] theorem rufNur_sperre (g : D.Fn) (L : D.Lock) : (rufNur g).sperre L = true := rfl
+@[simp] theorem rufNur_ind (g : D.Fn) (n : Nat) : (rufNur g).ind n = true := by rfl
+@[simp] theorem rufNur_sperre (g : D.Fn) (L : D.Lock) : (rufNur g).sperre L = true := by rfl
 
 /-- The contract places of `g`. -/
 def vOrte (P : Programm D) (g : D.Fn) : List (D.Tab ⊕ D.Glob) := (P.requires g).orte ++ (P.ensures g).orte

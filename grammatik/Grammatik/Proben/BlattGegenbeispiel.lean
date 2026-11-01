@@ -118,10 +118,10 @@ def writeLeaf : Stmt D1 V1 false [] [] [] :=
   .assignSlot () () i0 negE rfl (fun w => nomatch w)
 
 /-- The writing leaf is a leaf. -/
-theorem writeLeaf_blatt : writeLeaf.istBlatt = true := rfl
+theorem writeLeaf_blatt : writeLeaf.istBlatt = true := by rfl
 
 /-- The writing leaf is not memory-preserving. -/
-theorem writeLeaf_nicht_fest : writeLeaf.speicherfest = false := rfl
+theorem writeLeaf_nicht_fest : writeLeaf.speicherfest = false := by rfl
 
 /-- The program: `requires = true`; `ensures = T.slots[0]`. -/
 def P1 : Programm D1 where

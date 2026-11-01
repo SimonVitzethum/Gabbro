@@ -112,7 +112,7 @@ noncomputable def mischT (T : D.Tab ⊕ D.Glob → Prop) (X : List (D.Tab ⊕ D.
    fun g => if Sum.inr g ∈ X ∧ T (.inr g) then s.globs g else σ.globs g, σ.spur⟩
 
 theorem mischT_spur (T : D.Tab ⊕ D.Glob → Prop) (X : List (D.Tab ⊕ D.Glob)) (σ : World D)
-    (s : Speicher D) : (mischT T X σ s).spur = σ.spur := rfl
+    (s : Speicher D) : (mischT T X σ s).spur = σ.spur := by rfl
 
 theorem mischT_innen {T : D.Tab ⊕ D.Glob → Prop} {X : List (D.Tab ⊕ D.Glob)} (σ : World D)
     (s : Speicher D) {c : D.Tab ⊕ D.Glob} (h : c ∈ X ∧ T c) :

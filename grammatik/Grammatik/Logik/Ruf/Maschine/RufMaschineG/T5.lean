@@ -153,7 +153,7 @@ def iteG : Stmt rufDF (vertragVon rufDF rufIncF) false
   .ite cG thenG elseG
 
 /-- The `if` unfolds. -/
-theorem iteG_entf : GEntfaltbar iteG = true := rfl
+theorem iteG_entf : GEntfaltbar iteG = true := by rfl
 
 /-- The callee body: the `if`, then the parameter return `restF`. -/
 def calleeG : Endblock rufDF (vertragVon rufDF rufIncF) false
@@ -171,7 +171,7 @@ def gP : Programm rufDF where
     | false => rufCallerRumpfF
 
 /-- The callee body is what `gP` runs at `true`. -/
-theorem gP_rumpf_true : gP.rumpf rufIncF = calleeG := rfl
+theorem gP_rumpf_true : gP.rumpf rufIncF = calleeG := by rfl
 
 def M0G : RufMaschineG rufDF := RufStartG gP spF initF
 
@@ -205,7 +205,7 @@ theorem M0G_kopf :
   rw [hM, hrumpf]
 
 /-- Reachability from `RufStartG`: `M0G` IS the start machine. -/
-theorem M0G_start : M0G = RufStartG gP spF initF := rfl
+theorem M0G_start : M0G = RufStartG gP spF initF := by rfl
 
 /-! ## 8. The witness run: call, unfold, branch, write, return -/
 
@@ -279,10 +279,10 @@ theorem M1G_kopf :
     (M1G.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .ende (.cons iteG restF)⟩ := rfl
+     .ende (.cons iteG restF)⟩ := by rfl
 
 /-- The thread world is unchanged by the call (no new events). -/
-theorem M1G_welt : M1G.weltVon 0 = spF.welt [] := rfl
+theorem M1G_welt : M1G.weltVon 0 = spF.welt [] := by rfl
 
 /-- The machine after the unfold: the `if` moved into `dann` position. -/
 def M2G : RufMaschineG rufDF :=
@@ -312,12 +312,12 @@ theorem M2G_kopf :
     (M2G.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .dann (.cons iteG .nil) (.ende restF)⟩ := rfl
+     .dann (.cons iteG .nil) (.ende restF)⟩ := by rfl
 
 /-- The thread world is unchanged by the unfold. -/
-theorem M2G_welt : M2G.weltVon 0 = spF.welt [] := rfl
+theorem M2G_welt : M2G.weltVon 0 = spF.welt [] := by rfl
 
-theorem cG_orte : cG.orte = [] := rfl
+theorem cG_orte : cG.orte = [] := by rfl
 
 /-- The machine after the branch: the taken writing branch runs first,
     then the empty rest, then the return. The condition reads nothing,
@@ -367,10 +367,10 @@ theorem M3G_kopf :
     (M3G.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .dann (.cons leafSF .nil) (.dann .nil (.ende restF))⟩ := rfl
+     .dann (.cons leafSF .nil) (.dann .nil (.ende restF))⟩ := by rfl
 
 /-- The thread world is unchanged by the branch choice. -/
-theorem M3G_welt : M3G.weltVon 0 = spF.welt [] := rfl
+theorem M3G_welt : M3G.weltVon 0 = spF.welt [] := by rfl
 
 /-- The machine after the writing leaf: memory moved to `outWF`, the
     branch block is done. -/
@@ -425,7 +425,7 @@ theorem M4G_kopf :
     (M4G.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .dann .nil (.dann .nil (.ende restF))⟩ := rfl
+     .dann .nil (.dann .nil (.ende restF))⟩ := by rfl
 
 /-- The machine after the first empty block completes. -/
 def M5G : RufMaschineG rufDF :=
@@ -454,7 +454,7 @@ theorem M5G_kopf :
     (M5G.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .dann .nil (.ende restF)⟩ := rfl
+     .dann .nil (.ende restF)⟩ := by rfl
 
 /-- The machine after the second empty block completes: the return. -/
 def M6G : RufMaschineG rufDF :=
@@ -483,7 +483,7 @@ theorem M6G_kopf :
     (M6G.faeden 0).kopf.rest =
     ⟨false, rufDF.params rufIncF,
      Signatur.anfang rufDF (rufDF.signatur rufIncF), rufRhoF,
-     .ende (.ret eF (by decide))⟩ := rfl
+     .ende (.ret eF (by decide))⟩ := by rfl
 
 /-- The return world: the callee thread world read at the (empty) result
     places. -/

@@ -28,9 +28,9 @@ theorem Var.pos_inj {Γ : Ctx} {τ : Ty} : ∀ (x y : Var Γ τ), x.pos = y.pos 
 
 /-! ## 2. The abstract state -/
 
-theorem Abs.ext_null (a : Abs) (s : Status) : a.ext s 0 = s := rfl
+theorem Abs.ext_null (a : Abs) (s : Status) : a.ext s 0 = s := by rfl
 
-theorem Abs.ext_succ (a : Abs) (s : Status) (n : Nat) : a.ext s (n + 1) = a n := rfl
+theorem Abs.ext_succ (a : Abs) (s : Status) (n : Nat) : a.ext s (n + 1) = a n := by rfl
 
 theorem Abs.set_selbst (a : Abs) (m : Nat) (s : Status) : a.set m s m = s := by simp only [set, ↓reduceIte]
 

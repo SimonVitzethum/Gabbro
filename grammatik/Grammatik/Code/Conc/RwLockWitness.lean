@@ -40,12 +40,12 @@ def rwMod : Modl :=
   ⟨[], [⟨"rw", [], .void, [⟨0, [], [], .jmp 1⟩, rdLoad cLay () 1 1 2, rdTake cLay () 1 2 3 4 2 5 1,
     rdRel cLay () 5 5 6, ⟨6, [], [], .ret none⟩, wrTake cLay () 1 2 10 11, wrRel cLay () 11 6]⟩]⟩
 
-theorem rw_blk1 : rwMod.blk 0 1 = some (rdLoad cLay () 1 1 2) := rfl
-theorem rw_blk2 : rwMod.blk 0 2 = some (rdTake cLay () 1 2 3 4 2 5 1) := rfl
-theorem rw_blk5 : rwMod.blk 0 5 = some (rdRel cLay () 5 5 6) := rfl
-theorem rw_blk6 : rwMod.blk 0 6 = some ⟨6, [], [], .ret none⟩ := rfl
-theorem rw_blk10 : rwMod.blk 0 10 = some (wrTake cLay () 1 2 10 11) := rfl
-theorem rw_blk11 : rwMod.blk 0 11 = some (wrRel cLay () 11 6) := rfl
+theorem rw_blk1 : rwMod.blk 0 1 = some (rdLoad cLay () 1 1 2) := by rfl
+theorem rw_blk2 : rwMod.blk 0 2 = some (rdTake cLay () 1 2 3 4 2 5 1) := by rfl
+theorem rw_blk5 : rwMod.blk 0 5 = some (rdRel cLay () 5 5 6) := by rfl
+theorem rw_blk6 : rwMod.blk 0 6 = some ⟨6, [], [], .ret none⟩ := by rfl
+theorem rw_blk10 : rwMod.blk 0 10 = some (wrTake cLay () 1 2 10 11) := by rfl
+theorem rw_blk11 : rwMod.blk 0 11 = some (wrRel cLay () 11 6) := by rfl
 
 /-- Threads 0 and 1 are readers, thread 2 is the writer. -/
 def rwLese : Lese cD := fun t _ => t ≠ 2
@@ -85,12 +85,12 @@ def gd : Rw := gc.delR 0
 def ge : Rw := gd.delR 1
 def gf : Rw := Rw.mkW 2
 
-theorem ga_cv : ga.cellv = 0 := rfl
-theorem gb_cv : gb.cellv = 2 := rfl
-theorem gc_cv : gc.cellv = 4 := rfl
-theorem gd_cv : gd.cellv = 2 := rfl
-theorem ge_cv : ge.cellv = 0 := rfl
-theorem ge_eq : ge = Rw.free := rfl
+theorem ga_cv : ga.cellv = 0 := by rfl
+theorem gb_cv : gb.cellv = 2 := by rfl
+theorem gc_cv : gc.cellv = 4 := by rfl
+theorem gd_cv : gd.cellv = 2 := by rfl
+theorem ge_cv : ge.cellv = 0 := by rfl
+theorem ge_eq : ge = Rw.free := by rfl
 
 theorem rwRel0 : RwRel rwLese cLay lcM0 mem0 (fun _ => ga) := by
   intro L
@@ -106,9 +106,9 @@ theorem rwRel0 : RwRel rwLese cLay lcM0 mem0 (fun _ => ga) := by
 def rwT0 : TM := ⟨mem0, fun t => if t = 2 then .run ⟨0, 10, 0, fun _ => none, none⟩ [] else
   .run ⟨0, 1, 0, fun _ => none, none⟩ []⟩
 
-theorem rwT0_0 : AtB rwT0 0 0 1 (fun _ => none) [] none := rfl
-theorem rwT0_1 : AtB rwT0 1 0 1 (fun _ => none) [] none := rfl
-theorem rwT0_2 : AtB rwT0 2 0 10 (fun _ => none) [] none := rfl
+theorem rwT0_0 : AtB rwT0 0 0 1 (fun _ => none) [] none := by rfl
+theorem rwT0_1 : AtB rwT0 1 0 1 (fun _ => none) [] none := by rfl
+theorem rwT0_2 : AtB rwT0 2 0 10 (fun _ => none) [] none := by rfl
 
 /-- **The reader/writer lock, two readers and a writer.** -/
 theorem rw_witness :

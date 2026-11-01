@@ -193,11 +193,11 @@ theorem g1_temp_dekodiert (σ : World g1D) :
 theorem g1_temp_passt : ∃ v, einpassen (D := g1D) (fun _ => none) g1Temp g1Halb = some v :=
   ⟨g1HalbW, g1_temp_wort⟩
 
-theorem g1_rzusage (v : Wert g1D (g1D.rtyp g1Reg)) : g1D.rzusage g1Reg v = true := rfl
+theorem g1_rzusage (v : Wert g1D (g1D.rtyp g1Reg)) : g1D.rzusage g1Reg v = true := by rfl
 
 /-- A word no `ok | err` value has: case `1` (`err`, bare) with payload `1`. -/
 theorem g1_holen_schief : einpassenErg (D := g1D) (fun _ => none) (g1D.aerg g1Holen) 3 = none :=
-  rfl
+  by rfl
 
 /-- The oracle answering the bad word meets EVERY declared ensures of `holen`. -/
 theorem g1O_schief_vertrag (Q : AxEns g1D) (t : Int) : AxVertragO Q (g1O 3 t) := by

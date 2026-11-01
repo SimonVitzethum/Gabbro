@@ -35,7 +35,7 @@ def hoeheA (σ : Sig) : Automat σ Nat Nat where
 def hoehe (t : Baum σ) : Nat := (hoeheA σ).lauf t
 
 theorem hoehe_knoten (k : σ.K) (ch : Fin (σ.ar k) → Baum σ) :
-    hoehe (.knoten k ch) = 1 + Finset.univ.sup fun i => hoehe (ch i) := rfl
+    hoehe (.knoten k ch) = 1 + Finset.univ.sup fun i => hoehe (ch i) := by rfl
 
 /-- **The counter model**: the spec state and the height saturated at `h + 1`; above `h` the output is
     changed by `kipp`. -/
@@ -50,10 +50,10 @@ variable (S : Automat σ Q O) (kipp : O → O) (h : Nat)
 
 theorem zaehler_δ (k : σ.K) (p : Fin (σ.ar k) → Q × Fin (h + 2)) :
     (zaehlerModell S kipp h).δ k p = (S.δ k fun i => (p i).1,
-      ⟨min (h + 1) (1 + Finset.univ.sup fun i => ((p i).2 : Nat)), Nat.lt_succ_of_le (Nat.min_le_left _ _)⟩) := rfl
+      ⟨min (h + 1) (1 + Finset.univ.sup fun i => ((p i).2 : Nat)), Nat.lt_succ_of_le (Nat.min_le_left _ _)⟩) := by rfl
 
 theorem zaehler_aus (x : Q × Fin (h + 2)) :
-    (zaehlerModell S kipp h).aus x = if (x.2 : Nat) = h + 1 then kipp (S.aus x.1) else S.aus x.1 := rfl
+    (zaehlerModell S kipp h).aus x = if (x.2 : Nat) = h + 1 then kipp (S.aus x.1) else S.aus x.1 := by rfl
 
 theorem zaehler_fst (t : Baum σ) : ((zaehlerModell S kipp h).lauf t).1 = S.lauf t := by
   induction t with

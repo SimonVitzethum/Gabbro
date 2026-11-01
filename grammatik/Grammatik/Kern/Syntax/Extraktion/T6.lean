@@ -150,7 +150,7 @@ def progAus (P : Programm D) (code : Faden → D.Fn)
 theorem progAus_aus_rumpf (P : Programm D) (code : Faden → D.Fn)
     (tabs : List D.Tab) (globs : List D.Glob) (f : Faden) :
     progAus P code tabs globs f = endblockAtome tabs globs (P.rumpf (code f)) :=
-  rfl
+  by rfl
 
 /-- A `locks` body extracts to its bracketed atoms: the sides a
     `PCSchritt.take`/`rel` step points at. -/
@@ -160,7 +160,7 @@ theorem stmtAtome_locks (tabs : List D.Tab) (globs : List D.Glob)
     (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ)) :
     stmtAtome tabs globs (Stmt.locks L hr body) =
       [PCAtom.take L] ++ blockAtome tabs globs body ++ [PCAtom.rel L] :=
-  rfl
+  by rfl
 
 /-- **The leaf match.** A leaf statement extracts to exactly one atom, and
     its `Λa` IS the statement's `Λ`: a witness firing this statement takes
@@ -215,7 +215,7 @@ theorem progTreue_aus_progAus (P : Programm D) (code : Faden → D.Fn)
 /-- Sprechprobe: the probe bodies are bare terminals (S10: never fired), so
     the extracted thread program is empty -- the computation runs to the
     end, loudly (`rfl` fails at elaboration on a wrong atom). -/
-example : progAus miniP (fun _ => true) miniTabs miniGlobs 0 = [] := rfl
+example : progAus miniP (fun _ => true) miniTabs miniGlobs 0 = [] := by rfl
 
 #print axioms Gabbro.Grammatik.Extraktion.progAus_aus_rumpf
 #print axioms Gabbro.Grammatik.Extraktion.stmtAtome_locks

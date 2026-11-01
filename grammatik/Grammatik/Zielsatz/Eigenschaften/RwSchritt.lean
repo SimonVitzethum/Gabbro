@@ -69,7 +69,7 @@ def ohneFremde (M : RufMaschineG D) (f : Faden) : RufMaschineG D :=
 theorem ohneFremde_self (M : RufMaschineG D) (f : Faden) : (ohneFremde M f).faeden f = M.faeden f := by
   simp only [ohneFremde, ↓reduceIte]
 
-theorem ohneFremde_speicher (M : RufMaschineG D) (f : Faden) : (ohneFremde M f).speicher = M.speicher := rfl
+theorem ohneFremde_speicher (M : RufMaschineG D) (f : Faden) : (ohneFremde M f).speicher = M.speicher := by rfl
 
 theorem ohneFremde_frei (M : RufMaschineG D) (f : Faden) (L : D.Lock) : RufFreiG (ohneFremde M f) f L := by
   intro g hg

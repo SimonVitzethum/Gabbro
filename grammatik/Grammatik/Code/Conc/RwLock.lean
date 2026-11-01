@@ -149,8 +149,8 @@ theorem stepI_add2 {m : Mem} {rs : Regs} {d r : Reg} {x : Nat} (hr : rs r = some
   simp only [stepI, h1, h2]
   simp only [Val.bin, tk, ↓reduceDIte, BinOp.ap, Option.map_some, BitVec.ofNat_add]
 
-theorem bool_true : Val.bool true = .int 1 1 := rfl
-theorem bool_false : Val.bool false = .int 1 0 := rfl
+theorem bool_true : Val.bool true = .int 1 1 := by rfl
+theorem bool_false : Val.bool false = .int 1 0 := by rfl
 
 /-! ## 4. The runs of a thread: the writer -/
 

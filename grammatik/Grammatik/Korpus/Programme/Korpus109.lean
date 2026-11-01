@@ -169,9 +169,9 @@ def kZwei {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.int 0 4294967295) :=
   .widen (by decide) (by decide) (.lit 2)
 
 /-- The call-site typing of every call. -/
-theorem kHaeltWriteA : (kD.signatur kWriteA).haelt = [KLock.l] := rfl
+theorem kHaeltWriteA : (kD.signatur kWriteA).haelt = [KLock.l] := by rfl
 
-theorem kHaeltWriteB : (kD.signatur kWriteB).haelt = [KLock.m] := rfl
+theorem kHaeltWriteB : (kD.signatur kWriteB).haelt = [KLock.m] := by rfl
 
 theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
     (hw : ∀ t, (kD.signatur callee).schreibt t = true → (vertragVon kD caller).schreibt t = true)
@@ -297,7 +297,7 @@ theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kD
 
 /-- Every `requires` is `.tru`, at every function, world and environment. -/
 theorem kReqWahr (f : kD.Fn) (W : World kD) (ρ : Env kD (kD.params f)) :
-    ReqAmEintritt kP f W ρ := rfl
+    ReqAmEintritt kP f W ρ := by rfl
 
 theorem kP_koerper_writeA : KoerperGutS kP 0 (axWahr kD) kSI kWriteA := by
   have hr : kP.rumpf kWriteA = kRumpfWriteA := rfl

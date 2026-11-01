@@ -151,7 +151,7 @@ def poolD : Deklaration where
   ggeteilt_bewacht := fun g h => absurd h (by decide)
 
 /-- Parameters of `einzahlen` on the variant, by computation. -/
-theorem poolEin_params : poolD.params true = [.int 0 10] := rfl
+theorem poolEin_params : poolD.params true = [.int 0 10] := by rfl
 
 /-- The witness argument: 7 in `.int 0 10` (same shape as `refRho7`). -/
 def poolRho : Env poolD (poolD.params true) :=
@@ -428,7 +428,7 @@ theorem pool_startExklusiv {ws : List D.Fn}
 /-- `einzahlen` writes `konto`: the fixture is non-degenerate (some
     function writes a table). -/
 theorem pool_schreibt_zeigt :
-    TraegerSchreibt (D := poolD) true (.inl ()) = true := rfl
+    TraegerSchreibt (D := poolD) true (.inl ()) = true := by rfl
 
 /-- Decidable equality on the variant's functions: `Bool` underneath, as
     a named instance so kernel evaluation (`decide` over computed graphs)

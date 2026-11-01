@@ -114,7 +114,7 @@ theorem eval_nestIdx {Γ : Ctx} {Λ : List (Res D)} (M N : Nat) (hM : 0 < M) (hN
     (i : Expr D Γ Λ (.index (M : Int))) (j : Expr D Γ Λ (.index (N : Int))) (σ₀ σ : World D)
     (ρ : Env D Γ) :
     (eval σ₀ (nestIdx M N hM hN i j) σ ρ).n =
-      flachIndex N (eval σ₀ i σ ρ).n (eval σ₀ j σ ρ).n := rfl
+      flachIndex N (eval σ₀ i σ ρ).n (eval σ₀ j σ ρ).n := by rfl
 
 /-! ## 3. Witness: `[[u32; 4]; 3]`, `M[1][2] = 7`, read back -/
 

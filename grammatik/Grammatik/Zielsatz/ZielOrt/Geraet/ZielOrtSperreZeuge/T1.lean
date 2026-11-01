@@ -44,7 +44,7 @@ theorem execStmtH_call {D : Deklaration} {S : SperrInv D} {O : Orakel D} {U : Um
     (args : Args D Γ Λ (D.params g)) (hp : RufPasst D V (D.signatur g) Λ) (hr : D.gruende g = 0)
     (σ : World D) (ρ : Env D Γ) :
     execStmtH S O U passes R (Stmt.call (l := l) g args hp hr) σ ρ =
-      execStmt O passes R (Stmt.call (l := l) g args hp hr) σ ρ := rfl
+      execStmt O passes R (Stmt.call (l := l) g args hp hr) σ ρ := by rfl
 
 /-- A call answered normally continues normally. -/
 theorem execStmt_call_ok {D : Deklaration} {O : Orakel D} {passes : Nat}
@@ -280,7 +280,7 @@ theorem zPB_zertifiziert : ∀ M : RufMaschineG zD,
     axEnsLokal_wahr zS_ok zFs_voll zPB_fragmentG zPB_fussS zPB_koerper zPB_start (fun _ => rfl)
     zInit_exklusiv
 
-theorem zPB_M0_faden (t : Faden) : (RufStartG zPB zSp zInit).faeden t = zZ0 := rfl
+theorem zPB_M0_faden (t : Faden) : (RufStartG zPB zSp zInit).faeden t = zZ0 := by rfl
 
 /-- **The run of probe B.** Ten steps of thread 1 from the start machine of
     `zPB`: take the lock, enter `wrap`, call `lies` and `einzahlen` (which

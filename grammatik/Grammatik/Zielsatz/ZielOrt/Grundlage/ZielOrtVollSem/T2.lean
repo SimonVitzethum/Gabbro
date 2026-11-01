@@ -104,7 +104,7 @@ def semV {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ) (σ :
 variable {l : Bool} {Γ : Ctx}
 
 theorem laufA_ok (f : World D → Env D Γ → Ausgang V l Γ) (σ : World D) (ρ : Env D Γ) :
-    laufA f (.ok σ ρ) = f σ ρ := rfl
+    laufA f (.ok σ ρ) = f σ ρ := by rfl
 
 /-- A block with a head statement: the head, then the rest on `ok`. -/
 theorem execBlock_cons_laufA {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
@@ -116,7 +116,7 @@ theorem execBlock_cons_laufA {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ 
 
 theorem semV_dann {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ')
     (σ : World D) (ρ : Env D Γ) :
-    semV O passes R (.dann b k) σ ρ = weiterZ O passes R k (execBlock O passes R b σ ρ) := rfl
+    semV O passes R (.dann b k) σ ρ = weiterZ O passes R k (execBlock O passes R b σ ρ) := by rfl
 
 theorem semV_dann_cons {Λ Λ' Λ'' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :

@@ -106,16 +106,16 @@ def refEin : refD.Fn := show refD.Fn from true
 def refLies : refD.Fn := show refD.Fn from false
 
 /-- Parameters of `einzahlen`, by computation. -/
-theorem refEin_params : refD.params refEin = [.int 0 10] := rfl
+theorem refEin_params : refD.params refEin = [.int 0 10] := by rfl
 
 /-- `einzahlen` returns nothing. -/
-theorem refEin_erg : refD.erg refEin = none := rfl
+theorem refEin_erg : refD.erg refEin = none := by rfl
 
 /-- Parameters of `lies`, by computation. -/
-theorem refLies_params : refD.params refLies = [] := rfl
+theorem refLies_params : refD.params refLies = [] := by rfl
 
 /-- `lies` returns `.int 0 100`. -/
-theorem refLies_erg : refD.erg refLies = some (.int 0 100) := rfl
+theorem refLies_erg : refD.erg refLies = some (.int 0 100) := by rfl
 
 /-- The argument of the witness call: 7 in `.int 0 10`. -/
 def refRho7 : Env refD (refD.params refEin) :=
@@ -133,18 +133,18 @@ theorem refLies_schreibt (t : refD.Tab) :
   cases t <;> rfl
 
 /-- `lies` holds the lock. -/
-theorem refLies_haelt : (refD.signatur refLies).haelt = [()] := rfl
+theorem refLies_haelt : (refD.signatur refLies).haelt = [()] := by rfl
 
 /-- `lies` has no error channel. -/
-theorem refLies_gruende : refD.gruende refLies = 0 := rfl
+theorem refLies_gruende : refD.gruende refLies = 0 := by rfl
 
 /-- End holdings of `einzahlen`: the lock. -/
 theorem refEin_ende :
-    (vertragVon refD refEin).ende = [Res.held (D := refD) ()] := rfl
+    (vertragVon refD refEin).ende = [Res.held (D := refD) ()] := by rfl
 
 /-- End holdings of `lies`: the lock. -/
 theorem refLies_ende :
-    (vertragVon refD refLies).ende = [Res.held (D := refD) ()] := rfl
+    (vertragVon refD refLies).ende = [Res.held (D := refD) ()] := by rfl
 
 /-- The table access is allowed holding the lock. -/
 theorem refDarf : darf refD () [Res.held (D := refD) ()] := by
@@ -213,7 +213,7 @@ def refEnsLies : Expr refD (ErgCtx (refD.params refLies) (refD.erg refLies))
 
 /-- `einzahlen` holds the lock: start equals end. -/
 theorem refEin_start : Signatur.anfang refD (refD.signatur refEin) =
-    [Res.held (D := refD) ()] := rfl
+    [Res.held (D := refD) ()] := by rfl
 
 /-- The call from `einzahlen` to `lies`: no arguments, the callee holds the
     same lock, writes nothing, needs nothing. Works at any holdings whose
@@ -291,7 +291,7 @@ def refRumpfEin :
 
 /-- `lies` holds the lock: start equals end. -/
 theorem refLies_start : Signatur.anfang refD (refD.signatur refLies) =
-    [Res.held (D := refD) ()] := rfl
+    [Res.held (D := refD) ()] := by rfl
 
 /-- Index `0` in the `lies` body context, at the start holdings. -/
 def refIdxBodyLies : Expr refD [] (Signatur.anfang refD (refD.signatur refLies))
@@ -347,13 +347,13 @@ def refSp0 : Speicher refD :=
 /-- Start slot value: `0`. -/
 theorem refSp0_slot :
     refSp0.slots () 0 () = (⟨0, by decide, by decide⟩ :
-      Wert refD (refD.typ () ())) := rfl
+      Wert refD (refD.typ () ())) := by rfl
 
 /-- `refP.rumpf` of `einzahlen` is the write-call-return body. -/
-theorem refP_rumpf_ein : refP.rumpf refEin = refEin_start ▸ refRumpfEin := rfl
+theorem refP_rumpf_ein : refP.rumpf refEin = refEin_start ▸ refRumpfEin := by rfl
 
 /-- `refP.rumpf` of `lies` is the slot return. -/
-theorem refP_rumpf_lies : refP.rumpf refLies = refLies_start ▸ refRumpfLies := rfl
+theorem refP_rumpf_lies : refP.rumpf refLies = refLies_start ▸ refRumpfLies := by rfl
 
 /-! ## 5. The call-machine run: lock, write, call, return -/
 
@@ -410,10 +410,10 @@ theorem refReachA : RufErreichbarD refP refO 0 refM0B refM1B :=
   RufErreichbarD.schritt _ _ 1 RufErreichbarD.start refSchrittA
 
 /-- Thread 1 head still runs `einzahlen` after taking the lock. -/
-theorem refM1kopf : (refM1B.faeden 1).kopf.f = refEin := rfl
+theorem refM1kopf : (refM1B.faeden 1).kopf.f = refEin := by rfl
 
 /-- Thread 1 entry environment is the call argument. -/
-theorem refM1rho : (refM1B.faeden 1).kopf.rho = refRho7 := rfl
+theorem refM1rho : (refM1B.faeden 1).kopf.rho = refRho7 := by rfl
 
 /-- Thread 1 holds the lock exactly after step A. -/
 theorem refM1haelt :

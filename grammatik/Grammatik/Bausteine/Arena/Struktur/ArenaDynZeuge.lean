@@ -148,14 +148,14 @@ def rn0 : Int → Int := fun _ => 4
 
 def w0 : World FD := wd 4 1 2 nx0 ln0 rn0
 
-theorem stand_w0 : FA.stand w0 = 4 := rfl
-theorem kopf_w0 : FA.kopfSt w0 = 1 := rfl
-theorem naechst_w0 (j : Int) : FA.naechst w0 j = 4 := rfl
-theorem lg_w0 : LG.st w0 = 2 := rfl
+theorem stand_w0 : FA.stand w0 = 4 := by rfl
+theorem kopf_w0 : FA.kopfSt w0 = 1 := by rfl
+theorem naechst_w0 (j : Int) : FA.naechst w0 j = 4 := by rfl
+theorem lg_w0 : LG.st w0 = 2 := by rfl
 theorem ll_w0 (j : Int) : LL.wert w0 j = ln0 j := by
   show max 0 (min 4 (ln0 j)) = ln0 j
   unfold ln0; split <;> omega
-theorem rr_w0 (j : Int) : RR.wert w0 j = 4 := rfl
+theorem rr_w0 (j : Int) : RR.wert w0 j = 4 := by rfl
 
 /-- The free list of the scenario is `[1]`: not empty, so the allocator has a slot to hand out. -/
 theorem kette_w0 : FA.Kette w0 1 [1] :=

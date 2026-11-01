@@ -433,7 +433,7 @@ def vZ0 : RufFadenG vD :=
   ⟨[], ⟨vHaupt, .nil, vSp.welt [], ⟨false, [], [], .nil, .ende vRumpfHaupt⟩⟩, [],
     [RufEreignisF.eintritt vHaupt .nil (vSp.welt [])]⟩
 
-theorem vM0_faden (t : Faden) : (RufStartG vP vSp vInit).faeden t = vZ0 := rfl
+theorem vM0_faden (t : Faden) : (RufStartG vP vSp vInit).faeden t = vZ0 := by rfl
 
 theorem vHg0 {s : List (Ereignis vD)} (h : offen s = []) :
     HeldGenau ([] : List (Res vD)) (offen s) := by
@@ -448,7 +448,7 @@ theorem vHgL {s : List (Ereignis vD)} (h : offen s = [()]) : HeldGenau vL (offen
   exact ⟨fun _ => List.mem_cons_self, fun _ => List.mem_cons_self⟩
 
 theorem vOffen_weltVon (M : RufMaschineG vD) (t : Faden) :
-    offen (M.weltVon t).spur = offen (M.faeden t).spur := rfl
+    offen (M.weltVon t).spur = offen (M.faeden t).spur := by rfl
 
 theorem vHoff_z {M : RufMaschineG vD} {f : Faden} {stapel : List (RufRahmenG vD)} {fn : vD.Fn}
     {rho : Env vD (vD.params fn)} {s0 : World vD} {log : List (RufEreignisF vD)} {l : Bool}

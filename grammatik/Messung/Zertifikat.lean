@@ -36,7 +36,7 @@ def certN (t : List Nat) : Bool :=
   t.all entryOkN
 
 /-- The empty table is trivially certified. -/
-theorem certN_nil : certN [] = true := rfl
+theorem certN_nil : certN [] = true := by rfl
 
 /-- Range proofs attached afterwards by one lemma: a closed certificate
     yields every entry's range fact. -/

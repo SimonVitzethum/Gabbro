@@ -55,7 +55,7 @@ def lnN : Int → Int := fun _ => 4
 /-- Slot `1` on the free list, the tree is the single node `3`. -/
 def w3 : World FD := wd 4 1 3 nx0 lnN lnN
 
-theorem lg_w3 : LG.st w3 = 3 := rfl
+theorem lg_w3 : LG.st w3 = 3 := by rfl
 theorem ll_w3 (j : Int) : LL.wert w3 j = 4 := by show max 0 (min 4 (lnN j)) = 4; unfold lnN; decide
 theorem rr_w3 (j : Int) : RR.wert w3 j = 4 := by show max 0 (min 4 (lnN j)) = 4; unfold lnN; decide
 

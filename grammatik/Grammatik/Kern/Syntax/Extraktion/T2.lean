@@ -136,7 +136,7 @@ def miniB : Geteilt.Bau :=
 
 /-- Der Pruefer entscheidet per Rechnung: eine falsche Marke liesse dieses
     `rfl` zur Elaborationszeit scheitern -- der laute Bruch. -/
-example : Geteilt.pruefeUngeteilt miniB 3 = true := rfl
+example : Geteilt.pruefeUngeteilt miniB 3 = true := by rfl
 
 /-- Faden 0 erreicht Traeger 7 wirklich -- durch den errechneten Bau. -/
 theorem mini_errecht : Geteilt.ErreichtBau miniB 3 0 7 :=

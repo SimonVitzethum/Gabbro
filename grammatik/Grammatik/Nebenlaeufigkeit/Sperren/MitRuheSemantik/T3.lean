@@ -605,7 +605,7 @@ theorem rumpf_mitRuhe_verhalten (P : Programm D) (O : Orakel D) (passes : Nat)
 theorem rumpf_ruhe_verhalten (P : Programm D) (O : Orakel D) (passes : Nat)
     (R' : ∀ f : D.mitRuhe.Fn, World D.mitRuhe → Env D.mitRuhe (D.mitRuhe.params f) →
       RufAusgang f) (σ : World D.mitRuhe) (ρ : Env D.mitRuhe (D.mitRuhe.params none)) :
-    execEnd O.mitRuhe passes R' (P.mitRuhe.rumpf none) σ ρ = .zurueck σ () := rfl
+    execEnd O.mitRuhe passes R' (P.mitRuhe.rumpf none) σ ρ = .zurueck σ () := by rfl
 
 
 /-! ## 9. Every call behaves as in `P` (`rufAt`) -/

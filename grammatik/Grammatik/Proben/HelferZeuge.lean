@@ -242,7 +242,7 @@ def ntSp : Speicher ntD := ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g 
 def ntInit : Faden → Σ f : ntD.Fn, Env ntD (ntD.params f) :=
   fun t => if t = 0 then ⟨ntSetze, .nil⟩ else ⟨ntFrei, .nil⟩
 
-theorem ntInit_null : ntInit 0 = ⟨ntSetze, .nil⟩ := rfl
+theorem ntInit_null : ntInit 0 = ⟨ntSetze, .nil⟩ := by rfl
 
 theorem ntInit_sonst {t : Faden} (ht : t ≠ 0) : ntInit t = ⟨ntFrei, .nil⟩ := if_neg ht
 
@@ -356,11 +356,11 @@ theorem ntP_zertifiziert : ∀ M : RufMaschineG ntD,
 
 theorem ntM0_faden0 : (RufStartG ntP ntSp ntInit).faeden 0 =
     ⟨[], ⟨ntSetze, .nil, ntSp.welt [], ⟨false, [], [], .nil, .ende ntRumpfSetze⟩⟩, [],
-      [RufEreignisF.eintritt ntSetze .nil (ntSp.welt [])]⟩ := rfl
+      [RufEreignisF.eintritt ntSetze .nil (ntSp.welt [])]⟩ := by rfl
 
 theorem ntM0_faden1 : (RufStartG ntP ntSp ntInit).faeden 1 =
     ⟨[], ⟨ntFrei, .nil, ntSp.welt [], ⟨false, [], [], .nil, .ende ntRumpfFrei⟩⟩, [],
-      [RufEreignisF.eintritt ntFrei .nil (ntSp.welt [])]⟩ := rfl
+      [RufEreignisF.eintritt ntFrei .nil (ntSp.welt [])]⟩ := by rfl
 
 theorem ntM0_offen (t : Faden) : offen ((RufStartG ntP ntSp ntInit).faeden t).spur = [] := by
   by_cases ht : t = 0

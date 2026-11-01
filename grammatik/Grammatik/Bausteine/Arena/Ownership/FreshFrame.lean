@@ -28,7 +28,7 @@ def State.freshFrame (s : State) (extent : Nat) (caller : Frame) : Frame :=
   ⟨caller.thread, 1 + max caller.activation (activationMax (s.activations extent))⟩
 
 theorem State.freshFrame_thread (s : State) (extent : Nat) (caller : Frame) :
-    (s.freshFrame extent caller).thread = caller.thread := rfl
+    (s.freshFrame extent caller).thread = caller.thread := by rfl
 
 theorem State.freshFrame_ne_caller (s : State) (extent : Nat) (caller : Frame) :
     s.freshFrame extent caller ≠ caller := by

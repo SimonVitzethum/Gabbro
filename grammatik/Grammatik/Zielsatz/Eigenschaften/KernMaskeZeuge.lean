@@ -149,7 +149,7 @@ theorem wM0_offen (m : Bool) (f : Faden) : offen ((wM0 m).faeden f).spur = [] :=
   | 0 => rfl
   | _ + 1 => rfl
 
-theorem wH0 (m : Bool) : HandlerVon (wP m) (wM0 m) 0 := rfl
+theorem wH0 (m : Bool) : HandlerVon (wP m) (wM0 m) 0 := by rfl
 
 theorem w_handler (m : Bool) (t : Faden) (h : HandlerVon (wP m) (wM0 m) t) : t = 0 := by
   match t, h with

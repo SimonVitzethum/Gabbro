@@ -71,7 +71,7 @@ theorem restore_store_zeuge :
   ⟨rfl, restore_store _⟩
 
 theorem stored_frames_zeuge :
-    (frames (restore (store (M1G.faeden 0)))).length = 2 := rfl
+    (frames (restore (store (M1G.faeden 0)))).length = 2 := by rfl
 
 /-- The original machine's nonempty call step, not an invented call calculus. -/
 theorem dispatcher_source_zeuge :

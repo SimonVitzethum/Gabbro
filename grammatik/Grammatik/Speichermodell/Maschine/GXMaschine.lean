@@ -195,7 +195,7 @@ theorem fadenInvX_start (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (
     (lebt0 : Faden → Bool) :
     FadenInvX P O passes Tg (RufStartG P sp init) (FadenStart P sp init lebt0) where
   lauf := .start
-  schlaeft _ _ := rfl
+  schlaeft _ _ := by rfl
   joinFrei _ h := absurd rfl h
   joinLebt _ h := absurd rfl h
   kindLebt _ _ h := absurd h List.not_mem_nil
