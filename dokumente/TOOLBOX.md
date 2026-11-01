@@ -33,12 +33,6 @@ theorem, or a stage in one of the four. The old counters (mark ratchets, documen
 the mutation run, the C-emitter stages) are retired (the C emitter itself was removed on 2026-10-17, tag `archiv/c-emitter-2026-10-17`); their figures in other documents are dated
 results, not guarded values.
 
-**The Lean guardian under the RAM rules.** `pruefe-lean.py --stufe 7,8` runs single stages; `--seriell` (the
-default under 24 GiB available) builds `stage0/` and `runner/` with one `lean -j1 -DElab.async=false -M4608` at a time on
-a shared slot lock, module by module in Lake's order (`teile/lean-seriell.py` is Lake's `lean`: Lake 5.0.0 has no job
-limit), and holds both slots for the grammar stages; every process runs in a no-swap scope and waits for 8 GiB. A step
-killed for lack of memory or without its memory/lock in time is "not measured" (exit `2`), as is a `--stufe` subset.
-
 **Heavy runs — one at a time, with `free -g` beside them:** `cargo build`, `cargo test --no-fail-fast`,
 `lake build`, the acceptance run. Never two in one tree (`cargo test` rebuilds the model with `lake` and
 replaces the `.olean` files running `lean` processes read). An agent gets its own working directory.
@@ -495,32 +489,3 @@ a binary older than its sources (`cargo build`, never `touch`), a stale `program
 agent tree not on `master`, two runs in one tree. A guardian that aborts reads like one that passed:
 look for what it no longer printed.
 
-## 6. The batch build: one build checks four to six agents (planned 2026-11-01)
-
-Owner request: many agents, two Lean slots, so agents stop building on their own. One **batch builder**
-(`instrumente/teile/sammelbau.py`, a helper part, not a fifth guardian) builds the work of several agents at
-once and reports to each of them.
-
-1. **Submit, do not build.** An agent commits on its branch and runs `sammelbau.py submit` (branch, HEAD,
-   changed modules, its probes). The request is a file in `~/.cache/gabbro-sammelbau/queue/`. The agent keeps
-   working and later reads `~/.cache/gabbro-sammelbau/results/<branch>.md`.
-2. **Batch.** The builder starts a batch when 4–6 requests wait, or 30 minutes after the oldest one. It
-   keeps ONE integration worktree beside the checkout with a persistent, warm, incremental `.lake` (the module
-   system makes incremental builds cheap). Per batch: reset to `master`, then `git merge --no-ff` each
-   requested branch in submission order; a branch that conflicts is left out and gets a conflict report.
-3. **One build.** `grammatik/` (both slot locks, `MemAvailable - 2G`), then `stage0/` and the runner through
-   the serial wrapper (one `lean -j4 -DElab.async=true -M4608` per slot), the axiom audit (`gabbro_ziel` and
-   every new theorem), the sorry/layout scan, the IR probes and the I/O probes. Every process under a no-swap
-   scope.
-4. **Attribute.** Every error is mapped to the branch that changed its file; an error in an unchanged file
-   goes to the branches that changed one of its imports. If the attribution is not unique, the builder
-   rebuilds without the suspect branch (incremental, so cheap) instead of guessing.
-5. **Retry without the red ones.** Red or conflicting branches leave the batch, the rest is rebuilt
-   incrementally until it is green or empty. A green batch is a merge candidate: root reviews it and moves
-   `master` forward; nothing is pushed by the builder.
-6. **Quick checks against shared artifacts.** Between batches an agent may check ONE changed module against
-   the integration tree's `.olean` files (read-only, `LEAN_PATH` overlay, one slot, 5G) instead of rebuilding
-   its dependencies. It never writes into the integration `.lake`.
-7. **Results.** Per branch and batch: green/red/conflict/not measured (exit 2 semantics), its errors with file
-   and line, audits, probe counts, wall time and peak memory. A batch that could not measure everything is
-   never reported green.
