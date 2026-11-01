@@ -1,0 +1,29 @@
+// Wide unsigned operands that are not constants: bit identities, shifts by runtime counts, division identities.
+module ir_probe {
+impl fn bits(a : u64 in 0 .. 1267650600228229401496703205375, b : u64 in 1 .. 1267650600228229401496703205375, n : u8 in 0 .. 27) -> u32 in 0 .. 255 effects { pure } {
+    let x = a & b;
+    let o = a | b;
+    let e = a ^ b;
+    if x + o == a + b {
+        if e + x + x == a + b {
+            let l = a << n;
+            let r = l >> n;
+            if r == a {
+                let q = a / b;
+                let m = a % b;
+                if q * b + m == a { return 1; }
+            }
+        }
+    }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 2000 effects { pure } {
+    let t0 = bits(0, 1, 0);
+    let t1 = bits(1267650600228229401496703205375, 1267650600228229401496703205375, 5);
+    let t2 = bits(1267650600228229401496703205375, 1, 10);
+    let t3 = bits(18446744073709551616, 9223372036854775808, 15);
+    let t4 = bits(12345678901234567890123456789, 98765432109876543210987, 20);
+    let t5 = bits(633825300114114700748351602693, 1180591620717411303427, 25);
+    return t0 + t1 + t2 + t3 + t4 + t5;
+}
+}

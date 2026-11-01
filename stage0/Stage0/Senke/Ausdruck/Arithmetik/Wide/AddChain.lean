@@ -12,23 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-/-- Instructions over natural slot numbers. -/
-abbrev cn (o a b c : Nat) : II := ci o a b c
-
-/-- One limb: `tb := B ^ m`, `A := A + tb + c`, the new carry from both partial additions. -/
-def addLimbC (A B m c t : Nat) : List II :=
-  [cn 10 t B m, cn 3 (t + 1) A t, cn 27 (t + 2) (t + 1) A, cn 3 (t + 3) (t + 1) c,
-   cn 27 (t + 4) (t + 3) (t + 1), cn 2 A (t + 3) 0, cn 9 c (t + 2) (t + 4)]
-
-def addChain : Nat → Nat → Nat → Nat → Nat → Nat → List II
-  | 0, _, _, _, _, _ => []
-  | n + 1, a, b, m, c, t => addLimbC a b m c t ++ addChain n (a + 1) (b + 1) m c t
-
-/-- Add (`mask = 0`, `carry = 0`) or subtract (`mask = -1`, `carry = 1`). -/
-def wideAddC (k a : Nat) (mask carry : Int) : List II :=
-  [ci 1 (a + 2 * k : Nat) mask 0, ci 1 (a + 2 * k + 1 : Nat) carry 0] ++
-    addChain k a (a + k) (a + 2 * k) (a + 2 * k + 1) (a + 2 * k + 2)
-
 theorem addLimbC_length (A B m c t : Nat) : (addLimbC A B m c t).length = 7 := rfl
 
 @[simp] theorem addChain_length (n a b m c t : Nat) : (addChain n a b m c t).length = 7 * n := by

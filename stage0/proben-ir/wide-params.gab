@@ -1,0 +1,11 @@
+// Wide operands that are not constants: function parameters with 64-bit ranges multiplied to 128 bits.
+module ir_probe {
+impl fn square(x : u64 in 0 .. 18446744073709551615) -> u64 in 0 .. 340282366920938463426481119284349108225 effects { pure } {
+    return x * x;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let q = square(18446744073709551615);
+    if q == 340282366920938463426481119284349108225 { return 42; }
+    return 0;
+}
+}

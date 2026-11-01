@@ -8,6 +8,7 @@
   from `d` on, and leaves the code untouched. Limb arithmetic is then argued on `aluRun` alone.
 -/
 import Stage0.Senke.Ausdruck.Quant.Frame
+import Stage0.Senke.Ausdruck.Aggregat.WideInt.KernelCode
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

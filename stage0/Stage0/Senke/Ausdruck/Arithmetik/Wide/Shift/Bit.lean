@@ -10,9 +10,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Stages
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def bitC (k a oM oX : Nat) (srcB : Nat → Nat) (l : List Nat) : List II :=
-  seqC (fun j => bitP oM oX (srcB j) (a + k + 2) (a + k + 4) (a + k + 3) (a + k + 7) (a + k + 8) a j) l
-
 theorem bitC_length (k a oM oX : Nat) (srcB : Nat → Nat) (l : List Nat) :
     (bitC k a oM oX srcB l).length = 4 * l.length := by
   simp only [bitC, seqC_length _ 4 (fun j => bitP_length _ _ _ _ _ _ _ _ _ j)]

@@ -12,8 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Code
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-def wideDivC (k a : Nat) : List II := dvPre k a ++ dvLoop k a (a + 4 * k + 10) (64 * k)
-
 theorem wideDiv_value (k a x y : Nat) (hk : 1 ≤ k) (hy0 : 0 < y) (hy : y < 2 ^ (64 * k))
     (hx : x < 2 ^ (64 * k)) (s : Nat → Runner.W) (hX : ∀ j, j < k → s (a + j) = lmb (x : Int) j)
     (hD : ∀ j, j < k → s (a + k + j) = lmb (y : Int) j) :

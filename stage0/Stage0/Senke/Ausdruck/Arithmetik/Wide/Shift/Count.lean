@@ -10,11 +10,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Bit
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def shPre (k a : Nat) : List II :=
-  [ci 1 (a + k + 8 : Nat) 6 0, cn 12 (a + k + 1) (a + k) (a + k + 8), ci 1 (a + k + 7 : Nat) 63 0,
-   cn 8 (a + k + 2) (a + k) (a + k + 7), cn 4 (a + k + 3) (a + k + 7) (a + k + 2),
-   ci 1 (a + k + 4 : Nat) 1 0, ci 1 (a + k + 5 : Nat) 0 0]
-
 @[simp] theorem shPre_length (k a : Nat) : (shPre k a).length = 7 := rfl
 
 theorem count_q (n : Nat) (hn : n < 2 ^ 64) :

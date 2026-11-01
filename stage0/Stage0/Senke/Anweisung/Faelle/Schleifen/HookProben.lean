@@ -203,7 +203,7 @@ theorem exprCost_zeuge :
     lowE FnptrProben.callLayout e 4 = some
       ([ci 1 4 7 0, ci 1 5 9 0, ci 3 4 4 5, ci 1 5 11 0, ci 3 4 4 5], 6) := by
   constructor
-  · exact ⟨_, ⟨ExprCost.add (ExprCost.add .literal .literal) .literal⟩⟩
+  · exact ⟨_, ⟨ExprCost.add (by decide) (ExprCost.add (by decide) .literal .literal) .literal⟩⟩
   · rfl
 
 def compositeCode : List II :=
@@ -238,7 +238,7 @@ theorem exprCost_execution_zeuge [Runner.IR.Kern] :
       code, ?_, ?_, trivial, wstab_true _ _⟩
     · unfold CodeFar; decide +kernel
     · intro _ x; nomatch x
-  exact (ExprCost.add (ExprCost.add .literal .literal) .literal).sound
+  exact (ExprCost.add (by decide) (ExprCost.add (by decide) .literal .literal) .literal).sound
     (L := FnptrProben.callLayout) (Γ := []) (Λ := []) (reserved := 0) (top := 6)
     (e := .add (.add (.lit 7) (.lit 9)) (.lit 11)) (by rfl) (by decide) pre
 

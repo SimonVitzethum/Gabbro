@@ -31,14 +31,15 @@ theorem eng_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi lo' hi' : Int}
     {e : Expr D Γ Λ (.int lo hi)} {b : Expr D Γ Λ (.int lo' hi')}
     {L : Lay D} {fp : Runner.W} {K d top : Nat} {c : List II} {W : Runner.Mem → Prop}
     {σ₀ σ : World D} {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W}
-    (h : lowE L (reserved := reserved) (.eng e lo' hi' b) d = some (c, top)) (hK : top ≤ K)
+    (h : engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) b d) =
+      some (c, top)) (hK : top ≤ K)
     (ihe : ∀ ce te, lowE L (reserved := reserved) e d = some (ce, te) → te ≤ K → ∀ m pc,
       Pre L m pc fp K d ce ρ W reserved → Ok m pc fp K d ce (Enc L (.int lo hi) (eval σ₀ e σ ρ)))
     (ihb : ∀ cb tb, lowE L (reserved := reserved) b d = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K d cb ρ W reserved → Ok m pc fp K d cb (Enc L (.int lo' hi') (eval σ₀ b σ ρ)))
     (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L (.int lo' hi') (eval σ₀ (.eng e lo' hi' b) σ ρ)) := by
-  simp only [lowE_eqs, engL, bind, Option.bind_eq_some_iff] at h
+  simp only [engL, bind, Option.bind_eq_some_iff] at h
   obtain ⟨⟨ce, te⟩, he, ⟨cb, tb⟩, hb, ⟨ct, tt⟩, ht, h⟩ := h
   split at h
   · next hlen =>
