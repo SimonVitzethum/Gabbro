@@ -9,8 +9,8 @@ were organised) is in `git log`, not here.
 
 ## Current implementation scope: all Gabbro to IR
 
-**ALL AGENTS ON THE C PACKAGES (owner, 2026-11-01).** All four agents (two Claude Sonnet 5.5, two GPT Sol
-6.1) work on the C packages and on the Lean module-system migration below; every other lane (IR-04 floats in
+**ALL AGENTS ON THE C PACKAGES (owner, 2026-11-01).** Two Claude Sonnet 5.5 and SIX GPT Sol 6.1 agents
+(owner, 2026-11-01) work on the C packages and on the Lean module-system migration below; every other lane (IR-04 floats in
 `t3-c3ebf14f`, IR-02 `narrow`, the remaining A/B packages and IR lanes) is paused with its worktree, dirty
 changes and scratch preserved, and resumes only when C is done. Per round, new constructors/types of `Expr`,
 `Stmt`, `Ty` and the declaration fields are added first in ONE central commit (appended at the END of their
