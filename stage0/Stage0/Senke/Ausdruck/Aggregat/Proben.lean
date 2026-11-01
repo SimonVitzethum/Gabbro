@@ -137,7 +137,6 @@ theorem accepted_zeuge :
 /-- Each still unsupported operation fails at its own static representation guard. -/
 theorem refused_zeuge :
     lowE layout (.strCat letter letter) 3 = none ∧
-    lowE layout (.strWeit 2 letter) 3 = none ∧
     lowE layout (.strGet letter (.lit (2 ^ 63))) 3 = none := by decide +kernel
 
 /-- The word representation distinguishes empty from a zero byte and preserves byte 255. -/
@@ -263,6 +262,9 @@ theorem narrow_lowered_zeuge :
     (lowE layout (.strWeit 2 wide) 4).isSome = true ∧ (lowE layout (.strWeit 1 wide) 4).isSome = true ∧
     (lowE layout (.strWeit 0 wide) 4).isSome = true ∧
     (lowE layout (.strGet wide (.lit (-1))) 4).isSome = true ∧
-    (lowE layout (.strGet wide (.lit 7)) 4).isSome = true := by decide +kernel
+    (lowE layout (.strGet wide (.lit 7)) 4).isSome = true ∧
+    (lowE layout (.strWeit 2 letter) 4).isSome = true ∧ (lowE layout (.strWeit 3 empty) 4).isSome = true ∧
+    (lowE layout (.strEq letter wide) 4).isSome = true ∧ (lowE layout (.strEq wide letter) 4).isSome = true ∧
+    (lowE layout (.strEq empty wide) 4).isSome = true := by decide +kernel
 
 end Gabbro.Stage0.Senke.AggregateProbe.Narrow

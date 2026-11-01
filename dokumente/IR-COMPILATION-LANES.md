@@ -1077,3 +1077,27 @@ and that the lowering accepts narrowing to 2, 1 and 0 (and the wide-index `strGe
 
 Measured: closure rebuilt (294 modules reachable from `Stage0`, `Stage0.Haupt`), `Nachpruefung.lean` 346 theorems
 on the standard axioms only (6 axiom-free), layout check passes, 169/169 textual programs.
+
+## IR-03 packed-to-long widening and `strEq` between short and long strings (2026-11-01)
+
+Two forms, verified together in one rebuild (the surface `==` of a short and a long string first widens the short
+operand, so the equality could only be exercised after the widening compiled):
+
+- `strWeit m` of a string of capacity at most one to a long capacity `m >= 2` (`strExpandL`,
+  `Frame/StringExpandCode.lean`): the scratch head computes the length word `[w <> 0]` and the first byte
+  `(w - 256) * [w <> 0]`, `copyWords 2` places them (exact footprint), `constWords` writes the `m - 1` zero words.
+  `expand_words` (the widened encoding), `strExpand_ok`; `strWeit_ok` moved to `StringExpandOk.lean` and now covers
+  widening of short and long strings and narrowing.
+- `strEq` of a string of capacity at most one and a long string, in either operand order (`strEqMixedL`,
+  `Frame/StringEqMixedCode.lean`): the long string's length word and first byte are packed (`0` or `256 + byte`) and
+  compared with the packed word, AND-ed with `len < 2`, branch-free. `pack_word`, `mixedEq_word` (the word
+  identity by cases on both byte lists), `strEqMixedC_ok`, `strEqMixed_ok` (`strEqW_comm` for the swapped order);
+  `strEq_ok` dispatches short, mixed and long. `span_len_read`/`span_byte_read` give the length and first byte word
+  of a long span (used by narrowing, packing and the mixed comparison).
+
+Textual programs `str-widen-short` (length, byte and zero words of widened `""`/`"A"`) and `str-eq-mixed` (both
+operand orders, equal and unequal, empty and one-byte strings against longer ones). Model witnesses in
+`Aggregat/Proben`; the former refusal witness for `strWeit 2` of a one-byte string is now an acceptance witness.
+
+Measured: closure rebuilt (223 modules after the edits), `Nachpruefung.lean` 353 theorems on the standard axioms only
+(6 axiom-free), layout check passes, 171/171 textual programs.

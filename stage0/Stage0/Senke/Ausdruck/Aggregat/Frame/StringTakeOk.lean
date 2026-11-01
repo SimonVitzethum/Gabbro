@@ -48,6 +48,32 @@ theorem strTake_encode (L : Lay D) {n m : Nat} (hn2 : 2 ≤ n) (hm2 : 2 ≤ m) (
   congr 2
   omega
 
+/-- The length word of a long string span. -/
+theorem span_len_read {n b : Nat} (hn2 : 2 ≤ n) {m : Runner.Mem} {fp : Runner.W} (vs : Wert D (.str n))
+    (span : ValueAt L m fp b (.str n) vs) :
+    m.rd64 (slot fp (BitVec.ofNat 64 b)) = some (BitVec.ofNat 64 vs.1.length) := by
+  have wn : valueWords (.str n) = n + 1 := by simp only [valueWords, if_neg (show ¬ n ≤ 1 by omega)]
+  have h0 := span.2 0 (by rw [encodeWords_length, wn]; omega)
+  simpa only [Nat.add_zero, encodeWords, if_neg (show ¬ n ≤ 1 by omega), List.cons_append,
+    List.getElem_cons_zero] using h0
+
+/-- The word of the first byte of a long string span (zero for the empty string). -/
+theorem span_byte_read {n b : Nat} (hn2 : 2 ≤ n) {m : Runner.Mem} {fp : Runner.W} (vs : Wert D (.str n))
+    (span : ValueAt L m fp b (.str n) vs) :
+    m.rd64 (slot fp (BitVec.ofNat 64 (b + 1))) =
+      some (BitVec.ofInt 64 (strGetW (n := n) vs (0 : Nat)).n) := by
+  have wn : valueWords (.str n) = n + 1 := by simp only [valueWords, if_neg (show ¬ n ≤ 1 by omega)]
+  have h1 := span.2 1 (by rw [encodeWords_length, wn]; omega)
+  have hget : (encodeWords L (.str n) vs)[0 + 1]? =
+      some (BitVec.ofInt 64 (strGetW (n := n) vs (0 : Nat)).n) := by
+    simp only [encodeWords, if_neg (show ¬ n ≤ 1 by omega)]
+    exact strBytes_word (n := n) vs 0 (by omega)
+  have inRange : 1 < (encodeWords L (.str n) vs).length := by
+    rw [encodeWords_length, wn]; omega
+  rw [List.getElem?_eq_getElem inRange] at hget
+  rw [h1]
+  exact congrArg some (Option.some.inj hget)
+
 /-- The branch-free minimum of the length word and the new capacity. -/
 theorem take_len_word {len q : Nat} (hl : len < 2 ^ 31) (hq : q < 2 ^ 31) :
     BitVec.ofNat 64 len - (BitVec.ofNat 64 len - BitVec.ofInt 64 (q : Int)) *
@@ -88,10 +114,7 @@ theorem strTakeLen_ok {n q : Nat} (hn2 : 2 ≤ n) (hq2 : 2 ≤ q) (hqn : q < n) 
       ([ci 5 ((d + n + 1 + 2 : Nat) : Int) ((d + n + 1 + 2 : Nat) : Int) ((d + n + 1 + 1 : Nat) : Int)] ++
       [ci 4 d d ((d + n + 1 + 2 : Nat) : Int)])))) ρ W reserved :=
     { (show Pre L m pc fp K d _ ρ W reserved from hp) with ctx := by have := hp.ctx; omega }
-  have lenRead : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some (BitVec.ofNat 64 vs.1.length) := by
-    have h0 := span.2 0 (by rw [encodeWords_length, wn]; omega)
-    simpa only [Nat.add_zero, encodeWords, if_neg (show ¬ n ≤ 1 by omega), List.cons_append,
-      List.getElem_cons_zero] using h0
+  have lenRead := span_len_read hn2 vs span
   obtain ⟨m1, s1, a1, w1, r1, e1⟩ := const_ok (k := q) hpt.left lit (by omega)
   subst e1
   have p1 := hpt.next a1 (by omega : d + n + 1 ≤ d + n + 1 + 1) (by omega)
@@ -177,21 +200,8 @@ theorem strTakePack_ok {n : Nat} (hn2 : 2 ≤ n) (hn31 : n < 2 ^ 31)
       ([ci 3 ((d + n + 1 + 2 : Nat) : Int) ((d + n + 1 + 2 : Nat) : Int) ((d + 1 : Nat) : Int)] ++
       [ci 5 d ((d + n + 1 + 1 : Nat) : Int) ((d + n + 1 + 2 : Nat) : Int)])))) ρ W reserved :=
     { (show Pre L m pc fp K d _ ρ W reserved from hp) with ctx := by have := hp.ctx; omega }
-  have lenRead : m.rd64 (slot fp (BitVec.ofNat 64 d)) = some (BitVec.ofNat 64 vs.1.length) := by
-    have h0 := span.2 0 (by rw [encodeWords_length, wn]; omega)
-    simpa only [Nat.add_zero, encodeWords, if_neg (show ¬ n ≤ 1 by omega), List.cons_append,
-      List.getElem_cons_zero] using h0
-  have byteRead : m.rd64 (slot fp (BitVec.ofNat 64 (d + 1))) =
-      some (BitVec.ofInt 64 (strGetW (n := n) vs (0 : Nat)).n) := by
-    have h1 := span.2 1 (by rw [encodeWords_length, wn]; omega)
-    have hget : (encodeWords L (.str n) vs)[0 + 1]? = some (BitVec.ofInt 64 (strGetW (n := n) vs (0 : Nat)).n) := by
-      simp only [encodeWords, if_neg (show ¬ n ≤ 1 by omega)]
-      exact strBytes_word (n := n) vs 0 (by omega)
-    have inRange : 1 < (encodeWords L (.str n) vs).length := by
-      rw [encodeWords_length, wn]; omega
-    rw [List.getElem?_eq_getElem inRange] at hget
-    rw [h1]
-    exact congrArg some (Option.some.inj hget)
+  have lenRead := span_len_read hn2 vs span
+  have byteRead := span_byte_read hn2 vs span
   obtain ⟨m1, s1, a1, w1, r1, e1⟩ := const_ok (k := 0) hpt.left (by decide) (by omega)
   subst e1
   have p1 := hpt.next a1 (by omega : d + n + 1 ≤ d + n + 1 + 1) (by omega)
@@ -306,51 +316,5 @@ theorem strTake_ok {n q : Nat} (vs : Wert D (.str n)) (s : Option (List II × Na
           exact ⟨Nat.zero_le _, rfl⟩
   · cases h
 
-
-variable {Λ : List (Res D)} {σ₀ σ : World D}
-
-theorem strWeit_ok {n : Nat} (q : Nat) (s : Expr D Γ Λ (.str n))
-    (ih : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
-      Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str n) (eval σ₀ s σ ρ))
-    (h : lowE L (reserved := reserved) (.strWeit q s) d = some (c, top)) (hK : top ≤ K)
-    (hp : Pre L m pc fp K d c ρ W reserved) :
-    ValueOk L m pc fp K d c (.str q) (eval σ₀ (.strWeit q s) σ ρ) := by
-  simp only [lowE_eqs] at h
-  split at h
-  · next hn =>
-    refine Ok.value ?_ (by simp only [valueWords, if_pos hn.2])
-    split at h
-    · next hz =>
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      exact (const_ok hp (by decide) (by omega)).mono fun w hw => by
-        exact ⟨hn.2, by simpa [eval, strWeitW, hz, strN] using hw⟩
-    · next hz =>
-      have hlen : (eval σ₀ s σ ρ).1.length ≤ q := by have := (eval σ₀ s σ ρ).2; omega
-      exact ((ih c top h hK m pc hp).word hn.1).mono fun w hw =>
-        ⟨hn.2, by simpa [eval, strWeitW, List.take_of_length_le hlen] using hw.2⟩
-  · split at h
-    · next hl =>
-      simp only [Option.map_eq_some_iff] at h
-      obtain ⟨⟨cs, ts⟩, hs, out⟩ := h
-      simp only [Prod.mk.injEq] at out
-      obtain ⟨rfl, rfl⟩ := out
-      obtain ⟨m1, run1, changed1, value1⟩ := ih cs ts hs (by omega) m pc hp.left
-      have next := hp.next changed1 (by omega : d ≤ d + n + 1) (by omega : d ≤ K)
-      obtain ⟨m2, run2, changed2, tail⟩ := constWords_ok (L := L) (List.replicate (q - n) 0) (by omega) next
-      have hlen : (eval σ₀ s σ ρ).1.length ≤ n := (eval σ₀ s σ ρ).2
-      have encoded : encodeWords L (.str q) (eval σ₀ (.strWeit q s) σ ρ) =
-          encodeWords L (.str n) (eval σ₀ s σ ρ) ++ List.replicate (q - n) 0 := by
-        simp only [encodeWords, eval, strWeitW, if_neg (show ¬ q ≤ 1 by omega),
-          if_neg (show ¬ n ≤ 1 by omega), List.take_of_length_le (show (eval σ₀ s σ ρ).1.length ≤ q by omega)]
-        simp only [List.append_assoc, List.replicate_append_replicate, List.cons.injEq, true_and, List.append_cancel_left_eq]
-        congr 2
-        omega
-      refine ⟨m2, ?_, changed1.trans (changed2.mono (by omega)), trivial, ?_⟩
-      · simpa only [List.length_append, pc_add] using run1.trans run2
-      · have kept := value1.agree changed2 (hp.frame.agree changed1) (by simp only [valueWords, if_neg (show ¬ n ≤ 1 by omega)]; omega) (by omega)
-        rw [encoded, wordsAt_append]
-        refine ⟨kept.2, ?_⟩
-        simpa only [encodeWords_length, valueWords, if_neg (show ¬ n ≤ 1 by omega), Nat.add_assoc] using tail
-    · exact strTake_ok (eval σ₀ s σ ρ) _ (fun ca ta ha hta m pc hp => ih ca ta ha hta m pc hp) h hK hp
 
 end Gabbro.Stage0.Senke

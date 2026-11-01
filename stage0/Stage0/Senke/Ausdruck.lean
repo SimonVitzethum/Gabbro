@@ -29,6 +29,8 @@ import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
 import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
 import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
 import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
 import Stage0.Senke.Ausdruck.Aggregat.Kopie
 import Stage0.Senke.Ausdruck.Aggregat.Layout
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
@@ -541,6 +543,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     else none
   | _, _, @Expr.strEq _ _ _ n m s t, d =>
     if n ≤ 1 ∧ m ≤ 1 then wordL 14 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1))
+    else if n ≤ 1 ∨ m ≤ 1 then
+      strEqMixedL n m d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + valueWords (.str n)))
     else strEqLongL n m d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + (n + 1)))
   | _, _, @Expr.strLt _ _ _ n m s t, d =>
     if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE L (reserved := reserved) s d) (lowE L (reserved := reserved) t (d + 1)) else none
@@ -550,6 +554,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       (lowE L (reserved := reserved) s d).map fun a =>
         (a.1 ++ (constWords (List.replicate (m - n) 0) (d + n + 1)).1,
           max a.2 (max (constWords (List.replicate (m - n) 0) (d + n + 1)).2 (d + m + 1)))
+    else if n ≤ 1 then
+      strExpandL n m d (lowE L (reserved := reserved) s d) (constWords (List.replicate (m - 1) 0) (d + 2))
     else strTakeL n m d (lowE L (reserved := reserved) s d)
   | _, _, .none n, d => some (constWords (encodeWords L (.opt n) none) d)
   | _, _, @Expr.some _ _ _ n e, d =>

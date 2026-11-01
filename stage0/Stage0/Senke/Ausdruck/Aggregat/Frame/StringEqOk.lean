@@ -1,6 +1,7 @@
 /- Subject: Generic correctness of the equality of two strings of capacity at least two. -/
 import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareOk
 import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEq
+import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedOk
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -121,6 +122,9 @@ theorem strEq_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str
       Pre L m pc fp K (d + 1) ca ρ W reserved → ValueOk L m pc fp K (d + 1) ca (.str q) (eval σ₀ t σ ρ))
     (ihl : ∀ ca ta, lowE L (reserved := reserved) t (d + (n + 1)) = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K (d + (n + 1)) ca ρ W reserved → ValueOk L m pc fp K (d + (n + 1)) ca (.str q) (eval σ₀ t σ ρ))
+    (ihm : ∀ ca ta, lowE L (reserved := reserved) t (d + valueWords (.str n)) = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K (d + valueWords (.str n)) ca ρ W reserved →
+        ValueOk L m pc fp K (d + valueWords (.str n)) ca (.str q) (eval σ₀ t σ ρ))
     (h : lowE L (reserved := reserved) (.strEq s t) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c .bool (eval σ₀ (.strEq s t) σ ρ) := by
@@ -128,6 +132,8 @@ theorem strEq_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str
   split at h
   · next short =>
     exact strCompare_ok false s t ihs iht (by rw [if_pos short]; exact h) hK hp
-  · exact strEqLong_ok (eval σ₀ s σ ρ) (eval σ₀ t σ ρ) _ _ ihs ihl h hK hp
+  · split at h
+    · exact strEqMixed_ok (eval σ₀ s σ ρ) (eval σ₀ t σ ρ) _ _ ihs ihm h hK hp
+    · exact strEqLong_ok (eval σ₀ s σ ρ) (eval σ₀ t σ ρ) _ _ ihs ihl h hK hp
 
 end Gabbro.Stage0.Senke

@@ -1,0 +1,32 @@
+// Equality between a string of at most one byte and a longer string, in both operand orders.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 300 effects { pure } {
+    let a : string max 1 = "A";
+    let e : string max 1 = "";
+    let l : string max 3 = "A";
+    let m : string max 3 = "AB";
+    let n : string max 3 = "";
+    if a == l {
+        if l == a {
+            if e == n {
+                if n == e {
+                    if a == m {
+                        return 1;
+                    }
+                    if m == a {
+                        return 2;
+                    }
+                    if e == l {
+                        return 3;
+                    }
+                    if l == e {
+                        return 4;
+                    }
+                    return 42;
+                }
+            }
+        }
+    }
+    return 5;
+}
+}

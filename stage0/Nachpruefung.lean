@@ -192,6 +192,8 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.strClamped_byte
 #print axioms Gabbro.Stage0.Senke.strCompare_ok
 #print axioms Gabbro.Stage0.Senke.strWeit_ok
+#print axioms Gabbro.Stage0.Senke.strExpand_ok
+#print axioms Gabbro.Stage0.Senke.expand_words
 #print axioms Gabbro.Stage0.Senke.strTake_ok
 #print axioms Gabbro.Stage0.Senke.strTakeLen_ok
 #print axioms Gabbro.Stage0.Senke.strTakePack_ok
@@ -398,6 +400,11 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.wordsAt_arrSet
 #print axioms Gabbro.Stage0.Senke.strEqLong_ok
 #print axioms Gabbro.Stage0.Senke.strEq_ok
+#print axioms Gabbro.Stage0.Senke.strEqMixed_ok
+#print axioms Gabbro.Stage0.Senke.strEqMixedC_ok
+#print axioms Gabbro.Stage0.Senke.mixedEq_word
+#print axioms Gabbro.Stage0.Senke.span_len_read
+#print axioms Gabbro.Stage0.Senke.span_byte_read
 #print axioms Gabbro.Stage0.Senke.xorOrSpan_ok
 #print axioms Gabbro.Stage0.Senke.strEq_words_iff
 #print axioms Gabbro.Stage0.Senke.retFreiGrundArms_istZ

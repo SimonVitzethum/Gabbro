@@ -1,0 +1,10 @@
+// A string of at most one byte widened to a longer capacity becomes a length word, the byte and zero words.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 700 effects { pure } {
+    let a : string max 1 = "A";
+    let e : string max 1 = "";
+    let b : string max 3 = a;
+    let f : string max 4 = e;
+    return lenof(b) + lenof(f) * 10 + b[0] + b[1];
+}
+}
