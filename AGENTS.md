@@ -70,7 +70,13 @@ expanding infrastructure for a small subset.
   **Exception (owner, 2026-11-01):** pure source-to-G exports in `grammatik/Grammatik/Parser/Elab/*` for
   forms whose canonical model rule already exists may be added, batched into ONE change by ONE agent with
   one grammar rebuild (inside the two-slot limit), `gabbro_ziel` still on the standard axioms and the Lean
-  guardian afterwards. Missing model rules remain an owner decision.
+  guardian afterwards.
+  **Model extension (owner, 2026-11-01):** wherever the Lean model or machine G is not strong or complete
+  enough for an existing source form, extend it there (syntax, G semantics, `Akzeptiert`, proofs) instead
+  of dropping the form; this covers the C packages of the export catalogue in
+  `dokumente/IR-COMPILATION-LANES.md`. Every extension keeps `gabbro_ziel` on the standard axioms, never
+  weakens a guarantee, describes any change of meaning of `Spec.lean` in its commit, and is followed by the
+  Lean guardian. Only one agent at a time changes `grammatik/`.
 - **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
   slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 
