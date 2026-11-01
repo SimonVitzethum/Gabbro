@@ -1,8 +1,8 @@
 //! **Export `.gab` to a G program term (`gabbro lean-g`), over snippets.**
 //!
-//! The file half is `beispiele/104-referenz.gab` (mechanical export checks
+//! The file half is `beispiele/0104-referenz.gab` (mechanical export checks
 //! with `./lean-probe`, pinned in `grammatik/Grammatik/Korrespondenz/Korpus/Export104.lean`) and
-//! `beispiele/108-disjoint-start-locks.gab` (`Export108.lean`); what stands
+//! `beispiele/0108-disjoint-start-locks.gab` (`Export108.lean`); what stands
 //! here pins the same exporter over snippets -- the two positives and every
 //! refusal code (`LG001`-`LG005`), so a form that stops being refused fails
 //! here even where no corpus file has the shape.
@@ -42,9 +42,9 @@ fn export_file(name: &str) -> String {
 /// collide.
 #[test]
 fn export_104_succeeds() {
-    let text = export_file("104-referenz.gab");
+    let text = export_file("0104-referenz.gab");
     for teil in [
-        "namespace G104_referenz",
+        "namespace G0104_referenz",
         "inductive GTab where",
         "| Konto",
         "inductive GLock where",
@@ -64,9 +64,9 @@ fn export_104_succeeds() {
 /// **108 exports**: one table, two lock-free readers over it, no calls.
 #[test]
 fn export_108_succeeds() {
-    let text = export_file("108-disjoint-start-locks.gab");
+    let text = export_file("0108-disjoint-start-locks.gab");
     for teil in [
-        "namespace G108_disjoint_start_locks",
+        "namespace G0108_disjoint_start_locks",
         "| T",
         "def gSig_read_a",
         "def gSig_read_c",
@@ -90,7 +90,7 @@ fn export_108_succeeds() {
 /// minimum rank taken in the reachable call graph, `HOCH` where there is none.
 #[test]
 fn export_124_succeeds() {
-    let text = export_file("124-two-threads-private.gab");
+    let text = export_file("0124-two-threads-private.gab");
     assert!(text.contains("def gSig_setze"), "{text}");
     // `L` has rank 0, so `HOCH` is 1: the lock-free callees carry it, and
     // `hauptA`, which takes `L`, carries 0.
@@ -635,9 +635,9 @@ fn export_lock_invariant_family() {
 /// the family its checker duty stands beside.
 #[test]
 fn export_118_succeeds() {
-    let text = export_file("118-sperrinvariante-erhaltung.gab");
+    let text = export_file("0118-sperrinvariante-erhaltung.gab");
     for teil in [
-        "namespace G118_sperrinvariante_erhaltung",
+        "namespace G0118_sperrinvariante_erhaltung",
         "def gS : SperrInv gD where",
         "by decide",
     ] {
@@ -752,9 +752,9 @@ fn accepts_locks_block() {
 /// takes instead of holding.
 #[test]
 fn export_119_succeeds() {
-    let text = export_file("119-sperrinvariante-bloecke.gab");
+    let text = export_file("0119-sperrinvariante-bloecke.gab");
     for teil in [
-        "namespace G119_sperrinvariante_bloecke",
+        "namespace G0119_sperrinvariante_bloecke",
         "(.locks",
         "example : programmImFragmentG gP gFs = true := by decide",
     ] {
@@ -1013,7 +1013,7 @@ fn accepts_bool_field() {
 /// and the `bool`-field reader/writer with no other blocker.
 #[test]
 fn export_15_16_succeed() {
-    for name in ["15-own-traegt-beide-rechte.gab", "16-by-ops-am-feld.gab"] {
+    for name in ["0015-own-traegt-beide-rechte.gab", "0016-by-ops-am-feld.gab"] {
         let text = export_file(name);
         assert!(
             text.contains("example : programmImFragmentG gP gFs = true := by decide"),
@@ -1052,9 +1052,9 @@ fn accepts_conversion_grenzwort() {
 #[test]
 fn export_62_69_73_succeed() {
     for name in [
-        "62-grenzwort-im-ausdruck.gab",
-        "69-integer-conversion.gab",
-        "73-sugar-widths.gab",
+        "0062-grenzwort-im-ausdruck.gab",
+        "0069-integer-conversion.gab",
+        "0073-sugar-widths.gab",
     ] {
         let text = export_file(name);
         assert!(
@@ -1097,7 +1097,7 @@ fn refuses_bare_call_of_reason_fn() {
 /// zero-memory `gSp0` and the declared starts (104 declares none).
 #[test]
 fn export_104_carries_the_unit() {
-    let text = export_file("104-referenz.gab");
+    let text = export_file("0104-referenz.gab");
     for teil in [
         "import Grammatik.Zielsatz.Kern.Spec",
         "def gLs : List gD.Lock",
@@ -1119,7 +1119,7 @@ fn export_104_carries_the_unit() {
 /// `gReq` definition.
 #[test]
 fn export_104_requires_stays_true() {
-    let text = export_file("104-referenz.gab");
+    let text = export_file("0104-referenz.gab");
     for teil in ["    | .einzahlen => .tru", "    | .lies => .tru"] {
         assert!(text.contains(teil), "104 export must contain {teil:?}");
     }
@@ -1205,7 +1205,7 @@ fn concurrent_members_travel_to_starts() {
 /// declared starts of the unit.
 #[test]
 fn export_108_starts_travel() {
-    let text = export_file("108-disjoint-start-locks.gab");
+    let text = export_file("0108-disjoint-start-locks.gab");
     assert!(
         text.contains("starts := [⟨g_read_a, .nil⟩, ⟨g_read_c, .nil⟩]"),
         "108 starts travel:\n{text}"
@@ -1538,9 +1538,9 @@ fn float_alias_names_its_form() {
 #[test]
 fn tagged_corpus_programs_export() {
     for name in [
-        "120-tagged-construction.gab",
-        "121-tagged-static-init.gab",
-        "34-markierter-wert.gab",
+        "0120-tagged-construction.gab",
+        "0121-tagged-static-init.gab",
+        "0034-markierter-wert.gab",
     ] {
         let text = export_file(name);
         assert!(text.contains(".sum ["), "{name} must carry a `Ty.sum`:\n{text}");
@@ -1784,11 +1784,11 @@ fn refuses_bool_slot_index() {
 /// result types); a lane that closes it there turns these two tests.
 #[test]
 fn bit_range_remainder_stays_refused() {
-    let w61 = export("61-invertierung.gab", &tree(&beispiele("61-invertierung.gab")))
+    let w61 = export("0061-invertierung.gab", &tree(&beispiele("0061-invertierung.gab")))
         .expect_err("61 needs model-side narrowed bit types");
     assert_eq!(w61.code, "LG004", "{w61}");
     assert!(w61.message.contains("`let a`") && w61.message.contains("exceeds its annotation"), "{w61}");
-    let w151 = export("151-word-pool-discipline.gab", &tree(&beispiele("151-word-pool-discipline.gab")))
+    let w151 = export("0151-word-pool-discipline.gab", &tree(&beispiele("0151-word-pool-discipline.gab")))
         .expect_err("151 needs model-side narrowed bit types");
     assert_eq!(w151.code, "LG004", "{w151}");
     assert!(w151.message.contains("index w in lies_byte"), "{w151}");
@@ -1835,7 +1835,7 @@ fn masks_irqs_travels_as_maskiert() {
 /// door for it. Pinned on `beispiele/10`, whose first wall it is.
 #[test]
 fn refuses_shared_hold_by_name() {
-    let w = export("10-geteilte-sperre.gab", &tree(&beispiele("10-geteilte-sperre.gab")))
+    let w = export("0010-geteilte-sperre.gab", &tree(&beispiele("0010-geteilte-sperre.gab")))
         .expect_err("shared hold has no G form");
     assert_eq!(w.code, "LG001", "{w}");
     assert!(w.message.contains("shared hold"), "must name the branch: {w}");
@@ -1867,9 +1867,9 @@ fn deadline_drops_as_environment_promise() {
 /// both decidable checks.
 #[test]
 fn export_59_succeeds() {
-    let text = export_file("59-eintritt-nimmt-maskierte-sperre.gab");
+    let text = export_file("0059-eintritt-nimmt-maskierte-sperre.gab");
     for teil in [
-        "namespace G59_eintritt_nimmt_maskierte_sperre",
+        "namespace G0059_eintritt_nimmt_maskierte_sperre",
         "maskiert := fun | .TAKT => true | .RING => false",
         "starts := [⟨g_takt_verteiler, .nil⟩, ⟨g_ruf_verteiler, .nil⟩]",
         "example : programmImFragmentG gP gFs = true := by decide",
@@ -1888,7 +1888,7 @@ fn export_59_succeeds() {
 /// exporter has no rule producing it, so the refusal is an exporter gap.
 #[test]
 fn return_under_locks_stays_refused() {
-    let w = export("125-read-under-lock.gab", &tree(&beispiele("125-read-under-lock.gab")))
+    let w = export("0125-read-under-lock.gab", &tree(&beispiele("0125-read-under-lock.gab")))
         .expect_err("return under locks has no exporter rule (offen125_ret_unter_locks)");
     assert_eq!(w.code, "LG004", "{w}");
     assert!(w.message.contains("falls off with a result"), "{w}");
@@ -1901,7 +1901,7 @@ fn return_under_locks_stays_refused() {
 /// exports with the numbers 42 and 100 in the body and no `doppelt` function.
 #[test]
 fn const_expressions_travel_folded() {
-    let text = export_file("93-const-scalars.gab");
+    let text = export_file("0093-const-scalars.gab");
     assert!(text.contains("(.lit 42)"), "C = doppelt(21) must travel as 42");
     assert!(text.contains("(.lit 100)"), "D = B - 3 must travel as 100");
     assert!(!text.contains("doppelt"), "a const fn is no G function:\n{text}");
@@ -1955,7 +1955,7 @@ fn exports_syscall_gates_as_axioms() {
     ] {
         assert!(text.contains(teil), "the export must contain {teil:?}: {text}");
     }
-    let datei = export_file("174-tor-im-modell.gab");
+    let datei = export_file("0174-tor-im-modell.gab");
     assert!(datei.contains("(.bindAxiom GAx.exit_group"), "{datei}");
 }
 
@@ -1996,7 +1996,7 @@ fn exports_fallible_gates_as_bind_axiom_else() {
         impl fn f() -> u32 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n", tor("bool"))));
     assert_eq!(w.code, "LG007", "{w}");
     assert!(w.message.contains("tor.fehlbar"), "{w}");
-    let datei = export_file("182-fallible-gate.gab");
+    let datei = export_file("0182-fallible-gate.gab");
     assert!(datei.contains("(.bindAxiomElse GAx.write"), "{datei}");
 }
 
@@ -2022,7 +2022,7 @@ fn exports_top_level_gates_as_end_block_binders() {
     ] {
         assert!(text.contains(teil), "the export must contain {teil:?}: {text}");
     }
-    let datei = export_file("181-gate-at-top-level.gab");
+    let datei = export_file("0181-gate-at-top-level.gab");
     assert!(datei.contains("(.bindAxiom GAx.getpid .nil rfl"), "{datei}");
 }
 

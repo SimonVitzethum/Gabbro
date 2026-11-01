@@ -22,8 +22,8 @@ fn lauf(argumente: &[&str]) -> (String, String, i32) {
     )
 }
 
-const A: &str = "beispiele/74-syscall-schreiben.gab";
-const B: &str = "beispiele/182-fallible-gate.gab";
+const A: &str = "beispiele/0074-syscall-schreiben.gab";
+const B: &str = "beispiele/0182-fallible-gate.gab";
 
 #[test]
 fn zwei_programme_mit_verschiedener_annahme_fallen_ohne_das_flag_als_eines() {

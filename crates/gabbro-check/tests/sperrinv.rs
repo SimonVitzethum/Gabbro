@@ -31,8 +31,8 @@ fn datei(name: &str) -> String {
 #[test]
 fn positive_bleiben_sauber() {
     for name in [
-        "beispiele/118-sperrinvariante-erhaltung.gab",
-        "beispiele/119-sperrinvariante-bloecke.gab",
+        "beispiele/0118-sperrinvariante-erhaltung.gab",
+        "beispiele/0119-sperrinvariante-bloecke.gab",
     ] {
         let q = datei(name);
         assert!(fehler(&q).is_empty(), "{name} falls with {:?}", fehler(&q));
@@ -44,12 +44,12 @@ fn positive_bleiben_sauber() {
 fn gifte_fallen_allein() {
     for (name, code) in [
         (
-            "beispiele/gift/940-invariant-liest-ungeschuetzten-traeger.gab",
+            "beispiele/gift/0940-invariant-liest-ungeschuetzten-traeger.gab",
             "N275",
         ),
-        ("beispiele/gift/941-invariant-mit-old.gab", "N276"),
-        ("beispiele/gift/942-invariant-mit-ruf.gab", "N276"),
-        ("beispiele/gift/943-invariant-nennt-nichts.gab", "N277"),
+        ("beispiele/gift/0941-invariant-mit-old.gab", "N276"),
+        ("beispiele/gift/0942-invariant-mit-ruf.gab", "N276"),
+        ("beispiele/gift/0943-invariant-nennt-nichts.gab", "N277"),
     ] {
         let q = datei(name);
         assert_eq!(fehler(&q), vec![code], "{name} draws more than {code}");
@@ -60,7 +60,7 @@ fn gifte_fallen_allein() {
 /// invariant, named by its lock -- the same shape as one line per `ensures`.
 #[test]
 fn ausloesung_wird_gezaehlt() {
-    let (baum, _) = gabbro_syntax::lies("118", &datei("beispiele/118-sperrinvariante-erhaltung.gab"));
+    let (baum, _) = gabbro_syntax::lies("118", &datei("beispiele/0118-sperrinvariante-erhaltung.gab"));
     let p = gabbro_check::pflichten::sammle(&baum);
     let sperr: Vec<_> = p
         .iter()
@@ -73,7 +73,7 @@ fn ausloesung_wird_gezaehlt() {
     let (_, vollstaendig) = gabbro_check::pflichten::zeige(
         &baum,
         "118",
-        &datei("beispiele/118-sperrinvariante-erhaltung.gab"),
+        &datei("beispiele/0118-sperrinvariante-erhaltung.gab"),
     );
     assert!(vollstaendig, "the register loses no kind (E1 inside the tool)");
 }

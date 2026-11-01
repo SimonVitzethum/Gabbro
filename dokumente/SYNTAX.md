@@ -2594,7 +2594,7 @@ lowers, `cc` accepts at `-O0`/`-O2`):
 
 * `u32` without `in`, `f64` without `in` — everywhere — **SUGAR, nothing moves**;
 * signed `/` or `%`, or a `/` with a signed numerator — **refused**; to be measured (W10);
-* `forever` without `progress` — **one site**, `66-transport-rueckgabe.gab`:66;
+* `forever` without `progress` — **one site**, `0066-transport-rueckgabe.gab`:66;
 * `let … else` / `narrow … else` whose block falls off — **refused**; the checker refuses these
   today (`M1`), so the corpus has none;
 * `maintains` — **SUGAR**; an invariant a function writes under and does not `maintains` is

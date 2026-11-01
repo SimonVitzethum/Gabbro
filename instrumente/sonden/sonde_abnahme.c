@@ -4,7 +4,7 @@
  *
  *     frist_abnahme_eingehalten (assume): falsifier sonde_abnahme
  *
- * for `abnahme` (`beispiele/06-annahmen.gab`:97):
+ * for `abnahme` (`beispiele/0006-annahmen.gab`:97):
  *
  *     impl fn abnahme()
  *         effects { reads kerne_gemessen }
@@ -106,7 +106,7 @@ typedef unsigned long long u64;
 
 /* ---- The workload: the emitted gate read's shape, same `-O2`. ---- */
 
-/* Mirrors `static mut kerne_gemessen : u32` (`beispiele/06-annahmen.gab`:123). */
+/* Mirrors `static mut kerne_gemessen : u32` (`beispiele/0006-annahmen.gab`:123). */
 static uint32_t kerne_gemessen;
 
 static uint32_t lies_abnahme(void)

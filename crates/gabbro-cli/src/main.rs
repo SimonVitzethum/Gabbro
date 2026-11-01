@@ -2370,7 +2370,7 @@ fn register_voll() -> String {
 
 /// **The disclosure, in four lines instead of 1 122 words** (2026-08-25).
 ///
-/// **Measured on `beispiele/16-by-ops-am-feld.gab`, a CLEAN file of 39 lines:** the whole run
+/// **Measured on `beispiele/0016-by-ops-am-feld.gab`, a CLEAN file of 39 lines:** the whole run
 /// printed **1 142 words**, and **1 122 of them (98.2 %) were this register.** The result --
 /// the one line somebody ran the command for -- was twenty. *A disclosure that drowns the
 /// finding by a factor of 56 is not read the twentieth time, and is therefore guaranteed to

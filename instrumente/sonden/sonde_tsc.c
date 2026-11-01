@@ -1,7 +1,7 @@
 /* sonde_tsc -- the falsifier for the axiom `rdtsc`.
  *
  * THE ASSUMPTION, as the corpus declares it in one line
- * (`beispiele/06-annahmen.gab`:82):
+ * (`beispiele/0006-annahmen.gab`:82):
  *
  *     axiom rdtsc()           effects { reads zeitzaehler }                falsifier sonde_tsc;
  *
@@ -61,7 +61,7 @@
 #if !defined(__x86_64__) && !defined(__i386__)
 int main(void)
 {
-    printf("sonde sonde_tsc :: rdtsc (beispiele/06-annahmen.gab:82)\n");
+    printf("sonde sonde_tsc :: rdtsc (beispiele/0006-annahmen.gab:82)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -147,7 +147,7 @@ static void pruefe_quelle(u64 (*quelle)(void), long runden, struct befund *b)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_tsc :: rdtsc -- effects { reads zeitzaehler } "
-           "(beispiele/06-annahmen.gab:82)\n");
+           "(beispiele/0006-annahmen.gab:82)\n");
 
     /* **The round count is CAPPED and the cap stands in the output.** A control round costs
      * up to GRENZE reads, so the runner's 2 000 000 would be 128 million of them. */

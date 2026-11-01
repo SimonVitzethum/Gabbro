@@ -1,7 +1,7 @@
 /* sonde_rdtscp -- the falsifier for the axiom `rdtscp`.
  *
  * THE ASSUMPTION, as the corpus declares it
- * (`beispiele/11-grammatikbefunde.gab`:17-20):
+ * (`beispiele/0011-grammatikbefunde.gab`:17-20):
  *
  *     axiom rdtscp() -> u64
  *         requires Has(RDTSCP)
@@ -66,7 +66,7 @@
 #if !defined(__x86_64__) && !defined(__i386__)
 int main(void)
 {
-    printf("sonde sonde_rdtscp :: rdtscp (beispiele/11-grammatikbefunde.gab:17)\n");
+    printf("sonde sonde_rdtscp :: rdtscp (beispiele/0011-grammatikbefunde.gab:17)\n");
     printf("      no RDTSCP on this architecture -- not runnable here\n");
     return 77;
 }
@@ -183,7 +183,7 @@ static long verschraenkt(u64 (*mitte)(void), long runden)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_rdtscp :: rdtscp -- requires Has(RDTSCP), effects { reads uhr } "
-           "(beispiele/11-grammatikbefunde.gab:17)\n");
+           "(beispiele/0011-grammatikbefunde.gab:17)\n");
 
     /* **The round count is CAPPED and the cap stands in the output.** A control round costs
      * up to GRENZE reads, so the runner's 2 000 000 would be 128 million of them. */

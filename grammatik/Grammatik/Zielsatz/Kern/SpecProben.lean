@@ -136,7 +136,7 @@ def probeF1_widerlegt : Prop := NutzerWiderlegt f1P
 def probeD_widerlegt : Prop := NutzerWiderlegt (fvP false)
 
 /-- The `forever` variant with invariant `true` (the shape of `manifest_pruefen`,
-    `beispiele/04-schleifen.gab`) fails (b) too: at budget `1` it returns under `ensures false`. -/
+    `beispiele/0004-schleifen.gab`) fails (b) too: at budget `1` it returns under `ensures false`. -/
 def probeD_wahr_widerlegt : Prop := NutzerWiderlegt (fvP true)
 
 /-- A body that breaks a declared table invariant fails (b). -/

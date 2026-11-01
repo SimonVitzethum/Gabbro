@@ -1,10 +1,10 @@
 /-
   File:      Grammatik/Export104.lean
-  Subject:   the mechanical export of `beispiele/104-referenz.gab` held
+  Subject:   the mechanical export of `beispiele/0104-referenz.gab` held
              against its hand translation (`Referenz104.lean`, `r4P`).
 
   The `namespace G104_referenz` block below is pasted verbatim from the
-  output of `gabbro lean-g beispiele/104-referenz.gab` (only its `import`
+  output of `gabbro lean-g beispiele/0104-referenz.gab` (only its `import`
   line is left out; this file imports instead). What follows it is the
   correspondence: the decidable checks on the export, the same checks on
   the hand translation, and the declaration data both agree on.
@@ -199,7 +199,7 @@ theorem export104_data :
 
 /-! ## CUTS:
 
-  What is proved: the mechanical export of `beispiele/104-referenz.gab`
+  What is proved: the mechanical export of `beispiele/0104-referenz.gab`
   checks (`export104_fragment`, `export104_fuss`); it passes the same two
   decidable checks as the hand translation (`export104_checks`); every
   piece of declaration data agrees (`export104_data`); the `ensures` and

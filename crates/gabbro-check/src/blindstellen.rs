@@ -615,7 +615,7 @@ fn keine_zelle(form: &str, stellung: &str) -> Option<&'static str> {
     // > written -- it is awaited, published or exchanged, and that is the point of the
     // > word"~~
     //
-    // The cross-check flagged it as a CONTRADICTION: `beispiele/gift/301-tor-ohne-paarung.gab`
+    // The cross-check flagged it as a CONTRADICTION: `beispiele/gift/0301-tor-ohne-paarung.gab`
     // writes `let versiegelt = VERSIEGELT;` -- a plain load of an atomic -- and it is the
     // only site of that shape in the whole tree. Measured the same day against the
     // UNCHANGED checker: a plain load passes with 0 errors, a plain store passes with 0

@@ -55,7 +55,7 @@ struct Fahne {
     lebendig: &'static [&'static str],
 }
 
-const DATEI: &str = "beispiele/16-by-ops-am-feld.gab";
+const DATEI: &str = "beispiele/0016-by-ops-am-feld.gab";
 
 /// **Every flag spelling `crates/gabbro-cli/src/` accepts.**
 ///
@@ -70,7 +70,7 @@ const FAHNEN: &[Fahne] = &[
         // Only two of the 63 clean examples have a computed hull that differs from the
         // written one at all; on the other 61 this flag is invisible, and a liveness call
         // taken from them would have proved nothing.
-        lebendig: &["abi", "--computed", "beispiele/29-undurchsichtig.gab"],
+        lebendig: &["abi", "--computed", "beispiele/0029-undurchsichtig.gab"],
     },
     Fahne {
         erstname: "--compare",
@@ -83,7 +83,7 @@ const FAHNEN: &[Fahne] = &[
         // **`--wide` alone changes nothing on any of the 63 examples** -- it widens the
         // COMPARISON, so its liveness only exists next to `--compare`. Measured, not
         // assumed: 0 of 63 alone, 63 of 63 together.
-        lebendig: &["abi", "--compare", "--wide", "beispiele/01-tabelle.gab"],
+        lebendig: &["abi", "--compare", "--wide", "beispiele/0001-tabelle.gab"],
     },
     Fahne {
         erstname: "--total",
@@ -139,8 +139,8 @@ const FAHNEN: &[Fahne] = &[
         lebendig: &[
             "abi",
             "--unit",
-            "beispiele/01-tabelle.gab",
-            "beispiele/02-geraet.gab",
+            "beispiele/0001-tabelle.gab",
+            "beispiele/0002-geraet.gab",
         ],
     },
     Fahne {
@@ -151,8 +151,8 @@ const FAHNEN: &[Fahne] = &[
         lebendig: &[
             "annahmen",
             "--per-file",
-            "beispiele/74-syscall-schreiben.gab",
-            "beispiele/182-fallible-gate.gab",
+            "beispiele/0074-syscall-schreiben.gab",
+            "beispiele/0182-fallible-gate.gab",
         ],
     },
     Fahne {
@@ -184,7 +184,7 @@ const FAHNEN: &[Fahne] = &[
     Fahne {
         erstname: "--target",
         zweitname: "",
-        lebendig: &["llvm", "--target", "metal", "beispiele/163-systemruf-variablen.gab"],
+        lebendig: &["llvm", "--target", "metal", "beispiele/0163-systemruf-variablen.gab"],
     },
     Fahne {
         erstname: "--isabelle",

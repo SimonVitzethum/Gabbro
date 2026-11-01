@@ -191,6 +191,17 @@ def too_long(files):
         if n >= MAX_LINES:
             out.append((n, f))
     return sorted(out, reverse=True)
+def documented_targets():
+    """Modules that README.md tells a reader to `lake build` (2026-11-01: a friend's build failed on three module
+    names the layout tool had moved): every one must exist under grammatik/."""
+    text = (ROOT / 'README.md').read_text(encoding='utf-8').replace('\\\n', ' ')
+    missing = []
+    for line in text.split('\n'):
+        if line.strip().startswith('lake build '):
+            for mod in line.split()[2:]:
+                if mod.startswith('Grammatik.') and not (ROOT / 'grammatik' / (mod.replace('.', '/') + '.lean')).is_file():
+                    missing.append(mod)
+    return missing
 
 
 def cmd_check():
@@ -207,12 +218,15 @@ def cmd_check():
         print(f'TOO LONG: {f}: {n} lines (maximum {MAX_LINES - 1})')
     if long:
         print(f'TOO LONG: {len(long)} Lean file(s) have {MAX_LINES} lines or more')
+    missing = documented_targets()
+    for m in missing:
+        print(f'README NAMES A MISSING MODULE: lake build {m}')
     for n, k in bad:
         print(f'TOO FULL: {k or "."}: {n} entries (maximum {MAXIMUM})')
     if unplaced:
         print(f'NOT PLACED: {len(unplaced)} Lean file(s) sit where a rule says they belong elsewhere; '
               f'run: python3 instrumente/teile/lean-layout.py --apply   (first: {next(iter(unplaced))})')
-    if bad or unplaced or plain or long:
+    if bad or unplaced or plain or long or missing:
         return 1
     print(f'lean-layout: every folder holds at most {MAXIMUM} entries; all {len(lean_files(files))} Lean files placed '
           f'and every one is a module.')

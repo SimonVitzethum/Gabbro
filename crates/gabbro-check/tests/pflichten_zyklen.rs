@@ -146,7 +146,7 @@ fn fehler_ueber_datei(datei: &str) -> (String, String, Vec<&'static str>) {
 /// costs nothing only under `decreases`).
 #[test]
 fn h022_self_cycle_falls_exactly_with_h022_k001_and_k008() {
-    let datei = "774-selbstruf-ohne-mass.gab";
+    let datei = "0774-selbstruf-ohne-mass.gab";
     let pfad = gift_wurzel().join(datei);
     let quelle =
         std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));
@@ -168,7 +168,7 @@ fn h022_self_cycle_falls_exactly_with_h022_k001_and_k008() {
 /// either), while `g` and `h` each draw the triple.
 #[test]
 fn h022_half_measured_three_cycle_names_only_bare_members() {
-    let datei = "775-dreierzyklus-halbes-mass.gab";
+    let datei = "0775-dreierzyklus-halbes-mass.gab";
     let pfad = gift_wurzel().join(datei);
     let quelle =
         std::fs::read_to_string(&pfad).unwrap_or_else(|e| panic!("{}: {e}", pfad.display()));

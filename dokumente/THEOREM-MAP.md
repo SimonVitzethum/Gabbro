@@ -691,7 +691,7 @@ threads are excluded by the held signature locks, `fussOrtGB`,
 - `ziel_ort_voll_lokal_aus_rahmen`, `ziel_ort_lokal_aus_rahmen`:
   `ziel_ort_voll` and `ziel_ort` on register-local oracles.
 - `ziel_ort_rahmen_ref104` (`Referenz104Rahmen.lean`): every premise holds
-  jointly on the hand translation of `beispiele/104-referenz.gab`; the
+  jointly on the hand translation of `beispiele/0104-referenz.gab`; the
   conclusion holds on every reachable machine and on the reached run
   (`ensures` of `einzahlen` at its logged return, from the theorem).
 
@@ -820,7 +820,7 @@ head stands at one of these places (a leaf here: a `state` transition).
   machine reachable in two steps (`endeEntf`, `dannTrav`): the stuck state is
   now a refutation, not a certificate.
 - **Corpus 104** (`ziel_ort_ganz_ref104`): every premise jointly on the hand
-  translation of `beispiele/104-referenz.gab` (the new clause by
+  translation of `beispiele/0104-referenz.gab` (the new clause by
   `programmLogikFrei`), the full conclusion on every reachable machine, and
   on the reached run memory `0 -> 100` with the `ensures` of `einzahlen` at
   its logged return. (`ziel_ort_rahmen_ref104` still builds unchanged.)
@@ -1802,7 +1802,7 @@ restated over every budget at the cost of one `decide` each.
 
 *Probe D, rebuilt and refuted* (`ProbeD.lean`, on `zD`; `fvP false` is the
 verdict's `fvP`, `fvP true` its `fwP` -- invariant `true`, the shape of
-`manifest_pruefen` in `beispiele/04-schleifen.gab`):
+`manifest_pruefen` in `beispiele/0004-schleifen.gab`):
 
 - `fvP_koerper0`, `probeD_bei0_zertifiziert`: the per-budget lemma at `0`
   certifies both variants (the defect, kept as a theorem).
@@ -3217,7 +3217,7 @@ refuses `atomic` and `accumulates` items, so both sides read "every written carr
 the footprint legs `N290`-`N293` always paired thread indices, which is the occurrence form of
 `Getrennt`. `N315` (idle duplicate) is retired -- an idle routine is the empty pool and the goal
 covers it -- and gift 976 with it. The exporter's `LG001` for repeated starts (fix lane F4) is
-lifted: `beispiele/157-worker-pool.gab` exports with both occurrences and agrees
+lifted: `beispiele/0157-worker-pool.gab` exports with both occurrences and agrees
 (retired `pruefe-akzeptiert-diff`, 0 findings; its self-test runs the pool positive).
 
 **What is NOT claimed.** Per-core writes (`accumulates … per cpu`) stay unmodelled (OFFEN

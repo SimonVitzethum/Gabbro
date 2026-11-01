@@ -65,8 +65,8 @@ fn pflichten(
 #[test]
 fn vertrag_am_zeigertyp_wird_abgelehnt() {
     for datei in [
-        "gift/247-fnzeiger-mit-requires.gab",
-        "gift/248-fnzeiger-mit-ensures.gab",
+        "gift/0247-fnzeiger-mit-requires.gab",
+        "gift/0248-fnzeiger-mit-ensures.gab",
         "gift/1483-fnzeiger-mit-held.gab",
     ] {
         let (_, _, absagen) = lies(datei);
@@ -77,7 +77,7 @@ fn vertrag_am_zeigertyp_wird_abgelehnt() {
 /// **The arity of an indirect call is the slot's.** Exactly one `N296`.
 #[test]
 fn indirekter_ruf_haelt_stelligkeit_des_typs() {
-    let (_, _, absagen) = lies("gift/959-indirect-call-wrong-arity.gab");
+    let (_, _, absagen) = lies("gift/0959-indirect-call-wrong-arity.gab");
     assert_eq!(fehler(&absagen), ["N296"], "959 must fall exactly once with N296");
 }
 
@@ -92,7 +92,7 @@ fn funktion_mit_held_ist_kein_zeigerwert() {
 /// with no hint and no contract-refinement line in `gabbro obligations`.
 #[test]
 fn zeigertypen_ohne_vertrag_gehen_durch() {
-    for datei in ["126-vergleichssortierung.gab", "127-treiberrueckruf.gab"] {
+    for datei in ["0126-vergleichssortierung.gab", "0127-treiberrueckruf.gab"] {
         let (quelle, baum, absagen) = lies(datei);
         assert!(fehler(&absagen).is_empty(), "{datei}:\n{}", absagen.zeige(&quelle));
         assert!(hinweise(&absagen).is_empty(), "{datei}: hints {:?}", hinweise(&absagen));

@@ -1,6 +1,6 @@
 //! **The "not checked in this run" register: short by default, full on demand.**
 //!
-//! Measured 2026-08-25 on `beispiele/16-by-ops-am-feld.gab`, a CLEAN file of 39 lines: the
+//! Measured 2026-08-25 on `beispiele/0016-by-ops-am-feld.gab`, a CLEAN file of 39 lines: the
 //! run printed **1 142 words, 1 122 of them (98.2 %) this register** -- and twenty the
 //! result. *A disclosure that drowns the finding by a factor of 56 is not read the twentieth
 //! time.*
@@ -24,7 +24,7 @@ fn lauf(argumente: &[&str]) -> String {
     String::from_utf8_lossy(&aus.stdout).into_owned()
 }
 
-const DATEI: &str = "beispiele/16-by-ops-am-feld.gab";
+const DATEI: &str = "beispiele/0016-by-ops-am-feld.gab";
 
 /// The long line a FULL register is recognised by -- it stands in the entry for pass 2 and
 /// in no summary.
@@ -79,7 +79,7 @@ fn die_kuerzung_ruehrt_das_ergebnis_nicht_an() {
     // What stands at the top is the reason for the call. It reads the same in both forms.
     let kurz = lauf(&["pruefe", DATEI]);
     let voll = lauf(&["pruefe", "--paesse", DATEI]);
-    let kopf = "beispiele/16-by-ops-am-feld.gab: 6 items, 0 errors, 0 hints";
+    let kopf = "beispiele/0016-by-ops-am-feld.gab: 6 items, 0 errors, 0 hints";
     assert!(kurz.contains(kopf), "short:\n{kurz}");
     assert!(voll.contains(kopf), "full:\n{voll}");
 }
@@ -131,7 +131,7 @@ fn geschlossene_pipe_ist_kein_absturz() {
 #[test]
 fn die_pipe_verschluckt_das_urteil_nicht() {
     let (rc, err) = durch_bash(
-        r#""$1" pruefe beispiele/gift/104-ensures-index-tippfehler.gab | cat >/dev/null; echo "${PIPESTATUS[0]}""#,
+        r#""$1" pruefe beispiele/gift/0104-ensures-index-tippfehler.gab | cat >/dev/null; echo "${PIPESTATUS[0]}""#,
     );
     assert_eq!(rc, "1", "a finding stays a finding through a pipe\nstderr:\n{err}");
 }

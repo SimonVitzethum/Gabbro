@@ -241,7 +241,7 @@ fn erhebe_lage(baum: &Programm) -> (Traegerlage, Vec<Absage>) {
 
     // Welche erklaerten Traeger erreicht ueberhaupt ein Kontext? Der Schluessel ist der
     // QUALIFIZIERTE Name -- zwei gleichnamige Funktionen in zwei Modulen sind zwei Knoten
-    // (derselbe Fehler, den `140-gleicher-name-fremdes-modul.gab` festhaelt).
+    // (derselbe Fehler, den `0140-gleicher-name-fremdes-modul.gab` festhaelt).
     // **«B39» -- the lock table, and it is the half `kontexte.rs` never had.**
     //
     // `LockDecl::maskiert` is filled by the reader and, until 2026-08-31, read by nobody:

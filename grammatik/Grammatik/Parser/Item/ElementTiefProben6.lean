@@ -71,7 +71,7 @@ theorem t56 : beqTopTief (parseTopTief tt56)
     (.ok [.constT "T" (.array (.atom "u32") (.lit 2))
       (.rows [.one (.lit 1), .one (.lit 2)])]) = true := by
   decide
--- beispiele/92-const-squares.gab:13 (shortened from 64
+-- beispiele/0092-const-squares.gab:13 (shortened from 64
 -- elements; the lane-111 const-table literal). Rust: `Konst`
 -- over an array type with an `arraylit` value -- same shape.
 def tt57 : List Token :=
@@ -103,7 +103,7 @@ theorem t58_lex :
 theorem t58 : beqTopTief (parseTopTief tt58)
     (.ok [.devT "Ring" [("basis", (.atom "u64"))] "mmio" [.reg { name := "AVAIL_IDX", rtyp := (.wrap (.atom "u16")), addr := (.lit 258), klasse := "rw", stage := [], felder := [], voraus := .none, elseF := .none, abhaengt := [] }, .reg { name := "RING_LEN", rtyp := (.atom "u16"), addr := (.lit 260), klasse := "r", stage := [], felder := [], voraus := .none, elseF := .none, abhaengt := [] }]]) = true := by
   decide
--- beispiele/12-umlaufendes-register.gab (the `Ring` device).
+-- beispiele/0012-umlaufendes-register.gab (the `Ring` device).
 -- Rust: `Device` with a `wrapping` register -- the width rides
 -- the type (`wrap`), not the register.
 

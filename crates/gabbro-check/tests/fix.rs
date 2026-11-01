@@ -70,57 +70,57 @@ fn gift_repariert(datei: &str, erwartet: &'static str) {
 
 #[test]
 fn k001_bound_rises_to_computed() {
-    gift_repariert("34-kosten-ueberschritten.gab", "K001");
+    gift_repariert("0034-kosten-ueberschritten.gab", "K001");
 }
 
 #[test]
 fn p001_semicolon_is_inserted() {
-    gift_repariert("623-statement-without-semicolon.gab", "P001");
+    gift_repariert("0623-statement-without-semicolon.gab", "P001");
 }
 
 #[test]
 fn a005_arch_becomes_the_declared_one() {
-    gift_repariert("462-annahme-fuer-fremde-maschine.gab", "A005");
+    gift_repariert("0462-annahme-fuer-fremde-maschine.gab", "A005");
 }
 
 #[test]
 fn f002_literal_is_marked_rounded() {
-    gift_repariert("84-literal-still-gerundet.gab", "F002");
+    gift_repariert("0084-literal-still-gerundet.gab", "F002");
 }
 
 #[test]
 fn e005_write_is_declared() {
-    gift_repariert("28-pure-schreibt.gab", "E005");
+    gift_repariert("0028-pure-schreibt.gab", "E005");
 }
 
 #[test]
 fn e010_read_is_declared() {
-    gift_repariert("62-lesen-ohne-reads.gab", "E010");
+    gift_repariert("0062-lesen-ohne-reads.gab", "E010");
 }
 
 #[test]
 fn n016_demand_is_carried_on() {
-    gift_repariert("127-axiom-merkmal-ungetragen.gab", "N016");
+    gift_repariert("0127-axiom-merkmal-ungetragen.gab", "N016");
 }
 
 #[test]
 fn s001_label_becomes_the_visible_one() {
-    gift_repariert("10-marke-fehlt.gab", "S001");
+    gift_repariert("0010-marke-fehlt.gab", "S001");
 }
 
 #[test]
 fn e006_lock_is_declared() {
-    gift_repariert("30-sperre-nicht-erklaert.gab", "E006");
+    gift_repariert("0030-sperre-nicht-erklaert.gab", "E006");
 }
 
 #[test]
 fn e007_declaration_goes_exclusive() {
-    gift_repariert("41-geteilt-erklaert-exklusiv-genommen.gab", "E007");
+    gift_repariert("0041-geteilt-erklaert-exklusiv-genommen.gab", "E007");
 }
 
 #[test]
 fn e011_touch_is_declared() {
-    gift_repariert("117-touches-deckt-nicht.gab", "E011");
+    gift_repariert("0117-touches-deckt-nicht.gab", "E011");
 }
 
 #[test]
@@ -145,8 +145,8 @@ fn e002_double_pure_becomes_single() {
 /// refusal without one.
 #[test]
 fn e002_contradiction_stays_manual() {
-    let q = gift("13-pure-und-schreiben.gab");
-    let (baum0, mut vor) = gabbro_syntax::lies("13-pure-und-schreiben.gab", &q);
+    let q = gift("0013-pure-und-schreiben.gab");
+    let (baum0, mut vor) = gabbro_syntax::lies("0013-pure-und-schreiben.gab", &q);
     gabbro_check::pruefe(&baum0, &mut vor);
     assert!(fehler(&vor).contains(&"E002"));
     assert!(
@@ -160,27 +160,27 @@ fn e002_contradiction_stays_manual() {
 
 #[test]
 fn k012_deadline_takes_the_declared_arch() {
-    gift_repariert("696-frist-ohne-maschine.gab", "K012");
+    gift_repariert("0696-frist-ohne-maschine.gab", "K012");
 }
 
 #[test]
 fn p033_stray_semicolon_is_removed() {
-    gift_repariert("624-block-form-with-trailing-semicolon.gab", "P033");
+    gift_repariert("0624-block-form-with-trailing-semicolon.gab", "P033");
 }
 
 #[test]
 fn n202_translator_goes_pure() {
-    gift_repariert("872-translator-with-effects.gab", "N202");
+    gift_repariert("0872-translator-with-effects.gab", "N202");
 }
 
 #[test]
 fn n036_uncarryable_word_is_removed() {
-    gift_repariert("243-fnzeiger-verspricht-locks.gab", "N036");
+    gift_repariert("0243-fnzeiger-verspricht-locks.gab", "N036");
 }
 
 #[test]
 fn g002_gate_becomes_the_only_build() {
-    gift_repariert("312-when-auf-etwas-anderem.gab", "G002");
+    gift_repariert("0312-when-auf-etwas-anderem.gab", "G002");
 }
 
 #[test]

@@ -629,7 +629,7 @@ fn format_(f: &Format, quelle: &str, aus: &mut Vec<Stelle>) {
 /// | `transition … requires` | **13** |
 /// | a register inside a `bank` (and its per-field classes) | **17** |
 ///
-/// `beispiele/02-geraet.gab` carries three `transition … requires` and `gabbro zeremonie
+/// `beispiele/0002-geraet.gab` carries three `transition … requires` and `gabbro zeremonie
 /// --je-stelle` listed **none** of them; the two `T3` it printed were the `requires` and
 /// `ensures` of the one `impl fn`. *A census that misses a clause reports a corpus tidier
 /// than the one on disk*, and the direction of that error is the dangerous one: ceremony

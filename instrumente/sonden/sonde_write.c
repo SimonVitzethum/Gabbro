@@ -1,12 +1,12 @@
 /* sonde_write -- the falsifier for `linux_write_contract`.
  *
- * THE OBLIGATION, as it stands in the source (`beispiele/74-syscall-schreiben.gab`:22):
+ * THE OBLIGATION, as it stands in the source (`beispiele/0074-syscall-schreiben.gab`:22):
  *
  *     assume linux_write_contract
  *         "Write keeps its contract on this machine."
  *         falsifier sonde_write;
  *
- * and at the syscall resting on it (`beispiele/74-syscall-schreiben.gab`:35):
+ * and at the syscall resting on it (`beispiele/0074-syscall-schreiben.gab`:35):
  *
  *     assume linux_write_contract falsifier sonde_write;
  *
@@ -57,7 +57,7 @@
 int main(void)
 {
     printf("sonde sonde_write :: linux_write_contract "
-           "(beispiele/74-syscall-schreiben.gab:22)\n");
+           "(beispiele/0074-syscall-schreiben.gab:22)\n");
     printf("      no Linux userland on this machine -- not runnable here\n");
     return 77;
 }
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
     int roehre[2];
     if (pipe(roehre) != 0) {
         printf("sonde sonde_write :: linux_write_contract "
-               "(beispiele/74-syscall-schreiben.gab:22)\n");
+               "(beispiele/0074-syscall-schreiben.gab:22)\n");
         printf("      blind: pipe() failed, errno=%d\n", errno);
         return 1;
     }
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
         ssize_t n = write(roehre[1], hinein, (size_t)LAENGE);
         if (n != LAENGE) {
             printf("sonde sonde_write :: linux_write_contract "
-                   "(beispiele/74-syscall-schreiben.gab:22)\n");
+                   "(beispiele/0074-syscall-schreiben.gab:22)\n");
             printf("      REFUTED leg 1: write returned %ld of %ld\n",
                    (long)n, LAENGE);
             return 1;
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
         ssize_t m = read(roehre[0], heraus, (size_t)LAENGE);
         if (m != LAENGE || memcmp(hinein, heraus, (size_t)LAENGE) != 0) {
             printf("sonde sonde_write :: linux_write_contract "
-                   "(beispiele/74-syscall-schreiben.gab:22)\n");
+                   "(beispiele/0074-syscall-schreiben.gab:22)\n");
             printf("      REFUTED leg 1: read back %ld bytes, content %s\n",
                    (long)m, m == LAENGE ? "differs" : "short");
             return 1;
@@ -148,7 +148,7 @@ int main(int argc, char **argv)
     if (kaputt) {
         /* The positive control: demand the wrong answer on the good path. */
         printf("sonde sonde_write :: linux_write_contract "
-               "(beispiele/74-syscall-schreiben.gab:22)\n");
+               "(beispiele/0074-syscall-schreiben.gab:22)\n");
         printf("      control: good path answers %ld, demanded %ld -- detector falls\n",
                LAENGE, LAENGE + 1);
         return 1;
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
     int gesehen = errno;
     if (n != -1 || gesehen != EBADF) {
         printf("sonde sonde_write :: linux_write_contract "
-               "(beispiele/74-syscall-schreiben.gab:22)\n");
+               "(beispiele/0074-syscall-schreiben.gab:22)\n");
         printf("      REFUTED leg 2: bad-fd write returned %ld, errno=%d (want -1/EBADF=%d)\n",
                (long)n, gesehen, EBADF);
         return 1;
@@ -171,14 +171,14 @@ int main(int argc, char **argv)
     /* Leg 3: the empty transfer. */
     if (pipe(roehre) != 0) {
         printf("sonde sonde_write :: linux_write_contract "
-               "(beispiele/74-syscall-schreiben.gab:22)\n");
+               "(beispiele/0074-syscall-schreiben.gab:22)\n");
         printf("      blind: pipe() failed, errno=%d\n", errno);
         return 1;
     }
     n = write(roehre[1], hinein, 0);
     if (n != 0) {
         printf("sonde sonde_write :: linux_write_contract "
-               "(beispiele/74-syscall-schreiben.gab:22)\n");
+               "(beispiele/0074-syscall-schreiben.gab:22)\n");
         printf("      REFUTED leg 3: zero-length write returned %ld\n", (long)n);
         return 1;
     }
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
     close(roehre[0]);
 
     printf("sonde sonde_write :: linux_write_contract "
-           "(beispiele/74-syscall-schreiben.gab:22)\n");
+           "(beispiele/0074-syscall-schreiben.gab:22)\n");
     printf("      held over %ld rounds: %ld bytes round-tripped, "
            "EBADF observed, empty transfer 0\n",
            runden, geschrieben_insgesamt);

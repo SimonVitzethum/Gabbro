@@ -77,7 +77,7 @@ fn der_rufer_eines_schreibers_schuldet_mit() {
 /// **The two corpus programs the rule reached, repaired and clean.**
 #[test]
 fn die_korpusprogramme_sind_gebucht() {
-    for datei in ["09-ohne-zeiger.gab", "17-gruppe-ueber-zwei-sperren.gab"] {
+    for datei in ["0009-ohne-zeiger.gab", "0017-gruppe-ueber-zwei-sperren.gab"] {
         let pfad = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../beispiele")
             .join(datei);

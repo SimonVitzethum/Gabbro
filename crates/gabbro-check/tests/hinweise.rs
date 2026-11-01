@@ -49,11 +49,11 @@ const HINWEISE: &[(&str, &str)] = &[
 /// the omission stays an error (a declaration without a body), so the site
 /// moves to `740`, whose `extern` edge falls with `E001` by design.
 const STELLEN: &[(&str, &str)] = &[
-    ("E001", "740-stumm-edge-pinned.gab"),
-    ("P014", "581-wirkungsliste-leer.gab"),
-    ("P001-brace", "582-wirkung-ohne-klammern.gab"),
-    ("M104", "583-summe-verlaesst-die-breite.gab"),
-    ("P001-semi", "584-strichpunkt-fehlt-im-block.gab"),
+    ("E001", "0740-stumm-edge-pinned.gab"),
+    ("P014", "0581-wirkungsliste-leer.gab"),
+    ("P001-brace", "0582-wirkung-ohne-klammern.gab"),
+    ("M104", "0583-summe-verlaesst-die-breite.gab"),
+    ("P001-semi", "0584-strichpunkt-fehlt-im-block.gab"),
 ];
 
 fn beispiele() -> PathBuf {

@@ -4,7 +4,7 @@
  *
  *     frist_takt_verteiler_eingehalten (assume): falsifier sonde_takt_verteiler
  *
- * and in the source (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`:41):
+ * and in the source (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`:41):
  *
  *     deadline <= 400 ops arch x86_64 falsifier sonde_takt_verteiler
  *
@@ -97,7 +97,7 @@
 int main(void)
 {
     printf("sonde sonde_takt_verteiler :: frist_takt_verteiler_eingehalten "
-           "(beispiele/59-eintritt-nimmt-maskierte-sperre.gab:41)\n");
+           "(beispiele/0059-eintritt-nimmt-maskierte-sperre.gab:41)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -118,7 +118,7 @@ typedef unsigned long long u64;
 /* ---- The workload: the emitted dispatch body's shape, same `-O2`. ---- */
 
 /* Mirrors `table Takte count 64 { slot { stand : u64 } }`
- * (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`:22) and the inner
+ * (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`:22) and the inner
  * call `zaehle(0)` inside `takt_verteiler` (:44): the store
  * `Takte.slots[0].stand = 1;`. The lock stubs are outside the bracket by
  * design (see header): `TAKT_nimm`/`TAKT_gib` stand in the emit as bare
@@ -192,7 +192,7 @@ static int dezimal(const char *s, long *aus)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_takt_verteiler :: frist_takt_verteiler_eingehalten "
-           "(beispiele/59-eintritt-nimmt-maskierte-sperre.gab:41, deadline <= 400 ops arch x86_64)\n");
+           "(beispiele/0059-eintritt-nimmt-maskierte-sperre.gab:41, deadline <= 400 ops arch x86_64)\n");
 
     long iters = DEFAULT_ITERS;
     u64 grenze = BOOKED_MAX_CYCLES;

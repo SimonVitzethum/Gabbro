@@ -129,7 +129,7 @@ theorem tEnd : beqTopTief (parseTopTief ttEnd)
         "=" (.variable "w")]
         (.some (.ret (.some (.lit 0)))))]]) = true := by
   decide
--- beispiele/112-register-traeger-bewacht.gab, whole file (38 lines): the smallest whole corpus file with a table, a lock and contracted functions. Module, table, lock, device and both function bodies parse end to end with nothing skipped.
+-- beispiele/0112-register-traeger-bewacht.gab, whole file (38 lines): the smallest whole corpus file with a table, a lock and contracted functions. Module, table, lock, device and both function bodies parse end to end with nothing skipped.
 end Gabbro.Grammatik.Parser
 
 #print axioms Gabbro.Grammatik.Parser.tEnd

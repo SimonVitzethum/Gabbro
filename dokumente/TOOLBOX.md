@@ -328,7 +328,7 @@ replaced number is a claim about a correction.*
 `Verzeichnis::insert(v, i)` has always parsed: `parse.rs::erwarte_feldname` accepts any
 vocabulary word after `::`; the EBNF did not say so), and **«B17»** (a multi-place form for
 `transition` — but `transset = placeshift { "," placeshift }` stands in `SYNTAX.md` and is *used*
-in `beispiele/02-geraet.gab`; of seven probes exactly one fell at the parser, at one token; what
+in `beispiele/0002-geraet.gab`; of seven probes exactly one fell at the parser, at one token; what
 really lacked was that `breaking I { … }` never resolved its name). Through the unchanged
 checker the real answers were `E009` (callee unknown to the graph) and `K003` — not a single
 `P00x`: the missing thing was the **callee**, not the call form. *Rule, asked before the
@@ -385,7 +385,7 @@ to check the instrument): here it **cannot accept the question**. *Ask whether t
 except `module` and `use`, `extern fn` included — the construct whose purpose is the deliberate
 binding to a C name — so a Gabbro program could not print and **eight attempts at "add two
 numbers"** had an explanation that was not the language. Redeemed 2026-09-01 as a **change**,
-not an exception: `beispiele/63-druckt.gab` prints `Hallo` (checked, emitted, compiled under
+not an exception: `beispiele/0063-druckt.gab` prints `Hallo` (checked, emitted, compiled under
 `-Wall -Wextra -Werror`, run), and `N046` asks the right question — *does the signature match
 the one C already knows?* The handle for that was missing too: `./instrumente/miss-c-signaturen.py`
 (not in the tree today; the measurement stood at 138 of 558 names bindable, 420 not).

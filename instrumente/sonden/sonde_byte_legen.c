@@ -4,7 +4,7 @@
  *
  *     frist_byte_legen_eingehalten (assume): falsifier sonde_byte_legen
  *
- * for `byte_legen` (`beispiele/25-entrust.gab`:47):
+ * for `byte_legen` (`beispiele/0025-entrust.gab`:47):
  *
  *     impl fn byte_legen(p : ptr<normal, rw> Puffer, wo : Bytelage, was : u8)
  *         effects { writes p.slots }
@@ -113,7 +113,7 @@ typedef unsigned long long u64;
 /* ---- The workload: the emitted slot write's shape, same `-O2`. ---- */
 
 /* Mirrors `table Puffer count 4096 { slot { wert : u8 } }`
- * (`beispiele/25-entrust.gab`:43) and `NBYTES = 4096` (:40). */
+ * (`beispiele/0025-entrust.gab`:43) and `NBYTES = 4096` (:40). */
 #define NBYTES 4096u
 
 static uint8_t puffer[NBYTES];

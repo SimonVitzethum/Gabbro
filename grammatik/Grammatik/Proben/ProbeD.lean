@@ -7,7 +7,7 @@
   `ensures false`, every body `forever () invariant w { leave }; return`.
   Two variants, `fvP false` (invariant `false`, the verdict's `fvP`) and
   `fvP true` (invariant `true`, the verdict's `fwP` -- the shape of
-  `manifest_pruefen` in `beispiele/04-schleifen.gab`, where the loop leaves
+  `manifest_pruefen` in `beispiele/0004-schleifen.gab`, where the loop leaves
   and the function returns).
 
   * At budget `0` every body stops at the loop's named assumption before

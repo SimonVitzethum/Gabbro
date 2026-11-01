@@ -308,7 +308,7 @@ theorem elabU_verweigert_noch_zeuge :
 
 /-! ## 108 elaborates -/
 
-/-- **108's parsed items** (`beispiele/108-disjoint-start-locks.gab`,
+/-- **108's parsed items** (`beispiele/0108-disjoint-start-locks.gab`,
     printed by `.tmp/probe_repr108.lean`, pasted in the tree's dotted
     style like `items104`): one table, two readers, and the single
     `concurrent` item (the thread roots). -/

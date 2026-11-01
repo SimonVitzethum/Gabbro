@@ -186,7 +186,7 @@ const LEAN_PAUSE_MS: u64 = 5000;
 /// dies with `lean::exception: failed to create thread` (SETUP, exit 3) while its twin,
 /// seconds later, is GREEN -- which the alias-equality tests then read as an alias
 /// difference (reproduced 2026-10-01: `emit --proved` GREEN exit 0 vs `emit --mit-beweis`
-/// SETUP exit 3 on `beispiele/16-by-ops-am-feld.gab`). The per-model gate (lane 556)
+/// SETUP exit 3 on `beispiele/0016-by-ops-am-feld.gab`). The per-model gate (lane 556)
 /// serialises WHEN measurements run; it cannot shrink any single run's thread demand,
 /// so one unbounded `lean` can still starve on a loaded machine.
 ///
@@ -826,7 +826,7 @@ mod ressourcen_engpass_tests {
     }
 
     /// **The reproduced failure takes the apparatus path** -- the verbatim stderr of the
-    /// 2026-10-01 run (`emit --mit-beweis` on `beispiele/16-by-ops-am-feld.gab`): no
+    /// 2026-10-01 run (`emit --mit-beweis` on `beispiele/0016-by-ops-am-feld.gab`): no
     /// position, a starvation signature, and the positionless-exit mapping to SETUP.
     /// A positioned error still takes the tree path, never the retry/gate path.
     #[test]

@@ -51,7 +51,7 @@ pub struct Gebildet {
     /// the rule itself is issued next door in `namen.rs`, this field only feeds it -- and
     /// both were measured over the corpus before the rule was narrowed:
     ///
-    /// * `beispiele/29-undurchsichtig.gab` -- `pub impl fn pa_aus_zahl` in one module and
+    /// * `beispiele/0029-undurchsichtig.gab` -- `pub impl fn pa_aus_zahl` in one module and
     ///   `extern fn pa_aus_zahl` in the next. Two declarations, one C symbol **on purpose**:
     ///   the second names the first. The emitter writes the prototype exactly once, and `cc`
     ///   is happy.

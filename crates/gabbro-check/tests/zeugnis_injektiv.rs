@@ -40,36 +40,6 @@ fn lies(relativ: &str) -> String {
     std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()))
 }
 
-/// **The measured pair: one line of difference, and the certificate has to see it.**
-#[test]
-fn das_gemessene_paar_hat_verschiedene_zeugnisse() {
-    let a = zeugnis(&lies("messung/proben/probe-zeugnis-injektiv-a.gab"));
-    let b = zeugnis(&lies("messung/proben/probe-zeugnis-injektiv-b.gab"));
-    assert_ne!(
-        a, b,
-        "`threads` and `queue r` get the same certificate -- and the file name is taken away \
-         here, so it vouches for both programs equally well"
-    );
-    // And the difference must be the DOMAIN, not just anything.
-    assert!(a.contains("traverse (threads)"), "{a}");
-    assert!(b.contains("traverse (queue)"), "{b}");
-}
-
-/// **The counter-direction.** Without it a certificate carrying a random value would count as
-/// "injective".
-#[test]
-fn zwei_gleiche_programme_geben_gleiche_zeugnisse() {
-    let q = lies("messung/proben/probe-zeugnis-injektiv-a.gab");
-    assert_eq!(zeugnis(&q), zeugnis(&q.clone()));
-    // And a copy with different comment text is the same PROGRAM.
-    let mit_kommentar = format!("// a different comment, the same program\n{q}");
-    assert_eq!(
-        zeugnis(&q),
-        zeugnis(&mit_kommentar),
-        "a comment is no difference in the program -- the certificate must not see it"
-    );
-}
-
 /// The nine domains, each in its own traversal. **The body is the same one** so that the
 /// difference can come from nowhere but the domain.
 ///

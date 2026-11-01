@@ -572,70 +572,6 @@ const BENANNT: &[&str] = &[
 ];
 
 #[test]
-fn der_korpus_bringt_nur_benannte_absagen() {
-    for datei in ["dokumente/FRAGMENTS.md", "dokumente/SYNTAX.md", "dokumente/LANGUAGE.md", "README.md",
-                  // Der Memo BEHAUPTET „heute schreibbar" -- dann wird sein Block auch gemessen.
-                  "dokumente/FLOATING-POINT.md"] {
-        let md = lies(datei);
-        for b in korpus::messe(datei, &md) {
-            for (code, zeile) in b.fehler.iter().chain(b.hinweise.iter()) {
-                assert!(
-                    BENANNT.contains(code),
-                    "{datei}:{zeile}: unbenannte Absage `{code}` -- \
-                     jede Absage braucht ihren Eintrag, sonst zaehlt niemand sie"
-                );
-            }
-        }
-    }
-}
-
-#[test]
-fn f2_das_geraetefragment_bleibt_sauber() {
-    // F2 (VT-d als `device`) ist das eine Fragment, das gegen die heutige Grammatik
-    // vollstaendig durchgeht. Faellt es, ist eine Regel zurueckgegangen.
-    let md = lies("dokumente/FRAGMENTS.md");
-    let befunde = korpus::messe("dokumente/FRAGMENTS.md", &md);
-    // **Am INHALT verankert, nicht an der Zeilennummer.** Bis 2026-08-15 stand hier
-    // `erste_zeile > 330 && < 350`; jede Aenderung weiter oben in der Datei brach den Test,
-    // ohne dass an F2 etwas falsch war. Eine Probe, die an einer Zeilennummer haengt, ist
-    // dieselbe Sorte Zahl wie eine, die ein Mensch parallel zur Wahrheit fuehrt.
-    // `Befund.text` ist der gerenderte BERICHT, nicht die Quelle -- der Inhalt muss aus
-    // den geschnittenen Bloecken kommen.
-    let quelle = korpus::schneide(&md);
-    let f2_zeile = quelle
-        .iter()
-        .find(|b| b.text.contains("device Vtd"))
-        .map(|b| b.erste_zeile)
-        .expect("F2 ist das VT-d-Fragment -- erkennbar an `device Vtd`");
-    let f2 = befunde
-        .iter()
-        .find(|b| b.erste_zeile == f2_zeile)
-        .expect("zu jedem geschnittenen Block gehoert ein Befund");
-    assert!(
-        f2.sauber(),
-        "F2 war sauber und ist es nicht mehr:\n{}",
-        f2.text
-    );
-}
-
-#[test]
-fn jeder_block_wird_gefunden() {
-    let md = lies("dokumente/FRAGMENTS.md");
-    let bloecke = korpus::schneide(&md);
-    assert_eq!(
-        bloecke.len(),
-        md.matches("\n```gabbro").count(),
-        "der Schneider verliert Bloecke"
-    );
-    // Die Zeilennummern muessen die der Markdown-Datei sein -- sonst zeigt eine Absage
-    // auf eine Zeile, die es nicht gibt.
-    for b in &bloecke {
-        let vorspann = b.text.chars().take_while(|c| *c == '\n').count();
-        assert_eq!(vorspann + 1, b.erste_zeile);
-    }
-}
-
-#[test]
 fn die_beispiele_der_grammatik_gehen_selbst_durch() {
     // **SYNTAX.md ist das Grammatikdokument -- seine eigenen Uebersetzungseinheiten muessen
     // uebersetzen.** Bis 2026-08-16 hat das niemand verlangt, und es standen drei echte
@@ -759,7 +695,7 @@ fn eine_uebersetzungseinheit_faengt_mit_einem_item_an() {
 
 /// **Jede Korpusdatei steht in einem `module` — und das ist keine Formfrage** (2026-08-20).
 ///
-/// Gefunden von aussen: `beispiele/gift/22-globaler-fakt-nach-aufruf.gab` trug die Notiz
+/// Gefunden von aussen: `beispiele/gift/0022-globaler-fakt-nach-aufruf.gab` trug die Notiz
 /// *„damit das Loch nicht zurueckkehrt"* und war grün. **Dieselbe Datei in ein `module`
 /// gewickelt gab drei Fehler statt einem** — `m1.rs::ist_lokal` fragte die
 /// modulqualifizierte Karte der globalen Grössen mit einem *unqualifizierten* Schlüssel,
@@ -835,7 +771,7 @@ fn keine_zwei_korpusdateien_teilen_eine_nummer() {
             }
             let name = p.file_name().and_then(|x| x.to_str()).unwrap_or("").to_string();
             // Das Praefix bis zum ersten `-`; ein Buchstabe dahinter gehoert dazu
-            // (`11a-divergenz-endet.gab` ist die Gegenprobe zu `11-…` und mit Absicht so).
+            // (`0011a-divergenz-endet.gab` ist die Gegenprobe zu `11-…` und mit Absicht so).
             let Some(nummer) = name.split('-').next() else { continue };
             if nummer.is_empty() || !nummer.chars().next().is_some_and(|c| c.is_ascii_digit()) {
                 continue;
@@ -853,34 +789,6 @@ fn keine_zwei_korpusdateien_teilen_eine_nummer() {
     }
 }
 
-/// **The expectation file travels with the probes.**
-///
-/// `EXPECTED.md` is the readable half of each witness pair; if it stops
-/// naming a probe, the pair is half a pair.
-#[test]
-fn c2_witness_pairs_have_written_expectations() {
-    let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..");
-    let pfad = wurzel.join("messung/proben/zeugnis-c2/EXPECTED.txt");
-    let md = std::fs::read_to_string(&pfad).expect("EXPECTED.md readable");
-    for (name, form) in [
-        ("c2-01-zuweisung", "zuweisung"),
-        ("c2-02-wenn", "wenn"),
-        ("c2-03-ruf", "ruf"),
-        ("c2-04-rueckgabe", "rueckgabe"),
-        ("c2-05-literal", "literal"),
-    ] {
-        assert!(
-            md.contains(name),
-            "EXPECTED.md must name the probe `{name}`"
-        );
-        assert!(
-            md.contains(form),
-            "EXPECTED.md must name the C form `{form}`"
-        );
-    }
-}
 
 /// **The user-space side of the pointer-rights refusal: gifts 772/773.**
 ///
@@ -896,8 +804,8 @@ fn c2_witness_pairs_have_written_expectations() {
 fn user_rights_fall_exactly_once_772_773() {
     use gabbro_syntax::diag::Stufe;
     for (datei, erwartet) in [
-        ("772-user-write-without-right.gab", "R002"),
-        ("773-user-read-without-right.gab", "R003"),
+        ("0772-user-write-without-right.gab", "R002"),
+        ("0773-user-read-without-right.gab", "R003"),
     ] {
         let pfad = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()

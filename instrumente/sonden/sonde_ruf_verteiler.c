@@ -4,7 +4,7 @@
  *
  *     frist_ruf_verteiler_eingehalten (assume): falsifier sonde_ruf_verteiler
  *
- * and in the source (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`:89):
+ * and in the source (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`:89):
  *
  *     deadline <= 400 ops arch x86_64 falsifier sonde_ruf_verteiler
  *
@@ -97,7 +97,7 @@
 int main(void)
 {
     printf("sonde sonde_ruf_verteiler :: frist_ruf_verteiler_eingehalten "
-           "(beispiele/59-eintritt-nimmt-maskierte-sperre.gab:89)\n");
+           "(beispiele/0059-eintritt-nimmt-maskierte-sperre.gab:89)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -118,7 +118,7 @@ typedef unsigned long long u64;
 /* ---- The workload: the emitted dispatch body's shape, same `-O2`. ---- */
 
 /* Mirrors `table Auftraege count 16 { slot { stand : u64 } }`
- * (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`:71) and the inner
+ * (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`:71) and the inner
  * call `bearbeite(0)` inside `ruf_verteiler` (:92): the store
  * `Auftraege.slots[0].stand = 1;`. The lock stubs are outside the bracket
  * by design (see header): `RING_nimm`/`RING_gib` stand in the emit as bare
@@ -192,7 +192,7 @@ static int dezimal(const char *s, long *aus)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_ruf_verteiler :: frist_ruf_verteiler_eingehalten "
-           "(beispiele/59-eintritt-nimmt-maskierte-sperre.gab:89, deadline <= 400 ops arch x86_64)\n");
+           "(beispiele/0059-eintritt-nimmt-maskierte-sperre.gab:89, deadline <= 400 ops arch x86_64)\n");
 
     long iters = DEFAULT_ITERS;
     u64 grenze = BOOKED_MAX_CYCLES;

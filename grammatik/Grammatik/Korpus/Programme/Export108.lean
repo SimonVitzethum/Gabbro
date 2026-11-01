@@ -1,12 +1,12 @@
 /-
   File:      Grammatik/Export108.lean
   Subject:   the mechanical export of
-             `beispiele/108-disjoint-start-locks.gab` (two lock-free readers
+             `beispiele/0108-disjoint-start-locks.gab` (two lock-free readers
              over one shared, never-written table) and its two decidable
              checks.
 
   The `namespace G108_disjoint_start_locks` block below is pasted VERBATIM
-  from the output of `gabbro lean-g beispiele/108-disjoint-start-locks.gab`;
+  from the output of `gabbro lean-g beispiele/0108-disjoint-start-locks.gab`;
   only its `import` lines are left out, because this file imports instead.
   There is no hand translation of 108 to hold it against; what is proved
   here is that the export's fragment and footprint checks hold, and the
@@ -38,7 +38,7 @@ public import Grammatik.Zielsatz.Kern.Spec
 
 namespace Gabbro.Grammatik
 
--- PASTED from `gabbro lean-g beispiele/108-disjoint-start-locks.gab` block `G108_disjoint_start_locks`
+-- PASTED from `gabbro lean-g beispiele/0108-disjoint-start-locks.gab` block `G108_disjoint_start_locks`
 namespace G108_disjoint_start_locks
 
 inductive GTab where
@@ -211,7 +211,7 @@ theorem export108_data :
 /-! ## CUTS:
 
   What is proved: the mechanical export of
-  `beispiele/108-disjoint-start-locks.gab` checks (`export108_fragment`,
+  `beispiele/0108-disjoint-start-locks.gab` checks (`export108_fragment`,
   `export108_fuss`) and its declaration data (`export108_data`).
 
   What is NOT proved: anything about runs or user obligations -- 108 has

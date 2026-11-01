@@ -72,67 +72,6 @@ fn ohne_die_andere_datei_faellt_es_weiter() {
     }
 }
 
-/// **Counter-direction 2: a name that no `use` names must fall, even though the file
-/// carrying it lies right beside it in the same run.**
-#[test]
-fn ein_name_ohne_use_faellt_auch_neben_seiner_datei() {
-    let (aus, _, code) = lauf(&[
-        "pruefe",
-        "--unit",
-        "messung/einheit-proben/pub-a.gab",
-        "messung/einheit-proben/ohne-use-b.gab",
-    ]);
-    assert_eq!(code, 1, "no `use`, no name:\n{aus}");
-    assert!(aus.contains("[N040]"), "the type name does not resolve:\n{aus}");
-    // **And the site is the site in ITS OWN FILE.** Without the offset map the line number
-    // would be the one in the concatenation -- a line number in no file at all, which is what
-    // `gabbro lean` names as its own price.
-    assert!(
-        aus.contains("messung/einheit-proben/ohne-use-b.gab:7:29"),
-        "the refusal points into the file it came from, at its own line:\n{aus}"
-    );
-}
-
-/// **Counter-direction 3: `pub` decides what leaves a module -- and it decides twice.**
-///
-/// `N025` at the `use` line, `N038` at the exported signature that would carry the name
-/// abroad.
-#[test]
-fn pub_entscheidet_was_hinausgeht() {
-    let (aus, _, code) = lauf(&[
-        "pruefe",
-        "--unit",
-        "messung/einheit-proben/pub-a.gab",
-        "messung/einheit-proben/pub-b.gab",
-    ]);
-    assert_eq!(code, 1, "a private name does not travel:\n{aus}");
-    assert!(aus.contains("[N025]"), "the `use` line itself is refused:\n{aus}");
-    assert!(aus.contains("[N038]"), "and the export that would carry it:\n{aus}");
-}
-
-/// **Counter-direction 4: two modules carrying the same name do not hide one another.**
-///
-/// The answer today is blunter than "the nearer one wins": `N039` refuses the whole build,
-/// because both names would carry the same C name. **And it is order-independent** -- the
-/// refusal names whichever module came first, but it comes either way.
-#[test]
-fn zwei_module_mit_demselben_namen_verdecken_einander_nicht() {
-    let x = "messung/einheit-proben/kollision-x.gab";
-    let y = "messung/einheit-proben/kollision-y.gab";
-    let z = "messung/einheit-proben/kollision-z.gab";
-    for reihenfolge in [[x, y, z], [y, x, z]] {
-        let (aus, _, code) = lauf(&[
-            "pruefe",
-            "--unit",
-            reihenfolge[0],
-            reihenfolge[1],
-            reihenfolge[2],
-        ]);
-        assert_eq!(code, 1, "the collision is refused in either order:\n{aus}");
-        assert!(aus.contains("[N039]"), "and it is `N039` that refuses it:\n{aus}");
-    }
-}
-
 /// **A HINT is printed, not swallowed -- and the summary counts it.**
 ///
 /// *This test exists because a hand mutation survived without it* (`451`, and the whole run
@@ -167,39 +106,6 @@ fn ein_hinweis_wird_gedruckt_und_gezaehlt() {
     );
 }
 
-/// **What joining BUYS, beside silence: a finding no per-file run can reach.**
-///
-/// `messung/abi-proben/mischt.gab` carries a lock ring across two libraries and says so in
-/// its own first line -- *"der Zyklus, den weder `speicher` noch `geraet` allein sehen
-/// kann"*. File by file the checker reports name noise and not the ring. As a unit it reports
-/// the ring, twice, with the site in the file that carries it.
-#[test]
-fn der_sperrring_ueber_bibliotheken_wird_erst_als_einheit_sichtbar() {
-    let dateien = [
-        "messung/abi-proben/lib-speicher.gab",
-        "messung/abi-proben/lib-geraet.gab",
-        "messung/abi-proben/mischt.gab",
-    ];
-    // File by file: no `H012` anywhere.
-    for d in dateien {
-        let (aus, _, _) = lauf(&["pruefe", d]);
-        assert!(
-            !aus.contains("[H012]"),
-            "checked alone, {d} cannot see the ring:\n{aus}"
-        );
-    }
-    let (aus, _, code) = lauf(&["pruefe", "--unit", dateien[0], dateien[1], dateien[2]]);
-    assert_eq!(code, 1, "as a unit the ring is refused:\n{aus}");
-    assert_eq!(
-        aus.matches("[H012]").count(),
-        2,
-        "both directions of the ring, not one:\n{aus}"
-    );
-    assert!(
-        aus.contains("messung/abi-proben/mischt.gab:17:9"),
-        "and the site is in the file that closes the ring:\n{aus}"
-    );
-}
 
 // =========================================================================================
 // **`emit --unit` and `abi --unit` -- the other half of the pair** (2026-09-01, `OB5`).

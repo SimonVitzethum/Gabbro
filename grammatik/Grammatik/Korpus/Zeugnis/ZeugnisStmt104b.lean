@@ -1,6 +1,6 @@
 /-
   File:     Grammatik/ZeugnisStmt104b.lean
-  Subject:  TRANSFER certificates for `beispiele/104-referenz.gab` (lane 155).
+  Subject:  TRANSFER certificates for `beispiele/0104-referenz.gab` (lane 155).
 
   The `CertEnd104` layer below extends `CertEnd2` (`ZeugnisStmt2.lean`) with
   exactly what the reference program needs beyond it: calls with arguments
@@ -12,7 +12,7 @@
   `durch` precedent of `cut4_sound`). Old shapes reuse through `lift2`
   (whole old bodies), `cons1`/`cons2` (single old steps) and `bind`/the two
   terminals. Section 4 pastes the verbatim printer output for both bodies
-  of `beispiele/104-referenz.gab` (proofs filled beside the printed `?hp`),
+  of `beispiele/0104-referenz.gab` (proofs filled beside the printed `?hp`),
   each accepted by `decide` and pushed through `zeugnisStmt104b_sound`.
 -/
 module
@@ -292,7 +292,7 @@ theorem zeugnisStmt104b_sound_zeuge :
 /-! ## The 104 transfer: verbatim printer output, checked and pushed through
 
     The two `cert104_*` below are verbatim output of
-    `gabbro certificate beispiele/104-referenz.gab` (section S, lane 155;
+    `gabbro certificate beispiele/0104-referenz.gab` (section S, lane 155;
     pinned in `crates/gabbro-check/tests/certstmt.rs` as
     `reference_104_prints`), elaborated against the `lean-g` export it was
     printed for (`Export104.lean`: `gD`, `gCtx_*`, `gL_*`). Surface names

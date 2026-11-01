@@ -207,7 +207,7 @@ theorem ziel_ort_lokal_aus_rahmen (P : Programm D) (O : Orakel D) (passes : Nat)
   `ziel_ort_voll` on register-local oracles
   (`ziel_ort_voll_lokal_aus_rahmen`) and `ziel_ort` on register-local
   oracles (`ziel_ort_lokal_aus_rahmen`). The corpus program
-  `beispiele/104-referenz.gab`, whose `einzahlen` refutes the old
+  `beispiele/0104-referenz.gab`, whose `einzahlen` refutes the old
   obligation, is certified in `Referenz104Rahmen.lean`.
 
   What is NOT covered:

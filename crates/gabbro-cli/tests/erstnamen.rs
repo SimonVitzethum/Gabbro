@@ -50,7 +50,7 @@ const PAARE: &[(&str, &str)] = &[
     ("link", "verbinde"),
 ];
 
-const DATEI: &str = "beispiele/16-by-ops-am-feld.gab";
+const DATEI: &str = "beispiele/0016-by-ops-am-feld.gab";
 
 /// **Both spellings, byte for byte the same run.** Over every pair, not over one.
 #[test]

@@ -763,7 +763,7 @@ fn ausdruck(
 /// Schleifenmarke.
 ///
 /// > *Der erste Anlauf am 2026-08-19 baute die falsche Regel und meldete an
-/// > `beispiele/04-schleifen.gab` zwei Befunde -- `leaves marke` gegen `leave dienst`. Beide
+/// > `beispiele/0004-schleifen.gab` zwei Befunde -- `leaves marke` gegen `leave dienst`. Beide
 /// > waren richtig, und die Regel war es nicht.* **Eine Klauselbeschreibung, die seit Wochen
 /// > in der Waechtertabelle steht, ist keine Quelle -- die Spezifikation ist eine.**
 ///

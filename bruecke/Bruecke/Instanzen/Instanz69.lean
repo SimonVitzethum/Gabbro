@@ -4,9 +4,9 @@ public import Duty.Duty69IntegerConversion
 @[expose] public section
 
 
-/-! BRIDGE-GENERIC beispiele/69-integer-conversion.gab nutzer
+/-! BRIDGE-GENERIC beispiele/0069-integer-conversion.gab nutzer
 
-    P4: the bridge instance of `beispiele/69-integer-conversion.gab` THROUGH THE GENERIC THEOREM (`Quelle.lean`): the
+    P4: the bridge instance of `beispiele/0069-integer-conversion.gab` THROUGH THE GENERIC THEOREM (`Quelle.lean`): the
     template `gabbro prove --template --source` writes (source pinned as pieces, stage outputs as
     hints the kernel checks, statements COMPUTED by Lean) with every owed proof filled by a proof
     against GabbroV's `Body` (the `gabbro_auto2` script of the duty files). The duty printer of
@@ -158,7 +158,7 @@ theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
   nutzer_aus_quelle pflichten h
 
-/-! BRIDGE-GENERIC beispiele/69-integer-conversion.gab acceptance
+/-! BRIDGE-GENERIC beispiele/0069-integer-conversion.gab acceptance
 
     The checker's Bool on the unit the front end builds from `quelle` (no tables: the carriers
     enumeration is empty), by computation. -/

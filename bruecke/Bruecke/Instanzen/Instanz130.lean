@@ -4,7 +4,7 @@ public import Duty.Duty130DerivedContractPure
 @[expose] public section
 
 
-/-! BRIDGE-GENERIC beispiele/130-derived-contract-pure.gab nutzer
+/-! BRIDGE-GENERIC beispiele/0130-derived-contract-pure.gab nutzer
 
     P4: the bridge instance of `beispiele/130` THROUGH THE GENERIC THEOREM (`Quelle.lean`). The file
     is the template `gabbro prove --template --source` writes (the source pinned as pieces, the
@@ -109,7 +109,7 @@ theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
   nutzer_aus_quelle pflichten h
 
-/-! BRIDGE-GENERIC beispiele/130-derived-contract-pure.gab acceptance
+/-! BRIDGE-GENERIC beispiele/0130-derived-contract-pure.gab acceptance
 
     The checker's Bool on the unit the front end builds from `quelle` (no tables: the carriers
     enumeration is empty), by computation. -/

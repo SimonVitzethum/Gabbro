@@ -8,8 +8,8 @@
   Each `example` runs the Lean checker (`certEnd2Ok ... = true` by
   `decide`); each soundness corollary applies `zeugnisStmt2_sound`.
   `csCertDoppelt` is verbatim output for a real corpus body
-  (`beispiele/93-const-scalars.gab`, `doppelt`); the rest are the pinned
-  probe bodies. The `beispiele/104-referenz.gab` bodies themselves are
+  (`beispiele/0093-const-scalars.gab`, `doppelt`); the rest are the pinned
+  probe bodies. The `beispiele/0104-referenz.gab` bodies themselves are
   REFUSED by the printer -- section 3 records the exact output.
 -/
 module
@@ -38,7 +38,7 @@ inductive CSFeld where
   deriving DecidableEq
 
 /-- The probe functions: one per pinned probe body, plus `doppelt`
-    (`beispiele/93-const-scalars.gab`, a real corpus body). -/
+    (`beispiele/0093-const-scalars.gab`, a real corpus body). -/
 inductive CSFn where
   | fRet
   | fBind
@@ -225,7 +225,7 @@ example : certEnd2Ok csD (csV .fRet) false [] [] csCertWide5 = true := by
 example : ∃ _ : Endblock csD (csV .fRet) false [] [], True :=
   zeugnisStmt2_sound csD _ false _ _ csCertWide5 (by decide)
 
-/-- VERBATIM printer output for `doppelt` (`beispiele/93-const-scalars.gab`):
+/-- VERBATIM printer output for `doppelt` (`beispiele/0093-const-scalars.gab`):
     `const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000`
     with body `return n + n;`. A real corpus body, checked by `decide`. -/
 def csCertDoppelt : CertEnd2 csD (csV .fDoppelt) :=
@@ -242,7 +242,7 @@ example : ∃ _ : Endblock csD (csV .fDoppelt) false [.int 0 1000] [], True :=
 
 /-! ## 3. The 104 record: what the printer says about the reference program
 
-    Verbatim output of `gabbro certificate beispiele/104-referenz.gab`
+    Verbatim output of `gabbro certificate beispiele/0104-referenz.gab`
     (section S). Both bodies are refused, each at its first outside form:
     `einzahlen` writes through the pointer `k` with the index variable `i`
     (`CertStmt2.assignDurch` needs a recomputable index range; an
@@ -264,7 +264,7 @@ example : ∃ _ : Endblock csD (csV .fDoppelt) false [.int 0 1000] [], True :=
     `beispiele/*.gab` (lane report) finds `CertEnd2` terms only for
     straight-line integer bodies (`doppelt` above; `(.liftE .ret)` for the
     `abnahme`/`freigabe` acceptance bodies of `06`, `43`, `52`; the
-    eight-variable sum of `70-kernel-namen.gab`). Every loop (`traverse`,
+    eight-variable sum of `0070-kernel-namen.gab`). Every loop (`traverse`,
     `retry`, `forever`) and every `match` is refused by name -- the
     fragment boundary is measured, not hoped. -/
 

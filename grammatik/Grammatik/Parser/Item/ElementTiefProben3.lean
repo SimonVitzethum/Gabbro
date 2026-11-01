@@ -76,7 +76,7 @@ theorem t30_lex :
 theorem t30 : beqTopTief (parseTopTief tt30)
     (.ok [.tableT "T" .none (.some (.lit 4)) .none .none false [.tSlot [{ fname := "b", ftyp := .atom "bool", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }], .tInv { name := "inv", kosten := .lit 1, online := true, proof := .none, pred := (.field (.index (.field (.variable "T") "slots") (.variable "i")) "b") }]]) = true := by
   decide
--- The `invariant` member shape is beispiele/01-tabelle.gab (the
+-- The `invariant` member shape is beispiele/0001-tabelle.gab (the
 -- header row); the `pred` is synthetic and quantifier-free --
 -- quantified predicates ride no `SExpr` shape (see CUTS).
 def tt31 : List Token :=
@@ -91,7 +91,7 @@ theorem t31 : beqTopTief (parseTopTief tt31)
     (.ok [.atomT "fertig" (.atom "bool")
       (.some [.variable "bericht"]) (.some "release") .none]) = true := by
   decide
--- beispiele/11-grammatikbefunde.gab:13. Rust: `Atomic` with a
+-- beispiele/0011-grammatikbefunde.gab:13. Rust: `Atomic` with a
 -- payload and an ordering -- same shape.
 def tt32 : List Token :=
   [.wort "atomic", .ident "AVAIL_IDX", .zeichen ":", .wort "u32",
@@ -105,7 +105,7 @@ theorem t32 : beqTopTief (parseTopTief tt32)
     (.ok [.atomT "AVAIL_IDX" (.atom "u32") .none (.some "release")
       (.some "karte_liest_nach_dem_index")]) = true := by
   decide
--- beispiele/41-handschlag.gab:49. Rust: `Atomic` with an
+-- beispiele/0041-handschlag.gab:49. Rust: `Atomic` with an
 -- `observed by` assumption -- same shape.
 def tt33 : List Token :=
   [.wort "rcu", .ident "BACCT", .wort "protects", .zeichen "{",
@@ -118,7 +118,7 @@ theorem t33 : beqTopTief (parseTopTief tt33)
     (.ok [.rcuT "BACCT" [.variable "Konten"]
       (.some (.variable "frei"))]) = true := by
   decide
--- beispiele/31-rcu.gab:24. Rust: `Rcu` with a reclaim site --
+-- beispiele/0031-rcu.gab:24. Rust: `Rcu` with a reclaim site --
 -- same shape.
 def tt34 : List Token :=
   [.wort "group", .ident "Zustellung", .wort "over", .zeichen "{",
@@ -138,7 +138,7 @@ theorem t34_lex :
 theorem t34 : beqTopTief (parseTopTief tt34)
     (.ok [.groupT "Zustellung" ["Endpunkte", "Faeden"] [{ name := "wartende_haben_grund", kosten := (.variable "n"), online := false, proof := .none, pred := (.bin ">" (.field (.index (.field (.variable "Faeden") "slots") (.variable "wartende")) "gruende") (.lit 0)) }]]) = true := by
   decide
--- The `group` frame is beispiele/17-gruppe-ueber-zwei-sperren.gab:42-47;
+-- The `group` frame is beispiele/0017-gruppe-ueber-zwei-sperren.gab:42-47;
 -- the `pred` is simplified (the corpus body quantifies -- see CUTS).
 def tt35 : List Token :=
   [.wort "concurrent", .zeichen "{", .ident "read_a",
@@ -150,7 +150,7 @@ theorem t35_lex :
 theorem t35 : beqTopTief (parseTopTief tt35)
     (.ok [.concT [(["read_a"], []), (["read_c"], [])]]) = true := by
   decide
--- beispiele/108-disjoint-start-locks.gab (the declared pair).
+-- beispiele/0108-disjoint-start-locks.gab (the declared pair).
 -- Rust: `Concurrent` -- same shape.
 def tt36 : List Token :=
   [.wort "accumulates", .ident "fehlerzahl", .zeichen ":",
@@ -164,7 +164,7 @@ theorem t36 : beqTopTief (parseTopTief tt36)
     (.ok [.accT "fehlerzahl" (.atom "u32") "add"
       (.some (.variable "NKERNE"))]) = true := by
   decide
--- beispiele/23-akkumulatoren.gab:45. Rust: `Accumulates` with a
+-- beispiele/0023-akkumulatoren.gab:45. Rust: `Accumulates` with a
 -- cell count -- same shape.
 def tt37 : List Token :=
   [.wort "walk", .ident "Seitentabelle", .wort "levels", .num 4,
@@ -184,7 +184,7 @@ theorem t37_lex :
 theorem t37 : beqTopTief (parseTopTief tt37)
     (.ok [.walkT { name := "Seitentabelle", stufen := (.lit 4), node := (.array (.atom "Pte") (.lit 512)), dname := "rahmen", dwhen := (.bin "&&" (.field (.variable "it") "praesent") (.un "!" (.field (.variable "it") "gross"))), blatt := (.bin "&&" (.field (.variable "it") "praesent") (.un "!" (.field (.variable "it") "gross"))), invarianten := [] }]) = true := by
   decide
--- beispiele/07-eintritt-und-boot.gab:26-29 (invariants dropped --
+-- beispiele/0007-eintritt-und-boot.gab:26-29 (invariants dropped --
 -- they quantify, see CUTS). Rust: `Walk` with node, down and
 -- leaf -- same shape.
 def tt38 : List Token :=
@@ -205,7 +205,7 @@ theorem t38_lex :
 theorem t38 : beqTopTief (parseTopTief tt38)
     (.ok [.entryT { name := "entry_a", vektor := (.some (.lit 128)), via := .none, arch := "x86_64", regIn := [], regOut := [], erhaelt := ["rbx"], kills := ["rcx"], stapel := "ka", perCpu := true, ist := .none, nest := (.some "never"), dispatch := ["beispiel", "lockfree_entry_roots", "distribute_a"] }]) = true := by
   decide
--- beispiele/109-lockfree-entry-roots.gab (the `entry_a` root).
+-- beispiele/0109-lockfree-entry-roots.gab (the `entry_a` root).
 -- Rust: `Entry` with empty register maps -- same shape.
 def tt39 : List Token :=
   [.wort "entrust", .ident "jitpuffer", .wort "at",
@@ -225,7 +225,7 @@ theorem t39 : beqTopTief (parseTopTief tt39)
       [.binds "eintritt" "rdi", .binds "kappe" "rsi"]
       "gaststapel" "gast_bleibt_in_seinem_raum"]) = true := by
   decide
--- beispiele/25-entrust.gab:32-36. Rust: `Entrust` -- same shape.
+-- beispiele/0025-entrust.gab:32-36. Rust: `Entrust` -- same shape.
 def tt40 : List Token :=
   [.wort "boot", .ident "multiboot1", .wort "arch",
    .ident "x86_64", .zeichen "{", .wort "step",
@@ -245,7 +245,7 @@ theorem t40 : beqTopTief (parseTopTief tt40)
         .call ["bootinfo_retten"] [.variable "ebx"]]
       ["beispiel", "eintritt", "rust_eintritt"]]) = true := by
   decide
--- beispiele/07-eintritt-und-boot.gab:86-97 (two steps stand for
+-- beispiele/0007-eintritt-und-boot.gab:86-97 (two steps stand for
 -- the ten). Rust: `Boot` with steps and a dispatch -- same shape.
 def tt41 : List Token :=
   [.wort "syscall", .ident "write", .zeichen "(", .ident "fd",
@@ -277,7 +277,7 @@ theorem t41_lex :
 theorem t41 : beqTopTief (parseTopTief tt41)
     (.ok [.callT { name := "write", params := [("fd", (.atom "u64")), ("buf", (.atom "u64")), ("len", (.atom "u64"))], res := (.some (.atom "u64")), fail := (.some "IoError"), way := .lit "linux" "x86_64" { id := (.lit 1), ins := [.binds "rdi" "fd", .binds "rsi" "buf", .binds "rdx" "len"], outs := [.reg "rax"], stack := [], dirty := ["rcx", "r11"], codes := [("EBADF", .none, "BadFd"), ("EINTR", .none, "Interrupted"), ("EAGAIN", .none, "WouldBlock")] } (.assum "linux_write_contract" (.probe "sonde_write")), gate := { pre := [(.bin "<=" (.variable "len") (.lit 1024))], post := [(.bin "<=" .res (.variable "len"))], uses := [.pure], cost := .none } }]) = true := by
   decide
--- beispiele/90-syscall-errno.gab:22-31. Rust: `Syscall` with an
+-- beispiele/0090-syscall-errno.gab:22-31. Rust: `Syscall` with an
 -- error channel, maps and contracts -- same shape.
 def tt42 : List Token :=
   [.wort "library", .wort "fn", .ident "sum", .zeichen "(",
@@ -307,7 +307,7 @@ theorem t42_lex :
 theorem t42 : beqTopTief (parseTopTief tt42)
     (.ok [.fnT { art := "library", name := "sum", params := [(("t", (.ptr "normal" "r" (.atom "SumTab"))))], res := (.some ((.range (.atom "u32") (.lit 0) (.lit 400) false))), fehler := .none, klauseln := [(.load ["SumTab"]), (.gives ((.bin "<=" .res (.lit 400)))), (.effs [(.reads ((.field (.variable "t") "slots")))]), (.cost (.lit 16))] } (.block [] (.some (.ret (.some ((.bin "+" ((.bin "+" ((.bin "+" ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 0))) "v")) ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 1))) "v")))) ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 2))) "v")))) ((.field ((.index ((.field ((.variable "t")) "slots")) (.lit 3))) "v"))))))))]) = true := by
   decide
--- beispiele/106-summe-uebersetzt.gab:16-23 (the `sum` library).
+-- beispiele/0106-summe-uebersetzt.gab:16-23 (the `sum` library).
 -- Rust: `Funktion` with a payload type and a ranged result --
 -- same shape.
 def tt43 : List Token :=
@@ -324,7 +324,7 @@ theorem t43_lex :
 theorem t43 : beqTopTief (parseTopTief tt43)
     (.ok [.lockT "KAPPEN" [.variable "belegt", .variable "rechte", .variable "objekt"] (.lit 0) (.some (.lit 3)) (.some (.lit 4)) .none .none]) = true := by
   decide
--- beispiele/10-geteilte-sperre.gab (the `KAPPEN` reader-writer
+-- beispiele/0010-geteilte-sperre.gab (the `KAPPEN` reader-writer
 -- lock). Rust: `Lock` with both held bounds -- same shape.
 def tt44 : List Token :=
   [.wort "lock", .ident "KAPPEN", .wort "protects", .zeichen "{",
@@ -340,7 +340,7 @@ theorem t44 : beqTopTief (parseTopTief tt44)
     (.ok [.lockT "KAPPEN" [.variable "eintraege", .variable "baum"]
       (.lit 0) (.some (.lit 400)) .none (.some "irqs") .none]) = true := by
   decide
--- beispiele/01-tabelle.gab:31. Rust: `Lock` with a held bound
+-- beispiele/0001-tabelle.gab:31. Rust: `Lock` with a held bound
 -- and an irq mask -- same shape.
 def tt45 : List Token :=
   [.wort "device", .ident "D", .wort "at", .wort "mmio",
@@ -360,7 +360,7 @@ theorem t45 : beqTopTief (parseTopTief tt45)
     (.ok [.devT "D" [] "mmio"
       [.bank "bank FRR at (CAP.FRO * 16) stride 16 count 256 { reg FR_LO : u64 @ 0 class rw reg FR_HI : u64 @ 8 class rw } "]]) = true := by
   decide
--- beispiele/02-geraet.gab:22-25 (the `FRR` bank). Rust: `Device`
+-- beispiele/0002-geraet.gab:22-25 (the `FRR` bank). Rust: `Device`
 -- with a `Bank` member -- the bank body rides raw (see CUTS).
 def tt46 : List Token :=
   [.wort "device", .ident "Einheit", .zeichen "(", .ident "basis",
@@ -385,7 +385,7 @@ theorem t46_lex :
 theorem t46 : beqTopTief (parseTopTief tt46)
     (.ok [.devT "Einheit" [("basis", (.atom "Pa"))] "mmio" [.copy (.variable "GCMD") (.variable "GSTS"), .reg { name := "GCMD", rtyp := (.atom "u32"), addr := (.lit 24), klasse := "w", stage := [], felder := [{ name := "SRTP", pos := "30", klasse := .none }, { name := "TE", pos := "31", klasse := .none }], voraus := .none, elseF := .none, abhaengt := [] }, .trans { tname := "setze_rtp", schritte := [((.field (.variable "GCMD") "SRTP"), (.lit 0), (.lit 1))], voraus := (.some ((.bin "==" ((.field (.variable "GSTS") "TES")) (.lit 0)))), wirkung := [(.writes (.variable "GCMD"))] }]]) = true := by
   decide
--- beispiele/20-falle-vier.gab (the `Einheit` device). Rust:
+-- beispiele/0020-falle-vier.gab (the `Einheit` device). Rust:
 -- `Device` with `mirrors`, a bit-field register and a guarded
 -- transition -- same shape.
 def tt47 : List Token :=
@@ -405,7 +405,7 @@ theorem t47 : beqTopTief (parseTopTief tt47)
         .mode "fp_contract" "off",
         .assum "plattform_takt_stabil"]]) = true := by
   decide
--- beispiele/100-hardwareprofil.gab:50-55. Rust: `Profil` with
+-- beispiele/0100-hardwareprofil.gab:50-55. Rust: `Profil` with
 -- keyed modes and an assumption -- same shape.
 def tt48 : List Token :=
   [.wort "requires", .wort "profile", .zeichen "{",
@@ -421,7 +421,7 @@ theorem t48 : beqTopTief (parseTopTief tt48)
       [.mode "arch" "x86_64",
         .assum "plattform_takt_stabil"]]) = true := by
   decide
--- beispiele/100-hardwareprofil.gab:26-29. Rust: `ProfilBedarf`
+-- beispiele/0100-hardwareprofil.gab:26-29. Rust: `ProfilBedarf`
 -- -- same shape.
 def tt49 : List Token :=
   [.wort "when", .ident "TESTBUILD", .wort "static", .wort "mut",
@@ -435,7 +435,7 @@ theorem t49 : beqTopTief (parseTopTief tt49)
     (.ok [.gateT (.globT true "hoechstmarke" (.atom "Fuellstand")
       (.one (.lit 0)) .none .none false)]) = true := by
   decide
--- beispiele/52-baugatter.gab:61-62. Rust: a gated `Statisch` --
+-- beispiele/0052-baugatter.gab:61-62. Rust: a gated `Statisch` --
 -- same shape.
 def tt50 : List Token :=
   [.wort "const", .wort "fn", .ident "quad", .zeichen "(",
@@ -453,6 +453,6 @@ theorem t50_lex :
 theorem t50 : beqTopTief (parseTopTief tt50)
     (.ok [.fnT { art := "const", name := "quad", params := [(("i", (.range (.atom "u32") (.lit 0) (.lit 64) false)))], res := (.some (.atom "u32")), fehler := .none, klauseln := [(.effs [(.pure)]), (.cost (.lit 4))] } (.block [] (.some (.ret (.some (.bin "*" (.variable "i") (.variable "i"))))))]) = true := by
   decide
--- beispiele/92-const-squares.gab:11. Rust: `Funktion` with the
+-- beispiele/0092-const-squares.gab:11. Rust: `Funktion` with the
 -- `const` modifier and a ranged parameter -- same shape.
 end Gabbro.Grammatik.Parser

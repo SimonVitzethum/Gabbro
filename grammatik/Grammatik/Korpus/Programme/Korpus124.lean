@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Korpus124.lean
-  Subject:   THE G PROGRAM OF `beispiele/124-two-threads-private.gab`, with the
+  Subject:   THE G PROGRAM OF `beispiele/0124-two-threads-private.gab`, with the
              bodies of the source (stage (b) of the translation-validation
              plan, §7), and every premise group of the goal theorem on it.
 

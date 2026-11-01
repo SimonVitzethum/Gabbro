@@ -2642,7 +2642,7 @@ impl<'a> Pruefer<'a> {
             // `update(v) { … }` hands back the OLD value of the place, so the name carries
             // the place's type. **`when … returns e` hands back whether the swap
             // HAPPENED** -- the emitter writes `bool genommen; genommen =
-            // atomic_compare_exchange_strong_explicit(…)` (`beispiele/35-tausch.gab`), and
+            // atomic_compare_exchange_strong_explicit(…)` (`beispiele/0035-tausch.gab`), and
             // this pass called it `u32`. *Three stages agreed with each other and the
             // fourth wrote something else* -- found by `M135`, which is the first rule that
             // ever compared the two sides of this binding.
@@ -2650,7 +2650,7 @@ impl<'a> Pruefer<'a> {
             // And the second half is the RESULT type of the `update` body. A `return` in
             // there yields the NEW value of the place, not the enclosing function's result
             // -- passing `ergebnis` down was right in the corpus by accident
-            // (`beispiele/05-nebenlaeufigkeit.gab` counts a `Zaehlerwert` inside a function
+            // (`beispiele/0005-nebenlaeufigkeit.gab` counts a `Zaehlerwert` inside a function
             // returning `Zaehlerwert`) and wrong at `beispiele/gift/209`, where the same
             // body sits in a `check` and `M135` read its `return v + 1` against `bool`.
             StmtArt::Exchange(e) => {
@@ -4268,7 +4268,7 @@ impl<'a> Pruefer<'a> {
         // entered with `parameter: Vec::new()` because the grammar gives a transition no
         // parameter list at all, while `wurzel_setzen(v)` passes the carrier -- so the empty
         // list is a PLACEHOLDER and comparing against it reads `declares 0`. It did, over
-        // `beispiele/02-geraet.gab`:64 and :71, at the first corpus run of this rule.
+        // `beispiele/0002-geraet.gab`:64 and :71, at the first corpus run of this rule.
         // *What the arity of a transition call ought to be is a question this rule does not
         // answer* -- see the register's reservation.
         let uebergang = r.path().is_some_and(|p| self.u.ist_uebergang(&self.modul, p));
@@ -8370,7 +8370,7 @@ impl<'a> Pruefer<'a> {
         let n = &o.basis.text;
         // **Ein QUALIFIZIERTER Name hat keine Basis, die man nachschlagen koennte.**
         // `u64::max` ist ein Ort, dessen Basis das TYPWORT `u64` ist -- gefunden sofort an
-        // `beispiele/11-grammatikbefunde.gab`. *Ein Namensauflöser, der Typwörter für
+        // `beispiele/0011-grammatikbefunde.gab`. *Ein Namensauflöser, der Typwörter für
         // Variablen hält, ist schlimmer als keiner.*
         //
         // **`|| breite_wort(n)` stood beside it and fell on 2026-09-05.** It covered the
@@ -8622,7 +8622,7 @@ impl<'a> Pruefer<'a> {
         //
         // > **Die Regel war gebaut, gebucht und getragen -- und traf genau die Form nicht,
         // > fuer die sie da ist:** eine Tabelle, die ueber ihren globalen Namen adressiert
-        // > wird. *Das ist die Bauart von `beispiele/09-ohne-zeiger.gab`, dessen ganzer Punkt
+        // > wird. *Das ist die Bauart von `beispiele/0009-ohne-zeiger.gab`, dessen ganzer Punkt
         // > es ist, dass Kernzustand keinen Zeiger braucht.*
         //
         // Gefunden beim Bauen von `const fn`, weil eine Giftprobe nicht fiel, die fallen
@@ -9740,7 +9740,7 @@ fn bereichsgrenzen(baum: &Programm, u: &Umgebung, absagen: &mut Absagen) {
     // before any reasoning did: `narrowstmt = "narrow" place "to" (range | "finite")` hangs
     // a range on a PLACE and not on a type, so `narrow x to 0.0 .. 1.0` is the correct
     // spelling at an `f64` and the fault at a `u32`. The first build of this rule read the
-    // range alone and refused `beispiele/26-gleitkomma.gab`:42 -- *`impl fn klemmen(x :
+    // range alone and refused `beispiele/0026-gleitkomma.gab`:42 -- *`impl fn klemmen(x :
     // f64)`, the file that exists to show `narrow … else` as the NaN path.* **A refusal with
     // the sign that rejects a correct program, W10, caught by the corpus sweep and not by
     // the design.** So the place is resolved, and where it does not resolve to an integer --

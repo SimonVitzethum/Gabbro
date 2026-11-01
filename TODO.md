@@ -1,26 +1,30 @@
 # Open work
 
-*Updated 2026-10-20. Only what is OPEN, in five areas: heap, Lean model, checker, LLVM backend, translation validation.
+*Updated 2026-10-20; references and "Right now" updated 2026-11-01 (the entries themselves were not re-audited). Only what is OPEN, in five areas: heap, Lean model, checker, LLVM backend, translation validation.
 IDs (`Oxx`) are stable: comments in the tree that say `OFFEN Oxx` or `TODO.md Oxx` mean these entries. Closed and removed items are in the
 appendix, one line each. History is in git.*
+
+*A name marked † is a plan that was removed in the owner clean-up of 2026-11-01 (`15efa71da`); read it with
+`git show 15efa71da^:dokumente/<name>` (`ARM-PLAN.md`† lay at the top level).*
 
 **How to read this file.** Each entry gives the state in a sentence or two, then `Open:` with what is missing. Designs and long
 reasoning live in the linked plans, never here. Keep an entry to one short paragraph; if it needs more, write it in a plan and link it.
 
 ## Right now
 
-- **Gabbro-to-IR resumed (2026-10-31).** Execute seven two-agent rounds, then a final integration/proof agent. All non-register
-  compilation and its formal lowering proofs are partitioned into IR-01..IR-14 in
-  [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md), with dependencies, exhaustive primary form ownership and shared
-  completion gates. Preserve the two worker worktrees and their uncommitted changes; no legacy Lean source
-  runtime, grammar rebuild or unrelated side project.
+- **Stage 0: every userspace Gabbro form to IR, formally verified (2026-11-01).** The lanes IR-01..IR-14, their checkpoints
+  and the C-package designs are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); team, scope and build caps are
+  in [AGENTS.md](AGENTS.md) ("Current work"). No legacy Lean source runtime and no unrelated side project.
+- **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
+  (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
+  more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
 
 
 - **Phase A step 4 (the combined `Spec.lean` diff "M8": arena plus payload) is PAUSED** (Simon, 2026-10-19). Nothing is merged or pushed.
   The arena foundation (M3) is green on Lean/Mathlib 4.35.0 (820 jobs); the full library is not (7 modules, one a real heartbeat
   timeout in `ArenaErkZeugeBaum.lean`); the payload half still lacks its global history induction (O21 in the plan). The work sits in an
   uncommitted worktree under `.claude/muse-arbeit/kratz/spec-arena-recovery/`.
-  Exact state, outstanding obligations and resume order: `dokumente/PLAN-DYNAMIC.md` §8a, part H.
+  Exact state, outstanding obligations and resume order: `PLAN-DYNAMIC.md`† §8a, part H.
 
 ## 0. Order of work (Simon, 2026-10-17)
 
@@ -28,7 +32,7 @@ Strictly in this order. Every step is Lean-first (model, then exporter, checker,
 
 ### Phase A: dynamic data structures and their invariants
 
-Plan: `dokumente/PLAN-DYNAMIC.md` §8a. Covers O4-O6, O11, O14, O20, O29.
+Plan: `PLAN-DYNAMIC.md`† §8a. Covers O4-O6, O11, O14, O20, O29.
 
 | Step | What | State |
 |---|---|---|
@@ -53,7 +57,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 
 1. **Message passing with a plain payload under release/acquire, no lock** (O25, `N291`). The memory-model half is PROVED
    (`Speichermodell/Payload/`, THEOREM-MAP 80: no race after the await, the value, counter-models, litmus tests). Open: the `Spec.lean` diff
-   D1-D6 and the checker rule R0-R4 (proposed in `PLAN-DYNAMIC.md` §11, four decisions for Simon in §11.5); no concrete W/GX fixture
+   D1-D6 and the checker rule R0-R4 (proposed in `PLAN-DYNAMIC.md`† §11, four decisions for Simon in §11.5); no concrete W/GX fixture
    yet; 11 corpus examples wait for it. The Lean integration is the payload half of the paused M8.
 2. **Weak memory beyond DRF-SC:** name and prove what is claimed (standard patterns); shrink the NOT CLAIMED line.
 3. **Hardware bridge:** x86-TSO, ARMv8 and RISC-V (RVWMO) refine W/GX access by access through the ISA-neutral `Need` list of Track L.
@@ -67,7 +71,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 
 1. **Track P and Track L**, both running now in parallel with Phase A.
    Track P: complete Lean parser (coverage matrix, then elaboration replaces `lean_g.rs`). Track L: refinement down to the binary with an
-   ISA-neutral `Code` and no CPU model. Plans: `PLAN-TRANSLATION-VALIDATION.md` §9a/§9b.
+   ISA-neutral `Code` and no CPU model. Plans: `PLAN-TRANSLATION-VALIDATION.md`† §9a/§9b.
 2. **Model gaps behind existing lowerings:** `boot` and `entrust` semantics; aarch64 `vector`/`via` meaning; port space and `asm` (LLVM
    lowerings exist without a model).
 3. **Remaining O-items:** interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate
@@ -80,16 +84,16 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
    (`Token.doku`); the `--` comment is removed everywhere. Lean first, then `lex.rs`, then ~1270 files (THEOREM-MAP 83).
    Left: a formatter or doc tool that reads `Token.doku`/`Art::Doku`.
 8. **Adequacy of the generated test set** (Simon, 2026-10-18). Goal: if a program-neutral checker/compiler handles every generated test
-   program, it handles all valid programs correctly. Result in Lean (`grammatik/Grammatik/Adaequanz/`, `CHECKER.md` §16, THEOREM-MAP 85):
+   program, it handles all valid programs correctly. Result in Lean (`grammatik/Grammatik/Adaequanz/`, `CHECKER.md`† §16, THEOREM-MAP 85):
    program-neutral alone admits NO finite test set (`kein_endlicher_test`). With a state bound the W-method set is sufficient and
    astronomically large for Gabbro. For the class "verdict = conjunction of local premises and whole-program patterns" the answer is exact
    and small: one single-fault program per isolable refusal cell plus valid programs covering the accepted cells (124 premise cells, 146
-   child-position cells, at most 4 540 pattern cells, independent of program size). EXACT CELLS (2026-10-20, `CHECKER.md` §16.6a): the global patterns are 124 cells with 20 bad, not 4 540; `gen-zellen` witnesses 75 of 104 good and 9 of 20 bad cells strictly (valid program / single-fault program), from a generator that emits each program with its proof (`Gutes`, `Schlechtes`), against the Lean model only (the Rust checker is never an oracle). Open: the local refusal cells need source mutants,
+   child-position cells, at most 4 540 pattern cells, independent of program size). EXACT CELLS (2026-10-20, `CHECKER.md`† §16.6a): the global patterns are 124 cells with 20 bad, not 4 540; `gen-zellen` witnesses 75 of 104 good and 9 of 20 bad cells strictly (valid program / single-fault program), from a generator that emits each program with its proof (`Gutes`, `Schlechtes`), against the Lean model only (the Rust checker is never an oracle). Open: the local refusal cells need source mutants,
    so the G-to-source printer of Track P; the coarse accepted cells (4 of 459 covered); the metamorphic tests for hypotheses H1-H8.
 9. **Refinement down to the binary: EETV-R version 3** (the ONLY refinement item; Simon's design, 2026-10-18). LLVM stays an UNTRUSTED
    producer; Lean checks the binary against the certificate through a small UB-free core K, bridge steps justified by Gabbro facts, and a
    backend validator over chip-learned instruction semantics. Nothing built; the first steps start with extending `Code`. Full design,
-   hardware contract and research risks: `PLAN-TRANSLATION-VALIDATION.md` §9c.
+   hardware contract and research risks: `PLAN-TRANSLATION-VALIDATION.md`† §9c.
 10. **One-off corpus of ALL generated programs** in a git submodule (at most 30 GiB, counting-and-unranking generation). Not started.
     `dokumente/PLAN-LONG-RANGE.md` §1.
 11. **`async fn` and `.await`** as a verified state-machine transformation (sugar; machine G and `Spec.lean` stay untouched). Not started.
@@ -110,10 +114,10 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   return of empty anonymous payload pages; whole-arena reset. All direct and compatible indirect recursive cycles use a loop dispatcher
   with explicit growable continuation storage (allocation failure is an explicit trap); checked static range zeroing; guarded
   per-invocation thread stacks, group spawn before join, stack unmapping after join.
-- **Open:** `free` across function boundaries (Lean audit and plan: `dokumente/PLAN-DYNAMIC.md` §12); aliases outside the tracked ownership discipline; complete `ArenaForm`/`DynForm` export and
+- **Open:** `free` across function boundaries (Lean audit and plan: `PLAN-DYNAMIC.md`† §12); aliases outside the tracked ownership discipline; complete `ArenaForm`/`DynForm` export and
   the G form of the newer memory statements. No checker refusal or source obligation was relaxed. CPU/final-byte refinement is §5.
-- **Evidence:** `dokumente/LLVM-BACKEND.md`; coverage is the Lean constructor/field register, checked by
-  `python3 instrumente/pruefe-llvm-modelldeckung.py` (examples never define it).
+- **Evidence:** `LLVM-BACKEND.md`†; coverage is the Lean constructor/field register, checked by
+  `python3 instrumente/teile/llvm-modelldeckung.py` (examples never define it).
 
 ## 2. Lean model
 
@@ -143,8 +147,9 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   `runner_entry_tso`/`runner_entry_sc` from the process's first instruction (the loader proved) for any number of
   threads, with the witness on the real file. Open: `ir_sim` (S0IR against the thread machine) and the lowering; the provider freshness of the open region in the model; the front end and the subset gate
   over the whole language; the Rust exporter `lean_g.rs` writes `aschreibt := false` for every gate and refuses a
-  gate's `writes` (the model and the Lean front end accept it). The active task is complete Gabbro-to-IR compilation; the assembly runner may be corrected when necessary.
-- **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with `grammatik/kratz/Deckung.lean` over
+  gate's `writes` (the model and the Lean front end accept it). The active task is complete Gabbro-to-IR compilation; the assembly runner may be corrected when necessary. The lowering and
+  `irBild_correct` now exist for part of the language; current state in `IR-COMPILATION-LANES.md`, not here.
+- **Stage 0: the Lean front end over the whole syntax (2026-10-25).** Measured with a scratch file `grammatik/kratz/Deckung.lean` (not in the tree) over
   `beispiele/` (first refusal per example): 43 of 177 accepted after arrays/strings, half-open ranges and aggregate
   fields. Open, model work first where marked (M):
   * (M) records as values (`Treiber`, `Completion`, `Platz`; O15 was priced and refused for C, revisit for stage 0);
@@ -159,12 +164,12 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **O14 (arena chains: two statement shapes without a form).** Specification and exporter have the form; two statement shapes close no chain.
 - **O19-Rest (handlers and cores).** Since 2026-10-18 (Lean): G has a per-core interrupt-mask state over the layer `KernZ`
   (`KernMaske.lean`); the core schedule is DERIVED from the machine (`kernPlan_aus_lauf`, `kernHaltE_iff_M`); `Code` has `Instr.imsk` with the
-  named assumption `MaskHw` and the refinement `MaskRel.lean` (`PLAN-DYNAMIC.md` §8a.4, THEOREM-MAP 81). Open: the `Spec.lean` proposal
+  named assumption `MaskHw` and the refinement `MaskRel.lean` (`PLAN-DYNAMIC.md`† §8a.4, THEOREM-MAP 81). Open: the `Spec.lean` proposal
   (not applied) and its GA twin; composing the `Code` steps with the interleaving of all threads of a core (H3); re-entry and
   handler-on-handler preemption; `Einheit` names no handler; `H102` fires only on `via idt`; no Rust/LLVM emitter for `imsk`.
 - **Reader/writer lock (decision 2026-10-18).** In Lean as the layer `RwSchritt` over machine G: exclusion, rank order, no wait cycle, no
   write-write/write-read race (premise `LeserLos`), a `Code` lowering on one state word with refinement `RwRel`, witnesses and planted
-  defects (`PLAN-DYNAMIC.md` §8a.5, THEOREM-MAP 82). Open: the `Spec.lean` diff (mode in G recommended); the syntax (`lock L rank N rw`,
+  defects (`PLAN-DYNAMIC.md`† §8a.5, THEOREM-MAP 82). Open: the `Spec.lean` diff (mode in G recommended); the syntax (`lock L rank N rw`,
   `reads L { }`: proposals); the `Ziel` legs with no layer twin; the checker rule deriving `LeserLos`; fairness; no Rust/LLVM.
 - **O20 (arenas under concurrency).** Generations and the commit ceiling assume one thread of control and roots entered once. Lean (Phase A
   step 3) covers the locked commit. Open: ABA ownership predicate, commit bound, footprint of `pop` (`schuldet`), entry fact of a writer.
@@ -185,11 +190,11 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   `pub` and the closed export hull are in Lean too (THEOREM-MAP 104); the Rust `N038` still compares short names.
 - **O41 (registers as Lean, not as `.tsv`; Simon, 2026-10-20).** `dokumente/llvm-modelldeckung.tsv` is a hand-written list of the model's
   members with an LLVM status per member; it proves nothing, its member column duplicates the total match of `Gen/Abdeckung/Mitglieder.lean`,
-  and `instrumente/teile/llvm-modelldeckung.py` checks it against the Lean sources by regex. `messung/fallen-klassifikation.tsv` has no reader.
+  and `instrumente/teile/llvm-modelldeckung.py` checks it against the Lean sources by regex. (`messung/fallen-klassifikation.tsv` was removed with `messung/` on 2026-11-01.)
   Open: the LLVM status as a total Lean function over the constructors (a new constructor stops the build; the status stays a claim about
   `llvm.rs` until translation validation); stage 6 of `pruefe-lean.py` (`gen-abdeckung`) takes its members from Lean, reading no file; delete
-  both `.tsv` files and the Python script; update `llvm.rs`, `CHECKER.md`, O27, `pruefe-lean.py`, `pruefe-llvm.py`.
-- **O42 (complete test sets M and N; `dokumente/PLAN-TEST-SET.md`).** Proved: Theorem 5 `vollstaendig_hinreichend` (a conjunctive checker
+  the remaining `.tsv` and the Python script; update `llvm.rs`, `CHECKER.md`†, O27, `pruefe-lean.py`, `pruefe-llvm.py`.
+- **O42 (complete test sets M and N; `PLAN-TEST-SET.md`†).** Proved: Theorem 5 `vollstaendig_hinreichend` (a conjunctive checker
   that agrees with the model on M and N agrees on every program), step 1 `akzeptiertX_zellen` (the model's Bool IS the conjunction over the
   cells), unreachability of five cells (`ZellenUnmoeglich.lean`). The generator emits only proof-carrying `Gutes`/`Schlechtes`, one program
   at a time (`Strom`), with contracts. Open: M and N as concrete values for the whole model with `Vollstaendig` proved (a witness or an
@@ -207,7 +212,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   has class `abgelehnt`. Open: a finite-program, oracle-free universal-machine encoding and a generic push/pop/controller simulation with
   halting/output correspondence, budget adequacy and precise admission conditions. Unbounded stacks and conditional exits are not that proof;
   do not claim Turing completeness from them. No syntax, acceptance rule or goal premise was weakened.
-  **Complete proof plan:** [PROOF.md D5](dokumente/PROOF.md#d5-complete-universality-proof-and-brainfuck-compiler-plan-2026-10-24),
+  **Complete proof plan:** `PROOF.md`† D5,
   packages U0-U10: all eight Brainfuck commands compiled through finite Mathlib TM2
   to the actual G machine, with input loading, safety/admission, bidirectional halt and output-prefix preservation, nested-fuel adequacy,
   conditional time/space bounds and a partial-recursive-function/undecidability bridge. Resolve real push/pop and admission at U0 first.
@@ -219,11 +224,11 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   The target is additionally bundled as finite Mathlib `FinTM2` with its regular input entry, and one fixed BF/TM2 program reaches
   arbitrary tape depths. `Storage/CallReturn.lean` proves a real G call/return restores a retained bit (class `endet`, core-checker accepted).
   This primitive does not solve the admission of an unbounded recursive stack service. Simon authorized an explicit, fallible region without
-  an element ceiling. Its storage semantics and safety proofs are now in `Bausteine/Arena/Unbounded/`; see `PLAN-DYNAMIC.md` section 13.
+  an element ceiling. Its storage semantics and safety proofs are now in `Bausteine/Arena/Unbounded/`; see `PLAN-DYNAMIC.md`† section 13.
   Whole-program G admission/export, production lowering and the final universality theorem remain open.
   The linked TM2/BF heap backend now preserves and reflects halting and output from allocated input, with OOM separated from normal halt
-  and a conditional four-operation bound per BF transition (`PLAN-DYNAMIC.md` 13.3). This target is the new storage component, not yet G.
-  Concrete, value-sensitive G push/pop/free prefixes and a whole finite core-accepted `endet` witness are now proved (`PLAN-DYNAMIC.md`
+  and a conditional four-operation bound per BF transition (`PLAN-DYNAMIC.md`† 13.3). This target is the new storage component, not yet G.
+  Concrete, value-sensitive G push/pop/free prefixes and a whole finite core-accepted `endet` witness are now proved (`PLAN-DYNAMIC.md`†
   13.4). G's fixed index bound, full source ownership admission and the unbounded whole-program TM2/G bridge remain open.
   G stack operations now carry exact ownership-grant effects (13.5); an actual G `runs until stack-is-empty` loop has the exact
   proved boundary `initialStack.length < passes`, including a core-accepted conditional-class function witness (13.6).
@@ -234,7 +239,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
   17 poison probes, 42 dead functions and constants, the Lean folder `CBackend` (22 233 lines, deleted 2026-10-18; tag
   `archiv/c-emitter-2026-10-17`). Open: 13 compiler warnings in `llvm.rs`/`nulpfad.rs`/`certstmt.rs` (two unreachable patterns, the
   link-unit init for constants, never-read fields); the C templates in `schablonen.rs`; comments naming `emit.rs`/C11. Remove, do not rename.
-- **Differential harness** (`CHECKER.md` §12.6). Class (b) is empty over 62 000 generated programs. The groups of class (a) left
+- **Differential harness** (`CHECKER.md`† §12.6). Class (b) is empty over 62 000 generated programs. The groups of class (a) left
   (`ERWARTET_A`: costs, `locks`/`reads` effects, `N511`/`N275` user logic, `const fn`) need Lean components; the model gaps (`return` under
   `locks`, `Endblock` formers, `Block.arenaAlloc` at the top level) are listed there with the exact change. Open rulings: `M104`, `N001`,
   `M133`, `M147`. Track P: 79 % of the generated space is outside the elaboration fragment.
@@ -245,7 +250,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 - **O11 (guardless invariant).** A `table`/`group` invariant that no function `maintains` is booked by NOTHING (`N275`-`N277` check only
   anchored ones).
 - **Alias / `own`** (built 2026-10-17). `R014` (error) and `R015` (hint) separate pointer roots at call boundaries; Lean has `ParamGetrennt`
-  and `ObjGetrennt` with a bridge to `R014`; LLVM sets `noalias` on internal writable pointer parameters. Paper: `dokumente/A1-OWN-PAPER.md`.
+  and `ObjGetrennt` with a bridge to `R014`; LLVM sets `noalias` on internal writable pointer parameters. Paper: `A1-OWN-PAPER.md`†.
   Open: records over byte buffers (range objects in the model, `LG005`/`LG001`); the four bridge hypotheses (`ParamVerschieden`,
   `RechteOk`, `HerkunftTreu`, `FrischNeu` only for the model allocator) and the checker's `let` run in Lean; `R004`/`R007` as special cases
   of `R014`; `noalias` is no Lean judgment (O27).
@@ -254,7 +259,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 
 ## 4. LLVM backend
 
-Full table: `dokumente/LLVM-BACKEND.md` §5.
+Full table: `LLVM-BACKEND.md`† §5.
 
 - **Lowerings without a Lean model** (2026-10-17; rule: language follows the Lean model). Built, evidenced only by text/qemu: aarch64
   `entry` (the meaning of `vector`/`via` on aarch64 is the lowerer's reading; `LANGUAGE.md` and the model are silent), `masks irqs`, the
@@ -273,13 +278,14 @@ Full table: `dokumente/LLVM-BACKEND.md` §5.
 
 Prerequisite chain, in this order; none of it is O27 work:
 
-1. **A complete Lean model of a CPU.** Without it no refinement: the long pole (`ARM-PLAN.md`: Sail Arm plus multicore model).
+1. **A complete Lean model of a CPU.** Without it no refinement: the long pole. The Sail-Arm plan (`ARM-PLAN.md`†) and the `arm/` model were
+   retired on 2026-11-01; no CPU model is being built now.
 2. **And more:** per-access bridge (goal to W/GX simulation), gate and entry lemmas per target (raw instruction, `_start` with stack, state,
    exit/`never`), O28 link closure, O26 foreign orderings.
 3. **Automatic for all programs.** No per-program step by hand. That makes the chain more expensive than O27, not cheaper: O27 widens the set
    of judged programs one program at a time, while validation must run for ALL of them without help afterwards.
 
-Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md` §§0-5 and §9c.
+Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and §9c.
 
 ## Appendix: closed or removed (ID → reason)
 

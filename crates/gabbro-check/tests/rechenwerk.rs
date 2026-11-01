@@ -809,7 +809,7 @@ pub impl fn tu(i : index into T) -> u32 effects { reads T, writes zaehler } cost
 }
 
 /// **Ein `extern fn` bekommt kein zweites `extern`, und ein `use` gehört in die Schnittstelle**
-/// (gefunden 2026-08-20 an `beispiele/29-undurchsichtig.gab`, dem einzigen Beispiel mit *zwei*
+/// (gefunden 2026-08-20 an `beispiele/0029-undurchsichtig.gab`, dem einzigen Beispiel mit *zwei*
 /// Modulen).
 ///
 /// Beides in einem Test, weil es derselbe Befund war: das doppelte `extern` gab `P001` und
@@ -1018,7 +1018,7 @@ fn ein_unbekannter_name_faellt_und_zaehlt_gegen_die_deckung() {
     assert_eq!(text.matches("M119").count(), 1, "und GENAU einmal:\n{text}");
 
     // **Die andere Richtung, und sie war ein Falschtreffer beim Bauen:** `u64::max` ist ein
-    // Ort, dessen Basis das TYPWORT `u64` ist. Gefunden sofort an `11-grammatikbefunde.gab`.
+    // Ort, dessen Basis das TYPWORT `u64` ist. Gefunden sofort an `0011-grammatikbefunde.gab`.
     let k = "module m {\nconst A : u64 = u64::max;\n}\n";
     let (b2, mut a2) = gabbro_syntax::lies("k.gab", k);
     gabbro_check::pruefe(&b2, &mut a2);
@@ -2853,7 +2853,7 @@ fn lean_ruf_sammeltopf_ist_aufgeteilt() {
 ///
 /// The `let` and `return` arms sent every `ExprArt::Ruf` to `call_parts` before `expr_term`
 /// could see it, so a body whose only sin was an option value was refused whole. *Measured
-/// at `beispiele/27-freiliste.gab :: belegen`, which gains a body by this line alone.*
+/// at `beispiele/0027-freiliste.gab :: belegen`, which gains a body by this line alone.*
 #[test]
 fn lean_optionswert_ist_kein_ruf() {
     let t = lean_programm(LEAN_VIER_DINGE);

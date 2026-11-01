@@ -12,7 +12,7 @@
 //! * no object at all -- the common parameter walk is untouched by the rule;
 //! * the CARRIER walk stays out of `touches`: `touches` covers the body (and
 //!   now the object), the walk itself is the function effects' business.
-//!   `beispiele/09-ohne-zeiger.gab` and `beispiele/57-faedenhalt.gab` pin the
+//!   `beispiele/0009-ohne-zeiger.gab` and `beispiele/0057-faedenhalt.gab` pin the
 //!   same split at corpus scale; the third row below pins it in reduced form
 //!   so a later lane cannot re-add the carrier hold without this file going
 //!   red first.

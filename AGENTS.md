@@ -1,95 +1,49 @@
 # AGENTS.md — how work on Gabbro is run
 
-This is the operating manual for everyone who works in this repository, human or model. `CLAUDE.md` holds the
-working rules that are loaded into every session; this file states the goal, the standing rules, the procedures
-and the pitfalls. The current work list is `TODO.md`. History (who decided what, when, and how earlier rounds
+This is the operating manual for everyone who works in this repository, human or model (`CLAUDE.md` is a
+symlink to it, so Claude Code loads the same text); it states the goal, the standing rules, the procedures and
+the pitfalls. The current work list is `TODO.md`. History (who decided what, when, and how earlier rounds
 were organised) is in `git log`, not here.
 
 ---
 
-## Current implementation scope: all Gabbro to IR
+## Current work: Stage 0 and the Lean migration (state of 2026-11-01)
 
-**TEAM AND BUILD RULES (owner, 2026-11-01, supersede every older staffing rule below).**
-- **Two Claude Sonnet 5.5 leads**, both T3 Code agents (owner, 2026-11-01, latest order). While the Lean
-  module-system migration and the splitting of every Lean file below 500 lines run, **Lead B does the migration
-  and the splitting** of the whole repository (it may use up to one Sol and four Muse for exactly that — never
-  for new `grammatik/` or Stage-0 work; its slots need not all be busy), and **ALL other agents work on Stage 0**: **Lead A works with
-  PERMANENTLY five sub-agents** (ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor, only the Go
-  access: model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`), started through T3
-  `delegate_task`, every slot occupied at all times. Stage-0 work means the Stage-0 side only (`stage0/`, the
-  runner, probes): the paused IR lanes (IR-04 floats, IR-02 `narrow`, IR-06 memory, the StatementCost/EarlyExit
-  migration, orphans, `ir_parallel`, IR-01 rest) and the Stage-0 lowering prepared for the C packages; no
-  `grammatik/` change until the migration is merged.
-- **Only the leads build.** Each lead runs its own builds and may do heavy work itself; sub-agents and their
-  sub-agents never build or check Lean, and their worktrees carry no `.lake` (no Mathlib, no build cache).
-  A lead checks its sub-agents' work in its own tree.
-- **One integration branch, one build per lead (owner, 2026-11-01).** A lead merges the branches of all its
-  agents (its Sol, its four Muse and its own work) into ONE integration branch and builds/checks that branch
-  only; never one build per agent. All eight Muse and both Sol stay busy at all times: when one finishes, its
-  branch goes into the integration branch and it gets its next task at once.
-- **Heavy witness modules are not rebuilt during work.** Probe files that run the parser/elaborator in the
-  kernel (`Grammatik/Parser/Elab/Proben/**`, `*Proben*.lean`) need 7–12 GB each; they are checked only in the
-  final integration build of a round, never in single-module checks.
-- **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`,
-  `lean` and the shell. The four guardians stay root's tools.
-- **One Mathlib for all trees**: the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
-  tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only
-  the own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
-- **CPU and memory caps after the OOM/CPU overload of 2026-11-01 (owner).** The machine has 20 threads and 31 GB.
-  A full `grammatik/` build: only ONE globally (both slot locks), scope `-p AllowedCPUs=0-11 -p CPUQuota=1200%
-  -p MemoryMax=<min(MemAvailable-6G, 14G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0`. A single-module check:
-  one slot lock, `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0`.
-  Nothing heavy starts when the load average is above 16 or less than 8 GiB are available; wait instead.
-- **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
-- **Nothing in `/tmp` (owner, 2026-11-01).** `/tmp` is RAM: no agent writes there (scratch goes to `.scratch-*`
-  inside its own worktree, `TMPDIR` points there), and everything in `/tmp` together stays under 100 MB; root
-  removes leftovers no process holds open.
+This section is the ONE valid staffing and build order; it replaces every earlier one (earlier orders are in
+`git log`). Lane checkpoints, the fourteen work packages and the C-package designs are in
+[IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); staffing statements there are history, not orders.
 
-**Lean module system (owner, 2026-11-01, fixed rule).** All Lean in the repository (`grammatik/`,
-`stage0/`, `runner/`, `programmlogik/`, `passlogik/` and every other Lean package) is migrated completely to
-the Lean module system (`module`, `public import`/`import`, explicit `public`/`@[expose]` visibility), and
-every new or changed Lean file must be a module that uses it: expose only what dependents must unfold, keep
-proof bodies and helpers private, so a change that does not move an interface does not rebuild dependents.
-A non-module Lean file is a layout finding.
+### Team
 
-**RESUMED with two agents (2026-10-31).** The owner ended the pause and authorized exactly TWO Claude
-Sonnet 5.5 implementation agents, no others: one rolling lane on Lean slot 1 (IR-06 memory, handed back; then IR-02 wide-integer kernels
-in `t3-db31d27d`, handed back; now IR-04 floats in `t3-c3ebf14f`) and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. Additionally (owner, same day) two GPT Sol 6.1
-agents for small bounded tasks: IR-01 const-signature bounds in `t3-d342a8ed` (slot 1, shared) and IR-02
-`wideExtend`/mixed-sign multiword compare in `t3-db31d27d` (slot 2, shared; IR-03 has priority). The two Sonnet lanes (IR-03, IR-04) resumed at 00:00 (2026-11-01)
-after the owner pause; two Sol 6.1 agents stay active for small tasks. All other lanes stay paused
-with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
+- **Two Claude Sonnet 5.5 leads**, both T3 Code agents.
+  - **Lead B does the Lean module-system migration and the splitting of every Lean file below 500 lines**,
+    repository-wide. It may use up to one GPT Sol 6.1 and four Muse for exactly that, never for new `grammatik/`
+    or Stage-0 work; its slots need not all be busy.
+  - **Lead A works on Stage 0 with permanently five sub-agents**: one GPT Sol 6.1 and four OpenCode Muse Spark 1.3
+    Contributor, only through the Go access (model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`),
+    started through T3 `delegate_task`. Every slot is occupied at all times: when an agent finishes, its branch
+    goes into the integration branch and it gets its next task at once.
+- **Stage-0 work** means the Stage-0 side only (`stage0/`, the runner, probes): the paused IR lanes (IR-04 floats,
+  IR-02 `narrow`, IR-06 memory, the StatementCost/EarlyExit migration, orphans, `ir_parallel`, IR-01 rest) and the
+  Stage-0 lowering prepared for the C packages. **No `grammatik/` change until the migration is merged.**
+- **Only the leads build.** Sub-agents and their sub-agents never build or check Lean, and their worktrees carry no
+  `.lake` (no Mathlib, no build cache). A lead checks its sub-agents' work in its own tree.
+- **One integration branch, one build per lead.** A lead merges the branches of all its agents and its own work
+  into ONE integration branch and builds/checks that branch only; never one build per agent.
+- **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`, `lean` and
+  the shell. The four guardians stay root's tools.
+- Root owns form-based coverage measurement and reviews; agents implement.
 
-**Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
-checks globally, each with MemoryMax=5G, MemoryHigh=4G and MemorySwapMax=0. This supersedes all older
-one-global-Lean-check rules below and in lane instructions. One process per slot is protected by
-`/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N=1..2). Assign IR-01/IR-06 to slot 1;
-IR-02/IR-03/IR-04/IR-10 share slot 2. Slots 3 and 4 are retired. Release the slot after each module/check so other assigned workers
-can proceed. Never run two checks in one worktree or mutate artifacts read by another check; use isolated
-artifact overlays. Do not interrupt another worker's running proof. Grammar rebuilds remain forbidden.
+### Scope: every userspace Gabbro form to Stage-0 IR
 
-**Scope update (2026-10-31): userspace compilation.** Implement and formally verify all existing Gabbro
-needed by userspace programs. Source ASM bodies, boot code, privileged instructions and the proposed raw
-memory-address syntax are outside this compiler assignment, alongside device-register forms. The assembly
-IR runner remains the execution backend. Six implementation agents continue; a temporary seventh agent
-only plans these excluded low-level language features in Markdown. That plan may propose future canonical
-grammar changes, but authorizes no grammar rebuild or implementation now. ASM/boot behavior is user logic
-with explicit proof obligations, never silently a hardware assumption. Existing safe region/reference
-userspace memory remains in scope; raw-address access must not weaken those guarantees.
-
-**RESUMED (2026-10-31).** The owner authorized up to six parallel Sol 6.1 implementation agents,
-followed by one final integration/proof agent. Preserve existing worktrees, uncommitted changes and scratch. The checkpoint and fourteen
-complete work packages are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md). Fourteen lanes do not authorize fourteen
-simultaneous agents; the current staffing limit is six Sol 6.1 implementation agents. Root owns form-based
-coverage measurement and reviews; agents implement.
-
-
-The active implementation task is **only to compile every existing Gabbro language form except register
-operations into Stage-0 IR and build the connected translation pipeline**. Device-register reads, writes,
-fallible reads and register transitions are explicitly outside this task; do not implement them or count
-them as unfinished work for this scope. Work is prioritized by completed, connected source-to-IR cases,
-not by the number of helper lemmas, commits or added lines. Cover the whole language rather than repeatedly
-expanding infrastructure for a small subset.
+The active implementation task is **only to compile every existing Gabbro language form needed by userspace
+programs into Stage-0 IR and build the connected translation pipeline**, formally verified. Outside this task, and
+not counted as unfinished work: device-register reads, writes, fallible reads and register transitions; source ASM
+bodies, boot code, privileged instructions and the proposed raw-address syntax (planned only, in
+[LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md); ASM/boot behaviour is user logic with explicit proof
+obligations, never silently a hardware assumption). Existing safe region/reference userspace memory is in scope.
+Work is prioritized by completed, connected source-to-IR cases, not by the number of helper lemmas, commits or added
+lines. Cover the whole language rather than repeatedly expanding infrastructure for a small subset.
 
 - **The assembly IR runner is the execution backend.** Reuse it; change it only for a concrete missing or
   incorrect capability needed by source-to-IR compilation. Do not start an adjacent runner or hardware project.
@@ -108,49 +62,73 @@ expanding infrastructure for a small subset.
   preserving existing guarantees. Do not weaken checks or semantics to enable a case.
 - Test emitted IR with the assembly runner when needed. Never add another Gabbro interpreter or restore the
   retired Lean execution path.
-- **Never rebuild `grammatik/` for this task.** Reuse its existing compiled artifacts. Run affected Stage-0
-  compilation checks directly; do not invoke a build or guardian that would rebuild the grammar.
-  **Exception (owner, 2026-11-01):** pure source-to-G exports in `grammatik/Grammatik/Parser/Elab/*` for
-  forms whose canonical model rule already exists may be added, batched into ONE change by ONE agent with
-  one grammar rebuild (inside the two-slot limit), `gabbro_ziel` still on the standard axioms and the Lean
-  guardian afterwards.
-  **Model extension (owner, 2026-11-01):** wherever the Lean model or machine G is not strong or complete
-  enough for an existing source form, extend it there (syntax, G semantics, `Akzeptiert`, proofs) instead
-  of dropping the form; this covers the C packages of the export catalogue in
-  `dokumente/IR-COMPILATION-LANES.md`. Every extension keeps `gabbro_ziel` on the standard axioms, never
-  weakens a guarantee, describes any change of meaning of `Spec.lean` in its commit, and is followed by the
-  Lean guardian. Several agents may change `grammatik/` at the same time (owner, 2026-11-01; the former
-  one-agent rule is lifted), each in its own worktree; root merges them one after the other.
-  **C packages approved (owner, 2026-11-01):** all 18 C packages may change `grammatik/` and machine G as
-  designed in `dokumente/IR-COMPILATION-LANES.md`, with the recommended answer to every owner question in
-  those design sections, provided `gabbro_ziel` stays proved on the standard axioms. All C work is done in
-  2–3 full `grammatik/` build rounds: round 1 C13, C17, C05, C04, C03; round 2 C01, C06, C07, C08, C09,
-  C11, C18; round 3 C10, C02, C12, C14, C15, C16. Between rounds only single changed modules are checked.
-  `axiom`-`ensures` stays a named hardware assumption (`AxVertragO`, owner 2026-11-01); it is not turned
-  into a runtime check.
-  **Grammar build memory (owner, 2026-11-01; tightened the same day, see the CPU and memory caps above):** a
-  `grammatik/` build may use the currently available memory minus 6 GiB, at most 14 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
-  `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
-  allows. Stage-0 checks keep their 5G slots.
-- **No swap for ANY run (owner, 2026-11-01):** every process an agent or root starts that can use real memory —
-  `lean`, `lake`, `cargo`, the runner and regression loops, guardians, Python measurement scripts — runs
-  inside `systemd-run --user --scope -p MemorySwapMax=0` with a MemoryMax/MemoryHigh. No exceptions.
-- **RAM discipline (owner, 2026-11-01):** inside a Stage-0 slot exactly ONE `lean` process runs, with
-  `-j4 -DElab.async=true -M4608` (owner, 2026-11-01: asynchronous elaboration is the standard; the threads of
-  one process share its imports), checked module by module in dependency order. Never run a parallel
-  `lake build` of `stage0/` (it spawns one `lean -M16384` per module and thrashes inside the 5G scope). Check
-  `free -g` before every heavy step; with less than 8 GiB available, wait. Agents keep the slot lock only for
-  one module and must not end their run while a build they started still runs.
-- **Build less, keep working (owner, 2026-11-01):** check rarely — batch several finished edits into one
-  check of the affected modules instead of checking after every small change. While a check runs or waits
-  for memory/a slot, keep writing the next proofs and code instead of idling; never stop a run because a
-  check is pending.
-- **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
-  slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
+- **`grammatik/`** is not changed until the migration is merged (above). Afterwards these owner rules of
+  2026-11-01 apply; outside them `grammatik/` is never rebuilt for this task (reuse its compiled artifacts, run
+  affected Stage-0 checks directly, invoke no build or guardian that would rebuild the grammar):
+  - **Exports:** pure source-to-G exports in `grammatik/Grammatik/Parser/Elab/*` for forms whose canonical model
+    rule already exists may be added, batched into ONE change by ONE agent with one grammar rebuild,
+    `gabbro_ziel` still on the standard axioms and the Lean guardian afterwards.
+  - **Model extension:** wherever the Lean model or machine G is not strong or complete enough for an existing
+    source form, extend it there (syntax, G semantics, `Akzeptiert`, proofs) instead of dropping the form. Every
+    extension keeps `gabbro_ziel` on the standard axioms, never weakens a guarantee, describes any change of
+    meaning of `Spec.lean` in its commit, and is followed by the Lean guardian. Several agents may change
+    `grammatik/` at the same time, each in its own worktree; root merges them one after the other.
+  - **C packages:** all 18 C packages may change `grammatik/` and machine G as designed in
+    `dokumente/IR-COMPILATION-LANES.md`, with the recommended answer to every owner question there, provided
+    `gabbro_ziel` stays proved on the standard axioms. They are done in three full `grammatik/` build rounds:
+    round 1 C13, C17, C05, C04, C03; round 2 C01, C06, C07, C08, C09, C11, C18; round 3 C10, C02, C12, C14, C15,
+    C16. Between rounds only single changed modules are checked.
+  - `axiom`-`ensures` stays a named hardware assumption (`AxVertragO`); it is not turned into a runtime check.
 
-This scope governs the current implementation work; the broader roadmap below is not authorization to
-start adjacent projects. Report which language cases actually compile, which remain refused, and what was
-measured.
+Report which language cases actually compile, which remain refused, and what was measured. The broader roadmap
+below is not authorization to start adjacent projects.
+
+### Builds, memory and CPU
+
+The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/CPU overload of 2026-11-01.
+
+- **At most two Lean builds or direct Lean checks run globally**, across all worktrees, including audits,
+  witnesses and `lean --run` compiler invocations. Each holds a slot lock
+  `/home/simon/.cache/gabbro-stage0-build.slot-N.lock` (N = 1, 2) and releases it after each module/check. Never
+  run two checks in one worktree or mutate artifacts another check reads (use isolated artifact overlays); never
+  interrupt another worker's running proof.
+- **Scopes** (`systemd-run --user --scope …`):
+
+  | Run | Locks | Scope |
+  |---|---|---|
+  | full `grammatik/` build (only one globally) | both | `-p AllowedCPUs=0-11 -p CPUQuota=1200% -p MemoryMax=<min(MemAvailable-6G, 14G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0` |
+  | Stage-0/runner `lake build` | both | `LEAN_NUM_THREADS=2`, `-p MemoryMax=<min(MemAvailable-4G, 16G)> -p MemoryHigh=<1G below> -p MemorySwapMax=0` |
+  | single-module check | one | `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0` |
+
+- **Inside a single-module slot exactly ONE `lean` process runs**, with `-j4 -DElab.async=true -M4608`
+  (asynchronous elaboration is the standard; the threads of one process share its imports), module by module in
+  dependency order. Never run a `lake build` of `stage0/` inside such a slot: it spawns one `lean -M16384` per
+  module and thrashes inside the 5G scope.
+- **No swap for ANY run:** every process that can use real memory (`lean`, `lake`, `cargo`, the runner and
+  regression loops, guardians, Python measurement scripts) runs inside a scope with `-p MemorySwapMax=0` and a
+  MemoryMax/MemoryHigh. No exceptions.
+- **Nothing heavy starts** when the load average is above 16 or less than 8 GiB are available (`free -g` before
+  every heavy step); wait instead.
+- **Heavy witness modules are not rebuilt during work.** Probe files that run the parser/elaborator in the kernel
+  (`Grammatik/Parser/Elab/Proben/**`, `*Proben*.lean`) need 7–12 GB each; they are checked only in the final
+  integration build of a round, never in single-module checks.
+- **Build less, keep working:** batch several finished edits into one check of the affected modules. While a check
+  runs or waits for memory or a slot, keep writing the next proofs and code; never stop a run because a check is
+  pending, and never end a run while a build it started still runs.
+- **One Mathlib for all trees:** the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
+  tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only its
+  own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
+- **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
+- **Nothing in `/tmp`:** it is RAM. Scratch goes to `.scratch-*` inside the own worktree (`TMPDIR` points there);
+  everything in `/tmp` together stays under 100 MB, and root removes leftovers no process holds open.
+
+### Lean module system (fixed rule)
+
+All Lean in the repository (`grammatik/`, `stage0/`, `runner/`, `programmlogik/`, `passlogik/`, `bruecke/` and
+every other Lean package) is migrated completely to the Lean module system (`module`, `public import`/`import`,
+explicit `public`/`@[expose]` visibility), and every new or changed Lean file must be a module that uses it: expose
+only what dependents must unfold, keep proof bodies and helpers private, so a change that does not move an
+interface does not rebuild dependents. A non-module Lean file is a layout finding.
 
 ## 1. The goal
 
@@ -233,7 +211,7 @@ not the Rust checker, and no bridge to any binary is built. The
 - **Safety is never traded for features.** No change weakens a guarantee — memory safety, race freedom,
   contracts, costs, lock discipline — to make a check go green. A wall that only yields by weakening is recorded
   as a finding.
-- **Simplicity without losing a guarantee** (`dokumente/CHECKER.md`): ceremony count down AND pass register
+- **Simplicity without losing a guarantee**: ceremony count down AND pass register
   constant. Never derive `ensures`, never turn a refusal into a warning.
 - **Where the model has no rule yet, refuse** — never accept by default.
 
@@ -243,16 +221,15 @@ not the Rust checker, and no bridge to any binary is built. The
 - **LLVM is the only backend** (`llvm.rs`, `llvm/`); `gabbro build` drives it (checker, IR, `opt`, `llc`,
   `ld.lld`). A form LLVM cannot lower is refused by name (`Y1xx`). The removed C emitter is in the tag
   `archiv/c-emitter-2026-10-17`.
-- **Target direction: AArch64** (Armv9-A) on the Sail Arm model, with the multicore memory model added in Lean
-  (`ARM-PLAN.md`). The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
+- **Target direction: AArch64** (Armv9-A); the former Lean model of it (`arm/`) was removed on 2026-11-01 and lives
+  in git history. The x86-64 hardware model is archived (branch `archive`); the one exception is the verified
   stage-0 runner (`PLAN-SELF-HOSTING.md` §2.2, Simon 2026-10-28), whose x86-64 instruction subset is written anew and tested against the CPU.
 - **Target portability**: source semantics, IR, optimisation and validation stay generic; ABI, image and entry
   requirements are described in checked profiles; environment services are Gabbro bindings with user-logic proof
   obligations. No implicit Linux/POSIX/libc/ELF dependency; freestanding has no mandatory host runtime.
 - **Vendor neutrality**: the hardware model holds on all CPUs of an architecture. What a vendor calls undefined or
   model-specific stays FREE (all allowed results, never one observed value).
-- **Optimisations** follow `dokumente/PLAN-TRANSLATION-VALIDATION.md` §8 (including §8.6, the techniques taken
-  over from Goose): a validated optimised image or a refusal, never "optimised but unchecked".
+- **Optimisations**: a validated optimised image or a refusal, never "optimised but unchecked".
 
 **Operating system, memory, data**
 - **The operating system is user logic, never an assumption, and nothing is OS-specific.** A system or kernel
@@ -265,7 +242,7 @@ not the Rust checker, and no bridge to any binary is built. The
 - **Memory from outside comes as a REGION, never from a number.** A `syscall`/`extern` item may answer a region
   (or a reference into one) whose contract says it is fresh and disjoint; no int→ptr or int→fn-ptr conversion.
 - **Dynamic data structures are in scope**: heap regions with a declared ceiling and refuse-on-full (the
-  default), and OPEN regions without a ceiling (`Deklaration.offen`, PLAN-DYNAMIC 14) whose cells come only from
+  default), and OPEN regions without a ceiling (`Deklaration.offen`) whose cells come only from
   the program's provider. **OOM is user logic**: an allocation needs no source OOM path; that the provider has
   memory to give is the program's own obligation. An arena's `else` at its declared ceiling is a capacity bound,
   not OOM.
@@ -284,8 +261,12 @@ not the Rust checker, and no bridge to any binary is built. The
   commit messages, diagnostics, `TODO.md`. The conversation with the project owner is in German.
 - **At most 30 `.md` files** in the repository. Reports, verdicts and interim states belong in git, not in the
   tree.
-- **Commit messages** only through `arbeitsprotokoll/.commitmsg` + `./commit.sh`, which commits STAGED changes
-  only (`git add` first).
+- **Commits** are plain `git commit` with a Conventional Commits subject (`type(scope): summary`, types `feat`,
+  `fix`, `refactor`, `perf`, `test`, `docs`, `build`, `ci`, `chore`); no helper script, no extra trailers beyond
+  the model's `Co-Authored-By`. Write the message to a file outside the tree and commit with `git commit -F <file>`.
+- **Squash before pushing**: work that belongs together (e.g. a feature and its follow-up fix) becomes ONE commit
+  before it is pushed (`git reset --soft <base>` and recommit, or `git commit --fixup` + autosquash). Pushed
+  history is never rewritten (no force-push), so squash only what is not yet pushed.
 - **Commit every building step.** Work that builds is committed at once.
 - **Caprock** (the OS this language exists for) lies read-only in `../caprock-messbasis`: never commit into it.
 - **Tag milestones** at the push that reaches them.
@@ -313,7 +294,8 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
 ## 5. Procedure: branch, build, merge, push
 
 - **Large changes run on a branch in a worktree beside the checkout** (`git worktree add -b NAME ../dir
-  master`), with the warm `grammatik/.lake` copied in, so that master stays buildable for everyone else. Build,
+  master`), with the warm build cache set up as in "One Mathlib for all trees" (lead trees only), so that master
+  stays buildable for everyone else. Build,
   commit there; merge when the acceptance of §1 holds.
 - **After every merge:** build `grammatik/` (also after a clean merge: a new structure field or a changed arity
   only shows in the build), run the layout check, then the guardians.
@@ -337,8 +319,9 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
 
 - **Every parallel worker (another session, a subagent) gets its OWN worktree** and scratch directory, never
   this checkout; its tree is on `master` before it starts. Two runs in one tree measure a mixture.
-- Copy both `grammatik/.lake` and `programmlogik/.lake` (warm, Mathlib) into a new tree; with no cache
-  `gabbro prove` goes off to clone Mathlib and hangs; a stale `.lake` is worse than none.
+- A lead tree gets its warm caches (`grammatik/.lake`, `programmlogik/.lake`) as in "One Mathlib for all trees":
+  Mathlib hard-linked, never copied; with no cache `gabbro prove` goes off to clone Mathlib and hangs, and a stale
+  `.lake` is worse than none. Sub-agent trees carry no `.lake`.
 - Before starting work in an area, check whether another session already works there (worktrees, recent file
   times) and do not duplicate it.
 - Reviews and assessments are done directly, not delegated.
@@ -366,8 +349,8 @@ Re-measure instead of trusting this table: `grep -rho '\bN[0-9]\{3\}\b' crates/ 
 | The goal statement | `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, `Beweis.lean`, `Akzeptiert.lean`, `Proben*.lean`, `SpecProben.lean`; `Zielsatz/Atomar/BeweisAtomar.lean` |
 | Model | `Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/` (arenas, regions, ownership, floats) |
 | Code model and lowering | `grammatik/Grammatik/Code/` (`Model`, `Lower`, `Refine`, `Conc`, `Gate`) |
-| Test sets M and N | `grammatik/Grammatik/Gen/` (generator, coverage cells, fine cells), runs under `messung/fein/`, driver `instrumente/fein-suche.sh` |
-| Plans | `dokumente/PROOF.md`, `dokumente/PLAN-TRANSLATION-VALIDATION.md`, `dokumente/PLAN-DYNAMIC.md`, `dokumente/CHECKER.md`, `ARM-PLAN.md`, `FLOATING-POINT.md` |
+| Test sets M and N | `grammatik/Grammatik/Gen/` (generator, coverage cells, fine cells) |
+| Plans | `dokumente/IR-COMPILATION-LANES.md`, `dokumente/PLAN-SELF-HOSTING.md`, `dokumente/PLAN-LONG-RANGE.md`, `dokumente/LOW-LEVEL-SYNTAX-PLAN.md` |
 | Theorem map | `dokumente/THEOREM-MAP.md` (new sections at the end) |
 | Known absences | `TODO.md` |
 | Guardians | `instrumente/abnahme.py` and the four `instrumente/pruefe-*.py` (`dokumente/TOOLBOX.md`) |
@@ -429,7 +412,7 @@ class and ISA (Simon, 2026-10-25; was 80 %), ambitious above 110 %.
 Fixed-work score `100 * Ctime / Gabbrotime`, throughput score `100 * Gabbrothroughput / Cthroughput`, per
 workload and class, on full validated direct binaries with matched hardware, ISA, semantics and settings.
 Compile latency includes checking, optimisation, production, validation and Lean kernel checking. Targets are
-OPEN until measured; no universal speed claim. Central record: `dokumente/PLAN-TRANSLATION-VALIDATION.md`.
+OPEN until measured; no universal speed claim. 
 
 ## 12. Working with Lean here
 

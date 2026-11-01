@@ -250,8 +250,8 @@ pub enum Art {
     ///   (`walk` invariants:                               6   (was  4))
     /// ```
     ///
-    /// *Three of yesterday's fifteen were MAINTAINED* -- `53-zwei-orte.gab`:47,
-    /// `55-kindkette.gab`:72 and `messung/netz/udp-echo.gab`:135, all three already at the
+    /// *Three of yesterday's fifteen were MAINTAINED* -- `0053-zwei-orte.gab`:47,
+    /// `0055-kindkette.gab`:72 and `messung/netz/udp-echo.gab`:135, all three already at the
     /// commit that wrote the census -- **and `spezpraedikate` a hundred lines below named
     /// exactly those three (plus F03's) the same day, as the `maintains` lines whose wording
     /// sat at a `table`/`group` invariant.** Two registers over one set, written together,
@@ -1122,7 +1122,7 @@ fn lauf(
 /// ```
 ///
 /// Fassung 1 carried the name alone, and `TODO.md` `O3` measured what that is worth: swap
-/// the first and third `ensures` conjunct of `beispiele/01-tabelle.gab` and the two registers
+/// the first and third `ensures` conjunct of `beispiele/0001-tabelle.gab` and the two registers
 /// are byte-identical apart from the file name in the header. **`ensures #1` named one thing
 /// before the swap and another after, and nothing reported the change.**
 ///

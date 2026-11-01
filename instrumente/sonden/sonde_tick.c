@@ -1,11 +1,11 @@
 /* sonde_tick -- the falsifier for `frist_zaehle_werte_eingehalten`.
  *
  * THE OBLIGATION, as the checker declares it in the generated header
- * (`gabbro emit beispiele/71-frist-und-zaehlung.gab`):
+ * (`gabbro emit beispiele/0071-frist-und-zaehlung.gab`):
  *
  *     frist_zaehle_werte_eingehalten (assume): falsifier sonde_tick
  *
- * and in the source (`beispiele/71-frist-und-zaehlung.gab`:29):
+ * and in the source (`beispiele/0071-frist-und-zaehlung.gab`:29):
  *
  *     deadline <= 5000 ops arch x86_64 falsifier sonde_tick
  *
@@ -84,7 +84,7 @@
 int main(void)
 {
     printf("sonde sonde_tick :: frist_zaehle_werte_eingehalten "
-           "(beispiele/71-frist-und-zaehlung.gab:29)\n");
+           "(beispiele/0071-frist-und-zaehlung.gab:29)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -194,7 +194,7 @@ static int dezimal(const char *s, long *aus)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_tick :: frist_zaehle_werte_eingehalten "
-           "(beispiele/71-frist-und-zaehlung.gab:29, deadline <= 5000 ops arch x86_64)\n");
+           "(beispiele/0071-frist-und-zaehlung.gab:29, deadline <= 5000 ops arch x86_64)\n");
 
     long iters = DEFAULT_ITERS;
     u64 grenze = BOOKED_MAX_CYCLES;

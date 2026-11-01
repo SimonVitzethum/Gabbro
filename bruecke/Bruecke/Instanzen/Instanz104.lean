@@ -9,9 +9,9 @@ public import Duty.Duty104Referenz
 @[expose] public section
 
 
-/-! BRIDGE-INSTANCE beispiele/104-referenz.gab Bruecke.Instanz104
+/-! BRIDGE-INSTANCE beispiele/0104-referenz.gab Bruecke.Instanz104
 
-    S1+S2 instance: `beispiele/104-referenz.gab`.
+    S1+S2 instance: `beispiele/0104-referenz.gab`.
     The parse is anchored at the source text by `Einheit104.uebersetzt4`
     (`uebersetzeAllg src104real = .ok ⟨uExp104, …⟩`); every printed definition of
     `Duty104Referenz.lean` is checked against the Lean computation from `uExp104`. -/
@@ -63,7 +63,7 @@ example : meetsU u wellFormed lies ((zuBody u lies).getD []) = lies_meets_statem
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit104.E4 :=
   startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Einheit104.low4)
 
-/-! BRIDGE-CLOSED beispiele/104-referenz.gab nutzer_bruecke
+/-! BRIDGE-CLOSED beispiele/0104-referenz.gab nutzer_bruecke
 
     S3 instance: the simulation theorem (`Bruecke/Simulation.lean`, `bruecke_nutzer`) applied to the
     parser's program of 104. Its premises, each checked here: the lowering (`Einheit104.low4`), the
@@ -87,7 +87,7 @@ theorem stimmig : Stimmig u := stimmig_of (by decide)
 
 theorem rang : Rang u (rangAuto u) := rang_of (by decide)
 
-/-! GENERIC-WITNESS beispiele/104-referenz.gab pflichten_104
+/-! GENERIC-WITNESS beispiele/0104-referenz.gab pflichten_104
 
     P6: the same bridge through the GENERIC theorem over every source (`Quelle.lean`). The
     statement `Pflichten src104real` is COMPUTED from the pinned text; this file only supplies a
@@ -118,7 +118,7 @@ theorem bruecke_zeuge : ∃ (u : UProg) (P : Gabbro.Grammatik.Programm (Gabbro.G
   ⟨u, _, _, Gabbro.Grammatik.Einheit104.low4, stimmig, rang, meets_alle,
     ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" false, .val (.param "i")], by decide⟩⟩
 
-/-! BRIDGE-ATOMIC beispiele/104-referenz.gab nutzerA_bruecke -/
+/-! BRIDGE-ATOMIC beispiele/0104-referenz.gab nutzerA_bruecke -/
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
 theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Einheit104.E4 :=

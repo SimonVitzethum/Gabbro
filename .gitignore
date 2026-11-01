@@ -63,3 +63,8 @@ programmlogik/_pruefung/
 .town/
 qemu_*.core
 .serena/
+
+# Nix build output (`nix build`).
+/result
+# direnv cache of the flake shell.
+/.direnv/

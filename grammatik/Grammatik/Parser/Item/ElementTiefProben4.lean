@@ -85,7 +85,7 @@ theorem t51_lex :
 theorem t51 : beqTopTief (parseTopTief tt51)
     (.ok [.fnT { art := "impl", name := "freigeben", params := [("p", .index false "Buch")], res := .none, fehler := .none, klauseln := [.refs ["ist_frei"], .needs (.call "Held" [.variable "BUCH"]), .needs (.field (.index (.field (.variable "Buch") "slots") (.variable "p")) "belegt"), .effs [.reads (.field (.variable "Buch") "slots"), .writes (.field (.variable "Buch") "slots"), .locks false (.variable "BUCH")], .cost (.lit 8)] } (.block [.set (.field (.index (.field (.variable "Buch") "slots") (.variable "p")) "belegt") "=" .fls, .set (.field (.index (.field (.variable "Buch") "slots") (.variable "p")) "wert") "=" (.lit 0)] .none)]) = true := by
   decide
--- beispiele/50-verfeinerung.gab (the `freigeben` refinement).
+-- beispiele/0050-verfeinerung.gab (the `freigeben` refinement).
 -- Rust: `Funktion` with `refines`, two `requires` and three
 -- effects -- same shape.
 def tt52 : List Token :=
@@ -102,7 +102,7 @@ theorem t52_lex :
 theorem t52 : beqTopTief (parseTopTief tt52)
     (.ok [.protoT { art := "extern", name := "groesse_gemessen", params := [], res := (.some (.atom "Stapelgroesse")), fehler := (.some "MessFehler"), klauseln := [(.gives ((.bin ">=" .res (.lit 1)))), (.effs [(.reads (.variable "stapel"))])] }]) = true := by
   decide
--- beispiele/06-annahmen.gab:163-165. Rust: `Funktion` with the
+-- beispiele/0006-annahmen.gab:163-165. Rust: `Funktion` with the
 -- `or` error channel -- same shape.
 def tt53 : List Token :=
   [.wort "prim", .wort "fn", .ident "wechseln", .zeichen "(",
@@ -122,7 +122,7 @@ theorem t53_lex :
 theorem t53 : beqTopTief (parseTopTief tt53)
     (.ok [.protoT { art := "prim", name := "wechseln", params := [(("von", (.ptr "normal" "rw" (.atom "Kontext")))), (("nach", (.ptr "normal" "r" (.atom "Kontext"))))], res := (.some (.atom "never")), fehler := .none, klauseln := [(.effs [(.writes (.variable "maschinenzustand")), (.writes (.variable "stapel")), .loops])] }]) = true := by
   decide
--- beispiele/07-eintritt-und-boot.gab:148-149. Rust: `Funktion`
+-- beispiele/0007-eintritt-und-boot.gab:148-149. Rust: `Funktion`
 -- over `never` with a diverging effect -- same shape.
 def tt54 : List Token :=
   [.wort "impl", .wort "fn", .ident "f", .zeichen "(",
@@ -141,11 +141,11 @@ theorem t54 : beqTopTief (parseTopTief tt54)
     (.ok [.protoT { art := "impl", name := "f", params := [], res := .none, fehler := .none, klauseln := [(.keeps ["invA", "invB"]), (.induc "induction over descendants of s "), (.part ".text"), (.arch "x86_64"), (.moves "roh" "mmu"), (.quits "t from boot falsifier p")] }]) = true := by
   decide
 -- Synthetic carrier for the remaining clause forms; each cites
--- its corpus shape: `maintains` (beispiele/01-tabelle.gab:94),
--- `by induction over` (beispiele/01-tabelle.gab:77),
--- `section`/`arch` (beispiele/36-asm.gab:27),
--- `advances a -> b` (beispiele/02-geraet.gab:129),
--- `retires` (beispiele/07-eintritt-und-boot.gab:137).
+-- its corpus shape: `maintains` (beispiele/0001-tabelle.gab:94),
+-- `by induction over` (beispiele/0001-tabelle.gab:77),
+-- `section`/`arch` (beispiele/0036-asm.gab:27),
+-- `advances a -> b` (beispiele/0002-geraet.gab:129),
+-- `retires` (beispiele/0007-eintritt-und-boot.gab:137).
 def tt55 : List Token :=
   [.wort "table", .ident "Halde", .wort "count", .num 1048576,
    .wort "backed", .ident "hinterlegt", .zeichen "{",
@@ -159,7 +159,7 @@ theorem t55_lex :
 theorem t55 : beqTopTief (parseTopTief tt55)
     (.ok [.tableT "Halde" .none (.some (.lit 1048576)) (.some "hinterlegt") .none false [.tSlot [{ fname := "b", ftyp := (.atom "bool"), pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]]]) = true := by
   decide
--- beispiele/28-reserve-und-hinterlegung.gab:19 (the header;
+-- beispiele/0028-reserve-und-hinterlegung.gab:19 (the header;
 -- memory kinds are values, not checked here). Rust: `Tabelle`
 -- with a `backed` bound -- same shape.
 

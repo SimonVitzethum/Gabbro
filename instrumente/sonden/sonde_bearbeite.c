@@ -4,7 +4,7 @@
  *
  *     frist_bearbeite_eingehalten (assume): falsifier sonde_bearbeite
  *
- * and in the source (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`:80):
+ * and in the source (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`:80):
  *
  *     deadline <= 80 ops arch x86_64 falsifier sonde_bearbeite
  *
@@ -96,7 +96,7 @@
 int main(void)
 {
     printf("sonde sonde_bearbeite :: frist_bearbeite_eingehalten "
-           "(beispiele/59-eintritt-nimmt-maskierte-sperre.gab:80)\n");
+           "(beispiele/0059-eintritt-nimmt-maskierte-sperre.gab:80)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -116,7 +116,7 @@ typedef unsigned long long u64;
 /* ---- The workload: the emitted slot write's shape, same `-O2`. ---- */
 
 /* Mirrors `table Auftraege count 16 { slot { stand : u64 } }`
- * (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`:71) and the body
+ * (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`:71) and the body
  * `Auftraege.slots[i].stand = 1;` (:83). Locks are outside the bracket by
  * design (see header): `RING_nimm`/`RING_gib` stand in the emit as bare
  * prototypes with no definition behind them. */
@@ -189,7 +189,7 @@ static int dezimal(const char *s, long *aus)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_bearbeite :: frist_bearbeite_eingehalten "
-           "(beispiele/59-eintritt-nimmt-maskierte-sperre.gab:80, deadline <= 80 ops arch x86_64)\n");
+           "(beispiele/0059-eintritt-nimmt-maskierte-sperre.gab:80, deadline <= 80 ops arch x86_64)\n");
 
     long iters = DEFAULT_ITERS;
     u64 grenze = BOOKED_MAX_CYCLES;
