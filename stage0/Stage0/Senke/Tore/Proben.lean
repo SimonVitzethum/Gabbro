@@ -14,7 +14,8 @@ set_option maxRecDepth 100000
 def u : UProg := {
   tabs := [], locks := []
   axs := [{ name := "truth", params := [], kinds := [], res := some .bool },
-    { name := "finish", params := [], kinds := [], res := some .never }]
+    { name := "finish", params := [], kinds := [], res := some .never },
+    { name := "wide", params := [], kinds := [], res := some (.int (-4294967296) 4294967296) }]
   fns := [{ name := "main", params := [], kinds := [], res := some (0, 100), held := [], puts := [], gives := [], body := [], ret := .val (.lit 0) }]
 }
 abbrev D := declOf u
@@ -55,7 +56,7 @@ def programOf (body : Endblock D (vertragVon D main) false [] []) : Programm D w
     exact body
 
 def binding (a : D.Ax) : Option TorB :=
-  some ⟨if a.val = 0 then 39 else 231, regsIn 0, []⟩
+  some ⟨if a.val = 1 then 231 else 39, regsIn 0, []⟩
 
 def imageOf (body : Endblock D (vertragVon D main) false [] []) : Except String (List Runner.B) := do
   let b ← bild 1 (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main [] 1024
@@ -67,6 +68,17 @@ theorem boolean_images_zeuge : (imageOf boolBody).isOk = true ∧
 
 theorem never_images_zeuge : (imageOf neverBody).isOk = true ∧
     (imageOf (.cons (.ite .tru neverBlock .nil) (retN 99 (by decide) (by decide)))).isOk = true := by
+  decide +kernel
+
+/-- A scalar foreign result can use both bounds beyond the literal instruction's range. -/
+def wordBody : Endblock D (vertragVon D main) false [] [] :=
+  .bindAxiom ⟨2, by decide⟩ .nil rfl (fun t => Fin.elim0 t) (fun g => Fin.elim0 g)
+    (fun t => Fin.elim0 t) (fun g => Fin.elim0 g) (retN 17 (by decide) (by decide))
+
+/-- The inhabited foreign binding reaches the actual image emitter with shared signed-word bound materialization. -/
+theorem word_range_images_zeuge : (imageOf wordBody).isOk = true ∧
+    (chkC (some (.int 4294967296 8589934592)) 5).isSome = true ∧
+    (chkC (some (.int (-8589934592) (-4294967296))) 5).isSome = true := by
   decide +kernel
 
 /-- The never continuation is discarded by G for every oracle. -/

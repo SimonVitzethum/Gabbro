@@ -371,3 +371,5 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.ForeverHookProbe.hook_images_zeuge
 #print axioms Gabbro.Stage0.Senke.retFreiGrundArms_istZ
 #print axioms Gabbro.Stage0.Senke.locks_reason_zeuge
+
+#print axioms Gabbro.Stage0.Senke.GateProbe.word_range_images_zeuge
