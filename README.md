@@ -18,13 +18,17 @@ the LLVM backend are **not** verified, and no bridge to any binary exists yet ([
 - **No standard library, no libc, no linked runtime.** Everything a program does to the outside world goes through its own `syscall`
   items (raw kernel gates with declared registers, contracts and error channels) or through hardware register forms. The operating system
   is user logic, never an assumption of the language. Networking, files, TLS and the like are written in Gabbro, in your program or in a
-  binding library (`bibliothek/`), and checked like any other code. The container, text and time helpers every program needs are planned
-  as native Gabbro modules ([PLAN-STDLIB](dokumente/PLAN-STDLIB.md)), not as C behind a border.
+  binding library, and checked like any other code. The container, text and time helpers every program needs are meant to become
+  native Gabbro modules, not C behind a border; none exist yet (the earlier plan and the Linux bindings were removed on 2026-11-01,
+  see `git log`).
 - **One backend: LLVM.** Checked Gabbro lowers directly to LLVM IR for x86-64 and AArch64: no C, no libc; locks, threads and arenas are
-  generated IR over raw kernel gates ([LLVM-BACKEND](dokumente/LLVM-BACKEND.md)). The C11 emitter was removed on 2026-10-17 (tag
+  generated IR over raw kernel gates (`crates/gabbro-check`, `llvm.rs`). The C11 emitter was removed on 2026-10-17 (tag
   `archiv/c-emitter-2026-10-17`, which also holds its Lean line).
-- **The backend is not verified.** Final-binary refinement needs a complete Lean model of the CPU, which is being built on the
-  [Sail Arm](https://github.com/rems-project/sail-arm) specification plus a multicore memory model in Lean ([plan](ARM-PLAN.md)).
+- **The backend is not verified.** Final-binary refinement needs a complete Lean model of the CPU; the earlier AArch64 model (`arm/`)
+  and its Sail-Arm plan were retired on 2026-11-01 (git history).
+- **Stage 0: the verified path that exists today.** `stage0/` compiles Gabbro in Lean to the IR `S0IR`, with a generic lowering
+  theorem (`irBild_correct`), and the x86-64 assembly runner in `runner/` executes it. It covers part of the userspace language; state
+  and limits per form are in [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md).
 
 ## 1. Quick start
 
@@ -88,13 +92,14 @@ Lean-checked certificate:**
 > **Lean accepts the certificate ⟹ (1)** the source parses to `P`, **(2)** `P` satisfies the model, **(3)** every execution of the
 > validated final image refines `P` / GX: bytes, layout, relocations, entries, conventions.
 
-Five pieces ([plan](dokumente/PLAN-TRANSLATION-VALIDATION.md) §§0-5):
+Five pieces (the design document `PLAN-TRANSLATION-VALIDATION.md` was removed on 2026-11-01; read it with
+`git show 15efa71da^:dokumente/PLAN-TRANSLATION-VALIDATION.md`):
 
 | Piece | What | State |
 |---|---|---|
 | **T3** | Lean parser, source to `P` | items in; generics and round trip in flight |
-| **T1** | model certificates per constructor | see the plan, §1 |
-| **T4** | AArch64 semantics (from Sail Arm) and image decoding | planned |
+| **T1** | model certificates per constructor | partial; design in the removed plan, §1 |
+| **T4** | AArch64 semantics and image decoding | planned; the Sail-Arm route was retired on 2026-11-01 |
 | **T2** | final-byte correspondence validator | planned |
 | **T5** | proof templates for runtime, entries, locks, recurring duties | 41 templates, 30 machine-checked |
 
@@ -103,26 +108,29 @@ needs the new validator and its proof.
 
 ## 4. Status
 
-Measured snapshot 2026-10-17. Each figure names its command; since the four-guardian cut these are dated results, not guarded values
-(see [MESSUNGEN](dokumente/MEASUREMENTS.md), [TOOLBOX](dokumente/TOOLBOX.md)). Work in progress is in [TODO.md](TODO.md).
+**Last measured 2026-10-17 and not re-measured since.** Corpus, tests and several documents were trimmed on 2026-11-01, so these
+figures are history until the guardians run again. Each figure names its command; they are dated results, not guarded values (see
+[MEASUREMENTS](dokumente/MEASUREMENTS.md), [TOOLBOX](dokumente/TOOLBOX.md)). Work in progress is in [TODO.md](TODO.md); the Stage-0
+state is in [IR-COMPILATION-LANES](dokumente/IR-COMPILATION-LANES.md).
 
 | | | |
 |---|---|---|
 | **Compiler** | 12 passes: 3 complete, 9 carried with a named residue, 0 partial, 0 open | 497 diagnostics · `gabbro passes` |
 | **Grammar** | 189 EBNF rules, closed and reachable | vocabulary covers every terminal, 245 / 245 |
 | **Proof templates** | 41, of which 30 are machine-checked | `gabbro templates` |
-| **Corpus** | 170 clean examples, 898 poison files | `cargo test --no-fail-fast` |
+| **Corpus** | 170 clean examples, 898 poison files (2026-11-01 in the tree: 177 `.gab` examples, 830 poison files, counted, not run) | `cargo test --no-fail-fast` |
 | **Backend** | LLVM (the only one), x86_64 and aarch64 | `./instrumente/pruefe-llvm.py` |
 | **Guardians** | exactly 4: Lean model, LLVM compiler, checker, GabbroV; each prints its work quantity, exit `2` means not measured | `./instrumente/abnahme.py` |
 | **Blind spots** | 72 blind · 176 covered · 24 poison-only · 12 no cell (of 285 pairs); poison-only is a hint, not a proof | `gabbro blindspots` |
 | **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites may fall (2564 and 110 clause sites) | `gabbro ceremony` |
 
-The 15 Isabelle theories in [`grammatik/Beweise/`](grammatik/Beweise/) hold 3512 lines of Isar and are frozen; new proofs go to Lean.
+The frozen Isabelle theories were removed on 2026-11-01; their Lean ports are in `grammatik/Grammatik/Isabelle/`. All proofs
+are in Lean.
 
 ## 5. Proved and not proved
 
 **Proved over the model:** `theorem gabbro_ziel : GabbroZiel` ([statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean), proof
-`Zielsatz/BeweisAtomar.lean`; tags `milestone-2026-09-15-gabbro-ziel` and `-zielsatz-bestaetigt`). Six review rounds; round 6: *"the goal
+`Zielsatz/Atomar/BeweisAtomar.lean`; tags `milestone-2026-09-15-gabbro-ziel` and `-zielsatz-bestaetigt`). Six review rounds; round 6: *"the goal
 with named gaps, no unnamed gap found"*. The checker inside the statement is the **Lean** checker, not the Rust one. GabbroV derives
 premise (b), the user's logic, in Lean from the source for five programs; that does not certify binaries.
 
