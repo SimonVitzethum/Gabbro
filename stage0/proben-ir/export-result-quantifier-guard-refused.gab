@@ -1,0 +1,7 @@
+module ir_result_quantifier_guard {
+table T count 2 { slot { ready : bool, } }
+lock L protects { T } rank 1;
+impl fn main() -> option index into T effects { reads T.slots }
+    ensures forall i in slots of T : !T.slots[i].ready
+{ return Some(1); }
+}

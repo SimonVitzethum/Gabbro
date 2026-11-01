@@ -14,15 +14,17 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   unit : UProg
   main : (declOf unit).Fn
   program : Programm (declOf unit)
-  elaborated : Frontend.elabWithScopes
+  elaborated : (Frontend.elabWithScopes
     ((uMembers (pre108 source.items)).map OldSource.normalizeItem)
     source.scopes.values source.scopes.types source.scopes.functions
-    (Frontend.tableWithEmpty source.scopes.values source.scopes.types) = .ok unit
+    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+      (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.items))}) = .ok unit
   entry : fnIdx unit.fns "main" = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (uMembers (pre108 source.items)) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
   arrayConstants : ∀ item ∈ uMembers (pre108 source.items), Frontend.ArrayMeaning unit source.scopes item
+  metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.items))
 
 /-- Compilation only: the result is the same canonical G program passed to the IR emitter. -/
 def compile (text : String) (options : Profil.Options := {}) : Except String (Compiled text options) := do
@@ -32,7 +34,14 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
       source.scopes.values source.scopes.types source.scopes.functions
       (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
   | .error e => throw e
-  | .ok unit => do
+  | .ok candidate => do
+    let unit := {candidate with exportGate := ExportMetadata.check members}
+    have elaborated : (Frontend.elabWithScopes (members.map OldSource.normalizeItem)
+        source.scopes.values source.scopes.types source.scopes.functions
+        (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+          (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
+      rw [he]
+      rfl
     let arrays ← Frontend.checkArrays unit source.scopes members
     match hm : fnIdx unit.fns "main" with
     | .error e => throw e
@@ -46,7 +55,7 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
           match ha : OldSource.accepts unit program with
           | .error e => throw e
           | .ok false => throw "refused by the checker (AkzeptiertX)"
-          | .ok true => pure ⟨source, unit, main, program, he, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down⟩
+          | .ok true => pure ⟨source, unit, main, program, elaborated, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down, rfl⟩
 
 /-- Original-source scalar and function semantics, canonical alias lookup order, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
@@ -70,17 +79,19 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.ScopeStable scope ∧
     Frontend.typedConstants scope.declared scope.functions original [] = some scope.values ∧
     Frontend.compileTimeSafe original = true ∧
-    Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types scope.functions
-      (Frontend.tableWithEmpty scope.values scope.types) = .ok result.unit ∧
+    (Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types scope.functions
+      (Frontend.tableWithEmpty scope.values scope.types)).map
+        (fun u => {u with exportGate := ExportMetadata.check original}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore original result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true ∧
-    (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item)
+    (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item) ∧
+    result.unit.exportGate = ExportMetadata.check original
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
-    result.accepted, result.arrayConstants⟩
+    result.accepted, result.arrayConstants, result.metadata⟩
 
 end Gabbro.Stage0

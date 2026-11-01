@@ -153,6 +153,11 @@ theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
       simp only [bin2, Prod.mk.injEq] at he
       omega
     · cases h
+  | _, .not a, d, c, top, h => by
+    simp only [lowEns, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ca, ta⟩, _, he⟩ := h
+    simp only [bin2, Prod.mk.injEq] at he
+    omega
   | _, e@(.lit ..), d, c, top, h
   | _, e@(.tru ..), d, c, top, h
   | _, e@(.fls ..), d, c, top, h
@@ -176,7 +181,6 @@ theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
   | _, e@(.le ..), d, c, top, h
   | _, e@(.fllt ..), d, c, top, h
   | _, e@(.flle ..), d, c, top, h
-  | _, e@(.not ..), d, c, top, h
   | _, e@(.none ..), d, c, top, h
   | _, e@(.some ..), d, c, top, h
   | _, e@(.istSome ..), d, c, top, h

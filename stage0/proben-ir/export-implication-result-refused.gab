@@ -1,0 +1,4 @@
+impl fn main() -> u32 in 0..42
+  effects { pure }
+  requires true => result == 42
+{ return 42; }

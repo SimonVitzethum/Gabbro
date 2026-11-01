@@ -1,0 +1,7 @@
+module ir_implication_invariant {
+table T count 1 {
+    slot { ready : bool, }
+    invariant valid cost O(1) runs online : true => true;
+}
+impl fn main() -> u32 in 0 .. 42 effects { pure } { return 42; }
+}

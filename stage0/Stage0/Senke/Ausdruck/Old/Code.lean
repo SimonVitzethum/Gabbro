@@ -26,7 +26,7 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, .oldS t f i _ => match entryIndex i with
     | some k => [.elem t f k.toNat]
     | none => []
-  | _, .widen _ _ e => oldCells e
+  | _, .widen _ _ e | _, .not e => oldCells e
   | _, .add a b | _, .sub a b | _, .mul a b | _, .eq a b | _, .lt a b
   | _, .and a b | _, .or a b => oldCells a ++ oldCells b
   | _, _ => []
@@ -67,6 +67,9 @@ def lowEns (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} :
       else none
   | _, .and a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 8 d ca cb)
   | _, .or a b, d => do let ca ← lowEns L a d; let cb ← lowEns L b (d+1); pure (bin2 9 d ca cb)
+  | _, .not a, d => do
+      let ca ← lowEns L a d
+      pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
   | _, e, d => lowE L e d
 
 end Gabbro.Stage0.Senke

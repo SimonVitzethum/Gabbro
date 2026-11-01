@@ -34,6 +34,7 @@
 -/
 import Grammatik.Korpus.Programme.Export104
 import Grammatik.Parser.Item.ElementTief
+import Grammatik.Parser.Elab.ExportMetadata
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
@@ -132,6 +133,10 @@ inductive UEns
   | ergB : UEns
   /-- `o.is_some()` (`Expr.istSome`): the option value and the number of the table it indexes. -/
   | istSome : UOpt → Nat → UEns
+  /-- A named ordinary lock; lowering must prove possession in the actual resource list. -/
+  | held : String → UEns
+  /-- Source implication retains its identity until the guarded G lowering. -/
+  | imp : UEns → UEns → UEns
   deriving DecidableEq, Repr
 
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
@@ -668,7 +673,9 @@ structure UAx where
   gputs : List String := []
   deriving DecidableEq, Repr
 
-/-- The elaborated program: tables, locks, functions. -/
+deriving instance DecidableEq for Except
+
+/-- The elaborated program and its original-source export admission. -/
 structure UProg where
   tabs : List UTab
   locks : List ULock
@@ -706,6 +713,8 @@ structure UProg where
   ptrs : List UFn := []
   /-- The texts of `ptrs`, in the same order (the key a parameter or `let` type is found by). -/
   ptrKeys : List String := []
+  /-- Original-source duty check, consumed by the actual new lowering branches. -/
+  exportGate : Except String Unit := .ok ()
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -1538,6 +1547,16 @@ def uOptEin (ctx : UCtx) : SExpr → Except String (UOpt × Nat)
 
 /-- One `ensures` predicate (the `tr_ensures` of `lean_g.rs`). -/
 def uSichert (ctx : UCtx) : SExpr → Except String UEns
+  | .ext .imp [] [p, q] =>
+    match uSichert ctx p with
+    | .error e => .error e
+    | .ok a =>
+      match uSichert ctx q with
+      | .error e => .error e
+      | .ok b => .ok (.imp a b)
+  | .call "Held" [.variable name] =>
+    if ctx.locks.any (fun lock => strEq lock.name name) then .ok (.held name)
+    else .error ("lock unknown: " ++ name)
   | .bin op l r =>
     if uIstVgl op then
       match uSeite ctx l with
@@ -1618,7 +1637,7 @@ def seiteAltErg : USide → Bool
 /-- `old(..)` or `result` inside a predicate. -/
 def ensAltErg : UEns → Bool
   | .cmp _ a b => seiteAltErg a || seiteAltErg b
-  | .and a b | .or a b => ensAltErg a || ensAltErg b
+  | .and a b | .or a b | .imp a b => ensAltErg a || ensAltErg b
   | .not a => ensAltErg a
   | .alle _ _ b | .einige _ _ b => ensAltErg b
   | .ergB => true
@@ -3586,6 +3605,8 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
           match uAnwReihe tabs koepfe f ctx' rest with
           | .error err => .error err
           | .ok (xs, cE) => .ok ([UStmt.narrowBeg x lo hi] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
+  | _ + 1, _, .waive .. :: _ =>
+    .error "source export: invariant cost/runs/by duties lack a checked source binding"
   | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
     if g then .error "shared lock without G form"
     else
@@ -4837,7 +4858,8 @@ def elabU : List SItemTief → Except String UProg
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                           gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
           annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
-          zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger }
+          zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
+          exportGate := ExportMetadata.check ms0 }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
@@ -5008,6 +5030,8 @@ def lowerSichertEin (tabs : List UTab) (names : List String)
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
+  | .held .. => .error "held predicate without G form in the 104 lowering"
+  | .imp .. => .error "implication without G form in the 104 lowering"
   | .istSome .. => .error "option test without G form in the 104 lowering"
 
 /-- The `ensures` conjunction in `einzahlen` (empty is `.tru`,
@@ -5433,6 +5457,8 @@ def lowerSichertLies (tabs : List UTab) (names : List String)
     | .error e => .error e
     | .ok x => .ok (Expr.not x)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
+  | .held .. => .error "held predicate without G form in the 104 lowering"
+  | .imp .. => .error "implication without G form in the 104 lowering"
   | .istSome .. => .error "option test without G form in the 104 lowering"
 
 def lowerSichertListeLies (tabs : List UTab) (names : List String)
@@ -5551,7 +5577,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [], zustaende := [], regiert := [], ptrs := [], ptrKeys := [] } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [], zustaende := [], regiert := [], ptrs := [], ptrKeys := [], exportGate := _ } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"
@@ -5778,7 +5804,7 @@ def uExp104 : UProg :=
         gives := [.cmp "==" .erg
           (.slot "k" "stand" (.param "i"))],
         body := [],
-        ret := .val (.slot "k" "stand" (.param "i")), boden := some 1 }] }
+        ret := .val (.slot "k" "stand" (.param "i")), boden := some 1 }], exportGate := ExportMetadata.check (uMembers items104) }
 
 /-! ## Shape equality on U (Bool pins, like `beqTopTief`) -/
 
@@ -5847,6 +5873,8 @@ def beqUEns : UEns → UEns → Bool
   | .globB a, .globB b => strEq a b
   | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
   | .ergB, .ergB => true
+  | .held a, .held b => strEq a b
+  | .imp a b, .imp c d => beqUEns a c && beqUEns b d
   | .istSome o m, .istSome p n => o == p && m == n
   | _, _ => false
 

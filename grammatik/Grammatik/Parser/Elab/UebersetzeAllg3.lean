@@ -4,6 +4,7 @@
              `traverse`, early `return`), bodies, `lowerAllg`, and the 104/108 pins and the chain.
              Split from `UebersetzeAllg2` (which keeps the single statements and calls); same namespace.
 -/
+import Grammatik.Parser.Elab.ExportControl
 import Grammatik.Parser.Elab.UebersetzeSum
 import Grammatik.Bausteine.Arena.ArenaZucker
 import Grammatik.Parser.Namen.Oeffentlich
@@ -409,7 +410,7 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               k.hgd b, r))
   | Γ, fn, n + 1, Λ, pe, .startS :: rest => lowSeqL (l := l) u caller Γ fn n Λ pe rest
   | _, _, _ + 1, _, _, .bindAxElse .. :: _ =>
-    .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
+    .error "lower: a foreign let else in a continuing block has no G export"
   | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.matchTagBeg sidx m bs) rest with
     | .error e => .error e
@@ -965,8 +966,23 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
               (fn.mitWhy e 0 ((declOf u).agruende k.ax)) n Λ pe [] with
           | _ => .error "lower: a let else in an else branch has no G form here"
       else .error "lower: let else of a foreign call without a reason channel"
-  | _, _, _ + 1, _, _, .bindElse .. :: _ =>
-    .error "lower: a let else in an else branch has no G form (Endblock lacks bindCallElse)"
+  | Γ, fn, n + 1, Λ, pe, .bindElse y c args e :: rest => do
+    u.exportGate
+    match lowRufKopf u caller Γ fn Λ c args with
+    | .error err => .error err
+    | .ok k =>
+      if hr : 0 < (declOf u).gruende k.callee then
+        withErg u k.callee fun τ hE =>
+          match lowEndL (l := l) u caller (Ty.why ((declOf u).gruende k.callee) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).gruende k.callee)) n Λ pe rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: tail) =>
+            match lowEndL (l := l) u caller (τ :: Γ) (fn.mitTy y τ) n Λ pe tail with
+            | .error err => .error err
+            | .ok (body, remaining) =>
+              .ok (nestedElse u caller Γ Λ k τ hE hr errb body, remaining)
+          | .ok (_, _) => .error "lower: a let else is not closed"
+      else .error "lower: let else of a call without a reason channel"
   | Γ, fn, n + 1, Λ, pe, .matchTagBeg sidx m bs :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.matchTagBeg sidx m bs) rest with
     | .error err => .error err
@@ -2115,7 +2131,7 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
 
-def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"] }
+def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"], exportGate := ExportMetadata.check (uMembers (pre108 items108)) }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide

@@ -10,12 +10,14 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 
 /-- Only these source forms participate in the numeric entry-global bridge. -/
 def hasEntry : SExpr → Bool
+  | .ext .imp [] [a, b] => hasEntry a || hasEntry b
   | .old (.variable _) => true
   | .bin _ a b => hasEntry a || hasEntry b
   | .un _ a => hasEntry a
   | _ => false
 
 def normalize : SExpr → SExpr
+  | .ext .imp [] [a, b] => .ext .imp [] [normalize a, normalize b]
   | .old (.variable g) => .variable g
   | .bin op a b => .bin op (normalize a) (normalize b)
   | .un op a => .un op (normalize a)
@@ -76,6 +78,9 @@ def predicate (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er
         | ">" => pure (.lt b.term a.term)
         | ">=" => pure (.le b.term a.term)
         | _ => throw "ir: unsupported old(global) comparison"
+    | .ext .imp [] [a, b], .imp x y => do
+        u.exportGate
+        pure (.impl (← predicate u Γ Λ fn er a x) (← predicate u Γ Λ fn er b y))
     | .bin "&&" a b, .and x y => do
         pure (.and (← predicate u Γ Λ fn er a x) (← predicate u Γ Λ fn er b y))
     | .bin "||" a b, .or x y => do

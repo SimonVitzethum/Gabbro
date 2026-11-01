@@ -1,0 +1,11 @@
+module ir_result_quantifier_scope {
+table T count 2 { slot { ready : bool, } }
+impl fn choose(flag : bool, value : u32 in 0 .. 7) -> option index into T
+    effects { reads T.slots }
+    ensures forall i in slots of T : forall j in slots of T : flag && value == 7
+{ return Some(1); }
+impl fn main() -> u32 in 0 .. 42 effects { reads T.slots } {
+    let chosen = choose(true, 7);
+    return 42;
+}
+}

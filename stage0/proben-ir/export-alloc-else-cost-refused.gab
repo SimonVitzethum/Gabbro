@@ -1,0 +1,14 @@
+module ir_alloc_metadata {
+reason Fault { Bad = 7 "bad" exhaustive }
+impl fn fail() -> u32 in 0 .. 42 or Fault effects { pure } { return Fault::Bad; }
+impl fn main() -> u32 in 0 .. 42 effects { writes A } costs <= 0 ops {
+    if true {
+    let cell = alloc A(0) else {
+        let answer = fail() else (reason) { return 7; }
+        return answer;
+    };
+    }
+    return 42;
+}
+arena A capacity 2 .. 8 of u32;
+}

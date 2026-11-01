@@ -1,0 +1,3 @@
+module ir_held_unknown {
+impl fn main() -> u32 in 0 .. 42 effects { pure } { let held : bool = Held(Missing); return 42; }
+}

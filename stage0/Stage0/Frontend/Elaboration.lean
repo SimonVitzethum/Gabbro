@@ -110,7 +110,8 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
         axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                         gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
         annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
-        zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger }
+        zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
+        exportGate := ExportMetadata.check ms0 }
     .ok (uMitBoden u)
 
 /-- Conservative equality for every original input, including all error branches. No visibility,

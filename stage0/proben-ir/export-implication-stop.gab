@@ -1,0 +1,4 @@
+module ir_implication_stop {
+impl fn wrong() -> u32 in 0 .. 42 effects { pure } ensures true => result == 7 { return 42; }
+impl fn main() -> u32 in 0 .. 42 effects { pure } { let answer = wrong(); return answer; }
+}

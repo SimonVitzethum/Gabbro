@@ -1161,13 +1161,40 @@ def lowBoolTab (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
             exact Expr.slot (D := declOf u) t fh.idx i hL)
         else .error "access without held guard"
 
+/-- The result kind retains its declaration identity, particularly options/tags/reasons. -/
+def resultKind (fn : UFn) : Ty → Except String UParamArt
+  | .int .. => .ok .int
+  | .bool => .ok .bool
+  | .opt n =>
+    match fn.resOpt with
+    | some (num, count) => if n == count then .ok (.opt num) else .error "result option count mismatch"
+    | none => .error "result option identity missing"
+  | .sum cases =>
+    match fn.resSum with
+    | some (num, spec) => if cases == spec then .ok (.sum num) else .error "result tag cases mismatch"
+    | none => .error "result tag identity missing"
+  | .why n =>
+    match fn.resWhy with
+    | some (num, count) => if n == count then .ok (.why num) else .error "result reason count mismatch"
+    | none => .error "result reason identity missing"
+  | .ptr num writable => .ok (.ptr num writable)
+  | .fnptr num => .ok (.fnptr num)
+  | .ref num => .ok (.ref num)
+  | _ => .error "quantifier beside a result of this type without G form"
+
+/-- Only the newly represented result kinds require the original-source duty gate. -/
+def resultContextGate (u : UProg) : Option Ty → Except String Unit
+  | none | some (.int ..) | some .bool => .ok ()
+  | _ => u.exportGate
+
 /-- The result of an `ensures` as a parameter `#erg` in front of the others (a name no source can write): inside a
     quantifier the binder rides in front of the result, so the result is found by its name, not at position 0. -/
-def ergAlsParam (fn : UFn) : Option Ty → Except String UFn
+def ergAlsParam (u : UProg) (fn : UFn) : Option Ty → Except String UFn
   | none => .ok fn
-  | some (.int a b) => .ok { fn with params := ("#erg", .int a b) :: fn.params, kinds := .int :: fn.kinds }
-  | some .bool => .ok { fn with params := ("#erg", .bool) :: fn.params, kinds := .bool :: fn.kinds }
-  | some _ => .error "quantifier beside a result of this type without G form"
+  | some ty => do
+    let kind ← resultKind fn ty
+    resultContextGate u (some ty)
+    pure {fn with params := ("#erg", ty) :: fn.params, kinds := kind :: fn.kinds}
 
 /-! ### Aggregate values (`Ty.arr`, `Ty.str`, 2026-10-25)
 
@@ -1601,10 +1628,24 @@ def lowOpt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : 
         else .error "option of a foreign table"
       else .error "access without held guard"
 
+/-- Reify an ordinary held-lock fact only after checking the current resource list. -/
+def lowHeld (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (name : String) :
+    Except String (Expr (declOf u) Γ Λ .bool) := do
+  u.exportGate
+  match lockIdx u.locks name with
+  | .error e => .error e
+  | .ok lock =>
+    if Res.held lock ∈ Λ then .ok Expr.tru
+    else .error "Held predicate without possession"
+
 /-- One `ensures` predicate. -/
 def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option Ty) :
     UEns → Except String (Expr (declOf u) Γ Λ .bool)
+  | .held name => lowHeld u Γ Λ name
+  | .imp a b => do
+      u.exportGate
+      pure (Expr.or (Expr.not (← lowEns u Γ Λ fn er a)) (← lowEns u Γ Λ fn er b))
   | .cmp op a b => lowCmp u Γ Λ fn er op a b
   | .tru => .ok Expr.tru
   | .fls => .ok Expr.fls
@@ -1657,7 +1698,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .slotB b f ix => lowBoolDurch u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .tabB b f ix => lowBoolTab u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .alle tn x body =>
-    match tabIdx u.tabs tn, ergAlsParam fn er with
+    match tabIdx u.tabs tn, ergAlsParam u fn er with
     | .error e, _ => .error e
     | _, .error e => .error e
     | .ok t, .ok fnR =>
@@ -1667,7 +1708,7 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         | .ok b => .ok (Expr.forallSlots (D := declOf u) t b hL)
       else .error "access without held guard"
   | .einige tn x body =>
-    match tabIdx u.tabs tn, ergAlsParam fn er with
+    match tabIdx u.tabs tn, ergAlsParam u fn er with
     | .error e, _ => .error e
     | _, .error e => .error e
     | .ok t, .ok fnR =>

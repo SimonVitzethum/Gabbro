@@ -1,0 +1,12 @@
+module ir_nested_else_pure {
+reason Fault { Bad = 7 "bad" exhaustive }
+impl fn fail() -> u32 in 0 .. 42 or Fault effects { pure } { return Fault::Bad; }
+impl fn pure() -> u32 in 0 .. 42 effects { pure } { return 42; }
+impl fn main() -> u32 in 0 .. 42 effects { pure } {
+    let answer = fail() else (outer) {
+        let inner = pure() else (reason) { return 7; }
+        return inner;
+    }
+    return answer;
+}
+}

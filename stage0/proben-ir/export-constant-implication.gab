@@ -1,0 +1,4 @@
+module ir_constant_implication {
+const ANSWER : u32 in 0 .. 42 = 42;
+impl fn main() -> u32 in 0 .. 42 effects { pure } ensures true => result == ANSWER { return ANSWER; }
+}

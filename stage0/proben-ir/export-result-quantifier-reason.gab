@@ -1,0 +1,7 @@
+module ir_result_quantifier {
+table T count 2 { slot { ready : bool, } }
+reason Fault { First = 7 "first" Second = 19 "second" exhaustive }
+impl fn main() -> Fault effects { reads T.slots }
+    ensures forall i in slots of T : !T.slots[i].ready
+{ return Fault::Second; }
+}
