@@ -1,0 +1,6 @@
+table T count 3 { tree { child next } slot { next : option index into Self, } }
+impl fn query(root : index into T) -> u8 effects { reads T.slots } {
+    traverse node over descendants of root by unvisited decreases node { }
+    return 42;
+}
+impl fn main() -> u8 { return 42; }

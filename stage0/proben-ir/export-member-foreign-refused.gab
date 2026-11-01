@@ -1,0 +1,6 @@
+table A count 3 { slot { value : u8, } }
+table B count 3 { slot { value : u8, } }
+impl fn query(value : index into A) -> u8 effects { reads B.slots }
+ requires value in slots of B
+ { return 42; }
+impl fn main() -> u8 { return 42; }

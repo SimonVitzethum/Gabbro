@@ -5040,3 +5040,25 @@ hull is open; `uMembers` (the direct `elabU` path) drops the mark as before.
   oracle of the answers the kernel gave in the run. The run itself (phase 1, OS threads, futex world lock, system
   calls outside the lock) is IO and unproved; the replay checks it.
 * Named assumptions: the system calls keep their Gabbro contracts; the futex lock excludes.
+
+Pure source-to-G export batch 2 (2026-11-01), without changing Spec or model rules:
+`Parser/Elab/ExportRelations.lean` proves exact constant-header/initializer expansion and
+checked numeric slot membership (`member_meaning`, `member_footprint`, including false
+negative/out-of-range values) and reach (`reach_sound` retains the original gate, field lookup,
+optional-self type, endpoint table identity and guard). The canonical initializer value is
+preserved in G; `Frontend.Initializers` refuses newly expanded nonzero initializers because
+the current image zero-fills world memory. The production compiler retains that check in
+`CanonicalSourceProgram`; zero-valued expansions execute. `ExportQuantifiers.lean` proves
+single-child tree filters, capture-free outer seeds and finite traversal/exits;
+`ExportArrays.lean` proves fixed lexical ARRAY INDEX domains over private fieldless
+carriers, including empty-domain predicate checks and the existing traversal semantics.
+The element is read through ordinary `arrGet` and transported by the existing full-value ABI.
+`ExportComparisons.lean` records all six canonical string comparisons and guarded,
+same-region reference comparisons; the latter does not establish a source provider binding.
+`ExportWitnesses2.lean` pins nonempty source fixtures as characters and checks lexing,
+parsing, elaboration and generic G lowering in the kernel. Stage0 imports those proofs in
+`Frontend/ExportCorrectness.lean`; `exported_batch2_ir_correct` uses the actual
+`compile_source_program` and `irBild_correct`, retaining original-source metadata and
+all inherited memory/view, call-depth and budget premises. The `_zeuge` instantiates
+that generic certificate on the accepted nested-array source/image. No source interpreter or
+additional backend is introduced.

@@ -1,0 +1,7 @@
+module ir_constant_wide_initializer {
+static VALUE : u64 in 0 .. 2535301200456458802993406410751 = 1267650600228229401496703205376 + 3;
+impl fn main() -> u8 effects { reads VALUE } {
+    if VALUE == 1267650600228229401496703205379 { return 42; }
+    return 1;
+}
+}

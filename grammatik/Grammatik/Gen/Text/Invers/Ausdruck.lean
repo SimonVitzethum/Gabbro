@@ -813,7 +813,8 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     simp only [Expr.forallSlots.sizeOf_spec, sizeOf_default, add_zero] at hn
     have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
-    simp only [uSichert, BEq.rfl, Bool.true_or, Bool.not_true, Bool.false_eq_true, ↓reduceIte, strEq_eq,
+    simp only [(show ("slots" == "elems") = false from rfl),
+      (show (("slots" == "descendants") || ("slots" == "ancestors")) = false from rfl), uSichert, BEq.rfl, Bool.true_or, Bool.not_true, Bool.false_eq_true, ↓reduceIte, strEq_eq,
   decide_true, uTabNr, H.tabNr t, h1]
   | existsSlots t body hL =>
     simp only [delabE] at hd
@@ -831,7 +832,8 @@ theorem sichert_ok (kopf : Option Nat) (n : Nat) :
     simp only [Expr.existsSlots.sizeOf_spec, sizeOf_default, add_zero] at hn
     have h1 := ih (H.auf t) (hr.auf rfl rfl _) body (by omega) sa x ha xa
     simp only [ctxAuf] at h1
-    simp only [uSichert, BEq.rfl, Bool.or_true, Bool.not_true, Bool.false_eq_true, ↓reduceIte, strEq_eq,
+    simp only [(show ("slots" == "elems") = false from rfl),
+      (show (("slots" == "descendants") || ("slots" == "ancestors")) = false from rfl), uSichert, BEq.rfl, Bool.or_true, Bool.not_true, Bool.false_eq_true, ↓reduceIte, strEq_eq,
   decide_true, uTabNr, H.tabNr t, h1, beq_iff_eq, reduceCtorEq]
   | _ => simp only [uOfB, reduceCtorEq] at hu
 

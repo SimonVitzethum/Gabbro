@@ -1,0 +1,6 @@
+table A count 2 { slot { next : option index into Self, } }
+table B count 2 { slot { next : option index into Self, } }
+impl fn query(a : index into A, b : index into B) -> bool effects { reads A.slots, reads B.slots }
+ requires a reaches b via next
+ { return true; }
+impl fn main() -> u8 { return 42; }

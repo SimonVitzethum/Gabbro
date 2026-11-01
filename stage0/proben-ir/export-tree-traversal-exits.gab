@@ -1,0 +1,16 @@
+module ir_tree_traversal_exits {
+table T count 3 { tree { child next } slot { next : option index into Self, } }
+impl fn query(root : index into T) -> u8 effects { reads T.slots } {
+    let mut answer : u8 = 0;
+    traverse node of root over descendants of root by unvisited invariant answer <= 42 {
+        if node == 0 { next node; }
+        if node == 1 { answer = 42; leave node; }
+    }
+    return answer;
+}
+impl fn main() -> u8 effects { reads T.slots, writes T.slots } {
+    T.slots[0].next = Some(1);
+    let answerFromCall = query(0);
+    return answerFromCall;
+}
+}

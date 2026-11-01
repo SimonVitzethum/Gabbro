@@ -1,0 +1,5 @@
+impl fn main() -> u8 costs <= 0 ops {
+ let text : string max 1 = "A";
+ if text == "A" { return 42; }
+ return 1;
+}

@@ -1,0 +1,7 @@
+extern fn allocate() -> index into Cells;
+table Cells from allocate { slot { value : u8, } }
+impl fn main() -> u8 {
+    let cell = allocate();
+    if cell == cell { return 42; }
+    return 1;
+}

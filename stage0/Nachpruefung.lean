@@ -5,13 +5,11 @@ import Stage0.Senke.Ausdruck.Gleit.Exponent
              depend on exactly `propext`, `Classical.choice`, `Quot.sound`.
 -/
 import Stage0
-
 import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Quant.Proben
 import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 import Stage0.Bindung.Proben
-
 -- Forward scalar dependencies, exact final meanings and certified declaration schedules.
 #print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle
 #print axioms Gabbro.Stage0.Frontend.ConstantAcyclic.no_cycle_zeuge
@@ -23,7 +21,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Frontend.discoverScopes_final
 #print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_dependencies
 #print axioms Gabbro.Stage0.Frontend.elaborateConstantScopes_forward_zeuge
-
 -- Certified alias scheduling and dependency-cycle refusal in the actual frontend.
 #print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound
 #print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound_zeuge
@@ -37,7 +34,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_forward_zeuge
 #print axioms Gabbro.Stage0.compile_source_program
-
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge
@@ -471,3 +467,33 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.result_scope
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.nested_else_lower
 #print axioms Gabbro.Grammatik.Parser.ExportPreservation.nested_else_meaning
+
+-- Batch 2: source counts, guarded relations, finite domains and typed comparisons.
+#print axioms Gabbro.Stage0.exported_batch2_ir_correct
+#print axioms Gabbro.Stage0.Compiled.constant_exports_metadata
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.count_export
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.initializer_export
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.reach_sound
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.reach_meaning
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.tree_quantifier_lower
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.tree_quantifier_meaning
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.filtered_traversal_meaning
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.array_quantifier_lower
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.array_quantifier_meaning
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.strings_lower
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.references_lower
+#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.count_source_zeuge
+#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.relations_source_zeuge
+#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.tree_source_zeuge
+#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.strings_source_zeuge
+#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.arrays_source_zeuge
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.array_traversal_lower
+#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.treeTraversal_source_zeuge
+#print axioms Gabbro.Grammatik.Parser.ExportWitnesses2.arrayTraversal_source_zeuge
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.member_meaning
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.member_footprint
+#print axioms Gabbro.Grammatik.Parser.ExportPreservation.strings_gate
+
+#print axioms Gabbro.Stage0.Compiled.initializer_exports
+
+#print axioms Gabbro.Stage0.exported_batch2_ir_correct_zeuge

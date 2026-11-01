@@ -137,6 +137,13 @@ inductive UEns
   | held : String → UEns
   /-- Source implication retains its identity until the guarded G lowering. -/
   | imp : UEns → UEns → UEns
+  /-- An explicit relation keeps its table and edge identities through typed lowering. -/
+  | reach : String → String → UIdx → UIdx → UEns
+  | member : String → UIdx → UEns
+  /-- A finite tree filter: universal/existential, table, binder, edge, reverse, outer seed, body. -/
+  | filtered : Bool → String → String → String → Bool → UIdx → UEns → UEns
+  /-- Universal/existential iteration over the exact index domain of a fixed array. -/
+  | arrayElements : Bool → USide → String → UEns → UEns
   deriving DecidableEq, Repr
 
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
@@ -319,6 +326,8 @@ inductive UStmt
   /-- `if c { … } else { … }` as the last statement of a block whose two arms both end (`Endblock.ite`); the arms
       and markers as at `ifBeg`. -/
   | ifEnde : UEns → UStmt
+  /-- An array traversal binds its actual element under the private finite index. -/
+  | arrayLoopBeg : String → USide → UEns → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -1073,7 +1082,10 @@ def uKonstArrays (alias : List (String × (Int × Int))) (fns : List UKonstFn) (
 def uAnzahl (consts : List (String × Int)) : SExpr → Except String Int
   | .lit v => .ok (Int.ofNat v)
   | .variable c => uSuch "const" consts c
-  | _ => .error "count without G form"
+  | expression =>
+    match uSchranke (consts.map (fun pair => (pair.1, (pair.2, pair.2)))) expression with
+    | some value => if 0 ≤ value then .ok value else .error "source export: negative constant count"
+    | none => .error "source export: count is not a canonical constant bound"
 
 /-- The kind of a slot field. -/
 inductive UFeldArt
@@ -1205,19 +1217,17 @@ def uSchutzAux (globs : List UGlob) : List UTab → List SExpr → Except String
 /-- One lock: a numeric rank and the guarded tables. Masking
     and the shared hold have no G form; the `held` budget is
     ignored like `costs` (both travel nowhere). -/
-def uSperre (globs : List UGlob) (tabs : List UTab) : SItemTief → Except String ULock
-  | .lockT n ps (.lit rk) _ .none m _ =>
-    match (match m with
-        | .none => .ok false
-        | .some w => if strEq w "irqs" then .ok true else .error "lock masks something but irqs: no G form"
-        : Except String Bool) with
-    | .error e => .error e
-    | .ok masks =>
-      match uSchutzAux globs tabs ps with
-      | .error e => .error e
-      | .ok ts =>
-        -- the `invariant` is read once the predicates can be (`uSperrInvs`)
-        .ok { name := n, rank := Int.ofNat rk, guard := ts, masks }
+def uSperre (globs : List UGlob) (tabs : List UTab) (item : SItemTief)
+    (consts : List (String × Int) := []) : Except String ULock :=
+  match item with
+  | .lockT n ps expression _ .none m _ => do
+    let rank ← uAnzahl consts expression
+    if rank < 0 then throw "source export: negative lock rank"
+    let masks ← match m with
+      | .none => .ok false
+      | .some w => if strEq w "irqs" then .ok true else .error "lock masks something but irqs: no G form"
+    let guarded ← uSchutzAux globs tabs ps
+    pure {name := n, rank, guard := guarded, masks}
   | .lockT n .. => .error ("lock without G form: " ++ n)
   | _ => .error "lock without G form"
 
@@ -1545,8 +1555,216 @@ def uOptEin (ctx : UCtx) : SExpr → Except String (UOpt × Nat)
         | .thru p => .ok (.slot p f ix, m)
         | .tabelle t => .ok (.tab t f ix, m)
 
+/-- Resolve an index against its declared table; do not erase a foreign table identity. -/
+def uExportIndex (ctx : UCtx) (table : String) (number : Nat) (source : SExpr) : Except String UIdx :=
+  match source with
+  | .variable name => do
+      let position ← uParamNr ctx name
+      match ← uArtBei ctx.kinds position with
+      | .index other =>
+          if other = number then uIndex ctx table number source
+          else .error "source export: index belongs to another table"
+      | _ => uIndex ctx table number source
+  | .index (.field (.variable other) "slots") index =>
+      if other = table then uIndex ctx table number index
+      else .error "source export: index belongs to another table"
+  | _ => uIndex ctx table number source
+
+
+/-- Membership tests accept ordinary integer values, including values outside the domain.
+    Nominal indices still keep their table identity; access/reach keep uExportIndex bounds. -/
+def uMemberIndex (ctx : UCtx) (table : String) (number : Nat) : SExpr → Except String UIdx
+  | .lit value => .ok (.lit (Int.ofNat value))
+  | .un "-" (.lit value) => .ok (.lit (-(Int.ofNat value)))
+  | .variable name =>
+    match uParamNr ctx name with
+    | .error _ =>
+      match ctx.lits.find? (fun constant => strEq constant.1 name) with
+      | some constant => .ok (.lit constant.2)
+      | none => .error "source export: membership value lacks a checked numeric origin"
+    | .ok position =>
+      match uArtBei ctx.kinds position with
+      | .ok .int => .ok (.param name)
+      | .ok (.index origin) =>
+          if origin == number then .ok (.param name)
+          else .error "source export: index belongs to another table"
+      | _ => .error "source export: membership value is not an integer index"
+  | value => uExportIndex ctx table number value
+
+/-- One source-inaccessible, iterator carrier without fields per represented array length. -/
+def uArrayCarrierName (count : Nat) : String := "#array-elements:" ++ toString count
+
+/-- The source domain retains the array's real type. Local/parameter values and certified
+    constants are supported; a stateful array expression needs an explicit source binding. -/
+def uArrayDomain (ctx : UCtx) : SExpr → Except String (USide × Ty × Nat)
+  | .variable name =>
+    match uParamNr ctx name with
+    | .ok position =>
+      match ctx.types[position]? with
+      | some (.arr element count) => .ok (.param name, element, count)
+      | _ => .error "source export: elems domain is not a fixed array value"
+    | .error _ =>
+      match ctx.arrKonst.find? (fun entry => strEq entry.1 name) with
+      | some (_, value@(.typed (.arr element count) _)) => .ok (value, element, count)
+      | _ => .error "source export: elems domain requires an immutable array binding"
+  | _ => .error "source export: elems domain requires an immutable array binding"
+
+/-- Whether a new finite array domain occurs anywhere in a predicate. -/
+def uArrayExpr : Nat → SExpr → Bool
+  | 0, _ => true
+  | fuel + 1, expression =>
+    match expression with
+    | .ext .all [_, "elems"] [_, _] | .ext .any [_, "elems"] [_, _] |
+      .ext .mem ["elems"] [_, _] => true
+    | .ext _ _ values => values.any (uArrayExpr fuel)
+    | .bin _ a b | .index a b => uArrayExpr fuel a || uArrayExpr fuel b
+    | .un _ a | .field a _ | .arrow a _ | .old a => uArrayExpr fuel a
+    | .call _ values | .built _ values => values.any (uArrayExpr fuel)
+    | _ => false
+
+/-- Inspect the same nested statements covered by the original-source metadata gate. -/
+def uArrayBody : Nat → SAnw → Bool
+  | 0, _ => true
+  | fuel + 1, statement =>
+    match statement with
+    | .each _ _ kind _ _ _ invariant body => kind == "elems" ||
+        invariant.any (uArrayExpr fuel) || uArrayBody fuel body
+    | .block statements ending => statements.any (uArrayBody fuel) ||
+        (match ending with | some (.ret value) => value.any (uArrayExpr fuel) | _ => false)
+    | .bind _ _ _ value | .ret (some value) => uArrayExpr fuel value
+    | .bindElse _ _ value _ body => uArrayExpr fuel value || uArrayBody fuel body
+    | .cond condition yes branches no => uArrayExpr fuel condition || uArrayBody fuel yes ||
+        branches.any (uArrayBody fuel) || no.any (uArrayBody fuel)
+    | .elsif condition body => uArrayExpr fuel condition || uArrayBody fuel body
+    | .cases value branches => uArrayExpr fuel value || branches.any (uArrayBody fuel)
+    | .arm _ _ body | .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body => uArrayBody fuel body
+    | .set a _ b => uArrayExpr fuel a || uArrayExpr fuel b
+    | .call _ arguments => arguments.any (uArrayExpr fuel)
+    | _ => false
+
+/-- Exact declared lengths, evaluated in the already certified alias/constant scope. -/
+def uArrayTypeCounts (types : List (String × (Int × Int))) : STyp → List Nat
+  | .array element count =>
+    (match uSchranke types count with | some value => if 0 ≤ value then [value.toNat] else [] | none => []) ++
+      uArrayTypeCounts types element
+  | .ptr _ _ element | .range element _ _ _ | .wrap element | .embed element _ _ => uArrayTypeCounts types element
+  | _ => []
+
+def uArrayBodyTypes : Nat → SAnw → List STyp
+  | 0, _ => []
+  | fuel + 1, statement =>
+    match statement with
+    | .bind _ _ annotation _ | .bindLib _ _ annotation _ _ => annotation.toList
+    | .bindElse _ annotation _ _ body => annotation.toList ++ uArrayBodyTypes fuel body
+    | .cond _ yes branches no => uArrayBodyTypes fuel yes ++ branches.flatMap (uArrayBodyTypes fuel) ++
+        no.toList.flatMap (uArrayBodyTypes fuel)
+    | .elsif _ body | .arm _ _ body | .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body =>
+        uArrayBodyTypes fuel body
+    | .cases _ branches => branches.flatMap (uArrayBodyTypes fuel)
+    | .each _ _ _ _ _ _ _ body => uArrayBodyTypes fuel body
+    | .block statements _ => statements.flatMap (uArrayBodyTypes fuel)
+    | _ => []
+
+def uArraySignatureTypes (signature : FnSig) : List STyp := signature.params.map (·.2) ++ signature.res.toList
+
+def uArrayItemTypes : SItemTief → List STyp
+  | .fnT signature body => uArraySignatureTypes signature ++ uArrayBodyTypes 10000 body
+  | .protoT signature => uArraySignatureTypes signature
+  | .constT _ ty _ | .globT _ _ ty _ _ _ _ => [ty]
+  | .typeT _ _ _ _ body => body.toList
+  | .tableT _ _ _ _ _ _ parts => parts.flatMap fun
+      | .tSlot fields => fields.map (·.ftyp)
+      | _ => []
+  | _ => []
+
+/-- Existing units keep exactly their declaration universe. New array forms reuse a finite
+    carrier with no fields, so the carrier adds no mutable program data or provider assumption. -/
+def uArrayCarriers (types : List (String × (Int × Int))) (items : List SItemTief) : List UTab :=
+  if items.any (fun
+      | .fnT signature body => uArrayBody 10000 body || signature.klauseln.any (fun
+          | .needs predicate | .gives predicate => uArrayExpr 10000 predicate
+          | _ => false)
+      | _ => false) then
+    let counts := (items.flatMap uArrayItemTypes).flatMap (uArrayTypeCounts types)
+    let unique := counts.foldl (fun result count => if result.contains count then result else result ++ [count]) []
+    unique.map (fun count => {name := uArrayCarrierName count, count := Int.ofNat count, cols := []})
+  else []
+
+/-- The table identity of a source index. A coincidentally equal count is insufficient. -/
+def uIndexOrigin (ctx : UCtx) : SExpr → Except String (String × Nat × UIdx)
+  | .variable name => do
+      let position ← uParamNr ctx name
+      match ← uArtBei ctx.kinds position with
+      | .index number =>
+          match ctx.tabs[number]? with
+          | some table => .ok (table.name, number, .param name)
+          | none => .error "source export: index table is not declared"
+      | _ => .error "source export: reach requires a declared table index"
+  | .index (.field (.variable table) "slots") index => do
+      let (number, _) ← uTabNr ctx.tabs table
+      pure (table, number, ← uExportIndex ctx table number index)
+  | _ => .error "source export: reach requires a declared table index"
+
+
+/-- A tree domain follows one declared child edge. Branching and undeclared roles are refused. -/
+def uTreeDomain (ctx : UCtx) (source : SExpr) : Except String (String × Nat × UIdx × String) := do
+  let (table, number, seed) ← uIndexOrigin ctx source
+  match ctx.tabs[number]? with
+  | none => .error "source export: tree table is not declared"
+  | some declared =>
+      match declared.kanten with
+      | [("child", field)] =>
+          if declared.opts.any (fun pair => pair.1 == field && pair.2 == number) then
+            pure (table, number, seed, field)
+          else .error "source export: tree edge must be option index into Self"
+      | _ => .error "source export: tree domain requires one declared child edge"
+
+/-- Explicit reachability retains both index origins and its named edge. -/
+def uReachExport (ctx : UCtx) (field : String) (a b : SExpr) : Except String UEns := do
+  let (table, number, _) ← match uIndexOrigin ctx a with
+    | .ok origin => .ok origin
+    | .error _ => uIndexOrigin ctx b
+  pure (.reach table field (← uExportIndex ctx table number a) (← uExportIndex ctx table number b))
+
 /-- One `ensures` predicate (the `tr_ensures` of `lean_g.rs`). -/
 def uSichert (ctx : UCtx) : SExpr → Except String UEns
+  | .ext k [x, dk] [subject, body] =>
+    if !(k == XKind.all || k == XKind.any) then .error "ensures clause without G form"
+    else if dk == "elems" then do
+      let (array, _, count) ← uArrayDomain ctx subject
+      let predicate ← uSichert {ctx with names := x :: ctx.names, kinds := .int :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits} body
+      pure (.arrayElements (k == XKind.all) array x predicate)
+    else if dk == "descendants" || dk == "ancestors" then do
+      let (table, number, seed, field) ← uTreeDomain ctx subject
+      let count := (ctx.tabs[number]?).map (·.count) |>.getD 0
+      let predicate ← uSichert {ctx with names := x :: ctx.names, kinds := .index number :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits} body
+      pure (.filtered (k == XKind.all) table x field (dk == "ancestors") seed predicate)
+    else if !strEq dk "slots" then .error "source export: quantifier domain lacks a canonical G expansion"
+    else
+      match subject with
+      | .variable tn =>
+        match uTabNr ctx.tabs tn with
+        | .error e => .error e
+        | .ok (num, c) =>
+          match uSichert { ctx with names := x :: ctx.names, kinds := .index num :: ctx.kinds,
+                                    types := Ty.index c :: ctx.types, bits := 0 :: ctx.bits } body with
+          | .error e => .error e
+          | .ok b => .ok (if k == XKind.all then .alle tn x b else .einige tn x b)
+      | _ => .error "source export: slots domain requires an explicit table"
+  | .ext .reach [field] [a, b] => uReachExport ctx field a b
+  | .ext .mem ["slots"] [value, .variable table] => do
+      let (number, _) ← uTabNr ctx.tabs table
+      pure (.member table (← uMemberIndex ctx table number value))
+  | .ext .mem ["elems"] [value, subject] => do
+      let (array, element, _) ← uArrayDomain ctx subject
+      let compared ← uSeite ctx value
+      pure (.arrayElements false array "#array-member" (.cmp "==" compared (.param "#array-member")))
+  | .ext .mem [kind] [value, seed] => do
+      if kind != "descendants" && kind != "ancestors" then
+        throw "source export: membership domain lacks a canonical G expansion"
+      let (table, number, start, field) ← uTreeDomain ctx seed
+      let stop ← uExportIndex ctx table number value
+      pure (if kind == "ancestors" then .reach table field stop start else .reach table field start stop)
   | .ext .imp [] [p, q] =>
     match uSichert ctx p with
     | .error e => .error e
@@ -1584,17 +1802,10 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
     match uSichert ctx q with
     | .error e => .error e
     | .ok a => .ok (.not a)
-  | .ext k [x, dk] [.variable tn, body] =>
-    if !(k == XKind.all || k == XKind.any) then .error "ensures clause without G form"
-    else if !strEq dk "slots" then .error "quantifier domain without G form"
-    else
-      match uTabNr ctx.tabs tn with
-      | .error e => .error e
-      | .ok (num, c) =>
-        match uSichert { ctx with names := x :: ctx.names, kinds := .index num :: ctx.kinds,
-                                  types := Ty.index c :: ctx.types, bits := 0 :: ctx.bits } body with
-        | .error e => .error e
-        | .ok b => .ok (if k == XKind.all then .alle tn x b else .einige tn x b)
+  | .ext .all [_, "threads"] [_] | .ext .any [_, "threads"] [_] =>
+      .error "source export: threads domain has no explicit scheduler-table binding"
+  | .ext .mem ("chain" :: _) _ =>
+      .error "source export: chain field-pair semantics lack a canonical G expansion"
   | .tru => .ok .tru
   | .fls => .ok .fls
   | .res => if ctx.resBool then .ok .ergB else .error "ensures clause without G form"
@@ -1639,7 +1850,7 @@ def ensAltErg : UEns → Bool
   | .cmp _ a b => seiteAltErg a || seiteAltErg b
   | .and a b | .or a b | .imp a b => ensAltErg a || ensAltErg b
   | .not a => ensAltErg a
-  | .alle _ _ b | .einige _ _ b => ensAltErg b
+  | .alle _ _ b | .einige _ _ b | .filtered _ _ _ _ _ _ b | .arrayElements _ _ _ b => ensAltErg b
   | .ergB => true
   | _ => false
 
@@ -3220,6 +3431,54 @@ def uSchleifenKopf (ctx : UCtx) (b : String) (o : Option SExpr) (k : String) (s 
                                  types := .index cnt :: ctx.types, bits := 0 :: ctx.bits,
                                  loops := b :: ctx.loops })
 
+/-- A finite filtered traversal keeps its outer seed separate from the body's binder.
+    A raw decreases/touches header has no source-duty binding here and stays refused. -/
+def uLoopExport (ctx : UCtx) (binder : String) (origin : Option SExpr) (kind : String)
+    (subject : SExpr) (mode raw : String) (invariant : Option SExpr) :
+    Except String (UStmt × UCtx × Option UEns) :=
+  if kind == "slots" then
+    (uSchleifenKopf ctx binder origin kind subject mode invariant).map
+      (fun (table, predicate, bodyContext) => (.loopBeg binder table predicate, bodyContext, none))
+  else do
+    if mode != "unvisited" then throw "traverse by consuming without G form"
+    if raw != "" then throw "source export: traversal decreases/touches duties lack a checked source binding"
+    let predicate ← match invariant with | none => .ok UEns.tru | some p => uBool ctx p
+    if kind == "elems" then
+      if origin.any (fun value => !beqSExpr value subject) then
+        throw "source export: array traversal of subject disagrees with its domain"
+      let (array, _, count) ← uArrayDomain ctx subject
+      let (number, numberCount) ← uTabNr ctx.tabs (uArrayCarrierName count)
+      if numberCount != (count : Int) then throw "source export: array iterator count disagrees with its value"
+      if ctx.muts.any (strEq · binder) then
+        throw "source export: array traversal binder shadows a mutable outer name"
+      let context := {ctx with names := binder :: ctx.names, kinds := .int :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits, loops := binder :: ctx.loops}
+      pure (.arrayLoopBeg binder array predicate, context, none)
+    else
+      if kind != "descendants" && kind != "ancestors" then
+        throw "source export: traversal domain lacks a canonical G expansion"
+      let (table, number, seed, edge) ← uTreeDomain ctx subject
+      match seed with
+      | .param name =>
+          if name == binder || ctx.muts.any (strEq · name) then
+            throw "source export: traversal seed must be immutable and distinct from its binder"
+      | .lit _ => pure ()
+      match origin with
+      | some expression =>
+          if (← uExportIndex ctx table number expression) != seed then
+            throw "source export: traversal of seed disagrees with its domain"
+      | none => pure ()
+      let count := (ctx.tabs[number]?).map (·.count) |>.getD 0
+      let context := {ctx with names := binder :: ctx.names, kinds := .index number :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits, loops := binder :: ctx.loops}
+      let filter := if kind == "ancestors" then UEns.reach table edge (.param binder) seed
+        else UEns.reach table edge seed (.param binder)
+      pure (.loopBeg binder table predicate, context, some filter)
+
+/-- The existing conditional block carries leave/next/return unchanged on visited nodes. -/
+def uFilteredBody (filter : Option UEns) (body : List UStmt) : List UStmt :=
+  match filter with
+  | none => body
+  | some predicate => [.ifBeg predicate] ++ body ++ [.ifElse, .blkEnd]
+
 /-- The body of an arm. -/
 def uArmBody : SAnw → SAnw
   | .arm _ _ b => b
@@ -3654,10 +3913,10 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
               let kopf := if rest.isEmpty && uEndetS 64 (.cond c (.block ss e) ei els) then UStmt.ifEnde cv
                 else UStmt.ifBeg cv
               .ok ([kopf] ++ body ++ endS ++ [UStmt.ifElse] ++ elseS ++ [UStmt.blkEnd] ++ xs, cE)
-  | f + 1, ctx, .each bnd o k s m _ inv (.block ss e) :: rest =>
-    match uSchleifenKopf ctx bnd o k s m inv with
+  | f + 1, ctx, .each bnd o k s m raw inv (.block ss e) :: rest =>
+    match uLoopExport ctx bnd o k s m raw inv with
     | .error err => .error err
-    | .ok (tab, inv, ctxS) =>
+    | .ok (header, ctxS, filter) =>
       match uAnwReihe tabs koepfe f ctxS ss with
       | .error err => .error err
       | .ok (body, ctxB) =>
@@ -3667,7 +3926,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
           match uAnwReihe tabs koepfe f ctx rest with
           | .error err => .error err
           | .ok (xs, cE) =>
-            .ok ([UStmt.loopBeg bnd tab inv] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
+            .ok ([header] ++ uFilteredBody filter (body ++ endS) ++ [UStmt.blkEnd] ++ xs, cE)
   | f + 1, ctx, s :: rest =>
     match uAnw1 ctx tabs koepfe s with
     | .error e => .error e
@@ -3920,6 +4179,18 @@ def uKonstReihe (consts : List (String × Int)) : List SKonstWert → Except Str
     | .error e, _ | _, .error e => .error e
 end
 
+/-- Scalar initializers keep their declared range at every constant-evaluator intermediate.
+    Existing literal/constant encodings retain their canonical admission; new expressions are checked. -/
+def uInitialNumber (consts : List (String × Int)) (lo hi : Int) : SKonstWert → Except String Int
+  | .one (.lit k) => .ok (Int.ofNat k)
+  | .one (.un "-" (.lit k)) => .ok (-(Int.ofNat k))
+  | .one (.variable name) => uSuch "const" consts name
+  | .one expression =>
+      match uKonstWert lo hi [] consts 64 expression with
+      | some value => .ok value
+      | none => .error "source export: scalar initializer is outside its canonical constant domain"
+  | .rows _ => .error "static initialiser without G form"
+
 /-- The statics of the unit: ONE value each, an integer range or `bool`, with a numeral (or `true`/`false`)
     as the initial value; a placement, an alignment or a `shared` word has no `Glob` form. -/
 def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
@@ -3945,11 +4216,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             match uErgBereich alias (.atom a) with
             | .error _ => .ok (GTy.wert (.sum []), (0 : Int))
             | .ok (lo, hi) =>
-              match (match v with
-                  | .one (.lit k) => .ok (Int.ofNat k)
-                  | .one (.un "-" (.lit k)) => .ok (-(Int.ofNat k))
-                  | .one (.variable c) => uSuch "const" consts c
-                  | _ => .error "static initialiser without G form" : Except String Int) with
+              match uInitialNumber consts lo hi v with
               | .error e => .error e
               | .ok z =>
                 if lo ≤ z ∧ z ≤ hi then .ok (GTy.int lo hi, z)
@@ -3958,11 +4225,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             match uErgBereich alias t with
             | .error e => .error e
             | .ok (lo, hi) =>
-              match (match v with
-                  | .one (.lit k) => .ok (Int.ofNat k)
-                  | .one (.un "-" (.lit k)) => .ok (-(Int.ofNat k))
-                  | .one (.variable c) => uSuch "const" consts c
-                  | _ => .error "static initialiser without G form" : Except String Int) with
+              match uInitialNumber consts lo hi v with
               | .error e => .error e
               | .ok z =>
                 if lo ≤ z ∧ z ≤ hi then .ok (GTy.int lo hi, z)
@@ -4763,6 +5026,9 @@ def elabU : List SItemTief → Except String UProg
     match uRestFehler ms0 with
     | .error e => .error e
     | .ok _ =>
+    match ExportMetadata.checkConstants ms0 with
+    | .error error => .error error
+    | .ok () =>
     let ms := uOhneSenken ms0
     match uGlobs consts alias ms with
     | .error e => .error e
@@ -4775,12 +5041,12 @@ def elabU : List SItemTief → Except String UProg
     match uArenen consts alias ms with
     | .error e => .error e
     | .ok (arTabs, arGlobs) =>
-    let tabs := uIdxTabs (tabs0 ++ arTabs)
+    let tabs := uIdxTabs (tabs0 ++ arTabs ++ uArrayCarriers alias ms0)
     match uOptGlobs tabs (globs0 ++ arGlobs) with
     | .error e => .error e
     | .ok globs =>
     match uSeq ((ms.filter (fun
-        | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (uSperre globs tabs)) with
+        | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (fun item => uSperre globs tabs item consts)) with
     | .error e => .error e
     | .ok locks0 =>
     match uSperrInvs consts alias globs tabs ms locks0 with
@@ -5032,6 +5298,7 @@ def lowerSichertEin (tabs : List UTab) (names : List String)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
   | .held .. => .error "held predicate without G form in the 104 lowering"
   | .imp .. => .error "implication without G form in the 104 lowering"
+  | .reach .. | .member .. | .filtered .. | .arrayElements .. => .error "source relation without G form in the 104 lowering"
   | .istSome .. => .error "option test without G form in the 104 lowering"
 
 /-- The `ensures` conjunction in `einzahlen` (empty is `.tru`,
@@ -5174,7 +5441,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       | .error e => .error e
       | .ok t => .ok (.cons s t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
-    | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
+    | .arrayLoopBeg .. :: _, _ | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
     | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .regWriteB .. :: _, _ | .awaitBind .. :: _, _
     | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .shiftTab .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
@@ -5217,7 +5484,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
-    | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
+    | .arrayLoopBeg .. :: _, _ | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
     | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .regWriteB .. :: _, _ | .awaitBind .. :: _, _
     | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .shiftTab .. :: _, _ =>
     .error "statement without G form in the 104 lowering"
@@ -5459,6 +5726,7 @@ def lowerSichertLies (tabs : List UTab) (names : List String)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
   | .held .. => .error "held predicate without G form in the 104 lowering"
   | .imp .. => .error "implication without G form in the 104 lowering"
+  | .reach .. | .member .. | .filtered .. | .arrayElements .. => .error "source relation without G form in the 104 lowering"
   | .istSome .. => .error "option test without G form in the 104 lowering"
 
 def lowerSichertListeLies (tabs : List UTab) (names : List String)
@@ -5875,6 +6143,12 @@ def beqUEns : UEns → UEns → Bool
   | .ergB, .ergB => true
   | .held a, .held b => strEq a b
   | .imp a b, .imp c d => beqUEns a c && beqUEns b d
+  | .reach t f a b, .reach u g c d => strEq t u && strEq f g && a == c && b == d
+  | .member t a, .member u b => strEq t u && a == b
+  | .arrayElements a source x body, .arrayElements b target y other =>
+      a == b && beqUSide source target && strEq x y && beqUEns body other
+  | .filtered a t x f r s b, .filtered c u y g v z d =>
+      a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
   | .istSome o m, .istSome p n => o == p && m == n
   | _, _ => false
 
@@ -5919,6 +6193,8 @@ def beqUStmt : UStmt → UStmt → Bool
   | .ifBeg a, .ifBeg b => beqUEns a b
   | .ifElse, .ifElse => true
   | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && beqUEns i j
+  | .arrayLoopBeg a source inv, .arrayLoopBeg b target other =>
+      strEq a b && beqUSide source target && beqUEns inv other
   | .ret a, .ret b => beqURet a b
   | .leave a, .leave b | .next a, .next b => strEq a b
   | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>

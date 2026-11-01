@@ -296,6 +296,13 @@ def lowSeqL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
       match lowSeqL u caller Γ fn n Λ pe rest' with
       | .error e => .error e
       | .ok (b, r) => .ok (Block.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .arrayLoopBeg bnd array inv :: rest =>
+    match lowStructL u caller Γ fn n Λ pe (.arrayLoopBeg bnd array inv) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowSeqL u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Block.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
     match lowStructL u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
     | .error e => .error e
@@ -638,6 +645,16 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         | .ok (eb, .blkEnd :: rest2) => .ok (Stmt.ite cv tb eb, rest2)
         | .ok (_, _) => .error "lower: an if is not closed"
       | .ok (_, _) => .error "lower: an if has no else part"
+  | Γ, fn, n + 1, Λ, pe, .arrayLoopBeg binder source invariant, rest => do
+    u.exportGate
+    let array ← lowArrayValue u Γ Λ fn none source
+    let carrier ← arrayCarrier u array.count
+    let iv ← lowEns u Γ Λ fn none invariant
+    match lowSeqL (l := true) u caller (Ty.index ((declOf u).count carrier.table) :: Γ)
+        (fn.mitTy binder (.index ((declOf u).count carrier.table))) n Λ pe rest with
+    | .error error => .error error
+    | .ok (body, .blkEnd :: remaining) => .ok (Stmt.traverse carrier.table iv body, remaining)
+    | .ok (_, _) => .error "lower: an array traverse is not closed"
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv, rest =>
     match tabIdx u.tabs tab with
     | .error e => .error e
@@ -1045,6 +1062,13 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) :
         match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
         | .error e => .error e
         | .ok (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, n + 1, Λ, pe, .arrayLoopBeg bnd array inv :: rest =>
+    match lowStructL (l := l) u caller Γ fn n Λ pe (.arrayLoopBeg bnd array inv) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowEndL (l := l) u caller Γ fn n Λ pe rest' with
+      | .error e => .error e
+      | .ok (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, n + 1, Λ, pe, .loopBeg bnd tab inv :: rest =>
     match lowStructL (l := l) u caller Γ fn n Λ pe (.loopBeg bnd tab inv) rest with
     | .error e => .error e
@@ -1382,6 +1406,13 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
     | _, _ => .error "fn with a result falls off"
   | Γ, fn, n + 1, (.ifEnde c) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.ifBeg c) rest with
+    | .error e => .error e
+    | .ok (st, rest') =>
+      match lowBodyF u caller Γ fn n rest' r with
+      | .error e => .error e
+      | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, (.arrayLoopBeg b array i) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.arrayLoopBeg b array i) rest with
     | .error e => .error e
     | .ok (st, rest') =>
       match lowBodyF u caller Γ fn n rest' r with

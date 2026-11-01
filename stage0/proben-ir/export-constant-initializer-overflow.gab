@@ -1,0 +1,2 @@
+static VALUE : u8 = (255 + 1) - 1;
+impl fn main() -> u8 effects { reads VALUE } { return VALUE; }

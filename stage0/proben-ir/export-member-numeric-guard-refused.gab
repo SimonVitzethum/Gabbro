@@ -1,0 +1,5 @@
+table T count 3 { slot { value : u8, } }
+lock L protects { T } rank 1;
+impl fn main() -> u8 effects { reads T.slots, locks L }
+ requires !(255 in slots of T)
+ { return 42; }

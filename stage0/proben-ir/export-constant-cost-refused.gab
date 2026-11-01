@@ -1,0 +1,2 @@
+table T count 1 + 1 { slot { value : u8, } }
+impl fn main() -> u8 costs <= 0 ops { return 42; }

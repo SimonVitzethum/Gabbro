@@ -1,0 +1,6 @@
+// An ordinary string must not create a finite array-domain carrier.
+impl fn sample(data : [u8; 2]) -> u8 {
+ let message : string max 5 = "elems";
+ return 42;
+}
+impl fn main() -> u8 { return 42; }

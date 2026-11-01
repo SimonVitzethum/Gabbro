@@ -21,7 +21,8 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .elsif _ b | n + 1, .arm _ _ b => bodyMetadata n b
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
   | _ + 1, .bind _ _ ty _ | _ + 1, .bindLib _ _ ty _ _ => ty.any typeMetadata
-  | _ + 1, .each .. | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
+  | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
+  | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. | _ + 1, .reset .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. | _ + 1, .lcall .. |
@@ -43,6 +44,7 @@ def itemMetadata : SItemTief → Bool
       parts.any fun
         | .tSlot fields => fields.any (fun field => typeMetadata field.ftyp || field.pos.isSome ||
             field.bezug.isSome || field.wo.isSome || field.reserviert || field.byOps)
+        | .tTree _ => false
         | _ => true
   | .lockT _ _ _ held reserve mask inv => held.isSome || reserve.isSome || mask.isSome || inv.isSome
   | .groupT .. => true
@@ -77,6 +79,20 @@ def check (items : List SItemTief) : Except String Unit :=
     .error ("source export: " ++ ((items.find? itemMetadata).map metadataReason).getD "unsupported metadata")
   else .ok ()
 
+/-- Only the newly evaluable header/initializer positions need the new original-source gate. -/
+def constantExpansion : SItemTief → Bool
+  | .tableT _ _ (some count) _ _ _ _ | .arenaT _ _ count _ _ _ =>
+      match count with | .lit _ | .variable _ => false | _ => true
+  | .lockT _ _ rank _ _ _ _ => match rank with | .lit _ => false | _ => true
+  | .globT _ _ _ (.one expression) _ _ _ =>
+      match expression with
+      | .lit _ | .un "-" (.lit _) | .variable _ | .tru | .fls | .ext .text _ _ | .call "None" [] => false
+      | _ => true
+  | _ => false
+
+def checkConstants (items : List SItemTief) : Except String Unit :=
+  if items.any constantExpansion then check items else .ok ()
+
 /-- Successful new exports have no ignored metadata in the admitted source domain. -/
 theorem check_sound (items : List SItemTief) (h : check items = .ok ()) : items.any itemMetadata = false := by
   unfold check at h
@@ -94,6 +110,12 @@ theorem check_sound_zeuge :
     check [.fnT {sig with klauseln := .cost (.lit 0) :: sig.klauseln} body] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
   exact ⟨rfl, rfl⟩
+
+/-- Every newly evaluable count/rank/initializer preserves the original unit's metadata duties. -/
+theorem checkConstants_sound (items : List SItemTief)
+    (used : items.any constantExpansion = true) (accepted : checkConstants items = .ok ()) :
+    items.any itemMetadata = false :=
+  check_sound items (by simpa only [checkConstants, used, ↓reduceIte] using accepted)
 
 set_option maxRecDepth 100000 in
 /-- Invariant duties stay unsupported regardless of where the guarded lowering occurs. -/

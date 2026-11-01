@@ -1,5 +1,6 @@
 import Stage0.Frontend.Elaboration
 import Stage0.Frontend.ArrayConstants
+import Stage0.Frontend.Initializers
 import Stage0.Senke.Ausdruck.Old.Source
 
 namespace Gabbro.Stage0
@@ -24,38 +25,46 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
     OldSource.restore (uMembers (pre108 source.items)) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
   arrayConstants : ∀ item ∈ uMembers (pre108 source.items), Frontend.ArrayMeaning unit source.scopes item
+  initializerExports : Frontend.checkInitializers (uMembers (pre108 source.items)) unit = .ok ()
+  constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.items)) = .ok ()
   metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.items))
 
 /-- Compilation only: the result is the same canonical G program passed to the IR emitter. -/
 def compile (text : String) (options : Profil.Options := {}) : Except String (Compiled text options) := do
   let source ← Frontend.source text options
   let members := uMembers (pre108 source.items)
-  match he : Frontend.elabWithScopes (members.map OldSource.normalizeItem)
-      source.scopes.values source.scopes.types source.scopes.functions
-      (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
-  | .error e => throw e
-  | .ok candidate => do
-    let unit := {candidate with exportGate := ExportMetadata.check members}
-    have elaborated : (Frontend.elabWithScopes (members.map OldSource.normalizeItem)
+  match hc : ExportMetadata.checkConstants members with
+  | .error error => throw error
+  | .ok () => do
+    match he : Frontend.elabWithScopes (members.map OldSource.normalizeItem)
         source.scopes.values source.scopes.types source.scopes.functions
-        (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
-          (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
-      rw [he]
-      rfl
-    let arrays ← Frontend.checkArrays unit source.scopes members
-    match hm : fnIdx unit.fns "main" with
+        (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
     | .error e => throw e
-    | .ok main =>
-      match hl : lowerAllg unit with
-      | .error e => throw e
-      | .ok (raw, fs) =>
-        match hr : OldSource.restore members unit raw with
+    | .ok candidate => do
+      let unit := {candidate with exportGate := ExportMetadata.check members}
+      have elaborated : (Frontend.elabWithScopes (members.map OldSource.normalizeItem)
+          source.scopes.values source.scopes.types source.scopes.functions
+          (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+            (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
+        rw [he]
+        rfl
+      match hi : Frontend.checkInitializers members unit with
+      | .error error => throw error
+      | .ok () => do
+        let arrays ← Frontend.checkArrays unit source.scopes members
+        match hm : fnIdx unit.fns "main" with
         | .error e => throw e
-        | .ok program =>
-          match ha : OldSource.accepts unit program with
+        | .ok main =>
+          match hl : lowerAllg unit with
           | .error e => throw e
-          | .ok false => throw "refused by the checker (AkzeptiertX)"
-          | .ok true => pure ⟨source, unit, main, program, elaborated, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down, rfl⟩
+          | .ok (raw, fs) =>
+            match hr : OldSource.restore members unit raw with
+            | .error e => throw e
+            | .ok program =>
+              match ha : OldSource.accepts unit program with
+              | .error e => throw e
+              | .ok false => throw "refused by the checker (AkzeptiertX)"
+              | .ok true => pure ⟨source, unit, main, program, elaborated, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down, hi, hc, rfl⟩
 
 /-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
     certified declaration permutation, and the identical
@@ -87,6 +96,8 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.ScopeStable scope ∧
     Frontend.typedConstants scope.declared scope.functions scope.scalarOrder [] = some scope.values ∧
     (∀ item ∈ original, Frontend.ConstantMeaning scope.types scope.functions scope.values item) ∧
+    Frontend.checkInitializers original result.unit = .ok () ∧
+    ExportMetadata.checkConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
     (Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types scope.functions
       (Frontend.tableWithEmpty scope.values scope.types)).map
@@ -100,7 +111,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
-    result.source.scopes.scalarValues, result.source.constantMeanings, result.source.compileTime, result.elaborated, result.lowered,
+    result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted, result.arrayConstants, result.metadata⟩
 
 end Gabbro.Stage0

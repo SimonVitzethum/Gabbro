@@ -1,0 +1,5 @@
+static VALUE : u8 = 42 - 42;
+impl fn main() -> u8 effects { reads VALUE } {
+    if VALUE == 0 { return 42; }
+    return 1;
+}

@@ -1,0 +1,19 @@
+module ir_short_string_comparisons {
+impl fn main() -> u8 effects { pure } {
+    let empty : string max 1 = "";
+    let first : string max 1 = "A";
+    let second : string max 1 = "B";
+    if empty < first {
+        if first != second {
+            if first <= second {
+                if second > first {
+                    if second >= first {
+                        if first == first { return 42; }
+                    }
+                }
+            }
+        }
+    }
+    return 1;
+}
+}

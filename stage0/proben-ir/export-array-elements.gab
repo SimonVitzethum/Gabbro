@@ -1,0 +1,5 @@
+const DATA : [u8; 2] = [1, 2];
+impl fn main() -> u8
+ requires forall j in elems of DATA : DATA[j] > 0
+ ensures forall j in elems of DATA : DATA[j] <= result
+ { return 42; }

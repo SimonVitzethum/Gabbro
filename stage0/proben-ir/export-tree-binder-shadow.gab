@@ -1,0 +1,13 @@
+module ir_tree_binder_shadow {
+table T count 3 { tree { child next } slot { next : option index into Self, } }
+impl fn query(root : index into T) -> u8 effects { reads T.slots }
+ requires forall root in descendants of root : root <= 1
+ requires exists node in ancestors of root : node == 0
+ ensures result == 42
+ { return 42; }
+impl fn main() -> u8 effects { reads T.slots, writes T.slots } {
+ T.slots[0].next = Some(1);
+ let answer = query(1);
+ return answer;
+}
+}
