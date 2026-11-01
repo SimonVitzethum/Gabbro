@@ -1390,3 +1390,310 @@ remaining guardians before integration/push. No erased contracts, added axioms,
 weakened footprint/resource checks or detached helper proof can close a package.
 This document changes no acceptance result: **zero new source cases compiled or
 proved; no builds run.**
+
+### Model extension design: C01, C03 (2026-11-01)
+
+Design baseline: `8805be37e`; static inspection only, no Lean edits or builds.
+**New** marks proposed names; other names below were located in this checkout.
+Kernel paths are relative to `grammatik/Grammatik/`. This checkout contains
+“IR-03 in-progress canonical interface” and `Ausdruck/Aggregat/{Layout,Encoding,Kopie,KopieSatz}`;
+the requested heading “IR-03 arrays and strings over the full value span” and
+`storeFramePointerSpan` are **absent** here. Treat that store helper as an IR-03
+handoff dependency, not an available theorem. Current `Welt/Lay.Lay.elem` still
+advances by eight bytes, and `Welt/Schreib` proves single-word writes. The design
+must join the completed IR-03 migration before claiming multiword world storage.
+
+**Decision.** Add a real heterogeneous product; generalize the existing sum and
+reason families rather than adding competing record encodings or tagged-value
+machines. Records preserve declaration identity, field order and field types.
+Pure field replacement plus the existing assignment statements is sufficient;
+neither a new record heap nor a field-specific locking system is needed. Every
+new inductive constructor goes at the **end**, including `Ty`, the mutual
+expression family and exporter intermediates. Changes to arguments of existing
+constructors migrate all clients in one canonical path; remove replaced numeric
+payload adapters instead of retaining a compatibility mode.
+
+| Package | Core model change | Spec impact | Engineering days |
+|---|---|---|---|
+| C01 | Typed products, field paths, checked field ownership, generated mapping products | Conservative value extension; ownership stage adds an explicit acceptance/preservation clause, described below | 18–30: copyable products 7–11, mappings 4–7, ownership 7–12 |
+| C03 | Typed sum payloads; nominal open/closed reasons throughout values and channels | **Yes:** error outcomes and foreign-answer admission range over open reason values and structured payloads | 9–15, including channel/oracle migration |
+
+Ranges include generic proofs, witnesses, exporter and connected IR cases, not
+measured build times; shared raw-answer work is counted once in C03. Critical
+path: nested `Ty`/`Val` recursion and all syntax inductions, IR-03 world/frame
+integration, then ownership and channel replay. Safe walker child resolution is
+a separate prerequisite when a source `down` field currently denotes a raw
+address; C01 does not authorize raw-address access or privileged boot execution.
+
+**C01 — records/products.**
+
+| Layer | Implementable change |
+|---|---|
+| Types and values | In `Kern/Syntax/Typen`, append **new** `Ty.prod (name : Nat) (fields : List Ty)` and, at the ownership stage, **new** `Ty.linear (name : Nat) (repr : Ty)`. A resolved declaration number supplies nominal identity; anonymous structural products receive an interned identity derived from their complete ordered schema. Canonical alias expansion preserves the original identity. Export/link relocation must map these identities just as it maps table/signature identities. `Val F passt (.prod r fs)` is the dependent tuple `(i : Fin fs.length) → Val F passt (fs.get i)`; the empty tuple has one mathematical value. `Val F passt (.linear r τ) = Val F passt τ`; the wrapper preserves ownership identity in the type, not an extra runtime word. Extend the nested structural recursion used for arrays to lists of child types, with an explicit decreasing type-size argument if Lean cannot elaborate recursion through `List.get`; no arbitrary depth/fuel cut. Add **new** `prodGetW` and `prodSetW` at typed indices and prove get/set, other-field preservation and extensionality. |
+| Typed expressions | `Args` currently follows `Expr`, outside its mutual family (`Syntax/Syntax:553`). Move that same definition into the mutual family before appending **new** `Expr.prod (r : Nat) (args : Args D Γ Λ fs) : Expr D Γ Λ (.prod r fs)`, **new** `Expr.prodGet (v : Expr D Γ Λ (.prod r fs)) (i : Fin fs.length) : Expr D Γ Λ (fs.get i)`, and **new** `Expr.prodSet (v : Expr D Γ Λ (.prod r fs)) (i : Fin fs.length) (e : Expr D Γ Λ (fs.get i)) : Expr D Γ Λ (.prod r fs)`. Keep `Args.nil/cons` and their order. A **new** indexed `FieldPath : Ty → Ty → Type` composes these projections/replacements for nested places; elaboration resolves names to indices, never runtime strings. No general `linear` introduction expression may manufacture an owner. |
+| `eval` and assignment | In `Kern/Semantik/Semantik/T1`, `eval .prod` packages the evaluated arguments in declaration order, `eval .prodGet` selects the component, and `eval .prodSet` replaces precisely that component. Their `orte` are respectively argument reads, base reads, and base plus replacement reads. **No new `Stmt` constructor or primitive `execStmt` case:** local `p.f = e` expands to `assignVar p (prodSet (var p) i e)`; a record-valued table field expands through `assignSlot`, `assignThru` or `assignSlotRef`, and a global through `assignGlob`. Capture the place/index and RHS once with existing block/end-block binders before expansion; preserve source evaluation order. A record-field store is a read/modify/write of its containing cell and requires that carrier's existing write permission and guards. Prove the expansion against `execStmt` in T2, including preservation of every sibling. Do not route a state-field update around `Stmt.shift` or erase `where` checks. |
+| All value positions | `D.params`, `D.erg`, `D.typ`, `D.gtyp`, `ErgExpr.val`, `Env` and `World.slots/globs` already range over arbitrary `Ty`; use them unchanged for product parameters/results, locals and table/global cells. C03 makes `Ty.sum` payloads arbitrary `Ty`, so products also travel inside sums. Initialization must supply every field exactly once; no zero/default field and no projection masquerading as a whole result. `Stmt.verbund` in `Zucker:215` remains count-one carrier sugar, not the product constructor. Carrier records and by-value records share the resolved schema, but a by-value product is not a table capability. |
+| Source export | `Parser/Expr/Typ.STyp.raw` holds brace types; `SItemTief.typeT` holds names/modifiers; labelled `SExpr.call` is the existing `P(a: ..., b: ...)` construction (`SYNTAX.md:660`). Add **new** `URecord` and a checked schema collector in `Parser/Elab/Uebersetze`, preserving field names/order/types and nominal/linear/ghost modifiers. Resolve dependencies acyclically; recursive values require an existing safe indirection. Replace the relevant refusals in `uAliase:822`, `uTyp:988–1023`, `uFeldTyp:1029–1034`, parameter/result elaboration around :1780/:2050, and `uRestFehler:4039`. Reuse the canonical type/field reader for balanced `raw` groups, not a comma splitter. Extend `USide`, `UParamArt.wert`, `UFnKopf.resTy`, `UProg`, `uWertBlatt`, `uSeiteBlatt`, `uZugriff`, assignment and return elaboration; field access to a product must be distinguished from a carrier slot lookup. Reject missing/duplicate/unknown constructor labels and retain source argument evaluation order before arranging fields in declaration order. In `UebersetzeAllg`, extend `declOf`, field typing, `lowWertE`, `lowSideVal/lowSideEns/lowEns`; in `UebersetzeAllg2/3`, extend binding, argument/store lowering, `lowErg`, `lowStructL`, `lowEndL` and `lowerAllg`. Carry schema/constructor/projection/update preservation through the actual `Frontend.elabWithScopes` and `Compiler.CanonicalSourceProgram`, not a witness-only exporter. |
+| IR-03 layout | Define **new** `fieldWords fs i = sum ((fs.take i.val).map valueWords)`; `valueWords (.prod r fs) = max 1 (sum (fs.map valueWords))`. `encodeWords` concatenates fields in declaration order, with `[0]` only for the empty product. `linear` has its representation's width/encoding. All spans use the existing 64-bit runner words, aligned to eight bytes, with no internal padding or field reordering. Thus a u8 value still occupies its existing runner-word span. This is the internal ABI, not a packed `format`/foreign layout: use `Speichermodell/RecordLage.{offset,groesse,offset_ausgerichtet}` only for a separately checked byte-layout adapter. Prove each field interval lies inside the product and distinct intervals do not overlap; compose offsets for nesting. `contextWords` has the existing reverse-context placement order, whereas a product's internal fields have declaration order: **do not use `contextWords fs` to derive field offsets**. |
+| Emitter/proofs | Extend `Senke/Ausdruck.lowE`, `Ausdruck/Top.lowE_top`, `Ausdruck/Satz.lowE_ok` and their mutual argument/value validity statements: constructor evaluates all fields into reserved disjoint spans; projection copies the entire selected field; replacement first preserves the base then overwrites its selected span. Reuse `Ausdruck/Aggregat/KopieSatz.copyValue_run` and its exact `Agree` footprint, including its forward-copy condition `dst ≤ src ∨ src + width ≤ dst`; use a disjoint temporary for destructive overlap. Extend `ValueValid` recursively over every field and through `linear`, and derive field extraction/reassembly lemmas for `ValueAt` and `ValueOk`. Reuse IR-03's completed pointer-span store/load contracts (including `storeFramePointerSpan` when handed over), never a new record-only store loop. Extend `WeltAt`, `LayIn/LayDis`, initialization, snapshots, `EnvAt`, assignments, `ResultAt/ResultOk/ReturnMirror`, call and return paths; complete product result width feeds `returnWords`. Thread through `lowS_ok/lowB_ok/lowEnd_ok`, `Rekursion.lowFun_spec`, `Compiler.compile_source_program` and `IRBild.irBild_correct`. |
+
+**Ownership is checked per field, not inferred from a byte copy.** Existing
+`Res.marke`, `D.eigner`, `Signatur.konsumiert/produziert` and `nachSig` govern
+resource marks; `Ty.ptr n rw` alone carries no unique owner (`Val` is unit).
+Rust `m2.rs` tracks `Zustand::{Lebt,Verbraucht}` by variable, and `m3.rs` handles
+root separation. Neither supplies a generic proof of partial record moves.
+
+The proposed `FieldPath` constructors are identity, one typed product-field
+step, a `.linear r τ → τ` representation step, and composition; they carry no
+permissions themselves. Define path get/set recursively from `prodGetW` and
+`prodSetW`, with get-after-set and disjoint-path frame lemmas. Array indexing
+uses existing `arrGet/arrSet`; inventory keys append the evaluated bounded
+element index. Representation steps cannot bypass `ValueUse` or unwrap an
+owner into a freely copyable capability.
+
+Implement **new** `ValueUse`, an inductive derivation over the existing typed
+syntax, with input/output availability maps keyed by local/cell plus `FieldPath`.
+Its type-directed leaves are copyable scalars or indivisible `Ty.linear` atoms;
+products/arrays split recursively and sums expose only the selected payload.
+An explicitly linear outer wrapper is one indivisible obligation even if its
+representation has several fields; a non-linear product with linear fields has
+one obligation per linear field. Ordinary scalar projections remain copyable.
+For scalar observation through a linear wrapper, append **new**
+`Expr.fieldView (p : FieldPath τ σ) (h : Observable σ)
+(v : Expr D Γ Λ τ) : Expr D Γ Λ σ`, with **new** `Observable σ`:
+numbers, bools, reasons and recursively pure
+products/arrays/strings, excluding capabilities, references and linear atoms.
+`FieldPath` includes a representation step through `linear`; `eval` projects
+without consuming, `orte = v.orte`, and `ValueUse` requires the owning atom live.
+A borrowed capability needs the existing rights/root/guard discipline plus a
+proved borrow lifetime; `fieldView` cannot manufacture one. Include this case
+in the same renaming, locality, cost, IR projection and ownership proofs.
+The same mechanism covers whole records, parameters, results and payloads:
+
+- Construction moves each linear input into one destination; projection of a
+  linear field moves that leaf, making its source path unavailable. A whole
+  read/move requires all leaves live. Reading a copyable sibling remains legal.
+  Replacement may fill an unavailable leaf, but cannot overwrite a live linear
+  obligation; ordinary `prodSet` of a noncopyable base is admitted only with this
+  exact transfer derivation, never as a second copy. A temporary for RHS evaluation
+  has the same obligations as a named local.
+- Calls transfer the paths named by the actual consumed parameter positions;
+  callee entry/exit summaries include surviving/produced paths and both result
+  channels. Return transfers the result; every other live local obligation must
+  be consumed or explicitly survive as required by the existing `leaves` rules.
+  Joins require equal inventories on returning branches; loops restore the stated
+  carried inventory at back edges and prove all exit inventories. A divergent
+  branch has no terminating-exit obligation. No new eventual-consumption claim
+  about an infinite run follows from linearity.
+- Existing marks remain in `Λ`; a field carrying an owner names that same mark,
+  not a newly minted one. Parameter/result transfer renames its location; stage
+  changes/retirement use `advances`/`retires` and existing signature transitions.
+  Provider freshness and the existing owner-minter obligations remain user logic.
+  Ghost linear fields have proof obligations but no independent payload word;
+  export them to the existing mark context, with a certificate matching each
+  erased field to its resource. `URecord` keeps the full schema and a checked
+  source-field-to-runtime-field-or-resource map; `Ty.prod.fields` contains only
+  runtime fields, in their relative declaration order. Ghost field access is
+  resource access, never `prodGet`; no ghost obligation becomes a default value.
+- Add **new** `valueUseB` with a soundness theorem and **new** `AkzeptiertSpec.werte`
+  / `AkzeptiertSpecX.werte`; compose with `Akzeptiert`/`AkzeptiertX`. Extend M2 to
+  the same field paths and M3's root extraction through products/sum payloads;
+  `Logik/Vertraege/Getrennt.traegerVon` currently sees only a top-level pointer.
+  Generalize separation to the flattened capability leaves, including leaves
+  within one argument, retaining the declared carrier/rights for every leaf.
+  No cross-type re-view or int-to-pointer becomes valid by being put in a record.
+
+For linear table/global cells, availability is a ghost inventory over the
+existing `Speicher`, keyed by actual `(t,k,f,path)` or `(g,path)`, not a new heap.
+A move leaves stale representation bits but no usable permission; its next read
+requires a live inventory entry. The shared inventory is updated under the same
+carrier guards/owner marks as the store; aliases name the same entry. Computed
+indices need a proved equality/disjointness fact, not distinct syntax. Add **new**
+`ValueOwnership` relating each live linear atom to exactly one location, and
+prove preservation under the existing G/GX step and foreign-call contract.
+Foreign consumption/production and initial ownership are explicit user-logic
+obligations, not assertions deduced by the checker or hardware assumptions.
+Concretely, **new** `ValueFlowDuty` in `NutzerPflicht`/`NutzerPflichtA` supplies
+initial inventory uniqueness, semantic cell-identity facts and each foreign
+transfer summary, for every relevant world and rely answer. `valueUseB` checks
+the finite syntax-directed transfer derivation and which duties it requires;
+it does not decide universally quantified cell disjointness or borrow lifetimes.
+The preservation theorem uses that derivation **and** those discharged duties,
+under the existing guards. Dynamic moves without such a derivation/duty refuse.
+Until those obligations and the simulation are connected, refuse linear-cell
+transport; never enable it merely because `copyValue_run` copies all the bits.
+
+**Walk mapping products.** Actual source coordinates are `SWeg` in
+`Parser/Item/ElementTief:407`, and `Uebersetze:1570/3174/4039` (quantified domain,
+traversal domain, declaration). `SWeg` retains `stufen/node/dname/dwhen/blatt/invarianten`.
+Rust `umgebung.rs::walkknoten` and `domaene.rs::abbildungsfelder_pruefen` establish
+the schema: all node-entry fields plus synthesized `va`, `level`, `index`;
+`index[level]` is path-dependent. Generate **new** `WalkShape` (positive finite
+levels L, node arity N, node schema and safe child relation), **new** `WalkPath`
+(depth and bounded child indices), and **new** `MappingTy` as `Ty.prod` of the
+entry fields, `va`, `level` and `[Ty.index N; L]`. Reject synthesized-name
+collisions; select `level = L - 1 - depth` (root highest, leaf level zero).
+`index[ell]` stores the visited index at level ell; positions below `level` are
+canonically zero and the active suffix is `[level,L)`. They are not extra
+visited nodes. A **new** `WalkMeaning` relates
+the source down/leaf predicates and resolved root/child relation to this product.
+
+Expand finite levels with existing `Stmt.traverse`/quantifiers and product
+binders, reusing `Stmt.walk2` only as the two-level expansion pattern. At a node,
+evaluate the leaf predicate first; a leaf yields exactly one mapping and stops
+descent, including an early large-page leaf. Otherwise descend only if `dwhen`
+holds and another level exists. Neither predicate silently replaces the other;
+both true still yields one leaf. Preserve lexicographic path order, source
+leave/next semantics and invariants at every loop boundary. Prove **new**
+`walkMappings_correct`: emitted visits equal all reachable qualifying path/entry
+pairs, including their fields/position, with no duplicate *paths*; shared child
+nodes reached through distinct paths remain distinct mappings. Prove quantifier
+and traversal substitution against that same enumeration and its finite bound,
+not merely list membership (`Bausteine/Schablonen/SchablonenT5/T2.walk_hits_mapping`).
+`N^L` bounds mappings; work also includes internal-node visits and must be billed
+by the sum of level bounds, not `L*N` or only the leaf count.
+
+Two unresolved semantics must be explicit in the implementation review:
+`SWeg` has no byte/page scale or child-address binding, and the existing abstract
+`walk_hits_mapping` supplies neither. Recommend `va = radix-prefix * N^level`,
+where the prefix includes the current entry index in root-to-entry radix-N
+order, in logical leaf units; an early leaf covers `N^level` such units. Then
+use a checked layout scale for byte `va`; preserve any
+established binding's coordinate convention instead of silently changing it.
+A numeric `dname` alone cannot select a G region. The root/child access must be a
+safe capability/reference relation supplied by the declared storage/binding,
+whose correspondence is proved as user logic. Without that relation or an
+agreed `va` unit, refuse the affected walker by name; never fabricate an address
+conversion, flatten an unrelated table, or claim complete walk coverage. These
+are source-meaning decisions for the grammatik owner/owner, not implementation
+freedom to guess paging constants. Safe finite walkers proceed independently.
+
+**C03 — open reasons and arbitrary typed tagged payloads.**
+
+| Layer | Implementable change |
+|---|---|
+| Typed payloads | Generalize the existing `Ty.sum` argument to `List (Option Ty)` in `Kern/Syntax/Typen`; do not add another sum constructor. Generalize `Nutzlast none = Unit`, `Nutzlast (some τ) = Val F passt τ` together with `Val (.sum cs) = Σ i : Fin cs.length, Nutzlast (cs.get i)`. Define this by the same nested type recursion as products. In `Syntax/Syntax`, replace `NutzlastExpr.num` by **new** `.val (e : Expr D Γ Λ τ)` at the end, retaining `.empty`; `Expr.case` keeps its name. `ArmCtx Γ none = Γ`, `ArmCtx Γ (some τ) = τ :: Γ`; generalize `Arms`, `execArms`, `armEnv` and `Ausgang.schrumpfArm`. `Stmt.onTag` still requires exactly one arm per case and binds the whole typed payload. `evalNutz` delegates `.val` to `eval`; `eval .case` packages the tag and payload. No new `Stmt` constructor. Noncopyable payload matching consumes the selected variant under `ValueUse`; its inactive variants create no obligations. |
+| Reason descriptor/value | Add **new** `ReasonSpec` before `Ty`: declaration identity `name : Nat`, ordered distinct `codes : List (Fin (2^128))`, and `closed : Bool`. The 128-bit domain comes from `crates/gabbro-syntax/src/ast.rs::ReasonFall.wert : u128`, not a runner-word limit; validate bounds in the canonical parser/exporter too. Replace `Ty.why (n : Nat)` with `Ty.why (r : ReasonSpec)`. **New** `ReasonVal r = { c : Fin (2^128) // r.closed = true → c ∈ r.codes }`. Closed values are exactly declared cases; open values also include codes not yet named, retaining their identity through forwarding. This is an opaque reason value in the source, not an integer: no arithmetic, integer conversion, or manufacture of an unknown case. `Expr.why` constructs a declared code by a bounded case index; append **new** `Expr.whyEq` over two expressions of exactly the same reason type, with code equality and combined footprints. An open/closed or foreign declaration is not implicitly interchangeable. In particular, an open declaration with zero known cases is inhabited and is never “no channel”. |
+| Channels and execution | Replace the `Nat` type of `Signatur.gruende` and `Deklaration.agruende` by `Option ReasonSpec` (`none` = no channel); keep these existing field names. Add **new** `reasonTy none = Ty.never`, `reasonTy (some r) = Ty.why r`. Migrate `Vertrag`, `D.gruende`, `SigPasst.gruende`, all call premises (`= none` or `= some r`), `Ausgang.why`, `EndAusgang.why`, `RufAusgang.why` and machine/rest result types to the exact descriptor. Generalize existing `Stmt.retWhy` and `Endblock.retWhy` to take `Expr D Γ Λ (reasonTy V.gruende)`, so a received open reason can be forwarded without reconstructing a declared index; T2 evaluates it once and records its reads. Error binders use the same `reasonTy`, including `Block/Endblock.bindCallElse/bindAxiomElse`. `onWhy` gains a proof `r.closed = true`; `execGrund` converts the declared code to its unique case index and runs the corresponding `GrundArms` arm. Keep `GrundArms` indexed by the known case count. No unknown/default match arm; open matching stays refused (`m1.rs:2170`, M125), while equality tests and forwarding work. `rufAt` keeps distinct normal/reason returns, requires/ensures order and owed-invariant duties. |
+| Foreign-answer boundary | Current `Orakel.wirkt` returns one `Int`; `einpassen`, `summePasst` and `axiomAntwortSonst` decode numeric payload/tag packing. That interface cannot be cited as an existing structured-product ABI. Replace its answer component with **new** `RawAnswer` (`value RawValue` or `reason RawValue`), where **new** `RawValue` is a finite tree of integer leaves, ordered product fields and a tag plus optional payload. Generalize `einpassen/einpassenErg`, `AntwortLeer`, `axiomAntwort/axiomAntwortSonst`, `sonstPasst`, `roh` and `Logik/Vertraege/EinpassenVoll.einpassen_voll` against the declared type and exact tree shape. Scalar leaves retain the existing range/IEEE/function-image checks; recursively check product arity, every field, selected payload type and reason membership/bounds. Keep register raw `Int` access unchanged, embedding its scalar answer at the decoder boundary. Structured user bindings provide explicit register/buffer-to-tree correspondence; a syscall's errno decoder maps its declared codes to reason values. Never choose an unspecified product field or map an unknown reason to the first known case. These are raw data checked against G types, not a second interpreter. |
+| Source coordinates | `Uebersetze.uWhys:4285–4297` must retain `whyT`'s `ex` flag, source numeric codes and identity in `UWhy`; remove only the blanket nonexhaustive refusal. Preserve N002's distinct-code check (`namen.rs::reason`). Migrate `kanal/resWhy`, `uWhyArme:3210`, argument elaboration at :2175 and `uEndeKanal:3068`/result elaboration through :3125, `UebersetzeAllg2.lowGrund` and all call/else/return lowerings; require `closed` before constructing `onWhy`. `uNutzTyp:4227`, `uSumFaelle:4240`, `uSums:4262` and `USum` must retain a complete parsed `STyp`/resolved `Ty`, not just an integer range; `uBisKlammer` currently stops at the first `)` and must use balanced nesting. Generalize `USVal`, payload binders and `UebersetzeAllg2/3` tag dispatch/export. Resolve bool, arrays/strings, references and products through the one canonical type elaborator. Prove typed payload substitution, exact open/closed descriptor provenance, forwarding and same-declaration equality in the real `lowerAllg` pipeline. |
+| IR-03 representation | For generalized sums use a separate tag span `integerWords 0 (cs.length-1)` followed by `max` of the **complete** `valueWords` of possible payload types (`none` contributes zero), with zero padding after the active payload. The empty sum retains the ABI's positive-width marker but has no model value. Keep the existing `sumFits` compact case only when every payload is an integer range and the existing 8/56-bit packing theorem applies; typed products are never squeezed through `sumOff`. Generalize `sumPayloadWords`, `encodeWords`, `ValueValid`, constructors/dispatch and selected-payload `ValueAt`; inactive padding is zero and has no validity/ownership obligations. Closed reasons may retain compact declared-index encoding with a proved code/index bijection; open reasons encode the complete u128 code in two words. `valueWords` depends on the descriptor, not its currently known case count alone. Generalize `returnWords result reasons` to the optional descriptor, with no-channel width zero, still reserving at least `resultWords result`; error status is outside both complete spans. Update direct/indirect/foreign calls, `Rueckkehr.retWhy_ok`, `RetWhy`, snapshots, relocated parameters and `ReturnMirror` consumers together. Use the same aggregate copy/store/load proofs as C01 and connect the existing mutual expression/statement/block/function/image theorems. |
+
+The raw-answer migration must also replace the current aggregate refusals in
+`Logik/Vertraege/EinpassenVoll.WertOk` and `antwortTyB`, not make their checks
+vacuous: product inhabitation is the conjunction of field inhabitation, sums
+the disjunction over payloads, arrays require an element only when nonempty,
+strings admit the empty string, and open reasons are inhabited regardless of
+known case count. Recursively preserve IEEE well-formedness. Prove
+`antwortTyB_iff` and `einpassen_voll` for these definitions with **one consistent
+function image** across all nested function-pointer leaves, then restore
+`antwortenB_iff`/`StelleOk` and halt classification. Decoding completeness is not
+provider freshness or an owner minting proof. For all-copyable old programs,
+`ValueUse`/ownership obligations are empty and derive automatically; stages
+must not add an unrelated user premise to an existing accepted scalar program.
+
+**Goal proof obligations and Spec review, shared by both packages.**
+
+1. **Reads, races and separation.** Extend `Expr.orte`,
+   `NutzlastExpr.orte`, `Args.orte`, `Syntax/Extraktion/T2.stmtOrte` and
+   `Extraktion/T3.eval_liest_nur_orte` through products, payloads and evaluated
+   reason returns; prove `ZielOrt/Grundlage/ZielOrtSem.eval_gleichAuf` from those
+   facts. A by-value field projection reads no new world location, but a projection
+   from `slot/thru/slotRef/glob/oldS/oldG` retains its containing carrier in the
+   footprint. Field read/modify/write retains its read and write events.
+   G/GX race footprints remain **carrier-granular**, not separately lockable field
+   paths: two fields never establish disjoint carriers. Re-establish
+   `rennB_iff`, `fussWB_iff`, `Atomar/AtomarAkzeptiert.fussWXB_ok`,
+   `vertragsFreiB_ok`, `akzeptiert_iff` and `akzeptiertSpecX_of`; contracts cannot
+   hide a shared-atomic read in a nested payload/field. Generalized capability
+   leaf separation supplements, never weakens, these existing carrier checks.
+2. **Frame, invariants and contracts.** Pure get/set lemmas plus existing
+   `World.storeSlot/storeGlob` show all other cells and sibling fields unchanged;
+   repair `Logik/Vertraege/RahmenTreu.rufAt_treu`,
+   `ZielOrtSem.gleichAuf_storeSlot`, invariant/contract dependency and replay
+   proofs. A writer of any subfield owes all of the containing carrier's existing
+   invariants; product extension adds no independent invariant registry.
+   `Programm.requires/ensures/invariante`, old-state snapshots and result contexts
+   must retain full values. Re-establish `VertragAmOrtG`, `SperrInvG`,
+   `InvAmOrtG/InvAmGrundG`, `InvRuheG/InvSichtG` and
+   `SperrWechselG/SperrSichtG`, including early/reason returns and idle-root/link
+   transport. Reason returns still bypass normal ensures; retain
+   `InvGutGrund`/`LogikPflichtA` for **every** admitted reason, including unknown
+   open values. Do not satisfy them by quantifying only over declared cases.
+3. **Addresses.** `Speichermodell/Adressen/Bereich.storeSlot_aussen`,
+   `execStmt_blatt_aussen` and `rufErreichbarGX_aussen` remain the route to
+   `speicherAdressen`: only an in-extent existing cell is replaced. A product
+   field span lies inside that cell's representation; prove this and sibling
+   disjointness in the IR-03 layout relation and compose with
+   `Adressen/Layout.zelle_im_bereich` under `LayoutOk`. `AdressLayout`'s field
+   means `D.Feld t`, not an arbitrary nested product path. No narrower race or
+   physical-address claim follows just from a word offset, and no new address
+   space, freshness or memory-provider assumption is introduced.
+4. **Ownership and Spec meaning.** Copyable products and typed sums conservatively
+   enlarge the values/programs quantified over by `Spec.lean`; existing safety
+   conclusions keep their qualifications. At the ownership stage, add **new**
+   `WertLinearG`: every reachable G/GX machine admits a `ValueOwnership` inventory
+   whose transfer history is compatible with `ValueUse`; no live atom has two
+   locations, unavailable paths cannot be used, and terminating scope exits have
+   no undeclared outstanding local obligation. Prove it by the same machine-step
+   induction, including starts, spawn, return and linking, and carry it as an
+   additive `Ziel`/`ZielX` conclusion. Record this **strengthening** and the new
+   acceptance component/user ownership duties in the Spec header and commit;
+   it is not an axiom, a weakening of `BesitzStart`, or eventual reclamation.
+   C03 also changes the meaning of the reason alternatives/foreign-answer
+   domain in `KopfHalt`, `InvAmGrundG`, `InvGutGrund`, `HardwareAnnahmen` and the
+   derived goals: open values include undeclared codes, structured answers have
+   all fields checked. Preserve the existing named assumptions; any foreign
+   ownership/freshness claim stays user logic. The implementation needs an
+   explicit Spec diff/review, not the label “representation only”.
+5. **Remaining theorem closure.** Extend renaming, ghost/fragment checks,
+   `Syntax/Geist`, `Syntax/Fehler`, `Syntax/Extraktion`,
+   `Nebenlaeufigkeit/Sperren/MitRuhe*`, `Zielsatz/Einbettung/Syntax`,
+   `Speichermodell/Maschine/GXMaschine` and atomic replay for the changed syntax
+   and outcome types; update the represented `GabbroV/GvBruecke` fragment.
+   Extend `Logik/Fortschritt/KostenG/T1.kostenExpr` and statement/binder costs for
+   construction, replacement, typed matching and evaluated reason returns,
+   then `frame_schritte_beschraenkt` and the corresponding `ZeitAb/ ZeitAbX`
+   proofs. Re-establish progress/halt classification without an “unknown reason”
+   stuck case. Recompile `Zielsatz/Kern/Beweis.ziel_aus`,
+   `Atomar/BeweisAtomar.gabbro_ziel`, `gabbro_ziel_gx`, `gabbro_ziel_sc_aus`
+   and `gabbro_ziel_verbund`; source call logs, budgets, locks and interruption
+   guarantees retain their existing premises. Audit exactly `propext`,
+   `Classical.choice`, `Quot.sound`; no added axiom or executable interpreter.
+
+**Witnesses and refusal boundaries.** Every generic syntax/translation theorem
+gets a non-degenerate `_zeuge` satisfying all premises jointly; source examples
+must actually pass export, `AkzeptiertX`, IR emission and the assembly runner.
+
+| Package | Positive witnesses | Negative twins / retained refusals |
+|---|---|---|
+| C01 values/layout | Empty and heterogeneous scalar product; two equal-shape nominal records; nested record/array/string and a >64-bit field; field replacement preserves siblings; record parameter → table cell → sum payload → call result; old-field contract; overlapping-copy temporary | Foreign nominal identity, unknown/missing/duplicate field, wrong range/type, recursive-by-value schema, out-of-range array index, truncated result, unsupported byte layout, state/where bypass, unguarded carrier or shared-atomic contract |
+| C01 ownership | Move one linear field and use its scalar sibling; refill moved field then move whole record; two linear fields transferred independently; linear payload match; guarded cell handoff through an alias; both normal/error exits conserve ownership; ghost mark/stage survives erasure | Read moved path/whole partial record, duplicate field move, overwrite/drop live leaf, unequal branch inventory, missing consumes position, forged owner, aliasing computed cell, unproved initial/provider ownership, ghost runtime use |
+| C01 mappings | L=1; N=2/L=3 with real child links; unreachable/nonleaf entries excluded; early large-page leaf; shared child at two distinct paths; every node field plus va/level/index; nested quantified binder and generated invariant | Zero/unknown levels, invalid down target, synthesized-name collision, missing safe child binding/va scale, L*N domain bound, wrong active index suffix, missing invariant restoration; raw-address or boot behavior remains excluded |
+| C03 | Closed and open declarations with equal known cases but different identities; undeclared open code survives foreign call → else binder → return → caller equality; open declaration with no known cases; codes >64 bits; bool/record/array/string/reference payloads through match and calls; closed integer tags retain their compact theorem | Open `match` (M125), foreign-reason equality/forwarding, code outside u128, duplicate codes, unknown closed code, absent/extra/wrong payload, malformed nested raw answer, discarded fields, unproved reference provenance, non-atomic multiword exchange |
+
+**Recommended staging and rebuild handoff.** First implement scalar-only
+copyable products end to end; then nested products with IR-03 full spans and
+typed sum payloads. Next migrate reason descriptors, channel outcomes and raw
+answers as one compiling batch; enable open reason transport only after every
+return/foreign/error consumer is connected. Then add safe mapping products and
+their exact enumeration; resolve the documented va/child-binding questions
+before enabling affected source walkers. Finish with the ownership derivation,
+first local/call fields, then guarded table/global cells, ghost fields and the
+additive Spec theorem. Intermediate stages explicitly refuse the remaining
+forms; a green product helper never marks all of C01 complete.
+
+`Typen` and `Syntax` changes rebuild nearly all grammar modules: semantics,
+syntax inductions, G/GX machines, acceptance, invariants, costs, idle-root/link
+embeddings, goal witnesses, exporter and the GabbroV bridge. C03's changed
+`gruende` field also updates every signature/declaration fixture and all oracle
+answer proofs. Stage 0 rebuilds aggregate encoding/layout, world/init/snapshot,
+expression and dispatch, assignment/binding, direct/indirect/foreign calls,
+returns, recursion, start/image and frontend/compiler provenance consumers.
+One grammatik owner batches these changes; no simultaneous grammar mutation.
+Implementation builds use the authorized available-memory-minus-2-GiB scope
+and two global slots; Stage-0 checks use their prescribed 5-GiB slots. Require
+full grammar build, layout check, Lean guardian/axiom audit and connected
+Stage-0 proofs/runner witnesses after each accepted batch; all remaining
+guardians still gate integration. This design compiles **zero new cases** and
+changes no measured proof/acceptance status; no builds were run.
