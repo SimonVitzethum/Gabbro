@@ -55,7 +55,8 @@ theorem nimm_wait_retry {spurious : W → W → Mem → Mem → Prop} [FutexOK s
     (answer : Kern.ans (futexReq (BitVec.ofNat 64 a) 128 seen) m (some (r, x)) mr)
     (resume : LS m0 mr fp s a f o' c' w') (invariant : LockInv o' c' w')
     (registered : 0 < w'.toNat) :
-    (mr.rd32 (BitVec.ofNat 64 a) ≠ some (seen.setWidth 32) ∨ spurious (BitVec.ofNat 64 a) seen m mr) ∧
+    ( (∃ observed, mr.rd32 (BitVec.ofNat 64 a) = some observed ∧ observed ≠ seen.setWidth 32) ∨
+      spurious (BitVec.ofNat 64 a) seen m mr) ∧
     ∃ m' f', Star ⟨pc + BitVec.ofNat 64 (16 * (p + 36)), fp⟩ m
         ⟨pc + BitVec.ofNat 64 (16 * (p + 17)), fp⟩ m' ∧
       LS m0 m' fp s a f' o' c' (w' + BitVec.ofInt 64 (-1)) ∧

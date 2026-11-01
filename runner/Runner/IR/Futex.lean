@@ -18,7 +18,7 @@ def futexReq (a op v : W) : Req := ⟨202, a, op, v, 0, 0, 0⟩
 class FutexOK (spurious : W → W → Mem → Mem → Prop) [Kern] : Prop where
   wait_return : ∀ a v m r x m',
     Kern.ans (futexReq a 128 v) m (some (r, x)) m' →
-    m'.rd32 a ≠ some (v.setWidth 32) ∨ spurious a v m m'
+    (∃ observed, m'.rd32 a = some observed ∧ observed ≠ v.setWidth 32) ∨ spurious a v m m'
   /-- A successful WAKE reports at most the requested number woken; negative
       error returns are allowed. The count says nothing about who runs next. -/
   wake_return : ∀ a n m r x m',
