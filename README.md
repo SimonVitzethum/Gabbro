@@ -54,7 +54,9 @@ targets, tests, options -- [`BUILD-SYSTEM.md`](dokumente/BUILD-SYSTEM.md)); read
 
 ```bash
 git clone https://github.com/SimonVitzethum/Gabbro && cd Gabbro/grammatik
-lake build Grammatik.Zielsatz.Beweis Grammatik.Zielsatz.Proben Grammatik.Zielsatz.ProbenW1 Grammatik.Zielsatz.BeweisAtomar
+lake build Grammatik.Zielsatz.Kern.Beweis Grammatik.Zielsatz.Kern.Proben Grammatik.Zielsatz.Kern.ProbenW1 \
+  Grammatik.Zielsatz.Atomar.BeweisAtomar Grammatik.Zielsatz.Atomar.BeweisTerminierung \
+  Grammatik.Zielsatz.Atomar.TerminierungZeuge Grammatik.Zielsatz.Atomar.BeweisWarten
 lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence named below
 ```
 
