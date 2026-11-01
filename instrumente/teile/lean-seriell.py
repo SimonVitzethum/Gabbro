@@ -14,7 +14,7 @@ Environment (set by the guardian):
                        number of `lean` processes that may run at once in this guardian run)
   GABBRO_LEAN_SLOTS    `:`-separated shared slot lock files; the call takes any free one while it runs
                        (empty when the guardian holds the slots itself)
-  GABBRO_LEAN_ARGS     `streng`: drop `-j*`, `-M*`, `-DElab.async=*` and run `-j1 -DElab.async=false -M4608`
+  GABBRO_LEAN_ARGS     `streng`: drop `-j*`, `-M*`, `-DElab.async=*` and run `-j4 -DElab.async=true -M4608`
                        (the Stage-0 rule); `lake`: keep the arguments as Lake passes them
   GABBRO_LEAN_MAX      MemoryMax of the scope in GiB (default 5), GABBRO_LEAN_HOCH its MemoryHigh (default 4)
   GABBRO_LEAN_MIN      GiB of MemAvailable required before a start (default 8)
@@ -93,7 +93,7 @@ def main():
         time.sleep(10)
     if os.environ.get("GABBRO_LEAN_ARGS", "streng") == "streng":
         args = [a for a in args if not (a.startswith("-j") or a.startswith("-M") or a.startswith("-DElab.async="))]
-        args = ["-j1", "-DElab.async=false", "-M4608", *args]
+        args = ["-j4", "-DElab.async=true", "-M4608", *args]
     mx = os.environ.get("GABBRO_LEAN_MAX", "5")
     hoch = os.environ.get("GABBRO_LEAN_HOCH", "4")
     cmd = ["systemd-run", "--user", "--scope", "-q", "-p", f"MemoryHigh={hoch}G", "-p", f"MemoryMax={mx}G",

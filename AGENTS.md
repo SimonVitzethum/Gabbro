@@ -107,7 +107,8 @@ expanding infrastructure for a small subset.
   `lean`, `lake`, `cargo`, the runner and regression loops, guardians, Python measurement scripts — runs
   inside `systemd-run --user --scope -p MemorySwapMax=0` with a MemoryMax/MemoryHigh. No exceptions.
 - **RAM discipline (owner, 2026-11-01):** inside a Stage-0 slot exactly ONE `lean` process runs, with
-  `-j1 -DElab.async=false -M4608`, checked module by module in dependency order. Never run a parallel
+  `-j4 -DElab.async=true -M4608` (owner, 2026-11-01: asynchronous elaboration is the standard; the threads of
+  one process share its imports), checked module by module in dependency order. Never run a parallel
   `lake build` of `stage0/` (it spawns one `lean -M16384` per module and thrashes inside the 5G scope). Check
   `free -g` before every heavy step; with less than 8 GiB available, wait. Agents keep the slot lock only for
   one module and must not end their run while a build they started still runs.

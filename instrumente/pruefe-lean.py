@@ -40,7 +40,7 @@ build state). `--stufe 7,8` runs only the named stages.
 Memory (AGENTS.md, "RAM discipline"): every process that can use real memory runs in a no-swap `systemd-run`
 scope, and a heavy step waits until 8 GiB are available. Lake has no job limit, so there are two modes:
   serial (default when under 24 GiB are available at the start, or `--seriell`): Lake's `lean` is
-    `teile/lean-seriell.py` (fake sysroot, `LAKE_OVERRIDE_LEAN=1`), which lets ONE `lean -j1 -DElab.async=false
+    `teile/lean-seriell.py` (fake sysroot, `LAKE_OVERRIDE_LEAN=1`), which lets ONE `lean -j4 -DElab.async=true
     -M4608` run at a time on one of the two shared slot locks (`~/.cache/gabbro-stage0-build.slot-N.lock`, 5 GiB
     scope), module by module in Lake's dependency order -- exactly the module set `lake build` builds (the
     lakefile roots, here `Stage0` and `Stage0.Haupt`, with their import closure), traces and the executables
@@ -213,7 +213,7 @@ def lake_bau(argv, cwd, frist, grammatik=False):
 
 def lean_datei(datei, cwd, frist, grammatik=False):
     """`lake env lean FILE`: the grammar's checks run with both slots held by the caller and a scope of
-    `MemAvailable - 2 GiB`; stage 0 and the runner run `lean -j1 -DElab.async=false -M4608` on one shared slot."""
+    `MemAvailable - 2 GiB`; stage 0 and the runner run `lean -j4 -DElab.async=true -M4608` on one shared slot."""
     if grammatik:
         mx = budget_gib()
         env = lean_umgebung(cwd, [], mx=mx, hoch=max(1, mx - 1), args="lake")
