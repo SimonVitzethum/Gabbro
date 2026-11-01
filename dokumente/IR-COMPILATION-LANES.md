@@ -1101,3 +1101,25 @@ operand orders, equal and unequal, empty and one-byte strings against longer one
 
 Measured: closure rebuilt (223 modules after the edits), `Nachpruefung.lean` 353 theorems on the standard axioms only
 (6 axiom-free), layout check passes, 171/171 textual programs.
+
+## IR-03 handback state (2026-11-01)
+
+Branch `t3/central-value-abi`: master `6444b5cc3` merged (`05cfd542b`), then `strGet` over any scalar index range,
+`strWeit` narrowing, `strWeit` of short to long strings and `strEq` between short and long strings (commits above).
+
+Open (exact):
+
+- `strLt` on long strings (and between short and long): the planned form is an unrolled backward fold over
+  the padded key sequence `x_k = [k < len] * (1 + byte_k)` with `res := (x_k <u y_k) | ((x_k == y_k) & res)`; its
+  correctness needs `bytesLt as bs = lexLt (keys as) (keys bs)` and a descending induction over the scan code. Refused
+  by its guard until then.
+- `strCat` of strings whose combined capacity exceeds one: needs the dynamic-offset word store of the second
+  operand (`storeFrameSpan` per word, preceded by zero-filling the extension) and the sum of the length words.
+  Refused by its guard.
+- IR-08 `StatementCost.lean` (5498 lines) and `EarlyExit.lean` (807 lines) are still outside the `Stage0` root: they
+  depend on scalar-only copy, return and store transports and are not migrated to the complete value ABI.
+- Ordinary records (canonical-model prerequisite); `getBytes`/`putBytes`/`shift` at the eight-byte limit (IR-02/IR-06).
+- Not reachable from the surface language, hence witnessed on the model only: `arrSet` of arrays of more than one
+  element and `strWeit` narrowing (the elaborator refuses a string longer than the maximum).
+- The 500-line rule: `Ausdruck.lean` (about 620 lines), `Satz.lean` and `Anweisung.lean` exceed it as they did before
+  this lane; they are the `lowE`/`lowS` mutual definitions and have not been split.
