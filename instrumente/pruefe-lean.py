@@ -163,7 +163,7 @@ def lean_umgebung(cwd, slots, parallel=1, mx=5, hoch=4, args="streng"):
     """Environment that makes Lake (as its `lean`) and `lake env` use `lean-seriell.py`; also the fake sysroot."""
     WACHE.mkdir(parents=True, exist_ok=True)
     rc, out = lauf(["lake", "env", "printenv", "LEAN_SYSROOT"], cwd, 300)
-    echt = out.strip().splitlines()[-1] if rc == 0 and out.strip() else ""
+    echt = next((z for z in reversed(out.splitlines()) if z.startswith("/")), "") if rc == 0 else ""
     if not echt or not (pathlib.Path(echt) / "bin" / "lean").exists():
         raise NichtGemessen(f"no Lean sysroot found in {cwd}: {out.strip()[-200:]!r}")
     fake = WACHE / "sysroot"

@@ -20,7 +20,7 @@ Environment (set by the guardian):
   GABBRO_LEAN_MIN      GiB of MemAvailable required before a start (default 8)
   GABBRO_LEAN_FRIST    seconds to wait for lock and memory before giving up with exit 75 (default 14400)
 """
-import fcntl, os, subprocess, sys, time
+import fcntl, os, signal, subprocess, sys, time
 
 ABFRAGEN = ("--githash", "--version", "-v", "--print-prefix", "--print-libdir", "--help", "-h", "--stdin",
             "--deps", "--deps-json", "--short-version", "--features")
@@ -33,8 +33,20 @@ def verfuegbar_gib():
     return 0.0
 
 
+class _Alarm(Exception):
+    pass
+
+
+def _bei_alarm(signum, frame):
+    raise _Alarm()
+
+
 def nimm(dateien, ende):
-    """Take any free lock of `dateien` (blocking by polling); the open file keeps it until exit."""
+    """Take any free lock of `dateien`; the open file keeps it until exit. A free lock is taken at once; otherwise
+    the call queues with a BLOCKING `flock` (the other workers queue that way, polling would starve against them),
+    on another file each round, and looks at all of them again every 30 s."""
+    signal.signal(signal.SIGALRM, _bei_alarm)
+    runde = 0
     while True:
         for d in dateien:
             fd = os.open(d, os.O_RDWR | os.O_CREAT, 0o666)
@@ -45,7 +57,15 @@ def nimm(dateien, ende):
                 os.close(fd)
         if time.time() > ende:
             return None
-        time.sleep(2)
+        fd = os.open(dateien[(os.getpid() + runde) % len(dateien)], os.O_RDWR | os.O_CREAT, 0o666)
+        signal.alarm(30)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            signal.alarm(0)
+            return fd
+        except _Alarm:
+            os.close(fd)
+        runde += 1
 
 
 def main():
