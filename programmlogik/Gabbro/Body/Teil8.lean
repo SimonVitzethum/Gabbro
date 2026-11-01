@@ -12,6 +12,7 @@ public import Gabbro.Body.Teil7
     the same tactic run twice). The second list is the first WITHOUT the names `simp_all` clears
     (`hall`, `hpass`) -- an unknown identifier fails a whole pass. A pass over no goals costs
     nothing, so a unit the first pass closes pays nothing. -/
+open Lean.Parser.Tactic in
 macro "gabbro_auto2" "[" ts:simpLemma,* "]" "[" us:simpLemma,* "]" "using" t:ident : tactic =>
   `(tactic| (gabbro_pipeline [$ts,*] using $t;
              all_goals (try (gabbro_pipeline [$us,*] using $t));

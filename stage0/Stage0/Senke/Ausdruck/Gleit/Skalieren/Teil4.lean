@@ -427,5 +427,4 @@ theorem floatOfIntContinuationL_first_eight (F : Gleitkomma.Format) (input : Nat
     exact ⟨_, rfl⟩
   · cases he
 
-set_option maxRecDepth 4096 in
 end Gabbro.Stage0.Senke

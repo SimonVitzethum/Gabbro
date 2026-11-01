@@ -228,5 +228,4 @@ theorem lAkt_wert (n : Nat) :
       rw [if_neg (show ¬ n ≤ 2 by omega), if_neg (show ¬ n ≤ 4 by omega),
         if_neg (show ¬ n ≤ 14 by omega), if_pos h2]⟩
 
-set_option maxHeartbeats 8000000 in
 end Gabbro.Grammatik

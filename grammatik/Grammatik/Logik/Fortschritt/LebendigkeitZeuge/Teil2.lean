@@ -10,6 +10,7 @@ namespace Gabbro.Grammatik
 set_option linter.unusedVariables false
 
 /-- **The run, tabled.** -/
+set_option maxHeartbeats 8000000 in
 theorem lLauf : ∃ Ms : Nat → RufMaschineG mD,
     Ms 0 = RufStartG mP mSp mInit ∧
     (∀ j u, lAkt j = some u → RufSchrittG mP mO 0 (Ms j) u (Ms (j + 1))) ∧
@@ -377,5 +378,4 @@ end Tafel
 
 /-! ## 5. The witness -/
 
-set_option maxHeartbeats 4000000 in
 end Gabbro.Grammatik

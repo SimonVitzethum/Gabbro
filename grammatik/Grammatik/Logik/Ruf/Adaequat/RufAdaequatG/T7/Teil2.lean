@@ -10,6 +10,7 @@ variable {D : Deklaration}
 section Spur
 variable (O : Orakel D) (passes : Nat) {V : Vertrag D} (A : D.Lock → Prop)
 
+set_option maxHeartbeats 800000 in
 mutual
 
 theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

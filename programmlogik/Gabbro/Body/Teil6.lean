@@ -8,6 +8,7 @@ public import Gabbro.Body.Teil5
 
 /-- Every `ρ f t` in `e` where `ρ` is a local of type `Env` -- with `t` closed (no loose
     bound variables), because only a closed state can be handed to a contract. -/
+open Lean Elab Tactic Meta in
 partial def GabbroMeta.collectCalls (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr × Lean.Expr)) := do
   let acc ← IO.mkRef (#[] : Array (Lean.Expr × Lean.Expr × Lean.Expr))
   let rec go (e : Lean.Expr) : MetaM Unit := do
@@ -420,4 +421,3 @@ open Lean Elab Tactic Meta in
     split a person would write by hand before every `if` of the body; which branch holds
     what is their logic, that the split stands before it is not. -/
 syntax "gabbro_cases" num "[" Lean.Parser.Tactic.simpLemma,* "]" : tactic
-open Lean Elab Tactic Meta in

@@ -428,6 +428,5 @@ theorem floatNormalizeLoopL_distance_compare
 
 #print axioms floatNormalizeLoopL_distance_compare
 
-set_option maxHeartbeats 800000 in
 end
 end Gabbro.Stage0.Senke

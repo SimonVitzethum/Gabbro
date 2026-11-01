@@ -382,6 +382,5 @@ theorem beitrag_le {T : D.Tab ⊕ D.Glob → Nat} {o : Ordnung} {c : D.Tab ⊕ D
   · exact heins
   · exact Nat.max_le.mpr ⟨hs x, heins⟩
 
-open Classical in
 end Einbettung
 end Gabbro.Grammatik

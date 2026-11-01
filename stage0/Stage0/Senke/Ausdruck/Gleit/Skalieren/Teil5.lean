@@ -12,6 +12,7 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
+set_option maxRecDepth 4096 in
 theorem floatOfIntContinuationL_first_nine (F : Gleitkomma.Format) (input : Nat)
     {code : List II} {top : Nat}
     (h : floatOfIntContinuationL F input = some (code, top)) :

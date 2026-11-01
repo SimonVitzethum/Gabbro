@@ -14,6 +14,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat} {ord : D.Glob → Ordnun
 
 /-- **One G step lifts to a W step** that keeps the SC shape; every write sits right above the
     message read at its carrier (`neu c = ts + 1`: the step is atomic for an RMW, `RMW.lean`). -/
+open Classical in
 theorem schrittW_aus_g {W : RufMaschineW D} (hF : SCForm W) {u : Faden} {M' : RufMaschineG D}
     (hs : RufSchrittG P O passes W.g u M') :
     ∃ W' σ M'' wahl neu, SchrittW P O passes ord W u W' σ M'' wahl neu ∧

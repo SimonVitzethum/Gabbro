@@ -15,6 +15,7 @@ set_option linter.unusedVariables false
     `KeinLogikHaltG` at every machine (from `mP_zertifiziert`). And the run
     is not degenerate: thread 1 stands at `locks` from step 5 to step 15
     while thread 0 holds the lock at steps 6-11, and takes it at step 15. -/
+set_option maxHeartbeats 4000000 in
 theorem lZeuge : ∃ R : PlanLauf mP mO 0,
     R.M 0 = RufStartG mP mSp mInit ∧ R.akt = lAkt ∧
     LaufzeitAnnahme R 4 ∧ Haltezeit R (fun _ => 6) (fun _ => 0) ∧ Zielsatz.HardwareImAbschnitt R ∧

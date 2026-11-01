@@ -389,6 +389,5 @@ theorem floatNormalizeLoopL_large_iteration
 
 #print axioms floatNormalizeLoopL_large_iteration
 
-set_option maxHeartbeats 800000 in
 end
 end Gabbro.Stage0.Senke

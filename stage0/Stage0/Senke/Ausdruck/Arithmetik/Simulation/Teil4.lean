@@ -18,6 +18,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {originDistance budget : Nat}
 
 /-- Materialize the carry threshold only after the actual distance guard. -/
+set_option maxHeartbeats 800000 in
 theorem floatNormalizeLoopL_large_carry_denominator
     (hc : floatNormalizeLoopL base = some (code, top))
     {m : Runner.Mem} {distance : Nat}

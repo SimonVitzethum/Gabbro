@@ -6,6 +6,7 @@ public import Gabbro.Body.Teil6
 @[expose] public section
 
 
+open Lean Elab Tactic Meta in
 elab_rules : tactic
   | `(tactic| gabbro_cases $n:num [$ts,*]) => do
   let depth := n.getNat
@@ -440,4 +441,3 @@ open Lean.Parser.Tactic in
 macro "gabbro_auto" "[" ts:simpLemma,* "]" "using" t:ident : tactic =>
   `(tactic| (gabbro_pipeline [$ts,*] using $t; all_goals sorry))
 
-open Lean.Parser.Tactic in

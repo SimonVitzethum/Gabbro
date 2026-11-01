@@ -261,6 +261,5 @@ macro "kopfF" : tactic => `(tactic| (
   dsimp only at hk ⊢
   simp only [GRest.fR, fE, fB, fS, fNach, fB_alsBlock, Bool.and_eq_true] at hk ⊢))
 
-set_option maxHeartbeats 4000000 in
 end Schritt
 end Gabbro.Grammatik

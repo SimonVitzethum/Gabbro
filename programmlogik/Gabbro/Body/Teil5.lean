@@ -432,4 +432,3 @@ elab_rules : tactic
       evalTactic (← `(tactic| all_goals (try (simp [*]; done))))
 
 
-open Lean Elab Tactic Meta in
