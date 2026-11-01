@@ -10,11 +10,15 @@ were organised) is in `git log`, not here.
 ## Current implementation scope: all Gabbro to IR
 
 **TEAM AND BUILD RULES (owner, 2026-11-01, supersede every older staffing rule below).**
-- **Two Claude Sonnet 5.5 leads**, both T3 Code agents. Each lead controls, through T3 `delegate_task`, exactly
-  ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor sub-agents (only the Go access:
-  model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`). All agents are T3 Code agents.
-  The leads work on the C packages and the Lean module-system migration; every other lane (IR-04 floats,
-  IR-02 `narrow`, the remaining A/B packages and IR lanes) is paused with its worktree and resumes after C.
+- **Two Claude Sonnet 5.5 leads**, both T3 Code agents (owner, 2026-11-01, latest order). While the Lean
+  module-system migration and the splitting of every Lean file below 500 lines run, **Lead B does the migration
+  and the splitting** of the whole repository, and **ALL other agents work on Stage 0**: **Lead A works with
+  PERMANENTLY five sub-agents** (ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor, only the Go
+  access: model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`), started through T3
+  `delegate_task`, every slot occupied at all times. Stage-0 work means the Stage-0 side only (`stage0/`, the
+  runner, probes): the paused IR lanes (IR-04 floats, IR-02 `narrow`, IR-06 memory, the StatementCost/EarlyExit
+  migration, orphans, `ir_parallel`, IR-01 rest) and the Stage-0 lowering prepared for the C packages; no
+  `grammatik/` change until the migration is merged.
 - **Only the leads build.** Each lead runs its own builds and may do heavy work itself; sub-agents and their
   sub-agents never build or check Lean, and their worktrees carry no `.lake` (no Mathlib, no build cache).
   A lead checks its sub-agents' work in its own tree.
