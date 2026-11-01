@@ -478,3 +478,8 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.WaitProbe.sync_waiters_zeuge
 
 #print axioms Gabbro.Stage0.Senke.ReservedByteProbe.putBytes_reserved_sentinel_zeuge
+
+-- The first private-frame rely component for concurrent IR refinement.
+#print axioms Gabbro.Stage0.Senke.AgreeK.foreign_word
+#print axioms Gabbro.Stage0.Senke.AgreeK.foreign_frame
+#print axioms Gabbro.Stage0.Senke.foreign_frame_zeuge
