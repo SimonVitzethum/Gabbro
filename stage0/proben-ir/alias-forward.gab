@@ -1,0 +1,7 @@
+// Alias declarations may precede their targets without changing their exact ranges.
+module alias_forward {
+type Result = Count;
+type Count = Byte;
+type Byte = u8;
+impl fn main() -> Result effects { pure } { return 42; }
+}

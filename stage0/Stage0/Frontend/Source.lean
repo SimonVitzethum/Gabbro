@@ -1,4 +1,5 @@
 import Stage0.Frontend.DependentScopes
+import Stage0.Frontend.AliasMeaning
 import Stage0.Frontend.Guard
 import Stage0.Profil
 
@@ -18,7 +19,10 @@ structure Source (text : String) (options : Profil.Options := {}) where
   visibility : Oeffentlich.huelleZu items = true
   compileTime : compileTimeSafe (uMembers (pre108 items)) = true
   normalized : Normalization (uMembers (pre108 items)) members
+  aliasDependencies : AliasAcyclic (uMembers (pre108 items)) ∧
+    (aliasNames (uMembers (pre108 items))).Nodup
   derived : DerivedScopes (uMembers (pre108 items))
+  aliasMeanings : ∀ item ∈ uMembers (pre108 items), AliasMeaning derived.scope.types item
 
 /-- The actual whole-source frontend, producing a proof of provenance and normalization. -/
 def source (text : String) (options : Profil.Options := {}) : Except String (Source text options) :=
@@ -34,10 +38,14 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
         if hv : Oeffentlich.huelleZu items then
           if hc : compileTimeSafe (uMembers (pre108 items)) then
             let result := normalize (uMembers (pre108 items))
-            match elaborateScopes (uMembers (pre108 items)) with
+            match hd : elaborateScopes (uMembers (pre108 items)) with
             | .error e => .error e
             | .ok derived =>
-              .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property, derived⟩
+              if ha : (uMembers (pre108 items)).all (checkAliasMeaning derived.scope.types) then
+                .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property,
+                  elaborateScopes_dependencies _ derived hd, derived, fun item hm =>
+                    checkAliasMeaning_sound _ _ (List.all_eq_true.mp ha item hm)⟩
+              else .error "compile-time alias does not match its canonical source type"
           else .error "compile-time call requires unsupported function contracts, effects or body"
         else .error "public interface is not closed"
 

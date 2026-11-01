@@ -10,6 +10,10 @@ def aliasEdges (items : List SItemTief) : List (String × String) :=
     | .typeT _ name [] _ (some (.atom target)) => some (name, target)
     | _ => none
 
+/-- A single source namespace for type declarations; reordering cannot change shadowing. -/
+def aliasNames (items : List SItemTief) : List String :=
+  items.filterMap fun | .typeT _ name _ _ _ => some name | _ => none
+
 /-- A rank certificate rules out every nonempty alias dependency cycle, including unused ones. -/
 def AliasAcyclic (items : List SItemTief) : Prop :=
   ∃ rank : String → Nat, ∀ edge ∈ aliasEdges items, rank edge.2 < rank edge.1
@@ -42,6 +46,7 @@ structure AliasOrder (items : List SItemTief) where
   ordered : List SItemTief
   permutation : ordered.Perm items
   acyclic : AliasAcyclic items
+  unique : (aliasNames items).Nodup
 
 /-- Structural insertion carries its permutation proof and remains kernel-computable for
     whole-source witnesses. This avoids a new Mathlib sorting import. -/
@@ -66,24 +71,22 @@ def aliasRankOrder (priority : SItemTief → Nat) :
 
 /-- Build candidate depths, then independently check strict descent on EVERY source edge.
     Sorting uses those checked ranks. Duplicate alias names refuse rather than change shadowing. -/
-def orderAliases (items : List SItemTief) : Except String (AliasOrder items) := do
-  let names := items.filterMap fun | .typeT _ name _ _ _ => some name | _ => none
-  if names.eraseDups.length != names.length then
-    throw "compile-time alias dependency ordering requires unique type names"
-  let depths ← names.mapM fun name => do
-    let depth ← aliasDepth items (items.length + 2) [] name
-    pure (name, depth)
-  let rank := fun name => ((depths.find? (fun entry => entry.1 == name)).map (·.2)).getD 0
-  if h : (aliasEdges items).all (fun edge => rank edge.2 < rank edge.1) then
-    let priority := fun item => match item with
-      | .typeT _ name _ _ _ => rank name
-      | _ => 0
-    let ordered := aliasRankOrder priority items
-    pure ⟨ordered.val, ordered.property,
-      ⟨rank, by
-        intro edge hm
-        exact of_decide_eq_true (List.all_eq_true.mp h edge hm)⟩⟩
-  else throw "compile-time alias dependency ranks are inconsistent"
+def orderAliases (items : List SItemTief) : Except String (AliasOrder items) :=
+  if hn : (aliasNames items).Nodup then do
+    let depths ← (aliasNames items).mapM fun name => do
+      let depth ← aliasDepth items (items.length + 2) [] name
+      pure (name, depth)
+    let rank := fun name => ((depths.find? (fun entry => entry.1 == name)).map (·.2)).getD 0
+    if h : (aliasEdges items).all (fun edge => rank edge.2 < rank edge.1) then
+      let priority := fun item => match item with
+        | .typeT _ name _ _ _ => rank name
+        | _ => 0
+      let ordered := aliasRankOrder priority items
+      pure ⟨ordered.val, ordered.property, ⟨rank, by
+          intro edge hm
+          exact of_decide_eq_true (List.all_eq_true.mp h edge hm)⟩, hn⟩
+    else throw "compile-time alias dependency ranks are inconsistent"
+  else .error "compile-time alias dependency ordering requires unique type names"
 
 /-- The independently checked ranks exclude cycles for every accepted schedule. -/
 theorem orderAliases_acyclic (items : List SItemTief) (order : AliasOrder items) : AliasAcyclic items :=
@@ -108,5 +111,12 @@ theorem orderAliases_cycle_zeuge :
     orderAliases [SItemTief.typeT [] "A" [] [] (some (.atom "B")),
       .typeT [] "B" [] [] (some (.atom "A"))] =
       .error "compile-time alias dependency cycle at A" := by rfl
+
+/-- The generic no-cycle theorem is inhabited by a nonempty, two-edge alias chain. -/
+theorem AliasAcyclic.no_cycle_zeuge :
+    ¬ Relation.TransGen (fun a b => (a, b) ∈ aliasEdges
+      [SItemTief.typeT [] "A" [] [] (some (.atom "B")),
+       .typeT [] "B" [] [] (some (.atom "u8"))]) "A" "A" :=
+  (orderAliases_acyclic _ ((orderAliases _).toOption.get (by decide +kernel))).no_cycle "A"
 
 end Gabbro.Stage0.Frontend

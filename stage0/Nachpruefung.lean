@@ -12,6 +12,19 @@ import Stage0.Senke.Anweisung.Bytes.Proben
 import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 import Stage0.Bindung.Proben
 
+-- Certified alias scheduling and dependency-cycle refusal in the actual frontend.
+#print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound
+#print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_sound_zeuge
+#print axioms Gabbro.Stage0.Frontend.checkAliasMeaning_refused_zeuge
+#print axioms Gabbro.Stage0.Frontend.AliasAcyclic.no_cycle
+#print axioms Gabbro.Stage0.Frontend.AliasAcyclic.no_cycle_zeuge
+#print axioms Gabbro.Stage0.Frontend.orderAliases_acyclic
+#print axioms Gabbro.Stage0.Frontend.orderAliases_zeuge
+#print axioms Gabbro.Stage0.Frontend.orderAliases_cycle_zeuge
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_forward_zeuge
+#print axioms Gabbro.Stage0.compile_source_program
+
 -- Actual source/image provenance and jointly inhabited abstract IR entry contracts.
 #print axioms Gabbro.Stage0.irBild_correct
 #print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge

@@ -48,7 +48,8 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
           | .ok false => throw "refused by the checker (AkzeptiertX)"
           | .ok true => pure ⟨source, unit, main, program, he, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down⟩
 
-/-- Original-source scalar and function semantics, canonical alias lookup order, and the identical
+/-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
+    certified declaration permutation, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
     they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
 def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : Compiled text options) : Prop :=
@@ -60,7 +61,11 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     parseTopTief result.source.tokens = .ok result.source.items ∧
     Oeffentlich.huelleZu result.source.items = true ∧
     (scope.aliasConstants = uConstsRech (uKonstFns original) original [] ∨ scope.aliasConstants = scope.values) ∧
-    scope.declared = original.foldl (Frontend.aliasStep scope.aliasConstants) [] ∧
+    Frontend.AliasAcyclic original ∧
+    (Frontend.aliasNames original).Nodup ∧
+    scope.aliasOrder.Perm original ∧
+    scope.declared = scope.aliasOrder.foldl (Frontend.aliasStep scope.aliasConstants) [] ∧
+    (∀ item ∈ original, Frontend.AliasMeaning scope.types item) ∧
     scope.functions = Frontend.constantFunctions scope.functionTypes original ∧
     (∀ fn ∈ scope.functions, ∃ item ∈ original, Frontend.FunctionMeaning scope.functionTypes item fn) ∧
     (∀ names item table,
@@ -79,7 +84,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
-  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.scopes.aliases, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
+  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted, result.arrayConstants⟩
 
