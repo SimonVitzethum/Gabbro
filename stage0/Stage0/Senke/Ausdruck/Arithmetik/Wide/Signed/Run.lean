@@ -12,23 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Sdiv
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-def sdSign (k a : Nat) : List II :=
-  [ci 1 (a + 4 * k + 18 + 2 : Nat) 63 0, ci 1 (a + 4 * k + 18 + 5 : Nat) 0 0,
-   cn 12 (a + 4 * k + 18) (a + (k - 1)) (a + 4 * k + 18 + 2),
-   cn 12 (a + 4 * k + 18 + 1) (a + k + (k - 1)) (a + 4 * k + 18 + 2)]
-
-def wideSdivC (k a : Nat) : List II :=
-  sdSign k a ++
-  condNegC k a (a + 2 * k) (a + 4 * k + 18) (a + 4 * k + 18 + 3) (a + 4 * k + 18 + 4) (a + 4 * k + 18 + 5) ++
-  condNegC k (a + k) (a + 2 * k) (a + 4 * k + 18 + 1) (a + 4 * k + 18 + 3) (a + 4 * k + 18 + 4)
-    (a + 4 * k + 18 + 5) ++
-  [cn 10 (a + 4 * k + 18 + 6) (a + 4 * k + 18) (a + 4 * k + 18 + 1)] ++
-  wideDivC k a ++
-  condNegC k a (a + 2 * k) (a + 4 * k + 18 + 6) (a + 4 * k + 18 + 3) (a + 4 * k + 18 + 4)
-    (a + 4 * k + 18 + 5) ++
-  condNegC k (a + k) (a + 2 * k) (a + 4 * k + 18) (a + 4 * k + 18 + 3) (a + 4 * k + 18 + 4)
-    (a + 4 * k + 18 + 5)
-
 theorem bool_flag (p : Prop) [Decidable p] :
     Runner.IR.bool (decide p) = BitVec.ofNat 64 (if p then 1 else 0) := by
   by_cases h : p <;> simp [Runner.IR.bool, h]

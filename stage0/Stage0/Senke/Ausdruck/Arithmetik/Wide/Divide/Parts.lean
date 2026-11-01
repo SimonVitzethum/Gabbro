@@ -37,9 +37,6 @@ theorem topbit_word (V k : Nat) (hk : 1 ≤ k) :
 
 /-! ## Flag and mask -/
 
-def flagC (c Tk : Nat) : List II :=
-  [cn 12 (c + 4) Tk (c + 3), cn 4 (c + 4) (c + 1) (c + 4), cn 4 (c + 5) c (c + 4)]
-
 theorem flagC_run (c Tk k : Nat) (h1 : Tk ≠ c + 4) (h2 : Tk ≠ c + 5) (s : Nat → Runner.W) (v : Int)
     (hTk : s Tk = lmb v k) (hr1 : -(2 ^ 63 * 2 ^ (64 * k)) ≤ v) (hr2 : v < 2 ^ 63 * 2 ^ (64 * k))
     (hC : s (c + 3) = BitVec.ofInt 64 63) (hO : s (c + 1) = 1) (hZ : s c = 0) :
@@ -71,9 +68,6 @@ theorem flagC_run (c Tk k : Nat) (h1 : Tk ≠ c + 4) (h2 : Tk ≠ c + 5) (s : Na
   · simp [slotUpd, h3, h4]
 
 /-! ## Selection under the mask -/
-
-def selSeq (R T MS TA n : Nat) : List II :=
-  seqC (fun j => selP (T + j) MS TA R j) (List.range n).reverse
 
 theorem selSeq_value (R T MS TA n : Nat)
     (hd : R + n ≤ T ∧ T + n ≤ MS ∧ T + n ≤ TA ∧ MS ≠ TA) (s : Nat → Runner.W) :

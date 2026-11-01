@@ -11,12 +11,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Word
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-def wideLitFrom (a : Nat) (v : Int) : Nat → Nat → List II
-  | _, 0 => []
-  | j0, n + 1 => (wordConstant (a + j0) (v / 2 ^ (64 * j0))).1 ++ wideLitFrom a v (j0 + 1) n
-
-def wideLitC (k a : Nat) (v : Int) : List II := wideLitFrom a v 0 k
-
 theorem wideLitFrom_value (a : Nat) (v : Int) : ∀ (n j0 : Nat) (s : Nat → Runner.W),
     (∀ j, j0 ≤ j → j < j0 + n → aluRun (wideLitFrom a v j0 n) s (a + j) = lmb v j) ∧
     (∀ i, (i < a + j0 ∨ a + j0 + n + 1 ≤ i) → aluRun (wideLitFrom a v j0 n) s i = s i)

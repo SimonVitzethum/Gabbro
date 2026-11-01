@@ -11,10 +11,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulBlock
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def mulRow : Nat → Nat → Nat → Nat → Nat → Nat → List II
-  | 0, _, _, _, _, _ => []
-  | n + 1, X, Y, R, c, t => mulLimbC X Y R c t ++ mulRow n X (Y + 1) (R + 1) c t
-
 @[simp] theorem mulRow_length (n X Y R c t : Nat) : (mulRow n X Y R c t).length = 31 * n := by
   induction n generalizing Y R with
   | zero => rfl

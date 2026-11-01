@@ -12,13 +12,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shl
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-def shrSrc (k a c j : Nat) : Nat := if j + c < k then a + (j + c) else a + k + 5
-def shrOrder (k : Nat) : List Nat := List.range k
-def shrSrcB (k a j : Nat) : Nat := if j + 1 < k then a + (j + 1) else a + k + 5
-
-def wideShrC (k S a : Nat) : List II :=
-  shPre k a ++ stagesC k a (shrSrc k a) (shrOrder k) S ++ bitC k a 12 11 (shrSrcB k a) (shrOrder k)
-
 theorem wideShrC_length (k S a : Nat) : (wideShrC k S a).length = 7 + S * (4 + 3 * k) + 4 * k := by
   simp only [wideShrC, List.length_append, shPre_length, stagesC_length, bitC_length, shrOrder,
     List.length_range]

@@ -11,10 +11,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Iter
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def dvLoop (k a c : Nat) : Nat → List II
-  | 0 => []
-  | n + 1 => dvLoop k a c n ++ dvStep k a c
-
 theorem dvLoop_value (k a c y x : Nat) (hk : 1 ≤ k) (hc : c = a + 4 * k + 10) (hy0 : 0 < y)
     (hy : y < 2 ^ (64 * k)) (hx : x < 2 ^ (64 * k)) (s : Nat → Runner.W) (hs : DvRep k a c y s x 0) :
     ∀ n, n ≤ 64 * k → DvRep k a c y (aluRun (dvLoop k a c n) s) (dvIter k y x n).1 (dvIter k y x n).2
@@ -25,11 +21,6 @@ theorem dvLoop_value (k a c y x : Nat) (hk : 1 ≤ k) (hc : c = a + 4 * k + 10) 
     have hr : (dvIter k y x n).2 < y := by rw [ihR]; exact Nat.mod_lt _ hy0
     have := dvStep_value k a c y (dvIter k y x n).1 (dvIter k y x n).2 hk hc hy hr _ ih
     simpa only [dvLoop, aluRun_append, dvIter] using this
-
-def dvPre (k a : Nat) : List II :=
-  copyWords k (a + 3 * k + 2) (a + k) ++ [ci 1 (a + 4 * k + 2 : Nat) 0 0] ++ zeroSlotsC (k + 1) (a + k) ++
-    [ci 1 (a + 4 * k + 10 : Nat) 0 0, ci 1 (a + 4 * k + 11 : Nat) 1 0, ci 1 (a + 4 * k + 12 : Nat) 62 0,
-     ci 1 (a + 4 * k + 13 : Nat) 63 0]
 
 theorem dvPre_value (k a y x : Nat) (hy : y < 2 ^ (64 * k)) (s : Nat → Runner.W)
     (hX : ∀ j, j < k → s (a + j) = lmb (x : Int) j) (hD : ∀ j, j < k → s (a + k + j) = lmb (y : Int) j) :

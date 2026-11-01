@@ -15,17 +15,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
 namespace Gabbro.Stage0.Senke
 open Runner.IR Runner.Mem
 
-def wideOutC (k a : Nat) (lo hi : Int) : List II :=
-  [ci 1 (a + k : Nat) 0 0, ci 1 (a + k + 1 : Nat) 63 0, cn 12 (a + k + 2) (a + (k - 1)) (a + k + 1),
-   cn 4 (a + k + 2) (a + k) (a + k + 2)] ++
-  copyWords k (a + k + 4) a ++ [ci 2 (a + k + 4 + k : Nat) (a + k + 2 : Nat) 0] ++
-  wideLitC (k + 1) (a + k + 4 + (k + 1)) lo ++ wideLtC k (a + k + 4) ++
-  wideLitC (k + 1) (a + k + 4 + (2 * (k + 1) + 7)) hi ++
-  copyWords k (a + k + 4 + (2 * (k + 1) + 7) + (k + 1)) a ++
-  [ci 2 (a + k + 4 + (2 * (k + 1) + 7) + (k + 1) + k : Nat) (a + k + 2 : Nat) 0] ++
-  wideLtC k (a + k + 4 + (2 * (k + 1) + 7)) ++
-  [cn 9 (a + k + 3) (a + k + 4) (a + k + 4 + (2 * (k + 1) + 7))]
-
 theorem ext_word (x : Int) (k : Nat) (hk : 1 ≤ k) (h1 : -(2 ^ 63 * 2 ^ (64 * (k - 1))) ≤ x)
     (h2 : x < 2 ^ 63 * 2 ^ (64 * (k - 1))) :
     lmb x k = 0 - Runner.IR.bool (decide (x < 0)) := by

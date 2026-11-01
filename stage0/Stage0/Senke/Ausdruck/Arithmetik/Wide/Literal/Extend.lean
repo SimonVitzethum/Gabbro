@@ -37,15 +37,6 @@ theorem extend_limb (signed : Bool) (j i : Nat) (x : Int) (hj : 1 ≤ j) (hji : 
     rfl
   | true => exact ext_word x i hi hx'.1 hx'.2
 
-def extendPre (signed : Bool) (j k a : Nat) : List II :=
-  if signed then
-    [ci 1 (a + k : Nat) 0 0, ci 1 (a + k + 1 : Nat) 63 0,
-     cn 12 (a + k + 2) (a + (j - 1)) (a + k + 1), cn 4 (a + k + 2) (a + k) (a + k + 2)]
-  else [ci 1 (a + k + 2 : Nat) 0 0]
-
-def wideExtendC (signed : Bool) (j k a : Nat) : List II :=
-  extendPre signed j k a ++ seqC (fun i => [ci 2 (a + i : Nat) (a + k + 2 : Nat) 0]) (List.range' j (k - j))
-
 theorem extendPre_value (signed : Bool) (j k a : Nat) (x : Int) (hj : 1 ≤ j) (hjk : j ≤ k)
     (hx : WideFits signed j x) (s : Nat → Runner.W) (hX : s (a + (j - 1)) = lmb x (j - 1)) :
     aluRun (extendPre signed j k a) s (a + k + 2) =

@@ -11,12 +11,6 @@ import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Shr
 namespace Gabbro.Stage0.Senke
 open Runner.IR
 
-def shl1P (p O W TB TA TB2 j : Nat) : List II :=
-  if j = 0 then [cn 11 TA p O, cn 9 p TA TB] else bitP 11 12 (p + (j - 1)) O O W TA TB2 p j
-
-def shl1C (p n O W TB TA TB2 : Nat) : List II :=
-  seqC (shl1P p O W TB TA TB2) (List.range n).reverse
-
 theorem shl1P_length (p O W TB TA TB2 j : Nat) :
     (shl1P p O W TB TA TB2 j).length = if j = 0 then 2 else 4 := by
   unfold shl1P; split <;> rfl

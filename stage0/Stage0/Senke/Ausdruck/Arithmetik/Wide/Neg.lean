@@ -32,9 +32,6 @@ theorem copyUp_value : ∀ (n dst src : Nat) (s : Nat → Runner.W), src + n ≤
     · simp only [copyWords, aluRun_cons]
       rw [i2 j (by omega), st j (by omega)]
 
-def wideNegC (k a : Nat) : List II :=
-  copyWords k (a + k) a ++ zeroSlotsC k a ++ wideAddC k a (-1) 1
-
 theorem lmb_zero (j : Nat) : lmb 0 j = 0 := by
   apply BitVec.eq_of_toNat_eq
   simp [lmb]
