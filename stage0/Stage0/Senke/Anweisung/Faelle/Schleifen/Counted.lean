@@ -383,21 +383,17 @@ inductive ExprCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (reserved : Nat) :
 def ExprCost.add {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int}
     {a : Expr D Γ Λ (.int l1 h1)} {b : Expr D Γ Λ (.int l2 h2)}
     {d na nb : Nat} {Pa Pb : Runner.W → Prop}
+    (narrow : valueWords (.int (l1 + l2) (h1 + h2)) = 1)
     (left : ExprCost L reserved a d na Pa)
     (right : ExprCost L reserved b (d + 1) nb Pb) :
     ExprCost L reserved (.add a b) d (na + nb + 1)
       (fun r => ∃ wa wb, Pa wa ∧ Pb wb ∧ r = wa + wb) :=
   .binary (by
     intro code top made
-    rw [lowE_add] at made
-    split at made
-    · exact made
-    · cases made) (by
-    intro code top made
-    rw [lowE_add] at made
-    split at made
-    · assumption
-    · cases made) left right
+    rw [lowE_add, if_pos narrow] at made
+    exact made) (by
+    intro code top _
+    exact narrow) left right
     (fun wa wb ha hb => ⟨wa + wb, rfl, wa, wb, ha, hb, rfl⟩) rfl (by decide)
 
 /-- Sound for every accepted lowering, layout, environment and stable world

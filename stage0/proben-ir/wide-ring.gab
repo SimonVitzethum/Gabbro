@@ -1,0 +1,16 @@
+// Wide integers: literals above 64 bits go through the multiword add, sub, mul and equality kernels.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a = 18446744073709551615;
+    let b = 18446744073709551616;
+    let s = a + b;
+    if s == 36893488147419103231 {
+        let m = b * b;
+        if m == 340282366920938463463374607431768211456 {
+            let t = m - b;
+            if t == 340282366920938463444927863358058659840 { return 42; }
+        }
+    }
+    return 0;
+}
+}

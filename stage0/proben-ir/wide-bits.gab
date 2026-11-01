@@ -1,0 +1,22 @@
+// Bitwise operators and shifts of integers wider than 64 bits.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a = 340282366920938463463374607431768211455;
+    let b = 18446744073709551616;
+    let x = a & b;
+    let y = b | 3;
+    let z = a ^ b;
+    if x == 18446744073709551616 {
+        if y == 18446744073709551619 {
+            if z == 340282366920938463444927863358058659839 {
+                let s = b << 3;
+                let t = a >> 100;
+                if s == 147573952589676412928 {
+                    if t == 268435455 { return 42; }
+                }
+            }
+        }
+    }
+    return 0;
+}
+}

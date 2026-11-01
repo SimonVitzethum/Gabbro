@@ -1,0 +1,21 @@
+// Unsigned and signed division and remainder of integers wider than 64 bits.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let a = 340282366920938463463374607431768211455;
+    let b = 18446744073709551616;
+    let q = a / b;
+    let r = a % b;
+    if q == 18446744073709551615 {
+        if r == 18446744073709551615 {
+            let n = -340282366920938463463374607431768211456;
+            let c = 3;
+            let sq = n / c;
+            let sr = n % c;
+            if sq == -113427455640312821154458202477256070485 {
+                if sr == -1 { return 42; }
+            }
+        }
+    }
+    return 0;
+}
+}

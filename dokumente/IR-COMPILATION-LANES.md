@@ -2978,3 +2978,46 @@ used the capped slot-2 lock with `ELAN_TOOLCHAIN` removed; grammar artifacts
 were reused, with no grammar build or full guardian. This closes only the
 foreign-owner acquisition prefix: full WAIT/WAKE, interference, ordering and
 `ir_parallel` remain open, and no additional source-form family is claimed.
+
+## IR-02 wide integer operators in `lowE` (2026-11-01)
+
+The verified wide kernels (`Arithmetik/Wide/*`) are now emitted by the actual expression lowering for integer
+types of any width, with the generic theorem connected through `lowE_ok`, `lowE_top` and the equations. The
+existing one-word emitters remain the fast path under their original guards; every case they refused is now
+assembled from the shared operand placement instead of `none`.
+
+- **Code below the proofs.** The 52 kernel code definitions moved unchanged into
+  `Aggregat/WideInt/KernelCode.lean` (imports only `Hilfen`), because the proof modules import `Quant.Frame` and
+  hence `Ausdruck.lean`. `Literal/Word` and `Literal/Eng` import the lemmas they use instead of a probe module,
+  which removed the import path `Literal/Word -> Signed/Probe -> Divide/Probe -> BildLese -> ... -> Satz`.
+- **Placement (`WideInt/Place.lean`).** First operand lowered at `d` and extended in place to the common width `k`
+  (`wideExtendC`: sign extension exactly when the operand interval has a negative lower bound, zero extension
+  otherwise), second operand lowered at `d + k` and extended, then the kernel at `d`; the result is the first
+  `integerWords` limbs of the modular result. Widths: `arithWords` (operands and result), `signedArithWords`
+  (`signedWords`: one sign limb more for nonnegative intervals), `compareWords` (`max signedWords + 1`, so the
+  difference fits), `shiftWords` (also `h2 / 64 + 1`, so the count is below `64 k`; the count keeps its own limbs),
+  `engWords`.
+- **Generic proofs.** `Operands.wideBinary_ok` / `wideUnary_ok` prove the placement once against a kernel contract
+  on actual memory with the exact footprint `Agree fp d K`; `Ring` (add, sub, mul, neg, and, or, xor), `Divide`
+  (div, rem, sdiv, srem; the remainder is copied down by `withCopy_run`), `Compare` (lt, le by the swapped order and
+  an `xor 1` instruction, eq), `Shift` (shl, shr with `shiftStages_bounds`) and `Eng` supply the contracts from
+  the kernels' execution theorems. `lowE_ok` dispatches to them; `IntegerOps` now takes the operands as `ValueOk`
+  hypotheses quantified over the destination slot.
+- **sdiv/srem minimum / -1.** The model's result interval is `+-betragMax`, which holds the one out-of-range
+  quotient; the kernel's modular limbs at the common width are its canonical encoding and the result type has
+  the extra limb. No refusal is needed (`wide-sdiv-min`: `-2^127 / -1 = 2^127`).
+- **Removed refusals:** `inUE`/`inWE`/`nichtMin` for div, rem, sdiv, srem, band, bor, bxor, shr; the one-word
+  result and count guard of shl (now only the fast path); `scalarFits` for lt, le, eq and eng.
+- **Counted layer.** `ExprCost.add` (IR-08's counted statement layer) covers only the one-word case and now says
+  so with a `narrow` premise instead of `cases` on the wide branch; no counted wide cost exists.
+
+Textual source -> IR -> assembly programs (`stage0/proben-ir/wide-*`): ring on constants, squares through a
+64-bit parameter, unsigned and signed division of constants, order and negation, bit operators and shifts, plus
+runtime-operand programs `wide-vars` (identities and order of 101-bit signed parameters), `wide-sdiv` (quotient and
+remainder identity, exact quotient), `wide-sdiv-min` and `wide-bitvars` (bit identities, shifts by runtime counts,
+division). `eng` has no textual form over a wide input (only the `update` body of an atomic exchange produces
+it), so its acceptance witness is `WideInt/Proben.lowE_wide_eng_zeuge`.
+
+Open (exact): the statement `narrow x to lo .. hi` of a value wider than 64 bits is still refused
+(`uses a form outside the IR fragment`; its lowering is the scalar interval test, not `Expr.eng`); counted
+(`StatementCost`/`EarlyExit`) wide costs.
