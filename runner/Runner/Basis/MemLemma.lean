@@ -65,13 +65,11 @@ theorem rd64_write_far {m : Mem} {a b : W} {n v : Nat} (hf : Far a n b 8) :
     (write m a n v).rd64 b = m.rd64 b := by
   simp only [rd64, write_rd]
   rw [le_congr (fun j hj => write_far_b hf hj)]
-  rfl
 
 theorem rd32_write_far {m : Mem} {a b : W} {n v : Nat} (hf : Far a n b 4) :
     (write m a n v).rd32 b = m.rd32 b := by
   simp only [rd32, write_rd]
   rw [le_congr (fun j hj => write_far_b hf hj)]
-  rfl
 
 theorem rd8_write_far {m : Mem} {a b : W} {n v : Nat} (hf : Far a n b 1) :
     (write m a n v).rd8 b = m.rd8 b := by
@@ -79,7 +77,6 @@ theorem rd8_write_far {m : Mem} {a b : W} {n v : Nat} (hf : Far a n b 1) :
   have := write_far_b (m := m) (v := v) hf (j := 0) (by decide)
   simp only [BitVec.add_zero] at this
   rw [this]
-  rfl
 
 theorem write_in_b {m : Mem} {a : W} {n v j : Nat} (hj : j < n) (hn : n ≤ 2 ^ 64) :
     (write m a n v).b (a + BitVec.ofNat 64 j) = BitVec.ofNat 8 (v / 256 ^ j) := by

@@ -348,8 +348,8 @@ theorem bild_wurzel {O : Orakel D} [hT : TorOK Yb O] [hV : SichtOK O] {passes : 
     (h : BildLage passes P fs pos main roots K Ks Yb A cs body n fp0 sp ρm) {m : Runner.Mem}
     (hm : BytesAt m codeBase ((spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body).flatMap encII ++
       ((startFrameBytes Ks (FB + FB) (encodeEnv Yb ρm)).getD [] ++ List.replicate (8 * (K - Ks)) 0)))
-    (j : Nat) (hj : j < roots.length) (σ : World D) (ρ : Env D (D.params roots[j])) (hWa : WeltAt m Yb σ) :
-    match rufAt P O passes n roots[j] σ ρ with
+    (j : Nat) (hj : j < roots.length) (σ : World D) (ρ : Env D (D.params (getElem roots j hj))) (hWa : WeltAt m Yb σ) :
+    match rufAt P O passes n (getElem roots j hj) σ ρ with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (fp0 + 8 * (Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = BitVec.ofNat 64 60
     | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
@@ -467,8 +467,8 @@ theorem bild_wurzel_ok {P : Programm D} {O : Orakel D} {passes : Nat} {fs : List
     {ρm : Env D (D.params main)} (hb : bild passes P Y fs pos name main ρm roots Ks = .ok b) (hfs : ∀ g, fs[pos g]? = some g)
     (hYin : ∀ x, (Y x).hi < 2 ^ 31 → LayIn (Y x)) (hYdis : ∀ x, LayDis (Y x)) (hYord : ∀ x, (Y x).lo ≤ (Y x).hi)
     (hYsync : ∀ x, LaySync (Y x)) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat) (hj : j < roots.length) (σ : World D)
-    (ρ : Env D (D.params roots[j])) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O b.passes b.depth roots[j] σ ρ with
+    (ρ : Env D (D.params (getElem roots j hj))) (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
+    match rufAt P O b.passes b.depth (getElem roots j hj) σ ρ with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
     | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),

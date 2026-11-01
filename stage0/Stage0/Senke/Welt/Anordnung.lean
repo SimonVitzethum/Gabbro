@@ -34,9 +34,9 @@ theorem bild_wurzel_ok_u {u : UProg} {P : Programm (declOf u)} {O : Orakel (decl
     {roots : List (declOf u).Fn} {Ks : Nat} {b : Bild (declOf u)} {ρm : Env (declOf u) ((declOf u).params main)}
     {tor : (declOf u).Ax → Option TorB} (hb : bild passes P (layU u tor) fs pos name main ρm roots Ks = .ok b)
     (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem} (hm : BytesAt m Runner.Prog.IMG b.bytes) (j : Nat)
-    (hj : j < roots.length) (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params roots[j]))
+    (hj : j < roots.length) (σ : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params (getElem roots j hj)))
     (hWa : WeltAt m b.Y σ) (hT : TorOK b.Y O) (hV : SichtOK O) :
-    match rufAt P O b.passes b.depth roots[j] σ ρ with
+    match rufAt P O b.passes b.depth (getElem roots j hj) σ ρ with
     | .ok _ _ => ∃ t' m' q, Star ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),
         BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * (j + 1)))⟩ m t' m' ∧ StopAt t' m' q ∧ q.nr = 60
     | .logik e => Stops ⟨BitVec.ofNat 64 (codeBase + 16 * (3 * roots.length + startLen + startLen * j)),

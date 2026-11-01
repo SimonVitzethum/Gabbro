@@ -60,7 +60,9 @@ theorem tableWithEmpty_sound (values : List (String × Int)) (typeEnv : List (St
       · contradiction
       · rename_i hi
         have hi' : invs.all (fun p => match p with | .tInv _ => true | _ => false) = true := by
-          cases hh : invs.all (fun p => match p with | .tInv _ => true | _ => false) <;> simp_all
+          have h' := hi
+          simp only [Bool.not_eq_true, Bool.not_eq_eq_eq_not, Bool.not_false] at h'
+          exact Bool.of_not_eq_false h'
         split at h
         · contradiction
         · rename_i amount hc

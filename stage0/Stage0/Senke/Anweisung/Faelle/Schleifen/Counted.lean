@@ -391,7 +391,7 @@ def ExprCost.add {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int}
     (right : ExprCost L reserved b (d + 1) nb Pb) :
     ExprCost L reserved (.add a b) d (na + nb + 1)
       (fun r => ∃ wa wb, Pa wa ∧ Pb wb ∧ r = wa + wb) :=
-  .binary (by
+  .binary (o := 3) (by
     intro code top made
     rw [lowE_add, if_pos narrow] at made
     exact made) (by
