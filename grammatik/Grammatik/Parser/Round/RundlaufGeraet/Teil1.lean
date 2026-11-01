@@ -1,3 +1,23 @@
+/-
+  File:      Grammatik/Parser/Round/RundlaufGeraet.lean
+  Subject:   Layer L2c, devices: a `device` item (`druckItem (.devT n ps sp ms)`) reads back through
+             `parseItemTief` -- `item_dev`.
+
+  The printable devices (`GeraetGut`): parameters with printable types, any space name, and members
+  that are `mirrors a from b;` (two printable expressions) or registers (`RegGut`): a printable
+  type (a range type `u32 in 0 .. 9` among them), an address `@ e` or none, a class `class c` with
+  its `in`-stage words (`in st, k in st', ...`) or none, `fields { n @ pos [class c], ... }` with
+  bit positions that are numbers or names, `requires p` with an optional `else A::B`, and
+  `depends { T, U.f }` with carriers of one or two segments.
+
+  Excluded (recorded in the CUTS at the end): `bank` members (the reader keeps them as raw text and
+  re-prints a reconstruction), `transition` members (their steps), register fields with a bit
+  range `[hi:lo]`, a register named by nothing printable.
+
+  The register reader is a loop over optional clauses (`parseRegRest`); the proof runs it clause by
+  clause from the last to the first (`regRest_*` step lemmas), the record growing by one field per
+  clause.
+-/
 module
 
 public import Grammatik.Parser.Round.RundlaufItem.Teil6

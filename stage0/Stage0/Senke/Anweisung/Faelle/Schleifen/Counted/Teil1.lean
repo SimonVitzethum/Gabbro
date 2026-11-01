@@ -1,3 +1,6 @@
+/- Exact S0IR instruction counts. A memory request within an instruction is not
+   another instruction; kernel execution time is not measured by this relation.
+   Source loop fuel and `ZeitAb` (G own steps) are distinct units. -/
 module
 
 public import Stage0.Senke.Anweisung.Simulation

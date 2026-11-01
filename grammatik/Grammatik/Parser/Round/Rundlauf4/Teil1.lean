@@ -1,3 +1,33 @@
+/-
+  File:      Grammatik/Parser/Rundlauf4.lean
+  Subject:   T3 (lane 195): the remaining primaries -- level 6.
+
+  Rundlauf3 closes at level 5 (`gutEmb`: kernel, comparisons,
+  bits, add/mul spellings, calls, builtins). MUSE-REPORT-172
+  "Open" lists what is left per constructor: `alt`, `res`,
+  `fnref`, `grund` ("single-constructor primaries, small, not
+  started") and statements (`SAnw`, untouched -- NOT this file).
+
+  This file takes the four primaries, each as one new layer over
+  the previous predicate, in the established one-level pattern
+  (no nested list patterns -- MUSE-REPORT-172 finding 3):
+
+  - `altNeu`: `.old x` over KERNEL places (`gutKernPlatz`, the
+    `sizeof` precedent). Full `gutPlatz` payloads carry arbitrary
+    `gut` index expressions and need the joint size induction
+    (Rundlauf3 header: the exact remaining blocker).
+  - `ergebnisNeu`: `.res`, no payload (lane 161's
+    `prim_ergebnis`, reused).
+  - `fnwertNeu`: `.fnref p`, no tree payload. `primFrei` is
+    false, so there is no primary leg -- the leg below is at
+    `parseUnary` (`&` arm, segments stop by `sammleSeg_stop`
+    under `ruhigSuff`).
+  - `grundNeu`: `.why g f` with exactly `gut`'s side
+    conditions (lane 161's `prim_grund`, reused).
+
+  `gutPrim e = gutEmb e || primNeu e`; `parse_druck_prim` is the
+  level-6 goal. Statements are NOT entered here.
+-/
 module
 
 public import Grammatik.Parser.Round.Rundlauf3

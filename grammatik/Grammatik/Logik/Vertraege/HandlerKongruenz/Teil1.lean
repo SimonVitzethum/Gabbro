@@ -1,3 +1,53 @@
+/-
+  File:      Grammatik/HandlerKongruenz.lean
+  Subject:   **THE CONGRUENCE OF `execStmt` / `execBlock` / `execEnd` IN ITS
+             HANDLER** -- two handlers that differ only where BOTH answer an
+             error give body runs that differ only where BOTH are errors.
+
+  WHY IT EXISTS. The sequential semantics of a body is parametric in the
+  handler `R` that answers a call (`Semantik.lean`, section `Rumpf`). Every
+  obligation the user proves is quantified over handlers in a CLASS --
+  `KoerperGutS` (SperreFuss.lean) over `RespektiertRahmen ∧ OhneVorbedingung`
+  and `RespektiertRahmen ∧ OhneLogik` -- and the handler the closing theorem
+  speaks about, `rufAt` (the model's own call), is in NEITHER: it answers
+  `logik (vorbedingung g)` at every key whose `requires` fails and
+  `logik (abstieg g)` at depth `0`. Relating the body run under `rufAt` to the
+  body run under a handler that IS in the class is what this file is for; so
+  is relating `rufAt` at two DEPTHS (`rufAt_tiefer`, section 5).
+
+  THE SHAPE, and why it is the shape. Every error outcome of the semantics
+  propagates through every constructor VERBATIM, with its tag: `.logik e` and
+  `.hardware e` are treated identically by `Ausgang.schrumpf`,
+  `.schrumpfArm`, `.mapWelt`, `EndAusgang.schrumpf`, `.zuAusgang`, by
+  `traverseLauf`, `retryLauf`, `foreverLauf` and by every `match` in
+  `execStmt`/`execBlock`/`execEnd`. Nothing in the semantics CATCHES an error
+  (`bindCallElse` catches a REASON, which is not an error). So if the two
+  handlers agree at a key, the two runs go on together; and the first key at
+  which they disagree ends both runs, each with its own mark, and the rest of
+  the body is not run by either.
+
+  That is exactly what `AusgangUnter`/`EndUnter` say: the outcome under `R₁`
+  is the outcome under `R₂`, or it is an error whose mark lies in the set `Er`
+  the handler premise carries -- "`R₁` is `R₂` except that it may FAIL EARLY,
+  and only in the named way". `Er` is a parameter because the two consumers
+  want different sets:
+
+  * part 4's `logik` condition takes `R₁ = rufAt n` and `R₂` the same handler
+    patched into `OhneLogik`; `Er` is "a `logik` mark";
+  * depth monotonicity takes `R₁ = rufAt n`, `R₂ = rufAt (n+1)`; `Er` is
+    "an `abstieg` mark".
+
+  WHY ONE-SIDED AND NOT SYMMETRIC. A symmetric form ("both are errors, with
+  related marks") does NOT cover depth monotonicity: where `rufAt n` answers
+  `abstieg`, `rufAt (n+1)` may answer `ok`, so the second side is no error at
+  all. The one-sided form covers both, and the symmetric statement follows
+  from TWO instances of it (once in each direction) where it holds.
+
+  WHAT IT DOES NOT DO. It says nothing about which of the two runs is "right",
+  nothing about worlds or traces, and nothing about the handler classes: a
+  frame fact about `rufAt` (`RespektiertRahmen`) is a different statement and
+  is NOT proved here (see `RufLogik.lean` and the report).
+-/
 module
 
 public import Grammatik.Kern.Semantik.Semantik

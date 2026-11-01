@@ -1,3 +1,34 @@
+/-
+  File:      Grammatik/Parser/Round/RundlaufLex.lean
+  Subject:   Layer L1 of the syntax round trip: a token renderer and the theorem that the lexer
+             reads the rendered text back, token for token.
+
+  `render ts` writes every token in its canonical spelling followed by one space. `lex_render`:
+  for every token list in the class `TokGut` (below), `lex (String.ofList (render ts)) =
+  .ok (ts ++ [.ende])` -- the lexer returns exactly the list, with the end marker it always emits.
+
+  The class, token by token (`TokGut`), and what it excludes:
+  - `ident s`: `s` is name-shaped (a `istAnfang` head, `istFolge` tail) and NOT a table word
+    (`istSchluessel s = false`). Excluded: an identifier token that spells a keyword (`x`, `r`,
+    `Some`, ...): the lexer reads every table word as `wort`, so such a token cannot come back as
+    `ident` (the parsers read names through `nameText`, which takes both; the class is about the
+    LEXER, which has no such freedom).
+  - `wort s`: name-shaped and a table word.
+  - `num n`: every `n`, spelled by `Nat.toDigits 10` (the spelling of `toString n`).
+  - `float s`: the canonical float spelling the lexer itself builds: `toString v ++ "." ++ frac
+    ++ exp` with a non-empty digit fraction and an exponent that is empty or `e`/`e+`/`e-`
+    followed by digits (`GleitKanon`). Excluded: `_` separators, leading zeros, uppercase `E`,
+    and any text that is not a float literal at all (`"1.0 rounded"`, see the CUTS).
+  - `text s`: no `"` and no newline in `s` (the lexer has no escapes).
+  - `zeichen s`: one of the marks the lexer cuts (`markTafel`, the 47 spellings of
+    `nimmZeichen`).
+  - `doku`, `ende`: excluded (`lex` drops doc comments and emits `ende` itself).
+
+  The proof is one lemma per token class (`scan_name`, `scan_zahl`, `scan_gleit`, `scan_text`,
+  `scan_zeichen`): the scanner reads the token's spelling plus the separating space in exactly two
+  fuel steps and continues on the rest. List induction (`scan_render`) and the fuel count
+  (`render_laenge`) give `lex_render`.
+-/
 module
 
 public import Grammatik.Parser.Lex.Lexer

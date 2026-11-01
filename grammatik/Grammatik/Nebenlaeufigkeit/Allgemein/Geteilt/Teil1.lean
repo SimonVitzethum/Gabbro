@@ -1,3 +1,67 @@
+/-
+  File:     Grammatik/Geteilt.lean
+  Subject:  **Shared, as a construction** -- closed-world reachability from thread
+            entries plus concurrent sets, and the proof `geteilt_treu`.
+
+  GOAL (lane 28, D1): turn `D1` (shared) from an explanation into a construction.
+  In `Syntax.lean`, `D.geteilt` / `D.ggeteilt` are bare declarations, and in
+  `Wettlauf.lean` the premise (W5) -- "an unshared carrier belongs to one thread" --
+  is assumed per run (`Gesittet.ungeteilt`, justified by the Rust pass `H013`).
+  This file builds the middle: a finite declaration `Bau` (thread entries, call
+  edges, footprints, the carrier flags, the declared concurrent pairs) together
+  with reachability computed FROM the entries, and proves `geteilt_treu`: a
+  carrier declared unshared is reachable by at most one thread. The corollary
+  `ungeteilt_aus_baulauf` has exactly the shape of (W5), so `kein_wettlauf`
+  can consume it instead of the pass.
+
+  LOUD FAILURE: there is no default `Bau`, no axiom, and no `sorry`. To apply
+  `geteilt_treu` to a concrete declaration you must supply
+  `h : pruefeUngeteilt B fuel = true`, which is decided by computation
+  (`rfl` / `decide`). A declaration that wrongly marks a shared carrier
+  unshared -- or forgets a reaching thread in `eintritt` / `ruft` -- makes the
+  checker compute `false`, and the `rfl` fails at elaboration. The wrong
+  declaration breaks the proof loudly, not silently.
+
+  Mirror (this file is standalone -- the lane forbids editing the `Grammatik.lean`
+  index, so it cannot be imported yet; names are chosen to wire up later):
+
+  | here                  | there (`Syntax` / `Wettlauf`)              |
+  |-----------------------|--------------------------------------------|
+  | `Carrier := Nat`      | `D.Tab ⊕ D.Glob` (tables and globals, one) |
+  | `Fn := Nat`           | `D.Fn`                                     |
+  | `Bau.eintritt`        | thread entries (`entry` / `boot` roots)    |
+  | `Bau.ruft`            | static call-edge over-approximation        |
+  | `Bau.schreibtFn`      | `D.schreibt` / `D.gschreibt` (footprints)  |
+  | `Bau.geteilt`         | `D.geteilt` / `D.ggeteilt`                 |
+  | `Bau.neben`           | `Nebeneinander` (`concurrent { … }` sets)  |
+  | `RuftStarN`/`ErreichtBau` | closed-world reachability               |
+  | `ungeteilt_aus_baulauf`  | (W5) `Gesittet.ungeteilt`               |
+
+  CUTS (booked, not hidden):
+  C1. Table/global collapse: one `Carrier` stands for both; the split
+      (`geteilt_treu` per table vs. per global) returns with the wiring.
+      Narrowed (lane 130): §8 proves the fold/split round-trips and the
+      code-injectivity shapes; the per-side `geteilt_treu` wiring is open.
+  C2. Executable footprint: `schreibtFn` is declared per function HERE, but
+      `Extraktion.lean` (lane 78) computes it from the effects
+      (`fussAus` over `D.schreibt`/`D.gschreibt`, `fussTreue_aus_bau`) -- the
+      call edges likewise (`ruftDirekt` traversal W-EXT, `kantenTreue_aus_bau`).
+      What stays a premise is the dynamic coverage (`BauLauf`): every access
+      of the run is covered by static reachability, stated explicitly.
+  C3. Concurrent sets are a finite pair list, not the `Nebeneinander` relation;
+      `Extraktion.lean` computes the list from the declaration (`nebenAus`,
+      `paarTreue_aus_bau`/`paarVoll_aus_bau`) and speaks `Nebeneinander`
+      (`Wettlauf.lean` §6) at the fidelity shapes.
+  C4. Marks (W4) are derived, not assumed: `Marken.lean` proves single-threaded
+      stands per `Verlauf`, and `Wettlauf.lean` §7 projects `Einfaedig` into
+      `marke_eindeutig`. Only (W5) is derived HERE.
+  C5. `fuel` is the declared exploration bound, mirroring `passes`/`fuel` of
+      `Semantik.exec`: the checker and the reachability speak about the SAME
+      fuel, so neither can outrun the other.
+
+  Core only: no `mathlib`, no import at all (not even the sibling files, see the
+  mirror note above). Zero `sorry`.
+-/
 module
 
 

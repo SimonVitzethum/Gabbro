@@ -1,3 +1,14 @@
+/-
+  File:      Grammatik/Parser/Round/RundlaufItem.lean
+  Subject:   Layer L2c, the item pieces: each item form the item printer prints (`druckItem`,
+             Print/Item.lean) reads back through `parseItemTief` -- `item_use`, `item_const`,
+             `item_static`, `item_fn`, `item_proto`, `item_why`, `item_conc`, `item_mod`, `item_atom`,
+             `item_lock`, `item_table`, `item_entry` -- with the readers of their parts (constant
+             values, effects, clauses, parameters, paths, table fields and parts, register bindings).
+
+  The printability class `ItemGut`, the induction over it and the composition with the lexer are in
+  `RundlaufProgramm`; devices are in `RundlaufGeraet`.
+-/
 module
 
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil5

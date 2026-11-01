@@ -1,3 +1,19 @@
+/-
+  File:      Grammatik/Profil.lean
+  Subject:   ONE HARDWARE PROFILE -- Lean model, model half (lane 66, E6).
+
+  Per `PLAN-ERWEITUNG.md` section 0c: the main program declares ONE hardware
+  profile; libraries REQUIRE profile entries by name reference, never by copying
+  their text; linking refuses requirements outside the profile. Keyed mode
+  assumptions (FP rounding, FP contraction, memory model, arch, interrupt
+  routing) fix a mode by key and value; two entries with one key and different
+  values are refused at the profile itself.
+
+  Model: entries, profiles, goodness, the mode projection a good keyed profile
+  induces (`modusVonProfil`), binding, and the three theorems `profil_modell`,
+  `bindung_fuegt_nichts_hinzu`, `widerspruch_abgelehnt`, plus a joint witness
+  (`profil_modell_zeuge`, `bindung_fuegt_nichts_hinzu_zeuge`).
+-/
 module
 
 public import Grammatik.Kern.Semantik.Semantik

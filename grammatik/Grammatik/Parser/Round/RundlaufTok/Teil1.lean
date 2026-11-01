@@ -1,3 +1,31 @@
+/-
+  File:      Grammatik/Parser/Round/RundlaufTok.lean
+  Subject:   Layer L2a of the syntax round trip, with TOKEN fuel: every printable expression
+             (`gut`) parses back from its tokens with fuel linear in the NUMBER OF TOKENS, so the
+             whole reader `parseTop` (fuel `8 * length + 32`) returns it.
+
+  Why a second bound. `RundlaufVoll.legs_gut` gives the legs at the size bound
+  `12 * (groesse e + 1) + groesse e` (lane 172's `Legs`): thirteen fuel per tree node. The readers
+  of the front end run with fuel `8 * length + 32` (`parseTop`, `parseStmtTop`, `parseTopTief`), and
+  a tree with many one-token nodes (`a[!x][!x]...`: three nodes per four tokens) has thirteen fuel
+  per node > eight per token -- so the size bound cannot reach `parseTop`, although the reader's
+  real fuel use is a nesting depth, far below it. Here the legs carry an ABSTRACT bound
+  (`LegsB m e`, `Legs e = LegsB (12 * (groesse e + 1) + groesse e) e` definitionally), the steps
+  combine the bounds of the children by MAXIMUM (one `m` for both operands), and the induction
+  proves `LegsB (fb e) e` with `fb e = 6 * (druckToks e).length + 26`.
+
+  The towers and inner traces are lane 172/179's (Rundlauf2/3), restated over `m` (the proofs are
+  the same `omega` strips with the size terms replaced by `m`); the places, calls and builtins are
+  lane 161's (Rundlauf.lean), restated over the token measure.
+
+  Main statements:
+  - `legs_tok : ∀ e, gut e = true → LegsB (fb e) e`;
+  - `parse_druck_tok : gut e → fb e + 8 ≤ F → ruhig/ruhigSuff/ruhigGleit rest →
+     parseOr F (druckToks e ++ rest) = .ok (e, rest)`;
+  - `parseTop_druck_gut : gut e → parseTop (druckToks e ++ [.ende]) = .ok e`;
+  - `rundlauf_text_gut : gut e → (∀ t ∈ druckToks e, TokGut t) →
+     parseTopAusText (renderText (druckToks e)) = .ok e` (with L1, from source text).
+-/
 module
 
 public import Grammatik.Parser.Round.RundlaufVoll

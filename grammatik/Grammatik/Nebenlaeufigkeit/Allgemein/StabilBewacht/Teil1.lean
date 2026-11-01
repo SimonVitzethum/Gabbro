@@ -1,3 +1,31 @@
+/-
+  File:      Grammatik/StabilBewacht.lean
+  Subject:   STABILITY WITHOUT INVARIANT FORM (lane 105, D9).
+
+  The goal theorem needs, for assertions over shared carriers that are NOT
+  in invariant form, the full `InterferenceFree` shape (`hFree`). This file
+  replaces it by the standard rely/guarantee argument at chain grain:
+
+  * `stabil_ohne_form` -- the induction: head validity plus own-step
+    preservation plus foreign-step preservation (`hStabil`, one direction
+    only) give the assertion at every chain world. No invariant form, no
+    `HaengtAb`, no discipline -- pure chain folding (`kette_erhaelt` grain).
+  * `stabil_aus_bewachung` -- the corollary that connects `hStabil` to the
+    checker: `hStabil` follows from a static GUARANTEE (every foreign write
+    to a carrier `Q f` reads happens only while holding a guard lock that
+    `f` holds throughout -- `Bewacht` / `TraegerSchreibt` / `D.haelt`) plus
+    a per-step RELY (guarded foreign writes leave `Q f`'s slots alone).
+    The rely is memory-level (slot agreement, checker-comparable per run),
+    so no assertion-level per-step proof is owed any more.
+  * `haengtAb_aus_slotDep` -- the checker-shape link: slot-level dependence
+    plus footprint coverage give table-level `HaengtAb`, the shape the
+    `InterferenceFree` machinery consumes downstream.
+
+  Witnesses (`_zeuge`) run on the reference fixture (`ReferenzB.lean`):
+  a two-thread chain where `Q` (`slot 0 = slot 1`, "my slot equals my local
+  counter") is not a whole-table invariant and the other thread writes only
+  slot 5, a different slot of the same shared table.
+-/
 module
 
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein

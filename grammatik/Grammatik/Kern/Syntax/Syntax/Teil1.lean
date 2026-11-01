@@ -1,3 +1,72 @@
+/-
+  Datei:      Grammatik/Syntax.lean
+  Gegenstand: **DIE GRAMMATIK VON GABBRO** -- als getypte Familie, ueber die GANZE Sprache.
+
+              Ein Satz der Grammatik ist ein Term dieser Typen, und jedes Attribut, das
+              `SYNTAX.md` neben eine Produktion schreibt, ist hier ein Argument des
+              Konstruktors: die Schranke am Index, der Bereich am Ergebnis, das gehaltene
+              Sperrzeugnis am geschuetzten Ort, das Schreibrecht an der Zuweisung, die
+              verbrauchte Marke am Ruf, die Stufe an der Phasenmarke, die Registerklasse am
+              Geraetezugriff, die Paarung an der Veroeffentlichung.
+
+              **Was die Grammatik nicht ableitet, ist nicht schreibbar** -- und was sie
+              ableitet, hat in `Semantik.lean` eine totale Bedeutung.
+
+  DIE ABDECKUNG -- jede Produktion von `SYNTAX.md` und wo sie hier steht
+    §1  program/module/use/const/static/when  -> `Deklaration` (Namen sind statisch; ein
+                                               `const` ist ein Literal, ein `static` ein `Glob`)
+    §2  typedecl/intty/floatty/tagged/linear  -> `Ty` (`int`, `fl`, `sum`, `never`, …), `Marke`
+    §3  ptrty/space/rights                    -> `Ty.ptr t rw`; ein Zugriff hindurch ist ein
+                                               Zugriff auf `t` mit dessen Waechtern («SG-8»)
+    §4  expr/primary/place/call/fnvalue/old   -> `Expr` (alle Operatoren), `Expr.fnref`,
+                                               `Expr.altGlob`/`altSlot`, `Expr.ptrOf`
+    §5  pred/quant/domain/reach/Held          -> `forallSlots`, `existsSlots`, `reaches`;
+                                               `Held(L)` ist `Res.held L ∈ Λ`
+    §6  fndecl mit allen Klauseln             -> `Signatur`, `Programm.requires/ensures/rumpf`,
+                                               `decreases` = Rekursionstiefe, `refines` =
+                                               `ensures` der Spezifikation (Logik), `by
+                                               induction` = kein Term, `spec fn` = eingesetzt
+    §7  stmt/letstmt/assign/if/match/narrow   -> `Stmt`, `Block`, `Endblock`, `Arms`, `GrundArms`
+    §8  traverse/retry/forever                -> `Stmt.traverse/retry/forever`
+    §9  table/ops/tree/occupied/format/walk   -> `Tab` mit `count`; `ops` = erzeugte `Fn` mit
+                                               `requires`; `format` = `Tab` mit `count 1` und
+                                               `where` als `Block.pruefung`; `walk` = ein
+                                               `traverse` je Stufe (`levels` konstant)
+    §10 device/reg/bank/transition/mirrors    -> `Reg` mit Klasse; `Block.regLies`,
+                                               `Stmt.regSchreib` (die Klasse ist ableitbar
+                                               oder nicht); `transition` = `regSchreib`
+    §11 atomic/publishes/awaits/exchange/lock/rcu/group/accumulates
+                                              -> `Stmt.publish`, `Block.awaits` mit der
+                                               Paarung als Attribut; `Stmt.locks` mit Rang;
+                                               `observes` = `locks` einer RCU-Sperre; `group` =
+                                               `Inv` ueber mehrere Traeger; `accumulates` =
+                                               `Glob` + erzeugte Zuweisung
+    §12 assume/axiom                           -> `Annahme`, `Ax`
+    §13 check                                  -> eine Marke (`Duty`): erzeugt vom `check`,
+                                               verbraucht von `gates` (`konsumiert`)
+    §14 boot/entry/entrust/asm/prim/divergent  -> fremde Ruempfe sind `Ax`; `-> never` ist
+                                               `Ty.never` (kein `return` ableitbar); `retires`
+                                               ist `Stmt.retires` (Marke weg, Annahme genannt)
+    «F» f32/f64/rounded/finite                -> `Ty.fl`, `Block.gleit*` -- jede Rechnung
+                                               gegen ihren Bereich, von der MASCHINE (IEEE ist
+                                               Annahme `gleitkomma_ieee`, C-Seite; ein
+                                               Ergebnis ausserhalb ist `Logik.bereich`)
+    «B37» order/advances                       -> `Res.marke m stufe`, `Stmt.advances`
+    state/transition ueber Felder              -> `Stmt.uebergang` (die Vorstufe ist Logik)
+    seit dem Abend des 2026-09-09 («SG-3»², «SG-16»², «SG-15»², «SG-13»², «SG-20», «SG-21»):
+    vorzeichenbehaftete Division              -> `Expr.sdiv/srem`
+    Bytes und `format` als Sicht               -> `Expr.leseBytes`, `Stmt.schreibBytes`
+    `transition` mit Spiegel, Registerzusage   -> `Stmt.transition`, `D.spiegel`, `D.rzusage`
+    `awaits` und das Speichermodell            -> `Orakel.sichtbar`, `Hardware.sichtbarkeit`
+    `requires Held(L)`                         -> `RufPasst.hh` (⊆ since 2026-09-13; `hx`/`hb`
+                                               with the lock floor `Signatur.boden`), `Signatur.haelt`
+    `shared`, U003 als Erklaerung              -> `D.geteilt`, `D.invarianten_gehalten`
+    Faeden                                     -> `Wettlauf.lean` (Lauf, Gesittet, HB)
+
+  QUELLSAETZE
+    dokumente/SYNTAX.md (die neue Fassung, 2026-09-09) -- jede Produktion nennt ihren
+    Konstruktor hier; LANGUAGE.md:788 "Linear means linear, not affine".
+-/
 module
 
 public import Grammatik.Kern.Syntax.Typen.Teil2

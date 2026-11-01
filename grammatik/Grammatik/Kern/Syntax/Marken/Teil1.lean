@@ -1,3 +1,83 @@
+/-
+  Datei:      Grammatik/Marken.lean
+  Gegenstand: **Die linearen Marken als Konstruktion** -- der Schrittstand, der W4
+              (`Wettlauf.lean`) aus einer Praemisse in eine Form macht.
+
+  ## Das Modell
+
+  Eine Marke ist entweder frei oder in genau einem Faden auf genau einer Stufe: der
+  Stand ist eine FUNKTION (`Stand`), kein Behaelter. Was ein Faden HAELT, faedelt der
+  Schritt explizit durch (`MarkenSchritt`, `Verlauf`): erzeugen nur aus dem Leeren,
+  fuehren nur in der Hand desselben Fadens auf die naechste Stufe, verbrauchen nur
+  aus der Hand ins Leere. Einen vierten Konstruktor gibt es nicht -- kein Schmieden,
+  keine Verdopplung, keine Uebergabe an einen anderen Faden. Dass die Konstruktoren
+  eng sind, IST die Disziplin; was hier als `def` mit `Prop` steht, benennt die
+  Invarianten, ohne sie zu beweisen.
+
+  QUELLSAETZE (nur gelesen, nichts ausserhalb dieser Datei ist angeruehrt)
+    dokumente/SYNTAX.md:256  -- `typedecl … "linear" … [ markorder ]`
+    dokumente/SYNTAX.md:259  -- `order` sagt, welche Schritte auf dem Wert zulaessig sind
+    dokumente/SYNTAX.md:321  -- `linear type Parked;`, `linear ghost type BootPhase order { … }`
+    dokumente/SYNTAX.md:555  -- `advances a -> b`: die Marke steht auf `a`, der Rumpf
+                                laesst sie auf `b = a + 1`
+    dokumente/SYNTAX.md:558  -- `retires m from s …`: die Marke verlaesst Λ
+    dokumente/SYNTAX.md:590  -- "linear, not affine": `return` verlangt Mengengleichheit
+    dokumente/SYNTAX.md:729  -- `Λ nach advances = Λ − marke(m, a) + marke(m, b)`
+    dokumente/SYNTAX.md:730  -- `Λ nach retires = Λ − marke(m, s)`
+    Syntax.lean:207           -- `Res.marke (m : D.Marke) (stufe : Nat)`
+    Syntax.lean:149           -- `eigner_nie_erzeugt`: Eignermarken erzeugt keine Signatur
+    Syntax.lean:461           -- `Stmt.advances`: `h : Res.marke m a ∈ Λ`, `hs : a + 1 < D.stufen m`
+    Syntax.lean:464           -- `Stmt.retires`: `h : Res.marke m s ∈ Λ`
+    Wettlauf.lean:18          -- (W4): eine Marke ist in EINEM Faden
+    Wettlauf.lean:188         -- `marke_eindeutig`, WORTLAUT siehe unten bei `Einfaedig`
+
+  WAS HIER STEHT
+    `Stand`          -- das Eigentum als Schrittzustand: jede Marke frei oder in
+                        (Faden, Stufe)
+    `belebe/loesche`-- die zwei Zustandswechsel, als Definitionen
+    `MarkenSchritt`  -- erzeugen/fuehren/verbrauchen, jeder mit seiner Praemisse;
+                        Eignermarken sind von der Erzeugung ausgenommen
+    `Verlauf`        -- die Laeufe ueber dem Stand, von `Anfang` an
+    `Besitzt`, `StufenTreu`, `StandEinfaedig`
+                     -- die Strukturinvarianten als `def`s mit `Prop`
+    `Einfaedig`      -- die Einzelfaedrigkeit JEDER Marke als `def` mit `Prop`, im
+                        WORTLAUT von `marke_eindeutig`: was `Gesittet` liefert,
+                        nimmt diese Definition ohne Uebersetzung
+
+  Spiegel (diese Datei steht allein -- der Zweig verbietet den Eingriff in den
+  `Grammatik.lean`-Index, also kann sie noch nicht eingebunden werden; die Namen
+  sind fuer das spaetere Verdrahten gewaehlt):
+
+  | here                  | dort (`Syntax` / `Wettlauf`)                  |
+  |-----------------------|-----------------------------------------------|
+  | `Marke := Nat`        | `D.Marke`                                     |
+  | `Faden := Nat`        | `Wettlauf.Faden`                              |
+  | `MarkDekl.stufen`     | `D.stufen`                                    |
+  | `MarkDekl.istEigner`  | `∃ t, m ∈ D.eigner t` (gefaltet)              |
+  | `Res.marke`           | `Res.marke` (`Syntax.lean:207`)               |
+  | `Stand`               | das Λ-seitige Eigentum je Faden               |
+  | `MarkenSchritt`       | Ruf-Erzeugung / `Stmt.advances` / `Stmt.retires` |
+  | `Verlauf`             | der Markenlauf ueber dem Stand                |
+  | `Einfaedig`           | (W4) `Gesittet.marke_eindeutig`               |
+
+  SCHNITTE (gebucht, nicht versteckt):
+  C1. Erhaltung BEWIESEN (§6 unten): jeder erreichbare Stand ist stufentreu und
+      einfaedrig -- Induktion ueber `Verlauf`, je Schritt Fallunterscheidung.
+  C2. Verdrahtung: `Einfaedig` hat GENAU die Gestalt des W4-Feldes; die Projektion
+      (`marke_eindeutig_aus_einfaedig`, `gesittet_aus_einfaedig`) steht in
+      `Wettlauf.lean` §7 -- sie braucht `Lauf D` und kann darum nicht hier stehen
+      (Importrichtung: `Wettlauf` liest `Marken`, nie umgekehrt).
+  C3. Kein Uebergabekonstruktor: dass keine Anweisung eine Marke an einen anderen
+      Faden weiterreicht (W4), steht hier als Abwesenheit -- `fuehre` und
+      `verbrauche` binden den Schritt an den besitzenden Faden, und einen
+      Konstruktor mit zwei verschiedenen Faeden gibt es nicht.
+  C4. Eignermarken entstehen nie (`erzeuge` verlangt `¬ istEigner`, nach
+      `eigner_nie_erzeugt`); woher das ANFAENGLICHE Eigentum kommt (Signaturkopf),
+      sagt `Signatur.anfang`, nicht diese Datei.
+
+  Nur Kern-Lean, kein `mathlib`, kein Import -- auch nicht der Geschwisterdateien
+  (siehe Spiegel oben). Kein `sorry`.
+-/
 module
 
 

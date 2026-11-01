@@ -1,3 +1,4 @@
+/- Runtime loop edges consume the actual block simulation and its world-aware frame. -/
 module
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter

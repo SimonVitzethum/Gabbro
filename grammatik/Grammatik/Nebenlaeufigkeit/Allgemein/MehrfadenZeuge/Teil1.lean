@@ -1,3 +1,33 @@
+/-
+  File:      Grammatik/MehrfadenZeuge.lean
+  Subject:   THE WITNESS for the three concurrency repairs of 2026-09-14
+             (THEOREM-MAP §16): two ACTIVE threads, each writing its OWN
+             private table unguarded, both updating one shared table under a
+             lock with a non-trivial lock invariant.
+
+  Declaration `mD`: tables `konto` (shared, guarded by the lock `()`),
+  `privA` and `privB` (UNGUARDED, not shared), two slots each, values
+  `0 .. 100`; one table invariant `privA[0] == privA[1]`.
+
+  * `setze(x)` (holds the lock by signature): requires
+    `konto[0] == konto[1]`, ensures `konto[0] == konto[1] && konto[0] == x`,
+    writes `x` into both `konto` slots.
+  * `hauptA()` (thread 0): `privA[0] = 7; privA[1] = 7; locks { setze(30) };
+    pruefeA(); return`, ensures `privA[0] == 7`, OWES the invariant (it
+    writes `privA`).
+  * `hauptB()` (thread 1): `privB[0] = 5; locks { setze(70) }; return`.
+  * `pruefeA()`: REQUIRES `privA[0] == 7`, returns.
+  * `ruhe()`: every other thread, returns.
+
+  Lock invariant `konto[0] == konto[1]`. The per-thread call graphs:
+  `{hauptA, setze, pruefeA}`, `{hauptB, setze}`, `{ruhe}`.
+
+  Both earlier footprint checks REFUSE the program (`mP_fussS_falsch`:
+  `hauptA`'s footprint holds `privA`, unguarded and written); the new one
+  passes (`mP_fussMehr`). Every premise of the new flagship
+  `ziel_ort_mehrfaden_ende` holds (`mP_zertifiziert`), and of the deadlock
+  theorem (`mP_verklemmungsfrei`). The runs are in `MehrfadenLauf.lean`.
+-/
 module
 
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung

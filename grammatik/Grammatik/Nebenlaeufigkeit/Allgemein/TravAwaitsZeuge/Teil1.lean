@@ -1,3 +1,37 @@
+/-
+  File:      Grammatik/TravAwaitsZeuge.lean
+  Subject:   REACHED RUNS THAT FIRE `traverse` AND `awaits`, jointly with the
+             premises of `ziel_ort_geraet` (the witness of the full race
+             theorem `rennfrei_g_voll` runs on a copy with a plain read of a
+             non-atomic `flag`: `TravLese.lean`).
+
+  The declaration `taD`: one table `tab` (2 slots, field `0 .. 1`) guarded by
+  the lock `l` (rank 0); one global `flag` (`0 .. 1`, shared, atomic, payload
+  empty) guarded by the lock `k` (rank 1); five functions:
+
+  * `haupt0` (thread 0's entry; holds `l` by signature; writes `tab`, `flag`):
+      `fuelle(); locks k { flag := 1 publishes {} }; return`
+  * `fuelle` (holds `l`; writes `tab`;
+      `ensures forall i in slots of tab : tab[i] == 1`):
+      `traverse tab invariant true { tab[i] := 1 }; return`
+  * `haupt1` (thread 1's entry; holds nothing): `locks k { warte() }; return`
+  * `warte` (holds `k` by signature): `if true { let v = flag awaits {} }; return`
+  * `ruhe` (every other thread): `return`.
+
+  The oracle `taO` makes a publication visible exactly when `flag` is `1`
+  (`sichtbar flag σ = (σ.globs flag == 1)`): register-local, memory
+  dependent, and the `awaits` of thread 1 fires only after thread 0's
+  publish.
+
+  The run (`taLauf`, 29 steps, by index): thread 0 calls `fuelle`, which
+  unfolds the `traverse` (`dannTrav`), runs two iterations (`travNext`,
+  the slot write, `travFort`), writes `tab[0]` and `tab[1]` (memory `0 -> 1`
+  twice), leaves the loop (`travDone`) and returns (the non-trivial
+  `ensures` is checked at this logged return); `haupt0` takes `k`,
+  publishes `flag := 1` (memory `0 -> 1`), releases `k`. Thread 1 takes `k`,
+  calls `warte`, which unfolds its `if`, fires `awaits` (reading `flag`),
+  and returns.
+-/
 module
 
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll

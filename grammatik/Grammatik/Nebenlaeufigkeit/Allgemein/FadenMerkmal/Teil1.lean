@@ -1,3 +1,32 @@
+/-
+  File:      Grammatik/FadenMerkmal.lean
+  Subject:   WHAT A THREAD CAN STILL RUN -- a syntactic feature set of a
+             residue (the direct callees, the signatures of indirect calls,
+             the locks taken by `locks` blocks) and its invariance along
+             every rule of machine G.
+
+  The goal theorem needs, for concurrency, three facts about each thread
+  that no invariant of G carried:
+
+  * which functions the thread can run at all (the call graph from its start
+    function), to exempt carriers only one thread reaches from the footprint
+    check (`ZielOrtMehrfaden.lean`);
+  * that every `locks L` still ahead of a frame takes a lock of rank at least
+    the frame's floor (`StufenOk` read on the residue), for deadlock freedom
+    (`Verklemmung.lean`);
+  * that the `abbruch` layer behind an `else` branch names the same held
+    locks as the block it stands behind (so a `leave`/`next` out of it keeps
+    the held set).
+
+  All three are one predicate `GRest.mR A` over a feature set `A : Merkmal D`,
+  hereditary over the residue, and `schrittMerk` classifies every rule: a
+  head-local step keeps the stack and the function and carries the
+  predicate to the new residue; a push names a callee the old residue
+  admitted and carries the predicate to the suspended caller; a pop resumes
+  the caller with the predicate its suspended residue had. The call-graph
+  closure `MerkAbg` then gives the thread invariant `MerkInvG` on every
+  reachable machine (`merkInvG_erreichbar`).
+-/
 module
 
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG

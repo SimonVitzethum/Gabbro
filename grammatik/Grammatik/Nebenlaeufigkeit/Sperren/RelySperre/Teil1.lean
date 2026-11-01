@@ -1,3 +1,18 @@
+/-
+  File:      Grammatik/RelySperre.lean
+  Subject:   D9, SECOND HALF -- THE RELY FROM LOCK EXCLUSIVITY (lane 106).
+
+  `stabil_aus_bewachung` (StabilBewacht.lean) takes the memory-level rely
+  `hRelyT` as a premise. On the PC machine it is derivable: the take rule
+  fires only while nobody else holds the lock (`GenFrei`), so two threads
+  never hold the same lock (`sperre_exklusiv`, proved here by induction
+  over `GenErreichbar` -- no such state-level lemma existed before, only
+  the run-level `ForeignExclusion`); a leaf step of a thread not holding
+  `L` then leaves the slots of an `L`-guarded table unchanged
+  (`blatt_erhaelt_slots` from `Ressourceninvariante.lean`) and the globals of an
+  `L`-guarded global unchanged (`blatt_erhaelt_globs`, proved here as the
+  global mirror). Take/release steps keep memory by construction.
+-/
 module
 
 public import Grammatik.Kern.Semantik.Maschine

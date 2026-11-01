@@ -1,3 +1,14 @@
+/-
+  File:      Grammatik/Nebenlaeufigkeit/Sperren/RessourcenBlatt.lean
+  Subject:   THE CSL RESOURCE INVARIANT AT EVENT GRAIN, leaf lemmas (formerly `CSLInvarianteC.lean`;
+             CSL = concurrent separation logic, "C" meant attempt C, not the C language).
+
+  While lock L is free, no thread that could write carrier t is inside a
+  critical section, so t's invariant holds. Each leaf step of a thread not
+  holding L leaves the slots of t unchanged: writing t records an access
+  event whose guards (`darf`, `Ereignis.gut`) require `Held L`, and
+  `HeldGenau` ties the static resource list to the thread's open locks.
+-/
 module
 
 public import Grammatik.Kern.Semantik.Maschine

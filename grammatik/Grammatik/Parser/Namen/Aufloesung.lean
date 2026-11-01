@@ -1,4 +1,4 @@
 module
 
 public import Grammatik.Parser.Namen.Aufloesung.Teil1
-public import Grammatik.Parser.Namen.Aufloesung
+public import Grammatik.Parser.Namen.Aufloesung.Teil2

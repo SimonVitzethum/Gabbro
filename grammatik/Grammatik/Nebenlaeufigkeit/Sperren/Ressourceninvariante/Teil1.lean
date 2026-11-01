@@ -1,3 +1,16 @@
+/-
+  File:      Grammatik/Nebenlaeufigkeit/Sperren/Ressourceninvariante.lean (formerly `CSLInvariante.lean`)
+  Subject:   THE CSL RESOURCE INVARIANT -- THE MAIN THEOREM (lane 81).
+
+  While lock L is free everywhere, the L-guarded table's invariant holds.
+  Lane 54 proved the leaf lemma for non-oracle leaves
+  (`blatt_slots_t_gleich` in `RessourcenBlatt.lean`) and cut the main theorem
+  because `Stmt.axiomCall` could write guarded tables without the lock.
+  Lane 74 repaired that: `axiomCall` carries `hd`/`hgd`, and
+  `FremdSperre.lean` proves `axiomCall_haelt_waechter`. This file extends
+  the leaf argument to `axiomCall` (oracle frame + `hd` + `HeldGenau`)
+  and runs the induction over `PCReach`.
+-/
 module
 
 public import Grammatik.Kern.Semantik.Maschine

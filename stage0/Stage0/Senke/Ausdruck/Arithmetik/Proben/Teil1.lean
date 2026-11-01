@@ -1,3 +1,4 @@
+/- Emitted runner images for the shared arithmetic operand preparation. -/
 module
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung

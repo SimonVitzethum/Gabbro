@@ -1,3 +1,80 @@
+/-
+  File:     Grammatik/Koernung.lean
+  Subject:  Event granularity as an EXPLICIT premise.
+
+  One event of the trace (`Semantik.lean`: `Ereignis`, `World.spur`,
+  newest first) executes indivisibly on the machine. Until now the tree
+  USED that -- every `schreibSlot` records exactly one event, every
+  `lese` one event per place -- without SAYING it. This file says it:
+  `EreignisAtomar` (each event covers at most one cell) travels as an
+  explicit hypothesis into the no-tearing theorem `atomar_no_tear`.
+
+  Cites (read-only; nothing outside this file is touched):
+  - `Semantik.lean`: `Ereignis` (zugriff/gzugriff/nimmt/gibt),
+    `World.spur`, `World.merke` (new events as prefix), `World.lese`
+    (one event per place), `World.schreibSlot` (value plus exactly one
+    event), `World.schreibBytes` (one event PER BYTE, by recursion),
+    `World.bytesAb` (the n cells a byte read folds over) with
+    `World.bytesAb_length`, `Expr.orte` (a `leseBytes` records ONE place
+    while reading n cells), `alleIndizes` (indices as `Zahl 0 (n - 1)`).
+  - `Typen.lean`: `Zahl lo hi`, `Ty.index n = .int 0 (n - 1)`, `Byte`.
+    A byte is `Zahl 0 255`: the same `0 .. count-1` shape over a
+    256-cell carrier, so one event covers exactly one such value.
+  - `Satz.lean`: `Ereignis.gut` / `Ereignis.passt` (one event carries its
+    own guards) -- used, not restated.
+
+  Proven here:
+  - `ereignisAtomar_gilt`: every event satisfies the premise (it is
+    satisfiable, not vacuous).
+  - `atomar_no_tear`: UNDER `EreignisAtomar`, interrupting a transfer at
+    any byte boundary shows the old or the new bytes -- never a mix.
+  - `schreibBytes_event_count`: an n-byte `schreibBytes` leaves exactly
+    n events on the trace.
+  - `schreibBytes_not_single`: for 2 <= n the transfer is NOT one event
+    (negative write case: n single-byte events, or the premise fails).
+  - `leseBytes_single_event` / `leseBytes_not_atomic`: a `leseBytes`
+    records ONE event while folding over n cells (negative read case).
+  - `two_byte_tear` (+ `two_byte_tear_is_interruption`): the witnessed
+    mix -- interrupting a 2-byte transfer after one byte.
+   - `oldOrNewPerByte` (Prop-valued bridge) + `schreibBytes_prefix_readback`:
+     writing the first `m` bytes of `new` over the world and reading the `n`
+     bytes back shows exactly `interrupted old new m` (§7);
+     `prefix_readback_perByte` reads it as old-or-new per byte, with
+     `prefix_readback_zero` / `prefix_readback_full` at the boundaries.
+     Helpers: `castBytes_cancel`, `schreibSlot_slots_same` (`_other`),
+     `merke_bytesAb`, `storeSlot_bytesAb_other`, `schreibBytes_slots_other`;
+     list facts `interrupted_length_eq`, `interrupted_zero_eq`,
+     `interrupted_full_eq`, `interrupted_perByte`.
+  - §8 (C2 discharge over the lane-47 inventory under the lane-70 ruling):
+    `InvForm` (nine rows) + `Guarantee`, `InvForm.verdict` / `admitted` /
+    `width`, `ruling_covers` (no fourth case), `admitted_no_tear` (+
+    world-level `admitted_readback_no_tear`), `AtBoundary` +
+    `boundary_no_tear`, `refused_no_tear` (+ world-level
+    `refused_readback_no_tear`), `mid_interruption_tears` (the ruled-out
+    middle IS the witnessed tear), and `shared_inventory_tearing_free`.
+
+  CUTS (booked, not hidden):
+  - C1 (was: no world-level readback): bridged in §7 for the prefix case --
+     `schreibBytes_prefix_readback` writes `new.take m` over the world and
+     reads `interrupted old new m` back, `prefix_readback_perByte` as
+     old-or-new per byte. The machine step itself stays a word: no claim is
+     made about hardware granularity, the premise is still width-based
+     (`eventWidth <= 1`) and is explicitly NOT moved by this section.
+  - C2: read tearing under a concurrent write DURING the n-cell fold is
+    discharged for the measured inventory under the ruling (§8): admitted
+    rows cannot tear by width (`admitted_no_tear`, world-level
+    `admitted_readback_no_tear`), refused rows cannot tear under their
+    guarantee (`refused_no_tear`, world-level `refused_readback_no_tear`),
+    every row lands somewhere (`ruling_covers`), and the middle the
+    guarantee rules out IS the witnessed tear (`mid_interruption_tears`).
+    What is NOT built is a general interleaving semantics for `eval` (cf.
+    the honest section 5 of `Wettlauf.lean`): outside the nine inventory
+    rows and their ruling premises the n-cell fold under a concurrent
+    write still has no model, and the volatile row stays open with no
+    theorem.
+  - C3: no machine beyond counting is modelled; the premise is
+    width-based (`eventWidth <= 1`), the machine step itself stays a word.
+-/
 module
 
 public import Grammatik.Kern.Semantik.Semantik

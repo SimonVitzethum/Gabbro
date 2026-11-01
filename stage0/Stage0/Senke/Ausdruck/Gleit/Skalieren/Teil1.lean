@@ -1,3 +1,4 @@
+/- Quotient/remainder scaling followed by G's nearest-even rounding. -/
 module
 
 public import Stage0.Senke.Ausdruck.Gleit.RundCode

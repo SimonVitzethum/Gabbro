@@ -1,3 +1,4 @@
+/- Executable checks of actual lowered early exits, with exact Runner step counts. -/
 module
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun

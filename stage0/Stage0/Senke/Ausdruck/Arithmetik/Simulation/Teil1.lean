@@ -1,3 +1,4 @@
+/- Whole-loop induction for the emitted normalization block. -/
 module
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Schleife

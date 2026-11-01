@@ -1,3 +1,10 @@
+/-
+  File:      Grammatik/TravAwaitsLauf.lean
+  Subject:   THE RUN of `taP` (`TravAwaitsZeuge.lean`), step by step: thread 0
+             (19 steps: call, `traverse` unfold, two iterations, loop exit,
+             return, `locks`, publish, release) and thread 1 (10 steps:
+             `locks`, call, `if`, `awaits`, return).
+-/
 module
 
 public import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsZeuge.Teil2

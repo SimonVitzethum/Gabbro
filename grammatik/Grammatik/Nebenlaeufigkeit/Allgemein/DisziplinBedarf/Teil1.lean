@@ -1,3 +1,18 @@
+/-
+  File:      Grammatik/DisziplinBedarf.lean
+  Subject:   Guards only where they are needed (D3).
+
+  The discipline package `invariantenKontext_aus_disziplin`
+  (`InterferenzAllgemein.lean`) requires `hGuardEx`: every carrier has a
+  guard lock. Ordinary programs leave unshared or read-only carriers
+  unguarded, so the premise fits nothing ordinary. This file proves the
+  narrowed version: only carriers that some member thread WRITES need a
+  guard (`hGuardBedarf`). A carrier no member writes keeps its slots
+  along the whole chain (`traegerStill_ohneSchreiber`, via the
+  non-writer preservation `nichtschreiber_erhaelt`); a written carrier
+  runs through the existing per-carrier chain lemma
+  (`hinv_kette_aus_disziplin`), exactly as the old proof did.
+-/
 module
 
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein

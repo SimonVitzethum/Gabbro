@@ -1,3 +1,16 @@
+/-
+  File:      Grammatik/Nebenlaeufigkeit/Allgemein/TravLese.lean
+  Subject:   THE WITNESS of the full race theorem `rennfrei_g_voll` (`rennfrei_g_voll_zeuge`): the run of
+             `TravAwaitsLauf.lean` with thread 1 READING `flag` plainly instead of awaiting it.
+
+  Since 2026-10-21 an `awaits` needs an atomic static (`Block.awaits` carries `D.atomar g = true`), and an
+  atomic carrier is exempt from the lock discipline (`AtomarAusgenommen`). The race witness needs a
+  lock-guarded carrier that is neither atomic nor a payload, so it lives on this copy of the declaration:
+  `flag` is not atomic, and `warte` reads it with `let v = flag;` under `k`. Everything else -- the
+  declaration, the program, the oracle, the 29 steps -- is the run of `TravAwaitsLauf.lean`, step 24 being
+  `dannBind` instead of `dannAwaits` (same footprint `[flag]`, same recorded read event).
+  The names are those of `TravAwaitsZeuge.lean`/`TravAwaitsLauf.lean` in the namespace `TravLese`.
+-/
 module
 
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll

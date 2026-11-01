@@ -1,3 +1,31 @@
+/-
+  File:      Grammatik/Parser/Round/RundlaufAnwVoll.lean
+  Subject:   Layer L2b: every printable statement and block reads back -- `parseStmt`/`parseBlock` of
+             the statement printer's tokens (`druckAnw`, Print/Stmt.lean) return the tree.
+
+  `rundlauf_anw`: for every statement in the printability class `AnwGut .anw` and every follow that
+  does not start with `else` (`KE`), `parseStmt F (druckAnw s ++ rest) = .ok (s, rest)` with fuel
+  `fbA s = 8 * #tokens + 30` or more; `rundlauf_block`: the same for blocks through `parseBlock`,
+  whatever follows. The proof is one induction over the printability derivation (`AnwGut`, indexed
+  by the position: statement, block, `else if` branch, `match` arm), one lemma per statement form.
+
+  The class `AnwGut` (stated in full below) is what the reader forces, form by form:
+  - expressions are `gut` (L2a), places are `gutPlatz`, types `TypGut` (RundlaufTyp);
+  - every body is a block (`AnwGut .block`), `else if` branches and `match` arms are `elsif`/`arm`
+    nodes in their lists; a block without an ender does not end in `return`/`leave`/`next`
+    (`EndeGut`: the reader would take it for the ender);
+  - raw header texts are rendered token lists without the collector's stop tokens (`RohText`);
+  - names print as `nameTok`, the lexer's token (a table word is a `wort`): a `let` binder is no
+    `mut`, a place head no `transition` and none of the primary words (`istKopfWort`), a call head
+    no statement head word (`istAnwWort`), the place of a plain `locks` no `shared`;
+  - a call head and a `start` root are a single name-shaped word (the printer re-lexes the
+    text); `breaking` and `start` carry at least one name; `narrow ... to` is `finite` or a raw text
+    that does not start with `finite`; a `publishes` payload other than `nothing` is a raw text.
+  Excluded, with the reason (recorded in the CUTS at the end): `.other` (never read), a bare block
+  as a statement (the reader has no such statement), calls through a `::` path or a place
+  (`a::f(x)`, `p->f(x)`: the printer prints the text of the callee), `let ... else` with `mut`
+  (the form has no `mut`), raw texts with braces, `;`, or stop words inside.
+-/
 module
 
 public import Grammatik.Parser.Round.RundlaufQuant.Teil2

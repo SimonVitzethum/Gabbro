@@ -1,3 +1,22 @@
+/-
+  File:      Grammatik/Parser/Round/RundlaufQuant.lean
+  Subject:   Predicates with quantifiers read back: `forall x in D : p`, `exists x in D : p`, and
+             `&&`, `||`, `!`, `=>` over them, through `parsePred` -- `pred_voll`.
+
+  The printable predicates (`PredGut`): every printable expression (`gut`), the quantifiers
+  `forall`/`exists` over the domains `slots of`, `descendants of`, `ancestors of`, `elems of`,
+  `mappings of` a place, `queue` a place and `threads` (`DomGut`), and `&&`, `||`, `!`, `=>` over
+  printable predicates. The printer prints a quantifier and `=>` in parentheses (`druckExtToks`),
+  and every `&&`/`||` in parentheses (`druckToks`).
+
+  The reader takes a parenthesis at the atom level: it first tries the expression reader
+  (`parseCmp`) and falls back to `( pred )` when that fails. So the proof carries two legs per
+  predicate (`PredBein`): the atom leg (what `parsePredAtom` returns) and, for a predicate that is
+  no expression, the error leg (the expression reader fails on its print, `parseUnary` and up).
+
+  Excluded (recorded in the CUTS at the end): `count x in D : p` (it reads as an expression at the
+  primary level), `e in D`, `a reaches b via f`, the domains `fields of` and `chain (x, y) in`.
+-/
 module
 
 public import Grammatik.Parser.Round.RundlaufPred

@@ -1,3 +1,30 @@
+/-
+  File:      Grammatik/Parser/Round/RundlaufTyp.lean
+  Subject:   Layer L2b, part one: the pieces under the statements -- raw header texts, bare names that
+             the printer re-lexes, and surface types (`druckTyp` read back by `parseTyp`).
+
+  Raw texts. The reader keeps several headers as text (`retry`/`forever` headers, `traverse`
+  `decreases`/`touches` words, `narrow` ranges, `publishes`/`awaits` payloads, `exchange` tails); the
+  printer re-lexes the text (`rohToks`). A text read back is the rendered token list (L1's
+  `renderText`), so the round-trip class of a raw field is: the field IS `renderText ts` for a
+  lexically clean `ts` that holds none of the collector's stop tokens (`roh_*` below). Each
+  collector (`traverseRest`, `schleifenKopf`, `nimmBisWort`, `nimmBisZeichen`) returns exactly that
+  text (`renderText_cons`: one token, one space).
+
+  Bare names. A call head and a `start` root ride as text (`rohToks f`); `rohToks_name`: a
+  name-shaped `f` re-lexes to the one token the lexer reads for it (`nameTok f`).
+
+  Types (`TypGut`): atoms (not one of the type-head words), paths of two or more segments,
+  `range`/`wrapping` suffix chains over them, `ptr<space, right> T` with a single right,
+  `[option] index into t`, arrays, `string max e`. `parse_druckTyp`: every `TypGut` type reads back
+  before a type follow (`TypFolge`: no suffix word, no `::`, benign for expressions), with fuel
+  `fbT t = 8 * #tokens + 30`. Excluded (recorded): `embeds` fields, raw brace groups and `fn(..)`
+  types (`.raw`), `entry fn(..)` types, rights lists `rw+own`/`own@h`, suffix chains over a
+  non-chain base (`[T; n] wrapping` reads `[T; n]` and leaves `wrapping`).
+
+  Names print as `nameTok`, the token the lexer reads (`u32`, `bool`, `dma` are table words); the
+  reader takes both. A path type's head is no type-head word (`typKopf`), as an atom.
+-/
 module
 
 public import Grammatik.Parser.Round.RundlaufTok.Teil4
