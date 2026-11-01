@@ -2894,7 +2894,12 @@ Measured: closure rebuilt (223 modules after the edits), `Nachpruefung.lean` 353
 
 ## IR-03 handback state (2026-11-01)
 
-Branch `t3/central-value-abi`: master `6444b5cc3` merged (`05cfd542b`), then `strGet` over any scalar index range,
+Branch `t3/central-value-abi`: master `ae716338a` merged (`cd8cf4d5d`) and current master `2d54e78f2` merged
+(`c6ce18d84`, fast-forwardable: `master` is an ancestor). After both merges the whole Stage0 closure rebuilds, all 207
+textual regressions in `stage0/proben-ir` pass, `Nachpruefung` and `gabbro_ziel` stay on the three standard axioms,
+the layout check is clean and no file under 500 lines on master reaches 500. The four old probes in `stage0/proben`
+(`echo`, `hello`, `threads`, `upper`) still refuse with "main takes parameters" (known IR-12 limit). Earlier:
+master `6444b5cc3` merged (`05cfd542b`), then `strGet` over any scalar index range,
 `strWeit` narrowing, `strWeit` of short to long strings and `strEq` between short and long strings (commits above).
 
 Open (exact):
