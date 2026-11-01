@@ -1,7 +1,7 @@
 /* sonde_metall_systemruf -- the falsifier for `metal_kernel_contract`.
  *
  * THE OBLIGATION, as it stands in the source (every gate unit with a `target … abi metal`
- * block, e.g. `beispiele/74-syscall-schreiben.gab`):
+ * block, e.g. `beispiele/0074-syscall-schreiben.gab`):
  *
  *     assume metal_kernel_contract
  *         "The image's kernel entry keeps the Linux x86_64 convention …"

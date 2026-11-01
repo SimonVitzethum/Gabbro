@@ -180,7 +180,7 @@ fn kopf_von(f: &FnDecl, quelle: &str) -> String {
     // `"extern "` steht mit in der Liste: eine Deklaration, die schon `extern` IST -- ein
     // Import ueber die Modulgrenze -- bekam sonst ein zweites davor, und `P001` sagte
     // *„`fn` erwartet, `extern` gefunden"*. Gefunden 2026-08-20 an
-    // `beispiele/29-undurchsichtig.gab`, dem einzigen Beispiel mit zwei Modulen.
+    // `beispiele/0029-undurchsichtig.gab`, dem einzigen Beispiel mit zwei Modulen.
     for w in ["pub ", "impl ", "raw ", "prim ", "divergent ", "const ", "extern "] {
         if let Some(r) = ohne_klasse.strip_prefix(w) {
             ohne_klasse = r.trim_start();

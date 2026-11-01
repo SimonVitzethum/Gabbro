@@ -954,7 +954,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         // Beim Ansetzen gemessen: `ops` steht an NULL Korpusstellen, und
         // `opdecl = "ops" identlist ";"` nimmt beliebige Bezeichner. **Nirgends stand, WAS
         // eine erzeugte Mutation tut** -- der Satz hatte kein Subjekt. Er ist aus dem Korpus
-        // geholt statt erfunden: `beispiele/01-tabelle.gab` schreibt `blatt_loeschen` mit
+        // geholt statt erfunden: `beispiele/0001-tabelle.gab` schreibt `blatt_loeschen` mit
         // `maintains baum_wohlgeformt`, und `aushaengen` daneben.
         //
         // **Theorem -> line. Redrawn 2026-08-28, evening: Teil II has THREE mutations now,
@@ -1096,7 +1096,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         //
         // **The form is not what is missing here** (measured 2026-08-28, W24). `transset`
         // has carried several places since the first day (`SYNTAX.md`:1256), the parser has
-        // the comma loop, and `beispiele/02-geraet.gab`:42 uses it. `PFLICHTEN.txt` read the
+        // the comma loop, and `beispiele/0002-geraet.gab`:42 uses it. `PFLICHTEN.txt` read the
         // opposite twice («B17», *"`transition` writes exactly ONE `place`"*) and was wrong
         // on that for eleven days.
         //

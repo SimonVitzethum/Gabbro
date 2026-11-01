@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Korpus07.lean
-  Subject:   THE ATTEMPTED G PROGRAM OF `beispiele/07-eintritt-und-boot.gab`,
+  Subject:   THE ATTEMPTED G PROGRAM OF `beispiele/0007-eintritt-und-boot.gab`,
              with the exact reason no non-degenerate witness exists.
 
   The source declares: a `walk` page table with `mappings of` quantifiers, a

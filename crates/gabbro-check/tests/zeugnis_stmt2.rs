@@ -38,12 +38,12 @@ fn marke(e: &gabbro_check::zeugnis::Erhebung, was: &str) -> usize {
 
 /// **`assignDurch` -- the write through a read-write pointer.**
 ///
-/// `beispiele/104-referenz.gab`: `k.slots[i].stand = 100` with
+/// `beispiele/0104-referenz.gab`: `k.slots[i].stand = 100` with
 /// `k : ptr<normal, rw> Konto`. The census books every assignment under
 /// `assignment`, pointer or not.
 #[test]
 fn zeiger_schreiben_ist_eingeordnet() {
-    let e = erhebung(&lies("beispiele/104-referenz.gab"));
+    let e = erhebung(&lies("beispiele/0104-referenz.gab"));
     assert!(e.unzugeordnet.is_empty(), "{:?}", e.unzugeordnet);
     assert!(marke(&e, "assignment") >= 1, "{:?}", e.posten);
 }
@@ -62,11 +62,11 @@ fn mittelbarer_ruf_ist_eingeordnet() {
 
 /// **`onTag` -- the tagged match.**
 ///
-/// `beispiele/34-markierter-wert.gab`: `match` over the tagged type
+/// `beispiele/0034-markierter-wert.gab`: `match` over the tagged type
 /// `Nachricht`. Non-option matches are booked as `match (tagged)`.
 #[test]
 fn markierter_match_ist_eingeordnet() {
-    let e = erhebung(&lies("beispiele/34-markierter-wert.gab"));
+    let e = erhebung(&lies("beispiele/0034-markierter-wert.gab"));
     assert!(e.unzugeordnet.is_empty(), "{:?}", e.unzugeordnet);
     assert!(marke(&e, "match (tagged)") >= 1, "{:?}", e.posten);
 }
@@ -175,12 +175,12 @@ impl fn sieben() -> Bruch effects { pure } costs <= 2 ops {
 
 /// **`gleitNarrow` -- the float narrowing.**
 ///
-/// `beispiele/26-gleitkomma.gab`: `narrow x to 0.0 .. 1.0 else { … }`
+/// `beispiele/0026-gleitkomma.gab`: `narrow x to 0.0 .. 1.0 else { … }`
 /// over `f64`. The census books every narrowing under `narrow`, int or
 /// float (`Block.narrow` vs `Block.gleitNarrow`).
 #[test]
 fn gleit_verengung_ist_eingeordnet() {
-    let e = erhebung(&lies("beispiele/26-gleitkomma.gab"));
+    let e = erhebung(&lies("beispiele/0026-gleitkomma.gab"));
     assert!(e.unzugeordnet.is_empty(), "{:?}", e.unzugeordnet);
     assert!(marke(&e, "narrow") >= 1, "{:?}", e.posten);
     assert!(e.gleitkomma, "the float file must set the float flag");

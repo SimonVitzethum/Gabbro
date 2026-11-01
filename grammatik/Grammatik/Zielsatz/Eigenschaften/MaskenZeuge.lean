@@ -5,7 +5,7 @@
              refused `gift/460` shape on which the leg FAILS.
 
   The fixture is `Korpus59.lean`, the G program of
-  `beispiele/59-eintritt-nimmt-maskierte-sperre.gab`: the `via idt` dispatch root
+  `beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`: the `via idt` dispatch root
   `takt_verteiler` (the program's one handler, `kP.unterbricht`) takes `TAKT`, which is declared
   `masks irqs` (`kMaskiert .takt = true`), and the system-call root `ruf_verteiler` takes `RING`,
   which is not.

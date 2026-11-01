@@ -1791,7 +1791,7 @@ impl<'a> Rechner<'a> {
                             // to fit is not the mechanism -- and the scan is chunked:
                             // one bounded window per `locks` acquisition, each window
                             // fitting `held` (the in-the-wild shape is
-                            // `beispiele/147-ftp-alg-control.gab`: 1024 slots as 16
+                            // `beispiele/0147-ftp-alg-control.gab`: 1024 slots as 16
                             // windows of 64, 8320 ops per tick under
                             // `held <= 16384`). Each window re-establishes the lock
                             // invariant at its own release, so chunking moves work

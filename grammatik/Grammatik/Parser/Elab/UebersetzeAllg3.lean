@@ -1718,7 +1718,7 @@ theorem lowerAllg104data :
 /-! ## The real-text lexer pin for 104 -/
 
 -- SRC-BEGIN src104real
-/-- The real `beispiele/104-referenz.gab` text, one entry per source line (a long
+/-- The real `beispiele/0104-referenz.gab` text, one entry per source line (a long
     line cut again after a space). `zaehle-kette.py` compares the
     pieces against the file, byte for byte. WHY PIECES and not one
     literal: `Parser/Lexer.lean`'s `lex_ofList` -- one 2064-byte
@@ -1898,7 +1898,7 @@ def pre108 (items : List SItemTief) : List SItemTief :=
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
 
 -- SRC-BEGIN src108
-/-- The real `beispiele/108-disjoint-start-locks.gab` text, one entry per source line (a long
+/-- The real `beispiele/0108-disjoint-start-locks.gab` text, one entry per source line (a long
     line cut again after a space). `zaehle-kette.py` compares the
     pieces against the file, byte for byte. WHY PIECES and not one
     literal: `Parser/Lexer.lean`'s `lex_ofList` -- one 2082-byte

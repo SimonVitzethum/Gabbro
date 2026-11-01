@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Referenz104Rahmen.lean
-  Subject:   `beispiele/104-referenz.gab` CERTIFIED by the goal theorem over
+  Subject:   `beispiele/0104-referenz.gab` CERTIFIED by the goal theorem over
              declared frames (`ziel_ort_rahmen`): every premise holds
              jointly on the hand translation `r4P` of `Referenz104.lean`,
              and the conclusion holds on its reached run.
@@ -22,7 +22,7 @@ namespace Gabbro.Grammatik
 
 /-! ## 1. `einzahlen` meets the obligation against declared frames -/
 
-/-- **`einzahlen` of `104-referenz.gab` meets `KoerperGutR`.** The body
+/-- **`einzahlen` of `0104-referenz.gab` meets `KoerperGutR`.** The body
     writes `100` into the slot, calls `lies` (whose signature writes
     nothing: every frame-respecting answer keeps the slots), and returns;
     `old(stand) <= stand` is `old(stand) <= 100`, true by the slot's range.
@@ -74,7 +74,7 @@ theorem r4_einzahlen_R : KoerperGutR r4P 0 r4Ein := by
         cases h2
 
 /-- **The new obligation is strictly weaker**: on `einzahlen` of
-    `104-referenz.gab` it holds, the old one fails. -/
+    `0104-referenz.gab` it holds, the old one fails. -/
 theorem r4_rahmen_echt_schwaecher : KoerperGutR r4P 0 r4Ein ∧ ¬ KoerperGutV r4P 0 r4Ein :=
   ⟨r4_einzahlen_R, r4_einzahlen_nicht_V⟩
 
@@ -101,7 +101,7 @@ def r4E0 : Ereignis r4D := .nimmt () []
 
 /-! ## 3. The certificate -/
 
-/-- **`ziel_ort_rahmen_ref104` -- `beispiele/104-referenz.gab` certified.**
+/-- **`ziel_ort_rahmen_ref104` -- `beispiele/0104-referenz.gab` certified.**
     On the hand translation `r4P` (with the flagged driver and idle
     function), ALL premises of `ziel_ort_rahmen` hold jointly: the hardware
     facts `GutO`/`RegLokal` of the oracle, the complete member list, the
@@ -134,7 +134,7 @@ theorem ziel_ort_rahmen_ref104 :
 
 /-! ## CUTS:
 
-  What is proved: `einzahlen` of `104-referenz.gab` meets `KoerperGutR`
+  What is proved: `einzahlen` of `0104-referenz.gab` meets `KoerperGutR`
   (`r4_einzahlen_R`), so the new obligation is strictly weaker than
   `KoerperGutV` (`r4_rahmen_echt_schwaecher`); every premise of
   `ziel_ort_rahmen` holds jointly on the hand translation `r4P`, the

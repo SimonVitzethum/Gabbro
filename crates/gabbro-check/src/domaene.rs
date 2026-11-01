@@ -244,7 +244,7 @@ impl<'a> Sicht<'a> {
 /// name different fields *"without anybody comparing the two"* -- and it names `chain(a, b)
 /// in` as the model that could already do it. **On `chain` itself the argument never fell
 /// back.** Measured on 2026-08-31 (`dokumente/CHECKER.md` §2c): five falsifications of
-/// the edge in `beispiele/55-kindkette.gab`, in `ensures`, in an `invariant` and in a `spec
+/// the edge in `beispiele/0055-kindkette.gab`, in `ensures`, in an `invariant` and in a `spec
 /// fn` body -- **0 errors and 0 `C001` every time**, while `tree { child gibtsnicht }` at the
 /// very same table falls at `D006`.
 ///
@@ -1232,8 +1232,8 @@ fn zaehlbar_pruefen(d: &Domaene, st: Stellung, span: Span, absagen: &mut Absagen
 /// * **`ensures`** belongs to `M109`, and a second refusal for one fault is worse than one.
 /// * **The argument of `Has(…)` and of `Held(…)`** is not a place. A machine feature is not
 ///   a program name and a lock is not a value; both are spelled as a call, and both would
-///   otherwise be read as one. `beispiele/01-tabelle.gab` writes `Held(KAPPEN)` at every
-///   `impl fn` in the file, and `beispiele/11-grammatikbefunde.gab` writes `Has(RDTSCP)`.
+///   otherwise be read as one. `beispiele/0001-tabelle.gab` writes `Held(KAPPEN)` at every
+///   `impl fn` in the file, and `beispiele/0011-grammatikbefunde.gab` writes `Has(RDTSCP)`.
 ///
 /// > **The exemption is by NAME and not by site**, exactly as `namen.rs::zusagenstelle`
 /// > does it: a predicate that writes `Has(F)` and `F.x == 1` in one breath exempts `F` in
@@ -1652,10 +1652,10 @@ fn pred_orte<'p>(p: &'p Pred, v: &str, aus: &mut Vec<&'p Ort>) {
 ///
 /// * **`chain(a, b) in <place>` binds a SLOT INDEX of the place's table.** It is not a
 ///   guess: `D016` refuses a chain edge that leaves its own table, so a chain that resolves
-///   at all stays in the table it starts in. `beispiele/55-kindkette.gab` writes exactly
+///   at all stays in the table it starts in. `beispiele/0055-kindkette.gab` writes exactly
 ///   that (`forall k in chain(…) in Self.slots[s] : Self.slots[k].elter == Some(s)`).
 /// * **`queue` and `elems of` bind an index into an ARRAY FIELD, not a slot index.** Both
-///   run over a `[T; N]` field of a record; `beispiele/56-auftragsring.gab` writes
+///   run over a `[T; N]` field of a record; `beispiele/0056-auftragsring.gab` writes
 ///   `r.plaetze[j]` under both, and neither `j` nor the array is a table.
 /// * **`threads` binds a number that indexes NOTHING DECLARED.** There is no `count` behind
 ///   it and no table it addresses -- `PLAN.md` §9.1 books giving it one as *"a language

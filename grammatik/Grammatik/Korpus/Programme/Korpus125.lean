@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Korpus125.lean
-  Subject:   THE G PROGRAM OF `beispiele/125-read-under-lock.gab`, value-
+  Subject:   THE G PROGRAM OF `beispiele/0125-read-under-lock.gab`, value-
              faithful: `lese_schreibe` returns the `z` it read under the lock.
 
   The source: `static mut z : u32 = 0`, lock `WACHE` protecting `z`,

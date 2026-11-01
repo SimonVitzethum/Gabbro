@@ -5889,7 +5889,7 @@ def lowerProg : UProg →
 
 /-! ## The 104 instance: tokens -/
 
-/-- The token list of `beispiele/104-referenz.gab` (comment-free;
+/-- The token list of `beispiele/0104-referenz.gab` (comment-free;
     `u104lex` checks it against the lexer). -/
 def tt104 : List Token :=
   [.wort "module", .ident "beispiel", .zeichen "::", .ident "referenz",
@@ -5999,7 +5999,7 @@ theorem u104lex : lex (String.ofList srcQuelle104K) = .ok tt104 := by
 def uStand104 : SExpr :=
   .field (.index (.field (.variable "k") "slots") (.variable "i")) "stand"
 
-/-- The parsed surface tree of `beispiele/104-referenz.gab`
+/-- The parsed surface tree of `beispiele/0104-referenz.gab`
     (`u104parse` checks it against the reader). -/
 def items104 : List SItemTief :=
   [.modT "beispiel::referenz" [

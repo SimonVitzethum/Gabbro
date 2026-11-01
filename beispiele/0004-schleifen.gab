@@ -1,0 +1,151 @@
+// 04 -- Die drei Schleifenformen. **Unendlich ist eine davon, und das ist erlaubt.**
+//
+// Die Regel ist nicht „jede Schleife endet", sondern: **was eine Schleife tun darf, steht
+// dabei.** `traverse` endet durch die Menge, `retry` durch eine Zahl, `forever` gar nicht --
+// aber jeder Durchgang ist begrenzt und der Rahmen steht in `effects`.
+
+module beispiel::schleifen {
+
+const NKERNE  : u32 = 64;
+const NFAEDEN : u32 = 1024;
+
+type KernIdx  = u32 in 0 ..< NKERNE;
+type FadenIdx = u32 in 0 ..< NFAEDEN;
+type Frist    = u64 in 1 .. 1000000;
+
+table Warteschlange count NFAEDEN {
+    slot {
+        aktiv   : bool,
+        frist   : Frist,
+        naechst : option index into Warteschlange,
+    }
+}
+
+lock PLANER protects { bereit, laufend } rank 1 held <= 300 ops;
+
+// 1. `traverse` -- endet durch die Menge. Bereich UND Terminierung fallen durch Konstruktion.
+impl fn faellige_wecken(q : ptr<normal, rw> Warteschlange, jetzt : Frist)
+    requires Held(PLANER)
+    effects  { writes q.slots, locks PLANER }
+    // NFAEDEN Slots x 6 ops je Durchgang. Die Zahl faellt aus dem Rumpf.
+    // **6 seit dem 2026-09-13 (Lane 139, F1): die Schreibung zaehlt ihren Zielindex.**
+    costs    <= NFAEDEN * 6 ops
+{
+    traverse eintrag over slots of q by unvisited
+        touches writes q.slots
+    {
+        if q.slots[eintrag].frist <= jetzt {
+            q.slots[eintrag].aktiv = true;
+        }
+    }
+}
+
+// **Das Register, an dem `retry` wartet -- und bis 2026-08-20 stand hier nur sein NAME.**
+// Die Datei las `g.fertig` und sagte nirgends, was ein `Statusregister` ist. Der Pruefer
+// ging durch (ein fremder Name hinter einem Zeiger ist in einem Auszug normal), und der
+// Erzeuger reichte die Frage an C weiter -- wo sie als *„falsche Verwendung des
+// undefinierten Typs"* zurueckkam. **Ein Auszug, der aussah wie eine Uebersetzungseinheit.**
+device Statusregister(basis : Pa) at mmio {
+    reg fertig : u32 @0x0 class r
+}
+
+// 2. `retry` -- endet durch eine Zahl. Der Ueberlauf ist BENANNT, nicht gedeutet:
+//    `on_exceeded` nennt den Ausgang, statt dass ein Kommentar ihn beschreibt.
+impl fn auf_quittung_warten(g : ptr<mmio, r> Statusregister) -> u32
+    effects { reads g }
+    costs   <= 2048 ops
+{
+    retry warten until g.fertig == 1
+        bounded 1024 ops
+        progress geraet_antwortet
+        on_exceeded zeitablauf
+        effects { reads g }
+    { }
+    return 0;
+}
+
+// 3. `forever` -- endet NICHT. `per_pass`, `on_exceeded` und `effects` sind Pflicht;
+//    `progress` nennt, WER sie beendet -- eine Annahme mit Falsifikator, und der
+//    Watchdog IST der Falsifikator. `leaves` nennt, was den Ausgang verlaesst.
+divergent fn dienstschleife(q : ptr<normal, rw> Warteschlange, marke : Angemeldet)
+    // `reads schalter` steht hier, weil `abschaltung_angefordert()` es nennt: seit
+    // 2026-08-15 schliesst eine Wirkungsliste die der Gerufenen ein (`E008`).
+    // **Vorher war diese Zeile unvollstaendig, und niemand konnte es sehen.**
+    effects { diverges, writes q.slots, locks PLANER, reads schalter }
+{
+    forever dienst
+        per_pass bounded 4096 ops
+        on_exceeded watchdog_schlug_an
+        effects  { reads q.slots, writes q.slots, locks PLANER }
+        progress zeitgeber_tickt
+        leaves   marke
+    {
+        // **Die Sperre liegt IM Durchgang, nicht um die Traversierung.** Ein `locks`-Block
+        // ueber einer vollen Tabelle haelt `PLANER` fuer NFAEDEN x 3 ops -- die Sperre sagt
+        // 300 zu, und der Kostenpass rechnet das nach. Das ist keine Stilfrage: an dieser
+        // Zahl haengt die Latenzaussage jeder Wartestelle (LANGUAGE.md 9.3).
+        traverse e over slots of q by unvisited touches writes q.slots {
+            locks PLANER {
+                if q.slots[e].aktiv {
+                    q.slots[e].aktiv = false;
+                }
+            }
+        }
+        if abschaltung_angefordert() {
+            leave dienst;
+        }
+    }
+}
+
+// **ERGAENZT 2026-08-25: `Manifest` war ein Zeigerziel OHNE Deklaration.** Die Datei nannte
+// den Namen an zwei Stellen und erklaerte ihn nirgends; `gabbro pruefe` sagte 0 Fehler.
+// `N040` hat es an dem Tag gefunden, an dem ein Typname zum ersten Mal aufgeloest werden
+// musste -- *dieselbe Gestalt wie die drei Zeugen weiter unten, die `S003` 2026-08-18 fand.*
+//
+// Was es IST, sagt die Datei selbst an `eingabe_endet`: *„Ein Manifest traegt endlich viele
+// Saetze, und `lenof` nennt ihre Zahl."* Ein `format` also -- `lenof` ueber einem
+// Formatzeiger ist die Pufferlaenge, genau wie in `beispiele/0003-format.gab`:85.
+format Manifest @version 1 endian little {
+    saetze : u32,
+    laenge : u32,
+}
+
+// Die Schranke eines Durchgangs DARF von seinen Eingaben abhaengen -- damit ist eine
+// Signatur ueber ein Manifest ehrlich beschreibbar statt falsch beschraenkt.
+impl fn manifest_pruefen(m : ptr<normal, r> Manifest) -> u32
+    effects { reads m }
+{
+    forever pruefer
+        per_pass bounded 64 + 12 * lenof(m) ops
+        on_exceeded zeitablauf
+        effects { reads m }
+        progress eingabe_endet
+    {
+        leave pruefer;
+    }
+    return 0;
+}
+
+linear type Angemeldet;
+
+extern fn abschaltung_angefordert() -> bool effects { reads schalter };
+extern fn zeitablauf() -> never effects { diverges };
+extern fn watchdog_schlug_an() -> never effects { diverges };
+
+// **Die drei Zeugen -- und bis 2026-08-18 stand hier keiner.** Der Abschnitt oben ERKLAERT
+// die Regel (*„eine Annahme mit Falsifikator, und der Watchdog IST der Falsifikator"*), und
+// dieselbe Datei nannte drei Namen, die nirgends erklaert waren. `S003` hat es gefunden, am
+// ersten Tag, an dem `progress` einen Leser hatte.
+assume geraet_antwortet
+    "Ein Statusregister, das `fertig` setzt, tut es innerhalb der zugesagten Leseoperationen."
+    falsifier sonde_geraet_antwortet;
+
+assume zeitgeber_tickt
+    "Der Zeitgeber unterbricht; ohne ihn laeuft ein Durchgang bis zum Wachhund."
+    falsifier sonde_zeitgeber_tickt;
+
+assume eingabe_endet
+    "Ein Manifest traegt endlich viele Saetze, und `lenof` nennt ihre Zahl."
+    falsifier sonde_eingabe_endet;
+
+}

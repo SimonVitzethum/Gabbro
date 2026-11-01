@@ -104,10 +104,10 @@ fn jedes_beispiel_geht_sauber_durch() {
 /// silent checker with a green corpus. So these four assert the other side:
 /// no error at all. `MUSE-REPORT-191.md` books the flip.
 const ABGELEITET_STATT_E001: &[&str] = &[
-    "04-ohne-wirkungen.gab",
-    "580-wirkungsklausel-fehlt.gab",
-    "700-lesen-ohne-klausel.gab",
-    "701-rein-ohne-klausel.gab",
+    "0004-ohne-wirkungen.gab",
+    "0580-wirkungsklausel-fehlt.gab",
+    "0700-lesen-ohne-klausel.gab",
+    "0701-rein-ohne-klausel.gab",
 ];
 
 #[test]
@@ -391,7 +391,7 @@ fn zeugnis_von(name: &str) -> String {
 
 /// **Die Stelle steht mit Namen im Zeugnis -- an einer echten Korpusdatei.**
 ///
-/// `beispiele/39-auftragsdienst.gab` ist die EINZIGE Datei des ganzen Korpus, in der der
+/// `beispiele/0039-auftragsdienst.gab` ist die EINZIGE Datei des ganzen Korpus, in der der
 /// Vertrag eines fremden Rumpfes heute etwas bewegt: `naechste_menge` verspricht
 /// `result >= 1`, sein Ergebnistyp ist `Rest = u32 in 0 .. 4096`, und damit rechnet der
 /// Rufer ab Zeile 127 mit `1 .. 4096`.
@@ -413,7 +413,7 @@ fn zeugnis_von(name: &str) -> String {
 /// module) -- so the only message the program got was the wrong one. *A wrong refusal is more
 /// expensive than a missing one: it makes someone rewrite a program that was correct.*
 ///
-/// The poison side is `beispiele/gift/262-gruppe-gleicher-rang.gab`, where the ranks really
+/// The poison side is `beispiele/gift/0262-gruppe-gleicher-rang.gab`, where the ranks really
 /// are equal. This test is the other half of the pair.
 #[test]
 fn ein_modulweiter_rang_loest_auf() {
@@ -500,8 +500,8 @@ fn h020_silence_and_single_fire_738() {
         );
     }
     for datei in [
-        "737-line-covers-write-without-guard.gab",
-        "739-hull-redeems-line-write-stays-naked.gab",
+        "0737-line-covers-write-without-guard.gab",
+        "0739-hull-redeems-line-write-stays-naked.gab",
     ] {
         let pfad = wurzel().join("gift").join(datei);
         let quelle =
@@ -576,15 +576,15 @@ fn ein_requires_am_register_wird_gezaehlt() {
 /// counted in the header line and printed in no line.
 ///
 /// The sibling test above runs on `F04.gab`, which carries `D` obligations and nothing else --
-/// dropping any other kind from the list would pass there. `01-tabelle.gab` carries `E`, `N`,
+/// dropping any other kind from the list would pass there. `0001-tabelle.gab` carries `E`, `N`,
 /// `V` and `S`, so this test bites wherever the omission is. *A completeness check tested over
 /// a unit with one kind is a completeness check tested over nothing.*
 #[test]
 fn e1_haelt_ueber_einer_datei_mit_vier_arten() {
-    let p = wurzel().join("01-tabelle.gab");
+    let p = wurzel().join("0001-tabelle.gab");
     let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
-    let (baum, _) = gabbro_syntax::lies("01-tabelle.gab", &q);
-    let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "01-tabelle.gab", &q);
+    let (baum, _) = gabbro_syntax::lies("0001-tabelle.gab", &q);
+    let (bericht, vollstaendig) = gabbro_check::pflichten::zeige(&baum, "0001-tabelle.gab", &q);
     assert!(vollstaendig, "E1 gefallen:\n{bericht}");
     // **13 -> 15 on 2026-09-04**, and the two are `Kappenraum`'s own invariants
     // (`wurzel_ohne_vorgaenger`:69 and `baum_bleibt_baum`:76). No function of this unit
@@ -628,7 +628,7 @@ fn das_register_traegt_seine_fassung_auf_zeile_eins() {
 
 #[test]
 fn eine_fremdverengung_steht_mit_namen_im_zeugnis() {
-    let z = zeugnis_von("39-auftragsdienst.gab");
+    let z = zeugnis_von("0039-auftragsdienst.gab");
     assert!(
         z.contains("F  FOREIGN CONTRACTS THAT NARROWED"),
         "der Abschnitt fehlt ganz:\n{z}"
@@ -646,7 +646,7 @@ fn eine_fremdverengung_steht_mit_namen_im_zeugnis() {
 
 /// **Und die Gegenrichtung, ohne die die Zahl nichts misst (R14/W17).**
 ///
-/// `beispiele/41-handschlag.gab` hat dieselbe Klausel an derselben Bauform -- `extern fn
+/// `beispiele/0041-handschlag.gab` hat dieselbe Klausel an derselben Bauform -- `extern fn
 /// naechster_puffer() -> Laenge or Quellefehler ensures result >= 1`, gerufen in Zeile 210.
 /// **`Laenge` ist `u32 in 1 .. 4096`, und damit bewegt die Klausel nichts.**
 ///
@@ -655,7 +655,7 @@ fn eine_fremdverengung_steht_mit_namen_im_zeugnis() {
 /// Zaehlung, die jede vorhandene Klausel zaehlt, faellt hier.
 #[test]
 fn eine_klausel_ohne_wirkung_steht_nicht_unter_f() {
-    let z = zeugnis_von("41-handschlag.gab");
+    let z = zeugnis_von("0041-handschlag.gab");
     assert!(
         z.contains("6 foreign bodies (1 state their duty), 0 narrowings from foreign contracts"),
         "die Klausel ist da und bindet niemanden -- Flaeche ja, Verengung nein:\n{z}"
@@ -740,7 +740,7 @@ fn auch_die_relationale_nachbedingung_wird_gebucht() {
 /// this test stands against.
 #[test]
 fn die_befundzeile_trennt_die_nicht_falsifizierbaren_annahmen() {
-    let z = zeugnis_von("06-annahmen.gab");
+    let z = zeugnis_von("0006-annahmen.gab");
     // Gezaehlt wird die LISTE, und die Befundzeile muss dieselbe Zahl tragen. *Ein Literal
     // hier waere ein Muster, das seine eigene Antwort enthaelt* -- die Klasse von W16.
     // **Both patterns mean the A LINE and not the finding line below it** -- and since
@@ -770,17 +770,17 @@ fn die_befundzeile_trennt_die_nicht_falsifizierbaren_annahmen() {
 
 /// **Die GNADENFRIST wird verlangt (`H015`) -- und die Sprechprobe geht in BEIDE Richtungen.**
 ///
-/// `beispiele/31-rcu.gab` gibt unter der Schreibersperre zurueck UND nennt die Gnadenfrist;
+/// `beispiele/0031-rcu.gab` gibt unter der Schreibersperre zurueck UND nennt die Gnadenfrist;
 /// `beispiele/gift/230` tut alles Pruefbare richtig und nennt sie nicht. *Der Unterschied
 /// zwischen beiden sind drei Zeilen, die kein Pass herstellen kann.*
 #[test]
 fn die_gnadenfrist_wird_verlangt_und_nur_sie() {
-    let (codes, bericht, _) = absagen_von(&wurzel().join("31-rcu.gab"));
+    let (codes, bericht, _) = absagen_von(&wurzel().join("0031-rcu.gab"));
     assert!(
         !codes.iter().any(|(c, _)| *c == "H015"),
-        "31-rcu.gab NENNT die Gnadenfrist -- H015 darf hier nicht fallen:\n{bericht}"
+        "0031-rcu.gab NENNT die Gnadenfrist -- H015 darf hier nicht fallen:\n{bericht}"
     );
-    let (codes, bericht, _) = absagen_von(&wurzel().join("gift").join("230-gnadenfrist-fehlt.gab"));
+    let (codes, bericht, _) = absagen_von(&wurzel().join("gift").join("0230-gnadenfrist-fehlt.gab"));
     assert!(
         codes.iter().any(|(c, _)| *c == "H015"),
         "230 nennt sie nicht -- H015 muss fallen:\n{bericht}"
@@ -804,7 +804,7 @@ fn die_gnadenfrist_wird_verlangt_und_nur_sie() {
 /// unsichtbar; jetzt steht sie in der Zahl.*
 #[test]
 fn eine_gruppe_bringt_ihre_sperrabdruckannahme_mit() {
-    let z = zeugnis_von("17-gruppe-ueber-zwei-sperren.gab");
+    let z = zeugnis_von("0017-gruppe-ueber-zwei-sperren.gab");
     assert!(
         z.contains("sperrabdruck_haelt_fremde_kerne_fern"),
         "eine `group` ruht auf dem Sperrabdruck -- die Annahme gehoert ins Zeugnis:\n{z}"
@@ -819,7 +819,7 @@ fn eine_gruppe_bringt_ihre_sperrabdruckannahme_mit() {
     );
     // Und die Gegenrichtung: eine Datei OHNE `group` bringt sie nicht mit. *Eine Annahme,
     // die immer dasteht, unterscheidet nichts.*
-    let ohne = zeugnis_von("31-rcu.gab");
+    let ohne = zeugnis_von("0031-rcu.gab");
     assert!(
         !ohne.contains("sperrabdruck_haelt_fremde_kerne_fern"),
         "ohne `group` ruht nichts auf dem Abdruck:\n{ohne}"
@@ -950,7 +950,7 @@ fn abi_union(libraries: &[&str], caller: &str) -> (String, Vec<&'static str>) {
 /// `RegDecl::requires` and walked past `Uebergang::requires` and past every register inside
 /// a `bank`. The report's own header says *"Every clause and annotation"*.
 ///
-/// `beispiele/02-geraet.gab` is the measuring stick because it carries all three shapes at
+/// `beispiele/0002-geraet.gab` is the measuring stick because it carries all three shapes at
 /// once -- three transition promises, a `bank` with two registers, and an `impl fn` whose
 /// `requires`/`ensures` were the only two `T3` the tool used to print.
 ///
@@ -958,9 +958,9 @@ fn abi_union(libraries: &[&str], caller: &str) -> (String, Vec<&'static str>) {
 /// > assertion would pass over a register that had lost the clause it always had.
 #[test]
 fn eine_geraetezusage_am_uebergang_steht_im_zeremonieregister() {
-    let p = wurzel().join("02-geraet.gab");
+    let p = wurzel().join("0002-geraet.gab");
     let q = std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()));
-    let (baum, _) = gabbro_syntax::lies("02-geraet.gab", &q);
+    let (baum, _) = gabbro_syntax::lies("0002-geraet.gab", &q);
     let stellen = gabbro_check::zeremonie::sammle(&baum, &q);
     let zeile = stellen
         .iter()
@@ -993,7 +993,7 @@ fn eine_geraetezusage_am_uebergang_steht_im_zeremonieregister() {
 /// different assumption from the same one without.**
 #[test]
 fn die_voraussetzung_eines_axioms_steht_im_zeugnis() {
-    let z = zeugnis_von("11-grammatikbefunde.gab");
+    let z = zeugnis_von("0011-grammatikbefunde.gab");
     assert!(
         z.contains("under: Has(RDTSCP)"),
         "the side condition of `axiom rdtscp` is missing from the certificate:\n{z}"
@@ -1002,13 +1002,13 @@ fn die_voraussetzung_eines_axioms_steht_im_zeugnis() {
 
 /// **And the counter-direction, without which the probe above measures nothing** (R14/W17).
 ///
-/// `beispiele/02-geraet.gab` declares five assumptions and NOT ONE carries a side condition.
+/// `beispiele/0002-geraet.gab` declares five assumptions and NOT ONE carries a side condition.
 /// A certificate that printed an `under:` line there would be printing a clause nobody wrote
 /// -- *the same error as the omission, mirrored, and the more expensive one: an invented
 /// premise reads as a narrower promise than the program made.*
 #[test]
 fn ohne_voraussetzung_steht_keine_zeile_im_zeugnis() {
-    let z = zeugnis_von("02-geraet.gab");
+    let z = zeugnis_von("0002-geraet.gab");
     assert!(z.contains("A1  dma_kohaerent"), "die Annahmen fehlen ganz:\n{z}");
     assert!(
         !z.contains("under:"),

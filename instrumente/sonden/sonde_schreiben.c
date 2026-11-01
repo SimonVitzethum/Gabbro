@@ -1,11 +1,11 @@
 /* sonde_schreiben -- the date probe for the supervisor call `schreiben`.
  *
  * THE OBLIGATION, as the checker declares it in the generated header
- * (`gabbro annahmen beispiele/36-asm.gab`):
+ * (`gabbro annahmen beispiele/0036-asm.gab`):
  *
  *     frist_schreiben_eingehalten (assume): falsifier sonde_schreiben
  *
- * and in the source (`beispiele/36-asm.gab`:36):
+ * and in the source (`beispiele/0036-asm.gab`:36):
  *
  *     deadline <= 10 ops arch x86_64 falsifier sonde_schreiben
  *
@@ -100,7 +100,7 @@
 int main(void)
 {
     printf("sonde sonde_schreiben :: frist_schreiben_eingehalten "
-           "(beispiele/36-asm.gab:36, deadline <= 10 ops arch x86_64)\n");
+           "(beispiele/0036-asm.gab:36, deadline <= 10 ops arch x86_64)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -194,7 +194,7 @@ static int dezimal(const char *s, long *aus)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_schreiben :: frist_schreiben_eingehalten "
-           "(beispiele/36-asm.gab:36, deadline <= 10 ops arch x86_64)\n");
+           "(beispiele/0036-asm.gab:36, deadline <= 10 ops arch x86_64)\n");
 
     long iters = DEFAULT_ITERS;
     u64 grenze = BOOKED_MAX_CYCLES;

@@ -299,7 +299,7 @@ theorem table_induction_zeuge :
     decide
   exact table_induction _ _ _ hfin hwf _ hstep 0 hx
 
-/-! ## 20. `table.ops.erhaltung` (by-ops: `16-by-ops-am-feld.gab` plus
+/-! ## 20. `table.ops.erhaltung` (by-ops: `0016-by-ops-am-feld.gab` plus
     the `by ops`/`maintains` corpus sites).
 
 Per generated mutation every `online` invariant OF THIS CARRIER is

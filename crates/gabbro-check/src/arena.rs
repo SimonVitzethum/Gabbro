@@ -74,7 +74,7 @@
 //! What is NOT built, and why (finding, measured): `PLAN-DYNAMIC.md` §4
 //! `R-max` as its own code — refuse the `alloc` whose static count may reach
 //! `M` even with an `else` beside it. Wired with `M = hi` it fires on
-//! `beispiele/99-arena-grenze.gab`'s third `alloc` (`Klein capacity 2 .. 2`,
+//! `beispiele/0099-arena-grenze.gab`'s third `alloc` (`Klein capacity 2 .. 2`,
 //! count 2 == `M`, `else` present): load-bearing corpus behavior (the
 //! boundary demo, emission included) would go red. That is a tightening of
 //! the kind lane 184 was rejected for. Lane 259 wires the rule's dynamic

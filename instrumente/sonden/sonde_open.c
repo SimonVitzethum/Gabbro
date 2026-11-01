@@ -1,6 +1,6 @@
 /* sonde_open -- the falsifier for `linux_open_contract`.
  *
- * THE OBLIGATION, as it stands in the source (`beispiele/149-fd-offen.gab`):
+ * THE OBLIGATION, as it stands in the source (`beispiele/0149-fd-offen.gab`):
  *
  *     assume linux_open_contract
  *         "Open keeps its contract on this machine: a descriptor that fits 32 bits, the mapped errnos."
@@ -56,7 +56,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define KOPF "sonde sonde_open :: linux_open_contract (beispiele/149-fd-offen.gab)\n"
+#define KOPF "sonde sonde_open :: linux_open_contract (beispiele/0149-fd-offen.gab)\n"
 
 #if !defined(__linux__) || !defined(__x86_64__)
 int main(void)

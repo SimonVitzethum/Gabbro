@@ -39,7 +39,7 @@
 // (C11 6.5.3.2p4; UBSan: `member access within null pointer`). The
 // `(uintptr_t)` cast changed the spelling, not the address. The checker now
 // refuses that declaration with `N260`
-// (`beispiele/gift/931-null-pointer-through-an-immutable-static.gab`), and
+// (`beispiele/gift/0931-null-pointer-through-an-immutable-static.gab`), and
 // the file binds its pointer to declared storage instead
 // (`let tz : ptr<normal, rw> Platz = SPEICHER;`).
 //

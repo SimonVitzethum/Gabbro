@@ -759,7 +759,7 @@ fn eine_uebersetzungseinheit_faengt_mit_einem_item_an() {
 
 /// **Jede Korpusdatei steht in einem `module` — und das ist keine Formfrage** (2026-08-20).
 ///
-/// Gefunden von aussen: `beispiele/gift/22-globaler-fakt-nach-aufruf.gab` trug die Notiz
+/// Gefunden von aussen: `beispiele/gift/0022-globaler-fakt-nach-aufruf.gab` trug die Notiz
 /// *„damit das Loch nicht zurueckkehrt"* und war grün. **Dieselbe Datei in ein `module`
 /// gewickelt gab drei Fehler statt einem** — `m1.rs::ist_lokal` fragte die
 /// modulqualifizierte Karte der globalen Grössen mit einem *unqualifizierten* Schlüssel,
@@ -835,7 +835,7 @@ fn keine_zwei_korpusdateien_teilen_eine_nummer() {
             }
             let name = p.file_name().and_then(|x| x.to_str()).unwrap_or("").to_string();
             // Das Praefix bis zum ersten `-`; ein Buchstabe dahinter gehoert dazu
-            // (`11a-divergenz-endet.gab` ist die Gegenprobe zu `11-…` und mit Absicht so).
+            // (`0011a-divergenz-endet.gab` ist die Gegenprobe zu `11-…` und mit Absicht so).
             let Some(nummer) = name.split('-').next() else { continue };
             if nummer.is_empty() || !nummer.chars().next().is_some_and(|c| c.is_ascii_digit()) {
                 continue;
@@ -896,8 +896,8 @@ fn c2_witness_pairs_have_written_expectations() {
 fn user_rights_fall_exactly_once_772_773() {
     use gabbro_syntax::diag::Stufe;
     for (datei, erwartet) in [
-        ("772-user-write-without-right.gab", "R002"),
-        ("773-user-read-without-right.gab", "R003"),
+        ("0772-user-write-without-right.gab", "R002"),
+        ("0773-user-read-without-right.gab", "R003"),
     ] {
         let pfad = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()

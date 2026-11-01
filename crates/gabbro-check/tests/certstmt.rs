@@ -390,7 +390,7 @@ fn let_else_refused() {
 /// A `traverse` loop is refused by name on a real corpus file.
 #[test]
 fn loop_refused() {
-    let b = read("beispiele/04-schleifen.gab");
+    let b = read("beispiele/0004-schleifen.gab");
     let aus = gabbro_check::certstmt::zeige(&b);
     assert!(
         aus.contains("faellige_wecken") && aus.contains("CS001"),
@@ -471,13 +471,13 @@ fn bool_result_refused() {
     assert_eq!(w.code, "CS005", "{}", w.grund);
 }
 
-/// `beispiele/104-referenz.gab`: both bodies print (lane 155 target).
+/// `beispiele/0104-referenz.gab`: both bodies print (lane 155 target).
 /// `einzahlen` writes through the pointer with the index variable, then
 /// calls `lies(k, i)`; `lies` returns through the pointer. The `const`
 /// count `NKONTO` resolves, the first parameter is index 0.
 #[test]
 fn reference_104_prints() {
-    let b = read("beispiele/104-referenz.gab");
+    let b = read("beispiele/0104-referenz.gab");
     assert_eq!(
         gedruckt(&b, "einzahlen"),
         "(.cons2 (.assignThru Konto stand 0 true (.var 1) (.wide 0 100 (.lit 100))) [] (.consCall lies 2 [] ?hp .ret))"

@@ -6,7 +6,7 @@
 //!
 //! # What is irreducible, measured on 2026-09-01
 //!
-//! `beispiele/63-druckt.gab` was taken apart clause by clause, each removal checked with
+//! `beispiele/0063-druckt.gab` was taken apart clause by clause, each removal checked with
 //! `gabbro check` and then BUILT and RUN. Twelve variants; the table is the finding:
 //!
 //! | taken out | `check` | `build` + run |

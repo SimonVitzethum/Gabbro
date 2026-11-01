@@ -6,9 +6,9 @@ import Bruecke.Atomar
 import Bruecke.Quelle
 import Duty.Duty108DisjointStartLocks
 
-/-! BRIDGE-INSTANCE beispiele/108-disjoint-start-locks.gab Bruecke.Instanz108
+/-! BRIDGE-INSTANCE beispiele/0108-disjoint-start-locks.gab Bruecke.Instanz108
 
-    S1+S2 instance: `beispiele/108-disjoint-start-locks.gab` (see `Instanz104.lean`). -/
+    S1+S2 instance: `beispiele/0108-disjoint-start-locks.gab` (see `Instanz104.lean`). -/
 
 namespace Gabbro.Bruecke.I108
 
@@ -49,7 +49,7 @@ example : meetsU u wellFormed rc ((zuBody u rc).getD []) = read_c_meets_statemen
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit108.E8 :=
   startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Einheit108.low8)
 
-/-! BRIDGE-CLOSED beispiele/108-disjoint-start-locks.gab nutzer_bruecke
+/-! BRIDGE-CLOSED beispiele/0108-disjoint-start-locks.gab nutzer_bruecke
 
     S3 instance: the simulation theorem applied to the parser's program of 108 (see
     `Instanz104.lean`); the duties are GabbroV's `read_a_meets` and `read_c_meets`. -/
@@ -72,7 +72,7 @@ theorem stimmig : Stimmig u := stimmig_of (by decide)
 
 theorem rang : Rang u (rangAuto u) := rang_of (by decide)
 
-/-! GENERIC-WITNESS beispiele/108-disjoint-start-locks.gab pflichten_108
+/-! GENERIC-WITNESS beispiele/0108-disjoint-start-locks.gab pflichten_108
 
     P6: the computed statement `Pflichten src108` (`Quelle.lean`), witnessed by the front end's own
     output and GabbroV's duty proofs. -/
@@ -85,7 +85,7 @@ theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammati
   bruecke_nutzer Gabbro.Grammatik.Einheit108.low8 stimmig (rangAuto u) rang meets_alle
     Gabbro.Grammatik.Einheit108.E8 rfl rfl rfl
 
-/-! BRIDGE-ATOMIC beispiele/108-disjoint-start-locks.gab nutzerA_bruecke -/
+/-! BRIDGE-ATOMIC beispiele/0108-disjoint-start-locks.gab nutzerA_bruecke -/
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`): the parser's unit has no shared atomic. -/
 theorem nutzerA_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflichtA Gabbro.Grammatik.Einheit108.E8 :=

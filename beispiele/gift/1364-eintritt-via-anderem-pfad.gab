@@ -23,7 +23,7 @@
 // (`messung/proben/kmodul/sperre-takt.gab` is the running probe). The refusal
 // has to reach that spelling, or the module target has no guard at all.
 //
-// The remedy is the counter-probe `beispiele/166-eintritt-irq-maskiert.gab`:
+// The remedy is the counter-probe `beispiele/0166-eintritt-irq-maskiert.gab`:
 // the same file with `masks irqs`, clean -- so this is a rule and not a ban on
 // the word.
 

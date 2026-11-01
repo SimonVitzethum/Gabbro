@@ -27,7 +27,7 @@ theorem r4_ruhig : ∀ u, u ≠ 0 → ruhig r4P (r4Init u).1 = true := by
   rw [if_neg hu]
   decide
 
-/-- **`ziel_ort_einfaden_ref104`**: `beispiele/104-referenz.gab` certified by
+/-- **`ziel_ort_einfaden_ref104`**: `beispiele/0104-referenz.gab` certified by
     the one-thread theorem, whose premises contain no footprint check. -/
 theorem ziel_ort_einfaden_ref104 :
     ∀ M : RufMaschineG r4D, RufErreichbarG r4P r4O 0 (RufStartG r4P r4Sp r4Init) M →

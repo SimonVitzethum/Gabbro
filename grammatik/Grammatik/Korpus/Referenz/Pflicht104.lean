@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Pflicht104.lean
-  Subject:   THE USER'S HALF for `beispiele/104-referenz.gab`, proved once,
+  Subject:   THE USER'S HALF for `beispiele/0104-referenz.gab`, proved once,
              over the EXPORTED UNIT.
 
   `GenOblig104.lean` is what `gabbro obligations --g` states over the
@@ -33,7 +33,7 @@
   thread runs the runtime's idle root. The theorem below is therefore TRUE
   AND ITS MACHINE IS IDLE. That is what the SOURCE declares, not a weakness
   of the duty: the concurrent instance of the same chain is `Pflicht108.lean`
-  (`beispiele/108-disjoint-start-locks.gab`, two declared starts). That the
+  (`beispiele/0108-disjoint-start-locks.gab`, two declared starts). That the
   program itself is not trivial is witnessed here by `oblig_ruf_bewegt`
   (a call of `einzahlen` moves the slot `0 -> 100`).
 -/
@@ -231,7 +231,7 @@ theorem oblig_start_req : ∀ a ∈ G104_referenz_oblig.gE.starts,
   fun _ ha => absurd ha List.not_mem_nil
 
 /-- **THE USER'S DUTY ON 104, PROVED** -- exactly the `def nutzerPflicht`
-    that `gabbro obligations --g beispiele/104-referenz.gab` states, with no
+    that `gabbro obligations --g beispiele/0104-referenz.gab` states, with no
     hypothesis of any kind. -/
 theorem oblig_nutzer : Zielsatz.NutzerPflicht G104_referenz_oblig.gE where
   logik := oblig_logik

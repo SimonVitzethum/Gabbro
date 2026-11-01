@@ -1,11 +1,11 @@
 /* sonde_speicher_schranke -- the date probe for the fence `speicher_schranke`.
  *
  * THE OBLIGATION, as the checker declares it in the generated header
- * (`gabbro annahmen beispiele/67-befehlsebene.gab`):
+ * (`gabbro annahmen beispiele/0067-befehlsebene.gab`):
  *
  *     frist_speicher_schranke_eingehalten (assume): falsifier sonde_speicher_schranke
  *
- * and in the source (`beispiele/67-befehlsebene.gab`:55):
+ * and in the source (`beispiele/0067-befehlsebene.gab`:55):
  *
  *     deadline <= 10 ops arch x86_64 falsifier sonde_speicher_schranke
  *
@@ -88,7 +88,7 @@
 int main(void)
 {
     printf("sonde sonde_speicher_schranke :: frist_speicher_schranke_eingehalten "
-           "(beispiele/67-befehlsebene.gab:55, deadline <= 10 ops arch x86_64)\n");
+           "(beispiele/0067-befehlsebene.gab:55, deadline <= 10 ops arch x86_64)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -176,7 +176,7 @@ static int dezimal(const char *s, long *aus)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_speicher_schranke :: frist_speicher_schranke_eingehalten "
-           "(beispiele/67-befehlsebene.gab:55, deadline <= 10 ops arch x86_64)\n");
+           "(beispiele/0067-befehlsebene.gab:55, deadline <= 10 ops arch x86_64)\n");
 
     long iters = DEFAULT_ITERS;
     u64 grenze = BOOKED_MAX_CYCLES;

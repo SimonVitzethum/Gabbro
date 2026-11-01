@@ -2,7 +2,7 @@
   File:      Grammatik/ZielOrtGanzZeuge.lean
   Subject:   WITNESSES AND THE PROBE for the goal theorem `ziel_ort_ganz`.
 
-  * `ziel_ort_ganz_ref104`: the corpus program `beispiele/104-referenz.gab`
+  * `ziel_ort_ganz_ref104`: the corpus program `beispiele/0104-referenz.gab`
     (hand translation `r4P`) meets EVERY premise of `ziel_ort_ganz` jointly
     -- the new clause `KeineLogik` by the syntactic check -- and on its
     reached run (memory `0 -> 100`, the return of `einzahlen` logged) the
@@ -34,7 +34,7 @@ import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
 
 namespace Gabbro.Grammatik
 
-/-! ## 1. The corpus program `104-referenz.gab` -/
+/-! ## 1. The corpus program `0104-referenz.gab` -/
 
 /-- No body of `r4P` has a loop invariant or a `state` transition. -/
 theorem r4P_logikFrei : programmLogikFrei r4P r4Fs = true := by decide
@@ -46,7 +46,7 @@ theorem r4P_koerperZ : ∀ f : r4D.Fn, KoerperGutZ r4P 0 (axWahr r4D) f :=
   fun f => ⟨koerperGutRQ_of_R _ (r4P_koerperR f),
     programmLogikFrei_ok r4Fs_voll r4P_logikFrei 0 _ f⟩
 
-/-- **`ziel_ort_ganz_ref104` -- `beispiele/104-referenz.gab` certified by the
+/-- **`ziel_ort_ganz_ref104` -- `beispiele/0104-referenz.gab` certified by the
     goal theorem.** All premises of `ziel_ort_ganz` hold jointly on `r4P`
     (with the trivial declared axiom ensures: the declaration has no axiom),
     the conclusion holds on EVERY reachable machine, and on the reached run

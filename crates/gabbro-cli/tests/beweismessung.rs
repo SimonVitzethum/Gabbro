@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const WURZEL: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
-const DATEI: &str = "beispiele/16-by-ops-am-feld.gab";
+const DATEI: &str = "beispiele/0016-by-ops-am-feld.gab";
 
 fn gabbro() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_gabbro"))
@@ -159,7 +159,7 @@ fn a_lean_that_writes_its_receipt_is_green() {
 /// and is the plain case.
 #[test]
 fn the_template_carries_both_passes_at_the_blocks_column_and_the_budget() {
-    for datei in ["beispiele/55-kindkette.gab", "beispiele/124-two-threads-private.gab"] {
+    for datei in ["beispiele/0055-kindkette.gab", "beispiele/0124-two-threads-private.gab"] {
         let out = Command::new(gabbro())
             .current_dir(WURZEL)
             .args(["prove", "--template", datei])

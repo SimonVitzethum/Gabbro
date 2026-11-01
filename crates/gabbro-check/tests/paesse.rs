@@ -823,7 +823,7 @@ fn unausgerichtete_registerlage_faellt() {
     // register is aligned at every offset, and the rule must not invent a refusal for it.
     faellt_nicht(&d("reg A : u64 @0x08 class rw"));
     faellt_nicht(&d("reg A : u8 @0x03 class rw"));
-    // The corpus shape itself -- `02-geraet.gab` writes exactly this pair.
+    // The corpus shape itself -- `0002-geraet.gab` writes exactly this pair.
     faellt_nicht(&d("reg A : u32 @0x18 class rw\nreg B : u32 @0x1c class rw"));
 }
 
@@ -899,7 +899,7 @@ fn bankregister_jenseits_der_zelle_faellt() {
     // inside the cell by its offset, past it by its width
     faellt_mit(&d("bank F at 0x100 stride 8 count 8 { reg X : u64 @0x10 class rw }"), "N048");
 
-    // **The counter-direction is the real bank of `02-geraet.gab`:** stride 16, two 64-bit
+    // **The counter-direction is the real bank of `0002-geraet.gab`:** stride 16, two 64-bit
     // registers at 0 and 8. It fits exactly, and exactly-fitting must stay silent.
     faellt_nicht(&d(
         "bank F at 0x100 stride 16 count 8 { reg X : u64 @0x0 class rw reg Y : u64 @0x8 class rw }",
@@ -932,7 +932,7 @@ fn bank_ueber_fremden_bytes_faellt() {
     );
 
     // **The counter-direction, and the last case is the one that keeps the rule honest:** a
-    // COMPUTED base stays silent, exactly as `N009` promises for itself. `02-geraet.gab`
+    // COMPUTED base stays silent, exactly as `N009` promises for itself. `0002-geraet.gab`
     // writes `bank FRR at CAP.FRO * 16`.
     faellt_nicht(&d(
         "reg C : u64 @0xf8 class rw\nbank F at 0x100 stride 8 count 8 { reg X : u64 @0x0 class rw }",
@@ -1026,7 +1026,7 @@ fn bankindex_jenseits_der_wortbreite_faellt() {
     // **The counter-direction, and the first case is the boundary itself:**
     // `0xFFF * 0x100000 == 0xFFF00000`, the largest product that still fits.
     faellt_nicht(&d("bank F at 0x0 stride 0x100000 count 0x1000 { reg X : u64 @0x0 class rw }"));
-    // The corpus shape -- `02-geraet.gab` writes `stride 16 count 256`.
+    // The corpus shape -- `0002-geraet.gab` writes `stride 16 count 256`.
     faellt_nicht(&d(
         "bank F at 0x100 stride 16 count 256 { reg X : u64 @0x0 class rw reg Y : u64 @0x8 class rw }",
     ));
@@ -1486,7 +1486,7 @@ fn ein_traeger_in_aligned_verbindet_die_gruppe() {
 /// accepted, and emitted as an out-of-bounds C subscript over `T_slot slots[8];`.
 ///
 /// Found by `instrumente/fuzze-grenzen.py`; the poison probe is
-/// `beispiele/gift/601-an-index-too-wide-to-have-a-type.gab`.
+/// `beispiele/gift/0601-an-index-too-wide-to-have-a-type.gab`.
 #[test]
 fn ein_literal_breiter_als_i128_faellt() {
     let index = |wert: &str| {
@@ -1561,7 +1561,7 @@ fn das_when_eines_tauschs_traegt_die_wirkung() {
 
     // **The counter-direction, and it is the whole reason this arm is narrow.** A
     // compare-exchange whose expected value is an ordinary expression must stay silent --
-    // the literal form the corpus writes (`beispiele/35-tausch.gab`), and a call that keeps
+    // the literal form the corpus writes (`beispiele/0035-tausch.gab`), and a call that keeps
     // its promise.
     faellt_nicht(&quelle("writes AT, publishes AT", "0"));
     faellt_nicht(&quelle("writes AT, publishes AT", "frei()"));
@@ -1793,7 +1793,7 @@ fn ein_praedikatsname_ohne_deklaration_faellt() {
 /// probes, and every line here stands for one of them.
 #[test]
 fn ein_praedikat_darf_nennen_was_ein_rumpf_nicht_kann() {
-    // `Held(L)` at every `impl fn` of `beispiele/01-tabelle.gab`, and in brackets too --
+    // `Held(L)` at every `impl fn` of `beispiele/0001-tabelle.gab`, and in brackets too --
     // between brackets the form is an ordinary CALL in the tree, and the argument would
     // otherwise be read as a place.
     let sperre = |req: &str| {
@@ -2431,7 +2431,7 @@ fn eine_bruchschranke_an_einem_ganzzahltyp() {
     faellt_nicht(&m("type T = f64 in 0.5 .. 1.5;"));
     // (c) **a `narrow` at a FLOAT place**, and this one is not decoration: the first build
     //     of this rule read the range without its place and refused
-    //     `beispiele/26-gleitkomma.gab`:42 -- the file that exists to show `narrow … else`
+    //     `beispiele/0026-gleitkomma.gab`:42 -- the file that exists to show `narrow … else`
     //     as the NaN path. *W10 in the expensive direction, found by the corpus sweep and
     //     not by the design.*
     faellt_nicht(&m(
@@ -4858,7 +4858,7 @@ impl fn runde(i : index into Plaetze) -> bool
 /// A user-made gate over an opaque `Fd` carrier -- invented ABI name,
 /// invented number, no errno names at all -- checks clean: no rule keys on
 /// `linux`, on a number, or on an errno name. The file forms of the same
-/// shape are `beispiele/149-fd-offen.gab` + `/150-fd-lesen.gab` (real user
+/// shape are `beispiele/0149-fd-offen.gab` + `/0150-fd-lesen.gab` (real user
 /// data, checked and emitted); the poison sides are `beispiele/gift/1067`
 /// (`D004`, the crossing) and `/1068` (`D003`, the computation, pinned
 /// exactly below).
@@ -4951,7 +4951,7 @@ impl fn f()
 /// (16 ops) per `locks` acquisition under `held <= 64 ops` -- no `traverse`
 /// under a held lock anywhere, so neither K002 nor N421 has anything to hold.
 /// The production shape (unrolled windows with a round-robin tick over 1024
-/// slots) is `beispiele/147-ftp-alg-control.gab`; this is its minimal core:
+/// slots) is `beispiele/0147-ftp-alg-control.gab`; this is its minimal core:
 /// each window fits the bound, and each window re-establishes the lock
 /// invariant at its own release, so the lock leg holds across chunks.
 #[test]

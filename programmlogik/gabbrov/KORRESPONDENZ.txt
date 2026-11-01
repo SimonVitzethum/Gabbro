@@ -30,7 +30,7 @@ checks exactly that — a row that names nothing is not a correspondence.*
 | Lean construct | Gabbro counterpart | Verdict | Evidence |
 |---|---|---|---|
 | `LEAN ∧/∨/¬/→` | `GABBRO Und/Oder/Nicht/Folgt/Klammer` | `GREEN` | `lean.rs:1308` carries all three connectives; `.bin`/`.un` emitted over `messung/fragmente/F01.gab` |
-| `LEAN =/≠` | `GABBRO Vergleich` | `GREEN` | `lean.rs:1305` (`in_expr`), `:1337` (`expr_term`); `duty_4`–`duty_6` carried over `beispiele/01-tabelle.gab` |
+| `LEAN =/≠` | `GABBRO Vergleich` | `GREEN` | `lean.rs:1305` (`in_expr`), `:1337` (`expr_term`); `duty_4`–`duty_6` carried over `beispiele/0001-tabelle.gab` |
 | `LEAN allD/forallSlots` | `GABBRO Quantor/SlotsVon/ElementeVon/Alle/Existiert` | `GREEN` | `lean.rs:1376` carries `Alle`/`Existiert`; `(.forallSlots …)` emitted; `F01.gab`: `total 17 goals 17 refused 0` |
 | `LEAN World` | `GABBRO Vergleich` | `GREEN` | single-state predicates: the V1 rows over one `World` (`L18`–`L22`: `reg w "GSTS" …`); carried |
 | `LEAN State` | `GABBRO ensures/requires/old` | `GREEN` | relations over pre/post pairs: 20 of the 66 V1 rows take `(s s')`; the `V` call-site duties of `F01.gab` are carried. §7's phrase *"predicates over values"* reads as one state and is corrected in `GABBROV.md` §7 (§7.1) |

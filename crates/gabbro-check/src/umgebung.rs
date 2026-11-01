@@ -189,7 +189,7 @@ pub struct Umgebung {
     /// A `transition` enters `funktionen` with `parameter: Vec::new()`, and that empty list
     /// is not a statement: the grammar gives a transition no parameter list at all, while
     /// the call `wurzel_setzen(v)` passes the carrier. **`M143` compares the two lists and
-    /// would read the placeholder as `declares 0`** -- it did, over `beispiele/02-geraet.gab`,
+    /// would read the placeholder as `declares 0`** -- it did, over `beispiele/0002-geraet.gab`,
     /// twice, before this set existed.
     ///
     /// `uebergangskosten` is not the discriminator, though it looks like one: a `device`

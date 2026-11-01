@@ -2353,7 +2353,7 @@ correspondence changes the current output-only translation promise and requires
 owner review; it adds no oracle assumption. Missing/ambiguous translator,
 unretained tokens, malformed schema, wrong arity/type, unproved totality/map,
 effects, mutable/linear payload and unproved payload precondition stay refused.
-Witnesses: existing `beispiele/106-summe-uebersetzt.gab` identity, a nonidentity
+Witnesses: existing `beispiele/0106-summe-uebersetzt.gab` identity, a nonidentity
 bounded map, two call sites with different regions, multi-field/product payload,
 payload-reading requires and both call outcomes. Negative twins include a
 well-typed **wrong** translator output, reordered arguments, changed translator
@@ -2433,7 +2433,7 @@ all privileged entry/register/boot operations.
 
 `Parser/Item/ElementTief.accT` stores name/type/operator/optional core count;
 `Uebersetze.lean:4039` refuses it. `Isabelle/AccumulatesMonoid` proves abstract
-fold/permutation/RMW identities, not actual cells. `beispiele/23-akkumulatoren.gab`
+fold/permutation/RMW identities, not actual cells. `beispiele/0023-akkumulatoren.gab`
 states assignment means merge, the core query is a foreign binding, and live
 folds are not atomic snapshots. `Zielsatz/Eigenschaften/KernMaske`'s
 `kern : Faden → Nat` is a schedule parameter, not a runtime core-query theorem.

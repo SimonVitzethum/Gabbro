@@ -1,12 +1,12 @@
 /-
   File:      Grammatik/Referenz104.lean
-  Subject:   `beispiele/104-referenz.gab`, TRANSLATED BY HAND into the Lean
+  Subject:   `beispiele/0104-referenz.gab`, TRANSLATED BY HAND into the Lean
              syntax, run on machine G, and checked against the premises of
              `ziel_ort_voll`.
 
   ## The translation, construct by construct
 
-  | surface (104-referenz.gab)                    | Lean form here                                  |
+  | surface (0104-referenz.gab)                    | Lean form here                                  |
   |-----------------------------------------------|-------------------------------------------------|
   | `module beispiel::referenz { … }`             | NO FORM (a namespace; this file)                |
   | `const NKONTO : u32 = 2;`                     | inlined: `count := fun _ => 2`                  |
@@ -114,7 +114,7 @@ def r4SigRuhe : Signatur Unit Empty Unit Empty where
   konsumiert := []
   produziert := []
 
-/-- `104-referenz.gab`'s declarations: table `Konto` (2 slots, field
+/-- `0104-referenz.gab`'s declarations: table `Konto` (2 slots, field
     `stand : 0 .. 100`), lock `M` (rank 0) protecting it; functions
     `einzahlen`, `lies`, and the flagged additions `treiber`, `ruhe`. -/
 def r4D : Deklaration where
@@ -434,7 +434,7 @@ theorem r4Boese_ohne : OhneVorbedingung r4Boese := by
   | ruhe => cases h; cases he
 
 /-- **The finding (`r4_einzahlen_nicht_V`).** `einzahlen` of
-    `104-referenz.gab` does NOT meet the user obligation of the goal
+    `0104-referenz.gab` does NOT meet the user obligation of the goal
     theorems: from an entry world with the slot at `50`, the body writes
     `100` and calls `lies`; the contract-respecting handler `r4Boese`
     answers `lies` with the slot at `0` (and result `0`, so `lies`'s
@@ -473,7 +473,7 @@ theorem r4Hoff {M : RufMaschineG r4D} {f : Faden} {z : RufFadenG r4D} {x : List 
     (e : M.faeden f = z) (ho : offen (M.faeden f).spur = x) : offen z.spur = x := by
   rw [← e]; exact ho
 
-/-- **The run of `104-referenz.gab` on G** (7 steps of thread 0): the driver
+/-- **The run of `0104-referenz.gab` on G** (7 steps of thread 0): the driver
     calls `einzahlen(&Konto, 0, 7)` (1), which writes `Konto[0].stand = 100`
     through its pointer (2: memory `0 -> 100`), calls `lies(k, 0)` (3), which
     returns the slot (4, logged); `einzahlen` returns (5, logged); the
@@ -595,7 +595,7 @@ theorem r4Lauf : ∃ M : RufMaschineG r4D,
 /-! ## 7. The premises, jointly -/
 
 /-- **`referenz104_zeuge`.** On the hand translation of
-    `104-referenz.gab` (plus the flagged driver and idle function), every
+    `0104-referenz.gab` (plus the flagged driver and idle function), every
     premise of `ziel_ort_voll` holds EXCEPT the user obligation of
     `einzahlen`, which is refuted; the declared costs pass `kostenPasst`;
     on the reached run (memory `0 -> 100`, the return of `einzahlen`
@@ -617,7 +617,7 @@ theorem referenz104_zeuge :
 
 /-! ## CUTS:
 
-  What is proved: the hand translation `r4D`/`r4P` of `104-referenz.gab`
+  What is proved: the hand translation `r4D`/`r4P` of `0104-referenz.gab`
   (the construct table in the header); the decidable premises
   (`r4P_fragment`, `r4P_fuss`), the declared costs (`r4P_kostenPasst`),
   `GutO`, the start facts, the user obligations of `lies`, the driver and

@@ -1,12 +1,12 @@
 /-
   File:      Grammatik/ExportSperre.lean
-  Subject:   the mechanical export of `beispiele/118-sperrinvariante-erhaltung.gab`
+  Subject:   the mechanical export of `beispiele/0118-sperrinvariante-erhaltung.gab`
              (lane 156): the `SperrInv` lock invariant family for a
              conserved-sum invariant over two carriers under one lock.
 
   The `namespace G118_sperrinvariante_erhaltung` block below is pasted
   verbatim from the output of
-  `gabbro lean-g beispiele/118-sperrinvariante-erhaltung.gab` (only its two
+  `gabbro lean-g beispiele/0118-sperrinvariante-erhaltung.gab` (only its two
   `import` lines are left out; this file imports instead). What follows the
   paste is the correspondence: `gS_orte_K` exhibits the `orte` list as
   exactly the `protects` set, by `rfl`.

@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Korpus/Programme/Einheit108.lean
-  Subject:   `beispiele/108-disjoint-start-locks.gab` as the goal theorem's UNIT, through the
+  Subject:   `beispiele/0108-disjoint-start-locks.gab` as the goal theorem's UNIT, through the
              generic Lean pipeline: the real source text (`src108`) is parsed, elaborated and
              lowered (`uebersetzeAllg`); one table `T` (4 slots, one `u32` field), no lock, two
              readers `read_a`/`read_c`, declared `concurrent { read_a, read_c }`. The unit holds

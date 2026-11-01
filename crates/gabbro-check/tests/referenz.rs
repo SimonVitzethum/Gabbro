@@ -1,6 +1,6 @@
 //! Lane 126 -- the reference fixture as a real Gabbro program.
 //!
-//! `beispiele/104-referenz.gab` is the Lean reference fixture
+//! `beispiele/0104-referenz.gab` is the Lean reference fixture
 //! (`grammatik/Grammatik/Korrespondenz/Allgemein/ReferenzB.lean`: `refD`/`refP`) in surface syntax.
 //! These tests print the checker's Lean view of it (whatever `lean.rs`
 //! produces: the duty register `module` and the program datum `program`)
@@ -17,14 +17,14 @@ fn quelle() -> String {
         .join("..")
         .join("..")
         .join("beispiele")
-        .join("104-referenz.gab");
-    std::fs::read_to_string(&pfad).expect("104-referenz.gab is readable")
+        .join("0104-referenz.gab");
+    std::fs::read_to_string(&pfad).expect("0104-referenz.gab is readable")
 }
 
 /// Parse and check; the file is a corpus example, so zero errors are owed.
 fn baum() -> Programm {
     let q = quelle();
-    let (baum, mut absagen) = gabbro_syntax::lies("104-referenz.gab", &q);
+    let (baum, mut absagen) = gabbro_syntax::lies("0104-referenz.gab", &q);
     gabbro_check::pruefe(&baum, &mut absagen);
     let fehler: Vec<String> = absagen
         .absagen
@@ -32,7 +32,7 @@ fn baum() -> Programm {
         .filter(|a| a.stufe == Stufe::Fehler)
         .map(|a| format!("[{}] {}", a.code, a.text.lines().next().unwrap_or("")))
         .collect();
-    assert!(fehler.is_empty(), "104-referenz.gab must check clean: {fehler:?}");
+    assert!(fehler.is_empty(), "0104-referenz.gab must check clean: {fehler:?}");
     baum
 }
 
@@ -76,13 +76,13 @@ fn checker_accepts_referenz() {
 #[test]
 fn lean_duty_view_matches_refD() {
     let b = baum();
-    let duty = gabbro_check::lean::module(&b, "beispiele/104-referenz.gab");
+    let duty = gabbro_check::lean::module(&b, "beispiele/0104-referenz.gab");
     // The Lean view, printed: this is the checker's reading of the program.
     println!("{duty}");
     // The line that has to add up: 2 routines, 3 duties (2 ensures + 1 call
     // precondition), all carried, none refused.
     assert!(
-        duty.contains("@duty 1  beispiele/104-referenz.gab  total 3  goals 3  refused 0"),
+        duty.contains("@duty 1  beispiele/0104-referenz.gab  total 3  goals 3  refused 0"),
         "duty balance line moved:\n{duty}"
     );
     // `refD.typ () () = .int 0 100`: the slot shape carries the range.
@@ -192,7 +192,7 @@ fn erklaerung_gestalt_matches_refD() {
 fn lean_program_view_carries_refD() {
     let b = baum();
     let prog =
-        gabbro_check::lean::program(&b, &["beispiele/104-referenz.gab".to_string()]);
+        gabbro_check::lean::program(&b, &["beispiele/0104-referenz.gab".to_string()]);
     println!("{prog}");
     assert!(
         prog.contains("@program 1  units 1  routines 2  bodies 2  refused 0  places 1"),
@@ -268,7 +268,7 @@ fn lean_program_view_carries_refD() {
     );
 }
 
-/// Lane 141, F1 of lane 126: the `concurrent` set of `104-referenz.gab` is
+/// Lane 141, F1 of lane 126: the `concurrent` set of `0104-referenz.gab` is
 /// classified by the certificate census (erased: the emitter writes nothing
 /// for it), so no `UNCLASSIFIED` remains and stage 7 of the emission check
 /// passes over a concurrent program.
@@ -278,7 +278,7 @@ fn concurrent_is_classified() {
     // signature lock M); the census is pinned on `beispiele/108`, whose
     // declared pair starts under disjoint locks.
     let pfad = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../beispiele/108-disjoint-start-locks.gab");
+        .join("../../beispiele/0108-disjoint-start-locks.gab");
     let q = std::fs::read_to_string(&pfad).expect("108 is readable");
     let (b, _) = gabbro_syntax::lies("108.gab", &q);
     let e = gabbro_check::zeugnis::erhebe(&b);

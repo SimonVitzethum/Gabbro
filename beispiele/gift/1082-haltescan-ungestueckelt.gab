@@ -9,7 +9,7 @@
 // cores, not a fix.
 //
 // WHAT TO WRITE INSTEAD is the windowed shape of
-// `beispiele/147-ftp-alg-control.gab`: one bounded window per `locks`
+// `beispiele/0147-ftp-alg-control.gab`: one bounded window per `locks`
 // acquisition, each window fitting `held`, each window re-establishing the
 // lock invariant at its own release. The positive half stands beside this
 // probe in `paesse.rs` (`haltezeit_fenster_*`): the same table swept in

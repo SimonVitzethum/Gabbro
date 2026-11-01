@@ -71,9 +71,9 @@ fn ziele_stehen_beim_wort() {
 /// stehen in jeder Datei, auf beiden Zielen.
 #[test]
 fn kopf_traegt_ziel_und_ehrlichkeit() {
-    let quelle = std::fs::read_to_string(wurzel().join("63-druckt.gab")).expect("63 lesbar");
+    let quelle = std::fs::read_to_string(wurzel().join("0063-druckt.gab")).expect("63 lesbar");
     for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
-        let (ir, codes) = senke(&quelle, "63-druckt.gab", ziel);
+        let (ir, codes) = senke(&quelle, "0063-druckt.gab", ziel);
         assert!(fehler(&codes).is_empty(), "63 fällt mit {codes:?}");
         assert!(ir.contains(&format!("target triple = \"{}\"", ziel.triple)), "kein Triplett");
         assert!(
@@ -88,8 +88,8 @@ fn kopf_traegt_ziel_und_ehrlichkeit() {
 /// gerufen — die Form, die `baue-llvm.sh` danach übersetzt und ausführt.
 #[test]
 fn hallo_als_ir() {
-    let quelle = std::fs::read_to_string(wurzel().join("63-druckt.gab")).expect("63 lesbar");
-    let (ir, _) = senke(&quelle, "63-druckt.gab", &ZIEL_X86_64);
+    let quelle = std::fs::read_to_string(wurzel().join("0063-druckt.gab")).expect("63 lesbar");
+    let (ir, _) = senke(&quelle, "0063-druckt.gab", &ZIEL_X86_64);
     assert!(ir.contains("define i32 @\"main\"()"), "kein main:\n{ir}");
     assert!(ir.contains("declare i32 @\"putchar\"(i32 noundef)"), "kein putchar:\n{ir}");
     assert_eq!(ir.matches("call i32 @\"putchar\"").count(), 6, "keine sechs Rufe:\n{ir}");
@@ -102,11 +102,11 @@ fn hallo_als_ir() {
 #[test]
 fn saubere_senken_auf_beiden_zielen() {
     for datei in [
-        "19-traversierung.gab",
-        "21-verbundwert.gab",
-        "168-bytes-through-a-pointer.gab",
-        "171-narrow-nach-eigener-deklaration.gab",
-        "130-derived-contract-pure.gab",
+        "0019-traversierung.gab",
+        "0021-verbundwert.gab",
+        "0168-bytes-through-a-pointer.gab",
+        "0171-narrow-nach-eigener-deklaration.gab",
+        "0130-derived-contract-pure.gab",
     ] {
         let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("{datei} lesbar");
         for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
@@ -124,7 +124,7 @@ fn verweigerung_ist_zielunabhaengig() {
     for (datei, code) in [
         ("1427-opaque-ohne-llvm.gab", "Y101"),
         ("1428-sperre-ohne-llvm.gab", "Y102"),
-        ("196-descendants-nur-mit-elter.gab", "Y103"),
+        ("0196-descendants-nur-mit-elter.gab", "Y103"),
         ("1430-aligned-ohne-llvm.gab", "Y104"),
     ] {
         let quelle =
@@ -296,7 +296,7 @@ pub fn main() -> never
 /// selbst trägt kein IR (Verfeinerung Gabbro→Binary).
 #[test]
 fn beleg_ohne_llvm() {
-    let quelle = std::fs::read_to_string(wurzel().join("63-druckt.gab")).expect("63 lesbar");
+    let quelle = std::fs::read_to_string(wurzel().join("0063-druckt.gab")).expect("63 lesbar");
     let (baum, mut absagen) = gabbro_syntax::lies("63", &quelle);
     gabbro_check::pruefe(&baum, &mut absagen);
     let (_, beleg) = gabbro_check::llvm::emittiere_llvm_mit_beleg(
@@ -306,7 +306,7 @@ fn beleg_ohne_llvm() {
         &ZIEL_X86_64,
     );
     assert!(absagen.fehler_zahl() == 0);
-    let lean = beleg.als_lean("63-druckt.gab");
+    let lean = beleg.als_lean("0063-druckt.gab");
     // Kein LLVM darin (Verfeinerung Gabbro→Binary, nicht über Zwischentext).
     assert!(!lean.contains("define i32"), "IR im Beleg!");
     assert!(!lean.contains("target triple = "), "IR-Rest im Beleg!");
@@ -321,7 +321,7 @@ fn beleg_ohne_llvm() {
 #[test]
 fn annahmen_reisen_mit() {
     let quelle =
-        std::fs::read_to_string(wurzel().join("171-narrow-nach-eigener-deklaration.gab"))
+        std::fs::read_to_string(wurzel().join("0171-narrow-nach-eigener-deklaration.gab"))
             .expect("171 lesbar");
     let (baum, mut absagen) = gabbro_syntax::lies("171", &quelle);
     gabbro_check::pruefe(&baum, &mut absagen);
@@ -493,7 +493,7 @@ fn beleg_elaboriert_mit_lean() {
         eprintln!("SKIP beleg_elaboriert_mit_lean: no `lean` on PATH or in ~/.elan/bin");
         return;
     };
-    let quelle63 = std::fs::read_to_string(wurzel().join("63-druckt.gab")).expect("63 lesbar");
+    let quelle63 = std::fs::read_to_string(wurzel().join("0063-druckt.gab")).expect("63 lesbar");
     let faelle: [(&str, &str, &gabbro_check::llvm::Ziel); 3] = [
         ("beleg63", &quelle63, &ZIEL_X86_64),
         ("belegtor", TOR_QUELLE, &ZIEL_AARCH64),
@@ -677,7 +677,7 @@ fn child_springt_im_kind_auf_den_uebergebenen_stapel() {
 /// auf aarch64 steht kein Tor da, der Ruf fällt beim Namen (nicht still).
 #[test]
 fn stapeltor_beispiele_senken_auf_x86_und_fallen_auf_aarch64_benannt() {
-    for datei in ["155-kind-uebergabe.gab", "156-kind-verzweigt.gab", "160-kind-liest-stapel.gab", "1114-kind-handed-read.gab"] {
+    for datei in ["0155-kind-uebergabe.gab", "0156-kind-verzweigt.gab", "0160-kind-liest-stapel.gab", "1114-kind-handed-read.gab"] {
         let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
         let ir = senke_ohne_fehler(&quelle, datei, &ZIEL_X86_64);
         assert!(ir.contains("callq gabbro_kind_0"), "{datei}: der Stapelruf springt in die Region");
@@ -781,7 +781,7 @@ fn entry_boot_entrust_fallen_benannt() {
     let doppelt = EINTRITT_QUELLE.replace("vector 13", "vector 0x80");
     let (_, codes) = senke(&doppelt, "doppelt", &ZIEL_X86_64);
     assert!(fehler(&codes).contains(&"Y102"), "zweiter Eintritt auf demselben Vektor");
-    for datei in ["07-eintritt-und-boot.gab", "25-entrust.gab"] {
+    for datei in ["0007-eintritt-und-boot.gab", "0025-entrust.gab"] {
         let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
         let (_, codes) = senke(&quelle, datei, &ZIEL_X86_64);
         assert!(fehler(&codes).contains(&"Y102"), "{datei} fällt beim Namen");
@@ -859,13 +859,13 @@ fn publish_und_await_halten_seq_cst() {
 #[test]
 fn publish_beispiele_senken_auf_beiden_zielen() {
     for datei in [
-        "117-message-passing-flag.gab",
-        "141-atomic-array-pairing.gab",
-        "14-paarung-ueber-zwischenfunktion.gab",
-        "39-auftragsdienst.gab",
-        "41-handschlag.gab",
-        "42-zaehlwerk.gab",
-        "43-gegenprobe.gab",
+        "0117-message-passing-flag.gab",
+        "0141-atomic-array-pairing.gab",
+        "0014-paarung-ueber-zwischenfunktion.gab",
+        "0039-auftragsdienst.gab",
+        "0041-handschlag.gab",
+        "0042-zaehlwerk.gab",
+        "0043-gegenprobe.gab",
     ] {
         let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
         for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
@@ -880,7 +880,7 @@ fn publish_beispiele_senken_auf_beiden_zielen() {
 /// for the count to reach zero (`acquire` load) after its ticket. Same on both targets.
 #[test]
 fn geteilte_sperre_ist_leser_schreiber() {
-    for datei in ["10-geteilte-sperre.gab", "13-zeuge-mit-staerke.gab"] {
+    for datei in ["0010-geteilte-sperre.gab", "0013-zeuge-mit-staerke.gab"] {
         let quelle = std::fs::read_to_string(wurzel().join(datei)).expect("lesbar");
         for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
             let (ir, codes) = senke(&quelle, datei, ziel);
@@ -890,7 +890,7 @@ fn geteilte_sperre_ist_leser_schreiber() {
             assert!(ir.contains(".leser\", i32 1 release"), "{datei}: Austritt\n{ir}");
         }
     }
-    let quelle = std::fs::read_to_string(wurzel().join("10-geteilte-sperre.gab")).expect("lesbar");
+    let quelle = std::fs::read_to_string(wurzel().join("0010-geteilte-sperre.gab")).expect("lesbar");
     let (ir, _) = senke(&quelle, "10", &ZIEL_X86_64);
     // The writer (`rechte_setzen`) drains the readers after its ticket.
     let schreiber = ir.split("define void @\"rechte_setzen\"").nth(1).expect("Schreiber");
@@ -1018,7 +1018,7 @@ fn beispiel(datei: &str) -> String {
 /// `$$1`, `result : "=a"` the output `={ax}`. On aarch64 the x86 bodies are refused BY NAME.
 #[test]
 fn asm_rumpf_ist_ein_inline_asm_nur_fuer_seine_maschine() {
-    let q = beispiel("36-asm.gab");
+    let q = beispiel("0036-asm.gab");
     let ir = senke_ohne_fehler(&q, "36", &ZIEL_X86_64);
     assert!(ir.contains("define void @\"ausgeben\"(i16 noundef %p0, i8 noundef %p1)"), "{ir}");
     assert!(
@@ -1080,7 +1080,7 @@ impl fn f(x : u64) -> u64
 /// of a port space.
 #[test]
 fn portraum_ist_in_und_out_und_sonst_nichts() {
-    let q = beispiel("65-port-space.gab");
+    let q = beispiel("0065-port-space.gab");
     let ir = senke_ohne_fehler(&q, "65", &ZIEL_X86_64);
     assert!(ir.contains("asm sideeffect \"inb %dx, %al\", \"={al},{dx},~{memory}\"(i16 "), "{ir}");
     assert!(ir.contains("asm sideeffect \"outb %al, %dx\", \"{al},{dx},~{memory}\"(i8 "), "{ir}");
@@ -1210,7 +1210,7 @@ fn aarch64_eintritt_verweigert_was_er_nicht_schreiben_kann() {
 /// no body, and an `entrust` has no source form that transfers control to it.
 #[test]
 fn boot_und_entrust_bleiben_benannt_verweigert() {
-    for datei in ["07-eintritt-und-boot.gab", "25-entrust.gab"] {
+    for datei in ["0007-eintritt-und-boot.gab", "0025-entrust.gab"] {
         let q = beispiel(datei);
         for ziel in [&ZIEL_X86_64, &ZIEL_AARCH64] {
             let (_, codes) = senke(&q, datei, ziel);

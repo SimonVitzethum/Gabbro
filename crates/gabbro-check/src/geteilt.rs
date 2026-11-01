@@ -320,7 +320,7 @@ pub fn pass_mit(
     // **Welche RCU-Domaene traegt eine GNADENFRISTANNAHME?** (`H015`, 2026-08-21)
     //
     // Eine Annahme deckt eine Domaene, wenn ihr Satz die Domaene BEIM NAMEN nennt -- so, wie
-    // `beispiele/31-rcu.gab` es seit jeher schreibt: *„Nach der Ruecknahme des Zeigers ist
+    // `beispiele/0031-rcu.gab` es seit jeher schreibt: *„Nach der Ruecknahme des Zeigers ist
     // kein Leser mehr in einem `observes BACCT`."*
     //
     // Der Abgleich laeuft ueber WORTGRENZEN und nicht ueber `contains`: ein Domaenenname ist
@@ -2734,7 +2734,7 @@ fn rcu_schutz(
                 // statischer Pass her. **Also wird sie verlangt statt hergestellt** --
                 // dieselbe Regel wie `S003` an `progress`, an einem anderen Konstrukt.
                 //
-                // Gemessen am 2026-08-21, vor dem Bau: `beispiele/43-gegenprobe.gab`
+                // Gemessen am 2026-08-21, vor dem Bau: `beispiele/0043-gegenprobe.gab`
                 // deklariert `rcu BACCT … reclaims frei` und nannte keine Gnadenfrist --
                 // *0 Fehler.* Der Posten im Ordner stimmte.
                 //

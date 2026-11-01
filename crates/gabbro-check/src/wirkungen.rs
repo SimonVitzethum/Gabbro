@@ -573,7 +573,7 @@ fn pruefe_touches(
     // lane 222) lands in the AST, its bound expressions join this exact spot
     // beside it: evaluated means read. The CARRIER walk itself stays the
     // function level's business (`domaene_liest` in `sammle_taten` below):
-    // `beispiele/09-ohne-zeiger.gab` (`touches consumes Kappenraum.slots`
+    // `beispiele/0009-ohne-zeiger.gab` (`touches consumes Kappenraum.slots`
     // over `descendants of Kappenraum.slots[s]`) and `beispiele/57-
     // faedenhalt.gab` (`touches writes Faden.slots` over `slots of Faden`)
     // both name the body and leave the walk to the function effects -- that

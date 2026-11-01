@@ -303,7 +303,7 @@ single repeated acquisition of one lock class in the tree (`system.rs:15`: *no p
 different `SCHEDS[*]` at once*; migration is take, select, release, then revalidate) — *the test
 killed its own candidate*. Two real gaps found instead: **L-A** no shared lock acquisition (the
 hottest path, cap resolution, was unwritable) → built the same day: `locks [shared] …`,
-`shared held <= K ops`, refusals `H001`–`H004`, `E007`, `K004`, example `10-geteilte-sperre.gab`,
+`shared held <= K ops`, refusals `H001`–`H004`, `E007`, `K004`, example `0010-geteilte-sperre.gab`,
 poison `38`–`41`, +5 mutations all caught; **L-B** handover with revalidation (`ghost Stale(T)`) →
 carried as a *condition*, not a construct (F8, «B38»). **N1** (to Caprock, not Gabbro): the two
 documented lock orders contradict each other (`MEM` as leaf versus `MEM` in the middle of a
@@ -358,7 +358,7 @@ The ownership chain "has no beginning" was a problem only because the Rust origi
 `&mut CapSpace`: kernel state is one instance behind a lock. **A `table` IS memory** (its name is
 its place, no pointer pair, no aliasing question); **the parameter list of a `device` IS its
 constructor** (the address comes from data, not out of nowhere). F1 and F2 were written out without
-one pointer through all five passes (`beispiele/09-ohne-zeiger.gab`). What remains are DMA buffers,
+one pointer through all five passes (`beispiele/0009-ohne-zeiger.gab`). What remains are DMA buffers,
 allocated regions and foreign memory — `own` pointers, consumed if `effects` names them under
 `consumes`, otherwise borrowed. *A fragment that translates its original along brings that
 original's constraints with it, and those then look like requirements of the new language.*

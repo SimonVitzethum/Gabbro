@@ -48,7 +48,7 @@ theorem s02 : beqTopStmt (parseTopStmt st02)
         (.variable "s")) "marke")
       "+=" (.lit 1))) = true := by
   decide
--- beispiele/01-tabelle.gab:156. Rust: `Zuweisung` with `Plus` --
+-- beispiele/0001-tabelle.gab:156. Rust: `Zuweisung` with `Plus` --
 -- same shape.
 def st03 : List Token :=
   [.ident "wurzel_setzen", .zeichen "(", .ident "v",
@@ -59,7 +59,7 @@ theorem s03_lex :
 theorem s03 : beqTopStmt (parseTopStmt st03)
     (.ok (.call "wurzel_setzen" [.variable "v"])) = true := by
   decide
--- beispiele/02-geraet.gab (the `uebersetzung_an` call shape).
+-- beispiele/0002-geraet.gab (the `uebersetzung_an` call shape).
 -- Rust: `Ruf` on a one-segment path -- same shape.
 def st04 : List Token :=
   [.wort "let", .wort "x", .zeichen ":", .wort "u64",
@@ -72,7 +72,7 @@ theorem s04 : beqTopStmt (parseTopStmt st04)
     (.ok (.bind false "x" (.some (.atom "u64"))
       (.index (.variable "SQUARES") (.variable "a")))) = true := by
   decide
--- beispiele/92-const-squares.gab (the type ascription is read,
+-- beispiele/0092-const-squares.gab (the type ascription is read,
 -- the value rides). Rust: `Let` -- same shape.
 def st05 : List Token :=
   [.wort "let", .wort "mut", .ident "n", .zeichen ":",
@@ -83,7 +83,7 @@ theorem s05_lex :
 theorem s05 : beqTopStmt (parseTopStmt st05)
     (.ok (.bind true "n" (.some (.atom "u32")) (.lit 0))) = true := by
   decide
--- beispiele/46-verneinung.gab:45. Rust: `Let` with `veraenderlich`
+-- beispiele/0046-verneinung.gab:45. Rust: `Let` with `veraenderlich`
 -- -- same shape.
 def st06 : List Token :=
   [.wort "let", .ident "g", .zeichen "=",
@@ -99,7 +99,7 @@ theorem s06 : beqTopStmt (parseTopStmt st06)
     (.ok (.bindElse "g" .none (.call "groesse_gemessen" []) "e1"
       (.block [] (.some (.ret (.some .fls)))))) = true := by
   decide
--- beispiele/06-annahmen.gab:136. Rust: `LetSonst` with a call
+-- beispiele/0006-annahmen.gab:136. Rust: `LetSonst` with a call
 -- source -- same shape (the `else` takes no trailing `;`, as in
 -- `parse.rs`).
 def st07 : List Token :=
@@ -114,7 +114,7 @@ theorem s07 : beqTopStmt (parseTopStmt st07)
     (.ok (.await "fertig" none (.variable "FARBE_FERTIG")
       "farbbericht ")) = true := by
   decide
--- beispiele/05-nebenlaeufigkeit.gab:60. Rust: `AwaitLoad` -- same
+-- beispiele/0005-nebenlaeufigkeit.gab:60. Rust: `AwaitLoad` -- same
 -- shape (the payload rides raw; `parse.rs` keeps the place list).
 def st08 : List Token :=
   [.wort "let", .ident "alt", .zeichen "=",
@@ -131,7 +131,7 @@ theorem s08 : beqTopStmt (parseTopStmt st08)
     (.ok (.swap "alt" none (.variable "ZAEHLER")
       "update ( v ) bounded 4 ops on_exceeded streit { } publishes nothing ")) = true := by
   decide
--- beispiele/05-nebenlaeufigkeit.gab:104 (block emptied). Rust:
+-- beispiele/0005-nebenlaeufigkeit.gab:104 (block emptied). Rust:
 -- `Exchange` with the `Update` form -- same head shape (the
 -- bound, the exit and the body ride raw).
 def st09 : List Token :=
@@ -149,7 +149,7 @@ theorem s09 : beqTopStmt (parseTopStmt st09)
     (.ok (.swap "genommen" none (.variable "BESITZER")
       "f when old ( BESITZER ) == 0 returns erfolg publishes nothing ")) = true := by
   decide
--- beispiele/05-nebenlaeufigkeit.gab:131. Rust: `Exchange` with
+-- beispiele/0005-nebenlaeufigkeit.gab:131. Rust: `Exchange` with
 -- the compare form -- same head shape.
 def st10 : List Token :=
   [.wort "let", .ident "s", .zeichen "=", .zeichen "@",
@@ -162,7 +162,7 @@ theorem s10_lex :
 theorem s10 : beqTopStmt (parseTopStmt st10)
     (.ok (.bindLib false "s" .none "summe" "sum")) = true := by
   decide
--- beispiele/107-summe-zwei-rufe.gab:36. Rust: `Let` over a
+-- beispiele/0107-summe-zwei-rufe.gab:36. Rust: `Let` over a
 -- `LibraryCall` -- same shape (the region is captured balanced,
 -- never interpreted).
 def st11 : List Token :=
@@ -176,7 +176,7 @@ theorem s11 : beqTopStmt (parseTopStmt st11)
       (.block [] (.some (.ret (.some (.variable "farbbericht")))))
       [] .none)) = true := by
   decide
--- beispiele/05-nebenlaeufigkeit.gab (the branch of
+-- beispiele/0005-nebenlaeufigkeit.gab (the branch of
 -- `bericht_lesen`). Rust: `Wenn` with no `else` -- same shape.
 def st12 : List Token :=
   [.wort "if", .ident "a", .zeichen "{", .zeichen "}",
@@ -212,7 +212,7 @@ theorem s13 : beqTopStmt (parseTopStmt st13)
       [(.arm "Some" (.some "p") (.block [] .none)),
        (.arm "None" .none (.block [] .none))])) = true := by
   decide
--- beispiele/01-tabelle.gab:98 (bodies emptied). Rust: `Match`
+-- beispiele/0001-tabelle.gab:98 (bodies emptied). Rust: `Match`
 -- with one binder arm and one bare arm -- same shape.
 def st14 : List Token :=
   [.wort "traverse", .ident "e", .wort "over", .wort "slots",
@@ -226,7 +226,7 @@ theorem s14 : beqTopStmt (parseTopStmt st14)
     (.ok (.each "e" none "slots" (.variable "q") "unvisited" "" none
       (.block [] .none))) = true := by
   decide
--- beispiele/04-schleifen.gab (the `dienstschleife` header, body
+-- beispiele/0004-schleifen.gab (the `dienstschleife` header, body
 -- emptied). Rust: `Schleife::Traverse` -- same head shape (the
 -- domain and the mode ride raw).
 def st15 : List Token :=
@@ -242,7 +242,7 @@ theorem s15 : beqTopStmt (parseTopStmt st15)
     (.ok (.retry "warten until ok bounded 8 ops on_exceeded haengt "
       (.block [] .none))) = true := by
   decide
--- beispiele/02-geraet.gab:65 (shortened). Rust:
+-- beispiele/0002-geraet.gab:65 (shortened). Rust:
 -- `Schleife::Retry` -- same head shape (the `until` predicate
 -- needs the `pred` reader and rides raw).
 def st16 : List Token :=
@@ -260,7 +260,7 @@ theorem s16 : beqTopStmt (parseTopStmt st16)
       "dienst per_pass bounded 4096 ops on_exceeded w effects { pure } progress tick "
       (.block [] .none))) = true := by
   decide
--- beispiele/04-schleifen.gab:76 (shortened). Rust:
+-- beispiele/0004-schleifen.gab:76 (shortened). Rust:
 -- `Schleife::Forever` -- same head shape (the `effects` braces
 -- are stepped over balanced).
 def st17 : List Token :=
@@ -273,7 +273,7 @@ theorem s17 : beqTopStmt (parseTopStmt st17)
     (.ok (.waive ["antwortpflicht_paarig"]
       (.block [] .none))) = true := by
   decide
--- beispiele/53-zwei-orte.gab:64 (body emptied). Rust: `Bricht`
+-- beispiele/0053-zwei-orte.gab:64 (body emptied). Rust: `Bricht`
 -- -- same shape.
 def st18 : List Token :=
   [.wort "narrow", .ident "roh", .wort "to", .num 0,
@@ -288,7 +288,7 @@ theorem s18 : beqTopStmt (parseTopStmt st18)
     (.ok (.trim (.variable "roh") "0 .. GRENZE "
       (.block [] (.some (.ret (.some (.lit 0))))))) = true := by
   decide
--- beispiele/08-bereiche.gab:127. Rust: `Narrow` over a range --
+-- beispiele/0008-bereiche.gab:127. Rust: `Narrow` over a range --
 -- same shape (the range rides raw).
 def st19 : List Token :=
   [.wort "narrow", .wort "x", .wort "to", .wort "finite",
@@ -302,7 +302,7 @@ theorem s19 : beqTopStmt (parseTopStmt st19)
     (.ok (.trim (.variable "x") "finite"
       (.block [] (.some (.ret (.some (.variable "HALB"))))))) = true := by
   decide
--- beispiele/26-gleitkomma.gab:73. Rust: `Narrow` to `finite` --
+-- beispiele/0026-gleitkomma.gab:73. Rust: `Narrow` to `finite` --
 -- same shape.
 def st20 : List Token :=
   [.wort "locks", .ident "P", .zeichen "{", .zeichen "}",
@@ -314,7 +314,7 @@ theorem s20 : beqTopStmt (parseTopStmt st20)
     (.ok (.locks false (.variable "P")
       (.block [] .none))) = true := by
   decide
--- beispiele/71-frist-und-zaehlung.gab (body emptied). Rust:
+-- beispiele/0071-frist-und-zaehlung.gab (body emptied). Rust:
 -- `Sperrt` -- same shape.
 def st21 : List Token :=
   [.wort "locks", .wort "shared", .ident "PLANER",
@@ -326,7 +326,7 @@ theorem s21 : beqTopStmt (parseTopStmt st21)
     (.ok (.locks true (.variable "PLANER")
       (.block [] .none))) = true := by
   decide
--- beispiele/04-schleifen.gab (the `locks PLANER` shape with the
+-- beispiele/0004-schleifen.gab (the `locks PLANER` shape with the
 -- shared witness). Rust: `Sperrt` with `geteilt` -- same shape.
 def st22 : List Token :=
   [.wort "observes", .ident "BACCT", .zeichen "{",
@@ -337,7 +337,7 @@ theorem s22_lex :
 theorem s22 : beqTopStmt (parseTopStmt st22)
     (.ok (.watch "BACCT" (.block [] .none))) = true := by
   decide
--- beispiele/31-rcu.gab:39 (body emptied). Rust: `Observiert` --
+-- beispiele/0031-rcu.gab:39 (body emptied). Rust: `Observiert` --
 -- same shape.
 def st23 : List Token :=
   [.wort "leave", .ident "dienst", .zeichen ";", .ende]
@@ -347,7 +347,7 @@ theorem s23_lex :
 theorem s23 : beqTopStmt (parseTopStmt st23)
     (.ok (.leave "dienst")) = true := by
   decide
--- beispiele/04-schleifen.gab. Rust: `Leave` -- same shape.
+-- beispiele/0004-schleifen.gab. Rust: `Leave` -- same shape.
 def st24 : List Token :=
   [.wort "next", .ident "dienst", .zeichen ";", .ende]
 theorem s24_lex :
@@ -370,7 +370,7 @@ theorem s25 : beqTopStmt (parseTopStmt st25)
     (.ok (.emit (.variable "FARBE_FERTIG") .tru
       "farbbericht ")) = true := by
   decide
--- beispiele/05-nebenlaeufigkeit.gab:52. Rust: `Publish` with a
+-- beispiele/0005-nebenlaeufigkeit.gab:52. Rust: `Publish` with a
 -- braced payload -- same shape (the payload rides raw).
 def st26 : List Token :=
   [.ident "TIEFE_MAX", .zeichen "=", .ident "t",
@@ -382,7 +382,7 @@ theorem s26 : beqTopStmt (parseTopStmt st26)
     (.ok (.emit (.variable "TIEFE_MAX") (.variable "t")
       "nothing")) = true := by
   decide
--- beispiele/05-nebenlaeufigkeit.gab:72. Rust: `Publish` with
+-- beispiele/0005-nebenlaeufigkeit.gab:72. Rust: `Publish` with
 -- `nothing` -- same shape.
 def st27 : List Token :=
   [.wort "return", .wort "r", .zeichen ".", .wort "slots",
@@ -406,7 +406,7 @@ theorem s28_lex :
 theorem s28 : beqTopStmt (parseTopStmt st28)
     (.ok (.ret .none)) = true := by
   decide
--- beispiele/06-annahmen.gab:101. Rust: `Return` with no value --
+-- beispiele/0006-annahmen.gab:101. Rust: `Return` with no value --
 -- same shape.
 def st29 : List Token :=
   [.wort "return", .ident "Fehler", .zeichen "::",
@@ -417,7 +417,7 @@ theorem s29_lex :
 theorem s29 : beqTopStmt (parseTopStmt st29)
     (.ok (.ret (.some (.why "Fehler" "Buchfuehrung")))) = true := by
   decide
--- beispiele/48-grund-mit-erzeuger.gab (the error-return shape).
+-- beispiele/0048-grund-mit-erzeuger.gab (the error-return shape).
 -- Rust: `Return` over a `Grund` -- same shape.
 def st30 : List Token :=
   [.wort "transition", .ident "T", .zeichen ".",
@@ -447,7 +447,7 @@ theorem s31_lex :
 theorem s31 : beqTopStmt (parseTopStmt st31)
     (.ok (.step "setup" "live")) = true := by
   decide
--- beispiele/02-geraet.gab:129. The phase step as a statement --
+-- beispiele/0002-geraet.gab:129. The phase step as a statement --
 -- `parse.rs` has no statement-level counterpart either (it rides
 -- in the checker); the shape is the SYNTAX.md `advstmt`
 -- production.
@@ -461,7 +461,7 @@ theorem s32_lex :
 theorem s32 : beqTopStmt (parseTopStmt st32)
     (.ok (.alloc false "a" .none "Log" (.lit 10) .none)) = true := by
   decide
--- beispiele/98-arena-erklaert.gab:11. Rust: `Alloc` with no
+-- beispiele/0098-arena-erklaert.gab:11. Rust: `Alloc` with no
 -- `else` -- same shape.
 def st33 : List Token :=
   [.wort "let", .ident "c", .zeichen "=", .wort "alloc",
@@ -478,7 +478,7 @@ theorem s33 : beqTopStmt (parseTopStmt st33)
       (.bin "+" (.variable "a") (.variable "b"))
       (.some (.block [] (.some (.ret (.some (.lit 0)))))))) = true := by
   decide
--- beispiele/98-arena-erklaert.gab:13 (shortened). Rust: `Alloc`
+-- beispiele/0098-arena-erklaert.gab:13 (shortened). Rust: `Alloc`
 -- with the full-arena continuation -- same shape (the `else`
 -- takes a plain block here, unlike `let … else`).
 def st34 : List Token :=
@@ -489,7 +489,7 @@ theorem s34_lex :
 theorem s34 : beqTopStmt (parseTopStmt st34)
     (.ok (.reset "Log" .none)) = true := by
   decide
--- beispiele/98-arena-erklaert.gab:16. Rust: `ResetArena` --
+-- beispiele/0098-arena-erklaert.gab:16. Rust: `ResetArena` --
 -- same shape.
 def st35 : List Token :=
   [.zeichen "@", .ident "spirv", .zeichen "#", .wort "kernel",

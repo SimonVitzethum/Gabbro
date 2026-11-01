@@ -4,7 +4,7 @@
  *
  *     frist_freigabe_eingehalten (assume): falsifier sonde_freigabe
  *
- * for `freigabe` (`beispiele/06-annahmen.gab`:102):
+ * for `freigabe` (`beispiele/0006-annahmen.gab`:102):
  *
  *     impl fn freigabe()
  *         effects { reads tiefe_max }
@@ -108,7 +108,7 @@ typedef unsigned long long u64;
 
 /* ---- The workload: the emitted gate read's shape, same `-O2`. ---- */
 
-/* Mirrors `static mut tiefe_max : Tiefe` (`beispiele/06-annahmen.gab`:121,
+/* Mirrors `static mut tiefe_max : Tiefe` (`beispiele/0006-annahmen.gab`:121,
  * `Tiefe = u64`). */
 static uint64_t tiefe_max;
 

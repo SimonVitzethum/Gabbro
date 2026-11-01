@@ -40,7 +40,7 @@ theorem t01 : beqTopTief (parseTopTief tt01)
                   pos := .none, bezug := .none, wo := .none,
                   reserviert := false, byOps := false }]]]) = true := by
   decide
--- beispiele/112-register-traeger-bewacht.gab (the `Zustand`
+-- beispiele/0112-register-traeger-bewacht.gab (the `Zustand`
 -- table). Rust: `Tabelle` with one slot field -- same shape.
 def tt02 : List Token :=
   [.wort "lock", .ident "Sperre", .wort "protects", .zeichen "{",
@@ -144,7 +144,7 @@ theorem t06_lex :
 theorem t06 : beqTopTief (parseTopTief tt06)
     (.ok [.useT ["beispiel", "adressen", "Pa"]]) = true := by
   decide
--- beispiele/29-undurchsichtig.gab:42. Rust: `Use` -- same shape
+-- beispiele/0029-undurchsichtig.gab:42. Rust: `Use` -- same shape
 -- (the path rides split here, raw in `SItem`).
 def tt07 : List Token :=
   [.wort "opaque", .wort "type", .ident "Pa", .zeichen "=",
@@ -155,7 +155,7 @@ theorem t07_lex :
 theorem t07 : beqTopTief (parseTopTief tt07)
     (.ok [.typeT ["opaque"] "Pa" [] [] (.some (.atom "u64"))]) = true := by
   decide
--- beispiele/01-tabelle.gab:18. Rust: `Typ` with the `opaque`
+-- beispiele/0001-tabelle.gab:18. Rust: `Typ` with the `opaque`
 -- flag -- same shape.
 def tt08 : List Token :=
   [.wort "type", .ident "Zaehler", .zeichen "=", .wort "u32",
@@ -168,7 +168,7 @@ theorem t08 : beqTopTief (parseTopTief tt08)
     (.ok [.typeT [] "Zaehler" [] []
       (.some (.range (.atom "u32") (.lit 0) (.lit 65535) false))]) = true := by
   decide
--- beispiele/01-tabelle.gab:16. Rust: `Typ` over a ranged
+-- beispiele/0001-tabelle.gab:16. Rust: `Typ` over a ranged
 -- integer -- same shape.
 def tt09 : List Token :=
   [.wort "tagged", .wort "type", .ident "ObjektArt", .zeichen "=",
@@ -186,7 +186,7 @@ theorem t09 : beqTopTief (parseTopTief tt09)
     (.ok [.typeT ["tagged"] "ObjektArt" [] [] (.some (.raw
       "{ Speicher ( Pa ) , Endpunkt ( EpId ) , Faden ( FadenId ) , Antwort ( EpId ) } "))]) = true := by
   decide
--- beispiele/01-tabelle.gab:22. Rust: `Typ` over variants -- the
+-- beispiele/0001-tabelle.gab:22. Rust: `Typ` over variants -- the
 -- payload types ride raw and balanced (see CUTS).
 def tt10 : List Token :=
   [.wort "linear", .wort "ghost", .wort "type",
@@ -201,7 +201,7 @@ theorem t10 : beqTopTief (parseTopTief tt10)
     (.ok [.typeT ["linear", "ghost"] "QueuePhase" [] ["setup", "live"]
       .none]) = true := by
   decide
--- beispiele/02-geraet.gab:115. Rust: `Typ` with a mark order --
+-- beispiele/0002-geraet.gab:115. Rust: `Typ` with a mark order --
 -- same shape.
 def tt11 : List Token :=
   [.wort "const", .ident "NSLOTS", .zeichen ":", .wort "u32",
@@ -212,7 +212,7 @@ theorem t11_lex :
 theorem t11 : beqTopTief (parseTopTief tt11)
     (.ok [.constT "NSLOTS" (.atom "u32") (.one (.lit 4096))]) = true := by
   decide
--- beispiele/01-tabelle.gab:10. Rust: `Konst` -- same shape.
+-- beispiele/0001-tabelle.gab:10. Rust: `Konst` -- same shape.
 def tt12 : List Token :=
   [.wort "static", .wort "mut", .ident "zaehler", .zeichen ":",
    .wort "u32", .zeichen "=", .num 0, .zeichen ";", .ende]
@@ -223,7 +223,7 @@ theorem t12 : beqTopTief (parseTopTief tt12)
     (.ok [.globT true "zaehler" (.atom "u32") (.one (.lit 0)) .none .none
       false]) = true := by
   decide
--- beispiele/110-fussgarantie.gab:12. Rust: `Statisch` -- same
+-- beispiele/0110-fussgarantie.gab:12. Rust: `Statisch` -- same
 -- shape.
 def tt13 : List Token :=
   [.wort "static", .ident "KERNZAHL", .zeichen ":", .wort "u32",
@@ -237,7 +237,7 @@ theorem t13 : beqTopTief (parseTopTief tt13)
     (.ok [.globT false "KERNZAHL" (.atom "u32") (.one (.lit 64)) .none
       (.some ".rodata") false]) = true := by
   decide
--- beispiele/05-nebenlaeufigkeit.gab:44. Rust: `Statisch` with a
+-- beispiele/0005-nebenlaeufigkeit.gab:44. Rust: `Statisch` with a
 -- section -- same shape.
 def tt14 : List Token :=
   [.wort "static", .wort "mut", .ident "zaehl", .zeichen ":",
@@ -269,6 +269,6 @@ theorem t15 : beqTopTief (parseTopTief tt15)
         klauseln := [.effs [.writes (.variable "halde")],
           .cost (.lit 64)] }]) = true := by
   decide
--- beispiele/01-tabelle.gab (the `speicher_freigeben` foreign
+-- beispiele/0001-tabelle.gab (the `speicher_freigeben` foreign
 -- body). Rust: `Funktion` without a body -- same shape.
 end Gabbro.Grammatik.Parser

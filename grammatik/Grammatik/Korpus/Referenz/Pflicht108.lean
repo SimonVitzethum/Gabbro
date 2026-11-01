@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Pflicht108.lean
-  Subject:   THE USER'S HALF for `beispiele/108-disjoint-start-locks.gab`,
+  Subject:   THE USER'S HALF for `beispiele/0108-disjoint-start-locks.gab`,
              over the EXPORTED UNIT -- the CONCURRENT instance.
 
   `GenOblig108.lean` is what `gabbro obligations --g` states over the
@@ -172,7 +172,7 @@ theorem p108_start_req : ∀ a ∈ G108_disjoint_start_locks_oblig.gE.starts,
   cases w <;> rfl
 
 /-- **THE USER'S DUTY ON 108, PROVED** -- exactly the `def nutzerPflicht`
-    that `gabbro obligations --g beispiele/108-disjoint-start-locks.gab`
+    that `gabbro obligations --g beispiele/0108-disjoint-start-locks.gab`
     states, with no hypothesis of any kind. -/
 theorem p108_nutzer : Zielsatz.NutzerPflicht G108_disjoint_start_locks_oblig.gE where
   logik := p108_logik

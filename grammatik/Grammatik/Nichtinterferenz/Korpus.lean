@@ -5,10 +5,10 @@
              refuses under a natural two-domain split.
 
   Four corpus programs have a Lean form: the mechanical exports of
-  `beispiele/104-referenz.gab` (`Export104.lean`),
-  `beispiele/108-disjoint-start-locks.gab` (`Export108.lean`),
-  `beispiele/118-sperrinvariante-erhaltung.gab` (`ExportSperre.lean`), and
-  the hand model of `beispiele/124-two-threads-private.gab`
+  `beispiele/0104-referenz.gab` (`Export104.lean`),
+  `beispiele/0108-disjoint-start-locks.gab` (`Export108.lean`),
+  `beispiele/0118-sperrinvariante-erhaltung.gab` (`ExportSperre.lean`), and
+  the hand model of `beispiele/0124-two-threads-private.gab`
   (`MehrfadenZeuge.lean`, the same tables and functions). The split is the
   natural one: each root function its own tenant domain (`A`, `B`), each
   carrier labelled with the tenant that owns it, a carrier touched by both

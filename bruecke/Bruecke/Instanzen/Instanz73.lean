@@ -1,9 +1,9 @@
 import Bruecke.Quelle
 import Duty.Duty73SugarWidths
 
-/-! BRIDGE-GENERIC beispiele/73-sugar-widths.gab nutzer
+/-! BRIDGE-GENERIC beispiele/0073-sugar-widths.gab nutzer
 
-    P4: the bridge instance of `beispiele/73-sugar-widths.gab` THROUGH THE GENERIC THEOREM (`Quelle.lean`): the
+    P4: the bridge instance of `beispiele/0073-sugar-widths.gab` THROUGH THE GENERIC THEOREM (`Quelle.lean`): the
     template `gabbro prove --template --source` writes (source pinned as pieces, stage outputs as
     hints the kernel checks, statements COMPUTED by Lean) with every owed proof filled: by GabbroV's
     own duty proof where `lean.rs` printed one, and by a proof against `Body` (the `gabbro_auto2`
@@ -220,7 +220,7 @@ theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
   nutzer_aus_quelle pflichten h
 
-/-! BRIDGE-GENERIC beispiele/73-sugar-widths.gab acceptance
+/-! BRIDGE-GENERIC beispiele/0073-sugar-widths.gab acceptance
 
     The checker's Bool on the unit the front end builds from `quelle` (no tables: the carriers
     enumeration is empty), by computation. -/

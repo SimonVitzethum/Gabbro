@@ -35,10 +35,10 @@ PROGRAMME = {
 
 # hardware-only forms: (file, target, [(objdump pattern, what)]) -- the TEXT is checked, never the effect at a device
 BEFEHLE = [
-    ("beispiele/36-asm.gab", "x86_64", [(r"\boutb\s+%al, %dx", "outb"), (r"\bsyscall\b", "syscall")]),
-    ("beispiele/67-befehlsebene.gab", "x86_64", [(r"\binvlpg\b", "invlpg"), (r"\bsfence\b", "sfence"), (r"\bmfence\b", "mfence")]),
-    ("beispiele/65-port-space.gab", "x86_64", [(r"\binb\s+%dx, %al", "inb"), (r"\boutb\s+%al, %dx", "outb")]),
-    ("beispiele/60-annahme-mit-maschine.gab", "x86_64", [(r"\bmfence\b", "mfence")]),
+    ("beispiele/0036-asm.gab", "x86_64", [(r"\boutb\s+%al, %dx", "outb"), (r"\bsyscall\b", "syscall")]),
+    ("beispiele/0067-befehlsebene.gab", "x86_64", [(r"\binvlpg\b", "invlpg"), (r"\bsfence\b", "sfence"), (r"\bmfence\b", "mfence")]),
+    ("beispiele/0065-port-space.gab", "x86_64", [(r"\binb\s+%dx, %al", "inb"), (r"\boutb\s+%al, %dx", "outb")]),
+    ("beispiele/0060-annahme-mit-maschine.gab", "x86_64", [(r"\bmfence\b", "mfence")]),
 ]
 
 

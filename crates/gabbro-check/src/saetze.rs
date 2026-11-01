@@ -160,7 +160,7 @@ pub const NAMEN: &[Satz] = &[
                     (2) `N009`/`N010` compare only what is a NUMBER LITERAL, and `N009` only \
                     within one level -- bank against main level never. \
                     **What the function scopes deliberately do NOT refuse is a covering in a \
-                    NESTED block**: C accepts it, `19-let-verdeckt.gab` has held it as a \
+                    NESTED block**: C accepts it, `0019-let-verdeckt.gab` has held it as a \
                     legal program since 2026-08-14, and `m1.rs` carries the block scope that \
                     gives it meaning. That form carries a defect of a DIFFERENT pass -- \
                     `kosten.rs` and `domaene.rs` build `lokal` from the parameters alone and \
@@ -312,7 +312,7 @@ pub const NAMEN: &[Satz] = &[
                       `// erwartet: N321 allein`: without the checker rule the emitter still \
                       refuses (a `static` prototype with no definition, which `cc` rejects \
                       for that other reason), so `nothing else catches it' would be false. \
-                      Counter-direction: `beispiele/36-asm.gab` (`schreiben -> u64` with \
+                      Counter-direction: `beispiele/0036-asm.gab` (`schreiben -> u64` with \
                       `out { result }`, and `ausgeben` with neither) stays green. \
                       **Lane 225** adds the acceptance pins beside it: `gift/1065` \
                       (`// erwartet: A003`, the declaration the accepted shape still owes) \
@@ -434,7 +434,7 @@ pub const NAMEN: &[Satz] = &[
                       with `N320`, and WITHOUT the rule `cc -Werror` accepts the emitted \
                       C -- nothing else catches it). Counter-direction: two corpus \
                       `section` sites, both on a `static`, stay green \
-                      (`beispiele/05-nebenlaeufigkeit.gab`, `/40-werte-und-griffe.gab`).",
+                      (`beispiele/0005-nebenlaeufigkeit.gab`, `/0040-werte-und-griffe.gab`).",
         fundstelle: "crates/gabbro-check/src/namen.rs; SYNTAX.md §6 (`fndecl`); \
                      dokumente/LANGUAGE.md §S2",
     },
@@ -1234,7 +1234,7 @@ pub const D1D2: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: 422 (`D014`, the field does not exist), 423 (`D015`, a \
                       `bool` -- no edge, no end), 424 (`D016`, an edge into another table). \
-                      The clean side is beispiele/55-kindkette.gab and \
+                      The clean side is beispiele/0055-kindkette.gab and \
                       messung/proben/probe-neun-domaenen.gab; the counter-direction (the \
                       reversed pair, `chain(parent, parent)`, `chain(child, child)`) is \
                       measured green at each of them.",
@@ -1270,7 +1270,7 @@ pub const D1D2: &[Satz] = &[
                       converts. A probe returning `7` HOLDS on that path, always. Poison is \
                       beispiele/gift/430. **Its first two finds were in this checker**: a \
                       compare-exchange bound to the atomic's type instead of to `bool` \
-                      (`beispiele/35-tausch.gab`, where the emitter had written `bool \
+                      (`beispiele/0035-tausch.gab`, where the emitter had written `bool \
                       genommen` all along), and an `exchange update` body read against the \
                       enclosing function's result instead of the place's type \
                       (beispiele/gift/209). Over all 475 corpus files the rule falls in ZERO \
@@ -1305,7 +1305,7 @@ pub const D1D2: &[Satz] = &[
                       fourth is not part of the language. Eighteen corpus files carried the \
                       shape and every one of them was a defect; they are repaired, and the \
                       poison is beispiele/gift/428 (`N044`) and 429 (`N045`). \
-                      **beispiele/06-annahmen.gab has carried the finding as a COMMENT \
+                      **beispiele/0006-annahmen.gab has carried the finding as a COMMENT \
                       since 2026-08-20 with no rule behind it** -- and six files walked \
                       back into it. dokumente/CHECKER.md. **The loop half was measured \
                       2026-08-31** at messung/proben/probe-probenurteil-schleife.gab: \
@@ -1313,7 +1313,7 @@ pub const D1D2: &[Satz] = &[
                       repair changes exactly that one file -- no other rule fell silent, \
                       none newly spoke.",
         fundstelle: "crates/gabbro-check/src/namen.rs; dokumente/SYNTAX.md §13; \
-                     beispiele/06-annahmen.gab",
+                     beispiele/0006-annahmen.gab",
     },
     Satz {
         name: "d.domaenenfeld",
@@ -1381,7 +1381,7 @@ pub const D1D2: &[Satz] = &[
                       file. Over all 533 files -- 171 corpus plus 362 gift -- the rule falls \
                       in ZERO.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; \
-                     beispiele/gift/570-mapping-field-not-declared.gab; \
+                     beispiele/gift/0570-mapping-field-not-declared.gab; \
                      dokumente/PLAN-HARDWARE.md §5",
     },
     Satz {
@@ -1447,7 +1447,7 @@ pub const D1D2: &[Satz] = &[
                     for one fault is worse than one; `Self` is the carrier question and \
                     belongs to `M120`; a machine feature is not a program name and a lock \
                     is not a value, and both are spelled as a call, so both would otherwise \
-                    be read as places (`beispiele/01-tabelle.gab` writes `Held(KAPPEN)` at \
+                    be read as places (`beispiele/0001-tabelle.gab` writes `Held(KAPPEN)` at \
                     every `impl fn`, `beispiele/11` writes `Has(RDTSCP)`). The exemption of \
                     the two pseudo-calls is by NAME and not by site, the way \
                     `namen.rs::zusagenstelle` does it -- coarse, and coarse in the quiet \
@@ -1506,9 +1506,9 @@ pub const D1D2: &[Satz] = &[
                       `requires Held(SPERRE[eimer])` drew `N240 … share a signature-held \
                       lock: … requires Held(SPERRE[…])` beside `H008 SPERRE … is taken \
                       nowhere`. Counter-direction: the whole positive corpus, which writes \
-                      `Held(KAPPEN)` at every `impl fn` of `beispiele/01-tabelle.gab`, the \
+                      `Held(KAPPEN)` at every `impl fn` of `beispiele/0001-tabelle.gab`, the \
                       shared-strength form `Held(L, shared)` in `beispiele/13`, and the new \
-                      `beispiele/146-sperrstreifen.gab` (four tables, four locks, a \
+                      `beispiele/0146-sperrstreifen.gab` (four tables, four locks, a \
                       dispatch) -- the rule falls in none of them.",
         fundstelle: "crates/gabbro-check/src/domaene.rs; grammatik/Grammatik/Nebenlaeufigkeit/Sperren/Sperrstreifen.lean; \
                      messung/muse/OPUS-BERICHT-SPERRSTREIFEN.md",
@@ -1548,7 +1548,7 @@ pub const D1D2: &[Satz] = &[
                       beispiele/gift/687 (`threads` indexing a table -- the census's own \
                       shape) and 688 (a `slots of A` binder indexing `B`). Over all 665 \
                       `.gab` files of the tree the rule falls in ONE that was clean before: \
-                      beispiele/57-faedenhalt.gab, whose own header had carried the finding \
+                      beispiele/0057-faedenhalt.gab, whose own header had carried the finding \
                       as prose since 2026-08-31 (*\"`forall t in slots of Faden : …` says \
                       exactly the same to the checker, only without the claim\"*) -- the \
                       file now writes what it described.",
@@ -1979,7 +1979,7 @@ pub const M1: &[Satz] = &[
                       `eins(x, x)` against `fn(u32)` each gave `3 items, 0 errors, 0 hints` \
                       at `100 % coverage`, `gabbro emit` wrote the call out, and `cc` \
                       answered -- *too few arguments to function 'zwei'*. Corpus cost, all \
-                      512 files: TWO sites, both in `beispiele/02-geraet.gab` and both \
+                      512 files: TWO sites, both in `beispiele/0002-geraet.gab` and both \
                       `transition` calls, which is what the reservation above is made of. \
                       The live site outside the corpus is `messung/fragmente/F03.gab`:210, \
                       `owner_core(picked)` against a two-parameter declaration, on a frozen \
@@ -2016,7 +2016,7 @@ pub const M1: &[Satz] = &[
                       (carrier) (index : Int) (field)` and `wellFormed` quantifies over \
                       every `k`, so the premise is satisfiable rather than vacuous: the \
                       sixth class in pure form. Poison is \
-                      beispiele/gift/637-an-assumption-over-a-slot-that-is-not-there.gab, \
+                      beispiele/gift/0637-an-assumption-over-a-slot-that-is-not-there.gab, \
                       whose counter-probes (a quantifier variable and an in-range literal) \
                       stay silent in the same run. Over all corpus files the rule falls in \
                       ZERO.",
@@ -2067,8 +2067,8 @@ pub const M1: &[Satz] = &[
                     WITHOUT a warning and the program computes `4294905615` where this pass \
                     says `u16 in 0 .. 65535`.*",
         stand: Satzstand::Gemessen,
-        gemessen_an: "`beispiele/61-invertierung.gab`, emitted, compiled at `-O0` and `-O2` \
-                      and RUN over eight values; `beispiele/62-grenzwort-im-ausdruck.gab` \
+        gemessen_an: "`beispiele/0061-invertierung.gab`, emitted, compiled at `-O0` and `-O2` \
+                      and RUN over eight values; `beispiele/0062-grenzwort-im-ausdruck.gab` \
                       likewise. `beispiele/gift`: 4 probes (`443` literal, `444` signed, \
                       `445` in a `const`, `447` a third member), each with its code alone. \
                       `crates/gabbro-check/tests/komplement.rs` pins the emitted text in \
@@ -2182,7 +2182,7 @@ pub const M1: &[Satz] = &[
         gemessen_an: "beispiele/gift 253/254/255, one probe per code; and three mutations \
                       (`refines-auch-an-spec-fn`, `refines-nennt-ins-leere`, \
                       `refines-ungleiche-stelligkeit`). Clean site: \
-                      `beispiele/50-verfeinerung.gab`",
+                      `beispiele/0050-verfeinerung.gab`",
         fundstelle: "crates/gabbro-check/src/m1.rs::verfeinert_pruefen; \
                      messung/VERFEINERUNG.md",
     },
@@ -2486,7 +2486,7 @@ pub const M1: &[Satz] = &[
                       1` and **0 errors for `u32 in 0.5 .. 1.5`** -- the fractional bound is \
                       the plain word. Poison: beispiele/gift/690. Over all 686 `.gab` files \
                       of the tree it falls in ZERO -- and it fell in ONE before the place \
-                      was read at a `narrow`: beispiele/26-gleitkomma.gab:42, `narrow x to \
+                      was read at a `narrow`: beispiele/0026-gleitkomma.gab:42, `narrow x to \
                       0.0 .. 1.0` at an `f64` parameter, which is the CORRECT spelling. *The \
                       corpus sweep found the over-reach, the design did not.*",
         fundstelle: "crates/gabbro-check/src/m1.rs; \
@@ -2536,7 +2536,7 @@ pub const M1: &[Satz] = &[
                       refused every one of them. Poison is beispiele/gift/788, whose twin \
                       `gib` declares `-> u32` and keeps the same lines silent.",
         fundstelle: "crates/gabbro-check/src/m1.rs; beispiele/gift/776-*; \
-                     beispiele/gift/788-return-carries-a-value-without-a-result.gab",
+                     beispiele/gift/0788-return-carries-a-value-without-a-result.gab",
     },
     Satz {
         name: "m1.bare_atomic_place",
@@ -2578,11 +2578,11 @@ pub const M1: &[Satz] = &[
                     atomic name is not exempt -- no corpus site binds one, and the shape \
                     is booked, not closed.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/936-bare-store-to-atomic.gab falls with N270 ALONE \
+        gemessen_an: "beispiele/gift/0936-bare-store-to-atomic.gab falls with N270 ALONE \
                       (and `cc` still accepts the emitted C, hence `allein`); \
-                      beispiele/gift/937-bare-store-despite-pairing.gab falls with N270 \
+                      beispiele/gift/0937-bare-store-despite-pairing.gab falls with N270 \
                       ALONE beside a live `publishes`/`awaits` pairing; \
-                      beispiele/gift/939-index-into-atomic.gab falls with N271 ALONE (the \
+                      beispiele/gift/0939-index-into-atomic.gab falls with N271 ALONE (the \
                       SCALAR, unchanged); beispiele/gift/1044-atomic-array-field-behind-index.gab \
                       pins the edge of the array exception -- `REGEL[0].x` over an atomic \
                       array still falls with N271. The positive side of the exception is \
@@ -2640,7 +2640,7 @@ pub const M1: &[Satz] = &[
                     claims nothing about the rest of the table.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/1413 (the consuming walk falls with N580 alone); the \
-                      clean side is beispiele/190-erster-treffer.gab (checks, exports, and \
+                      clean side is beispiele/0190-erster-treffer.gab (checks, exports, and \
                       its generated module builds in Lean).",
         fundstelle: "crates/gabbro-check/src/schleifen.rs (Traverse arm, springt_auf); \
                      crates/gabbro-check/src/lean_g.rs (Leave/Next arm)",
@@ -2665,11 +2665,11 @@ pub const M1: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "Measured against the UNCHANGED checker: `M[i] = M[j]` and `B = A` \
                       both checked clean and both named an array assignment `cc` \
-                      rejects. Poison is beispiele/gift/951-nested-whole-row-store.gab \
+                      rejects. Poison is beispiele/gift/0951-nested-whole-row-store.gab \
                       (falls with N287 alone); the flat twin is pinned inline \
                       (`n287_flat_whole_array_store` in \
                       crates/gabbro-check/tests/nested_arrays.rs). The clean side is \
-                      beispiele/122-matrix.gab (element stores at depth two).",
+                      beispiele/0122-matrix.gab (element stores at depth two).",
         fundstelle: "crates/gabbro-check/src/m1.rs (N287, assignment arm); \
                      crates/gabbro-check/tests/nested_arrays.rs",
     },
@@ -2709,13 +2709,13 @@ pub const M1: &[Satz] = &[
                     scrutinee stays the emitter's `C001`; the Lean bare-case term covers \
                     the nullary form only.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/944-unknown-variant-construction.gab falls with N280 \
+        gemessen_an: "beispiele/gift/0944-unknown-variant-construction.gab falls with N280 \
                       (beside `H021`/`K003`, which own the call halves); \
-                      beispiele/gift/945-variant-payload-out-of-range.gab falls with M101 \
+                      beispiele/gift/0945-variant-payload-out-of-range.gab falls with M101 \
                       (the range half, no constructor rule); \
-                      beispiele/gift/946-payload-on-nullary-variant.gab falls with N282; \
-                      beispiele/gift/947-missing-variant-payload.gab falls with N281; \
-                      beispiele/gift/938-ambiguous-variant-construction.gab falls with N280 \
+                      beispiele/gift/0946-payload-on-nullary-variant.gab falls with N282; \
+                      beispiele/gift/0947-missing-variant-payload.gab falls with N281; \
+                      beispiele/gift/0938-ambiguous-variant-construction.gab falls with N280 \
                       over two sums sharing `Kurz`. The silent direction is \
                       `beispiele/120` (call form and bare form constructed, matched \
                       exhaustively) and `beispiele/121` (both spellings at file scope, \
@@ -2807,8 +2807,8 @@ pub const M1: &[Satz] = &[
                       alone); the pure block-bodied call is pinned inline \
                       (`k190_reiner_aufruf_ohne_huelle` in \
                       crates/gabbro-check/tests/konstanten.rs). The clean side is \
-                      beispiele/92-const-squares.gab and \
-                      beispiele/93-const-scalars.gab.",
+                      beispiele/0092-const-squares.gab and \
+                      beispiele/0093-const-scalars.gab.",
         fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_skalar`, \
                      `pruefe_tabelle`); dokumente/SYNTAX.md §1 (`arraylit`)",
     },
@@ -2828,7 +2828,7 @@ pub const M1: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/861 (two entries for three fall as `K191` alone) \
                       and /864 (`300` in a `u8` table falls as `K194` alone). The clean \
-                      side is beispiele/92-const-squares.gab (64 folded entries, \
+                      side is beispiele/0092-const-squares.gab (64 folded entries, \
                       emitted and compiled).",
         fundstelle: "crates/gabbro-check/src/konstanten.rs (`pruefe_tabelle`); \
                      dokumente/SYNTAX.md §1 (`arraylit`)",
@@ -2855,7 +2855,7 @@ pub const M1: &[Satz] = &[
                       `N285` directions are pinned inline (`n285_scalar_where_row_stands`, \
                       `n285_row_where_scalar_stands` in \
                       crates/gabbro-check/tests/konstanten.rs). The clean side is \
-                      beispiele/123-const-matrix.gab (`[[1, 2], [3, 4]]` over \
+                      beispiele/0123-const-matrix.gab (`[[1, 2], [3, 4]]` over \
                       `[[u32; 2]; 2]`, emitted and compiled).",
         fundstelle: "crates/gabbro-check/src/konstanten.rs (`check_eintrag`); \
                      dokumente/SYNTAX.md §1 (`arraylit`)",
@@ -2879,7 +2879,7 @@ pub const M1: &[Satz] = &[
                       /863 (two consts naming each other fall as `K193`, once per \
                       member); the transitive impurity through a `const fn` is pinned \
                       inline (`k192_through_const_fn`). The clean side is the \
-                      `quad` calls of beispiele/92-const-squares.gab.",
+                      `quad` calls of beispiele/0092-const-squares.gab.",
         fundstelle: "crates/gabbro-check/src/konstanten.rs (`hull_expr`); \
                      dokumente/SYNTAX.md §1 (`arraylit`)",
     },
@@ -3050,7 +3050,7 @@ pub const M1: &[Satz] = &[
                       (copy-in into a smaller local, N455), 1416 (copy-out of a longer \
                       string, N455); for the array form 1418 (N581), 1419 (N455), 1420 \
                       (N455), 1421 (a nested array stays N465); the clean sides are \
-                      beispiele/191-name-im-slot.gab and beispiele/192-namenfeld.gab. Lean: \
+                      beispiele/0191-name-im-slot.gab and beispiele/0192-namenfeld.gab. Lean: \
                       grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean \
                       (laden_speichern, laden_speichern_ne, laden_len, zelleBytes_le_C).",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (zelle, zelle_anfang, \
@@ -3243,8 +3243,8 @@ pub const M3: &[Satz] = &[
                     of the 67 clean examples ever passed a NAMED space to a call, so nothing \
                     here had ever exercised the comparison this rule's own claim rests on. \
                     Repaired by giving `Raum` a manual `PartialEq` that reads `Benannt` by \
-                    `text` alone; probe `beispiele/68-named-space-matches-itself.gab` (pass) \
-                    and `beispiele/gift/681-two-different-named-spaces-still-clash.gab` \
+                    `text` alone; probe `beispiele/0068-named-space-matches-itself.gab` (pass) \
+                    and `beispiele/gift/0681-two-different-named-spaces-still-clash.gab` \
                     (still refuses two DIFFERENT names). A sweep of the whole tracked corpus \
                     before and after the repair changed the verdict of zero existing files.",
         stand: Satzstand::Gemessen,
@@ -3253,7 +3253,7 @@ pub const M3: &[Satz] = &[
                       at all* (2026-08-21, written down and not acted on). \
                       Reproduced first: a `ptr<normal, rw>` reaching a `ptr<mmio, rw>` \
                       parameter gave zero errors. Probe \
-                      `beispiele/gift/259-raum-laeuft-durch.gab`, anchor \
+                      `beispiele/gift/0259-raum-laeuft-durch.gab`, anchor \
                       `adressraum-egal-am-rufort`; zero sites in the corpus.",
         fundstelle: "crates/gabbro-check/src/m3.rs::eigen_doppelt; messung/PASSREGISTER.md",
     },
@@ -3288,7 +3288,7 @@ pub const M3: &[Satz] = &[
                       `cc -O0 -Wall -Wextra -Werror` refused it -- *passing argument 1 of \
                       'schreibt' discards 'const' qualifier from pointer target type*. **The \
                       `N041` shape: the checker confirmed and the foreign compiler held the \
-                      line.** Probe `beispiele/gift/607-pointer-rights-widen-at-a-call.gab`; \
+                      line.** Probe `beispiele/gift/0607-pointer-rights-widen-at-a-call.gab`; \
                       speech test `crates/gabbro-check/tests/rechte.rs` drives BOTH directions \
                       -- 4 rows that must fall, 7 correct calls that must stay silent, \
                       including `rw + own` and `r + w` spelled out. **Zero sites in the \
@@ -3321,7 +3321,7 @@ pub const M3: &[Satz] = &[
                       the four that NOTHING carries, and `gabbro alias` had counted the site \
                       since 2026-08-21 (`S3`: one call, writable) without any pass refusing \
                       it. *A measurement without a rule is the state a rule grows out of.* \
-                      Probe: `beispiele/gift/257-alias-zwei-schreibbare.gab`; anchor \
+                      Probe: `beispiele/gift/0257-alias-zwei-schreibbare.gab`; anchor \
                       `syntaktischer-alias-geht-wieder-durch`. `R004` carries the `own` half \
                       and has its own probe.",
         fundstelle: "crates/gabbro-check/src/m3.rs::eigen_doppelt; messung/RACE.md A1",
@@ -3715,7 +3715,7 @@ pub const PAARUNG: &[Satz] = &[
                     load in the tree is this rule's own poison probe, so the rule hangs on \
                     that probe and on nothing else.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/301-tor-ohne-paarung.gab -- one probe, and the corpus \
+        gemessen_an: "beispiele/gift/0301-tor-ohne-paarung.gab -- one probe, and the corpus \
                       contributes nothing (0 plain atomic loads, measured).",
         fundstelle: "crates/gabbro-check/src/paarung.rs; messung/ORDNUNGSFINDER.md §4",
     },
@@ -3738,7 +3738,7 @@ pub const PAARUNG: &[Satz] = &[
                     inherits `V003`'s `continue`: for a function with an incomplete call \
                     hull it never runs.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/302-fremder-schreiber.gab -- one probe. Over the corpus \
+        gemessen_an: "beispiele/gift/0302-fremder-schreiber.gab -- one probe. Over the corpus \
                       it is silent: all 7 payload publications write their payload in their \
                       own body.",
         fundstelle: "crates/gabbro-check/src/paarung.rs; messung/ORDNUNGSFINDER.md §5",
@@ -4271,7 +4271,7 @@ pub const KOSTEN: &[Satz] = &[
                       overflow without a written scan stays K002 alone, and a windowed \
                       scan with each window under `held` falls with nothing.",
         fundstelle: "crates/gabbro-check/src/kosten.rs (`enthaelt_traverse`, the N421 \
-                     arm beside K002); beispiele/147-ftp-alg-control.gab (the windowed \
+                     arm beside K002); beispiele/0147-ftp-alg-control.gab (the windowed \
                      shape: 1024 slots as 16 windows of 64)",
     },
 ];
@@ -6051,7 +6051,7 @@ pub const SPERREN: &[Satz] = &[
                     assumption name is caught by the name pass, not by this one.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/230; 2 mutations, both caught. Hand probe before the \
-                      build: `beispiele/43-gegenprobe.gab` carried `rcu … reclaims` without \
+                      build: `beispiele/0043-gegenprobe.gab` carried `rcu … reclaims` without \
                       a grace assumption and passed with 0 errors.",
         fundstelle: "crates/gabbro-check/src/geteilt.rs",
     },
@@ -6109,7 +6109,7 @@ pub const SPERREN: &[Satz] = &[
                     silent -- *not by choice, but because its surface was withheld.* Sixth \
                     blind-spot class, third instance.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/48-grund-mit-erzeuger.gab through `pruefe`/`emit`/`cc \
+        gemessen_an: "beispiele/0048-grund-mit-erzeuger.gab through `pruefe`/`emit`/`cc \
                       -Werror` at -O0 and -O2 and under UBSan; beispiele/gift/232-239; \
                       10 mutations, all caught. The template comes from outside (Regel B): \
                       `FRAGMENTS.md`:269 writes `return Fehler::Buchfuehrung;`.",
@@ -6140,7 +6140,7 @@ pub const SPERREN: &[Satz] = &[
                     annotation -- is not yet reached, and the rule says so instead of \
                     looking complete.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/295-zeigerziel-ohne-typ.gab; four real defects found \
+        gemessen_an: "beispiele/gift/0295-zeigerziel-ohne-typ.gab; four real defects found \
                       on the first run over the clean corpus and one in SYNTAX.md:1387.",
         fundstelle: "crates/gabbro-check/src/namen.rs::typname_bekannt",
     },
@@ -6169,9 +6169,9 @@ pub const SPERREN: &[Satz] = &[
                     **Indices are not judged here** -- a literal index out of a table's \
                     `count` is `M141`, in the pass that already walks predicate positions.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/639-a-device-promise-over-a-field-that-is-not-there.gab \
+        gemessen_an: "beispiele/gift/0639-a-device-promise-over-a-field-that-is-not-there.gab \
                       (a `transition` premise over `GSTS.NICHTDA`) and \
-                      beispiele/gift/640-a-register-promise-over-a-name-nobody-declares.gab \
+                      beispiele/gift/0640-a-register-promise-over-a-name-nobody-declares.gab \
                       (a `reg` premise over an undeclared `QMAX`); both fall with N053 ALONE. \
                       The silent direction is the corpus: all 19 sites of the three clauses \
                       (4 `reg`, 13 `transition`, 2 `axiom`) pass, and the whole-tree sweep on \
@@ -6202,9 +6202,9 @@ pub const SPERREN: &[Satz] = &[
                     arrives without its kind: it reads as a carrier rather than as a \
                     refusal.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/925-depends-names-nothing-declared.gab (`N255`), \
-                      beispiele/gift/927-depends-names-a-lock.gab (`N257`), \
-                      beispiele/gift/928-depends-names-a-slot.gab (`N258`); each falls with \
+        gemessen_an: "beispiele/gift/0925-depends-names-nothing-declared.gab (`N255`), \
+                      beispiele/gift/0927-depends-names-a-lock.gab (`N257`), \
+                      beispiele/gift/0928-depends-names-a-slot.gab (`N258`); each falls with \
                       its code ALONE. The silent direction is beispiele/112 and /113, whose \
                       `depends` clauses name tables and a global and pass.",
         fundstelle: "crates/gabbro-check/src/namen.rs::geraetetraeger_pruefen",
@@ -6232,8 +6232,8 @@ pub const SPERREN: &[Satz] = &[
                     WRITES a device carrier owing the guard at its own access -- stays \
                     `H007`'s (`N259` reserved).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/926-reader-without-signature-guard.gab (no `Held` at \
-                      all) and beispiele/gift/929-reader-holding-the-wrong-lock.gab (a \
+        gemessen_an: "beispiele/gift/0926-reader-without-signature-guard.gab (no `Held` at \
+                      all) and beispiele/gift/0929-reader-holding-the-wrong-lock.gab (a \
                        `Held` of a lock guarding elsewhere); both fall with N256 ALONE. The \
                      silent direction is beispiele/112 (guarded reader, written carrier) \
                      and beispiele/113 (unwritten carrier, no guard owed).",
@@ -6258,7 +6258,7 @@ pub const SPERREN: &[Satz] = &[
                     un-annotated `let` has no declared pointer type**; what its \
                     inferred zero becomes is `M140`'s at the use site.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/931-null-pointer-through-an-immutable-static.gab \
+        gemessen_an: "beispiele/gift/0931-null-pointer-through-an-immutable-static.gab \
                       is refused with N260 ALONE. The silent direction is the \
                       `static mut` twin and the decay twin in \
                       `crates/gabbro-check/tests/null_pointer.rs`, \
@@ -6346,7 +6346,7 @@ pub const SPERREN: &[Satz] = &[
                     to `geltungsbereich` -- W7, one register per thing. That cut was measured, \
                     not guessed: without it the rule spoke a second time over five duplicate \
                     poison samples, and twice where there was no defect at all -- \
-                    `beispiele/29-undurchsichtig.gab` (a prototype naming its definition in \
+                    `beispiele/0029-undurchsichtig.gab` (a prototype naming its definition in \
                     another module) and `messung/fragmente/F05.gab` (two `prim fn invoke` \
                     separated by `arch`).",
         stand: Satzstand::Gemessen,
@@ -6379,7 +6379,7 @@ pub const SPERREN: &[Satz] = &[
                     exactly where all six corpus sites stood before this run. *So the rule \
                     is silent on the majority of the surface, and it says so* (W10).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/237-kanal-ohne-einloeser.gab.",
+        gemessen_an: "beispiele/gift/0237-kanal-ohne-einloeser.gab.",
         fundstelle: "crates/gabbro-check/src/namen.rs",
     },
     // --- The report line of a `check`, resolved at last (2026-08-31) -------------------
@@ -6404,9 +6404,9 @@ pub const SPERREN: &[Satz] = &[
                     `measures` naming a function is a different mistake, and this rule does \
                     not claim it.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/421-measures-ins-leere.gab, exactly ONE refusal; \
+        gemessen_an: "beispiele/gift/0421-measures-ins-leere.gab, exactly ONE refusal; \
                       1 mutation, caught. **The first run found two cases in the folder's \
-                      own corpus:** `beispiele/gift/187-can-fail-schreibt.gab` named \
+                      own corpus:** `beispiele/gift/0187-can-fail-schreibt.gab` named \
                       `tiefe_lebend` and `kerne_gemessen`, dropped when it was cut down \
                       from `beispiele/06` -- so `N022` was silent there about \
                       `floor kerne_gemessen >= 2` -- and `messung/fragmente/F06.gab` \
@@ -6437,7 +6437,7 @@ pub const SPERREN: &[Satz] = &[
                     find that a clause has no reader; that a reader reads the WRONG thing \
                     is found only by whoever writes the sentence the rule must hold.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/249-breaking-auf-ops-traeger.gab; one mutation. The \
+        gemessen_an: "beispiele/gift/0249-breaking-auf-ops-traeger.gab; one mutation. The \
                       corpus count is zero, so the whole evidence is poison -- and it says \
                       so (W10).",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; PL.1, finding 1 of 9",
@@ -6467,12 +6467,12 @@ pub const SPERREN: &[Satz] = &[
                     buys is that a named region names something. \
                     **The measured base is thin and it says so** (W10/W23): before this run \
                     the clean corpus had ZERO `breaking` sites and the poison corpus one. \
-                    `beispiele/53-zwei-orte.gab` is the first clean one, written for this \
+                    `beispiele/0053-zwei-orte.gab` is the first clean one, written for this \
                     rule -- so it does not count as demand, only as a site.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/351-breaking-nennt-nichts.gab; one mutation \
+        gemessen_an: "beispiele/gift/0351-breaking-nennt-nichts.gab; one mutation \
                       (`breaking-darf-ins-leere-nennen`). The clean side is \
-                      beispiele/53-zwei-orte.gab.",
+                      beispiele/0053-zwei-orte.gab.",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs; messung/ZWEI-ORTE.md",
     },
     // --- The region of `breaking`, checked where a syntax check can (2026-09-26) -------
@@ -6497,7 +6497,7 @@ pub const SPERREN: &[Satz] = &[
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/1291-breaking-am-falschen-traeger.gab (example 53 with \
                       the invariant name swapped for one over another table); the clean \
-                      sides are beispiele/53-zwei-orte.gab and beispiele/55-kindkette.gab, \
+                      sides are beispiele/0053-zwei-orte.gab and beispiele/0055-kindkette.gab, \
                       and crates/gabbro-check/tests/breaking_region.rs pins both directions.",
         fundstelle: "crates/gabbro-check/src/kbedingung.rs (`breaking_rests_here`); \
                      messung/OPUS-G-O1.md; LANGUAGE.md §8.3.1",
@@ -6583,12 +6583,12 @@ pub const SPERREN: &[Satz] = &[
                     phase-classed register may not carry their own class: «B23» stands per \
                     field, «B18» per phase, and the two do not compose today.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/401-registerklasse-ohne-marke.gab (`R006`, no mark in \
+        gemessen_an: "beispiele/gift/0401-registerklasse-ohne-marke.gab (`R006`, no mark in \
                       scope -- the load-bearing site, measured at 0 errors on 2026-08-26), \
-                      402-registerklasse-nach-dem-schritt.gab (`R006`, stage `live` after \
-                      the step), 403-phasenklasse-schweigt-ueber-stufe.gab and \
-                      404-phasenstufe-gibt-es-nicht.gab (`R009`). The clean side is \
-                      beispiele/02-geraet.gab, which writes the form for the first time -- \
+                      0402-registerklasse-nach-dem-schritt.gab (`R006`, stage `live` after \
+                      the step), 0403-phasenklasse-schweigt-ueber-stufe.gab and \
+                      0404-phasenstufe-gibt-es-nicht.gab (`R009`). The clean side is \
+                      beispiele/0002-geraet.gab, which writes the form for the first time -- \
                       so it is a SITE and not demand (W23).",
         fundstelle: "crates/gabbro-check/src/m3.rs::phasendeklarationen, ::phasenzugriff; \
                      crates/gabbro-check/src/phasen.rs::registerzugriffe; \
@@ -6619,10 +6619,10 @@ pub const SPERREN: &[Satz] = &[
                     place, keeps its `C001` refusal -- `None` carries no reason, which is a \
                     different question with a different answer.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/405-geraeteversprechen-blank-gelesen.gab (`R011` -- the \
+        gemessen_an: "beispiele/gift/0405-geraeteversprechen-blank-gelesen.gab (`R011` -- the \
                       load-bearing site, measured at 0 errors before the build) and \
-                      406-falsifikator-nennt-nichts.gab (`R010`). The clean side is \
-                      beispiele/44-register-einmal-lesen.gab, «B33»'s own file, and it goes \
+                      0406-falsifikator-nennt-nichts.gab (`R010`). The clean side is \
+                      beispiele/0044-register-einmal-lesen.gab, «B33»'s own file, and it goes \
                       through the C compiler -- so the LOWERING is measured and not only the \
                       refusal. Two mutations.",
         fundstelle: "crates/gabbro-check/src/m3.rs::geraeteversprechen, ::fehlbare_lesungen; \
@@ -6647,7 +6647,7 @@ pub const SPERREN: &[Satz] = &[
                     without a common lock. `entrust` roots are skipped, not cleared (open \
                     question 2).",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/704-gleichzeitig-schreibt-gleiche-tabelle.gab (`W001` \
+        gemessen_an: "beispiele/gift/0704-gleichzeitig-schreibt-gleiche-tabelle.gab (`W001` \
                       -- different rows of one table, no lock in either hull). The clean \
                       side is messung/proben/probe-nebeneinander-getrennt.gab (disjoint \
                       write sets, shared read, 0 errors).",

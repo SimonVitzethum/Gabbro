@@ -1,7 +1,7 @@
 //! **Immutable pointers starting at `0` (`N260`, lane 145) in both directions.**
 //!
 //! The file-level twin of the gift probe:
-//! `beispiele/gift/931-null-pointer-through-an-immutable-static.gab` pins the
+//! `beispiele/gift/0931-null-pointer-through-an-immutable-static.gab` pins the
 //! fall over a file, what stands here pins it over snippets -- poison and
 //! positive twin side by side, so a rule that goes silent fails here even
 //! where the gift corpus has no file for the shape. The `let` shapes and the

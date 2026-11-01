@@ -1,6 +1,6 @@
 /* sonde_read -- the falsifier for `linux_read_contract`.
  *
- * THE OBLIGATION, as it stands in the source (`beispiele/150-fd-lesen.gab`):
+ * THE OBLIGATION, as it stands in the source (`beispiele/0150-fd-lesen.gab`):
  *
  *     assume linux_read_contract
  *         "Read keeps its contract on this machine: at most len bytes, the bytes that stood there, the mapped errnos."
@@ -53,7 +53,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define KOPF "sonde sonde_read :: linux_read_contract (beispiele/150-fd-lesen.gab)\n"
+#define KOPF "sonde sonde_read :: linux_read_contract (beispiele/0150-fd-lesen.gab)\n"
 
 #if !defined(__linux__) || !defined(__x86_64__)
 int main(void)

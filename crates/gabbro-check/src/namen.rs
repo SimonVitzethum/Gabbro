@@ -2216,7 +2216,7 @@ fn geister_haben_keinen_speicher(baum: &Programm, absagen: &mut Absagen) {
     // NSLOTS Plaetzen legt, hat ihn aus der Buchfuehrung genommen -- und M2 sagt darueber
     // nichts, weil es nichts sagen kann.
     //
-    // > **Die Alternative steht im Korpus**: `beispiele/27-freiliste.gab` fuehrt Besitz in
+    // > **Die Alternative steht im Korpus**: `beispiele/0027-freiliste.gab` fuehrt Besitz in
     // > einer Tabelle als `bool` plus `option index into T`, und die Linearitaet lebt an den
     // > FUNKTIONEN, die den Platz vergeben und zurueckgeben. Das ist die Stelle, an der M2
     // > sie halten kann.
@@ -2270,7 +2270,7 @@ fn pruefe_speicher(items: &[Item], geister: &[String], absagen: &mut Absagen) {
             )
             .mit_notiz(
                 "both belong where the checker threads them: a parameter, a result, a `let`. \
-                 For ownership IN a table see beispiele/27-freiliste.gab -- a `bool` plus an \
+                 For ownership IN a table see beispiele/0027-freiliste.gab -- a `bool` plus an \
                  `option index into T`, and the linearity lives at the FUNCTIONS",
             ),
         );
@@ -2747,7 +2747,7 @@ fn geltungsbereich(items: &[Item], absagen: &mut Absagen) {
             // says so in its first line. *Refuse, never interpret* (design rule 3).
             //
             // **What this rule deliberately does NOT touch is the covering in a NESTED
-            // block.** C accepts it, `beispiele/gift/19-let-verdeckt.gab` has held it as a
+            // block.** C accepts it, `beispiele/gift/0019-let-verdeckt.gab` has held it as a
             // legal program since 2026-08-14, and `m1.rs` carries the block scope that gives
             // it its meaning. *That form has a second defect, and it belongs to a different
             // pass:* `kosten.rs` and `domaene.rs` build their `lokal` from **the parameters
@@ -2824,7 +2824,7 @@ fn auswahl(item: &Item) -> Auswahl {
 /// Sibling arms of an `if` never see each other, and a nested block may cover an outer name.
 ///
 /// **The cut at the block boundary is the whole rule, and it is not a style choice.**
-/// `beispiele/gift/19-let-verdeckt.gab` has held the covering form as a legal program since
+/// `beispiele/gift/0019-let-verdeckt.gab` has held the covering form as a legal program since
 /// 2026-08-14 -- `let x : u8 = 0;` inside an `if`, covering the parameter `x`, expected to
 /// fall over the division because the narrowing fact belongs to the covered binding. *The language
 /// permits covering, and `m1.rs` carries the block scope that makes it mean something.*
@@ -3255,7 +3255,7 @@ fn schritt_pruefen(b: &Bank, absagen: &mut Absagen) {
 /// `transition`, the effect lists) reasons about them as two places. A `writes C` says
 /// nothing about `F[0].X`, and they are the same bytes.
 ///
-/// Judged only where BOTH sides are literal: `02-geraet.gab` writes `bank FRR at CAP.FRO *
+/// Judged only where BOTH sides are literal: `0002-geraet.gab` writes `bank FRR at CAP.FRO *
 /// 16`, and that stays silent -- `W10`, as at `N009`.
 ///
 /// **The arithmetic is `u128` and SATURATING, and it was neither on the day this rule was
@@ -3887,7 +3887,7 @@ fn wertnamen(t: &TypExpr, aus: &mut Vec<Ident>) {
 /// silent** -- and the file looks no different from one that had nothing to report.
 ///
 /// *Measured 2026-08-31, `dokumente/CHECKER.md`:* `messung/tor-proben/t11` is
-/// `beispiele/gift/155-messung-schreibt-sich-selbst.gab` byte for byte with `measures kk`
+/// `beispiele/gift/0155-messung-schreibt-sich-selbst.gab` byte for byte with `measures kk`
 /// instead of `measures k`. The original reports `N027` **and `N021`**, the copy only
 /// `N027`. *One letter, and the rule is gone.* `measures` is „the report line" by
 /// `SYNTAX.md` §13 -- a name with nothing behind it describes a state that does not exist.
@@ -3998,7 +3998,7 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
         // > Sprachaenderung, und *aus der strengen Lesart kann man lockern, nie umgekehrt.*
         //
         // Was bleibt: lesen, rechnen, vergleichen, `return`. Genau das tut der Korpus
-        // (`beispiele/06-annahmen.gab`), und genau das ist eine Gegenprobe.
+        // (`beispiele/0006-annahmen.gab`), und genau das ist eine Gegenprobe.
         {
             fn probenrein(b: &Block, absagen: &mut Absagen) {
                 for s in &b.anweisungen {
@@ -4052,7 +4052,7 @@ fn check_traegt_seine_pflicht(baum: &Programm, absagen: &mut Absagen) {
         // it, and the fourth is not part of the language** -- the same shape as the four
         // blind walkers, one layer further out.
         //
-        // > **And the folder already knew the fault.** `beispiele/06-annahmen.gab` carries
+        // > **And the folder already knew the fault.** `beispiele/0006-annahmen.gab` carries
         // > a comment at its own `can_fail` saying that the body returned no value at all;
         // > it was found on 2026-08-20, and only that one body was repaired. *A comment
         // > that names a defect with no line behind it is read as evidence*, and six files
@@ -5901,7 +5901,7 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
         // so an `asm` body was never held against its `-> never` declaration. The
         // model side (`grammatik/Grammatik/Zielsatz/Eigenschaften/NeverAsm.lean`, `AxNeverGut`) says
         // the same from the other end: a `never` axiom delivers no out value.
-        // `beispiele/36-asm.gab` (`schreiben -> u64` with `out`) is the
+        // `beispiele/0036-asm.gab` (`schreiben -> u64` with `out`) is the
         // counter-direction and stays green; `beispiele/gift/984` is the probe.
         // (Reserved as N320; that code is taken by `section_an_funktion` since
         // 2026-09-15, so this rule carries the next free number.)

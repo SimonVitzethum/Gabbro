@@ -58,7 +58,7 @@ theorem t16 : beqTopTief (parseTopTief tt16)
             (.variable "s")) "erstes_kind")
           (.call "None" [])))]) = true := by
   decide
--- beispiele/01-tabelle.gab (the `ist_blatt` predicate helper).
+-- beispiele/0001-tabelle.gab (the `ist_blatt` predicate helper).
 -- Rust: `Funktion` with `= pred` -- same shape (a `ptr` and an
 -- `index into` parameter, a `pure` effect).
 def tt17 : List Token :=
@@ -87,7 +87,7 @@ theorem t17 : beqTopTief (parseTopTief tt17)
           .cost (.lit 1), .arch "x86_64"] }
       "asm { \"outb %[wert], %[tor]\" in { wert : \"a\" , tor : \"d\" } clobbers { memory } } "]) = true := by
   decide
--- beispiele/36-asm.gab:17-27. Rust: `Funktion` with `= asm` --
+-- beispiele/0036-asm.gab:17-27. Rust: `Funktion` with `= asm` --
 -- the assembler body rides raw and balanced (see CUTS).
 def tt18 : List Token :=
   [.wort "impl", .wort "fn", .ident "f", .zeichen "(", .zeichen ")",
@@ -105,7 +105,7 @@ theorem t18 : beqTopTief (parseTopTief tt18)
         klauseln := [.limit
           "deadline <= 10 ops arch x86_64 falsifier s"] }]) = true := by
   decide
--- The `deadline` clause shape is beispiele/36-asm.gab:36 (on a
+-- The `deadline` clause shape is beispiele/0036-asm.gab:36 (on a
 -- bodied `asm` function there); the bare-proto carrier is
 -- synthetic. Rust: the clause rides the signature.
 def tt19 : List Token :=
@@ -130,7 +130,7 @@ theorem t19 : beqTopTief (parseTopTief tt19)
           .drops (.field (.variable "region") "v")] }
       (.block [] (.some (.ret (.some (.variable "region")))))]) = true := by
   decide
--- beispiele/106-summe-uebersetzt.gab (the `build` translator).
+-- beispiele/0106-summe-uebersetzt.gab (the `build` translator).
 -- Rust: `Translator` -- same shape (a `pure` contract with a
 -- `decreases` witness).
 def tt20 : List Token :=
@@ -143,7 +143,7 @@ theorem t20_lex :
 theorem t20 : beqTopTief (parseTopTief tt20)
     (.ok [.arenaT "Log" (.lit 2) (.lit 8) .none (.atom "u32") .none]) = true := by
   decide
--- beispiele/98-arena-erklaert.gab. Rust: `Arena` -- same shape.
+-- beispiele/0098-arena-erklaert.gab. Rust: `Arena` -- same shape.
 def tt21 : List Token :=
   [.wort "format", .ident "Elf64Kopf", .wort "endian",
    .wort "little", .zeichen "{", .ident "e_typ", .zeichen ":",
@@ -177,7 +177,7 @@ theorem t21 : beqTopTief (parseTopTief tt21)
           pos := .none, bezug := .none, wo := .none,
           reserviert := true, byOps := false }]]) = true := by
   decide
--- beispiele/03-format.gab:12-24 (fields from adjacent lines).
+-- beispiele/0003-format.gab:12-24 (fields from adjacent lines).
 -- Rust: `Format` with ranged, plain, `offset_into`/`where` and
 -- `reserved` fields -- same shape.
 def tt22 : List Token :=
@@ -199,7 +199,7 @@ theorem t22 : beqTopTief (parseTopTief tt22)
         ("HatKinder", .lit 3, "erst die Nachfahren einsammeln")]
       true]) = true := by
   decide
--- beispiele/01-tabelle.gab (the `KappenFehler` grounds). Rust:
+-- beispiele/0001-tabelle.gab (the `KappenFehler` grounds). Rust:
 -- `Reason` with an `exhaustive` tail -- same shape.
 def tt23 : List Token :=
   [.wort "state", .ident "Ampel", .zeichen "{", .wort "transition",
@@ -221,7 +221,7 @@ theorem t23 : beqTopTief (parseTopTief tt23)
          wirkung := [.writes (.variable "licht")] }]]) = true := by
   decide
 -- Synthetic (no `state` item in the corpus, measured 2026-09-13;
--- the transition arms follow beispiele/20-falle-vier.gab).
+-- the transition arms follow beispiele/0020-falle-vier.gab).
 -- Rust: `State` with one guarded transition.
 def tt24 : List Token :=
   [.wort "assume", .ident "mmu_folgt_ihrem_modell",
@@ -237,7 +237,7 @@ theorem t24 : beqTopTief (parseTopTief tt24)
       "Eine Uebersetzung mit P=0 faultet, bevor ein Zugriff die Zeile beruehrt."
       (.probe "sonde_pf_bei_p0")]) = true := by
   decide
--- beispiele/06-annahmen.gab:15-17. Rust: `Assume` with a
+-- beispiele/0006-annahmen.gab:15-17. Rust: `Assume` with a
 -- falsifier -- same shape.
 def tt25 : List Token :=
   [.wort "axiom", .ident "write_cr3", .zeichen "(", .ident "p",
@@ -256,7 +256,7 @@ theorem t25 : beqTopTief (parseTopTief tt25)
         .writes (.variable "aktive_tabelle")]
       (.probe "sonde_cr3")]) = true := by
   decide
--- beispiele/06-annahmen.gab:80. Rust: `Axiom` with two writes --
+-- beispiele/0006-annahmen.gab:80. Rust: `Axiom` with two writes --
 -- same shape.
 def tt26 : List Token :=
   [.wort "check", .ident "stapel_wasserstand", .zeichen "{",
@@ -305,7 +305,7 @@ theorem t26 : beqTopTief (parseTopTief tt26)
         sonde := .some ("Ein Kern mit kuenstlich tiefem Aufruf muss die Pflicht fallen lassen.",
           "sonde_tiefer_stapel") }]) = true := by
   decide
--- beispiele/06-annahmen.gab:127-146 (comments dropped, one
+-- beispiele/0006-annahmen.gab:127-146 (comments dropped, one
 -- string re-encoded without umlauts -- see CUTS). Rust: `Check`
 -- with `floor` and `counterprobe` -- same shape.
 def tt27 : List Token :=
@@ -331,7 +331,7 @@ theorem t27 : beqTopTief (parseTopTief tt27)
                    reserviert := false, byOps := false }],
         .tOps ["insert", "remove"], .tBusy "benutzt"]]) = true := by
   decide
--- beispiele/47-ops-wortmenge.gab:60-71 (comments dropped).
+-- beispiele/0047-ops-wortmenge.gab:60-71 (comments dropped).
 -- Rust: `Tabelle` with generated `ops` and an `occupied` field
 -- -- same shape.
 def tt28 : List Token :=
@@ -352,7 +352,7 @@ theorem t28 : beqTopTief (parseTopTief tt28)
                    pos := .none, bezug := .none, wo := .none,
                    reserviert := false, byOps := false }]]]) = true := by
   decide
--- beispiele/01-tabelle.gab (the `WURZEL` table constant beside a
+-- beispiele/0001-tabelle.gab (the `WURZEL` table constant beside a
 -- slot). Rust: `Tabelle` with a `const` member -- same shape.
 def tt29 : List Token :=
   [.wort "table", .ident "K", .wort "count", .num 4,
@@ -374,6 +374,6 @@ theorem t29 : beqTopTief (parseTopTief tt29)
                    pos := .none, bezug := .none, wo := .none,
                    reserviert := false, byOps := false }]]]) = true := by
   decide
--- beispiele/01-tabelle.gab (the «B41b» edge beside a slot).
+-- beispiele/0001-tabelle.gab (the «B41b» edge beside a slot).
 -- Rust: `Tabelle` with a `tree` member -- same shape.
 end Gabbro.Grammatik.Parser

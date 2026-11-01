@@ -438,7 +438,7 @@ theorem ziel_ort_sperre_zeuge : ∃ M M' : RufMaschineG sD,
 
 /-! ## 5. Corpus 104 through the new theorem; probe A -/
 
-/-- **`ziel_ort_sperre_ref104` -- `beispiele/104-referenz.gab` certified by
+/-- **`ziel_ort_sperre_ref104` -- `beispiele/0104-referenz.gab` certified by
     the goal theorem with lock invariants** (the empty family: 104 takes its
     lock by signature): all premises jointly, the conclusion on every
     reachable machine, and on the reached run of `r4Lauf` the `ensures` of

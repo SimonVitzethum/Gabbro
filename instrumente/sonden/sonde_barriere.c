@@ -1,11 +1,11 @@
 /* sonde_barriere -- the date probe for the fence `barriere`.
  *
  * THE OBLIGATION, as the checker declares it in the generated header
- * (`gabbro annahmen beispiele/60-annahme-mit-maschine.gab`):
+ * (`gabbro annahmen beispiele/0060-annahme-mit-maschine.gab`):
  *
  *     frist_barriere_eingehalten (assume): falsifier sonde_barriere
  *
- * and in the source (`beispiele/60-annahme-mit-maschine.gab`:56):
+ * and in the source (`beispiele/0060-annahme-mit-maschine.gab`:56):
  *
  *     deadline <= 10 ops arch x86_64 falsifier sonde_barriere
  *
@@ -88,7 +88,7 @@
 int main(void)
 {
     printf("sonde sonde_barriere :: frist_barriere_eingehalten "
-           "(beispiele/60-annahme-mit-maschine.gab:56, deadline <= 10 ops arch x86_64)\n");
+           "(beispiele/0060-annahme-mit-maschine.gab:56, deadline <= 10 ops arch x86_64)\n");
     printf("      no RDTSC on this architecture -- not runnable here\n");
     return 77;
 }
@@ -176,7 +176,7 @@ static int dezimal(const char *s, long *aus)
 int main(int argc, char **argv)
 {
     printf("sonde sonde_barriere :: frist_barriere_eingehalten "
-           "(beispiele/60-annahme-mit-maschine.gab:56, deadline <= 10 ops arch x86_64)\n");
+           "(beispiele/0060-annahme-mit-maschine.gab:56, deadline <= 10 ops arch x86_64)\n");
 
     long iters = DEFAULT_ITERS;
     u64 grenze = BOOKED_MAX_CYCLES;

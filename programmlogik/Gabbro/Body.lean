@@ -1051,7 +1051,7 @@ inductive Stmt where
 
       The store itself is a store. What makes the PAYLOAD visible to the reader is
       `release_stellt_sichtbarkeit_her` -- an assumption of the axiom layer since
-      `beispiele/06-annahmen.gab`, `unfalsifiable` with its reason written out, and rebooked
+      `beispiele/0006-annahmen.gab`, `unfalsifiable` with its reason written out, and rebooked
       there by `K100.2`. *In a single world the visibility is automatic; the assumption is
       what licenses reading it that way.*
 

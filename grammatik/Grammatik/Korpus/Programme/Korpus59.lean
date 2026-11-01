@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Korpus59.lean
-  Subject:   THE G PROGRAM OF `beispiele/59-eintritt-nimmt-maskierte-sperre.gab`,
+  Subject:   THE G PROGRAM OF `beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`,
              with the bodies of the source, and every premise group of the goal
              theorem on it.
 
