@@ -23,6 +23,11 @@ were organised) is in `git log`, not here.
 - **One Mathlib for all trees**: the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
   tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only
   the own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
+- **CPU and memory caps after the OOM/CPU overload of 2026-11-01 (owner).** The machine has 20 threads and 31 GB.
+  A full `grammatik/` build: only ONE globally (both slot locks), scope `-p AllowedCPUs=0-11 -p CPUQuota=1200%
+  -p MemoryMax=<min(MemAvailable-6G, 14G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0`. A single-module check:
+  one slot lock, `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0`.
+  Nothing heavy starts when the load average is above 16 or less than 8 GiB are available; wait instead.
 - **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
 - **Nothing in `/tmp` (owner, 2026-11-01).** `/tmp` is RAM: no agent writes there (scratch goes to `.scratch-*`
   inside its own worktree, `TMPDIR` points there), and everything in `/tmp` together stays under 100 MB; root
@@ -111,8 +116,8 @@ expanding infrastructure for a small subset.
   C11, C18; round 3 C10, C02, C12, C14, C15, C16. Between rounds only single changed modules are checked.
   `axiom`-`ensures` stays a named hardware assumption (`AxVertragO`, owner 2026-11-01); it is not turned
   into a runtime check.
-  **Grammar build memory (owner, 2026-11-01):** a `grammatik/` build may use all currently available memory
-  minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
+  **Grammar build memory (owner, 2026-11-01; tightened the same day, see the CPU and memory caps above):** a
+  `grammatik/` build may use the currently available memory minus 6 GiB, at most 14 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
   `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
   allows. Stage-0 checks keep their 5G slots.
 - **No swap for ANY run (owner, 2026-11-01):** every process an agent or root starts that can use real memory —
