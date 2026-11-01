@@ -81,6 +81,11 @@ expanding infrastructure for a small subset.
   minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
   `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
   allows. Stage-0 checks keep their 5G slots.
+- **RAM discipline (owner, 2026-11-01):** inside a Stage-0 slot exactly ONE `lean` process runs, with
+  `-j1 -DElab.async=false -M4608`, checked module by module in dependency order. Never run a parallel
+  `lake build` of `stage0/` (it spawns one `lean -M16384` per module and thrashes inside the 5G scope). Check
+  `free -g` before every heavy step; with less than 8 GiB available, wait. Agents keep the slot lock only for
+  one module and must not end their run while a build they started still runs.
 - **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
   slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 
