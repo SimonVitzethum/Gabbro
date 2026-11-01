@@ -10,19 +10,40 @@ were organised) is in `git log`, not here.
 ## Current implementation scope: all Gabbro to IR
 
 **TEAM AND BUILD RULES (owner, 2026-11-01, supersede every older staffing rule below).**
-- **Two Claude Sonnet 5.5 leads**, both T3 Code agents. Each lead controls, through T3 `delegate_task`, exactly
-  ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor sub-agents. All agents are T3 Code agents.
-  The leads work on the C packages and the Lean module-system migration; every other lane (IR-04 floats,
-  IR-02 `narrow`, the remaining A/B packages and IR lanes) is paused with its worktree and resumes after C.
+- **Two Claude Sonnet 5.5 leads**, both T3 Code agents (owner, 2026-11-01, latest order). While the Lean
+  module-system migration and the splitting of every Lean file below 500 lines run, **Lead B does the migration
+  and the splitting** of the whole repository (it may use up to one Sol and four Muse for exactly that — never
+  for new `grammatik/` or Stage-0 work; its slots need not all be busy), and **ALL other agents work on Stage 0**: **Lead A works with
+  PERMANENTLY five sub-agents** (ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor, only the Go
+  access: model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`), started through T3
+  `delegate_task`, every slot occupied at all times. Stage-0 work means the Stage-0 side only (`stage0/`, the
+  runner, probes): the paused IR lanes (IR-04 floats, IR-02 `narrow`, IR-06 memory, the StatementCost/EarlyExit
+  migration, orphans, `ir_parallel`, IR-01 rest) and the Stage-0 lowering prepared for the C packages; no
+  `grammatik/` change until the migration is merged.
 - **Only the leads build.** Each lead runs its own builds and may do heavy work itself; sub-agents and their
   sub-agents never build or check Lean, and their worktrees carry no `.lake` (no Mathlib, no build cache).
   A lead checks its sub-agents' work in its own tree.
+- **One integration branch, one build per lead (owner, 2026-11-01).** A lead merges the branches of all its
+  agents (its Sol, its four Muse and its own work) into ONE integration branch and builds/checks that branch
+  only; never one build per agent. All eight Muse and both Sol stay busy at all times: when one finishes, its
+  branch goes into the integration branch and it gets its next task at once.
+- **Heavy witness modules are not rebuilt during work.** Probe files that run the parser/elaborator in the
+  kernel (`Grammatik/Parser/Elab/Proben/**`, `*Proben*.lean`) need 7–12 GB each; they are checked only in the
+  final integration build of a round, never in single-module checks.
 - **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`,
   `lean` and the shell. The four guardians stay root's tools.
 - **One Mathlib for all trees**: the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
   tree links it with `cp -al <root>/grammatik/.lake/packages <tree>/grammatik/.lake/packages` and copies only
   the own build part (`rsync -rlpgoD --exclude packages …`); nobody copies or rebuilds Mathlib.
+- **CPU and memory caps after the OOM/CPU overload of 2026-11-01 (owner).** The machine has 20 threads and 31 GB.
+  A full `grammatik/` build: only ONE globally (both slot locks), scope `-p AllowedCPUs=0-11 -p CPUQuota=1200%
+  -p MemoryMax=<min(MemAvailable-6G, 14G)> -p MemoryHigh=<2G below> -p MemorySwapMax=0`. A single-module check:
+  one slot lock, `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0`.
+  Nothing heavy starts when the load average is above 16 or less than 8 GiB are available; wait instead.
 - **At most 50 GB for all worktrees together.** Root deletes every worktree right after its merge.
+- **Nothing in `/tmp` (owner, 2026-11-01).** `/tmp` is RAM: no agent writes there (scratch goes to `.scratch-*`
+  inside its own worktree, `TMPDIR` points there), and everything in `/tmp` together stays under 100 MB; root
+  removes leftovers no process holds open.
 
 **Lean module system (owner, 2026-11-01, fixed rule).** All Lean in the repository (`grammatik/`,
 `stage0/`, `runner/`, `programmlogik/`, `passlogik/` and every other Lean package) is migrated completely to
@@ -107,8 +128,8 @@ expanding infrastructure for a small subset.
   C11, C18; round 3 C10, C02, C12, C14, C15, C16. Between rounds only single changed modules are checked.
   `axiom`-`ensures` stays a named hardware assumption (`AxVertragO`, owner 2026-11-01); it is not turned
   into a runtime check.
-  **Grammar build memory (owner, 2026-11-01):** a `grammatik/` build may use all currently available memory
-  minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
+  **Grammar build memory (owner, 2026-11-01; tightened the same day, see the CPU and memory caps above):** a
+  `grammatik/` build may use the currently available memory minus 6 GiB, at most 14 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
   `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
   allows. Stage-0 checks keep their 5G slots.
 - **No swap for ANY run (owner, 2026-11-01):** every process an agent or root starts that can use real memory —
@@ -251,6 +272,9 @@ not the Rust checker, and no bridge to any binary is built. The
 - **Floats are in scope** (IEEE kernel model). Probabilistic statements are out of scope.
 
 **Lean layout**
+- **Every Lean file has fewer than 500 lines** (owner, 2026-11-01): also every OLD file — the 235 files above
+  the limit (largest `Uebersetze.lean`, 6455 lines) are split into cohesive modules, pure moves without changing
+  a statement or a name. Large files also cost most of the build memory.
 - Every folder holds at most **20 entries**, and every Lean file lives in a sensible folder. The placement rules
   are `instrumente/teile/lean-layout-rules.py`; `python3 instrumente/teile/lean-layout.py --check` runs inside
   the Lean guardian, `--apply` moves new modules into place and rewrites imports.
